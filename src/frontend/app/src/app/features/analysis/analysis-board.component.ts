@@ -1,7 +1,6 @@
 import {
   Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, OnInit,
-  Output, SimpleChanges, ViewChild
-} from '@angular/core';
+  Output, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
@@ -14,6 +13,7 @@ import { PromotionPickerComponent, PromotionPiece } from '../../shared/promotion
  * Bauernumwandlung über den gemeinsamen `PromotionPickerComponent` (Auswahl statt Auto-Dame).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-analysis-board',
   standalone: true,
   imports: [PromotionPickerComponent],

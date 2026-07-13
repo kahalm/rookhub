@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, Input, OnChanges, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Input, OnChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import * as QRCode from 'qrcode';
 
 /**
@@ -8,6 +8,7 @@ import * as QRCode from 'qrcode';
  * bleibt. Inputs bewusst kompatibel zum bisherigen Aufruf (Breite + Fehlerkorrektur „M").
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-qr-code',
   standalone: true,
   template: '<canvas #canvas [attr.aria-label]="\'QR\'"></canvas>',

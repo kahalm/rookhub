@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -21,6 +21,7 @@ const ALL_THEMES = ['tactics', 'endgame', 'opening', 'middlegame', 'other'] as c
  * die ausgewählten Keys zurück; leer = Rückfall auf Default „tactics" (serverseitig).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-course-themes-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, TranslatePipe],

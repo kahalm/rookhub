@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
@@ -11,6 +11,7 @@ import { OPERATOR } from '../../../environments/operator';
  * ENTWURF: rechtlich von Betreiber/Anwalt zu prüfen; Betreiber-Daten im Impressum.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-privacy',
   standalone: true,
   imports: [CommonModule, MatCardModule, RouterModule, TranslatePipe],

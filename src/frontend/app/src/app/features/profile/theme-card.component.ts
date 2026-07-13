@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { ThemeService } from '../../core/theme.service';
  * self-contained — liest/schreibt die Präferenz direkt über den <see cref="ThemeService"/>.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-theme-card',
   standalone: true,
   imports: [CommonModule, MatButtonToggleModule, MatIconModule, TranslatePipe],

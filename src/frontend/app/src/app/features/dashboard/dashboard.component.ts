@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -52,6 +52,7 @@ const DEFAULT_ORDER = [
 const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id));
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-dashboard',
   standalone: true,
   imports: [

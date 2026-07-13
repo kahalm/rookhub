@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,6 +25,7 @@ import { AdminService, AdminUser, Role } from '../../../core/admin.service';
  * die admin-Rolle erscheint daher in der Nutzer-Zuweisung nicht als Checkbox.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-admin-roles',
   standalone: true,
   imports: [

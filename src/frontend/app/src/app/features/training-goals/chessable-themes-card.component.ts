@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -18,6 +18,7 @@ import { formatDuration } from './duration.util';
  * über <c>(changed)</c>, weil sie die Themen-Aufschlüsselung des Eltern-Containers beeinflussen.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chessable-themes-card',
   standalone: true,
   imports: [

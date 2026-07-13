@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FriendsService } from '../../core/friends.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ import { Friend } from '../../core/models';
  * „Senden (n)". Lädt die Freundesliste faul beim Öffnen des Menüs.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-challenge-friends',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatCheckboxModule, TranslatePipe],

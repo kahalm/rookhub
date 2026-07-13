@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +24,7 @@ export interface ShareRepertoireDialogData {
  * Kurs-Teilen-Dialog; self-contained (ruft RepertoireService direkt).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-share-repertoire-dialog',
   standalone: true,
   imports: [

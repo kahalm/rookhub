@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RepertoireService } from '../../core/repertoire.service';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { RepertoireFile } from '../../core/models';
 import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-edit',
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslatePipe],

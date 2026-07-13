@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -15,6 +15,7 @@ import { AuthService } from '../../core/auth.service';
  * ruft <see cref="AuthService.deleteAccount"/> (dessen logout() navigiert bereits zu /login).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-delete-account-card',
   standalone: true,
   imports: [

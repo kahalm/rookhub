@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +21,7 @@ import { activityKindIcon } from './activity-timer-tile.component';
  * ausgegliedert; verwaltet die Vorlagenliste vollständig selbst (unabhängig vom Ziel-/Tracker-Stand).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-activity-presets-card',
   standalone: true,
   imports: [

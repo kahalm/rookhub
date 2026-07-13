@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,6 +25,7 @@ export const APK_DOWNLOAD_URL =
  *     bereits installiert → Hinweis; sonst → „in diesem System nicht möglich".
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-install',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe],

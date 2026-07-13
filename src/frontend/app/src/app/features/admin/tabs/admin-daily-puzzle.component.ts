@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +16,7 @@ import { AdminService, DailyPuzzleInfo } from '../../../core/admin.service';
  * Aus <c>AdminComponent</c> ausgegliedert; self-contained (nur AdminService).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-admin-daily-puzzle',
   standalone: true,
   imports: [

@@ -1,6 +1,5 @@
 import {
-  Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild
-} from '@angular/core';
+  Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -59,6 +58,7 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
  * vom Brett ziehen = löschen. Emittiert beim „Übernehmen" die validierte volle FEN.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-position-setup',
   standalone: true,
   imports: [

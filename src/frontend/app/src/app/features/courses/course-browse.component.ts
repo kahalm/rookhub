@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -40,6 +40,7 @@ interface ChapterGroup {
  * `BookPuzzleComponent.reviewGoTo` (ganze Linie ab FEN).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-course-browse',
   standalone: true,
   imports: [

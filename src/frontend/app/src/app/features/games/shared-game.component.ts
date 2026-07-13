@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +18,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
  * Reused den PgnViewerService + chess-board/move-list aus dem PGN-Viewer, aber inline statt im Dialog.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-shared-game',
   standalone: true,
   imports: [

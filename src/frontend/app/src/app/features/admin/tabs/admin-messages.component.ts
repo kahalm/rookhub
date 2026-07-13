@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,6 +24,7 @@ import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/m
  * (eigenes queryParamMap-Abo — der `?tab=`-Teil bleibt im Parent).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-admin-messages',
   standalone: true,
   imports: [

@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, HostListener, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
@@ -28,6 +28,7 @@ import { APK_VERSION } from '../environments/changelog';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, RouterLink, NavbarComponent, TranslatePipe, A11yModule, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.Default,
   template: `
     @if (showApkUpdate) {
       <div class="apk-banner">

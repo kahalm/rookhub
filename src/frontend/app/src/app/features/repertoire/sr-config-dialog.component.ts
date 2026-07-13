@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -18,6 +18,7 @@ import { RepertoireTrainingService, SrLevel } from './repertoire-training.servic
  * jeweiligen Stufe bestimmt, wann die Linie wieder fällig wird.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-sr-config-dialog',
   standalone: true,
   imports: [

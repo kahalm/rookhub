@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,6 +27,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
  * GitHub-Abrufe kurz, daher ist das 5-s-Polling rate-limit-schonend.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-admin-github-actions',
   standalone: true,
   imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +12,7 @@ import { AdminService } from '../../../core/admin.service';
  * Aus <c>AdminComponent</c> ausgegliedert; self-contained.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-admin-puzzle-tags',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe],

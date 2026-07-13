@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
@@ -23,6 +23,7 @@ import { RepertoireDetail } from '../../core/models';
 type ViewMode = 'lines' | 'tree' | 'edit';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-detail',
   standalone: true,
   imports: [

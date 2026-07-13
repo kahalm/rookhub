@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, of } from 'rxjs';
 import { switchMap, catchError, tap } from 'rxjs/operators';
@@ -24,6 +24,7 @@ import { RevengeService, RevengeNotification } from '../../core/revenge.service'
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friends',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatTooltipModule, MatBadgeModule, TranslatePipe, LoadingSpinnerComponent],

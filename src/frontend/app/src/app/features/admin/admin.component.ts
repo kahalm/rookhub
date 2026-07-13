@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -34,6 +34,7 @@ import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-admin',
   standalone: true,
   imports: [

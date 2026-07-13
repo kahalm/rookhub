@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,6 +16,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
  * liest/schreibt direkt über den <see cref="OfflineService"/> (pro Gerät, kein API-Call).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-offline-settings-card',
   standalone: true,
   imports: [

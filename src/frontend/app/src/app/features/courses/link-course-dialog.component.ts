@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -26,6 +26,7 @@ export interface LinkCourseDialogData {
  * `true`, wenn sich etwas geändert hat (Liste soll neu laden).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-link-course-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatTooltipModule, TranslatePipe],

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ interface CategoryDef {
  * gelöste Kurs-Linien) je Periode (Woche/Monat/gesamt). Nur eingeloggt (Route-Guard).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-leaderboards',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, MatButtonToggleModule, TranslatePipe, LoadingSpinnerComponent],

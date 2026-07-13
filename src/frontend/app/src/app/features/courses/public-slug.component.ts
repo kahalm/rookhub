@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CourseService } from './course.service';
 
@@ -11,6 +11,7 @@ import { CourseService } from './course.service';
  * echte Routen (login/dashboard/courses/…) matchen vorher.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-slug',
   standalone: true,
   template: '',

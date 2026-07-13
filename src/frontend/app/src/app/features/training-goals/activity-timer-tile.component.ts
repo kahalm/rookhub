@@ -1,4 +1,4 @@
-import { Component, DestroyRef, EventEmitter, OnDestroy, OnInit, Output, inject } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, OnDestroy, OnInit, Output, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +34,7 @@ export function activityKindIcon(kind: ManualActivityKind): string {
  * Pollt initial und dann alle 30 s vom Server, damit andere Geräte/Browser-Tabs schnell mitziehen.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-activity-timer-tile',
   standalone: true,
   imports: [

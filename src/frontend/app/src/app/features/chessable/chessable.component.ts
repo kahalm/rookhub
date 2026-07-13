@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
@@ -43,6 +43,7 @@ export { CHESSABLE_LINES_PER_MIN, formatDuration, effectiveTotalLines, estimateR
 type ActiveImport = ChessableImport & { queueLabelText: string };
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chessable',
   standalone: true,
   imports: [

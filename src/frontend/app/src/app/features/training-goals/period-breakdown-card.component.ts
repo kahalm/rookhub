@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,7 @@ import { formatDuration } from './duration.util';
  * Tracker-Heatmap gerendert.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-period-breakdown-card',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule, TranslatePipe],

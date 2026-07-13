@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -32,6 +32,7 @@ const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30];
 const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-analysis',
   standalone: true,
   imports: [

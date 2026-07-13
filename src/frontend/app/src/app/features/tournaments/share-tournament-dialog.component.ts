@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-share-tournament-dialog',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, QrCodeComponent],

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FriendsService } from '../../core/friends.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -36,6 +36,7 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friend-revenge',
   standalone: true,
   imports: [CommonModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent],

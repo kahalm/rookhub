@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,7 @@ interface ReprocessStatus {
  * `/api/{section}/reprocess[/status]` (section = "courses" | "repertoires").
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-reprocess-banner',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],

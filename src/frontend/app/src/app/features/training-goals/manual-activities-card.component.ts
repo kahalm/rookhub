@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -23,6 +23,7 @@ import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
  * der Eltern-Container Heute-/Tracker-Werte neu lädt.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-manual-activities-card',
   standalone: true,
   imports: [

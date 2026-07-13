@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleChallengeSource } from '../../core/challenge.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-share-puzzle-dialog',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, QrCodeComponent, ChallengeFriendsComponent],

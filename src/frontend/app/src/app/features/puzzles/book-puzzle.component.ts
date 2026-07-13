@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -54,6 +54,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
 const ANON_COURSE_PAGE_SIZE = 300;
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-book-puzzle',
   standalone: true,
   imports: [

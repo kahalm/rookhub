@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,6 +14,7 @@ import { AuthService } from '../../core/auth.service';
  * ruft <see cref="AuthService.changePassword"/> und behandelt Validierung/Snackbars selbst.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-change-password-card',
   standalone: true,
   imports: [

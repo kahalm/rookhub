@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -19,6 +19,7 @@ import { CourseListItem, CourseChapter } from './course.service';
  * `*ngTemplateOutlet`-`ng-container`).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-course-card',
   standalone: true,
   imports: [

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +13,7 @@ import { chessableQueueLabel, formatDuration } from './chessable-progress.util';
  * Import-Flow des Users. Nur einbinden, wenn der Betrachter Admin ist.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chessable-admin-imports-feed',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, TranslatePipe],

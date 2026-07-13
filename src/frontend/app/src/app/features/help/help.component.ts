@@ -1,4 +1,4 @@
-import { Component, AfterViewInit } from '@angular/core';
+import { Component, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +16,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 interface HelpSection { id: string; icon: string; }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-help',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, RouterModule, TranslatePipe],

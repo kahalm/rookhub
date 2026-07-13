@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -19,6 +19,7 @@ import { RememberedService, RememberedPosition } from '../../core/remembered.ser
  * (In Analyse öffnen · FEN kopieren · Löschen).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-remembered-lines',
   standalone: true,
   imports: [

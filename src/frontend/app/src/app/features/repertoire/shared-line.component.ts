@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +18,7 @@ import { RepertoireService, SharedLine } from '../../core/repertoire.service';
  * + chess-board/move-list.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-shared-line',
   standalone: true,
   imports: [

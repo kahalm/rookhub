@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of, switchMap, catchError, merge, map, timer } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -23,6 +23,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-navbar',
   standalone: true,
   imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatBadgeModule, TranslatePipe],

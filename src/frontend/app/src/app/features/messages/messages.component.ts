@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -12,6 +12,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 
 /** Nachrichten-Thread des Users mit dem Admin-Team: Verlauf lesen + antworten. */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-messages',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent],

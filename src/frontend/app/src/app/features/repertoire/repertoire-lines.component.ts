@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, computed, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
@@ -24,6 +24,7 @@ interface ChapterGroup {
 type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-lines',
   standalone: true,
   imports: [

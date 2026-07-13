@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { PublicTournamentService } from '../../core/public-tournament.service';
@@ -17,6 +17,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-tournament',
   standalone: true,
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],

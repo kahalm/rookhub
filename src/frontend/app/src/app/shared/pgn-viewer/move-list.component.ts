@@ -1,11 +1,11 @@
 import {
   Component, Input, Output, EventEmitter, OnChanges,
-  SimpleChanges, ElementRef, ViewChild
-} from '@angular/core';
+  SimpleChanges, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Move } from 'chess.js';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-move-list',
   standalone: true,
   imports: [CommonModule],

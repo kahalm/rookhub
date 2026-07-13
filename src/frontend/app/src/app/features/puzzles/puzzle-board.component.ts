@@ -1,7 +1,6 @@
 import {
   Component, ElementRef, EventEmitter, HostListener, Input, OnChanges,
-  OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild
-} from '@angular/core';
+  OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
@@ -13,6 +12,7 @@ import { paintCrazyPieces, clearCrazyPieces, CrazyPieceMode } from './board-them
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-puzzle-board',
   standalone: true,
   imports: [CommonModule],

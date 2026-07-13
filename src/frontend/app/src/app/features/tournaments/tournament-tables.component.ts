@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
@@ -23,6 +23,7 @@ import { TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/mod
  * bleibt bewusst im Container.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-tables',
   standalone: true,
   imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSlideToggleModule, MatSortModule, TranslatePipe, LoadingSpinnerComponent],

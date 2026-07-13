@@ -1,4 +1,4 @@
-import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -23,6 +23,7 @@ export interface WeeklyFromChapterDialogData {
  * Termin/Titel/Beschreibung setzen, anlegen. Der Wochenpost spiegelt dann live die Puzzles dieses Kapitels.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-weekly-from-chapter-dialog',
   standalone: true,
   imports: [

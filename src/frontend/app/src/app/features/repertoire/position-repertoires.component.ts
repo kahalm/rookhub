@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +26,7 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
  * nicht eingeloggte Besucher komplett aus (Repertoires sind pro-Nutzer).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-position-repertoires',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, TranslatePipe],

@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { TournamentPlayer } from '../../core/models';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-team-players-dialog',
   standalone: true,
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],

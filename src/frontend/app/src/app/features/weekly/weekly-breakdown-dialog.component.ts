@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ export interface WeeklyBreakdownDialogData {
  * mit Zeit, Tipps, Fehlzügen und Mausrutschern. Geöffnet über das (i) in der Bestenliste.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-weekly-breakdown-dialog',
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, TranslatePipe, LoadingSpinnerComponent],

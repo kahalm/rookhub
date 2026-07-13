@@ -1,12 +1,12 @@
 import {
   Component, ElementRef, Input, OnChanges, OnDestroy,
-  AfterViewInit, SimpleChanges, ViewChild
-} from '@angular/core';
+  AfterViewInit, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Key } from 'chessground/types';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chess-board',
   standalone: true,
   template: `<div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>`,

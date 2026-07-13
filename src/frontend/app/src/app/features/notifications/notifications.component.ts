@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -22,6 +22,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
 
 /** Vollständige, paginierte Benachrichtigungs-History (von der Glocke aus „Alle anzeigen"). */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-notifications',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatSlideToggleModule, TranslatePipe, LoadingSpinnerComponent],
