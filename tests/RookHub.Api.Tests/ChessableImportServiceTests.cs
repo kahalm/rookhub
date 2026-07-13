@@ -56,6 +56,77 @@ public class ChessableImportServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    // Chessable-Stil-Puzzle-PGN (FEN + [%tqu]) → erzeugt beim Buch-Import ein Kurs-Puzzle.
+    private const string PuzzlePgn = @"
+[Event ""Test Book""]
+[Round ""1.1""]
+[White ""Italian Idea""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""Finde den Zug""] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *
+";
+
+    [Fact]
+    public async Task ImportPgnDirect_Repertoire_CreatesRepertoireAndNotifies()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var import = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 2. Nf3 Nc6 *", "My Course", "repertoire", 3);
+
+        Assert.Equal("completed", import.Status);
+        Assert.NotNull(import.ResultId);
+        Assert.True(import.FullyCached);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        var rep = await _db.Repertoires.FirstAsync(r => r.UserId == 7);
+        Assert.False(rep.UseForExtension);                 // wie Server-Import: nicht für die Extension
+        Assert.Equal("424242", rep.ChessableCourseId);     // aus dem Dateinamen chessable-424242.pgn
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted));
+    }
+
+    [Fact]
+    public async Task ImportPgnDirect_Repertoire_ReSend_ReplacesInPlace_NoDuplicate()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 *", "My Course", "repertoire", 2);
+        var repId = first.ResultId;
+
+        // Erneutes „Über meinen Browser holen" desselben Kurses → dasselbe Repertoire in-place ersetzt.
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 2. Nf3 Nc6 *", "My Course", "repertoire", 3);
+
+        Assert.Equal(repId, second.ResultId);                       // dieselbe Id (Fortschritt bleibt)
+        Assert.Equal(repId, second.TargetRepertoireId);             // in-place-Pfad genutzt
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));  // kein Duplikat
+        Assert.Equal(1, await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == repId));
+    }
+
+    [Fact]
+    public async Task ImportPgnDirect_Book_ImportsPuzzles_Idempotent()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", PuzzlePgn, "Tactics", "book", 1);
+        Assert.Equal("completed", first.Status);
+        Assert.NotNull(first.ResultId);
+        var bookId = first.ResultId!.Value;
+        var puzzleCount = await _db.BookPuzzles.CountAsync(p => p.BookId == bookId);
+        Assert.True(puzzleCount >= 1);
+        var book = await _db.Books.FindAsync(bookId);
+        Assert.Equal(7, book!.OwnerUserId);
+        Assert.Equal("chessable", book.Tags);
+
+        // Erneuter Import desselben Kurses (gleicher stabiler Dateiname) → dedup per LineId, kein Duplikat-Buch.
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", PuzzlePgn, "Tactics", "book", 1);
+        Assert.Equal(bookId, second.ResultId);
+        Assert.Equal(1, await _db.Books.CountAsync(b => b.OwnerUserId == 7));
+        Assert.Equal(puzzleCount, await _db.BookPuzzles.CountAsync(p => p.BookId == bookId));
+    }
+
     private async Task<ChessableImport> SeedImportAsync(
         string target, string status = "running", string? fetchedPgn = "1. e4 e5 2. Nf3 Nc6 *",
         int attempts = 0, int? resultId = null)

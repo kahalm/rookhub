@@ -42,8 +42,22 @@ public record ChessableCoursesDto(List<ChessableCourseDto> Courses, DateTime? Ca
 /// <summary>Test-Ergebnis: gibt die uid des Bearers und die Anzahl der Kurse zurueck.</summary>
 public record ChessableTestResultDto(string Uid, int CourseCount);
 
-/// <summary>Antwort des piratechess /api/chessable/direct/course-Endpoints (tiefer Kurs-Abruf, synchron).</summary>
+/// <summary>Antwort des piratechess /api/chessable/direct/course-Endpoints (tiefer Kurs-Abruf, synchron).
+/// Dieselbe Form liefert auch der fetch-freie /course/parse-Endpoint (Browser-Import).</summary>
 public record ChessableCourseDataDto(string Bid, string Name, string Mode, int ChapterCount, int LineCount, string Pgn);
+
+/// <summary>Browser-Import („Über meinen Browser holen"): die RepCheck-Extension hat die rohen Chessable-
+/// Antworten als eigene eingeloggte Session geholt (V2 aktiv) bzw. beim Training mitgeschnitten (V1 passiv)
+/// und schickt sie je Kapitel — die getList-Antwort (<see cref="ChessableIngestChapter.ChapterJson"/>) plus
+/// die getGame-Antworten (<see cref="ChessableIngestChapter.Lines"/>) in getList-Reihenfolge. RookHub reicht
+/// sie an den fetch-freien piratechess-Parser durch und importiert das PGN als Repertoire (<c>Target</c>
+/// "repertoire", Default) bzw. Buch/Kurs ("book"). Kein serverseitiger Chessable-Abruf/VPN.</summary>
+public record ChessableIngestRequest(string Bid, string? Target, string? CourseName, List<ChessableIngestChapter>? Chapters);
+public record ChessableIngestChapter(string? ChapterJson, List<string>? Lines);
+
+/// <summary>Ergebnis eines Browser-Imports (analog zum Server-Import, aber synchron).</summary>
+public record ChessableIngestResultDto(
+    int ImportId, string Target, int? ResultId, string CourseName, int Imported, int Skipped, int Invalid, int LineCount);
 
 /// <summary>Antwort von piratechess /direct/course/start (async).</summary>
 public record ChessableCourseStartDto(string JobId);

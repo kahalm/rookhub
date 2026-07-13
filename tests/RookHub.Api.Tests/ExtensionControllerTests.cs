@@ -36,7 +36,14 @@ public class ExtensionControllerTests : IDisposable
         var rememberedService = new RememberedPositionService(_db, encryption, chessableProxy,
             NullLogger<RememberedPositionService>.Instance);
         var savedGameService = new SavedGameService(_db);
-        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService, savedGameService, new SharedLineService(_db));
+        var bgQueue = new NoOpBackgroundTaskQueue();
+        var rateLimiterConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var chessableImport = new ChessableImportService(_db, encryption, chessableProxy, _service,
+            new PgnImportService(_db), bgQueue, new NotificationService(_db),
+            new ChessableBearerBreaker(_db, bgQueue, NullLogger<ChessableBearerBreaker>.Instance),
+            new ChessableRateLimiter(_db, rateLimiterConfig), NullLogger<ChessableImportService>.Instance);
+        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService,
+            savedGameService, new SharedLineService(_db), chessableProxy, chessableImport);
     }
 
     public void Dispose() => _db.Dispose();

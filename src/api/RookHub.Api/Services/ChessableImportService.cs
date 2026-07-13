@@ -576,6 +576,100 @@ public class ChessableImportService : ICourseReimporter
         }
     }
 
+    /// <summary>
+    /// Importiert ein bereits FERTIGES Kurs-PGN (vom Browser über die RepCheck-Extension geholt und von
+    /// piratechess fetch-frei geparst) direkt als Repertoire/Buch — OHNE piratechess-Fetch, Queue oder VPN.
+    /// Nutzt exakt dieselben Import-Primitive (<see cref="ImportAsBookAsync"/>/<see cref="ImportAsRepertoireAsync"/>)
+    /// wie der Server-Fetch-Pfad und legt einen abgeschlossenen <see cref="ChessableImport"/>-Satz an
+    /// (Verlauf/Anzeige, Benachrichtigung). Idempotent bei erneutem Senden desselben Kurses: Buch dedupliziert
+    /// per LineId, Repertoire wird IN-PLACE ersetzt (Trainings-Fortschritt bleibt), wenn schon eins aus diesem
+    /// Kurs (bid) existiert.
+    /// </summary>
+    public async Task<ChessableImport> ImportPgnDirectAsync(
+        int userId, string bid, string pgn, string courseName, string target, int lineCount, CancellationToken ct = default)
+    {
+        target = target == "book" ? "book" : "repertoire";
+        var name = Trunc(string.IsNullOrWhiteSpace(courseName) ? $"Chessable {bid}" : courseName, 200);
+        var import = new ChessableImport
+        {
+            UserId = userId,
+            Bid = bid,
+            CourseName = name,
+            Target = target,
+            Status = "running",
+            Phase = "importing",
+            LineCount = lineCount,
+            FullyCached = true,   // Browser lieferte die Daten → kein Download nötig
+            CreatedAt = DateTime.UtcNow,
+            StartedAt = DateTime.UtcNow,
+        };
+
+        // Idempotenz Repertoire: erneutes „Über meinen Browser holen" desselben Kurses ersetzt das
+        // vorhandene Repertoire IN-PLACE (Id/Fortschritt bleiben) statt ein Duplikat anzulegen. Match wie
+        // bei BumpSiblingRepertoiresAsync über ChessableCourseId ODER den stabilen Dateinamen (das PGN des
+        // Parsers trägt kein [Site]-Tag → ChessableCourseId wird beim Neuanlegen unten explizit gesetzt).
+        if (target == "repertoire")
+        {
+            var fileName = $"chessable-{bid}.pgn";
+            var existing = await _db.Repertoires
+                .Where(r => r.UserId == userId && (r.ChessableCourseId == bid || r.Files.Any(f => f.FileName == fileName)))
+                .Select(r => (int?)r.Id)
+                .FirstOrDefaultAsync(ct);
+            if (existing is int repId) import.TargetRepertoireId = repId;
+        }
+
+        _db.ChessableImports.Add(import);
+        await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            if (target == "repertoire")
+                await ImportAsRepertoireAsync(import, pgn, name, ct);
+            else
+                await ImportAsBookAsync(import, pgn, name, ct);
+
+            // Kurs-Zuordnung (bid) explizit setzen, falls neu angelegt und noch leer (das Parser-PGN trägt
+            // kein [Site]-Tag) → macht künftige Browser-Importe desselben Kurses idempotent (in-place).
+            if (target == "repertoire" && import.ResultId is int newRepId)
+            {
+                var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == newRepId, ct);
+                if (rep is not null && string.IsNullOrEmpty(rep.ChessableCourseId))
+                {
+                    rep.ChessableCourseId = bid;
+                    await _db.SaveChangesAsync(ct);
+                }
+            }
+
+            import.Status = "completed";
+            import.Phase = "done";
+            import.CompletedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+
+            using (LogContext.PushProperty("LogTags", "import,chessable,browser"))
+                _logger.LogInformation(
+                    "Browser-Import {Id} fertig: {Target} '{Name}' (bid {Bid}), imported={Imported}",
+                    import.Id, import.Target, name, import.Bid, import.Imported);
+
+            await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
+                new Dictionary<string, string>
+                {
+                    ["courseName"] = name,
+                    ["target"] = import.Target,
+                    ["queueTime"] = "0s",
+                    ["fetchTime"] = "0s",
+                },
+                import.Target == "book" ? "/courses" : "/repertoires");
+        }
+        catch (Exception ex)
+        {
+            using (LogContext.PushProperty("LogTags", "import,chessable,browser"))
+                _logger.LogWarning(ex, "Browser-Import {Id} fehlgeschlagen (bid {Bid})", import.Id, import.Bid);
+            await FailAsync(import, ex.Message);
+            throw;
+        }
+        return import;
+    }
+
     private async Task ImportAsRepertoireAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
         // In-place-Re-Import (Reprocess-Re-Fetch): das frische PGN ersetzt ein BESTEHENDES Repertoire,

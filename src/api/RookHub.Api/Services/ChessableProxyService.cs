@@ -64,6 +64,27 @@ public class ChessableProxyService
         return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
     }
 
+    /// <summary>
+    /// Fetch-freier Parse: schickt bereits (vom Browser über die RepCheck-Extension) erfasstes rohes
+    /// Chessable-JSON — je Kapitel die getList-Antwort + geordnete getGame-Antworten — an piratechess und
+    /// bekommt dasselbe PGN wie der Live-Abruf zurück, OHNE dass piratechess Chessable kontaktiert (kein
+    /// Bearer/VPN). Für den Browser-Import („Über meinen Browser holen"). <paramref name="mode"/> wie bei
+    /// <see cref="FetchCourseAsync"/> ("None"=Repertoire, "FirstKeyMove"=Buch).
+    /// </summary>
+    public async Task<ChessableCourseDataDto> ParseCourseAsync(
+        string bid, string mode, IEnumerable<ChessableIngestChapter> chapters, CancellationToken ct = default)
+    {
+        var payload = new
+        {
+            Bid = bid,
+            Mode = mode,
+            Chapters = chapters.Select(c => new { c.ChapterJson, c.Lines }).ToList()
+        };
+        var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/course/parse", payload, ct);
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
+    }
+
     /// <summary>Startet den tiefen Kurs-Abruf asynchron und liefert die JobId für das Polling.</summary>
     public async Task<ChessableCourseStartDto> StartCourseFetchAsync(string bearer, string bid, string mode, CancellationToken ct = default)
     {

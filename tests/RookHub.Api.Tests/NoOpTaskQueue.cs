@@ -15,6 +15,17 @@ public class NoOpTaskQueue : IWebhookTaskQueue
         => throw new NotImplementedException("NoOpTaskQueue does not support dequeue");
 }
 
+/// <summary>No-op <see cref="IBackgroundTaskQueue"/> für Tests, die einen Dienst nur konstruieren
+/// müssen (enqueuete Work-Items werden verworfen).</summary>
+public class NoOpBackgroundTaskQueue : IBackgroundTaskQueue
+{
+    public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+        => ValueTask.CompletedTask;
+
+    public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
+        => throw new NotImplementedException("NoOpBackgroundTaskQueue does not support dequeue");
+}
+
 /// <summary>
 /// Zählt enqueuete Work-Items (führt sie nicht aus) — für Tests, die prüfen, OB ein
 /// Hintergrund-Job angestoßen wurde (z.B. Auto-Subscription nur bei Identitätsänderung).

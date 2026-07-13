@@ -20,10 +20,13 @@ public class ExtensionController : BaseApiController
     private readonly RememberedPositionService _rememberedPositionService;
     private readonly SavedGameService _savedGameService;
     private readonly SharedLineService _sharedLineService;
+    private readonly ChessableProxyService _chessableProxy;
+    private readonly ChessableImportService _chessableImport;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
         TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
-        SavedGameService savedGameService, SharedLineService sharedLineService)
+        SavedGameService savedGameService, SharedLineService sharedLineService,
+        ChessableProxyService chessableProxy, ChessableImportService chessableImport)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
@@ -31,6 +34,8 @@ public class ExtensionController : BaseApiController
         _rememberedPositionService = rememberedPositionService;
         _savedGameService = savedGameService;
         _sharedLineService = sharedLineService;
+        _chessableProxy = chessableProxy;
+        _chessableImport = chessableImport;
     }
 
     /// <summary>
@@ -174,5 +179,54 @@ public class ExtensionController : BaseApiController
         if (dto == null) return BadRequest(new { message = "Body required." });
         var res = await _sharedLineService.CreateStandaloneAsync(GetUserId(), dto.Moves, dto.Title, ct);
         return res == null ? BadRequest(new { message = "No moves." }) : Ok(res);
+    }
+
+    /// <summary>
+    /// Browser-Import „Über meinen Browser holen": die RepCheck-Extension hat die rohen Chessable-
+    /// Antworten als eigene eingeloggte Session geholt (V2 aktiv) bzw. beim Training mitgeschnitten (V1
+    /// passiv) und schickt sie hier je Kapitel. RookHub lässt sie vom fetch-freien piratechess-Parser in
+    /// PGN wandeln und importiert das Ergebnis als Repertoire bzw. Buch/Kurs — ganz ohne serverseitigen
+    /// Chessable-Abruf/VPN (der Browser passiert Cloudflare als echte Session). <c>Target</c> "repertoire"
+    /// (Default) oder "book". Bei erneutem Senden desselben Kurses idempotent.
+    /// </summary>
+    [HttpPost("chessable/ingest")]
+    [RequestSizeLimit(64_000_000)]
+    public async Task<ActionResult<ChessableIngestResultDto>> ChessableIngest([FromBody] ChessableIngestRequest dto, CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Bid))
+            return BadRequest(new { message = "bid required." });
+        if (dto.Bid.Length > 12 || !dto.Bid.All(char.IsAsciiDigit))
+            return BadRequest(new { message = "Invalid bid." });
+
+        var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
+        if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
+            return BadRequest(new { message = "No captured lines." });
+
+        var target = dto.Target == "book" ? "book" : "repertoire";
+        var mode = target == "book" ? "FirstKeyMove" : "None";
+
+        ChessableCourseDataDto parsed;
+        try
+        {
+            parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, mode, chapters, ct);
+        }
+        catch (ChessableProxyException ex)
+        {
+            // 400 = ungültige/kaputte Roh-Daten (Client-Fehler) durchreichen; sonst upstream (502).
+            var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
+            return StatusCode(code, new { message = ex.Message });
+        }
+
+        if (string.IsNullOrWhiteSpace(parsed.Pgn))
+            return BadRequest(new { message = "Parser produced no importable lines." });
+
+        var courseName = !string.IsNullOrWhiteSpace(dto.CourseName) ? dto.CourseName! : parsed.Name;
+        var import = await _chessableImport.ImportPgnDirectAsync(
+            GetUserId(), dto.Bid, parsed.Pgn, courseName, target, parsed.LineCount, ct);
+
+        return Ok(new ChessableIngestResultDto(
+            import.Id, import.Target, import.ResultId, import.CourseName,
+            import.Imported, import.Skipped, import.Invalid, parsed.LineCount));
     }
 }
