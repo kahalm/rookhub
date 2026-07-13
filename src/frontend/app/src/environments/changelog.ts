@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.293.3';
+export const APP_VERSION = '0.294.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.294.0", date: "2026-07-13", changes: [
+    { en: "Login/Register now carry over the entered username and password when switching between the two pages (and back): typing a username or password on the login page and then clicking through to registration keeps the fields filled — likewise the email survives a round trip. Implemented via a small in-memory AuthPrefillService (shared state), deliberately NOT via query params so the password never ends up in the URL/browser history; the state is cleared on a successful login/register and on reload.", de: "Login/Registrierung übernehmen jetzt den eingegebenen Benutzernamen und das Passwort beim Wechsel zwischen den beiden Seiten (und wieder zurück): tippt man auf der Login-Seite Benutzername/Passwort und wechselt dann zur Registrierung, bleiben die Felder befüllt — ebenso überlebt die E-Mail einen Hin-und-zurück-Wechsel. Umgesetzt über einen kleinen In-Memory-AuthPrefillService (geteilter State), bewusst NICHT über Query-Params, damit das Passwort nie in der URL/Browser-History landet; der State wird bei erfolgreichem Login/Register und beim Reload verworfen." },
+  ] },
   { version: "0.293.3", date: "2026-07-13", changes: [
     { en: "Changelog→Discord hardening for backfills: the post function now handles Discord rate-limiting (HTTP 429) by waiting the Retry-After interval and retrying (up to 6 attempts), instead of crashing on the first 429. Discord caps webhooks at ~30 messages/minute, so a large since_version backfill (e.g. ~185 entries) previously would have died partway and left a NEW partial gap. Other HTTP errors (e.g. 404 = dead webhook) still fail loud by design. CI-only (script), no app/DB change.", de: "Changelog→Discord-Härtung für Backfills: die Post-Funktion behandelt Discords Rate-Limit (HTTP 429) jetzt, indem sie das Retry-After-Intervall abwartet und erneut sendet (bis zu 6 Versuche), statt beim ersten 429 abzustürzen. Discord deckelt Webhooks bei ~30 Nachrichten/Minute — ein großer since_version-Backfill (z. B. ~185 Einträge) wäre vorher mittendrin gestorben und hätte eine NEUE Teil-Lücke hinterlassen. Andere HTTP-Fehler (z. B. 404 = toter Webhook) schlagen bewusst weiter laut fehl. Nur CI (Script), keine App-/DB-Änderung." },
   ] },

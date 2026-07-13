@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
+import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
@@ -65,15 +66,19 @@ import { SnackbarService } from '../../core/snackbar.service';
   `]
 })
 export class LoginComponent {
-  username = '';
-  password = '';
+  // username/password über den Prefill-Service, damit die Eingaben beim
+  // Wechsel zur Registrierung (und zurück) erhalten bleiben.
+  get username(): string { return this.prefill.username; }
+  set username(v: string) { this.prefill.username = v; }
+  get password(): string { return this.prefill.password; }
+  set password(v: string) { this.prefill.password = v; }
   rememberMe = false;
   loading = false;
 
   returnUrl: string;
   authRequired = false;
 
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
+  constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = this.sanitizeReturnUrl(raw);
     this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';
@@ -88,6 +93,7 @@ export class LoginComponent {
     this.loading = true;
     this.auth.login(this.username, this.password, this.rememberMe).subscribe({
       next: () => {
+        this.prefill.clear();
         this.router.navigateByUrl(this.returnUrl);
       },
       error: (err) => {

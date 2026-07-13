@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
+import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
@@ -56,14 +57,19 @@ import { SnackbarService } from '../../core/snackbar.service';
   `]
 })
 export class RegisterComponent {
-  username = '';
-  email = '';
-  password = '';
+  // username/email/password über den Prefill-Service, damit die Eingaben beim
+  // Wechsel zum Login (und zurück) erhalten bleiben.
+  get username(): string { return this.prefill.username; }
+  set username(v: string) { this.prefill.username = v; }
+  get email(): string { return this.prefill.email; }
+  set email(v: string) { this.prefill.email = v; }
+  get password(): string { return this.prefill.password; }
+  set password(v: string) { this.prefill.password = v; }
   loading = false;
 
   returnUrl: string;
 
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
+  constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = this.sanitizeReturnUrl(raw);
   }
@@ -79,6 +85,7 @@ export class RegisterComponent {
     const email = this.email.trim() || null;
     this.auth.register(this.username, email, this.password).subscribe({
       next: () => {
+        this.prefill.clear();
         // navigateByUrl (nicht navigate([...])): returnUrl ist ein kompletter Pfad und kann mehrere
         // Segmente haben (z.B. /tournaments/123) — navigate([...]) würde den Slash url-encoden → 404.
         const sep = this.returnUrl.includes('?') ? '&' : '?';

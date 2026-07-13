@@ -1,13 +1,14 @@
 import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
+import { AuthPrefillService } from '../../core/auth-prefill.service';
 
-function make(queryParams: Record<string, string> = {}) {
+function make(queryParams: Record<string, string> = {}, prefill = new AuthPrefillService()) {
   const auth: any = { login: jasmine.createSpy('login').and.returnValue(of({})) };
   const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
   const route: any = { snapshot: { queryParams } };
   const snackbar: any = { warn: jasmine.createSpy('warn') };
   const translate: any = { instant: (k: string) => k };
-  return { c: new LoginComponent(auth, router, route, snackbar, translate), auth, router, snackbar };
+  return { c: new LoginComponent(auth, prefill, router, route, snackbar, translate), auth, router, snackbar, prefill };
 }
 
 describe('LoginComponent', () => {
@@ -36,6 +37,29 @@ describe('LoginComponent', () => {
     c.onSubmit();
     expect(auth.login).toHaveBeenCalledWith('u', 'p', true);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/stats');
+  });
+
+  it('seeds fields from the shared prefill (carried over from register)', () => {
+    const prefill = new AuthPrefillService();
+    prefill.username = 'carried'; prefill.password = 'pw';
+    const { c } = make({}, prefill);
+    expect(c.username).toBe('carried');
+    expect(c.password).toBe('pw');
+  });
+
+  it('writes typed values back into the shared prefill', () => {
+    const { c, prefill } = make();
+    c.username = 'typed'; c.password = 'secret';
+    expect(prefill.username).toBe('typed');
+    expect(prefill.password).toBe('secret');
+  });
+
+  it('clears the prefill on successful login', () => {
+    const { c, prefill } = make({ returnUrl: '/stats' });
+    c.username = 'u'; c.password = 'p';
+    c.onSubmit();
+    expect(prefill.username).toBe('');
+    expect(prefill.password).toBe('');
   });
 
   it('warns on login error and clears loading', () => {
