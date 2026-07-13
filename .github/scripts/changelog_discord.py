@@ -12,7 +12,9 @@ Crawler-/piratechess-/log-watcher-/RepCheck-Änderungen stehen ebenfalls hier.
 Bewusst nur Stdlib. Fehlt das Secret ``DISCORD_CHANGELOG_WEBHOOK``, beendet
 sich das Script mit Exit 0 (Workflow bleibt grün, bis das Secret gesetzt ist).
 
-ENV: WEBHOOK, BEFORE, AFTER, REPO_LABEL (Default "RookHub").
+ENV: WEBHOOK, BEFORE, AFTER, REPO_LABEL (Default "RookHub"), SINCE_VERSION
+(optional; per workflow_dispatch — postet alle Einträge von dieser Version bis
+zum neuesten, chronologisch — zum Nachreichen nach einem Ausfall).
 """
 
 import json
@@ -91,8 +93,19 @@ def main() -> int:
         print('Keine Changelog-Einträge gefunden.')
         return 0
 
+    # Backfill (workflow_dispatch mit since_version): alle Eintraege von dieser
+    # Version bis zum neuesten nachreichen — z. B. nach einem defekten Webhook.
+    since = os.environ.get('SINCE_VERSION', '').strip()
     versions: list[str] = []
-    if before and not set(before) <= {'0'}:
+    if since:
+        if since not in entries:
+            print(f'since_version {since!r} nicht in changelog.ts gefunden — nichts zu posten.')
+            return 0
+        all_versions = list(entries)  # neueste zuerst (Dateireihenfolge)
+        idx = all_versions.index(since)
+        versions = list(reversed(all_versions[:idx + 1]))  # since..neueste, chronologisch
+        print(f'Backfill: poste {len(versions)} Eintraege von v{since} bis v{all_versions[0]}.')
+    elif before and not set(before) <= {'0'}:
         try:
             diff = subprocess.run(
                 ['git', 'diff', f'{before}..{after}', '--', CHANGELOG],

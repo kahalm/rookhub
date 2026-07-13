@@ -12,6 +12,11 @@ on:
     paths:
       - src/frontend/app/src/environments/changelog.ts
   workflow_dispatch:
+    inputs:
+      since_version:
+        description: 'Backfill: alle Einträge ab dieser Version bis zum neuesten posten (leer = nur neuester)'
+        required: false
+        default: ''
 
 jobs:
   announce:
@@ -26,4 +31,5 @@ jobs:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
           REPO_LABEL: RookHub
+          SINCE_VERSION: ${{ github.event.inputs.since_version }}
         run: python3 .github/scripts/changelog_discord.py
