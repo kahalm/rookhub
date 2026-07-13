@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.293.2';
+export const APP_VERSION = '0.293.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.293.3", date: "2026-07-13", changes: [
+    { en: "Changelog→Discord hardening for backfills: the post function now handles Discord rate-limiting (HTTP 429) by waiting the Retry-After interval and retrying (up to 6 attempts), instead of crashing on the first 429. Discord caps webhooks at ~30 messages/minute, so a large since_version backfill (e.g. ~185 entries) previously would have died partway and left a NEW partial gap. Other HTTP errors (e.g. 404 = dead webhook) still fail loud by design. CI-only (script), no app/DB change.", de: "Changelog→Discord-Härtung für Backfills: die Post-Funktion behandelt Discords Rate-Limit (HTTP 429) jetzt, indem sie das Retry-After-Intervall abwartet und erneut sendet (bis zu 6 Versuche), statt beim ersten 429 abzustürzen. Discord deckelt Webhooks bei ~30 Nachrichten/Minute — ein großer since_version-Backfill (z. B. ~185 Einträge) wäre vorher mittendrin gestorben und hätte eine NEUE Teil-Lücke hinterlassen. Andere HTTP-Fehler (z. B. 404 = toter Webhook) schlagen bewusst weiter laut fehl. Nur CI (Script), keine App-/DB-Änderung." },
+  ] },
   { version: "0.293.2", date: "2026-07-13", changes: [
     { en: "Changelog→Discord workflow: added a `since_version` input to workflow_dispatch so a gap of un-posted entries can be backfilled in one run — it posts every entry from that version up to the newest, chronologically (oldest first). Background: the Discord webhook (GitHub secret DISCORD_CHANGELOG_WEBHOOK) began returning HTTP 404 (Discord = Unknown Webhook, i.e. the URL was deleted/regenerated) right after v0.292.18, so v0.292.19…0.293.1 were never announced even though the diff-detection worked; the script/workflow themselves were healthy. Once the webhook secret is restored, running the workflow manually with since_version=0.292.19 catches the whole gap up. A dead webhook intentionally still fails the run loud (red) so it is not missed. CI-only (workflow + script), no app/DB change.", de: "Changelog→Discord-Workflow: neuer `since_version`-Input für workflow_dispatch, damit eine Lücke nicht geposteter Einträge in einem Lauf nachgereicht werden kann — postet jeden Eintrag von dieser Version bis zum neuesten, chronologisch (ältester zuerst). Hintergrund: der Discord-Webhook (GitHub-Secret DISCORD_CHANGELOG_WEBHOOK) lieferte direkt nach v0.292.18 HTTP 404 (bei Discord = Unknown Webhook, also URL gelöscht/neu generiert), weshalb v0.292.19…0.293.1 nie announced wurden, obwohl die Diff-Erkennung funktionierte; Script/Workflow selbst sind gesund. Sobald das Webhook-Secret wieder gesetzt ist, holt ein manueller Lauf mit since_version=0.292.19 die ganze Lücke nach. Ein toter Webhook lässt den Lauf bewusst weiterhin laut (rot) fehlschlagen, damit es nicht unbemerkt bleibt. Nur CI (Workflow + Script), keine App-/DB-Änderung." },
   ] },

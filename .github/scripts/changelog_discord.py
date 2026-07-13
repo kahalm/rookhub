@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 CHANGELOG = 'src/frontend/app/src/environments/changelog.ts'
@@ -65,16 +66,39 @@ def build_message(label: str, version: str, date: str, en_texts: list[str]) -> s
     return msg
 
 
-def _post(webhook: str, content: str) -> None:
-    payload = {'content': content, 'flags': _SILENT_FLAG}
-    req = urllib.request.Request(
-        webhook, data=json.dumps(payload).encode('utf-8'),
-        # Expliziter User-Agent: Discords Cloudflare blockt Pythons
-        # urllib-Default-UA mit 403 (error code 1010).
-        headers={'Content-Type': 'application/json',
-                 'User-Agent': 'rookhub-changelog-webhook/1.0'}, method='POST')
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        resp.read()
+def _post(webhook: str, content: str, tries: int = 6) -> None:
+    """POST an den Discord-Webhook. Rate-Limit (HTTP 429) wird per Retry-After
+    abgewartet und wiederholt — wichtig fuer grosse Backfills (Discord erlaubt
+    nur ~30 Webhook-Nachrichten/min). Andere HTTP-Fehler (z. B. 404 = toter
+    Webhook) schlagen bewusst laut fehl."""
+    data = json.dumps({'content': content, 'flags': _SILENT_FLAG}).encode('utf-8')
+    headers = {'Content-Type': 'application/json',
+               # Expliziter User-Agent: Discords Cloudflare blockt Pythons
+               # urllib-Default-UA mit 403 (error code 1010).
+               'User-Agent': 'rookhub-changelog-webhook/1.0'}
+    for attempt in range(tries):
+        req = urllib.request.Request(webhook, data=data, headers=headers, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp.read()
+            return
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == tries - 1:
+                raise
+            wait = 2.0
+            try:  # Discord liefert retry_after (Sekunden) meist im JSON-Body
+                body = json.loads(e.read().decode('utf-8') or '{}')
+                wait = float(body.get('retry_after', 0)) or wait
+            except Exception:
+                pass
+            ra = e.headers.get('Retry-After')
+            if ra:
+                try:
+                    wait = max(wait, float(ra))
+                except ValueError:
+                    pass
+            print(f'429 rate-limited — warte {wait:.1f}s (Versuch {attempt + 1}/{tries})')
+            time.sleep(min(wait + 0.5, 30))
 
 
 def main() -> int:
