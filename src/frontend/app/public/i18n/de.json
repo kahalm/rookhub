@@ -2264,6 +2264,10 @@
   },
   "chessable": {
     "title": "Chessable verbinden",
+    "rateNotice": {
+      "title": "Importe laufen bewusst langsam",
+      "body": "Aufgrund von Blocks seitens Chessable wurde die Abrufrate stark gedrosselt — auf aktuell rund 4 Anfragen pro Minute. Ein Kurs mit 1000 Linien braucht damit gut 4 Stunden zum Importieren. Bitte hab Geduld — so werden die Konten nicht gesperrt."
+    },
     "intro": "Hinterlege deinen Chessable-Bearer einmal — RookHub fragt darüber deine Kurse über die piratechess-API ab. Der Token wird verschlüsselt gespeichert und nicht im Klartext angezeigt.",
     "bearerLabel": "Bearer-Token",
     "bearerHint": "Bearer findest du im Browser: Chessable → Entwicklertools → Netzwerk → Header „authorization: Bearer …\"",

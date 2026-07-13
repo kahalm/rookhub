@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.294.0';
+export const APP_VERSION = '0.295.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.295.0", date: "2026-07-13", changes: [
+    { en: "Chessable import throttled hard against blocks + prominent notice. Measured against Chessable's per-IP limit (single exit IP tolerates ~10 requests in a fast burst before a soft-block; at ~1 request/15s a single IP runs block-free). New model in piratechess: NO rotate-per-request/-per-block anymore — the exit IP is pinned to the Chessable token (uid) and only rotates when the token changes (e.g. a second user imports); blocks are avoided via a slow cadence instead (Chessable:InterRequestDelay 13–17s random ≈ 4 requests/minute, Vpn:RotateOnBlock=false, Vpn:RotateAfterRequests very high). A prominent banner at the top of the Chessable tab explains that imports are intentionally slow (~4 req/min → a 1000-line course takes a good 4 hours). Config-driven (defaults keep the old behavior); needs the new piratechess image + prod config to take effect.", de: "Chessable-Import stark gegen Blocks gedrosselt + deutlicher Hinweis. Gegen Chessables Per-IP-Limit gemessen (eine Exit-IP verträgt im schnellen Burst ~10 Requests bis zum Soft-Block; bei ~1 Request/15s läuft eine IP blockfrei). Neues Modell in piratechess: KEINE Rotation je Request/Block mehr — die Exit-IP ist an das Chessable-Token (uid) gekoppelt und rotiert nur bei Token-Wechsel (z. B. ein zweiter User importiert); Blocks werden stattdessen über den langsamen Takt vermieden (Chessable:InterRequestDelay 13–17s zufällig ≈ 4 Anfragen/Minute, Vpn:RotateOnBlock=false, Vpn:RotateAfterRequests sehr hoch). Ein deutlicher Banner oben im Chessable-Tab erklärt, dass Importe bewusst langsam laufen (~4 Anf./Min → ein Kurs mit 1000 Linien braucht gut 4 Stunden). Konfig-gesteuert (Defaults behalten das alte Verhalten); wirkt erst mit dem neuen piratechess-Image + Prod-Config." },
+  ] },
   { version: "0.294.0", date: "2026-07-13", changes: [
     { en: "Login/Register now carry over the entered username and password when switching between the two pages (and back): typing a username or password on the login page and then clicking through to registration keeps the fields filled — likewise the email survives a round trip. Implemented via a small in-memory AuthPrefillService (shared state), deliberately NOT via query params so the password never ends up in the URL/browser history; the state is cleared on a successful login/register and on reload.", de: "Login/Registrierung übernehmen jetzt den eingegebenen Benutzernamen und das Passwort beim Wechsel zwischen den beiden Seiten (und wieder zurück): tippt man auf der Login-Seite Benutzername/Passwort und wechselt dann zur Registrierung, bleiben die Felder befüllt — ebenso überlebt die E-Mail einen Hin-und-zurück-Wechsel. Umgesetzt über einen kleinen In-Memory-AuthPrefillService (geteilter State), bewusst NICHT über Query-Params, damit das Passwort nie in der URL/Browser-History landet; der State wird bei erfolgreichem Login/Register und beim Reload verworfen." },
   ] },

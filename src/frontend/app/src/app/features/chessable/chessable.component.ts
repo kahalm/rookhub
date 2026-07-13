@@ -62,6 +62,15 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
   template: `
     <div class="container">
       <h1>{{ 'chessable.title' | translate }}</h1>
+
+      <div class="rate-notice" role="note">
+        <mat-icon>hourglass_top</mat-icon>
+        <div class="rate-notice-text">
+          <strong>{{ 'chessable.rateNotice.title' | translate }}</strong>
+          <p>{{ 'chessable.rateNotice.body' | translate }}</p>
+        </div>
+      </div>
+
       <p class="intro">{{ 'chessable.intro' | translate }}</p>
 
       @if (disclaimerAccepted === null) {
@@ -295,6 +304,16 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
   styles: [`
     .container { max-width: 760px; margin: 0 auto; padding: 1rem; }
     h1 { margin-bottom: 0.25rem; }
+    .rate-notice {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      background: rgba(245, 124, 0, 0.14); border: 1px solid rgba(245, 124, 0, 0.55);
+      border-left: 5px solid #f57c00; border-radius: 6px;
+      padding: 0.85rem 1rem; margin: 0.75rem 0 1.25rem;
+    }
+    .rate-notice > mat-icon { color: #f57c00; flex: 0 0 auto; margin-top: 2px; }
+    .rate-notice-text { flex: 1 1 auto; }
+    .rate-notice-text strong { display: block; font-size: 1.02rem; margin-bottom: 0.2rem; }
+    .rate-notice-text p { margin: 0; font-size: 0.92rem; line-height: 1.4; }
     .intro { color: var(--mat-sys-on-surface-variant, #666); margin-bottom: 1.25rem; }
     .disclaimer-card { border-left: 4px solid #c62828; }
     .disclaimer-title { display: flex; align-items: center; gap: 0.5rem; color: #c62828; margin-top: 0; }
