@@ -104,6 +104,59 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(1, await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == repId));
     }
 
+    private static string RepLine(string white, string moves) =>
+        $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n\n{moves}\n";
+
+    [Fact]
+    public async Task AppendLive_Repertoire_CreatesThenAppends_AndDedups()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        // Erste Linie → Repertoire wird angelegt.
+        var (imp1, rep1, t1) = await _svc.AppendLiveAsync(7, "424242", RepLine("Line A", "1. e4 e5 *"), "My Course", "repertoire");
+        Assert.Equal("repertoire", t1);
+        Assert.Equal(1, imp1);
+        Assert.NotNull(rep1);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        Assert.Equal("424242", (await _db.Repertoires.FindAsync(rep1!.Value))!.ChessableCourseId);
+
+        // Zweite (neue) Linie → wird angehängt, dasselbe Repertoire.
+        var (imp2, rep2, _) = await _svc.AppendLiveAsync(7, "424242", RepLine("Line B", "1. d4 d5 *"), "My Course", "repertoire");
+        Assert.Equal(1, imp2);
+        Assert.Equal(rep1, rep2);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+
+        var content = (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == rep1!.Value)).PgnContent;
+        Assert.Contains("1. e4 e5", content);
+        Assert.Contains("1. d4 d5", content);
+
+        // Dieselbe erste Linie erneut → KEINE Dublette.
+        var (imp3, _, _) = await _svc.AppendLiveAsync(7, "424242", RepLine("Line A", "1. e4 e5 *"), "My Course", "repertoire");
+        Assert.Equal(0, imp3);
+        var content2 = (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == rep1!.Value)).PgnContent;
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content2, @"\[Event ").Count);
+    }
+
+    [Fact]
+    public async Task AppendLive_Book_AppendsAndDedupsByLineId()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var (imp1, bookId, t) = await _svc.AppendLiveAsync(7, "424242", PuzzlePgn, "Tactics", "book");
+        Assert.Equal("book", t);
+        Assert.NotNull(bookId);
+        var count = await _db.BookPuzzles.CountAsync(p => p.BookId == bookId!.Value);
+        Assert.True(count >= 1);
+        Assert.Equal("chessable", (await _db.Books.FindAsync(bookId!.Value))!.Tags);
+
+        // Dieselbe Linie erneut → dedup per LineId, kein zweites Puzzle.
+        await _svc.AppendLiveAsync(7, "424242", PuzzlePgn, "Tactics", "book");
+        Assert.Equal(count, await _db.BookPuzzles.CountAsync(p => p.BookId == bookId!.Value));
+        Assert.Equal(1, await _db.Books.CountAsync(b => b.OwnerUserId == 7));
+    }
+
     [Fact]
     public async Task ImportPgnDirect_Book_ImportsPuzzles_Idempotent()
     {

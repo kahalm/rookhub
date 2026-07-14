@@ -670,6 +670,113 @@ public class ChessableImportService : ICourseReimporter
         return import;
     }
 
+    /// <summary>
+    /// LIVE-Append (V1 „beim Durchklicken"): hängt die frisch erfassten Linien SOFORT an das Ziel an,
+    /// ohne je Aufruf einen <see cref="ChessableImport"/>-Satz oder eine Benachrichtigung zu erzeugen
+    /// (sonst Flut bei per-Linie-Aufrufen). Buch: <see cref="PgnImportService.ImportFileAsync"/> (dedup per
+    /// LineId). Repertoire: bestehendes chessable-{bid}-Repertoire finden (bzw. bei der ERSTEN Linie
+    /// anlegen) und die neuen Linien an die PGN-Datei anhängen — dedupliziert per Zugtext, sodass erneutes
+    /// Durchklicken derselben Linie (auch sitzungsübergreifend) keine Dubletten erzeugt. Liefert die Zahl der
+    /// tatsächlich NEU hinzugefügten Linien + die Ziel-Id.
+    /// </summary>
+    public async Task<(int imported, int? resultId, string target)> AppendLiveAsync(
+        int userId, string bid, string pgn, string courseName, string target, CancellationToken ct = default)
+    {
+        target = target == "book" ? "book" : "repertoire";
+        var name = Trunc(string.IsNullOrWhiteSpace(courseName) ? $"Chessable {bid}" : courseName, 200);
+
+        if (target == "book")
+        {
+            var fileName = $"chessable-u{userId}-{bid}.pgn";
+            var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct);
+            var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
+            if (book is not null)
+            {
+                book.OwnerUserId = userId;
+                if (string.IsNullOrWhiteSpace(book.DisplayName)) book.DisplayName = name;
+                book.Tags = "chessable";
+                book.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+            }
+            return (res.Imported, res.BookId, target);
+        }
+
+        var repFile = $"chessable-{bid}.pgn";
+        var rep = await _db.Repertoires.Include(r => r.Files)
+            .FirstOrDefaultAsync(r => r.UserId == userId && (r.ChessableCourseId == bid || r.Files.Any(f => f.FileName == repFile)), ct);
+
+        if (rep is null)
+        {
+            // Erste Linie → Repertoire anlegen, damit es sofort sichtbar ist und live mitwächst.
+            var created = await _repertoires.CreateAsync(userId, new CreateRepertoireDto
+            {
+                Name = name,
+                Description = $"Aus Chessable (bid {bid}) — live beim Durchklicken erfasst",
+                Kind = RepertoireKind.Opening,
+                IsPublic = false,
+                UseForExtension = false,
+            });
+            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
+            await _repertoires.UploadFileAsync(created.Id, userId, repFile, ms);
+            var r2 = await _db.Repertoires.FirstAsync(r => r.Id == created.Id, ct);
+            if (string.IsNullOrEmpty(r2.ChessableCourseId)) { r2.ChessableCourseId = bid; await _db.SaveChangesAsync(ct); }
+            return (CountPgnGames(pgn), created.Id, target);
+        }
+
+        var file = rep.Files.FirstOrDefault(f => f.FileName == repFile) ?? rep.Files.FirstOrDefault();
+        if (file is null)
+        {
+            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
+            await _repertoires.UploadFileAsync(rep.Id, userId, repFile, ms);
+            return (CountPgnGames(pgn), rep.Id, target);
+        }
+
+        // Nur die noch nicht vorhandenen Linien anhängen (Dedup per Zugtext gegen den Bestand + innerhalb
+        // dieses Batches) → erneutes Durchklicken derselben Linie erzeugt keine Dublette.
+        var existing = file.PgnContent ?? string.Empty;
+        var sb = new StringBuilder(existing.TrimEnd());
+        var added = 0;
+        foreach (var game in SplitPgnGames(pgn))
+        {
+            var moves = MovetextOf(game);
+            if (moves.Length == 0) continue;
+            if (existing.Contains(moves, StringComparison.Ordinal)) continue;
+            sb.Append("\n\n\n").Append(game.Trim());
+            existing += "\n" + moves;   // Batch-internes Dedup
+            added++;
+        }
+        if (added > 0)
+        {
+            file.PgnContent = sb.ToString() + "\n";
+            file.FileSize = file.PgnContent.Length;
+            rep.UpdatedAt = DateTime.UtcNow;
+            rep.ImportVersion = ImportPipeline.CurrentVersion;
+            await _db.SaveChangesAsync(ct);
+        }
+        return (added, rep.Id, target);
+    }
+
+    /// <summary>Zerlegt ein Mehr-Partien-PGN in einzelne [Event]-Blöcke.</summary>
+    private static IEnumerable<string> SplitPgnGames(string pgn)
+    {
+        if (string.IsNullOrWhiteSpace(pgn)) yield break;
+        var idx = pgn.IndexOf("[Event ", StringComparison.Ordinal);
+        if (idx < 0) yield break;
+        foreach (var part in System.Text.RegularExpressions.Regex.Split(pgn[idx..], @"(?=\[Event )"))
+            if (!string.IsNullOrWhiteSpace(part)) yield return part.Trim();
+    }
+
+    /// <summary>Zugtext eines PGN-Blocks (alles nach der Leerzeile hinter den Headern), whitespace-normiert
+    /// — als Dedup-Signatur einer Linie (Züge sind je Kurslinie praktisch eindeutig).</summary>
+    private static string MovetextOf(string block)
+    {
+        var i = block.IndexOf("\n\n", StringComparison.Ordinal);
+        var mt = i < 0 ? block : block[(i + 2)..];
+        return System.Text.RegularExpressions.Regex.Replace(mt, @"\s+", " ").Trim();
+    }
+
+    private static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();
+
     private async Task ImportAsRepertoireAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
         // In-place-Re-Import (Reprocess-Re-Fetch): das frische PGN ersetzt ein BESTEHENDES Repertoire,

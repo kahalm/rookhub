@@ -280,4 +280,46 @@ public class ExtensionController : BaseApiController
 
         return await ParseAndImportAsync(userId, taken.Bid, taken.Target, taken.CourseName, taken.Chapters, ct);
     }
+
+    /// <summary>
+    /// Live-Append „beim Durchklicken" (V1): die Extension schickt die soeben passiv erfassten Linien SOFORT
+    /// hierher (nicht erst am Ende). Sie werden über den fetch-freien Parser zu PGN gewandelt und DIREKT ans
+    /// bestehende Repertoire angehängt (bzw. legen es bei der ersten Linie an) → das Repertoire wächst live
+    /// mit. Anders als /ingest wird pro Aufruf KEIN Import-Datensatz und KEINE Benachrichtigung erzeugt; der
+    /// Server dedupliziert Linien per Zugtext. <c>Chapters</c> trägt nur die NEUEN Linien.
+    /// </summary>
+    [HttpPost("chessable/ingest/live")]
+    [RequestSizeLimit(16_000_000)]
+    public async Task<IActionResult> ChessableIngestLive([FromBody] ChessableLiveIngestRequest dto, CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid or missing bid." });
+
+        var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
+        if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
+            return BadRequest(new { message = "No lines." });
+
+        var target = dto.Target == "book" ? "book" : "repertoire";
+        var mode = target == "book" ? "FirstKeyMove" : "None";
+
+        ChessableCourseDataDto parsed;
+        try
+        {
+            parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, mode, chapters, ct);
+        }
+        catch (ChessableProxyException ex)
+        {
+            var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
+            return StatusCode(code, new { message = ex.Message });
+        }
+
+        // Reine Info-/Erklärlinien liefern kein PGN → nichts anzuhängen, aber kein Fehler (Client macht weiter).
+        if (string.IsNullOrWhiteSpace(parsed.Pgn))
+            return Ok(new ChessableLiveIngestResultDto(0, null, target, 0));
+
+        var name = !string.IsNullOrWhiteSpace(dto.CourseName) ? dto.CourseName! : parsed.Name;
+        var (imported, resultId, t) = await _chessableImport.AppendLiveAsync(GetUserId(), dto.Bid, parsed.Pgn, name, target, ct);
+        return Ok(new ChessableLiveIngestResultDto(imported, resultId, t, parsed.LineCount));
+    }
 }

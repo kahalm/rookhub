@@ -70,6 +70,15 @@ public record ChessableIngestChunkRequest(
 /// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>
 public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines);
 
+/// <summary>Live-Append (V1 „beim Durchklicken"): die Extension schickt die soeben erfassten Linien SOFORT
+/// (nicht am Ende) — sie werden direkt ans bestehende Repertoire angehängt (bzw. legen es bei der ersten
+/// Linie an), sodass es live mitwächst. <c>Chapters</c> enthält nur die NEUEN Linien (je Kapitel getList +
+/// getGame). Kein Import-Datensatz/keine Benachrichtigung je Aufruf; serverseitig zugtext-dedupliziert.</summary>
+public record ChessableLiveIngestRequest(string Bid, string? Target, string? CourseName, List<ChessableIngestChapter>? Chapters);
+
+/// <summary>Ergebnis eines Live-Append: tatsächlich NEU hinzugefügte Linien + Ziel-Id.</summary>
+public record ChessableLiveIngestResultDto(int Imported, int? ResultId, string Target, int LineCount);
+
 /// <summary>Antwort von piratechess /direct/course/start (async).</summary>
 public record ChessableCourseStartDto(string JobId);
 
