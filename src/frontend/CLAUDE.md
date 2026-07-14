@@ -155,7 +155,7 @@ Default-Browser ist `ChromeHeadlessNoSandbox` (`--no-sandbox --disable-gpu --dis
 
 ## Build-Konfiguration
 
-- Budget: 750kB warning / 1.5MB error (initial bundle)
+- Budget: 1.5MB warning / 2MB error (initial bundle; angehoben, da der Single-Source-Changelog stetig wächst)
 - Output: `dist/app/browser/` (wird in Docker nach nginx kopiert)
 - SCSS als Style-Preprocessor
 - Keine Server-Side Rendering / SSR
