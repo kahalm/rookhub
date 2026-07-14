@@ -87,10 +87,17 @@ namespace RookHub.Api.Services;
 ///   linien-genauen Kurs-Fortschritts-Overlays in der RepCheck-Extension. Alt-Bücher haben die oid erst
 ///   nach einem Chessable-Re-Fetch (der lokale Reprocess aus <c>SourcePgn</c> füllt sie nur, wenn das
 ///   gespeicherte PGN bereits <c>[ChessableOid]</c> enthält).</item>
+/// <item><b>14:</b> Reiner Re-Fetch-Trigger (keine Transformationsänderung): erzwingt das Neu-Holen aller
+///   Chessable-Kurse/-Repertoires, die im Deploy-Fenster auf v13 gehoben wurden, WÄHREND piratechess noch
+///   die oid-lose Vorversion (&lt; v1.0.39) lieferte. Solche Importe stehen auf v13 (= „aktuell"), tragen
+///   aber KEINE <c>[ChessableOid]</c> → das Fortschritts-Overlay zeigt 0. Der Bump macht sie wieder
+///   „veraltet", sodass ein „Aktualisieren" sie über das jetzt oid-liefernde piratechess (≥ v1.0.39,
+///   auch aus dem Cache) neu holt und die oids nachträgt. Voll-gecachte Kurse laufen dabei netzfrei
+///   über die Fast-Lane.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 13;
+    public const int CurrentVersion = 14;
 }
