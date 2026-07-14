@@ -22,11 +22,13 @@ public class ExtensionController : BaseApiController
     private readonly SharedLineService _sharedLineService;
     private readonly ChessableProxyService _chessableProxy;
     private readonly ChessableImportService _chessableImport;
+    private readonly ChessableIngestSessionStore _ingestSessions;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
         TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
         SavedGameService savedGameService, SharedLineService sharedLineService,
-        ChessableProxyService chessableProxy, ChessableImportService chessableImport)
+        ChessableProxyService chessableProxy, ChessableImportService chessableImport,
+        ChessableIngestSessionStore ingestSessions)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
@@ -36,6 +38,34 @@ public class ExtensionController : BaseApiController
         _sharedLineService = sharedLineService;
         _chessableProxy = chessableProxy;
         _chessableImport = chessableImport;
+        _ingestSessions = ingestSessions;
+    }
+
+    private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
+
+    private async Task<IActionResult> ParseAndImportAsync(
+        int userId, string bid, string target, string? courseName, List<ChessableIngestChapter> chapters, CancellationToken ct)
+    {
+        var mode = target == "book" ? "FirstKeyMove" : "None";
+        ChessableCourseDataDto parsed;
+        try
+        {
+            parsed = await _chessableProxy.ParseCourseAsync(bid, mode, chapters, ct);
+        }
+        catch (ChessableProxyException ex)
+        {
+            var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
+            return StatusCode(code, new { message = ex.Message });
+        }
+
+        if (string.IsNullOrWhiteSpace(parsed.Pgn))
+            return BadRequest(new { message = "Parser produced no importable lines." });
+
+        var name = !string.IsNullOrWhiteSpace(courseName) ? courseName! : parsed.Name;
+        var import = await _chessableImport.ImportPgnDirectAsync(userId, bid, parsed.Pgn, name, target, parsed.LineCount, ct);
+        return Ok(new ChessableIngestResultDto(
+            import.Id, import.Target, import.ResultId, import.CourseName,
+            import.Imported, import.Skipped, import.Invalid, parsed.LineCount));
     }
 
     /// <summary>
@@ -191,42 +221,63 @@ public class ExtensionController : BaseApiController
     /// </summary>
     [HttpPost("chessable/ingest")]
     [RequestSizeLimit(64_000_000)]
-    public async Task<ActionResult<ChessableIngestResultDto>> ChessableIngest([FromBody] ChessableIngestRequest dto, CancellationToken ct)
+    public async Task<IActionResult> ChessableIngest([FromBody] ChessableIngestRequest dto, CancellationToken ct)
     {
         if (ScopeGuard() is { } forbid) return forbid;
-        if (dto == null || string.IsNullOrWhiteSpace(dto.Bid))
-            return BadRequest(new { message = "bid required." });
-        if (dto.Bid.Length > 12 || !dto.Bid.All(char.IsAsciiDigit))
-            return BadRequest(new { message = "Invalid bid." });
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid or missing bid." });
 
         var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
         if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
             return BadRequest(new { message = "No captured lines." });
 
         var target = dto.Target == "book" ? "book" : "repertoire";
-        var mode = target == "book" ? "FirstKeyMove" : "None";
+        return await ParseAndImportAsync(GetUserId(), dto.Bid, target, dto.CourseName, chapters, ct);
+    }
 
-        ChessableCourseDataDto parsed;
-        try
+    /// <summary>
+    /// Kapitelweiser Browser-Import: die Extension streamt einen großen Kurs Kapitel für Kapitel (bounded
+    /// pro Request) statt in einem einzigen (potenziell riesigen) Ingest-Body. Der Server sammelt die rohen
+    /// Kapitel je <c>SessionId</c> (<see cref="ChessableIngestSessionStore"/>) und parst/importiert erst
+    /// beim Chunk mit <c>Final=true</c> den GANZEN Kurs — so bleibt die Kapitel-/Round-Reihenfolge über
+    /// Kapitel hinweg korrekt (ein einzelnes Kapitel parsen würde die Round-Nummerierung je Chunk auf 1
+    /// zurücksetzen). <c>Bid</c>/<c>Target</c>/<c>CourseName</c> stammen vom ersten Chunk.
+    /// </summary>
+    [HttpPost("chessable/ingest/chunk")]
+    [RequestSizeLimit(48_000_000)]
+    public async Task<IActionResult> ChessableIngestChunk([FromBody] ChessableIngestChunkRequest dto, CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null || string.IsNullOrWhiteSpace(dto.SessionId) || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "sessionId and valid bid required." });
+
+        var userId = GetUserId();
+        var target = dto.Target == "book" ? "book" : "repertoire";
+
+        // Kapitel anhängen (ein finaler Chunk darf leer sein, wenn das letzte Kapitel schon zuvor kam).
+        ChessableIngestSessionStore.Session? session = null;
+        if (dto.Chapter is { } chapter && (chapter.Lines?.Count ?? 0) > 0)
         {
-            parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, mode, chapters, ct);
+            var (s, error) = _ingestSessions.AddChapter(userId, dto.SessionId, dto.Bid, target, dto.CourseName, chapter);
+            if (error != null)
+            {
+                _ingestSessions.Discard(userId, dto.SessionId);
+                return BadRequest(new { message = error });
+            }
+            session = s;
         }
-        catch (ChessableProxyException ex)
+
+        if (!dto.Final)
         {
-            // 400 = ungültige/kaputte Roh-Daten (Client-Fehler) durchreichen; sonst upstream (502).
-            var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
-            return StatusCode(code, new { message = ex.Message });
+            var lines = session?.Chapters.Sum(c => c.Lines?.Count ?? 0) ?? 0;
+            return Ok(new ChessableIngestChunkAck(false, session?.Chapters.Count ?? 0, lines));
         }
 
-        if (string.IsNullOrWhiteSpace(parsed.Pgn))
-            return BadRequest(new { message = "Parser produced no importable lines." });
+        // Final: gesamte Session entnehmen und als ganzen Kurs parsen + importieren.
+        var taken = _ingestSessions.Take(userId, dto.SessionId);
+        if (taken == null || taken.Chapters.Count == 0)
+            return BadRequest(new { message = "No captured lines in session." });
 
-        var courseName = !string.IsNullOrWhiteSpace(dto.CourseName) ? dto.CourseName! : parsed.Name;
-        var import = await _chessableImport.ImportPgnDirectAsync(
-            GetUserId(), dto.Bid, parsed.Pgn, courseName, target, parsed.LineCount, ct);
-
-        return Ok(new ChessableIngestResultDto(
-            import.Id, import.Target, import.ResultId, import.CourseName,
-            import.Imported, import.Skipped, import.Invalid, parsed.LineCount));
+        return await ParseAndImportAsync(userId, taken.Bid, taken.Target, taken.CourseName, taken.Chapters, ct);
     }
 }

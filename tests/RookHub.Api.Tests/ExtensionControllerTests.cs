@@ -43,7 +43,8 @@ public class ExtensionControllerTests : IDisposable
             new ChessableBearerBreaker(_db, bgQueue, NullLogger<ChessableBearerBreaker>.Instance),
             new ChessableRateLimiter(_db, rateLimiterConfig), NullLogger<ChessableImportService>.Instance);
         _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService,
-            savedGameService, new SharedLineService(_db), chessableProxy, chessableImport);
+            savedGameService, new SharedLineService(_db), chessableProxy, chessableImport,
+            new ChessableIngestSessionStore());
     }
 
     public void Dispose() => _db.Dispose();
@@ -364,5 +365,55 @@ public class ExtensionControllerTests : IDisposable
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Empty(_db.SavedGames.Where(g => g.UserId == user.Id));
+    }
+
+    private static ChessableIngestChapter Chapter(params string[] lines)
+        => new("{\"list\":{\"name\":\"Ch\",\"data\":[]}}", lines.ToList());
+
+    [Fact]
+    public async Task ChessableIngestChunk_NonFinal_AccumulatesAndAcks()
+    {
+        SetUser(7, scope: "extension");
+
+        var r1 = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-1", "424242", "book", "Course", Chapter("{\"game\":{}}", "{\"game\":{}}"), false), default);
+        var ack1 = Assert.IsType<ChessableIngestChunkAck>(Assert.IsType<OkObjectResult>(r1).Value);
+        Assert.False(ack1.Done);
+        Assert.Equal(1, ack1.Chapters);
+        Assert.Equal(2, ack1.Lines);
+
+        var r2 = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-1", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+        var ack2 = Assert.IsType<ChessableIngestChunkAck>(Assert.IsType<OkObjectResult>(r2).Value);
+        Assert.Equal(2, ack2.Chapters);
+        Assert.Equal(3, ack2.Lines);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_InvalidBid_ReturnsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-1", "nope", "book", null, Chapter("{\"game\":{}}"), false), default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_FinalWithoutSession_ReturnsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        // finaler Chunk ohne Kapitel und ohne vorherige Chunks → nichts zu importieren
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("ghost", "424242", "book", null, null, true), default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_WrongScope_Forbidden()
+    {
+        SetUser(7, scope: "other");
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("s", "424242", "book", null, Chapter("{\"game\":{}}"), false), default);
+        Assert.IsType<ForbidResult>(res);
     }
 }

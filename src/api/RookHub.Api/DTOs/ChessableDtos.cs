@@ -59,6 +59,17 @@ public record ChessableIngestChapter(string? ChapterJson, List<string>? Lines);
 public record ChessableIngestResultDto(
     int ImportId, string Target, int? ResultId, string CourseName, int Imported, int Skipped, int Invalid, int LineCount);
 
+/// <summary>Ein Kapitel-Chunk des kapitelweisen Browser-Imports. Die Extension streamt einen großen Kurs
+/// Kapitel für Kapitel (bounded pro Request); der Server sammelt sie je <c>SessionId</c> und importiert
+/// erst beim Chunk mit <c>Final=true</c> den GANZEN Kurs (korrekte Kapitel-/Round-Reihenfolge).
+/// <c>Bid</c>/<c>Target</c>/<c>CourseName</c> werden vom ersten Chunk übernommen. <c>SessionId</c> ist
+/// eine clientseitige GUID; Sessions sind pro (User, SessionId) isoliert.</summary>
+public record ChessableIngestChunkRequest(
+    string SessionId, string Bid, string? Target, string? CourseName, ChessableIngestChapter? Chapter, bool Final);
+
+/// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>
+public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines);
+
 /// <summary>Antwort von piratechess /direct/course/start (async).</summary>
 public record ChessableCourseStartDto(string JobId);
 

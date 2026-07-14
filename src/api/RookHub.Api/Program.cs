@@ -172,6 +172,7 @@ try
     builder.Services.AddScoped<PuzzleService>();
     builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<ChessableImportService>();
+    builder.Services.AddSingleton<ChessableIngestSessionStore>();
     builder.Services.AddScoped<ChessableImportQueueService>();
     builder.Services.AddScoped<ChessableBearerBreaker>();
     builder.Services.AddScoped<ChessableRateLimiter>();
