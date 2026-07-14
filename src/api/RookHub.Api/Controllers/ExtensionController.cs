@@ -236,6 +236,20 @@ public class ExtensionController : BaseApiController
     }
 
     /// <summary>
+    /// Import-Fortschritt eines Chessable-Kurses (für die Overlays auf chessable.com): liefert die
+    /// Chessable-oids, die der User bereits importiert hat (Buch und/oder Repertoire). Die Extension
+    /// matcht sie gegen die Linien-oids der Kursstruktur und zeigt Kurs-/Kapitel-/Linien-Fortschritt.
+    /// </summary>
+    [HttpGet("chessable/progress")]
+    public async Task<IActionResult> ChessableProgress([FromQuery] string bid, CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (!IsValidBid(bid)) return BadRequest(new { message = "Invalid bid." });
+        var (oids, book, repertoire) = await _chessableImport.GetImportedOidsAsync(GetUserId(), bid, ct);
+        return Ok(new ChessableProgressDto(book, repertoire, oids.ToList()));
+    }
+
+    /// <summary>
     /// Kapitelweiser Browser-Import: die Extension streamt einen großen Kurs Kapitel für Kapitel (bounded
     /// pro Request) statt in einem einzigen (potenziell riesigen) Ingest-Body. Der Server sammelt die rohen
     /// Kapitel je <c>SessionId</c> (<see cref="ChessableIngestSessionStore"/>) und parst/importiert erst

@@ -777,6 +777,49 @@ public class ChessableImportService : ICourseReimporter
 
     private static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();
 
+    private static readonly System.Text.RegularExpressions.Regex ChessableOidRegex =
+        new("\\[ChessableOid \"([^\"]+)\"\\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Import-Fortschritt eines Chessable-Kurses für die Overlays: liefert die Menge der Chessable-oids,
+    /// die der User bereits importiert hat — als Buch (<c>BookPuzzle.ChessableOid</c> des Buchs
+    /// <c>chessable-u{userId}-{bid}.pgn</c>) und/oder als Repertoire (aus dem <c>[ChessableOid]</c>-Header
+    /// im gespeicherten Repertoire-PGN, Datei <c>chessable-{bid}.pgn</c> bzw. <c>ChessableCourseId==bid</c>).
+    /// <c>book</c>/<c>repertoire</c> zeigen, ob das jeweilige Ziel überhaupt existiert (auch bei 0 oids,
+    /// z. B. Alt-Import ohne oid).
+    /// </summary>
+    public async Task<(HashSet<string> Oids, bool Book, bool Repertoire)> GetImportedOidsAsync(
+        int userId, string bid, CancellationToken ct = default)
+    {
+        var oids = new HashSet<string>();
+
+        var bookFile = $"chessable-u{userId}-{bid}.pgn";
+        var bookOids = await _db.BookPuzzles
+            .Where(bp => bp.BookFileName == bookFile && bp.ChessableOid != null)
+            .Select(bp => bp.ChessableOid!)
+            .ToListAsync(ct);
+        foreach (var o in bookOids) oids.Add(o);
+        var hasBook = bookOids.Count > 0
+            || await _db.Books.AnyAsync(b => b.FileName == bookFile && b.OwnerUserId == userId, ct);
+
+        var repFile = $"chessable-{bid}.pgn";
+        var repIds = await _db.Repertoires
+            .Where(r => r.UserId == userId && (r.ChessableCourseId == bid || r.Files.Any(f => f.FileName == repFile)))
+            .Select(r => r.Id).ToListAsync(ct);
+        var hasRep = repIds.Count > 0;
+        if (hasRep)
+        {
+            var contents = await _db.RepertoireFiles
+                .Where(f => repIds.Contains(f.RepertoireId))
+                .Select(f => f.PgnContent).ToListAsync(ct);
+            foreach (var content in contents)
+                foreach (System.Text.RegularExpressions.Match m in ChessableOidRegex.Matches(content ?? string.Empty))
+                    oids.Add(m.Groups[1].Value);
+        }
+
+        return (oids, hasBook, hasRep);
+    }
+
     private async Task ImportAsRepertoireAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
         // In-place-Re-Import (Reprocess-Re-Fetch): das frische PGN ersetzt ein BESTEHENDES Repertoire,

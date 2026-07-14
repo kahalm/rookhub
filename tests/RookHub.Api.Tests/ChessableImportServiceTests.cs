@@ -104,6 +104,63 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(1, await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == repId));
     }
 
+    // Buch-Puzzle-PGN mit Chessable-oid-Header (wie piratechess es ab v1.29.0 liefert).
+    private const string PuzzlePgnWithOid = @"
+[Event ""Test Book""]
+[Round ""002.002""]
+[White ""Idea""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+[ChessableOid ""500""]
+
+{ [%tqu ""En"",""Finde den Zug""] } 2.Nf3 Nc6 3. Bb5 *
+";
+
+    private static string RepLineOid(string white, string moves, string oid) =>
+        $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n\n{moves}\n";
+
+    [Fact]
+    public async Task GetImportedOids_Book_ReturnsStoredOid()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(7, "424242", PuzzlePgnWithOid, "Tactics", "book");
+        var (oids, book, rep) = await _svc.GetImportedOidsAsync(7, "424242");
+
+        Assert.True(book);
+        Assert.False(rep);
+        Assert.Contains("500", oids);
+    }
+
+    [Fact]
+    public async Task GetImportedOids_Repertoire_ParsesOidsFromPgn()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(7, "424242", RepLineOid("Line A", "1. e4 e5 *", "601"), "My Course", "repertoire");
+        await _svc.AppendLiveAsync(7, "424242", RepLineOid("Line B", "1. d4 d5 *", "602"), "My Course", "repertoire");
+        var (oids, book, rep) = await _svc.GetImportedOidsAsync(7, "424242");
+
+        Assert.True(rep);
+        Assert.False(book);
+        Assert.Contains("601", oids);
+        Assert.Contains("602", oids);
+    }
+
+    [Fact]
+    public async Task GetImportedOids_NothingImported_Empty()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        var (oids, book, rep) = await _svc.GetImportedOidsAsync(7, "111111");
+        Assert.Empty(oids);
+        Assert.False(book);
+        Assert.False(rep);
+    }
+
     private static string RepLine(string white, string moves) =>
         $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n\n{moves}\n";
 

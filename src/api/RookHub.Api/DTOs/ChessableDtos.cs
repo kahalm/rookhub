@@ -70,6 +70,12 @@ public record ChessableIngestChunkRequest(
 /// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>
 public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines);
 
+/// <summary>Import-Fortschritt eines Chessable-Kurses für die RepCheck-Overlays: welche Chessable-oids
+/// der User bereits importiert hat (als Buch und/oder Repertoire). Die Extension matcht diese oids gegen
+/// die Linien-oids aus getCourse/getList und zeigt Kurs-/Kapitel-/Linien-Fortschritt auf chessable.com.
+/// <c>Book</c>/<c>Repertoire</c> = existiert das jeweilige Ziel (auch bei 0 oids, z. B. Alt-Import).</summary>
+public record ChessableProgressDto(bool Book, bool Repertoire, List<string> Oids);
+
 /// <summary>Live-Append (V1 „beim Durchklicken"): die Extension schickt die soeben erfassten Linien SOFORT
 /// (nicht am Ende) — sie werden direkt ans bestehende Repertoire angehängt (bzw. legen es bei der ersten
 /// Linie an), sodass es live mitwächst. <c>Chapters</c> enthält nur die NEUEN Linien (je Kapitel getList +

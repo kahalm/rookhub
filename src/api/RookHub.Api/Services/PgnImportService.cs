@@ -45,7 +45,8 @@ public class PgnImportService
         string? Title, string? Chapter, string? Comment,
         Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false,
         Dictionary<int, List<PgnParser.MoveShape>>? MoveShapes = null,
-        Dictionary<int, List<string>>? AltMoves = null);
+        Dictionary<int, List<string>>? AltMoves = null,
+        string? ChessableOid = null);
 
     /// <summary>
     /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
@@ -72,6 +73,10 @@ public class PgnImportService
         {
             var fen = headers.GetValueOrDefault("FEN", "").Trim();
             var round = headers.GetValueOrDefault("Round", "").Trim();
+            // Chessable-oid (von piratechess als [ChessableOid] mitgegeben) → eindeutige Zuordnung
+            // importierte Linie ↔ Chessable-Linie für die Fortschritts-Overlays. null wenn nicht vorhanden.
+            var oidHdr = headers.GetValueOrDefault("ChessableOid", "").Trim();
+            var chessableOid = string.IsNullOrEmpty(oidHdr) ? null : PgnParser.Truncate(oidHdr, 32);
             // Skip-Regeln wie import_books.py
             if (string.IsNullOrEmpty(fen) || fen == "?") { invalid++; continue; }
             if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
@@ -114,7 +119,8 @@ public class PgnImportService
                         Comment: infoText,
                         MoveComments: moveComments,
                         IsInfoOnly: true,
-                        MoveShapes: moveShapes));
+                        MoveShapes: moveShapes,
+                        ChessableOid: chessableOid));
                     continue;
                 }
                 invalid++; continue;
@@ -156,7 +162,8 @@ public class PgnImportService
                 MoveComments: moveComments,
                 IsInfoOnly: isInfoOnly,
                 MoveShapes: moveShapes,
-                AltMoves: altMoves));
+                AltMoves: altMoves,
+                ChessableOid: chessableOid));
         }
         return new ParseResult(result, invalid);
     }
@@ -252,6 +259,7 @@ public class PgnImportService
                     bp.MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes);
                     bp.AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves);
                     bp.IsInfoOnly = p.IsInfoOnly;
+                    if (!string.IsNullOrEmpty(p.ChessableOid)) bp.ChessableOid = p.ChessableOid;
                     updated++;
                 }
                 else { skipped++; }
@@ -273,6 +281,7 @@ public class PgnImportService
                 MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes),
                 AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves),
                 IsInfoOnly = p.IsInfoOnly,
+                ChessableOid = p.ChessableOid,
             });
         }
 

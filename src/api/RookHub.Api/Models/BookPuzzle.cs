@@ -110,4 +110,12 @@ public class BookPuzzle
     /// nur zum Durchklicken da. Wird beim Import aus dem <c>[%info]</c>-Marker gesetzt.
     /// </summary>
     public bool IsInfoOnly { get; set; }
+
+    /// <summary>
+    /// Chessable-Linien-Id (oid) der Quell-Linie, sofern aus Chessable importiert (piratechess gibt sie
+    /// als PGN-Header <c>[ChessableOid]</c> mit). Erlaubt der RepCheck-Extension, den Import-Fortschritt
+    /// eines Kurses linien-genau auf chessable.com zu overlayen (welche Linie ist schon auf RookHub).
+    /// null bei Nicht-Chessable-Quellen bzw. Alt-Importen (erst nach Re-Fetch/Aktualisieren gefüllt).
+    /// </summary>
+    public string? ChessableOid { get; set; }
 }

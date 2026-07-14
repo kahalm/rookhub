@@ -82,10 +82,15 @@ namespace RookHub.Api.Services;
 ///   (b) Header-only-Spiele (Header ohne Movetext) mischten ihre Header (z. B. die FEN) still in das
 ///   NÄCHSTE Spiel; sie werden jetzt separat geflusht. Der Quelltext steht im <c>Book.SourcePgn</c>
 ///   → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
+/// <item><b>13:</b> Chessable-<c>oid</c> je Linie wird beim Import gespeichert (<c>BookPuzzle.ChessableOid</c>,
+///   aus dem PGN-Header <c>[ChessableOid]</c>, den piratechess seit v1.29.0 mitgibt) — Grundlage für die
+///   linien-genauen Kurs-Fortschritts-Overlays in der RepCheck-Extension. Alt-Bücher haben die oid erst
+///   nach einem Chessable-Re-Fetch (der lokale Reprocess aus <c>SourcePgn</c> füllt sie nur, wenn das
+///   gespeicherte PGN bereits <c>[ChessableOid]</c> enthält).</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 12;
+    public const int CurrentVersion = 13;
 }
