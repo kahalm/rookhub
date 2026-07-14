@@ -2350,7 +2350,13 @@
     "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
     "etaRemaining": "~{{min}} min left",
     "importDuration": "Queue {{queue}} · Fetch {{fetch}}",
-    "cachedHint": "Cached — available almost instantly (no Chessable fetch needed)"
+    "cachedHint": "Cached — available almost instantly (no Chessable fetch needed)",
+    "banWarning": {
+      "title": "Ban risk: importing via RookHub",
+      "body": "When RookHub imports a course, it fetches it server-side from Chessable over shared VPN/datacenter IPs using your stored bearer token. Chessable actively blocks those IPs, and this bulk fetching under your account is exactly the pattern that can get your Chessable account flagged or banned. Use it at your own risk.",
+      "repcheck": "Significantly safer: import via the RepCheck browser extension. It runs inside your own logged-in Chessable session on your own IP, so its requests look like normal browsing rather than server-side scraping.",
+      "manual": "Safest of all is the manual RepCheck variant (v1), where you trigger a course yourself, one at a time, from your own browser: it technically still violates Chessable's terms of service, but in practice it is virtually indistinguishable from normal use and therefore invisible to Chessable."
+    }
   },
   "messages": {
     "title": "Messages",

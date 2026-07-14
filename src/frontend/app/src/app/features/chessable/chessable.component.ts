@@ -71,6 +71,20 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
         </div>
       </div>
 
+      <div class="ban-warning" role="alert">
+        <mat-icon>gpp_maybe</mat-icon>
+        <div class="ban-warning-text">
+          <strong>{{ 'chessable.banWarning.title' | translate }}</strong>
+          <p>{{ 'chessable.banWarning.body' | translate }}</p>
+          <p>
+            {{ 'chessable.banWarning.repcheck' | translate }}
+            RepCheck (<a href="https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn" target="_blank" rel="noopener noreferrer">Chrome</a> /
+            <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener noreferrer">Firefox</a>).
+          </p>
+          <p class="ban-warning-manual">{{ 'chessable.banWarning.manual' | translate }}</p>
+        </div>
+      </div>
+
       <p class="intro">{{ 'chessable.intro' | translate }}</p>
 
       @if (disclaimerAccepted === null) {
@@ -314,6 +328,19 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
     .rate-notice-text { flex: 1 1 auto; }
     .rate-notice-text strong { display: block; font-size: 1.02rem; margin-bottom: 0.2rem; }
     .rate-notice-text p { margin: 0; font-size: 0.92rem; line-height: 1.4; }
+    .ban-warning {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      background: rgba(198, 40, 40, 0.12); border: 1px solid rgba(198, 40, 40, 0.55);
+      border-left: 5px solid #c62828; border-radius: 6px;
+      padding: 0.85rem 1rem; margin: 0.75rem 0 1.25rem;
+    }
+    .ban-warning > mat-icon { color: #c62828; flex: 0 0 auto; margin-top: 2px; }
+    .ban-warning-text { flex: 1 1 auto; }
+    .ban-warning-text strong { display: block; font-size: 1.02rem; margin-bottom: 0.2rem; }
+    .ban-warning-text p { margin: 0 0 0.4rem; font-size: 0.92rem; line-height: 1.45; }
+    .ban-warning-text p:last-child { margin-bottom: 0; }
+    .ban-warning-text a { color: #c62828; font-weight: 600; }
+    .ban-warning-manual { font-style: italic; opacity: 0.9; }
     .intro { color: var(--mat-sys-on-surface-variant, #666); margin-bottom: 1.25rem; }
     .disclaimer-card { border-left: 4px solid #c62828; }
     .disclaimer-title { display: flex; align-items: center; gap: 0.5rem; color: #c62828; margin-top: 0; }

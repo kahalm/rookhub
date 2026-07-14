@@ -2350,7 +2350,13 @@
     "throughputHint": "Das Holen schafft grob 15–20 Zeilen/min (inkl. VPN-Pausen). Ein Kurs mit 500 Zeilen dauert ca. 30 Min, 1000 Zeilen ca. 1 Std.",
     "etaRemaining": "noch ca. {{min}} Min",
     "importDuration": "Wartezeit {{queue}} · Holzeit {{fetch}}",
-    "cachedHint": "Zwischengespeichert — quasi sofort verfügbar (kein Chessable-Abruf nötig)"
+    "cachedHint": "Zwischengespeichert — quasi sofort verfügbar (kein Chessable-Abruf nötig)",
+    "banWarning": {
+      "title": "Ban-Risiko: Import über RookHub",
+      "body": "Wenn RookHub einen Kurs importiert, holt es ihn serverseitig von Chessable über geteilte VPN-/Rechenzentrums-IPs mit deinem hinterlegten Bearer-Token. Chessable blockt diese IPs aktiv, und genau dieses gebündelte Abrufen unter deinem Konto ist das Muster, das dein Chessable-Konto markieren oder sperren lassen kann. Nutzung auf eigene Gefahr.",
+      "repcheck": "Deutlich sicherer: der Import über die RepCheck-Browser-Erweiterung. Sie läuft in deiner eigenen eingeloggten Chessable-Sitzung über deine eigene IP — ihre Anfragen sehen aus wie normales Surfen, nicht wie serverseitiges Scraping.",
+      "manual": "Am sichersten ist die manuelle RepCheck-Variante (v1), bei der du einen Kurs selbst und einzeln aus deinem eigenen Browser anstößt: Sie verstößt technisch zwar weiterhin gegen die Chessable-Nutzungsbedingungen, ist in der Praxis aber kaum von normaler Nutzung zu unterscheiden und damit für Chessable praktisch unsichtbar."
+    }
   },
   "messages": {
     "title": "Nachrichten",
