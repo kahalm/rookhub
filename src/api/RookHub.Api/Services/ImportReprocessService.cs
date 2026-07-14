@@ -80,9 +80,12 @@ public partial class ImportReprocessService
             .Select(b => new
             {
                 HasSource = b.SourcePgn != null,
-                // „Modern": Quelle enthält bereits [%info]/[%alt] → lokal vollständig aufbereitbar (SQL-LIKE,
-                // lädt das große PGN NICHT). Sonst (alte marker-lose Quelle) weiter Re-Fetch.
-                SourceModern = b.SourcePgn != null && (b.SourcePgn.Contains("[%info") || b.SourcePgn.Contains("[%alt")),
+                // „Modern": Quelle enthält bereits ALLES, was die aktuelle Pipeline aus dem Quell-PGN zieht —
+                // maßgeblich der jüngste Marker [ChessableOid] (piratechess ≥ v1.0.39). Nur dann reicht ein
+                // lokaler Re-Parse (SQL-LIKE, lädt das große PGN NICHT). Eine ältere Quelle mit zwar [%alt]/
+                // [%info], aber OHNE [ChessableOid] ist NICHT modern → braucht einen Chessable-Re-Fetch, damit
+                // die oids (Grundlage der Fortschritts-Overlays) reinkommen.
+                SourceModern = b.SourcePgn != null && b.SourcePgn.Contains("[ChessableOid"),
                 b.Tags, b.FileName,
             })
             .ToListAsync(ct);
@@ -117,8 +120,8 @@ public partial class ImportReprocessService
             if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid)
                 && !SourceHasModernMarkers(book.SourcePgn))
             {
-                // Chessable OHNE moderne Quelle: vollständiger Re-Fetch (die Marker [%info]/[%alt] stehen
-                // nicht im alten gecachten PGN → lokales Reprocess würde sie nicht setzen).
+                // Chessable OHNE moderne Quelle: vollständiger Re-Fetch (die [ChessableOid] steht nicht im
+                // alten gecachten PGN → ein lokales Reprocess könnte sie nie setzen).
                 if (localOnly) continue; // Netz-Re-Fetch bewusst auslassen
                 refetch.Add(new RefetchCandidate(book.OwnerUserId ?? userId, bid, "book", book.DisplayName, null));
             }
@@ -126,7 +129,7 @@ public partial class ImportReprocessService
             {
                 // Lokal verlustfrei + in-place aus dem gespeicherten PGN (ImportFileAsync erkennt das
                 // veraltete Buch). Gilt für Nicht-Chessable UND Chessable mit „moderner" Quelle
-                // ([%info]/[%alt] bereits vorhanden) → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
+                // ([ChessableOid] bereits vorhanden) → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
                 var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, CancellationToken.None);
                 result.Reprocessed++;
                 result.UpdatedLines += res.Updated;
@@ -289,13 +292,14 @@ public partial class ImportReprocessService
     private static bool CanRefetch(string? tags, string fileName) =>
         IsChessable(tags, fileName) && TryParseBid(fileName, out _);
 
-    /// <summary>Enthält die gespeicherte Quelle bereits die Marker, die früher NUR ein Re-Fetch brachte
-    /// (<c>[%info]</c> Info-/Erklärlinien, <c>[%alt]</c> geduldete Züge)? Dann ist sie „modern" gefetcht
-    /// und ein LOKALES Reprocess ist vollständig — kein Chessable-Re-Fetch nötig (umgeht Parser-Crashes,
-    /// (Owner,bid)-Dedup und Besitz-/Bearer-Probleme). Alle Pipeline-Schritte ab v5 (Info-Durchklick,
-    /// Kommentar-Länge, NULL-Zug-Intros, [%cal]/[%csl]-Pfeile) sind ohnehin reine lokale Parse-Schritte.</summary>
+    /// <summary>Enthält die gespeicherte Quelle bereits ALLES, was die aktuelle Pipeline aus dem Quell-PGN
+    /// zieht? Maßgeblich ist der jüngste quell-abhängige Marker <c>[ChessableOid]</c> (piratechess ≥ v1.0.39,
+    /// Basis der Fortschritts-Overlays). Nur dann ist ein LOKALES Reprocess vollständig — kein Chessable-
+    /// Re-Fetch nötig. Eine ältere Quelle mit zwar <c>[%alt]</c>/<c>[%info]</c>, aber OHNE <c>[ChessableOid]</c>
+    /// ist NICHT modern und MUSS re-gefetcht werden (lokaler Re-Parse könnte die oids nie ergänzen). Ein PGN
+    /// mit oids trägt implizit auch [%alt]/[%info], da dieselbe piratechess-Version alle Marker schreibt.</summary>
     private static bool SourceHasModernMarkers(string? pgn) =>
-        pgn != null && (pgn.Contains("[%info", StringComparison.Ordinal) || pgn.Contains("[%alt", StringComparison.Ordinal));
+        pgn != null && pgn.Contains("[ChessableOid", StringComparison.Ordinal);
 
     /// <summary>Wie <see cref="SourceHasModernMarkers"/>, aber für ein Repertoire (Quelle = seine
     /// gespeicherten PGN-Dateien). Trifft es zu, reicht ein reiner Versions-Mark statt Re-Fetch —

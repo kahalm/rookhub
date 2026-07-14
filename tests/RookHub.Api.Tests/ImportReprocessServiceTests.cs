@@ -28,9 +28,21 @@ public class ImportReprocessServiceTests : IDisposable
 2. Nf3 {Develops.} Nc6 3. Bb5 {The pin.} a6 *
 ";
 
-    // Wie SamplePgn, aber mit einem [%alt]-Marker → gilt als „modern" gefetchte Quelle
-    // (SourceHasModernMarkers), also lokal vollständig aufbereitbar statt Re-Fetch.
+    // „Modern" gefetchte Quelle: enthält [ChessableOid] (piratechess ≥ v1.0.39) → lokal vollständig
+    // aufbereitbar statt Re-Fetch. Maßgeblich ist die oid; [%alt] allein macht eine Quelle NICHT modern.
     private const string ModernPgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+[ChessableOid ""10""]
+
+2. Nf3 {[%alt g1e2] Develops.} Nc6 3. Bb5 {The pin.} a6 *
+";
+
+    // Chessable-Quelle aus der Zeit VOR der oid-Ära: hat [%alt], aber KEINE [ChessableOid] → NICHT modern,
+    // muss re-gefetcht werden (Regression: wurde früher fälschlich als „modern → lokal" eingestuft, sodass
+    // der Kurs beim „Aktualisieren" nur versions-markiert wurde und nie oids/Fortschritt bekam).
+    private const string AltNoOidPgn = @"
 [Event ""X""]
 [Round ""1""]
 [FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
@@ -82,6 +94,20 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Equal(1, status.Stale);
         Assert.Equal(1, status.ReprocessableLocally);
         Assert.Equal(0, status.Refetchable);          // kein Re-Fetch, obwohl Chessable
+    }
+
+    [Fact]
+    public async Task GetCourseStatus_ChessableAltButNoOid_CountsAsRefetchNotLocal()
+    {
+        // Regression: [%alt] vorhanden, aber KEINE [ChessableOid] → NICHT modern → muss re-gefetcht werden
+        // (früher fälschlich als lokal aufbereitbar eingestuft, wodurch die oids nie reinkamen).
+        await SeedBookAsync("chessable-u7-altnooid.pgn", 0, AltNoOidPgn, "chessable");
+
+        var status = await ReprocessTestHelper.Build(_db).GetCourseStatusAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, status.Stale);
+        Assert.Equal(0, status.ReprocessableLocally);
+        Assert.Equal(1, status.Refetchable);
     }
 
     [Fact]
@@ -416,6 +442,30 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Empty(stub.Calls);                     // kein Re-Fetch
         Assert.Equal(1, result.Reprocessed);
         Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_ChessableAltButNoOid_EnqueuesRefetch_NotVersionMark()
+    {
+        // Regression: Chessable-Repertoire mit [%alt], aber OHNE [ChessableOid] darf NICHT als „modern"
+        // durchgehen und versions-markiert werden — es muss re-gefetcht werden, damit die oids reinkommen.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential { UserId = user.Id, EncryptedBearer = "x" });
+        await _db.SaveChangesAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: AltNoOidPgn);
+        var stub = new StubCourseReimporter { ReturnId = 777 };
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, result.Enqueued);
+        Assert.Equal(0, result.Reprocessed);          // NICHT versions-markiert
+        var call = Assert.Single(stub.Calls);
+        Assert.Equal("128648", call.Bid);
+        Assert.Equal(rep.Id, call.TargetRepertoireId);
+        // Version bleibt veraltet, bis der Re-Fetch das oid-tragende PGN eingespielt hat.
+        Assert.Equal(0, (await _db.Repertoires.SingleAsync(r => r.Id == rep.Id)).ImportVersion);
     }
 
     [Fact]

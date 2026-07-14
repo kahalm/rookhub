@@ -94,10 +94,17 @@ namespace RookHub.Api.Services;
 ///   „veraltet", sodass ein „Aktualisieren" sie über das jetzt oid-liefernde piratechess (≥ v1.0.39,
 ///   auch aus dem Cache) neu holt und die oids nachträgt. Voll-gecachte Kurse laufen dabei netzfrei
 ///   über die Fast-Lane.</item>
+/// <item><b>15:</b> Fix zur v14-Runde: die Reprocess-Klassifikation „modern" (= Quelle lokal aufbereitbar,
+///   kein Re-Fetch) hing an <c>[%alt]</c>/<c>[%info]</c> — Marker, die piratechess schon VOR der oid-Ära
+///   schrieb. Ein Chessable-Kurs/-Repertoire mit <c>[%alt]</c>, aber OHNE <c>[ChessableOid]</c> galt daher
+///   fälschlich als modern → wurde beim „Aktualisieren" nur versions-markiert statt re-gefetcht → bekam nie
+///   oids und wurde als „aktuell" (v14) nicht mehr angeboten. „Modern" verlangt jetzt <c>[ChessableOid]</c>;
+///   der Bump macht die auf v14 fälschlich verbrannten Datensätze wieder veraltet, sodass sie über das
+///   oid-liefernde piratechess (≥ v1.0.39, auch aus dem Cache) neu geholt werden.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 14;
+    public const int CurrentVersion = 15;
 }
