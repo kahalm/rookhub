@@ -46,8 +46,10 @@ public class BookSolverDto
     public string? DiscordId { get; set; }
     public string? DiscordUsername { get; set; }
     public int TimeSeconds { get; set; }
-    /// <summary>Höchste angesehene Tipp-Stufe (0–3) im wertungsrelevanten Erstversuch; > 0 = mit Tipps gelöst.</summary>
+    /// <summary>Höchste angesehene Tipp-Stufe (0–3) über alle Versuche bis einschließlich des ersten Solves; > 0 = mit Tipps gelöst.</summary>
     public int HintsUsed { get; set; }
+    /// <summary>Fehlversuche (Fehlzug/Mouseslip-Zurücknahme/Restart) vor dem ersten Solve — je einer ein rotes ✗ in der Anzeige.</summary>
+    public int WrongAttempts { get; set; }
 }
 
 public class BookPuzzleResultsDto

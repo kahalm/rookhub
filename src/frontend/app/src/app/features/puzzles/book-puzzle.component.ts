@@ -214,7 +214,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  Antwort darf das inzwischen geladene Puzzle nicht überschreiben → wird per Epoche verworfen. */
   private loadEpoch = 0;
   private retryFn: (() => void) | null = null;
-  private bookAttemptRecorded = false;   // pro Puzzle nur ein Versuch melden (Tagespuzzle-Statistik)
+  private bookSolveRecorded = false;     // Solve nur einmal je Puzzle-Durchgang melden (Tagespuzzle-Statistik)
+  private bookChallengeResolved = false; // Challenge-Ergebnis nur mit dem ERSTEN gemeldeten Versuch aufloesen
   private courseAttemptRecorded = false; // pro Puzzle-Durchgang nur ein Kurs-Versuch melden (Zeit-Inflation vermeiden)
   /** Gesetzt, wenn dieses Buch-Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
   private challengeId: number | null = null;
@@ -540,10 +541,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    * (Basis für die Tagespuzzle-Visualisierung auf Discord). Pro Puzzle nur einmal.
    */
   private recordBookAttempt(solved: boolean): void {
-    if (!this.standalone || this.bookAttemptRecorded || !this.puzzle) return;
-    this.bookAttemptRecorded = true;
-    // Ergebnis an eine ggf. offene Freundes-Challenge zurückmelden (nur Standalone, einmalig).
-    this.resolveChallengeIfNeeded(solved);
+    if (!this.standalone || !this.puzzle) return;
+    // Seit v0.309.0 wird JEDER Fehlversuch gemeldet (Fehlzug/Mouseslip/Restart → je ein rotes ✗
+    // in der Löser-Anzeige); nur der Solve bleibt einmalig je Durchgang. Die Aufrufer stellen
+    // sicher, dass ein Fehler nicht doppelt zählt (State-Guards in resetPuzzle/mouseslip).
+    if (solved) {
+      if (this.bookSolveRecorded) return;
+      this.bookSolveRecorded = true;
+    }
+    // Ergebnis an eine ggf. offene Freundes-Challenge zurückmelden (nur Standalone; der ERSTE
+    // gemeldete Versuch entscheidet — wie die bisherige Erstversuch-Semantik der Challenge).
+    if (!this.bookChallengeResolved) {
+      this.bookChallengeResolved = true;
+      this.resolveChallengeIfNeeded(solved);
+    }
     if (this.auth.isLoggedIn) {
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
       const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel };
@@ -1206,7 +1217,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private setupPuzzle(puzzle: BookPuzzleDto): void {
     this.clearSolutionPlay();
     this.variationPreview = null;   // etwaige Kommentar-Varianten-Vorschau aus dem Vorgänger-Puzzle beenden
-    this.bookAttemptRecorded = false;
+    this.bookSolveRecorded = false;
+    this.bookChallengeResolved = false;
     this.courseAttemptRecorded = false;
     this.hintLevel = 0;
     // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint) —
@@ -1434,9 +1446,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   resetPuzzle(): void {
     if (!this.puzzle) return;
-    // Daily-Fairness: ein Reset nach mindestens einem gespielten Zug verbraucht den Tag.
-    // Der erste Versuch zählt, spätere Solves auf demselben Tagespuzzle ändern das nicht mehr.
-    if (this.isDaily && this.moveLog.length > 0) this.recordBookAttempt(false);
+    // Daily: ein Reset mitten im Lauf (mind. ein Zug gespielt) zählt als Fehlversuch (rotes ✗).
+    // Nach FAILED/SOLVED nicht erneut melden — der Fehlzug bzw. Solve wurde bereits erfasst.
+    if (this.isDaily && this.moveLog.length > 0 && this.state !== 'FAILED' && this.state !== 'SOLVED')
+      this.recordBookAttempt(false);
     // Wochenpost: Reset nach mind. einem Zug zählt als ✗ (gespielt, nicht gelöst).
     if (this.inWeekly && this.moveLog.length > 0) this.recordWeeklyAttempt(false);
     // „Track solves": Reset zählt als failed (alles mit Reset gilt als nicht gelöst).
@@ -1447,8 +1460,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   override mouseslip(): void {
-    // Im Tagespuzzle ist der „Mausrutscher" kein straffreier Undo: der Tag gilt damit als verbraucht.
-    if (this.isDaily && !this.mouseslipUsed && !this.onSolutionPath) this.recordBookAttempt(false);
+    // Im Tagespuzzle ist der „Mausrutscher" kein straffreier Undo: jede Off-Path-Zurücknahme
+    // zählt als Fehlversuch (rotes ✗). Nach FAILED nicht erneut melden (Fehlzug schon erfasst).
+    if (this.isDaily && !this.onSolutionPath && this.state !== 'FAILED') this.recordBookAttempt(false);
     super.mouseslip();
   }
 

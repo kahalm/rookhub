@@ -52,6 +52,56 @@ describe('BookPuzzleComponent load race (loadEpoch)', () => {
   });
 });
 
+describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
+  function makeDaily(): any {
+    const c: any = makeComponent();
+    c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.dailyDate = '20260714';           // isDaily = true; standalone-Getter: kein Kurs/Weekly-Kontext
+    return c;
+  }
+
+  it('Solve nach vorherigem Fail wird trotzdem gemeldet (Spätlöser)', () => {
+    const c = makeDaily();
+    const calls: boolean[] = [];
+    c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return { subscribe: () => {} }; };
+    c.auth = { isLoggedIn: true };
+    (c as any).recordBookAttempt(false);   // Fehlzug
+    (c as any).recordBookAttempt(true);    // späterer Solve — darf nicht mehr blockiert sein
+    (c as any).recordBookAttempt(true);    // zweiter Solve: einmalig
+    expect(calls).toEqual([false, true]);
+  });
+
+  it('jeder Fehlversuch wird einzeln gemeldet, Reset nach FAILED aber nicht doppelt', () => {
+    const c = makeDaily();
+    const spy = spyOn(c as any, 'recordBookAttempt');
+    // Reset mitten im Lauf (Zug gespielt, nicht FAILED) → Fehlversuch
+    c.moveLog = [{ ok: true }];
+    c.state = 'PLAYING';
+    spyOn(c as any, 'setupPuzzle');
+    (c as any).resetPuzzle();
+    expect(spy).toHaveBeenCalledWith(false);
+    spy.calls.reset();
+    // Reset NACH FAILED (Fehlzug schon erfasst) → KEINE Doppelmeldung
+    c.state = 'FAILED';
+    (c as any).resetPuzzle();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('Off-Path-Mouseslip meldet Fehlversuch, aus FAILED heraus nicht', () => {
+    const c = makeDaily();
+    const spy = spyOn(c as any, 'recordBookAttempt');
+    spyOn(Object.getPrototypeOf(Object.getPrototypeOf(c)), 'mouseslip');
+    (c as any).onSolutionPath = false;
+    c.state = 'PLAYING';
+    c.mouseslip();
+    expect(spy).toHaveBeenCalledWith(false);
+    spy.calls.reset();
+    c.state = 'FAILED';
+    c.mouseslip();
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
 describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
   it('handleSolved merkt das gelöste Puzzle als lastSolved', () => {
     const c = makeComponent();

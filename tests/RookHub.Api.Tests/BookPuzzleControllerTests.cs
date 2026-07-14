@@ -229,14 +229,14 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetResults_FirstAttemptDecidesSolverState()
+    public async Task GetResults_EverSolvedCountsAsSolver_WithWrongAttempts()
     {
-        // Daily-Fairness: nach einem fehlgeschlagenen ersten Versuch zählt ein späterer Solve
-        // nicht mehr als Lösung. Umgekehrt: solve-zuerst → spätere Fehlversuche ändern den Status nicht.
+        // Seit v0.309.0: Löser ist, wer IRGENDWANN gelöst hat; Fehlversuche vor dem ersten Solve
+        // werden gezählt (WrongAttempts → rotes ✗ je Fehlversuch). Nur wer nie löst, gilt als versucht.
         var p = await CreateBookPuzzleAsync(lineId: "fair.pgn:1", bookFileName: "fair.pgn");
-        var dora = await CreateUserAsync("dora");   // fail → solve → DARF NICHT als Löser zählen
-        var eve = await CreateUserAsync("eve");     // solve → fail → bleibt Löser
-        var finn = await CreateUserAsync("finn");   // nur solve → Löser
+        var dora = await CreateUserAsync("dora");   // fail → solve → Spätlöser mit 1 ✗
+        var eve = await CreateUserAsync("eve");     // solve → fail → Löser ohne ✗ (Fail nach Solve zählt nicht)
+        var finn = await CreateUserAsync("finn");   // nur fail → kein Löser (nur „versucht")
 
         SetUser(dora.Id);
         await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 8 });
@@ -249,28 +249,38 @@ public class BookPuzzleControllerTests : IDisposable
         await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 2 });
 
         SetUser(finn.Id);
-        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 19 });
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 19 });
 
         var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
-        Assert.Equal(2, res.SolvedCount);                              // eve + finn
-        Assert.DoesNotContain(res.Solvers, s => s.Name == "dora");
-        Assert.Contains(res.Solvers, s => s.Name == "eve");
-        Assert.Contains(res.Solvers, s => s.Name == "finn");
+        Assert.Equal(2, res.SolvedCount);                              // dora + eve
+        Assert.Equal(3, res.AttemptCount);                             // alle drei haben versucht
+
+        var doraDto = res.Solvers.Single(s => s.Name == "dora");
+        Assert.Equal(1, doraDto.WrongAttempts);                        // 1 Fail vor dem Solve
+        Assert.Equal(8 + 14, doraDto.TimeSeconds);                     // Zeit = Summe bis inkl. erstem Solve
+
+        var eveDto = res.Solvers.Single(s => s.Name == "eve");
+        Assert.Equal(0, eveDto.WrongAttempts);                         // Fail NACH dem Solve zählt nicht
+        Assert.Equal(30, eveDto.TimeSeconds);
+
+        Assert.DoesNotContain(res.Solvers, s => s.Name == "finn");    // nie gelöst → nur „versucht"
     }
 
     [Fact]
-    public async Task GetResults_IncludesTimeSecondsOfFirstAttempt()
+    public async Task GetResults_TimeIsSumUntilFirstSolve_LaterAttemptsIgnored()
     {
         var p = await CreateBookPuzzleAsync(lineId: "time.pgn:1", bookFileName: "time.pgn");
         var anna = await CreateUserAsync("anna_time", discordId: "999");
         SetUser(anna.Id);
         await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 42 });
-        // zweiter Versuch — TimeSeconds des ERSTEN muss gelten
+        // Nachspielen — Versuche NACH dem ersten Solve ändern Zeit/✗ nicht mehr
         await Task.Delay(10);
         await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 99 });
 
         var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
-        Assert.Equal(42, res.Solvers.Single(s => s.Name == "anna_time").TimeSeconds);
+        var dto = res.Solvers.Single(s => s.Name == "anna_time");
+        Assert.Equal(42, dto.TimeSeconds);
+        Assert.Equal(0, dto.WrongAttempts);
     }
 
     [Fact]
@@ -869,18 +879,29 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task DailyLeaderboard_OnlyFirstAttemptCounts()
+    public async Task DailyLeaderboard_LateSolverGetsFivePoints_TimeIsSum()
     {
+        // Seit v0.309.0: fail → solve am selben Tag = Spätlöser (5 statt 10 Basispunkte),
+        // Zeit = Summe aller Versuche bis inkl. erstem Solve (rankt entsprechend schlechter).
         var p = await CreateBookPuzzleAsync(lineId: "lbf.pgn:1", bookFileName: "lbf.pgn");
         await AssignDailyAsync(new DateOnly(2026, 6, 5), p);
-        var carl = await CreateUserAsync("carl");
+        var carl = await CreateUserAsync("carl");    // fail 10s → solve 12s = Spätlöser, Zeit 22s
+        var dana = await CreateUserAsync("dana");    // first-try 30s = sauberer Löser
 
-        // Erster Versuch fehlgeschlagen → zählt NICHT als Löser, auch wenn später gelöst
         await AddAttemptAsync(p, carl, false, 10, new DateTime(2026, 6, 5, 8, 0, 0, DateTimeKind.Utc));
         await AddAttemptAsync(p, carl, true, 12, new DateTime(2026, 6, 5, 8, 5, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p, dana, true, 30, new DateTime(2026, 6, 5, 9, 0, 0, DateTimeKind.Utc));
 
         var lb = LadderOf(await _controller.GetDailyLeaderboard("2026-06"));
-        Assert.Empty(lb.Entries);
+        var carlE = lb.Entries.Single(e => e.Name == "carl");
+        var danaE = lb.Entries.Single(e => e.Name == "dana");
+
+        // carl: 5 (Spätlöser) + 5 (🥇, Summenzeit 22s < danas 30s) = 10; dana: 10 + 3 (🥈) = 13.
+        Assert.Equal(10, carlE.Points);
+        Assert.Equal(1, carlE.Solved);
+        Assert.Equal(1, carlE.Golds);
+        Assert.Equal(13, danaE.Points);
+        Assert.Equal(0, danaE.Golds);
     }
 
     [Fact]

@@ -7,8 +7,10 @@ namespace RookHub.Api.Services;
 
 /// <summary>
 /// Tagespuzzle-Bestenlisten (Monats-Ladder + all-time Hall of Fame), aus <see cref="BookPuzzleService"/>
-/// ausgegliedert. Wertet je (Tag, eingeloggtem User) den ersten Versuch am Tagespuzzle aus (dieselbe
-/// Fairness-Regel wie die Solver-Liste), rankt die Löser pro Tag nach Zeit und summiert Punkte/🥇.
+/// ausgegliedert. Wertet je (Tag, eingeloggtem User) die Versuche AM Daily-Tag aus (dieselbe Regel
+/// wie die Solver-Liste seit v0.309.0): Löser ist, wer das Puzzle an dem Tag irgendwann gelöst hat —
+/// sauberer Erstversuch = 10 Punkte, Spätlöser = 5 Punkte; die Zeit ist die SUMME aller Versuche bis
+/// einschließlich des ersten Solves. Pro Tag werden die Löser nach dieser Zeit gerankt (🥇-Bonus).
 /// Rein lesend auf <see cref="AppDbContext"/>.
 /// </summary>
 public class DailyLeaderboardService
@@ -17,22 +19,24 @@ public class DailyLeaderboardService
 
     public DailyLeaderboardService(AppDbContext db) => _db = db;
 
-    /// <summary>Eine gewertete Erstversuch-Lösung an einem Tagespuzzle (Rohzeile fürs Ranking).</summary>
-    private sealed record DailyScoreRow(DateOnly Date, int UserId, int TimeSeconds, DateTime FirstAt);
+    /// <summary>Eine gewertete Lösung an einem Tagespuzzle (Rohzeile fürs Ranking).
+    /// <c>FirstTry</c> = der erste Versuch des Tages war bereits gelöst (10 statt 5 Basispunkte);
+    /// <c>TimeSeconds</c> = Summe aller Versuche bis einschließlich des ersten Solves.</summary>
+    private sealed record DailyScoreRow(DateOnly Date, int UserId, int TimeSeconds, DateTime FirstAt, bool FirstTry);
 
-    /// <summary>Tages-Rang-Bonus nach Erstversuch-Zeit: 🥇 +5 / 🥈 +3 / 🥉 +1, sonst 0.</summary>
+    /// <summary>Tages-Rang-Bonus nach (Summen-)Zeit: 🥇 +5 / 🥈 +3 / 🥉 +1, sonst 0.</summary>
     private static int RankBonus(int rank) => rank switch { 1 => 5, 2 => 3, 3 => 1, _ => 0 };
 
     /// <summary>
     /// Lädt für alle Tagespuzzles im optionalen Datumsfenster [<paramref name="from"/>,
-    /// <paramref name="to"/>] je (Tag, eingeloggtem User) den ERSTEN Versuch AM UTC-TAG des
-    /// Tagespuzzles und behält nur die gelösten. Der Tages-Fence ist Teil der Fairness-Regel:
+    /// <paramref name="to"/>] je (Tag, eingeloggtem User) die Versuche AM UTC-TAG des
+    /// Tagespuzzles und behält nur die User, die an dem Tag gelöst haben. Der Tages-Fence bleibt:
     /// ohne ihn entschied der erste Versuch ÜBERHAUPT (auch Monate vor/nach dem Daily-Tag, z. B.
     /// beim Buch-Browsen über einen geteilten Link) über Credit, Zeit und 🥇 — ein Alt-Fail nahm
     /// einem echten Tages-Löser die Wertung, und Buch-Löser von früher bekamen Daily-Punkte.
     /// Ranking/Punkte berechnet der Aufrufer in-memory (kleine Datenmengen: ein Puzzle pro Tag).
     /// </summary>
-    private async Task<List<DailyScoreRow>> LoadDailyFirstAttemptsAsync(DateOnly? from, DateOnly? to)
+    private async Task<List<DailyScoreRow>> LoadDailySolveRowsAsync(DateOnly? from, DateOnly? to)
     {
         var dailyQ = _db.DailyPuzzles.AsQueryable();
         if (from.HasValue) dailyQ = dailyQ.Where(d => d.Date >= from.Value);
@@ -61,22 +65,25 @@ public class DailyLeaderboardService
         foreach (var d in dailies)
         {
             if (!byPuzzle.TryGetValue(d.BookPuzzleId, out var all)) continue;
-            // Erster Versuch je User AM Daily-Tag; nur gelöste werten (Fairness wie Solver-Liste).
-            var solvers = all
-                .Where(a => DateOnly.FromDateTime(a.AttemptedAt) == d.Date)
-                .GroupBy(a => a.UserId)
-                .Select(g => g.OrderBy(a => a.AttemptedAt).First())
-                .Where(a => a.Solved);
-            foreach (var s in solvers)
-                rows.Add(new DailyScoreRow(d.Date, s.UserId, s.TimeSeconds, s.AttemptedAt));
+            // Je User alle Versuche AM Daily-Tag: gelöst (irgendwann) → gewertet. Erstversuch-Solve
+            // = FirstTry (10 P), Spätlöser 5 P; Zeit = Summe bis einschließlich des ersten Solves.
+            foreach (var g in all.Where(a => DateOnly.FromDateTime(a.AttemptedAt) == d.Date).GroupBy(a => a.UserId))
+            {
+                var ordered = g.OrderBy(a => a.AttemptedAt).ToList();
+                var firstSolve = ordered.FirstOrDefault(a => a.Solved);
+                if (firstSolve == null) continue;
+                var counted = ordered.Where(a => a.AttemptedAt <= firstSolve.AttemptedAt).ToList();
+                rows.Add(new DailyScoreRow(
+                    d.Date, g.Key, counted.Sum(a => a.TimeSeconds), firstSolve.AttemptedAt, ordered[0].Solved));
+            }
         }
         return rows;
     }
 
     /// <summary>
-    /// Aggregiert die Erstversuch-Zeilen je User: pro Tag werden die Löser nach Zeit gerankt
-    /// (Gleichstand → früherer Versuch zuerst), daraus Punkte (10 + Rang-Bonus), Lösungs- und
-    /// 🥇-Zähler summiert.
+    /// Aggregiert die Lösungs-Zeilen je User: pro Tag werden die Löser nach (Summen-)Zeit gerankt
+    /// (Gleichstand → früherer Solve zuerst), daraus Punkte (10 bei Erstversuch-Solve, 5 als
+    /// Spätlöser, + Rang-Bonus), Lösungs- und 🥇-Zähler summiert.
     /// </summary>
     private static Dictionary<int, (int points, int solved, int golds)> AggregateScores(List<DailyScoreRow> rows)
     {
@@ -91,7 +98,8 @@ public class DailyLeaderboardService
                 // Submit-Reihenfolge/Mikrosekunden über Gold vs. Silber entscheiden, insb. bei TimeSeconds==0).
                 var rank = 1 + ranked.Count(o => o.TimeSeconds < r.TimeSeconds);
                 acc.TryGetValue(r.UserId, out var cur);
-                acc[r.UserId] = (cur.points + 10 + RankBonus(rank), cur.solved + 1, cur.golds + (rank == 1 ? 1 : 0));
+                var basePoints = r.FirstTry ? 10 : 5;
+                acc[r.UserId] = (cur.points + basePoints + RankBonus(rank), cur.solved + 1, cur.golds + (rank == 1 ? 1 : 0));
             }
         }
         return acc;
@@ -126,7 +134,7 @@ public class DailyLeaderboardService
 
         var from = new DateOnly(year, month, 1);
         var to = from.AddMonths(1).AddDays(-1);
-        var rows = await LoadDailyFirstAttemptsAsync(from, to);
+        var rows = await LoadDailySolveRowsAsync(from, to);
         var perUser = AggregateScores(rows);
         var (names, profiles) = await ResolveUsersAsync(perUser.Keys.ToList());
 
@@ -152,12 +160,12 @@ public class DailyLeaderboardService
 
     /// <summary>
     /// All-time Hall of Fame des Tagespuzzles: meiste gelöste Dailies, meiste 🥇 (Tage als
-    /// schnellster Erstversuch-Löser) und die schnellste je gelöste Lösung. Jede Liste auf
+    /// schnellster Löser nach Summen-Zeit) und die schnellste je gelöste Lösung. Jede Liste auf
     /// <paramref name="top"/> Einträge begrenzt.
     /// </summary>
     public async Task<DailyHallOfFameDto> GetDailyHallOfFameAsync(int top = 5)
     {
-        var rows = await LoadDailyFirstAttemptsAsync(null, null);
+        var rows = await LoadDailySolveRowsAsync(null, null);
         var perUser = AggregateScores(rows);
         var (names, profiles) = await ResolveUsersAsync(perUser.Keys.ToList());
 

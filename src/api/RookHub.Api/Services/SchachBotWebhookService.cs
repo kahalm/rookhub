@@ -65,6 +65,8 @@ public class SchachBotWebhookService
                     // Der Bot zeigt ein 💡 hinter Lösern mit hintsUsed>0 (puzzle/daily_results.py).
                     // Fehlte hier (anders als beim Wochenpost) → Daily-Solver bekamen nie das Badge.
                     hintsUsed = s.HintsUsed,
+                    // Der Bot zeigt je Fehlversuch vor dem ersten Solve ein ❌ hinter der Zeit.
+                    wrongAttempts = s.WrongAttempts,
                 }),
             },
         };

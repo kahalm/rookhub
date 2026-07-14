@@ -300,20 +300,33 @@ public class BookPuzzleService
         if (DateTime.TryParse(since, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var sinceUtc))
             q = q.Where(a => a.AttemptedAt >= sinceUtc);
 
-        // Eingeloggte: je User aggregieren. Fairness-Regel (insb. Tagespuzzle):
-        // Ein User gilt nur dann als Löser, wenn sein ERSTER Versuch gelöst war —
-        // ein späterer Solve nach einem fehlgeschlagenen ersten Versuch zählt nicht.
-        // FirstSolved/AnyAttempt sind beides EF-übersetzbare skalare Aggregate.
-        var perUser = await q.Where(a => a.UserId != null)
-            .GroupBy(a => a.UserId)
-            .Select(g => new
-            {
-                UserId = g.Key!.Value,
-                FirstSolved = g.OrderBy(a => a.AttemptedAt).Select(a => a.Solved).FirstOrDefault(),
-                TimeSeconds = g.OrderBy(a => a.AttemptedAt).Select(a => a.TimeSeconds).FirstOrDefault(),
-                HintsUsed = g.OrderBy(a => a.AttemptedAt).Select(a => a.HintsUsed).FirstOrDefault()
-            })
+        // Eingeloggte: je User aggregieren. Regel (seit v0.309.0): Löser ist, wer das Puzzle
+        // IRGENDWANN gelöst hat — als bloß „versucht" gilt nur, wer nie gelöst hat. Fehlversuche
+        // vor dem ersten Solve werden gezählt (WrongAttempts → rotes ✗ je Fehlversuch, analog 💡);
+        // die Zeit ist die SUMME aller Versuche bis einschließlich des ersten Solves, Tipps das
+        // Maximum bis dahin. Versuche NACH dem ersten Solve (Nachspielen) ändern nichts mehr.
+        // In-Memory-Aggregation: Versuche je Puzzle sind wenige hundert Zeilen (49 Prod-User).
+        var attempts = await q.Where(a => a.UserId != null)
+            .Select(a => new { UserId = a.UserId!.Value, a.Solved, a.TimeSeconds, a.HintsUsed, a.AttemptedAt })
             .ToListAsync();
+        var perUser = attempts
+            .GroupBy(a => a.UserId)
+            .Select(g =>
+            {
+                var ordered = g.OrderBy(a => a.AttemptedAt).ToList();
+                var firstSolve = ordered.FirstOrDefault(a => a.Solved);
+                var counted = firstSolve == null ? ordered
+                    : ordered.Where(a => a.AttemptedAt <= firstSolve.AttemptedAt).ToList();
+                return new
+                {
+                    UserId = g.Key,
+                    Solved = firstSolve != null,
+                    TimeSeconds = counted.Sum(a => a.TimeSeconds),
+                    HintsUsed = counted.Count == 0 ? 0 : counted.Max(a => a.HintsUsed),
+                    WrongAttempts = counted.Count(a => !a.Solved),
+                };
+            })
+            .ToList();
 
         // Anonyme: nur gelöste werden anonym erfasst → distinct Sessions = anonyme Löser.
         var anonymousSolvedCount = await q.Where(a => a.AnonymousSessionId != null && a.Solved)
@@ -328,7 +341,7 @@ public class BookPuzzleService
             .ToDictionaryAsync(p => p.UserId);
 
         var solvers = perUser
-            .Where(u => u.FirstSolved)
+            .Where(u => u.Solved)
             .Select(u =>
             {
                 profiles.TryGetValue(u.UserId, out var prof);
@@ -339,7 +352,8 @@ public class BookPuzzleService
                     DiscordId = prof?.DiscordId,
                     DiscordUsername = prof?.DiscordUsername,
                     TimeSeconds = u.TimeSeconds,
-                    HintsUsed = u.HintsUsed
+                    HintsUsed = u.HintsUsed,
+                    WrongAttempts = u.WrongAttempts
                 };
             })
             .OrderBy(s => s.Name)
