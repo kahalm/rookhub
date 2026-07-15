@@ -75,4 +75,41 @@ describe('AppComponent lifecycle', () => {
     const fixture = TestBed.createComponent(AppComponent);
     expect(fixture.componentInstance.discordUrl).toBe(DISCORD_INVITE_URL);
   });
+
+  // Prod-Vorfall 2026-07-15: UNRECOVERABLE_STATE → blinder reload() heilte nichts und die App
+  // hing in einer Endlos-Reload-Schleife. Der Handler räumt jetzt SW+Caches weg und lädt pro
+  // Tab-Session höchstens EINMAL neu (sessionStorage-Guard) — und meldet das Event via ClientLog.
+  describe('service worker recovery (unrecoverable)', () => {
+    const GUARD_KEY = 'rookhub_sw_recovery_reload';
+
+    afterEach(() => sessionStorage.removeItem(GUARD_KEY));
+
+    it('reports, sets the guard and reloads exactly once', async () => {
+      sessionStorage.removeItem(GUARD_KEY);
+      const clientLog = TestBed.inject(ClientLogService);
+      const reportSpy = spyOn(clientLog, 'report');
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      const reloadSpy = spyOn<any>(fixture.componentInstance, 'reloadApp');
+
+      unrecoverable.next({ reason: 'hash mismatch' });
+      await fixture.componentInstance.swRecovery; // async-Selbstheilung deterministisch abwarten
+
+      expect(reportSpy).toHaveBeenCalledWith('sw_unrecoverable', 'hash mismatch');
+      expect(sessionStorage.getItem(GUARD_KEY)).toBe('1');
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT reload again when the guard is already set (no reload loop)', async () => {
+      sessionStorage.setItem(GUARD_KEY, '1');
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      const reloadSpy = spyOn<any>(fixture.componentInstance, 'reloadApp');
+
+      unrecoverable.next({ reason: 'hash mismatch' });
+      await fixture.componentInstance.swRecovery;
+
+      expect(reloadSpy).not.toHaveBeenCalled();
+    });
+  });
 });

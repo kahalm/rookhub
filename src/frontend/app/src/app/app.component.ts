@@ -213,7 +213,7 @@ export class AppComponent implements OnInit {
     // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
     _offlineQueue: OfflineQueueService,
     private offlinePrefetch: OfflinePrefetchService,
-    clientLog: ClientLogService,
+    private clientLog: ClientLogService,
     stockfish: StockfishService,
     analysisEngine: AnalysisEngineService,
     _theme: ThemeService,
@@ -251,9 +251,13 @@ export class AppComponent implements OnInit {
           const ref = this.snackbar.show(this.translate.instant('app.updateAvailable'), { action: 'app.reload', duration: 0 });
           ref.onAction().subscribe(() => document.location.reload());
         });
-      // Kaputter SW-Zustand (z.B. Hash-Mismatch nach Teil-Deploy) → einmal hart neu laden,
-      // sonst lädt die App veraltete/fehlende Chunks bis zu einem manuellen Reload.
-      this.swUpdate.unrecoverable.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => document.location.reload());
+      // Kaputter SW-Zustand (UNRECOVERABLE_STATE: gecachtes Asset fehlt im Cache UND ist nach einem
+      // Deploy auch am Server weg). Ein blinder reload() heilt den Zustand nicht — er feuerte sofort
+      // wieder und die App hing in einer Endlos-Reload-Schleife (Prod-Vorfall 2026-07-15). Stattdessen:
+      // Event melden, SW deregistrieren + ngsw-Caches löschen, genau EINMAL neu laden.
+      this.swUpdate.unrecoverable
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(ev => { this.swRecovery = this.recoverFromBrokenServiceWorker(ev.reason); });
 
       // Aktiv nach neuen Versionen suchen — sonst merkt ein lange offener Tab / eine installierte PWA
       // ein Deploy nie (der SW prüft von sich aus nur beim (Neu-)Start). checkForUpdate() lädt ngsw.json
@@ -275,6 +279,43 @@ export class AppComponent implements OnInit {
       }
       this.handleDiscordLinkParam(params);
     });
+  }
+
+  /** Guard-Key: pro Tab-Session höchstens EIN automatischer Recovery-Reload. */
+  private static readonly SW_RECOVERY_GUARD_KEY = 'rookhub_sw_recovery_reload';
+  /** Laufende SW-Selbstheilung — Feld, damit Tests den async-Ablauf deterministisch awaiten können. */
+  swRecovery?: Promise<void>;
+
+  /**
+   * SW-Selbstheilung bei UNRECOVERABLE_STATE: Diagnose-Event an die API melden, alle Service-Worker-
+   * Registrierungen entfernen und die ngsw-Caches löschen, danach genau einmal neu laden
+   * (sessionStorage-Guard verhindert die Reload-Schleife). Schlägt der Guard fehl oder lief der
+   * Reload schon, läuft die App ohne SW weiter (Netz-direkt) statt endlos zu reloaden.
+   */
+  private async recoverFromBrokenServiceWorker(reason: string): Promise<void> {
+    this.clientLog.report('sw_unrecoverable', reason);
+
+    let alreadyReloaded = true; // Default: NICHT reloaden (sicher gegen Schleife), außer Guard ist setzbar
+    try {
+      alreadyReloaded = sessionStorage.getItem(AppComponent.SW_RECOVERY_GUARD_KEY) === '1';
+      if (!alreadyReloaded) sessionStorage.setItem(AppComponent.SW_RECOVERY_GUARD_KEY, '1');
+    } catch { /* Storage nicht verfügbar → kein Auto-Reload */ }
+
+    try {
+      const regs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
+      await Promise.all(regs.map(r => r.unregister()));
+      if (typeof caches !== 'undefined') {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(k => k.startsWith('ngsw:')).map(k => caches.delete(k)));
+      }
+    } catch { /* best effort — Reload unten registriert den SW ohnehin frisch */ }
+
+    if (!alreadyReloaded) this.reloadApp();
+  }
+
+  /** In Methode gekapselt, damit Tests den harten Reload abfangen können. */
+  protected reloadApp(): void {
+    document.location.reload();
   }
 
   /** Nach einer neuen App-Version suchen (fehlertolerant; SW evtl. noch nicht registriert). */
