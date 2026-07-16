@@ -275,6 +275,13 @@ export class AppComponent implements OnInit {
       });
     }
 
+    // Persistenten Storage anfordern: Android evict bei Speicherdruck einzelne SW-Cache-Einträge
+    // (z. B. einen Lazy-Chunk, während die referenzierende index.html bleibt) — die deploy-
+    // unabhängige Hauptursache des unrecoverable-Zustands (angular/angular#36539). persist()
+    // nimmt unseren Storage von dieser Auto-Eviction aus; installierte PWAs/TWAs bekommen das
+    // auf Android i. d. R. ohne Nutzer-Prompt. Fire-and-forget, Ablehnung nur Telemetrie.
+    this.storagePersist = this.requestPersistentStorage();
+
     this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       const params = new URLSearchParams(window.location.search);
       if (params.get('quickstart') === '1') {
@@ -321,6 +328,25 @@ export class AppComponent implements OnInit {
   /** In Methode gekapselt, damit Tests den harten Reload abfangen können. */
   protected reloadApp(): void {
     document.location.reload();
+  }
+
+  /** Laufende Persistenz-Anfrage — Feld, damit Tests den async-Ablauf deterministisch awaiten können. */
+  storagePersist?: Promise<void>;
+
+  /** In Methode gekapselt, damit Tests den StorageManager stubben können. */
+  protected storageManager(): StorageManager | undefined {
+    return typeof navigator !== 'undefined' ? navigator.storage : undefined;
+  }
+
+  /** Best-effort `navigator.storage.persist()`; nur eine ABLEHNUNG wird gemeldet (Grant = Normalfall). */
+  private async requestPersistentStorage(): Promise<void> {
+    try {
+      const storage = this.storageManager();
+      if (!storage?.persist || !storage.persisted) return; // API nicht verfügbar (alte Browser)
+      if (await storage.persisted()) return;               // schon persistent → nichts zu tun
+      const granted = await storage.persist();
+      if (!granted) this.clientLog.report('storage_persist_denied');
+    } catch { /* optionale API — Fehler bewusst still */ }
   }
 
   /** Nach einer neuen App-Version suchen (fehlertolerant; SW evtl. noch nicht registriert). */

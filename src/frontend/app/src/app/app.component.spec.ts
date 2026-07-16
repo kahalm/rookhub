@@ -87,6 +87,41 @@ describe('AppComponent lifecycle', () => {
     expect(reportSpy).toHaveBeenCalledWith('sw_install_failed', 'Hash mismatch (cacheBustedFetchFromNetwork)');
   });
 
+  // Anti-Eviction (angular/angular#36539): beim Start wird persistenter Storage angefordert;
+  // nur eine Ablehnung wird gemeldet, bereits persistenter Storage fragt nicht erneut an.
+  describe('persistent storage request', () => {
+    function makeWithStorage(storage: Partial<StorageManager> | undefined) {
+      const fixture = TestBed.createComponent(AppComponent);
+      spyOn<any>(fixture.componentInstance, 'storageManager').and.returnValue(storage);
+      fixture.detectChanges(); // ngOnInit → requestPersistentStorage
+      return fixture;
+    }
+
+    it('requests persist() and reports a denial to the client log', async () => {
+      const clientLog = TestBed.inject(ClientLogService);
+      const reportSpy = spyOn(clientLog, 'report');
+      const persist = jasmine.createSpy('persist').and.resolveTo(false);
+      const fixture = makeWithStorage({ persisted: () => Promise.resolve(false), persist });
+
+      await fixture.componentInstance.storagePersist;
+
+      expect(persist).toHaveBeenCalled();
+      expect(reportSpy).toHaveBeenCalledWith('storage_persist_denied');
+    });
+
+    it('skips persist() when storage is already persistent and stays silent on grant', async () => {
+      const clientLog = TestBed.inject(ClientLogService);
+      const reportSpy = spyOn(clientLog, 'report');
+      const persist = jasmine.createSpy('persist').and.resolveTo(true);
+      const fixture = makeWithStorage({ persisted: () => Promise.resolve(true), persist });
+
+      await fixture.componentInstance.storagePersist;
+
+      expect(persist).not.toHaveBeenCalled();
+      expect(reportSpy).not.toHaveBeenCalled();
+    });
+  });
+
   // Prod-Vorfall 2026-07-15: UNRECOVERABLE_STATE → blinder reload() heilte nichts und die App
   // hing in einer Endlos-Reload-Schleife. Der Handler räumt jetzt SW+Caches weg und lädt pro
   // Tab-Session höchstens EINMAL neu (sessionStorage-Guard) — und meldet das Event via ClientLog.

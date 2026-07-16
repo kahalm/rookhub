@@ -26,6 +26,27 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [x] RecordAttemptAsync ohne Idempotenz/Limit → behoben in 0.97.8 (30s-Idempotenz + Elo-Guard)
 - [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
 
+## Runbooks
+
+### Service-Worker-Notfall (kaputter SW-Stand flächig bei Usern)
+Kontext: Vorfall 2026-07-15 (Endlos-Reload-Schleife nach UNRECOVERABLE_STATE, gefixt v0.309.1/0.309.2).
+Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cache-Stand ausliefern
+(Symptome in Kibana: Häufung der ClientLog-Arten `sw_unrecoverable` / `sw_install_failed`):
+
+1. **Einzelner User**: Chrome am Gerät → rookhub.oberschmid.homes → Schloss → Website-Einstellungen →
+   „Daten löschen" (TWA/PWA/Browser teilen sich denselben SW), danach neu einloggen. Alternativ
+   App force-stoppen/Gerät neu starten — degradierte ngsw-Zustände (EXISTING_CLIENTS_ONLY/SAFE_MODE)
+   werden NICHT persistiert, eine frische SW-Instanz startet nominal.
+2. **Weicher Kill-Switch (alle User)**: `ngsw.json` serverseitig mit 404 beantworten — der ngsw löscht
+   dann selbst alle Caches und deregistriert sich (eingebautes Verhalten). In `src/frontend/nginx.conf`
+   temporär einfügen: `location = /ngsw.json { return 404; }` (Container: Datei in
+   /etc/nginx/conf.d/default.conf editieren + `nginx -s reload` — überlebt keinen Redeploy, für den
+   Notfall genau richtig). Wieder entfernen, sobald ein sauberer Build deployed ist.
+3. **Harter Kill-Switch (alle User)**: den bereits im Image liegenden `safety-worker.js` unter der URL
+   des Workers ausliefern: `location = /ngsw-worker.js { try_files /safety-worker.js =404; }` —
+   deregistriert den Worker + löscht die Caches bei JEDEM Client, der die Seite lädt. Muss so lange
+   aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
+
 ## Geparkt
 - [ ] **Benachrichtigungen Phase 2/3: E-Mail + Web-Push** (Feature). Phase 1 (zentrale In-App-Glocke + Trigger) ist live. Offen: dieselben `Notification`-Events zusätzlich per **E-Mail** (reuse `IEmailSender`/SMTP wie beim Passwort-Reset; Opt-out/Frequenz je Nutzer bedenken) und per **Web-Push** (Browser-`NotificationService` + Push-Subscription/VAPID; SW-`push`-Handler) ausspielen. Pro Notification-Typ konfigurierbar (welche Kanäle), Nutzer-Präferenzen im Profil. Siehe `NotificationService.CreateAsync` als Fan-out-Punkt. (2026-07-05 aus dem offene-Punkte-Tracking hierher verlagert.)
 
