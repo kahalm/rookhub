@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { SwUpdate, VersionReadyEvent, VersionInstallationFailedEvent } from '@angular/service-worker';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { filter, interval } from 'rxjs';
@@ -251,6 +251,11 @@ export class AppComponent implements OnInit {
           const ref = this.snackbar.show(this.translate.instant('app.updateAvailable'), { action: 'app.reload', duration: 0 });
           ref.onAction().subscribe(() => document.location.reload());
         });
+      // Gescheiterte Update-Installation (Hash-Mismatch, fehlende Chunks nach Deploy, Abbruch)
+      // an die API melden (→ Kibana) — die Vorstufe des unrecoverable-Zustands. Nur Telemetrie.
+      this.swUpdate.versionUpdates
+        .pipe(filter((e): e is VersionInstallationFailedEvent => e.type === 'VERSION_INSTALLATION_FAILED'), takeUntilDestroyed(this.destroyRef))
+        .subscribe(e => this.clientLog.report('sw_install_failed', e.error));
       // Kaputter SW-Zustand (UNRECOVERABLE_STATE: gecachtes Asset fehlt im Cache UND ist nach einem
       // Deploy auch am Server weg). Ein blinder reload() heilt den Zustand nicht — er feuerte sofort
       // wieder und die App hing in einer Endlos-Reload-Schleife (Prod-Vorfall 2026-07-15). Stattdessen:

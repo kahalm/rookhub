@@ -76,6 +76,17 @@ describe('AppComponent lifecycle', () => {
     expect(fixture.componentInstance.discordUrl).toBe(DISCORD_INVITE_URL);
   });
 
+  it('reports VERSION_INSTALLATION_FAILED to the client log (sw_install_failed)', () => {
+    const clientLog = TestBed.inject(ClientLogService);
+    const reportSpy = spyOn(clientLog, 'report');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    versionUpdates.next({ type: 'VERSION_INSTALLATION_FAILED', error: 'Hash mismatch (cacheBustedFetchFromNetwork)' });
+
+    expect(reportSpy).toHaveBeenCalledWith('sw_install_failed', 'Hash mismatch (cacheBustedFetchFromNetwork)');
+  });
+
   // Prod-Vorfall 2026-07-15: UNRECOVERABLE_STATE → blinder reload() heilte nichts und die App
   // hing in einer Endlos-Reload-Schleife. Der Handler räumt jetzt SW+Caches weg und lädt pro
   // Tab-Session höchstens EINMAL neu (sessionStorage-Guard) — und meldet das Event via ClientLog.
