@@ -35,6 +35,8 @@ export interface SharedGame {
   createdAt: string;
   whiteElo?: number | null;
   blackElo?: number | null;
+  /** "white"/"black", wenn der Teilende einer Seite zuordenbar ist — initiale Brett-Orientierung. */
+  ownerSide?: 'white' | 'black' | null;
 }
 
 @Injectable({ providedIn: 'root' })

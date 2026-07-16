@@ -85,4 +85,11 @@ public class SharedGameDto
 
     /// <summary>Elo/Rating des Schwarzspielers (aus dem PGN-Header <c>BlackElo</c> gelesen).</summary>
     public int? BlackElo { get; set; }
+
+    /// <summary>"white"/"black", wenn der TEILENDE Besitzer über seinen hinterlegten Plattform-
+    /// Username (lichess bzw. chess.com, je nach Quelle) einer Seite zuordenbar ist; sonst null.
+    /// Steuert die Brett-Orientierung der öffentlichen /g/-Seite + des OG-Vorschaubilds
+    /// (Partie aus der Sicht des Teilenden). Kein zusätzlicher Identitäts-Leak — die
+    /// Spielernamen stehen ohnehin im DTO.</summary>
+    public string? OwnerSide { get; set; }
 }

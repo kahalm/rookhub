@@ -146,7 +146,10 @@ public class SavedGameService
         if (string.IsNullOrWhiteSpace(token)) return null;
         var g = await _db.SavedGames.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ShareToken == token);
-        return g == null ? null : new SharedGameDto
+        if (g == null) return null;
+        var profile = await _db.UserProfiles.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.UserId == g.UserId);
+        return new SharedGameDto
         {
             Source = g.Source,
             White = g.White,
@@ -158,7 +161,20 @@ public class SavedGameService
             CreatedAt = g.CreatedAt,
             WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
             BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
+            OwnerSide = DetermineOwnerSide(g, profile),
         };
+    }
+
+    /// <summary>Welche Seite spielte der Besitzer? Vergleich der Spielernamen mit seinem
+    /// Plattform-Username (lichess/chess.com je nach Quelle, case-insensitiv) — dieselbe
+    /// Logik wie das clientseitige Flippen der eigenen Nachspiel-Ansicht (games-list.isFlipped).</summary>
+    private static string? DetermineOwnerSide(SavedGame g, UserProfile? profile)
+    {
+        var myName = g.Source == "lichess" ? profile?.LichessUsername : profile?.ChessComUsername;
+        if (string.IsNullOrWhiteSpace(myName)) return null;
+        if (string.Equals(g.Black?.Trim(), myName.Trim(), StringComparison.OrdinalIgnoreCase)) return "black";
+        if (string.Equals(g.White?.Trim(), myName.Trim(), StringComparison.OrdinalIgnoreCase)) return "white";
+        return null;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────

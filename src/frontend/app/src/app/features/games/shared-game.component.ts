@@ -144,7 +144,13 @@ export class SharedGameComponent implements OnInit {
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('token') || '';
     this.games.getShared(token).subscribe({
-      next: g => { this.game = g; this.service.loadPgn(g.pgn); this.loading = false; },
+      next: g => {
+        this.game = g;
+        // Aus der Sicht des Teilenden: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
+        this.flipped = g.ownerSide === 'black';
+        this.service.loadPgn(g.pgn);
+        this.loading = false;
+      },
       error: () => { this.notFound = true; this.loading = false; },
     });
   }

@@ -139,7 +139,8 @@ public class OgMetaService
                 {
                     var g = await _games.GetSharedAsync(id);
                     if (g is null) return null;
-                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: false);
+                    // Aus der Sicht des Teilenden: spielte er Schwarz, wird auch die Vorschau gedreht.
+                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: g.OwnerSide == "black");
                 }
                 case "puzzle":
                 {

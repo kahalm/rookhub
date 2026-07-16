@@ -136,6 +136,54 @@ public class GamesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetShared_OwnerPlayedBlackOnLichess_OwnerSideBlack()
+    {
+        var owner = await CreateUserAsync("blackowner");
+        _db.UserProfiles.Add(new UserProfile { UserId = owner.Id, LichessUsername = "SchwarzSpieler" });
+        await _db.SaveChangesAsync();
+        var saved = await _service.SaveAsync(owner.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "Gegner",
+            Black = "schwarzspieler", // case-insensitiv gegen den Profil-Username
+            Result = "0-1", ExternalId = "side-1",
+        });
+
+        var shared = await _service.GetSharedAsync(saved.ShareToken);
+        Assert.Equal("black", shared!.OwnerSide);
+    }
+
+    [Fact]
+    public async Task GetShared_OwnerPlayedWhiteOnChessCom_OwnerSideWhite_UsesChessComName()
+    {
+        var owner = await CreateUserAsync("whiteowner");
+        // lichess-Name absichtlich anders — bei Quelle chess.com zählt NUR der chess.com-Username.
+        _db.UserProfiles.Add(new UserProfile { UserId = owner.Id, ChessComUsername = "WeissSpieler", LichessUsername = "andererName" });
+        await _db.SaveChangesAsync();
+        var saved = await _service.SaveAsync(owner.Id, new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = new() { "e4", "c5" }, White = "WeissSpieler", Black = "Gegner",
+            Result = "1-0", ExternalId = "side-2",
+        });
+
+        var shared = await _service.GetSharedAsync(saved.ShareToken);
+        Assert.Equal("white", shared!.OwnerSide);
+    }
+
+    [Fact]
+    public async Task GetShared_NoProfileOrNoNameMatch_OwnerSideNull()
+    {
+        var owner = await CreateUserAsync("nomatch");
+        var saved = await _service.SaveAsync(owner.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b",
+            Result = "*", ExternalId = "side-3",
+        });
+
+        var shared = await _service.GetSharedAsync(saved.ShareToken);
+        Assert.Null(shared!.OwnerSide);
+    }
+
+    [Fact]
     public async Task Save_WithElo_SharedViewExposesEloFromPgn()
     {
         var owner = await CreateUserAsync("owner");
