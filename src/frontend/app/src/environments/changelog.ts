@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.311.0';
+export const APP_VERSION = '0.312.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.312.0", date: "2026-07-16", changes: [
+    { en: "Kibana dashboards (RookHub Prod + Dev) got a new section ‚Extension (RepCheck)': a metric with the number of distinct users of the browser extension plus a per-user table (#requests and #days active), both based on requests to /api/extension/* (labels.VisitorId). Added in init-kibana.sh and already applied to the running Kibana — no app deploy needed.", de: "Die Kibana-Dashboards (RookHub Prod + Dev) haben eine neue Sektion „Extension (RepCheck)“: eine Kennzahl mit der Anzahl unterschiedlicher Nutzer der Browser-Extension plus eine Pro-User-Tabelle (#requests und #tageaktiv), beides auf Basis der Requests auf /api/extension/* (labels.VisitorId). In init-kibana.sh ergänzt und bereits live ins laufende Kibana eingespielt — kein App-Deploy nötig." },
+  ] },
   { version: "0.311.0", date: "2026-07-16", changes: [
     { en: "Shared game page /g/{token} now shows the board from the SHARER's perspective: if the owner played black (their stored lichess/chess.com username matches the black player, case-insensitive, platform chosen by the game source — same logic the own replay dialog already used client-side), the board starts flipped; the manual flip button still works. The server derives this once (new SharedGameDto.OwnerSide, no extra identity leak — the player names are already public on the page) so it also works for anonymous visitors, and the Open-Graph preview image of the final position is rendered flipped as well (OgBoard.Flip was already plumbed). +3 backend tests, +2 frontend tests. NOT deployed (needs BOTH images: api + frontend).", de: "Die geteilte Partie-Seite /g/{token} zeigt das Brett jetzt aus der Sicht des TEILENDEN: Spielte der Besitzer Schwarz (sein hinterlegter lichess-/chess.com-Username matcht den Schwarzspieler, case-insensitiv, Plattform je nach Partie-Quelle — dieselbe Logik, die der eigene Nachspiel-Dialog clientseitig schon nutzte), startet das Brett gedreht; der manuelle Dreh-Knopf bleibt. Der Server leitet das einmal ab (neues SharedGameDto.OwnerSide, kein zusätzlicher Identitäts-Leak — die Spielernamen stehen ohnehin öffentlich auf der Seite), damit es auch für anonyme Besucher gilt, und auch das Open-Graph-Vorschaubild der Endstellung wird gedreht gerendert (OgBoard.Flip war bereits verdrahtet). +3 Backend-Tests, +2 Frontend-Tests. NICHT deployed (braucht BEIDE Images: api + frontend)." },
   ] },
