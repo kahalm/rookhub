@@ -21,7 +21,12 @@ export const connectivityInterceptor: HttpInterceptorFn = (req, next) => {
     tap(event => { if (event.type === HttpEventType.Response) connectivity.reportApiSuccess(); }),
     catchError(err => {
       const deviceOnline = typeof navigator === 'undefined' || navigator.onLine;
-      if (err instanceof HttpErrorResponse && err.status === 0 && deviceOnline) connectivity.reportApiFailure();
+      // Status 0 = „Failed to fetch" (kein Service Worker dazwischen). Mit AKTIVEM ngsw kommt
+      // Status 0 nie an: der SW wandelt gescheiterte Passthrough-Fetches in synthetische
+      // 504-„Gateway Timeout"-Antworten um (ngsw-worker.js) — in der PWA/TWA ist 504 also
+      // das Netzfehler-Signal, sonst bliebe das Banner dort für immer stumm.
+      const networkLevelFailure = err instanceof HttpErrorResponse && (err.status === 0 || err.status === 504);
+      if (networkLevelFailure && deviceOnline) connectivity.reportApiFailure();
       return throwError(() => err);
     })
   );

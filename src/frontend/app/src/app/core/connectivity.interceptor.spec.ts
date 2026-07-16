@@ -29,6 +29,14 @@ describe('connectivityInterceptor', () => {
     expect(connectivity.problem()).toBe('unreachable');
   });
 
+  // PWA/TWA-Fall: mit aktivem ngsw kommt Status 0 NIE an — der SW synthetisiert bei
+  // gescheiterten Passthrough-Fetches eine 504-Antwort (ngsw-worker.js). Ohne diesen
+  // Trigger bliebe das Verbindungs-Banner in der installierten App für immer stumm.
+  it('marks the API unreachable on a service-worker-synthesized 504 for /api requests', () => {
+    run(new HttpRequest('GET', '/api/menu'), () => throwError(() => new HttpErrorResponse({ status: 504 })));
+    expect(connectivity.problem()).toBe('unreachable');
+  });
+
   it('clears the unreachable state on the next successful /api response', () => {
     run(new HttpRequest('GET', '/api/menu'), failNext);
     run(new HttpRequest('GET', '/api/menu'), okNext);
