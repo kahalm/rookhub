@@ -17,6 +17,7 @@ import { OfflineQueueService } from './core/offline-queue.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
 import { PwaInstallService } from './core/pwa-install.service';
 import { ClientLogService } from './core/client-log.service';
+import { ConnectivityService } from './core/connectivity.service';
 import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
@@ -35,6 +36,33 @@ import { APK_VERSION } from '../environments/changelog';
         <span>{{ 'app.apkUpdate.banner' | translate }}</span>
         <a routerLink="/install" (click)="dismissApkUpdate()">{{ 'app.apkUpdate.install' | translate }}</a>
         <button class="apk-dismiss" (click)="dismissApkUpdate()" [attr.aria-label]="'common.close' | translate">&times;</button>
+      </div>
+    }
+    @if (connectivity.problem(); as connProblem) {
+      <div class="conn-banner" [class.conn-offline]="connProblem === 'offline'">
+        <div class="conn-row">
+          <span class="conn-icon" aria-hidden="true">{{ connProblem === 'offline' ? '&#x1F4F4;' : '&#x26A0;&#xFE0F;' }}</span>
+          <span>{{ 'app.connectivity.' + connProblem | translate }}</span>
+          <button class="conn-btn" (click)="showConnDetails = !showConnDetails">{{ 'app.connectivity.details' | translate }}</button>
+          @if (connProblem === 'unreachable') {
+            <button class="conn-btn" (click)="connectivity.checkNow()">{{ 'app.connectivity.retry' | translate }}</button>
+          }
+        </div>
+        @if (showConnDetails) {
+          <div class="conn-details">
+            @if (connProblem === 'offline') {
+              <p>{{ 'app.connectivity.offlineInfo' | translate }}</p>
+            } @else {
+              <p>{{ 'app.connectivity.hintsTitle' | translate }}</p>
+              <ul>
+                <li>{{ 'app.connectivity.hint1' | translate }}</li>
+                <li>{{ 'app.connectivity.hint2' | translate }}</li>
+                <li>{{ 'app.connectivity.hint3' | translate }}</li>
+                <li>{{ 'app.connectivity.hint4' | translate }}</li>
+              </ul>
+            }
+          </div>
+        }
       </div>
     }
     @if (auth.isImpersonating) {
@@ -137,6 +165,21 @@ import { APK_VERSION } from '../environments/changelog';
       border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
     }
     .apk-dismiss:hover { background: rgba(255,255,255,0.3); }
+    .conn-banner {
+      background: #e65100; color: #fff; padding: 6px 14px; font-size: 0.85rem; font-weight: 500;
+      position: sticky; top: 0; z-index: 1100;
+    }
+    .conn-banner.conn-offline { background: #455a64; }
+    .conn-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .conn-btn {
+      background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .conn-btn:hover { background: rgba(255,255,255,0.3); }
+    .conn-details { max-width: 640px; margin: 6px auto 2px; font-weight: 400; text-align: left; }
+    .conn-details p { margin: 4px 0; }
+    .conn-details ul { margin: 4px 0 4px 18px; padding: 0; }
+    .conn-details li { margin-bottom: 3px; }
     .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
@@ -186,6 +229,8 @@ export class AppComponent implements OnInit {
   showChangelog = false;
   showQuickstart = false;
   showApkUpdate = false;
+  /** Details-Panel des Verbindungs-Banners (Offline-Info bzw. VPN/DNS-Hinweise) ausgeklappt? */
+  showConnDetails = false;
   private readonly APK_UPDATE_LS_KEY = 'rookhub_apk_seen_version';
 
   /** Escape schließt das offene Overlay (Changelog/Quickstart) — Tastatur-Bedienbarkeit. */
@@ -214,6 +259,8 @@ export class AppComponent implements OnInit {
     _offlineQueue: OfflineQueueService,
     private offlinePrefetch: OfflinePrefetchService,
     private clientLog: ClientLogService,
+    // Verbindungs-Banner (offline / Server unerreichbar) in der App-Shell.
+    readonly connectivity: ConnectivityService,
     stockfish: StockfishService,
     analysisEngine: AnalysisEngineService,
     _theme: ThemeService,
@@ -229,6 +276,9 @@ export class AppComponent implements OnInit {
     // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).
     stockfish.reportEngineEvent = (kind, detail) => clientLog.report('engine_stockfish_' + kind, detail);
     analysisEngine.reportEngineEvent = (kind, detail) => clientLog.report('engine_analysis_' + kind, detail);
+    // Wiederhergestellte Verbindung (nach „Server unerreichbar") als Diagnose-Event melden —
+    // macht Client-seitige Ausfälle (VPN-/DNS-Blockade) in Kibana sichtbar.
+    connectivity.reportRecovery = (kind, detail) => clientLog.report(kind, detail);
   }
 
   ngOnInit(): void {

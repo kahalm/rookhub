@@ -225,6 +225,18 @@
     "impersonation": {
       "banner": "Pregledavate kao {{user}} (administrator: {{admin}})",
       "exit": "Natrag na administratora"
+    },
+    "connectivity": {
+      "offline": "Offline si — nema internetske veze.",
+      "unreachable": "RookHub poslužitelj nije dostupan — možda ga blokira tvoja internetska veza ili VPN/filter.",
+      "details": "Detalji",
+      "retry": "Pokušaj ponovno",
+      "offlineInfo": "Unaprijed učitane zagonetke, tečajevi i dnevna zagonetka rade i offline. Tvoja rješenja spremaju se na uređaj i automatski sinkroniziraju čim se vratiš online.",
+      "hintsTitle": "Uređaj je online, ali RookHub poslužitelj nije dostupan. Mogući uzroci:",
+      "hint1": "Provjeri internetsku vezu uređaja (Wi-Fi / mobilni podaci).",
+      "hint2": "VPN, blokator oglasa ili funkcija „Threat Protection“ (npr. NordVPN, AdGuard) može blokirati RookHub putem DNS-a — privremeno ga isključi ili dodaj rookhub.oberschmid.homes kao iznimku.",
+      "hint3": "Na Androidu postavi „Privatni DNS“ na „Automatski“ (Postavke → Mreža i internet).",
+      "hint4": "Ako problem ostaje, poslužitelj je možda privremeno nedostupan — pokušaj kasnije."
     }
   },
   "auth": {

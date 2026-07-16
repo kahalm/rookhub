@@ -225,6 +225,18 @@
     "impersonation": {
       "banner": "Du bist als {{user}} unterwegs (Admin: {{admin}})",
       "exit": "Zurück zu Admin"
+    },
+    "connectivity": {
+      "offline": "Du bist offline — keine Internetverbindung.",
+      "unreachable": "RookHub-Server nicht erreichbar — evtl. blockiert deine Internetverbindung oder ein VPN/Filter den Zugriff.",
+      "details": "Details",
+      "retry": "Erneut versuchen",
+      "offlineInfo": "Vorab geladene Puzzles, Kurse und das Tagespuzzle funktionieren offline weiter. Deine Lösungen werden am Gerät gespeichert und automatisch synchronisiert, sobald du wieder online bist.",
+      "hintsTitle": "Dein Gerät ist online, aber der RookHub-Server ist nicht erreichbar. Mögliche Ursachen:",
+      "hint1": "Internetverbindung des Geräts prüfen (WLAN / mobile Daten).",
+      "hint2": "Ein VPN, Werbeblocker oder eine „Threat Protection“-Funktion (z. B. NordVPN, AdGuard) kann RookHub per DNS blockieren — testweise kurz deaktivieren oder rookhub.oberschmid.homes als Ausnahme eintragen.",
+      "hint3": "Auf Android „Privates DNS“ auf „Automatisch“ stellen (Einstellungen → Netzwerk & Internet).",
+      "hint4": "Besteht das Problem weiter, ist der Server evtl. kurzzeitig nicht erreichbar — bitte später erneut versuchen."
     }
   },
   "auth": {

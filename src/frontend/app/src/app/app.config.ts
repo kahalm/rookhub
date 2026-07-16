@@ -11,6 +11,7 @@ import localeHr from '@angular/common/locales/hr';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
+import { connectivityInterceptor } from './core/connectivity.interceptor';
 import { retryInterceptor } from './core/retry.interceptor';
 import { visitorInterceptor } from './core/visitor.interceptor';
 import { resolveStartupLocale } from './core/locale.service';
@@ -27,7 +28,8 @@ export const appConfig: ApplicationConfig = {
     // Aktive Locale (en/de/hr) für Angular-Pipes; aus gespeicherter Sprache beim Start.
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
-    provideHttpClient(withInterceptors([retryInterceptor, visitorInterceptor, authInterceptor])),
+    // connectivity zuerst (äußerster) — sieht Erfolge/finale Fehler NACH den Retries.
+    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, visitorInterceptor, authInterceptor])),
     provideAnimationsAsync(),
     // i18n (ngx-translate): JSON aus public/i18n/*.json, Fallback Englisch.
     provideTranslateService({
