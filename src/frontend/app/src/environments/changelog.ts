@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.314.0';
+export const APP_VERSION = '0.314.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.314.1", date: "2026-07-18", changes: [
+    { en: "Internal security review across all six stack repos (no critical/high issues open); findings logged in TODO.md. Documentation only — no product code change.", de: "Interner Security-Review über alle sechs Stack-Repos (keine kritischen/hohen Lücken offen); Funde in TODO.md protokolliert. Nur Doku — keine Produktcode-Änderung." },
+  ] },
   { version: "0.314.0", date: "2026-07-18", changes: [
     { en: "Daily puzzle: the solve timer now accumulates across visits. Opening the daily, leaving, and opening the link again used to restart the clock at 0 — the active (visible-tab) time is now remembered per day on the device, resumed on the next visit, and the recorded solve time includes all of it (fairer for the ‚fastest solver' medal). The stored time is written once per second while solving plus when leaving mid-run, and it stops accumulating as soon as an attempt is actually recorded (logged in: any attempt; anonymous: the solve). The last 14 days are kept per device. +10 frontend tests. NOT deployed (frontend image only).", de: "Tagespuzzle: Die Lösezeit kumuliert jetzt über Besuche hinweg. Wer das Daily öffnete, es verließ und den Link später erneut aufmachte, fing bisher wieder bei 0 an — die aktive Zeit (nur sichtbarer Tab) wird nun pro Tag auf dem Gerät gemerkt, beim nächsten Besuch fortgeführt, und die gewertete Lösezeit enthält alles davon (fairer für die „schnellster Löser“-Medaille). Der Zwischenstand wird während des Lösens sekündlich sowie beim Verlassen mitten im Lauf gespeichert und hört auf zu kumulieren, sobald ein Versuch tatsächlich erfasst ist (eingeloggt: jeder Versuch; anonym: der Solve). Gemerkt werden die letzten 14 Tage pro Gerät. +10 Frontend-Tests. NICHT deployed (nur Frontend-Image)." },
   ] },
