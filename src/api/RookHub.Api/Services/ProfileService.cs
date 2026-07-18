@@ -225,7 +225,8 @@ public class ProfileService
 
         // 1) Persönliche Inhalte & Verknüpfungen hart entfernen (keine Statistik):
         //    Freundschaften (FK Restrict -> müssen explizit weg), Repertoires (cascadet Dateien),
-        //    Turnier-Abos/-Favoriten/-Einstellungen, Gruppen-Mitgliedschaften.
+        //    Turnier-Abos/-Favoriten/-Einstellungen, Gruppen-Mitgliedschaften, API-Tokens,
+        //    Chessable-Bearer + Reset-Tokens, öffentliche Share-Inhalte, gemerkte Stellungen.
         _db.Friendships.RemoveRange(
             await _db.Friendships.Where(f => f.RequesterId == userId || f.AddresseeId == userId).ToListAsync());
         _db.Repertoires.RemoveRange(await _db.Repertoires.Where(r => r.UserId == userId).ToListAsync());
@@ -235,6 +236,19 @@ public class ProfileService
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
         // API-Tokens (chess.com-Extension u. a.) widerrufen — ein gelöschtes Konto behält keinen Zugang.
         _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == userId).ToListAsync());
+        // Live-Drittanbieter-Credential + Einmal-Tokens: dürfen nach der Löschung nicht fortbestehen
+        // (der Chessable-Bearer bliebe sonst mit dem Server-Key entschlüsselbar).
+        _db.ChessableCredentials.RemoveRange(await _db.ChessableCredentials.Where(c => c.UserId == userId).ToListAsync());
+        _db.PasswordResetTokens.RemoveRange(await _db.PasswordResetTokens.Where(t => t.UserId == userId).ToListAsync());
+        // Öffentlich abrufbare Inhalte mit Klarnamen/Fremddaten: geteilte Partien (/g/{token}) und
+        // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.
+        _db.SavedGames.RemoveRange(await _db.SavedGames.Where(g => g.UserId == userId).ToListAsync());
+        _db.SharedLines.RemoveRange(await _db.SharedLines.Where(l => l.OwnerUserId == userId).ToListAsync());
+        // Auf chessable.com gemerkte Stellungen (Kursname/Quell-URL) — persönlich, keine Statistik.
+        _db.RememberedPositions.RemoveRange(await _db.RememberedPositions.Where(r => r.UserId == userId).ToListAsync());
+        // Manuelle Aktivitäten bleiben als (anonyme) Trainingsstatistik, aber die Freitext-Notiz (PII) wird geleert.
+        var manualWithNote = await _db.ManualActivities.Where(a => a.UserId == userId && a.Note != null).ToListAsync();
+        foreach (var a in manualWithNote) a.Note = null;
 
         // 2) Identität anonymisieren (in-place) -> nicht re-identifizierbar, Login gesperrt.
         user.Username = $"deleted_{userId}";

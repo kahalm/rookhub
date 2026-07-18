@@ -2,6 +2,7 @@ import { Injectable, Injector } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { OfflineService } from './offline.service';
 
 export interface AuthResponse {
   token: string;
@@ -173,6 +174,11 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('rookhub_user');
     localStorage.removeItem('rookhub_admin_user');
+    // Geräte-lokale Offline-Inhalte (heruntergeladene Repertoires/Kurse, Kursliste, Tagespuzzle,
+    // Pools) beim Abmelden löschen — sonst blieben sie für den NÄCHSTEN Nutzer desselben Geräts
+    // les-/sichtbar. Die Offline-Schreib-Queue bleibt bewusst bestehen (sie ist user-gestempelt und
+    // geht nur unter demselben Konto raus) → gemerkte Lösungen überstehen ein versehentliches Logout.
+    try { this.injector.get(OfflineService).clearAll(); } catch { /* Storage/DI nicht verfügbar */ }
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }

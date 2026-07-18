@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.314.1';
+export const APP_VERSION = '0.315.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.315.0", date: "2026-07-18", changes: [
+    { en: "Security review follow-up — fixed the three MED findings in rookhub. (1) Account deletion now also removes the stored Chessable bearer, password-reset tokens, public share links (saved games /g/, shared lines /l/) and remembered positions, and blanks the free-text notes of manual activities — previously these survived the (in-place) anonymization; solve statistics are still kept anonymously. (2) The offline write-queue is now stamped with the user id and only replays entries under the same account — on a shared device one user's offline solves can no longer be sent under the next user's login (they wait until their own user logs back in); anonymous entries still sync under anyone. (3) Downloaded offline content (repertoires, courses, course list, daily puzzle, pools) is now cleared on logout so it isn't readable by the next user of the same device (the user-stamped queue is intentionally kept, so an accidental logout doesn't lose pending solves). +6 frontend tests, +1 backend assertion set (BE 1513 / FE 1253 green). NOT deployed (needs both images: api + frontend).", de: "Security-Review-Nachgang — die drei MED-Funde in rookhub behoben. (1) Die Kontolöschung entfernt jetzt auch den gespeicherten Chessable-Bearer, Passwort-Reset-Tokens, öffentliche Share-Links (geteilte Partien /g/, geteilte Linien /l/) und gemerkte Stellungen und leert die Freitext-Notizen manueller Aktivitäten — bisher überlebten diese die (in-place-)Anonymisierung; die Solve-Statistik bleibt weiterhin anonym erhalten. (2) Die Offline-Schreib-Queue wird mit der User-Id gestempelt und nur unter demselben Konto erneut gesendet — auf einem geteilten Gerät können die Offline-Lösungen des einen Nutzers nicht mehr unter dem Login des nächsten rausgehen (sie warten, bis ihr eigener Nutzer wieder eingeloggt ist); anonyme Einträge synchronisieren weiter unter jedem. (3) Heruntergeladene Offline-Inhalte (Repertoires, Kurse, Kursliste, Tagespuzzle, Pools) werden beim Abmelden gelöscht, damit sie nicht vom nächsten Nutzer desselben Geräts lesbar sind (die user-gestempelte Queue bleibt bewusst erhalten, damit ein versehentliches Logout keine offenen Lösungen verliert). +6 Frontend-Tests, +1 Backend-Assertion-Set (BE 1513 / FE 1253 grün). NICHT deployed (braucht beide Images: api + frontend)." },
+  ] },
   { version: "0.314.1", date: "2026-07-18", changes: [
     { en: "Internal security review across all six stack repos (no critical/high issues open); findings logged in TODO.md. Documentation only — no product code change.", de: "Interner Security-Review über alle sechs Stack-Repos (keine kritischen/hohen Lücken offen); Funde in TODO.md protokolliert. Nur Doku — keine Produktcode-Änderung." },
   ] },

@@ -57,6 +57,14 @@ public class ProfileServiceTests : IDisposable
         _db.Friendships.Add(new Models.Friendship { RequesterId = id, AddresseeId = other, Status = Models.FriendshipStatus.Accepted });
         _db.EndlessSessions.Add(new Models.EndlessSession { UserId = id, Timestamp = 1, TotalSolved = 7 });
         _db.UserApiTokens.Add(new Models.UserApiToken { UserId = id, Name = "ext", TokenHash = "h", Prefix = "rkh_abc", Scope = "extension" });
+        // Secrets/öffentliche Inhalte/PII, die mit der Löschung verschwinden müssen:
+        _db.ChessableCredentials.Add(new Models.ChessableCredential { UserId = id, EncryptedBearer = "enc" });
+        _db.PasswordResetTokens.Add(new Models.PasswordResetToken { UserId = id, TokenHash = "prt", ExpiresAt = DateTime.UtcNow.AddHours(1) });
+        _db.SavedGames.Add(new Models.SavedGame { UserId = id, Source = "chess.com", Pgn = "1. e4", ShareToken = "g-tok" });
+        _db.SharedLines.Add(new Models.SharedLine { OwnerUserId = id, Pgn = "1. e4", LineHash = "lh", ShareToken = "l-tok" });
+        _db.RememberedPositions.Add(new Models.RememberedPosition { UserId = id, Fen = "8/8/8/8/8/8/8/8 w - - 0 1" });
+        // Manuelle Aktivität bleibt als Statistik, aber die Notiz (PII) wird geleert:
+        _db.ManualActivities.Add(new Models.ManualActivity { UserId = id, Date = new DateOnly(2026, 7, 1), Kind = Models.ManualActivityKind.OtbGame, Amount = 1, Note = "gegen Max am Vereinsabend" });
         await _db.SaveChangesAsync();
 
         await _profileService.DeleteAccountAsync(id, "secret123");
@@ -78,6 +86,15 @@ public class ProfileServiceTests : IDisposable
         Assert.True(await _db.EndlessSessions.AnyAsync(s => s.UserId == id && s.TotalSolved == 7));
         // API-Tokens widerrufen (kein Zugang nach Löschung)
         Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == id));
+        // Live-Bearer + Einmal-Tokens + öffentliche Share-Inhalte + gemerkte Stellungen sind weg
+        Assert.False(await _db.ChessableCredentials.AnyAsync(c => c.UserId == id));
+        Assert.False(await _db.PasswordResetTokens.AnyAsync(t => t.UserId == id));
+        Assert.False(await _db.SavedGames.AnyAsync(g => g.UserId == id));
+        Assert.False(await _db.SharedLines.AnyAsync(l => l.OwnerUserId == id));
+        Assert.False(await _db.RememberedPositions.AnyAsync(r => r.UserId == id));
+        // Manuelle Aktivität bleibt (Statistik), aber ohne Freitext-Notiz
+        var manual = await _db.ManualActivities.SingleAsync(a => a.UserId == id);
+        Assert.Null(manual.Note);
     }
 
     private async Task<int> CreateUserAsync(string username = "testuser")

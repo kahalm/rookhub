@@ -134,3 +134,37 @@ describe('AuthService RBAC permissions/has', () => {
     expect(svc.has('books.manage')).toBeFalse();
   });
 });
+
+describe('AuthService logout clears offline content', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+  });
+  afterEach(() => localStorage.clear());
+
+  it('removes downloaded offline content on logout but keeps the (user-stamped) queue + unrelated keys', () => {
+    const svc = TestBed.inject(AuthService);
+    // Offline-Inhalte eines Nutzers
+    localStorage.setItem('rookhub_repertoire_offline_3', JSON.stringify({ meta: { id: 3 } }));
+    localStorage.setItem('rookhub_book_offline_x', '[]');
+    localStorage.setItem('rookhub_courses_cache', '[]');
+    localStorage.setItem('rookhub_daily_offline', '{}');
+    // Diese sollen ERHALTEN bleiben:
+    localStorage.setItem('rookhub_offline_queue', '[{"id":"1","method":"POST","url":"/api/x","body":{},"ts":0,"userId":7}]');
+    localStorage.setItem('rookhub_offline_settings', '{"puzzleCount":30}');
+    localStorage.setItem('rookhub_lang', 'de');
+
+    svc.logout();
+
+    expect(localStorage.getItem('rookhub_repertoire_offline_3')).toBeNull();
+    expect(localStorage.getItem('rookhub_book_offline_x')).toBeNull();
+    expect(localStorage.getItem('rookhub_courses_cache')).toBeNull();
+    expect(localStorage.getItem('rookhub_daily_offline')).toBeNull();
+    // Queue (user-gestempelt → sicher) + Einstellungen + Sprache bleiben
+    expect(localStorage.getItem('rookhub_offline_queue')).not.toBeNull();
+    expect(localStorage.getItem('rookhub_offline_settings')).not.toBeNull();
+    expect(localStorage.getItem('rookhub_lang')).toBe('de');
+  });
+});

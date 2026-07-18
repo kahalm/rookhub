@@ -8,6 +8,10 @@ interface PendingRequest {
   url: string;
   body: unknown;
   ts: number;
+  /** User, unter dem der Request entstand (aus dem Login-State). null = anonym (Session-basiert,
+   *  darf unter jedem Login rausgehen). Verhindert, dass A's gemerkte Lösungen unter B's Bearer
+   *  gesendet werden, wenn auf einem geteilten Gerät der Nutzer wechselt. */
+  userId?: number | null;
 }
 
 export const OFFLINE_QUEUE_KEY = 'rookhub_offline_queue';
@@ -34,11 +38,28 @@ export class OfflineQueueService {
     }
   }
 
-  /** Einen Request für später vormerken (wenn offline / Netzwerkfehler). */
+  /** Einen Request für später vormerken (wenn offline / Netzwerkfehler). Wird mit der aktuellen
+   *  User-Id gestempelt, damit er beim Reconnect nur unter DEMSELBEN Konto rausgeht. */
   enqueue(method: 'POST' | 'PUT', url: string, body: unknown): void {
     const q = this.read();
-    q.push({ id: this.newId(), method, url, body, ts: Date.now() });
+    q.push({ id: this.newId(), method, url, body, ts: Date.now(), userId: this.currentUserId() });
     this.write(q);
+  }
+
+  /** Aktuelle Login-User-Id aus dem gespeicherten Auth-State (ohne AuthService-Abhängigkeit, um
+   *  keinen DI-Zyklus zu erzeugen). null = nicht eingeloggt / unlesbar. */
+  private currentUserId(): number | null {
+    try {
+      const raw = localStorage.getItem('rookhub_user');
+      const id = raw ? JSON.parse(raw)?.userId : null;
+      return typeof id === 'number' ? id : null;
+    } catch { return null; }
+  }
+
+  /** Darf dieser Eintrag jetzt gesendet werden? Anonyme (userId null/fehlt) immer; ein an einen
+   *  Login gebundener Eintrag nur, wenn genau dieser User eingeloggt ist. */
+  private eligible(r: PendingRequest, currentUserId: number | null): boolean {
+    return r.userId == null || r.userId === currentUserId;
   }
 
   private newId(): string {
@@ -63,27 +84,30 @@ export class OfflineQueueService {
     try { localStorage.removeItem(OFFLINE_QUEUE_KEY); } catch { /* ignore */ }
   }
 
-  /** Vorgemerkte Requests der Reihe nach erneut senden. */
+  /** Vorgemerkte Requests der Reihe nach erneut senden. Nur Einträge des aktuell eingeloggten
+   *  Users (bzw. anonyme) gehen raus; fremde bleiben liegen, bis IHR User wieder eingeloggt ist. */
   flush(): void {
     if (this.flushing) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     const q = this.read();
     if (q.length === 0) return;
     this.flushing = true;
-    this.sendNext(q, 0);
+    this.sendNext(q, 0, this.currentUserId());
   }
 
-  private sendNext(q: PendingRequest[], i: number): void {
+  private sendNext(q: PendingRequest[], i: number, currentUserId: number | null): void {
     if (i >= q.length) { this.flushing = false; return; }
     const r = q[i];
+    // Fremd-User-Eintrag: NICHT senden und NICHT entfernen — zum nächsten weitergehen.
+    if (!this.eligible(r, currentUserId)) { this.sendNext(q, i + 1, currentUserId); return; }
     this.http.request(r.method, r.url, { body: r.body }).subscribe({
-      next: () => { this.remove(r.id); this.sendNext(q, i + 1); },
+      next: () => { this.remove(r.id); this.sendNext(q, i + 1, currentUserId); },
       error: (e: { status?: number }) => {
         const status = e?.status ?? 0;
         if (status >= 400 && status < 500) {
           // Dauerhaft fehlerhaft (z.B. Puzzle weg / nicht mehr berechtigt) → verwerfen.
           this.remove(r.id);
-          this.sendNext(q, i + 1);
+          this.sendNext(q, i + 1, currentUserId);
         } else {
           // Netzwerk (0) oder 5xx → Queue stehen lassen + Backoff-Retry planen (sonst bliebe
           // sie bei durchgehend „online" bis zum nächsten App-Start/online-Event liegen).
