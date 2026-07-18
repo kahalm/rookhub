@@ -5,7 +5,7 @@ function make(offlineOverride?: any) {
     puzzleCount: 10, endlessRuns: 2,
     setPuzzleCount: jasmine.createSpy('setPuzzleCount'),
     setEndlessRuns: jasmine.createSpy('setEndlessRuns'),
-    formatSize: () => '0 B', cacheSizeBytes: () => 0, cachedBookCount: () => 0,
+    formatSize: () => '0 B', cacheSizeBytes: () => 0, cachedBookCount: () => 0, cachedRepertoireCount: () => 0,
     clearAll: jasmine.createSpy('clearAll'),
   };
   const offlineQueue = { pendingCount: () => 0 };
@@ -29,7 +29,7 @@ describe('OfflineSettingsCardComponent', () => {
       puzzleCount: 20, endlessRuns: 5,
       setPuzzleCount: jasmine.createSpy('setPuzzleCount'),
       setEndlessRuns: jasmine.createSpy('setEndlessRuns'),
-      formatSize: () => '0 B', cacheSizeBytes: () => 0, cachedBookCount: () => 0,
+      formatSize: () => '0 B', cacheSizeBytes: () => 0, cachedBookCount: () => 0, cachedRepertoireCount: () => 0,
       clearAll: jasmine.createSpy('clearAll'),
     };
     const { c } = make(offline);
@@ -48,5 +48,23 @@ describe('OfflineSettingsCardComponent', () => {
     c.clearOfflineCache();
     expect(offline.clearAll).toHaveBeenCalled();
     expect(snackbar.success).toHaveBeenCalledWith('profile.offline.cleared');
+  });
+});
+
+describe('OfflineSettingsCardComponent cacheDetail', () => {
+  it('lists books and repertoires only when present', () => {
+    const offline = {
+      puzzleCount: 10, endlessRuns: 2,
+      setPuzzleCount: () => {}, setEndlessRuns: () => {},
+      formatSize: () => '1.0 KB', cacheSizeBytes: () => 1024,
+      cachedBookCount: () => 2, cachedRepertoireCount: () => 1,
+      clearAll: () => {},
+    };
+    const { c } = make(offline);
+    c.ngOnInit();
+    expect(c.cacheDetail).toBe(' (profile.offline.books, profile.offline.repertoires)');
+    c.offlineBooks = 0;
+    c.offlineRepertoires = 0;
+    expect(c.cacheDetail).toBe('');
   });
 });

@@ -1,4 +1,4 @@
-import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle } from './repertoire-sr.util';
+import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, hoursOfLevel, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
 import { LineStateDto } from './repertoire-training.service';
 
 function st(overrides: Partial<LineStateDto> = {}): LineStateDto {
@@ -89,5 +89,64 @@ describe('repertoire-sr.util', () => {
       expect(shuffle([])).toEqual([]);
       expect(shuffle([7])).toEqual([7]);
     });
+  });
+});
+
+/** Lokale SR-Übergänge (Offline-Spiegel des Backends ScheduleLevel/PromoteAsync). */
+describe('applySrReview / applyPromote / hoursOfLevel', () => {
+  const NOW = Date.parse('2026-07-18T12:00:00Z');
+  const base: LineStateDto = {
+    lineKey: 'k', level: 3, reps: 5, lapses: 1,
+    dueAt: '2026-07-18T00:00:00Z', lastReviewedAt: null, inPool: true, paused: false,
+  };
+
+  it('hoursOfLevel converts units (h/d/w/mo=30d)', () => {
+    expect(hoursOfLevel({ value: 4, unit: 'h' })).toBe(4);
+    expect(hoursOfLevel({ value: 2.5, unit: 'd' })).toBe(60);
+    expect(hoursOfLevel({ value: 1, unit: 'w' })).toBe(168);
+    expect(hoursOfLevel({ value: 3, unit: 'mo' })).toBe(3 * 720);
+  });
+
+  it('correct: level +1 (max 9), reps +1, dueAt = now + interval of the NEW level', () => {
+    const st = applySrReview(base, 'k', true, DEFAULT_SR_LEVELS, NOW);
+    expect(st.level).toBe(4);
+    expect(st.reps).toBe(6);
+    expect(st.lapses).toBe(1);
+    // Stufe 4 = 2.5 Tage = 60 h
+    expect(Date.parse(st.dueAt) - NOW).toBe(60 * 3_600_000);
+    expect(st.inPool).toBeTrue();
+    expect(st.paused).toBeFalse();
+    expect(st.lastReviewedAt).toBe(new Date(NOW).toISOString());
+  });
+
+  it('correct caps at level 9', () => {
+    const st = applySrReview({ ...base, level: 9 }, 'k', true, DEFAULT_SR_LEVELS, NOW);
+    expect(st.level).toBe(9);
+  });
+
+  it('wrong: back to level 1, lapses +1, due after the first interval', () => {
+    const st = applySrReview(base, 'k', false, DEFAULT_SR_LEVELS, NOW);
+    expect(st.level).toBe(1);
+    expect(st.lapses).toBe(2);
+    expect(st.reps).toBe(5);
+    expect(Date.parse(st.dueAt) - NOW).toBe(4 * 3_600_000);   // Stufe 1 = 4 h
+  });
+
+  it('missing previous state starts fresh (correct → level 1)', () => {
+    const st = applySrReview(undefined, 'neu', true, DEFAULT_SR_LEVELS, NOW);
+    expect(st.level).toBe(1);
+    expect(st.reps).toBe(1);
+    expect(st.lapses).toBe(0);
+  });
+
+  it('applyPromote puts the line in the pool, immediately due, counters preserved', () => {
+    const st = applyPromote({ ...base, inPool: false, paused: true }, 'k', NOW);
+    expect(st.inPool).toBeTrue();
+    expect(st.paused).toBeFalse();
+    expect(st.level).toBe(3);
+    expect(st.dueAt).toBe(new Date(NOW).toISOString());
+    const fresh = applyPromote(undefined, 'neu', NOW);
+    expect(fresh.level).toBe(0);
+    expect(fresh.reps).toBe(0);
   });
 });

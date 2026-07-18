@@ -10,6 +10,10 @@ export const BOOK_OFFLINE_PREFIX = 'rookhub_book_offline_';
 export const BOOK_ID_MAP_KEY = 'rookhub_book_idmap';
 /** Tagespuzzle-Cache (Datum→Puzzle); auto-befüllt beim Online-Abruf eines Tagespuzzles. */
 export const DAILY_CACHE_KEY = 'rookhub_daily_offline';
+/** Heruntergeladene Repertoires (PGN + SR-Zustände + Intervalle) je Repertoire-Id. */
+export const REPERTOIRE_OFFLINE_PREFIX = 'rookhub_repertoire_offline_';
+/** Letzte erfolgreich geladene Kursliste — Offline-Fallback der /courses-Seite. */
+export const COURSES_CACHE_KEY = 'rookhub_courses_cache';
 const SETTINGS_KEY = 'rookhub_offline_settings';
 
 export interface OfflineSettings {
@@ -62,7 +66,8 @@ export class OfflineService {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k) continue;
-      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY || k.startsWith(BOOK_OFFLINE_PREFIX)) keys.push(k);
+      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY || k === COURSES_CACHE_KEY
+        || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX)) keys.push(k);
     }
     return keys;
   }
@@ -80,6 +85,11 @@ export class OfflineService {
   /** Anzahl gecachter Bücher. */
   cachedBookCount(): number {
     return this.cacheKeys().filter(k => k.startsWith(BOOK_OFFLINE_PREFIX)).length;
+  }
+
+  /** Anzahl heruntergeladener Repertoires. */
+  cachedRepertoireCount(): number {
+    return this.cacheKeys().filter(k => k.startsWith(REPERTOIRE_OFFLINE_PREFIX)).length;
   }
 
   /** Leert alle Offline-Caches (Einstellungen bleiben erhalten). */

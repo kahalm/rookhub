@@ -48,7 +48,9 @@
     "pressToContinue": "Aufs Brett tippen, Leertaste oder Enter zum Fortfahren",
     "linePassDone": "Linie durchgespielt — spiel sie nochmal durch",
     "repeatLine": "Nochmal",
-    "nextLine": "Nächste Linie"
+    "nextLine": "Nächste Linie",
+    "offlineBadge": "Offline",
+    "offlineHint": "Training aus der Offline-Kopie — Ergebnisse werden auf diesem Gerät gespeichert und automatisch synchronisiert, sobald du wieder online bist."
   },
   "srConfig": {
     "title": "Übungszyklen",
@@ -512,7 +514,8 @@
       "books": "{{count}} Bücher",
       "clear": "Cache leeren",
       "cleared": "Offline-Cache geleert",
-      "pending": "{{count}} Lösungen warten auf Synchronisierung — sie werden automatisch hochgeladen, sobald du wieder online bist."
+      "pending": "{{count}} Lösungen warten auf Synchronisierung — sie werden automatisch hochgeladen, sobald du wieder online bist.",
+      "repertoires": "{{count}} Repertoires"
     },
     "delete": {
       "title": "Konto löschen",
@@ -714,7 +717,13 @@
       "sectionOtherHint": "Nicht von RepCheck genutzt. Über „Für Extension nutzen“ im Bearbeiten kannst du ein Repertoire nach oben schieben.",
       "extensionBadge": "Wird von der RepCheck-Extension genutzt",
       "sectionSharedWithMe": "Mit mir geteilt",
-      "sectionSharedWithMeHint": "Repertoires, die andere Mitglieder mit dir geteilt haben."
+      "sectionSharedWithMeHint": "Repertoires, die andere Mitglieder mit dir geteilt haben.",
+      "offlineListHint": "Du bist offline — angezeigt werden deine heruntergeladenen Repertoires; nur das Training ist verfügbar. Ergebnisse werden synchronisiert, sobald du wieder online bist.",
+      "offlineSaveTooltip": "Repertoire offline speichern (ohne Internet trainieren)",
+      "offlineRemoveTooltip": "Offline-Kopie entfernen",
+      "offlineSaved": "\"{{name}}\" offline gespeichert",
+      "offlineRemoved": "\"{{name}}\" aus dem Offline-Cache entfernt",
+      "offlineFailed": "Repertoire konnte nicht offline gespeichert werden"
     },
     "detail": {
       "noDescription": "Keine Beschreibung",
@@ -1215,7 +1224,8 @@
       "hint": "Welche Themen deckt „{{name}}“ ab? Die Trainingszeit dieses Kurses wird im Fortschritt gleichmäßig auf die gewählten Themen aufgeteilt. Keine Auswahl = Taktik.",
       "saved": "Themen für „{{name}}“ gespeichert.",
       "error": "Themen konnten nicht gespeichert werden."
-    }
+    },
+    "offlineListHint": "Du bist offline — angezeigt werden deine heruntergeladenen Kurse (letzter bekannter Stand)."
   },
   "weekly": {
     "title": "Wochenpost",

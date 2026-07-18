@@ -1,6 +1,7 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CourseListComponent } from './course-list.component';
 import { CourseListItem } from './course.service';
+import { saveBookOffline } from '../puzzles/book-offline.util';
 
 /**
  * Reihenfolge-Logik der Kursübersicht: angefangene Bücher (lastActivityAt gesetzt) nach vorn,
@@ -219,5 +220,48 @@ describe('CourseListComponent sorting', () => {
       expect(courseService.deleteCourse).not.toHaveBeenCalled();
       expect(comp.courses.length).toBe(1);
     });
+  });
+});
+
+/**
+ * Offline-Fallback der Kursliste: bei erfolgreichem Laden wird ein Snapshot gecacht; scheitert
+ * der Request (offline), zeigt die Liste daraus die HERUNTERGELADENEN Kurse.
+ */
+describe('CourseListComponent offline fallback', () => {
+  function item(over: Partial<CourseListItem>): CourseListItem {
+    return {
+      bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
+      tags: null, description: null, puzzleCount: 10, solvedCount: 0, progressPercent: 0,
+      lastMode: null, lastActivityAt: null, isOwned: false, isPinned: false, ...over,
+    };
+  }
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('caches the list on success and serves downloaded courses when the request fails', () => {
+    const items = [
+      item({ bookId: 1, fileName: 'a.pgn', displayName: 'Offline-Kurs' }),
+      item({ bookId: 2, fileName: 'b.pgn', displayName: 'Nur online' }),
+    ];
+    // Nur a.pgn ist als Buch offline gespeichert.
+    saveBookOffline('a.pgn', [], 1);
+    const svc: any = { getCourses: jasmine.createSpy().and.returnValues(of(items), throwError(() => new Error('offline'))) };
+    const comp = new CourseListComponent(svc, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+    comp.ngOnInit();                          // Erfolg → Snapshot gecacht
+    expect(comp.offlineList).toBeFalse();
+    comp.loadCourses();                       // Fehler → Fallback aus dem Cache
+    expect(comp.offlineList).toBeTrue();
+    expect(comp.courses.map(c => c.bookId)).toEqual([1]);
+  });
+
+  it('keeps the plain error hint when nothing is downloaded', () => {
+    const info = jasmine.createSpy('info');
+    const svc: any = { getCourses: () => throwError(() => new Error('offline')) };
+    const comp = new CourseListComponent(svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any);
+    comp.ngOnInit();
+    expect(comp.offlineList).toBeFalse();
+    expect(comp.courses.length).toBe(0);
+    expect(info).toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
     .chapter-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .offline-chip { background: color-mix(in srgb, #ff9800 22%, transparent); }
     .center, .msg { text-align: center; padding: 32px; }
     .msg { display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .msg mat-icon { font-size: 40px; height: 40px; width: 40px; }

@@ -48,7 +48,9 @@
     "pressToContinue": "Dodirni ploču, pritisni razmaknicu ili Enter za nastavak",
     "linePassDone": "Linija odigrana — odigraj je ponovno",
     "repeatLine": "Ponovno",
-    "nextLine": "Sljedeća linija"
+    "nextLine": "Sljedeća linija",
+    "offlineBadge": "Offline",
+    "offlineHint": "Trening iz offline kopije — rezultati se spremaju na ovom uređaju i automatski sinkroniziraju kad ponovno budete na mreži."
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",
@@ -512,7 +514,8 @@
       "books": "{{count}} knjiga",
       "clear": "Isprazni predmemoriju",
       "cleared": "Offline predmemorija ispražnjena",
-      "pending": "{{count}} rješenja čeka sinkronizaciju — automatski se učitavaju kad ponovno budete na mreži."
+      "pending": "{{count}} rješenja čeka sinkronizaciju — automatski se učitavaju kad ponovno budete na mreži.",
+      "repertoires": "{{count}} repertoara"
     },
     "delete": {
       "title": "Brisanje računa",
@@ -714,7 +717,13 @@
       "sectionOtherHint": "RepCheck ih ne koristi. Uključi „Koristi za ekstenziju“ u uređivanju da bi repertoar premjestio gore.",
       "extensionBadge": "Koristi ga RepCheck ekstenzija",
       "sectionSharedWithMe": "Podijeljeno sa mnom",
-      "sectionSharedWithMeHint": "Repertoari koje su drugi članovi podijelili s tobom."
+      "sectionSharedWithMeHint": "Repertoari koje su drugi članovi podijelili s tobom.",
+      "offlineListHint": "Offline ste — prikazani su preuzeti repertoari; dostupan je samo trening. Rezultati se sinkroniziraju kad ponovno budete na mreži.",
+      "offlineSaveTooltip": "Spremi repertoar offline (trening bez interneta)",
+      "offlineRemoveTooltip": "Ukloni offline kopiju",
+      "offlineSaved": "\"{{name}}\" spremljeno offline",
+      "offlineRemoved": "\"{{name}}\" uklonjeno iz offline pohrane",
+      "offlineFailed": "Spremanje repertoara offline nije uspjelo"
     },
     "detail": {
       "noDescription": "Nema opisa",
@@ -1215,7 +1224,8 @@
       "hint": "Koje teme pokriva „{{name}}“? Vrijeme treniranja ovog tečaja u napretku se ravnomjerno raspoređuje na odabrane teme. Bez odabira = Taktika.",
       "saved": "Teme za „{{name}}“ spremljene.",
       "error": "Teme nije moguće spremiti."
-    }
+    },
+    "offlineListHint": "Offline ste — prikazani su preuzeti tečajevi (zadnje poznato stanje)."
   },
   "weekly": {
     "title": "Tjedna objava",

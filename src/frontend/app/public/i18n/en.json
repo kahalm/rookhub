@@ -48,7 +48,9 @@
     "pressToContinue": "Tap the board, press Space or Enter to continue",
     "linePassDone": "Line done — play it through again",
     "repeatLine": "Again",
-    "nextLine": "Next line"
+    "nextLine": "Next line",
+    "offlineBadge": "Offline",
+    "offlineHint": "Training from the offline copy — results are stored on this device and sync automatically once you're back online."
   },
   "srConfig": {
     "title": "Practice cycles",
@@ -512,7 +514,8 @@
       "books": "{{count}} books",
       "clear": "Clear cache",
       "cleared": "Offline cache cleared",
-      "pending": "{{count}} solutions waiting to sync — they upload automatically when you're back online."
+      "pending": "{{count}} solutions waiting to sync — they upload automatically when you're back online.",
+      "repertoires": "{{count}} repertoires"
     },
     "delete": {
       "title": "Delete account",
@@ -714,7 +717,13 @@
       "sectionOtherHint": "Not used by RepCheck. Toggle \"Use for extension\" in edit to move a repertoire up.",
       "extensionBadge": "Used by the RepCheck extension",
       "sectionSharedWithMe": "Shared with me",
-      "sectionSharedWithMeHint": "Repertoires other members have shared with you."
+      "sectionSharedWithMeHint": "Repertoires other members have shared with you.",
+      "offlineListHint": "You're offline — showing your downloaded repertoires; only training is available. Results sync once you're back online.",
+      "offlineSaveTooltip": "Save repertoire offline (train without internet)",
+      "offlineRemoveTooltip": "Remove offline copy",
+      "offlineSaved": "\"{{name}}\" saved offline",
+      "offlineRemoved": "\"{{name}}\" removed from offline",
+      "offlineFailed": "Could not save repertoire offline"
     },
     "detail": {
       "noDescription": "No description",
@@ -1215,7 +1224,8 @@
       "hint": "Which themes does “{{name}}” cover? Training time on this course is split evenly across the selected themes in your progress. No selection = Tactics.",
       "saved": "Themes for “{{name}}” saved.",
       "error": "Could not save themes."
-    }
+    },
+    "offlineListHint": "You're offline — showing your downloaded courses (last known state)."
   },
   "weekly": {
     "title": "Weekly",

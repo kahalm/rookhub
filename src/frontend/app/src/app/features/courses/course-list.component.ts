@@ -11,7 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
-import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
+import { saveBookOffline, removeBookOffline, cachedBookFileNames, saveCourseListCache, loadCourseListCache } from '../puzzles/book-offline.util';
 import { downloadBlob } from '../../shared/download.util';
 import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
 import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
@@ -41,6 +41,13 @@ import { CourseCardComponent } from './course-card.component';
       <p class="intro">{{ 'courses.intro' | translate }}</p>
 
       <app-reprocess-banner section="courses" (done)="loadCourses()" />
+
+      @if (offlineList) {
+        <div class="offline-banner">
+          <mat-icon>cloud_off</mat-icon>
+          <span>{{ 'courses.offlineListHint' | translate }}</span>
+        </div>
+      }
 
       @if (loading) {
         <app-loading-spinner />
@@ -197,6 +204,11 @@ import { CourseCardComponent } from './course-card.component';
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
 
     .course-section { margin-bottom: 28px; }
+    .offline-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 1rem;
+                      padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
+                      background: color-mix(in srgb, currentColor 7%, transparent);
+                      color: color-mix(in srgb, currentColor 80%, transparent); }
+    .offline-banner mat-icon { flex: 0 0 auto; opacity: 0.7; }
     .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
     .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; margin: 0 0 10px; }
     .course-grid {
@@ -221,6 +233,8 @@ export class CourseListComponent implements OnInit {
   /** bookId, der gerade in ein Repertoire umgewandelt wird (Button-Sperre). */
   converting: number | null = null;
   private offlineFiles = new Set<string>();
+  /** true = Server nicht erreichbar; Anzeige aus dem Offline-Cache (nur heruntergeladene Kurse). */
+  offlineList = false;
 
   /** Aufgeklapptes Buch (Kapitelübersicht) bzw. null. */
   expandedBook: number | null = null;
@@ -388,10 +402,20 @@ export class CourseListComponent implements OnInit {
     this.courseService.getCourses().subscribe({
       next: courses => {
         this.courses = this.sortCourses(courses);
+        this.offlineList = false;
+        saveCourseListCache(courses);   // Offline-Fallback aktuell halten
         this.loading = false;
       },
       error: () => {
-        this.snackbar.info(this.translate.instant('courses.loadFailed'), { action: 'common.ok', duration: 3000 });
+        // Offline/Server weg → letzte bekannte Liste zeigen, beschränkt auf heruntergeladene
+        // (offline spielbare) Kurse. Ohne Cache bleibt es beim bisherigen Fehlerhinweis.
+        const cached = loadCourseListCache<CourseListItem>().filter(c => this.offlineFiles.has(c.fileName));
+        if (cached.length > 0) {
+          this.courses = this.sortCourses(cached);
+          this.offlineList = true;
+        } else {
+          this.snackbar.info(this.translate.instant('courses.loadFailed'), { action: 'common.ok', duration: 3000 });
+        }
         this.loading = false;
       }
     });

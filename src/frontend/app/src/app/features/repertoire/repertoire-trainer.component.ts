@@ -17,13 +17,15 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { calcDests } from '../puzzles/puzzle-move.util';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
+import { RepertoireTrainingService, LineStateDto, LineReviewRequest, SrLevel } from './repertoire-training.service';
 import { buildRepertoireGraph, normSan, normFen, RepertoireGraph } from './repertoire-tree.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
-import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle } from './repertoire-sr.util';
+import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
+import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineStates } from './repertoire-offline.util';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
 
@@ -135,6 +137,11 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private wrongRevertTimer: ReturnType<typeof setTimeout> | null = null;
   private oppTimer: ReturnType<typeof setTimeout> | null = null;
   private startFen = '';
+  /** true = Session läuft aus der Offline-Kopie (Server unerreichbar); Bewertungen werden lokal
+   *  berechnet und via Offline-Queue nachgereicht, Pool-/Config-Verwaltung ist ausgeblendet. */
+  offlineSession = false;
+  /** Effektive SR-Intervalle aus der Offline-Kopie (nur fürs lokale Fälligkeits-Rechnen). */
+  private srLevels: SrLevel[] | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -144,6 +151,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private stockfish: StockfishService,
     private dialog: MatDialog,
+    private offlineQueue: OfflineQueueService,
   ) {}
 
   ngOnInit(): void {
@@ -158,22 +166,41 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       states: this.training.getLineStates(this.repertoireId),
     }).subscribe({
       next: ({ pgn, states }) => {
-        this.graph = buildRepertoireGraph(pgn);
-        this.allLines = parsePgnText(pgn);
-        // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
-        // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
-        // Farben mischt.
-        const auto = autoChapterColors(this.allLines.map(l => ({
-          chapter: (l.headers['Black'] || '').trim(),
-          side: sideOfLastMove(l.fens[0], l.moves.length),
-          rootSide: rootSideOf(l.fens[0]),
-        })));
-        this.chapterColors = resolveChapterColors(this.repertoireId, auto);
-        this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
-        this.buildQueue();
+        // Eine vorhandene Offline-Kopie beim Online-Öffnen aktuell halten (No-op ohne Kopie).
+        refreshRepertoireOffline(this.repertoireId, pgn, states);
+        this.initSession(pgn, states);
       },
-      error: () => { this.phase = 'EMPTY'; this.cdr.markForCheck(); },
+      error: () => {
+        // Server unerreichbar → heruntergeladene Kopie verwenden (Offline-Training); ohne Kopie
+        // bleibt es bei der leeren Ansicht.
+        const cached = getRepertoireOffline(this.repertoireId);
+        if (cached) {
+          this.offlineSession = true;
+          this.srLevels = cached.config;
+          this.initSession(cached.pgn, cached.states);
+        } else {
+          this.phase = 'EMPTY';
+          this.cdr.markForCheck();
+        }
+      },
     });
+  }
+
+  /** Session aus PGN + SR-Zuständen aufbauen (frisch vom Server oder aus der Offline-Kopie). */
+  private initSession(pgn: string, states: LineStateDto[]): void {
+    this.graph = buildRepertoireGraph(pgn);
+    this.allLines = parsePgnText(pgn);
+    // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
+    // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
+    // Farben mischt.
+    const auto = autoChapterColors(this.allLines.map(l => ({
+      chapter: (l.headers['Black'] || '').trim(),
+      side: sideOfLastMove(l.fens[0], l.moves.length),
+      rootSide: rootSideOf(l.fens[0]),
+    })));
+    this.chapterColors = resolveChapterColors(this.repertoireId, auto);
+    this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
+    this.buildQueue();
   }
 
   ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); this.clearLearn(); }
@@ -420,21 +447,42 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
         return;
       }
-      // Oft genug gelernt → in den Pool aufnehmen (sofort fällig für die 1. Abfrage).
-      this.training.promote(this.repertoireId, [this.lineKeyOf(line)])
-        .subscribe({ next: () => {}, error: () => {} });
+      // Oft genug gelernt → in den Pool aufnehmen (sofort fällig für die 1. Abfrage). Den Zustand
+      // IMMER auch lokal nachziehen (Moduswechsel zu „Abfragen" sieht die Linie sofort als fällig);
+      // offline wird der Request via Offline-Queue nachgereicht.
+      const key = this.lineKeyOf(line);
+      this.statesByKey.set(key, applyPromote(this.statesByKey.get(key), key, Date.now()));
+      this.persistOfflineStates();
+      const promoteUrl = `/api/repertoires/${this.repertoireId}/training/promote`;
+      const promoteBody = { lineKeys: [key] };
+      if (this.isNetOffline()) {
+        this.offlineQueue.enqueue('POST', promoteUrl, promoteBody);
+      } else {
+        this.training.promote(this.repertoireId, [key])
+          .subscribe({ next: () => {}, error: () => this.offlineQueue.enqueue('POST', promoteUrl, promoteBody) });
+      }
     } else if (line) {
       // Quiz: SR-Bewertung PRO LINIE: fehlerfrei → +1 Stufe, sonst zurück auf Stufe 1.
+      // Erst in den „Linie fertig"-Zustand wechseln, DANN bewerten — die Offline-Bewertung (und
+      // eine synchron eintreffende Antwort) darf nextRepeatAt sofort in den offenen Kasten schreiben.
+      this.pendingRepeat = false;
+      this.phase = 'LINE_DONE';
       const label = (line.headers['White'] || '').trim().slice(0, 120);
-      this.training.reviewLine(this.repertoireId, { lineKey: this.lineKeyOf(line), label, correct: !this.lineHadWrong })
-        .subscribe({
-          next: st => {
-            this.statesByKey.set(st.lineKey, st);
-            // Nächste Fälligkeit im „Linie fertig"-Kasten anzeigen (nur solange diese Linie noch offen ist).
-            if (this.phase === 'LINE_DONE') { this.nextRepeatAt = st.dueAt; this.cdr.markForCheck(); }
-          },
-          error: () => {},
-        });
+      const req: LineReviewRequest = { lineKey: this.lineKeyOf(line), label, correct: !this.lineHadWrong };
+      if (this.isNetOffline()) {
+        this.applyLocalReview(req);
+      } else {
+        this.training.reviewLine(this.repertoireId, req)
+          .subscribe({
+            next: st => {
+              this.statesByKey.set(st.lineKey, st);
+              this.persistOfflineStates();
+              // Nächste Fälligkeit im „Linie fertig"-Kasten anzeigen (nur solange diese Linie noch offen ist).
+              if (this.phase === 'LINE_DONE') { this.nextRepeatAt = st.dueAt; this.cdr.markForCheck(); }
+            },
+            error: () => this.applyLocalReview(req),
+          });
+      }
     }
     // Nicht mehr automatisch weiter — der User rückt per „Weiter"-Knopf (bzw. Klick/Leertaste) vor.
     // Timer werden BEWUSST hier NICHT geräumt: `startCurrentLine` cleart sie beim Übergang zur
@@ -443,6 +491,33 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.pendingRepeat = false;
     this.phase = 'LINE_DONE';
     this.cdr.markForCheck();
+  }
+
+  private isNetOffline(): boolean {
+    return typeof navigator !== 'undefined' && !navigator.onLine;
+  }
+
+  /** Offline-/Fehlerpfad der SR-Bewertung: den Stufen-Übergang lokal berechnen (Spiegel des
+   * Backends), Session + Offline-Kopie nachziehen und den Request für den Reconnect vormerken —
+   * so bleibt die Fälligkeits-Logik der laufenden Offline-Session konsistent. */
+  private applyLocalReview(req: LineReviewRequest): void {
+    const st = applySrReview(this.statesByKey.get(req.lineKey), req.lineKey, req.correct, this.effectiveSrLevels(), Date.now());
+    this.statesByKey.set(st.lineKey, st);
+    this.persistOfflineStates();
+    this.offlineQueue.enqueue('POST', `/api/repertoires/${this.repertoireId}/training/line-review`, req);
+    if (this.phase === 'LINE_DONE') { this.nextRepeatAt = st.dueAt; this.cdr.markForCheck(); }
+  }
+
+  /** Intervalle fürs lokale Fälligkeits-Rechnen: Offline-Kopie → Client-Defaults. */
+  private effectiveSrLevels(): SrLevel[] {
+    if (this.srLevels?.length) return this.srLevels;
+    const cached = getRepertoireOffline(this.repertoireId);
+    return cached?.config?.length ? cached.config : DEFAULT_SR_LEVELS;
+  }
+
+  /** SR-Zustände in die Offline-Kopie spiegeln (No-op, wenn nicht heruntergeladen). */
+  private persistOfflineStates(): void {
+    updateRepertoireOfflineStates(this.repertoireId, [...this.statesByKey.values()]);
   }
 
   /** „Weiter" nach einer fertig gespielten Linie: entweder dieselbe Linie erneut (Learn-Wiederholung)

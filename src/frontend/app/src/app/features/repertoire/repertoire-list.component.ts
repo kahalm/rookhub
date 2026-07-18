@@ -15,10 +15,13 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { ShareRepertoireDialogComponent, ShareRepertoireDialogData } from './share-repertoire-dialog.component';
+import { forkJoin, of, catchError } from 'rxjs';
 import { Repertoire } from '../../core/models';
 import { RepertoireService } from '../../core/repertoire.service';
 import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.types';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
+import { RepertoireTrainingService } from './repertoire-training.service';
+import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, cachedRepertoires } from './repertoire-offline.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -43,6 +46,13 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
       </div>
 
       <app-reprocess-banner section="repertoires" (done)="loadRepertoires()" />
+
+      @if (offlineList) {
+        <div class="offline-banner">
+          <mat-icon>cloud_off</mat-icon>
+          <span>{{ 'repertoire.list.offlineListHint' | translate }}</span>
+        </div>
+      }
 
       @if (loading) {
         <app-loading-spinner />
@@ -135,13 +145,26 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
           <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
         </mat-card-content>
         <mat-card-actions>
-          <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
-          <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
-          @if (!rep.isShared) {
-            <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
-            <button mat-button (click)="openShareDialog(rep)">{{ 'repertoire.share.action' | translate }}</button>
-            <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
-            <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
+          @if (offlineList) {
+            <!-- Offline-Fallback: nur das Training funktioniert (aus dem Offline-Cache). -->
+            <a mat-button color="primary" [routerLink]="['/repertoires', rep.id, 'train']">
+              <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.train' | translate }}
+            </a>
+          } @else {
+            <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
+            <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
+            @if (!rep.isShared) {
+              <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
+              <button mat-button (click)="openShareDialog(rep)">{{ 'repertoire.share.action' | translate }}</button>
+              <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
+              <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
+            }
+            <button mat-icon-button class="offline-toggle" [disabled]="savingOffline === rep.id"
+                    (click)="toggleOffline(rep)"
+                    [matTooltip]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate"
+                    [attr.aria-label]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate">
+              <mat-icon>{{ isOffline(rep) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
+            </button>
           }
         </mat-card-actions>
       </mat-card>
@@ -156,6 +179,12 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
                 color: color-mix(in srgb, currentColor 80%, transparent); }
     .ext-hint mat-icon { flex: 0 0 auto; opacity: 0.7; }
     .ext-hint a { color: inherit; text-decoration: underline; cursor: pointer; }
+    .offline-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 1rem;
+                      padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
+                      background: color-mix(in srgb, currentColor 7%, transparent);
+                      color: color-mix(in srgb, currentColor 80%, transparent); }
+    .offline-banner mat-icon { flex: 0 0 auto; opacity: 0.7; }
+    .offline-toggle { margin-left: auto; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 1rem; }
     .repertoire-section { margin-bottom: 1.75rem; }
     .repertoire-section .section-title { display: flex; align-items: center; gap: 6px; margin: 0.25rem 0 0.15rem; font-size: 1.05rem; font-weight: 600; }
@@ -204,8 +233,12 @@ export class RepertoireListComponent implements OnInit {
   readonly Kind = RepertoireKind;
   /** id des Repertoires, das gerade in einen Kurs umgewandelt wird (Button-Sperre). */
   converting: number | null = null;
+  /** id des Repertoires, das gerade offline gespeichert wird (Button-Sperre). */
+  savingOffline: number | null = null;
+  /** true = Server nicht erreichbar; Anzeige aus dem Offline-Cache (nur heruntergeladene). */
+  offlineList = false;
 
-  constructor(private repertoireService: RepertoireService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private repertoireService: RepertoireService, private training: RepertoireTrainingService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   kindLabel(kind: RepertoireKind): string {
     return REPERTOIRE_KIND_LABELS[kind] ?? 'repertoire.kind.none';
@@ -218,8 +251,51 @@ export class RepertoireListComponent implements OnInit {
   loadRepertoires(): void {
     this.loading = true;
     this.repertoireService.list().subscribe({
-      next: (r) => { this.repertoires = r; this.loading = false; },
-      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('repertoire.list.loadFailed')); }
+      next: (r) => { this.repertoires = r; this.offlineList = false; this.loading = false; },
+      error: () => {
+        // Offline/Server weg → heruntergeladene Repertoires aus dem Offline-Cache zeigen
+        // (nur Trainieren möglich). Ohne Cache bleibt es beim bisherigen Fehlerhinweis.
+        const cached = cachedRepertoires();
+        if (cached.length > 0) {
+          this.repertoires = cached;
+          this.offlineList = true;
+        } else {
+          this.snackbar.info(this.translate.instant('repertoire.list.loadFailed'));
+        }
+        this.loading = false;
+      }
+    });
+  }
+
+  isOffline(rep: Repertoire): boolean {
+    return hasRepertoireOffline(rep.id);
+  }
+
+  /** Repertoire fürs Offline-Training herunterladen (PGN + SR-Zustände + Intervalle) bzw. die
+   * Offline-Kopie wieder entfernen. */
+  toggleOffline(rep: Repertoire): void {
+    if (hasRepertoireOffline(rep.id)) {
+      removeRepertoireOffline(rep.id);
+      this.snackbar.info(this.translate.instant('repertoire.list.offlineRemoved', { name: rep.name }), { action: 'common.ok', duration: 2000 });
+      return;
+    }
+    this.savingOffline = rep.id;
+    forkJoin({
+      pgn: this.repertoireService.getPgnText(rep.id),
+      states: this.training.getLineStates(rep.id),
+      // Config ist fürs Offline-Fälligkeits-Rechnen nice-to-have — ohne sie greifen die Defaults.
+      config: this.training.getConfig(rep.id).pipe(catchError(() => of(null))),
+    }).subscribe({
+      next: ({ pgn, states, config }) => {
+        this.savingOffline = null;
+        const ok = saveRepertoireOffline({ meta: rep, pgn, states, config: config?.effective ?? null, savedAt: new Date().toISOString() });
+        const key = ok ? 'repertoire.list.offlineSaved' : 'repertoire.list.offlineFailed';
+        this.snackbar.info(this.translate.instant(key, { name: rep.name }), { action: 'common.ok', duration: 2500 });
+      },
+      error: () => {
+        this.savingOffline = null;
+        this.snackbar.info(this.translate.instant('repertoire.list.offlineFailed'), { action: 'common.ok', duration: 3000 });
+      }
     });
   }
 

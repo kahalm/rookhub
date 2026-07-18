@@ -1,4 +1,4 @@
-import { OfflineService, ENDLESS_POOL_KEY, PUZZLE_POOL_KEY, BOOK_OFFLINE_PREFIX } from './offline.service';
+import { OfflineService, ENDLESS_POOL_KEY, PUZZLE_POOL_KEY, BOOK_OFFLINE_PREFIX, REPERTOIRE_OFFLINE_PREFIX, COURSES_CACHE_KEY } from './offline.service';
 
 function clearAllStorage() {
   localStorage.clear();
@@ -41,15 +41,28 @@ describe('OfflineService', () => {
     expect(s.cachedBookCount()).toBe(2);
   });
 
+  it('counts downloaded repertoires + includes repertoire/course caches in the size', () => {
+    const s = new OfflineService();
+    localStorage.setItem(REPERTOIRE_OFFLINE_PREFIX + '3', 'r'.repeat(40));
+    localStorage.setItem(REPERTOIRE_OFFLINE_PREFIX + '5', 'r'.repeat(40));
+    localStorage.setItem(COURSES_CACHE_KEY, 'c'.repeat(20));
+    expect(s.cachedRepertoireCount()).toBe(2);
+    expect(s.cacheSizeBytes()).toBeGreaterThan((40 + 40 + 20) * 2);
+  });
+
   it('clearAll removes offline caches but keeps settings + unrelated keys', () => {
     const s = new OfflineService();
     s.setPuzzleCount(15);
     localStorage.setItem(ENDLESS_POOL_KEY, 'pool');
     localStorage.setItem(BOOK_OFFLINE_PREFIX + '1', 'book');
+    localStorage.setItem(REPERTOIRE_OFFLINE_PREFIX + '1', 'rep');
+    localStorage.setItem(COURSES_CACHE_KEY, 'courses');
     localStorage.setItem('rookhub_user', 'token');
     s.clearAll();
     expect(localStorage.getItem(ENDLESS_POOL_KEY)).toBeNull();
     expect(localStorage.getItem(BOOK_OFFLINE_PREFIX + '1')).toBeNull();
+    expect(localStorage.getItem(REPERTOIRE_OFFLINE_PREFIX + '1')).toBeNull();
+    expect(localStorage.getItem(COURSES_CACHE_KEY)).toBeNull();
     expect(localStorage.getItem('rookhub_user')).toBe('token');   // fremd bleibt
     expect(s.puzzleCount).toBe(15);                                // Einstellung bleibt
   });

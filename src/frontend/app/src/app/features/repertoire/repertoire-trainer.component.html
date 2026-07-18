@@ -1,26 +1,35 @@
 <div class="trainer">
   <div class="bar">
-    <a mat-button [routerLink]="['/repertoires', repertoireId]"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
+    <!-- Offline führt „Zurück" zur Liste (die Detail-Seite braucht den Server). -->
+    <a mat-button [routerLink]="offlineSession ? ['/repertoires'] : ['/repertoires', repertoireId]"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
     <span class="title">
       {{ 'repertoireTrainer.title' | translate }}
       @if (chapterFilter) {
         <span class="chapter-chip"><mat-icon>bookmark</mat-icon>{{ chapterFilter }}</span>
+      }
+      @if (offlineSession) {
+        <span class="chapter-chip offline-chip" [matTooltip]="'repertoireTrainer.offlineHint' | translate">
+          <mat-icon>cloud_off</mat-icon>{{ 'repertoireTrainer.offlineBadge' | translate }}
+        </span>
       }
     </span>
     <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" hideSingleSelectionIndicator="true" aria-label="Mode">
       <mat-button-toggle value="quiz">{{ 'repertoireTrainer.modeQuiz' | translate }}</mat-button-toggle>
       <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
     </mat-button-toggle-group>
-    <button mat-icon-button (click)="openConfig()"
-            [matTooltip]="'srConfig.title' | translate"
-            [attr.aria-label]="'srConfig.title' | translate">
-      <mat-icon>tune</mat-icon>
-    </button>
-    <button mat-icon-button (click)="resetProgress()" [disabled]="resetting"
-            [matTooltip]="'repertoireTrainer.resetTooltip' | translate"
-            [attr.aria-label]="'repertoireTrainer.resetTooltip' | translate">
-      <mat-icon>restart_alt</mat-icon>
-    </button>
+    @if (!offlineSession) {
+      <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet. -->
+      <button mat-icon-button (click)="openConfig()"
+              [matTooltip]="'srConfig.title' | translate"
+              [attr.aria-label]="'srConfig.title' | translate">
+        <mat-icon>tune</mat-icon>
+      </button>
+      <button mat-icon-button (click)="resetProgress()" [disabled]="resetting"
+              [matTooltip]="'repertoireTrainer.resetTooltip' | translate"
+              [attr.aria-label]="'repertoireTrainer.resetTooltip' | translate">
+        <mat-icon>restart_alt</mat-icon>
+      </button>
+    }
   </div>
 
   <ng-container [ngSwitch]="phase">
@@ -40,14 +49,18 @@
       <mat-icon>{{ nextDueAt ? 'schedule' : 'school' }}</mat-icon>
       @if (nextDueAt) {
         <p>{{ 'repertoireTrainer.nextDue' | translate: { when: nextDueLabel } }}</p>
-        <button mat-flat-button color="primary" (click)="makeAllDue()" [disabled]="poolBusy">
-          <mat-icon>bolt</mat-icon> {{ 'repertoireTrainer.makeAllDue' | translate }}
-        </button>
+        @if (!offlineSession) {
+          <button mat-flat-button color="primary" (click)="makeAllDue()" [disabled]="poolBusy">
+            <mat-icon>bolt</mat-icon> {{ 'repertoireTrainer.makeAllDue' | translate }}
+          </button>
+        }
       } @else {
         <p>{{ 'repertoireTrainer.nothingInPool' | translate }}</p>
-        <button mat-flat-button color="primary" (click)="promoteAllToPool()" [disabled]="poolBusy">
-          <mat-icon>playlist_add</mat-icon> {{ 'repertoireTrainer.addAllToPool' | translate }}
-        </button>
+        @if (!offlineSession) {
+          <button mat-flat-button color="primary" (click)="promoteAllToPool()" [disabled]="poolBusy">
+            <mat-icon>playlist_add</mat-icon> {{ 'repertoireTrainer.addAllToPool' | translate }}
+          </button>
+        }
       }
       <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
         <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}

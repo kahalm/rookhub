@@ -1,4 +1,4 @@
-import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, DAILY_CACHE_KEY } from '../../core/offline.service';
+import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, DAILY_CACHE_KEY, COURSES_CACHE_KEY } from '../../core/offline.service';
 import { BookPuzzleDto } from './puzzle.service';
 
 /**
@@ -104,6 +104,21 @@ export function getDailyOffline(date: string): BookPuzzleDto | null {
     const map = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || '{}') || {};
     return map[date] ?? null;
   } catch { return null; }
+}
+
+/**
+ * Letzte erfolgreich geladene Kursliste cachen — Offline-Fallback der /courses-Seite.
+ * Bewusst untypisiert (Snapshot der Server-Antwort); der Aufrufer kennt das CourseListItem-Shape.
+ */
+export function saveCourseListCache<T>(list: T[]): void {
+  try { localStorage.setItem(COURSES_CACHE_KEY, JSON.stringify(list ?? [])); } catch { /* Quota */ }
+}
+
+export function loadCourseListCache<T>(): T[] {
+  try {
+    const arr = JSON.parse(localStorage.getItem(COURSES_CACHE_KEY) || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
 }
 
 /** Sucht ein Puzzle nach Id über ALLE offline gespeicherten Bücher (für Offline-Direktaufruf). */

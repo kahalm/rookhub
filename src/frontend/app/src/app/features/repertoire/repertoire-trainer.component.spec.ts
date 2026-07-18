@@ -3,6 +3,7 @@ import { of, throwError } from 'rxjs';
 import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { LineStateDto } from './repertoire-training.service';
+import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
 
 /** Minimal-PGN mit zwei einfachen Linien für den Line-basierten Trainer. */
 const PGN = [
@@ -51,6 +52,7 @@ function make(
   states: LineStateDto[] = [state(KEY_A, PAST()), state(KEY_B, PAST())],
   reviewSpy?: jasmine.Spy,
   forceColor = true,
+  offlineQueue?: any,
 ): RepertoireTrainerComponent {
   const route: any = {
     snapshot: {
@@ -80,7 +82,7 @@ function make(
     localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify(chapters));
   }
   // forceColor=false → localStorage NICHT anfassen (Test setzt Overrides/Auto-Erkennung selbst).
-  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog);
+  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog, offlineQueue ?? ({ enqueue: () => {} } as any));
   c.ngOnInit();
   return c;
 }
@@ -239,6 +241,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
       { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any,
     );
     c.ngOnInit();
     expect(c.mode).toBe('learn');
@@ -295,6 +298,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
       { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any,
     );
     c.ngOnInit();
     expect(c.phase).toBe('LEARN_SHOW');                   // e4 vorgezeigt (kein Kommentar)
@@ -326,6 +330,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
       { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any,
     );
     c.ngOnInit();
     // In einen Wiederholungs-Durchlauf versetzen: der 2. Durchlauf zeigt NICHT vor → direkt PLAYING.
@@ -467,8 +472,84 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     const c = new RepertoireTrainerComponent(
       route, training, {} as any, { instant: (k: string) => k } as any,
       { markForCheck: () => {} } as any, { init: () => Promise.resolve() } as any, {} as any,
+      { enqueue: () => {} } as any,
     );
     c.ngOnInit();
     expect(c.phase).toBe('EMPTY');
   });
+});
+
+/**
+ * Offline-Training: Init fällt auf die heruntergeladene Kopie zurück; SR-Bewertungen werden lokal
+ * berechnet (Backend-Spiegel), in die Offline-Kopie gespiegelt und via Offline-Queue nachgereicht.
+ */
+describe('RepertoireTrainerComponent offline', () => {
+  const OFFLINE_KEY = REPERTOIRE_OFFLINE_PREFIX + '1';
+
+  function makeOffline(
+    states: LineStateDto[],
+    reviewSpy: jasmine.Spy = jasmine.createSpy('reviewLine'),
+    enqueue: jasmine.Spy = jasmine.createSpy('enqueue'),
+    withCache = true,
+  ): RepertoireTrainerComponent {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));
+    if (withCache) {
+      localStorage.setItem(OFFLINE_KEY, JSON.stringify({
+        meta: { id: 1, name: 'Rep' }, pgn: PGN, states, config: null, savedAt: '2026-07-18T00:00:00Z',
+      }));
+    }
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } } };
+    const training: any = {
+      getPgn: () => throwError(() => new Error('offline')),
+      getLineStates: () => throwError(() => new Error('offline')),
+      reviewLine: reviewSpy,
+      promote: () => of({ affected: 1 }),
+    };
+    const c = new RepertoireTrainerComponent(
+      route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue } as any,
+    );
+    c.ngOnInit();
+    return c;
+  }
+
+  afterEach(() => {
+    localStorage.removeItem(OFFLINE_KEY);
+    localStorage.removeItem('rookhub_rep_train_chaptercolor_1');
+  });
+
+  it('falls back to the downloaded copy when the server is unreachable', () => {
+    const c = makeOffline([state(KEY_A, PAST()), state(KEY_B, PAST())]);
+    expect(c.offlineSession).toBeTrue();
+    expect(c.queue.length).toBe(2);
+    expect(c.phase).toBe('PLAYING');
+  });
+
+  it('stays EMPTY without a downloaded copy', () => {
+    const c = makeOffline([], jasmine.createSpy(), jasmine.createSpy(), false);
+    expect(c.offlineSession).toBeFalse();
+    expect(c.phase).toBe('EMPTY');
+  });
+
+  it('a failed review is computed locally, mirrored into the copy and queued for reconnect', fakeAsync(() => {
+    const reviewSpy = jasmine.createSpy('reviewLine').and.returnValue(throwError(() => new Error('offline')));
+    const enqueue = jasmine.createSpy('enqueue');
+    const c = makeOffline([state(KEY_A, PAST())], reviewSpy, enqueue);
+    // Linie A fehlerfrei durchspielen → finishLine → lokale Bewertung
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    tick(3000); tick(400);
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
+    tick(3000); tick(400);
+    expect(c.phase).toBe('LINE_DONE');
+    expect(enqueue).toHaveBeenCalledWith('POST', '/api/repertoires/1/training/line-review',
+      jasmine.objectContaining({ lineKey: KEY_A, correct: true }));
+    // Fälligkeit lokal berechnet (Stufe 1 → 2) und im „Linie fertig"-Kasten angezeigt
+    expect(c.nextRepeatAt).not.toBeNull();
+    const cached = JSON.parse(localStorage.getItem(OFFLINE_KEY)!);
+    const st = cached.states.find((s: any) => s.lineKey === KEY_A);
+    expect(st.level).toBe(2);
+    expect(new Date(st.dueAt).getTime()).toBeGreaterThan(Date.now());
+  }));
 });

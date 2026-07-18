@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.312.0';
+export const APP_VERSION = '0.313.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.313.0", date: "2026-07-18", changes: [
+    { en: "Offline mode now covers downloaded courses and repertoires. Courses: the course list caches its last known state and, when the server is unreachable, shows your downloaded courses (playable offline as before) with an offline banner. Repertoires: every repertoire card gets a cloud button that downloads the repertoire for offline training (PGN + spaced-repetition line states + effective intervals); the repertoire list falls back to downloaded repertoires when offline (training only), and the repertoire trainer runs fully offline from the copy — due lines are quizzed, results are rated locally with the same 9-level ladder as the server (correct → level +1, wrong → back to level 1), mirrored into the offline copy, and synced automatically via the offline queue once you're back online (learn mode incl. pool promotion works too). The trainer shows an offline badge and hides server-only management (intervals, reset, make-all-due) in offline sessions; the profile's offline card now also counts downloaded repertoires. i18n en/de/hr, +21 frontend tests. NOT deployed (frontend image only).", de: "Der Offlinemodus umfasst jetzt auch heruntergeladene Kurse und Repertoires. Kurse: Die Kursliste cacht ihren letzten bekannten Stand und zeigt bei nicht erreichbarem Server die heruntergeladenen Kurse (offline spielbar wie bisher) mit Offline-Banner. Repertoires: Jede Repertoire-Karte bekommt einen Wolken-Knopf, der das Repertoire fürs Offline-Training herunterlädt (PGN + Spaced-Repetition-Linien-Zustände + effektive Intervalle); die Repertoire-Liste fällt offline auf heruntergeladene Repertoires zurück (nur Training), und der Repertoire-Trainer läuft vollständig offline aus der Kopie — fällige Linien werden abgefragt, Ergebnisse lokal mit derselben 9-Stufen-Leiter wie am Server bewertet (richtig → Stufe +1, falsch → zurück auf Stufe 1), in die Offline-Kopie gespiegelt und über die Offline-Queue automatisch synchronisiert, sobald du wieder online bist (auch der Lern-Modus inkl. Pool-Aufnahme funktioniert). Der Trainer zeigt ein Offline-Badge und blendet server-seitige Verwaltung (Intervalle, Reset, alle-fällig-machen) in Offline-Sitzungen aus; die Offline-Karte im Profil zählt jetzt auch heruntergeladene Repertoires. i18n en/de/hr, +21 Frontend-Tests. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.312.0", date: "2026-07-16", changes: [
     { en: "Kibana dashboards (RookHub Prod + Dev) got a new section ‚Extension (RepCheck)': a metric with the number of distinct users of the browser extension plus a per-user table (#requests and #days active), both based on requests to /api/extension/* (labels.VisitorId). Added in init-kibana.sh and already applied to the running Kibana — no app deploy needed.", de: "Die Kibana-Dashboards (RookHub Prod + Dev) haben eine neue Sektion „Extension (RepCheck)“: eine Kennzahl mit der Anzahl unterschiedlicher Nutzer der Browser-Extension plus eine Pro-User-Tabelle (#requests und #tageaktiv), beides auf Basis der Requests auf /api/extension/* (labels.VisitorId). In init-kibana.sh ergänzt und bereits live ins laufende Kibana eingespielt — kein App-Deploy nötig." },
   ] },

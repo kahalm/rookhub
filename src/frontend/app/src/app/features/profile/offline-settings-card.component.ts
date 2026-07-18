@@ -38,7 +38,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
         </mat-form-field>
       </div>
       <div class="offline-cache">
-        <span class="offline-size">{{ 'profile.offline.cacheSize' | translate }}: <strong>{{ offlineSize }}</strong>{{ offlineBooks > 0 ? ' (' + ('profile.offline.books' | translate: { count: offlineBooks }) + ')' : '' }}</span>
+        <span class="offline-size">{{ 'profile.offline.cacheSize' | translate }}: <strong>{{ offlineSize }}</strong>{{ cacheDetail }}</span>
         <button mat-stroked-button color="warn" type="button" (click)="clearOfflineCache()">
           <mat-icon>delete_sweep</mat-icon> {{ 'profile.offline.clear' | translate }}
         </button>
@@ -66,7 +66,16 @@ export class OfflineSettingsCardComponent implements OnInit {
   offlineEndlessRuns = 2;
   offlineSize = '0 B';
   offlineBooks = 0;
+  offlineRepertoires = 0;
   offlinePending = 0;
+
+  /** „ (3 Bücher, 2 Repertoires)"-Zusatz hinter der Cache-Größe; leer ohne Downloads. */
+  get cacheDetail(): string {
+    const parts: string[] = [];
+    if (this.offlineBooks > 0) parts.push(this.translate.instant('profile.offline.books', { count: this.offlineBooks }));
+    if (this.offlineRepertoires > 0) parts.push(this.translate.instant('profile.offline.repertoires', { count: this.offlineRepertoires }));
+    return parts.length ? ` (${parts.join(', ')})` : '';
+  }
 
   constructor(
     private offline: OfflineService,
@@ -91,6 +100,7 @@ export class OfflineSettingsCardComponent implements OnInit {
   private refreshOfflineSize(): void {
     this.offlineSize = this.offline.formatSize(this.offline.cacheSizeBytes());
     this.offlineBooks = this.offline.cachedBookCount();
+    this.offlineRepertoires = this.offline.cachedRepertoireCount();
     this.offlinePending = this.offlineQueue.pendingCount();
   }
 
