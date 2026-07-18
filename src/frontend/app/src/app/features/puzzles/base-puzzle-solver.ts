@@ -212,14 +212,20 @@ export abstract class BasePuzzleSolver {
     return formatPuzzleTime(seconds);
   }
 
-  /** Lösezeit-Timer starten (Standard-/Buch-Modus): Stoppuhr nullen + 1-s-Anzeige-Tick. */
-  protected startTimer(): void {
-    this.stopwatch.start();
-    this.elapsedSeconds = 0;
+  /** Lösezeit-Timer starten (Standard-/Buch-Modus): Stoppuhr nullen + 1-s-Anzeige-Tick.
+   * `initialSeconds` setzt eine frühere (persistierte) Lösezeit fort — Tagespuzzle-Wiederbesuch. */
+  protected startTimer(initialSeconds = 0): void {
+    this.stopwatch.start(initialSeconds);
+    this.elapsedSeconds = initialSeconds;
     this.timerInterval = setInterval(() => {
       this.elapsedSeconds = this.stopwatch.elapsedSeconds;
+      this.onTimerTick();
     }, 1000);
   }
+
+  /** Hook je 1-s-Anzeige-Tick des laufenden Lösezeit-Timers (Default: nichts) — z. B. um den
+   * Zwischenstand zu persistieren, damit ein Wiederbesuch die Zeit fortführen kann. */
+  protected onTimerTick(): void {}
 
   /** Lösezeit-Timer stoppen + finalen aktiven Stand festhalten. */
   protected stopTimer(): void {

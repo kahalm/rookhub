@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.313.1';
+export const APP_VERSION = '0.314.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.314.0", date: "2026-07-18", changes: [
+    { en: "Daily puzzle: the solve timer now accumulates across visits. Opening the daily, leaving, and opening the link again used to restart the clock at 0 — the active (visible-tab) time is now remembered per day on the device, resumed on the next visit, and the recorded solve time includes all of it (fairer for the ‚fastest solver' medal). The stored time is written once per second while solving plus when leaving mid-run, and it stops accumulating as soon as an attempt is actually recorded (logged in: any attempt; anonymous: the solve). The last 14 days are kept per device. +10 frontend tests. NOT deployed (frontend image only).", de: "Tagespuzzle: Die Lösezeit kumuliert jetzt über Besuche hinweg. Wer das Daily öffnete, es verließ und den Link später erneut aufmachte, fing bisher wieder bei 0 an — die aktive Zeit (nur sichtbarer Tab) wird nun pro Tag auf dem Gerät gemerkt, beim nächsten Besuch fortgeführt, und die gewertete Lösezeit enthält alles davon (fairer für die „schnellster Löser“-Medaille). Der Zwischenstand wird während des Lösens sekündlich sowie beim Verlassen mitten im Lauf gespeichert und hört auf zu kumulieren, sobald ein Versuch tatsächlich erfasst ist (eingeloggt: jeder Versuch; anonym: der Solve). Gemerkt werden die letzten 14 Tage pro Gerät. +10 Frontend-Tests. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.313.1", date: "2026-07-18", changes: [
     { en: "The connectivity banner no longer flashes on short blips: both states (device offline, server unreachable) are debounced — the banner only appears once the problem has persisted for 2.5 seconds, while recovery still hides it immediately. On the first failed request an immediate counter-probe (/api/menu ping) runs, so a one-off failure on an idle page clears the pending state before anything becomes visible (previously it could show the banner for up to 30 seconds until the next recheck). This also stops the spurious connectivity_restored client-log entries such blips produced. NOT deployed (frontend image only).", de: "Das Verbindungs-Banner blitzt bei kurzen Aussetzern nicht mehr auf: Beide Zustände (Gerät offline, Server unerreichbar) sind jetzt entprellt — das Banner erscheint erst, wenn das Problem 2,5 Sekunden anhält; die Erholung blendet es weiterhin sofort aus. Beim ersten fehlgeschlagenen Request läuft sofort eine Gegenprobe (/api/menu-Ping), sodass ein einmaliger Fehlschlag auf einer inaktiven Seite den schwebenden Zustand abräumt, bevor etwas sichtbar wird (bisher konnte das Banner dort bis zu 30 Sekunden bis zum nächsten Recheck stehen bleiben). Damit entfallen auch die durch solche Aussetzer erzeugten unnötigen connectivity_restored-Client-Log-Einträge. NICHT deployed (nur Frontend-Image)." },
   ] },

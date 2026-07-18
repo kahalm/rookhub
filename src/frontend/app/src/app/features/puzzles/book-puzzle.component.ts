@@ -40,6 +40,7 @@ import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.s
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
+import { loadDailyElapsed, saveDailyElapsed, clearDailyElapsed } from './daily-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
@@ -398,7 +399,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
-    this.startTimer();
+    // Tagespuzzle: früher verbrachte (aktive) Zeit fortführen — wer den Link schließt und später
+    // wieder öffnet, zählt kumuliert weiter statt bei 0 (fair für die „schnellster Löser"-Wertung).
+    this.startTimer(this.isDaily && this.dailyDate ? loadDailyElapsed(this.dailyDate) : 0);
+  }
+
+  /** Zwischenstand der Tagespuzzle-Lösezeit im Sekunden-Tick persistieren (für den Wiederbesuch). */
+  protected override onTimerTick(): void {
+    if (this.isDaily && this.dailyDate) saveDailyElapsed(this.dailyDate, this.elapsedSeconds);
   }
 
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
@@ -556,13 +564,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.resolveChallengeIfNeeded(solved);
     }
     if (this.auth.isLoggedIn) {
+      // Versuch wird erfasst → gemerkte Tagespuzzle-Zwischenzeit verfällt (Erstversuch ist gewertet).
+      if (this.isDaily && this.dailyDate) clearDailyElapsed(this.dailyDate);
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
       const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
       this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.maxHintLevel)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     } else if (solved) {
-      // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos).
+      // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos) — die
+      // gemerkte Zwischenzeit kumuliert daher bis zum ersten SOLVE weiter.
+      if (this.isDaily && this.dailyDate) clearDailyElapsed(this.dailyDate);
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt/anonymous`;
       const body = { solved, timeSeconds: this.solveSeconds, sessionId: this.puzzleService.ensureSessionId() };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
@@ -700,6 +712,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.dailySub?.unsubscribe();
     this.courseSub?.unsubscribe();
     this.stopTimer();
+    // Tagespuzzle mitten im Lauf verlassen → finalen Stand für den Wiederbesuch festhalten.
+    // NUR bei offenem Lauf (isSolving): nach SOLVED/FAILED ist der Versuch erfasst und der Eintrag
+    // gelöscht — ein Speichern hier würde ihn wieder aufleben lassen.
+    if (this.isDaily && this.dailyDate && this.isSolving)
+      saveDailyElapsed(this.dailyDate, this.elapsedSeconds);
     this.clearSolutionPlay();
     this.abortSolver();
     clearCrazyStyles();

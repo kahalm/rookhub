@@ -1,6 +1,7 @@
 import { of } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline } from './book-offline.util';
+import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -822,5 +823,84 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b' };   // keine moveComments
     (c as any).finalizeSolve();
     expect(countdown).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Kumulierte Tagespuzzle-Lösezeit: Wiederbesuch führt die gemerkte Zeit fort, der Sekunden-Tick
+ * persistiert den Zwischenstand, ein erfasster Versuch beendet das Kumulieren.
+ */
+describe('BookPuzzleComponent Daily kumulierte Lösezeit', () => {
+  const DATE = '20260718';
+  beforeEach(() => localStorage.removeItem('rookhub_daily_elapsed'));
+  afterEach(() => localStorage.removeItem('rookhub_daily_elapsed'));
+
+  function makeDaily(): any {
+    const c: any = makeComponent();
+    c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.dailyDate = DATE;
+    return c;
+  }
+
+  it('resumes the stored time when solving begins again (revisit)', () => {
+    saveDailyElapsed(DATE, 120);
+    const c = makeDaily();
+    (c as any).onSolvingBegins();
+    expect(c.elapsedSeconds).toBe(120);
+    (c as any).stopTimer();
+  });
+
+  it('starts at 0 without a stored time and outside the daily mode', () => {
+    const c = makeDaily();
+    (c as any).onSolvingBegins();
+    expect(c.elapsedSeconds).toBe(0);
+    (c as any).stopTimer();
+    saveDailyElapsed(DATE, 99);
+    const plain = makeComponent();
+    (plain as any).puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (plain as any).onSolvingBegins();          // kein Daily → keine Fortführung
+    expect((plain as any).elapsedSeconds).toBe(0);
+    (plain as any).stopTimer();
+  });
+
+  it('the timer tick persists the current stand', () => {
+    const c = makeDaily();
+    c.elapsedSeconds = 42;
+    (c as any).onTimerTick();
+    expect(loadDailyElapsed(DATE)).toBe(42);
+  });
+
+  it('a recorded attempt (logged in) clears the stored time', () => {
+    saveDailyElapsed(DATE, 99);
+    const c = makeDaily();
+    c.auth = { isLoggedIn: true };
+    c.puzzleService.recordBookAttempt = () => ({ subscribe: () => {} });
+    (c as any).recordBookAttempt(false);
+    expect(loadDailyElapsed(DATE)).toBe(0);
+  });
+
+  it('an anonymous FAIL keeps accumulating (nothing recorded server-side), a solve clears', () => {
+    saveDailyElapsed(DATE, 99);
+    const c = makeDaily();                      // auth.isLoggedIn = false
+    c.puzzleService.ensureSessionId = () => 's1';
+    c.puzzleService.recordBookAttemptAnonymous = () => ({ subscribe: () => {} });
+    (c as any).recordBookAttempt(false);        // anon-Fail wird nicht gemeldet
+    expect(loadDailyElapsed(DATE)).toBe(99);
+    (c as any).recordBookAttempt(true);         // anon-Solve wird gemeldet → Ende der Kumulation
+    expect(loadDailyElapsed(DATE)).toBe(0);
+  });
+
+  it('leaving mid-run stores the final stand; after SOLVED it does not resurrect', () => {
+    const c = makeDaily();
+    c.state = 'AWAITING_USER_MOVE';
+    (c as any).startTimer(33);      // laufende Stoppuhr mit fortgeführtem Stand (ngOnDestroy stoppt sie)
+    c.ngOnDestroy();
+    expect(loadDailyElapsed(DATE)).toBe(33);
+    localStorage.removeItem('rookhub_daily_elapsed');
+    const done = makeDaily();
+    done.state = 'SOLVED';
+    done.elapsedSeconds = 50;
+    done.ngOnDestroy();
+    expect(loadDailyElapsed(DATE)).toBe(0);     // erfasster Versuch bleibt gelöscht
   });
 });
