@@ -90,7 +90,21 @@ const SYNCED_KEY = 'rookhub_endless_synced';
 // physischen localStorage-Key; nicht hier dupliziert, sonst desynchronisieren sie.
 const OFFLINE_POOL_KEY = ENDLESS_POOL_KEY;
 const CHAIN_SEED_KEY = 'rookhub_endless_chain_seed';
+const LIVE_ELAPSED_KEY = 'rookhub_endless_live_elapsed';
 const MAX_HISTORY_SESSIONS = 50;
+
+/** Sekündlich persistierter Live-Zeitstand des aktiven Laufs — überlebt einen Refresh mitten
+ *  im Puzzle (der Spielstand selbst wird nur an Sync-Punkten geschrieben). */
+export interface EndlessLiveElapsed {
+  /** Lauf-Identität (Run-Seed) — der Stand eines fremden/alten Laufs wird beim Resume ignoriert. */
+  seed: string;
+  /** Ketten-Position beim Schreiben — nur bei Übereinstimmung wird die Puzzle-Zeit fortgesetzt. */
+  chainIndex: number;
+  /** Aktive Session-Sekunden (nur sichtbarer Tab). */
+  session: number;
+  /** Aktive Sekunden im laufenden Einzelpuzzle (0 = keins offen). */
+  puzzle: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class EndlessStorageService {
@@ -207,6 +221,8 @@ export class EndlessStorageService {
         localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify(state));
       } else {
         localStorage.removeItem(ACTIVE_GAME_KEY);
+        // Kein aktiver Lauf mehr → auch der sekündliche Live-Zeitstand ist obsolet.
+        localStorage.removeItem(LIVE_ELAPSED_KEY);
       }
     } catch {}
   }
@@ -214,6 +230,20 @@ export class EndlessStorageService {
   loadActiveGameLocal(): object | null {
     try {
       const raw = localStorage.getItem(ACTIVE_GAME_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  }
+
+  /** Live-Zeitstand des aktiven Laufs persistieren (Sekunden-Tick — der Spielstand selbst wird
+   *  nur an Sync-Punkten geschrieben; so überlebt die Zeit einen Refresh mitten im Puzzle). */
+  saveLiveElapsed(e: EndlessLiveElapsed): void {
+    try { localStorage.setItem(LIVE_ELAPSED_KEY, JSON.stringify(e)); } catch {}
+  }
+
+  loadLiveElapsed(): EndlessLiveElapsed | null {
+    try {
+      const raw = localStorage.getItem(LIVE_ELAPSED_KEY);
       if (raw) return JSON.parse(raw);
     } catch {}
     return null;

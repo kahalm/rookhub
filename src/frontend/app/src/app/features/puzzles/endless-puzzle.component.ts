@@ -239,6 +239,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private sessionInterval?: ReturnType<typeof setInterval>;
   private readonly sessionStopwatch = new VisibilityStopwatch();
   private readonly puzzleStopwatch = new VisibilityStopwatch();
+  /** Beim Resume ermittelte fortzusetzende Puzzle-Zeit (Refresh mitten im selben Puzzle);
+   *  wird vom nächsten onSolvingBegins genau einmal konsumiert. */
+  private resumePuzzleSeconds = 0;
 
   // Session history
   sessionHistory: EndlessSession[] = [];
@@ -502,6 +505,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   ngOnDestroy(): void {
+    // Laufender Run: finalen Live-Zeitstand sichern — der 1-s-Tick kann bis zu 1 s hinterherhängen.
+    if (this.sessionInterval && this.lives > 0) this.saveLiveElapsedNow();
     this.stopSessionTimer();
     this.abortSolver();
     clearCrazyStyles();
@@ -512,7 +517,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** Tab/Fenster wird geschlossen oder in den Hintergrund verschoben. Best-effort-Variante des
    *  Sicherheitsnetzes für den Fall, dass ngOnDestroy nicht (rechtzeitig) läuft. */
   @HostListener('window:pagehide')
-  onPageHide(): void { this.rescueUnrecordedRun(); }
+  onPageHide(): void {
+    if (this.sessionInterval && this.lives > 0) this.saveLiveElapsedNow();
+    this.rescueUnrecordedRun();
+  }
 
   /** Sicherheitsnetz: Ein beendeter Lauf (0 Leben), den der User verlässt, BEVOR er im Game-Over
    *  „Weiter" geklickt hat, würde sonst nirgends landen — bei 0 Leben ist der aktive Lauf bereits
@@ -656,8 +664,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
     this.puzzleStartTime = Date.now();   // Wanduhr-Timestamp (für startedAt der Session-Aufzeichnung)
-    this.puzzleStopwatch.start();        // gewertete Dauer = nur aktive Tab-Zeit
-    this.elapsedSeconds = 0;
+    // Gewertete Dauer = nur aktive Tab-Zeit; nach einem Resume DESSELBEN Puzzles (Refresh mitten
+    // im Lösen) wird die persistierte Zwischenzeit fortgesetzt statt bei 0 zu starten.
+    this.puzzleStopwatch.start(this.resumePuzzleSeconds);
+    this.elapsedSeconds = this.resumePuzzleSeconds;
+    this.resumePuzzleSeconds = 0;
   }
 
   protected override handleSolved(alternative: boolean): void { this.puzzleSolved(alternative); }
@@ -697,6 +708,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.maxRatingReached = this.config.startElo;
     this.isNewHighscore = false;
     this.sessionSeconds = 0;
+    this.resumePuzzleSeconds = 0;   // frischer Run → keine fortzusetzende Puzzle-Zeit
     this.currentSessionMistakes = [];
     this.currentSessionPuzzles = [];
     this.previousPuzzleId = null;
@@ -832,6 +844,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this._currentMinRating = g.currentMinRating ?? this.config.startElo;
     this.maxRatingReached = g.maxRatingReached ?? this._currentMinRating;
     this.sessionSeconds = g.sessionSeconds ?? 0;
+    // Der sekündlich persistierte Live-Zeitstand ist i. d. R. jünger als der letzte Sync-Punkt
+    // des Spielstands: Session-Zeit auf den größeren Wert anheben und — wenn der Refresh mitten
+    // im SELBEN Puzzle passierte — dessen Zwischenzeit fortsetzen. Nur für denselben Lauf (Seed).
+    const live = this.storage.loadLiveElapsed();
+    if (live && live.seed && live.seed === this.seed) {
+      this.sessionSeconds = Math.max(this.sessionSeconds, Math.floor(live.session) || 0);
+      if (live.chainIndex === this.chainIndex && live.puzzle > 0)
+        this.resumePuzzleSeconds = Math.floor(live.puzzle);
+    }
     this.currentSessionMistakes = g.mistakes ?? [];
     this.currentSessionPuzzles = (g.puzzleAttempts ?? []).map((p: any) => ({
       puzzleNumber: p.puzzleNumber,
@@ -1361,7 +1382,21 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.sessionInterval = setInterval(() => {
       this.sessionSeconds = this.sessionStopwatch.elapsedSeconds;
       this.elapsedSeconds = this.puzzleStartTime > 0 ? this.puzzleStopwatch.elapsedSeconds : 0;
+      // Live-Zeitstand mitschreiben, damit ein Refresh mitten im Puzzle die Zeit nicht verliert
+      // (der Spielstand selbst wird nur an Sync-Punkten — nach jedem Puzzle-Ergebnis — geschrieben).
+      this.saveLiveElapsedNow();
     }, 1000);
+  }
+
+  /** Persistiert den Live-Zeitstand (Session-/Puzzle-Sekunden) des aktiven Laufs. */
+  private saveLiveElapsedNow(): void {
+    if (!this.seed) return;
+    this.storage.saveLiveElapsed({
+      seed: this.seed,
+      chainIndex: this.chainIndex,
+      session: this.sessionSeconds,
+      puzzle: this.puzzleStartTime > 0 ? this.puzzleStopwatch.elapsedSeconds : 0,
+    });
   }
 
   private stopSessionTimer(): void {

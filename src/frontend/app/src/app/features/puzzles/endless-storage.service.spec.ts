@@ -105,3 +105,40 @@ describe('EndlessStorageService offline pool shares ENDLESS_POOL_KEY with Offlin
     expect(svc.loadOfflinePool()).toEqual([{ id: 7 } as any]);
   });
 });
+
+describe('EndlessStorageService Live-Zeitstand', () => {
+  let svc: EndlessStorageService;
+  const LIVE_KEY = 'rookhub_endless_live_elapsed';
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('save/load roundtrip', () => {
+    expect(svc.loadLiveElapsed()).toBeNull();
+    svc.saveLiveElapsed({ seed: 's1', chainIndex: 4, session: 120, puzzle: 7 });
+    expect(svc.loadLiveElapsed()).toEqual({ seed: 's1', chainIndex: 4, session: 120, puzzle: 7 });
+  });
+
+  it('saveActiveGameLocal(null) räumt auch den Live-Zeitstand weg', () => {
+    svc.saveLiveElapsed({ seed: 's1', chainIndex: 4, session: 120, puzzle: 7 });
+    svc.saveActiveGameLocal({ lives: 2 });
+    expect(svc.loadLiveElapsed()).not.toBeNull();   // aktiver Lauf → Live-Stand bleibt
+    svc.saveActiveGameLocal(null);
+    expect(svc.loadLiveElapsed()).toBeNull();       // Lauf beendet → Live-Stand obsolet
+  });
+
+  it('kaputter Storage-Inhalt liefert null statt zu werfen', () => {
+    localStorage.setItem(LIVE_KEY, '{kaputt');
+    expect(svc.loadLiveElapsed()).toBeNull();
+  });
+});

@@ -58,6 +58,8 @@ function makeComponent(params: Record<string, string> = {}): any {
     recordSession: (hist: any[]) => hist,
     recordSessionToServer: () => sub(null),
     loadFromServer: () => ({ subscribe: () => {} }),   // async Merge: im Test no-op
+    loadLiveElapsed: () => null,
+    saveLiveElapsed: () => {},
   };
   const router: any = { navigate: jasmine.createSpy('navigate') };
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
@@ -521,5 +523,73 @@ describe('EndlessPuzzleComponent recordAttempt', () => {
     expect(spy).toHaveBeenCalled();
     // Signatur: (id, solved, timeSpentSeconds, moveLog?, viz, evalShown, vizShowCount, hintsUsed)
     expect(spy.calls.mostRecent().args[7]).toBe(2);
+  });
+});
+
+describe('EndlessPuzzleComponent Live-Zeitstand (Refresh mitten im Puzzle)', () => {
+  it('onSolvingBegins setzt eine fortzusetzende Puzzle-Zeit genau einmal fort', () => {
+    const c = makeComponent();
+    (c as any).resumePuzzleSeconds = 12;
+    (c as any).onSolvingBegins();
+    expect(c.elapsedSeconds).toBe(12);          // Zwischenzeit fortgesetzt
+    (c as any).onSolvingBegins();
+    expect(c.elapsedSeconds).toBe(0);           // konsumiert → nächstes Puzzle startet bei 0
+    c.ngOnDestroy();
+  });
+
+  it('resumeGame übernimmt den Live-Stand desselben Laufs (Session-Maximum + Puzzle-Zeit)', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'loadCurrent');             // Kettenaufbau hier irrelevant
+    c['storage'].loadChainSeed = () => 'seed-xyz';
+    c['offlinePool'] = CHAIN.map((p: any) => ({ ...p }));
+    c['storage'].loadLiveElapsed = () => ({ seed: 'seed-xyz', chainIndex: 2, session: 95, puzzle: 12 });
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 };
+    c.resumeGame();
+    expect(c.sessionSeconds).toBe(95);                    // Live-Stand (jünger) schlägt Sync-Punkt (80)
+    expect((c as any).resumePuzzleSeconds).toBe(12);      // gleiches Puzzle → Zwischenzeit wird fortgesetzt
+    c.ngOnDestroy();
+  });
+
+  it('Live-Stand eines anderen Laufs (Seed) wird ignoriert', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'loadCurrent');
+    c['storage'].loadChainSeed = () => 'seed-xyz';
+    c['offlinePool'] = CHAIN.map((p: any) => ({ ...p }));
+    c['storage'].loadLiveElapsed = () => ({ seed: 'anderer-lauf', chainIndex: 2, session: 999, puzzle: 50 });
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 };
+    c.resumeGame();
+    expect(c.sessionSeconds).toBe(80);
+    expect((c as any).resumePuzzleSeconds).toBe(0);
+    c.ngOnDestroy();
+  });
+
+  it('bei anderer Ketten-Position wird nur die Session-Zeit angehoben, nicht die Puzzle-Zeit', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'loadCurrent');
+    c['storage'].loadChainSeed = () => 'seed-xyz';
+    c['offlinePool'] = CHAIN.map((p: any) => ({ ...p }));
+    c['storage'].loadLiveElapsed = () => ({ seed: 'seed-xyz', chainIndex: 1, session: 95, puzzle: 12 });
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 };
+    c.resumeGame();
+    expect(c.sessionSeconds).toBe(95);
+    expect((c as any).resumePuzzleSeconds).toBe(0);       // anderes Puzzle → nicht fortsetzen
+    c.ngOnDestroy();
+  });
+
+  it('der Sekunden-Tick persistiert den Live-Stand über den Storage', () => {
+    const c = makeComponent();
+    const saved: any[] = [];
+    c['storage'].saveLiveElapsed = (e: any) => saved.push(e);
+    (c as any).seed = 'seed-abc';
+    (c as any).chainIndex = 3;
+    c.sessionSeconds = 41;
+    (c as any).saveLiveElapsedNow();
+    expect(saved.length).toBe(1);
+    expect(saved[0].seed).toBe('seed-abc');
+    expect(saved[0].chainIndex).toBe(3);
+    expect(saved[0].session).toBe(41);
+    (c as any).seed = '';
+    (c as any).saveLiveElapsedNow();                      // ohne Lauf-Seed wird nichts geschrieben
+    expect(saved.length).toBe(1);
   });
 });

@@ -2,6 +2,7 @@ import { of } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline } from './book-offline.util';
 import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
+import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -902,5 +903,82 @@ describe('BookPuzzleComponent Daily kumulierte Lösezeit', () => {
     done.elapsedSeconds = 50;
     done.ngOnDestroy();
     expect(loadDailyElapsed(DATE)).toBe(0);     // erfasster Versuch bleibt gelöscht
+  });
+});
+
+describe('BookPuzzleComponent Kurs kumulierte Lösezeit', () => {
+  const KEY = 'course:77';
+  beforeEach(() => localStorage.removeItem('rookhub_solve_elapsed'));
+  afterEach(() => localStorage.removeItem('rookhub_solve_elapsed'));
+
+  function makeCourse(): any {
+    const c: any = makeComponent();
+    c.puzzle = { id: 77, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.inCourse = true;
+    c.courseBookId = 5;
+    return c;
+  }
+
+  it('resumes the stored time when solving begins again (refresh)', () => {
+    saveSolveElapsed(KEY, 60);
+    const c = makeCourse();
+    (c as any).onSolvingBegins();
+    expect(c.elapsedSeconds).toBe(60);
+    (c as any).stopTimer();
+  });
+
+  it('starts at 0 without a stored time; a plain book puzzle never resumes', () => {
+    const c = makeCourse();
+    (c as any).onSolvingBegins();
+    expect(c.elapsedSeconds).toBe(0);
+    (c as any).stopTimer();
+    saveSolveElapsed(KEY, 99);
+    const plain = makeComponent();
+    (plain as any).puzzle = { id: 77, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (plain as any).onSolvingBegins();          // kein Kursmodus → keine Fortführung
+    expect((plain as any).elapsedSeconds).toBe(0);
+    (plain as any).stopTimer();
+  });
+
+  it('the timer tick persists the current stand (course mode only)', () => {
+    const c = makeCourse();
+    c.elapsedSeconds = 42;
+    (c as any).onTimerTick();
+    expect(loadSolveElapsed(KEY)).toBe(42);
+    const plain = makeComponent();
+    (plain as any).puzzle = { id: 78, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (plain as any).elapsedSeconds = 33;
+    (plain as any).onTimerTick();              // außerhalb des Kurses wird nichts gemerkt
+    expect(loadSolveElapsed('course:78')).toBe(0);
+  });
+
+  it('a recorded course attempt (logged in) clears the stored time', () => {
+    saveSolveElapsed(KEY, 99);
+    const c = makeCourse();
+    c.auth = { isLoggedIn: true };
+    c.courseService.recordResult = () => ({ subscribe: () => {} });
+    (c as any).recordCourseAttempt(false);
+    expect(loadSolveElapsed(KEY)).toBe(0);
+  });
+
+  it('an anonymous course attempt clears too (retry starts fresh)', () => {
+    saveSolveElapsed(KEY, 99);
+    const c = makeCourse();                    // auth.isLoggedIn = false → isAnonCourse
+    (c as any).recordCourseAttempt(false);
+    expect(loadSolveElapsed(KEY)).toBe(0);
+  });
+
+  it('leaving mid-run stores the final stand; after SOLVED it does not resurrect', () => {
+    const c = makeCourse();
+    c.state = 'AWAITING_USER_MOVE';
+    (c as any).startTimer(33);      // laufende Stoppuhr mit fortgeführtem Stand (ngOnDestroy stoppt sie)
+    c.ngOnDestroy();
+    expect(loadSolveElapsed(KEY)).toBe(33);
+    localStorage.removeItem('rookhub_solve_elapsed');
+    const done = makeCourse();
+    done.state = 'SOLVED';
+    done.elapsedSeconds = 50;
+    done.ngOnDestroy();
+    expect(loadSolveElapsed(KEY)).toBe(0);     // erfasster Versuch bleibt gelöscht
   });
 });

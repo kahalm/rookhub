@@ -41,6 +41,7 @@ import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
 import { loadDailyElapsed, saveDailyElapsed, clearDailyElapsed } from './daily-elapsed.util';
+import { loadSolveElapsed, saveSolveElapsed, clearSolveElapsed } from './solve-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
@@ -399,14 +400,22 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
-    // Tagespuzzle: früher verbrachte (aktive) Zeit fortführen — wer den Link schließt und später
-    // wieder öffnet, zählt kumuliert weiter statt bei 0 (fair für die „schnellster Löser"-Wertung).
-    this.startTimer(this.isDaily && this.dailyDate ? loadDailyElapsed(this.dailyDate) : 0);
+    // Tagespuzzle/Kurs: früher verbrachte (aktive) Zeit fortführen — wer die Seite mitten im Lösen
+    // verlässt oder neu lädt, zählt kumuliert weiter statt bei 0 (Daily: fair für die „schnellster
+    // Löser"-Wertung; Kurs: ehrliche Kurs-/Trainingszeit-Statistik).
+    this.startTimer(this.isDaily && this.dailyDate ? loadDailyElapsed(this.dailyDate)
+      : this.courseElapsedKey ? loadSolveElapsed(this.courseElapsedKey) : 0);
   }
 
-  /** Zwischenstand der Tagespuzzle-Lösezeit im Sekunden-Tick persistieren (für den Wiederbesuch). */
+  /** localStorage-Schlüssel der gemerkten Kurs-Zwischenzeit des aktuellen Puzzles (nur Kursmodus). */
+  private get courseElapsedKey(): string | null {
+    return this.inCourse && this.puzzle ? `course:${this.puzzle.id}` : null;
+  }
+
+  /** Zwischenstand der Lösezeit im Sekunden-Tick persistieren (für den Wiederbesuch/Refresh). */
   protected override onTimerTick(): void {
-    if (this.isDaily && this.dailyDate) saveDailyElapsed(this.dailyDate, this.elapsedSeconds);
+    if (this.isDaily && this.dailyDate) { saveDailyElapsed(this.dailyDate, this.elapsedSeconds); return; }
+    if (this.courseElapsedKey) saveSolveElapsed(this.courseElapsedKey, this.elapsedSeconds);
   }
 
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
@@ -712,11 +721,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.dailySub?.unsubscribe();
     this.courseSub?.unsubscribe();
     this.stopTimer();
-    // Tagespuzzle mitten im Lauf verlassen → finalen Stand für den Wiederbesuch festhalten.
+    // Tagespuzzle/Kurs mitten im Lauf verlassen → finalen Stand für den Wiederbesuch festhalten.
     // NUR bei offenem Lauf (isSolving): nach SOLVED/FAILED ist der Versuch erfasst und der Eintrag
     // gelöscht — ein Speichern hier würde ihn wieder aufleben lassen.
-    if (this.isDaily && this.dailyDate && this.isSolving)
-      saveDailyElapsed(this.dailyDate, this.elapsedSeconds);
+    if (this.isSolving) {
+      if (this.isDaily && this.dailyDate) saveDailyElapsed(this.dailyDate, this.elapsedSeconds);
+      else if (this.courseElapsedKey) saveSolveElapsed(this.courseElapsedKey, this.elapsedSeconds);
+    }
     this.clearSolutionPlay();
     this.abortSolver();
     clearCrazyStyles();
@@ -1116,6 +1127,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private recordCourseAttempt(solved: boolean): void {
     if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
     this.courseAttemptRecorded = true;
+    // Versuch ist entschieden → gemerkte Zwischenzeit verfällt (ein Retry startet wieder bei 0).
+    clearSolveElapsed(`course:${this.puzzle.id}`);
 
     // Anonym: Fortschritt nur lokal (localStorage). Kein Server-Call/Queue — Kurs-Endpoints sind
     // auth-pflichtig, und anonyme Versuche zählen bewusst nicht in Bestenlisten/Trainingsziele.
