@@ -658,6 +658,27 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
     expect(() => c.reviewPrev()).not.toThrow();
   });
 
+  it('eine Info-Linie mit illegaler FEN UND Demozügen lässt sich durchklicken (per Koordinaten)', () => {
+    const c = makeComponent();
+    // „📝65. Lasker-Loman" ohne weißen König; Demozüge Rh8+ Kxh8 gxf7 als UCI.
+    const badFen = '6k1/5pp1/6P1/8/8/8/8/7R w - - 0 1';
+    const puzzle = { id: 65, fen: badFen, moves: 'h1h8 g8h8 g6f7', startPly: -1, bookFileName: 'b', isInfoOnly: true };
+    c.puzzle = puzzle;
+    (c as any).setupPuzzle(puzzle);
+    expect(c.state).toBe('INFO');
+    expect(c.reviewTotal).toBe(3);            // 3 Halbzüge durchklickbar
+    expect(c.boardFen).toBe(badFen);          // Index 0 = Ausgangsstellung
+    c.reviewNext();
+    expect(c.reviewIndex).toBe(1);
+    expect(c.boardFen).toBe('6kR/5pp1/6P1/8/8/8/8/8 b - - 0 1');   // nach Rh8
+    expect(c.lastMove).toEqual(['h1', 'h8']);
+    c.reviewNext(); c.reviewNext();
+    expect(c.reviewIndex).toBe(3);
+    expect(c.boardFen).toBe('7k/5Pp1/8/8/8/8/8/8 b - - 0 1');      // nach Kxh8 gxf7
+    c.reviewPrev();
+    expect(c.reviewIndex).toBe(2);
+  });
+
   it('courseNext auf einer Info-Linie merkt sie serverseitig + offline (überspringen beim Wiedereinstieg)', () => {
     const c = makeComponent();
     c.auth.isLoggedIn = true;   // serverseitiges Merken (markInfoSeen) ist ein eingeloggtes Verhalten

@@ -34,6 +34,7 @@ import { DrawShape } from 'chessground/draw';
 import { parseMoveShapes } from './move-shapes.util';
 import { parseAltMoves } from './alt-moves.util';
 import { applyUci, tryLoadFen, fenSideToMove } from './puzzle-move.util';
+import { replayIllegalFen } from './illegal-board.util';
 import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
@@ -1290,18 +1291,23 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.reviewGoTo(0);   // setzt boardFen/turnColor/Kommentar für die Ausgangsstellung
   }
 
-  /** Illegale (Chessable-Diagramm-)FEN nur statisch anzeigen — ohne chess.js, ohne Zug-Logik. */
-  private renderStaticInfo(): void {
+  /** Illegale (Chessable-Diagramm-)FEN ohne chess.js anzeigen. Hat die Info-Linie Demozüge, kann man
+   *  sie trotzdem durchklicken: die Stellung nach `index` Halbzügen wird rein per Koordinaten (kein
+   *  Legalitätscheck) berechnet — sonst nur die Ausgangsstellung. */
+  private renderStaticInfo(index: number): void {
     if (!this.puzzle) return;
     this.chess = new Chess();               // sicherer Platzhalter (nie angezeigt; boardFen zeigt das Diagramm)
-    this.reviewIndex = 0;
-    this.boardFen = this.puzzle.fen;         // chessground rendert die Brettstellung ohne Legalitätsprüfung
-    this.turnColor = fenSideToMove(this.puzzle.fen) === 'b' ? 'black' : 'white';
+    const moves = this.puzzle.moves.split(' ').filter(m => m);
+    const idx = Math.max(0, Math.min(index, moves.length));
+    this.reviewIndex = idx;
+    const replay = replayIllegalFen(this.puzzle.fen, moves, idx);
+    this.boardFen = replay.fen;             // chessground rendert die Brettstellung ohne Legalitätsprüfung
+    this.turnColor = replay.whiteToMove ? 'white' : 'black';
+    this.lastMove = replay.lastMove as [Key, Key] | undefined;
     this.isCheck = false;
     this.dests = new Map();
-    this.lastMove = undefined;
-    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, 0, -1);
-    this.reviewShapes = this.shapesForPlyPlayed(-1);
+    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, 0, idx - 1);
+    this.reviewShapes = this.shapesForPlyPlayed(idx - 1);
   }
 
   /** Zug aufs Brett anwenden ohne lastMove-Highlight (Vorspiel/Review-Aufbau). */
@@ -1369,7 +1375,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     index = Math.max(0, Math.min(index, solutionMoves.length));
     this.reviewIndex = index;
     const chess = tryLoadFen(this.puzzle.fen);
-    if (!chess) { this.renderStaticInfo(); return; }   // illegale Diagramm-FEN → nur statisch anzeigen
+    if (!chess) { this.renderStaticInfo(start + index); return; }   // illegale Diagramm-FEN → per Koordinaten
     this.chess = chess;
     // Vorspiel still aufs Brett
     for (let i = 0; i < start; i++) this.applyUci(allMoves[i]);
@@ -1446,7 +1452,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     index = Math.max(0, Math.min(index, moves.length));
     this.reviewIndex = index;
     const chess = tryLoadFen(this.puzzle.fen);
-    if (!chess) { this.renderStaticInfo(); return; }   // illegale Diagramm-FEN → nur statisch anzeigen
+    if (!chess) { this.renderStaticInfo(index); return; }   // illegale Diagramm-FEN → per Koordinaten
     this.chess = chess;
     let last: [Key, Key] | undefined;
     for (let i = 0; i < index; i++) {

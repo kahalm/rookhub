@@ -108,11 +108,15 @@ public class PgnImportService
                 {
                     var iw = headers.GetValueOrDefault("White", "").Trim();
                     var ib = headers.GetValueOrDefault("Black", "").Trim();
+                    // Ist die FEN nur ILLEGAL (Chessable-Muster-Diagramm ohne König), sind die Demo-
+                    // Züge trotzdem im PGN — permissiv nach UCI auflösen, damit die Info-Linie
+                    // durchklickbar wird (das Frontend spielt sie ohne Legalitätsprüfung nach).
+                    var infoUci = PgnParser.TryExtractUciMainlinePermissive(fen, moveText);
                     result.Add(new ParsedPuzzle(
                         LineId: PgnParser.Truncate($"{fileName}:{round}", 300),
                         Round: PgnParser.Truncate(round, 20),
                         Fen: fen,
-                        Moves: "",
+                        Moves: infoUci == null ? "" : string.Join(' ', infoUci),
                         StartPly: -1,
                         Title: iw.Length == 0 ? null : PgnParser.Truncate(iw, 300),
                         Chapter: ib.Length == 0 ? null : PgnParser.Truncate(ib, 200),

@@ -110,10 +110,18 @@ namespace RookHub.Api.Services;
 ///   Nachspielen extrahiert werden). Jetzt wird die Umwandlung vor dem Nachspielen auf <c>=&lt;GROSS&gt;</c>
 ///   normalisiert. Betrifft v. a. Endspiel-/Taktik-Bücher; die Züge stehen bereits im <c>Book.SourcePgn</c>
 ///   → rein lokal per „Aktualisieren" aufbereitbar (kein Chessable-Re-Fetch nötig).</item>
+/// <item><b>17:</b> Info-/Muster-Linien mit ILLEGALER Diagramm-FEN (Chessable-„📝"-Seiten, z. B. ganz
+///   ohne König) bekommen jetzt ihre Demonstrations-Züge als <c>Moves</c> (UCI). Bisher lehnte
+///   Gera.Chess die illegale Stellung ab → <c>TryExtractUciMainline</c> gab <c>null</c> → die Info-Linie
+///   wurde zug-los gespeichert und war im Kurs nur STATISCH (Ausgangsstellung), während man sie auf
+///   Chessable durchklicken kann. Ein permissiver SAN→UCI-Parser (<see cref="PermissiveSan"/>, reine
+///   Figuren-Geometrie ohne Legalität) füllt die Züge jetzt auch für illegale FENs; das Frontend spielt
+///   sie ohne chess.js nach. Betrifft nur <c>IsInfoOnly</c>-Linien (Zählung/Quiz unverändert). Die Züge
+///   stehen bereits im <c>Book.SourcePgn</c> → rein lokal per „Aktualisieren" aufbereitbar.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 16;
+    public const int CurrentVersion = 17;
 }

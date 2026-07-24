@@ -325,6 +325,21 @@ public static partial class PgnParser
         }
     }
 
+    /// <summary>
+    /// Fallback-Zugauflösung NUR für <b>illegale</b> Diagramm-FENs (Chessable-Muster-/Info-Seiten ohne
+    /// König o. Ä.), die Gera.Chess ablehnt. Für lade-bare (legale) FENs bewusst <c>null</c> — dort ist
+    /// der strikte <see cref="TryExtractUciMainline"/> zuständig (scheitert er dort, wird NICHT geraten).
+    /// Ergebnis dient nur dem Durchklicken der Info-Linie (siehe <see cref="PermissiveSan"/>).
+    /// </summary>
+    public static List<string>? TryExtractUciMainlinePermissive(string fen, string moveText)
+    {
+        try { ChessBoard.LoadFromFen(fen); return null; }   // legale FEN → nicht hier auflösen
+        catch { /* illegale FEN → weiter unten permissiv auflösen */ }
+        var sanMoves = ExtractMainlineSans(moveText);
+        if (sanMoves.Count == 0) return null;
+        return PermissiveSan.TryResolve(fen, sanMoves);
+    }
+
     private static string ToUci(Move m)
     {
         var u = m.OriginalPosition.ToString() + m.NewPosition.ToString();

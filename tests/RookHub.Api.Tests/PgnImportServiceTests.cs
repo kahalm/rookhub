@@ -309,6 +309,51 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal("b4b3 c2d2 a5a2 a1a2 b3a2 b1a3 a2a1q d3c1 a8a3 b2a3 a1a3 e1g1 a3c5", p.Moves);
     }
 
+    // ---- Info-Linien mit ILLEGALER Diagramm-FEN: Züge fürs Durchklicken permissiv auflösen ----
+    [Fact]
+    public void PermissiveMainline_ResolvesMoves_OnIllegalKinglessDiagram()
+    {
+        // „📝65. The Lasker-Loman Tactic" — FEN ohne weißen König (illegal), Demozüge Rh8+ Kxh8 gxf7.
+        var moveText = "1. Rh8+ Kxh8 2. gxf7 *";
+        var uci = PgnParser.TryExtractUciMainlinePermissive("6k1/5pp1/6P1/8/8/8/8/7R w - - 0 1", moveText);
+        Assert.Equal(new[] { "h1h8", "g8h8", "g6f7" }, uci);
+    }
+
+    [Fact]
+    public void PermissiveMainline_HandlesUnderpromotion_LongAlgebraic_AndDisambiguation()
+    {
+        Assert.Equal(new[] { "f7f8n" }, PgnParser.TryExtractUciMainlinePermissive("6k1/5P2/8/8/8/8/8/8 w - - 0 1", "1. f8=N *"));
+        // Lange algebraische Notation (From explizit): d4-e5 (Bauer), Nc3xb5 (Springer schlägt).
+        Assert.Equal(new[] { "d4e5", "c3b5" }, PgnParser.TryExtractUciMainlinePermissive("8/1p6/8/1p6/3P4/2N5/8/8 w - - 0 1", "1. d4-e5 Nc3xb5 *"));
+        // Disambiguierung per Datei: zwei weiße Türme (a8/h8), Rag8 = a-Turm nach g8.
+        Assert.Equal(new[] { "a8g8" }, PgnParser.TryExtractUciMainlinePermissive("R6R/8/8/8/8/8/8/8 w - - 0 1", "1. Rag8 *"));
+    }
+
+    [Fact]
+    public void PermissiveMainline_ReturnsNull_ForLegalFen()
+    {
+        // Legale FEN → der permissive Parser hält sich raus (der strikte Parser ist zuständig).
+        Assert.Null(PgnParser.TryExtractUciMainlinePermissive("8/P7/8/8/8/8/8/k6K w - - 0 1", "1. a8=Q+ Kb2 *"));
+    }
+
+    [Fact]
+    public void ParsePgn_IllegalFenInfoLine_KeepsClickThroughMoves()
+    {
+        var pgn = @"
+[Event ""Patterns""]
+[Round ""9.8""]
+[White ""PATTERN 65. The Lasker-Loman Tactic""]
+[Black ""7. Promotion""]
+[FEN ""6k1/5pp1/6P1/8/8/8/8/7R w - - 0 1""]
+
+{[%info] The rook lures the king away.} 1. Rh8+ Kxh8 2. gxf7 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("b.pgn", pgn, keepCommentOnlyAsInfo: true).Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal(-1, p.StartPly);
+        Assert.Equal("h1h8 g8h8 g6f7", p.Moves);   // durchklickbar statt nur statisch
+    }
+
     [Fact]
     public void ParsePgn_HandlesCastling()
     {
