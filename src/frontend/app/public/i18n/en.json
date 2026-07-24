@@ -1155,6 +1155,8 @@
     "offlineFailed": "Could not save book offline",
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
+    "infoLines": "+{{count}} info",
+    "infoLinesTooltip": "Explanatory / pattern-intro lines (not quizzed, click-through only)",
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "In progress",

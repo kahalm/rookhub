@@ -159,7 +159,7 @@ import { CourseListItem, CourseChapter } from './course.service';
                         </span>
                         <div class="chapter-progress">
                           <mat-progress-bar class="chapter-bar" mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
-                          <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}</span>
+                          <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}@if (ch.infoCount > 0) {<span class="chapter-info-count" [matTooltip]="'courses.infoLinesTooltip' | translate">&nbsp;{{ 'courses.infoLines' | translate:{ count: ch.infoCount } }}</span>}</span>
                         </div>
                         <div class="chapter-btns">
                           <button mat-icon-button [matTooltip]="'courses.browseTooltip' | translate"
@@ -253,6 +253,7 @@ import { CourseListItem, CourseChapter } from './course.service';
     .chapter-progress { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .chapter-bar { width: 70px; --mdc-linear-progress-track-height: 4px; --mdc-linear-progress-active-indicator-height: 4px; }
     .chapter-label { font-variant-numeric: tabular-nums; font-size: 0.75rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; min-width: 36px; }
+    .chapter-info-count { font-size: 0.7rem; color: color-mix(in srgb, currentColor 40%, transparent); font-style: italic; }
     .chapter-btns { display: flex; flex-shrink: 0; }
     .chapter-btns .mat-mdc-icon-button { width: 30px; height: 30px; padding: 4px; }
     .chapter-btns mat-icon { font-size: 16px; width: 16px; height: 16px; }

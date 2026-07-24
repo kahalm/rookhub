@@ -70,6 +70,8 @@ export interface CourseChapter {
   puzzleCount: number;
   solvedCount: number;
   progressPercent: number;
+  /** Anzahl Info-/Erklärlinien im Kapitel (nicht in puzzleCount enthalten); in der Übersicht in Klammern. */
+  infoCount: number;
 }
 
 /** Statistik eines Kurs-Bereichs (ganzes Buch ODER aktuelles Kapitel): Fortschritt + Zeit + Erst-Versuch-Trefferquote.

@@ -1155,6 +1155,8 @@
     "offlineFailed": "Buch konnte nicht offline gespeichert werden",
     "chapters": "Kapitel",
     "noChapter": "(ohne Kapitel)",
+    "infoLines": "+{{count}} Info",
+    "infoLinesTooltip": "Erklär-/Muster-Einleitungslinien (kein Quiz, nur zum Durchklicken)",
     "chaptersEmpty": "Keine Kapitel",
     "chaptersLoadFailed": "Kapitel konnten nicht geladen werden",
     "sectionInProgress": "In Arbeit",

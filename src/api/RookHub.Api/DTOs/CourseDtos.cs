@@ -119,6 +119,10 @@ public class CourseChapterDto
     public int SolvedCount { get; set; }
     /// <summary>0–100, gerundet.</summary>
     public int ProgressPercent { get; set; }
+    /// <summary>Anzahl der Info-/Erklärlinien (<c>IsInfoOnly</c>) in diesem Kapitel — NICHT in
+    /// <see cref="PuzzleCount"/> enthalten (die zählt nur Quiz-Linien). Chessable weist solche
+    /// Muster-Einleitungen als eigene „Linien" aus; die Übersicht zeigt sie in Klammern separat.</summary>
+    public int InfoCount { get; set; }
 }
 
 /// <summary>

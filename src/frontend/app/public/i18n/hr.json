@@ -1155,6 +1155,8 @@
     "downloadFailed": "Preuzimanje PGN-a nije uspjelo.",
     "chapters": "Poglavlja",
     "noChapter": "(bez poglavlja)",
+    "infoLines": "+{{count}} info",
+    "infoLinesTooltip": "Objašnjenja / uvodne linije uzoraka (bez kviza, samo za proklikavanje)",
     "chaptersEmpty": "Nema poglavlja",
     "chaptersLoadFailed": "Učitavanje poglavlja nije uspjelo",
     "sectionInProgress": "U tijeku",

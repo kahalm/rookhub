@@ -139,6 +139,21 @@ public class CourseService
             groups[gi] = (g.Name, g.Count + 1, g.Solved + (solvedSet.Contains(p.Id) ? 1 : 0));
         }
 
+        // Info-/Erklärlinien je Kapitel getrennt zählen (für den Klammer-Ausweis in der Übersicht).
+        // Nur BESTEHENDE (quiz-tragende) Kapitel werden annotiert — ein reines Info-Kapitel bekommt
+        // KEINE Gruppe/keinen Index (Index-Kontrakt mit GetOrderedChapterNamesAsync/?chapterIndex).
+        var infoByKey = new Dictionary<string, int>();
+        var infoChapters = await _db.BookPuzzles
+            .Where(bp => bp.BookId == bookId && bp.IsInfoOnly)
+            .Select(bp => bp.Chapter)
+            .ToListAsync();
+        foreach (var raw in infoChapters)
+        {
+            var key = NormalizeChapter(raw) ?? noneKey;
+            if (indexByKey.ContainsKey(key))
+                infoByKey[key] = infoByKey.GetValueOrDefault(key) + 1;
+        }
+
         return groups.Select((g, idx) => new CourseChapterDto
         {
             Index = idx,
@@ -146,6 +161,7 @@ public class CourseService
             PuzzleCount = g.Count,
             SolvedCount = Math.Min(g.Solved, g.Count),
             ProgressPercent = Percent(g.Solved, g.Count),
+            InfoCount = infoByKey.GetValueOrDefault(g.Name ?? noneKey),
         }).ToList();
     }
 

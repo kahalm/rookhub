@@ -145,4 +145,31 @@ public class CourseServiceReadingOrderTests : IDisposable
         Assert.NotNull(next1.Puzzle);
         Assert.Equal(b.LineId, next1.Puzzle!.LineId);
     }
+
+    /// <summary>Info-/Erklärlinien zählen NICHT in <c>PuzzleCount</c> (nur Quiz-Linien), werden aber
+    /// je Kapitel in <c>InfoCount</c> ausgewiesen (Klammer-Anzeige in der Übersicht, entspricht der
+    /// Chessable-Linienzahl). Ein reines Info-Kapitel bekommt weiterhin KEINE eigene Gruppe/Index.</summary>
+    [Fact]
+    public async Task GetChapters_ReportsInfoCount_PerChapter_WithoutInflatingPuzzleCount()
+    {
+        var book = new Book { FileName = "ic.pgn", DisplayName = "IC", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        // Kapitel „7. Promotion": 2 Quiz-Linien + 3 Info-/Erklärseiten.
+        await AddPuzzleAsync(book, "p-intro", "007.001", "7. Promotion", info: true);
+        await AddPuzzleAsync(book, "p-q1", "007.002", "7. Promotion");
+        await AddPuzzleAsync(book, "p-info2", "007.003", "7. Promotion", info: true);
+        await AddPuzzleAsync(book, "p-q2", "007.004", "7. Promotion");
+        await AddPuzzleAsync(book, "p-info3", "007.005", "7. Promotion", info: true);
+        // Ein reines Info-Kapitel darf keine Gruppe bilden (und sein InfoCount taucht nirgends auf).
+        await AddPuzzleAsync(book, "only-info", "008.001", "8. Nur Info", info: true);
+
+        var chapters = await _svc.GetChaptersAsync(UserId, book.Id, isAdmin: false);
+
+        var promo = Assert.Single(chapters);
+        Assert.Equal("7. Promotion", promo.Name);
+        Assert.Equal(2, promo.PuzzleCount);   // nur Quiz-Linien
+        Assert.Equal(3, promo.InfoCount);     // Info-Seiten separat
+    }
 }
