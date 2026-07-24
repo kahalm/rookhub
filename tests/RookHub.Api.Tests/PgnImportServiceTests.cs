@@ -266,6 +266,49 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal("a7a8q a1b2", p.Moves);
     }
 
+    // Regression: Chessable/piratechess exportieren Umwandlungen ohne "=" bzw. mit kleinem
+    // Figurbuchstaben ("a8Q+", "a8q", "bxa8N"). Gera.Chess akzeptiert SAN nur kanonisch ("a8=Q"),
+    // sonst warf board.Move → die ganze Linie fiel still in den zug-losen Info-Zweig (leere Moves,
+    // IsInfoOnly). CleanSan normalisiert die Umwandlung jetzt vor dem Nachspielen.
+    [Theory]
+    [InlineData("a8Q+")]   // ohne "="
+    [InlineData("a8q")]    // ohne "=", klein
+    [InlineData("a8=q")]   // mit "=", klein
+    [InlineData("a8=Q+")]  // kanonisch (Kontrollfall)
+    public void ParsePgn_HandlesPromotion_NonStandardChessableNotation(string promoSan)
+    {
+        var pgn = $@"
+[Event ""P""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. {promoSan} Kb2 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("p.pgn", pgn).Puzzles);
+        Assert.Equal("a7a8q a1b2", p.Moves);
+        Assert.False(p.IsInfoOnly);   // nicht zur statischen Info-Seite degradiert
+    }
+
+    // Regression (der konkrete Fall aus „100 Tactical Patterns", Round 009.004 / ChessableOid 47084790):
+    // Root-[%tqu] + Umwandlung "a1Q+" mitten in der Lösungslinie. Vor dem Fix wurde daraus IsInfoOnly
+    // mit leeren Moves; jetzt ein lösbares Puzzle ab moves[0].
+    [Fact]
+    public void ParsePgn_RootTqu_WithMidlinePromotion_StaysSolvable()
+    {
+        var pgn = @"
+[Event ""100 Tactical Patterns""]
+[Round ""9.4""]
+[FEN ""rnb2rk1/1p3ppp/4pn2/q1P5/1pPp4/3N2P1/PPQ1PPBP/RN2K2R b KQ - 0 11""]
+
+{[%tqu ""En"",""find the move"","""","""",""b4b3"","""",10]}
+11. b3+ 12. Qd2 Qxa2 13. Rxa2 bxa2 14. Na3 a1Q+ 15. Nc1 Rxa3 16. bxa3 Qxa3 17. O-O Qxc5 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.False(p.IsInfoOnly);
+        Assert.Equal(-1, p.StartPly);
+        Assert.Equal("b4b3 c2d2 a5a2 a1a2 b3a2 b1a3 a2a1q d3c1 a8a3 b2a3 a1a3 e1g1 a3c5", p.Moves);
+    }
+
     [Fact]
     public void ParsePgn_HandlesCastling()
     {

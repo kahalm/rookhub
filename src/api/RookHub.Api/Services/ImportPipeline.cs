@@ -101,10 +101,19 @@ namespace RookHub.Api.Services;
 ///   oids und wurde als „aktuell" (v14) nicht mehr angeboten. „Modern" verlangt jetzt <c>[ChessableOid]</c>;
 ///   der Bump macht die auf v14 fälschlich verbrannten Datensätze wieder veraltet, sodass sie über das
 ///   oid-liefernde piratechess (≥ v1.0.39, auch aus dem Cache) neu geholt werden.</item>
+/// <item><b>16:</b> Umwandlungs-SAN-Normalisierung (<c>PgnParser.CleanSan</c>): Chessable/piratechess
+///   schreiben Bauern-Umwandlungen OHNE „="/mit kleinem Figurbuchstaben (<c>a1Q+</c>, <c>exd8n</c>).
+///   Gera.Chess akzeptiert SAN aber nur kanonisch (<c>a1=Q</c>) → <c>board.Move</c> warf, <c>TryExtract­
+///   UciMainline</c> gab <c>null</c>, und die GANZE Linie fiel in den zug-losen Info-Zweig: aus einem
+///   lösbaren Puzzle wurde still eine statische Info-Seite (leere <c>Moves</c>, <c>StartPly=-1</c>,
+///   <c>IsInfoOnly=1</c> — Board-Pfeile/Kommentare blieben, weil die per Token-Zählung, nicht per
+///   Nachspielen extrahiert werden). Jetzt wird die Umwandlung vor dem Nachspielen auf <c>=&lt;GROSS&gt;</c>
+///   normalisiert. Betrifft v. a. Endspiel-/Taktik-Bücher; die Züge stehen bereits im <c>Book.SourcePgn</c>
+///   → rein lokal per „Aktualisieren" aufbereitbar (kein Chessable-Re-Fetch nötig).</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 15;
+    public const int CurrentVersion = 16;
 }

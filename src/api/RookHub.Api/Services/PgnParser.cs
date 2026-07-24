@@ -28,6 +28,8 @@ public static partial class PgnParser
     private static partial Regex NagRegex();
     [GeneratedRegex(@"\d+\.+")]                    // Zugnummern "12." / "12..."
     private static partial Regex MoveNumberRegex();
+    [GeneratedRegex(@"^([a-h]?x?[a-h][18])=?([nbrqNBRQ])$")] // Umwandlung "a1Q"/"a1q"/"a1=q" → kanonisch "a1=Q"
+    private static partial Regex PromotionRegex();
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
 
@@ -332,12 +334,19 @@ public static partial class PgnParser
         return u;
     }
 
-    /// <summary>SAN einzeln von Zug-Dekorationen bereinigen (0-0→O-O, Suffixe !?+# weg). Leer/Ergebnis → "".</summary>
+    /// <summary>SAN einzeln von Zug-Dekorationen bereinigen (0-0→O-O, Suffixe !?+# weg,
+    /// Umwandlung → kanonisch "=Q"). Leer/Ergebnis → "".</summary>
     private static string CleanSan(string token)
     {
         var t = token.Trim();
         if (t.Length == 0 || ResultTokens.Contains(t)) return "";
         t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
+        // Chessable/piratechess schreiben Umwandlungen ohne "=" (bzw. mit kleinem Figurbuchstaben),
+        // z. B. "a1Q+"/"exd8n" → nach dem Suffix-Strip "a1Q"/"exd8n". Gera.Chess akzeptiert SAN aber
+        // NUR in der Form "a1=Q" (großer Figurbuchstabe, mit "="); sonst wirft board.Move → die ganze
+        // Linie fällt in den zug-losen Info-Zweig (Puzzle wird still zu einer statischen Info-Seite).
+        var pm = PromotionRegex().Match(t);
+        if (pm.Success) t = pm.Groups[1].Value + "=" + char.ToUpperInvariant(pm.Groups[2].Value[0]);
         return ResultTokens.Contains(t) ? "" : t;
     }
 
