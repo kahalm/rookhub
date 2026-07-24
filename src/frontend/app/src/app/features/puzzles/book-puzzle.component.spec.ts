@@ -640,6 +640,24 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
     expect(c.state).not.toBe('INFO');
   });
 
+  it('eine Info-Linie mit ILLEGALER Chessable-Diagramm-FEN (kein König) rendert statisch, ohne zu werfen', () => {
+    const c = makeComponent();
+    // Muster-Einleitungsdiagramm ohne Könige — chess.js würde werfen; muss trotzdem angezeigt werden.
+    const badFen = '8/2p1n3/3b1n2/3pp3/3PP3/2P5/1P3P2/8 w - - 0 1';
+    const puzzle = { id: 13, fen: badFen, moves: '', startPly: -1, bookFileName: 'b', isInfoOnly: true,
+                     comment: 'PATTERN 1. Increasing pawn tension …' };
+    c.puzzle = puzzle;
+    expect(() => (c as any).setupPuzzle(puzzle)).not.toThrow();
+    expect(c.state).toBe('INFO');
+    expect(c.reviewMode).toBeTrue();
+    expect(c.boardFen).toBe(badFen);           // chessground zeigt das Diagramm verbatim
+    expect(c.turnColor).toBe('white');
+    expect(c.dests.size).toBe(0);              // keine Zug-Logik
+    // Klicken der (leeren) Navigation darf ebenfalls nicht werfen.
+    expect(() => c.reviewNext()).not.toThrow();
+    expect(() => c.reviewPrev()).not.toThrow();
+  });
+
   it('courseNext auf einer Info-Linie merkt sie serverseitig + offline (überspringen beim Wiedereinstieg)', () => {
     const c = makeComponent();
     c.auth.isLoggedIn = true;   // serverseitiges Merken (markInfoSeen) ist ein eingeloggtes Verhalten

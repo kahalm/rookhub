@@ -23,6 +23,25 @@ export function applyUci(chess: Chess, uci: string): Move {
 }
 
 /**
+ * Versucht eine FEN in chess.js zu laden; gibt die Instanz zurück oder `null`, wenn chess.js sie
+ * ablehnt. Chessable-Muster-/Erklär-Diagramme benutzen bewusst ILLEGALE Stellungen (z. B. ohne
+ * König), die chess.js (Legalitätsprüfung) verwirft — chessground rendert sie aber problemlos.
+ * Für solche reinen Info-/Durchklick-Linien (keine Züge) genügt die Anzeige ohne chess.js.
+ */
+export function tryLoadFen(fen: string): Chess | null {
+  try {
+    return new Chess(fen);
+  } catch {
+    return null;
+  }
+}
+
+/** Farbe am Zug aus dem 2. FEN-Feld (roh, ohne chess.js). Fallback: Weiß. */
+export function fenSideToMove(fen: string): 'w' | 'b' {
+  return fen.split(/\s+/)[1] === 'b' ? 'b' : 'w';
+}
+
+/**
  * Freien (vom User gewählten) Zug von orig→dest anwenden. Promotion default Dame.
  * Gibt den Move zurück oder null, wenn illegal (Aufrufer überspringt dann).
  */

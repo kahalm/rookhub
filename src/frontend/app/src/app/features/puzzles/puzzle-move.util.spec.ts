@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
-import { parseUci, applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
+import { parseUci, applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml, tryLoadFen, fenSideToMove } from './puzzle-move.util';
 
 describe('puzzle-move.util', () => {
   describe('parseUci', () => {
@@ -89,6 +89,26 @@ describe('puzzle-move.util', () => {
     it('hebt Gegnerzüge (ungerade Indizes) mit <strong> hervor', () => {
       // Index 0 = User (e4), Index 1 = Gegner (e5, fett)
       expect(formatSanListHtml(['e4', 'e5'], true, 1)).toBe('1. e4 <strong>e5</strong>');
+    });
+  });
+
+  describe('tryLoadFen', () => {
+    it('lädt eine legale FEN', () => {
+      expect(tryLoadFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')).not.toBeNull();
+    });
+    it('gibt null für eine illegale Chessable-Diagramm-FEN zurück (kein König)', () => {
+      // Chessable-Muster-Diagramm ohne Könige — chess.js verwirft, chessground zeigt es trotzdem.
+      expect(tryLoadFen('8/2p1n3/3b1n2/3pp3/3PP3/2P5/1P3P2/8 w - - 0 1')).toBeNull();
+    });
+  });
+
+  describe('fenSideToMove', () => {
+    it('liest die Farbe am Zug aus dem 2. Feld', () => {
+      expect(fenSideToMove('8/2p1n3/3b1n2/3pp3/3PP3/2P5/1P3P2/8 b - - 0 1')).toBe('b');
+      expect(fenSideToMove('r6r/4bpk1/4p3/7Q/8/6R1/8/8 b - - 0 1')).toBe('b');
+    });
+    it('fällt ohne Farb-Feld auf Weiß zurück', () => {
+      expect(fenSideToMove('8/8/8/8/8/8/8/8')).toBe('w');
     });
   });
 });

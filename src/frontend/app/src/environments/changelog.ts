@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.316.2';
+export const APP_VERSION = '0.316.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.316.3", date: "2026-07-24", changes: [
+    { en: "Course info/explanation pages with an illegal diagram FEN now display instead of failing. Some Chessable pattern-intro pages use deliberately illegal positions (e.g. a diagram with no king) that the chess engine rejects; the info line was stored but the board threw when opening it, so the page appeared broken. Such info-only lines now render statically (the board is drawn straight from the FEN — no move logic needed, since these are click-through pages), and navigating them no longer throws. Real puzzles are unaffected. Data was already stored correctly, so no reprocess is needed. +5 frontend tests. NOT deployed (frontend image only).", de: "Kurs-Info-/Erklärseiten mit einer illegalen Diagramm-FEN werden jetzt angezeigt, statt zu scheitern. Manche Chessable-Muster-Einleitungsseiten nutzen bewusst illegale Stellungen (z. B. ein Diagramm ganz ohne König), die die Schach-Engine ablehnt; die Info-Linie war zwar gespeichert, aber das Brett warf beim Öffnen einen Fehler, sodass die Seite kaputt wirkte. Solche reinen Info-Linien werden nun statisch gerendert (das Brett wird direkt aus der FEN gezeichnet — ohne Zug-Logik, da es Durchklick-Seiten sind), und das Blättern wirft keinen Fehler mehr. Echte Puzzles sind nicht betroffen. Die Daten waren bereits korrekt gespeichert, ein Reprocess ist also nicht nötig. +5 Frontend-Tests. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.316.2", date: "2026-07-24", changes: [
     { en: "Course chapter overview now shows the number of Chessable info/explanation lines per chapter in parentheses, e.g. ‚2/44 +13 info'. These pattern-intro pages (‚[%info]' lines like ‚Introduction to Promotion') are counted by Chessable in its line total but are not quizzed in RookHub, so the chapter's solved/total still counts only real puzzles — the parenthesized number just explains the difference from Chessable's count (e.g. ‚100 Tactical Patterns' chapter 7: 44 puzzles + 13 info = 57 on Chessable). Info-only chapters still don't get their own row/index. i18n en/de/hr, +1 backend test. NOT deployed (needs both images: api + frontend).", de: "Die Kurs-Kapitelübersicht zeigt jetzt die Anzahl der Chessable-Info-/Erklärlinien je Kapitel in Klammern, z. B. „2/44 +13 Info“. Diese Muster-Einleitungsseiten („[%info]“-Linien wie „Introduction to Promotion“) zählt Chessable in seine Linienzahl mit, in RookHub werden sie aber nicht abgefragt — die Kapitel-Zählung gelöst/gesamt zählt daher weiterhin nur echte Puzzles, und die Klammer-Zahl erklärt nur die Differenz zur Chessable-Zahl (z. B. „100 Tactical Patterns“ Kapitel 7: 44 Puzzles + 13 Info = 57 auf Chessable). Reine Info-Kapitel bekommen weiterhin keine eigene Zeile/keinen Index. i18n en/de/hr, +1 Backend-Test. NICHT deployed (braucht beide Images: api + frontend)." },
   ] },
