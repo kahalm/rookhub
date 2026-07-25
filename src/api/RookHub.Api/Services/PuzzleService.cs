@@ -233,6 +233,9 @@ public class PuzzleService
     private async Task<int?> SeekTaggedIdAsync(List<int> tagIds, int min, int max,
         bool excludeSolved, int? userId, ISet<int> used)
     {
+        // Defense in depth zur DTO-Validierung: ein unsinniges Fenster (min > max) bzw. max == int.MaxValue
+        // würde Random.Shared.Next werfen (ArgumentOutOfRange/Overflow) → unbehandelter 500.
+        if (max < min || max == int.MaxValue) return null;
         var r = Random.Shared.Next(min, max + 1);
         foreach (var tagId in tagIds.OrderBy(_ => Random.Shared.Next()))
         {

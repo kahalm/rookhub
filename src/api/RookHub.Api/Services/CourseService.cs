@@ -458,7 +458,12 @@ public class CourseService
     /// geteilte Empfänger werden übersprungen (Grund <c>duplicate</c>), Fremde als <c>not_friends</c>,
     /// unbekannte als <c>not_found</c>, man selbst als <c>self</c>. Legt je neuem Empfänger eine
     /// In-App-Benachrichtigung an.</summary>
-    public async Task<CourseShareResultDto> ShareCourseAsync(int userId, int bookId, List<int> recipientUserIds, bool isAdmin)
+    /// <param name="retryOnConflict">Interner Schalter: nur der ERSTE Aufruf darf nach einem
+    /// Unique-Index-Konflikt einmal neu auflegen. Ohne diese Schranke rekursierte der Catch-Zweig
+    /// unbegrenzt, sobald die <see cref="DbUpdateException"/> kein Duplikat war (dauerhafter Fehler
+    /// ⇒ StackOverflow ⇒ Prozess-Abbruch, nicht abfangbar).</param>
+    public async Task<CourseShareResultDto> ShareCourseAsync(int userId, int bookId, List<int> recipientUserIds, bool isAdmin,
+        bool retryOnConflict = true)
     {
         var book = await EnsureOwnedBookAsync(userId, bookId);
 
@@ -490,11 +495,12 @@ public class CourseService
         if (result.Shared > 0)
         {
             try { await _db.SaveChangesAsync(); }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (retryOnConflict && AuthService.IsUniqueViolation(ex))
             {
-                // Race: derselbe (Buch, Empfänger) parallel geteilt → Unique-Index. Idempotent behandeln.
+                // Race: derselbe (Buch, Empfänger) parallel geteilt → Unique-Index. Idempotent behandeln
+                // (der zweite Lauf findet den Empfänger in `alreadyShared` und überspringt ihn).
                 _db.ChangeTracker.Clear();
-                return await ShareCourseAsync(userId, bookId, recipientUserIds, isAdmin);
+                return await ShareCourseAsync(userId, bookId, recipientUserIds, isAdmin, retryOnConflict: false);
             }
 
             var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";

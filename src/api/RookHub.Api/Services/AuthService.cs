@@ -226,13 +226,21 @@ public class AuthService
     /// Das Token trägt die echte Identität/Rollen des Zielnutzers + einen <c>imp</c>-Claim
     /// (ID des Admins, zur Nachvollziehbarkeit) und läuft bewusst kurz ab.
     /// </summary>
-    public async Task<AuthResponseDto> ImpersonateAsync(int adminId, string adminUsername, int targetUserId)
+    public async Task<AuthResponseDto> ImpersonateAsync(int adminId, string adminUsername, int targetUserId,
+        bool actorIsAdmin = true)
     {
         if (adminId == targetUserId)
             throw new InvalidOperationException("Cannot impersonate yourself.");
 
         var target = await _db.AppUsers.FindAsync(targetUserId)
             ?? throw new KeyNotFoundException("User not found.");
+
+        // Rechteausweitung verhindern: das Impersonations-Token trägt die Rollen des ZIELS — wer nur die
+        // Permission `users.manage` hat (delegierte Rolle, selbst KEIN Admin), könnte sich sonst über den
+        // Einstieg in ein Admin-Konto volle Admin-Rechte verschaffen. Ein echter Admin darf weiterhin in
+        // jedes Konto (Support-Fall).
+        if (target.IsAdmin && !actorIsAdmin)
+            throw new UnauthorizedAccessException("Only an admin may impersonate an admin account.");
 
         // Impersonation trägt die Rollen/Permissions des ZIEL-Users (der Admin agiert als dieser)
         // plus den imp-Claim zur Nachvollziehbarkeit.

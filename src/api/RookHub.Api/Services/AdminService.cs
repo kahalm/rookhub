@@ -67,10 +67,15 @@ public class AdminService
         await _db.SaveChangesAsync();   // verbleibende Restrict-FKs → DbUpdateException → Controller mappt auf 409
     }
 
-    public async Task<AdminUserDto> ToggleAdminAsync(int id, int currentUserId)
+    /// <summary>Schaltet das Admin-Flag eines anderen Users um. <paramref name="actorIsAdmin"/> muss true
+    /// sein: sonst könnte eine delegierte Rolle mit der Permission <c>users.manage</c> (selbst kein Admin)
+    /// sich über ein zweites Konto Admin-Rechte verschaffen bzw. echte Admins degradieren.</summary>
+    public async Task<AdminUserDto> ToggleAdminAsync(int id, int currentUserId, bool actorIsAdmin = true)
     {
         if (id == currentUserId)
             throw new InvalidOperationException("Cannot toggle your own admin status.");
+        if (!actorIsAdmin)
+            throw new UnauthorizedAccessException("Only an admin may change the admin flag.");
 
         var user = await _db.AppUsers.FindAsync(id)
             ?? throw new KeyNotFoundException();

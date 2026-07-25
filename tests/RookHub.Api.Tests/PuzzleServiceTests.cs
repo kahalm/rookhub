@@ -137,6 +137,23 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandomBatch_InvertedOrExtremeWindow_DoesNotThrow()
+    {
+        // Der Tag-Index-Pfad zog vorher `Random.Shared.Next(min, max + 1)` ungeprüft → ein Fenster mit
+        // min > max bzw. max == int.MaxValue warf ArgumentOutOfRange/Overflow und wurde anonym über
+        // POST /api/puzzles/random-batch zu einem unbehandelten 500. (Die DTO-Validierung fängt es
+        // vorne ab; das hier ist die Absicherung im Service.)
+        await CreatePuzzleAsync(rating: 900, themes: "fork", lichessId: "inv-1");
+
+        var windows = new (int, int)[] { (1500, 800), (0, int.MaxValue), (880, 920) };
+        var result = await _service.GetRandomBatchAsync(null, windows, themes: null, excludeSolved: false, themesAny: "fork");
+
+        // Unsinnige Fenster entfallen still, das gültige liefert weiter.
+        Assert.Single(result);
+        Assert.InRange(result[0].Rating, 880, 920);
+    }
+
+    [Fact]
     public async Task BackfillPuzzleTags_CreatesTagsAndLinks_Idempotent()
     {
         await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "bf1");

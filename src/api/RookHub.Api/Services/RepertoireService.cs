@@ -273,7 +273,11 @@ public class RepertoireService
     /// bereits geteilte → <c>duplicate</c>, Fremde → <c>not_friends</c>, unbekannte → <c>not_found</c>,
     /// man selbst → <c>self</c>. Legt je neuem Empfänger eine In-App-Benachrichtigung an.
     /// Admins dürfen an Nicht-Freunde teilen.</summary>
-    public async Task<RepertoireShareResultDto> ShareAsync(int userId, int repertoireId, List<int> recipientUserIds, bool isAdmin)
+    /// <param name="retryOnConflict">Interner Schalter: nur der ERSTE Aufruf legt nach einem
+    /// Unique-Index-Konflikt einmal neu auf (sonst unbegrenzte Rekursion bei einer
+    /// <see cref="DbUpdateException"/>, die kein Duplikat ist → StackOverflow).</param>
+    public async Task<RepertoireShareResultDto> ShareAsync(int userId, int repertoireId, List<int> recipientUserIds, bool isAdmin,
+        bool retryOnConflict = true)
     {
         var rep = await EnsureOwnedAsync(userId, repertoireId);
 
@@ -304,11 +308,11 @@ public class RepertoireService
         if (result.Shared > 0)
         {
             try { await _db.SaveChangesAsync(); }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (retryOnConflict && AuthService.IsUniqueViolation(ex))
             {
                 // Race: derselbe (Repertoire, Empfänger) parallel → Unique-Index. Idempotent behandeln.
                 _db.ChangeTracker.Clear();
-                return await ShareAsync(userId, repertoireId, recipientUserIds, isAdmin);
+                return await ShareAsync(userId, repertoireId, recipientUserIds, isAdmin, retryOnConflict: false);
             }
 
             var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";

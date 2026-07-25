@@ -482,8 +482,13 @@ try
 
     app.UseResponseCompression();
     app.UseCors();
-    app.UseRateLimiter();
+    // Authentication MUSS vor dem Rate-Limiter laufen: die Policy „user-flag" partitioniert pro
+    // User-Claim und fiel sonst IMMER auf den IP-Fallback zurück (HttpContext.User war noch anonym)
+    // — die dokumentierte Pro-User-Drossel gegen Massen-Umflaggen griff also nie, und Nutzer hinter
+    // demselben NAT teilten einen Bucket. Endpoint-bezogene Limiter funktionieren weiterhin, weil das
+    // Routing (von WebApplication automatisch vorangestellt) davor liegt.
     app.UseAuthentication();
+    app.UseRateLimiter();
 
     // Reichert JEDES Log-Event innerhalb eines Requests mit UserId/UserName/IpAddress an
     // (sofern vorhanden) — nicht nur die Request-Summary. Greift via Enrich.FromLogContext().

@@ -24,9 +24,16 @@ public class RandomBatchRequestDto
     public string? ThemesAny { get; set; }
 }
 
+/// <summary>Ein Rating-Fenster des Offline-Vorab-Ladens. Beide Grenzen sind validiert: ein Fenster mit
+/// <c>MinRating &gt; MaxRating</c> bzw. <c>MaxRating = int.MaxValue</c> ließ den Tag-Index-Pfad
+/// (<c>Random.Shared.Next(min, max + 1)</c>) mit einer ArgumentOutOfRangeException in einen 500 laufen —
+/// anonym auslösbar über <c>POST /api/puzzles/random-batch</c>.</summary>
 public class RatingWindowDto
 {
+    [Range(0, 5000)]
     public int MinRating { get; set; }
+
+    [Range(0, 5000)]
     public int MaxRating { get; set; }
 }
 

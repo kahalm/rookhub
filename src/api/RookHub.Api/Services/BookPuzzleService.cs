@@ -29,6 +29,8 @@ public class BookPuzzleService
     private static readonly Regex SessionIdPattern =
         new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
 
+    /// <summary>Einzelnes Puzzle per Id — bewusst OHNE Buch-Gate (Teilen-Links, Tagespuzzle,
+    /// OG-Vorschau, Bot-Lookup; siehe <see cref="BookAccess"/>).</summary>
     public async Task<BookPuzzleDto?> GetByIdAsync(int id)
     {
         var puzzle = await _db.BookPuzzles
@@ -38,11 +40,14 @@ public class BookPuzzleService
     }
 
     /// <summary>Nächstes Puzzle im selben Buch in Lesereihenfolge (Round = Chessable-Zeilennummer,
-    /// dann Id; NICHT die DB-Id, da re-gefetchte Linien höhere Ids haben); am Ende wieder das erste.</summary>
-    public async Task<BookPuzzleDto> GetNextInBookAsync(int id)
+    /// dann Id; NICHT die DB-Id, da re-gefetchte Linien höhere Ids haben); am Ende wieder das erste.
+    /// <para>Gegatet über <see cref="BookAccess"/>: das Durchlaufen eines Buchs ab einem geteilten
+    /// Einzel-Puzzle darf keinen Zugriff auf fremde/gruppen-gegatete Bücher öffnen.</para></summary>
+    public async Task<BookPuzzleDto> GetNextInBookAsync(int id, int? userId = null, bool isAdmin = false)
     {
         var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id)
             ?? throw new KeyNotFoundException("Book puzzle not found.");
+        await EnsureBookReadableAsync(current, userId, isAdmin);
 
         // Nur Schlüssel (Id, Round) in Round-Reihenfolge laden; der Cursor-Vergleich passiert
         // in-memory (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
@@ -58,11 +63,13 @@ public class BookPuzzleService
         return MapToDto(next);
     }
 
-    /// <summary>Zufälliges Puzzle aus demselben Buch (möglichst nicht das aktuelle).</summary>
-    public async Task<BookPuzzleDto> GetRandomInBookAsync(int id)
+    /// <summary>Zufälliges Puzzle aus demselben Buch (möglichst nicht das aktuelle). Gegatet wie
+    /// <see cref="GetNextInBookAsync"/>.</summary>
+    public async Task<BookPuzzleDto> GetRandomInBookAsync(int id, int? userId = null, bool isAdmin = false)
     {
         var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id)
             ?? throw new KeyNotFoundException("Book puzzle not found.");
+        await EnsureBookReadableAsync(current, userId, isAdmin);
 
         // Info-/Erklärlinien sind kein Quiz → nicht zufällig ziehen.
         var others = BookSiblings(current).Where(bp => bp.Id != current.Id && !bp.IsInfoOnly);
@@ -71,6 +78,14 @@ public class BookPuzzleService
             return MapToDto(await BookSiblings(current).Include(bp => bp.Book).FirstAsync(bp => bp.Id == current.Id));
         var pick = await others.Include(bp => bp.Book).OrderBy(bp => bp.Id).Skip(Random.Shared.Next(count)).FirstAsync();
         return MapToDto(pick);
+    }
+
+    /// <summary>Wirft <see cref="KeyNotFoundException"/> (→404, kein Existenz-Orakel), wenn der Aufrufer
+    /// das Buch des Puzzles nicht lesen darf.</summary>
+    private async Task EnsureBookReadableAsync(BookPuzzle puzzle, int? userId, bool isAdmin)
+    {
+        if (!await BookAccess.CanReadPuzzleAsync(_db, puzzle, userId, isAdmin))
+            throw new KeyNotFoundException("Book puzzle not found.");
     }
 
     /// <summary>Puzzles desselben Buchs (per BookId; Fallback BookFileName für Altbestand ohne BookId).</summary>
@@ -386,7 +401,8 @@ public class BookPuzzleService
     /// Zufälliges Buch-Puzzle aus dem gewünschten Pool. pool=random|blind → echtes Zufallspuzzle;
     /// pool=daily → deterministisch pro UTC-Tag. exclude=id,id schließt IDs aus; bookId überschreibt den Pool.
     /// </summary>
-    public async Task<BookPuzzleDto> GetRandomAsync(string pool, string? exclude, int? bookId)
+    public async Task<BookPuzzleDto> GetRandomAsync(string pool, string? exclude, int? bookId,
+        int? userId = null, bool isAdmin = false)
     {
         pool = (pool ?? "random").Trim().ToLowerInvariant();
         if (pool != "random" && pool != "daily" && pool != "blind")
@@ -395,8 +411,14 @@ public class BookPuzzleService
         // Info-/Erklärlinien (IsInfoOnly) sind keine Quizaufgaben → in KEINEM Zufalls-/Tagespuzzle-Topf.
         var query = _db.BookPuzzles.Include(bp => bp.Book).Where(bp => bp.Book != null && !bp.IsInfoOnly);
         if (bookId.HasValue)
-            // Explizite Buchwahl überschreibt den Pool-Filter: irgendein Puzzle aus diesem Buch.
+        {
+            // Explizite Buchwahl überschreibt den Pool-Filter: irgendein Puzzle aus diesem Buch —
+            // aber NUR aus einem lesbaren Buch (sonst wäre der Endpoint ein anonymer Voll-Export
+            // beliebiger Bücher, inkl. persönlicher Importe fremder Nutzer; siehe BookAccess).
+            if (!await BookAccess.CanReadAsync(_db, bookId.Value, userId, isAdmin))
+                throw new KeyNotFoundException($"No book puzzle available for pool '{pool}'.");
             query = query.Where(bp => bp.BookId == bookId.Value);
+        }
         else
             // Ausgemusterte Puzzles (Retired) werden in keinem Zufalls-Pool mehr gezogen.
             query = pool switch
@@ -575,9 +597,19 @@ public class BookPuzzleService
         return puzzle.Id;
     }
 
-    /// <summary>Buch-Liste mit Counts (gruppiert über BookFileName).</summary>
-    public async Task<List<BookInfoDto>> GetBooksAsync() =>
-        await _db.BookPuzzles
+    /// <summary>Buch-Liste mit Counts (gruppiert über BookFileName) — nur die für den (ggf. anonymen)
+    /// Aufrufer lesbaren Bücher (<see cref="BookAccess"/>). Vorher listete der offene Endpoint ALLE
+    /// Bücher inkl. persönlicher Importe fremder Nutzer und lieferte damit die Ids für den
+    /// <c>?bookId=</c>-Voll-Export.</summary>
+    public async Task<List<BookInfoDto>> GetBooksAsync(int? userId = null, bool isAdmin = false)
+    {
+        var readableFileNames = BookAccess.ReadableBy(_db, userId, isAdmin).Select(b => b.FileName);
+        // Altbestand ohne Book-Zeile bleibt sichtbar (an so einem „Buch" kann keine Freigabe hängen —
+        // dieselbe Regel wie in BookAccess.CanReadPuzzleAsync).
+        var gatedFileNames = _db.Books.Select(b => b.FileName);
+        return await _db.BookPuzzles
+            .Where(bp => readableFileNames.Contains(bp.BookFileName)
+                         || !gatedFileNames.Contains(bp.BookFileName))
             .GroupBy(bp => bp.BookFileName)
             .Select(g => new BookInfoDto
             {
@@ -590,6 +622,7 @@ public class BookPuzzleService
             })
             .OrderBy(b => b.BookFileName)
             .ToListAsync();
+    }
 
     /// <summary>Bulk-Import aus JSON; legt fehlende Bücher an, dedupliziert über LineId.</summary>
     public async Task<(int imported, int skipped)> ImportAsync(List<BookPuzzleImportDto> puzzles)

@@ -70,4 +70,59 @@ public class ChessableIngestSessionStoreTests
         store.Discard(7, "s");
         Assert.Null(store.Take(7, "s"));
     }
+
+    // ---- Deckel gegen Speicher-Erschöpfung ------------------------------------------------------
+    // Der Pro-Session-Deckel allein reichte nicht: die SessionId kommt vom Client, ein einzelner
+    // authentifizierter Client konnte also beliebig viele Sessions (je bis 128 MB, TTL 30 min) öffnen.
+
+    [Fact]
+    public void AddChapter_TooManySessionsPerUser_IsRejected()
+    {
+        var store = new ChessableIngestSessionStore { MaxSessionsPerUser = 2 };
+        Assert.Null(store.AddChapter(7, "a", "1", "book", null, Ch("{\"game\":{}}")).error);
+        Assert.Null(store.AddChapter(7, "b", "1", "book", null, Ch("{\"game\":{}}")).error);
+
+        var (session, error) = store.AddChapter(7, "c", "1", "book", null, Ch("{\"game\":{}}"));
+        Assert.Null(session);
+        Assert.NotNull(error);
+
+        // Bestehende Sessions dürfen weiterlaufen …
+        Assert.Null(store.AddChapter(7, "a", "1", "book", null, Ch("{\"game\":{}}")).error);
+        // … und ein anderer User ist nicht betroffen (Deckel ist pro User).
+        Assert.Null(store.AddChapter(8, "c", "1", "book", null, Ch("{\"game\":{}}")).error);
+    }
+
+    [Fact]
+    public void AddChapter_AfterTake_SlotIsFreeAgain()
+    {
+        var store = new ChessableIngestSessionStore { MaxSessionsPerUser = 1 };
+        store.AddChapter(7, "a", "1", "book", null, Ch("{\"game\":{}}"));
+        Assert.NotNull(store.AddChapter(7, "b", "1", "book", null, Ch("{\"game\":{}}")).error);
+
+        store.Take(7, "a");
+        Assert.Null(store.AddChapter(7, "b", "1", "book", null, Ch("{\"game\":{}}")).error);
+    }
+
+    [Fact]
+    public void AddChapter_GlobalByteBudgetExceeded_IsRejected()
+    {
+        var store = new ChessableIngestSessionStore { MaxTotalBytes = 200 };
+        var big = Ch(new string('x', 150));
+        Assert.Null(store.AddChapter(7, "a", "1", "book", null, big).error);
+
+        // Zweiter Chunk würde das prozessweite Budget reißen (auch für einen anderen User).
+        var (session, error) = store.AddChapter(8, "b", "1", "book", null, big);
+        Assert.Null(session);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void AddChapter_InvalidSessionId_IsRejected()
+    {
+        var store = new ChessableIngestSessionStore();
+        // Die SessionId ist Teil des Dictionary-Keys → Länge begrenzen, Leerwerte ablehnen.
+        Assert.NotNull(store.AddChapter(7, "", "1", "book", null, Ch("{\"game\":{}}")).error);
+        Assert.NotNull(store.AddChapter(7, new string('s', ChessableIngestSessionStore.MaxSessionIdLength + 1),
+            "1", "book", null, Ch("{\"game\":{}}")).error);
+    }
 }

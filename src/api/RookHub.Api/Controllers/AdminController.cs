@@ -87,8 +87,9 @@ public class AdminController : BaseApiController
     [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> ToggleAdmin(int id)
     {
-        try { return Ok(await _admin.ToggleAdminAsync(id, GetUserId())); }
+        try { return Ok(await _admin.ToggleAdminAsync(id, GetUserId(), IsAdmin)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
     }
 
@@ -98,8 +99,9 @@ public class AdminController : BaseApiController
     public async Task<IActionResult> Impersonate(int id)
     {
         var adminName = User.Identity?.Name ?? string.Empty;
-        try { return Ok(await _auth.ImpersonateAsync(GetUserId(), adminName, id)); }
+        try { return Ok(await _auth.ImpersonateAsync(GetUserId(), adminName, id, IsAdmin)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
     }
 

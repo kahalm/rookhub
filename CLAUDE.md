@@ -244,8 +244,8 @@ RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `Enc
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/book-puzzles/{id}` | AllowAnonymous | Puzzle by ID |
-| GET | `/api/book-puzzles/{id}/next` | AllowAnonymous | Nächstes Puzzle im selben Buch (Loop am Ende) |
-| GET | `/api/book-puzzles/{id}/random` | AllowAnonymous | Zufälliges Puzzle aus demselben Buch |
+| GET | `/api/book-puzzles/{id}/next` | AllowAnonymous | Nächstes Puzzle im selben Buch (Loop am Ende) — **buch-gegatet** (`BookAccess`) |
+| GET | `/api/book-puzzles/{id}/random` | AllowAnonymous | Zufälliges Puzzle aus demselben Buch — **buch-gegatet** (`BookAccess`) |
 | POST | `/api/book-puzzles/{id}/attempt` | Auth | Lösungsversuch erfassen `{ solved, timeSeconds }` (Tagespuzzle) |
 | POST | `/api/book-puzzles/{id}/flag-hints` | Auth | Tipps als „dumm/schlecht" markieren/aufheben `{ flagged }` — jeder eingeloggte User (Review-Flag `BookPuzzle.HintsFlagged`; 404 wenn Puzzle fehlt) |
 | POST | `/api/book-puzzles/{id}/attempt/anonymous` | Anon | Anonymer Versuch (Session-ID, je Session/Puzzle dedupliziert) |
@@ -256,11 +256,22 @@ RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `Enc
 | GET | `/api/book-puzzles/daily/hall-of-fame?top=5` | AllowAnonymous | All-time-Bestenlisten: meiste gelöste Dailies, meiste 🥇 (Tage als schnellster Erstversuch-Löser), schnellste je gelöste Lösung. `top` 1–25 |
 | GET | `/api/book-puzzles/daily/{date}` | AllowAnonymous | Tagespuzzle für UTC-Datum (`yyyyMMdd` oder `today`); legt on-demand eine persistierte Zuordnung in `DailyPuzzles` an — aber NUR für heute/gestern (ältere Daten: gespeicherte Zuordnung oder 404; verhindert anonyme Write-Amplification per Datums-Enumeration) |
 | GET | `/api/book-puzzles/by-line-id?lineId=xxx` | AllowAnonymous | Lookup für schach-bot |
-| GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts |
+| GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts — nur **lesbare** Bücher (`BookAccess`) |
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
 | POST | `/api/admin/book-puzzles/daily/{date}/regenerate` | Admin | Tagespuzzle eines UTC-Datums neu generieren: Datum/Link bleibt, bisheriges Puzzle wird `Retired=true` gesetzt (nie wieder in Daily/Random/Blind), neues aus dem forDaily-Pool zugeordnet |
 | POST | `/api/admin/book-puzzles/{id}/regenerate-hints` | Admin | Tipps eines einzelnen Buch-Puzzles synchron (neu) generieren (force). 400 ohne `Anthropic:ApiKey`, 404 wenn Puzzle/keine Tipps; sonst die generierten Tipps |
 | POST | `/api/admin/books/{bookId}/generate-hints?force=` | Admin | Tipps für ein ganzes Buch im Hintergrund erzeugen (Queue); `force` regeneriert auch vorhandene, sonst nur fehlende/veraltete. Antwort `{ queued }` |
+
+**Zugriff auf die offenen Buch-Endpoints (`Services/BookAccess.cs`, seit 0.317.1)**: EINE Regel für
+`{id}/next`, `{id}/random`, `/random?bookId=` und `/books`. Anonym sichtbar ist ein Buch nur, wenn ein Admin
+es bewusst geöffnet hat — `Book.IsPublic` (öffentlicher Kurs) oder Mitgliedschaft in einem offenen Pool
+(`ForDaily`/`ForRandom`/`ForBlind`); eingeloggte sehen zusätzlich eigene (`OwnerUserId`), per `CourseShare`
+geteilte und über `BookGroupAccess` (inkl. „Everyone") freigegebene Bücher; Admins alles. Altbestand ohne
+`Book`-Zeile bleibt ungegatet (dort kann keine Freigabe hängen). **Bewusst weiter offen**: `GET
+/api/book-puzzles/{id}` (Einzel-Puzzle per Id) — Basis für Teilen-Links, Tagespuzzle, OG-Vorschau und den
+Bot-Lookup per LineId. Bewusst NICHT identisch mit `CourseService.CanAccessAsync`: die Pool-Flags öffnen nur
+Einzel-Puzzles/Zufallsziehungen, nicht den strukturierten Kurs (Kapitel/Fortschritt/Offline-Export). Folge für
+den schach-bot: sein `/kurs`-Katalog (`/books` + `?bookId=`) enthält nur noch Pool-/öffentliche Bücher.
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |

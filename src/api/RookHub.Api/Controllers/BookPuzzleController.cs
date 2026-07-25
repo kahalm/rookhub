@@ -50,7 +50,7 @@ public class BookPuzzleController : BaseApiController
     [HttpGet("{id:int}/next")]
     public async Task<IActionResult> GetNextInBook(int id)
     {
-        try { return Ok(await _service.GetNextInBookAsync(id)); }
+        try { return Ok(await _service.GetNextInBookAsync(id, GetUserIdOrNull(), IsAdmin)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -58,7 +58,7 @@ public class BookPuzzleController : BaseApiController
     [HttpGet("{id:int}/random")]
     public async Task<IActionResult> GetRandomInBook(int id)
     {
-        try { return Ok(await _service.GetRandomInBookAsync(id)); }
+        try { return Ok(await _service.GetRandomInBookAsync(id, GetUserIdOrNull(), IsAdmin)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -170,7 +170,7 @@ public class BookPuzzleController : BaseApiController
     [HttpGet("random")]
     public async Task<IActionResult> GetRandom([FromQuery] string pool = "random", [FromQuery] string? exclude = null, [FromQuery] int? bookId = null)
     {
-        try { return Ok(await _service.GetRandomAsync(pool, exclude, bookId)); }
+        try { return Ok(await _service.GetRandomAsync(pool, exclude, bookId, GetUserIdOrNull(), IsAdmin)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
@@ -209,9 +209,11 @@ public class BookPuzzleController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Buch-Liste — nur die für den (ggf. anonymen) Aufrufer lesbaren Bücher
+    /// (öffentlich/offener Pool bzw. eigene/geteilte/gruppen-freigegebene; siehe <see cref="BookAccess"/>).</summary>
     [AllowAnonymous]
     [HttpGet("books")]
-    public async Task<IActionResult> GetBooks() => Ok(await _service.GetBooksAsync());
+    public async Task<IActionResult> GetBooks() => Ok(await _service.GetBooksAsync(GetUserIdOrNull(), IsAdmin));
 
     [HttpPost("/api/admin/book-puzzles/import")]
     [HasPermission(Permissions.BooksManage)]

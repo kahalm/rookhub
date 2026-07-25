@@ -29,9 +29,21 @@ public class ChessableIngestSessionStore
     private const long MaxBytes = 128L * 1024 * 1024;
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(30);
 
+    // Der Pro-Session-Deckel allein schützt NICHT: die Session-Id kommt vom Client, also konnte ein
+    // einzelner authentifizierter Client beliebig viele Sessions öffnen (je bis 128 MB, TTL 30 min) und
+    // damit den Heap füllen. Zusätzlich daher ein Deckel für die Anzahl offener Sessions je User und ein
+    // prozessweites Byte-Budget; beide intern überschreibbar für Tests.
+    internal int MaxSessionsPerUser = 3;
+    internal long MaxTotalBytes = 512L * 1024 * 1024;
+    /// <summary>Längen-Obergrenze der (client-vergebenen) Session-Id — sie ist Teil des Dictionary-Keys.</summary>
+    public const int MaxSessionIdLength = 64;
+
     private readonly ConcurrentDictionary<string, Session> _sessions = new();
 
     private static string Key(int userId, string sessionId) => userId + ":" + sessionId;
+
+    /// <summary>Aktuell gepufferte Bytes über alle Sessions (Diagnose/Tests).</summary>
+    internal long TotalBytes => _sessions.Values.Sum(s => s.Bytes);
 
     /// <summary>Fügt ein Kapitel an die (lazily angelegte) Session an. bid/target/courseName kommen vom
     /// ERSTEN Chunk und bleiben fix. Liefert die aktualisierte Session oder eine Fehlermeldung
@@ -40,7 +52,19 @@ public class ChessableIngestSessionStore
         int userId, string sessionId, string bid, string target, string? courseName, ChessableIngestChapter chapter)
     {
         PurgeExpired();
+        if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > MaxSessionIdLength)
+            return (null, "Invalid sessionId.");
+
         var key = Key(userId, sessionId);
+        // Deckel VOR dem Anlegen prüfen (nur für NEUE Sessions; eine laufende darf weiterlaufen).
+        if (!_sessions.ContainsKey(key))
+        {
+            if (_sessions.Count(kv => kv.Value.UserId == userId) >= MaxSessionsPerUser)
+                return (null, "Too many concurrent import sessions — finish or abort one first.");
+            if (TotalBytes >= MaxTotalBytes)
+                return (null, "Server is busy with other imports — please retry shortly.");
+        }
+
         var s = _sessions.GetOrAdd(key, _ => new Session
         {
             UserId = userId,
@@ -57,6 +81,8 @@ public class ChessableIngestSessionStore
                 return (null, "Too many chapters in one import session.");
             if (s.Bytes + size > MaxBytes)
                 return (null, "Import session exceeds size limit.");
+            if (TotalBytes + size > MaxTotalBytes)
+                return (null, "Server-side import buffer is full — please retry shortly.");
 
             s.Chapters.Add(chapter);
             s.Bytes += size;

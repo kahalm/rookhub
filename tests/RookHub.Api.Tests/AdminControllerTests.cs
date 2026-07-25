@@ -47,9 +47,13 @@ public class AdminControllerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private void SetUser(int userId)
+    /// <summary>Setzt den aufrufenden Nutzer. <paramref name="isAdmin"/> steuert den Role-Claim: ein echter
+    /// Admin trägt ihn immer (AuthService setzt ihn bei <c>IsAdmin</c>), eine delegierte Rolle mit bloßer
+    /// <c>users.manage</c>-Permission NICHT — davon hängen Impersonation/Admin-Toggle ab.</summary>
+    private void SetUser(int userId, bool isAdmin = true)
     {
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (isAdmin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -269,6 +273,65 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.ToggleAdmin(9999);
 
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    // ---- Rechteausweitung über `users.manage` (ohne Admin-Rolle) --------------------------------
+
+    [Fact]
+    public async Task ToggleAdmin_ByNonAdminPermissionHolder_ReturnsForbidden()
+    {
+        // Delegierte Rolle mit users.manage, selbst KEIN Admin: dürfte sich sonst über ein zweites
+        // Konto Admin-Rechte verschaffen.
+        var target = await CreateUserAsync("target");
+        SetUser(99, isAdmin: false);
+
+        var result = await _controller.ToggleAdmin(target.Id);
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
+        var unchanged = await _db.AppUsers.FindAsync(target.Id);
+        Assert.False(unchanged!.IsAdmin);
+    }
+
+    [Fact]
+    public async Task Impersonate_AdminTarget_ByNonAdminPermissionHolder_ReturnsForbidden()
+    {
+        // Das Impersonations-Token trägt die Rollen des ZIELS → Einstieg in ein Admin-Konto wäre
+        // eine vollständige Rechteausweitung.
+        var admin = await CreateUserAsync("realadmin", isAdmin: true);
+        SetUser(99, isAdmin: false);
+
+        var result = await _controller.Impersonate(admin.Id);
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task Impersonate_NonAdminTarget_ByNonAdminPermissionHolder_IsAllowed()
+    {
+        // Support-Fall bleibt erlaubt: nur Admin-ZIELE sind geschützt.
+        var target = await CreateUserAsync("normaluser");
+        SetUser(99, isAdmin: false);
+
+        var result = await _controller.Impersonate(target.Id) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var dto = Assert.IsType<AuthResponseDto>(result!.Value);
+        Assert.Equal(target.Id, dto.UserId);
+    }
+
+    [Fact]
+    public async Task Impersonate_AdminTarget_ByRealAdmin_IsAllowed()
+    {
+        var admin = await CreateUserAsync("otheradmin", isAdmin: true);
+        SetUser(99, isAdmin: true);
+
+        var result = await _controller.Impersonate(admin.Id) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var dto = Assert.IsType<AuthResponseDto>(result!.Value);
+        Assert.Equal(admin.Id, dto.UserId);
     }
 
     // ---- Book management -------------------------------------------------
