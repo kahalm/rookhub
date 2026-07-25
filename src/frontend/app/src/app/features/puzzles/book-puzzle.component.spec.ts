@@ -3,6 +3,7 @@ import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline } from './book-offline.util';
 import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
 import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
+import { CommentSegment } from './comment-variation.util';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -656,6 +657,29 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
     // Klicken der (leeren) Navigation darf ebenfalls nicht werfen.
     expect(() => c.reviewNext()).not.toThrow();
     expect(() => c.reviewPrev()).not.toThrow();
+  });
+
+  it('Kommentar einer Info-Linie mit illegaler FEN wird als Text geliefert (Getter wirft NICHT)', () => {
+    const c = makeComponent();
+    // Echte Info-Linie „📝64" (Buch 16): Stellung ohne Könige, Kommentar MIT Zugfolgen. Der
+    // Kommentar-Varianten-Parser lief bis 0.317.1 ungeschützt in chess.js → der commentBlocks-Getter
+    // warf mitten in der Change-Detection und riss Kommentar, Info-Card, „Weiter" und Teilen mit.
+    const badFen = 'rn6/pp6/1P6/8/Q7/8/8/8 w - - 0 1';
+    const intro = 'PATTERN 64. Sacrificing the queen …';
+    const puzzle = {
+      id: 64, fen: badFen, moves: '', startPly: -1, bookFileName: 'b', isInfoOnly: true,
+      comment: intro,
+      moveComments: { '-1': intro, '0': 'If the rook captures the queen, 1...Rxa7 2.bxa7 …' },
+    };
+    c.puzzle = puzzle;
+    (c as any).setupPuzzle(puzzle);
+    expect(c.state).toBe('INFO');
+    expect(() => c.commentBlocks).not.toThrow();
+    expect(c.commentLines.length).toBe(1);
+    // Der Text kommt vollständig durch; klickbare Zug-Chips gibt es hier (nicht validierbar) nicht.
+    const segs: CommentSegment[] = c.commentBlocks[0];
+    expect(segs.map(s => s.text ?? s.move).join('')).toBe(intro);
+    expect(segs.every(s => !s.move)).toBeTrue();
   });
 
   it('eine Info-Linie mit illegaler FEN UND Demozügen lässt sich durchklicken (per Koordinaten)', () => {

@@ -7,7 +7,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { CourseService } from './course.service';
@@ -15,7 +14,8 @@ import { BookPuzzleDto } from '../puzzles/puzzle.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ReviewNavComponent } from '../puzzles/review-nav.component';
 import { parseMoveShapes } from '../puzzles/move-shapes.util';
-import { applyUci } from '../puzzles/puzzle-move.util';
+import { applyUci, fenSideToMove, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { replayIllegalFen } from '../puzzles/illegal-board.util';
 import { buildCommentSegments, CommentSegment } from '../puzzles/comment-variation.util';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -486,14 +486,16 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     this.totalPlies = this.uciMoves.length;
     // SAN-Folge einmal aus der FEN ableiten (für den Zug-Streifen).
     this.sanMoves = this.buildSan(line.fen, this.uciMoves);
-    // Orientierung aus der Seite am Zug in der Startstellung (wie Info-Durchsicht).
-    const chess = new Chess(line.fen);
-    this.orientation = chess.turn() === 'w' ? 'white' : 'black';
+    // Orientierung aus der Seite am Zug in der Startstellung (wie Info-Durchsicht); bei einer von
+    // chess.js abgelehnten Diagramm-FEN direkt aus dem 2. FEN-Feld.
+    const chess = tryLoadFen(line.fen);
+    this.orientation = (chess ? chess.turn() : fenSideToMove(line.fen)) === 'w' ? 'white' : 'black';
     this.goTo(0);
   }
 
   private buildSan(fen: string, ucis: string[]): string[] {
-    const chess = new Chess(fen);
+    const chess = tryLoadFen(fen);
+    if (!chess) return [...ucis];   // illegale Diagramm-FEN → kein SAN ableitbar, roher UCI-Zug
     const san: string[] = [];
     for (const uci of ucis) {
       try { san.push(applyUci(chess, uci).san); } catch { san.push(uci); }
@@ -507,16 +509,26 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
     index = Math.max(0, Math.min(index, this.uciMoves.length));
     this.plyIndex = index;
-    const chess = new Chess(this.selected.fen);
-    let last: [Key, Key] | undefined;
-    for (let i = 0; i < index; i++) {
-      applyUci(chess, this.uciMoves[i]);
-      last = [this.uciMoves[i].substring(0, 2) as Key, this.uciMoves[i].substring(2, 4) as Key];
+    const chess = tryLoadFen(this.selected.fen);
+    if (chess) {
+      let last: [Key, Key] | undefined;
+      for (let i = 0; i < index; i++) {
+        applyUci(chess, this.uciMoves[i]);
+        last = [this.uciMoves[i].substring(0, 2) as Key, this.uciMoves[i].substring(2, 4) as Key];
+      }
+      this.lastMove = last;
+      this.boardFen = chess.fen();
+      this.turnColor = chess.turn() === 'w' ? 'white' : 'black';
+      this.isCheck = chess.isCheck();
+    } else {
+      // Chessable-Muster-/Info-Diagramm mit ILLEGALER FEN (z. B. ohne König): chess.js verwirft die
+      // Stellung → rein per Koordinaten nachspielen (wie im Solver, `renderStaticInfo`).
+      const replay = replayIllegalFen(this.selected.fen, this.uciMoves, index);
+      this.lastMove = replay.lastMove as [Key, Key] | undefined;
+      this.boardFen = replay.fen;
+      this.turnColor = replay.whiteToMove ? 'white' : 'black';
+      this.isCheck = false;
     }
-    this.lastMove = last;
-    this.boardFen = chess.fen();
-    this.turnColor = chess.turn() === 'w' ? 'white' : 'black';
-    this.isCheck = chess.isCheck();
     this.comment = this.latestCommentUpTo(index - 1);
     this.reviewShapes = this.shapesByPly[index - 1] ?? [];
     if (this.autoplay && index >= this.totalPlies) this.stopAutoplay();

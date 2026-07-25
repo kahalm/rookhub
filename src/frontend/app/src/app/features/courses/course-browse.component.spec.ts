@@ -95,6 +95,24 @@ describe('CourseBrowseComponent', () => {
     expect(comp.variationPreview).toBeNull();
   });
 
+  it('renders an illegal-FEN pattern line (no king) without throwing, stepping by coordinates', () => {
+    // Chessable-Muster-/Info-Diagramme sind bewusst illegal (hier ohne Könige); chess.js verwirft sie.
+    const badFen = '8/5pp1/6P1/8/8/8/8/7R w - - 0 1';
+    const comp = build([line({
+      id: 1, fen: badFen, moves: 'h1h8 g6f7',
+      moveComments: { '-1': 'Pattern: 1.Rh8+ wins.' },
+    })]);
+    expect(comp.selected?.id).toBe(1);
+    expect(comp.orientation).toBe('white');       // aus dem 2. FEN-Feld
+    expect(comp.sanMoves).toEqual(['h1h8', 'g6f7']);   // kein SAN ableitbar → roher UCI-Zug
+    expect(comp.boardFen).toBe(badFen);
+    expect(() => comp.commentBlocks).not.toThrow();
+    comp.goTo(1);
+    expect(comp.boardFen).toBe('7R/5pp1/6P1/8/8/8/8/8 b - - 0 1');
+    expect(comp.lastMove).toEqual(['h1', 'h8']);
+    expect(comp.comment).toBe('Pattern: 1.Rh8+ wins.');
+  });
+
   it('reports per-line status (solved ✓ / failed ✗ / none) from the loaded line status', () => {
     const comp = build(
       [line({ id: 1 }), line({ id: 2 }), line({ id: 3 })],

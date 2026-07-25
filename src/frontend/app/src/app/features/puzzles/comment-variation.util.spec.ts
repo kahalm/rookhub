@@ -96,4 +96,16 @@ describe('comment-variation.util', () => {
   it('Komma vor nummeriertem Zug ist Fortsetzung, kein Zweig-Bruch', () => {
     expect(splitBranches('40.b5 a3, 41.b6 a2')).toEqual([['b5', 'a3', 'b6', 'a2']]);
   });
+
+  it('ILLEGALE Diagramm-FEN (Chessable-Muster ohne König): kein Wurf, alles bleibt Text', () => {
+    // Echte Info-Linie „📝64" aus Buch 16 (Stellung ohne Könige) samt Original-Kommentar. chess.js
+    // verwirft die FEN — der Kommentar MUSS trotzdem als Text herauskommen (vorher warf der Parser
+    // in den commentBlocks-Getter und riss die halbe Solver-Ansicht mit).
+    const fen = 'rn6/pp6/1P6/8/Q7/8/8/8 w - - 0 1';
+    const text = 'If the rook captures the queen, 1...Rxa7 2.bxa7 comes with a double threat of 3.a8=Q and 3.axb8=Q .';
+    const segs = buildCommentSegments(text, fen, []);
+    expect(segs.every(s => !s.move)).toBeTrue();          // nichts klickbar (nicht validierbar)
+    expect(segs.map(s => s.text).join('')).toBe(text);    // aber der volle Text ist da
+    expect(resolveVariation(fen, [], ['Rxa7', 'bxa7'])).toEqual([]);
+  });
 });

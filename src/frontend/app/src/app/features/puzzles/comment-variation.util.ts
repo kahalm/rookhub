@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { tryLoadFen } from './puzzle-move.util';
 
 /**
  * Macht Zugfolgen in Buch-/Kurs-Kommentaren anklickbar (Vorschau auf dem Brett).
@@ -125,9 +126,12 @@ export function splitBranches(text: string): string[][] {
   return branches(text).map(b => b.sans);
 }
 
-/** FEN-Liste der Hauptlinie: Start-FEN, dann nach jedem (UCI-)Zug. Ungültige Züge brechen die Kette ab. */
+/** FEN-Liste der Hauptlinie: Start-FEN, dann nach jedem (UCI-)Zug. Ungültige Züge brechen die Kette ab.
+ *  Leer, wenn chess.js schon die Start-FEN ablehnt (Chessable-Muster-Diagramme ohne König o. Ä.) — dann
+ *  gibt es keine Basis-Stellung, gegen die ein Kommentar-Zug validiert werden könnte. */
 function mainlineFens(startFen: string, ucis: string[]): string[] {
-  const c = new Chess(startFen);
+  const c = tryLoadFen(startFen);
+  if (!c) return [];
   const fens = [c.fen()];
   for (const u of ucis) {
     if (!safeUci(c, u)) break;
@@ -151,9 +155,11 @@ function baseStartPly(startFen: string): number {
   return (fullmove - 1) * 2 + (white ? 0 : 1);
 }
 
-/** Spielt die SAN-Folge ab `baseFen`, bis ein Zug illegal wird; liefert die Schritte des legalen Präfix. */
+/** Spielt die SAN-Folge ab `baseFen`, bis ein Zug illegal wird; liefert die Schritte des legalen Präfix.
+ *  Leer bei einer von chess.js abgelehnten `baseFen` (illegales Diagramm) — nichts ist dann klickbar. */
 function playPrefix(baseFen: string, sans: string[]): VariationStep[] {
-  const c = new Chess(baseFen);
+  const c = tryLoadFen(baseFen);
+  if (!c) return [];
   const steps: VariationStep[] = [];
   for (const san of sans) {
     let mv;
