@@ -22,3 +22,27 @@ describe('CourseCardComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 });
+
+/**
+ * Kapitel-Primäraktion: der Play-Knopf startet im zuletzt genutzten Kursmodus
+ * (die Alternativen liegen im ⋮-Menü der Zeile).
+ */
+describe('CourseCardComponent Kapitel-Modus', () => {
+  function make(lastMode: string | null): CourseCardComponent {
+    const c = new CourseCardComponent();
+    c.course = { bookId: 1, lastMode } as never;
+    return c;
+  }
+
+  it('nimmt den letzten Modus des Kurses, sonst sequenziell', () => {
+    expect(make('random').chapterMode).toBe('random');
+    expect(make('sequential').chapterMode).toBe('sequential');
+    expect(make(null).chapterMode).toBe('sequential');
+    expect(make('quatsch').chapterMode).toBe('sequential');
+  });
+
+  it('der Tooltip nennt den Modus', () => {
+    expect(make('random').startChapterTooltip).toBe('courses.startChapterRandom');
+    expect(make(null).startChapterTooltip).toBe('courses.startChapterSequential');
+  });
+});

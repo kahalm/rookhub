@@ -120,6 +120,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
   }
 
+  /** Feineinstellungen des Start-Bildschirms aufgeklappt (Stockfish-Tiefe, Schwellen, Kurvenvorschau).
+   *  Standardmäßig zu: vor dem Start zählen Start-Rating und Themen, alles andere ist Nachjustierung. */
+  showAdvanced = false;
+
   // ── Themen-Auswahl (durchsuchbare Multiselect-Dropdown) ───────────────────────────
   /** Alle verfügbaren Themen (vom Backend, alphabetisch) — Optionen des Autocomplete-Dropdowns. */
   allThemes: string[] = [];

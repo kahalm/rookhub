@@ -161,19 +161,38 @@ import { CourseListItem, CourseChapter } from './course.service';
                           <mat-progress-bar class="chapter-bar" mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
                           <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}@if (ch.infoCount > 0) {<span class="chapter-info-count" [matTooltip]="'courses.infoLinesTooltip' | translate">&nbsp;{{ 'courses.infoLines' | translate:{ count: ch.infoCount } }}</span>}</span>
                         </div>
+                        <!-- Eine Primäraktion je Kapitel (im zuletzt genutzten Modus des Kurses) statt
+                             dreier gleich aussehender Icons; die Alternativen liegen im ⋮-Menü der Zeile.
+                             Ein Buch mit 15 Kapiteln zeigte vorher 45 Icons in einer Karte. -->
                         <div class="chapter-btns">
-                          <button mat-icon-button [matTooltip]="'courses.browseTooltip' | translate"
-                                  [routerLink]="['/courses', course.bookId, 'chapter', ch.index, 'browse']">
-                            <mat-icon>auto_stories</mat-icon>
+                          <button mat-icon-button color="primary"
+                                  [matTooltip]="startChapterTooltip | translate"
+                                  [attr.aria-label]="startChapterTooltip | translate"
+                                  [routerLink]="['/courses', course.bookId, 'chapter', ch.index, chapterMode]">
+                            <mat-icon>play_arrow</mat-icon>
                           </button>
-                          <button mat-icon-button color="primary" [matTooltip]="'courses.sequential' | translate"
-                                  [routerLink]="['/courses', course.bookId, 'chapter', ch.index, 'sequential']">
-                            <mat-icon>format_list_numbered</mat-icon>
+                          <button mat-icon-button [matMenuTriggerFor]="chapterMenu"
+                                  [matTooltip]="'courses.moreActions' | translate"
+                                  [attr.aria-label]="'courses.moreActions' | translate">
+                            <mat-icon>more_vert</mat-icon>
                           </button>
-                          <button mat-icon-button [matTooltip]="'courses.random' | translate"
-                                  [routerLink]="['/courses', course.bookId, 'chapter', ch.index, 'random']">
-                            <mat-icon>shuffle</mat-icon>
-                          </button>
+                          <mat-menu #chapterMenu="matMenu">
+                            <button mat-menu-item [class.active-item]="chapterMode === 'sequential'"
+                                    [routerLink]="['/courses', course.bookId, 'chapter', ch.index, 'sequential']">
+                              <mat-icon>format_list_numbered</mat-icon>
+                              <span>{{ 'courses.sequential' | translate }}</span>
+                            </button>
+                            <button mat-menu-item [class.active-item]="chapterMode === 'random'"
+                                    [routerLink]="['/courses', course.bookId, 'chapter', ch.index, 'random']">
+                              <mat-icon>shuffle</mat-icon>
+                              <span>{{ 'courses.random' | translate }}</span>
+                            </button>
+                            <button mat-menu-item
+                                    [routerLink]="['/courses', course.bookId, 'chapter', ch.index, 'browse']">
+                              <mat-icon>auto_stories</mat-icon>
+                              <span>{{ 'courses.browseTooltip' | translate }}</span>
+                            </button>
+                          </mat-menu>
                         </div>
                       </li>
                     }
@@ -288,4 +307,15 @@ export class CourseCardComponent {
   @Output() shareCourse = new EventEmitter<void>();
   @Output() deleteCourse = new EventEmitter<void>();
   @Output() chaptersToggle = new EventEmitter<void>();
+
+  /** Modus, in dem der Kapitel-Play-Knopf startet: der zuletzt in diesem Kurs genutzte
+   *  (`CourseProgress.LastMode`), sonst sequenziell. Die andere Variante bleibt im ⋮-Menü. */
+  get chapterMode(): 'sequential' | 'random' {
+    return this.course.lastMode === 'random' ? 'random' : 'sequential';
+  }
+
+  /** Tooltip des Play-Knopfs — nennt den Modus, damit klar ist, was der Klick tut. */
+  get startChapterTooltip(): string {
+    return this.chapterMode === 'random' ? 'courses.startChapterRandom' : 'courses.startChapterSequential';
+  }
 }

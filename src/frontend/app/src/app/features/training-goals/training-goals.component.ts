@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTabsModule } from '@angular/material/tabs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import {
@@ -26,6 +27,7 @@ import { clampGoal } from './goal.util';
 import { BreakRow, breakdownRows } from './breakdown.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 // level -1 = Zukunft (leer); manual = enthält selbst gemeldete Aktivität
 export interface GoalCell { date: string; status: GoalStatus; level: number; manual: boolean; }
@@ -95,7 +97,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
-    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
+    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule, MatTabsModule,
     TranslatePipe, LoadingSpinnerComponent,
     ManualActivitiesCardComponent, ActivityPresetsCardComponent, ChessableThemesCardComponent,
     PeriodBreakdownCardComponent,
@@ -108,197 +110,234 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
       @if (loading) {
         <app-loading-spinner />
       } @else {
-        <!-- Heute -->
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ 'trainingGoals.today' | translate }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            @if (hasGoal) {
-              <div class="today-head">
-                <mat-icon class="day-star" [class]="'st-' + (today?.status ?? 'none')">{{ dayIcon(today?.status) }}</mat-icon>
-                <div class="today-summary">
-                  <div class="today-label">{{ ('trainingGoals.status.' + (today?.status ?? 'none')) | translate }}</div>
-                  @if ((today?.weeklyDaysTarget ?? 0) > 0) {
-                    <div class="week-line">{{ 'trainingGoals.weekProgress' | translate:{ done: today?.weekDaysMet ?? 0, target: today?.weeklyDaysTarget ?? 0 } }}</div>
-                  }
-                </div>
-              </div>
-              <div class="cats">
-                <!-- Ein gemeinsames Tageszeit-Ziel (alle Quellen füttern es). -->
-                @if ((today?.daily?.targetMinutes ?? 0) > 0) {
-                  <div class="cat">
-                    <div class="cat-row">
-                      <mat-icon [class.met]="today?.daily?.met">{{ today?.daily?.met ? 'check_circle' : 'schedule' }}</mat-icon>
-                      <span class="cat-name">{{ 'trainingGoals.dailyGoal' | translate }}</span>
-                      <span class="cat-val">{{ minutes(today?.daily?.doneSeconds ?? 0) }} / {{ today?.daily?.targetMinutes ?? 0 }} {{ 'trainingGoals.min' | translate }}</span>
-                    </div>
-                    <mat-progress-bar mode="determinate" [value]="pct(today?.daily?.doneSeconds ?? 0, today?.daily?.targetMinutes ?? 0)"></mat-progress-bar>
-                  </div>
-                }
-                <!-- Spielen ist ein Wochenziel (Anzahl Rapid-/Classical-Partien dieser Woche). -->
-                @if ((today?.play?.targetGames ?? 0) > 0) {
-                  <div class="cat">
-                    <div class="cat-row">
-                      <mat-icon [class.met]="today?.play?.met">{{ today?.play?.met ? 'check_circle' : 'sports_esports' }}</mat-icon>
-                      <span class="cat-name">{{ 'trainingGoals.cat.play' | translate }} <span class="weekly-tag">{{ 'trainingGoals.thisWeek' | translate }}</span></span>
-                      <span class="cat-val">{{ today?.play?.doneGames ?? 0 }} / {{ today?.play?.targetGames ?? 0 }} {{ 'trainingGoals.games' | translate }}</span>
-                    </div>
-                    <mat-progress-bar mode="determinate" [value]="pctCount(today?.play?.doneGames ?? 0, today?.play?.targetGames ?? 0)"></mat-progress-bar>
-                  </div>
-                }
-              </div>
-
-              <!-- Aufzeichnung von heute: nach Quelle + nach Thema -->
-              @if (todaySourceRows.length) {
-                <div class="breakdowns">
-                  <div class="bd">
-                    <div class="bd-title">{{ 'trainingGoals.breakdownBySource' | translate }}</div>
-                    @for (r of todaySourceRows; track r.label) {
-                      <div class="bd-row">
-                        <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
-                        <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
+        <!-- Vier Reiter statt eines Stapels: Alltagsfall (Ziele) vorn, Auswertung und
+             Verwaltung dahinter. matTabContent lädt den Inhalt erst beim Öffnen. -->
+        <mat-tab-group class="tg-tabs" animationDuration="0ms"
+                       [selectedIndex]="tabIndex" (selectedIndexChange)="onTabChange($event)">
+          <mat-tab [label]="'trainingGoals.tabs.goals' | translate">
+            <ng-template matTabContent>
+              <div class="tab-body">
+                <!-- Heute -->
+                <mat-card>
+                  <mat-card-header>
+                    <mat-card-title>{{ 'trainingGoals.today' | translate }}</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    @if (hasGoal) {
+                      <div class="today-head">
+                        <mat-icon class="day-star" [class]="'st-' + (today?.status ?? 'none')">{{ dayIcon(today?.status) }}</mat-icon>
+                        <div class="today-summary">
+                          <div class="today-label">{{ ('trainingGoals.status.' + (today?.status ?? 'none')) | translate }}</div>
+                          @if ((today?.weeklyDaysTarget ?? 0) > 0) {
+                            <div class="week-line">{{ 'trainingGoals.weekProgress' | translate:{ done: today?.weekDaysMet ?? 0, target: today?.weeklyDaysTarget ?? 0 } }}</div>
+                          }
+                        </div>
                       </div>
-                    }
-                  </div>
-                  <div class="bd">
-                    <div class="bd-title">{{ 'trainingGoals.breakdownByTheme' | translate }}</div>
-                    @for (r of todayThemeRows; track r.label) {
-                      <div class="bd-row">
-                        <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
-                        <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
+                      <div class="cats">
+                        <!-- Ein gemeinsames Tageszeit-Ziel (alle Quellen füttern es). -->
+                        @if ((today?.daily?.targetMinutes ?? 0) > 0) {
+                          <div class="cat">
+                            <div class="cat-row">
+                              <mat-icon [class.met]="today?.daily?.met">{{ today?.daily?.met ? 'check_circle' : 'schedule' }}</mat-icon>
+                              <span class="cat-name">{{ 'trainingGoals.dailyGoal' | translate }}</span>
+                              <span class="cat-val">{{ minutes(today?.daily?.doneSeconds ?? 0) }} / {{ today?.daily?.targetMinutes ?? 0 }} {{ 'trainingGoals.min' | translate }}</span>
+                            </div>
+                            <mat-progress-bar mode="determinate" [value]="pct(today?.daily?.doneSeconds ?? 0, today?.daily?.targetMinutes ?? 0)"></mat-progress-bar>
+                          </div>
+                        }
+                        <!-- Spielen ist ein Wochenziel (Anzahl Rapid-/Classical-Partien dieser Woche). -->
+                        @if ((today?.play?.targetGames ?? 0) > 0) {
+                          <div class="cat">
+                            <div class="cat-row">
+                              <mat-icon [class.met]="today?.play?.met">{{ today?.play?.met ? 'check_circle' : 'sports_esports' }}</mat-icon>
+                              <span class="cat-name">{{ 'trainingGoals.cat.play' | translate }} <span class="weekly-tag">{{ 'trainingGoals.thisWeek' | translate }}</span></span>
+                              <span class="cat-val">{{ today?.play?.doneGames ?? 0 }} / {{ today?.play?.targetGames ?? 0 }} {{ 'trainingGoals.games' | translate }}</span>
+                            </div>
+                            <mat-progress-bar mode="determinate" [value]="pctCount(today?.play?.doneGames ?? 0, today?.play?.targetGames ?? 0)"></mat-progress-bar>
+                          </div>
+                        }
                       </div>
+    
+                      <!-- Aufzeichnung von heute: nach Quelle + nach Thema -->
+                      @if (todaySourceRows.length) {
+                        <div class="breakdowns">
+                          <div class="bd">
+                            <div class="bd-title">{{ 'trainingGoals.breakdownBySource' | translate }}</div>
+                            @for (r of todaySourceRows; track r.label) {
+                              <div class="bd-row">
+                                <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
+                                <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
+                                <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
+                              </div>
+                            }
+                          </div>
+                          <div class="bd">
+                            <div class="bd-title">{{ 'trainingGoals.breakdownByTheme' | translate }}</div>
+                            @for (r of todayThemeRows; track r.label) {
+                              <div class="bd-row">
+                                <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
+                                <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
+                                <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
+    
+                      @if ((today?.play?.targetGames ?? 0) > 0) {
+                        <button mat-stroked-button class="sync-btn" (click)="syncPlayTime()" [disabled]="syncingPlay">
+                          <mat-icon>sync</mat-icon> {{ 'trainingGoals.syncPlay' | translate }}
+                        </button>
+                      }
+                    } @else {
+                      <p class="muted">{{ 'trainingGoals.noGoalHint' | translate }}</p>
                     }
-                  </div>
-                </div>
-              }
-
-              @if ((today?.play?.targetGames ?? 0) > 0) {
-                <button mat-stroked-button class="sync-btn" (click)="syncPlayTime()" [disabled]="syncingPlay">
-                  <mat-icon>sync</mat-icon> {{ 'trainingGoals.syncPlay' | translate }}
-                </button>
-              }
-            } @else {
-              <p class="muted">{{ 'trainingGoals.noGoalHint' | translate }}</p>
-            }
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Ziele festlegen -->
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ 'trainingGoals.setTitle' | translate }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            @if (goal?.source === 'group') {
-              <p class="source-hint">
-                <mat-icon class="inline">groups</mat-icon>
-                {{ 'trainingGoals.fromGroup' | translate:{ group: goal?.groupName ?? '' } }}
-              </p>
-            } @else if (goal?.source === 'personal') {
-              <p class="source-hint"><mat-icon class="inline">person</mat-icon>{{ 'trainingGoals.personal' | translate }}</p>
-            }
-            <div class="goal-fields">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
-                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.dailyMinutes" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
-                <input matInput type="number" min="0" max="200" [(ngModel)]="edit.playGames" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.weeklyDays' | translate }}</mat-label>
-                <input matInput type="number" min="0" max="7" [(ngModel)]="edit.weeklyDaysTarget" />
-              </mat-form-field>
-            </div>
-            <p class="muted small">{{ 'trainingGoals.dailyHint' | translate }}</p>
-            <p class="muted small">{{ 'trainingGoals.playHint' | translate }}</p>
-            <div class="actions">
-              <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
-              @if (goal?.source === 'personal') {
-                <button mat-button (click)="resetOverride()" [disabled]="saving">{{ 'trainingGoals.resetOverride' | translate }}</button>
-              }
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <app-manual-activities-card [manualList]="manualList" (changed)="reload()" />
-
-        <app-activity-presets-card />
-
-        <!-- Tracker -->
-        @if (tracker.length) {
-          <mat-card>
-            <mat-card-header><mat-card-title>{{ 'trainingGoals.tracker' | translate }}</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="heatmap">
-                @for (week of tracker; track $index) {
-                  <div class="hm-col">
-                    @for (cell of week; track cell.date) {
-                      <div class="hm-cell" [class]="'gl' + cell.level" [class.manual]="cell.manual"
-                           [matTooltip]="cell.level >= 0 ? (cell.date + ' · ' + (('trainingGoals.status.' + cell.status) | translate) + (cell.manual ? ' · ' + ('trainingGoals.manual.marker' | translate) : '')) : ''"></div>
+                  </mat-card-content>
+                </mat-card>
+    
+                <!-- Ziele festlegen -->
+                <mat-card>
+                  <mat-card-header>
+                    <mat-card-title>{{ 'trainingGoals.setTitle' | translate }}</mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    @if (goal?.source === 'group') {
+                      <p class="source-hint">
+                        <mat-icon class="inline">groups</mat-icon>
+                        {{ 'trainingGoals.fromGroup' | translate:{ group: goal?.groupName ?? '' } }}
+                      </p>
+                    } @else if (goal?.source === 'personal') {
+                      <p class="source-hint"><mat-icon class="inline">person</mat-icon>{{ 'trainingGoals.personal' | translate }}</p>
                     }
-                  </div>
+                    <div class="goal-fields">
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                        <input matInput type="number" min="0" max="600" [(ngModel)]="edit.dailyMinutes" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
+                        <input matInput type="number" min="0" max="200" [(ngModel)]="edit.playGames" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <mat-label>{{ 'trainingGoals.weeklyDays' | translate }}</mat-label>
+                        <input matInput type="number" min="0" max="7" [(ngModel)]="edit.weeklyDaysTarget" />
+                      </mat-form-field>
+                    </div>
+                    <p class="muted small">{{ 'trainingGoals.dailyHint' | translate }}</p>
+                    <p class="muted small">{{ 'trainingGoals.playHint' | translate }}</p>
+                    <div class="actions">
+                      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
+                      @if (goal?.source === 'personal') {
+                        <button mat-button (click)="resetOverride()" [disabled]="saving">{{ 'trainingGoals.resetOverride' | translate }}</button>
+                      }
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+            </ng-template>
+          </mat-tab>
+          <mat-tab [label]="'trainingGoals.tabs.history' | translate">
+            <ng-template matTabContent>
+              <div class="tab-body">
+                <!-- Tracker -->
+                @if (tracker.length) {
+                  <mat-card>
+                    <mat-card-header><mat-card-title>{{ 'trainingGoals.tracker' | translate }}</mat-card-title></mat-card-header>
+                    <mat-card-content>
+                      <div class="heatmap">
+                        @for (week of tracker; track $index) {
+                          <div class="hm-col">
+                            @for (cell of week; track cell.date) {
+                              <div class="hm-cell" [class]="'gl' + cell.level" [class.manual]="cell.manual"
+                                   [matTooltip]="cell.level >= 0 ? (cell.date + ' · ' + (('trainingGoals.status.' + cell.status) | translate) + (cell.manual ? ' · ' + ('trainingGoals.manual.marker' | translate) : '')) : ''"></div>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <div class="legend">
+                        <span class="legend-item"><span class="sw gl4"></span>{{ 'trainingGoals.status.full' | translate }}</span>
+                        <span class="legend-item"><span class="sw gl2"></span>{{ 'trainingGoals.status.partial' | translate }}</span>
+                        <span class="legend-item"><span class="sw gl0"></span>{{ 'trainingGoals.status.none' | translate }}</span>
+                        <span class="legend-item"><span class="sw gl0 manual"></span>{{ 'trainingGoals.manual.marker' | translate }}</span>
+                      </div>
+    
+                      <!-- Umschaltbare Perioden-Aufschlüsselung: eigene, selbst rechnende Karte -->
+                      <app-period-breakdown-card [series]="series" />
+                    </mat-card-content>
+                  </mat-card>
                 }
+    
+                <!-- Tageshistory: pro Tag Gesamtzeit + je Quelle + Partien -->
+                @if (historyDays.length) {
+                  <mat-card>
+                    <mat-card-header><mat-card-title>{{ 'trainingGoals.history' | translate }}</mat-card-title></mat-card-header>
+                    <mat-card-content>
+                      <div class="history-wrap">
+                        <table class="history">
+                          <thead>
+                            <tr>
+                              <th class="th-date">{{ 'trainingGoals.dateCol' | translate }}</th>
+                              <th>{{ 'trainingGoals.total' | translate }}</th>
+                              <th>{{ 'trainingGoals.source.randomPuzzle' | translate }}</th>
+                              <th>{{ 'trainingGoals.source.courseBook' | translate }}</th>
+                              <th>{{ 'trainingGoals.source.chessable' | translate }}</th>
+                              <th>{{ 'trainingGoals.cat.play' | translate }}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (d of historyDays; track d.date) {
+                              <tr>
+                                <td class="td-date">{{ d.date }}</td>
+                                <td class="strong">{{ durValue(d.totalSeconds) }} <span class="unit">{{ durUnit(d.totalSeconds) | translate }}</span></td>
+                                <td>{{ durValue(d.bySource.randomPuzzleSeconds) }} <span class="unit">{{ durUnit(d.bySource.randomPuzzleSeconds) | translate }}</span></td>
+                                <td>{{ durValue(d.bySource.courseBookSeconds) }} <span class="unit">{{ durUnit(d.bySource.courseBookSeconds) | translate }}</span></td>
+                                <td>{{ durValue(d.bySource.chessableSeconds) }} <span class="unit">{{ durUnit(d.bySource.chessableSeconds) | translate }}</span></td>
+                                <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </mat-card-content>
+                  </mat-card>
+                }
+              @if (!tracker.length && !historyDays.length) {
+                <p class="muted">{{ 'trainingGoals.noActivityPeriod' | translate }}</p>
+              }
               </div>
-              <div class="legend">
-                <span class="legend-item"><span class="sw gl4"></span>{{ 'trainingGoals.status.full' | translate }}</span>
-                <span class="legend-item"><span class="sw gl2"></span>{{ 'trainingGoals.status.partial' | translate }}</span>
-                <span class="legend-item"><span class="sw gl0"></span>{{ 'trainingGoals.status.none' | translate }}</span>
-                <span class="legend-item"><span class="sw gl0 manual"></span>{{ 'trainingGoals.manual.marker' | translate }}</span>
+            </ng-template>
+          </mat-tab>
+          <mat-tab [label]="'trainingGoals.tabs.log' | translate">
+            <ng-template matTabContent>
+              <div class="tab-body">
+                <app-manual-activities-card [manualList]="manualList" (changed)="reload()" />
+    
+                <app-activity-presets-card />
               </div>
-
-              <!-- Umschaltbare Perioden-Aufschlüsselung: eigene, selbst rechnende Karte -->
-              <app-period-breakdown-card [series]="series" />
-            </mat-card-content>
-          </mat-card>
-        }
-
-        <!-- Tageshistory: pro Tag Gesamtzeit + je Quelle + Partien -->
-        @if (historyDays.length) {
-          <mat-card>
-            <mat-card-header><mat-card-title>{{ 'trainingGoals.history' | translate }}</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="history-wrap">
-                <table class="history">
-                  <thead>
-                    <tr>
-                      <th class="th-date">{{ 'trainingGoals.dateCol' | translate }}</th>
-                      <th>{{ 'trainingGoals.total' | translate }}</th>
-                      <th>{{ 'trainingGoals.source.randomPuzzle' | translate }}</th>
-                      <th>{{ 'trainingGoals.source.courseBook' | translate }}</th>
-                      <th>{{ 'trainingGoals.source.chessable' | translate }}</th>
-                      <th>{{ 'trainingGoals.cat.play' | translate }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (d of historyDays; track d.date) {
-                      <tr>
-                        <td class="td-date">{{ d.date }}</td>
-                        <td class="strong">{{ durValue(d.totalSeconds) }} <span class="unit">{{ durUnit(d.totalSeconds) | translate }}</span></td>
-                        <td>{{ durValue(d.bySource.randomPuzzleSeconds) }} <span class="unit">{{ durUnit(d.bySource.randomPuzzleSeconds) | translate }}</span></td>
-                        <td>{{ durValue(d.bySource.courseBookSeconds) }} <span class="unit">{{ durUnit(d.bySource.courseBookSeconds) | translate }}</span></td>
-                        <td>{{ durValue(d.bySource.chessableSeconds) }} <span class="unit">{{ durUnit(d.bySource.chessableSeconds) | translate }}</span></td>
-                        <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
+            </ng-template>
+          </mat-tab>
+          <mat-tab [label]="'trainingGoals.tabs.chessable' | translate">
+            <ng-template matTabContent>
+              <div class="tab-body">
+                <!-- Chessable-Kurse: History + manuelle Themen-Zuordnung (eigene, self-loading Karte) -->
+                <app-chessable-themes-card (changed)="reload()" />
               </div>
-            </mat-card-content>
-          </mat-card>
-        }
-
-        <!-- Chessable-Kurse: History + manuelle Themen-Zuordnung (eigene, self-loading Karte) -->
-        <app-chessable-themes-card (changed)="reload()" />
+            </ng-template>
+          </mat-tab>
+        </mat-tab-group>
       }
     </div>
   `,
   styles: [`
     .tg-container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
+    /* Reiter-Inhalt: etwas Luft nach der Reiterleiste, damit die erste Karte nicht anklebt. */
+    .tg-tabs { margin-top: 8px; }
+    .tab-body { padding-top: 16px; }
+    /* Auf dem Handy die Material-Standardpolsterung (2×24px je Reiter) kürzen — sonst passen die
+       vier Beschriftungen nicht nebeneinander und Material blendet Blätter-Pfeile ein. */
+    @media (max-width: 480px) {
+      .tg-tabs ::ng-deep .mdc-tab { padding: 0 10px; min-width: 0; }
+    }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-top: -8px; }
     mat-card { margin-bottom: 16px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
@@ -390,7 +429,32 @@ export class TrainingGoalsComponent implements OnInit {
     private service: TrainingGoalService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private route: ActivatedRoute,
+    private router: Router,
   ) {}
+
+  /** Reiter-Reihenfolge; der Schlüssel steht als ?tab= in der URL (Deep-Link + Reload-fest). */
+  private static readonly TABS = ['goals', 'history', 'log', 'chessable'] as const;
+  tabIndex = 0;
+
+  /** Reiter aus ?tab= übernehmen (unbekannt/fehlt → erster Reiter). */
+  private initTabFromUrl(): void {
+    const key = this.route.snapshot.queryParamMap.get('tab');
+    const i = key ? TrainingGoalsComponent.TABS.indexOf(key as never) : -1;
+    this.tabIndex = i >= 0 ? i : 0;
+  }
+
+  /** Reiterwechsel in die URL spiegeln, ohne einen History-Eintrag je Klick zu erzeugen. */
+  onTabChange(index: number): void {
+    this.tabIndex = index;
+    const tab = TrainingGoalsComponent.TABS[index] ?? 'goals';
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: index === 0 ? null : tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 
   get hasGoal(): boolean {
     const g = this.goal;
@@ -406,7 +470,7 @@ export class TrainingGoalsComponent implements OnInit {
     return formatDuration(seconds, this.translate.currentLang()).unitKey;
   }
 
-  ngOnInit(): void { this.reload(); }
+  ngOnInit(): void { this.initTabFromUrl(); this.reload(); }
 
   reload(): void {
     this.loading = true;

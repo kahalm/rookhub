@@ -1228,7 +1228,9 @@
       "saved": "Themes for “{{name}}” saved.",
       "error": "Could not save themes."
     },
-    "offlineListHint": "You're offline — showing your downloaded courses (last known state)."
+    "offlineListHint": "You're offline — showing your downloaded courses (last known state).",
+    "startChapterSequential": "Start chapter (in order)",
+    "startChapterRandom": "Start chapter (random)"
   },
   "weekly": {
     "title": "Weekly",
@@ -1385,7 +1387,8 @@
       "continue": "Continue",
       "archiveAndNew": "Archive & New Game",
       "newGame": "New Game",
-      "start": "Start"
+      "start": "Start",
+      "advanced": "Fine-tuning"
     },
     "game": {
       "visualization": "Visualization (Level {{level}})",
@@ -1972,6 +1975,12 @@
     "activity": "Activity"
   },
   "trainingGoals": {
+    "tabs": {
+      "goals": "Goals",
+      "history": "History",
+      "log": "Log activity",
+      "chessable": "Chessable"
+    },
     "manual": {
       "title": "Log offline activity",
       "intro": "Trained away from the screen? Log OTB games, board study, puzzle work or lessons — they count toward your goals just like online activity.",

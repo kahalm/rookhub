@@ -90,11 +90,6 @@
                     <input matInput type="number" [(ngModel)]="config.startElo" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                     <mat-hint>{{ puzzleRange.min }}–{{ puzzleRange.max }}</mat-hint>
                   </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>{{ 'endless.config.stockfishDepth' | translate }}</mat-label>
-                    <input matInput type="number" [(ngModel)]="config.stockfishDepth" min="1" max="24" step="1">
-                    <mat-hint>{{ 'endless.config.stockfishDepthHint' | translate }}</mat-hint>
-                  </mat-form-field>
                   <div class="theme-presets">
                     <span class="theme-presets-label">{{ 'endless.themePreset.label' | translate }}</span>
                     <div class="theme-presets-chips">
@@ -109,7 +104,9 @@
                     </div>
                   </div>
                   <div class="themes-row">
-                  <mat-form-field appearance="outline" class="themes-field">
+                  <!-- subscriptSizing=dynamic: der zweizeilige Hinweis lief sonst aus seinem
+                       reservierten Einzeiler heraus und überlappte den „Alle löschen"-Knopf. -->
+                  <mat-form-field appearance="outline" class="themes-field" subscriptSizing="dynamic">
                     <mat-label>{{ 'endless.config.themes' | translate }}</mat-label>
                     <mat-chip-grid #themeChips [disabled]="!!config.worstTags" aria-label="Themen">
                       @for (theme of selectedThemes; track theme) {
@@ -154,6 +151,24 @@
                   }
                 </div>
 
+                <!-- Feineinstellungen zugeklappt: vor dem Start zählen Start-Rating + Themen. Tiefe,
+                     Schwellen und Kurvenvorschau sind Nachjustierung und standen bisher als 4 weitere
+                     Blöcke zwischen Start-Knopf und Lauf. -->
+                <button type="button" class="adv-toggle" (click)="showAdvanced = !showAdvanced"
+                        [attr.aria-expanded]="showAdvanced">
+                  <mat-icon>{{ showAdvanced ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  <span>{{ 'endless.config.advanced' | translate }}</span>
+                </button>
+
+                @if (showAdvanced) {
+                <div class="config-fields adv-fields">
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'endless.config.stockfishDepth' | translate }}</mat-label>
+                    <input matInput type="number" [(ngModel)]="config.stockfishDepth" min="1" max="24" step="1">
+                    <mat-hint>{{ 'endless.config.stockfishDepthHint' | translate }}</mat-hint>
+                  </mat-form-field>
+                </div>
+
                 <div class="level-preview">
                   @if (fasttrackPhase1Step > 0) {
                     <p class="threshold-explain">{{ 'endless.config.thresholdExplain' | translate }}</p>
@@ -190,6 +205,7 @@
                     </div>
                   }
                 </div>
+                }
 
                 <div class="settings-bar">
                   <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()" [attr.title]="'endless.config.settings' | translate">

@@ -1228,7 +1228,9 @@
       "saved": "Themen für „{{name}}“ gespeichert.",
       "error": "Themen konnten nicht gespeichert werden."
     },
-    "offlineListHint": "Du bist offline — angezeigt werden deine heruntergeladenen Kurse (letzter bekannter Stand)."
+    "offlineListHint": "Du bist offline — angezeigt werden deine heruntergeladenen Kurse (letzter bekannter Stand).",
+    "startChapterSequential": "Kapitel starten (der Reihe nach)",
+    "startChapterRandom": "Kapitel starten (zufällig)"
   },
   "weekly": {
     "title": "Wochenpost",
@@ -1385,7 +1387,8 @@
       "continue": "Fortsetzen",
       "archiveAndNew": "Archivieren & neues Spiel",
       "newGame": "Neues Spiel",
-      "start": "Start"
+      "start": "Start",
+      "advanced": "Feineinstellungen"
     },
     "game": {
       "visualization": "Visualisierung (Level {{level}})",
@@ -1972,6 +1975,12 @@
     "activity": "Aktivität"
   },
   "trainingGoals": {
+    "tabs": {
+      "goals": "Ziele",
+      "history": "Verlauf",
+      "log": "Erfassen",
+      "chessable": "Chessable"
+    },
     "manual": {
       "title": "Offline-Aktivität eintragen",
       "intro": "Abseits des Bildschirms trainiert? Trage OTB-Partien, Studium am Brett, Puzzlearbeit oder Trainerstunden ein — sie zählen wie Online-Aktivität auf deine Ziele.",

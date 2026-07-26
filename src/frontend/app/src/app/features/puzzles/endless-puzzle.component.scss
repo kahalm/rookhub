@@ -75,6 +75,16 @@
     }
     .theme-chip.active { border-color: #1976d2; }
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
+    /* Aufklapper für die Feineinstellungen — gleiche Optik wie der Kapitel-Aufklapper der Kurs-Karte. */
+    .adv-toggle {
+      display: flex; align-items: center; gap: 6px; width: 100%; margin: 0.2rem 0 0.6rem;
+      padding: 8px 4px; background: none; border: none; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+      color: color-mix(in srgb, currentColor 70%, transparent); font: inherit; font-size: 0.9em;
+      cursor: pointer; text-align: left;
+    }
+    .adv-toggle:hover { color: inherit; }
+    .adv-toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .adv-fields { margin-bottom: 0.4rem; }
     .settings-bar { display: flex; justify-content: flex-end; }
     .settings-gear.active { color: #1976d2; }
     .theme-presets { margin-bottom: 0.6rem; }
