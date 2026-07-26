@@ -100,6 +100,7 @@ const CK = {
               <app-puzzle-your-turn
                 state="AWAITING_USER_MOVE"
                 [mode]="mode"
+                [showStatus]="showTurnStatus"
                 [showEval]="showEval"
                 [evalLoading]="evalLoading"
                 [initialEval]="initialEval"
@@ -256,6 +257,10 @@ const CK = {
 export class PuzzleStatusCardComponent {
   @Input() mode: PuzzleMode = 'standard';
   @Input() state = 'LOADING';
+  /** „Du bist am Zug!" im WARTE-Zustand anzeigen. Die Solver setzen das auf false, solange unter dem
+   *  Brett schon „Weiß/Schwarz am Zug" steht (Doppelaussage); THINKING/PLAYING behalten ihren Text,
+   *  weil der dort etwas anderes sagt („Stockfish denkt…" / „Du spielst weiter"). */
+  @Input() showTurnStatus = true;
   @Input() showEval = false;
   @Input() evalLoading = false;
   @Input() initialEval = '';

@@ -156,26 +156,53 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>
       } @else {
-        @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
-        @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+        <!-- Ausgeloggt: dieselben Einträge, aber auf schmalen Schirmen gebündelt im Kompakt-Menü
+             (.nav-anon wird ≤768px ausgeblendet) — sonst lief die Toolbar über die Viewport-Breite
+             hinaus und die GANZE Seite scrollte horizontal (Teilen-Links/Tagespuzzle auf dem Handy). -->
+        @if (can('puzzles')) { <button mat-button class="nav-anon" routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+        @if (can('analysis')) { <button mat-button class="nav-anon" routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
         @if (can('help')) {
-        <button mat-icon-button routerLink="/help" [matTooltip]="'nav.help' | translate" [attr.aria-label]="'nav.help' | translate">
+        <button mat-icon-button class="nav-anon" routerLink="/help" [matTooltip]="'nav.help' | translate" [attr.aria-label]="'nav.help' | translate">
           <mat-icon>help_outline</mat-icon>
         </button>
         }
-        <button mat-icon-button (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
+        <button mat-icon-button class="nav-anon" (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
           <mat-icon>info_outline</mat-icon>
         </button>
         <a mat-icon-button [href]="discordUrl" target="_blank" rel="noopener noreferrer"
-           class="discord-link" [matTooltip]="'nav.discord' | translate" [attr.aria-label]="'nav.discord' | translate">
+           class="discord-link nav-anon" [matTooltip]="'nav.discord' | translate" [attr.aria-label]="'nav.discord' | translate">
           <mat-icon svgIcon="discord"></mat-icon>
         </a>
-        <button mat-icon-button (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
+        <button mat-icon-button class="nav-anon" (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
           <mat-icon>{{ themeIcon }}</mat-icon>
         </button>
-        <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
+        <button mat-icon-button class="nav-anon" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
+        <button mat-icon-button class="anon-menu-btn" [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <mat-menu #anonMenu="matMenu">
+          @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+          @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
+          <button mat-menu-item (click)="quickstartClick.emit()">
+            <mat-icon>info_outline</mat-icon>
+            <span>{{ 'nav.info' | translate }}</span>
+          </button>
+          <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
+            <mat-icon svgIcon="discord"></mat-icon>
+            <span>{{ 'nav.discord' | translate }}</span>
+          </a>
+          <button mat-menu-item (click)="theme.toggle()">
+            <mat-icon>{{ themeIcon }}</mat-icon>
+            <span>{{ themeTooltip }}</span>
+          </button>
+          <button mat-menu-item [matMenuTriggerFor]="langMenu">
+            <mat-icon>language</mat-icon>
+            <span>{{ 'nav.language' | translate }}</span>
+          </button>
+        </mat-menu>
         <button mat-button routerLink="/login">{{ 'nav.login' | translate }}</button>
         <button mat-raised-button routerLink="/register">{{ 'nav.register' | translate }}</button>
       }
@@ -198,6 +225,8 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
        Bildschirmen über. Die horizontalen Text-Links (.nav-links) entfallen daher generell. */
     .nav-links { display: none; }
     .mobile-menu-btn { display: inline-flex; }
+    /* Ausgeloggt: Einzel-Buttons breit, Kompakt-Menü nur schmal (Umschaltung unten im @media). */
+    .anon-menu-btn { display: none; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
@@ -229,6 +258,11 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
          damit die Toolbar nicht überläuft und das Profil-Icon nicht aus dem Bild geschoben wird.
          (Die Haupt-Navigation liegt ohnehin auf allen Auflösungen im Hamburger-Menü.) */
       .nav-extra { display: none; }
+      /* Dasselbe für die AUSGELOGGTE Toolbar: dort gab es bisher gar kein Menü, alle 9 Einträge
+         standen nebeneinander → 590px Inhalt bei 390px Viewport, die ganze Seite scrollte
+         horizontal. Jetzt: Einzel-Buttons aus, ein Menü-Button rein; Login/Register bleiben. */
+      .nav-anon { display: none; }
+      .anon-menu-btn { display: inline-flex; }
     }
   `]
 })

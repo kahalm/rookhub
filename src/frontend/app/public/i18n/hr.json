@@ -84,7 +84,8 @@
     "downloadFailed": "Preuzimanje nije uspjelo.",
     "whiteToMove": "Bijeli na potezu",
     "blackToMove": "Crni na potezu",
-    "copy": "Kopiraj"
+    "copy": "Kopiraj",
+    "error": "Nešto je pošlo po zlu."
   },
   "notifications": {
     "title": "Obavijesti",
@@ -2025,6 +2026,8 @@
       "stopFailed": "Timer se ne može spremiti."
     },
     "theme": {
+      "label": "Tema",
+      "unset": "Bez teme",
       "opening": "Otvaranje",
       "middlegame": "Sredina igre",
       "endgame": "Završnica",

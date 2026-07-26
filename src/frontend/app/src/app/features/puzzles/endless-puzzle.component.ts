@@ -560,13 +560,18 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    */
   get isFirstRun(): boolean { return this.sessionHistory.length === 0; }
 
-  /** Vorschau der Ketten-Kurve: Rating an markanten Stellen (Start, T1 ≈ Puzzle 6, T2 ≈ Puzzle 21, Block-Ende). */
+  /** Vorschau der Ketten-Kurve: Rating an markanten Stellen (Start, T1 ≈ Puzzle 6, T2 ≈ Puzzle 21, Block-Ende).
+   *  Marken werden auf den Block geklemmt, aufsteigend sortiert und dedupliziert — sonst zeigte der
+   *  erste Lauf „Puzzle 1 / 16 / 31 / 30": Anker 2 liegt bei Index 30 und damit AUSSERHALB des
+   *  30er-Blocks (0–29), landete vor dem Block-Ende und mit höherem Rating als die Zeile darunter. */
   get chainPreview(): { puzzle: number; rating: number }[] {
     const s = this.config.startElo, t1 = this.fasttrackAvgFirst, t2 = this.fasttrackAvgSecond;
     const fr = this.isFirstRun;
-    const marks = fr
-      ? [0, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX, ENDLESS_CHAIN_BLOCK - 1]
-      : [0, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK - 1];
+    const last = ENDLESS_CHAIN_BLOCK - 1;
+    const raw = fr
+      ? [0, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX, last]
+      : [0, CHAIN_T1_INDEX, CHAIN_T2_INDEX, last];
+    const marks = [...new Set(raw.map(i => Math.min(Math.max(i, 0), last)))].sort((a, b) => a - b);
     return marks.map(i => ({ puzzle: i + 1, rating: chainRatingAt(i, s, t1, t2, fr) }));
   }
 

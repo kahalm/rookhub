@@ -27,7 +27,13 @@ import { formatDuration } from './duration.util';
   ],
   templateUrl: './chessable-themes-card.component.html',
   styles: [`
-    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-top: -8px; }
+    /* Karten-Rhythmus: die Host-Elemente der Karten-Kindkomponenten bekommen den Abstand selbst —
+       das mat-card-margin der Elternseite ist kapselungsbedingt wirkungslos, wodurch
+       die letzten drei Karten der Trainingsziele stumpf aneinanderstießen (0px Abstand). */
+    :host { display: block; margin-bottom: 16px; }
+    /* Kein negativer Rand: in der Karte (direkt unter mat-card-title) kollidierte der Text sonst
+       mit der Überschrift — die -8px stammen aus dem Seiten-Kontext unter einer h1. */
+    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-top: 0; }
     .small { font-size: .8rem; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
     .filter-toggle { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0; font-size: .9rem; cursor: pointer; }

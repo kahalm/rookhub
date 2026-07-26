@@ -18,7 +18,9 @@ function makeComponent(params: Record<string, string | null>): any {
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
   const snackBar: any = { open: () => {} };
   const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
-  return new AnalysisComponent(engine, route, snackBar, router);
+  // auth: die „Stellung in meinen Repertoires"-Karte wird nur eingeloggt gerendert.
+  const auth: any = { isLoggedIn: false };
+  return new AnalysisComponent(engine, route, snackBar, router, auth);
 }
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';

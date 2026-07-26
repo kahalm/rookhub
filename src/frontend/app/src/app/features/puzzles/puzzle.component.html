@@ -117,6 +117,7 @@
           } @else {
             <app-puzzle-status-card
               mode="standard"
+              [showTurnStatus]="!!vizMoveHtml"
               [state]="state"
               [showEval]="showEval"
               [evalLoading]="evalLoading"
@@ -179,7 +180,9 @@
             <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />
           }
 
-          @if (stats) {
+          <!-- Erst ab dem ersten Versuch: eine Karte aus fünf Nullen ist für neue/anonyme Besucher
+               reines Rauschen an der Stelle, an der sie das Puzzle verstehen sollen. -->
+          @if (stats && stats.totalAttempts > 0) {
             <mat-card class="stats-card">
               <mat-card-header>
                 <mat-card-title>{{ 'puzzles.stats.title' | translate }}</mat-card-title>

@@ -32,6 +32,10 @@ import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
   ],
   templateUrl: './manual-activities-card.component.html',
   styles: [`
+    /* Karten-Rhythmus: die Host-Elemente der Karten-Kindkomponenten bekommen den Abstand selbst —
+       das mat-card-margin der Elternseite ist kapselungsbedingt wirkungslos, wodurch
+       die letzten drei Karten der Trainingsziele stumpf aneinanderstießen (0px Abstand). */
+    :host { display: block; margin-bottom: 16px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
     .small { font-size: .8rem; }
     .actions { display: flex; gap: 8px; margin-top: 8px; }

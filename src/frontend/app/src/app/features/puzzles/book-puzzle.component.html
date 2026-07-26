@@ -374,6 +374,7 @@
           } @else if (puzzle || state === 'LOADING') {
             <app-puzzle-status-card
               mode="book"
+              [showTurnStatus]="!!vizMoveHtml"
               [state]="state"
               [showEval]="showEval"
               [evalLoading]="evalLoading"

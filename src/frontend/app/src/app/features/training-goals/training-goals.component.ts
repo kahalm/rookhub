@@ -336,7 +336,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .bd-val { flex: 0 0 auto; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
     .source-hint { display: flex; align-items: center; gap: 6px; color: color-mix(in srgb, currentColor 65%, transparent); }
     .inline { font-size: 18px; width: 18px; height: 18px; }
-    .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 8px 0; }
+    /* 200px statt 160px: bei 160px passten auf dem Handy zwei Spalten à ~177px nebeneinander und
+       das längste Label („Spielen (Partien/Woche)") wurde am Feldrand abgeschnitten. */
+    .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 8px 0; }
     .actions { display: flex; gap: 8px; margin-top: 8px; }
     .heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
     .hm-col { display: flex; flex-direction: column; gap: 3px; }

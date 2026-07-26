@@ -21,4 +21,29 @@ describe('PuzzleYourTurnComponent', () => {
     const fixture = TestBed.createComponent(PuzzleYourTurnComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
+
+  it('showStatus=false blendet NUR die Statuszeile aus (Timer + Aktionen bleiben)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PuzzleYourTurnComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PuzzleYourTurnComponent);
+    const el: HTMLElement = fixture.nativeElement;
+    // setInput statt Feldzuweisung: die Komponente ist OnPush und würde sonst nicht neu rendern.
+    fixture.componentRef.setInput('timerSeconds', 42);
+    fixture.detectChanges();
+    expect(el.querySelector('.ytp-status')).toBeTruthy();
+
+    fixture.componentRef.setInput('showStatus', false);
+    fixture.detectChanges();
+    expect(el.querySelector('.ytp-status')).toBeNull();     // Doppelaussage zum Brett-Hinweis weg
+    expect(el.querySelector('.ytp-timer')).toBeTruthy();    // Zeit bleibt
+    expect(el.querySelectorAll('.ytp-actions button').length).toBeGreaterThan(0);
+  });
 });

@@ -592,4 +592,14 @@ describe('EndlessPuzzleComponent Live-Zeitstand (Refresh mitten im Puzzle)', () 
     (c as any).saveLiveElapsedNow();                      // ohne Lauf-Seed wird nichts geschrieben
     expect(saved.length).toBe(1);
   });
+  it('chainPreview: Marken sortiert, dedupliziert und auf den 30er-Block geklemmt', () => {
+    const c = makeComponent();
+    c.config.startElo = 700;
+    (c as any).sessionHistory = [];                       // erster Lauf → Anker 15/30
+    const first = c.chainPreview;
+    expect(first.map((p: any) => p.puzzle)).toEqual([1, 16, 30]);   // vorher: 1, 16, 31, 30
+    // Puzzle-Nummern streng aufsteigend, letzte = Blockende
+    expect(first[first.length - 1].puzzle).toBe(30);
+    for (let i = 1; i < first.length; i++) expect(first[i].puzzle).toBeGreaterThan(first[i - 1].puzzle);
+  });
 });

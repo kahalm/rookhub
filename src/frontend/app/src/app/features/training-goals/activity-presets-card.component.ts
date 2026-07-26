@@ -30,6 +30,10 @@ import { activityKindIcon } from './activity-timer-tile.component';
   ],
   templateUrl: './activity-presets-card.component.html',
   styles: [`
+    /* Karten-Rhythmus: die Host-Elemente der Karten-Kindkomponenten bekommen den Abstand selbst —
+       das mat-card-margin der Elternseite ist kapselungsbedingt wirkungslos, wodurch
+       die letzten drei Karten der Trainingsziele stumpf aneinanderstießen (0px Abstand). */
+    :host { display: block; margin-bottom: 16px; }
     .preset-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: start; }
     .preset-form .actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
     .preset-list { list-style: none; padding: 0; margin: 12px 0 0; }

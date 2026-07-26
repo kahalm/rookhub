@@ -20,6 +20,7 @@ import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
+import { AuthService } from '../../core/auth.service';
 
 interface LineNode { san: string; fen: string; uci: string; }
 interface EngineDisplayLine { evalText: string; san: string; positive: boolean; }
@@ -144,11 +145,15 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
             </mat-card-content>
           </mat-card>
 
-          <mat-card class="reps-card">
-            <mat-card-content>
-              <app-position-repertoires [fen]="currentFen" />
-            </mat-card-content>
-          </mat-card>
+          <!-- „Stellung in meinen Repertoires" gibt es nur eingeloggt; ohne dieses @if stand hier
+               für anonyme Besucher eine leere graue Karte zwischen Zug- und FEN-Karte. -->
+          @if (auth.isLoggedIn) {
+            <mat-card class="reps-card">
+              <mat-card-content>
+                <app-position-repertoires [fen]="currentFen" />
+              </mat-card-content>
+            </mat-card>
+          }
 
           <mat-card class="io-card">
             <mat-card-content>
@@ -248,7 +253,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private errorSub?: Subscription;
 
-  constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService, private router: Router) {
+  constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
+              private router: Router, public auth: AuthService) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;

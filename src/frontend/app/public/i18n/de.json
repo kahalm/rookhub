@@ -84,7 +84,8 @@
     "remove": "Entfernen",
     "whiteToMove": "Weiß am Zug",
     "blackToMove": "Schwarz am Zug",
-    "copy": "Kopieren"
+    "copy": "Kopieren",
+    "error": "Da ist etwas schiefgelaufen."
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -2025,6 +2026,8 @@
       "stopFailed": "Timer-Eintrag konnte nicht gespeichert werden."
     },
     "theme": {
+      "label": "Thema",
+      "unset": "Kein Thema",
       "opening": "Eröffnung",
       "middlegame": "Mittelspiel",
       "endgame": "Endspiel",

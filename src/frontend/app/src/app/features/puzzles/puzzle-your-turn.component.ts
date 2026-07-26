@@ -57,7 +57,9 @@ const ACTION_KEYS = {
       @if (state === 'THINKING') {
         <mat-spinner diameter="24"></mat-spinner>
       }
-      <p class="ytp-status">{{ statusKey | translate }}</p>
+      @if (showStatus) {
+        <p class="ytp-status">{{ statusKey | translate }}</p>
+      }
       @if (timerSeconds !== null) {
         <p class="ytp-timer">{{ formatTime(timerSeconds) }}</p>
       }
@@ -111,6 +113,10 @@ const ACTION_KEYS = {
 export class PuzzleYourTurnComponent {
   @Input() state: ActivePuzzleState = 'AWAITING_USER_MOVE';
   @Input() mode: PuzzleMode = 'standard';
+  /** Statuszeile („Du bist am Zug!") anzeigen. Die Solver schalten sie im Wartezustand ab, weil
+   *  direkt unter dem Brett bereits „Weiß/Schwarz am Zug" steht — dieselbe Aussage zweimal auf
+   *  einem Bildschirm. Timer + Aktionen bleiben in der Karte. */
+  @Input() showStatus = true;
   @Input() showEval = false;
   @Input() evalLoading = false;
   @Input() initialEval = '';

@@ -319,6 +319,7 @@
               }
               <app-puzzle-status-card
                 mode="endless"
+                [showTurnStatus]="!!vizMoveHtml"
                 [state]="state"
                 [showEval]="showEval"
                 [evalLoading]="evalLoading"

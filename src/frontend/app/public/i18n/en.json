@@ -84,7 +84,8 @@
     "remove": "Remove",
     "whiteToMove": "White to move",
     "blackToMove": "Black to move",
-    "copy": "Copy"
+    "copy": "Copy",
+    "error": "Something went wrong."
   },
   "notifications": {
     "title": "Notifications",
@@ -2025,6 +2026,8 @@
       "stopFailed": "Could not save the timer entry."
     },
     "theme": {
+      "label": "Topic",
+      "unset": "No topic",
       "opening": "Opening",
       "middlegame": "Middlegame",
       "endgame": "Endgame",
