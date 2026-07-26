@@ -154,20 +154,25 @@ Dichte konzentriert sich auf **Solver, Endless-Start und Trainingsziele** und fo
 abgeschnittenes Label auf den Trainingszielen, Endless-Kurvenmarken, doppelte Zug-Anzeige, Null-Statistik,
 leere Karte auf /analysis).
 
-**Welle 2 — mittel, größter sichtbarer Effekt:**
+**Welle 2 — mittel, größter sichtbarer Effekt** (Reiter/Endless/Kapitelzeile erledigt in v0.318.0;
+offen: Solver-Aktionsleiste + Hilfetexte):
 - [ ] **Eine Aktionsleiste statt vier Karten im Solver** (alle 3 Modi): unter dem Brett EINE Zeile
   `[Tipp] [Bewertung] [Aufgeben] [⋮]`; ins ⋮-Menü wandern Teilen, Favorit, An Freund schicken, Tags,
   Endlos-Modus, Einstellungen. Muster existiert bereits in `course-card` — nur konsequent auf den Solver
   anwenden. Gemessene Ausgangslage (Handy, eingeloggt, leerer Account): 4 gestapelte Karten, 1108 px
   Scrollhöhe; Ziel ~700 px, 1 Karte. Betrifft `puzzle-status-card`/`puzzle-rating-card` + die 3 Templates.
-- [ ] **Endless-Start stufen**: sichtbar bleiben Start + Start-Rating + Preset-Chips; Stockfish-Tiefe,
-  beide Thresholds und die Kurventabelle in ein zugeklapptes „Erweitert" (24 interaktive Elemente vor dem
-  ersten Klick). Stockfish-Tiefe gehört eher in die Puzzle-Einstellungen als auf den Startbildschirm.
-- [ ] **Trainingsziele in Tabs** `Ziele | Eintragen | Vorlagen | Chessable` statt eines 1569-px-Stapels aus
-  3 Formularen + 4 Leerzuständen (Zahlen von einem LEEREN Account; mit Daten wächst es).
-- [ ] **Kurs-Kapitelzeile entdichten**: statt 3 Icon-Buttons je Kapitel (browse/sequenziell/zufällig) ein
-  Play-Button mit dem zuletzt genutzten Modus, „Durchsehen" ins Overflow-Menü. Ein Buch mit 15 Kapiteln
-  zeigt sonst 45 Icons in einer Karte.
+- [x] **Endless-Start stufen** → **erledigt v0.318.0**: Engine-Tiefe, beide Schwellen und die
+  Kurvenvorschau liegen unter einem zugeklappten „Feineinstellungen"; sichtbar bleiben Start, Start-Rating,
+  Themen-Vorlagen und Themen. Zugeklappt 844 px statt 1233 px. (Offen geblieben: die Stockfish-Tiefe ganz in
+  die Puzzle-Einstellungen zu verschieben — sie gilt geräteweit, nicht pro Lauf.)
+- [x] **Trainingsziele in Tabs** → **erledigt v0.318.0**: vier Reiter `Ziele | Verlauf | Erfassen |
+  Chessable` (Vorlagen zu „Erfassen" gezogen, Tracker/Tageshistory nach „Verlauf" — sonst wäre Reiter 1
+  wieder 1000 px lang geworden). Aktiver Reiter in der URL (`?tab=history`), Inhalt lazy je Reiter.
+  Gemessen (Handy, leeres Konto): 1569 → 844 px, 5 → 2 Karten, 15 → 8 interaktive Elemente.
+- [x] **Kurs-Kapitelzeile entdichten** → **erledigt v0.318.0**: ein Play-Knopf je Kapitel (startet im
+  zuletzt genutzten Kursmodus aus `CourseProgress.LastMode`), Alternativen (sequenziell/zufällig/durchsehen)
+  im ⋮-Menü der Zeile. **Noch nicht mit echten Daten gegengesehen** — das Testkonto auf Dev hat keine
+  freigegebenen Kurse; nur Unit-Tests + Prod-Build.
 - [ ] **Hilfetexte → Tooltip/Hilfe-Icon**: pro Karte höchstens ein Satz Fließtext (aktuell bis zu 5 kursive
   Absätze je Seite, z. B. Trainingsziele).
 
