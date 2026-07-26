@@ -143,6 +143,45 @@ Read-only-Review je Repo (rookhub-API/-Frontend, crawler, piratechess, schach-bo
 ### INFO / accepted-by-design (bewusst)
 - gluetun-Calls (crawler+piratechess) senden kein X-API-Key (Port unexponiert; Aktivierung liegt im Deploy-Stack — piratechess-Code sendet den Key bereits). `/api/health/ip` (crawler) jetzt key-gated ✓. Body→ES-Logging entfernt ✓. curl-Arg-Injection (piratechess) via ArgumentList+`IsValidBid` geschlossen ✓. RBAC: `UsersManage`/`RolesManage`/`ChessableAdmin` sind faktisch admin-nah (Machtkonzentration). `EncryptionService` behält Legacy-AES-CBC-Decrypt (neue Writes AES-GCM). RepCheck-host_permissions `https://*/*` breit, aber Proxy origin-locked + `sender.id`-geprüft + kein `externally_connectable` → nicht von Seiten aus nutzbar. Frontend-CSP solide (`script-src 'self' 'wasm-unsafe-eval'`); optional `frame-ancestors 'none'`/`base-uri 'self'`/`form-action 'self'` ergänzen. `SanitizeLikeInput` escaped kein `\` (nur Korrektheit, kein SQLi). `RememberedPositions.SourceUrl` ohne Scheme-Check gespeichert (kein SSRF; nur relevant, falls je als href gerendert).
 
+## UI-Review 2026-07-26 (Überladung) — Welle 2 + 3 offen
+Praktisches Oberflächen-Review (Seiten headless gerendert **und vermessen**, Prod anonym + Dev eingeloggt,
+1440×900 und 390×844; Screenshots waren einmalig im Session-Scratchpad). Befund: „überladen" trifft nicht
+überall zu — `/analysis` ist gut sortiert, die Kurs-Karte nutzt bereits Primär-Aktion + Overflow-Menü. Die
+Dichte konzentriert sich auf **Solver, Endless-Start und Trainingsziele** und folgt drei Mustern:
+(1) dieselbe Aussage mehrfach, (2) alles gleichzeitig statt gestuft, (3) kein Seiten-Container.
+
+**Welle 1 = erledigt in v0.317.3** (Handy-Overflow ausgeloggt, 3 rohe i18n-Keys, Karten-Abstände +
+abgeschnittenes Label auf den Trainingszielen, Endless-Kurvenmarken, doppelte Zug-Anzeige, Null-Statistik,
+leere Karte auf /analysis).
+
+**Welle 2 — mittel, größter sichtbarer Effekt:**
+- [ ] **Eine Aktionsleiste statt vier Karten im Solver** (alle 3 Modi): unter dem Brett EINE Zeile
+  `[Tipp] [Bewertung] [Aufgeben] [⋮]`; ins ⋮-Menü wandern Teilen, Favorit, An Freund schicken, Tags,
+  Endlos-Modus, Einstellungen. Muster existiert bereits in `course-card` — nur konsequent auf den Solver
+  anwenden. Gemessene Ausgangslage (Handy, eingeloggt, leerer Account): 4 gestapelte Karten, 1108 px
+  Scrollhöhe; Ziel ~700 px, 1 Karte. Betrifft `puzzle-status-card`/`puzzle-rating-card` + die 3 Templates.
+- [ ] **Endless-Start stufen**: sichtbar bleiben Start + Start-Rating + Preset-Chips; Stockfish-Tiefe,
+  beide Thresholds und die Kurventabelle in ein zugeklapptes „Erweitert" (24 interaktive Elemente vor dem
+  ersten Klick). Stockfish-Tiefe gehört eher in die Puzzle-Einstellungen als auf den Startbildschirm.
+- [ ] **Trainingsziele in Tabs** `Ziele | Eintragen | Vorlagen | Chessable` statt eines 1569-px-Stapels aus
+  3 Formularen + 4 Leerzuständen (Zahlen von einem LEEREN Account; mit Daten wächst es).
+- [ ] **Kurs-Kapitelzeile entdichten**: statt 3 Icon-Buttons je Kapitel (browse/sequenziell/zufällig) ein
+  Play-Button mit dem zuletzt genutzten Modus, „Durchsehen" ins Overflow-Menü. Ein Buch mit 15 Kapiteln
+  zeigt sonst 45 Icons in einer Karte.
+- [ ] **Hilfetexte → Tooltip/Hilfe-Icon**: pro Karte höchstens ein Satz Fließtext (aktuell bis zu 5 kursive
+  Absätze je Seite, z. B. Trainingsziele).
+
+**Welle 3 — strukturell:**
+- [ ] **Globaler Seiten-Container**: `max-width: 1200–1280px`, zentriert, einheitliches Padding; Brett
+  skaliert (`min(72vh, 100%)`) statt fixer 720 px. Heute klebt das Brett bei x=30 am linken Rand und unter
+  der halbleeren Info-Spalte stehen ~450 px tote Fläche (1440×900 gemessen).
+- [ ] **Dashboard-Default kuratieren**: 16 mögliche Kacheln (`dashboard.component.ts`), standardmäßig 4–6
+  (Puzzles, Kurse, Trainingsziele, Wochenpost), Rest opt-in über „Anpassen" (die Personalisierung gibt es
+  schon — nur der Default ist maximal).
+- [ ] **Designregel festschreiben** (in `CLAUDE.md`, analog „Puzzle-Modi konsistent halten"): pro Screen
+  genau EINE primäre Aktion, höchstens drei sekundäre sichtbar, alles Weitere ins ⋮-Menü. Ohne Regel
+  wächst die Dichte mit jedem Feature zurück.
+
 ## Code-Review 2026-07-26 (rookhub Frontend, `src/frontend`)
 Review des Angular-Frontends (207 TS-Dateien / ~35.400 Zeilen ohne Specs): Lifecycle/RxJS-Teardown, Robustheit gegen Server-/Storage-Daten, Security/XSS, Performance + Bundle, Offline-/localStorage-Schicht, i18n/A11y, Struktur. **Stand: nur dokumentiert, nichts davon gefixt** (Basis v0.317.2, 1285 FE-Tests grün, Prod-Build sauber).
 
