@@ -130,7 +130,9 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
                     @let done = c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount;
                     <div class="pinned-course">
                       <div class="pc-header">
-                        <span class="pc-name" [title]="c.displayName">{{ c.displayName }}</span>
+                        <!-- Name klickbar → Kurs-Detailseite (Kapitel-Verwaltung/Metadaten). -->
+                        <a class="pc-name" [routerLink]="['/courses', c.bookId]"
+                           [title]="c.displayName">{{ c.displayName }}</a>
                         <span class="pc-prog" [class.pc-prog-done]="done">
                           @if (done) { <mat-icon class="pc-done-icon">emoji_events</mat-icon> }
                           {{ c.solvedCount }}/{{ c.puzzleCount }}
@@ -238,7 +240,8 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .pinned-course { display: flex; flex-direction: column; gap: 0.5rem; }
     .pinned-course + .pinned-course { border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); padding-top: 0.75rem; }
     .pc-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-    .pc-name { font-weight: 600; font-size: 0.92rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pc-name { font-weight: 600; font-size: 0.92rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; text-decoration: none; }
+    .pc-name:hover, .pc-name:focus-visible { text-decoration: underline; }
     .pc-prog { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.25rem; }
     .pc-prog-done { color: color-mix(in srgb, #f9a825 85%, currentColor); font-weight: 600; }
     .pc-done-icon { font-size: 16px; width: 16px; height: 16px; }

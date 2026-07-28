@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.322.1';
+export const APP_VERSION = '0.323.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.323.0", date: "2026-07-28", changes: [
+    { en: "Dashboard: on the pinned-courses tile the course name is now a link to the course detail page (chapters, metadata, content management) — previously only the two play buttons were clickable. +1 test (1389 green). NOT deployed (frontend image only).", de: "Dashboard: auf der Angepinnte-Kurse-Kachel ist der Kursname jetzt ein Link auf die Kurs-Detailseite (Kapitel, Metadaten, Inhaltspflege) — bisher waren nur die beiden Spiel-Knöpfe klickbar. +1 Test (1389 grün). NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.322.1", date: "2026-07-28", changes: [
     { en: "Fullscreen board fixed: the board filled the screen WIDTH and overflowed the bottom on landscape screens. Cause: the browser forces the fullscreen element to 100% × 100% with rules that beat even the page's own !important — our size on that element was silently ignored. Now an outer shell goes fullscreen and the board is centred inside it as a square of the SMALLER screen side (min of width/height), with black bars around it. Verified with a scripted real-Chrome measurement: on an 800×600 screen the board is now 600×600 centred instead of 800×800 running off the bottom. Frontend image only.", de: "Vollbild-Brett repariert: das Brett füllte die Bildschirm-BREITE und lief auf Querformat-Schirmen unten aus dem Bild. Ursache: der Browser erzwingt für das Vollbild-Element 100 % × 100 % mit Regeln, die sogar eigenes !important schlagen — unsere Größenangabe auf diesem Element wurde stillschweigend ignoriert. Jetzt geht eine äußere Hülle ins Vollbild und das Brett wird darin als Quadrat der KLEINEREN Bildschirmseite (Minimum aus Breite/Höhe) zentriert, mit schwarzen Balken drumherum. Per Skript in echtem Chrome nachgemessen: auf einem 800×600-Schirm ist das Brett jetzt 600×600 zentriert statt 800×800 unten hinauslaufend. Nur Frontend-Image." },
   ] },

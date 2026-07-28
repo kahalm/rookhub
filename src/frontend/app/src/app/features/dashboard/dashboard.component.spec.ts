@@ -251,3 +251,39 @@ describe('DashboardComponent tiles', () => {
     expect(ids).toContain('stats'); // nicht im gespeicherten Layout → angehängt
   });
 });
+
+describe('DashboardComponent pinned courses', () => {
+  beforeEach(() => { localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
+  it('macht den Kursnamen zum Link auf die Detailseite', () => {
+    // Voll gerendert (kein Template-Override): geprüft wird das echte DOM der Kachel.
+    const pinned = {
+      bookId: 58, displayName: 'TestNoel', puzzleCount: 6, solvedCount: 1,
+      progressPercent: 17, isPinned: true,
+    };
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => of([]), getCourses: () => of([pinned]), getSubscriptions: () => of([]),
+          getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
+        } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const link: HTMLAnchorElement | null = fixture.nativeElement.querySelector('a.pc-name');
+    expect(link).not.toBeNull();
+    expect(link!.textContent!.trim()).toBe('TestNoel');
+    expect(link!.getAttribute('href')).toBe('/courses/58');
+  });
+});
