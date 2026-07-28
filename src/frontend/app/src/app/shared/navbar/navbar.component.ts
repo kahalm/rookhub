@@ -21,6 +21,9 @@ import { notificationText, notificationIcon } from '../../core/notification-text
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
+import {
+  fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
+} from '../fullscreen/fullscreen.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -88,6 +91,12 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
             <mat-icon>{{ themeIcon }}</mat-icon>
             <span>{{ themeTooltip }}</span>
           </button>
+          @if (fsSupported) {
+            <button mat-menu-item (click)="toggleAppFullscreen()">
+              <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              <span>{{ fsLabel }}</span>
+            </button>
+          }
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
@@ -139,6 +148,12 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
         <button mat-icon-button class="nav-extra" (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
           <mat-icon>{{ themeIcon }}</mat-icon>
         </button>
+        @if (fsSupported) {
+          <button mat-icon-button class="nav-extra" (click)="toggleAppFullscreen()"
+                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
+            <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+          </button>
+        }
         <button mat-icon-button class="nav-extra" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
@@ -176,6 +191,12 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
         <button mat-icon-button class="nav-anon" (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
           <mat-icon>{{ themeIcon }}</mat-icon>
         </button>
+        @if (fsSupported) {
+          <button mat-icon-button class="nav-anon" (click)="toggleAppFullscreen()"
+                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
+            <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+          </button>
+        }
         <button mat-icon-button class="nav-anon" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
@@ -198,6 +219,12 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
             <mat-icon>{{ themeIcon }}</mat-icon>
             <span>{{ themeTooltip }}</span>
           </button>
+          @if (fsSupported) {
+            <button mat-menu-item (click)="toggleAppFullscreen()">
+              <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              <span>{{ fsLabel }}</span>
+            </button>
+          }
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
@@ -305,12 +332,34 @@ export class NavbarComponent implements OnInit {
   /** Einladungslink zum öffentlichen RookHub-Discord (Community). */
   readonly discordUrl = DISCORD_INVITE_URL;
 
+  // ===== App-Vollbild ======================================================
+  // Schaltet die GANZE GUI (documentElement) ins echte Vollbild — anders als der Brett-
+  // Vollbild-Knopf, der nur das Brett zeigt. Da das gesamte Dokument im Vollbild-Teilbaum
+  // liegt, funktionieren hier auch CDK-Overlays (Tooltips/Menüs/Dialoge) normal weiter.
+  readonly fsSupported = fullscreenSupported();
+  fsActive = false;
+
+  get fsLabel(): string {
+    return this.translate.instant(this.fsActive ? 'nav.fullscreenExit' : 'nav.fullscreen');
+  }
+
+  toggleAppFullscreen(): void {
+    void toggleFullscreen(document.documentElement);
+  }
+
   constructor(public auth: AuthService, private courseService: CourseService, private catalogService: CatalogService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router, iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
     // Discord-Markenlogo als SVG-Icon registrieren (nicht im Material-Standardsatz enthalten).
     iconRegistry.addSvgIconLiteral('discord', sanitizer.bypassSecurityTrustHtml(DISCORD_SVG));
   }
 
   ngOnInit(): void {
+    // App-Vollbild-Zustand nachführen (auch bei Esc). Der Knopf zählt nur dann als „aktiv",
+    // wenn wirklich das GANZE Dokument im Vollbild ist — nicht ein einzelnes Brett.
+    if (this.fsSupported) {
+      const off = onFullscreenChange(() => this.fsActive = isFullscreen(document.documentElement));
+      this.destroyRef.onDestroy(off);
+    }
+
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(set => this.visible = set);
 

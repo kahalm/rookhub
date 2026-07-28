@@ -190,6 +190,8 @@
     "login": "Prijava",
     "register": "Registracija",
     "language": "Jezik",
+    "fullscreen": "Cijeli zaslon",
+    "fullscreenExit": "Izađi iz cijelog zaslona (Esc)",
     "menu": "Izbornik",
     "info": "Informacije",
     "account": "Račun",

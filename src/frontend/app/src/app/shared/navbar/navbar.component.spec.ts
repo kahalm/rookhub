@@ -84,3 +84,53 @@ describe('NavbarComponent', () => {
     expect(nav.notifications.map(x => x.id)).toEqual([2]); // geklickte verschwindet, Rest bleibt
   });
 });
+
+describe('NavbarComponent App-Vollbild', () => {
+  function buildNav(): NavbarComponent {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: { currentUser$: of(null), isAdmin: false } },
+        { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
+        { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
+        { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
+        { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
+        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
+        { provide: LocaleService, useValue: {} },
+        { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+        { provide: Router, useValue: { navigateByUrl: () => {} } },
+      ],
+    });
+    return TestBed.runInInjectionContext(() => new NavbarComponent(
+      TestBed.inject(AuthService), TestBed.inject(CourseService), TestBed.inject(CatalogService),
+      TestBed.inject(MenuService), TestBed.inject(InAppNotificationService), TestBed.inject(MessageService),
+      TestBed.inject(LocaleService), TestBed.inject(ThemeService), TestBed.inject(TranslateService),
+      TestBed.inject(Router), TestBed.inject(MatIconRegistry), TestBed.inject(DomSanitizer),
+    ));
+  }
+
+  it('schaltet das GANZE Dokument ins Vollbild (nicht nur ein Brett)', () => {
+    const nav = buildNav();
+    const request = spyOn(document.documentElement, 'requestFullscreen').and.returnValue(Promise.resolve());
+    nav.toggleAppFullscreen();
+    expect(request).toHaveBeenCalled();
+  });
+
+  it('folgt dem Vollbild-Zustand des Dokuments — ein Brett-Vollbild zählt nicht als aktiv', () => {
+    let current: Element | null = null;
+    spyOnProperty(document, 'fullscreenElement', 'get').and.callFake(() => current);
+    const nav = buildNav();
+    nav.ngOnInit();
+    expect(nav.fsActive).toBeFalse();
+    expect(nav.fsLabel).toBe('nav.fullscreen');
+
+    current = document.createElement('div');          // ein Brett im Vollbild
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(nav.fsActive).toBeFalse();
+
+    current = document.documentElement;               // die ganze GUI
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(nav.fsActive).toBeTrue();
+    expect(nav.fsLabel).toBe('nav.fullscreenExit');
+  });
+});

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.324.0';
+export const APP_VERSION = '0.325.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.325.0", date: "2026-07-28", changes: [
+    { en: "Fullscreen for the WHOLE app: a new toggle in the navbar (next to theme and language, also in the compact menu on phones and in the signed-out toolbar) puts the entire interface into real fullscreen — over the taskbar and browser bar. Unlike the board fullscreen button, everything stays visible and usable: navigation, side panels, tooltips, menus, dialogs. The button flips to ‚leave fullscreen', Esc works as usual. Browsers without element fullscreen (Safari on iPhone/iPad) simply don't show it. +2 tests (1397 green). NOT deployed (frontend image only).", de: "Vollbild für die GANZE App: ein neuer Schalter in der Navbar (neben Design und Sprache, auch im Kompakt-Menü auf dem Handy und in der ausgeloggten Leiste) schaltet die komplette Oberfläche ins echte Vollbild — über Taskleiste und Browserleiste hinweg. Anders als beim Brett-Vollbild bleibt dabei alles sichtbar und bedienbar: Navigation, Seitenpanels, Tooltips, Menüs, Dialoge. Der Knopf wird zum „Vollbild verlassen“, Esc geht wie gewohnt. Browser ohne Element-Vollbild (Safari auf iPhone/iPad) zeigen ihn einfach nicht. +2 Tests (1397 grün). NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.324.0", date: "2026-07-28", changes: [
     { en: "Calculation mode: a chapter timer. Next to the board there is now a start/pause button with a running clock that accumulates your calculation time PER CHAPTER — moving to the next position of the same chapter keeps counting into the same pot, switching chapters saves the old pot and loads the new one, and coming back restores it. The timer also floats next to the board in fullscreen (top-left corner, with its own pause button — the usual tooltips and menus don't exist inside fullscreen, so it has to live there). The times are stored per device in the browser; they are a training aid, not a score. +6 tests (1395 green). NOT deployed (frontend image only).", de: "Kalkulations-Modus: ein Kapitel-Timer. Neben dem Brett gibt es jetzt einen Start-/Pause-Knopf mit laufender Uhr, die deine Rechenzeit JE KAPITEL kumuliert — zur nächsten Stellung desselben Kapitels zählt derselbe Topf weiter, beim Kapitelwechsel wird der alte Topf gesichert und der neue geladen, und beim Zurückkommen ist er wieder da. Im Vollbild schwebt der Timer ebenfalls neben dem Brett (linke obere Ecke, mit eigenem Pause-Knopf — die üblichen Tooltips und Menüs gibt es im Vollbild nicht, also muss er dort hinein). Gespeichert werden die Zeiten je Gerät im Browser; sie sind ein Trainingswerkzeug, keine Wertung. +6 Tests (1395 grün). NICHT deployed (nur Frontend-Image)." },
   ] },

@@ -190,6 +190,8 @@
     "login": "Anmelden",
     "register": "Registrieren",
     "language": "Sprache",
+    "fullscreen": "Vollbild",
+    "fullscreenExit": "Vollbild verlassen (Esc)",
     "menu": "Menü",
     "info": "Info",
     "account": "Konto",
