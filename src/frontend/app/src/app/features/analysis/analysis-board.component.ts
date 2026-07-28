@@ -21,29 +21,40 @@ import {
   standalone: true,
   imports: [PromotionPickerComponent, BoardFullscreenButtonComponent],
   template: `
-    <div #wrapEl class="ab-wrap board-theme-brown piece-set-cburnett">
+    <div #fsHost class="ab-fs-host">
+     <div class="ab-wrap board-theme-brown piece-set-cburnett">
       <div #board class="ab-board"></div>
-      <app-board-fullscreen-button [target]="wrapEl" />
+      <app-board-fullscreen-button [target]="fsHost" />
       @if (promo) {
         <app-promotion-picker
           [color]="promo.color" [dest]="promo.dest" [orientation]="orientation"
           (choose)="confirmPromotion($event)" (dismiss)="cancelPromotion()" />
       }
+     </div>
     </div>
   `,
   styles: [`
+    .ab-fs-host { width: 100%; }
     .ab-wrap { width: 100%; position: relative; }
     .ab-board { width: 100%; aspect-ratio: 1 / 1; }
-    /* Vollbild: der Wrapper wird das zentrierte Quadrat, damit die absolut positionierte
-       Umwandlungs-Auswahl weiter gegen die Brettfläche rechnet. UA-Regeln sind !important. */
-    .ab-wrap:fullscreen {
-      width: min(100vw, 100vh) !important;
-      height: min(100vw, 100vh) !important;
-      max-width: none !important;
-      inset: 0 !important;
-      margin: auto !important;
+    /* Vollbild: die Größe des Vollbild-Elements erzwingt der Browser (UA-!important schlägt
+       Author-!important) — zentriert wird darum das Brett DARIN, Quadrat aus der kleineren
+       Bildschirmseite mit schwarzen Balken. Der Wrapper bleibt exakt die Brettfläche, damit die
+       absolut positionierte Umwandlungs-Auswahl weiter gegen das Brett rechnet. */
+    .ab-fs-host:fullscreen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
     }
-    .ab-wrap:fullscreen::backdrop { background: #000; }
+    .ab-fs-host:fullscreen .ab-wrap {
+      flex: 0 0 auto;
+      width: min(100vw, 100vh);
+      height: min(100vw, 100vh);
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .ab-fs-host:fullscreen::backdrop { background: #000; }
   `]
 })
 export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {

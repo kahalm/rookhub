@@ -1,4 +1,11 @@
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent } from './chess-board.component';
+import {
+  BoardFullscreenButtonComponent,
+} from '../fullscreen/board-fullscreen-button.component';
 
 /**
  * Testet die Aufräum-Garantie der Breite-0-Retry-Schleife (requestAnimationFrame):
@@ -64,5 +71,23 @@ describe('ChessBoardComponent right-click drawing', () => {
 
     c.ngOnDestroy();
     document.body.removeChild(host);
+  });
+});
+
+describe('ChessBoardComponent Vollbild', () => {
+  it('schickt die äußere Hülle ins Vollbild und hängt den Knopf ans Brett', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ChessBoardComponent);
+    fixture.detectChanges();
+
+    const target: HTMLElement =
+      fixture.debugElement.query(By.directive(BoardFullscreenButtonComponent)).componentInstance.target;
+    // Die Größe des Vollbild-Elements erzwingt der Browser — daher Hülle ins Vollbild, Brett darin
+    // als zentriertes Quadrat der kleineren Bildschirmseite.
+    expect(target.classList).toContain('cb-fs-host');
+    expect(fixture.nativeElement.querySelector('.cb-wrap .board-fs-btn')).not.toBeNull();
   });
 });

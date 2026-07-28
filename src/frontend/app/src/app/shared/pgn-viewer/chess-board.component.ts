@@ -12,24 +12,35 @@ import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-b
   standalone: true,
   imports: [BoardFullscreenButtonComponent],
   template: `
-    <div #wrapEl class="cb-wrap">
-      <div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>
-      <app-board-fullscreen-button [target]="wrapEl" />
+    <div #fsHost class="cb-fs-host">
+      <div class="cb-wrap">
+        <div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>
+        <app-board-fullscreen-button [target]="fsHost" />
+      </div>
     </div>
   `,
   styles: [`
     :host { display: block; width: 100%; }
+    .cb-fs-host { width: 100%; }
     .cb-wrap { position: relative; width: 100%; }
-    /* Vollbild: der Wrapper wird das zentrierte Quadrat; die Brett-Pixelgröße zieht der
-       ResizeObserver aus der neuen Wrapper-Breite nach. UA-Regeln sind !important. */
-    .cb-wrap:fullscreen {
-      width: min(100vw, 100vh) !important;
-      height: min(100vw, 100vh) !important;
-      max-width: none !important;
-      inset: 0 !important;
-      margin: auto !important;
+    /* Vollbild: die Größe des Vollbild-Elements erzwingt der Browser (UA-!important schlägt
+       Author-!important) — zentriert wird das Brett DARIN: Quadrat aus der kleineren
+       Bildschirmseite, drumherum schwarze Balken. Die Brett-Pixelgröße zieht der
+       ResizeObserver aus der Wrapper-Breite nach. */
+    .cb-fs-host:fullscreen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
     }
-    .cb-wrap:fullscreen::backdrop { background: #000; }
+    .cb-fs-host:fullscreen .cb-wrap {
+      flex: 0 0 auto;
+      width: min(100vw, 100vh);
+      height: min(100vw, 100vh);
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .cb-fs-host:fullscreen::backdrop { background: #000; }
     /* Verschließ-Sicher: der Boden-Div bleibt immer quadratisch, egal welche width
        chess-board.component per JS setzt oder ob die JS-Größenberechnung verpasst wird.
        Ohne aspect-ratio zieht Chessground die Squares horizontal, das Brett wirkt

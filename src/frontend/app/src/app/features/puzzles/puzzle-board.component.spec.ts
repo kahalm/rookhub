@@ -1,4 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import {
+  BoardFullscreenButtonComponent,
+} from '../../shared/fullscreen/board-fullscreen-button.component';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
@@ -264,14 +268,27 @@ describe('PuzzleBoardComponent Vollbild-Knopf', () => {
     }).compileComponents();
   });
 
-  it('rendert ihn innerhalb des Brett-Wrappers und übergibt diesen als Ziel', () => {
+  it('rendert ihn am Brett selbst — damit er im Vollbild sichtbar bleibt', () => {
     const fixture = TestBed.createComponent(PuzzleBoardComponent);
     fixture.detectChanges();
 
     const wrapper: HTMLElement = fixture.nativeElement.querySelector('.board-wrapper');
-    const button = wrapper.querySelector('app-board-fullscreen-button');
-    expect(button).not.toBeNull();
+    expect(wrapper.querySelector('app-board-fullscreen-button')).not.toBeNull();
     expect(wrapper.querySelector('.board-fs-btn')).not.toBeNull();
+  });
+
+  it('schickt die ÄUSSERE Hülle ins Vollbild, nicht die Brettfläche', () => {
+    // Die Größe des Vollbild-Elements erzwingt der Browser (UA-!important) — deshalb geht die
+    // Hülle ins Vollbild und das Brett wird darin als Quadrat der kleineren Bildschirmseite
+    // zentriert. Wäre der Wrapper selbst das Ziel, füllte das Brett die Breite und liefe unten
+    // aus dem Bild (Regression 0.322.0).
+    const fixture = TestBed.createComponent(PuzzleBoardComponent);
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(By.directive(BoardFullscreenButtonComponent));
+    const target: HTMLElement = button.componentInstance.target;
+    expect(target.classList).toContain('board-fs-host');
+    expect(target.querySelector('.board-wrapper')).not.toBeNull();
   });
 
   it('lässt sich abschalten (allowFullscreen = false)', () => {

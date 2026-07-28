@@ -20,10 +20,11 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   standalone: true,
   imports: [CommonModule, BoardFullscreenButtonComponent],
   template: `
-    <div #wrapEl class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
+    <div #fsHost class="board-fs-host">
+     <div class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
       <div #boardEl class="cg-wrap"></div>
       @if (allowFullscreen) {
-        <app-board-fullscreen-button [target]="wrapEl" />
+        <app-board-fullscreen-button [target]="fsHost" />
       }
       @if (vizSelectedSquare) {
         <!-- DOM-Overlay als verlässliche Viz-Auswahlmarkierung (unabhängig von chessground-SVG). -->
@@ -42,24 +43,33 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
           }
         </div>
       }
+     </div>
     </div>
   `,
   styles: [`
     :host { display: block; width: 100%; }
+    .board-fs-host { width: 100%; }
     .board-wrapper { position: relative; }
-    /* Vollbild: der WRAPPER selbst wird das zentrierte Quadrat (nicht bloß das Brett darin) —
-       sonst würden die absolut positionierten Auflagen (Umwandlungs-Auswahl, Viz-Markierung)
-       gegen den ganzen Bildschirm statt gegen die Brettfläche rechnen. Die UA-Regeln für
-       :fullscreen sind !important, also hier ebenfalls. Die Brett-Pixelgröße zieht der
-       ResizeObserver aus der neuen Wrapper-Breite nach. */
-    .board-wrapper:fullscreen {
-      width: min(100vw, 100vh) !important;
-      height: min(100vw, 100vh) !important;
-      max-width: none !important;
-      inset: 0 !important;
-      margin: auto !important;
+    /* Vollbild: das Vollbild-ELEMENT (.board-fs-host) behält die vom Browser erzwungenen
+       100% × 100% — dessen UA-Regeln sind !important und schlagen sogar Author-!important,
+       eigene Größenangaben darauf verpuffen also. Zentriert wird darum das Brett DARIN:
+       Quadrat aus der KLEINEREN Bildschirmseite, drumherum schwarze Balken. Der Wrapper bleibt
+       damit exakt die Brettfläche — nur so rechnen die absolut positionierten Auflagen
+       (Umwandlungs-Auswahl, Viz-Ring) weiter gegen das Brett statt gegen den Bildschirm. */
+    .board-fs-host:fullscreen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
     }
-    .board-wrapper:fullscreen::backdrop { background: #000; }
+    .board-fs-host:fullscreen .board-wrapper {
+      flex: 0 0 auto;
+      width: min(100vw, 100vh);
+      height: min(100vw, 100vh);
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .board-fs-host:fullscreen::backdrop { background: #000; }
     .cg-wrap {
       position: relative;
       display: block;
