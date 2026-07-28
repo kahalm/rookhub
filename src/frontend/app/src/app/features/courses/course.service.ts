@@ -377,6 +377,14 @@ export class CourseService {
     return this.http.get<CourseDetail>(`/api/courses/${bookId}`);
   }
 
+  /**
+   * Schaltet den Kalkulations-Modus des Kurses ein/aus (Besitzer/Admin). Der Schalter sitzt auf der
+   * Kurs-Detailseite — nicht in der Admin-Bücherverwaltung.
+   */
+  setCalculation(bookId: number, isCalculation: boolean): Observable<{ isCalculation: boolean }> {
+    return this.http.put<{ isCalculation: boolean }>(`/api/courses/${bookId}/calculation`, { isCalculation });
+  }
+
   /** Linien EINES Kapitels (`null` = „ohne Kapitel"); ohne Lösungszüge. */
   getChapterLines(bookId: number, chapter: string | null): Observable<CourseLine[]> {
     const params = new HttpParams().set('chapter', chapter ?? '');

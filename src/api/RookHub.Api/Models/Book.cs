@@ -72,6 +72,10 @@ public class Book
     /// eigenen Analysebaum an (<see cref="CalculationTree"/>). Eine „Lösung" gibt es in diesem
     /// Modus nicht — gespeicherte <c>BookPuzzle.Moves</c> werden weder ausgeliefert noch angezeigt.
     /// Default false (klassisches Verhalten).
+    /// <para>Geschaltet wird das Flag auf der KURS-Detailseite von dem, der den Kurs verwaltet
+    /// (Besitzer oder Admin) — <c>PUT /api/courses/{bookId}/calculation</c>. Es ist bewusst KEIN
+    /// Admin-Schalter der Bücherverwaltung: wer die Stellungen einfügt, entscheidet auch, wie sie
+    /// serviert werden.</para>
     /// </summary>
     public bool IsCalculation { get; set; }
 

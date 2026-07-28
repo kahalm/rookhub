@@ -132,8 +132,8 @@ describe('AdminComponent', () => {
   it('applyBookFilter applies per-column filters (kind, tri-state, group, ranges) combined with AND', () => {
     const { c } = make();
     c.books = [
-      { id: 1, displayName: 'Endgame', fileName: 'e.pgn', tags: null, kind: 'Puzzle', difficulty: 'Easy', minElo: 1000, maxElo: 1500, puzzleCount: 50, forDaily: true, forRandom: false, forBlind: false, isCalculation: false, isPublic: true, accessGroupIds: [4] },
-      { id: 2, displayName: 'Tactics', fileName: 't.pgn', tags: null, kind: 'Study', difficulty: 'Hard', minElo: 2000, maxElo: 2400, puzzleCount: 500, forDaily: false, forRandom: true, forBlind: false, isCalculation: false, isPublic: false, accessGroupIds: [] },
+      { id: 1, displayName: 'Endgame', fileName: 'e.pgn', tags: null, kind: 'Puzzle', difficulty: 'Easy', minElo: 1000, maxElo: 1500, puzzleCount: 50, forDaily: true, forRandom: false, forBlind: false, isPublic: true, accessGroupIds: [4] },
+      { id: 2, displayName: 'Tactics', fileName: 't.pgn', tags: null, kind: 'Study', difficulty: 'Hard', minElo: 2000, maxElo: 2400, puzzleCount: 500, forDaily: false, forRandom: true, forBlind: false, isPublic: false, accessGroupIds: [] },
     ] as any;
 
     c.bookFilters.kind = 'Puzzle';

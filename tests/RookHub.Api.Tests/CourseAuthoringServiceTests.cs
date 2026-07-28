@@ -164,6 +164,85 @@ public class CourseAuthoringServiceTests : IDisposable
         Assert.DoesNotContain("Moves", typeof(CourseLineDto).GetProperties().Select(p => p.Name));
     }
 
+    // ===== Kalkulations-Modus schalten (Kurs-Detailseite, NICHT Admin-Bücher) =
+
+    [Fact]
+    public async Task SetCalculation_AsOwner_TogglesFlagAndSurvivesInDetail()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id);
+        await SeedLineAsync(book, "1", "Kalkulation", infoOnly: true, fen: Fen1);
+
+        Assert.True(await _svc.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false));
+        Assert.True((await _db.Books.FindAsync(book.Id))!.IsCalculation);
+        // Das Detailbild zählt jetzt ALLE Stellungen (statt nur Quiz-Linien).
+        var detail = await _svc.GetDetailAsync(user.Id, book.Id, isAdmin: false);
+        Assert.True(detail.IsCalculation);
+        Assert.Equal(1, detail.PuzzleCount);
+
+        Assert.False(await _svc.SetCalculationAsync(user.Id, book.Id, false, isAdmin: false));
+        Assert.False((await _db.Books.FindAsync(book.Id))!.IsCalculation);
+    }
+
+    [Fact]
+    public async Task SetCalculation_SameValueTwice_IsIdempotent()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id, isCalculation: true);
+
+        Assert.True(await _svc.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false));
+        Assert.True(await _svc.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false));
+        Assert.True((await _db.Books.FindAsync(book.Id))!.IsCalculation);
+    }
+
+    [Fact]
+    public async Task SetCalculation_KeepsLinesUntouched()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id);
+        var quiz = await SeedLineAsync(book, "1", "Taktik", infoOnly: false, fen: Fen1);
+
+        await _svc.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false);
+
+        var line = await _db.BookPuzzles.FindAsync(quiz.Id);
+        Assert.False(line!.IsInfoOnly);
+        Assert.Equal("e2e3", line.Moves);
+    }
+
+    [Fact]
+    public async Task SetCalculation_NonOwnerWithReadAccess_Throws403()
+    {
+        var owner = await CreateUserAsync("owner");
+        var guest = await CreateUserAsync("guest");
+        var book = await SeedBookAsync(owner.Id);
+        book.IsPublic = true;                             // Zugriff ja, Schreibrecht nein
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _svc.SetCalculationAsync(guest.Id, book.Id, true, isAdmin: false));
+        Assert.False((await _db.Books.FindAsync(book.Id))!.IsCalculation);
+    }
+
+    [Fact]
+    public async Task SetCalculation_AsAdmin_WorksOnForeignCourse()
+    {
+        var owner = await CreateUserAsync("owner");
+        var admin = await CreateUserAsync("admin");
+        var book = await SeedBookAsync(owner.Id);
+
+        Assert.True(await _svc.SetCalculationAsync(admin.Id, book.Id, true, isAdmin: true));
+    }
+
+    [Fact]
+    public async Task SetCalculation_WithoutAccess_Throws404()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(ownerUserId: 999);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _svc.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false));
+    }
+
     // ===== Stellungen einfügen ===============================================
 
     [Fact]

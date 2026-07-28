@@ -35,18 +35,24 @@ function line(over: Partial<CourseLine> = {}): CourseLine {
   };
 }
 
-/** Komponente ohne Template, mit Stub-Abhängigkeiten. */
-function make(api: Record<string, unknown> = {}, dialogResult: unknown = false) {
+/**
+ * Komponente ohne Template, mit Stub-Abhängigkeiten. `detailOver` verstellt das Detailbild des
+ * mitzählenden Standard-Stubs — nötig, wo ein Test die Zahl der `getDetail`-Aufrufe prüft (ein
+ * eigener `getDetail`-Stub in `api` protokolliert nicht mit).
+ */
+function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
+              detailOver: Partial<CourseDetail> = {}) {
   const calls: string[] = [];
   const warnings: string[] = [];
   const courses = {
-    getDetail: () => { calls.push('getDetail'); return of(detail()); },
+    getDetail: () => { calls.push('getDetail'); return of(detail(detailOver)); },
     getChapterLines: () => { calls.push('getChapterLines'); return of([line()]); },
     addLines: () => of({ added: 1, chapter: 'K', issues: [], totalLines: 1 }),
     deleteLine: () => { calls.push('deleteLine'); return of(undefined); },
     renameChapter: () => { calls.push('renameChapter'); return of({ updated: 2 }); },
     deleteChapter: () => { calls.push('deleteChapter'); return of({ deleted: 3 }); },
     resetChapter: () => { calls.push('resetChapter'); return of({ cleared: 1 }); },
+    setCalculation: (_id: number, v: boolean) => { calls.push(`setCalculation:${v}`); return of({ isCalculation: v }); },
     reset: () => { calls.push('reset'); return of({}); },
     pinCourse: () => { calls.push('pinCourse'); return of(undefined); },
     unpinCourse: () => { calls.push('unpinCourse'); return of(undefined); },
@@ -286,5 +292,38 @@ describe('CourseDetailComponent Anpinnen', () => {
     component.togglePin();
     expect(calls).toContain('unpinCourse');
     expect(component.detail!.isPinned).toBeFalse();
+  });
+});
+
+describe('CourseDetailComponent Kalkulations-Modus', () => {
+  it('schaltet um und lädt die Detailseite neu (Start-Knopf/Zählung hängen am Flag)', () => {
+    const { component, calls } = make({}, false, { isCalculation: false });
+    component.ngOnInit();
+    const before = calls.filter(c => c === 'getDetail').length;
+
+    component.setCalculation(true);
+
+    expect(calls).toContain('setCalculation:true');
+    expect(calls.filter(c => c === 'getDetail').length).toBe(before + 1);
+  });
+
+  it('ignoriert den unveränderten Zustand', () => {
+    const { component, calls } = make();                 // Fixture ist bereits Kalkulationsbuch
+    component.ngOnInit();
+    component.setCalculation(true);
+    expect(calls).not.toContain('setCalculation:true');
+  });
+
+  it('meldet einen Fehlschlag und holt den echten Stand zurück', () => {
+    const { component, calls, warnings } = make(
+      { setCalculation: () => throwError(() => new Error('nope')) }, false, { isCalculation: false });
+    component.ngOnInit();
+    const before = calls.filter(c => c === 'getDetail').length;
+
+    component.setCalculation(true);
+
+    expect(warnings).toContain('courses.detail.calcToggleFailed');
+    expect(calls.filter(c => c === 'getDetail').length).toBe(before + 1);
+    expect(component.busy).toBeFalse();
   });
 });

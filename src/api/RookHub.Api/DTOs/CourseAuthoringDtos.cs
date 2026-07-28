@@ -111,6 +111,12 @@ public class CourseChapterRefDto
     public string? Chapter { get; set; }
 }
 
+/// <summary>Eingabe: Kalkulations-Modus des Kurses ein-/ausschalten (<c>Book.IsCalculation</c>).</summary>
+public class SetCourseCalculationDto
+{
+    public bool IsCalculation { get; set; }
+}
+
 /// <summary>Eine einzelne Linie in der Verwaltungssicht eines Kapitels.</summary>
 public class CourseLineDto
 {

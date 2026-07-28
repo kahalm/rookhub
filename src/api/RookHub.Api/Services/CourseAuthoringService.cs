@@ -209,6 +209,27 @@ public class CourseAuthoringService
     // ===== Inhalte pflegen ===================================================
 
     /// <summary>
+    /// Schaltet den Kalkulations-Modus des Kurses um (<see cref="Book.IsCalculation"/>) — der
+    /// Schalter gehört dem Besitzer des Kurses (bzw. einem Admin), nicht der Admin-Bücherverwaltung:
+    /// wer die Stellungen einfügt, entscheidet auch, wie sie serviert werden.
+    /// <para>Verändert KEINE Linien — nur, ob der Kurs den Kalkulations-Modus statt des Solvers
+    /// anbietet und wie Fortschritt gezählt wird (bearbeitete Stellungen statt gelöster Linien).
+    /// Bereits gespeicherte Analysebäume bzw. Lösungen bleiben beim Umschalten erhalten.</para>
+    /// </summary>
+    public async Task<bool> SetCalculationAsync(int userId, int bookId, bool isCalculation, bool isAdmin,
+        CancellationToken ct = default)
+    {
+        var book = await LoadManageableAsync(userId, bookId, isAdmin, ct);
+        if (book.IsCalculation != isCalculation)
+        {
+            book.IsCalculation = isCalculation;
+            book.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+        return book.IsCalculation;
+    }
+
+    /// <summary>
     /// Fügt Stellungen aus dem Memo-Text als neue Linien ins (ggf. neue) Kapitel ein. Jede Zeile wird
     /// zu einer Stellungs-Linie ohne Lösung (<see cref="BookPuzzle.IsInfoOnly"/>); Stellungen, die im
     /// Buch schon vorkommen, werden mit Grund <c>duplicate</c> übersprungen.

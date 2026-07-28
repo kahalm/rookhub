@@ -62,7 +62,7 @@ export class AdminComponent implements OnInit {
   bookSearch = '';
   booksLoading = false;
   booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isCalculation', 'isPublic', 'groups', 'actions'];
+  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isPublic', 'groups', 'actions'];
 
   /** Per-Spalten-Filter über dem Bücher-Grid (UND-verknüpft, zusätzlich zur globalen Suche). */
   bookFilters = this.emptyBookFilters();
@@ -225,7 +225,6 @@ export class AdminComponent implements OnInit {
       daily: '' as '' | 'yes' | 'no',
       random: '' as '' | 'yes' | 'no',
       blind: '' as '' | 'yes' | 'no',
-      calculation: '' as '' | 'yes' | 'no',
       public: '' as '' | 'yes' | 'no',
       group: '' as '' | 'none' | number,
     };
@@ -252,7 +251,6 @@ export class AdminComponent implements OnInit {
       if (!tri(f.daily, b.forDaily)) return false;
       if (!tri(f.random, b.forRandom)) return false;
       if (!tri(f.blind, b.forBlind)) return false;
-      if (!tri(f.calculation, b.isCalculation)) return false;
       if (!tri(f.public, b.isPublic)) return false;
       if (f.group === 'none' && (b.accessGroupIds?.length ?? 0) > 0) return false;
       if (typeof f.group === 'number' && !(b.accessGroupIds ?? []).includes(f.group)) return false;
@@ -320,7 +318,6 @@ export class AdminComponent implements OnInit {
       forDaily: book.forDaily,
       forRandom: book.forRandom,
       forBlind: book.forBlind,
-      isCalculation: book.isCalculation,
       isPublic: book.isPublic,
       publicSlug: book.publicSlug ?? '',
       kind: book.kind,

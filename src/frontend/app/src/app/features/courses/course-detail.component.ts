@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -32,8 +33,8 @@ import { downloadBlob } from '../../shared/download.util';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule,
-    MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatTooltipModule,
-    MatDialogModule, TranslatePipe,
+    MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatSlideToggleModule,
+    MatTooltipModule, MatDialogModule, TranslatePipe,
   ],
   templateUrl: './course-detail.component.html',
   styleUrls: ['./course-detail.component.scss'],
@@ -133,6 +134,20 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   chapterStartParams(chapter: CourseManageChapter): Record<string, unknown> | null {
     if (!this.detail?.isCalculation) return null;
     return chapter.firstLineId == null ? null : { pos: chapter.firstLineId };
+  }
+
+  /**
+   * Schaltet den Kalkulations-Modus des Kurses um (nur Besitzer/Admin, `canManage`). Danach die
+   * Detailseite neu laden: Start-Knopf, Fortschritts-Zählung und die Kapitel-Startlinks hängen
+   * alle am Flag. Schlägt es fehl, stellt das Nachladen den Schalter auf den echten Stand zurück.
+   */
+  setCalculation(value: boolean): void {
+    if (!this.detail || this.detail.isCalculation === value) return;
+    this.busy = true;
+    this.subs.add(this.courses.setCalculation(this.bookId, value).subscribe({
+      next: () => { this.busy = false; this.load(); },
+      error: () => { this.busy = false; this.fail('courses.detail.calcToggleFailed'); this.load(); },
+    }));
   }
 
   // ===== Linien eines Kapitels ==============================================

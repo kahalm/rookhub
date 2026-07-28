@@ -82,6 +82,12 @@
             <button mat-stroked-button (click)="addChapter()" [disabled]="busy">
               <mat-icon>create_new_folder</mat-icon>{{ 'courses.detail.addChapter' | translate }}
             </button>
+            <!-- Der Kalkulations-Modus wird hier vom Kurs-Verwalter geschaltet (nicht im Admin-Bereich). -->
+            <mat-slide-toggle class="calc-toggle" [checked]="d.isCalculation" [disabled]="busy"
+                              (change)="setCalculation($event.checked)"
+                              [matTooltip]="'courses.detail.calcToggleHint' | translate">
+              {{ 'courses.detail.calcToggle' | translate }}
+            </mat-slide-toggle>
           }
           <button mat-icon-button [matMenuTriggerFor]="moreMenu"
                   [matTooltip]="'courses.moreActions' | translate">

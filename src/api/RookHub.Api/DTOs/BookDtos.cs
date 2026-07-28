@@ -18,8 +18,6 @@ public class BookDto
     public bool ForDaily { get; set; }
     public bool ForRandom { get; set; }
     public bool ForBlind { get; set; }
-    /// <summary>Kalkulationsbuch: Stellungen ohne Lösung, im Kalkulations-Modus durchzurechnen.</summary>
-    public bool IsCalculation { get; set; }
     /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
     public bool IsPublic { get; set; }
     /// <summary>Optionaler Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}); null = keiner.</summary>
@@ -57,8 +55,8 @@ public class UpdateBookDto
     public bool? ForDaily { get; set; }
     public bool? ForRandom { get; set; }
     public bool? ForBlind { get; set; }
-    /// <summary>Kalkulationsbuch: Stellungen ohne Lösung, im Kalkulations-Modus durchzurechnen.</summary>
-    public bool? IsCalculation { get; set; }
+    // Kein IsCalculation: der Kalkulations-Modus wird auf der KURS-Detailseite vom Besitzer (bzw.
+    // einem Admin) geschaltet — siehe PUT /api/courses/{bookId}/calculation.
     /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
     public bool? IsPublic { get; set; }
     /// <summary>Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}). Leerstring = Alias entfernen;

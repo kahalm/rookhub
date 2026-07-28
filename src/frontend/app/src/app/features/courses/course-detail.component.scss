@@ -97,6 +97,12 @@
   align-items: center;
 }
 
+/* Kalkulations-Schalter: sitzt in derselben Zeile wie die Knöpfe, aber sichtbar abgesetzt. */
+.calc-toggle {
+  margin-left: 0.4rem;
+  font-size: 0.9rem;
+}
+
 .section-head {
   display: flex;
   align-items: center;

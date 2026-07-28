@@ -9,9 +9,10 @@ using RookHub.Api.Services;
 namespace RookHub.Api.Tests;
 
 /// <summary>
-/// Kursübersicht + Admin-Verwaltung für Kalkulationsbücher: dort gibt es nichts zu „lösen", also
-/// zählt die Übersicht ALLE Stellungen (auch die zug-losen, die im normalen Kurs als Info-Linien
-/// aus dem Fortschritt fallen) und als „erledigt" die Stellungen mit eigenem Analysebaum.
+/// Kursübersicht für Kalkulationsbücher: dort gibt es nichts zu „lösen", also zählt die Übersicht
+/// ALLE Stellungen (auch die zug-losen, die im normalen Kurs als Info-Linien aus dem Fortschritt
+/// fallen) und als „erledigt" die Stellungen mit eigenem Analysebaum. Geschaltet wird das Flag auf
+/// der Kurs-Detailseite (<see cref="CourseAuthoringService"/>), nicht in der Admin-Bücherverwaltung.
 /// </summary>
 public class CalculationCourseListTests : IDisposable
 {
@@ -19,6 +20,7 @@ public class CalculationCourseListTests : IDisposable
     private readonly CourseService _courses;
     private readonly CalculationService _calc;
     private readonly BookAdminService _bookAdmin;
+    private readonly CourseAuthoringService _authoring;
 
     public CalculationCourseListTests()
     {
@@ -29,6 +31,7 @@ public class CalculationCourseListTests : IDisposable
         _courses = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), _bookAdmin,
             new RepertoireService(_db, new RepertoireAnalyzeService(_db, new MemoryCache(new MemoryCacheOptions()))));
         _calc = new CalculationService(_db);
+        _authoring = new CourseAuthoringService(_db);
     }
 
     public void Dispose() => _db.Dispose();
@@ -118,30 +121,38 @@ public class CalculationCourseListTests : IDisposable
     }
 
     [Fact]
-    public async Task AdminUpdate_TogglesCalculationFlag()
+    public async Task CourseToggle_SwitchesCountingInTheOverview()
     {
+        // Der Schalter sitzt auf der Kurs-Detailseite: erst zählt die Übersicht nur Quiz-Linien,
+        // nach dem Umschalten ALLE Stellungen (die zug-lose Linie kommt hinzu).
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(user.Id, isCalculation: false);
+        await SeedLineAsync(book, "1", infoOnly: false);
+        await SeedLineAsync(book, "2", infoOnly: true);
 
-        var on = await _bookAdmin.UpdateBookAsync(book.Id, new UpdateBookDto { IsCalculation = true });
-        Assert.True(on.IsCalculation);
-        Assert.True((await _db.Books.FindAsync(book.Id))!.IsCalculation);
+        Assert.Equal(1, (await _courses.GetCoursesAsync(user.Id, isAdmin: false)).Single().PuzzleCount);
 
-        // null = unverändert lassen (wie die anderen Flags).
-        var untouched = await _bookAdmin.UpdateBookAsync(book.Id, new UpdateBookDto { DisplayName = "Neu" });
-        Assert.True(untouched.IsCalculation);
+        Assert.True(await _authoring.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false));
 
-        var off = await _bookAdmin.UpdateBookAsync(book.Id, new UpdateBookDto { IsCalculation = false });
-        Assert.False(off.IsCalculation);
+        var item = (await _courses.GetCoursesAsync(user.Id, isAdmin: false)).Single();
+        Assert.True(item.IsCalculation);
+        Assert.Equal(2, item.PuzzleCount);
     }
 
     [Fact]
-    public async Task AdminBookList_ExposesCalculationFlag()
+    public async Task AdminBookDtos_NoLongerCarryTheCalculationFlag()
     {
+        // Das Flag ist bewusst aus der Admin-Bücherverwaltung verschwunden (Kurs-Detailseite statt
+        // Admin-Tab) — hier festgenagelt, damit es nicht versehentlich zurückwandert.
+        Assert.DoesNotContain("IsCalculation", typeof(BookDto).GetProperties().Select(p => p.Name));
+        Assert.DoesNotContain("IsCalculation", typeof(UpdateBookDto).GetProperties().Select(p => p.Name));
+
         var user = await CreateUserAsync();
         await SeedBookAsync(user.Id, isCalculation: true);
-        var list = await _bookAdmin.GetBooksAsync();
-        Assert.True(list.Single().IsCalculation);
+        var untouched = await _bookAdmin.UpdateBookAsync((await _db.Books.SingleAsync()).Id,
+            new UpdateBookDto { DisplayName = "Neu" });
+        Assert.Equal("Neu", untouched.DisplayName);
+        Assert.True((await _db.Books.SingleAsync()).IsCalculation);   // Admin-Update rührt es nicht an
     }
 
     [Fact]

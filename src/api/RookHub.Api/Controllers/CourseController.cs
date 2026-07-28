@@ -313,6 +313,21 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Schaltet den Kalkulations-Modus des Kurses ein/aus (Besitzer/Admin, 403 sonst; 404
+    /// unzugänglich). Antwortet mit dem effektiven Zustand.</summary>
+    [HttpPut("{bookId:int}/calculation")]
+    public async Task<IActionResult> SetCalculation(int bookId, [FromBody] SetCourseCalculationDto dto,
+        CancellationToken ct)
+    {
+        try
+        {
+            var value = await _authoring.SetCalculationAsync(GetUserId(), bookId, dto.IsCalculation, IsAdmin, ct);
+            return Ok(new { isCalculation = value });
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
     /// <summary>Linien EINES Kapitels (`chapter` leer = „ohne Kapitel") — ohne Lösungszüge.</summary>
     [HttpGet("{bookId:int}/lines")]
     public async Task<ActionResult<List<CourseLineDto>>> GetChapterLines(int bookId, [FromQuery] string? chapter,
