@@ -340,6 +340,31 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 | GET | `/api/courses/{bookId}/link` | Auth | Aktuell verknüpfter Partner-Kurs `{ linkedBookId, linkedDisplayName }` (leer wenn keiner) — für den Schnellwechsel im Solver. Literal-Route |
 | DELETE | `/api/courses/{bookId}/link` | Auth | Verknüpfung dieses Kurses lösen (beide Richtungen, idempotent) |
 
+### Kurs-Detailseite + Inhaltspflege (auth)
+`/courses/:bookId` (Frontend) zeigt Metadaten, eigenen Fortschritt und die **Kapitel-Verwaltung**.
+Logik in `Services/CourseAuthoringService.cs`. Zwei Rechte-Ebenen: **lesen** = Kurs-Zugriff
+(`CourseAccess`, kein Zugriff → 404); **Inhalte ändern** = Besitzer des persönlichen Buchs ODER Admin
+(sonst 403); den **eigenen Fortschritt** (Kapitel-Reset) darf jeder mit Lese-Zugriff.
+
+Kapitel werden hier über den **Namen** adressiert, nicht über einen Index (der verschiebt sich beim
+Anlegen) — und die Verwaltungssicht listet **ALLE** Kapitel, auch rein aus Stellungs-/Info-Linien
+bestehende (die Solver-Kapitelliste `GET /chapters` bleibt unverändert: nur Quiz-Linien, Index-Kontrakt
+mit `?chapterIndex=`). `CourseManageChapterDto.SolverIndex` verbindet beides (`null` = im Solver nicht
+startbar). **Manuell angelegte Linien sind `IsInfoOnly=true`** (keine Lösung ⇒ nie abgefragt, nicht in
+Daily-/Random-Pools) — genau das sind die Stellungen des Kalkulations-Modus; Einfügen setzt zusätzlich
+`Book.ImportVersion = ImportPipeline.CurrentVersion` (handgepflegte Bücher haben kein Quell-PGN und
+sollen nicht im „Aktualisieren"-Banner hängen).
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/courses/{bookId:int}` | Auth | Detailbild: Metadaten, Fortschritt, `canManage`, Kapitel-Verwaltungssicht (`LineCount`/`QuizCount`/`SolverIndex`/`FirstLineId`) |
+| GET | `/api/courses/{bookId:int}/lines?chapter=` | Auth | Linien EINES Kapitels (leer = „ohne Kapitel") — mit `MoveCount`, aber **ohne Zugfolge** |
+| POST | `/api/courses/{bookId:int}/lines` | Besitzer/Admin | Stellungen als Text einfügen `{ chapter?, text }` → `{ added, chapter, issues[], totalLines }`. Parser = `Services/FenListParser.cs` (eine FEN je Zeile, führende Nummer „1:"/„2." wird ignoriert, Kommentar nach `\|` oder in `{…}`; **keine** Legalitätsprüfung, nur Struktur). Bereits im Buch vorhandene FENs → `issues` mit Grund `duplicate`; max. 500 Zeilen (`too_many`) |
+| DELETE | `/api/courses/{bookId:int}/lines/{lineId:int}` | Besitzer/Admin | Einzelne Linie löschen (räumt Restrict-Abhängige ab: CoursePuzzleResults/CourseAttempts/CourseInfoViews/BookPuzzleAttempts/DailyPuzzles/CalculationTrees) |
+| PUT | `/api/courses/{bookId:int}/chapters/rename` | Besitzer/Admin | Kapitel umbenennen `{ chapter, newName }` (leerer Name = „ohne Kapitel"); 400 wenn Zielname existiert |
+| POST | `/api/courses/{bookId:int}/chapters/delete` | Besitzer/Admin | Ganzes Kapitel = alle seine Linien löschen `{ chapter }` |
+| POST | `/api/courses/{bookId:int}/chapters/reset` | Auth | **Einzel-Kapitel-Reset des EIGENEN Fortschritts** `{ chapter }` — leert CoursePuzzleResults/CourseAttempts/CourseInfoViews dieses Kapitels. Buchweites `CourseProgress.ResetAt` bleibt (ist buchweit), eigene `CalculationTrees` bleiben ebenfalls (Nutzerarbeit) |
+
 ### Kalkulations-Modus (auth) — Stellungen ohne Lösung
 Ein Buch mit `Book.IsCalculation` (Admin-Schalter im Bücher-Tab) ist ein **Kalkulationsbuch**: seine Linien
 werden nicht abgefragt, sondern als reine Stellungen (FEN + optionaler Kommentar) zum Durchrechnen serviert.
@@ -497,7 +522,8 @@ src/
                             Course, Calculation, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
                             Puzzle, Admin, Me, BotStats, BaseApiController
     Services/               Auth, Profile, Friend, Repertoire, CrawlerProxy, PlayerSearch,
-                            BookPuzzle, Course, CourseAccess, Calculation, Puzzle, EndlessProgress, TrainingGoal,
+                            BookPuzzle, Course, CourseAccess, CourseAuthoring, Calculation,
+                            FenListParser, Puzzle, EndlessProgress, TrainingGoal,
                             PlayTime, PlayTimeSync, WeeklyPost, BotStats,
                             ApiToken+ApiTokenAuthenticationHandler, DiscordLink, PgnImport,
                             SchachBotWebhook, BackgroundTaskQueue, Admin, BookAdmin,

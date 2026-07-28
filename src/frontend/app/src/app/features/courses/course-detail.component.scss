@@ -1,0 +1,242 @@
+.detail-page {
+  padding: 0.75rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  white-space: nowrap;
+
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
+.badge--calc { background: #e3f2fd; color: #1565c0; }
+.badge--theme { background: color-mix(in srgb, currentColor 8%, transparent); font-weight: 500; }
+
+.description {
+  margin: 0 0 0.6rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  mat-progress-bar { flex: 1; }
+}
+
+.progress-label {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.progress-note {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.4rem 1rem;
+  margin: 0 0 0.75rem;
+
+  div { display: flex; flex-direction: column; }
+  dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; opacity: 0.6; }
+  dd { margin: 0; word-break: break-word; }
+}
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82em; }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.section-title { font-weight: 600; }
+
+.count-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.spacer { flex: 1; }
+
+.empty {
+  margin: 0.4rem 0;
+  font-style: italic;
+  color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.chapter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chapter {
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+
+  &:first-child { border-top: none; }
+}
+
+.chapter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0;
+  flex-wrap: wrap;
+}
+
+.expander {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.chapter-name {
+  font-weight: 500;
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  word-break: break-word;
+}
+
+.chapter-name--none {
+  font-style: italic;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.chapter-counts {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  white-space: nowrap;
+}
+
+.quiz-count { margin-left: 2px; }
+
+.chapter-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 9rem;
+
+  mat-progress-bar { flex: 1; }
+}
+
+.chapter-label {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chapter-actions { display: flex; align-items: center; }
+
+.rename-input {
+  flex: 1 1 10rem;
+  padding: 5px 7px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.lines {
+  padding: 0.25rem 0 0.6rem 1.6rem;
+  overflow-x: auto;
+}
+
+.line-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  td {
+    padding: 3px 6px;
+    border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+    vertical-align: middle;
+  }
+}
+
+.line-table .round {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.line-table .fen { word-break: break-all; }
+.line-table .comment { color: color-mix(in srgb, currentColor 70%, transparent); }
+.line-table .row-actions { white-space: nowrap; text-align: right; }
+
+.pill {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  white-space: nowrap;
+}
+
+.pill--position { background: #e3f2fd; color: #1565c0; }
+
+.danger { color: #c62828; }

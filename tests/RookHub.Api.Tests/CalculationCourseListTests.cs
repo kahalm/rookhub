@@ -143,4 +143,21 @@ public class CalculationCourseListTests : IDisposable
         var list = await _bookAdmin.GetBooksAsync();
         Assert.True(list.Single().IsCalculation);
     }
+
+    [Fact]
+    public async Task DeleteBook_WithSavedCalculationTrees_Works()
+    {
+        // CalculationTree hängt per Restrict-FK am BookPuzzle → ohne explizites Aufräumen
+        // scheitert das Buch-Löschen am DB-Constraint.
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id, isCalculation: true);
+        var pos = await SeedLineAsync(book, "1", infoOnly: true);
+        await _calc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto { TreeJson = "{\"v\":1}" }, isAdmin: false);
+
+        await _bookAdmin.DeleteBookAsync(book.Id);
+
+        Assert.Empty(_db.Books);
+        Assert.Empty(_db.BookPuzzles);
+        Assert.Empty(_db.CalculationTrees);
+    }
 }

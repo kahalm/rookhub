@@ -22,13 +22,16 @@ public class CourseController : BaseApiController
     private readonly CourseStatsService _stats;
     private readonly ImportReprocessService _reprocess;
     private readonly IReprocessLauncher _reprocessLauncher;
+    private readonly CourseAuthoringService _authoring;
 
-    public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher)
+    public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess,
+        IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring)
     {
         _service = service;
         _stats = stats;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
+        _authoring = authoring;
     }
 
     /// <summary>Status der Aufbereitungs-Versionierung: wie viele (verwaltbare) Kurse sind veraltet
@@ -296,5 +299,81 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // ===== Detailseite + Inhaltspflege (CourseAuthoringService) ==============
+    // Die {bookId:int}-Zwänge halten diese Routen von den literalen (access/stats/history) fern.
+
+    /// <summary>Vollbild der Kurs-Detailseite: Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht
+    /// (inkl. reiner Stellungs-Kapitel). 404 wenn nicht zugänglich.</summary>
+    [HttpGet("{bookId:int}")]
+    public async Task<ActionResult<CourseDetailDto>> GetDetail(int bookId, CancellationToken ct)
+    {
+        try { return Ok(await _authoring.GetDetailAsync(GetUserId(), bookId, IsAdmin, ct)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Linien EINES Kapitels (`chapter` leer = „ohne Kapitel") — ohne Lösungszüge.</summary>
+    [HttpGet("{bookId:int}/lines")]
+    public async Task<ActionResult<List<CourseLineDto>>> GetChapterLines(int bookId, [FromQuery] string? chapter,
+        CancellationToken ct)
+    {
+        try { return Ok(await _authoring.GetChapterLinesAsync(GetUserId(), bookId, chapter, IsAdmin, ct)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Fügt Stellungen als neue Linien ein (Memo-Text, eine Stellung je Zeile, optional
+    /// nummeriert + Kommentar); ein noch nicht vorhandenes Kapitel entsteht dadurch. Nur Besitzer/Admin
+    /// (403). Antwortet mit der Anzahl übernommener Zeilen + je verworfener Zeile einem Grund.</summary>
+    [HttpPost("{bookId:int}/lines")]
+    public async Task<ActionResult<AddCourseLinesResultDto>> AddLines(int bookId,
+        [FromBody] AddCourseLinesDto dto, CancellationToken ct)
+    {
+        try { return Ok(await _authoring.AddLinesAsync(GetUserId(), bookId, dto, IsAdmin, ct)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Löscht eine einzelne Linie des Buchs (samt abhängiger Nutzerdaten). Nur Besitzer/Admin.</summary>
+    [HttpDelete("{bookId:int}/lines/{lineId:int}")]
+    public async Task<IActionResult> DeleteLine(int bookId, int lineId, CancellationToken ct)
+    {
+        try { await _authoring.DeleteLineAsync(GetUserId(), bookId, lineId, IsAdmin, ct); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Benennt ein Kapitel um (leerer neuer Name = „ohne Kapitel"). Nur Besitzer/Admin;
+    /// 400 wenn der Zielname schon existiert.</summary>
+    [HttpPut("{bookId:int}/chapters/rename")]
+    public async Task<IActionResult> RenameChapter(int bookId, [FromBody] RenameCourseChapterDto dto,
+        CancellationToken ct)
+    {
+        try { return Ok(new { updated = await _authoring.RenameChapterAsync(GetUserId(), bookId, dto, IsAdmin, ct) }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Löscht ein ganzes Kapitel = alle seine Linien. Nur Besitzer/Admin.</summary>
+    [HttpPost("{bookId:int}/chapters/delete")]
+    public async Task<IActionResult> DeleteChapter(int bookId, [FromBody] CourseChapterRefDto dto,
+        CancellationToken ct)
+    {
+        try { return Ok(new { deleted = await _authoring.DeleteChapterAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Setzt den EIGENEN Fortschritt eines Kapitels zurück (gelöste Linien, Zeit-/Versuchs-Log,
+    /// gesehene Info-Linien). Braucht nur Lese-Zugriff auf den Kurs; das buchweite `ResetAt` und die
+    /// eigenen Analysebäume bleiben unberührt.</summary>
+    [HttpPost("{bookId:int}/chapters/reset")]
+    public async Task<IActionResult> ResetChapter(int bookId, [FromBody] CourseChapterRefDto dto,
+        CancellationToken ct)
+    {
+        try { return Ok(new { cleared = await _authoring.ResetChapterProgressAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 }

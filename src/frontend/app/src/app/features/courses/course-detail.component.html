@@ -1,0 +1,245 @@
+<div class="detail-page">
+  <div class="topbar">
+    <a mat-stroked-button [routerLink]="['/courses']">
+      <mat-icon>arrow_back</mat-icon>{{ 'common.back' | translate }}
+    </a>
+    <h1 class="page-title">{{ detail?.displayName || ('courses.detail.title' | translate) }}</h1>
+  </div>
+
+  @if (loading && !detail) {
+    <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (loadError && !detail) {
+    <mat-card><mat-card-content>{{ 'courses.loadFailed' | translate }}</mat-card-content></mat-card>
+  } @else if (detail; as d) {
+    <!-- ===== Kopf: Metadaten + Fortschritt ===== -->
+    <mat-card class="head-card">
+      <mat-card-content>
+        <div class="badges">
+          @if (d.isCalculation) {
+            <span class="badge badge--calc" [matTooltip]="'courses.detail.calcHint' | translate">
+              <mat-icon>calculate</mat-icon>{{ 'courses.detail.calcBook' | translate }}
+            </span>
+          }
+          @if (d.isOwned) { <span class="badge">{{ 'courses.detail.owned' | translate }}</span> }
+          @if (d.isShared) {
+            <span class="badge">{{ 'courses.detail.sharedBy' | translate:{ name: d.sharedByUsername } }}</span>
+          }
+          @if (d.isPublic) { <span class="badge">{{ 'courses.detail.public' | translate }}</span> }
+          <span class="badge">{{ ('courses.detail.kind.' + d.kind) | translate }}</span>
+          @for (t of d.themes; track t) {
+            <span class="badge badge--theme">{{ ('trainingGoals.theme.' + t) | translate }}</span>
+          }
+        </div>
+
+        @if (d.description) { <p class="description">{{ d.description }}</p> }
+
+        <div class="progress-row">
+          <mat-progress-bar mode="determinate" [value]="d.progressPercent"></mat-progress-bar>
+          <span class="progress-label">{{ d.solvedCount }}/{{ d.puzzleCount }}</span>
+        </div>
+        <p class="progress-note">
+          {{ (d.isCalculation ? 'courses.detail.progressCalc' : 'courses.detail.progressSolve') | translate }}
+        </p>
+
+        <dl class="meta">
+          <div><dt>{{ 'courses.detail.lines' | translate }}</dt><dd>{{ d.totalLines }}</dd></div>
+          <div>
+            <dt>{{ 'courses.detail.positionLines' | translate }}</dt>
+            <dd>{{ d.infoLineCount }}</dd>
+          </div>
+          <div><dt>{{ 'courses.detail.chapters' | translate }}</dt><dd>{{ d.chapters.length }}</dd></div>
+          @if (d.difficulty) { <div><dt>{{ 'courses.detail.difficulty' | translate }}</dt><dd>{{ d.difficulty }}</dd></div> }
+          @if (d.rating) { <div><dt>{{ 'courses.detail.rating' | translate }}</dt><dd>{{ d.rating }}/10</dd></div> }
+          @if (d.minElo || d.maxElo) {
+            <div><dt>Elo</dt><dd>{{ d.minElo || '?' }}–{{ d.maxElo || '?' }}</dd></div>
+          }
+          @if (d.tags) { <div><dt>{{ 'courses.detail.tags' | translate }}</dt><dd>{{ d.tags }}</dd></div> }
+          @if (d.linkedBookId) {
+            <div>
+              <dt>{{ 'courses.detail.linked' | translate }}</dt>
+              <dd><a [routerLink]="['/courses', d.linkedBookId]">{{ d.linkedDisplayName }}</a></dd>
+            </div>
+          }
+          @if (d.lastActivityAt) {
+            <div>
+              <dt>{{ 'courses.detail.lastActivity' | translate }}</dt>
+              <dd>{{ d.lastActivityAt | date:'short' }}</dd>
+            </div>
+          }
+          <div><dt>{{ 'courses.detail.file' | translate }}</dt><dd class="mono">{{ d.fileName }}</dd></div>
+        </dl>
+
+        <div class="actions">
+          <button mat-flat-button color="primary" [routerLink]="startLink" [disabled]="d.totalLines === 0">
+            <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
+          </button>
+          @if (!d.isCalculation) {
+            <button mat-stroked-button [routerLink]="['/courses', bookId, 'browse']" [disabled]="d.totalLines === 0">
+              <mat-icon>auto_stories</mat-icon>{{ 'courses.browseTooltip' | translate }}
+            </button>
+          }
+          @if (d.canManage) {
+            <button mat-stroked-button (click)="addChapter()" [disabled]="busy">
+              <mat-icon>create_new_folder</mat-icon>{{ 'courses.detail.addChapter' | translate }}
+            </button>
+          }
+          <button mat-icon-button [matMenuTriggerFor]="moreMenu"
+                  [matTooltip]="'courses.moreActions' | translate">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #moreMenu="matMenu">
+            <button mat-menu-item (click)="togglePin()">
+              <mat-icon>push_pin</mat-icon>
+              <span>{{ (d.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate }}</span>
+            </button>
+            <button mat-menu-item (click)="downloadPgn()" [disabled]="d.totalLines === 0">
+              <mat-icon>download</mat-icon>
+              <span>{{ 'common.downloadPgn' | translate }}</span>
+            </button>
+            <button mat-menu-item (click)="resetCourse()" [disabled]="busy">
+              <mat-icon>restart_alt</mat-icon>
+              <span>{{ 'courses.detail.resetCourse' | translate }}</span>
+            </button>
+          </mat-menu>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ===== Kapitel ===== -->
+    <mat-card class="chapters-card">
+      <mat-card-content>
+        <div class="section-head">
+          <span class="section-title">{{ 'courses.chapters' | translate }}</span>
+          <span class="count-badge">{{ d.chapters.length }}</span>
+          <span class="spacer"></span>
+          @if (d.canManage) {
+            <button mat-stroked-button (click)="addChapter()" [disabled]="busy">
+              <mat-icon>add</mat-icon>{{ 'courses.detail.addChapter' | translate }}
+            </button>
+          }
+        </div>
+
+        @if (d.chapters.length === 0) {
+          <p class="empty">
+            {{ (d.canManage ? 'courses.detail.emptyManage' : 'courses.detail.empty') | translate }}
+          </p>
+        } @else {
+          <ul class="chapter-list">
+            @for (ch of d.chapters; track key(ch)) {
+              <li class="chapter">
+                <div class="chapter-row">
+                  <button class="expander" (click)="toggleChapter(ch)"
+                          [attr.aria-expanded]="expanded[key(ch)] === true">
+                    <mat-icon>{{ expanded[key(ch)] ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+
+                  @if (renamingKey === key(ch)) {
+                    <input class="rename-input" [(ngModel)]="renameDraft" maxlength="200"
+                           (keydown.enter)="commitRename(ch)" (keydown.escape)="cancelRename()" />
+                    <button mat-button (click)="commitRename(ch)" [disabled]="busy">{{ 'common.save' | translate }}</button>
+                    <button mat-button (click)="cancelRename()">{{ 'common.cancel' | translate }}</button>
+                  } @else {
+                    <span class="chapter-name" [class.chapter-name--none]="!ch.name">{{ chapterLabel(ch) }}</span>
+                    <span class="chapter-counts">
+                      {{ 'courses.detail.lineCount' | translate:{ count: ch.lineCount } }}
+                      @if (ch.quizCount > 0 && ch.quizCount !== ch.lineCount) {
+                        <span class="quiz-count">· {{ 'courses.detail.quizCount' | translate:{ count: ch.quizCount } }}</span>
+                      }
+                    </span>
+                    <span class="chapter-progress">
+                      <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
+                      <span class="chapter-label">{{ ch.solvedCount }}/{{ d.isCalculation ? ch.lineCount : ch.quizCount }}</span>
+                    </span>
+
+                    <span class="chapter-actions">
+                      @if (chapterStartLink(ch); as link) {
+                        <button mat-icon-button color="primary" [routerLink]="link"
+                                [queryParams]="chapterStartParams(ch)"
+                                [matTooltip]="'courses.detail.startChapter' | translate">
+                          <mat-icon>play_arrow</mat-icon>
+                        </button>
+                      }
+                      <button mat-icon-button [matMenuTriggerFor]="chapterMenu"
+                              [matTooltip]="'courses.moreActions' | translate">
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #chapterMenu="matMenu">
+                        @if (d.canManage) {
+                          <button mat-menu-item (click)="addLines(ch)">
+                            <mat-icon>playlist_add</mat-icon>
+                            <span>{{ 'courses.detail.addLines' | translate }}</span>
+                          </button>
+                          <button mat-menu-item (click)="startRename(ch)">
+                            <mat-icon>edit</mat-icon>
+                            <span>{{ 'courses.detail.renameChapter' | translate }}</span>
+                          </button>
+                        }
+                        <button mat-menu-item (click)="resetChapter(ch)">
+                          <mat-icon>restart_alt</mat-icon>
+                          <span>{{ 'courses.detail.resetChapter' | translate }}</span>
+                        </button>
+                        @if (d.canManage) {
+                          <button mat-menu-item class="danger" (click)="deleteChapter(ch)">
+                            <mat-icon>delete</mat-icon>
+                            <span>{{ 'courses.detail.deleteChapter' | translate }}</span>
+                          </button>
+                        }
+                      </mat-menu>
+                    </span>
+                  }
+                </div>
+
+                @if (expanded[key(ch)]) {
+                  <div class="lines">
+                    @if (loadingLines[key(ch)]) {
+                      <mat-spinner diameter="22"></mat-spinner>
+                    } @else if ((linesByChapter[key(ch)] || []).length === 0) {
+                      <p class="empty">{{ 'courses.detail.noLines' | translate }}</p>
+                    } @else {
+                      <table class="line-table">
+                        <tbody>
+                          @for (line of linesByChapter[key(ch)]; track line.id) {
+                            <tr>
+                              <td class="round">{{ line.round }}</td>
+                              <td class="fen mono">{{ line.fen }}</td>
+                              <td class="comment">{{ line.comment }}</td>
+                              <td class="kind">
+                                @if (line.moveCount > 0) {
+                                  <span class="pill" [matTooltip]="'courses.detail.hasSolution' | translate">
+                                    {{ 'courses.detail.plies' | translate:{ count: line.moveCount } }}
+                                  </span>
+                                } @else {
+                                  <span class="pill pill--position">{{ 'courses.detail.positionOnly' | translate }}</span>
+                                }
+                              </td>
+                              <td class="row-actions">
+                                @if (d.isCalculation) {
+                                  <a mat-icon-button [routerLink]="['/courses', bookId, 'calc']"
+                                     [queryParams]="{ pos: line.id }"
+                                     [matTooltip]="'courses.calculate' | translate">
+                                    <mat-icon>calculate</mat-icon>
+                                  </a>
+                                }
+                                @if (d.canManage) {
+                                  <button mat-icon-button class="danger" [disabled]="busy"
+                                          (click)="deleteLine(ch, line)"
+                                          [matTooltip]="'courses.detail.deleteLine' | translate">
+                                    <mat-icon>delete_outline</mat-icon>
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    }
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

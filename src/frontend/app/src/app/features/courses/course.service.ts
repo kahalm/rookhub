@@ -117,6 +117,90 @@ export interface CourseProgress {
   chapterName?: string | null;
 }
 
+/**
+ * Kapitel in der VERWALTUNGSSICHT der Detailseite — anders als {@link CourseChapter} sind hier ALLE
+ * Kapitel enthalten, auch solche, die nur aus Stellungs-/Info-Linien bestehen (die Kalkulationsbücher).
+ * Adressiert wird über `name`, nicht über einen Index (der verschiebt sich beim Anlegen).
+ */
+export interface CourseManageChapter {
+  /** null = Sammelgruppe „ohne Kapitel". */
+  name: string | null;
+  /** Alle Linien des Kapitels. */
+  lineCount: number;
+  /** Davon abgefragte Quiz-Linien (mit Lösung). */
+  quizCount: number;
+  solvedCount: number;
+  progressPercent: number;
+  /** Index in der Solver-Kapitelliste; null = im Solver nicht startbar (keine Quiz-Linien). */
+  solverIndex: number | null;
+  /** Erste Linie des Kapitels — Einstieg für den Kalkulations-Modus. */
+  firstLineId: number | null;
+}
+
+/** Vollbild der Kurs-Detailseite. */
+export interface CourseDetail {
+  bookId: number;
+  fileName: string;
+  displayName: string;
+  description: string | null;
+  difficulty: string | null;
+  rating: number | null;
+  minElo: number | null;
+  maxElo: number | null;
+  tags: string | null;
+  themes: string[];
+  kind: 'Puzzle' | 'Study';
+  isCalculation: boolean;
+  isPublic: boolean;
+  publicSlug: string | null;
+  isOwned: boolean;
+  isShared: boolean;
+  sharedByUsername: string | null;
+  isPinned: boolean;
+  /** Darf der Aufrufer Kapitel/Linien bearbeiten (Besitzer oder Admin)? */
+  canManage: boolean;
+  puzzleCount: number;
+  solvedCount: number;
+  progressPercent: number;
+  totalLines: number;
+  infoLineCount: number;
+  lastMode: string | null;
+  lastActivityAt: string | null;
+  linkedBookId: number | null;
+  linkedDisplayName: string | null;
+  chapters: CourseManageChapter[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Eine Linie in der Verwaltungssicht (ohne Zugfolge — die Detailseite verrät keine Lösung). */
+export interface CourseLine {
+  id: number;
+  lineId: string;
+  round: string;
+  title: string | null;
+  chapter: string | null;
+  fen: string;
+  comment: string | null;
+  isInfoOnly: boolean;
+  /** Halbzüge der gespeicherten Linie (0 = reine Stellung). */
+  moveCount: number;
+}
+
+/** Eine beim Einfügen verworfene Zeile (Grund invalid_fen/duplicate/too_many). */
+export interface CourseLineIssue {
+  lineNumber: number;
+  text: string;
+  reason: string;
+}
+
+export interface AddCourseLinesResult {
+  added: number;
+  chapter: string | null;
+  issues: CourseLineIssue[];
+  totalLines: number;
+}
+
 /** Status der Aufbereitungs-Versionierung (Kurse/Repertoires) — Basis für den „Aktualisieren (N)"-Knopf. */
 export interface ReprocessStatus {
   currentVersion: number;
@@ -284,5 +368,40 @@ export class CourseService {
   /** Bereitet alle veralteten Kurse neu auf (lokal bzw. Chessable-Re-Fetch im Hintergrund). */
   reprocess(): Observable<ReprocessResult> {
     return this.http.post<ReprocessResult>('/api/courses/reprocess', {});
+  }
+
+  // ---- Detailseite + Inhaltspflege ----------------------------------------
+
+  /** Vollbild der Kurs-Detailseite (Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht). */
+  getDetail(bookId: number): Observable<CourseDetail> {
+    return this.http.get<CourseDetail>(`/api/courses/${bookId}`);
+  }
+
+  /** Linien EINES Kapitels (`null` = „ohne Kapitel"); ohne Lösungszüge. */
+  getChapterLines(bookId: number, chapter: string | null): Observable<CourseLine[]> {
+    const params = new HttpParams().set('chapter', chapter ?? '');
+    return this.http.get<CourseLine[]>(`/api/courses/${bookId}/lines`, { params });
+  }
+
+  /** Fügt Stellungen aus einem Memo-Text als neue Linien ein (Kapitel entsteht bei Bedarf). */
+  addLines(bookId: number, chapter: string | null, text: string): Observable<AddCourseLinesResult> {
+    return this.http.post<AddCourseLinesResult>(`/api/courses/${bookId}/lines`, { chapter, text });
+  }
+
+  deleteLine(bookId: number, lineId: number): Observable<void> {
+    return this.http.delete<void>(`/api/courses/${bookId}/lines/${lineId}`);
+  }
+
+  renameChapter(bookId: number, chapter: string | null, newName: string | null): Observable<{ updated: number }> {
+    return this.http.put<{ updated: number }>(`/api/courses/${bookId}/chapters/rename`, { chapter, newName });
+  }
+
+  deleteChapter(bookId: number, chapter: string | null): Observable<{ deleted: number }> {
+    return this.http.post<{ deleted: number }>(`/api/courses/${bookId}/chapters/delete`, { chapter });
+  }
+
+  /** Setzt den EIGENEN Fortschritt eines Kapitels zurück (Analysebäume bleiben erhalten). */
+  resetChapter(bookId: number, chapter: string | null): Observable<{ cleared: number }> {
+    return this.http.post<{ cleared: number }>(`/api/courses/${bookId}/chapters/reset`, { chapter });
   }
 }

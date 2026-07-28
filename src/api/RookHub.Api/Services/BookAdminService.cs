@@ -186,6 +186,8 @@ public class BookAdminService
         // DailyPuzzle hat eine Restrict-FK auf BookPuzzle → Historie verfaellt
         // beim Buch-Loeschen mit. Sonst blockt der DB-Constraint die Loeschung.
         _db.DailyPuzzles.RemoveRange(_db.DailyPuzzles.Where(d => puzzleIds.Contains(d.BookPuzzleId)));
+        // Ebenso die Analysebäume des Kalkulations-Modus (Restrict-FK auf BookPuzzle).
+        _db.CalculationTrees.RemoveRange(_db.CalculationTrees.Where(t => t.BookId == id));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         _db.Books.Remove(book);

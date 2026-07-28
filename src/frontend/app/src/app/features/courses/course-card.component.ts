@@ -29,7 +29,8 @@ import { CourseListItem, CourseChapter } from './course.service';
   template: `
       <mat-card class="course-card">
         <mat-card-content>
-          <div class="card-title">{{ course.displayName }}</div>
+          <a class="card-title" [routerLink]="['/courses', course.bookId]"
+             [matTooltip]="'courses.detail.openTooltip' | translate">{{ course.displayName }}</a>
           @if (course.isShared && course.sharedByUsername) {
             <div class="shared-badge">
               <mat-icon>group</mat-icon>{{ 'courses.share.sharedBy' | translate:{ name: course.sharedByUsername } }}
@@ -92,6 +93,10 @@ import { CourseListItem, CourseChapter } from './course.service';
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #actionMenu="matMenu">
+                <button mat-menu-item [routerLink]="['/courses', course.bookId]">
+                  <mat-icon>info</mat-icon>
+                  <span>{{ 'courses.detail.open' | translate }}</span>
+                </button>
                 <button mat-menu-item [disabled]="course.puzzleCount === 0"
                         [routerLink]="['/courses', course.bookId, 'browse']">
                   <mat-icon>auto_stories</mat-icon>
@@ -234,7 +239,11 @@ import { CourseListItem, CourseChapter } from './course.service';
       padding: 0;
       mat-card-content { padding: 14px 16px 8px; }
     }
-    .card-title { font-size: 0.95rem; font-weight: 600; line-height: 1.35; margin-bottom: 2px; }
+    .card-title {
+      font-size: 0.95rem; font-weight: 600; line-height: 1.35; margin-bottom: 2px;
+      display: block; color: inherit; text-decoration: none; cursor: pointer;
+    }
+    .card-title:hover { text-decoration: underline; }
     .card-meta {
       display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
       font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);
