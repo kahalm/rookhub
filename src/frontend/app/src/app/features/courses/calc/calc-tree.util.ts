@@ -19,6 +19,47 @@ export type CalcGlyph = typeof CALC_GLYPHS[number];
 export const CALC_EVALS = ['=', '⩲', '⩱', '±', '∓', '+−', '−+', '∞', '⯹', '→', '↑', '⇆', '⨀'] as const;
 export type CalcEval = typeof CALC_EVALS[number];
 
+/**
+ * i18n-Namen der Symbole („+−" = „Weiß gewinnt"). Die Symbole selbst taugen nicht als
+ * Übersetzungs-Schlüssel (Sonderzeichen im Pfad `calc.eval.…`), darum je Symbol ein Slug.
+ * Vollständigkeit erzwingt `Record<CalcGlyph|CalcEval, string>` — ein neues Symbol ohne Name
+ * bricht dann den Build statt still einen leeren Tooltip zu zeigen.
+ */
+export const CALC_GLYPH_KEYS: Record<CalcGlyph, string> = {
+  '!!': 'brilliant',
+  '!': 'good',
+  '!?': 'interesting',
+  '?!': 'dubious',
+  '?': 'mistake',
+  '??': 'blunder',
+};
+
+export const CALC_EVAL_KEYS: Record<CalcEval, string> = {
+  '=': 'equal',
+  '⩲': 'whiteSlight',
+  '⩱': 'blackSlight',
+  '±': 'whiteClear',
+  '∓': 'blackClear',
+  '+−': 'whiteWinning',
+  '−+': 'blackWinning',
+  '∞': 'unclear',
+  '⯹': 'compensation',
+  '→': 'attack',
+  '↑': 'initiative',
+  '⇆': 'counterplay',
+  '⨀': 'zugzwang',
+};
+
+/** Übersetzungs-Schlüssel für die Bedeutung eines Zug-Symbols. */
+export function glyphNameKey(glyph: CalcGlyph): string {
+  return `calc.glyph.${CALC_GLYPH_KEYS[glyph]}`;
+}
+
+/** Übersetzungs-Schlüssel für die Bedeutung einer Stellungsbewertung. */
+export function evalNameKey(evaluation: CalcEval): string {
+  return `calc.eval.${CALC_EVAL_KEYS[evaluation]}`;
+}
+
 export interface CalcNode {
   id: number;
   /** null nur bei der Wurzel. */

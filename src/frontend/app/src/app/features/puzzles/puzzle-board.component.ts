@@ -8,6 +8,9 @@ import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Chess, Square } from 'chess.js';
 import { paintCrazyPieces, clearCrazyPieces, CrazyPieceMode } from './board-theme.util';
+import {
+  BoardFullscreenButtonComponent,
+} from '../../shared/fullscreen/board-fullscreen-button.component';
 
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
@@ -15,10 +18,13 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-puzzle-board',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, BoardFullscreenButtonComponent],
   template: `
-    <div class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
+    <div #wrapEl class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
       <div #boardEl class="cg-wrap"></div>
+      @if (allowFullscreen) {
+        <app-board-fullscreen-button [target]="wrapEl" />
+      }
       @if (vizSelectedSquare) {
         <!-- DOM-Overlay als verlässliche Viz-Auswahlmarkierung (unabhängig von chessground-SVG). -->
         <div class="viz-select-overlay"
@@ -41,6 +47,19 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   styles: [`
     :host { display: block; width: 100%; }
     .board-wrapper { position: relative; }
+    /* Vollbild: der WRAPPER selbst wird das zentrierte Quadrat (nicht bloß das Brett darin) —
+       sonst würden die absolut positionierten Auflagen (Umwandlungs-Auswahl, Viz-Markierung)
+       gegen den ganzen Bildschirm statt gegen die Brettfläche rechnen. Die UA-Regeln für
+       :fullscreen sind !important, also hier ebenfalls. Die Brett-Pixelgröße zieht der
+       ResizeObserver aus der neuen Wrapper-Breite nach. */
+    .board-wrapper:fullscreen {
+      width: min(100vw, 100vh) !important;
+      height: min(100vw, 100vh) !important;
+      max-width: none !important;
+      inset: 0 !important;
+      margin: auto !important;
+    }
+    .board-wrapper:fullscreen::backdrop { background: #000; }
     .cg-wrap {
       position: relative;
       display: block;
@@ -104,6 +123,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() pieceSet = 'cburnett';
   /** Crazy-Figuren-Modus: 'piece' (je Figur) oder 'square' (Feld bestimmt den Stil, `?anarchy=max+1`). */
   @Input() crazyPieceMode: CrazyPieceMode = 'piece';
+  /** Vollbild-Knopf in der Brett-Ecke anbieten (Standard: ja). */
+  @Input() allowFullscreen = true;
   /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
    *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
   @Input() visualization = 0;

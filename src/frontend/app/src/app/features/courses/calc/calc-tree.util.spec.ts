@@ -1,6 +1,7 @@
 import {
   addMove, createTree, deserializeTree, depthOf, findNode, isEmpty, leafIds, lines, plyPrefix,
   removeLine, removeSubtree, serializeTree, setComment, setEvaluation, setGlyph, whiteToMove,
+  CALC_EVALS, CALC_GLYPHS, CALC_EVAL_KEYS, CALC_GLYPH_KEYS, evalNameKey, glyphNameKey,
 } from './calc-tree.util';
 
 const START = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4';
@@ -191,5 +192,28 @@ describe('calc-tree.util', () => {
     // Und ein neuer Zug kollidiert nicht mit der bestehenden Id.
     const added = addMove(restored, 0, mv('d4', 'd2d4'));
     expect(added.id).toBe(8);
+  });
+});
+
+describe('calc-tree.util Symbol-Namen', () => {
+  it('gibt JEDEM Symbol einen Übersetzungs-Schlüssel (kein leerer Tooltip)', () => {
+    for (const g of CALC_GLYPHS) {
+      expect(CALC_GLYPH_KEYS[g]).toBeTruthy();
+      expect(glyphNameKey(g)).toBe(`calc.glyph.${CALC_GLYPH_KEYS[g]}`);
+    }
+    for (const e of CALC_EVALS) {
+      expect(CALC_EVAL_KEYS[e]).toBeTruthy();
+      expect(evalNameKey(e)).toBe(`calc.eval.${CALC_EVAL_KEYS[e]}`);
+    }
+  });
+
+  it('vergibt die Slugs eindeutig (kein Symbol erbt die Erklärung eines anderen)', () => {
+    const slugs = [...Object.values(CALC_GLYPH_KEYS), ...Object.values(CALC_EVAL_KEYS)];
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it('benennt die Gewinn-Symbole erkennbar (+− = Weiß, −+ = Schwarz)', () => {
+    expect(CALC_EVAL_KEYS['+−']).toBe('whiteWinning');
+    expect(CALC_EVAL_KEYS['−+']).toBe('blackWinning');
   });
 });

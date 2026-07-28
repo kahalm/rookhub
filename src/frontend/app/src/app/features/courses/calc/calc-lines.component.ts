@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe } from '@ngx-translate/core';
-import { CalcLine, CalcNode, CalcTree, lines, plyPrefix } from './calc-tree.util';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import {
+  CalcEval, CalcGlyph, CalcLine, CalcNode, CalcTree, evalNameKey, glyphNameKey, lines, plyPrefix,
+} from './calc-tree.util';
 
 /**
  * Die „Visualisierung" des Kalkulations-Modus: die eingeklickten Linien als Notation.
@@ -46,8 +48,10 @@ import { CalcLine, CalcNode, CalcTree, lines, plyPrefix } from './calc-tree.util
                           [class.cl-move--cursor]="move.id === cursorId"
                           (click)="selectNode.emit(move.id)">
                     <span class="cl-num" *ngIf="prefixFor($index)">{{ prefixFor($index) }}</span>{{ move.san
-                    }}<span class="cl-glyph" *ngIf="move.glyph">{{ move.glyph }}</span
-                    ><span class="cl-eval" *ngIf="move.evaluation">{{ move.evaluation }}</span>
+                    }}<span class="cl-glyph" *ngIf="move.glyph"
+                            [attr.title]="glyphName(move.glyph!)">{{ move.glyph }}</span
+                    ><span class="cl-eval" *ngIf="move.evaluation"
+                           [attr.title]="evalName(move.evaluation!)">{{ move.evaluation }}</span>
                   </button>
                   @if (move.comment && move.id !== line.leafId) {
                     <span class="cl-inline-comment">{{ braced(move.comment) }}</span>
@@ -145,6 +149,17 @@ export class CalcLinesComponent {
 
   editingLeafId: number | null = null;
   draftComment = '';
+
+  constructor(private translate: TranslateService) {}
+
+  /** Bedeutung eines Symbols in der Notation (Mouseover) — „+−" = „Weiß gewinnt". */
+  glyphName(glyph: CalcGlyph): string {
+    return this.translate.instant(glyphNameKey(glyph));
+  }
+
+  evalName(evaluation: CalcEval): string {
+    return this.translate.instant(evalNameKey(evaluation));
+  }
 
   get allLines(): CalcLine[] {
     return this.tree ? lines(this.tree) : [];

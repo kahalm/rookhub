@@ -26,7 +26,8 @@ describe('CalcLinesComponent', () => {
 
 describe('CalcLinesComponent Darstellung', () => {
   function make() {
-    const c = new CalcLinesComponent();
+    // Translate-Stub liefert den Schlüssel zurück — reicht für Darstellung + Symbol-Namen.
+    const c = new CalcLinesComponent({ instant: (k: string) => k } as never);
     c.tree = createTree(START);
     c.startFen = START;
     return c;
@@ -81,4 +82,14 @@ describe('CalcLinesComponent Darstellung', () => {
     c.toggleComment(a.id);                    // zweiter Klick schließt wieder
     expect(c.editingLeafId).toBeNull();
   });
+
+  it('gibt den Symbolen in der Notation ihre Bedeutung als natives title', () => {
+    // Bewusst `title` statt `matTooltip`: CDK-Overlays hängen am <body> und wären im
+    // Brett-Vollbild unsichtbar.
+    const c = make();
+    expect(c.glyphName('!!')).toBe('calc.glyph.brilliant');
+    expect(c.evalName('+−')).toBe('calc.eval.whiteWinning');
+    expect(c.evalName('⨀')).toBe('calc.eval.zugzwang');
+  });
+
 });

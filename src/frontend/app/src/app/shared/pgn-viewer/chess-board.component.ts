@@ -4,14 +4,32 @@ import {
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Key } from 'chessground/types';
+import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chess-board',
   standalone: true,
-  template: `<div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>`,
+  imports: [BoardFullscreenButtonComponent],
+  template: `
+    <div #wrapEl class="cb-wrap">
+      <div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>
+      <app-board-fullscreen-button [target]="wrapEl" />
+    </div>
+  `,
   styles: [`
     :host { display: block; width: 100%; }
+    .cb-wrap { position: relative; width: 100%; }
+    /* Vollbild: der Wrapper wird das zentrierte Quadrat; die Brett-Pixelgröße zieht der
+       ResizeObserver aus der neuen Wrapper-Breite nach. UA-Regeln sind !important. */
+    .cb-wrap:fullscreen {
+      width: min(100vw, 100vh) !important;
+      height: min(100vw, 100vh) !important;
+      max-width: none !important;
+      inset: 0 !important;
+      margin: auto !important;
+    }
+    .cb-wrap:fullscreen::backdrop { background: #000; }
     /* Verschließ-Sicher: der Boden-Div bleibt immer quadratisch, egal welche width
        chess-board.component per JS setzt oder ob die JS-Größenberechnung verpasst wird.
        Ohne aspect-ratio zieht Chessground die Squares horizontal, das Brett wirkt

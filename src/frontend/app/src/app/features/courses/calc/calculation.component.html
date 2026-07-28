@@ -107,7 +107,7 @@
                 @for (g of glyphs; track g) {
                   <button type="button" class="calc-sym"
                           [class.calc-sym--on]="cursorNode?.glyph === g"
-                          [matTooltip]="'calc.glyphTooltip' | translate"
+                          [matTooltip]="glyphTooltip(g)"
                           (click)="applyGlyph(g)">{{ g }}</button>
                 }
               </div>
@@ -115,7 +115,7 @@
                 @for (e of evals; track e) {
                   <button type="button" class="calc-sym"
                           [class.calc-sym--on]="cursorNode?.evaluation === e"
-                          [matTooltip]="'calc.evalTooltip' | translate"
+                          [matTooltip]="evalTooltip(e)"
                           (click)="applyEval(e)">{{ e }}</button>
                 }
                 <button type="button" class="calc-sym calc-sym--clear"

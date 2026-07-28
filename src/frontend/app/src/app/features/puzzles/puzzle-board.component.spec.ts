@@ -1,3 +1,6 @@
+import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { Key } from 'chessground/types';
 
@@ -246,5 +249,36 @@ describe('PuzzleBoardComponent Promotion-Erkennung (Premove)', () => {
   it('ist kein Umwandlungszug, wenn das Zielfeld nicht auf Grundreihe liegt', () => {
     const p = withPieces([['e2' as Key, { role: 'pawn', color: 'white' }]]) as unknown as Priv;
     expect(p.isPromotion('e2' as Key, 'e4' as Key, true)).toBe(false);
+  });
+});
+
+/**
+ * Der Vollbild-Knopf sitzt IM Brett-Wrapper (= dem Element, das ins Vollbild geht) — nur dort
+ * bleibt er im Vollbild sichtbar, weil der Browser ausschließlich diesen Teilbaum rendert.
+ */
+describe('PuzzleBoardComponent Vollbild-Knopf', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [PuzzleBoardComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+  });
+
+  it('rendert ihn innerhalb des Brett-Wrappers und übergibt diesen als Ziel', () => {
+    const fixture = TestBed.createComponent(PuzzleBoardComponent);
+    fixture.detectChanges();
+
+    const wrapper: HTMLElement = fixture.nativeElement.querySelector('.board-wrapper');
+    const button = wrapper.querySelector('app-board-fullscreen-button');
+    expect(button).not.toBeNull();
+    expect(wrapper.querySelector('.board-fs-btn')).not.toBeNull();
+  });
+
+  it('lässt sich abschalten (allowFullscreen = false)', () => {
+    const fixture = TestBed.createComponent(PuzzleBoardComponent);
+    fixture.componentInstance.allowFullscreen = false;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-board-fullscreen-button')).toBeNull();
   });
 });

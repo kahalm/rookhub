@@ -18,7 +18,7 @@ import { PreferencesService } from '../../../core/preferences.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { CalcLinesComponent } from './calc-lines.component';
 import {
-  CALC_EVALS, CALC_GLYPHS, CalcEval, CalcGlyph, CalcNode, CalcTree,
+  CALC_EVALS, CALC_GLYPHS, CalcEval, CalcGlyph, CalcNode, CalcTree, evalNameKey, glyphNameKey,
   addMove, createTree, deserializeTree, findNode, isEmpty, lines, pathToRoot,
   removeLine, removeSubtree, serializeTree, setComment, setEvaluation, setGlyph, whiteToMove,
 } from './calc-tree.util';
@@ -85,6 +85,23 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   readonly glyphs = CALC_GLYPHS;
   readonly evals = CALC_EVALS;
+
+  /**
+   * Erklärung eines Symbols fürs Mouseover: erst was es bedeutet („Weiß gewinnt"), dann der
+   * Bedienhinweis. Der Übersetzungs-Schlüssel kommt aus `calc-tree.util` — dieselbe Quelle wie
+   * die Symbolliste, damit kein Symbol ohne Erklärung bleibt.
+   */
+  glyphTooltip(glyph: CalcGlyph): string {
+    return this.symbolTooltip(glyphNameKey(glyph));
+  }
+
+  evalTooltip(evaluation: CalcEval): string {
+    return this.symbolTooltip(evalNameKey(evaluation));
+  }
+
+  private symbolTooltip(nameKey: string): string {
+    return `${this.translate.instant(nameKey)} (${this.translate.instant('calc.symbolToggleHint')})`;
+  }
 
   /** Kommentar-Entwurf zum ausgewählten Zug. */
   cursorComment = '';

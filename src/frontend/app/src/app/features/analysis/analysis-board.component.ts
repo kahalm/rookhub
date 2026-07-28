@@ -6,6 +6,9 @@ import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { PromotionPickerComponent, PromotionPiece } from '../../shared/promotion-picker/promotion-picker.component';
+import {
+  BoardFullscreenButtonComponent,
+} from '../../shared/fullscreen/board-fullscreen-button.component';
 
 /**
  * Interaktives Analyse-Brett (chessground): beide Seiten spielbar (movable.color = turnColor),
@@ -16,10 +19,11 @@ import { PromotionPickerComponent, PromotionPiece } from '../../shared/promotion
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-analysis-board',
   standalone: true,
-  imports: [PromotionPickerComponent],
+  imports: [PromotionPickerComponent, BoardFullscreenButtonComponent],
   template: `
-    <div class="ab-wrap board-theme-brown piece-set-cburnett">
+    <div #wrapEl class="ab-wrap board-theme-brown piece-set-cburnett">
       <div #board class="ab-board"></div>
+      <app-board-fullscreen-button [target]="wrapEl" />
       @if (promo) {
         <app-promotion-picker
           [color]="promo.color" [dest]="promo.dest" [orientation]="orientation"
@@ -30,6 +34,16 @@ import { PromotionPickerComponent, PromotionPiece } from '../../shared/promotion
   styles: [`
     .ab-wrap { width: 100%; position: relative; }
     .ab-board { width: 100%; aspect-ratio: 1 / 1; }
+    /* Vollbild: der Wrapper wird das zentrierte Quadrat, damit die absolut positionierte
+       Umwandlungs-Auswahl weiter gegen die Brettfläche rechnet. UA-Regeln sind !important. */
+    .ab-wrap:fullscreen {
+      width: min(100vw, 100vh) !important;
+      height: min(100vw, 100vh) !important;
+      max-width: none !important;
+      inset: 0 !important;
+      margin: auto !important;
+    }
+    .ab-wrap:fullscreen::backdrop { background: #000; }
   `]
 })
 export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
@@ -45,6 +59,7 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
 
   @ViewChild('board', { static: true }) boardEl!: ElementRef<HTMLDivElement>;
   private ground?: Api;
+  private resizeObserver?: ResizeObserver;
 
   /** Offener Umwandlungs-Dialog (orig/dest des Zugs + Farbe des Bauern). */
   promo: { orig: Key; dest: Key; color: 'w' | 'b' } | null = null;
@@ -74,6 +89,11 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
     });
     this.applyShapes();
     requestAnimationFrame(() => this.ground?.redrawAll());
+
+    // chessground legt Figuren per Pixel-Transform ab: ändert sich die Brettgröße (Vollbild,
+    // Fensterbreite), müssen sie neu gezeichnet werden — sonst kleben sie auf alten Koordinaten.
+    this.resizeObserver = new ResizeObserver(() => this.ground?.redrawAll());
+    this.resizeObserver.observe(this.boardEl.nativeElement);
   }
 
   /** Ein Bauer steht nach dem (von chessground bereits angewandten) Zug auf Reihe 1/8. */
@@ -131,6 +151,7 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }
 }
