@@ -34,6 +34,9 @@ export interface CourseListItem {
   /** Themen-Tags des Buchs (Keys opening/middlegame/endgame/tactics/other); leer/unset = ["tactics"].
    *  Steuern die Themen-Aufschlüsselung der Kurszeit im Trainingsfortschritt. */
   themes?: string[];
+  /** true = Kalkulationsbuch (Stellungen ohne Lösung): Karte bietet statt sequenziell/zufällig den
+   *  Kalkulations-Modus an; puzzleCount/solvedCount = alle bzw. bearbeitete Stellungen. */
+  isCalculation?: boolean;
 }
 
 /** Pro-Linien-Bearbeitungsstatus eines Kurs-Buchs (für die „Linien durchsehen"-Ansicht):

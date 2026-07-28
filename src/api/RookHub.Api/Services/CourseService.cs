@@ -48,22 +48,9 @@ public class CourseService
     private Task<int?> EveryoneGroupIdAsync() =>
         _db.Groups.Where(g => g.IsEveryone).Select(g => (int?)g.Id).FirstOrDefaultAsync();
 
-    public async Task<bool> CanAccessAsync(int userId, int bookId, bool isAdmin)
-    {
-        if (!await _db.Books.AnyAsync(b => b.Id == bookId)) return false;
-        if (isAdmin) return true;
-        // Öffentlicher Kurs: für JEDEN (auch eingeloggt ohne Gruppen-Freigabe) über den Direkt-Link
-        // nutzbar — der eingeloggte Nutzer bekommt dabei serverseitigen Fortschritt.
-        if (await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic)) return true;
-        // Persönliches Buch des Users (z. B. eigener Chessable-Import) ist immer sichtbar.
-        if (await _db.Books.AnyAsync(b => b.Id == bookId && b.OwnerUserId == userId)) return true;
-        // Ein anderer Nutzer hat mir diesen Kurs direkt geteilt.
-        if (await _db.CourseShares.AnyAsync(cs => cs.BookId == bookId && cs.RecipientId == userId)) return true;
-        var everyoneId = await EveryoneGroupIdAsync();
-        return await _db.BookGroupAccesses.AnyAsync(a => a.BookId == bookId &&
-            (a.GroupId == everyoneId ||
-             _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)));
-    }
+    // Regel liegt in CourseAccess (geteilt mit CalculationService), damit es genau EINE Definition gibt.
+    public Task<bool> CanAccessAsync(int userId, int bookId, bool isAdmin) =>
+        CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin);
 
     private async Task EnsureAccessAsync(int userId, int bookId, bool isAdmin)
     {
@@ -294,7 +281,7 @@ public class CourseService
             .Select(b => new
             {
                 b.Id, b.FileName, b.DisplayName, b.Difficulty, b.Rating, b.Tags, b.Description,
-                b.OwnerUserId, b.Themes,
+                b.OwnerUserId, b.Themes, b.IsCalculation,
             })
             .ToListAsync();
 
@@ -311,6 +298,27 @@ public class CourseService
             .GroupBy(cr => cr.BookId)
             .Select(g => new { BookId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.BookId, x => x.Count);
+
+        // Kalkulationsbücher zählen ANDERS: dort gibt es nichts zu „lösen". Gesamtzahl = ALLE Linien
+        // (auch die zug-losen — genau die sind im Kalkulationsbuch die reinen Stellungen, und die
+        // fehlen in puzzleCountByBook, das Info-Linien ausschließt); „erledigt" = Stellungen, zu denen
+        // der Nutzer einen eigenen Analysebaum gespeichert hat.
+        var calcBookIds = books.Where(b => b.IsCalculation).Select(b => b.Id).ToList();
+        var calcTotalByBook = new Dictionary<int, int>();
+        var calcDoneByBook = new Dictionary<int, int>();
+        if (calcBookIds.Count > 0)
+        {
+            calcTotalByBook = await _db.BookPuzzles
+                .Where(bp => bp.BookId != null && calcBookIds.Contains(bp.BookId.Value))
+                .GroupBy(bp => bp.BookId!.Value)
+                .Select(g => new { BookId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BookId, x => x.Count);
+            calcDoneByBook = await _db.CalculationTrees
+                .Where(t => t.UserId == userId && calcBookIds.Contains(t.BookId))
+                .GroupBy(t => t.BookId)
+                .Select(g => new { BookId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BookId, x => x.Count);
+        }
 
         var progressByBook = await _db.CourseProgresses
             .Where(cp => cp.UserId == userId)
@@ -343,8 +351,12 @@ public class CourseService
 
         return books.Select(b =>
         {
-            var puzzleCount = puzzleCountByBook.TryGetValue(b.Id, out var pc) ? pc : 0;
-            var solved = solvedByBook.TryGetValue(b.Id, out var c) ? c : 0;
+            var puzzleCount = b.IsCalculation
+                ? (calcTotalByBook.TryGetValue(b.Id, out var ct) ? ct : 0)
+                : (puzzleCountByBook.TryGetValue(b.Id, out var pc) ? pc : 0);
+            var solved = b.IsCalculation
+                ? (calcDoneByBook.TryGetValue(b.Id, out var cd) ? cd : 0)
+                : (solvedByBook.TryGetValue(b.Id, out var c) ? c : 0);
             var progress = progressByBook.TryGetValue(b.Id, out var p) ? p : null;
             return new CourseListItemDto
             {
@@ -367,6 +379,7 @@ public class CourseService
                 LinkedBookId = linkByBook.TryGetValue(b.Id, out var linkedId) ? linkedId : null,
                 LinkedDisplayName = linkByBook.TryGetValue(b.Id, out var lid) && linkedNameById.TryGetValue(lid, out var ln) ? ln : null,
                 Themes = BookThemeTags.ParseKeys(b.Themes),
+                IsCalculation = b.IsCalculation,
             };
         }).ToList();
     }

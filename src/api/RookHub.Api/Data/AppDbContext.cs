@@ -74,6 +74,7 @@ public class AppDbContext : DbContext
     public DbSet<RepertoireShare> RepertoireShares => Set<RepertoireShare>();
     public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
     public DbSet<NotificationPushSetting> NotificationPushSettings => Set<NotificationPushSetting>();
+    public DbSet<CalculationTree> CalculationTrees => Set<CalculationTree>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -522,6 +523,30 @@ public class AppDbContext : DbContext
 
             e.HasIndex(cr => new { cr.UserId, cr.BookPuzzleId }).IsUnique();
             e.HasIndex(cr => new { cr.UserId, cr.BookId });
+        });
+
+        modelBuilder.Entity<CalculationTree>(e =>
+        {
+            e.HasOne(ct => ct.User)
+             .WithMany()
+             .HasForeignKey(ct => ct.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(ct => ct.Book)
+             .WithMany()
+             .HasForeignKey(ct => ct.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Wie bei CoursePuzzleResult: BookPuzzle hängt schon via Book am Cascade — ein zweiter
+            // Cascade-Pfad wäre in MySQL/MariaDB ein "multiple cascade paths"-Fehler. Daher Restrict.
+            e.HasOne(ct => ct.BookPuzzle)
+             .WithMany()
+             .HasForeignKey(ct => ct.BookPuzzleId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.Property(ct => ct.TreeJson).HasColumnType("LONGTEXT");
+            e.HasIndex(ct => new { ct.UserId, ct.BookPuzzleId }).IsUnique();
+            e.HasIndex(ct => new { ct.UserId, ct.BookId });
         });
 
         modelBuilder.Entity<CoursePin>(e =>

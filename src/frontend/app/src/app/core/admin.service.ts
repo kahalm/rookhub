@@ -59,6 +59,8 @@ export interface Book {
   forDaily: boolean;
   forRandom: boolean;
   forBlind: boolean;
+  /** Kalkulationsbuch: reine Stellungen ohne Lösung, im Kalkulations-Modus durchzurechnen. */
+  isCalculation: boolean;
   /** Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar. */
   isPublic: boolean;
   /** Optionaler Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}); null = keiner. */
@@ -83,6 +85,7 @@ export interface UpdateBook {
   forDaily?: boolean;
   forRandom?: boolean;
   forBlind?: boolean;
+  isCalculation?: boolean;
   isPublic?: boolean;
   /** Kurz-Alias setzen; Leerstring entfernt ihn, undefined lässt ihn unverändert. */
   publicSlug?: string | null;

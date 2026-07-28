@@ -68,14 +68,22 @@ import { CourseListItem, CourseChapter } from './course.service';
         <div class="card-footer">
           <div class="action-row">
             <div class="primary-actions">
-              <button mat-flat-button color="primary"
-                      [routerLink]="['/courses', course.bookId, 'sequential']" [disabled]="course.puzzleCount === 0">
-                <mat-icon>format_list_numbered</mat-icon>{{ 'courses.sequential' | translate }}
-              </button>
-              <button mat-stroked-button
-                      [routerLink]="['/courses', course.bookId, 'random']" [disabled]="course.puzzleCount === 0">
-                <mat-icon>shuffle</mat-icon>{{ 'courses.random' | translate }}
-              </button>
+              @if (course.isCalculation) {
+                <!-- Kalkulationsbuch: reine Stellungen ohne Lösung → nur der Kalkulations-Modus. -->
+                <button mat-flat-button color="primary"
+                        [routerLink]="['/courses', course.bookId, 'calc']" [disabled]="course.puzzleCount === 0">
+                  <mat-icon>calculate</mat-icon>{{ 'courses.calculate' | translate }}
+                </button>
+              } @else {
+                <button mat-flat-button color="primary"
+                        [routerLink]="['/courses', course.bookId, 'sequential']" [disabled]="course.puzzleCount === 0">
+                  <mat-icon>format_list_numbered</mat-icon>{{ 'courses.sequential' | translate }}
+                </button>
+                <button mat-stroked-button
+                        [routerLink]="['/courses', course.bookId, 'random']" [disabled]="course.puzzleCount === 0">
+                  <mat-icon>shuffle</mat-icon>{{ 'courses.random' | translate }}
+                </button>
+              }
             </div>
             <div class="util-actions">
               <button mat-icon-button [matMenuTriggerFor]="actionMenu"
@@ -140,7 +148,9 @@ import { CourseListItem, CourseChapter } from './course.service';
             </div>
           </div>
 
-          @if (course.puzzleCount > 0) {
+          <!-- Kalkulationsbücher haben keine Kapitel-Modi (kein Lösen/Fortschritt je Kapitel) —
+               die Kapitel dienen dort nur als Sprungliste IM Kalkulations-Modus. -->
+          @if (course.puzzleCount > 0 && !course.isCalculation) {
             <div class="chapters-block">
               <button class="chapters-toggle" (click)="chaptersToggle.emit()"
                       [attr.aria-expanded]="expanded">

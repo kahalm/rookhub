@@ -1,0 +1,249 @@
+.calc-page {
+  padding: 0.75rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.calc-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.calc-title {
+  font-size: 1.25rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.calc-book {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.calc-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.calc-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 520px) minmax(280px, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .calc-layout { grid-template-columns: 1fr; }
+}
+
+.calc-board-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.calc-board-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.calc-frozen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e3f2fd;
+  color: #1565c0;
+  white-space: nowrap;
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+}
+
+.calc-turn { font-size: 0.85rem; opacity: 0.8; }
+.calc-spacer { flex: 1; }
+
+.calc-board-wrap { width: 100%; }
+
+.calc-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.82rem;
+  color: #e65100;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.calc-where {
+  margin: 0;
+  font-size: 0.9rem;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.calc-where-label { opacity: 0.6; font-size: 0.8rem; }
+
+.calc-where-san {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.calc-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.calc-task-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.6; }
+}
+
+.calc-task-name { font-weight: 600; }
+
+.calc-chapter {
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.calc-task-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.calc-task-text--empty {
+  font-style: italic;
+  color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.calc-line-tools {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.calc-keys {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.calc-annotate-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.calc-annotate-target {
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #1976d2;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.calc-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.3rem;
+}
+
+.calc-sym {
+  min-width: 2.1rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.2;
+  cursor: pointer;
+
+  &:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; }
+}
+
+.calc-sym--on {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+  font-weight: 700;
+}
+
+.calc-comment-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  margin-top: 0.35rem;
+
+  input {
+    flex: 1;
+    min-width: 6rem;
+    padding: 5px 7px;
+    border-radius: 4px;
+    border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+}
+
+.calc-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.calc-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.calc-nav-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.calc-done {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.calc-jump {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.calc-save-state {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}

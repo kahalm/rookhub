@@ -54,6 +54,14 @@ public class CourseListItemDto
     /// Themen-Aufschlüsselung der Kurszeit im Trainingsfortschritt; leer/unset = Default „tactics".
     /// Bearbeitbar für Admin (alle) bzw. Besitzer eigener Kurse (<see cref="IsOwned"/>).</summary>
     public List<string> Themes { get; set; } = new();
+
+    /// <summary>
+    /// <c>true</c> = Kalkulationsbuch (<c>Book.IsCalculation</c>): reine Stellungen ohne Lösung.
+    /// Die Übersicht bietet dann statt sequenziell/zufällig den Kalkulations-Modus an; außerdem
+    /// zählen <see cref="PuzzleCount"/>/<see cref="SolvedCount"/> hier ALLE Stellungen bzw. die
+    /// bereits mit einem eigenen Analysebaum bearbeiteten.
+    /// </summary>
+    public bool IsCalculation { get; set; }
 }
 
 /// <summary>Eingabe: die Themen-Tags eines Kurs-Buchs setzen (leer = Rückfall auf Default „tactics").</summary>

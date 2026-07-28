@@ -1,0 +1,182 @@
+<div class="calc-page">
+  <div class="calc-topbar">
+    <a mat-stroked-button class="calc-back" [routerLink]="['/courses']">
+      <mat-icon>arrow_back</mat-icon>{{ 'common.back' | translate }}
+    </a>
+    <h1 class="calc-title">
+      {{ 'calc.title' | translate }}
+      <span class="calc-book" *ngIf="book">· {{ book.displayName }}</span>
+    </h1>
+  </div>
+
+  @if (loading && !position) {
+    <div class="calc-loading"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (loadError && !position) {
+    <mat-card><mat-card-content>{{ 'calc.loadFailed' | translate }}</mat-card-content></mat-card>
+  } @else if (positions.length === 0) {
+    <mat-card><mat-card-content>{{ 'calc.emptyBook' | translate }}</mat-card-content></mat-card>
+  } @else {
+    <div class="calc-layout">
+      <!-- ===== Brett (STRIKT eingefroren) ===== -->
+      <div class="calc-board-col">
+        <div class="calc-board-head">
+          <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
+            <mat-icon>ac_unit</mat-icon>{{ 'calc.frozen' | translate }}
+          </span>
+          <span class="calc-turn">
+            {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
+          </span>
+          <span class="calc-spacer"></span>
+          <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
+            <mat-icon>flip_camera_android</mat-icon>
+          </button>
+        </div>
+
+        <div class="calc-board-wrap">
+          <app-puzzle-board
+            [fen]="startFen" [actualFen]="cursorFen" [visualization]="1"
+            [orientation]="orientation" [turnColor]="orientation" [dests]="noDests"
+            [boardTheme]="boardTheme" [pieceSet]="pieceSet"
+            (moveMade)="onMove($event)" />
+        </div>
+
+        @if (illegalPosition) {
+          <p class="calc-warn"><mat-icon>report_problem</mat-icon>{{ 'calc.illegalPosition' | translate }}</p>
+        }
+
+        <p class="calc-where">
+          <span class="calc-where-label">{{ 'calc.currentLine' | translate }}</span>
+          <span class="calc-where-san">{{ cursorPathSan || ('calc.atStart' | translate) }}</span>
+        </p>
+      </div>
+
+      <!-- ===== Seitenspalte ===== -->
+      <div class="calc-side-col">
+        <!-- Aufgabe: nur Stellung + optionaler Kommentar, keine Lösung -->
+        <mat-card class="calc-task">
+          <mat-card-content>
+            @if (position; as pos) {
+              <div class="calc-task-head">
+                <mat-icon>menu_book</mat-icon>
+                <span class="calc-task-name">{{ currentPositionLabel }}</span>
+                @if (pos.chapter) { <span class="calc-chapter">{{ pos.chapter }}</span> }
+              </div>
+              @if (pos.comment) {
+                <p class="calc-task-text">{{ pos.comment }}</p>
+              } @else {
+                <p class="calc-task-text calc-task-text--empty">{{ 'calc.noTaskText' | translate }}</p>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Linien -->
+        <mat-card class="calc-lines-card">
+          <mat-card-content>
+            <app-calc-lines
+              [tree]="tree" [cursorId]="cursorId" [startFen]="startFen" [revision]="revision"
+              (selectNode)="setCursor($event)"
+              (newLine)="startNewLine()"
+              (deleteLine)="deleteLine($event)"
+              (commentChanged)="onLineComment($event)" />
+
+            <div class="calc-line-tools">
+              <button mat-stroked-button (click)="startNewLine()" [disabled]="atStart">
+                <mat-icon>add</mat-icon>{{ 'calc.newLine' | translate }}
+              </button>
+              <button mat-stroked-button (click)="deleteFromCursor()" [disabled]="atStart"
+                      [matTooltip]="'calc.deleteFromCursorHint' | translate">
+                <mat-icon>undo</mat-icon>{{ 'calc.deleteFromCursor' | translate }}
+              </button>
+            </div>
+            <p class="calc-keys">{{ 'calc.keyboardHint' | translate }}</p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Bewertungen + Kommentar zum ausgewählten Zug -->
+        <mat-card class="calc-annotate">
+          <mat-card-content>
+            <div class="calc-annotate-head">
+              <span>{{ 'calc.annotate' | translate }}</span>
+              <span class="calc-annotate-target" *ngIf="!atStart">{{ cursorNode?.san }}</span>
+            </div>
+            @if (atStart) {
+              <p class="calc-hint">{{ 'calc.selectMoveFirst' | translate }}</p>
+            } @else {
+              <div class="calc-symbols">
+                @for (g of glyphs; track g) {
+                  <button type="button" class="calc-sym"
+                          [class.calc-sym--on]="cursorNode?.glyph === g"
+                          [matTooltip]="'calc.glyphTooltip' | translate"
+                          (click)="applyGlyph(g)">{{ g }}</button>
+                }
+              </div>
+              <div class="calc-symbols">
+                @for (e of evals; track e) {
+                  <button type="button" class="calc-sym"
+                          [class.calc-sym--on]="cursorNode?.evaluation === e"
+                          [matTooltip]="'calc.evalTooltip' | translate"
+                          (click)="applyEval(e)">{{ e }}</button>
+                }
+                <button type="button" class="calc-sym calc-sym--clear"
+                        [matTooltip]="'calc.clearAnnotations' | translate" (click)="clearAnnotations()">
+                  <mat-icon>backspace</mat-icon>
+                </button>
+              </div>
+              <div class="calc-comment-row">
+                <input type="text" [(ngModel)]="cursorComment" maxlength="500"
+                       [placeholder]="'calc.commentPlaceholder' | translate"
+                       (blur)="saveCursorComment()" (keydown.enter)="saveCursorComment()" />
+                <button mat-button (click)="saveCursorComment()">{{ 'common.save' | translate }}</button>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Stellungs-Navigation -->
+        <mat-card class="calc-nav">
+          <mat-card-content>
+            <div class="calc-nav-row">
+              <button mat-icon-button [disabled]="!hasPrev()" (click)="prevPosition()"
+                      [matTooltip]="'calc.prevPosition' | translate">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="calc-nav-count">{{ index + 1 }} / {{ positions.length }}</span>
+              <button mat-icon-button [disabled]="!hasNext()" (click)="nextPosition()"
+                      [matTooltip]="'calc.nextPosition' | translate">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+              <span class="calc-spacer"></span>
+              <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount, total: positions.length } }}</span>
+            </div>
+
+            <mat-form-field appearance="outline" class="calc-jump" subscriptSizing="dynamic">
+              <mat-label>{{ 'calc.jumpTo' | translate }}</mat-label>
+              <mat-select [value]="position?.id" (selectionChange)="jumpToPosition($event.value)">
+                @for (group of groups; track $index) {
+                  <mat-optgroup [label]="group.chapter || ('courses.noChapter' | translate)">
+                    @for (item of group.items; track item.id) {
+                      <mat-option [value]="item.id">
+                        {{ item.hasTree ? '✓ ' : '' }}{{ positionLabel(item) }}
+                      </mat-option>
+                    }
+                  </mat-optgroup>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <p class="calc-save-state">
+              @if (saving) {
+                <span>{{ 'calc.saving' | translate }}</span>
+              } @else if (savedAt) {
+                <span>{{ 'calc.savedAt' | translate: { time: savedAt | date: 'short' } }}</span>
+              } @else {
+                <span class="calc-hint">{{ 'calc.notSavedYet' | translate }}</span>
+              }
+            </p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  }
+</div>

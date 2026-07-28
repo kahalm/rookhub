@@ -199,6 +199,15 @@
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.calculation' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.calculation" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="yes">{{ 'admin.books.filters.yes' | translate }}</mat-option>
+                      <mat-option value="no">{{ 'admin.books.filters.no' | translate }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
                     <mat-label>{{ 'admin.books.columns.public' | translate }}</mat-label>
                     <mat-select [(ngModel)]="bookFilters.public" (selectionChange)="applyBookFilter()">
                       <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
@@ -285,6 +294,13 @@
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.blind' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="isCalculation">
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.calculation' | translate }}</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-slide-toggle [(ngModel)]="b.isCalculation" (change)="saveBook(b)"
+                                      [attr.title]="'admin.books.calculationHint' | translate"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="isPublic">

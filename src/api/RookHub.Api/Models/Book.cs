@@ -65,6 +65,17 @@ public class Book
     public bool ForBlind { get; set; }
 
     /// <summary>
+    /// „Kalkulationsbuch": die Linien dieses Buchs werden NICHT abgefragt, sondern als reine
+    /// Stellungen (FEN + optionaler Kommentar) zum Durchrechnen serviert. Der Kurs öffnet dann
+    /// statt des Solvers den Kalkulations-Modus (<c>/courses/{id}/calc</c>): Brett bleibt strikt
+    /// eingefroren, der Nutzer klickt seine Varianten für BEIDE Seiten ein und legt damit einen
+    /// eigenen Analysebaum an (<see cref="CalculationTree"/>). Eine „Lösung" gibt es in diesem
+    /// Modus nicht — gespeicherte <c>BookPuzzle.Moves</c> werden weder ausgeliefert noch angezeigt.
+    /// Default false (klassisches Verhalten).
+    /// </summary>
+    public bool IsCalculation { get; set; }
+
+    /// <summary>
     /// Öffentlich = ohne Registrierung als Kurs nutzbar. Ist es gesetzt, darf JEDER (auch anonym,
     /// ohne Login) diesen Kurs über den Direkt-Link öffnen und durchspielen; der Fortschritt eines
     /// anonymen Besuchers wird nur lokal im Browser gehalten (zählt nicht in Bestenlisten/Ziele).
