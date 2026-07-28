@@ -81,10 +81,85 @@ export class CalculationComponent implements OnInit, OnDestroy {
   orientation: Color = 'white';
   boardTheme = 'brown';
   pieceSet = 'cburnett';
+
+  // ===== Kapitel-Timer =====================================================
+  // Kumuliert die Rechenzeit JE KAPITEL (nicht je Stellung): beim Stellungswechsel innerhalb
+  // desselben Kapitels läuft derselbe Zähler weiter, beim Kapitelwechsel wird der Topf des
+  // neuen Kapitels geladen. Persistiert je Gerät in localStorage (`rookhub_calc_timer_<bookId>`,
+  // Map Kapitelname→Sekunden) — bewusst ohne Server-Anteil: der Timer ist ein Trainingswerkzeug,
+  // kein Wertungsbestandteil.
+  timerRunning = false;
+  timerSeconds = 0;
+  /** Kapitel-Schlüssel des laufenden Zählers ('' = „ohne Kapitel"); null = noch nicht geladen. */
+  private timerChapterKey: string | null = null;
+  private timerHandle?: ReturnType<typeof setInterval>;
   readonly noDests = new Map<Key, Key[]>();
 
   readonly glyphs = CALC_GLYPHS;
   readonly evals = CALC_EVALS;
+
+  // ===== Kapitel-Timer =====================================================
+
+  toggleTimer(): void {
+    if (this.timerRunning) this.pauseTimer(); else this.startTimer();
+  }
+
+  startTimer(): void {
+    if (this.timerRunning) return;
+    this.timerRunning = true;
+    this.timerHandle = setInterval(() => {
+      this.timerSeconds++;
+      // Jede Sekunde persistieren: übersteht Tab-Schließen/Navigieren ohne eigenen Flush-Pfad.
+      this.persistTimer();
+    }, 1000);
+  }
+
+  pauseTimer(): void {
+    if (!this.timerRunning) return;
+    this.timerRunning = false;
+    if (this.timerHandle !== undefined) { clearInterval(this.timerHandle); this.timerHandle = undefined; }
+    this.persistTimer();
+  }
+
+  /** Angezeigte kumulierte Kapitel-Zeit (m:ss bzw. h:mm:ss). */
+  get timerDisplay(): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const h = Math.floor(this.timerSeconds / 3600);
+    const m = Math.floor((this.timerSeconds % 3600) / 60);
+    const sec = this.timerSeconds % 60;
+    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  }
+
+  /**
+   * Beim Stellungswechsel den Zähler-Topf des Kapitels nachziehen: gleiches Kapitel → weiterzählen,
+   * anderes Kapitel → alten Stand sichern und den des neuen Kapitels laden. Ein laufender Timer
+   * läuft über den Wechsel hinweg weiter (zählt dann ins neue Kapitel).
+   */
+  private syncTimerChapter(chapter: string | null): void {
+    const key = chapter ?? '';
+    if (key === this.timerChapterKey) return;
+    if (this.timerChapterKey !== null) this.persistTimer();
+    this.timerChapterKey = key;
+    this.timerSeconds = this.readTimerStore()[key] ?? 0;
+  }
+
+  private timerStorageKey(): string {
+    return `rookhub_calc_timer_${this.bookId}`;
+  }
+
+  private readTimerStore(): Record<string, number> {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.timerStorageKey()) ?? '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch { return {}; }
+  }
+
+  private persistTimer(): void {
+    if (this.timerChapterKey === null) return;
+    const store = this.readTimerStore();
+    store[this.timerChapterKey] = this.timerSeconds;
+    try { localStorage.setItem(this.timerStorageKey(), JSON.stringify(store)); } catch { /* voll/gesperrt */ }
+  }
 
   /**
    * Erklärung eines Symbols fürs Mouseover: erst was es bedeutet („Weiß gewinnt"), dann der
@@ -133,6 +208,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.pauseTimer();
     this.clearSaveTimer();
     this.flushSave();
     this.subs.unsubscribe();
@@ -174,6 +250,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   private applyPosition(pos: CalcPosition): void {
+    this.syncTimerChapter(pos.chapter);
     this.startFen = this.buildStartFen(pos);
     this.orientation = whiteToMove(this.startFen) ? 'white' : 'black';
     const stored = deserializeTree(pos.treeJson, this.startFen);

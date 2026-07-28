@@ -385,3 +385,86 @@ describe('CalculationComponent Symbol-Erklärungen', () => {
     for (const e of component.evals) expect(component.evalTooltip(e)).toContain('calc.eval.');
   });
 });
+
+describe('CalculationComponent Kapitel-Timer', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    jasmine.clock().install();
+  });
+  afterEach(() => {
+    jasmine.clock().uninstall();
+    localStorage.clear();
+  });
+
+  function makeWithBook() {
+    const { component } = make();
+    component.bookId = 1;             // sonst hieße der Speicher-Schlüssel „…_undefined"
+    return component;
+  }
+
+  it('zählt nur, solange er läuft, und persistiert je Sekunde', () => {
+    const c = makeWithBook();
+    load(c, position({ chapter: 'A' }));
+
+    c.startTimer();
+    jasmine.clock().tick(3000);
+    expect(c.timerSeconds).toBe(3);
+    expect(c.timerRunning).toBeTrue();
+
+    c.pauseTimer();
+    jasmine.clock().tick(5000);
+    expect(c.timerSeconds).toBe(3);   // pausiert = eingefroren
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 3 });
+  });
+
+  it('kumuliert innerhalb des Kapitels über Stellungswechsel hinweg', () => {
+    const c = makeWithBook();
+    load(c, position({ id: 7, chapter: 'A' }));
+    c.startTimer();
+    jasmine.clock().tick(4000);
+
+    load(c, position({ id: 8, chapter: 'A' }));   // nächste Stellung, GLEICHES Kapitel
+    jasmine.clock().tick(2000);
+
+    expect(c.timerSeconds).toBe(6);   // 4 + 2, ein Topf
+  });
+
+  it('führt je Kapitel einen eigenen Topf und lädt ihn beim Wechsel zurück', () => {
+    const c = makeWithBook();
+    load(c, position({ id: 7, chapter: 'A' }));
+    c.startTimer();
+    jasmine.clock().tick(4000);
+
+    load(c, position({ id: 9, chapter: 'B' }));   // Kapitelwechsel: A wird gesichert, B startet leer
+    expect(c.timerSeconds).toBe(0);
+    jasmine.clock().tick(2000);
+    expect(c.timerSeconds).toBe(2);
+
+    load(c, position({ id: 7, chapter: 'A' }));   // zurück nach A: Topf kommt wieder
+    expect(c.timerSeconds).toBe(4);
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 4, B: 2 });
+  });
+
+  it('formatiert die Anzeige als m:ss bzw. h:mm:ss', () => {
+    const c = makeWithBook();
+    load(c, position({ chapter: null }));
+    c.timerSeconds = 65;
+    expect(c.timerDisplay).toBe('1:05');
+    c.timerSeconds = 3723;
+    expect(c.timerDisplay).toBe('1:02:03');
+  });
+
+  it('stoppt beim Zerstören und sichert den Stand', () => {
+    const c = makeWithBook();
+    load(c, position({ chapter: 'A' }));
+    c.startTimer();
+    jasmine.clock().tick(2000);
+
+    c.ngOnDestroy();
+
+    expect(c.timerRunning).toBeFalse();
+    jasmine.clock().tick(5000);
+    expect(c.timerSeconds).toBe(2);
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 2 });
+  });
+});

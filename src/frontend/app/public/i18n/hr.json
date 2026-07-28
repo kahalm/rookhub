@@ -1348,6 +1348,11 @@
       "blunder": "Velika pogreška"
     },
     "symbolToggleHint": "klikni ponovno za brisanje",
+    "timer": {
+      "start": "Pokreni mjerač",
+      "pause": "Pauziraj mjerač",
+      "hint": "Ukupno vrijeme računanja u ovom poglavlju"
+    },
     "illegalPosition": "Ovaj dijagram nije legalna šahovska pozicija — ovdje se potezi ne mogu unositi.",
     "jumpTo": "Skoči na poziciju",
     "keyboardHint": "← / → kreće se unutar varijante, ↑ / ↓ mijenja varijantu. Za odvojak odaberi potez u sredini varijante i odigraj drugi potez.",

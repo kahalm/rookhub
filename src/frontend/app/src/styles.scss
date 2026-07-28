@@ -162,3 +162,10 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
     border-radius: 0 !important;
   }
 }
+
+/* In die Brett-Vollbild-Hülle projizierte Elemente (siehe PuzzleBoardComponent <ng-content>):
+   außerhalb des Vollbilds unsichtbar, im Vollbild eingeblendet. Global, weil der :fullscreen-
+   Vorfahre und das projizierte Element aus verschiedenen Komponenten stammen (View-Encapsulation
+   würde den Selektor sonst zerlegen). */
+[data-fs-only] { display: none !important; }
+.board-fs-host:fullscreen [data-fs-only] { display: flex !important; }

@@ -1348,6 +1348,11 @@
       "blunder": "Blunder"
     },
     "symbolToggleHint": "click again to remove",
+    "timer": {
+      "start": "Start timer",
+      "pause": "Pause timer",
+      "hint": "Accumulated calculation time in this chapter"
+    },
     "illegalPosition": "This diagram is not a legal chess position, so moves cannot be entered here.",
     "jumpTo": "Jump to position",
     "keyboardHint": "← / → move within the line, ↑ / ↓ switch lines. Select a move in the middle and play another one to branch off.",

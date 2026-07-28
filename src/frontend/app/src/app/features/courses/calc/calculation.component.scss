@@ -247,3 +247,46 @@
   font-size: 0.78rem;
   opacity: 0.75;
 }
+
+/* ===== Kapitel-Timer ===== */
+.calc-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.calc-timer-icon { font-size: 18px; width: 18px; height: 18px; }
+
+/* Vollbild-Variante: schwebt im schwarzen Balken neben dem Brett (Sichtbarkeit steuert die
+   globale [data-fs-only]-Regel in styles.scss; position: fixed greift, weil das Vollbild-
+   Element vom Browser als fixed-Containing-Block gesetzt wird). */
+.calc-fs-timer {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 70;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.calc-fs-timer .calc-timer-icon { font-size: 22px; width: 22px; height: 22px; }
+.calc-fs-timer-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.calc-fs-timer-btn:hover, .calc-fs-timer-btn:focus-visible { background: rgba(255, 255, 255, 0.3); }

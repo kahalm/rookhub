@@ -44,11 +44,15 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
         </div>
       }
      </div>
+     <!-- Vom Consumer in die Vollbild-Hülle projizierte Elemente (z. B. der Kalkulations-Timer).
+          Mit data-fs-only sind sie NUR im Vollbild sichtbar (globale Regel in styles.scss) —
+          nötig, weil der Browser im Vollbild ausschließlich diesen Teilbaum rendert. -->
+     <ng-content />
     </div>
   `,
   styles: [`
     :host { display: block; width: 100%; }
-    .board-fs-host { width: 100%; }
+    .board-fs-host { width: 100%; position: relative; }
     .board-wrapper { position: relative; }
     /* Vollbild: das Vollbild-ELEMENT (.board-fs-host) behält die vom Browser erzwungenen
        100% × 100% — dessen UA-Regeln sind !important und schlagen sogar Author-!important,

@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import {
@@ -297,5 +298,28 @@ describe('PuzzleBoardComponent Vollbild-Knopf', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-board-fullscreen-button')).toBeNull();
+  });
+});
+
+describe('PuzzleBoardComponent Vollbild-Projektion', () => {
+  it('projiziert Consumer-Inhalte (z. B. den Kalkulations-Timer) in die Vollbild-Hülle', async () => {
+    // Nur was INNERHALB der Hülle liegt, ist im Vollbild sichtbar — der Browser rendert dort
+    // ausschließlich diesen Teilbaum.
+    @Component({
+      standalone: true,
+      imports: [PuzzleBoardComponent],
+      template: '<app-puzzle-board><span id="probe" data-fs-only>0:00</span></app-puzzle-board>',
+    })
+    class HostComponent {}
+
+    await TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+
+    const host: HTMLElement = fixture.nativeElement.querySelector('.board-fs-host');
+    expect(host.querySelector('#probe')).not.toBeNull();
   });
 });

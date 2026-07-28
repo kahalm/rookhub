@@ -27,6 +27,15 @@
             {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
           </span>
           <span class="calc-spacer"></span>
+          <!-- Kapitel-Timer: kumuliert die Rechenzeit dieses Kapitels (Start/Pause). -->
+          <span class="calc-timer" [matTooltip]="'calc.timer.hint' | translate">
+            <mat-icon class="calc-timer-icon">timer</mat-icon>
+            <span class="calc-timer-time">{{ timerDisplay }}</span>
+          </span>
+          <button mat-icon-button (click)="toggleTimer()"
+                  [matTooltip]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate">
+            <mat-icon>{{ timerRunning ? 'pause' : 'play_arrow' }}</mat-icon>
+          </button>
           <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
             <mat-icon>flip_camera_android</mat-icon>
           </button>
@@ -37,7 +46,19 @@
             [fen]="startFen" [actualFen]="cursorFen" [visualization]="1"
             [orientation]="orientation" [turnColor]="orientation" [dests]="noDests"
             [boardTheme]="boardTheme" [pieceSet]="pieceSet"
-            (moveMade)="onMove($event)" />
+            (moveMade)="onMove($event)">
+            <!-- Timer neben dem Brett im Vollbild: natives title statt matTooltip
+                 (CDK-Overlays sind im Vollbild unsichtbar). -->
+            <div class="calc-fs-timer" data-fs-only [attr.title]="'calc.timer.hint' | translate">
+              <mat-icon class="calc-timer-icon">timer</mat-icon>
+              <span class="calc-timer-time">{{ timerDisplay }}</span>
+              <button type="button" class="calc-fs-timer-btn" (click)="toggleTimer()"
+                      [attr.title]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate"
+                      [attr.aria-label]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate">
+                <mat-icon>{{ timerRunning ? 'pause' : 'play_arrow' }}</mat-icon>
+              </button>
+            </div>
+          </app-puzzle-board>
         </div>
 
         @if (illegalPosition) {

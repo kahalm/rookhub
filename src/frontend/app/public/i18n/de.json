@@ -1348,6 +1348,11 @@
       "blunder": "Grober Fehler"
     },
     "symbolToggleHint": "nochmal klicken = entfernen",
+    "timer": {
+      "start": "Timer starten",
+      "pause": "Timer pausieren",
+      "hint": "Kumulierte Rechenzeit in diesem Kapitel"
+    },
     "illegalPosition": "Dieses Diagramm ist keine legale Schachstellung — hier lassen sich keine Züge eingeben.",
     "jumpTo": "Zu Stellung springen",
     "keyboardHint": "← / → bewegt innerhalb der Linie, ↑ / ↓ wechselt die Linie. Für eine Abzweigung einen Zug mitten in der Linie auswählen und einen anderen Zug spielen.",
