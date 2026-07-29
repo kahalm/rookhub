@@ -178,6 +178,8 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     </div>
   `,
   styles: [`
+    /* App-Vollbild (Host-Klasse auf app-root): Seitentitel weg — das Brett bekommt den Platz. */
+    :host-context(.app-fullscreen) h1 { display: none; }
     .analysis-page { max-width: 1100px; margin: 16px auto; padding: 0 12px; }
     .analysis-layout { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
     .board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, 560px); min-width: 280px; }

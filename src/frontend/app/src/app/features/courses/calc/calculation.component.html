@@ -19,7 +19,7 @@
     <div class="calc-layout">
       <!-- ===== Brett (STRIKT eingefroren) ===== -->
       <div class="calc-board-col">
-        <div class="calc-board-head">
+        <div class="calc-board-head calc-board-head--board">
           <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
             <mat-icon>ac_unit</mat-icon>{{ 'calc.frozen' | translate }}
           </span>
@@ -73,6 +73,29 @@
 
       <!-- ===== Seitenspalte ===== -->
       <div class="calc-side-col">
+        <!-- Im App-Vollbild rutscht die Brett-Kopfzeile (Eingefroren/Am-Zug/Timer/Drehen)
+             hierher (rechts) — über dem Brett stiehlt dann nichts mehr Höhe. Normal ausgeblendet. -->
+        <div class="calc-board-head calc-board-head--side">
+          <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
+            <mat-icon>ac_unit</mat-icon>{{ 'calc.frozen' | translate }}
+          </span>
+          <span class="calc-turn">
+            {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
+          </span>
+          <span class="calc-spacer"></span>
+          <!-- Kapitel-Timer: kumuliert die Rechenzeit dieses Kapitels (Start/Pause). -->
+          <span class="calc-timer" [matTooltip]="'calc.timer.hint' | translate">
+            <mat-icon class="calc-timer-icon">timer</mat-icon>
+            <span class="calc-timer-time">{{ timerDisplay }}</span>
+          </span>
+          <button mat-icon-button (click)="toggleTimer()"
+                  [matTooltip]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate">
+            <mat-icon>{{ timerRunning ? 'pause' : 'play_arrow' }}</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
+            <mat-icon>flip_camera_android</mat-icon>
+          </button>
+        </div>
         <!-- Im App-Vollbild rutscht die „Du bist hier"-Zugzeile vom Brett hierher (rechts),
              damit das Brett die volle Höhe bekommt. Normal ist diese Kopie ausgeblendet. -->
         <p class="calc-where calc-where--side">

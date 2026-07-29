@@ -191,6 +191,8 @@ interface ChapterGroup {
     </div>
   `,
   styles: [`
+    /* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
+    :host-context(.app-fullscreen) .browse-head { display: none; }
     .browse-container { max-width: 1200px; margin: 16px auto; padding: 0 16px; }
     .browse-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .head-text h1 { margin: 0; font-size: 1.25rem; }

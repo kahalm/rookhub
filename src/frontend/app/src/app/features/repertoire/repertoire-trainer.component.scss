@@ -68,3 +68,6 @@
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .eval-info { font-size: 13px; opacity: .85; margin: 0 0 8px; }
+
+/* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
+:host-context(.app-fullscreen) .bar { display: none; }

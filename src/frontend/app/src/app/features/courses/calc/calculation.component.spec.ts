@@ -494,5 +494,12 @@ describe('CalculationComponent App-Vollbild-Layout', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.calc-board-col .calc-where--board')).not.toBeNull();
     expect(el.querySelector('.calc-side-col .calc-where--side')).not.toBeNull();
+    // Auch die Brett-Kopfzeile (Eingefroren/Timer/Drehen) steht doppelt da: im Vollbild zeigt
+    // CSS die Seiten-Variante, damit über dem Brett nichts Höhe stiehlt.
+    expect(el.querySelector('.calc-board-col .calc-board-head--board')).not.toBeNull();
+    expect(el.querySelector('.calc-side-col .calc-board-head--side')).not.toBeNull();
+    // Drei Timer-Anzeigen im DOM: Brett-Kopfzeile, Seiten-Kopie (App-Vollbild) und das
+    // data-fs-only-Overlay fürs BRETT-Vollbild — CSS zeigt je Modus genau eine.
+    expect(el.querySelectorAll('.calc-timer-time').length).toBe(3);
   });
 });

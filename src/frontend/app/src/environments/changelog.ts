@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.326.0';
+export const APP_VERSION = '0.326.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.326.1", date: "2026-07-29", changes: [
+    { en: "App fullscreen, follow-up: the pages' own headers get out of the way too. In calculation mode the strip above the board (frozen badge, side to move, chapter timer, flip button) moves to the RIGHT of the board while fullscreen is on — nothing above or below the board steals height any more, the board itself is the full screen height. The page headers of the analysis page, the repertoire trainer and course browsing (title/back rows) disappear in fullscreen as well; the puzzle solvers never had anything above the board. Everything returns when you leave fullscreen. NOT deployed (frontend image only).", de: "App-Vollbild, Nachschlag: auch die seiteneigenen Kopfzeilen gehen aus dem Weg. Im Kalkulations-Modus wandert die Leiste über dem Brett (Eingefroren-Badge, Am-Zug, Kapitel-Timer, Brett drehen) im Vollbild nach RECHTS neben das Brett — über und unter dem Brett stiehlt nichts mehr Höhe, das Brett ist die volle Bildschirmhöhe. Die Seitenköpfe der Analyse-Seite, des Repertoire-Trainers und des Kurs-Durchsehens (Titel-/Zurück-Zeilen) verschwinden im Vollbild ebenfalls; die Puzzle-Solver hatten nie etwas über dem Brett. Beim Verlassen kommt alles zurück. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.326.0", date: "2026-07-29", changes: [
     { en: "Calculation mode in app fullscreen: the board now grows to the largest square the screen allows (full height, capped by the width the side panel leaves), the page header disappears, and everything else — task, your lines, the jump list — sits to the RIGHT of the board in its own scrolling column. The ‚You are here' move line, normally shown under the board, moves to the right as well, so nothing below the board steals height. Leaving fullscreen restores the normal layout; below 900px width the single-column view stays as is. +1 test (1400 green). NOT deployed (frontend image only).", de: "Kalkulations-Modus im App-Vollbild: das Brett wächst jetzt auf das größte Quadrat, das der Schirm hergibt (volle Höhe, begrenzt nur durch die Breite, die die Seitenspalte übrig lässt), der Seitenkopf verschwindet, und alles andere — Aufgabe, deine Linien, die Sprungliste — steht RECHTS neben dem Brett in einer eigenen scrollenden Spalte. Die „Du bist hier“-Zugzeile, die normal unter dem Brett steht, wandert ebenfalls nach rechts — unter dem Brett stiehlt nichts mehr Höhe. Beim Verlassen des Vollbilds kommt das normale Layout zurück; unter 900px Breite bleibt die Einspalten-Ansicht unverändert. +1 Test (1400 grün). NICHT deployed (nur Frontend-Image)." },
   ] },

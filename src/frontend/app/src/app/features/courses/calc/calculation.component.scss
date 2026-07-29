@@ -299,6 +299,7 @@
    wechselt vom Brett in die Seitenspalte. Nur ab 900px — darunter bleibt die Einspalten-
    Ansicht (dort gewinnt das Brett durch eine Seitenspalte nichts). */
 .calc-where--side { display: none; }
+.calc-board-head--side { display: none; }
 
 @media (min-width: 900px) {
   :host-context(.app-fullscreen) {
@@ -308,8 +309,11 @@
       grid-template-columns: auto minmax(300px, 1fr);
       gap: 0.75rem;
     }
-    /* 100vh − Brett-Kopfzeile/Ränder (~72px) in der Höhe, − Seitenspalte (~340px) in der Breite. */
-    .calc-board-col { width: min(calc(100vh - 72px), calc(100vw - 340px)); }
+    /* Über/unter dem Brett steht im Vollbild NICHTS mehr (Kopfzeile + Zugzeile sind rechts) —
+       nur die Seitenränder (2×0.5rem) gehen von der Höhe ab. */
+    .calc-board-col { width: min(calc(100vh - 1rem), calc(100vw - 340px)); }
+    .calc-board-head--board { display: none; }
+    .calc-board-head--side { display: flex; }
     .calc-where--board { display: none; }
     .calc-where--side { display: flex; }
     .calc-side-col {
