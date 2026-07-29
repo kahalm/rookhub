@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.325.0';
+export const APP_VERSION = '0.325.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.325.1", date: "2026-07-29", changes: [
+    { en: "App fullscreen now really clears the screen: the top menu bar and the footer disappear while fullscreen is active, so the content — above all the board — gets the maximum space. A small translucent button in the top-right corner (or Esc) brings you back; leaving fullscreen restores both bars. A board taken fullscreen on its own deliberately does not trigger this. +2 tests (1399 green). NOT deployed (frontend image only).", de: "Das App-Vollbild räumt jetzt wirklich den Schirm frei: die Menüleiste oben und die Fußzeile verschwinden, solange das Vollbild aktiv ist — der Inhalt, allen voran das Brett, bekommt den maximalen Platz. Ein kleiner halbtransparenter Knopf rechts oben (oder Esc) führt zurück; beim Verlassen sind beide Leisten wieder da. Ein einzeln ins Vollbild geschicktes Brett löst das bewusst nicht aus. +2 Tests (1399 grün). NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.325.0", date: "2026-07-28", changes: [
     { en: "Fullscreen for the WHOLE app: a new toggle in the navbar (next to theme and language, also in the compact menu on phones and in the signed-out toolbar) puts the entire interface into real fullscreen — over the taskbar and browser bar. Unlike the board fullscreen button, everything stays visible and usable: navigation, side panels, tooltips, menus, dialogs. The button flips to ‚leave fullscreen', Esc works as usual. Browsers without element fullscreen (Safari on iPhone/iPad) simply don't show it. +2 tests (1397 green). NOT deployed (frontend image only).", de: "Vollbild für die GANZE App: ein neuer Schalter in der Navbar (neben Design und Sprache, auch im Kompakt-Menü auf dem Handy und in der ausgeloggten Leiste) schaltet die komplette Oberfläche ins echte Vollbild — über Taskleiste und Browserleiste hinweg. Anders als beim Brett-Vollbild bleibt dabei alles sichtbar und bedienbar: Navigation, Seitenpanels, Tooltips, Menüs, Dialoge. Der Knopf wird zum „Vollbild verlassen“, Esc geht wie gewohnt. Browser ohne Element-Vollbild (Safari auf iPhone/iPad) zeigen ihn einfach nicht. +2 Tests (1397 grün). NICHT deployed (nur Frontend-Image)." },
   ] },

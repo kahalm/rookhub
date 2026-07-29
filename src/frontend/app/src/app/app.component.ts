@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, HostBinding, HostListener, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
@@ -22,6 +22,9 @@ import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
 import { ThemeService } from './core/theme.service';
+import {
+  exitFullscreen, isFullscreen, onFullscreenChange,
+} from './shared/fullscreen/fullscreen.util';
 import { environment } from '../environments/environment';
 import { APK_VERSION } from '../environments/changelog';
 
@@ -75,6 +78,15 @@ import { APK_VERSION } from '../environments/changelog';
       </div>
     }
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
+    @if (appFullscreen) {
+      <!-- Im App-Vollbild sind Navbar + Fußzeile ausgeblendet (maximaler Platz fürs Brett) —
+           dieser schwebende Knopf ist neben Esc der Weg zurück. -->
+      <button class="app-fs-exit" (click)="exitAppFullscreen()"
+              [attr.title]="'nav.fullscreenExit' | translate"
+              [attr.aria-label]="'nav.fullscreenExit' | translate">
+        <mat-icon>fullscreen_exit</mat-icon>
+      </button>
+    }
     <main><router-outlet /></main>
     <footer class="app-footer">
       <span class="version-link" role="button" tabindex="0"
@@ -181,6 +193,26 @@ import { APK_VERSION } from '../environments/changelog';
     .conn-details ul { margin: 4px 0 4px 18px; padding: 0; }
     .conn-details li { margin-bottom: 3px; }
     .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
+    /* App-Vollbild: Kopf- und Fußleiste weg, der Inhalt (v. a. das Brett) bekommt den ganzen
+       Schirm. Gesteuert über die Host-Klasse (JS-Flag), nicht über :root:fullscreen — so zählt
+       ein einzelnes Brett im Vollbild nicht mit. */
+    :host(.app-fullscreen) app-navbar,
+    :host(.app-fullscreen) .app-footer { display: none; }
+    .app-fs-exit {
+      position: fixed;
+      top: 6px; right: 6px;
+      z-index: 1000;
+      width: 30px; height: 30px;
+      display: grid; place-items: center;
+      padding: 0; border: 0; border-radius: 6px;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      opacity: 0.35;
+      transition: opacity 0.12s ease-in-out;
+    }
+    .app-fs-exit:hover, .app-fs-exit:focus-visible { opacity: 1; background: rgba(0, 0, 0, 0.6); }
+    .app-fs-exit mat-icon { font-size: 20px; width: 20px; height: 20px; }
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
     .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
@@ -246,6 +278,18 @@ export class AppComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
+  /**
+   * App-Vollbild aktiv (der Navbar-Schalter hat das GANZE Dokument ins Vollbild geschickt)?
+   * Blendet als Host-Klasse Navbar + Fußzeile aus — der Inhalt bekommt den maximalen Platz.
+   * Ein einzelnes Brett im Vollbild zählt bewusst NICHT (dort bleibt die App unsichtbar,
+   * es gibt nichts auszublenden).
+   */
+  @HostBinding('class.app-fullscreen') appFullscreen = false;
+
+  exitAppFullscreen(): void {
+    void exitFullscreen();
+  }
+
   constructor(
     private router: Router,
     locale: LocaleService,
@@ -282,6 +326,10 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // App-Vollbild-Zustand nachführen (Navbar-Schalter, Esc, F11-Wechsel).
+    const offFs = onFullscreenChange(() => this.appFullscreen = isFullscreen(document.documentElement));
+    this.destroyRef.onDestroy(offFs);
+
     // APK-Update-Banner: nur auf Android im Standalone-Modus (= TWA-App).
     if (this.pwa.isAndroid && this.pwa.isInstalled()) {
       const seen = parseInt(localStorage.getItem(this.APK_UPDATE_LS_KEY) ?? '0', 10);

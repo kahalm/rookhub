@@ -159,3 +159,65 @@ describe('AppComponent lifecycle', () => {
     });
   });
 });
+
+describe('AppComponent App-Vollbild', () => {
+  let current: Element | null;
+
+  beforeEach(() => {
+    current = null;
+    TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [
+        { provide: Router, useValue: { events: new Subject<unknown>() } },
+        { provide: SwUpdate, useValue: { isEnabled: false, versionUpdates: new Subject<unknown>(), unrecoverable: new Subject<unknown>(), checkForUpdate: () => Promise.resolve(false) } },
+        { provide: LocaleService, useValue: { init: () => {} } },
+        { provide: AuthService, useValue: { isLoggedIn: false, isAdmin: false, isImpersonating: false } },
+        { provide: MenuService, useValue: {} },
+        { provide: DiscordLinkService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+        { provide: OfflineQueueService, useValue: {} },
+        { provide: OfflinePrefetchService, useValue: { prefetchAll: () => {} } },
+        { provide: ClientLogService, useValue: { report: () => {} } },
+        { provide: StockfishService, useValue: {} },
+        { provide: AnalysisEngineService, useValue: {} },
+        { provide: ThemeService, useValue: { init: () => {} } },
+        { provide: PwaInstallService, useValue: { captureBeforeInstallPrompt: () => {} } },
+      ],
+    });
+    TestBed.overrideComponent(AppComponent, { set: { template: `
+      @if (appFullscreen) { <button class="app-fs-exit" (click)="exitAppFullscreen()"></button> }
+    ` } });
+    spyOnProperty(document, 'fullscreenElement', 'get').and.callFake(() => current);
+  });
+
+  it('blendet Kopf-/Fußleiste nur im DOKUMENT-Vollbild aus (Host-Klasse), nicht beim Brett-Vollbild', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.appFullscreen).toBeFalse();
+
+    current = document.createElement('div');            // nur ein Brett im Vollbild
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(fixture.componentInstance.appFullscreen).toBeFalse();
+
+    current = document.documentElement;                  // die ganze GUI
+    document.dispatchEvent(new Event('fullscreenchange'));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.appFullscreen).toBeTrue();
+    expect((fixture.nativeElement as HTMLElement).classList).toContain('app-fullscreen');
+    expect(fixture.nativeElement.querySelector('.app-fs-exit')).not.toBeNull();
+  });
+
+  it('der schwebende Knopf verlässt das Vollbild', () => {
+    const exit = spyOn(document, 'exitFullscreen').and.returnValue(Promise.resolve());
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    current = document.documentElement;
+    document.dispatchEvent(new Event('fullscreenchange'));
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.app-fs-exit') as HTMLButtonElement).click();
+
+    expect(exit).toHaveBeenCalled();
+  });
+});
