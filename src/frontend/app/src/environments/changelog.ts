@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.326.1';
+export const APP_VERSION = '0.326.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.326.2", date: "2026-07-29", changes: [
+    { en: "The three puzzle solvers (standard, Endless, and book/course — the same screen also serves daily puzzle and weekly post) now get the same fullscreen treatment as calculation mode: in app fullscreen the board grows to the full screen height (previously it stopped well short), and the strip below the board (side to move, visualization countdown/eye, hint and flag buttons) moves to the TOP of the info column on the right — nothing below the board steals height any more. The strip is defined once and rendered in whichever of the two places fits the mode, so both stay in sync. Below 900px width the single-column view stays as is. NOT deployed (frontend image only).", de: "Die drei Puzzle-Solver (Standard, Endless und Buch/Kurs — derselbe Bildschirm bedient auch Tagespuzzle und Wochenpost) bekommen jetzt dieselbe Vollbild-Behandlung wie der Kalkulations-Modus: im App-Vollbild wächst das Brett auf die volle Bildschirmhöhe (bisher blieb es deutlich darunter), und die Leiste unter dem Brett (Am-Zug, Visualisierungs-Countdown/Auge, Tipp- und Melde-Knöpfe) wandert OBEN in die Info-Spalte rechts — unter dem Brett stiehlt nichts mehr Höhe. Die Leiste ist einmal definiert und wird je Modus an genau einer der beiden Stellen gerendert, beide bleiben also synchron. Unter 900px Breite bleibt die Einspalten-Ansicht unverändert. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.326.1", date: "2026-07-29", changes: [
     { en: "App fullscreen, follow-up: the pages' own headers get out of the way too. In calculation mode the strip above the board (frozen badge, side to move, chapter timer, flip button) moves to the RIGHT of the board while fullscreen is on — nothing above or below the board steals height any more, the board itself is the full screen height. The page headers of the analysis page, the repertoire trainer and course browsing (title/back rows) disappear in fullscreen as well; the puzzle solvers never had anything above the board. Everything returns when you leave fullscreen. NOT deployed (frontend image only).", de: "App-Vollbild, Nachschlag: auch die seiteneigenen Kopfzeilen gehen aus dem Weg. Im Kalkulations-Modus wandert die Leiste über dem Brett (Eingefroren-Badge, Am-Zug, Kapitel-Timer, Brett drehen) im Vollbild nach RECHTS neben das Brett — über und unter dem Brett stiehlt nichts mehr Höhe, das Brett ist die volle Bildschirmhöhe. Die Seitenköpfe der Analyse-Seite, des Repertoire-Trainers und des Kurs-Durchsehens (Titel-/Zurück-Zeilen) verschwinden im Vollbild ebenfalls; die Puzzle-Solver hatten nie etwas über dem Brett. Beim Verlassen kommt alles zurück. NICHT deployed (nur Frontend-Image)." },
   ] },

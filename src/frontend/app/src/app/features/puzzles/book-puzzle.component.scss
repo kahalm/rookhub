@@ -214,3 +214,18 @@
         .info-line-pos { font-variant-numeric: tabular-nums; min-width: 3.5rem; text-align: center; }
       }
     }
+
+    /* ===== App-Vollbild (Host-Klasse auf app-root) =====
+       Brett auf das größtmögliche Quadrat (nur die Seitenränder gehen von der Höhe ab); die
+       Unter-Brett-Leiste (boardHintTpl) rendert dann im Seiten-Slot RECHTS statt unter dem
+       Brett. Nur ab 900px — darunter bleibt das Einspalten-Layout. */
+    .board-hint-slot--side { display: none; }
+
+    @media (min-width: 900px) {
+      :host-context(.app-fullscreen) {
+        .puzzle-page { max-width: none; padding: 0.5rem; }
+        .board-section { width: min(calc(100vh - 1rem), calc(100vw - 320px)); }
+        .board-hint-slot--board { display: none; }
+        .board-hint-slot--side { display: block; }
+      }
+    }

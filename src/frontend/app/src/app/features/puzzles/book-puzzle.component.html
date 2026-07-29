@@ -22,6 +22,10 @@
             [reviewShapes]="(!variationPreview && reviewMode) ? reviewShapes : []"
             (moveMade)="onMoveMade($event)"
           />
+          <!-- Unter-Brett-Leiste (Am-Zug/Viz/Tipps) EINMAL definiert, an zwei Stellen gerendert:
+               normal unter dem Brett, im App-Vollbild oben in der Info-Spalte — dann stiehlt
+               unter dem Brett nichts Höhe und das Brett wird bildschirmhoch. -->
+          <ng-template #boardHintTpl>
           @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
             <div class="board-hint">
               @if (vizCountdownSeconds > 0) {
@@ -65,10 +69,17 @@
               </ol>
             }
           }
+          </ng-template>
+          <div class="board-hint-slot board-hint-slot--board">
+            <ng-container [ngTemplateOutlet]="boardHintTpl" />
+          </div>
         </div>
 
         <!-- Info-Spalte -->
         <div class="info-section">
+          <div class="board-hint-slot board-hint-slot--side">
+            <ng-container [ngTemplateOutlet]="boardHintTpl" />
+          </div>
 
           <!-- Kontext-Card: Puzzle-Info + Kurs/Weekly-Fortschritt + Navigation (immer oben) -->
           @if (puzzle) {

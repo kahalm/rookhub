@@ -268,6 +268,10 @@
                 [vizOpponentArrowBrush]="themeMode === 'crazy' ? 'green' : 'red'"
                 (moveMade)="onMoveMade($event)"
               />
+              <!-- Unter-Brett-Leiste (Am-Zug/Viz/Tipps) EINMAL definiert, an zwei Stellen gerendert:
+                   normal unter dem Brett, im App-Vollbild oben in der Info-Spalte — dann stiehlt
+                   unter dem Brett nichts Höhe und das Brett wird bildschirmhoch. -->
+              <ng-template #boardHintTpl>
               @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
                 <div class="board-hint">
                   @if (vizCountdownSeconds > 0) {
@@ -311,9 +315,16 @@
                   </ol>
                 }
               }
+              </ng-template>
+              <div class="board-hint-slot board-hint-slot--board">
+                <ng-container [ngTemplateOutlet]="boardHintTpl" />
+              </div>
             </div>
 
             <div class="info-section">
+              <div class="board-hint-slot board-hint-slot--side">
+                <ng-container [ngTemplateOutlet]="boardHintTpl" />
+              </div>
               @if (puzzle) {
                 <div class="quick-stats">
                   <span class="qs-pill"><mat-icon>star</mat-icon>{{ puzzle.rating }}</span>
