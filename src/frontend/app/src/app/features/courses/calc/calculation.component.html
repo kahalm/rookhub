@@ -65,7 +65,7 @@
           <p class="calc-warn"><mat-icon>report_problem</mat-icon>{{ 'calc.illegalPosition' | translate }}</p>
         }
 
-        <p class="calc-where">
+        <p class="calc-where calc-where--board">
           <span class="calc-where-label">{{ 'calc.currentLine' | translate }}</span>
           <span class="calc-where-san">{{ cursorPathSan || ('calc.atStart' | translate) }}</span>
         </p>
@@ -73,6 +73,12 @@
 
       <!-- ===== Seitenspalte ===== -->
       <div class="calc-side-col">
+        <!-- Im App-Vollbild rutscht die „Du bist hier"-Zugzeile vom Brett hierher (rechts),
+             damit das Brett die volle Höhe bekommt. Normal ist diese Kopie ausgeblendet. -->
+        <p class="calc-where calc-where--side">
+          <span class="calc-where-label">{{ 'calc.currentLine' | translate }}</span>
+          <span class="calc-where-san">{{ cursorPathSan || ('calc.atStart' | translate) }}</span>
+        </p>
         <!-- Aufgabe: nur Stellung + optionaler Kommentar, keine Lösung -->
         <mat-card class="calc-task">
           <mat-card-content>

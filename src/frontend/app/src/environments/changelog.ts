@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.325.1';
+export const APP_VERSION = '0.326.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.326.0", date: "2026-07-29", changes: [
+    { en: "Calculation mode in app fullscreen: the board now grows to the largest square the screen allows (full height, capped by the width the side panel leaves), the page header disappears, and everything else — task, your lines, the jump list — sits to the RIGHT of the board in its own scrolling column. The ‚You are here' move line, normally shown under the board, moves to the right as well, so nothing below the board steals height. Leaving fullscreen restores the normal layout; below 900px width the single-column view stays as is. +1 test (1400 green). NOT deployed (frontend image only).", de: "Kalkulations-Modus im App-Vollbild: das Brett wächst jetzt auf das größte Quadrat, das der Schirm hergibt (volle Höhe, begrenzt nur durch die Breite, die die Seitenspalte übrig lässt), der Seitenkopf verschwindet, und alles andere — Aufgabe, deine Linien, die Sprungliste — steht RECHTS neben dem Brett in einer eigenen scrollenden Spalte. Die „Du bist hier“-Zugzeile, die normal unter dem Brett steht, wandert ebenfalls nach rechts — unter dem Brett stiehlt nichts mehr Höhe. Beim Verlassen des Vollbilds kommt das normale Layout zurück; unter 900px Breite bleibt die Einspalten-Ansicht unverändert. +1 Test (1400 grün). NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.325.1", date: "2026-07-29", changes: [
     { en: "App fullscreen now really clears the screen: the top menu bar and the footer disappear while fullscreen is active, so the content — above all the board — gets the maximum space. A small translucent button in the top-right corner (or Esc) brings you back; leaving fullscreen restores both bars. A board taken fullscreen on its own deliberately does not trigger this. +2 tests (1399 green). NOT deployed (frontend image only).", de: "Das App-Vollbild räumt jetzt wirklich den Schirm frei: die Menüleiste oben und die Fußzeile verschwinden, solange das Vollbild aktiv ist — der Inhalt, allen voran das Brett, bekommt den maximalen Platz. Ein kleiner halbtransparenter Knopf rechts oben (oder Esc) führt zurück; beim Verlassen sind beide Leisten wieder da. Ein einzeln ins Vollbild geschicktes Brett löst das bewusst nicht aus. +2 Tests (1399 grün). NICHT deployed (nur Frontend-Image)." },
   ] },

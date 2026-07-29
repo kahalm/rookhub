@@ -468,3 +468,31 @@ describe('CalculationComponent Kapitel-Timer', () => {
     expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 2 });
   });
 });
+
+describe('CalculationComponent App-Vollbild-Layout', () => {
+  it('führt die Zugzeile doppelt: unter dem Brett UND (fürs App-Vollbild) in der Seitenspalte', async () => {
+    // Im App-Vollbild blendet CSS die Brett-Variante aus und die Seiten-Variante ein — beide
+    // müssen dafür im DOM stehen, an den richtigen Stellen.
+    await TestBed.configureTestingModule({
+      imports: [CalculationComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CalculationComponent);
+    fixture.detectChanges();                       // ngOnInit (HTTP bleibt offen/pending)
+    const c = fixture.componentInstance;
+    c.bookId = 1;
+    load(c, position());
+    c.loading = false;
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.calc-board-col .calc-where--board')).not.toBeNull();
+    expect(el.querySelector('.calc-side-col .calc-where--side')).not.toBeNull();
+  });
+});

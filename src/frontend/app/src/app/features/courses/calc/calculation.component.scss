@@ -290,3 +290,31 @@
   color: #fff;
 }
 .calc-fs-timer-btn:hover, .calc-fs-timer-btn:focus-visible { background: rgba(255, 255, 255, 0.3); }
+
+/* ===== App-Vollbild-Layout =====
+   Aktiv, wenn die GANZE GUI im Vollbild ist (Host-Klasse `app-fullscreen` auf app-root,
+   siehe AppComponent) — Navbar + Fußzeile sind dann schon weg. Hier zusätzlich: eigener
+   Seitenkopf weg, Brett auf das größtmögliche Quadrat (Höhe = Viewport minus Brett-Kopfzeile,
+   Breite = Viewport minus Seitenspalte), Rest rechts daneben; die „Du bist hier"-Zugzeile
+   wechselt vom Brett in die Seitenspalte. Nur ab 900px — darunter bleibt die Einspalten-
+   Ansicht (dort gewinnt das Brett durch eine Seitenspalte nichts). */
+.calc-where--side { display: none; }
+
+@media (min-width: 900px) {
+  :host-context(.app-fullscreen) {
+    .calc-page { max-width: none; padding: 0.5rem; }
+    .calc-topbar { display: none; }
+    .calc-layout {
+      grid-template-columns: auto minmax(300px, 1fr);
+      gap: 0.75rem;
+    }
+    /* 100vh − Brett-Kopfzeile/Ränder (~72px) in der Höhe, − Seitenspalte (~340px) in der Breite. */
+    .calc-board-col { width: min(calc(100vh - 72px), calc(100vw - 340px)); }
+    .calc-where--board { display: none; }
+    .calc-where--side { display: flex; }
+    .calc-side-col {
+      max-height: calc(100vh - 1rem);
+      overflow-y: auto;
+    }
+  }
+}
