@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.326.2';
+export const APP_VERSION = '0.326.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.326.3", date: "2026-07-29", changes: [
+    { en: "Repertoire trainer (quiz AND learn mode) joins the fullscreen family: in app fullscreen the board grows to the full screen height (the old cap kept it well below), while progress, move list, comments and feedback stay in the right-hand column, which scrolls on its own. The toolbar row is already hidden in fullscreen since 0.326.1. NOT deployed (frontend image only).", de: "Der Repertoire-Trainer (Quiz- UND Lern-Modus) zieht beim Vollbild nach: im App-Vollbild wächst das Brett auf die volle Bildschirmhöhe (die alte Deckelung hielt es deutlich darunter), während Fortschritt, Zugliste, Kommentare und Feedback in der rechten Spalte bleiben, die selbst scrollt. Die Werkzeugleiste oben ist im Vollbild schon seit 0.326.1 ausgeblendet. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.326.2", date: "2026-07-29", changes: [
     { en: "The three puzzle solvers (standard, Endless, and book/course — the same screen also serves daily puzzle and weekly post) now get the same fullscreen treatment as calculation mode: in app fullscreen the board grows to the full screen height (previously it stopped well short), and the strip below the board (side to move, visualization countdown/eye, hint and flag buttons) moves to the TOP of the info column on the right — nothing below the board steals height any more. The strip is defined once and rendered in whichever of the two places fits the mode, so both stay in sync. Below 900px width the single-column view stays as is. NOT deployed (frontend image only).", de: "Die drei Puzzle-Solver (Standard, Endless und Buch/Kurs — derselbe Bildschirm bedient auch Tagespuzzle und Wochenpost) bekommen jetzt dieselbe Vollbild-Behandlung wie der Kalkulations-Modus: im App-Vollbild wächst das Brett auf die volle Bildschirmhöhe (bisher blieb es deutlich darunter), und die Leiste unter dem Brett (Am-Zug, Visualisierungs-Countdown/Auge, Tipp- und Melde-Knöpfe) wandert OBEN in die Info-Spalte rechts — unter dem Brett stiehlt nichts mehr Höhe. Die Leiste ist einmal definiert und wird je Modus an genau einer der beiden Stellen gerendert, beide bleiben also synchron. Unter 900px Breite bleibt die Einspalten-Ansicht unverändert. NICHT deployed (nur Frontend-Image)." },
   ] },

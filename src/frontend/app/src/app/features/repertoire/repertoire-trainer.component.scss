@@ -71,3 +71,18 @@
 
 /* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
 :host-context(.app-fullscreen) .bar { display: none; }
+
+/* App-Vollbild: Brett auf das größtmögliche Quadrat (die .bar oben ist dort schon ausgeblendet,
+   alles andere — Fortschritt/Züge/Kommentar/Feedback — liegt ohnehin rechts in .side, die bei
+   Bedarf selbst scrollt). Nur ab 900px; darunter bleibt das umbrechende Layout. */
+@media (min-width: 900px) {
+  :host-context(.app-fullscreen) {
+    .trainer { max-width: none; padding: 0.5rem; }
+    app-puzzle-board {
+      flex: 0 0 auto;
+      width: min(calc(100vh - 1rem), calc(100vw - 360px));
+      max-width: none;
+    }
+    .side { max-height: calc(100vh - 1rem); overflow-y: auto; max-width: none; }
+  }
+}
