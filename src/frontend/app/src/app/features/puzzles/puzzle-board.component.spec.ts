@@ -269,13 +269,19 @@ describe('PuzzleBoardComponent Vollbild-Knopf', () => {
     }).compileComponents();
   });
 
-  it('rendert ihn am Brett selbst — damit er im Vollbild sichtbar bleibt', () => {
+  it('rendert ihn ÜBER dem Brett (in der Vollbild-Hülle, nicht als Overlay im Wrapper)', () => {
+    // Als Overlay in der Brett-Ecke verdeckte er das Eckfeld — jetzt eine Zeile über dem Brett.
     const fixture = TestBed.createComponent(PuzzleBoardComponent);
     fixture.detectChanges();
 
-    const wrapper: HTMLElement = fixture.nativeElement.querySelector('.board-wrapper');
-    expect(wrapper.querySelector('app-board-fullscreen-button')).not.toBeNull();
-    expect(wrapper.querySelector('.board-fs-btn')).not.toBeNull();
+    const host: HTMLElement = fixture.nativeElement.querySelector('.board-fs-host');
+    expect(host.querySelector('.board-fs-btn')).not.toBeNull();
+    // NICHT mehr im Brett-Wrapper (dort läge er über dem Eckfeld) …
+    expect(fixture.nativeElement.querySelector('.board-wrapper .board-fs-btn')).toBeNull();
+    // … sondern VOR ihm (Zeile oberhalb des Bretts).
+    const button = host.querySelector('app-board-fullscreen-button')!;
+    const wrapper = host.querySelector('.board-wrapper')!;
+    expect(button.compareDocumentPosition(wrapper) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('schickt die ÄUSSERE Hülle ins Vollbild, nicht die Brettfläche', () => {

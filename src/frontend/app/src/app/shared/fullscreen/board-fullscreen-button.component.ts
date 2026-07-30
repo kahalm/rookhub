@@ -9,10 +9,14 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
  * Vollbild-Knopf für ein Schachbrett: schickt das übergebene Element ins echte Vollbild (über
  * Taskleiste/Browserleiste hinweg) und wieder heraus.
  *
- * <p>Er sitzt bewusst INNERHALB des Vollbild-Elements (Brett-Ecke) — nur so bleibt er im Vollbild
- * sichtbar und man kommt ohne Tastatur wieder heraus. Aus demselben Grund erklärt ihn ein natives
- * `title` und kein `matTooltip`: CDK-Overlays hängen am `<body>` und werden im Vollbild nicht
- * gerendert.</p>
+ * <p>Platzierung: als schmale Zeile DIREKT ÜBER dem Brett (rechtsbündig, im Fluss) — bewusst
+ * nicht als Overlay in der Brett-Ecke, das verdeckte dort das Eckfeld. Im Vollbild löst sich
+ * der Knopf aus dem Fluss und schwebt fix rechts oben im schwarzen Balken (das Vollbild-Element
+ * ist der Containing-Block für <c>position: fixed</c>).</p>
+ *
+ * <p>Er sitzt INNERHALB des Vollbild-Elements — nur so bleibt er im Vollbild sichtbar und man
+ * kommt ohne Tastatur wieder heraus. Aus demselben Grund erklärt ihn ein natives `title` und
+ * kein `matTooltip`: CDK-Overlays hängen am `<body>` und werden im Vollbild nicht gerendert.</p>
  *
  * <p>Kann der Browser kein Element-Vollbild (iOS-Safari), rendert die Komponente nichts.</p>
  */
@@ -31,41 +35,53 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
     }
   `,
   styles: [`
-    /* In der Brett-Ecke, halbtransparent — beim Überfahren des Bretts deutlich sichtbar.
-       Der Elternknoten (Brett-Wrapper) setzt position: relative. */
+    /* Schmale Zeile über dem Brett, Knopf rechtsbündig — überdeckt kein Feld. */
+    :host {
+      display: flex;
+      justify-content: flex-end;
+      line-height: 0;
+    }
     .board-fs-btn {
-      position: absolute;
-      top: 2px; right: 2px;
-      z-index: 60;
-      width: 24px; height: 24px;
+      width: 22px; height: 22px;
       display: grid; place-items: center;
       padding: 0;
+      margin-bottom: 2px;
       border: 0;
       border-radius: 4px;
       cursor: pointer;
-      background: rgba(0, 0, 0, 0.35);
-      color: #fff;
-      opacity: 0.3;
-      transition: opacity 0.12s ease-in-out;
+      background: transparent;
+      color: currentColor;
+      opacity: 0.45;
+      transition: opacity 0.12s ease-in-out, background 0.12s ease-in-out;
     }
     .board-fs-btn mat-icon {
       font-size: 18px; width: 18px; height: 18px; line-height: 18px;
     }
-    :host-context(.board-wrapper:hover) .board-fs-btn,
-    :host-context(.ab-wrap:hover) .board-fs-btn,
-    :host-context(.cb-wrap:hover) .board-fs-btn { opacity: 0.85; }
-    .board-fs-btn:hover, .board-fs-btn:focus-visible { opacity: 1; background: rgba(0, 0, 0, 0.6); }
-    /* Im Vollbild ist der Knopf der einzige Ausweg neben Esc — immer gut sichtbar, größer. */
+    .board-fs-btn:hover, .board-fs-btn:focus-visible {
+      opacity: 1;
+      background: color-mix(in srgb, currentColor 12%, transparent);
+    }
+    /* Im Vollbild: raus aus dem Fluss, fix rechts oben im schwarzen Balken — dort verdeckt er
+       nichts und ist der einzige Ausweg neben Esc. (position: fixed löst gegen das
+       Vollbild-Element auf, nicht gegen die Seite.) */
     .board-fs-btn--on {
-      opacity: 0.8;
+      position: fixed;
+      top: 8px; right: 8px;
+      z-index: 90;
       width: 34px; height: 34px;
-      top: 6px; right: 6px;
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      opacity: 0.8;
     }
     .board-fs-btn--on mat-icon { font-size: 24px; width: 24px; height: 24px; line-height: 24px; }
+    .board-fs-btn--on:hover, .board-fs-btn--on:focus-visible {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.6);
+    }
   `],
 })
 export class BoardFullscreenButtonComponent implements OnInit, OnDestroy {
-  /** Element, das ins Vollbild geht — üblicherweise der Brett-Wrapper (= exakt die Brettfläche). */
+  /** Element, das ins Vollbild geht — die Vollbild-Hülle um das Brett (.board-fs-host & Co.). */
   @Input() target: HTMLElement | null = null;
 
   readonly supported = fullscreenSupported();

@@ -21,11 +21,12 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   imports: [CommonModule, BoardFullscreenButtonComponent],
   template: `
     <div #fsHost class="board-fs-host">
+     @if (allowFullscreen) {
+       <!-- Als Zeile ÜBER dem Brett (nicht als Overlay in der Ecke — das verdeckte das Eckfeld). -->
+       <app-board-fullscreen-button [target]="fsHost" />
+     }
      <div class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
       <div #boardEl class="cg-wrap"></div>
-      @if (allowFullscreen) {
-        <app-board-fullscreen-button [target]="fsHost" />
-      }
       @if (vizSelectedSquare) {
         <!-- DOM-Overlay als verlässliche Viz-Auswahlmarkierung (unabhängig von chessground-SVG). -->
         <div class="viz-select-overlay"

@@ -22,9 +22,9 @@ import {
   imports: [PromotionPickerComponent, BoardFullscreenButtonComponent],
   template: `
     <div #fsHost class="ab-fs-host">
+     <app-board-fullscreen-button [target]="fsHost" />
      <div class="ab-wrap board-theme-brown piece-set-cburnett">
       <div #board class="ab-board"></div>
-      <app-board-fullscreen-button [target]="fsHost" />
       @if (promo) {
         <app-promotion-picker
           [color]="promo.color" [dest]="promo.dest" [orientation]="orientation"

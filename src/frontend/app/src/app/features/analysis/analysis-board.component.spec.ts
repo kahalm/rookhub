@@ -43,6 +43,7 @@ describe('AnalysisBoardComponent', () => {
     const target: HTMLElement =
       fixture.debugElement.query(By.directive(BoardFullscreenButtonComponent)).componentInstance.target;
     expect(target.classList).toContain('ab-fs-host');
-    expect(fixture.nativeElement.querySelector('.ab-wrap .board-fs-btn')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.ab-fs-host .board-fs-btn')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.ab-wrap .board-fs-btn')).toBeNull();
   });
 });

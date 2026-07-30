@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.326.3';
+export const APP_VERSION = '0.326.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.326.4", date: "2026-07-30", changes: [
+    { en: "The board fullscreen button no longer covers the corner square: it now sits in a slim row DIRECTLY ABOVE the board (right-aligned), on every board in the app. Inside fullscreen it floats in the black bar at the top right — over there it covers nothing either. NOT deployed (frontend image only).", de: "Der Brett-Vollbild-Knopf überdeckt kein Eckfeld mehr: er sitzt jetzt in einer schmalen Zeile DIREKT ÜBER dem Brett (rechtsbündig), bei jedem Brett der App. Im Vollbild schwebt er im schwarzen Balken rechts oben — auch dort verdeckt er nichts. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.326.3", date: "2026-07-29", changes: [
     { en: "Repertoire trainer (quiz AND learn mode) joins the fullscreen family: in app fullscreen the board grows to the full screen height (the old cap kept it well below), while progress, move list, comments and feedback stay in the right-hand column, which scrolls on its own. The toolbar row is already hidden in fullscreen since 0.326.1. NOT deployed (frontend image only).", de: "Der Repertoire-Trainer (Quiz- UND Lern-Modus) zieht beim Vollbild nach: im App-Vollbild wächst das Brett auf die volle Bildschirmhöhe (die alte Deckelung hielt es deutlich darunter), während Fortschritt, Zugliste, Kommentare und Feedback in der rechten Spalte bleiben, die selbst scrollt. Die Werkzeugleiste oben ist im Vollbild schon seit 0.326.1 ausgeblendet. NICHT deployed (nur Frontend-Image)." },
   ] },

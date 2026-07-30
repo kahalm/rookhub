@@ -88,6 +88,7 @@ describe('ChessBoardComponent Vollbild', () => {
     // Die Größe des Vollbild-Elements erzwingt der Browser — daher Hülle ins Vollbild, Brett darin
     // als zentriertes Quadrat der kleineren Bildschirmseite.
     expect(target.classList).toContain('cb-fs-host');
-    expect(fixture.nativeElement.querySelector('.cb-wrap .board-fs-btn')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.cb-fs-host .board-fs-btn')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.cb-wrap .board-fs-btn')).toBeNull();
   });
 });

@@ -13,9 +13,9 @@ import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-b
   imports: [BoardFullscreenButtonComponent],
   template: `
     <div #fsHost class="cb-fs-host">
+      <app-board-fullscreen-button [target]="fsHost" />
       <div class="cb-wrap">
         <div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>
-        <app-board-fullscreen-button [target]="fsHost" />
       </div>
     </div>
   `,
