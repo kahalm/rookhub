@@ -459,6 +459,79 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.Equal("Caro-Kann", row.CourseName);
     }
 
+    [Fact]
+    public async Task RecordChessableActivity_StoresLinesTrained()
+    {
+        var u = await CreateUserAsync();
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto
+        { SecondsActive = 120, MovesTrained = 14, LinesTrained = 3 });
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto
+        { SecondsActive = 60, MovesTrained = 5, LinesTrained = -7 });   // negative Werte geklemmt
+
+        var rows = await _db.ChessableActivities.Where(a => a.UserId == u.Id).OrderBy(a => a.Id).ToListAsync();
+        Assert.Equal(3, rows[0].LinesTrained);
+        Assert.Equal(0, rows[1].LinesTrained);
+    }
+
+    [Fact]
+    public async Task RecordChessableActivity_DropsModeLabelAsCourseName_AndHealsFromCachedList()
+    {
+        // „Practice Moves" & Co. sind Chessables Dialog-Überschriften, keine Kursnamen — sie werden
+        // verworfen und, wenn eine Kurs-ID mitkommt, aus der gecachten Kursliste geheilt.
+        var u = await CreateUserAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = u.Id, EncryptedBearer = "x",
+            CachedCoursesJson = """[{"bid":"777","name":"Lifetime Repertoires: Caro-Kann"}]""",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto
+        { SecondsActive = 60, CourseId = "777", CourseName = "Practice Moves" });
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto
+        { SecondsActive = 60, CourseId = "999", CourseName = "Learn Moves" });     // unbekannte ID → null
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto
+        { SecondsActive = 60, CourseId = "999", CourseName = "Kapitel 7:" });      // Kapitel-Label → null
+
+        var rows = await _db.ChessableActivities.Where(a => a.UserId == u.Id).OrderBy(a => a.Id).ToListAsync();
+        Assert.Equal("Lifetime Repertoires: Caro-Kann", rows[0].CourseName);
+        Assert.Null(rows[1].CourseName);
+        Assert.Null(rows[2].CourseName);
+    }
+
+    [Fact]
+    public async Task GetChessableCourses_SumsLines_AndPrefersNonJunkName()
+    {
+        var u = await CreateUserAsync();
+        // Ältester Eintrag trägt den echten Namen, die jüngeren Altbestands-Müll —
+        // die Zusammenfassung muss trotzdem den echten Namen zeigen und Linien summieren.
+        _db.ChessableActivities.AddRange(
+            new ChessableActivity { UserId = u.Id, CourseId = "42", CourseName = "Najdorf Masterclass", TimeSeconds = 300, MovesTrained = 20, LinesTrained = 4, AttemptedAt = DateTime.UtcNow.AddDays(-2) },
+            new ChessableActivity { UserId = u.Id, CourseId = "42", CourseName = "Practice Moves", TimeSeconds = 300, MovesTrained = 10, LinesTrained = 2, AttemptedAt = DateTime.UtcNow.AddDays(-1) },
+            new ChessableActivity { UserId = u.Id, CourseId = "42", CourseName = null, TimeSeconds = 60, MovesTrained = 0, LinesTrained = 0, AttemptedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var summary = (await _service.GetChessableCoursesAsync(u.Id)).Single();
+        Assert.Equal("Najdorf Masterclass", summary.CourseName);
+        Assert.Equal(6, summary.TotalLines);
+        Assert.Equal(30, summary.TotalMoves);
+    }
+
+    [Fact]
+    public void IsChessableModeLabel_MatchesJunkOnly()
+    {
+        Assert.True(TrainingGoalService.IsChessableModeLabel("Practice Moves"));
+        Assert.True(TrainingGoalService.IsChessableModeLabel("learn moves"));
+        Assert.True(TrainingGoalService.IsChessableModeLabel("Leaderboard"));
+        Assert.True(TrainingGoalService.IsChessableModeLabel("nächstes Kapitel"));
+        Assert.True(TrainingGoalService.IsChessableModeLabel("Kapitel 7:"));
+        // Echte Titel, die den Wörtern nahekommen, bleiben erhalten.
+        Assert.False(TrainingGoalService.IsChessableModeLabel("Learn Chess Openings"));
+        Assert.False(TrainingGoalService.IsChessableModeLabel("100 Tactical Patterns You Must Know"));
+        Assert.False(TrainingGoalService.IsChessableModeLabel(null));
+    }
+
     // ---- Chessable-Kurs-History + manuelle Themen-Zuordnung --------------
 
     [Fact]

@@ -22,7 +22,14 @@
               <span class="c-name">{{ c.courseName || ('trainingGoals.chessable.course' | translate) }}</span>
               <span class="c-id">#{{ c.courseId }}</span>
             </div>
-            <span class="c-time">{{ durValue(c.totalSeconds) }} <span class="unit">{{ durUnit(c.totalSeconds) | translate }}</span></span>
+            <span class="c-time">{{ durValue(c.totalSeconds) }} <span class="unit">{{ durUnit(c.totalSeconds) | translate }}</span>
+              @if (c.totalLines > 0) {
+                <span class="c-lines" [matTooltip]="'trainingGoals.chessable.linesHint' | translate">
+                  · {{ 'trainingGoals.chessable.lines' | translate:{ count: c.totalLines } }}
+                  ({{ secPerLine(c) }})
+                </span>
+              }
+            </span>
             @if (!c.assignedTheme && c.autoTheme) {
               <span class="c-auto" [matTooltip]="'trainingGoals.chessable.autoHint' | translate">
                 {{ 'trainingGoals.chessable.auto' | translate }}: {{ ('trainingGoals.theme.' + c.autoTheme) | translate }}

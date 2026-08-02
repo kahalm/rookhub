@@ -104,6 +104,8 @@ export interface ChessableCourseSummary {
   courseName: string | null;
   totalSeconds: number;
   totalMoves: number;
+  /** Abgeschlossene Linien (Varianten) — 0 bei Altbestand/alten Extension-Versionen. */
+  totalLines: number;
   activityCount: number;
   lastActivityAt: string;
   /** Manuell zugeordnetes Thema (lowercase) oder null. */

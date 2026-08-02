@@ -2240,6 +2240,8 @@
       "clear": "— (none)",
       "auto": "auto",
       "autoHint": "Theme derived automatically from a matching RookHub repertoire.",
+      "lines": "{{count}} lines",
+      "linesHint": "Completed variations (counted by the extension since v1.34) — with average time per line.",
       "unassigned": "not assigned",
       "saved": "Theme saved"
     },

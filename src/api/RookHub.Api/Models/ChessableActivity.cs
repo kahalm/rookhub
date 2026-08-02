@@ -21,6 +21,10 @@ public class ChessableActivity
     /// <summary>Anzahl in diesem Häppchen abgeschlossener (gewerteter) Züge — informativ.</summary>
     public int MovesTrained { get; set; }
 
+    /// <summary>Anzahl in diesem Häppchen ABGESCHLOSSENER LINIEN (Varianten). Die Extension zählt
+    /// Chessables „Next variation"-Abschluss; 0 bei Altbestand/alten Extension-Versionen.</summary>
+    public int LinesTrained { get; set; }
+
     /// <summary>Art des Chessable-Kurses, aus Repertoire-Zuordnung (ChessableCourseId). Null = unbekannt.</summary>
     public RepertoireKind? CourseKind { get; set; }
 

@@ -44,6 +44,7 @@ import { formatDuration } from './duration.util';
     .course-list .c-id { font-size: .72rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .course-list .c-time { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .course-list .c-time .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
+    .course-list .c-lines { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .85em; }
     .course-list .c-auto { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .course-list .c-unassigned { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #d4820a 18%, transparent); color: #d4820a; }
     .course-list .c-theme { width: 190px; }
@@ -87,6 +88,16 @@ export class ChessableThemesCardComponent implements OnInit {
   }
 
   /** mat-select-Wert je Kurs: das manuell zugeordnete Thema (Großschreibung) oder null. */
+  /** ⌀-Zeit je abgeschlossener Linie, hübsch formatiert (m:ss ab 60 s). */
+  secPerLine(c: ChessableCourseSummary): string {
+    if (!c.totalLines) return '';
+    const s = Math.round(c.totalSeconds / c.totalLines);
+    if (s < 60) return `⌀ ${s} s`;
+    const m = Math.floor(s / 60);
+    const rest = (s % 60).toString().padStart(2, '0');
+    return `⌀ ${m}:${rest} min`;
+  }
+
   selectedTheme(c: ChessableCourseSummary): ChessableTheme | null {
     if (!c.assignedTheme) return null;
     return (c.assignedTheme.charAt(0).toUpperCase() + c.assignedTheme.slice(1)) as ChessableTheme;

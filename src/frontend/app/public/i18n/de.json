@@ -2240,6 +2240,8 @@
       "clear": "— (keins)",
       "auto": "auto",
       "autoHint": "Thema automatisch aus einem passenden RookHub-Repertoire abgeleitet.",
+      "lines": "{{count}} Linien",
+      "linesHint": "Abgeschlossene Varianten (zählt die Extension seit v1.34) — mit Durchschnittszeit je Linie.",
       "unassigned": "nicht zugeordnet",
       "saved": "Thema gespeichert"
     },

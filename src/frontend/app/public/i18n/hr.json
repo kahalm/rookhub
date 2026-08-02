@@ -2240,6 +2240,8 @@
       "clear": "— (ništa)",
       "auto": "auto",
       "autoHint": "Tema automatski izvedena iz odgovarajućeg RookHub repertoara.",
+      "lines": "{{count}} linija",
+      "linesHint": "Dovršene varijante (broji ih proširenje od v1.34) — s prosječnim vremenom po liniji.",
       "unassigned": "nije dodijeljeno",
       "saved": "Tema spremljena"
     },

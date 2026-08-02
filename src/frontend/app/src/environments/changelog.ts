@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.326.4';
+export const APP_VERSION = '0.327.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.327.0", date: "2026-08-02", changes: [
+    { en: "Chessable tracking measures LINES now, and the numbers get honest. (1) RepCheck v1.34 counts completed variations (a click on Chessable's ‚Next variation') and reports them alongside the time; the course list under training goals shows lines and average time per line for each course. (2) The move counter was drastically undercounting (it only accepted one exact notification text and lost the notification element whenever Chessable re-rendered it — typically 1–2 counted moves per minute where ~10 were played); it now counts every scored-move notification, de-duplicated over a time window. (3) Mode labels like ‚Practice Moves' or ‚Learn Moves' no longer end up as course names: the extension filters them, and the server drops them too and resolves the real name from your cached Chessable course list via the course id — historic junk entries display under their real course name where the id is known. Needs api image + RepCheck v1.34; old extension versions keep working (lines simply stay 0).", de: "Das Chessable-Tracking misst jetzt LINIEN, und die Zahlen werden ehrlich. (1) RepCheck v1.34 zählt abgeschlossene Varianten (Klick auf Chessables „Next variation“) und meldet sie zusammen mit der Zeit; die Kursliste unter den Trainingszielen zeigt je Kurs Linien und Durchschnittszeit pro Linie. (2) Der Zug-Zähler hat drastisch unterzählt (er akzeptierte nur einen exakten Notification-Text und verlor das Notification-Element, sobald Chessable es neu renderte — typisch 1–2 gezählte Züge pro Minute, wo ~10 gespielt wurden); jetzt zählt jede Zug-Bewertung, über ein Zeitfenster dedupliziert. (3) Modus-Labels wie „Practice Moves“ oder „Learn Moves“ landen nicht mehr als Kursname: die Extension filtert sie, und der Server verwirft sie ebenfalls und löst den echten Namen über die Kurs-ID aus deiner gecachten Chessable-Kursliste auf — historische Müll-Einträge erscheinen unter ihrem echten Kursnamen, wo die ID bekannt ist. Braucht api-Image + RepCheck v1.34; alte Extension-Versionen laufen weiter (Linien bleiben dann einfach 0)." },
+  ] },
   { version: "0.326.4", date: "2026-07-30", changes: [
     { en: "The board fullscreen button no longer covers the corner square: it now sits in a slim row DIRECTLY ABOVE the board (right-aligned), on every board in the app. Inside fullscreen it floats in the black bar at the top right — over there it covers nothing either. NOT deployed (frontend image only).", de: "Der Brett-Vollbild-Knopf überdeckt kein Eckfeld mehr: er sitzt jetzt in einer schmalen Zeile DIREKT ÜBER dem Brett (rechtsbündig), bei jedem Brett der App. Im Vollbild schwebt er im schwarzen Balken rechts oben — auch dort verdeckt er nichts. NICHT deployed (nur Frontend-Image)." },
   ] },

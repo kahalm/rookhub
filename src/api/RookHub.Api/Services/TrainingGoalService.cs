@@ -127,23 +127,70 @@ public class TrainingGoalService
 
     // ----- Chessable-Aktivität (von der Extension) -------------------------
 
+    /// <summary>
+    /// Chessable-Modus-/Navigations-Labels, die die Extension historisch fälschlich als Kursnamen
+    /// meldete (Dialog-Überschriften der Trainings-SPA). Solche „Namen" werden verworfen — lieber
+    /// über die Kurs-ID heilen oder gar kein Name als ein falscher.
+    /// </summary>
+    internal static bool IsChessableModeLabel(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var t = name.Trim().ToLowerInvariant();
+        if (t is "practice moves" or "learn moves" or "review" or "overview" or "leaderboard"
+            or "move trainer" or "movetrainer" or "next" or "previous" or "prev" or "continue"
+            or "weiter" or "home" or "practice" or "learn" or "variations" or "variation")
+            return true;
+        // „Next/Previous chapter|variation|move|line" bzw. deutsche Entsprechungen —
+        // auch Kapitel-/Zeilenlabels wie „Kapitel 7:" sind keine Kursnamen.
+        if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^(next|previous|prev|nächst\w*|naechst\w*|vorherig\w*|vorig\w*|letzt\w*)\b")
+            && System.Text.RegularExpressions.Regex.IsMatch(t, "(chapter|variation|move|line|kapitel|variante|zug|linie)"))
+            return true;
+        if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^(kapitel|chapter)\s*\d*\s*:?$")) return true;
+        return false;
+    }
+
     /// <summary>Hängt ein Häppchen aktiver Chessable-Trainingszeit an (Zeitstempel serverseitig).
-    /// Fließt über <see cref="AggregateAsync"/> in die Quelle „chessable" des Trackers.</summary>
+    /// Fließt über <see cref="AggregateAsync"/> in die Quelle „chessable" des Trackers.
+    /// Modus-Labels als „Kursname" werden verworfen und — falls eine Kurs-ID mitkommt — aus der
+    /// gecachten Kursliste des Users geheilt (cache-only, kein Live-Abruf im Minutentakt).</summary>
     public async Task RecordChessableActivityAsync(int userId, ChessableActivityInputDto dto)
     {
         var courseId = string.IsNullOrWhiteSpace(dto.CourseId) ? null : dto.CourseId.Trim();
         var courseName = string.IsNullOrWhiteSpace(dto.CourseName) ? null : dto.CourseName.Trim();
+        if (IsChessableModeLabel(courseName)) courseName = null;
+        if (courseName is null && courseId is not null)
+            courseName = await CachedChessableCourseNameAsync(userId, courseId);
         _db.ChessableActivities.Add(new ChessableActivity
         {
             UserId = userId,
             TimeSeconds = Math.Clamp(dto.SecondsActive, 0, PerChessableFlushCapSeconds),
             MovesTrained = Math.Max(0, dto.MovesTrained),
+            LinesTrained = Math.Max(0, dto.LinesTrained),
             CourseKind = dto.CourseKind,
             CourseId = courseId?.Length > 32 ? courseId[..32] : courseId,
             CourseName = courseName?.Length > 200 ? courseName[..200] : courseName,
             AttemptedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Kursname aus der bereits gecachten Kursliste des Users (ChessableCredential.
+    /// CachedCoursesJson) — bewusst OHNE Live-Abruf: Aktivitäts-Häppchen kommen im Minutentakt.</summary>
+    private async Task<string?> CachedChessableCourseNameAsync(int userId, string courseId)
+    {
+        var json = await _db.ChessableCredentials.AsNoTracking()
+            .Where(c => c.UserId == userId)
+            .Select(c => c.CachedCoursesJson)
+            .FirstOrDefaultAsync();
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var list = System.Text.Json.JsonSerializer.Deserialize<List<ChessableCourseDto>>(
+                json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var name = list?.FirstOrDefault(c => c.Bid == courseId)?.Name;
+            return string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        }
+        catch { return null; }
     }
 
     // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung --------------
@@ -155,7 +202,7 @@ public class TrainingGoalService
     {
         var acts = await _db.ChessableActivities.AsNoTracking()
             .Where(a => a.UserId == userId && a.CourseId != null && a.CourseId != "")
-            .Select(a => new { a.CourseId, a.CourseName, a.CourseKind, a.TimeSeconds, a.MovesTrained, a.AttemptedAt })
+            .Select(a => new { a.CourseId, a.CourseName, a.CourseKind, a.TimeSeconds, a.MovesTrained, a.LinesTrained, a.AttemptedAt })
             .ToListAsync();
 
         var assignments = await _db.ChessableCourseThemes.AsNoTracking()
@@ -169,12 +216,18 @@ public class TrainingGoalService
                 var latest = g.OrderByDescending(a => a.AttemptedAt).First();
                 var autoKind = g.Select(a => a.CourseKind).FirstOrDefault(k => k != null);
                 var hasManual = assignments.TryGetValue(g.Key, out var manual);
+                // Jüngster BRAUCHBARER Name — Altbestand trägt teils Modus-Labels („Practice Moves").
+                var bestName = g.OrderByDescending(a => a.AttemptedAt)
+                    .Select(a => a.CourseName)
+                    .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n) && !IsChessableModeLabel(n))
+                    ?? latest.CourseName;
                 return new ChessableCourseSummaryDto
                 {
                     CourseId = g.Key,
-                    CourseName = latest.CourseName,
+                    CourseName = bestName,
                     TotalSeconds = g.Sum(a => Math.Min(a.TimeSeconds, PerChessableFlushCapSeconds)),
                     TotalMoves = g.Sum(a => a.MovesTrained),
+                    TotalLines = g.Sum(a => a.LinesTrained),
                     ActivityCount = g.Count(),
                     LastActivityAt = latest.AttemptedAt,
                     AssignedTheme = hasManual ? ThemeName(manual) : null,

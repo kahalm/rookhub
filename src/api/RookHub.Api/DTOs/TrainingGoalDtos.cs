@@ -30,6 +30,8 @@ public class ChessableActivityInputDto
     [Range(1, 3600)] public int SecondsActive { get; set; }
     /// <summary>Anzahl in diesem Häppchen abgeschlossener (gewerteter) Züge — informativ.</summary>
     [Range(0, 10000)] public int MovesTrained { get; set; }
+    /// <summary>Anzahl in diesem Häppchen abgeschlossener LINIEN (Varianten). 0 bei alten Clients.</summary>
+    [Range(0, 10000)] public int LinesTrained { get; set; }
     /// <summary>Art des Chessable-Kurses (Opening/Middlegame/Endgame), ermittelt aus Repertoire-Zuordnung. Null = unbekannt.</summary>
     public RepertoireKind? CourseKind { get; set; }
     /// <summary>Chessable-Kurs-ID (numerisch als String), von der Extension aus der Seite aufgelöst. Null = unbekannt.</summary>
@@ -50,6 +52,8 @@ public class ChessableCourseSummaryDto
     public int TotalSeconds { get; set; }
     /// <summary>Summe der gewerteten Züge über alle Häppchen — informativ.</summary>
     public int TotalMoves { get; set; }
+    /// <summary>Summe der abgeschlossenen Linien (Varianten) über alle Häppchen; 0 bei Altbestand.</summary>
+    public int TotalLines { get; set; }
     /// <summary>Anzahl gemeldeter Häppchen.</summary>
     public int ActivityCount { get; set; }
     /// <summary>Zeitpunkt der jüngsten Aktivität (UTC, ISO-8601).</summary>
