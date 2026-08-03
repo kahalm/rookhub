@@ -23,15 +23,17 @@ public class CourseController : BaseApiController
     private readonly ImportReprocessService _reprocess;
     private readonly IReprocessLauncher _reprocessLauncher;
     private readonly CourseAuthoringService _authoring;
+    private readonly FlashcardMarkService _flashcards;
 
     public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess,
-        IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring)
+        IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring, FlashcardMarkService flashcards)
     {
         _service = service;
         _stats = stats;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
         _authoring = authoring;
+        _flashcards = flashcards;
     }
 
     /// <summary>Status der Aufbereitungs-Versionierung: wie viele (verwaltbare) Kurse sind veraltet
@@ -326,6 +328,30 @@ public class CourseController : BaseApiController
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Als Flashcard markierte Linien-Ids des Users in diesem Kurs. 404 unzugänglich.</summary>
+    [HttpGet("{bookId:int}/flashcards")]
+    public async Task<IActionResult> GetFlashcardMarks(int bookId, CancellationToken ct)
+    {
+        var ids = await _flashcards.GetCourseMarksAsync(GetUserId(), bookId, IsAdmin, ct);
+        return ids is null ? NotFound() : Ok(new { lineIds = ids });
+    }
+
+    /// <summary>Markiert eine Kurs-Linie als Flashcard (idempotent). 404 unzugänglich/Linie fremd.</summary>
+    [HttpPost("{bookId:int}/flashcards/{lineId:int}")]
+    public async Task<IActionResult> MarkFlashcard(int bookId, int lineId, CancellationToken ct)
+    {
+        var res = await _flashcards.SetCourseMarkAsync(GetUserId(), bookId, lineId, marked: true, IsAdmin, ct);
+        return res is null ? NotFound() : Ok(new { marked = true });
+    }
+
+    /// <summary>Entfernt die Flashcard-Markierung einer Kurs-Linie (idempotent).</summary>
+    [HttpDelete("{bookId:int}/flashcards/{lineId:int}")]
+    public async Task<IActionResult> UnmarkFlashcard(int bookId, int lineId, CancellationToken ct)
+    {
+        var res = await _flashcards.SetCourseMarkAsync(GetUserId(), bookId, lineId, marked: false, IsAdmin, ct);
+        return res is null ? NotFound() : Ok(new { marked = false });
     }
 
     /// <summary>Linien EINES Kapitels (`chapter` leer = „ohne Kapitel") — ohne Lösungszüge.</summary>

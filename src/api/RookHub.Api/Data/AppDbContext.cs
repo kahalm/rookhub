@@ -63,6 +63,8 @@ public class AppDbContext : DbContext
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
     public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
     public DbSet<ChessableProblemMove> ChessableProblemMoves => Set<ChessableProblemMove>();
+    public DbSet<CourseFlashcardMark> CourseFlashcardMarks => Set<CourseFlashcardMark>();
+    public DbSet<RepertoireFlashcardMark> RepertoireFlashcardMarks => Set<RepertoireFlashcardMark>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<ActivityPreset> ActivityPresets => Set<ActivityPreset>();
     public DbSet<ActivityTimer> ActivityTimers => Set<ActivityTimer>();
@@ -705,6 +707,24 @@ public class AppDbContext : DbContext
             e.Property(a => a.CourseName).HasMaxLength(200);
             // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<CourseFlashcardMark>(e =>
+        {
+            e.HasOne(m => m.User).WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.Book).WithMany().HasForeignKey(m => m.BookId).OnDelete(DeleteBehavior.Cascade);
+            // Wie CoursePuzzleResult/CalculationTree: Restrict vermeidet den 2. Cascade-Pfad von
+            // Book; Linien-/Buch-Löschpfade räumen explizit ab.
+            e.HasOne(m => m.BookPuzzle).WithMany().HasForeignKey(m => m.BookPuzzleId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(m => new { m.UserId, m.BookPuzzleId }).IsUnique();
+            e.HasIndex(m => new { m.UserId, m.BookId });
+        });
+
+        modelBuilder.Entity<RepertoireFlashcardMark>(e =>
+        {
+            e.HasOne(m => m.User).WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.Repertoire).WithMany().HasForeignKey(m => m.RepertoireId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(m => new { m.UserId, m.RepertoireId, m.LineKey }).IsUnique();
         });
 
         modelBuilder.Entity<ChessableProblemMove>(e =>

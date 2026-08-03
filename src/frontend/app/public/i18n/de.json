@@ -1293,7 +1293,12 @@
       "printView": "Druckvorschau",
       "flip": "Karte umdrehen",
       "shuffle": "Mischen",
-      "digitalHint": "Karte anklicken (oder Leertaste/Enter) zum Umdrehen; ←/→ blättern durch den Stapel."
+      "digitalHint": "Karte anklicken (oder Leertaste/Enter) zum Umdrehen; ←/→ blättern durch den Stapel.",
+      "markedOnly": "Nur markierte",
+      "markedEmpty": "Noch keine Linien als Flashcards markiert. Markiere Linien über das Kästchen im Durchsehen.",
+      "markedButton": "Markierte",
+      "markedTooltip": "Nur die von dir als Flashcards markierten Linien",
+      "markedMenu": "Flashcards (markierte Linien)"
     },
     "calculate": "Kalkulieren",
     "browse": {

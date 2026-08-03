@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnInit, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
@@ -63,10 +63,16 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               <mat-icon>school</mat-icon>
             </a>
             <span class="spacer"></span>
+            @if (marked.size > 0) {
+              <a mat-stroked-button [routerLink]="['/repertoires', repertoireId, 'flashcards']"
+                 [queryParams]="{ marked: 1 }"
+                 [matTooltip]="'courses.flashcards.markedTooltip' | translate">
+                <mat-icon>style</mat-icon>({{ marked.size }})
+              </a>
+            }
             <a mat-stroked-button [routerLink]="['/repertoires', repertoireId, 'flashcards']"
-               [queryParams]="picked.size ? { lines: pickedParam() } : {}"
                [matTooltip]="'courses.flashcards.browseTooltip' | translate">
-              <mat-icon>style</mat-icon>@if (picked.size > 0) { ({{ picked.size }}) }
+              <mat-icon>style</mat-icon>
             </a>
             <button mat-icon-button [matMenuTriggerFor]="courseMenu" [disabled]="busy"
                     [matTooltip]="'repertoire.lines.sr.courseActions' | translate"><mat-icon>more_vert</mat-icon></button>
@@ -120,9 +126,10 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               @if (group.expanded) {
                 @for (line of group.lines; track line.gameIndex) {
                   <div class="line-item">
-                    <!-- Karteikarten-Auswahl (Linien-Schlüssel wandern in den Flashcards-Link). -->
-                    <input type="checkbox" class="line-pick" [checked]="picked.has(line.lineKey)"
-                           (click)="togglePick(line, $event)"
+                    <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend). -->
+                    <input type="checkbox" class="line-pick" [checked]="marked.has(line.lineKey)"
+                           (click)="toggleMark(line, $event)"
+                           [matTooltip]="'courses.flashcards.pick' | translate"
                            [attr.aria-label]="'courses.flashcards.pick' | translate" />
                     <div class="line-main" role="button" tabindex="0"
                          (click)="lineSelected.emit(line.gameIndex)"
@@ -213,7 +220,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
   `],
 })
-export class RepertoireLinesComponent implements OnInit {
+export class RepertoireLinesComponent implements OnInit, OnChanges {
   // `lines` liegt hinter einem Signal, damit das `chapterGroups`-computed darauf reagiert (die
   // Linien werden async nachgeladen; ein plain @Input() würde das computed nicht invalidieren).
   private linesSig = signal<RepertoireLine[]>([]);
@@ -221,17 +228,28 @@ export class RepertoireLinesComponent implements OnInit {
   get lines(): RepertoireLine[] { return this.linesSig(); }
   @Input() selectedIndex = -1;
 
-  /** Für den Flashcards-Druck/Lern-Stapel angehakte Linien (Linien-Schlüssel). */
-  picked = new Set<string>();
+  /** PERSISTENT als Flashcard markierte Linien (Linien-Schlüssel, Server-Zustand). */
+  marked = new Set<string>();
+  private marksLoadedFor: number | null = null;
 
-  togglePick(line: RepertoireLine, event: Event): void {
+  toggleMark(line: RepertoireLine, event: Event): void {
     event.stopPropagation();
-    if (this.picked.has(line.lineKey)) this.picked.delete(line.lineKey);
-    else this.picked.add(line.lineKey);
+    if (this.repertoireId == null) return;
+    const next = !this.marked.has(line.lineKey);
+    if (next) this.marked.add(line.lineKey); else this.marked.delete(line.lineKey);
+    this.training.setFlashcardMark(this.repertoireId, line.lineKey, next).subscribe({
+      error: () => { if (next) this.marked.delete(line.lineKey); else this.marked.add(line.lineKey); },
+    });
   }
 
-  pickedParam(): string {
-    return [...this.picked].join(',');
+  /** Markierungen laden, sobald die Repertoire-Id da ist (Input kann nach ngOnInit eintreffen). */
+  private ensureMarksLoaded(): void {
+    if (this.repertoireId == null || this.marksLoadedFor === this.repertoireId) return;
+    this.marksLoadedFor = this.repertoireId;
+    this.training.getFlashcardMarks(this.repertoireId).subscribe({
+      next: m => { this.marked = new Set(m.lineKeys); },
+      error: () => {},
+    });
   }
 
   @Input() moves: Move[] = [];
@@ -256,7 +274,12 @@ export class RepertoireLinesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadStates();
+    this.ensureMarksLoaded();
     if (this.repertoireId != null) this.colorOverrides.set(readChapterColorOverrides(this.repertoireId));
+  }
+
+  ngOnChanges(): void {
+    this.ensureMarksLoaded();
   }
 
   private loadStates(): void {

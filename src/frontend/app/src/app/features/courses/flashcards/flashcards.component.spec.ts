@@ -23,15 +23,21 @@ function puzzle(id: number, over: Partial<BookPuzzleDto> = {}): BookPuzzleDto {
   } as BookPuzzleDto;
 }
 
-function make(puzzles: BookPuzzleDto[], query: Record<string, string>) {
+function make(puzzles: BookPuzzleDto[], query: Record<string, string>, marks: number[] = []) {
   TestBed.resetTestingModule();   // erlaubt mehrere make()-Aufrufe in einem it
   TestBed.configureTestingModule({
     imports: [FlashcardsComponent],
     providers: [
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
       provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
-      { provide: CourseService, useValue: { getBookPuzzles: () => of(puzzles) } },
-      { provide: RepertoireTrainingService, useValue: { getPgn: () => of('') } },
+      { provide: CourseService, useValue: {
+        getBookPuzzles: () => of(puzzles),
+        getFlashcardMarks: () => of({ lineIds: marks }),
+      } },
+      { provide: RepertoireTrainingService, useValue: {
+        getPgn: () => of(''),
+        getFlashcardMarks: () => of({ lineKeys: [] }),
+      } },
       { provide: PreferencesService, useValue: { pieceSet: 'cburnett' } },
       { provide: ActivatedRoute, useValue: { snapshot: {
         paramMap: {
@@ -64,6 +70,22 @@ describe('FlashcardsComponent', () => {
     const s = fixture.componentInstance.sheets[0];
     expect(s.fronts.map(f => f?.heading)).toEqual(['#1', '#2', '#3', '#4']);
     expect(s.backs.map(b => b?.heading)).toEqual(['#2', '#1', '#4', '#3']);
+  });
+
+  it('marked=1 zeigt nur die persistent markierten Linien (schlägt lines/chapter)', () => {
+    const fixture = make(
+      [puzzle(1), puzzle(2), puzzle(3)],
+      { marked: '1', lines: '1,2,3', chapter: 'A' },
+      [2],
+    );
+    const c = fixture.componentInstance;
+    expect(c.markedOnly).toBeTrue();
+    expect(c.cards.map(x => x.heading)).toEqual(['#2']);
+  });
+
+  it('marked=1 ohne Markierungen → leerer Stapel (eigener Leertext)', () => {
+    const fixture = make([puzzle(1)], { marked: '1' }, []);
+    expect(fixture.componentInstance.cards.length).toBe(0);
   });
 
   it('filtert per chapter=… (leer = „ohne Kapitel")', () => {

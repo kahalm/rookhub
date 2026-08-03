@@ -8,6 +8,11 @@
     <span class="fc-count" *ngIf="!loading && !error">
       {{ 'courses.flashcards.count' | translate:{ count: cards.length } }}
     </span>
+    @if (markedOnly) {
+      <span class="fc-marked-chip">
+        <mat-icon inline>bookmark</mat-icon>{{ 'courses.flashcards.markedOnly' | translate }}
+      </span>
+    }
     <span class="fc-spacer"></span>
     <button mat-stroked-button [class.fc-view-active]="view === 'digital'" (click)="view = 'digital'">
       <mat-icon>style</mat-icon>{{ 'courses.flashcards.digital' | translate }}
@@ -39,7 +44,7 @@
   } @else if (error) {
     <p class="fc-center">{{ 'courses.loadFailed' | translate }}</p>
   } @else if (cards.length === 0) {
-    <p class="fc-center">{{ 'courses.flashcards.empty' | translate }}</p>
+    <p class="fc-center">{{ (markedOnly ? 'courses.flashcards.markedEmpty' : 'courses.flashcards.empty') | translate }}</p>
   } @else if (view === 'digital') {
     <!-- ===== Digitale Lern-Ansicht: eine Karte, klicken/Leertaste = umdrehen ===== -->
     <div class="fc-study">

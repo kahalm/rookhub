@@ -1293,7 +1293,12 @@
       "printView": "Pregled ispisa",
       "flip": "Okreni karticu",
       "shuffle": "Promiješaj",
-      "digitalHint": "Klikni karticu (ili razmaknica/Enter) za okretanje; ←/→ listaju špil."
+      "digitalHint": "Klikni karticu (ili razmaknica/Enter) za okretanje; ←/→ listaju špil.",
+      "markedOnly": "Samo označene",
+      "markedEmpty": "Još nema linija označenih kao flashcard. Označi linije kvačicom u pregledu.",
+      "markedButton": "Označene",
+      "markedTooltip": "Samo linije koje si označio kao flashcard",
+      "markedMenu": "Flashcards (označene linije)"
     },
     "calculate": "Izračunaj",
     "browse": {

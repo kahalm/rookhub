@@ -59,7 +59,7 @@ public class CourseAuthoringService
 
         var lines = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .Select(bp => new { bp.Id, bp.Chapter, bp.IsInfoOnly })
             .ToListAsync(ct);
 
@@ -181,7 +181,7 @@ public class CourseAuthoringService
         var wanted = Normalize(chapter);
         var lines = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .Select(bp => new
             {
                 bp.Id, bp.LineId, bp.Round, bp.Title, bp.Chapter, bp.Fen, bp.Comment, bp.IsInfoOnly, bp.Moves,
@@ -312,9 +312,11 @@ public class CourseAuthoringService
     }
 
     /// <summary>
-    /// Nächste Rundennummer + Ziffernbreite der bestehenden Runden. Die Lesereihenfolge sortiert
-    /// <see cref="BookPuzzle.Round"/> als TEXT — deshalb übernimmt eine neue Runde die Breite der
-    /// bestehenden (aus „0007" wird „0008", aus „7" wird „8"), sonst käme „0010" vor „9".
+    /// Nächste Rundennummer + Ziffernbreite der bestehenden Runden. Neue Runden übernehmen die
+    /// Breite der bestehenden (aus „0007" wird „0008"). Wächst die Nummer über die Breite hinaus
+    /// („9" → „10"), rettet die Lesereihenfolge das inzwischen selbst: sie sortiert Länge-vor-Text
+    /// (numerisch korrekt für reine Zahlen, No-op für einheitlich gepolsterte Importe) — vorher
+    /// stand „10" zwischen „1" und „2", und die Kapitel mischten sich (TestNoel, 0.331.x).
     /// </summary>
     internal static (int Next, int Width) NextRound(IEnumerable<string> rounds)
     {
@@ -395,6 +397,8 @@ public class CourseAuthoringService
             await _db.DailyPuzzles.Where(d => ids.Contains(d.BookPuzzleId)).ToListAsync(ct));
         _db.CalculationTrees.RemoveRange(
             await _db.CalculationTrees.Where(t => ids.Contains(t.BookPuzzleId)).ToListAsync(ct));
+        _db.CourseFlashcardMarks.RemoveRange(
+            await _db.CourseFlashcardMarks.Where(m => ids.Contains(m.BookPuzzleId)).ToListAsync(ct));
         _db.BookPuzzles.RemoveRange(lines);
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId, ct);

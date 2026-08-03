@@ -47,7 +47,7 @@ public class CalculationService
 
         var positions = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .Select(bp => new CalcPositionListItemDto
             {
                 Id = bp.Id,

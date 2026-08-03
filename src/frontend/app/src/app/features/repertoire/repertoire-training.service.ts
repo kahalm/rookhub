@@ -44,6 +44,17 @@ export class RepertoireTrainingService {
   }
 
   /** SR-Zustände aller (schon gelernten/pausierten) Linien. */
+  /** Als Flashcard markierte Linien-Schlüssel des Users in diesem Repertoire. */
+  getFlashcardMarks(repertoireId: number): Observable<{ lineKeys: string[] }> {
+    return this.http.get<{ lineKeys: string[] }>(`/api/repertoires/${repertoireId}/flashcards`);
+  }
+
+  /** Setzt/entfernt die persistente Flashcard-Markierung einer Repertoire-Linie. */
+  setFlashcardMark(repertoireId: number, lineKey: string, marked: boolean): Observable<{ marked: boolean }> {
+    const url = `/api/repertoires/${repertoireId}/flashcards/${encodeURIComponent(lineKey)}`;
+    return marked ? this.http.post<{ marked: boolean }>(url, {}) : this.http.delete<{ marked: boolean }>(url);
+  }
+
   getLineStates(repertoireId: number): Observable<LineStateDto[]> {
     return this.http.get<LineStateDto[]>(`/api/repertoires/${repertoireId}/training/lines`);
   }

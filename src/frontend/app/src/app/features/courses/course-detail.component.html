@@ -102,6 +102,13 @@
               <mat-icon>download</mat-icon>
               <span>{{ 'common.downloadPgn' | translate }}</span>
             </button>
+            <!-- Eigener Bereich: nur die persistent markierten Flashcards dieses Kurses. -->
+            <button mat-menu-item
+                    [routerLink]="['/courses', bookId, 'flashcards']"
+                    [queryParams]="{ marked: 1 }">
+              <mat-icon>style</mat-icon>
+              <span>{{ 'courses.flashcards.markedMenu' | translate }}</span>
+            </button>
             <button mat-menu-item (click)="resetCourse()" [disabled]="busy">
               <mat-icon>restart_alt</mat-icon>
               <span>{{ 'courses.detail.resetCourse' | translate }}</span>

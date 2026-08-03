@@ -62,10 +62,17 @@ interface ChapterGroup {
           </p>
         </div>
         <span class="head-spacer"></span>
+        @if (marked.size > 0) {
+          <button mat-stroked-button class="fc-btn fc-btn--marked" (click)="openMarkedFlashcards()"
+                  [matTooltip]="'courses.flashcards.markedTooltip' | translate">
+            <mat-icon>style</mat-icon>
+            {{ 'courses.flashcards.markedButton' | translate }} ({{ marked.size }})
+          </button>
+        }
         <button mat-stroked-button class="fc-btn" (click)="printFlashcards()" [disabled]="lines.length === 0"
                 [matTooltip]="'courses.flashcards.browseTooltip' | translate">
           <mat-icon>style</mat-icon>
-          {{ 'courses.flashcards.button' | translate }}@if (picked.size > 0) { ({{ picked.size }}) }
+          {{ 'courses.flashcards.button' | translate }}
         </button>
       </div>
 
@@ -83,9 +90,10 @@ interface ChapterGroup {
               }
               @for (line of g.lines; track line.id) {
                 <div class="line-row" [class.active]="selected?.id === line.id">
-                  <!-- Karteikarten-Auswahl: angehakte Linien landen im Flashcards-Druck. -->
-                  <input type="checkbox" class="line-pick" [checked]="picked.has(line.id)"
-                         (click)="togglePick(line, $event)"
+                  <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend). -->
+                  <input type="checkbox" class="line-pick" [checked]="marked.has(line.id)"
+                         (click)="toggleMark(line, $event)"
+                         [matTooltip]="'courses.flashcards.pick' | translate"
                          [attr.aria-label]="'courses.flashcards.pick' | translate" />
                   <button class="line-item" role="option"
                           [attr.aria-selected]="selected?.id === line.id"
@@ -386,6 +394,11 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
       next: s => { this.solvedIds = new Set(s.solvedIds); this.failedIds = new Set(s.failedIds); },
       error: () => {},
     });
+    // Persistente Flashcard-Markierungen des Users in diesem Kurs.
+    this.courseService.getFlashcardMarks(this.bookId).subscribe({
+      next: m => { this.marked = new Set(m.lineIds); },
+      error: () => {},
+    });
     if (this.isLoggedIn) {
       this.favorites.list(500).subscribe({
         next: favs => { this.favoriteIds = new Set(favs.filter(f => f.source === 'Book').map(f => f.puzzleId)); },
@@ -491,20 +504,28 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Für den Flashcards-Druck angehakte Linien (Ids). */
-  picked = new Set<number>();
+  /** PERSISTENT als Flashcard markierte Linien (Server-Zustand, beim Laden geholt). */
+  marked = new Set<number>();
 
-  togglePick(line: { id: number }, event: Event): void {
+  /** Markierung umschalten — optimistisch, bei Fehler zurückrollen. */
+  toggleMark(line: { id: number }, event: Event): void {
     event.stopPropagation();
-    if (this.picked.has(line.id)) this.picked.delete(line.id);
-    else this.picked.add(line.id);
+    const next = !this.marked.has(line.id);
+    if (next) this.marked.add(line.id); else this.marked.delete(line.id);
+    this.courseService.setFlashcardMark(this.bookId, line.id, next).subscribe({
+      error: () => { if (next) this.marked.delete(line.id); else this.marked.add(line.id); },
+    });
   }
 
-  /** Auswahl drucken; ohne Auswahl die aktuelle Ansicht (Kapitel bzw. ganzer Kurs). */
+  /** Eigener Bereich „nur markierte Flashcards" dieses Kurses. */
+  openMarkedFlashcards(): void {
+    this.router.navigate(['/courses', this.bookId, 'flashcards'], { queryParams: { marked: 1 } });
+  }
+
+  /** Aktuelle Ansicht (Kapitel bzw. ganzer Kurs) als Flashcards. */
   printFlashcards(): void {
     const queryParams: Record<string, string> = {};
-    if (this.picked.size > 0) queryParams['lines'] = [...this.picked].join(',');
-    else if (this.chapterName !== undefined) queryParams['chapter'] = this.chapterName || '';
+    if (this.chapterName !== undefined) queryParams['chapter'] = this.chapterName || '';
     this.router.navigate(['/courses', this.bookId, 'flashcards'], { queryParams });
   }
 

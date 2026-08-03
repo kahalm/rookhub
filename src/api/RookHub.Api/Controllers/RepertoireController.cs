@@ -14,16 +14,18 @@ public class RepertoireController : BaseApiController
     private readonly ImportReprocessService _reprocess;
     private readonly IReprocessLauncher _reprocessLauncher;
     private readonly RepertoireTrainingService _training;
+    private readonly FlashcardMarkService _flashcards;
     private readonly CourseService _courseService;
     private readonly SharedLineService _sharedLines;
     private readonly RepertoirePositionLookupService _positionLookup;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup, FlashcardMarkService flashcards)
     {
         _repertoireService = repertoireService;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
         _training = training;
+        _flashcards = flashcards;
         _courseService = courseService;
         _sharedLines = sharedLines;
         _positionLookup = positionLookup;
@@ -78,6 +80,30 @@ public class RepertoireController : BaseApiController
 
     /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des eigenen Repertoires — das Frontend
     /// ermittelt daraus die fälligen Linien. 404 wenn nicht vorhanden/nicht eigenes Repertoire.</summary>
+    /// <summary>Als Flashcard markierte Linien-Schlüssel des Users. 404 ohne Zugriff.</summary>
+    [HttpGet("{id:int}/flashcards")]
+    public async Task<IActionResult> GetFlashcardMarks(int id, CancellationToken ct)
+    {
+        var keys = await _flashcards.GetRepertoireMarksAsync(GetUserId(), id, ct);
+        return keys is null ? NotFound() : Ok(new { lineKeys = keys });
+    }
+
+    /// <summary>Markiert eine Repertoire-Linie (LineKey) als Flashcard (idempotent).</summary>
+    [HttpPost("{id:int}/flashcards/{lineKey}")]
+    public async Task<IActionResult> MarkFlashcard(int id, string lineKey, CancellationToken ct)
+    {
+        var res = await _flashcards.SetRepertoireMarkAsync(GetUserId(), id, lineKey, marked: true, ct);
+        return res is null ? NotFound() : Ok(new { marked = true });
+    }
+
+    /// <summary>Entfernt die Flashcard-Markierung einer Repertoire-Linie (idempotent).</summary>
+    [HttpDelete("{id:int}/flashcards/{lineKey}")]
+    public async Task<IActionResult> UnmarkFlashcard(int id, string lineKey, CancellationToken ct)
+    {
+        var res = await _flashcards.SetRepertoireMarkAsync(GetUserId(), id, lineKey, marked: false, ct);
+        return res is null ? NotFound() : Ok(new { marked = false });
+    }
+
     [HttpGet("{id:int}/training/lines")]
     public async Task<ActionResult<List<LineStateDto>>> TrainingLines(int id, CancellationToken ct)
     {

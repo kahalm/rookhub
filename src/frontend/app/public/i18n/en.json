@@ -1293,7 +1293,12 @@
       "printView": "Print view",
       "flip": "Flip card",
       "shuffle": "Shuffle",
-      "digitalHint": "Click the card (or Space/Enter) to flip it; ←/→ move through the deck."
+      "digitalHint": "Click the card (or Space/Enter) to flip it; ←/→ move through the deck.",
+      "markedOnly": "Marked only",
+      "markedEmpty": "No lines are marked as flashcards yet. Mark lines via the checkbox in the browse view.",
+      "markedButton": "Marked",
+      "markedTooltip": "Only the lines you marked as flashcards",
+      "markedMenu": "Flashcards (marked lines)"
     },
     "calculate": "Calculate",
     "browse": {

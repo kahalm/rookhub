@@ -11,6 +11,7 @@ import { PreferencesService } from '../../../core/preferences.service';
 import { RepertoireTrainingService } from '../../repertoire/repertoire-training.service';
 import { lineKeyFromSans } from '../../repertoire/repertoire-line-key.util';
 import { parsePgnText } from '../../../shared/pgn-viewer/pgn-parser';
+import { forkJoin } from 'rxjs';
 import { Flashcard, buildFlashcard, buildRepertoireFlashcards } from './flashcard.util';
 import { FlashcardBoardComponent } from './flashcard-board.component';
 
@@ -21,8 +22,9 @@ import { FlashcardBoardComponent } from './flashcard-board.component';
  * Spalten, damit beidseitiger Druck (Wenden an der langen Kante) Vorder- und Rückseite
  * deckungsgleich übereinanderlegt.
  *
- * Auswahl über Query-Parameter: `lines=id,id,…` (einzelne Linien, z. B. aus dem Durchsehen)
- * oder `chapter=<Name>` ('' = „ohne Kapitel"); ohne beides der ganze Kurs.
+ * Auswahl über Query-Parameter: `lines=id,id,…` (einzelne Linien, z. B. aus dem Durchsehen),
+ * `chapter=<Name>` ('' = „ohne Kapitel") oder `marked=1` (nur die PERSISTENT als Flashcard
+ * markierten Linien des Users — der „eigene Bereich" je Kurs/Repertoire); ohne alles der ganze Kurs.
  *
  * ZWEI Quellen über dieselbe Komponente: `/courses/:bookId/flashcards` (Aufgabe vorn, Lösung
  * hinten) und `/repertoires/:id/flashcards` (UMGEKEHRT: Endstellung+Pfeile vorn, Linie hinten;
@@ -47,6 +49,8 @@ export class FlashcardsComponent implements OnInit {
   loading = true;
   error = false;
   cards: Flashcard[] = [];
+  /** `?marked=1` — nur die serverseitig markierten Linien (eigener Flashcard-Bereich). */
+  markedOnly = false;
 
   // ===== Digitale Lern-Ansicht =====
   /** 'digital' = Karten am Schirm durchblättern (Standard), 'print' = Druckvorschau. */
@@ -74,16 +78,19 @@ export class FlashcardsComponent implements OnInit {
     const q = this.route.snapshot.queryParamMap;
     const rawLines = (q.get('lines') || '').split(',').map(s => s.trim()).filter(Boolean);
     const chapter = q.has('chapter') ? (q.get('chapter') || '') : null;
+    this.markedOnly = q.get('marked') === '1';
 
     if (pm.has('bookId')) {
       this.source = 'course';
       this.bookId = Number(pm.get('bookId'));
       this.backLink = ['/courses', this.bookId];
       const ids = rawLines.map(Number).filter(n => Number.isFinite(n) && n > 0);
-      this.courses.getBookPuzzles(this.bookId).subscribe({
+      const load = (markedIds: Set<number> | null) => this.courses.getBookPuzzles(this.bookId).subscribe({
         next: puzzles => {
           let picked = puzzles;
-          if (ids.length) {
+          if (markedIds) {
+            picked = puzzles.filter(p => markedIds.has(p.id));
+          } else if (ids.length) {
             const wanted = new Set(ids);
             picked = puzzles.filter(p => wanted.has(p.id));
           } else if (chapter !== null) {
@@ -93,6 +100,14 @@ export class FlashcardsComponent implements OnInit {
         },
         error: () => { this.loading = false; this.error = true; },
       });
+      if (this.markedOnly) {
+        this.courses.getFlashcardMarks(this.bookId).subscribe({
+          next: m => load(new Set(m.lineIds)),
+          error: () => { this.loading = false; this.error = true; },
+        });
+      } else {
+        load(null);
+      }
       return;
     }
 
@@ -101,7 +116,7 @@ export class FlashcardsComponent implements OnInit {
     this.source = 'repertoire';
     this.bookId = Number(pm.get('id'));
     this.backLink = ['/repertoires', this.bookId];
-    this.training.getPgn(this.bookId).subscribe({
+    const loadRep = (markedKeys: Set<string> | null) => this.training.getPgn(this.bookId).subscribe({
       next: pgn => {
         const raws = pgn.split(/\n\n(?=\[Event )/);
         const games: Parameters<typeof buildRepertoireFlashcards>[0] = [];
@@ -113,7 +128,9 @@ export class FlashcardsComponent implements OnInit {
           alignedRaws.push(raw);
         }
         let built = buildRepertoireFlashcards(games, alignedRaws, lineKeyFromSans);
-        if (rawLines.length) {
+        if (markedKeys) {
+          built = built.filter(b => markedKeys.has(b.lineKey));
+        } else if (rawLines.length) {
           const wanted = new Set(rawLines);
           built = built.filter(b => wanted.has(b.lineKey));
         } else if (chapter !== null) {
@@ -123,6 +140,14 @@ export class FlashcardsComponent implements OnInit {
       },
       error: () => { this.loading = false; this.error = true; },
     });
+    if (this.markedOnly) {
+      this.training.getFlashcardMarks(this.bookId).subscribe({
+        next: m => loadRep(new Set(m.lineKeys)),
+        error: () => { this.loading = false; this.error = true; },
+      });
+    } else {
+      loadRep(null);
+    }
   }
 
   private finish(cards: Flashcard[]): void {

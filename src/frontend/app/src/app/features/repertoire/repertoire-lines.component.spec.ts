@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireLine } from './repertoire-viewer.service';
 
@@ -15,6 +15,8 @@ function line(chapter: string, gameIndex: number, lastMoveSide: 'w' | 'b' | null
 function makeComponent(): RepertoireLinesComponent {
   const training: any = {
     getLineStates: () => of([]),
+    getFlashcardMarks: () => of({ lineKeys: [] }),
+    setFlashcardMark: () => of({ marked: true }),
     promote: () => of({ affected: 1 }),
     makeDue: () => of({ affected: 1 }),
     setPaused: () => of({ affected: 1 }),
@@ -52,6 +54,7 @@ describe('RepertoireLinesComponent chapterGroups reactivity', () => {
   it('promote calls the service with the given line keys and reloads', () => {
     const training: any = {
       getLineStates: jasmine.createSpy('get').and.returnValue(of([])),
+      getFlashcardMarks: () => of({ lineKeys: [] }),
       promote: jasmine.createSpy('promote').and.returnValue(of({ affected: 2 })),
     };
     const c = new RepertoireLinesComponent(training);
@@ -68,6 +71,7 @@ describe('RepertoireLinesComponent chapterGroups reactivity', () => {
         { lineKey: 'k0', level: 3, reps: 3, lapses: 0, dueAt: past, lastReviewedAt: past, inPool: true, paused: false },
         { lineKey: 'k1', level: 1, reps: 1, lapses: 0, dueAt: past, lastReviewedAt: past, inPool: true, paused: true },
       ]),
+      getFlashcardMarks: () => of({ lineKeys: [] }),
     };
     const c = new RepertoireLinesComponent(training);
     c.repertoireId = 7;
@@ -76,6 +80,39 @@ describe('RepertoireLinesComponent chapterGroups reactivity', () => {
     expect(c.status(line('A', 1))).toBe('paused');    // k1, paused
     expect(c.status(line('A', 2))).toBe('new');       // k2, kein Zustand
     expect(c.badge(line('A', 0))).toBe('S3');
+  });
+
+  it('lädt persistente Flashcard-Marks und toggelt optimistisch über den Service', () => {
+    const training: any = {
+      getLineStates: () => of([]),
+      getFlashcardMarks: () => of({ lineKeys: ['k1'] }),
+      setFlashcardMark: jasmine.createSpy('setMark').and.returnValue(of({ marked: true })),
+    };
+    const c = new RepertoireLinesComponent(training);
+    c.repertoireId = 7;
+    c.ngOnInit();
+    expect([...c.marked]).toEqual(['k1']);
+
+    c.toggleMark(line('A', 0), new Event('click'));   // k0 → markieren
+    expect(c.marked.has('k0')).toBeTrue();
+    expect(training.setFlashcardMark).toHaveBeenCalledWith(7, 'k0', true);
+
+    c.toggleMark(line('A', 1), new Event('click'));   // k1 → entmarkieren
+    expect(c.marked.has('k1')).toBeFalse();
+    expect(training.setFlashcardMark).toHaveBeenCalledWith(7, 'k1', false);
+  });
+
+  it('rollt die Markierung bei Server-Fehler zurück', () => {
+    const training: any = {
+      getLineStates: () => of([]),
+      getFlashcardMarks: () => of({ lineKeys: [] }),
+      setFlashcardMark: () => throwError(() => new Error('down')),
+    };
+    const c = new RepertoireLinesComponent(training);
+    c.repertoireId = 7;
+    c.ngOnInit();
+    c.toggleMark(line('A', 0), new Event('click'));
+    expect(c.marked.has('k0')).toBeFalse();
   });
 });
 

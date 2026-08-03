@@ -100,7 +100,7 @@ public class CourseService
         // Info-/Erklärlinien sind kein Quiz → zählen nicht zum Kapitel-Fortschritt.
         var puzzles = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .Select(bp => new { bp.Id, bp.Chapter })
             .ToListAsync();
         var solvedSet = (await _db.CoursePuzzleResults
@@ -182,7 +182,7 @@ public class CourseService
         var puzzles = await _db.BookPuzzles
             .Include(bp => bp.Book)
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .ToListAsync();
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
@@ -201,7 +201,7 @@ public class CourseService
         IQueryable<BookPuzzle> query = _db.BookPuzzles
             .Include(bp => bp.Book)
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id);
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
         if (skip is int s && s > 0) query = query.Skip(s);
         if (take is int t && t > 0) query = query.Take(t);
         var puzzles = await query.ToListAsync();
@@ -241,7 +241,7 @@ public class CourseService
         // Fallback (Altbestand ohne Quelle): aus den BookPuzzles rekonstruieren (Round-Lesereihenfolge).
         var puzzles = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .ToListAsync();
         return (CoursePgnExporter.ToPgn(book.DisplayName, puzzles), fileName);
     }
@@ -767,7 +767,7 @@ public class CourseService
             // gesehen), daher wird ihr (Round, Id) separat aufgelöst und die erste Pool-Linie danach
             // gewählt. Nur die Schlüssel (Id, Round) laden — String-Vergleich passiert in-memory
             // (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
-            var keys = await seqPool.OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            var keys = await seqPool.OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
                 .Select(bp => new { bp.Id, bp.Round })
                 .ToListAsync();
             int? pickId = null;

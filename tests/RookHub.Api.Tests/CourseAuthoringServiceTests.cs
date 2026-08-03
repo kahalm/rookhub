@@ -385,6 +385,24 @@ public class CourseAuthoringServiceTests : IDisposable
         Assert.Equal((6, 1), CourseAuthoringService.NextRound(new[] { "abc", "5" }));
     }
 
+    [Fact]
+    public async Task GetDetail_RoundsBeyondNine_KeepInsertionOrder_AndChaptersStayContiguous()
+    {
+        // Handangelegte Linien tragen unpadded Runden „1"…„12" — Text-Sortierung stellte „10"
+        // zwischen „1" und „2" und mischte damit die Kapitel (TestNoel-Bug). Die Länge-vor-Text-
+        // Sortierung hält numerische Reihenfolge UND Kapitel-Blöcke zusammen.
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id);
+        for (var i = 1; i <= 6; i++) await SeedLineAsync(book, i.ToString(), "Kapitel A", infoOnly: true);
+        for (var i = 7; i <= 12; i++) await SeedLineAsync(book, i.ToString(), "Kapitel B", infoOnly: true);
+
+        var detail = await _svc.GetDetailAsync(user.Id, book.Id, isAdmin: false);
+        Assert.Equal(new[] { "Kapitel A", "Kapitel B" }, detail.Chapters.Select(c => c.Name));
+
+        var linesB = await _svc.GetChapterLinesAsync(user.Id, book.Id, "Kapitel B", isAdmin: false);
+        Assert.Equal(new[] { "7", "8", "9", "10", "11", "12" }, linesB.Select(l => l.Round));
+    }
+
     // ===== Kapitel pflegen ====================================================
 
     [Fact]

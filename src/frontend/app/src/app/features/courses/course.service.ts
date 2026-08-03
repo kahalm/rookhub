@@ -386,6 +386,18 @@ export class CourseService {
   }
 
   /** Linien EINES Kapitels (`null` = „ohne Kapitel"); ohne Lösungszüge. */
+  /** Als Flashcard markierte Linien-Ids des Users in diesem Kurs. */
+  getFlashcardMarks(bookId: number): Observable<{ lineIds: number[] }> {
+    return this.http.get<{ lineIds: number[] }>(`/api/courses/${bookId}/flashcards`);
+  }
+
+  /** Setzt/entfernt die persistente Flashcard-Markierung einer Kurs-Linie. */
+  setFlashcardMark(bookId: number, lineId: number, marked: boolean): Observable<{ marked: boolean }> {
+    return marked
+      ? this.http.post<{ marked: boolean }>(`/api/courses/${bookId}/flashcards/${lineId}`, {})
+      : this.http.delete<{ marked: boolean }>(`/api/courses/${bookId}/flashcards/${lineId}`);
+  }
+
   getChapterLines(bookId: number, chapter: string | null): Observable<CourseLine[]> {
     const params = new HttpParams().set('chapter', chapter ?? '');
     return this.http.get<CourseLine[]>(`/api/courses/${bookId}/lines`, { params });

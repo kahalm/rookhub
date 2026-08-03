@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CourseBrowseComponent } from './course-browse.component';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
 
@@ -20,13 +20,15 @@ describe('CourseBrowseComponent', () => {
     puzzles: BookPuzzleDto[],
     chapterIndex: number | null = null,
     chapters: any[] = [],
-    opts: { status?: { solvedIds: number[]; failedIds: number[] }; favorites?: any[]; loggedIn?: boolean; dialog?: any; favService?: any } = {},
+    opts: { status?: { solvedIds: number[]; failedIds: number[] }; favorites?: any[]; loggedIn?: boolean; dialog?: any; favService?: any; marks?: number[]; setMark?: any } = {},
   ): CourseBrowseComponent {
     const route: any = { snapshot: { paramMap: { get: (k: string) => k === 'bookId' ? '5' : (k === 'chapterIndex' ? (chapterIndex == null ? null : String(chapterIndex)) : null) } } };
     const courseService: any = {
       getBookPuzzles: () => of(puzzles),
       getChapters: () => of(chapters),
       getLineStatus: () => of(opts.status ?? { solvedIds: [], failedIds: [] }),
+      getFlashcardMarks: () => of({ lineIds: opts.marks ?? [] }),
+      setFlashcardMark: opts.setMark ?? (() => of({ marked: true })),
     };
     const prefs: any = { boardTheme: 'brown', pieceSet: 'cburnett' };
     const auth: any = { isLoggedIn: opts.loggedIn ?? true };
@@ -39,6 +41,27 @@ describe('CourseBrowseComponent', () => {
     comp.ngOnInit();
     return comp;
   }
+
+  it('lädt persistente Flashcard-Marks und toggelt optimistisch über den Service', () => {
+    const setMark = jasmine.createSpy('setMark').and.returnValue(of({ marked: true }));
+    const comp = build([line({ id: 1 }), line({ id: 2 })], null, [], { marks: [2], setMark });
+    expect([...comp.marked]).toEqual([2]);
+
+    comp.toggleMark({ id: 1 }, new Event('click'));
+    expect(comp.marked.has(1)).toBeTrue();
+    expect(setMark).toHaveBeenCalledWith(5, 1, true);
+
+    comp.toggleMark({ id: 2 }, new Event('click'));
+    expect(comp.marked.has(2)).toBeFalse();
+    expect(setMark).toHaveBeenCalledWith(5, 2, false);
+  });
+
+  it('rollt die Markierung bei Server-Fehler zurück', () => {
+    const setMark = jasmine.createSpy('setMark').and.returnValue(throwError(() => new Error('down')));
+    const comp = build([line({ id: 1 })], null, [], { setMark });
+    comp.toggleMark({ id: 1 }, new Event('click'));
+    expect(comp.marked.has(1)).toBeFalse();   // optimistisch gesetzt, nach Fehler zurückgenommen
+  });
 
   it('loads all lines and groups them by chapter, selecting the first', () => {
     const comp = build([

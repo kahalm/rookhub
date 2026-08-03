@@ -24,7 +24,7 @@ public static class ChapterOrder
     {
         var chapters = await db.BookPuzzles
             .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .Select(bp => bp.Chapter)
             .ToListAsync();
         var names = new List<string?>();
