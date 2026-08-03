@@ -89,6 +89,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | `adminGuard` (vorerst nur Admin) |
 | `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
 | `/courses/:bookId` | CourseDetailComponent (Detailseite: Metadaten + Kapitel-Verwaltung, Stellungen per Memo einfügen) | `courseAccessGuard` |
+| `/courses/:bookId/flashcards` | FlashcardsComponent (Druckvorlage: Endstellung+Pfeile vorn, Notation+Abschlusstext hinten; `?lines=`/`?chapter=`; MUSS vor der `:mode`-Route stehen) | `courseAccessGuard` |
 | `/courses/:bookId/calc` | CalculationComponent (Kalkulations-Modus; MUSS vor der `:mode`-Route stehen) | `coursePlayGuard` |
 | `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `courseAccessGuard` |
 | `/` | redirect -> `/dashboard` | - |

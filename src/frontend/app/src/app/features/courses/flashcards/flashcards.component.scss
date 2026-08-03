@@ -1,0 +1,60 @@
+/* Bildschirm: Blätter als Vorschau untereinander; Druck: 1 Blatt = 1 A4-Seite. */
+.fc-page { max-width: 1000px; margin: 0 auto; padding: 0.75rem; }
+
+.fc-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.fc-title { font-size: 1.15rem; font-weight: 600; }
+.fc-count { opacity: 0.7; }
+.fc-spacer { flex: 1; }
+.fc-hint { font-size: 0.85rem; opacity: 0.65; margin: 0.4rem 0 1rem; }
+.fc-center { display: flex; justify-content: center; padding: 2rem; }
+
+/* 2×2-Raster je Blatt; Karte mit Schnittlinie. */
+.fc-sheet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-bottom: 1.25rem;
+  border: 1px dashed color-mix(in srgb, currentColor 25%, transparent);
+}
+.fc-card {
+  border: 1px dashed color-mix(in srgb, currentColor 25%, transparent);
+  padding: 4mm;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  break-inside: avoid;
+}
+.fc-card-head {
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  font-size: 0.78rem; margin-bottom: 2mm;
+}
+.fc-heading { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-chapter { opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
+.fc-board { width: 100%; max-width: 82mm; margin: 0 auto; }
+.fc-turnhint { text-align: center; font-size: 0.72rem; opacity: 0.55; margin-top: 1.5mm; }
+
+.fc-notation {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.82rem; line-height: 1.45; margin: 0 0 2mm; overflow-wrap: anywhere;
+}
+.fc-closing { font-size: 0.8rem; line-height: 1.45; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fc-closing--empty { opacity: 0.5; font-style: italic; }
+
+@media print {
+  /* Nur die Blätter drucken; App-Chrome (Navbar/Footer blendet die Seite selbst aus). */
+  .fc-toolbar, .fc-hint { display: none; }
+  .fc-page { max-width: none; padding: 0; }
+  .fc-sheet {
+    page-break-after: always;
+    margin: 0;
+    border: none;
+    /* Feste Kartenhöhe: A4 (297mm) − Druckränder ⇒ 2 Zeilen à ~135mm. */
+    grid-template-rows: 135mm 135mm;
+  }
+  .fc-card { border: 1px dashed #bbb; }
+  .fc-notation, .fc-closing { color: #000; }
+}
+
+/* Die Seite ist eine reine Druckvorlage — Navbar/Footer stören auch am Schirm nicht,
+   im Druck blendet der Browser sie über die globale print-Regel (styles.scss) aus. */

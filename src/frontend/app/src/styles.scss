@@ -169,3 +169,9 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
    würde den Selektor sonst zerlegen). */
 [data-fs-only] { display: none !important; }
 .board-fs-host:fullscreen [data-fs-only] { display: flex !important; }
+
+/* Druck: App-Chrome nie mitdrucken (relevant v. a. für die Flashcards-Druckvorlage). */
+@media print {
+  app-navbar, .app-footer, .app-fs-exit { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+}

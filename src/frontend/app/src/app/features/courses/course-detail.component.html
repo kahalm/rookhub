@@ -180,6 +180,12 @@
                             <span>{{ 'courses.detail.renameChapter' | translate }}</span>
                           </button>
                         }
+                        <button mat-menu-item
+                                [routerLink]="['/courses', bookId, 'flashcards']"
+                                [queryParams]="{ chapter: ch.name ?? '' }">
+                          <mat-icon>style</mat-icon>
+                          <span>{{ 'courses.flashcards.chapterMenu' | translate }}</span>
+                        </button>
                         <button mat-menu-item (click)="resetChapter(ch)">
                           <mat-icon>restart_alt</mat-icon>
                           <span>{{ 'courses.detail.resetChapter' | translate }}</span>

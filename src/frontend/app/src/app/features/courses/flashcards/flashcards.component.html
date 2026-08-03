@@ -1,0 +1,68 @@
+<div class="fc-page">
+  <!-- Werkzeugleiste — im Druck ausgeblendet. -->
+  <div class="fc-toolbar">
+    <a mat-stroked-button [routerLink]="['/courses', bookId]">
+      <mat-icon>arrow_back</mat-icon>{{ 'common.back' | translate }}
+    </a>
+    <span class="fc-title">{{ 'courses.flashcards.title' | translate }}</span>
+    <span class="fc-count" *ngIf="!loading && !error">
+      {{ 'courses.flashcards.count' | translate:{ count: cards.length } }}
+    </span>
+    <span class="fc-spacer"></span>
+    <button mat-flat-button color="primary" (click)="print()" [disabled]="loading || cards.length === 0">
+      <mat-icon>print</mat-icon>{{ 'courses.flashcards.print' | translate }}
+    </button>
+  </div>
+  <p class="fc-hint">{{ 'courses.flashcards.duplexHint' | translate }}</p>
+
+  @if (loading) {
+    <div class="fc-center"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (error) {
+    <p class="fc-center">{{ 'courses.loadFailed' | translate }}</p>
+  } @else if (cards.length === 0) {
+    <p class="fc-center">{{ 'courses.flashcards.empty' | translate }}</p>
+  } @else {
+    @for (sheet of sheets; track $index) {
+      <!-- Vorderseiten-Blatt -->
+      <section class="fc-sheet">
+        @for (card of sheet.fronts; track $index) {
+          <div class="fc-card fc-card--front">
+            @if (card) {
+              <div class="fc-card-head">
+                <span class="fc-heading">{{ card.heading }}</span>
+                @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
+              </div>
+              <app-flashcard-board class="fc-board"
+                [fen]="card.frontFen" [orientation]="card.orientation"
+                [shapes]="card.shapes" [pieceSet]="pieceSet" />
+              <div class="fc-turnhint">
+                {{ (card.orientation === 'white' ? 'courses.flashcards.fromWhite' : 'courses.flashcards.fromBlack') | translate }}
+              </div>
+            }
+          </div>
+        }
+      </section>
+      <!-- Rückseiten-Blatt (Spalten gespiegelt für Duplex an der langen Kante) -->
+      <section class="fc-sheet fc-sheet--backs">
+        @for (card of sheet.backs; track $index) {
+          <div class="fc-card fc-card--back">
+            @if (card) {
+              <div class="fc-card-head">
+                <span class="fc-heading">{{ card.heading }}</span>
+                @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
+              </div>
+              @if (card.notation) {
+                <p class="fc-notation">{{ card.notation }}</p>
+              }
+              @if (card.closing) {
+                <p class="fc-closing">{{ card.closing }}</p>
+              } @else if (!card.notation) {
+                <p class="fc-closing fc-closing--empty">{{ 'courses.flashcards.noText' | translate }}</p>
+              }
+            }
+          </div>
+        }
+      </section>
+    }
+  }
+</div>

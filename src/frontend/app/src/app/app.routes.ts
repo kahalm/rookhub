@@ -44,6 +44,7 @@ export const routes: Routes = [
   { path: 'courses/:bookId/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-detail.component').then(m => m.CourseDetailComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   // MUSS vor der :mode-Route stehen, sonst landet „calc" im Buch-Puzzle-Solver.
+  { path: 'courses/:bookId/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   { path: 'courses/:bookId/calc', loadComponent: () => import('./features/courses/calc/calculation.component').then(m => m.CalculationComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },

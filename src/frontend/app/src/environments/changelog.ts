@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.329.0';
+export const APP_VERSION = '0.330.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.330.0", date: "2026-08-03", changes: [
+    { en: "Print FLASHCARDS from course lines. Front: the line's FINAL position (for pattern/info lines the position itself) with Chessable's arrows and square marks, shown from the trainee's side; back: the whole line in notation plus the closing description (the last move's comment, otherwise the line comment). Four cards per A4 sheet with cut lines; every back sheet is column-mirrored so double-sided printing (flip on long edge) lines fronts and backs up exactly. The boards are print-safe SVGs (pieces as real images in your chosen piece set — no ‚print backgrounds' setting needed). Where: in course browsing tick individual lines and press ‚Flashcards' (without a selection the current view prints), or use ‚Print flashcards' in a chapter's menu on the course detail page. NOT deployed (frontend image only).", de: "FLASHCARDS aus Kurs-Linien drucken. Vorn: die ENDSTELLUNG der Linie (bei Muster-/Info-Linien die Stellung selbst) mit Chessables Pfeilen und Feld-Markierungen, aus der Sicht des Trainierenden; hinten: die ganze Linie in Notation plus die Abschlussbeschreibung (Kommentar des letzten Zugs, sonst der Linien-Kommentar). Vier Karten je A4-Blatt mit Schnittlinien; jedes Rückseiten-Blatt ist spaltengespiegelt, sodass beidseitiger Druck (Wenden an der langen Kante) Vorder- und Rückseiten exakt übereinanderlegt. Die Bretter sind druckfeste SVGs (Figuren als echte Bilder im eingestellten Figurensatz — keine „Hintergründe drucken“-Einstellung nötig). Wo: im Kurs-Durchsehen einzelne Linien anhaken und „Flashcards“ drücken (ohne Auswahl wird die aktuelle Ansicht gedruckt), oder „Flashcards drucken“ im Kapitel-Menü der Kurs-Detailseite. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.329.0", date: "2026-08-03", changes: [
     { en: "Your DIFFICULT Chessable moves now land in RookHub's database. Chessable's own responses carry your training state — per line the ‚hard moves' counter, per position the exact moves you played wrong (including timeouts and give-ups) and when the line was last reviewed. RepCheck v1.36 harvests these from the responses it already captures during training AND while fetching a course, batches them and RookHub stores them per line (a clean run clears earlier mistakes). No extra Chessable requests are made. This is the data layer — filters like ‚only difficult lines' in the course/trainer can now build on it. Needs api image + RepCheck v1.36.", de: "Deine SCHWIERIGEN Chessable-Züge landen jetzt in RookHubs Datenbank. Chessables eigene Antworten tragen deinen Trainingszustand — je Linie den „schwierige Züge“-Zähler, je Stellung die konkret falsch gespielten Züge (inklusive Zeitüberschreitungen und Aufgeben) und wann die Linie zuletzt wiederholt wurde. RepCheck v1.36 erntet das aus den Antworten, die es beim Training UND beim Kurs-Holen ohnehin mitschneidet, bündelt es und RookHub speichert es je Linie (ein sauberer Durchlauf löscht frühere Fehlzüge). Es entstehen KEINE zusätzlichen Chessable-Anfragen. Das ist die Datenbasis — Filter wie „nur schwierige Linien“ im Kurs/Trainer können jetzt darauf aufbauen. Braucht api-Image + RepCheck v1.36." },
   ] },

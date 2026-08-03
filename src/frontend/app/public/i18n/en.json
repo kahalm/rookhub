@@ -1276,6 +1276,20 @@
     },
     "moreActions": "More actions",
     "browseTooltip": "Browse lines",
+    "flashcards": {
+      "title": "Flashcards",
+      "button": "Flashcards",
+      "print": "Print",
+      "count": "{{count}} cards",
+      "empty": "Nothing to print — no lines selected.",
+      "duplexHint": "Print double-sided (flip on long edge): each back sheet is mirrored so fronts and backs line up. Enable background printing is NOT needed.",
+      "fromWhite": "from White\\u2019s side",
+      "fromBlack": "from Black\\u2019s side",
+      "noText": "No description for this line.",
+      "pick": "Select for flashcards",
+      "browseTooltip": "Print selected lines as flashcards — without a selection the current view is printed.",
+      "chapterMenu": "Print flashcards"
+    },
     "calculate": "Calculate",
     "browse": {
       "title": "Browse",

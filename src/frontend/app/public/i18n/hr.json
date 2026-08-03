@@ -1276,6 +1276,20 @@
     },
     "moreActions": "Više radnji",
     "browseTooltip": "Pregledaj linije",
+    "flashcards": {
+      "title": "Kartice",
+      "button": "Kartice",
+      "print": "Ispis",
+      "count": "{{count}} kartica",
+      "empty": "Nema ničega za ispis — nijedna linija nije odabrana.",
+      "duplexHint": "Ispišite obostrano (okretanje po dugom rubu): svaki list poleđina je zrcaljen pa se prednje i stražnje strane poklapaju.",
+      "fromWhite": "iz perspektive bijelog",
+      "fromBlack": "iz perspektive crnog",
+      "noText": "Nema opisa za ovu liniju.",
+      "pick": "Odaberi za kartice",
+      "browseTooltip": "Ispiši odabrane linije kao kartice — bez odabira ispisuje se trenutačni prikaz.",
+      "chapterMenu": "Ispiši kartice"
+    },
     "calculate": "Izračunaj",
     "browse": {
       "title": "Pregled",

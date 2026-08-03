@@ -61,6 +61,12 @@ interface ChapterGroup {
             <span class="dot">·</span>{{ 'courses.browse.lineCount' | translate:{ count: lines.length } }}
           </p>
         </div>
+        <span class="head-spacer"></span>
+        <button mat-stroked-button class="fc-btn" (click)="printFlashcards()" [disabled]="lines.length === 0"
+                [matTooltip]="'courses.flashcards.browseTooltip' | translate">
+          <mat-icon>style</mat-icon>
+          {{ 'courses.flashcards.button' | translate }}@if (picked.size > 0) { ({{ picked.size }}) }
+        </button>
       </div>
 
       @if (loading) {
@@ -77,6 +83,10 @@ interface ChapterGroup {
               }
               @for (line of g.lines; track line.id) {
                 <div class="line-row" [class.active]="selected?.id === line.id">
+                  <!-- Karteikarten-Auswahl: angehakte Linien landen im Flashcards-Druck. -->
+                  <input type="checkbox" class="line-pick" [checked]="picked.has(line.id)"
+                         (click)="togglePick(line, $event)"
+                         [attr.aria-label]="'courses.flashcards.pick' | translate" />
                   <button class="line-item" role="option"
                           [attr.aria-selected]="selected?.id === line.id"
                           (click)="selectLine(line)">
@@ -195,6 +205,8 @@ interface ChapterGroup {
     :host-context(.app-fullscreen) .browse-head { display: none; }
     .browse-container { max-width: 1200px; margin: 16px auto; padding: 0 16px; }
     .browse-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .head-spacer { flex: 1; }
+    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary, #3f51b5); }
     .head-text h1 { margin: 0; font-size: 1.25rem; }
     .sub { margin: 2px 0 0; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; }
     .dot { margin: 0 6px; opacity: 0.5; }
@@ -477,6 +489,23 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
       width: '400px',
       maxWidth: '95vw',
     });
+  }
+
+  /** Für den Flashcards-Druck angehakte Linien (Ids). */
+  picked = new Set<number>();
+
+  togglePick(line: { id: number }, event: Event): void {
+    event.stopPropagation();
+    if (this.picked.has(line.id)) this.picked.delete(line.id);
+    else this.picked.add(line.id);
+  }
+
+  /** Auswahl drucken; ohne Auswahl die aktuelle Ansicht (Kapitel bzw. ganzer Kurs). */
+  printFlashcards(): void {
+    const queryParams: Record<string, string> = {};
+    if (this.picked.size > 0) queryParams['lines'] = [...this.picked].join(',');
+    else if (this.chapterName !== undefined) queryParams['chapter'] = this.chapterName || '';
+    this.router.navigate(['/courses', this.bookId, 'flashcards'], { queryParams });
   }
 
   selectLine(line: BookPuzzleDto): void {
