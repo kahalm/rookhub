@@ -44,7 +44,8 @@ public class ExtensionControllerTests : IDisposable
             new ChessableRateLimiter(_db, rateLimiterConfig), NullLogger<ChessableImportService>.Instance);
         _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService,
             savedGameService, new SharedLineService(_db), chessableProxy, chessableImport,
-            new ChessableIngestSessionStore());
+            new ChessableIngestSessionStore(),
+            new ChessableTrainedLineService(_db, new RepertoireTrainingService(_db)));
     }
 
     public void Dispose() => _db.Dispose();

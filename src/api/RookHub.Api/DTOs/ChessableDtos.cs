@@ -146,3 +146,26 @@ public record ChessableAdminImportDto(
     DateTime CreatedAt,
     DateTime? StartedAt,
     DateTime? CompletedAt);
+
+/// <summary>Eingabe „Linie auf Chessable trainiert": Kurs-bid + Varianten-oid (beide von der
+/// Extension aus der Chessable-SPA ermittelt).</summary>
+public class ChessableLineTrainedInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+}
+
+/// <summary>Ergebnis der Markierung: was wurde in den RookHub-Gegenstücken nachgezogen?</summary>
+public class ChessableLineTrainedResultDto
+{
+    /// <summary>Die Linie existiert im importierten Kurs (Buch) des Users.</summary>
+    public bool CourseLineFound { get; set; }
+    /// <summary>Die Kurs-Linie wurde JETZT als gelöst markiert (false = war schon gelöst/nicht da).</summary>
+    public bool CourseLineMarked { get; set; }
+    /// <summary>SR-Linien, die gelernt bzw. eine Stufe vorgerückt sind.</summary>
+    public int RepertoireLinesAdvanced { get; set; }
+    /// <summary>Gefundene, aber bewusst unangetastete SR-Linien (nicht fällig bzw. pausiert).</summary>
+    public int RepertoireLinesSkipped { get; set; }
+}

@@ -177,6 +177,7 @@ try
     builder.Services.AddScoped<ChessableBearerBreaker>();
     builder.Services.AddScoped<ChessableRateLimiter>();
     builder.Services.AddScoped<ChessableCourseRefreshService>();
+    builder.Services.AddScoped<ChessableTrainedLineService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<DailyLeaderboardService>();

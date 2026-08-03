@@ -23,12 +23,13 @@ public class ExtensionController : BaseApiController
     private readonly ChessableProxyService _chessableProxy;
     private readonly ChessableImportService _chessableImport;
     private readonly ChessableIngestSessionStore _ingestSessions;
+    private readonly ChessableTrainedLineService _trainedLines;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
         TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
         SavedGameService savedGameService, SharedLineService sharedLineService,
         ChessableProxyService chessableProxy, ChessableImportService chessableImport,
-        ChessableIngestSessionStore ingestSessions)
+        ChessableIngestSessionStore ingestSessions, ChessableTrainedLineService trainedLines)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
@@ -39,6 +40,7 @@ public class ExtensionController : BaseApiController
         _chessableProxy = chessableProxy;
         _chessableImport = chessableImport;
         _ingestSessions = ingestSessions;
+        _trainedLines = trainedLines;
     }
 
     private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
@@ -240,6 +242,23 @@ public class ExtensionController : BaseApiController
     /// Chessable-oids, die der User bereits importiert hat (Buch und/oder Repertoire). Die Extension
     /// matcht sie gegen die Linien-oids der Kursstruktur und zeigt Kurs-/Kapitel-/Linien-Fortschritt.
     /// </summary>
+    /// <summary>
+    /// „Linie auf Chessable trainiert": markiert die Linie (Kurs-bid + Varianten-oid) in den
+    /// RookHub-Gegenstücken — Kurs-Linie gilt als gelöst, im Repertoire-Trainer wird eine neue
+    /// Linie „gelernt" bzw. eine fällige eine SR-Stufe vorgerückt (Chessable ersetzt das Review).
+    /// Idempotent; unbekannte bid/oid sind kein Fehler (leeres Ergebnis).
+    /// </summary>
+    [HttpPost("chessable/line-trained")]
+    public async Task<ActionResult<ChessableLineTrainedResultDto>> ChessableLineTrained(
+        [FromBody] ChessableLineTrainedInputDto dto, CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid2) return forbid2;
+        if (dto == null || !IsValidBid(dto.Bid) || string.IsNullOrWhiteSpace(dto.Oid) || dto.Oid.Length > 32
+            || !dto.Oid.All(char.IsAsciiDigit))
+            return BadRequest(new { message = "Valid bid and oid required." });
+        return Ok(await _trainedLines.MarkTrainedAsync(GetUserId(), dto.Bid, dto.Oid.Trim(), ct));
+    }
+
     [HttpGet("chessable/progress")]
     public async Task<IActionResult> ChessableProgress([FromQuery] string bid, CancellationToken ct)
     {
