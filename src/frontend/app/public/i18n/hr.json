@@ -1288,7 +1288,12 @@
       "noText": "Nema opisa za ovu liniju.",
       "pick": "Odaberi za kartice",
       "browseTooltip": "Ispiši odabrane linije kao kartice — bez odabira ispisuje se trenutačni prikaz.",
-      "chapterMenu": "Ispiši kartice"
+      "chapterMenu": "Ispiši kartice",
+      "digital": "Digitalno",
+      "printView": "Pregled ispisa",
+      "flip": "Okreni karticu",
+      "shuffle": "Promiješaj",
+      "digitalHint": "Klikni karticu (ili razmaknica/Enter) za okretanje; ←/→ listaju špil."
     },
     "calculate": "Izračunaj",
     "browse": {

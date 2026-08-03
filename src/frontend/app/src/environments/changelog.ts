@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.330.0';
+export const APP_VERSION = '0.330.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.330.1", date: "2026-08-03", changes: [
+    { en: "Flashcards can now be studied DIGITALLY too: the flashcards page opens in a study view — one card at a time, click it (or Space/Enter) to flip from the final position with arrows to the notation and closing description, ←/→ move through the deck, plus a shuffle toggle and a position counter. The print view moved behind a toggle in the toolbar and is unchanged — and printing works from either view. Same entry points as before (selection in course browsing, chapter menu on the detail page). NOT deployed (frontend image only).", de: "Flashcards gibt es jetzt auch DIGITAL: die Flashcards-Seite öffnet in einer Lern-Ansicht — eine Karte nach der anderen, Klick auf die Karte (oder Leertaste/Enter) dreht von der Endstellung mit Pfeilen auf Notation und Abschlussbeschreibung um, ←/→ blättern durch den Stapel, dazu Misch-Schalter und Positionszähler. Die Druckansicht liegt hinter einem Umschalter in der Werkzeugleiste und ist unverändert — gedruckt werden kann aus beiden Ansichten. Einstiege wie gehabt (Auswahl im Kurs-Durchsehen, Kapitel-Menü der Detailseite). NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.330.0", date: "2026-08-03", changes: [
     { en: "Print FLASHCARDS from course lines. Front: the line's FINAL position (for pattern/info lines the position itself) with Chessable's arrows and square marks, shown from the trainee's side; back: the whole line in notation plus the closing description (the last move's comment, otherwise the line comment). Four cards per A4 sheet with cut lines; every back sheet is column-mirrored so double-sided printing (flip on long edge) lines fronts and backs up exactly. The boards are print-safe SVGs (pieces as real images in your chosen piece set — no ‚print backgrounds' setting needed). Where: in course browsing tick individual lines and press ‚Flashcards' (without a selection the current view prints), or use ‚Print flashcards' in a chapter's menu on the course detail page. NOT deployed (frontend image only).", de: "FLASHCARDS aus Kurs-Linien drucken. Vorn: die ENDSTELLUNG der Linie (bei Muster-/Info-Linien die Stellung selbst) mit Chessables Pfeilen und Feld-Markierungen, aus der Sicht des Trainierenden; hinten: die ganze Linie in Notation plus die Abschlussbeschreibung (Kommentar des letzten Zugs, sonst der Linien-Kommentar). Vier Karten je A4-Blatt mit Schnittlinien; jedes Rückseiten-Blatt ist spaltengespiegelt, sodass beidseitiger Druck (Wenden an der langen Kante) Vorder- und Rückseiten exakt übereinanderlegt. Die Bretter sind druckfeste SVGs (Figuren als echte Bilder im eingestellten Figurensatz — keine „Hintergründe drucken“-Einstellung nötig). Wo: im Kurs-Durchsehen einzelne Linien anhaken und „Flashcards“ drücken (ohne Auswahl wird die aktuelle Ansicht gedruckt), oder „Flashcards drucken“ im Kapitel-Menü der Kurs-Detailseite. NICHT deployed (nur Frontend-Image)." },
   ] },

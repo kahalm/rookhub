@@ -114,3 +114,53 @@ describe('FlashcardBoardComponent', () => {
     expect(black.pieces[0].y).toBe(0);
   });
 });
+
+describe('FlashcardsComponent digitale Lern-Ansicht', () => {
+  it('startet digital auf Karte 1, blättert zyklisch und dreht per flip() um', () => {
+    const fixture = make([puzzle(1), puzzle(2), puzzle(3)], {});
+    const c = fixture.componentInstance;
+    expect(c.view).toBe('digital');
+    expect(c.current!.heading).toBe('#1');
+
+    c.flip();
+    expect(c.flipped).toBeTrue();
+    c.next();                                   // Weiterblättern dreht zurück auf die Vorderseite
+    expect(c.flipped).toBeFalse();
+    expect(c.current!.heading).toBe('#2');
+    c.prev(); c.prev();
+    expect(c.current!.heading).toBe('#3');      // zyklisch
+  });
+
+  it('Mischen permutiert nur die Reihenfolge; ausschalten stellt die Kurs-Reihenfolge wieder her', () => {
+    const fixture = make([puzzle(1), puzzle(2), puzzle(3), puzzle(4)], {});
+    const c = fixture.componentInstance;
+    c.toggleShuffle();
+    expect(c.shuffled).toBeTrue();
+    expect([...c.order].sort()).toEqual([0, 1, 2, 3]);   // Permutation, nichts verloren
+    c.toggleShuffle();
+    expect(c.order).toEqual([0, 1, 2, 3]);
+    expect(c.pos).toBe(0);
+  });
+
+  it('Tastatur: ←/→ blättern, Leertaste dreht um — aber nicht in der Druckvorschau', () => {
+    const fixture = make([puzzle(1), puzzle(2)], {});
+    const c = fixture.componentInstance;
+    c.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(c.current!.heading).toBe('#2');
+    c.onKey(new KeyboardEvent('keydown', { key: ' ' }));
+    expect(c.flipped).toBeTrue();
+
+    c.view = 'print';
+    c.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(c.current!.heading).toBe('#2');      // unverändert
+  });
+
+  it('rendert die Druck-Blätter auch im Digital-Modus (nur am Schirm versteckt) — Drucken klappt immer', () => {
+    const fixture = make([puzzle(1)], {});
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.view).toBe('digital');
+    const sheets = el.querySelector('.fc-sheets');
+    expect(sheets).not.toBeNull();
+    expect(sheets!.classList).toContain('fc-sheets--screen-hidden');
+  });
+});

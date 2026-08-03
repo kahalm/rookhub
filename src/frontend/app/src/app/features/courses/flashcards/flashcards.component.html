@@ -9,11 +9,30 @@
       {{ 'courses.flashcards.count' | translate:{ count: cards.length } }}
     </span>
     <span class="fc-spacer"></span>
-    <button mat-flat-button color="primary" (click)="print()" [disabled]="loading || cards.length === 0">
-      <mat-icon>print</mat-icon>{{ 'courses.flashcards.print' | translate }}
+    <button mat-stroked-button [class.fc-view-active]="view === 'digital'" (click)="view = 'digital'">
+      <mat-icon>style</mat-icon>{{ 'courses.flashcards.digital' | translate }}
     </button>
+    <button mat-stroked-button [class.fc-view-active]="view === 'print'" (click)="view = 'print'">
+      <mat-icon>print</mat-icon>{{ 'courses.flashcards.printView' | translate }}
+    </button>
+    @if (view === 'digital') {
+      <button mat-icon-button (click)="toggleShuffle()" [disabled]="loading || cards.length < 2"
+              [class.fc-view-active]="shuffled"
+              [matTooltip]="'courses.flashcards.shuffle' | translate"
+              [attr.aria-label]="'courses.flashcards.shuffle' | translate">
+        <mat-icon>shuffle</mat-icon>
+      </button>
+    } @else {
+      <button mat-flat-button color="primary" (click)="print()" [disabled]="loading || cards.length === 0">
+        <mat-icon>print</mat-icon>{{ 'courses.flashcards.print' | translate }}
+      </button>
+    }
   </div>
-  <p class="fc-hint">{{ 'courses.flashcards.duplexHint' | translate }}</p>
+  @if (view === 'print') {
+    <p class="fc-hint">{{ 'courses.flashcards.duplexHint' | translate }}</p>
+  } @else {
+    <p class="fc-hint">{{ 'courses.flashcards.digitalHint' | translate }}</p>
+  }
 
   @if (loading) {
     <div class="fc-center"><mat-spinner diameter="40"></mat-spinner></div>
@@ -21,7 +40,49 @@
     <p class="fc-center">{{ 'courses.loadFailed' | translate }}</p>
   } @else if (cards.length === 0) {
     <p class="fc-center">{{ 'courses.flashcards.empty' | translate }}</p>
-  } @else {
+  } @else if (view === 'digital') {
+    <!-- ===== Digitale Lern-Ansicht: eine Karte, klicken/Leertaste = umdrehen ===== -->
+    <div class="fc-study">
+      @if (current; as card) {
+        <div class="fc-study-card" (click)="flip()" role="button" tabindex="0"
+             [attr.aria-label]="'courses.flashcards.flip' | translate">
+          <div class="fc-card-head">
+            <span class="fc-heading">{{ card.heading }}</span>
+            @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
+          </div>
+          @if (!flipped) {
+            <app-flashcard-board class="fc-study-board"
+              [fen]="card.frontFen" [orientation]="card.orientation"
+              [shapes]="card.shapes" [pieceSet]="pieceSet" />
+            <div class="fc-turnhint">
+              {{ (card.orientation === 'white' ? 'courses.flashcards.fromWhite' : 'courses.flashcards.fromBlack') | translate }}
+              · {{ 'courses.flashcards.flip' | translate }}
+            </div>
+          } @else {
+            <div class="fc-study-back">
+              @if (card.notation) { <p class="fc-notation">{{ card.notation }}</p> }
+              @if (card.closing) { <p class="fc-closing">{{ card.closing }}</p> }
+              @else if (!card.notation) { <p class="fc-closing fc-closing--empty">{{ 'courses.flashcards.noText' | translate }}</p> }
+            </div>
+          }
+        </div>
+        <div class="fc-study-nav">
+          <button mat-icon-button (click)="prev()" [attr.aria-label]="'pgnViewer.nav.previous' | translate">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="fc-study-pos">{{ pos + 1 }} / {{ cards.length }}</span>
+          <button mat-stroked-button (click)="flip()">
+            <mat-icon>flip</mat-icon>{{ 'courses.flashcards.flip' | translate }}
+          </button>
+          <button mat-icon-button (click)="next()" [attr.aria-label]="'pgnViewer.nav.next' | translate">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+  }
+  @if (!loading && !error && cards.length > 0) {
+    <div class="fc-sheets" [class.fc-sheets--screen-hidden]="view === 'digital'">
     @for (sheet of sheets; track $index) {
       <!-- Vorderseiten-Blatt -->
       <section class="fc-sheet">
@@ -64,5 +125,6 @@
         }
       </section>
     }
+    </div>
   }
 </div>

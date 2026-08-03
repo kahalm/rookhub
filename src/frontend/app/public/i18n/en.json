@@ -1288,7 +1288,12 @@
       "noText": "No description for this line.",
       "pick": "Select for flashcards",
       "browseTooltip": "Print selected lines as flashcards — without a selection the current view is printed.",
-      "chapterMenu": "Print flashcards"
+      "chapterMenu": "Print flashcards",
+      "digital": "Digital",
+      "printView": "Print view",
+      "flip": "Flip card",
+      "shuffle": "Shuffle",
+      "digitalHint": "Click the card (or Space/Enter) to flip it; ←/→ move through the deck."
     },
     "calculate": "Calculate",
     "browse": {

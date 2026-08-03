@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CourseService } from '../course.service';
 import { PreferencesService } from '../../../core/preferences.service';
@@ -26,7 +27,7 @@ import { FlashcardBoardComponent } from './flashcard-board.component';
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    TranslatePipe, FlashcardBoardComponent,
+    MatTooltipModule, TranslatePipe, FlashcardBoardComponent,
   ],
   templateUrl: './flashcards.component.html',
   styleUrls: ['./flashcards.component.scss'],
@@ -36,6 +37,15 @@ export class FlashcardsComponent implements OnInit {
   loading = true;
   error = false;
   cards: Flashcard[] = [];
+
+  // ===== Digitale Lern-Ansicht =====
+  /** 'digital' = Karten am Schirm durchblättern (Standard), 'print' = Druckvorschau. */
+  view: 'digital' | 'print' = 'digital';
+  /** Reihenfolge als Index-Liste (Mischen tauscht nur diese, nie `cards`). */
+  order: number[] = [];
+  pos = 0;
+  flipped = false;
+  shuffled = false;
   /** Blätter à 4 Karten: [Vorderseiten (Leseordnung), Rückseiten (Spalten gespiegelt)]. */
   sheets: { fronts: (Flashcard | null)[]; backs: (Flashcard | null)[] }[] = [];
   pieceSet = 'cburnett';
@@ -65,6 +75,7 @@ export class FlashcardsComponent implements OnInit {
         }
         this.cards = picked.map(buildFlashcard).filter((c): c is Flashcard => c !== null);
         this.sheets = this.buildSheets(this.cards);
+        this.order = this.cards.map((_, i) => i);
         this.loading = false;
       },
       error: () => { this.loading = false; this.error = true; },
@@ -89,5 +100,52 @@ export class FlashcardsComponent implements OnInit {
 
   print(): void {
     window.print();
+  }
+
+  // ===== Digitale Lern-Ansicht ==============================================
+
+  get current(): Flashcard | null {
+    return this.cards.length ? this.cards[this.order[this.pos]] : null;
+  }
+
+  flip(): void {
+    this.flipped = !this.flipped;
+  }
+
+  next(): void {
+    if (!this.cards.length) return;
+    this.pos = (this.pos + 1) % this.cards.length;
+    this.flipped = false;
+  }
+
+  prev(): void {
+    if (!this.cards.length) return;
+    this.pos = (this.pos - 1 + this.cards.length) % this.cards.length;
+    this.flipped = false;
+  }
+
+  /** Mischen an/aus — aus stellt die Kurs-Reihenfolge wieder her; Position beginnt vorn. */
+  toggleShuffle(): void {
+    this.shuffled = !this.shuffled;
+    this.order = this.cards.map((_, i) => i);
+    if (this.shuffled) {
+      for (let i = this.order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.order[i], this.order[j]] = [this.order[j], this.order[i]];
+      }
+    }
+    this.pos = 0;
+    this.flipped = false;
+  }
+
+  /** ←/→ blättern, Leertaste/Enter dreht die Karte um (nur in der digitalen Ansicht). */
+  @HostListener('document:keydown', ['$event'])
+  onKey(event: KeyboardEvent): void {
+    if (this.view !== 'digital' || this.loading || !this.cards.length) return;
+    const t = event.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (event.key === 'ArrowRight') { this.next(); event.preventDefault(); }
+    else if (event.key === 'ArrowLeft') { this.prev(); event.preventDefault(); }
+    else if (event.key === ' ' || event.key === 'Enter') { this.flip(); event.preventDefault(); }
   }
 }

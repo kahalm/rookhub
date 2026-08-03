@@ -1288,7 +1288,12 @@
       "noText": "Keine Beschreibung zu dieser Linie.",
       "pick": "Für Flashcards auswählen",
       "browseTooltip": "Ausgewählte Linien als Karteikarten drucken — ohne Auswahl wird die aktuelle Ansicht gedruckt.",
-      "chapterMenu": "Flashcards drucken"
+      "chapterMenu": "Flashcards drucken",
+      "digital": "Digital",
+      "printView": "Druckvorschau",
+      "flip": "Karte umdrehen",
+      "shuffle": "Mischen",
+      "digitalHint": "Karte anklicken (oder Leertaste/Enter) zum Umdrehen; ←/→ blättern durch den Stapel."
     },
     "calculate": "Kalkulieren",
     "browse": {
