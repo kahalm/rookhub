@@ -8,7 +8,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CourseService } from '../course.service';
 import { PreferencesService } from '../../../core/preferences.service';
-import { Flashcard, buildFlashcard } from './flashcard.util';
+import { RepertoireTrainingService } from '../../repertoire/repertoire-training.service';
+import { lineKeyFromSans } from '../../repertoire/repertoire-line-key.util';
+import { parsePgnText } from '../../../shared/pgn-viewer/pgn-parser';
+import { Flashcard, buildFlashcard, buildRepertoireFlashcards } from './flashcard.util';
 import { FlashcardBoardComponent } from './flashcard-board.component';
 
 /**
@@ -20,6 +23,10 @@ import { FlashcardBoardComponent } from './flashcard-board.component';
  *
  * Auswahl über Query-Parameter: `lines=id,id,…` (einzelne Linien, z. B. aus dem Durchsehen)
  * oder `chapter=<Name>` ('' = „ohne Kapitel"); ohne beides der ganze Kurs.
+ *
+ * ZWEI Quellen über dieselbe Komponente: `/courses/:bookId/flashcards` (Aufgabe vorn, Lösung
+ * hinten) und `/repertoires/:id/flashcards` (UMGEKEHRT: Endstellung+Pfeile vorn, Linie hinten;
+ * `lines=` trägt dort Linien-Schlüssel statt Ids).
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -34,6 +41,9 @@ import { FlashcardBoardComponent } from './flashcard-board.component';
 })
 export class FlashcardsComponent implements OnInit {
   bookId!: number;
+  /** Quelle: Kurs (Buch) oder Repertoire — steuert Laden, Auswahl-Filter und Zurück-Link. */
+  source: 'course' | 'repertoire' = 'course';
+  backLink: (string | number)[] = ['/courses'];
   loading = true;
   error = false;
   cards: Flashcard[] = [];
@@ -53,33 +63,73 @@ export class FlashcardsComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private courses: CourseService,
+    private training: RepertoireTrainingService,
     prefs: PreferencesService,
   ) {
     this.pieceSet = prefs.pieceSet || 'cburnett';
   }
 
   ngOnInit(): void {
-    this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
+    const pm = this.route.snapshot.paramMap;
     const q = this.route.snapshot.queryParamMap;
-    const ids = (q.get('lines') || '').split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0);
+    const rawLines = (q.get('lines') || '').split(',').map(s => s.trim()).filter(Boolean);
     const chapter = q.has('chapter') ? (q.get('chapter') || '') : null;
 
-    this.courses.getBookPuzzles(this.bookId).subscribe({
-      next: puzzles => {
-        let picked = puzzles;
-        if (ids.length) {
-          const wanted = new Set(ids);
-          picked = puzzles.filter(p => wanted.has(p.id));
-        } else if (chapter !== null) {
-          picked = puzzles.filter(p => (p.chapter?.trim() || '') === chapter);
+    if (pm.has('bookId')) {
+      this.source = 'course';
+      this.bookId = Number(pm.get('bookId'));
+      this.backLink = ['/courses', this.bookId];
+      const ids = rawLines.map(Number).filter(n => Number.isFinite(n) && n > 0);
+      this.courses.getBookPuzzles(this.bookId).subscribe({
+        next: puzzles => {
+          let picked = puzzles;
+          if (ids.length) {
+            const wanted = new Set(ids);
+            picked = puzzles.filter(p => wanted.has(p.id));
+          } else if (chapter !== null) {
+            picked = puzzles.filter(p => (p.chapter?.trim() || '') === chapter);
+          }
+          this.finish(picked.map(buildFlashcard).filter((c): c is Flashcard => c !== null));
+        },
+        error: () => { this.loading = false; this.error = true; },
+      });
+      return;
+    }
+
+    // Repertoire-Quelle: kombiniertes PGN laden; je Spiel bleibt der Roh-Abschnitt für die
+    // [%cal]/[%csl]-Marker gepaart. `lines=` = Linien-Schlüssel der Linienliste.
+    this.source = 'repertoire';
+    this.bookId = Number(pm.get('id'));
+    this.backLink = ['/repertoires', this.bookId];
+    this.training.getPgn(this.bookId).subscribe({
+      next: pgn => {
+        const raws = pgn.split(/\n\n(?=\[Event )/);
+        const games: Parameters<typeof buildRepertoireFlashcards>[0] = [];
+        const alignedRaws: string[] = [];
+        for (const raw of raws) {
+          const parsed = parsePgnText(raw)[0];
+          if (!parsed || !parsed.moves.length) continue;
+          games.push(parsed);
+          alignedRaws.push(raw);
         }
-        this.cards = picked.map(buildFlashcard).filter((c): c is Flashcard => c !== null);
-        this.sheets = this.buildSheets(this.cards);
-        this.order = this.cards.map((_, i) => i);
-        this.loading = false;
+        let built = buildRepertoireFlashcards(games, alignedRaws, lineKeyFromSans);
+        if (rawLines.length) {
+          const wanted = new Set(rawLines);
+          built = built.filter(b => wanted.has(b.lineKey));
+        } else if (chapter !== null) {
+          built = built.filter(b => (b.card.chapter?.trim() || '') === chapter);
+        }
+        this.finish(built.map(b => b.card));
       },
       error: () => { this.loading = false; this.error = true; },
     });
+  }
+
+  private finish(cards: Flashcard[]): void {
+    this.cards = cards;
+    this.sheets = this.buildSheets(cards);
+    this.order = cards.map((_, i) => i);
+    this.loading = false;
   }
 
   /**

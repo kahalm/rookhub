@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.330.1';
+export const APP_VERSION = '0.331.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.331.0", date: "2026-08-03", changes: [
+    { en: "Flashcards from REPERTOIRE lines too — and the card sides now match what each source is for. COURSES are puzzles: the front shows the STARTING position (the task, with only the context marks that the solver would see — never solution arrows), the back shows the solution with the closing description. REPERTOIRES are the other way round: the front shows the line's FINAL position with its arrows and square marks (from the PGN's [%cal]/[%csl] annotations), the back the whole line in notation plus the closing comment — recognise the picture, reconstruct the path. In the repertoire line list every line has a checkbox and the toolbar a flashcards button (selection or whole repertoire); study and print views work identically for both sources. NOT deployed (frontend image only).", de: "Flashcards jetzt auch aus REPERTOIRE-Linien — und die Kartenseiten passen zur jeweiligen Quelle. KURSE sind Aufgaben: vorn die AUSGANGSSTELLUNG (die Aufgabe, nur mit den Kontext-Markierungen, die der Löser ohnehin sähe — nie Lösungs-Pfeile), hinten die Lösung mit der Abschlussbeschreibung. REPERTOIRES umgekehrt: vorn die ENDSTELLUNG der Linie mit ihren Pfeilen und Feld-Markierungen (aus den [%cal]/[%csl]-Anmerkungen des PGNs), hinten die ganze Linie in Notation plus Abschlusskommentar — Bild erkennen, Weg rekonstruieren. In der Repertoire-Linienliste hat jede Linie eine Checkbox und die Werkzeugleiste einen Flashcards-Knopf (Auswahl oder ganzes Repertoire); Lern- und Druckansicht funktionieren für beide Quellen identisch. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.330.1", date: "2026-08-03", changes: [
     { en: "Flashcards can now be studied DIGITALLY too: the flashcards page opens in a study view — one card at a time, click it (or Space/Enter) to flip from the final position with arrows to the notation and closing description, ←/→ move through the deck, plus a shuffle toggle and a position counter. The print view moved behind a toggle in the toolbar and is unchanged — and printing works from either view. Same entry points as before (selection in course browsing, chapter menu on the detail page). NOT deployed (frontend image only).", de: "Flashcards gibt es jetzt auch DIGITAL: die Flashcards-Seite öffnet in einer Lern-Ansicht — eine Karte nach der anderen, Klick auf die Karte (oder Leertaste/Enter) dreht von der Endstellung mit Pfeilen auf Notation und Abschlussbeschreibung um, ←/→ blättern durch den Stapel, dazu Misch-Schalter und Positionszähler. Die Druckansicht liegt hinter einem Umschalter in der Werkzeugleiste und ist unverändert — gedruckt werden kann aus beiden Ansichten. Einstiege wie gehabt (Auswahl im Kurs-Durchsehen, Kapitel-Menü der Detailseite). NICHT deployed (nur Frontend-Image)." },
   ] },

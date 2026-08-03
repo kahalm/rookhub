@@ -22,6 +22,7 @@ interface ChapterGroup {
 }
 
 type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
+// (Flashcards-Auswahl: siehe `picked` in der Komponente — Linien-Schlüssel, nicht Indizes.)
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -62,6 +63,11 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               <mat-icon>school</mat-icon>
             </a>
             <span class="spacer"></span>
+            <a mat-stroked-button [routerLink]="['/repertoires', repertoireId, 'flashcards']"
+               [queryParams]="picked.size ? { lines: pickedParam() } : {}"
+               [matTooltip]="'courses.flashcards.browseTooltip' | translate">
+              <mat-icon>style</mat-icon>@if (picked.size > 0) { ({{ picked.size }}) }
+            </a>
             <button mat-icon-button [matMenuTriggerFor]="courseMenu" [disabled]="busy"
                     [matTooltip]="'repertoire.lines.sr.courseActions' | translate"><mat-icon>more_vert</mat-icon></button>
             <mat-menu #courseMenu="matMenu">
@@ -114,6 +120,10 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               @if (group.expanded) {
                 @for (line of group.lines; track line.gameIndex) {
                   <div class="line-item">
+                    <!-- Karteikarten-Auswahl (Linien-Schlüssel wandern in den Flashcards-Link). -->
+                    <input type="checkbox" class="line-pick" [checked]="picked.has(line.lineKey)"
+                           (click)="togglePick(line, $event)"
+                           [attr.aria-label]="'courses.flashcards.pick' | translate" />
                     <div class="line-main" role="button" tabindex="0"
                          (click)="lineSelected.emit(line.gameIndex)"
                          (keydown.enter)="lineSelected.emit(line.gameIndex)"
@@ -152,6 +162,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     }
   `,
   styles: [`
+    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary, #3f51b5); flex: 0 0 auto; }
     :host { display: block; height: 100%; }
     .lines-list { overflow-y: auto; height: 100%; }
     .course-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px;
@@ -209,6 +220,20 @@ export class RepertoireLinesComponent implements OnInit {
   @Input() set lines(v: RepertoireLine[]) { this.linesSig.set(v ?? []); }
   get lines(): RepertoireLine[] { return this.linesSig(); }
   @Input() selectedIndex = -1;
+
+  /** Für den Flashcards-Druck/Lern-Stapel angehakte Linien (Linien-Schlüssel). */
+  picked = new Set<string>();
+
+  togglePick(line: RepertoireLine, event: Event): void {
+    event.stopPropagation();
+    if (this.picked.has(line.lineKey)) this.picked.delete(line.lineKey);
+    else this.picked.add(line.lineKey);
+  }
+
+  pickedParam(): string {
+    return [...this.picked].join(',');
+  }
+
   @Input() moves: Move[] = [];
   @Input() currentMoveIndex = -1;
   @Input() comments: { [moveIndex: number]: string } = {};

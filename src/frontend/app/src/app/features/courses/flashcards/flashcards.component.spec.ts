@@ -9,8 +9,10 @@ import { of } from 'rxjs';
 import { FlashcardsComponent } from './flashcards.component';
 import { FlashcardBoardComponent } from './flashcard-board.component';
 import { CourseService } from '../course.service';
+import { RepertoireTrainingService } from '../../repertoire/repertoire-training.service';
 import { PreferencesService } from '../../../core/preferences.service';
 import { BookPuzzleDto } from '../../puzzles/puzzle.service';
+import { lineKeyFromSans } from '../../repertoire/repertoire-line-key.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -29,9 +31,13 @@ function make(puzzles: BookPuzzleDto[], query: Record<string, string>) {
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
       provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
       { provide: CourseService, useValue: { getBookPuzzles: () => of(puzzles) } },
+      { provide: RepertoireTrainingService, useValue: { getPgn: () => of('') } },
       { provide: PreferencesService, useValue: { pieceSet: 'cburnett' } },
       { provide: ActivatedRoute, useValue: { snapshot: {
-        paramMap: { get: (k: string) => k === 'bookId' ? '58' : null },
+        paramMap: {
+          get: (k: string) => k === 'bookId' ? '58' : null,
+          has: (k: string) => k === 'bookId',
+        },
         queryParamMap: {
           get: (k: string) => k in query ? query[k] : null,
           has: (k: string) => k in query,
@@ -162,5 +168,60 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
     const sheets = el.querySelector('.fc-sheets');
     expect(sheets).not.toBeNull();
     expect(sheets!.classList).toContain('fc-sheets--screen-hidden');
+  });
+});
+
+describe('FlashcardsComponent Repertoire-Quelle', () => {
+  const REP_PGN = `[Event "Kurs"]
+[White "Hauptlinie"]
+[Black "Kap 1"]
+[Result "*"]
+
+1. e4 e6 {[%cal Ge4e5] Franzose.} *
+
+[Event "Kurs"]
+[White "Nebenlinie"]
+[Black "Kap 1"]
+[Result "*"]
+
+1. d4 d5 *`;
+
+  function makeRep(query: Record<string, string>) {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [FlashcardsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getBookPuzzles: () => of([]) } },
+        { provide: RepertoireTrainingService, useValue: { getPgn: () => of(REP_PGN) } },
+        { provide: PreferencesService, useValue: { pieceSet: 'cburnett' } },
+        { provide: ActivatedRoute, useValue: { snapshot: {
+          paramMap: { get: (k: string) => k === 'id' ? '7' : null, has: (k: string) => k === 'id' },
+          queryParamMap: { get: (k: string) => k in query ? query[k] : null, has: (k: string) => k in query },
+        } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FlashcardsComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('lädt Repertoire-Linien (umgekehrte Karten) und verlinkt zurück zum Repertoire', () => {
+    const fixture = makeRep({});
+    const c = fixture.componentInstance;
+    expect(c.source).toBe('repertoire');
+    expect(c.backLink).toEqual(['/repertoires', 7]);
+    expect(c.cards.map(x => x.heading)).toEqual(['Hauptlinie', 'Nebenlinie']);
+    // Endstellung vorn: nach 1.e4 e6 ist Weiß am Zug; Pfeil aus dem letzten Kommentar dabei.
+    expect(c.cards[0].frontFen).toContain(' w ');
+    expect(c.cards[0].shapes.length).toBe(1);
+    expect(c.cards[0].closing).toBe('Franzose.');
+  });
+
+  it('filtert per lines=<lineKey>', () => {
+    const key = lineKeyFromSans(['d4', 'd5']);
+    const fixture = makeRep({ lines: key });
+    expect(fixture.componentInstance.cards.map(x => x.heading)).toEqual(['Nebenlinie']);
   });
 });

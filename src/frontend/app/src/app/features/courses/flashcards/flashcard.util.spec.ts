@@ -1,4 +1,6 @@
-import { buildFlashcard, formatNotation } from './flashcard.util';
+import { buildFlashcard, buildRepertoireFlashcards, extractLastShapes, formatNotation, parseCalCsl } from './flashcard.util';
+import { parsePgnText } from '../../../shared/pgn-viewer/pgn-parser';
+import { lineKeyFromSans } from '../../repertoire/repertoire-line-key.util';
 import { BookPuzzleDto } from '../../puzzles/puzzle.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -12,11 +14,17 @@ function puzzle(over: Partial<BookPuzzleDto> = {}): BookPuzzleDto {
 }
 
 describe('buildFlashcard', () => {
-  it('vorn die ENDSTELLUNG (Züge durchgespielt), hinten die Notation', () => {
+  it('KURS: vorn die AUSGANGSSTELLUNG (Aufgabe), hinten die Lösung', () => {
+    // startPly -1: die FEN selbst ist die Aufgabe — vorn unverändert, hinten alle Lösungszüge.
     const card = buildFlashcard(puzzle())!;
-    // Endstellung nach 1.e4 e5 2.Sf3 — Springer auf f3, Schwarz am Zug.
-    expect(card.frontFen).toBe('rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2');
+    expect(card.frontFen).toBe(START);
     expect(card.notation).toBe('1.e4 e5 2.Nf3');
+
+    // startPly 0: moves[0] ist Setup — vorn die Stellung NACH 1.e4, hinten die Lösung ab Schwarz.
+    const setup = buildFlashcard(puzzle({ startPly: 0 }))!;
+    expect(setup.frontFen).toContain('4P3');           // e4 steht schon
+    expect(setup.frontFen).toContain(' b ');           // Schwarz (der Löser) am Zug
+    expect(setup.notation).toBe('1…e5 2.Nf3');
   });
 
   it('Abschlussbeschreibung: Kommentar des LETZTEN Zugs schlägt den Linien-Kommentar', () => {
@@ -30,16 +38,15 @@ describe('buildFlashcard', () => {
     expect(withoutLast.closing).toBe('Linien-Kommentar');
   });
 
-  it('Pfeile: die Shapes des letzten Halbzugs landen auf der Vorderseite', () => {
+  it('KURS-Vorderseite zeigt nur Kontext-Markierungen — nie Lösungs-Pfeile späterer Züge', () => {
     const card = buildFlashcard(puzzle({
       moveShapes: JSON.stringify({
-        '0': [{ o: 'a1', d: 'a8', b: 'red' }],
-        '2': [{ o: 'f3', d: 'e5', b: 'green' }, { o: 'd4' }],
+        '-1': [{ o: 'd4' }],                              // Einleitung = Kontext, darf drauf
+        '2': [{ o: 'f3', d: 'e5', b: 'green' }],          // Lösungs-Pfeil → würde verraten
       }),
     }))!;
-    expect(card.shapes.length).toBe(2);
-    expect(card.shapes[0]).toEqual(jasmine.objectContaining({ orig: 'f3', dest: 'e5' }));
-    expect(card.shapes[1]).toEqual(jasmine.objectContaining({ orig: 'd4' }));   // Feld-Markierung
+    expect(card.shapes.length).toBe(1);
+    expect(card.shapes[0]).toEqual(jasmine.objectContaining({ orig: 'd4' }));
   });
 
   it('Ausrichtung = Seite des Trainierenden (startPly -1 → am Zug; 0 → nach dem Setup-Zug)', () => {
@@ -80,5 +87,67 @@ describe('formatNotation', () => {
     expect(formatNotation(['e4', 'e5', 'Nf3'], true, 1)).toBe('1.e4 e5 2.Nf3');
     expect(formatNotation(['e5', 'Nf3', 'Nc6'], false, 12)).toBe('12…e5 13.Nf3 Nc6');
     expect(formatNotation([], true, 1)).toBe('');
+  });
+});
+
+describe('buildRepertoireFlashcards', () => {
+  const PGN = `[Event "Kurs"]
+[White "Vorstoßvariante Hauptlinie"]
+[Black "Kapitel 4"]
+[Result "*"]
+
+1. e4 e6 2. d4 d5 3. e5 {Der Vorstoß.} c5 {[%cal Gc5d4,Rd4c5][%csl Ge5] Der Hebel — Druck gegen d4.} *
+
+[Event "Kurs"]
+[White "Nebenlinie"]
+[Black "Kapitel 4"]
+[Result "*"]
+
+1. e4 e6 2. Qe2 *`;
+
+  function build() {
+    const raws = PGN.split(/\n\n(?=\[Event )/);
+    const games = raws.map(r => parsePgnText(r)[0]).filter(g => !!g && g.moves.length > 0);
+    return buildRepertoireFlashcards(games as never, raws, lineKeyFromSans);
+  }
+
+  it('REPERTOIRE (umgekehrt): vorn die ENDSTELLUNG mit den Markern, hinten Linie + Abschluss', () => {
+    const [a, b] = build();
+    // Endstellung nach 3…c5 — Weiß am Zug, Bauernkette e5/d4 gegen d5/c5.
+    expect(a.card.frontFen).toBe('rnbqkbnr/pp3ppp/4p3/2ppP3/3P4/8/PPP2PPP/RNBQKBNR w KQkq - 0 4');
+    expect(a.card.notation).toBe('1.e4 e6 2.d4 d5 3.e5 c5');
+    expect(a.card.closing).toBe('Der Hebel — Druck gegen d4.');   // Marker sind raus
+    expect(a.card.shapes.length).toBe(3);               // 2 Pfeile + 1 Feld
+    expect(a.card.shapes[0]).toEqual(jasmine.objectContaining({ orig: 'c5', dest: 'd4', brush: 'green' }));
+    expect(a.card.shapes[2]).toEqual(jasmine.objectContaining({ orig: 'e5', brush: 'green' }));
+    // Ausrichtung = Seite des letzten Zugs (…c5 = Schwarz — ein Schwarz-Repertoire).
+    expect(a.card.orientation).toBe('black');
+    expect(b.card.orientation).toBe('white');           // endet mit 2.De2 (Weiß)
+    expect(b.card.shapes.length).toBe(0);
+  });
+
+  it('Kopf = White-Header, Kapitel = Black-Header, lineKey passt zur Linienliste', () => {
+    const [a] = build();
+    expect(a.card.heading).toBe('Vorstoßvariante Hauptlinie');
+    expect(a.card.chapter).toBe('Kapitel 4');
+    expect(a.lineKey).toBe(lineKeyFromSans(['e4', 'e6', 'd4', 'd5', 'e5', 'c5']));
+  });
+});
+
+describe('parseCalCsl / extractLastShapes', () => {
+  it('parst Pfeile und Felder mit Farb-Präfixen', () => {
+    const shapes = parseCalCsl('{[%cal Gc8h3,Yd1d8][%csl Rb5]}');
+    expect(shapes).toEqual([
+      jasmine.objectContaining({ orig: 'c8', dest: 'h3', brush: 'green' }),
+      jasmine.objectContaining({ orig: 'd1', dest: 'd8', brush: 'yellow' }),
+      jasmine.objectContaining({ orig: 'b5', brush: 'red' }),
+    ] as never);
+  });
+
+  it('nimmt den LETZTEN Kommentar-Block mit Markern (Endstellungs-Annotation)', () => {
+    const raw = '1. e4 {[%cal Ga1a2]} e5 2. Nf3 {[%csl Gf3]} *';
+    const shapes = extractLastShapes(raw);
+    expect(shapes.length).toBe(1);
+    expect(shapes[0]).toEqual(jasmine.objectContaining({ orig: 'f3' }));
   });
 });
