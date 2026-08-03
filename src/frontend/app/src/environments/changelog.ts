@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.328.0';
+export const APP_VERSION = '0.329.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.329.0", date: "2026-08-03", changes: [
+    { en: "Your DIFFICULT Chessable moves now land in RookHub's database. Chessable's own responses carry your training state — per line the ‚hard moves' counter, per position the exact moves you played wrong (including timeouts and give-ups) and when the line was last reviewed. RepCheck v1.36 harvests these from the responses it already captures during training AND while fetching a course, batches them and RookHub stores them per line (a clean run clears earlier mistakes). No extra Chessable requests are made. This is the data layer — filters like ‚only difficult lines' in the course/trainer can now build on it. Needs api image + RepCheck v1.36.", de: "Deine SCHWIERIGEN Chessable-Züge landen jetzt in RookHubs Datenbank. Chessables eigene Antworten tragen deinen Trainingszustand — je Linie den „schwierige Züge“-Zähler, je Stellung die konkret falsch gespielten Züge (inklusive Zeitüberschreitungen und Aufgeben) und wann die Linie zuletzt wiederholt wurde. RepCheck v1.36 erntet das aus den Antworten, die es beim Training UND beim Kurs-Holen ohnehin mitschneidet, bündelt es und RookHub speichert es je Linie (ein sauberer Durchlauf löscht frühere Fehlzüge). Es entstehen KEINE zusätzlichen Chessable-Anfragen. Das ist die Datenbasis — Filter wie „nur schwierige Linien“ im Kurs/Trainer können jetzt darauf aufbauen. Braucht api-Image + RepCheck v1.36." },
+  ] },
   { version: "0.328.0", date: "2026-08-03", changes: [
     { en: "Train on Chessable, learned in RookHub: when you finish a variation on chessable.com (RepCheck v1.35 reports course + variation id), RookHub marks the same line in its counterparts — in the imported COURSE the line counts as solved (progress bar moves; deliberately without a fake 0-second attempt polluting your stats), and in the REPERTOIRE TRAINER a line you never learned becomes ‚learned once' (ladder step 1) while a line that was DUE advances one SR step — a Chessable session replaces that RookHub review. Lines that are not due yet, and paused lines, are left untouched so intervals never stretch twice. The line is identified by Chessable's variation id in the imported PGN; the server mirrors the trainer's line-key hash bit for bit (locked by tests). Needs api image + RepCheck v1.35.", de: "Auf Chessable trainiert, in RookHub gelernt: schließt du auf chessable.com eine Variante ab (RepCheck v1.35 meldet Kurs + Varianten-ID), zieht RookHub dieselbe Linie in seinen Gegenstücken nach — im importierten KURS gilt die Linie als gelöst (Fortschrittsbalken steigt; bewusst ohne 0-Sekunden-Fake-Versuch in deiner Statistik), und im REPERTOIRE-TRAINER wird eine nie gelernte Linie „einmal gelernt“ (Leiter-Stufe 1), während eine FÄLLIGE Linie eine SR-Stufe vorrückt — die Chessable-Runde ersetzt dieses RookHub-Review. Noch nicht fällige und pausierte Linien bleiben unangetastet, Intervalle strecken sich also nie doppelt. Identifiziert wird die Linie über Chessables Varianten-ID im importierten PGN; der Server spiegelt den Linien-Hash des Trainers Bit für Bit (per Tests festgenagelt). Braucht api-Image + RepCheck v1.35." },
   ] },

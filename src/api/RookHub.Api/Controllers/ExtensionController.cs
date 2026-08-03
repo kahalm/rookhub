@@ -24,12 +24,14 @@ public class ExtensionController : BaseApiController
     private readonly ChessableImportService _chessableImport;
     private readonly ChessableIngestSessionStore _ingestSessions;
     private readonly ChessableTrainedLineService _trainedLines;
+    private readonly ChessableProblemMoveService _problemMoves;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
         TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
         SavedGameService savedGameService, SharedLineService sharedLineService,
         ChessableProxyService chessableProxy, ChessableImportService chessableImport,
-        ChessableIngestSessionStore ingestSessions, ChessableTrainedLineService trainedLines)
+        ChessableIngestSessionStore ingestSessions, ChessableTrainedLineService trainedLines,
+        ChessableProblemMoveService problemMoves)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
@@ -41,6 +43,7 @@ public class ExtensionController : BaseApiController
         _chessableImport = chessableImport;
         _ingestSessions = ingestSessions;
         _trainedLines = trainedLines;
+        _problemMoves = problemMoves;
     }
 
     private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
@@ -257,6 +260,22 @@ public class ExtensionController : BaseApiController
             || !dto.Oid.All(char.IsAsciiDigit))
             return BadRequest(new { message = "Valid bid and oid required." });
         return Ok(await _trainedLines.MarkTrainedAsync(GetUserId(), dto.Bid, dto.Oid.Trim(), ct));
+    }
+
+    /// <summary>
+    /// „Schwierige Züge" ablegen: Batch-Upsert je (User, Kurs-bid, Linien-oid) — nHard aus den
+    /// Kapitel-Listen, Zug-Details (problemMoves.thisUser) + lastReviewed aus den Linien-Antworten,
+    /// die die Extension beim Training/Kurs-Holen ohnehin mitschneidet. Idempotent.
+    /// </summary>
+    [HttpPost("chessable/problem-moves")]
+    public async Task<IActionResult> ChessableProblemMoves([FromBody] ChessableProblemMovesInputDto dto,
+        CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid3) return forbid3;
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        var written = await _problemMoves.UpsertBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
+        return Ok(new { written });
     }
 
     [HttpGet("chessable/progress")]

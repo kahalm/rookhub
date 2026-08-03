@@ -169,3 +169,26 @@ public class ChessableLineTrainedResultDto
     /// <summary>Gefundene, aber bewusst unangetastete SR-Linien (nicht fällig bzw. pausiert).</summary>
     public int RepertoireLinesSkipped { get; set; }
 }
+
+/// <summary>Batch „schwierige Züge": je Linie (oid) die von der Extension geernteten Felder.
+/// Quellen ergänzen sich: getList → NHard, getGame → ProblemMoves (thisUser) + LastReviewed;
+/// fehlende Felder lassen den gespeicherten Wert unangetastet.</summary>
+public class ChessableProblemMovesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableProblemMoveEntryDto> Entries { get; set; } = new();
+}
+
+public class ChessableProblemMoveEntryDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+    /// <summary>Chessables nHard der Linie (aus getList); null = nicht Teil dieses Batches.</summary>
+    public int? NHard { get; set; }
+    /// <summary>game.problemMoves.thisUser als Roh-JSON-Objekt; {} = keine Fehlzüge (löscht alte).</summary>
+    public System.Text.Json.JsonElement? ProblemMoves { get; set; }
+    /// <summary>Chessables lastReviewed-String ("never" oder "yyyy-MM-dd HH:mm:ss").</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(40)]
+    public string? LastReviewed { get; set; }
+}

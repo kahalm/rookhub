@@ -62,6 +62,7 @@ public class AppDbContext : DbContext
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
     public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
+    public DbSet<ChessableProblemMove> ChessableProblemMoves => Set<ChessableProblemMove>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<ActivityPreset> ActivityPresets => Set<ActivityPreset>();
     public DbSet<ActivityTimer> ActivityTimers => Set<ActivityTimer>();
@@ -704,6 +705,17 @@ public class AppDbContext : DbContext
             e.Property(a => a.CourseName).HasMaxLength(200);
             // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<ChessableProblemMove>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Upsert-Identität: eine Zeile je (User, Kurs, Linie); Abfrage typischerweise je Kurs.
+            e.HasIndex(a => new { a.UserId, a.Bid, a.Oid }).IsUnique();
         });
 
         modelBuilder.Entity<ChessableCourseTheme>(e =>
