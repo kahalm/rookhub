@@ -59,6 +59,8 @@ export class FlashcardsComponent implements OnInit {
   order: number[] = [];
   pos = 0;
   flipped = false;
+  /** true = Flip-Transition kurz aus (Blätterwechsel soll nicht rückwärts drehen). */
+  flipSnap = false;
   shuffled = false;
   /** Blätter à 4 Karten: [Vorderseiten (Leseordnung), Rückseiten (Spalten gespiegelt)]. */
   sheets: { fronts: (Flashcard | null)[]; backs: (Flashcard | null)[] }[] = [];
@@ -190,13 +192,20 @@ export class FlashcardsComponent implements OnInit {
   next(): void {
     if (!this.cards.length) return;
     this.pos = (this.pos + 1) % this.cards.length;
-    this.flipped = false;
+    this.snapUnflip();
   }
 
   prev(): void {
     if (!this.cards.length) return;
     this.pos = (this.pos - 1 + this.cards.length) % this.cards.length;
+    this.snapUnflip();
+  }
+
+  /** Beim Blättern sofort (ohne Rückwärts-Drehung) die Vorderseite der neuen Karte zeigen. */
+  private snapUnflip(): void {
+    this.flipSnap = true;
     this.flipped = false;
+    setTimeout(() => { this.flipSnap = false; }, 60);
   }
 
   /** Mischen an/aus — aus stellt die Kurs-Reihenfolge wieder her; Position beginnt vorn. */
@@ -210,7 +219,7 @@ export class FlashcardsComponent implements OnInit {
       }
     }
     this.pos = 0;
-    this.flipped = false;
+    this.snapUnflip();
   }
 
   /** ←/→ blättern, Leertaste/Enter dreht die Karte um (nur in der digitalen Ansicht). */

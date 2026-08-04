@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.332.0';
+export const APP_VERSION = '0.332.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.332.1", date: "2026-08-04", changes: [
+    { en: "Flashcards: clicking a card in the digital study view now flips it with a 3D turn animation (both sides live on one card that rotates around its vertical axis). Moving to the next/previous card snaps back to the front without a reverse spin; the animation is disabled for users with reduced-motion preference. NOT deployed (frontend image only).", de: "Flashcards: ein Klick auf die Karte in der digitalen Lern-Ansicht dreht sie jetzt mit einer 3D-Umdreh-Animation um (beide Seiten sitzen auf EINER Karte, die sich um die Hochachse dreht). Beim Weiter-/Zurückblättern schnappt die neue Karte ohne Rückwärts-Drehung auf die Vorderseite; bei reduzierter Bewegung (Systemeinstellung) ist die Animation aus. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.332.0", date: "2026-08-03", changes: [
     { en: "Mark individual lines as FLASHCARDS — permanently. The checkboxes in course browsing and in the repertoire line list now save to the server (per user, across devices) instead of being a one-off print selection. Each course and repertoire gets its own marked-cards area: on the course detail page via the ⋮ menu entry ‚Flashcards (marked lines)', in browsing and in the repertoire toolbar via a ‚Marked (n)' button — study, flip through and print only those cards there. Course marks stick to the line, repertoire marks to the line's move sequence (like SR states, a re-import with changed moves resets them). Needs api + frontend image.", de: "Einzelne Linien DAUERHAFT als FLASHCARDS markieren. Die Kästchen im Kurs-Durchsehen und in der Repertoire-Linienliste speichern jetzt auf dem Server (je User, geräteübergreifend) statt nur eine einmalige Druck-Auswahl zu sein. Jeder Kurs und jedes Repertoire bekommt einen eigenen Bereich mit den markierten Karten: auf der Kurs-Detailseite über den ⋮-Menüpunkt „Flashcards (markierte Linien)“, im Durchsehen und in der Repertoire-Werkzeugleiste über einen „Markierte (n)“-Knopf — dort nur diese Karten lernen, durchblättern und drucken. Kurs-Markierungen hängen an der Linie, Repertoire-Markierungen an der Zugfolge der Linie (wie SR-Zustände; ein Re-Import mit geänderten Zügen setzt sie zurück). Braucht api- + Frontend-Image." },
     { en: "Fix: course/calculation line order with hand-added positions. Rounds were sorted as TEXT, so ‚10, 11, 12' sorted between ‚1' and ‚2' — positions appeared jumbled and chapters no longer formed contiguous blocks (calculation courses with more than 9 added positions, e.g. /courses/58/calc). Numbers now sort numerically everywhere (imported courses with padded rounds are unaffected). Needs api image.", de: "Fix: Linien-Reihenfolge in Kursen/Kalkulation mit handangelegten Stellungen. Runden wurden als TEXT sortiert, „10, 11, 12“ landete daher zwischen „1“ und „2“ — Stellungen wirkten durcheinander und Kapitel bildeten keine zusammenhängenden Blöcke mehr (Kalkulationskurse mit mehr als 9 angelegten Stellungen, z. B. /courses/58/calc). Zahlen sortieren jetzt überall numerisch (importierte Kurse mit gepolsterten Runden sind unberührt). Braucht api-Image." },

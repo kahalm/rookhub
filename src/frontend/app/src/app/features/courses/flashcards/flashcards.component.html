@@ -49,27 +49,35 @@
     <!-- ===== Digitale Lern-Ansicht: eine Karte, klicken/Leertaste = umdrehen ===== -->
     <div class="fc-study">
       @if (current; as card) {
+        <!-- 3D-Flip: BEIDE Seiten sind gerendert; Klick dreht die Karte animiert um die Y-Achse. -->
         <div class="fc-study-card" (click)="flip()" role="button" tabindex="0"
              [attr.aria-label]="'courses.flashcards.flip' | translate">
-          <div class="fc-card-head">
-            <span class="fc-heading">{{ card.heading }}</span>
-            @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
+          <div class="fc-flip" [class.fc-flip--flipped]="flipped" [class.fc-flip--noanim]="flipSnap">
+            <div class="fc-flip-face fc-flip-front" [attr.aria-hidden]="flipped">
+              <div class="fc-card-head">
+                <span class="fc-heading">{{ card.heading }}</span>
+                @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
+              </div>
+              <app-flashcard-board class="fc-study-board"
+                [fen]="card.frontFen" [orientation]="card.orientation"
+                [shapes]="card.shapes" [pieceSet]="pieceSet" />
+              <div class="fc-turnhint">
+                {{ (card.orientation === 'white' ? 'courses.flashcards.fromWhite' : 'courses.flashcards.fromBlack') | translate }}
+                · {{ 'courses.flashcards.flip' | translate }}
+              </div>
+            </div>
+            <div class="fc-flip-face fc-flip-back" [attr.aria-hidden]="!flipped">
+              <div class="fc-card-head">
+                <span class="fc-heading">{{ card.heading }}</span>
+                @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
+              </div>
+              <div class="fc-study-back">
+                @if (card.notation) { <p class="fc-notation">{{ card.notation }}</p> }
+                @if (card.closing) { <p class="fc-closing">{{ card.closing }}</p> }
+                @else if (!card.notation) { <p class="fc-closing fc-closing--empty">{{ 'courses.flashcards.noText' | translate }}</p> }
+              </div>
+            </div>
           </div>
-          @if (!flipped) {
-            <app-flashcard-board class="fc-study-board"
-              [fen]="card.frontFen" [orientation]="card.orientation"
-              [shapes]="card.shapes" [pieceSet]="pieceSet" />
-            <div class="fc-turnhint">
-              {{ (card.orientation === 'white' ? 'courses.flashcards.fromWhite' : 'courses.flashcards.fromBlack') | translate }}
-              · {{ 'courses.flashcards.flip' | translate }}
-            </div>
-          } @else {
-            <div class="fc-study-back">
-              @if (card.notation) { <p class="fc-notation">{{ card.notation }}</p> }
-              @if (card.closing) { <p class="fc-closing">{{ card.closing }}</p> }
-              @else if (!card.notation) { <p class="fc-closing fc-closing--empty">{{ 'courses.flashcards.noText' | translate }}</p> }
-            </div>
-          }
         </div>
         <div class="fc-study-nav">
           <button mat-icon-button (click)="prev()" [attr.aria-label]="'pgnViewer.nav.previous' | translate">

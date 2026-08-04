@@ -159,6 +159,24 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
     expect(c.current!.heading).toBe('#3');      // zyklisch
   });
 
+  it('Flip ist animiert: beide Seiten gleichzeitig im DOM, Blättern schnappt ohne Animation zurück', () => {
+    const fixture = make([puzzle(1), puzzle(2)], {});
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.fc-flip-front')).toBeTruthy();   // 3D-Flip braucht BEIDE Faces
+    expect(el.querySelector('.fc-flip-back')).toBeTruthy();
+
+    c.flip();
+    fixture.detectChanges();
+    expect(el.querySelector('.fc-flip')!.classList).toContain('fc-flip--flipped');
+
+    c.next();                                   // Kartenwechsel: Vorderseite OHNE Rückwärts-Drehung
+    fixture.detectChanges();
+    expect(c.flipSnap).toBeTrue();
+    expect(el.querySelector('.fc-flip')!.classList).toContain('fc-flip--noanim');
+    expect(el.querySelector('.fc-flip')!.classList).not.toContain('fc-flip--flipped');
+  });
+
   it('Mischen permutiert nur die Reihenfolge; ausschalten stellt die Kurs-Reihenfolge wieder her', () => {
     const fixture = make([puzzle(1), puzzle(2), puzzle(3), puzzle(4)], {});
     const c = fixture.componentInstance;
