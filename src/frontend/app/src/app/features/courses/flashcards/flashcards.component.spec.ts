@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { FlashcardsComponent } from './flashcards.component';
 import { FlashcardBoardComponent } from './flashcard-board.component';
+import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
 import { CourseService } from '../course.service';
 import { RepertoireTrainingService } from '../../repertoire/repertoire-training.service';
 import { PreferencesService } from '../../../core/preferences.service';
@@ -175,6 +176,17 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
     expect(c.flipSnap).toBeTrue();
     expect(el.querySelector('.fc-flip')!.classList).toContain('fc-flip--noanim');
     expect(el.querySelector('.fc-flip')!.classList).not.toContain('fc-flip--flipped');
+  });
+
+  it('Vollbild-Knopf zielt auf die Lern-Sektion (Karte + Leiste = Vollbild-Teilbaum)', () => {
+    const fixture = make([puzzle(1)], {});
+    const el: HTMLElement = fixture.nativeElement;
+    const host = el.querySelector('.fc-study');
+    const btn = fixture.debugElement.query(
+      d => d.componentInstance instanceof BoardFullscreenButtonComponent);
+    expect(host).toBeTruthy();
+    expect(btn).toBeTruthy();
+    expect((btn.componentInstance as BoardFullscreenButtonComponent).target).toBe(host as HTMLElement);
   });
 
   it('Mischen permutiert nur die Reihenfolge; ausschalten stellt die Kurs-Reihenfolge wieder her', () => {

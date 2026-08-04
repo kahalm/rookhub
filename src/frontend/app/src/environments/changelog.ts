@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.332.1';
+export const APP_VERSION = '0.333.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.333.0", date: "2026-08-04", changes: [
+    { en: "Digital flashcards get a FULLSCREEN mode: a fullscreen button above the card takes just the card plus the flip/previous/next bar onto a dark full screen — no toolbar, no page around it. Keyboard (←/→, Space/Enter) keeps working; leave via the button or Esc. On iOS Safari (no element fullscreen) the button is hidden. NOT deployed (frontend image only).", de: "Digitale Flashcards bekommen einen VOLLBILD-Modus: ein Vollbild-Knopf über der Karte holt nur die Karte plus die Umdrehen/Vor/Zurück-Leiste auf einen dunklen Vollbildschirm — ohne Werkzeugleiste, ohne Seite drumherum. Tastatur (←/→, Leertaste/Enter) funktioniert weiter; raus geht es über den Knopf oder Esc. Auf iOS-Safari (kein Element-Vollbild) ist der Knopf ausgeblendet. NICHT deployed (nur Frontend-Image)." },
+  ] },
   { version: "0.332.1", date: "2026-08-04", changes: [
     { en: "Flashcards: clicking a card in the digital study view now flips it with a 3D turn animation (both sides live on one card that rotates around its vertical axis). Moving to the next/previous card snaps back to the front without a reverse spin; the animation is disabled for users with reduced-motion preference. NOT deployed (frontend image only).", de: "Flashcards: ein Klick auf die Karte in der digitalen Lern-Ansicht dreht sie jetzt mit einer 3D-Umdreh-Animation um (beide Seiten sitzen auf EINER Karte, die sich um die Hochachse dreht). Beim Weiter-/Zurückblättern schnappt die neue Karte ohne Rückwärts-Drehung auf die Vorderseite; bei reduzierter Bewegung (Systemeinstellung) ist die Animation aus. NICHT deployed (nur Frontend-Image)." },
   ] },

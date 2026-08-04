@@ -14,6 +14,7 @@ import { parsePgnText } from '../../../shared/pgn-viewer/pgn-parser';
 import { forkJoin } from 'rxjs';
 import { Flashcard, buildFlashcard, buildRepertoireFlashcards } from './flashcard.util';
 import { FlashcardBoardComponent } from './flashcard-board.component';
+import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
 
 /**
  * Druckansicht „Flashcards": je Kurs-Linie eine Karteikarte — VORN die Endstellung mit den
@@ -36,7 +37,7 @@ import { FlashcardBoardComponent } from './flashcard-board.component';
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatTooltipModule, TranslatePipe, FlashcardBoardComponent,
+    MatTooltipModule, TranslatePipe, FlashcardBoardComponent, BoardFullscreenButtonComponent,
   ],
   templateUrl: './flashcards.component.html',
   styleUrls: ['./flashcards.component.scss'],

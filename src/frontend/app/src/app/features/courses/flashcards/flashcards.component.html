@@ -46,9 +46,12 @@
   } @else if (cards.length === 0) {
     <p class="fc-center">{{ (markedOnly ? 'courses.flashcards.markedEmpty' : 'courses.flashcards.empty') | translate }}</p>
   } @else if (view === 'digital') {
-    <!-- ===== Digitale Lern-Ansicht: eine Karte, klicken/Leertaste = umdrehen ===== -->
-    <div class="fc-study">
+    <!-- ===== Digitale Lern-Ansicht: eine Karte, klicken/Leertaste = umdrehen =====
+         Die Sektion ist zugleich die Vollbild-Hülle: im Vollbild rendert der Browser NUR diesen
+         Teilbaum — Karte + Flip/Blätter-Leiste + der Knopf zum Verlassen, sonst nichts. -->
+    <div class="fc-study" #studyHost>
       @if (current; as card) {
+        <app-board-fullscreen-button class="fc-fs-btn" [target]="studyHost" />
         <!-- 3D-Flip: BEIDE Seiten sind gerendert; Klick dreht die Karte animiert um die Y-Achse. -->
         <div class="fc-study-card" (click)="flip()" role="button" tabindex="0"
              [attr.aria-label]="'courses.flashcards.flip' | translate">
