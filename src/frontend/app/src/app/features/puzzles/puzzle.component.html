@@ -146,7 +146,6 @@
               [canFavorite]="isLoggedIn && !!puzzle"
               [isFavorite]="favoriteTracker.currentIsFavorite"
               (favoriteToggled)="favoriteTracker.toggleCurrent()"
-              (settingsClicked)="openSettingsDialog()"
               (evalToggled)="toggleEval()"
               (resetClicked)="resetPuzzle()"
               (mouseslipClicked)="mouseslip()"
@@ -161,34 +160,25 @@
             />
           }
 
-          @if (lastSolvedPuzzleId) {
-            <div class="last-actions">
-              <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
-                <mat-icon>history</mat-icon>
-                {{ 'puzzles.actions.reviewLast' | translate }}
-              </button>
-              @if (isLoggedIn) {
-                <button mat-stroked-button class="love-last-btn" [class.loved]="favoriteTracker.lastIsFavorite"
-                        (click)="favoriteTracker.toggleLast()" [attr.aria-pressed]="favoriteTracker.lastIsFavorite">
-                  <mat-icon>{{ favoriteTracker.lastIsFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
-                  {{ 'favorites.loveLast' | translate }}
-                </button>
-              }
-            </div>
-          }
-
+          <!-- UI-Welle 2: EINE Aktionszeile statt Rating-Card + Last-Actions + Endlos-Knopf;
+               Seltenes (Letztes ansehen/lieben, Endlos, Einstellungen) im ⋮-Menü. -->
           @if (puzzle) {
-            <app-puzzle-rating-card
-              ratingKey="puzzles.info.rating"
-              [appendRating]="puzzle.rating"
+            <app-puzzle-action-bar
+              [rating]="puzzle.rating"
               [tags]="puzzle.themes ?? ''"
-              shareKey="puzzles.actions.share"
+              [hasLast]="!!lastSolvedPuzzleId"
+              [canLoveLast]="isLoggedIn"
+              [lastLoved]="favoriteTracker.lastIsFavorite"
+              [showEndless]="true"
               (shareClicked)="sharePuzzle()"
-            />
-          }
-
-          @if (puzzle && isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
-            <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />
+              (settingsClicked)="openSettingsDialog()"
+              (reviewLastClicked)="reviewLastPuzzle()"
+              (loveLastClicked)="favoriteTracker.toggleLast()"
+              (endlessClicked)="goEndless()">
+              @if (isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
+                <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />
+              }
+            </app-puzzle-action-bar>
           }
 
           <!-- Erst ab dem ersten Versuch: eine Karte aus fünf Nullen ist für neue/anonyme Besucher
@@ -225,11 +215,6 @@
             </mat-card>
           }
 
-
-          <button mat-stroked-button color="accent" class="endless-btn" (click)="goEndless()">
-            <mat-icon>all_inclusive</mat-icon>
-            {{ 'puzzles.actions.endlessMode' | translate }}
-          </button>
         </div>
       </div>
       }

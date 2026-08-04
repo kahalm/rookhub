@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { VizCardComponent } from './viz-card.component';
-import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
+import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 
 /**
  * OnPush-Regression für die präsentationalen Puzzle-Display-Cards: bei reiner Input-Bindung
@@ -13,17 +13,16 @@ import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 // an die OnPush-Kinder — getestet wird damit die Re-Render-Reaktion der KINDER auf Input-Änderung.
 @Component({
   standalone: true,
-  imports: [VizCardComponent, PuzzleRatingCardComponent],
+  imports: [VizCardComponent, PuzzleActionBarComponent],
   template: `
     <app-viz-card
       [visualizationMode]="vizLevel"
       [vizPiecesHidden]="true"
       (vizShowClicked)="vizClicks = vizClicks + 1"></app-viz-card>
-    <app-puzzle-rating-card
+    <app-puzzle-action-bar
       [levelText]="levelText"
-      [ratingParams]="{ rating: rating }"
-      [shareKey]="'puzzles.share'"
-      (shareClicked)="shareClicks = shareClicks + 1"></app-puzzle-rating-card>
+      [rating]="rating"
+      (shareClicked)="shareClicks = shareClicks + 1"></app-puzzle-action-bar>
   `,
 })
 class HostComponent {
@@ -48,9 +47,9 @@ describe('Display cards (OnPush)', () => {
     fixture.detectChanges();
   });
 
-  it('viz-card and puzzle-rating-card are OnPush', () => {
+  it('viz-card and puzzle-action-bar are OnPush', () => {
     expect((VizCardComponent as any).ɵcmp.onPush).toBeTrue();
-    expect((PuzzleRatingCardComponent as any).ɵcmp.onPush).toBeTrue();
+    expect((PuzzleActionBarComponent as any).ɵcmp.onPush).toBeTrue();
   });
 
   it('re-renders the viz level badge when the bound input changes', () => {
@@ -71,7 +70,7 @@ describe('Display cards (OnPush)', () => {
   it('emits the viz show + share outputs on click (OnPush does not swallow events)', () => {
     const el = fixture.nativeElement as HTMLElement;
     (el.querySelector('.viz-show-btn') as HTMLButtonElement).click();
-    (el.querySelector('.prc-share') as HTMLButtonElement).click();
+    (el.querySelector('.pab-share') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(host.vizClicks).toBe(1);
     expect(host.shareClicks).toBe(1);

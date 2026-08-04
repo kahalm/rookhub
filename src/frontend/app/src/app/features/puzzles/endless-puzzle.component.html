@@ -364,7 +364,6 @@
                 [canFavorite]="isLoggedIn && !!puzzle"
                 [isFavorite]="favoriteTracker.currentIsFavorite"
                 (favoriteToggled)="favoriteTracker.toggleCurrent()"
-                (settingsClicked)="openSettingsDialog()"
                 (evalToggled)="toggleEval()"
                 (resetClicked)="resetPuzzle()"
                 (mouseslipClicked)="mouseslip()"
@@ -378,35 +377,25 @@
                 (showOriginalSolutionClicked)="showOriginalSolution()"
               />
 
-
-              @if (lastSolvedPuzzleId) {
-                <div class="last-actions">
-                  <button mat-stroked-button class="review-last-btn" (click)="reviewLastPuzzle()">
-                    <mat-icon>history</mat-icon> {{ 'endless.game.reviewLast' | translate }}
-                  </button>
-                  @if (isLoggedIn) {
-                    <button mat-stroked-button class="love-last-btn" [class.loved]="favoriteTracker.lastIsFavorite"
-                            (click)="favoriteTracker.toggleLast()" [attr.aria-pressed]="favoriteTracker.lastIsFavorite">
-                      <mat-icon>{{ favoriteTracker.lastIsFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
-                      {{ 'favorites.loveLast' | translate }}
-                    </button>
-                  }
-                </div>
-              }
-
+              <!-- UI-Welle 2: EINE Aktionszeile (Rating/Level stehen schon in den Quick-Stats;
+                   Level-Fenster bleibt als Zusatztext); Seltenes im ⋮-Menü. -->
               @if (puzzle) {
-                <app-puzzle-rating-card
-                  ratingKey="endless.game.puzzleRating"
-                  [ratingParams]="{ rating: puzzle.rating }"
+                <app-puzzle-action-bar
                   [levelText]="'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating }"
                   [tags]="puzzle.themes ?? ''"
-                  shareKey="endless.game.sharePuzzle"
+                  [hasLast]="!!lastSolvedPuzzleId"
+                  [canLoveLast]="isLoggedIn"
+                  [lastLoved]="favoriteTracker.lastIsFavorite"
+                  shareLabelKey="endless.game.sharePuzzle"
+                  reviewLastKey="endless.game.reviewLast"
                   (shareClicked)="sharePuzzle()"
-                />
-              }
-
-              @if (puzzle && isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
-                <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />
+                  (settingsClicked)="openSettingsDialog()"
+                  (reviewLastClicked)="reviewLastPuzzle()"
+                  (loveLastClicked)="favoriteTracker.toggleLast()">
+                  @if (isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
+                    <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />
+                  }
+                </app-puzzle-action-bar>
               }
 
               <mat-card class="stats-card">

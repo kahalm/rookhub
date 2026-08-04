@@ -175,3 +175,11 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   app-navbar, .app-footer, .app-fs-exit { display: none !important; }
   main { margin: 0 !important; padding: 0 !important; }
 }
+
+/* Hilfe-Icon-Tooltips (HelpHintComponent): mehrzeilige Erklärtexte lesbar halten. */
+.hh-tooltip .mdc-tooltip__surface {
+  white-space: pre-line;
+  max-width: 320px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}

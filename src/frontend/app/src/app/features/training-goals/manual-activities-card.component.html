@@ -1,9 +1,11 @@
 <mat-card>
   <mat-card-header>
-    <mat-card-title>{{ 'trainingGoals.manual.title' | translate }}</mat-card-title>
+    <mat-card-title>
+      {{ 'trainingGoals.manual.title' | translate }}
+      <app-help-hint [text]="'trainingGoals.manual.intro' | translate" />
+    </mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <p class="muted small">{{ 'trainingGoals.manual.intro' | translate }}</p>
     <div class="manual-fields">
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ 'trainingGoals.manual.kind' | translate }}</mat-label>

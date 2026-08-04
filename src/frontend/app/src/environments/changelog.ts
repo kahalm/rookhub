@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.333.0';
+export const APP_VERSION = '0.334.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.334.0", date: "2026-08-04", changes: [
+    { en: "UI wave 2 completed — ONE action row in all three puzzle solvers (standard, endless, course/book/daily) instead of stacked cards: visible stay rating + topic toggle, share and the contextual buttons after solving (send to a friend, view full game); everything rare (view/love last puzzle, endless mode, settings) moved into a ⋮ menu, and the gear left the status card. On a phone this removes two to three full cards below the board. Frontend image only.", de: "UI-Welle 2 abgeschlossen — EINE Aktionszeile in allen drei Puzzle-Solvern (Standard, Endlos, Kurs/Buch/Daily) statt gestapelter Karten: sichtbar bleiben Wertung + Themen-Toggle, Teilen und die kontextuellen Knöpfe nach dem Lösen (an Freund schicken, ganze Partie); alles Seltene (letztes Puzzle ansehen/lieben, Endlos-Modus, Einstellungen) liegt jetzt im ⋮-Menü, das Zahnrad ist aus der Status-Karte verschwunden. Auf dem Handy fallen dadurch zwei bis drei ganze Karten unter dem Brett weg. Nur Frontend-Image." },
+    { en: "Help texts tidied: the explanation paragraphs on the training-goals page (goal card, offline activities) sit behind a small ? icon — hover shows them, a click/tap toggles them. At most one sentence of prose remains visible per card.", de: "Hilfetexte entrümpelt: die Erklär-Absätze auf der Trainingsziele-Seite (Ziel-Karte, Offline-Aktivitäten) liegen hinter einem kleinen ?-Icon — Hover zeigt sie, Klick/Tipp schaltet sie um. Pro Karte bleibt höchstens ein Satz Fließtext sichtbar." },
+  ] },
   { version: "0.333.0", date: "2026-08-04", changes: [
     { en: "Digital flashcards get a FULLSCREEN mode: a fullscreen button above the card takes just the card plus the flip/previous/next bar onto a dark full screen — no toolbar, no page around it. Keyboard (←/→, Space/Enter) keeps working; leave via the button or Esc. On iOS Safari (no element fullscreen) the button is hidden. NOT deployed (frontend image only).", de: "Digitale Flashcards bekommen einen VOLLBILD-Modus: ein Vollbild-Knopf über der Karte holt nur die Karte plus die Umdrehen/Vor/Zurück-Leiste auf einen dunklen Vollbildschirm — ohne Werkzeugleiste, ohne Seite drumherum. Tastatur (←/→, Leertaste/Enter) funktioniert weiter; raus geht es über den Knopf oder Esc. Auf iOS-Safari (kein Element-Vollbild) ist der Knopf ausgeblendet. NICHT deployed (nur Frontend-Image)." },
   ] },

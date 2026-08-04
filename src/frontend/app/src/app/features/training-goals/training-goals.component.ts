@@ -26,6 +26,7 @@ import { formatDuration } from './duration.util';
 import { clampGoal } from './goal.util';
 import { BreakRow, breakdownRows } from './breakdown.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -98,7 +99,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule, MatTabsModule,
-    TranslatePipe, LoadingSpinnerComponent,
+    TranslatePipe, LoadingSpinnerComponent, HelpHintComponent,
     ManualActivitiesCardComponent, ActivityPresetsCardComponent, ChessableThemesCardComponent,
     PeriodBreakdownCardComponent,
   ],
@@ -198,7 +199,10 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                 <!-- Ziele festlegen -->
                 <mat-card>
                   <mat-card-header>
-                    <mat-card-title>{{ 'trainingGoals.setTitle' | translate }}</mat-card-title>
+                    <mat-card-title>
+                      {{ 'trainingGoals.setTitle' | translate }}
+                      <app-help-hint [text]="('trainingGoals.dailyHint' | translate) + '\n\n' + ('trainingGoals.playHint' | translate)" />
+                    </mat-card-title>
                   </mat-card-header>
                   <mat-card-content>
                     @if (goal?.source === 'group') {
@@ -223,8 +227,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                         <input matInput type="number" min="0" max="7" [(ngModel)]="edit.weeklyDaysTarget" />
                       </mat-form-field>
                     </div>
-                    <p class="muted small">{{ 'trainingGoals.dailyHint' | translate }}</p>
-                    <p class="muted small">{{ 'trainingGoals.playHint' | translate }}</p>
                     <div class="actions">
                       <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
                       @if (goal?.source === 'personal') {

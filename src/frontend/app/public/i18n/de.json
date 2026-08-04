@@ -1108,6 +1108,9 @@
       "copyFailed": "Kopieren fehlgeschlagen",
       "current": "Aktuelles Puzzle",
       "previous": "Vorheriges Puzzle"
+    },
+    "bar": {
+      "more": "Mehr"
     }
   },
   "courses": {

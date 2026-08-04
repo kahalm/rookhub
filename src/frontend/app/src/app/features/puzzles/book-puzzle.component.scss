@@ -118,12 +118,6 @@
     .rating-badge { font-weight: bold; font-size: 0.9em; }
 
     /* Untere Aktionen */
-    .bottom-actions {
-      display: flex; flex-direction: column; gap: 0.5rem;
-    }
-    .bottom-actions button { width: 100%; }
-    .share-full { width: 100%; }
-    .love-last.loved { color: #e91e63; }
 
     /* Info-/Zug-Kommentar-Block in der Kontext-Card, über der Fortschrittsanzeige */
     .context-card .ctx-comment {

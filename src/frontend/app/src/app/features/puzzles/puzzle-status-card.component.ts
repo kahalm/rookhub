@@ -56,7 +56,8 @@ const CK = {
 
 /**
  * Einheitliche Status-Card für alle drei Puzzle-Modi (Standard/Endless/Buch).
- * Kapselt Zahnrad-Button + den kompletten State-Switch (LOADING/SETUP/YourTurn/SOLVED/FAILED).
+ * Kapselt den kompletten State-Switch (LOADING/SETUP/YourTurn/SOLVED/FAILED);
+ * Einstellungen liegen seit UI-Welle 2 im ⋮-Menü der PuzzleActionBar.
  */
 @Component({
   selector: 'app-puzzle-status-card',
@@ -69,11 +70,6 @@ const CK = {
   template: `
     <mat-card class="psc-card">
       <mat-card-content>
-        <button mat-icon-button class="psc-gear" (click)="settingsClicked.emit()"
-                [attr.aria-label]="'puzzles.settings.tooltip' | translate">
-          <mat-icon>settings</mat-icon>
-        </button>
-
         @if (fullGameReview) {
           <div class="psc-center">
             <p class="psc-text">{{ 'book.status.fullGame' | translate }}</p>
@@ -238,7 +234,6 @@ const CK = {
   `,
   styles: [`
     .psc-card { min-height: 120px; position: relative; }
-    .psc-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
     .psc-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
     .psc-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .psc-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
@@ -285,7 +280,6 @@ export class PuzzleStatusCardComponent {
   /** Ist das aktuelle Puzzle bereits favorisiert? */
   @Input() isFavorite = false;
 
-  @Output() settingsClicked = new EventEmitter<void>();
   @Output() evalToggled = new EventEmitter<void>();
   @Output() resetClicked = new EventEmitter<void>();
   @Output() mouseslipClicked = new EventEmitter<void>();

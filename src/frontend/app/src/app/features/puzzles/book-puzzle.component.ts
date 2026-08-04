@@ -23,6 +23,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
+import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { ChallengeService } from '../../core/challenge.service';
 import { PuzzleService, BookPuzzleDto, SharedPuzzleCounts } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -64,7 +65,7 @@ const ANON_COURSE_PAGE_SIZE = 300;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     PuzzleBoardComponent, PuzzleTagsComponent,
-    TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent
+    TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],

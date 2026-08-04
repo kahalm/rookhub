@@ -1108,6 +1108,9 @@
       "copyFailed": "Kopiranje nije uspjelo",
       "current": "Trenutna zagonetka",
       "previous": "Prethodna zagonetka"
+    },
+    "bar": {
+      "more": "Više"
     }
   },
   "courses": {

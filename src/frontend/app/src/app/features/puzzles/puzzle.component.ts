@@ -11,7 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
+import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
@@ -49,7 +49,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent,
-    PuzzleRatingCardComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
+    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],

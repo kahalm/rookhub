@@ -15,6 +15,7 @@ import {
   ActivityTheme, ACTIVITY_THEMES,
 } from './training-goals.service';
 import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Karte „Manuelle Offline-Aktivität eintragen": Formular (Art/Datum/Menge/Thema/Notiz) + Liste der
@@ -28,7 +29,7 @@ import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, TranslatePipe,
+    MatFormFieldModule, MatInputModule, MatSelectModule, TranslatePipe, HelpHintComponent,
   ],
   templateUrl: './manual-activities-card.component.html',
   styles: [`

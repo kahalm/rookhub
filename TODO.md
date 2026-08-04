@@ -167,13 +167,13 @@ Dichte konzentriert sich auf **Solver, Endless-Start und Trainingsziele** und fo
 abgeschnittenes Label auf den Trainingszielen, Endless-Kurvenmarken, doppelte Zug-Anzeige, Null-Statistik,
 leere Karte auf /analysis).
 
-**Welle 2 — mittel, größter sichtbarer Effekt** (Reiter/Endless/Kapitelzeile erledigt in v0.318.0;
-offen: Solver-Aktionsleiste + Hilfetexte):
-- [ ] **Eine Aktionsleiste statt vier Karten im Solver** (alle 3 Modi): unter dem Brett EINE Zeile
-  `[Tipp] [Bewertung] [Aufgeben] [⋮]`; ins ⋮-Menü wandern Teilen, Favorit, An Freund schicken, Tags,
-  Endlos-Modus, Einstellungen. Muster existiert bereits in `course-card` — nur konsequent auf den Solver
-  anwenden. Gemessene Ausgangslage (Handy, eingeloggt, leerer Account): 4 gestapelte Karten, 1108 px
-  Scrollhöhe; Ziel ~700 px, 1 Karte. Betrifft `puzzle-status-card`/`puzzle-rating-card` + die 3 Templates.
+**Welle 2 — ERLEDIGT** (Reiter/Endless/Kapitelzeile v0.318.0; Aktionsleiste + Hilfetexte v0.334.0):
+- [x] **Eine Aktionsleiste statt vier Karten im Solver** → **erledigt v0.334.0**: neue
+  `PuzzleActionBarComponent` (Rating-Pille + Tags-Toggle + kontextuelle Knöpfe + Teilen + ⋮-Menü mit
+  Letztes-ansehen/-lieben, Endlos, Einstellungen) ersetzt in allen 3 Modi Rating-Card, Last-Actions,
+  Endlos-Knopf und Bottom-Actions; `puzzle-rating-card` gelöscht, Zahnrad aus der Status-Card entfernt.
+  Tipp/Bewertung/Aufgeben bleiben bewusst an Ort (Brett-Leiste bzw. Your-Turn-Zeile im Status) — sie
+  sind zustandsgebunden, die statischen Karten drumherum waren die eigentliche Überladung.
 - [x] **Endless-Start stufen** → **erledigt v0.318.0**: Engine-Tiefe, beide Schwellen und die
   Kurvenvorschau liegen unter einem zugeklappten „Feineinstellungen"; sichtbar bleiben Start, Start-Rating,
   Themen-Vorlagen und Themen. Zugeklappt 844 px statt 1233 px. (Offen geblieben: die Stockfish-Tiefe ganz in
@@ -186,8 +186,11 @@ offen: Solver-Aktionsleiste + Hilfetexte):
   zuletzt genutzten Kursmodus aus `CourseProgress.LastMode`), Alternativen (sequenziell/zufällig/durchsehen)
   im ⋮-Menü der Zeile. **Noch nicht mit echten Daten gegengesehen** — das Testkonto auf Dev hat keine
   freigegebenen Kurse; nur Unit-Tests + Prod-Build.
-- [ ] **Hilfetexte → Tooltip/Hilfe-Icon**: pro Karte höchstens ein Satz Fließtext (aktuell bis zu 5 kursive
-  Absätze je Seite, z. B. Trainingsziele).
+- [x] **Hilfetexte → Tooltip/Hilfe-Icon** → **erledigt v0.334.0**: neue `HelpHintComponent`
+  (shared/help-hint, ?-Icon + Klick-Tooltip, globale `.hh-tooltip`-Klasse); Trainingsziele-Ziel-Karte
+  (dailyHint+playHint) und Offline-Aktivitäten-Intro umgestellt. Endless-Hilfe war schon ein Overlay,
+  Rest der App hatte nach v0.318.0 keine Absatz-Stapel mehr (per Regex über alle Templates geprüft).
+  Bei künftigen Karten: HelpHintComponent statt `<p class="muted">`-Absätzen verwenden.
 
 **Welle 3 — strukturell:**
 - [ ] **Globaler Seiten-Container**: `max-width: 1200–1280px`, zentriert, einheitliches Padding; Brett
