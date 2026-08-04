@@ -113,11 +113,14 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     return fixture;
   }
 
-  it('eingeloggt zeigt die Leiste genau 3 Icon-Buttons (Mail, Glocke, Menü)', () => {
+  it('eingeloggt zeigt die Leiste genau 3 Icon-Buttons (Vollbild, Glocke, Menü)', () => {
     const fixture = render({ loggedIn: true, keys: ['dashboard', 'puzzles', 'analysis'] });
     const icons = (fixture.nativeElement as HTMLElement)
       .querySelectorAll('mat-toolbar button[mat-icon-button], mat-toolbar a[mat-icon-button]');
-    expect(icons.length).toBe(3);   // alles inkl. Konto liegt im EINEN ☰-Menü
+    // Headless-Chrome unterstützt Element-Vollbild → Vollbild-Icon zählt mit.
+    expect(icons.length).toBe(3);   // Nachrichten + Konto liegen im EINEN ☰-Menü
+    expect((fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail mat-icon')?.textContent)
+      .toContain('menu');           // Mail-Badge hängt jetzt am ☰-Knopf
   });
 
   it('Kategorie-Untermenüs erscheinen nur mit sichtbarem Inhalt', () => {
@@ -131,7 +134,7 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     const fixture = render({ loggedIn: false, keys: ['puzzles', 'analysis', 'help'] });
     const el: HTMLElement = fixture.nativeElement;
     const iconBtns = el.querySelectorAll('mat-toolbar button[mat-icon-button], mat-toolbar a[mat-icon-button]');
-    expect(iconBtns.length).toBe(1);      // nur der ☰-Knopf — keine Icon-Reihe mehr
+    expect(iconBtns.length).toBe(2);      // Vollbild + ☰ — keine Icon-Reihe mehr
   });
 });
 

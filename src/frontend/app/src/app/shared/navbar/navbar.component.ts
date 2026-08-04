@@ -19,7 +19,7 @@ import { InAppNotificationService, AppNotification } from '../../core/in-app-not
 import { MessageService } from '../../core/message.service';
 import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
-import { ThemeService, AppTheme } from '../../core/theme.service';
+import { ThemeService } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
@@ -35,14 +35,15 @@ import {
       <span class="logo" routerLink="/dashboard">RookHub</span>
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
-        <!-- UI-Entrümpelung Navbar: nur noch 3 Icons (Mail, Glocke, Menü). ALLES andere —
-             auch das Konto — liegt vereinheitlicht als Untermenü im einen ☰-Menü. -->
-        <button mat-icon-button routerLink="/messages" class="msg-mail" [class.has-unseen]="messagesUnread > 0"
-                [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
-                [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
-                [attr.aria-label]="'messages.title' | translate">
-          <mat-icon>mail</mat-icon>
-        </button>
+        <!-- UI-Entrümpelung Navbar: 3 Icons — Vollbild (oft benutzt), Glocke, Menü.
+             Nachrichten + alles andere (auch das Konto) liegen im einen ☰-Menü;
+             ungelesene Nachrichten färben das ☰ und tragen ein Badge. -->
+        @if (fsSupported) {
+          <button mat-icon-button (click)="toggleAppFullscreen()"
+                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
+            <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+          </button>
+        }
         <button mat-icon-button [matMenuTriggerFor]="notifMenu" (menuOpened)="onBellOpened()"
                 class="notif-bell" [class.has-unseen]="notifCount > 0"
                 matBadge="!" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="medium"
@@ -76,7 +77,9 @@ import {
             <span>{{ 'notifications.viewAll' | translate }}</span>
           </button>
         </mat-menu>
-        <button mat-icon-button [matMenuTriggerFor]="navMenu" [attr.aria-label]="'nav.menu' | translate">
+        <button mat-icon-button [matMenuTriggerFor]="navMenu" class="msg-mail" [class.has-unseen]="messagesUnread > 0"
+                [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
+                [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
         <!-- ☰: kurzes Hauptmenü mit Untermenüs je Kategorie statt 19 flacher Einträge. -->
@@ -86,6 +89,10 @@ import {
               <mat-icon>dashboard</mat-icon><span>{{ 'nav.dashboard' | translate }}</span>
             </button>
           }
+          <button mat-menu-item routerLink="/messages" [class.msg-item-unseen]="messagesUnread > 0">
+            <mat-icon>mail</mat-icon>
+            <span>{{ 'messages.title' | translate }}@if (messagesUnread > 0) { ({{ messagesUnread }})}</span>
+          </button>
           @if (anyTraining) {
             <button mat-menu-item [matMenuTriggerFor]="trainingMenu">
               <mat-icon>fitness_center</mat-icon><span>{{ 'nav.groupTraining' | translate }}</span>
@@ -102,12 +109,6 @@ import {
           <button mat-menu-item [matMenuTriggerFor]="userMenu">
             <mat-icon>account_circle</mat-icon><span>{{ 'nav.account' | translate }}</span>
           </button>
-          @if (fsSupported) {
-            <button mat-menu-item (click)="toggleAppFullscreen()">
-              <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-              <span>{{ fsLabel }}</span>
-            </button>
-          }
           @if (auth.isAdmin) {
             <button mat-menu-item routerLink="/admin">
               <mat-icon>admin_panel_settings</mat-icon><span>{{ 'nav.admin' | translate }}</span>
@@ -149,10 +150,6 @@ import {
           @if (can('chessable')) { <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button> }
           @if (can('install')) { <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
-          <button mat-menu-item (click)="theme.toggle()">
-            <mat-icon>{{ themeIcon }}</mat-icon>
-            <span>{{ themeTooltip }}</span>
-          </button>
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
@@ -166,6 +163,12 @@ import {
              Sprache) liegt IMMER im ☰-Menü statt als Icon-Reihe in der Leiste. -->
         @if (can('puzzles')) { <button mat-button class="nav-anon" routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
         @if (can('analysis')) { <button mat-button class="nav-anon" routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+        @if (fsSupported) {
+          <button mat-icon-button (click)="toggleAppFullscreen()"
+                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
+            <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+          </button>
+        }
         <button mat-icon-button [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
@@ -181,16 +184,6 @@ import {
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>
           </a>
-          <button mat-menu-item (click)="theme.toggle()">
-            <mat-icon>{{ themeIcon }}</mat-icon>
-            <span>{{ themeTooltip }}</span>
-          </button>
-          @if (fsSupported) {
-            <button mat-menu-item (click)="toggleAppFullscreen()">
-              <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-              <span>{{ fsLabel }}</span>
-            </button>
-          }
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
@@ -226,6 +219,8 @@ import {
     .notif-bell.has-unseen mat-icon { color: #d32f2f; }
     /* Mail-Symbol ebenfalls rot, sobald ungelesene Nachrichten vorliegen. */
     .msg-mail.has-unseen mat-icon { color: #d32f2f; }
+    .msg-item-unseen { font-weight: 600; }
+    .msg-item-unseen mat-icon { color: #d32f2f; }
     .notif-bell ::ng-deep .mat-badge-content {
       background: #d32f2f; color: #fff; font-weight: 800; font-size: 15px;
       width: 19px; height: 19px; line-height: 19px;
@@ -278,20 +273,6 @@ export class NavbarComponent implements OnInit {
   messagesUnread = 0;
 
   private destroyRef = inject(DestroyRef);
-
-  get themeIcon(): string {
-    const icons: Record<AppTheme, string> = { system: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
-    return icons[this.theme.preference];
-  }
-
-  get themeTooltip(): string {
-    const labels: Record<AppTheme, string> = {
-      system: this.translate.instant('nav.themeSystem'),
-      light: this.translate.instant('nav.themeLight'),
-      dark: this.translate.instant('nav.themeDark'),
-    };
-    return labels[this.theme.preference];
-  }
 
   /** Einladungslink zum öffentlichen RookHub-Discord (Community). */
   readonly discordUrl = DISCORD_INVITE_URL;

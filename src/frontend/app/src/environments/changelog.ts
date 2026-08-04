@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.336.1';
+export const APP_VERSION = '0.336.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.336.2", date: "2026-08-04", changes: [
+    { en: "Navbar fine-tuning: FULLSCREEN is back as an icon in the top bar (logged in and out); MESSAGES moved into the ☰ menu (entry right below dashboard — unread messages still colour the ☰ icon red and show a count badge on it). The light/dark toggle left the menus entirely (the theme remains configurable in the profile). Bar: fullscreen, bell, menu. Frontend image only.", de: "Navbar-Feinschliff: VOLLBILD ist zurück als Icon in der oberen Leiste (ein- und ausgeloggt); die NACHRICHTEN sind ins ☰-Menü gewandert (Eintrag direkt unter Dashboard — ungelesene Nachrichten färben weiterhin das ☰-Icon rot und zeigen dort ein Zähler-Badge). Der Hell/Dunkel-Umschalter ist komplett aus den Menüs raus (das Theme bleibt im Profil einstellbar). Leiste: Vollbild, Glocke, Menü. Nur Frontend-Image." },
+  ] },
   { version: "0.336.1", date: "2026-08-04", changes: [
     { en: "One menu for everything: the separate account popup is gone — 'Account' is now a submenu of the single ☰ menu (profile, statistics, puzzle history, Chessable, install app, help, theme, language, changelog, logout). The top bar is down to THREE icons: messages, notifications, menu. Frontend image only.", de: "Ein Menü für alles: das separate Konto-Popup ist weg — „Konto“ ist jetzt ein Untermenü des einen ☰-Menüs (Profil, Statistik, Puzzle-Verlauf, Chessable, App installieren, Hilfe, Theme, Sprache, Changelog, Abmelden). Die obere Leiste ist auf DREI Icons runter: Nachrichten, Benachrichtigungen, Menü. Nur Frontend-Image." },
   ] },
