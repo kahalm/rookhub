@@ -35,8 +35,8 @@ import {
       <span class="logo" routerLink="/dashboard">RookHub</span>
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
-        <!-- UI-Entrümpelung Navbar: nur noch 4 Icons (Mail, Glocke, Konto, Menü).
-             Discord/Vollbild liegen im ☰-Menü, Theme/Sprache im Konto-Menü. -->
+        <!-- UI-Entrümpelung Navbar: nur noch 3 Icons (Mail, Glocke, Menü). ALLES andere —
+             auch das Konto — liegt vereinheitlicht als Untermenü im einen ☰-Menü. -->
         <button mat-icon-button routerLink="/messages" class="msg-mail" [class.has-unseen]="messagesUnread > 0"
                 [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
                 [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
@@ -76,9 +76,6 @@ import {
             <span>{{ 'notifications.viewAll' | translate }}</span>
           </button>
         </mat-menu>
-        <button mat-icon-button [matMenuTriggerFor]="userMenu" [attr.aria-label]="'nav.account' | translate">
-          <mat-icon>account_circle</mat-icon>
-        </button>
         <button mat-icon-button [matMenuTriggerFor]="navMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
@@ -101,6 +98,9 @@ import {
           }
           <button mat-menu-item [matMenuTriggerFor]="communityMenu">
             <mat-icon>groups</mat-icon><span>{{ 'nav.groupCommunity' | translate }}</span>
+          </button>
+          <button mat-menu-item [matMenuTriggerFor]="userMenu">
+            <mat-icon>account_circle</mat-icon><span>{{ 'nav.account' | translate }}</span>
           </button>
           @if (fsSupported) {
             <button mat-menu-item (click)="toggleAppFullscreen()">
@@ -141,6 +141,7 @@ import {
             <span>{{ 'nav.discord' | translate }}</span>
           </a>
         </mat-menu>
+        <!-- Konto-Untermenü — einziger Ort für Profil/Statistik/Einstellungen/Abmelden. -->
         <mat-menu #userMenu="matMenu">
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
           @if (can('stats')) { <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button> }

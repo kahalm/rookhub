@@ -113,11 +113,11 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     return fixture;
   }
 
-  it('eingeloggt zeigt die Leiste genau 4 Icon-Buttons (Mail, Glocke, Konto, Menü)', () => {
+  it('eingeloggt zeigt die Leiste genau 3 Icon-Buttons (Mail, Glocke, Menü)', () => {
     const fixture = render({ loggedIn: true, keys: ['dashboard', 'puzzles', 'analysis'] });
     const icons = (fixture.nativeElement as HTMLElement)
       .querySelectorAll('mat-toolbar button[mat-icon-button], mat-toolbar a[mat-icon-button]');
-    expect(icons.length).toBe(4);   // Discord/Theme/Vollbild/Sprache liegen jetzt in den Menüs
+    expect(icons.length).toBe(3);   // alles inkl. Konto liegt im EINEN ☰-Menü
   });
 
   it('Kategorie-Untermenüs erscheinen nur mit sichtbarem Inhalt', () => {

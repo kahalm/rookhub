@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.336.0';
+export const APP_VERSION = '0.336.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.336.1", date: "2026-08-04", changes: [
+    { en: "One menu for everything: the separate account popup is gone — 'Account' is now a submenu of the single ☰ menu (profile, statistics, puzzle history, Chessable, install app, help, theme, language, changelog, logout). The top bar is down to THREE icons: messages, notifications, menu. Frontend image only.", de: "Ein Menü für alles: das separate Konto-Popup ist weg — „Konto“ ist jetzt ein Untermenü des einen ☰-Menüs (Profil, Statistik, Puzzle-Verlauf, Chessable, App installieren, Hilfe, Theme, Sprache, Changelog, Abmelden). Die obere Leiste ist auf DREI Icons runter: Nachrichten, Benachrichtigungen, Menü. Nur Frontend-Image." },
+  ] },
   { version: "0.336.0", date: "2026-08-04", changes: [
     { en: "The top bar is decluttered: logged in it shows only FOUR icons (messages, notifications, account, menu) — Discord, theme, fullscreen and language left the bar. The ☰ menu shrank from 19 flat entries to a short main menu with submenus: Dashboard, Training (puzzles, courses, weekly post, training goals, repertoires, favorites), Analysis & collection (analysis, games, remembered positions, catalog), Community (friends, tournaments, leaderboards, Discord), plus fullscreen and admin. Theme and language now live in the account menu. The logged-out bar follows the same rule (Puzzles/Analysis links + one menu instead of an icon row). Frontend image only.", de: "Die obere Leiste ist entrümpelt: eingeloggt zeigt sie nur noch VIER Icons (Nachrichten, Benachrichtigungen, Konto, Menü) — Discord, Theme, Vollbild und Sprache sind aus der Leiste verschwunden. Das ☰-Menü schrumpft von 19 flachen Einträgen auf ein kurzes Hauptmenü mit Untermenüs: Dashboard, Training (Puzzles, Kurse, Wochenpost, Trainingsziele, Repertoires, Favoriten), Analyse & Sammlung (Analyse, Partien, Gemerkte, Katalog), Community (Freunde, Turniere, Bestenlisten, Discord), dazu Vollbild und Admin. Theme und Sprache liegen jetzt im Konto-Menü. Die ausgeloggte Leiste folgt derselben Regel (Puzzles/Analyse-Links + ein Menü statt Icon-Reihe). Nur Frontend-Image." },
   ] },
