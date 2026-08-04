@@ -38,14 +38,18 @@ interface TileDef {
   buttons: TileButton[];
 }
 
-/** Kuratierter Standard: diese Kacheln sind anfänglich sichtbar — in genau dieser Reihenfolge. */
+/** Kuratierter Standard (UI-Welle 3): nur der Trainings-Kern ist anfänglich sichtbar —
+ *  Puzzles, Wochenpost, angepinnte Kurse, Kurse, Trainingsziele. Alles andere (auch
+ *  Repertoires/Bestenlisten) ist über „Anpassen" zuschaltbar; wer schon personalisiert
+ *  hat, behält seinen gespeicherten Stand. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'weekly', 'repertoires', 'pinnedCourses', 'courses', 'trainingGoals', 'leaderboards',
+  'puzzles', 'weekly', 'pinnedCourses', 'courses', 'trainingGoals',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
 const DEFAULT_ORDER = [
   ...DEFAULT_VISIBLE,
+  'repertoires', 'leaderboards',
   'activityTimer', 'favorites', 'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
 ];
 /** Im Standard ausgeblendete Kacheln (alles außer DEFAULT_VISIBLE). */

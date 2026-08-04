@@ -163,7 +163,9 @@ describe('DashboardComponent tiles', () => {
   it('shows the curated default tiles in order (puzzles first; non-default tiles hidden)', () => {
     const { component } = setup();
     const ids = component.visibleTiles.map(t => t.id);
-    expect(ids).toEqual(['puzzles', 'weekly', 'repertoires', 'courses', 'trainingGoals', 'leaderboards']);
+    expect(ids).toEqual(['puzzles', 'weekly', 'courses', 'trainingGoals']);
+    expect(ids).not.toContain('repertoires');  // seit UI-Welle 3 Standard-aus (über „Anpassen" zuschaltbar)
+    expect(ids).not.toContain('leaderboards');
     expect(ids).not.toContain('messages');    // im Standard ausgeblendet
     expect(ids).not.toContain('tournaments');  // im Standard ausgeblendet
   });
@@ -234,7 +236,7 @@ describe('DashboardComponent tiles', () => {
     component.toggle(puzzles);
     component.drop({ previousIndex: 0, currentIndex: 3 } as any);
     component.applyDefault();
-    expect(component.visibleTiles.map(t => t.id)).toEqual(['puzzles', 'weekly', 'repertoires', 'courses', 'trainingGoals', 'leaderboards']);
+    expect(component.visibleTiles.map(t => t.id)).toEqual(['puzzles', 'weekly', 'courses', 'trainingGoals']);
     expect(component.isEnabled(puzzles)).toBeTrue();
     const saved = JSON.parse(localStorage.getItem('rookhub_dashboard_layout_v2')!);
     expect(saved.order[0]).toBe('puzzles');

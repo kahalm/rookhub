@@ -1,4 +1,4 @@
-    .endless-page { padding: 1rem; max-width: min(1400px, 96vw); margin: 0 auto; }
+    .endless-page { padding: 1rem; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
 
     .history-loading { display: flex; justify-content: center; padding: 4rem 0; }
 

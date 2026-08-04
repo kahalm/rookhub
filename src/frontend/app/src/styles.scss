@@ -176,6 +176,11 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   main { margin: 0 !important; padding: 0 !important; }
 }
 
+/* UI-Welle 3: EINE Seitenbreite für alle Inhaltsseiten (statt page-individueller 1400px/96vw-
+   Werte). Seiten binden ihren Container an var(--page-max-width) — zentriert, ruhige Ränder
+   statt randloser Fläche mit toter Info-Spalte (gemessen 1440x900). */
+:root { --page-max-width: 1240px; }
+
 /* Hilfe-Icon-Tooltips (HelpHintComponent): mehrzeilige Erklärtexte lesbar halten. */
 .hh-tooltip .mdc-tooltip__surface {
   white-space: pre-line;

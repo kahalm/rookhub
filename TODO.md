@@ -156,7 +156,7 @@ Read-only-Review je Repo (rookhub-API/-Frontend, crawler, piratechess, schach-bo
 ### INFO / accepted-by-design (bewusst)
 - gluetun-Calls (crawler+piratechess) senden kein X-API-Key (Port unexponiert; Aktivierung liegt im Deploy-Stack — piratechess-Code sendet den Key bereits). `/api/health/ip` (crawler) jetzt key-gated ✓. Body→ES-Logging entfernt ✓. curl-Arg-Injection (piratechess) via ArgumentList+`IsValidBid` geschlossen ✓. RBAC: `UsersManage`/`RolesManage`/`ChessableAdmin` sind faktisch admin-nah (Machtkonzentration). `EncryptionService` behält Legacy-AES-CBC-Decrypt (neue Writes AES-GCM). RepCheck-host_permissions `https://*/*` breit, aber Proxy origin-locked + `sender.id`-geprüft + kein `externally_connectable` → nicht von Seiten aus nutzbar. Frontend-CSP solide (`script-src 'self' 'wasm-unsafe-eval'`); optional `frame-ancestors 'none'`/`base-uri 'self'`/`form-action 'self'` ergänzen. `SanitizeLikeInput` escaped kein `\` (nur Korrektheit, kein SQLi). `RememberedPositions.SourceUrl` ohne Scheme-Check gespeichert (kein SSRF; nur relevant, falls je als href gerendert).
 
-## UI-Review 2026-07-26 (Überladung) — Welle 2 + 3 offen
+## UI-Review 2026-07-26 (Überladung) — ABGESCHLOSSEN (Welle 1 v0.317.3, Welle 2 v0.318.0+v0.334.0, Welle 3 v0.335.0)
 Praktisches Oberflächen-Review (Seiten headless gerendert **und vermessen**, Prod anonym + Dev eingeloggt,
 1440×900 und 390×844; Screenshots waren einmalig im Session-Scratchpad). Befund: „überladen" trifft nicht
 überall zu — `/analysis` ist gut sortiert, die Kurs-Karte nutzt bereits Primär-Aktion + Overflow-Menü. Die
@@ -192,16 +192,20 @@ leere Karte auf /analysis).
   Rest der App hatte nach v0.318.0 keine Absatz-Stapel mehr (per Regex über alle Templates geprüft).
   Bei künftigen Karten: HelpHintComponent statt `<p class="muted">`-Absätzen verwenden.
 
-**Welle 3 — strukturell:**
-- [ ] **Globaler Seiten-Container**: `max-width: 1200–1280px`, zentriert, einheitliches Padding; Brett
-  skaliert (`min(72vh, 100%)`) statt fixer 720 px. Heute klebt das Brett bei x=30 am linken Rand und unter
-  der halbleeren Info-Spalte stehen ~450 px tote Fläche (1440×900 gemessen).
-- [ ] **Dashboard-Default kuratieren**: 16 mögliche Kacheln (`dashboard.component.ts`), standardmäßig 4–6
-  (Puzzles, Kurse, Trainingsziele, Wochenpost), Rest opt-in über „Anpassen" (die Personalisierung gibt es
-  schon — nur der Default ist maximal).
-- [ ] **Designregel festschreiben** (in `CLAUDE.md`, analog „Puzzle-Modi konsistent halten"): pro Screen
-  genau EINE primäre Aktion, höchstens drei sekundäre sichtbar, alles Weitere ins ⋮-Menü. Ohne Regel
-  wächst die Dichte mit jedem Feature zurück.
+**Welle 3 — ERLEDIGT (v0.335.0):**
+- [x] **Globaler Seiten-Container** → **erledigt v0.335.0**: War organisch schon fast da (alle Seiten
+  haben inzwischen eigene `max-width`-Container, das Brett skaliert seit den Vollbild-Arbeiten via
+  `min(60vw, 820px, 100vh-180px)`). Rest vereinheitlicht: globale CSS-Variable `--page-max-width`
+  (1240px, `styles.scss`); die drei zuvor randlosen Brett-Seiten (Standard/Buch/Endless, vorher
+  `min(1400px, 96vw)` ≈ randlos bei 1440px) binden daran. Admin bleibt bewusst 1400px (Tabellen).
+- [x] **Dashboard-Default kuratieren** → **erledigt v0.335.0**: `DEFAULT_VISIBLE` auf den
+  Trainings-Kern reduziert (puzzles, weekly, pinnedCourses, courses, trainingGoals — 4 Kacheln +
+  bedingte Pinned-Kachel); repertoires + leaderboards jetzt Standard-aus. Gespeicherte
+  Personalisierungen bleiben unangetastet (Load-Pfad respektiert `rookhub_dashboard_layout_v2`).
+- [x] **Designregel festschreiben** → **erledigt v0.335.0**: „UI-Dichte-Regel" in `CLAUDE.md`
+  (Wichtige Konventionen, vor „Puzzle-Modi konsistent halten"): 1 primäre Aktion, ≤3 sekundäre,
+  Rest ⋮; HelpHint statt Absatz-Stapeln; Container an `--page-max-width`; neue Dashboard-Kacheln
+  nicht in `DEFAULT_VISIBLE`.
 
 ## Code-Review 2026-07-26 (rookhub Frontend, `src/frontend`)
 Review des Angular-Frontends (207 TS-Dateien / ~35.400 Zeilen ohne Specs): Lifecycle/RxJS-Teardown, Robustheit gegen Server-/Storage-Daten, Security/XSS, Performance + Bundle, Offline-/localStorage-Schicht, i18n/A11y, Struktur. **Stand: nur dokumentiert, nichts davon gefixt** (Basis v0.317.2, 1285 FE-Tests grün, Prod-Build sauber).

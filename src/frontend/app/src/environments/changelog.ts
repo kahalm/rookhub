@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.334.0';
+export const APP_VERSION = '0.335.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.335.0", date: "2026-08-04", changes: [
+    { en: "UI wave 3 (structural declutter, completes the 2026-07-26 UI review): the DASHBOARD default is curated — new/unpersonalized accounts see only the training core (puzzles, weekly post, pinned courses, courses, training goals); repertoires, leaderboards and everything else stay one click away behind 'Customize'. Anyone who already personalized their dashboard keeps their layout untouched.", de: "UI-Welle 3 (strukturelles Entrümpeln, schließt das UI-Review vom 26.07. ab): das DASHBOARD-Standardlayout ist kuratiert — neue/unpersonalisierte Konten sehen nur den Trainings-Kern (Puzzles, Wochenpost, angepinnte Kurse, Kurse, Trainingsziele); Repertoires, Bestenlisten und alles Weitere liegen einen Klick entfernt hinter „Anpassen“. Wer sein Dashboard schon personalisiert hat, behält sein Layout unverändert." },
+    { en: "One page width for the whole app: a global container width (1240px, centered) replaces the per-page values; the three board pages (standard, course/book, endless) previously ran nearly borderless at 1440px wide screens, leaving a dead half-empty info column. A design rule in the docs locks the density rules in (one primary action per screen, help texts behind ? icons, new dashboard tiles opt-in) so the UI does not silt back up with every feature. Frontend image only.", de: "Eine Seitenbreite für die ganze App: eine globale Container-Breite (1240px, zentriert) ersetzt die Werte je Seite; die drei Brett-Seiten (Standard, Kurs/Buch, Endlos) liefen auf 1440px-Bildschirmen bisher fast randlos mit halbleerer Info-Spalte. Eine Designregel in der Doku schreibt die Dichte-Regeln fest (eine primäre Aktion je Screen, Hilfetexte hinter ?-Icons, neue Dashboard-Kacheln opt-in), damit die Oberfläche nicht mit jedem Feature wieder zuwächst. Nur Frontend-Image." },
+  ] },
   { version: "0.334.0", date: "2026-08-04", changes: [
     { en: "UI wave 2 completed — ONE action row in all three puzzle solvers (standard, endless, course/book/daily) instead of stacked cards: visible stay rating + topic toggle, share and the contextual buttons after solving (send to a friend, view full game); everything rare (view/love last puzzle, endless mode, settings) moved into a ⋮ menu, and the gear left the status card. On a phone this removes two to three full cards below the board. Frontend image only.", de: "UI-Welle 2 abgeschlossen — EINE Aktionszeile in allen drei Puzzle-Solvern (Standard, Endlos, Kurs/Buch/Daily) statt gestapelter Karten: sichtbar bleiben Wertung + Themen-Toggle, Teilen und die kontextuellen Knöpfe nach dem Lösen (an Freund schicken, ganze Partie); alles Seltene (letztes Puzzle ansehen/lieben, Endlos-Modus, Einstellungen) liegt jetzt im ⋮-Menü, das Zahnrad ist aus der Status-Karte verschwunden. Auf dem Handy fallen dadurch zwei bis drei ganze Karten unter dem Brett weg. Nur Frontend-Image." },
     { en: "Help texts tidied: the explanation paragraphs on the training-goals page (goal card, offline activities) sit behind a small ? icon — hover shows them, a click/tap toggles them. At most one sentence of prose remains visible per card.", de: "Hilfetexte entrümpelt: die Erklär-Absätze auf der Trainingsziele-Seite (Ziel-Karte, Offline-Aktivitäten) liegen hinter einem kleinen ?-Icon — Hover zeigt sie, Klick/Tipp schaltet sie um. Pro Karte bleibt höchstens ein Satz Fließtext sichtbar." },

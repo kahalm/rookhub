@@ -1,4 +1,4 @@
-    .puzzle-page { padding: 1rem; max-width: min(1400px, 96vw); margin: 0 auto; }
+    .puzzle-page { padding: 1rem; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
     .puzzle-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
     /* Brett wächst bis knapp Viewport-Höhe (Chessable-artig) — chess-board's aspect-ratio 1/1
      * hält es quadratisch. `min(…, 60vw, …)` sorgt außerdem dafür, dass genug Platz für die
