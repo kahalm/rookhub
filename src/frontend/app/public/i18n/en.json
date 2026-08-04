@@ -207,7 +207,10 @@
     "chessable": "Chessable",
     "messages": "Messages",
     "leaderboards": "Leaderboards",
-    "remembered": "Remembered"
+    "remembered": "Remembered",
+    "groupTraining": "Training",
+    "groupLibrary": "Analysis & collection",
+    "groupCommunity": "Community"
   },
   "app": {
     "changelogTitle": "Changelog",

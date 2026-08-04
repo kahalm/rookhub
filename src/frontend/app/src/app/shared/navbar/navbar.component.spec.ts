@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { NavbarComponent } from './navbar.component';
 import { AuthService } from '../../core/auth.service';
@@ -82,6 +84,54 @@ describe('NavbarComponent', () => {
     nav.openNotification(n);
     expect(markSeen).toHaveBeenCalledWith(1);
     expect(nav.notifications.map(x => x.id)).toEqual([2]); // geklickte verschwindet, Rest bleibt
+  });
+});
+
+describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
+  function render(opts: { loggedIn?: boolean; keys?: string[] } = {}) {
+    TestBed.configureTestingModule({
+      imports: [NavbarComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {
+          currentUser$: of(opts.loggedIn ? { username: 'u' } : null),
+          isLoggedIn: !!opts.loggedIn, isAdmin: false, logout: () => {},
+        } },
+        { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
+        { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
+        { provide: MenuService, useValue: { visible$: of(new Set<string>(opts.keys ?? [])) } },
+        { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
+        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
+        { provide: LocaleService, useValue: { languages: [], current: 'en', use: () => {} } },
+        { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
+        provideRouter([]),
+      ],
+    });
+    const fixture = TestBed.createComponent(NavbarComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('eingeloggt zeigt die Leiste genau 4 Icon-Buttons (Mail, Glocke, Konto, Menü)', () => {
+    const fixture = render({ loggedIn: true, keys: ['dashboard', 'puzzles', 'analysis'] });
+    const icons = (fixture.nativeElement as HTMLElement)
+      .querySelectorAll('mat-toolbar button[mat-icon-button], mat-toolbar a[mat-icon-button]');
+    expect(icons.length).toBe(4);   // Discord/Theme/Vollbild/Sprache liegen jetzt in den Menüs
+  });
+
+  it('Kategorie-Untermenüs erscheinen nur mit sichtbarem Inhalt', () => {
+    const fixture = render({ loggedIn: true, keys: ['puzzles'] });
+    const c = fixture.componentInstance;
+    expect(c.anyTraining).toBeTrue();     // puzzles sichtbar
+    expect(c.anyLibrary).toBeFalse();     // nichts aus Analyse & Sammlung freigegeben
+  });
+
+  it('ausgeloggt: nur Puzzles/Analyse + ☰ + Login/Registrieren in der Leiste', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles', 'analysis', 'help'] });
+    const el: HTMLElement = fixture.nativeElement;
+    const iconBtns = el.querySelectorAll('mat-toolbar button[mat-icon-button], mat-toolbar a[mat-icon-button]');
+    expect(iconBtns.length).toBe(1);      // nur der ☰-Knopf — keine Icon-Reihe mehr
   });
 });
 

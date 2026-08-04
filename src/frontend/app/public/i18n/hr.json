@@ -207,7 +207,10 @@
     "chessable": "Chessable",
     "leaderboards": "Ljestvice",
     "messages": "Poruke",
-    "remembered": "Zapamćeno"
+    "remembered": "Zapamćeno",
+    "groupTraining": "Trening",
+    "groupLibrary": "Analiza i zbirka",
+    "groupCommunity": "Zajednica"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",

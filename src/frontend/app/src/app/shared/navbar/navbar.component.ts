@@ -35,73 +35,8 @@ import {
       <span class="logo" routerLink="/dashboard">RookHub</span>
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
-        <div class="nav-links">
-          @if (can('dashboard')) { <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
-          @if (can('repertoires')) { <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
-          @if (can('tournaments')) { <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('friends')) { <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
-          @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
-          @if (can('favorites')) { <button mat-button routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
-          @if (can('training-goals')) { <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
-          @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
-          @if (can('games')) { <button mat-button routerLink="/games">{{ 'nav.games' | translate }}</button> }
-          @if (can('remembered')) { <button mat-button routerLink="/remembered">{{ 'nav.remembered' | translate }}</button> }
-          @if (can('weekly')) { <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
-          @if (showCourses && can('courses')) {
-            <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
-          }
-          @if (showCatalog && can('catalog')) {
-            <button mat-button routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
-          }
-          @if (can('leaderboards')) { <button mat-button routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
-          @if (auth.isAdmin) {
-            <button mat-button routerLink="/admin">{{ 'nav.admin' | translate }}</button>
-          }
-        </div>
-        <button mat-icon-button class="mobile-menu-btn" [matMenuTriggerFor]="navMenu" [attr.aria-label]="'nav.menu' | translate">
-          <mat-icon>menu</mat-icon>
-        </button>
-        <mat-menu #navMenu="matMenu">
-          @if (can('dashboard')) { <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
-          @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
-          @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
-          @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
-          @if (can('favorites')) { <button mat-menu-item routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
-          @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
-          @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
-          @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
-          @if (can('remembered')) { <button mat-menu-item routerLink="/remembered">{{ 'nav.remembered' | translate }}</button> }
-          @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
-          @if (showCourses && can('courses')) {
-            <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
-          }
-          @if (showCatalog && can('catalog')) {
-            <button mat-menu-item routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
-          }
-          @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
-          @if (auth.isAdmin) {
-            <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
-          }
-          <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
-            <mat-icon svgIcon="discord"></mat-icon>
-            <span>{{ 'nav.discord' | translate }}</span>
-          </a>
-          <button mat-menu-item (click)="theme.toggle()">
-            <mat-icon>{{ themeIcon }}</mat-icon>
-            <span>{{ themeTooltip }}</span>
-          </button>
-          @if (fsSupported) {
-            <button mat-menu-item (click)="toggleAppFullscreen()">
-              <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-              <span>{{ fsLabel }}</span>
-            </button>
-          }
-          <button mat-menu-item [matMenuTriggerFor]="langMenu">
-            <mat-icon>language</mat-icon>
-            <span>{{ 'nav.language' | translate }}</span>
-          </button>
-        </mat-menu>
+        <!-- UI-Entrümpelung Navbar: nur noch 4 Icons (Mail, Glocke, Konto, Menü).
+             Discord/Vollbild liegen im ☰-Menü, Theme/Sprache im Konto-Menü. -->
         <button mat-icon-button routerLink="/messages" class="msg-mail" [class.has-unseen]="messagesUnread > 0"
                 [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
                 [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
@@ -141,25 +76,71 @@ import {
             <span>{{ 'notifications.viewAll' | translate }}</span>
           </button>
         </mat-menu>
-        <a mat-icon-button [href]="discordUrl" target="_blank" rel="noopener noreferrer"
-           class="discord-link nav-extra" [matTooltip]="'nav.discord' | translate" [attr.aria-label]="'nav.discord' | translate">
-          <mat-icon svgIcon="discord"></mat-icon>
-        </a>
-        <button mat-icon-button class="nav-extra" (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
-          <mat-icon>{{ themeIcon }}</mat-icon>
-        </button>
-        @if (fsSupported) {
-          <button mat-icon-button class="nav-extra" (click)="toggleAppFullscreen()"
-                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
-            <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-          </button>
-        }
-        <button mat-icon-button class="nav-extra" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
-          <mat-icon>language</mat-icon>
-        </button>
         <button mat-icon-button [matMenuTriggerFor]="userMenu" [attr.aria-label]="'nav.account' | translate">
           <mat-icon>account_circle</mat-icon>
         </button>
+        <button mat-icon-button [matMenuTriggerFor]="navMenu" [attr.aria-label]="'nav.menu' | translate">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <!-- ☰: kurzes Hauptmenü mit Untermenüs je Kategorie statt 19 flacher Einträge. -->
+        <mat-menu #navMenu="matMenu">
+          @if (can('dashboard')) {
+            <button mat-menu-item routerLink="/dashboard">
+              <mat-icon>dashboard</mat-icon><span>{{ 'nav.dashboard' | translate }}</span>
+            </button>
+          }
+          @if (anyTraining) {
+            <button mat-menu-item [matMenuTriggerFor]="trainingMenu">
+              <mat-icon>fitness_center</mat-icon><span>{{ 'nav.groupTraining' | translate }}</span>
+            </button>
+          }
+          @if (anyLibrary) {
+            <button mat-menu-item [matMenuTriggerFor]="libraryMenu">
+              <mat-icon>collections_bookmark</mat-icon><span>{{ 'nav.groupLibrary' | translate }}</span>
+            </button>
+          }
+          <button mat-menu-item [matMenuTriggerFor]="communityMenu">
+            <mat-icon>groups</mat-icon><span>{{ 'nav.groupCommunity' | translate }}</span>
+          </button>
+          @if (fsSupported) {
+            <button mat-menu-item (click)="toggleAppFullscreen()">
+              <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              <span>{{ fsLabel }}</span>
+            </button>
+          }
+          @if (auth.isAdmin) {
+            <button mat-menu-item routerLink="/admin">
+              <mat-icon>admin_panel_settings</mat-icon><span>{{ 'nav.admin' | translate }}</span>
+            </button>
+          }
+        </mat-menu>
+        <mat-menu #trainingMenu="matMenu">
+          @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+          @if (showCourses && can('courses')) {
+            <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
+          }
+          @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
+          @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
+          @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
+          @if (can('favorites')) { <button mat-menu-item routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
+        </mat-menu>
+        <mat-menu #libraryMenu="matMenu">
+          @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
+          @if (can('remembered')) { <button mat-menu-item routerLink="/remembered">{{ 'nav.remembered' | translate }}</button> }
+          @if (showCatalog && can('catalog')) {
+            <button mat-menu-item routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
+          }
+        </mat-menu>
+        <mat-menu #communityMenu="matMenu">
+          @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
+          @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
+          @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
+          <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
+            <mat-icon svgIcon="discord"></mat-icon>
+            <span>{{ 'nav.discord' | translate }}</span>
+          </a>
+        </mat-menu>
         <mat-menu #userMenu="matMenu">
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
           @if (can('stats')) { <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button> }
@@ -167,40 +148,24 @@ import {
           @if (can('chessable')) { <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button> }
           @if (can('install')) { <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
+          <button mat-menu-item (click)="theme.toggle()">
+            <mat-icon>{{ themeIcon }}</mat-icon>
+            <span>{{ themeTooltip }}</span>
+          </button>
+          <button mat-menu-item [matMenuTriggerFor]="langMenu">
+            <mat-icon>language</mat-icon>
+            <span>{{ 'nav.language' | translate }}</span>
+          </button>
           <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>
       } @else {
-        <!-- Ausgeloggt: dieselben Einträge, aber auf schmalen Schirmen gebündelt im Kompakt-Menü
-             (.nav-anon wird ≤768px ausgeblendet) — sonst lief die Toolbar über die Viewport-Breite
-             hinaus und die GANZE Seite scrollte horizontal (Teilen-Links/Tagespuzzle auf dem Handy). -->
+        <!-- Ausgeloggt (entrümpelt wie die eingeloggte Leiste): nur Puzzles/Analyse als
+             Text-Links (≤768px im ☰), alles Sekundäre (Hilfe/Info/Discord/Theme/Vollbild/
+             Sprache) liegt IMMER im ☰-Menü statt als Icon-Reihe in der Leiste. -->
         @if (can('puzzles')) { <button mat-button class="nav-anon" routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
         @if (can('analysis')) { <button mat-button class="nav-anon" routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
-        @if (can('help')) {
-        <button mat-icon-button class="nav-anon" routerLink="/help" [matTooltip]="'nav.help' | translate" [attr.aria-label]="'nav.help' | translate">
-          <mat-icon>help_outline</mat-icon>
-        </button>
-        }
-        <button mat-icon-button class="nav-anon" (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
-          <mat-icon>info_outline</mat-icon>
-        </button>
-        <a mat-icon-button [href]="discordUrl" target="_blank" rel="noopener noreferrer"
-           class="discord-link nav-anon" [matTooltip]="'nav.discord' | translate" [attr.aria-label]="'nav.discord' | translate">
-          <mat-icon svgIcon="discord"></mat-icon>
-        </a>
-        <button mat-icon-button class="nav-anon" (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
-          <mat-icon>{{ themeIcon }}</mat-icon>
-        </button>
-        @if (fsSupported) {
-          <button mat-icon-button class="nav-anon" (click)="toggleAppFullscreen()"
-                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
-            <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-          </button>
-        }
-        <button mat-icon-button class="nav-anon" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
-          <mat-icon>language</mat-icon>
-        </button>
-        <button mat-icon-button class="anon-menu-btn" [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
+        <button mat-icon-button [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
         <mat-menu #anonMenu="matMenu">
@@ -247,13 +212,6 @@ import {
   styles: [`
     .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; }
     .spacer { flex: 1 1 auto; }
-    /* Die Navigation läuft immer über das Hamburger-Menü — auf ALLEN Auflösungen, nicht nur
-       mobil. Bei den vielen Menüpunkten liefe die Toolbar sonst auch auf mittleren/großen
-       Bildschirmen über. Die horizontalen Text-Links (.nav-links) entfallen daher generell. */
-    .nav-links { display: none; }
-    .mobile-menu-btn { display: inline-flex; }
-    /* Ausgeloggt: Einzel-Buttons breit, Kompakt-Menü nur schmal (Umschaltung unten im @media). */
-    .anon-menu-btn { display: none; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
@@ -281,15 +239,9 @@ import {
       .notif-bell.has-unseen ::ng-deep .mat-badge-content { animation: none; }
     }
     @media (max-width: 768px) {
-      /* Sekundäraktionen (Discord/Theme/Sprache) wandern auf Mobil ins Hamburger-Menü,
-         damit die Toolbar nicht überläuft und das Profil-Icon nicht aus dem Bild geschoben wird.
-         (Die Haupt-Navigation liegt ohnehin auf allen Auflösungen im Hamburger-Menü.) */
-      .nav-extra { display: none; }
-      /* Dasselbe für die AUSGELOGGTE Toolbar: dort gab es bisher gar kein Menü, alle 9 Einträge
-         standen nebeneinander → 590px Inhalt bei 390px Viewport, die ganze Seite scrollte
-         horizontal. Jetzt: Einzel-Buttons aus, ein Menü-Button rein; Login/Register bleiben. */
+      /* Ausgeloggte Text-Links (Puzzles/Analyse) wandern auf schmalen Schirmen ins ☰-Menü —
+         sonst läuft die Toolbar über die Viewport-Breite und die ganze Seite scrollt horizontal. */
       .nav-anon { display: none; }
-      .anon-menu-btn { display: inline-flex; }
     }
   `]
 })
@@ -304,6 +256,17 @@ export class NavbarComponent implements OnInit {
   /** Admin-konfigurierte Sichtbarkeit der Menüeinträge (Snapshot für synchrones Binding). */
   visible = new Set<string>();
   can(key: string): boolean { return this.visible.has(key); }
+
+  /** Kategorie-Untermenüs nur zeigen, wenn mindestens ein Eintrag darin sichtbar ist.
+   *  (Community braucht keinen Getter — der Discord-Link ist immer da.) */
+  get anyTraining(): boolean {
+    return this.can('puzzles') || this.can('weekly') || this.can('training-goals')
+      || this.can('repertoires') || this.can('favorites') || (this.showCourses && this.can('courses'));
+  }
+  get anyLibrary(): boolean {
+    return this.can('analysis') || this.can('games') || this.can('remembered')
+      || (this.showCatalog && this.can('catalog'));
+  }
 
   /** Glocken-Badge: Anzahl ungelesener In-App-Benachrichtigungen. */
   notifCount = 0;
