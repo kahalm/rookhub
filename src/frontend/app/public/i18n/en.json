@@ -590,7 +590,7 @@
     },
     "privacy": {
       "title": "Privacy Policy",
-      "updated": "Last updated: 3 June 2026",
+      "updated": "Last updated: 7 August 2026",
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
       "controllerTitle": "Controller",
       "controller": "The controller for data processing is the operator named in the imprint",
@@ -606,7 +606,7 @@
       "thirdIntro": "Data is not sold. Depending on your use, the following services are involved:",
       "thirdDiscord": "Discord: only on voluntary account linking (Discord ID/name) for display in the RookHub Discord bot.",
       "thirdChessresults": "chess-results.com: tournament data is fetched server-side when you set a ChessResults ID or load tournaments.",
-      "thirdChesssites": "Chess.com / Lichess: only the usernames you voluntarily enter; no automatic data transfer.",
+      "thirdChesssites": "Chess.com / Lichess: if you store a username for these platforms in your profile, our server queries their public game APIs automatically — in the background every 6 hours by default while a weekly “games” goal is active for you, and whenever you trigger a manual sync in the training goals. Your username on that platform is transmitted to it; chess.com is operated by a US provider (transfer to a third country). We only store the number of your rapid/classical games per day and the time of the most recently fetched game — no game moves. Removing the username in your profile stops these queries.",
       "thirdLogging": "Elasticsearch/Kibana: self-hosted logging/monitoring on our infrastructure.",
       "thirdHosting": "Hosting: operated on our own server infrastructure with a TLS reverse proxy.",
       "storageTitle": "Local storage (cookies/storage)",

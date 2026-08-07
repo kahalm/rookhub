@@ -59,7 +59,7 @@ public class EndlessProgressService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException) when (isNew)
+        catch (DbUpdateException ex) when (isNew && AuthService.IsUniqueViolation(ex))
         {
             // Race: ein paralleler Request hat die Zeile zwischen Read und Insert
             // angelegt (Unique-Index auf UserId). Statt 500/Lost-Update die nun
@@ -114,7 +114,7 @@ public class EndlessProgressService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException) when (isNew)
+        catch (DbUpdateException ex) when (isNew && AuthService.IsUniqueViolation(ex))
         {
             // Race auf dem AnonymousSessionId-Insert: nun vorhandene Zeile laden
             // und das Update darauf anwenden (statt 500/Lost-Update).

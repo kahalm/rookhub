@@ -136,6 +136,20 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     const iconBtns = el.querySelectorAll('mat-toolbar button[mat-icon-button], mat-toolbar a[mat-icon-button]');
     expect(iconBtns.length).toBe(2);      // Vollbild + ☰ — keine Icon-Reihe mehr
   });
+
+  it('ausgeloggt: das ☰-Menü bietet den Theme-Umschalter (Anonyme haben keine Profil-Theme-Karte)', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles'] });
+    const el: HTMLElement = fixture.nativeElement;
+    // aria-label ist der rohe Key, weil im Test keine Übersetzungen geladen sind.
+    const trigger = el.querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.cdk-overlay-container button'));
+    // preference 'system' → brightness_auto (siehe ThemeService-Mock oben)
+    expect(items.some(b => b.textContent?.includes('brightness_auto'))).toBeTrue();
+    trigger.click();
+    fixture.detectChanges();
+  });
 });
 
 describe('NavbarComponent App-Vollbild', () => {

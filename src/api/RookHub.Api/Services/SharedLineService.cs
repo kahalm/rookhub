@@ -88,7 +88,7 @@ public class SharedLineService
         {
             await _db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
         {
             // Race: paralleler Teilen-Klick derselben Linie hat den (Owner,LineHash)-Unique zuerst belegt.
             _db.ChangeTracker.Clear();

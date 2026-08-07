@@ -1,0 +1,15 @@
+# Timer zur rookhub-backup.service (Installation siehe .service.example).
+
+[Unit]
+Description=Taegliches RookHub-DB-Backup
+
+[Timer]
+OnCalendar=*-*-* 03:17:00
+# Faengt Laeufe nach, wenn der Host zur geplanten Zeit aus war.
+Persistent=true
+# Streut den Start, damit Backup und naechtlicher Chessable-Refresh (04:00 UTC)
+# nicht gleichzeitig auf die DB gehen.
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

@@ -184,8 +184,31 @@ public class ChessableTrainedLineService
 
     internal static string LineKeyFromSans(IEnumerable<string> sans)
     {
-        var norm = string.Join(' ', sans.Select(s => s.TrimEnd('+', '#', '!', '?').Trim()));
+        var norm = string.Join(' ', sans.Select(CanonicalSan));
         return "l" + ToBase36(Cyrb53(norm));
+    }
+
+    private static readonly Regex PromotionSanRegex =
+        new(@"^([a-h]?x?[a-h][18])=?([nbrqNBRQ])$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// SAN so schreiben, wie chess.js sie im Frontend liefert — der Schlüssel wird dort aus
+    /// <c>chess.history()</c> gebildet, hier aus ROHEN PGN-Tokens. Ohne Angleichung driften beide
+    /// auseinander, sobald das PGN nicht-kanonisch schreibt: Chessable notiert Umwandlungen ohne
+    /// „=" (<c>c8Q</c>, in Prod in 10 Repertoire-Dateien belegt), chess.js macht daraus <c>c8=Q</c>
+    /// → anderer Hash → „auf Chessable trainiert" findet die Karte nicht und der SR-Fortschritt
+    /// rückt still nicht vor. Dieselbe Normalisierung steht im Frontend in
+    /// <c>repertoire-tree.util.ts#normSan</c>; auf bereits kanonischer Eingabe ist sie ein No-op,
+    /// bestehende gespeicherte Schlüssel bleiben also gültig.
+    /// </summary>
+    internal static string CanonicalSan(string san)
+    {
+        var s = (san ?? string.Empty).TrimEnd('+', '#', '!', '?').Trim();
+        if (s.Length == 0) return s;
+        if (s == "0-0") return "O-O";                 // PGN erlaubt Nullen, chess.js schreibt Buchstaben
+        if (s == "0-0-0") return "O-O-O";
+        var m = PromotionSanRegex.Match(s);
+        return m.Success ? m.Groups[1].Value + "=" + char.ToUpperInvariant(m.Groups[2].Value[0]) : s;
     }
 
     private static ulong Cyrb53(string str, int seed = 0)

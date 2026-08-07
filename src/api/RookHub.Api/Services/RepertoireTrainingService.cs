@@ -158,7 +158,7 @@ public class RepertoireTrainingService
         if (!string.IsNullOrEmpty(req.Label)) card.ExpectedMove = req.Label;
 
         try { await _db.SaveChangesAsync(ct); }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
         {
             // Race auf dem Unique-Index (UserId, RepertoireId, CardKey): parallelen Insert verwerfen,
             // vorhandene Zeile laden und erneut planen (idempotent).

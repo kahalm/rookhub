@@ -28,14 +28,9 @@ public class FavoriteService
         if (exists) return true;
 
         _db.FavoritePuzzles.Add(new FavoritePuzzle { UserId = userId, Source = source, PuzzleId = puzzleId });
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            // Race auf den Unique-Index (UserId, Source, PuzzleId) → bereits favorisiert, alles gut.
-        }
+        // Race auf den Unique-Index (UserId, Source, PuzzleId) → bereits favorisiert, alles gut.
+        // Andere DB-Fehler dürfen NICHT als Erfolg durchgehen (siehe DbIdempotency).
+        await _db.SaveIgnoringUniqueRaceAsync();
         return true;
     }
 

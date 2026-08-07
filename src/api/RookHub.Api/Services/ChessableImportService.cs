@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,38 @@ public class ChessableImportService : ICourseReimporter
     /// weil <see cref="ChessableImportService"/> scoped ist (eine Instanz je Scope/Request).
     /// Die Fast-Lane (netzfrei, eigener serieller Loop) bleibt bewusst ungated und läuft NEBENLÄUFIG.</summary>
     private static readonly SemaphoreSlim _downloadLaneGate = new(1, 1);
+
+    /// <summary>Import-Ids, die in DIESEM Prozess GERADE von einem Treiber bearbeitet werden (Claim bis
+    /// Ende von <see cref="RunAsync"/>), mit Zähler wegen der verschachtelten Registrierung
+    /// Drain→RunAsync. Die DB-Phase allein reicht als „läuft"-Nachweis NICHT: verliert ein Job seinen
+    /// treibenden Task, ohne einen Terminal-Status zu schreiben (z. B. DB-Ausfall → auch das
+    /// Fehler-Update in <see cref="FailAsync"/> scheitert), bleibt er auf "claimed"/"fetching"/"importing"
+    /// stehen und belegt den Lane-Slot dauerhaft — der Drain steht bis zum API-Neustart. Der
+    /// <see cref="ChessableImportWatchdogService"/> vergleicht die DB-Inflight-Menge gegen diese Liste
+    /// und reiht verwaiste Jobs wieder ein. Prozesslokal (eine API-Instanz; nach einem Neustart räumt
+    /// der <see cref="ChessableImportResumeService"/> auf).</summary>
+    private static readonly ConcurrentDictionary<int, int> _localInflight = new();
+
+    /// <summary>Wird dieser Import gerade von einem Treiber DIESES Prozesses bearbeitet?</summary>
+    internal static bool IsDrivenLocally(int importId) => _localInflight.ContainsKey(importId);
+
+    /// <summary>Markiert den Import für die Dauer des <c>using</c> als lokal getrieben.</summary>
+    internal static IDisposable TrackInflight(int importId) => new InflightToken(importId);
+
+    private sealed class InflightToken : IDisposable
+    {
+        private readonly int _id;
+        public InflightToken(int id)
+        {
+            _id = id;
+            _localInflight.AddOrUpdate(id, 1, (_, c) => c + 1);
+        }
+        public void Dispose()
+        {
+            var left = _localInflight.AddOrUpdate(_id, 0, (_, c) => c - 1);
+            if (left <= 0) _localInflight.TryRemove(new KeyValuePair<int, int>(_id, left));
+        }
+    }
 
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
@@ -244,6 +277,12 @@ public class ChessableImportService : ICourseReimporter
 
         foreach (var next in FairOrder(queued))
         {
+            // Schon VOR dem Claim als lokal getrieben markieren: sonst gäbe es ein Fenster, in dem die
+            // DB-Phase bereits "claimed" ist, aber noch kein Treiber registriert — der Watchdog hielte
+            // den Job für verwaist. Wird am Ende jedes Schleifendurchlaufs (auch bei continue/return)
+            // wieder freigegeben.
+            using var tracked = TrackInflight(next.Id);
+
             if (!await TryClaimAsync(next.Id, ct))
                 continue; // jemand anderes war schneller → nächsten wartenden Job probieren
 
@@ -305,6 +344,10 @@ public class ChessableImportService : ICourseReimporter
     /// <summary>Verarbeitet (oder resumt) den Import-Job <paramref name="importId"/>.</summary>
     public async Task RunAsync(int importId, CancellationToken ct = default)
     {
+        // Auch hier (nicht nur im Drain) registrieren, damit ein DIREKTER Aufruf nicht vom Watchdog als
+        // verwaister Inflight-Job zurückgeholt wird. Verschachtelung ist über den Zähler abgedeckt.
+        using var tracked = TrackInflight(importId);
+
         var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
         if (import is null)
         {
@@ -621,6 +664,13 @@ public class ChessableImportService : ICourseReimporter
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync(ct);
 
+        // Dieser Satz ist ab sofort „inflight" (running/importing), wird aber INLINE im Request
+        // getrieben — nicht vom Drain. Ohne Registrierung hielte ihn der Watchdog für eine
+        // verwaiste Zombie-Zeile, setzte ihn nach der Karenz auf „queued" zurück, und die
+        // Fast-Lane liefe parallel zum noch laufenden Direktimport (doppelter Import, im
+        // schlimmsten Fall sogar ein echter Chessable-Abruf für einen reinen Browser-Import).
+        using var tracked = TrackInflight(import.Id);
+
         try
         {
             if (target == "repertoire")
@@ -679,8 +729,36 @@ public class ChessableImportService : ICourseReimporter
     /// Durchklicken derselben Linie (auch sitzungsübergreifend) keine Dubletten erzeugt. Liefert die Zahl der
     /// tatsächlich NEU hinzugefügten Linien + die Ziel-Id.
     /// </summary>
-    public async Task<(int imported, int? resultId, string target)> AppendLiveAsync(
+    public Task<(int imported, int? resultId, string target)> AppendLiveAsync(
         int userId, string bid, string pgn, string courseName, string target, CancellationToken ct = default)
+    {
+        // FALLE: der Live-Append ist ein Read-Modify-Write auf demselben PgnContent (lesen → anhängen →
+        // zurückschreiben) OHNE Concurrency-Token. Klickt der Nutzer schnell durch oder feuert ein
+        // Netz-Retry parallel, lesen beide Requests denselben Stand und der zweite SaveChanges
+        // überschreibt die Linie des ersten — sie verschwindet still. Ebenso fänden zwei parallele
+        // ERSTE Linien beide kein Repertoire und legten zwei chessable-{bid}-Repertoires an. Darum je
+        // (User, bid) serialisieren.
+        return WithAppendLockAsync($"{userId}:{bid}", () => AppendLiveCoreAsync(userId, bid, pgn, courseName, target, ct), ct);
+    }
+
+    /// <summary>Prozessweite Schlösser je (User, bid) für <see cref="AppendLiveAsync"/>. Bewusst nicht
+    /// aufgeräumt: pro durchgeklicktem Kurs genau ein Eintrag (vernachlässigbar), und ein Entfernen
+    /// bräuchte selbst wieder Synchronisation. Prozesslokal — bei mehreren API-Instanzen bräuchte es
+    /// zusätzlich ein DB-seitiges Schloss/Concurrency-Token.</summary>
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _appendGates = new();
+
+    internal static async Task<T> WithAppendLockAsync<T>(string key, Func<Task<T>> body, CancellationToken ct = default)
+    {
+        var gate = _appendGates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        // Mit Token warten: hängt der Body (DB-Hänger im Read-Modify-Write), soll ein abgebrochener
+        // Request nicht unkündbar in der Schlange stehen bleiben.
+        await gate.WaitAsync(ct);
+        try { return await body(); }
+        finally { gate.Release(); }
+    }
+
+    private async Task<(int imported, int? resultId, string target)> AppendLiveCoreAsync(
+        int userId, string bid, string pgn, string courseName, string target, CancellationToken ct)
     {
         target = target == "book" ? "book" : "repertoire";
         var name = Trunc(string.IsNullOrWhiteSpace(courseName) ? $"Chessable {bid}" : courseName, 200);
@@ -982,19 +1060,41 @@ public class ChessableImportService : ICourseReimporter
         // Terminalen Status mit CancellationToken.None festschreiben: scheitert ein Import WEGEN einer
         // (Timeout-)Cancellation, muss er trotzdem als "failed" persistiert werden — sonst bliebe er als
         // Zombie auf "running" haengen und wuerde beim Neustart endlos resumed.
-        await _db.SaveChangesAsync(CancellationToken.None);
+        try
+        {
+            await _db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // FALLE: Ist die DB gerade weg (Ausfall/Timeout), scheitert AUCH dieses Fehler-Update — die
+            // Exception liefe sonst aus RunAsync bis in den Worker und der Import bliebe für immer auf
+            // "fetching"/"importing" stehen, also als Zombie im Lane-Slot (Drain steht bis zum Neustart).
+            // Darum hier schlucken: der Watchdog erkennt den verwaisten Inflight-Job und reiht ihn neu ein.
+            _logger.LogError(ex, "Chessable-Import {Id}: Fehlerstatus konnte nicht gespeichert werden", import.Id);
+            return;
+        }
 
         // Circuit-Breaker: war der Fehlschlag fatal für den Bearer selbst (Account gesperrt/gelöscht
         // bzw. Token tot), den Bearer sperren — danach pausieren weitere Importe sofort, statt mit dem
         // toten Bearer immer wieder fehlzuschlagen (siehe ChessableBearerBreaker). IP-/VPN-Blocks lösen
         // das bewusst NICHT aus.
-        if (ChessableBearerBreaker.IsBearerFatal(error))
-            await _breaker.TripAsync(import.BearerUserId ?? import.UserId, error, CancellationToken.None);
+        // Nachgelagerte Nebenwirkungen dürfen den bereits festgeschriebenen Fehlerstatus nicht mehr
+        // gefährden: eine Exception von hier liefe erneut in den Worker (Fehlalarm im log-watcher),
+        // ohne dass am Import-Satz noch etwas zu retten wäre.
+        try
+        {
+            if (ChessableBearerBreaker.IsBearerFatal(error))
+                await _breaker.TripAsync(import.BearerUserId ?? import.UserId, error, CancellationToken.None);
 
-        // User benachrichtigen: Import fehlgeschlagen.
-        var name = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
-        await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportFailed,
-            new Dictionary<string, string> { ["courseName"] = name }, "/chessable");
+            // User benachrichtigen: Import fehlgeschlagen.
+            var name = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
+            await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportFailed,
+                new Dictionary<string, string> { ["courseName"] = name }, "/chessable");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Chessable-Import {Id}: Nachbereitung des Fehlschlags fehlgeschlagen", import.Id);
+        }
     }
 
     private static string Trunc(string s, int max) => s.Length > max ? s[..max] : s;

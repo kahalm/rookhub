@@ -150,8 +150,11 @@ public class FriendService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
         {
+            // NUR der echte Unique-Index-Race meldet „gibt's schon". FALLE: ohne den Filter wurde
+            // auch ein transienter DB-Fehler (Deadlock/Timeout) als „Anfrage existiert bereits"
+            // gemeldet — der User hielt die Anfrage für gestellt, obwohl ein Retry genügt hätte.
             throw new InvalidOperationException("A friendship or request already exists.");
         }
 

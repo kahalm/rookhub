@@ -10,9 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      # FALLE: Die Projekte targeten net10.0. Ein 9.0.x-Pin baut sie NICHT — dass es
+      # trotzdem lief, lag nur am vorinstallierten SDK des Runner-Images. Beim naechsten
+      # Framework-Bump muss diese Version hier mitwandern (Checkliste in TODO.md).
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - run: dotnet test tests/RookHub.Api.Tests --verbosity normal
 
   test-crawler:
@@ -30,7 +33,7 @@ jobs:
           path: chessresults_crawler
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
       - run: dotnet test tests/ChessResultsCrawler.Tests --verbosity normal
         working-directory: chessresults_crawler
 
@@ -44,6 +47,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: src/frontend/app/package-lock.json
       - run: npm ci
+        working-directory: src/frontend/app
+      # karma.conf sucht ohne CHROME_BIN eine Puppeteer-Cache-Shell, die es auf dem
+      # Runner nicht gibt. Leerer Wert ist unschaedlich (karma faellt auf sein eigenes
+      # Chrome-Lookup zurueck).
+      - name: Chrome fuer Karma ermitteln
+        run: echo "CHROME_BIN=$(command -v google-chrome || command -v chromium-browser || command -v chromium || true)" >> "$GITHUB_ENV"
+      # Der Build faengt nur Compile-Fehler — ohne diesen Schritt liefe kein einziger
+      # Frontend-Spec im Gate, das die Image-Pushes freigibt.
+      - run: npx ng test --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
       - run: npx ng build --configuration=production
         working-directory: src/frontend/app

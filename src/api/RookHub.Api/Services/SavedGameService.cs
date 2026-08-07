@@ -85,7 +85,7 @@ public class SavedGameService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException) when (externalId != null)
+        catch (DbUpdateException ex) when (externalId != null && AuthService.IsUniqueViolation(ex))
         {
             // Race: ein paralleler Save derselben externen Partie hat den Unique-Index zuerst belegt.
             // Idempotent: getrackten Versuch verwerfen und die bereits gespeicherte Partie zurückgeben.

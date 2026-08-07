@@ -108,6 +108,44 @@ public class ProfileControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateProfile_EmailChangeWhileImpersonating_Returns403()
+    {
+        var u = await CreateUserAsync("imp-mail");
+        var before = u.Email;
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.UpdateProfile(new UpdateProfileDto { Email = "angreifer@example.com" });
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+        // Die E-Mail ist der Reset-Anker — sie darf sich NICHT geändert haben.
+        Assert.Equal(before, (await _db.AppUsers.FindAsync(u.Id))!.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WhileImpersonating_StillAllowsNonIdentityFields()
+    {
+        var u = await CreateUserAsync("imp-name");
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.UpdateProfile(new UpdateProfileDto { DisplayName = "Support-Korrektur" });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UnlinkDiscord_WhileImpersonating_Returns403()
+    {
+        var u = await CreateUserAsync("imp-discord");
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.UnlinkDiscord();
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateToken_WhileImpersonating_Returns403()
     {
         var u = await CreateUserAsync("imp-target");

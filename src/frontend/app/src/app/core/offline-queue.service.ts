@@ -17,6 +17,13 @@ interface PendingRequest {
 export const OFFLINE_QUEUE_KEY = 'rookhub_offline_queue';
 
 /**
+ * Abstand zwischen zwei Replays. FALLE: nach einer längeren Offline-Session liegen leicht 40+
+ * Einträge in der Queue; ungebremst hintereinander gefeuert reißen sie das serverseitige
+ * Rate-Limit (100 Req/min pro IP, anonyme Puzzle-Routen 30/min) und der Server antwortet 429.
+ */
+export const OFFLINE_QUEUE_THROTTLE_MS = 300;
+
+/**
  * Merkt sich schreibende Requests (Lösungs-/Versuchs-Aufzeichnungen), die offline nicht
  * rausgehen konnten, im localStorage und spielt sie bei Reconnect (window 'online' bzw.
  * App-Start) erneut über den HttpClient ein. Idempotent gegenüber Mehrfach-Flush: ein Eintrag
@@ -68,10 +75,21 @@ export class OfflineQueueService {
 
   private retryTimer?: ReturnType<typeof setTimeout>;
 
-  /** Einmaligen Backoff-Retry planen (für „online, aber Server gerade 5xx/weg"). */
-  private scheduleRetry(): void {
+  /** Einmaligen Backoff-Retry planen (für „online, aber Server gerade 5xx/weg/drosselt"). */
+  private scheduleRetry(delayMs = 30000): void {
     if (this.retryTimer !== undefined) return;
-    this.retryTimer = setTimeout(() => { this.retryTimer = undefined; this.flush(); }, 30000);
+    this.retryTimer = setTimeout(() => { this.retryTimer = undefined; this.flush(); }, delayMs);
+  }
+
+  /** Wartezeit aus dem `Retry-After`-Header (Sekunden ODER HTTP-Datum) des 429; gedeckelt auf
+   *  1 s–5 min, damit ein kaputter Header den Nachlauf weder verschluckt noch ewig aufschiebt. */
+  private retryAfterMs(e: { headers?: { get(name: string): string | null } }): number {
+    const raw = e?.headers?.get?.('Retry-After');
+    if (!raw) return 30000;
+    const secs = Number(raw);
+    const ms = Number.isFinite(secs) ? secs * 1000 : Date.parse(raw) - Date.now();
+    if (!Number.isFinite(ms) || ms <= 0) return 30000;
+    return Math.min(Math.max(ms, 1000), 300000);
   }
 
   /** Anzahl noch ausstehender Requests. */
@@ -101,21 +119,30 @@ export class OfflineQueueService {
     // Fremd-User-Eintrag: NICHT senden und NICHT entfernen — zum nächsten weitergehen.
     if (!this.eligible(r, currentUserId)) { this.sendNext(q, i + 1, currentUserId); return; }
     this.http.request(r.method, r.url, { body: r.body }).subscribe({
-      next: () => { this.remove(r.id); this.sendNext(q, i + 1, currentUserId); },
-      error: (e: { status?: number }) => {
+      next: () => { this.remove(r.id); this.sendThrottled(q, i + 1, currentUserId); },
+      error: (e: { status?: number; headers?: { get(name: string): string | null } }) => {
         const status = e?.status ?? 0;
-        if (status >= 400 && status < 500) {
+        // FALLE: 429 (Rate-Limit) und 408 sind KEINE dauerhaften Fehler — würden sie wie 4xx
+        // verworfen, löschte ein großer Nachlauf genau die Lösungen, die die Queue schützen soll.
+        const permanent = status >= 400 && status < 500 && status !== 429 && status !== 408;
+        if (permanent) {
           // Dauerhaft fehlerhaft (z.B. Puzzle weg / nicht mehr berechtigt) → verwerfen.
           this.remove(r.id);
-          this.sendNext(q, i + 1, currentUserId);
+          this.sendThrottled(q, i + 1, currentUserId);
         } else {
-          // Netzwerk (0) oder 5xx → Queue stehen lassen + Backoff-Retry planen (sonst bliebe
-          // sie bei durchgehend „online" bis zum nächsten App-Start/online-Event liegen).
+          // Netzwerk (0), 429/408 oder 5xx → Queue stehen lassen + Backoff-Retry planen (sonst
+          // bliebe sie bei durchgehend „online" bis zum nächsten App-Start/online-Event liegen).
           this.flushing = false;
-          this.scheduleRetry();
+          this.scheduleRetry(status === 429 ? this.retryAfterMs(e) : 30000);
         }
       },
     });
+  }
+
+  /** Nächsten Eintrag mit Abstand senden (siehe OFFLINE_QUEUE_THROTTLE_MS). */
+  private sendThrottled(q: PendingRequest[], i: number, currentUserId: number | null): void {
+    if (i >= q.length) { this.flushing = false; return; }
+    setTimeout(() => this.sendNext(q, i, currentUserId), OFFLINE_QUEUE_THROTTLE_MS);
   }
 
   private read(): PendingRequest[] {

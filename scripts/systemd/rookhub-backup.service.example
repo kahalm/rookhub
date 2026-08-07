@@ -1,0 +1,29 @@
+# RookHub DB-Backup — Unit-Vorlage (NICHT installiert, bewusst nur Beispiel).
+#
+# Installation auf dem Deploy-Host:
+#   sudo cp scripts/systemd/rookhub-backup.service.example /etc/systemd/system/rookhub-backup.service
+#   sudo cp scripts/systemd/rookhub-backup.timer.example   /etc/systemd/system/rookhub-backup.timer
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rookhub-backup.timer
+#   systemctl list-timers rookhub-backup.timer      # naechster Lauf
+#   sudo systemctl start rookhub-backup.service     # Testlauf sofort
+#   journalctl -u rookhub-backup.service -n 50      # Ergebnis
+#
+# Pfade unten an die eigene Installation anpassen.
+
+[Unit]
+Description=RookHub MariaDB-Backup (rookhub + chessresults)
+# Ohne laufenden Docker-Daemon kann das Skript nichts dumpen.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/rookhub/scripts/backup-db.sh
+Environment=ENV_FILE=/opt/stacks/rookhub-schach/.env
+Environment=BACKUP_DIR=/var/backups/rookhub
+Environment=RETENTION_DAYS=14
+# Braucht Zugriff auf den Docker-Socket und die .env mit dem Root-Passwort.
+User=root
+Nice=10
+IOSchedulingClass=idle

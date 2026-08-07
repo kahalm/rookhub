@@ -69,6 +69,13 @@ describe('ShareRepertoireDialogComponent', () => {
     expect(component.recipients.length).toBe(0);
   });
 
+  // Template/Logik teilt er sich mit dem Kurs-Dialog — nur der i18n-Namensraum unterscheidet sie.
+  it('uses the repertoire i18n namespace in the shared template', () => {
+    expect(component.tk('title')).toBe('repertoire.share.title');
+    expect((fixture.nativeElement as HTMLElement).querySelector('h2')?.textContent)
+      .toContain('repertoire.share.title');   // ohne geladene Übersetzung liefert die Pipe den Key
+  });
+
   it('closes when loading fails', () => {
     friendsService.getFriends.and.returnValue(throwError(() => new Error('x')));
     const f = TestBed.createComponent(ShareRepertoireDialogComponent);

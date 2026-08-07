@@ -59,7 +59,15 @@ function tokenize(movetext: string): string[] {
 
 /** Normalisiert eine SAN für den Vergleich (entfernt +, #, !, ?). */
 export function normSan(san: string): string {
-  return san.replace(/[+#!?]+$/g, '').trim();
+  const s = san.replace(/[+#!?]+$/g, '').trim();
+  // Auf die chess.js-Schreibweise vereinheitlichen: Chessable-PGNs notieren Umwandlungen ohne „="
+  // (`c8Q`) und Rochaden gelegentlich mit Nullen. Ohne das vergleicht der Trainer rohe Tokens
+  // gegen chess.js-SAN (ein korrekter Umwandlungszug gälte als falsch), und der Linien-Hash
+  // driftet gegen den Server-Spiegel (ChessableTrainedLineService.CanonicalSan).
+  if (s === '0-0') return 'O-O';
+  if (s === '0-0-0') return 'O-O-O';
+  const m = /^([a-h]?x?[a-h][18])=?([nbrqNBRQ])$/.exec(s);
+  return m ? `${m[1]}=${m[2].toUpperCase()}` : s;
 }
 
 /**

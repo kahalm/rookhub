@@ -493,6 +493,32 @@ try
     // demselben NAT teilten einen Bucket. Endpoint-bezogene Limiter funktionieren weiterhin, weil das
     // Routing (von WebApplication automatisch vorangestellt) davor liegt.
     app.UseAuthentication();
+
+    // ===== Scope-Zaun für Personal-Access-Tokens (rkh_…) =====
+    // Ein PAT bekommt im ApiTokenAuthenticationHandler dieselben Identitäts-Claims wie ein
+    // JWT — bis hierher war der `scope`-Claim aber NUR im ExtensionController geprüft. Damit
+    // war ein „extension"-Token faktisch ein Voll-Account-Token: PUT /api/profile ändert die
+    // E-Mail, danach „Passwort vergessen" → Kontoübernahme. Der Zaun steht deshalb zentral:
+    // wer einen scope-Claim mitbringt (= PAT, JWTs haben keinen), darf ausschließlich die
+    // Extension-Fläche. Neue Endpoints sind damit automatisch gesperrt statt automatisch offen.
+    var patAllowedPrefixes = new[] { "/api/extension" };
+    app.Use(async (ctx, next) =>
+    {
+        var scope = ctx.User?.FindFirst("scope")?.Value;
+        if (scope != null &&
+            !patAllowedPrefixes.Any(p => ctx.Request.Path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new
+            {
+                error = "api_token_scope",
+                detail = $"API tokens (scope '{scope}') may only be used on {string.Join(", ", patAllowedPrefixes)}.",
+            });
+            return;
+        }
+        await next();
+    });
+
     app.UseRateLimiter();
 
     // Reichert JEDES Log-Event innerhalb eines Requests mit UserId/UserName/IpAddress an

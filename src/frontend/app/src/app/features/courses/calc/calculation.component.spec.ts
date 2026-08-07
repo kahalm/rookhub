@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { CalculationComponent } from './calculation.component';
 import { CalcPosition } from './calculation.service';
 import { findNode, lines } from './calc-tree.util';
@@ -337,6 +337,124 @@ describe('CalculationComponent Speichern', () => {
     c2.onMove({ orig: 'f3' as never, dest: 'e5' as never });
     c2.flushSave();
     expect(saved.length).toBe(1);
+  });
+
+  it('rettet den Baum der alten Stellung, wenn der Save beim Stellungswechsel scheitert', () => {
+    const saved: { id: number; json: string }[] = [];
+    let fail = true;
+    const { component } = make({
+      saveTree: (id: number, json: string) => {
+        if (fail) return throwError(() => new Error('offline'));
+        saved.push({ id, json });
+        return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // scheitert → Snapshot bleibt an Stellung 7 hängen
+    expect(saved.length).toBe(0);
+
+    fail = false;
+    load(component, position({ id: 8 }));        // Wechsel: `tree` ist jetzt der Baum von Stellung 8
+    component.flushSave();
+
+    expect(saved.length).toBe(1);
+    expect(saved[0].id).toBe(7);                 // der gerettete Baum, nicht die neue Stellung
+    expect(JSON.parse(saved[0].json).nodes.length).toBe(2);
+  });
+
+  it('schickt einen bewusst geleerten Baum nicht doch noch aus der Outbox hoch', () => {
+    // Regression: ein zuvor GESCHEITERTER Save liegt in der Outbox. Nimmt der Nutzer den Zug
+    // danach zurück (Baum leer, nie gespeichert), wurde der alte Stand trotzdem gesendet.
+    const saved: { id: number; json: string }[] = [];
+    let fail = true;
+    const { component } = make({
+      saveTree: (id: number, json: string) => {
+        if (fail) return throwError(() => new Error('offline'));
+        saved.push({ id, json });
+        return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // scheitert → Stand liegt in der Outbox
+    expect(saved.length).toBe(0);
+
+    fail = false;
+    component.setCursor(1);
+    component.deleteFromCursor();                // Zug zurücknehmen → Baum ist wieder leer
+    component.flushSave();
+
+    expect(saved.length).toBe(0);                // nichts hochgeschrieben
+    expect(component.positions[0].hasTree).toBeFalse();
+  });
+
+  it('rollt einen erfolgreich gespeicherten Stand nicht auf einen älteren zurück', () => {
+    // Regression: Save v1 scheitert SPÄT, während v2 längst erfolgreich durch ist — das Requeue
+    // von v1 hätte den Server beim nächsten Flush auf den alten Stand zurückgesetzt.
+    const first = new Subject<{ bookPuzzleId: number; updatedAt: string }>();
+    const saved: { id: number; json: string }[] = [];
+    let call = 0;
+    const { component } = make({
+      saveTree: (id: number, json: string) => {
+        call++;
+        if (call === 1) return first;            // v1 bleibt offen
+        saved.push({ id, json });
+        return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // v1 unterwegs
+    component.startNewLine();
+    component.onMove({ orig: 'd2' as never, dest: 'd4' as never });   // zweite Variante
+    component.flushSave();                       // v2 erfolgreich
+    expect(saved.length).toBe(1);
+
+    first.error(new Error('offline'));           // v1 scheitert nachträglich
+    component.flushSave();                       // darf v1 NICHT nachschicken
+
+    expect(saved.length).toBe(1);
+  });
+
+  it('schreibt eine späte Antwort der alten Stellung nicht in die neue Ansicht', () => {
+    const answer = new Subject<{ bookPuzzleId: number; updatedAt: string }>();
+    const { component } = make({ saveTree: () => answer });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();
+    expect(component.saving).toBeTrue();
+
+    load(component, position({ id: 8 }));        // Wechsel, während der Save noch unterwegs ist
+    expect(component.saving).toBeFalse();
+    answer.next({ bookPuzzleId: 7, updatedAt: '2026-07-28T10:00:00Z' });
+    answer.complete();
+
+    expect(component.saving).toBeFalse();
+    expect(component.savedAt).toBeNull();        // „gespeichert um …" gehörte zu Stellung 7
+  });
+});
+
+describe('CalculationComponent Laden', () => {
+  it('ignoriert die überholte Antwort eines schnell weggeklickten Ladevorgangs', () => {
+    const first = new Subject<CalcPosition>();
+    const second = new Subject<CalcPosition>();
+    const queue = [first, second];
+    const { component } = make({ getPosition: () => queue.shift()! });
+    component.bookId = 1;
+    const loadPosition = (component as unknown as { loadPosition: (id: number) => void }).loadPosition.bind(component);
+
+    loadPosition(7);
+    loadPosition(8);                                        // schnell weitergeklickt
+
+    second.next(position({ id: 8, fen: '8/8/8/4k3/8/8/4K3/8 b - - 0 7' }));
+    second.complete();
+    first.next(position({ id: 7 }));                        // ältere Antwort trifft ZULETZT ein
+    first.complete();
+
+    expect(component.position!.id).toBe(8);
+    expect(component.startFen).toBe('8/8/8/4k3/8/8/4K3/8 b - - 0 7');
+    expect(component.loading).toBeFalse();
   });
 });
 

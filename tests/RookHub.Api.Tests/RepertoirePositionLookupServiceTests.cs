@@ -157,6 +157,70 @@ public class RepertoirePositionLookupServiceTests : IDisposable
         Assert.Equal(-1, line.Ply);
     }
 
+    // ===== [FEN]-Header: Linien, die NICHT in der Grundstellung beginnen =====
+    // piratechess schreibt je Chessable-Linie die Startstellung der Variante als [FEN]-Header.
+    // Wird der ignoriert, ist der erste Zug aus der Grundstellung illegal und die ganze Linie
+    // fehlt still im Index (Prod: ~7.700 solche Linien).
+
+    private const string FenHeaderPgn =
+        "[Event \"Kurs\"]\n[White \"Turmendspiel\"]\n[Black \"Endspiele\"]\n" +
+        "[FEN \"8/8/8/8/8/5k2/4p3/4K2R w K - 0 1\"]\n\n1. Rh3+ Kg2 2. Rh8 *\n";
+
+    [Fact]
+    public async Task Lookup_LineStartingFromFenHeader_IsFound()
+    {
+        var user = await AddUserAsync("f1");
+        await AddRepertoireAsync(user, "Endspiel-Rep", FenHeaderPgn);
+
+        // Stellung nach 1.Rh3+ — nur erreichbar, wenn die [FEN]-Startstellung benutzt wird.
+        var board = ChessBoard.LoadFromFen("8/8/8/8/8/5k2/4p3/4K2R w K - 0 1");
+        board.Move("Rh3+");
+
+        var res = await _svc.LookupAsync(user, board.ToFen(), CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        var line = Assert.Single(rep.Lines);
+        Assert.Equal("Turmendspiel", line.LineName);
+        Assert.Equal("Endspiele", line.Chapter);
+    }
+
+    [Fact]
+    public async Task Lookup_FenHeaderStartPositionItself_IsFound()
+    {
+        var user = await AddUserAsync("f2");
+        await AddRepertoireAsync(user, "Endspiel-Rep", FenHeaderPgn);
+
+        var res = await _svc.LookupAsync(user, "8/8/8/8/8/5k2/4p3/4K2R w K - 0 1", CancellationToken.None);
+
+        Assert.Single(res.Repertoires);
+    }
+
+    [Fact]
+    public async Task Tree_LineStartingFromFenHeader_ReturnsContinuation()
+    {
+        var user = await AddUserAsync("f3");
+        await AddRepertoireAsync(user, "Endspiel-Rep", FenHeaderPgn);
+
+        var res = await _svc.TreeAsync(user, "8/8/8/8/8/5k2/4p3/4K2R w K - 0 1", 0, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        var rh3 = Assert.Single(rep.Moves);
+        Assert.Equal("Rh3", rh3.San);          // Tokenizer strippt das '+'
+    }
+
+    [Fact]
+    public async Task Lookup_UnusableFenHeader_SkipsLineInsteadOfIndexingWrongPositions()
+    {
+        var user = await AddUserAsync("f4");
+        // Kaputte FEN: die Linie darf NICHT ersatzweise aus der Grundstellung gespielt werden.
+        var pgn = "[Event \"Kurs\"]\n[White \"Kaputt\"]\n[Black \"X\"]\n[FEN \"nonsense\"]\n\n1. e4 e5 *\n";
+        await AddRepertoireAsync(user, "Rep", pgn);
+
+        var res = await _svc.LookupAsync(user, FenAfter("e4"), CancellationToken.None);
+
+        Assert.Empty(res.Repertoires);
+    }
+
     // ===== Baummodus =====
 
     [Fact]

@@ -46,8 +46,7 @@ public class FlashcardMarkService
             {
                 UserId = userId, BookId = bookId, BookPuzzleId = bookPuzzleId,
             });
-            try { await _db.SaveChangesAsync(ct); }
-            catch (DbUpdateException) { _db.ChangeTracker.Clear(); }   // Unique-Race → schon markiert
+            await _db.SaveIgnoringUniqueRaceAsync(ct: ct);   // Unique-Race → schon markiert; andere Fehler durchreichen
         }
         else if (!marked && existing is not null)
         {
@@ -86,8 +85,7 @@ public class FlashcardMarkService
             {
                 UserId = userId, RepertoireId = repertoireId, LineKey = lineKey,
             });
-            try { await _db.SaveChangesAsync(ct); }
-            catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
+            await _db.SaveIgnoringUniqueRaceAsync(ct: ct);   // Unique-Race → schon markiert
         }
         else if (!marked && existing is not null)
         {

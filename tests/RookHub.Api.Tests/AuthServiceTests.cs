@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
@@ -363,6 +365,51 @@ public class AuthServiceTests : IDisposable
 
         var result = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "newpass99" });
         Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public void LoginThrottleDelay_GrowsAfterFreeAttempts_AndIsCapped()
+    {
+        // Der Auth-Rate-Limiter bremst nur pro IP — pro KONTO wächst hier die Wartezeit,
+        // damit Raten über IP-Rotation nicht mehr durchgeht. Vertipper (≤5) bleiben ungebremst.
+        Assert.Equal(TimeSpan.Zero, AuthService.LoginThrottleDelay(0));
+        Assert.Equal(TimeSpan.Zero, AuthService.LoginThrottleDelay(5));
+        Assert.Equal(TimeSpan.FromMilliseconds(250), AuthService.LoginThrottleDelay(6));
+        Assert.Equal(TimeSpan.FromMilliseconds(500), AuthService.LoginThrottleDelay(7));
+        Assert.Equal(TimeSpan.FromSeconds(4), AuthService.LoginThrottleDelay(10));
+        Assert.Equal(TimeSpan.FromSeconds(4), AuthService.LoginThrottleDelay(5000));   // gedeckelt
+    }
+
+    [Fact]
+    public async Task Login_FailedAttempts_ThrottleAccount_AndSuccessResetsIt()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = new AuthService(_db, _config, _logger, null, cache);
+        await sut.RegisterAsync(new RegisterDto { Username = "bob", Password = "correct-horse" });
+
+        for (var i = 0; i < 6; i++)
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sut.LoginAsync(new LoginDto { Username = "BOB", Password = "wrong" }));
+
+        // Zählung ist konto-, nicht schreibweisen-bezogen (sonst umgeht „BoB" die Bremse).
+        Assert.Equal(6, cache.Get<int?>("login-fail:bob"));
+
+        await sut.LoginAsync(new LoginDto { Username = "bob", Password = "correct-horse" });
+        Assert.Null(cache.Get<int?>("login-fail:bob"));
+    }
+
+    [Theory]
+    [InlineData("1234", false)]              // vierstellige PIN: online komplett durchprobierbar
+    [InlineData("passwor", false)]           // 7 Zeichen
+    [InlineData("password", false)]          // Allerweltspasswort
+    [InlineData("aaaaaaaa", false)]          // nur ein Zeichen wiederholt
+    [InlineData("korrektes-pferd", true)]
+    public void PasswordPolicy_RejectsTooShortAndCommonPasswords(string password, bool expectValid)
+    {
+        var dto = new RegisterDto { Username = "bob", Password = password };
+        var results = new List<ValidationResult>();
+        var valid = Validator.TryValidateObject(dto, new ValidationContext(dto), results, validateAllProperties: true);
+        Assert.Equal(expectValid, valid);
     }
 
     // Minimaler ILogger, der Events samt strukturierter Properties mitschreibt.

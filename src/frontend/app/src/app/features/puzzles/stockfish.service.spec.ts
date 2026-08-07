@@ -67,4 +67,62 @@ describe('StockfishService crash recovery', () => {
     sf.last.crash();
     await expectAsync(p).toBeRejected();
   });
+
+  it('bricht beim destroy() eine laufende Suche sofort ab (statt 10 s zu hängen)', async () => {
+    const sf = new TestSf();                // kein autoReply → Suche bleibt offen
+    const p = sf.getEval(FEN, 12);
+    await micro();
+    sf.destroy();
+    await expectAsync(p).toBeRejected();
+  });
+});
+
+/** Mehrere Microtask-Runden abarbeiten (init/pending-Kette ist promise-getrieben). */
+const micro = async (rounds = 20) => { for (let i = 0; i < rounds; i++) await Promise.resolve(); };
+
+describe('StockfishService Suchtimeout', () => {
+  beforeEach(() => jasmine.clock().install());
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('hält den Kern per stop an und lässt die nächste Suche erst nach dem bestmove los', async () => {
+    const sf = new TestSf();                    // kein autoReply → Suche läuft in den Timeout
+    const p = sf.getEval(FEN, 12);
+    await micro();
+    jasmine.clock().tick(10000);
+    await expectAsync(p).toBeRejectedWith('Stockfish timeout');
+
+    const worker = sf.last;
+    expect(worker.posted).toContain('stop');
+    expect(worker.terminated).toBeFalse();      // erst mal nur anhalten, nicht wegwerfen
+
+    // Die nächste Suche darf KEIN 'go' in den noch rechnenden Kern schicken (Asyncify-Crash).
+    worker.autoReply = { info: 'info depth 8 score cp 30 pv e2e4', bestmove: 'bestmove e2e4' };
+    const next = sf.getEval(FEN, 8);
+    await micro();
+    expect(worker.posted.filter(c => c.startsWith('go')).length).toBe(1);
+
+    worker.emit('bestmove e2e4');                // Quittung des gestoppten Laufs
+    await micro();
+    expect(await next).toBe('+0.3');
+    expect(worker.posted.filter(c => c.startsWith('go')).length).toBe(2);
+  });
+
+  it('entsorgt den Kern, wenn er das stop nicht quittiert', async () => {
+    const sf = new TestSf();
+    const p = sf.getEval(FEN, 12);
+    await micro();
+    jasmine.clock().tick(10000);
+    await expectAsync(p).toBeRejected();
+    const dead = sf.last;
+
+    jasmine.clock().tick(2000);                  // keine bestmove-Quittung → harte Entsorgung
+    await micro();
+    expect(dead.terminated).toBeTrue();
+
+    const fresh = sf.getEval(FEN, 8);
+    await micro();
+    expect(sf.workers.length).toBe(2);           // nächste Suche bekommt einen frischen Worker
+    sf.last.emit('bestmove e2e4');               // der frische Kern antwortet
+    await expectAsync(fresh).toBeResolved();
+  });
 });

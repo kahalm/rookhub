@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
@@ -16,6 +17,7 @@ public class AuthService
     private readonly IConfiguration _config;
     private readonly ILogger<AuthService> _logger;
     private readonly NotificationService? _notifications;
+    private readonly IMemoryCache? _loginFailures;
 
     // Konstanter Dummy-Hash fuer timing-sichere Logins nicht existierender User
     // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer).
@@ -24,13 +26,38 @@ public class AuthService
         BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy", BcryptWorkFactor);
 
     public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger,
-        NotificationService? notifications = null)
+        NotificationService? notifications = null, IMemoryCache? loginFailures = null)
     {
         _db = db;
         _config = config;
         _logger = logger;
         _notifications = notifications;
+        _loginFailures = loginFailures;
     }
+
+    /// <summary>Zeitfenster der Fehlversuchs-Zählung je Konto (sliding: anhaltendes Raten hält die Bremse aktiv).</summary>
+    private static readonly TimeSpan LoginFailureWindow = TimeSpan.FromMinutes(15);
+
+    /// <summary>So viele Fehlversuche bleiben unverzögert (Vertipper).</summary>
+    private const int FreeLoginAttempts = 5;
+
+    /// <summary>Wartezeit VOR der Passwortprüfung, abhängig von den jüngsten Fehlversuchen DIESES Kontos.
+    /// FALLE: der Auth-Rate-Limiter partitioniert nur nach IP — über IP-Rotation/Botnetz ist die
+    /// Rate pro KONTO sonst unbegrenzt, und Online-Raten wird allein durch BCrypt nicht teuer genug.
+    /// Bewusst Verzögerung statt Kontosperre: eine Sperre wäre ein Fremd-DoS („ich sperre dich aus"),
+    /// die Verzögerung trifft praktisch nur den, der massenhaft rät.</summary>
+    internal static TimeSpan LoginThrottleDelay(int recentFailures)
+    {
+        if (recentFailures <= FreeLoginAttempts) return TimeSpan.Zero;
+        var steps = Math.Min(recentFailures - FreeLoginAttempts, 5);   // 250 ms … 4 s
+        return TimeSpan.FromMilliseconds(250 * Math.Pow(2, steps - 1));
+    }
+
+    private static string LoginFailureKey(string loginName) => "login-fail:" + loginName.Trim().ToLowerInvariant();
+
+    private void RegisterLoginFailure(string key) =>
+        _loginFailures?.Set(key, (_loginFailures.Get<int?>(key) ?? 0) + 1,
+            new MemoryCacheEntryOptions { SlidingExpiration = LoginFailureWindow });
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
     {
@@ -102,6 +129,13 @@ public class AuthService
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
     {
         var loginName = dto.Username ?? string.Empty;
+
+        // Konto-bezogene Bremse VOR jeder Prüfung anwenden (nicht erst im Fehlerfall) — sonst
+        // verrät die Antwortzeit, ob das Passwort stimmte bzw. ob es das Konto überhaupt gibt.
+        var failureKey = LoginFailureKey(loginName);
+        var delay = LoginThrottleDelay(_loginFailures?.Get<int?>(failureKey) ?? 0);
+        if (delay > TimeSpan.Zero) await Task.Delay(delay);
+
         var user = await _db.AppUsers
             .FirstOrDefaultAsync(u => u.Username.ToLower() == loginName.ToLower());
 
@@ -110,12 +144,15 @@ public class AuthService
         // zu ueberspringen (verhindert Username-Enumeration ueber Timing).
         var hash = user?.PasswordHash ?? DummyHash;
         var passwordOk = BCrypt.Net.BCrypt.Verify(dto.Password, hash);
-        if (user == null || !passwordOk)
+        // Gelöschte/anonymisierte Accounts können sich nicht mehr einloggen (gleiche Antwort wie
+        // ein falsches Passwort, damit der Zustand nicht ableitbar ist).
+        if (user == null || !passwordOk || user.DeletedAt != null)
+        {
+            RegisterLoginFailure(failureKey);
             throw new UnauthorizedAccessException("Invalid username or password.");
+        }
 
-        // Gelöschte/anonymisierte Accounts können sich nicht mehr einloggen.
-        if (user.DeletedAt != null)
-            throw new UnauthorizedAccessException("Invalid username or password.");
+        _loginFailures?.Remove(failureKey);   // erfolgreicher Login setzt die Bremse zurück
 
         // Lazy-Backfill: Alt-User ohne Security-Stamp bekommen beim ersten Login einen — damit ihre
         // ab jetzt ausgegebenen Tokens den Stempel tragen und eine spätere Passwortänderung sie

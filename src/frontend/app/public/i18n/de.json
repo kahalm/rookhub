@@ -590,7 +590,7 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
-      "updated": "Stand: 3. Juni 2026",
+      "updated": "Stand: 7. August 2026",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
       "controllerTitle": "Verantwortlicher",
       "controller": "Verantwortlich für die Datenverarbeitung ist der im Impressum genannte Betreiber",
@@ -606,7 +606,7 @@
       "thirdIntro": "Daten werden nicht verkauft. Je nach Nutzung sind folgende Dienste eingebunden:",
       "thirdDiscord": "Discord: nur bei freiwilliger Konto-Verknüpfung (Discord-ID/-Name) zur Anzeige im RookHub-Discord-Bot.",
       "thirdChessresults": "chess-results.com: serverseitiger Abruf von Turnierdaten, wenn du eine ChessResults-ID hinterlegst oder Turniere abrufst.",
-      "thirdChesssites": "Chess.com / Lichess: nur die von dir freiwillig eingetragenen Benutzernamen, keine automatische Datenübertragung.",
+      "thirdChesssites": "Chess.com / Lichess: Hinterlegst du im Profil einen dortigen Benutzernamen, ruft unser Server die öffentlichen Partie-Schnittstellen dieser Plattformen automatisch ab — im Hintergrund standardmäßig alle 6 Stunden, solange für dich ein Wochenziel „Partien“ aktiv ist, sowie bei manuellem Synchronisieren in den Trainingszielen. Dabei wird dein dortiger Benutzername an die jeweilige Plattform übertragen; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Gespeichert werden nur die Anzahl deiner Rapid-/Klassisch-Partien je Tag sowie der Zeitpunkt der zuletzt abgerufenen Partie — keine Partiezüge. Entfernst du den Benutzernamen im Profil, unterbleibt der Abruf.",
       "thirdLogging": "Elasticsearch/Kibana: selbst gehostetes Logging/Monitoring auf unserer Infrastruktur.",
       "thirdHosting": "Hosting: Betrieb auf eigener Server-Infrastruktur mit TLS-Reverse-Proxy.",
       "storageTitle": "Lokale Speicherung (Cookies/Storage)",

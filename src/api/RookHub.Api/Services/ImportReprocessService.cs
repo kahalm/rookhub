@@ -130,9 +130,23 @@ public partial class ImportReprocessService
                 // Lokal verlustfrei + in-place aus dem gespeicherten PGN (ImportFileAsync erkennt das
                 // veraltete Buch). Gilt für Nicht-Chessable UND Chessable mit „moderner" Quelle
                 // ([ChessableOid] bereits vorhanden) → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
-                var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, CancellationToken.None);
-                result.Reprocessed++;
-                result.UpdatedLines += res.Updated;
+                // FALLE: EIN kaputtes Buch (korruptes SourcePgn, Parser-Sonderfall, DbUpdateException)
+                // riss ohne dieses try/catch den GANZEN Batch mit — alle nachfolgenden Bücher blieben
+                // veraltet und die gesammelten Re-Fetch-Kandidaten (unten) wurden nie eingereiht, weil
+                // die Exception bis in den fire-and-forget-Launcher durchschlug. Also je Buch isolieren.
+                try
+                {
+                    var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, CancellationToken.None);
+                    result.Reprocessed++;
+                    result.UpdatedLines += res.Updated;
+                }
+                catch (Exception ex)
+                {
+                    result.Skipped++;
+                    _logger.LogWarning(ex,
+                        "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht neu aufbereitet werden — übersprungen",
+                        book.FileName, book.Id);
+                }
             }
             else
             {

@@ -590,7 +590,7 @@
     },
     "privacy": {
       "title": "Pravila o privatnosti",
-      "updated": "Zadnja izmjena: 3. lipnja 2026.",
+      "updated": "Zadnja izmjena: 7. kolovoza 2026.",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
       "controllerTitle": "Voditelj obrade",
       "controller": "Voditelj obrade podataka je operator naveden u impresumu",
@@ -606,7 +606,7 @@
       "thirdIntro": "Podaci se ne prodaju. Ovisno o korištenju, uključene su sljedeće usluge:",
       "thirdDiscord": "Discord: samo pri dobrovoljnom povezivanju računa (Discord ID/ime) za prikaz u RookHub Discord botu.",
       "thirdChessresults": "chess-results.com: podaci o turnirima dohvaćaju se na strani poslužitelja kada postavite ChessResults ID ili učitate turnire.",
-      "thirdChesssites": "Chess.com / Lichess: samo korisnička imena koja dobrovoljno unesete; nema automatskog prijenosa podataka.",
+      "thirdChesssites": "Chess.com / Lichess: ako u profilu spremite korisničko ime za te platforme, naš poslužitelj automatski dohvaća njihova javna sučelja za partije — u pozadini prema zadanim postavkama svakih 6 sati dok je za vas aktivan tjedni cilj „partije“, te pri ručnoj sinkronizaciji u ciljevima treninga. Pritom se vaše korisničko ime na toj platformi prenosi njoj; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Pohranjujemo samo broj vaših rapid/klasičnih partija po danu i vrijeme zadnje dohvaćene partije — nikakve poteze partija. Uklonite li korisničko ime u profilu, dohvat izostaje.",
       "thirdLogging": "Elasticsearch/Kibana: vlastito hostano evidentiranje/nadzor na našoj infrastrukturi.",
       "thirdHosting": "Hosting: rad na vlastitoj serverskoj infrastrukturi s TLS reverznim proxyjem.",
       "storageTitle": "Lokalna pohrana (kolačići/pohrana)",
@@ -2487,6 +2487,10 @@
   },
   "chessable": {
     "title": "Connect Chessable",
+    "rateNotice": {
+      "title": "Uvozi namjerno teku sporo",
+      "body": "Zbog blokada sa strane Chessablea brzina dohvaćanja jako je smanjena — trenutno na oko 4 zahtjeva u minuti. Tečaj s 1000 linija zato se uvozi dobrih 4 sata. Molimo za strpljenje — tako se računi ne blokiraju."
+    },
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
     "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
@@ -2569,7 +2573,13 @@
     "throughputHint": "Dohvaćanje ide otprilike 15–20 linija/min (uključujući VPN pauze). Tečaj s 500 linija traje oko 30 min, 1000 linija oko 1 sat.",
     "etaRemaining": "još ~{{min}} min",
     "importDuration": "Čekanje {{queue}} · Dohvat {{fetch}}",
-    "cachedHint": "Spremljeno u predmemoriju — dostupno gotovo odmah (nije potreban Chessable dohvat)"
+    "cachedHint": "Spremljeno u predmemoriju — dostupno gotovo odmah (nije potreban Chessable dohvat)",
+    "banWarning": {
+      "title": "Rizik od blokade: uvoz preko RookHuba",
+      "body": "Kada RookHub uvozi tečaj, dohvaća ga poslužiteljski s Chessablea preko zajedničkih VPN/podatkovnih IP adresa uz tvoj pohranjeni bearer token. Chessable te IP adrese aktivno blokira, a upravo je takvo skupno dohvaćanje pod tvojim računom obrazac zbog kojeg Chessable račun može biti označen ili blokiran. Koristi na vlastitu odgovornost.",
+      "repcheck": "Znatno sigurnije: uvoz preko RepCheck proširenja za preglednik. Ono radi unutar tvoje prijavljene Chessable sesije i s tvoje vlastite IP adrese, pa njegovi zahtjevi izgledaju kao uobičajeno pregledavanje, a ne kao poslužiteljsko skupljanje podataka.",
+      "manual": "Najsigurnija je ručna RepCheck varijanta (v1), kod koje sam pokrećeš jedan po jedan tečaj iz vlastitog preglednika: tehnički i dalje krši Chessableove uvjete korištenja, ali se u praksi gotovo ne razlikuje od normalnog korištenja i zato je za Chessable praktički nevidljiva."
+    }
   },
   "leaderboards": {
     "title": "Ljestvice",

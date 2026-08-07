@@ -32,6 +32,14 @@ public class ChessableImportWatchdogService : BackgroundService
     /// <summary>Wie lange ein wegen Tageslimit pausierter Import (<c>Phase="rate-limited"</c>) wartet,
     /// bevor er automatisch wieder freigegeben wird (siehe <see cref="ChessableRateLimiter"/>).</summary>
     internal TimeSpan RateLimitPause = TimeSpan.FromHours(24);
+    /// <summary>Wie lange ein Import in einer Inflight-Phase ohne lokalen Treiber beobachtet werden muss,
+    /// bevor er als verwaist gilt und zurück in die Warteschlange geht (siehe
+    /// <see cref="ReclaimOrphanedInflightAsync"/>).</summary>
+    internal TimeSpan OrphanGrace = TimeSpan.FromMinutes(10);
+
+    /// <summary>Seit wann ein Inflight-Import ohne lokalen Treiber beobachtet wird (Id → erste Sichtung).
+    /// Nur vom Watchdog-Loop benutzt (ein Thread).</summary>
+    private readonly Dictionary<int, DateTime> _orphanSince = new();
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChessableImportWatchdogService> _logger;
@@ -78,7 +86,9 @@ public class ChessableImportWatchdogService : BackgroundService
                 "Chessable-Import-Watchdog: {Count} wegen Tageslimit pausierte Importe nach 24h automatisch freigegeben",
                 resumedCount);
 
-        if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0;
+        var reclaimed = await ReclaimOrphanedInflightAsync(db, ct);
+
+        if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0 || reclaimed > 0;
 
         var queued = await db.ChessableImports.CountAsync(
             i => i.Status == "running" && i.Phase == "queued" && i.FullyCached != true, ct);
@@ -113,6 +123,62 @@ public class ChessableImportWatchdogService : BackgroundService
         }
         if (expired.Count > 0) await db.SaveChangesAsync(ct);
         return expired.Count;
+    }
+
+    /// <summary>Holt VERWAISTE Inflight-Importe zurück in die Warteschlange: Sätze, die laut DB in einer
+    /// Inflight-Phase stehen ("claimed"/"fetching"/"importing"), zu denen es in diesem Prozess aber KEINEN
+    /// Treiber (mehr) gibt (<see cref="ChessableImportService.IsDrivenLocally"/>).
+    ///
+    /// FALLE, gegen die das schützt: verliert ein Job seinen treibenden Task, ohne einen Terminal-Status zu
+    /// schreiben (z. B. DB-Ausfall &gt; 30 s — dann scheitert auch das Fehler-Update in <c>FailAsync</c>),
+    /// bleibt er als Zombie inflight. <see cref="IsDrainStalledAsync"/> wertet ihn als „Drain läuft" und die
+    /// Fast-Lane zählt ihn als belegten Slot (<c>FreeSlotsAsync</c>) — die Lane steht dann DAUERHAFT, bisher
+    /// bis zum API-Neustart (<see cref="ChessableImportResumeService"/>). Genau die Vorfallsklasse 2026-06-29,
+    /// nur eine Ebene tiefer.
+    ///
+    /// Zwei Sichtungen im Abstand von <see cref="OrphanGrace"/> sind nötig, damit ein gerade erst geclaimter
+    /// Job (Registrierungs-Fenster) nicht fälschlich zurückgeholt wird. <see cref="ChessableImport.Attempts"/>
+    /// bleibt stehen → der Job zählt weiter gegen <see cref="ChessableImportService.MaxAttempts"/> statt
+    /// endlos zu kreisen. Setzt EINE API-Instanz voraus (Treiberliste ist prozesslokal).</summary>
+    internal async Task<int> ReclaimOrphanedInflightAsync(AppDbContext db, CancellationToken ct = default)
+    {
+        var inflight = await db.ChessableImports
+            .Where(i => i.Status == "running" && InflightPhases.Contains(i.Phase))
+            .ToListAsync(ct);
+
+        var now = DateTime.UtcNow;
+        var seen = new HashSet<int>();
+        var reclaimed = 0;
+        foreach (var import in inflight)
+        {
+            if (ChessableImportService.IsDrivenLocally(import.Id))
+            {
+                _orphanSince.Remove(import.Id);
+                continue;
+            }
+            seen.Add(import.Id);
+            if (!_orphanSince.TryGetValue(import.Id, out var since))
+            {
+                _orphanSince[import.Id] = now;   // erste Sichtung → erst beim nächsten Tick entscheiden
+                continue;
+            }
+            if (now - since < OrphanGrace) continue;
+
+            _logger.LogWarning(
+                "Chessable-Import-Watchdog: Import {Id} (bid {Bid}) steht seit {Minutes:0} min in Phase {Phase}, "
+                + "wird aber von niemandem bearbeitet — zurück in die Warteschlange",
+                import.Id, import.Bid, (now - since).TotalMinutes, import.Phase);
+            import.Phase = "queued";
+            _orphanSince.Remove(import.Id);
+            reclaimed++;
+        }
+
+        // Nicht mehr inflight (fertig/abgebrochen/zurückgeholt) → Beobachtung verwerfen.
+        foreach (var id in _orphanSince.Keys.Where(id => !seen.Contains(id)).ToList())
+            _orphanSince.Remove(id);
+
+        if (reclaimed > 0) await db.SaveChangesAsync(ct);
+        return reclaimed;
     }
 
     /// <summary>Der Drain steht: mindestens ein Import wartet (Phase "queued") und KEINER ist gerade

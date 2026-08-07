@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -147,6 +148,32 @@ public class ImportReprocessServiceTests : IDisposable
         var refreshed = await _db.BookPuzzles.SingleAsync(p => p.Id == id);
         Assert.NotNull(refreshed.MoveComments);                    // Kommentare nachgezogen, Id erhalten
         Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_FailingBook_DoesNotAbortBatch_RefetchesStillEnqueued()
+    {
+        // FALLE: ohne per-Buch-Isolation reißt EIN scheiterndes Buch den ganzen Batch mit — die
+        // restlichen Bücher bleiben veraltet UND die eingesammelten Re-Fetch-Kandidaten werden nie
+        // eingereiht (das Einreihen läuft erst nach der Schleife).
+        await SeedBookAsync("manual-a.pgn", 0, SamplePgn, null);
+        await SeedBookAsync("manual-b.pgn", 0, SamplePgn, null);
+        await SeedBookAsync("chessable-u7-abc123.pgn", 0, null, "chessable");
+
+        // Kaputter DbContext ⇒ jeder lokale Re-Parse wirft (steht für korruptes SourcePgn / DB-Fehler).
+        var brokenDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        brokenDb.Dispose();
+        var stub = new StubCourseReimporter { ReturnId = 42 };
+        var svc = new ImportReprocessService(_db, new PgnImportService(brokenDb), stub,
+            NullLogger<ImportReprocessService>.Instance);
+
+        var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(0, result.Reprocessed);
+        Assert.Equal(2, result.Skipped);                       // beide lokalen Bücher übersprungen, kein Abbruch
+        Assert.Equal(1, result.Enqueued);                      // Re-Fetch trotzdem eingereiht
+        Assert.Equal("abc123", Assert.Single(stub.Calls).Bid);
     }
 
     [Fact]

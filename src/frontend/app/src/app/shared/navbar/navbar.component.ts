@@ -19,7 +19,7 @@ import { InAppNotificationService, AppNotification } from '../../core/in-app-not
 import { MessageService } from '../../core/message.service';
 import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
-import { ThemeService } from '../../core/theme.service';
+import { ThemeService, AppTheme } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
@@ -184,6 +184,14 @@ import {
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>
           </a>
+          <!-- FALLE: Der Theme-Umschalter sitzt sonst NUR in der Profil-Theme-Karte, und die
+               setzt einen Login voraus. Da der ThemeService als Default hart „dark" fährt,
+               steckten Anonyme auf den offenen Seiten (/puzzles, /analysis, /g/, /help)
+               unumkehrbar im Dunkel-Theme. Für Eingeloggte bleibt das Profil die einzige Stelle. -->
+          <button mat-menu-item (click)="theme.toggle()">
+            <mat-icon>{{ themeIcon }}</mat-icon>
+            <span>{{ themeTooltip }}</span>
+          </button>
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
@@ -290,6 +298,23 @@ export class NavbarComponent implements OnInit {
 
   toggleAppFullscreen(): void {
     void toggleFullscreen(document.documentElement);
+  }
+
+  // ===== Theme (nur im ☰-Menü der Ausgeloggten) ============================
+  /** Icon der aktuellen Theme-Wahl; `toggle()` dreht system → hell → dunkel → system. */
+  get themeIcon(): string {
+    const icons: Record<AppTheme, string> = { system: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
+    return icons[this.theme.preference];
+  }
+
+  /** Beschriftung zur aktuellen Theme-Wahl. */
+  get themeTooltip(): string {
+    const labels: Record<AppTheme, string> = {
+      system: this.translate.instant('nav.themeSystem'),
+      light: this.translate.instant('nav.themeLight'),
+      dark: this.translate.instant('nav.themeDark'),
+    };
+    return labels[this.theme.preference];
   }
 
   constructor(public auth: AuthService, private courseService: CourseService, private catalogService: CatalogService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router, iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {

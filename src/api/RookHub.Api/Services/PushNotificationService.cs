@@ -128,20 +128,64 @@ public class PushNotificationService
 
     // ----- Subscriptions ---------------------------------------------------
 
+    /// <summary>Hosts der bekannten Browser-Push-Dienste (exakt oder als Domain-Suffix).</summary>
+    private static readonly string[] AllowedEndpointHosts =
+    {
+        "fcm.googleapis.com",                 // Chrome/Edge/Chromium
+        "android.googleapis.com",             // Legacy-GCM-Endpoint älterer Chrome-Stände
+        "push.services.mozilla.com",          // Firefox (updates.push.services.mozilla.com + autopush-Varianten)
+        "notify.windows.com",                 // WNS (*.notify.windows.com)
+        "web.push.apple.com",                 // Safari/iOS
+    };
+
+    /// <summary>Ist das eine plausible Push-Endpoint-URL eines bekannten Push-Dienstes?
+    /// FALLE: der API-Container POSTet beim Versand blind an die GESPEICHERTE URL. Ohne diese Prüfung
+    /// könnte jeder eingeloggte Nutzer eine interne Adresse des Docker-Netzes registrieren
+    /// (gluetun, elasticsearch, piratechess-api …) und den Server als blindes SSRF-Relais in ein Netz
+    /// benutzen, das bewusst nicht von außen erreichbar ist. Deshalb: https, Standard-Port, kein
+    /// IP-Literal, kein Single-Label-Hostname — und der Host muss zu einem bekannten Dienst gehören.</summary>
+    internal static bool IsAllowedEndpoint(string endpoint)
+    {
+        if (endpoint.Length > 500) return false;                       // = MaxLength der Spalte
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)) return false;
+        if (uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort) return false;
+        if (!string.IsNullOrEmpty(uri.UserInfo)) return false;
+        if (uri.HostNameType is not UriHostNameType.Dns) return false; // schließt IPv4/IPv6-Literale aus
+        // IdnHost statt Host: Unicode-Lookalikes landen als punycode und matchen die Allowlist nicht.
+        var host = uri.IdnHost.ToLowerInvariant();
+        return AllowedEndpointHosts.Any(h => host == h || host.EndsWith("." + h, StringComparison.Ordinal));
+    }
+
     /// <summary>Legt eine Subscription an bzw. ordnet sie (per eindeutigem Endpoint) diesem User zu (Upsert).</summary>
     public async Task SubscribeAsync(int userId, string endpoint, string p256dh, string auth)
     {
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(p256dh) || string.IsNullOrWhiteSpace(auth))
             throw new InvalidOperationException("Incomplete push subscription.");
+        endpoint = endpoint.Trim();
+        if (!IsAllowedEndpoint(endpoint))
+            throw new InvalidOperationException("Unsupported push endpoint.");
+        if (p256dh.Length > 200 || auth.Length > 100)
+            throw new InvalidOperationException("Invalid push subscription keys.");
+
         var existing = await _db.UserPushSubscriptions.FirstOrDefaultAsync(s => s.Endpoint == endpoint);
         if (existing == null)
             _db.UserPushSubscriptions.Add(new UserPushSubscription
             {
                 UserId = userId, Endpoint = endpoint, P256dh = p256dh, Auth = auth, CreatedAt = DateTime.UtcNow,
             });
-        else { existing.UserId = userId; existing.P256dh = p256dh; existing.Auth = auth; }
-        try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException) { /* Race auf dem Unique-Endpoint → ignorieren. */ }
+        else
+        {
+            // FALLE: der Endpoint ist global unique. Ihn ungeprüft umzuhängen hieß: wer eine fremde
+            // Endpoint-URL kennt, entzieht dem Opfer die Push-Zustellung und beschickt dessen Gerät
+            // selbst. Übernahme daher nur, wenn die Subscription-Schlüssel identisch sind — das ist
+            // genau der legitime Fall „selber Browser, anderer Nutzer" (pushManager.subscribe liefert
+            // dort dieselbe Subscription inkl. p256dh/auth zurück).
+            if (existing.UserId != userId && (existing.P256dh != p256dh || existing.Auth != auth))
+                throw new InvalidOperationException("Push subscription belongs to another account.");
+            existing.UserId = userId; existing.P256dh = p256dh; existing.Auth = auth;
+        }
+        // Race auf dem Unique-Endpoint → ignorieren; andere DB-Fehler nicht schlucken.
+        await _db.SaveIgnoringUniqueRaceAsync(_log);
     }
 
     /// <summary>Entfernt eine Subscription des Users (idempotent).</summary>

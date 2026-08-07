@@ -250,6 +250,17 @@ public class ChessableController : BaseApiController
         if (cred.BlockedAt is not null)
             return BadRequest(new { message = ChessableImportQueueService.BlockedMessage(cred.BlockedReason), blocked = true });
 
+        // Dedup: FALLE Doppel-Klick / zweiter Tab / Retry nach Frontend-Timeout — ohne diese Prüfung legt
+        // jeder Klick einen weiteren Import an, und JEDER holt den kompletten Kurs erneut von Chessable
+        // (verbrennt das 2000-Zeilen-Tageslimit und erhöht das Cloudflare-/IP-Block-Risiko). Läuft/pausiert
+        // für (User, bid, Ziel) bereits einer, den BESTEHENDEN zurückgeben — das Frontend pollt dann den
+        // laufenden Import weiter. Gegenstück zum Dedup in ChessableImportService.EnqueueReimportAsync.
+        var existing = await _db.ChessableImports.FirstOrDefaultAsync(
+            i => i.UserId == userId && i.Bid == bid && i.Target == target
+                && (i.Status == "running" || i.Status == "paused"), ct);
+        if (existing is not null)
+            return Accepted(ChessableImportQueueService.ToDto(existing, await _queue.QueuedAheadAsync(existing)));
+
         // SICHERHEIT: Nur Kurse importieren, die WIRKLICH in der Chessable-Bibliothek dieses Users liegen.
         // Andernfalls könnte ein User einen beliebigen (öffentlich aus der chessable.com-URL bekannten)
         // Kurs-bid importieren — und für bereits GECACHTE Kurse umgeht die piratechess-Seite die

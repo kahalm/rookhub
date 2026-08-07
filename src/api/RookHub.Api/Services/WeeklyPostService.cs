@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -16,12 +17,34 @@ public class WeeklyPostService
     private readonly AppDbContext _db;
     private readonly ILogger<WeeklyPostService> _logger;
     private readonly IWebhookTaskQueue? _bgQueue;
+    private readonly IMemoryCache? _cache;
 
-    public WeeklyPostService(AppDbContext db, ILogger<WeeklyPostService> logger, IWebhookTaskQueue? bgQueue = null)
+    public WeeklyPostService(AppDbContext db, ILogger<WeeklyPostService> logger,
+        IWebhookTaskQueue? bgQueue = null, IMemoryCache? cache = null)
     {
         _db = db;
         _logger = logger;
         _bgQueue = bgQueue;
+        _cache = cache;
+    }
+
+    /// <summary>
+    /// Geparste Puzzle-Sequenz des gespeicherten PGN — gecacht je (Post, UpdatedAt).
+    /// FALLE: <c>GET /weekly-posts/{id}/puzzles</c> ist anonym erreichbar und parste bisher bei JEDEM
+    /// Abruf das komplette PGN (bis 10 MB) neu; dazu kam ein zweiter Parse für die Titel im
+    /// Admin-Breakdown. Posts sind nach dem Upload praktisch unveränderlich, <c>UpdatedAt</c> im Key
+    /// macht eine Bearbeitung selbst cache-invalidierend (kein Stale-Inhalt).
+    /// </summary>
+    private List<PgnImportService.ParsedPuzzle> ParsedPuzzles(WeeklyPost post)
+    {
+        if (_cache == null) return PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles;
+        var key = $"WeeklyPostPgn:{post.Id}:{post.UpdatedAt.Ticks}";
+        return _cache.GetOrCreate(key, entry =>
+        {
+            entry.SlidingExpiration = TimeSpan.FromMinutes(15);
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(2);
+            return PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles;
+        })!;
     }
 
     /// <summary>
@@ -36,7 +59,7 @@ public class WeeklyPostService
             return await ChapterQuizPuzzles(bookId, post.SourceChapter).CountAsync();
 
         if (post.PuzzleCount > 0) return post.PuzzleCount;
-        var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+        var total = ParsedPuzzles(post).Count;
         if (total > 0)
         {
             post.PuzzleCount = total;
@@ -87,7 +110,7 @@ public class WeeklyPostService
             }).ToList();
         }
 
-        var parsed = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles;
+        var parsed = ParsedPuzzles(post);
         return parsed.Select((p, i) => new BookPuzzleDto
         {
             Id = i,
@@ -368,7 +391,7 @@ public class WeeklyPostService
                 if (total <= 0)
                 {
                     // Alt-Datensatz ohne gecachte Anzahl: einmal parsen und für künftige Aufrufe persistieren.
-                    total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+                    total = ParsedPuzzles(post).Count;
                     if (total > 0) { post.PuzzleCount = total; needsBackfill = true; }
                 }
             }

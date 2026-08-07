@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -16,8 +17,13 @@ namespace RookHub.Api.Services;
 public class DailyLeaderboardService
 {
     private readonly AppDbContext _db;
+    private readonly IMemoryCache? _cache;
 
-    public DailyLeaderboardService(AppDbContext db) => _db = db;
+    public DailyLeaderboardService(AppDbContext db, IMemoryCache? cache = null)
+    {
+        _db = db;
+        _cache = cache;
+    }
 
     /// <summary>Eine gewertete Lösung an einem Tagespuzzle (Rohzeile fürs Ranking).
     /// <c>FirstTry</c> = der erste Versuch des Tages war bereits gelöst (10 statt 5 Basispunkte);
@@ -105,6 +111,19 @@ public class DailyLeaderboardService
         return acc;
     }
 
+    /// <summary>All-time-Lösungszeilen, 15 Minuten gecacht (Rohzeilen sind unveränderliche Records —
+    /// Namen/Profile werden weiterhin bei jedem Abruf frisch aufgelöst).</summary>
+    private async Task<List<DailyScoreRow>> GetCachedAllTimeRowsAsync()
+    {
+        if (_cache == null) return await LoadDailySolveRowsAsync(null, null);
+        const string cacheKey = "DailyHallOfFameRows";
+        if (_cache.TryGetValue<List<DailyScoreRow>>(cacheKey, out var cached) && cached != null)
+            return cached;
+        var rows = await LoadDailySolveRowsAsync(null, null);
+        _cache.Set(cacheKey, rows, TimeSpan.FromMinutes(15));
+        return rows;
+    }
+
     /// <summary>Namen + Discord-Profile der gegebenen User laden (für die Leaderboard-Anzeige).</summary>
     private async Task<(Dictionary<int, string> names, Dictionary<int, UserProfile> profiles)> ResolveUsersAsync(List<int> userIds)
     {
@@ -165,7 +184,11 @@ public class DailyLeaderboardService
     /// </summary>
     public async Task<DailyHallOfFameDto> GetDailyHallOfFameAsync(int top = 5)
     {
-        var rows = await LoadDailySolveRowsAsync(null, null);
+        // FALLE: die all-time-Rohdaten (alle DailyPuzzles + alle Versuche darauf) wachsen mit jedem Tag
+        // und werden komplett in den RAM geladen — der Endpoint ist aber anonym erreichbar. Die Liste
+        // ändert sich höchstens im Minutentakt (ein Puzzle pro Tag), darum kurz cachen: wiederholte
+        // Abrufe kosten dann nur noch die kleine In-Memory-Aggregation.
+        var rows = await GetCachedAllTimeRowsAsync();
         var perUser = AggregateScores(rows);
         var (names, profiles) = await ResolveUsersAsync(perUser.Keys.ToList());
 

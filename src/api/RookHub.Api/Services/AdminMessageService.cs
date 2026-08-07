@@ -51,9 +51,10 @@ public class AdminMessageService
             await _db.SaveChangesAsync();
             return thread;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
         {
-            // Race: ein paralleler Request hat die Thread-Zeile gerade angelegt.
+            // Race: ein paralleler Request hat die Thread-Zeile gerade angelegt. Nur der echte
+            // PK-/Unique-Konflikt landet hier; andere DB-Fehler fliegen direkt weiter.
             _db.Entry(thread).State = EntityState.Detached;
             var existing = await _db.MessageThreads.FindAsync(userId);
             if (existing is null) throw;   // anderer Fehler als der erwartete PK-Konflikt

@@ -400,6 +400,37 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task StartImport_SameCourseTwice_ReusesRunningImport_NoDuplicate()
+    {
+        // Doppel-Klick/zweiter Tab: der zweite Aufruf darf KEINEN zweiten Import anlegen (sonst holt
+        // jeder Lauf den kompletten Kurs erneut von Chessable), sondern liefert den laufenden zurück.
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"bid-1\",\"name\":\"My Course\"}]",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var first = Assert.IsType<ChessableImportDto>(
+            Assert.IsType<AcceptedResult>(
+                await _controller.StartImport("bid-1", new StartChessableImportRequest("book", "My Course"))).Value);
+        var second = Assert.IsType<ChessableImportDto>(
+            Assert.IsType<AcceptedResult>(
+                await _controller.StartImport("bid-1", new StartChessableImportRequest("book", "My Course"))).Value);
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(1, await _db.ChessableImports.CountAsync(i => i.UserId == 42 && i.Bid == "bid-1"));
+
+        // Anderes Ziel (Repertoire statt Buch) ist ein eigener Import und bleibt erlaubt.
+        var other = Assert.IsType<ChessableImportDto>(
+            Assert.IsType<AcceptedResult>(
+                await _controller.StartImport("bid-1", new StartChessableImportRequest("repertoire", "My Course"))).Value);
+        Assert.NotEqual(first.Id, other.Id);
+    }
+
+    [Fact]
     public async Task Courses_MarksImportedVariants()
     {
         await SeedUserAsync(42);

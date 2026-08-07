@@ -91,18 +91,59 @@ public class PushNotificationServiceTests : IDisposable
         Assert.Equal(new[] { "admin", "courses" }, asAdmin);
     }
 
+    private const string Ep1 = "https://fcm.googleapis.com/fcm/send/ep1";
+
     [Fact]
     public async Task Subscribe_Upsert_Unsubscribe_Idempotent()
     {
         var svc = Svc();
-        await svc.SubscribeAsync(1, "https://push/ep1", "p1", "a1");
-        await svc.SubscribeAsync(1, "https://push/ep1", "p2", "a2");   // Upsert (kein Duplikat)
+        await svc.SubscribeAsync(1, Ep1, "p1", "a1");
+        await svc.SubscribeAsync(1, Ep1, "p2", "a2");   // Upsert (kein Duplikat)
         Assert.Equal(1, await _db.UserPushSubscriptions.CountAsync());
         Assert.Equal("p2", (await _db.UserPushSubscriptions.FirstAsync()).P256dh);
 
-        await svc.UnsubscribeAsync(1, "https://push/ep1");
-        await svc.UnsubscribeAsync(1, "https://push/ep1");            // idempotent
+        await svc.UnsubscribeAsync(1, Ep1);
+        await svc.UnsubscribeAsync(1, Ep1);            // idempotent
         Assert.Equal(0, await _db.UserPushSubscriptions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Subscribe_RejectsEndpointsOutsideKnownPushServices()
+    {
+        // Der API-Container POSTet beim Versand blind an die gespeicherte URL — interne
+        // Docker-Ziele hier zu registrieren wäre ein blindes SSRF-Relais ins interne Netz.
+        var svc = Svc();
+        foreach (var bad in new[]
+        {
+            "http://gluetun:8000/v1/openvpn/status",       // Single-Label-Host, kein https
+            "https://elasticsearch:9200/_all",             // interner Name + Nicht-Standard-Port
+            "https://10.24.13.6/push",                     // IP-Literal
+            "https://fcm.googleapis.com.evil.example/x",   // Allowlist-Suffix nur vorgetäuscht
+            "not-a-url",
+        })
+            await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SubscribeAsync(1, bad, "p", "a"));
+
+        Assert.Equal(0, await _db.UserPushSubscriptions.CountAsync());
+
+        // Die echten Push-Dienste bleiben erlaubt.
+        await svc.SubscribeAsync(1, "https://updates.push.services.mozilla.com/wpush/v2/abc", "p", "a");
+        await svc.SubscribeAsync(1, "https://web.push.apple.com/xyz", "p", "a");
+        Assert.Equal(2, await _db.UserPushSubscriptions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Subscribe_DoesNotStealForeignSubscription_ButAllowsSameBrowserHandover()
+    {
+        // Endpoint ist global unique: ihn ungeprüft umzuhängen entzöge dem Opfer die Zustellung.
+        var svc = Svc();
+        await svc.SubscribeAsync(1, Ep1, "p1", "a1");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SubscribeAsync(2, Ep1, "fremd", "fremd"));
+        Assert.Equal(1, (await _db.UserPushSubscriptions.FirstAsync()).UserId);
+
+        // Selber Browser, anderer Nutzer: pushManager.subscribe liefert dieselben Keys → Übernahme ok.
+        await svc.SubscribeAsync(2, Ep1, "p1", "a1");
+        Assert.Equal(2, (await _db.UserPushSubscriptions.FirstAsync()).UserId);
     }
 
     [Fact]

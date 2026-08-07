@@ -25,6 +25,19 @@
 #   API_PORT=
 #   DB_DATA_PATH=              (named volume, or host path like /data/mariadb)
 #   INIT_DB_PATH=
+#   ADMIN_USERNAME=
+#   ADMIN_PASSWORD=
+#
+# Optional .env variables (feature stays OFF when unset – see comments below):
+#   ENCRYPTION_KEY=            PFLICHT: AES key for the stored Chessable bearer (leer = Schein-Verschlüsselung!)
+#   CHESSABLE_API_URL=         piratechess API, default http://piratechess-api:8080
+#   CHESSABLE_SERVICE_KEY=
+#   DISCORD_LINK_SECRET=       required for linking Discord accounts
+#   APP_BASE_URL=              public frontend URL, used in e-mail links (password reset)
+#   EMAIL_SMTP_HOST/PORT/USER/PASSWORD/FROM_ADDRESS/FROM_NAME/USE_STARTTLS
+#   ELASTICSEARCH_URL=         Serilog sink; unset = file/console logging only
+#   SCHACH_BOT_WEBHOOK_URL/SCHACH_BOT_WEBHOOK_SECRET/SCHACH_BOT_STATS_SECRET
+#   ANTHROPIC_API_KEY=         puzzle hint generation
 #
 # Ports:
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
@@ -94,6 +107,37 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: Production
+      # Optional – leer lassen schaltet das jeweilige Feature still ab.
+      Discord__LinkSecret: ${DISCORD_LINK_SECRET:-}
+      App__BaseUrl: ${APP_BASE_URL:-}
+      Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
+      Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
+      Email__SmtpUser: ${EMAIL_SMTP_USER:-}
+      Email__SmtpPassword: ${EMAIL_SMTP_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM_ADDRESS:-}
+      Email__FromName: ${EMAIL_FROM_NAME:-RookHub}
+      Email__UseStartTls: ${EMAIL_USE_STARTTLS:-true}
+      Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
+      Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      # PFLICHT, sobald der Chessable-Import genutzt wird: ein LEERER Wert wäre kein
+      # "Feature aus", sondern eine Schein-Verschlüsselung mit dem öffentlich bekannten
+      # Fixschlüssel SHA256("") — deshalb bricht der Start hier bewusst ab.
+      Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein (verschlüsselt den gespeicherten Chessable-Bearer)}
+      Elasticsearch__Url: ${ELASTICSEARCH_URL:-}
+      SchachBot__WebhookUrl: ${SCHACH_BOT_WEBHOOK_URL:-}
+      SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
+      SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      # PFLICHT: ohne persistentes /keys haelt ASP.NET die DataProtection-Keys nur im
+      # Speicher — jeder Container-Neustart entwertet Reset-Links/geschuetzte Payloads.
+      - dataprotection-keys:/keys
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
   rookhub:
@@ -101,9 +145,18 @@ services:
     container_name: rookhub-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT}:80"
+      # FALLE: nginx laeuft im Image als non-root User und lauscht deshalb auf 8080,
+      # NICHT auf 80 — ein 80er-Mapping ergibt einen tot wirkenden Stack.
+      - "${FRONTEND_PORT}:8080"
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   mariadb-data:
+  dataprotection-keys:

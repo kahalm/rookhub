@@ -184,11 +184,17 @@ export class CalculationComponent implements OnInit, OnDestroy {
   saving = false;
   savedAt: Date | null = null;
   private dirty = false;
+  /** Noch nicht bestätigte Speicherungen JE STELLUNG (BookPuzzleId → serialisierter Baum, `null` =
+   *  löschen). Der Snapshot muss an der Stellung hängen, zu der er gehört: `this.tree` ist nach
+   *  einem Stellungswechsel schon ersetzt, ein gescheiterter Save wäre sonst unwiederbringlich weg. */
+  private outbox = new Map<number, string | null>();
   private hadStoredTree = false;
   private saveTimer?: ReturnType<typeof setTimeout>;
   private static readonly AUTOSAVE_MS = 1200;
 
   private subs = new Subscription();
+  /** Entwertet überholte Ladevorgänge (siehe loadPosition). */
+  private loadEpoch = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -237,15 +243,27 @@ export class CalculationComponent implements OnInit, OnDestroy {
     }));
   }
 
+  /**
+   * FALLE: bei schnellem Weiterklicken laufen zwei Ladevorgänge parallel und können
+   * out-of-order eintreffen — die ältere Antwort würde Brett/Baum auf die VORHERIGE Stellung
+   * setzen, während Index/URL/Sprungliste schon auf der neuen stehen (Eingaben landeten dann
+   * unter der falschen Stellung). Der Epoch-Zähler entwertet jede überholte Antwort.
+   */
   private loadPosition(bookPuzzleId: number): void {
     this.loading = true;
+    const epoch = ++this.loadEpoch;
     this.subs.add(this.api.getPosition(bookPuzzleId).subscribe({
       next: pos => {
+        if (epoch !== this.loadEpoch) return;
         this.position = pos;
         this.applyPosition(pos);
         this.loading = false;
       },
-      error: () => { this.loading = false; this.loadError = true; },
+      error: () => {
+        if (epoch !== this.loadEpoch) return;
+        this.loading = false;
+        this.loadError = true;
+      },
     }));
   }
 
@@ -261,6 +279,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.cursorFen = this.startFen;
     this.cursorComment = '';
     this.dirty = false;
+    // Ein noch laufender Save gehört zur ALTEN Stellung — sein Spinner darf hier nicht weiterlaufen.
+    this.saving = false;
     this.savedAt = pos.treeUpdatedAt ? new Date(pos.treeUpdatedAt) : null;
     this.revision++;
   }
@@ -470,32 +490,82 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   /** Speichert sofort (Autosave-Timer, Stellungswechsel, Verlassen der Seite). */
   flushSave(): void {
-    if (!this.dirty || !this.position) return;
-    const bookPuzzleId = this.position.id;
-    this.dirty = false;
-
-    // Leerer Baum: gespeicherten Stand verwerfen (nicht „{}" ablegen).
-    if (isEmpty(this.tree)) {
-      this.markPositionDone(bookPuzzleId, false);
-      if (!this.hadStoredTree) return;
-      this.hadStoredTree = false;
-      this.api.deleteTree(bookPuzzleId).subscribe({
-        next: () => { this.savedAt = null; },
-        error: () => this.reportSaveError(),
-      });
-      return;
+    if (this.dirty && this.position) {
+      const bookPuzzleId = this.position.id;
+      this.dirty = false;
+      // Leerer Baum: gespeicherten Stand verwerfen (nicht „{}" ablegen).
+      if (isEmpty(this.tree)) {
+        this.markPositionDone(bookPuzzleId, false);
+        if (this.hadStoredTree) { this.hadStoredTree = false; this.outbox.set(bookPuzzleId, null); }
+        // Sonst nur einen noch offenen Stand entwerten: ohne das würde ein zuvor
+        // fehlgeschlagener Save (Eintrag liegt noch in der Outbox) den gerade bewusst
+        // GELEERTEN Baum beim nächsten Senden doch wieder hochschreiben.
+        else this.outbox.delete(bookPuzzleId);
+      } else {
+        this.outbox.set(bookPuzzleId, serializeTree(this.tree));
+      }
     }
+    this.sendOutbox();
+  }
 
-    this.saving = true;
-    this.api.saveTree(bookPuzzleId, serializeTree(this.tree)).subscribe({
+  /** Laufende Nummer je Stellung: ein spät scheiternder ALTER Save darf einen inzwischen
+   *  erfolgreich gespeicherten neueren Stand nicht per Requeue zurückrollen. */
+  private sendSeq = new Map<number, number>();
+
+  private nextSeq(bookPuzzleId: number): number {
+    const n = (this.sendSeq.get(bookPuzzleId) ?? 0) + 1;
+    this.sendSeq.set(bookPuzzleId, n);
+    return n;
+  }
+
+  /** Nur re-queuen, wenn seit dem Absenden kein neuerer Stand derselben Stellung losgeschickt wurde. */
+  private requeueIfLatest(bookPuzzleId: number, seq: number, json: string | null): void {
+    if (this.sendSeq.get(bookPuzzleId) !== seq) return;
+    this.outbox.set(bookPuzzleId, json);
+  }
+
+  /** Alles Offene rausschicken — auch Stände von Stellungen, die inzwischen verlassen wurden. */
+  private sendOutbox(): void {
+    if (this.outbox.size === 0) return;
+    const pending = [...this.outbox];
+    this.outbox.clear();
+    for (const [bookPuzzleId, json] of pending) {
+      const seq = this.nextSeq(bookPuzzleId);
+      if (json === null) this.sendDelete(bookPuzzleId, seq); else this.sendSave(bookPuzzleId, json, seq);
+    }
+  }
+
+  private sendSave(bookPuzzleId: number, json: string, seq: number): void {
+    if (this.isCurrent(bookPuzzleId)) this.saving = true;
+    this.api.saveTree(bookPuzzleId, json).subscribe({
       next: res => {
-        this.saving = false;
-        this.hadStoredTree = true;
-        this.savedAt = new Date(res.updatedAt);
+        if (this.isCurrent(bookPuzzleId)) {
+          this.saving = false;
+          this.hadStoredTree = true;
+          this.savedAt = new Date(res.updatedAt);
+        }
         this.markPositionDone(bookPuzzleId, true);
       },
-      error: () => { this.saving = false; this.reportSaveError(); },
+      error: () => {
+        if (this.isCurrent(bookPuzzleId)) this.saving = false;
+        this.requeueIfLatest(bookPuzzleId, seq, json);   // GENAU diesen Stand erneut einreihen —
+                                                        // aber nur, wenn er noch der jüngste ist
+        this.reportSaveError();
+      },
     });
+  }
+
+  private sendDelete(bookPuzzleId: number, seq: number): void {
+    this.api.deleteTree(bookPuzzleId).subscribe({
+      next: () => { if (this.isCurrent(bookPuzzleId)) this.savedAt = null; },
+      error: () => { this.requeueIfLatest(bookPuzzleId, seq, null); this.reportSaveError(); },
+    });
+  }
+
+  /** Gehört die Antwort noch zur angezeigten Stellung? Sonst dürfen `saving`/`savedAt` nicht angefasst
+   *  werden — eine spät eintreffende Antwort der ALTEN Stellung schriebe sonst in die neue Ansicht. */
+  private isCurrent(bookPuzzleId: number): boolean {
+    return this.position?.id === bookPuzzleId;
   }
 
   private markPositionDone(bookPuzzleId: number, done: boolean): void {
@@ -504,7 +574,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   private reportSaveError(): void {
-    this.dirty = true;                                  // beim nächsten Anstoß erneut versuchen
+    // Kein `dirty = true`: das Flag hängt am GERADE geladenen Baum — nach einem Stellungswechsel
+    // hätte es den nächsten Flush auf die falsche (neue) Stellung gelenkt und den bearbeiteten
+    // Baum der alten Stellung verworfen. Der Wiederholversuch läuft über `outbox` (je Stellung).
     this.snackbar.warn(this.translate.instant('calc.saveFailed'));
   }
 

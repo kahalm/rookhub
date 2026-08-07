@@ -196,6 +196,43 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AppendLock_SerialisesSameKey_ButNotDifferentKeys()
+    {
+        // Der Live-Append ist ein Read-Modify-Write auf dem PgnContent: zwei parallele Requests desselben
+        // (User, bid) dürfen sich NICHT überlappen (sonst überschreibt der zweite die Linie des ersten);
+        // ein anderer Kurs darf dabei nicht mitblockiert werden.
+        var key = $"7:{Guid.NewGuid()}";
+        var otherKey = $"7:{Guid.NewGuid()}";
+        var firstEntered = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var secondEntered = false;
+
+        var first = ChessableImportService.WithAppendLockAsync(key, async () =>
+        {
+            firstEntered.SetResult();
+            await release.Task;
+            return 1;
+        });
+        await firstEntered.Task;
+
+        var second = ChessableImportService.WithAppendLockAsync(key, () =>
+        {
+            secondEntered = true;
+            return Task.FromResult(2);
+        });
+        await Task.Delay(50);
+        Assert.False(secondEntered);                      // wartet auf das Schloss des ersten Aufrufs
+
+        // Anderer (User, bid) läuft ungehindert durch.
+        Assert.Equal(3, await ChessableImportService.WithAppendLockAsync(otherKey, () => Task.FromResult(3)));
+
+        release.SetResult();
+        Assert.Equal(1, await first);
+        Assert.Equal(2, await second);
+        Assert.True(secondEntered);
+    }
+
+    [Fact]
     public async Task AppendLive_Book_AppendsAndDedupsByLineId()
     {
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });

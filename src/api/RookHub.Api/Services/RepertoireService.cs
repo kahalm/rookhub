@@ -272,58 +272,36 @@ public class RepertoireService
     /// <summary>Teilt ein eigenes Repertoire mit mehreren (befreundeten) Nutzern. Idempotent:
     /// bereits geteilte → <c>duplicate</c>, Fremde → <c>not_friends</c>, unbekannte → <c>not_found</c>,
     /// man selbst → <c>self</c>. Legt je neuem Empfänger eine In-App-Benachrichtigung an.
-    /// Admins dürfen an Nicht-Freunde teilen.</summary>
-    /// <param name="retryOnConflict">Interner Schalter: nur der ERSTE Aufruf legt nach einem
-    /// Unique-Index-Konflikt einmal neu auf (sonst unbegrenzte Rekursion bei einer
-    /// <see cref="DbUpdateException"/>, die kein Duplikat ist → StackOverflow).</param>
-    public async Task<RepertoireShareResultDto> ShareAsync(int userId, int repertoireId, List<int> recipientUserIds, bool isAdmin,
-        bool retryOnConflict = true)
+    /// Admins dürfen an Nicht-Freunde teilen. Die Mechanik (Skip-Gründe, Unique-Race) teilt sich
+    /// diese Methode mit dem Kurs-Teilen in <see cref="ShareServiceBatch"/>.</summary>
+    public async Task<RepertoireShareResultDto> ShareAsync(int userId, int repertoireId, List<int> recipientUserIds, bool isAdmin)
     {
         var rep = await EnsureOwnedAsync(userId, repertoireId);
 
-        var result = new RepertoireShareResultDto();
-        var distinct = recipientUserIds.Distinct().ToList();
-        if (distinct.Count == 0) return result;
-
-        var existing = (await _db.AppUsers.Where(u => distinct.Contains(u.Id)).Select(u => u.Id).ToListAsync()).ToHashSet();
-        var friendIds = await _friends.GetAcceptedFriendIdsAsync(userId, distinct);
-        var alreadyShared = (await _db.RepertoireShares
-            .Where(s => s.RepertoireId == repertoireId && distinct.Contains(s.RecipientId))
-            .Select(s => s.RecipientId)
-            .ToListAsync()).ToHashSet();
-
-        var toNotify = new List<int>();
-        foreach (var rid in distinct)
-        {
-            if (rid == userId) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "self" }); continue; }
-            if (!existing.Contains(rid)) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "not_found" }); continue; }
-            if (!isAdmin && !friendIds.Contains(rid)) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "not_friends" }); continue; }
-            if (alreadyShared.Contains(rid)) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "duplicate" }); continue; }
-
-            _db.RepertoireShares.Add(new RepertoireShare { RepertoireId = repertoireId, OwnerId = userId, RecipientId = rid, SharedAt = DateTime.UtcNow });
-            toNotify.Add(rid);
-            result.Shared++;
-        }
-
-        if (result.Shared > 0)
-        {
-            try { await _db.SaveChangesAsync(); }
-            catch (DbUpdateException ex) when (retryOnConflict && AuthService.IsUniqueViolation(ex))
+        var outcome = await ShareServiceBatch.ShareAsync(_db, _friends, userId, recipientUserIds, isAdmin,
+            loadAlreadySharedAsync: async ids => (await _db.RepertoireShares
+                .Where(s => s.RepertoireId == repertoireId && ids.Contains(s.RecipientId))
+                .Select(s => s.RecipientId)
+                .ToListAsync()).ToHashSet(),
+            addShare: rid => _db.RepertoireShares.Add(new RepertoireShare
             {
-                // Race: derselbe (Repertoire, Empfänger) parallel → Unique-Index. Idempotent behandeln.
-                _db.ChangeTracker.Clear();
-                return await ShareAsync(userId, repertoireId, recipientUserIds, isAdmin, retryOnConflict: false);
-            }
+                RepertoireId = repertoireId, OwnerId = userId, RecipientId = rid, SharedAt = DateTime.UtcNow,
+            }),
+            onSharedAsync: async toNotify =>
+            {
+                var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
+                await _notifications.CreateManyAsync(toNotify, NotificationType.RepertoireShared,
+                    new Dictionary<string, string> { ["username"] = ownerName, ["repertoireName"] = rep.Name }, "/repertoires");
 
-            var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
-            await _notifications.CreateManyAsync(toNotify, NotificationType.RepertoireShared,
-                new Dictionary<string, string> { ["username"] = ownerName, ["repertoireName"] = rep.Name }, "/repertoires");
+                // Neue Empfänger: Stellungssuche-Cache verwerfen, damit das Repertoire dort sofort auftaucht.
+                foreach (var rid in toNotify) _positionLookup?.Invalidate(rid);
+            });
 
-            // Neue Empfänger: Stellungssuche-Cache verwerfen, damit das Repertoire dort sofort auftaucht.
-            foreach (var rid in toNotify) _positionLookup?.Invalidate(rid);
-        }
-
-        return result;
+        return new RepertoireShareResultDto
+        {
+            Shared = outcome.Shared,
+            Skipped = outcome.Skipped.Select(s => new RepertoireShareSkipDto { UserId = s.UserId, Reason = s.Reason }).ToList(),
+        };
     }
 
     /// <summary>Mit welchen Nutzern ist dieses eigene Repertoire aktuell geteilt? (Für den Dialog.)</summary>

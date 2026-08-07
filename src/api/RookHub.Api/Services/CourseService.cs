@@ -391,8 +391,9 @@ public class CourseService
         await EnsureAccessAsync(userId, bookId, isAdmin);
         if (await _db.CoursePins.AnyAsync(p => p.UserId == userId && p.BookId == bookId)) return;
         _db.CoursePins.Add(new CoursePin { UserId = userId, BookId = bookId, PinnedAt = DateTime.UtcNow });
-        try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException) { /* Race: paralleler Pin desselben (User,Buch) → Unique-Index, ignorieren. */ }
+        // Race: paralleler Pin desselben (User,Buch) → Unique-Index, ignorieren. Andere DB-Fehler
+        // fliegen bewusst durch (siehe DbIdempotency).
+        await _db.SaveIgnoringUniqueRaceAsync(_logger);
     }
 
     /// <summary>Löst einen angepinnten Kurs wieder. Idempotent (kein Pin → No-op).</summary>
@@ -470,58 +471,33 @@ public class CourseService
     /// <summary>Teilt einen eigenen Kurs mit mehreren (befreundeten) Nutzern. Idempotent: bereits
     /// geteilte Empfänger werden übersprungen (Grund <c>duplicate</c>), Fremde als <c>not_friends</c>,
     /// unbekannte als <c>not_found</c>, man selbst als <c>self</c>. Legt je neuem Empfänger eine
-    /// In-App-Benachrichtigung an.</summary>
-    /// <param name="retryOnConflict">Interner Schalter: nur der ERSTE Aufruf darf nach einem
-    /// Unique-Index-Konflikt einmal neu auflegen. Ohne diese Schranke rekursierte der Catch-Zweig
-    /// unbegrenzt, sobald die <see cref="DbUpdateException"/> kein Duplikat war (dauerhafter Fehler
-    /// ⇒ StackOverflow ⇒ Prozess-Abbruch, nicht abfangbar).</param>
-    public async Task<CourseShareResultDto> ShareCourseAsync(int userId, int bookId, List<int> recipientUserIds, bool isAdmin,
-        bool retryOnConflict = true)
+    /// In-App-Benachrichtigung an. Die Mechanik (Skip-Gründe, Unique-Race) liegt gemeinsam mit dem
+    /// Repertoire-Teilen in <see cref="ShareServiceBatch"/> — hier nur das Kurs-Spezifische.</summary>
+    public async Task<CourseShareResultDto> ShareCourseAsync(int userId, int bookId, List<int> recipientUserIds, bool isAdmin)
     {
         var book = await EnsureOwnedBookAsync(userId, bookId);
 
-        var result = new CourseShareResultDto();
-        var distinct = recipientUserIds.Distinct().ToList();
-        if (distinct.Count == 0) return result;
-
-        var existing = (await _db.AppUsers.Where(u => distinct.Contains(u.Id)).Select(u => u.Id).ToListAsync()).ToHashSet();
-        var friendIds = await _friends.GetAcceptedFriendIdsAsync(userId, distinct);
-        var alreadyShared = (await _db.CourseShares
-            .Where(cs => cs.BookId == bookId && distinct.Contains(cs.RecipientId))
-            .Select(cs => cs.RecipientId)
-            .ToListAsync()).ToHashSet();
-
-        var toNotify = new List<int>();
-        foreach (var rid in distinct)
-        {
-            if (rid == userId) { result.Skipped.Add(new CourseShareSkipDto { UserId = rid, Reason = "self" }); continue; }
-            if (!existing.Contains(rid)) { result.Skipped.Add(new CourseShareSkipDto { UserId = rid, Reason = "not_found" }); continue; }
-            // Admins dürfen auch an Nicht-Freunde teilen; normale Nutzer nur an bestätigte Freunde.
-            if (!isAdmin && !friendIds.Contains(rid)) { result.Skipped.Add(new CourseShareSkipDto { UserId = rid, Reason = "not_friends" }); continue; }
-            if (alreadyShared.Contains(rid)) { result.Skipped.Add(new CourseShareSkipDto { UserId = rid, Reason = "duplicate" }); continue; }
-
-            _db.CourseShares.Add(new CourseShare { BookId = bookId, OwnerId = userId, RecipientId = rid, SharedAt = DateTime.UtcNow });
-            toNotify.Add(rid);
-            result.Shared++;
-        }
-
-        if (result.Shared > 0)
-        {
-            try { await _db.SaveChangesAsync(); }
-            catch (DbUpdateException ex) when (retryOnConflict && AuthService.IsUniqueViolation(ex))
+        var outcome = await ShareServiceBatch.ShareAsync(_db, _friends, userId, recipientUserIds, isAdmin,
+            loadAlreadySharedAsync: async ids => (await _db.CourseShares
+                .Where(cs => cs.BookId == bookId && ids.Contains(cs.RecipientId))
+                .Select(cs => cs.RecipientId)
+                .ToListAsync()).ToHashSet(),
+            addShare: rid => _db.CourseShares.Add(new CourseShare
             {
-                // Race: derselbe (Buch, Empfänger) parallel geteilt → Unique-Index. Idempotent behandeln
-                // (der zweite Lauf findet den Empfänger in `alreadyShared` und überspringt ihn).
-                _db.ChangeTracker.Clear();
-                return await ShareCourseAsync(userId, bookId, recipientUserIds, isAdmin, retryOnConflict: false);
-            }
+                BookId = bookId, OwnerId = userId, RecipientId = rid, SharedAt = DateTime.UtcNow,
+            }),
+            onSharedAsync: async toNotify =>
+            {
+                var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
+                await _notifications.CreateManyAsync(toNotify, NotificationType.CourseShared,
+                    new Dictionary<string, string> { ["username"] = ownerName, ["courseName"] = book.DisplayName }, "/courses");
+            });
 
-            var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
-            await _notifications.CreateManyAsync(toNotify, NotificationType.CourseShared,
-                new Dictionary<string, string> { ["username"] = ownerName, ["courseName"] = book.DisplayName }, "/courses");
-        }
-
-        return result;
+        return new CourseShareResultDto
+        {
+            Shared = outcome.Shared,
+            Skipped = outcome.Skipped.Select(s => new CourseShareSkipDto { UserId = s.UserId, Reason = s.Reason }).ToList(),
+        };
     }
 
     /// <summary>Mit welchen Nutzern ist dieser eigene Kurs aktuell geteilt? (Für den Teilen-Dialog.)</summary>
@@ -684,16 +660,9 @@ public class CourseService
 
         mode = NormalizeMode(mode);
         await UpsertProgressAsync(userId, bookId, mode);
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            // Race: zwei (fast) gleichzeitige .../next-Aufrufe legen den CourseProgress parallel an
-            // (Unique (UserId, BookId)). Der LastMode-Upsert ist nur Nebeneffekt → Konflikt verwerfen.
-            _db.ChangeTracker.Clear();
-        }
+        // Race: zwei (fast) gleichzeitige .../next-Aufrufe legen den CourseProgress parallel an
+        // (Unique (UserId, BookId)). Der LastMode-Upsert ist nur Nebeneffekt → Konflikt verwerfen.
+        await _db.SaveIgnoringUniqueRaceAsync(_logger);
 
         // Kapitel-Modus: Fortschritt + Pool auf das gewählte Kapitel beschränken; sonst buchweit.
         var (chapterName, chapterScoped) = await ResolveChapterAsync(bookId, chapterIndex);
@@ -857,28 +826,15 @@ public class CourseService
                     SolvedAt = solvedAt,
                     TimeSeconds = timeSeconds,
                 });
-                try
-                {
-                    await _db.SaveChangesAsync();
-                }
-                catch (DbUpdateException)
-                {
-                    // Race: paralleles Aufzeichnen desselben Puzzles → Unique (UserId, BookPuzzleId). Idempotent.
-                    _db.ChangeTracker.Clear();
-                }
+                // Race: paralleles Aufzeichnen desselben Puzzles → Unique (UserId, BookPuzzleId). Idempotent.
+                // Ein ANDERER Fehler darf hier nicht geschluckt werden — sonst geht der Solve still verloren.
+                await _db.SaveIgnoringUniqueRaceAsync(_logger);
             }
         }
 
         // Fortschritt/LastMode getrennt upserten; ein paralleler Erstinsert (Unique (UserId, BookId)) ist hier unkritisch.
         await UpsertProgressAsync(userId, bookId, dto.Mode);
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            _db.ChangeTracker.Clear();
-        }
+        await _db.SaveIgnoringUniqueRaceAsync(_logger);
 
         // Im Kapitel-Modus den zurückgegebenen Fortschritt aufs Kapitel beschränken (sonst buchweit);
         // die Kapitel-Statistik bezieht sich auf das gerade bearbeitete Puzzle.
@@ -910,15 +866,8 @@ public class CourseService
             BookPuzzleId = bookPuzzleId,
             SeenAt = DateTime.UtcNow,
         });
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            // Race: paralleles Aufzeichnen derselben Info-Linie → Unique (UserId, BookPuzzleId). Idempotent.
-            _db.ChangeTracker.Clear();
-        }
+        // Race: paralleles Aufzeichnen derselben Info-Linie → Unique (UserId, BookPuzzleId). Idempotent.
+        await _db.SaveIgnoringUniqueRaceAsync(_logger);
     }
 
     /// <summary>Setzt den Fortschritt eines Kurses zurück (löscht alle gelösten Markierungen).</summary>

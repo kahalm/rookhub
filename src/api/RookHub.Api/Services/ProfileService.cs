@@ -105,11 +105,12 @@ public class ProfileService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException) when (dto.Email != null)
+        catch (DbUpdateException ex) when (dto.Email != null && AuthService.IsUniqueViolation(ex))
         {
             // TOCTOU: zwei Konten setzen (fast) gleichzeitig dieselbe E-Mail → die Vorab-Prüfung
             // passiert beide, der zweite Insert verletzt den Unique-Index auf Email. Sauber als
-            // Kollision (409) statt 500 behandeln.
+            // Kollision (409) statt 500 behandeln. Nur bei echtem Duplikat — ein transienter
+            // DB-Fehler würde sonst fälschlich „E-Mail vergeben" melden.
             throw new InvalidOperationException("This email address is already in use.");
         }
 
@@ -173,11 +174,12 @@ public class ProfileService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
         {
             // TOCTOU: zwei Accounts verknüpfen (fast) gleichzeitig dieselbe Discord-ID → die
             // Vorab-Prüfung passiert beide, der zweite Insert verletzt den Unique-Index auf
-            // DiscordId. Sauber als Kollision (409) statt 500 behandeln.
+            // DiscordId. Sauber als Kollision (409) statt 500 behandeln — nur bei echtem
+            // Duplikat, sonst hieße ein Timeout fälschlich „schon verknüpft".
             throw new InvalidOperationException("This Discord account is already linked to another RookHub user.");
         }
         _logger.LogInformation("Linked Discord account {DiscordId} to user {UserId}.", discordId, userId);

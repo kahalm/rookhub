@@ -110,7 +110,7 @@ public class RepertoirePositionLookupService
     /// und Baummodus, damit beide dieselben Linien/gameIndex-Zuordnungen sehen.</summary>
     private sealed record RepGame(
         int RepertoireId, string RepertoireName, string Kind, bool Shared,
-        string Chapter, string LineName, int GameIndex, List<PgnMove> Moves);
+        string Chapter, string LineName, int GameIndex, string? StartFen, List<PgnMove> Moves);
 
     private static MemoryCacheEntryOptions CacheOptions() => new()
     {
@@ -154,7 +154,7 @@ public class RepertoirePositionLookupService
                 {
                     if (gamesSeen++ > MaxGamesPerUser) break;
                     result.Add(new RepGame(rep.Id, rep.Name, kindName, !rep.Owned,
-                        game.Chapter, game.LineName, gameIndex, game.Moves));
+                        game.Chapter, game.LineName, gameIndex, game.StartFen, game.Moves));
                     gameIndex++;
                 }
             }
@@ -179,11 +179,27 @@ public class RepertoirePositionLookupService
         return index;
     }
 
+    /// <summary>Brett in der Startstellung DIESER Linie. Chessable-Linien starten oft mitten in der
+    /// Partie ([FEN]-Header); ohne das säuft der erste Zug ab und die Linie fehlt im Index. Ist die
+    /// FEN unbrauchbar, wird die Linie übersprungen (null) statt aus der Grundstellung gespielt —
+    /// sonst landen FALSCHE Stellungen im Index.</summary>
+    private static ChessBoard? BoardFor(string? startFen)
+    {
+        if (string.IsNullOrWhiteSpace(startFen)) return new ChessBoard();
+        try { return ChessBoard.LoadFromFen(startFen); }
+        catch { return null; }
+    }
+
     private static void IndexGame(Dictionary<string, List<Occurrence>> index, RepGame game)
     {
         // Pro Linie zuerst die beste (kleinste echte) Ply je Stellung sammeln, dann in den Index legen.
         var perLine = new Dictionary<string, int>(StringComparer.Ordinal);
-        var board = new ChessBoard();
+        var board = BoardFor(game.StartFen);
+        if (board == null) return;
+        // Startstellung nur bei eigener [FEN] mitindizieren: dort ist sie eine echte Repertoire-
+        // Stellung (Endspiel-/Mittelspiel-Linie beginnt genau dort). Bei Linien aus der
+        // Grundstellung wäre sie reines Rauschen — jedes Repertoire würde auf sie matchen.
+        if (game.StartFen != null) perLine[NormalizeKey(board.ToFen())] = 0;
         try { WalkLine(board, game.Moves, perLine, startPly: 0, isMainline: true); }
         catch { /* defensiv: eine einzelne Linie nie den Index kippen lassen */ }
 
@@ -248,8 +264,9 @@ public class RepertoirePositionLookupService
             int occurrences = 0;
             foreach (var game in repGroup)
             {
-                var board = new ChessBoard();
-                // Die Ausgangsstellung selbst kann der Treffer sein (Repertoire-Start).
+                var board = BoardFor(game.StartFen);
+                if (board == null) continue;   // unbrauchbare [FEN] → Linie überspringen
+                // Die Startstellung DIESER Linie kann der Treffer sein (Repertoire-/Varianten-Anfang).
                 if (NormalizeKey(board.ToFen()) == target)
                 {
                     occurrences++;
@@ -385,7 +402,7 @@ public class RepertoirePositionLookupService
     // Eigenständig gehalten (statt RepertoireAnalyzeService-Interna offenzulegen); deckt dieselben
     // Fälle ab wie der Client-Parser `parsePgnText`, plus [White]/[Black]-Header pro Partie.
 
-    private sealed record ParsedGame(string Chapter, string LineName, List<PgnMove> Moves);
+    private sealed record ParsedGame(string Chapter, string LineName, string? StartFen, List<PgnMove> Moves);
     private sealed record PgnMove(string San, List<List<PgnMove>> Variations);
 
     private static readonly Regex CommentRegex = new(@"\{[^}]*\}", RegexOptions.Compiled);
@@ -396,6 +413,10 @@ public class RepertoirePositionLookupService
     private static readonly Regex EventHeaderSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
     private static readonly Regex WhiteHeaderRegex = new(@"^\[White\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     private static readonly Regex BlackHeaderRegex = new(@"^\[Black\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
+    // Chessable-Importe (via piratechess) tragen je Linie die Startstellung der Variante im
+    // [FEN]-Header — ohne den beginnt der Walk in der Grundstellung, der erste Zug ist dort
+    // illegal und die ganze Linie fehlt still im Index (bzw. indiziert falsche Stellungen).
+    private static readonly Regex FenHeaderRegex = new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
 
     private static List<ParsedGame> ParseGames(string text)
@@ -409,12 +430,14 @@ public class RepertoirePositionLookupService
             var moves = movetext.Length == 0 ? new List<PgnMove>() : ParseMoveTokens(Tokenize(movetext), 0).Moves;
             var white = WhiteHeaderRegex.Match(section);
             var black = BlackHeaderRegex.Match(section);
+            var fen = FenHeaderRegex.Match(section);
             var lineName = white.Success ? white.Groups[1].Value.Trim() : "";
             var chapter = black.Success ? black.Groups[1].Value.Trim() : "";
+            var startFen = fen.Success ? fen.Groups[1].Value.Trim() : null;
             // Auch zug-lose Partien behalten (könnten Kapitel-Intros sein) — sie tragen aber keine
             // Positionen bei und würden nie matchen; wir nehmen sie nur mit, damit gameIndex mit dem
             // Client-Parser übereinstimmt.
-            games.Add(new ParsedGame(chapter, lineName, moves));
+            games.Add(new ParsedGame(chapter, lineName, string.IsNullOrWhiteSpace(startFen) ? null : startFen, moves));
         }
         return games;
     }

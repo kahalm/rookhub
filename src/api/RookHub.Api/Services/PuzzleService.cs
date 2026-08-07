@@ -40,10 +40,21 @@ public class PuzzleService
         // statt LIKE-Full-Scan. Nur wenn PuzzleTags befüllt ist (sonst Fallback auf LIKE unten).
         if (!string.IsNullOrEmpty(themesAny) && string.IsNullOrEmpty(themes) && await HasPuzzleTagsAsync())
         {
-            var cands = await TagCandidatesAsync(themesAny, minRating, maxRating, excludeSolved, userId, excludeIds);
-            if (cands.Count == 0) return null;
-            var pickId = cands[Random.Shared.Next(cands.Count)].Id;
-            var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId);
+            // FALLE: die Kandidatenmenge NICHT materialisieren. Häufige Tags (mateIn1/mateIn2) bringen
+            // über eine Million (PuzzleId,Rating)-Zeilen — und /api/puzzles/random ist anonym erreichbar.
+            // Darum derselbe Random-Seek wie im Batch-Pfad: LIMIT 1 über den Index (TagId, Rating).
+            // Offene Rating-Grenzen werden mit der gecachten Pool-Spanne geschlossen, damit der Seek
+            // ein endliches Fenster hat.
+            var tagIds = await TagIdsAsync(themesAny);
+            if (tagIds.Count == 0) return null;
+            var (poolMin, poolMax) = await GetCachedRatingRangeAsync();
+            if (poolMin == null || poolMax == null) return null;
+            var seekMin = Math.Max(minRating ?? poolMin.Value, poolMin.Value);
+            var seekMax = Math.Min(maxRating ?? poolMax.Value, poolMax.Value);
+            var exclude = excludeIds is { Count: > 0 } ? new HashSet<int>(excludeIds) : new HashSet<int>();
+            var pickId = await SeekTaggedIdAsync(tagIds, seekMin, seekMax, excludeSolved, userId, exclude);
+            if (pickId == null) return null;
+            var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId.Value);
             return picked == null ? null : MapToDto(picked);
         }
 
@@ -207,10 +218,7 @@ public class PuzzleService
     private async Task<List<int>> PickTaggedPerWindowAsync(string themesAny,
         List<(int Min, int Max)> windows, bool excludeSolved, int? userId)
     {
-        var names = themesAny.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct().ToList();
-        if (names.Count == 0) return new List<int>();
-        var tagIds = await _db.Tags.Where(t => names.Contains(t.Name)).Select(t => t.Id).ToListAsync();
+        var tagIds = await TagIdsAsync(themesAny);
         if (tagIds.Count == 0) return new List<int>();
 
         var used = new HashSet<int>();
@@ -290,32 +298,13 @@ public class PuzzleService
         return _puzzleTagsReady;
     }
 
-    /// <summary>
-    /// Kandidaten (PuzzleId + Rating) für einen ODER-Themenfilter über die normalisierte Tag-Tabelle.
-    /// Nutzt den Index (TagId, Rating) → reiner Index-Range-Scan statt LIKE-Full-Scan.
-    /// </summary>
-    private async Task<List<(int Id, int Rating)>> TagCandidatesAsync(string themesAny,
-        int? minRating, int? maxRating, bool excludeSolved, int? userId, IReadOnlyCollection<int>? excludeIds)
+    /// <summary>Tag-Ids zu einem leerzeichengetrennten Themen-String (ODER-Filter); leer = keine bekannten Themen.</summary>
+    private async Task<List<int>> TagIdsAsync(string themesAny)
     {
         var names = themesAny.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct().ToList();
-        if (names.Count == 0) return new List<(int, int)>();
-        var tagIds = await _db.Tags.Where(t => names.Contains(t.Name)).Select(t => t.Id).ToListAsync();
-        if (tagIds.Count == 0) return new List<(int, int)>();
-
-        var q = _db.PuzzleTags.Where(pt => tagIds.Contains(pt.TagId));
-        if (minRating.HasValue) q = q.Where(pt => pt.Rating >= minRating.Value);
-        if (maxRating.HasValue) q = q.Where(pt => pt.Rating <= maxRating.Value);
-        if (excludeIds is { Count: > 0 }) q = q.Where(pt => !excludeIds.Contains(pt.PuzzleId));
-        if (excludeSolved && userId.HasValue)
-        {
-            var uid = userId.Value;
-            var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
-            q = q.Where(pt => !solvedIds.Contains(pt.PuzzleId));
-        }
-        // Ein Puzzle kann mehrere der gesuchten Tags tragen → DISTINCT auf (PuzzleId, Rating).
-        var rows = await q.Select(pt => new { pt.PuzzleId, pt.Rating }).Distinct().ToListAsync();
-        return rows.Select(r => (r.PuzzleId, r.Rating)).ToList();
+        if (names.Count == 0) return new List<int>();
+        return await _db.Tags.Where(t => names.Contains(t.Name)).Select(t => t.Id).ToListAsync();
     }
 
 
@@ -600,6 +589,23 @@ public class PuzzleService
 
         var min = await _db.Puzzles.MinAsync(p => (int?)p.Id);
         var max = await _db.Puzzles.MaxAsync(p => (int?)p.Id);
+        var result = (min, max);
+        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+        return result;
+    }
+
+    /// <summary>
+    /// Rating-Spanne des gesamten Pools (gecacht) — schließt offene Rating-Grenzen im Tag-Seek.
+    /// Min/Max laufen über den Index auf Puzzles.Rating, der Cache hält sie trotzdem aus dem Request-Pfad.
+    /// </summary>
+    private async Task<(int? Min, int? Max)> GetCachedRatingRangeAsync()
+    {
+        const string cacheKey = "PuzzleRatingRange";
+        if (_cache.TryGetValue<(int?, int?)>(cacheKey, out var cached))
+            return cached;
+
+        var min = await _db.Puzzles.MinAsync(p => (int?)p.Rating);
+        var max = await _db.Puzzles.MaxAsync(p => (int?)p.Rating);
         var result = (min, max);
         _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
         return result;

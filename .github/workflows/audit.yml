@@ -1,0 +1,94 @@
+name: Dependency Audit
+
+# Meldet bekannte Schwachstellen in den Abhaengigkeiten (NuGet, npm, pip).
+#
+# BEWUSST nicht blockierend (continue-on-error): der Workflow laeuft neben dem
+# Test-Gate her und darf den Release-Pfad nicht rotfaerben, wenn irgendwo in der
+# Lieferkette ein neues Advisory auftaucht. Ergebnis steht im Job-Log + in der
+# Job-Summary; die Entscheidung (Update / akzeptieren) trifft ein Mensch.
+
+on:
+  schedule:
+    # Montags 05:17 UTC — krumme Minute, damit der Job nicht in der vollen Stunde
+    # mit dem GitHub-weiten Scheduler-Stau kollidiert (sonst faellt er oft aus).
+    - cron: '17 5 * * 1'
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nuget:
+    name: NuGet (dotnet list package --vulnerable)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore src/api/RookHub.Api/RookHub.Api.csproj
+        continue-on-error: true
+      - name: Vulnerable packages (inkl. transitiv)
+        continue-on-error: true
+        run: |
+          {
+            echo '## NuGet'
+            echo '```'
+            dotnet list src/api/RookHub.Api/RookHub.Api.csproj package --vulnerable --include-transitive 2>&1
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  npm:
+    name: npm audit (Frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/frontend/app/package-lock.json
+      - name: npm audit
+        working-directory: src/frontend/app
+        continue-on-error: true
+        run: |
+          {
+            echo '## npm (high + critical)'
+            echo '```'
+            npm audit --audit-level=high 2>&1
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  pip:
+    name: pip-audit (Python-Skripte)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: pip-audit
+        continue-on-error: true
+        run: |
+          # Die Python-Anteile (scripts/*.py, .github/scripts/*.py) fahren heute rein
+          # auf der Standardbibliothek — ohne requirements-Datei gibt es nichts zu
+          # pruefen. Der Schritt bleibt trotzdem stehen, damit die Pruefung automatisch
+          # anspringt, sobald jemand Abhaengigkeiten einfuehrt.
+          files=$(find . -name 'requirements*.txt' -not -path './node_modules/*' -not -path '*/node_modules/*')
+          if [ -z "$files" ]; then
+            echo 'Keine requirements*.txt gefunden — nichts zu pruefen.' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python -m pip install --quiet pip-audit
+          {
+            echo '## pip-audit'
+            echo '```'
+            for f in $files; do
+              echo "--- $f"
+              pip-audit -r "$f" 2>&1
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

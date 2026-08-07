@@ -1,6 +1,6 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { OfflineQueueService, OFFLINE_QUEUE_KEY } from './offline-queue.service';
+import { OfflineQueueService, OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_THROTTLE_MS } from './offline-queue.service';
 
 describe('OfflineQueueService', () => {
   let svc: OfflineQueueService;
@@ -23,7 +23,7 @@ describe('OfflineQueueService', () => {
     expect(raw[0].method).toBe('POST');
   });
 
-  it('spielt vorgemerkte Requests bei flush ein und leert die Queue bei Erfolg', () => {
+  it('spielt vorgemerkte Requests bei flush ein und leert die Queue bei Erfolg', fakeAsync(() => {
     svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
     svc.enqueue('POST', '/api/courses/2/results', { bookPuzzleId: 9, solved: true });
     svc.flush();
@@ -33,11 +33,14 @@ describe('OfflineQueueService', () => {
     expect(r1.request.body).toEqual({ solved: true });
     r1.flush({});
 
+    // Der nächste Eintrag geht erst nach dem Drosselabstand raus (Rate-Limit-Schutz).
+    http.expectNone('/api/courses/2/results');
+    tick(OFFLINE_QUEUE_THROTTLE_MS);
     const r2 = http.expectOne('/api/courses/2/results');
     r2.flush({});
 
     expect(svc.pendingCount()).toBe(0);
-  });
+  }));
 
   it('behält den Eintrag bei Netzwerkfehler (Status 0)', () => {
     svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: false });
@@ -54,6 +57,30 @@ describe('OfflineQueueService', () => {
     req.flush({ message: 'gone' }, { status: 404, statusText: 'Not Found' });
     expect(svc.pendingCount()).toBe(0);
   });
+
+  it('verwirft NICHTS bei 429 (Rate-Limit) und pausiert den Nachlauf', () => {
+    svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
+    svc.enqueue('POST', '/api/puzzles/6/attempt', { solved: true });
+    svc.flush();
+    http.expectOne('/api/puzzles/5/attempt')
+      .flush({ message: 'rate limit' }, { status: 429, statusText: 'Too Many Requests' });
+    expect(svc.pendingCount()).toBe(2);            // gemerkte Lösungen bleiben erhalten
+    http.expectNone('/api/puzzles/6/attempt');     // Rest erst nach dem Backoff-Retry
+  });
+
+  it('respektiert Retry-After des 429 und sendet danach erneut', fakeAsync(() => {
+    svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
+    svc.flush();
+    http.expectOne('/api/puzzles/5/attempt').flush(
+      { message: 'rate limit' },
+      { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '5' } },
+    );
+    tick(4999);
+    http.expectNone('/api/puzzles/5/attempt');
+    tick(1);
+    http.expectOne('/api/puzzles/5/attempt').flush({});
+    expect(svc.pendingCount()).toBe(0);
+  }));
 
   it('flush ohne Einträge löst keinen Request aus', () => {
     svc.flush();
@@ -88,7 +115,7 @@ describe('OfflineQueueService', () => {
     expect(svc.pendingCount()).toBe(1);          // bleibt für User 7 erhalten
   });
 
-  it('sendet gemischt: eigenen + anonymen Eintrag, fremden überspringen', () => {
+  it('sendet gemischt: eigenen + anonymen Eintrag, fremden überspringen', fakeAsync(() => {
     login(7);
     svc.enqueue('POST', '/api/a', { x: 1 });        // User 7
     login(9);
@@ -99,9 +126,10 @@ describe('OfflineQueueService', () => {
     svc.flush();
     http.expectNone('/api/a');                       // fremd (User 7) → übersprungen
     http.expectOne('/api/b').flush({});              // eigener
+    tick(OFFLINE_QUEUE_THROTTLE_MS);
     http.expectOne('/api/c/anonymous').flush({});    // anonym
     expect(svc.pendingCount()).toBe(1);              // nur User-7-Eintrag bleibt
-  });
+  }));
 
   it('flusht eigene Einträge nach Wieder-Login', () => {
     login(7);

@@ -119,6 +119,20 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "App version: $v"
 
+      # FALLE: action-gh-release legt einen fehlenden Tag STILL selbst an — auf dem
+      # Dispatch-Stand. Von GITHUB_TOKEN erzeugte Tags loesen keine Workflows aus, d. h.
+      # fuer dieses "latest"-Release wuerde NIE ein :latest-Docker-Image gebaut: Release
+      # vX.Y.Z, Images aber noch vom vorigen Tag. Darum hart abbrechen, wenn der Tag fehlt.
+      - name: Release-Tag muss existieren
+        if: inputs.variant == 'prod'
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          if ! git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
+            echo "::error::Tag v$v fehlt. Erst 'git tag v$v && git push origin v$v' (baut die :latest-Images), dann diesen Workflow starten."
+            exit 1
+          fi
+          echo "Tag v$v vorhanden."
+
       # Nur prod: frische APK/AAB an ein GitHub-Release hängen + als "latest" markieren,
       # damit releases/latest/download/app-release-signed.apk immer die aktuelle App liefert.
       - name: Publish GitHub Release with fresh APK

@@ -35,9 +35,32 @@ public class ChessableTrainedLineServiceTests : IDisposable
     [InlineData("l1sv2o9a142o", new[] { "e4", "e6", "d4", "d5", "Nd2", "c5", "exd5", "Qxd5+" })]
     [InlineData("l65y1fu91w7", new[] { "O-O", "O-O-O" })]
     [InlineData("lbve4kkccho", new[] { "e4" })]
+    // Chessable-Schreibweisen: Umwandlung OHNE "=" und Rochade mit Nullen müssen denselben
+    // Schlüssel ergeben wie die chess.js-Form, aus der das Frontend seine Keys bildet.
+    [InlineData("l3oj25ls9tj", new[] { "e4", "d5", "exd5", "c6", "dxc6", "b5", "c7", "a5", "c8=Q" })]
+    [InlineData("l3oj25ls9tj", new[] { "e4", "d5", "exd5", "c6", "dxc6", "b5", "c7", "a5", "c8Q" })]
+    [InlineData("l27uzjsul7qp", new[] { "a2", "b1=Q+" })]
+    [InlineData("l27uzjsul7qp", new[] { "a2", "b1Q+" })]
+    [InlineData("lf2l4fs48fe", new[] { "O-O" })]
+    [InlineData("lf2l4fs48fe", new[] { "0-0" })]
     public void LineKey_MirrorsFrontendHash(string expected, string[] sans)
     {
         Assert.Equal(expected, ChessableTrainedLineService.LineKeyFromSans(sans));
+    }
+
+    [Theory]
+    [InlineData("c8Q", "c8=Q")]
+    [InlineData("c8q", "c8=Q")]
+    [InlineData("c8=q", "c8=Q")]
+    [InlineData("bxc8N+", "bxc8=N")]
+    [InlineData("0-0", "O-O")]
+    [InlineData("0-0-0", "O-O-O")]
+    [InlineData("Nf3!", "Nf3")]
+    [InlineData("Qxd5+", "Qxd5")]
+    [InlineData("e4", "e4")]
+    public void CanonicalSan_MatchesFrontendNormSan(string raw, string expected)
+    {
+        Assert.Equal(expected, ChessableTrainedLineService.CanonicalSan(raw));
     }
 
     // ===== PGN-Extraktion =====================================================================

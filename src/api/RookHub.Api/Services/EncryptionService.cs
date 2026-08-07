@@ -27,8 +27,12 @@ public class EncryptionService
 
     public EncryptionService(IConfiguration configuration)
     {
-        var keyString = configuration["Encryption:Key"]
-            ?? throw new InvalidOperationException("Encryption:Key not configured");
+        // Leerstring genauso ablehnen wie "fehlt": ein leerer Schlüssel läuft sonst durch und
+        // verschlüsselt mit SHA256("") — einem öffentlich bekannten Fixwert. Lieber ein lauter
+        // Startfehler als eine Schein-Verschlüsselung des fremden Chessable-Bearers.
+        var keyString = configuration["Encryption:Key"];
+        if (string.IsNullOrWhiteSpace(keyString))
+            throw new InvalidOperationException("Encryption:Key not configured");
         _key = SHA256.HashData(Encoding.UTF8.GetBytes(keyString));
         _legacyKey = Encoding.UTF8.GetBytes(keyString.PadRight(32, '0')[..32]);
     }

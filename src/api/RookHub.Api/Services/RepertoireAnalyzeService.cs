@@ -128,8 +128,13 @@ public class RepertoireAnalyzeService
             {
                 foreach (var game in ParsePgn(text))
                 {
-                    var board = new ChessBoard();
-                    WalkMoves(board, game, positions);
+                    // Unbrauchbare [FEN] → Linie überspringen statt aus der Grundstellung zu spielen
+                    // (das würde falsche Stellungen als „im Repertoire" markieren).
+                    ChessBoard board;
+                    if (game.StartFen == null) board = new ChessBoard();
+                    else { try { board = ChessBoard.LoadFromFen(game.StartFen); } catch { continue; } }
+                    positions.Add(NormalizeFen(board.ToFen()));   // Startstellung der Linie zählt mit
+                    WalkMoves(board, game.Moves, positions);
                 }
             }
             catch
@@ -188,24 +193,34 @@ public class RepertoireAnalyzeService
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex MoveNumberRegex = new(@"^\d+\.+$", RegexOptions.Compiled);
     private static readonly Regex EventHeaderSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
+    // Chessable-Importe tragen je Linie die Startstellung im [FEN]-Header. Ohne ihn beginnt der
+    // Walk in der Grundstellung: der erste Zug ist dort illegal (Linie fehlt still im Positions-Set)
+    // oder zufällig legal (FALSCHE Stellungen gelten als „im Repertoire").
+    private static readonly Regex FenHeaderRegex = new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
 
-    private static List<List<PgnMove>> ParsePgn(string text)
+    /// <summary>Eine Linie: Startstellung (<c>null</c> = Grundstellung) + Zugbaum.</summary>
+    private sealed record ParsedLine(string? StartFen, List<PgnMove> Moves);
+
+    private static List<ParsedLine> ParsePgn(string text)
     {
-        var games = new List<List<PgnMove>>();
+        var games = new List<ParsedLine>();
         foreach (var section in EventHeaderSplit.Split(text))
         {
             var movetext = ExtractMovetext(section);
             if (string.IsNullOrWhiteSpace(movetext)) continue;
             var tokens = Tokenize(movetext);
             var (moves, _) = ParseMoveTokens(tokens, 0);
-            if (moves.Count > 0) games.Add(moves);
+            if (moves.Count == 0) continue;
+            var fen = FenHeaderRegex.Match(section);
+            var startFen = fen.Success ? fen.Groups[1].Value.Trim() : null;
+            games.Add(new ParsedLine(string.IsNullOrWhiteSpace(startFen) ? null : startFen, moves));
         }
         if (games.Count == 0 && !string.IsNullOrWhiteSpace(text))
         {
             var tokens = Tokenize(text);
             var (moves, _) = ParseMoveTokens(tokens, 0);
-            if (moves.Count > 0) games.Add(moves);
+            if (moves.Count > 0) games.Add(new ParsedLine(null, moves));
         }
         return games;
     }

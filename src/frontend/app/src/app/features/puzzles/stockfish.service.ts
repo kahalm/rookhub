@@ -12,6 +12,8 @@ export class StockfishService implements OnDestroy {
   private pending: Promise<any> = Promise.resolve();
   /** Abbruch der gerade laufenden Suche (räumt Timeout + Listener auf und rejected) — für sofortigen Crash-Abbruch. */
   private currentAbort?: () => void;
+  /** Läuft, solange ein abgebrochener Kern noch ausräumt (stop → bestmove); die nächste Suche wartet. */
+  private draining?: Promise<void>;
 
   /** Optionaler Telemetrie-Hook (Crash/Hänger melden); von AppComponent an ClientLogService verdrahtet. */
   reportEngineEvent?: (kind: string, detail?: string) => void;
@@ -68,7 +70,12 @@ export class StockfishService implements OnDestroy {
   async getBestMove(fen: string, depth = 16): Promise<StockfishResult> {
     // init() INNERHALB der Kette: stürzt eine vorherige Suche ab (Worker weg), initialisiert
     // die nächste gequeuete Suche einen frischen Worker, statt mit „not initialized" zu scheitern.
-    const task = this.pending.then(async () => { await this.init(); return this.runSearch(fen, depth); });
+    const task = this.pending.then(async () => {
+      // Ein per Timeout aufgegebener Kern rechnet noch — erst abwarten, dann neu anwerfen.
+      if (this.draining) await this.draining;
+      await this.init();
+      return this.runSearch(fen, depth);
+    });
     this.pending = task.catch(() => {});
     return task;
   }
@@ -89,6 +96,36 @@ export class StockfishService implements OnDestroy {
     abort?.();   // räumt Timeout + Listener der laufenden Suche auf und rejected sie
   }
 
+  /**
+   * Timeout-Pfad: der Aufrufer hat aufgegeben, die Suche läuft im Worker aber WEITER. FALLE:
+   * schickt die nächste Suche jetzt `position`+`go` in den noch rechnenden lite-single-Kern,
+   * platzt der asyncify-Abbau („RuntimeError: unreachable", vgl. Fix v0.152.1) — deshalb erst
+   * `stop` senden und das quittierende `bestmove` abwarten. Bleibt es aus, wird der Kern hart
+   * entsorgt (der nächste Aufruf initialisiert dann einen frischen Worker).
+   */
+  private drainSearch(worker: Worker): void {
+    const drain = new Promise<void>(resolve => {
+      const finish = () => {
+        clearTimeout(guard);
+        worker.removeEventListener('message', onMessage);
+        if (this.draining === drain) this.draining = undefined;
+        resolve();
+      };
+      const onMessage = (e: MessageEvent) => {
+        if (typeof e.data === 'string' && e.data.startsWith('bestmove')) finish();
+      };
+      const guard = setTimeout(() => {
+        this.reportEngineEvent?.('search_stop_timeout');
+        try { worker.terminate(); } catch { /* ignore */ }
+        if (this.worker === worker) { this.worker = undefined; this.initPromise = undefined; }
+        finish();
+      }, 2000);
+      worker.addEventListener('message', onMessage);
+      try { worker.postMessage('stop'); } catch { /* ignore */ }
+    });
+    this.draining = drain;
+  }
+
   private runSearch(fen: string, depth: number): Promise<StockfishResult> {
     const sideToMove = fen.split(' ')[1];
     const worker = this.worker;
@@ -104,10 +141,11 @@ export class StockfishService implements OnDestroy {
         fn();
       };
 
-      const timeout = setTimeout(() => done(() => {
+      const timeout = setTimeout(() => {
         this.reportEngineEvent?.('search_timeout', `depth=${depth}`);
-        reject('Stockfish timeout');
-      }), 10000);
+        done(() => reject('Stockfish timeout'));
+        this.drainSearch(worker);
+      }, 10000);
       // Damit ein Crash (handleCrash) diese Suche sofort sauber beenden kann (Timeout+Listener weg).
       this.currentAbort = () => done(() => reject('Stockfish worker crashed'));
 
@@ -146,13 +184,18 @@ export class StockfishService implements OnDestroy {
   }
 
   destroy(): void {
+    // Erst den Wartenden erlösen: ohne currentAbort() hinge ein laufender Aufruf bis zum
+    // 10-s-Suchtimeout, obwohl der Worker längst terminiert ist.
+    const abort = this.currentAbort;
+    this.currentAbort = undefined;
     if (this.worker) {
       try { this.worker.postMessage('quit'); } catch { /* ignore */ }
       try { this.worker.terminate(); } catch { /* ignore */ }
       this.worker = undefined;
       this.initPromise = undefined;
       this.pending = Promise.resolve();
-      this.currentAbort = undefined;
     }
+    this.draining = undefined;
+    abort?.();
   }
 }

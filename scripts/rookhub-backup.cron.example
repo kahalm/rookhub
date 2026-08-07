@@ -1,0 +1,17 @@
+# RookHub — cron-Vorlage (Alternative zum systemd-Timer, NICHT installiert).
+#
+# Installation auf dem Deploy-Host (als root, wegen Docker-Socket + .env):
+#   sudo cp scripts/rookhub-backup.cron.example /etc/cron.d/rookhub-backup
+#   sudo chmod 644 /etc/cron.d/rookhub-backup     # cron ignoriert schreibbare/ausfuehrbare Dateien
+#
+# Pfade an die eigene Installation anpassen. Ausgabe landet im Log, nicht als
+# Mail — sonst verschwindet ein Fehlschlag stillschweigend in /var/mail.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV_FILE=/opt/stacks/rookhub-schach/.env
+BACKUP_DIR=/var/backups/rookhub
+RETENTION_DAYS=14
+
+# min std tag monat wochentag user befehl
+17 3 * * * root /opt/rookhub/scripts/backup-db.sh >> /var/log/rookhub-backup.log 2>&1

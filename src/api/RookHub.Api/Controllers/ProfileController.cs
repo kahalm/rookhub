@@ -74,6 +74,13 @@ public class ProfileController : BaseApiController
     [HttpPut]
     public async Task<ActionResult<ProfileDto>> UpdateProfile([FromBody] UpdateProfileDto dto)
     {
+        // Identität im Impersonations-Kontext unantastbar: die E-Mail ist der Reset-Anker.
+        // Wer sie hier ändern dürfte, könnte per „Passwort vergessen" das fremde Konto dauerhaft
+        // übernehmen — genau deshalb ist change-password im Impersonations-Kontext gesperrt.
+        // Nur das E-Mail-Feld blocken (nicht den ganzen Endpoint), damit Support weiterhin
+        // Anzeigename/Schach-IDs korrigieren kann.
+        if (IsImpersonating() && dto.Email != null)
+            return StatusCode(403, new { message = "Email cannot be changed while impersonating another user." });
         try
         {
             return Ok(await _profileService.UpdateProfileAsync(GetUserId(), dto));
@@ -109,6 +116,9 @@ public class ProfileController : BaseApiController
     [HttpPost("discord/link")]
     public async Task<ActionResult<ProfileDto>> LinkDiscord([FromBody] LinkDiscordDto dto)
     {
+        // Auch eine Identitätsbindung — im Impersonations-Kontext gesperrt (siehe UpdateProfile).
+        if (IsImpersonating())
+            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         var identity = _discordLink.Verify(dto.Token);
         if (identity == null)
             return BadRequest(new { message = "Invalid or expired Discord link token." });
@@ -130,6 +140,8 @@ public class ProfileController : BaseApiController
     [HttpDelete("discord")]
     public async Task<ActionResult<ProfileDto>> UnlinkDiscord()
     {
+        if (IsImpersonating())
+            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             return Ok(await _profileService.UnlinkDiscordAsync(GetUserId()));

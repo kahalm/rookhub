@@ -1,4 +1,4 @@
-import { buildRepertoireGraph, cardsForColor, normFen, sideToMove } from './repertoire-tree.util';
+import { buildRepertoireGraph, cardsForColor, normFen, normSan, sideToMove } from './repertoire-tree.util';
 
 const START = '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n\n';
 
@@ -6,6 +6,28 @@ describe('repertoire-tree.util', () => {
   it('normFen drops the move counters', () => {
     expect(normFen('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'))
       .toBe('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3');
+  });
+
+  // Chessable schreibt Umwandlungen ohne „=" (`c8Q`) und gelegentlich Rochaden mit Nullen.
+  // normSan vereinheitlicht auf die chess.js-Schreibweise — sonst gilt im Trainer ein korrekter
+  // Umwandlungszug als falsch, und der Linien-Hash driftet gegen den Server-Spiegel
+  // (ChessableTrainedLineService.CanonicalSan).
+  it('normSan canonicalises promotions and castling like chess.js', () => {
+    expect(normSan('c8Q')).toBe('c8=Q');
+    expect(normSan('c8q')).toBe('c8=Q');
+    expect(normSan('c8=q')).toBe('c8=Q');
+    expect(normSan('bxc8N+')).toBe('bxc8=N');
+    expect(normSan('b1Q+')).toBe('b1=Q');
+    expect(normSan('0-0')).toBe('O-O');
+    expect(normSan('0-0-0')).toBe('O-O-O');
+  });
+
+  it('normSan leaves ordinary moves alone (idempotent on chess.js output)', () => {
+    for (const san of ['e4', 'Nf3', 'Qxd5', 'O-O', 'O-O-O', 'exd5', 'c8=Q', 'R1a3']) {
+      expect(normSan(san)).toBe(san.replace(/[+#!?]+$/g, ''));
+    }
+    expect(normSan('Nf3!')).toBe('Nf3');
+    expect(normSan('Qh7#')).toBe('Qh7');
   });
 
   it('builds cards for the trained side and extracts [%alt] tolerated moves', () => {
