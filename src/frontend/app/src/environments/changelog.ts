@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.340.0';
+export const APP_VERSION = '0.340.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.340.1", date: "2026-08-07", changes: [
+    { en: "Documentation: the stack-wide code review of 2026-08-07 is now recorded in TODO.md \u2014 what was fixed, and the five bigger items deliberately left for later (splitting the 1600-line solver component, refresh-token rotation, key rotation for the stored Chessable credentials, real time zones instead of hard UTC day boundaries, integration tests against a real MariaDB). No functional change.", de: "Dokumentation: der stack-weite Codereview vom 07.08.2026 steht jetzt in TODO.md \u2014 was behoben wurde und die f\u00fcnf gr\u00f6\u00dferen Punkte, die bewusst liegen bleiben (Aufspaltung der 1600-Zeilen-Solver-Komponente, Refresh-Token-Rotation, Key-Rotation f\u00fcr die gespeicherten Chessable-Zugangsdaten, echte Zeitzonen statt harter UTC-Tagesgrenzen, Integrationstests gegen echtes MariaDB). Keine funktionale \u00c4nderung." },
+  ] },
   { version: "0.340.0", date: "2026-08-07", changes: [
     { en: "Repertoire search fixed \u2014 it was silently missing thousands of lines. Chessable courses whose lines start mid-game (tactics, endgames) carry their own start position; the server ignored that and replayed every line from the initial position, so those lines dropped out of the index entirely. In the production data that is around 7,700 lines \u2014 whole courses like '1001 Chess Exercises' or '100 Endgames You Must Know' never showed up under 'which of my repertoires contains this position?', in the list view and in the new tree view alike. The extension\u2019s deviation analysis used the same broken index.", de: "Repertoire-Suche repariert \u2014 sie hat still Tausende Linien \u00fcbersehen. Chessable-Kurse, deren Linien mitten in der Partie beginnen (Taktik, Endspiele), bringen ihre eigene Startstellung mit; der Server ignorierte die und spielte jede Linie ab der Grundstellung nach, wodurch diese Linien komplett aus dem Index fielen. In den Produktionsdaten sind das rund 7.700 Linien \u2014 ganze Kurse wie \u201e1001 Chess Exercises\u201c oder \u201e100 Endspiele, die Sie kennen m\u00fcssen\u201c tauchten unter \u201ein welchen Repertoires kommt diese Stellung vor?\u201c nie auf, in der Liste wie im neuen Baummodus. Die Abweichungsanalyse der Browser-Erweiterung nutzte denselben kaputten Index." },
     { en: "Chessable training progress now actually counts for promotion lines. Server and app computed the line identifier from differently written moves \u2014 Chessable writes promotions without the '=' (c8Q), the app canonicalises to c8=Q \u2014 so 'trained on Chessable' silently failed to advance the repetition schedule for those lines. Both sides normalise identically now; stored identifiers stay valid.", de: "Chessable-Trainingsfortschritt z\u00e4hlt jetzt auch bei Umwandlungs-Linien. Server und App bildeten den Linien-Schl\u00fcssel aus unterschiedlich geschriebenen Z\u00fcgen \u2014 Chessable notiert Umwandlungen ohne \u201e=\u201c (c8Q), die App vereinheitlicht zu c8=Q \u2014 weshalb \u201eauf Chessable trainiert\u201c den Wiederholungs-Fortschritt f\u00fcr diese Linien still nicht vorr\u00fcckte. Beide Seiten normalisieren jetzt gleich, gespeicherte Schl\u00fcssel bleiben g\u00fcltig." },

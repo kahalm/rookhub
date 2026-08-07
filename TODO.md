@@ -3,7 +3,7 @@
 Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
 ## Periodisch
-- [ ] Code Review — letzter: **2026-07-26** → **rookhub-Frontend** (`src/frontend`, 207 TS-Dateien/~35,4k Zeilen ohne Specs; Lifecycle/RxJS, Robustheit, Security/XSS, Performance/Bundle, Offline/Storage, i18n/A11y, Struktur). Gesamtbild solide (kein XSS-Vektor, saubere Teardowns, 9× `as any` in 35k Zeilen, i18n lückenlos). Wichtigster Fund: **~0,8 MB Changelog-Prosa im Initial-Bundle**. Funde unter „## Code-Review 2026-07-26"; **nichts davon gefixt** (nur dokumentiert). Davor: **2026-07-25** rookhub-Backend komplett (`src/api`; Fund: anonym auslesbare Buch-/Kursinhalte → `BookAccess`; 6 Funde gefixt in v0.317.1, Rest unter „## Code-Review 2026-07-25"). (vorher 2026-06-30 API-Fan-out; 2026-06-18 Frontend; 2026-06-16/13 alle Repos)
+- [ ] Code Review — letzter: **2026-08-07** → **stack-weit über alle 6 Repos** (Multi-Agent: 16 Finder × Fokus, adversarische Verifikation, Vollständigkeits-Kritiker). 71 Roh-Findings → 20 widerlegt → **51 umgesetzt in v0.340.0** (erstmals nicht nur dokumentiert). Schwerste Funde: `[FEN]`-Header von beiden Server-PGN-Walkern ignoriert (~7.700 Prod-Linien fielen aus dem Positions-Index), Linien-Hash-Drift Server↔Frontend bei Chessable-Umwandlungen, `rkh_`-Token außerhalb des ExtensionControllers = Voll-Account-Token. Größter organisatorischer Fund (vom Kritiker, kein Finder suchte danach): **es gab im ganzen Stack kein Backup** → Skript + Restore-Doku + CVE-Scan + ES-Log-Retention ergänzt. Geparktes + Restpunkte unter „## Code-Review 2026-08-07"; Bericht `rookhubstack/CODE_REVIEW_2026-08-07.md`. (vorher 2026-07-26 Frontend, 2026-07-25 Backend, 2026-06-30 API-Fan-out, 2026-06-18/16/13)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-07-12** → alle 25 Sprachdateien JSON-valide. en/de/hr je **1867 Keys**; **hr hatte 2 Lücken (repertoire.dialog.chessableCourseId + Hint) → ergänzt v0.291.34**. Die 22 Weltsprachen weiter hinter en (Fallback greift). (vorher 2026-06-13: hr 73 Lücken → 0.115.1)
 - [ ] Security Review — letzter: **2026-07-18** → alle 6 Repos (6-Wege-Fan-out, siehe „## Security-Review 2026-07-18"). **Keine CRIT/HIGH offen.** Auth/Ownership/IDOR/HMAC/Injection/CORS/SSRF-Ziele durchweg solide (rookhub-API besonders gut gehärtet: jeder resource-by-id-Pfad user/owner/permission-scoped). Wichtigste NEUE Funde (MED): (1) Kontolöschung lässt live Chessable-Bearer + öffentliche Share-Links (/g/, /l/) + PII stehen (kein Cascade); (2) Offline-Queue + Offline-Caches nicht user-scoped, überleben Logout → Cross-User auf geteiltem Gerät; (3) RepCheck prefill des rkh_-Tokens ins seiten-injizierte Input. Bekannte Crawler-SSRF-via-Redirect weiter offen (durch .NET-https→http-Downgrade-Verweigerung entschärft). (vorher 2026-06-13)
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-07-12** → ES lokal :9200. Prod-rookhub 7d: nur **5 Errors** = 5× `GET /api/og/render` → 502 in EINEM 2-Min-Fenster am 07-07 06:11–06:13 (Deploy-Fenster, Frontend-Container kurz nicht erreichbar → bekannte, in v0.274.1 abgemilderte OG-Renderer-Degradation; seither 0, selbst-geheilt → kein Handlungsbedarf). Prod 24h: 0 Warn. Crawler 7d: 0 Error / 2 Warn(24h). Bot: 0/0. Dev-rookhub: 5 Error (analog OG). (vorher 2026-06-13: 0 Errors/7d)
@@ -206,6 +206,91 @@ leere Karte auf /analysis).
   (Wichtige Konventionen, vor „Puzzle-Modi konsistent halten"): 1 primäre Aktion, ≤3 sekundäre,
   Rest ⋮; HelpHint statt Absatz-Stapeln; Container an `--page-max-width`; neue Dashboard-Kacheln
   nicht in `DEFAULT_VISIBLE`.
+
+## Code-Review 2026-08-07 (Stack-weit, alle 6 Repos — GEFIXT in v0.340.0)
+
+Multi-Agent-Review über rookhub (api+frontend), chessresults_crawler, piratechess_docker,
+schach-bot, log-watcher, repcheck + Infra/CI. 71 Roh-Findings, 20 adversarisch widerlegt, 51 übrig
+— **alle verifizierten Punkte sind behoben und gepusht** (rookhub v0.340.0, repcheck v1.38.1, die
+übrigen Repos ohne eigenes Versionsschema). Vollständiger Bericht mit Fehlerszenarien, Belegen und
+den widerlegten Punkten: `rookhubstack/CODE_REVIEW_2026-08-07.md`.
+
+**Die zwei schwersten Funde waren stille Korrektheitsfehler, beide an Prod-Daten belegt:**
+(1) `[FEN]`-Header wurde von beiden Server-PGN-Walkern ignoriert → ~7.700 Repertoire-Linien (ganze
+Chessable-Kurse) fielen aus dem Positions-Index; (2) der Linien-Hash driftete zwischen Server (rohe
+PGN-Tokens) und Frontend (chess.js-kanonisch) → „auf Chessable trainiert" rückte bei
+Umwandlungs-Linien den SR-Fortschritt nicht vor. Dazu als schwerster Security-Fund: das
+`rkh_`-Extension-Token war außerhalb des ExtensionControllers ein Voll-Account-Token
+(E-Mail ändern → „Passwort vergessen" → Kontoübernahme); der Scope wird jetzt zentral erzwungen.
+
+**Lehre fürs nächste Mal:** die Gegenleser haben in **vier von sechs** Bereichen Fehler gefunden,
+die der jeweilige Fix selbst eingeführt hatte (Watchdog setzte laufende Browser-Importe zurück;
+piratechess-Force-Refresh löschte den einzigen Linien-Speicher VOR dem Abruf; log-watcher bildete
+die Alarm-Signatur nach dem PII-Schwärzen → zweiter Angreifer im Cooldown des ersten;
+Compose-Beispiel hätte mit leerem `ENCRYPTION_KEY` still mit `SHA256("")` „verschlüsselt").
+Ein Fix-Durchgang ohne unabhängiges Gegenlesen wäre netto schlechter gewesen als kein Durchgang.
+
+### Bewusst geparkt (zu großer Umbau für einen Sammel-Durchgang)
+- [ ] **`BookPuzzleComponent` (~1600 Zeilen) in Modus-Strategien zerlegen.** Bedient Kurs, Buch,
+  Daily, Wochenpost und geteiltes Einzelpuzzle in einer Klasse; Modus-Fallunterscheidungen ziehen
+  sich durch Laden, Speichern, Navigation, Review und Teilen. Laut Changelog wiederkehrende
+  Regressionsquelle. Schnitt: je Modus ein kleiner Service mit `load/next/report/share`, Komponente
+  auf Darstellung + Delegation reduzieren. (Verifiziert als PLAUSIBLE/low — Aufwand ≫ Einzelnutzen,
+  lohnt nur zusammen mit dem geparkten Punkt „Cross-Solver-Duplikation".)
+- [ ] **Refresh-Token-Rotation statt langlebiger JWTs.** `rememberMe` gibt 30 Tage (Konfig bis 90),
+  es gibt keinen serverseitigen Widerruf außer der SecurityStamp-Prüfung bei Passwortänderung. Ein
+  abgegriffenes Token bleibt sehr lange gültig. Ziel: kurzlebiger Access-Token (1–24 h) + rotierender
+  Refresh-Token, mindestens aber eine Session-Liste zum Widerrufen.
+- [ ] **Key-Rotation für die verschlüsselten Chessable-Credentials.** `EncryptionService` leitet aus
+  einem einzigen `Encryption:Key` ab, kennt keine Key-Version, und der Alt-Pfad `DecryptLegacyCbc`
+  bleibt dauerhaft **AES-CBC ohne MAC** entschlüsselbar. Eine Rotation würde heute alle Credentials
+  still entwerten (`TryDecrypt` → null). Nötig: Key-Version am Datensatz + Re-Encrypt-Migration,
+  danach den Legacy-Pfad entfernen. (Seit v0.340.0 bricht wenigstens ein LEERER Key den Start ab,
+  statt mit `SHA256("")` schein-zu-verschlüsseln.)
+- [ ] **Zeitzonen statt harter UTC-Tagesgrenzen.** `TrainingGoalService`, `BookPuzzleService`,
+  `LeaderboardService`, `PlayTimeService` rechnen durchgängig mit `DateTime.UtcNow.Date`; im
+  gesamten API-Code null Treffer für `TimeZoneInfo`. Bei österreichischer Nutzerbasis rollen Streak,
+  Tagesziel und Tagespuzzle im Sommer um 02:00 Ortszeit — zwischen Mitternacht und zwei zählt alles
+  auf den Vortag. Immerhin konsistent falsch (`DateTime.Now` kommt nirgends vor). Braucht eine
+  Nutzer-Zeitzone im Profil + eine zentrale „Tagesgrenze"-Hilfe, sonst driften die Bereiche
+  auseinander.
+- [ ] **Integrationstests gegen echtes MariaDB + Migrations-Smoke-Test in der CI.** Alle 1753
+  Backend-Tests laufen gegen EF InMemory (LINQ-to-Objects); Übersetzungsfehler, Collation-/
+  Case-Sensitivity, Unique-Index-Verhalten bei NULL und fehlerhafte Migrationen fallen erst gegen
+  echtes MariaDB auf — die eigene Doku warnt davor, ohne Gegenmaßnahme. Nötig: `db-integration`-Stage
+  mit Testcontainers-MariaDB (leere DB → alle Migrationen → Snapshot-Vergleich) + eine kleine Suite
+  für die riskanten Queries. Vom Test-Agenten bewusst übersprungen, weil es Workflow-Dateien und ein
+  Docker-fähiges CI braucht.
+
+### Kleinere Restpunkte aus dem Gegenlesen (nicht blockierend)
+- [ ] **`PuzzleService.GetRandomAsync` (themesAny): Verteilung geändert.** Der neue Random-Seek zieht
+  gleichverteilt über *Rating*, nicht über *Puzzles* — bei offener Rating-Spanne ist das Fenster der
+  gesamte Pool, dünn besetzte Ränder werden übergewichtet und wiederholen sich. Praktisch entschärft,
+  weil das Frontend immer `r.min/r.max` schickt; betroffen ist nur der rohe API-Aufruf. Entweder den
+  Trade-off im Kommentar benennen oder das offene Fenster begrenzen.
+- [ ] **`ImportReprocessService`: `Skipped` zählt jetzt auch Fehlschläge** (gleicher Zähler wie „keine
+  Quelle"). Ein kaputtes Buch behält seine `ImportVersion` → das „Aktualisieren (N)"-Banner leert sich
+  nie und der User bekommt keinen Hinweis. Eigenes `Failed` im DTO/Log wäre sauberer.
+- [ ] **Append-Sperre ist prozesslokal.** `AppendLiveAsync` serialisiert je (User, bid) über ein
+  In-Memory-Semaphor; bei mehreren API-Instanzen bräuchte es ein DB-seitiges Schloss bzw. einen
+  Unique-Index. Zusätzlich laufen `ImportPgnDirectAsync`/`ImportAsRepertoireAsync` NICHT unter dieser
+  Sperre — Mixed-Path bleibt ein (kleines) Duplikat-Risiko für das `chessable-{bid}`-Repertoire.
+- [ ] **`FailAsync`-Härtung ist ungetestet.** Sie ist der eigentliche Auslöser der Zombie-Import-Kette
+  (Wurf gegen toten DbContext), hat aber keinen Test — nur der Watchdog-Teil ist abgedeckt.
+- [ ] **`android-twa.yml`: Guard sitzt hinter dem ~10-Minuten-Build.** Der Abbruch bei fehlendem
+  Image-Tag kostet den kompletten Android-Build; `Read app version` + Guard gehören vor `setup-java`.
+  Außerdem ist `target_commitish` weiterhin nicht gesetzt — zeigt ein vorhandener Tag auf einen
+  älteren Commit, hängt die aus dem Dispatch-Ref gebaute APK am falschen Release.
+- [ ] **repcheck: `lib/chessable-course-names.js` wird weiterhin nicht ausgeliefert.** Die getestete
+  Spiegel-Datei steht in keinem `content_scripts`-Eintrag; ausgeführt werden drei Inline-Kopien
+  (jetzt immerhin per Drift-Guard-Test abgesichert). Sauber wäre der Weg von `lib/repertoire-text.js`:
+  ins Manifest aufnehmen bzw. über `build/assemble.mjs` ins Userscript generieren, Kopien löschen.
+- [ ] **schach-bot: Doku-Kommentare zum Monats-Endstand veraltet** (`commands/leaderboard.py:75/98`,
+  `bot.py:790` sprechen noch von „nur am 1."; seit v0.340.0-Durchgang gilt ein Catch-up-Fenster), und
+  das Daily-Catch-up hat ein ~2-Minuten-Karenz-Loch direkt um die Post-Zeit.
+- [ ] **log-watcher: serverseitige Filter-Aggregation für `warn_spike_ignore`** bewusst übersprungen
+  (die Rausch-Muster werden weiterhin client-seitig aus den Top-Termen gerechnet → stille Degradation
+  möglich, wenn ein Muster aus den Top-N fällt).
 
 ## Code-Review 2026-07-26 (rookhub Frontend, `src/frontend`)
 Review des Angular-Frontends (207 TS-Dateien / ~35.400 Zeilen ohne Specs): Lifecycle/RxJS-Teardown, Robustheit gegen Server-/Storage-Daten, Security/XSS, Performance + Bundle, Offline-/localStorage-Schicht, i18n/A11y, Struktur. **Stand: nur dokumentiert, nichts davon gefixt** (Basis v0.317.2, 1285 FE-Tests grün, Prod-Build sauber).
