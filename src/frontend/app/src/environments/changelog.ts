@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.339.0';
+export const APP_VERSION = '0.339.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.339.1", date: "2026-08-07", changes: [
+    { en: "App fullscreen: the board gains the last bit of height. The board\u2019s own fullscreen button no longer sits in a row above the board (where it cost height for nothing) but floats next to the exit button in the top right corner \u2014 both ways out of a fullscreen now sit together. Board fullscreen itself is unchanged. Frontend image only.", de: "App-Vollbild: das Brett gewinnt die letzte Resth\u00f6he. Der Brett-Vollbild-Knopf sitzt nicht mehr in einer Zeile \u00fcber dem Brett (wo er umsonst H\u00f6he kostete), sondern schwebt neben dem Beenden-Knopf oben rechts \u2014 beide Wege aus einem Vollbild liegen damit beieinander. Das Brett-Vollbild selbst bleibt unver\u00e4ndert. Nur Frontend-Image." },
+  ] },
   { version: "0.339.0", date: "2026-08-07", changes: [
     { en: "Fullscreen no longer swallows popups. In board fullscreen the browser renders only the board subtree, so everything Angular Material puts in its overlay layer (dialogs, snackbars, menus, tooltips) was invisible there \u2014 and the modal 'that took a while, were you away?' question after a long solve even locked the app: it blocked, but could not be clicked. The overlay layer now moves into the fullscreen element while fullscreen is active (and back out afterwards, also when the page navigates away). Frontend image only.", de: "Das Vollbild schluckt keine Popups mehr. Im Brett-Vollbild rendert der Browser nur den Brett-Teilbaum \u2014 alles, was Angular Material in seine Overlay-Ebene legt (Dialoge, Snackbars, Men\u00fcs, Tooltips), war dort unsichtbar, und die modale Nachfrage \u201eGanz sch\u00f6n lang \u2014 warst du zwischendurch weg?\u201c nach langer L\u00f6sezeit h\u00e4ngte die App sogar fest: sie blockierte, war aber nicht anklickbar. Die Overlay-Ebene zieht jetzt f\u00fcrs Vollbild ins Vollbild-Element um (und danach wieder heraus, auch beim Wegnavigieren). Nur Frontend-Image." },
   ] },

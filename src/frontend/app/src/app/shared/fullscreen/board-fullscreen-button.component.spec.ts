@@ -61,6 +61,32 @@ describe('BoardFullscreenButtonComponent', () => {
     expect(fixture.componentInstance.active).toBeFalse();
   });
 
+  it('schwebt im App-Vollbild oben rechts statt über dem Brett Höhe zu kosten', () => {
+    // Der Knopf steht normal IM Fluss (schmale Zeile über dem Brett) …
+    const fixture = TestBed.createComponent(BoardFullscreenButtonComponent);
+    fixture.componentRef.setInput('target', document.createElement('div'));
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const btn = host.querySelector('button') as HTMLElement;
+    document.body.appendChild(host);
+
+    expect(getComputedStyle(btn).position).toBe('static');
+    expect(host.getBoundingClientRect().height).toBeGreaterThan(0);
+
+    // … und verlässt ihn im App-Vollbild (Host-Klasse auf einem Vorfahren), damit das Brett
+    // nach oben rutscht.
+    const appRoot = document.createElement('div');
+    appRoot.className = 'app-fullscreen';
+    document.body.appendChild(appRoot);
+    appRoot.appendChild(host);
+    fixture.detectChanges();
+
+    expect(getComputedStyle(btn).position).toBe('fixed');
+    expect(host.getBoundingClientRect().height).toBe(0);
+
+    appRoot.remove();
+  });
+
   it('meldet den Ereignis-Hörer beim Zerstören ab', () => {
     const fixture = TestBed.createComponent(BoardFullscreenButtonComponent);
     fixture.componentRef.setInput('target', document.createElement('div'));

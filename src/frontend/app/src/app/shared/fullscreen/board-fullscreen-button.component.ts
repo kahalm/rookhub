@@ -14,9 +14,15 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
  * der Knopf aus dem Fluss und schwebt fix rechts oben im schwarzen Balken (das Vollbild-Element
  * ist der Containing-Block für <c>position: fixed</c>).</p>
  *
- * <p>Er sitzt INNERHALB des Vollbild-Elements — nur so bleibt er im Vollbild sichtbar und man
- * kommt ohne Tastatur wieder heraus. Aus demselben Grund erklärt ihn ein natives `title` und
- * kein `matTooltip`: CDK-Overlays hängen am `<body>` und werden im Vollbild nicht gerendert.</p>
+ * <p>Im APP-Vollbild (ganze Oberfläche, Host-Klasse <c>app-fullscreen</c>) wandert er ebenfalls aus
+ * dem Fluss — direkt neben den App-Vollbild-Beenden-Knopf oben rechts. Dort kostet er keine
+ * Bretthöhe mehr (die Zeile über dem Brett verschwindet, das Brett rutscht nach oben), und beide
+ * Vollbild-Ausgänge sitzen beieinander.</p>
+ *
+ * <p>Er sitzt INNERHALB des Vollbild-Elements — nur so bleibt er im Brett-Vollbild sichtbar und
+ * man kommt ohne Tastatur wieder heraus. Erklärt wird er per nativem `title` statt per
+ * `matTooltip` — im Vollbild-Element selbst ist das die einfachere Wahl (CDK-Overlays müssen
+ * dafür erst über den `FullscreenOverlayService` mit umziehen).</p>
  *
  * <p>Kann der Browser kein Element-Vollbild (iOS-Safari), rendert die Komponente nichts.</p>
  */
@@ -75,6 +81,31 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
     }
     .board-fs-btn--on mat-icon { font-size: 24px; width: 24px; height: 24px; line-height: 24px; }
     .board-fs-btn--on:hover, .board-fs-btn--on:focus-visible {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.6);
+    }
+    /* App-Vollbild (Host-Klasse app-fullscreen auf app-root): der Knopf verlaesst den Fluss und
+       legt sich links neben den App-Vollbild-Beenden-Knopf oben rechts. Damit verschwindet die
+       schmale Zeile über dem Brett (der Host hat dann keine Kinder mehr im Fluss → Höhe 0) und
+       das Brett rutscht genau darum nach oben; beide Vollbild-Ausgänge liegen beieinander.
+       NICHT im Brett-Vollbild (--on): dort gilt die eigene Position, und der App-Knopf wird
+       ohnehin nicht gerendert (der Browser zeigt nur den Brett-Teilbaum). Dialog-Bretter sind
+       nicht betroffen — CDK-Overlays hängen außerhalb von app-root. */
+    :host-context(.app-fullscreen) .board-fs-btn:not(.board-fs-btn--on) {
+      position: fixed;
+      top: 6px; right: 42px;      /* 30px Knopfbreite + 6px Abstand zum Beenden-Knopf */
+      z-index: 1000;
+      width: 30px; height: 30px;
+      margin: 0;
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      opacity: 0.35;
+    }
+    :host-context(.app-fullscreen) .board-fs-btn:not(.board-fs-btn--on) mat-icon {
+      font-size: 20px; width: 20px; height: 20px; line-height: 20px;
+    }
+    :host-context(.app-fullscreen) .board-fs-btn:not(.board-fs-btn--on):hover,
+    :host-context(.app-fullscreen) .board-fs-btn:not(.board-fs-btn--on):focus-visible {
       opacity: 1;
       background: rgba(0, 0, 0, 0.6);
     }
