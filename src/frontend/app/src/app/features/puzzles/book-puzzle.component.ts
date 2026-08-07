@@ -11,6 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
+import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { buildCommentSegments, CommentSegment } from './comment-variation.util';
@@ -64,7 +65,7 @@ const ANON_COURSE_PAGE_SIZE = 300;
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
-    PuzzleBoardComponent, PuzzleTagsComponent,
+    PuzzleBoardComponent, BoardFsActionsComponent, PuzzleTagsComponent,
     TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent
   ],
   templateUrl: './book-puzzle.component.html',

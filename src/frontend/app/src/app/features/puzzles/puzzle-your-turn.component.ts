@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
+import { SOLVER_ACTION_KEYS, canMouseslip, canReset } from './solver-actions.util';
 
 export type ActivePuzzleState = 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING';
 export type PuzzleMode = 'standard' | 'endless' | 'book';
@@ -36,11 +37,9 @@ const EVAL_KEYS = {
   book: { show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now' },
 } as const;
 
-const ACTION_KEYS = {
-  standard: { reset: 'puzzles.actions.reset', mouseslip: 'puzzles.actions.mouseslip', giveUp: 'puzzles.actions.giveUp' },
-  endless: { reset: 'endless.game.reset', mouseslip: 'endless.game.mouseslip', giveUp: 'endless.game.giveUp' },
-  book: { reset: 'book.actions.reset', mouseslip: 'book.actions.mouseslip', giveUp: 'book.actions.giveUp' },
-} as const;
+// Keys + Sichtbarkeits-Regeln liegen in solver-actions.util.ts — die Vollbild-Icon-Leiste
+// (board-fs-actions.component) zeigt dieselben Aktionen und muss denselben Regeln folgen.
+const ACTION_KEYS = SOLVER_ACTION_KEYS;
 
 /**
  * Wiederverwendbares „Your turn!"-Panel für Standard-, Endless- und Buch-Puzzle.
@@ -79,13 +78,13 @@ const ACTION_KEYS = {
           <mat-icon>analytics</mat-icon>
           {{ (showEval ? ek.hide : ek.show) | translate }}
         </button>
-        @if (hasMadeFirstMove || state !== 'AWAITING_USER_MOVE') {
+        @if (showReset) {
           <button mat-button (click)="resetClicked.emit()">
             <mat-icon>replay</mat-icon>
             {{ ak.reset | translate }}
           </button>
         }
-        @if (showMouseslip && (hasMadeFirstMove || state === 'PLAYING' || (state === 'THINKING' && showMouseslipInThinking))) {
+        @if (showMouseslipAction) {
           <button mat-button (click)="mouseslipClicked.emit()">
             <mat-icon>mouse</mat-icon>
             {{ ak.mouseslip | translate }}
@@ -135,6 +134,12 @@ export class PuzzleYourTurnComponent {
   @Output() resetClicked = new EventEmitter<void>();
   @Output() mouseslipClicked = new EventEmitter<void>();
   @Output() giveUpClicked = new EventEmitter<void>();
+
+  /** Gleiche Regeln wie die Vollbild-Icon-Leiste (solver-actions.util). */
+  get showReset(): boolean { return canReset(this.state, this.hasMadeFirstMove); }
+  get showMouseslipAction(): boolean {
+    return canMouseslip(this.state, this.showMouseslip, this.hasMadeFirstMove, this.showMouseslipInThinking);
+  }
 
   get statusKey(): string {
     const k = STATUS_KEYS[this.mode];

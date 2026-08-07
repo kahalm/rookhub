@@ -37,8 +37,25 @@
             [visualization]="(state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
             [vizOpponentArrow]="vizOpponentLastMove"
             [vizOpponentArrowBrush]="themeMode === 'crazy' ? 'green' : 'red'"
-            (moveMade)="onMoveMade($event)"
-          />
+            (moveMade)="onMoveMade($event)">
+            <!-- Vollbild: kompakte Icon-Leiste im schwarzen Balken (Tipp/Zuruecksetzen/
+                 Mausrutscher/Aufgeben). Im Vollbild rendert der Browser nur diesen Teilbaum,
+                 die normale Aktionszeile ist dort nicht sichtbar. -->
+            <app-board-fs-actions
+              mode="standard"
+              [state]="state"
+              [reviewMode]="reviewMode"
+              [hasHints]="hasHints"
+              [canShowMoreHints]="canShowMoreHints"
+              [hintLevel]="hintLevel"
+              [totalHints]="totalHints"
+              [showMouseslip]="!mouseslipUsed && (!onSolutionPath || hasMadeFirstMove)"
+              [hasMadeFirstMove]="hasMadeFirstMove"
+              (hintClicked)="showNextHint()"
+              (resetClicked)="resetPuzzle()"
+              (mouseslipClicked)="mouseslip()"
+              (giveUpClicked)="giveUp()" />
+          </app-puzzle-board>
           <!-- Unter-Brett-Leiste (Am-Zug/Viz/Tipps) EINMAL definiert, an zwei Stellen gerendert:
                normal unter dem Brett, im App-Vollbild oben in der Info-Spalte — dann stiehlt
                unter dem Brett nichts Höhe und das Brett wird bildschirmhoch. -->

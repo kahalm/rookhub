@@ -15,6 +15,7 @@ import { COMMA, ENTER, SPACE } from '@angular/cdk/keycodes';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
@@ -70,7 +71,7 @@ interface EndlessPuzzleAttempt {
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
     MatChipsModule, MatAutocompleteModule,
-    MatDialogModule, TranslatePipe, PuzzleBoardComponent,
+    MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
     PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './endless-puzzle.component.html',

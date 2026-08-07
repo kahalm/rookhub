@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.337.0';
+export const APP_VERSION = '0.338.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.338.0", date: "2026-08-07", changes: [
+    { en: "Board fullscreen: the black bars are no longer dead space. A small, discreet icon bar now sits there (hint, reset, mouse slip, give up) \u2014 square, icon-only, semi-transparent, next to the board in landscape and below it in portrait. Until now every one of those actions lived outside the fullscreen subtree, so in fullscreen they were simply gone. Same visibility rules as the normal action row (shared helper), same three modes (standard, endless, course/book/daily). Frontend image only.", de: "Brett-Vollbild: die schwarzen Balken sind kein toter Raum mehr. Dort sitzt jetzt eine kleine, dezente Icon-Leiste (Tipp, Zur\u00fccksetzen, Mausrutscher, Aufgeben) \u2014 quadratisch, nur Icon, halbtransparent; im Querformat neben dem Brett, im Hochformat darunter. Bisher lagen all diese Aktionen au\u00dferhalb des Vollbild-Teilbaums und waren im Vollbild schlicht weg. Gleiche Sichtbarkeitsregeln wie die normale Aktionszeile (gemeinsamer Helfer), gleiche drei Modi (Standard, Endlos, Kurs/Buch/Tagespuzzle). Nur Frontend-Image." },
+  ] },
   { version: "0.337.0", date: "2026-08-07", changes: [
     { en: "Position in your repertoires: NEW TREE MODE. The panel (analysis, PGN viewer, shared game) now has two views, switchable in the top right: the familiar LIST (repertoire \u2192 chapter \u2192 line) and a new TREE that answers 'how does my repertoire continue from here?' \u2014 all occurrences of the position merged into one move tree per repertoire, VARIATIONS INCLUDED (they are lost in the list view). Each move shows how many lines run through it; where a branch belongs to exactly one line, train/view sit right next to it. In the analysis, clicking a move plays it on the board, so you can click your way down your own repertoire. The chosen view is remembered per device. Needs BOTH images (api + frontend).", de: "Stellung in meinen Repertoires: NEUER BAUMMODUS. Das Panel (Analyse, PGN-Viewer, geteilte Partie) hat jetzt zwei Sichten, oben rechts umschaltbar: die gewohnte LISTE (Repertoire \u2192 Kapitel \u2192 Linie) und einen neuen BAUM mit der Frage \u201ewie geht mein Repertoire ab hier weiter?\u201c \u2014 alle Vorkommen der Stellung zu einem Zugbaum je Repertoire zusammengef\u00fchrt, VARIANTEN INKLUSIVE (die fehlen in der Listenansicht). An jedem Zug steht, wie viele Linien dar\u00fcber laufen; wo ein Zweig eindeutig zu EINER Linie geh\u00f6rt, sitzen Trainieren/Ansehen direkt daneben. In der Analyse spielt ein Klick den Zug aufs Brett \u2014 so klickt man sich durch sein eigenes Repertoire. Die gew\u00e4hlte Sicht wird pro Ger\u00e4t gemerkt. Braucht BEIDE Images (api + frontend)." },
   ] },

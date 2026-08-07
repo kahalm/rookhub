@@ -10,6 +10,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -48,7 +49,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent,
+    MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
     PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './puzzle.component.html',
