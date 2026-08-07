@@ -36,11 +36,20 @@ public class RepertoirePositionLookupService
     // sprengt. Bei realen Repertoire-Größen nie erreicht.
     private const int MaxGamesPerUser = 20000;
     private const int MaxPositionsPerLine = 400;
+    /// <summary>Knoten-Obergrenze je Repertoire im Baummodus (danach <c>Truncated</c>).</summary>
+    private const int MaxTreeNodes = 1500;
+    public const int DefaultTreeDepth = 12;
+    public const int MaxTreeDepth = 30;
 
     private static string CacheKey(int userId) => $"rep:poslookup:{userId}";
+    private static string GamesCacheKey(int userId) => $"rep:posgames:{userId}";
 
-    /// <summary>Cache-Eintrag eines Users invalidieren (nach PGN-Upload/-Delete/-Update).</summary>
-    public void Invalidate(int userId) => _cache.Remove(CacheKey(userId));
+    /// <summary>Cache-Einträge eines Users invalidieren (nach PGN-Upload/-Delete/-Update).</summary>
+    public void Invalidate(int userId)
+    {
+        _cache.Remove(CacheKey(userId));
+        _cache.Remove(GamesCacheKey(userId));
+    }
 
     /// <summary>
     /// Match-Schlüssel = Brett + Seite + Rochaderechte (Halbzug-/Vollzugzähler UND en-passant-Feld
@@ -97,15 +106,27 @@ public class RepertoirePositionLookupService
         int RepertoireId, string RepertoireName, string Kind, bool Shared,
         string Chapter, string LineName, int GameIndex, int Ply);
 
-    private async Task<Dictionary<string, List<Occurrence>>> GetIndexAsync(int userId, CancellationToken ct)
+    /// <summary>Eine geparste Repertoire-Linie samt Herkunft — gemeinsame Basis von Index (Listenansicht)
+    /// und Baummodus, damit beide dieselben Linien/gameIndex-Zuordnungen sehen.</summary>
+    private sealed record RepGame(
+        int RepertoireId, string RepertoireName, string Kind, bool Shared,
+        string Chapter, string LineName, int GameIndex, List<PgnMove> Moves);
+
+    private static MemoryCacheEntryOptions CacheOptions() => new()
     {
-        var key = CacheKey(userId);
-        if (_cache.TryGetValue<Dictionary<string, List<Occurrence>>>(key, out var cached) && cached != null)
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+        SlidingExpiration = TimeSpan.FromMinutes(5),
+    };
+
+    /// <summary>Lädt + parst alle lesbaren Repertoires des Users (gecacht). Reihenfolge (Repertoire.Id,
+    /// dann File.Id) muss mit GetCombinedPgnAsync + parsePgnText übereinstimmen, damit gameIndex zwischen
+    /// Server und Client dieselbe Linie meint (gameIndex ist pro Repertoire).</summary>
+    private async Task<List<RepGame>> GetGamesAsync(int userId, CancellationToken ct)
+    {
+        var key = GamesCacheKey(userId);
+        if (_cache.TryGetValue<List<RepGame>>(key, out var cached) && cached != null)
             return cached;
 
-        // Eigene UND mit dem User geteilte Repertoires. Reihenfolge (Repertoire.Id, dann File.Id) muss
-        // mit GetCombinedPgnAsync + parsePgnText übereinstimmen, damit gameIndex zwischen Server und
-        // Client dieselbe Linie meint (gameIndex ist pro Repertoire, das Mischen owned/geteilt ist egal).
         var reps = await RepertoireAccess.ReadableBy(_db, userId)
             .OrderBy(r => r.Id)
             .Select(r => new
@@ -118,7 +139,7 @@ public class RepertoirePositionLookupService
             })
             .ToListAsync(ct);
 
-        var index = new Dictionary<string, List<Occurrence>>(StringComparer.Ordinal);
+        var result = new List<RepGame>();
         int gamesSeen = 0;
         foreach (var rep in reps)
         {
@@ -128,26 +149,37 @@ public class RepertoirePositionLookupService
             {
                 List<ParsedGame> games;
                 try { games = ParseGames(pgn); }
-                catch { continue; } // kaputte Datei nicht den ganzen Index kippen lassen
+                catch { continue; } // kaputte Datei nicht alles kippen lassen
                 foreach (var game in games)
                 {
                     if (gamesSeen++ > MaxGamesPerUser) break;
-                    IndexGame(index, rep.Id, rep.Name, kindName, !rep.Owned, game, gameIndex);
+                    result.Add(new RepGame(rep.Id, rep.Name, kindName, !rep.Owned,
+                        game.Chapter, game.LineName, gameIndex, game.Moves));
                     gameIndex++;
                 }
             }
         }
 
-        _cache.Set(key, index, new MemoryCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(5),
-        });
+        _cache.Set(key, result, CacheOptions());
+        return result;
+    }
+
+    private async Task<Dictionary<string, List<Occurrence>>> GetIndexAsync(int userId, CancellationToken ct)
+    {
+        var key = CacheKey(userId);
+        if (_cache.TryGetValue<Dictionary<string, List<Occurrence>>>(key, out var cached) && cached != null)
+            return cached;
+
+        var games = await GetGamesAsync(userId, ct);
+        var index = new Dictionary<string, List<Occurrence>>(StringComparer.Ordinal);
+        foreach (var game in games)
+            IndexGame(index, game);
+
+        _cache.Set(key, index, CacheOptions());
         return index;
     }
 
-    private static void IndexGame(Dictionary<string, List<Occurrence>> index,
-        int repId, string repName, string kind, bool shared, ParsedGame game, int gameIndex)
+    private static void IndexGame(Dictionary<string, List<Occurrence>> index, RepGame game)
     {
         // Pro Linie zuerst die beste (kleinste echte) Ply je Stellung sammeln, dann in den Index legen.
         var perLine = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -158,7 +190,8 @@ public class RepertoirePositionLookupService
         foreach (var (norm, ply) in perLine)
         {
             var list = index.TryGetValue(norm, out var l) ? l : (index[norm] = new List<Occurrence>());
-            list.Add(new Occurrence(repId, repName, kind, shared, game.Chapter, game.LineName, gameIndex, ply));
+            list.Add(new Occurrence(game.RepertoireId, game.RepertoireName, game.Kind, game.Shared,
+                game.Chapter, game.LineName, game.GameIndex, ply));
         }
     }
 
@@ -189,6 +222,163 @@ public class RepertoirePositionLookupService
                 perLine[norm] = thisPly;                     // frühesten Ply bevorzugen
         }
         for (int i = 0; i < movesMade; i++) board.Cancel();
+    }
+
+    // ─── Baummodus ────────────────────────────────────────────────────────
+    // Dieselben Treffer wie die Listenansicht, nur andersherum aufgeschnitten: statt „welche Linien
+    // enthalten die Stellung?" die Frage „wie geht mein Repertoire ab hier weiter?". Alle Vorkommen
+    // (Hauptlinien UND Varianten, auch Zugumstellungen) werden zu EINEM Zugbaum je Repertoire
+    // zusammengeführt — Varianten sind hier der halbe Sinn der Sache, deshalb läuft der Baum
+    // serverseitig: der Client-Parser (`parsePgnText`) wirft Varianten weg.
+
+    /// <summary>Zugbaum ab <paramref name="fen"/> je Repertoire (zusammengeführt über alle Linien).</summary>
+    /// <param name="maxDepth">Maximale Halbzug-Tiefe ab der Stellung (1…<see cref="MaxTreeDepth"/>).</param>
+    public async Task<PositionTreeResultDto> TreeAsync(int userId, string fen, int maxDepth, CancellationToken ct)
+    {
+        maxDepth = Math.Clamp(maxDepth <= 0 ? DefaultTreeDepth : maxDepth, 1, MaxTreeDepth);
+        var games = await GetGamesAsync(userId, ct);
+        var target = NormalizeKey(fen);
+        var result = new PositionTreeResultDto();
+
+        foreach (var repGroup in games
+                     .GroupBy(g => g.RepertoireId)
+                     .OrderBy(g => g.First().RepertoireName, StringComparer.OrdinalIgnoreCase))
+        {
+            var builder = new TreeBuilder();
+            int occurrences = 0;
+            foreach (var game in repGroup)
+            {
+                var board = new ChessBoard();
+                // Die Ausgangsstellung selbst kann der Treffer sein (Repertoire-Start).
+                if (NormalizeKey(board.ToFen()) == target)
+                {
+                    occurrences++;
+                    builder.Collect(game.Moves, 0, builder.Root, maxDepth, game);
+                }
+                try { occurrences += WalkForTree(board, game.Moves, target, builder, game, maxDepth); }
+                catch { /* eine kaputte Linie darf den Baum nicht kippen */ }
+            }
+            if (occurrences == 0) continue;
+
+            var first = repGroup.First();
+            result.Repertoires.Add(new RepertoirePositionTreeDto
+            {
+                RepertoireId = first.RepertoireId,
+                RepertoireName = first.RepertoireName,
+                Kind = first.Kind,
+                Shared = first.Shared,
+                Occurrences = occurrences,
+                Truncated = builder.Truncated,
+                Moves = builder.Root.Children.Select(ToDto).ToList(),
+            });
+        }
+        return result;
+    }
+
+    /// <summary>Sucht in einer Zugliste (rekursiv über Varianten) alle Vorkommen der Zielstellung und
+    /// hängt die jeweilige Fortsetzung an den Baum. Rückgabe: Anzahl gefundener Vorkommen.</summary>
+    private static int WalkForTree(ChessBoard board, List<PgnMove> moves, string target,
+        TreeBuilder builder, RepGame game, int maxDepth)
+    {
+        int hits = 0;
+        int movesMade = 0;
+        for (int i = 0; i < moves.Count; i++)
+        {
+            var move = moves[i];
+            // Varianten zweigen VOR diesem Zug ab — dort kann die Stellung ebenfalls vorkommen.
+            foreach (var variation in move.Variations)
+                hits += WalkForTree(board, variation, target, builder, game, maxDepth);
+
+            bool ok;
+            try { ok = board.Move(move.San); }
+            catch { ok = false; }
+            if (!ok) break;
+            movesMade++;
+
+            if (NormalizeKey(board.ToFen()) == target)
+            {
+                hits++;
+                builder.Collect(moves, i + 1, builder.Root, maxDepth, game);
+            }
+        }
+        for (int i = 0; i < movesMade; i++) board.Cancel();
+        return hits;
+    }
+
+    private static PositionTreeNodeDto ToDto(TreeNode node) => new()
+    {
+        San = node.San,
+        Count = node.Count,
+        IsEnd = node.IsEnd,
+        // Kapitel/Linie nur, wenn ab hier genau EINE Linie durchläuft — sonst wäre „Trainieren" mehrdeutig.
+        Chapter = node.MultipleLines ? null : node.Chapter,
+        LineName = node.MultipleLines ? null : node.LineName,
+        GameIndex = node.MultipleLines ? null : node.GameIndex,
+        Children = node.Children.Select(ToDto).ToList(),
+    };
+
+    private sealed class TreeNode
+    {
+        public string San { get; init; } = string.Empty;
+        public int Count { get; set; }
+        public bool IsEnd { get; set; }
+        public List<TreeNode> Children { get; } = new();          // Einfüge-Reihenfolge: Hauptlinie zuerst
+        private readonly Dictionary<string, TreeNode> _bySan = new(StringComparer.Ordinal);
+
+        public string Chapter { get; private set; } = string.Empty;
+        public string LineName { get; private set; } = string.Empty;
+        public int GameIndex { get; private set; } = -1;
+        public bool MultipleLines { get; private set; }
+
+        public TreeNode? Find(string san) => _bySan.TryGetValue(san, out var n) ? n : null;
+
+        public TreeNode Add(string san)
+        {
+            var child = new TreeNode { San = san };
+            _bySan[san] = child;
+            Children.Add(child);
+            return child;
+        }
+
+        /// <summary>Merkt sich die Herkunfts-Linie; ab der zweiten verschiedenen wird der Knoten mehrdeutig.</summary>
+        public void Note(int gameIndex, string chapter, string lineName)
+        {
+            if (GameIndex < 0) { GameIndex = gameIndex; Chapter = chapter; LineName = lineName; }
+            else if (GameIndex != gameIndex) MultipleLines = true;
+        }
+    }
+
+    private sealed class TreeBuilder
+    {
+        public TreeNode Root { get; } = new();
+        public bool Truncated { get; private set; }
+        private int _nodes;
+
+        /// <summary>Hängt die Fortsetzung ab <paramref name="startIdx"/> (inkl. der dort abzweigenden
+        /// Varianten) unter <paramref name="node"/>. Rein strukturell — die Legalität hat der
+        /// Suchlauf bereits geprüft.</summary>
+        public void Collect(List<PgnMove> moves, int startIdx, TreeNode node, int depthLeft, RepGame game)
+        {
+            if (startIdx >= moves.Count) { node.IsEnd = true; return; }   // Linie endet hier
+            if (depthLeft <= 0) return;
+
+            var move = moves[startIdx];
+            var child = node.Find(move.San);
+            if (child == null)
+            {
+                if (_nodes >= MaxTreeNodes) { Truncated = true; return; }
+                _nodes++;
+                child = node.Add(move.San);
+            }
+            child.Count++;
+            child.Note(game.GameIndex, game.Chapter, game.LineName);
+            Collect(moves, startIdx + 1, child, depthLeft - 1, game);
+
+            // Alternativen an derselben Stelle hängen unter den GLEICHEN Elternknoten (nach der
+            // Hauptfortsetzung, damit die Reihenfolge im Baum der PGN-Lesart entspricht).
+            foreach (var variation in move.Variations)
+                Collect(variation, 0, node, depthLeft, game);
+        }
     }
 
     // ─── PGN Parser (header-aware, mit Varianten) ─────────────────────────

@@ -409,7 +409,22 @@
     "train": "Diese Linie trainieren",
     "view": "Diese Linie ansehen",
     "sharedBadge": "geteilt",
-    "sharedHint": "Von einem anderen Nutzer mit dir geteilt"
+    "sharedHint": "Von einem anderen Nutzer mit dir geteilt",
+    "mode": {
+      "list": "Listenansicht",
+      "tree": "Baumansicht"
+    },
+    "tree": {
+      "foundCount": "{{reps}} Repertoire(s) · {{lines}} Vorkommen",
+      "noContinuation": "Hier endet das Repertoire — keine Fortsetzung hinterlegt.",
+      "truncated": "Baum gekürzt (sehr viele Verzweigungen).",
+      "linesThrough": "{{count}} Linien laufen über diesen Zug",
+      "lineEnd": "Hier endet eine Linie",
+      "playHint": "Zug aufs Brett spielen",
+      "expandHint": "Auf-/zuklappen",
+      "expandNode": "Aufklappen",
+      "collapseNode": "Zuklappen"
+    }
   },
   "pgnViewer": {
     "gameLabel": "Partie",

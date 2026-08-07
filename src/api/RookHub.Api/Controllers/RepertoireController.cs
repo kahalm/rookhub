@@ -42,6 +42,16 @@ public class RepertoireController : BaseApiController
         return Ok(await _positionLookup.LookupAsync(GetUserId(), dto.Fen, ct));
     }
 
+    /// <summary>Baummodus derselben Suche: wie geht das Repertoire ab dieser Stellung weiter?
+    /// Liefert je Repertoire einen über alle Linien UND Varianten zusammengeführten Zugbaum.
+    /// Literale Route MUSS vor `{id}` stehen.</summary>
+    [HttpPost("position-tree")]
+    public async Task<ActionResult<PositionTreeResultDto>> PositionTree([FromBody] PositionTreeRequestDto dto, CancellationToken ct)
+    {
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
+        return Ok(await _positionLookup.TreeAsync(GetUserId(), dto.Fen, dto.MaxDepth, ct));
+    }
+
     // ===== Einzelne Linie öffentlich teilen (Nur-Ansehen-Link /l/{token}) =====
 
     /// <summary>Öffentliche Sicht einer geteilten Linie über das Token — kein Login nötig.

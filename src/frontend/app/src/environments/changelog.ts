@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.336.2';
+export const APP_VERSION = '0.337.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.337.0", date: "2026-08-07", changes: [
+    { en: "Position in your repertoires: NEW TREE MODE. The panel (analysis, PGN viewer, shared game) now has two views, switchable in the top right: the familiar LIST (repertoire \u2192 chapter \u2192 line) and a new TREE that answers 'how does my repertoire continue from here?' \u2014 all occurrences of the position merged into one move tree per repertoire, VARIATIONS INCLUDED (they are lost in the list view). Each move shows how many lines run through it; where a branch belongs to exactly one line, train/view sit right next to it. In the analysis, clicking a move plays it on the board, so you can click your way down your own repertoire. The chosen view is remembered per device. Needs BOTH images (api + frontend).", de: "Stellung in meinen Repertoires: NEUER BAUMMODUS. Das Panel (Analyse, PGN-Viewer, geteilte Partie) hat jetzt zwei Sichten, oben rechts umschaltbar: die gewohnte LISTE (Repertoire \u2192 Kapitel \u2192 Linie) und einen neuen BAUM mit der Frage \u201ewie geht mein Repertoire ab hier weiter?\u201c \u2014 alle Vorkommen der Stellung zu einem Zugbaum je Repertoire zusammengef\u00fchrt, VARIANTEN INKLUSIVE (die fehlen in der Listenansicht). An jedem Zug steht, wie viele Linien dar\u00fcber laufen; wo ein Zweig eindeutig zu EINER Linie geh\u00f6rt, sitzen Trainieren/Ansehen direkt daneben. In der Analyse spielt ein Klick den Zug aufs Brett \u2014 so klickt man sich durch sein eigenes Repertoire. Die gew\u00e4hlte Sicht wird pro Ger\u00e4t gemerkt. Braucht BEIDE Images (api + frontend)." },
+  ] },
   { version: "0.336.2", date: "2026-08-04", changes: [
     { en: "Navbar fine-tuning: FULLSCREEN is back as an icon in the top bar (logged in and out); MESSAGES moved into the ☰ menu (entry right below dashboard — unread messages still colour the ☰ icon red and show a count badge on it). The light/dark toggle left the menus entirely (the theme remains configurable in the profile). Bar: fullscreen, bell, menu. Frontend image only.", de: "Navbar-Feinschliff: VOLLBILD ist zurück als Icon in der oberen Leiste (ein- und ausgeloggt); die NACHRICHTEN sind ins ☰-Menü gewandert (Eintrag direkt unter Dashboard — ungelesene Nachrichten färben weiterhin das ☰-Icon rot und zeigen dort ein Zähler-Badge). Der Hell/Dunkel-Umschalter ist komplett aus den Menüs raus (das Theme bleibt im Profil einstellbar). Leiste: Vollbild, Glocke, Menü. Nur Frontend-Image." },
   ] },

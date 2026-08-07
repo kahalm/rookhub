@@ -150,7 +150,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
           @if (auth.isLoggedIn) {
             <mat-card class="reps-card">
               <mat-card-content>
-                <app-position-repertoires [fen]="currentFen" />
+                <app-position-repertoires [fen]="currentFen" (playMoves)="playRepertoireMoves($event)" />
               </mat-card-content>
             </mat-card>
           }
@@ -362,6 +362,27 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
     if (this.ply < this.line.length) this.line = this.line.slice(0, this.ply);   // ab hier neu
     this.line.push({ san: mv.san, fen: c.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
+    this.ply = this.line.length;
+    this.refresh();
+  }
+
+  /** Baummodus des Repertoire-Panels: die geklickte Zugfolge ab der aktuellen Stellung aufs Brett
+   * spielen (wie selbst gezogen — ab hier wird die bisherige Fortsetzung ersetzt). Illegale/unbekannte
+   * SAN brechen still ab, statt die Linie halb zu zerschießen. */
+  playRepertoireMoves(sans: string[]): void {
+    if (!sans?.length) return;
+    let c: Chess;
+    try { c = new Chess(this.currentFen); } catch { return; }
+    const added: LineNode[] = [];
+    for (const san of sans) {
+      let mv;
+      try { mv = c.move(san); } catch { break; }
+      if (!mv) break;
+      added.push({ san: mv.san, fen: c.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
+    }
+    if (!added.length) return;
+    if (this.ply < this.line.length) this.line = this.line.slice(0, this.ply);   // ab hier neu
+    this.line = this.line.concat(added);
     this.ply = this.line.length;
     this.refresh();
   }

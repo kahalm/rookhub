@@ -9,16 +9,32 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
-import { RepertoireService, RepertoirePositionMatch, RepertoireLineMatch } from '../../core/repertoire.service';
+import {
+  RepertoireService, RepertoirePositionMatch, RepertoireLineMatch,
+  RepertoirePositionTree, PositionTreeNode,
+} from '../../core/repertoire.service';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
+import { PositionTreeComponent } from './position-tree.component';
 
 interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
+type PanelMode = 'list' | 'tree';
+const MODE_KEY = 'rookhub_position_reps_mode';
+
 /**
  * „In welchen Repertoires kommt diese Stellung vor?" — wiederverwendbarer Knopf + Ergebnis-Panel.
- * Nimmt die aktuelle Brett-Stellung als `fen`, fragt `POST /api/repertoires/position-lookup` und zeigt
- * die Treffer als Repertoire → Kapitel → Linie. Pro Linie „Trainieren" (Trainer) und „Ansehen" (Detail).
+ * Nimmt die aktuelle Brett-Stellung als `fen` und zeigt die Treffer in zwei umschaltbaren Sichten:
+ *
+ * - **Liste** (`POST /api/repertoires/position-lookup`): Repertoire → Kapitel → Linie, pro Linie
+ *   „Trainieren" (Trainer) und „Ansehen" (Detail).
+ * - **Baum** (`POST /api/repertoires/position-tree`): „wie geht mein Repertoire ab hier weiter?" —
+ *   alle Vorkommen zu einem Zugbaum je Repertoire zusammengeführt, Varianten inklusive. Der Baum
+ *   kommt deshalb vom Server: der Client-Parser (`parsePgnText`) wirft Varianten weg.
+ *
+ * Die gewählte Sicht wird pro Gerät gemerkt. Hört ein Consumer auf `playMoves` (heute die Analyse),
+ * spielt ein Klick im Baum die Zugfolge aufs Brett — die Stellung ändert sich, das Panel lädt neu
+ * und der Baum wächst mit; so klickt man sich durchs eigene Repertoire.
  *
  * Der Ziel-`lineKey` wird bewusst aus dem CLIENT-Parse des Repertoire-PGN berechnet (identisch zu
  * Trainer/Linienliste), nicht aus Server-SAN — so ist die Linien-Identität garantiert konsistent.
@@ -29,7 +45,7 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-position-repertoires',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, TranslatePipe, PositionTreeComponent],
   template: `
     @if (auth.isLoggedIn) {
       <div class="pos-reps">
@@ -40,10 +56,54 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
         @if (open) {
           <div class="pr-panel">
+            <div class="pr-modes">
+              <button class="pr-mode" type="button" [class.pr-mode-on]="mode === 'list'" (click)="setMode('list')"
+                      [matTooltip]="'positionInReps.mode.list' | translate">
+                <mat-icon>format_list_bulleted</mat-icon>
+              </button>
+              <button class="pr-mode" type="button" [class.pr-mode-on]="mode === 'tree'" (click)="setMode('tree')"
+                      [matTooltip]="'positionInReps.mode.tree' | translate">
+                <mat-icon>account_tree</mat-icon>
+              </button>
+            </div>
+
             @if (loading) {
               <div class="pr-muted"><mat-spinner diameter="16"></mat-spinner> {{ 'positionInReps.loading' | translate }}</div>
             } @else if (error) {
               <div class="pr-muted pr-error">{{ 'positionInReps.error' | translate }}</div>
+            } @else if (mode === 'tree') {
+              @if (trees.length === 0) {
+                <div class="pr-muted">{{ 'positionInReps.none' | translate }}</div>
+              } @else {
+                <div class="pr-count">{{ 'positionInReps.tree.foundCount' | translate:{ reps: trees.length, lines: totalOccurrences } }}</div>
+                @for (tree of trees; track tree.repertoireId) {
+                  <div class="pr-rep">
+                    <button class="pr-rep-head" (click)="toggleRep(tree.repertoireId)">
+                      <mat-icon>{{ isRepOpen(tree.repertoireId) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+                      <span class="pr-rep-name">{{ tree.repertoireName }}</span>
+                      @if (tree.shared) { <span class="pr-shared" [matTooltip]="'positionInReps.sharedHint' | translate"><mat-icon>group</mat-icon>{{ 'positionInReps.sharedBadge' | translate }}</span> }
+                      <span class="pr-badge">{{ tree.occurrences }}</span>
+                    </button>
+                    @if (isRepOpen(tree.repertoireId)) {
+                      @if (tree.moves.length === 0) {
+                        <div class="pr-muted pr-tree-empty">{{ 'positionInReps.tree.noContinuation' | translate }}</div>
+                      } @else {
+                        <app-position-tree class="pr-tree"
+                          [nodes]="tree.moves"
+                          [startMoveNumber]="startMoveNumber"
+                          [blackToMove]="blackToMove"
+                          [canPlay]="canPlay"
+                          (playPath)="playMoves.emit($event)"
+                          (train)="trainNode(tree, $event)"
+                          (view)="viewNode(tree, $event)" />
+                      }
+                      @if (tree.truncated) {
+                        <div class="pr-muted pr-tree-empty">{{ 'positionInReps.tree.truncated' | translate }}</div>
+                      }
+                    }
+                  </div>
+                }
+              }
             } @else if (repertoires.length === 0) {
               <div class="pr-muted">{{ 'positionInReps.none' | translate }}</div>
             } @else {
@@ -90,6 +150,13 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
     .pos-reps { display: block; }
     .pr-toggle { width: 100%; }
     .pr-panel { margin-top: 8px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 6px; padding: 8px; max-height: 46vh; overflow: auto; }
+    .pr-modes { display: flex; justify-content: flex-end; gap: 2px; margin-bottom: 4px; }
+    .pr-mode { width: 26px; height: 26px; padding: 0; border: none; background: none; color: color-mix(in srgb, currentColor 55%, transparent); cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
+    .pr-mode:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+    .pr-mode-on { color: #1976d2; background: color-mix(in srgb, #1976d2 14%, transparent); }
+    .pr-mode mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    .pr-tree { margin: 2px 0 6px 22px; }
+    .pr-tree-empty { margin: 2px 0 6px 22px; font-size: .8rem; }
     .pr-muted { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; display: flex; align-items: center; gap: 8px; }
     .pr-error { color: #c62828; }
     .pr-count { font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px; }
@@ -112,20 +179,41 @@ export class PositionRepertoiresComponent implements OnChanges {
   @Input() fen = '';
   /** Feuert vor jeder Navigation — z. B. damit ein umschließender Dialog sich schließt. */
   @Output() navigated = new EventEmitter<void>();
+  /** Baummodus: SAN-Zugfolge ab der aktuellen Stellung, die aufs Brett gespielt werden soll.
+   * Nur Consumer mit eigenem Brett hören darauf (heute die Analyse) — sonst klappt ein Klick
+   * den Knoten nur auf/zu. */
+  @Output() playMoves = new EventEmitter<string[]>();
 
   open = false;
   loading = false;
   error = false;
+  mode: PanelMode = 'list';
   repertoires: RepertoirePositionMatch[] = [];
+  trees: RepertoirePositionTree[] = [];
   totalLines = 0;
+  totalOccurrences = 0;
   busyLine: string | null = null;
 
   private openReps = new Set<number>();
   private loadedFen = '';
+  private loadedMode: PanelMode | null = null;
   private reqId = 0;
   private pgnCache = new Map<number, ParsedGame[]>();
 
-  constructor(public auth: AuthService, private repertoireService: RepertoireService, private router: Router) {}
+  constructor(public auth: AuthService, private repertoireService: RepertoireService, private router: Router) {
+    const saved = (() => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } })();
+    if (saved === 'tree' || saved === 'list') this.mode = saved;
+  }
+
+  /** Nur wo ein Consumer zuhört, ist „Zug aufs Brett spielen" sinnvoll. */
+  get canPlay(): boolean { return this.playMoves.observed; }
+
+  /** Zugnummer/Seite am Zug aus der FEN — für die Nummerierung im Baum. */
+  get startMoveNumber(): number {
+    const n = parseInt((this.fen || '').split(' ')[5], 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+  get blackToMove(): boolean { return (this.fen || '').split(' ')[1] === 'b'; }
 
   ngOnChanges(changes: SimpleChanges): void {
     // Wenn das Panel offen ist und sich die Stellung ändert (Durchklicken), neu laden.
@@ -137,12 +225,38 @@ export class PositionRepertoiresComponent implements OnChanges {
     if (this.open) this.load();
   }
 
+  setMode(mode: PanelMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    try { localStorage.setItem(MODE_KEY, mode); } catch { /* Privatmodus: Auswahl gilt nur für die Sitzung */ }
+    if (this.open) this.load();
+  }
+
   private load(): void {
     if (!this.fen) return;
+    // Beide Sichten hängen an derselben Stellung; nur neu laden, wenn Stellung ODER Sicht wechselt.
+    if (this.fen === this.loadedFen && this.mode === this.loadedMode && !this.error) return;
     this.loadedFen = this.fen;
+    this.loadedMode = this.mode;
     this.loading = true;
     this.error = false;
     const myReq = ++this.reqId;
+    const fail = () => { if (myReq === this.reqId) { this.error = true; this.loading = false; this.loadedMode = null; } };
+
+    if (this.mode === 'tree') {
+      this.repertoireService.lookupPositionTree(this.fen).subscribe({
+        next: (res) => {
+          if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
+          this.trees = res.repertoires ?? [];
+          this.totalOccurrences = this.trees.reduce((s, r) => s + r.occurrences, 0);
+          this.openReps = new Set(this.trees.map(r => r.repertoireId)); // alle aufgeklappt
+          this.loading = false;
+        },
+        error: fail,
+      });
+      return;
+    }
+
     this.repertoireService.lookupPosition(this.fen).subscribe({
       next: (res) => {
         if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
@@ -151,7 +265,7 @@ export class PositionRepertoiresComponent implements OnChanges {
         this.openReps = new Set(this.repertoires.map(r => r.repertoireId)); // alle aufgeklappt
         this.loading = false;
       },
-      error: () => { if (myReq === this.reqId) { this.error = true; this.loading = false; } },
+      error: fail,
     });
   }
 
@@ -177,6 +291,28 @@ export class PositionRepertoiresComponent implements OnChanges {
   }
   view(rep: RepertoirePositionMatch, line: RepertoireLineMatch): void {
     this.navigateToLine(rep, line, 'view');
+  }
+
+  /** Baummodus: Trainieren/Ansehen für einen Knoten, der eindeutig zu EINER Linie gehört. */
+  trainNode(tree: RepertoirePositionTree, node: PositionTreeNode): void {
+    this.navigateToLine(this.asMatch(tree), this.asLine(node), 'train');
+  }
+  viewNode(tree: RepertoirePositionTree, node: PositionTreeNode): void {
+    this.navigateToLine(this.asMatch(tree), this.asLine(node), 'view');
+  }
+
+  private asMatch(tree: RepertoirePositionTree): RepertoirePositionMatch {
+    return {
+      repertoireId: tree.repertoireId, repertoireName: tree.repertoireName,
+      kind: tree.kind, shared: tree.shared, lines: [],
+    };
+  }
+  /** Baum-Knoten → Linien-Treffer (ply -1: die Detailansicht springt dann an den Linienanfang). */
+  private asLine(node: PositionTreeNode): RepertoireLineMatch {
+    return {
+      chapter: node.chapter ?? '', lineName: node.lineName ?? '',
+      gameIndex: node.gameIndex ?? 0, ply: -1,
+    };
   }
 
   private navigateToLine(rep: RepertoirePositionMatch, line: RepertoireLineMatch, target: 'train' | 'view'): void {

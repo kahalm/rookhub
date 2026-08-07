@@ -44,6 +44,38 @@ export interface PositionLookupResult {
   repertoires: RepertoirePositionMatch[];
 }
 
+/** Ein Zug im Baummodus; `children` sind die im Repertoire folgenden Antworten. */
+export interface PositionTreeNode {
+  /** SAN ohne Schach-/Bewertungszeichen (der Server-PGN-Tokenizer strippt `+#!?`). */
+  san: string;
+  /** Wie viele Linien-Pfade durch diesen Zug laufen. */
+  count: number;
+  /** Hier endet mindestens eine Linie. */
+  isEnd: boolean;
+  /** Nur gesetzt, wenn ab hier GENAU EINE Linie durchläuft (dann sind Trainieren/Ansehen eindeutig). */
+  chapter?: string | null;
+  lineName?: string | null;
+  gameIndex?: number | null;
+  children: PositionTreeNode[];
+}
+
+/** Ein Repertoire mit dem ab der Stellung zusammengeführten Zugbaum. */
+export interface RepertoirePositionTree {
+  repertoireId: number;
+  repertoireName: string;
+  kind: string;
+  shared: boolean;
+  moves: PositionTreeNode[];
+  /** Anzahl Linien-Vorkommen (Hauptlinie + Varianten) der Stellung. */
+  occurrences: number;
+  /** Baum wurde an der Knoten-Obergrenze gekappt. */
+  truncated: boolean;
+}
+
+export interface PositionTreeResult {
+  repertoires: RepertoirePositionTree[];
+}
+
 /** Öffentliche Sicht einer geteilten Einzel-Linie (Nur-Ansehen-Link `/l/{token}`). */
 export interface SharedLine {
   shareToken: string;
@@ -123,6 +155,13 @@ export class RepertoireService {
   /** „In welchen eigenen Repertoire-Linien kommt diese Stellung vor?" (Repertoire → Kapitel → Linie). */
   lookupPosition(fen: string): Observable<PositionLookupResult> {
     return this.http.post<PositionLookupResult>(`${this.apiUrl}/position-lookup`, { fen });
+  }
+
+  /** Baummodus derselben Suche: „wie geht mein Repertoire ab dieser Stellung weiter?"
+   * Der Baum kommt bewusst vom Server — er führt auch VARIANTEN zusammen, die der
+   * Client-PGN-Parser (`parsePgnText`) wegwirft. `maxDepth` = Halbzüge (0 = Server-Default). */
+  lookupPositionTree(fen: string, maxDepth = 0): Observable<PositionTreeResult> {
+    return this.http.post<PositionTreeResult>(`${this.apiUrl}/position-tree`, { fen, maxDepth });
   }
 
   /** PGN-Datei hochladen (multipart). */

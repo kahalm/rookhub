@@ -409,7 +409,22 @@
     "train": "Treniraj ovu liniju",
     "view": "Pogledaj ovu liniju",
     "sharedBadge": "podijeljeno",
-    "sharedHint": "Podijelio s tobom drugi korisnik"
+    "sharedHint": "Podijelio s tobom drugi korisnik",
+    "mode": {
+      "list": "Prikaz popisa",
+      "tree": "Prikaz stabla"
+    },
+    "tree": {
+      "foundCount": "{{reps}} repertoar(a) · {{lines}} pojavljivanja",
+      "noContinuation": "Ovdje repertoar završava — nastavak nije spremljen.",
+      "truncated": "Stablo skraćeno (vrlo mnogo grananja).",
+      "linesThrough": "{{count}} linija prolazi kroz ovaj potez",
+      "lineEnd": "Ovdje završava linija",
+      "playHint": "Odigraj potez na ploči",
+      "expandHint": "Otvori / zatvori",
+      "expandNode": "Otvori",
+      "collapseNode": "Zatvori"
+    }
   },
   "pgnViewer": {
     "gameLabel": "Partija",

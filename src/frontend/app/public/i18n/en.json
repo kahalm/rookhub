@@ -409,7 +409,22 @@
     "train": "Train this line",
     "view": "View this line",
     "sharedBadge": "shared",
-    "sharedHint": "Shared with you by another user"
+    "sharedHint": "Shared with you by another user",
+    "mode": {
+      "list": "List view",
+      "tree": "Tree view"
+    },
+    "tree": {
+      "foundCount": "{{reps}} repertoire(s) · {{lines}} occurrence(s)",
+      "noContinuation": "The repertoire ends here — no continuation stored.",
+      "truncated": "Tree shortened (very many branches).",
+      "linesThrough": "{{count}} lines run through this move",
+      "lineEnd": "A line ends here",
+      "playHint": "Play this move on the board",
+      "expandHint": "Expand / collapse",
+      "expandNode": "Expand",
+      "collapseNode": "Collapse"
+    }
   },
   "pgnViewer": {
     "gameLabel": "Game",

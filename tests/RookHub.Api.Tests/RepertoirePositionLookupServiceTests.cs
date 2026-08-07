@@ -156,4 +156,154 @@ public class RepertoirePositionLookupServiceTests : IDisposable
         var line = Assert.Single(rep.Lines);
         Assert.Equal(-1, line.Ply);
     }
+
+    // ===== Baummodus =====
+
+    [Fact]
+    public async Task Tree_FromMainlinePosition_ReturnsFollowingMoves()
+    {
+        var user = await AddUserAsync("t1");
+        await AddRepertoireAsync(user, "My Sicilian", SicilianPgn);   // 1.e4 c5 2.Nf3 d6 3.d4 cxd4
+
+        var res = await _svc.TreeAsync(user, FenAfter("e4", "c5", "Nf3"), 0, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.Equal("My Sicilian", rep.RepertoireName);
+        Assert.Equal(1, rep.Occurrences);
+        Assert.False(rep.Truncated);
+        var d6 = Assert.Single(rep.Moves);
+        Assert.Equal("d6", d6.San);
+        Assert.Equal(1, d6.Count);
+        var d4 = Assert.Single(d6.Children);
+        Assert.Equal("d4", d4.San);
+        var cxd4 = Assert.Single(d4.Children);
+        Assert.Equal("cxd4", cxd4.San);
+        Assert.True(cxd4.IsEnd);                                       // Linie endet hier
+    }
+
+    [Fact]
+    public async Task Tree_MergesBranchesAcrossLines_AndCountsPaths()
+    {
+        var user = await AddUserAsync("t2");
+        // Zwei Linien mit gemeinsamem Anfang, die nach 2...d6 bzw. 2...Nc6 auseinanderlaufen.
+        var pgn =
+            "[Event \"R\"]\n[White \"Najdorf\"]\n[Black \"Sicilian\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n\n" +
+            "[Event \"R\"]\n[White \"Sveshnikov\"]\n[Black \"Sicilian\"]\n\n1. e4 c5 2. Nf3 Nc6 3. d4 *\n";
+        await AddRepertoireAsync(user, "Sicilian Rep", pgn);
+
+        var res = await _svc.TreeAsync(user, FenAfter("e4", "c5", "Nf3"), 0, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.Equal(2, rep.Occurrences);
+        Assert.Equal(2, rep.Moves.Count);
+        Assert.Equal(new[] { "d6", "Nc6" }, rep.Moves.Select(m => m.San).ToArray());
+        Assert.All(rep.Moves, m => Assert.Equal(1, m.Count));
+        // Jeder Zweig ist eindeutig EINER Linie zuzuordnen → Kapitel/Linie fürs „Trainieren".
+        Assert.Equal("Najdorf", rep.Moves[0].LineName);
+        Assert.Equal("Sicilian", rep.Moves[0].Chapter);
+        Assert.Equal(0, rep.Moves[0].GameIndex);
+        Assert.Equal("Sveshnikov", rep.Moves[1].LineName);
+        Assert.Equal(1, rep.Moves[1].GameIndex);
+    }
+
+    [Fact]
+    public async Task Tree_SharedPrefixFromTwoLines_IsAmbiguous_NoLineReference()
+    {
+        var user = await AddUserAsync("t3");
+        // Beide Linien spielen 2...d6, trennen sich erst im 4. Zug.
+        var pgn =
+            "[Event \"R\"]\n[White \"A\"]\n[Black \"Sicilian\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *\n\n" +
+            "[Event \"R\"]\n[White \"B\"]\n[Black \"Sicilian\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Qxd4 Nc6 *\n";
+        await AddRepertoireAsync(user, "Sicilian Rep", pgn);
+
+        var res = await _svc.TreeAsync(user, FenAfter("e4", "c5", "Nf3"), 0, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        var d6 = Assert.Single(rep.Moves);
+        Assert.Equal(2, d6.Count);                                     // beide Linien laufen hier durch
+        Assert.Null(d6.LineName);                                      // mehrdeutig → keine Linien-Referenz
+        Assert.Null(d6.GameIndex);
+        var cxd4 = Assert.Single(Assert.Single(d6.Children).Children); // 3.d4 → 3...cxd4
+        Assert.Equal(2, cxd4.Children.Count);                          // 4.Nxd4 / 4.Qxd4
+        Assert.Equal("A", cxd4.Children[0].LineName);                  // ab hier wieder eindeutig
+        Assert.Equal("B", cxd4.Children[1].LineName);
+    }
+
+    [Fact]
+    public async Task Tree_IncludesVariations_NotJustMainline()
+    {
+        var user = await AddUserAsync("t4");
+        // Nach 1.e4 c5 2.Nf3 stehen Hauptzug d6 und die Variante Nc6 zur Wahl.
+        var pgn = "[Event \"R\"]\n[White \"Open Sicilian\"]\n[Black \"Sicilian\"]\n\n1. e4 c5 2. Nf3 d6 (2... Nc6 3. Bb5) 3. d4 *\n";
+        await AddRepertoireAsync(user, "e4 Rep", pgn);
+
+        var res = await _svc.TreeAsync(user, FenAfter("e4", "c5", "Nf3"), 0, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.Equal(new[] { "d6", "Nc6" }, rep.Moves.Select(m => m.San).ToArray());
+        Assert.Equal("Bb5", Assert.Single(rep.Moves[1].Children).San);
+    }
+
+    [Fact]
+    public async Task Tree_RespectsMaxDepth()
+    {
+        var user = await AddUserAsync("t5");
+        await AddRepertoireAsync(user, "My Sicilian", SicilianPgn);   // ab der Stellung: d6, d4, cxd4
+
+        var res = await _svc.TreeAsync(user, FenAfter("e4", "c5", "Nf3"), 2, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        var d6 = Assert.Single(rep.Moves);
+        var d4 = Assert.Single(d6.Children);
+        Assert.Empty(d4.Children);                                     // 3...cxd4 liegt jenseits der Tiefe
+    }
+
+    [Fact]
+    public async Task Tree_StartPosition_ReturnsFirstMoves()
+    {
+        var user = await AddUserAsync("t6");
+        await AddRepertoireAsync(user, "My Sicilian", SicilianPgn);
+
+        var res = await _svc.TreeAsync(user, FenAfter(), 0, CancellationToken.None);   // Grundstellung
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.Equal("e4", Assert.Single(rep.Moves).San);
+    }
+
+    [Fact]
+    public async Task Tree_UnknownPosition_ReturnsEmpty()
+    {
+        var user = await AddUserAsync("t7");
+        await AddRepertoireAsync(user, "My Sicilian", SicilianPgn);
+
+        var res = await _svc.TreeAsync(user, FenAfter("e4", "c6", "d4", "d5"), 0, CancellationToken.None);
+
+        Assert.Empty(res.Repertoires);
+    }
+
+    [Fact]
+    public async Task Tree_OnlyReturnsReadableRepertoires()
+    {
+        var mine = await AddUserAsync("t8");
+        var other = await AddUserAsync("t8other");
+        await AddRepertoireAsync(other, "Someone else's", SicilianPgn);
+
+        var res = await _svc.TreeAsync(mine, FenAfter("e4", "c5", "Nf3"), 0, CancellationToken.None);
+
+        Assert.Empty(res.Repertoires);
+    }
+
+    [Fact]
+    public async Task Tree_SharedRepertoire_IsFlaggedShared()
+    {
+        var me = await AddUserAsync("t9");
+        var owner = await AddUserAsync("t9owner");
+        var repId = await AddRepertoireAsync(owner, "Owner's Sicilian", SicilianPgn);
+        await ShareAsync(repId, owner, me);
+
+        var res = await _svc.TreeAsync(me, FenAfter("e4", "c5", "Nf3"), 0, CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.True(rep.Shared);
+    }
 }
