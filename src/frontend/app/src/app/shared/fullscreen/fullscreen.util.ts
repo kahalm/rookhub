@@ -7,10 +7,14 @@
  * müssen — er fragt {@link fullscreenSupported} und blendet seinen Knopf sonst aus.</p>
  *
  * <p>Wichtig fürs Layout: im Vollbild rendert der Browser NUR den Teilbaum des Vollbild-Elements.
- * Alles, was Angular Material in den CDK-Overlay-Container am `<body>` hängt (Tooltip, Snackbar,
- * Dialog, Menü), ist dann unsichtbar. Bedienelemente, die im Vollbild erreichbar bleiben müssen,
- * gehören daher INS Vollbild-Element — und ihre Erklärung ins native `title`-Attribut statt in
- * einen `matTooltip`.</p>
+ * Bedienelemente, die im Vollbild erreichbar bleiben müssen, gehören daher INS Vollbild-Element
+ * (Vollbild-Knopf, Solver-Icon-Leiste) — im normalen Seitenfluss stehende Knöpfe sind dort weg.</p>
+ *
+ * <p>Für CDK-Overlays (Tooltip, Snackbar, Dialog, Menü) erledigt das seit 0.339.0 der
+ * {@link FullscreenOverlayService}: er hängt den Overlay-Container fürs Vollbild ins Vollbild-Element
+ * um, Overlays erscheinen also normal. (Davor waren sie unsichtbar — ein modaler Dialog mit
+ * `disableClose` hing die App sogar fest.) Für Elemente INNERHALB des Vollbild-Elements bleibt das
+ * native `title`-Attribut trotzdem die einfachere Wahl.</p>
  */
 
 interface FullscreenCapableElement extends HTMLElement {

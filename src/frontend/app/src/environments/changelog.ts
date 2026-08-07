@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.338.0';
+export const APP_VERSION = '0.339.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.339.0", date: "2026-08-07", changes: [
+    { en: "Fullscreen no longer swallows popups. In board fullscreen the browser renders only the board subtree, so everything Angular Material puts in its overlay layer (dialogs, snackbars, menus, tooltips) was invisible there \u2014 and the modal 'that took a while, were you away?' question after a long solve even locked the app: it blocked, but could not be clicked. The overlay layer now moves into the fullscreen element while fullscreen is active (and back out afterwards, also when the page navigates away). Frontend image only.", de: "Das Vollbild schluckt keine Popups mehr. Im Brett-Vollbild rendert der Browser nur den Brett-Teilbaum \u2014 alles, was Angular Material in seine Overlay-Ebene legt (Dialoge, Snackbars, Men\u00fcs, Tooltips), war dort unsichtbar, und die modale Nachfrage \u201eGanz sch\u00f6n lang \u2014 warst du zwischendurch weg?\u201c nach langer L\u00f6sezeit h\u00e4ngte die App sogar fest: sie blockierte, war aber nicht anklickbar. Die Overlay-Ebene zieht jetzt f\u00fcrs Vollbild ins Vollbild-Element um (und danach wieder heraus, auch beim Wegnavigieren). Nur Frontend-Image." },
+  ] },
   { version: "0.338.0", date: "2026-08-07", changes: [
     { en: "Board fullscreen: the black bars are no longer dead space. A small, discreet icon bar now sits there (hint, reset, mouse slip, give up) \u2014 square, icon-only, semi-transparent, next to the board in landscape and below it in portrait. Until now every one of those actions lived outside the fullscreen subtree, so in fullscreen they were simply gone. Same visibility rules as the normal action row (shared helper), same three modes (standard, endless, course/book/daily). Frontend image only.", de: "Brett-Vollbild: die schwarzen Balken sind kein toter Raum mehr. Dort sitzt jetzt eine kleine, dezente Icon-Leiste (Tipp, Zur\u00fccksetzen, Mausrutscher, Aufgeben) \u2014 quadratisch, nur Icon, halbtransparent; im Querformat neben dem Brett, im Hochformat darunter. Bisher lagen all diese Aktionen au\u00dferhalb des Vollbild-Teilbaums und waren im Vollbild schlicht weg. Gleiche Sichtbarkeitsregeln wie die normale Aktionszeile (gemeinsamer Helfer), gleiche drei Modi (Standard, Endlos, Kurs/Buch/Tagespuzzle). Nur Frontend-Image." },
   ] },

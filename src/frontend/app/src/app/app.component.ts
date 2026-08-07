@@ -14,6 +14,7 @@ import { AuthService } from './core/auth.service';
 import { MenuService } from './core/menu.service';
 import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
+import { FullscreenOverlayService } from './shared/fullscreen/fullscreen-overlay.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
 import { PwaInstallService } from './core/pwa-install.service';
 import { ClientLogService } from './core/client-log.service';
@@ -301,6 +302,9 @@ export class AppComponent implements OnInit {
     private swUpdate: SwUpdate,
     // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
     _offlineQueue: OfflineQueueService,
+    // App-weit instanziieren: holt den CDK-Overlay-Container im Vollbild ins Vollbild-Element,
+    // sonst sind Dialoge/Snackbars/Menüs dort unsichtbar (modale hingen die App fest).
+    _fullscreenOverlay: FullscreenOverlayService,
     private offlinePrefetch: OfflinePrefetchService,
     private clientLog: ClientLogService,
     // Verbindungs-Banner (offline / Server unerreichbar) in der App-Shell.
