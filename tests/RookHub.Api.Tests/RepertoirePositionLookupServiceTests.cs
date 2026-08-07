@@ -209,6 +209,37 @@ public class RepertoirePositionLookupServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Lookup_EmptyFenHeader_FallsBackToStartPosition()
+    {
+        var user = await AddUserAsync("f5");
+        // piratechess schreibt fuer Linien aus der Grundstellung ein LEERES [FEN ""] (PirateChessLib.cs:322)
+        // — in Prod ~34 mal. Das darf nicht als unbrauchbare FEN gelten (Linie waere sonst weg),
+        // sondern muss auf die Grundstellung zurueckfallen.
+        var pgn = "[Event \"Kurs\"]\n[White \"Leerer Header\"]\n[Black \"Kapitel\"]\n[FEN \"\"]\n\n1. e4 c5 2. Nf3 *\n";
+        await AddRepertoireAsync(user, "Rep", pgn);
+
+        var res = await _svc.LookupAsync(user, FenAfter("e4", "c5", "Nf3"), CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.Equal("Leerer Header", Assert.Single(rep.Lines).LineName);
+    }
+
+    [Fact]
+    public async Task Lookup_EmptyFenHeader_DoesNotIndexTheStartPositionAsAMatch()
+    {
+        var user = await AddUserAsync("f6");
+        // Gegenprobe zur Regel "Startstellung nur bei EIGENER [FEN] mitindizieren": ein leerer
+        // Header ist keine eigene Startstellung — sonst matchte dieses Repertoire auf die
+        // Grundstellung und damit auf jede frische Partie.
+        var pgn = "[Event \"Kurs\"]\n[White \"Leerer Header\"]\n[Black \"Kapitel\"]\n[FEN \"\"]\n\n1. e4 c5 *\n";
+        await AddRepertoireAsync(user, "Rep", pgn);
+
+        var res = await _svc.LookupAsync(user, new ChessBoard().ToFen(), CancellationToken.None);
+
+        Assert.Empty(res.Repertoires);
+    }
+
+    [Fact]
     public async Task Lookup_UnusableFenHeader_SkipsLineInsteadOfIndexingWrongPositions()
     {
         var user = await AddUserAsync("f4");

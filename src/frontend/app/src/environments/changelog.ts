@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.340.1';
+export const APP_VERSION = '0.340.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.340.2", date: "2026-08-07", changes: [
+    { en: "Two more regression tests around the repertoire position index: an EMPTY [FEN \"\"] header (which the Chessable importer writes for lines that do start from the initial position \u2014 about 34 of them in the live data) correctly falls back to the start position instead of dropping the line, and it does not register that repertoire as a match for the initial position. No functional change.", de: "Zwei weitere Regressionstests um den Repertoire-Stellungsindex: ein LEERER [FEN \"\"]-Header (den der Chessable-Import f\u00fcr Linien schreibt, die tats\u00e4chlich in der Grundstellung beginnen \u2014 rund 34 in den Live-Daten) f\u00e4llt korrekt auf die Grundstellung zur\u00fcck, statt die Linie zu verwerfen, und meldet das Repertoire nicht f\u00e4lschlich als Treffer f\u00fcr die Grundstellung. Keine funktionale \u00c4nderung." },
+  ] },
   { version: "0.340.1", date: "2026-08-07", changes: [
     { en: "Documentation: the stack-wide code review of 2026-08-07 is now recorded in TODO.md \u2014 what was fixed, and the five bigger items deliberately left for later (splitting the 1600-line solver component, refresh-token rotation, key rotation for the stored Chessable credentials, real time zones instead of hard UTC day boundaries, integration tests against a real MariaDB). No functional change.", de: "Dokumentation: der stack-weite Codereview vom 07.08.2026 steht jetzt in TODO.md \u2014 was behoben wurde und die f\u00fcnf gr\u00f6\u00dferen Punkte, die bewusst liegen bleiben (Aufspaltung der 1600-Zeilen-Solver-Komponente, Refresh-Token-Rotation, Key-Rotation f\u00fcr die gespeicherten Chessable-Zugangsdaten, echte Zeitzonen statt harter UTC-Tagesgrenzen, Integrationstests gegen echtes MariaDB). Keine funktionale \u00c4nderung." },
   ] },
