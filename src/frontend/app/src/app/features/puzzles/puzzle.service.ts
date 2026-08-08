@@ -281,9 +281,10 @@ export class PuzzleService {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/random`);
   }
 
-  /** Lösungsversuch an einem Buch-Puzzle melden (eingeloggt; Basis für Tagespuzzle-Anzeige). */
-  recordBookAttempt(id: number, solved: boolean, timeSeconds: number, hintsUsed = 0): Observable<unknown> {
-    return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds, hintsUsed });
+  /** Lösungsversuch an einem Buch-Puzzle melden (eingeloggt; Basis für Tagespuzzle-Anzeige).
+   *  `mode` = Spielweise ('training'/'easy'); fehlt sie, fällt der Server auf 'training' zurück. */
+  recordBookAttempt(id: number, solved: boolean, timeSeconds: number, hintsUsed = 0, mode?: string): Observable<unknown> {
+    return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds, hintsUsed, mode });
   }
 
   /** Tipps eines Buch-Puzzles als „dumm/schlecht" markieren (oder aufheben) — jeder eingeloggte User. */
@@ -292,9 +293,9 @@ export class PuzzleService {
   }
 
   /** Anonymer Buch-Puzzle-Solve (nicht eingeloggt) — zählt fürs Tagespuzzle namenlos mit. */
-  recordBookAttemptAnonymous(id: number, solved: boolean, timeSeconds: number): Observable<unknown> {
+  recordBookAttemptAnonymous(id: number, solved: boolean, timeSeconds: number, mode?: string): Observable<unknown> {
     return this.http.post(`/api/book-puzzles/${id}/attempt/anonymous`, {
-      solved, timeSeconds, sessionId: this.ensureSessionId()
+      solved, timeSeconds, sessionId: this.ensureSessionId(), mode
     });
   }
 

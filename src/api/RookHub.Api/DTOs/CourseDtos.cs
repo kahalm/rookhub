@@ -186,6 +186,14 @@ public class RecordCourseResultDto
     public int? ChapterIndex { get; set; }
     /// <summary>Höchste in diesem Versuch angesehene Tipp-Stufe (0–3).</summary>
     public int HintsUsed { get; set; }
+
+    /// <summary>Spielweise: "training" (Brett eingefroren bzw. höhere Visualisierungsstufe) oder
+    /// "easy" (Figuren normal ziehbar). Fehlt sie oder ist sie unbekannt → "training".
+    /// Heißt bewusst NICHT <c>Mode</c> — <see cref="Mode"/> ist hier seit jeher die Durchlaufart
+    /// ("sequential"/"random") und darf ihre Bedeutung nicht wechseln.</summary>
+    /// BEWUSST ohne Längenbegrenzung: ein unbekannter Wert soll auf "training" zurückfallen, nicht
+    /// den ganzen Versuch mit 400 abweisen (die Spaltenlänge sichert das Modell).
+    public string? SolveMode { get; set; }
 }
 
 /// <summary>Meldet eine sequenziell durchgeklickte Info-/Erklärlinie (damit sie beim nächsten
@@ -225,6 +233,10 @@ public class CourseStatsDto
     public double Accuracy { get; set; }
     public int CurrentStreak { get; set; }
     public int BestStreak { get; set; }
+    /// <summary>Versuche im Modus „training" (Brett eingefroren; Altbestand ohne Modus zählt hier).</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Versuche im Modus „easy" (Figuren normal ziehbar).</summary>
+    public int EasyCount { get; set; }
 }
 
 /// <summary>
@@ -242,6 +254,8 @@ public class CourseAttemptDto
     public bool Solved { get; set; }
     public int TimeSeconds { get; set; }
     public DateTime AttemptedAt { get; set; }
+    /// <summary>Spielweise dieses Versuchs ("training"/"easy"); Altbestand liefert "training".</summary>
+    public string Mode { get; set; } = Models.SolveMode.Training;
 }
 
 /// <summary>

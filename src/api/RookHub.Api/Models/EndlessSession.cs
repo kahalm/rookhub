@@ -37,6 +37,15 @@ public class EndlessSession
     [Column(TypeName = "TEXT")]
     public string? PuzzleAttemptsJson { get; set; }
 
+    /// <summary>
+    /// Spielweise des GANZEN Laufs: <see cref="SolveMode.Training"/> (Brett eingefroren bzw. höhere
+    /// Visualisierungsstufe — Default für Altbestand) oder <see cref="SolveMode.Easy"/> (Figuren
+    /// normal ziehbar). Ein Lauf hat genau einen Modus (im Gegensatz zu den Einzel-Versuchen der
+    /// übrigen Bereiche).
+    /// </summary>
+    [Required, MaxLength(10)]
+    public string Mode { get; set; } = SolveMode.Training;
+
     public bool IsArchived { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

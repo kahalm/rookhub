@@ -38,9 +38,13 @@ import { applyUci } from './puzzle-move.util';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { LongSolveService } from './long-solve.service';
+import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { of } from 'rxjs';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
+
+/** Bereichs-Schlüssel der Spielweise (SolveModeService) für die Standard-Puzzles. */
+const SOLVE_SCOPE = 'puzzles';
 
 
 @Component({
@@ -121,6 +125,14 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
    *  einen Hinweis statt "Your turn!". Reset bei loadNext/retry. */
   gaveUp = false;
 
+  /** Gewählte Spielweise für den Bereich „Puzzles" (Training/Einfach). `null` = es wurde bewusst
+   *  nicht gefragt (fester Ansichts-Link, geteiltes Einzel-Puzzle, Challenge/Revanche) — dann
+   *  bleibt es bei der Stufe aus den Einstellungen bzw. aus der URL, und das ⋮-Menü zeigt keinen
+   *  Umschalter. */
+  solveModeChoice: SolveMode | null = null;
+  /** True, wenn in diesem Aufruf nicht nach der Spielweise gefragt werden darf (siehe oben). */
+  private solveModeAskSuppressed = false;
+
   constructor(
     private puzzleService: PuzzleService,
     stockfish: StockfishService,
@@ -137,7 +149,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private translate: TranslateService,
     private http: HttpClient,
     private longSolve: LongSolveService,
-    private favorites: FavoritesService
+    private favorites: FavoritesService,
+    private solveMode: SolveModeService
   ) {
     super(stockfish);
     this.favoriteTracker = new FavoriteTracker(
@@ -339,6 +352,15 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       if (this.revengeUserId) this.loadRevengeQueue(this.revengeUserId);
     }
 
+    // Spielweise für den Bereich „Puzzles" einmalig erfragen — aber nur beim normalen Einstieg
+    // ins Training. Nicht gefragt wird, wenn die Ansicht per Link festgelegt ist (?visualmode=)
+    // oder ein Einzelkontext geöffnet wurde (geteiltes Puzzle, Challenge, Revanche): dort hat der
+    // Absender die Ansicht bereits gewählt bzw. es ist kein Trainingseinstieg, und ein
+    // blockierender Dialog stünde nur im Weg.
+    this.solveModeAskSuppressed = ov.visualization != null || this.singlePuzzle
+      || this.challengeId != null || this.revengeUserId != null;
+    this.askSolveMode();
+
     const stats$ = this.isLoggedIn
       ? this.puzzleService.getStats(this.visualizationMode)
       : this.puzzleService.getAnonymousStats();
@@ -368,6 +390,47 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     });
   }
 
+  // ===== Spielweise (Training/Einfach) =====
+
+  /** Fragt beim ersten Einstieg in den Bereich nach der Spielweise; danach kommt die gemerkte
+   *  Wahl ohne Dialog (SolveModeService). Das erste Puzzle steht evtl. schon → mit der frisch
+   *  gewählten Spielweise neu aufsetzen (wie im Wochenpost). */
+  private askSolveMode(): void {
+    if (this.solveModeAskSuppressed) return;
+    this.solveMode.ensure(SOLVE_SCOPE, { scopeLabel: this.translate.instant('solveMode.scope.puzzles') })
+      .subscribe(mode => {
+        const vorher = this.visualizationMode;
+        this.solveModeChoice = mode;
+        this.applySolveModeLevel();
+        // Elo/Statistik hängen an der Visualisierungsstufe (wie in setVisualizationLevel) →
+        // nur nachladen, wenn die Wahl die Stufe tatsächlich verschoben hat.
+        if (this.isLoggedIn && this.visualizationMode !== vorher) {
+          this.puzzleService.getStats(this.visualizationMode)
+            .subscribe({ next: s => this.stats = s, error: () => {} });
+        }
+        if (this.puzzle) this.setupPuzzle(this.puzzle);
+      });
+  }
+
+  /** Visualisierungsstufe zur gemerkten Spielweise setzen. Wird bei jedem Puzzle-Start
+   *  aufgerufen, damit ein Umschalten ab dem NÄCHSTEN Puzzle greift. Ohne gemerkte Wahl
+   *  (nicht gefragt) bleibt die Stufe unangetastet. */
+  private applySolveModeLevel(): void {
+    if (!this.solveModeChoice) return;
+    this.visualizationMode = this.solveMode.levelFor(this.solveModeChoice);
+  }
+
+  /** Spielweise umschalten (⋮-Menü). Wirkt ab dem NÄCHSTEN Puzzle — ein laufender Versuch darf
+   *  nicht mitten im Rechnen die Regeln wechseln. */
+  toggleSolveMode(): void {
+    const neu: SolveMode = this.solveModeChoice === 'training' ? 'easy' : 'training';
+    this.solveModeChoice = neu;
+    this.solveMode.set(SOLVE_SCOPE, neu);
+    this.snackbar.info(
+      this.translate.instant(neu === 'easy' ? 'solveMode.switchedEasy' : 'solveMode.switchedTraining'),
+      { duration: 3000 });
+  }
+
   ngOnDestroy(): void {
     this.stopTimer();
     this.stopCountdown();
@@ -379,6 +442,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   loadNext(): void {
     const epoch = ++this.loadEpoch;
+    this.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
     this.state = 'LOADING';
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
@@ -775,6 +839,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   setVisualizationLevel(level: number): void {
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
+    // Stufe direkt gewählt → gemerkte Spielweise mitziehen, sonst widersprechen sich beide.
+    this.solveModeChoice = this.solveMode.modeForLevel(level);
+    this.solveMode.set(SOLVE_SCOPE, this.solveModeChoice);
     if (this.isLoggedIn) {
       this.puzzleService.getStats(level).subscribe(s => this.stats = s);
     }

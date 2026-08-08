@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.Models;
 
 /// <summary>
@@ -26,4 +28,12 @@ public class BookPuzzleAttempt
     /// <summary>Höchste angesehene Tipp-Stufe in diesem Versuch (0 = keiner, 1–3). Analog
     /// <c>PuzzleAttempt.VizShowCount</c>; fließt später in Statistik/Trainingsziele.</summary>
     public int HintsUsed { get; set; }
+
+    /// <summary>
+    /// Spielweise dieses Versuchs: <see cref="SolveMode.Training"/> (Brett eingefroren bzw. höhere
+    /// Visualisierungsstufe — Default für Altbestand) oder <see cref="SolveMode.Easy"/> (Figuren
+    /// normal ziehbar). Gilt für eingeloggte wie anonyme Versuche.
+    /// </summary>
+    [Required, MaxLength(10)]
+    public string Mode { get; set; } = SolveMode.Training;
 }

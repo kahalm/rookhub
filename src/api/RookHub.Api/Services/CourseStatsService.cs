@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -26,6 +27,10 @@ public class CourseStatsService
 
         var solved = await _db.CourseAttempts.CountAsync(a => a.UserId == userId && a.Solved);
         var accuracy = (double)solved / totalAttempts * 100;
+        // Spielweise: nur ausdrücklich als „easy" markierte Versuche zählen, alles andere (inkl.
+        // Altbestand ohne Modus) ist „training" — gleiche Regel wie bei Wochenpost/Standard-Puzzles.
+        var easyCount = await _db.CourseAttempts.CountAsync(a => a.UserId == userId && a.Mode == SolveMode.Easy);
+        var (trainingCount, easy) = SolveMode.Split(totalAttempts, easyCount);
 
         var recentResults = await _db.CourseAttempts
             .Where(a => a.UserId == userId)
@@ -56,6 +61,8 @@ public class CourseStatsService
             Accuracy = Math.Round(accuracy, 1),
             CurrentStreak = currentStreak,
             BestStreak = bestStreak,
+            TrainingCount = trainingCount,
+            EasyCount = easy,
         };
     }
 
@@ -81,6 +88,7 @@ public class CourseStatsService
                 Solved = a.Solved,
                 TimeSeconds = a.TimeSeconds,
                 AttemptedAt = a.AttemptedAt,
+                Mode = a.Mode,
             })
             .ToListAsync();
     }

@@ -42,6 +42,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle-theme-presets';
 import { LongSolveService } from './long-solve.service';
+import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -50,6 +51,9 @@ import { Key } from 'chessground/types';
 // PLAYING = user's turn after first move (buttons visible, board active)
 type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
   | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'EXHAUSTED' | 'WON';
+
+/** Bereichs-Schlüssel der Spielweise (SolveModeService) für den Endless-Modus. */
+const SOLVE_SCOPE = 'endless';
 
 interface EndlessPuzzleAttempt {
   puzzleNumber: number;
@@ -327,6 +331,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** „Geliebtes Puzzle"-Zustand (Herz) für aktuelles + zuletzt gelöstes Puzzle. */
   readonly favoriteTracker: FavoriteTracker;
 
+  /** Gewählte Spielweise für den Bereich „Endless" (Training/Einfach). `null` = es wurde bewusst
+   *  nicht gefragt (fester Ansichts-Link ?visualmode=) — dann bleibt es bei der Stufe aus den
+   *  Einstellungen bzw. aus der URL, und das ⋮-Menü zeigt keinen Umschalter. */
+  solveModeChoice: SolveMode | null = null;
+  /** True, wenn in diesem Aufruf nicht nach der Spielweise gefragt werden darf (siehe oben). */
+  private solveModeAskSuppressed = false;
+
   constructor(
     private puzzleService: PuzzleService,
     stockfish: StockfishService,
@@ -342,7 +353,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private offlineQueue: OfflineQueueService,
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
-    private chainService: EndlessChainService
+    private chainService: EndlessChainService,
+    private solveMode: SolveModeService
   ) {
     super(stockfish);
     this.favoriteTracker = new FavoriteTracker(
@@ -489,6 +501,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
     this.anarchyForcedByUrl = !!ov.enPassantForced;   // Anarchy per URL: e.p. immer forciert (sonst folgt es der Einstellung)
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;  // ?anarchy=max+1 → Feld bestimmt Stil
+    // Feste Ansicht aus dem Link (?visualmode=) → nicht nach der Spielweise fragen: wer einen Link
+    // mit vorgegebener Ansicht öffnet, hat die Wahl schon getroffen.
+    this.solveModeAskSuppressed = ov.visualization != null;
 
     this.autoStartRequested = qp.get('start') === '1' || qp.get('autostart') === '1';
 
@@ -605,7 +620,45 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   setVisualizationLevel(level: number): void {
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
+    // Stufe direkt gewählt → gemerkte Spielweise mitziehen, sonst widersprechen sich beide.
+    this.solveModeChoice = this.solveMode.modeForLevel(level);
+    this.solveMode.set(SOLVE_SCOPE, this.solveModeChoice);
     if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);  // laufendes Puzzle neu starten
+  }
+
+  // ===== Spielweise (Training/Einfach) =====
+
+  /** Fragt beim ERSTEN Lauf nach der Spielweise; danach gilt die gemerkte Wahl ohne Dialog
+   *  (SolveModeService). Ein Endless-Lauf ist eine Einheit → gefragt wird beim Start/Fortsetzen
+   *  eines Laufs, nicht bei jedem Puzzle darin. Steht das erste Puzzle schon, wird es mit der
+   *  frisch gewählten Spielweise neu aufgesetzt. */
+  private askSolveMode(): void {
+    if (this.solveModeAskSuppressed) return;
+    this.solveMode.ensure(SOLVE_SCOPE, { scopeLabel: this.translate.instant('solveMode.scope.endless') })
+      .subscribe(mode => {
+        this.solveModeChoice = mode;
+        this.applySolveModeLevel();
+        if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);
+      });
+  }
+
+  /** Visualisierungsstufe zur gemerkten Spielweise setzen. Wird bei jedem Puzzle-Start
+   *  aufgerufen, damit ein Umschalten ab dem NÄCHSTEN Puzzle greift. Ohne gemerkte Wahl
+   *  (nicht gefragt) bleibt die Stufe unangetastet. */
+  private applySolveModeLevel(): void {
+    if (!this.solveModeChoice) return;
+    this.visualizationMode = this.solveMode.levelFor(this.solveModeChoice);
+  }
+
+  /** Spielweise umschalten (⋮-Menü). Wirkt ab dem NÄCHSTEN Puzzle — ein laufender Versuch darf
+   *  nicht mitten im Rechnen die Regeln wechseln. */
+  toggleSolveMode(): void {
+    const neu: SolveMode = this.solveModeChoice === 'training' ? 'easy' : 'training';
+    this.solveModeChoice = neu;
+    this.solveMode.set(SOLVE_SCOPE, neu);
+    this.snackbar.info(
+      this.translate.instant(neu === 'easy' ? 'solveMode.switchedEasy' : 'solveMode.switchedTraining'),
+      { duration: 3000 });
   }
 
   setVizArrowEnabled(val: boolean): void {
@@ -707,6 +760,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   startGame(): void {
     ++this.runGeneration;   // laufenden Hintergrund-Prefetch für diesen Run entwerten
+    this.askSolveMode();    // Spielweise gilt für den ganzen LAUF, nicht je Puzzle
     this.clampConfig();
     this.saveConfig();
     this.lives = 3;
@@ -845,6 +899,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   resumeGame(): void {
     if (!this.activeGameState) return;
     ++this.runGeneration;   // laufenden Hintergrund-Prefetch entwerten
+    this.askSolveMode();    // fortgesetzter Lauf ist derselbe Bereich → nach der ersten Wahl stumm
     const g = this.activeGameState;
     this.lives = g.lives ?? 3;
     this.solved = g.solved ?? 0;
@@ -998,6 +1053,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   /** Lädt das aktuelle Ketten-Puzzle (`chain[chainIndex]`); am Kettenende wird verlängert/gewonnen. */
   private loadCurrent(): void {
+    this.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
     this.state = 'LOADING';
     this.alternativeSolve = false;
     this.showEval = false;

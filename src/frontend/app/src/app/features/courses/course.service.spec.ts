@@ -46,14 +46,22 @@ describe('CourseService', () => {
     svc.recordResult(3, 55, true, 'sequential').subscribe();
     const req = http.expectOne('/api/courses/3/results');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ bookPuzzleId: 55, solved: true, mode: 'sequential', timeSeconds: 0, chapterIndex: undefined, hintsUsed: 0 });
+    expect(req.request.body).toEqual({ bookPuzzleId: 55, solved: true, mode: 'sequential', timeSeconds: 0, chapterIndex: undefined, hintsUsed: 0, solveMode: undefined });
     req.flush({ bookId: 3, solvedCount: 1, total: 10, progressPercent: 10, completed: false, lastMode: 'sequential' });
   });
 
   it('sends the elapsed time (for start/solve logging)', () => {
     svc.recordResult(3, 55, true, 'sequential', 42).subscribe();
     const req = http.expectOne('/api/courses/3/results');
-    expect(req.request.body).toEqual({ bookPuzzleId: 55, solved: true, mode: 'sequential', timeSeconds: 42, chapterIndex: undefined, hintsUsed: 0 });
+    expect(req.request.body).toEqual({ bookPuzzleId: 55, solved: true, mode: 'sequential', timeSeconds: 42, chapterIndex: undefined, hintsUsed: 0, solveMode: undefined });
+    req.flush({ bookId: 3, solvedCount: 1, total: 10, progressPercent: 10, completed: false, lastMode: 'sequential' });
+  });
+
+  it('reicht die Spielweise als solveMode durch (mode bleibt die Durchlaufart)', () => {
+    svc.recordResult(3, 55, true, 'sequential', 42, undefined, 0, 'easy').subscribe();
+    const req = http.expectOne('/api/courses/3/results');
+    expect(req.request.body.solveMode).toBe('easy');
+    expect(req.request.body.mode).toBe('sequential');
     req.flush({ bookId: 3, solvedCount: 1, total: 10, progressPercent: 10, completed: false, lastMode: 'sequential' });
   });
 

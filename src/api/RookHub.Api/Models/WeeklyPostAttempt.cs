@@ -42,17 +42,19 @@ public class WeeklyPostAttempt
     /// normal ziehbar). Wird nur beim ERSTEN Versuch je (Post, User, Index) geschrieben (idempotent).
     /// </summary>
     [Required, MaxLength(10)]
-    public string Mode { get; set; } = ModeTraining;
+    public string Mode { get; set; } = SolveMode.Training;
+
+    // Die drei folgenden Member sind nur noch Durchreichen auf <see cref="SolveMode"/> — die eine
+    // Wahrheit für alle Solver-Bereiche. Namen bleiben erhalten (Service/Tests benutzen sie).
 
     /// <summary>Modus „Training": Brett eingefroren, Figuren nicht ziehbar (Default/Altbestand).</summary>
-    public const string ModeTraining = "training";
+    public const string ModeTraining = SolveMode.Training;
 
     /// <summary>Modus „Einfach": Figuren normal ziehbar.</summary>
-    public const string ModeEasy = "easy";
+    public const string ModeEasy = SolveMode.Easy;
 
     /// <summary>Normalisiert einen vom Client gelieferten Modus — fehlt er oder ist er unbekannt, gilt „training".</summary>
-    public static string NormalizeMode(string? mode) =>
-        string.Equals(mode?.Trim(), ModeEasy, StringComparison.OrdinalIgnoreCase) ? ModeEasy : ModeTraining;
+    public static string NormalizeMode(string? mode) => SolveMode.Normalize(mode);
 
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

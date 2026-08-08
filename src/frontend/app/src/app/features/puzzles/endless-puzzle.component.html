@@ -406,6 +406,8 @@
                   [lastLoved]="favoriteTracker.lastIsFavorite"
                   shareLabelKey="endless.game.sharePuzzle"
                   reviewLastKey="endless.game.reviewLast"
+                  [solveModeChoice]="solveModeChoice"
+                  (solveModeToggle)="toggleSolveMode()"
                   (shareClicked)="sharePuzzle()"
                   (settingsClicked)="openSettingsDialog()"
                   (reviewLastClicked)="reviewLastPuzzle()"

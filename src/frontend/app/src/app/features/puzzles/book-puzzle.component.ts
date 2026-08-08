@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -51,6 +51,7 @@ import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyMode, WeeklyService } from '../weekly/weekly.service';
 import { WeeklyModeDialogComponent } from '../weekly/weekly-mode-dialog.component';
+import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 // 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
@@ -67,7 +68,8 @@ const ANON_COURSE_PAGE_SIZE = 300;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     PuzzleBoardComponent, BoardFsActionsComponent, PuzzleTagsComponent,
-    TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent
+    TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent,
+    RouterLink
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -120,6 +122,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   weeklySolved = 0;                       // davon gelöst
   weeklySeconds = 0;                      // Gesamtzeit über alle gespielten Puzzles (serverseitiger Stand)
   private weeklyAttemptRecorded = false;  // pro Puzzle nur einmal aufzeichnen
+
+  // ===== Spielweise (Kurs / Tagespuzzle / einzelnes Buch-Puzzle) =====
+  // Der Wochenpost-Modus hat seine EIGENE Abfrage (weeklyMode, s. o.) und bleibt davon unberührt:
+  // dort wird gewertet, es gilt zwingend Stufe 1 und die „Auge nach dem ersten Zug"-Regel.
+  /** Gewählte Spielweise des aktuellen Bereichs. Wirkt über {@link applySolveMode} beim Aufsetzen
+   *  eines Puzzles — ein Umschalten mitten im Versuch ändert das laufende Puzzle NICHT. */
+  solveModeChoice: SolveMode = 'training';
+  /** Bereichs-Schlüssel, für den die Spielweise schon geholt wurde (verhindert erneutes Fragen
+   *  bei jedem Puzzle; beim Wechsel des Bereichs/Kurses wird wieder geholt). */
+  private solveModeScopeAsked: string | null = null;
+  /** Kein Dialog: die Ansicht ist per Link festgelegt (`?visualmode=`) bzw. es ist ein direkt
+   *  geteiltes Einzel-Puzzle / eine Challenge / eine Revanche — dort hat der Öffnende die Wahl
+   *  schon getroffen, und es ist kein Trainingsbereich. Dann bleibt es beim bisherigen Verhalten. */
+  private solveModeSuppressed = false;
 
   // Tagespuzzle-Modus: /puzzles/daily/:date — Datums-Navigation (zurück/vor) statt Buch-Nav.
   dailyDate: string | null = null;
@@ -263,6 +279,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  (keine auth-pflichtigen Kurs-Endpoints aufrufen). */
   get isAnonCourse(): boolean { return this.inCourse && !this.isLoggedIn; }
 
+  /** Wohin Anmelden/Registrieren zurückführen soll: genau diese Wochenpost. Ohne das landet
+   *  ein Gast nach dem Login auf dem Dashboard und muss den geteilten Link neu suchen. */
+  get weeklyReturnUrl(): string { return this.weeklyId != null ? `/weekly/${this.weeklyId}` : '/weekly'; }
+
   get displayBookName(): string {
     if (!this.puzzle) return '';
     if (this.puzzle.bookTitle) return this.puzzle.bookTitle;
@@ -288,7 +308,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private offlineQueue: OfflineQueueService,
     private challengeService: ChallengeService,
     private longSolve: LongSolveService,
-    private favorites: FavoritesService
+    private favorites: FavoritesService,
+    private solveMode: SolveModeService
   ) {
     super(stockfish);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
@@ -591,18 +612,23 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // Versuch wird erfasst → gemerkte Tagespuzzle-Zwischenzeit verfällt (Erstversuch ist gewertet).
       if (this.isDaily && this.dailyDate) clearDailyElapsed(this.dailyDate);
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
-      const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel };
+      // `mode` = Spielweise: hier wird KEINE Visualisierungsstufe gespeichert, der Server müsste
+      // sonst auf „training" raten. Offline-Body identisch zum Online-Body, sonst geht die
+      // Spielweise beim Nachsenden verloren.
+      const mode = this.attemptSolveMode;
+      const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel, mode };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.maxHintLevel)
+      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.maxHintLevel, mode)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     } else if (solved) {
       // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos) — die
       // gemerkte Zwischenzeit kumuliert daher bis zum ersten SOLVE weiter.
       if (this.isDaily && this.dailyDate) clearDailyElapsed(this.dailyDate);
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt/anonymous`;
-      const body = { solved, timeSeconds: this.solveSeconds, sessionId: this.puzzleService.ensureSessionId() };
+      const mode = this.attemptSolveMode;
+      const body = { solved, timeSeconds: this.solveSeconds, sessionId: this.puzzleService.ensureSessionId(), mode };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.solveSeconds)
+      this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.solveSeconds, mode)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     }
   }
@@ -688,6 +714,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // weiterspringen UND Erstversuche immer mitzählen + anzeigen (kein separates Opt-in mehr).
       this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
       this.trackSolves = this.singlePuzzle;
+      // Direkt geteiltes Einzel-Puzzle: kein Trainingsbereich → keine Spielweisen-Abfrage.
+      if (this.singlePuzzle) this.solveModeSuppressed = true;
       if (this.trackSolves) {
         this.puzzleService.getSharedCounts(Number(idParam)).subscribe({ next: c => this.sharedCounts = c, error: () => {} });
       }
@@ -703,7 +731,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private applyShareViewOverrides(): void {
     const ov = parseShareViewParams(this.route.snapshot.queryParamMap);
     if (ov.themeMode) this.themeMode = ov.themeMode;
-    if (ov.visualization != null) this.visualizationMode = ov.visualization;
+    if (ov.visualization != null) {
+      this.visualizationMode = ov.visualization;
+      // Ansicht per Link festgelegt → nicht nach der Spielweise fragen (die Wahl steckt im Link).
+      this.solveModeSuppressed = true;
+    }
+    // Challenge/Revanche: „schau dir das an"-Kontext aus einem Link, kein Trainingsbereich.
+    const q = this.route.snapshot.queryParamMap;
+    if (q.get('challengeId') || q.get('revengeUserId')) this.solveModeSuppressed = true;
     this.anarchyForcedByUrl = !!ov.enPassantForced;   // Anarchy per URL: e.p. immer forciert (sonst folgt es der Einstellung)
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
   }
@@ -1221,7 +1256,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     }
 
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.maxHintLevel };
+    // `mode` ist hier seit jeher die Durchlaufart (sequential/random); die Spielweise heißt
+    // deshalb `solveMode`. Offline-Body identisch zum Online-Body (sonst geht sie beim
+    // Nachsenden verloren).
+    const solveMode = this.attemptSolveMode;
+    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.maxHintLevel, solveMode };
     if (!navigator.onLine) {
       // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
@@ -1231,7 +1270,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       }
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.maxHintLevel).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.maxHintLevel, solveMode).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; this.applyCourseStats(p.book, p.chapter, p.chapterName); },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -1323,7 +1362,84 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     });
   }
 
+  // ===== Spielweise: Kurs / Tagespuzzle / einzelnes Buch-Puzzle =====
+
+  /**
+   * Bereichs-Schlüssel der Spielweise. Je Kurs ein eigener (ein Taktikbuch trainiert man anders
+   * als einen Eröffnungskurs), sonst „daily" bzw. „book". `null` = kein eigener Bereich:
+   * Wochenpost (eigene Abfrage) bzw. Kurs ohne bekannte Buch-Id.
+   */
+  get solveModeScope(): string | null {
+    if (this.inWeekly) return null;
+    if (this.inCourse) return this.courseBookId != null ? SolveModeService.scopeCourse(this.courseBookId) : null;
+    return this.isDaily ? 'daily' : 'book';
+  }
+
+  /** Wird der Umschalt-Knopf angeboten? (Nicht im Wochenpost und nicht in per Link festgelegten Ansichten.) */
+  get showSolveModeSwitch(): boolean {
+    return !!this.solveModeScope && !this.solveModeSuppressed;
+  }
+
+  /** Was im Dialog benannt wird: im Kurs der Kursname, sonst der Bereichsname. */
+  private get solveModeLabel(): string {
+    if (this.inCourse && this.displayBookName) return this.displayBookName;
+    return this.translate.instant(this.isDaily ? 'solveMode.scope.daily' : 'solveMode.scope.book');
+  }
+
+  /**
+   * Klärt die Spielweise des Bereichs, BEVOR das erste Puzzle aufgesetzt wird — sonst liefe die
+   * Stoppuhr hinter dem (blockierenden) Dialog mit. Gefragt wird nur beim ersten Mal je Bereich;
+   * danach liefert der Service die gemerkte Wahl ohne Dialog.
+   * Liefert true, wenn das Aufsetzen zurückgestellt wurde (läuft im Callback weiter).
+   */
+  private askSolveModeIfNeeded(puzzle: BookPuzzleDto): boolean {
+    const scope = this.solveModeScope;
+    if (!scope || this.solveModeSuppressed || this.solveModeScopeAsked === scope) return false;
+    this.solveModeScopeAsked = scope;
+    this.solveMode.ensure(scope, { scopeLabel: this.solveModeLabel }).subscribe(mode => {
+      this.solveModeChoice = mode;
+      // Jetzt mit der gewählten Spielweise aufsetzen (der Guard oben greift nicht mehr).
+      this.setupPuzzle(puzzle);
+    });
+    return true;
+  }
+
+  /** Visualisierungsstufe aus der gewählten Spielweise setzen — je Puzzle neu, damit ein
+   *  Umschalten ab dem nächsten Puzzle greift. Per Link festgelegte Ansichten bleiben unberührt. */
+  private applySolveMode(): void {
+    if (this.solveModeSuppressed || !this.solveModeScope) return;
+    this.visualizationMode = this.solveMode.levelFor(this.solveModeChoice);
+  }
+
+  /**
+   * Spielweise umschalten — wirkt ab dem NÄCHSTEN Puzzle, damit ein laufender Versuch nicht
+   * mitten im Rechnen die Regeln wechselt (die Stufe kommt beim nächsten Aufsetzen über
+   * {@link applySolveMode}). Bereits gemeldete Versuche bleiben, wie sie gewertet wurden.
+   */
+  toggleSolveMode(): void {
+    const scope = this.solveModeScope;
+    if (!scope || this.solveModeSuppressed) return;
+    this.solveModeChoice = this.solveModeChoice === 'training' ? 'easy' : 'training';
+    this.solveMode.set(scope, this.solveModeChoice);
+    this.snackbar.info(this.translate.instant(
+      this.solveModeChoice === 'easy' ? 'solveMode.switchedEasy' : 'solveMode.switchedTraining'),
+      { duration: 3000 });
+  }
+
+  /** Spielweise, unter der das AKTUELLE Puzzle tatsächlich läuft (aus der wirksamen
+   *  Visualisierungsstufe abgeleitet) — das ist der Wert, der gemeldet wird. Bewusst nicht
+   *  `solveModeChoice`: ein Umschalten mitten im Versuch gilt erst fürs nächste Puzzle, und
+   *  per Link festgelegte Ansichten sollen ehrlich gewertet werden. */
+  private get attemptSolveMode(): SolveMode {
+    return this.solveMode.modeForLevel(this.visualizationMode);
+  }
+
   private setupPuzzle(puzzle: BookPuzzleDto): void {
+    // Info-/Erklärlinien werden nicht gelöst → keine Spielweise nötig (weder fragen noch anwenden).
+    if (!puzzle.isInfoOnly) {
+      if (this.askSolveModeIfNeeded(puzzle)) return;
+      this.applySolveMode();
+    }
     this.clearSolutionPlay();
     this.variationPreview = null;   // etwaige Kommentar-Varianten-Vorschau aus dem Vorgänger-Puzzle beenden
     this.bookSolveRecorded = false;
@@ -1614,6 +1730,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   setVisualizationLevel(level: number): void {
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
+    // Gemerkte Spielweise mitziehen, sonst widersprechen sich Wahl und tatsächliche Stufe
+    // (Stufe 0 = Einfachmodus, alles darüber = Trainingsmodus).
+    const scope = this.solveModeScope;
+    if (scope && !this.solveModeSuppressed) {
+      this.solveModeChoice = this.solveMode.modeForLevel(level);
+      this.solveMode.set(scope, this.solveModeChoice);
+    }
     if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
   }
 

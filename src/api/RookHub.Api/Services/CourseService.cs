@@ -807,6 +807,9 @@ public class CourseService
             TimeSeconds = timeSeconds,
             AttemptedAt = solvedAt,
             HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
+            // Spielweise je Versuch (dto.SolveMode, NICHT dto.Mode = sequential/random);
+            // unbekannt/fehlend → "training" (Altbestand-Verhalten).
+            Mode = SolveMode.Normalize(dto.SolveMode),
         });
         await _db.SaveChangesAsync();
 

@@ -1767,7 +1767,8 @@
       "label": "Wochenpost",
       "noPuzzles": "Dieser Wochenpost enthält keine spielbaren Puzzles.",
       "allSolved": "Alle Puzzles gelöst!",
-      "progress": "{{played}}/{{total}} gespielt · {{solved}} gelöst"
+      "progress": "{{played}}/{{total}} gespielt · {{solved}} gelöst",
+      "guestHint": "Du spielst als Gast — dein Ergebnis wird nicht gewertet."
     },
     "longSolve": {
       "title": "Ganz schön lang",
@@ -2664,6 +2665,26 @@
     "errors": {
       "load": "Gemerkte Stellungen konnten nicht geladen werden",
       "delete": "Löschen fehlgeschlagen"
+    }
+  },
+  "solveMode": {
+    "title": "Wie möchtest du hier spielen?",
+    "titleFor": "Wie möchtest du „{{scope}}\" spielen?",
+    "intro": "Wir fragen einmal je Bereich. Die Wahl wird gemerkt — umschalten kannst du jederzeit.",
+    "training": "Trainingsmodus",
+    "trainingDesc": "Das Brett bleibt eingefroren — Züge werden eingegeben, ohne Figuren zu ziehen (es gilt deine eingestellte Visualisierungsstufe).",
+    "easy": "Einfachmodus",
+    "easyDesc": "Figuren normal ziehen, wie an jedem anderen Brett.",
+    "switchHint": "Umschalten kannst du jederzeit über das ⋮-Menü des Solvers.",
+    "switchedTraining": "Trainingsmodus",
+    "switchedEasy": "Einfachmodus",
+    "switch": "Spielweise",
+    "split": "{{training}} Training · {{easy}} einfach",
+    "scope": {
+      "puzzles": "Puzzles",
+      "endless": "Endless",
+      "daily": "Tagespuzzle",
+      "book": "Buch-Puzzles"
     }
   }
 }

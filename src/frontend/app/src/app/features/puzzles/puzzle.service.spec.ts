@@ -18,6 +18,21 @@ describe('PuzzleService', () => {
 
   afterEach(() => { httpMock.verify(); localStorage.clear(); });
 
+  it('recordBookAttempt schickt die Spielweise als mode mit', () => {
+    service.recordBookAttempt(42, true, 30, 1, 'easy').subscribe();
+    const req = httpMock.expectOne('/api/book-puzzles/42/attempt');
+    expect(req.request.body).toEqual({ solved: true, timeSeconds: 30, hintsUsed: 1, mode: 'easy' });
+    req.flush({});
+  });
+
+  it('recordBookAttemptAnonymous schickt die Spielweise ebenfalls mit', () => {
+    service.recordBookAttemptAnonymous(42, true, 30, 'training').subscribe();
+    const req = httpMock.expectOne('/api/book-puzzles/42/attempt/anonymous');
+    expect(req.request.body.mode).toBe('training');
+    expect(typeof req.request.body.sessionId).toBe('string');
+    req.flush({});
+  });
+
   it('getRandom lässt nicht gesetzte optionale Parameter weg', () => {
     service.getRandom().subscribe();
     const req = httpMock.expectOne(r => r.url === '/api/puzzles/random');

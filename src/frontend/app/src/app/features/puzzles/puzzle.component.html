@@ -187,6 +187,8 @@
               [canLoveLast]="isLoggedIn"
               [lastLoved]="favoriteTracker.lastIsFavorite"
               [showEndless]="true"
+              [solveModeChoice]="solveModeChoice"
+              (solveModeToggle)="toggleSolveMode()"
               (shareClicked)="sharePuzzle()"
               (settingsClicked)="openSettingsDialog()"
               (reviewLastClicked)="reviewLastPuzzle()"

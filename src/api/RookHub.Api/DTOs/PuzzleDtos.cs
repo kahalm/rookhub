@@ -64,6 +64,9 @@ public class RecordPuzzleAttemptDto
     /// <summary>Höchste aufgedeckte Tipp-Stufe (0–3).</summary>
     [Range(0, 3)]
     public int HintsUsed { get; set; } = 0;
+
+    // KEIN Modus-Feld: die Spielweise ergibt sich aus VisualizationLevel (0 = "easy", > 0 =
+    // "training"). Ein zweites Feld wäre widerspruchsfähig (Stufe 0 + "training").
 }
 
 public class PuzzleStatsDto
@@ -75,6 +78,10 @@ public class PuzzleStatsDto
     public int BestStreak { get; set; }
     public int PuzzleElo { get; set; } = 1500;
     public Dictionary<int, int>? PuzzleEloPerLevel { get; set; }
+    /// <summary>Versuche im Modus „training" — abgeleitet: Visualisierungsstufe &gt; 0.</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Versuche im Modus „easy" — abgeleitet: Visualisierungsstufe 0 (Drag &amp; Drop).</summary>
+    public int EasyCount { get; set; }
 }
 
 public class AnonymousAttemptDto
@@ -107,6 +114,8 @@ public class AnonymousAttemptDto
     /// <summary>Höchste aufgedeckte Tipp-Stufe (0–3).</summary>
     [Range(0, 3)]
     public int HintsUsed { get; set; } = 0;
+
+    // KEIN Modus-Feld — siehe RecordPuzzleAttemptDto: die Spielweise folgt aus VisualizationLevel.
 }
 
 public class ClaimSessionDto
@@ -128,6 +137,12 @@ public class PuzzleAttemptDto
     public int? EloAfter { get; set; }
     public int? EloChange { get; set; }
     public int VisualizationLevel { get; set; }
+    /// <summary>
+    /// Spielweise dieses Versuchs ("training"/"easy") — ABGELEITET aus <see cref="VisualizationLevel"/>
+    /// (0 = „easy", &gt; 0 = „training") und NICHT gespeichert. Der Standard-Puzzle-Versuch hat bewusst
+    /// keine Modus-Spalte; auch Altbestand liefert damit den tatsächlich gespielten Modus.
+    /// </summary>
+    public string Mode { get; set; } = Models.SolveMode.Easy;
 }
 
 /// <summary>Ein Punkt der Puzzle-Elo-Kurve (für die Statistikseite).</summary>

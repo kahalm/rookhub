@@ -113,6 +113,8 @@ public class BookPuzzleService
             TimeSeconds = timeSeconds,
             AttemptedAt = solvedAt,
             HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
+            // Spielweise je Versuch; unbekannt/fehlend → "training" (Altbestand-Verhalten).
+            Mode = SolveMode.Normalize(dto.Mode),
         });
         await _db.SaveChangesAsync();
 
@@ -148,6 +150,7 @@ public class BookPuzzleService
                     Solved = true,
                     TimeSeconds = timeSeconds,
                     AttemptedAt = solvedAt,
+                    Mode = SolveMode.Normalize(dto.Mode),
                 });
                 try
                 {
@@ -322,7 +325,7 @@ public class BookPuzzleService
         // Maximum bis dahin. Versuche NACH dem ersten Solve (Nachspielen) ändern nichts mehr.
         // In-Memory-Aggregation: Versuche je Puzzle sind wenige hundert Zeilen (49 Prod-User).
         var attempts = await q.Where(a => a.UserId != null)
-            .Select(a => new { UserId = a.UserId!.Value, a.Solved, a.TimeSeconds, a.HintsUsed, a.AttemptedAt })
+            .Select(a => new { UserId = a.UserId!.Value, a.Solved, a.TimeSeconds, a.HintsUsed, a.AttemptedAt, a.Mode })
             .ToListAsync();
         var perUser = attempts
             .GroupBy(a => a.UserId)
@@ -339,6 +342,9 @@ public class BookPuzzleService
                     TimeSeconds = counted.Sum(a => a.TimeSeconds),
                     HintsUsed = counted.Count == 0 ? 0 : counted.Max(a => a.HintsUsed),
                     WrongAttempts = counted.Count(a => !a.Solved),
+                    // Spielweise = die des ersten Solves (sonst des ersten Versuchs); alles, was
+                    // nicht ausdrücklich „easy" ist, gilt als „training" (auch Altbestand).
+                    Mode = SolveMode.Normalize((firstSolve ?? ordered.FirstOrDefault())?.Mode),
                 };
             })
             .ToList();
@@ -368,17 +374,24 @@ public class BookPuzzleService
                     DiscordUsername = prof?.DiscordUsername,
                     TimeSeconds = u.TimeSeconds,
                     HintsUsed = u.HintsUsed,
-                    WrongAttempts = u.WrongAttempts
+                    WrongAttempts = u.WrongAttempts,
+                    Mode = u.Mode
                 };
             })
             .OrderBy(s => s.Name)
             .ToList();
+
+        // Löser je Spielweise (Summe = SolvedCount) — dieselbe Zählregel wie beim Wochenpost.
+        var (trainingCount, easyCount) = SolveMode.Split(
+            solvers.Count, solvers.Count(sv => sv.Mode == SolveMode.Easy));
 
         return new BookPuzzleResultsDto
         {
             SolvedCount = solvers.Count,
             AnonymousSolvedCount = anonymousSolvedCount,
             AttemptCount = perUser.Count + anonymousAttempts,
+            TrainingCount = trainingCount,
+            EasyCount = easyCount,
             Solvers = solvers
         };
     }

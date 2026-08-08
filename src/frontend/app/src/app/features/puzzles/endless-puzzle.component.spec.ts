@@ -29,8 +29,31 @@ const CHAIN = [
   { id: 102, lichessId: 'c', fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 1100 },
 ];
 
-function makeComponent(params: Record<string, string> = {}): any {
-  const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0, offPathWarnMoves: 3, enPassantForced: true };
+/** Minimaler SolveModeService-Ersatz: merkt sich die Wahl je Bereich und zählt die Abfragen.
+ *  `antwort` = was der (echte) Dialog liefern würde; `dialogCalls` zählt, wie oft tatsächlich
+ *  gefragt worden wäre (der echte Service fragt nur beim ersten Mal je Bereich). */
+function makeSolveMode(antwort: 'training' | 'easy' = 'training', prefsViz = 3): any {
+  const gemerkt: Record<string, string> = {};
+  const stub: any = { gemerkt, dialogCalls: 0 };
+  Object.assign(stub, {
+    ensure: jasmine.createSpy('ensure').and.callFake((scope: string) => {
+      if (!gemerkt[scope]) { stub.dialogCalls++; gemerkt[scope] = antwort; }
+      return sub(gemerkt[scope]);
+    }),
+    get: (scope: string) => gemerkt[scope] ?? null,
+    set: jasmine.createSpy('set').and.callFake((scope: string, mode: string) => { gemerkt[scope] = mode; }),
+    levelFor: (mode: string) => (mode === 'easy' ? 0 : Math.max(1, prefsViz)),
+    modeForLevel: (level: number) => (level > 0 ? 'training' : 'easy'),
+  });
+  return stub;
+}
+
+function makeComponent(params: Record<string, string> = {}, solveMode: any = makeSolveMode()): any {
+  const prefs: any = {
+    boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0,
+    offPathWarnMoves: 3, enPassantForced: true,
+    setVisualization(v: number) { this.visualization = v; },
+  };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const auth: any = { isLoggedIn: false };
   const puzzleService: any = {
@@ -74,7 +97,7 @@ function makeComponent(params: Record<string, string> = {}): any {
   // Neuzuweisungen (c.puzzleService.getRandomBatch = …) wirken durch den Service hindurch.
   const chainService = new EndlessChainService(puzzleService);
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites, chainService
+    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites, chainService, solveMode
   );
 }
 
@@ -601,5 +624,95 @@ describe('EndlessPuzzleComponent Live-Zeitstand (Refresh mitten im Puzzle)', () 
     // Puzzle-Nummern streng aufsteigend, letzte = Blockende
     expect(first[first.length - 1].puzzle).toBe(30);
     for (let i = 1; i < first.length; i++) expect(first[i].puzzle).toBeGreaterThan(first[i - 1].puzzle);
+  });
+});
+
+
+/**
+ * Spielweise (Training/Einfach) im Bereich „Endless": Ein LAUF ist die Einheit — gefragt wird beim
+ * Start/Fortsetzen eines Laufs (und nur beim ersten Mal), nicht bei jedem Puzzle darin. Bei fester
+ * Ansicht aus dem Link (?visualmode=) wird gar nicht gefragt.
+ */
+describe('EndlessPuzzleComponent Spielweise', () => {
+  it('fragt beim ersten Lauf-Start mit dem Bereich „endless"', () => {
+    const sm = makeSolveMode('training');
+    const c = makeComponent({}, sm);
+
+    c.startGame();
+
+    expect(sm.ensure).toHaveBeenCalled();
+    expect(sm.ensure.calls.mostRecent().args[0]).toBe('endless');
+    expect(sm.ensure.calls.mostRecent().args[1].scopeLabel).toBe('solveMode.scope.endless');
+    expect(sm.dialogCalls).toBe(1);
+    c.ngOnDestroy();
+  });
+
+  it('fragt beim zweiten Lauf NICHT mehr (gemerkte Wahl)', () => {
+    const sm = makeSolveMode('easy');
+    const c = makeComponent({}, sm);
+
+    c.startGame();
+    c.startGame();
+
+    expect(sm.dialogCalls).toBe(1);
+    expect(c.solveModeChoice).toBe('easy');
+    c.ngOnDestroy();
+  });
+
+  it('wendet die Stufe der gewählten Spielweise an (einfach = 0, Training = eingestellte Stufe)', () => {
+    const einfach = makeComponent({}, makeSolveMode('easy', 3));
+    einfach.startGame();
+    expect(einfach.visualizationMode).toBe(0);
+    einfach.ngOnDestroy();
+
+    const training = makeComponent({}, makeSolveMode('training', 3));
+    training.startGame();
+    expect(training.visualizationMode).toBe(3);
+    training.ngOnDestroy();
+  });
+
+  it('fragt NICHT bei fester Ansicht aus dem Link (?visualmode=)', () => {
+    const sm = makeSolveMode('easy');
+    const c = makeComponent({ visualmode: '2' }, sm);
+    c.ngOnInit();
+
+    c.startGame();
+
+    expect(sm.ensure).not.toHaveBeenCalled();
+    expect(c.solveModeChoice).toBeNull();
+    expect(c.visualizationMode).toBe(2);   // Stufe aus der URL bleibt
+    c.ngOnDestroy();
+  });
+
+  it('Umschalten merkt die neue Spielweise, wirkt aber erst beim nächsten Puzzle', () => {
+    const sm = makeSolveMode('training', 3);
+    const c = makeComponent({}, sm);
+    c.startGame();
+    expect(c.visualizationMode).toBe(3);
+
+    c.toggleSolveMode();
+
+    expect(c.solveModeChoice).toBe('easy');
+    expect(sm.set).toHaveBeenCalledWith('endless', 'easy');
+    expect(c.snackbar.info).toHaveBeenCalledWith('solveMode.switchedEasy', { duration: 3000 });
+    expect(c.visualizationMode).toBe(3);   // laufender Versuch behält seine Regeln
+
+    c.loadCurrent();
+    expect(c.visualizationMode).toBe(0);   // erst das nächste Puzzle spielt einfach
+    c.ngOnDestroy();
+  });
+
+  it('direkte Stufenwahl zieht die gemerkte Spielweise mit', () => {
+    const sm = makeSolveMode('training', 3);
+    const c = makeComponent({}, sm);
+
+    c.setVisualizationLevel(0);
+    expect(sm.set).toHaveBeenCalledWith('endless', 'easy');
+    expect(c.solveModeChoice).toBe('easy');
+
+    c.setVisualizationLevel(2);
+    expect(sm.set).toHaveBeenCalledWith('endless', 'training');
+    expect(c.solveModeChoice).toBe('training');
+    c.ngOnDestroy();
   });
 });

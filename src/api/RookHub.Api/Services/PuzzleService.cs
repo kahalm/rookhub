@@ -448,7 +448,9 @@ public class PuzzleService
         MoveLog = attempt.MoveLog,
         EloAfter = attempt.EloAfter,
         EloChange = attempt.EloChange,
-        VisualizationLevel = attempt.VisualizationLevel
+        VisualizationLevel = attempt.VisualizationLevel,
+        // Spielweise ABGELEITET (nicht gespeichert): Stufe 0 = Figuren ziehbar → „easy".
+        Mode = attempt.VisualizationLevel > 0 ? SolveMode.Training : SolveMode.Easy
     };
 
     private async Task TrimUserPuzzleAttemptsAsync(int userId, int puzzleId, int vizLevel)

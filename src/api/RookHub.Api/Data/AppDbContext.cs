@@ -317,6 +317,8 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.Property(a => a.AnonymousSessionId).HasMaxLength(36);
+            // KEINE Modus-Spalte: die Spielweise folgt hier vollständig aus VisualizationLevel
+            // (0 = "easy", > 0 = "training") und wird deshalb abgeleitet statt gespeichert.
             e.HasIndex(a => new { a.UserId, a.PuzzleId });
             e.HasIndex(a => new { a.UserId, a.VisualizationLevel });
             e.HasIndex(a => a.AnonymousSessionId);
@@ -424,6 +426,8 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
 
             e.Property(a => a.AnonymousSessionId).HasMaxLength(36);
+            // Spielweise des Versuchs; DB-Default "training" → Altbestand gilt als Trainings-Modus.
+            e.Property(a => a.Mode).HasMaxLength(10).HasDefaultValue(SolveMode.Training);
             e.HasIndex(a => new { a.BookPuzzleId, a.AttemptedAt });
             e.HasIndex(a => new { a.BookPuzzleId, a.UserId });
             // Anonyme Lösungen sind „genau einmal je (Puzzle, Session)" — hart per Unique-Index erzwingen
@@ -460,6 +464,8 @@ public class AppDbContext : DbContext
             e.HasIndex(es => new { es.UserId, es.Timestamp });
             e.HasIndex(es => es.AnonymousSessionId);
             e.Property(es => es.AnonymousSessionId).HasMaxLength(36);
+            // Spielweise des Laufs; DB-Default "training" → Altbestand gilt als Trainings-Modus.
+            e.Property(es => es.Mode).HasMaxLength(10).HasDefaultValue(SolveMode.Training);
         });
 
         modelBuilder.Entity<RepertoireCardState>(e =>
@@ -691,6 +697,9 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(a => a.BookPuzzleId)
              .OnDelete(DeleteBehavior.Restrict);
+
+            // Spielweise des Versuchs; DB-Default "training" → Altbestand gilt als Trainings-Modus.
+            e.Property(a => a.Mode).HasMaxLength(10).HasDefaultValue(SolveMode.Training);
 
             // Fenster-Aggregation je User (AttemptedAt >= windowStart).
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });

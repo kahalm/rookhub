@@ -63,6 +63,14 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
             <mat-icon>all_inclusive</mat-icon><span>{{ 'puzzles.actions.endlessMode' | translate }}</span>
           </button>
         }
+        @if (solveModeChoice) {
+          <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe toggleSolveMode). -->
+          <button mat-menu-item (click)="solveModeToggle.emit()">
+            <mat-icon>{{ solveModeChoice === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
+            <span>{{ 'solveMode.switch' | translate }}:
+              {{ (solveModeChoice === 'easy' ? 'solveMode.easy' : 'solveMode.training') | translate }}</span>
+          </button>
+        }
         <button mat-menu-item (click)="settingsClicked.emit()">
           <mat-icon>settings</mat-icon><span>{{ 'puzzles.settings.title' | translate }}</span>
         </button>
@@ -112,7 +120,13 @@ export class PuzzleActionBarComponent {
   @Input() shareLabelKey = 'puzzles.actions.share';
   @Input() reviewLastKey = 'puzzles.actions.reviewLast';
 
+  /** Gewählte Spielweise des Bereichs — `null` blendet den Umschalter aus (Bereiche ohne
+   *  Spielweisen-Abfrage, z. B. geteiltes Einzel-Puzzle mit fester Ansicht). */
+  @Input() solveModeChoice: 'training' | 'easy' | null = null;
+
   @Output() shareClicked = new EventEmitter<void>();
+  /** ⋮-Eintrag „Spielweise" geklickt (Umschalten Training ↔ Einfach). */
+  @Output() solveModeToggle = new EventEmitter<void>();
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() reviewLastClicked = new EventEmitter<void>();
   @Output() loveLastClicked = new EventEmitter<void>();

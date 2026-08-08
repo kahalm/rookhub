@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline } from './book-offline.util';
 import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
@@ -9,6 +9,39 @@ import { CommentSegment } from './comment-variation.util';
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
  * langsamer auflösende Puzzle-Antwort darf das inzwischen geladene Puzzle nicht überschreiben.
  */
+/**
+ * Doppel des SolveModeService mit demselben Vertrag: `ensure` fragt nur beim ersten Mal je Bereich
+ * und merkt die Antwort. `asked` protokolliert die echten Abfragen (Scope + Dialog-Daten).
+ */
+function makeSolveModeStub(prefs: any): any {
+  const store: Record<string, 'training' | 'easy'> = {};
+  return {
+    asked: [] as Array<{ scope: string; data: any }>,
+    /** Antwort, die eine Abfrage liefert (Tests setzen sie auf 'easy'). */
+    answer: 'training' as 'training' | 'easy',
+    /** Auf true → `ensure` antwortet erst, wenn `resolve()` gerufen wird (blockierender Dialog). */
+    defer: false,
+    pending: null as null | ((m: 'training' | 'easy') => void),
+    get(scope: string) { return store[scope] ?? null; },
+    set(scope: string, mode: 'training' | 'easy') { store[scope] = mode; },
+    clear(scope: string) { delete store[scope]; },
+    ensure(scope: string, data?: any) {
+      const gemerkt = store[scope];
+      if (gemerkt) return of(gemerkt);
+      this.asked.push({ scope, data });
+      if (this.defer) {
+        const s = new Subject<'training' | 'easy'>();
+        this.pending = (m: 'training' | 'easy') => { store[scope] = m; s.next(m); s.complete(); };
+        return s;
+      }
+      store[scope] = this.answer;
+      return of(this.answer);
+    },
+    levelFor(mode: 'training' | 'easy') { return mode === 'easy' ? 0 : Math.max(1, prefs.visualization); },
+    modeForLevel(level: number) { return level > 0 ? 'training' : 'easy'; },
+  };
+}
+
 function makeComponent(): any {
   const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0 };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
@@ -27,9 +60,11 @@ function makeComponent(): any {
   // Default: keine Kappung — gibt die gemessene Zeit unverändert zurück (Tests überschreiben bei Bedarf).
   const longSolve: any = { resolve: (s: number) => of(s) };
   const favorites: any = { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) };
+  const solveMode: any = makeSolveModeStub(prefs);
   return new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, dialog, courseService, weeklyService,
-    router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites
+    router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites,
+    solveMode
   );
 }
 
@@ -1151,5 +1186,282 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
     c.askWeeklyMode();
     expect(c.dialog.open).not.toHaveBeenCalled();
     expect(c.weeklyMode).toBe('training');
+  });
+});
+
+/**
+ * Spielweisen-Abfrage der drei Bereiche Kurs / Tagespuzzle / einzelnes Buch-Puzzle.
+ * Die Wochenpost hat ihre eigene Abfrage (weiter oben getestet) und bleibt unberührt.
+ */
+describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
+  const P: any = { id: 5, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b.pgn', bookTitle: 'Mein Kurs' };
+
+  /** Komponente mit stillgelegtem Solver-Aufbau (setupPuzzle selbst bleibt echt). */
+  function makeSolver(): any {
+    const c = makeComponent();
+    spyOn(c, 'setupSolver');
+    spyOn(c, 'clearSolutionPlay');
+    c.prefs.setVisualization = (v: number) => { c.prefs.visualization = v; };
+    return c;
+  }
+
+  function makeCourse(): any {
+    const c = makeSolver();
+    c.inCourse = true;
+    c.courseBookId = 12;
+    c.puzzle = P;
+    return c;
+  }
+
+  it('Kurs: fragt beim ersten Puzzle — je Kurs eigener Bereich, Kursname als Beschriftung', () => {
+    const c = makeCourse();
+    c.setupPuzzle(P);
+    expect(c.solveMode.asked.length).toBe(1);
+    expect(c.solveMode.asked[0].scope).toBe('course:12');
+    expect(c.solveMode.asked[0].data.scopeLabel).toBe('Mein Kurs');
+  });
+
+  it('Kurs: fragt beim zweiten Puzzle nicht erneut', () => {
+    const c = makeCourse();
+    c.setupPuzzle(P);
+    c.setupPuzzle({ ...P, id: 6 });
+    c.setupPuzzle({ ...P, id: 7 });
+    expect(c.solveMode.asked.length).toBe(1);
+  });
+
+  it('Kurs: ein anderer Kurs wird eigens gefragt', () => {
+    const c = makeCourse();
+    c.setupPuzzle(P);
+    c.courseBookId = 13;
+    c.setupPuzzle(P);
+    expect(c.solveMode.asked.map((a: any) => a.scope)).toEqual(['course:12', 'course:13']);
+  });
+
+  it('wendet die Stufe der Wahl an: einfach = 0, Training = eingestellte Stufe (mind. 1)', () => {
+    const easy = makeCourse();
+    easy.solveMode.answer = 'easy';
+    easy.setupPuzzle(P);
+    expect(easy.visualizationMode).toBe(0);
+    expect(easy.solveModeChoice).toBe('easy');
+
+    const training = makeCourse();
+    training.prefs.visualization = 3;      // Blind/Unsichtbar bleibt erhalten
+    training.solveMode.answer = 'training';
+    training.setupPuzzle(P);
+    expect(training.visualizationMode).toBe(3);
+
+    const minimum = makeCourse();
+    minimum.prefs.visualization = 0;       // Training hebt mindestens auf Stufe 1
+    minimum.setupPuzzle(P);
+    expect(minimum.visualizationMode).toBe(1);
+  });
+
+  it('setzt das Puzzle erst nach der Antwort auf (Stoppuhr läuft nicht hinter dem Dialog)', () => {
+    const c = makeCourse();
+    c.solveMode.defer = true;
+    c.setupPuzzle(P);
+    expect(c.setupSolver).not.toHaveBeenCalled();
+    c.solveMode.pending('easy');
+    expect(c.setupSolver).toHaveBeenCalled();
+    expect(c.visualizationMode).toBe(0);
+  });
+
+  it('Tagespuzzle nutzt den Bereich „daily", das Einzel-Buch-Puzzle „book"', () => {
+    const daily = makeSolver();
+    daily.dailyDate = '20260808';
+    daily.puzzle = P;
+    daily.setupPuzzle(P);
+    expect(daily.solveMode.asked[0].scope).toBe('daily');
+    expect(daily.solveMode.asked[0].data.scopeLabel).toBe('solveMode.scope.daily');
+
+    const book = makeSolver();
+    book.puzzle = P;
+    book.setupPuzzle(P);
+    expect(book.solveMode.asked[0].scope).toBe('book');
+    expect(book.solveMode.asked[0].data.scopeLabel).toBe('solveMode.scope.book');
+  });
+
+  it('fragt NICHT, wenn die Ansicht per Link festgelegt ist (?visualmode=)', () => {
+    const c = makeSolver();
+    c.route.snapshot.queryParamMap = { get: (k: string) => (k === 'visualmode' ? '2' : null) };
+    c.applyShareViewOverrides();
+    c.puzzle = P;
+    c.setupPuzzle(P);
+    expect(c.solveMode.asked.length).toBe(0);
+    expect(c.visualizationMode).toBe(2);      // Stufe aus dem Link bleibt
+    expect(c.showSolveModeSwitch).toBeFalse();
+  });
+
+  it('fragt NICHT bei Challenge/Revanche', () => {
+    const c = makeSolver();
+    c.route.snapshot.queryParamMap = { get: (k: string) => (k === 'challengeId' ? '9' : null) };
+    c.applyShareViewOverrides();
+    c.puzzle = P;
+    c.setupPuzzle(P);
+    expect(c.solveMode.asked.length).toBe(0);
+  });
+
+  it('fragt NICHT bei einem direkt geteilten Einzel-Puzzle (?single=1)', () => {
+    const c = makeComponent();
+    spyOn(c, 'setupSolver');
+    spyOn(c, 'clearSolutionPlay');
+    c.route.snapshot.paramMap = { get: (k: string) => (k === 'id' ? '5' : null), has: () => false };
+    c.route.snapshot.queryParamMap = { get: (k: string) => (k === 'single' ? '1' : null) };
+    c.puzzleService.getBookPuzzleById = () => of(P);
+    c.puzzleService.getSharedCounts = () => of({ solved: 0, failed: 0 });
+    c.ngOnInit();
+    expect(c.singlePuzzle).toBeTrue();
+    expect(c.solveMode.asked.length).toBe(0);
+  });
+
+  it('Wochenpost bleibt unberührt: kein eigener Bereich, keine Abfrage', () => {
+    const c = makeSolver();
+    c.inWeekly = true;
+    c.weeklyId = 7;
+    c.puzzle = P;
+    c.visualizationMode = 1;                 // von applyWeeklyMode gesetzt
+    c.setupPuzzle(P);
+    expect(c.solveModeScope).toBeNull();
+    expect(c.solveMode.asked.length).toBe(0);
+    expect(c.visualizationMode).toBe(1);
+    expect(c.showSolveModeSwitch).toBeFalse();
+  });
+
+  it('Info-/Erklärlinien fragen nicht (dort gibt es nichts zu lösen)', () => {
+    const c = makeCourse();
+    spyOn(c, 'enterInfoReview');
+    c.setupPuzzle({ ...P, isInfoOnly: true });
+    expect(c.solveMode.asked.length).toBe(0);
+  });
+
+  it('Umschalten merkt die neue Spielweise, wirkt aber erst beim nächsten Puzzle', () => {
+    const c = makeCourse();
+    c.prefs.visualization = 2;
+    c.setupPuzzle(P);
+    expect(c.visualizationMode).toBe(2);
+    const snack = spyOn(c.snackbar, 'info');
+
+    c.toggleSolveMode();
+    expect(c.solveModeChoice).toBe('easy');
+    expect(c.solveMode.get('course:12')).toBe('easy');
+    expect(snack).toHaveBeenCalledWith('solveMode.switchedEasy', jasmine.any(Object));
+    expect(c.visualizationMode).toBe(2);      // laufender Versuch bleibt, wie er ist
+
+    c.setupPuzzle({ ...P, id: 6 });
+    expect(c.visualizationMode).toBe(0);      // erst das nächste Puzzle spielt einfach
+
+    c.toggleSolveMode();
+    expect(c.solveMode.get('course:12')).toBe('training');
+  });
+
+  it('eine direkt gesetzte Visualisierungsstufe zieht die gemerkte Spielweise mit', () => {
+    const c = makeCourse();
+    c.setupPuzzle(P);
+    c.setVisualizationLevel(0);
+    expect(c.solveMode.get('course:12')).toBe('easy');
+    expect(c.solveModeChoice).toBe('easy');
+    c.setVisualizationLevel(2);
+    expect(c.solveMode.get('course:12')).toBe('training');
+    expect(c.solveModeChoice).toBe('training');
+  });
+
+  it('Buch-Versuch meldet die Spielweise mit — online und offline derselbe Body', () => {
+    const c = makeSolver();
+    c.dailyDate = '20260808';
+    c.puzzle = P;
+    c.auth = { isLoggedIn: true };
+    c.solveMode.answer = 'easy';
+    c.setupPuzzle(P);
+    c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(of(null));
+    c.recordBookAttempt(true);
+    expect(c.puzzleService.recordBookAttempt).toHaveBeenCalledWith(5, true, jasmine.any(Number), 0, 'easy');
+
+    const off = makeSolver();
+    off.dailyDate = '20260808';
+    off.puzzle = P;
+    off.auth = { isLoggedIn: true };
+    off.solveMode.answer = 'easy';
+    off.setupPuzzle(P);
+    const enqueue = spyOn(off.offlineQueue, 'enqueue');
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try { off.recordBookAttempt(true); } finally { spy.and.callThrough(); }
+    expect(enqueue).toHaveBeenCalledWith('POST', '/api/book-puzzles/5/attempt',
+      jasmine.objectContaining({ solved: true, mode: 'easy' }));
+  });
+
+  it('anonymer Buch-Versuch meldet die Spielweise ebenfalls mit', () => {
+    const c = makeSolver();
+    c.dailyDate = '20260808';
+    c.puzzle = P;
+    c.auth = { isLoggedIn: false };
+    c.puzzleService.ensureSessionId = () => 's1';
+    c.puzzleService.recordBookAttemptAnonymous = jasmine.createSpy('anon').and.returnValue(of(null));
+    c.setupPuzzle(P);                          // Antwort: 'training' (Standard)
+    c.recordBookAttempt(true);
+    expect(c.puzzleService.recordBookAttemptAnonymous)
+      .toHaveBeenCalledWith(5, true, jasmine.any(Number), 'training');
+  });
+
+  it('Kurs-Versuch meldet die Spielweise als solveMode (mode bleibt die Durchlaufart)', () => {
+    const c = makeCourse();
+    c.auth = { isLoggedIn: true };
+    c.solveMode.answer = 'easy';
+    c.setupPuzzle(P);
+    c.courseService.recordResult = jasmine.createSpy('recordResult').and.returnValue(of({ solvedCount: 1, total: 3 }));
+    c.recordCourseAttempt(true);
+    expect(c.courseService.recordResult).toHaveBeenCalledWith(
+      12, 5, true, 'sequential', jasmine.any(Number), undefined, 0, 'easy');
+
+    const off = makeCourse();
+    off.auth = { isLoggedIn: true };
+    off.solveMode.answer = 'easy';
+    off.setupPuzzle(P);
+    const enqueue = spyOn(off.offlineQueue, 'enqueue');
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try { off.recordCourseAttempt(true); } finally { spy.and.callThrough(); }
+    expect(enqueue).toHaveBeenCalledWith('POST', '/api/courses/12/results',
+      jasmine.objectContaining({ bookPuzzleId: 5, mode: 'sequential', solveMode: 'easy' }));
+  });
+});
+
+/**
+ * Wochenpost über einen geteilten Link: durchspielen muss ohne Konto gehen. Der Server liefert
+ * Post, Puzzles und Bestenliste ohnehin anonym aus — gewertet wird aber nur eingeloggt.
+ */
+describe('BookPuzzleComponent Wochenpost als Gast', () => {
+  function makeGast(): any {
+    const c = makeComponent();
+    c.inWeekly = true;
+    c.weeklyId = 42;
+    c.auth.isLoggedIn = false;
+    c.puzzle = { id: 0, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.weeklyService.getProgress = jasmine.createSpy('getProgress');
+    c.weeklyService.recordAttempt = jasmine.createSpy('recordAttempt');
+    c.dialog.open = jasmine.createSpy('open');
+    return c;
+  }
+
+  it('fragt Gäste nicht nach der Spielweise (für sie wird nichts gewertet)', () => {
+    const c = makeGast();
+    c.askWeeklyMode();
+    expect(c.dialog.open).not.toHaveBeenCalled();
+  });
+
+  it('meldet keinen Versuch und ruft den Server nicht', () => {
+    const c = makeGast();
+    c.recordWeeklyAttempt(true);
+    expect(c.weeklyService.recordAttempt).not.toHaveBeenCalled();
+    expect(c.weeklyService.getProgress).not.toHaveBeenCalled();
+  });
+
+  it('führt Anmelden/Registrieren auf genau diese Wochenpost zurück', () => {
+    const c = makeGast();
+    expect(c.weeklyReturnUrl).toBe('/weekly/42');
+  });
+
+  it('fällt ohne Wochenpost-Id auf die Übersicht zurück', () => {
+    const c = makeGast();
+    c.weeklyId = null;
+    expect(c.weeklyReturnUrl).toBe('/weekly');
   });
 });

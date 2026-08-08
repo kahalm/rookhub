@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.Models;
 
 /// <summary>
@@ -29,4 +31,12 @@ public class CourseAttempt
 
     /// <summary>Höchste angesehene Tipp-Stufe in diesem Versuch (0 = keiner, 1–3).</summary>
     public int HintsUsed { get; set; }
+
+    /// <summary>
+    /// Spielweise dieses Versuchs: <see cref="SolveMode.Training"/> (Brett eingefroren bzw. höhere
+    /// Visualisierungsstufe — Default für Altbestand) oder <see cref="SolveMode.Easy"/> (Figuren
+    /// normal ziehbar). Wird bei JEDEM Versuch geschrieben (append-only, nicht idempotent).
+    /// </summary>
+    [Required, MaxLength(10)]
+    public string Mode { get; set; } = SolveMode.Training;
 }

@@ -1767,7 +1767,8 @@
       "label": "Tjedna objava",
       "noPuzzles": "Ova tjedna objava ne sadrži zagonetke za igranje.",
       "allSolved": "Sve zagonetke riješene!",
-      "progress": "{{played}}/{{total}} odigrano · {{solved}} riješeno"
+      "progress": "{{played}}/{{total}} odigrano · {{solved}} riješeno",
+      "guestHint": "Igraš kao gost — tvoj rezultat se ne broji."
     },
     "longSolve": {
       "title": "Poprilično dugo",
@@ -2664,6 +2665,26 @@
     "errors": {
       "load": "Zapamćene pozicije nije moguće učitati",
       "delete": "Brisanje nije uspjelo"
+    }
+  },
+  "solveMode": {
+    "title": "Kako želiš igrati ovdje?",
+    "titleFor": "Kako želiš igrati „{{scope}}\"?",
+    "intro": "Pitamo jednom po području. Odabir se pamti — možeš ga promijeniti bilo kada.",
+    "training": "Trening način",
+    "trainingDesc": "Ploča ostaje zamrznuta — potezi se unose bez povlačenja figura (vrijedi tvoja postavljena razina vizualizacije).",
+    "easy": "Jednostavan način",
+    "easyDesc": "Povlači figure normalno, kao na svakoj drugoj ploči.",
+    "switchHint": "Možeš promijeniti bilo kada preko ⋮ izbornika.",
+    "switchedTraining": "Trening način",
+    "switchedEasy": "Jednostavan način",
+    "switch": "Način igre",
+    "split": "{{training}} trening · {{easy}} jednostavno",
+    "scope": {
+      "puzzles": "Zagonetke",
+      "endless": "Endless",
+      "daily": "Dnevna zagonetka",
+      "book": "Zagonetke iz knjige"
     }
   }
 }

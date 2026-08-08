@@ -1767,7 +1767,8 @@
       "label": "Weekly Post",
       "noPuzzles": "This weekly post contains no playable puzzles.",
       "allSolved": "All puzzles solved!",
-      "progress": "{{played}}/{{total}} played · {{solved}} solved"
+      "progress": "{{played}}/{{total}} played · {{solved}} solved",
+      "guestHint": "You are playing as a guest — your result is not recorded."
     },
     "longSolve": {
       "title": "Took a while",
@@ -2664,6 +2665,26 @@
     "errors": {
       "load": "Failed to load remembered positions",
       "delete": "Delete failed"
+    }
+  },
+  "solveMode": {
+    "title": "How do you want to play here?",
+    "titleFor": "How do you want to play “{{scope}}”?",
+    "intro": "We ask once per area. Your choice is remembered — you can switch at any time.",
+    "training": "Training mode",
+    "trainingDesc": "Board stays frozen — you enter moves without dragging pieces (your configured visualisation level applies).",
+    "easy": "Easy mode",
+    "easyDesc": "Move the pieces normally, as on any other board.",
+    "switchHint": "You can switch at any time via the ⋮ menu of the solver.",
+    "switchedTraining": "Training mode",
+    "switchedEasy": "Easy mode",
+    "switch": "Playing style",
+    "split": "{{training}} training · {{easy}} easy",
+    "scope": {
+      "puzzles": "Puzzles",
+      "endless": "Endless",
+      "daily": "Daily puzzle",
+      "book": "Book puzzles"
     }
   }
 }

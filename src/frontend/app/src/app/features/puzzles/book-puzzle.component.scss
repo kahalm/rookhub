@@ -86,6 +86,8 @@
     .context-card .ctx-switch mat-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
     .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
     .context-card .ctx-progress { margin-top: 0.6rem; }
+    /* Spielweisen-Umschalter (Kurs/Tagespuzzle/Buch) — gleiche Optik wie der Wochenpost-Knopf. */
+    .context-card .ctx-mode { margin-top: 0.6rem; }
     .context-card .ctx-stats { font-size: 0.85em; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }
     .context-card .course-stats { display: flex; flex-direction: column; gap: 0.55rem; }
     .context-card .course-stats .cs-scope.cs-chapter { padding-top: 0.5rem; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
@@ -223,3 +225,14 @@
         .board-hint-slot--side { display: block; }
       }
     }
+
+/* Gast-Hinweis im Wochenpost: durchspielen geht, gewertet wird nur eingeloggt. */
+.ctx-guest {
+  margin: 6px 0 0;
+  font-size: .85rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}

@@ -346,8 +346,10 @@ export class CourseService {
     return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params });
   }
 
-  recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0, chapterIndex?: number, hintsUsed = 0): Observable<CourseProgress> {
-    return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode, timeSeconds, chapterIndex, hintsUsed });
+  recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0, chapterIndex?: number, hintsUsed = 0, solveMode?: string): Observable<CourseProgress> {
+    // `mode` = Durchlaufart (sequential/random), `solveMode` = Spielweise ('training'/'easy');
+    // fehlt letztere, fällt der Server auf 'training' zurück.
+    return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode, timeSeconds, chapterIndex, hintsUsed, solveMode });
   }
 
   reset(bookId: number): Observable<CourseProgress> {

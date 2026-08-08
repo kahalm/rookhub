@@ -146,6 +146,8 @@ public class EndlessProgressService
         MistakeAtRatings = dto.MistakeAtRatings,
         Seed = dto.Seed,
         ChainPuzzleIds = dto.ChainPuzzleIds,
+        // Spielweise des Laufs; unbekannt/fehlend → "training" (Altbestand-Verhalten).
+        Mode = SolveMode.Normalize(dto.Mode),
         PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
     };
 
@@ -306,6 +308,10 @@ public class EndlessProgressService
         if (archived.HasValue)
             query = query.Where(s => s.IsArchived == archived.Value);
         var totalCount = await query.CountAsync();
+        // Läufe je Spielweise über den GANZEN gefilterten Bestand (nicht nur die Seite): nur die
+        // ausdrücklich als „easy" markierten zählen, alles andere (inkl. Altbestand) ist „training".
+        var easyCount = await query.CountAsync(s => s.Mode == SolveMode.Easy);
+        var (trainingCount, easy) = SolveMode.Split(totalCount, easyCount);
 
         var items = await query
             .OrderByDescending(s => s.Timestamp)
@@ -319,7 +325,9 @@ public class EndlessProgressService
             Items = items,
             TotalCount = totalCount,
             Page = page,
-            PageSize = pageSize
+            PageSize = pageSize,
+            TrainingCount = trainingCount,
+            EasyCount = easy
         };
     }
 
@@ -343,6 +351,7 @@ public class EndlessProgressService
             Seed = session.Seed,
             ChainPuzzleIds = session.ChainPuzzleIds,
             IsArchived = session.IsArchived,
+            Mode = session.Mode,
             Puzzles = DeserializeAttempts(session.PuzzleAttemptsJson)
         };
     }
@@ -452,6 +461,7 @@ public class EndlessProgressService
         MistakeAtRatings = s.MistakeAtRatings,
         Seed = s.Seed,
         ChainPuzzleIds = s.ChainPuzzleIds,
-        IsArchived = s.IsArchived
+        IsArchived = s.IsArchived,
+        Mode = s.Mode
     };
 }

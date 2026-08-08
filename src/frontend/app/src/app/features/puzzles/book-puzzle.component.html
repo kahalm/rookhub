@@ -160,6 +160,19 @@
                   </div>
                 }
 
+                <!-- Spielweise (Kurs/Tagespuzzle/Buch-Puzzle) umschalten: wirkt ab dem nächsten
+                     Puzzle (siehe toggleSolveMode). Der Wochenpost hat seinen eigenen Knopf. -->
+                @if (showSolveModeSwitch) {
+                  <div class="ctx-mode">
+                    <button mat-stroked-button class="ctx-mode-btn" (click)="toggleSolveMode()"
+                            [matTooltip]="'solveMode.switchHint' | translate"
+                            [attr.aria-label]="'solveMode.switch' | translate">
+                      <mat-icon>{{ solveModeChoice === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
+                      {{ (solveModeChoice === 'easy' ? 'solveMode.easy' : 'solveMode.training') | translate }}
+                    </button>
+                  </div>
+                }
+
                 @if (inWeekly && weeklyTotal > 0) {
                   <div class="ctx-progress">
                     <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
@@ -170,12 +183,26 @@
                         <span> · {{ 'weekly.mode.split' | translate:{training: weeklyTrainingCount, easy: weeklyEasyCount} }}</span>
                       }
                     </p>
-                    <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe toggleWeeklyMode). -->
-                    <button mat-stroked-button class="ctx-mode-btn" (click)="toggleWeeklyMode()"
-                            [matTooltip]="'weekly.mode.switchHint' | translate">
-                      <mat-icon>{{ weeklyMode === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
-                      {{ (weeklyMode === 'easy' ? 'weekly.mode.easy' : 'weekly.mode.training') | translate }}
-                    </button>
+                    @if (isLoggedIn) {
+                      <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe toggleWeeklyMode). -->
+                      <button mat-stroked-button class="ctx-mode-btn" (click)="toggleWeeklyMode()"
+                              [matTooltip]="'weekly.mode.switchHint' | translate">
+                        <mat-icon>{{ weeklyMode === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
+                        {{ (weeklyMode === 'easy' ? 'weekly.mode.easy' : 'weekly.mode.training') | translate }}
+                      </button>
+                    } @else {
+                      <!-- Gast: durchspielen geht, gewertet wird nur eingeloggt. Der Rücksprung
+                           führt genau hierher zurück, damit man nicht neu suchen muss. -->
+                      <p class="ctx-guest">
+                        {{ 'book.weekly.guestHint' | translate }}
+                        <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: weeklyReturnUrl }">
+                          {{ 'auth.login.title' | translate }}
+                        </a>
+                        <a mat-button routerLink="/register" [queryParams]="{ returnUrl: weeklyReturnUrl }">
+                          {{ 'auth.register.title' | translate }}
+                        </a>
+                      </p>
+                    }
                   </div>
                 }
                 @if (inCourse && courseTotal > 0) {

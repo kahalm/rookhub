@@ -34,6 +34,8 @@ public class EndlessSessionDto
     public string? Seed { get; set; }
     public string? ChainPuzzleIds { get; set; }
     public bool IsArchived { get; set; }
+    /// <summary>Spielweise des Laufs ("training"/"easy"); Altbestand liefert "training".</summary>
+    public string Mode { get; set; } = Models.SolveMode.Training;
 }
 
 /// <summary>Vollständige Detail-Ansicht eines Laufs (History-Klick) inkl. der einzelnen Puzzle-Versuche.</summary>
@@ -98,6 +100,12 @@ public class RecordEndlessSessionDto
     [MaxLength(20000)]
     public string? ChainPuzzleIds { get; set; }
 
+    /// <summary>Spielweise des Laufs: "training" (Brett eingefroren bzw. höhere Visualisierungsstufe)
+    /// oder "easy" (Figuren normal ziehbar). Fehlt sie oder ist sie unbekannt → "training".</summary>
+    /// BEWUSST ohne Längenbegrenzung: ein unbekannter Wert soll auf "training" zurückfallen, nicht
+    /// den ganzen Lauf mit 400 abweisen (die Spaltenlänge sichert das Modell).
+    public string? Mode { get; set; }
+
     /// <summary>Optional: einzelne Puzzles der Session (nur fürs Logging der Start-/Lösungszeit, nicht persistiert).</summary>
     public List<EndlessSessionPuzzleDto> Puzzles { get; set; } = new();
 }
@@ -152,4 +160,10 @@ public class EndlessHistoryResponseDto
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
+    /// <summary>Läufe im Modus „training" über den GANZEN gefilterten Bestand (nicht nur die
+    /// aktuelle Seite); Altbestand ohne Modus zählt hier. Zusammen mit <see cref="EasyCount"/>
+    /// ergibt das <see cref="TotalCount"/>.</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Läufe im Modus „easy" über den ganzen gefilterten Bestand.</summary>
+    public int EasyCount { get; set; }
 }

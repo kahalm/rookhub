@@ -6,6 +6,12 @@ public class RecordBookAttemptDto
     public int TimeSeconds { get; set; }
     /// <summary>Höchste in diesem Versuch angesehene Tipp-Stufe (0–3).</summary>
     public int HintsUsed { get; set; }
+
+    /// <summary>Spielweise: "training" (Brett eingefroren bzw. höhere Visualisierungsstufe) oder
+    /// "easy" (Figuren normal ziehbar). Fehlt sie oder ist sie unbekannt → "training".</summary>
+    /// BEWUSST ohne Längenbegrenzung: ein unbekannter Wert soll auf "training" zurückfallen, nicht
+    /// den ganzen Versuch mit 400 abweisen (die Spaltenlänge sichert das Modell).
+    public string? Mode { get; set; }
 }
 
 public class RecordAnonymousBookAttemptDto : RecordBookAttemptDto
@@ -50,6 +56,8 @@ public class BookSolverDto
     public int HintsUsed { get; set; }
     /// <summary>Fehlversuche (Fehlzug/Mouseslip-Zurücknahme/Restart) vor dem ersten Solve — je einer ein rotes ✗ in der Anzeige.</summary>
     public int WrongAttempts { get; set; }
+    /// <summary>Spielweise des ersten Solves ("training"/"easy"); Altbestand liefert "training".</summary>
+    public string Mode { get; set; } = Models.SolveMode.Training;
 }
 
 public class BookPuzzleResultsDto
@@ -59,6 +67,11 @@ public class BookPuzzleResultsDto
     /// <summary>Anzahl anonymer Löser (distinct Sessions), die gelöst haben.</summary>
     public int AnonymousSolvedCount { get; set; }
     public int AttemptCount { get; set; }
+    /// <summary>Eingeloggte Löser, die im Modus „training" gelöst haben (Altbestand zählt hier);
+    /// zusammen mit <see cref="EasyCount"/> ergibt das <see cref="SolvedCount"/>.</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Eingeloggte Löser, die im Modus „easy" gelöst haben.</summary>
+    public int EasyCount { get; set; }
     public List<BookSolverDto> Solvers { get; set; } = new();
 }
 

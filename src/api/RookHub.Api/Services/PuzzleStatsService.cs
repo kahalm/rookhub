@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -97,6 +98,11 @@ public class PuzzleStatsService
 
         var solved = await _db.PuzzleAttempts.CountAsync(a => a.AnonymousSessionId == sessionId && a.Solved);
         var accuracy = (double)solved / totalAttempts * 100;
+        // Spielweise wird ABGELEITET, nicht gespeichert: Visualisierungsstufe 0 = Figuren ziehbar
+        // („easy"), jede höhere Stufe ist Blind-/Trainingsspiel. Der Vergleich steht bewusst direkt
+        // im Count (SQL-übersetzbar) statt in einem C#-Helfer.
+        var easyCount = await _db.PuzzleAttempts.CountAsync(a => a.AnonymousSessionId == sessionId && a.VisualizationLevel == 0);
+        var (trainingCount, easy) = SolveMode.Split(totalAttempts, easyCount);
 
         var recentResults = await _db.PuzzleAttempts
             .Where(a => a.AnonymousSessionId == sessionId)
@@ -126,7 +132,9 @@ public class PuzzleStatsService
             Solved = solved,
             Accuracy = Math.Round(accuracy, 1),
             CurrentStreak = currentStreak,
-            BestStreak = bestStreak
+            BestStreak = bestStreak,
+            TrainingCount = trainingCount,
+            EasyCount = easy
         };
     }
 
@@ -166,6 +174,11 @@ public class PuzzleStatsService
 
         var solved = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.Solved);
         var accuracy = (double)solved / totalAttempts * 100;
+        // Spielweise wird ABGELEITET, nicht gespeichert: Visualisierungsstufe 0 = Figuren ziehbar
+        // („easy"), jede höhere Stufe ist Blind-/Trainingsspiel. Der Vergleich steht bewusst direkt
+        // im Count (SQL-übersetzbar) statt in einem C#-Helfer.
+        var easyCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == 0);
+        var (trainingCount, easy) = SolveMode.Split(totalAttempts, easyCount);
 
         // Calculate streaks from most recent 1000 attempts
         var recentResults = await _db.PuzzleAttempts
@@ -198,7 +211,9 @@ public class PuzzleStatsService
             CurrentStreak = currentStreak,
             BestStreak = bestStreak,
             PuzzleElo = user != null ? PuzzleElo.GetEloForLevel(user, level) : PuzzleElo.GetDefaultElo(level),
-            PuzzleEloPerLevel = user != null ? PuzzleElo.BuildEloDict(user) : null
+            PuzzleEloPerLevel = user != null ? PuzzleElo.BuildEloDict(user) : null,
+            TrainingCount = trainingCount,
+            EasyCount = easy
         };
     }
 
@@ -237,7 +252,10 @@ public class PuzzleStatsService
                 MoveLog = a.MoveLog,
                 EloAfter = a.EloAfter,
                 EloChange = a.EloChange,
-                VisualizationLevel = a.VisualizationLevel
+                VisualizationLevel = a.VisualizationLevel,
+                // Abgeleitet (keine Spalte); als Ternär direkt im Projektions-Ausdruck, damit die
+                // Abfrage serverseitig übersetzbar bleibt.
+                Mode = a.VisualizationLevel > 0 ? SolveMode.Training : SolveMode.Easy
             })
             .ToListAsync();
     }
