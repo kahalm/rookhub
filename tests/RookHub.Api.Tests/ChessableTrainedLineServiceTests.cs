@@ -48,6 +48,63 @@ public class ChessableTrainedLineServiceTests : IDisposable
         Assert.Equal(expected, ChessableTrainedLineService.LineKeyFromSans(sans));
     }
 
+    // ===== Der ECHTE Pfad: PGN-Tokenizer -> Hash (nicht nur die Hilfsfunktionen) ==============
+    // Regression: `IsMoveToken` prüfte das erste Zeichen, also fiel eine Rochade mit Nullen
+    // ("0-0") still ganz aus der Zugliste — andere LÄNGE, komplett anderer Hash, Karte
+    // unauffindbar. Der Vektor stammt aus der Frontend-Implementierung (chess.js liefert "O-O").
+
+    private const string CastlingPgn = """
+[Event "Kurs"]
+[White "Rochade-Linie"]
+[ChessableOid "777"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. 0-0 Nf6 *
+""";
+
+    private const string CastlingPgnLetters = """
+[Event "Kurs"]
+[White "Rochade-Linie"]
+[ChessableOid "777"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. O-O Nf6 *
+""";
+
+    [Fact]
+    public void MainlineSans_ZeroCastling_IsKeptAndCanonicalised()
+    {
+        var sans = ChessableTrainedLineService.MainlineSansForOid(CastlingPgn, "777")!;
+        Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "O-O", "Nf6" }, sans);
+    }
+
+    [Fact]
+    public void LineKey_ZeroCastlingAndLetterCastling_HashIdenticallyAndMatchFrontend()
+    {
+        var zeros = ChessableTrainedLineService.MainlineSansForOid(CastlingPgn, "777")!;
+        var letters = ChessableTrainedLineService.MainlineSansForOid(CastlingPgnLetters, "777")!;
+
+        Assert.Equal(ChessableTrainedLineService.LineKeyFromSans(letters),
+                     ChessableTrainedLineService.LineKeyFromSans(zeros));
+        // Vektor aus der Frontend-Implementierung (repertoire-line-key.util.ts) erzeugt.
+        Assert.Equal("lcvspxwtgmj", ChessableTrainedLineService.LineKeyFromSans(zeros));
+    }
+
+    [Fact]
+    public void MainlineSans_DropsEnPassantAnnotation()
+    {
+        // "e.p." beginnt mit 'e' und ginge als Zug durch — chess.js liefert es im Frontend nie,
+        // die Liste wäre also einen Eintrag zu lang.
+        var pgn = """
+[Event "Kurs"]
+[White "e.p."]
+[ChessableOid "888"]
+
+1. e4 d5 2. e5 f5 3. exf6 e.p. Nxf6 *
+""";
+        var sans = ChessableTrainedLineService.MainlineSansForOid(pgn, "888")!;
+        Assert.DoesNotContain("e.p.", sans);
+        Assert.Equal(new[] { "e4", "d5", "e5", "f5", "exf6", "Nxf6" }, sans);
+    }
+
     [Theory]
     [InlineData("c8Q", "c8=Q")]
     [InlineData("c8q", "c8=Q")]

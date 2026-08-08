@@ -144,6 +144,20 @@ try
     builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
         RookHub.Api.Authorization.PermissionAuthorizationHandler>();
 
+    // Fail-fast gegen einen LEEREN Verschlüsselungs-Schlüssel. `EncryptionService` ist ein
+    // Singleton und wird erst beim ersten Chessable-Request erzeugt — ein Konfigurationsfehler
+    // fiele sonst mitten im Betrieb auf statt beim Start. Genau dieser Fall ist realistisch:
+    // `${ENCRYPTION_KEY:-}` in einer Compose-Datei liefert bei ungesetzter Variable einen
+    // LEERSTRING (nicht "fehlt"), und ohne diese Prüfung würde damit mit SHA256("") — einem
+    // öffentlich bekannten Fixwert — „verschlüsselt". Ein komplett FEHLENDER Schlüssel bleibt
+    // erlaubt: Installationen ohne Chessable-Import brauchen ihn nicht.
+    var configuredEncryptionKey = builder.Configuration["Encryption:Key"];
+    if (configuredEncryptionKey != null && string.IsNullOrWhiteSpace(configuredEncryptionKey))
+        throw new InvalidOperationException(
+            "Encryption:Key ist gesetzt, aber leer. Entweder einen echten Schlüssel hinterlegen " +
+            "(ENCRYPTION_KEY) oder die Variable ganz weglassen — ein leerer Wert würde den " +
+            "gespeicherten Chessable-Bearer nur zum Schein verschlüsseln.");
+
     // Services
     builder.Services.AddScoped<AuthService>();
     builder.Services.AddSingleton<EncryptionService>();

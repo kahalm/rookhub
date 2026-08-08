@@ -74,16 +74,19 @@ public class ProfileController : BaseApiController
     [HttpPut]
     public async Task<ActionResult<ProfileDto>> UpdateProfile([FromBody] UpdateProfileDto dto)
     {
-        // Identität im Impersonations-Kontext unantastbar: die E-Mail ist der Reset-Anker.
-        // Wer sie hier ändern dürfte, könnte per „Passwort vergessen" das fremde Konto dauerhaft
-        // übernehmen — genau deshalb ist change-password im Impersonations-Kontext gesperrt.
-        // Nur das E-Mail-Feld blocken (nicht den ganzen Endpoint), damit Support weiterhin
-        // Anzeigename/Schach-IDs korrigieren kann.
-        if (IsImpersonating() && dto.Email != null)
-            return StatusCode(403, new { message = "Email cannot be changed while impersonating another user." });
+        // Identität im Impersonations-Kontext unantastbar: die E-Mail ist der Reset-Anker. Wer sie
+        // hier ändern dürfte, könnte per „Passwort vergessen" das fremde Konto dauerhaft übernehmen
+        // — genau deshalb ist change-password im Impersonations-Kontext gesperrt. Geprüft wird auf
+        // ÄNDERUNG, nicht auf Anwesenheit des Feldes: die UI schickt die E-Mail bei jedem Speichern
+        // mit, ein pauschales Ablehnen verbaute dem Support jede Profil-Korrektur.
         try
         {
-            return Ok(await _profileService.UpdateProfileAsync(GetUserId(), dto));
+            return Ok(await _profileService.UpdateProfileAsync(GetUserId(), dto,
+                allowEmailChange: !IsImpersonating()));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {

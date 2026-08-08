@@ -48,7 +48,11 @@ public class ProfileService
         };
     }
 
-    public async Task<ProfileDto> UpdateProfileAsync(int userId, UpdateProfileDto dto)
+    /// <param name="allowEmailChange">false im Impersonations-Kontext: die E-Mail ist der
+    /// Reset-Anker, ihre Änderung wäre eine dauerhafte Kontoübernahme. Ein UNVERÄNDERTER Wert
+    /// darf trotzdem durch — die UI schickt das Feld bei JEDEM Speichern mit, ein pauschales
+    /// Ablehnen würde dem Support auch die Korrektur von Anzeigename/Schach-IDs verbauen.</param>
+    public async Task<ProfileDto> UpdateProfileAsync(int userId, UpdateProfileDto dto, bool allowEmailChange = true)
     {
         var user = await _db.AppUsers
             .Include(u => u.Profile)
@@ -80,6 +84,9 @@ public class ProfileService
 
             if (normalizedEmail != null && !new EmailAddressAttribute().IsValid(normalizedEmail))
                 throw new ArgumentException("Email is not a valid email address.");
+
+            if (!allowEmailChange && !string.Equals(normalizedEmail, user.Email, StringComparison.Ordinal))
+                throw new UnauthorizedAccessException("Email cannot be changed while impersonating another user.");
 
             if (normalizedEmail != null && await _db.AppUsers
                     .AnyAsync(u => u.Id != userId && u.Email == normalizedEmail))

@@ -262,6 +262,34 @@ Ein Fix-Durchgang ohne unabhängiges Gegenlesen wäre netto schlechter gewesen a
   für die riskanten Queries. Vom Test-Agenten bewusst übersprungen, weil es Workflow-Dateien und ein
   Docker-fähiges CI braucht.
 
+### Nachprüfung des Fix-Durchgangs (2026-08-07, eigener Verifikations-Lauf)
+- [ ] **Chessable-Kursinhalt kann nicht aktualisiert werden — Entscheidung nötig.** piratechess hat
+  jetzt ein `ForceRefresh`-Flag (umgeht den Rohdaten-Cache, ersetzt erst nach Erfolg per Upsert),
+  aber **rookhub setzt es nirgends**. Damit bedient jeder Kurs-Abruf weiter den Stand des
+  Erst-Imports: ein vom Autor aktualisierter Chessable-Kurs kommt nie an. Es blind für jeden
+  „Aktualisieren"-Lauf zu setzen wäre falsch — der Reprocess will bewusst die ALTEN Rohdaten mit der
+  NEUEN Pipeline neu parsen (kein Chessable-Traffic), und ein pauschales Erzwingen zöge alle Kurse
+  erneut über die VPN-IPs (dokumentiertes Ban-Risiko). Zu entscheiden: eine eigene, seltene Aktion
+  („Von Chessable neu laden", pro Kurs, gedrosselt) statt einer Kopplung an den Reprocess.
+- [ ] **Kalkulations-Outbox: In-Flight-Schutz prüfen.** Der Prüfer meldet, ein älterer Save könne
+  einen neueren überschreiben; der Requeue ist inzwischen durch `sendSeq`/`requeueIfLatest`
+  abgesichert, die *parallele Auslieferung* zweier Saves derselben Stellung aber nicht verhindert.
+  Nachprüfen, ob der Server-Upsert dabei in der falschen Reihenfolge landen kann.
+- [ ] **`PatScopeFenceTests` testet eine Kopie der Middleware,** nicht die Middleware selbst — die
+  Prefix-Liste in `Program.cs` kann unbemerkt auseinanderlaufen. Besser über `WebApplicationFactory`
+  gegen die echte Pipeline (Mvc.Testing ist referenziert).
+- [ ] **Blockierte PAT-Zugriffe sind unsichtbar:** der Zaun kappt VOR Rate-Limiter und
+  Request-Logging, ein 403 taucht also in keinem Log auf. Für die Fehlersuche (und als Signal für
+  gestohlene Token) sollte er ein Log-Event schreiben.
+- [ ] **Backup-Skript deckt nur 2 der 3 Datenbanken im Container ab** (piratechess fehlt), und das
+  Passwort erreicht `mariadb-dump` per Umgebungsvariable auf dem Host — in der Prozessliste des Hosts
+  sichtbar. Beides vor dem produktiven Einsatz nachziehen.
+- [ ] **ES-Retention-Skript meldet Erfolg, ohne dass Template/Data-Stream angefasst wurden** (laut
+  Prüfer) — vor dem Scharfschalten gegen die echte ES verifizieren.
+- [ ] **Repertoire-Graph speichert weiterhin den rohen Token** statt des bereits vorliegenden
+  `mv.san` — lange/überbestimmte Notation läuft in den `[%alt]`-Toleranzen weiter auseinander
+  (der Linien-Hash ist davon nicht betroffen, der kommt aus chess.js).
+
 ### Kleinere Restpunkte aus dem Gegenlesen (nicht blockierend)
 - [ ] **`PuzzleService.GetRandomAsync` (themesAny): Verteilung geändert.** Der neue Random-Seek zieht
   gleichverteilt über *Rating*, nicht über *Puzzles* — bei offener Rating-Spanne ist das Fenster der

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.340.2';
+export const APP_VERSION = '0.340.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.340.3", date: "2026-08-08", changes: [
+    { en: "Follow-up to the review fixes, from an independent verification pass over the previous round. Support impersonation could no longer save a profile at all: the guard rejected the email FIELD, but the UI sends it on every save \u2014 it now rejects only an actual CHANGE. An empty encryption key now aborts startup instead of failing on the first Chessable request (the service is created lazily). Castling written with zeros (0-0) was silently dropped from the server-side move list, which broke the line hash for those lines; it is canonicalised now. The cross-language hash contract is finally pinned on BOTH sides \u2014 previously only the server had fixed vectors, so a frontend change could have silently invalidated stored keys.", de: "Nachzug zu den Review-Fixes, aus einem unabh\u00e4ngigen Verifikationslauf \u00fcber die letzte Runde. Im Support-Modus lie\u00df sich gar kein Profil mehr speichern: der Guard wies das E-Mail-FELD ab, die UI schickt es aber bei jedem Speichern mit \u2014 jetzt wird nur noch eine echte \u00c4NDERUNG abgewiesen. Ein leerer Verschl\u00fcsselungs-Schl\u00fcssel bricht jetzt den Start ab, statt erst beim ersten Chessable-Request aufzufallen (der Dienst wird lazy erzeugt). Eine mit Nullen geschriebene Rochade (0-0) fiel serverseitig still aus der Zugliste und zerst\u00f6rte damit den Linien-Hash dieser Linien; sie wird jetzt kanonisiert. Der sprach\u00fcbergreifende Hash-Vertrag ist endlich auf BEIDEN Seiten festgenagelt \u2014 bisher hatte nur der Server feste Vektoren, eine Frontend-\u00c4nderung h\u00e4tte gespeicherte Schl\u00fcssel still entwerten k\u00f6nnen." },
+  ] },
   { version: "0.340.2", date: "2026-08-07", changes: [
     { en: "Two more regression tests around the repertoire position index: an EMPTY [FEN \"\"] header (which the Chessable importer writes for lines that do start from the initial position \u2014 about 34 of them in the live data) correctly falls back to the start position instead of dropping the line, and it does not register that repertoire as a match for the initial position. No functional change.", de: "Zwei weitere Regressionstests um den Repertoire-Stellungsindex: ein LEERER [FEN \"\"]-Header (den der Chessable-Import f\u00fcr Linien schreibt, die tats\u00e4chlich in der Grundstellung beginnen \u2014 rund 34 in den Live-Daten) f\u00e4llt korrekt auf die Grundstellung zur\u00fcck, statt die Linie zu verwerfen, und meldet das Repertoire nicht f\u00e4lschlich als Treffer f\u00fcr die Grundstellung. Keine funktionale \u00c4nderung." },
   ] },

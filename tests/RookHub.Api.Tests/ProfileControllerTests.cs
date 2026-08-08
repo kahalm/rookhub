@@ -134,6 +134,38 @@ public class ProfileControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateProfile_WhileImpersonating_AllowsSaveWithUnchangedEmail()
+    {
+        // Die UI schickt die E-Mail bei JEDEM Speichern mit (profile.component.ts:319). Würde der
+        // Guard auf Anwesenheit statt auf Änderung prüfen, wäre im Support-Modus gar kein
+        // Profil-Speichern mehr möglich.
+        var u = await CreateUserAsync("imp-same-mail");
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.UpdateProfile(new UpdateProfileDto
+        {
+            Email = u.Email,                       // unverändert
+            DisplayName = "Support-Korrektur",
+        });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(u.Email, (await _db.AppUsers.FindAsync(u.Id))!.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WhileImpersonating_AllowsSaveWhenEmailOnlyDiffersInCase()
+    {
+        // Normalisierung (trim + lowercase) wie bei der Registrierung — sonst gälte ein aus der UI
+        // zurückgeschickter Wert mit anderer Schreibweise fälschlich als Änderungsversuch.
+        var u = await CreateUserAsync("imp-case-mail");
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.UpdateProfile(new UpdateProfileDto { Email = "  " + u.Email!.ToUpperInvariant() + " " });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
     public async Task UnlinkDiscord_WhileImpersonating_Returns403()
     {
         var u = await CreateUserAsync("imp-discord");

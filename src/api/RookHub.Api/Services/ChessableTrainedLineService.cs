@@ -159,10 +159,15 @@ public class ChessableTrainedLineService
             while (t.StartsWith('(')) { depth++; t = t[1..]; }
             var closes = 0;
             while (t.EndsWith(')')) { closes++; t = t[..^1]; }
-            if (depth == 0 && t.Length > 0 && IsMoveToken(t))
+            if (depth == 0 && t.Length > 0)
             {
-                var clean = t.TrimEnd('!', '?', '+', '#');
-                if (clean.Length > 0) sans.Add(clean);
+                // ERST kanonisieren, DANN entscheiden: `IsMoveToken` prüft das erste Zeichen, und
+                // eine Rochade mit Nullen („0-0") fiele sonst durchs Raster und würde still ganz
+                // aus der Zugliste fallen — das ändert die LÄNGE der Liste und damit den Hash
+                // komplett (die Karte wäre unauffindbar, `MarkTrainedAsync` legte eine Phantom-
+                // Karte an). Nach `CanonicalSan` heißt sie „O-O" und passiert die Prüfung.
+                var clean = CanonicalSan(t);
+                if (clean.Length > 0 && IsMoveToken(clean)) sans.Add(clean);
             }
             depth = Math.Max(0, depth - closes);
         }
@@ -172,8 +177,11 @@ public class ChessableTrainedLineService
     private static bool IsMoveToken(string token)
     {
         if (MoveNumberRegex.IsMatch(token) || ResultTokens.Contains(token)) return false;
-        // Angeklebte Zugnummer („3.Nc3") abtrennen passiert nicht — piratechess-PGNs trennen mit
-        // Leerzeichen; reine Zahlen/Ergebnisse sind oben raus.
+        // Ein Punkt kommt in echter SAN nie vor: das filtert die Annotation „e.p." (die sonst
+        // wegen des führenden 'e' als Zug durchginge und die Liste verlängert) ebenso wie
+        // angeklebte Zugnummern („3.Nc3"). Letztere trennen piratechess-PGNs ohnehin mit
+        // Leerzeichen ab; chess.js liefert im Frontend in beiden Fällen keinen Extra-Zug.
+        if (token.Contains('.')) return false;
         var c = token[0];
         return (c >= 'a' && c <= 'h') || c is 'K' or 'Q' or 'R' or 'B' or 'N' or 'O';
     }
