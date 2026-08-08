@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.Models;
 
 /// <summary>
@@ -33,6 +35,24 @@ public class WeeklyPostAttempt
 
     /// <summary>Anzahl genutzter Mausrutscher in diesem Puzzle (pro Puzzle höchstens 1). 0 bei Alt-Datensätzen.</summary>
     public int Mouseslips { get; set; }
+
+    /// <summary>
+    /// Spielmodus dieses Versuchs: <see cref="ModeTraining"/> (Brett eingefroren, Figuren werden NICHT
+    /// gezogen — bisheriges Verhalten und Default für Altbestand) oder <see cref="ModeEasy"/> (Figuren
+    /// normal ziehbar). Wird nur beim ERSTEN Versuch je (Post, User, Index) geschrieben (idempotent).
+    /// </summary>
+    [Required, MaxLength(10)]
+    public string Mode { get; set; } = ModeTraining;
+
+    /// <summary>Modus „Training": Brett eingefroren, Figuren nicht ziehbar (Default/Altbestand).</summary>
+    public const string ModeTraining = "training";
+
+    /// <summary>Modus „Einfach": Figuren normal ziehbar.</summary>
+    public const string ModeEasy = "easy";
+
+    /// <summary>Normalisiert einen vom Client gelieferten Modus — fehlt er oder ist er unbekannt, gilt „training".</summary>
+    public static string NormalizeMode(string? mode) =>
+        string.Equals(mode?.Trim(), ModeEasy, StringComparison.OrdinalIgnoreCase) ? ModeEasy : ModeTraining;
 
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

@@ -1497,6 +1497,18 @@
       "createFailed": "Could not create the weekly post.",
       "loadBooksFailed": "Could not load books.",
       "loadChaptersFailed": "Could not load chapters."
+    },
+    "mode": {
+      "title": "How do you want to play this weekly post?",
+      "intro": "Your choice applies to this weekly post and is recorded with each puzzle.",
+      "training": "Training mode",
+      "trainingDesc": "Board stays frozen — you enter moves without dragging pieces (previous behaviour).",
+      "easy": "Easy mode",
+      "easyDesc": "Move the pieces normally, as in any other puzzle.",
+      "switchHint": "You can switch at any time — it takes effect from the next puzzle.",
+      "switchedTraining": "Training mode — from the next puzzle on.",
+      "switchedEasy": "Easy mode — from the next puzzle on.",
+      "split": "{{training}} training · {{easy}} easy"
     }
   },
   "endless": {

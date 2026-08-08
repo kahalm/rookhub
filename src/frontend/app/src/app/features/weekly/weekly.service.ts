@@ -30,6 +30,9 @@ export interface WeeklyPlay {
 }
 
 /** Per-User-Fortschritt eines Wochenposts. */
+/** Spielweise eines Wochenpost-Puzzles (Vertrag zum Server, siehe weekly-mode-dialog.component). */
+export type WeeklyMode = 'training' | 'easy';
+
 export interface WeeklyProgress {
   weeklyPostId: number;
   total: number;
@@ -40,6 +43,9 @@ export interface WeeklyProgress {
   totalSeconds: number;
   /** Indizes der bereits gespielten Puzzles (für „zum ersten neuen Puzzle springen"); leer in der Übersicht. */
   playedIndices?: number[];
+  /** Wie viele der gespielten Puzzles im jeweiligen Modus gelöst wurden (Erstversuch zählt). */
+  trainingCount?: number;
+  easyCount?: number;
 }
 
 /** Stand eines Spielers bei einem Wochenpost (für die Bestenliste). */
@@ -53,6 +59,9 @@ export interface WeeklyPlayerResult {
   solvedCount: number;
   totalSeconds: number;
   completed: boolean;
+  /** Aufteilung der gespielten Puzzles auf die beiden Spielweisen. */
+  trainingCount?: number;
+  easyCount?: number;
 }
 
 /** Aggregierte Ergebnisse eines Wochenposts (für die Bestenliste). */
@@ -161,8 +170,9 @@ export class WeeklyService {
   }
 
   /** Zeichnet ein gespieltes Puzzle (gelöst oder nicht) des Wochenposts auf. */
-  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number, hintsUsed = 0, wrongAttempts = 0, mouseslips = 0): Observable<WeeklyProgress> {
-    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds, hintsUsed, wrongAttempts, mouseslips });
+  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number, hintsUsed = 0, wrongAttempts = 0, mouseslips = 0, mode: WeeklyMode = 'training'): Observable<WeeklyProgress> {
+    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`,
+      { puzzleIndex, solved, timeSeconds, hintsUsed, wrongAttempts, mouseslips, mode });
   }
 
   /** Admin: Detailaufschlüsselung eines Spielers (eine Zeile je Puzzle). */

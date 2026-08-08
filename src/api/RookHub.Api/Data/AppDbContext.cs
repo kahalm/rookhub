@@ -893,6 +893,8 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(a => a.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+            // Spielmodus des Versuchs; DB-Default "training" → Altbestand gilt als Trainings-Modus.
+            e.Property(a => a.Mode).HasMaxLength(10).HasDefaultValue(WeeklyPostAttempt.ModeTraining);
             // Ein Puzzle je (Post, User) genau einmal → idempotentes Aufzeichnen (erster Versuch zaehlt).
             e.HasIndex(a => new { a.WeeklyPostId, a.UserId, a.PuzzleIndex }).IsUnique();
             e.HasIndex(a => new { a.WeeklyPostId, a.UserId });

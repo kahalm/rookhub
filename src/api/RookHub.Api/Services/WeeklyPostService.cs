@@ -209,6 +209,8 @@ public class WeeklyPostService
                 HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
                 WrongAttempts = Math.Clamp(dto.WrongAttempts, 0, 10000),
                 Mouseslips = Math.Clamp(dto.Mouseslips, 0, 1000),
+                // Modus nur beim ERSTEN Versuch je (Post, User, Index); unbekannt/fehlend → "training".
+                Mode = WeeklyPostAttempt.NormalizeMode(dto.Mode),
                 AttemptedAt = DateTime.UtcNow,
             });
             try
@@ -248,6 +250,8 @@ public class WeeklyPostService
                 TotalSeconds = g.Sum(a => a.TimeSeconds),
                 // Über alle Puzzles des Posts: höchste genutzte Tipp-Stufe → > 0 ⇒ „mit Tipps gelöst" (💡).
                 HintsUsed = g.Max(a => a.HintsUsed),
+                // Gespielte Puzzles je Modus (Altbestand ohne Modus zählt als „training").
+                EasyCount = g.Count(a => a.Mode == WeeklyPostAttempt.ModeEasy),
             })
             .ToListAsync();
 
@@ -272,6 +276,9 @@ public class WeeklyPostService
                     SolvedCount = u.Solved,
                     TotalSeconds = u.TotalSeconds,
                     HintsUsed = u.HintsUsed,
+                    // Alles, was nicht ausdrücklich „easy" ist, zählt als „training" (auch Altbestand).
+                    TrainingCount = u.Played - u.EasyCount,
+                    EasyCount = u.EasyCount,
                     Completed = total > 0 && u.Played >= total,
                 };
             })
@@ -363,7 +370,7 @@ public class WeeklyPostService
     {
         var attempts = await _db.WeeklyPostAttempts
             .Where(a => a.UserId == userId)
-            .Select(a => new { a.WeeklyPostId, a.Solved, a.TimeSeconds })
+            .Select(a => new { a.WeeklyPostId, a.Solved, a.TimeSeconds, a.Mode })
             .ToListAsync();
 
         var postIds = attempts.Select(a => a.WeeklyPostId).Distinct().ToList();
@@ -396,6 +403,8 @@ public class WeeklyPostService
                 }
             }
             var played = grp.Count();
+            // Alles, was nicht ausdrücklich „easy" ist, zählt als „training" (auch Altbestand ohne Modus).
+            var easy = grp.Count(a => a.Mode == WeeklyPostAttempt.ModeEasy);
             result.Add(new WeeklyPostProgressDto
             {
                 WeeklyPostId = grp.Key,
@@ -404,6 +413,8 @@ public class WeeklyPostService
                 SolvedCount = grp.Count(a => a.Solved),
                 Completed = total > 0 && played >= total,
                 TotalSeconds = grp.Sum(a => a.TimeSeconds),
+                TrainingCount = played - easy,
+                EasyCount = easy,
             });
         }
         if (needsBackfill)
@@ -427,9 +438,11 @@ public class WeeklyPostService
     {
         var played = await _db.WeeklyPostAttempts
             .Where(a => a.WeeklyPostId == weeklyPostId && a.UserId == userId)
-            .Select(a => new { a.PuzzleIndex, a.Solved, a.TimeSeconds })
+            .Select(a => new { a.PuzzleIndex, a.Solved, a.TimeSeconds, a.Mode })
             .ToListAsync();
 
+        // Alles, was nicht ausdrücklich „easy" ist, zählt als „training" (auch Altbestand ohne Modus).
+        var easy = played.Count(a => a.Mode == WeeklyPostAttempt.ModeEasy);
         return new WeeklyPostProgressDto
         {
             WeeklyPostId = weeklyPostId,
@@ -439,6 +452,8 @@ public class WeeklyPostService
             Completed = total > 0 && played.Count >= total,
             TotalSeconds = played.Sum(a => a.TimeSeconds),
             PlayedIndices = played.Select(a => a.PuzzleIndex).OrderBy(i => i).ToList(),
+            TrainingCount = played.Count - easy,
+            EasyCount = easy,
         };
     }
 }

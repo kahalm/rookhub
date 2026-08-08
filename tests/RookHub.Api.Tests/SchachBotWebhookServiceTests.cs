@@ -158,4 +158,29 @@ public class SchachBotWebhookServiceTests
         Assert.Equal("http://schach-bot:9000/webhook/weekly-progress",
             SchachBotWebhookService.SiblingWebhookUrl("http://schach-bot:9000", "weekly-progress"));
     }
+
+    [Fact]
+    public async Task NotifyWeeklyAsync_CarriesModeCountsPerPlayer()
+    {
+        var handler = new CapturingHandler();
+        var svc = Build(handler, BuildConfig("http://schach-bot:9000/webhook/puzzle-attempt", "s"));
+
+        await svc.NotifyWeeklyAsync(7, new WeeklyPostResultsDto
+        {
+            WeeklyPostId = 7,
+            Total = 3,
+            CompletedCount = 1,
+            Players = new List<WeeklyPlayerResultDto>
+            {
+                new() { Name = "Anna", PlayedCount = 3, SolvedCount = 2, TotalSeconds = 40,
+                        TrainingCount = 2, EasyCount = 1, Completed = true },
+            },
+        });
+
+        using var doc = JsonDocument.Parse(handler.LastBody!);
+        var player = doc.RootElement.GetProperty("results").GetProperty("players")[0];
+        // Der Bot zeigt je Spieler, wie viele Puzzles im jeweiligen Modus gespielt wurden.
+        Assert.Equal(2, player.GetProperty("trainingCount").GetInt32());
+        Assert.Equal(1, player.GetProperty("easyCount").GetInt32());
+    }
 }

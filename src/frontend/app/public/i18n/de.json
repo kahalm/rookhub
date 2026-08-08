@@ -1497,6 +1497,18 @@
       "createFailed": "Wochenpost konnte nicht angelegt werden.",
       "loadBooksFailed": "Bücher konnten nicht geladen werden.",
       "loadChaptersFailed": "Kapitel konnten nicht geladen werden."
+    },
+    "mode": {
+      "title": "Wie möchtest du diese Wochenpost spielen?",
+      "intro": "Die Wahl gilt für diese Wochenpost und wird bei jedem Puzzle mitgeschrieben.",
+      "training": "Trainingsmodus",
+      "trainingDesc": "Das Brett bleibt eingefroren — Züge werden eingegeben, ohne Figuren zu ziehen (bisheriges Verhalten).",
+      "easy": "Einfachmodus",
+      "easyDesc": "Figuren normal ziehen, wie bei jedem anderen Puzzle.",
+      "switchHint": "Du kannst jederzeit wechseln — es gilt ab dem nächsten Puzzle.",
+      "switchedTraining": "Trainingsmodus — ab dem nächsten Puzzle.",
+      "switchedEasy": "Einfachmodus — ab dem nächsten Puzzle.",
+      "split": "{{training}} Training · {{easy}} einfach"
     }
   },
   "endless": {

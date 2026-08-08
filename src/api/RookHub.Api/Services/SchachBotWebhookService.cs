@@ -138,6 +138,9 @@ public class SchachBotWebhookService
                     solvedCount = p.SolvedCount,
                     totalSeconds = p.TotalSeconds,
                     hintsUsed = p.HintsUsed,
+                    // Gespielte Puzzles je Modus ("training" = Brett eingefroren, "easy" = Figuren ziehbar).
+                    trainingCount = p.TrainingCount,
+                    easyCount = p.EasyCount,
                     completed = p.Completed,
                 }),
             },

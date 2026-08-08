@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.340.4';
+export const APP_VERSION = '0.341.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.341.0", date: "2026-08-08", changes: [
+    { en: "Weekly post: you now pick how you want to play it. At the start a dialog asks for training mode (board frozen, moves entered without dragging \u2014 the previous behaviour and still the default) or easy mode (pieces move normally). The choice applies to that weekly post, and a button next to the progress bar switches it from the next puzzle on. Every puzzle is recorded with the mode it was played in, the split is shown under the progress bar, and the Discord leaderboard marks how many puzzles a player did in easy mode. If you reveal the position with the eye AFTER your first move, that puzzle counts as easy regardless of the setting \u2014 whoever uncovers the board did not calculate it blind.", de: "Wochenpost: du w\u00e4hlst jetzt, wie du sie spielen willst. Beim Start fragt ein Dialog nach Trainingsmodus (Brett eingefroren, Z\u00fcge werden eingegeben, ohne Figuren zu ziehen \u2014 bisheriges Verhalten und weiterhin Standard) oder Einfachmodus (Figuren normal ziehbar). Die Wahl gilt f\u00fcr diese Wochenpost, ein Knopf neben dem Fortschrittsbalken schaltet ab dem n\u00e4chsten Puzzle um. Jedes Puzzle wird mit seinem Modus mitgeschrieben, die Aufteilung steht unter dem Fortschrittsbalken, und die Discord-Bestenliste vermerkt, wie viele Puzzles jemand einfach gespielt hat. Wer die Stellung NACH dem ersten Zug mit dem Auge aufdeckt, dessen Puzzle z\u00e4hlt unabh\u00e4ngig von der Einstellung als einfach \u2014 aufgedeckt ist nicht mehr blind gerechnet." },
+  ] },
   { version: "0.340.4", date: "2026-08-08", changes: [
     { en: "Backup script corrected before it ever ran in production: it dumped only two of the three databases in the container \u2014 piratechess was missing, and that is where the encrypted Chessable credentials live, so a restore would have been incomplete. Also, the database password reached the dump through the docker command line and was therefore visible in the host\u2019s process list; it is passed through the environment now. Documentation updated to match.", de: "Backup-Skript korrigiert, bevor es je produktiv lief: es sicherte nur zwei der drei Datenbanken im Container \u2014 piratechess fehlte, und genau dort liegen die verschl\u00fcsselten Chessable-Zugangsdaten, ein Restore w\u00e4re also unvollst\u00e4ndig gewesen. Au\u00dferdem erreichte das Datenbank-Passwort den Dump \u00fcber die docker-Kommandozeile und war damit in der Prozessliste des Hosts sichtbar; es wird jetzt \u00fcber die Umgebung \u00fcbergeben. Doku entsprechend nachgezogen." },
   ] },

@@ -401,6 +401,98 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.Equal(0, res.Players.Single(p => p.Name == "Clean").HintsUsed);
     }
 
+    // --- Spielmodus („training" = Brett eingefroren / „easy" = Figuren ziehbar) ----------
+
+    [Fact]
+    public async Task RecordAttempt_StoresModeOnFirstAttempt()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+
+        var a = await _db.WeeklyPostAttempts.SingleAsync(x => x.UserId == 1 && x.PuzzleIndex == 0);
+        Assert.Equal(WeeklyPostAttempt.ModeEasy, a.Mode);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_SecondAttempt_DoesNotChangeMode()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+        // Wiederholung desselben Index (jetzt im Trainings-Modus) ist idempotent → Modus bleibt „easy".
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 9, Mode = "training" });
+
+        var a = await _db.WeeklyPostAttempts.SingleAsync(x => x.UserId == 1 && x.PuzzleIndex == 0);
+        Assert.Equal(WeeklyPostAttempt.ModeEasy, a.Mode);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_MissingOrUnknownMode_FallsBackToTraining()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        // Kein Modus im Body (Altes Frontend) …
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5 });
+        // … und ein unbekannter Wert.
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 5, Mode = "hyperspeed" });
+
+        var modes = await _db.WeeklyPostAttempts.Where(x => x.UserId == 1).OrderBy(x => x.PuzzleIndex)
+            .Select(x => x.Mode).ToListAsync();
+        Assert.Equal(new[] { WeeklyPostAttempt.ModeTraining, WeeklyPostAttempt.ModeTraining }, modes);
+    }
+
+    [Fact]
+    public async Task GetProgress_CountsPlayedPuzzlesPerMode()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 7, Mode = "training" });
+
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
+        Assert.Equal(2, p.PlayedCount);
+        Assert.Equal(1, p.TrainingCount);
+        Assert.Equal(1, p.EasyCount);
+
+        // Auch die Übersicht (Batch-Fortschritt) trägt die Aufteilung.
+        var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        var all = Assert.Single(list);
+        Assert.Equal(1, all.TrainingCount);
+        Assert.Equal(1, all.EasyCount);
+    }
+
+    [Fact]
+    public async Task GetResults_CountsPerModePerPlayer()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var easyPlayer = new AppUser { Username = "easy", Email = "e@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Easy" } };
+        var hardPlayer = new AppUser { Username = "hard", Email = "t@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Hard" } };
+        _db.AppUsers.AddRange(easyPlayer, hardPlayer);
+        await _db.SaveChangesAsync();
+
+        SetUser(easyPlayer.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 6, Mode = "training" });
+
+        SetUser(hardPlayer.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 8, Mode = "training" });
+
+        var res = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        var easy = res.Players.Single(p => p.Name == "Easy");
+        Assert.Equal(1, easy.EasyCount);
+        Assert.Equal(1, easy.TrainingCount);
+        var hard = res.Players.Single(p => p.Name == "Hard");
+        Assert.Equal(0, hard.EasyCount);
+        Assert.Equal(1, hard.TrainingCount);
+    }
+
     // --- Terminierte Sichtbarkeit (scheduledAt in der Zukunft) -------------------
 
     private async Task<int> CreateFuturePostAsync()

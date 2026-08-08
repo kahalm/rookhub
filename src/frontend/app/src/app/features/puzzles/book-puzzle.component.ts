@@ -49,7 +49,8 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
-import { WeeklyService } from '../weekly/weekly.service';
+import { WeeklyMode, WeeklyService } from '../weekly/weekly.service';
+import { WeeklyModeDialogComponent } from '../weekly/weekly-mode-dialog.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 // 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
@@ -104,6 +105,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   weeklyPuzzles: BookPuzzleDto[] = [];
   weeklyIndex = 0;
   weeklyCompleted = false;
+  /** Spielweise dieses Wochenposts: 'training' = Brett eingefroren (bisheriges Verhalten),
+   *  'easy' = Figuren normal ziehen. Wird beim Start abgefragt und gilt für den ganzen Post;
+   *  umschaltbar über die Aktionszeile (wirkt ab dem nächsten Puzzle-Start). */
+  weeklyMode: WeeklyMode = 'training';
+  /** Aufteilung der bereits gespielten Puzzles (Serverstand, für die Anzeige). */
+  weeklyTrainingCount = 0;
+  weeklyEasyCount = 0;
+  /** Wurde in DIESEM Puzzle das Auge benutzt, nachdem der erste Zug gemacht war? Dann zählt das
+   *  ganze Puzzle als „einfach" — aufgedeckte Figuren sind kein Trainingsmodus mehr. */
+  private weeklyRevealedAfterMove = false;
+
   weeklyPlayed = 0;                       // gespielte Puzzles (serverseitiger Stand)
   weeklySolved = 0;                       // davon gelöst
   weeklySeconds = 0;                      // Gesamtzeit über alle gespielten Puzzles (serverseitiger Stand)
@@ -1050,6 +1062,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.weeklyTitle = play.title;
         this.weeklyPuzzles = play.puzzles ?? [];
         this.weeklyIndex = 0;
+        this.askWeeklyMode();
         if (this.weeklyPuzzles.length === 0) {
           this.weeklyCompleted = false;
           this.puzzle = null;
@@ -1063,6 +1076,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
               if (epoch !== this.loadEpoch) return;
               this.weeklyPlayed = p.playedCount;
               this.weeklySolved = p.solvedCount;
+              this.weeklyTrainingCount = p.trainingCount ?? 0;
+              this.weeklyEasyCount = p.easyCount ?? 0;
               this.weeklySeconds = p.totalSeconds;
               this.loadWeeklyAt(computeWeeklyStartIndex(this.weeklyPuzzles, p));
             },
@@ -1076,6 +1091,38 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     });
   }
 
+  /** Spielweise beim Start erfragen. Einmal je Wochenpost und Sitzung: die Wahl steckt in
+   *  sessionStorage, damit ein Reload mitten im Post nicht erneut fragt (und die Wertung
+   *  konsistent bleibt). Anonyme Besucher werden nicht gefragt — für sie wird nichts gewertet. */
+  private askWeeklyMode(): void {
+    if (!this.inWeekly || this.weeklyId == null) return;
+    const key = `rookhub_weekly_mode_${this.weeklyId}`;
+    let gemerkt: string | null = null;
+    try { gemerkt = sessionStorage.getItem(key); } catch { /* Privatmodus */ }
+    if (gemerkt === 'easy' || gemerkt === 'training') {
+      this.weeklyMode = gemerkt;
+      this.applyWeeklyMode();
+      return;
+    }
+    if (!this.auth.isLoggedIn) { this.applyWeeklyMode(); return; }
+    this.dialog.open(WeeklyModeDialogComponent, { width: '420px', maxWidth: '92vw', disableClose: true })
+      .afterClosed().subscribe((mode: WeeklyMode | undefined) => {
+        this.weeklyMode = mode === 'easy' ? 'easy' : 'training';
+        try { sessionStorage.setItem(key, this.weeklyMode); } catch { /* Privatmodus */ }
+        this.applyWeeklyMode();
+        // Das erste Puzzle steht schon — mit der frisch gewählten Spielweise neu aufsetzen.
+        if (this.puzzle) this.setupPuzzle(this.puzzle);
+      });
+  }
+
+  /** Visualisierung nach der gewählten Spielweise setzen: Training = eingefroren (Level 1),
+   *  Einfach = normal ziehbar (0). Überschreibt für den Wochenpost bewusst die globale
+   *  Einstellung — die Wertung hängt daran. */
+  private applyWeeklyMode(): void {
+    this.visualizationMode = this.weeklyMode === 'easy' ? 0 : 1;
+    this.weeklyRevealedAfterMove = false;
+  }
+
   private loadWeeklyAt(index: number): void {
     if (index >= this.weeklyPuzzles.length) {
       this.weeklyCompleted = true;
@@ -1087,6 +1134,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.weeklyAttemptRecorded = false;   // neues Puzzle → wieder aufzeichenbar
     this.weeklyIndex = index;
     this.puzzle = this.weeklyPuzzles[index];
+    this.applyWeeklyMode();               // Spielweise gilt je Puzzle neu (auch nach dem Umschalten)
     this.setupPuzzle(this.puzzle);
   }
 
@@ -1102,18 +1150,45 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const wrongAttempts = this.wrongMoveCount;
     const mouseslips = this.mouseslipUsed ? 1 : 0;
     const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
-    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel, wrongAttempts, mouseslips };
+    // Auge nach dem ersten Zug benutzt → das ganze Puzzle zählt als „einfach", egal welcher
+    // Modus eingestellt war: wer die Stellung aufdeckt, hat sie nicht mehr blind gerechnet.
+    const mode: WeeklyMode = this.weeklyRevealedAfterMove ? 'easy' : this.weeklyMode;
+    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel, wrongAttempts, mouseslips, mode };
     if (!navigator.onLine) {
       this.offlineQueue.enqueue('POST', url, body);
       this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
       if (solved) this.weeklySolved += 1;
       this.weeklySeconds += this.solveSeconds;
+      if (mode === 'easy') this.weeklyEasyCount += 1; else this.weeklyTrainingCount += 1;
       return;
     }
-    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.maxHintLevel, wrongAttempts, mouseslips).subscribe({
-      next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; this.weeklySeconds = p.totalSeconds; },
+    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.maxHintLevel, wrongAttempts, mouseslips, mode).subscribe({
+      next: p => {
+        this.weeklyPlayed = p.playedCount;
+        this.weeklySolved = p.solvedCount;
+        this.weeklySeconds = p.totalSeconds;
+        this.weeklyTrainingCount = p.trainingCount ?? this.weeklyTrainingCount;
+        this.weeklyEasyCount = p.easyCount ?? this.weeklyEasyCount;
+      },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
+  }
+
+  /** Auge im Wochenpost: NACH dem ersten Zug aufgedeckt → dieses Puzzle zählt als „einfach".
+   *  Vor dem ersten Zug ist das Aufdecken die normale Vorbereitung (Stellung einprägen). */
+  override onVizShow(): void {
+    super.onVizShow();
+    if (this.inWeekly && this.vizShowPressed && this.hasMadeFirstMove) this.weeklyRevealedAfterMove = true;
+  }
+
+  /** Spielweise umschalten — wirkt ab dem NÄCHSTEN Puzzle, damit ein laufender Versuch nicht
+   *  mitten im Rechnen die Regeln wechselt. Bereits gemeldete Puzzles bleiben, wie sie gewertet
+   *  wurden. */
+  toggleWeeklyMode(): void {
+    this.weeklyMode = this.weeklyMode === 'training' ? 'easy' : 'training';
+    try { sessionStorage.setItem(`rookhub_weekly_mode_${this.weeklyId}`, this.weeklyMode); } catch { /* Privatmodus */ }
+    this.snackbar.show(this.translate.instant(
+      this.weeklyMode === 'easy' ? 'weekly.mode.switchedEasy' : 'weekly.mode.switchedTraining'));
   }
 
   weeklyNext(): void {

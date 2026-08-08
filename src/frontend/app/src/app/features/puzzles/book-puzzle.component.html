@@ -166,7 +166,16 @@
                     <p class="ctx-stats">
                       {{ 'book.weekly.progress' | translate:{played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved} }}
                       @if (weeklySeconds > 0) {<span> · ⏱ {{ weeklyTimeDisplay }}</span>}
+                      @if (weeklyTrainingCount + weeklyEasyCount > 0) {
+                        <span> · {{ 'weekly.mode.split' | translate:{training: weeklyTrainingCount, easy: weeklyEasyCount} }}</span>
+                      }
                     </p>
+                    <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe toggleWeeklyMode). -->
+                    <button mat-stroked-button class="ctx-mode-btn" (click)="toggleWeeklyMode()"
+                            [matTooltip]="'weekly.mode.switchHint' | translate">
+                      <mat-icon>{{ weeklyMode === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
+                      {{ (weeklyMode === 'easy' ? 'weekly.mode.easy' : 'weekly.mode.training') | translate }}
+                    </button>
                   </div>
                 }
                 @if (inCourse && courseTotal > 0) {

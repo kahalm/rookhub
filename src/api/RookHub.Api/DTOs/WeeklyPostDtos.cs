@@ -68,6 +68,11 @@ public class RecordWeeklyAttemptDto
     [Range(0, 10000)] public int WrongAttempts { get; set; }
     /// <summary>Anzahl genutzter Mausrutscher in diesem Puzzle (0/1).</summary>
     [Range(0, 1000)] public int Mouseslips { get; set; }
+    /// <summary>Spielmodus: "training" (Brett eingefroren) oder "easy" (Figuren ziehbar).
+    /// Fehlt er oder ist er unbekannt → "training". Nur der ERSTE Versuch je Index schreibt ihn.</summary>
+    /// BEWUSST ohne Längenbegrenzung: ein unbekannter Wert soll auf "training" zurückfallen, nicht
+    /// den ganzen Versuch mit 400 abweisen (die Spaltenlänge sichert das Modell).
+    public string? Mode { get; set; }
 }
 
 /// <summary>Per-User-Fortschritt eines Wochenposts. „Erledigt" = alle Puzzles gespielt (Solved egal).</summary>
@@ -86,6 +91,10 @@ public class WeeklyPostProgressDto
     public int TotalSeconds { get; set; }
     /// <summary>Indizes der bereits gespielten Puzzles (für „zum ersten neuen Puzzle springen"); leer in der Übersicht.</summary>
     public List<int> PlayedIndices { get; set; } = new();
+    /// <summary>Davon im Modus „training" gespielte Puzzles (Brett eingefroren; Altbestand zählt hier).</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Davon im Modus „easy" gespielte Puzzles (Figuren ziehbar).</summary>
+    public int EasyCount { get; set; }
 }
 
 /// <summary>Aggregierte Wochenpost-Ergebnisse (für die Discord-Anzeige): wer wie weit ist.</summary>
@@ -113,6 +122,10 @@ public class WeeklyPlayerResultDto
     public int TotalSeconds { get; set; }
     /// <summary>Höchste in irgendeinem Puzzle dieses Posts genutzte Tipp-Stufe (0–3). &gt; 0 ⇒ mit Tipps gelöst (💡).</summary>
     public int HintsUsed { get; set; }
+    /// <summary>Davon im Modus „training" gespielte Puzzles (Brett eingefroren; Altbestand zählt hier).</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Davon im Modus „easy" gespielte Puzzles (Figuren ziehbar).</summary>
+    public int EasyCount { get; set; }
     /// <summary>True, wenn alle Puzzles gespielt wurden.</summary>
     public bool Completed { get; set; }
 }

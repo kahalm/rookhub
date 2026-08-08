@@ -1497,6 +1497,18 @@
       "createFailed": "Tjedni post nije moguće stvoriti.",
       "loadBooksFailed": "Knjige nije moguće učitati.",
       "loadChaptersFailed": "Poglavlja nije moguće učitati."
+    },
+    "mode": {
+      "title": "Kako želiš igrati ovaj tjedni post?",
+      "intro": "Odabir vrijedi za ovaj tjedni post i bilježi se uz svaku zagonetku.",
+      "training": "Trening način",
+      "trainingDesc": "Ploča ostaje zamrznuta — potezi se unose bez povlačenja figura (dosadašnje ponašanje).",
+      "easy": "Jednostavan način",
+      "easyDesc": "Povlači figure normalno, kao kod svake druge zagonetke.",
+      "switchHint": "Možeš promijeniti u svakom trenutku — vrijedi od sljedeće zagonetke.",
+      "switchedTraining": "Trening način — od sljedeće zagonetke.",
+      "switchedEasy": "Jednostavan način — od sljedeće zagonetke.",
+      "split": "{{training}} trening · {{easy}} jednostavno"
     }
   },
   "endless": {
