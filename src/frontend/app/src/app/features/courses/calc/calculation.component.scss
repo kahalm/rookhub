@@ -23,6 +23,21 @@
   opacity: 0.7;
 }
 
+/* Das Kapitel ist die Arbeitseinheit — sein Name steht deshalb kräftiger da als der Buchtitel. */
+.calc-chapter-name {
+  font-weight: 600;
+}
+
+/* ד am Hinweis: klein und rechts, damit es die Zeile nicht dominiert. */
+.calc-note-close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+}
+
 /* „Nur auf diesem Gerät"-Hinweis für nicht angemeldete Nutzer. Bewusst eine ruhige Zeile:
    kein Dialog, keine Farbe, die nach Fehler aussieht — es ist eine Auskunft, keine Warnung. */
 .calc-local-note {
@@ -278,6 +293,79 @@
   color: #f57f17;
 }
 
+/* Die Buchsumme steht bewusst kleiner und beschriftet darunter — sie ist NICHT die Zahl,
+   auf die es beim Durcharbeiten eines Kapitels ankommt. */
+.calc-book-points {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, currentColor 55%, transparent);
+}
+
+/* ===== Kapitel-Training (Laufzustand sichtbar) ===== */
+.calc-training-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.calc-training-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, currentColor 55%, transparent);
+
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+}
+
+.calc-training-state--on {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+/* ===== Kapitelende ===== */
+.calc-chapter-done {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #2e7d32 12%, transparent);
+  font-size: 0.85rem;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #2e7d32; }
+}
+
+.calc-chapter-done-text { flex: 1 1 10rem; font-weight: 600; }
+/* Nur der WEG ins nächste Kapitel, ohne die Behauptung „durch": dieselbe Zeile, aber ohne die
+   Erledigt-Färbung — Grün ist hier eine Aussage und keine Dekoration. */
+.calc-chapter-done--onward {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+/* Der Knopf „Ergebnis": eine Aktion statt fünf Schaltern (UI-Dichte-Regel). */
+.calc-result-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.calc-result-btn--set {
+  color: #f57f17;
+  font-weight: 600;
+}
+
+.calc-result-label {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ===== Festlegung · Rechenzeit · Selbstbewertung ===== */
 .calc-review-row {
   display: flex;
@@ -383,6 +471,10 @@
 }
 .calc-timer-icon { font-size: 18px; width: 18px; height: 18px; }
 
+/* Läuft das Training? Ohne Start misst NICHTS — der Unterschied muss ins Auge fallen. */
+.calc-timer { color: color-mix(in srgb, currentColor 50%, transparent); }
+.calc-timer--running { color: #2e7d32; }
+
 /* Vollbild-Variante: schwebt im schwarzen Balken neben dem Brett (Sichtbarkeit steuert die
    globale [data-fs-only]-Regel in styles.scss; position: fixed greift, weil das Vollbild-
    Element vom Browser als fixed-Containing-Block gesetzt wird). */
@@ -402,6 +494,9 @@
   font-weight: 600;
 }
 .calc-fs-timer .calc-timer-icon { font-size: 22px; width: 22px; height: 22px; }
+/* Im Vollbild ist der Balken schwarz — dort trägt der Laufzustand eine hellere Farbe. */
+.calc-fs-timer { color: rgba(255, 255, 255, 0.65); }
+.calc-fs-timer--running { color: #a5d6a7; }
 .calc-fs-timer-btn {
   display: grid;
   place-items: center;

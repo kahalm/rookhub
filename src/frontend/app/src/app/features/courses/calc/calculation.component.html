@@ -6,9 +6,9 @@
     <h1 class="calc-title">
       {{ 'calc.title' | translate }}
       <span class="calc-book" *ngIf="book">· {{ book.displayName }}</span>
-      <!-- Kapitel-Kurz-URL /{slug}/{kapitel}: die Liste zeigt nur dieses Kapitel — das gehört
-           sichtbar in den Titel, sonst wirkt der Kurs einfach kürzer als er ist. -->
-      <span class="calc-book" *ngIf="chapterFilter">· {{ chapterFilter }}</span>
+      <!-- Gearbeitet wird KAPITELWEISE — welches Kapitel das ist, muss auch beim Rechnen
+           sichtbar bleiben (früher stand es nirgends). -->
+      <span class="calc-chapter-name" *ngIf="chapter">· {{ chapterName }}</span>
     </h1>
   </div>
 
@@ -17,15 +17,35 @@
        führt über returnUrl genau hierher zurück (inkl. Stellung/Kapitel).
        Spielt der Gerätespeicher NICHT mit (Privatmodus, Quota), wäre „liegt auf diesem Gerät" eine
        Lüge — die Zeile sagt dann, dass gerade gar nichts gespeichert werden konnte. -->
-  @if (localOnly) {
-    <p class="calc-local-note" [class.calc-local-note--failed]="localSaveFailed">
-      <mat-icon>{{ localSaveFailed ? 'warning' : 'devices' }}</mat-icon>
-      <span class="calc-local-text">
-        {{ (localSaveFailed ? 'calc.local.unavailable' : 'calc.local.notice') | translate }}
-      </span>
+  @if (showLocalNotice) {
+    <p class="calc-local-note">
+      <mat-icon>devices</mat-icon>
+      <span class="calc-local-text">{{ 'calc.local.notice' | translate }}</span>
       <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
         {{ 'calc.local.signIn' | translate }}
       </a>
+      <!-- Ein Vorschlag darf man abstellen: einmal weggeklickt bleibt er für diesen Kurs weg. -->
+      <button mat-icon-button class="calc-note-close" (click)="dismissLocalNotice()"
+              [matTooltip]="'calc.local.dismiss' | translate"
+              [attr.aria-label]="'calc.local.dismiss' | translate">
+        <mat-icon>close</mat-icon>
+      </button>
+    </p>
+  }
+  @if (showLocalWarning) {
+    <p class="calc-local-note calc-local-note--failed">
+      <mat-icon>warning</mat-icon>
+      <span class="calc-local-text">{{ 'calc.local.unavailable' | translate }}</span>
+      <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
+        {{ 'calc.local.signIn' | translate }}
+      </a>
+      <!-- Diese hier meldet DATENVERLUST, keinen Vorschlag: sie lässt sich nur für die laufende
+           Sitzung wegklicken und steht beim nächsten Fehlschlag wieder da. -->
+      <button mat-icon-button class="calc-note-close" (click)="dismissLocalWarning()"
+              [matTooltip]="'calc.local.hideForNow' | translate"
+              [attr.aria-label]="'calc.local.hideForNow' | translate">
+        <mat-icon>close</mat-icon>
+      </button>
     </p>
   }
 
@@ -47,14 +67,17 @@
             {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
           </span>
           <span class="calc-spacer"></span>
-          <!-- Kapitel-Timer: kumuliert die Rechenzeit dieses Kapitels (Start/Pause). -->
-          <span class="calc-timer" [matTooltip]="'calc.timer.hint' | translate">
-            <mat-icon class="calc-timer-icon">timer</mat-icon>
+          <!-- Kapitel-Training: NUR solange es läuft, wird überhaupt Zeit gemessen. Der
+               Laufzustand ist an Farbe und Symbol ablesbar. -->
+          <span class="calc-timer" [class.calc-timer--running]="timerRunning"
+                [matTooltip]="'calc.timer.hint' | translate">
+            <mat-icon class="calc-timer-icon">{{ timerRunning ? 'timer' : 'timer_off' }}</mat-icon>
             <span class="calc-timer-time">{{ timerDisplay }}</span>
           </span>
-          <button mat-icon-button (click)="toggleTimer()"
-                  [matTooltip]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate">
-            <mat-icon>{{ timerRunning ? 'pause' : 'play_arrow' }}</mat-icon>
+          <button mat-icon-button (click)="toggleTraining()" [disabled]="trainingDisabled"
+                  [matTooltip]="trainingActionKey | translate"
+                  [attr.aria-label]="trainingActionKey | translate">
+            <mat-icon>{{ timerRunning ? 'stop' : 'play_arrow' }}</mat-icon>
           </button>
           <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
             <mat-icon>flip_camera_android</mat-icon>
@@ -69,13 +92,15 @@
             (moveMade)="onMove($event)">
             <!-- Timer neben dem Brett im Vollbild: natives title statt matTooltip
                  (CDK-Overlays sind im Vollbild unsichtbar). -->
-            <div class="calc-fs-timer" data-fs-only [attr.title]="'calc.timer.hint' | translate">
-              <mat-icon class="calc-timer-icon">timer</mat-icon>
+            <div class="calc-fs-timer" data-fs-only [class.calc-fs-timer--running]="timerRunning"
+                 [attr.title]="'calc.timer.hint' | translate">
+              <mat-icon class="calc-timer-icon">{{ timerRunning ? 'timer' : 'timer_off' }}</mat-icon>
               <span class="calc-timer-time">{{ timerDisplay }}</span>
-              <button type="button" class="calc-fs-timer-btn" (click)="toggleTimer()"
-                      [attr.title]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate"
-                      [attr.aria-label]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate">
-                <mat-icon>{{ timerRunning ? 'pause' : 'play_arrow' }}</mat-icon>
+              <button type="button" class="calc-fs-timer-btn" (click)="toggleTraining()"
+                      [disabled]="trainingDisabled"
+                      [attr.title]="trainingActionKey | translate"
+                      [attr.aria-label]="trainingActionKey | translate">
+                <mat-icon>{{ timerRunning ? 'stop' : 'play_arrow' }}</mat-icon>
               </button>
             </div>
           </app-puzzle-board>
@@ -103,14 +128,17 @@
             {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
           </span>
           <span class="calc-spacer"></span>
-          <!-- Kapitel-Timer: kumuliert die Rechenzeit dieses Kapitels (Start/Pause). -->
-          <span class="calc-timer" [matTooltip]="'calc.timer.hint' | translate">
-            <mat-icon class="calc-timer-icon">timer</mat-icon>
+          <!-- Kapitel-Training: NUR solange es läuft, wird überhaupt Zeit gemessen. Der
+               Laufzustand ist an Farbe und Symbol ablesbar. -->
+          <span class="calc-timer" [class.calc-timer--running]="timerRunning"
+                [matTooltip]="'calc.timer.hint' | translate">
+            <mat-icon class="calc-timer-icon">{{ timerRunning ? 'timer' : 'timer_off' }}</mat-icon>
             <span class="calc-timer-time">{{ timerDisplay }}</span>
           </span>
-          <button mat-icon-button (click)="toggleTimer()"
-                  [matTooltip]="(timerRunning ? 'calc.timer.pause' : 'calc.timer.start') | translate">
-            <mat-icon>{{ timerRunning ? 'pause' : 'play_arrow' }}</mat-icon>
+          <button mat-icon-button (click)="toggleTraining()" [disabled]="trainingDisabled"
+                  [matTooltip]="trainingActionKey | translate"
+                  [attr.aria-label]="trainingActionKey | translate">
+            <mat-icon>{{ timerRunning ? 'stop' : 'play_arrow' }}</mat-icon>
           </button>
           <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
             <mat-icon>flip_camera_android</mat-icon>
@@ -165,9 +193,9 @@
           </mat-card-content>
         </mat-card>
 
-        <!-- Festlegung · Rechenzeit · Selbstbewertung. Bewertet wird über die BEDEUTUNG
-             (fünf benannte Stufen), nicht über eine Zahl; die Festlegung selbst wird am Stern
-             in der Linienliste gesetzt. -->
+        <!-- Festlegung · Rechenzeit · Ergebnis. Die fünf Stufen stehen NICHT mehr hier, sondern
+             hinter dem Knopf „Ergebnis" (Dialog): der Modus soll ein Brett bleiben, kein
+             Formular. Die Festlegung selbst wird am Stern in der Linienliste gesetzt. -->
         <mat-card class="calc-review">
           <mat-card-content>
             <div class="calc-review-row">
@@ -181,27 +209,17 @@
                 <span class="calc-review-time">{{ positionTimeDisplay }}</span>
               </span>
               <span class="calc-spacer"></span>
-              <!-- Punkte anzeigen ist erlaubt — gewählt wird trotzdem die Stufe. -->
-              <span class="calc-review-chip" [class.calc-review-chip--set]="review.grade !== null"
-                    [matTooltip]="'calc.review.scoreHint' | translate">
-                @if (review.grade === null) {
-                  <span>{{ 'calc.review.notRated' | translate }}</span>
-                } @else {
+              <!-- Unbewertet heißt der Knopf „Ergebnis", bewertet zeigt er die gewählte Stufe. -->
+              <button type="button" mat-stroked-button class="calc-result-btn"
+                      [class.calc-result-btn--set]="review.grade !== null"
+                      [matTooltip]="'calc.review.resultHint' | translate"
+                      (click)="openGradeDialog()">
+                <mat-icon>rule</mat-icon>
+                <span class="calc-result-label">{{ gradeButtonLabel }}</span>
+                @if (review.grade !== null) {
                   <span class="calc-review-score">{{ scoreDisplay(positionPoints, maxPointsPerPosition) }}</span>
                 }
-              </span>
-            </div>
-
-            <div class="calc-grades" role="group" [attr.aria-label]="'calc.review.gradeLegend' | translate">
-              @for (option of gradeOptions; track option.grade) {
-                <button type="button" class="calc-grade" [class.calc-grade--on]="isGrade(option.grade)"
-                        [attr.aria-pressed]="isGrade(option.grade)"
-                        [matTooltip]="'calc.review.gradeHint' | translate"
-                        (click)="setGrade(option.grade)">
-                  <span class="calc-grade-label">{{ option.labelKey | translate }}</span>
-                  <span class="calc-grade-points">{{ option.points }}</span>
-                </button>
-              }
+              </button>
             </div>
             <p class="calc-hint">{{ 'calc.review.selfRatingHint' | translate }}</p>
           </mat-card-content>
@@ -247,53 +265,102 @@
           </mat-card-content>
         </mat-card>
 
-        <!-- Stellungs-Navigation -->
+        <!-- Auswahl in ZWEI Stufen: erst das Kapitel, dann die Stellung DARIN. -->
         <mat-card class="calc-nav">
           <mat-card-content>
+            <!-- Stufe 1: Kapitel. Der Kopf nennt die Summen des Kapitels (Punkte · Zeit). -->
+            <mat-form-field appearance="outline" class="calc-jump" subscriptSizing="dynamic">
+              <mat-label>{{ 'calc.chapter.label' | translate }}</mat-label>
+              <mat-select [value]="chapterIndex" (selectionChange)="selectChapter($event.value)">
+                @for (group of groups; track group.key) {
+                  <mat-option [value]="$index">{{ chapterLabel(group) }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Training: ohne Start misst nichts — das muss man sehen können. -->
+            <div class="calc-training-row">
+              <span class="calc-training-state" [class.calc-training-state--on]="timerRunning">
+                <mat-icon>{{ timerRunning ? 'play_circle' : 'pause_circle' }}</mat-icon>
+                <!-- Ohne geladene Stellung misst nichts — dann steht hier der GRUND, nicht bloß
+                     „gestoppt" (eine tickende Uhr, die nichts speichert, wäre eine Lüge). -->
+                <span>{{ trainingStateKey | translate }}</span>
+              </span>
+              <span class="calc-spacer"></span>
+              <button mat-stroked-button class="calc-training-btn" (click)="toggleTraining()"
+                      [disabled]="trainingDisabled" [matTooltip]="trainingActionKey | translate">
+                <mat-icon>{{ timerRunning ? 'stop' : 'play_arrow' }}</mat-icon>
+                {{ (timerRunning ? 'calc.timer.stop' : 'calc.timer.start') | translate }}
+              </button>
+            </div>
+
+            <!-- Stufe 2: Weiter/Zurück laufen NUR innerhalb des Kapitels; alle Zahlen hier
+                 gehören ebenfalls dem Kapitel. -->
             <div class="calc-nav-row">
               <button mat-icon-button [disabled]="!hasPrev()" (click)="prevPosition()"
                       [matTooltip]="'calc.prevPosition' | translate">
                 <mat-icon>chevron_left</mat-icon>
               </button>
-              <span class="calc-nav-count">{{ index + 1 }} / {{ positions.length }}</span>
+              <span class="calc-nav-count">{{ index + 1 }} / {{ positionCount }}</span>
               <button mat-icon-button [disabled]="!hasNext()" (click)="nextPosition()"
                       [matTooltip]="'calc.nextPosition' | translate">
                 <mat-icon>chevron_right</mat-icon>
               </button>
               <span class="calc-spacer"></span>
-              <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount, total: positions.length } }}</span>
-              <!-- Bei aktivem Kapitelfilter zeigt die Liste NUR dieses Kapitel — dann ist auch
-                   diese Summe die des Kapitels (siehe `pickTotals`); der Tooltip sagt es. -->
-              <span class="calc-total-points"
-                    [matTooltip]="(chapterFilter ? 'calc.review.totalPointsChapterHint' : 'calc.review.totalPointsHint') | translate">
+              <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount, total: positionCount } }}</span>
+              <span class="calc-total-points" [matTooltip]="'calc.review.totalPointsChapterHint' | translate">
                 {{ 'calc.review.totalPoints' | translate: { score: scoreDisplay(totalPoints, totalMaxPoints) } }}
               </span>
             </div>
 
+            <!-- Die Buchsumme darf vorkommen — aber ausdrücklich als solche beschriftet. -->
+            <p class="calc-book-points" [matTooltip]="'calc.review.bookPointsHint' | translate">
+              {{ 'calc.review.bookPoints' | translate: { score: scoreDisplay(bookPoints, bookMaxPoints) } }}
+            </p>
+
+            <!-- Kapitelende: NICHT von selbst weiterspringen (das mischte die Kapitel-Zeit
+                 still über Kapitelgrenzen), sondern deutlich sagen und den Weg anbieten. -->
+            @if (atChapterEnd || (atLastPosition && hasNextChapter)) {
+              <div class="calc-chapter-done" [class.calc-chapter-done--onward]="!atChapterEnd">
+                <!-- „Durchgearbeitet" wird nur BEHAUPTET, wenn man am Ende angekommen ist — wer
+                     hier einsteigt (Deep-Link, Kapitel mit einer Stellung), hat nichts durch.
+                     Der WEG ins nächste Kapitel steht trotzdem offen. -->
+                @if (atChapterEnd) {
+                  <mat-icon>flag</mat-icon>
+                  <span class="calc-chapter-done-text">
+                    {{ 'calc.chapter.done' | translate: { chapter: chapterName } }}
+                  </span>
+                }
+                @if (hasNextChapter) {
+                  <button mat-flat-button color="primary" class="calc-next-chapter"
+                          (click)="goToNextChapter()">
+                    {{ 'calc.chapter.next' | translate: { chapter: nextChapterName } }}
+                  </button>
+                } @else {
+                  <span class="calc-hint">{{ 'calc.chapter.lastDone' | translate }}</span>
+                }
+              </div>
+            }
+
             <mat-form-field appearance="outline" class="calc-jump" subscriptSizing="dynamic">
               <mat-label>{{ 'calc.jumpTo' | translate }}</mat-label>
               <mat-select [value]="position?.id" (selectionChange)="jumpToPosition($event.value)">
-                @for (group of groups; track $index) {
-                  <!-- Kapitel-Kopf trägt die Summen (Punkte · Zeit). -->
-                  <mat-optgroup [label]="chapterLabel(group)">
-                    @for (item of group.items; track item.id) {
-                      <mat-option [value]="item.id">
-                        {{ item.hasTree ? '✓ ' : '' }}{{ positionLabel(item) }}
-                        <span class="calc-opt-meta">
-                          @if (item.chosenSan) {
-                            <span class="calc-opt-choice">★ {{ item.chosenSan }}</span>
-                          }
-                          @if (item.secondsSpent) {
-                            <span class="calc-opt-time">{{ timeDisplay(item.secondsSpent) }}</span>
-                          }
-                          @if (item.grade !== null) {
-                            <span class="calc-opt-grade">{{ gradeShortLabel(item.grade) }}</span>
-                            <span class="calc-opt-points">{{ scoreDisplay(pointsOf(item), maxPointsPerPosition) }}</span>
-                          }
-                        </span>
-                      </mat-option>
-                    }
-                  </mat-optgroup>
+                @for (item of chapterPositions; track item.id) {
+                  <mat-option [value]="item.id">
+                    {{ item.hasTree ? '✓ ' : '' }}{{ positionLabel(item) }}
+                    <span class="calc-opt-meta">
+                      @if (item.chosenSan) {
+                        <span class="calc-opt-choice">★ {{ item.chosenSan }}</span>
+                      }
+                      @if (item.secondsSpent) {
+                        <span class="calc-opt-time">{{ timeDisplay(item.secondsSpent) }}</span>
+                      }
+                      @if (item.grade !== null) {
+                        <span class="calc-opt-grade">{{ gradeShortLabel(item.grade) }}</span>
+                        <span class="calc-opt-points">{{ scoreDisplay(pointsOf(item), maxPointsPerPosition) }}</span>
+                      }
+                    </span>
+                  </mat-option>
                 }
               </mat-select>
             </mat-form-field>

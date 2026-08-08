@@ -1444,9 +1444,12 @@
     },
     "symbolToggleHint": "click again to remove",
     "timer": {
-      "start": "Start timer",
-      "pause": "Pause timer",
-      "hint": "Accumulated calculation time in this chapter"
+      "start": "Start training",
+      "hint": "Accumulated calculation time in this chapter. It only runs while training is started.",
+      "stop": "Stop training",
+      "running": "Training running — time is being measured",
+      "stopped": "Training stopped — no time is measured",
+      "unavailable": "Training can only be started once a position has loaded."
     },
     "illegalPosition": "This diagram is not a legal chess position, so moves cannot be entered here.",
     "jumpTo": "Jump to position",
@@ -1472,8 +1475,6 @@
         "solved": "Solved",
         "someIdeas": "Saw some ideas"
       },
-      "gradeHint": "Pick a level (click again to clear your rating).",
-      "gradeLegend": "Self-assessment",
       "gradeShort": {
         "moveNoMainLine": "move, no main line",
         "moveNoSideLines": "move, no side lines",
@@ -1482,14 +1483,22 @@
         "someIdeas": "some ideas"
       },
       "noChoice": "No choice yet",
-      "notRated": "Not rated yet",
       "saveFailed": "Your choice, time and rating could not be saved.",
       "scoreHint": "Points for this position (4 at most).",
       "selfRatingHint": "Check the solution in the book, then pick your level — calculation mode never shows a solution.",
       "timeHint": "Active thinking time on this position (paused while the tab is in the background).",
       "totalPoints": "{{score}} pts",
-      "totalPointsHint": "Points of this course from your self-assessment, next to the maximum you can reach.",
-      "totalPointsChapterHint": "Points of this CHAPTER from your self-assessment, next to the maximum you can reach — the list shows this chapter only."
+      "totalPointsChapterHint": "Points of this CHAPTER from your self-assessment, next to the maximum you can reach — the list shows this chapter only.",
+      "result": "Result",
+      "resultHint": "Rate this position yourself (opens the levels).",
+      "bookPoints": "Whole book: {{score}} pts",
+      "bookPointsHint": "Points of the WHOLE course — the numbers above belong to the current chapter.",
+      "dialog": {
+        "choice": "You had committed to {{move}}.",
+        "clear": "Clear rating",
+        "noChoice": "You did not commit to a move.",
+        "title": "Your result"
+      }
     },
     "saveFailed": "Could not save your lines.",
     "savedAt": "Saved {{time}}",
@@ -1499,7 +1508,15 @@
     "local": {
       "notice": "Not signed in: your lines, choices, time and self-rating stay on this device only.",
       "unavailable": "Nothing can be saved on this device right now (private window or storage full): your lines, choices, time and rating will be gone after a reload.",
-      "signIn": "Sign in to save"
+      "signIn": "Sign in to save",
+      "dismiss": "Hide this note",
+      "hideForNow": "Hide for now (returns on the next failed save)"
+    },
+    "chapter": {
+      "done": "Chapter “{{chapter}}” worked through.",
+      "label": "Chapter",
+      "lastDone": "This was the last chapter of the course.",
+      "next": "Next chapter: {{chapter}}"
     }
   },
   "weekly": {

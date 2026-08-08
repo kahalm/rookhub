@@ -5,8 +5,10 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
-import { CalculationComponent } from './calculation.component';
+import { CalculationComponent, CalcPositionGroup } from './calculation.component';
 import { CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved } from './calculation.service';
+import { CalcGradeDialogResult } from './calc-grade-dialog.component';
+import { CALC_NOTICE_PREFIX } from './calc-local.util';
 import { CalcReviewPatch } from './calc-review.util';
 import { findNode, lines } from './calc-tree.util';
 import { VisibilityStopwatch } from '../../puzzles/visibility-stopwatch';
@@ -43,6 +45,26 @@ function fakeReviewServer() {
   };
 }
 
+/**
+ * Dialog-Attrappe: merkt sich, WOMIT geöffnet wurde, und liefert das eingestellte Ergebnis.
+ * `undefined` = weggeklickt (der Normalfall, wenn nichts eingestellt wurde).
+ */
+function fakeDialog() {
+  const opened: { grade: unknown; chosenSan: unknown }[] = [];
+  // Bewusst `unknown`: der Dialog wird über Angular Material geschlossen, und dessen
+  // `mat-dialog-close`-Attribut liefert auch schon mal einen leeren STRING statt `undefined`.
+  // Genau solche Fremdwerte muss die Komponente aushalten (siehe Ergebnis-Dialog-Tests).
+  let result: unknown;
+  return {
+    opened,
+    setResult(value: CalcGradeDialogResult | undefined | unknown): void { result = value; },
+    open(_component: unknown, config?: { data?: { grade: unknown; chosenSan: unknown } }) {
+      opened.push(config?.data ?? { grade: undefined, chosenSan: undefined });
+      return { afterClosed: () => of(result) };
+    },
+  };
+}
+
 /** Komponente ohne Template, mit Stub-Abhängigkeiten — für die reine Bedienlogik. */
 function make(
   api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'deleteTree' | 'saveReview' | 'getPublicBook', unknown>> = {},
@@ -63,6 +85,8 @@ function make(
     ...api,
   };
   const queryParams: Record<string, string | null> = { pos: route.pos ?? null, chapter: route.chapter ?? null };
+  const dialog = fakeDialog();
+  const navigated: Record<string, unknown>[] = [];
   const component = new CalculationComponent(
     {
       snapshot: {
@@ -70,14 +94,21 @@ function make(
         queryParamMap: { get: (k: string) => queryParams[k] ?? null },
       },
     } as never,
-    { navigate: () => Promise.resolve(true), url: '/courses/1/calc' } as never,
+    {
+      navigate: (_commands: unknown, extras?: { queryParams?: Record<string, unknown> }) => {
+        navigated.push(extras?.queryParams ?? {});
+        return Promise.resolve(true);
+      },
+      url: '/courses/1/calc',
+    } as never,
     apiStub as never,
     { boardTheme: 'brown', pieceSet: 'cburnett' } as never,
     { warn: (m: string) => { warnings.push(m); } } as never,
     { instant: (k: string) => k } as never,
     { isLoggedIn: loggedIn } as never,
+    dialog as never,
   );
-  return { component, saved, deleted, warnings, reviews };
+  return { component, saved, deleted, warnings, reviews, dialog, navigated };
 }
 
 function listItem(pos: CalcPosition): CalcPositionListItem {
@@ -93,8 +124,15 @@ function load(component: CalculationComponent, pos: CalcPosition = position()): 
   component.position = pos;
   // Die Sprunglisten-Zeile ist die Quelle für Wahl/Zeit/Stufe — sie muss VOR applyPosition stehen.
   component.positions = [listItem(pos)];
+  // Gearbeitet wird auf den Kapitel-Gruppen: ohne sie gäbe es kein Kapitel und keine Nummerierung.
+  const inner = component as unknown as {
+    groupPositions(items: CalcPositionListItem[]): CalcPositionGroup[];
+    applyPosition(p: CalcPosition): void;
+  };
+  component.groups = inner.groupPositions(component.positions);
+  component.chapterIndex = 0;
   component.index = 0;
-  (component as unknown as { applyPosition: (p: CalcPosition) => void }).applyPosition(pos);
+  inner.applyPosition(pos);
 }
 
 function item(id: number, overrides: Partial<CalcPositionListItem> = {}): CalcPositionListItem {
@@ -635,7 +673,7 @@ describe('CalculationComponent Symbol-Erklärungen', () => {
   });
 });
 
-describe('CalculationComponent Kapitel-Timer', () => {
+describe('CalculationComponent Kapitel-Training (Timer)', () => {
   beforeEach(() => {
     localStorage.clear();
     jasmine.clock().install();
@@ -645,31 +683,32 @@ describe('CalculationComponent Kapitel-Timer', () => {
     localStorage.clear();
   });
 
-  function makeWithBook() {
+  /** Nur die Komponente, ohne Buch — der Speicher-Schlüssel braucht aber eine bookId. */
+  function makeForTimer() {
     const { component } = make();
     component.bookId = 1;             // sonst hieße der Speicher-Schlüssel „…_undefined"
     return component;
   }
 
-  it('zählt nur, solange er läuft, und persistiert je Sekunde', () => {
-    const c = makeWithBook();
+  it('zählt nur, solange das Training läuft, und persistiert je Sekunde', () => {
+    const c = makeForTimer();
     load(c, position({ chapter: 'A' }));
 
-    c.startTimer();
+    c.startTraining();
     jasmine.clock().tick(3000);
     expect(c.timerSeconds).toBe(3);
     expect(c.timerRunning).toBeTrue();
 
-    c.pauseTimer();
+    c.stopTraining();
     jasmine.clock().tick(5000);
     expect(c.timerSeconds).toBe(3);   // pausiert = eingefroren
     expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 3 });
   });
 
   it('kumuliert innerhalb des Kapitels über Stellungswechsel hinweg', () => {
-    const c = makeWithBook();
+    const c = makeForTimer();
     load(c, position({ id: 7, chapter: 'A' }));
-    c.startTimer();
+    c.startTraining();
     jasmine.clock().tick(4000);
 
     load(c, position({ id: 8, chapter: 'A' }));   // nächste Stellung, GLEICHES Kapitel
@@ -679,9 +718,9 @@ describe('CalculationComponent Kapitel-Timer', () => {
   });
 
   it('führt je Kapitel einen eigenen Topf und lädt ihn beim Wechsel zurück', () => {
-    const c = makeWithBook();
+    const c = makeForTimer();
     load(c, position({ id: 7, chapter: 'A' }));
-    c.startTimer();
+    c.startTraining();
     jasmine.clock().tick(4000);
 
     load(c, position({ id: 9, chapter: 'B' }));   // Kapitelwechsel: A wird gesichert, B startet leer
@@ -694,8 +733,68 @@ describe('CalculationComponent Kapitel-Timer', () => {
     expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 4, B: 2 });
   });
 
+  it('lässt sich gar nicht erst starten, wenn die Stellung nicht geladen ist', () => {
+    // `persistTimer()` steigt ohne Kapitel-Schlüssel aus (den setzt erst `applyPosition`): die
+    // Anzeige tickte, gespeichert und gemessen wurde nichts — eine Uhr, die lügt.
+    const { component: c, warnings } = make({
+      getBook: () => of({
+        bookId: 1, displayName: 'B', isCalculation: true, positions: [item(1, { chapter: 'A' })],
+      }),
+      getPosition: () => throwError(() => new Error('offline')),
+    });
+    c.ngOnInit();
+    expect(c.loadError).toBeTrue();
+    expect(c.position).toBeNull();
+    expect(c.canTrain).toBeFalse();
+
+    c.toggleTraining();
+    jasmine.clock().tick(3000);
+
+    expect(c.timerRunning).toBeFalse();
+    expect(c.timerSeconds).toBe(0);
+    // Und es wird gesagt, WARUM — statt still ins Leere zu zählen.
+    expect(warnings).toEqual(['calc.timer.unavailable']);
+    expect(localStorage.getItem('rookhub_calc_timer_1')).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('hält an, wenn das WEITERblättern scheitert — und zeigt nicht das alte Brett weiter', () => {
+    // Scheitert erst der zweite Ladevorgang, blieb `position` auf der VORHERIGEN Stellung stehen,
+    // während Index und URL schon auf der neuen standen: das Brett zeigte etwas anderes, als die
+    // Sprungliste behauptete, und die Kapitel-Uhr tickte weiter, ohne noch etwas zu messen.
+    const { component: c, warnings } = make({
+      getBook: () => of({
+        bookId: 1, displayName: 'B', isCalculation: true,
+        positions: [item(1, { chapter: 'A' }), item(2, { chapter: 'A' })],
+      }),
+      getPosition: (id: number) =>
+        id === 2 ? throwError(() => new Error('offline')) : of(position({ id: 1, chapter: 'A' })),
+    });
+    c.ngOnInit();
+    c.startTraining();
+    jasmine.clock().tick(4000);
+    expect(c.timerRunning).toBeTrue();
+
+    c.nextPosition();                 // dieser Ladevorgang scheitert
+
+    expect(c.loadError).toBeTrue();
+    expect(c.position).toBeNull();    // Vorlage zeigt die Fehlermeldung, nicht die alte Stellung
+    expect(c.canTrain).toBeFalse();
+    expect(c.timerRunning).toBeFalse();
+    // Die bis dahin gemessene Zeit ist gesichert, nicht verloren.
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 4 });
+
+    jasmine.clock().tick(5000);
+    expect(c.timerSeconds).toBe(4);   // steht wirklich still
+
+    c.toggleTraining();               // erneutes Starten geht nicht — und sagt, warum
+    expect(c.timerRunning).toBeFalse();
+    expect(warnings).toEqual(['calc.timer.unavailable']);
+    c.ngOnDestroy();
+  });
+
   it('formatiert die Anzeige als m:ss bzw. h:mm:ss', () => {
-    const c = makeWithBook();
+    const c = makeForTimer();
     load(c, position({ chapter: null }));
     c.timerSeconds = 65;
     expect(c.timerDisplay).toBe('1:05');
@@ -703,10 +802,103 @@ describe('CalculationComponent Kapitel-Timer', () => {
     expect(c.timerDisplay).toBe('1:02:03');
   });
 
-  it('stoppt beim Zerstören und sichert den Stand', () => {
-    const c = makeWithBook();
+  it('misst NICHTS, solange das Training nicht gestartet ist', () => {
+    // Früher lief die Uhr, sobald man eine Stellung nur ansah — eine offene Seite sammelte
+    // stundenlang „Rechenzeit". Ohne Start darf kein `addSeconds` entstehen.
+    const { component: c, reviews } = make();
+    c.bookId = 1;
     load(c, position({ chapter: 'A' }));
-    c.startTimer();
+    const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
+    spyOn(inner.watch, 'stop').and.returnValue(42);
+
+    inner.harvestWatch();
+
+    expect(c.timerRunning).toBeFalse();
+    expect(reviews.length).toBe(0);
+  });
+
+  it('misst ab „Training starten" und schickt die Zeit beim Stoppen', () => {
+    const { component: c, reviews } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+    const inner = c as unknown as { watch: { stop(): number } };
+    spyOn(inner.watch, 'stop').and.returnValue(30);
+
+    c.startTraining();
+    jasmine.clock().tick(3000);
+    c.stopTraining();
+
+    expect(c.timerRunning).toBeFalse();
+    expect(reviews.length).toBe(1);
+    expect(reviews[0].patch.secondsDelta).toBe(30);
+    expect(reviews[0].patch.secondsToken).toBeTruthy();
+  });
+
+  it('schickt die gemessene Zeit auch beim VERLASSEN der Seite', () => {
+    const { component: c, reviews } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+    const inner = c as unknown as { watch: { stop(): number } };
+    spyOn(inner.watch, 'stop').and.returnValue(17);
+
+    c.startTraining();
+    jasmine.clock().tick(2000);
+    c.ngOnDestroy();
+
+    expect(reviews.map(r => r.patch.secondsDelta)).toEqual([17]);
+  });
+
+  it('stoppt das Training beim Kapitelwechsel', () => {
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: 'A' }), item(2, { chapter: 'B' })],
+    });
+    c.bookId = 1;
+    c.startTraining();
+    jasmine.clock().tick(2000);
+
+    c.selectChapter(1);
+
+    // Sonst liefe die Kapitel-Zeit still über die Kapitelgrenze hinweg weiter.
+    expect(c.timerRunning).toBeFalse();
+    expect(c.chapterName).toBe('B');
+  });
+
+  it('überlebt kein Neuladen: der Laufzustand liegt in KEINEM Speicher', () => {
+    const { component: c } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+    c.startTraining();
+    jasmine.clock().tick(2000);
+    c.stopTraining();
+
+    // Gespeichert wird nur die kumulierte ZEIT, nie „läuft gerade".
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 2 });
+    expect(Object.keys(sessionStorage).filter(k => k.startsWith('rookhub_calc'))).toEqual([]);
+    const { component: fresh } = make();
+    fresh.bookId = 1;
+    expect(fresh.timerRunning).toBeFalse();
+  });
+
+  it('akkumuliert über mehrere Durchgänge', () => {
+    const { component: c } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+
+    c.startTraining();
+    jasmine.clock().tick(3000);
+    c.stopTraining();
+    jasmine.clock().tick(9000);          // Pause zählt nicht
+    c.startTraining();
+    jasmine.clock().tick(2000);
+    c.stopTraining();
+
+    expect(c.timerSeconds).toBe(5);
+  });
+
+  it('stoppt beim Zerstören und sichert den Stand', () => {
+    const c = makeForTimer();
+    load(c, position({ chapter: 'A' }));
+    c.startTraining();
     jasmine.clock().tick(2000);
 
     c.ngOnDestroy();
@@ -758,7 +950,7 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
     const { component: c, reviews } = make();
     load(c);
 
-    c.setGrade(3);
+    c.applyGrade(3);
 
     expect(c.review.grade).toBe(3);
     expect(c.positionPoints).toBe(3);
@@ -767,13 +959,13 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
     expect(c.positions[0].grade).toBe(3);
   });
 
-  it('nimmt die Bewertung zurück, wenn dieselbe Stufe erneut geklickt wird', () => {
+  it('nimmt die Bewertung zurück (Dialog liefert null)', () => {
     const { component: c, reviews } = make();
     load(c);
 
-    c.setGrade(0);
+    c.applyGrade(0);
     expect(c.review.grade).toBe(0);      // Stufe 0 IST eine Bewertung
-    c.setGrade(0);
+    c.applyGrade(null);
 
     // „noch nicht bewertet" ist etwas anderes als „nicht gelöst" — und geht als Löschwunsch raus.
     expect(c.review.grade).toBeNull();
@@ -785,8 +977,8 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
     const { component: c } = make();
     load(c);
 
-    c.setGrade(1);
-    c.setGrade(4);
+    c.applyGrade(1);
+    c.applyGrade(4);
 
     expect(c.review.grade).toBe(4);
     expect(c.positionPoints).toBe(4);
@@ -812,7 +1004,7 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
 });
 
 describe('CalculationComponent Summen mit Maximum', () => {
-  it('nennt Kapitel- und Kurssumme immer mit dem Maximum (4 je Stellung)', () => {
+  it('nennt Kapitel- und Buchsumme immer mit dem Maximum (4 je Stellung)', () => {
     const { component: c } = makeWithBook({
       positions: [
         item(1, { chapter: 'Turmendspiele', grade: 4 }),
@@ -825,7 +1017,10 @@ describe('CalculationComponent Summen mit Maximum', () => {
     expect(c.groups.length).toBe(2);
     expect(c.scoreDisplay(c.groups[0].points, c.groups[0].maxPoints)).toBe('6 / 12');
     expect(c.scoreDisplay(c.groups[1].points, c.groups[1].maxPoints)).toBe('1 / 4');
-    expect(c.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('7 / 16');
+    // Die große Zahl unter der Liste gehört dem KAPITEL, in dem man steht …
+    expect(c.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('6 / 12');
+    // … die Buchsumme gibt es weiterhin, aber getrennt und beschriftet.
+    expect(c.scoreDisplay(c.bookPoints, c.bookMaxPoints)).toBe('7 / 16');
     expect(c.chapterLabel(c.groups[0])).toBe('Turmendspiele · calc.review.chapterScore');
   });
 
@@ -854,17 +1049,26 @@ describe('CalculationComponent Summen mit Maximum', () => {
     expect(c.groups[0].points).toBe(7);
     expect(c.groups[0].seconds).toBe(60);
 
-    c.setGrade(4);                            // eigene Änderung ⇒ Server-Summen sind überholt
+    c.applyGrade(4);                            // eigene Änderung ⇒ Server-Summen sind überholt
 
     expect(c.totalPoints).toBe(5);            // jetzt aus den Zeilen: 4 + 1
     expect(c.totalMaxPoints).toBe(8);
     expect(c.groups[0].points).toBe(5);
   });
 
+  it('fasst zwei Blöcke DESSELBEN Kapitels zu EINEM zusammen', () => {
+    // Sonst gäbe es zwei Kapitel gleichen Namens — mit derselben Server-Summe an beiden.
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: 'K1' }), item(2, { chapter: 'K2' }), item(3, { chapter: 'K1' })],
+    });
+    expect(c.groups.map(g => g.chapter)).toEqual(['K1', 'K2']);
+    expect(c.groups[0].items.map(i => i.id)).toEqual([1, 3]);
+  });
+
   it('kommt ohne Server-Summen aus (Maximum ergibt sich aus den Stellungen)', () => {
     const { component: c } = makeWithBook({ positions: [item(1), item(2), item(3)] });
     expect(c.totalPoints).toBe(0);
-    expect(c.totalMaxPoints).toBe(12);
+    expect(c.totalMaxPoints).toBe(12);          // ein Kapitel („ohne Kapitel") mit drei Stellungen
   });
 });
 
@@ -952,6 +1156,7 @@ describe('CalculationComponent Rechenzeit', () => {
       },
     });
     load(c, position({ secondsSpent: 60 }));
+    c.startTraining();          // ohne gestartetes Training misst die Uhr nichts
     const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
     spyOn(inner.watch, 'stop').and.returnValue(42);
 
@@ -963,6 +1168,7 @@ describe('CalculationComponent Rechenzeit', () => {
     expect(reviews[0].patch.secondsToken).toBeTruthy();     // Zeit geht nie ohne Marke raus
     expect(c.review.secondsSpent).toBe(102);
     expect(c.positions[0].secondsSpent).toBe(102);
+    c.ngOnDestroy();
   });
 
   it('wiederholt ein gescheitertes Zeit-Delta mit DERSELBEN Marke', () => {
@@ -979,6 +1185,7 @@ describe('CalculationComponent Rechenzeit', () => {
       },
     });
     load(c);
+    c.startTraining();
     const inner = c as unknown as {
       watch: { stop(): number }; harvestWatch(): void; sendReviews(): void;
     };
@@ -991,11 +1198,13 @@ describe('CalculationComponent Rechenzeit', () => {
     expect(sent[0].secondsToken).toBeTruthy();
     expect(sent[1].secondsToken).toBe(sent[0].secondsToken);
     expect(sent[1].secondsDelta).toBe(42);
+    c.ngOnDestroy();
   });
 
   it('gibt jeder NEUEN Messung eine eigene Marke (sonst zählte die zweite nie)', () => {
     const { component: c, reviews } = make();
     load(c);
+    c.startTraining();
     const inner = c as unknown as {
       watch: { stop(): number }; harvestWatch(): void; beginWatch(id: number): void;
     };
@@ -1007,6 +1216,7 @@ describe('CalculationComponent Rechenzeit', () => {
 
     expect(reviews.length).toBe(2);
     expect(reviews[0].patch.secondsToken).not.toBe(reviews[1].patch.secondsToken);
+    c.ngOnDestroy();
   });
 
   it('lässt die Zeit der Zeile stehen, solange ein neueres Delta wartet', () => {
@@ -1015,6 +1225,7 @@ describe('CalculationComponent Rechenzeit', () => {
     const answer = new Subject<CalcReviewSaved>();
     const { component: c } = make({ saveReview: () => answer });
     load(c, position({ secondsSpent: 60 }));
+    c.startTraining();
     const inner = c as unknown as {
       watch: { stop(): number }; harvestWatch(): void; beginWatch(id: number): void;
     };
@@ -1026,6 +1237,7 @@ describe('CalculationComponent Rechenzeit', () => {
     answer.next({ bookPuzzleId: 7, chosenSan: null, chosenUci: null, secondsSpent: 80, grade: null });
 
     expect(c.positions[0].secondsSpent).toBe(95);   // nicht 80
+    c.ngOnDestroy();
   });
 
   it('schöpft die Zeit ab, ohne etwas zu schicken, wenn nichts gemessen wurde', () => {
@@ -1040,10 +1252,90 @@ describe('CalculationComponent Rechenzeit', () => {
   });
 });
 
-describe('CalculationComponent Bewertungs-Auswahl (Darstellung)', () => {
+describe('CalculationComponent Ergebnis-Dialog', () => {
+  it('öffnet die Stufen als DIALOG und trägt das Ergebnis ein', () => {
+    const { component: c, dialog, reviews } = make();
+    load(c);
+    dialog.setResult(3);
+
+    c.openGradeDialog();
+
+    expect(dialog.opened.length).toBe(1);
+    expect(c.review.grade).toBe(3);
+    expect(reviews).toEqual([{ id: 7, patch: { grade: 3 } }]);
+  });
+
+  it('zeigt dem Dialog die FESTLEGUNG mit („du hattest dich auf … festgelegt")', () => {
+    const { component: c, dialog } = make();
+    load(c, position({ chosenSan: 'Sd5', chosenUci: 'c3d5', grade: 2 }));
+
+    c.openGradeDialog();
+
+    expect(dialog.opened[0]).toEqual({ grade: 2, chosenSan: 'Sd5' });
+  });
+
+  it('nimmt die Bewertung zurück, wenn der Dialog `null` liefert', () => {
+    const { component: c, dialog } = make();
+    load(c, position({ grade: 4 }));
+    dialog.setResult(null);
+
+    c.openGradeDialog();
+
+    expect(c.review.grade).toBeNull();
+  });
+
+  it('lässt alles stehen, wenn der Dialog weggeklickt wird', () => {
+    const { component: c, dialog, reviews } = make();
+    load(c, position({ grade: 4 }));
+    dialog.setResult(undefined);          // abgebrochen ≠ „Bewertung entfernen"
+
+    c.openGradeDialog();
+
+    expect(c.review.grade).toBe(4);
+    expect(reviews.length).toBe(0);
+  });
+
+  it('behandelt einen leeren Fremdwert als „weggeklickt", nicht als Löschbefehl', () => {
+    // Der KNOPF-Pfad „Abbrechen": schließt der Dialog über Angular Material mit dem leeren
+    // String (`mat-dialog-close` befüllt seinen Input so), darf daraus niemals `clearGrade`
+    // werden — wer eine bestehende Bewertung nur ansieht und abbricht, verlöre sie sonst.
+    const { component: c, dialog, reviews } = make();
+    load(c, position({ grade: 4 }));
+    dialog.setResult('');
+
+    c.openGradeDialog();
+
+    expect(c.review.grade).toBe(4);
+    expect(c.positions[0].grade).toBe(4);
+    expect(reviews.length).toBe(0);
+  });
+
+  it('trägt nur echte Stufen ein und lässt anderen Unfug liegen', () => {
+    const { component: c, dialog, reviews } = make();
+    load(c, position({ grade: 2 }));
+
+    for (const junk of ['3', {}, NaN, [], true]) {
+      dialog.setResult(junk);
+      c.openGradeDialog();
+    }
+
+    expect(c.review.grade).toBe(2);
+    expect(reviews.length).toBe(0);
+  });
+
+  it('beschriftet den Knopf mit „Ergebnis" bzw. der gewählten Stufe', () => {
+    const { component: c } = make();
+    load(c);
+    expect(c.gradeButtonLabel).toBe('calc.review.result');
+    c.applyGrade(2);
+    expect(c.gradeButtonLabel).toBe('calc.review.gradeShort.moveNoMainLine');
+  });
+});
+
+describe('CalculationComponent Ergebnis-Knopf (Darstellung)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('zeigt fünf benannte Stufen statt eines Zahlenfelds — Klick auf die gewählte nimmt zurück', async () => {
+  it('zeigt EINEN Knopf statt fünf Stufen-Schaltern — die Stufen stehen im Dialog', async () => {
     await TestBed.configureTestingModule({
       imports: [CalculationComponent],
       providers: [
@@ -1063,25 +1355,17 @@ describe('CalculationComponent Bewertungs-Auswahl (Darstellung)', () => {
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    const buttons = el.querySelectorAll<HTMLButtonElement>('.calc-grade');
-    expect(buttons.length).toBe(5);
-    // Kein Zahlenfeld mehr: die Bedeutung ist die Eingabe.
+    // Der Modus soll ein Brett bleiben, kein Formular: keine Stufen-Reihe in der Seitenspalte.
+    expect(el.querySelectorAll('.calc-grade').length).toBe(0);
     expect(el.querySelector('.calc-review input[type="number"]')).toBeNull();
-    expect(buttons[2].textContent).toContain('calc.review.grade.moveNoMainLine');
-
-    buttons[2].click();
-    fixture.detectChanges();
-    expect(c.review.grade).toBe(2);
-    expect(el.querySelectorAll('.calc-grade--on').length).toBe(1);
-
-    buttons[2].click();
-    fixture.detectChanges();
-    expect(c.review.grade).toBeNull();
-    expect(el.querySelectorAll('.calc-grade--on').length).toBe(0);
+    const button = el.querySelector<HTMLButtonElement>('.calc-result-btn')!;
+    expect(button).not.toBeNull();
+    expect(button.textContent).toContain('calc.review.result');
+    c.ngOnDestroy();
   });
 });
 
-describe('CalculationComponent Kapitel-Filter (?chapter=)', () => {
+describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
   const book = (positions: CalcPositionListItem[]): CalcBook =>
     ({ bookId: 1, displayName: 'B', isCalculation: true, positions });
 
@@ -1092,79 +1376,270 @@ describe('CalculationComponent Kapitel-Filter (?chapter=)', () => {
     return made;
   }
 
-  it('zeigt ohne ?chapter= weiterhin das ganze Buch', () => {
-    const { component: c } = boot([item(1, { chapter: 'A' }), item(2, { chapter: 'B' })], null);
-    expect(c.positions.map(p => p.id)).toEqual([1, 2]);
-    expect(c.chapterFilter).toBeNull();
+  it('steigt ohne ?chapter= im ersten Kapitel mit offener Arbeit ein', () => {
+    const { component: c } = boot(
+      [item(1, { chapter: 'A', hasTree: true }), item(2, { chapter: 'B' })], null);
+    expect(c.chapterName).toBe('B');
+    expect(c.chapterPositions.map(p => p.id)).toEqual([2]);
+    // Das ganze Buch bleibt geladen — nur gearbeitet wird kapitelweise.
+    expect(c.positions.length).toBe(2);
+    expect(c.groups.length).toBe(2);
     c.ngOnDestroy();
   });
 
-  it('beschränkt die Sprungliste auf das Kapitel aus der URL', () => {
+  it('wählt das Kapitel aus der URL vor', () => {
     const { component: c } = boot(
       [item(1, { chapter: 'Woche 46' }), item(2, { chapter: 'Woche 47' }), item(3, { chapter: 'Woche 46' })],
       'Woche 46');
-    expect(c.positions.map(p => p.id)).toEqual([1, 3]);
-    expect(c.chapterFilter).toBe('Woche 46');
-    // Auch die Summen gehören zum Kapitel — 2 Stellungen à 4 Punkte.
+    expect(c.chapterName).toBe('Woche 46');
+    expect(c.chapterPositions.map(p => p.id)).toEqual([1, 3]);
+    // Die Summen gehören dem Kapitel — 2 Stellungen à 4 Punkte.
     expect(c.totalMaxPoints).toBe(8);
     c.ngOnDestroy();
   });
 
   it('vergleicht nachsichtig (getrimmt, ohne Groß-/Kleinschreibung) und nennt den Buch-Namen', () => {
     const { component: c } = boot([item(1, { chapter: 'KW46' }), item(2, { chapter: 'KW47' })], ' kw46 ');
-    expect(c.positions.map(p => p.id)).toEqual([1]);
+    expect(c.chapterPositions.map(p => p.id)).toEqual([1]);
     // Angezeigt wird die Schreibweise aus dem BUCH, nicht die aus der URL.
-    expect(c.chapterFilter).toBe('KW46');
+    expect(c.chapterName).toBe('KW46');
     c.ngOnDestroy();
   });
 
-  it('fällt bei unbekanntem Kapitel auf das ganze Buch zurück, statt eine leere Seite zu zeigen', () => {
+  it('nimmt bei mehrdeutigem ?chapter= das ERSTE passende Kapitel (Gruppen bleiben getrennt)', () => {
+    // Nachsichtig ist nur der VERGLEICH beim Auflösen der URL — gruppiert wird streng wie
+    // serverseitig, „Taktik" und „taktik" bleiben also zwei Kapitel.
+    const { component: c } = boot([
+      item(1, { chapter: 'Taktik' }), item(2, { chapter: 'taktik' }), item(3, { chapter: 'Taktik' }),
+    ], 'TAKTIK');
+    expect(c.chapterName).toBe('Taktik');
+    expect(c.chapterPositions.map(p => p.id)).toEqual([1, 3]);
+    expect(c.groups.length).toBe(2);
+    c.ngOnDestroy();
+  });
+
+  it('behauptet ein unbekanntes Kapitel nicht, sondern steigt normal ein', () => {
     const { component: c } = boot([item(1, { chapter: 'A' }), item(2, { chapter: 'B' })], 'gibt-es-nicht');
-    expect(c.positions.map(p => p.id)).toEqual([1, 2]);
-    expect(c.chapterFilter).toBeNull();
+    expect(c.chapterName).toBe('A');
+    expect(c.groups.length).toBe(2);
     c.ngOnDestroy();
   });
 
-  /**
-   * Die Gesamtsumme unter der Liste muss zu der Liste gehören, die daneben steht. Der Server
-   * rechnet `book.points` über ALLE Stellungen — bei aktivem Kapitelfilter zeigt die Ansicht aber
-   * nur ein Kapitel; die Kapitelsumme kommt in `chapters[]` ohnehin mit.
-   */
-  function bootWithSums(chapter: string | null) {
-    const full: CalcBook = {
-      bookId: 1, displayName: 'B', isCalculation: true,
-      positions: [
-        item(1, { chapter: 'KW46', grade: 4 }), item(2, { chapter: 'KW46' }),
-        item(3, { chapter: 'KW47', grade: 4 }),
-      ],
-      // Der Server zählt bewusst anders als die geladenen Zeilen (5 statt 4 in KW46), damit sich
-      // „Kapitelsumme vom Server" von „aus den Zeilen gerechnet" unterscheiden lässt.
-      chapters: [
-        { chapter: 'KW46', points: 5, maxPoints: 8, secondsSum: 60 },
-        { chapter: 'KW47', points: 3, maxPoints: 4, secondsSum: 30 },
-      ],
-      points: 8, maxPoints: 12, secondsSum: 90,
-    };
-    const made = make({ getBook: () => of(full) }, { chapter });
+  it('steigt bei ?pos= im Kapitel DIESER Stellung ein', () => {
+    const made = make(
+      {
+        getBook: () => of(book([item(1, { chapter: 'A' }), item(2, { chapter: 'B' })])),
+        getPosition: (id: number) => of(position({ id, chapter: id === 2 ? 'B' : 'A' })),
+      },
+      { pos: '2' });
     made.component.ngOnInit();
-    return made;
+    expect(made.component.chapterName).toBe('B');
+    expect(made.component.position?.id).toBe(2);
+    made.component.ngOnDestroy();
+  });
+});
+
+describe('CalculationComponent kapitelweises Arbeiten', () => {
+  /** Zwei Kapitel: A mit drei Stellungen, B mit zwei. */
+  function twoChapters() {
+    return makeWithBook({
+      positions: [
+        item(1, { chapter: 'A' }), item(2, { chapter: 'A' }), item(3, { chapter: 'A' }),
+        item(4, { chapter: 'B' }), item(5, { chapter: 'B' }),
+      ],
+    });
   }
 
-  it('zeigt bei aktivem Kapitelfilter die Summe des KAPITELS, nicht die des ganzen Buchs', () => {
-    const { component: c } = bootWithSums(' kw46 ');
-    expect(c.positions.map(p => p.id)).toEqual([1, 2]);
-    // Ohne den Fix stünden hier die 8 / 12 des ganzen Buchs unter einer Liste von zwei Stellungen.
-    expect(c.totalPoints).toBe(5);
-    expect(c.totalMaxPoints).toBe(8);
-    c.ngOnDestroy();
+  it('iteriert NUR innerhalb des Kapitels', () => {
+    const { component: c } = twoChapters();
+    expect(c.chapterName).toBe('A');
+    expect(c.chapterPositions.map(p => p.id)).toEqual([1, 2, 3]);
+
+    c.nextPosition();
+    c.nextPosition();
+    expect(c.position?.id).toBe(3);
+    // Am Kapitelende ist Schluss: kein stilles Weiterspringen ins nächste Kapitel.
+    expect(c.hasNext()).toBeFalse();
+    expect(c.atChapterEnd).toBeTrue();
+    c.nextPosition();
+    expect(c.position?.id).toBe(3);
   });
 
-  it('zeigt ohne Kapitelfilter weiterhin die Kurssumme', () => {
-    const { component: c } = bootWithSums(null);
-    expect(c.positions.length).toBe(3);
+  it('sagt am Kapitelende, dass das Kapitel durch ist — und bietet den Weg ins nächste', () => {
+    const { component: c } = twoChapters();
+    c.nextPosition(); c.nextPosition();
+    expect(c.atChapterEnd).toBeTrue();
+    expect(c.hasNextChapter).toBeTrue();
+    expect(c.nextChapterName).toBe('B');
+
+    c.goToNextChapter();
+
+    expect(c.chapterName).toBe('B');
+    expect(c.chapterPositions.map(p => p.id)).toEqual([4, 5]);
+    expect(c.index).toBe(0);
+    expect(c.position?.id).toBe(4);
+    expect(c.hasNextChapter).toBeFalse();
+  });
+
+  it('behauptet „durch" NICHT bei einem Kapitel mit einer einzigen Stellung', () => {
+    // „Kapitel durchgearbeitet" ist eine Behauptung — und die stimmte ab der ersten Sekunde nicht,
+    // solange sie allein am Index hing.
+    const { component: c } = makeWithBook({ positions: [item(1, { chapter: 'A' })] });
+    expect(c.atChapterEnd).toBeFalse();
+    // Der ORT stimmt trotzdem: der Weg ins nächste Kapitel darf offen bleiben.
+    expect(c.atLastPosition).toBeTrue();
+  });
+
+  it('behauptet „durch" NICHT beim Deep-Link auf die letzte Stellung', () => {
+    const made = make(
+      {
+        getBook: () => of({
+          bookId: 1, displayName: 'B', isCalculation: true,
+          positions: [item(1, { chapter: 'A' }), item(2, { chapter: 'A' }), item(3, { chapter: 'A' })],
+        }),
+        getPosition: (id: number) => of(position({ id, chapter: 'A' })),
+      },
+      { pos: '3' });
+    made.component.ngOnInit();
+
+    expect(made.component.index).toBe(2);
+    expect(made.component.atChapterEnd).toBeFalse();
+    expect(made.component.atLastPosition).toBeTrue();
+    made.component.ngOnDestroy();
+  });
+
+  it('sagt „durch", sobald man am Kapitelende ANGEKOMMEN ist — und nimmt es zurück', () => {
+    const { component: c } = twoChapters();
+    expect(c.atChapterEnd).toBeFalse();
+
+    c.nextPosition(); c.nextPosition();
+    expect(c.atChapterEnd).toBeTrue();
+
+    c.prevPosition();                 // zurück im Kapitel: nicht mehr am Ende
+    expect(c.atChapterEnd).toBeFalse();
+  });
+
+  it('schreibt Stellung UND Kapitel in die URL (ein Neuladen landet wieder hier)', () => {
+    const { component: c, navigated } = twoChapters();
+    c.selectChapter(1);
+    expect(navigated.at(-1)).toEqual({ pos: 4, chapter: 'B' });
+  });
+
+  it('springt über die Sprungliste auch in ein anderes Kapitel', () => {
+    const { component: c } = twoChapters();
+    c.jumpToPosition(5);
+    expect(c.chapterName).toBe('B');
+    expect(c.position?.id).toBe(5);
+    expect(c.index).toBe(1);
+  });
+
+  it('zählt bearbeitet und Punkte NUR fürs Kapitel', () => {
+    const { component: c } = makeWithBook({
+      positions: [
+        item(1, { chapter: 'A', grade: 4, hasTree: true }),
+        item(2, { chapter: 'A', grade: 1 }),
+        item(3, { chapter: 'B', grade: 4, hasTree: true }),
+        item(4, { chapter: 'B', grade: 4, hasTree: true }),
+      ],
+      chapters: [
+        { chapter: 'A', points: 5, maxPoints: 8, secondsSum: 60 },
+        { chapter: 'B', points: 8, maxPoints: 8, secondsSum: 30 },
+      ],
+      points: 13, maxPoints: 16, secondsSum: 90,
+    });
+
+    // Kapitel A: 2 Stellungen, davon 1 bearbeitet — nicht „1 von 4" des ganzen Buchs.
+    expect(c.chapterName).toBe('A');
+    expect(c.positionCount).toBe(2);
+    expect(c.doneCount).toBe(1);
+    // Punkte kommen fertig aus chapters[] (Server), nicht aus einem zweiten Rechenweg.
+    expect(c.totalPoints).toBe(5);
+    expect(c.totalMaxPoints).toBe(8);
+    // Die Buchsumme bleibt verfügbar — getrennt beschriftet.
+    expect(c.bookPoints).toBe(13);
+    expect(c.bookMaxPoints).toBe(16);
+  });
+
+  it('gruppiert und schlüsselt EXAKT wie der Server (ordinal, roher Name)', () => {
+    // Der Server gruppiert mit StringComparer.Ordinal über den ROHEN Namen (CalculationService
+    // .SummarizeChapters) — „Taktik" und „taktik" sind dort ZWEI Kapitel mit je eigener Summe.
+    // Faßt der Client sie zusammen, zeigt er vier Stellungen mit der Summe von zweien
+    // (Map-Kollision, letzter gewinnt): „8 / 8" bei 16 möglichen Punkten.
+    const { component: c } = makeWithBook({
+      positions: [
+        item(1, { chapter: 'Taktik', grade: 4 }), item(2, { chapter: 'Taktik', grade: 4 }),
+        item(3, { chapter: 'taktik', grade: 4 }), item(4, { chapter: 'taktik', grade: 4 }),
+      ],
+      chapters: [
+        { chapter: 'Taktik', points: 8, maxPoints: 8, secondsSum: 0 },
+        { chapter: 'taktik', points: 8, maxPoints: 8, secondsSum: 0 },
+      ],
+      points: 16, maxPoints: 16, secondsSum: 0,
+    });
+
+    expect(c.groups.map(g => g.chapter)).toEqual(['Taktik', 'taktik']);
+    expect(c.groups.map(g => g.items.length)).toEqual([2, 2]);
+    expect(c.groups.map(g => [g.points, g.maxPoints])).toEqual([[8, 8], [8, 8]]);
     expect(c.totalPoints).toBe(8);
-    expect(c.totalMaxPoints).toBe(12);
-    c.ngOnDestroy();
+    expect(c.totalMaxPoints).toBe(8);
+    expect(c.positionCount).toBe(2);
+  });
+
+  it('hält auch Kapitel auseinander, die sich nur in Leerzeichen unterscheiden', () => {
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: 'Endspiel' }), item(2, { chapter: 'Endspiel ' })],
+      chapters: [
+        { chapter: 'Endspiel', points: 4, maxPoints: 4, secondsSum: 0 },
+        { chapter: 'Endspiel ', points: 0, maxPoints: 4, secondsSum: 0 },
+      ],
+    });
+
+    expect(c.groups.length).toBe(2);
+    expect(c.groups.map(g => g.points)).toEqual([4, 0]);
+  });
+
+  it('behandelt Stellungen ohne Kapitel als eigene Gruppe', () => {
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: null }), item(2, { chapter: 'A' }), item(3, { chapter: '  ' })],
+    });
+    expect(c.groups.map(g => g.chapter)).toEqual([null, 'A']);
+    expect(c.groups[0].items.map(i => i.id)).toEqual([1, 3]);
+    // Ohne Namen steht dort der übersetzte Sammelbegriff, nicht „null".
+    expect(c.chapterName).toBe('courses.noChapter');
+  });
+});
+
+describe('CalculationComponent Nummerierung je Kapitel', () => {
+  /** `round` ist buchweit fortlaufend und hat Lücken — genau das soll NICHT angezeigt werden. */
+  function bookWithGaps() {
+    return makeWithBook({
+      positions: [
+        item(1, { chapter: 'A', round: '3' }),
+        item(2, { chapter: 'B', round: '7' }),
+        item(3, { chapter: 'B', round: '9' }),
+        item(4, { chapter: 'B', round: '12' }),
+      ],
+    });
+  }
+
+  it('nummeriert in JEDEM Kapitel ab 1 — unabhängig von `round`', () => {
+    const { component: c } = bookWithGaps();
+    c.selectChapter(1);
+    expect(c.chapterPositions.map(p => c.positionLabel(p))).toEqual(['#1', '#2', '#3']);
+    expect(c.currentPositionLabel).toBe('#1');
+  });
+
+  it('lässt `round` und die Id unangetastet (reine ANZEIGE)', () => {
+    const { component: c } = bookWithGaps();
+    expect(c.positions.map(p => p.round)).toEqual(['3', '7', '9', '12']);
+    expect(c.positions.map(p => p.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('lässt einem benannten Titel den Vortritt', () => {
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: 'A', round: '7', title: 'Aufgabe X' })],
+    });
+    expect(c.positionLabel(c.chapterPositions[0])).toBe('Aufgabe X');
   });
 });
 
@@ -1206,7 +1681,7 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
     const { component: c, saved, reviews } = anonymous();
     c.onMove({ orig: 'c4' as never, dest: 'f7' as never });
     c.flushSave();
-    c.setGrade(2);
+    c.applyGrade(2);
 
     // Nichts ging an den Server …
     expect(saved).toEqual([]);
@@ -1228,18 +1703,21 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
 
     const second = anonymous();
     expect(second.component.positions[0].hasTree).toBeTrue();
-    // Ohne Deep-Link steigt der Modus bei der ersten UNBEARBEITETEN Stellung ein (hier 12) —
-    // die bearbeitete trägt ihren Baum trotzdem noch.
-    expect(second.component.index).toBe(1);
+    // Kapitel KW46 ist durch → der Einstieg liegt im ersten Kapitel mit offener Arbeit (KW47).
+    expect(second.component.chapterName).toBe('KW47');
+    // Der Sprung zurück wechselt auch das Kapitel; der Baum ist noch da.
     second.component.jumpToPosition(11);
+    expect(second.component.chapterName).toBe('KW46');
     expect(second.component.position?.treeJson).toContain('Bxf7');
     second.component.ngOnDestroy();
   });
 
-  it('filtert auch anonym nach dem Kapitel aus der Kurz-URL', () => {
+  it('wählt auch anonym das Kapitel aus der Kurz-URL vor', () => {
     const { component: c } = anonymous('KW47');
-    expect(c.positions.map(p => p.id)).toEqual([12]);
-    expect(c.chapterFilter).toBe('KW47');
+    expect(c.chapterPositions.map(p => p.id)).toEqual([12]);
+    expect(c.chapterName).toBe('KW47');
+    // Das ganze (öffentliche) Buch bleibt geladen — der Wechsel ins andere Kapitel geht weiter.
+    expect(c.groups.length).toBe(2);
     c.ngOnDestroy();
   });
 
@@ -1257,7 +1735,7 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
     // wäre ab hier eine Lüge; er muss auf „konnte nicht gespeichert werden" umschalten.
     spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
 
-    c.setGrade(2);
+    c.applyGrade(2);
 
     expect(warnings).toContain('calc.review.saveFailed');
     expect(c.localSaveFailed).toBeTrue();
@@ -1267,13 +1745,87 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
   it('nimmt den Hinweis zurück, sobald wieder gespeichert werden kann', () => {
     const { component: c } = anonymous();
     const setItem = spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
-    c.setGrade(2);
+    c.applyGrade(2);
     expect(c.localSaveFailed).toBeTrue();
 
     setItem.and.callThrough();
-    c.setGrade(3);
+    c.applyGrade(3);
 
     expect(c.localSaveFailed).toBeFalse();
+    c.ngOnDestroy();
+  });
+});
+
+describe('CalculationComponent Hinweis wegklicken', () => {
+  const publicBook = {
+    bookId: 1, displayName: 'Öffentlich', isCalculation: true,
+    positions: [{ id: 11, round: '1', title: null, chapter: null, fen: START, setupMoves: '', comment: null }],
+  };
+
+  function anonymous() {
+    const made = make({ getPublicBook: () => of(publicBook) }, {}, false);
+    made.component.ngOnInit();
+    return made;
+  }
+
+  beforeEach(() => {
+    localStorage.removeItem('rookhub_calc_local_1');
+    localStorage.removeItem(`${CALC_NOTICE_PREFIX}1`);
+  });
+  afterEach(() => {
+    localStorage.removeItem('rookhub_calc_local_1');
+    localStorage.removeItem(`${CALC_NOTICE_PREFIX}1`);
+  });
+
+  it('blendet den Anmelde-Hinweis dauerhaft aus (je Kurs gemerkt)', () => {
+    const { component: c } = anonymous();
+    expect(c.showLocalNotice).toBeTrue();
+
+    c.dismissLocalNotice();
+
+    expect(c.showLocalNotice).toBeFalse();
+    c.ngOnDestroy();
+
+    // Auch beim nächsten Aufruf desselben Kurses bleibt er weg.
+    const { component: again } = anonymous();
+    expect(again.showLocalNotice).toBeFalse();
+    again.ngOnDestroy();
+  });
+
+  it('liest den Merker beim Öffnen — nicht erst beim Klicken', () => {
+    localStorage.setItem(`${CALC_NOTICE_PREFIX}1`, '1');
+    const { component: c } = anonymous();
+    expect(c.noticeDismissed).toBeTrue();
+    expect(c.showLocalNotice).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('lässt die WARNUNG (nichts speicherbar) nicht dauerhaft wegklicken', () => {
+    const { component: c } = anonymous();
+    const setItem = spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+    c.applyGrade(2);
+    expect(c.showLocalWarning).toBeTrue();
+
+    c.dismissLocalWarning();
+    expect(c.showLocalWarning).toBeFalse();
+
+    // Der nächste fehlgeschlagene Schreibversuch holt sie zurück: sie meldet Datenverlust.
+    c.applyGrade(3);
+    expect(c.showLocalWarning).toBeTrue();
+
+    setItem.and.callThrough();
+    c.ngOnDestroy();
+  });
+
+  it('zeigt den ruhigen Hinweis nicht, solange die Warnung steht', () => {
+    const { component: c } = anonymous();
+    const setItem = spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+    c.applyGrade(2);
+
+    expect(c.showLocalWarning).toBeTrue();
+    expect(c.showLocalNotice).toBeFalse();
+
+    setItem.and.callThrough();
     c.ngOnDestroy();
   });
 });

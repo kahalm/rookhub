@@ -205,3 +205,33 @@ export function writeCalcLocalReview(bookId: number, bookPuzzleId: number, patch
 export function clearCalcLocal(bookId: number): void {
   try { localStorage.removeItem(storageKey(bookId)); } catch { /* gesperrt → egal */ }
 }
+
+// ===== Weggeklickte Hinweise =================================================
+
+/**
+ * Präfix des Merkers „der Hinweis ‚liegt nur auf diesem Gerät' wurde weggeklickt" — je Kurs
+ * (`…_<bookId>`), damit die Auskunft in einem anderen Kurs wieder auftaucht.
+ *
+ * Gilt AUSDRÜCKLICH nur für den ruhigen Hinweis. Die WARNUNG, dass gerade gar nichts gespeichert
+ * werden kann (gesperrter/voller Speicher), darf hier nie landen: sie meldet Datenverlust und
+ * verschwindet höchstens für die laufende Sitzung (Feld in der Komponente, nicht hier).
+ */
+export const CALC_NOTICE_PREFIX = 'rookhub_calc_note_off_';
+
+function noticeKey(bookId: number): string {
+  return `${CALC_NOTICE_PREFIX}${bookId}`;
+}
+
+/** Wurde der Hinweis für diesen Kurs schon weggeklickt? (Gesperrter Speicher ⇒ „nein".) */
+export function readCalcNoticeDismissed(bookId: number): boolean {
+  try { return localStorage.getItem(noticeKey(bookId)) === '1'; } catch { return false; }
+}
+
+/** Merker setzen/löschen. Wie überall hier: ein gesperrter/voller Speicher darf NICHT werfen —
+ *  der Hinweis kommt dann eben beim nächsten Aufruf wieder, das ist der harmlose Ausgang. */
+export function writeCalcNoticeDismissed(bookId: number, dismissed = true): void {
+  try {
+    if (dismissed) localStorage.setItem(noticeKey(bookId), '1');
+    else localStorage.removeItem(noticeKey(bookId));
+  } catch { /* voll/gesperrt → Hinweis bleibt sichtbar */ }
+}

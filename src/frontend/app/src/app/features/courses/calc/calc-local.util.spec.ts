@@ -1,7 +1,7 @@
 import {
-  CALC_LOCAL_MAX_POSITIONS, CALC_LOCAL_MAX_TREE_CHARS, CALC_LOCAL_PREFIX,
+  CALC_LOCAL_MAX_POSITIONS, CALC_LOCAL_MAX_TREE_CHARS, CALC_LOCAL_PREFIX, CALC_NOTICE_PREFIX,
   clearCalcLocal, deleteCalcLocalTree, readCalcLocal, readCalcLocalEntry, readCalcLocalReview,
-  writeCalcLocalReview, writeCalcLocalTree,
+  readCalcNoticeDismissed, writeCalcLocalReview, writeCalcLocalTree, writeCalcNoticeDismissed,
 } from './calc-local.util';
 
 const BOOK = 4242;
@@ -109,5 +109,31 @@ describe('calc-local.util', () => {
   it('wirft nicht, wenn schon das LESEN gesperrt ist', () => {
     spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
     expect(readCalcLocal(BOOK)).toEqual({});
+  });
+});
+
+describe('calc-local.util weggeklickter Hinweis', () => {
+  const NOTE = `${CALC_NOTICE_PREFIX}${BOOK}`;
+
+  beforeEach(() => localStorage.removeItem(NOTE));
+  afterEach(() => localStorage.removeItem(NOTE));
+
+  it('merkt sich das Wegklicken je Buch und nimmt es wieder zurück', () => {
+    expect(readCalcNoticeDismissed(BOOK)).toBeFalse();
+
+    writeCalcNoticeDismissed(BOOK);
+    expect(readCalcNoticeDismissed(BOOK)).toBeTrue();
+    expect(readCalcNoticeDismissed(BOOK + 1)).toBeFalse();   // anderer Kurs, eigener Merker
+
+    writeCalcNoticeDismissed(BOOK, false);
+    expect(readCalcNoticeDismissed(BOOK)).toBeFalse();
+  });
+
+  it('wirft nicht, wenn der Speicher gesperrt ist (Privatmodus) — der Hinweis bleibt eben', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+    spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
+
+    expect(() => writeCalcNoticeDismissed(BOOK)).not.toThrow();
+    expect(readCalcNoticeDismissed(BOOK)).toBeFalse();
   });
 });

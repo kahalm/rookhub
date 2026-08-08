@@ -1444,9 +1444,12 @@
     },
     "symbolToggleHint": "klikni ponovno za brisanje",
     "timer": {
-      "start": "Pokreni mjerač",
-      "pause": "Pauziraj mjerač",
-      "hint": "Ukupno vrijeme računanja u ovom poglavlju"
+      "start": "Pokreni trening",
+      "hint": "Ukupno vrijeme računanja u ovom poglavlju. Teče samo dok je trening pokrenut.",
+      "stop": "Zaustavi trening",
+      "running": "Trening teče — vrijeme se mjeri",
+      "stopped": "Trening zaustavljen — vrijeme se ne mjeri",
+      "unavailable": "Trening se može pokrenuti tek kad je pozicija učitana."
     },
     "illegalPosition": "Ovaj dijagram nije legalna šahovska pozicija — ovdje se potezi ne mogu unositi.",
     "jumpTo": "Skoči na poziciju",
@@ -1472,8 +1475,6 @@
         "solved": "Riješeno",
         "someIdeas": "Viđene neke ideje"
       },
-      "gradeHint": "Odaberi razinu (ponovni klik poništava ocjenu).",
-      "gradeLegend": "Samoocjena",
       "gradeShort": {
         "moveNoMainLine": "potez, bez glavnog",
         "moveNoSideLines": "potez, bez sporednih",
@@ -1482,14 +1483,22 @@
         "someIdeas": "neke ideje"
       },
       "noChoice": "Još bez izbora",
-      "notRated": "Još nije ocijenjeno",
       "saveFailed": "Izbor, vrijeme i ocjena nisu spremljeni.",
       "scoreHint": "Bodovi ove pozicije (najviše 4).",
       "selfRatingHint": "Provjeri rješenje u knjizi pa odaberi svoju razinu — način računanja nikad ne prikazuje rješenje.",
       "timeHint": "Aktivno vrijeme računanja na ovoj poziciji (pauzira kad je kartica u pozadini).",
       "totalPoints": "{{score}} bod.",
-      "totalPointsHint": "Bodovi ovog tečaja iz tvoje samoocjene, uz najveći mogući broj.",
-      "totalPointsChapterHint": "Bodovi ovog POGLAVLJA iz tvoje samoocjene, uz najveći mogući broj — popis prikazuje samo ovo poglavlje."
+      "totalPointsChapterHint": "Bodovi ovog POGLAVLJA iz tvoje samoocjene, uz najveći mogući broj — popis prikazuje samo ovo poglavlje.",
+      "result": "Rezultat",
+      "resultHint": "Sam ocijeni ovu poziciju (otvara razine).",
+      "bookPoints": "Cijela knjiga: {{score}} bod.",
+      "bookPointsHint": "Bodovi CIJELOG tečaja — brojevi iznad pripadaju trenutnom poglavlju.",
+      "dialog": {
+        "choice": "Odlučio si se za {{move}}.",
+        "clear": "Poništi ocjenu",
+        "noChoice": "Nisi se odlučio ni za jedan potez.",
+        "title": "Tvoj rezultat"
+      }
     },
     "saveFailed": "Tvoje varijante nije bilo moguće spremiti.",
     "savedAt": "Spremljeno {{time}}",
@@ -1499,7 +1508,15 @@
     "local": {
       "notice": "Niste prijavljeni: vaše linije, odabir, vrijeme i samoocjena ostaju samo na ovom uređaju.",
       "unavailable": "Na ovom uređaju trenutačno se NIŠTA ne može spremiti (privatni prozor ili je memorija puna): varijante, odabir, vrijeme i ocjena nestat će nakon ponovnog učitavanja.",
-      "signIn": "Prijavite se za spremanje"
+      "signIn": "Prijavite se za spremanje",
+      "dismiss": "Sakrij napomenu",
+      "hideForNow": "Sakrij za sada (vraća se pri sljedećem neuspjelom spremanju)"
+    },
+    "chapter": {
+      "done": "Poglavlje „{{chapter}}\" je obrađeno.",
+      "label": "Poglavlje",
+      "lastDone": "To je bilo posljednje poglavlje tečaja.",
+      "next": "Sljedeće poglavlje: {{chapter}}"
     }
   },
   "weekly": {

@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Color, Key } from 'chessground/types';
 import { Subscription } from 'rxjs';
@@ -33,11 +34,19 @@ import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
+import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
+import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
 import { AuthService } from '../../../core/auth.service';
 
-/** Stellungen eines Kapitels für die Sprungliste — samt der Kapitel-Summen. */
-interface CalcPositionGroup {
+/** Stellungen EINES Kapitels — die Arbeitseinheit dieses Modus, samt der Kapitel-Summen. */
+export interface CalcPositionGroup {
   chapter: string | null;
+  /**
+   * Schlüssel des Kapitels — EXAKT der des Servers ({@link chapterKey}): ordinal über den ROHEN
+   * Namen. Gruppenbildung und das Nachschlagen der Server-Summen benutzen ihn gemeinsam, sonst
+   * zeigt die Ansicht die Zeilen des einen und die Summe eines anderen Kapitels.
+   */
+  key: string;
   items: CalcPositionListItem[];
   /** Erreichte Punkte des Kapitels. */
   points: number;
@@ -47,11 +56,32 @@ interface CalcPositionGroup {
   seconds: number;
 }
 
+/** Eigener Schlüssel für „ohne Kapitel" — ein Name, den es als Kapitelname nicht geben kann
+ *  (Spiegel von `CalculationService.SummarizeChapters`). */
+const NO_CHAPTER_KEY = '\u0000';
+
 /**
- * Kapitelnamen nachsichtig vergleichen (getrimmt, ohne Groß-/Kleinschreibung): der Name kommt aus
- * einer URL, die jemand abgetippt haben kann. EINE Stelle, damit Zeilen-Filter und Summen-Auswahl
- * nie unterschiedlich treffen (sonst zeigt die Ansicht die Zeilen des einen und die Summe eines
- * anderen Kapitels).
+ * Schlüssel eines Kapitels — GENAU wie serverseitig: ordinal über den ROHEN Namen, nur
+ * leer/whitespace zählt als „ohne Kapitel".
+ *
+ * Die Strenge ist Absicht. Der Server gruppiert in `CalculationService.SummarizeChapters` mit
+ * `StringComparer.Ordinal` und liefert die Kapitel-SUMMEN fertig aus (`chapters[]`); die Ansicht
+ * schlägt sie hier nach. Faßte der Client zwei Kapitel zusammen, die sich nur in Groß-/Klein-
+ * schreibung oder Leerzeichen unterscheiden (bei `PUT /chapters/rename` erlaubt, die Duplikat-
+ * Prüfung ist ebenfalls ordinal), zeigte er die Zeilen BEIDER mit der Summe EINER — die Map-
+ * Kollision überschreibt still die erste. Der Server ist die Wahrheit für die Summen, der Client
+ * richtet sich danach.
+ *
+ * Nachsichtig verglichen wird bewusst NUR beim Auflösen von `?chapter=` (siehe {@link normChapter}).
+ */
+function chapterKey(chapter: string | null | undefined): string {
+  return chapter?.trim() ? chapter : NO_CHAPTER_KEY;
+}
+
+/**
+ * Kapitelnamen nachsichtig vergleichen (getrimmt, ohne Groß-/Kleinschreibung) — AUSSCHLIESSLICH
+ * für den Kapitel-Wunsch aus der URL (`?chapter=`, Kurz-URL `/{slug}/{kapitel}`): der Name kann
+ * abgetippt sein, ein Link soll trotzdem treffen. Für Gruppen und Summen gilt {@link chapterKey}.
  */
 function normChapter(value: string | null | undefined): string {
   return (value ?? '').trim().toLocaleLowerCase();
@@ -88,9 +118,35 @@ function normChapter(value: string | null | undefined): string {
 export class CalculationComponent implements OnInit, OnDestroy {
   bookId!: number;
   book: CalcBook | null = null;
+  /** ALLE Stellungen des Buchs (Quelle der Kapitel-Gruppen) — gearbeitet wird nie auf dieser Liste. */
   positions: CalcPositionListItem[] = [];
+  /** Die Kapitel in Lesereihenfolge; „ohne Kapitel" ist eines davon. */
   groups: CalcPositionGroup[] = [];
+  /**
+   * Welches KAPITEL bearbeitet wird (Index in {@link groups}); -1 = noch keins gewählt.
+   *
+   * Der Modus ist kapitelweise: Weiter/Zurück, Sprungliste, Zähler und Punkte beziehen sich alle
+   * auf dieses eine Kapitel. Am Kapitelende wird BEWUSST nicht weitergesprungen — sonst mischte
+   * die Kapitel-Zeit (siehe Training) still über Kapitelgrenzen hinweg.
+   */
+  chapterIndex = -1;
+  /** Stellung INNERHALB des Kapitels (Index in {@link chapterPositions}). */
   index = 0;
+
+  /**
+   * Ist der Nutzer am Kapitelende ANGEKOMMEN (durchnavigiert), statt dort einzusteigen? Nur dann
+   * darf „Kapitel durchgearbeitet" behauptet werden (siehe {@link atChapterEnd}). Wird beim
+   * Betreten eines Kapitels zurückgesetzt und bei jedem Sprung innerhalb des Kapitels nachgeführt.
+   */
+  private arrivedAtChapterEnd = false;
+
+  /**
+   * Angezeigte Nummer je Stellung: ihre Position IM KAPITEL, beginnend bei 1 (BookPuzzleId →
+   * Nummer). Bewusst nicht `round`: das ist die buchweit fortlaufende Nummer und hat Lücken,
+   * sobald Linien gelöscht wurden („#7" bis „#12" in einem Kapitel mit sechs Stellungen).
+   * Reine Anzeige — in der Datenbank wird NICHTS umnummeriert.
+   */
+  private chapterNumbers = new Map<number, number>();
 
   // ===== Woher kommen die Daten? ===========================================
   // Angemeldet: der Server. Anonym (öffentlicher Kalkulations-Kurs per Kurz-URL): der
@@ -111,15 +167,53 @@ export class CalculationComponent implements OnInit, OnDestroy {
    */
   localSaveFailed = false;
 
+  /**
+   * Der ruhige Hinweis „liegt nur auf diesem Gerät" wurde für DIESEN Kurs weggeklickt
+   * (localStorage, siehe `calc-local.util.ts`). Er ist ein Vorschlag — den darf man abstellen.
+   */
+  noticeDismissed = false;
+
+  /**
+   * Die WARNUNG „kann gerade gar nicht gespeichert werden" wurde weggeklickt. Bewusst NUR im
+   * Speicher und bewusst nicht dauerhaft: sie meldet Datenverlust, keinen Vorschlag — beim
+   * nächsten fehlgeschlagenen Schreibversuch steht sie wieder da (siehe {@link setLocalSaveFailed}).
+   */
+  warningDismissed = false;
+
   /** Anmelde-Link führt GENAU hierher zurück (inkl. `?pos=`/`?chapter=`). */
   get loginReturnUrl(): string { return this.router.url; }
 
+  /** Der ruhige Geräte-Hinweis (anonym, Speicher tut es) — wegklickbar. */
+  get showLocalNotice(): boolean {
+    return this.localOnly && !this.localSaveFailed && !this.noticeDismissed;
+  }
+
+  /** Die Warnung, dass gerade NICHTS gespeichert werden kann — nur für die Sitzung wegklickbar. */
+  get showLocalWarning(): boolean {
+    return this.localOnly && this.localSaveFailed && !this.warningDismissed;
+  }
+
+  dismissLocalNotice(): void {
+    this.noticeDismissed = true;
+    writeCalcNoticeDismissed(this.bookId);
+  }
+
+  /** Nur für diese Sitzung: der nächste Fehlschlag holt die Warnung zurück. */
+  dismissLocalWarning(): void {
+    this.warningDismissed = true;
+  }
+
+  /** Einzige Stelle, die `localSaveFailed` setzt: jeder NEUE Fehlschlag zeigt die Warnung wieder. */
+  private setLocalSaveFailed(failed: boolean): void {
+    if (failed) this.warningDismissed = false;
+    this.localSaveFailed = failed;
+  }
+
   /**
-   * Kapitel-Filter aus `?chapter=` (gesetzt von der Kurz-URL `/{slug}/{kapitel}`): die
-   * Sprungliste zeigt dann nur dieses Kapitel. `null` = ganzes Buch wie bisher.
+   * Kapitel-Wunsch aus `?chapter=` (Kurz-URL `/{slug}/{kapitel}`) — er WÄHLT das Kapitel vor,
+   * filtert aber nichts mehr weg: gewechselt werden kann weiterhin zu jedem anderen Kapitel.
+   * Was in der URL stand, kann anders geschrieben sein als der Kapitelname im Buch.
    */
-  chapterFilter: string | null = null;
-  /** Was in der URL stand — kann anders geschrieben sein als der Kapitelname im Buch. */
   private requestedChapter: string | null = null;
 
   position: CalcPosition | null = null;
@@ -144,12 +238,17 @@ export class CalculationComponent implements OnInit, OnDestroy {
   boardTheme = 'brown';
   pieceSet = 'cburnett';
 
-  // ===== Kapitel-Timer =====================================================
+  // ===== Kapitel-Training (Timer) ==========================================
   // Kumuliert die Rechenzeit JE KAPITEL (nicht je Stellung): beim Stellungswechsel innerhalb
   // desselben Kapitels läuft derselbe Zähler weiter, beim Kapitelwechsel wird der Topf des
-  // neuen Kapitels geladen. Persistiert je Gerät in localStorage (`rookhub_calc_timer_<bookId>`,
-  // Map Kapitelname→Sekunden) — bewusst ohne Server-Anteil: der Timer ist ein Trainingswerkzeug,
-  // kein Wertungsbestandteil.
+  // neuen Kapitels geladen. Die AKKUMULIERTE Zeit liegt je Gerät im localStorage
+  // (`rookhub_calc_timer_<bookId>`, Map Kapitelname→Sekunden) — bewusst ohne Server-Anteil:
+  // sie ist ein Trainingswerkzeug, kein Wertungsbestandteil.
+  //
+  // Der LAUFZUSTAND dagegen lebt NUR hier im Speicher und wird nirgends persistiert: ein
+  // Zustand, der ein Neuladen überlebt, fängt sich irgendwann eine vergessene Stunde ein.
+  // Solange nicht gestartet wurde, misst auch die Stellungs-Uhr nichts (siehe `beginWatch`)
+  // und es geht kein `addSeconds` an den Server.
   timerRunning = false;
   timerSeconds = 0;
   /** Kapitel-Schlüssel des laufenden Zählers ('' = „ohne Kapitel"); null = noch nicht geladen. */
@@ -167,9 +266,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
   readonly gradeOptions = CALC_GRADE_OPTIONS;
   /** Höchstpunktzahl einer einzelnen Stellung (für „2 / 4"). */
   readonly maxPointsPerPosition = CALC_MAX_POINTS_PER_POSITION;
-  /** Erreichte/erreichbare Punkte des ganzen Kurses. */
+  /** Erreichte/erreichbare Punkte des AKTUELLEN KAPITELS (das ist die Arbeitseinheit). */
   totalPoints = 0;
   totalMaxPoints = 0;
+  /** Dieselben Zahlen fürs ganze Buch — dürfen vorkommen, aber nur ausdrücklich beschriftet. */
+  bookPoints = 0;
+  bookMaxPoints = 0;
   /** Sekunden der laufenden Sitzung an dieser Stellung (nur Anzeige; gesendet wird das Delta). */
   liveSeconds = 0;
 
@@ -185,15 +287,56 @@ export class CalculationComponent implements OnInit, OnDestroy {
   readonly glyphs = CALC_GLYPHS;
   readonly evals = CALC_EVALS;
 
-  // ===== Kapitel-Timer =====================================================
+  // ===== Kapitel-Training starten/stoppen ==================================
 
-  toggleTimer(): void {
-    if (this.timerRunning) this.pauseTimer(); else this.startTimer();
+  toggleTraining(): void {
+    if (this.timerRunning) this.stopTraining(); else this.startTraining();
   }
 
-  startTimer(): void {
+  /**
+   * Darf JETZT gemessen werden? Nur mit geladener Stellung: der Kapitel-Topf
+   * ({@link timerChapterKey}) entsteht erst in {@link applyPosition} — ohne ihn speichert
+   * `persistTimer()` nichts und `beginWatch` hätte keine Stellung, der die Zeit gehört. Scheitert
+   * das Laden (`loadError`), tickte die Anzeige also vor sich hin, ohne irgendetwas zu messen oder
+   * zu sichern: eine Uhr, die lügt. Dann lieber gar nicht erst starten (und sagen, warum).
+   */
+  get canTrain(): boolean {
+    return !this.loadError && this.position !== null && this.timerChapterKey !== null;
+  }
+
+  /** Stoppen muss immer gehen — gesperrt wird nur das STARTEN ohne geladene Stellung. */
+  get trainingDisabled(): boolean {
+    return !this.timerRunning && !this.canTrain;
+  }
+
+  /** Beschriftung/Erklärung des Trainings-Knopfes — inklusive des Grundes, wenn es nicht geht. */
+  get trainingActionKey(): string {
+    if (this.timerRunning) return 'calc.timer.stop';
+    return this.canTrain ? 'calc.timer.start' : 'calc.timer.unavailable';
+  }
+
+  /** Laufzustand in Worten; ohne ladbare Stellung steht dort der Grund statt „gestoppt". */
+  get trainingStateKey(): string {
+    if (this.timerRunning) return 'calc.timer.running';
+    return this.canTrain ? 'calc.timer.stopped' : 'calc.timer.unavailable';
+  }
+
+  /**
+   * Ab jetzt wird gemessen — und zwar beides: die kumulierte KAPITEL-Zeit und (über die
+   * VisibilityStopwatch) die Rechenzeit der angezeigten STELLUNG. Ohne diesen Start läuft nichts;
+   * das bloße Ansehen einer Stellung ist kein Training.
+   */
+  startTraining(): void {
     if (this.timerRunning) return;
+    // Ohne geladene Stellung misst und speichert nichts (siehe {@link canTrain}) — statt still ins
+    // Leere zu zählen, geht der Start gar nicht erst los und sagt es.
+    if (!this.canTrain) {
+      this.snackbar.warn(this.translate.instant('calc.timer.unavailable'));
+      return;
+    }
     this.timerRunning = true;
+    // Die Stellungs-Uhr wird erst hier aufgezogen (`beginWatch` misst nur bei laufendem Training).
+    if (this.position) this.beginWatch(this.position.id);
     this.timerHandle = setInterval(() => {
       this.timerSeconds++;
       // Jede Sekunde persistieren: übersteht Tab-Schließen/Navigieren ohne eigenen Flush-Pfad.
@@ -201,11 +344,16 @@ export class CalculationComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  pauseTimer(): void {
+  /**
+   * Stoppen heißt auch ABRECHNEN: die bis hierher gemessene Stellungszeit geht noch raus
+   * (`harvestWatch`), sonst wäre sie mit dem Stopp verloren.
+   */
+  stopTraining(): void {
     if (!this.timerRunning) return;
     this.timerRunning = false;
     if (this.timerHandle !== undefined) { clearInterval(this.timerHandle); this.timerHandle = undefined; }
     this.persistTimer();
+    this.harvestWatch();
   }
 
   /** Angezeigte kumulierte Kapitel-Zeit (m:ss bzw. h:mm:ss). */
@@ -214,9 +362,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Beim Stellungswechsel den Zähler-Topf des Kapitels nachziehen: gleiches Kapitel → weiterzählen,
-   * anderes Kapitel → alten Stand sichern und den des neuen Kapitels laden. Ein laufender Timer
-   * läuft über den Wechsel hinweg weiter (zählt dann ins neue Kapitel).
+   * Beim Stellungswechsel den Zähler-Topf des Kapitels nachziehen: gleiches Kapitel → weiterzählen
+   * (die Zeit AKKUMULIERT über mehrere Durchgänge), anderes Kapitel → alten Stand sichern und den
+   * des neuen Kapitels laden. Ein Kapitelwechsel stoppt das Training ohnehin vorher.
    */
   private syncTimerChapter(chapter: string | null): void {
     const key = chapter ?? '';
@@ -287,6 +435,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private auth: AuthService,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -299,6 +448,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     if (!this.auth?.isLoggedIn && Number.isFinite(this.bookId)) {
       this.localBackend = new LocalCalculationBackend(this.api, this.bookId);
     }
+    this.noticeDismissed = readCalcNoticeDismissed(this.bookId);
     const requested = Number(this.route.snapshot.queryParamMap.get('pos')) || null;
     this.loadBook(requested);
     // Nur Anzeige: die Stoppuhr selbst zählt ohne Takt weiter (und pausiert bei verstecktem Tab).
@@ -306,7 +456,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.pauseTimer();
+    this.stopTraining();     // stoppt UND schöpft die gemessene Zeit ab
     if (this.liveHandle !== undefined) { clearInterval(this.liveHandle); this.liveHandle = undefined; }
     this.clearSaveTimer();
     this.flushSave();
@@ -323,17 +473,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.subs.add(this.backend.getBook(this.bookId).subscribe({
       next: book => {
         this.book = book;
-        this.positions = this.applyChapterFilter(book.positions.map(p => this.normalizeItem(p)));
+        this.positions = book.positions.map(p => this.normalizeItem(p));
         this.groups = this.groupPositions(this.positions);
         this.takeServerSums(book);
         if (this.positions.length === 0) { this.loading = false; return; }
-        const wanted = requestedPositionId != null
-          ? this.positions.findIndex(p => p.id === requestedPositionId)
-          : -1;
-        // Ohne Deep-Link bei der ersten noch unbearbeiteten Stellung einsteigen.
-        const firstOpen = this.positions.findIndex(p => !p.hasTree);
-        this.index = wanted >= 0 ? wanted : (firstOpen >= 0 ? firstOpen : 0);
-        this.loadPosition(this.positions[this.index].id);
+        // Erst das KAPITEL, dann die Stellung darin — der Modus arbeitet ein Kapitel durch.
+        this.enterChapter(this.pickChapter(requestedPositionId), requestedPositionId, false);
       },
       error: () => { this.loading = false; this.loadError = true; },
     }));
@@ -359,6 +504,15 @@ export class CalculationComponent implements OnInit, OnDestroy {
         if (epoch !== this.loadEpoch) return;
         this.loading = false;
         this.loadError = true;
+        // Beim WEITERblättern stünde sonst weiter das Brett der VORHERIGEN Stellung da, während
+        // Index, URL und Sprungliste schon auf der neuen stehen — dieselbe Verwechslung, gegen die
+        // oben der Epoch-Zähler schützt, nur über den Fehlerpfad. Die Arbeit an der alten Stellung
+        // ist zu diesem Zeitpunkt bereits abgeflossen (`leaveCurrentPosition` vor dem Laden), es
+        // geht also nichts verloren; ohne Stellung zeigt die Vorlage die Fehlermeldung.
+        this.position = null;
+        // Und ohne Stellung wird nicht gemessen: sonst tickte die Kapitel-Uhr weiter, während man
+        // auf eine Fehlermeldung schaut. `stopTraining` sichert die bis hierhin gemessene Zeit.
+        this.stopTraining();
       },
     }));
   }
@@ -400,33 +554,133 @@ export class CalculationComponent implements OnInit, OnDestroy {
     return chess.fen();
   }
 
-  /**
-   * `?chapter=` anwenden: nur die Stellungen dieses Kapitels. Verglichen wird nachsichtig
-   * (getrimmt, ohne Groß-/Kleinschreibung) — der Kapitelname kommt aus einer URL, die jemand
-   * abgetippt haben kann.
-   *
-   * Trifft der Filter NICHTS (Kapitel umbenannt, Tippfehler), bleibt das ganze Buch stehen und
-   * der Filter wird auch nicht behauptet: eine leere Seite mit einem Kapitelnamen im Titel wäre
-   * die schlechtere Auskunft.
-   */
-  private applyChapterFilter(all: CalcPositionListItem[]): CalcPositionListItem[] {
-    const wanted = this.requestedChapter;
-    this.chapterFilter = null;
-    if (!wanted) return all;
-    const target = normChapter(wanted);
-    const hits = all.filter(p => normChapter(p.chapter) === target);
-    if (hits.length === 0) return all;
-    this.chapterFilter = hits[0].chapter?.trim() || wanted;
-    return hits;
+  // ===== Kapitel (Stufe 1 der Auswahl) ======================================
+
+  /** Das gerade bearbeitete Kapitel; `null`, solange nichts geladen ist. */
+  get chapter(): CalcPositionGroup | null {
+    return this.groups[this.chapterIndex] ?? null;
   }
 
+  /** Nur die Stellungen dieses Kapitels — die einzige Liste, auf der navigiert wird. */
+  get chapterPositions(): CalcPositionListItem[] {
+    return this.chapter?.items ?? [];
+  }
+
+  /** Anzeigename des Kapitels („ohne Kapitel" ist auch einer). */
+  get chapterName(): string {
+    const group = this.chapter;
+    if (!group) return '';
+    return group.chapter || this.translate.instant('courses.noChapter');
+  }
+
+  get hasNextChapter(): boolean { return this.chapterIndex >= 0 && this.chapterIndex < this.groups.length - 1; }
+
+  get nextChapterName(): string {
+    const next = this.groups[this.chapterIndex + 1];
+    if (!next) return '';
+    return next.chapter || this.translate.instant('courses.noChapter');
+  }
+
+  /**
+   * Kapitel wechseln. Das ist bewusst ein SCHNITT: offene Speicherungen raus, Training stoppen
+   * (damit die Kapitel-Zeit nicht über die Grenze hinweg weiterläuft) und in der neuen Liste bei
+   * der ersten unbearbeiteten Stellung einsteigen.
+   */
+  selectChapter(chapterIndex: number): void {
+    if (chapterIndex === this.chapterIndex || !this.groups[chapterIndex]) return;
+    this.stopTraining();          // Kapitelwechsel beendet das Training (und rechnet es ab)
+    this.leaveCurrentPosition();
+    this.enterChapter(chapterIndex, null, true);
+  }
+
+  /** Der Weg ins nächste Kapitel — ausdrücklich per Knopf, nie von selbst (siehe {@link chapterIndex}). */
+  goToNextChapter(): void {
+    if (this.hasNextChapter) this.selectChapter(this.chapterIndex + 1);
+  }
+
+  /**
+   * Reine ORTSANGABE: die angezeigte Stellung ist die letzte des Kapitels. Daran hängt der WEG ins
+   * nächste Kapitel — der darf immer offen stehen, auch wenn hier gerade erst eingestiegen wurde.
+   */
+  get atLastPosition(): boolean {
+    const items = this.chapterPositions;
+    return items.length > 0 && this.index >= items.length - 1;
+  }
+
+  /**
+   * „Kapitel durchgearbeitet" — das ist eine BEHAUPTUNG, und die muss stimmen. Sie gilt erst, wenn
+   * man am Ende ANGEKOMMEN ist (siehe {@link arrivedAtChapterEnd}), nicht wenn man dort startet:
+   * am Index allein hängend meldete ein Kapitel mit genau EINER Stellung ab der ersten Sekunde
+   * „durch", ebenso ein Deep-Link (`?pos=`) auf die letzte Stellung.
+   */
+  get atChapterEnd(): boolean {
+    return this.atLastPosition && this.arrivedAtChapterEnd;
+  }
+
+  /**
+   * Welches Kapitel wird beim Öffnen bearbeitet? Reihenfolge: `?chapter=` aus der Kurz-URL
+   * (nachsichtig verglichen — der Name kommt aus einer URL, die jemand abgetippt haben kann),
+   * sonst das Kapitel der per `?pos=` verlangten Stellung, sonst das erste mit offener Arbeit.
+   *
+   * Trifft `?chapter=` nichts (Kapitel umbenannt, Tippfehler), wird der Wunsch nicht behauptet:
+   * es geht normal weiter, statt eine leere Seite mit fremdem Kapitelnamen zu zeigen.
+   */
+  private pickChapter(requestedPositionId: number | null): number {
+    const wanted = normChapter(this.requestedChapter);
+    if (wanted) {
+      // NACHSICHTIG und nur hier: verglichen wird der Anzeigename, nicht der (strenge)
+      // Gruppen-Schlüssel — ein abgetippter Link soll auch bei abweichender Schreibweise treffen.
+      // Passen mehrere (etwa „Taktik" neben „taktik"), gewinnt das erste Kapitel des Buchs.
+      const hit = this.groups.findIndex(g => normChapter(g.chapter) === wanted);
+      if (hit >= 0) return hit;
+    }
+    if (requestedPositionId != null) {
+      const hit = this.groups.findIndex(g => g.items.some(p => p.id === requestedPositionId));
+      if (hit >= 0) return hit;
+    }
+    const open = this.groups.findIndex(g => g.items.some(p => !p.hasTree));
+    return open >= 0 ? open : 0;
+  }
+
+  /** Kapitel öffnen und die Einstiegsstellung laden (Deep-Link, sonst erste unbearbeitete). */
+  private enterChapter(chapterIndex: number, requestedPositionId: number | null, updateUrl: boolean): void {
+    this.chapterIndex = chapterIndex;
+    // Einsteigen ist kein Durcharbeiten — auch nicht, wenn der Einstieg auf der letzten Stellung
+    // liegt (Deep-Link, Kapitel mit einer einzigen Stellung).
+    this.arrivedAtChapterEnd = false;
+    this.refreshSums();
+    const items = this.chapterPositions;
+    if (items.length === 0) { this.loading = false; return; }
+    const wanted = requestedPositionId != null ? items.findIndex(p => p.id === requestedPositionId) : -1;
+    const firstOpen = items.findIndex(p => !p.hasTree);
+    this.index = wanted >= 0 ? wanted : (firstOpen >= 0 ? firstOpen : 0);
+    const id = items[this.index].id;
+    if (updateUrl) this.syncUrl(id);
+    this.loadPosition(id);
+  }
+
+  /**
+   * Kapitel EINDEUTIG je Name gruppieren (nicht bloß aufeinanderfolgende Läufe): stünden zwei
+   * Blöcke desselben Kapitels in der Liste, gäbe es zwei Kapitel gleichen Namens — mit derselben
+   * Server-Summe an beiden. Stellungen ohne Kapitel bilden ihre eigene Gruppe.
+   */
   private groupPositions(positions: CalcPositionListItem[]): CalcPositionGroup[] {
+    const byKey = new Map<string, CalcPositionGroup>();
     const out: CalcPositionGroup[] = [];
+    this.chapterNumbers.clear();
     for (const p of positions) {
       const chapter = p.chapter?.trim() ? p.chapter : null;
-      const last = out.at(-1);
-      if (last && last.chapter === chapter) last.items.push(p);
-      else out.push({ chapter, items: [p], points: 0, maxPoints: 0, seconds: 0 });
+      const key = chapterKey(chapter);
+      let group = byKey.get(key);
+      if (!group) {
+        group = { chapter, key, items: [], points: 0, maxPoints: 0, seconds: 0 };
+        byKey.set(key, group);
+        out.push(group);
+      }
+      group.items.push(p);
+      // Nummerierung ist reine ANZEIGE: sie zählt die Stellung IM KAPITEL. `round`/`id` bleiben
+      // unangetastet — an ihnen hängen Fortschritt und gespeicherte Bäume.
+      this.chapterNumbers.set(p.id, group.items.length);
     }
     return out;
   }
@@ -448,7 +702,11 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private takeServerSums(book: CalcBook): void {
     this.serverSums.clear();
     for (const c of book.chapters ?? []) {
-      this.serverSums.set(c.chapter ?? '', {
+      // Schlüssel wie bei den Gruppen (siehe CalcPositionGroup.key) — sonst findet das Kapitel
+      // seine eigene Summe nicht wieder und die Ansicht rechnet still selbst. Und wie beim Server:
+      // zwei Kapitel, die sich nur in Schreibweise/Leerzeichen unterscheiden, haben ZWEI Summen —
+      // ein nachsichtiger Schlüssel ließe die eine die andere überschreiben.
+      this.serverSums.set(chapterKey(c.chapter), {
         points: c.points ?? 0,
         maxPoints: c.maxPoints ?? 0,
         // `secondsSum`, nicht `secondsSpent`: der Server liefert eine SUMME (siehe
@@ -460,44 +718,35 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.refreshSums();
   }
 
-  /**
-   * Welche Gesamtsumme steht unter der Liste — die des KURSES oder die des KAPITELS?
-   *
-   * Bei `/{slug}/{kapitel}` zeigt die Liste nur dieses eine Kapitel; `book.points`/`book.maxPoints`
-   * rechnet der Server aber über ALLE Stellungen des Buchs. Beides zusammen ergäbe eine Zahl, die
-   * zu nichts Sichtbarem gehört („3 / 8 Punkte" unter zwei angezeigten Stellungen). Angezeigt wird
-   * deshalb die Summe des Kapitels — sie kommt in `chapters[]` ohnehin mit, ist also dieselbe
-   * serverseitige Wahrheit, nur im Zuschnitt der Liste. Der Tooltip benennt den Zuschnitt (siehe
-   * `calc.review.totalPointsChapterHint`), das Kapitel steht zusätzlich im Seitentitel.
-   *
-   * Findet sich zum Filter keine Kapitelsumme (älterer Server ohne `chapters[]`), gibt es hier
-   * `null` — dann rechnet `refreshSums` aus den sichtbaren Zeilen, was ebenfalls das Kapitel meint.
-   */
+  /** Buchsumme, falls der Server eine mitliefert (sonst rechnet {@link refreshSums} sie selbst). */
   private pickTotals(book: CalcBook): { points: number; maxPoints: number } | null {
-    if (this.chapterFilter) {
-      const target = normChapter(this.chapterFilter);
-      const chapter = (book.chapters ?? []).find(c => normChapter(c.chapter) === target);
-      return chapter
-        ? { points: chapter.points ?? 0, maxPoints: chapter.maxPoints || maxPoints(this.positions.length) }
-        : null;
-    }
     return typeof book.points === 'number'
       ? { points: book.points, maxPoints: book.maxPoints ?? maxPoints(this.positions.length) }
       : null;
   }
 
-  /** Kapitel-Summen + Kurssumme neu setzen (Server-Werte, solange vorhanden). */
+  /**
+   * Kapitel-Summen + Buchsumme neu setzen (Server-Werte, solange vorhanden).
+   *
+   * Die angezeigte Gesamtsumme ist die des KAPITELS: der Nutzer steht in einem Kapitel, eine Zahl
+   * über das ganze Buch gehörte zu nichts Sichtbarem („19 / 48" unter sechs Stellungen). Sie kommt
+   * fertig aus `chapters[]` — dieselbe serverseitige Wahrheit im richtigen Zuschnitt, KEIN zweiter
+   * Rechenweg im Client. Die Buchsumme steht daneben, aber ausdrücklich als solche beschriftet.
+   */
   private refreshSums(): void {
     for (const group of this.groups) {
-      const fromServer = this.serverSums.get(group.chapter ?? '');
+      const fromServer = this.serverSums.get(group.key);
       group.points = fromServer ? fromServer.points : sumPoints(group.items);
       // Das Maximum hängt nur an der Zahl der Stellungen — der Server darf es liefern, die
       // Ansicht kann es aber jederzeit selbst ausrechnen.
       group.maxPoints = fromServer?.maxPoints || maxPoints(group.items.length);
       group.seconds = fromServer ? fromServer.seconds : sumSeconds(group.items);
     }
-    this.totalPoints = this.serverTotals ? this.serverTotals.points : sumPoints(this.positions);
-    this.totalMaxPoints = this.serverTotals?.maxPoints || maxPoints(this.positions.length);
+    const chapter = this.chapter;
+    this.totalPoints = chapter ? chapter.points : 0;
+    this.totalMaxPoints = chapter ? chapter.maxPoints : 0;
+    this.bookPoints = this.serverTotals ? this.serverTotals.points : sumPoints(this.positions);
+    this.bookMaxPoints = this.serverTotals?.maxPoints || maxPoints(this.positions.length);
   }
 
   /** Nach einer eigenen Änderung sind die Server-Summen überholt — ab jetzt selbst rechnen. */
@@ -656,15 +905,50 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Eine Stufe wählen. Die Auswahl geht über die BEDEUTUNG, nicht über eine Zahl — dieselbe Stufe
-   * noch einmal nimmt die Bewertung zurück („noch nicht bewertet", ausdrücklich ≠ Stufe 0).
+   * Ergebnis eintragen: eine benannte Stufe oder `null` = „noch nicht bewertet" (ausdrücklich
+   * ≠ Stufe 0 „nicht gelöst"). Die Auswahl selbst passiert im Dialog, nicht mehr inline.
    */
-  setGrade(grade: CalcGrade): void {
-    this.setReview({ grade: this.review.grade === grade ? null : grade });
+  applyGrade(grade: CalcGrade | null): void {
+    this.setReview({ grade });
   }
 
   isGrade(grade: CalcGrade): boolean {
     return this.review.grade === grade;
+  }
+
+  /**
+   * Der Knopf „Ergebnis" öffnet die Auswahl. Bewusst ein Dialog statt fünf Schaltern in der
+   * Seitenspalte: der Modus soll ein Brett bleiben, kein Formular (UI-Dichte-Regel).
+   */
+  openGradeDialog(): void {
+    const ref = this.dialog.open<CalcGradeDialogComponent, unknown, CalcGradeDialogResult>(
+      CalcGradeDialogComponent, {
+        data: { grade: this.review.grade, chosenSan: this.review.chosenSan },
+        width: '440px',
+        autoFocus: false,
+      });
+    this.subs.add(ref.afterClosed().subscribe(result => {
+      // Durchgelassen wird nur ein ECHTES Ergebnis: eine Zahl = Stufe, `null` = Bewertung
+      // ausdrücklich zurücknehmen. Alles andere heißt „weggeklickt, nichts ändern".
+      //
+      // Bewusst NICHT auf `undefined` prüfen: was hier ankommt, befüllt teils ein fremdes
+      // Framework (ein `mat-dialog-close`-Attribut schließt mit dem leeren STRING). Ein solcher
+      // Wert liefe über `normalizeGrade('') === null` als `clearGrade` an den Server — wer eine
+      // bestehende Bewertung nur ansieht und abbricht, verlöre sie. Ein Löschbefehl muss aus
+      // einer AUSDRÜCKLICHEN Handlung kommen, nicht aus einem Vorgabewert.
+      if (typeof result === 'number' && Number.isFinite(result)) {
+        this.applyGrade(normalizeGrade(result));
+      } else if (result === null) {
+        this.applyGrade(null);
+      }
+    }));
+  }
+
+  /** Beschriftung des Knopfes: unbewertet „Ergebnis", sonst die gewählte Stufe. */
+  get gradeButtonLabel(): string {
+    return this.review.grade === null
+      ? this.translate.instant('calc.review.result')
+      : this.gradeShortLabel(this.review.grade);
   }
 
   /** Optimistisch anzeigen + an den Server einreihen. */
@@ -701,9 +985,15 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Rechenzeit messen ==================================================
 
-  /** Uhr für die angezeigte Stellung neu aufziehen (vorherige Zeit vorher abschöpfen). */
+  /**
+   * Uhr für die angezeigte Stellung neu aufziehen (vorherige Zeit vorher abschöpfen).
+   *
+   * NUR bei gestartetem Kapitel-Training: das bloße Ansehen einer Stellung ist kein Training, und
+   * ohne laufende Uhr geht auch kein `addSeconds` an den Server.
+   */
   private beginWatch(bookPuzzleId: number): void {
     this.harvestWatch();
+    if (!this.timerRunning) return;
     this.watchPositionId = bookPuzzleId;
     this.watch.start(0);
     this.liveSeconds = 0;
@@ -759,7 +1049,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
       this.backend.saveReview(bookPuzzleId, patch).subscribe({
         next: res => {
           this.reviewInFlight.delete(bookPuzzleId);
-          this.localSaveFailed = false;
+          this.setLocalSaveFailed(false);
           this.applyServerReview(bookPuzzleId, res);
           if (this.reviewOutbox.has(bookPuzzleId)) this.sendReviews();
         },
@@ -777,7 +1067,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
           // Anonym ist der „Server" der Gerätespeicher: dann ist der Hinweis „liegt nur auf diesem
           // Gerät" falsch — es liegt gerade nirgends, und das muss stehen bleiben (der Snackbar-
           // Hinweis ist nach ein paar Sekunden weg).
-          this.localSaveFailed = this.localOnly;
+          this.setLocalSaveFailed(this.localOnly);
           this.snackbar.warn(this.translate.instant('calc.review.saveFailed'));
         },
       });
@@ -819,7 +1109,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get cursorNode(): CalcNode | undefined { return findNode(this.tree, this.cursorId); }
   get atStart(): boolean { return this.cursorId === this.tree.rootId; }
   get lineCount(): number { return lines(this.tree).length; }
-  get doneCount(): number { return this.positions.filter(p => p.hasTree).length; }
+  /** Bearbeitete Stellungen des KAPITELS (alle Zahlen dieser Ansicht meinen das Kapitel). */
+  get doneCount(): number { return this.chapterPositions.filter(p => p.hasTree).length; }
+  /** Stellungen des Kapitels — Nenner von „3 / 6" und „bearbeitet". */
+  get positionCount(): number { return this.chapterPositions.length; }
   get whiteToMoveAtCursor(): boolean { return whiteToMove(this.cursorFen || this.startFen); }
 
   /** Notation des Pfades zum Cursor („wo stehe ich") — der einzige Ort, an dem der Vorlauf sichtbar ist. */
@@ -830,11 +1123,23 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get currentPositionLabel(): string {
     const pos = this.position;
     if (!pos) return '';
-    return pos.title?.trim() ? pos.title : `#${pos.round}`;
+    if (pos.title?.trim()) return pos.title;
+    const number = this.chapterNumbers.get(pos.id);
+    return number ? `#${number}` : `#${pos.round}`;
   }
 
   positionLabel(item: CalcPositionListItem): string {
-    return item.title?.trim() ? item.title : `#${item.round}`;
+    return item.title?.trim() ? item.title : `#${this.chapterNumberOf(item)}`;
+  }
+
+  /**
+   * Die ANGEZEIGTE Nummer einer Stellung: ihre Position im Kapitel (1, 2, 3 …). Fällt auf
+   * `round` zurück, solange die Gruppen noch nicht stehen — `round`/`id` selbst bleiben
+   * unverändert, sie sind die Identität der Linie.
+   */
+  chapterNumberOf(item: CalcPositionListItem): string {
+    const number = this.chapterNumbers.get(item.id);
+    return number ? String(number) : item.round;
   }
 
   /** Rechenzeit an der ANGEZEIGTEN Stellung inkl. der laufenden Sitzung. */
@@ -876,31 +1181,58 @@ export class CalculationComponent implements OnInit, OnDestroy {
     return `${name} · ${summary}`;
   }
 
-  // ===== Stellungs-Navigation ==============================================
+  // ===== Stellungs-Navigation (Stufe 2: INNERHALB des Kapitels) =============
 
   hasPrev(): boolean { return this.index > 0; }
-  hasNext(): boolean { return this.index < this.positions.length - 1; }
+  hasNext(): boolean { return this.index < this.chapterPositions.length - 1; }
 
   prevPosition(): void { if (this.hasPrev()) this.goToIndex(this.index - 1); }
   nextPosition(): void { if (this.hasNext()) this.goToIndex(this.index + 1); }
 
+  /** Sprung in der Liste. Zeigt der Sprung aus dem Kapitel heraus, wird das Kapitel gewechselt. */
   jumpToPosition(bookPuzzleId: number): void {
-    const idx = this.positions.findIndex(p => p.id === bookPuzzleId);
-    if (idx >= 0 && idx !== this.index) this.goToIndex(idx);
+    const idx = this.chapterPositions.findIndex(p => p.id === bookPuzzleId);
+    if (idx >= 0) {
+      if (idx !== this.index) this.goToIndex(idx);
+      return;
+    }
+    const other = this.groups.findIndex(g => g.items.some(p => p.id === bookPuzzleId));
+    if (other < 0) return;
+    this.stopTraining();          // auch das ist ein Kapitelwechsel
+    this.leaveCurrentPosition();
+    this.enterChapter(other, bookPuzzleId, true);
   }
 
   private goToIndex(index: number): void {
+    this.leaveCurrentPosition();
+    this.index = index;
+    // Hier wird NAVIGIERT — nur so entsteht „am Ende angekommen" (und geht beim Zurückgehen
+    // wieder verloren).
+    this.arrivedAtChapterEnd = this.atLastPosition;
+    const id = this.chapterPositions[index].id;
+    this.syncUrl(id);
+    this.loadPosition(id);
+  }
+
+  /**
+   * Alles abschließen, was an der GERADE angezeigten Stellung hängt: offene Speicherung raus und
+   * die an ihr gemessene Zeit abschöpfen (sonst ginge sie verloren, falls die nächste Stellung gar
+   * nicht erst lädt).
+   */
+  private leaveCurrentPosition(): void {
     this.clearSaveTimer();
     this.flushSave();
-    // Die an DIESER Stellung gemessene Zeit gehört noch zu ihr — vor dem Wechsel abschöpfen
-    // (sonst ginge sie verloren, falls die nächste Stellung gar nicht erst lädt).
     this.harvestWatch();
-    this.index = index;
-    const id = this.positions[index].id;
+  }
+
+  /** URL nachziehen: Stellung UND Kapitel, damit ein Neuladen dieselbe Ansicht wiederherstellt. */
+  private syncUrl(bookPuzzleId: number): void {
     this.router.navigate([], {
-      relativeTo: this.route, queryParams: { pos: id }, queryParamsHandling: 'merge', replaceUrl: true,
+      relativeTo: this.route,
+      queryParams: { pos: bookPuzzleId, chapter: this.chapter?.chapter ?? null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
-    this.loadPosition(id);
   }
 
   // ===== Speichern ==========================================================
@@ -982,7 +1314,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     if (this.isCurrent(bookPuzzleId)) this.saving = true;
     this.backend.saveTree(bookPuzzleId, json).subscribe({
       next: res => {
-        this.localSaveFailed = false;
+        this.setLocalSaveFailed(false);
         if (this.isCurrent(bookPuzzleId)) {
           this.saving = false;
           this.hadStoredTree = true;
@@ -1031,7 +1363,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     // Kein `dirty = true`: das Flag hängt am GERADE geladenen Baum — nach einem Stellungswechsel
     // hätte es den nächsten Flush auf die falsche (neue) Stellung gelenkt und den bearbeiteten
     // Baum der alten Stellung verworfen. Der Wiederholversuch läuft über `outbox` (je Stellung).
-    this.localSaveFailed = this.localOnly;   // anonym = Gerätespeicher (siehe `localSaveFailed`)
+    this.setLocalSaveFailed(this.localOnly);   // anonym = Gerätespeicher (siehe `localSaveFailed`)
     this.snackbar.warn(this.translate.instant('calc.saveFailed'));
   }
 

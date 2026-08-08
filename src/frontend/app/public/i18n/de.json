@@ -1444,9 +1444,12 @@
     },
     "symbolToggleHint": "nochmal klicken = entfernen",
     "timer": {
-      "start": "Timer starten",
-      "pause": "Timer pausieren",
-      "hint": "Kumulierte Rechenzeit in diesem Kapitel"
+      "start": "Training starten",
+      "hint": "Kumulierte Rechenzeit in diesem Kapitel. Sie läuft nur bei gestartetem Training.",
+      "stop": "Training stoppen",
+      "running": "Training läuft — die Zeit wird gemessen",
+      "stopped": "Training gestoppt — es wird keine Zeit gemessen",
+      "unavailable": "Training lässt sich erst starten, wenn eine Stellung geladen ist."
     },
     "illegalPosition": "Dieses Diagramm ist keine legale Schachstellung — hier lassen sich keine Züge eingeben.",
     "jumpTo": "Zu Stellung springen",
@@ -1472,8 +1475,6 @@
         "solved": "Gelöst",
         "someIdeas": "Manche Ideen gesehen"
       },
-      "gradeHint": "Stufe wählen (nochmal klicken = Bewertung zurücknehmen).",
-      "gradeLegend": "Selbstbewertung",
       "gradeShort": {
         "moveNoMainLine": "Zug, ohne Hauptfolge",
         "moveNoSideLines": "Zug, ohne Nebenfolgen",
@@ -1482,14 +1483,22 @@
         "someIdeas": "Ideen gesehen"
       },
       "noChoice": "Noch nicht festgelegt",
-      "notRated": "Noch nicht bewertet",
       "saveFailed": "Wahl, Zeit und Bewertung konnten nicht gespeichert werden.",
       "scoreHint": "Punkte dieser Stellung (höchstens 4).",
       "selfRatingHint": "Prüf die Lösung im Buch und wähl dann deine Stufe — der Kalkulations-Modus zeigt keine Lösung.",
       "timeHint": "Aktive Rechenzeit an dieser Stellung (pausiert, wenn der Tab im Hintergrund liegt).",
       "totalPoints": "{{score}} Punkte",
-      "totalPointsHint": "Punkte dieses Kurses aus deiner Selbstbewertung, mit der erreichbaren Höchstzahl.",
-      "totalPointsChapterHint": "Punkte dieses KAPITELS aus deiner Selbstbewertung, mit der erreichbaren Höchstzahl — die Liste zeigt nur dieses Kapitel."
+      "totalPointsChapterHint": "Punkte dieses KAPITELS aus deiner Selbstbewertung, mit der erreichbaren Höchstzahl — die Liste zeigt nur dieses Kapitel.",
+      "result": "Ergebnis",
+      "resultHint": "Stellung selbst bewerten (öffnet die Stufen).",
+      "bookPoints": "Ganzes Buch: {{score}} Pkt",
+      "bookPointsHint": "Punkte des GANZEN Kurses — die Zahlen darüber gehören zum aktuellen Kapitel.",
+      "dialog": {
+        "choice": "Du hattest dich auf {{move}} festgelegt.",
+        "clear": "Bewertung zurücknehmen",
+        "noChoice": "Du hast dich auf keinen Zug festgelegt.",
+        "title": "Dein Ergebnis"
+      }
     },
     "saveFailed": "Deine Linien konnten nicht gespeichert werden.",
     "savedAt": "Gespeichert {{time}}",
@@ -1499,7 +1508,15 @@
     "local": {
       "notice": "Nicht angemeldet: Linien, Festlegung, Zeit und Bewertung bleiben nur auf diesem Gerät.",
       "unavailable": "Auf diesem Gerät kann gerade GAR NICHTS gespeichert werden (privates Fenster oder Speicher voll): Linien, Festlegung, Zeit und Bewertung sind nach dem Neuladen weg.",
-      "signIn": "Anmelden zum Speichern"
+      "signIn": "Anmelden zum Speichern",
+      "dismiss": "Hinweis ausblenden",
+      "hideForNow": "Vorerst ausblenden (kommt beim nächsten Fehlschlag wieder)"
+    },
+    "chapter": {
+      "done": "Kapitel „{{chapter}}\" durchgearbeitet.",
+      "label": "Kapitel",
+      "lastDone": "Das war das letzte Kapitel des Kurses.",
+      "next": "Nächstes Kapitel: {{chapter}}"
     }
   },
   "weekly": {
