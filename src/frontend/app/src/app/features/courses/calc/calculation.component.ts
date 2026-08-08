@@ -30,8 +30,10 @@ import {
   mergeReviewPatch, newSecondsToken, normalizeGrade, sumPoints, sumSeconds,
 } from './calc-review.util';
 import {
-  CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
+  CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
 } from './calculation.service';
+import { LocalCalculationBackend } from './calc-local.backend';
+import { AuthService } from '../../../core/auth.service';
 
 /** Stellungen eines Kapitels für die Sprungliste — samt der Kapitel-Summen. */
 interface CalcPositionGroup {
@@ -46,6 +48,16 @@ interface CalcPositionGroup {
 }
 
 /**
+ * Kapitelnamen nachsichtig vergleichen (getrimmt, ohne Groß-/Kleinschreibung): der Name kommt aus
+ * einer URL, die jemand abgetippt haben kann. EINE Stelle, damit Zeilen-Filter und Summen-Auswahl
+ * nie unterschiedlich treffen (sonst zeigt die Ansicht die Zeilen des einen und die Summe eines
+ * anderen Kapitels).
+ */
+function normChapter(value: string | null | undefined): string {
+  return (value ?? '').trim().toLocaleLowerCase();
+}
+
+/**
  * Kalkulations-Modus für Kalkulationsbücher (`Book.IsCalculation`): der Nutzer sieht NUR die
  * Stellung (FEN + optionaler Aufgabentext) — es gibt keine Lösung. Das Brett bleibt STRIKT
  * eingefroren: Klicks werden als Züge erfasst (für beide Seiten), verändern das Brett aber nicht.
@@ -55,6 +67,11 @@ interface CalcPositionGroup {
  * der Linie navigieren · ↑/↓ = Linie wechseln · Zug mitten in einer Linie auswählen und einen
  * anderen Zug klicken = Abzweigung · Symbolleiste = Zug-/Stellungsbewertung · Kommentar je Zug/Linie.
  * Gespeichert wird pro Nutzer und Stellung serverseitig (automatisch, entprellt).
+ *
+ * **Ohne Konto geht es auch** (öffentliche Kurz-URL `/{slug}`): dann kommen die Stellungen lesend
+ * vom öffentlichen Endpoint und alles Selbstgemachte — Baum, Festlegung, Zeit, Bewertung — bleibt
+ * im localStorage DIESES Geräts (`LocalCalculationBackend`). Die Bedienung ist identisch; ein
+ * dezenter Hinweis samt Anmelde-Link sagt, dass die Arbeit nirgendwo sonst liegt.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -74,6 +91,36 @@ export class CalculationComponent implements OnInit, OnDestroy {
   positions: CalcPositionListItem[] = [];
   groups: CalcPositionGroup[] = [];
   index = 0;
+
+  // ===== Woher kommen die Daten? ===========================================
+  // Angemeldet: der Server. Anonym (öffentlicher Kalkulations-Kurs per Kurz-URL): der
+  // localStorage dieses Geräts. Genau EINE Öffnung gibt es serverseitig — LESEND, und nur für
+  // ausdrücklich öffentlich freigegebene Bücher; geschrieben wird anonym gar nichts.
+  private localBackend: LocalCalculationBackend | null = null;
+
+  /** Server oder Gerät — die einzige Stelle, die diesen Unterschied kennt. */
+  private get backend(): CalcBackend { return this.localBackend ?? this.api; }
+
+  /** Läuft alles nur lokal? (dezenter Hinweis + Anmelde-Link in der Ansicht) */
+  get localOnly(): boolean { return this.localBackend !== null; }
+
+  /**
+   * Der Gerätespeicher hat zuletzt NICHT mitgespielt (Privatmodus, Quota voll, gesperrt). Dann ist
+   * „liegt nur auf diesem Gerät" die falsche Auskunft — es liegt gerade NIRGENDS. Der Hinweis oben
+   * wechselt deshalb auf eine Warnung. Wird bei der nächsten erfolgreichen Speicherung zurückgesetzt.
+   */
+  localSaveFailed = false;
+
+  /** Anmelde-Link führt GENAU hierher zurück (inkl. `?pos=`/`?chapter=`). */
+  get loginReturnUrl(): string { return this.router.url; }
+
+  /**
+   * Kapitel-Filter aus `?chapter=` (gesetzt von der Kurz-URL `/{slug}/{kapitel}`): die
+   * Sprungliste zeigt dann nur dieses Kapitel. `null` = ganzes Buch wie bisher.
+   */
+  chapterFilter: string | null = null;
+  /** Was in der URL stand — kann anders geschrieben sein als der Kapitelname im Buch. */
+  private requestedChapter: string | null = null;
 
   position: CalcPosition | null = null;
   loading = true;
@@ -239,12 +286,19 @@ export class CalculationComponent implements OnInit, OnDestroy {
     private prefs: PreferencesService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private auth: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.boardTheme = this.prefs.boardTheme;
     this.pieceSet = this.prefs.pieceSet;
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
+    this.requestedChapter = (this.route.snapshot.queryParamMap.get('chapter') || '').trim() || null;
+    // Niemand angemeldet → Stellungen lesend vom öffentlichen Endpoint, alles Selbstgemachte
+    // in den localStorage. Serverseitige Persistenz bleibt angemeldeten Nutzern vorbehalten.
+    if (!this.auth?.isLoggedIn && Number.isFinite(this.bookId)) {
+      this.localBackend = new LocalCalculationBackend(this.api, this.bookId);
+    }
     const requested = Number(this.route.snapshot.queryParamMap.get('pos')) || null;
     this.loadBook(requested);
     // Nur Anzeige: die Stoppuhr selbst zählt ohne Takt weiter (und pausiert bei verstecktem Tab).
@@ -266,10 +320,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private loadBook(requestedPositionId: number | null): void {
     this.loading = true;
     this.loadError = false;
-    this.subs.add(this.api.getBook(this.bookId).subscribe({
+    this.subs.add(this.backend.getBook(this.bookId).subscribe({
       next: book => {
         this.book = book;
-        this.positions = book.positions.map(p => this.normalizeItem(p));
+        this.positions = this.applyChapterFilter(book.positions.map(p => this.normalizeItem(p)));
         this.groups = this.groupPositions(this.positions);
         this.takeServerSums(book);
         if (this.positions.length === 0) { this.loading = false; return; }
@@ -294,7 +348,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private loadPosition(bookPuzzleId: number): void {
     this.loading = true;
     const epoch = ++this.loadEpoch;
-    this.subs.add(this.api.getPosition(bookPuzzleId).subscribe({
+    this.subs.add(this.backend.getPosition(bookPuzzleId).subscribe({
       next: pos => {
         if (epoch !== this.loadEpoch) return;
         this.position = pos;
@@ -346,6 +400,26 @@ export class CalculationComponent implements OnInit, OnDestroy {
     return chess.fen();
   }
 
+  /**
+   * `?chapter=` anwenden: nur die Stellungen dieses Kapitels. Verglichen wird nachsichtig
+   * (getrimmt, ohne Groß-/Kleinschreibung) — der Kapitelname kommt aus einer URL, die jemand
+   * abgetippt haben kann.
+   *
+   * Trifft der Filter NICHTS (Kapitel umbenannt, Tippfehler), bleibt das ganze Buch stehen und
+   * der Filter wird auch nicht behauptet: eine leere Seite mit einem Kapitelnamen im Titel wäre
+   * die schlechtere Auskunft.
+   */
+  private applyChapterFilter(all: CalcPositionListItem[]): CalcPositionListItem[] {
+    const wanted = this.requestedChapter;
+    this.chapterFilter = null;
+    if (!wanted) return all;
+    const target = normChapter(wanted);
+    const hits = all.filter(p => normChapter(p.chapter) === target);
+    if (hits.length === 0) return all;
+    this.chapterFilter = hits[0].chapter?.trim() || wanted;
+    return hits;
+  }
+
   private groupPositions(positions: CalcPositionListItem[]): CalcPositionGroup[] {
     const out: CalcPositionGroup[] = [];
     for (const p of positions) {
@@ -382,10 +456,34 @@ export class CalculationComponent implements OnInit, OnDestroy {
         seconds: c.secondsSum ?? 0,
       });
     }
-    this.serverTotals = typeof book.points === 'number'
+    this.serverTotals = this.pickTotals(book);
+    this.refreshSums();
+  }
+
+  /**
+   * Welche Gesamtsumme steht unter der Liste — die des KURSES oder die des KAPITELS?
+   *
+   * Bei `/{slug}/{kapitel}` zeigt die Liste nur dieses eine Kapitel; `book.points`/`book.maxPoints`
+   * rechnet der Server aber über ALLE Stellungen des Buchs. Beides zusammen ergäbe eine Zahl, die
+   * zu nichts Sichtbarem gehört („3 / 8 Punkte" unter zwei angezeigten Stellungen). Angezeigt wird
+   * deshalb die Summe des Kapitels — sie kommt in `chapters[]` ohnehin mit, ist also dieselbe
+   * serverseitige Wahrheit, nur im Zuschnitt der Liste. Der Tooltip benennt den Zuschnitt (siehe
+   * `calc.review.totalPointsChapterHint`), das Kapitel steht zusätzlich im Seitentitel.
+   *
+   * Findet sich zum Filter keine Kapitelsumme (älterer Server ohne `chapters[]`), gibt es hier
+   * `null` — dann rechnet `refreshSums` aus den sichtbaren Zeilen, was ebenfalls das Kapitel meint.
+   */
+  private pickTotals(book: CalcBook): { points: number; maxPoints: number } | null {
+    if (this.chapterFilter) {
+      const target = normChapter(this.chapterFilter);
+      const chapter = (book.chapters ?? []).find(c => normChapter(c.chapter) === target);
+      return chapter
+        ? { points: chapter.points ?? 0, maxPoints: chapter.maxPoints || maxPoints(this.positions.length) }
+        : null;
+    }
+    return typeof book.points === 'number'
       ? { points: book.points, maxPoints: book.maxPoints ?? maxPoints(this.positions.length) }
       : null;
-    this.refreshSums();
   }
 
   /** Kapitel-Summen + Kurssumme neu setzen (Server-Werte, solange vorhanden). */
@@ -658,9 +756,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
       if (this.reviewInFlight.has(bookPuzzleId)) continue;
       this.reviewOutbox.delete(bookPuzzleId);
       this.reviewInFlight.add(bookPuzzleId);
-      this.api.saveReview(bookPuzzleId, patch).subscribe({
+      this.backend.saveReview(bookPuzzleId, patch).subscribe({
         next: res => {
           this.reviewInFlight.delete(bookPuzzleId);
+          this.localSaveFailed = false;
           this.applyServerReview(bookPuzzleId, res);
           if (this.reviewOutbox.has(bookPuzzleId)) this.sendReviews();
         },
@@ -675,6 +774,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
           if (!isNoopPatch(merged)) this.reviewOutbox.set(bookPuzzleId, merged);
           // Bewusst kein sofortiger Neuversuch (sonst heiße Schleife bei totem Server) —
           // der nächste Stellungswechsel/Verlassen schickt es mit.
+          // Anonym ist der „Server" der Gerätespeicher: dann ist der Hinweis „liegt nur auf diesem
+          // Gerät" falsch — es liegt gerade nirgends, und das muss stehen bleiben (der Snackbar-
+          // Hinweis ist nach ein paar Sekunden weg).
+          this.localSaveFailed = this.localOnly;
           this.snackbar.warn(this.translate.instant('calc.review.saveFailed'));
         },
       });
@@ -877,8 +980,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   private sendSave(bookPuzzleId: number, json: string, seq: number): void {
     if (this.isCurrent(bookPuzzleId)) this.saving = true;
-    this.api.saveTree(bookPuzzleId, json).subscribe({
+    this.backend.saveTree(bookPuzzleId, json).subscribe({
       next: res => {
+        this.localSaveFailed = false;
         if (this.isCurrent(bookPuzzleId)) {
           this.saving = false;
           this.hadStoredTree = true;
@@ -899,7 +1003,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   private sendDelete(bookPuzzleId: number, seq: number): void {
-    this.api.deleteTree(bookPuzzleId).subscribe({
+    this.backend.deleteTree(bookPuzzleId).subscribe({
       next: () => {
         if (this.isCurrent(bookPuzzleId)) this.savedAt = null;
         this.finishSend(bookPuzzleId, true);
@@ -927,6 +1031,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     // Kein `dirty = true`: das Flag hängt am GERADE geladenen Baum — nach einem Stellungswechsel
     // hätte es den nächsten Flush auf die falsche (neue) Stellung gelenkt und den bearbeiteten
     // Baum der alten Stellung verworfen. Der Wiederholversuch läuft über `outbox` (je Stellung).
+    this.localSaveFailed = this.localOnly;   // anonym = Gerätespeicher (siehe `localSaveFailed`)
     this.snackbar.warn(this.translate.instant('calc.saveFailed'));
   }
 

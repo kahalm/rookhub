@@ -95,10 +95,60 @@ export interface CalcReviewSaved {
   grade: CalcGrade | null;
 }
 
+/**
+ * Eine Stellung eines ÖFFENTLICHEN Kalkulationsbuchs, so wie sie ein anonymer Aufrufer bekommt.
+ *
+ * **Ohne Lösung** — wie überall im Kalkulations-Modus: `BookPuzzle.Moves` taucht hier nicht auf,
+ * höchstens der Vorlauf bis zum Trainingsstart (`setupMoves`). Es gibt bewusst keinen eigenen
+ * Baum und keine Trainings-Werte: die liegen bei anonymen Nutzern im localStorage
+ * (`calc-local.util.ts`), nicht auf dem Server.
+ */
+export interface CalcPublicPosition {
+  id: number;
+  round: string;
+  title: string | null;
+  chapter: string | null;
+  fen: string;
+  setupMoves: string;
+  comment: string | null;
+}
+
+/** Ein öffentlich freigegebenes Kalkulationsbuch am Stück (ein Abruf, danach arbeitet alles lokal). */
+export interface CalcPublicBook {
+  bookId: number;
+  displayName: string;
+  isCalculation: boolean;
+  positions: CalcPublicPosition[];
+}
+
+/**
+ * Was der Kalkulations-Modus vom Speicher braucht — mehr nicht. Es gibt zwei Umsetzungen:
+ * {@link CalculationService} (angemeldet, Server) und `LocalCalculationBackend` (anonym,
+ * localStorage). Die Komponente kennt nur diese Schnittstelle und muss an keiner Stelle
+ * „bin ich eingeloggt?" fragen.
+ */
+export interface CalcBackend {
+  getBook(bookId: number): Observable<CalcBook>;
+  getPosition(bookPuzzleId: number): Observable<CalcPosition>;
+  saveTree(bookPuzzleId: number, treeJson: string): Observable<CalcTreeSaved>;
+  deleteTree(bookPuzzleId: number): Observable<void>;
+  saveReview(bookPuzzleId: number, patch: CalcReviewPatch): Observable<CalcReviewSaved>;
+}
+
 /** HTTP-Zugang zum Kalkulations-Modus (`/api/calculations`). */
 @Injectable({ providedIn: 'root' })
-export class CalculationService {
+export class CalculationService implements CalcBackend {
   constructor(private http: HttpClient) {}
+
+  /**
+   * Stellungen eines ÖFFENTLICH freigegebenen Kalkulationsbuchs — der einzige anonym erreichbare
+   * Weg in diesen Modus, und er ist rein LESEND. Der Server gated hart auf „Buch ist öffentlich
+   * freigegeben" (Slug/IsPublic) und antwortet auf jede andere bookId mit 404; geschrieben wird
+   * anonym gar nichts (siehe `calc-local.util.ts`).
+   */
+  getPublicBook(bookId: number): Observable<CalcPublicBook> {
+    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`);
+  }
 
   getBook(bookId: number): Observable<CalcBook> {
     return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`);

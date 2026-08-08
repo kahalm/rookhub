@@ -106,22 +106,30 @@ import { formatScore, maxPoints } from './calc/calc-review.util';
                   <mat-icon>info</mat-icon>
                   <span>{{ 'courses.detail.open' | translate }}</span>
                 </button>
-                <button mat-menu-item [disabled]="course.puzzleCount === 0"
-                        [routerLink]="['/courses', course.bookId, 'browse']">
-                  <mat-icon>auto_stories</mat-icon>
-                  <span>{{ 'courses.browseTooltip' | translate }}</span>
-                </button>
+                <!-- „Durchsehen" und „Offline speichern" holen die LINIEN samt Zugfolge
+                     (GET /api/courses/{id}/puzzles). Ein Kalkulationsbuch gibt die nicht heraus
+                     (dort ist sie die Lösung) — beides entfällt deshalb, wie schon auf der
+                     Detailseite, die „Durchsehen" bei Kalkulationsbüchern ebenfalls weglässt. -->
+                @if (!course.isCalculation) {
+                  <button mat-menu-item [disabled]="course.puzzleCount === 0"
+                          [routerLink]="['/courses', course.bookId, 'browse']">
+                    <mat-icon>auto_stories</mat-icon>
+                    <span>{{ 'courses.browseTooltip' | translate }}</span>
+                  </button>
+                }
                 <button mat-menu-item [class.active-item]="course.isPinned"
                         [disabled]="pinning" (click)="pinToggle.emit()">
                   <mat-icon>push_pin</mat-icon>
                   <span>{{ (course.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate }}</span>
                 </button>
-                <button mat-menu-item
-                        [disabled]="course.puzzleCount === 0 || savingOffline"
-                        (click)="offlineToggle.emit()">
-                  <mat-icon>{{ offline ? 'cloud_done' : 'cloud_download' }}</mat-icon>
-                  <span>{{ (offline ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate }}</span>
-                </button>
+                @if (!course.isCalculation) {
+                  <button mat-menu-item
+                          [disabled]="course.puzzleCount === 0 || savingOffline"
+                          (click)="offlineToggle.emit()">
+                    <mat-icon>{{ offline ? 'cloud_done' : 'cloud_download' }}</mat-icon>
+                    <span>{{ (offline ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate }}</span>
+                  </button>
+                }
                 <button mat-menu-item
                         [disabled]="course.puzzleCount === 0 || downloadingPgn" (click)="pgnDownload.emit()">
                   <mat-icon>download</mat-icon>

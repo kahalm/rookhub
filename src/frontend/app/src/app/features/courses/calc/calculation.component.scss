@@ -23,6 +23,40 @@
   opacity: 0.7;
 }
 
+/* „Nur auf diesem Gerät"-Hinweis für nicht angemeldete Nutzer. Bewusst eine ruhige Zeile:
+   kein Dialog, keine Farbe, die nach Fehler aussieht — es ist eine Auskunft, keine Warnung. */
+.calc-local-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.6rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  background: rgba(128, 128, 128, 0.12);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+  }
+}
+
+/* Ausnahme von der Ruhe oben: konnte GAR NICHT gespeichert werden (Privatmodus, Quota voll),
+   ist es eben doch ein Fehler — und der darf nicht wie eine Auskunft aussehen. */
+.calc-local-note--failed {
+  opacity: 1;
+  background: rgba(211, 47, 47, 0.14);
+  color: var(--mat-sys-error, #d32f2f);
+
+  mat-icon { opacity: 1; }
+}
+
+.calc-local-text { flex: 1 1 12rem; }
+
 .calc-loading {
   display: flex;
   justify-content: center;

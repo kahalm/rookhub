@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
@@ -44,7 +44,11 @@ function fakeReviewServer() {
 }
 
 /** Komponente ohne Template, mit Stub-Abhängigkeiten — für die reine Bedienlogik. */
-function make(api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'deleteTree' | 'saveReview', unknown>> = {}) {
+function make(
+  api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'deleteTree' | 'saveReview' | 'getPublicBook', unknown>> = {},
+  route: { pos?: string | null; chapter?: string | null } = {},
+  loggedIn = true,
+) {
   const saved: { id: number; json: string }[] = [];
   const deleted: number[] = [];
   const warnings: string[] = [];
@@ -58,13 +62,20 @@ function make(api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'dele
     saveReview: (id: number, patch: CalcReviewPatch) => { reviews.push({ id, patch }); return of(reviewServer(id, patch)); },
     ...api,
   };
+  const queryParams: Record<string, string | null> = { pos: route.pos ?? null, chapter: route.chapter ?? null };
   const component = new CalculationComponent(
-    { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } } } as never,
-    { navigate: () => Promise.resolve(true) } as never,
+    {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: (k: string) => queryParams[k] ?? null },
+      },
+    } as never,
+    { navigate: () => Promise.resolve(true), url: '/courses/1/calc' } as never,
     apiStub as never,
     { boardTheme: 'brown', pieceSet: 'cburnett' } as never,
     { warn: (m: string) => { warnings.push(m); } } as never,
     { instant: (k: string) => k } as never,
+    { isLoggedIn: loggedIn } as never,
   );
   return { component, saved, deleted, warnings, reviews };
 }
@@ -1067,5 +1078,238 @@ describe('CalculationComponent Bewertungs-Auswahl (Darstellung)', () => {
     fixture.detectChanges();
     expect(c.review.grade).toBeNull();
     expect(el.querySelectorAll('.calc-grade--on').length).toBe(0);
+  });
+});
+
+describe('CalculationComponent Kapitel-Filter (?chapter=)', () => {
+  const book = (positions: CalcPositionListItem[]): CalcBook =>
+    ({ bookId: 1, displayName: 'B', isCalculation: true, positions });
+
+  /** Über ngOnInit, weil GENAU dort der Kapitel-Wunsch aus der URL gelesen wird. */
+  function boot(positions: CalcPositionListItem[], chapter: string | null) {
+    const made = make({ getBook: () => of(book(positions)) }, { chapter });
+    made.component.ngOnInit();
+    return made;
+  }
+
+  it('zeigt ohne ?chapter= weiterhin das ganze Buch', () => {
+    const { component: c } = boot([item(1, { chapter: 'A' }), item(2, { chapter: 'B' })], null);
+    expect(c.positions.map(p => p.id)).toEqual([1, 2]);
+    expect(c.chapterFilter).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('beschränkt die Sprungliste auf das Kapitel aus der URL', () => {
+    const { component: c } = boot(
+      [item(1, { chapter: 'Woche 46' }), item(2, { chapter: 'Woche 47' }), item(3, { chapter: 'Woche 46' })],
+      'Woche 46');
+    expect(c.positions.map(p => p.id)).toEqual([1, 3]);
+    expect(c.chapterFilter).toBe('Woche 46');
+    // Auch die Summen gehören zum Kapitel — 2 Stellungen à 4 Punkte.
+    expect(c.totalMaxPoints).toBe(8);
+    c.ngOnDestroy();
+  });
+
+  it('vergleicht nachsichtig (getrimmt, ohne Groß-/Kleinschreibung) und nennt den Buch-Namen', () => {
+    const { component: c } = boot([item(1, { chapter: 'KW46' }), item(2, { chapter: 'KW47' })], ' kw46 ');
+    expect(c.positions.map(p => p.id)).toEqual([1]);
+    // Angezeigt wird die Schreibweise aus dem BUCH, nicht die aus der URL.
+    expect(c.chapterFilter).toBe('KW46');
+    c.ngOnDestroy();
+  });
+
+  it('fällt bei unbekanntem Kapitel auf das ganze Buch zurück, statt eine leere Seite zu zeigen', () => {
+    const { component: c } = boot([item(1, { chapter: 'A' }), item(2, { chapter: 'B' })], 'gibt-es-nicht');
+    expect(c.positions.map(p => p.id)).toEqual([1, 2]);
+    expect(c.chapterFilter).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  /**
+   * Die Gesamtsumme unter der Liste muss zu der Liste gehören, die daneben steht. Der Server
+   * rechnet `book.points` über ALLE Stellungen — bei aktivem Kapitelfilter zeigt die Ansicht aber
+   * nur ein Kapitel; die Kapitelsumme kommt in `chapters[]` ohnehin mit.
+   */
+  function bootWithSums(chapter: string | null) {
+    const full: CalcBook = {
+      bookId: 1, displayName: 'B', isCalculation: true,
+      positions: [
+        item(1, { chapter: 'KW46', grade: 4 }), item(2, { chapter: 'KW46' }),
+        item(3, { chapter: 'KW47', grade: 4 }),
+      ],
+      // Der Server zählt bewusst anders als die geladenen Zeilen (5 statt 4 in KW46), damit sich
+      // „Kapitelsumme vom Server" von „aus den Zeilen gerechnet" unterscheiden lässt.
+      chapters: [
+        { chapter: 'KW46', points: 5, maxPoints: 8, secondsSum: 60 },
+        { chapter: 'KW47', points: 3, maxPoints: 4, secondsSum: 30 },
+      ],
+      points: 8, maxPoints: 12, secondsSum: 90,
+    };
+    const made = make({ getBook: () => of(full) }, { chapter });
+    made.component.ngOnInit();
+    return made;
+  }
+
+  it('zeigt bei aktivem Kapitelfilter die Summe des KAPITELS, nicht die des ganzen Buchs', () => {
+    const { component: c } = bootWithSums(' kw46 ');
+    expect(c.positions.map(p => p.id)).toEqual([1, 2]);
+    // Ohne den Fix stünden hier die 8 / 12 des ganzen Buchs unter einer Liste von zwei Stellungen.
+    expect(c.totalPoints).toBe(5);
+    expect(c.totalMaxPoints).toBe(8);
+    c.ngOnDestroy();
+  });
+
+  it('zeigt ohne Kapitelfilter weiterhin die Kurssumme', () => {
+    const { component: c } = bootWithSums(null);
+    expect(c.positions.length).toBe(3);
+    expect(c.totalPoints).toBe(8);
+    expect(c.totalMaxPoints).toBe(12);
+    c.ngOnDestroy();
+  });
+});
+
+describe('CalculationComponent ohne Konto (alles lokal)', () => {
+  const publicBook = {
+    bookId: 1, displayName: 'Öffentlich', isCalculation: true,
+    positions: [
+      { id: 11, round: '1', title: null, chapter: 'KW46', fen: START, setupMoves: '', comment: null },
+      { id: 12, round: '2', title: null, chapter: 'KW47', fen: START, setupMoves: '', comment: null },
+    ],
+  };
+
+  beforeEach(() => localStorage.removeItem('rookhub_calc_local_1'));
+  afterEach(() => localStorage.removeItem('rookhub_calc_local_1'));
+
+  function anonymous(chapter: string | null = null) {
+    const publicCalls: number[] = [];
+    const made = make({
+      getBook: () => { throw new Error('anonym darf den eingeloggten Endpoint NICHT anfassen'); },
+      getPosition: () => { throw new Error('anonym darf den eingeloggten Endpoint NICHT anfassen'); },
+      saveTree: () => { throw new Error('anonym darf NICHT auf den Server schreiben'); },
+      saveReview: () => { throw new Error('anonym darf NICHT auf den Server schreiben'); },
+      getPublicBook: (id: number) => { publicCalls.push(id); return of(publicBook); },
+    }, { chapter }, false);
+    made.component.ngOnInit();
+    return { ...made, publicCalls };
+  }
+
+  it('lädt anonym NUR den öffentlichen Endpoint und meldet „nur auf diesem Gerät"', () => {
+    const { component: c, publicCalls } = anonymous();
+    expect(publicCalls).toEqual([1]);
+    expect(c.localOnly).toBeTrue();
+    expect(c.positions.map(p => p.id)).toEqual([11, 12]);
+    expect(c.position?.fen).toBe(START);
+    c.ngOnDestroy();
+  });
+
+  it('speichert Baum und Bewertung im localStorage statt auf dem Server', () => {
+    const { component: c, saved, reviews } = anonymous();
+    c.onMove({ orig: 'c4' as never, dest: 'f7' as never });
+    c.flushSave();
+    c.setGrade(2);
+
+    // Nichts ging an den Server …
+    expect(saved).toEqual([]);
+    expect(reviews).toEqual([]);
+    // … dafür liegt alles lokal (und die Sprungliste zeigt es sofort).
+    const stored = JSON.parse(localStorage.getItem('rookhub_calc_local_1')!);
+    expect(stored.entries['11'].tree).toContain('Bxf7');
+    expect(stored.entries['11'].grade).toBe(2);
+    expect(c.positions[0].hasTree).toBeTrue();
+    expect(c.positions[0].grade).toBe(2);
+    c.ngOnDestroy();
+  });
+
+  it('findet die lokale Arbeit beim nächsten Aufruf wieder', () => {
+    const first = anonymous();
+    first.component.onMove({ orig: 'c4' as never, dest: 'f7' as never });
+    first.component.flushSave();
+    first.component.ngOnDestroy();
+
+    const second = anonymous();
+    expect(second.component.positions[0].hasTree).toBeTrue();
+    // Ohne Deep-Link steigt der Modus bei der ersten UNBEARBEITETEN Stellung ein (hier 12) —
+    // die bearbeitete trägt ihren Baum trotzdem noch.
+    expect(second.component.index).toBe(1);
+    second.component.jumpToPosition(11);
+    expect(second.component.position?.treeJson).toContain('Bxf7');
+    second.component.ngOnDestroy();
+  });
+
+  it('filtert auch anonym nach dem Kapitel aus der Kurz-URL', () => {
+    const { component: c } = anonymous('KW47');
+    expect(c.positions.map(p => p.id)).toEqual([12]);
+    expect(c.chapterFilter).toBe('KW47');
+    c.ngOnDestroy();
+  });
+
+  it('bleibt für angemeldete Nutzer beim Server (kein localOnly)', () => {
+    const { component: c } = make({ getBook: () => of({ bookId: 1, displayName: 'B', isCalculation: true, positions: [] }) });
+    c.ngOnInit();
+    expect(c.localOnly).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('meldet, wenn Festlegung/Zeit/Bewertung GAR NICHT gespeichert werden konnten', () => {
+    const { component: c, warnings } = anonymous();
+    expect(c.localSaveFailed).toBeFalse();
+    // Speicher gesperrt/voll (Privatmodus, Quota) — der Hinweis „liegt nur auf diesem Gerät"
+    // wäre ab hier eine Lüge; er muss auf „konnte nicht gespeichert werden" umschalten.
+    spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+
+    c.setGrade(2);
+
+    expect(warnings).toContain('calc.review.saveFailed');
+    expect(c.localSaveFailed).toBeTrue();
+    c.ngOnDestroy();
+  });
+
+  it('nimmt den Hinweis zurück, sobald wieder gespeichert werden kann', () => {
+    const { component: c } = anonymous();
+    const setItem = spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+    c.setGrade(2);
+    expect(c.localSaveFailed).toBeTrue();
+
+    setItem.and.callThrough();
+    c.setGrade(3);
+
+    expect(c.localSaveFailed).toBeFalse();
+    c.ngOnDestroy();
+  });
+});
+
+describe('CalculationComponent Hinweis „nur auf diesem Gerät"', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('zeigt anonym eine ruhige Zeile mit Anmelde-Link — kein Dialog, keine Bevormundung', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CalculationComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ bookId: '1' }), queryParamMap: convertToParamMap({}) } },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CalculationComponent);
+    fixture.detectChanges();                       // ngOnInit — niemand angemeldet
+    const c = fixture.componentInstance;
+    expect(c.localOnly).toBeTrue();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const note = el.querySelector('.calc-local-note');
+    expect(note).not.toBeNull();
+    // Der Anmelde-Link führt über returnUrl genau hierher zurück.
+    const href = note!.querySelector('a')!.getAttribute('href')!;
+    expect(href).toContain('/login');
+    expect(href).toContain('returnUrl');
+    // Nichts Modales — der Hinweis steht in der Seite.
+    expect(document.querySelector('mat-dialog-container')).toBeNull();
+    c.ngOnDestroy();
   });
 });

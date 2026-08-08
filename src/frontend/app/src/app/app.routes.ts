@@ -67,5 +67,11 @@ export const routes: Routes = [
   // stehen (nach allen literalen Top-Level-Routen, vor dem Catch-all), damit sie nur unbekannte
   // Einzelsegmente abfängt und keine echte Seite verdeckt.
   { path: ':slug', loadComponent: () => import('./features/courses/public-slug.component').then(m => m.PublicSlugComponent) },
+  // Kapitel-Kurz-URL öffentlicher Kurse: /{slug}/{kapitel} (z. B. /noel/KW46). MUSS die LETZTE
+  // Route vor dem Catch-all sein: sie hat zwei freie Segmente und würde sonst jede echte
+  // zweiteilige Route verschlucken (/courses/403, /repertoires/12, /tournaments/9, /t/5 …) —
+  // niemand käme mehr in seine Kurse. Dieselbe Disziplin wie beim einteiligen ':slug' darüber.
+  // Abgesichert durch app.routes.spec.ts (Reihenfolge-Test).
+  { path: ':slug/:chapter', loadComponent: () => import('./features/courses/public-slug.component').then(m => m.PublicSlugComponent) },
   { path: '**', redirectTo: '/dashboard' }
 ];

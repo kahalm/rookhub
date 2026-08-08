@@ -30,6 +30,29 @@ public class CalculationController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>
+    /// Stellungen eines ÖFFENTLICH freigegebenen Buchs — OHNE Login. Damit ist ein Kalkulationskurs
+    /// über seinen Kurz-Link (<c>/{slug}</c>) ohne Konto durchrechenbar; die Arbeit des Besuchers
+    /// (Baum, Festlegung, Zeit, Bewertung) bleibt vollständig LOKAL im Browser.
+    ///
+    /// <para><b>Bewusst ein eigener Endpoint</b> statt <c>GET books/{bookId}</c> zu öffnen: der
+    /// eingeloggte Endpoint ist von Grund auf nutzerbezogen (Zugriffsregel über
+    /// <see cref="CourseAccess"/> + Trainings-Werte je Stellung). Ihn zu öffnen hieße, in einem
+    /// Pfad, der Nutzerdaten liefert, einen „kein Nutzer"-Sonderfall einzuziehen — genau dort
+    /// entstehen Lecks. Hier gibt es stattdessen ein eigenes DTO OHNE Nutzer-Felder und ein hartes
+    /// Freigabe-Gate; ein anonymer Aufruf auf ein privates Buch ist schlicht 404.</para>
+    ///
+    /// <para>Enthält wie der ganze Modus KEINE Lösung (kein <c>BookPuzzle.Moves</c>), höchstens den
+    /// Vorlauf bis zum Trainingsstart.</para>
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("books/{bookId}/public")]
+    public async Task<ActionResult<CalcPublicBookDto>> GetPublicBook(int bookId, CancellationToken ct)
+    {
+        try { return Ok(await _service.GetPublicBookAsync(bookId, ct)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     /// <summary>Eine Stellung inkl. eigenem Analysebaum.</summary>
     [HttpGet("positions/{bookPuzzleId}")]
     public async Task<ActionResult<CalcPositionDto>> GetPosition(int bookPuzzleId, CancellationToken ct)

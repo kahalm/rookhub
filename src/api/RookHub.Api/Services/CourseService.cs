@@ -175,10 +175,16 @@ public class CourseService
         };
     }
 
-    /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
+    /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.
+    /// <para>KALKULATIONSBÜCHER liefert dieser Pfad nicht aus (404, siehe
+    /// <see cref="CourseAccess.IsCalculationBookAsync"/>): er reicht <see cref="BookPuzzle.Moves"/>
+    /// durch, und ein öffentlich freigegebenes Kalkulationsbuch ist für JEDEN angemeldeten Nutzer
+    /// zugänglich (<see cref="CourseAccess.CanAccessAsync"/>) — der Voll-Export wäre die Lösung.</para></summary>
     public async Task<List<BookPuzzleDto>> GetAllPuzzlesAsync(int userId, int bookId, bool isAdmin)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
+        if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
+            throw new KeyNotFoundException("Book not found.");
         var puzzles = await _db.BookPuzzles
             .Include(bp => bp.Book)
             .Where(bp => bp.BookId == bookId)
@@ -193,10 +199,17 @@ public class CourseService
     /// <para><paramref name="skip"/>/<paramref name="take"/> paginieren DB-seitig (stabile Lese-Reihenfolge
     /// Round→Id): der Client holt die erste kleine Seite → sofort spielbar, den Rest im Hintergrund.
     /// Ohne beide Parameter wird (rückwärtskompatibel) das ganze Buch geliefert.</para>
-    /// Nicht öffentlich / nicht vorhanden → <see cref="KeyNotFoundException"/> (404).</summary>
+    /// Nicht öffentlich / nicht vorhanden → <see cref="KeyNotFoundException"/> (404).
+    /// <para><b>Kalkulationsbücher liefert dieser Pfad NICHT aus</b> (ebenfalls 404): ein
+    /// Kalkulationsbuch ist kein Solver-Kurs, und der Solver-Pfad reicht über
+    /// <see cref="BookPuzzleService.MapToDto"/> <see cref="BookPuzzle.Moves"/> durch — also genau
+    /// die Lösung, die der Kalkulations-Modus auf dem Server behält. Ohne diese Sperre wäre das
+    /// <see cref="Book.IsPublic"/>-Flag, das ein Kalkulationskurs für seinen Kurz-Link
+    /// (<c>/{slug}</c>) BRAUCHT, zugleich das Tor zur Lösung — siehe
+    /// <see cref="CourseAccess.IsCalculationBookAsync"/>.</para></summary>
     public async Task<List<BookPuzzleDto>> GetPublicCoursePuzzlesAsync(int bookId, int? skip = null, int? take = null)
     {
-        if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic))
+        if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic && !b.IsCalculation))
             throw new KeyNotFoundException("Book not found.");
         IQueryable<BookPuzzle> query = _db.BookPuzzles
             .Include(bp => bp.Book)
@@ -208,18 +221,72 @@ public class CourseService
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
 
-    /// <summary>Löst einen öffentlichen Kurz-Alias (<see cref="Book.PublicSlug"/>) auf die BookId auf —
+    /// <summary>Löst einen öffentlichen Kurz-Alias (<see cref="Book.PublicSlug"/>) auf sein Ziel auf —
     /// nur für öffentliche Bücher. Null = unbekannter/nicht-öffentlicher Alias. Basis für die
-    /// Kurz-URL <c>/{slug}</c>, die anonym auf den Kurs weiterleitet.</summary>
-    public async Task<int?> ResolvePublicSlugAsync(string slug)
+    /// Kurz-URL <c>/{slug}</c>, die anonym auf den Kurs weiterleitet.
+    /// <para>Mitgeliefert wird <see cref="PublicSlugTargetDto.IsCalculation"/>, weil die Kurz-URL sonst
+    /// bei einem KALKULATIONSBUCH ins Leere läuft: dessen Stellungen sind Info-Linien und aus allen
+    /// Quiz-/Zufallspools ausgeschlossen — der Solver meldete sofort „abgeschlossen". Die Verzweigung
+    /// gehört an die Auflösung, weil nur sie das Buch überhaupt kennt.</para></summary>
+    public async Task<PublicSlugTargetDto?> ResolvePublicSlugAsync(string slug)
     {
         var s = (slug ?? string.Empty).Trim().ToLowerInvariant();
         if (s.Length == 0) return null;
         return await _db.Books
             .Where(b => b.IsPublic && b.PublicSlug == s)
-            .Select(b => (int?)b.Id)
+            .Select(b => new PublicSlugTargetDto { BookId = b.Id, IsCalculation = b.IsCalculation })
             .FirstOrDefaultAsync();
     }
+
+    /// <summary>
+    /// Löst <c>/{slug}/{kapitel}</c> auf: Alias → Buch, Kapitel-NAME → Kapitel. Der Kapitel-Teil der
+    /// URL ist der Kapitelname selbst (kein zweites Konzept); verglichen wird getrimmt und ohne
+    /// Groß-/Kleinschreibungs-Unterschied. Unbekannter Alias ODER unbekanntes Kapitel → <c>null</c> (404).
+    /// <para>Gesucht wird über ALLE Linien des Buchs, auch <see cref="BookPuzzle.IsInfoOnly"/>: in einem
+    /// Kalkulationsbuch sind sämtliche Stellungen Info-Linien, eine Suche nur über Quiz-Linien fände
+    /// dort überhaupt kein Kapitel.</para>
+    /// <para><see cref="PublicSlugChapterDto.ChapterIndex"/> ist der SOLVER-Index (<see cref="ChapterOrder"/>,
+    /// nur Quiz-Linien) für die interne Route <c>courses/:bookId/chapter/:index/:mode</c> — <c>null</c>
+    /// bei Kalkulationsbüchern (dort filtert der Kalkulations-Modus über den Namen) und bei reinen
+    /// Info-Kapiteln, die im Solver gar keinen Index belegen.</para>
+    /// </summary>
+    public async Task<PublicSlugChapterDto?> ResolvePublicSlugChapterAsync(string slug, string chapter)
+    {
+        var target = await ResolvePublicSlugAsync(slug);
+        if (target == null) return null;
+
+        var wanted = (chapter ?? string.Empty).Trim();
+        if (wanted.Length == 0) return null;
+
+        var raw = await _db.BookPuzzles
+            .Where(bp => bp.BookId == target.BookId)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .Select(bp => bp.Chapter)
+            .ToListAsync();
+        var name = raw.Select(NormalizeChapter).FirstOrDefault(n => Matches(n, wanted));
+        if (name == null) return null;
+
+        int? index = null;
+        if (!target.IsCalculation)
+        {
+            var solverNames = await GetOrderedChapterNamesAsync(target.BookId);
+            var i = solverNames.FindIndex(n => Matches(n, wanted));
+            if (i >= 0) index = i;
+        }
+
+        return new PublicSlugChapterDto
+        {
+            BookId = target.BookId,
+            IsCalculation = target.IsCalculation,
+            Chapter = name,
+            ChapterIndex = index,
+        };
+    }
+
+    /// <summary>Kapitelname aus der URL ↔ gespeicherter Name: getrimmt, ohne Groß-/Kleinschreibung.
+    /// „ohne Kapitel" (<c>null</c>) ist über die URL nicht adressierbar (leerer Pfadteil).</summary>
+    private static bool Matches(string? stored, string wanted) =>
+        stored != null && string.Equals(stored.Trim(), wanted, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Exportiert ein (zugängliches) Buch als PGN. Liefert PGN-Text + Dateiname.
     /// <para>Bevorzugt das gespeicherte Roh-PGN (<see cref="Book.SourcePgn"/>) — es enthält die

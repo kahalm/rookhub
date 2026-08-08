@@ -1488,13 +1488,19 @@
       "selfRatingHint": "Check the solution in the book, then pick your level — calculation mode never shows a solution.",
       "timeHint": "Active thinking time on this position (paused while the tab is in the background).",
       "totalPoints": "{{score}} pts",
-      "totalPointsHint": "Points of this course from your self-assessment, next to the maximum you can reach."
+      "totalPointsHint": "Points of this course from your self-assessment, next to the maximum you can reach.",
+      "totalPointsChapterHint": "Points of this CHAPTER from your self-assessment, next to the maximum you can reach — the list shows this chapter only."
     },
     "saveFailed": "Could not save your lines.",
     "savedAt": "Saved {{time}}",
     "saving": "Saving…",
     "selectMoveFirst": "Select a move to annotate it.",
-    "title": "Calculation"
+    "title": "Calculation",
+    "local": {
+      "notice": "Not signed in: your lines, choices, time and self-rating stay on this device only.",
+      "unavailable": "Nothing can be saved on this device right now (private window or storage full): your lines, choices, time and rating will be gone after a reload.",
+      "signIn": "Sign in to save"
+    }
   },
   "weekly": {
     "title": "Weekly",

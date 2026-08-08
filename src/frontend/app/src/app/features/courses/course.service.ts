@@ -51,6 +51,21 @@ export interface CourseLineStatus {
   failedIds: number[];
 }
 
+/** Auflösung einer öffentlichen Kurz-URL `/{slug}` (siehe {@link CourseService.resolvePublicSlug}). */
+export interface PublicSlugTarget {
+  bookId: number;
+  /** Kalkulationsbuch → Kalkulations-Modus statt Solver. Fehlt das Feld, gilt `false`. */
+  isCalculation?: boolean;
+}
+
+/** Auflösung einer Kapitel-Kurz-URL `/{slug}/{kapitel}`. */
+export interface PublicSlugChapterTarget extends PublicSlugTarget {
+  /** Kanonischer Kapitelname, wie ihn der Server führt (die URL kann anders geschrieben sein). */
+  chapter: string;
+  /** Index in der SOLVER-Kapitelliste (nur Quiz-Kapitel); `null` = dort nicht startbar. */
+  chapterIndex: number | null;
+}
+
 /** Der verknüpfte Partner-Kurs (leere Felder = keine Verknüpfung). */
 export interface CourseLink {
   linkedBookId: number | null;
@@ -332,9 +347,27 @@ export class CourseService {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params });
   }
 
-  /** Öffentlichen Kurz-Alias (z. B. „mate1") auf die BookId auflösen — ohne Login (404 = unbekannt). */
-  resolvePublicSlug(slug: string): Observable<{ bookId: number }> {
-    return this.http.get<{ bookId: number }>(`/api/courses/by-slug/${encodeURIComponent(slug)}`);
+  /**
+   * Öffentlichen Kurz-Alias (z. B. „mate1") auf die BookId auflösen — ohne Login (404 = unbekannt).
+   *
+   * `isCalculation` entscheidet, WOHIN der Alias springt: ein Kalkulationsbuch besteht aus
+   * `IsInfoOnly`-Stellungen, die aus allen Solver-Pools ausgeschlossen sind — der Solver meldete
+   * dort sofort „abgeschlossen". Die Verzweigung braucht die Auskunft, sie ist also Teil der
+   * Antwort und wird nicht erraten (fehlt sie, gilt „kein Kalkulationsbuch").
+   */
+  resolvePublicSlug(slug: string): Observable<PublicSlugTarget> {
+    return this.http.get<PublicSlugTarget>(`/api/courses/by-slug/${encodeURIComponent(slug)}`);
+  }
+
+  /**
+   * Kapitel-Kurz-URL `/{slug}/{kapitel}`: der zweite Teil IST der Kapitelname (kein zweites
+   * Konzept — der Link soll selbsterklärend bleiben). Der Server liefert zusätzlich den
+   * SOLVER-Kapitelindex (`chapterIndex`, nur Quiz-Kapitel — `null`, wenn das Kapitel im Solver
+   * nicht startbar ist); Kalkulationsbücher bekommen den Namen stattdessen als Filter.
+   */
+  resolvePublicSlugChapter(slug: string, chapter: string): Observable<PublicSlugChapterTarget> {
+    return this.http.get<PublicSlugChapterTarget>(
+      `/api/courses/by-slug/${encodeURIComponent(slug)}/${encodeURIComponent(chapter)}`);
   }
 
   /** Pro-Linien-Bearbeitungsstatus (gelöst ✓ / versucht-aber-nicht-gelöst ✗) eines Buchs. */

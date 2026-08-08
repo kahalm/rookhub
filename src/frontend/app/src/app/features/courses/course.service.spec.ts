@@ -90,4 +90,20 @@ describe('CourseService', () => {
     req.flush({ themes: ['tactics', 'endgame'] });
     expect(result).toEqual(['tactics', 'endgame']);
   });
+
+  it('löst den öffentlichen Kurz-Alias samt Modus-Auskunft auf', () => {
+    let got: { bookId: number; isCalculation?: boolean } | undefined;
+    svc.resolvePublicSlug('noel').subscribe(res => (got = res));
+    const req = http.expectOne('/api/courses/by-slug/noel');
+    expect(req.request.method).toBe('GET');
+    req.flush({ bookId: 9, isCalculation: true });
+    expect(got).toEqual({ bookId: 9, isCalculation: true });
+  });
+
+  it('löst die Kapitel-Kurz-URL auf und kodiert den Kapitelnamen', () => {
+    svc.resolvePublicSlugChapter('noel', 'KW 46/47').subscribe();
+    const req = http.expectOne('/api/courses/by-slug/noel/KW%2046%2F47');
+    expect(req.request.method).toBe('GET');
+    req.flush({ bookId: 9, isCalculation: true, chapter: 'KW 46/47', chapterIndex: null });
+  });
 });

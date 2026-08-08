@@ -76,14 +76,31 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
-    /// <summary>Löst einen öffentlichen Kurz-Alias (z. B. <c>mate1</c>) auf die BookId auf — OHNE Login.
-    /// Basis für die Kurz-URL <c>/{slug}</c>, die auf den Kurs weiterleitet. 404 bei unbekanntem Alias.</summary>
+    /// <summary>Löst einen öffentlichen Kurz-Alias (z. B. <c>mate1</c>) auf sein Ziel auf — OHNE Login:
+    /// <c>{ bookId, isCalculation }</c>. Basis für die Kurz-URL <c>/{slug}</c>. <c>isCalculation</c>
+    /// entscheidet, ob der Link in den Kalkulations-Modus oder in den Solver springt (ein
+    /// Kalkulationsbuch hat nur Info-Linien — der Solver wäre sofort „abgeschlossen").
+    /// 404 bei unbekanntem Alias.</summary>
     [AllowAnonymous]
     [HttpGet("by-slug/{slug}")]
-    public async Task<IActionResult> ResolvePublicSlug(string slug)
+    public async Task<ActionResult<PublicSlugTargetDto>> ResolvePublicSlug(string slug)
     {
-        var id = await _service.ResolvePublicSlugAsync(slug);
-        return id is int bookId ? Ok(new { bookId }) : NotFound(new { message = "Unknown alias." });
+        var target = await _service.ResolvePublicSlugAsync(slug);
+        return target is not null ? Ok(target) : NotFound(new { message = "Unknown alias." });
+    }
+
+    /// <summary>Löst <c>/{slug}/{kapitel}</c> auf — OHNE Login: <c>{ bookId, isCalculation, chapter,
+    /// chapterIndex }</c>. Der Kapitel-Teil der URL IST der Kapitelname (getrimmt, ohne
+    /// Groß-/Kleinschreibungs-Unterschied verglichen); <c>chapterIndex</c> ist der SOLVER-Index für
+    /// <c>courses/:bookId/chapter/:index/:mode</c> und <c>null</c> bei Kalkulationsbüchern bzw. reinen
+    /// Info-Kapiteln (dort filtert der Kalkulations-Modus über den Namen).
+    /// 404 bei unbekanntem Alias ODER unbekanntem Kapitel.</summary>
+    [AllowAnonymous]
+    [HttpGet("by-slug/{slug}/{chapter}")]
+    public async Task<ActionResult<PublicSlugChapterDto>> ResolvePublicSlugChapter(string slug, string chapter)
+    {
+        var target = await _service.ResolvePublicSlugChapterAsync(slug, chapter);
+        return target is not null ? Ok(target) : NotFound(new { message = "Unknown alias or chapter." });
     }
 
     /// <summary>Pro-Linien-Status eines (zugänglichen) Buchs für die „Linien durchsehen"-Ansicht:

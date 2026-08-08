@@ -117,7 +117,8 @@ public class BookPublicSlugTests : IDisposable
     public async Task ResolvePublicSlug_ReturnsBookId_ForPublicBook()
     {
         var book = await SeedBookAsync(isPublic: true, slug: "mate1");
-        Assert.Equal(book.Id, await _course.ResolvePublicSlugAsync("MATE1"));
+        var target = await _course.ResolvePublicSlugAsync("MATE1");
+        Assert.Equal(book.Id, target?.BookId);
     }
 
     [Fact]

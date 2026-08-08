@@ -155,6 +155,62 @@ public class CalculationService
         return order.Select(c => byChapter[c ?? NoChapterKey]).ToList();
     }
 
+    /// <summary>
+    /// ANONYMER Lesezugriff: Kopf + vollständige Stellungen eines öffentlich freigegebenen Buchs.
+    /// Die EINZIGE Öffnung des Kalkulations-Modus — rein lesend, ohne jeden Nutzer-Kontext.
+    ///
+    /// <para><b>Gate</b>: <see cref="Book.IsPublic"/> — „ausdrücklich öffentlich freigegeben", und
+    /// zwar exakt dieselbe Bedingung wie die Slug-Auflösung (<see cref="CourseService.ResolvePublicSlugAsync"/>),
+    /// damit Einstieg (<c>/{slug}</c>) und Inhalt nicht auseinanderlaufen. Ein NICHT freigegebenes
+    /// Buch ist hier nicht existent (<see cref="KeyNotFoundException"/> → 404, kein Existenz-Orakel).</para>
+    ///
+    /// <para>Bewusst NICHT <see cref="BookAccess.PubliclyExposed"/>: die Pool-Flags
+    /// (<see cref="Book.ForDaily"/>/<see cref="Book.ForRandom"/>/<see cref="Book.ForBlind"/>) öffnen
+    /// EINZELNE Puzzles und Zufallsziehungen, nicht den strukturierten Kurs (siehe
+    /// <see cref="BookAccess"/>). Ein persönlicher Import, den ein Admin in den Tagespuzzle-Pool
+    /// gelegt hat, würde damit sonst anonym als vollständiger, geordneter Kurs herausgehen.</para>
+    ///
+    /// <para><b>Keine Trainings-Werte</b>: Baum, Zeit, Stufe und Festlegung gibt es für anonyme
+    /// Aufrufer nicht — die liegen bei ihnen im Browser. Es wird deshalb gar keine
+    /// <see cref="CalculationTree"/>-Zeile gelesen, und das Antwort-DTO
+    /// (<see cref="CalcPublicBookDto"/>) hat für sie keine Felder.</para>
+    ///
+    /// <para><b>Keine Lösung</b>: wie im eingeloggten Pfad verlässt <see cref="BookPuzzle.Moves"/> den
+    /// Server nicht — höchstens der Vorlauf bis zum Trainingsstart (<see cref="SetupMoves"/>).</para>
+    /// </summary>
+    public async Task<CalcPublicBookDto> GetPublicBookAsync(int bookId, CancellationToken ct = default)
+    {
+        var book = await _db.Books
+            .Where(b => b.Id == bookId && b.IsPublic)
+            .Select(b => new { b.Id, b.DisplayName, b.IsCalculation })
+            .FirstOrDefaultAsync(ct)
+            ?? throw new KeyNotFoundException("Book not found.");
+
+        // Moves/StartPly werden NUR geladen, um daraus den Vorlauf zu schneiden — sie landen nie im DTO.
+        var rows = await _db.BookPuzzles
+            .Where(bp => bp.BookId == bookId)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .Select(bp => new { bp.Id, bp.Round, bp.Title, bp.Chapter, bp.Fen, bp.Comment, bp.Moves, bp.StartPly })
+            .ToListAsync(ct);
+
+        return new CalcPublicBookDto
+        {
+            BookId = book.Id,
+            DisplayName = book.DisplayName,
+            IsCalculation = book.IsCalculation,
+            Positions = rows.Select(r => new CalcPublicPositionDto
+            {
+                Id = r.Id,
+                Round = r.Round,
+                Title = r.Title,
+                Chapter = r.Chapter,
+                Fen = r.Fen,
+                SetupMoves = SetupMoves(r.Moves, r.StartPly),
+                Comment = r.Comment,
+            }).ToList(),
+        };
+    }
+
     /// <summary>Eine Stellung inkl. eigenem Baum. Liefert NIE die Lösungszüge — nur den Vorlauf bis
     /// zum Trainingsstart (<c>StartPly</c>), sonst gar keine Züge.</summary>
     public async Task<CalcPositionDto> GetPositionAsync(int userId, int bookPuzzleId, bool isAdmin,
@@ -194,11 +250,15 @@ public class CalculationService
     /// mitten in der Partie) sind das die Halbzüge <c>0..StartPly</c> — also ausdrücklich NUR der
     /// Vorlauf, nie der ab <c>StartPly+1</c> beginnende Lösungsweg. Sonst leer.
     /// </summary>
-    internal static string SetupMoves(BookPuzzle puzzle)
+    internal static string SetupMoves(BookPuzzle puzzle) => SetupMoves(puzzle.Moves, puzzle.StartPly);
+
+    /// <inheritdoc cref="SetupMoves(BookPuzzle)"/>
+    /// <remarks>Überladung für Projektionen, die nur die beiden Felder laden (statt die ganze Zeile).</remarks>
+    internal static string SetupMoves(string? moves, int startPly)
     {
-        if (puzzle.StartPly < 0 || string.IsNullOrWhiteSpace(puzzle.Moves)) return string.Empty;
-        var moves = puzzle.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return string.Join(' ', moves.Take(Math.Min(puzzle.StartPly + 1, moves.Length)));
+        if (startPly < 0 || string.IsNullOrWhiteSpace(moves)) return string.Empty;
+        var parts = moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Join(' ', parts.Take(Math.Min(startPly + 1, parts.Length)));
     }
 
     /// <summary>Speichert (Upsert) den Analysebaum des Users zu einer Stellung; die drei

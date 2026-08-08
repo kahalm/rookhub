@@ -1488,13 +1488,19 @@
       "selfRatingHint": "Provjeri rješenje u knjizi pa odaberi svoju razinu — način računanja nikad ne prikazuje rješenje.",
       "timeHint": "Aktivno vrijeme računanja na ovoj poziciji (pauzira kad je kartica u pozadini).",
       "totalPoints": "{{score}} bod.",
-      "totalPointsHint": "Bodovi ovog tečaja iz tvoje samoocjene, uz najveći mogući broj."
+      "totalPointsHint": "Bodovi ovog tečaja iz tvoje samoocjene, uz najveći mogući broj.",
+      "totalPointsChapterHint": "Bodovi ovog POGLAVLJA iz tvoje samoocjene, uz najveći mogući broj — popis prikazuje samo ovo poglavlje."
     },
     "saveFailed": "Tvoje varijante nije bilo moguće spremiti.",
     "savedAt": "Spremljeno {{time}}",
     "saving": "Spremam…",
     "selectMoveFirst": "Odaberi potez da ga ocijeniš.",
-    "title": "Izračun"
+    "title": "Izračun",
+    "local": {
+      "notice": "Niste prijavljeni: vaše linije, odabir, vrijeme i samoocjena ostaju samo na ovom uređaju.",
+      "unavailable": "Na ovom uređaju trenutačno se NIŠTA ne može spremiti (privatni prozor ili je memorija puna): varijante, odabir, vrijeme i ocjena nestat će nakon ponovnog učitavanja.",
+      "signIn": "Prijavite se za spremanje"
+    }
   },
   "weekly": {
     "title": "Tjedna objava",

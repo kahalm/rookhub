@@ -48,6 +48,7 @@ public class BookPuzzleService
         var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id)
             ?? throw new KeyNotFoundException("Book puzzle not found.");
         await EnsureBookReadableAsync(current, userId, isAdmin);
+        await EnsureNotCalculationBookAsync(current);
 
         // Nur Schlüssel (Id, Round) in Round-Reihenfolge laden; der Cursor-Vergleich passiert
         // in-memory (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
@@ -70,6 +71,7 @@ public class BookPuzzleService
         var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id)
             ?? throw new KeyNotFoundException("Book puzzle not found.");
         await EnsureBookReadableAsync(current, userId, isAdmin);
+        await EnsureNotCalculationBookAsync(current);
 
         // Info-/Erklärlinien sind kein Quiz → nicht zufällig ziehen.
         var others = BookSiblings(current).Where(bp => bp.Id != current.Id && !bp.IsInfoOnly);
@@ -86,6 +88,25 @@ public class BookPuzzleService
     {
         if (!await BookAccess.CanReadPuzzleAsync(_db, puzzle, userId, isAdmin))
             throw new KeyNotFoundException("Book puzzle not found.");
+    }
+
+    /// <summary>
+    /// Wirft <see cref="KeyNotFoundException"/> (→404), wenn das Puzzle zu einem KALKULATIONSBUCH
+    /// gehört. Das Buch-Durchlaufen (<see cref="GetNextInBookAsync"/>/<see cref="GetRandomInBookAsync"/>)
+    /// ist ein SOLVER-Weg und liefert <see cref="BookPuzzle.Moves"/> mit — in einem Kalkulationsbuch
+    /// ist das die Lösung, die den Server nicht verlassen soll (siehe
+    /// <see cref="CourseAccess.IsCalculationBookAsync"/>). Beide Endpoints sind anonym und hängen am
+    /// selben <see cref="BookAccess"/>-Tor wie der öffentliche Kurs-Endpoint; ohne diese Sperre
+    /// bliebe dort dieselbe Lücke offen.
+    /// <para>Altbestand ohne <see cref="BookPuzzle.BookId"/> wird wie in
+    /// <see cref="BookAccess.CanReadPuzzleAsync"/> über den Dateinamen aufgelöst.</para>
+    /// </summary>
+    private async Task EnsureNotCalculationBookAsync(BookPuzzle puzzle)
+    {
+        var isCalculation = puzzle.BookId is int bookId
+            ? await CourseAccess.IsCalculationBookAsync(_db, bookId)
+            : await _db.Books.AnyAsync(b => b.FileName == puzzle.BookFileName && b.IsCalculation);
+        if (isCalculation) throw new KeyNotFoundException("Book puzzle not found.");
     }
 
     /// <summary>Puzzles desselben Buchs (per BookId; Fallback BookFileName für Altbestand ohne BookId).</summary>

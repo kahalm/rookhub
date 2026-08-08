@@ -112,13 +112,17 @@
               <mat-icon>download</mat-icon>
               <span>{{ 'common.downloadPgn' | translate }}</span>
             </button>
-            <!-- Eigener Bereich: nur die persistent markierten Flashcards dieses Kurses. -->
-            <button mat-menu-item
-                    [routerLink]="['/courses', bookId, 'flashcards']"
-                    [queryParams]="{ marked: 1 }">
-              <mat-icon>style</mat-icon>
-              <span>{{ 'courses.flashcards.markedMenu' | translate }}</span>
-            </button>
+            <!-- Eigener Bereich: nur die persistent markierten Flashcards dieses Kurses.
+                 Kalkulationsbücher haben keine — die Kartenansicht zeigt die LÖSUNG auf der
+                 Rückseite, und die gibt ein Kalkulationsbuch nicht heraus (wie „Durchsehen"). -->
+            @if (!d.isCalculation) {
+              <button mat-menu-item
+                      [routerLink]="['/courses', bookId, 'flashcards']"
+                      [queryParams]="{ marked: 1 }">
+                <mat-icon>style</mat-icon>
+                <span>{{ 'courses.flashcards.markedMenu' | translate }}</span>
+              </button>
+            }
             <button mat-menu-item (click)="resetCourse()" [disabled]="busy">
               <mat-icon>restart_alt</mat-icon>
               <span>{{ 'courses.detail.resetCourse' | translate }}</span>
@@ -197,12 +201,14 @@
                             <span>{{ 'courses.detail.renameChapter' | translate }}</span>
                           </button>
                         }
-                        <button mat-menu-item
-                                [routerLink]="['/courses', bookId, 'flashcards']"
-                                [queryParams]="{ chapter: ch.name ?? '' }">
-                          <mat-icon>style</mat-icon>
-                          <span>{{ 'courses.flashcards.chapterMenu' | translate }}</span>
-                        </button>
+                        @if (!d.isCalculation) {
+                          <button mat-menu-item
+                                  [routerLink]="['/courses', bookId, 'flashcards']"
+                                  [queryParams]="{ chapter: ch.name ?? '' }">
+                            <mat-icon>style</mat-icon>
+                            <span>{{ 'courses.flashcards.chapterMenu' | translate }}</span>
+                          </button>
+                        }
                         <button mat-menu-item (click)="resetChapter(ch)">
                           <mat-icon>restart_alt</mat-icon>
                           <span>{{ 'courses.detail.resetChapter' | translate }}</span>

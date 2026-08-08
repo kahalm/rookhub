@@ -282,3 +282,39 @@ public class CourseLineStatusDto
     public List<int> SolvedIds { get; set; } = new();
     public List<int> FailedIds { get; set; } = new();
 }
+
+/// <summary>
+/// Auflösung eines öffentlichen Kurz-Alias (<c>/{slug}</c>) auf sein Ziel — anonym abrufbar.
+/// <para><see cref="IsCalculation"/> entscheidet, WOHIN der Link springt: ein Kalkulationsbuch
+/// (<see cref="Models.Book.IsCalculation"/>) muss in den Kalkulations-Modus, nicht in den Solver —
+/// dessen Stellungen sind Info-Linien und aus allen Quiz-/Zufallspools ausgeschlossen, der Solver
+/// meldete sofort „abgeschlossen". Die Verzweigung gehört an die Auflösung, weil der Client sonst
+/// die Information gar nicht hat.</para>
+/// </summary>
+public class PublicSlugTargetDto
+{
+    public int BookId { get; set; }
+    /// <summary>Buch ist ein Kalkulationsbuch → Ziel ist der Kalkulations-Modus statt des Solvers.</summary>
+    public bool IsCalculation { get; set; }
+}
+
+/// <summary>
+/// Auflösung von <c>/{slug}/{kapitel}</c>: derselbe Ziel-Kopf wie <see cref="PublicSlugTargetDto"/>
+/// plus das aufgelöste Kapitel. Der Kapitel-Teil der URL IST der Kapitelname (getrimmt und ohne
+/// Groß-/Kleinschreibungs-Unterschied verglichen); unbekannt → 404.
+/// </summary>
+public class PublicSlugChapterDto
+{
+    public int BookId { get; set; }
+    public bool IsCalculation { get; set; }
+    /// <summary>Kapitelname in der Schreibweise, wie er im Buch gespeichert ist (nicht wie in der URL).</summary>
+    public string Chapter { get; set; } = string.Empty;
+    /// <summary>
+    /// 0-basierter SOLVER-Kapitelindex für die interne Route <c>courses/:bookId/chapter/:index/:mode</c>
+    /// — derselbe Index-Kontrakt wie <see cref="CourseChapterDto.Index"/> (<see cref="Services.ChapterOrder"/>:
+    /// nur Quiz-Linien, Info-Kapitel belegen keinen Index).
+    /// <para><c>null</c> bei Kalkulationsbüchern (dort filtert der Kalkulations-Modus über den NAMEN)
+    /// und bei reinen Info-Kapiteln (die haben im Solver keinen Index).</para>
+    /// </summary>
+    public int? ChapterIndex { get; set; }
+}

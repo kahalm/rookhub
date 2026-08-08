@@ -35,7 +35,9 @@ public class EndpointAuthInventoryTests
         "GET /api/book-puzzles/{id:int}/track-counts",               // BookPuzzleController.TrackCounts
         "GET /api/book-puzzles/{id:int}",                            // BookPuzzleController.GetById
         "GET /api/bot/player-progress/{discordId}",                  // BotStatsController.GetPlayerProgress
+        "GET /api/calculations/books/{bookId}/public",                // CalculationController.GetPublicBook
         "GET /api/courses/by-slug/{slug}",                           // CourseController.ResolvePublicSlug
+        "GET /api/courses/by-slug/{slug}/{chapter}",                 // CourseController.ResolvePublicSlugChapter
         "GET /api/courses/{bookId}/public",                          // CourseController.GetPublicCourse
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress
         "GET /api/games/shared/{token}",                             // GamesController.GetShared

@@ -6,8 +6,28 @@
     <h1 class="calc-title">
       {{ 'calc.title' | translate }}
       <span class="calc-book" *ngIf="book">· {{ book.displayName }}</span>
+      <!-- Kapitel-Kurz-URL /{slug}/{kapitel}: die Liste zeigt nur dieses Kapitel — das gehört
+           sichtbar in den Titel, sonst wirkt der Kurs einfach kürzer als er ist. -->
+      <span class="calc-book" *ngIf="chapterFilter">· {{ chapterFilter }}</span>
     </h1>
   </div>
+
+  <!-- Anonym: alles bleibt auf diesem Gerät. Bewusst als ruhige Zeile und nicht als Dialog —
+       niemand soll zum Konto gedrängt werden; er soll nur wissen, woran er ist. Der Anmelde-Link
+       führt über returnUrl genau hierher zurück (inkl. Stellung/Kapitel).
+       Spielt der Gerätespeicher NICHT mit (Privatmodus, Quota), wäre „liegt auf diesem Gerät" eine
+       Lüge — die Zeile sagt dann, dass gerade gar nichts gespeichert werden konnte. -->
+  @if (localOnly) {
+    <p class="calc-local-note" [class.calc-local-note--failed]="localSaveFailed">
+      <mat-icon>{{ localSaveFailed ? 'warning' : 'devices' }}</mat-icon>
+      <span class="calc-local-text">
+        {{ (localSaveFailed ? 'calc.local.unavailable' : 'calc.local.notice') | translate }}
+      </span>
+      <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
+        {{ 'calc.local.signIn' | translate }}
+      </a>
+    </p>
+  }
 
   @if (loading && !position) {
     <div class="calc-loading"><mat-spinner diameter="40"></mat-spinner></div>
@@ -242,7 +262,10 @@
               </button>
               <span class="calc-spacer"></span>
               <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount, total: positions.length } }}</span>
-              <span class="calc-total-points" [matTooltip]="'calc.review.totalPointsHint' | translate">
+              <!-- Bei aktivem Kapitelfilter zeigt die Liste NUR dieses Kapitel — dann ist auch
+                   diese Summe die des Kapitels (siehe `pickTotals`); der Tooltip sagt es. -->
+              <span class="calc-total-points"
+                    [matTooltip]="(chapterFilter ? 'calc.review.totalPointsChapterHint' : 'calc.review.totalPointsHint') | translate">
                 {{ 'calc.review.totalPoints' | translate: { score: scoreDisplay(totalPoints, totalMaxPoints) } }}
               </span>
             </div>

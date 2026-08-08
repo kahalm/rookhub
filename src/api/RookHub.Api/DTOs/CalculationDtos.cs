@@ -201,3 +201,45 @@ public class CalcPositionStateDto
     /// <summary>Die daraus abgeleiteten Punkte (<c>null</c>, solange unbewertet).</summary>
     public int? Points { get; set; }
 }
+
+/// <summary>
+/// Eine Stellung eines ÖFFENTLICHEN Buchs für den anonymen Kalkulations-Modus. Bewusst ein EIGENES
+/// DTO neben <see cref="CalcPositionDto"/>: hier gibt es keinen Nutzer, also auch keine
+/// Trainings-Werte (Baum, Zeit, Stufe, Festlegung) — die liegen beim anonymen Besucher im Browser.
+/// Was NICHT drinsteht, kann auch nicht versehentlich fremde Werte tragen.
+/// <para>Wie überall im Kalkulations-Modus enthält das DTO <b>keine Lösung</b>: <c>BookPuzzle.Moves</c>
+/// hat hier keine Entsprechung, höchstens der Vorlauf bis zum Trainingsstart
+/// (<see cref="SetupMoves"/> = Halbzüge <c>0..StartPly</c>).</para>
+/// </summary>
+public class CalcPublicPositionDto
+{
+    public int Id { get; set; }
+    public string Round { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    /// <summary>Kapitel der Linie (<c>null</c> = ohne Kapitel) — Filter für <c>/{slug}/{kapitel}</c>.</summary>
+    public string? Chapter { get; set; }
+    /// <summary>FEN aus dem PGN-Header (Ausgangspunkt, ggf. noch vor den <see cref="SetupMoves"/>).</summary>
+    public string Fen { get; set; } = string.Empty;
+    /// <summary>Züge (UCI) von <see cref="Fen"/> BIS zur Aufgabenstellung — nie darüber hinaus
+    /// (<c>CalculationService.SetupMoves</c>). Leer bei reinen Stellungs-Linien.</summary>
+    public string SetupMoves { get; set; } = string.Empty;
+    /// <summary>Optionaler Erklär-/Aufgabentext zur Stellung.</summary>
+    public string? Comment { get; set; }
+}
+
+/// <summary>
+/// Kopf + VOLLSTÄNDIGE Stellungen eines öffentlich freigegebenen Buchs für den anonymen
+/// Kalkulations-Modus — die einzige Lese-Öffnung des Modus. Anders als der eingeloggte Pfad
+/// (leichte Liste + Einzelabruf je Stellung) kommt hier alles in EINEM Abruf, weil es für einen
+/// anonymen Besucher keinen zweiten, nutzerbezogenen Endpoint gibt und seine Arbeit ohnehin
+/// vollständig lokal im Browser liegt.
+/// </summary>
+public class CalcPublicBookDto
+{
+    public int BookId { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    /// <summary>Ist das Buch als Kalkulationsbuch markiert (<c>Book.IsCalculation</c>)?</summary>
+    public bool IsCalculation { get; set; }
+    /// <summary>Stellungen in Lesereihenfolge (Round → Id).</summary>
+    public List<CalcPublicPositionDto> Positions { get; set; } = new();
+}

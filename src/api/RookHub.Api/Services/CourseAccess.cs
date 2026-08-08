@@ -36,4 +36,22 @@ public static class CourseAccess
             (a.GroupId == everyoneId ||
              db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)), ct);
     }
+
+    /// <summary>
+    /// Ist dieses Buch ein KALKULATIONSBUCH (<see cref="Book.IsCalculation"/>)? Unbekannte BookId
+    /// → <c>false</c>.
+    ///
+    /// <para><b>Warum das eine Zugriffsfrage ist</b>: ein Kalkulationsbuch wird als Stellung OHNE
+    /// Lösung serviert — <see cref="BookPuzzle.Moves"/> verlässt den Server bewusst nicht (siehe
+    /// <see cref="CalculationService"/>). Die SOLVER-Pfade liefern dieselben Linien aber über
+    /// <see cref="BookPuzzleService.MapToDto"/> samt <c>Moves</c> aus. Ein Kalkulationsbuch ist
+    /// kein Solver-Kurs; diese Pfade behandeln es deshalb wie ein nicht vorhandenes Buch (404) —
+    /// sonst zwänge schon das Freischalten eines Kalkulationskurses (nötig für <c>/{slug}</c>) zur
+    /// Preisgabe der Lösung über den Nachbar-Endpoint.</para>
+    ///
+    /// <para>Der Schalter bleibt beim Besitzer/Admin (<c>PUT /api/courses/{bookId}/calculation</c>):
+    /// wer die Zugfolgen wieder über die Kurs-Pfade braucht, schaltet den Kalkulations-Modus aus.</para>
+    /// </summary>
+    public static Task<bool> IsCalculationBookAsync(AppDbContext db, int bookId, CancellationToken ct = default)
+        => db.Books.AnyAsync(b => b.Id == bookId && b.IsCalculation, ct);
 }
