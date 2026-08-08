@@ -156,6 +156,96 @@ public class CalculationCourseListTests : IDisposable
     }
 
     [Fact]
+    public async Task CalculationBook_ShowsTotalPointsWithMaximumOfTheCourse()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id, isCalculation: true);
+        var a = await SeedLineAsync(book, "1", infoOnly: true);
+        var b = await SeedLineAsync(book, "2", infoOnly: true);
+        var c = await SeedLineAsync(book, "3", infoOnly: true);
+        await _calc.PatchMetaAsync(user.Id, a.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.MoveNoSideLines }, isAdmin: false);
+        await _calc.PatchMetaAsync(user.Id, b.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.NotSolved }, isAdmin: false);
+        await _calc.PatchMetaAsync(user.Id, c.Id, new PatchCalcMetaDto { AddSeconds = 60 }, isAdmin: false);  // unbewertet
+
+        var item = (await _courses.GetCoursesAsync(user.Id, isAdmin: false)).Single();
+
+        Assert.Equal(3, item.CalcPoints);        // 3 + 0, die unbewertete zählt nicht
+        Assert.Equal(12, item.CalcMaxPoints);    // … das Maximum aber schon: 3 Stellungen × 4
+        // Werte ohne Baum sind KEIN Fortschritt: „bearbeitet" bleibt an einem echten Analysebaum hängen.
+        Assert.Equal(0, item.SolvedCount);
+    }
+
+    [Fact]
+    public async Task NormalBook_HasNoCalculationPoints()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id, isCalculation: false);
+        await SeedLineAsync(book, "1", infoOnly: false);
+
+        var item = (await _courses.GetCoursesAsync(user.Id, isAdmin: false)).Single();
+
+        // null statt 0: bei einem normalen Kurs gibt es nichts zu bewerten.
+        Assert.Null(item.CalcPoints);
+        Assert.Null(item.CalcMaxPoints);
+    }
+
+    [Fact]
+    public async Task CalculationBook_WithoutRatings_HasZeroPoints()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id, isCalculation: true);
+        await SeedLineAsync(book, "1", infoOnly: true);
+
+        var item = (await _courses.GetCoursesAsync(user.Id, isAdmin: false)).Single();
+
+        Assert.Equal(0, item.CalcPoints);
+        Assert.Equal(4, item.CalcMaxPoints);     // 0 von 4 ist etwas anderes als „nichts zu holen"
+    }
+
+    [Fact]
+    public async Task CourseDetail_ShowsTotalPoints_OnlyForCalculationBooks()
+    {
+        var user = await CreateUserAsync();
+        var calcBook = await SeedBookAsync(user.Id, isCalculation: true);
+        var pos = await SeedLineAsync(calcBook, "1", infoOnly: true);
+        var pos2 = await SeedLineAsync(calcBook, "2", infoOnly: true);
+        await _calc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.MoveNoMainLine, AddSeconds = 120 },
+            isAdmin: false);
+        await _calc.PatchMetaAsync(user.Id, pos2.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.Solved }, isAdmin: false);
+        var normalBook = await SeedBookAsync(user.Id, isCalculation: false);
+        await SeedLineAsync(normalBook, "1", infoOnly: false);
+
+        var calcDetail = await _authoring.GetDetailAsync(user.Id, calcBook.Id, isAdmin: false);
+        var normalDetail = await _authoring.GetDetailAsync(user.Id, normalBook.Id, isAdmin: false);
+
+        Assert.Equal(6, calcDetail.CalcPoints);          // 2 + 4
+        Assert.Equal(8, calcDetail.CalcMaxPoints);       // 2 Stellungen × 4
+        Assert.Null(normalDetail.CalcPoints);
+        Assert.Null(normalDetail.CalcMaxPoints);
+        // Werte ohne Baum sind kein Fortschritt — auch nicht in der Kapitel-Verwaltungssicht.
+        Assert.Equal(0, calcDetail.SolvedCount);
+        Assert.Equal(0, calcDetail.Chapters.Sum(c => c.SolvedCount));
+    }
+
+    [Fact]
+    public async Task CalculationBook_PointsOfOtherUsers_DoNotCount()
+    {
+        var mine = await CreateUserAsync("mine");
+        var other = await CreateUserAsync("other");
+        var book = await SeedBookAsync(mine.Id, isCalculation: true);
+        var pos = await SeedLineAsync(book, "1", infoOnly: true);
+        await _calc.PatchMetaAsync(other.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.Solved }, isAdmin: true);
+
+        var item = (await _courses.GetCoursesAsync(mine.Id, isAdmin: false)).Single();
+        Assert.Equal(0, item.CalcPoints);
+    }
+
+    [Fact]
     public async Task DeleteBook_WithSavedCalculationTrees_Works()
     {
         // CalculationTree hängt per Restrict-FK am BookPuzzle → ohne explizites Aufräumen

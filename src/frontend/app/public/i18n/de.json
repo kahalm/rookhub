@@ -1215,6 +1215,8 @@
       "addedCount": "{{count}} Stellung(en) hinzugefügt.",
       "calcBook": "Kalkulationsbuch",
       "calcHint": "Stellungen ohne Lösung — werden im Kalkulations-Modus durchgerechnet.",
+      "calcPoints": "Kalkulations-Punkte",
+      "calcPointsHint": "Punkte deiner Selbstbewertung im Kalkulations-Modus über alle Stellungen dieses Kurses, mit der erreichbaren Höchstzahl.",
       "calcToggle": "Kalkulations-Modus",
       "calcToggleHint": "Diesen Kurs als Stellungen zum Durchrechnen ausliefern statt als Puzzles zum Lösen: eingefrorenes Brett, keine Lösung, eigener Analysebaum je Stellung. Vorhandene Linien bleiben unverändert.",
       "calcToggleFailed": "Der Kalkulations-Modus konnte nicht umgeschaltet werden.",
@@ -1366,6 +1368,7 @@
       "markedTooltip": "Nur die von dir als Flashcards markierten Linien",
       "markedMenu": "Flashcards (markierte Linien)"
     },
+    "calcPoints": "{{score}} Punkte",
     "calculate": "Kalkulieren",
     "browse": {
       "title": "Durchsehen",
@@ -1456,6 +1459,37 @@
     "noTaskText": "Kein Kommentar zu dieser Stellung.",
     "notSavedYet": "Noch nicht gespeichert",
     "prevPosition": "Vorherige Stellung",
+    "review": {
+      "chapterScore": "{{score}} Pkt",
+      "chapterSummary": "{{score}} Pkt · {{time}}",
+      "choiceHint": "Der erste Zug, auf den du dich festgelegt hast.",
+      "choose": "Als meine Wahl markieren",
+      "chooseHint": "Auf diesen ersten Zug festlegen (nochmal klicken = zurücknehmen). Genau eine Wahl je Stellung.",
+      "grade": {
+        "moveNoMainLine": "Richtiger Zug, aber Hauptfolge nicht gesehen",
+        "moveNoSideLines": "Richtiger Zug, aber Nebenfolgen nicht gesehen",
+        "notSolved": "Nicht gelöst",
+        "solved": "Gelöst",
+        "someIdeas": "Manche Ideen gesehen"
+      },
+      "gradeHint": "Stufe wählen (nochmal klicken = Bewertung zurücknehmen).",
+      "gradeLegend": "Selbstbewertung",
+      "gradeShort": {
+        "moveNoMainLine": "Zug, ohne Hauptfolge",
+        "moveNoSideLines": "Zug, ohne Nebenfolgen",
+        "notSolved": "nicht gelöst",
+        "solved": "gelöst",
+        "someIdeas": "Ideen gesehen"
+      },
+      "noChoice": "Noch nicht festgelegt",
+      "notRated": "Noch nicht bewertet",
+      "saveFailed": "Wahl, Zeit und Bewertung konnten nicht gespeichert werden.",
+      "scoreHint": "Punkte dieser Stellung (höchstens 4).",
+      "selfRatingHint": "Prüf die Lösung im Buch und wähl dann deine Stufe — der Kalkulations-Modus zeigt keine Lösung.",
+      "timeHint": "Aktive Rechenzeit an dieser Stellung (pausiert, wenn der Tab im Hintergrund liegt).",
+      "totalPoints": "{{score}} Punkte",
+      "totalPointsHint": "Punkte dieses Kurses aus deiner Selbstbewertung, mit der erreichbaren Höchstzahl."
+    },
     "saveFailed": "Deine Linien konnten nicht gespeichert werden.",
     "savedAt": "Gespeichert {{time}}",
     "saving": "Speichere…",

@@ -83,6 +83,24 @@ describe('CalcLinesComponent Darstellung', () => {
     expect(c.editingLeafId).toBeNull();
   });
 
+  it('hebt die Linien unter dem festgelegten ersten Zug hervor — über UCI, nicht über die Id', () => {
+    const c = make();
+    const first = addMove(c.tree, c.tree.rootId, mv('Nxe5', 'f3e5'));
+    addMove(c.tree, first.id, mv('Nxe5', 'c6e5'));
+    const second = addMove(c.tree, first.id, mv('d6', 'd7d6'));   // Abzweigung UNTER der Wahl
+    addMove(c.tree, c.tree.rootId, mv('d4', 'd2d4'));             // andere Wahl
+    expect(second).toBeTruthy();
+
+    c.chosenUci = 'f3e5';
+    const [lineA, lineB, lineC] = c.allLines;
+    expect(c.isChosenLine(lineA)).toBeTrue();
+    expect(c.isChosenLine(lineB)).toBeTrue();     // Abzweigung zählt zur Festlegung
+    expect(c.isChosenLine(lineC)).toBeFalse();
+
+    c.chosenUci = null;
+    expect(c.isChosenLine(lineA)).toBeFalse();
+  });
+
   it('gibt den Symbolen in der Notation ihre Bedeutung als natives title', () => {
     // Bewusst `title` statt `matTooltip`: CDK-Overlays hängen am <body> und wären im
     // Brett-Vollbild unsichtbar.
@@ -92,4 +110,46 @@ describe('CalcLinesComponent Darstellung', () => {
     expect(c.evalName('⨀')).toBe('calc.eval.zugzwang');
   });
 
+});
+
+describe('CalcLinesComponent Festlegung (Stern am ersten Zug)', () => {
+  async function render(chosenUci: string | null) {
+    await TestBed.configureTestingModule({
+      imports: [CalcLinesComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CalcLinesComponent);
+    const c = fixture.componentInstance;
+    c.tree = createTree(START);
+    c.startFen = START;
+    // Zwei Linien mit DEMSELBEN ersten Zug plus eine dritte mit einem anderen.
+    const first = addMove(c.tree, c.tree.rootId, mv('Nxe5', 'f3e5'));
+    addMove(c.tree, first.id, mv('Nxe5', 'c6e5'));
+    addMove(c.tree, first.id, mv('d6', 'd7d6'));
+    addMove(c.tree, c.tree.rootId, mv('d4', 'd2d4'));
+    c.chosenUci = chosenUci;
+    fixture.detectChanges();
+    return { fixture, component: c, el: fixture.nativeElement as HTMLElement, firstId: first.id };
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('zeigt den Stern je ERSTEM Zug genau einmal — nicht je Abzweigung', async () => {
+    const { el } = await render(null);
+    // Drei Linien, aber nur zwei verschiedene erste Züge → zwei Sterne.
+    expect(el.querySelectorAll('.cl-line').length).toBe(3);
+    expect(el.querySelectorAll('.cl-star').length).toBe(2);
+  });
+
+  it('meldet den geklickten ersten Zug und markiert die Festlegung', async () => {
+    const { el, component, firstId } = await render('f3e5');
+    const emitted: number[] = [];
+    component.chooseMove.subscribe(id => emitted.push(id));
+
+    expect(el.querySelectorAll('.cl-star--on').length).toBe(1);
+    expect(el.querySelectorAll('.cl-line--chosen').length).toBe(2);   // beide Abzweigungen
+
+    (el.querySelector('.cl-star') as HTMLButtonElement).click();
+    expect(emitted).toEqual([firstId]);
+  });
 });

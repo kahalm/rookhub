@@ -237,6 +237,97 @@
   opacity: 0.75;
 }
 
+.calc-total-points {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #f57f17;
+}
+
+/* ===== Festlegung · Rechenzeit · Selbstbewertung ===== */
+.calc-review-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.calc-review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  color: color-mix(in srgb, currentColor 65%, transparent);
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.calc-review-chip--set {
+  color: #f57f17;
+  font-weight: 600;
+}
+
+.calc-review-time,
+.calc-review-score { font-variant-numeric: tabular-nums; }
+
+/* Die fünf Stufen: eine Spalte von Schaltflächen, gewählt wird die BEDEUTUNG (die Punkte
+   stehen nur als kleine Zahl daneben). Kein Zahlenfeld — die Stufe ist die Eingabe. */
+.calc-grades {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.4rem;
+}
+
+.calc-grade {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+}
+
+.calc-grade--on {
+  border-color: #f9a825;
+  background: color-mix(in srgb, #f9a825 16%, transparent);
+  font-weight: 600;
+}
+
+.calc-grade-label { flex: 1; }
+
+.calc-grade-points {
+  flex: 0 0 auto;
+  min-width: 1.2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* Zusatzangaben in der Sprungliste (Wahl · Zeit · Stufe/Punkte) */
+.calc-opt-meta {
+  margin-left: 0.4rem;
+  font-size: 0.78rem;
+  opacity: 0.75;
+
+  span + span { margin-left: 0.35rem; }
+}
+
+.calc-opt-choice { color: #f57f17; }
+.calc-opt-time { font-variant-numeric: tabular-nums; }
+.calc-opt-grade { font-style: italic; }
+.calc-opt-points { font-weight: 600; font-variant-numeric: tabular-nums; }
+
 .calc-jump {
   width: 100%;
   margin-top: 0.4rem;

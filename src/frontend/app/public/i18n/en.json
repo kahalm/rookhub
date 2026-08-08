@@ -1215,6 +1215,8 @@
       "addedCount": "{{count}} position(s) added.",
       "calcBook": "Calculation book",
       "calcHint": "Positions without a solution — worked through in calculation mode.",
+      "calcPoints": "Calculation points",
+      "calcPointsHint": "Points from your self-assessment in calculation mode across all positions of this course, next to the maximum you can reach.",
       "calcToggle": "Calculation mode",
       "calcToggleHint": "Serve this course as positions to calculate instead of puzzles to solve: frozen board, no solution, your own analysis tree per position. Existing lines stay untouched.",
       "calcToggleFailed": "Calculation mode could not be changed.",
@@ -1366,6 +1368,7 @@
       "markedTooltip": "Only the lines you marked as flashcards",
       "markedMenu": "Flashcards (marked lines)"
     },
+    "calcPoints": "{{score}} pts",
     "calculate": "Calculate",
     "browse": {
       "title": "Browse",
@@ -1456,6 +1459,37 @@
     "noTaskText": "No comment for this position.",
     "notSavedYet": "Not saved yet",
     "prevPosition": "Previous position",
+    "review": {
+      "chapterScore": "{{score}} pts",
+      "chapterSummary": "{{score}} pts · {{time}}",
+      "choiceHint": "The first move you committed to.",
+      "choose": "Mark as my choice",
+      "chooseHint": "Commit to this first move (click again to take it back). Only one choice per position.",
+      "grade": {
+        "moveNoMainLine": "Right move, but main line not seen",
+        "moveNoSideLines": "Right move, but side lines not seen",
+        "notSolved": "Not solved",
+        "solved": "Solved",
+        "someIdeas": "Saw some ideas"
+      },
+      "gradeHint": "Pick a level (click again to clear your rating).",
+      "gradeLegend": "Self-assessment",
+      "gradeShort": {
+        "moveNoMainLine": "move, no main line",
+        "moveNoSideLines": "move, no side lines",
+        "notSolved": "not solved",
+        "solved": "solved",
+        "someIdeas": "some ideas"
+      },
+      "noChoice": "No choice yet",
+      "notRated": "Not rated yet",
+      "saveFailed": "Your choice, time and rating could not be saved.",
+      "scoreHint": "Points for this position (4 at most).",
+      "selfRatingHint": "Check the solution in the book, then pick your level — calculation mode never shows a solution.",
+      "timeHint": "Active thinking time on this position (paused while the tab is in the background).",
+      "totalPoints": "{{score}} pts",
+      "totalPointsHint": "Points of this course from your self-assessment, next to the maximum you can reach."
+    },
     "saveFailed": "Could not save your lines.",
     "savedAt": "Saved {{time}}",
     "saving": "Saving…",

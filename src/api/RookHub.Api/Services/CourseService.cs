@@ -306,6 +306,7 @@ public class CourseService
         var calcBookIds = books.Where(b => b.IsCalculation).Select(b => b.Id).ToList();
         var calcTotalByBook = new Dictionary<int, int>();
         var calcDoneByBook = new Dictionary<int, int>();
+        var calcPointsByBook = new Dictionary<int, int>();
         if (calcBookIds.Count > 0)
         {
             calcTotalByBook = await _db.BookPuzzles
@@ -313,11 +314,25 @@ public class CourseService
                 .GroupBy(bp => bp.BookId!.Value)
                 .Select(g => new { BookId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.BookId, x => x.Count);
+            // „Bearbeitet" heißt: es gibt einen echten Analysebaum. Eine Zeile mit LEEREM TreeJson
+            // trägt nur Rechenzeit/Festlegung/Punkte (PATCH ohne Baum) und zählt hier NICHT mit.
             calcDoneByBook = await _db.CalculationTrees
-                .Where(t => t.UserId == userId && calcBookIds.Contains(t.BookId))
+                .Where(t => t.UserId == userId && calcBookIds.Contains(t.BookId) && t.TreeJson != "")
                 .GroupBy(t => t.BookId)
                 .Select(g => new { BookId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.BookId, x => x.Count);
+            // Gesamtpunkte der Selbstbewertung je Kalkulationsbuch (unbewertete Stellungen = null
+            // fließen nicht ein). Gespeichert ist die STUFE — die Punkte entstehen erst über
+            // CalculationGrades.PointsFor, deshalb wird je Buch nach Stufe gezählt und die
+            // Gewichtung hier angewandt statt in der DB summiert.
+            calcPointsByBook = (await _db.CalculationTrees
+                .Where(t => t.UserId == userId && calcBookIds.Contains(t.BookId) && t.Grade != null)
+                .GroupBy(t => new { t.BookId, t.Grade })
+                .Select(g => new { g.Key.BookId, g.Key.Grade, Count = g.Count() })
+                .ToListAsync())
+                .GroupBy(x => x.BookId)
+                .ToDictionary(g => g.Key,
+                    g => g.Sum(x => CalculationGrades.PointsFor(x.Grade!.Value) * x.Count));
         }
 
         var progressByBook = await _db.CourseProgresses
@@ -380,6 +395,12 @@ public class CourseService
                 LinkedDisplayName = linkByBook.TryGetValue(b.Id, out var lid) && linkedNameById.TryGetValue(lid, out var ln) ? ln : null,
                 Themes = BookThemeTags.ParseKeys(b.Themes),
                 IsCalculation = b.IsCalculation,
+                CalcPoints = b.IsCalculation
+                    ? (calcPointsByBook.TryGetValue(b.Id, out var cp) ? cp : 0)
+                    : null,
+                // Summe immer MIT Maximum ausliefern: „14" allein ist ohne die Zahl der
+                // Stellungen nicht lesbar.
+                CalcMaxPoints = b.IsCalculation ? CalculationGrades.MaxPointsFor(puzzleCount) : null,
             };
         }).ToList();
     }

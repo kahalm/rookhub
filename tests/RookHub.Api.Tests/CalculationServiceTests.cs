@@ -295,4 +295,605 @@ public class CalculationServiceTests : IDisposable
         await _svc.DeleteTreeAsync(user.Id, pos.Id, isAdmin: false);   // wirft nicht
         Assert.Empty(_db.CalculationTrees);
     }
+
+    // ---- Rechenzeit (Delta, wird addiert) ------------------------------------
+
+    [Fact]
+    public async Task PatchMeta_Seconds_AreAddedNotOverwritten()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 90 }, isAdmin: false);
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 30 }, isAdmin: false);
+
+        // Zweiter Besuch schickt sein Delta — die Zeit des ersten darf dabei nicht verlorengehen.
+        Assert.Equal(120, state.SecondsSpent);
+        Assert.Equal(120, _db.CalculationTrees.Single().SecondsSpent);
+    }
+
+    [Fact]
+    public async Task PatchMeta_Seconds_AreClampedPerTransmission()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        // Hängender Client meldet ein absurdes Delta → je Übertragung gedeckelt.
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 5_000_000 }, isAdmin: false);
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 5_000_000 }, isAdmin: false);
+
+        Assert.Equal(2 * CalculationService.MaxSecondsPerFlush, state.SecondsSpent);
+    }
+
+    [Fact]
+    public async Task PatchMeta_NegativeSeconds_DoNotSubtract()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 60 }, isAdmin: false);
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = -600 }, isAdmin: false);
+
+        Assert.Equal(60, state.SecondsSpent);
+    }
+
+    [Fact]
+    public async Task PatchMeta_Seconds_HaveATotalCeiling()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        var tree = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 1 }, isAdmin: false);
+        var row = _db.CalculationTrees.Single();
+        row.SecondsSpent = CalculationService.MaxSecondsSpent - 10;
+        await _db.SaveChangesAsync();
+
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 3600 }, isAdmin: false);
+
+        Assert.Equal(CalculationService.MaxSecondsSpent, state.SecondsSpent);
+        Assert.Equal(pos.Id, tree.BookPuzzleId);
+    }
+
+    // ---- Rechenzeit: Wiederholungen dürfen nicht doppelt zählen ---------------
+    // Zeit ist der einzige Wert, der ADDIERT statt SETZT — und damit der einzige, der eine
+    // Idempotenz-Marke braucht. Der Fall, um den es geht: die Anfrage KAM AN, nur die Antwort ging
+    // verloren (Timeout/502) — der Client wiederholt sie dann mit derselben Marke.
+
+    [Fact]
+    public async Task PatchMeta_SamePatchTwice_AddsSecondsOnlyOnce()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        var patch = new PatchCalcMetaDto { AddSeconds = 90, SecondsToken = "t-abc" };
+
+        var first = await _svc.PatchMetaAsync(user.Id, pos.Id, patch, isAdmin: false);
+        var retry = await _svc.PatchMetaAsync(user.Id, pos.Id, patch, isAdmin: false);
+
+        Assert.Equal(90, first.SecondsSpent);
+        Assert.Equal(90, retry.SecondsSpent);              // NICHT 180
+        Assert.Equal(90, _db.CalculationTrees.Single().SecondsSpent);
+    }
+
+    [Fact]
+    public async Task PatchMeta_DifferentSecondsTokens_AddBothDeltas()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 90, SecondsToken = "t-1" }, isAdmin: false);
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 30, SecondsToken = "t-2" }, isAdmin: false);
+
+        // Zwei echte Messungen sind zwei Deltas — die Marke unterdrückt nur die WIEDERHOLUNG.
+        Assert.Equal(120, state.SecondsSpent);
+    }
+
+    [Fact]
+    public async Task PatchMeta_RepeatedPatch_StillUpdatesGradeAndChoice()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 60, SecondsToken = "t-x" }, isAdmin: false);
+
+        // Der Wiederholversuch trägt dieselbe Zeit-Marke, aber neue Stufe/Festlegung: Stufe und
+        // Festlegung SETZEN (sind also von sich aus idempotent) und müssen durchlaufen.
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto
+        {
+            AddSeconds = 60,
+            SecondsToken = "t-x",
+            Grade = (int)CalculationGrade.MoveNoSideLines,
+            ChosenSan = "Nd5",
+            ChosenUci = "c3d5",
+        }, isAdmin: false);
+
+        Assert.Equal(60, state.SecondsSpent);              // Zeit: einmal
+        Assert.Equal((int)CalculationGrade.MoveNoSideLines, state.Grade);
+        Assert.Equal("Nd5", state.ChosenSan);
+        Assert.Equal("c3d5", state.ChosenUci);
+    }
+
+    [Fact]
+    public async Task PatchMeta_GrownRetryWithSameToken_AddsOnlyTheDifference()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 40, SecondsToken = "t-grow" }, isAdmin: false);
+
+        // Scheitert die Antwort, legt der Client den Patch zurück in die Warteschlange und lässt ihn
+        // um inzwischen gemessene Zeit WACHSEN — mit derselben Marke.
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 65, SecondsToken = "t-grow" }, isAdmin: false);
+
+        Assert.Equal(65, state.SecondsSpent);              // 40 + 25, nicht 105
+    }
+
+    [Fact]
+    public async Task SaveTree_SamePatchTwice_AddsSecondsOnlyOnce()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        var dto = new SaveCalcTreeDto { TreeJson = "{\"v\":1}", AddSeconds = 30, SecondsToken = "t-tree" };
+
+        await _svc.SaveTreeAsync(user.Id, pos.Id, dto, isAdmin: false);
+        var retry = await _svc.SaveTreeAsync(user.Id, pos.Id, dto, isAdmin: false);
+
+        Assert.Equal(30, retry.SecondsSpent);
+        Assert.True(retry.HasTree);
+    }
+
+    [Fact]
+    public async Task PatchMeta_SecondsToken_TooLong_Throws400()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto
+            {
+                AddSeconds = 10,
+                SecondsToken = new string('x', CalculationService.MaxSecondsTokenLength + 1),
+            }, isAdmin: false));
+    }
+
+    [Fact]
+    public async Task PatchMeta_WithoutSecondsToken_KeepsAddingAsBefore()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 20 }, isAdmin: false);
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto { AddSeconds = 20 }, isAdmin: false);
+
+        Assert.Equal(40, state.SecondsSpent);
+        Assert.Null(_db.CalculationTrees.Single().SecondsToken);
+    }
+
+    // ---- Bewertung (benannte Stufe, null ≠ Stufe 0) --------------------------
+
+    [Theory]
+    [InlineData(CalculationGrade.NotSolved, 0)]
+    [InlineData(CalculationGrade.SomeIdeas, 1)]
+    [InlineData(CalculationGrade.MoveNoMainLine, 2)]
+    [InlineData(CalculationGrade.MoveNoSideLines, 3)]
+    [InlineData(CalculationGrade.Solved, 4)]
+    public async Task PatchMeta_EachGrade_DerivesItsPoints(CalculationGrade grade, int expectedPoints)
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)grade }, isAdmin: false);
+
+        // Gespeichert wird die STUFE, die Punkte sind nur abgeleitet (heute linear 0..4).
+        Assert.Equal((int)grade, state.Grade);
+        Assert.Equal((int)grade, _db.CalculationTrees.Single().Grade);
+        Assert.Equal(expectedPoints, state.Points);
+        Assert.Equal(expectedPoints, CalculationGrades.PointsFor(grade));
+    }
+
+    [Fact]
+    public async Task PatchMeta_Grade_CanBeSetChangedAndTakenBack()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        var set = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.SomeIdeas }, isAdmin: false);
+        Assert.Equal((int)CalculationGrade.SomeIdeas, set.Grade);
+        Assert.Equal(1, set.Points);
+
+        // Umbewerten ersetzt die Stufe (es gibt genau eine je Stellung).
+        var changed = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.MoveNoSideLines }, isAdmin: false);
+        Assert.Equal((int)CalculationGrade.MoveNoSideLines, changed.Grade);
+        Assert.Equal(3, changed.Points);
+        Assert.Equal((int)CalculationGrade.MoveNoSideLines, _db.CalculationTrees.Single().Grade);
+
+        // Zurücknehmen = wieder „noch nicht bewertet".
+        var cleared = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ClearGrade = true }, isAdmin: false);
+        Assert.Null(cleared.Grade);
+        Assert.Null(cleared.Points);
+        Assert.Null(_db.CalculationTrees.Single().Grade);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(10)]
+    [InlineData(-1)]
+    [InlineData(99)]
+    public async Task PatchMeta_UnknownGrade_Throws400_AndStoresNothing(int grade)
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        // Eine unbekannte Stufe ist ein Client-Fehler — NICHT still auf 0 („nicht gelöst") klemmen.
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = grade }, isAdmin: false));
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.SaveTreeAsync(user.Id, pos.Id,
+            new SaveCalcTreeDto { TreeJson = "{\"v\":1}", Grade = grade }, isAdmin: false));
+        Assert.Empty(_db.CalculationTrees);
+    }
+
+    [Fact]
+    public async Task PatchMeta_UnratedIsNull_AndNotSolvedIsAValueOfItsOwn()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        // Zeit buchen, ohne zu bewerten → Stufe bleibt null („noch nicht bewertet").
+        var afterTime = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 30 }, isAdmin: false);
+        Assert.Null(afterTime.Grade);
+        Assert.Null(afterTime.Points);
+
+        // Stufe 0 = geprüft und nicht gelöst — ein echter Wert, nicht „unbewertet".
+        var zero = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.NotSolved }, isAdmin: false);
+        Assert.Equal(0, zero.Grade);
+        Assert.Equal(0, zero.Points);
+        Assert.NotNull(_db.CalculationTrees.Single().Grade);
+
+        // Weiterer PATCH ohne Stufen-Feld lässt die Bewertung stehen.
+        var untouched = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { AddSeconds = 10 }, isAdmin: false);
+        Assert.Equal(0, untouched.Grade);
+
+        // Erst ClearGrade nimmt sie zurück — und das ist etwas anderes als Stufe 0.
+        var cleared = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ClearGrade = true }, isAdmin: false);
+        Assert.Null(cleared.Grade);
+        Assert.Null(_db.CalculationTrees.Single().Grade);
+    }
+
+    // ---- Festlegung (genau eine je Stellung) ---------------------------------
+
+    [Fact]
+    public async Task PatchMeta_Choice_SetMoveAndToggleOff()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        var set = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = "c3d5" }, isAdmin: false);
+        Assert.Equal("Nd5", set.ChosenSan);
+        Assert.Equal("c3d5", set.ChosenUci);
+
+        // Dieselbe Festlegung noch einmal markiert = zurücknehmen.
+        var off = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = "c3d5" }, isAdmin: false);
+        Assert.Null(off.ChosenSan);
+        Assert.Null(off.ChosenUci);
+        Assert.Null(_db.CalculationTrees.Single().ChosenSan);
+    }
+
+    [Fact]
+    public async Task PatchMeta_Choice_MovesInsteadOfAccumulating()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = "c3d5" }, isAdmin: false);
+        var moved = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = "Bxf7+", ChosenUci = "c4f7" }, isAdmin: false);
+
+        Assert.Equal("Bxf7+", moved.ChosenSan);
+        Assert.Equal("c4f7", moved.ChosenUci);
+        var row = Assert.Single(_db.CalculationTrees);     // genau EINE Festlegung je Stellung
+        Assert.Equal("Bxf7+", row.ChosenSan);
+    }
+
+    [Fact]
+    public async Task PatchMeta_ClearChoice_RemovesItWithoutKnowingTheMove()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = "c3d5" }, isAdmin: false);
+
+        var cleared = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ClearChoice = true }, isAdmin: false);
+
+        Assert.Null(cleared.ChosenSan);
+        Assert.Null(cleared.ChosenUci);
+    }
+
+    [Fact]
+    public async Task PatchMeta_ChoiceTooLong_Throws400()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = new string('N', 21) }, isAdmin: false));
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = new string('a', 11) }, isAdmin: false));
+        Assert.Empty(_db.CalculationTrees);
+    }
+
+    // ---- Werte ohne Baum / Baum mit Werten -----------------------------------
+
+    [Fact]
+    public async Task PatchMeta_WithoutAnyTree_CreatesRowButNotProgress()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto
+            {
+                AddSeconds = 45, Grade = (int)CalculationGrade.MoveNoMainLine,
+                ChosenSan = "Nd5", ChosenUci = "c3d5",
+            },
+            isAdmin: false);
+
+        Assert.False(state.HasTree);                       // festlegen/bewerten geht ohne Baum
+        Assert.Equal(45, state.SecondsSpent);
+        Assert.Equal((int)CalculationGrade.MoveNoMainLine, state.Grade);
+        Assert.Equal(2, state.Points);
+        Assert.Equal(string.Empty, _db.CalculationTrees.Single().TreeJson);
+
+        var dto = await _svc.GetPositionAsync(user.Id, pos.Id, isAdmin: false);
+        Assert.Null(dto.TreeJson);                         // leerer Baum ≠ gespeicherter Baum
+        Assert.Null(dto.TreeUpdatedAt);
+        Assert.Equal((int)CalculationGrade.MoveNoMainLine, dto.Grade);
+        Assert.Equal(2, dto.Points);
+        Assert.Equal("Nd5", dto.ChosenSan);
+    }
+
+    [Fact]
+    public async Task PatchMeta_WithNothingToChange_CreatesNoRow()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        var state = await _svc.PatchMetaAsync(user.Id, pos.Id, new PatchCalcMetaDto(), isAdmin: false);
+
+        Assert.Empty(_db.CalculationTrees);                // keine Karteileichen
+        Assert.Equal(0, state.SecondsSpent);
+        Assert.Null(state.Grade);
+        Assert.Null(state.Points);
+    }
+
+    [Fact]
+    public async Task SaveTree_CanCarryTheThreeValues()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+
+        var saved = await _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto
+        {
+            TreeJson = "{\"v\":1}", AddSeconds = 120, Grade = (int)CalculationGrade.MoveNoSideLines,
+            ChosenSan = "Nd5", ChosenUci = "c3d5",
+        }, isAdmin: false);
+
+        Assert.True(saved.HasTree);
+        Assert.Equal(120, saved.SecondsSpent);
+        Assert.Equal((int)CalculationGrade.MoveNoSideLines, saved.Grade);
+        Assert.Equal(3, saved.Points);
+        Assert.Equal("Nd5", saved.ChosenSan);
+
+        // Ein zweites Speichern addiert wieder nur das Delta.
+        var again = await _svc.SaveTreeAsync(user.Id, pos.Id,
+            new SaveCalcTreeDto { TreeJson = "{\"v\":2}", AddSeconds = 60 }, isAdmin: false);
+        Assert.Equal(180, again.SecondsSpent);
+        Assert.Equal((int)CalculationGrade.MoveNoSideLines, again.Grade);   // unverändert mitgeschleppt
+    }
+
+    [Fact]
+    public async Task PatchMeta_WithoutAccess_Throws404()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(ownerUserId: 999);   // fremdes persönliches Buch
+        var pos = await SeedPositionAsync(book);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.Solved, AddSeconds = 60 }, isAdmin: false));
+        Assert.Empty(_db.CalculationTrees);
+    }
+
+    [Fact]
+    public async Task PatchMeta_UnknownPosition_Throws404()
+    {
+        var user = await CreateUserAsync();
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.PatchMetaAsync(user.Id, 12345,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.MoveNoSideLines }, isAdmin: true));
+    }
+
+    [Fact]
+    public async Task PatchMeta_OfAnotherUser_LeavesMyValuesAlone()
+    {
+        var mine = await CreateUserAsync("mine");
+        var other = await CreateUserAsync("other");
+        var book = await SeedBookAsync(ownerUserId: null);
+        book.IsPublic = true;
+        await _db.SaveChangesAsync();
+        var pos = await SeedPositionAsync(book);
+
+        await _svc.PatchMetaAsync(mine.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.Solved, AddSeconds = 100 }, isAdmin: false);
+        await _svc.PatchMetaAsync(other.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.SomeIdeas, AddSeconds = 10 }, isAdmin: false);
+
+        var dto = await _svc.GetPositionAsync(mine.Id, pos.Id, isAdmin: false);
+        Assert.Equal((int)CalculationGrade.Solved, dto.Grade);
+        Assert.Equal(4, dto.Points);
+        Assert.Equal(100, dto.SecondsSpent);
+    }
+
+    [Fact]
+    public async Task DeleteTree_KeepsTimeAndRating_ButDropsTheTree()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto
+        {
+            TreeJson = "{\"v\":1}", AddSeconds = 300, Grade = (int)CalculationGrade.MoveNoMainLine,
+            ChosenSan = "Nd5", ChosenUci = "c3d5",
+        }, isAdmin: false);
+
+        await _svc.DeleteTreeAsync(user.Id, pos.Id, isAdmin: false);
+
+        var row = Assert.Single(_db.CalculationTrees);
+        Assert.Equal(string.Empty, row.TreeJson);          // Analyse neu anfangen …
+        Assert.Equal(300, row.SecondsSpent);               // … aber Zeit/Bewertung bleiben
+        Assert.Equal((int)CalculationGrade.MoveNoMainLine, row.Grade);
+        Assert.Equal("Nd5", row.ChosenSan);
+    }
+
+    [Fact]
+    public async Task DeleteTree_WithoutAnyValues_RemovesTheRow()
+    {
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        await _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto { TreeJson = "{\"v\":1}" }, isAdmin: false);
+
+        await _svc.DeleteTreeAsync(user.Id, pos.Id, isAdmin: false);
+
+        Assert.Empty(_db.CalculationTrees);
+    }
+
+    // ---- Kapitelsummen (serverseitig) ----------------------------------------
+
+    [Fact]
+    public async Task GetBook_SumsPointsWithTheirMaximumAndTimePerChapter()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(ownerUserId: user.Id);
+        var a1 = await SeedPositionAsync(book, round: "1", chapter: "Kapitel A");
+        var a2 = await SeedPositionAsync(book, round: "2", chapter: "Kapitel A");
+        var a3 = await SeedPositionAsync(book, round: "3", chapter: "Kapitel A");
+        var b1 = await SeedPositionAsync(book, round: "4", chapter: "Kapitel B");
+        var ohne = await SeedPositionAsync(book, round: "5", chapter: null);
+
+        await _svc.SaveTreeAsync(user.Id, a1.Id, new SaveCalcTreeDto
+        {
+            TreeJson = "{\"v\":1}", AddSeconds = 100, Grade = (int)CalculationGrade.Solved,
+            ChosenSan = "Nd5", ChosenUci = "c3d5",
+        }, isAdmin: false);
+        await _svc.PatchMetaAsync(user.Id, a2.Id,
+            new PatchCalcMetaDto { AddSeconds = 50, Grade = (int)CalculationGrade.MoveNoMainLine },
+            isAdmin: false);                                                             // ohne Baum
+        await _svc.PatchMetaAsync(user.Id, a3.Id,
+            new PatchCalcMetaDto { AddSeconds = 25 }, isAdmin: false);                    // unbewertet
+        await _svc.PatchMetaAsync(user.Id, b1.Id,
+            new PatchCalcMetaDto
+            {
+                Grade = (int)CalculationGrade.NotSolved, ChosenSan = "Qh5", ChosenUci = "d1h5",
+            }, isAdmin: false);
+
+        var dto = await _svc.GetBookAsync(user.Id, book.Id, isAdmin: false);
+
+        var chA = dto.Chapters.Single(c => c.Chapter == "Kapitel A");
+        Assert.Equal(3, chA.PositionCount);
+        Assert.Equal(1, chA.TreeCount);          // nur a1 hat einen echten Baum
+        Assert.Equal(1, chA.ChosenCount);
+        Assert.Equal(2, chA.RatedCount);         // a3 ist unbewertet (null zählt nicht)
+        Assert.Equal(6, chA.Points);             // gelöst (4) + Hauptfolge nicht gesehen (2)
+        // Das Maximum hängt an ALLEN Stellungen des Kapitels, auch der unbewerteten: 3 × 4.
+        Assert.Equal(12, chA.MaxPoints);
+        Assert.Equal(175, chA.SecondsSum);
+
+        var chB = dto.Chapters.Single(c => c.Chapter == "Kapitel B");
+        Assert.Equal(1, chB.RatedCount);         // Stufe „nicht gelöst" ist bewertet …
+        Assert.Equal(0, chB.Points);             // … zählt aber 0 zur Summe
+        Assert.Equal(4, chB.MaxPoints);
+        Assert.Equal(1, chB.ChosenCount);
+
+        var chNone = dto.Chapters.Single(c => c.Chapter == null);
+        Assert.Equal(1, chNone.PositionCount);
+        Assert.Equal(0, chNone.RatedCount);
+        Assert.Equal(0, chNone.Points);
+        Assert.Equal(4, chNone.MaxPoints);       // unbewertet heißt nicht „nichts zu holen"
+        Assert.Equal(0, chNone.SecondsSum);
+
+        // Buchsummen = Summe der Kapitel; Reihenfolge = erstes Auftreten in der Stellungsliste.
+        Assert.Equal(6, dto.Points);
+        Assert.Equal(20, dto.MaxPoints);         // 5 Stellungen × 4
+        Assert.Equal(175, dto.SecondsSum);
+        Assert.Equal(new string?[] { "Kapitel A", "Kapitel B", null }, dto.Chapters.Select(c => c.Chapter));
+        Assert.Equal(ohne.Id, dto.Positions.Last().Id);
+    }
+
+    [Fact]
+    public async Task GetBook_ListsTheThreeValuesPerPosition()
+    {
+        var (user, book, pos) = await SeedOwnPositionAsync();
+        await _svc.PatchMetaAsync(user.Id, pos.Id,
+            new PatchCalcMetaDto
+            {
+                AddSeconds = 42, Grade = (int)CalculationGrade.MoveNoSideLines,
+                ChosenSan = "Nd5", ChosenUci = "c3d5",
+            }, isAdmin: false);
+
+        var item = (await _svc.GetBookAsync(user.Id, book.Id, isAdmin: false)).Positions.Single();
+
+        Assert.Equal(42, item.SecondsSpent);
+        Assert.Equal((int)CalculationGrade.MoveNoSideLines, item.Grade);
+        Assert.Equal(3, item.Points);
+        Assert.Equal("Nd5", item.ChosenSan);
+        Assert.Equal("c3d5", item.ChosenUci);
+        Assert.False(item.HasTree);
+    }
+
+    [Fact]
+    public async Task GetBook_TreesOfOtherUsers_DoNotContributeToSums()
+    {
+        var mine = await CreateUserAsync("mine");
+        var other = await CreateUserAsync("other");
+        var book = await SeedBookAsync(ownerUserId: null);
+        book.IsPublic = true;
+        await _db.SaveChangesAsync();
+        var pos = await SeedPositionAsync(book, chapter: "K");
+        await _svc.PatchMetaAsync(other.Id, pos.Id,
+            new PatchCalcMetaDto { Grade = (int)CalculationGrade.Solved, AddSeconds = 600 }, isAdmin: false);
+
+        var dto = await _svc.GetBookAsync(mine.Id, book.Id, isAdmin: false);
+
+        Assert.Equal(0, dto.Points);
+        Assert.Equal(4, dto.MaxPoints);          // das Maximum hängt an der Stellung, nicht am Nutzer
+        Assert.Equal(0, dto.SecondsSum);
+        Assert.Equal(0, dto.Chapters.Single().RatedCount);
+    }
+
+    // ---- Weiterhin KEINE Lösung ----------------------------------------------
+
+    [Fact]
+    public async Task WithTrainingValues_StillNoSolutionLeavesTheServer()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(ownerUserId: user.Id);
+        // Puzzle-Linie mit echter Lösung ab Halbzug 2.
+        var pos = await SeedPositionAsync(book, moves: "e2e4 e7e5 g1f3 b8c6 f1b5", startPly: 1, chapter: "K");
+        await _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto
+        {
+            TreeJson = "{\"v\":1}", AddSeconds = 60, Grade = (int)CalculationGrade.Solved,
+            ChosenSan = "Nf3", ChosenUci = "g1f3",
+        }, isAdmin: false);
+
+        var listJson = System.Text.Json.JsonSerializer.Serialize(
+            await _svc.GetBookAsync(user.Id, book.Id, isAdmin: false));
+        var positionJson = System.Text.Json.JsonSerializer.Serialize(
+            await _svc.GetPositionAsync(user.Id, pos.Id, isAdmin: false));
+
+        // Die Bewertung ist reine SELBSTeinschätzung — sie schaltet keine Lösung frei.
+        foreach (var json in new[] { listJson, positionJson })
+        {
+            Assert.DoesNotContain("b8c6", json);
+            Assert.DoesNotContain("f1b5", json);
+        }
+        // Der Vorlauf bis zum Trainingsstart bleibt erlaubt, die Zugliste selbst kommt nie mit.
+        Assert.DoesNotContain("Moves", listJson);
+        Assert.Contains("e2e4 e7e5", positionJson);
+        // …und „g1f3" steht nur als eigene Festlegung des Nutzers drin, nicht als Buchlösung.
+        Assert.DoesNotContain("g1f3 b8c6", positionJson);
+    }
+
+    /// <summary>Nutzer + eigenes Kalkulationsbuch + eine Stellung — der Normalfall dieser Tests.</summary>
+    private async Task<(AppUser User, Book Book, BookPuzzle Position)> SeedOwnPositionAsync()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(ownerUserId: user.Id);
+        var pos = await SeedPositionAsync(book);
+        return (user, book, pos);
+    }
 }

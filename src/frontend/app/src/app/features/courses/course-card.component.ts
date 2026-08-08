@@ -10,6 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CourseListItem, CourseChapter } from './course.service';
+import { formatScore, maxPoints } from './calc/calc-review.util';
 
 /**
  * Praesentationale Kurs-Karte: zeigt Titel/Badges/Fortschritt/Themen-Chips/Aktions-Menue/Kapitel
@@ -46,6 +47,14 @@ import { CourseListItem, CourseChapter } from './course.service';
             <span>{{ 'courses.puzzleCount' | translate:{ count: course.puzzleCount } }}</span>
             @if (course.difficulty) { <span class="meta-sep">·</span><span>{{ course.difficulty }}</span> }
             @if (course.rating) { <span class="meta-sep">·</span><span>{{ course.rating }}/10</span> }
+            <!-- Kalkulationsbuch: Punkte der Selbstbewertung — IMMER mit dem Maximum, sonst ist
+                 die Zahl ohne die Stellungsanzahl nicht lesbar. -->
+            @if (calcScore) {
+              <span class="meta-sep">·</span>
+              <span class="calc-points" [matTooltip]="'courses.detail.calcPointsHint' | translate">
+                {{ 'courses.calcPoints' | translate:{ score: calcScore } }}
+              </span>
+            }
           </div>
 
           @if (course.themes?.length) {
@@ -250,6 +259,7 @@ import { CourseListItem, CourseChapter } from './course.service';
       margin-bottom: 8px;
     }
     .meta-sep { opacity: 0.5; }
+    .calc-points { font-variant-numeric: tabular-nums; font-weight: 600; }
     .progress-row { display: flex; align-items: center; gap: 8px; }
     .progress-row mat-progress-bar { flex: 1; --mdc-linear-progress-track-height: 5px; --mdc-linear-progress-active-indicator-height: 5px; border-radius: 3px; }
     .progress-label { font-variant-numeric: tabular-nums; font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; min-width: 46px; text-align: right; }
@@ -336,5 +346,15 @@ export class CourseCardComponent {
   /** Tooltip des Play-Knopfs — nennt den Modus, damit klar ist, was der Klick tut. */
   get startChapterTooltip(): string {
     return this.chapterMode === 'random' ? 'courses.startChapterRandom' : 'courses.startChapterSequential';
+  }
+
+  /**
+   * Punktestand der Selbstbewertung („14 / 24"); leer, wenn es keiner ist (kein Kalkulationsbuch
+   * bzw. Server ohne den Wert). Das Maximum gehört IMMER dazu — nackte Punkte sind ohne die Zahl
+   * der Stellungen nicht lesbar; fehlt es, ergibt es sich aus den Stellungen (4 je Stellung).
+   */
+  get calcScore(): string {
+    if (!this.course.isCalculation || this.course.calcPoints == null) return '';
+    return formatScore(this.course.calcPoints, this.course.calcMaxPoints ?? maxPoints(this.course.puzzleCount));
   }
 }

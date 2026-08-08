@@ -554,6 +554,16 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
 
             e.Property(ct => ct.TreeJson).HasColumnType("LONGTEXT");
+            e.Property(ct => ct.ChosenSan).HasMaxLength(20);
+            e.Property(ct => ct.ChosenUci).HasMaxLength(10);
+            // Rechenzeit/Punkte/Festlegung bewusst als SPALTEN neben dem opaken TreeJson: im
+            // Baum-JSON vergraben wären sie für den Server für immer unabfragbar — als Spalten
+            // lassen sich Kapitel- und Kurssummen direkt in der DB rechnen.
+            e.Property(ct => ct.SecondsSpent).HasDefaultValue(0);
+            // Idempotenz-Marke des zuletzt verbuchten Zeit-Deltas (+ wie viel darunter schon zählte):
+            // die Zeit kommt als Delta und wird ADDIERT, ein Retry darf sie nicht doppelt buchen.
+            e.Property(ct => ct.SecondsToken).HasMaxLength(64);
+            e.Property(ct => ct.SecondsTokenApplied).HasDefaultValue(0);
             e.HasIndex(ct => new { ct.UserId, ct.BookPuzzleId }).IsUnique();
             e.HasIndex(ct => new { ct.UserId, ct.BookId });
         });

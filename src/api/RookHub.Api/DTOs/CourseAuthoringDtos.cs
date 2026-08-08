@@ -38,6 +38,15 @@ public class CourseDetailDto
     /// <summary>Davon Info-/Stellungs-Linien (ohne abgefragte Lösung).</summary>
     public int InfoLineCount { get; set; }
 
+    /// <summary>Gesamtpunkte des Kurses aus der Selbstbewertung im Kalkulations-Modus (Summe der
+    /// aus den gespeicherten Stufen abgeleiteten Punkte). Nur bei Kalkulationsbüchern gefüllt,
+    /// sonst <c>null</c> — wie <c>CourseListItemDto.CalcPoints</c>.</summary>
+    public int? CalcPoints { get; set; }
+
+    /// <summary>Erreichbare Punkte des Kurses (alle Stellungen × beste Stufe); Summen werden immer
+    /// mit ihrem Maximum ausgeliefert. Nur bei Kalkulationsbüchern gefüllt.</summary>
+    public int? CalcMaxPoints { get; set; }
+
     public string? LastMode { get; set; }
     public DateTime? LastActivityAt { get; set; }
     public int? LinkedBookId { get; set; }

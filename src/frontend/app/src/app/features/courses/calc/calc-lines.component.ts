@@ -40,8 +40,21 @@ import {
       } @else {
         <ol class="cl-list">
           @for (line of allLines; track line.leafId) {
-            <li class="cl-line" [class.cl-line--active]="isActiveLine(line)">
+            <li class="cl-line" [class.cl-line--active]="isActiveLine(line)"
+                [class.cl-line--chosen]="isChosenLine(line)">
               <div class="cl-moves">
+                <!-- Stern am ERSTEN Zug = „meine Wahl". Nur an der ersten Linie, die mit diesem
+                     Zug beginnt (sharedPrefix = 0) — sonst stünde derselbe Stern je Abzweigung
+                     noch einmal da. -->
+                @if (line.sharedPrefix === 0 && line.moves.length) {
+                  <button type="button" class="cl-star" [class.cl-star--on]="isChosenLine(line)"
+                          [matTooltip]="'calc.review.chooseHint' | translate"
+                          [attr.aria-pressed]="isChosenLine(line)"
+                          [attr.aria-label]="'calc.review.choose' | translate"
+                          (click)="chooseMove.emit(line.moves[0].id)">
+                    <mat-icon>{{ isChosenLine(line) ? 'star' : 'star_border' }}</mat-icon>
+                  </button>
+                }
                 @for (move of line.moves; track move.id) {
                   <button type="button" class="cl-move"
                           [class.cl-move--shared]="$index < line.sharedPrefix"
@@ -109,6 +122,21 @@ import {
       border-left-color: #1976d2;
       background: color-mix(in srgb, currentColor 6%, transparent);
     }
+    /* Festlegung: die Linie unter dem gewählten ersten Zug bleibt sichtbar hervorgehoben,
+       auch wenn der Cursor gerade woanders steht. */
+    .cl-line--chosen {
+      border-left-color: #f9a825;
+      background: color-mix(in srgb, #f9a825 10%, transparent);
+    }
+    .cl-line--chosen.cl-line--active { border-left-color: #f57f17; }
+    .cl-line--chosen .cl-move { font-weight: 600; }
+    .cl-star {
+      border: none; background: none; padding: 0 2px; cursor: pointer;
+      color: color-mix(in srgb, currentColor 45%, transparent); line-height: 1;
+    }
+    .cl-star:hover { color: #f9a825; }
+    .cl-star--on { color: #f9a825; }
+    .cl-star mat-icon { font-size: 17px; width: 17px; height: 17px; vertical-align: middle; }
     .cl-moves { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem; }
     .cl-move {
       border: none; background: none; color: inherit; cursor: pointer;
@@ -141,11 +169,15 @@ export class CalcLinesComponent {
   @Input() startFen = '';
   /** Zähler: ändert sich, sobald der Baum verändert wurde → Neuzeichnen. */
   @Input() revision = 0;
+  /** UCI des Zuges, auf den sich der Nutzer festgelegt hat (immer ein ERSTER Zug); null = keiner. */
+  @Input() chosenUci: string | null = null;
 
   @Output() selectNode = new EventEmitter<number>();
   @Output() newLine = new EventEmitter<void>();
   @Output() deleteLine = new EventEmitter<number>();
   @Output() commentChanged = new EventEmitter<{ nodeId: number; text: string }>();
+  /** Stern am ersten Zug geklickt (Knoten-Id) — die Eltern-Komponente schaltet die Festlegung um. */
+  @Output() chooseMove = new EventEmitter<number>();
 
   editingLeafId: number | null = null;
   draftComment = '';
@@ -173,6 +205,15 @@ export class CalcLinesComponent {
   /** Liegt der Cursor auf dieser Linie? (Dann ist sie die „aktive".) */
   isActiveLine(line: CalcLine): boolean {
     return line.moves.some(m => m.id === this.cursorId);
+  }
+
+  /**
+   * Beginnt diese Linie mit dem festgelegten Zug? Verglichen wird über UCI, nicht über die
+   * Knoten-Id: die Festlegung überlebt so das Löschen und erneute Eingeben desselben Zuges.
+   * Alle Linien unter der Wahl (auch die Abzweigungen) gelten als hervorgehoben.
+   */
+  isChosenLine(line: CalcLine): boolean {
+    return !!this.chosenUci && line.moves[0]?.uci === this.chosenUci;
   }
 
   leafComment(line: CalcLine): string | undefined {

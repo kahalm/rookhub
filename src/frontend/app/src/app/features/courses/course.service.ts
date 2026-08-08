@@ -37,6 +37,11 @@ export interface CourseListItem {
   /** true = Kalkulationsbuch (Stellungen ohne Lösung): Karte bietet statt sequenziell/zufällig den
    *  Kalkulations-Modus an; puzzleCount/solvedCount = alle bzw. bearbeitete Stellungen. */
   isCalculation?: boolean;
+  /** Erreichte Punkte der Selbstbewertung im Kalkulations-Modus; null/fehlend = kein
+   *  Kalkulationsbuch. 0 heißt „bewertet, aber keine Punkte" — deshalb nicht auf 0 zurückfallen. */
+  calcPoints?: number | null;
+  /** Erreichbare Punkte (4 je Stellung). Fehlt der Wert, rechnet die Karte ihn aus `puzzleCount`. */
+  calcMaxPoints?: number | null;
 }
 
 /** Pro-Linien-Bearbeitungsstatus eines Kurs-Buchs (für die „Linien durchsehen"-Ansicht):
@@ -164,6 +169,11 @@ export interface CourseDetail {
   progressPercent: number;
   totalLines: number;
   infoLineCount: number;
+  /** Erreichte Punkte der Selbstbewertung im Kalkulations-Modus (nur bei Kalkulationsbüchern
+   *  belegt; `null` = kein Kalkulationsbuch, 0 = bewertet ohne Punkte). */
+  calcPoints?: number | null;
+  /** Erreichbare Punkte (4 je Stellung); fehlt der Wert, wird er aus `puzzleCount` gerechnet. */
+  calcMaxPoints?: number | null;
   lastMode: string | null;
   lastActivityAt: string | null;
   linkedBookId: number | null;

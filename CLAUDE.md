@@ -378,7 +378,9 @@ Ein Buch mit `Book.IsCalculation` (Schalter auf der KURS-Detailseite, Besitzer/A
 werden nicht abgefragt, sondern als reine Stellungen (FEN + optionaler Kommentar) zum Durchrechnen serviert.
 Die Kursübersicht bietet dafür statt sequenziell/zufällig den Kalkulations-Modus an
 (`/courses/:bookId/calc`); Fortschritt = Stellungen mit eigenem Analysebaum (`PuzzleCount`/`SolvedCount` in
-`CourseListItemDto` zählen bei diesen Büchern ALLE Linien bzw. die bearbeiteten).
+`CourseListItemDto` zählen bei diesen Büchern ALLE Linien bzw. die bearbeiteten). `calcPoints`/`calcMaxPoints`
+im selben DTO (und in `CourseDetailDto`) = Punktestand des Kurses aus der Selbstbewertung, IMMER als
+„x / y" (Maximum = 4 × alle Stellungen) — nur bei Kalkulationsbüchern gefüllt, sonst beide `null`.
 
 **Es gibt keine Lösung — und sie verlässt den Server nicht.** Die Endpoints liefern `BookPuzzle.Moves`
 bewusst NICHT aus; bei einer normalen Puzzle-Linie höchstens den Vorlauf bis zum Trainingsstart
@@ -391,10 +393,44 @@ Flag beschränkt — es steuert nur den Einstieg in der Übersicht.
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/calculations/books/{bookId}` | Auth | Buchkopf + leichte Stellungsliste (`id`/`round`/`title`/`chapter`/`hasTree`), Reihenfolge Round→Id — ohne FEN/Kommentar/Züge |
-| GET | `/api/calculations/positions/{bookPuzzleId}` | Auth | Eine Stellung (FEN, `setupMoves`, Kommentar) + eigener Analysebaum (`treeJson`, `treeUpdatedAt`) |
-| PUT | `/api/calculations/positions/{bookPuzzleId}` | Auth | Baum speichern (Upsert) `{ treeJson }` — 400 bei leerem/ungültigem JSON oder > `CalculationService.MaxTreeJsonLength` (256 KB) |
-| DELETE | `/api/calculations/positions/{bookPuzzleId}` | Auth | Eigenen Baum verwerfen (idempotent) |
+| GET | `/api/calculations/books/{bookId}` | Auth | Buchkopf + leichte Stellungsliste (`id`/`round`/`title`/`chapter`/`hasTree` + `chosenSan`/`chosenUci`/`secondsSpent`/`grade`/`points`), Reihenfolge Round→Id — ohne FEN/Kommentar/Züge. Dazu **serverseitig** gerechnete Kapitelsummen (`chapters[]`: `positionCount`/`treeCount`/`chosenCount`/`ratedCount`/`points`/`maxPoints`/`secondsSum`) + Buchsummen `points`/`maxPoints`/`secondsSum` |
+| GET | `/api/calculations/positions/{bookPuzzleId}` | Auth | Eine Stellung (FEN, `setupMoves`, Kommentar) + eigener Analysebaum (`treeJson`, `treeUpdatedAt`) + die drei Trainings-Werte |
+| PUT | `/api/calculations/positions/{bookPuzzleId}` | Auth | Baum speichern (Upsert) `{ treeJson, addSeconds?, secondsToken?, grade?, clearGrade?, chosenSan?, chosenUci?, clearChoice? }` — 400 bei leerem/ungültigem JSON, > `CalculationService.MaxTreeJsonLength` (256 KB), `grade` außerhalb 0–4 oder `secondsToken` > 64 Zeichen; Antwort = `CalcPositionStateDto` (`bookPuzzleId`/`updatedAt`/`hasTree`/`chosenSan`/`chosenUci`/`secondsSpent`/`grade`/`points`) |
+| PATCH | `/api/calculations/positions/{bookPuzzleId}` | Auth | **Nur** die drei Trainings-Werte, ohne den Baum erneut zu schicken (festlegen/Zeit/bewerten) — gleiches Feld-Set wie oben ohne `treeJson`, gleiche Antwort. Legt die Zeile bei Bedarf mit LEEREM Baum an (zählt dann nirgends als „bearbeitet"); ein PATCH ohne Wirkung legt gar nichts an |
+| DELETE | `/api/calculations/positions/{bookPuzzleId}` | Auth | Eigenen Baum verwerfen (idempotent) — Zeit/Festlegung/Bewertung bleiben stehen, die Zeile wird nur bei komplett leeren Werten entfernt |
+
+**Rechnen → festlegen → prüfen → bewerten**: je Stellung hält `CalculationTrees` drei eigene SPALTEN
+(nicht im opaken `TreeJson` vergraben — dort wären sie für Auswertungen für immer unerreichbar):
+`ChosenSan`/`ChosenUci` (die EINE Festlegung auf einen ersten Zug — derselbe Zug erneut = Toggle
+zurück, ein anderer verschiebt sie), `SecondsSpent` (der Client schickt **Deltas**, der Server
+ADDIERT; Deckel `MaxSecondsPerFlush` = 1 h je Übertragung, `MaxSecondsSpent` gesamt) und `Grade`
+(Selbstbewertung als benannte STUFE). `null` vs. löschen unterscheiden die Schalter
+`clearGrade`/`clearChoice` — ein fehlendes Feld heißt immer „unverändert". Die Bewertung ist
+**reine Selbsteinschätzung**: der Server liefert weiterhin keine Lösung aus.
+
+**Zeit ist der einzige ADDIERENDE Wert — und braucht deshalb eine Idempotenz-Marke.** Stufe und
+Festlegung SETZEN (Wiederholung schadet nicht), `addSeconds` addiert: kam eine Anfrage an und ging
+nur die ANTWORT verloren (Timeout/502), würde der Wiederholversuch die Zeit still ein zweites Mal
+buchen. Der Client vergibt darum je gemessenem Delta eine Marke (`secondsToken`, ≤64 Zeichen,
+Inhalt für den Server opak) und **wiederholt mit DERSELBEN Marke**; die Zeile merkt sich
+`SecondsToken` + `SecondsTokenApplied` und rechnet nur an, was unter dieser Marke noch nicht
+verbucht war (identischer Retry ⇒ 0 s; ein beim Wiedereinreihen um neue Messungen gewachsener Patch
+behält seine Marke ⇒ nur die Differenz). Stufe/Festlegung laufen dabei weiter durch. Ohne
+`secondsToken` gilt das alte Verhalten (bedingungslos addieren). Frontend-Gegenstück:
+`newSecondsToken()` + `mergeReviewPatch` in `calc-review.util.ts` (die Marke des ÄLTEREN Patches
+gewinnt beim Zusammenlegen — genau der kann schon beim Server sein).
+
+**Bewertung = AUSWAHL, keine freie Zahl** (`Models/CalculationGrade.cs`): fünf benannte Stufen
+`notSolved` (0) · `someIdeas` (1) · `moveNoMainLine` (2) · `moveNoSideLines` (3) · `solved` (4) —
+„Hauptfolge nicht gesehen" wiegt bewusst schwerer als „Nebenfolgen nicht gesehen". Eine benannte
+Stufe ist reproduzierbar, „7 von 10" bedeutet nächste Woche etwas anderes. **Gespeichert wird die
+STUFE**, nicht die Punktzahl; die Punkte entstehen ausschließlich in `CalculationGrades.PointsFor`
+(heute linear 0..4) und werden zusätzlich mit ausgeliefert — eine spätere Neugewichtung passiert nur
+dort und schreibt die Vergangenheit nicht um. `null` = noch nicht bewertet und ausdrücklich etwas
+anderes als Stufe 0 („nicht gelöst"). Eine Stufe außerhalb 0–4 ist ein **Client-Fehler → 400** und
+wird NICHT still auf 0 geklemmt. Kapitel-/Kurssummen nennen IMMER auch ihr Maximum
+(`points` + `maxPoints` = 4 × Stellungen), weil eine nackte Summe ohne die Zahl der Stellungen
+nicht lesbar ist („14 / 24" statt „14").
 
 Buch↔Gruppe-Freigabe verwaltet der Admin:
 | Methode | Endpoint | Auth | Zweck |
@@ -479,7 +515,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | SharedPuzzleAttempts | „Track solves" geteilter Einzel-Puzzles (opt-in per Teilen-Link `?track=1`) — Erstversuch je Besucher | BookPuzzleId (indexed), **IdentityKey** (`u:{userId}` eingeloggt / `s:{sessionId}` anonym), Solved (true nur saubere Erstlösung; Fehlzug/Aufgeben/Reset = false), **HintsUsed (höchste angesehene Tipp-Stufe 0–3 beim Erstversuch)**, CreatedAt; **UNIQUE (BookPuzzleId, IdentityKey)** = nur 1. Versuch zählt. Kein harter FK (Index genügt) |
 | BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche | BookPuzzleId (Restrict) + UserId (Cascade, nullable für Anon) + AnonymousSessionId, Solved, TimeSeconds, AttemptedAt, **HintsUsed (höchste angesehene Tipp-Stufe 0–3)**; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) + **UNIQUE (BookPuzzleId, AnonymousSessionId)** (eine anonyme Lösung je Session; auth. Versuche = NULL-Session → mehrfach erlaubt) |
 | Books | Buch-Metadaten | FileName (unique), Title, Author, **Kind** (Enum Puzzle/Study, Default Puzzle; steuert das Trainingsziel-Routing der Kurszeit), **IsCalculation (bool, Default false; „Kalkulationsbuch" = Stellungen ohne Lösung → Kurs öffnet den Kalkulations-Modus statt des Solvers; geschaltet auf der Kurs-Detailseite von Besitzer/Admin, nicht im Admin-Tab)**, **SourcePgn (LONGTEXT, nullable; Roh-PGN als Reprocessing-Quelle, null bei Altbestand/JSON-Import)**, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet → Reprocess-Knopf)** |
-| CalculationTrees | Selbst eingeklickter Analysebaum EINES Users zu EINER Stellung eines Kalkulationsbuchs (Kalkulations-Modus; es gibt keine Lösung, der Nutzer legt seine Varianten für beide Seiten selbst an) | UserId (Cascade) + BookId (denormalisiert für die „bearbeitet"-Zähler, Cascade) + BookPuzzleId (**Restrict**, wie CoursePuzzleResult — vermeidet doppelte Cascade-Pfade), **TreeJson (LONGTEXT; für den Server OPAK, nur JSON-Gültigkeit + Maximalgröße geprüft)**, CreatedAt, UpdatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId) |
+| CalculationTrees | Selbst eingeklickter Analysebaum EINES Users zu EINER Stellung eines Kalkulationsbuchs (Kalkulations-Modus; es gibt keine Lösung, der Nutzer legt seine Varianten für beide Seiten selbst an) | UserId (Cascade) + BookId (denormalisiert für die „bearbeitet"-Zähler, Cascade) + BookPuzzleId (**Restrict**, wie CoursePuzzleResult — vermeidet doppelte Cascade-Pfade), **TreeJson (LONGTEXT; für den Server OPAK, nur JSON-Gültigkeit + Maximalgröße geprüft; LEER erlaubt = Zeile trägt nur Trainings-Werte, „hat Baum" ist überall `TreeJson != ''`, nicht „Zeile existiert")**, **ChosenSan (20)/ChosenUci (10) = die eine Festlegung, SecondsSpent (int, Default 0, aufsummiert), SecondsToken (64, nullable) + SecondsTokenApplied (int, Default 0) = Idempotenz-Marke des zuletzt verbuchten Zeit-Deltas samt darunter angerechneter Sekunden (Retry darf die addierte Zeit nicht doppelt buchen), Grade (int?, 0–4 = benannte Stufe `CalculationGrade`, `null` = unbewertet ≠ Stufe 0 „nicht gelöst"; Punkte sind eine Ableitung via `CalculationGrades.PointsFor` und werden NICHT gespeichert)**, CreatedAt, UpdatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId) |
 | DailyPuzzles | Persistierte Tagespuzzle-Zuordnung je UTC-Datum | Date (PK, DATE), BookPuzzleId (Restrict), CreatedAt; vom `DailyPuzzleScheduler` (00:00 UTC) gesetzt oder on-demand bei `/daily/{date}` (nur heute/gestern); Admin-Regenerate ändert nur `BookPuzzleId` (Datum bleibt) |
 | Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
 | UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |

@@ -62,6 +62,19 @@ public class CourseListItemDto
     /// bereits mit einem eigenen Analysebaum bearbeiteten.
     /// </summary>
     public bool IsCalculation { get; set; }
+
+    /// <summary>
+    /// Gesamtpunkte des Kurses aus der Selbstbewertung im Kalkulations-Modus (Summe der aus den
+    /// gespeicherten Stufen abgeleiteten Punkte). Nur bei Kalkulationsbüchern gefüllt, sonst
+    /// <c>null</c> — bei einem normalen Kurs gäbe es nichts zu bewerten, und 0 würde „alles
+    /// danebengelegen" behaupten. 0 heißt hier also wirklich „bewertet, aber keine Punkte".
+    /// </summary>
+    public int? CalcPoints { get; set; }
+
+    /// <summary>Erreichbare Punkte des Kurses (alle Stellungen × beste Stufe) — die Summe wird nie
+    /// ohne ihr Maximum ausgeliefert („14 / 24"). Wie <see cref="CalcPoints"/> nur bei
+    /// Kalkulationsbüchern gefüllt.</summary>
+    public int? CalcMaxPoints { get; set; }
 }
 
 /// <summary>Eingabe: die Themen-Tags eines Kurs-Buchs setzen (leer = Rückfall auf Default „tactics").</summary>

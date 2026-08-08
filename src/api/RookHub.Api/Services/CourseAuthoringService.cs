@@ -67,8 +67,10 @@ public class CourseAuthoringService
             .Where(cr => cr.UserId == userId && cr.BookId == bookId)
             .Select(cr => cr.BookPuzzleId)
             .ToListAsync(ct)).ToHashSet();
+        // Nur Zeilen mit ECHTEM Baum zählen als bearbeitet — eine Zeile mit leerem TreeJson trägt
+        // bloß die Trainings-Werte (Zeit/Festlegung/Punkte, per PATCH ohne Baum gesetzt).
         var treeIds = (await _db.CalculationTrees
-            .Where(t => t.UserId == userId && t.BookId == bookId)
+            .Where(t => t.UserId == userId && t.BookId == bookId && t.TreeJson != "")
             .Select(t => t.BookPuzzleId)
             .ToListAsync(ct)).ToHashSet();
 
@@ -137,6 +139,16 @@ public class CourseAuthoringService
         var total = isCalc ? lines.Count : quizCount;
         var done = lines.Count(l => (isCalc || !l.IsInfoOnly) && doneIds.Contains(l.Id));
 
+        var calcPoints = 0;
+        if (isCalc)
+        {
+            var grades = await _db.CalculationTrees
+                .Where(t => t.UserId == userId && t.BookId == bookId && t.Grade != null)
+                .Select(t => t.Grade!.Value)
+                .ToListAsync(ct);
+            calcPoints = grades.Sum(CalculationGrades.PointsFor);
+        }
+
         return new CourseDetailDto
         {
             BookId = book.Id,
@@ -163,6 +175,12 @@ public class CourseAuthoringService
             ProgressPercent = Percent(done, total),
             TotalLines = lines.Count,
             InfoLineCount = lines.Count - quizCount,
+            // Selbstbewertung nur beim Kalkulationsbuch — bei einem normalen Kurs gäbe es nichts
+            // zu bewerten, und 0 würde „alles danebengelegen" behaupten (null ≠ 0). Gespeichert
+            // sind STUFEN; die Punkte entstehen über CalculationGrades.PointsFor.
+            CalcPoints = isCalc ? calcPoints : null,
+            // Summe immer MIT Maximum: 4 Punkte × ALLE Stellungen des Kurses.
+            CalcMaxPoints = isCalc ? CalculationGrades.MaxPointsFor(total) : null,
             LastMode = progress?.LastMode,
             LastActivityAt = progress?.UpdatedAt,
             LinkedBookId = link == 0 ? null : link,

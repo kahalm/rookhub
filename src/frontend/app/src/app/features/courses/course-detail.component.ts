@@ -14,6 +14,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { CourseDetail, CourseLine, CourseManageChapter, CourseService } from './course.service';
+import { formatScore, maxPoints } from './calc/calc-review.util';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
@@ -104,6 +105,17 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   chapterLabel(chapter: CourseManageChapter): string {
     return chapter.name ?? this.translate.instant('courses.noChapter');
+  }
+
+  /**
+   * Punktestand der Selbstbewertung („14 / 24"); leer, wenn es kein Kalkulationsbuch ist. Das
+   * Maximum gehört IMMER dazu — nackte Punkte sagen ohne die Zahl der Stellungen nichts; fehlt es
+   * vom Server, ergibt es sich aus den Stellungen (4 je Stellung).
+   */
+  get calcScore(): string {
+    const d = this.detail;
+    if (!d?.isCalculation || d.calcPoints == null) return '';
+    return formatScore(d.calcPoints, d.calcMaxPoints ?? maxPoints(d.puzzleCount));
   }
 
   // ===== Starten ============================================================

@@ -97,3 +97,32 @@ describe('CourseCardComponent Kalkulationsbuch', () => {
     expect(html).toContain('chapters-block');
   });
 });
+
+/**
+ * Punkte der Selbstbewertung: eine nackte Summe ist ohne die Zahl der Stellungen nicht lesbar —
+ * die Karte nennt deshalb IMMER auch das erreichbare Maximum.
+ */
+describe('CourseCardComponent Kalkulations-Punkte', () => {
+  function make(course: Record<string, unknown>): CourseCardComponent {
+    const c = new CourseCardComponent();
+    c.course = course as never;
+    return c;
+  }
+
+  it('nennt die Punkte mit ihrem Maximum', () => {
+    expect(make({ isCalculation: true, calcPoints: 14, calcMaxPoints: 24 }).calcScore).toBe('14 / 24');
+  });
+
+  it('rechnet das Maximum aus den Stellungen, wenn der Server keins liefert (4 je Stellung)', () => {
+    expect(make({ isCalculation: true, calcPoints: 3, puzzleCount: 6 }).calcScore).toBe('3 / 24');
+  });
+
+  it('zeigt nichts bei einem normalen Kurs — dort gibt es nichts zu bewerten', () => {
+    expect(make({ isCalculation: false, calcPoints: 5, puzzleCount: 3 }).calcScore).toBe('');
+    expect(make({ isCalculation: true, calcPoints: null, puzzleCount: 3 }).calcScore).toBe('');
+  });
+
+  it('unterscheidet „bewertet, aber 0 Punkte" von „kein Kalkulationsbuch"', () => {
+    expect(make({ isCalculation: true, calcPoints: 0, puzzleCount: 2 }).calcScore).toBe('0 / 8');
+  });
+});

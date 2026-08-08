@@ -38,12 +38,29 @@ public class CalculationController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
-    /// <summary>Eigenen Analysebaum zu einer Stellung speichern (Upsert).</summary>
+    /// <summary>Eigenen Analysebaum zu einer Stellung speichern (Upsert); die drei Trainings-Werte
+    /// (Festlegung/Rechenzeit/Bewertungsstufe) dürfen im selben Aufruf mitkommen.</summary>
     [HttpPut("positions/{bookPuzzleId}")]
-    public async Task<ActionResult<CalcTreeSavedDto>> SaveTree(int bookPuzzleId, [FromBody] SaveCalcTreeDto dto,
+    public async Task<ActionResult<CalcPositionStateDto>> SaveTree(int bookPuzzleId, [FromBody] SaveCalcTreeDto dto,
         CancellationToken ct)
     {
         try { return Ok(await _service.SaveTreeAsync(GetUserId(), bookPuzzleId, dto, IsAdmin, ct)); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>
+    /// Nur die drei Trainings-Werte einer Stellung ändern — ohne den (u. U. großen) Baum erneut zu
+    /// schicken: sich festlegen, Rechenzeit nachtragen (Delta, wird addiert), sich nach dem Prüfen
+    /// der Lösung selbst bewerten. Absichtlich ein eigener Endpoint neben dem Baum-PUT, weil diese
+    /// Aktionen unabhängig vom Baum passieren und ein Baum-PUT ohne Baum-Änderung sonst 256 KB
+    /// JSON pro Klick übertragen würde.
+    /// </summary>
+    [HttpPatch("positions/{bookPuzzleId}")]
+    public async Task<ActionResult<CalcPositionStateDto>> PatchMeta(int bookPuzzleId, [FromBody] PatchCalcMetaDto dto,
+        CancellationToken ct)
+    {
+        try { return Ok(await _service.PatchMetaAsync(GetUserId(), bookPuzzleId, dto, IsAdmin, ct)); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }

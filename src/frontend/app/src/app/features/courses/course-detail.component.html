@@ -48,6 +48,16 @@
             <dd>{{ d.infoLineCount }}</dd>
           </div>
           <div><dt>{{ 'courses.detail.chapters' | translate }}</dt><dd>{{ d.chapters.length }}</dd></div>
+          <!-- Punkte der Selbstbewertung — nur bei Kalkulationsbüchern sinnvoll, und immer
+               zusammen mit dem erreichbaren Maximum („14 / 24"). -->
+          @if (calcScore) {
+            <div>
+              <dt [matTooltip]="'courses.detail.calcPointsHint' | translate">
+                {{ 'courses.detail.calcPoints' | translate }}
+              </dt>
+              <dd>{{ calcScore }}</dd>
+            </div>
+          }
           @if (d.difficulty) { <div><dt>{{ 'courses.detail.difficulty' | translate }}</dt><dd>{{ d.difficulty }}</dd></div> }
           @if (d.rating) { <div><dt>{{ 'courses.detail.rating' | translate }}</dt><dd>{{ d.rating }}/10</dd></div> }
           @if (d.minElo || d.maxElo) {

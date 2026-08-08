@@ -125,9 +125,11 @@
           <mat-card-content>
             <app-calc-lines
               [tree]="tree" [cursorId]="cursorId" [startFen]="startFen" [revision]="revision"
+              [chosenUci]="review.chosenUci"
               (selectNode)="setCursor($event)"
               (newLine)="startNewLine()"
               (deleteLine)="deleteLine($event)"
+              (chooseMove)="chooseMove($event)"
               (commentChanged)="onLineComment($event)" />
 
             <div class="calc-line-tools">
@@ -140,6 +142,48 @@
               </button>
             </div>
             <p class="calc-keys">{{ 'calc.keyboardHint' | translate }}</p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Festlegung · Rechenzeit · Selbstbewertung. Bewertet wird über die BEDEUTUNG
+             (fünf benannte Stufen), nicht über eine Zahl; die Festlegung selbst wird am Stern
+             in der Linienliste gesetzt. -->
+        <mat-card class="calc-review">
+          <mat-card-content>
+            <div class="calc-review-row">
+              <span class="calc-review-chip" [class.calc-review-chip--set]="review.chosenSan"
+                    [matTooltip]="'calc.review.choiceHint' | translate">
+                <mat-icon>{{ review.chosenSan ? 'star' : 'star_border' }}</mat-icon>
+                <span>{{ review.chosenSan || ('calc.review.noChoice' | translate) }}</span>
+              </span>
+              <span class="calc-review-chip" [matTooltip]="'calc.review.timeHint' | translate">
+                <mat-icon>hourglass_bottom</mat-icon>
+                <span class="calc-review-time">{{ positionTimeDisplay }}</span>
+              </span>
+              <span class="calc-spacer"></span>
+              <!-- Punkte anzeigen ist erlaubt — gewählt wird trotzdem die Stufe. -->
+              <span class="calc-review-chip" [class.calc-review-chip--set]="review.grade !== null"
+                    [matTooltip]="'calc.review.scoreHint' | translate">
+                @if (review.grade === null) {
+                  <span>{{ 'calc.review.notRated' | translate }}</span>
+                } @else {
+                  <span class="calc-review-score">{{ scoreDisplay(positionPoints, maxPointsPerPosition) }}</span>
+                }
+              </span>
+            </div>
+
+            <div class="calc-grades" role="group" [attr.aria-label]="'calc.review.gradeLegend' | translate">
+              @for (option of gradeOptions; track option.grade) {
+                <button type="button" class="calc-grade" [class.calc-grade--on]="isGrade(option.grade)"
+                        [attr.aria-pressed]="isGrade(option.grade)"
+                        [matTooltip]="'calc.review.gradeHint' | translate"
+                        (click)="setGrade(option.grade)">
+                  <span class="calc-grade-label">{{ option.labelKey | translate }}</span>
+                  <span class="calc-grade-points">{{ option.points }}</span>
+                </button>
+              }
+            </div>
+            <p class="calc-hint">{{ 'calc.review.selfRatingHint' | translate }}</p>
           </mat-card-content>
         </mat-card>
 
@@ -198,16 +242,32 @@
               </button>
               <span class="calc-spacer"></span>
               <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount, total: positions.length } }}</span>
+              <span class="calc-total-points" [matTooltip]="'calc.review.totalPointsHint' | translate">
+                {{ 'calc.review.totalPoints' | translate: { score: scoreDisplay(totalPoints, totalMaxPoints) } }}
+              </span>
             </div>
 
             <mat-form-field appearance="outline" class="calc-jump" subscriptSizing="dynamic">
               <mat-label>{{ 'calc.jumpTo' | translate }}</mat-label>
               <mat-select [value]="position?.id" (selectionChange)="jumpToPosition($event.value)">
                 @for (group of groups; track $index) {
-                  <mat-optgroup [label]="group.chapter || ('courses.noChapter' | translate)">
+                  <!-- Kapitel-Kopf trägt die Summen (Punkte · Zeit). -->
+                  <mat-optgroup [label]="chapterLabel(group)">
                     @for (item of group.items; track item.id) {
                       <mat-option [value]="item.id">
                         {{ item.hasTree ? '✓ ' : '' }}{{ positionLabel(item) }}
+                        <span class="calc-opt-meta">
+                          @if (item.chosenSan) {
+                            <span class="calc-opt-choice">★ {{ item.chosenSan }}</span>
+                          }
+                          @if (item.secondsSpent) {
+                            <span class="calc-opt-time">{{ timeDisplay(item.secondsSpent) }}</span>
+                          }
+                          @if (item.grade !== null) {
+                            <span class="calc-opt-grade">{{ gradeShortLabel(item.grade) }}</span>
+                            <span class="calc-opt-points">{{ scoreDisplay(pointsOf(item), maxPointsPerPosition) }}</span>
+                          }
+                        </span>
                       </mat-option>
                     }
                   </mat-optgroup>

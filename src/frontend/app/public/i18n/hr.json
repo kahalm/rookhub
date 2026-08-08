@@ -1215,6 +1215,8 @@
       "addedCount": "Dodano pozicija: {{count}}.",
       "calcBook": "Knjiga za izračun",
       "calcHint": "Pozicije bez rješenja — obrađuju se u načinu izračuna.",
+      "calcPoints": "Bodovi računanja",
+      "calcPointsHint": "Bodovi tvoje samoocjene u načinu računanja kroz sve pozicije ovog tečaja, uz najveći mogući broj.",
       "calcToggle": "Način izračuna",
       "calcToggleHint": "Posluži ovaj kurs kao pozicije za izračun umjesto zagonetki za rješavanje: zamrznuta ploča, bez rješenja, vlastito drvo analize po poziciji. Postojeće linije ostaju nepromijenjene.",
       "calcToggleFailed": "Način izračuna nije se mogao promijeniti.",
@@ -1366,6 +1368,7 @@
       "markedTooltip": "Samo linije koje si označio kao flashcard",
       "markedMenu": "Flashcards (označene linije)"
     },
+    "calcPoints": "{{score}} bod.",
     "calculate": "Izračunaj",
     "browse": {
       "title": "Pregled",
@@ -1456,6 +1459,37 @@
     "noTaskText": "Nema komentara za ovu poziciju.",
     "notSavedYet": "Još nije spremljeno",
     "prevPosition": "Prethodna pozicija",
+    "review": {
+      "chapterScore": "{{score}} bod.",
+      "chapterSummary": "{{score}} bod. · {{time}}",
+      "choiceHint": "Prvi potez za koji si se odlučio.",
+      "choose": "Označi kao moj izbor",
+      "chooseHint": "Odluči se za ovaj prvi potez (ponovni klik poništava). Samo jedan izbor po poziciji.",
+      "grade": {
+        "moveNoMainLine": "Točan potez, ali glavni nastavak nije viđen",
+        "moveNoSideLines": "Točan potez, ali sporedni nastavci nisu viđeni",
+        "notSolved": "Nije riješeno",
+        "solved": "Riješeno",
+        "someIdeas": "Viđene neke ideje"
+      },
+      "gradeHint": "Odaberi razinu (ponovni klik poništava ocjenu).",
+      "gradeLegend": "Samoocjena",
+      "gradeShort": {
+        "moveNoMainLine": "potez, bez glavnog",
+        "moveNoSideLines": "potez, bez sporednih",
+        "notSolved": "nije riješeno",
+        "solved": "riješeno",
+        "someIdeas": "neke ideje"
+      },
+      "noChoice": "Još bez izbora",
+      "notRated": "Još nije ocijenjeno",
+      "saveFailed": "Izbor, vrijeme i ocjena nisu spremljeni.",
+      "scoreHint": "Bodovi ove pozicije (najviše 4).",
+      "selfRatingHint": "Provjeri rješenje u knjizi pa odaberi svoju razinu — način računanja nikad ne prikazuje rješenje.",
+      "timeHint": "Aktivno vrijeme računanja na ovoj poziciji (pauzira kad je kartica u pozadini).",
+      "totalPoints": "{{score}} bod.",
+      "totalPointsHint": "Bodovi ovog tečaja iz tvoje samoocjene, uz najveći mogući broj."
+    },
     "saveFailed": "Tvoje varijante nije bilo moguće spremiti.",
     "savedAt": "Spremljeno {{time}}",
     "saving": "Spremam…",

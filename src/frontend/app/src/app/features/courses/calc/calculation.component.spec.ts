@@ -6,8 +6,10 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
 import { CalculationComponent } from './calculation.component';
-import { CalcPosition } from './calculation.service';
+import { CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved } from './calculation.service';
+import { CalcReviewPatch } from './calc-review.util';
 import { findNode, lines } from './calc-tree.util';
+import { VisibilityStopwatch } from '../../puzzles/visibility-stopwatch';
 
 const START = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4';
 
@@ -20,16 +22,40 @@ function position(overrides: Partial<CalcPosition> = {}): CalcPosition {
   };
 }
 
+/**
+ * Server-Attrappe für den Review-Endpoint: übernimmt nur die GESETZTEN Felder und ADDIERT die
+ * Zeit — genau das Verhalten, gegen das die Komponente gebaut ist.
+ */
+function fakeReviewServer() {
+  const state = new Map<number, CalcReviewSaved>();
+  return (id: number, patch: CalcReviewPatch): CalcReviewSaved => {
+    const cur = state.get(id)
+      ?? { bookPuzzleId: id, chosenSan: null, chosenUci: null, secondsSpent: 0, grade: null };
+    const next: CalcReviewSaved = {
+      bookPuzzleId: id,
+      chosenSan: 'chosenSan' in patch ? patch.chosenSan ?? null : cur.chosenSan,
+      chosenUci: 'chosenUci' in patch ? patch.chosenUci ?? null : cur.chosenUci,
+      secondsSpent: cur.secondsSpent + (patch.secondsDelta ?? 0),
+      grade: 'grade' in patch ? patch.grade ?? null : cur.grade,
+    };
+    state.set(id, next);
+    return next;
+  };
+}
+
 /** Komponente ohne Template, mit Stub-Abhängigkeiten — für die reine Bedienlogik. */
-function make(api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'deleteTree', unknown>> = {}) {
+function make(api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'deleteTree' | 'saveReview', unknown>> = {}) {
   const saved: { id: number; json: string }[] = [];
   const deleted: number[] = [];
   const warnings: string[] = [];
+  const reviews: { id: number; patch: CalcReviewPatch }[] = [];
+  const reviewServer = fakeReviewServer();
   const apiStub = {
     getBook: () => of({ bookId: 1, displayName: 'B', isCalculation: true, positions: [] }),
     getPosition: () => of(position()),
     saveTree: (id: number, json: string) => { saved.push({ id, json }); return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' }); },
     deleteTree: (id: number) => { deleted.push(id); return of(undefined); },
+    saveReview: (id: number, patch: CalcReviewPatch) => { reviews.push({ id, patch }); return of(reviewServer(id, patch)); },
     ...api,
   };
   const component = new CalculationComponent(
@@ -40,15 +66,45 @@ function make(api: Partial<Record<'getBook' | 'getPosition' | 'saveTree' | 'dele
     { warn: (m: string) => { warnings.push(m); } } as never,
     { instant: (k: string) => k } as never,
   );
-  return { component, saved, deleted, warnings };
+  return { component, saved, deleted, warnings, reviews };
+}
+
+function listItem(pos: CalcPosition): CalcPositionListItem {
+  return {
+    id: pos.id, round: pos.round, title: pos.title, chapter: pos.chapter, hasTree: !!pos.treeJson,
+    chosenSan: pos.chosenSan ?? null, chosenUci: pos.chosenUci ?? null,
+    secondsSpent: pos.secondsSpent ?? 0, grade: pos.grade ?? null,
+  };
 }
 
 /** Stellung laden, ohne den HTTP-Pfad zu bemühen (applyPosition ist der Kern davon). */
 function load(component: CalculationComponent, pos: CalcPosition = position()): void {
   component.position = pos;
-  (component as unknown as { applyPosition: (p: CalcPosition) => void }).applyPosition(pos);
-  component.positions = [{ id: pos.id, round: pos.round, title: pos.title, chapter: pos.chapter, hasTree: !!pos.treeJson }];
+  // Die Sprunglisten-Zeile ist die Quelle für Wahl/Zeit/Stufe — sie muss VOR applyPosition stehen.
+  component.positions = [listItem(pos)];
   component.index = 0;
+  (component as unknown as { applyPosition: (p: CalcPosition) => void }).applyPosition(pos);
+}
+
+function item(id: number, overrides: Partial<CalcPositionListItem> = {}): CalcPositionListItem {
+  return {
+    id, round: String(id), title: null, chapter: null, hasTree: false,
+    chosenSan: null, chosenUci: null, secondsSpent: 0, grade: null, ...overrides,
+  };
+}
+
+/** Ganzes Buch über den echten Ladeweg holen (Sprungliste + Gruppen + Summen in einem Rutsch). */
+function makeWithBook(book: Partial<CalcBook> & { positions: CalcPositionListItem[] }) {
+  const full: CalcBook = { bookId: 1, displayName: 'B', isCalculation: true, ...book };
+  const made = make({
+    getBook: () => of(full),
+    getPosition: (id: number) => {
+      const row = full.positions.find(p => p.id === id) ?? full.positions[0];
+      return of(position({ id: row.id, round: row.round, title: row.title, chapter: row.chapter }));
+    },
+  });
+  (made.component as unknown as { loadBook(requested: number | null): void }).loadBook(null);
+  return made;
 }
 
 describe('CalculationComponent', () => {
@@ -683,5 +739,333 @@ describe('CalculationComponent App-Vollbild-Layout', () => {
     // Drei Timer-Anzeigen im DOM: Brett-Kopfzeile, Seiten-Kopie (App-Vollbild) und das
     // data-fs-only-Overlay fürs BRETT-Vollbild — CSS zeigt je Modus genau eine.
     expect(el.querySelectorAll('.calc-timer-time').length).toBe(3);
+  });
+});
+
+describe('CalculationComponent Selbstbewertung (Stufen)', () => {
+  it('setzt die Stufe und schickt sie — nicht die Punktzahl', () => {
+    const { component: c, reviews } = make();
+    load(c);
+
+    c.setGrade(3);
+
+    expect(c.review.grade).toBe(3);
+    expect(c.positionPoints).toBe(3);
+    expect(reviews).toEqual([{ id: 7, patch: { grade: 3 } }]);
+    // Die Sprunglisten-Zeile zieht sofort mit (ohne auf den Server zu warten).
+    expect(c.positions[0].grade).toBe(3);
+  });
+
+  it('nimmt die Bewertung zurück, wenn dieselbe Stufe erneut geklickt wird', () => {
+    const { component: c, reviews } = make();
+    load(c);
+
+    c.setGrade(0);
+    expect(c.review.grade).toBe(0);      // Stufe 0 IST eine Bewertung
+    c.setGrade(0);
+
+    // „noch nicht bewertet" ist etwas anderes als „nicht gelöst" — und geht als Löschwunsch raus.
+    expect(c.review.grade).toBeNull();
+    expect(c.isGrade(0)).toBeFalse();
+    expect(reviews.map(r => r.patch)).toEqual([{ grade: 0 }, { grade: null }]);
+  });
+
+  it('verschiebt die Bewertung auf eine andere Stufe', () => {
+    const { component: c } = make();
+    load(c);
+
+    c.setGrade(1);
+    c.setGrade(4);
+
+    expect(c.review.grade).toBe(4);
+    expect(c.positionPoints).toBe(4);
+  });
+
+  it('übernimmt die gespeicherte Stufe beim Laden der Stellung', () => {
+    const { component: c } = make();
+    load(c, position({ grade: 2, secondsSpent: 90, chosenSan: 'Nd5', chosenUci: 'c3d5' }));
+
+    expect(c.review.grade).toBe(2);
+    expect(c.isGrade(2)).toBeTrue();
+    expect(c.review.chosenSan).toBe('Nd5');
+    expect(c.positionTimeDisplay).toBe('1:30');
+  });
+
+  it('bietet die fünf Stufen in der Reihenfolge schlecht → gut an', () => {
+    const { component: c } = make();
+    expect(c.gradeOptions.map(o => o.key)).toEqual([
+      'notSolved', 'someIdeas', 'moveNoMainLine', 'moveNoSideLines', 'solved',
+    ]);
+    expect(c.maxPointsPerPosition).toBe(4);
+  });
+});
+
+describe('CalculationComponent Summen mit Maximum', () => {
+  it('nennt Kapitel- und Kurssumme immer mit dem Maximum (4 je Stellung)', () => {
+    const { component: c } = makeWithBook({
+      positions: [
+        item(1, { chapter: 'Turmendspiele', grade: 4 }),
+        item(2, { chapter: 'Turmendspiele', grade: 2 }),
+        item(3, { chapter: 'Turmendspiele', grade: null }),
+        item(4, { chapter: 'Bauernendspiele', grade: 1 }),
+      ],
+    });
+
+    expect(c.groups.length).toBe(2);
+    expect(c.scoreDisplay(c.groups[0].points, c.groups[0].maxPoints)).toBe('6 / 12');
+    expect(c.scoreDisplay(c.groups[1].points, c.groups[1].maxPoints)).toBe('1 / 4');
+    expect(c.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('7 / 16');
+    expect(c.chapterLabel(c.groups[0])).toBe('Turmendspiele · calc.review.chapterScore');
+  });
+
+  it('übernimmt die Kapitelzeit des Servers (Feldname `secondsSum`)', () => {
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: 'K1' }), item(2, { chapter: 'K1' })],
+      // Der Server nennt die Summe `secondsSum` — hieß das Feld hier anders, stünde die Kapitel-
+      // und Kurszeit dauerhaft auf 0, ohne dass irgendetwas fehlschlüge.
+      chapters: [{ chapter: 'K1', points: 0, maxPoints: 8, secondsSum: 750 }],
+      points: 0, maxPoints: 8, secondsSum: 750,
+    });
+
+    expect(c.groups[0].seconds).toBe(750);
+    expect(c.chapterLabel(c.groups[0])).toBe('K1 · calc.review.chapterSummary');
+  });
+
+  it('nimmt die Summen des Servers — bis der Nutzer selbst bewertet', () => {
+    const { component: c } = makeWithBook({
+      positions: [item(1, { chapter: 'K1', grade: 1 }), item(2, { chapter: 'K1', grade: 1 })],
+      chapters: [{ chapter: 'K1', points: 7, maxPoints: 8, secondsSum: 60 }],
+      points: 7, maxPoints: 8,
+    });
+    // Der Server zählt hier bewusst anders als die zwei geladenen Zeilen (7 statt 2) — solange
+    // der Nutzer nichts ändert, gilt SEIN Stand.
+    expect(c.totalPoints).toBe(7);
+    expect(c.groups[0].points).toBe(7);
+    expect(c.groups[0].seconds).toBe(60);
+
+    c.setGrade(4);                            // eigene Änderung ⇒ Server-Summen sind überholt
+
+    expect(c.totalPoints).toBe(5);            // jetzt aus den Zeilen: 4 + 1
+    expect(c.totalMaxPoints).toBe(8);
+    expect(c.groups[0].points).toBe(5);
+  });
+
+  it('kommt ohne Server-Summen aus (Maximum ergibt sich aus den Stellungen)', () => {
+    const { component: c } = makeWithBook({ positions: [item(1), item(2), item(3)] });
+    expect(c.totalPoints).toBe(0);
+    expect(c.totalMaxPoints).toBe(12);
+  });
+});
+
+describe('CalculationComponent Festlegung auf einen ersten Zug', () => {
+  /** Zwei verschiedene erste Züge anlegen und ihre Knoten-Ids liefern. */
+  function twoFirstMoves(c: CalculationComponent): number[] {
+    c.onMove({ orig: 'f3' as never, dest: 'e5' as never });    // Nxe5
+    c.startNewLine();
+    c.onMove({ orig: 'd2' as never, dest: 'd4' as never });    // d4
+    return findNode(c.tree, c.tree.rootId)!.childIds;
+  }
+
+  it('merkt sich genau EINE Wahl je Stellung — ein anderer Zug verschiebt sie', () => {
+    const { component: c, reviews } = make();
+    load(c);
+    const [first, second] = twoFirstMoves(c);
+
+    c.chooseMove(first);
+    expect(c.review.chosenSan).toBe('Nxe5');
+    expect(c.review.chosenUci).toBe('f3e5');
+
+    c.chooseMove(second);
+    expect(c.review.chosenSan).toBe('d4');
+    expect(reviews.map(r => r.patch.chosenUci)).toEqual(['f3e5', 'd2d4']);
+  });
+
+  it('nimmt die Festlegung zurück, wenn derselbe Zug erneut geklickt wird', () => {
+    const { component: c } = make();
+    load(c);
+    const [first] = twoFirstMoves(c);
+
+    c.chooseMove(first);
+    c.chooseMove(first);
+
+    expect(c.review.chosenSan).toBeNull();
+    expect(c.review.chosenUci).toBeNull();
+    expect(c.positions[0].chosenSan).toBeNull();
+  });
+
+  it('lässt sich nur auf ERSTE Züge festlegen (Kinder der Ausgangsstellung)', () => {
+    const { component: c, reviews } = make();
+    load(c);
+    c.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    c.onMove({ orig: 'c6' as never, dest: 'e5' as never });    // zweiter Halbzug
+    const deep = c.cursorId;
+
+    c.chooseMove(deep);
+
+    expect(c.review.chosenSan).toBeNull();
+    expect(reviews.length).toBe(0);
+  });
+
+  it('räumt die Festlegung weg, wenn der gewählte Zug aus dem Baum verschwindet', () => {
+    const { component: c } = make();
+    load(c);
+    const [first] = twoFirstMoves(c);
+    c.chooseMove(first);
+    expect(c.review.chosenUci).toBe('f3e5');
+
+    c.setCursor(first);
+    c.deleteFromCursor();
+
+    // Eine Wahl, die in keiner Linie mehr vorkommt, wäre eine Behauptung ohne Grundlage.
+    expect(c.review.chosenUci).toBeNull();
+  });
+});
+
+describe('CalculationComponent Rechenzeit', () => {
+  it('misst mit der Stoppuhr aus dem Puzzle-Modus (zählt nicht bei verstecktem Tab)', () => {
+    const { component: c } = make();
+    expect((c as unknown as { watch: unknown }).watch instanceof VisibilityStopwatch).toBeTrue();
+  });
+
+  it('schickt die gemessene Zeit als DELTA und schreibt sie der Stellung sofort gut', () => {
+    const reviews: { id: number; patch: CalcReviewPatch }[] = [];
+    // Server-Attrappe mit den schon gespeicherten 60 s: sie ADDIERT das Delta und antwortet mit
+    // der Gesamtzeit — die der Client nicht selbst kennen kann (anderes Gerät, anderer Tab).
+    const { component: c } = make({
+      saveReview: (id: number, patch: CalcReviewPatch) => {
+        reviews.push({ id, patch });
+        return of({
+          bookPuzzleId: id, chosenSan: null, chosenUci: null,
+          secondsSpent: 60 + (patch.secondsDelta ?? 0), grade: null,
+        });
+      },
+    });
+    load(c, position({ secondsSpent: 60 }));
+    const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
+    spyOn(inner.watch, 'stop').and.returnValue(42);
+
+    inner.harvestWatch();
+
+    expect(reviews.length).toBe(1);
+    expect(reviews[0].id).toBe(7);
+    expect(reviews[0].patch.secondsDelta).toBe(42);
+    expect(reviews[0].patch.secondsToken).toBeTruthy();     // Zeit geht nie ohne Marke raus
+    expect(c.review.secondsSpent).toBe(102);
+    expect(c.positions[0].secondsSpent).toBe(102);
+  });
+
+  it('wiederholt ein gescheitertes Zeit-Delta mit DERSELBEN Marke', () => {
+    // Der Kern der At-least-once-Falle: der Fehler kann ein Timeout sein — die Anfrage KAM AN,
+    // nur die Antwort ging verloren. Eine frische Marke beim Wiederholen würde die Zeit auf dem
+    // Server ein zweites Mal addieren, still und unkorrigierbar.
+    const sent: CalcReviewPatch[] = [];
+    let failNext = true;
+    const { component: c } = make({
+      saveReview: (id: number, patch: CalcReviewPatch) => {
+        sent.push({ ...patch });
+        if (failNext) { failNext = false; return throwError(() => new Error('timeout')); }
+        return of({ bookPuzzleId: id, chosenSan: null, chosenUci: null, secondsSpent: 42, grade: null });
+      },
+    });
+    load(c);
+    const inner = c as unknown as {
+      watch: { stop(): number }; harvestWatch(): void; sendReviews(): void;
+    };
+    spyOn(inner.watch, 'stop').and.returnValue(42);
+
+    inner.harvestWatch();        // 1. Anlauf scheitert → landet wieder in der Warteschlange
+    inner.sendReviews();         // 2. Anlauf
+
+    expect(sent.length).toBe(2);
+    expect(sent[0].secondsToken).toBeTruthy();
+    expect(sent[1].secondsToken).toBe(sent[0].secondsToken);
+    expect(sent[1].secondsDelta).toBe(42);
+  });
+
+  it('gibt jeder NEUEN Messung eine eigene Marke (sonst zählte die zweite nie)', () => {
+    const { component: c, reviews } = make();
+    load(c);
+    const inner = c as unknown as {
+      watch: { stop(): number }; harvestWatch(): void; beginWatch(id: number): void;
+    };
+    spyOn(inner.watch, 'stop').and.returnValues(30, 12);
+
+    inner.harvestWatch();
+    inner.beginWatch(7);
+    inner.harvestWatch();
+
+    expect(reviews.length).toBe(2);
+    expect(reviews[0].patch.secondsToken).not.toBe(reviews[1].patch.secondsToken);
+  });
+
+  it('lässt die Zeit der Zeile stehen, solange ein neueres Delta wartet', () => {
+    // Die Server-Antwort kennt das gerade eingereihte Delta noch nicht — die Zeile würde sonst
+    // kurz zu klein anzeigen und erst nach der nächsten Antwort zurückspringen.
+    const answer = new Subject<CalcReviewSaved>();
+    const { component: c } = make({ saveReview: () => answer });
+    load(c, position({ secondsSpent: 60 }));
+    const inner = c as unknown as {
+      watch: { stop(): number }; harvestWatch(): void; beginWatch(id: number): void;
+    };
+    spyOn(inner.watch, 'stop').and.returnValues(20, 15);
+
+    inner.harvestWatch();                       // 20 s unterwegs (Antwort steht aus)
+    inner.beginWatch(7);
+    inner.harvestWatch();                       // 15 s warten in der Schlange
+    answer.next({ bookPuzzleId: 7, chosenSan: null, chosenUci: null, secondsSpent: 80, grade: null });
+
+    expect(c.positions[0].secondsSpent).toBe(95);   // nicht 80
+  });
+
+  it('schöpft die Zeit ab, ohne etwas zu schicken, wenn nichts gemessen wurde', () => {
+    const { component: c, reviews } = make();
+    load(c);
+    const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
+    spyOn(inner.watch, 'stop').and.returnValue(0);
+
+    inner.harvestWatch();
+
+    expect(reviews.length).toBe(0);
+  });
+});
+
+describe('CalculationComponent Bewertungs-Auswahl (Darstellung)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('zeigt fünf benannte Stufen statt eines Zahlenfelds — Klick auf die gewählte nimmt zurück', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CalculationComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CalculationComponent);
+    fixture.detectChanges();                       // ngOnInit (HTTP bleibt offen/pending)
+    const c = fixture.componentInstance;
+    c.bookId = 1;
+    load(c, position());
+    c.loading = false;
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const buttons = el.querySelectorAll<HTMLButtonElement>('.calc-grade');
+    expect(buttons.length).toBe(5);
+    // Kein Zahlenfeld mehr: die Bedeutung ist die Eingabe.
+    expect(el.querySelector('.calc-review input[type="number"]')).toBeNull();
+    expect(buttons[2].textContent).toContain('calc.review.grade.moveNoMainLine');
+
+    buttons[2].click();
+    fixture.detectChanges();
+    expect(c.review.grade).toBe(2);
+    expect(el.querySelectorAll('.calc-grade--on').length).toBe(1);
+
+    buttons[2].click();
+    fixture.detectChanges();
+    expect(c.review.grade).toBeNull();
+    expect(el.querySelectorAll('.calc-grade--on').length).toBe(0);
   });
 });
