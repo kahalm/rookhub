@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.341.0';
+export const APP_VERSION = '0.341.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.341.1", date: "2026-08-08", changes: [
+    { en: "Follow-up to the weekly play mode: the build was red because the attempt request now carries the mode and the existing test still expected the old body. Test corrected and eight new ones added around the scoring \u2014 which mode a puzzle is filed under, that the eye only flips it to easy AFTER the first move (before it is normal preparation), that the flip is per puzzle rather than for the rest of the post, and that the switch remembers the choice for that weekly post. No functional change.", de: "Nachzug zur Wochenpost-Spielweise: der Build war rot, weil der Versuch jetzt den Modus mitschickt und der bestehende Test noch den alten Rumpf erwartete. Test korrigiert und acht neue rund um die Wertung erg\u00e4nzt \u2014 unter welchem Modus ein Puzzle verbucht wird, dass das Auge es erst NACH dem ersten Zug auf einfach kippt (davor ist es normale Vorbereitung), dass die Kippung je Puzzle gilt und nicht f\u00fcr den Rest der Post, und dass das Umschalten die Wahl f\u00fcr diese Wochenpost festh\u00e4lt. Keine funktionale \u00c4nderung." },
+  ] },
   { version: "0.341.0", date: "2026-08-08", changes: [
     { en: "Weekly post: you now pick how you want to play it. At the start a dialog asks for training mode (board frozen, moves entered without dragging \u2014 the previous behaviour and still the default) or easy mode (pieces move normally). The choice applies to that weekly post, and a button next to the progress bar switches it from the next puzzle on. Every puzzle is recorded with the mode it was played in, the split is shown under the progress bar, and the Discord leaderboard marks how many puzzles a player did in easy mode. If you reveal the position with the eye AFTER your first move, that puzzle counts as easy regardless of the setting \u2014 whoever uncovers the board did not calculate it blind.", de: "Wochenpost: du w\u00e4hlst jetzt, wie du sie spielen willst. Beim Start fragt ein Dialog nach Trainingsmodus (Brett eingefroren, Z\u00fcge werden eingegeben, ohne Figuren zu ziehen \u2014 bisheriges Verhalten und weiterhin Standard) oder Einfachmodus (Figuren normal ziehbar). Die Wahl gilt f\u00fcr diese Wochenpost, ein Knopf neben dem Fortschrittsbalken schaltet ab dem n\u00e4chsten Puzzle um. Jedes Puzzle wird mit seinem Modus mitgeschrieben, die Aufteilung steht unter dem Fortschrittsbalken, und die Discord-Bestenliste vermerkt, wie viele Puzzles jemand einfach gespielt hat. Wer die Stellung NACH dem ersten Zug mit dem Auge aufdeckt, dessen Puzzle z\u00e4hlt unabh\u00e4ngig von der Einstellung als einfach \u2014 aufgedeckt ist nicht mehr blind gerechnet." },
   ] },

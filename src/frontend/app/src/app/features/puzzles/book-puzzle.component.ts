@@ -1187,8 +1187,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   toggleWeeklyMode(): void {
     this.weeklyMode = this.weeklyMode === 'training' ? 'easy' : 'training';
     try { sessionStorage.setItem(`rookhub_weekly_mode_${this.weeklyId}`, this.weeklyMode); } catch { /* Privatmodus */ }
-    this.snackbar.show(this.translate.instant(
-      this.weeklyMode === 'easy' ? 'weekly.mode.switchedEasy' : 'weekly.mode.switchedTraining'));
+    this.snackbar.info(this.translate.instant(
+      this.weeklyMode === 'easy' ? 'weekly.mode.switchedEasy' : 'weekly.mode.switchedTraining'),
+      { duration: 3000 });
   }
 
   weeklyNext(): void {

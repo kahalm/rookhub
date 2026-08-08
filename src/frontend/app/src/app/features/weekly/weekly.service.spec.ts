@@ -96,10 +96,10 @@ describe('WeeklyService', () => {
 
   it('records a played attempt (solved or not) and returns updated progress', () => {
     let played = 0;
-    svc.recordAttempt(7, 2, false, 15, 1, 3, 2).subscribe(p => (played = p.playedCount));
+    svc.recordAttempt(7, 2, false, 15, 1, 3, 2, 'easy').subscribe(p => (played = p.playedCount));
     const req = http.expectOne('/api/weekly-posts/7/attempt');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15, hintsUsed: 1, wrongAttempts: 3, mouseslips: 2 });
+    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15, hintsUsed: 1, wrongAttempts: 3, mouseslips: 2, mode: 'easy' });
     req.flush({ weeklyPostId: 7, total: 5, playedCount: 3, solvedCount: 1, completed: false });
     expect(played).toBe(3);
   });
@@ -107,7 +107,8 @@ describe('WeeklyService', () => {
   it('records an attempt with wrong/mouseslip defaulting to 0 when omitted', () => {
     svc.recordAttempt(7, 2, true, 15).subscribe();
     const req = http.expectOne('/api/weekly-posts/7/attempt');
-    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: true, timeSeconds: 15, hintsUsed: 0, wrongAttempts: 0, mouseslips: 0 });
+    // Ohne Angabe gilt der Trainingsmodus — dasselbe, was der Server bei fehlendem Feld annimmt.
+    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: true, timeSeconds: 15, hintsUsed: 0, wrongAttempts: 0, mouseslips: 0, mode: 'training' });
     req.flush({ weeklyPostId: 7, total: 5, playedCount: 1, solvedCount: 1, completed: false });
   });
 

@@ -1045,3 +1045,111 @@ describe('BookPuzzleComponent Kurs kumulierte Lösezeit', () => {
     expect(loadSolveElapsed(KEY)).toBe(0);     // erfasster Versuch bleibt gelöscht
   });
 });
+
+/**
+ * Wochenpost-Spielweise (v0.341.0): Trainingsmodus (Brett eingefroren) vs. Einfachmodus
+ * (Figuren ziehbar). Geprüft wird, was die WERTUNG betrifft — welcher Modus am Puzzle
+ * hängt, wann das Auge ihn kippt, und dass das Umschalten die Wahl für den Post festhält.
+ */
+describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
+  const KEY = 'rookhub_weekly_mode_7';
+
+  function makeWeekly(): any {
+    const c = makeComponent();
+    c.inWeekly = true;
+    c.weeklyId = 7;
+    c.auth.isLoggedIn = true;
+    c.puzzle = { id: 2, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.weeklyService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(of({
+      weeklyPostId: 7, total: 5, playedCount: 1, solvedCount: 1, completed: false,
+      totalSeconds: 10, trainingCount: 1, easyCount: 0,
+    }));
+    return c;
+  }
+
+  afterEach(() => sessionStorage.removeItem(KEY));
+
+  it('Trainingsmodus friert das Brett ein, Einfachmodus nicht', () => {
+    const c = makeWeekly();
+    c.weeklyMode = 'training';
+    c.applyWeeklyMode();
+    expect(c.visualizationMode).toBe(1);
+
+    c.weeklyMode = 'easy';
+    c.applyWeeklyMode();
+    expect(c.visualizationMode).toBe(0);
+  });
+
+  it('gemeldet wird der eingestellte Modus', () => {
+    const c = makeWeekly();
+    c.weeklyMode = 'easy';
+    c.applyWeeklyMode();
+    c.recordWeeklyAttempt(true);
+    expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
+      7, 2, true, jasmine.any(Number), 0, 0, 0, 'easy');
+  });
+
+  it('Auge NACH dem ersten Zug kippt das Puzzle auf „einfach"', () => {
+    const c = makeWeekly();
+    c.weeklyMode = 'training';
+    c.applyWeeklyMode();
+    c.moveLog = ['e2e4'];        // erster Zug ist gespielt
+    c.onVizShow();               // aufgedeckt
+    c.recordWeeklyAttempt(false);
+    expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
+      7, 2, false, jasmine.any(Number), 0, 0, 0, 'easy');
+  });
+
+  it('Auge VOR dem ersten Zug ist normale Vorbereitung und kippt nichts', () => {
+    const c = makeWeekly();
+    c.weeklyMode = 'training';
+    c.applyWeeklyMode();
+    c.moveLog = [];              // noch kein Zug
+    c.onVizShow();
+    c.recordWeeklyAttempt(true);
+    expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
+      7, 2, true, jasmine.any(Number), 0, 0, 0, 'training');
+  });
+
+  it('das nächste Puzzle startet wieder unaufgedeckt (Kipp-Marke gilt je Puzzle)', () => {
+    const c = makeWeekly();
+    c.weeklyMode = 'training';
+    c.moveLog = ['e2e4'];
+    c.onVizShow();
+    c.applyWeeklyMode();         // neues Puzzle setzt die Spielweise frisch
+    c.recordWeeklyAttempt(true);
+    expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
+      7, 2, true, jasmine.any(Number), 0, 0, 0, 'training');
+  });
+
+  it('Umschalten wechselt den Modus und merkt ihn für diesen Wochenpost', () => {
+    const c = makeWeekly();
+    c.weeklyMode = 'training';
+    c.toggleWeeklyMode();
+    expect(c.weeklyMode).toBe('easy');
+    expect(sessionStorage.getItem(KEY)).toBe('easy');
+
+    c.toggleWeeklyMode();
+    expect(c.weeklyMode).toBe('training');
+    expect(sessionStorage.getItem(KEY)).toBe('training');
+  });
+
+  it('gemerkte Wahl wird übernommen, ohne erneut zu fragen', () => {
+    sessionStorage.setItem(KEY, 'easy');
+    const c = makeWeekly();
+    c.dialog.open = jasmine.createSpy('open');
+    c.askWeeklyMode();
+    expect(c.dialog.open).not.toHaveBeenCalled();
+    expect(c.weeklyMode).toBe('easy');
+    expect(c.visualizationMode).toBe(0);
+  });
+
+  it('anonyme Besucher werden nicht gefragt (für sie wird nichts gewertet)', () => {
+    const c = makeWeekly();
+    c.auth.isLoggedIn = false;
+    c.dialog.open = jasmine.createSpy('open');
+    c.askWeeklyMode();
+    expect(c.dialog.open).not.toHaveBeenCalled();
+    expect(c.weeklyMode).toBe('training');
+  });
+});
