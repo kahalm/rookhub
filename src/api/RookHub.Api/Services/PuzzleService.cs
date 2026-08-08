@@ -51,6 +51,27 @@ public class PuzzleService
             if (poolMin == null || poolMax == null) return null;
             var seekMin = Math.Max(minRating ?? poolMin.Value, poolMin.Value);
             var seekMax = Math.Min(maxRating ?? poolMax.Value, poolMax.Value);
+            // OFFENE Spanne (Aufrufer hat eine Grenze weggelassen — das Frontend schickt immer beide,
+            // betroffen ist der rohe API-Aufruf) auf die Rating-Spanne DER TAGS eindampfen. Sonst zieht
+            // der Seek gleichverteilt über die Ratings des GESAMTEN Pools, und die leeren Ränder
+            // (z. B. mateIn1 gibt es kaum über 2000) fallen samt ihrer Wahrscheinlichkeitsmasse per
+            // Vorwärts-/Rückwärts-Fallback auf das eine Rand-Puzzle des Tags: bei ~2600 Rating-Punkten
+            // Pool und einem Tag in einem 100-Punkte-Band bekam EIN Puzzle über 90 % aller Ziehungen.
+            // Kostet einen indexgestützten MIN/MAX-Seek über (TagId, Rating).
+            if (minRating == null || maxRating == null)
+            {
+                var tagRange = _db.PuzzleTags.Where(pt => tagIds.Contains(pt.TagId)
+                    && pt.Rating >= seekMin && pt.Rating <= seekMax);
+                var tagMin = await tagRange.MinAsync(pt => (int?)pt.Rating);
+                var tagMax = await tagRange.MaxAsync(pt => (int?)pt.Rating);
+                if (tagMin == null || tagMax == null) return null;   // kein Puzzle mit diesen Tags im Fenster
+                if (minRating == null) seekMin = tagMin.Value;
+                if (maxRating == null) seekMax = tagMax.Value;
+            }
+            // BLEIBENDER Trade-off: innerhalb des Fensters zieht der Seek gleichverteilt über RATING,
+            // nicht über PUZZLES — dünn besetzte Ratings sind damit überrepräsentiert. Das ist der Preis
+            // für den O(1)-Index-Seek; die Alternative (Kandidatenmenge materialisieren) bringt bei
+            // häufigen Tags über eine Million Zeilen pro anonymem Request.
             var exclude = excludeIds is { Count: > 0 } ? new HashSet<int>(excludeIds) : new HashSet<int>();
             var pickId = await SeekTaggedIdAsync(tagIds, seekMin, seekMax, excludeSolved, userId, exclude);
             if (pickId == null) return null;

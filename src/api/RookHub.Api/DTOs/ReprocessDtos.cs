@@ -38,6 +38,13 @@ public class ReprocessResultDto
     /// <summary>Als Hintergrund-Job zum Re-Fetch eingereihte Datensätze (nur Kurse, Chessable).</summary>
     public int Enqueued { get; set; }
 
-    /// <summary>Veraltete Datensätze, die weder lokal noch per Re-Fetch behandelt werden konnten.</summary>
+    /// <summary>Veraltete Datensätze, die weder lokal noch per Re-Fetch behandelt werden konnten
+    /// (keine Quelle, Re-Fetch-Backoff, Dedup) — ein reguläres „nichts zu tun".</summary>
     public int Skipped { get; set; }
+
+    /// <summary>Datensätze, deren Aufbereitung mit einem FEHLER abgebrochen ist (kaputtes Quell-PGN,
+    /// Parser-Sonderfall, DbUpdateException). Bewusst getrennt von <see cref="Skipped"/>: so ein Buch
+    /// behält seine <c>ImportVersion</c>, bleibt also im „Aktualisieren (N)"-Banner stehen — ohne
+    /// eigenen Zähler wäre nicht zu unterscheiden, ob nichts zu tun war oder etwas kaputt ist.</summary>
+    public int Failed { get; set; }
 }

@@ -171,9 +171,35 @@ public class ImportReprocessServiceTests : IDisposable
         var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
 
         Assert.Equal(0, result.Reprocessed);
-        Assert.Equal(2, result.Skipped);                       // beide lokalen Bücher übersprungen, kein Abbruch
+        Assert.Equal(2, result.Failed);                        // beide lokalen Bücher fehlgeschlagen, kein Abbruch
+        Assert.Equal(0, result.Skipped);                       // „kaputt" ist NICHT „nichts zu tun"
         Assert.Equal(1, result.Enqueued);                      // Re-Fetch trotzdem eingereiht
         Assert.Equal("abc123", Assert.Single(stub.Calls).Bid);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_FailingBook_CountsAsFailed_NotSkipped_AndStaysStale()
+    {
+        // Regression (Codereview 2026-08-07): ein Fehlschlag wurde wie „keine Quelle" als Skipped
+        // gezählt. Das Buch behält seine ImportVersion → es bleibt im „Aktualisieren (N)"-Banner
+        // stehen, ohne dass irgendwo steht, dass etwas kaputt ist. Getrennte Zähler:
+        // ohne Quelle = Skipped, mit Wurf = Failed.
+        await SeedBookAsync("manual-nosource.pgn", 0, null, null);          // keine Quelle → Skipped
+        var broken = await SeedBookAsync("manual-broken.pgn", 0, SamplePgn, null);   // wirft → Failed
+
+        var brokenDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        brokenDb.Dispose();
+        var svc = new ImportReprocessService(_db, new PgnImportService(brokenDb), new StubCourseReimporter(),
+            NullLogger<ImportReprocessService>.Instance);
+
+        var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(0, result.Reprocessed);
+        // Das kaputte Buch bleibt veraltet — genau deshalb braucht der Aufrufer den Fehler-Zähler.
+        Assert.Equal(0, (await _db.Books.SingleAsync(b => b.Id == broken.Id)).ImportVersion);
     }
 
     [Fact]

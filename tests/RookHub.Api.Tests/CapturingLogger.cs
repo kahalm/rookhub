@@ -6,7 +6,13 @@ namespace RookHub.Api.Tests;
 /// die pruefen, dass ein bestimmter messageTemplate-Event (z.B. fuer Kibana) emittiert wird.</summary>
 public sealed class CapturingLogger<T> : ILogger<T>
 {
-    public sealed record Entry(string Message, IReadOnlyDictionary<string, object?> State);
+    public sealed record Entry(string Message, IReadOnlyDictionary<string, object?> State)
+    {
+        /// <summary>Nachtraeglich ergaenzt (als init-Property, damit die positionale Signatur
+        /// der bestehenden Tests unveraendert bleibt) — noetig fuer Tests, die zwischen
+        /// Warning und Information unterscheiden.</summary>
+        public LogLevel Level { get; init; }
+    }
 
     public List<Entry> Events { get; } = new();
 
@@ -20,6 +26,6 @@ public sealed class CapturingLogger<T> : ILogger<T>
         if (state is IEnumerable<KeyValuePair<string, object?>> kvps)
             foreach (var kv in kvps)
                 dict[kv.Key] = kv.Value;
-        Events.Add(new Entry(formatter(state, exception), dict));
+        Events.Add(new Entry(formatter(state, exception), dict) { Level = logLevel });
     }
 }

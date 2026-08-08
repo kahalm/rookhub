@@ -71,6 +71,22 @@ export function normSan(san: string): string {
 }
 
 /**
+ * Einen PGN-Token über das BRETT auf die chess.js-Schreibweise bringen: `Nf3e5` → `Nxe5`,
+ * `e2e4` → `e4`. Ohne Stellung (oder bei illegalem Zug) bleibt nur die textuelle Normalisierung.
+ */
+function canonicalSan(board: Chess, beforeFen: string | null, token: string): string {
+  const raw = normSan(token);
+  if (!raw || !beforeFen) return raw;
+  try {
+    board.load(beforeFen);
+    const mv = board.move(raw);
+    return mv ? normSan(mv.san) : raw;
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * Parst die kombinierte Repertoire-PGN (mehrere Spiele) in einen Stellungs-Graph.
  * PGN-Header werden ignoriert; jede Linie wird ab ihrer FEN (oder Grundstellung) eingespielt.
  */
@@ -100,6 +116,7 @@ function parseSeq(tokens: string[], cur: { i: number }, fen: string, moves: Map<
   let lastRef: RepMove | null = null;        // zuletzt eingetragener Zug (für [%alt]-Kommentar)
 
   const chess = new Chess();
+  const altBoard = new Chess();     // eigenes Brett für die [%alt]-Kanonisierung (nie `chess` anfassen!)
 
   while (cur.i < tokens.length) {
     const t = tokens[cur.i];
@@ -117,7 +134,9 @@ function parseSeq(tokens: string[], cur: { i: number }, fen: string, moves: Map<
       const alts = extractAlts(t);
       if (alts.length && lastRef) {
         for (const a of alts) {
-          const na = normSan(a);
+          // Wie beim Hauptzug über das BRETT kanonisieren (siehe unten): [%alt] steht für die
+          // Stellung VOR dem annotierten Zug (`prevBeforeFen`).
+          const na = canonicalSan(altBoard, prevBeforeFen, a);
           if (na && !lastRef.alts.includes(na)) lastRef.alts.push(na);
         }
       }
@@ -133,10 +152,12 @@ function parseSeq(tokens: string[], cur: { i: number }, fen: string, moves: Map<
 
     // Zug anwenden, um die Folge-FEN zu erhalten.
     let afterFen: string;
+    let canonical: string;
     try {
       chess.load(posFen);
       const mv = chess.move(san);
       if (!mv) { skipToVariationEnd(tokens, cur); continue; }
+      canonical = normSan(mv.san);
       afterFen = chess.fen();
     } catch {
       // Illegaler Zug (kaputte Variante) → Rest dieser Ebene überspringen.
@@ -144,11 +165,16 @@ function parseSeq(tokens: string[], cur: { i: number }, fen: string, moves: Map<
       continue;
     }
 
+    // WICHTIG: den von chess.js erzeugten SAN speichern, nicht den rohen PGN-Token. Chessable
+    // notiert Züge teils lang/überbestimmt (`Nf3e5`, `e2e4`); der Trainer vergleicht dagegen den
+    // SAN, den chess.js aus dem BRETT-Zug des Nutzers bildet (`Nxe5`). Mit dem rohen Token liefe
+    // beides auseinander — ein korrekter Zug gälte als falsch bzw. eine [%alt]-Alternative würde
+    // nicht mehr geduldet. `normSan` allein reicht nicht: es sieht das Brett nicht.
     const key = normFen(posFen);
     let list = moves.get(key);
     if (!list) { list = []; moves.set(key, list); }
-    let ref = list.find(m => m.san === normSan(san));
-    if (!ref) { ref = { san: normSan(san), alts: [] }; list.push(ref); }
+    let ref = list.find(m => m.san === canonical);
+    if (!ref) { ref = { san: canonical, alts: [] }; list.push(ref); }
     lastRef = ref;
 
     prevBeforeFen = posFen;

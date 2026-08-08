@@ -142,9 +142,12 @@ public partial class ImportReprocessService
                 }
                 catch (Exception ex)
                 {
-                    result.Skipped++;
+                    // NICHT als "übersprungen" verbuchen: das Buch behält seine ImportVersion, bleibt
+                    // also im „Aktualisieren (N)"-Banner stehen. Nur ein eigener Fehler-Zähler macht
+                    // den Unterschied zwischen „nichts zu tun" und „kaputt" nach außen sichtbar.
+                    result.Failed++;
                     _logger.LogWarning(ex,
-                        "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht neu aufbereitet werden — übersprungen",
+                        "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht neu aufbereitet werden — bleibt veraltet",
                         book.FileName, book.Id);
                 }
             }
@@ -158,8 +161,8 @@ public partial class ImportReprocessService
         await EnqueueRefetchesAsync(refetch, isAdmin, result);
 
         _logger.LogInformation(
-            "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} lokal ({UpdatedLines} Linien), {Enqueued} eingereiht, {Skipped} übersprungen",
-            userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.Enqueued, result.Skipped);
+            "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} lokal ({UpdatedLines} Linien), {Enqueued} eingereiht, {Skipped} übersprungen, {Failed} fehlgeschlagen",
+            userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.Enqueued, result.Skipped, result.Failed);
         return result;
     }
 

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RookHub.Api.Data;
+using RookHub.Api.Middleware;
 using RookHub.Api.Services;
 using Serilog;
 using Serilog.Context;
@@ -509,29 +510,12 @@ try
     app.UseAuthentication();
 
     // ===== Scope-Zaun für Personal-Access-Tokens (rkh_…) =====
-    // Ein PAT bekommt im ApiTokenAuthenticationHandler dieselben Identitäts-Claims wie ein
-    // JWT — bis hierher war der `scope`-Claim aber NUR im ExtensionController geprüft. Damit
-    // war ein „extension"-Token faktisch ein Voll-Account-Token: PUT /api/profile ändert die
-    // E-Mail, danach „Passwort vergessen" → Kontoübernahme. Der Zaun steht deshalb zentral:
-    // wer einen scope-Claim mitbringt (= PAT, JWTs haben keinen), darf ausschließlich die
-    // Extension-Fläche. Neue Endpoints sind damit automatisch gesperrt statt automatisch offen.
-    var patAllowedPrefixes = new[] { "/api/extension" };
-    app.Use(async (ctx, next) =>
-    {
-        var scope = ctx.User?.FindFirst("scope")?.Value;
-        if (scope != null &&
-            !patAllowedPrefixes.Any(p => ctx.Request.Path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
-        {
-            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await ctx.Response.WriteAsJsonAsync(new
-            {
-                error = "api_token_scope",
-                detail = $"API tokens (scope '{scope}') may only be used on {string.Join(", ", patAllowedPrefixes)}.",
-            });
-            return;
-        }
-        await next();
-    });
+    // Wer einen scope-Claim mitbringt (= PAT, JWTs haben keinen), darf ausschließlich die
+    // Extension-Fläche; alles andere ist 403. Muss NACH UseAuthentication() stehen, sonst ist
+    // HttpContext.User noch anonym und der Zaun ein No-op. Logik + erlaubte Präfixe bewusst in
+    // PatScopeFenceMiddleware statt inline hier: nur so kann PatScopeFenceTests den echten Code
+    // prüfen (eine Test-Kopie der Präfix-Liste würde still auseinanderlaufen).
+    app.UsePatScopeFence();
 
     app.UseRateLimiter();
 

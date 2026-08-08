@@ -524,15 +524,33 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.outbox.set(bookPuzzleId, json);
   }
 
-  /** Alles Offene rausschicken — auch Stände von Stellungen, die inzwischen verlassen wurden. */
+  /** Stellungen mit einer JETZT laufenden Anfrage. Je Stellung darf immer nur EINE unterwegs sein:
+   *  der Server-Upsert ist ein reines „last write wins" ohne Versions-Token, zwei parallele Saves
+   *  derselben Stellung könnten also in umgekehrter Reihenfolge ankommen — der ältere Baum bliebe
+   *  gespeichert, ohne dass die Oberfläche etwas davon merkt (Autosave alle 1,2 s, eine langsame
+   *  Verbindung genügt). Der jüngere Stand wartet stattdessen in der Outbox und geht raus, sobald
+   *  die laufende Anfrage durch ist. */
+  private inFlight = new Set<number>();
+
+  /** Alles Offene rausschicken — auch Stände von Stellungen, die inzwischen verlassen wurden.
+   *  Stellungen mit laufender Anfrage bleiben in der Outbox (siehe {@link inFlight}). */
   private sendOutbox(): void {
     if (this.outbox.size === 0) return;
-    const pending = [...this.outbox];
-    this.outbox.clear();
+    const pending = [...this.outbox].filter(([bookPuzzleId]) => !this.inFlight.has(bookPuzzleId));
     for (const [bookPuzzleId, json] of pending) {
+      this.outbox.delete(bookPuzzleId);
+      this.inFlight.add(bookPuzzleId);
       const seq = this.nextSeq(bookPuzzleId);
       if (json === null) this.sendDelete(bookPuzzleId, seq); else this.sendSave(bookPuzzleId, json, seq);
     }
+  }
+
+  /** Antwort da: Slot freigeben. Nach ERFOLG einen inzwischen aufgelaufenen neueren Stand direkt
+   *  nachschicken; nach einem FEHLER nicht (sonst dreht sich bei totem Server eine heiße Schleife) —
+   *  der wartet dann auf den nächsten Autosave/Flush. */
+  private finishSend(bookPuzzleId: number, drain: boolean): void {
+    this.inFlight.delete(bookPuzzleId);
+    if (drain && this.outbox.has(bookPuzzleId)) this.sendOutbox();
   }
 
   private sendSave(bookPuzzleId: number, json: string, seq: number): void {
@@ -545,11 +563,14 @@ export class CalculationComponent implements OnInit, OnDestroy {
           this.savedAt = new Date(res.updatedAt);
         }
         this.markPositionDone(bookPuzzleId, true);
+        this.finishSend(bookPuzzleId, true);
       },
       error: () => {
         if (this.isCurrent(bookPuzzleId)) this.saving = false;
-        this.requeueIfLatest(bookPuzzleId, seq, json);   // GENAU diesen Stand erneut einreihen —
-                                                        // aber nur, wenn er noch der jüngste ist
+        // GENAU diesen Stand erneut einreihen — aber nur, wenn er noch der jüngste ist: weder ein
+        // inzwischen aufgelaufener neuerer Stand in der Outbox noch ein bereits gesendeter (seq).
+        if (!this.outbox.has(bookPuzzleId)) this.requeueIfLatest(bookPuzzleId, seq, json);
+        this.finishSend(bookPuzzleId, false);
         this.reportSaveError();
       },
     });
@@ -557,8 +578,15 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   private sendDelete(bookPuzzleId: number, seq: number): void {
     this.api.deleteTree(bookPuzzleId).subscribe({
-      next: () => { if (this.isCurrent(bookPuzzleId)) this.savedAt = null; },
-      error: () => { this.requeueIfLatest(bookPuzzleId, seq, null); this.reportSaveError(); },
+      next: () => {
+        if (this.isCurrent(bookPuzzleId)) this.savedAt = null;
+        this.finishSend(bookPuzzleId, true);
+      },
+      error: () => {
+        if (!this.outbox.has(bookPuzzleId)) this.requeueIfLatest(bookPuzzleId, seq, null);
+        this.finishSend(bookPuzzleId, false);
+        this.reportSaveError();
+      },
     });
   }
 

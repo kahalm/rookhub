@@ -37,6 +37,51 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # ACHTUNG Reihenfolge: „Read app version" + der Guard darunter stehen BEWUSST ganz
+      # vorn — vor setup-java/Android-SDK/Bubblewrap. Ein Abbruch wegen fehlendem/falschem
+      # Tag darf nicht erst nach dem ~10-Minuten-Android-Build kommen. Beide Schritte
+      # brauchen nur den Checkout (grep + git ls-remote), keinerlei Toolchain.
+      #
+      # Nur prod: App-Version aus changelog.ts lesen (Single Source, siehe CLAUDE.md).
+      - name: Read app version
+        if: inputs.variant == 'prod'
+        id: ver
+        run: |
+          v=$(grep -oE "APP_VERSION = '[0-9.]+'" src/frontend/app/src/environments/changelog.ts | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+          if [ -z "$v" ]; then echo "APP_VERSION nicht gefunden"; exit 1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "App version: $v"
+
+      # FALLE 1 (Tag fehlt): action-gh-release legt einen fehlenden Tag STILL selbst an — auf
+      # dem Dispatch-Stand. Von GITHUB_TOKEN erzeugte Tags loesen keine Workflows aus, d. h.
+      # fuer dieses "latest"-Release wuerde NIE ein :latest-Docker-Image gebaut: Release
+      # vX.Y.Z, Images aber noch vom vorigen Tag. Darum hart abbrechen, wenn der Tag fehlt.
+      #
+      # FALLE 2 (Tag zeigt woanders hin): existiert v$v bereits auf einem AELTEREN Commit,
+      # haengt die aus dem Dispatch-Ref gebaute APK am Release dieses alten Tags — APK und
+      # :latest-Images stammen dann aus verschiedenen Staenden. `target_commitish` hilft
+      # dagegen NICHT: die GitHub-API ignoriert das Feld, wenn der Git-Tag schon existiert —
+      # und existieren MUSS er ja wegen Falle 1. Deshalb hier die SHAs vergleichen.
+      - name: Release-Tag muss existieren und auf diesen Commit zeigen
+        if: inputs.variant == 'prod'
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          if ! git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
+            echo "::error::Tag v$v fehlt. Erst 'git tag v$v && git push origin v$v' (baut die :latest-Images), dann diesen Workflow starten."
+            exit 1
+          fi
+          # Annotated Tags: "^{}" liefert den Commit, auf den der Tag zeigt. Lightweight Tags
+          # haben keinen peeled-Eintrag -> Fallback auf den Tag-Ref selbst.
+          tag_sha=$(git ls-remote origin "refs/tags/v$v^{}" | cut -f1)
+          if [ -z "$tag_sha" ]; then
+            tag_sha=$(git ls-remote origin "refs/tags/v$v" | cut -f1)
+          fi
+          if [ "$tag_sha" != "${{ github.sha }}" ]; then
+            echo "::error::Tag v$v zeigt auf $tag_sha, gebaut wird aber ${{ github.sha }} (${{ github.ref_name }}). Die APK wuerde am Release eines anderen Commits haengen. Workflow direkt auf dem Tag v$v starten (oder passend neu taggen)."
+            exit 1
+          fi
+          echo "Tag v$v vorhanden und zeigt auf $tag_sha (= dieser Build)."
+
       - name: Select manifest variant
         working-directory: twa
         run: |
@@ -108,30 +153,6 @@ jobs:
             twa/app-release-bundle.aab
             twa/app-release-signed.apk
           if-no-files-found: warn
-
-      # Nur prod: App-Version aus changelog.ts lesen (Single Source, siehe CLAUDE.md).
-      - name: Read app version
-        if: inputs.variant == 'prod'
-        id: ver
-        run: |
-          v=$(grep -oE "APP_VERSION = '[0-9.]+'" src/frontend/app/src/environments/changelog.ts | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
-          if [ -z "$v" ]; then echo "APP_VERSION nicht gefunden"; exit 1; fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "App version: $v"
-
-      # FALLE: action-gh-release legt einen fehlenden Tag STILL selbst an — auf dem
-      # Dispatch-Stand. Von GITHUB_TOKEN erzeugte Tags loesen keine Workflows aus, d. h.
-      # fuer dieses "latest"-Release wuerde NIE ein :latest-Docker-Image gebaut: Release
-      # vX.Y.Z, Images aber noch vom vorigen Tag. Darum hart abbrechen, wenn der Tag fehlt.
-      - name: Release-Tag muss existieren
-        if: inputs.variant == 'prod'
-        run: |
-          v="${{ steps.ver.outputs.version }}"
-          if ! git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
-            echo "::error::Tag v$v fehlt. Erst 'git tag v$v && git push origin v$v' (baut die :latest-Images), dann diesen Workflow starten."
-            exit 1
-          fi
-          echo "Tag v$v vorhanden."
 
       # Nur prod: frische APK/AAB an ein GitHub-Release hängen + als "latest" markieren,
       # damit releases/latest/download/app-release-signed.apk immer die aktuelle App liefert.

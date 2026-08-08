@@ -41,17 +41,59 @@ public class ChessableImportServiceTests : IDisposable
         _svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")));
     }
 
-    private ChessableImportService BuildSvc(HttpMessageHandler handler, int? dailyLineLimit = null)
+    private ChessableImportService BuildSvc(HttpMessageHandler handler, int? dailyLineLimit = null, AppDbContext? db = null)
     {
+        var d = db ?? _db;
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
-        var breaker = new ChessableBearerBreaker(_db, _queue, NullLogger<ChessableBearerBreaker>.Instance);
+        var breaker = new ChessableBearerBreaker(d, _queue, NullLogger<ChessableBearerBreaker>.Instance);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Chessable:DailyLineLimitPerUser"] = dailyLineLimit?.ToString(),
         }).Build();
-        var rateLimiter = new ChessableRateLimiter(_db, config);
-        return new ChessableImportService(_db, _encryption, proxy, _repertoires, new PgnImportService(_db),
-            _queue, new NotificationService(_db), breaker, rateLimiter, NullLogger<ChessableImportService>.Instance);
+        var rateLimiter = new ChessableRateLimiter(d, config);
+        var repertoires = ReferenceEquals(d, _db)
+            ? _repertoires
+            : new RepertoireService(d, new RepertoireAnalyzeService(d, new MemoryCache(new MemoryCacheOptions())));
+        return new ChessableImportService(d, _encryption, proxy, repertoires, new PgnImportService(d),
+            _queue, new NotificationService(d), breaker, rateLimiter, NullLogger<ChessableImportService>.Instance);
+    }
+
+    /// <summary>DbContext, der ab einem bestimmten asynchronen SaveChanges wirft — steht für „DB gerade
+    /// weg" (Ausfall/Timeout) und damit für den Zustand, in dem <c>FailAsync</c> den Fehlerstatus NICHT
+    /// mehr festschreiben kann.</summary>
+    private sealed class FlakyDbContext : AppDbContext
+    {
+        public FlakyDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+        /// <summary>Ab dem wievielten asynchronen SaveChanges geworfen wird (1 = ab dem ersten). null = nie.</summary>
+        public int? ThrowFromSaveNo { get; set; }
+        public int AsyncSaves { get; private set; }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            AsyncSaves++;
+            if (ThrowFromSaveNo is { } n && AsyncSaves >= n)
+                throw new InvalidOperationException("DB weg (simuliert)");
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+    }
+
+    /// <summary>Import mit ausgeschöpften Versuchen in einer eigenen (kaputt schaltbaren) DB — RunAsync
+    /// geht damit direkt in FailAsync, ohne dass vorher etwas gespeichert werden müsste.</summary>
+    private static (FlakyDbContext Db, int ImportId) SeedForFailAsync()
+    {
+        var db = new FlakyDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "Kurs", Target = "repertoire",
+            Status = "running", Phase = "queued", Attempts = ChessableImportService.MaxAttempts,
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.ChessableImports.Add(imp);
+        db.SaveChanges();   // synchron → von der Wurf-Logik nicht betroffen
+        return (db, imp.Id);
     }
 
     public void Dispose() => _db.Dispose();
@@ -845,6 +887,48 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(0, await _db.Repertoires.CountAsync());
         // Glocke: User wird über den fehlgeschlagenen Import benachrichtigt.
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportFailed));
+    }
+
+    // --- Härtung von FailAsync (Auslöser der Zombie-Import-Kette): weder das gescheiterte
+    //     Fehler-Update noch die Nachbereitung dürfen aus RunAsync herausfliegen. ---
+
+    [Fact]
+    public async Task RunAsync_FailWhileDbIsDown_DoesNotThrow_LeavesJobForWatchdog()
+    {
+        // FALLE: Ist die DB weg, scheitert AUCH das Fehler-Update in FailAsync. Ohne die Härtung
+        // liefe die Exception bis in den BackgroundTaskWorker („Background task failed"), der Import
+        // bliebe im Lane-Slot hängen (Drain steht bis zum Neustart) und der Watchdog sähe ihn nie.
+        var (db, id) = SeedForFailAsync();
+        using var _ = db;
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet")), db: db);
+        db.ThrowFromSaveNo = 1;   // schon das Fehler-Update scheitert
+
+        await svc.RunAsync(id);   // darf NICHT werfen
+
+        // Nach dem gescheiterten Update KEINE weiteren Schreibversuche (Nachbereitung übersprungen) —
+        // der Job bleibt unangetastet, der Watchdog holt ihn als verwaisten Inflight-Job zurück.
+        Assert.Equal(1, db.AsyncSaves);
+        Assert.Empty(db.Notifications.Local);   // keine Benachrichtigung mehr angehängt
+    }
+
+    [Fact]
+    public async Task RunAsync_FailPostProcessingThrows_KeepsFailedStatus_AndDoesNotThrow()
+    {
+        // Der Fehlerstatus ist festgeschrieben; erst die NACHBEREITUNG (Breaker/Benachrichtigung)
+        // scheitert. Die darf den bereits gesicherten Zustand nicht mehr gefährden und nicht als
+        // Background-Task-Fehler hochblubbern (Fehlalarm im log-watcher).
+        var (db, id) = SeedForFailAsync();
+        using var _ = db;
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet")), db: db);
+        db.ThrowFromSaveNo = 2;   // Fehler-Update geht durch, die Benachrichtigung wirft
+
+        await svc.RunAsync(id);   // darf NICHT werfen
+
+        var reloaded = await db.ChessableImports.FindAsync(id);
+        Assert.Equal("failed", reloaded!.Status);
+        Assert.Equal($"Abgebrochen nach {ChessableImportService.MaxAttempts} Versuchen", reloaded.Error);
+        Assert.NotNull(reloaded.CompletedAt);
+        Assert.Equal(2, db.AsyncSaves);   // Status-Save + gescheiterter Benachrichtigungs-Save
     }
 
     [Fact]

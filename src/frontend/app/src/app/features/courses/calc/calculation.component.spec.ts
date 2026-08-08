@@ -390,7 +390,7 @@ describe('CalculationComponent Speichern', () => {
   });
 
   it('rollt einen erfolgreich gespeicherten Stand nicht auf einen älteren zurück', () => {
-    // Regression: Save v1 scheitert SPÄT, während v2 längst erfolgreich durch ist — das Requeue
+    // Regression: Save v1 scheitert SPÄT, während v2 schon in der Outbox liegt — das Requeue
     // von v1 hätte den Server beim nächsten Flush auf den alten Stand zurückgesetzt.
     const first = new Subject<{ bookPuzzleId: number; updatedAt: string }>();
     const saved: { id: number; json: string }[] = [];
@@ -408,12 +408,76 @@ describe('CalculationComponent Speichern', () => {
     component.flushSave();                       // v1 unterwegs
     component.startNewLine();
     component.onMove({ orig: 'd2' as never, dest: 'd4' as never });   // zweite Variante
-    component.flushSave();                       // v2 erfolgreich
-    expect(saved.length).toBe(1);
+    component.flushSave();                       // v2 wartet (v1 noch unterwegs)
 
     first.error(new Error('offline'));           // v1 scheitert nachträglich
-    component.flushSave();                       // darf v1 NICHT nachschicken
+    component.flushSave();                       // schickt v2 — NICHT v1
 
+    expect(saved.length).toBe(1);
+    expect(lines(JSON.parse(saved[0].json)).length).toBe(2);   // v2 = zwei Varianten
+  });
+
+  it('schickt zwei Stände derselben Stellung nie parallel (Reihenfolge am Server)', () => {
+    // Regression (Codereview 2026-08-07): der Server-Upsert ist ein reines „last write wins" ohne
+    // Versions-Token. Gingen v1 und v2 derselben Stellung gleichzeitig raus, konnte v1 NACH v2
+    // ankommen → der ältere Baum blieb gespeichert. Erwartung: v2 wartet, bis v1 beantwortet ist.
+    const first = new Subject<{ bookPuzzleId: number; updatedAt: string }>();
+    const sent: string[] = [];
+    let call = 0;
+    const { component } = make({
+      saveTree: (id: number, json: string) => {
+        call++; sent.push(json);
+        if (call === 1) return first;            // v1 bleibt offen
+        return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // v1 unterwegs
+    component.startNewLine();
+    component.onMove({ orig: 'd2' as never, dest: 'd4' as never });
+    component.flushSave();                       // v2 darf NICHT parallel losgehen
+
+    expect(sent.length).toBe(1);
+
+    first.next({ bookPuzzleId: 7, updatedAt: '2026-07-28T10:00:00Z' });
+    first.complete();                            // v1 beantwortet → v2 geht automatisch raus
+
+    expect(sent.length).toBe(2);
+    expect(lines(JSON.parse(sent[1])).length).toBe(2);
+  });
+
+  it('serialisiert auch Löschen gegen einen danach neu angelegten Baum', () => {
+    // Sonst könnte das DELETE nach dem PUT beim Server ankommen und den neuen Baum wegräumen.
+    const del = new Subject<void>();
+    const saved: { id: number; json: string }[] = [];
+    const { component } = make({
+      deleteTree: () => del,
+      saveTree: (id: number, json: string) => {
+        saved.push({ id, json });
+        return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({
+      treeJson: JSON.stringify({
+        version: 1, startFen: START, rootId: 0, nextId: 2,
+        nodes: [
+          { id: 0, parentId: null, san: '', uci: '', fen: START, childIds: [1] },
+          { id: 1, parentId: 0, san: 'Nxe5', uci: 'f3e5', fen: 'x', childIds: [] },
+        ],
+      }),
+      treeUpdatedAt: '2026-07-27T10:00:00Z',
+    }));
+    component.setCursor(1);
+    component.deleteFromCursor();
+    component.flushSave();                       // DELETE unterwegs
+
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // neuer Baum — darf nicht überholen
+    expect(saved.length).toBe(0);
+
+    del.next();
+    del.complete();                              // DELETE beantwortet → jetzt erst speichern
     expect(saved.length).toBe(1);
   });
 

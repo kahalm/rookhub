@@ -190,6 +190,45 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandom_ThemesAny_OpenRatingWindow_DoesNotOverweightThePoolEdges()
+    {
+        // Regression (Codereview 2026-08-07): bei OFFENER Rating-Spanne war das Seek-Fenster der ganze
+        // Pool (hier 400–3000). Der Zufalls-Rating-Punkt landet dann fast immer außerhalb des Bandes,
+        // in dem der Tag überhaupt vorkommt — und der Vorwärts-/Rückwärts-Fallback kippt die gesamte
+        // Wahrscheinlichkeitsmasse dieses leeren Bereichs auf EIN Rand-Puzzle (hier: ~96 % auf das
+        // 501er). Erwartung: das Fenster wird auf die Rating-Spanne der Tags eingedampft → beide
+        // fork-Puzzles kommen regelmäßig dran.
+        await CreatePuzzleAsync(rating: 400, themes: "endgame", lichessId: "edge-lo");    // spannt den Pool auf
+        await CreatePuzzleAsync(rating: 3000, themes: "endgame", lichessId: "edge-hi");
+        var low = await CreatePuzzleAsync(rating: 500, themes: "fork", lichessId: "edge-f1");
+        await CreatePuzzleAsync(rating: 501, themes: "fork", lichessId: "edge-f2");
+
+        var hitsLow = 0;
+        for (var i = 0; i < 200; i++)
+        {
+            var picked = await _service.GetRandomAsync(null, null, null, themes: null, excludeSolved: false, themesAny: "fork");
+            Assert.NotNull(picked);
+            Assert.Contains("fork", picked!.Themes);      // Themen-Filter bleibt scharf
+            if (picked.Id == low.Id) hitsLow++;
+        }
+
+        // Gleichverteilt über das Tag-Fenster wären ~100; ohne den Fix sind es ~8 von 200.
+        Assert.True(hitsLow >= 50, $"unteres Puzzle nur {hitsLow}/200 gezogen — Rand-Übergewichtung");
+    }
+
+    [Fact]
+    public async Task GetRandom_ThemesAny_OpenWindowWithoutMatchingTagPuzzle_ReturnsNull()
+    {
+        // Eingedampftes Fenster darf keinen Treffer erfinden: Tag existiert, aber unter der Untergrenze.
+        await CreatePuzzleAsync(rating: 800, themes: "fork", lichessId: "edge-n1");
+        await CreatePuzzleAsync(rating: 2500, themes: "endgame", lichessId: "edge-n2");
+
+        var picked = await _service.GetRandomAsync(null, 2000, null, themes: null, excludeSolved: false, themesAny: "fork");
+
+        Assert.Null(picked);
+    }
+
+    [Fact]
     public async Task GetRandomBatch_SkipsEmptyWindows()
     {
         await CreatePuzzleAsync(rating: 810);

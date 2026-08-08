@@ -68,6 +68,36 @@ describe('repertoire-tree.util', () => {
     expect(cards.some(c => c.expected === 'd5')).toBeTrue();
   });
 
+  // Regression (Codereview 2026-08-07): der Graph speicherte den ROHEN PGN-Token. Chessable
+  // notiert Züge teils lang/überbestimmt (`Ng1f3`, `e2e4`); der Trainer vergleicht dagegen den
+  // SAN, den chess.js aus dem Brett-Zug des Nutzers bildet (`Nf3`) — der korrekte Zug galt damit
+  // als falsch. Erwartung: Haupt- UND [%alt]-Züge liegen in chess.js-Schreibweise im Graph.
+  it('canonicalises long/overdetermined notation to the chess.js SAN', () => {
+    const pgn = START + '1. e2e4 e7e5 2. Ng1f3 Nb8c6 *';
+    const g = buildRepertoireGraph(pgn);
+    const white = cardsForColor(g, 'w').map(c => c.expected).sort();
+    const black = cardsForColor(g, 'b').map(c => c.expected).sort();
+    expect(white).toEqual(['Nf3', 'e4']);
+    expect(black).toEqual(['Nc6', 'e5']);
+  });
+
+  it('canonicalises [%alt] tolerances against the board, not just textually', () => {
+    // Der geduldete Zug steht lang notiert im Kommentar (`Ng8f6`) — die Toleranz muss trotzdem
+    // gegen den chess.js-SAN `Nf6` greifen, den der Trainer aus dem Brettzug bildet.
+    const pgn = START + '1. e4 e5 2. Nf3 Nc6 {[%alt Ng8f6 d7d6]} *';
+    const g = buildRepertoireGraph(pgn);
+    const card = cardsForColor(g, 'b').find(c => c.expected === 'Nc6')!;
+    expect(card).toBeTruthy();
+    expect(card.accepted.sort()).toEqual(['Nf6', 'd6']);
+  });
+
+  it('keeps an unparsable [%alt] token as plain text instead of dropping it', () => {
+    const pgn = START + '1. e4 e5 {[%alt Zz9]} *';
+    const g = buildRepertoireGraph(pgn);
+    const card = cardsForColor(g, 'b').find(c => c.expected === 'e5')!;
+    expect(card.accepted).toEqual(['Zz9']);
+  });
+
   it('white repertoire: cards are White moves', () => {
     const pgn = START + '1. e4 {[%alt d4 c4]} e5 2. Nf3 Nc6 *';
     const g = buildRepertoireGraph(pgn);

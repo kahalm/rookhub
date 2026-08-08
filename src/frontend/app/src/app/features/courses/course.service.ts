@@ -211,12 +211,21 @@ export interface ReprocessStatus {
   needsReimport: number;
 }
 
-/** Ergebnis eines Reprocess-Laufs. */
+/**
+ * Ergebnis eines Reprocess-Laufs — SPIEGEL des Server-DTOs, aber KEIN Antwort-Vertrag:
+ * `POST /api/courses/reprocess` startet den Lauf im Hintergrund und antwortet mit
+ * `202 { started: true }`. Die Zahlen hier landen also nur im Server-Log; der Typ
+ * beschreibt die Struktur für den Fall, dass der Lauf später synchron auswertbar wird.
+ * Wer auf `failed` reagieren will, braucht vorher einen Endpoint, der das ausliefert.
+ */
 export interface ReprocessResult {
   reprocessed: number;
   updatedLines: number;
   enqueued: number;
+  /** Nichts zu tun (keine Quelle, Re-Fetch-Backoff, Dedup). */
   skipped: number;
+  /** Mit Fehler abgebrochen — der Datensatz bleibt veraltet (siehe Server-Log). */
+  failed: number;
 }
 
 @Injectable({ providedIn: 'root' })
