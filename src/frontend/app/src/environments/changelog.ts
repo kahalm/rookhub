@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.340.3';
+export const APP_VERSION = '0.340.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.340.4", date: "2026-08-08", changes: [
+    { en: "Backup script corrected before it ever ran in production: it dumped only two of the three databases in the container \u2014 piratechess was missing, and that is where the encrypted Chessable credentials live, so a restore would have been incomplete. Also, the database password reached the dump through the docker command line and was therefore visible in the host\u2019s process list; it is passed through the environment now. Documentation updated to match.", de: "Backup-Skript korrigiert, bevor es je produktiv lief: es sicherte nur zwei der drei Datenbanken im Container \u2014 piratechess fehlte, und genau dort liegen die verschl\u00fcsselten Chessable-Zugangsdaten, ein Restore w\u00e4re also unvollst\u00e4ndig gewesen. Au\u00dferdem erreichte das Datenbank-Passwort den Dump \u00fcber die docker-Kommandozeile und war damit in der Prozessliste des Hosts sichtbar; es wird jetzt \u00fcber die Umgebung \u00fcbergeben. Doku entsprechend nachgezogen." },
+  ] },
   { version: "0.340.3", date: "2026-08-08", changes: [
     { en: "Follow-up to the review fixes, from an independent verification pass over the previous round. Support impersonation could no longer save a profile at all: the guard rejected the email FIELD, but the UI sends it on every save \u2014 it now rejects only an actual CHANGE. An empty encryption key now aborts startup instead of failing on the first Chessable request (the service is created lazily). Castling written with zeros (0-0) was silently dropped from the server-side move list, which broke the line hash for those lines; it is canonicalised now. The cross-language hash contract is finally pinned on BOTH sides \u2014 previously only the server had fixed vectors, so a frontend change could have silently invalidated stored keys.", de: "Nachzug zu den Review-Fixes, aus einem unabh\u00e4ngigen Verifikationslauf \u00fcber die letzte Runde. Im Support-Modus lie\u00df sich gar kein Profil mehr speichern: der Guard wies das E-Mail-FELD ab, die UI schickt es aber bei jedem Speichern mit \u2014 jetzt wird nur noch eine echte \u00c4NDERUNG abgewiesen. Ein leerer Verschl\u00fcsselungs-Schl\u00fcssel bricht jetzt den Start ab, statt erst beim ersten Chessable-Request aufzufallen (der Dienst wird lazy erzeugt). Eine mit Nullen geschriebene Rochade (0-0) fiel serverseitig still aus der Zugliste und zerst\u00f6rte damit den Linien-Hash dieser Linien; sie wird jetzt kanonisiert. Der sprach\u00fcbergreifende Hash-Vertrag ist endlich auf BEIDEN Seiten festgenagelt \u2014 bisher hatte nur der Server feste Vektoren, eine Frontend-\u00c4nderung h\u00e4tte gespeicherte Schl\u00fcssel still entwerten k\u00f6nnen." },
   ] },

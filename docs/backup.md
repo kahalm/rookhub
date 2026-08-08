@@ -10,10 +10,11 @@ Betroffene Datenbanken (beide liegen im selben MariaDB-Container):
 |----------------|--------|
 | `rookhub`      | Benutzer, Profile, Repertoires, Kurse/Bücher, Puzzle-Ergebnisse, Nachrichten |
 | `chessresults` | Vom Crawler geholte Turnier-/Spielerdaten |
+| `piratechess`  | Chessable-Rohdaten-Cache **und die AES-verschlüsselten Chessable-Zugangsdaten der Nutzer** — ohne diese DB ist ein Restore unvollständig |
 
 ## Skript
 
-`scripts/backup-db.sh` — läuft auf dem Deploy-Host und dumpt beide Datenbanken
+`scripts/backup-db.sh` — läuft auf dem Deploy-Host und dumpt alle drei Datenbanken
 per `docker exec` aus dem laufenden MariaDB-Container (kein Client-Setup nötig).
 
 ```bash
@@ -25,7 +26,7 @@ sudo BACKUP_DIR=/data/backups RETENTION_DAYS=30 ./scripts/backup-db.sh
 |-----|---------|-------|
 | `ENV_FILE` | `/opt/stacks/rookhub-schach/.env` | Quelle für `MARIADB_ROOT_PASSWORD` (alternativ direkt als ENV setzen) |
 | `DB_CONTAINER` | `rookhub-mariadb` | Container-Name |
-| `DATABASES` | `rookhub chessresults` | Leerzeichenliste |
+| `DATABASES` | `rookhub chessresults piratechess` | Leerzeichenliste. **piratechess gehört dazu** — die DB liegt im selben Container und hält die verschlüsselten Chessable-Zugangsdaten. |
 | `BACKUP_DIR` | `/var/backups/rookhub` | Zielverzeichnis (Modus 700, Dumps 600) |
 | `RETENTION_DAYS` | `14` | Aufbewahrung; ältere `*.sql.gz` werden gelöscht |
 

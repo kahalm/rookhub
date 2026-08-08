@@ -14,7 +14,7 @@
 #                   (Default /opt/stacks/rookhub-schach/.env). Alternativ
 #                   MARIADB_ROOT_PASSWORD direkt setzen.
 #   DB_CONTAINER    Name des MariaDB-Containers (Default rookhub-mariadb)
-#   DATABASES       Leerzeichenliste (Default "rookhub chessresults")
+#   DATABASES       Leerzeichenliste (Default "rookhub chessresults piratechess")
 #   BACKUP_DIR      Zielverzeichnis (Default /var/backups/rookhub)
 #   RETENTION_DAYS  Aufbewahrung in Tagen (Default 14)
 #
@@ -27,7 +27,7 @@
 #
 # 2. Dump auswaehlen und einspielen (Beispiel rookhub):
 #       gunzip -c /var/backups/rookhub/rookhub-20260807-030000.sql.gz \
-#         | docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" \
+#         | MYSQL_PWD="$MARIADB_ROOT_PASSWORD" docker exec -i -e MYSQL_PWD \
 #             rookhub-mariadb mariadb -u root --default-character-set=utf8mb4 rookhub
 #
 #    Der Dump enthaelt CREATE DATABASE IF NOT EXISTS + USE (--databases), die
@@ -49,7 +49,10 @@ set -euo pipefail
 
 ENV_FILE="${ENV_FILE:-/opt/stacks/rookhub-schach/.env}"
 DB_CONTAINER="${DB_CONTAINER:-rookhub-mariadb}"
-DATABASES="${DATABASES:-rookhub chessresults}"
+# piratechess gehoert dazu: die DB liegt im SELBEN Container und haelt die
+# AES-verschluesselten Chessable-Zugangsdaten der Nutzer — ohne sie ist ein Restore
+# unvollstaendig, und die Credentials sind nicht wiederherstellbar.
+DATABASES="${DATABASES:-rookhub chessresults piratechess}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/rookhub}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 
@@ -80,8 +83,12 @@ for db in $DATABASES; do
   log "Dumpe '$db' -> $target"
 
   # MYSQL_PWD statt -p<pass>: sonst steht das Passwort in der Prozessliste des
-  # Containers. --single-transaction haelt InnoDB konsistent ohne Table-Locks.
-  if docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" "$DB_CONTAINER" \
+  # Containers. WICHTIG: `-e MYSQL_PWD` OHNE Wert — die Variable wird aus der
+  # Umgebung dieses Skripts uebernommen. Mit `-e MYSQL_PWD="$..."` stuende das
+  # Passwort in der Kommandozeile des `docker exec` und damit in der Prozessliste
+  # des HOSTS (nur die des Containers waere geschuetzt).
+  # --single-transaction haelt InnoDB konsistent ohne Table-Locks.
+  if MYSQL_PWD="$MARIADB_ROOT_PASSWORD" docker exec -i -e MYSQL_PWD "$DB_CONTAINER" \
       mariadb-dump -u root \
         --single-transaction --quick --routines --events --triggers \
         --default-character-set=utf8mb4 --databases "$db" 2>"$tmp.err" \
