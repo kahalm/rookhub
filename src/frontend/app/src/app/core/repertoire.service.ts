@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Repertoire } from './models';
 
 /**
@@ -74,6 +75,176 @@ export interface RepertoirePositionTree {
 
 export interface PositionTreeResult {
   repertoires: RepertoirePositionTree[];
+}
+
+/**
+ * Gewichtungs-Voreinstellung der Ähnlichkeitssuche. Die Werte sind BEWUSST die Wire-Werte des
+ * Servers (nicht übersetzt/umbenannt) — Gewichte Bauern/Material/Figuren/König:
+ * `struktur` 0.75/0.10/0.10/0.05 · `ausgewogen` 0.50/0.20/0.20/0.10 (Default) ·
+ * `stellungsbild` 0.30/0.15/0.45/0.10.
+ */
+export type SimilarityPreset = 'struktur' | 'ausgewogen' | 'stellungsbild';
+
+/** Umwandlungsfigur eines Zuges (chess.js-Schreibweise). */
+export type SimilarMovePromotion = 'q' | 'r' | 'b' | 'n';
+
+/**
+ * Der Zug, den der Nutzer erwägt — BEWUSST als from→to (+ Umwandlungsfigur), nicht als SAN.
+ * `Nbd2` und `Nd2` sind derselbe Zug, nur anders disambiguiert; ein Textvergleich verfehlt
+ * solche Paare still. Die SAN-Eingabe wird im Frontend auf der Ankerstellung aufgelöst
+ * (siehe `parseMoveInput`), über die Leitung gehen nur Felder.
+ */
+export interface SimilarMoveInput {
+  from: string;
+  to: string;
+  promotion?: SimilarMovePromotion;
+}
+
+/**
+ * Trefferstufe des mitgegebenen Zuges an der gefundenen Stellung:
+ * - `exact` — dort geht die Linie tatsächlich mit genau diesem Zug weiter (Hauptzug ODER eine
+ *   Variante an dieser Stelle); nicht bloße Legalität.
+ * - `sameTarget` — dieselbe Figurenart zieht dort aufs gleiche Zielfeld, aber von woanders.
+ */
+export type SimilarMoveMatch = 'exact' | 'sameTarget';
+
+/** Lücken-Schluss-Bonus je Trefferstufe (siehe `applyMoveBonus`). */
+export const SIMILAR_MOVE_BONUS: Record<SimilarMoveMatch, number> = { exact: 0.5, sameTarget: 0.25 };
+
+/**
+ * Verrechnet den Zug-Treffer als LÜCKEN-SCHLUSS, nicht als fünfte gewichtete Komponente:
+ * `score' = score + bonus * (100 - score)`. Das ordnet richtig (ein Zug-Treffer hebt jeden
+ * Stellungswert an, ohne die Reihenfolge innerhalb einer Stufe zu drehen) und kann per
+ * Konstruktion nie über 100 laufen. Ohne Trefferstufe bleibt der Wert unverändert.
+ */
+export function applyMoveBonus(score: number, level: SimilarMoveMatch | null): number {
+  if (!level || !Number.isFinite(score)) return Number.isFinite(score) ? score : 0;
+  const clamped = Math.max(0, Math.min(100, score));
+  return clamped + SIMILAR_MOVE_BONUS[level] * (100 - clamped);
+}
+
+/** Anfrage an `POST /api/repertoires/similar-positions`. */
+export interface SimilarPositionsRequest {
+  fen: string;
+  /** Leere Liste = alle (der Server filtert dann nicht). */
+  repertoireIds: number[];
+  preset: SimilarityPreset;
+  /** Auch farbgetauscht+gespiegelt vergleichen und den besseren Wert werten. */
+  includeMirrored: boolean;
+  /** Nur Stellungen mit derselben Seite am Zug (Server-Default: aus). */
+  sameSideToMove: boolean;
+  /**
+   * Optionaler Zug, den der Nutzer erwägt („wo geht 12.Nd5 noch?"). Fehlt er, ist die Suche
+   * exakt die bisherige.
+   */
+  move?: SimilarMoveInput;
+  /** Nur Treffer, an denen dieser Zug tatsächlich der Repertoirezug ist. Nur mit `move` sinnvoll. */
+  onlyWithMove?: boolean;
+  limit: number;
+  // KEIN minScore: die Schwelle gehört dem Server. Schickte das Frontend eine eigene mit, würden
+  // die beiden Defaults auseinanderdriften (genau das war hier der Fall: 55 hier vs. 60 dort).
+}
+
+/**
+ * Eine ähnliche Stellung in einer Repertoire-Linie. `score` ist der ENDWERT 0–100 (Stellung plus
+ * Zug-Bonus), `positionScore` der reine Stellungswert davor — beide bleiben sichtbar, sonst wäre
+ * nicht erkennbar, warum ein Treffer oben steht. Die vier Teilwerte sind die Komponenten derselben
+ * Skala (Bauerngerüst, Material, Figurenplatzierung, König); sie werden in der Trefferliste offen
+ * ausgewiesen, nicht hinter einem Tooltip versteckt.
+ */
+export interface SimilarPositionMatch {
+  repertoireId: number;
+  repertoireName: string;
+  chapter: string;
+  lineName: string;
+  gameIndex: number;
+  /** Halbzüge vom Linienanfang bis zur Stellung. */
+  ply: number;
+  fen: string;
+  /** Endwert: Stellungswert nach Verrechnung des Zug-Treffers (ohne Zug identisch zu `positionScore`). */
+  score: number;
+  /** Reiner Stellungswert vor dem Zug-Bonus. */
+  positionScore: number;
+  /** Treffer entstand über den Farbtausch (Brett gespiegelt, Farben getauscht). */
+  mirrored: boolean;
+  pawnScore: number;
+  materialScore: number;
+  pieceScore: number;
+  kingScore: number;
+  /** SAN des Zuges, mit dem die Linie an dieser Stellung weitergeht ('' = keiner gemeldet). */
+  moveSan: string;
+  /** Dessen Ausgangsfeld ('' = keines gemeldet). */
+  moveFrom: string;
+  /** Dessen Zielfeld ('' = keines gemeldet). */
+  moveTo: string;
+  /** Trefferstufe des mitgegebenen Zuges; `null` = kein Zug mitgegeben oder kein Treffer. */
+  moveMatch: SimilarMoveMatch | null;
+}
+
+export interface SimilarPositionsResult {
+  matches: SimilarPositionMatch[];
+}
+
+/** Rohform eines Treffers, wie er über die Leitung kommt (siehe `normalizeSimilarMatch`). */
+type SimilarPositionWireMatch = Partial<Omit<SimilarPositionMatch, 'moveMatch'>> & {
+  breakdown?: { pawns?: number; material?: number; pieces?: number; king?: number };
+  moveMatch?: string | null;
+  /** Verschachtelte Alternativform der Fortsetzung. */
+  move?: { san?: string; from?: string; to?: string; match?: string | null } | null;
+};
+
+function num(v: unknown): number { return typeof v === 'number' && Number.isFinite(v) ? v : 0; }
+function str(v: unknown): string { return typeof v === 'string' ? v : ''; }
+
+/** Trefferstufe aus der Leitung lesen; alles Unbekannte wird `null` (= kein Zug-Treffer). */
+function moveMatchOf(v: unknown): SimilarMoveMatch | null {
+  const s = str(v).trim().toLowerCase().replace(/[_-]/g, '');
+  if (s === 'exact') return 'exact';
+  if (s === 'sametarget') return 'sameTarget';
+  return null;
+}
+
+/**
+ * Bringt einen Treffer auf die flache Vertragsform. Der Vertrag nennt die vier Teilwerte flach
+ * (`pawnScore`/`materialScore`/`pieceScore`/`kingScore`); liefert der Server sie stattdessen
+ * verschachtelt (`breakdown: { pawns, material, pieces, king }`), wird das hier — an EINER Stelle,
+ * nicht in der Ansicht — übersetzt. Dasselbe für die Fortsetzung (`moveSan`/`moveFrom`/`moveTo`/
+ * `moveMatch` bzw. `move: { san, from, to, match }`). Fehlende Werte werden 0 bzw. '', damit die
+ * Aufschlüsselung nie `undefined` in die Balken schreibt.
+ *
+ * Zu den beiden Zahlen: nennt der Server `positionScore`, hat er den Lücken-Schluss selbst
+ * gerechnet und `score` IST der Endwert. Fehlt `positionScore`, ist `score` der reine
+ * Stellungswert und der Endwert wird hier aus der Trefferstufe abgeleitet — so wird der Bonus
+ * nie doppelt verrechnet und ein Server ohne Zug-Kenntnis (Trefferstufe `null`) liefert
+ * unverändert Endwert = Stellungswert.
+ */
+export function normalizeSimilarMatch(m: SimilarPositionWireMatch): SimilarPositionMatch {
+  const b = m.breakdown;
+  const mv = m.move ?? undefined;
+  const moveMatch = moveMatchOf(m.moveMatch ?? mv?.match);
+  const serverClosedGap = typeof m.positionScore === 'number' && Number.isFinite(m.positionScore);
+  const positionScore = serverClosedGap ? num(m.positionScore) : num(m.score);
+  const score = serverClosedGap ? num(m.score) : applyMoveBonus(positionScore, moveMatch);
+  return {
+    repertoireId: num(m.repertoireId),
+    repertoireName: m.repertoireName ?? '',
+    chapter: m.chapter ?? '',
+    lineName: m.lineName ?? '',
+    gameIndex: num(m.gameIndex),
+    ply: num(m.ply),
+    fen: m.fen ?? '',
+    score,
+    positionScore,
+    mirrored: m.mirrored === true,
+    pawnScore: num(m.pawnScore ?? b?.pawns),
+    materialScore: num(m.materialScore ?? b?.material),
+    pieceScore: num(m.pieceScore ?? b?.pieces),
+    kingScore: num(m.kingScore ?? b?.king),
+    moveSan: str(m.moveSan ?? mv?.san),
+    moveFrom: str(m.moveFrom ?? mv?.from),
+    moveTo: str(m.moveTo ?? mv?.to),
+    moveMatch,
+  };
 }
 
 /** Öffentliche Sicht einer geteilten Einzel-Linie (Nur-Ansehen-Link `/l/{token}`). */
@@ -162,6 +333,15 @@ export class RepertoireService {
    * Client-PGN-Parser (`parsePgnText`) wegwirft. `maxDepth` = Halbzüge (0 = Server-Default). */
   lookupPositionTree(fen: string, maxDepth = 0): Observable<PositionTreeResult> {
     return this.http.post<PositionTreeResult>(`${this.apiUrl}/position-tree`, { fen, maxDepth });
+  }
+
+  /** „Wo in meinen Repertoires steht etwas ÄHNLICHES?" — dieselbe Frage wie `lookupPosition`,
+   * nur unscharf: der Server verdichtet jede Stellung zu Bitmasken und gewichtet Bauerngerüst,
+   * Material, Figurenplatzierung und Königsstellung (Voreinstellung `preset`). Sortiert nach Score. */
+  findSimilarPositions(req: SimilarPositionsRequest): Observable<SimilarPositionsResult> {
+    return this.http.post<{ matches?: SimilarPositionWireMatch[] }>(`${this.apiUrl}/similar-positions`, req).pipe(
+      map(res => ({ matches: (res?.matches ?? []).map(normalizeSimilarMatch) })),
+    );
   }
 
   /** PGN-Datei hochladen (multipart). */

@@ -18,9 +18,11 @@ public class RepertoireController : BaseApiController
     private readonly CourseService _courseService;
     private readonly SharedLineService _sharedLines;
     private readonly RepertoirePositionLookupService _positionLookup;
+    private readonly RepertoireSimilarityService _similarity;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup, FlashcardMarkService flashcards)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup, FlashcardMarkService flashcards, RepertoireSimilarityService similarity)
     {
+        _similarity = similarity;
         _repertoireService = repertoireService;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
@@ -50,6 +52,19 @@ public class RepertoireController : BaseApiController
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
         return Ok(await _positionLookup.TreeAsync(GetUserId(), dto.Fen, dto.MaxDepth, ct));
+    }
+
+    /// <summary>Ähnlichkeitssuche: „wo in meinen Repertoires habe ich schon mal so etwas gespielt?"
+    /// Vergleicht Bauerngerüst/Material/Figurenplatzierung/König (siehe <see cref="PositionSimilarity"/>)
+    /// statt auf exakte Gleichheit zu prüfen. Optional darf die Anfrage einen erwogenen ZUG mitbringen
+    /// (<c>move</c>): Treffer, an denen dieser Zug auch der Repertoirezug ist, rücken nach vorn
+    /// (<c>moveMatch</c> + Bonus, siehe <see cref="RepertoireSimilarityService"/>); <c>onlyWithMove</c>
+    /// blendet die übrigen aus. Literale Route MUSS vor `{id}` stehen.</summary>
+    [HttpPost("similar-positions")]
+    public async Task<ActionResult<SimilarPositionsResultDto>> SimilarPositions([FromBody] SimilarPositionsRequestDto dto, CancellationToken ct)
+    {
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
+        return Ok(await _similarity.FindAsync(GetUserId(), dto, ct));
     }
 
     // ===== Einzelne Linie öffentlich teilen (Nur-Ansehen-Link /l/{token}) =====

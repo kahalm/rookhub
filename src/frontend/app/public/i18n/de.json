@@ -412,7 +412,8 @@
     "sharedHint": "Von einem anderen Nutzer mit dir geteilt",
     "mode": {
       "list": "Listenansicht",
-      "tree": "Baumansicht"
+      "tree": "Baumansicht",
+      "similar": "Ähnliche Stellungen"
     },
     "tree": {
       "foundCount": "{{reps}} Repertoire(s) · {{lines}} Vorkommen",
@@ -424,6 +425,50 @@
       "expandHint": "Auf-/zuklappen",
       "expandNode": "Aufklappen",
       "collapseNode": "Zuklappen"
+    },
+    "similar": {
+      "preset": "Vergleich",
+      "presets": {
+        "struktur": "Struktur",
+        "ausgewogen": "Ausgewogen",
+        "stellungsbild": "Stellungsbild"
+      },
+      "presetHint": {
+        "struktur": "Das Bauerngerüst entscheidet (75 %); Material, Figuren und König fallen kaum ins Gewicht.",
+        "ausgewogen": "Bauerngerüst 50 %, Material 20 %, Figurenplatzierung 20 %, König 10 %.",
+        "stellungsbild": "Wo die Figuren stehen, zählt am meisten (45 %), das Bauerngerüst 30 %."
+      },
+      "move": "Zug",
+      "movePlaceholder": "z. B. Nd5",
+      "moveHint": "Optional: ein Zug, den du hier erwägst. Stellungen, in denen dein Repertoire ihn wirklich spielt, stehen weiter oben.",
+      "moveIllegal": "In dieser Stellung kein legaler Zug.",
+      "repertoires": "Repertoires",
+      "selectAll": "Alle",
+      "selectNone": "Keins",
+      "noneSelected": "Kein Repertoire ausgewählt — wähle mindestens eines.",
+      "mirrored": "Gespiegelte Treffer",
+      "mirroredHint": "Zusätzlich mit getauschten Farben und gespiegeltem Brett vergleichen und den besseren Wert werten.",
+      "mirroredBadge": "Über den Farbtausch gefunden (Brett gespiegelt).",
+      "sameSide": "Gleiche Seite am Zug",
+      "sameSideHint": "Nur Stellungen vergleichen, in denen dieselbe Farbe am Zug ist.",
+      "onlyWithMove": "nur mit {{move}}",
+      "onlyWithMoveHint": "Treffer ausblenden, an denen dieser Zug nicht der Repertoirezug ist.",
+      "none": "Nichts Ähnliches in deinen Repertoires gefunden.",
+      "noneWithMove": "Keine Stellung in deinen Repertoires geht dort mit {{move}} weiter.",
+      "foundCount": "{{count}} ähnliche Stellung(en)",
+      "atMove": "Zug {{move}}",
+      "startPosition": "Ausgangsstellung",
+      "openHint": "Diese Stellung im Repertoire öffnen",
+      "moveHitExact": "→ hier auch {{move}}",
+      "moveHitSameTarget": "→ hier {{move}} (gleiches Zielfeld)",
+      "positionScore": "Stellung {{score}}",
+      "positionScoreHint": "Ähnlichkeit der Stellung allein — die große Zahl rechnet den Zug-Treffer dazu.",
+      "parts": {
+        "pawns": "Struktur",
+        "material": "Material",
+        "pieces": "Figuren",
+        "king": "König"
+      }
     }
   },
   "pgnViewer": {

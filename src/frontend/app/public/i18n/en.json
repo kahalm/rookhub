@@ -412,7 +412,8 @@
     "sharedHint": "Shared with you by another user",
     "mode": {
       "list": "List view",
-      "tree": "Tree view"
+      "tree": "Tree view",
+      "similar": "Similar positions"
     },
     "tree": {
       "foundCount": "{{reps}} repertoire(s) · {{lines}} occurrence(s)",
@@ -424,6 +425,50 @@
       "expandHint": "Expand / collapse",
       "expandNode": "Expand",
       "collapseNode": "Collapse"
+    },
+    "similar": {
+      "preset": "Comparison",
+      "presets": {
+        "struktur": "Structure",
+        "ausgewogen": "Balanced",
+        "stellungsbild": "Piece picture"
+      },
+      "presetHint": {
+        "struktur": "Pawn skeleton decides (75%); material, pieces and king barely matter.",
+        "ausgewogen": "Pawn skeleton 50%, material 20%, piece placement 20%, king 10%.",
+        "stellungsbild": "Where the pieces stand counts most (45%), pawn skeleton 30%."
+      },
+      "move": "Move",
+      "movePlaceholder": "e.g. Nd5",
+      "moveHint": "Optional: a move you are considering here. Positions where your repertoire really plays it rank higher.",
+      "moveIllegal": "Not a legal move in this position.",
+      "repertoires": "Repertoires",
+      "selectAll": "All",
+      "selectNone": "None",
+      "noneSelected": "No repertoire selected — pick at least one.",
+      "mirrored": "Mirrored hits",
+      "mirroredHint": "Also compare with colours swapped and the board flipped, and keep the better value.",
+      "mirroredBadge": "Found with colours swapped (board mirrored).",
+      "sameSide": "Same side to move",
+      "sameSideHint": "Only compare positions where the same colour is to move.",
+      "onlyWithMove": "only with {{move}}",
+      "onlyWithMoveHint": "Hide hits where this move is not the repertoire move.",
+      "none": "Nothing similar found in your repertoires.",
+      "noneWithMove": "No position in your repertoires continues with {{move}}.",
+      "foundCount": "{{count}} similar position(s)",
+      "atMove": "move {{move}}",
+      "startPosition": "starting position",
+      "openHint": "Open this position in the repertoire",
+      "moveHitExact": "→ {{move}} here too",
+      "moveHitSameTarget": "→ here {{move}} (same target square)",
+      "positionScore": "position {{score}}",
+      "positionScoreHint": "Similarity of the position alone — the big number adds the move hit.",
+      "parts": {
+        "pawns": "Structure",
+        "material": "Material",
+        "pieces": "Pieces",
+        "king": "King"
+      }
     }
   },
   "pgnViewer": {

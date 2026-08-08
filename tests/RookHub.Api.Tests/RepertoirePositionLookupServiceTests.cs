@@ -20,7 +20,7 @@ public class RepertoirePositionLookupServiceTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _cache = new MemoryCache(new MemoryCacheOptions());
-        _svc = new RepertoirePositionLookupService(_db, _cache);
+        _svc = new RepertoirePositionLookupService(new RepertoireLineSource(_db, _cache), _cache);
     }
 
     public void Dispose() { _db.Dispose(); _cache.Dispose(); }

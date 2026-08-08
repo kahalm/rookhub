@@ -1,9 +1,7 @@
-using System.Text.RegularExpressions;
 using Chess;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using static RookHub.Api.Services.RepertoireLineSource;
 
 namespace RookHub.Api.Services;
 
@@ -18,37 +16,35 @@ namespace RookHub.Api.Services;
 /// (Brett + Seite + Rochade + en-passant) wird aus <see cref="RepertoireAnalyzeService.NormalizeFen"/>
 /// wiederverwendet, damit Matching und Extension-Analyse konsistent sind.
 ///
+/// Die geparsten Linien selbst kommen aus <see cref="RepertoireLineSource"/> (gemeinsam mit
+/// <see cref="RepertoireSimilarityService"/>).
+///
 /// Cache: per User, 10 min absolute / 5 min sliding. Invalidiert von <see cref="RepertoireService"/>
 /// bei Upload/Delete/Update (analog zum Analyse-Cache).
 /// </summary>
 public class RepertoirePositionLookupService
 {
-    private readonly AppDbContext _db;
+    private readonly RepertoireLineSource _lines;
     private readonly IMemoryCache _cache;
 
-    public RepertoirePositionLookupService(AppDbContext db, IMemoryCache cache)
+    public RepertoirePositionLookupService(RepertoireLineSource lines, IMemoryCache cache)
     {
-        _db = db;
+        _lines = lines;
         _cache = cache;
     }
 
-    // Sicherheits-Deckel: verhindert, dass ein pathologisch großes Repertoire den Index-Aufbau/-Speicher
-    // sprengt. Bei realen Repertoire-Größen nie erreicht.
-    private const int MaxGamesPerUser = 20000;
-    private const int MaxPositionsPerLine = 400;
     /// <summary>Knoten-Obergrenze je Repertoire im Baummodus (danach <c>Truncated</c>).</summary>
     private const int MaxTreeNodes = 1500;
     public const int DefaultTreeDepth = 12;
     public const int MaxTreeDepth = 30;
 
     private static string CacheKey(int userId) => $"rep:poslookup:{userId}";
-    private static string GamesCacheKey(int userId) => $"rep:posgames:{userId}";
 
     /// <summary>Cache-Einträge eines Users invalidieren (nach PGN-Upload/-Delete/-Update).</summary>
     public void Invalidate(int userId)
     {
         _cache.Remove(CacheKey(userId));
-        _cache.Remove(GamesCacheKey(userId));
+        _lines.Invalidate(userId);
     }
 
     /// <summary>
@@ -106,63 +102,11 @@ public class RepertoirePositionLookupService
         int RepertoireId, string RepertoireName, string Kind, bool Shared,
         string Chapter, string LineName, int GameIndex, int Ply);
 
-    /// <summary>Eine geparste Repertoire-Linie samt Herkunft — gemeinsame Basis von Index (Listenansicht)
-    /// und Baummodus, damit beide dieselben Linien/gameIndex-Zuordnungen sehen.</summary>
-    private sealed record RepGame(
-        int RepertoireId, string RepertoireName, string Kind, bool Shared,
-        string Chapter, string LineName, int GameIndex, string? StartFen, List<PgnMove> Moves);
-
     private static MemoryCacheEntryOptions CacheOptions() => new()
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
         SlidingExpiration = TimeSpan.FromMinutes(5),
     };
-
-    /// <summary>Lädt + parst alle lesbaren Repertoires des Users (gecacht). Reihenfolge (Repertoire.Id,
-    /// dann File.Id) muss mit GetCombinedPgnAsync + parsePgnText übereinstimmen, damit gameIndex zwischen
-    /// Server und Client dieselbe Linie meint (gameIndex ist pro Repertoire).</summary>
-    private async Task<List<RepGame>> GetGamesAsync(int userId, CancellationToken ct)
-    {
-        var key = GamesCacheKey(userId);
-        if (_cache.TryGetValue<List<RepGame>>(key, out var cached) && cached != null)
-            return cached;
-
-        var reps = await RepertoireAccess.ReadableBy(_db, userId)
-            .OrderBy(r => r.Id)
-            .Select(r => new
-            {
-                r.Id,
-                r.Name,
-                r.Kind,
-                Owned = r.UserId == userId,
-                Pgns = r.Files.OrderBy(f => f.Id).Select(f => f.PgnContent).ToList(),
-            })
-            .ToListAsync(ct);
-
-        var result = new List<RepGame>();
-        int gamesSeen = 0;
-        foreach (var rep in reps)
-        {
-            int gameIndex = 0;
-            var kindName = rep.Kind.ToString();
-            foreach (var pgn in rep.Pgns)
-            {
-                List<ParsedGame> games;
-                try { games = ParseGames(pgn); }
-                catch { continue; } // kaputte Datei nicht alles kippen lassen
-                foreach (var game in games)
-                {
-                    if (gamesSeen++ > MaxGamesPerUser) break;
-                    result.Add(new RepGame(rep.Id, rep.Name, kindName, !rep.Owned,
-                        game.Chapter, game.LineName, gameIndex, game.StartFen, game.Moves));
-                    gameIndex++;
-                }
-            }
-        }
-
-        _cache.Set(key, result, CacheOptions());
-        return result;
-    }
 
     private async Task<Dictionary<string, List<Occurrence>>> GetIndexAsync(int userId, CancellationToken ct)
     {
@@ -170,24 +114,13 @@ public class RepertoirePositionLookupService
         if (_cache.TryGetValue<Dictionary<string, List<Occurrence>>>(key, out var cached) && cached != null)
             return cached;
 
-        var games = await GetGamesAsync(userId, ct);
+        var games = await _lines.GetGamesAsync(userId, ct);
         var index = new Dictionary<string, List<Occurrence>>(StringComparer.Ordinal);
         foreach (var game in games)
             IndexGame(index, game);
 
         _cache.Set(key, index, CacheOptions());
         return index;
-    }
-
-    /// <summary>Brett in der Startstellung DIESER Linie. Chessable-Linien starten oft mitten in der
-    /// Partie ([FEN]-Header); ohne das säuft der erste Zug ab und die Linie fehlt im Index. Ist die
-    /// FEN unbrauchbar, wird die Linie übersprungen (null) statt aus der Grundstellung gespielt —
-    /// sonst landen FALSCHE Stellungen im Index.</summary>
-    private static ChessBoard? BoardFor(string? startFen)
-    {
-        if (string.IsNullOrWhiteSpace(startFen)) return new ChessBoard();
-        try { return ChessBoard.LoadFromFen(startFen); }
-        catch { return null; }
     }
 
     private static void IndexGame(Dictionary<string, List<Occurrence>> index, RepGame game)
@@ -200,7 +133,20 @@ public class RepertoirePositionLookupService
         // Stellung (Endspiel-/Mittelspiel-Linie beginnt genau dort). Bei Linien aus der
         // Grundstellung wäre sie reines Rauschen — jedes Repertoire würde auf sie matchen.
         if (game.StartFen != null) perLine[NormalizeKey(board.ToFen())] = 0;
-        try { WalkLine(board, game.Moves, perLine, startPly: 0, isMainline: true); }
+        try
+        {
+            WalkPositions(board, game.Moves, startPly: 0, (fen, ply) =>
+            {
+                var norm = NormalizeKey(fen);
+                if (!perLine.TryGetValue(norm, out var existing))
+                    perLine[norm] = ply;
+                else if (existing < 0 && ply >= 0)
+                    perLine[norm] = ply;                     // echten Hauptlinien-Ply gegenüber -1 bevorzugen
+                else if (existing >= 0 && ply >= 0 && ply < existing)
+                    perLine[norm] = ply;                     // frühesten Ply bevorzugen
+                return perLine.Count < MaxPositionsPerLine;
+            });
+        }
         catch { /* defensiv: eine einzelne Linie nie den Index kippen lassen */ }
 
         foreach (var (norm, ply) in perLine)
@@ -209,35 +155,6 @@ public class RepertoirePositionLookupService
             list.Add(new Occurrence(game.RepertoireId, game.RepertoireName, game.Kind, game.Shared,
                 game.Chapter, game.LineName, game.GameIndex, ply));
         }
-    }
-
-    private static void WalkLine(ChessBoard board, List<PgnMove> moves, Dictionary<string, int> perLine, int startPly, bool isMainline)
-    {
-        int movesMade = 0;
-        int ply = startPly;
-        foreach (var move in moves)
-        {
-            // Varianten zweigen VOR diesem Zug ab (ply -1 = nur in Variante).
-            foreach (var variation in move.Variations)
-                WalkLine(board, variation, perLine, ply, isMainline: false);
-
-            bool ok;
-            try { ok = board.Move(move.San); }
-            catch { ok = false; }
-            if (!ok) break;
-            movesMade++;
-            ply++;
-            if (perLine.Count >= MaxPositionsPerLine) continue; // weiterlaufen (Cancel!), aber nichts mehr merken
-            var norm = NormalizeKey(board.ToFen());
-            var thisPly = isMainline ? ply : -1;
-            if (!perLine.TryGetValue(norm, out var existing))
-                perLine[norm] = thisPly;
-            else if (existing < 0 && thisPly >= 0)
-                perLine[norm] = thisPly;                     // echten Hauptlinien-Ply gegenüber -1 bevorzugen
-            else if (existing >= 0 && thisPly >= 0 && thisPly < existing)
-                perLine[norm] = thisPly;                     // frühesten Ply bevorzugen
-        }
-        for (int i = 0; i < movesMade; i++) board.Cancel();
     }
 
     // ─── Baummodus ────────────────────────────────────────────────────────
@@ -252,7 +169,7 @@ public class RepertoirePositionLookupService
     public async Task<PositionTreeResultDto> TreeAsync(int userId, string fen, int maxDepth, CancellationToken ct)
     {
         maxDepth = Math.Clamp(maxDepth <= 0 ? DefaultTreeDepth : maxDepth, 1, MaxTreeDepth);
-        var games = await GetGamesAsync(userId, ct);
+        var games = await _lines.GetGamesAsync(userId, ct);
         var target = NormalizeKey(fen);
         var result = new PositionTreeResultDto();
 
@@ -396,129 +313,5 @@ public class RepertoirePositionLookupService
             foreach (var variation in move.Variations)
                 Collect(variation, 0, node, depthLeft, game);
         }
-    }
-
-    // ─── PGN Parser (header-aware, mit Varianten) ─────────────────────────
-    // Eigenständig gehalten (statt RepertoireAnalyzeService-Interna offenzulegen); deckt dieselben
-    // Fälle ab wie der Client-Parser `parsePgnText`, plus [White]/[Black]-Header pro Partie.
-
-    private sealed record ParsedGame(string Chapter, string LineName, string? StartFen, List<PgnMove> Moves);
-    private sealed record PgnMove(string San, List<List<PgnMove>> Variations);
-
-    private static readonly Regex CommentRegex = new(@"\{[^}]*\}", RegexOptions.Compiled);
-    private static readonly Regex LineCommentRegex = new(@";[^\n]*", RegexOptions.Compiled);
-    private static readonly Regex NagRegex = new(@"\$\d+", RegexOptions.Compiled);
-    private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly Regex MoveNumberRegex = new(@"^\d+\.+$", RegexOptions.Compiled);
-    private static readonly Regex EventHeaderSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
-    private static readonly Regex WhiteHeaderRegex = new(@"^\[White\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    private static readonly Regex BlackHeaderRegex = new(@"^\[Black\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    // Chessable-Importe (via piratechess) tragen je Linie die Startstellung der Variante im
-    // [FEN]-Header — ohne den beginnt der Walk in der Grundstellung, der erste Zug ist dort
-    // illegal und die ganze Linie fehlt still im Index (bzw. indiziert falsche Stellungen).
-    private static readonly Regex FenHeaderRegex = new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
-
-    private static List<ParsedGame> ParseGames(string text)
-    {
-        var games = new List<ParsedGame>();
-        if (string.IsNullOrWhiteSpace(text)) return games;
-        foreach (var section in EventHeaderSplit.Split(text))
-        {
-            if (string.IsNullOrWhiteSpace(section)) continue;
-            var movetext = ExtractMovetext(section);
-            var moves = movetext.Length == 0 ? new List<PgnMove>() : ParseMoveTokens(Tokenize(movetext), 0).Moves;
-            var white = WhiteHeaderRegex.Match(section);
-            var black = BlackHeaderRegex.Match(section);
-            var fen = FenHeaderRegex.Match(section);
-            var lineName = white.Success ? white.Groups[1].Value.Trim() : "";
-            var chapter = black.Success ? black.Groups[1].Value.Trim() : "";
-            var startFen = fen.Success ? fen.Groups[1].Value.Trim() : null;
-            // Auch zug-lose Partien behalten (könnten Kapitel-Intros sein) — sie tragen aber keine
-            // Positionen bei und würden nie matchen; wir nehmen sie nur mit, damit gameIndex mit dem
-            // Client-Parser übereinstimmt.
-            games.Add(new ParsedGame(chapter, lineName, string.IsNullOrWhiteSpace(startFen) ? null : startFen, moves));
-        }
-        return games;
-    }
-
-    private static string ExtractMovetext(string section)
-    {
-        var lines = section.Split('\n');
-        var sb = new System.Text.StringBuilder();
-        bool pastHeaders = false;
-        foreach (var raw in lines)
-        {
-            var line = raw.Trim();
-            if (line.StartsWith('[') && line.EndsWith(']') && !pastHeaders) continue;
-            if (line.Length == 0 && !pastHeaders) { pastHeaders = true; continue; }
-            if (pastHeaders || !line.StartsWith('['))
-            {
-                sb.Append(line).Append(' ');
-                pastHeaders = true;
-            }
-        }
-        return sb.ToString().Trim();
-    }
-
-    private static List<string> Tokenize(string movetext)
-    {
-        movetext = CommentRegex.Replace(movetext, " ");
-        movetext = LineCommentRegex.Replace(movetext, " ");
-        movetext = NagRegex.Replace(movetext, " ");
-        movetext = WhitespaceRegex.Replace(movetext, " ").Trim();
-
-        var tokens = new List<string>();
-        int i = 0;
-        while (i < movetext.Length)
-        {
-            char c = movetext[i];
-            if (c == '(') { tokens.Add("("); i++; }
-            else if (c == ')') { tokens.Add(")"); i++; }
-            else if (c == ' ') { i++; }
-            else
-            {
-                int j = i;
-                while (j < movetext.Length && movetext[j] != ' ' && movetext[j] != '(' && movetext[j] != ')') j++;
-                tokens.Add(movetext.Substring(i, j - i));
-                i = j;
-            }
-        }
-        return tokens;
-    }
-
-    private static (List<PgnMove> Moves, int EndPos) ParseMoveTokens(List<string> tokens, int pos)
-    {
-        var moves = new List<PgnMove>();
-        while (pos < tokens.Count)
-        {
-            var token = tokens[pos];
-            if (token == ")") return (moves, pos);
-            if (token == "(")
-            {
-                pos++;
-                var (varMoves, endPos) = ParseMoveTokens(tokens, pos);
-                pos = endPos + 1;
-                if (moves.Count > 0) moves[^1].Variations.Add(varMoves);
-                continue;
-            }
-            if (IsMoveToken(token))
-            {
-                var clean = token.TrimEnd('!', '?', '+', '#');
-                if (clean.Length > 0)
-                    moves.Add(new PgnMove(clean, new List<List<PgnMove>>()));
-            }
-            pos++;
-        }
-        return (moves, pos);
-    }
-
-    private static bool IsMoveToken(string token)
-    {
-        if (string.IsNullOrEmpty(token) || token == "(" || token == ")") return false;
-        if (MoveNumberRegex.IsMatch(token)) return false;
-        if (ResultTokens.Contains(token)) return false;
-        char c = token[0];
-        return (c >= 'a' && c <= 'h') || c == 'K' || c == 'Q' || c == 'R' || c == 'B' || c == 'N' || c == 'O';
     }
 }

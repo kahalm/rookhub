@@ -180,7 +180,9 @@ try
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();
     builder.Services.AddScoped<RepertoireAnalyzeService>();
+    builder.Services.AddScoped<RepertoireLineSource>();
     builder.Services.AddScoped<RepertoirePositionLookupService>();
+    builder.Services.AddScoped<RepertoireSimilarityService>();
     builder.Services.AddScoped<PlayerSearchService>();
     builder.Services.AddScoped<PuzzleTaggingService>();
     builder.Services.AddScoped<PuzzleStatsService>();

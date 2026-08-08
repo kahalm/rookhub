@@ -412,7 +412,8 @@
     "sharedHint": "Podijelio s tobom drugi korisnik",
     "mode": {
       "list": "Prikaz popisa",
-      "tree": "Prikaz stabla"
+      "tree": "Prikaz stabla",
+      "similar": "Slične pozicije"
     },
     "tree": {
       "foundCount": "{{reps}} repertoar(a) · {{lines}} pojavljivanja",
@@ -424,6 +425,50 @@
       "expandHint": "Otvori / zatvori",
       "expandNode": "Otvori",
       "collapseNode": "Zatvori"
+    },
+    "similar": {
+      "preset": "Usporedba",
+      "presets": {
+        "struktur": "Struktura",
+        "ausgewogen": "Uravnoteženo",
+        "stellungsbild": "Raspored figura"
+      },
+      "presetHint": {
+        "struktur": "Pješački kostur odlučuje (75 %); materijal, figure i kralj jedva da se broje.",
+        "ausgewogen": "Pješački kostur 50 %, materijal 20 %, raspored figura 20 %, kralj 10 %.",
+        "stellungsbild": "Najviše se broji gdje stoje figure (45 %), pješački kostur 30 %."
+      },
+      "move": "Potez",
+      "movePlaceholder": "npr. Nd5",
+      "moveHint": "Neobavezno: potez koji ovdje razmatraš. Pozicije u kojima ga tvoj repertoar stvarno igra stoje više.",
+      "moveIllegal": "U ovoj poziciji to nije legalan potez.",
+      "repertoires": "Repertoari",
+      "selectAll": "Svi",
+      "selectNone": "Nijedan",
+      "noneSelected": "Nije odabran nijedan repertoar — odaberi barem jedan.",
+      "mirrored": "Zrcalni pogoci",
+      "mirroredHint": "Usporedi i sa zamijenjenim bojama i zrcaljenom pločom te uzmi bolju vrijednost.",
+      "mirroredBadge": "Pronađeno zamjenom boja (ploča zrcaljena).",
+      "sameSide": "Ista strana na potezu",
+      "sameSideHint": "Uspoređuj samo pozicije u kojima je na potezu ista boja.",
+      "onlyWithMove": "samo s {{move}}",
+      "onlyWithMoveHint": "Sakrij pogotke u kojima taj potez nije potez iz repertoara.",
+      "none": "Ništa slično nije pronađeno u tvojim repertoarima.",
+      "noneWithMove": "Nijedna pozicija u tvojim repertoarima ondje ne nastavlja s {{move}}.",
+      "foundCount": "{{count}} slična pozicija/e",
+      "atMove": "potez {{move}}",
+      "startPosition": "početna pozicija",
+      "openHint": "Otvori ovu poziciju u repertoaru",
+      "moveHitExact": "→ i ovdje {{move}}",
+      "moveHitSameTarget": "→ ovdje {{move}} (isto ciljno polje)",
+      "positionScore": "pozicija {{score}}",
+      "positionScoreHint": "Sličnost same pozicije — velika brojka pribraja pogodak poteza.",
+      "parts": {
+        "pawns": "Struktura",
+        "material": "Materijal",
+        "pieces": "Figure",
+        "king": "Kralj"
+      }
     }
   },
   "pgnViewer": {
