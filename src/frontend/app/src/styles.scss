@@ -201,19 +201,25 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
    Erst ab 900px: darunter liegt die Seite ohnehin einspaltig, und eine schwebende Navigation
    würde dort den Inhalt überdecken statt Platz zu schaffen. */
 @media (min-width: 900px) {
+  /* Oben rechts, aber AUF der Befehlszeile: dieselbe Einrückung wie das Seitenpolster
+     (`.calc-page` hat 0.75rem) und dieselbe Höhe wie die Zeile. Klebte die Leiste am
+     Fensterrand, während die Seite gedeckelt und zentriert ist, lägen die Symbole auf einem
+     breiten Schirm NEBEN der Zeile statt darauf. */
   body.calc-mode app-navbar {
     position: fixed;
-    top: 0;
-    right: 0;
+    top: 0.75rem;
+    right: 0.75rem;
     z-index: 900;
     width: auto;
   }
 
   body.calc-mode app-navbar mat-toolbar {
     width: auto;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 4px;
     background: transparent;
     box-shadow: none;
-    padding-right: 8px;
   }
 
   /* Die Marke steht auf jeder anderen Seite — hier führt der Pfeil der Befehlszeile zurück. */
@@ -221,4 +227,28 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   body.calc-mode app-navbar .spacer { display: none; }
 
   body.calc-mode main { padding-top: 0; }
+
+  /* Der Vollbild-Knopf des Bretts saß in einer eigenen schmalen ZEILE darüber und kostete damit
+     Bretthöhe. Er wandert in den Spalt zwischen Brett und Seitenspalte — daneben statt darüber,
+     und aus dem Fluss heraus, also für null Höhe. */
+  body.calc-mode .calc-board-col { position: relative; }
+
+  body.calc-mode .calc-board-col app-board-fullscreen-button {
+    position: absolute;
+    top: 0;
+    right: -1.65rem;
+    z-index: 3;
+  }
+
+  /* Fußzeile in die rechte Spalte, ganz unten: sie ist Auskunft (Version, Hilfe, Feedback) und
+     kostete unter dem Brett eine ganze Zeile Höhe. Aus dem Fluss genommen kostet sie keine. */
+  body.calc-mode .app-footer {
+    position: fixed;
+    right: 0.9rem;
+    bottom: 0.4rem;
+    margin: 0;
+    padding: 0;
+    text-align: right;
+    z-index: 5;
+  }
 }

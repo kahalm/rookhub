@@ -10,6 +10,9 @@
 .calc-bar {
   display: flex;
   align-items: center;
+  /* Gleiche Höhe wie die App-Kopfzeile im Modus (`styles.scss`) — sonst liegen die Symbole
+     rechts ein paar Pixel höher als der Rest der Zeile. */
+  min-height: 40px;
   gap: 0.25rem;
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
@@ -130,9 +133,23 @@
    darüber frei wurde. Jetzt nimmt es, was Höhe UND Breite hergeben — dieselbe Rechnung wie im
    App-Vollbild, nur mit Abzug für Befehlszeile, Seitenränder und Fußzeile. */
 @media (min-width: 900px) {
-  .calc-layout { grid-template-columns: auto minmax(320px, 1fr); }
+  /* Kein Breiten-Deckel in diesem Modus: die App-Kopfzeile sitzt am rechten FENSTERrand, und
+     eine auf 1400px gedeckelte, zentrierte Seite endete auf einem breiten Schirm weit davor —
+     die Symbole lägen dann neben der Befehlszeile statt auf ihr. Das Brett bemisst sich ohnehin
+     an der Höhe, die Seitenspalte bekommt einen eigenen Deckel. */
+  .calc-page { max-width: none; }
 
-  .calc-board-col { width: min(calc(100vh - 7.5rem), calc(100vw - 480px)); }
+  /* Der Spalt trägt jetzt den Vollbild-Knopf des Bretts (Regel in `styles.scss`) — er braucht
+     etwas mehr als die üblichen 1rem. */
+  .calc-layout {
+    grid-template-columns: auto minmax(320px, 980px);
+    gap: 1.9rem;
+  }
+
+  /* Abzug von der Fensterhöhe: Seitenpolster oben und unten (2 × 0.75rem), die Befehlszeile
+     (40px) und ihr Abstand zum Inhalt (0.5rem). Zeile über dem Brett und Fußzeile darunter gibt
+     es nicht mehr — genau das macht den Unterschied zu vorher. */
+  .calc-board-col { width: min(calc(100vh - 4.75rem), calc(100vw - 480px)); }
 }
 
 .calc-board-col {
@@ -536,16 +553,27 @@
    ihm dieselbe Silhouette wie die Icons daneben; das GROSSE A füllt ihn gleichmäßig aus (das
    kleine saß mit seiner Unterlänge sichtbar tief). */
 .calc-tool-letter {
+  /* Die Hülle misst exakt wie ein `mat-icon` (24×24). Vorher war der Span kleiner als die
+     Zeilenbox und saß damit auf der GRUNDLINIE — er hing sichtbar tiefer als die Symbole
+     daneben, die ihre Box ganz ausfüllen. Der Ring selbst bleibt 20px und liegt mittig darin. */
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.calc-tool-letter::before {
+  content: "";
+  position: absolute;
   width: 20px;
   height: 20px;
   border: 2px solid currentColor;
   border-radius: 50%;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
 }
 
 /* Die Uhr ist ein Knopf (Zeit nachtragen) — sie soll trotzdem wie Text aussehen. */
