@@ -1052,7 +1052,10 @@ public class ChessableImportService : ICourseReimporter
         return false;
     }
 
-    private async Task FailAsync(ChessableImport import, string error)
+    // Internal statt private: die Zombie-Haertung (Fangnetze unten) war der Ausloeser echter
+    // Prod-Haenger und braucht direkte Tests — sie ist ueber die oeffentliche API nicht erreichbar,
+    // ohne eine halbe Chessable-Session zu simulieren.
+    internal async Task FailAsync(ChessableImport import, string error)
     {
         import.Status = "failed";
         import.Error = Trunc(error, 1000);

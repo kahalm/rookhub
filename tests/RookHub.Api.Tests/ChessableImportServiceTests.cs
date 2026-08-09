@@ -1225,6 +1225,69 @@ public class ChessableImportServiceTests : IDisposable
     private static HttpResponseMessage JsonOk(object payload) =>
         new(HttpStatusCode.OK) { Content = JsonContent.Create(payload) };
 
+    // ===== FailAsync: die Zombie-Haertung (Ausloeser der Prod-Haenger-Kette) ================
+
+    [Fact]
+    public async Task FailAsync_HealthyDb_MarksFailedAndNotifies()
+    {
+        var imp = await SeedImportAsync("repertoire", status: "importing");
+
+        await _svc.FailAsync(imp, "Kaputt");
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("failed", reloaded!.Status);
+        Assert.Equal("Kaputt", reloaded.Error);
+        Assert.NotNull(reloaded.CompletedAt);
+        Assert.Single(_db.Notifications.Where(n => n.UserId == 7));
+    }
+
+    [Fact]
+    public async Task FailAsync_DeadDbContext_SwallowsInsteadOfThrowing()
+    {
+        // DIE Haertung: scheitert schon das Fehler-Update (DB weg/Timeout), darf die Exception
+        // nicht bis in den Worker laufen — der Import bliebe sonst fuer immer als Zombie im
+        // Lane-Slot ("fetching"/"importing"), der Drain stuende bis zum Neustart. Genau diese
+        // Kette hat Prod-Import-Haenger ausgeloest; der Watchdog reiht den Verwaisten neu ein.
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var deadDb = new AppDbContext(options);
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("kein Proxy")), db: deadDb);
+        var imp = new ChessableImport
+        {
+            Id = 991, UserId = 7, Bid = "b1", CourseName = "X", Target = "repertoire",
+            Status = "importing", CreatedAt = DateTime.UtcNow,
+        };
+        deadDb.ChessableImports.Add(imp);
+        await deadDb.SaveChangesAsync();
+
+        await deadDb.DisposeAsync();   // ab jetzt wirft jedes SaveChangesAsync ObjectDisposed
+
+        // Darf NICHT werfen — genau das ist der Vertrag der Haertung.
+        await svc.FailAsync(imp, "DB weg");
+
+        Assert.Equal("failed", imp.Status);   // im Speicher gesetzt, nur nicht persistiert
+    }
+
+    [Fact]
+    public async Task FailAsync_BearerFatalError_TripsBreaker_AndBreakerFailureDoesNotPropagate()
+    {
+        // Zweites Fangnetz: die NACHGELAGERTEN Nebenwirkungen (Breaker, Notification) duerfen den
+        // bereits festgeschriebenen Fehlerstatus nicht mehr gefaehrden. Hier der Gutfall: ein
+        // bearer-fataler Fehler sperrt den Bearer (BlockedAt), damit Folge-Importe pausieren
+        // statt mit dem toten Token weiterzuhaemmern.
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential { UserId = 7, EncryptedBearer = "egal" });
+        await _db.SaveChangesAsync();
+        var imp = await SeedImportAsync("repertoire", status: "fetching");
+
+        await _svc.FailAsync(imp, "Dein Chessable-Konto wurde gesperrt (403 vom Kurs-Endpoint)");
+
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.NotNull(cred.BlockedAt);
+        Assert.Equal("failed", (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+    }
+
     private sealed class FakeQueue : IBackgroundTaskQueue
     {
         public int Count { get; private set; }

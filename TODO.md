@@ -287,8 +287,6 @@ Ein Fix-Durchgang ohne unabhängiges Gegenlesen wäre netto schlechter gewesen a
   In-Memory-Semaphor; bei mehreren API-Instanzen bräuchte es ein DB-seitiges Schloss bzw. einen
   Unique-Index. Zusätzlich laufen `ImportPgnDirectAsync`/`ImportAsRepertoireAsync` NICHT unter dieser
   Sperre — Mixed-Path bleibt ein (kleines) Duplikat-Risiko für das `chessable-{bid}`-Repertoire.
-- [ ] **`FailAsync`-Härtung ist ungetestet.** Sie ist der eigentliche Auslöser der Zombie-Import-Kette
-  (Wurf gegen toten DbContext), hat aber keinen Test — nur der Watchdog-Teil ist abgedeckt.
 - [ ] **log-watcher: serverseitige Filter-Aggregation für `warn_spike_ignore`** bewusst übersprungen
   (die Rausch-Muster werden weiterhin client-seitig aus den Top-Termen gerechnet → stille Degradation
   möglich, wenn ein Muster aus den Top-N fällt).
@@ -312,7 +310,6 @@ Umfangreiches Review des gesamten Backends (238 Dateien / ~30.600 Zeilen ohne Mi
 - [x] **500 bei `POST /api/puzzles/random-batch`** mit verdrehtem/extremem Rating-Fenster (`Random.Shared.Next(min, max+1)`) → DTO-`[Range]` + Service-Guard.
 
 **Offen (bewertet, nicht gefixt):**
-- [ ] **`StartImport` ohne (User,bid)-Dedup + `[DisableRateLimiting]` (LOW)**: derselbe Kurs beliebig oft einreihbar (der Dedup existiert nur in `EnqueueReimportAsync`) → N-fache Chessable-Abrufe = IP-Block-Risiko. Fix: denselben Dedup-Guard wie im Reimport-Pfad.
 - [ ] **`ComputeStatsAsync` im Hot-Path (MITTEL, Performance)**: lädt bei JEDEM `/next` und `/results` alle Puzzles des Buchs + alle `CourseAttempts` des Users in den Speicher; `GetNextAsync` (sequenziell) zusätzlich alle Pool-Schlüssel. Wächst mit Buchgröße × Historie.
 - [ ] **Kleinere Performance-Fallen (LOW)**: `GamesController.List` zieht über `CountPlies(g.Pgn)` in der Projektion die LONGTEXT-PGNs aller (bis 500) Partien, obwohl das DTO „ohne PGN" ist → Zähler persistieren; `GetImportedOidsAsync` lädt alle Repertoire-PGNs + Regex im Request-Pfad eines Extension-Polls; `AppendLiveAsync` dedupliziert per `existing.Contains(moves)` über das ganze PGN (quadratisch) und setzt `FileSize` in Zeichen statt Bytes; `BookPuzzleService.ImportAsync` lädt alle `LineId`s der DB in ein HashSet.
 - [ ] **Struktur (LOW)**: God-Services (`CourseService` 1059, `ChessableImportService` 1011, `TrainingGoalService` 892 Zeilen); optionale Konstruktor-Parameter „für Tests", die sich Abhängigkeiten selbst bauen (`new NotificationService(db)` in `CourseService`/`RepertoireService`) statt DI/Fakes; Import-Zustände als Magic Strings (`"running"`/`"queued"`/`"claimed"`/… über 5 Services + 2 Controller) statt Enum + Value-Converter; `CourseService.CanAccessAsync` macht 4–5 Round-Trips pro Endpoint-Aufruf (als eine `Any`-Query mit ODER-Zweigen formulierbar — Vorlage: `BookAccess.ReadableBy`).
