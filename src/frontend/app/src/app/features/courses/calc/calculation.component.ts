@@ -444,6 +444,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.enterMode();
     this.boardTheme = this.prefs.boardTheme;
     this.pieceSet = this.prefs.pieceSet;
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
@@ -460,8 +461,45 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.liveHandle = setInterval(() => { this.liveSeconds = this.currentWatchSeconds(); }, 1000);
   }
 
+  /**
+   * Klasse am <body>, solange dieser Modus offen ist: die App-Kopfzeile rückt nach rechts, damit
+   * die Befehlszeile dieselbe Zeile mitbenutzt (Regeln in `styles.scss`). Bewusst so eng
+   * gefasst — `<app-navbar>` ist EINE Instanz in der App-Hülle und damit auf allen Routen
+   * dieselbe; ohne die Eingrenzung baute man jede Seite um.
+   */
+  private static readonly MODE_CLASS = 'calc-mode';
+
+  /** Beobachtet die Breite der Navigationsleiste — die Befehlszeile hält genau so viel frei. */
+  private navResize?: ResizeObserver;
+
+  private enterMode(): void {
+    if (typeof document === 'undefined') return;
+    document.body.classList.add(CalculationComponent.MODE_CLASS);
+    const nav = document.querySelector('app-navbar');
+    if (!nav || typeof ResizeObserver === 'undefined') return;
+    // GEMESSEN statt geraten: die Breite hängt an Sprache, Anmeldezustand und Schriftgröße —
+    // ein fester Wert läge in der Hälfte der Fälle daneben und die Zeile liefe unter die Leiste.
+    this.navResize = new ResizeObserver(() => this.syncNavWidth(nav));
+    this.navResize.observe(nav);
+    this.syncNavWidth(nav);
+  }
+
+  private syncNavWidth(nav: Element): void {
+    const breite = Math.ceil(nav.getBoundingClientRect().width);
+    document.body.style.setProperty('--calc-nav-w', `${breite}px`);
+  }
+
+  private leaveMode(): void {
+    if (typeof document === 'undefined') return;
+    this.navResize?.disconnect();
+    this.navResize = undefined;
+    document.body.classList.remove(CalculationComponent.MODE_CLASS);
+    document.body.style.removeProperty('--calc-nav-w');
+  }
+
   ngOnDestroy(): void {
     this.stopTraining();     // stoppt UND schöpft die gemessene Zeit ab
+    this.leaveMode();
     if (this.liveHandle !== undefined) { clearInterval(this.liveHandle); this.liveHandle = undefined; }
     this.clearSaveTimer();
     this.flushSave();

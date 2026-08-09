@@ -919,7 +919,7 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
 });
 
 describe('CalculationComponent App-Vollbild-Layout', () => {
-  it('führt die Zugzeile doppelt: unter dem Brett UND (fürs App-Vollbild) in der Seitenspalte', async () => {
+  it('zeigt über dem Brett nichts und trägt die Befehlszeile für das App-Vollbild in der Seitenspalte', async () => {
     // Im App-Vollbild blendet CSS die Brett-Variante aus und die Seiten-Variante ein — beide
     // müssen dafür im DOM stehen, an den richtigen Stellen.
     await TestBed.configureTestingModule({
@@ -941,8 +941,9 @@ describe('CalculationComponent App-Vollbild-Layout', () => {
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.calc-board-col .calc-where--board')).not.toBeNull();
-    expect(el.querySelector('.calc-side-col .calc-where--side')).not.toBeNull();
+    // Die Zeile „Du bist hier" gibt es nicht mehr — sie wiederholte nur, was in „Meine Linien"
+    // farbig markiert ist, und kostete Bretthöhe.
+    expect(el.querySelector('.calc-where')).toBeNull();
     // Über dem Brett steht gar nichts mehr: die Befehlszeile trägt Kapitel, Stellung, Uhr und
     // Drehen. Im App-Vollbild ist die obere ausgeblendet und die Kopie in der Seitenspalte
     // sichtbar — ohne sie käme man dort zu keiner nächsten Stellung.
@@ -1876,6 +1877,27 @@ describe('CalculationComponent entrümpelte Ansicht', () => {
     // Erklärung BEIDES zusammenfasst: den Kapitel-Hinweis und die Buchsumme.
     expect(c.pointsTooltip).toContain('calc.review.totalPointsChapterHint');
     expect(c.pointsTooltip).toContain('calc.review.bookPoints');
+  });
+});
+
+describe('CalculationComponent Modus-Klasse am body', () => {
+  const KLASSE = 'calc-mode';
+  beforeEach(() => { document.body.classList.remove(KLASSE); document.body.style.removeProperty('--calc-nav-w'); });
+  afterEach(() => { document.body.classList.remove(KLASSE); document.body.style.removeProperty('--calc-nav-w'); });
+
+  it('setzt die Klasse nur, solange diese Seite offen ist — und räumt sie wieder ab', () => {
+    // `<app-navbar>` steht EINMAL in der App-Hülle und ist damit auf allen Routen dieselbe
+    // Instanz. Bliebe die Klasse hängen, wären alle anderen Seiten mit umgebaut.
+    const { component: c } = make();
+    expect(document.body.classList.contains(KLASSE)).toBeFalse();
+
+    c.ngOnInit();
+    expect(document.body.classList.contains(KLASSE)).toBeTrue();
+
+    c.ngOnDestroy();
+    expect(document.body.classList.contains(KLASSE)).toBeFalse();
+    // Auch die gemessene Breite verschwindet — sonst hielte jede andere Seite Platz frei.
+    expect(document.body.style.getPropertyValue('--calc-nav-w')).toBe('');
   });
 });
 

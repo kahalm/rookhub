@@ -14,6 +14,10 @@
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
   padding: 0.15rem 0.35rem;
+  /* Rechts bleibt genau so viel frei, wie die App-Kopfzeile misst (`--calc-nav-w`, von der
+     Komponente gesetzt). Ein fester Wert ginge daneben, sobald Sprache oder Anmeldezustand die
+     Leiste breiter machen. */
+  padding-right: calc(var(--calc-nav-w, 0px) + 0.5rem);
   border-radius: 10px;
   background: color-mix(in srgb, currentColor 5%, transparent);
 }
@@ -163,22 +167,6 @@
   color: #e65100;
 
   mat-icon { font-size: 16px; width: 16px; height: 16px; }
-}
-
-.calc-where {
-  margin: 0;
-  font-size: 0.9rem;
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  align-items: baseline;
-}
-
-.calc-where-label { opacity: 0.6; font-size: 0.8rem; }
-
-.calc-where-san {
-  font-weight: 600;
-  word-break: break-word;
 }
 
 .calc-side-col {
@@ -492,7 +480,6 @@
    Breite = Viewport minus Seitenspalte), Rest rechts daneben; die „Du bist hier"-Zugzeile
    wechselt vom Brett in die Seitenspalte. Nur ab 900px — darunter bleibt die Einspalten-
    Ansicht (dort gewinnt das Brett durch eine Seitenspalte nichts). */
-.calc-where--side { display: none; }
 .calc-board-head--side { display: none; }
 
 @media (min-width: 900px) {
@@ -506,8 +493,6 @@
     /* Über/unter dem Brett steht im Vollbild NICHTS mehr (Kopfzeile + Zugzeile sind rechts) —
        nur die Seitenränder (2×0.5rem) gehen von der Höhe ab. */
     .calc-board-col { width: min(calc(100vh - 1rem), calc(100vw - 340px)); }
-    .calc-where--board { display: none; }
-    .calc-where--side { display: flex; }
     /* Oben ausgeblendet, hier sichtbar — sonst käme man im Vollbild zu keiner nächsten Stellung.
        Rechts bleibt Platz frei: dort liegen die beiden aus dem Fluss genommenen Knöpfe des
        Bretts (Vollbild verlassen + App-Vollbild), die sich sonst mit der Zeile überlagern. */
@@ -536,8 +521,18 @@
    Eingeschaltet färben sie sich, damit man sieht, warum unten etwas steht. */
 .calc-tool-on { color: var(--mat-sys-primary, #1565c0); }
 
+/* Als nacktes Zeichen zwischen zwei Symbolen las sich das „a" wie verirrter Text. Der Ring gibt
+   ihm dieselbe Silhouette wie die Icons daneben; das GROSSE A füllt ihn gleichmäßig aus (das
+   kleine saß mit seiner Unterlänge sichtbar tief). */
 .calc-tool-letter {
-  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
 }

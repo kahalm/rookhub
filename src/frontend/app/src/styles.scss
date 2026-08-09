@@ -188,3 +188,37 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   font-size: 12.5px;
   line-height: 1.45;
 }
+
+/* ===== Kalkulations-Modus: Kopfzeile der App rückt nach rechts =====
+   Das Brett ist quadratisch — jede Zeile über ihm kostet Kantenlänge in BEIDE Richtungen. In
+   diesem Modus teilen sich App-Navigation und die Befehlszeile der Seite deshalb eine Zeile:
+   die Navigation legt sich oben rechts hin, die Seite beginnt bei 0.
+
+   Gesteuert über eine Klasse am <body>, die NUR die Kalkulations-Route setzt (Vorbild:
+   `app-fullscreen` am App-Host). `<app-navbar>` steht genau einmal in der App-Hülle und ist damit
+   auf allen Routen dieselbe Instanz — ohne diese Eingrenzung würde jede Seite umgebaut.
+
+   Erst ab 900px: darunter liegt die Seite ohnehin einspaltig, und eine schwebende Navigation
+   würde dort den Inhalt überdecken statt Platz zu schaffen. */
+@media (min-width: 900px) {
+  body.calc-mode app-navbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 900;
+    width: auto;
+  }
+
+  body.calc-mode app-navbar mat-toolbar {
+    width: auto;
+    background: transparent;
+    box-shadow: none;
+    padding-right: 8px;
+  }
+
+  /* Die Marke steht auf jeder anderen Seite — hier führt der Pfeil der Befehlszeile zurück. */
+  body.calc-mode app-navbar .logo,
+  body.calc-mode app-navbar .spacer { display: none; }
+
+  body.calc-mode main { padding-top: 0; }
+}

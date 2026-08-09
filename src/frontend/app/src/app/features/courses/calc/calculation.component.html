@@ -143,10 +143,6 @@
           <p class="calc-warn"><mat-icon>report_problem</mat-icon>{{ 'calc.illegalPosition' | translate }}</p>
         }
 
-        <p class="calc-where calc-where--board">
-          <span class="calc-where-label">{{ 'calc.currentLine' | translate }}</span>
-          <span class="calc-where-san">{{ cursorPathSan || ('calc.atStart' | translate) }}</span>
-        </p>
       </div>
 
       <!-- ===== Seitenspalte ===== -->
@@ -157,12 +153,6 @@
         <div class="calc-bar calc-bar--side">
           <ng-container *ngTemplateOutlet="commandBar"></ng-container>
         </div>
-        <!-- Im App-Vollbild rutscht die „Du bist hier"-Zugzeile vom Brett hierher (rechts),
-             damit das Brett die volle Höhe bekommt. Normal ist diese Kopie ausgeblendet. -->
-        <p class="calc-where calc-where--side">
-          <span class="calc-where-label">{{ 'calc.currentLine' | translate }}</span>
-          <span class="calc-where-san">{{ cursorPathSan || ('calc.atStart' | translate) }}</span>
-        </p>
         <!-- Die Aufgaben-KARTE gibt es nicht mehr: die Nummer steht in der Befehlszeile, das
              Kapitel ebenfalls, und „kein Kommentar" war eine ganze Karte für eine
              Nicht-Information — die Abwesenheit ist die Aussage. Gibt es einen Text, steht er
@@ -194,7 +184,7 @@
                         [matTooltip]="'calc.annotate' | translate"
                         [attr.aria-label]="'calc.annotate' | translate"
                         [attr.aria-expanded]="showAnnotations">
-                  <span class="calc-tool-letter">a</span>
+                  <span class="calc-tool-letter">A</span>
                 </button>
                 <button mat-icon-button (click)="toggleKeys()" [class.calc-tool-on]="showKeys"
                         [matTooltip]="'calc.keyboardHelp' | translate"

@@ -117,7 +117,10 @@ import {
     .cl-empty { margin: 0.2rem 0; font-style: italic; color: color-mix(in srgb, currentColor 45%, transparent); }
     .cl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
     .cl-line {
-      display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 0.2rem;
+      /* Die beiden Knöpfe stehen MITTIG zur Zeile — mit align-items: start hingen sie sichtbar
+         tiefer als die Züge, neben denen sie stehen (Knopfhöhe > Textzeile). Achtung: in diesem
+         styles-Literal darf KEIN Backtick vorkommen, er würde es beenden. */
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.2rem;
       padding: 0.25rem 0.3rem; border-radius: 6px;
       border-left: 3px solid transparent;
     }
@@ -157,7 +160,7 @@ import {
     /* Die beiden Knöpfe gehören zur ERSTEN Zugzeile, nicht zur ganzen (ggf. mehrzeiligen) Linie:
        oben ausrichten und so hoch wie eine Textzeile halten, sonst hängen sie sichtbar tiefer als
        die Züge, neben denen sie stehen. */
-    .cl-actions { display: flex; align-items: flex-start; margin-top: -1px; }
+    .cl-actions { display: flex; align-items: center; }
     .cl-icon { width: 24px; height: 24px; line-height: 24px; }
     .cl-icon mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .cl-comment { grid-column: 1 / -1; font-size: 0.85em; font-style: italic; opacity: 0.8; padding-left: 3px; }
