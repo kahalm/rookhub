@@ -244,8 +244,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
   revision = 0;
 
   orientation: Color = 'white';
-  boardTheme = 'brown';
-  pieceSet = 'cburnett';
 
   // ===== Kapitel-Training (Timer) ==========================================
   // Kumuliert die Rechenzeit JE KAPITEL (nicht je Stellung): beim Stellungswechsel innerhalb
@@ -440,7 +438,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private api: CalculationService,
-    private prefs: PreferencesService,
+    /** Öffentlich, weil die Vorlage Brett- und Figurenart DIREKT von hier liest: eine lokale
+     *  Kopie wurde nur beim Start gefüllt, eine Änderung im Einstellungs-Dialog kam nie an. */
+    public prefs: PreferencesService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private auth: AuthService,
@@ -449,8 +449,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.enterMode();
-    this.boardTheme = this.prefs.boardTheme;
-    this.pieceSet = this.prefs.pieceSet;
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
     this.requestedChapter = (this.route.snapshot.queryParamMap.get('chapter') || '').trim() || null;
     // Niemand angemeldet → Stellungen lesend vom öffentlichen Endpoint, alles Selbstgemachte

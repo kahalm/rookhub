@@ -122,7 +122,11 @@ import {
       /* Die beiden Knöpfe stehen MITTIG zur Zeile — mit align-items: start hingen sie sichtbar
          tiefer als die Züge, neben denen sie stehen (Knopfhöhe > Textzeile). Achtung: in diesem
          styles-Literal darf KEIN Backtick vorkommen, er würde es beenden. */
-      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.2rem;
+      /* minmax(0, max-content): die Zuege nehmen ihre natuerliche Breite, die Knoepfe stehen
+         DIREKT daneben. Mit 1fr klebten sie am rechten Rand — in einer breiten Spalte lagen
+         mehrere hundert Pixel Leere zwischen einer Linie und ihren eigenen Knoepfen. */
+      display: grid; grid-template-columns: minmax(0, max-content) auto; align-items: center;
+      gap: 0.2rem;
       padding: 0.25rem 0.3rem; border-radius: 6px;
       border-left: 3px solid transparent;
     }
@@ -163,7 +167,15 @@ import {
        oben ausrichten und so hoch wie eine Textzeile halten, sonst hängen sie sichtbar tiefer als
        die Züge, neben denen sie stehen. */
     .cl-actions { display: flex; align-items: center; }
-    .cl-icon { width: 24px; height: 24px; line-height: 24px; }
+    /* HIER lag der Versatz: ein mat-icon-button bringt 12px Innenpolster mit. Schrumpft man ihn
+       auf 24px, bleibt kein Inhaltsplatz — das Symbol wurde von der Polsterkante aus gesetzt und
+       sass damit sichtbar zu tief und zu weit rechts. Ohne Polster, dafuer selbst zentriert. */
+    .cl-icon {
+      width: 24px; height: 24px; padding: 0; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+      opacity: 0.55;
+    }
+    .cl-line:hover .cl-icon, .cl-icon:focus-visible { opacity: 1; }
     .cl-icon mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .cl-comment { grid-column: 1 / -1; font-size: 0.85em; font-style: italic; opacity: 0.8; padding-left: 3px; }
     .cl-comment-edit { grid-column: 1 / -1; display: flex; gap: 0.25rem; align-items: center; flex-wrap: wrap; }

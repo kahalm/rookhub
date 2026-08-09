@@ -122,7 +122,7 @@
             [allowFullscreen]="false"
             [fen]="startFen" [actualFen]="cursorFen" [visualization]="1"
             [orientation]="orientation" [turnColor]="orientation" [dests]="noDests"
-            [boardTheme]="boardTheme" [pieceSet]="pieceSet"
+            [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
             (moveMade)="onMove($event)">
             <!-- Timer neben dem Brett im Vollbild: natives title statt matTooltip
                  (CDK-Overlays sind im Vollbild unsichtbar). -->

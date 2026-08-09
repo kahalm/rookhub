@@ -17,10 +17,6 @@
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
   padding: 0.15rem 0.35rem;
-  /* Rechts bleibt genau so viel frei, wie die App-Kopfzeile misst (`--calc-nav-w`, von der
-     Komponente gesetzt). Ein fester Wert ginge daneben, sobald Sprache oder Anmeldezustand die
-     Leiste breiter machen. */
-  padding-right: calc(var(--calc-nav-w, 0px) + 0.5rem);
   border-radius: 10px;
   background: color-mix(in srgb, currentColor 5%, transparent);
 }
@@ -83,7 +79,11 @@
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  line-height: 30px;
+  padding: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   mat-icon { font-size: 17px; width: 17px; height: 17px; }
 }
@@ -137,8 +137,18 @@
 
 @media (max-width: 900px) {
   .calc-layout { grid-template-columns: 1fr; }
-  /* Einspaltig steht die Leiste quer statt hochkant. */
-  .calc-rail { flex-direction: row; justify-content: flex-end; }
+  /* Einspaltig steht die Leiste quer statt hochkant — sonst ist sie eine Säule aus zwei Knöpfen
+     zwischen Brett und Arbeitsfläche und kostet dort am meisten, wo am wenigsten Platz ist. */
+  .calc-rail {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 0;
+  }
+
+  /* Schmal soll das × neben dem Anmelde-Link stehen und nicht auf einer eigenen Zeile darunter. */
+  .calc-local-note { flex-wrap: nowrap; }
+  .calc-local-text { flex: 1 1 auto; min-width: 0; }
 }
 
 /* Ab hier steht die App-Kopfzeile rechts (Modus-Klasse) und über dem Brett nur die Befehlszeile.
@@ -147,6 +157,11 @@
    darüber frei wurde. Jetzt nimmt es, was Höhe UND Breite hergeben — dieselbe Rechnung wie im
    App-Vollbild, nur mit Abzug für Befehlszeile, Seitenränder und Fußzeile. */
 @media (min-width: 900px) {
+  /* Rechts bleibt genau so viel frei, wie die App-Kopfzeile misst (`--calc-nav-w`, von der
+     Komponente gesetzt) — aber NUR hier: unterhalb dieser Breite steht die Kopfzeile normal im
+     Fluss, und die reservierte Lücke schob die Zeile aus dem Fenster (Querbalken). */
+  .calc-bar { padding-right: calc(var(--calc-nav-w, 0px) + 0.5rem); }
+
   /* Kein Breiten-Deckel in diesem Modus: die App-Kopfzeile sitzt am rechten FENSTERrand, und
      eine auf 1400px gedeckelte, zentrierte Seite endete auf einem breiten Schirm weit davor —
      die Symbole lägen dann neben der Befehlszeile statt auf ihr. Das Brett bemisst sich ohnehin
@@ -226,7 +241,11 @@
 .calc-rail-btn {
   width: 30px;
   height: 30px;
-  line-height: 30px;
+  padding: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.5;
 
   mat-icon { font-size: 19px; width: 19px; height: 19px; }
@@ -550,9 +569,12 @@
   :host-context(.app-fullscreen) {
     .calc-page { max-width: none; padding: 0.5rem; }
     .calc-bar { display: none; }
+    /* DREI Spalten, seit die schmale Leiste dazugekommen ist: Brett | Leiste | Arbeitsfläche.
+       Mit nur zwei Angaben rutschte die dritte Spalte in eine neue Zeile — also unter das Brett,
+       wo sie weggescrollt werden musste. */
     .calc-layout {
-      grid-template-columns: auto minmax(300px, 1fr);
-      gap: 0.75rem;
+      grid-template-columns: auto auto minmax(300px, 1fr);
+      gap: 0.5rem;
     }
     /* Über/unter dem Brett steht im Vollbild NICHTS mehr (Kopfzeile + Zugzeile sind rechts) —
        nur die Seitenränder (2×0.5rem) gehen von der Höhe ab. */
@@ -589,15 +611,16 @@
    ihm dieselbe Silhouette wie die Icons daneben; das GROSSE A füllt ihn gleichmäßig aus (das
    kleine saß mit seiner Unterlänge sichtbar tief). */
 .calc-tool-letter {
-  /* Die Hülle misst exakt wie ein `mat-icon` (24×24). Vorher war der Span kleiner als die
-     Zeilenbox und saß damit auf der GRUNDLINIE — er hing sichtbar tiefer als die Symbole
-     daneben, die ihre Box ganz ausfüllen. Der Ring selbst bleibt 20px und liegt mittig darin. */
+  /* `display: flex` statt `inline-flex` ist hier der ganze Punkt: ein INLINE-Kasten mit Text
+     darin wird an der GRUNDLINIE ausgerichtet — und die liegt beim „A" unten im Ring, weshalb
+     der ganze Ring gegenüber den Symbolen daneben nach unten rutschte. Als Block-Kasten füllt er
+     die Knopffläche aus und wird von ihr zentriert, ganz ohne Grundlinie. */
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 100%;
+  height: 100%;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
