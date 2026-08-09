@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.349.1';
+export const APP_VERSION = '0.350.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.350.0", date: "2026-08-09", changes: [
+    { en: "The board gets the room back. In calculation mode the app header now sits at the top right and the page starts at zero, so the app navigation and the page\u0027s own command line share ONE row instead of stacking. The \u201eYou are here\u201c line below the board is gone as well \u2014 it only repeated what the line list already marks in colour. Together that is about 118 px, and because the board is square it grows in both directions: roughly 18 % more board on the same screen.", de: "Das Brett bekommt den Platz zur\u00fcck. Im Kalkulations-Modus sitzt die App-Kopfzeile jetzt oben rechts und die Seite beginnt bei null \u2014 App-Navigation und die Befehlszeile der Seite teilen sich damit EINE Zeile, statt \u00fcbereinander zu liegen. Auch die Zeile \u201eDu bist hier\u201c unter dem Brett f\u00e4llt weg: sie wiederholte nur, was die Linienliste ohnehin farbig markiert. Zusammen sind das rund 118 px, und weil das Brett quadratisch ist, w\u00e4chst es in beide Richtungen: etwa 18 % mehr Brett auf demselben Schirm." },
+    { en: "The header rearrangement is deliberately fenced to this one route. The app navigation exists exactly once, in the app shell above every page \u2014 changing it without a fence would rebuild all 55 routes. A document class does it, set on entering this mode and removed on leaving (a test guards exactly that), and the command line keeps free precisely as much space as the navigation MEASURES: a fixed value would sit wrong as soon as language or sign-in state make the bar wider.", de: "Der Umbau der Kopfzeile ist bewusst auf diese eine Route eingez\u00e4unt. Die App-Navigation gibt es genau einmal, in der App-H\u00fclle \u00fcber jeder Seite \u2014 ohne Zaun baute man alle 55 Routen um. Erledigt das eine Klasse am Dokument, gesetzt beim Betreten und beim Verlassen wieder entfernt (ein Test wacht genau dar\u00fcber), und die Befehlszeile h\u00e4lt genau so viel Platz frei, wie die Navigation MISST: ein fester Wert l\u00e4ge daneben, sobald Sprache oder Anmeldezustand die Leiste breiter machen." },
+    { en: "Two small things from the screenshots: the comment and delete buttons of a line are now vertically centred against their row \u2014 they hung visibly lower, because a button is taller than a line of text. And the switch for the move annotations is a capital \u201eA\u201c in a ring: as a bare character between two icons it read like stray text, and the lowercase letter sat low in the ring because of its descender.", de: "Zwei Kleinigkeiten aus den Screenshots: die Kn\u00f6pfe f\u00fcr Kommentar und L\u00f6schen einer Linie stehen jetzt mittig zu ihrer Zeile \u2014 sie hingen sichtbar tiefer, weil ein Knopf h\u00f6her ist als eine Textzeile. Und der Schalter f\u00fcr die Zug-Anmerkungen ist ein gro\u00dfes \u201eA\u201c im Ring: als nacktes Zeichen zwischen zwei Symbolen las es sich wie verirrter Text, und der Kleinbuchstabe sa\u00df wegen seiner Unterl\u00e4nge tief im Ring." },
+  ] },
   { version: "0.349.1", date: "2026-08-09", changes: [
     { en: "In full screen the command line now stays put while the side column scrolls. It sits inside that column there, so it would have scrolled away with the content \u2014 taking next/previous position with it, which is exactly what it was put there to fix.", de: "Im Vollbild bleibt die Befehlszeile stehen, w\u00e4hrend die Seitenspalte rollt. Sie sitzt dort IN dieser Spalte und w\u00e4re mit dem Inhalt davongerollt \u2014 samt Weiter/Zur\u00fcck, also genau dem, wof\u00fcr sie dorthin gekommen ist." },
   ] },
