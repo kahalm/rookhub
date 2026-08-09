@@ -393,6 +393,12 @@
 .calc-review-time,
 .calc-review-score { font-variant-numeric: tabular-nums; }
 
+/* Im Ergebnis-Knopf klebte die Punktzahl am Text („Gelöst4 / 4"). Das `gap` des Knopfes hilft
+   dort nicht: Material projiziert den Inhalt in EINEN `mdc-button__label`, die Lücke entsteht
+   also nur zwischen Icon und Label, nie zwischen zwei Spans DARIN. Angular entfernt den
+   Zeilenumbruch aus der Vorlage (preserveWhitespaces), es bleibt kein Leerzeichen übrig. */
+.calc-result-label + .calc-review-score { margin-left: 0.35rem; }
+
 /* Die fünf Stufen: eine Spalte von Schaltflächen, gewählt wird die BEDEUTUNG (die Punkte
    stehen nur als kleine Zahl daneben). Kein Zahlenfeld — die Stufe ist die Eingabe. */
 .calc-grades {

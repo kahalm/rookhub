@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.347.0';
+export const APP_VERSION = '0.347.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.347.1", date: "2026-08-09", changes: [
+    { en: "The result button in calculation mode had its score stuck to the label (\u201eSolved4 / 4\u201c). The button\u0027s own spacing could not help there: Material projects the whole content into ONE label element, so the gap only ever falls between the icon and the label, never between two pieces inside it.", de: "Im Ergebnis-Knopf des Kalkulations-Modus klebte die Punktzahl am Text (\u201eGel\u00f6st4 / 4\u201c). Der Abstand des Knopfes selbst konnte dort nicht helfen: Material projiziert den ganzen Inhalt in EIN Label-Element, die L\u00fccke f\u00e4llt also immer nur zwischen Icon und Label, nie zwischen zwei Teile darin." },
+  ] },
   { version: "0.347.0", date: "2026-08-09", changes: [
     { en: "Calculation mode is now organised by CHAPTER, because that is how it is used \u2014 you work through a chapter, not a book. Selection is in two steps: chapter first, then the position within it, and the chapter name stays visible while you calculate. Forward and back stay inside the chapter and no longer slip into the next one unnoticed; at the end there is a note and a button instead. Numbering restarts at 1 in every chapter, and the counters at the bottom (worked on, points) refer to the chapter you are in \u2014 they used to show the whole book. The book total is still there, but labelled as such.", de: "Der Kalkulations-Modus ist jetzt nach KAPITELN aufgebaut, weil er so benutzt wird \u2014 man arbeitet ein Kapitel durch, kein Buch. Ausgew\u00e4hlt wird zweistufig: erst das Kapitel, dann die Stellung darin, und der Kapitelname bleibt beim Rechnen sichtbar. Weiter und Zur\u00fcck bleiben im Kapitel und rutschen nicht mehr unbemerkt ins n\u00e4chste; am Ende steht stattdessen ein Hinweis mit Knopf. Die Nummerierung beginnt in jedem Kapitel wieder bei 1, und die Zahlen unten (bearbeitet, Punkte) beziehen sich auf das Kapitel, in dem man steht \u2014 bisher zeigten sie das ganze Buch. Die Buchsumme gibt es weiterhin, aber ausdr\u00fccklich als solche beschriftet." },
     { en: "Time is only measured once you START the chapter training. Merely looking at a position no longer counts \u2014 an open tab was quietly filling the chapter total. The switch shows plainly whether it is running, changing chapter stops it, and stopping or leaving still books whatever was measured. Deliberately: the running state does NOT survive a reload. A state that outlives the page eventually catches a forgotten hour. The accumulated chapter time, on the other hand, is kept and adds up across sessions.", de: "Gemessen wird erst, wenn das Kapitel-Training GESTARTET ist. Eine Stellung blo\u00df anzusehen z\u00e4hlt nicht mehr \u2014 ein offener Tab f\u00fcllte bisher still den Kapitel-Topf. Der Schalter zeigt deutlich, ob gemessen wird, ein Kapitelwechsel stoppt, und Stoppen wie Verlassen verbuchen die bis dahin gemessene Zeit. Bewusst so: der Laufzustand \u00fcbersteht ein Neuladen NICHT. Ein Zustand, der die Seite \u00fcberlebt, f\u00e4ngt sich irgendwann eine vergessene Stunde ein. Die kumulierte Kapitelzeit dagegen bleibt und addiert sich \u00fcber mehrere Durchg\u00e4nge." },
