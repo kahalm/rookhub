@@ -48,6 +48,13 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+
+- [ ] **Kalkulations-Modus: calc→calc-Navigation ist eine latente Falle** (Review 2026-08-09,
+  verifiziert): bookId/?chapter=/?pos= werden nur aus `route.snapshot` in ngOnInit gelesen, keine
+  paramMap-Subscription. Navigiert man je von einer calc-URL DIREKT zu einer anderen (heute gibt es
+  keinen solchen Link — course-card/-detail/public-slug starten alle von anderen Routen), wird die
+  Komponente wiederverwendet und zeigt still das ALTE Buch unter neuer URL. Vor dem ersten
+  calc→calc-Link (z. B. „verknüpfter Kurs") paramMap abonnieren und das Buch neu laden.
 - [ ] **Kalkulations-Modus: bewusst nicht gebaute Anschlüsse** (v0.319.0, 2026-07-28). Der Modus (`features/courses/calc/`, `/api/calculations`) ist inhaltlich fertig; folgende Anschlüsse fehlen absichtlich und sind je nach Bedarf nachzuziehen:
   - **Trainingsziele**: die im Kalkulations-Modus verbrachte Zeit fließt NICHT in den Tracker (es gibt keinen `CourseAttempt`, weil es kein „Versuch/gelöst" gibt). Falls gewünscht: eigene Zeit-Erfassung (Stoppuhr je Stellung → `CourseAttempt` mit `Solved=false` oder eine eigene Kategorie) — dabei entscheiden, wie „Zeit am Baum" gegen bloßes Offenhalten der Seite abgegrenzt wird.
   - **Offline**: keine Service-Worker-/Queue-Anbindung (Bäume brauchen den Server). Analog zu `book-offline.util.ts` möglich: Stellungen + eigene Bäume lokal cachen und über die `OfflineQueueService`-Queue nachreichen.

@@ -16,7 +16,10 @@
   gap: 0.25rem;
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
-  padding: 0.15rem 0.35rem;
+  /* SENKRECHT kein Polster: die Knöpfe (40px) geben die Höhe vor, und der Höhen-Abzug der
+     Brettformel rechnet mit exakt dieser Zeile. 4.8px Eigen-Polster machten die Rechnung um
+     0.8px falsch — genug für einen permanenten senkrechten Rollbalken. */
+  padding: 0 0.35rem;
   border-radius: 10px;
   background: color-mix(in srgb, currentColor 5%, transparent);
 }
@@ -135,16 +138,8 @@
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 899.98px) {
   .calc-layout { grid-template-columns: 1fr; }
-  /* Einspaltig steht die Leiste quer statt hochkant — sonst ist sie eine Säule aus zwei Knöpfen
-     zwischen Brett und Arbeitsfläche und kostet dort am meisten, wo am wenigsten Platz ist. */
-  .calc-rail {
-    flex-direction: row;
-    justify-content: flex-end;
-    align-items: center;
-    padding-top: 0;
-  }
 
   /* Schmal soll das × neben dem Anmelde-Link stehen und nicht auf einer eigenen Zeile darunter. */
   .calc-local-note { flex-wrap: nowrap; }
@@ -161,6 +156,11 @@
      Komponente gesetzt) — aber NUR hier: unterhalb dieser Breite steht die Kopfzeile normal im
      Fluss, und die reservierte Lücke schob die Zeile aus dem Fenster (Querbalken). */
   .calc-bar { padding-right: calc(var(--calc-nav-w, 0px) + 0.5rem); }
+
+  /* Die fixe Fußzeile (unten rechts, styles.scss) liegt ÜBER der Seitenspalte — ohne diesen
+     Freiraum schöbe sich beim Scrollen Text unter Text, und am Seitenende fing sie die Klicks
+     auf Anmelde-Link und ד des Hinweises ab. */
+  .calc-side-col { padding-bottom: 2rem; }
 
   /* Kein Breiten-Deckel in diesem Modus: die App-Kopfzeile sitzt am rechten FENSTERrand, und
      eine auf 1400px gedeckelte, zentrierte Seite endete auf einem breiten Schirm weit davor —
@@ -179,6 +179,15 @@
      (40px) und ihr Abstand zum Inhalt (0.5rem). Zeile über dem Brett und Fußzeile darunter gibt
      es nicht mehr — genau das macht den Unterschied zu vorher. */
   .calc-board-col { width: min(calc(100vh - 4.75rem), calc(100vw - 480px)); }
+}
+
+/* Im Band bis ~1450px kann die Befehlszeile zweizeilig werden (anonym reserviert die
+   App-Kopfzeile mit Login/Registrieren 400–500px): dann braucht sie eine Zeilenhöhe mehr,
+   sonst schiebt das Brett die Seite genau darum aus dem Fenster (gemessen bei 1366×768).
+   Bricht sie dort nicht um, ist das Brett ein paar Pixel kleiner als möglich — der billigere
+   der beiden Fehler. */
+@media (min-width: 900px) and (max-width: 1449.98px) {
+  .calc-board-col { width: min(calc(100vh - 7.25rem), calc(100vw - 480px)); }
 }
 
 .calc-board-col {
@@ -578,7 +587,10 @@
     }
     /* Über/unter dem Brett steht im Vollbild NICHTS mehr (Kopfzeile + Zugzeile sind rechts) —
        nur die Seitenränder (2×0.5rem) gehen von der Höhe ab. */
-    .calc-board-col { width: min(calc(100vh - 1rem), calc(100vw - 340px)); }
+    /* 370px statt der 340 aus der ZWEISPALTIGEN Zeit: neben dem Brett stehen jetzt
+       Seitenpolster (16) + zwei Lücken (16) + Leiste (30) + Spalten-Minimum (300) = 362px —
+       mit 340 lief das Grid auf 4:3-Schirmen 22px über (Querbalken im Vollbild). */
+    .calc-board-col { width: min(calc(100vh - 1rem), calc(100vw - 370px)); }
     /* Oben ausgeblendet, hier sichtbar — sonst käme man im Vollbild zu keiner nächsten Stellung.
        Rechts bleibt Platz frei: dort liegen die beiden aus dem Fluss genommenen Knöpfe des
        Bretts (Vollbild verlassen + App-Vollbild), die sich sonst mit der Zeile überlagern. */
@@ -646,4 +658,17 @@
   border-radius: 6px;
 
   &:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+}
+
+/* Einspaltig liegt die Leiste QUER zwischen Brett und Arbeitsfläche. Dieser Block muss NACH der
+   .calc-rail-Basisregel stehen: gleiche Spezifität — stünde er davor, gewänne die spätere
+   Spalten-Basis überall, und auf dem Handy stünde eine Säule aus zwei Knöpfen (genau so war es
+   kaputt, der Block lag oben in der Datei). */
+@media (max-width: 899.98px) {
+  .calc-rail {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 0;
+  }
 }

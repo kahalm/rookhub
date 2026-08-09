@@ -483,7 +483,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
    * Seite gibt es genau ein Brett, die Suche ist also eindeutig; das Ergebnis wird gemerkt.
    */
   get fsTarget(): HTMLElement | null {
-    if (!this.fsHost && typeof document !== 'undefined') {
+    // `isConnected`: nach einem Ladefehler ersetzt die Zustandsweiche das ganze Layout samt
+    // Brett — der Cache zeigte dann auf ein aus dem DOM entferntes Element, requestFullscreen
+    // darauf wird still abgelehnt, und der Knopf wäre für den Rest des Besuchs tot.
+    if ((!this.fsHost || !this.fsHost.isConnected) && typeof document !== 'undefined') {
       this.fsHost = document.querySelector('app-puzzle-board .board-fs-host');
     }
     return this.fsHost;
@@ -1263,11 +1266,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
       score: formatScore(this.bookPoints, this.bookMaxPoints),
     });
     return `${chapter}\n${book}`;
-  }
-
-  /** Notation des Pfades zum Cursor („wo stehe ich") — der einzige Ort, an dem der Vorlauf sichtbar ist. */
-  get cursorPathSan(): string {
-    return pathToRoot(this.tree, this.cursorId).slice(1).map(n => n.san).join(' ');
   }
 
   positionLabel(item: CalcPositionListItem): string {

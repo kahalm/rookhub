@@ -1880,6 +1880,36 @@ describe('CalculationComponent entrümpelte Ansicht', () => {
   });
 });
 
+describe('CalculationComponent Vollbild-Ziel (fsTarget)', () => {
+  afterEach(() => {
+    for (const el of Array.from(document.querySelectorAll('app-puzzle-board'))) el.remove();
+  });
+
+  function boardHost(): HTMLElement {
+    const board = document.createElement('app-puzzle-board');
+    const host = document.createElement('div');
+    host.className = 'board-fs-host';
+    board.appendChild(host);
+    document.body.appendChild(board);
+    return host;
+  }
+
+  it('verwirft ein gecachtes Ziel, das nicht mehr im DOM hängt', () => {
+    // Nach einem Ladefehler ersetzt die Zustandsweiche das Layout samt Brett: der Cache zeigte
+    // dann auf ein entferntes Element, requestFullscreen darauf wird still abgelehnt — der
+    // Vollbild-Knopf der Leiste wäre für den Rest des Besuchs tot gewesen.
+    const { component: c } = make();
+    const erstes = boardHost();
+    expect(c.fsTarget).toBe(erstes);
+
+    erstes.closest('app-puzzle-board')!.remove();   // Fehlerkarte ersetzt das Layout
+    const zweites = boardHost();                     // nächste Stellung baut ein neues Brett
+
+    expect(c.fsTarget).toBe(zweites);
+    expect(c.fsTarget!.isConnected).toBeTrue();
+  });
+});
+
 describe('CalculationComponent Modus-Klasse am body', () => {
   const KLASSE = 'calc-mode';
   beforeEach(() => { document.body.classList.remove(KLASSE); document.body.style.removeProperty('--calc-nav-w'); });

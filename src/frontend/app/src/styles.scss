@@ -235,8 +235,19 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
     right: 0.9rem;
     bottom: 0.4rem;
     margin: 0;
-    padding: 0;
+    /* Mit Grund und Polster: sie liegt ÜBER der Seitenspalte — ohne Hintergrund schob sich beim
+       Scrollen Spaltentext unter die Fußzeilen-Links (Text auf Text). */
+    padding: 1px 8px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mat-sys-surface, #1e1e1e) 92%, transparent);
     text-align: right;
     z-index: 5;
   }
+
+  /* Der brett-eigene Vollbild-Knopf: außerhalb des Vollbilds unsichtbar (seine Zeile über dem
+     Brett kostete Höhe — dafür gibt es die Leiste), IM Vollbild aber der einzige erreichbare
+     Ausstieg: nur er sitzt INNERHALB der Vollbild-Hülle, alles außerhalb liegt unter dem
+     ::backdrop. Ohne ihn gäbe es auf Touch-Geräten keinen Weg zurück außer Esc. */
+  body.calc-mode app-puzzle-board app-board-fullscreen-button { display: none; }
+  body.calc-mode app-puzzle-board .board-fs-host:fullscreen app-board-fullscreen-button { display: flex; }
 }

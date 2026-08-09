@@ -118,8 +118,11 @@
       <div class="calc-board-col">
 
         <div class="calc-board-wrap">
+          <!-- Der brett-eigene Vollbild-Knopf bleibt AN: nur er sitzt INNERHALB der
+               Vollbild-Hülle und ist damit im Vollbild sichtbar (der Leisten-Knopf liegt
+               unter dem ::backdrop — ohne den internen gäbe es auf Touch keinen Ausstieg).
+               Außerhalb des Vollbilds blendet ihn styles.scss aus, er kostet also keine Höhe. -->
           <app-puzzle-board
-            [allowFullscreen]="false"
             [fen]="startFen" [actualFen]="cursorFen" [visualization]="1"
             [orientation]="orientation" [turnColor]="orientation" [dests]="noDests"
             [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
