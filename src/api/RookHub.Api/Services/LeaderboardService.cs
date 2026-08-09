@@ -88,6 +88,13 @@ public class LeaderboardService
         // UTC-TAG der Daily-Zuordnung gelöster Versuch — vorher zählte JEDER gelöste Versuch an
         // einem Puzzle, das irgendwann Daily war (z. B. Buch-Browsing über den Zufallsmodus),
         // als „Tagespuzzle gelöst", sodass Buch-Löser echte Daily-Löser überholten.
+        // BEWUSST zweistufig mit In-Memory-Abgleich (Reviews 2026-06-30 + 2026-08-07 haben die
+        // Stelle beide angeklopft): SQL filtert auf Versuche AN Daily-Puzzles (IN-Liste, klein),
+        // nur der Datums-Paar-Abgleich (Versuchstag == Daily-Tag) läuft im Speicher. Ihn in SQL zu
+        // drücken hieße DateOnly-gegen-DateTime-Joins bzw. COUNT(DISTINCT)-Konstrukte — genau die
+        // Sorte Ausdruck, die der MySQL-Provider gern NICHT übersetzt und die die InMemory-Tests
+        // nicht abfangen würden. Wächst mit #Dailies × Löser (heute ~2k Zeilen); Revisit-Marke
+        // liegt bei ~100× Nutzerwachstum (siehe TODO.md).
         var dailies = await _db.DailyPuzzles
             .Select(d => new { d.Date, d.BookPuzzleId })
             .ToListAsync();

@@ -98,6 +98,10 @@ describe('CourseListComponent sorting', () => {
       expect(comp.inProgressCourses.length).toBe(1);
 
       comp.courses[0].solvedCount = 0;   // Reset hat den Fortschritt geleert
+      // Sektionen sind vorberechnet (keine Getter-Kaskade mehr): jeder Schreiber ruft
+      // rebuildSections — reset() in der Komponente tut das; hier simulieren wir die Mutation
+      // direkt und stossen den Neuaufbau wie der echte Schreiber an.
+      (comp as unknown as { rebuildSections(): void }).rebuildSections();
       expect(comp.inProgressCourses.length).toBe(0);
     });
 

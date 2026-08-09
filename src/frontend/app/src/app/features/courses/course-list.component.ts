@@ -219,8 +219,15 @@ import { CourseCardComponent } from './course-card.component';
 })
 export class CourseListComponent implements OnInit {
   courses: CourseListItem[] = [];
-  /** Freitext-Suche (filtert clientseitig nach Kurstitel). */
-  search = '';
+
+  /** Freitext-Suche (filtert clientseitig nach Kurstitel). Setter statt Feld, damit die
+   *  vorberechneten Sektionen (siehe {@link rebuildSections}) beim Tippen mitkommen. */
+  get search(): string { return this._search; }
+  set search(value: string) {
+    this._search = value;
+    this.rebuildSections();
+  }
+  private _search = '';
   loading = false;
   savingOffline: number | null = null;
   downloadingPgn: number | null = null;
@@ -272,44 +279,45 @@ export class CourseListComponent implements OnInit {
   /** Angefangene, noch nicht abgeschlossene Kurse — „In Arbeit". Erscheinen ZUSÄTZLICH oben,
    *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt
    *  verwendet zuerst (durch sortCourses bereits vorsortiert). */
+  // Vorberechnete Sektionen statt Getter-Kaskade: die fünf Getter liefen bei JEDEM
+  // Change-Detection-Zyklus (Default-Strategie: jedes Event der Seite), und jeder davon
+  // filterte die ganze Liste erneut — 8+ Array-Durchläufe pro Zyklus, obwohl sich die
+  // Eingaben (Liste, Suche, Pin/Fortschritt) nur an klar benannten Stellen ändern.
+  // Dort ruft jetzt jeder Schreiber {@link rebuildSections}.
   /** Kurse nach Suchtext gefiltert (Titel, case-insensitive); Basis für alle Sektionen. */
-  get filtered(): CourseListItem[] {
-    const q = this.search.trim().toLowerCase();
-    if (!q) return this.courses;
-    return this.courses.filter(c => (c.displayName || '').toLowerCase().includes(q));
-  }
+  filtered: CourseListItem[] = [];
+  inProgressCourses: CourseListItem[] = [];
+  /** Kurse, die andere Nutzer mit mir geteilt haben (eigene Sektion „Mit mir geteilt"). */
+  sharedCourses: CourseListItem[] = [];
+  /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */
+  publicCourses: CourseListItem[] = [];
+  /** Eigene, selbst importierte Chessable-Kurse. */
+  chessableCourses: CourseListItem[] = [];
 
-  get inProgressCourses(): CourseListItem[] {
+  /** Sektionen aus Liste + Suche neu ableiten. MUSS nach jeder Änderung an `courses`
+   *  (Zuweisung ODER Mutation von isPinned/solvedCount/puzzleCount/isShared/isOwned) laufen —
+   *  ein vergessener Aufruf zeigt veraltete Sektionen, bis der nächste Schreiber kommt. */
+  private rebuildSections(): void {
+    const q = this._search.trim().toLowerCase();
+    this.filtered = !q
+      ? this.courses
+      : this.courses.filter(c => (c.displayName || '').toLowerCase().includes(q));
     // „In Arbeit" umfasst zwei Fälle:
     //  • tatsächlich begonnen (≥1 gelöst) und noch nicht fertig → nach Reset (solvedCount=0)
     //    verschwindet der Kurs hier wieder.
     //  • angepinnte, noch nicht fertige Kurse — der User will die ganz oben sehen (Schnellzugriff),
     //    auch bevor er sie zum ersten Mal angeklickt hat.
-    // Angepinnte Kurse zuerst (nach Fortschritt absteigend, Vorlagen ganz oben), danach der Rest
-    // (sortCourses hat schon nach lastActivityAt sortiert; hier bewahren wir die Ordnung).
+    // Angepinnte zuerst; sortCourses hat schon nach lastActivityAt sortiert, die Ordnung bleibt.
     const eligible = this.filtered.filter(c =>
       c.puzzleCount > 0 && c.solvedCount < c.puzzleCount &&
       (c.isPinned || c.solvedCount > 0));
-    return [
+    this.inProgressCourses = [
       ...eligible.filter(c => c.isPinned),
       ...eligible.filter(c => !c.isPinned),
     ];
-  }
-
-  /** Kurse, die andere Nutzer mit mir geteilt haben (eigene Sektion „Mit mir geteilt"). */
-  get sharedCourses(): CourseListItem[] {
-    return this.filtered.filter(c => c.isShared);
-  }
-
-  /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher);
-   *  von anderen Nutzern geteilte Kurse stehen in ihrer eigenen Sektion. */
-  get publicCourses(): CourseListItem[] {
-    return this.filtered.filter(c => !c.isOwned && !c.isShared);
-  }
-
-  /** Eigene, selbst importierte Chessable-Kurse. */
-  get chessableCourses(): CourseListItem[] {
-    return this.filtered.filter(c => c.isOwned);
+    this.sharedCourses = this.filtered.filter(c => c.isShared);
+    this.publicCourses = this.filtered.filter(c => !c.isOwned && !c.isShared);
+    this.chessableCourses = this.filtered.filter(c => c.isOwned);
   }
 
   isOffline(c: CourseListItem): boolean {
@@ -321,6 +329,7 @@ export class CourseListComponent implements OnInit {
     const target = !c.isPinned;
     this.pinning = c.bookId;
     c.isPinned = target; // optimistisch
+    this.rebuildSections();
     const req = target ? this.courseService.pinCourse(c.bookId) : this.courseService.unpinCourse(c.bookId);
     req.subscribe({
       next: () => {
@@ -329,6 +338,7 @@ export class CourseListComponent implements OnInit {
       },
       error: () => {
         c.isPinned = !target; // Rollback
+        this.rebuildSections();
         this.pinning = null;
         this.snackbar.info(this.translate.instant('courses.pinFailed'), { action: 'common.ok', duration: 3000 });
       }
@@ -408,6 +418,7 @@ export class CourseListComponent implements OnInit {
     this.courseService.getCourses().subscribe({
       next: courses => {
         this.courses = this.sortCourses(courses);
+        this.rebuildSections();
         this.offlineList = false;
         saveCourseListCache(courses);   // Offline-Fallback aktuell halten
         this.loading = false;
@@ -418,6 +429,7 @@ export class CourseListComponent implements OnInit {
         const cached = loadCourseListCache<CourseListItem>().filter(c => this.offlineFiles.has(c.fileName));
         if (cached.length > 0) {
           this.courses = this.sortCourses(cached);
+          this.rebuildSections();
           this.offlineList = true;
         } else {
           this.snackbar.info(this.translate.instant('courses.loadFailed'), { action: 'common.ok', duration: 3000 });
@@ -433,6 +445,7 @@ export class CourseListComponent implements OnInit {
       next: p => {
         course.solvedCount = p.solvedCount;
         course.progressPercent = p.progressPercent;
+        this.rebuildSections();
         delete this.chaptersByBook[course.bookId]; // Kapitel-Fortschritt neu laden beim nächsten Öffnen
       },
       error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
@@ -485,6 +498,7 @@ export class CourseListComponent implements OnInit {
         this.uploading = false;
         // Neuen Kurs einsortieren (statt kompletten Reload) + Menü/Navbar-Zugriff neu prüfen lassen.
         this.courses = this.sortCourses([...this.courses.filter(c => c.bookId !== course.bookId), course]);
+        this.rebuildSections();
         this.courseService.notifyAccessChanged();
         this.snackbar.info(this.translate.instant('courses.upload.success', { name: course.displayName, count: course.puzzleCount }), { action: 'common.ok', duration: 3000 });
       },
@@ -504,6 +518,7 @@ export class CourseListComponent implements OnInit {
       next: () => {
         this.deleting = null;
         this.courses = this.courses.filter(c => c.bookId !== course.bookId);
+        this.rebuildSections();
         delete this.chaptersByBook[course.bookId];
         this.courseService.notifyAccessChanged();
       },
@@ -524,6 +539,7 @@ export class CourseListComponent implements OnInit {
         // Geteilte Gruppen-/Admin-Kurse bleiben bestehen (gehören dem User nicht).
         if (course.isOwned) {
           this.courses = this.courses.filter(c => c.bookId !== course.bookId);
+        this.rebuildSections();
           delete this.chaptersByBook[course.bookId];
           this.courseService.notifyAccessChanged();
         }
