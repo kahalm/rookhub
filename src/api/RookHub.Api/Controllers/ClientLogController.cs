@@ -35,9 +35,14 @@ public class ClientLogController : BaseApiController
         var userAgent = Truncate(Request.Headers.UserAgent.ToString(), 300);
         int? userId = GetUserIdOrNull();
 
-        // Routine-Heartbeats auf Information; nur echte Diagnose-Events (Crash/Hänger) auf Warning,
-        // sonst lösen die häufigen Heartbeats einen warn_spike im log-watcher aus (Fehlalarm).
+        // Routine-Events auf Information; nur echte Diagnose-Events (Crash/Hänger) auf Warning,
+        // sonst lösen die häufigen Meldungen einen warn_spike im log-watcher aus (Fehlalarm).
+        // `storage_persist_denied` dazugenommen (Logs-Check 2026-08-09: 49 der 82 Prod-Warnungen
+        // einer Woche): der Browser verweigert die Speicher-Persistenz-Garantie je nach
+        // Einstellung/Modus routinemäßig — das ist Umgebung, keine Störung, und niemand handelt
+        // darauf. `connectivity_restored` bleibt Warning: gehäuft zeigt es echte API-Ausfälle.
         var level = kind.StartsWith("heartbeat", StringComparison.OrdinalIgnoreCase)
+                    || kind.Equals("storage_persist_denied", StringComparison.OrdinalIgnoreCase)
             ? LogLevel.Information
             : LogLevel.Warning;
 
