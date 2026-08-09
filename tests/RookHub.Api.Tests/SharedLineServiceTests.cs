@@ -84,8 +84,10 @@ public class SharedLineServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ShareRecipient_CanShareLine()
+    public async Task ShareRecipient_CanNoLongerCreatePublicLink()
     {
+        // VERHALTENSÄNDERUNG (bewusst, siehe SharedLineService.CreateAsync): der Freigabe-Empfänger
+        // darf den Repertoire-Inhalt nicht mehr öffentlich machen — das entscheidet nur der Besitzer.
         var owner = await AddUserAsync("owner");
         var friend = await AddUserAsync("friend");
         var repId = await AddRepertoireAsync(owner);
@@ -93,7 +95,21 @@ public class SharedLineServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var res = await _svc.CreateAsync(friend, repId, new ShareLineInputDto { Pgn = Pgn });
-        Assert.NotNull(res);
+        Assert.Null(res);
+        Assert.Empty(_db.SharedLines);
+    }
+
+    [Fact]
+    public async Task Owner_PgnOverCap_ThrowsArgumentException_AndStoresNothing()
+    {
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner);
+        // Übergroßes „PGN": ohne Cap landete jeder beliebig große Text als öffentlicher LONGTEXT-Blob.
+        var huge = "[Event \"x\"]\n\n1. e4 e5 " + new string('y', SharedLineService.MaxPgnChars) + " *";
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = huge }));
+        Assert.Empty(_db.SharedLines);
     }
 
     [Fact]

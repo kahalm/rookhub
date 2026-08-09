@@ -65,17 +65,42 @@ public class BotStatsControllerTests : IDisposable
         return controller;
     }
 
-    private static string ValidHeader(string discordId)
+    /// <summary>Signatur im ALTEN Format (ohne Timestamp) — seit der Timestamp-Pflicht ungültig;
+    /// nur noch für die Ablehnungs-Tests da.</summary>
+    private static string LegacyHeader(string discordId)
         => "sha256=" + SchachBotWebhookService.ComputeHmacHex(Secret, discordId);
+
+    /// <summary>Gültiger Auth-Satz: frischer Timestamp + Signatur über "&lt;ts&gt;.&lt;id&gt;".</summary>
+    private BotStatsController ValidController(string discordId, string secret = Secret)
+    {
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        return BuildController(secret,
+            "sha256=" + SchachBotWebhookService.ComputeHmacHex(secret, ts + "." + discordId),
+            ts.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
 
     private static string TimestampedHeader(string discordId, long ts)
         => "sha256=" + SchachBotWebhookService.ComputeHmacHex(Secret, ts + "." + discordId);
 
     [Fact]
+    public async Task GetPlayerProgress_LegacySignatureWithoutTimestamp_IsRejected()
+    {
+        // Der rückwärtskompatible Zweig (HMAC nur über die Discord-ID, kein Timestamp) ist
+        // entfernt — eine einmal abgefangene Alt-Signatur wäre für immer replaybar gewesen.
+        // Der Bot sendet den Timestamp seit v2.70 durchgängig.
+        await CreateLinkedUserAsync("12345");
+        var controller = BuildController(Secret, LegacyHeader("12345"));
+
+        var result = await controller.GetPlayerProgress("12345");
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
     public async Task GetPlayerProgress_ValidSignatureLinkedUser_ReturnsProgress()
     {
         await CreateLinkedUserAsync("12345");
-        var controller = BuildController(Secret, ValidHeader("12345"));
+        var controller = ValidController("12345");
 
         var result = await controller.GetPlayerProgress("12345");
 
@@ -111,7 +136,7 @@ public class BotStatsControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var controller = BuildController(Secret, ValidHeader("12345"));
+        var controller = ValidController("12345");
         var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
         var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
 
@@ -152,7 +177,7 @@ public class BotStatsControllerTests : IDisposable
             .Map("/players/3/results", results)
             .Map("tournaments/T100", """{"location":"Innsbruck"}""");
 
-        var controller = BuildController(Secret, ValidHeader("12345"));
+        var controller = ValidController("12345");
         var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
         var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
 
@@ -180,7 +205,7 @@ public class BotStatsControllerTests : IDisposable
             .Map("/players/", "[]")
             .Map("tournaments/T200", """{"location":"Wien"}""");
 
-        var controller = BuildController(Secret, ValidHeader("12345"));
+        var controller = ValidController("12345");
         var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
         var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
 
@@ -205,7 +230,7 @@ public class BotStatsControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var controller = BuildController(Secret, ValidHeader("12345"));
+        var controller = ValidController("12345");
         var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
         var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
 
@@ -244,7 +269,7 @@ public class BotStatsControllerTests : IDisposable
         // body-only-Signatur darf den Replay-Schutz nicht aushebeln.
         await CreateLinkedUserAsync("12345");
         var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var controller = BuildController(Secret, ValidHeader("12345"), ts.ToString());
+        var controller = BuildController(Secret, LegacyHeader("12345"), ts.ToString());
 
         var result = await controller.GetPlayerProgress("12345");
 
@@ -277,7 +302,7 @@ public class BotStatsControllerTests : IDisposable
     public async Task GetPlayerProgress_UnlinkedDiscordId_ReturnsNotFound()
     {
         // Signatur korrekt, aber kein verknüpftes Konto.
-        var controller = BuildController(Secret, ValidHeader("99999"));
+        var controller = ValidController("99999");
 
         var result = await controller.GetPlayerProgress("99999");
 
@@ -290,7 +315,7 @@ public class BotStatsControllerTests : IDisposable
         await CreateLinkedUserAsync("12345");
         // Feature deaktiviert (kein Secret) → Endpoint verhält sich wie nicht vorhanden,
         // ohne die Signatur überhaupt zu prüfen.
-        var controller = BuildController(secret: "", ValidHeader("12345"));
+        var controller = BuildController(secret: "", LegacyHeader("12345"));
 
         var result = await controller.GetPlayerProgress("12345");
 

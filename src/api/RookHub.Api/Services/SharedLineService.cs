@@ -19,24 +19,35 @@ public class SharedLineService
 
     public SharedLineService(AppDbContext db) => _db = db;
 
+    /// <summary>Obergrenze für das geteilte Linien-PGN (Zeichen). Eine einzelne Repertoire-Linie ist
+    /// real wenige KB groß — der Cap verhindert, dass der öffentliche /l/-Endpoint als Ablage für
+    /// beliebig große LONGTEXT-Blobs missbraucht wird.</summary>
+    public const int MaxPgnChars = 32 * 1024;
+
     /// <summary>
     /// Legt einen Teilen-Link für eine Linie des Repertoires <paramref name="repertoireId"/> an.
-    /// Zugriff: Besitzer ODER jemand, mit dem das Repertoire geteilt ist. Dieselbe Linie erneut
-    /// geteilt (gleicher PGN-Hash je Besitzer) liefert den bestehenden Link zurück (kein Duplikat).
+    /// Zugriff: NUR der Besitzer. Dieselbe Linie erneut geteilt (gleicher PGN-Hash je Besitzer)
+    /// liefert den bestehenden Link zurück (kein Duplikat).
     /// Gibt <c>null</c> zurück, wenn kein Zugriff / Repertoire nicht existiert.
     /// </summary>
+    /// <exception cref="ArgumentException">PGN größer als <see cref="MaxPgnChars"/> (→ 400).</exception>
     public async Task<ShareLineResultDto?> CreateAsync(int userId, int repertoireId, ShareLineInputDto dto, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Pgn) || !RepertoireService.LooksLikePgn(dto.Pgn)) return null;
+        if (string.IsNullOrWhiteSpace(dto.Pgn)) return null;
+        if (dto.Pgn.Length > MaxPgnChars)
+            throw new ArgumentException($"PGN exceeds the {MaxPgnChars / 1024} KB limit for shared lines.");
+        if (!RepertoireService.LooksLikePgn(dto.Pgn)) return null;
 
         var rep = await _db.Repertoires.AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == repertoireId, ct);
         if (rep == null) return null;
 
-        var isOwner = rep.UserId == userId;
-        var isRecipient = !isOwner && await _db.RepertoireShares
-            .AnyAsync(s => s.RepertoireId == repertoireId && s.RecipientId == userId, ct);
-        if (!isOwner && !isRecipient) return null;
+        // VERHALTENSÄNDERUNG (bewusst): Nur noch der BESITZER darf öffentliche Links anlegen.
+        // Vorher durfte auch der Freigabe-Empfänger — damit konnte er den Repertoire-Inhalt dauerhaft
+        // öffentlich machen (der Snapshot überlebte sogar den Widerruf der Freigabe). Die Freigabe
+        // ist „ansehen/trainieren", nicht „weiterveröffentlichen" (analog: kein Weiterteilen bei
+        // RepertoireShares) — also entscheidet über eine ÖFFENTLICHE Kopie allein der Besitzer.
+        if (rep.UserId != userId) return null;
 
         return await StoreAsync(userId, repertoireId, dto.Title, rep.Name, dto.Pgn.Trim(), null, ct);
     }

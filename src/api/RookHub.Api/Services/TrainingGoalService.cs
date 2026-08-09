@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -28,8 +29,15 @@ namespace RookHub.Api.Services;
 public class TrainingGoalService
 {
     private readonly AppDbContext _db;
+    private readonly IMemoryCache? _cache;
 
-    public TrainingGoalService(AppDbContext db) => _db = db;
+    // cache optional: bestehende Test-Konstruktionen (new TrainingGoalService(db)) bleiben gültig;
+    // DI injiziert den registrierten IMemoryCache. Ohne Cache wird immer frisch gerechnet.
+    public TrainingGoalService(AppDbContext db, IMemoryCache? cache = null)
+    {
+        _db = db;
+        _cache = cache;
+    }
 
     /// <summary>Obergrenze je Einzel-Puzzle gegen aufgeblähte Zeiten (z.B. Tab stundenlang offen).</summary>
     private const int PerPuzzleCapSeconds = 1800;   // 30 min
@@ -443,6 +451,13 @@ public class TrainingGoalService
     /// client-seitig berechnen kann.</summary>
     public async Task<DailySeriesDto> GetDailySeriesAsync(int userId)
     {
+        // Kurz-Cache je User: die Serie aggregiert die KOMPLETTE Historie über 8 Tabellen pro Request.
+        // Die Daten sind praktisch append-only — 60 s Staleness ist für eine Statistikseite unerheblich,
+        // spart aber die volle Aggregation bei jedem Seitenwechsel/Perioden-Umschalten.
+        var cacheKey = $"tg_daily_series_{userId}";
+        if (_cache is not null && _cache.TryGetValue(cacheKey, out DailySeriesDto? cached) && cached is not null)
+            return cached;
+
         var goal = await GetEffectiveGoalAsync(userId);
         var agg = await AggregateAsync(userId, DateTime.UnixEpoch);
 
@@ -451,7 +466,9 @@ public class TrainingGoalService
             .Select(kv => MapDay(kv.Key, kv.Value, goal))
             .ToList();
 
-        return new DailySeriesDto { Days = days };
+        var dto = new DailySeriesDto { Days = days };
+        _cache?.Set(cacheKey, dto, TimeSpan.FromSeconds(60));
+        return dto;
     }
 
     /// <summary>Heutiger Fortschritt (Tageszeit-Ziel + Aufschlüsselung) + Wochenstand

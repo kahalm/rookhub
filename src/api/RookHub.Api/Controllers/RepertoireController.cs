@@ -80,12 +80,20 @@ public class RepertoireController : BaseApiController
     }
 
     /// <summary>Erzeugt einen öffentlichen Nur-Ansehen-Link für eine Linie des Repertoires.
-    /// Besitzer oder Freigabe-Empfänger; liefert bei erneutem Teilen derselben Linie denselben Link.</summary>
+    /// Nur der Besitzer; liefert bei erneutem Teilen derselben Linie denselben Link.
+    /// 400 bei übergroßem PGN (Cap in <see cref="SharedLineService.MaxPgnChars"/>).</summary>
     [HttpPost("{id:int}/share-line")]
     public async Task<ActionResult<ShareLineResultDto>> ShareLine(int id, [FromBody] ShareLineInputDto dto, CancellationToken ct)
     {
-        var res = await _sharedLines.CreateAsync(GetUserId(), id, dto, ct);
-        return res == null ? NotFound() : Ok(res);
+        try
+        {
+            var res = await _sharedLines.CreateAsync(GetUserId(), id, dto, ct);
+            return res == null ? NotFound() : Ok(res);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // ===== Repertoire-Trainer (Spaced Repetition, 9-Stufen-Leiter) =====

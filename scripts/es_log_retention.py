@@ -30,6 +30,13 @@ Restore/Rueckbau: Policy von einem Stream loesen ->
     curl -XPUT "$ES_URL/<stream>/_settings" -H 'Content-Type: application/json' \\
          -d '{"index.lifecycle.name": null}'
     curl -XDELETE "$ES_URL/_ilm/policy/rookhub-logs-retention"
+
+Erfolg heisst hier ZURUECKGELESEN: nach jedem PUT wird der Zustand per GET
+verifiziert (Policy hat die Delete-Phase, Template/Backing-Indices tragen
+index.lifecycle.name) — erst dann wird Erfolg gemeldet. Jede ES-Antwort
+ausserhalb 2xx wirft (EsError), Exit-Code != 0 bei jedem Fehlschlag. Vorher
+verschluckte das Skript Fehlstatus der Listen-GETs und meldete Erfolg ohne
+Wirkung.
 """
 
 import argparse
@@ -48,7 +55,16 @@ STREAM_PATTERN = re.compile(r"^[a-z-]+-logs-generic-default$")
 TEMPLATE_PATTERN = re.compile(r"^[a-z-]+-logs-generic-\d+\.\d+\.\d+$")
 
 
+class EsError(Exception):
+    """ES-Antwort ausserhalb 2xx oder Netzwerk-/Verifikationsfehler."""
+
+
 def request(method, url, body=None, timeout=15):
+    """HTTP-Request; wirft EsError bei Status != 2xx und bei Netzwerkfehlern.
+
+    Frueher kam auch fuer Fehlerantworten ein (status, body)-Tupel zurueck —
+    einzelne Aufrufer (Template-/Stream-Liste) verschluckten den Fehlstatus
+    und das Skript meldete Erfolg ohne Wirkung."""
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     if data:
@@ -56,13 +72,47 @@ def request(method, url, body=None, timeout=15):
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode() or "{}"
-            return resp.status, json.loads(raw)
+            return json.loads(raw)
     except urllib.error.HTTPError as e:
-        raw = e.read().decode() or "{}"
-        try:
-            return e.code, json.loads(raw)
-        except json.JSONDecodeError:
-            return e.code, {"error": raw}
+        raw = e.read().decode() or ""
+        raise EsError(f"{method} {url} -> HTTP {e.code}: {raw[:500]}") from e
+    except urllib.error.URLError as e:
+        raise EsError(f"{method} {url} -> nicht erreichbar: {e.reason}") from e
+
+
+def _linked_policy(settings):
+    """index.lifecycle.name aus einem Settings-Dict — ES liefert die Settings je
+    nach Quelle verschachtelt ({"index": {"lifecycle": {"name": ...}}}) oder flach."""
+    return (settings.get("index", {}).get("lifecycle", {}).get("name")
+            or settings.get("index.lifecycle.name"))
+
+
+def verify_policy(es, name, retention_days):
+    """Policy zuruecklesen: Erfolg erst, wenn die Delete-Phase wirklich angekommen ist."""
+    resp = request("GET", f"{es}/_ilm/policy/{name}")
+    phases = resp.get(name, {}).get("policy", {}).get("phases", {})
+    delete = phases.get("delete", {})
+    if delete.get("min_age") != f"{retention_days}d" or "delete" not in delete.get("actions", {}):
+        raise EsError(f"Policy '{name}' zurueckgelesen, aber Delete-Phase fehlt/falsch: {phases}")
+
+
+def verify_template(es, name, policy_name):
+    """Template zuruecklesen: index.lifecycle.name muss auf der Policy stehen."""
+    resp = request("GET", f"{es}/_index_template/{name}")
+    entries = resp.get("index_templates", [])
+    settings = (entries[0].get("index_template", {}).get("template", {}).get("settings", {})
+                if entries else {})
+    if _linked_policy(settings) != policy_name:
+        raise EsError(f"Template '{name}' zurueckgelesen, aber index.lifecycle.name != '{policy_name}'")
+
+
+def verify_stream(es, stream, policy_name):
+    """Stream-Settings zuruecklesen: ALLE Backing-Indices muessen die Policy tragen."""
+    resp = request("GET", f"{es}/{stream}/_settings")
+    bad = [idx for idx, data in resp.items()
+           if _linked_policy(data.get("settings", {})) != policy_name]
+    if bad:
+        raise EsError(f"Data-Stream '{stream}': Backing-Indices ohne Policy: {bad}")
 
 
 def policy_body(retention_days, rollover_age, rollover_size):
@@ -109,54 +159,64 @@ def main():
         return 2
 
     es = args.es_url.rstrip("/")
-    status, _ = request("GET", es)
-    if status != 200:
-        print(f"Elasticsearch unter {es} nicht erreichbar (HTTP {status})", file=sys.stderr)
+    try:
+        request("GET", es)
+    except EsError as e:
+        print(f"Elasticsearch unter {es} nicht erreichbar: {e}", file=sys.stderr)
         return 1
 
     failures = 0
 
-    # 1) Policy anlegen/aktualisieren
+    # 1) Policy anlegen/aktualisieren — Erfolg erst nach Zuruecklesen der Delete-Phase.
     body = policy_body(args.retention_days, args.rollover_age, args.rollover_size)
     if args.dry_run:
         print(f"[dry-run] PUT _ilm/policy/{args.policy_name} "
               f"(delete nach {args.retention_days}d, Rollover {args.rollover_age}/{args.rollover_size})")
     else:
-        status, resp = request("PUT", f"{es}/_ilm/policy/{args.policy_name}", body)
-        if status == 200:
-            print(f"Policy '{args.policy_name}': delete nach {args.retention_days}d gesetzt.")
-        else:
-            print(f"Policy '{args.policy_name}' FEHLER (HTTP {status}): {resp}", file=sys.stderr)
+        try:
+            request("PUT", f"{es}/_ilm/policy/{args.policy_name}", body)
+            verify_policy(es, args.policy_name, args.retention_days)
+            print(f"Policy '{args.policy_name}': delete nach {args.retention_days}d gesetzt (zurueckgelesen).")
+        except EsError as e:
+            print(f"Policy '{args.policy_name}' FEHLER: {e}", file=sys.stderr)
             failures += 1
 
-    # 2) Index-Templates des Sinks in place patchen (gilt fuer kuenftige Backing-Indices)
-    status, resp = request("GET", f"{es}/_index_template")
-    templates = resp.get("index_templates", []) if status == 200 else []
-    for entry in templates:
+    # 2) Index-Templates des Sinks in place patchen (gilt fuer kuenftige Backing-Indices).
+    # Die Liste MUSS lesbar sein: ein verschluckter Fehlstatus saehe hier aus wie
+    # "nichts zu tun" und das Skript meldete Erfolg ohne Wirkung.
+    try:
+        resp = request("GET", f"{es}/_index_template")
+    except EsError as e:
+        print(f"Index-Templates nicht lesbar: {e}", file=sys.stderr)
+        return 1
+    for entry in resp.get("index_templates", []):
         name = entry.get("name", "")
         if not TEMPLATE_PATTERN.match(name):
             continue
         tpl = entry["index_template"]
         settings = tpl.setdefault("template", {}).setdefault("settings", {})
-        current = settings.get("index", {}).get("lifecycle", {}).get("name") \
-            or settings.get("index.lifecycle.name")
-        if current == args.policy_name:
+        if _linked_policy(settings) == args.policy_name:
             print(f"Template '{name}': bereits verknuepft.")
             continue
         settings.setdefault("index", {}).setdefault("lifecycle", {})["name"] = args.policy_name
         if args.dry_run:
             print(f"[dry-run] PUT _index_template/{name} (+ index.lifecycle.name)")
             continue
-        status, resp = request("PUT", f"{es}/_index_template/{name}", tpl)
-        if status == 200:
-            print(f"Template '{name}': verknuepft.")
-        else:
-            print(f"Template '{name}' FEHLER (HTTP {status}): {resp}", file=sys.stderr)
+        try:
+            request("PUT", f"{es}/_index_template/{name}", tpl)
+            verify_template(es, name, args.policy_name)
+            print(f"Template '{name}': verknuepft (zurueckgelesen).")
+        except EsError as e:
+            print(f"Template '{name}' FEHLER: {e}", file=sys.stderr)
             failures += 1
 
     # 3) Bestehende Data-Streams (= ihre aktuellen Backing-Indices) nachziehen
-    status, resp = request("GET", f"{es}/_data_stream")
-    streams = [s["name"] for s in resp.get("data_streams", [])] if status == 200 else []
+    try:
+        resp = request("GET", f"{es}/_data_stream")
+    except EsError as e:
+        print(f"Data-Streams nicht lesbar: {e}", file=sys.stderr)
+        return 1
+    streams = [s["name"] for s in resp.get("data_streams", [])]
     matched = [s for s in streams if STREAM_PATTERN.match(s)]
     if not matched:
         print("Keine passenden Log-Data-Streams gefunden (noch keine Logs geschrieben?).")
@@ -164,12 +224,13 @@ def main():
         if args.dry_run:
             print(f"[dry-run] PUT {stream}/_settings (index.lifecycle.name={args.policy_name})")
             continue
-        status, resp = request("PUT", f"{es}/{stream}/_settings",
-                               {"index.lifecycle.name": args.policy_name})
-        if status == 200:
-            print(f"Data-Stream '{stream}': Policy gesetzt.")
-        else:
-            print(f"Data-Stream '{stream}' FEHLER (HTTP {status}): {resp}", file=sys.stderr)
+        try:
+            request("PUT", f"{es}/{stream}/_settings",
+                    {"index.lifecycle.name": args.policy_name})
+            verify_stream(es, stream, args.policy_name)
+            print(f"Data-Stream '{stream}': Policy gesetzt (zurueckgelesen).")
+        except EsError as e:
+            print(f"Data-Stream '{stream}' FEHLER: {e}", file=sys.stderr)
             failures += 1
 
     print(f"Fertig ({'dry-run, ' if args.dry_run else ''}Fehler: {failures}).")

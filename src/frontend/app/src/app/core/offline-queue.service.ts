@@ -1,5 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
+import { SnackbarService } from './snackbar.service';
 
 /** Ein aufgeschobener (offline fehlgeschlagener) schreibender Request. */
 interface PendingRequest {
@@ -24,6 +26,18 @@ export const OFFLINE_QUEUE_KEY = 'rookhub_offline_queue';
 export const OFFLINE_QUEUE_THROTTLE_MS = 300;
 
 /**
+ * Harte Obergrenze der Queue. Begründung: jeder enqueue schreibt die GANZE Queue neu in den
+ * (auf wenige MB gedeckelten) localStorage — unbegrenztes Wachstum macht jedes weitere
+ * Vormerken teurer und frisst den Platz der Offline-Caches. 200 Einträge sind deutlich mehr
+ * als eine realistische Offline-Session (ein Eintrag je gelöstem Puzzle). Läuft die Queue
+ * dennoch voll, werden NEUE Einträge abgewiesen statt die ältesten still zu verdrängen:
+ * Verdrängen wäre exakt der stille Verlust, den die Queue verhindern soll — beim Abweisen
+ * weiß der Nutzer nach der (einmaligen) Warnung, dass ab jetzt nichts mehr gemerkt wird,
+ * während beim Verdrängen längst gemerkte Lösungen unbemerkt verschwänden.
+ */
+export const OFFLINE_QUEUE_MAX = 200;
+
+/**
  * Merkt sich schreibende Requests (Lösungs-/Versuchs-Aufzeichnungen), die offline nicht
  * rausgehen konnten, im localStorage und spielt sie bei Reconnect (window 'online' bzw.
  * App-Start) erneut über den HttpClient ein. Idempotent gegenüber Mehrfach-Flush: ein Eintrag
@@ -37,7 +51,8 @@ export class OfflineQueueService {
   private flushing = false;
   private seq = 0;
 
-  constructor(private http: HttpClient, private zone: NgZone) {
+  constructor(private http: HttpClient, private zone: NgZone,
+              private snackbar: SnackbarService, private translate: TranslateService) {
     window.addEventListener('online', () => this.zone.run(() => this.flush()));
     // App-Start: falls online, gleich versuchen (kurz verzögert, damit Auth/Token steht).
     if (typeof navigator !== 'undefined' && navigator.onLine) {
@@ -46,11 +61,26 @@ export class OfflineQueueService {
   }
 
   /** Einen Request für später vormerken (wenn offline / Netzwerkfehler). Wird mit der aktuellen
-   *  User-Id gestempelt, damit er beim Reconnect nur unter DEMSELBEN Konto rausgeht. */
-  enqueue(method: 'POST' | 'PUT', url: string, body: unknown): void {
+   *  User-Id gestempelt, damit er beim Reconnect nur unter DEMSELBEN Konto rausgeht.
+   *  Liefert `false`, wenn NICHTS gemerkt wurde (Queue voll / Speicher wirft) — der Verlust wird
+   *  dann EINMAL sichtbar gemeldet statt still verschluckt (siehe {@link OFFLINE_QUEUE_MAX}). */
+  enqueue(method: 'POST' | 'PUT', url: string, body: unknown): boolean {
     const q = this.read();
+    if (q.length >= OFFLINE_QUEUE_MAX) { this.warnLossOnce(); return false; }
     q.push({ id: this.newId(), method, url, body, ts: Date.now(), userId: this.currentUserId() });
-    this.write(q);
+    if (!this.write(q)) { this.warnLossOnce(); return false; }
+    return true;
+  }
+
+  /** Schon einmal sichtbar vor Verlust gewarnt (einmal je App-Lauf reicht — sonst nervt die
+   *  Snackbar bei jeder weiteren Lösung, ohne neue Information zu liefern)? */
+  private lossWarned = false;
+
+  /** EINMALIGE sichtbare Warnung: neue Offline-Ergebnisse werden nicht mehr gemerkt. */
+  private warnLossOnce(): void {
+    if (this.lossWarned) return;
+    this.lossWarned = true;
+    this.snackbar.warn(this.translate.instant('app.offlineQueueFull'));
   }
 
   /** Aktuelle Login-User-Id aus dem gespeicherten Auth-State (ohne AuthService-Abhängigkeit, um
@@ -153,8 +183,11 @@ export class OfflineQueueService {
     } catch { return []; }
   }
 
-  private write(q: PendingRequest[]): void {
-    try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); } catch { /* Quota */ }
+  /** Queue schreiben; `false` = nichts geschrieben (Quota/Privatmodus) — der Aufrufer entscheidet,
+   *  ob das ein stiller Zustand (remove nach Erfolg) oder ein meldepflichtiger Verlust (enqueue) ist. */
+  private write(q: PendingRequest[]): boolean {
+    try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); return true; }
+    catch { return false; /* Quota */ }
   }
 
   private remove(id: string): void {

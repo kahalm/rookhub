@@ -20,6 +20,15 @@ ES_URL=http://localhost:9200 python3 scripts/es_log_retention.py
 Nur Standardbibliothek, idempotent, Default-Ziel `http://localhost:9200` (auf dem
 Deploy-Host — von außen ist :9200 je nach Firewall dicht).
 
+**Erfolg heißt zurückgelesen**: jede ES-Antwort außerhalb 2xx bricht den
+jeweiligen Schritt ab (auch die Listen-GETs — früher wurde deren Fehlstatus
+verschluckt und das Skript meldete Erfolg ohne Wirkung), und nach jedem PUT wird
+der Zustand per GET verifiziert (Policy trägt die Delete-Phase, Template und
+alle Backing-Indices tragen `index.lifecycle.name`). Erst dann erscheint
+`… (zurückgelesen)`; jeder Fehlschlag führt zu **Exit-Code != 0** — im
+cron-/Timer-Betrieb also prüfbar. Tests (gegen ein Fake-`urlopen`, kein ES
+nötig): `python3 scripts/tests/test_es_log_retention.py`.
+
 Erfasst werden alle Data-Streams `<dienst>-logs-generic-default` (rookhub,
 crawler, piratechess — je prod und dev) samt der zugehörigen Sink-Templates
 `<dienst>-logs-generic-<ecs-version>`.

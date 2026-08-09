@@ -927,27 +927,41 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // statt erst nach dem kompletten (mehrere MB großen) Download.
     const bookId = this.courseBookId;
     const acc: BookPuzzleDto[] = [];
+    // Cache-Schreiben ist teuer (JSON.stringify über den GANZEN bisherigen Stand): nach JEDER
+    // Seite geschrieben wüchse der Aufwand quadratisch (300+600+…+3000 statt 3000 serialisierte
+    // Puzzles — mehrere MB Main-Thread-Blockade auf Mobilgeräten). Deshalb wird nur EINMAL nach
+    // der ersten Seite geschrieben (sofort spielbar — loadCourseOffline liest aus dem Cache) und
+    // dann erst wieder am ENDE der Kette (letzte Seite bzw. Fehler einer Folgeseite, damit das
+    // bereits Geladene auch einen Reload übersteht).
+    const flushCache = (): boolean => {
+      const fileName = acc[0]?.bookFileName;
+      return fileName ? saveBookOffline(fileName, acc, bookId) : false;
+    };
     const fetchPage = (skip: number, first: boolean): void => {
       this.courseService.getPublicCourse(bookId, skip, ANON_COURSE_PAGE_SIZE).subscribe({
         next: page => {
           if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
-          if (page?.length) {
-            acc.push(...page);
-            const fileName = acc[0]?.bookFileName;
-            if (fileName) saveBookOffline(fileName, acc, bookId);   // wachsender Cache
-          }
+          if (page?.length) acc.push(...page);
+          // Volle Seite → es gibt vermutlich mehr; sonst ist die Kette hier zu Ende.
+          const hasMore = !!page && page.length === ANON_COURSE_PAGE_SIZE;
+          if (first || !hasMore) flushCache();
           if (first) {
-            if (acc.length) { this.loadCourseOffline(after, exclude, hadPuzzle); }
-            else { this.showCourseUnavailable(); return; }
+            // Cache-Schreiben kann fehlschlagen (Quota/Privatmodus) — der anonyme Kurs wird NUR
+            // aus dem Cache bedient: dann ehrlich „nicht verfügbar" statt endlosem Spinner.
+            if (!acc.length || !this.loadCourseOffline(after, exclude, hadPuzzle)) {
+              this.showCourseUnavailable();
+              return;
+            }
           }
-          // Volle Seite → es gibt vermutlich mehr: nächste Seite im Hintergrund.
-          if (page && page.length === ANON_COURSE_PAGE_SIZE) fetchPage(skip + ANON_COURSE_PAGE_SIZE, false);
+          if (hasMore) fetchPage(skip + ANON_COURSE_PAGE_SIZE, false);
         },
         error: () => {
           if (this.courseBookId !== bookId) return;
           // Nur wenn schon die erste Seite scheitert (nichts geladen) → „nicht verfügbar".
-          // Ein Fehler bei einer Folgeseite lässt das bereits Geladene spielbar.
-          if (first && !acc.length) this.showCourseUnavailable();
+          // Ein Fehler bei einer Folgeseite lässt das bereits Geladene spielbar — dazu den
+          // aufgelaufenen Stand festschreiben (die Zwischenseiten werden nicht mehr geschrieben).
+          if (first && !acc.length) { this.showCourseUnavailable(); return; }
+          flushCache();
         },
       });
     };

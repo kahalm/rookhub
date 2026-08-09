@@ -1,14 +1,24 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { OfflineQueueService, OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_THROTTLE_MS } from './offline-queue.service';
+import { TranslateService } from '@ngx-translate/core';
+import { OfflineQueueService, OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_THROTTLE_MS, OFFLINE_QUEUE_MAX } from './offline-queue.service';
+import { SnackbarService } from './snackbar.service';
 
 describe('OfflineQueueService', () => {
   let svc: OfflineQueueService;
   let http: HttpTestingController;
+  let warn: jasmine.Spy;
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
+    warn = jasmine.createSpy('warn');
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        { provide: SnackbarService, useValue: { warn } },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+      ],
+    });
     svc = TestBed.inject(OfflineQueueService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -139,6 +149,37 @@ describe('OfflineQueueService', () => {
     login(7); svc.flush();                            // User 7 kommt zurück
     http.expectOne('/api/puzzles/5/attempt').flush({});
     expect(svc.pendingCount()).toBe(0);
+  });
+
+  // Deckel + ehrlicher Verlust: die Queue wächst nicht unbegrenzt, neue Einträge werden bei
+  // voller Queue ABGEWIESEN (nicht ältere still verdrängt), und der Nutzer wird EINMAL sichtbar
+  // gewarnt statt Lösungen spurlos zu verlieren.
+  it('deckelt die Queue bei OFFLINE_QUEUE_MAX und weist neue Einträge ehrlich ab', () => {
+    for (let i = 0; i < OFFLINE_QUEUE_MAX; i++) {
+      expect(svc.enqueue('POST', `/api/puzzles/${i}/attempt`, { solved: true })).toBeTrue();
+    }
+    expect(warn).not.toHaveBeenCalled();
+
+    expect(svc.enqueue('POST', '/api/puzzles/x/attempt', { solved: true })).toBeFalse();
+    expect(svc.pendingCount()).toBe(OFFLINE_QUEUE_MAX);
+    const q = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)!);
+    expect(q[0].url).toBe('/api/puzzles/0/attempt');   // ältester Eintrag NICHT verdrängt
+    expect(q.some((r: { url: string }) => r.url === '/api/puzzles/x/attempt')).toBeFalse();
+  });
+
+  it('warnt bei voller Queue genau EINMAL sichtbar (Snackbar)', () => {
+    for (let i = 0; i < OFFLINE_QUEUE_MAX; i++) svc.enqueue('POST', `/api/p/${i}`, {});
+    svc.enqueue('POST', '/api/over/1', {});
+    svc.enqueue('POST', '/api/over/2', {});
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.calls.first().args[0]).toBe('app.offlineQueueFull');
+  });
+
+  it('meldet auch einen werfenden Speicher (Quota) einmal sichtbar statt still zu verlieren', () => {
+    spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
+    expect(svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true })).toBeFalse();
+    svc.enqueue('POST', '/api/puzzles/6/attempt', { solved: true });
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   afterEach(() => http.verify());

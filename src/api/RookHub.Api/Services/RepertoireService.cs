@@ -329,6 +329,12 @@ public class RepertoireService
             s.RepertoireId == repertoireId && s.OwnerId == userId && s.RecipientId == recipientId);
         if (share == null) return;
         _db.RepertoireShares.Remove(share);
+        // Öffentliche Linien-Links (/l/{token}), die DIESER Empfänger aus dem Repertoire angelegt hat,
+        // mit dem Widerruf entfernen — der Snapshot würde sonst die Freigabe überleben und den Inhalt
+        // dauerhaft öffentlich lassen. (Neu-Anlegen können Empfänger seit dem Owner-only-Umbau in
+        // SharedLineService.CreateAsync ohnehin nicht mehr; das hier räumt den Altbestand ab.)
+        _db.SharedLines.RemoveRange(_db.SharedLines.Where(l =>
+            l.RepertoireId == repertoireId && l.OwnerUserId == recipientId));
         await _db.SaveChangesAsync();
         // Empfänger verliert Zugriff → Stellungssuche-Cache verwerfen, damit das Repertoire verschwindet.
         _positionLookup?.Invalidate(recipientId);

@@ -1,7 +1,7 @@
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
-import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
+import { applyUci, tryFreeMove, tryLoadFen, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearVisualizationHide, ThemeMode } from './board-theme.util';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { formatPuzzleTime } from './puzzle-format.util';
@@ -793,6 +793,33 @@ export abstract class BasePuzzleSolver {
   protected enterSolutionReview(): void {
     this.reviewMode = true;
     this.reviewIndex = this.reviewTotal;
+  }
+
+  /**
+   * Gemeinsamer Review-Aufbau (Lösungs-Durchsicht): Brett auf `index` gespielte Halbzüge ab
+   * `fen` setzen. Von allen drei Solvern (Standard/Endless/Buch) genutzt — der Rumpf war 3×
+   * kopiert, 2× davon OHNE FEN-Guard: `new Chess(fen)` wirft bei nicht ladbaren FENs mitten im
+   * Render-Pfad und reißt die halbe Seite mit (die Fehlerklasse aus 0.316.3/0.317.2).
+   * Liefert `false`, wenn die FEN nicht ladbar ist (der Aufrufer rendert dann statisch bzw.
+   * lässt das Brett stehen); `reviewIndex` ist dann bereits geklemmt gesetzt.
+   */
+  protected reviewGoToCore(fen: string, moves: string[], index: number): boolean {
+    index = Math.max(0, Math.min(index, moves.length));
+    this.reviewIndex = index;
+    const chess = tryLoadFen(fen);
+    if (!chess) return false;
+    this.chess = chess;
+    let last: [Key, Key] | undefined;
+    for (let i = 0; i < index; i++) {
+      applyUci(this.chess, moves[i]);
+      last = [moves[i].substring(0, 2) as Key, moves[i].substring(2, 4) as Key];
+    }
+    this.lastMove = last;
+    this.boardFen = this.chess.fen();
+    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
+    this.isCheck = this.chess.isCheck();
+    this.dests = new Map();
+    return true;
   }
 
   /** Aufgeben: Lösung ab dem ersten Zug automatisch durchspielen (alle Modi identisch). */

@@ -27,7 +27,7 @@ import {
   exitFullscreen, isFullscreen, onFullscreenChange,
 } from './shared/fullscreen/fullscreen.util';
 import { environment } from '../environments/environment';
-import { APK_VERSION } from '../environments/changelog';
+import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
 
 @Component({
   selector: 'app-root',
@@ -78,7 +78,7 @@ import { APK_VERSION } from '../environments/changelog';
         <button class="imp-exit" (click)="exitImpersonation()">{{ 'app.impersonation.exit' | translate }}</button>
       </div>
     }
-    <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
+    <app-navbar (changelogClick)="openChangelog()" (quickstartClick)="showQuickstart = true" />
     @if (appFullscreen) {
       <!-- Im App-Vollbild sind Navbar + Fußzeile ausgeblendet (maximaler Platz fürs Brett) —
            dieser schwebende Knopf ist neben Esc der Weg zurück. -->
@@ -92,8 +92,8 @@ import { APK_VERSION } from '../environments/changelog';
     <footer class="app-footer">
       <span class="version-link" role="button" tabindex="0"
             [attr.aria-label]="'app.changelogTitle' | translate"
-            (click)="showChangelog = !showChangelog"
-            (keydown.enter)="showChangelog = !showChangelog" (keydown.space)="$event.preventDefault(); showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+            (click)="toggleChangelog()"
+            (keydown.enter)="toggleChangelog()" (keydown.space)="$event.preventDefault(); toggleChangelog()">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
       <span class="footer-sep">·</span>
       <a class="feedback-link" routerLink="/help">{{ 'nav.help' | translate }}</a>
       <span class="footer-sep">·</span>
@@ -256,7 +256,10 @@ import { APK_VERSION } from '../environments/changelog';
 export class AppComponent implements OnInit {
   version = environment.version;
   production = environment.production;
-  changelog = environment.changelog;
+  /** Changelog-Eintraege — LEER bis zum ersten Oeffnen des Overlays: das Array (~0,9 MB Prosa,
+   *  changelog-data.ts) wird bewusst per dynamic import() nachgeladen statt eager gebundelt,
+   *  sonst laege die komplette Versionshistorie im Initial-Bundle (groesster Perf-Hebel). */
+  changelog: ChangelogEntry[] = [];
   /** Einladungslink zum öffentlichen RookHub-Discord (Community) — prominent in der Fußzeile. */
   readonly discordUrl = DISCORD_INVITE_URL;
   showChangelog = false;
@@ -269,6 +272,34 @@ export class AppComponent implements OnInit {
   /** Escape schließt das offene Overlay (Changelog/Quickstart) — Tastatur-Bedienbarkeit. */
   @HostListener('document:keydown.escape')
   onEscape(): void { this.showChangelog = false; this.showQuickstart = false; }
+
+  /** Laufender Changelog-Nachlade-Vorgang — Feld, damit Tests den async-Ablauf awaiten können. */
+  changelogLoad?: Promise<void>;
+
+  /** Overlay öffnen (Navbar-Menü) — lädt die Einträge beim ersten Öffnen nach. */
+  openChangelog(): void {
+    this.showChangelog = true;
+    this.changelogLoad = this.loadChangelog();
+  }
+
+  /** Overlay per Footer-Versionslink auf-/zuklappen. */
+  toggleChangelog(): void {
+    this.showChangelog = !this.showChangelog;
+    if (this.showChangelog) this.changelogLoad = this.loadChangelog();
+  }
+
+  /**
+   * Changelog-Daten lazy laden: erst beim Öffnen des Overlays, genau einmal. Fehlschlag
+   * (offline ohne SW-Cache / Chunk nach Deploy weg) bleibt still — das Overlay zeigt dann nur
+   * den Kopf, der nächste Öffnen-Versuch lädt erneut (kein „loaded"-Flag bei Fehler).
+   */
+  private async loadChangelog(): Promise<void> {
+    if (this.changelog.length > 0) return;
+    try {
+      const m = await import('../environments/changelog-data');
+      this.changelog = m.CHANGELOG;
+    } catch { /* naechstes Oeffnen versucht es erneut */ }
+  }
 
   private dlHandled = false;
 

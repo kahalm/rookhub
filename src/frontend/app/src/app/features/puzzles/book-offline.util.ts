@@ -17,15 +17,22 @@ function saveIdMap(m: Record<string, string>): void {
   try { localStorage.setItem(BOOK_ID_MAP_KEY, JSON.stringify(m)); } catch { /* ignore */ }
 }
 
-export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], bookId?: number): void {
-  if (!fileName) return;
+/**
+ * Buch offline speichern. Liefert `false`, wenn NICHTS geschrieben wurde (Quota voll /
+ * Privatmodus) — gleiche Linie wie `writeCalcLocal*`: der Aufrufer darf dann keinen Erfolg
+ * melden, sonst glaubt der User an eine Offline-Kopie, die nicht existiert (und das
+ * ☁-Häkchen spraenge nach dem Reload zurueck, weil `cachedBookFileNames()` sie nicht findet).
+ */
+export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], bookId?: number): boolean {
+  if (!fileName) return false;
   try { localStorage.setItem(bookKey(fileName), JSON.stringify(puzzles ?? [])); }
-  catch { return; /* Quota → gar nicht erst in den Index aufnehmen */ }
+  catch { return false; /* Quota → gar nicht erst in den Index aufnehmen */ }
   if (bookId != null) {
     const m = loadIdMap();
     m[String(bookId)] = fileName;
     saveIdMap(m);
   }
+  return true;
 }
 
 /** Offline gespeichertes Buch über die (Kurs-)bookId auflösen. Null, wenn nicht gespeichert. */

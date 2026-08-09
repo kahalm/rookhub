@@ -40,8 +40,13 @@ Eigenschaften, die beim Selbstbau gern fehlen und hier drin sind:
   Geprüft werden Exit-Status (`pipefail`), `gzip -t` und eine Mindestgröße.
 - **Rotation läuft nur nach einem sauberen Durchlauf** — ein kaputter Lauf darf
   die letzten funktionierenden Backups nicht mit wegräumen.
-- Passwort per `MYSQL_PWD`, nicht als `-p`-Argument (sonst steht es in der
-  Prozessliste).
+- **Passwort per `--defaults-extra-file`**, nicht als `-p`-Argument (Prozessliste)
+  und nicht als Umgebungsvariable (`MYSQL_PWD` wäre auf dem Host via
+  `/proc/<pid>/environ` bzw. `ps e` einsehbar): das Skript schreibt eine
+  `mktemp`-Datei (`chmod 600`) mit `[client]`-Sektion, kopiert sie per `docker cp`
+  in den Container und räumt beide Kopien per `trap` wieder weg — auch bei Abbruch.
+- Test dazu: `scripts/tests/test_backup_db.sh` (läuft gegen ein Fake-`docker`,
+  kein Container nötig).
 
 ## Einrichtung (Zeitplan)
 
@@ -71,8 +76,10 @@ auf ein anderes System spiegeln (rsync/restic/Cloud-Bucket).
 2. Dump einspielen (Beispiel `rookhub`):
 
    ```bash
+   # -e MYSQL_PWD OHNE Wert: die Variable kommt aus der Shell-Umgebung — mit
+   # Wert stünde das Passwort in der docker-Kommandozeile (Host-Prozessliste).
    gunzip -c /var/backups/rookhub/rookhub-20260807-031700.sql.gz \
-     | docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" \
+     | MYSQL_PWD="$MARIADB_ROOT_PASSWORD" docker exec -i -e MYSQL_PWD \
          rookhub-mariadb mariadb -u root --default-character-set=utf8mb4 rookhub
    ```
 
@@ -96,12 +103,12 @@ auf ein anderes System spiegeln (rsync/restic/Cloud-Bucket).
    kein Backup:
 
    ```bash
-   docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" rookhub-mariadb \
+   MYSQL_PWD="$MARIADB_ROOT_PASSWORD" docker exec -i -e MYSQL_PWD rookhub-mariadb \
      mariadb -u root -e "CREATE DATABASE restore_test"
    # CREATE DATABASE/USE aus dem Dump entfernen, sonst landet er wieder in der
    # Original-Datenbank statt in restore_test.
    gunzip -c <dump>.sql.gz | sed -e '/^CREATE DATABASE/d' -e '/^USE /d' \
-     | docker exec -i -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" rookhub-mariadb \
+     | MYSQL_PWD="$MARIADB_ROOT_PASSWORD" docker exec -i -e MYSQL_PWD rookhub-mariadb \
          mariadb -u root restore_test
    ```
 

@@ -168,6 +168,20 @@ Default-Browser ist `ChromeHeadlessNoSandbox` (`--no-sandbox --disable-gpu --dis
 - Ist keine Cache-Shell da: `npx puppeteer browsers install chrome-headless-shell` (lädt nach `~/.cache/puppeteer`, kein root).
 - Lokal mit installiertem Chrome: einfach `CHROME_BIN` setzen oder `--browsers=Chrome` übergeben.
 
+## Fehlerbehandlung (wann `error: () => {}` legitim ist)
+
+Der Bestand enthält ~80 bewusst stille Fehler-Handler. Die Grenze:
+
+- **Still ist OK** bei Hintergrund-Feeds, deren Ausfall der Nutzer nicht bemerken soll und die sich
+  selbst heilen: Poll-Zyklen (Badges, Glocke, CI-Status), Vorab-Laden von Offline-Pools,
+  fire-and-forget-Meldungen (Track-Solves, Revenge-Result). Nächster Poll/Retry kommt ohnehin.
+- **Still ist NICHT OK**, wenn der Nutzer gerade eine Aktion ausgeführt hat (Speichern, Senden,
+  Löschen, Download) oder wenn Daten verloren gehen könnten — dann Snackbar mit konkreter Aussage
+  (`saveFailed`-Muster) und, wo sinnvoll, die Änderung als „offen" behalten statt sie zu verwerfen.
+- Offline-Schreibwege melden Fehlschläge IMMER (writeCalcLocal*/saveBookOffline/Offline-Queue geben
+  null/false zurück und die Aufrufer zeigen es an) — ein vorgetäuschtes „gespeichert" ist der
+  teuerste Fehler dieser Kategorie.
+
 ## Build-Konfiguration
 
 - Budget: 1.5MB warning / 2MB error (initial bundle; angehoben, da der Single-Source-Changelog stetig wächst)

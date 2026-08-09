@@ -265,3 +265,37 @@ describe('CourseListComponent offline fallback', () => {
     expect(info).toHaveBeenCalled();
   });
 });
+
+// Offline-Speichern über die ☁-Aktion: ein fehlgeschlagener Cache-Schreibvorgang (Quota voll,
+// Privatmodus) darf NICHT als Erfolg gemeldet werden — sonst glaubt der User an eine Offline-
+// Kopie, die es nicht gibt (und das Häkchen spränge nach dem Reload zurück).
+describe('CourseListComponent Offline-Speichern (ehrliche Fehlermeldung)', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  function makeComp(): { comp: CourseListComponent; info: jasmine.Spy } {
+    const svc: any = { getBookPuzzles: () => of([{ id: 1, bookFileName: 'b.pgn' }]) };
+    const info = jasmine.createSpy('info');
+    const comp = new CourseListComponent(
+      svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any);
+    return { comp, info };
+  }
+  const course = { bookId: 7, fileName: 'b.pgn', displayName: 'B' } as CourseListItem;
+
+  it('meldet Erfolg und merkt die Datei, wenn der Cache geschrieben wurde', () => {
+    const { comp, info } = makeComp();
+    comp.toggleOffline(course);
+    expect(comp.isOffline(course)).toBeTrue();
+    expect(comp.savingOffline).toBeNull();
+    expect(info.calls.mostRecent().args[0]).toBe('courses.offlineSaved');
+  });
+
+  it('meldet EHRLICH einen Fehler, wenn der Cache nicht geschrieben werden konnte (Quota)', () => {
+    const { comp, info } = makeComp();
+    spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
+    comp.toggleOffline(course);
+    expect(comp.isOffline(course)).toBeFalse();      // kein vorgetäuschtes ☁-Häkchen
+    expect(comp.savingOffline).toBeNull();
+    expect(info.calls.mostRecent().args[0]).toBe('courses.offlineFailed');
+  });
+});

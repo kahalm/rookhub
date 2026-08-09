@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-# RookHub — Datenbank-Backup (rookhub + chessresults)
+# RookHub — Datenbank-Backup (rookhub + chessresults + piratechess)
 #
 # Legt je Datenbank einen gzip-komprimierten mariadb-dump ab und raeumt alte
 # Dumps nach RETENTION_DAYS weg. Laeuft auf dem Deploy-Host gegen den laufenden
@@ -74,6 +74,25 @@ docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null | grep -q tru
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 
+# Passwort weder als Argument (-p<pass>: Prozessliste) noch als Umgebungsvariable
+# (MYSQL_PWD: auf dem Host via /proc/<pid>/environ bzw. `ps e` einsehbar) uebergeben.
+# Stattdessen eine defaults-extra-Datei (chmod 600, nur root/Owner lesbar) in den
+# Container kopieren und mariadb-dump per --defaults-extra-file darauf zeigen lassen.
+# trap raeumt beide Kopien auch bei Abbruch wieder weg.
+defaults_file="$(mktemp)"
+chmod 600 "$defaults_file"
+container_cnf="/tmp/.rookhub-backup-$$.cnf"
+cleanup() {
+  rm -f "$defaults_file"
+  docker exec "$DB_CONTAINER" rm -f "$container_cnf" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+# my.cnf-Quoting: Backslash und doppelte Anfuehrungszeichen im Passwort escapen,
+# sonst bricht ein Sonderzeichen-Passwort die Datei.
+esc_pw="$(printf '%s' "$MARIADB_ROOT_PASSWORD" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+printf '[client]\npassword="%s"\n' "$esc_pw" > "$defaults_file"
+docker cp "$defaults_file" "$DB_CONTAINER:$container_cnf" >/dev/null
+
 stamp="$(date '+%Y%m%d-%H%M%S')"
 failed=0
 
@@ -82,14 +101,10 @@ for db in $DATABASES; do
   tmp="$target.part"
   log "Dumpe '$db' -> $target"
 
-  # MYSQL_PWD statt -p<pass>: sonst steht das Passwort in der Prozessliste des
-  # Containers. WICHTIG: `-e MYSQL_PWD` OHNE Wert — die Variable wird aus der
-  # Umgebung dieses Skripts uebernommen. Mit `-e MYSQL_PWD="$..."` stuende das
-  # Passwort in der Kommandozeile des `docker exec` und damit in der Prozessliste
-  # des HOSTS (nur die des Containers waere geschuetzt).
+  # --defaults-extra-file MUSS das erste Argument sein (mariadb-Client-Konvention).
   # --single-transaction haelt InnoDB konsistent ohne Table-Locks.
-  if MYSQL_PWD="$MARIADB_ROOT_PASSWORD" docker exec -i -e MYSQL_PWD "$DB_CONTAINER" \
-      mariadb-dump -u root \
+  if docker exec -i "$DB_CONTAINER" \
+      mariadb-dump --defaults-extra-file="$container_cnf" -u root \
         --single-transaction --quick --routines --events --triggers \
         --default-character-set=utf8mb4 --databases "$db" 2>"$tmp.err" \
       | gzip -c > "$tmp"

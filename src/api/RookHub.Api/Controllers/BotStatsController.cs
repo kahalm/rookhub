@@ -62,37 +62,31 @@ public class BotStatsController : ControllerBase
     private const int TimestampToleranceSeconds = 300;
 
     /// <summary>
-    /// Prüft <c>X-Bot-Signature: sha256=&lt;hmac_hex&gt;</c> konstant-zeitig. Replay-Schutz (opt-in,
-    /// rückwärtskompatibel): ist <paramref name="timestamp"/> (Wert des <c>X-Bot-Timestamp</c>-Headers,
-    /// Unix-Sekunden) gesetzt, MUSS er innerhalb ±<see cref="TimestampToleranceSeconds"/> liegen und die
-    /// HMAC wird über <c>"&lt;ts&gt;.&lt;discordId&gt;"</c> gebildet. Fehlt der Header, greift der alte
-    /// Pfad (HMAC nur über die Discord-ID) — damit bricht nichts, solange der Bot den Timestamp noch
-    /// nicht mitschickt. Nutzt dieselbe HMAC-Hex-Berechnung wie der ausgehende Solver-Webhook.
+    /// Prüft <c>X-Bot-Signature: sha256=&lt;hmac_hex&gt;</c> konstant-zeitig. Replay-Schutz ist PFLICHT:
+    /// <paramref name="timestamp"/> (Wert des <c>X-Bot-Timestamp</c>-Headers, Unix-Sekunden) MUSS gesetzt
+    /// sein, innerhalb ±<see cref="TimestampToleranceSeconds"/> liegen und geht in die HMAC über
+    /// <c>"&lt;ts&gt;.&lt;discordId&gt;"</c> ein. Der frühere rückwärtskompatible Zweig (HMAC nur über
+    /// die Discord-ID, unbegrenzt replaybar) ist entfernt — der Bot sendet den Timestamp seit v2.70
+    /// durchgängig. Nutzt dieselbe HMAC-Hex-Berechnung wie der ausgehende Solver-Webhook.
     /// </summary>
     private static bool VerifySignature(string secret, string discordId, string? provided, string? timestamp)
     {
         if (string.IsNullOrEmpty(provided))
             return false;
+        // Ohne Timestamp keine Prüfung mehr — eine alte body-only-Signatur wäre für immer replaybar.
+        if (string.IsNullOrWhiteSpace(timestamp))
+            return false;
         var sig = provided.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase)
             ? provided["sha256=".Length..]
             : provided;
 
-        string signedMessage;
-        if (!string.IsNullOrWhiteSpace(timestamp))
-        {
-            // Timestamp vorhanden → Fenster prüfen + in die HMAC einbeziehen (Replay-Schutz).
-            if (!long.TryParse(timestamp, System.Globalization.NumberStyles.Integer,
-                    System.Globalization.CultureInfo.InvariantCulture, out var ts))
-                return false;
-            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (Math.Abs(now - ts) > TimestampToleranceSeconds)
-                return false;
-            signedMessage = ts.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + discordId;
-        }
-        else
-        {
-            signedMessage = discordId;  // rückwärtskompatibel (alter Bot ohne Timestamp)
-        }
+        if (!long.TryParse(timestamp, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out var ts))
+            return false;
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (Math.Abs(now - ts) > TimestampToleranceSeconds)
+            return false;
+        var signedMessage = ts.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + discordId;
 
         var expected = SchachBotWebhookService.ComputeHmacHex(secret, signedMessage);
         return CryptographicOperations.FixedTimeEquals(

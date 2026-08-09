@@ -18,6 +18,10 @@ namespace RookHub.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/weekly-posts")]
+// Sicherer Default: Klassenweit [Authorize] — die bewusst öffentlichen Lese-Actions tragen explizit
+// [AllowAnonymous]. Ohne Klassen-Attribut wäre jede KÜNFTIGE Action (inkl. der Admin-Absolut-Routen
+// in dieser Klasse) versehentlich anonym erreichbar, sobald jemand das Action-Attribut vergisst.
+[Authorize]
 public class WeeklyPostController : BaseApiController
 {
     private readonly AppDbContext _db;

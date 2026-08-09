@@ -354,9 +354,13 @@ public class CourseService
 
         // Puzzle-Anzahl (ohne Info-/Erklärlinien) je Buch in EINER gruppierten Query — statt einer
         // korrelierten Unterabfrage pro Buch (bei Admins mit hunderten Büchern sonst mehrere Sekunden).
+        // Auf die SICHTBAREN Bücher gefiltert (Where mit IN-Liste VOR dem GroupBy — übersetzungssicher):
+        // ohne den Filter aggregierte jeder Aufruf der Kursliste die KOMPLETTE BookPuzzles-Tabelle,
+        // auch wenn der User nur eine Handvoll Bücher sieht (skaliert mit der Buchzahl, nicht der Userzahl).
+        var bookIds = books.Select(b => b.Id).ToList();
         var puzzleCountByBook = await _db.BookPuzzles
-            .Where(bp => !bp.IsInfoOnly)
-            .GroupBy(bp => bp.BookId)
+            .Where(bp => bp.BookId != null && bookIds.Contains(bp.BookId.Value) && !bp.IsInfoOnly)
+            .GroupBy(bp => bp.BookId!.Value)
             .Select(g => new { BookId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.BookId, x => x.Count);
 

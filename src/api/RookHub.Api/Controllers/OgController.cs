@@ -20,12 +20,14 @@ public class OgController : ControllerBase
     private readonly OgMetaService _meta;
     private readonly OgImageService _images;
     private readonly OgIndexHtmlProvider _index;
+    private readonly IConfiguration _config;
 
-    public OgController(OgMetaService meta, OgImageService images, OgIndexHtmlProvider index)
+    public OgController(OgMetaService meta, OgImageService images, OgIndexHtmlProvider index, IConfiguration config)
     {
         _meta = meta;
         _images = images;
         _index = index;
+        _config = config;
     }
 
     /// <summary>
@@ -65,11 +67,23 @@ public class OgController : ControllerBase
         return File(png, "image/png");
     }
 
-    private string BaseUrl()
+    private string BaseUrl() => ResolveBaseUrl(_config["App:BaseUrl"], Request);
+
+    /// <summary>
+    /// Basis-URL für og:url/og:image: bevorzugt die konfigurierte <c>App:BaseUrl</c> (dieselbe Quelle
+    /// wie die Passwort-Reset-Links) — die Antwort wird mit <c>Cache-Control: public</c> gecacht, ein
+    /// aus dem Host-Header gebauter Wert wäre hinter einem CDN eine Cache-Poisoning-Fläche (Angreifer
+    /// schickt einen fremden Host-Header, der vergiftete og:image-Link landet im Cache für alle).
+    /// Fallback ohne Konfiguration bleibt wie bisher der Request (Dev/Docker ohne .env).
+    /// </summary>
+    internal static string ResolveBaseUrl(string? configuredBaseUrl, HttpRequest request)
     {
-        var proto = Request.Headers["X-Forwarded-Proto"].ToString();
-        if (string.IsNullOrWhiteSpace(proto)) proto = Request.Scheme;
-        var host = Request.Host.HasValue ? Request.Host.Value : "localhost";
+        if (!string.IsNullOrWhiteSpace(configuredBaseUrl))
+            return configuredBaseUrl.TrimEnd('/');
+
+        var proto = request.Headers["X-Forwarded-Proto"].ToString();
+        if (string.IsNullOrWhiteSpace(proto)) proto = request.Scheme;
+        var host = request.Host.HasValue ? request.Host.Value : "localhost";
         return $"{proto}://{host}";
     }
 

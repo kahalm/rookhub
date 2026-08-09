@@ -364,9 +364,15 @@ export class CourseListComponent implements OnInit {
     this.savingOffline = c.bookId;
     this.courseService.getBookPuzzles(c.bookId).subscribe({
       next: puzzles => {
-        saveBookOffline(c.fileName, puzzles, c.bookId);
-        this.offlineFiles.add(c.fileName);
+        // Cache-Schreiben kann fehlschlagen (Quota/Privatmodus) — dann EHRLICH als Fehler melden
+        // statt ein Offline-Häkchen zu zeigen, hinter dem keine Kopie liegt.
+        const saved = saveBookOffline(c.fileName, puzzles, c.bookId);
         this.savingOffline = null;
+        if (!saved) {
+          this.snackbar.info(this.translate.instant('courses.offlineFailed'), { action: 'common.ok', duration: 3000 });
+          return;
+        }
+        this.offlineFiles.add(c.fileName);
         this.snackbar.info(this.translate.instant('courses.offlineSaved', { name: c.displayName, count: puzzles.length }), { action: 'common.ok', duration: 2500 });
       },
       error: () => {

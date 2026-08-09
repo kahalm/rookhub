@@ -227,6 +227,7 @@
     },
     "feedback": "Povratne informacije / Prijavi grešku",
     "updateAvailable": "Dostupna je nova verzija.",
+    "offlineQueueFull": "Izvanmrežna memorija je puna — novi rezultati se više ne mogu spremiti za kasniji prijenos.",
     "reload": "Ponovno učitaj",
     "apkUpdate": {
       "banner": "Dostupna je nova verzija aplikacije – molimo reinstalirajte.",

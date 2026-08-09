@@ -22,10 +22,11 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-// Vom globalen 100-Req/min-pro-IP-Limit ausnehmen: Das Chessable-UI pollt laufende Importe und
-// reiht Kurse oft im Schwung ein — beides erschöpfte sonst das Minutenfenster (429 beim ~16. Add).
-// Endpoints sind ohnehin per [Authorize] geschützt.
-[DisableRateLimiting]
+// Rate-Limiting BEWUSST nicht mehr klassenweit deaktiviert: [DisableRateLimiting] sitzt nur noch auf
+// den Import-Endpunkten (Einreihen im Schwung + Status-Polling erschöpften sonst das 100-Req/min-
+// Fenster, 429 beim ~16. Add). POST /test und GET /courses (insb. ?refresh=true) lösen dagegen einen
+// Live-Fetch zu Chessable über den geteilten VPN-Pool aus — eine Schleife darauf konnte ungebremst
+// die IP verbrennen/Cloudflare-Blocks provozieren; sie unterliegen wieder dem globalen Limiter.
 public class ChessableController : BaseApiController
 {
     private readonly AppDbContext _db;
@@ -234,6 +235,7 @@ public class ChessableController : BaseApiController
     /// das Frontend pollt GET /api/chessable/imports/{id}.
     /// </summary>
     [HttpPost("courses/{bid}/import")]
+    [DisableRateLimiting]   // Kurse werden oft im Schwung eingereiht (kein Chessable-Live-Fetch pro Request)
     public async Task<IActionResult> StartImport(string bid, [FromBody] StartChessableImportRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(bid))
@@ -300,6 +302,7 @@ public class ChessableController : BaseApiController
 
     /// <summary>Status/Fortschritt eines Imports (Polling bis status != "running").</summary>
     [HttpGet("imports/{id:int}")]
+    [DisableRateLimiting]   // Status-Polling bis der Import fertig ist
     public async Task<IActionResult> GetImport(int id)
     {
         var userId = GetUserId();
@@ -310,6 +313,7 @@ public class ChessableController : BaseApiController
 
     /// <summary>Die letzten Importe des Users (Verlauf + laufende/wartende mit globaler Position).</summary>
     [HttpGet("imports")]
+    [DisableRateLimiting]   // Verlaufs-/Positions-Polling der Import-Seite
     public async Task<IActionResult> GetImports()
     {
         var userId = GetUserId();
@@ -333,6 +337,7 @@ public class ChessableController : BaseApiController
 
     /// <summary>Bricht einen eigenen Import ab (wartend oder laufend).</summary>
     [HttpPost("imports/{id:int}/cancel")]
+    [DisableRateLimiting]
     public async Task<IActionResult> CancelImport(int id)
     {
         var import = await OwnImportAsync(id);
@@ -349,6 +354,7 @@ public class ChessableController : BaseApiController
 
     /// <summary>Pausiert einen eigenen, laufenden/wartenden Import.</summary>
     [HttpPost("imports/{id:int}/pause")]
+    [DisableRateLimiting]
     public async Task<IActionResult> PauseImport(int id)
     {
         var import = await OwnImportAsync(id);
@@ -363,6 +369,7 @@ public class ChessableController : BaseApiController
 
     /// <summary>Setzt einen pausierten Import fort (wird wieder eingereiht).</summary>
     [HttpPost("imports/{id:int}/resume")]
+    [DisableRateLimiting]
     public async Task<IActionResult> ResumeImport(int id)
     {
         var import = await OwnImportAsync(id);

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { provideTranslateService } from '@ngx-translate/core';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { EndlessStorageService, EndlessConfig } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
@@ -17,6 +18,7 @@ describe('EndlessStorageService highscore sync', () => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: true } },
       ],
     });
@@ -52,6 +54,7 @@ describe('EndlessStorageService per-identity migration flag', () => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: auth },
       ],
     });
@@ -87,6 +90,7 @@ describe('EndlessStorageService offline pool shares ENDLESS_POOL_KEY with Offlin
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: false } },
       ],
     });
@@ -115,6 +119,7 @@ describe('EndlessStorageService Live-Zeitstand', () => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: false } },
       ],
     });

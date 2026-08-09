@@ -18,7 +18,7 @@ public interface IClaudeJsonClient
     Task<string?> GenerateHintsJsonAsync(string system, string userPrompt, CancellationToken ct = default);
 }
 
-/// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Opus 4.8, structured output).</summary>
+/// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Claude Opus 5, structured output).</summary>
 public class ClaudeJsonClient : IClaudeJsonClient
 {
     private readonly Anthropic.AnthropicClient? _client;
@@ -56,7 +56,10 @@ public class ClaudeJsonClient : IClaudeJsonClient
 
             var parameters = new MessageCreateParams
             {
-                Model = Model.ClaudeOpus4_8,
+                // claude-opus-5: empfohlener Default bei identischem Preis zu Opus 4.8. Die SDK-Version
+                // (12.35.1) kennt noch keine Model.ClaudeOpus5-Konstante → Model-Id als String
+                // (implizite Konvertierung; das SDK reicht die Id unverändert an die API durch).
+                Model = "claude-opus-5",
                 MaxTokens = 4096,
                 System = system,
                 Thinking = new ThinkingConfigAdaptive(),
@@ -64,7 +67,9 @@ public class ClaudeJsonClient : IClaudeJsonClient
                 Messages = [new() { Role = Role.User, Content = userPrompt }],
             };
 
-            var response = await _client.Messages.Create(parameters);
+            // ct durchreichen: sonst läuft die Generierung bei Shutdown/Abbruch (Hintergrund-Queue)
+            // ungebremst weiter, bis die API antwortet.
+            var response = await _client.Messages.Create(parameters, ct);
             if (response.StopReason == "refusal")
             {
                 _logger.LogWarning("Tipp-Generierung abgelehnt (refusal).");

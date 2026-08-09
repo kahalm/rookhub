@@ -1,6 +1,6 @@
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
-import { saveBookOffline } from './book-offline.util';
+import { saveBookOffline, getBookOfflineByBookId } from './book-offline.util';
 import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
 import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
 import { CommentSegment } from './comment-variation.util';
@@ -1463,5 +1463,63 @@ describe('BookPuzzleComponent Wochenpost als Gast', () => {
     const c = makeGast();
     c.weeklyId = null;
     expect(c.weeklyReturnUrl).toBe('/weekly');
+  });
+});
+
+// Anonymer Kurs, seitenweises Laden: der wachsende Akkumulator wird NICHT nach jeder Seite
+// komplett ins localStorage geschrieben — bei 3000 Puzzles wären das 300+600+…+3000 serialisierte
+// Puzzles (quadratisch, mehrere MB Main-Thread-Blockade auf Mobilgeräten). Geschrieben wird nur
+// nach der ERSTEN Seite (sofort spielbar) und am ENDE der Kette (bzw. beim Fehler einer Folgeseite).
+describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', () => {
+  const FILE = 'paged-course.pgn';
+  const BOOK_ID = 66;
+  const PAGE = 300;   // = ANON_COURSE_PAGE_SIZE in book-puzzle.component.ts
+
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  function pageOf(start: number, count: number): any[] {
+    return Array.from({ length: count }, (_, i) => ({ id: start + i, fen: FEN, moves: 'e2e4', bookFileName: FILE }));
+  }
+
+  function anonPagedCourse(pages: Array<any[] | 'error'>): any {
+    const c = makeComponent();
+    spyOn(c as any, 'setupPuzzle');
+    c.auth.isLoggedIn = false;   // anonym
+    c.inCourse = true;
+    c.courseBookId = BOOK_ID;
+    c.courseModeKind = 'sequential';
+    let call = 0;
+    c.courseService.getPublicCourse = jasmine.createSpy('getPublicCourse').and.callFake(() => {
+      const p = pages[Math.min(call++, pages.length - 1)];
+      return p === 'error' ? throwError(() => new Error('boom')) : of(p);
+    });
+    return c;
+  }
+
+  it('schreibt den Buch-Cache nur nach der ersten Seite und am Ende (nicht je Seite)', () => {
+    const setItem = spyOn(localStorage, 'setItem').and.callThrough();
+    const c = anonPagedCourse([pageOf(1, PAGE), pageOf(1 + PAGE, PAGE), pageOf(1 + 2 * PAGE, 5)]);
+    (c as any).loadCourseNext();
+    const bookWrites = setItem.calls.allArgs().filter(([k]) => String(k).startsWith('rookhub_book_offline_'));
+    expect(bookWrites.length).toBe(2);   // 1× erste Seite (sofort spielbar) + 1× letzte Seite
+    expect(getBookOfflineByBookId(BOOK_ID)?.length).toBe(2 * PAGE + 5);   // am Ende vollständig
+    expect(c.puzzle?.id).toBe(1);
+    expect(c.loadError).toBeFalse();
+  });
+
+  it('schreibt beim Fehler einer Folgeseite den aufgelaufenen Stand fest (bleibt spielbar)', () => {
+    const c = anonPagedCourse([pageOf(1, PAGE), pageOf(1 + PAGE, PAGE), 'error']);
+    (c as any).loadCourseNext();
+    expect(getBookOfflineByBookId(BOOK_ID)?.length).toBe(2 * PAGE);   // beide geladenen Seiten persistiert
+    expect(c.puzzle?.id).toBe(1);
+    expect(c.loadError).toBeFalse();
+  });
+
+  it('zeigt „nicht verfügbar", wenn der Cache der ersten Seite nicht geschrieben werden kann', () => {
+    spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
+    const c = anonPagedCourse([pageOf(1, 5)]);
+    (c as any).loadCourseNext();
+    expect(c.loadError).toBeTrue();   // anonym wird NUR aus dem Cache bedient — ehrlich melden
   });
 });

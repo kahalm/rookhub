@@ -227,6 +227,7 @@
     },
     "feedback": "Feedback / Report a bug",
     "updateAvailable": "A new version is available.",
+    "offlineQueueFull": "Offline storage is full — new results can no longer be saved for later upload.",
     "reload": "Reload",
     "apkUpdate": {
       "banner": "New app version available – please reinstall.",

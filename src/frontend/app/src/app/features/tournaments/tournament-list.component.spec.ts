@@ -21,4 +21,30 @@ describe('TournamentListComponent', () => {
     const fixture = TestBed.createComponent(TournamentListComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
+
+  // Robustheit: ein beschädigter hiddenTournaments-Wert (bzw. gültiges Nicht-Array) darf
+  // ngOnInit nicht werfen lassen — sonst ist die Turnierseite dauerhaft tot, bis der User
+  // den localStorage von Hand leert. Fallback: leeres Set (nichts versteckt).
+  for (const [label, raw] of [['kaputtes JSON', '{not json'], ['gültiges Nicht-Array', '{"a":1}']] as const) {
+    it(`überlebt ${label} in hiddenTournaments (leeres Set statt Wurf)`, async () => {
+      localStorage.setItem('hiddenTournaments', raw);
+      try {
+        await TestBed.configureTestingModule({
+          imports: [TournamentListComponent],
+          providers: [
+            provideHttpClient(),
+            provideHttpClientTesting(),
+            provideRouter([]),
+            provideNoopAnimations(),
+            provideTranslateService({ fallbackLang: 'en' }),
+          ],
+        }).compileComponents();
+        const fixture = TestBed.createComponent(TournamentListComponent);
+        expect(() => fixture.componentInstance.ngOnInit()).not.toThrow();
+        expect(((fixture.componentInstance as any).hiddenIds as Set<string>).size).toBe(0);
+      } finally {
+        localStorage.removeItem('hiddenTournaments');
+      }
+    });
+  }
 });

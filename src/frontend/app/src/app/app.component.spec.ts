@@ -17,6 +17,7 @@ import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
 import { ThemeService } from './core/theme.service';
 import { DISCORD_INVITE_URL } from './core/community';
+import { environment } from '../environments/environment';
 
 // Sichert das v0.181.1-Refactoring ab: die langlebigen Root-Subscriptions
 // (router.events, swUpdate.versionUpdates/unrecoverable) hängen jetzt an
@@ -74,6 +75,41 @@ describe('AppComponent lifecycle', () => {
   it('exposes the Discord community invite for the footer link', () => {
     const fixture = TestBed.createComponent(AppComponent);
     expect(fixture.componentInstance.discordUrl).toBe(DISCORD_INVITE_URL);
+  });
+
+  // Changelog-Split (Perf): das ~0,9-MB-Array darf NICHT mehr eager im Environment/Initial-Bundle
+  // haengen — es kommt per dynamic import() erst beim Oeffnen des Overlays.
+  it('haelt die Changelog-Eintraege aus dem eager geladenen Environment heraus', () => {
+    expect((environment as Record<string, unknown>)['changelog']).toBeUndefined();
+    const fixture = TestBed.createComponent(AppComponent);
+    expect(fixture.componentInstance.changelog.length).toBe(0);
+  });
+
+  it('laedt die Changelog-Eintraege beim Oeffnen des Overlays nach (dynamic import)', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const cmp = fixture.componentInstance;
+    cmp.openChangelog();
+    expect(cmp.showChangelog).toBe(true);
+    await cmp.changelogLoad;
+    expect(cmp.changelog.length).toBeGreaterThan(0);
+    expect(cmp.changelog[0].version).toBeTruthy();
+    expect(cmp.changelog[0].changes[0].en).toBeTruthy();
+    expect(cmp.changelog[0].changes[0].de).toBeTruthy();
+  });
+
+  it('klappt das Overlay per Footer-Versionslink auf und zu (Laden nur beim Oeffnen)', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const cmp = fixture.componentInstance;
+    cmp.toggleChangelog();
+    expect(cmp.showChangelog).toBe(true);
+    await cmp.changelogLoad;
+    const loaded = cmp.changelog;
+    expect(loaded.length).toBeGreaterThan(0);
+    cmp.toggleChangelog();
+    expect(cmp.showChangelog).toBe(false);
+    cmp.toggleChangelog();           // erneutes Oeffnen laedt nicht neu (Referenz bleibt)
+    await cmp.changelogLoad;
+    expect(cmp.changelog).toBe(loaded);
   });
 
   it('reports VERSION_INSTALLATION_FAILED to the client log (sw_install_failed)', () => {

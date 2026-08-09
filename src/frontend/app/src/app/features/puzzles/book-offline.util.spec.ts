@@ -15,6 +15,15 @@ describe('book-offline.util', () => {
     expect(getBookOffline('book-a.pgn')?.length).toBe(2);
   });
 
+  it('meldet Erfolg (true) beim Speichern und Fehlschlag (false) bei vollem Speicher', () => {
+    // Gleiche Linie wie writeCalcLocal*: ein Quota-Wurf darf nicht als Erfolg durchgehen.
+    expect(saveBookOffline('book-a.pgn', [puzzle(1, 'book-a.pgn')], 42)).toBeTrue();
+    spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
+    expect(saveBookOffline('book-b.pgn', [puzzle(2, 'book-b.pgn')], 43)).toBeFalse();
+    // Der gescheiterte Eintrag landet auch nicht im bookId-Index.
+    expect(getBookOfflineByBookId(43)).toBeNull();
+  });
+
   it('resolves a saved book via its course bookId', () => {
     saveBookOffline('book-a.pgn', [puzzle(1, 'book-a.pgn')], 42);
     const byId = getBookOfflineByBookId(42);

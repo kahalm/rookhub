@@ -227,6 +227,7 @@
     },
     "feedback": "Feedback / Bug melden",
     "updateAvailable": "Eine neue Version ist verfügbar.",
+    "offlineQueueFull": "Der Offline-Speicher ist voll — neue Ergebnisse können nicht mehr für die spätere Übertragung gemerkt werden.",
     "reload": "Neu laden",
     "apkUpdate": {
       "banner": "Neue App-Version verfügbar – bitte neu installieren.",

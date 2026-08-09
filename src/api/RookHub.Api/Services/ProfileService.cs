@@ -11,12 +11,16 @@ public class ProfileService
     private readonly AppDbContext _db;
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<ProfileService> _logger;
+    private readonly BookAdminService _bookAdmin;
 
-    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger)
+    // bookAdmin optional (wie FriendService/NotificationService in CourseService): bestehende
+    // Test-Konstruktionen bleiben gültig; DI injiziert den registrierten Service.
+    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger, BookAdminService? bookAdmin = null)
     {
         _db = db;
         _taskQueue = taskQueue;
         _logger = logger;
+        _bookAdmin = bookAdmin ?? new BookAdminService(db);
     }
 
     public async Task<ProfileDto> GetProfileAsync(int userId)
@@ -215,7 +219,11 @@ public class ProfileService
     /// <summary>
     /// Löscht den Account DSGVO-konform: Identität + PII werden anonymisiert (AppUser in-place,
     /// Login dauerhaft gesperrt), persönliche Inhalte/Verknüpfungen entfernt, die Solve-Statistik
-    /// bleibt anonym (unter der UserId) erhalten. Verlangt das korrekte Passwort.
+    /// bleibt anonym (unter der UserId) erhalten. Mit entfernt werden auch die PERSÖNLICHEN Bücher
+    /// (<see cref="Models.Book.OwnerUserId"/>, inkl. aller abhängigen Kursdaten über den bestehenden
+    /// <see cref="BookAdminService.DeleteBookAsync"/>-Löschpfad) sowie die Admin-Direktnachrichten
+    /// (<c>AdminMessages</c> + <c>MessageThreads</c> — Freitexte des Users sind PII).
+    /// Verlangt das korrekte Passwort.
     /// </summary>
     /// <exception cref="KeyNotFoundException">User existiert nicht.</exception>
     /// <exception cref="UnauthorizedAccessException">Passwort falsch.</exception>
@@ -232,10 +240,19 @@ public class ProfileService
         if (string.IsNullOrEmpty(password) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             throw new UnauthorizedAccessException("Password is incorrect.");
 
+        // 0) Persönliche Bücher (importierte/erstellte Kurse) samt Abhängigen über den bestehenden
+        //    Admin-Löschpfad entfernen — der räumt Puzzles, Fortschritte, Freigaben, Links etc.
+        //    konsistent ab (jeder DeleteBookAsync speichert für sich; ein Wiederholungslauf nach
+        //    einem Teil-Fehlschlag ist dank Idempotenz der Restschritte unkritisch).
+        var ownedBookIds = await _db.Books.Where(b => b.OwnerUserId == userId).Select(b => b.Id).ToListAsync();
+        foreach (var bookId in ownedBookIds)
+            await _bookAdmin.DeleteBookAsync(bookId);
+
         // 1) Persönliche Inhalte & Verknüpfungen hart entfernen (keine Statistik):
         //    Freundschaften (FK Restrict -> müssen explizit weg), Repertoires (cascadet Dateien),
         //    Turnier-Abos/-Favoriten/-Einstellungen, Gruppen-Mitgliedschaften, API-Tokens,
-        //    Chessable-Bearer + Reset-Tokens, öffentliche Share-Inhalte, gemerkte Stellungen.
+        //    Chessable-Bearer + Reset-Tokens, öffentliche Share-Inhalte, gemerkte Stellungen,
+        //    Admin-Direktnachrichten (Freitext = PII) samt Thread-Metadaten.
         _db.Friendships.RemoveRange(
             await _db.Friendships.Where(f => f.RequesterId == userId || f.AddresseeId == userId).ToListAsync());
         _db.Repertoires.RemoveRange(await _db.Repertoires.Where(r => r.UserId == userId).ToListAsync());
@@ -255,26 +272,53 @@ public class ProfileService
         _db.SharedLines.RemoveRange(await _db.SharedLines.Where(l => l.OwnerUserId == userId).ToListAsync());
         // Auf chessable.com gemerkte Stellungen (Kursname/Quell-URL) — persönlich, keine Statistik.
         _db.RememberedPositions.RemoveRange(await _db.RememberedPositions.Where(r => r.UserId == userId).ToListAsync());
+        // Admin-Direktnachrichten: die Nachrichtentexte des Users sind PII und müssen mit dem Konto
+        // verschwinden (beide Richtungen des Threads — der Kontext der Admin-Antworten identifiziert
+        // den User genauso). Thread-Metadaten (Claim) hängen daran und gehen mit.
+        _db.AdminMessages.RemoveRange(await _db.AdminMessages.Where(m => m.UserId == userId).ToListAsync());
+        _db.MessageThreads.RemoveRange(await _db.MessageThreads.Where(t => t.UserId == userId).ToListAsync());
         // Manuelle Aktivitäten bleiben als (anonyme) Trainingsstatistik, aber die Freitext-Notiz (PII) wird geleert.
         var manualWithNote = await _db.ManualActivities.Where(a => a.UserId == userId && a.Note != null).ToListAsync();
         foreach (var a in manualWithNote) a.Note = null;
 
         // 2) Identität anonymisieren (in-place) -> nicht re-identifizierbar, Login gesperrt.
-        user.Username = $"deleted_{userId}";
-        user.Email = $"deleted_{userId}@deleted.invalid";
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString());
-        user.IsAdmin = false;
-        user.DeletedAt = DateTime.UtcNow;
-
-        // 3) Profil-PII entfernen (Statistik-Tabellen referenzieren weiterhin die UserId).
-        if (user.Profile is { } p)
+        //    FALLE Username-Squatting: „deleted_{id}"/„deleted_{id}@deleted.invalid" sind normale,
+        //    vorab registrierbare Werte — hätte sie jemand belegt, schlüge der Unique-Index zu und
+        //    die Löschung fiele dauerhaft auf 500. Darum: freien Namen vorab suchen (Zufallssuffix)
+        //    und den TOCTOU-Rest über einen Kollisions-Retry am Unique-Index abfangen.
+        for (var attempt = 0; ; attempt++)
         {
-            p.FirstName = p.LastName = p.DisplayName = null;
-            p.FideId = p.ChessResultsId = p.ChessComUsername = p.LichessUsername = null;
-            p.DiscordId = p.DiscordUsername = null;
-        }
+            var suffix = attempt == 0 ? "" : "_" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
+            var username = $"deleted_{userId}{suffix}";
+            var email = $"deleted_{userId}{suffix}@deleted.invalid";
+            // Vorab-Prüfung (greift auch in den InMemory-Tests, die keine Unique-Indizes erzwingen).
+            if (await _db.AppUsers.AnyAsync(u => u.Id != userId && (u.Username == username || u.Email == email)))
+                continue;
 
-        await _db.SaveChangesAsync();
+            user.Username = username;
+            user.Email = email;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString());
+            user.IsAdmin = false;
+            user.DeletedAt = DateTime.UtcNow;
+
+            // 3) Profil-PII entfernen (Statistik-Tabellen referenzieren weiterhin die UserId).
+            if (user.Profile is { } p)
+            {
+                p.FirstName = p.LastName = p.DisplayName = null;
+                p.FideId = p.ChessResultsId = p.ChessComUsername = p.LichessUsername = null;
+                p.DiscordId = p.DiscordUsername = null;
+            }
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                break;
+            }
+            catch (DbUpdateException ex) when (attempt < 5 && AuthService.IsUniqueViolation(ex))
+            {
+                // Race: der Name wurde ZWISCHEN Prüfung und Save registriert → mit neuem Suffix erneut.
+            }
+        }
         _logger.LogInformation("AccountDeleted: user {UserId} anonymized (stats retained).", userId);
     }
 

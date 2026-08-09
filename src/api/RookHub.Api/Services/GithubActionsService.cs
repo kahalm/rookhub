@@ -273,28 +273,31 @@ public class GithubActionsService
     /// (die UI markiert dann nichts für dieses Repo). Das rookhub-Frontend meldet seine SHA selbst im Browser.</summary>
     private async Task<Dictionary<string, BuildInfo>> ResolveRunningBuildsAsync(CancellationToken ct)
     {
-        var targets = new List<(string Repo, string? Url, string? HeaderName, string? HeaderValue)>();
+        var targets = new List<(string Repo, string? Url, IReadOnlyList<(string Name, string Value)> Headers)>();
+
+        static IReadOnlyList<(string, string)> Header(string name, string? value) =>
+            string.IsNullOrEmpty(value) ? Array.Empty<(string, string)>() : new[] { (name, value) };
 
         var crawlerBase = _config["Crawler:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(crawlerBase))
-            targets.Add(("chessresults_crawler", Combine(crawlerBase, "api/health/build-info"), "X-Api-Key", _config["Crawler:ApiKey"]));
+            targets.Add(("chessresults_crawler", Combine(crawlerBase, "api/health/build-info"), Header("X-Api-Key", _config["Crawler:ApiKey"])));
 
         var pirateBase = _config["Chessable:ApiUrl"];
         if (!string.IsNullOrWhiteSpace(pirateBase))
-            targets.Add(("piratechess_docker", Combine(pirateBase, "api/chessable/direct/build-info"), "X-Service-Key", _config["Chessable:ServiceKey"]));
+            targets.Add(("piratechess_docker", Combine(pirateBase, "api/chessable/direct/build-info"), Header("X-Service-Key", _config["Chessable:ServiceKey"])));
 
         var botWebhook = _config["SchachBot:WebhookUrl"];
         if (!string.IsNullOrWhiteSpace(botWebhook) && Uri.TryCreate(botWebhook, UriKind.Absolute, out var botUri))
-            targets.Add(("schach-bot", $"{botUri.Scheme}://{botUri.Authority}/webhook/build-info", null, null));
+            targets.Add(("schach-bot", $"{botUri.Scheme}://{botUri.Authority}/webhook/build-info", BotBuildInfoHeaders()));
 
         // rookhub selbst: das Frontend liefert /build-info.json (im internen Netz erreichbar) → so kennt
         // der Server auch die laufende rookhub-SHA und kann den Run ggf. als 6. Zeile nachladen.
         var selfUrl = _config["Frontend:BuildInfoUrl"];
         if (string.IsNullOrWhiteSpace(selfUrl)) selfUrl = "http://rookhub:8080/build-info.json";
-        targets.Add(("rookhub", selfUrl, null, null));
+        targets.Add(("rookhub", selfUrl, Array.Empty<(string, string)>()));
 
         var pairs = await Task.WhenAll(targets.Select(async t =>
-            (t.Repo, Info: await FetchBuildInfoAsync(t.Url, t.HeaderName, t.HeaderValue, ct))));
+            (t.Repo, Info: await FetchBuildInfoAsync(t.Url, t.Headers, ct))));
 
         var map = new Dictionary<string, BuildInfo>();
         // Zuerst per Push gemeldete Build-Infos aus der DB (z. B. log-watcher, das rookhub nicht erreichen
@@ -308,7 +311,26 @@ public class GithubActionsService
 
     private static string Combine(string baseUrl, string path) => $"{baseUrl.TrimEnd('/')}/{path}";
 
-    private async Task<BuildInfo?> FetchBuildInfoAsync(string? url, string? headerName, string? headerValue, CancellationToken ct)
+    /// <summary>
+    /// Auth-Header für den build-info-Abruf beim schach-bot: derselbe HMAC-Mechanismus wie
+    /// <see cref="BotStatsController"/> in Gegenrichtung — <c>X-Bot-Timestamp</c> = Unix-Sekunden,
+    /// <c>X-Bot-Signature</c> = "sha256=" + HMAC_SHA256(<c>SchachBot:StatsSecret</c>, "&lt;ts&gt;") hex.
+    /// Fehlt das Secret, wie bisher OHNE Header anfragen (best-effort; der Bot lehnt dann ggf. ab).
+    /// Internal für den direkten Test der Signaturbildung.
+    /// </summary>
+    internal IReadOnlyList<(string Name, string Value)> BotBuildInfoHeaders()
+    {
+        var secret = _config["SchachBot:StatsSecret"];
+        if (string.IsNullOrWhiteSpace(secret)) return Array.Empty<(string, string)>();
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return new[]
+        {
+            ("X-Bot-Timestamp", ts),
+            ("X-Bot-Signature", "sha256=" + SchachBotWebhookService.ComputeHmacHex(secret, ts)),
+        };
+    }
+
+    private async Task<BuildInfo?> FetchBuildInfoAsync(string? url, IReadOnlyList<(string Name, string Value)> headers, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(url)) return null;
         try
@@ -316,8 +338,8 @@ public class GithubActionsService
             using var client = _httpFactory.CreateClient();
             client.Timeout = TimeSpan.FromSeconds(4);   // Stack-Ausfall darf die CI-Übersicht nicht hängen lassen
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            if (!string.IsNullOrEmpty(headerName) && !string.IsNullOrEmpty(headerValue))
-                req.Headers.TryAddWithoutValidation(headerName, headerValue);
+            foreach (var (name, value) in headers)
+                req.Headers.TryAddWithoutValidation(name, value);
             using var resp = await client.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode) return null;
             var bi = await resp.Content.ReadFromJsonAsync<BuildInfo>(GithubJson, ct);

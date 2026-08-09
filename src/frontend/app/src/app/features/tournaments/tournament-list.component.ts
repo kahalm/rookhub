@@ -140,8 +140,13 @@ export class TournamentListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const stored = localStorage.getItem('hiddenTournaments');
-    if (stored) this.hiddenIds = new Set(JSON.parse(stored));
+    // Defensiv parsen: ein beschädigter localStorage-Wert (oder gültiges Nicht-Array) würfe hier
+    // in ngOnInit und ließe die Turnierseite dauerhaft tot — dann lieber leeres Set (nichts versteckt).
+    try {
+      const stored = localStorage.getItem('hiddenTournaments');
+      const arr = stored ? JSON.parse(stored) : [];
+      this.hiddenIds = new Set(Array.isArray(arr) ? arr : []);
+    } catch { this.hiddenIds = new Set(); }
     this.loadTournaments();
   }
 
