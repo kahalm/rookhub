@@ -31,7 +31,7 @@ import {
         <span class="cl-spacer"></span>
         <button mat-icon-button class="cl-add" [matTooltip]="'calc.newLine' | translate"
                 [attr.aria-label]="'calc.newLine' | translate" (click)="newLine.emit()">
-          <mat-icon>add_circle</mat-icon>
+          <mat-icon>add_circle_outline</mat-icon>
         </button>
         <!-- Werkzeuge des Elternteils sitzen in DIESER Kopfzeile statt als eigene Knopfreihe
              darunter — sonst steht neben der Liste eine zweite Leiste mit denselben Aufgaben. -->
@@ -113,7 +113,9 @@ import {
       background: color-mix(in srgb, currentColor 12%, transparent);
     }
     .cl-spacer { flex: 1; }
-    .cl-add mat-icon { font-size: 26px; width: 26px; height: 26px; }
+    /* Alle vier Werkzeuge der Kopfzeile sollen als GESCHWISTER lesbar sein: gleiche Größe,
+       gleiche Strichstärke. Das gefüllte, größere Plus fiel aus der Reihe. */
+    .cl-add mat-icon { font-size: 24px; width: 24px; height: 24px; }
     .cl-empty { margin: 0.2rem 0; font-style: italic; color: color-mix(in srgb, currentColor 45%, transparent); }
     .cl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
     .cl-line {

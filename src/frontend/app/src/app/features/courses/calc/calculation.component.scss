@@ -124,6 +124,17 @@
   .calc-layout { grid-template-columns: 1fr; }
 }
 
+/* Ab hier steht die App-Kopfzeile rechts (Modus-Klasse) und über dem Brett nur die Befehlszeile.
+   Die gewonnene Höhe nützt aber nur, wenn sich das Brett auch DARAN bemisst: vorher hing seine
+   Kante allein an der Spaltenbreite (Deckel 520px), also blieb es gleich groß, egal wieviel Platz
+   darüber frei wurde. Jetzt nimmt es, was Höhe UND Breite hergeben — dieselbe Rechnung wie im
+   App-Vollbild, nur mit Abzug für Befehlszeile, Seitenränder und Fußzeile. */
+@media (min-width: 900px) {
+  .calc-layout { grid-template-columns: auto minmax(320px, 1fr); }
+
+  .calc-board-col { width: min(calc(100vh - 7.5rem), calc(100vw - 480px)); }
+}
+
 .calc-board-col {
   display: flex;
   flex-direction: column;
@@ -530,9 +541,9 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border: 1.5px solid currentColor;
+  border: 2px solid currentColor;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
 }
