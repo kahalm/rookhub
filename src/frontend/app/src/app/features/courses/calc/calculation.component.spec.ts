@@ -560,6 +560,38 @@ describe('CalculationComponent Speichern', () => {
     expect(lines(JSON.parse(sent[1])).length).toBe(2);
   });
 
+  it('schickt auch zwei BEWERTUNGS-Patches derselben Stellung nie parallel', () => {
+    // Gegenstück zum Baum-Test darüber (TODO-Nachprüfung 2026-08-09): der PATCH-Upsert für
+    // Wahl/Stufe ist ebenfalls „last write wins" ohne Versions-Token. Gingen Stufe 2 und
+    // Stufe 4 gleichzeitig raus und kämen vertauscht an, bliebe die ALTE Stufe gespeichert.
+    // Erwartung: solange Anfrage 1 offen ist, wartet alles Weitere in der Outbox und geht
+    // danach ZUSAMMENGEFASST raus — mit der jüngsten Stufe.
+    const first = new Subject<CalcReviewSaved>();
+    const sent: CalcReviewPatch[] = [];
+    let call = 0;
+    const { component } = make({
+      saveReview: (id: number, patch: CalcReviewPatch) => {
+        call++; sent.push(patch);
+        if (call === 1) return first;
+        return of({ bookPuzzleId: id, chosenSan: null, chosenUci: null, secondsSpent: 0, grade: patch.grade ?? null });
+      },
+    });
+    load(component, position({ id: 7 }));
+
+    component.applyGrade(2);                     // Anfrage 1 unterwegs (bleibt offen)
+    component.applyGrade(3);                     // muss WARTEN
+    component.applyGrade(4);                     // ebenfalls — verschmilzt in der Outbox
+
+    expect(sent.length).toBe(1);
+    expect(sent[0].grade).toBe(2);
+
+    first.next({ bookPuzzleId: 7, chosenSan: null, chosenUci: null, secondsSpent: 0, grade: 2 });
+    first.complete();                            // Slot frei → der aufgelaufene Stand geht raus
+
+    expect(sent.length).toBe(2);
+    expect(sent[1].grade).toBe(4);               // die JÜNGSTE Stufe, nicht die mittlere
+  });
+
   it('serialisiert auch Löschen gegen einen danach neu angelegten Baum', () => {
     // Sonst könnte das DELETE nach dem PUT beim Server ankommen und den neuen Baum wegräumen.
     const del = new Subject<void>();

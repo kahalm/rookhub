@@ -269,13 +269,6 @@ Ein Fix-Durchgang ohne unabhängiges Gegenlesen wäre netto schlechter gewesen a
   NEUEN Pipeline neu parsen (kein Chessable-Traffic), und ein pauschales Erzwingen zöge alle Kurse
   erneut über die VPN-IPs (dokumentiertes Ban-Risiko). Zu entscheiden: eine eigene, seltene Aktion
   („Von Chessable neu laden", pro Kurs, gedrosselt) statt einer Kopplung an den Reprocess.
-- [ ] **Kalkulations-Outbox: In-Flight-Schutz prüfen.** Der Prüfer meldet, ein älterer Save könne
-  einen neueren überschreiben; der Requeue ist inzwischen durch `sendSeq`/`requeueIfLatest`
-  abgesichert, die *parallele Auslieferung* zweier Saves derselben Stellung aber nicht verhindert.
-  Nachprüfen, ob der Server-Upsert dabei in der falschen Reihenfolge landen kann.
-- [ ] **Repertoire-Graph speichert weiterhin den rohen Token** statt des bereits vorliegenden
-  `mv.san` — lange/überbestimmte Notation läuft in den `[%alt]`-Toleranzen weiter auseinander
-  (der Linien-Hash ist davon nicht betroffen, der kommt aus chess.js).
 
 ### Kleinere Restpunkte aus dem Gegenlesen (nicht blockierend)
 - [ ] **`PuzzleService.GetRandomAsync` (themesAny): Verteilung geändert.** Der neue Random-Seek zieht
