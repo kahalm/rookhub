@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.349.0';
+export const APP_VERSION = '0.349.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.349.1", date: "2026-08-09", changes: [
+    { en: "In full screen the command line now stays put while the side column scrolls. It sits inside that column there, so it would have scrolled away with the content \u2014 taking next/previous position with it, which is exactly what it was put there to fix.", de: "Im Vollbild bleibt die Befehlszeile stehen, w\u00e4hrend die Seitenspalte rollt. Sie sitzt dort IN dieser Spalte und w\u00e4re mit dem Inhalt davongerollt \u2014 samt Weiter/Zur\u00fcck, also genau dem, wof\u00fcr sie dorthin gekommen ist." },
+  ] },
   { version: "0.349.0", date: "2026-08-09", changes: [
     { en: "Follow-up to the declutter, from looking at it in the browser. Full screen had lost its way forward: the command line is hidden up there to give the square board its height, and with it went next/previous position \u2014 it now appears in the side column instead, from the SAME template, so the two cannot drift apart. Nothing sits above the board any more; \u201eWhite to move\u201c, the frozen marker and flip board moved into the command line, which also keeps clear of the two board buttons that overlapped it. The horizontal scrollbar lying across the footer is gone.", de: "Nacharbeit zur Entr\u00fcmpelung, aus dem Blick in den Browser. Im Vollbild fehlte der Weg weiter: die Befehlszeile ist dort ausgeblendet, damit das quadratische Brett seine H\u00f6he bekommt \u2014 und mit ihr verschwand Weiter/Zur\u00fcck. Sie steht jetzt stattdessen in der Seitenspalte, aus DERSELBEN Vorlage, damit beide nicht auseinanderlaufen k\u00f6nnen. \u00dcber dem Brett steht nun gar nichts mehr; \u201eWei\u00df am Zug\u201c, das Eingefroren-Zeichen und Brett drehen sind in die Befehlszeile gewandert, die auch den beiden Brett-Kn\u00f6pfen ausweicht, die sie \u00fcberlagert hatten. Der waagrechte Rollbalken quer \u00fcber der Fu\u00dfzeile ist weg." },
     { en: "The clock speaks up and can be corrected. Start calculating while training is not running and a note says so \u2014 with a \u201eStart\u201c button right in it, asked once per visit rather than on every move. Clicking the clock lets you enter the chapter time by hand, for when you started too late. Deliberately only the chapter clock, which is a reminder kept on your device: the thinking time measured per position stays untouched, because a hand-typed value there would no longer be a measurement.", de: "Die Uhr meldet sich \u2014 und l\u00e4sst sich korrigieren. Wer zu rechnen beginnt, w\u00e4hrend das Training nicht l\u00e4uft, bekommt einen Hinweis mit \u201eStarten\u201c-Knopf darin; gefragt wird einmal je Besuch, nicht bei jedem Zug. Ein Klick auf die Uhr tr\u00e4gt die Kapitelzeit von Hand nach, f\u00fcr den Fall, dass man zu sp\u00e4t gestartet hat. Bewusst nur die Kapitel-Uhr, die eine Merkhilfe auf dem Ger\u00e4t ist: die je Stellung gemessene Rechenzeit bleibt unangetastet, weil ein getippter Wert dort keine Messung mehr w\u00e4re." },
