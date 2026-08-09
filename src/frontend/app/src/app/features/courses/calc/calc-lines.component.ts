@@ -154,9 +154,12 @@ import {
     .cl-glyph { font-weight: 700; }
     .cl-eval { margin-left: 2px; }
     .cl-inline-comment { font-size: 0.85em; font-style: italic; color: color-mix(in srgb, currentColor 55%, transparent); }
-    .cl-actions { display: flex; }
-    .cl-icon { width: 30px; height: 30px; line-height: 30px; }
-    .cl-icon mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    /* Die beiden Knöpfe gehören zur ERSTEN Zugzeile, nicht zur ganzen (ggf. mehrzeiligen) Linie:
+       oben ausrichten und so hoch wie eine Textzeile halten, sonst hängen sie sichtbar tiefer als
+       die Züge, neben denen sie stehen. */
+    .cl-actions { display: flex; align-items: flex-start; margin-top: -1px; }
+    .cl-icon { width: 24px; height: 24px; line-height: 24px; }
+    .cl-icon mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .cl-comment { grid-column: 1 / -1; font-size: 0.85em; font-style: italic; opacity: 0.8; padding-left: 3px; }
     .cl-comment-edit { grid-column: 1 / -1; display: flex; gap: 0.25rem; align-items: center; flex-wrap: wrap; }
     .cl-comment-edit input {

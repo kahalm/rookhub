@@ -1448,7 +1448,15 @@
       "stop": "Zaustavi trening",
       "running": "Trening teče — vrijeme se mjeri",
       "stopped": "Trening zaustavljen — vrijeme se ne mjeri",
-      "unavailable": "Trening se može pokrenuti tek kad je pozicija učitana."
+      "unavailable": "Trening se može pokrenuti tek kad je pozicija učitana.",
+      "notRunning": "Trening nije pokrenut — ovo se vrijeme ne mjeri.",
+      "editTitle": "Prilagodi vrijeme poglavlja",
+      "editFor": "Poglavlje: {{chapter}}",
+      "editHint": "Klikni za prilagodbu",
+      "hours": "Sati",
+      "minutes": "Minute",
+      "seconds": "Sekunde",
+      "editNote": "Ovo je sat poglavlja — podsjetnik na ovom uređaju. Vrijeme računanja mjereno po poziciji ostaje netaknuto: ono dolazi iz stvarnog mjerenja."
     },
     "illegalPosition": "Ovaj dijagram nije legalna šahovska pozicija — ovdje se potezi ne mogu unositi.",
     "jumpTo": "Skoči na poziciju",
@@ -1467,15 +1475,15 @@
       "choose": "Označi kao moj izbor",
       "chooseHint": "Odluči se za ovaj prvi potez (ponovni klik poništava). Samo jedan izbor po poziciji.",
       "grade": {
-        "moveNoMainLine": "Točan potez, ali glavni nastavak nije viđen",
-        "moveNoSideLines": "Točan potez, ali sporedni nastavci nisu viđeni",
+        "moveNoMainLine": "Točan potez, ali greške u glavnoj varijanti",
+        "moveNoSideLines": "Točan potez, ali greške u sporednim varijantama",
         "notSolved": "Nije riješeno",
-        "solved": "Riješeno",
-        "someIdeas": "Viđene neke ideje"
+        "solved": "Riješeno — glavna i sporedne varijante",
+        "someIdeas": "Neke ideje, ali ne i potez"
       },
       "gradeShort": {
-        "moveNoMainLine": "potez, bez glavnog",
-        "moveNoSideLines": "potez, bez sporednih",
+        "moveNoMainLine": "potez, glavna promašena",
+        "moveNoSideLines": "potez, sporedne promašene",
         "notSolved": "nije riješeno",
         "solved": "riješeno",
         "someIdeas": "neke ideje"

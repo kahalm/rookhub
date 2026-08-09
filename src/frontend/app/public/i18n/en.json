@@ -1448,7 +1448,15 @@
       "stop": "Stop training",
       "running": "Training running — time is being measured",
       "stopped": "Training stopped — no time is measured",
-      "unavailable": "Training can only be started once a position has loaded."
+      "unavailable": "Training can only be started once a position has loaded.",
+      "notRunning": "Training is not running — this time is not being measured.",
+      "editTitle": "Adjust chapter time",
+      "editFor": "Chapter: {{chapter}}",
+      "editHint": "Click to adjust",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "seconds": "Seconds",
+      "editNote": "This is the chapter clock — a reminder kept on this device. The thinking time measured per position stays untouched: it comes from actual measurement."
     },
     "illegalPosition": "This diagram is not a legal chess position, so moves cannot be entered here.",
     "jumpTo": "Jump to position",
@@ -1467,15 +1475,15 @@
       "choose": "Mark as my choice",
       "chooseHint": "Commit to this first move (click again to take it back). Only one choice per position.",
       "grade": {
-        "moveNoMainLine": "Right move, but main line not seen",
-        "moveNoSideLines": "Right move, but side lines not seen",
+        "moveNoMainLine": "Right move, but errors in the main line",
+        "moveNoSideLines": "Right move, but errors in the side lines",
         "notSolved": "Not solved",
-        "solved": "Solved",
-        "someIdeas": "Saw some ideas"
+        "solved": "Solved — main and side lines",
+        "someIdeas": "Some ideas, but not the move"
       },
       "gradeShort": {
-        "moveNoMainLine": "move, no main line",
-        "moveNoSideLines": "move, no side lines",
+        "moveNoMainLine": "move, main line off",
+        "moveNoSideLines": "move, side lines off",
         "notSolved": "not solved",
         "solved": "solved",
         "someIdeas": "some ideas"

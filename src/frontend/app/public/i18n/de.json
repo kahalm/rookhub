@@ -1448,7 +1448,15 @@
       "stop": "Training stoppen",
       "running": "Training läuft — die Zeit wird gemessen",
       "stopped": "Training gestoppt — es wird keine Zeit gemessen",
-      "unavailable": "Training lässt sich erst starten, wenn eine Stellung geladen ist."
+      "unavailable": "Training lässt sich erst starten, wenn eine Stellung geladen ist.",
+      "notRunning": "Das Training läuft nicht — diese Zeit wird nicht gemessen.",
+      "editTitle": "Kapitelzeit anpassen",
+      "editFor": "Kapitel: {{chapter}}",
+      "editHint": "Zum Anpassen klicken",
+      "hours": "Stunden",
+      "minutes": "Minuten",
+      "seconds": "Sekunden",
+      "editNote": "Das ist die Kapitel-Uhr — eine Merkhilfe auf diesem Gerät. Die je Stellung gemessene Rechenzeit bleibt unangetastet: sie stammt aus echter Messung."
     },
     "illegalPosition": "Dieses Diagramm ist keine legale Schachstellung — hier lassen sich keine Züge eingeben.",
     "jumpTo": "Zu Stellung springen",
@@ -1467,15 +1475,15 @@
       "choose": "Als meine Wahl markieren",
       "chooseHint": "Auf diesen ersten Zug festlegen (nochmal klicken = zurücknehmen). Genau eine Wahl je Stellung.",
       "grade": {
-        "moveNoMainLine": "Richtiger Zug, aber Hauptfolge nicht gesehen",
-        "moveNoSideLines": "Richtiger Zug, aber Nebenfolgen nicht gesehen",
+        "moveNoMainLine": "Richtiger Zug, aber Fehler in der Hauptvariante",
+        "moveNoSideLines": "Richtiger Zug, aber Fehler in den Nebenvarianten",
         "notSolved": "Nicht gelöst",
-        "solved": "Gelöst",
-        "someIdeas": "Manche Ideen gesehen"
+        "solved": "Gelöst — Haupt- und Nebenvarianten",
+        "someIdeas": "Ideen gesehen, aber nicht den Zug"
       },
       "gradeShort": {
-        "moveNoMainLine": "Zug, ohne Hauptfolge",
-        "moveNoSideLines": "Zug, ohne Nebenfolgen",
+        "moveNoMainLine": "Zug, Hauptvariante daneben",
+        "moveNoSideLines": "Zug, Nebenvarianten daneben",
         "notSolved": "nicht gelöst",
         "solved": "gelöst",
         "someIdeas": "Ideen gesehen"

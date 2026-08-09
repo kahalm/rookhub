@@ -36,6 +36,9 @@ import {
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
+import {
+  CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult,
+} from './calc-timer-dialog.component';
 import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
 import { AuthService } from '../../../core/auth.service';
 
@@ -776,6 +779,23 @@ export class CalculationComponent implements OnInit, OnDestroy {
     });
     this.setCursor(added.id);
     this.markDirty();
+    this.offerTrainingStart();
+  }
+
+  /**
+   * Wer anfängt zu rechnen, während das Training nicht läuft, misst nichts — und merkt es oft
+   * erst hinterher. Ein Hinweis mit Sofort-Schalter statt eines Dialogs: er hält beim Rechnen
+   * niemanden auf. Gefragt wird EINMAL je Besuch; wer nicht will, soll nicht bei jedem Zug
+   * erneut gefragt werden.
+   */
+  private offerTrainingStart(): void {
+    if (this.timerRunning || this.timerAsked || !this.canTrain) return;
+    this.timerAsked = true;
+    const ref = this.snackbar.warn(this.translate.instant('calc.timer.notRunning'), {
+      action: 'calc.timer.start',
+      duration: 10000,
+    });
+    ref.onAction().subscribe(() => this.startTraining());
   }
 
   // ===== Navigation im Baum =================================================
@@ -1125,6 +1145,47 @@ export class CalculationComponent implements OnInit, OnDestroy {
   showKeys = false;
 
   toggleKeys(): void { this.showKeys = !this.showKeys; }
+
+  /**
+   * Sind die Zug-Anmerkungen (Symbole, Einschätzung, Kommentar) eingeblendet? Wie der
+   * Tastatur-Hinweis bewusst NUR im Speicher und standardmäßig zu: sie sind Feinarbeit an einem
+   * einzelnen Zug und nicht das, was man beim Rechnen braucht.
+   */
+  showAnnotations = false;
+
+  toggleAnnotations(): void { this.showAnnotations = !this.showAnnotations; }
+
+  /** Wurde in diesem Besuch schon gefragt, ob das Training starten soll? Nur EINMAL fragen. */
+  private timerAsked = false;
+
+  /** Erklärung an der Uhr: Laufzustand plus der Hinweis, dass man sie anklicken kann. */
+  get timerTooltip(): string {
+    return `${this.translate.instant(this.trainingStateKey)}\n`
+      + this.translate.instant('calc.timer.editHint');
+  }
+
+  /**
+   * Kapitelzeit von Hand nachtragen — für den Fall, dass das Training zu spät gestartet wurde.
+   * Bewusst NUR die Kapitel-Uhr (Merkhilfe auf diesem Gerät): die je Stellung gemessene Zeit
+   * entsteht aus echten Abschnitten und bliebe sonst keine Messung mehr.
+   */
+  openTimerDialog(): void {
+    const ref = this.dialog.open<CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult | undefined>(
+      CalcTimerDialogComponent,
+      {
+        data: {
+          seconds: this.timerSeconds,
+          chapter: this.chapterName || this.translate.instant('courses.noChapter'),
+        },
+        autoFocus: false,
+      });
+    ref.afterClosed().subscribe(result => {
+      // Nur eine echte Zahl zählt: ein Fremdwert (leerer String vom Framework) ist „weggeklickt".
+      if (typeof result !== 'number' || !Number.isFinite(result)) return;
+      this.timerSeconds = Math.max(0, Math.floor(result));
+      this.persistTimer();
+    });
+  }
 
   /**
    * Erklärung am Kapitelstand in der Befehlszeile. Die BUCH-Summe steht hier statt als eigene

@@ -6,7 +6,9 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
 import { CalculationComponent, CalcPositionGroup } from './calculation.component';
-import { CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved } from './calculation.service';
+import {
+  CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
+} from './calculation.service';
 import { CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CALC_NOTICE_PREFIX } from './calc-local.util';
 import { CalcReviewPatch } from './calc-review.util';
@@ -76,6 +78,7 @@ function make(
   const warnings: string[] = [];
   const reviews: { id: number; patch: CalcReviewPatch }[] = [];
   const reviewServer = fakeReviewServer();
+  const snackbarAction = new Subject<void>();
   const apiStub = {
     getBook: () => of({ bookId: 1, displayName: 'B', isCalculation: true, positions: [] }),
     getPosition: () => of(position()),
@@ -103,12 +106,14 @@ function make(
     } as never,
     apiStub as never,
     { boardTheme: 'brown', pieceSet: 'cburnett' } as never,
-    { warn: (m: string) => { warnings.push(m); } } as never,
+    // Die Attrappe liefert wie der echte Dienst eine Referenz zurück: die Komponente hängt sich
+    // an `onAction()`, um „Training starten" direkt aus dem Hinweis heraus anzubieten.
+    { warn: (m: string) => { warnings.push(m); return { onAction: () => snackbarAction }; } } as never,
     { instant: (k: string) => k } as never,
     { isLoggedIn: loggedIn } as never,
     dialog as never,
   );
-  return { component, saved, deleted, warnings, reviews, dialog, navigated };
+  return { component, saved, deleted, warnings, reviews, dialog, navigated, snackbarAction };
 }
 
 function listItem(pos: CalcPosition): CalcPositionListItem {
@@ -430,6 +435,9 @@ describe('CalculationComponent Speichern', () => {
   it('keeps the change pending and warns when saving fails', () => {
     const { component, warnings } = make({ saveTree: () => throwError(() => new Error('offline')) });
     load(component);
+    // Läuft das Training, meldet sich der Hinweis „Training läuft nicht" nicht zu Wort — hier
+    // geht es um das Scheitern des Speicherns.
+    component.startTraining();
     component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
 
     component.flushSave();
@@ -935,11 +943,13 @@ describe('CalculationComponent App-Vollbild-Layout', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.calc-board-col .calc-where--board')).not.toBeNull();
     expect(el.querySelector('.calc-side-col .calc-where--side')).not.toBeNull();
-    // Auch die Brett-Kopfzeile (Eingefroren/Timer/Drehen) steht doppelt da: im Vollbild zeigt
-    // CSS die Seiten-Variante, damit über dem Brett nichts Höhe stiehlt.
-    expect(el.querySelector('.calc-board-col .calc-board-head--board')).not.toBeNull();
-    expect(el.querySelector('.calc-side-col .calc-board-head--side')).not.toBeNull();
-    // Drei Timer-Anzeigen im DOM: Brett-Kopfzeile, Seiten-Kopie (App-Vollbild) und das
+    // Über dem Brett steht gar nichts mehr: die Befehlszeile trägt Kapitel, Stellung, Uhr und
+    // Drehen. Im App-Vollbild ist die obere ausgeblendet und die Kopie in der Seitenspalte
+    // sichtbar — ohne sie käme man dort zu keiner nächsten Stellung.
+    expect(el.querySelector('.calc-board-col .calc-board-head--board')).toBeNull();
+    expect(el.querySelector('.calc-page > .calc-bar')).not.toBeNull();
+    expect(el.querySelector('.calc-side-col .calc-bar--side')).not.toBeNull();
+    // Drei Timer-Anzeigen im DOM: Befehlszeile, Seiten-Kopie (App-Vollbild) und das
     // data-fs-only-Overlay fürs BRETT-Vollbild — CSS zeigt je Modus genau eine.
     expect(el.querySelectorAll('.calc-timer-time').length).toBe(3);
   });
@@ -1869,6 +1879,67 @@ describe('CalculationComponent entrümpelte Ansicht', () => {
   });
 });
 
+describe('CalculationComponent Uhr und Anmerkungen', () => {
+  beforeEach(() => { localStorage.clear(); jasmine.clock().install(); });
+  afterEach(() => { jasmine.clock().uninstall(); localStorage.clear(); });
+
+  it('weist beim ersten Zug ohne laufende Uhr darauf hin — und startet auf Zuruf', () => {
+    // Wer zu rechnen beginnt, während nichts misst, merkt es sonst erst hinterher.
+    const { component: c, warnings, snackbarAction } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+    expect(c.timerRunning).toBeFalse();
+
+    c.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    expect(warnings).toEqual(['calc.timer.notRunning']);
+
+    // Nur EINMAL je Besuch — sonst wird bei jedem Zug gefragt.
+    c.onMove({ orig: 'e5' as never, dest: 'd7' as never });
+    expect(warnings).toEqual(['calc.timer.notRunning']);
+
+    // „Starten" im Hinweis schaltet das Training wirklich an.
+    snackbarAction.next();
+    expect(c.timerRunning).toBeTrue();
+    c.ngOnDestroy();
+  });
+
+  it('schweigt, solange die Uhr läuft', () => {
+    const { component: c, warnings } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+    c.startTraining();
+    c.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    expect(warnings).toEqual([]);
+    c.ngOnDestroy();
+  });
+
+  it('trägt die Kapitelzeit über die Uhr nach — und ignoriert Nicht-Zahlen', () => {
+    const { component: c, dialog } = make();
+    c.bookId = 1;
+    load(c, position({ chapter: 'A' }));
+
+    dialog.setResult(1830);                    // 30:30
+    c.openTimerDialog();
+    expect(c.timerSeconds).toBe(1830);
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 1830 });
+
+    // Weggeklickt bzw. ein Fremdwert des Rahmenwerks darf die Zeit nicht auf 0 setzen.
+    for (const unfug of [undefined, '', '900', NaN, null, {}]) {
+      dialog.setResult(unfug as never);
+      c.openTimerDialog();
+      expect(c.timerSeconds).toBe(1830);
+    }
+  });
+
+  it('blendet die Zug-Anmerkungen erst auf Wunsch ein und merkt sich das nicht', () => {
+    const { component: c } = make();
+    expect(c.showAnnotations).toBeFalse();
+    c.toggleAnnotations();
+    expect(c.showAnnotations).toBeTrue();
+    expect(make().component.showAnnotations).toBeFalse();
+  });
+});
+
 describe('CalculationComponent Hinweis „nur auf diesem Gerät"', () => {
   afterEach(() => TestBed.resetTestingModule());
 
@@ -1884,6 +1955,20 @@ describe('CalculationComponent Hinweis „nur auf diesem Gerät"', () => {
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ bookId: '1' }), queryParamMap: convertToParamMap({}) } },
+        },
+        // Der Hinweis steht dort, wo die Arbeit steht — in der Seitenspalte. Die rendert nur mit
+        // geladenem Buch, deshalb hier ein Buch mit einer Stellung statt eines offenen Requests.
+        {
+          provide: CalculationService,
+          useValue: {
+            getPublicBook: () => of({
+              bookId: 1, displayName: 'B', isCalculation: true, positions: [item(7, { chapter: 'A' })],
+            }),
+            getBook: () => of({
+              bookId: 1, displayName: 'B', isCalculation: true, positions: [item(7, { chapter: 'A' })],
+            }),
+            getPosition: () => of(position({ id: 7, chapter: 'A' })),
+          },
         },
       ],
     }).compileComponents();

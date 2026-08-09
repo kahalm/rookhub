@@ -185,7 +185,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  min-width: 0;
 }
+
+.calc-board-col { min-width: 0; }
+
+/* Die Befehlszeile in der Seitenspalte gibt es nur im App-Vollbild. */
+.calc-bar--side { display: none; }
 
 /* Der Aufgabentext hat keine eigene Karte mehr — er steht, wenn es einen gibt, als schlichte
    Zeile über den Linien. Fehlt er, steht dort nichts (statt „Kein Kommentar zu dieser Stellung"). */
@@ -500,13 +506,44 @@
     /* Über/unter dem Brett steht im Vollbild NICHTS mehr (Kopfzeile + Zugzeile sind rechts) —
        nur die Seitenränder (2×0.5rem) gehen von der Höhe ab. */
     .calc-board-col { width: min(calc(100vh - 1rem), calc(100vw - 340px)); }
-    .calc-board-head--board { display: none; }
-    .calc-board-head--side { display: flex; }
     .calc-where--board { display: none; }
     .calc-where--side { display: flex; }
+    /* Oben ausgeblendet, hier sichtbar — sonst käme man im Vollbild zu keiner nächsten Stellung.
+       Rechts bleibt Platz frei: dort liegen die beiden aus dem Fluss genommenen Knöpfe des
+       Bretts (Vollbild verlassen + App-Vollbild), die sich sonst mit der Zeile überlagern. */
+    .calc-bar--side {
+      display: flex;
+      padding-right: 84px;
+    }
     .calc-side-col {
       max-height: calc(100vh - 1rem);
       overflow-y: auto;
+      /* Waagrecht wird nicht gerollt: ein Balken quer über der Fußzeile ist schlimmer als ein
+         umbrechender Inhalt. `min-width: 0` oben lässt die Spalte ohnehin schrumpfen. */
+      overflow-x: hidden;
     }
   }
+}
+
+/* Werkzeug-Knöpfe in der Kopfzeile der Linienliste: „a" (Anmerkungen) und „?" (Tastenkürzel).
+   Eingeschaltet färben sie sich, damit man sieht, warum unten etwas steht. */
+.calc-tool-on { color: var(--mat-sys-primary, #1565c0); }
+
+.calc-tool-letter {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Die Uhr ist ein Knopf (Zeit nachtragen) — sie soll trotzdem wie Text aussehen. */
+.calc-timer-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0 0.25rem;
+  cursor: pointer;
+  border-radius: 6px;
+
+  &:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 }

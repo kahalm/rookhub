@@ -6,7 +6,10 @@
        Kapitelstand (bisher im Kapitel-Feld UND in der Navigationszeile).
        Sie klebt bewusst NICHT oben fest: im Kalkulations-Modus ist die Höhe das knappe Gut, weil
        das Brett quadratisch ist. -->
-  <div class="calc-bar">
+  <!-- EINE Vorlage, zwei Orte: normal oben auf der Seite, im App-Vollbild in der
+       Seitenspalte (oben stiehlt sie dort dem quadratischen Brett Höhe). Bewusst keine
+       zweite Abschrift — genau solche Doppelungen sind hier gerade weggeräumt worden. -->
+  <ng-template #commandBar>
     <a mat-icon-button class="calc-back" [routerLink]="['/courses']"
        [matTooltip]="'common.back' | translate" [attr.aria-label]="'common.back' | translate">
       <mat-icon>arrow_back</mat-icon>
@@ -17,7 +20,7 @@
     <button mat-button class="calc-bar-pick" [matMenuTriggerFor]="chapterMenu"
             [matTooltip]="'calc.chapter.label' | translate">
       <span class="calc-bar-pick-text">{{ chapterName || ('courses.noChapter' | translate) }}</span>
-      <mat-icon class="calc-bar-caret">arrow_drop_down</mat-icon>
+      <mat-icon iconPositionEnd class="calc-bar-caret">arrow_drop_down</mat-icon>
     </button>
     <mat-menu #chapterMenu="matMenu">
       @for (group of groups; track group.key) {
@@ -35,7 +38,7 @@
       <button mat-button class="calc-bar-pick" [matMenuTriggerFor]="posMenu"
               [matTooltip]="'calc.jumpTo' | translate">
         <span class="calc-bar-count">{{ index + 1 }} / {{ positionCount }}</span>
-        <mat-icon class="calc-bar-caret">arrow_drop_down</mat-icon>
+        <mat-icon iconPositionEnd class="calc-bar-caret">arrow_drop_down</mat-icon>
       </button>
       <mat-menu #posMenu="matMenu">
         @for (item of chapterPositions; track item.id) {
@@ -63,15 +66,32 @@
       </button>
     </span>
 
+    <span class="calc-turn">
+      {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
+    </span>
+
     <span class="calc-spacer"></span>
+
+    <!-- „Eingefroren" ist eine Eigenschaft des MODUS und ändert sich nie — als Dauertext war das
+         Grundrauschen, als Symbol mit Erklärung sagt es dasselbe. -->
+    <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate"
+          [attr.aria-label]="'calc.frozen' | translate">
+      <mat-icon>ac_unit</mat-icon>
+    </span>
+    <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
+      <mat-icon>flip_camera_android</mat-icon>
+    </button>
+
 
     <!-- Kapitel-Training: der EINZIGE Schalter dafür (er stand vorher zweimal auf dem Schirm).
          Ohne Start wird nicht gemessen; der Laufzustand ist an Farbe und Symbol ablesbar. -->
-    <span class="calc-timer" [class.calc-timer--running]="timerRunning"
-          [matTooltip]="trainingStateKey | translate">
+    <!-- Anklickbar: wer das Starten vergessen hat, trägt die Kapitelzeit hier nach. -->
+    <button type="button" class="calc-timer calc-timer-btn"
+            [class.calc-timer--running]="timerRunning" (click)="openTimerDialog()"
+            [matTooltip]="timerTooltip" [attr.aria-label]="timerTooltip">
       <mat-icon class="calc-timer-icon">{{ timerRunning ? 'timer' : 'timer_off' }}</mat-icon>
       <span class="calc-timer-time">{{ timerDisplay }}</span>
-    </span>
+    </button>
     <button mat-icon-button (click)="toggleTraining()" [disabled]="trainingDisabled"
             [matTooltip]="trainingActionKey | translate"
             [attr.aria-label]="trainingActionKey | translate">
@@ -82,7 +102,9 @@
     <span class="calc-bar-points" [matTooltip]="pointsTooltip">
       {{ scoreDisplay(totalPoints, totalMaxPoints) }}
     </span>
-  </div>
+  </ng-template>
+
+  <div class="calc-bar"><ng-container *ngTemplateOutlet="commandBar"></ng-container></div>
 
   @if (loading && !position) {
     <div class="calc-loading"><mat-spinner diameter="40"></mat-spinner></div>
@@ -94,22 +116,6 @@
     <div class="calc-layout">
       <!-- ===== Brett (STRIKT eingefroren) ===== -->
       <div class="calc-board-col">
-        <!-- Uhr und Start/Stopp stehen in der Befehlszeile — hier bleibt nur, was sich mit der
-             Stellung ändert. „Eingefroren" ist eine Eigenschaft des MODUS und ändert sich nie:
-             als Wort war es dauerhaft Grundrauschen, als Symbol mit Erklärung sagt es dasselbe. -->
-        <div class="calc-board-head calc-board-head--board">
-          <span class="calc-turn">
-            {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
-          </span>
-          <span class="calc-spacer"></span>
-          <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate"
-                [attr.aria-label]="'calc.frozen' | translate">
-            <mat-icon>ac_unit</mat-icon>
-          </span>
-          <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
-            <mat-icon>flip_camera_android</mat-icon>
-          </button>
-        </div>
 
         <div class="calc-board-wrap">
           <app-puzzle-board
@@ -145,31 +151,11 @@
 
       <!-- ===== Seitenspalte ===== -->
       <div class="calc-side-col">
-        <!-- Im App-Vollbild rutscht die Brett-Kopfzeile (Eingefroren/Am-Zug/Timer/Drehen)
-             hierher (rechts) — über dem Brett stiehlt dann nichts mehr Höhe. Normal ausgeblendet. -->
-        <div class="calc-board-head calc-board-head--side">
-          <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
-            <mat-icon>ac_unit</mat-icon>{{ 'calc.frozen' | translate }}
-          </span>
-          <span class="calc-turn">
-            {{ (whiteToMoveAtCursor ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
-          </span>
-          <span class="calc-spacer"></span>
-          <!-- Kapitel-Training: NUR solange es läuft, wird überhaupt Zeit gemessen. Der
-               Laufzustand ist an Farbe und Symbol ablesbar. -->
-          <span class="calc-timer" [class.calc-timer--running]="timerRunning"
-                [matTooltip]="'calc.timer.hint' | translate">
-            <mat-icon class="calc-timer-icon">{{ timerRunning ? 'timer' : 'timer_off' }}</mat-icon>
-            <span class="calc-timer-time">{{ timerDisplay }}</span>
-          </span>
-          <button mat-icon-button (click)="toggleTraining()" [disabled]="trainingDisabled"
-                  [matTooltip]="trainingActionKey | translate"
-                  [attr.aria-label]="trainingActionKey | translate">
-            <mat-icon>{{ timerRunning ? 'stop' : 'play_arrow' }}</mat-icon>
-          </button>
-          <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
-            <mat-icon>flip_camera_android</mat-icon>
-          </button>
+        <!-- Im App-Vollbild ist die Befehlszeile oben ausgeblendet — hier steht sie
+             stattdessen, damit Kapitel, Stellung, Weiter/Zurück und die Uhr auch dort
+             erreichbar sind. Ohne das käme man im Vollbild zu keiner nächsten Stellung. -->
+        <div class="calc-bar calc-bar--side">
+          <ng-container *ngTemplateOutlet="commandBar"></ng-container>
         </div>
         <!-- Im App-Vollbild rutscht die „Du bist hier"-Zugzeile vom Brett hierher (rechts),
              damit das Brett die volle Höhe bekommt. Normal ist diese Kopie ausgeblendet. -->
@@ -203,7 +189,14 @@
                         [attr.aria-label]="'calc.deleteFromCursor' | translate">
                   <mat-icon>undo</mat-icon>
                 </button>
-                <button mat-icon-button (click)="toggleKeys()" [class.calc-keys-on]="showKeys"
+                <button mat-icon-button (click)="toggleAnnotations()" [disabled]="atStart"
+                        [class.calc-tool-on]="showAnnotations"
+                        [matTooltip]="'calc.annotate' | translate"
+                        [attr.aria-label]="'calc.annotate' | translate"
+                        [attr.aria-expanded]="showAnnotations">
+                  <span class="calc-tool-letter">a</span>
+                </button>
+                <button mat-icon-button (click)="toggleKeys()" [class.calc-tool-on]="showKeys"
                         [matTooltip]="'calc.keyboardHelp' | translate"
                         [attr.aria-label]="'calc.keyboardHelp' | translate"
                         [attr.aria-expanded]="showKeys">
@@ -260,7 +253,7 @@
         <!-- Werkzeug erscheint am Werkstück: die Symbole wirken auf EINEN ausgewählten Zug.
              Solange keiner gewählt ist, bestand die Karte aus einer Überschrift und der
              Aufforderung, etwas anderes zu tun — sie erscheint jetzt erst mit der Auswahl. -->
-        @if (!atStart) {
+        @if (!atStart && showAnnotations) {
           <mat-card class="calc-annotate">
             <mat-card-content>
               <div class="calc-annotate-head">
@@ -338,43 +331,44 @@
           }
         </p>
 
+        <!-- Anonym: alles bleibt auf diesem Gerät. Bewusst als EINE ruhige Zeile unter der Arbeit —
+             es ist eine Auskunft, keine Warnung. Ganz ans SEITENENDE gehört sie trotzdem nicht:
+             unter einem quadratischen Brett stünde sie außerhalb des Sichtfelds.
+             Der Anmelde-Link führt über returnUrl genau hierher zurück (inkl. Stellung/Kapitel). -->
+        @if (showLocalNotice) {
+          <p class="calc-local-note">
+            <mat-icon>devices</mat-icon>
+            <span class="calc-local-text">{{ 'calc.local.notice' | translate }}</span>
+            <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
+              {{ 'calc.local.signIn' | translate }}
+            </a>
+            <!-- Ein Vorschlag darf man abstellen: einmal weggeklickt bleibt er für diesen Kurs weg. -->
+            <button mat-icon-button class="calc-note-close" (click)="dismissLocalNotice()"
+                    [matTooltip]="'calc.local.dismiss' | translate"
+                    [attr.aria-label]="'calc.local.dismiss' | translate">
+              <mat-icon>close</mat-icon>
+            </button>
+          </p>
+        }
+        <!-- Spielt der Gerätespeicher NICHT mit (Privatmodus, Quota), wäre „liegt auf diesem
+             Gerät" eine Lüge. Diese Zeile meldet DATENVERLUST, keinen Vorschlag: sie lässt sich
+             nur für die laufende Sitzung wegklicken und steht beim nächsten Fehlschlag wieder da. -->
+        @if (showLocalWarning) {
+          <p class="calc-local-note calc-local-note--failed">
+            <mat-icon>warning</mat-icon>
+            <span class="calc-local-text">{{ 'calc.local.unavailable' | translate }}</span>
+            <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
+              {{ 'calc.local.signIn' | translate }}
+            </a>
+            <button mat-icon-button class="calc-note-close" (click)="dismissLocalWarning()"
+                    [matTooltip]="'calc.local.hideForNow' | translate"
+                    [attr.aria-label]="'calc.local.hideForNow' | translate">
+              <mat-icon>close</mat-icon>
+            </button>
+          </p>
+        }
+
       </div>
     </div>
-  }
-
-  <!-- Anonym: alles bleibt auf diesem Gerät. Bewusst ganz unten und als EINE ruhige Zeile —
-       es ist eine Auskunft, keine Warnung, und stand vorher zweizeilig über der Arbeit.
-       Der Anmelde-Link führt über returnUrl genau hierher zurück (inkl. Stellung/Kapitel). -->
-  @if (showLocalNotice) {
-    <p class="calc-local-note">
-      <mat-icon>devices</mat-icon>
-      <span class="calc-local-text">{{ 'calc.local.notice' | translate }}</span>
-      <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
-        {{ 'calc.local.signIn' | translate }}
-      </a>
-      <!-- Ein Vorschlag darf man abstellen: einmal weggeklickt bleibt er für diesen Kurs weg. -->
-      <button mat-icon-button class="calc-note-close" (click)="dismissLocalNotice()"
-              [matTooltip]="'calc.local.dismiss' | translate"
-              [attr.aria-label]="'calc.local.dismiss' | translate">
-        <mat-icon>close</mat-icon>
-      </button>
-    </p>
-  }
-  <!-- Spielt der Gerätespeicher NICHT mit (Privatmodus, Quota), wäre „liegt auf diesem
-       Gerät" eine Lüge. Diese Zeile meldet DATENVERLUST, keinen Vorschlag: sie lässt sich
-       nur für die laufende Sitzung wegklicken und steht beim nächsten Fehlschlag wieder da. -->
-  @if (showLocalWarning) {
-    <p class="calc-local-note calc-local-note--failed">
-      <mat-icon>warning</mat-icon>
-      <span class="calc-local-text">{{ 'calc.local.unavailable' | translate }}</span>
-      <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
-        {{ 'calc.local.signIn' | translate }}
-      </a>
-      <button mat-icon-button class="calc-note-close" (click)="dismissLocalWarning()"
-              [matTooltip]="'calc.local.hideForNow' | translate"
-              [attr.aria-label]="'calc.local.hideForNow' | translate">
-        <mat-icon>close</mat-icon>
-      </button>
-    </p>
   }
 </div>
