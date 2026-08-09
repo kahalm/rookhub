@@ -13,8 +13,8 @@
          in einen net10-Testlauf. Aktuell noch ohne Nutzer — WebApplicationFactory kommt gegen
          Program.cs nicht hoch (db.Database.Migrate() beim Start braucht eine echte MariaDB, siehe
          Begründung in PatScopeFenceTests). -->
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />

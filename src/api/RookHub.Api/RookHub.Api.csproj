@@ -17,17 +17,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Anthropic" Version="12.35.1" />
+    <PackageReference Include="Anthropic" Version="12.40.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Gera.Chess" Version="1.2.0" />
     <PackageReference Include="MailKit" Version="4.17.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microting.EntityFrameworkCore.MySql" Version="10.0.9" />
+    <PackageReference Include="Microting.EntityFrameworkCore.MySql" Version="10.0.10" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <!-- Fest gepinnt (war "8.*"): ein Floating-Range zieht bei jedem Restore stillschweigend
          eine neue Sink-Version — Bootstrap/ECS-Templates koennen sich damit ohne Commit aendern. -->
