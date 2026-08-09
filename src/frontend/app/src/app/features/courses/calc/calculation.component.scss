@@ -4,28 +4,59 @@
   margin: 0 auto;
 }
 
-.calc-topbar {
+/* Befehlszeile: Buch · Kapitel · Stellung · Kapitel-Uhr · Kapitelstand in EINER Zeile.
+   Sie klebt bewusst NICHT oben fest (`position: sticky`) — im Kalkulations-Modus ist die HÖHE
+   das knappe Gut, weil das Brett quadratisch ist und mit ihr wächst. */
+.calc-bar {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.25rem;
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
 }
 
-.calc-title {
-  font-size: 1.25rem;
-  margin: 0;
-  font-weight: 500;
-}
-
-.calc-book {
-  font-weight: 400;
-  opacity: 0.7;
-}
-
-/* Das Kapitel ist die Arbeitseinheit — sein Name steht deshalb kräftiger da als der Buchtitel. */
-.calc-chapter-name {
+.calc-bar-book {
   font-weight: 600;
+  padding: 0 0.35rem;
+  white-space: nowrap;
+}
+
+/* Kapitel- und Stellungs-Auswahl sehen gleich aus — beide sind Menüs, nicht Formularfelder:
+   ein `mat-form-field` brächte Rahmen, Label und Fußzeile in eine Zeile, die davon lebt,
+   flach zu sein. */
+.calc-bar-pick {
+  min-width: 0;
+  padding: 0 0.35rem;
+
+  .calc-bar-pick-text {
+    display: inline-block;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+}
+
+.calc-bar-caret { margin-left: -2px; opacity: 0.7; }
+
+.calc-bar-count { font-variant-numeric: tabular-nums; }
+
+.calc-bar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Kapitelstand. Die Buchsumme steht im Tooltip (`pointsTooltip`) statt als eigene Zeile. */
+.calc-bar-points {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0 0.4rem;
+  white-space: nowrap;
 }
 
 /* ד am Hinweis: klein und rechts, damit es die Zeile nicht dominiert. */
@@ -102,19 +133,20 @@
   flex-wrap: wrap;
 }
 
+/* „Eingefroren" ist eine Eigenschaft des MODUS und ändert sich nie — als Dauertext war das
+   Grundrauschen. Als Symbol mit Erklärung sagt es dasselbe und nimmt eine Ecke statt einer Zeile. */
 .calc-frozen {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   background: #e3f2fd;
   color: #1565c0;
-  white-space: nowrap;
+  cursor: help;
 
-  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
 }
 
 .calc-turn { font-size: 0.85rem; opacity: 0.8; }
@@ -155,41 +187,21 @@
   gap: 0.6rem;
 }
 
-.calc-task-head {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.25rem;
-
-  mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.6; }
-}
-
-.calc-task-name { font-weight: 600; }
-
-.calc-chapter {
-  font-size: 0.72rem;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
-}
-
+/* Der Aufgabentext hat keine eigene Karte mehr — er steht, wenn es einen gibt, als schlichte
+   Zeile über den Linien. Fehlt er, steht dort nichts (statt „Kein Kommentar zu dieser Stellung"). */
 .calc-task-text {
-  margin: 0;
+  margin: 0 0 0.5rem;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.calc-task-text--empty {
-  font-style: italic;
-  color: color-mix(in srgb, currentColor 45%, transparent);
+/* Werkzeuge in der Kopfzeile der Linienliste statt als eigene Knopfreihe darunter. */
+.calc-head-tools {
+  display: inline-flex;
+  align-items: center;
 }
 
-.calc-line-tools {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-top: 0.5rem;
-}
+.calc-keys-on { color: var(--mat-sys-primary, #1565c0); }
 
 .calc-keys {
   margin: 0.4rem 0 0;
@@ -269,60 +281,21 @@
   color: color-mix(in srgb, currentColor 50%, transparent);
 }
 
-.calc-nav-row {
+/* Fußzeile: Bearbeitungs- und Speicherstand. Auskunft, keine Bedienung — deshalb ruhig, klein
+   und ganz unten. */
+.calc-foot {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.calc-nav-count {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  margin: 0;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, currentColor 55%, transparent);
 }
 
 .calc-done {
   font-size: 0.8rem;
   opacity: 0.75;
-}
-
-.calc-total-points {
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-  color: #f57f17;
-}
-
-/* Die Buchsumme steht bewusst kleiner und beschriftet darunter — sie ist NICHT die Zahl,
-   auf die es beim Durcharbeiten eines Kapitels ankommt. */
-.calc-book-points {
-  margin: 0.25rem 0 0;
-  font-size: 0.75rem;
-  color: color-mix(in srgb, currentColor 55%, transparent);
-}
-
-/* ===== Kapitel-Training (Laufzustand sichtbar) ===== */
-.calc-training-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin: 0.35rem 0 0.5rem;
-}
-
-.calc-training-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  color: color-mix(in srgb, currentColor 55%, transparent);
-
-  mat-icon { font-size: 17px; width: 17px; height: 17px; }
-}
-
-.calc-training-state--on {
-  color: #2e7d32;
-  font-weight: 600;
 }
 
 /* ===== Kapitelende ===== */
@@ -456,17 +429,6 @@
 .calc-opt-grade { font-style: italic; }
 .calc-opt-points { font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.calc-jump {
-  width: 100%;
-  margin-top: 0.4rem;
-}
-
-.calc-save-state {
-  margin: 0.4rem 0 0;
-  font-size: 0.78rem;
-  opacity: 0.75;
-}
-
 /* ===== Kapitel-Timer ===== */
 .calc-timer {
   display: inline-flex;
@@ -530,7 +492,7 @@
 @media (min-width: 900px) {
   :host-context(.app-fullscreen) {
     .calc-page { max-width: none; padding: 0.5rem; }
-    .calc-topbar { display: none; }
+    .calc-bar { display: none; }
     .calc-layout {
       grid-template-columns: auto minmax(300px, 1fr);
       gap: 0.75rem;

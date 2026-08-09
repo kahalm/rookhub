@@ -1626,7 +1626,8 @@ describe('CalculationComponent Nummerierung je Kapitel', () => {
     const { component: c } = bookWithGaps();
     c.selectChapter(1);
     expect(c.chapterPositions.map(p => c.positionLabel(p))).toEqual(['#1', '#2', '#3']);
-    expect(c.currentPositionLabel).toBe('#1');
+    // Die Befehlszeile zeigt die Stellung als „1 / 3" — derselbe kapitelweise Zuschnitt.
+    expect(`${c.index + 1} / ${c.positionCount}`).toBe('1 / 3');
   });
 
   it('lässt `round` und die Id unangetastet (reine ANZEIGE)', () => {
@@ -1827,6 +1828,44 @@ describe('CalculationComponent Hinweis wegklicken', () => {
 
     setItem.and.callThrough();
     c.ngOnDestroy();
+  });
+});
+
+describe('CalculationComponent entrümpelte Ansicht', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('startet mit eingeklapptem Tastatur-Hinweis und merkt sich das Aufklappen NICHT', () => {
+    // Erklärung ist kein Möbelstück: dauerhaft ausgeklappt wäre sie wieder das Grundrauschen,
+    // das sie vorher war. Sie klappt darum bei JEDEM Besuch wieder zu.
+    const { component: c } = make();
+    expect(c.showKeys).toBeFalse();
+    c.toggleKeys();
+    expect(c.showKeys).toBeTrue();
+    // Nichts davon landet im Speicher — ein frischer Aufruf fängt wieder eingeklappt an.
+    expect(Object.keys(localStorage).some(k => k.includes('keys'))).toBeFalse();
+    expect(make().component.showKeys).toBeFalse();
+  });
+
+  it('nennt am Kapitelstand auch die Buchsumme — statt sie als eigene Dauerzeile zu führen', () => {
+    const { component: c } = makeWithBook({
+      positions: [
+        item(1, { chapter: 'A', grade: 4 }), item(2, { chapter: 'A' }),
+        item(3, { chapter: 'B', grade: 2 }),
+      ],
+      chapters: [
+        { chapter: 'A', points: 4, maxPoints: 8, secondsSum: 0 },
+        { chapter: 'B', points: 2, maxPoints: 4, secondsSum: 0 },
+      ],
+      points: 6, maxPoints: 12, secondsSum: 0,
+    });
+    // Sichtbar bleibt das KAPITEL; das Buch steht in der Erklärung daneben.
+    expect(c.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('4 / 8');
+    expect(c.scoreDisplay(c.bookPoints, c.bookMaxPoints)).toBe('6 / 12');
+    // Die Attrappe für Übersetzungen gibt nur den Schlüssel zurück — prüfbar ist damit, dass die
+    // Erklärung BEIDES zusammenfasst: den Kapitel-Hinweis und die Buchsumme.
+    expect(c.pointsTooltip).toContain('calc.review.totalPointsChapterHint');
+    expect(c.pointsTooltip).toContain('calc.review.bookPoints');
   });
 });
 

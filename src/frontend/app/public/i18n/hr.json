@@ -1412,7 +1412,6 @@
     "commentPlaceholder": "Komentar…",
     "currentLine": "Ovdje si:",
     "deleteFromCursor": "Potez natrag",
-    "deleteFromCursorHint": "Briše odabrani potez i sve nakon njega.",
     "deleteLine": "Izbriši varijantu",
     "doneCount": "{{done}} od {{total}} obrađeno",
     "emptyBook": "Ova knjiga još ne sadrži pozicije.",
@@ -1459,7 +1458,6 @@
     "newLine": "Nova varijanta od početne pozicije",
     "nextPosition": "Sljedeća pozicija",
     "noLines": "Još nema varijante — klikni potez na ploči da je započneš.",
-    "noTaskText": "Nema komentara za ovu poziciju.",
     "notSavedYet": "Još nije spremljeno",
     "prevPosition": "Prethodna pozicija",
     "review": {
@@ -1487,24 +1485,21 @@
       "scoreHint": "Bodovi ove pozicije (najviše 4).",
       "selfRatingHint": "Provjeri rješenje u knjizi pa odaberi svoju razinu — način računanja nikad ne prikazuje rješenje.",
       "timeHint": "Aktivno vrijeme računanja na ovoj poziciji (pauzira kad je kartica u pozadini).",
-      "totalPoints": "{{score}} bod.",
       "totalPointsChapterHint": "Bodovi ovog POGLAVLJA iz tvoje samoocjene, uz najveći mogući broj — popis prikazuje samo ovo poglavlje.",
       "result": "Rezultat",
       "resultHint": "Sam ocijeni ovu poziciju (otvara razine).",
       "bookPoints": "Cijela knjiga: {{score}} bod.",
-      "bookPointsHint": "Bodovi CIJELOG tečaja — brojevi iznad pripadaju trenutnom poglavlju.",
       "dialog": {
         "choice": "Odlučio si se za {{move}}.",
         "clear": "Poništi ocjenu",
         "noChoice": "Nisi se odlučio ni za jedan potez.",
         "title": "Tvoj rezultat"
-      }
+      },
+      "positionTime": "Pozicija"
     },
     "saveFailed": "Tvoje varijante nije bilo moguće spremiti.",
     "savedAt": "Spremljeno {{time}}",
     "saving": "Spremam…",
-    "selectMoveFirst": "Odaberi potez da ga ocijeniš.",
-    "title": "Izračun",
     "local": {
       "notice": "Niste prijavljeni: vaše linije, odabir, vrijeme i samoocjena ostaju samo na ovom uređaju.",
       "unavailable": "Na ovom uređaju trenutačno se NIŠTA ne može spremiti (privatni prozor ili je memorija puna): varijante, odabir, vrijeme i ocjena nestat će nakon ponovnog učitavanja.",
@@ -1517,7 +1512,8 @@
       "label": "Poglavlje",
       "lastDone": "To je bilo posljednje poglavlje tečaja.",
       "next": "Sljedeće poglavlje: {{chapter}}"
-    }
+    },
+    "keyboardHelp": "Tipkovni prečaci"
   },
   "weekly": {
     "title": "Tjedna objava",

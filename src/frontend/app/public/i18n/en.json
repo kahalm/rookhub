@@ -1412,7 +1412,6 @@
     "commentPlaceholder": "Comment…",
     "currentLine": "You are here:",
     "deleteFromCursor": "Take back",
-    "deleteFromCursorHint": "Deletes the selected move and everything after it.",
     "deleteLine": "Delete line",
     "doneCount": "{{done}} of {{total}} worked on",
     "emptyBook": "This book has no positions yet.",
@@ -1459,7 +1458,6 @@
     "newLine": "New line from the start",
     "nextPosition": "Next position",
     "noLines": "No line yet — click a move on the board to start one.",
-    "noTaskText": "No comment for this position.",
     "notSavedYet": "Not saved yet",
     "prevPosition": "Previous position",
     "review": {
@@ -1487,24 +1485,21 @@
       "scoreHint": "Points for this position (4 at most).",
       "selfRatingHint": "Check the solution in the book, then pick your level — calculation mode never shows a solution.",
       "timeHint": "Active thinking time on this position (paused while the tab is in the background).",
-      "totalPoints": "{{score}} pts",
       "totalPointsChapterHint": "Points of this CHAPTER from your self-assessment, next to the maximum you can reach — the list shows this chapter only.",
       "result": "Result",
       "resultHint": "Rate this position yourself (opens the levels).",
       "bookPoints": "Whole book: {{score}} pts",
-      "bookPointsHint": "Points of the WHOLE course — the numbers above belong to the current chapter.",
       "dialog": {
         "choice": "You had committed to {{move}}.",
         "clear": "Clear rating",
         "noChoice": "You did not commit to a move.",
         "title": "Your result"
-      }
+      },
+      "positionTime": "Position"
     },
     "saveFailed": "Could not save your lines.",
     "savedAt": "Saved {{time}}",
     "saving": "Saving…",
-    "selectMoveFirst": "Select a move to annotate it.",
-    "title": "Calculation",
     "local": {
       "notice": "Not signed in: your lines, choices, time and self-rating stay on this device only.",
       "unavailable": "Nothing can be saved on this device right now (private window or storage full): your lines, choices, time and rating will be gone after a reload.",
@@ -1517,7 +1512,8 @@
       "label": "Chapter",
       "lastDone": "This was the last chapter of the course.",
       "next": "Next chapter: {{chapter}}"
-    }
+    },
+    "keyboardHelp": "Keyboard shortcuts"
   },
   "weekly": {
     "title": "Weekly",

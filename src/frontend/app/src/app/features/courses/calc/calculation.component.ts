@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
@@ -109,7 +110,8 @@ function normChapter(value: string | null | undefined): string {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatCardModule, MatIconModule, MatFormFieldModule,
-    MatSelectModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe, RouterLink,
+    MatSelectModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe,
+    RouterLink,
     PuzzleBoardComponent, CalcLinesComponent,
   ],
   templateUrl: './calculation.component.html',
@@ -1115,17 +1117,31 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get positionCount(): number { return this.chapterPositions.length; }
   get whiteToMoveAtCursor(): boolean { return whiteToMove(this.cursorFen || this.startFen); }
 
+  /**
+   * Ist der Tastatur-Hinweis aufgeklappt? Bewusst NUR im Speicher: er klappt bei jedem Besuch
+   * wieder zu. Eine dauerhaft ausgeklappte Erklärung wäre wieder das Möbelstück, das sie vorher
+   * war — sie stand fest da und wurde nach dem zweiten Mal nicht mehr gelesen.
+   */
+  showKeys = false;
+
+  toggleKeys(): void { this.showKeys = !this.showKeys; }
+
+  /**
+   * Erklärung am Kapitelstand in der Befehlszeile. Die BUCH-Summe steht hier statt als eigene
+   * Zeile: interessant, aber nie dringend — und als Dauerzeile war sie die vierte Punktzahl auf
+   * einem Schirm.
+   */
+  get pointsTooltip(): string {
+    const chapter = this.translate.instant('calc.review.totalPointsChapterHint');
+    const book = this.translate.instant('calc.review.bookPoints', {
+      score: formatScore(this.bookPoints, this.bookMaxPoints),
+    });
+    return `${chapter}\n${book}`;
+  }
+
   /** Notation des Pfades zum Cursor („wo stehe ich") — der einzige Ort, an dem der Vorlauf sichtbar ist. */
   get cursorPathSan(): string {
     return pathToRoot(this.tree, this.cursorId).slice(1).map(n => n.san).join(' ');
-  }
-
-  get currentPositionLabel(): string {
-    const pos = this.position;
-    if (!pos) return '';
-    if (pos.title?.trim()) return pos.title;
-    const number = this.chapterNumbers.get(pos.id);
-    return number ? `#${number}` : `#${pos.round}`;
   }
 
   positionLabel(item: CalcPositionListItem): string {

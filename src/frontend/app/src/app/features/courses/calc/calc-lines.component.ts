@@ -33,6 +33,9 @@ import {
                 [attr.aria-label]="'calc.newLine' | translate" (click)="newLine.emit()">
           <mat-icon>add_circle</mat-icon>
         </button>
+        <!-- Werkzeuge des Elternteils sitzen in DIESER Kopfzeile statt als eigene Knopfreihe
+             darunter — sonst steht neben der Liste eine zweite Leiste mit denselben Aufgaben. -->
+        <ng-content select="[headTools]"></ng-content>
       </div>
 
       @if (allLines.length === 0) {
