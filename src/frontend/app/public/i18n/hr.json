@@ -1521,7 +1521,10 @@
       "lastDone": "To je bilo posljednje poglavlje tečaja.",
       "next": "Sljedeće poglavlje: {{chapter}}"
     },
-    "keyboardHelp": "Tipkovni prečaci"
+    "keyboardHelp": "Tipkovni prečaci",
+    "settings": {
+      "title": "Postavke ploče"
+    }
   },
   "weekly": {
     "title": "Tjedna objava",

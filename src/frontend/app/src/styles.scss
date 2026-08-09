@@ -228,18 +228,6 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
 
   body.calc-mode main { padding-top: 0; }
 
-  /* Der Vollbild-Knopf des Bretts saß in einer eigenen schmalen ZEILE darüber und kostete damit
-     Bretthöhe. Er wandert in den Spalt zwischen Brett und Seitenspalte — daneben statt darüber,
-     und aus dem Fluss heraus, also für null Höhe. */
-  body.calc-mode .calc-board-col { position: relative; }
-
-  body.calc-mode .calc-board-col app-board-fullscreen-button {
-    position: absolute;
-    top: 0;
-    right: -1.65rem;
-    z-index: 3;
-  }
-
   /* Fußzeile in die rechte Spalte, ganz unten: sie ist Auskunft (Version, Hilfe, Feedback) und
      kostete unter dem Brett eine ganze Zeile Höhe. Aus dem Fluss genommen kostet sie keine. */
   body.calc-mode .app-footer {

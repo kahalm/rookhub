@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.352.0';
+export const APP_VERSION = '0.353.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.353.0", date: "2026-08-09", changes: [
+    { en: "A narrow rail next to the board carries what belongs to the BOARD: full screen at the top, a gear below it. The gear opens board and piece style \u2014 the things that actually do something in this mode. The visualisation level deliberately is not there: the board is frozen here and always on level 1, and a control that does nothing is worse than none. In the rail the full-screen button costs width, of which there is plenty, instead of the row of height it used to take above the board.", de: "Eine schmale Leiste neben dem Brett tr\u00e4gt, was zum BRETT geh\u00f6rt: oben Vollbild, darunter ein Zahnrad. Das Zahnrad \u00f6ffnet Brett- und Figurenart \u2014 das, was in diesem Modus tats\u00e4chlich etwas bewirkt. Die Visualisierungsstufe fehlt bewusst: das Brett ist hier eingefroren und steht immer auf Stufe 1, und ein Regler, der nichts tut, ist schlimmer als keiner. In der Leiste kostet der Vollbild-Knopf Breite, von der genug da ist, statt der Zeile H\u00f6he, die er vorher \u00fcber dem Brett belegte." },
+    { en: "The rook of the app replaces the bare back arrow in the command line \u2014 the same mark as the icon on the phone. It is also in the browser tab now: the favicon still carried the Angular logo from the very first build.", de: "Der Turm der App ersetzt den nackten Zur\u00fcck-Pfeil in der Befehlszeile \u2014 dasselbe Zeichen wie das Symbol auf dem Handy. Er steht jetzt auch im Browser-Tab: das Tab-Symbol trug bis hierher noch das Angular-Logo aus dem allerersten Build." },
+    { en: "\u201eBoard frozen\u201c is written out again instead of being just a snowflake. The bare symbol did not say what it meant, and this mode\u0027s whole point hangs on it.", de: "\u201eBrett eingefroren\u201c steht wieder ausgeschrieben da statt nur als Schneefl\u00f6ckchen. Das nackte Zeichen sagte nicht, was es meint \u2014 und an ihm h\u00e4ngt der ganze Sinn dieses Modus." },
+  ] },
   { version: "0.352.0", date: "2026-08-09", changes: [
     { en: "The app icons at the top right now sit ON the command line instead of next to it. The page was capped at 1400 px and centred while the header clung to the window edge \u2014 on a wide screen the two simply were not in the same place. In this mode the page uses the full width, both are the same height, and the side column has its own cap so text does not run absurdly wide.", de: "Die App-Symbole oben rechts sitzen jetzt AUF der Befehlszeile statt daneben. Die Seite war auf 1400 px gedeckelt und zentriert, w\u00e4hrend die Kopfzeile am Fensterrand klebte \u2014 auf einem breiten Schirm waren beide schlicht nicht am selben Ort. In diesem Modus nutzt die Seite die volle Breite, beide sind gleich hoch, und die Seitenspalte bekommt einen eigenen Deckel, damit Text nicht absurd breit l\u00e4uft." },
     { en: "More board again: the full-screen button of the board moved out of its own narrow row above the board into the gap beside it, and the page footer moved to the bottom right \u2014 both out of the flow, so both cost no height at all. Together with the row that was already gone the board now reckons against nearly the whole window height.", de: "Wieder mehr Brett: der Vollbild-Knopf des Bretts ist aus seiner eigenen schmalen Zeile dar\u00fcber in den Spalt daneben gewandert, und die Fu\u00dfzeile der Seite nach unten rechts \u2014 beide aus dem Fluss heraus, beide kosten damit gar keine H\u00f6he mehr. Zusammen mit der ohnehin entfallenen Zeile rechnet das Brett jetzt gegen fast die ganze Fensterh\u00f6he." },

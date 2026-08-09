@@ -25,6 +25,18 @@
   background: color-mix(in srgb, currentColor 5%, transparent);
 }
 
+/* Turm der App als Weg zurück — dasselbe Zeichen wie das Symbol auf dem Handy. */
+.calc-home {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.2rem;
+  border-radius: 6px;
+  line-height: 0;
+
+  img { display: block; border-radius: 5px; }
+  &:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+}
+
 .calc-bar-book {
   font-weight: 600;
   padding: 0 0.35rem;
@@ -125,6 +137,8 @@
 
 @media (max-width: 900px) {
   .calc-layout { grid-template-columns: 1fr; }
+  /* Einspaltig steht die Leiste quer statt hochkant. */
+  .calc-rail { flex-direction: row; justify-content: flex-end; }
 }
 
 /* Ab hier steht die App-Kopfzeile rechts (Modus-Klasse) und über dem Brett nur die Befehlszeile.
@@ -142,8 +156,8 @@
   /* Der Spalt trägt jetzt den Vollbild-Knopf des Bretts (Regel in `styles.scss`) — er braucht
      etwas mehr als die üblichen 1rem. */
   .calc-layout {
-    grid-template-columns: auto minmax(320px, 980px);
-    gap: 1.9rem;
+    grid-template-columns: auto auto minmax(320px, 980px);
+    gap: 0.6rem;
   }
 
   /* Abzug von der Fensterhöhe: Seitenpolster oben und unten (2 × 0.75rem), die Befehlszeile
@@ -171,14 +185,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
   background: #e3f2fd;
   color: #1565c0;
+  white-space: nowrap;
   cursor: help;
 
-  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
 }
 
 .calc-turn { font-size: 0.85rem; opacity: 0.8; }
@@ -195,6 +212,25 @@
   color: #e65100;
 
   mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+/* Schmale Leiste zwischen Brett und Seitenspalte: Vollbild oben, Einstellungen darunter. */
+.calc-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding-top: 2px;
+}
+
+.calc-rail-btn {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  opacity: 0.5;
+
+  mat-icon { font-size: 19px; width: 19px; height: 19px; }
+  &:hover, &:focus-visible { opacity: 1; }
 }
 
 .calc-side-col {

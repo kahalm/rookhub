@@ -1521,7 +1521,10 @@
       "lastDone": "This was the last chapter of the course.",
       "next": "Next chapter: {{chapter}}"
     },
-    "keyboardHelp": "Keyboard shortcuts"
+    "keyboardHelp": "Keyboard shortcuts",
+    "settings": {
+      "title": "Board settings"
+    }
   },
   "weekly": {
     "title": "Weekly",

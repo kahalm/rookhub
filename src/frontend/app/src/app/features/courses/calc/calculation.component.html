@@ -10,9 +10,10 @@
        Seitenspalte (oben stiehlt sie dort dem quadratischen Brett Höhe). Bewusst keine
        zweite Abschrift — genau solche Doppelungen sind hier gerade weggeräumt worden. -->
   <ng-template #commandBar>
-    <a mat-icon-button class="calc-back" [routerLink]="['/courses']"
+    <!-- Der Turm der App statt eines nackten Pfeils — dasselbe Zeichen wie auf dem Handy. -->
+    <a class="calc-home" [routerLink]="['/courses']"
        [matTooltip]="'common.back' | translate" [attr.aria-label]="'common.back' | translate">
-      <mat-icon>arrow_back</mat-icon>
+      <img src="icons/icon.svg" alt="" width="26" height="26" />
     </a>
     <span class="calc-bar-book" *ngIf="book">{{ book.displayName }}</span>
 
@@ -74,9 +75,8 @@
 
     <!-- „Eingefroren" ist eine Eigenschaft des MODUS und ändert sich nie — als Dauertext war das
          Grundrauschen, als Symbol mit Erklärung sagt es dasselbe. -->
-    <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate"
-          [attr.aria-label]="'calc.frozen' | translate">
-      <mat-icon>ac_unit</mat-icon>
+    <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
+      <mat-icon>ac_unit</mat-icon>{{ 'calc.frozen' | translate }}
     </span>
     <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
       <mat-icon>flip_camera_android</mat-icon>
@@ -119,6 +119,7 @@
 
         <div class="calc-board-wrap">
           <app-puzzle-board
+            [allowFullscreen]="false"
             [fen]="startFen" [actualFen]="cursorFen" [visualization]="1"
             [orientation]="orientation" [turnColor]="orientation" [dests]="noDests"
             [boardTheme]="boardTheme" [pieceSet]="pieceSet"
@@ -143,6 +144,19 @@
           <p class="calc-warn"><mat-icon>report_problem</mat-icon>{{ 'calc.illegalPosition' | translate }}</p>
         }
 
+      </div>
+
+      <!-- ===== Schmale Leiste neben dem Brett =====
+           Werkzeuge, die zum BRETT gehören, nicht zur Arbeit daneben: Vollbild und Einstellungen.
+           Der Vollbild-Knopf hatte vorher eine eigene Zeile ÜBER dem Brett und kostete Höhe —
+           hier kostet er nur Breite, von der genug da ist. -->
+      <div class="calc-rail">
+        <app-board-fullscreen-button [target]="fsTarget" />
+        <button mat-icon-button class="calc-rail-btn" (click)="openSettings()"
+                [matTooltip]="'calc.settings.title' | translate"
+                [attr.aria-label]="'calc.settings.title' | translate">
+          <mat-icon>settings</mat-icon>
+        </button>
       </div>
 
       <!-- ===== Seitenspalte ===== -->
