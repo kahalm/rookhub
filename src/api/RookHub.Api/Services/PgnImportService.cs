@@ -203,10 +203,13 @@ public class PgnImportService
     /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
     /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
     /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
-    /// Immer wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
-    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist.
+    /// Normalerweise wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
+    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist. <paramref name="preserveExistingSourcePgn"/>
+    /// = true (getReview-Lücken-Merge) überschreibt ein bereits vorhandenes <c>SourcePgn</c> NICHT — der
+    /// Merge liefert nur die fehlenden Linien, nicht das ganze Buch; ein vollständiges getGame-SourcePgn
+    /// bliebe sonst durch das Teil-PGN ersetzt (nur bei leerem SourcePgn wird es erstmalig gesetzt).
     /// </summary>
-    public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct)
+    public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct, bool preserveExistingSourcePgn = false)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
         var (parsed, invalid) = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true);
@@ -229,8 +232,7 @@ public class PgnImportService
         // Veraltetes Buch ⇒ bestehende Linien aktualisieren statt überspringen (Neu-Aufbereitung).
         var upgrade = book.ImportVersion < ImportPipeline.CurrentVersion;
 
-        // Bestehende Linien laden: beim Upgrade als TRACKED Entities (zum Aktualisieren),
-        // sonst nur die LineIds (leichtgewichtig, reines Dedup).
+        // Bestehende Linien laden: beim Upgrade ALLE als TRACKED Entities (zum In-place-Aktualisieren).
         var existing = upgrade
             ? await _db.BookPuzzles.Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
                 .ToDictionaryAsync(bp => bp.LineId, ct)
@@ -240,6 +242,17 @@ public class PgnImportService
             : await _db.BookPuzzles.Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
                 .Select(bp => bp.LineId).ToHashSetAsync(ct);
 
+        // „getGame gewinnt" — über die CHESSABLE-OID, NICHT die LineId. getReview belegt eine Lücke mit
+        // LineId={file}:{oid} (Round=oid), das echte getGame liefert aber Round="Kapitel.Index" und die
+        // oid separat im [ChessableOid]-Header (LineId={file}:002.001). Die LineIds passen also NICHT —
+        // ein LineId-Abgleich ließe getGame eine ZWEITE Linie anlegen (Duplikat). Deshalb den
+        // Review-Lücken-Füller über seine oid auflösen und beim echten Import ersetzen/entfernen.
+        var reviewByOid = upgrade
+            ? new Dictionary<string, BookPuzzle>()
+            : await _db.BookPuzzles.Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName)
+                    && bp.Source == "review" && bp.ChessableOid != null)
+                .ToDictionaryAsync(bp => bp.ChessableOid!, ct);
+
         var toAdd = new List<BookPuzzle>();
         var skipped = 0;
         var updated = 0;
@@ -248,9 +261,45 @@ public class PgnImportService
         foreach (var p in parsed)
         {
             if (!seen.Add(p.LineId)) { skipped++; continue; }      // Duplikat im selben Batch
+
+            // „getGame gewinnt" (oid-basiert): gibt es zu dieser Chessable-oid einen Review-Lücken-Füller,
+            // ERSETZT ihn dieser echte Import. Der Füller hat i. d. R. eine ANDERE LineId (Round=oid) als
+            // die getGame-Linie (Round="Kapitel.Index" + oid im Header) — deshalb über die oid, nicht die
+            // LineId auflösen. Die vorhandene Zeile wird dabei WIEDERVERWENDET (LineId + Inhalt von getGame
+            // übernehmen, Source löschen), NICHT gelöscht+neu angelegt: ein Füller ist eine vollwertige,
+            // lösbare Linie, auf die schon Fortschritt zeigen kann (CoursePuzzleResult/CourseAttempt/
+            // CalculationTree = Restrict-FKs → ein Delete würde in MariaDB werfen und Fortschritt verlieren).
+            // Inhaltlich sind getGame und getReview für die Linie ohnehin deckungsgleich, der Fortschritt
+            // gilt also weiter.
+            if (!string.IsNullOrEmpty(p.ChessableOid) && reviewByOid.Remove(p.ChessableOid, out var stale)
+                && (stale.LineId == p.LineId || !existingLineIds.Contains(p.LineId)))
+            {
+                existingLineIds.Remove(stale.LineId);
+                stale.LineId = p.LineId;      // getGame-LineId übernehmen (Round=Kapitel.Index)
+                stale.Round = p.Round;
+                stale.Fen = p.Fen;
+                stale.Moves = p.Moves;
+                stale.StartPly = p.StartPly;
+                stale.Title = p.Title;
+                stale.Chapter = ChapterForBook(book.Kind, p.Chapter);
+                stale.Comment = p.Comment;
+                stale.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
+                stale.MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes);
+                stale.AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves);
+                stale.IsInfoOnly = p.IsInfoOnly;
+                stale.ChessableOid = p.ChessableOid;
+                stale.Source = null;          // ab jetzt vollwertig (getGame)
+                existingLineIds.Add(p.LineId);
+                updated++;
+                continue;
+            }
+
             if (existingLineIds.Contains(p.LineId))
             {
-                if (upgrade && existing.TryGetValue(p.LineId, out var bp))
+                // In-place aktualisieren, wenn das Buch veraltet ist (Neu-Aufbereitung); sonst
+                // überspringen (idempotenter Resume).
+                existing.TryGetValue(p.LineId, out var bp);
+                if (bp is not null && upgrade)
                 {
                     bp.Round = p.Round;
                     bp.Fen = p.Fen;
@@ -291,8 +340,11 @@ public class PgnImportService
 
         if (toAdd.Count > 0) _db.BookPuzzles.AddRange(toAdd);
 
-        // Roh-PGN als Reprocessing-Quelle merken + Pipeline-Version hochsetzen.
-        book.SourcePgn = pgnText;
+        // Roh-PGN als Reprocessing-Quelle merken + Pipeline-Version hochsetzen. Beim getReview-Merge
+        // (preserveExistingSourcePgn) NICHT das vorhandene (ggf. vollständige getGame-)SourcePgn mit dem
+        // Teil-PGN der Lücken überschreiben — nur ein noch leeres SourcePgn erstmalig setzen.
+        if (!preserveExistingSourcePgn || string.IsNullOrEmpty(book.SourcePgn))
+            book.SourcePgn = pgnText;
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);

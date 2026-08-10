@@ -872,8 +872,11 @@ public class ChessableImportService : ICourseReimporter
         var oids = new HashSet<string>();
 
         var bookFile = $"chessable-u{userId}-{bid}.pgn";
+        // getGame gewinnt: aus getReview vorbelegte Lücken-Füller (Source=="review") zählen NICHT als
+        // importiert — so holt der getGame-Crawl genau diese oids und überschreibt sie mit der vollen
+        // Version (siehe PgnImportService.ImportFileAsync + BookPuzzle.Source).
         var bookOids = await _db.BookPuzzles
-            .Where(bp => bp.BookFileName == bookFile && bp.ChessableOid != null)
+            .Where(bp => bp.BookFileName == bookFile && bp.ChessableOid != null && bp.Source != "review")
             .Select(bp => bp.ChessableOid!)
             .ToListAsync(ct);
         foreach (var o in bookOids) oids.Add(o);

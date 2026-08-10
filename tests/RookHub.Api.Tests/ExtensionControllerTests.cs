@@ -46,7 +46,9 @@ public class ExtensionControllerTests : IDisposable
             savedGameService, new SharedLineService(_db), chessableProxy, chessableImport,
             new ChessableIngestSessionStore(),
             new ChessableTrainedLineService(_db, new RepertoireTrainingService(_db)),
-            new ChessableProblemMoveService(_db));
+            new ChessableProblemMoveService(_db),
+            new ChessableReviewLineService(_db, new PgnImportService(_db)),
+            NullLogger<ExtensionController>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -417,5 +419,83 @@ public class ExtensionControllerTests : IDisposable
         var res = await _controller.ChessableIngestChunk(
             new ChessableIngestChunkRequest("s", "424242", "book", null, Chapter("{\"game\":{}}"), false), default);
         Assert.IsType<ForbidResult>(res);
+    }
+
+    [Fact]
+    public async Task ChessableReviewLines_StoresRawAndReturnsCount()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        var dto = new ChessableReviewLinesInputDto
+        {
+            Bid = "228856",
+            Entries = new()
+            {
+                new ChessableReviewLineEntryDto { Oid = "1", Json = "{\"lesson\":{\"moves\":[]}}" },
+                new ChessableReviewLineEntryDto { Oid = "2", Json = "{\"lesson\":{\"moves\":[]}}" },
+            },
+        };
+
+        var res = await _controller.ChessableReviewLines(dto, default);
+
+        var ok = Assert.IsType<OkObjectResult>(res);
+        var stored = (int)ok.Value!.GetType().GetProperty("stored")!.GetValue(ok.Value)!;
+        Assert.Equal(2, stored);
+        Assert.Equal(2, _db.ChessableReviewLines.Count(r => r.UserId == user.Id && r.Bid == "228856"));
+    }
+
+    [Fact]
+    public async Task ChessableReviewLines_TriggersMerge_SeedsCourseFromReview()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        var fixture = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "getReview-sample.json"));
+
+        var res = await _controller.ChessableReviewLines(new ChessableReviewLinesInputDto
+        {
+            Bid = "228856",
+            Entries = new() { new ChessableReviewLineEntryDto { Oid = "36730415", Json = fixture } },
+        }, default);
+
+        var ok = Assert.IsType<OkObjectResult>(res);
+        var merged = (int)ok.Value!.GetType().GetProperty("merged")!.GetValue(ok.Value)!;
+        Assert.Equal(1, merged);
+
+        // Der Merge nach dem Speichern hat die Review-Linie in den Kurs (Buch) gespült.
+        var fileName = $"chessable-u{user.Id}-228856.pgn";
+        var bp = _db.BookPuzzles.Single(b => b.BookFileName == fileName);
+        Assert.Equal("review", bp.Source);
+        Assert.Equal("36730415", bp.ChessableOid);
+    }
+
+    [Fact]
+    public async Task ChessableReviewLines_WithForeignScope_Forbidden()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "admin");
+
+        var res = await _controller.ChessableReviewLines(new ChessableReviewLinesInputDto
+        {
+            Bid = "228856",
+            Entries = new() { new ChessableReviewLineEntryDto { Oid = "1", Json = "{}" } },
+        }, default);
+
+        Assert.IsType<ForbidResult>(res);
+        Assert.Empty(_db.ChessableReviewLines.Where(r => r.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task ChessableReviewLines_InvalidBid_BadRequest()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var res = await _controller.ChessableReviewLines(new ChessableReviewLinesInputDto
+        {
+            Bid = "not-a-bid",
+            Entries = new() { new ChessableReviewLineEntryDto { Oid = "1", Json = "{}" } },
+        }, default);
+
+        Assert.IsType<BadRequestObjectResult>(res);
     }
 }

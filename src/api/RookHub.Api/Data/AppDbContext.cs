@@ -63,6 +63,7 @@ public class AppDbContext : DbContext
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
     public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
     public DbSet<ChessableProblemMove> ChessableProblemMoves => Set<ChessableProblemMove>();
+    public DbSet<ChessableReviewLine> ChessableReviewLines => Set<ChessableReviewLine>();
     public DbSet<CourseFlashcardMark> CourseFlashcardMarks => Set<CourseFlashcardMark>();
     public DbSet<RepertoireFlashcardMark> RepertoireFlashcardMarks => Set<RepertoireFlashcardMark>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
@@ -402,6 +403,7 @@ public class AppDbContext : DbContext
             e.HasIndex(bp => bp.LineId).IsUnique();
             e.HasIndex(bp => bp.BookFileName);
             e.HasIndex(bp => bp.BookId);
+            e.Property(bp => bp.Source).HasMaxLength(16);
             // Pool-Filterung (Daily/Random/Blind) schließt ausgemusterte Puzzles aus.
             e.HasIndex(bp => bp.Retired);
 
@@ -754,6 +756,19 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             // Upsert-Identität: eine Zeile je (User, Kurs, Linie); Abfrage typischerweise je Kurs.
+            e.HasIndex(a => new { a.UserId, a.Bid, a.Oid }).IsUnique();
+        });
+
+        modelBuilder.Entity<ChessableReviewLine>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(a => a.Json).HasColumnType("LONGTEXT");
+            e.Property(a => a.ChapterTitle).HasMaxLength(300);
+            // Upsert-Identität: eine Zeile je (User, Kurs, Linie).
             e.HasIndex(a => new { a.UserId, a.Bid, a.Oid }).IsUnique();
         });
 

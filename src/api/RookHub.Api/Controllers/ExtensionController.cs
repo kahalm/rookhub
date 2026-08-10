@@ -25,13 +25,16 @@ public class ExtensionController : BaseApiController
     private readonly ChessableIngestSessionStore _ingestSessions;
     private readonly ChessableTrainedLineService _trainedLines;
     private readonly ChessableProblemMoveService _problemMoves;
+    private readonly ChessableReviewLineService _reviewLines;
+    private readonly ILogger<ExtensionController> _logger;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
         TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
         SavedGameService savedGameService, SharedLineService sharedLineService,
         ChessableProxyService chessableProxy, ChessableImportService chessableImport,
         ChessableIngestSessionStore ingestSessions, ChessableTrainedLineService trainedLines,
-        ChessableProblemMoveService problemMoves)
+        ChessableProblemMoveService problemMoves, ChessableReviewLineService reviewLines,
+        ILogger<ExtensionController> logger)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
@@ -44,6 +47,8 @@ public class ExtensionController : BaseApiController
         _ingestSessions = ingestSessions;
         _trainedLines = trainedLines;
         _problemMoves = problemMoves;
+        _reviewLines = reviewLines;
+        _logger = logger;
     }
 
     private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
@@ -276,6 +281,35 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = "Valid bid required." });
         var written = await _problemMoves.UpsertBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
         return Ok(new { written });
+    }
+
+    /// <summary>
+    /// „getReview-Linien" ablegen (zweite Linien-Quelle neben getGame): Batch-Upsert je (User, Kurs-bid,
+    /// Linien-oid) der ROHEN getReview-Antwort. Wird beim Empfang NICHT geparst — nur roh gespeichert; der
+    /// Aufbau zum Kurs (Fallback, wenn kein getGame vorliegt) passiert erst beim Kurs-Aufbau. Idempotent.
+    /// </summary>
+    [HttpPost("chessable/review-lines")]
+    [RequestSizeLimit(64_000_000)]
+    public async Task<IActionResult> ChessableReviewLines([FromBody] ChessableReviewLinesInputDto dto,
+        CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        var userId = GetUserId();
+        var stored = await _reviewLines.UpsertBatchAsync(userId, dto.Bid, dto.Entries, ct);
+
+        // Kurs beim Training fortlaufend mit den Review-Linien ergänzen (getGame gewinnt, Review füllt
+        // nur Lücken). Best-effort: ein Merge-Fehler darf den erfolgreichen Speicher-200 nicht kippen.
+        var merged = 0;
+        try { merged = await _reviewLines.MergeIntoCourseAsync(userId, dto.Bid, ct); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "getReview-Merge in den Kurs (User {UserId}, bid {Bid}) fehlgeschlagen — Speichern bleibt erfolgreich",
+                userId, dto.Bid);
+        }
+        return Ok(new { stored, merged });
     }
 
     [HttpGet("chessable/progress")]

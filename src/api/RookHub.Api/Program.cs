@@ -196,6 +196,7 @@ try
     builder.Services.AddScoped<ChessableCourseRefreshService>();
     builder.Services.AddScoped<ChessableTrainedLineService>();
     builder.Services.AddScoped<ChessableProblemMoveService>();
+    builder.Services.AddScoped<ChessableReviewLineService>();
     builder.Services.AddScoped<FlashcardMarkService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();

@@ -118,4 +118,18 @@ public class BookPuzzle
     /// null bei Nicht-Chessable-Quellen bzw. Alt-Importen (erst nach Re-Fetch/Aktualisieren gefüllt).
     /// </summary>
     public string? ChessableOid { get; set; }
+
+    /// <summary>
+    /// Herkunfts-Markierung der Linie. <c>null</c> = normale/vollwertige Linie (getGame bzw. jeder
+    /// echte PGN-Import). <c>"review"</c> = aus einer gespeicherten Chessable-<c>getReview</c>-Antwort
+    /// als Lücken-Füller gebaut (siehe <see cref="Services.ChessableReviewLineService.MergeIntoCourseAsync"/>).
+    /// <para>Der Vorrang-Mechanismus hängt an diesem Feld: getGame GEWINNT — eine <c>"review"</c>-Linie
+    /// wird von einem späteren getGame-Import ERSETZT (Moves/Alt/Comments/Shapes/StartPly der getGame-
+    /// Version, Source auf <c>null</c>), statt als „schon da" übersprungen zu werden; und
+    /// <c>ChessableImportService.GetImportedOidsAsync</c> zählt <c>"review"</c>-Linien NICHT als
+    /// importiert, damit der getGame-Crawl sie überhaupt holt. Review füllt also nur Lücken und
+    /// überschreibt nie eine bestehende (getGame- oder review-)Linie.</para>
+    /// </summary>
+    [MaxLength(16)]
+    public string? Source { get; set; }
 }

@@ -192,3 +192,21 @@ public class ChessableProblemMoveEntryDto
     [System.ComponentModel.DataAnnotations.MaxLength(40)]
     public string? LastReviewed { get; set; }
 }
+
+/// <summary>Batch „getReview-Linien" ablegen: je Linie (oid) die rohe getReview-Antwort als JSON.
+/// Zweite Linien-Quelle neben getGame; wird roh gespeichert und erst beim Kurs-Aufbau geparst.</summary>
+public class ChessableReviewLinesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableReviewLineEntryDto> Entries { get; set; } = new();
+}
+
+public class ChessableReviewLineEntryDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+    /// <summary>Rohe getReview-Antwort dieser Linie (opak, erst beim Kurs-Aufbau geparst).</summary>
+    [System.ComponentModel.DataAnnotations.Required]
+    public string Json { get; set; } = string.Empty;
+}
