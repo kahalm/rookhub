@@ -3,9 +3,9 @@
 Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
 ## Periodisch
-- [ ] Code Review — letzter: **2026-08-07** → **stack-weit über alle 6 Repos** (Multi-Agent: 16 Finder × Fokus, adversarische Verifikation, Vollständigkeits-Kritiker). 71 Roh-Findings → 20 widerlegt → **51 umgesetzt in v0.340.0** (erstmals nicht nur dokumentiert). Schwerste Funde: `[FEN]`-Header von beiden Server-PGN-Walkern ignoriert (~7.700 Prod-Linien fielen aus dem Positions-Index), Linien-Hash-Drift Server↔Frontend bei Chessable-Umwandlungen, `rkh_`-Token außerhalb des ExtensionControllers = Voll-Account-Token. Größter organisatorischer Fund (vom Kritiker, kein Finder suchte danach): **es gab im ganzen Stack kein Backup** → Skript + Restore-Doku + CVE-Scan + ES-Log-Retention ergänzt. Geparktes + Restpunkte unter „## Code-Review 2026-08-07"; Bericht `rookhubstack/CODE_REVIEW_2026-08-07.md`. (vorher 2026-07-26 Frontend, 2026-07-25 Backend, 2026-06-30 API-Fan-out, 2026-06-18/16/13)
+- [ ] Code Review — letzter: **2026-08-10** → Delta-Review v0.340.0..HEAD (6 Finder, adversarial verifiziert). Funde: 1× Lösungs-Leck GET /api/book-puzzles/{id} für Kalk-Bücher (behoben v0.356.0), 1× toter reviewGoToCore + falsche Changelog-Zusage (behoben v0.356.0), deleteTree-Ehrlichkeit (v0.356.0). 6 unverifizierte calc/front-Funde (Verifier im Session-Limit gestorben) → 2 geparkt, 4 bei nächster calc-Runde gegenprüfen. (vorher 2026-08-07 stack-weit, 51 Fixes v0.340.0)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-07-12** → alle 25 Sprachdateien JSON-valide. en/de/hr je **1867 Keys**; **hr hatte 2 Lücken (repertoire.dialog.chessableCourseId + Hint) → ergänzt v0.291.34**. Die 22 Weltsprachen weiter hinter en (Fallback greift). (vorher 2026-06-13: hr 73 Lücken → 0.115.1)
-- [ ] Security Review — letzter: **2026-07-18** → alle 6 Repos (6-Wege-Fan-out, siehe „## Security-Review 2026-07-18"). **Keine CRIT/HIGH offen.** Auth/Ownership/IDOR/HMAC/Injection/CORS/SSRF-Ziele durchweg solide (rookhub-API besonders gut gehärtet: jeder resource-by-id-Pfad user/owner/permission-scoped). Wichtigste NEUE Funde (MED): (1) Kontolöschung lässt live Chessable-Bearer + öffentliche Share-Links (/g/, /l/) + PII stehen (kein Cascade); (2) Offline-Queue + Offline-Caches nicht user-scoped, überleben Logout → Cross-User auf geteiltem Gerät; (3) RepCheck prefill des rkh_-Tokens ins seiten-injizierte Input. Bekannte Crawler-SSRF-via-Redirect weiter offen (durch .NET-https→http-Downgrade-Verweigerung entschärft). (vorher 2026-06-13)
+- [ ] Security Review — letzter: **2026-08-10** (im Delta-Review mitgelaufen: Auth-/Injection-/Contract-Blickwinkel). Einziger echter Fund = das Kalk-Lösungs-Leck (behoben). Keine CRIT/HIGH offen. (vorher 2026-07-18 6-Wege-Fan-out)
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-08-09** → ES :9200, 7-Tage-Fenster.
   **rookhub Prod: 0 Errors**; 82 Warns, davon 49× `storage_persist_denied` (Browser-Routine → auf
   Information gestuft, v0.355.4) + 18× connectivity_restored (Standby-Tabs kahalm/mhoehfeld) + 9×
@@ -53,6 +53,20 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+
+- [ ] **Anon öffentlicher Kurs: Offline-Cache-Verlustfenster** (Delta-Review 2026-08-09, unverifiziert
+  belegt per Sonde, LOW): die Cache-Flush-Strategie schreibt nur nach Seite 1 und am Kettenende
+  (`book-puzzle.component.ts`, anon `loadCourseNext`). Bricht die Kette ab (Kurswechsel mitten drin)
+  ODER scheitert der End-Flush an der Quota, gehen empfangene Seiten still verloren — schlimmer: ein
+  gekappter Cache wird beim Wiederbesuch als vollständig serviert (`courseTotal`=Cache-Größe), es
+  wird NIE nachgeladen. Betrifft nur das anonyme Offline-Browsing öffentlicher Kurse. Fix:
+  End-Flush-Fehlschlag melden/Cache invalidieren + beim Wiederbesuch Vollständigkeit prüfen.
+- [ ] **Kalkulations-Modus: kein pagehide/beforeunload-Flush** (Delta-Review 2026-08-09, unverifiziert):
+  Reload (F5)/Tab-Schließen verliert die seit dem letzten `harvestWatch` gemessene Zeit + einen noch
+  nicht gesendeten Outbox-Stand still. `ngOnDestroy` greift bei einem echten Seiten-Unload NICHT.
+  Kandidaten prüfen: `visibilitychange`→hidden bereits genutzt? sonst `pagehide`-Handler mit Flush.
+  (Die anderen 4 unverifizierten calc-Funde des Reviews — Festlegungs-Retry-Toggle, LRU ab 151,
+  Merge×Flush-Deckel — bei der nächsten calc-Runde am Code gegenprüfen, bevor gebaut wird.)
 
 - [ ] **Kalkulations-Modus: calc→calc-Navigation ist eine latente Falle** (Review 2026-08-09,
   verifiziert): bookId/?chapter=/?pos= werden nur aus `route.snapshot` in ngOnInit gelesen, keine

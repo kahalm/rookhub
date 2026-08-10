@@ -110,6 +110,19 @@ describe('calc-local.util', () => {
     spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
     expect(readCalcLocal(BOOK)).toEqual({});
   });
+
+  it('deleteCalcLocalTree meldet Erfolg/Fehlschlag ehrlich (Delta-Review 2026-08-09)', () => {
+    // Vorher gab die Funktion void zurück und der Backend-deleteTree meldete IMMER Erfolg —
+    // ein bei gesperrtem Speicher gescheitertes Löschen sah wie erledigt aus, der Baum war nach
+    // dem Neuladen wieder da. Jetzt: boolean, wie die übrigen Schreibwege.
+    writeCalcLocalTree(BOOK, 7, '{"a":1}');
+    expect(deleteCalcLocalTree(BOOK, 7)).toBeTrue();                 // erfolgreich geschrieben
+    expect(deleteCalcLocalTree(BOOK, 8)).toBeTrue();                 // nichts da = Ziel erreicht
+
+    writeCalcLocalTree(BOOK, 9, '{"b":2}');
+    spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+    expect(deleteCalcLocalTree(BOOK, 9)).toBeFalse();               // Speicher gesperrt → Fehlschlag
+  });
 });
 
 describe('calc-local.util weggeklickter Hinweis', () => {

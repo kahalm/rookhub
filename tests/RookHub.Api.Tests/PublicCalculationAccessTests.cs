@@ -404,6 +404,42 @@ public class PublicCalculationAccessTests : IDisposable
     }
 
     [Fact]
+    public async Task GetById_WithholdsSolution_ForCalculationBook()
+    {
+        // Delta-Review 2026-08-09: GET /api/book-puzzles/{id} ist bewusst anonym + ungegatet
+        // (Teilen/OG/Daily/Bot). Für ein Kalkulationsbuch war es aber der FÜNFTE, übersehene Weg
+        // an der Invariante „die Lösung verlässt den Server nie" vorbei: die anonyme /public-Ansicht
+        // liefert je Stellung die BookPuzzle-Id, mit der man hier die vollen Züge zog.
+        var book = await SeedBookAsync(isCalculation: true, slug: "noel");
+        var line = await SeedLineAsync(book, "1", "KW46", infoOnly: false,
+            moves: "e2e4 e7e5 g1f3 b8c6", startPly: 0, comment: "Rechnen!");
+        var puzzles = new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue());
+
+        var dto = await puzzles.GetByIdAsync(line.Id);
+
+        Assert.NotNull(dto);                              // Endpunkt bleibt NUTZBAR (OG/Teilen)
+        Assert.Equal("", dto!.Moves);                     // aber OHNE Lösung
+        Assert.Null(dto.MoveComments);
+        Assert.Null(dto.MoveShapes);
+        Assert.Null(dto.AltMoves);
+        Assert.Equal(line.Fen, dto.Fen);                  // Stellung + Metadaten weiterhin da
+    }
+
+    [Fact]
+    public async Task GetById_KeepsSolution_ForOrdinaryBook()
+    {
+        // Gegenprobe: an einem normalen (Nicht-Kalkulations-)Buch bleibt die Zugfolge erhalten —
+        // sonst bräche das Teilen/Nachspielen echter Puzzles.
+        var book = await SeedBookAsync(isCalculation: false, slug: "mate1");
+        var line = await SeedLineAsync(book, "1", null, infoOnly: false, moves: "e2e4 e7e5", startPly: 0);
+        var puzzles = new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue());
+
+        var dto = await puzzles.GetByIdAsync(line.Id);
+
+        Assert.Equal("e2e4 e7e5", dto!.Moves);
+    }
+
+    [Fact]
     public async Task NextAndRandomInBook_Throw_ForCalculationBook()
     {
         // Das anonyme Buch-Durchlaufen hängt am selben BookAccess-Tor wie der öffentliche

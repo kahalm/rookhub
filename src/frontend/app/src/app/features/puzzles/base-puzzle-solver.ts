@@ -797,9 +797,11 @@ export abstract class BasePuzzleSolver {
 
   /**
    * Gemeinsamer Review-Aufbau (Lösungs-Durchsicht): Brett auf `index` gespielte Halbzüge ab
-   * `fen` setzen. Von allen drei Solvern (Standard/Endless/Buch) genutzt — der Rumpf war 3×
-   * kopiert, 2× davon OHNE FEN-Guard: `new Chess(fen)` wirft bei nicht ladbaren FENs mitten im
-   * Render-Pfad und reißt die halbe Seite mit (die Fehlerklasse aus 0.316.3/0.317.2).
+   * `fen` setzen. Genutzt von Standard- und Endless-Solver (Rumpf war dort byte-identisch
+   * kopiert, beide OHNE FEN-Guard: `new Chess(fen)` wirft bei nicht ladbaren FENs mitten im
+   * Render-Pfad und reißt die halbe Seite mit — Fehlerklasse aus 0.316.3/0.317.2). Der
+   * Buch-Solver bleibt bei seiner EIGENEN, reicheren Variante (statischer Info-Fallback für
+   * illegale Diagramm-FENs, Varianten-Vorschau, Zug-Kommentare, Pfeil-Shapes).
    * Liefert `false`, wenn die FEN nicht ladbar ist (der Aufrufer rendert dann statisch bzw.
    * lässt das Brett stehen); `reviewIndex` ist dann bereits geklemmt gesetzt.
    */

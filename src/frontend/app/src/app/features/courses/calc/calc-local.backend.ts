@@ -97,7 +97,11 @@ export class LocalCalculationBackend implements CalcBackend {
   }
 
   deleteTree(bookPuzzleId: number): Observable<void> {
-    deleteCalcLocalTree(this.bookId, bookPuzzleId);
+    // Wie saveTree/saveReview: ein gescheiterter Speicher meldet einen FEHLER, statt Erfolg
+    // vorzutäuschen (der Baum wäre nach dem Neuladen wieder da).
+    if (!deleteCalcLocalTree(this.bookId, bookPuzzleId)) {
+      return throwError(() => new Error('local storage unavailable'));
+    }
     return of(undefined);
   }
 

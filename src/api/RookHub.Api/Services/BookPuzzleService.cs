@@ -30,13 +30,28 @@ public class BookPuzzleService
         new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
 
     /// <summary>Einzelnes Puzzle per Id — bewusst OHNE Buch-Gate (Teilen-Links, Tagespuzzle,
-    /// OG-Vorschau, Bot-Lookup; siehe <see cref="BookAccess"/>).</summary>
+    /// OG-Vorschau, Bot-Lookup; siehe <see cref="BookAccess"/>).
+    /// <para>ABER: gehört das Puzzle zu einem Kalkulationsbuch, wird die LÖSUNG zurückgehalten
+    /// (Moves/MoveComments/MoveShapes/AltMoves). Sonst wäre dies der fünfte, ungegatete Weg an
+    /// der Kalkulations-Invariante vorbei: die anonyme Slug-/Public-Ansicht liefert je Stellung
+    /// die BookPuzzle-Id, mit der man hier sonst die vollen Züge zöge (Review-Fund 2026-08-09).
+    /// Anders als die Solver-Geschwister (die 404 werfen) bleibt der Endpunkt hier NUTZBAR —
+    /// OG-Vorschau/Teilen einer Stellung brauchen FEN + Metadaten, nur eben nicht die Lösung.</para></summary>
     public async Task<BookPuzzleDto?> GetByIdAsync(int id)
     {
         var puzzle = await _db.BookPuzzles
             .Include(bp => bp.Book)
             .FirstOrDefaultAsync(bp => bp.Id == id);
-        return puzzle == null ? null : MapToDto(puzzle);
+        if (puzzle == null) return null;
+        var dto = MapToDto(puzzle);
+        if (puzzle.Book?.IsCalculation == true)
+        {
+            dto.Moves = "";
+            dto.MoveComments = null;
+            dto.MoveShapes = null;
+            dto.AltMoves = null;
+        }
+        return dto;
     }
 
     /// <summary>Nächstes Puzzle im selben Buch in Lesereihenfolge (Round = Chessable-Zeilennummer,

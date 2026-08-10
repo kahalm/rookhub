@@ -166,16 +166,18 @@ export function writeCalcLocalTree(bookId: number, bookPuzzleId: number, treeJso
 }
 
 /** Baum verwerfen; die Trainings-Werte bleiben stehen (wie beim Server-DELETE). */
-export function deleteCalcLocalTree(bookId: number, bookPuzzleId: number): void {
+export function deleteCalcLocalTree(bookId: number, bookPuzzleId: number): boolean {
   const entries = readCalcLocal(bookId);
   const id = String(bookPuzzleId);
-  if (!entries[id]) return;
+  if (!entries[id]) return true;   // schon weg = Ziel erreicht
   const entry = touch(entries, id);
   entry.tree = null;
   entry.updatedAt = null;
   // Zeile ganz weg, wenn auch sonst nichts mehr dran hängt.
   if (!entry.chosenSan && !entry.chosenUci && !entry.secondsSpent && entry.grade === null) delete entries[id];
-  persist(bookId, entries, id);
+  // Rückgabe wie die übrigen Schreibwege: scheitert der Speicher, MUSS das gemeldet werden
+  // (sonst zeigt die Ansicht „verworfen", obwohl der Baum nach dem Neuladen wieder da ist).
+  return persist(bookId, entries, id);
 }
 
 /**

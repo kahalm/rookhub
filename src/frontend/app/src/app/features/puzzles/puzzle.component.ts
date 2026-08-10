@@ -32,9 +32,7 @@ import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
-import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
-import { applyUci } from './puzzle-move.util';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { LongSolveService } from './long-solve.service';
@@ -616,20 +614,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
-    const moves = this.puzzle.moves.split(' ').filter(m => m);
-    index = Math.max(0, Math.min(index, moves.length));
-    this.reviewIndex = index;
-    this.chess = new Chess(this.puzzle.fen);
-    let last: [Key, Key] | undefined;
-    for (let i = 0; i < index; i++) {
-      this.applyUci(moves[i]);
-      last = [moves[i].substring(0, 2) as Key, moves[i].substring(2, 4) as Key];
-    }
-    this.lastMove = last;
-    this.boardFen = this.chess.fen();
-    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
-    this.isCheck = this.chess.isCheck();
-    this.dests = new Map();
+    // Gemeinsamer Review-Aufbau der Basisklasse (mit FEN-Guard) statt eigener Kopie — Rumpf war
+    // byte-identisch. Standard-Puzzles haben immer eine legale FEN; der Guard schadet nicht.
+    this.reviewGoToCore(this.puzzle.fen, this.puzzle.moves.split(' ').filter(m => m), index);
   }
 
   exitReview(): void {
@@ -637,10 +624,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   /** Zug aufs Brett anwenden ohne lastMove-Highlight (Review-Aufbau). */
-  private applyUci(uci: string): void {
-    applyUci(this.chess, uci);
-  }
-
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
