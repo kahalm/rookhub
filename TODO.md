@@ -61,12 +61,6 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
   gekappter Cache wird beim Wiederbesuch als vollständig serviert (`courseTotal`=Cache-Größe), es
   wird NIE nachgeladen. Betrifft nur das anonyme Offline-Browsing öffentlicher Kurse. Fix:
   End-Flush-Fehlschlag melden/Cache invalidieren + beim Wiederbesuch Vollständigkeit prüfen.
-- [ ] **Kalkulations-Modus: kein pagehide/beforeunload-Flush** (Delta-Review 2026-08-09, unverifiziert):
-  Reload (F5)/Tab-Schließen verliert die seit dem letzten `harvestWatch` gemessene Zeit + einen noch
-  nicht gesendeten Outbox-Stand still. `ngOnDestroy` greift bei einem echten Seiten-Unload NICHT.
-  Kandidaten prüfen: `visibilitychange`→hidden bereits genutzt? sonst `pagehide`-Handler mit Flush.
-  (Die anderen 4 unverifizierten calc-Funde des Reviews — Festlegungs-Retry-Toggle, LRU ab 151,
-  Merge×Flush-Deckel — bei der nächsten calc-Runde am Code gegenprüfen, bevor gebaut wird.)
 
 - [ ] **Kalkulations-Modus: calc→calc-Navigation ist eine latente Falle** (Review 2026-08-09,
   verifiziert): bookId/?chapter=/?pos= werden nur aus `route.snapshot` in ngOnInit gelesen, keine

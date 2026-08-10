@@ -48,20 +48,25 @@ describe('calc-local.util', () => {
     expect(readCalcLocalEntry(BOOK, 7)).toBeNull();
   });
 
-  it('deckelt die Zahl der Stellungen und verdrängt die am längsten nicht angefasste', () => {
+  it('deckelt die Zahl der Stellungen und verdrängt die am längsten nicht angefasste — aber nur LEERE', () => {
     // Ältester Eintrag zuerst; `touchedAt` kommt aus Date.now(), deshalb hier fest gesetzt.
     for (let i = 1; i <= CALC_LOCAL_MAX_POSITIONS; i++) writeCalcLocalTree(BOOK, i, '{"a":1}');
     const store = JSON.parse(localStorage.getItem(KEY)!);
     for (const id of Object.keys(store.entries)) store.entries[id].touchedAt = Number(id);
+    // Der älteste Eintrag ist LEER (kein Baum/Wahl/Zeit/Bewertung) → darf verdrängt werden.
+    store.entries['1'] = { tree: null, updatedAt: null, chosenSan: null, chosenUci: null, secondsSpent: 0, grade: null, touchedAt: 1 };
     localStorage.setItem(KEY, JSON.stringify(store));
 
-    writeCalcLocalTree(BOOK, 9999, '{"a":1}');
+    // Neue Stellung mit Inhalt → die leere älteste fliegt, der Schreibversuch gelingt.
+    expect(writeCalcLocalTree(BOOK, 9999, '{"a":1}')).not.toBeNull();
 
     const entries = readCalcLocal(BOOK);
     expect(Object.keys(entries).length).toBe(CALC_LOCAL_MAX_POSITIONS);
     expect(entries['9999']).toBeDefined();     // die gerade bearbeitete bleibt immer
-    expect(entries['1']).toBeUndefined();      // die älteste fliegt
+    expect(entries['1']).toBeUndefined();      // die älteste (LEERE) fliegt
     expect(entries[String(CALC_LOCAL_MAX_POSITIONS)]).toBeDefined();
+    // Gegenprobe: wären ALLE 150 mit Inhalt, würde die 151. NICHT still verdrängen, sondern
+    // fehlschlagen — siehe „verdrängt echte Arbeit NICHT still".
   });
 
   it('übersteht kaputten Speicherinhalt, ohne zu werfen', () => {
@@ -109,6 +114,21 @@ describe('calc-local.util', () => {
   it('wirft nicht, wenn schon das LESEN gesperrt ist', () => {
     spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
     expect(readCalcLocal(BOOK)).toEqual({});
+  });
+
+  it('verdrängt echte Arbeit NICHT still, sondern meldet den Fehlschlag (Delta-Review 2026-08-09)', () => {
+    // Modus-Invariante „anonyme Arbeit geht nicht still verloren": früher dampfte persist() vor
+    // jedem Schreiben auf 150 Einträge ein und meldete trotzdem Erfolg — ab der 151. bearbeiteten
+    // Stellung fiel die älteste (mit Baum!) ohne Signal weg. Jetzt schlägt der Schreibversuch
+    // ehrlich fehl (die Oberfläche zeigt „konnte nicht speichern", Anmelden bietet Server-Speicher).
+    for (let i = 1; i <= CALC_LOCAL_MAX_POSITIONS; i++) {
+      expect(writeCalcLocalTree(BOOK, i, `{"n":${i}}`)).not.toBeNull();
+    }
+    // 151. mit echtem Inhalt → würde eine echte Stellung verdrängen → Fehlschlag statt stillem Verlust.
+    expect(writeCalcLocalTree(BOOK, 151, '{"n":151}')).toBeNull();
+    // Und die 150 bereits gespeicherten sind NICHT angetastet.
+    expect(Object.keys(readCalcLocal(BOOK)).length).toBe(CALC_LOCAL_MAX_POSITIONS);
+    expect(readCalcLocalEntry(BOOK, 1)?.tree).toBe('{"n":1}');
   });
 
   it('deleteCalcLocalTree meldet Erfolg/Fehlschlag ehrlich (Delta-Review 2026-08-09)', () => {

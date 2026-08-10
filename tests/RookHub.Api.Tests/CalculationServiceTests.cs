@@ -326,6 +326,30 @@ public class CalculationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PatchMeta_GrownOverCapPatch_CreditsRemainderAcrossRetries()
+    {
+        // Review-Fund 2026-08-09: ein beim Wiedereinreihen über MaxSecondsPerFlush hinaus
+        // gewachsener Patch (Server war lange tot, mergeReviewPatch addierte unter DERSELBEN Marke)
+        // wurde je Übertragung auf den Cap geklemmt — der Server merkte sich aber `requested`
+        // statt des tatsächlich Angerechneten, sodass der Rest nie nachkam. Jetzt: applied =
+        // already + delta ⇒ der Rest wird über weitere Retries derselben Marke nachgeholt.
+        var (user, _, pos) = await SeedOwnPositionAsync();
+        var cap = CalculationService.MaxSecondsPerFlush;
+        var patch = new PatchCalcMetaDto { AddSeconds = cap + 1400, SecondsToken = "t-grown" };
+
+        var first = await _svc.PatchMetaAsync(user.Id, pos.Id, patch, isAdmin: false);
+        Assert.Equal(cap, first.SecondsSpent);                 // erste Übertragung: nur der Cap
+
+        // Gleiche Marke, gleicher (immer noch über-Cap) Wert: der Rest bis requested kommt nach.
+        var second = await _svc.PatchMetaAsync(user.Id, pos.Id, patch, isAdmin: false);
+        Assert.Equal(cap + 1400, second.SecondsSpent);          // Rest angerechnet, nicht unterschlagen
+
+        // Und jetzt ist es fertig — ein weiterer identischer Retry addiert nichts mehr (idempotent).
+        var third = await _svc.PatchMetaAsync(user.Id, pos.Id, patch, isAdmin: false);
+        Assert.Equal(cap + 1400, third.SecondsSpent);
+    }
+
+    [Fact]
     public async Task PatchMeta_NegativeSeconds_DoNotSubtract()
     {
         var (user, _, pos) = await SeedOwnPositionAsync();
@@ -557,8 +581,12 @@ public class CalculationServiceTests : IDisposable
     // ---- Festlegung (genau eine je Stellung) ---------------------------------
 
     [Fact]
-    public async Task PatchMeta_Choice_SetMoveAndToggleOff()
+    public async Task PatchMeta_Choice_SetIsIdempotent_NotToggle()
     {
+        // Review-Fund 2026-08-09: dasselbe SAN erneut zu senden ist ein SETZEN (No-op), KEIN
+        // Toggle. Früher togglete der Server auf null — nicht wiederholungsfest: kam die Anfrage
+        // an und ging nur die Antwort verloren, löschte der identische Retry die Festlegung. Das
+        // Zurücknehmen macht der Client über ClearChoice (eigener Test unten).
         var (user, _, pos) = await SeedOwnPositionAsync();
 
         var set = await _svc.PatchMetaAsync(user.Id, pos.Id,
@@ -566,12 +594,12 @@ public class CalculationServiceTests : IDisposable
         Assert.Equal("Nd5", set.ChosenSan);
         Assert.Equal("c3d5", set.ChosenUci);
 
-        // Dieselbe Festlegung noch einmal markiert = zurücknehmen.
-        var off = await _svc.PatchMetaAsync(user.Id, pos.Id,
+        // Retry desselben Set-Patches (verlorene Antwort) → Festlegung BLEIBT, nicht weg.
+        var again = await _svc.PatchMetaAsync(user.Id, pos.Id,
             new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = "c3d5" }, isAdmin: false);
-        Assert.Null(off.ChosenSan);
-        Assert.Null(off.ChosenUci);
-        Assert.Null(_db.CalculationTrees.Single().ChosenSan);
+        Assert.Equal("Nd5", again.ChosenSan);
+        Assert.Equal("c3d5", again.ChosenUci);
+        Assert.Equal("Nd5", _db.CalculationTrees.Single().ChosenSan);
     }
 
     [Fact]

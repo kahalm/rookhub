@@ -452,6 +452,26 @@ describe('CalculationComponent Speichern', () => {
     expect(saved.length).toBe(1);
   });
 
+  it('flusht bei pagehide (Reload/Tab-Schließen) den offenen Baum — ngOnDestroy läuft dort nicht', () => {
+    // Delta-Review 2026-08-09: F5/Tab-Schließen ruft KEIN ngOnDestroy; der seit dem letzten
+    // Autosave offene Baum-Stand (bis AUTOSAVE_MS) ging sonst verloren. `pagehide` sichert ihn.
+    const saved: { id: number; json: string }[] = [];
+    const { component } = make({
+      saveTree: (id: number, json: string) => {
+        saved.push({ id, json });
+        return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });   // Edit liegt im Autosave-Fenster
+    expect(saved.length).toBe(0);
+
+    component.onPageHide();                        // wie der window:pagehide-HostListener
+
+    expect(saved.length).toBe(1);
+    expect(saved[0].id).toBe(7);
+  });
+
   it('rettet den Baum der alten Stellung, wenn der Save beim Stellungswechsel scheitert', () => {
     const saved: { id: number; json: string }[] = [];
     let fail = true;

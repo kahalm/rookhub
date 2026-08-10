@@ -401,17 +401,21 @@ public class CalculationService
         }
         else if (!string.IsNullOrWhiteSpace(dto.ChosenSan))
         {
+            // SETZEN, nicht toggeln: genau EINE Festlegung je Stellung ⇒ ein anderes SAN verschiebt
+            // sie, dasselbe SAN ist ein No-op. Das Zurücknehmen macht der Client selbst (er kennt
+            // den Zustand) und schickt dafür ClearChoice.
+            //
+            // FRÜHER togglete der Server bei gleichem SAN auf null — das war NICHT idempotent: kam
+            // die Anfrage an und ging nur die ANTWORT verloren, löschte der (identische) Retry die
+            // gerade gesetzte Festlegung wieder. Anders als die Zeit (SecondsToken) hat die Wahl
+            // keine Marke; ihre Idempotenz kommt allein daraus, dass SET wiederholbar ist.
+            // (Review-Fund 2026-08-09.)
             var san = dto.ChosenSan.Trim();
             var uci = string.IsNullOrWhiteSpace(dto.ChosenUci) ? null : dto.ChosenUci.Trim();
-            if (string.Equals(tree.ChosenSan, san, StringComparison.Ordinal))
+            if (!string.Equals(tree.ChosenSan, san, StringComparison.Ordinal)
+                || !string.Equals(tree.ChosenUci, uci, StringComparison.Ordinal))
             {
-                tree.ChosenSan = null;                 // dieselbe Festlegung noch einmal = zurücknehmen
-                tree.ChosenUci = null;
-                changed = true;
-            }
-            else
-            {
-                tree.ChosenSan = san;                  // genau EINE Festlegung je Stellung ⇒ verschieben
+                tree.ChosenSan = san;
                 tree.ChosenUci = uci;
                 changed = true;
             }
@@ -452,12 +456,20 @@ public class CalculationService
         }
         // Die Marke NUR merken, wenn wirklich Zeit im Spiel war: sonst würde ein wirkungsloser
         // Patch (0 s) eine Karteileiche anlegen.
+        //
+        // Gemerkt wird, was TATSÄCHLICH angerechnet wurde (already + delta), NICHT das angeforderte
+        // `requested`. Nur so bleibt ein über MaxSecondsPerFlush hinausgewachsener Patch über
+        // mehrere Retries hinweg NACHHOLBAR: sonst setzte ein einziger Über-Cap-Send
+        // SecondsTokenApplied = requested, und der Rest (requested − cap) wäre für immer
+        // unterschlagen, weil der nächste Retry `already == requested` sähe (Review-Fund
+        // 2026-08-09). Im Normalfall (requested ≤ cap) ist already + delta == requested — unverändert.
+        var applied = already + delta;
         if (token != null && requested > 0 &&
             (!string.Equals(tree.SecondsToken, token, StringComparison.Ordinal) ||
-             tree.SecondsTokenApplied != requested))
+             tree.SecondsTokenApplied != applied))
         {
             tree.SecondsToken = token;
-            tree.SecondsTokenApplied = requested;
+            tree.SecondsTokenApplied = applied;
             changed = true;
         }
         return changed;

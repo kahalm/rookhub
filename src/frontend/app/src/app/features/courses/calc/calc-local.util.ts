@@ -105,12 +105,34 @@ export function readCalcLocalReview(bookId: number, bookPuzzleId: number): CalcR
   };
 }
 
+/** Trägt der Eintrag echte Arbeit (Baum, Festlegung, Zeit oder Bewertung)? Leere Zeilen dürfen
+ *  jederzeit verdrängt werden, echte nicht STILL. */
+function hasContent(e: CalcLocalEntry | undefined): boolean {
+  return !!e && (!!e.tree || !!e.chosenSan || !!e.chosenUci || !!e.secondsSpent || e.grade !== null);
+}
+
 /**
  * Schreiben mit Deckel: erst die überzähligen (am längsten nicht angefassten) Stellungen
  * verdrängen, dann speichern. Scheitert das Speichern trotzdem (Quota/gesperrt), wird noch
- * einmal aggressiv halbiert — und danach still aufgegeben. Geworfen wird nie.
+ * einmal aggressiv halbiert — und danach aufgegeben.
+ *
+ * WICHTIG (Review-Fund 2026-08-09): würde der Routine-Deckel eine Stellung mit ECHTER Arbeit
+ * verdrängen (>150 bearbeitete Stellungen anonym), gäbe die Funktion früher trotzdem `true`
+ * zurück — die verdrängte Arbeit war nach dem Reload weg, ohne jedes Signal. Das verstößt gegen
+ * die Modus-Invariante „anonyme Arbeit geht nicht still verloren". Jetzt: in diesem Fall `false`
+ * zurückgeben, damit die Oberfläche wie bei vollem Speicher ehrlich „konnte nicht speichern"
+ * zeigt (Anmelden bringt Server-Speicher ohne Deckel). Der Quota-Notfallpfad (Halbieren) bleibt
+ * die letzte Rettung, wenn ohnehin schon nichts mehr geht.
  */
 function persist(bookId: number, entries: CalcLocalEntries, keepId: string): boolean {
+  const ids = Object.keys(entries);
+  if (ids.length > CALC_LOCAL_MAX_POSITIONS) {
+    const wouldDrop = ids
+      .filter(id => id !== keepId)
+      .sort((a, b) => (entries[a].touchedAt || 0) - (entries[b].touchedAt || 0))
+      .slice(0, ids.length - CALC_LOCAL_MAX_POSITIONS);
+    if (wouldDrop.some(id => hasContent(entries[id]))) return false;
+  }
   const trimmed = evict(entries, keepId, CALC_LOCAL_MAX_POSITIONS);
   if (write(bookId, trimmed)) return true;
   const halved = evict(trimmed, keepId, Math.max(1, Math.floor(Object.keys(trimmed).length / 2)));

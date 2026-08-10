@@ -1513,6 +1513,22 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Tastatur ===========================================================
 
+  /**
+   * Reload (F5) / Tab schließen / App in den Hintergrund: `ngOnDestroy` läuft dabei NICHT, die
+   * seit dem letzten {@link harvestWatch} gemessene Stellungszeit und ein noch offener
+   * Baum-/Bewertungs-Stand (bis zu AUTOSAVE_MS) gingen sonst still verloren. Für anonyme Nutzer
+   * ist der Flush synchron (localStorage) und damit auch beim Unload zuverlässig — genau der
+   * „anonyme Arbeit geht nicht still verloren"-Pfad. `pagehide` statt `beforeunload`: es feuert
+   * auch beim mobilen App-Wechsel und stört keinen bfcache. (Review-Fund 2026-08-09; Endless hat
+   * dasselbe Muster längst.) Doppelt-Flush mit ngOnDestroy ist harmlos — leere Outbox, kein Send.
+   */
+  @HostListener('window:pagehide')
+  onPageHide(): void {
+    this.harvestWatch();     // gemessene Stellungszeit sichern (Kapitel-Uhr persistiert ohnehin je Sekunde)
+    this.flushSave();        // offenen Baum-Stand raus/lokal schreiben
+    this.sendReviews();      // Festlegung/Zeit/Bewertung mitschicken
+  }
+
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
