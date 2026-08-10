@@ -236,4 +236,110 @@ public class ChessableReviewLineServiceTests : IDisposable
 
         Assert.Equal(3, await _db.ChessableReviewLines.CountAsync());   // (a,100,1),(b,100,1),(a,200,1)
     }
+
+    // ===== Token-loser (anonymer) Pfad: uid-basiert sammeln, beim Verbinden claimen =====
+
+    [Fact]
+    public async Task AnonUpsert_ThenClaim_MovesLinesAndBuildsCourse()
+    {
+        var user = await CreateUserAsync();
+        const string uid = "790927";
+
+        // token-los: Linie landet in der Anon-Senke (keine UserId), NICHT in ChessableReviewLines
+        var storedAnon = await _service.UpsertAnonBatchAsync(uid, FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+        Assert.Equal(1, storedAnon);
+        Assert.Equal(1, await _db.AnonymousChessableReviewLines.CountAsync());
+        Assert.Equal(0, await _db.ChessableReviewLines.CountAsync());
+
+        // User verknüpft später seinen Bearer (uid daraus decodiert) → Claim übernimmt + baut den Kurs
+        var claimed = await _service.ClaimAnonForUidAsync(user.Id, uid);
+
+        Assert.Equal(1, claimed);
+        Assert.Equal(0, await _db.AnonymousChessableReviewLines.CountAsync());   // Anon-Senke geleert
+        var owned = await _db.ChessableReviewLines.SingleAsync();
+        Assert.Equal(user.Id, owned.UserId);
+        Assert.Equal(FixtureOid, owned.Oid);
+        // Kurs wurde aufgebaut: BookPuzzle mit Source="review"
+        var fileName = $"chessable-u{user.Id}-{FixtureBid}.pgn";
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == fileName);
+        Assert.Equal("review", bp.Source);
+        Assert.Equal(FixtureOid, bp.ChessableOid);
+    }
+
+    [Fact]
+    public async Task ClaimAnon_IsIdempotent_AndNoOpForUnknownUid()
+    {
+        var user = await CreateUserAsync();
+        await _service.UpsertAnonBatchAsync("790927", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+
+        Assert.Equal(1, await _service.ClaimAnonForUidAsync(user.Id, "790927"));
+        Assert.Equal(0, await _service.ClaimAnonForUidAsync(user.Id, "790927"));   // nichts mehr da
+        Assert.Equal(0, await _service.ClaimAnonForUidAsync(user.Id, "999999"));   // fremde uid
+    }
+
+    [Fact]
+    public async Task GetGameUpgradeImport_AfterMerge_ReplacesFillerInPlace_NoDuplicate()
+    {
+        var user = await CreateUserAsync();
+        await _service.UpsertBatchAsync(user.Id, FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+        await _service.MergeIntoCourseAsync(user.Id, FixtureBid);
+
+        var fileName = $"chessable-u{user.Id}-{FixtureBid}.pgn";
+        // Pipeline-Version bumpt später → Buch gilt als VERALTET (Upgrade-Pfad beim nächsten Import).
+        var book = await _db.Books.SingleAsync(b => b.FileName == fileName);
+        book.ImportVersion = 0;
+        await _db.SaveChangesAsync();
+
+        // getGame-Re-Import des veralteten Buchs über dieselbe oid → ersetzt den Review-Füller in-place;
+        // KEIN Duplikat (früherer Bug: reviewByOid war beim Upgrade leer → zweite Linie).
+        await new PgnImportService(_db).ImportFileAsync(fileName, GetGamePgnForOid(FixtureOid), CancellationToken.None);
+
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == fileName));   // genau EINE Linie
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == fileName);
+        Assert.Null(bp.Source);   // getGame gewinnt
+    }
+
+    [Fact]
+    public async Task AnonUpsert_PerUidCap_RejectsNewOids_ButUpdatesExisting()
+    {
+        var cap = ChessableReviewLineService.MaxAnonRowsPerUid;
+        // uid bis zum Deckel füllen (eine bestehende oid = "0" merken wir uns für den Update-Fall).
+        var seed = Enumerable.Range(0, cap).Select(i => new AnonymousChessableReviewLine
+        { ChessableUid = "42", Bid = "1", Oid = i.ToString(), Json = "{\"v\":1}" }).ToList();
+        _db.AnonymousChessableReviewLines.AddRange(seed);
+        await _db.SaveChangesAsync();
+
+        // NEUE oid jenseits des Deckels → abgewiesen (kein Wachstum).
+        await _service.UpsertAnonBatchAsync("42", "1", new() { Entry("999999", "{\"v\":9}") });
+        Assert.Equal(cap, await _db.AnonymousChessableReviewLines.CountAsync(r => r.ChessableUid == "42"));
+        Assert.Equal(0, await _db.AnonymousChessableReviewLines.CountAsync(r => r.Oid == "999999"));
+
+        // BESTEHENDE oid → Update bleibt erlaubt (kein neuer Datensatz).
+        await _service.UpsertAnonBatchAsync("42", "1", new() { Entry("0", "{\"v\":2}") });
+        Assert.Equal(cap, await _db.AnonymousChessableReviewLines.CountAsync(r => r.ChessableUid == "42"));
+        Assert.Equal("{\"v\":2}", (await _db.AnonymousChessableReviewLines.SingleAsync(r => r.ChessableUid == "42" && r.Oid == "0")).Json);
+    }
+
+    [Fact]
+    public async Task AnonUpsert_RejectsNonNumericUid()
+    {
+        var stored = await _service.UpsertAnonBatchAsync("abc", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+        Assert.Equal(0, stored);
+        Assert.Equal(0, await _db.AnonymousChessableReviewLines.CountAsync());
+    }
+
+    [Fact]
+    public async Task PruneAnon_RemovesOnlyOldUnclaimedRows()
+    {
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = "1", Bid = "228856", Oid = "1", Json = "{}", UpdatedAt = DateTime.UtcNow.AddDays(-120) });
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = "1", Bid = "228856", Oid = "2", Json = "{}", UpdatedAt = DateTime.UtcNow.AddDays(-10) });
+        await _db.SaveChangesAsync();
+
+        var pruned = await _service.PruneAnonOlderThanAsync(TimeSpan.FromDays(90));
+
+        Assert.Equal(1, pruned);
+        Assert.Equal("2", (await _db.AnonymousChessableReviewLines.SingleAsync()).Oid);   // die junge bleibt
+    }
 }

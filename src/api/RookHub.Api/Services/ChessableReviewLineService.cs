@@ -19,6 +19,11 @@ public class ChessableReviewLineService
     /// <summary>Größen-Deckel je Eintrag (Missbrauchs-/Sanity-Schranke; getReview ist normal einige KB).</summary>
     public const int MaxJsonLength = 256 * 1024;
 
+    /// <summary>Zeilen-Deckel je Chessable-uid in der ANON-Senke (DoS-/Poisoning-Schranke des offenen
+    /// Endpoints): jenseits davon werden für diese uid keine NEUEN oids mehr angenommen (Updates
+    /// bestehender bleiben). Großzügig über einem realen Trainingsbestand (großer Kurs ~1–2k Linien).</summary>
+    public const int MaxAnonRowsPerUid = 5000;
+
     private readonly AppDbContext _db;
     private readonly PgnImportService _pgnImport;
 
@@ -78,6 +83,125 @@ public class ChessableReviewLineService
             _db.ChangeTracker.Clear();
         }
         return written;
+    }
+
+    /// <summary>
+    /// Token-loser Zwilling von <see cref="UpsertBatchAsync"/>: legt getReview-Linien eines Users OHNE
+    /// RookHub-Account in der Anon-Senke ab, identifiziert über die Chessable-<c>uid</c>. Gleiche
+    /// Validierung/Deckel. Liefert die Zahl geschriebener/aktualisierter Zeilen.
+    /// </summary>
+    public async Task<int> UpsertAnonBatchAsync(string uid, string bid,
+        List<ChessableReviewLineEntryDto> entries, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid) || uid.Length > 32 || !uid.All(char.IsAsciiDigit)) return 0;
+
+        var clean = (entries ?? new())
+            .Where(e => e is not null
+                && !string.IsNullOrWhiteSpace(e.Oid)
+                && e.Oid.Trim().Length <= 32 && e.Oid.Trim().All(char.IsAsciiDigit)
+                && !string.IsNullOrWhiteSpace(e.Json)
+                && e.Json.Length <= MaxJsonLength)
+            .GroupBy(e => e.Oid.Trim())
+            .Select(g => g.Last())
+            .Take(MaxEntriesPerBatch)
+            .ToList();
+        if (clean.Count == 0) return 0;
+
+        var oids = clean.Select(e => e.Oid.Trim()).ToList();
+        var existing = await _db.AnonymousChessableReviewLines
+            .Where(r => r.ChessableUid == uid && r.Bid == bid && oids.Contains(r.Oid))
+            .ToDictionaryAsync(r => r.Oid, ct);
+        // Gesamtbestand dieser uid (über alle bids) für den Deckel — NEUE oids jenseits davon abweisen.
+        var uidRowCount = await _db.AnonymousChessableReviewLines.CountAsync(r => r.ChessableUid == uid, ct);
+
+        var now = DateTime.UtcNow;
+        var written = 0;
+        foreach (var e in clean)
+        {
+            var oid = e.Oid.Trim();
+            if (!existing.TryGetValue(oid, out var row))
+            {
+                if (uidRowCount >= MaxAnonRowsPerUid) continue;   // Deckel erreicht → keine neue Zeile
+                row = new AnonymousChessableReviewLine { ChessableUid = uid, Bid = bid, Oid = oid, CreatedAt = now };
+                _db.AnonymousChessableReviewLines.Add(row);
+                existing[oid] = row;
+                uidRowCount++;
+            }
+            row.Json = e.Json;
+            row.ChapterTitle = ExtractChapterTitle(e.Json);
+            row.UpdatedAt = now;
+            written++;
+        }
+
+        try { await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { _db.ChangeTracker.Clear(); }   // Race auf dem Unique-Index → idempotent verwerfen
+        return written;
+    }
+
+    /// <summary>
+    /// Übernimmt („claim") alle anonym (token-los) für eine Chessable-<c>uid</c> gesammelten getReview-
+    /// Linien in den RookHub-Account <paramref name="userId"/> — aufgerufen, wenn der User seinen
+    /// Chessable-Bearer mit RookHub verknüpft (der Server decodiert dieselbe uid daraus). Die Anon-Zeilen
+    /// werden in <see cref="ChessableReviewLine"/> übernommen (Upsert je (User,bid,oid), letzter Stand
+    /// gewinnt), aus der Anon-Senke entfernt und die betroffenen Kurse einmal aufgebaut
+    /// (<see cref="MergeIntoCourseAsync"/>). Idempotent. Liefert die Zahl übernommener Zeilen.
+    /// </summary>
+    public async Task<int> ClaimAnonForUidAsync(int userId, string uid, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return 0;
+
+        var anon = await _db.AnonymousChessableReviewLines
+            .Where(r => r.ChessableUid == uid)
+            .ToListAsync(ct);
+        if (anon.Count == 0) return 0;
+
+        var bids = anon.Select(r => r.Bid).Distinct().ToList();
+        var existing = (await _db.ChessableReviewLines
+                .Where(r => r.UserId == userId && bids.Contains(r.Bid))
+                .ToListAsync(ct))
+            .ToDictionary(r => (r.Bid, r.Oid));
+
+        var now = DateTime.UtcNow;
+        var claimed = 0;
+        foreach (var a in anon)
+        {
+            if (!existing.TryGetValue((a.Bid, a.Oid), out var row))
+            {
+                row = new ChessableReviewLine { UserId = userId, Bid = a.Bid, Oid = a.Oid };
+                _db.ChessableReviewLines.Add(row);
+                existing[(a.Bid, a.Oid)] = row;
+            }
+            row.Json = a.Json;
+            row.ChapterTitle = a.ChapterTitle;
+            row.UpdatedAt = now;
+            claimed++;
+        }
+        _db.AnonymousChessableReviewLines.RemoveRange(anon);
+
+        try { await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { _db.ChangeTracker.Clear(); return 0; }
+
+        // Betroffene Kurse aufbauen (getGame gewinnt, Review füllt Lücken) — best-effort je bid.
+        foreach (var bid in bids)
+        {
+            try { await MergeIntoCourseAsync(userId, bid, ct); }
+            catch { /* ein Kurs-Merge-Fehler darf den Claim nicht kippen */ }
+        }
+        return claimed;
+    }
+
+    /// <summary>Retention: ungeclaimte Anon-Zeilen älter als <paramref name="maxAge"/> löschen — der
+    /// Absender hat seine Chessable-uid nie mit einem RookHub-Account verknüpft (Default-URL-Nutzer, der
+    /// nie einen Bearer hinterlegt). Verhindert unbegrenztes Wachstum der Anon-Senke. Nächtlich getrieben.
+    /// Liefert die Zahl gelöschter Zeilen.</summary>
+    public async Task<int> PruneAnonOlderThanAsync(TimeSpan maxAge, CancellationToken ct = default)
+    {
+        var cutoff = DateTime.UtcNow - maxAge;
+        var old = await _db.AnonymousChessableReviewLines.Where(r => r.UpdatedAt < cutoff).ToListAsync(ct);
+        if (old.Count == 0) return 0;
+        _db.AnonymousChessableReviewLines.RemoveRange(old);
+        await _db.SaveChangesAsync(ct);
+        return old.Count;
     }
 
     /// <summary>

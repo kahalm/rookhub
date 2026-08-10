@@ -53,6 +53,13 @@ public class ChessableCourseRefreshScheduler : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<ChessableCourseRefreshService>();
             await svc.RefreshAllAsync(ct);
+
+            // Retention: ungeclaimte anonyme getReview-Linien (Default-URL-Nutzer ohne RookHub-Account,
+            // die ihre uid nie per Bearer verknüpft haben) nach 90 Tagen entsorgen — hält die Anon-Senke klein.
+            var reviewLines = scope.ServiceProvider.GetRequiredService<ChessableReviewLineService>();
+            var pruned = await reviewLines.PruneAnonOlderThanAsync(TimeSpan.FromDays(90), ct);
+            if (pruned > 0)
+                _logger.LogInformation("Anon-getReview-Retention: {Count} ungeclaimte Zeilen gelöscht", pruned);
         }
         catch (Exception ex)
         {

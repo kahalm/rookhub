@@ -47,8 +47,9 @@ public class ChessableControllerTests : IDisposable
         var queue = new BackgroundTaskQueue();
         var breaker = new ChessableBearerBreaker(_db, queue, NullLogger<ChessableBearerBreaker>.Instance);
         var queueSvc = new ChessableImportQueueService(_db, _proxy, _encryption, queue);
+        var reviewLines = new ChessableReviewLineService(_db, new PgnImportService(_db));
         _controller = new ChessableController(_db, _encryption, _proxy, breaker,
-            new NotificationService(_db), queueSvc, NullLogger<ChessableController>.Instance);
+            new NotificationService(_db), queueSvc, reviewLines, NullLogger<ChessableController>.Instance);
         _admin = new ChessableAdminController(_db, _encryption, _proxy, breaker,
             queueSvc, NullLogger<ChessableAdminController>.Instance);
         SetUser(42);
@@ -118,6 +119,50 @@ public class ChessableControllerTests : IDisposable
 
         var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
         Assert.Equal("second-token-zzzzzzzz", _encryption.Decrypt(cred.EncryptedBearer));
+    }
+
+    [Fact]
+    public async Task SaveCredentials_DoesNotClaimAnon_UntilTested()
+    {
+        await SeedUserAsync(42);
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = "790927", Bid = "228856", Oid = "1", Json = "{\"lesson\":{\"moves\":[]}}" });
+        await _db.SaveChangesAsync();
+
+        // Speichern allein (kein Chessable-Beweis) darf NICHT claimen — sonst könnte man per gefälschtem
+        // Bearer-JWT eine fremde uid claimen. Die Anon-Linie bleibt liegen.
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("some-bearer-token-1234"));
+
+        Assert.Equal(1, _db.AnonymousChessableReviewLines.Count());
+        Assert.Empty(_db.ChessableReviewLines);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        Assert.Null(cred.ChessableUid);   // uid wird erst durch den geprüften Test gesetzt
+    }
+
+    [Fact]
+    public async Task Test_OnSuccess_ClaimsAnonForProvenUidOnly()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("some-bearer-token-1234"));
+        // Zwei Anon-Linien: eine für die (durch den Test bewiesene) eigene uid, eine für eine fremde uid.
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = "790927", Bid = "228856", Oid = "1", Json = "{\"lesson\":{\"moves\":[]}}" });
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = "999999", Bid = "228856", Oid = "2", Json = "{\"lesson\":{\"moves\":[]}}" });
+        await _db.SaveChangesAsync();
+
+        // Chessable bestätigt den Bearer und liefert die BEWIESENE uid 790927.
+        _handler.Reply = (_, _) => JsonResponse(HttpStatusCode.OK, new ChessableTestResultDto("790927", 3));
+
+        var result = await _controller.Test(CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        Assert.Equal("790927", cred.ChessableUid);                       // bewiesene uid festgehalten
+        Assert.Equal(1, _db.ChessableReviewLines.Count(r => r.UserId == 42 && r.Oid == "1"));   // eigene übernommen
+        Assert.Equal(0, _db.ChessableReviewLines.Count(r => r.Oid == "2"));                      // fremde NICHT
+        Assert.Equal(1, _db.AnonymousChessableReviewLines.Count(r => r.ChessableUid == "999999")); // fremde bleibt in der Senke
+        Assert.Equal(0, _db.AnonymousChessableReviewLines.Count(r => r.ChessableUid == "790927")); // eigene aus der Senke raus
     }
 
     [Fact]

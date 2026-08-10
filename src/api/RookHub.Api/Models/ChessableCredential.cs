@@ -22,6 +22,13 @@ public class ChessableCredential
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Chessable-User-ID (uid), aus dem Bearer-JWT (<c>user.uid</c>) decodiert beim Speichern.
+    /// Verknüpft den RookHub-User mit seiner Chessable-Identität, damit anonym (token-los) gesammelte
+    /// getReview-Linien beim Verbinden in seinen Account übernommen werden können
+    /// (<see cref="Services.ChessableReviewLineService.ClaimAnonForUidAsync"/>).</summary>
+    [MaxLength(32)]
+    public string? ChessableUid { get; set; }
+
     /// <summary>Gecachte Kursliste (JSON: [{bid,name}]) — damit der User nicht jedes Mal „Kurse laden" muss.</summary>
     public string? CachedCoursesJson { get; set; }
     /// <summary>Zeitpunkt des letzten Kurslisten-Abrufs (für die „Stand"-Anzeige).</summary>

@@ -72,6 +72,7 @@ public class EndpointAuthInventoryTests
         "POST /api/client-log",                                      // ClientLogController.Post
         "POST /api/endless/sessions/anonymous",                      // EndlessController.RecordAnonymousSession
         "POST /api/endless/sessions/bulk/anonymous",                 // EndlessController.BulkImportAnonymousSessions
+        "POST /api/extension/chessable/review-lines/anon",           // ExtensionController.ChessableReviewLinesAnon (uid-based, token-less)
         "POST /api/puzzles/random-batch",                            // PuzzleController.GetRandomBatch
         "POST /api/puzzles/{id}/attempt/anonymous",                  // PuzzleController.RecordAnonymousAttempt
         "PUT /api/endless/progress/anonymous",                       // EndlessController.SaveAnonymousProgress

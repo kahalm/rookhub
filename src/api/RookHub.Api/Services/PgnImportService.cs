@@ -247,11 +247,14 @@ public class PgnImportService
         // oid separat im [ChessableOid]-Header (LineId={file}:002.001). Die LineIds passen also NICHT —
         // ein LineId-Abgleich ließe getGame eine ZWEITE Linie anlegen (Duplikat). Deshalb den
         // Review-Lücken-Füller über seine oid auflösen und beim echten Import ersetzen/entfernen.
-        var reviewByOid = upgrade
-            ? new Dictionary<string, BookPuzzle>()
-            : await _db.BookPuzzles.Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName)
+        // IMMER aufbauen (auch beim Upgrade/Reprozess eines veralteten Buchs) — sonst legt ein
+        // getGame-Import eines stale Buchs eine ZWEITE Linie neben einen bestehenden Review-Füller.
+        var reviewByOid = new Dictionary<string, BookPuzzle>();
+        foreach (var bp in await _db.BookPuzzles
+                .Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName)
                     && bp.Source == "review" && bp.ChessableOid != null)
-                .ToDictionaryAsync(bp => bp.ChessableOid!, ct);
+                .ToListAsync(ct))
+            reviewByOid[bp.ChessableOid!] = bp;   // duplikat-tolerant (letzter gewinnt), kein ToDictionary-Wurf
 
         var toAdd = new List<BookPuzzle>();
         var skipped = 0;

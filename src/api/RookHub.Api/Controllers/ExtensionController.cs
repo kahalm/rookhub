@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -310,6 +311,29 @@ public class ExtensionController : BaseApiController
                 userId, dto.Bid);
         }
         return Ok(new { stored, merged });
+    }
+
+    /// <summary>
+    /// Token-lose Ablage von getReview-Linien — für Nutzer OHNE hinterlegten RookHub-Token. Statt eines
+    /// RookHub-Accounts identifiziert die Chessable-<c>uid</c> (client-seitig aus dem Chessable-JWT
+    /// decodiert) die Linien; sie landen in der Anon-Senke und werden geclaimt, sobald diese uid einem
+    /// RookHub-Account zugeordnet wird (der User verknüpft seinen Chessable-Bearer). <c>AllowAnonymous</c>
+    /// + per-IP-Ratelimit; KEIN Kurs-Merge hier (es gibt kein Zielkonto). Der Client sendet erst nach
+    /// expliziter Zustimmung (einmaliger Hinweis in der Extension).
+    /// </summary>
+    [HttpPost("chessable/review-lines/anon")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    [RequestSizeLimit(16_000_000)]   // deutlich kleiner als der authentifizierte Pfad: der Client batcht ≤50 Linien (offener Endpoint → DoS-Schranke)
+    public async Task<IActionResult> ChessableReviewLinesAnon([FromBody] AnonymousChessableReviewLinesInputDto dto,
+        CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        if (string.IsNullOrWhiteSpace(dto.Uid) || dto.Uid.Length > 32 || !dto.Uid.All(char.IsAsciiDigit))
+            return BadRequest(new { message = "Valid uid required." });
+        var stored = await _reviewLines.UpsertAnonBatchAsync(dto.Uid, dto.Bid, dto.Entries, ct);
+        return Ok(new { stored });
     }
 
     [HttpGet("chessable/progress")]

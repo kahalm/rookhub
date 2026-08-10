@@ -210,3 +210,16 @@ public class ChessableReviewLineEntryDto
     [System.ComponentModel.DataAnnotations.Required]
     public string Json { get; set; } = string.Empty;
 }
+
+/// <summary>Token-lose (anonyme) Variante von <see cref="ChessableReviewLinesInputDto"/>: der Absender
+/// hat keinen RookHub-Token, identifiziert sich aber über seine Chessable-<c>uid</c> (aus dem
+/// Chessable-JWT decodiert). Landet in der Anon-Senke und wird geclaimt, sobald diese uid einem
+/// RookHub-Account zugeordnet wird.</summary>
+public class AnonymousChessableReviewLinesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Uid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableReviewLineEntryDto> Entries { get; set; } = new();
+}

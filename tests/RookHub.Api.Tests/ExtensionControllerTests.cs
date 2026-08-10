@@ -498,4 +498,38 @@ public class ExtensionControllerTests : IDisposable
 
         Assert.IsType<BadRequestObjectResult>(res);
     }
+
+    [Fact]
+    public async Task ChessableReviewLinesAnon_StoresByUid_NoAccountNeeded()
+    {
+        // KEIN SetUser: der anonyme Endpoint braucht keinen RookHub-Account/Scope.
+        var dto = new AnonymousChessableReviewLinesInputDto
+        {
+            Uid = "790927",
+            Bid = "228856",
+            Entries = new() { new ChessableReviewLineEntryDto { Oid = "1", Json = "{\"lesson\":{\"moves\":[]}}" } },
+        };
+
+        var res = await _controller.ChessableReviewLinesAnon(dto, default);
+
+        var ok = Assert.IsType<OkObjectResult>(res);
+        var stored = (int)ok.Value!.GetType().GetProperty("stored")!.GetValue(ok.Value)!;
+        Assert.Equal(1, stored);
+        Assert.Equal(1, _db.AnonymousChessableReviewLines.Count(r => r.ChessableUid == "790927" && r.Bid == "228856"));
+        Assert.Empty(_db.ChessableReviewLines);   // nichts an einen Account gebunden
+    }
+
+    [Fact]
+    public async Task ChessableReviewLinesAnon_InvalidUid_BadRequest()
+    {
+        var res = await _controller.ChessableReviewLinesAnon(new AnonymousChessableReviewLinesInputDto
+        {
+            Uid = "not-a-uid",
+            Bid = "228856",
+            Entries = new() { new ChessableReviewLineEntryDto { Oid = "1", Json = "{}" } },
+        }, default);
+
+        Assert.IsType<BadRequestObjectResult>(res);
+        Assert.Empty(_db.AnonymousChessableReviewLines);
+    }
 }

@@ -35,6 +35,7 @@ public class ChessableController : BaseApiController
     private readonly ChessableBearerBreaker _breaker;
     private readonly NotificationService _notifications;
     private readonly ChessableImportQueueService _queue;
+    private readonly ChessableReviewLineService _reviewLines;
     private readonly ILogger<ChessableController> _logger;
 
     public ChessableController(
@@ -44,6 +45,7 @@ public class ChessableController : BaseApiController
         ChessableBearerBreaker breaker,
         NotificationService notifications,
         ChessableImportQueueService queue,
+        ChessableReviewLineService reviewLines,
         ILogger<ChessableController> logger)
     {
         _db = db;
@@ -52,6 +54,7 @@ public class ChessableController : BaseApiController
         _breaker = breaker;
         _notifications = notifications;
         _queue = queue;
+        _reviewLines = reviewLines;
         _logger = logger;
     }
 
@@ -121,9 +124,12 @@ public class ChessableController : BaseApiController
         {
             cred.EncryptedBearer = _encryption.Encrypt(request.Bearer.Trim());
             cred.UpdatedAt = now;
-            // Bearer gewechselt → gecachte Kursliste verwerfen (kann zu anderem Account gehören).
+            // Bearer gewechselt → gecachte Kursliste + verknüpfte Chessable-Identität verwerfen
+            // (kann zu anderem Account gehören; die uid wird erst durch einen erfolgreichen „Testen"
+            // gegen Chessable BEWIESEN neu gesetzt — nie aus dem ungeprüften JWT).
             cred.CachedCoursesJson = null;
             cred.CoursesCachedAt = null;
+            cred.ChessableUid = null;
             // Frischer Bearer → Circuit-Breaker schließen (ein neuer Token verdient einen Versuch).
             // Pausierte Importe werden NICHT automatisch aufgenommen — das macht erst ein erfolgreicher
             // „Testen“-Klick (ClearAndResumeAsync), damit kein gleich wieder toter Token sie hetzt.
@@ -132,6 +138,9 @@ public class ChessableController : BaseApiController
         }
 
         await _db.SaveChangesAsync();
+        // Der Claim anonym gesammelter getReview-Linien passiert NICHT hier: die uid stünde nur aus dem
+        // ungeprüften Bearer-JWT zur Verfügung (fälschbar → fremde Anon-Daten claimbar). Er hängt am
+        // „Testen"-Endpoint, der den Bearer aktiv gegen Chessable prüft und die uid BEWIESEN zurückgibt.
 
         // Erstmalig hinterlegter Bearer → Admins informieren (Glocke). Best-effort, blockiert das Speichern nicht.
         if (isNewCredential)
@@ -177,6 +186,29 @@ public class ChessableController : BaseApiController
         {
             var result = await _chessable.TestAsync(bearer, ct);
             await _breaker.ClearAndResumeAsync(userId, ct);
+
+            // Der Test hat den Bearer aktiv gegen Chessable geprüft → die zurückgegebene uid ist BEWIESEN
+            // die Chessable-Identität dieses Users. Erst jetzt (nicht schon beim Speichern aus dem
+            // ungeprüften JWT) die uid festhalten und anonym gesammelte getReview-Linien in seinen Account
+            // übernehmen (best-effort; darf den Test-200 nicht kippen).
+            if (!string.IsNullOrWhiteSpace(result.Uid))
+            {
+                try
+                {
+                    var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+                    if (cred is not null && cred.ChessableUid != result.Uid)
+                    {
+                        cred.ChessableUid = result.Uid.Length > 32 ? result.Uid[..32] : result.Uid;
+                        await _db.SaveChangesAsync(ct);
+                    }
+                    await _reviewLines.ClaimAnonForUidAsync(userId, result.Uid, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Claim anonymer getReview-Linien (User {UserId}, uid {Uid}) fehlgeschlagen",
+                        userId, result.Uid);
+                }
+            }
             return Ok(result);
         }
         catch (ChessableProxyException ex)

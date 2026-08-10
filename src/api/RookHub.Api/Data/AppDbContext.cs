@@ -64,6 +64,7 @@ public class AppDbContext : DbContext
     public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
     public DbSet<ChessableProblemMove> ChessableProblemMoves => Set<ChessableProblemMove>();
     public DbSet<ChessableReviewLine> ChessableReviewLines => Set<ChessableReviewLine>();
+    public DbSet<AnonymousChessableReviewLine> AnonymousChessableReviewLines => Set<AnonymousChessableReviewLine>();
     public DbSet<CourseFlashcardMark> CourseFlashcardMarks => Set<CourseFlashcardMark>();
     public DbSet<RepertoireFlashcardMark> RepertoireFlashcardMarks => Set<RepertoireFlashcardMark>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
@@ -770,6 +771,19 @@ public class AppDbContext : DbContext
             e.Property(a => a.ChapterTitle).HasMaxLength(300);
             // Upsert-Identität: eine Zeile je (User, Kurs, Linie).
             e.HasIndex(a => new { a.UserId, a.Bid, a.Oid }).IsUnique();
+        });
+
+        modelBuilder.Entity<AnonymousChessableReviewLine>(e =>
+        {
+            e.Property(a => a.ChessableUid).HasMaxLength(32);
+            e.Property(a => a.Bid).HasMaxLength(12);
+            e.Property(a => a.Oid).HasMaxLength(32);
+            e.Property(a => a.Json).HasColumnType("LONGTEXT");
+            e.Property(a => a.ChapterTitle).HasMaxLength(300);
+            // Upsert-Identität: eine Zeile je (Chessable-uid, Kurs, Linie). Kein FK (uid ≠ RookHub-User).
+            e.HasIndex(a => new { a.ChessableUid, a.Bid, a.Oid }).IsUnique();
+            // Claim/Retention scannen nach uid.
+            e.HasIndex(a => a.ChessableUid);
         });
 
         modelBuilder.Entity<ChessableCourseTheme>(e =>
