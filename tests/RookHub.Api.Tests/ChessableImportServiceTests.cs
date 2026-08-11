@@ -193,7 +193,7 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetImportedOids_ExcludesReviewSeededLines_ButCountsGetGameLines()
+    public async Task GetImportedOids_CountsBothReviewAndGetGameLines()
     {
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
         await _db.SaveChangesAsync();
@@ -203,7 +203,7 @@ public class ChessableImportServiceTests : IDisposable
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         // Eine aus getReview vorbelegte Lücken-Füller-Linie (Source="review") und eine vollwertige
-        // getGame-Linie (Source=null) im selben Buch.
+        // getGame-Linie (Source=null) im selben Buch — BEIDE zählen als gecacht.
         _db.BookPuzzles.Add(new BookPuzzle
         {
             LineId = $"{fileName}:900", BookFileName = fileName, BookId = book.Id, Round = "900",
@@ -219,16 +219,8 @@ public class ChessableImportServiceTests : IDisposable
         var (oids, hasBook, _) = await _svc.GetImportedOidsAsync(7, "424242");
 
         Assert.True(hasBook);
-        Assert.Contains("901", oids);        // getGame-Linie zählt als importiert
-        Assert.DoesNotContain("900", oids);  // Review-Lücken-Füller NICHT → getGame-Crawl holt sie
-
-        // getGame ersetzt die Review-Linie (Source→null); danach zählt der oid als importiert.
-        var review = await _db.BookPuzzles.FirstAsync(b => b.ChessableOid == "900");
-        review.Source = null;
-        await _db.SaveChangesAsync();
-
-        var (oids2, _, _) = await _svc.GetImportedOidsAsync(7, "424242");
-        Assert.Contains("900", oids2);
+        Assert.Contains("901", oids);   // getGame-Linie zählt als importiert
+        Assert.Contains("900", oids);   // Review-Linie zählt AUCH → Overlay-✓ + kein getGame-Re-Fetch
     }
 
     [Fact]

@@ -123,12 +123,13 @@ public class BookPuzzle
     /// Herkunfts-Markierung der Linie. <c>null</c> = normale/vollwertige Linie (getGame bzw. jeder
     /// echte PGN-Import). <c>"review"</c> = aus einer gespeicherten Chessable-<c>getReview</c>-Antwort
     /// als Lücken-Füller gebaut (siehe <see cref="Services.ChessableReviewLineService.MergeIntoCourseAsync"/>).
-    /// <para>Der Vorrang-Mechanismus hängt an diesem Feld: getGame GEWINNT — eine <c>"review"</c>-Linie
-    /// wird von einem späteren getGame-Import ERSETZT (Moves/Alt/Comments/Shapes/StartPly der getGame-
-    /// Version, Source auf <c>null</c>), statt als „schon da" übersprungen zu werden; und
-    /// <c>ChessableImportService.GetImportedOidsAsync</c> zählt <c>"review"</c>-Linien NICHT als
-    /// importiert, damit der getGame-Crawl sie überhaupt holt. Review füllt also nur Lücken und
-    /// überschreibt nie eine bestehende (getGame- oder review-)Linie.</para>
+    /// <para>Der Vorrang-Mechanismus hängt an diesem Feld: wird ein <c>oid</c> tatsächlich per getGame
+    /// importiert, ERSETZT die getGame-Version eine bestehende <c>"review"</c>-Linie in-place
+    /// (Moves/Alt/Comments/Shapes/StartPly, Source auf <c>null</c>), statt sie zu duplizieren. Eine
+    /// <c>"review"</c>-Linie zählt aber ansonsten als vollwertig gecacht: <c>GetImportedOidsAsync</c>
+    /// führt sie als importiert (Overlay-✓) und der getGame-Crawl holt sie NICHT erneut — getReview und
+    /// getGame sind für die Linie gleichwertig (nur „schwierige Züge" fehlen), ein Re-Fetch bringt
+    /// keinen Mehrwert. Review füllt also Lücken und überschreibt nie eine bestehende Linie.</para>
     /// </summary>
     [MaxLength(16)]
     public string? Source { get; set; }
