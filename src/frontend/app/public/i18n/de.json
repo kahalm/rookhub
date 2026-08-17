@@ -1281,7 +1281,8 @@
       "skippedCount": "{{count}} Zeile(n) übersprungen:",
       "startChapter": "Kapitel starten",
       "tags": "Schlagwörter",
-      "title": "Kurs"
+      "title": "Kurs",
+      "chapterPoints": "{score} Pkt"
     },
     "sequential": "Sequenziell",
     "random": "Zufällig",
@@ -1522,6 +1523,13 @@
     "keyboardHelp": "Tastenkürzel",
     "settings": {
       "title": "Brett-Einstellungen"
+    },
+    "copyFen": "FEN kopieren",
+    "fenCopied": "FEN kopiert",
+    "analyzeLine": "Diese Linie analysieren",
+    "analyze": {
+      "open": "Analyse",
+      "hint": "Deine Linie mit der Engine prüfen"
     }
   },
   "weekly": {

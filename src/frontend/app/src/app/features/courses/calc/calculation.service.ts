@@ -30,6 +30,8 @@ export interface CalcPositionListItem {
 export interface CalcChapterSummary {
   /** null = Sammelgruppe „ohne Kapitel". */
   chapter: string | null;
+  /** Zahl der BEWERTETEN Stellungen des Kapitels (>0 ⇒ „vom Nutzer bewertet"). */
+  ratedCount?: number;
   /** Summe der erreichten Punkte. */
   points: number;
   /** Erreichbare Punkte des Kapitels (4 je Stellung) — eine Summe ohne Maximum ist nicht lesbar. */

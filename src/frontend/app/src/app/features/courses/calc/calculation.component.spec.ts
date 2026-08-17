@@ -193,6 +193,18 @@ describe('CalculationComponent Zug-Eingabe (Brett eingefroren)', () => {
     expect(component.cursorFen).not.toBe(START);
   });
 
+  it('opens the analysis board with the current line moves', () => {
+    const { component, navigated } = make();
+    load(component);
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });   // Nxe5 = f3e5
+
+    component.analyzeCurrentLine();
+
+    expect(navigated.length).toBe(1);
+    expect(navigated[0]['fen']).toBe(component.startFen);
+    expect(navigated[0]['moves']).toBe('f3e5');
+  });
+
   it('records moves for BOTH sides in one line', () => {
     const { component } = make();
     load(component);

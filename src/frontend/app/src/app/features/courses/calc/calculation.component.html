@@ -102,6 +102,12 @@
     <span class="calc-bar-points" [matTooltip]="pointsTooltip">
       {{ scoreDisplay(totalPoints, totalMaxPoints) }}
     </span>
+
+    <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. -->
+    <button mat-icon-button (click)="copyFen()" [matTooltip]="'calc.copyFen' | translate"
+            [attr.aria-label]="'calc.copyFen' | translate">
+      <mat-icon>content_copy</mat-icon>
+    </button>
   </ng-template>
 
   <div class="calc-bar"><ng-container *ngTemplateOutlet="commandBar"></ng-container></div>
@@ -186,6 +192,7 @@
               (selectNode)="setCursor($event)"
               (newLine)="startNewLine()"
               (deleteLine)="deleteLine($event)"
+              (analyzeLine)="analyzeLine($event)"
               (chooseMove)="chooseMove($event)"
               (commentChanged)="onLineComment($event)">
               <!-- „Neue Linie ab Start" ist ersatzlos weg: das ⊕ in der Kopfzeile der Liste ruft
@@ -251,6 +258,15 @@
                   <span class="calc-review-score">{{ scoreDisplay(positionPoints, maxPointsPerPosition) }}</span>
                 }
               </button>
+              <!-- Nach dem Bewerten: die eigene Linie im Analyse-Modus mit der Engine prüfen. -->
+              @if (review.grade !== null) {
+                <button type="button" mat-stroked-button class="calc-analyze-btn"
+                        (click)="analyzeCurrentLine()"
+                        [matTooltip]="'calc.analyze.hint' | translate">
+                  <mat-icon>insights</mat-icon>
+                  <span>{{ 'calc.analyze.open' | translate }}</span>
+                </button>
+              }
             </div>
             <!-- Der Satz „Prüf die Lösung im Buch …" stand hier dauerhaft. Er gehört dorthin, wo
                  man ihn braucht: in den Ergebnis-Dialog, unmittelbar vor der Auswahl. -->

@@ -172,6 +172,10 @@
                       @if (ch.quizCount > 0 && ch.quizCount !== ch.lineCount) {
                         <span class="quiz-count">· {{ 'courses.detail.quizCount' | translate:{ count: ch.quizCount } }}</span>
                       }
+                      <!-- Kalkulationsbuch: erreichte Punkte der Selbstbewertung, nur für bewertete Kapitel. -->
+                      @if (d.isCalculation && calcChapterScore(ch); as score) {
+                        <span class="calc-chapter-points">· {{ 'courses.detail.chapterPoints' | translate:{ score } }}</span>
+                      }
                     </span>
                     <span class="chapter-progress">
                       <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>

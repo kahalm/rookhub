@@ -15,6 +15,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { CourseDetail, CourseLine, CourseManageChapter, CourseService } from './course.service';
 import { formatScore, maxPoints } from './calc/calc-review.util';
+import { CalculationService } from './calc/calculation.service';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
@@ -58,10 +59,15 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   private subs = new Subscription();
 
+  /** Kalkulations-Punkte je Kapitel (Schlüssel = Kapitelname, '' = „ohne Kapitel"); nur bei
+   *  Kalkulationsbüchern befüllt, nur bewertete Kapitel (ratedCount>0) werden angezeigt. */
+  calcChapterScores: Record<string, string> = {};
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private courses: CourseService,
+    private calc: CalculationService,
     private dialog: MatDialog,
     private snackbar: SnackbarService,
     private translate: TranslateService,
@@ -83,6 +89,10 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
       next: detail => {
         this.detail = detail;
         this.loading = false;
+        // Kalkulationsbuch: Kapitel-Punkte der Selbstbewertung nachladen (eigener Endpoint, hält die
+        // Kurs-Detail-DTO frei von Kalkulations-Feldern). Nur bewertete Kapitel bekommen eine Zahl.
+        if (detail.isCalculation) this.loadCalcChapterScores();
+        else this.calcChapterScores = {};
         // Aufgeklappte Kapitel nachladen (nach Änderungen).
         for (const key of Object.keys(this.expanded)) {
           if (this.expanded[key]) this.loadLines(this.keyToChapter(key));
@@ -90,6 +100,27 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
       },
       error: () => { this.loading = false; this.loadError = true; },
     }));
+  }
+
+  /** Kalkulations-Kapitelpunkte laden (eigener Endpoint). Best-effort: die Zahlen sind Beiwerk,
+   *  ein Fehler blendet sie nur aus. Nur BEWERTETE Kapitel (ratedCount>0) bekommen einen Eintrag. */
+  private loadCalcChapterScores(): void {
+    this.subs.add(this.calc.getBook(this.bookId).subscribe({
+      next: book => {
+        const map: Record<string, string> = {};
+        for (const c of book.chapters ?? []) {
+          if ((c.ratedCount ?? 0) <= 0) continue;
+          map[c.chapter ?? ''] = formatScore(c.points, c.maxPoints);
+        }
+        this.calcChapterScores = map;
+      },
+      error: () => { this.calcChapterScores = {}; },
+    }));
+  }
+
+  /** Punkte-Anzeige eines Kapitels („14 / 24") — leer, wenn nicht bewertet / kein Kalkulationsbuch. */
+  calcChapterScore(chapter: CourseManageChapter): string {
+    return this.calcChapterScores[chapter.name ?? ''] ?? '';
   }
 
   // ===== Kapitel-Schlüssel („ohne Kapitel" = '') ============================

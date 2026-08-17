@@ -1281,7 +1281,8 @@
       "skippedCount": "{{count}} line(s) skipped:",
       "startChapter": "Start chapter",
       "tags": "Tags",
-      "title": "Course"
+      "title": "Course",
+      "chapterPoints": "{score} pts"
     },
     "sequential": "Sequential",
     "random": "Random",
@@ -1522,6 +1523,13 @@
     "keyboardHelp": "Keyboard shortcuts",
     "settings": {
       "title": "Board settings"
+    },
+    "copyFen": "Copy FEN",
+    "fenCopied": "FEN copied",
+    "analyzeLine": "Analyse this line",
+    "analyze": {
+      "open": "Analysis",
+      "hint": "Check your line with the engine"
     }
   },
   "weekly": {

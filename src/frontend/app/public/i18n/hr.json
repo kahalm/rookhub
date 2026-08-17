@@ -1281,7 +1281,8 @@
       "skippedCount": "Preskočeno redova: {{count}}:",
       "startChapter": "Pokreni poglavlje",
       "tags": "Oznake",
-      "title": "Kurs"
+      "title": "Kurs",
+      "chapterPoints": "{score} bod."
     },
     "sequential": "Slijedno",
     "random": "Nasumično",
@@ -1522,6 +1523,13 @@
     "keyboardHelp": "Tipkovni prečaci",
     "settings": {
       "title": "Postavke ploče"
+    },
+    "copyFen": "Kopiraj FEN",
+    "fenCopied": "FEN kopiran",
+    "analyzeLine": "Analiziraj ovu liniju",
+    "analyze": {
+      "open": "Analiza",
+      "hint": "Provjeri svoju liniju s engineom"
     }
   },
   "weekly": {

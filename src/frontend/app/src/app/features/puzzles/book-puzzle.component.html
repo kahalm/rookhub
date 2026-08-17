@@ -38,6 +38,16 @@
               (resetClicked)="resetPuzzle()"
               (mouseslipClicked)="mouseslip()"
               (giveUpClicked)="giveUp()" />
+            <!-- Vollbild: die angezeigten Tipp-Texte im schwarzen Balken. Die normale Tipp-Liste
+                 (board-hint-slot) liegt AUSSERHALB der Vollbild-Huelle und ist im Vollbild unsichtbar —
+                 darum hier eine fs-only-Kopie, damit der Tipp-Knopf im Vollbild auch etwas zeigt. -->
+            @if (shownHints.length) {
+              <div class="board-hint-fs" data-fs-only>
+                @for (h of shownHints; track $index) {
+                  <div class="board-hint-fs-line">{{ $index + 1 }}. {{ h }}</div>
+                }
+              </div>
+            }
           </app-puzzle-board>
           <!-- Unter-Brett-Leiste (Am-Zug/Viz/Tipps) EINMAL definiert, an zwei Stellen gerendert:
                normal unter dem Brett, im App-Vollbild oben in der Info-Spalte — dann stiehlt

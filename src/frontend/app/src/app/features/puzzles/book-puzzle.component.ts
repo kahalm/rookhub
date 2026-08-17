@@ -531,15 +531,21 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.recordWeeklyAttempt(true);
     this.recordBookAttempt(true);
     this.recordTrack(true);   // „Track solves": Erstversuch gelöst
+    // Im BRETT-Vollbild gibt es die „Weiter"-Knöpfe (im Panel unter dem Brett) nicht — dort würde der
+    // Spieler bei den „stehen bleiben"-Fällen (alternative Lösung / Abschlusstext) festhängen. Deshalb
+    // im Vollbild IMMER auto-weiterspringen; außerhalb bleibt das bewusste Stehenbleiben erhalten.
+    const inBoardFullscreen = !!document.fullscreenElement;
     // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
-    // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
-    if (this.solveAlternative) return;
-    // Direkt geteiltes Einzel-Puzzle: am Ende stehen bleiben, kein Auto-Advance.
+    // der Spieler entscheidet selbst (Weiter / Originallösung zeigen). Im Vollbild dennoch weiter.
+    if (this.solveAlternative && !inBoardFullscreen) return;
+    // Direkt geteiltes Einzel-Puzzle: am Ende stehen bleiben, kein Auto-Advance (auch im Vollbild —
+    // es gibt kein „nächstes").
     if (this.singlePuzzle) return;
     // Steht nach dem letzten Lösungszug noch ein Abschlusstext (Kommentar NACH dem Zug), NICHT
     // automatisch weiterspringen — der Spieler soll ihn lesen und selbst „Weiter" klicken. Der
     // Kommentar wird über displayComment angezeigt (enterSolutionReview springt ans Ende + setzt ihn).
-    if (this.hasTrailingSolutionComment) return;
+    // Im Vollbild ist der Text ohnehin nicht erreichbar → dennoch weiter.
+    if (this.hasTrailingSolutionComment && !inBoardFullscreen) return;
     // Sonst einheitlicher Auto-Advance: nach kurzem Countdown zum nächsten (kontextabhängig
     // Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
     this.startSolvedCountdown(() => this.solvedAutoNext());

@@ -62,10 +62,12 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
   const dialog = {
     open: () => { calls.push('dialog'); return { afterClosed: () => of(dialogResult) }; },
   };
+  const calc = { getBook: () => of({ chapters: [] }) };
   const component = new CourseDetailComponent(
     { snapshot: { paramMap: { get: () => '58' } } } as never,
     { navigate: () => Promise.resolve(true) } as never,
     courses as never,
+    calc as never,
     dialog as never,
     { warn: (m: string) => warnings.push(m), quick: () => undefined } as never,
     { instant: (k: string) => k } as never,

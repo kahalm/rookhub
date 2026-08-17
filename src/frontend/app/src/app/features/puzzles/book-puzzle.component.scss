@@ -236,3 +236,29 @@
   gap: 4px;
   color: color-mix(in srgb, currentColor 70%, transparent);
 }
+
+/* Vollbild-Tipp-Texte im schwarzen Balken (b-4): sichtbar nur im Brett-Vollbild (globale
+   [data-fs-only]-Regel schaltet display), positioniert im freien Balken — quer rechts, hoch oben. */
+.board-hint-fs {
+  position: absolute;
+  z-index: 70;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+  max-width: min(90vw, 340px);
+  max-height: 80vh;
+  overflow: auto;
+  font-size: 14px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+@media (min-aspect-ratio: 1/1) {   /* Querformat: rechter schwarzer Balken */
+  .board-hint-fs { right: 8px; top: 50%; transform: translateY(-50%); max-width: max(140px, calc((100vw - 100vh) / 2 - 16px)); }
+}
+@media (max-aspect-ratio: 1/1) {   /* Hochformat: oberer schwarzer Balken */
+  .board-hint-fs { top: 8px; left: 50%; transform: translateX(-50%); }
+}

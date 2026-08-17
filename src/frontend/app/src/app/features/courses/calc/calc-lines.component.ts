@@ -76,6 +76,10 @@ import {
               </div>
 
               <div class="cl-actions">
+                <button mat-icon-button class="cl-icon" [matTooltip]="'calc.analyzeLine' | translate"
+                        [disabled]="!line.moves.length" (click)="analyzeLine.emit(line.leafId)">
+                  <mat-icon>insights</mat-icon>
+                </button>
                 <button mat-icon-button class="cl-icon" [matTooltip]="'calc.comment' | translate"
                         (click)="toggleComment(line.leafId)">
                   <mat-icon>{{ leafComment(line) ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
@@ -198,6 +202,7 @@ export class CalcLinesComponent {
   @Output() selectNode = new EventEmitter<number>();
   @Output() newLine = new EventEmitter<void>();
   @Output() deleteLine = new EventEmitter<number>();
+  @Output() analyzeLine = new EventEmitter<number>();
   @Output() commentChanged = new EventEmitter<{ nodeId: number; text: string }>();
   /** Stern am ersten Zug geklickt (Knoten-Id) — die Eltern-Komponente schaltet die Festlegung um. */
   @Output() chooseMove = new EventEmitter<number>();

@@ -1321,6 +1321,35 @@ export class CalculationComponent implements OnInit, OnDestroy {
     return `${name} · ${summary}`;
   }
 
+  // ===== Analyse + FEN kopieren =============================================
+
+  /** Aktuelle Cursor-FEN in die Zwischenablage (immer verfügbar). */
+  copyFen(): void {
+    const fen = this.cursorFen || this.startFen;
+    if (!fen || !navigator.clipboard) return;
+    navigator.clipboard.writeText(fen).then(
+      () => this.snackbar.info(this.translate.instant('calc.fenCopied')),
+      () => this.snackbar.warn(this.translate.instant('common.error')),
+    );
+  }
+
+  /** Öffnet den Analyse-Modus mit den Zügen EINER Linie (Wurzel → <c>leafId</c>). Jede Linie ist
+   *  linear und passt damit in den (einlinigen) Analyse-Modus; ein „from" führt zurück hierher. */
+  analyzeLine(leafId: number): void {
+    this.openAnalysis(pathToRoot(this.tree, leafId).slice(1).map(n => n.uci).filter(Boolean));
+  }
+
+  /** Analyse der aktuell im Baum stehenden Linie (Wurzel → Cursor) — Knopf nach dem Bewerten. */
+  analyzeCurrentLine(): void {
+    this.openAnalysis(pathToRoot(this.tree, this.cursorId).slice(1).map(n => n.uci).filter(Boolean));
+  }
+
+  private openAnalysis(uci: string[]): void {
+    this.router.navigate(['/analysis'], {
+      queryParams: { fen: this.startFen, moves: uci.join(','), from: this.router.url.split('?')[0] },
+    });
+  }
+
   // ===== Stellungs-Navigation (Stufe 2: INNERHALB des Kapitels) =============
 
   hasPrev(): boolean { return this.index > 0; }
