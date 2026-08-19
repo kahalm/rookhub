@@ -109,6 +109,7 @@
       "chessable_token_added": "{{username}} je dodao Chessable token",
       "chessable_new_course": "Novi Chessable tečaj „{{courseName}}“ za {{username}}",
       "course_shared": "{{username}} je s tobom podijelio tečaj „{{courseName}}“",
+      "calc_series_edition_released": "Novi tjedan kalkulacije dostupan: „{{chapter}}“ ({{book}})",
       "repertoire_shared": "{{username}} je s tobom podijelio repertoar „{{repertoireName}}“",
       "catalog_request_received": "{{username}} traži „{{itemName}}“ iz tvog kataloga",
       "catalog_request_approved": "Tvoj zahtjev za „{{itemName}}“ je odobren",

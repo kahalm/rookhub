@@ -70,4 +70,8 @@ public static class NotificationType
     /// <summary>Der Besitzer hat eine Katalog-Anforderung abgelehnt (→ Glocke des Anfragenden).
     /// Daten: itemName.</summary>
     public const string CatalogRequestDeclined = "catalog_request_declined";
+
+    /// <summary>Kalkulations-Serie: eine terminierte Woche wurde freigegeben (→ Glocke der Verteiler-
+    /// Mitglieder bzw. Tester zum früheren Termin, Link auf die Kursseite). Daten: book, chapter.</summary>
+    public const string CalcSeriesEditionReleased = "calc_series_edition_released";
 }

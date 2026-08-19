@@ -211,4 +211,135 @@ public class CalcEditionTests : IDisposable
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPositionAsync(ViewerId, wb.Id, isAdmin: false));
         Assert.Equal(0, await _db.CalcEditionViews.CountAsync());
     }
+
+    private CalcSeriesAnnounceService Announcer() => new(_db, new NotificationService(_db));
+
+    [Fact]
+    public async Task Announce_PublicRelease_NotifiesAllMembers_Idempotent()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", PublishAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);   // ohne Tester-Termin ist er normales Mitglied
+
+        var announcer = Announcer();
+        Assert.Equal(1, await announcer.RunOnceAsync());                        // eine öffentliche Runde
+        var notifs = await _db.Notifications.ToListAsync();
+        Assert.Equal(2, notifs.Count);                                         // beide Mitglieder
+        Assert.All(notifs, n => Assert.Equal(NotificationType.CalcSeriesEditionReleased, n.Type));
+        Assert.Contains(notifs, n => n.UserId == ViewerId);
+        Assert.Contains(notifs, n => n.UserId == TesterId);
+        Assert.NotNull((await _db.CalcEditions.FirstAsync()).PublishAnnouncedAt);
+
+        Assert.Equal(0, await announcer.RunOnceAsync());                        // idempotent
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+    }
+
+    [Fact]
+    public async Task Announce_TesterPreviewFirst_ThenPublicToNonTestersOnly()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto
+        {
+            Chapter = "Woche B",
+            PublishAt = DateTime.UtcNow.AddDays(1),          // öffentlich noch fern
+            TesterPreviewAt = DateTime.UtcNow.AddMinutes(-1) // Tester-Vorschau offen
+        });
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+        var announcer = Announcer();
+
+        // Runde 1: nur Tester.
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        var afterTester = await _db.Notifications.ToListAsync();
+        Assert.Single(afterTester);
+        Assert.Equal(TesterId, afterTester[0].UserId);
+        var ed = await _db.CalcEditions.FirstAsync();
+        Assert.NotNull(ed.TesterAnnouncedAt);
+        Assert.Null(ed.PublishAnnouncedAt);
+
+        // Zeit vergeht: öffentliche Freigabe erreicht.
+        ed.PublishAt = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        // Runde 2: nur NICHT-Tester (Tester wurde schon informiert).
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        var all = await _db.Notifications.ToListAsync();
+        Assert.Equal(2, all.Count);
+        Assert.Single(all, n => n.UserId == ViewerId);      // Betrachter jetzt informiert
+        Assert.Single(all, n => n.UserId == TesterId);      // Tester NICHT erneut
+        Assert.NotNull((await _db.CalcEditions.FirstAsync()).PublishAnnouncedAt);
+    }
+
+    [Fact]
+    public async Task Announce_NoMembers_StampsWithoutCrash()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", PublishAt = DateTime.UtcNow.AddMinutes(-1) });
+        var announcer = Announcer();
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        Assert.Equal(0, await _db.Notifications.CountAsync());
+        Assert.NotNull((await _db.CalcEditions.FirstAsync()).PublishAnnouncedAt);
+        Assert.Equal(0, await announcer.RunOnceAsync());     // nichts mehr offen
+    }
+
+    [Fact]
+    public async Task Announce_TesterAddedAfterTesterRound_StillNotifiedAtPublic()
+    {
+        // Regression (Review 3b): ein NACH der Tester-Runde hinzugefügter Tester darf nicht verloren gehen.
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto
+        {
+            Chapter = "Woche B",
+            PublishAt = DateTime.UtcNow.AddDays(1),
+            TesterPreviewAt = DateTime.UtcNow.AddMinutes(-1),
+        });
+        var announcer = Announcer();
+
+        // Tester-Runde läuft ohne Mitglieder → Marker gesetzt, Empfängerliste leer.
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        Assert.Equal(0, await _db.Notifications.CountAsync());
+
+        // Erst danach kommt ein Tester dazu; öffentliche Freigabe wird erreicht.
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+        var ed = await _db.CalcEditions.FirstAsync();
+        ed.PublishAt = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        var notifs = await _db.Notifications.ToListAsync();
+        Assert.Single(notifs);                      // genau einmal
+        Assert.Equal(TesterId, notifs[0].UserId);   // der spät hinzugefügte Tester
+    }
+
+    [Fact]
+    public async Task Announce_TesterFlagRemovedBetweenRounds_NotDoubleNotified()
+    {
+        // Regression (Review 3b): ein zwischen den Runden ent-Tester-tes Mitglied darf nicht doppelt kommen.
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto
+        {
+            Chapter = "Woche B",
+            PublishAt = DateTime.UtcNow.AddDays(1),
+            TesterPreviewAt = DateTime.UtcNow.AddMinutes(-1),
+        });
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+        var announcer = Announcer();
+
+        // Tester-Runde: nur der Tester.
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        Assert.Single(await _db.Notifications.ToListAsync());
+
+        // Tester-Häkchen entfernt + öffentliche Freigabe erreicht.
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: false);
+        var ed = await _db.CalcEditions.FirstAsync();
+        ed.PublishAt = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(1, await announcer.RunOnceAsync());
+        var byUser = await _db.Notifications.GroupBy(n => n.UserId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
+        Assert.Equal(1, byUser.Single(x => x.Key == TesterId).Count);   // Tester NICHT doppelt
+        Assert.Equal(1, byUser.Single(x => x.Key == ViewerId).Count);   // Betrachter genau einmal
+    }
 }

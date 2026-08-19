@@ -205,6 +205,7 @@ try
     builder.Services.AddScoped<CourseStatsService>();
     builder.Services.AddScoped<CalculationService>();
     builder.Services.AddScoped<CalcEditionService>();
+    builder.Services.AddScoped<CalcSeriesAnnounceService>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
@@ -256,6 +257,8 @@ try
     // Taeglicher Chessable-Kurslisten-Refresh (04:00 UTC): aktualisiert alle hinterlegten Bearer,
     // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen.
     builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
+    // Kalkulations-Serie: kündigt freigegebene Wochen an den Verteiler an (Standard alle 5 min).
+    builder.Services.AddHostedService<CalcSeriesAnnounceScheduler>();
 
     // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
     builder.Services.AddHttpClient<GithubActionsService>(client =>

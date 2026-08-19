@@ -116,14 +116,18 @@ export class CalcMembersDialogComponent {
 
   private reload(): void {
     this.busy = true;
-    // Mitglieder + Ausgaben (für den Nenner: freigegebene Wochen) + „Gesehen"-Vermerke zusammen laden.
+    // KRITISCH: die Mitgliederliste — das ist der Zweck des Dialogs. Schlägt sie fehl, melden.
+    this.service.members(this.data.bookId).subscribe({
+      next: members => { this.members = members; this.loaded = true; this.busy = false; },
+      error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.membersLoadFailed')); },
+    });
+    // BEST-EFFORT: die „Gesehen"-Anzeige (N/M). Fällt sie aus, bleibt die Verwaltung voll nutzbar —
+    // dann nur ohne die Zähler (kein eigener Fehler, um die Mitglieder-Verwaltung nicht zu stören).
     forkJoin({
-      members: this.service.members(this.data.bookId),
       editions: this.service.manage(this.data.bookId),
       views: this.service.views(this.data.bookId),
     }).subscribe({
-      next: ({ members, editions, views }) => {
-        this.members = members;
+      next: ({ editions, views }) => {
         const releasedChapters = new Set(editions.filter(e => e.released).map(e => e.chapter));
         this.releasedCount = releasedChapters.size;
         // Nur Sichten auf inzwischen freigegebene Wochen zählen (eine später wieder verborgene Woche
@@ -134,10 +138,8 @@ export class CalcMembersDialogComponent {
           (map[v.userId] ??= new Set()).add(v.chapter);
         }
         this.seenByUser = Object.fromEntries(Object.entries(map).map(([k, set]) => [k, [...set].sort()]));
-        this.loaded = true;
-        this.busy = false;
       },
-      error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.membersLoadFailed')); },
+      error: () => { this.releasedCount = 0; this.seenByUser = {}; },
     });
   }
 

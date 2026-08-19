@@ -41,6 +41,7 @@ export function notificationCategory(type: string): NotificationCategory {
     case 'catalog_request_received':
     case 'catalog_request_approved':
     case 'catalog_request_declined':
+    case 'calc_series_edition_released':
       return 'courses';
     case 'friend_request_received':
     case 'friend_request_accepted':
@@ -82,6 +83,7 @@ export function notificationIcon(n: AppNotification): string {
     case 'catalog_request_received': return 'inbox';
     case 'catalog_request_approved': return 'check_circle';
     case 'catalog_request_declined': return 'block';
+    case 'calc_series_edition_released': return 'event_available';
     default: return 'notifications';
   }
 }

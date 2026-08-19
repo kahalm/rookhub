@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.367.0", date: "2026-08-19", changes: [
+    { en: "Calculation series: release notifications. When a scheduled week goes live, its distribution-list members get an in-app notification (the bell): testers already at the tester-preview time, everyone else at the public release (testers are not pinged twice). A background check runs every few minutes and each week is announced only once. This is in-app only for now — there is deliberately no bulk email, since there is no per-user email opt-out yet.", de: "Kalkulations-Serie: Freigabe-Benachrichtigungen. Wird eine terminierte Woche live, bekommen die Verteiler-Mitglieder eine In-App-Benachrichtigung (die Glocke): Tester schon zum Tester-Termin, alle anderen zur öffentlichen Freigabe (Tester werden nicht doppelt benachrichtigt). Ein Hintergrund-Lauf prüft alle paar Minuten, jede Woche wird genau einmal angekündigt. Vorerst nur In-App — bewusst keine Rundmail, solange es kein E-Mail-Opt-out je Nutzer gibt." },
+  ] },
   { version: "0.366.0", date: "2026-08-19", changes: [
     { en: "Calculation series: the distribution-list dialog now shows, per member, how many of the already-released weeks they have opened („3/5 seen“), with a tooltip listing the exact weeks. This uses the seen-tracking from the previous version, so the author can tell at a glance who is keeping up.", de: "Kalkulations-Serie: Der Verteiler-Dialog zeigt jetzt je Mitglied, wie viele der bereits freigegebenen Wochen es geöffnet hat („3/5 gesehen“), mit den genauen Wochen im Tooltip. Das nutzt die Gesehen-Erfassung aus der Vorversion — so sieht der Autor auf einen Blick, wer mitzieht." },
   ] },

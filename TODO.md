@@ -493,9 +493,12 @@ Noel = Calc-Buch 403, Wochen = Datums-Kapitel (je 6 Stellungen), heute öffentli
    ✅ Phase 3a Backend (v0.365.0): Tabelle `CalcEditionViews` (CalcEditionId, UserId, ViewedAt; UNIQUE) +
    Migration; Auto-Erfassung in `CalculationService.GetPositionAsync` (nur Verteiler-Mitglieder, einmalig je
    Ausgabe+Nutzer; Owner/Admin/öffentliche Betrachter zählen nicht) + Übersicht `GET /api/calc-editions/{bookId}/views`.
-   OFFEN: Phase 3b (Release-Benachrichtigung — Scheduler findet neu freigegebene Ausgaben und fächert
-   In-App/Mail an die Liste bzw. Tester auf; braucht `Announced`-Marker auf CalcEdition gegen Doppelmeldung)
-   und Phase 3c (Frontend: „Gesehen"-Anzeige im Serien-Verteiler-Dialog).
+   ✅ Phase 3b Backend (v0.367.0): `CalcSeriesAnnounceScheduler` (HostedService, 5 min) + `CalcSeriesAnnounceService`
+   kündigen freigegebene Wochen IN-APP (`calc_series_edition_released`) an: Tester zum `TesterPreviewAt`, alle übrigen
+   zur `PublishAt` (Tester nicht doppelt). Idempotenz-Marker `CalcEdition.TesterAnnouncedAt`/`PublishAnnouncedAt`.
+   BEWUSST kein Mail-Kanal (kein Mail-Opt-out-Modell → wäre unerbetenes Bulk-Mailing; andockbar sobald Opt-out da).
+   ✅ Phase 3c Frontend (v0.366.0): „Gesehen"-Anzeige (N/M) im Verteiler-Dialog.
+   → Kalkulations-Serie (Noel) damit funktional KOMPLETT (Phase 1–3). Offen nur optional: Mail-Kanal (braucht Opt-out).
 
 Tester-Rückmeldung: nur mündlich (kein Melden-Knopf). Kommentare pro Stellung = bestehendes BookPuzzle.Comment.
 Admin-UI: eigener Bereich (Route/Tab) analog Wochenpost-Verwaltung; Viewer: Serien-Seite mit Ausgaben-Liste

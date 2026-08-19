@@ -109,6 +109,7 @@
       "chessable_token_added": "{{username}} hat einen Chessable-Token hinterlegt",
       "chessable_new_course": "Neuer Chessable-Kurs „{{courseName}}“ bei {{username}}",
       "course_shared": "{{username}} hat den Kurs „{{courseName}}“ mit dir geteilt",
+      "calc_series_edition_released": "Neue Kalkulations-Woche verfügbar: „{{chapter}}“ ({{book}})",
       "repertoire_shared": "{{username}} hat das Repertoire „{{repertoireName}}“ mit dir geteilt",
       "catalog_request_received": "{{username}} fordert „{{itemName}}“ aus deinem Katalog an",
       "catalog_request_approved": "Deine Anfrage für „{{itemName}}“ wurde genehmigt",
