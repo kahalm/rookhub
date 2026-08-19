@@ -1530,6 +1530,20 @@
     "analyze": {
       "open": "Analiza",
       "hint": "Provjeri svoju liniju s engineom"
+    },
+    "series": {
+      "editEdition": "Uredi izdanje",
+      "newEdition": "Novo izdanje",
+      "planEdition": "Zakaži izdanje",
+      "videoUrl": "URL videozapisa",
+      "publishAt": "Vrijeme objave",
+      "testerPreviewAt": "Pregled za testere (opcionalno)",
+      "hint": "Testeri vide ovo poglavlje od termina za testere, ostali od objave. Bez termina za testere nema ranog pristupa.",
+      "watchVideo": "Pogledaj videozapis",
+      "releasesOn": "objava {{date}}",
+      "saved": "Izdanje spremljeno",
+      "deleted": "Izdanje izbrisano",
+      "saveFailed": "Izdanje nije moguće spremiti."
     }
   },
   "weekly": {

@@ -181,6 +181,20 @@
 
 .quiz-count { margin-left: 2px; }
 
+/* Calc-Serie (Noel): Ausgabe-Marker im Kapitel-Kopf. */
+.calc-series-video {
+  margin-left: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #1565c0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.calc-series-video:hover { text-decoration: underline; }
+.calc-series-video mat-icon { font-size: 16px; width: 16px; height: 16px; }
+.calc-series-upcoming { margin-left: 4px; opacity: 0.7; white-space: nowrap; }
+
 .chapter-progress {
   display: flex;
   align-items: center;

@@ -475,8 +475,11 @@ Noel = Calc-Buch 403, Wochen = Datums-Kapitel (je 6 Stellungen), heute öffentli
 (Übergang). Zugriff privat: statt Book.IsPublic gilt CalcSeriesMember (Owner/Admin immer).
 
 **Phasen:**
-1. CalcEdition + Admin-CRUD (Video + PublishAt) + DATUMS-Gating (Woche versteckt bis PublishAt, für alle).
-   Autor kann Wochen vorab anlegen + Video dran; öffentliche Freigabe zeitgesteuert. Noch kein Verteiler.
+1. ✅ CalcEdition + CRUD (Video + PublishAt/TesterPreviewAt) + DATUMS-Gating (Woche versteckt bis PublishAt,
+   für alle; Owner/Admin sieht Entwürfe). Backend v0.361.0, Frontend v0.362.0 (Kurs-Detailseite: Verwalter
+   plant/bearbeitet je Kapitel eine Ausgabe über den Kapitel-Menüpunkt; Betrachter sieht „Video ansehen"-Link
+   bzw. Freigabe-Datum). Endpoints `GET/PUT /api/calc-editions/{bookId}`, `GET .../manage`, `DELETE .../{id}`.
+   Noch kein privater Verteiler (Gating hängt weiter an Datum, nicht an Mitgliedschaft).
 2. Privater Verteiler (CalcSeriesMember) + Tester-Häkchen + TesterPreviewAt (Tester sehen früher);
    `/noel` von öffentlich auf „nur Liste" umstellen.
 3. Gesehen-Tracking (CalcEditionView) + Benachrichtigung (In-App/Mail an Liste bzw. Tester zum Termin).

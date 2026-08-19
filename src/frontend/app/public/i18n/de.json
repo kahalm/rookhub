@@ -1530,6 +1530,20 @@
     "analyze": {
       "open": "Analyse",
       "hint": "Deine Linie mit der Engine prüfen"
+    },
+    "series": {
+      "editEdition": "Ausgabe bearbeiten",
+      "newEdition": "Neue Ausgabe",
+      "planEdition": "Ausgabe planen",
+      "videoUrl": "Video-URL",
+      "publishAt": "Freigabe-Zeitpunkt",
+      "testerPreviewAt": "Tester-Vorschau (optional)",
+      "hint": "Tester sehen dieses Kapitel ab dem Tester-Zeitpunkt, alle anderen ab der Freigabe. Ohne Tester-Zeitpunkt gibt es keinen Frühzugang.",
+      "watchVideo": "Video ansehen",
+      "releasesOn": "kommt am {{date}}",
+      "saved": "Ausgabe gespeichert",
+      "deleted": "Ausgabe gelöscht",
+      "saveFailed": "Ausgabe konnte nicht gespeichert werden."
     }
   },
   "weekly": {

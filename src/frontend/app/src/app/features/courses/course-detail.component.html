@@ -176,6 +176,15 @@
                       @if (d.isCalculation && calcChapterScore(ch); as score) {
                         <span class="calc-chapter-points">· {{ 'courses.detail.chapterPoints' | translate:{ score } }}</span>
                       }
+                      <!-- Calc-Serie: freigegebene Ausgabe → Video-Link, künftige (nur Verwalter sichtbar) → Datum. -->
+                      @if (d.isCalculation && edition(ch); as ed) {
+                        @if (ed.released && ed.videoUrl) {
+                          <a class="calc-series-video" [href]="ed.videoUrl" target="_blank" rel="noopener"
+                             (click)="$event.stopPropagation()">· <mat-icon inline>smart_display</mat-icon> {{ 'calc.series.watchVideo' | translate }}</a>
+                        } @else if (!ed.released) {
+                          <span class="calc-series-upcoming">· {{ 'calc.series.releasesOn' | translate:{ date: (ed.publishAt | date:'short') } }}</span>
+                        }
+                      }
                     </span>
                     <span class="chapter-progress">
                       <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
@@ -204,6 +213,12 @@
                             <mat-icon>edit</mat-icon>
                             <span>{{ 'courses.detail.renameChapter' | translate }}</span>
                           </button>
+                          @if (d.isCalculation && ch.name) {
+                            <button mat-menu-item (click)="openEdition(ch)">
+                              <mat-icon>event</mat-icon>
+                              <span>{{ (edition(ch) ? 'calc.series.editEdition' : 'calc.series.planEdition') | translate }}</span>
+                            </button>
+                          }
                         }
                         @if (!d.isCalculation) {
                           <button mat-menu-item

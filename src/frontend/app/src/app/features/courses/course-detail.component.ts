@@ -16,6 +16,8 @@ import { Subscription } from 'rxjs';
 import { CourseDetail, CourseLine, CourseManageChapter, CourseService } from './course.service';
 import { formatScore, maxPoints } from './calc/calc-review.util';
 import { CalculationService } from './calc/calculation.service';
+import { CalcEdition, CalcEditionsService } from './calc-editions.service';
+import { CalcEditionDialogComponent, CalcEditionDialogResult } from './calc-edition-dialog.component';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
@@ -63,11 +65,18 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
    *  Kalkulationsbüchern befüllt, nur bewertete Kapitel (ratedCount>0) werden angezeigt. */
   calcChapterScores: Record<string, string> = {};
 
+  /** Kalkulations-„Ausgaben" je Kapitel (Calc-Serie/Noel): geplante Freigabe + Video. Schlüssel =
+   *  Kapitelname. Verwalter sehen ALLE (auch künftige), Betrachter nur freigegebene (Backend filtert). */
+  editions: Record<string, CalcEdition> = {};
+  /** Darf der aktuelle Nutzer die Ausgaben pflegen? (Besitzer/Admin — kommt aus dem Kurs-DTO.) */
+  get canManageEditions(): boolean { return !!this.detail?.canManage; }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private courses: CourseService,
     private calc: CalculationService,
+    private calcEditions: CalcEditionsService,
     private dialog: MatDialog,
     private snackbar: SnackbarService,
     private translate: TranslateService,
@@ -91,8 +100,8 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
         this.loading = false;
         // Kalkulationsbuch: Kapitel-Punkte der Selbstbewertung nachladen (eigener Endpoint, hält die
         // Kurs-Detail-DTO frei von Kalkulations-Feldern). Nur bewertete Kapitel bekommen eine Zahl.
-        if (detail.isCalculation) this.loadCalcChapterScores();
-        else this.calcChapterScores = {};
+        if (detail.isCalculation) { this.loadCalcChapterScores(); this.loadEditions(); }
+        else { this.calcChapterScores = {}; this.editions = {}; }
         // Aufgeklappte Kapitel nachladen (nach Änderungen).
         for (const key of Object.keys(this.expanded)) {
           if (this.expanded[key]) this.loadLines(this.keyToChapter(key));
@@ -121,6 +130,59 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   /** Punkte-Anzeige eines Kapitels („14 / 24") — leer, wenn nicht bewertet / kein Kalkulationsbuch. */
   calcChapterScore(chapter: CourseManageChapter): string {
     return this.calcChapterScores[chapter.name ?? ''] ?? '';
+  }
+
+  // ===== Kalkulations-Ausgaben (Calc-Serie) ================================
+
+  /** Ausgaben laden. Verwalter: alle (auch künftige, für die Planung); Betrachter: nur freigegebene.
+   *  Best-effort — ein Fehler blendet die Serien-Infos nur aus, der Kurs bleibt bedienbar. */
+  private loadEditions(): void {
+    const src = this.canManageEditions
+      ? this.calcEditions.manage(this.bookId)
+      : this.calcEditions.visible(this.bookId);
+    this.subs.add(src.subscribe({
+      next: list => {
+        const map: Record<string, CalcEdition> = {};
+        for (const e of list) map[e.chapter] = e;
+        this.editions = map;
+      },
+      error: () => { this.editions = {}; },
+    }));
+  }
+
+  /** Ausgabe eines Kapitels (oder null). */
+  edition(chapter: CourseManageChapter): CalcEdition | null {
+    return this.editions[chapter.name ?? ''] ?? null;
+  }
+
+  /** Ausgaben-Dialog öffnen (nur Verwalter). Legt eine neue Ausgabe an oder bearbeitet die
+   *  bestehende; nach Speichern/Löschen die Ausgaben neu laden. */
+  openEdition(chapter: CourseManageChapter): void {
+    if (!this.canManageEditions) return;
+    const name = chapter.name ?? '';
+    if (!name) return; // „ohne Kapitel" kann keine geplante Ausgabe haben
+    const ref = this.dialog.open(CalcEditionDialogComponent, {
+      width: '440px',
+      data: { chapter: name, edition: this.editions[name] ?? undefined },
+    });
+    this.subs.add(ref.afterClosed().subscribe((res: CalcEditionDialogResult | undefined) => {
+      if (!res) return;
+      if ('delete' in res) {
+        const ed = this.editions[name];
+        if (!ed) return;
+        this.busy = true;
+        this.subs.add(this.calcEditions.remove(this.bookId, ed.id).subscribe({
+          next: () => { this.busy = false; this.snackbar.quick(this.translate.instant('calc.series.deleted')); this.loadEditions(); },
+          error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.saveFailed')); },
+        }));
+        return;
+      }
+      this.busy = true;
+      this.subs.add(this.calcEditions.upsert(this.bookId, res.save).subscribe({
+        next: () => { this.busy = false; this.snackbar.quick(this.translate.instant('calc.series.saved')); this.loadEditions(); },
+        error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.saveFailed')); },
+      }));
+    }));
   }
 
   // ===== Kapitel-Schlüssel („ohne Kapitel" = '') ============================

@@ -1530,6 +1530,20 @@
     "analyze": {
       "open": "Analysis",
       "hint": "Check your line with the engine"
+    },
+    "series": {
+      "editEdition": "Edit edition",
+      "newEdition": "New edition",
+      "planEdition": "Schedule edition",
+      "videoUrl": "Video URL",
+      "publishAt": "Release date/time",
+      "testerPreviewAt": "Tester preview (optional)",
+      "hint": "Testers see this chapter from the tester date, everyone else from the release date. Leave the tester field empty for no early access.",
+      "watchVideo": "Watch video",
+      "releasesOn": "releases {{date}}",
+      "saved": "Edition saved",
+      "deleted": "Edition deleted",
+      "saveFailed": "Could not save the edition."
     }
   },
   "weekly": {
