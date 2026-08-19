@@ -18,6 +18,7 @@ import { formatScore, maxPoints } from './calc/calc-review.util';
 import { CalculationService } from './calc/calculation.service';
 import { CalcEdition, CalcEditionsService } from './calc-editions.service';
 import { CalcEditionDialogComponent, CalcEditionDialogResult } from './calc-edition-dialog.component';
+import { CalcMembersDialogComponent } from './calc-members-dialog.component';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
@@ -183,6 +184,14 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
         error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.saveFailed')); },
       }));
     }));
+  }
+
+  /** Serien-Verteiler verwalten (nur Verwalter): Mitglieder + Tester-Häkchen. Der Dialog pflegt
+   *  seinen Zustand selbst; hier ist nichts nachzuladen (Mitgliedschaft betrifft den Zugriff, nicht
+   *  die angezeigten Kapitel dieser Seite). */
+  openMembers(): void {
+    if (!this.canManageEditions) return;
+    this.dialog.open(CalcMembersDialogComponent, { width: '480px', data: { bookId: this.bookId } });
   }
 
   // ===== Kapitel-Schlüssel („ohne Kapitel" = '') ============================

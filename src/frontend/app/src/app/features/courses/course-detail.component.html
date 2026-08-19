@@ -112,6 +112,13 @@
               <mat-icon>download</mat-icon>
               <span>{{ 'common.downloadPgn' | translate }}</span>
             </button>
+            <!-- Kalkulations-Serie: privater Verteiler (Mitglieder + Tester-Häkchen). Nur Verwalter. -->
+            @if (d.canManage && d.isCalculation) {
+              <button mat-menu-item (click)="openMembers()">
+                <mat-icon>group</mat-icon>
+                <span>{{ 'calc.series.members' | translate }}</span>
+              </button>
+            }
             <!-- Eigener Bereich: nur die persistent markierten Flashcards dieses Kurses.
                  Kalkulationsbücher haben keine — die Kartenansicht zeigt die LÖSUNG auf der
                  Rückseite, und die gibt ein Kalkulationsbuch nicht heraus (wie „Durchsehen"). -->

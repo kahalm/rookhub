@@ -1543,7 +1543,19 @@
       "releasesOn": "releases {{date}}",
       "saved": "Edition saved",
       "deleted": "Edition deleted",
-      "saveFailed": "Could not save the edition."
+      "saveFailed": "Could not save the edition.",
+      "members": "Series distribution list",
+      "membersHint": "Add members by username. When you switch the book from public to private, only listed members can open it. Testers also see a week already from its tester-preview time.",
+      "membersLoadFailed": "Could not load the members.",
+      "username": "Username",
+      "tester": "Tester",
+      "testerHint": "Sees a week already from its tester-preview time.",
+      "addMember": "Add",
+      "noMembers": "No members yet.",
+      "userNotFound": "No user with that name.",
+      "memberAdded": "Member added",
+      "memberRemoved": "Member removed",
+      "removeMember": "Remove member"
     }
   },
   "weekly": {

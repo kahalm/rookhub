@@ -1543,7 +1543,19 @@
       "releasesOn": "kommt am {{date}}",
       "saved": "Ausgabe gespeichert",
       "deleted": "Ausgabe gelöscht",
-      "saveFailed": "Ausgabe konnte nicht gespeichert werden."
+      "saveFailed": "Ausgabe konnte nicht gespeichert werden.",
+      "members": "Serien-Verteiler",
+      "membersHint": "Mitglieder per Benutzername hinzufügen. Sobald du das Buch von öffentlich auf privat stellst, können nur noch gelistete Mitglieder es öffnen. Tester sehen eine Woche zusätzlich schon ab deren Tester-Vorschau-Zeitpunkt.",
+      "membersLoadFailed": "Mitglieder konnten nicht geladen werden.",
+      "username": "Benutzername",
+      "tester": "Tester",
+      "testerHint": "Sieht eine Woche schon ab deren Tester-Vorschau-Zeitpunkt.",
+      "addMember": "Hinzufügen",
+      "noMembers": "Noch keine Mitglieder.",
+      "userNotFound": "Kein Nutzer mit diesem Namen.",
+      "memberAdded": "Mitglied hinzugefügt",
+      "memberRemoved": "Mitglied entfernt",
+      "removeMember": "Mitglied entfernen"
     }
   },
   "weekly": {

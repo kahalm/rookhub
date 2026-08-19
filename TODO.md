@@ -484,9 +484,11 @@ Noel = Calc-Buch 403, Wochen = Datums-Kapitel (je 6 Stellungen), heute öffentli
    (`GET/PUT /api/calc-editions/{bookId}/members`, `DELETE .../{userId}`, per Benutzername). Zugriff privat:
    Mitgliedschaft ist zusätzlicher Pfad in `CourseAccess.CanAccessAsync` → sobald das Buch nicht mehr IsPublic
    ist, sehen nur noch Mitglieder (+ Owner/Admin/Share/Gruppe). `isTester` ins Gating verdrahtet (Tester sehen
-   Wochen ab TesterPreviewAt). OFFEN (Phase 2b): Verwaltungs-UI (Mitgliederliste + Tester-Häkchen) auf der
-   Kurs-Detailseite; `/noel` von öffentlich auf „nur Liste" umstellen ist eine reine Daten-Aktion (Book.IsPublic
-   aus, sobald der Verteiler steht) — kein Code.
+   Wochen ab TesterPreviewAt).
+   ✅ Phase 2b (v0.364.0): Verwaltungs-UI — „⋮"-Menü der Kurs-Detailseite → „Serien-Verteiler"-Dialog
+   (Mitglieder per Benutzername hinzufügen, Tester-Häkchen je Mitglied, entfernen). `/noel` von öffentlich
+   auf privat umstellen bleibt eine reine Daten-Aktion (Book.IsPublic=false setzen, sobald der Verteiler
+   steht) — kein Code.
 3. Gesehen-Tracking (CalcEditionView) + Benachrichtigung (In-App/Mail an Liste bzw. Tester zum Termin).
 
 Tester-Rückmeldung: nur mündlich (kein Melden-Knopf). Kommentare pro Stellung = bestehendes BookPuzzle.Comment.

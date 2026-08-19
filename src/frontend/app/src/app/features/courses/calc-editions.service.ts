@@ -22,6 +22,19 @@ export interface CalcEditionInput {
   testerPreviewAt?: string | null;
 }
 
+/** Ein Mitglied des Serien-Verteilers (Verwaltungssicht; Spiegel von CalcSeriesMemberDto). */
+export interface CalcSeriesMember {
+  userId: number;
+  username: string;
+  isTester: boolean;
+  createdAt: string;          // ISO (UTC)
+}
+
+export interface CalcSeriesMemberInput {
+  username: string;
+  isTester: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CalcEditionsService {
   private http = inject(HttpClient);
@@ -39,5 +52,20 @@ export class CalcEditionsService {
   }
   remove(bookId: number, editionId: number): Observable<void> {
     return this.http.delete<void>(`/api/calc-editions/${bookId}/${editionId}`);
+  }
+
+  // ===== Privater Verteiler (Phase 2) =====================================
+
+  /** Verteiler-Mitglieder eines Serien-Buchs (nur Besitzer/Admin). */
+  members(bookId: number): Observable<CalcSeriesMember[]> {
+    return this.http.get<CalcSeriesMember[]>(`/api/calc-editions/${bookId}/members`);
+  }
+  /** Mitglied hinzufügen/ändern (per Benutzername). 404, wenn es den Nutzer nicht gibt. */
+  upsertMember(bookId: number, dto: CalcSeriesMemberInput): Observable<CalcSeriesMember> {
+    return this.http.put<CalcSeriesMember>(`/api/calc-editions/${bookId}/members`, dto);
+  }
+  /** Mitglied entfernen. */
+  removeMember(bookId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`/api/calc-editions/${bookId}/members/${userId}`);
   }
 }

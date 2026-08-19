@@ -1543,7 +1543,19 @@
       "releasesOn": "objava {{date}}",
       "saved": "Izdanje spremljeno",
       "deleted": "Izdanje izbrisano",
-      "saveFailed": "Izdanje nije moguće spremiti."
+      "saveFailed": "Izdanje nije moguće spremiti.",
+      "members": "Popis pretplatnika serije",
+      "membersHint": "Dodaj članove prema korisničkom imenu. Kad knjigu prebaciš s javne na privatnu, mogu je otvoriti samo članovi s popisa. Testeri usto vide tjedan već od njegova termina za testere.",
+      "membersLoadFailed": "Članove nije moguće učitati.",
+      "username": "Korisničko ime",
+      "tester": "Tester",
+      "testerHint": "Vidi tjedan već od njegova termina za testere.",
+      "addMember": "Dodaj",
+      "noMembers": "Još nema članova.",
+      "userNotFound": "Nema korisnika s tim imenom.",
+      "memberAdded": "Član dodan",
+      "memberRemoved": "Član uklonjen",
+      "removeMember": "Ukloni člana"
     }
   },
   "weekly": {
