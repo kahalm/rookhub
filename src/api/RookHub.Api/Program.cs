@@ -204,6 +204,7 @@ try
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<CourseStatsService>();
     builder.Services.AddScoped<CalculationService>();
+    builder.Services.AddScoped<CalcEditionService>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());

@@ -80,6 +80,7 @@ public class AppDbContext : DbContext
     public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
     public DbSet<NotificationPushSetting> NotificationPushSettings => Set<NotificationPushSetting>();
     public DbSet<CalculationTree> CalculationTrees => Set<CalculationTree>();
+    public DbSet<CalcEdition> CalcEditions => Set<CalcEdition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -569,6 +570,19 @@ public class AppDbContext : DbContext
             e.Property(ct => ct.SecondsTokenApplied).HasDefaultValue(0);
             e.HasIndex(ct => new { ct.UserId, ct.BookPuzzleId }).IsUnique();
             e.HasIndex(ct => new { ct.UserId, ct.BookId });
+        });
+
+        modelBuilder.Entity<CalcEdition>(e =>
+        {
+            e.HasOne(x => x.Book)
+             .WithMany()
+             .HasForeignKey(x => x.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.Chapter).HasMaxLength(300);
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.VideoUrl).HasMaxLength(500);
+            // Eine Ausgabe je Buch+Kapitel (Upsert-Schlüssel).
+            e.HasIndex(x => new { x.BookId, x.Chapter }).IsUnique();
         });
 
         modelBuilder.Entity<CoursePin>(e =>

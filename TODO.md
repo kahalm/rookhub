@@ -457,3 +457,30 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 - [ ] Puzzle-Streaks / Achievements
 - [ ] Admin-Dashboard: User-Übersicht + Aktionen
 - [x] Schach-Bot auf Elasticsearch umbauen (Logging/Events) → umgesetzt im Bot-Repo v2.60.0/2.60.1 (`core/es_client.py`, ESHandler in `log_setup.py`, Events `reaction`+`stat_inc`); Index `schach-bot-logs-*` ist live in Prod. Weitere Event-Typen (Daily-Post, DMs, Webhooks, Commands, Buttons) bei Bedarf später ergänzen.
+
+## Kalkulations-Serie (Noel) — eigener Bereich, terminierte Ausgaben (geplant, Design bestätigt 2026-08-19)
+Eigener Bereich à la Wochenpost, PRIVAT. Positionen = Calc-Positionen wiederverwendet (Trainings-UI/
+Grading/Bäume/Punkte geschenkt); der Bereich ist die Termin-/Verteiler-/Video-/Tester-Schicht.
+Noel = Calc-Buch 403, Wochen = Datums-Kapitel (je 6 Stellungen), heute öffentlich (`/noel`).
+
+**Modell (neue Tabellen):**
+- `CalcEdition` (BookId, Chapter [= Wochen-Kapitelname], VideoUrl?, PublishAt, TesterPreviewAt?, Title?,
+  CreatedAt, UpdatedAt; UNIQUE (BookId, Chapter)). KEIN Kaskaden-FK auf Book-Löschung erwägen (wie WeeklyPost).
+- `CalcSeriesMember` (BookId, UserId, IsTester bool, CreatedAt; UNIQUE (BookId, UserId)) = privater Verteiler + Tester-Häkchen.
+- `CalcEditionView` (CalcEditionId, UserId, ViewedAt; UNIQUE (EditionId, UserId)) = „gesehen".
+
+**Gating (in CalculationService.GetBookAsync/GetPublicBookAsync + CalcPosition-Zugriff):** eine Woche
+(Kapitel) ist sichtbar, wenn eine CalcEdition existiert UND now≥PublishAt (Mitglied) bzw. now≥TesterPreviewAt
+(Tester); sonst Entwurf/versteckt (nur Owner/Admin sieht alles). Kapitel OHNE Edition = altes Verhalten
+(Übergang). Zugriff privat: statt Book.IsPublic gilt CalcSeriesMember (Owner/Admin immer).
+
+**Phasen:**
+1. CalcEdition + Admin-CRUD (Video + PublishAt) + DATUMS-Gating (Woche versteckt bis PublishAt, für alle).
+   Autor kann Wochen vorab anlegen + Video dran; öffentliche Freigabe zeitgesteuert. Noch kein Verteiler.
+2. Privater Verteiler (CalcSeriesMember) + Tester-Häkchen + TesterPreviewAt (Tester sehen früher);
+   `/noel` von öffentlich auf „nur Liste" umstellen.
+3. Gesehen-Tracking (CalcEditionView) + Benachrichtigung (In-App/Mail an Liste bzw. Tester zum Termin).
+
+Tester-Rückmeldung: nur mündlich (kein Melden-Knopf). Kommentare pro Stellung = bestehendes BookPuzzle.Comment.
+Admin-UI: eigener Bereich (Route/Tab) analog Wochenpost-Verwaltung; Viewer: Serien-Seite mit Ausgaben-Liste
+(Video + Status), freigegebene Ausgabe öffnet den bestehenden Calc-Trainer aufs Wochen-Kapitel.

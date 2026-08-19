@@ -53,6 +53,25 @@ public class CalculationService
             throw new KeyNotFoundException("Book not found.");
     }
 
+    /// <summary>Kalkulations-Serie: Kapitel, die für DIESEN Betrachter (noch) VERSTECKT sind — es gibt
+    /// eine terminierte Ausgabe und der maßgebliche Termin liegt in der Zukunft. Besitzer/Admin: nichts
+    /// versteckt. <paramref name="isTester"/> nutzt (Phase 2) den früheren <c>TesterPreviewAt</c>, sofern
+    /// gesetzt und vor <c>PublishAt</c>. Kapitel OHNE Ausgabe erscheinen hier nicht → bleiben sichtbar.</summary>
+    private async Task<HashSet<string>> HiddenChaptersAsync(int bookId, bool isOwnerOrAdmin, bool isTester, CancellationToken ct)
+    {
+        if (isOwnerOrAdmin) return new HashSet<string>(StringComparer.Ordinal);
+        var now = DateTime.UtcNow;
+        var eds = await _db.CalcEditions.Where(e => e.BookId == bookId)
+            .Select(e => new { e.Chapter, e.PublishAt, e.TesterPreviewAt }).ToListAsync(ct);
+        var hidden = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var e in eds)
+        {
+            var releaseAt = (isTester && e.TesterPreviewAt is DateTime tp && tp < e.PublishAt) ? tp : e.PublishAt;
+            if (now < releaseAt) hidden.Add(e.Chapter);
+        }
+        return hidden;
+    }
+
     /// <summary>Kopf + leichte Stellungsliste eines Buchs (ohne FEN/Kommentar/Züge) inkl. Markierung,
     /// zu welchen Stellungen der Nutzer schon einen Baum gespeichert hat, der drei Trainings-Werte
     /// je Stellung (Festlegung/Zeit/Bewertungsstufe) und der SERVERSEITIG gerechneten Kapitelsummen
@@ -63,7 +82,7 @@ public class CalculationService
         await EnsureBookAccessAsync(userId, bookId, isAdmin, ct);
 
         var book = await _db.Books.Where(b => b.Id == bookId)
-            .Select(b => new { b.Id, b.DisplayName, b.IsCalculation })
+            .Select(b => new { b.Id, b.DisplayName, b.IsCalculation, b.OwnerUserId })
             .FirstAsync(ct);
 
         var positions = await _db.BookPuzzles
@@ -77,6 +96,12 @@ public class CalculationService
                 Chapter = bp.Chapter,
             })
             .ToListAsync(ct);
+
+        // Terminierte Ausgaben (Kalkulations-Serie): Wochen, deren Ausgabe noch nicht freigegeben ist,
+        // ausblenden — außer für Besitzer/Admin. Kapitel ohne Ausgabe bleiben ungegatet.
+        var hidden = await HiddenChaptersAsync(bookId, isAdmin || book.OwnerUserId == userId, isTester: false, ct);
+        if (hidden.Count > 0)
+            positions = positions.Where(p => p.Chapter == null || !hidden.Contains(p.Chapter)).ToList();
 
         // Nur die Kennzahlen laden, NICHT das (bis zu 256 KB große) TreeJson — für die Liste zählt
         // bloß, OB ein Baum da ist.
@@ -193,6 +218,11 @@ public class CalculationService
             .Select(bp => new { bp.Id, bp.Round, bp.Title, bp.Chapter, bp.Fen, bp.Comment, bp.Moves, bp.StartPly })
             .ToListAsync(ct);
 
+        // Anonyme öffentliche Sicht: kein Besitzer/Tester → terminierte, noch nicht freigegebene Wochen aus.
+        var hidden = await HiddenChaptersAsync(bookId, isOwnerOrAdmin: false, isTester: false, ct);
+        if (hidden.Count > 0)
+            rows = rows.Where(r => r.Chapter == null || !hidden.Contains(r.Chapter)).ToList();
+
         return new CalcPublicBookDto
         {
             BookId = book.Id,
@@ -220,6 +250,15 @@ public class CalculationService
             ?? throw new KeyNotFoundException("Position not found.");
         var bookId = puzzle.BookId ?? throw new KeyNotFoundException("Position not found.");
         await EnsureBookAccessAsync(userId, bookId, isAdmin, ct);
+
+        // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
+        // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
+        if (puzzle.Chapter is string gateCh)
+        {
+            var ownerId = await _db.Books.Where(b => b.Id == bookId).Select(b => b.OwnerUserId).FirstOrDefaultAsync(ct);
+            var hiddenCh = await HiddenChaptersAsync(bookId, isAdmin || ownerId == userId, isTester: false, ct);
+            if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
+        }
 
         var tree = await _db.CalculationTrees
             .FirstOrDefaultAsync(t => t.UserId == userId && t.BookPuzzleId == bookPuzzleId, ct);
@@ -320,6 +359,15 @@ public class CalculationService
             ?? throw new KeyNotFoundException("Position not found.");
         var bookId = puzzle.BookId ?? throw new KeyNotFoundException("Position not found.");
         await EnsureBookAccessAsync(userId, bookId, isAdmin, ct);
+
+        // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
+        // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
+        if (puzzle.Chapter is string gateCh)
+        {
+            var ownerId = await _db.Books.Where(b => b.Id == bookId).Select(b => b.OwnerUserId).FirstOrDefaultAsync(ct);
+            var hiddenCh = await HiddenChaptersAsync(bookId, isAdmin || ownerId == userId, isTester: false, ct);
+            if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
+        }
 
         var tree = await _db.CalculationTrees
             .FirstOrDefaultAsync(t => t.UserId == userId && t.BookPuzzleId == bookPuzzleId, ct);
