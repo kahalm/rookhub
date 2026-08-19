@@ -79,4 +79,13 @@ public class CalcSeriesController : BaseApiController
         if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
         return await _service.RemoveMemberAsync(bookId, userId, ct) ? NoContent() : NotFound();
     }
+
+    /// <summary>„Gesehen"-Übersicht (Phase 3): welches Mitglied welche Ausgabe wann geöffnet hat.
+    /// Nur Besitzer/Admin.</summary>
+    [HttpGet("{bookId:int}/views")]
+    public async Task<ActionResult<List<CalcEditionViewDto>>> ListViews(int bookId, CancellationToken ct)
+    {
+        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        return Ok(await _service.ListViewsAsync(bookId, ct));
+    }
 }

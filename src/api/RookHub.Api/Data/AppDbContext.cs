@@ -82,6 +82,7 @@ public class AppDbContext : DbContext
     public DbSet<CalculationTree> CalculationTrees => Set<CalculationTree>();
     public DbSet<CalcEdition> CalcEditions => Set<CalcEdition>();
     public DbSet<CalcSeriesMember> CalcSeriesMembers => Set<CalcSeriesMember>();
+    public DbSet<CalcEditionView> CalcEditionViews => Set<CalcEditionView>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -594,6 +595,16 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             // Ein Nutzer steht je Buch höchstens einmal im Verteiler.
             e.HasIndex(x => new { x.BookId, x.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CalcEditionView>(e =>
+        {
+            e.HasOne(x => x.Edition)
+             .WithMany()
+             .HasForeignKey(x => x.CalcEditionId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Ein Mitglied „sieht" eine Ausgabe höchstens einmal.
+            e.HasIndex(x => new { x.CalcEditionId, x.UserId }).IsUnique();
         });
 
         modelBuilder.Entity<CoursePin>(e =>

@@ -123,4 +123,25 @@ public class CalcEditionService
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    /// <summary>„Gesehen"-Vermerke aller Ausgaben eines Buchs (Phase 3): welches Mitglied welche Woche
+    /// wann geöffnet hat, neuste zuletzt. Nur Besitzer/Admin (Controller prüft).</summary>
+    public async Task<List<CalcEditionViewDto>> ListViewsAsync(int bookId, CancellationToken ct = default)
+    {
+        var editions = await _db.CalcEditions.Where(e => e.BookId == bookId)
+            .Select(e => new { e.Id, e.Chapter }).ToListAsync(ct);
+        var chapterById = editions.ToDictionary(e => e.Id, e => e.Chapter);
+        var ids = chapterById.Keys.ToList();
+        var views = await _db.CalcEditionViews.Where(v => ids.Contains(v.CalcEditionId)).ToListAsync(ct);
+        var userIds = views.Select(v => v.UserId).Distinct().ToList();
+        var names = await _db.AppUsers.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
+        return views.OrderBy(v => v.ViewedAt).Select(v => new CalcEditionViewDto
+        {
+            EditionId = v.CalcEditionId,
+            Chapter = chapterById.TryGetValue(v.CalcEditionId, out var c) ? c : string.Empty,
+            UserId = v.UserId,
+            Username = names.TryGetValue(v.UserId, out var n) ? n : "?",
+            ViewedAt = v.ViewedAt,
+        }).ToList();
+    }
 }

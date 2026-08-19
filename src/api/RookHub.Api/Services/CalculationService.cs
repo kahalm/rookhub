@@ -77,6 +77,23 @@ public class CalculationService
     private Task<bool> IsTesterAsync(int bookId, int userId, CancellationToken ct)
         => _db.CalcSeriesMembers.AnyAsync(m => m.BookId == bookId && m.UserId == userId && m.IsTester, ct);
 
+    /// <summary>Kalkulations-Serie „gesehen" (Phase 3): öffnet ein VERTEILER-MITGLIED eine Stellung
+    /// einer Woche mit terminierter Ausgabe, wird das einmalig je Ausgabe+Mitglied vermerkt. Nur
+    /// Mitglieder zählen — Besitzer/Admin und öffentliche Betrachter nicht. Best-effort: eine parallele
+    /// Erst-Sicht kann in den UNIQUE-Index laufen; das ist dann bereits „gesehen" und wird geschluckt.</summary>
+    private async Task RecordEditionViewAsync(int bookId, int userId, string chapter, CancellationToken ct)
+    {
+        var editionId = await _db.CalcEditions.Where(e => e.BookId == bookId && e.Chapter == chapter)
+            .Select(e => (int?)e.Id).FirstOrDefaultAsync(ct);
+        if (editionId is null) return;                                                   // keine Ausgabe → nichts zu tracken
+        if (!await _db.CalcSeriesMembers.AnyAsync(m => m.BookId == bookId && m.UserId == userId, ct)) return; // kein Mitglied
+        if (await _db.CalcEditionViews.AnyAsync(v => v.CalcEditionId == editionId.Value && v.UserId == userId, ct)) return; // schon gesehen
+
+        _db.CalcEditionViews.Add(new CalcEditionView { CalcEditionId = editionId.Value, UserId = userId, ViewedAt = DateTime.UtcNow });
+        try { await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { /* Race: eine parallele Erst-Sicht war schneller → egal */ }
+    }
+
     /// <summary>Kopf + leichte Stellungsliste eines Buchs (ohne FEN/Kommentar/Züge) inkl. Markierung,
     /// zu welchen Stellungen der Nutzer schon einen Baum gespeichert hat, der drei Trainings-Werte
     /// je Stellung (Festlegung/Zeit/Bewertungsstufe) und der SERVERSEITIG gerechneten Kapitelsummen
@@ -268,6 +285,10 @@ public class CalculationService
             var hiddenCh = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
             if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
         }
+
+        // „Gesehen": ein Verteiler-Mitglied hat diese Woche geöffnet (einmalig vermerkt; siehe Helper).
+        if (puzzle.Chapter is string seenCh)
+            await RecordEditionViewAsync(bookId, userId, seenCh, ct);
 
         var tree = await _db.CalculationTrees
             .FirstOrDefaultAsync(t => t.UserId == userId && t.BookPuzzleId == bookPuzzleId, ct);

@@ -490,6 +490,12 @@ Noel = Calc-Buch 403, Wochen = Datums-Kapitel (je 6 Stellungen), heute öffentli
    auf privat umstellen bleibt eine reine Daten-Aktion (Book.IsPublic=false setzen, sobald der Verteiler
    steht) — kein Code.
 3. Gesehen-Tracking (CalcEditionView) + Benachrichtigung (In-App/Mail an Liste bzw. Tester zum Termin).
+   ✅ Phase 3a Backend (v0.365.0): Tabelle `CalcEditionViews` (CalcEditionId, UserId, ViewedAt; UNIQUE) +
+   Migration; Auto-Erfassung in `CalculationService.GetPositionAsync` (nur Verteiler-Mitglieder, einmalig je
+   Ausgabe+Nutzer; Owner/Admin/öffentliche Betrachter zählen nicht) + Übersicht `GET /api/calc-editions/{bookId}/views`.
+   OFFEN: Phase 3b (Release-Benachrichtigung — Scheduler findet neu freigegebene Ausgaben und fächert
+   In-App/Mail an die Liste bzw. Tester auf; braucht `Announced`-Marker auf CalcEdition gegen Doppelmeldung)
+   und Phase 3c (Frontend: „Gesehen"-Anzeige im Serien-Verteiler-Dialog).
 
 Tester-Rückmeldung: nur mündlich (kein Melden-Knopf). Kommentare pro Stellung = bestehendes BookPuzzle.Comment.
 Admin-UI: eigener Bereich (Route/Tab) analog Wochenpost-Verwaltung; Viewer: Serien-Seite mit Ausgaben-Liste

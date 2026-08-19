@@ -173,4 +173,42 @@ public class CalcEditionTests : IDisposable
         var owner = await _calc.GetBookAsync(OwnerId, bookId, isAdmin: false);
         Assert.NotEmpty(owner.Positions);
     }
+
+    [Fact]
+    public async Task View_RecordedForMemberOnly_Idempotent()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", PublishAt = DateTime.UtcNow.AddDays(-1) }); // freigegeben
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        var wa = await _db.BookPuzzles.Where(p => p.Chapter == "Woche A").OrderBy(p => p.Id).ToListAsync();
+
+        // Mitglied öffnet zwei Stellungen derselben Woche → genau EIN „gesehen"-Vermerk (je Ausgabe).
+        await _calc.GetPositionAsync(ViewerId, wa[0].Id, isAdmin: false);
+        await _calc.GetPositionAsync(ViewerId, wa[1].Id, isAdmin: false);
+        Assert.Equal(1, await _db.CalcEditionViews.CountAsync());
+
+        // Besitzer (kein Mitglied) zählt nicht.
+        await _calc.GetPositionAsync(OwnerId, wa[0].Id, isAdmin: false);
+        // Nicht-Mitglied mit Zugriff (Buch ist öffentlich) zählt nicht.
+        await _calc.GetPositionAsync(TesterId, wa[0].Id, isAdmin: false);
+        Assert.Equal(1, await _db.CalcEditionViews.CountAsync());
+
+        var views = await _editions.ListViewsAsync(bookId);
+        Assert.Single(views);
+        Assert.Equal("viewer", views[0].Username);
+        Assert.Equal("Woche A", views[0].Chapter);
+    }
+
+    [Fact]
+    public async Task View_NotRecorded_ForHiddenWeek()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(3) }); // Entwurf
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        var wb = await _db.BookPuzzles.FirstAsync(p => p.Chapter == "Woche B");
+
+        // Mitglied kann die noch nicht freigegebene Woche nicht öffnen → kein Vermerk.
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPositionAsync(ViewerId, wb.Id, isAdmin: false));
+        Assert.Equal(0, await _db.CalcEditionViews.CountAsync());
+    }
 }
