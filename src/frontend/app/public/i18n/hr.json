@@ -1555,7 +1555,9 @@
       "userNotFound": "Nema korisnika s tim imenom.",
       "memberAdded": "Član dodan",
       "memberRemoved": "Član uklonjen",
-      "removeMember": "Ukloni člana"
+      "removeMember": "Ukloni člana",
+      "seenCount": "{{seen}}/{{total}} viđeno",
+      "seenNone": "Još nije otvoreno"
     }
   },
   "weekly": {

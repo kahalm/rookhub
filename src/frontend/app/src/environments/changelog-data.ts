@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.366.0", date: "2026-08-19", changes: [
+    { en: "Calculation series: the distribution-list dialog now shows, per member, how many of the already-released weeks they have opened („3/5 seen“), with a tooltip listing the exact weeks. This uses the seen-tracking from the previous version, so the author can tell at a glance who is keeping up.", de: "Kalkulations-Serie: Der Verteiler-Dialog zeigt jetzt je Mitglied, wie viele der bereits freigegebenen Wochen es geöffnet hat („3/5 gesehen“), mit den genauen Wochen im Tooltip. Das nutzt die Gesehen-Erfassung aus der Vorversion — so sieht der Autor auf einen Blick, wer mitzieht." },
+  ] },
   { version: "0.365.0", date: "2026-08-19", changes: [
     { en: "Calculation series: seen-tracking (backend). When a distribution-list member opens a week that has a scheduled edition, that is recorded once per member and week — so the author can later see who has already worked through a released week. Only list members count; the owner, admins and public viewers do not. The author-facing overview and the release notification follow next.", de: "Kalkulations-Serie: Gesehen-Erfassung (Backend). Öffnet ein Verteiler-Mitglied eine Woche mit terminierter Ausgabe, wird das einmalig je Mitglied und Woche vermerkt — so sieht der Autor später, wer eine freigegebene Woche schon bearbeitet hat. Es zählen nur Verteiler-Mitglieder; Besitzer, Admins und öffentliche Betrachter nicht. Die Autoren-Übersicht und die Benachrichtigung zum Termin folgen." },
   ] },

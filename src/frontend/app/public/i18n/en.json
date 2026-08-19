@@ -1555,7 +1555,9 @@
       "userNotFound": "No user with that name.",
       "memberAdded": "Member added",
       "memberRemoved": "Member removed",
-      "removeMember": "Remove member"
+      "removeMember": "Remove member",
+      "seenCount": "{{seen}}/{{total}} seen",
+      "seenNone": "Not opened yet"
     }
   },
   "weekly": {

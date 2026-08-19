@@ -10,6 +10,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CalcEditionsService, CalcSeriesMember } from './calc-editions.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -17,10 +18,11 @@ import { SnackbarService } from '../../core/snackbar.service';
 export interface CalcMembersDialogData { bookId: number; }
 
 /**
- * Verwaltung des privaten Serien-Verteilers (Phase 2b): Mitglieder per Benutzername hinzufügen,
- * das Tester-Häkchen setzen und Mitglieder entfernen. Der Dialog hält seinen Zustand selbst und
- * spricht direkt mit {@link CalcEditionsService} — der Aufrufer (Kurs-Detailseite) muss nichts
- * nachladen. Zugriff ist serverseitig auf Besitzer/Admin beschränkt.
+ * Verwaltung des privaten Serien-Verteilers: Mitglieder per Benutzername hinzufügen, das Tester-Häkchen
+ * setzen und Mitglieder entfernen (Phase 2b). Zusätzlich zeigt der Dialog je Mitglied, WIE VIELE der
+ * bereits freigegebenen Wochen es schon geöffnet hat (Phase 3c, „Gesehen"; Quelle: `GET .../views`).
+ * Der Dialog hält seinen Zustand selbst und spricht direkt mit {@link CalcEditionsService} — der
+ * Aufrufer (Kurs-Detailseite) muss nichts nachladen. Zugriff ist serverseitig auf Besitzer/Admin beschränkt.
  */
 @Component({
   selector: 'app-calc-members-dialog',
@@ -55,6 +57,13 @@ export interface CalcMembersDialogData { bookId: number; }
         @for (m of members; track m.userId) {
           <li class="member">
             <span class="name">{{ m.username }}</span>
+            <!-- „Gesehen": N von M freigegebenen Wochen geöffnet (nur wenn schon etwas freigegeben ist). -->
+            @if (releasedCount > 0) {
+              <span class="seen" [class.seen--none]="seenCount(m) === 0"
+                    [matTooltip]="seenTooltip(m)">
+                <mat-icon inline>visibility</mat-icon>{{ 'calc.series.seenCount' | translate:{ seen: seenCount(m), total: releasedCount } }}
+              </span>
+            }
             <mat-slide-toggle [checked]="m.isTester" [disabled]="busy"
                               (change)="setTester(m, $event.checked)"
                               [matTooltip]="'calc.series.testerHint' | translate">{{ 'calc.series.tester' | translate }}</mat-slide-toggle>
@@ -71,7 +80,7 @@ export interface CalcMembersDialogData { bookId: number; }
     </mat-dialog-actions>
   `,
   styles: [`
-    .cmd { min-width: 360px; }
+    .cmd { min-width: 380px; }
     .hint { color: #9aa4b2; font-size: 12px; margin: 0 0 8px; }
     .add-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .add-row .grow { flex: 1 1 180px; }
@@ -79,6 +88,9 @@ export interface CalcMembersDialogData { bookId: number; }
     .members { list-style: none; margin: 8px 0 0; padding: 0; }
     .member { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .member .name { flex: 1 1 auto; font-weight: 500; }
+    .seen { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; white-space: nowrap; color: #2e7d32; cursor: default; }
+    .seen mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .seen--none { color: #9aa4b2; }
   `],
 })
 export class CalcMembersDialogComponent {
@@ -87,6 +99,11 @@ export class CalcMembersDialogComponent {
   busy = false;
   newUsername = '';
   newIsTester = false;
+
+  /** Anzahl bereits FREIGEGEBENER Wochen (= Nenner der „Gesehen"-Anzeige). */
+  releasedCount = 0;
+  /** Je Nutzer die Namen der freigegebenen Wochen, die er geöffnet hat. */
+  private seenByUser: Record<number, string[]> = {};
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: CalcMembersDialogData,
@@ -99,10 +116,40 @@ export class CalcMembersDialogComponent {
 
   private reload(): void {
     this.busy = true;
-    this.service.members(this.data.bookId).subscribe({
-      next: list => { this.members = list; this.loaded = true; this.busy = false; },
+    // Mitglieder + Ausgaben (für den Nenner: freigegebene Wochen) + „Gesehen"-Vermerke zusammen laden.
+    forkJoin({
+      members: this.service.members(this.data.bookId),
+      editions: this.service.manage(this.data.bookId),
+      views: this.service.views(this.data.bookId),
+    }).subscribe({
+      next: ({ members, editions, views }) => {
+        this.members = members;
+        const releasedChapters = new Set(editions.filter(e => e.released).map(e => e.chapter));
+        this.releasedCount = releasedChapters.size;
+        // Nur Sichten auf inzwischen freigegebene Wochen zählen (eine später wieder verborgene Woche
+        // soll den Zähler nicht über den Nenner heben).
+        const map: Record<number, Set<string>> = {};
+        for (const v of views) {
+          if (!releasedChapters.has(v.chapter)) continue;
+          (map[v.userId] ??= new Set()).add(v.chapter);
+        }
+        this.seenByUser = Object.fromEntries(Object.entries(map).map(([k, set]) => [k, [...set].sort()]));
+        this.loaded = true;
+        this.busy = false;
+      },
       error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.membersLoadFailed')); },
     });
+  }
+
+  /** Wie viele freigegebene Wochen dieses Mitglied geöffnet hat. */
+  seenCount(m: CalcSeriesMember): number {
+    return this.seenByUser[m.userId]?.length ?? 0;
+  }
+
+  /** Tooltip: die Namen der gesehenen Wochen (oder „noch nicht gesehen"). */
+  seenTooltip(m: CalcSeriesMember): string {
+    const chapters = this.seenByUser[m.userId];
+    return chapters?.length ? chapters.join(', ') : this.translate.instant('calc.series.seenNone');
   }
 
   add(): void {

@@ -35,6 +35,15 @@ export interface CalcSeriesMemberInput {
   isTester: boolean;
 }
 
+/** Ein „Gesehen"-Vermerk (Spiegel von CalcEditionViewDto): Mitglied hat eine Ausgabe geöffnet. */
+export interface CalcEditionView {
+  editionId: number;
+  chapter: string;
+  userId: number;
+  username: string;
+  viewedAt: string;          // ISO (UTC)
+}
+
 @Injectable({ providedIn: 'root' })
 export class CalcEditionsService {
   private http = inject(HttpClient);
@@ -67,5 +76,9 @@ export class CalcEditionsService {
   /** Mitglied entfernen. */
   removeMember(bookId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`/api/calc-editions/${bookId}/members/${userId}`);
+  }
+  /** „Gesehen"-Übersicht: welches Mitglied welche Ausgabe wann geöffnet hat (nur Besitzer/Admin). */
+  views(bookId: number): Observable<CalcEditionView[]> {
+    return this.http.get<CalcEditionView[]>(`/api/calc-editions/${bookId}/views`);
   }
 }
