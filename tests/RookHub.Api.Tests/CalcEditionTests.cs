@@ -11,7 +11,7 @@ public class CalcEditionTests : IDisposable
     private readonly AppDbContext _db;
     private readonly CalcEditionService _editions;
     private readonly CalculationService _calc;
-    private const int OwnerId = 5, ViewerId = 6;
+    private const int OwnerId = 5, ViewerId = 6, TesterId = 7;
 
     public CalcEditionTests()
     {
@@ -26,6 +26,7 @@ public class CalcEditionTests : IDisposable
     {
         _db.AppUsers.Add(new AppUser { Id = OwnerId, Username = "owner", PasswordHash = "x" });
         _db.AppUsers.Add(new AppUser { Id = ViewerId, Username = "viewer", PasswordHash = "x" });
+        _db.AppUsers.Add(new AppUser { Id = TesterId, Username = "tester", PasswordHash = "x" });
         var book = new Book { FileName = "noel.pgn", DisplayName = "Noel", IsCalculation = true, IsPublic = true, OwnerUserId = OwnerId };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -106,5 +107,70 @@ public class CalcEditionTests : IDisposable
         Assert.True(await _editions.CanManageAsync(OwnerId, bookId, isAdmin: false));
         Assert.False(await _editions.CanManageAsync(ViewerId, bookId, isAdmin: false));
         Assert.True(await _editions.CanManageAsync(ViewerId, bookId, isAdmin: true));
+    }
+
+    [Fact]
+    public async Task Members_AddUpdateRemove_ByUsername()
+    {
+        var bookId = await SeedBookAsync();
+        Assert.Null(await _editions.UpsertMemberAsync(bookId, "does-not-exist", isTester: false)); // unbekannt → null
+
+        var added = await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        Assert.NotNull(added);
+        Assert.False(added!.IsTester);
+
+        var updated = await _editions.UpsertMemberAsync(bookId, "VIEWER", isTester: true); // case-insensitiv + Upsert
+        Assert.Equal(ViewerId, updated!.UserId);
+        Assert.True(updated.IsTester);
+        Assert.Equal(1, await _db.CalcSeriesMembers.CountAsync(m => m.BookId == bookId)); // kein Duplikat
+
+        var list = await _editions.ListMembersAsync(bookId);
+        Assert.Single(list);
+        Assert.Equal("viewer", list[0].Username);
+        Assert.True(list[0].IsTester);
+
+        Assert.True(await _editions.RemoveMemberAsync(bookId, ViewerId));
+        Assert.False(await _editions.RemoveMemberAsync(bookId, ViewerId));   // schon weg
+        Assert.Empty(await _editions.ListMembersAsync(bookId));
+    }
+
+    [Fact]
+    public async Task Tester_SeesTesterPreviewWeek_PlainViewerDoesNot()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto
+        {
+            Chapter = "Woche B",
+            PublishAt = DateTime.UtcNow.AddDays(5),          // öffentliche Freigabe noch fern
+            TesterPreviewAt = DateTime.UtcNow.AddDays(-1),   // Tester-Vorschau schon offen
+        });
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+
+        var tester = await _calc.GetBookAsync(TesterId, bookId, isAdmin: false);
+        Assert.Contains(tester.Positions, p => p.Chapter == "Woche B");        // Tester sieht die Vorschau
+
+        var viewer = await _calc.GetBookAsync(ViewerId, bookId, isAdmin: false);
+        Assert.DoesNotContain(viewer.Positions, p => p.Chapter == "Woche B");  // Nicht-Tester noch nicht
+    }
+
+    [Fact]
+    public async Task PrivateSeries_MemberHasAccess_NonMemberDoesNot()
+    {
+        var bookId = await SeedBookAsync();
+        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        book.IsPublic = false;                               // Serie privat schalten
+        await _db.SaveChangesAsync();
+
+        // Nicht-Mitglied (kein Owner/Share/Gruppe): kein Zugriff → wie „nicht gefunden".
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetBookAsync(ViewerId, bookId, isAdmin: false));
+
+        // Verteiler-Mitglied: Zugriff.
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        var viewer = await _calc.GetBookAsync(ViewerId, bookId, isAdmin: false);
+        Assert.NotEmpty(viewer.Positions);
+
+        // Besitzer immer.
+        var owner = await _calc.GetBookAsync(OwnerId, bookId, isAdmin: false);
+        Assert.NotEmpty(owner.Positions);
     }
 }

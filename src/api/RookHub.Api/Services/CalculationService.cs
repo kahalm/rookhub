@@ -72,6 +72,11 @@ public class CalculationService
         return hidden;
     }
 
+    /// <summary>Ist dieser Nutzer für dieses Buch als TESTER eingetragen (privater Verteiler,
+    /// Phase 2)? Tester sehen terminierte Wochen schon ab dem früheren <c>TesterPreviewAt</c>.</summary>
+    private Task<bool> IsTesterAsync(int bookId, int userId, CancellationToken ct)
+        => _db.CalcSeriesMembers.AnyAsync(m => m.BookId == bookId && m.UserId == userId && m.IsTester, ct);
+
     /// <summary>Kopf + leichte Stellungsliste eines Buchs (ohne FEN/Kommentar/Züge) inkl. Markierung,
     /// zu welchen Stellungen der Nutzer schon einen Baum gespeichert hat, der drei Trainings-Werte
     /// je Stellung (Festlegung/Zeit/Bewertungsstufe) und der SERVERSEITIG gerechneten Kapitelsummen
@@ -99,7 +104,9 @@ public class CalculationService
 
         // Terminierte Ausgaben (Kalkulations-Serie): Wochen, deren Ausgabe noch nicht freigegeben ist,
         // ausblenden — außer für Besitzer/Admin. Kapitel ohne Ausgabe bleiben ungegatet.
-        var hidden = await HiddenChaptersAsync(bookId, isAdmin || book.OwnerUserId == userId, isTester: false, ct);
+        var isOwnerOrAdmin = isAdmin || book.OwnerUserId == userId;
+        var isTester = !isOwnerOrAdmin && await IsTesterAsync(bookId, userId, ct);
+        var hidden = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
         if (hidden.Count > 0)
             positions = positions.Where(p => p.Chapter == null || !hidden.Contains(p.Chapter)).ToList();
 
@@ -256,7 +263,9 @@ public class CalculationService
         if (puzzle.Chapter is string gateCh)
         {
             var ownerId = await _db.Books.Where(b => b.Id == bookId).Select(b => b.OwnerUserId).FirstOrDefaultAsync(ct);
-            var hiddenCh = await HiddenChaptersAsync(bookId, isAdmin || ownerId == userId, isTester: false, ct);
+            var isOwnerOrAdmin = isAdmin || ownerId == userId;
+            var isTester = !isOwnerOrAdmin && await IsTesterAsync(bookId, userId, ct);
+            var hiddenCh = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
             if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
         }
 
@@ -365,7 +374,9 @@ public class CalculationService
         if (puzzle.Chapter is string gateCh)
         {
             var ownerId = await _db.Books.Where(b => b.Id == bookId).Select(b => b.OwnerUserId).FirstOrDefaultAsync(ct);
-            var hiddenCh = await HiddenChaptersAsync(bookId, isAdmin || ownerId == userId, isTester: false, ct);
+            var isOwnerOrAdmin = isAdmin || ownerId == userId;
+            var isTester = !isOwnerOrAdmin && await IsTesterAsync(bookId, userId, ct);
+            var hiddenCh = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
             if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
         }
 

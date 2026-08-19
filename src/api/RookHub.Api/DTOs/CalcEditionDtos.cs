@@ -29,3 +29,20 @@ public class CalcEditionInputDto
     public DateTime PublishAt { get; set; }
     public DateTime? TesterPreviewAt { get; set; }
 }
+
+/// <summary>Ein Mitglied des Serien-Verteilers (Verwaltungssicht).</summary>
+public class CalcSeriesMemberDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public bool IsTester { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>Mitglied hinzufügen/ändern (Upsert je Buch+Nutzer, per Benutzername).</summary>
+public class CalcSeriesMemberInputDto
+{
+    [Required, MaxLength(100)]
+    public string Username { get; set; } = string.Empty;
+    public bool IsTester { get; set; }
+}

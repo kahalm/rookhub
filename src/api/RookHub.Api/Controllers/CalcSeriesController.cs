@@ -6,7 +6,8 @@ using RookHub.Api.Services;
 namespace RookHub.Api.Controllers;
 
 /// <summary>
-/// Kalkulations-Serien (eigener Bereich, Phase 1): terminierte Ausgaben eines Kalkulationsbuchs mit Video.
+/// Kalkulations-Serien (eigener Bereich): terminierte Ausgaben eines Kalkulationsbuchs mit Video (Phase 1)
+/// und der private Verteiler mit Tester-Häkchen (Phase 2).
 /// Verwaltung (Anlegen/Ändern/Löschen) nur durch Buch-Besitzer oder Admin; die Betrachter-Liste
 /// (<c>GET {bookId}</c>) liefert nur bereits freigegebene Ausgaben. Das Sichtbarkeits-Gating der
 /// Stellungen selbst passiert in den Kalkulations-Endpoints (<see cref="CalculationController"/>).
@@ -48,5 +49,34 @@ public class CalcSeriesController : BaseApiController
     {
         if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
         return await _service.DeleteAsync(bookId, editionId, ct) ? NoContent() : NotFound();
+    }
+
+    // ===== Privater Verteiler (Phase 2) — nur Besitzer/Admin =================
+
+    /// <summary>Mitglieder des Verteilers (inkl. Tester-Häkchen). Nur Besitzer/Admin.</summary>
+    [HttpGet("{bookId:int}/members")]
+    public async Task<ActionResult<List<CalcSeriesMemberDto>>> ListMembers(int bookId, CancellationToken ct)
+    {
+        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        return Ok(await _service.ListMembersAsync(bookId, ct));
+    }
+
+    /// <summary>Mitglied hinzufügen/ändern (per Benutzername). Nur Besitzer/Admin.
+    /// 404, wenn es keinen Nutzer mit diesem Namen gibt.</summary>
+    [HttpPut("{bookId:int}/members")]
+    public async Task<ActionResult<CalcSeriesMemberDto>> UpsertMember(int bookId, [FromBody] CalcSeriesMemberInputDto dto, CancellationToken ct)
+    {
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Username)) return BadRequest(new { message = "Username required." });
+        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        var member = await _service.UpsertMemberAsync(bookId, dto.Username, dto.IsTester, ct);
+        return member is null ? NotFound(new { message = "User not found." }) : Ok(member);
+    }
+
+    /// <summary>Mitglied entfernen. Nur Besitzer/Admin.</summary>
+    [HttpDelete("{bookId:int}/members/{userId:int}")]
+    public async Task<IActionResult> RemoveMember(int bookId, int userId, CancellationToken ct)
+    {
+        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        return await _service.RemoveMemberAsync(bookId, userId, ct) ? NoContent() : NotFound();
     }
 }

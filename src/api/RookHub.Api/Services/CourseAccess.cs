@@ -31,6 +31,10 @@ public static class CourseAccess
         if (await db.Books.AnyAsync(b => b.Id == bookId && b.OwnerUserId == userId, ct)) return true;
         // Ein anderer Nutzer hat mir diesen Kurs direkt geteilt.
         if (await db.CourseShares.AnyAsync(cs => cs.BookId == bookId && cs.RecipientId == userId, ct)) return true;
+        // Kalkulations-Serie (privater Verteiler): steht der Nutzer für dieses Buch im Verteiler,
+        // sieht er den Kurs — auch wenn das Buch nicht (mehr) öffentlich ist. Trägt so das „privat"
+        // der Serie: sobald IsPublic aus ist, gilt hier die Mitgliedschaft (siehe CalcSeriesMember).
+        if (await db.CalcSeriesMembers.AnyAsync(m => m.BookId == bookId && m.UserId == userId, ct)) return true;
         var everyoneId = await db.Groups.Where(g => g.IsEveryone).Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
         return await db.BookGroupAccesses.AnyAsync(a => a.BookId == bookId &&
             (a.GroupId == everyoneId ||

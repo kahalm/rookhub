@@ -71,4 +71,56 @@ public class CalcEditionService
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    // ===== Privater Verteiler (Phase 2) =====================================
+
+    /// <summary>Mitglieder des Serien-Verteilers eines Buchs (Verwaltungssicht, inkl. Benutzername).</summary>
+    public async Task<List<CalcSeriesMemberDto>> ListMembersAsync(int bookId, CancellationToken ct = default)
+    {
+        var members = await _db.CalcSeriesMembers.Where(m => m.BookId == bookId)
+            .OrderBy(m => m.CreatedAt).ToListAsync(ct);
+        var ids = members.Select(m => m.UserId).ToList();
+        var names = await _db.AppUsers.Where(u => ids.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.Username, ct);
+        return members.Select(m => new CalcSeriesMemberDto
+        {
+            UserId = m.UserId,
+            Username = names.TryGetValue(m.UserId, out var n) ? n : "?",
+            IsTester = m.IsTester,
+            CreatedAt = m.CreatedAt,
+        }).ToList();
+    }
+
+    /// <summary>Mitglied hinzufügen oder Tester-Häkchen ändern (per Benutzername, case-insensitiv).
+    /// Gibt das Mitglied zurück; <c>null</c>, wenn es keinen Nutzer mit diesem Namen gibt.</summary>
+    public async Task<CalcSeriesMemberDto?> UpsertMemberAsync(int bookId, string username, bool isTester, CancellationToken ct = default)
+    {
+        var name = (username ?? string.Empty).Trim();
+        if (name.Length == 0) return null;
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username.ToLower() == name.ToLower(), ct);
+        if (user is null) return null;
+
+        var existing = await _db.CalcSeriesMembers.FirstOrDefaultAsync(m => m.BookId == bookId && m.UserId == user.Id, ct);
+        if (existing is null)
+        {
+            existing = new CalcSeriesMember { BookId = bookId, UserId = user.Id, IsTester = isTester, CreatedAt = DateTime.UtcNow };
+            _db.CalcSeriesMembers.Add(existing);
+        }
+        else
+        {
+            existing.IsTester = isTester;
+        }
+        await _db.SaveChangesAsync(ct);
+        return new CalcSeriesMemberDto { UserId = user.Id, Username = user.Username, IsTester = existing.IsTester, CreatedAt = existing.CreatedAt };
+    }
+
+    /// <summary>Mitglied entfernen. <c>false</c>, wenn es nicht (mehr) im Verteiler stand.</summary>
+    public async Task<bool> RemoveMemberAsync(int bookId, int userId, CancellationToken ct = default)
+    {
+        var m = await _db.CalcSeriesMembers.FirstOrDefaultAsync(x => x.BookId == bookId && x.UserId == userId, ct);
+        if (m is null) return false;
+        _db.CalcSeriesMembers.Remove(m);
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

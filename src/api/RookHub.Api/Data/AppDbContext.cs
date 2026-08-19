@@ -81,6 +81,7 @@ public class AppDbContext : DbContext
     public DbSet<NotificationPushSetting> NotificationPushSettings => Set<NotificationPushSetting>();
     public DbSet<CalculationTree> CalculationTrees => Set<CalculationTree>();
     public DbSet<CalcEdition> CalcEditions => Set<CalcEdition>();
+    public DbSet<CalcSeriesMember> CalcSeriesMembers => Set<CalcSeriesMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -583,6 +584,16 @@ public class AppDbContext : DbContext
             e.Property(x => x.VideoUrl).HasMaxLength(500);
             // Eine Ausgabe je Buch+Kapitel (Upsert-Schlüssel).
             e.HasIndex(x => new { x.BookId, x.Chapter }).IsUnique();
+        });
+
+        modelBuilder.Entity<CalcSeriesMember>(e =>
+        {
+            e.HasOne(x => x.Book)
+             .WithMany()
+             .HasForeignKey(x => x.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Ein Nutzer steht je Buch höchstens einmal im Verteiler.
+            e.HasIndex(x => new { x.BookId, x.UserId }).IsUnique();
         });
 
         modelBuilder.Entity<CoursePin>(e =>
