@@ -65,6 +65,7 @@ public class AppDbContext : DbContext
     public DbSet<ChessableProblemMove> ChessableProblemMoves => Set<ChessableProblemMove>();
     public DbSet<ChessableReviewLine> ChessableReviewLines => Set<ChessableReviewLine>();
     public DbSet<AnonymousChessableReviewLine> AnonymousChessableReviewLines => Set<AnonymousChessableReviewLine>();
+    public DbSet<ChessableSessionMove> ChessableSessionMoves => Set<ChessableSessionMove>();
     public DbSet<CourseFlashcardMark> CourseFlashcardMarks => Set<CourseFlashcardMark>();
     public DbSet<RepertoireFlashcardMark> RepertoireFlashcardMarks => Set<RepertoireFlashcardMark>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
@@ -820,6 +821,18 @@ public class AppDbContext : DbContext
             e.HasIndex(a => new { a.ChessableUid, a.Bid, a.Oid }).IsUnique();
             // Claim/Retention scannen nach uid.
             e.HasIndex(a => a.ChessableUid);
+        });
+
+        modelBuilder.Entity<ChessableSessionMove>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(a => a.MovesJson).HasColumnType("LONGTEXT");
+            // Append-Log, KEIN Unique-Index: mehrere Durchläufe derselben Linie = mehrere Zeilen.
+            e.HasIndex(a => new { a.UserId, a.Bid, a.Oid });
         });
 
         modelBuilder.Entity<ChessableCourseTheme>(e =>

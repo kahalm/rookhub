@@ -48,6 +48,7 @@ public class ExtensionControllerTests : IDisposable
             new ChessableTrainedLineService(_db, new RepertoireTrainingService(_db)),
             new ChessableProblemMoveService(_db),
             new ChessableReviewLineService(_db, new PgnImportService(_db)),
+            new ChessableSessionMoveService(_db),
             NullLogger<ExtensionController>.Instance);
     }
 

@@ -211,6 +211,23 @@ public class ChessableReviewLineEntryDto
     public string Json { get; set; } = string.Empty;
 }
 
+/// <summary>Batch „Sitzungszüge" ablegen: je trainierter Linie (oid) der rohe <c>moves</c>-Block aus
+/// Chessables Session-Report (saveProgress) — enthält u. a. die falsch gespielten Züge. Append-only.</summary>
+public class ChessableSessionMovesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableSessionMoveEntryDto> Entries { get; set; } = new();
+}
+
+public class ChessableSessionMoveEntryDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+    /// <summary>Rohes JSON-ARRAY der per-Zug-Sitzungsergebnisse (opak, nur Form/Größe geprüft).</summary>
+    public System.Text.Json.JsonElement? Moves { get; set; }
+}
+
 /// <summary>Token-lose (anonyme) Variante von <see cref="ChessableReviewLinesInputDto"/>: der Absender
 /// hat keinen RookHub-Token, identifiziert sich aber über seine Chessable-<c>uid</c> (aus dem
 /// Chessable-JWT decodiert). Landet in der Anon-Senke und wird geclaimt, sobald diese uid einem

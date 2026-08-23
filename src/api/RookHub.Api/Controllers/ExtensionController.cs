@@ -27,6 +27,7 @@ public class ExtensionController : BaseApiController
     private readonly ChessableTrainedLineService _trainedLines;
     private readonly ChessableProblemMoveService _problemMoves;
     private readonly ChessableReviewLineService _reviewLines;
+    private readonly ChessableSessionMoveService _sessionMoves;
     private readonly ILogger<ExtensionController> _logger;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
@@ -35,6 +36,7 @@ public class ExtensionController : BaseApiController
         ChessableProxyService chessableProxy, ChessableImportService chessableImport,
         ChessableIngestSessionStore ingestSessions, ChessableTrainedLineService trainedLines,
         ChessableProblemMoveService problemMoves, ChessableReviewLineService reviewLines,
+        ChessableSessionMoveService sessionMoves,
         ILogger<ExtensionController> logger)
     {
         _repertoireService = repertoireService;
@@ -49,6 +51,7 @@ public class ExtensionController : BaseApiController
         _trainedLines = trainedLines;
         _problemMoves = problemMoves;
         _reviewLines = reviewLines;
+        _sessionMoves = sessionMoves;
         _logger = logger;
     }
 
@@ -282,6 +285,23 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = "Valid bid required." });
         var written = await _problemMoves.UpsertBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
         return Ok(new { written });
+    }
+
+    /// <summary>
+    /// „Sitzungszüge" ablegen (append-only, KEIN Upsert): je trainierter Linie der rohe moves-Block aus
+    /// Chessables eigenem Session-Report (saveProgressAndReturnNewProgressInfo) — enthält je Halbzug
+    /// u. a. die falsch gespielten Züge (wrong[]), Overstudy-/Alternative-Flags, Level und Punkte.
+    /// Quelle: RepCheck-Capture beim Training. Als Roh-Log gesammelt, Auswertung offen.
+    /// </summary>
+    [HttpPost("chessable/session-moves")]
+    public async Task<IActionResult> ChessableSessionMoves([FromBody] ChessableSessionMovesInputDto dto,
+        CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid4) return forbid4;
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        var stored = await _sessionMoves.AppendBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
+        return Ok(new { stored });
     }
 
     /// <summary>
