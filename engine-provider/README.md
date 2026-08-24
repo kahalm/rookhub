@@ -179,6 +179,77 @@ dauerhaft setzen statt pro Sitzung:
 setx LICHESS_API_TOKEN "lip_dein_token"
 ```
 
+Das reicht für den Alltag. Zwei Lücken hat dieser einfache Weg trotzdem: Stirbt der Provider
+(Absturz, `terminate()`-Timeout), startet ihn niemand neu, bis du dich wieder anmeldest — und
+Windows hinterlässt bei jedem Idle-Timeout einen Zombie-Prozess (Details unten). Für einen
+Rechner, der wirklich dauerhaft laufen soll, siehe den nächsten Abschnitt.
+
+### Robuster Dauerbetrieb (Auto-Restart + Aufräumen)
+
+Fertige Skripte dafür liegen unter [`windows/`](windows/) — `run_provider.ps1` (Auto-Restart-Loop)
+und `reap_orphans.ps1` (Zombie-Reaper). Beide Variablen am Kopf der Datei vor dem ersten Start
+anpassen.
+
+> **In einer VM zuerst die CPU-Features prüfen, nicht die des Hosts.** Ein virtueller Rechner
+> gibt AVX2/BMI2 des physischen Hosts nicht zwangsläufig an den Gast durch — je nach
+> Hypervisor-Konfiguration (z. B. generisches QEMU-CPU-Modell statt `-cpu host`) sieht der Gast
+> nur bis SSE4.2. Der falsche Build stürzt dann beim Start lautlos ab (Illegal Instruction, keine
+> Fehlermeldung, `EOFError` im Provider). Prüfen:
+> ```powershell
+> Add-Type -TypeDefinition @"
+> using System.Runtime.InteropServices;
+> public class CpuFeat {
+>     [DllImport("kernel32.dll")]
+>     public static extern bool IsProcessorFeaturePresent(uint feature);
+> }
+> "@
+> "AVX2: " + [CpuFeat]::IsProcessorFeaturePresent(40)
+> ```
+> `False` → `stockfish-windows-x86-64-sse41-popcnt.zip` von der
+> [Stockfish-Release-Seite](https://github.com/official-stockfish/Stockfish/releases) nehmen statt
+> AVX2/BMI2, auch wenn die physische CPU eigentlich mehr kann.
+
+**Auto-Restart:** Task Scheduler mit „Bei Anmeldung"-Trigger, der `run_provider.ps1` startet statt
+`python` direkt — das Skript läuft in einer Endlosschleife und startet den Provider automatisch neu,
+falls er beendet wird:
+
+```powershell
+$action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\stockfish\run_provider.ps1"'
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName "RookHub Engine Provider" -Action $action -Trigger $trigger -Settings $settings
+```
+
+`-ExecutionTimeLimit ([TimeSpan]::Zero)` ist Pflicht — Task Scheduler killt Aufgaben sonst
+standardmäßig nach 72 Stunden, egal wie die Aufgabe selbst konfiguriert ist.
+
+> **Fällt der Task-Prozess extern weg** (z. B. `Stop-ScheduledTask`, Absturz), **überlebt der
+> bereits gestartete Python-Prozess als Waise** — `Start-Process` koppelt die Lebensdauer des
+> Kindes nicht an den Elternprozess. Zum sauberen Stoppen daher immer beides:
+> ```powershell
+> Stop-ScheduledTask -TaskName "RookHub Engine Provider"
+> Get-Process python, stockfish-windows-x86-64-* -ErrorAction SilentlyContinue | Stop-Process -Force
+> ```
+
+**Der Zombie-Leak:** `example-provider.py` startet die Engine unter Windows über
+`subprocess.Popen(engine_command, shell=True, …)` und beendet sie bei Idle-Timeout per
+`process.terminate()`. Unter Windows tötet das nur die Shell-Hülle (`cmd.exe`), die Stockfish
+gestartet hat — der eigentliche Engine-Prozess bleibt als Waise zurück (0 % CPU, aber dauerhaft
+belegter Arbeitsspeicher). Das passiert bei **jedem** Timeout, unabhängig vom `KEEP_ALIVE`-Wert;
+ein höherer Wert (z. B. `3600` statt der Default-`300`) verlangsamt nur, wie oft das Leck
+ausgelöst wird — `run_provider.ps1` setzt ihn deshalb bereits hoch. Behoben wird es durch
+`reap_orphans.ps1`, alle 15 Minuten laufen lassen:
+
+```powershell
+$action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\stockfish\reap_orphans.ps1"'
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(15) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration (New-TimeSpan -Days 7300)
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName "RookHub Orphan Reaper" -Action $action -Trigger $trigger -Settings $settings
+```
+
+(`-RepetitionDuration ([TimeSpan]::MaxValue)` scheitert an Task Schedulers XML-Schema — ein
+großer, aber gültiger Wert wie 7300 Tage tut's genauso.)
+
 **Was auf einem Arbeitsrechner anders ist als auf einem Server:** Geht der PC in den Ruhezustand
 oder schläft der Netzwerkadapter ein, ist die Engine weg — RookHub fällt still auf die
 Browser-Engine zurück und blendet den Hinweis ein. Ein PC lohnt sich, wenn er mehr Kerne hat als
