@@ -760,7 +760,13 @@
     }
   },
   "repertoire": {
-    "list": {
+    "positionFilter": {
+      "hint": "Make moves on the board to filter the lines by position.",
+      "matches": "{{count}} lines contain this position",
+      "undo": "Undo last move",
+      "reset": "Clear filter"
+    },
+        "list": {
       "title": "My Repertoires",
       "new": "New Repertoire",
       "fileCount": "{{count}} files",

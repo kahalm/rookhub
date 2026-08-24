@@ -760,7 +760,13 @@
     }
   },
   "repertoire": {
-    "list": {
+    "positionFilter": {
+      "hint": "Züge auf dem Brett ausführen, um die Linien nach Stellung zu filtern.",
+      "matches": "{{count}} Linien enthalten diese Stellung",
+      "undo": "Letzten Zug zurücknehmen",
+      "reset": "Filter zurücksetzen"
+    },
+        "list": {
       "title": "Meine Repertoires",
       "new": "Neues Repertoire",
       "fileCount": "{{count}} Dateien",

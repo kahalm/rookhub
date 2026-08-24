@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.370.0", date: "2026-08-24", changes: [
+    { en: "Repertoire lines view: filter by position. As long as no line is open, the board on the left is playable — every move filters the list on the right down to the lines that contain the reached position (transpositions count, same matching as the position search). Undo takes back the last move, ✕ clears the filter, and opening a filtered line jumps straight to the matched position.", de: "Repertoire-Linien-Ansicht: Filtern nach Stellung. Solange keine Linie geöffnet ist, ist das Brett links bespielbar — jeder Zug filtert die Liste rechts auf die Linien, die die erreichte Stellung enthalten (Transpositionen zählen, gleiches Matching wie die Stellungssuche). Rücknahme-Pfeil nimmt den letzten Zug zurück, ✕ leert den Filter, und das Öffnen einer gefilterten Linie springt direkt zur Trefferstellung." },
+  ] },
   { version: "0.369.1", date: "2026-08-24", changes: [
     { en: "Repertoire list: the row of buttons at the bottom of each card no longer overflows. „Open“ and the offline download toggle stay visible; „Download PGN“, „Convert to course“, „Share“, „Edit“ and „Delete“ moved into a compact ⋮ menu — the same pattern the course cards use.", de: "Repertoire-Liste: Die Button-Zeile unten auf jeder Karte läuft nicht mehr über. „Öffnen“ und der Offline-Download-Schalter bleiben sichtbar; „PGN herunterladen“, „In Kurs umwandeln“, „Teilen“, „Bearbeiten“ und „Löschen“ sind in ein kompaktes ⋮-Menü gewandert — dasselbe Muster wie bei den Kurs-Karten." },
   ] },

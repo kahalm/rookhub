@@ -6,11 +6,13 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
@@ -18,6 +20,7 @@ import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.ser
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
 import { MoveTreeService } from './move-tree.service';
+import { findPositionInGames, formatSansWithNumbers } from './position-filter.util';
 import { RepertoireDetail } from '../../core/models';
 
 type ViewMode = 'lines' | 'tree' | 'edit';
@@ -28,7 +31,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
-    TranslatePipe, LoadingSpinnerComponent, ChessBoardComponent,
+    MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ChessBoardComponent,
     RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent,
   ],
   // Komponenten-bezogen (nicht providedIn:'root') — jede Instanz hat ihren eigenen
@@ -74,8 +77,34 @@ type ViewMode = 'lines' | 'tree' | 'edit';
           <div class="viewer-layout">
             <div class="board-section">
               <app-chess-board
-                [fen]="mode === 'lines' ? viewerService.currentFen : treeService.currentFen"
-                [lastMove]="mode === 'lines' ? viewerService.lastMove : treeService.lastMove" />
+                [fen]="boardFen"
+                [lastMove]="boardLastMove"
+                [playable]="filterBoardActive"
+                (userMove)="onFilterMove($event)" />
+              @if (filterBoardActive) {
+                <!-- Stellungs-Filter: Züge auf dem Brett grenzen rechts die Linien auf die ein,
+                     die die erreichte Stellung enthalten (Transpositionen zählen). -->
+                <div class="filter-bar">
+                  @if (filterStack.length > 0) {
+                    <span class="filter-moves" [attr.title]="filterMovesText">{{ filterMovesText }}</span>
+                    <button mat-icon-button (click)="undoFilterMove()"
+                            [matTooltip]="'repertoire.positionFilter.undo' | translate"
+                            [attr.aria-label]="'repertoire.positionFilter.undo' | translate">
+                      <mat-icon>undo</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="resetFilter()"
+                            [matTooltip]="'repertoire.positionFilter.reset' | translate"
+                            [attr.aria-label]="'repertoire.positionFilter.reset' | translate">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  } @else {
+                    <span class="filter-hint">{{ 'repertoire.positionFilter.hint' | translate }}</span>
+                  }
+                </div>
+                @if (filterStack.length > 0) {
+                  <div class="filter-count">{{ 'repertoire.positionFilter.matches' | translate:{ count: visibleLines.length } }}</div>
+                }
+              }
               @if (mode === 'lines' && viewerService.selectedLineIndex >= 0) {
                 <div class="nav-buttons">
                   <button mat-icon-button (click)="viewerService.goToStart()" [disabled]="viewerService.currentMoveIndex < 0">
@@ -98,13 +127,13 @@ type ViewMode = 'lines' | 'tree' | 'edit';
             <div class="side-panel">
               @if (mode === 'lines') {
                 <app-repertoire-lines
-                  [lines]="viewerService.lines"
+                  [lines]="visibleLines"
                   [selectedIndex]="viewerService.selectedLineIndex"
                   [moves]="viewerService.currentMoves"
                   [currentMoveIndex]="viewerService.currentMoveIndex"
                   [comments]="viewerService.currentComments"
                   [repertoireId]="id"
-                  (lineSelected)="viewerService.selectLine($event)"
+                  (lineSelected)="onLineSelected($event)"
                   (lineDeselected)="viewerService.deselectLine()"
                   (moveClicked)="viewerService.goToMove($event)"
                   (shareLine)="onShareLine($event)" />
@@ -154,6 +183,12 @@ type ViewMode = 'lines' | 'tree' | 'edit';
       width: 400px;
     }
     .nav-buttons { display: flex; gap: 4px; }
+    .filter-bar { display: flex; align-items: center; gap: 4px; width: 100%; max-width: 400px; min-height: 40px; }
+    .filter-moves { flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .filter-hint { flex: 1; text-align: center; font-size: 12px;
+      color: color-mix(in srgb, currentColor 55%, transparent); }
+    .filter-count { font-size: 12px; color: color-mix(in srgb, currentColor 65%, transparent); }
     .side-panel {
       flex: 1;
       min-width: 250px;
@@ -186,6 +221,77 @@ export class RepertoireDetailComponent implements OnInit {
   private focusLineKey: string | null = null;
   private focusPly: number | null = null;
   id!: number;
+
+  /** Stellungs-Filter der Linien-Ansicht: auf dem Brett gespielte Züge (jeweils Stellung DANACH). */
+  filterStack: { san: string; fen: string; lastMove: [string, string] }[] = [];
+  /** Linien, die die aktuelle Filter-Stellung enthalten (nur gültig solange filterStack nicht leer). */
+  private filteredLines: RepertoireLine[] = [];
+  /** Je gameIndex der Halbzug (fens-Index) des Treffers — fürs Vorspulen beim Anwählen. */
+  private filterPlyByGame = new Map<number, number>();
+
+  /** Brett spielbar = Linien-Ansicht ohne ausgewählte Linie (dann filtert es die Liste). */
+  get filterBoardActive(): boolean {
+    return this.mode === 'lines' && this.viewerService.selectedLineIndex < 0;
+  }
+
+  get boardFen(): string {
+    if (this.mode !== 'lines') return this.treeService.currentFen;
+    if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.currentFen;
+    return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].fen : START_FEN;
+  }
+
+  get boardLastMove(): [string, string] | undefined {
+    if (this.mode !== 'lines') return this.treeService.lastMove;
+    if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.lastMove;
+    return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].lastMove : undefined;
+  }
+
+  /** Rechts angezeigte Linien: bei aktivem Filter nur die Treffer, sonst alle. */
+  get visibleLines(): RepertoireLine[] {
+    if (!this.filterStack.length || this.viewerService.selectedLineIndex >= 0) return this.viewerService.lines;
+    return this.filteredLines;
+  }
+
+  get filterMovesText(): string {
+    return formatSansWithNumbers(this.filterStack.map(s => s.san));
+  }
+
+  onFilterMove(move: UserBoardMove): void {
+    this.filterStack.push({ san: move.san, fen: move.fen, lastMove: [move.from, move.to] });
+    this.recomputeFilter();
+  }
+
+  undoFilterMove(): void {
+    this.filterStack.pop();
+    this.recomputeFilter();
+  }
+
+  resetFilter(): void {
+    this.filterStack = [];
+    this.recomputeFilter();
+  }
+
+  /** Linie aus der (ggf. gefilterten) Liste öffnen — bei aktivem Filter direkt zur Trefferstellung. */
+  onLineSelected(index: number): void {
+    this.viewerService.selectLine(index);
+    if (!this.filterStack.length) return;
+    const gameIndex = this.viewerService.lines[index]?.gameIndex ?? -1;
+    const at = this.filterPlyByGame.get(gameIndex);
+    if (at != null) this.viewerService.goToMove(at - 1);
+  }
+
+  /** Treffer einmal je Zug berechnen (nicht im Getter — der läuft in jedem CD-Zyklus). */
+  private recomputeFilter(): void {
+    if (!this.filterStack.length) {
+      this.filteredLines = [];
+      this.filterPlyByGame = new Map();
+      return;
+    }
+    const fen = this.filterStack[this.filterStack.length - 1].fen;
+    const res = findPositionInGames(this.viewerService.games, fen);
+    this.filterPlyByGame = res.plyByGame;
+    this.filteredLines = this.viewerService.lines.filter(l => res.gameIndices.has(l.gameIndex));
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -285,10 +391,12 @@ export class RepertoireDetailComponent implements OnInit {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);
         this.applyFocusLine();
+        this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand
       },
       error: () => {
         this.viewerService.loadPgn('');
         this.treeService.buildTree('');
+        this.recomputeFilter();
       }
     });
   }

@@ -760,7 +760,13 @@
     }
   },
   "repertoire": {
-    "list": {
+    "positionFilter": {
+      "hint": "Odigraj poteze na ploči za filtriranje linija po poziciji.",
+      "matches": "{{count}} linija sadrži ovu poziciju",
+      "undo": "Poništi zadnji potez",
+      "reset": "Ukloni filtar"
+    },
+        "list": {
       "title": "Moji repertoari",
       "new": "Novi repertoar",
       "fileCount": "{{count}} datoteka",

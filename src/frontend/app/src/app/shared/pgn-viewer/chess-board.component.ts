@@ -1,10 +1,15 @@
 import {
-  Component, ElementRef, Input, OnChanges, OnDestroy,
+  Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output,
   AfterViewInit, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
+import { Config } from 'chessground/config';
 import { Key } from 'chessground/types';
 import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
+import { applyUserMove, legalDests } from './board-moves.util';
+
+/** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). */
+export interface UserBoardMove { from: string; to: string; san: string; fen: string; }
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -56,6 +61,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() boardTheme = 'brown';
   /** Figurenset aus den User-Preferences (styles.scss `.piece-set-*` cg-board piece Regeln). */
   @Input() pieceSet = 'cburnett';
+  /** Opt-in: legale Züge der Seite am Zug per Drag/Klick erlauben (Umwandlung immer Dame).
+   * Der Aufrufer MUSS auf (userMove) reagieren und die neue FEN zurückbinden — das Brett
+   * selbst bleibt zustandslos (Anzeige der [fen]-Bindung). */
+  @Input() playable = false;
+  @Output() userMove = new EventEmitter<UserBoardMove>();
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
 
@@ -101,9 +111,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       animation: { enabled: true, duration: 200 },
       highlight: { lastMove: true, check: true },
       coordinates: true,
-      movable: { free: false, color: undefined },
-      draggable: { enabled: false },
-      selectable: { enabled: false },
+      ...this.interactionConfig(),
       // Pfeile/Kreise per Rechtsklick-Ziehen (wie im Analyse-/Puzzle-Brett).
       drawable: { enabled: true, visible: true },
     });
@@ -122,13 +130,46 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
-    if (changes['fen'] || changes['lastMove'] || changes['flipped']) {
+    if (changes['fen'] || changes['lastMove'] || changes['flipped'] || changes['playable']) {
       this.ground.set({
         fen: this.fen,
         orientation: this.flipped ? 'black' : 'white',
         lastMove: this.lastMove as Key[] | undefined,
+        ...this.interactionConfig(),
       });
     }
+  }
+
+  /** Figuren-Interaktion je nach `playable`: aus (reine Anzeige) oder legale Züge der Seite am Zug. */
+  private interactionConfig(): Pick<Config, 'movable' | 'draggable' | 'selectable'> {
+    const legal = this.playable ? legalDests(this.fen) : null;
+    if (!legal) {
+      return {
+        movable: { free: false, color: undefined },
+        draggable: { enabled: false },
+        selectable: { enabled: false },
+      };
+    }
+    return {
+      movable: {
+        free: false,
+        color: legal.color,
+        dests: legal.dests as Map<Key, Key[]>,
+        events: { after: (orig, dest) => this.onBoardMove(orig, dest) },
+      },
+      draggable: { enabled: true },
+      selectable: { enabled: true },
+    };
+  }
+
+  private onBoardMove(orig: Key, dest: Key): void {
+    const applied = applyUserMove(this.fen, orig, dest);
+    if (!applied) {
+      // Sollte bei dests-beschränkten Zügen nicht passieren — Brett auf die Bindung zurücksetzen.
+      this.ground?.set({ fen: this.fen });
+      return;
+    }
+    this.userMove.emit({ from: orig, to: dest, san: applied.san, fen: applied.fen });
   }
 
   ngOnDestroy(): void {
