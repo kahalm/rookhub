@@ -97,7 +97,7 @@ ENGINE_PATH=/engine/stockfish
 
 Alles, was UCI spricht, funktioniert — der Provider startet es einfach als Unterprozess.
 
-## Ohne Docker
+## Ohne Docker (Linux/macOS)
 
 Es geht auch direkt, wenn Python 3 und eine Engine vorhanden sind:
 
@@ -112,6 +112,74 @@ Die virtuelle Umgebung ist kein Zierrat: aktuelle Linux-Distributionen (Debian 1
 und Homebrew lehnen ein direktes `pip install` in die System-Python ab
 (`error: externally-managed-environment`).
 
+## Auf Windows
+
+Der Provider ist plattformneutral und läuft unter Windows unverändert; Docker Desktop wird nicht
+gebraucht. Auf einem Einzelrechner ist der direkte Weg der einfachere.
+
+> **Vergib einen anderen Namen, wenn schon anderswo ein Provider läuft.** Der Provider erkennt
+> seine Registrierung am NAMEN: gleicher Name heißt *aktualisieren*, nicht *hinzufügen*. Startet
+> der PC unter dem Namen des Servers, übernimmt er dessen Eintrag — die Server-Engine
+> verschwindet dann aus der Auswahl. Mit zwei verschiedenen Namen stehen beide nebeneinander.
+
+**1. Python** von [python.org](https://www.python.org/downloads/windows/) installieren, dabei
+„Add python.exe to PATH" ankreuzen. Dann in der PowerShell:
+
+```powershell
+pip install requests
+```
+
+(Das `externally-managed-environment` aus dem Abschnitt oben betrifft nur Linux/macOS.)
+
+**2. Stockfish** von [stockfishchess.org/download/windows](https://stockfishchess.org/download/windows/)
+holen — aktuell Stockfish 18. Passende Variante:
+
+| CPU | Datei |
+|---|---|
+| Ryzen 3000+ / Intel ab Haswell | `stockfish-windows-x86-64-bmi2.zip` |
+| ältere oder unsicher | `stockfish-windows-x86-64-avx2.zip` |
+| läuft garantiert überall | `stockfish-windows-x86-64.zip` |
+
+Das NNUE-Netz steckt in der `.exe`, es wird also nur diese eine Datei gebraucht.
+**Nach `C:\stockfish\` entpacken — bewusst ein Pfad OHNE Leerzeichen**: der Provider startet die
+Engine über die Kommandozeile, ein Pfad wie `C:\Program Files\…` würde dort zerlegt.
+
+**3. Provider holen** (dieselbe gepinnte Fassung wie im Container):
+
+```powershell
+cd C:\stockfish
+curl.exe -O https://raw.githubusercontent.com/lichess-org/external-engine/a6ef15a8e395eb609535857aabf18837ea7696cf/example-provider.py
+```
+
+**4. Starten:**
+
+```powershell
+$env:LICHESS_API_TOKEN = "lip_dein_token"
+python example-provider.py --engine "C:\stockfish\stockfish-windows-x86-64-bmi2.exe" --name "RookHub PC" --max-threads 6 --max-hash 2048
+```
+
+(Bewusst eine lange Zeile: PowerShell bricht Zeilen mit einem Backtick um, der beim Kopieren
+kaputtgeht, sobald ein Leerzeichen dahinter steht.)
+
+Im Fenster muss `Registering new engine` erscheinen; danach steht „RookHub PC" in der
+Engine-Auswahl des Analysebretts. Beenden mit Strg+C — solange das Fenster offen ist, läuft die
+Engine. Bei `--max-threads` ein bis zwei Kerne unter der Kernzahl lassen, sonst wird der Rechner
+beim Analysieren zäh.
+
+**Dauerhaft, ohne offenes Fenster:** Aufgabenplanung → Aufgabe erstellen → Trigger „Bei
+Anmeldung", Aktion `python` mit denselben Argumenten, „Starten in" `C:\stockfish`. Den Token dann
+dauerhaft setzen statt pro Sitzung:
+
+```powershell
+setx LICHESS_API_TOKEN "lip_dein_token"
+```
+
+**Was auf einem Arbeitsrechner anders ist als auf einem Server:** Geht der PC in den Ruhezustand
+oder schläft der Netzwerkadapter ein, ist die Engine weg — RookHub fällt still auf die
+Browser-Engine zurück und blendet den Hinweis ein. Ein PC lohnt sich, wenn er mehr Kerne hat als
+der Server; ein Server-Provider lohnt sich, weil er immer erreichbar ist. Beides parallel (mit
+zwei Namen) ist der bequemste Fall: Du wählst im Analysebrett, was gerade läuft.
+
 ## Wenn etwas nicht klappt
 
 | Symptom | Ursache |
@@ -123,6 +191,9 @@ und Homebrew lehnen ein direktes `pip install` in die System-Python ab
 | Container startet, aber RookHub zeigt keine Auswahl | In RookHub den Token im Profil hinterlegt? Seite neu laden — die Liste wird beim Öffnen des Analysebretts geholt |
 | Analyse fällt auf „Browser" zurück | Container läuft nicht / Rechner aus / kein Netz. RookHub blendet dann den Hinweis „Externe Engine nicht erreichbar" ein |
 | Zwei Einträge in der Auswahl | Der Provider erkennt seine Registrierung am **Namen**. Gleicher Name = Aktualisierung, anderer Name = zusätzlicher Eintrag. Auf zwei Rechnern bewusst zwei Namen vergeben — sonst überschreiben sie sich gegenseitig |
+| Eine Engine ist aus der Auswahl verschwunden | Zwei Provider liefen unter demselben Namen — der zuletzt gestartete hat den Eintrag übernommen. Einen umbenennen und neu starten |
+| Windows: `'python' is not recognized` | Beim Python-Setup war „Add python.exe to PATH" nicht angekreuzt — Setup erneut ausführen (Modify → Repair) oder `py` statt `python` verwenden |
+| Windows: `/bin/sh: … not found` bzw. Engine startet nicht | Der Pfad zur `.exe` enthält Leerzeichen. Stockfish nach `C:\stockfish\` entpacken |
 
 Alte Registrierungen aufräumen kannst du auf <https://lichess.org/account/oauth/token> (Token
 widerrufen) bzw. über die Engine-Verwaltung im Lichess-Analysebrett.
