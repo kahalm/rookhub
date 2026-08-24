@@ -170,10 +170,40 @@ public class PlayerSearchServiceTests
         Assert.Equal("Huber, Johann", result.ChessResultsResults[0].Name);
     }
 
+    [Fact]
+    public void WrapWildcards_WrapsPlainTerms_AndKeepsExplicitWildcards()
+    {
+        Assert.Equal("%berschmid%", PlayerSearchService.WrapWildcards("berschmid"));
+        Assert.Equal("Ober%", PlayerSearchService.WrapWildcards("Ober%"));
+    }
+
+    [Fact]
+    public async Task SearchAsync_SendsWildcardsToChessResults_ButNotToFide()
+    {
+        // chess-results.com unterstuetzt %-Wildcards (sonst nur Praefix-Treffer) — die
+        // FIDE-Suche (chesstools.org) kennt keine und lieferte mit % gar nichts.
+        var crHandler = new MockHttpMessageHandler("[]");
+        var fideHandler = new MockHttpMessageHandler("[]");
+
+        var service = new PlayerSearchService(
+            CreateCrawlerProxy(crHandler),
+            CreateFideClientFactory(fideHandler),
+            new LoggerFactory().CreateLogger<PlayerSearchService>());
+
+        await service.SearchAsync("berschmid", "atri");
+
+        Assert.Contains("lastName=%25berschmid%25", crHandler.LastRequestUri);
+        Assert.Contains("firstName=%25atri%25", crHandler.LastRequestUri);
+        Assert.DoesNotContain("%25", fideHandler.LastRequestUri);
+        Assert.Contains("berschmid", fideHandler.LastRequestUri);
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly string? _response;
         private readonly HttpStatusCode _statusCode;
+
+        public string? LastRequestUri { get; private set; }
 
         public MockHttpMessageHandler(string response)
         {
@@ -188,6 +218,7 @@ public class PlayerSearchServiceTests
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequestUri = request.RequestUri?.ToString();
             var response = new HttpResponseMessage(_statusCode);
             if (_response != null)
                 response.Content = new StringContent(_response, System.Text.Encoding.UTF8, "application/json");

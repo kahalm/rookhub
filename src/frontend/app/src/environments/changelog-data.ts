@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.371.0", date: "2026-08-24", changes: [
+    { en: "Player searches now match name parts anywhere, not just the beginning. The chess-results player search wraps the entered name in wildcards („berschmid“ finds „Oberschmid“), and the friends/user search matches substrings across username, display name and chess.com/Lichess accounts. Numeric IDs (FIDE, chess-results) still match by prefix, and the FIDE list search keeps its prefix behavior — that service does not support wildcards.", de: "Spielersuchen finden Namensteile jetzt überall, nicht nur am Anfang. Die chess-results-Spielersuche umschließt den eingegebenen Namen mit Wildcards („berschmid“ findet „Oberschmid“), und die Freunde-/Nutzersuche matcht Teilstrings über Benutzername, Anzeigename und chess.com-/Lichess-Konten. Numerische IDs (FIDE, chess-results) matchen weiter per Präfix, und die FIDE-Listensuche bleibt eine Präfix-Suche — dieser Dienst unterstützt keine Wildcards." },
+  ] },
   { version: "0.370.0", date: "2026-08-24", changes: [
     { en: "Repertoire lines view: filter by position. As long as no line is open, the board on the left is playable — every move filters the list on the right down to the lines that contain the reached position (transpositions count, same matching as the position search). Undo takes back the last move, ✕ clears the filter, and opening a filtered line jumps straight to the matched position.", de: "Repertoire-Linien-Ansicht: Filtern nach Stellung. Solange keine Linie geöffnet ist, ist das Brett links bespielbar — jeder Zug filtert die Liste rechts auf die Linien, die die erreichte Stellung enthalten (Transpositionen zählen, gleiches Matching wie die Stellungssuche). Rücknahme-Pfeil nimmt den letzten Zug zurück, ✕ leert den Filter, und das Öffnen einer gefilterten Linie springt direkt zur Trefferstellung." },
   ] },

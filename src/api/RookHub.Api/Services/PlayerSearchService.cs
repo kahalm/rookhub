@@ -44,13 +44,20 @@ public class PlayerSearchService
         return exact.Count > 0 ? exact : items;
     }
 
+    /// <summary>chess-results.com unterstützt %-Wildcards in der Spielersuche; ohne sie matcht
+    /// das Formular nur den Namens-ANFANG. Eingaben ohne eigenes % werden deshalb beidseitig
+    /// umschlossen („berschmid" findet „Oberschmid"). NUR für den chess-results-Zweig — die
+    /// FIDE-Suche (chesstools.org) kennt keine Wildcards und liefert mit % gar nichts.</summary>
+    internal static string WrapWildcards(string term) =>
+        term.Contains('%') ? term : $"%{term}%";
+
     private async Task<List<PlayerSearchItemDto>> SearchChessResultsAsync(string lastName, string? firstName)
     {
         try
         {
-            var path = $"/api/players/search?lastName={Uri.EscapeDataString(lastName)}";
+            var path = $"/api/players/search?lastName={Uri.EscapeDataString(WrapWildcards(lastName))}";
             if (!string.IsNullOrWhiteSpace(firstName))
-                path += $"&firstName={Uri.EscapeDataString(firstName)}";
+                path += $"&firstName={Uri.EscapeDataString(WrapWildcards(firstName))}";
 
             var json = await _crawlerProxy.GetAsync(path);
             var items = new List<PlayerSearchItemDto>();

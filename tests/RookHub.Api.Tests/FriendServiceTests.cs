@@ -92,15 +92,18 @@ public class FriendServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SearchUsers_MatchesUsernameByPrefix_NotMidSubstring()
+    public async Task SearchUsers_MatchesUsernameAsSubstring()
     {
+        // Seit v0.371.0 bewusst TEILSTRING-Suche („berschmid" soll „Oberschmid" finden) —
+        // vorher präfix-verankert, was hintere Namensteile unauffindbar machte.
         var me = await CreateUserAsync("me");
         await CreateUserAsync("bobby");   // Präfix-Treffer für "bob"
-        await CreateUserAsync("alibob");  // Mid-Substring → KEIN Treffer mehr (präfix-anker)
+        await CreateUserAsync("alibob");  // Mid-Substring → jetzt ebenfalls Treffer
 
         var results = await _friendService.SearchUsersAsync("bob", me);
-        Assert.Single(results);
-        Assert.Equal("bobby", results[0].Username);
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, r => r.Username == "bobby");
+        Assert.Contains(results, r => r.Username == "alibob");
     }
 
     [Fact]

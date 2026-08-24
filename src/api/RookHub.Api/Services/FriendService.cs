@@ -229,19 +229,20 @@ public class FriendService
         if (q.Length > MaxQueryLength) q = q[..MaxQueryLength];
         if (q.Length == 0) return new List<UserSearchResultDto>();
 
-        // Identitäts-/Konto-Felder (Username + externe Spiel-Accounts/IDs) sind PRÄFIX-Treffer
-        // (`LIKE q%`) — so kann der Username-Index greifen und es bleibt ein indexfreundlicher
-        // Scan; das deckt den Normalfall „ich tippe den Anfang eines Namens" ab. Nur der
-        // Anzeige-/Klarname (DisplayName) bleibt Teilstring-Suche, weil dort die Mitte zählt.
+        // Namens-Felder (Username, Anzeigename, externe Spiel-Accounts) sind TEILSTRING-Treffer
+        // (`LIKE %q%`) — „berschmid" findet auch „Oberschmid"; die Nutzerbasis ist klein genug,
+        // dass der verlorene Index-Präfix-Scan nicht ins Gewicht fällt. Nur die numerischen IDs
+        // (ChessResults/FIDE) bleiben PRÄFIX-Treffer: ein Teilstring-Match über Ziffern-IDs
+        // produziert nichts als Zufalls-Rauschen.
         return await _db.AppUsers
             .Include(u => u.Profile)
             .Where(u => u.Id != currentUserId &&
-                       (u.Username.StartsWith(q) ||
+                       (u.Username.Contains(q) ||
                         (u.Profile != null && (
                             (u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(q)) ||
                             (u.Profile.ChessResultsId != null && u.Profile.ChessResultsId.StartsWith(q)) ||
-                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.StartsWith(q)) ||
-                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.StartsWith(q)) ||
+                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.Contains(q)) ||
+                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.Contains(q)) ||
                             (u.Profile.FideId != null && u.Profile.FideId.StartsWith(q))
                         ))))
             .OrderBy(u => u.Username)

@@ -164,4 +164,38 @@ public class FriendServiceExtendedTests : IDisposable
         Assert.Equal("fideplayer", results[0].Username);
         Assert.Equal("1503014", results[0].FideId);
     }
+
+    [Fact]
+    public async Task SearchUsers_FindsByMiddlePartOfUsername()
+    {
+        var me = await CreateUserAsync("me");
+        await CreateUserAsync("Oberschmid");
+
+        var results = await _friendService.SearchUsersAsync("berschmid", me);
+
+        Assert.Single(results);
+        Assert.Equal("Oberschmid", results[0].Username);
+    }
+
+    [Fact]
+    public async Task SearchUsers_FindsByMiddlePartOfExternalUsernames()
+    {
+        var me = await CreateUserAsync("me");
+        await CreateUserAsync("magnus", p => p.ChessComUsername = "MagnusCarlsen");
+        await CreateUserAsync("lich", p => p.LichessUsername = "DrNykterstein");
+
+        Assert.Single(await _friendService.SearchUsersAsync("gnusCarl", me));
+        Assert.Single(await _friendService.SearchUsersAsync("Nykter", me));
+    }
+
+    [Fact]
+    public async Task SearchUsers_NumericIds_StayPrefixMatches()
+    {
+        // Teilstring-Match ueber Ziffern-IDs waere nur Zufalls-Rauschen — IDs bleiben Praefix.
+        var me = await CreateUserAsync("me");
+        await CreateUserAsync("fideplayer", p => p.FideId = "1503014");
+
+        Assert.Empty(await _friendService.SearchUsersAsync("3014", me));
+        Assert.Single(await _friendService.SearchUsersAsync("1503", me));
+    }
 }
