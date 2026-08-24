@@ -537,6 +537,17 @@ bleibt stehen). Token-Verwaltung: Profil-Karte `features/profile/engine-card.com
 **nginx**: eigene `location /api/engine/` mit `proxy_buffering off` + langen Timeouts — sonst sammelt
 der Proxy die info-Zeilen bzw. kappt eine tiefe Suche nach 60 s.
 
+**Gegenstelle beim Nutzer**: `engine-provider/` ist ein fertiges Docker-Setup für den Rechner des
+Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Provider — beim Bauen
+auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (eindeutige Herkunft,
+Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
+und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). Zwei Fallen, die dort
+bewusst adressiert sind: der Provider-Token braucht `engine:read` **und `engine:write`** (er
+REGISTRIERT die Engine; RookHub selbst genügt `engine:read`) — ohne Vorabprüfung endete das in einem
+401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt; und die Registrierung
+wird über den **Namen** identifiziert (gleicher Name = Aktualisierung, zwei Rechner brauchen zwei
+Namen, sonst überschreiben sie sich).
+
 ### Client-Diagnostik (offen)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -645,6 +656,8 @@ init-db.sh                  Erstellt beide DBs + User beim ersten MariaDB-Start
 .env.dev.example            Umgebungsvariablen-Template (Development)
 .env.vpn.example            Umgebungsvariablen-Template (VPN/Production)
 twa/                        Android-TWA-Build-Gerüst (Bubblewrap, GH-Action — prod + dev-Variante)
+engine-provider/            Docker-Setup für den RECHNER DES NUTZERS: verbindet lokales Stockfish
+                            über den Lichess-Broker mit dem Analysebrett (läuft NICHT im Stack)
 src/
   api/RookHub.Api/
     Controllers/            Auth, Profile, Friend, Repertoire, Extension, TournamentProxy,

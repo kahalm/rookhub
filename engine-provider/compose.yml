@@ -1,0 +1,27 @@
+# Engine-Provider für die RookHub-Analyse (läuft auf DEINEM Rechner, nicht auf dem Server).
+#
+#   cp .env.example .env   # Token eintragen
+#   docker compose up -d --build
+#
+# Bewusst KEIN `ports:`-Eintrag: der Provider verbindet sich ausgehend zum Lichess-Broker
+# und wartet dort auf Arbeit. Es muss also nichts freigegeben oder weitergeleitet werden.
+services:
+  engine-provider:
+    build: .
+    image: rookhub-engine-provider
+    container_name: rookhub-engine-provider
+    env_file: .env
+    restart: unless-stopped
+    # Ohne init läuft Python als PID 1 — und PID 1 ignoriert SIGTERM mangels Handler: jedes
+    # `docker compose down/restart` hing 10 s im Timeout, bis Docker hart abschoss. init setzt
+    # ein winziges PID-1-Programm davor, das das Signal weiterreicht und nebenbei den
+    # Engine-Unterprozess (Stockfish) einsammelt.
+    init: true
+    # Eigene Engine-Binärdatei statt des mitgelieferten Stockfish? Einhängen und in der
+    # .env ENGINE_PATH=/engine/<datei> setzen:
+    # volumes:
+    #   - /pfad/zu/deiner/engine:/engine:ro
+    #
+    # Rechenlast deckeln, damit die Analyse den Rechner nicht lahmlegt (MAX_THREADS in der
+    # .env sollte dazu passen — der Provider selbst kennt dieses Limit nicht):
+    # cpus: 4
