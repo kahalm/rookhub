@@ -489,6 +489,54 @@ Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Dat
 |---------|----------|------|-------|
 | GET | `/api/bot/player-progress/{discordId}` | AllowAnonymous + HMAC | Heutiger Trainingsziel-Fortschritt + Puzzle-Stats + jüngster Wochenpost-Status für eine verknüpfte Discord-ID. Signaturheader `X-Bot-Signature: sha256=…` mit `SchachBot:StatsSecret` (== Bot-`ROOKHUB_STATS_SECRET`); 401 bei falscher Signatur, 404 bei nicht verknüpfter Discord-ID |
 
+### Externe Engine (auth) — Lichess-External-Engine-Protokoll als CLIENT
+Das Analysebrett kann statt der Browser-WASM-Engine eine **externe Engine** rechnen lassen: Stockfish auf
+dem eigenen Rechner (offizieller Lichess-Provider, `lichess-org/external-engine`) oder eine gemietete
+Cloud-Engine (stockfishcloud.com tritt selbst als Provider auf; Chessify lässt sich über sein
+UCI-Tunnel-Binary vom Provider wrappen). RookHub implementiert dafür **keine eigene Engine-Infrastruktur**,
+sondern spricht die offene Lichess-API als Client: der User hinterlegt einen Lichess-API-Token (Scope
+`engine:read`, AES-verschlüsselt in `LichessEngineCredentials`), RookHub listet damit die auf DIESEM
+Lichess-Konto registrierten External Engines und reicht Analyse-Anfragen an den Broker
+(`engine.lichess.ovh`) durch — der ndjson-Stream geht 1:1 an den Browser.
+
+**Warum als Server-Proxy und nicht direkt aus dem Browser**: das `clientSecret` einer Engine ist ein
+Dauer-Geheimnis (wer es hat, kann fremde Rechenzeit verbrauchen) und bleibt deshalb serverseitig
+(`LichessEngineService`, MemoryCache je `userId:engineId`, TTL 10 min). Nebeneffekt: die CSP
+(`connect-src 'self'`) bleibt unangetastet und die eigene Engine ist auch vom Handy aus nutzbar.
+Logik in `Services/LichessEngineService.cs`; URLs konfigurierbar (`Lichess:ApiUrl`/`Lichess:BrokerUrl`) —
+zugleich die Vorbereitung auf einen späteren RookHub-EIGENEN Broker (Phase 2, gleiche Endpoints).
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/engine/credentials` | Status + maskierter Token (`{ hasCredentials, maskedToken }`) |
+| POST | `/api/engine/credentials` | Lichess-Token setzen/überschreiben `{ token }` (max. 200 Zeichen) |
+| DELETE | `/api/engine/credentials` | Token löschen |
+| GET | `/api/engine/external` | Registrierte External Engines des Kontos — **ohne `clientSecret`** (`{ hasCredentials, tokenInvalid, engines[] }`). Immer 200: `tokenInvalid` sagt, WARUM die Liste leer ist (Lichess wies den Token ab) |
+| POST | `/api/engine/external/{id}/analyse` | Analyse anfordern → **`application/x-ndjson`-Stream** (durchgereicht). Body = `EngineAnalyseRequest` (`sessionId`, `initialFen`, `moves[]`, `multiPv`, GENAU EINES von `depth`/`movetime`/`nodes`, optional `threads`/`hash`); Threads/Hash werden serverseitig auf die von Lichess gemeldeten Engine-Maxima geklemmt, `variant` ist fest `chess`. Abbruch = Verbindung schließen (wandert über den Broker zum Provider) |
+
+**Frontend**: `features/analysis/external-engine.service.ts` (ndjson über den normalen `HttpClient` mit
+`reportProgress` — `partialText` wächst, nur NEUE vollständige Zeilen werden geparst; so greifen die
+Interceptors inkl. Auth). Der `AnalysisEngineService` bekam einen zweiten Analyse-Pfad
+(`setRemoteEngine`/`analyzeRemote`): dieselbe `analysis$`-Schnittstelle, dieselbe `AnalysisLine`-Form,
+also unverändertes Brett/Eval-Bar. **Die Bewertung kommt remote bereits aus Weiß-Sicht** (Spez.) — im
+Gegensatz zum WASM-Pfad (`parseInfo`) darf `mapRemoteLine` das Vorzeichen deshalb NICHT drehen.
+**Rochaden liefert der Broker als König-schlägt-Turm** (`e1h1`, lila-engine `emit.rs` nutzt
+`CastlingMode::Chess960`) — chess.js kennt in der Standardvariante nur `e1g1` und bräche die Variante
+dort ab. `castling-uci.util.ts` schreibt das um, aber NUR wenn auf dem Startfeld wirklich ein König
+steht (`e1h1` ist ein legaler Turmzug, wenn der König woanders steht) — deshalb wird die Linie
+mitgespielt statt Strings zu ersetzen. **Zwei Analyse-Pfade, EIN Zustand**: `searchGen` (beim Absetzen
+des `go` festgehalten) hält Worker-Zeilen einer überholten Suche aus `state$` — der frühere Vergleich
+`gen` gegen `gen` im selben Aufruf war wirkungslos, sodass Nachzügler des WASM-Kerns die Remote-Anzeige
+überschrieben und sein spätes `bestmove` die laufende Suche für beendet erklärte. Beim Umschalten wird
+der lokale Kern zusätzlich gestoppt (`stopLocalSearch`), und `analyze()` prüft die Auswahl NACH dem
+`await init()` erneut (die Engine-Liste kann während des WASM-Handshakes eintreffen).
+Scheitert die Remote-Suche VOR der ersten Datenzeile (Provider offline; auch: gar keine Antwort binnen
+12 s), fällt der Service für den Rest der Sitzung still auf WASM zurück und die Seite sagt es
+(`analysis.remoteFallback`); ein Abriss MITTEN im Stream gilt dagegen als beendete Suche (Ergebnis
+bleibt stehen). Token-Verwaltung: Profil-Karte `features/profile/engine-card.component.ts`.
+**nginx**: eigene `location /api/engine/` mit `proxy_buffering off` + langen Timeouts — sonst sammelt
+der Proxy die info-Zeilen bzw. kappt eine tiefe Suche nach 60 s.
+
 ### Client-Diagnostik (offen)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -578,6 +626,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | MenuItemSettings | Admin-Override der Menü-Sichtbarkeit | ItemKey (PK, string), Level (Enum All/Registered/Groups/Admin); fehlt eine Zeile → Default aus `MenuRegistry` |
 | MenuItemGroupAccesses | Welche Gruppe sieht einen gruppen-gegateten Menüeintrag | Composite PK (ItemKey, GroupId), Cascade von MenuItemSetting + Group, Index GroupId |
 | ChessableCredentials | Per-User Chessable-Bearer (1:1) | UserId (unique, Cascade), EncryptedBearer (TEXT, AES via `EncryptionService`), **ChessableUid? (≤32; beim erfolgreichen `POST /api/chessable/test` aus der Chessable-Antwort BEWIESEN gesetzt — nicht aus dem ungeprüften JWT; verknüpft den User mit seiner Chessable-Identität fürs Claimen anonymer getReview-Linien)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Wird vom `ChessableProxyService` an piratechess durchgereicht |
+| LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`), CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |
 | MessageThreads | Metadaten/Zuweisung einer Konversation (1 Zeile je User) | UserId (PK + FK AppUser Cascade), ClaimedByAdminId? (welcher Admin übernommen hat, **ohne FK** → vermeidet doppelte Cascade-Pfade; Name wird beim Abruf aufgelöst), ClaimedAt?; entsteht mit der ersten Nachricht |
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |
@@ -601,7 +650,7 @@ src/
     Controllers/            Auth, Profile, Friend, Repertoire, Extension, TournamentProxy,
                             TournamentFavorite, TournamentMonitor, Subscription, BookPuzzle,
                             Course, Calculation, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
-                            Puzzle, Admin, Me, BotStats, BaseApiController
+                            Puzzle, Admin, Me, BotStats, Engine, BaseApiController
     Services/               Auth, Profile, Friend, Repertoire, CrawlerProxy, PlayerSearch,
                             BookPuzzle, Course, CourseAccess, CourseAuthoring, Calculation,
                             FenListParser, Puzzle, EndlessProgress, TrainingGoal,
@@ -610,7 +659,7 @@ src/
                             SchachBotWebhook, BackgroundTaskQueue, Admin, BookAdmin,
                             AdminSeeder, AutoSubscription, RoundMonitor,
                             DailyPuzzleScheduler, Heartbeat,
-                            CalcEdition, CalcSeriesAnnounce(+Scheduler)
+                            CalcEdition, CalcSeriesAnnounce(+Scheduler), LichessEngine
     Models/                 EF-Entities (1:1 zum Schema oben)
     DTOs/                   Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/

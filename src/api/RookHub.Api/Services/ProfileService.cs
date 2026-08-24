@@ -265,6 +265,10 @@ public class ProfileService
         // Live-Drittanbieter-Credential + Einmal-Tokens: dürfen nach der Löschung nicht fortbestehen
         // (der Chessable-Bearer bliebe sonst mit dem Server-Key entschlüsselbar).
         _db.ChessableCredentials.RemoveRange(await _db.ChessableCredentials.Where(c => c.UserId == userId).ToListAsync());
+        // Ebenso der Lichess-OAuth-Token der External-Engine-Anbindung: Die Konto-Löschung
+        // anonymisiert die AppUser-Zeile IN PLACE, der Cascade-FK feuert hier also NICHT — ohne
+        // diese Zeile bliebe ein fremder, weiterhin gültiger Lichess-Token dauerhaft in der DB.
+        _db.LichessEngineCredentials.RemoveRange(await _db.LichessEngineCredentials.Where(c => c.UserId == userId).ToListAsync());
         _db.PasswordResetTokens.RemoveRange(await _db.PasswordResetTokens.Where(t => t.UserId == userId).ToListAsync());
         // Öffentlich abrufbare Inhalte mit Klarnamen/Fremddaten: geteilte Partien (/g/{token}) und
         // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.

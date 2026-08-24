@@ -15,6 +15,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { ApiTokensComponent } from './api-tokens.component';
+import { EngineCardComponent } from './engine-card.component';
 import { OfflineSettingsCardComponent } from './offline-settings-card.component';
 import { ThemeCardComponent } from './theme-card.component';
 import { ChangePasswordCardComponent } from './change-password-card.component';
@@ -61,7 +62,7 @@ interface PlayerSearchItem {
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatProgressSpinnerModule, MatListModule,
     MatIconModule, MatDividerModule, TranslatePipe, LoadingSpinnerComponent,
-    ApiTokensComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+    ApiTokensComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
     ChangePasswordCardComponent, DeleteAccountCardComponent],
   template: `
     @if (loading) {
@@ -188,6 +189,9 @@ interface PlayerSearchItem {
 
             <mat-divider class="discord-divider"></mat-divider>
             <app-api-tokens></app-api-tokens>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <app-engine-card></app-engine-card>
 
             <mat-divider class="discord-divider"></mat-divider>
             <app-offline-settings-card></app-offline-settings-card>

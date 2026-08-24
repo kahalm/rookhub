@@ -59,6 +59,7 @@ public class ProfileServiceTests : IDisposable
         _db.UserApiTokens.Add(new Models.UserApiToken { UserId = id, Name = "ext", TokenHash = "h", Prefix = "rkh_abc", Scope = "extension" });
         // Secrets/öffentliche Inhalte/PII, die mit der Löschung verschwinden müssen:
         _db.ChessableCredentials.Add(new Models.ChessableCredential { UserId = id, EncryptedBearer = "enc" });
+        _db.LichessEngineCredentials.Add(new Models.LichessEngineCredential { UserId = id, EncryptedToken = "enc-lip" });
         _db.PasswordResetTokens.Add(new Models.PasswordResetToken { UserId = id, TokenHash = "prt", ExpiresAt = DateTime.UtcNow.AddHours(1) });
         _db.SavedGames.Add(new Models.SavedGame { UserId = id, Source = "chess.com", Pgn = "1. e4", ShareToken = "g-tok" });
         _db.SharedLines.Add(new Models.SharedLine { OwnerUserId = id, Pgn = "1. e4", LineHash = "lh", ShareToken = "l-tok" });
@@ -88,6 +89,9 @@ public class ProfileServiceTests : IDisposable
         Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == id));
         // Live-Bearer + Einmal-Tokens + öffentliche Share-Inhalte + gemerkte Stellungen sind weg
         Assert.False(await _db.ChessableCredentials.AnyAsync(c => c.UserId == id));
+        // Der Lichess-OAuth-Token gehört dazu: die Löschung anonymisiert die User-Zeile nur, der
+        // Cascade-FK feuert also nicht — ohne die explizite Aufräumzeile bliebe er entschlüsselbar liegen.
+        Assert.False(await _db.LichessEngineCredentials.AnyAsync(c => c.UserId == id));
         Assert.False(await _db.PasswordResetTokens.AnyAsync(t => t.UserId == id));
         Assert.False(await _db.SavedGames.AnyAsync(g => g.UserId == id));
         Assert.False(await _db.SharedLines.AnyAsync(l => l.OwnerUserId == id));

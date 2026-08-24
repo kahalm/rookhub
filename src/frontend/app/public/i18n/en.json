@@ -576,6 +576,20 @@
         "copied": "Copied to clipboard"
       }
     },
+    "engine": {
+      "title": "External engine (Lichess)",
+      "hint": "Use a stronger engine on the analysis board: RookHub can use any external engine registered on your Lichess account — your own machine running the official provider, or a rented cloud engine. Store a Lichess API token with the engine:read scope here.",
+      "createToken": "Create a Lichess token (engine:read)",
+      "tokenLabel": "Lichess API token",
+      "stored": "Stored token",
+      "saved": "Token saved",
+      "saveFailed": "Could not save the token",
+      "tokenInvalid": "Lichess rejected this token. Create a new one with the engine:read scope.",
+      "listFailed": "Could not load the engine list from Lichess. Try again in a moment.",
+      "enginesFound": "Engines found on your Lichess account:",
+      "noEngines": "No external engines registered on your Lichess account yet.",
+      "specs": "{{threads}} threads, {{hash}} MiB hash"
+    },
     "offline": {
       "title": "Offline",
       "hint": "Store puzzles on this device to keep solving without internet (per device).",
@@ -2285,6 +2299,9 @@
     "loadPgn": "Load PGN",
     "engineCrashed": "The analysis engine crashed and could not be recovered.",
     "engineCrashedReload": "Reload page",
+    "engineProvider": "Engine",
+    "engineBrowser": "Browser",
+    "remoteFallback": "External engine unavailable — using the browser engine.",
     "setup": {
       "button": "Set up position",
       "apply": "Apply",

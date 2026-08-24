@@ -54,6 +54,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayTimeDaily> PlayTimeDailies => Set<PlayTimeDaily>();
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
+    public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
@@ -1051,6 +1052,17 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedBearer).HasColumnType("TEXT");
             e.Property(c => c.CachedCoursesJson).HasColumnType("LONGTEXT");
+        });
+
+        modelBuilder.Entity<LichessEngineCredential>(e =>
+        {
+            // 1:1 zu AppUser; Cascade-Delete entfernt den verschluesselten Lichess-Token mit dem User.
+            e.HasIndex(c => c.UserId).IsUnique();
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(c => c.EncryptedToken).HasColumnType("TEXT");
         });
 
         modelBuilder.Entity<ChessableImport>(e =>

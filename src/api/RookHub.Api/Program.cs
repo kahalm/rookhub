@@ -317,6 +317,15 @@ try
             client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
     });
 
+    // Lichess External-Engine (Client-Modus): Engine-Liste via lichess.org, Analyse-Streams via
+    // Broker (engine.lichess.ovh). Timeout bewusst unendlich — Analyse-Streams laufen lange und
+    // enden über den Abbruch des Browsers (RequestAborted); die kurze Engine-Liste schützt sich
+    // selbst mit einem eigenen 15-s-Timeout (LichessEngineService.ListEnginesAsync).
+    builder.Services.AddHttpClient<LichessEngineService>(client =>
+    {
+        client.Timeout = Timeout.InfiniteTimeSpan;
+    });
+
     // FIDE search HttpClient
     builder.Services.AddHttpClient("FideSearch", client =>
     {

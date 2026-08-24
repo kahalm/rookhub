@@ -5,12 +5,17 @@ import { AnalysisComponent } from './analysis.component';
  * Fokussierter Test des Vorladens aus Query-Params (genutzt vom „Analysieren"-Button
  * der Puzzles): ?fen=…&moves=…&orientation=… → Linie ab fen aufbauen, ans Ende springen.
  */
-function makeComponent(params: Record<string, string | null>): any {
+function makeComponent(params: Record<string, string | null>, opts: {
+  loggedIn?: boolean;
+  engines?: { id: string; name: string; maxThreads: number; maxHash: number }[];
+} = {}): any {
   const engine: any = {
     analysis$: new Subject(),
     engineFatalError$: new Subject(),   // Crash-Detection-Stream (seit 0.97.10), in ngOnInit subscribed
+    remoteFallback$: new Subject(),     // External-Engine-Rückfall (seit 0.372.0)
     setMultiPv: jasmine.createSpy('setMultiPv'),
     setDepth: jasmine.createSpy('setDepth'),
+    setRemoteEngine: jasmine.createSpy('setRemoteEngine'),
     analyze: jasmine.createSpy('analyze'),
     stop: () => {},
     destroy: () => {},                  // in ngOnDestroy aufgerufen
@@ -19,8 +24,21 @@ function makeComponent(params: Record<string, string | null>): any {
   const snackBar: any = { open: () => {} };
   const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
   // auth: die „Stellung in meinen Repertoires"-Karte wird nur eingeloggt gerendert.
-  const auth: any = { isLoggedIn: false };
-  return new AnalysisComponent(engine, route, snackBar, router, auth);
+  const auth: any = { isLoggedIn: opts.loggedIn ?? false };
+  const externalEngines: any = {
+    listEngines: () => new Subject(),   // Default: Liste kommt nie → bleibt bei WASM
+    analyse: jasmine.createSpy('analyse'),
+  };
+  if (opts.engines) {
+    const s = new Subject<any>();
+    externalEngines.listEngines = () => { setTimeout(() => { s.next({ hasCredentials: true, tokenInvalid: false, engines: opts.engines }); s.complete(); }); return s.asObservable(); };
+  }
+  const cdr: any = { markForCheck: jasmine.createSpy('markForCheck'), detectChanges: () => {} };
+  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr);
+  c.__cdr = cdr;
+  c.__engine = engine;
+  c.__externalEngines = externalEngines;
+  return c;
 }
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -120,6 +138,100 @@ describe('AnalysisComponent back-to-puzzle + depth', () => {
     c.depthSetting = 30;
     c.onDepthChange();
     expect((c as any).engine.setDepth).toHaveBeenCalledWith(30);
+    c.ngOnDestroy();
+  });
+});
+
+describe('AnalysisComponent external engine picker', () => {
+  const ENGINES = [{ id: 'eei_a', name: 'SF Heim-PC', maxThreads: 8, maxHash: 512 }];
+  const PROVIDER_KEY = 'rookhub_analysis_engine_provider';
+
+  afterEach(() => { try { localStorage.removeItem(PROVIDER_KEY); } catch {} });
+
+  it('does not query engines when logged out', () => {
+    const c = makeComponent({ fen: START }, { loggedIn: false });
+    spyOn(c.__externalEngines, 'listEngines').and.callThrough();
+    c.ngOnInit();
+    expect(c.__externalEngines.listEngines).not.toHaveBeenCalled();
+    expect(c.externalEnginesList.length).toBe(0);
+    c.ngOnDestroy();
+  });
+
+  it('fills the picker from the engine list when logged in', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    expect(c.externalEnginesList.length).toBe(1);
+    expect(c.selectedEngineId).toBe('wasm');          // ohne gespeicherte Wahl bleibt es lokal
+    c.ngOnDestroy();
+  });
+
+  it('restores the stored engine choice and wires it into the service', async () => {
+    localStorage.setItem(PROVIDER_KEY, 'eei_a');
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    expect(c.selectedEngineId).toBe('eei_a');
+    expect(c.__engine.setRemoteEngine).toHaveBeenCalledWith(ENGINES[0], jasmine.any(Function));
+    c.ngOnDestroy();
+  });
+
+  it('ignores a stored engine that no longer exists', async () => {
+    localStorage.setItem(PROVIDER_KEY, 'eei_gone');
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    expect(c.selectedEngineId).toBe('wasm');
+    expect(c.__engine.setRemoteEngine).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('onEngineSelect persists the choice and switches the service back to WASM', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    c.selectedEngineId = 'eei_a';
+    c.onEngineSelect();
+    expect(localStorage.getItem(PROVIDER_KEY)).toBe('eei_a');
+    expect(c.__engine.setRemoteEngine).toHaveBeenCalledWith(ENGINES[0], jasmine.any(Function));
+
+    c.selectedEngineId = 'wasm';
+    c.onEngineSelect();
+    expect(localStorage.getItem(PROVIDER_KEY)).toBe('wasm');
+    expect(c.__engine.setRemoteEngine).toHaveBeenCalledWith(null, jasmine.any(Function));
+    c.ngOnDestroy();
+  });
+});
+
+// Angular-22-Falle: eine unmarkierte View rendert nach async/HTTP nicht neu. Die Engine-Zeilen
+// kommen bei der externen Engine AUSSCHLIESSLICH aus einem HTTP-Stream — ohne markForCheck bliebe
+// die Anzeige stehen, obwohl der Zustand stimmt. Dieser Test hält die Marke fest.
+describe('AnalysisComponent change-detection marks', () => {
+  it('marks the view when engine lines arrive', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.engineOn = true;
+    c.__cdr.markForCheck.calls.reset();
+
+    (c as any).onEngineUpdate(c.currentFen, 12, [
+      { multipv: 1, depth: 12, scoreType: 'cp', score: 30, evalText: '+0.30', pvUci: ['e2e4'] },
+    ]);
+
+    expect(c.__cdr.markForCheck).toHaveBeenCalled();
+    expect(c.displayLines.length).toBe(1);
+    c.ngOnDestroy();
+  });
+
+  it('marks the view when the remote engine falls back to WASM', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.__cdr.markForCheck.calls.reset();
+
+    c.__engine.remoteFallback$.next(true);
+
+    expect(c.remoteFallback).toBeTrue();
+    expect(c.__cdr.markForCheck).toHaveBeenCalled();
     c.ngOnDestroy();
   });
 });

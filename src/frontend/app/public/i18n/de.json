@@ -576,6 +576,20 @@
         "copied": "In die Zwischenablage kopiert"
       }
     },
+    "engine": {
+      "title": "Externe Engine (Lichess)",
+      "hint": "Stärkere Engine für das Analysebrett: RookHub kann jede External Engine nutzen, die auf deinem Lichess-Konto registriert ist — dein eigener Rechner mit dem offiziellen Provider oder eine gemietete Cloud-Engine. Dafür hier einen Lichess-API-Token mit dem Scope engine:read hinterlegen.",
+      "createToken": "Lichess-Token erstellen (engine:read)",
+      "tokenLabel": "Lichess-API-Token",
+      "stored": "Gespeicherter Token",
+      "saved": "Token gespeichert",
+      "saveFailed": "Token konnte nicht gespeichert werden",
+      "tokenInvalid": "Lichess hat diesen Token abgewiesen. Erstelle einen neuen mit dem Scope engine:read.",
+      "listFailed": "Die Engine-Liste konnte nicht von Lichess geladen werden. Versuch es gleich noch einmal.",
+      "enginesFound": "Auf deinem Lichess-Konto gefundene Engines:",
+      "noEngines": "Auf deinem Lichess-Konto ist noch keine External Engine registriert.",
+      "specs": "{{threads}} Threads, {{hash}} MiB Hash"
+    },
     "offline": {
       "title": "Offline",
       "hint": "Puzzles auf diesem Gerät speichern, um ohne Internet weiterzuspielen (pro Gerät).",
@@ -2285,6 +2299,9 @@
     "loadPgn": "PGN laden",
     "engineCrashed": "Die Analyse-Engine ist abgestürzt und konnte nicht wiederhergestellt werden.",
     "engineCrashedReload": "Seite neu laden",
+    "engineProvider": "Engine",
+    "engineBrowser": "Browser",
+    "remoteFallback": "Externe Engine nicht erreichbar — es rechnet die Browser-Engine.",
     "setup": {
       "button": "Stellung aufbauen",
       "apply": "Übernehmen",

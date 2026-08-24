@@ -576,6 +576,20 @@
         "copied": "Kopirano u međuspremnik"
       }
     },
+    "engine": {
+      "title": "Vanjski motor (Lichess)",
+      "hint": "Jači motor za ploču za analizu: RookHub može koristiti svaki vanjski motor registriran na tvom Lichess računu — vlastito računalo sa službenim providerom ili unajmljeni motor u oblaku. Ovdje spremi Lichess API token s opsegom engine:read.",
+      "createToken": "Izradi Lichess token (engine:read)",
+      "tokenLabel": "Lichess API token",
+      "stored": "Spremljeni token",
+      "saved": "Token spremljen",
+      "saveFailed": "Token nije spremljen",
+      "tokenInvalid": "Lichess je odbio ovaj token. Izradi novi s opsegom engine:read.",
+      "listFailed": "Popis motora nije se mogao učitati s Lichessa. Pokušaj ponovno za koji trenutak.",
+      "enginesFound": "Motori pronađeni na tvom Lichess računu:",
+      "noEngines": "Na tvom Lichess računu još nije registriran nijedan vanjski motor.",
+      "specs": "{{threads}} niti, {{hash}} MiB hash"
+    },
     "offline": {
       "title": "Offline",
       "hint": "Spremi zagonetke na ovaj uređaj za igru bez interneta (po uređaju).",
@@ -2285,6 +2299,9 @@
     "loadPgn": "Učitaj PGN",
     "engineCrashed": "Motor za analizu srušio se i nije se mogao oporaviti.",
     "engineCrashedReload": "Ponovno učitaj stranicu",
+    "engineProvider": "Motor",
+    "engineBrowser": "Preglednik",
+    "remoteFallback": "Vanjski motor nije dostupan — računa motor u pregledniku.",
     "setup": {
       "button": "Postavi poziciju",
       "apply": "Primijeni",

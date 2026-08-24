@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -18,6 +18,7 @@ import { Subscription } from 'rxjs';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
+import { ExternalEngineService, ExternalEngineInfo } from './external-engine.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { AuthService } from '../../core/auth.service';
@@ -29,6 +30,8 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = 'rookhub_analysis_lines';
 const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = 'rookhub_analysis_depth';
+/** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
+const PROVIDER_KEY = 'rookhub_analysis_engine_provider';
 const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30];
 const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
 
@@ -101,7 +104,19 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                     @for (n of [1,2,3,4,5]; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
                   </mat-select>
                 </mat-form-field>
+                @if (externalEnginesList.length > 0) {
+                  <mat-form-field appearance="outline" class="engine-field" subscriptSizing="dynamic">
+                    <mat-label>{{ 'analysis.engineProvider' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="selectedEngineId" (selectionChange)="onEngineSelect()">
+                      <mat-option value="wasm">{{ 'analysis.engineBrowser' | translate }}</mat-option>
+                      @for (e of externalEnginesList; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                }
               </div>
+              @if (remoteFallback && selectedEngineId !== 'wasm') {
+                <p class="remote-fallback"><mat-icon>cloud_off</mat-icon> {{ 'analysis.remoteFallback' | translate }}</p>
+              }
               @if (engineOn) {
                 @if (displayLines.length === 0) {
                   <p class="muted">{{ 'analysis.calculating' | translate }}</p>
@@ -193,6 +208,9 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .depth { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .he-spacer { flex: 1 1 auto; }
     .num-field { width: 104px; }
+    .engine-field { width: 190px; }
+    .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
+    .remote-fallback mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .back-btn { width: 100%; margin-bottom: 8px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
@@ -252,11 +270,19 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   pgnInput = '';
   editing = false;
 
+  /** External Engines des Lichess-Kontos (leer = kein Picker); Auswahl 'wasm' = Browser. */
+  externalEnginesList: ExternalEngineInfo[] = [];
+  selectedEngineId = 'wasm';
+  remoteFallback = false;
+
   private sub?: Subscription;
   private errorSub?: Subscription;
+  private fallbackSub?: Subscription;
+  private enginesSub?: Subscription;
 
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
-              private router: Router, public auth: AuthService) {
+              private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
+              private cdr: ChangeDetectorRef) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -284,7 +310,32 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines));
-    this.errorSub = this.engine.engineFatalError$.subscribe(e => this.engineCrashed = e !== null);
+    this.errorSub = this.engine.engineFatalError$.subscribe(e => { this.engineCrashed = e !== null; this.cdr.markForCheck(); });
+    this.fallbackSub = this.engine.remoteFallback$.subscribe(f => { this.remoteFallback = f; this.cdr.markForCheck(); });
+
+    // External Engines des Lichess-Kontos laden (nur eingeloggt; stiller Hintergrund-Feed —
+    // ohne Liste bleibt es einfach beim Browser-WASM). War zuletzt eine External Engine gewählt
+    // und existiert sie noch, wird sie wieder aktiv; die evtl. schon laufende WASM-Analyse der
+    // Startstellung wechselt dann auf die Remote-Suche.
+    if (this.auth.isLoggedIn) {
+      // Subscription festhalten: der Engine-Service ist ein App-weites Singleton. Verlässt der
+      // Nutzer die Seite, WÄHREND die Liste noch unterwegs ist, würde die Antwort danach eine
+      // Engine im längst zerstörten Zustand scharf schalten und eine Analyse starten, die
+      // niemand mehr sieht.
+      this.enginesSub = this.externalEngines.listEngines().subscribe({
+        next: r => {
+          this.externalEnginesList = r.engines;
+          let stored: string | null = null;
+          try { stored = localStorage.getItem(PROVIDER_KEY); } catch {}
+          if (stored && stored !== 'wasm' && r.engines.some(e => e.id === stored)) {
+            this.selectedEngineId = stored;
+            this.applyEngineSelection();
+          }
+          this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
+        },
+        error: () => {},
+      });
+    }
 
     // Optional: eine Zugfolge (UCI, durch Leerzeichen/Komma getrennt) ab startFen vorladen
     // und an die aktuelle (letzte) Stellung springen — genutzt vom „Analysieren"-Button der Puzzles.
@@ -323,6 +374,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
     this.errorSub?.unsubscribe();
+    this.fallbackSub?.unsubscribe();
+    this.enginesSub?.unsubscribe();
     this.engine.destroy();
   }
 
@@ -420,6 +473,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   // ---- Engine updates ----
   private onEngineUpdate(fen: string, depth: number, lines: AnalysisLine[]): void {
     if (!this.engineOn || fen !== this.currentFen) return;
+    // Angular 22 refresht eine unmarkierte View nach async/HTTP NICHT mehr von selbst (siehe
+    // CLAUDE.md-Konvention). Beim WASM-Pfad kaschieren Worker-/Event-Ticks das noch; bei der
+    // externen Engine kommen die Zeilen NUR aus einem HTTP-Stream — ohne diese Marke bliebe die
+    // Linienliste stehen, obwohl der Zustand längst stimmt.
+    this.cdr.markForCheck();
     this.depth = depth;
     this.displayLines = lines.map(l => ({
       evalText: l.evalText,
@@ -477,6 +535,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     try { localStorage.setItem(DEPTH_KEY, String(this.depthSetting)); } catch {}
     this.engine.setDepth(this.depthSetting);
     if (this.engineOn) this.engine.analyze(this.currentFen);
+  }
+  onEngineSelect(): void {
+    try { localStorage.setItem(PROVIDER_KEY, this.selectedEngineId); } catch {}
+    this.applyEngineSelection();
+  }
+  /** Verdrahtet die aktuelle Auswahl in den Engine-Service (Transport = HTTP-Proxy) und startet neu. */
+  private applyEngineSelection(): void {
+    const info = this.externalEnginesList.find(e => e.id === this.selectedEngineId) ?? null;
+    this.engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
+    if (this.engineOn && this.dests.size > 0) this.engine.analyze(this.currentFen);
   }
   backToPuzzle(): void {
     if (this.returnTo) this.router.navigateByUrl(this.returnTo);

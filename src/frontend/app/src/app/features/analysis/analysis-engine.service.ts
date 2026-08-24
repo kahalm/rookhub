@@ -1,5 +1,18 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { EngineAnalyseLine, EngineAnalyseWork } from './external-engine.service';
+import { normalizeCastlingUci } from './castling-uci.util';
+
+/** Vom User gewählte External Engine (Lichess-Anbindung); Maxima kommen von der Registrierung. */
+export interface RemoteEngine {
+  id: string;
+  name: string;
+  maxThreads: number;
+  maxHash: number;
+}
+
+/** Transport der Remote-Analyse — von der Component verdrahtet (hält den Service DI-frei testbar). */
+export type RemoteAnalyseTransport = (engineId: string, work: EngineAnalyseWork) => Observable<EngineAnalyseLine>;
 
 /** Eine Computer-Line (Principal Variation) aus der MultiPV-Analyse. */
 export interface AnalysisLine {
@@ -39,6 +52,12 @@ export class AnalysisEngineService implements OnDestroy {
 
   /** Generation: bei jeder neuen Stellung erhöht; alte info-Zeilen werden verworfen. */
   private gen = 0;
+  /** Generation, für die das aktuell laufende `go` abgesetzt wurde. MUSS beim Absetzen festgehalten
+   *  werden, nicht im Handler gelesen: `gen` beim Eintreffen einer Zeile mit `gen` zu vergleichen
+   *  ist immer wahr (beides derselbe synchrone Aufruf) — der Vergleich lief deshalb ins Leere und
+   *  Zeilen einer ÜBERHOLTEN Suche (Stellungswechsel, Umschalten auf die externe Engine) landeten
+   *  weiter in `state$`. */
+  private searchGen = -1;
   private currentFen = '';
   private sideToMove: 'w' | 'b' = 'w';
   private partial = new Map<number, AnalysisLine>();
@@ -73,6 +92,19 @@ export class AnalysisEngineService implements OnDestroy {
 
   /** Optionaler Telemetrie-Hook (Crash/Hänger melden); von AppComponent an ClientLogService verdrahtet. */
   reportEngineEvent?: (kind: string, detail?: string) => void;
+
+  // ---- External Engine (Lichess-Anbindung): Analyse läuft remote statt im WASM-Worker ----
+
+  private remoteEngine: RemoteEngine | null = null;
+  private remoteTransport?: RemoteAnalyseTransport;
+  private remoteSub?: Subscription;
+  /** Wartet auf die ERSTE Zeile einer Remote-Suche; bleibt sie aus, gilt die Engine als offline. */
+  private remoteFirstLineGuard?: ReturnType<typeof setTimeout>;
+  /** Eine Session-ID pro Service-Lebenszeit — Provider halten die Engine je Session warm. */
+  private readonly remoteSessionId = 'rh-' + Math.random().toString(36).slice(2, 12);
+  /** True sobald die Remote-Analyse VOR der ersten Datenzeile scheiterte → Rest der Sitzung lokal. */
+  private remoteFallbackSubject = new BehaviorSubject<boolean>(false);
+  readonly remoteFallback$: Observable<boolean> = this.remoteFallbackSubject.asObservable();
 
   get linesRequested(): number { return this.multiPv; }
   get depthLimit(): number { return this.depthCap; }
@@ -168,9 +200,46 @@ export class AnalysisEngineService implements OnDestroy {
     if (this.watchdog !== undefined) { clearTimeout(this.watchdog); this.watchdog = undefined; }
   }
 
+  /** Wählt die External Engine (null = Browser-WASM). Der Transport wird mitgereicht, damit der
+   *  Service keine HTTP-Abhängigkeit braucht; ein Wechsel setzt den Fallback-Zustand zurück.
+   *  Das erneute analyze() stößt der Aufrufer an (wie bei setMultiPv/setDepth). */
+  setRemoteEngine(engine: RemoteEngine | null, transport?: RemoteAnalyseTransport): void {
+    this.remoteEngine = engine;
+    if (transport) this.remoteTransport = transport;
+    this.remoteFallbackSubject.next(false);
+    this.stopRemote();
+    if (engine) this.stopLocalSearch();   // der WASM-Kern soll nicht weiterrechnen
+  }
+
+  /** Läuft im WASM-Worker noch eine Suche, sie beenden (und nichts Neues nachschieben). Ohne das
+   *  rechnet der Kern nach dem Umschalten auf die externe Engine bis zur Zieltiefe weiter —
+   *  verbrannte CPU/Akku, und sein spätes `bestmove` fiele in eine fremde Suche. */
+  private stopLocalSearch(): void {
+    this.pendingGoFen = null;
+    this.clearWatchdog();
+    if (this.searching) this.send('stop');
+  }
+
+  /** True, solange die externe Engine die Analyse führt (kein Fallback aktiv). */
+  private get remoteActive(): boolean {
+    return !!this.remoteEngine && !!this.remoteTransport && !this.remoteFallbackSubject.value;
+  }
+
   /** Startet (oder wechselt) die Analyse auf eine Stellung. */
   async analyze(fen: string): Promise<void> {
+    if (this.remoteActive) {
+      this.analyzeRemote(fen, this.remoteEngine!, this.remoteTransport!);
+      return;
+    }
     await this.init();
+    // Nach dem await erneut prüfen: der WASM-Handshake dauert (Worker-Start + `readyok`), und
+    // genau in dieser Zeit kann die Engine-Liste eintreffen und auf die externe Engine umschalten
+    // (ngOnInit-Reihenfolge). Ohne diese zweite Prüfung liefe die fortgesetzte lokale Suche der
+    // gerade gestarteten Remote-Suche in die Parade und überschriebe sie.
+    if (this.remoteActive) {
+      this.analyzeRemote(fen, this.remoteEngine!, this.remoteTransport!);
+      return;
+    }
     // Neue, vom Nutzer angesteuerte Stellung → Crash-Budget zurücksetzen. Der Recovery-Retry aus
     // handleCrash ruft analyze() mit DERSELBEN FEN auf und setzt deshalb bewusst nichts zurück.
     if (fen !== this.currentFen) { this.crashStreak = 0; this.lastCrashFen = null; }
@@ -202,11 +271,105 @@ export class AnalysisEngineService implements OnDestroy {
     this.send('setoption name MultiPV value ' + this.multiPv);
     this.send('position fen ' + fen);
     this.send('go depth ' + this.depthCap);
+    this.searchGen = this.gen;   // Zeilen DIESER Suche gehören zu dieser Generation
     this.searching = true;
     this.armWatchdog();   // ab jetzt Info-Lines erwarten
   }
 
+  /** Remote-Suche (samt Erste-Zeile-Wächter) abbrechen; der Abbruch stoppt via Broker den Provider. */
+  private stopRemote(): void {
+    if (this.remoteFirstLineGuard !== undefined) { clearTimeout(this.remoteFirstLineGuard); this.remoteFirstLineGuard = undefined; }
+    this.remoteSub?.unsubscribe();
+    this.remoteSub = undefined;
+  }
+
+  /** Analyse über die External Engine: der ndjson-Stream des Brokers ersetzt die Worker-info-Zeilen.
+   *  Scheitert die Suche VOR der ersten Zeile (Engine/Provider offline, auch: gar keine Antwort
+   *  binnen Frist), fällt der Service für den Rest der Sitzung still auf WASM zurück. Ein Abriss
+   *  MITTEN im Stream gilt dagegen als beendete Suche — was da ist, bleibt stehen. */
+  private analyzeRemote(fen: string, engine: RemoteEngine, transport: RemoteAnalyseTransport): void {
+    this.gen++;
+    const gen = this.gen;
+    this.currentFen = fen;
+    this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
+    this.partial = new Map();
+    this.clearWatchdog();
+    this.stopRemote();
+    this.state$.next({ fen, depth: 0, lines: [], running: true });
+
+    let gotData = false;
+    const failBeforeData = () => {
+      if (gen !== this.gen || gotData) return;
+      this.stopRemote();
+      this.reportEngineEvent?.('remote_failed', engine.id);
+      this.remoteFallbackSubject.next(true);
+      this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false }));
+    };
+    this.remoteFirstLineGuard = setTimeout(failBeforeData, 12000);
+
+    this.remoteSub = transport(engine.id, {
+      sessionId: this.remoteSessionId,
+      initialFen: fen,
+      moves: [],
+      multiPv: this.multiPv,
+      depth: this.depthCap,
+      threads: engine.maxThreads,
+      // Hash gedeckelt: die volle Registrierungs-Grenze (bis 1 TiB erlaubt) muss der Provider-
+      // Rechner nicht für jede Brett-Analyse allozieren.
+      hash: Math.min(engine.maxHash, 1024),
+    }).subscribe({
+      next: line => {
+        if (gen !== this.gen) return;
+        gotData = true;
+        if (this.remoteFirstLineGuard !== undefined) { clearTimeout(this.remoteFirstLineGuard); this.remoteFirstLineGuard = undefined; }
+        this.remoteFallbackSubject.next(false);
+        this.state$.next({ fen, depth: line.depth ?? 0, lines: this.mapRemoteLine(line), running: true });
+      },
+      complete: () => {
+        if (gen !== this.gen) return;
+        const s = this.state$.value;
+        if (s.running) this.state$.next({ ...s, running: false });
+      },
+      error: () => {
+        if (gen !== this.gen) return;
+        if (gotData) {
+          const s = this.state$.value;
+          if (s.running) this.state$.next({ ...s, running: false });
+          return;
+        }
+        failBeforeData();
+      },
+    });
+  }
+
+  /** ndjson-Zeile des Brokers → AnalysisLines. cp/mate kommen laut Spez. bereits aus Weiß-Sicht;
+   *  Formatierung identisch zu parseInfo, damit die Anzeige beim Umschalten nicht springt. */
+  mapRemoteLine(l: EngineAnalyseLine): AnalysisLine[] {
+    return (l.pvs ?? []).slice(0, this.multiPv).map((pv, i) => {
+      const isMate = pv.mate !== undefined && pv.mate !== null;
+      const score = isMate ? pv.mate! : (pv.cp ?? 0);
+      let evalText: string;
+      if (isMate) {
+        evalText = '#' + score;
+      } else {
+        const v = score / 100;
+        evalText = (v > 0 ? '+' : '') + v.toFixed(2);
+      }
+      return {
+        multipv: i + 1,
+        depth: pv.depth ?? l.depth ?? 0,
+        scoreType: isMate ? 'mate' as const : 'cp' as const,
+        score,
+        evalText,
+        // Der Broker liefert Rochaden als König-schlägt-Turm (`e1h1`); `pvUci` muss aber die
+        // Standardform tragen, sonst bricht der SAN-Nachbau der Anzeige an der Rochade ab.
+        pvUci: normalizeCastlingUci(this.currentFen, pv.moves ?? []),
+      };
+    });
+  }
+
   stop(): void {
+    this.stopRemote();
     this.clearWatchdog();
     this.send('stop');
     const s = this.state$.value;
@@ -233,7 +396,10 @@ export class AnalysisEngineService implements OnDestroy {
     // eigenem Listener). Hier daher nur abfangen, damit es nicht als info-Zeile fehlinterpretiert wird.
     if (line.startsWith('readyok')) return;
 
-    const genAtSend = this.gen;
+    // Gehört diese Zeile noch zur aktuellen Suche? `searchGen` wurde beim Absetzen des `go`
+    // festgehalten; eine überholte Suche (Stellungswechsel, Wechsel auf die externe Engine)
+    // darf `state$` nicht mehr anfassen — ihre UCI-Sequenz (siehe bestmove) läuft aber weiter.
+    const stale = this.searchGen !== this.gen;
 
     if (line.startsWith('bestmove')) {
       // Die laufende Suche ist beendet (regulär ODER durch `stop`). Erst JETZT ist es sicher,
@@ -244,6 +410,9 @@ export class AnalysisEngineService implements OnDestroy {
         return;
       }
       this.clearWatchdog();   // Suche regulär beendet, nichts steht an
+      // Das `bestmove` einer überholten Suche beendet NUR den Worker-Zustand: würde es hier
+      // `running: false` setzen, erklärte es die inzwischen laufende (ggf. externe) Suche für fertig.
+      if (stale) return;
       const s = this.state$.value;
       if (s.running) this.state$.next({ ...s, running: false });
       return;
@@ -252,7 +421,7 @@ export class AnalysisEngineService implements OnDestroy {
 
     const parsed = this.parseInfo(line);
     if (!parsed) return;
-    if (genAtSend !== this.gen) return;   // Stellung hat gewechselt
+    if (stale) return;                    // Stellung hat gewechselt / externe Engine hat übernommen
     if (parsed.multipv > this.multiPv) return;
 
     this.clearWatchdog();   // Engine antwortet → kein Hänger
@@ -309,9 +478,19 @@ export class AnalysisEngineService implements OnDestroy {
     }
     this.searching = false;
     this.pendingGoFen = null;
+    this.searchGen = -1;
     this.crashStreak = 0;
     this.fatalError$.next(null);
     this.clearWatchdog();
+    // Remote-Auswahl mit aufräumen: der Service ist ein Root-Singleton — ohne Reset würde ein
+    // späterer Besuch mit einer VERALTETEN Engine-Auswahl remote analysieren, bevor die
+    // Component ihre (ggf. geänderte) Auswahl neu verdrahtet hat. Der Transport MUSS mit weg:
+    // er ist eine Closure über die zerstörte Component (und damit deren View) — bliebe er
+    // hängen, hielte das App-weite Singleton die tote Analyse-Seite am Leben.
+    this.stopRemote();
+    this.remoteEngine = null;
+    this.remoteTransport = undefined;
+    this.remoteFallbackSubject.next(false);
     this.state$.next(EMPTY);
   }
 }
