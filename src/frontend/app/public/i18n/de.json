@@ -2301,6 +2301,8 @@
     "engineCrashedReload": "Seite neu laden",
     "engineProvider": "Engine",
     "engineBrowser": "Browser",
+    "speedHint": "Geschwindigkeit: {{speed}}\n\nBisher durchsuchte Stellungen: {{nodes}}\n\nMehr ist schneller — eine starke externe Engine schafft mehrere Millionen pro Sekunde, die Browser-Engine deutlich weniger.",
+    "speedWaiting": "Geschwindigkeit: wird gemessen …",
     "remoteFallback": "Externe Engine nicht erreichbar — es rechnet die Browser-Engine.",
     "setup": {
       "button": "Stellung aufbauen",

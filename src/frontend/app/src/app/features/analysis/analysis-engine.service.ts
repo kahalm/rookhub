@@ -33,9 +33,13 @@ export interface AnalysisState {
   depth: number;
   lines: AnalysisLine[];   // nach multipv sortiert (beste zuerst)
   running: boolean;
+  /** Bisher durchsuchte Stellungen der laufenden Suche; 0 = noch nichts gemeldet. */
+  nodes: number;
+  /** Knoten pro Sekunde (Rechengeschwindigkeit); 0 = noch nicht messbar. */
+  nps: number;
 }
 
-const EMPTY: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+const EMPTY: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
 
 /**
  * MultiPV-Analyse mit lokalem Stockfish-WASM (eigener Worker, getrennt vom Puzzle-Solver).
@@ -61,6 +65,11 @@ export class AnalysisEngineService implements OnDestroy {
   private currentFen = '';
   private sideToMove: 'w' | 'b' = 'w';
   private partial = new Map<number, AnalysisLine>();
+
+  /** Zuletzt gemeldete Suchleistung der laufenden Suche (0 = noch nichts). Wird bei jeder neuen
+   *  Suche zurückgesetzt, damit die Anzeige nicht den Wert der Vorstellung weiterträgt. */
+  private lastNodes = 0;
+  private lastNps = 0;
 
   private state$ = new BehaviorSubject<AnalysisState>(EMPTY);
   readonly analysis$: Observable<AnalysisState> = this.state$.asObservable();
@@ -177,12 +186,12 @@ export class AnalysisEngineService implements OnDestroy {
     this.lastCrashFen = fen || null;
     if (fen && wasRunning && !sameCrash && this.crashStreak <= 3) {
       // Erster Crash auf dieser Stellung (oder Stellung hat gewechselt) → einmal sauber neu starten.
-      this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false }));
+      this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false, nodes: 0, nps: 0 }));
     } else {
       // Wiederholter Crash auf derselben Stellung ODER zu viele Crashes hintereinander → aufgeben.
       this.reportEngineEvent?.('giveup', sameCrash ? `repeat-crash @ ${fen}` : `streak=${this.crashStreak}`);
       this.fatalError$.next('crash');
-      this.state$.next({ fen, depth: 0, lines: [], running: false });
+      this.state$.next({ fen, depth: 0, lines: [], running: false, nodes: 0, nps: 0 });
     }
   }
 
@@ -247,8 +256,10 @@ export class AnalysisEngineService implements OnDestroy {
     this.currentFen = fen;
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
     this.partial = new Map();
+    this.lastNodes = 0;
+    this.lastNps = 0;
     this.clearWatchdog();
-    this.state$.next({ fen, depth: 0, lines: [], running: true });
+    this.state$.next({ fen, depth: 0, lines: [], running: true, nodes: 0, nps: 0 });
     // Sequencing gegen den asyncify-Crash: das `go` für die neue Stellung erst absetzen, wenn
     // eine evtl. laufende Suche WIRKLICH beendet ist (ihr `bestmove` zurückkam) — NICHT bloß nach
     // `readyok` (das beantwortet die Engine auch mitten in der Suche sofort, also keine echte
@@ -293,9 +304,11 @@ export class AnalysisEngineService implements OnDestroy {
     this.currentFen = fen;
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
     this.partial = new Map();
+    this.lastNodes = 0;
+    this.lastNps = 0;
     this.clearWatchdog();
     this.stopRemote();
-    this.state$.next({ fen, depth: 0, lines: [], running: true });
+    this.state$.next({ fen, depth: 0, lines: [], running: true, nodes: 0, nps: 0 });
 
     let gotData = false;
     const failBeforeData = () => {
@@ -303,7 +316,7 @@ export class AnalysisEngineService implements OnDestroy {
       this.stopRemote();
       this.reportEngineEvent?.('remote_failed', engine.id);
       this.remoteFallbackSubject.next(true);
-      this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false }));
+      this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false, nodes: 0, nps: 0 }));
     };
     this.remoteFirstLineGuard = setTimeout(failBeforeData, 12000);
 
@@ -323,10 +336,20 @@ export class AnalysisEngineService implements OnDestroy {
         gotData = true;
         if (this.remoteFirstLineGuard !== undefined) { clearTimeout(this.remoteFirstLineGuard); this.remoteFirstLineGuard = undefined; }
         this.remoteFallbackSubject.next(false);
-        this.state$.next({ fen, depth: line.depth ?? 0, lines: this.mapRemoteLine(line), running: true });
+        // Der Broker liefert `nodes` + verstrichene `time` (ms), aber keine Rate — also selbst
+        // rechnen. `time` ist in den ersten Zeilen oft 0: dann den letzten Wert behalten,
+        // statt durch null zu teilen (ergäbe Infinity in der Anzeige).
+        if (typeof line.nodes === 'number') this.lastNodes = line.nodes;
+        if (line.time > 0 && line.nodes > 0) this.lastNps = Math.round(line.nodes * 1000 / line.time);
+        this.state$.next({ fen, depth: line.depth ?? 0, lines: this.mapRemoteLine(line),
+                           running: true, nodes: this.lastNodes, nps: this.lastNps });
       },
       complete: () => {
         if (gen !== this.gen) return;
+        // Stream sauber beendet, aber KEINE einzige Zeile gebracht: dann hat die Engine nicht
+        // wirklich geantwortet. Sofort umschalten, statt bis zum Ablauf des Wächters eine
+        // leere „läuft"-Anzeige stehen zu lassen.
+        if (!gotData) { failBeforeData(); return; }
         const s = this.state$.value;
         if (s.running) this.state$.next({ ...s, running: false });
       },
@@ -417,6 +440,14 @@ export class AnalysisEngineService implements OnDestroy {
       if (s.running) this.state$.next({ ...s, running: false });
       return;
     }
+    // Leistungswerte stehen in denselben info-Zeilen (Stockfish liefert `nodes` und `nps`
+    // mit). Vor dem pv-Filter auslesen, damit auch Zeilen ohne pv die Anzeige aktuell halten.
+    if (!stale && line.startsWith('info ')) {
+      const nodesMatch = line.match(/\bnodes (\d+)/);
+      if (nodesMatch) this.lastNodes = parseInt(nodesMatch[1], 10);
+      const npsMatch = line.match(/\bnps (\d+)/);
+      if (npsMatch) this.lastNps = parseInt(npsMatch[1], 10);
+    }
     if (!line.startsWith('info ') || !line.includes(' pv ')) return;
 
     const parsed = this.parseInfo(line);
@@ -431,7 +462,8 @@ export class AnalysisEngineService implements OnDestroy {
     this.partial.set(parsed.multipv, parsed);
     const lines = [...this.partial.values()].sort((a, b) => a.multipv - b.multipv);
     const depth = Math.max(...lines.map(l => l.depth), 0);
-    this.state$.next({ fen: this.currentFen, depth, lines, running: true });
+    this.state$.next({ fen: this.currentFen, depth, lines, running: true,
+                       nodes: this.lastNodes, nps: this.lastNps });
   }
 
   /** Parst eine `info ... multipv k ... score cp|mate V ... pv m1 m2`-Zeile. */

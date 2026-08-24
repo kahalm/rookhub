@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, Inject, LOCALE_ID } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
@@ -19,6 +19,7 @@ import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
 import { ExternalEngineService, ExternalEngineInfo } from './external-engine.service';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { AuthService } from '../../core/auth.service';
@@ -43,7 +44,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent
+    PositionRepertoiresComponent, HelpHintComponent
   ],
   template: `
     <div class="analysis-page">
@@ -112,6 +113,9 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                       @for (e of externalEnginesList; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
                     </mat-select>
                   </mat-form-field>
+                }
+                @if (engineOn) {
+                  <app-help-hint icon="info_outline" [text]="speedHint" />
                 }
               </div>
               @if (remoteFallback && selectedEngineId !== 'wasm') {
@@ -274,6 +278,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   externalEnginesList: ExternalEngineInfo[] = [];
   selectedEngineId = 'wasm';
   remoteFallback = false;
+  /** Suchleistung der laufenden Analyse (0 = noch kein Messwert). */
+  nodes = 0;
+  nps = 0;
 
   private sub?: Subscription;
   private errorSub?: Subscription;
@@ -282,7 +289,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
-              private cdr: ChangeDetectorRef) {
+              private cdr: ChangeDetectorRef, private translate: TranslateService,
+              @Inject(LOCALE_ID) private locale: string) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -309,7 +317,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
-    this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines));
+    this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines, s.nodes, s.nps));
     this.errorSub = this.engine.engineFatalError$.subscribe(e => { this.engineCrashed = e !== null; this.cdr.markForCheck(); });
     this.fallbackSub = this.engine.remoteFallback$.subscribe(f => { this.remoteFallback = f; this.cdr.markForCheck(); });
 
@@ -471,8 +479,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   // ---- Engine updates ----
-  private onEngineUpdate(fen: string, depth: number, lines: AnalysisLine[]): void {
+  private onEngineUpdate(fen: string, depth: number, lines: AnalysisLine[], nodes = 0, nps = 0): void {
     if (!this.engineOn || fen !== this.currentFen) return;
+    this.nodes = nodes;
+    this.nps = nps;
     // Angular 22 refresht eine unmarkierte View nach async/HTTP NICHT mehr von selbst (siehe
     // CLAUDE.md-Konvention). Beim WASM-Pfad kaschieren Worker-/Event-Ticks das noch; bei der
     // externen Engine kommen die Zeilen NUR aus einem HTTP-Stream — ohne diese Marke bliebe die
@@ -489,6 +499,35 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: ARROW_BRUSHES[i] || 'blue' } as DrawShape : null;
     }).filter((s): s is DrawShape => !!s);
     this.updateEval(lines[0] ?? null);
+  }
+
+  /** Text hinter dem (i): Rechengeschwindigkeit der laufenden Analyse.
+   *  ACHTUNG: template-gebundener Getter — er läuft MITTEN in der Change-Detection und darf
+   *  deshalb unter keinen Umständen werfen (ein Wurf hier ließe die halbe Karte unrendert,
+   *  siehe CLAUDE.md-Konvention). Daher `toLocaleString` (Browser-Intl, fällt bei unbekannter
+   *  Sprache selbst zurück) statt Angulars formatNumber, das bei nicht registrierten
+   *  Locale-Daten NG0701 wirft — und zusätzlich ein try/catch. */
+  get speedHint(): string {
+    if (this.nps <= 0) return this.translate.instant('analysis.speedWaiting');
+    return this.translate.instant('analysis.speedHint', {
+      speed: this.formatNps(this.nps),
+      nodes: this.formatCount(this.nodes),
+    });
+  }
+
+  /** 8234567 → „8,2 MN/s" (Tausender/Millionen wie in Schach-Oberflächen üblich). */
+  private formatNps(nps: number): string {
+    if (nps >= 1000000) return this.formatCount(nps / 1000000, 1) + ' MN/s';
+    if (nps >= 1000) return this.formatCount(nps / 1000) + ' kN/s';
+    return this.formatCount(nps) + ' N/s';
+  }
+
+  private formatCount(value: number, digits = 0): string {
+    try {
+      return value.toLocaleString(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    } catch {
+      return value.toFixed(digits);
+    }
   }
 
   private updateEval(best: AnalysisLine | null): void {

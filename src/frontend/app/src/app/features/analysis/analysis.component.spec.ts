@@ -8,6 +8,7 @@ import { AnalysisComponent } from './analysis.component';
 function makeComponent(params: Record<string, string | null>, opts: {
   loggedIn?: boolean;
   engines?: { id: string; name: string; maxThreads: number; maxHash: number }[];
+  locale?: string;
 } = {}): any {
   const engine: any = {
     analysis$: new Subject(),
@@ -34,7 +35,8 @@ function makeComponent(params: Record<string, string | null>, opts: {
     externalEngines.listEngines = () => { setTimeout(() => { s.next({ hasCredentials: true, tokenInvalid: false, engines: opts.engines }); s.complete(); }); return s.asObservable(); };
   }
   const cdr: any = { markForCheck: jasmine.createSpy('markForCheck'), detectChanges: () => {} };
-  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr);
+  const translate: any = { instant: (k: string, p?: any) => p ? `${k}:${JSON.stringify(p)}` : k };
+  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de');
   c.__cdr = cdr;
   c.__engine = engine;
   c.__externalEngines = externalEngines;
@@ -232,6 +234,51 @@ describe('AnalysisComponent change-detection marks', () => {
 
     expect(c.remoteFallback).toBeTrue();
     expect(c.__cdr.markForCheck).toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+});
+
+// Das (i) neben der Engine-Auswahl: nennt die Rechengeschwindigkeit der laufenden Analyse.
+describe('AnalysisComponent speed hint', () => {
+  it('says „measuring" until the engine reported a speed', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    expect(c.speedHint).toBe('analysis.speedWaiting');
+    c.ngOnDestroy();
+  });
+
+  it('formats millions as MN/s and thousands as kN/s', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.engineOn = true;
+
+    (c as any).onEngineUpdate(c.currentFen, 20, [], 8234567, 3450000);
+    expect(c.speedHint).toContain('MN/s');
+    expect(c.speedHint).toContain('3,5');            // de-DE: Komma als Dezimaltrenner
+
+    (c as any).onEngineUpdate(c.currentFen, 20, [], 90000, 45000);
+    expect(c.speedHint).toContain('kN/s');
+    c.ngOnDestroy();
+  });
+
+  it('never throws, even with an unusable locale (getter runs during change detection)', () => {
+    const c = makeComponent({ fen: START }, { locale: 'nicht-echt' });
+    c.ngOnInit();
+    c.engineOn = true;
+    (c as any).onEngineUpdate(c.currentFen, 20, [], 1000, 2000);
+    expect(() => c.speedHint).not.toThrow();
+    c.ngOnDestroy();
+  });
+
+  it('reverts to „measuring" after switching position (no stale speed)', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.engineOn = true;
+    (c as any).onEngineUpdate(c.currentFen, 20, [], 5000, 12345);
+    expect(c.speedHint).not.toBe('analysis.speedWaiting');
+
+    (c as any).onEngineUpdate(c.currentFen, 0, [], 0, 0);
+    expect(c.speedHint).toBe('analysis.speedWaiting');
     c.ngOnDestroy();
   });
 });

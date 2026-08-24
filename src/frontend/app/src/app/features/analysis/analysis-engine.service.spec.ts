@@ -71,7 +71,7 @@ describe('AnalysisEngineService.parseInfo', () => {
 describe('AnalysisEngineService crash recovery', () => {
   it('recovers from a worker crash by re-analyzing the current position', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
 
     await eng.analyze(FEN);
@@ -91,7 +91,7 @@ describe('AnalysisEngineService crash recovery', () => {
 
   it('gives up after repeated crashes without progress (no infinite loop)', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
 
     await eng.analyze(FEN);
@@ -102,7 +102,7 @@ describe('AnalysisEngineService crash recovery', () => {
 
   it('gives up immediately on a repeat crash of the SAME position (no WASM re-instantiation thrash)', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
 
     await eng.analyze(FEN);            // Worker 1
@@ -201,7 +201,7 @@ describe('AnalysisEngineService external engine (remote)', () => {
 
   it('analyses via the remote transport instead of the WASM worker', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
     const subjects: Subject<any>[] = [];
     let sentWork: any = null;
@@ -228,7 +228,7 @@ describe('AnalysisEngineService external engine (remote)', () => {
 
   it('falls back to WASM when the remote analysis fails BEFORE any data', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
     let fallback = false;
     eng.remoteFallback$.subscribe(f => fallback = f);
@@ -249,7 +249,7 @@ describe('AnalysisEngineService external engine (remote)', () => {
 
   it('keeps the results and does NOT fall back when the stream dies mid-search', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
     let fallback = false;
     eng.remoteFallback$.subscribe(f => fallback = f);
@@ -269,7 +269,7 @@ describe('AnalysisEngineService external engine (remote)', () => {
 
   it('drops stale lines after switching position (generation guard)', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
     const subjects: Subject<any>[] = [];
     const FEN2 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
@@ -363,7 +363,7 @@ describe('AnalysisEngineService remote/local isolation', () => {
 
   it('ignores stale WASM info lines once the external engine is analysing', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
 
     await eng.analyze(FEN);
@@ -386,7 +386,7 @@ describe('AnalysisEngineService remote/local isolation', () => {
 
   it('drops WASM info lines of a position the user already left', async () => {
     const eng = new TestEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
     const FEN2 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
 
@@ -409,7 +409,7 @@ describe('AnalysisEngineService remote/local isolation', () => {
       }
     }
     const eng = new SlowInitEngine();
-    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
 
     const pending = eng.analyze(FEN);             // lokal gestartet, hängt im init
@@ -440,5 +440,94 @@ describe('AnalysisEngineService remote/local isolation', () => {
 
     await eng.analyze(FEN);                       // muss wieder lokal laufen
     expect(eng.workers.length).toBe(1);
+  });
+});
+
+// Suchleistung (das (i) im Analysebrett): beide Engine-Pfade müssen nodes/nps liefern,
+// und ein Stellungswechsel darf die Werte der Vorstellung nicht weitertragen.
+describe('AnalysisEngineService search speed (nodes/nps)', () => {
+  const ENGINE = { id: 'eei_a', name: 'SF', maxThreads: 2, maxHash: 64 };
+
+  it('reports nodes and nps from local UCI info lines', async () => {
+    const eng = new TestEngine();
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+
+    await eng.analyze(FEN);
+    eng.last.emit('info depth 14 seldepth 20 multipv 1 score cp 25 nodes 1234567 nps 987654 pv e2e4');
+
+    expect(state.nodes).toBe(1234567);
+    expect(state.nps).toBe(987654);
+  });
+
+  it('keeps the last speed when a later info line omits it', async () => {
+    const eng = new TestEngine();
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+
+    await eng.analyze(FEN);
+    eng.last.emit('info depth 10 multipv 1 score cp 20 nodes 500 nps 5000 pv e2e4');
+    eng.last.emit('info depth 12 multipv 1 score cp 22 pv d2d4');   // ohne nodes/nps
+
+    expect(state.nps).toBe(5000);
+  });
+
+  it('computes nps from nodes and elapsed time for the remote engine', async () => {
+    const eng = new TestEngine();
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+    const s$ = new Subject<any>();
+
+    eng.setRemoteEngine(ENGINE, () => s$.asObservable());
+    await eng.analyze(FEN);
+    s$.next({ time: 500, depth: 18, nodes: 2000000, pvs: [{ depth: 18, cp: 30, moves: ['e2e4'] }] });
+
+    expect(state.nodes).toBe(2000000);
+    expect(state.nps).toBe(4000000);          // 2 Mio Knoten in 0,5 s
+  });
+
+  it('does not divide by zero when the first remote line reports time 0', async () => {
+    const eng = new TestEngine();
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+    const s$ = new Subject<any>();
+
+    eng.setRemoteEngine(ENGINE, () => s$.asObservable());
+    await eng.analyze(FEN);
+    s$.next({ time: 0, depth: 1, nodes: 160, pvs: [{ depth: 1, cp: 17, moves: ['e2e4'] }] });
+
+    expect(state.nodes).toBe(160);
+    expect(state.nps).toBe(0);                // noch nicht messbar, aber kein Infinity/NaN
+    expect(Number.isFinite(state.nps)).toBeTrue();
+  });
+
+  it('resets the speed on a new search (no stale value from the previous position)', async () => {
+    const eng = new TestEngine();
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+    const FEN2 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+
+    await eng.analyze(FEN);
+    eng.last.emit('info depth 10 multipv 1 score cp 20 nodes 900 nps 9000 pv e2e4');
+    expect(state.nps).toBe(9000);
+
+    await eng.analyze(FEN2);
+    expect(state.nodes).toBe(0);
+    expect(state.nps).toBe(0);
+  });
+
+  it('switches to the browser engine when the remote stream completes without any data', async () => {
+    const eng = new TestEngine();
+    let fallback = false;
+    eng.remoteFallback$.subscribe(f => fallback = f);
+    const s$ = new Subject<any>();
+
+    eng.setRemoteEngine(ENGINE, () => s$.asObservable());
+    await eng.analyze(FEN);
+    s$.complete();                            // sauber beendet, aber keine einzige Zeile
+    await tick();
+
+    expect(fallback).toBeTrue();
+    expect(eng.workers.length).toBe(1);       // lokale Engine übernimmt sofort
   });
 });

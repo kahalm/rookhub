@@ -188,6 +188,13 @@ public class EngineController : BaseApiController
             {
                 upstream = await _lichess.AnalyseAsync(engine, work, streamCt);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Der Browser hat abgebrochen, bevor der Broker antwortete — das ist der NORMALE
+                // Weg bei jedem Stellungswechsel und kein Fehler. Ohne diesen Zweig landete er im
+                // catch darunter und erschien als 502 „Broker nicht erreichbar" im Log.
+                return new EmptyResult();
+            }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 _logger.LogWarning(ex, "External-Engine-Analyse nicht erreichbar (Engine {EngineId})", id);

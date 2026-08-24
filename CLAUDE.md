@@ -535,7 +535,14 @@ Scheitert die Remote-Suche VOR der ersten Datenzeile (Provider offline; auch: ga
 (`analysis.remoteFallback`); ein Abriss MITTEN im Stream gilt dagegen als beendete Suche (Ergebnis
 bleibt stehen). Token-Verwaltung: Profil-Karte `features/profile/engine-card.component.ts`.
 **nginx**: eigene `location /api/engine/` mit `proxy_buffering off` + langen Timeouts — sonst sammelt
-der Proxy die info-Zeilen bzw. kappt eine tiefe Suche nach 60 s.
+der Proxy die info-Zeilen bzw. kappt eine tiefe Suche nach 60 s. **Das genügt nicht allein**: nginx
+VERBRAUCHT den `X-Accel-Buffering: no`-Header der API und reicht ihn NICHT weiter, ein davor
+stehender Reverse-Proxy (hier Nginx Proxy Manager) sieht ihn also nie und puffert weiter. Deshalb
+setzt der Frontend-nginx den Header für `/api/engine/` per map + server-weitem `add_header` SELBST.
+**In Prod aufgetreten (0.373.0)**: kurze Suchen kamen am Stück an, lange (Tiefe 22 × 3 Linien > 12 s)
+gar nicht — der Browser sah null Bytes, brach ab und meldete „Externe Engine nicht erreichbar",
+während Provider und Broker fehlerfrei rechneten. Im NPM-Zugriffslog erkennbar an `499` mit
+`Length 0` bei langen und `200` mit ~15 KB bei kurzen Suchen.
 
 **Gegenstelle beim Nutzer**: `engine-provider/` ist ein fertiges Docker-Setup für den Rechner des
 Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Provider — beim Bauen

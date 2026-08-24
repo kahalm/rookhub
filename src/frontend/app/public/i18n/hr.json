@@ -2301,6 +2301,8 @@
     "engineCrashedReload": "Ponovno učitaj stranicu",
     "engineProvider": "Motor",
     "engineBrowser": "Preglednik",
+    "speedHint": "Brzina: {{speed}}\n\nDosad pretraženih pozicija: {{nodes}}\n\nViše je brže — snažan vanjski motor postiže nekoliko milijuna u sekundi, motor u pregledniku znatno manje.",
+    "speedWaiting": "Brzina: mjeri se …",
     "remoteFallback": "Vanjski motor nije dostupan — računa motor u pregledniku.",
     "setup": {
       "button": "Postavi poziciju",

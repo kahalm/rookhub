@@ -21,7 +21,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             [matTooltip]="text" matTooltipClass="hh-tooltip"
             (click)="tt.toggle()"
             [attr.aria-label]="text">
-      <mat-icon inline>help_outline</mat-icon>
+      <mat-icon inline>{{ icon }}</mat-icon>
     </button>
   `,
   styles: [`
@@ -46,4 +46,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 export class HelpHintComponent {
   /** Bereits übersetzter Hilfetext (mehrere Sätze mit \n\n trennen). */
   @Input() text = '';
+  /** Material-Symbolname; Standard ist das Fragezeichen. */
+  @Input() icon = 'help_outline';
 }
