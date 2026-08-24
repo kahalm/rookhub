@@ -3,6 +3,23 @@
 # "Robuster Dauerbetrieb (Auto-Restart + Aufraeumen)" fuer den Hintergrund.
 #
 # Vor dem ersten Start anpassen:
+#
+# Macht DIESEN Prozess immun gegen Strg+C-artige Konsolen-Signale. Ohne das kann der Wrapper mit
+# STATUS_CONTROL_C_EXIT (0xC000013A) sterben, obwohl niemand Strg+C gedrueckt hat - ein
+# GenerateConsoleCtrlEvent-Broadcast erreicht offenbar auch versteckte (-WindowStyle Hidden)
+# Konsolen, wenn mehrere solche Prozesse dieselbe Konsolensitzung teilen. Per AttachConsole +
+# GenerateConsoleCtrlEvent reproduzierbar, per SetConsoleCtrlHandler(NULL, true) zuverlaessig
+# behoben - das ist die dokumentierte Win32-Standardtechnik dafuer.
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class CtrlCImmune {
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetConsoleCtrlHandler(IntPtr HandlerRoutine, bool Add);
+    public static void Ignore() { SetConsoleCtrlHandler(IntPtr.Zero, true); }
+}
+"@ -ErrorAction SilentlyContinue
+try { [CtrlCImmune]::Ignore() } catch {}
 
 $pythonExe = "python.exe"                                       # ggf. Vollpfad, falls nicht auf PATH
 $script    = "C:\stockfish\example-provider.py"

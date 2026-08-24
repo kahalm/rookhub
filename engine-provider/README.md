@@ -223,6 +223,15 @@ Register-ScheduledTask -TaskName "RookHub Engine Provider" -Action $action -Trig
 `-ExecutionTimeLimit ([TimeSpan]::Zero)` ist Pflicht — Task Scheduler killt Aufgaben sonst
 standardmäßig nach 72 Stunden, egal wie die Aufgabe selbst konfiguriert ist.
 
+> **Auch ein „Bei Anmeldung"-Task kann trotz offener Sitzung sterben** — beobachtet mit
+> `LastTaskResult 0xC000013A` (`STATUS_CONTROL_C_EXIT`), obwohl niemand Strg+C gedrückt hat.
+> Reproduzierbar per `AttachConsole` + `GenerateConsoleCtrlEvent`: ein solcher Broadcast erreicht
+> offenbar auch versteckte (`-WindowStyle Hidden`) Konsolen, wenn mehrere Prozesse dieselbe
+> Konsolensitzung teilen. `run_provider.ps1` registriert deshalb bereits am Anfang einen
+> `SetConsoleCtrlHandler(NULL, true)` — die dokumentierte Win32-Standardtechnik, um genau das zu
+> ignorieren. Ohne diesen Fix bleibt der Provider bis zur nächsten Anmeldung tot, mit Fix
+> übernimmt der `while`-Loop nach spätestens 10 Sekunden von selbst wieder.
+
 > **Fällt der Task-Prozess extern weg** (z. B. `Stop-ScheduledTask`, Absturz), **überlebt der
 > bereits gestartete Python-Prozess als Waise** — `Start-Process` koppelt die Lebensdauer des
 > Kindes nicht an den Elternprozess. Zum sauberen Stoppen daher immer beides:
