@@ -3,13 +3,41 @@
 # er baut die Verbindung von sich aus nach außen auf (Long-Poll). Siehe README.md.
 FROM python:3.13-slim
 
-# Stockfish aus Debian (trixie = Stockfish 17, inkl. NNUE-Netz): ein portabler Build, der
-# auch auf älteren CPUs läuft. Wer eine auf die eigene CPU optimierte Binärdatei (oder das
-# UCI-Tunnel-Binary eines Cloud-Anbieters) nutzen will, hängt sie ein und setzt ENGINE_PATH.
-# ca-certificates wird zur LAUFZEIT gebraucht (HTTPS zu lichess.org), curl nur beim Bauen.
+# ca-certificates wird zur LAUFZEIT gebraucht (HTTPS zu lichess.org), curl beim Bauen.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends stockfish ca-certificates curl \
+ && apt-get install -y --no-install-recommends ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
+
+# Stockfish 18 als OFFIZIELLE Binärdatei statt aus Debian. Grund ist nicht nur die Version:
+# das Debian-Paket ist ein generischer Build ohne AVX2-Nutzung. Auf diesem Server gemessen
+# (bench 128 8 16): Debian-Stockfish 17.1 = 4,98 Mio Knoten/s, offizielles 18-avx2 = 8,39 Mio
+# — also rund zwei Drittel mehr Rechenleistung bei gleicher CPU.
+#
+# Variante `avx2` als Vorgabe (CPUs ab ~2013: Intel Haswell, AMD Excavator/Zen). Ebenfalls
+# gemessen: `bmi2` liegt auf Zen 3 nur 0,03 % darüber — der schmalere Kompatibilitätsbereich
+# lohnt dafür nicht. Andere Variante (avx512, sse41-popcnt für alte CPUs, …)? SF_VARIANT UND
+# SF_SHA256 zusammen setzen, sonst schlägt die Prüfsummen-Kontrolle fehl; SF_SHA256="" schaltet
+# sie ab (dann bekommt die Engine ungeprüft die Rechenzeit dieser Maschine).
+ARG SF_VERSION=sf_18
+ARG SF_VARIANT=x86-64-avx2
+ARG SF_SHA256=536c0c2c0cf06450df0bfb5e876ef0d3119950703a8f143627f990c7b5417964
+RUN set -eux; \
+    curl -fsSL -o /tmp/sf.tar \
+      "https://github.com/official-stockfish/Stockfish/releases/download/${SF_VERSION}/stockfish-ubuntu-${SF_VARIANT}.tar"; \
+    if [ -n "${SF_SHA256}" ]; then \
+      echo "${SF_SHA256}  /tmp/sf.tar" | sha256sum -c -; \
+    else \
+      echo "WARNUNG: SF_SHA256 leer — Stockfish-Download wird NICHT geprueft." >&2; \
+    fi; \
+    tar xf /tmp/sf.tar -C /tmp; \
+    mkdir -p /opt/stockfish; \
+    mv "/tmp/stockfish/stockfish-ubuntu-${SF_VARIANT}" /opt/stockfish/stockfish; \
+    chmod +x /opt/stockfish/stockfish; \
+    cp /tmp/stockfish/Copying.txt /tmp/stockfish/AUTHORS /opt/stockfish/; \
+    rm -rf /tmp/sf.tar /tmp/stockfish; \
+    /opt/stockfish/stockfish --help >/dev/null 2>&1 || true
+# Alles in EINEM RUN: das 109-MB-Archiv soll keine eigene Image-Schicht hinterlassen.
+# Copying.txt + AUTHORS bleiben liegen — Stockfish ist GPL-3.0, der Lizenztext gehört dazu.
 
 RUN pip install --no-cache-dir "requests==2.32.5"
 

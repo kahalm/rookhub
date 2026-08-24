@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.374.2", date: "2026-08-24", changes: [
+    { en: "The engine-provider container now ships Stockfish 18 as the official binary instead of the Debian package. That is not just a version bump: the Debian build is generic and does not use AVX2, so on the same CPU it computed about a third slower. Measured on the test server (bench 128 8 16): 4.98 vs 8.39 million nodes per second. The download is pinned and checksum-verified like the provider script, and the variant can be changed for older CPUs. The browser engine was already on Stockfish 18.", de: "Der Engine-Provider-Container bringt jetzt Stockfish 18 als offizielle Binärdatei mit statt des Debian-Pakets. Das ist nicht nur ein Versionssprung: Der Debian-Build ist generisch und nutzt kein AVX2, rechnete auf derselben CPU also rund ein Drittel langsamer. Auf dem Testserver gemessen (bench 128 8 16): 4,98 gegenüber 8,39 Millionen Knoten pro Sekunde. Der Download ist wie das Provider-Skript gepinnt und per Prüfsumme abgesichert, und die Variante lässt sich für ältere CPUs umstellen. Die Browser-Engine lief bereits auf Stockfish 18." },
+  ] },
   { version: "0.374.1", date: "2026-08-24", changes: [
     { en: "Documentation: the engine-provider guide now covers Windows — Python, which Stockfish build to pick, the start command and an autostart task. It also warns about the trap that costs you an engine: two providers under the same name do not add up, the second one takes over the first one\u2019s registration.", de: "Dokumentation: Die Anleitung zum Engine-Provider deckt jetzt auch Windows ab — Python, die passende Stockfish-Variante, der Startbefehl und ein Autostart-Eintrag. Dazu die Falle, die eine Engine kostet: Zwei Provider unter demselben Namen addieren sich nicht, der zweite übernimmt die Registrierung des ersten." },
   ] },

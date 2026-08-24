@@ -15,7 +15,7 @@ if [ -z "${LICHESS_API_TOKEN:-}" ]; then
 fi
 export LICHESS_API_TOKEN
 
-ENGINE_PATH="${ENGINE_PATH:-/usr/games/stockfish}"
+ENGINE_PATH="${ENGINE_PATH:-/opt/stockfish/stockfish}"
 # `-f` ZUSÄTZLICH zu `-x`: Verzeichnisse tragen das Ausführbar-Bit, ein vergessener Dateiname
 # (ENGINE_PATH=/engine statt /engine/stockfish — der wahrscheinlichste Vertipper beim Einhängen
 # einer eigenen Engine) käme sonst an dieser Prüfung vorbei und stürbe erst später im Provider,

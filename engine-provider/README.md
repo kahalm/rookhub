@@ -63,7 +63,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
 | `MAX_HASH` | Hash-Tabelle in MiB (leer = 512) |
 | `KEEP_ALIVE` | Sekunden, die eine unbenutzte Engine weiterläuft (leer = 300) |
-| `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 17 |
+| `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
@@ -80,9 +80,14 @@ Limit nicht, deshalb beide Werte zueinander passend setzen.
 
 ## Eigene Engine statt des mitgelieferten Stockfish
 
-Der Container bringt Stockfish 17 aus Debian mit — ein portabler Build, der auf jeder CPU
-läuft. Wer einen auf die eigene CPU optimierten Build (oder das UCI-Tunnel-Binary eines
-Cloud-Anbieters wie Chessify) nutzen will, hängt ihn ein:
+Der Container bringt **Stockfish 18** mit — die offizielle Binärdatei (Variante `avx2`, also
+CPUs ab ~2013). Bewusst nicht das Debian-Paket: das ist ein generischer Build ohne AVX2-Nutzung
+und rechnet auf derselben CPU rund ein Drittel langsamer (auf dem Testserver gemessen: 4,98 vs.
+8,39 Mio Knoten/s). Läuft dein Rechner auf einer älteren CPU, im `Dockerfile`
+`SF_VARIANT=x86-64-sse41-popcnt` samt passender `SF_SHA256` setzen.
+
+Wer einen anderen Build (oder das UCI-Tunnel-Binary eines Cloud-Anbieters wie Chessify)
+nutzen will, hängt ihn ein:
 
 ```yaml
 # compose.yml
