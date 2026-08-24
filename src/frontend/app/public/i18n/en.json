@@ -2303,6 +2303,9 @@
     "engineBrowser": "Browser",
     "speedHint": "Speed: {{speed}}\n\nPositions searched so far: {{nodes}}\n\nHigher is faster — a strong external engine reaches several million per second, the browser engine far less.",
     "speedWaiting": "Speed: measuring…",
+    "mateWhiteWins": "Checkmate — White wins",
+    "mateBlackWins": "Checkmate — Black wins",
+    "stalemate": "Stalemate — draw",
     "remoteFallback": "External engine unavailable — using the browser engine.",
     "setup": {
       "button": "Set up position",

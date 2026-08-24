@@ -33,7 +33,12 @@ const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = 'rookhub_analysis_depth';
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
 const PROVIDER_KEY = 'rookhub_analysis_engine_provider';
-const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30];
+// Bis 50: für eine externe Engine (mehrere Millionen Knoten/s) sind Tiefen jenseits von 30
+// gut erreichbar. Mit der Browser-Engine dauern sie sehr lange — sie bleiben trotzdem
+// wählbar, statt Optionen je nach Engine verschwinden zu lassen.
+// ACHTUNG: Jeder Wert hier muss den Clamp in AnalysisEngineService.setDepth überleben,
+// sonst wählt man 50 und bekommt stillschweigend weniger (Test hält das fest).
+export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
 const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
 
 @Component({
@@ -114,14 +119,16 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                     </mat-select>
                   </mat-form-field>
                 }
-                @if (engineOn) {
+                @if (engineOn && !terminal) {
                   <app-help-hint icon="info_outline" [text]="speedHint" />
                 }
               </div>
               @if (remoteFallback && selectedEngineId !== 'wasm') {
                 <p class="remote-fallback"><mat-icon>cloud_off</mat-icon> {{ 'analysis.remoteFallback' | translate }}</p>
               }
-              @if (engineOn) {
+              @if (terminal) {
+                <p class="terminal-state"><mat-icon>flag</mat-icon> {{ terminalText }}</p>
+              } @else if (engineOn) {
                 @if (displayLines.length === 0) {
                   <p class="muted">{{ 'analysis.calculating' | translate }}</p>
                 } @else {
@@ -214,6 +221,8 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .num-field { width: 104px; }
     .engine-field { width: 190px; }
     .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
+    .terminal-state { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 8px 0 0; }
+    .terminal-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .remote-fallback mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .back-btn { width: 100%; margin-bottom: 8px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
@@ -281,6 +290,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Suchleistung der laufenden Analyse (0 = noch kein Messwert). */
   nodes = 0;
   nps = 0;
+  /** Partie-Ende in der aktuellen Stellung (keine legalen Züge) — dort rechnet keine Engine. */
+  terminal: 'mate-white-wins' | 'mate-black-wins' | 'stalemate' | null = null;
 
   private sub?: Subscription;
   private errorSub?: Subscription;
@@ -462,10 +473,37 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.shapes = [];
     this.displayLines = [];
     this.depth = 0;
+    this.nodes = 0;
+    this.nps = 0;
     // Terminale Stellung (Matt/Patt → keine legalen Züge): der Engine kein `go` schicken. Ein
     // Suchlauf ohne legale Züge ist sinnlos und ein vermeidbarer Sonderfall im WASM-Kern.
+    // Das Ergebnis MUSS dann aber benannt werden: sonst stünde dort dauerhaft „Berechne…",
+    // obwohl nichts mehr gerechnet wird und auch nichts mehr zu rechnen ist.
+    this.terminal = this.dests.size > 0 ? null : this.terminalStateOf(c);
     if (this.engineOn && this.dests.size > 0) this.engine.analyze(fen);
     else { this.engine.stop(); this.updateEval(null); }
+  }
+
+  /** Matt oder Patt? Nur aufrufen, wenn es keine legalen Züge gibt. Wirft nicht: bei einer
+   *  illegalen Stellung (Buch-Diagramme ohne König) liefert chess.js keinen Zustand — dann
+   *  lieber gar keine Aussage als eine falsche. */
+  private terminalStateOf(c: Chess): 'mate-white-wins' | 'mate-black-wins' | 'stalemate' | null {
+    try {
+      if (c.isStalemate()) return 'stalemate';
+      // Matt heißt: die Seite AM ZUG hat verloren.
+      if (c.isCheckmate()) return c.turn() === 'w' ? 'mate-black-wins' : 'mate-white-wins';
+    } catch { /* illegale Stellung */ }
+    return null;
+  }
+
+  /** Übersetzter Satz für das Partie-Ende (leer, wenn die Stellung nicht terminal ist). */
+  get terminalText(): string {
+    switch (this.terminal) {
+      case 'mate-white-wins': return this.translate.instant('analysis.mateWhiteWins');
+      case 'mate-black-wins': return this.translate.instant('analysis.mateBlackWins');
+      case 'stalemate': return this.translate.instant('analysis.stalemate');
+      default: return '';
+    }
   }
 
   private computeDests(c: Chess): Map<Key, Key[]> {
@@ -531,7 +569,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   private updateEval(best: AnalysisLine | null): void {
-    if (!best) { this.evalText = '0.00'; this.whiteHeight = 50; return; }
+    if (!best) {
+      // Partie-Ende: die Leiste zeigt das ERGEBNIS, nicht eine ausgeglichene Stellung.
+      switch (this.terminal) {
+        case 'mate-white-wins': this.evalText = '1-0'; this.whiteHeight = 100; return;
+        case 'mate-black-wins': this.evalText = '0-1'; this.whiteHeight = 0; return;
+        case 'stalemate': this.evalText = '½-½'; this.whiteHeight = 50; return;
+      }
+      this.evalText = '0.00'; this.whiteHeight = 50; return;
+    }
     this.evalText = best.evalText;
     if (best.scoreType === 'mate') {
       this.whiteHeight = best.score > 0 ? 100 : 0;

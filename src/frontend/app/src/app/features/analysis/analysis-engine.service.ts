@@ -407,7 +407,10 @@ export class AnalysisEngineService implements OnDestroy {
   }
 
   setDepth(d: number): void {
-    this.depthCap = Math.max(6, Math.min(40, Math.round(d)));
+    // Obergrenze 50 — muss mindestens so hoch sein wie der größte Wert in DEPTH_OPTIONS
+    // (analysis.component.ts), sonst würde eine angebotene Tiefe still gekappt. Der Server
+    // lässt bis 60 zu (EngineController.MaxDepth).
+    this.depthCap = Math.max(6, Math.min(50, Math.round(d)));
   }
 
   /** Worker-Nachricht parsen (info / bestmove). Generation-geschützt gegen Altzeilen. */

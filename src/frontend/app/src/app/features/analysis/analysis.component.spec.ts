@@ -1,5 +1,6 @@
 import { Subject } from 'rxjs';
-import { AnalysisComponent } from './analysis.component';
+import { AnalysisComponent, DEPTH_OPTIONS } from './analysis.component';
+import { AnalysisEngineService } from './analysis-engine.service';
 
 /**
  * Fokussierter Test des Vorladens aus Query-Params (genutzt vom „Analysieren"-Button
@@ -280,5 +281,72 @@ describe('AnalysisComponent speed hint', () => {
     (c as any).onEngineUpdate(c.currentFen, 0, [], 0, 0);
     expect(c.speedHint).toBe('analysis.speedWaiting');
     c.ngOnDestroy();
+  });
+});
+
+// Gemeldet aus Prod: die Analyse einer Mattstellung zeigte dauerhaft „Berechne…", obwohl bei
+// Matt nichts zu rechnen ist (der Engine wird bewusst kein `go` geschickt). Statt zu schweigen
+// muss die Karte das ERGEBNIS benennen. Stellung + Züge stammen aus der Meldung.
+describe('AnalysisComponent terminal positions', () => {
+  const MATE_FEN = '8/5Qpk/3Bp3/4P2p/8/7P/5PP1/r2r1nK1 b - - 0 1';
+  const MATE_MOVES = 'f1g3,g1h2,h5h4,f2g3,d1h1';   // ...Rh1# → Weiß ist matt
+
+  it('names the result instead of pretending to calculate (mate at the end of the line)', () => {
+    const c = makeComponent({ fen: MATE_FEN, moves: MATE_MOVES });
+    c.ngOnInit();
+
+    expect(c.line.map((n: any) => n.san).join(' ')).toBe('Ng3+ Kh2 h4 fxg3 Rh1#');
+    expect(c.terminal).toBe('mate-black-wins');
+    expect(c.terminalText).toBe('analysis.mateBlackWins');
+    expect(c.evalText).toBe('0-1');
+    expect(c.whiteHeight).toBe(0);
+    // Kein `go` an die Engine — es gibt keinen legalen Zug.
+    expect((c as any).engine.analyze).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('clears the terminal state when stepping back into a playable position', () => {
+    const c = makeComponent({ fen: MATE_FEN, moves: MATE_MOVES });
+    c.ngOnInit();
+    expect(c.terminal).toBe('mate-black-wins');
+
+    c.prev();                       // einen Halbzug zurück → wieder spielbar
+    expect(c.terminal).toBeNull();
+    expect(c.terminalText).toBe('');
+    expect((c as any).engine.analyze).toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('recognises stalemate as a draw', () => {
+    const c = makeComponent({ fen: '7k/5Q2/6K1/8/8/8/8/8 b - - 0 1' });   // Schwarz patt
+    c.ngOnInit();
+    expect(c.terminal).toBe('stalemate');
+    expect(c.evalText).toBe('½-½');
+    expect(c.whiteHeight).toBe(50);
+    c.ngOnDestroy();
+  });
+
+  it('says nothing about a position that is merely check (engine keeps running)', () => {
+    const c = makeComponent({ fen: MATE_FEN, moves: 'f1g3' });   // Ng3+ ist Schach, kein Matt
+    c.ngOnInit();
+    expect(c.terminal).toBeNull();
+    expect((c as any).engine.analyze).toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+});
+
+// Zwei Grenzen, eine Kette: das Auswahlfeld bietet Tiefen an, der Service klemmt sie. Weichen
+// sie auseinander, wählt man 50 und bekommt stillschweigend 40 — genau so war es vor 0.374.0.
+describe('AnalysisComponent depth options', () => {
+  it('offers every depth up to 50', () => {
+    expect(Math.max(...DEPTH_OPTIONS)).toBe(50);
+  });
+
+  it('every offered depth survives the engine clamp unchanged', () => {
+    const engine = new AnalysisEngineService();     // echter Service, kein Worker nötig
+    for (const d of DEPTH_OPTIONS) {
+      engine.setDepth(d);
+      expect(engine.depthLimit).withContext(`Tiefe ${d} wurde gekappt`).toBe(d);
+    }
   });
 });
