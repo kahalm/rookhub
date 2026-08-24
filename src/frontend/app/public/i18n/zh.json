@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "更多操作",
     "save": "保存",
     "cancel": "取消",
     "delete": "删除",

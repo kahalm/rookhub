@@ -67,6 +67,7 @@
     }
   },
   "common": {
+    "moreActions": "Više radnji",
     "save": "Spremi",
     "cancel": "Odustani",
     "delete": "Izbriši",

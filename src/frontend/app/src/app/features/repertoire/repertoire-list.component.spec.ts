@@ -1,5 +1,17 @@
 import { of, throwError } from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatMenuTrigger } from '@angular/material/menu';
 import { RepertoireListComponent } from './repertoire-list.component';
+import { RepertoireService } from '../../core/repertoire.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { RepertoireTrainingService } from './repertoire-training.service';
 import { saveRepertoireOffline, hasRepertoireOffline } from './repertoire-offline.util';
 import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
 
@@ -102,5 +114,77 @@ describe('RepertoireListComponent offline', () => {
     comp.loadRepertoires();
     expect(comp.offlineList).toBeFalse();
     expect(comp.repertoires.map(r => r.id)).toEqual([1]);
+  });
+});
+
+/**
+ * Karten-Aktionen sind gebündelt (UI-Dichte-Regel): sichtbar bleiben nur „Öffnen" +
+ * Offline-Toggle; PGN-Download, Umwandeln, Teilen, Bearbeiten, Löschen liegen im ⋮-Menü —
+ * beim geteilten Repertoire nur der Download (keine Besitzer-Aktionen).
+ */
+describe('RepertoireListComponent Karten-Aktionen (⋮-Menü)', () => {
+  const rep = (id: number, extra: object = {}): any =>
+    ({ id, name: `Rep ${id}`, description: null, kind: 0, fileCount: 1, isPublic: false,
+       useForExtension: false, isShared: false, ...extra });
+
+  async function render(repertoires: unknown[]) {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireService, useValue: { list: () => of(repertoires) } },
+        { provide: RepertoireTrainingService, useValue: {} },
+        { provide: MatDialog, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireListComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function menuItemLabels(): string[] {
+    return Array.from(document.querySelectorAll('.mat-mdc-menu-item'))
+      .map(el => (el.textContent ?? '').trim());
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('eigene Karte: Aktionen im Menü statt als Button-Reihe', async () => {
+    const fixture = await render([rep(1)]);
+    const card = fixture.nativeElement as HTMLElement;
+
+    // Sichtbar in der Aktionszeile: genau EIN Text-Button (Öffnen), der Rest ist gebündelt.
+    expect(card.textContent).toContain('repertoire.list.open');
+    expect(card.textContent).not.toContain('common.delete');
+    expect(card.textContent).not.toContain('common.downloadPgn');
+
+    const trigger = fixture.debugElement.query(By.directive(MatMenuTrigger));
+    expect(trigger).withContext('⋮-Menü-Trigger auf der Karte').toBeTruthy();
+    (trigger.nativeElement as HTMLElement).click();
+    fixture.detectChanges();
+
+    const labels = menuItemLabels();
+    expect(labels.length).toBe(5);
+    expect(labels.join(' ')).toContain('common.downloadPgn');
+    expect(labels.join(' ')).toContain('repertoire.list.convertToCourse');
+    expect(labels.join(' ')).toContain('repertoire.share.action');
+    expect(labels.join(' ')).toContain('common.edit');
+    expect(labels.join(' ')).toContain('common.delete');
+  });
+
+  it('geteilte Karte: im Menü nur der PGN-Download', async () => {
+    const fixture = await render([rep(2, { isShared: true, sharedByUsername: 'noel' })]);
+    const trigger = fixture.debugElement.query(By.directive(MatMenuTrigger));
+    (trigger.nativeElement as HTMLElement).click();
+    fixture.detectChanges();
+
+    const labels = menuItemLabels();
+    expect(labels.length).toBe(1);
+    expect(labels[0]).toContain('common.downloadPgn');
   });
 });

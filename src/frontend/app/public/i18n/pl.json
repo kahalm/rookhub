@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "Więcej akcji",
     "save": "Zapisz",
     "cancel": "Anuluj",
     "delete": "Usuń",

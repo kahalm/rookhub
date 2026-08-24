@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -27,7 +28,7 @@ import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, c
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatChipsModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule, MatChipsModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -152,19 +153,41 @@ import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, c
             </a>
           } @else {
             <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
-            <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
-            @if (!rep.isShared) {
-              <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
-              <button mat-button (click)="openShareDialog(rep)">{{ 'repertoire.share.action' | translate }}</button>
-              <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
-              <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
-            }
             <button mat-icon-button class="offline-toggle" [disabled]="savingOffline === rep.id"
                     (click)="toggleOffline(rep)"
                     [matTooltip]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate"
                     [attr.aria-label]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate">
               <mat-icon>{{ isOffline(rep) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
             </button>
+            <button mat-icon-button [matMenuTriggerFor]="repMenu"
+                    [matTooltip]="'common.moreActions' | translate"
+                    [attr.aria-label]="'common.moreActions' | translate">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #repMenu="matMenu">
+              <button mat-menu-item (click)="downloadPgn(rep)">
+                <mat-icon>download</mat-icon>
+                <span>{{ 'common.downloadPgn' | translate }}</span>
+              </button>
+              @if (!rep.isShared) {
+                <button mat-menu-item [disabled]="converting === rep.id" (click)="convertToCourse(rep)">
+                  <mat-icon>school</mat-icon>
+                  <span>{{ 'repertoire.list.convertToCourse' | translate }}</span>
+                </button>
+                <button mat-menu-item (click)="openShareDialog(rep)">
+                  <mat-icon>group_add</mat-icon>
+                  <span>{{ 'repertoire.share.action' | translate }}</span>
+                </button>
+                <button mat-menu-item (click)="openEditDialog(rep)">
+                  <mat-icon>edit</mat-icon>
+                  <span>{{ 'common.edit' | translate }}</span>
+                </button>
+                <button mat-menu-item class="delete-item" (click)="deleteRepertoire(rep.id)">
+                  <mat-icon>delete</mat-icon>
+                  <span>{{ 'common.delete' | translate }}</span>
+                </button>
+              }
+            </mat-menu>
           }
         </mat-card-actions>
       </mat-card>
@@ -185,6 +208,8 @@ import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, c
                       color: color-mix(in srgb, currentColor 80%, transparent); }
     .offline-banner mat-icon { flex: 0 0 auto; opacity: 0.7; }
     .offline-toggle { margin-left: auto; }
+    /* Rotes Icon fuer den Loeschen-Eintrag im Aktionen-Menue (wie course-card). */
+    .delete-item mat-icon { color: color-mix(in srgb, #e53935 80%, currentColor); }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 1rem; }
     .repertoire-section { margin-bottom: 1.75rem; }
     .repertoire-section .section-title { display: flex; align-items: center; gap: 6px; margin: 0.25rem 0 0.15rem; font-size: 1.05rem; font-weight: 600; }

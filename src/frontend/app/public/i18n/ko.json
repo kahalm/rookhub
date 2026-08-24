@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "추가 작업",
     "save": "저장",
     "cancel": "취소",
     "delete": "삭제",

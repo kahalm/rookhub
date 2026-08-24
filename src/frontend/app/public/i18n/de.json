@@ -67,6 +67,7 @@
     }
   },
   "common": {
+    "moreActions": "Weitere Aktionen",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",

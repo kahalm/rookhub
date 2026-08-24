@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.369.1", date: "2026-08-24", changes: [
+    { en: "Repertoire list: the row of buttons at the bottom of each card no longer overflows. „Open“ and the offline download toggle stay visible; „Download PGN“, „Convert to course“, „Share“, „Edit“ and „Delete“ moved into a compact ⋮ menu — the same pattern the course cards use.", de: "Repertoire-Liste: Die Button-Zeile unten auf jeder Karte läuft nicht mehr über. „Öffnen“ und der Offline-Download-Schalter bleiben sichtbar; „PGN herunterladen“, „In Kurs umwandeln“, „Teilen“, „Bearbeiten“ und „Löschen“ sind in ein kompaktes ⋮-Menü gewandert — dasselbe Muster wie bei den Kurs-Karten." },
+  ] },
   { version: "0.369.0", date: "2026-08-24", changes: [
     { en: "Log in with your email address. The login field now accepts the username OR the email of the account — entering the email no longer fails with „invalid username or password“. If a username happens to look like someone else’s email, the username keeps priority. The password-reset email now also states the account’s username explicitly, since that mix-up (email in the username field) was the most common reason logins kept failing even after a successful reset.", de: "Anmeldung auch per E-Mail-Adresse. Das Login-Feld akzeptiert jetzt den Benutzernamen ODER die E-Mail des Kontos — die E-Mail führt nicht mehr zu „Benutzername oder Passwort ungültig“. Sieht ein Benutzername zufällig aus wie die E-Mail eines anderen Kontos, behält der Benutzername Vorrang. Die Passwort-Zurücksetzen-Mail nennt jetzt außerdem ausdrücklich den Benutzernamen des Kontos — genau diese Verwechslung (E-Mail im Benutzername-Feld) war der häufigste Grund, warum Logins auch nach erfolgreichem Reset weiter fehlschlugen." },
   ] },

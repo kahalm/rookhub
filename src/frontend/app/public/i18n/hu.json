@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "További műveletek",
     "save": "Mentés",
     "cancel": "Mégse",
     "delete": "Törlés",

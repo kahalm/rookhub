@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "اقدامات بیشتر",
     "save": "ذخیره",
     "cancel": "لغو",
     "delete": "حذف",

@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "Diğer işlemler",
     "save": "Kaydet",
     "cancel": "İptal",
     "delete": "Sil",

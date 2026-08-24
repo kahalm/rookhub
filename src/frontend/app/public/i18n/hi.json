@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "और कार्रवाइयाँ",
     "save": "सहेजें",
     "cancel": "रद्द करें",
     "delete": "हटाएं",
