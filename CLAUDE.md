@@ -514,6 +514,19 @@ zugleich die Vorbereitung auf einen späteren RookHub-EIGENEN Broker (Phase 2, g
 | GET | `/api/engine/external` | Registrierte External Engines des Kontos — **ohne `clientSecret`** (`{ hasCredentials, tokenInvalid, engines[] }`). Immer 200: `tokenInvalid` sagt, WARUM die Liste leer ist (Lichess wies den Token ab) |
 | POST | `/api/engine/external/{id}/analyse` | Analyse anfordern → **`application/x-ndjson`-Stream** (durchgereicht). Body = `EngineAnalyseRequest` (`sessionId`, `initialFen`, `moves[]`, `multiPv`, GENAU EINES von `depth`/`movetime`/`nodes`, optional `threads`/`hash`); Threads/Hash werden serverseitig auf die von Lichess gemeldeten Engine-Maxima geklemmt, `variant` ist fest `chess`. Abbruch = Verbindung schließen (wandert über den Broker zum Provider) |
 
+**Vergleichsmodus (0.375.0)**: Der Waagen-Knopf startet eine ZWEITE Engine auf derselben
+Stellung (`compareEngine`), beide Linienlisten stehen untereinander. Möglich ohne Umbau, weil
+`AnalysisEngineService` weder Konstruktor noch `inject()` hat — er lässt sich schlicht per `new`
+ein zweites Mal instanziieren (eigener Worker, eigener Zustand, eigene Generationszählung).
+Drei Regeln, die dabei nicht kippen dürfen: (1) **nie dieselbe Engine beidseitig** — der Schutz
+sitzt zentral in `startCompare`/`ensureDistinctCompareEngine` und wird auch beim Wechsel der
+HAUPT-Engine und beim Wiederherstellen aus localStorage durchlaufen (sonst zwei WASM-Kerne bzw.
+zwei Ströme auf dieselbe externe Engine); (2) **das Etikett muss die Wahrheit sagen** — fällt
+eine Seite auf WASM zurück, nennt `compareEngineName`/`mainEngineName` „Browser" statt des
+gewählten Namens; (3) **kein Block ohne Engine dahinter** — das Template hängt an
+`compareRunning` (Schalter AN *und* Instanz vorhanden), sonst stünde nach einem Neuladen ohne
+Engine-Liste ein ewiges „Berechne…" ohne erreichbaren Ausschalter.
+
 **Frontend**: `features/analysis/external-engine.service.ts` (ndjson über den normalen `HttpClient` mit
 `reportProgress` — `partialText` wächst, nur NEUE vollständige Zeilen werden geparst; so greifen die
 Interceptors inkl. Auth). Der `AnalysisEngineService` bekam einen zweiten Analyse-Pfad

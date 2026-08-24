@@ -33,6 +33,9 @@ const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = 'rookhub_analysis_depth';
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
 const PROVIDER_KEY = 'rookhub_analysis_engine_provider';
+/** Vergleichsmodus: an/aus und die Wahl der zweiten Engine. */
+const COMPARE_KEY = 'rookhub_analysis_compare';
+const COMPARE_ENGINE_KEY = 'rookhub_analysis_compare_engine';
 // Bis 50: für eine externe Engine (mehrere Millionen Knoten/s) sind Tiefen jenseits von 30
 // gut erreichbar. Mit der Browser-Engine dauern sie sehr lange — sie bleiben trotzdem
 // wählbar, statt Optionen je nach Engine verschwinden zu lassen.
@@ -122,13 +125,35 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                 @if (engineOn && !terminal) {
                   <app-help-hint icon="info_outline" [text]="speedHint" />
                 }
+                @if (engineOn && (externalEnginesList.length > 0 || compareOn)) {
+                  <button mat-icon-button class="cmp-btn" [class.on]="compareOn"
+                          [matTooltip]="'analysis.compareToggle' | translate"
+                          (click)="compareOn = !compareOn; onCompareToggle()">
+                    <mat-icon>balance</mat-icon>
+                  </button>
+                }
               </div>
+              @if (compareOn && engineOn && externalEnginesList.length > 0) {
+                <div class="cmp-pick">
+                  <mat-form-field appearance="outline" class="engine-field" subscriptSizing="dynamic">
+                    <mat-label>{{ 'analysis.compareWith' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="compareEngineId" (selectionChange)="onCompareEngineSelect()">
+                      @for (c of engineChoices; track c.id) {
+                        <mat-option [value]="c.id" [disabled]="c.id === selectedEngineId">{{ c.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              }
               @if (remoteFallback && selectedEngineId !== 'wasm') {
                 <p class="remote-fallback"><mat-icon>cloud_off</mat-icon> {{ 'analysis.remoteFallback' | translate }}</p>
               }
               @if (terminal) {
                 <p class="terminal-state"><mat-icon>flag</mat-icon> {{ terminalText }}</p>
               } @else if (engineOn) {
+                @if (compareRunning) {
+                  <p class="eng-label">{{ mainEngineName }} <span class="eng-depth">· {{ 'analysis.depth' | translate }} {{ depth }}</span></p>
+                }
                 @if (displayLines.length === 0) {
                   <p class="muted">{{ 'analysis.calculating' | translate }}</p>
                 } @else {
@@ -137,6 +162,31 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                       <div class="line-row">
                         <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
                         <span class="line-san">{{ l.san }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+                @if (compareRunning) {
+                  <div class="cmp-block">
+                    <p class="eng-label">
+                      {{ compareEngineName }} <span class="eng-depth">· {{ 'analysis.depth' | translate }} {{ compareDepth }}</span>
+                      <app-help-hint icon="info_outline" [text]="compareSpeedHint" />
+                      @if (compareFallback) {
+                        <mat-icon class="cmp-warn" [matTooltip]="'analysis.remoteFallback' | translate">cloud_off</mat-icon>
+                      }
+                    </p>
+                    @if (compareCrashed) {
+                      <p class="cmp-err"><mat-icon>error_outline</mat-icon> {{ 'analysis.engineCrashed' | translate }}</p>
+                    } @else if (compareLines.length === 0) {
+                      <p class="muted">{{ 'analysis.calculating' | translate }}</p>
+                    } @else {
+                      <div class="lines">
+                        @for (l of compareLines; track $index) {
+                          <div class="line-row">
+                            <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
+                            <span class="line-san">{{ l.san }}</span>
+                          </div>
+                        }
                       </div>
                     }
                   </div>
@@ -221,6 +271,16 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .num-field { width: 104px; }
     .engine-field { width: 190px; }
     .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
+    .cmp-btn { width: 34px; height: 34px; line-height: 34px; opacity: .55; }
+    .cmp-btn.on { opacity: 1; color: #64b5f6; }
+    .cmp-pick { margin-top: 8px; }
+    .cmp-block { margin-top: 10px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+    .eng-label { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; margin: 6px 0 2px;
+      color: color-mix(in srgb, currentColor 75%, transparent); }
+    .cmp-err { display: flex; align-items: center; gap: 6px; color: #ef9a9a; font-size: .85rem; margin: 6px 0 0; }
+    .cmp-err mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .cmp-warn { font-size: 16px; width: 16px; height: 16px; color: #ffb74d; }
+    .eng-depth { font-weight: 400; color: color-mix(in srgb, currentColor 55%, transparent); }
     .terminal-state { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 8px 0 0; }
     .terminal-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .remote-fallback mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -293,6 +353,28 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Partie-Ende in der aktuellen Stellung (keine legalen Züge) — dort rechnet keine Engine. */
   terminal: 'mate-white-wins' | 'mate-black-wins' | 'stalemate' | null = null;
 
+  // ---- Vergleichsmodus: eine ZWEITE Engine rechnet dieselbe Stellung ----
+  // Möglich, weil AnalysisEngineService keine DI-Abhängigkeiten hat und sich schlicht ein
+  // zweites Mal instanziieren lässt — jede Instanz hat eigenen Worker, eigenen Zustand und
+  // eigene Generationszählung, die beiden Suchen kommen sich also nicht ins Gehege.
+  compareOn = false;
+  /** 'wasm' oder Engine-ID der Vergleichs-Engine. */
+  compareEngineId = 'wasm';
+  compareLines: EngineDisplayLine[] = [];
+  compareDepth = 0;
+  compareNps = 0;
+  /** True, wenn die VERGLEICHS-Engine auf die Browser-Engine zurückgefallen ist. Ohne diese
+   *  Anzeige verglichen zwei Etiketten („RookHub PC") etwas, das in Wahrheit die Browser-Engine
+   *  gerechnet hat — ein Vergleich, der genau das Gegenteil von dem zeigt, was draufsteht. */
+  compareFallback = false;
+  /** Die zweite Instanz hat aufgegeben (Worker-Absturz/Start gescheitert). Ohne diese Anzeige
+   *  stünde dort für immer „Berechne…", obwohl nichts mehr rechnet. */
+  compareCrashed = false;
+  private compareEngine?: AnalysisEngineService;
+  private compareSub?: Subscription;
+  private compareFallbackSub?: Subscription;
+  private compareErrorSub?: Subscription;
+
   private sub?: Subscription;
   private errorSub?: Subscription;
   private fallbackSub?: Subscription;
@@ -308,6 +390,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.engineOn = localStorage.getItem(ENGINE_KEY) !== '0';
       const d = parseInt(localStorage.getItem(DEPTH_KEY) || '', 10);
       if (DEPTH_OPTIONS.includes(d)) this.depthSetting = d;
+      this.compareOn = localStorage.getItem(COMPARE_KEY) === '1';
+      this.compareEngineId = localStorage.getItem(COMPARE_ENGINE_KEY) || 'wasm';
     } catch {}
   }
 
@@ -350,6 +434,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
             this.selectedEngineId = stored;
             this.applyEngineSelection();
           }
+          if (this.compareOn) this.startCompare();
           this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
         },
         error: () => {},
@@ -395,6 +480,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.errorSub?.unsubscribe();
     this.fallbackSub?.unsubscribe();
     this.enginesSub?.unsubscribe();
+    this.stopCompare();          // eigene Instanz + deren Worker/Streams beenden
     this.engine.destroy();
   }
 
@@ -480,8 +566,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Das Ergebnis MUSS dann aber benannt werden: sonst stünde dort dauerhaft „Berechne…",
     // obwohl nichts mehr gerechnet wird und auch nichts mehr zu rechnen ist.
     this.terminal = this.dests.size > 0 ? null : this.terminalStateOf(c);
-    if (this.engineOn && this.dests.size > 0) this.engine.analyze(fen);
-    else { this.engine.stop(); this.updateEval(null); }
+    this.compareLines = [];
+    this.compareDepth = 0;
+    this.compareNps = 0;
+    if (this.engineOn && this.dests.size > 0) {
+      this.engine.analyze(fen);
+      this.compareEngine?.analyze(fen);
+    } else {
+      this.engine.stop();
+      this.compareEngine?.stop();
+      this.updateEval(null);
+    }
   }
 
   /** Matt oder Patt? Nur aufrufen, wenn es keine legalen Züge gibt. Wirft nicht: bei einer
@@ -614,13 +709,131 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   onLinesChange(): void {
     try { localStorage.setItem(LINES_KEY, String(this.linesCount)); } catch {}
     this.engine.setMultiPv(this.linesCount);
-    if (this.engineOn) this.engine.analyze(this.currentFen);
+    this.compareEngine?.setMultiPv(this.linesCount);
+    this.restartSearches();
   }
   onDepthChange(): void {
     try { localStorage.setItem(DEPTH_KEY, String(this.depthSetting)); } catch {}
     this.engine.setDepth(this.depthSetting);
-    if (this.engineOn) this.engine.analyze(this.currentFen);
+    this.compareEngine?.setDepth(this.depthSetting);
+    this.restartSearches();
   }
+  /** Vergleich ein/aus. Aus = zweite Instanz vollständig abräumen (Worker/Streams beenden). */
+  onCompareToggle(): void {
+    try { localStorage.setItem(COMPARE_KEY, this.compareOn ? '1' : '0'); } catch {}
+    if (this.compareOn) this.startCompare();
+    else this.stopCompare();
+  }
+
+  /** Läuft der Vergleich WIRKLICH (Schalter an UND zweite Instanz vorhanden)? Das Template
+   *  hängt daran statt an `compareOn` — sonst stünde ein Vergleichsblock da, hinter dem gar
+   *  keine Engine steckt (etwa abgemeldet, Engine-Liste nicht ladbar) und der ewig „Berechne…"
+   *  zeigt. */
+  get compareRunning(): boolean { return this.compareOn && !!this.compareEngine; }
+
+  /** Startet beide Suchen neu — mit DEMSELBEN Vorbehalt wie refresh(): in einer terminalen
+   *  Stellung (Matt/Patt) bekommt keine Engine ein `go`. Ohne diesen gemeinsamen Weg setzten
+   *  Tiefen-/Linienwechsel den Matt-Fall wieder außer Kraft. */
+  private restartSearches(): void {
+    if (!this.engineOn || this.dests.size === 0) return;
+    this.engine.analyze(this.currentFen);
+    this.compareEngine?.analyze(this.currentFen);
+  }
+
+  /** Sorgt dafür, dass die Vergleichs-Engine eine ANDERE ist als die Haupt-Engine, und merkt
+   *  sich die Korrektur. Muss an EINER Stelle passieren, die jeder Weg durchläuft — sonst
+   *  entsteht die Selbstvergleichs-Kombination über den Haupt-Picker oder nach einem Neuladen
+   *  doch wieder (zwei Instanzen rechnen dann dasselbe, im Browser-Fall zweimal 7 MB WASM). */
+  private ensureDistinctCompareEngine(): void {
+    if (this.compareEngineId !== this.selectedEngineId) return;
+    const other = this.engineChoices.find(c => c.id !== this.selectedEngineId);
+    if (!other) return;
+    this.compareEngineId = other.id;
+    try { localStorage.setItem(COMPARE_ENGINE_KEY, this.compareEngineId); } catch {}
+  }
+
+  onCompareEngineSelect(): void {
+    try { localStorage.setItem(COMPARE_ENGINE_KEY, this.compareEngineId); } catch {}
+    this.startCompare();
+  }
+
+  /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder. */
+  get engineChoices(): { id: string; name: string }[] {
+    return [
+      { id: 'wasm', name: this.translate.instant('analysis.engineBrowser') },
+      ...this.externalEnginesList.map(e => ({ id: e.id, name: e.name })),
+    ];
+  }
+
+  /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
+   *  Engine genannt — ein Vergleich mit falschem Etikett wäre schlimmer als gar keiner. */
+  get compareEngineName(): string {
+    if (this.compareFallback) return this.translate.instant('analysis.engineBrowser');
+    return this.engineChoices.find(c => c.id === this.compareEngineId)?.name ?? '';
+  }
+  /** Anzeigename der Haupt-Engine — im Vergleichsmodus muss beschriftet sein, welche welche ist. */
+  get mainEngineName(): string {
+    if (this.remoteFallback && this.selectedEngineId !== 'wasm') return this.translate.instant('analysis.engineBrowser');
+    return this.engineChoices.find(c => c.id === this.selectedEngineId)?.name ?? '';
+  }
+
+  /** Baut die zweite Engine-Instanz auf (bzw. richtet sie neu aus) und startet ihre Suche. */
+  private startCompare(): void {
+    this.stopCompare();
+    if (!this.compareOn) return;
+    // Gespeicherte Wahl kann veraltet sein (Engine abgemeldet, umbenannt): unbekannte ID auf
+    // „Browser" zurücksetzen, statt sie stumm als null durchzureichen — das ergäbe eine
+    // Browser-Suche unter leerem Etikett.
+    if (this.compareEngineId !== 'wasm' && !this.externalEnginesList.some(e => e.id === this.compareEngineId)) {
+      this.compareEngineId = 'wasm';
+    }
+    this.ensureDistinctCompareEngine();
+    const engine = new AnalysisEngineService();
+    engine.setDepth(this.depthSetting);
+    engine.setMultiPv(this.linesCount);
+    const info = this.externalEnginesList.find(e => e.id === this.compareEngineId) ?? null;
+    engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
+    this.compareSub = engine.analysis$.subscribe(st => this.onCompareUpdate(st.fen, st.depth, st.lines, st.nps));
+    this.compareFallbackSub = engine.remoteFallback$.subscribe(f => { this.compareFallback = f; this.cdr.markForCheck(); });
+    this.compareErrorSub = engine.engineFatalError$.subscribe(e => { this.compareCrashed = e !== null; this.cdr.markForCheck(); });
+    this.compareEngine = engine;
+    if (this.engineOn && this.dests.size > 0) engine.analyze(this.currentFen);
+  }
+
+  private stopCompare(): void {
+    this.compareSub?.unsubscribe();
+    this.compareSub = undefined;
+    this.compareFallbackSub?.unsubscribe();
+    this.compareFallbackSub = undefined;
+    this.compareErrorSub?.unsubscribe();
+    this.compareErrorSub = undefined;
+    this.compareFallback = false;
+    this.compareCrashed = false;
+    this.compareEngine?.destroy();
+    this.compareEngine = undefined;
+    this.compareLines = [];
+    this.compareDepth = 0;
+    this.compareNps = 0;
+  }
+
+  private onCompareUpdate(fen: string, depth: number, lines: AnalysisLine[], nps: number): void {
+    if (fen !== this.currentFen) return;   // Antwort einer bereits verlassenen Stellung
+    this.compareDepth = depth;
+    this.compareNps = nps;
+    this.compareLines = lines.map(l => ({
+      evalText: l.evalText,
+      positive: l.scoreType === 'mate' ? l.score > 0 : l.score >= 0,
+      san: this.uciLineToSan(fen, l.pvUci, 12),
+    }));
+    this.cdr.markForCheck();
+  }
+
+  /** Tempo der Vergleichs-Engine für deren (i) — gleiche Formatierung wie bei der Haupt-Engine. */
+  get compareSpeedHint(): string {
+    if (this.compareNps <= 0) return this.translate.instant('analysis.speedWaiting');
+    return this.translate.instant('analysis.speedShort', { speed: this.formatNps(this.compareNps) });
+  }
+
   onEngineSelect(): void {
     try { localStorage.setItem(PROVIDER_KEY, this.selectedEngineId); } catch {}
     this.applyEngineSelection();
@@ -629,6 +842,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private applyEngineSelection(): void {
     const info = this.externalEnginesList.find(e => e.id === this.selectedEngineId) ?? null;
     this.engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
+    // Wandert die Haupt-Engine auf die, die gerade als Vergleich läuft, muss die Vergleichs-
+    // seite ausweichen — sonst rechnen beide Instanzen dasselbe.
+    if (this.compareOn && this.compareEngineId === this.selectedEngineId) {
+      this.ensureDistinctCompareEngine();
+      this.startCompare();
+    }
     if (this.engineOn && this.dests.size > 0) this.engine.analyze(this.currentFen);
   }
   backToPuzzle(): void {

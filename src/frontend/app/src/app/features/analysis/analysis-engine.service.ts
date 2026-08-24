@@ -95,6 +95,12 @@ export class AnalysisEngineService implements OnDestroy {
    *  Navigation erst `stop`, dann das `bestmove` der alten Suche abwarten, DANN das nächste `go`. */
   private searching = false;
 
+  /** Handle des Init-Timeouts. MUSS als Feld liegen, damit destroy() ihn löschen kann: der
+   *  Timer lief sonst nach dem Zerstören weiter, terminierte einen längst entsorgten Worker
+   *  und lehnte ein Promise ab, das niemand mehr auffängt. Fällt erst mit dem Vergleichsmodus
+   *  ins Gewicht, wo Instanzen laufend entstehen und vergehen. */
+  private initTimeout?: ReturnType<typeof setTimeout>;
+
   /** Hänger-Watchdog: liefert die Engine nach `go` binnen `watchdogMs` keine Info-Line → Stall. */
   protected watchdogMs = 9000;
   private watchdog?: ReturnType<typeof setTimeout>;
@@ -137,6 +143,7 @@ export class AnalysisEngineService implements OnDestroy {
       }
       const fail = (reason: string) => {
         clearTimeout(timeout);
+        this.initTimeout = undefined;
         try { worker.terminate(); } catch { /* ignore */ }
         if (this.worker === worker) this.worker = undefined;
         this.initPromise = undefined;
@@ -144,11 +151,13 @@ export class AnalysisEngineService implements OnDestroy {
         reject(reason);
       };
       const timeout = setTimeout(() => fail('Stockfish init timeout'), 15000);
+      this.initTimeout = timeout;
       worker.onerror = () => fail('Stockfish worker error');
       const onReady = (e: MessageEvent) => {
         if (typeof e.data === 'string' && e.data.includes('readyok')) {
           worker.removeEventListener('message', onReady);
           clearTimeout(timeout);
+          this.initTimeout = undefined;
           // Ab jetzt: dauerhafter Crash-Handler + Analyse-Listener.
           // FEN ins Crash-Log: ohne die konkrete Stellung ist „RuntimeError: unreachable" nicht
           // reproduzierbar (alle Crashes sähen identisch aus). So lässt sich der Auslöser nachstellen.
@@ -505,6 +514,7 @@ export class AnalysisEngineService implements OnDestroy {
   ngOnDestroy(): void { this.destroy(); }
 
   destroy(): void {
+    if (this.initTimeout !== undefined) { clearTimeout(this.initTimeout); this.initTimeout = undefined; }
     if (this.worker) {
       try { this.send('stop'); this.send('quit'); } catch {}
       this.worker.terminate();

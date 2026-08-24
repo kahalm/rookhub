@@ -350,3 +350,284 @@ describe('AnalysisComponent depth options', () => {
     }
   });
 });
+
+// Vergleichsmodus: eine ZWEITE Engine-Instanz rechnet dieselbe Stellung. Der heikle Teil ist
+// nicht die Anzeige, sondern das Aufräumen — eine vergessene Instanz behielte ihren WASM-Worker
+// und ihren laufenden Analyse-Strom, unsichtbar und dauerhaft.
+describe('AnalysisComponent compare mode', () => {
+  const ENGINES = [
+    { id: 'eei_a', name: 'RookHub Server', maxThreads: 8, maxHash: 512 },
+    { id: 'eei_b', name: 'RookHub PC', maxThreads: 30, maxHash: 4096 },
+  ];
+  const KEYS = ['rookhub_analysis_compare', 'rookhub_analysis_compare_engine', 'rookhub_analysis_engine_provider'];
+
+  afterEach(() => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } });
+
+  it('is off by default and creates no second engine', () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    expect(c.compareOn).toBeFalse();
+    expect((c as any).compareEngine).toBeUndefined();
+    c.ngOnDestroy();
+  });
+
+  it('creates a second engine when switched on and tears it down when switched off', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    c.compareOn = true;
+    c.onCompareToggle();
+    const second = (c as any).compareEngine;
+    expect(second).toBeDefined();
+    expect(second).not.toBe((c as any).engine);      // eigene Instanz, nicht der Singleton
+    spyOn(second, 'destroy').and.callThrough();
+
+    c.compareOn = false;
+    c.onCompareToggle();
+    expect(second.destroy).toHaveBeenCalled();
+    expect((c as any).compareEngine).toBeUndefined();
+    expect(c.compareLines.length).toBe(0);
+    c.ngOnDestroy();
+  });
+
+  it('destroys the second engine on ngOnDestroy (no orphaned worker)', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.compareOn = true;
+    c.onCompareToggle();
+    const second = (c as any).compareEngine;
+    spyOn(second, 'destroy').and.callThrough();
+
+    c.ngOnDestroy();
+    expect(second.destroy).toHaveBeenCalled();
+  });
+
+  it('never compares an engine with itself', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    c.selectedEngineId = 'eei_a';
+    c.compareEngineId = 'eei_a';                     // dieselbe wie die Haupt-Engine
+    c.compareOn = true;
+    c.onCompareToggle();
+
+    expect(c.compareEngineId).not.toBe('eei_a');     // wurde auf eine andere umgestellt
+    c.ngOnDestroy();
+  });
+
+  it('labels both sides so it is clear which lines belong to which engine', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.selectedEngineId = 'eei_a';
+    c.compareEngineId = 'eei_b';
+
+    expect(c.mainEngineName).toBe('RookHub Server');
+    expect(c.compareEngineName).toBe('RookHub PC');
+    c.ngOnDestroy();
+  });
+
+  it('drops compare results that belong to a position already left', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.compareOn = true;
+    c.onCompareToggle();
+
+    (c as any).onCompareUpdate('8/8/8/8/8/8/8/K6k w - - 0 1', 20, [
+      { multipv: 1, depth: 20, scoreType: 'cp', score: 50, evalText: '+0.50', pvUci: ['a1b1'] },
+    ], 1000);
+
+    expect(c.compareLines.length).toBe(0);           // fremde Stellung → verworfen
+    c.ngOnDestroy();
+  });
+
+  it('passes depth and line count on to the second engine', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.compareOn = true;
+    c.onCompareToggle();
+    const second = (c as any).compareEngine;
+
+    c.depthSetting = 35;
+    c.onDepthChange();
+    expect(second.depthLimit).toBe(35);
+
+    c.linesCount = 4;
+    c.onLinesChange();
+    expect(second.linesRequested).toBe(4);
+    c.ngOnDestroy();
+  });
+});
+
+// Ein Vergleich mit falschem Etikett ist schlimmer als gar keiner: Fällt eine Seite auf die
+// Browser-Engine zurück, MUSS die Beschriftung das sagen — sonst steht „RookHub PC" über
+// Zahlen, die der Browser gerechnet hat.
+describe('AnalysisComponent compare mode labelling on fallback', () => {
+  const ENGINES = [
+    { id: 'eei_a', name: 'RookHub Server', maxThreads: 8, maxHash: 512 },
+    { id: 'eei_b', name: 'RookHub PC', maxThreads: 30, maxHash: 4096 },
+  ];
+
+  it('names the browser engine once the compare engine has fallen back', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.selectedEngineId = 'eei_a';
+    c.compareEngineId = 'eei_b';
+    c.compareOn = true;
+    c.onCompareToggle();
+
+    expect(c.compareEngineName).toBe('RookHub PC');
+    (c as any).compareFallback = true;
+    expect(c.compareEngineName).toBe('analysis.engineBrowser');
+    c.ngOnDestroy();
+  });
+
+  it('does the same for the main engine', () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    c.externalEnginesList = ENGINES;
+    c.selectedEngineId = 'eei_a';
+    expect(c.mainEngineName).toBe('RookHub Server');
+
+    c.remoteFallback = true;
+    expect(c.mainEngineName).toBe('analysis.engineBrowser');
+    c.ngOnDestroy();
+  });
+
+  it('resets the fallback flag when the comparison is switched off', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.compareOn = true;
+    c.onCompareToggle();
+    (c as any).compareFallback = true;
+
+    c.compareOn = false;
+    c.onCompareToggle();
+    expect(c.compareFallback).toBeFalse();
+    c.ngOnDestroy();
+  });
+});
+
+// Befunde aus dem adversarialen Review des Vergleichsmodus — jeder Test hält eine der
+// bestätigten Lücken fest.
+describe('AnalysisComponent compare mode hardening', () => {
+  const ENGINES = [
+    { id: 'eei_a', name: 'RookHub Server', maxThreads: 8, maxHash: 512 },
+    { id: 'eei_b', name: 'RookHub PC', maxThreads: 30, maxHash: 4096 },
+  ];
+  const KEYS = ['rookhub_analysis_compare', 'rookhub_analysis_compare_engine', 'rookhub_analysis_engine_provider'];
+  afterEach(() => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } });
+
+  const MATE_FEN = '8/5Qpk/3Bp3/4P2p/8/7P/5PP1/r2r1nK1 b - - 0 1';
+  const MATE_MOVES = 'f1g3,g1h2,h5h4,f2g3,d1h1';
+
+  it('does not start a search in a terminal position when depth or line count changes', () => {
+    const c = makeComponent({ fen: MATE_FEN, moves: MATE_MOVES });
+    c.ngOnInit();
+    expect(c.terminal).toBe('mate-black-wins');
+    (c as any).engine.analyze.calls.reset();
+
+    c.engineOn = true;
+    c.depthSetting = 35;
+    c.onDepthChange();
+    c.linesCount = 4;
+    c.onLinesChange();
+
+    expect((c as any).engine.analyze).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('keeps both engines apart when the MAIN engine is switched onto the compare engine', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.selectedEngineId = 'eei_a';
+    c.compareEngineId = 'eei_b';
+    c.compareOn = true;
+    c.onCompareToggle();
+
+    c.selectedEngineId = 'eei_b';        // Haupt-Engine wandert auf die Vergleichs-Engine
+    c.onEngineSelect();
+
+    expect(c.compareEngineId).not.toBe('eei_b');
+    c.ngOnDestroy();
+  });
+
+  it('separates the two sides after a reload that stored the same engine twice', async () => {
+    localStorage.setItem('rookhub_analysis_engine_provider', 'eei_a');
+    localStorage.setItem('rookhub_analysis_compare', '1');
+    localStorage.setItem('rookhub_analysis_compare_engine', 'eei_a');   // dieselbe wie Haupt
+
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    expect(c.selectedEngineId).toBe('eei_a');
+    expect(c.compareEngineId).not.toBe('eei_a');
+    c.ngOnDestroy();
+  });
+
+  it('falls back to the browser engine when the stored compare engine no longer exists', async () => {
+    localStorage.setItem('rookhub_analysis_engine_provider', 'eei_a');   // Haupt = externe Engine
+    localStorage.setItem('rookhub_analysis_compare', '1');
+    localStorage.setItem('rookhub_analysis_compare_engine', 'eei_weg');  // abgemeldet
+
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    expect(c.compareEngineId).toBe('wasm');
+    expect(c.compareEngineName).toBe('analysis.engineBrowser');   // nie ein leeres Etikett
+    c.ngOnDestroy();
+  });
+
+  it('picks a valid engine when the stored one is gone AND the browser slot is taken', async () => {
+    // Haupt-Engine ist der Browser, die gespeicherte Vergleichs-Engine existiert nicht mehr:
+    // „Browser" wäre dann ein Selbstvergleich, es muss also eine echte Engine gewählt werden.
+    localStorage.setItem('rookhub_analysis_compare', '1');
+    localStorage.setItem('rookhub_analysis_compare_engine', 'eei_weg');
+
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    expect(c.selectedEngineId).toBe('wasm');
+    expect(['eei_a', 'eei_b']).toContain(c.compareEngineId);
+    expect(c.compareEngineName).not.toBe('');
+    c.ngOnDestroy();
+  });
+
+  it('shows no comparison block when the switch is on but no second engine exists', () => {
+    localStorage.setItem('rookhub_analysis_compare', '1');
+    const c = makeComponent({ fen: START }, { loggedIn: false });   // keine Engine-Liste
+    c.ngOnInit();
+
+    expect(c.compareOn).toBeTrue();
+    expect(c.compareRunning).toBeFalse();     // Template zeigt daran nichts an
+    c.ngOnDestroy();
+  });
+
+  it('reports a crash of the compare engine instead of showing „calculating" forever', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.compareOn = true;
+    c.onCompareToggle();
+    expect(c.compareCrashed).toBeFalse();
+
+    (c as any).compareEngine['fatalError$'].next('crash');
+    expect(c.compareCrashed).toBeTrue();
+
+    c.compareOn = false;
+    c.onCompareToggle();
+    expect(c.compareCrashed).toBeFalse();     // beim Abschalten zurückgesetzt
+    c.ngOnDestroy();
+  });
+});
