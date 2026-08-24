@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "ログイン",
-      "usernameLabel": "ユーザー名",
+      "usernameLabel": "ユーザー名またはメールアドレス",
       "passwordLabel": "パスワード",
       "rememberMe": "ログインを維持する",
       "submit": "ログイン",

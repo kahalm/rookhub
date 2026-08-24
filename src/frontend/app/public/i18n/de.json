@@ -254,7 +254,7 @@
   "auth": {
     "login": {
       "title": "Anmelden",
-      "usernameLabel": "Benutzername",
+      "usernameLabel": "Benutzername oder E-Mail",
       "passwordLabel": "Passwort",
       "rememberMe": "Eingeloggt bleiben",
       "submit": "Anmelden",

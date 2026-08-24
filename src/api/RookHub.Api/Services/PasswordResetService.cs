@@ -142,6 +142,7 @@ public class PasswordResetService
         var text =
             $"Hallo {username},\n\n" +
             "für dein RookHub-Konto wurde ein Zurücksetzen des Passworts angefordert.\n" +
+            $"Dein Benutzername für die Anmeldung lautet: {username}\n" +
             $"Öffne den folgenden Link, um ein neues Passwort zu setzen (gültig für {minutes} Minuten):\n\n" +
             $"{link}\n\n" +
             "Wenn du das nicht warst, kannst du diese E-Mail ignorieren — dein Passwort bleibt unverändert.\n\n" +
@@ -149,6 +150,7 @@ public class PasswordResetService
         var html =
             $"<p>Hallo {System.Net.WebUtility.HtmlEncode(username)},</p>" +
             "<p>für dein RookHub-Konto wurde ein Zurücksetzen des Passworts angefordert. " +
+            $"Dein Benutzername für die Anmeldung lautet: <strong>{System.Net.WebUtility.HtmlEncode(username)}</strong>. " +
             $"Klicke auf den folgenden Link, um ein neues Passwort zu setzen (gültig für {minutes} Minuten):</p>" +
             $"<p><a href=\"{System.Net.WebUtility.HtmlEncode(link)}\">Passwort jetzt zurücksetzen</a></p>" +
             $"<p style=\"color:#888;font-size:0.9em\">Falls der Link nicht funktioniert, kopiere diese Adresse in den Browser:<br>{System.Net.WebUtility.HtmlEncode(link)}</p>" +

@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "लॉगिन",
-      "usernameLabel": "उपयोगकर्ता नाम",
+      "usernameLabel": "उपयोगकर्ता नाम या ईमेल",
       "passwordLabel": "पासवर्ड",
       "rememberMe": "लॉगिन में रहें",
       "submit": "लॉगिन करें",

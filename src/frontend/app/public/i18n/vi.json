@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Đăng nhập",
-      "usernameLabel": "Tên người dùng",
+      "usernameLabel": "Tên người dùng hoặc email",
       "passwordLabel": "Mật khẩu",
       "rememberMe": "Duy trì đăng nhập",
       "submit": "Đăng nhập",

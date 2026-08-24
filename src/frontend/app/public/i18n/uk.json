@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Вхід",
-      "usernameLabel": "Ім'я користувача",
+      "usernameLabel": "Ім'я користувача або ел. пошта",
       "passwordLabel": "Пароль",
       "rememberMe": "Залишитися в системі",
       "submit": "Увійти",

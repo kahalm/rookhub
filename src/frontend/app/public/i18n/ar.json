@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "تسجيل الدخول",
-      "usernameLabel": "اسم المستخدم",
+      "usernameLabel": "اسم المستخدم أو البريد الإلكتروني",
       "passwordLabel": "كلمة المرور",
       "rememberMe": "البقاء مسجلاً",
       "submit": "تسجيل الدخول",

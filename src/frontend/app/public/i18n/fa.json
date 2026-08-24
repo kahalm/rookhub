@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "ورود",
-      "usernameLabel": "نام کاربری",
+      "usernameLabel": "نام کاربری یا ایمیل",
       "passwordLabel": "رمز عبور",
       "rememberMe": "ورود خودکار",
       "submit": "ورود",

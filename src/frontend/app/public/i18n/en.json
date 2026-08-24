@@ -254,7 +254,7 @@
   "auth": {
     "login": {
       "title": "Login",
-      "usernameLabel": "Username",
+      "usernameLabel": "Username or email",
       "passwordLabel": "Password",
       "rememberMe": "Stay logged in",
       "submit": "Login",

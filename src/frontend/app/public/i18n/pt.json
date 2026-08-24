@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Iniciar sessão",
-      "usernameLabel": "Nome de utilizador",
+      "usernameLabel": "Nome de utilizador ou e-mail",
       "passwordLabel": "Palavra-passe",
       "rememberMe": "Manter sessão iniciada",
       "submit": "Iniciar sessão",

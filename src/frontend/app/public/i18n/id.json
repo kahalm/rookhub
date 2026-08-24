@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Masuk",
-      "usernameLabel": "Nama pengguna",
+      "usernameLabel": "Nama pengguna atau email",
       "passwordLabel": "Kata sandi",
       "rememberMe": "Tetap masuk",
       "submit": "Masuk",

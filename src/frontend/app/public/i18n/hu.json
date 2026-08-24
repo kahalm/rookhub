@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Bejelentkezés",
-      "usernameLabel": "Felhasználónév",
+      "usernameLabel": "Felhasználónév vagy e-mail",
       "passwordLabel": "Jelszó",
       "rememberMe": "Maradj bejelentkezve",
       "submit": "Bejelentkezés",

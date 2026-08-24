@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Connexion",
-      "usernameLabel": "Nom d'utilisateur",
+      "usernameLabel": "Nom d'utilisateur ou e-mail",
       "passwordLabel": "Mot de passe",
       "rememberMe": "Rester connecté",
       "submit": "Se connecter",

@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Вход",
-      "usernameLabel": "Имя пользователя",
+      "usernameLabel": "Имя пользователя или эл. почта",
       "passwordLabel": "Пароль",
       "rememberMe": "Оставаться в системе",
       "submit": "Войти",

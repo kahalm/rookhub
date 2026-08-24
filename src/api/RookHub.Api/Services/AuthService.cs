@@ -139,6 +139,16 @@ public class AuthService
         var user = await _db.AppUsers
             .FirstOrDefaultAsync(u => u.Username.ToLower() == loginName.ToLower());
 
+        // Anmeldung auch per E-Mail-Adresse (das Feld heisst "Benutzername", eingegeben wird
+        // trotzdem oft die Mail — Resets laufen ueber die Mail, der Login schlug dann endlos fehl).
+        // Der Username gewinnt bei Kollision (Usernames duerfen '@' enthalten, Lookup bleibt
+        // deterministisch); E-Mails liegen normalisiert (trim+lower) in der DB.
+        if (user == null && loginName.Contains('@'))
+        {
+            var normalizedEmail = loginName.Trim().ToLowerInvariant();
+            user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        }
+
         // Konstante Antwortzeit unabhaengig von der Existenz des Users: immer
         // einen BCrypt-Verify gegen einen Dummy-Hash ausfuehren, statt ihn per ||
         // zu ueberspringen (verhindert Username-Enumeration ueber Timing).

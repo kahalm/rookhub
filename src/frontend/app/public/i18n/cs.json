@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Přihlášení",
-      "usernameLabel": "Uživatelské jméno",
+      "usernameLabel": "Uživatelské jméno nebo e-mail",
       "passwordLabel": "Heslo",
       "rememberMe": "Zůstat přihlášen",
       "submit": "Přihlásit",

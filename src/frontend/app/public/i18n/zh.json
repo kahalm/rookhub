@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "登录",
-      "usernameLabel": "用户名",
+      "usernameLabel": "用户名或邮箱",
       "passwordLabel": "密码",
       "rememberMe": "保持登录",
       "submit": "登录",

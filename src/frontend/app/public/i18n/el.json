@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Σύνδεση",
-      "usernameLabel": "Όνομα χρήστη",
+      "usernameLabel": "Όνομα χρήστη ή email",
       "passwordLabel": "Κωδικός πρόσβασης",
       "rememberMe": "Παραμονή συνδεδεμένου",
       "submit": "Σύνδεση",

@@ -254,7 +254,7 @@
   "auth": {
     "login": {
       "title": "Prijava",
-      "usernameLabel": "Korisničko ime",
+      "usernameLabel": "Korisničko ime ili e-mail",
       "passwordLabel": "Lozinka",
       "rememberMe": "Ostani prijavljen",
       "submit": "Prijava",

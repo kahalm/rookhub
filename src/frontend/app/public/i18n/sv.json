@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Logga in",
-      "usernameLabel": "Användarnamn",
+      "usernameLabel": "Användarnamn eller e-post",
       "passwordLabel": "Lösenord",
       "rememberMe": "Håll mig inloggad",
       "submit": "Logga in",

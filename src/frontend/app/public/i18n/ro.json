@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Conectare",
-      "usernameLabel": "Nume utilizator",
+      "usernameLabel": "Nume utilizator sau e-mail",
       "passwordLabel": "Parolă",
       "rememberMe": "Rămâi conectat",
       "submit": "Conectare",

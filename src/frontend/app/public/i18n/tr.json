@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Giriş",
-      "usernameLabel": "Kullanıcı adı",
+      "usernameLabel": "Kullanıcı adı veya e-posta",
       "passwordLabel": "Şifre",
       "rememberMe": "Oturumumu açık tut",
       "submit": "Giriş Yap",

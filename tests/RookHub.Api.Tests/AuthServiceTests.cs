@@ -257,6 +257,66 @@ public class AuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_WithEmail_ReturnsToken()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "Schachkobold", Email = "jonathan@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "jonathan@example.com", Password = "password123" });
+
+        Assert.Equal("Schachkobold", result.Username);
+        Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public async Task Login_WithEmail_IsCaseInsensitiveAndTrimmed()
+    {
+        // E-Mails liegen normalisiert (trim+lower) in der DB — die Eingabe beim Login
+        // darf trotzdem Grossbuchstaben/Whitespace enthalten (Mobil-Tastatur/Autofill).
+        await _authService.RegisterAsync(new RegisterDto { Username = "kobold", Email = "jonathan@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = " Jonathan@Example.COM ", Password = "password123" });
+
+        Assert.Equal("kobold", result.Username);
+    }
+
+    [Fact]
+    public async Task Login_WithUnknownEmail_Throws()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "kobold", Email = "jonathan@example.com", Password = "password123" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "wrong@example.com", Password = "password123" }));
+    }
+
+    [Fact]
+    public async Task Login_UsernameWithAtSign_WinsOverEmail()
+    {
+        // Usernames duerfen '@' enthalten — bei Kollision mit einer fremden E-Mail muss der
+        // Lookup deterministisch bleiben: Username gewinnt, die E-Mail-Anmeldung des anderen
+        // Kontos schlaegt dann fehl (statt je nach Query-Reihenfolge zu wechseln).
+        await _authService.RegisterAsync(new RegisterDto { Username = "taken@example.com", Email = "a@example.com", Password = "ownerPass123" });
+        await _authService.RegisterAsync(new RegisterDto { Username = "other", Email = "taken@example.com", Password = "otherPass123" });
+
+        var asOwner = await _authService.LoginAsync(new LoginDto { Username = "taken@example.com", Password = "ownerPass123" });
+        Assert.Equal("taken@example.com", asOwner.Username);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "taken@example.com", Password = "otherPass123" }));
+    }
+
+    [Fact]
+    public async Task Login_DeletedUser_WithEmail_Throws()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "gone", Email = "gone@example.com", Password = "password123" });
+        var user = await _db.AppUsers.FindAsync(reg.UserId);
+        user!.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "gone@example.com", Password = "password123" }));
+    }
+
+    [Fact]
     public async Task Register_UsernameCollisionIsCaseInsensitive_Throws()
     {
         await _authService.RegisterAsync(new RegisterDto { Username = "Admin", Email = "a@example.com", Password = "password123" });

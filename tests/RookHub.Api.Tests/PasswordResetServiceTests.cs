@@ -72,6 +72,20 @@ public class PasswordResetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RequestReset_MailNamesTheUsername()
+    {
+        // Der Anmeldename gehoert ausdruecklich in die Mail: die Reset-Strecke laeuft komplett
+        // ueber die E-Mail, der Login verlangt aber den Benutzernamen — ohne den Hinweis
+        // scheitern Nutzer nach erfolgreichem Reset endlos mit der E-Mail im Login-Feld.
+        await CreateUserAsync("known@test.com");
+
+        await _service.RequestResetAsync("known@test.com");
+
+        Assert.Contains("Dein Benutzername für die Anmeldung lautet: resetuser", _email.LastText);
+        Assert.Contains("<strong>resetuser</strong>", _email.LastHtml);
+    }
+
+    [Fact]
     public async Task RequestReset_IsCaseInsensitiveOnEmail()
     {
         await CreateUserAsync("known@test.com");
@@ -201,12 +215,14 @@ public class PasswordResetServiceTests : IDisposable
     private sealed class CapturingEmailSender : IEmailSender
     {
         public string? LastTo { get; private set; }
+        public string? LastHtml { get; private set; }
         public string? LastText { get; private set; }
         public bool IsEnabled => true;
 
         public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
         {
             LastTo = to;
+            LastHtml = html;
             LastText = text;
             return Task.CompletedTask;
         }
