@@ -2,6 +2,15 @@
 export const DISCORD_INVITE_URL = 'https://discord.gg/wczc4BJtMf';
 
 /**
+ * Ko-fi-Seite für freiwillige Trinkgelder. Bewusst ein reiner Link ohne
+ * Ko-fi-Widget/iframe: kein Fremd-Script, keine Drittanbieter-Cookies, also
+ * kein Consent-Thema. Und bewusst OHNE Gegenleistung in der App — sobald es
+ * für eine Zahlung ein Feature gäbe, wäre es aus Sicht der Play-Billing-Regeln
+ * kein Trinkgeld mehr, sondern ein In-App-Kauf (die App läuft als TWA im Store).
+ */
+export const KOFI_URL = 'https://ko-fi.com/kahalm';
+
+/**
  * Discord-Markenlogo als SVG-Literal (nicht im Material-Standardsatz enthalten).
  * Wird in AppComponent + NavbarComponent via `iconRegistry.addSvgIconLiteral('discord', …)`
  * registriert — hier zentral, damit beide Registrierungen dieselbe Quelle teilen.

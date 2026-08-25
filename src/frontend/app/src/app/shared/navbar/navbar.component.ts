@@ -20,7 +20,7 @@ import { MessageService } from '../../core/message.service';
 import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
-import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
+import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
 } from '../fullscreen/fullscreen.util';
@@ -141,6 +141,10 @@ import {
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>
           </a>
+          <a mat-menu-item [href]="kofiUrl" target="_blank" rel="noopener noreferrer">
+            <mat-icon>local_cafe</mat-icon>
+            <span>{{ 'nav.support' | translate }}</span>
+          </a>
         </mat-menu>
         <!-- Konto-Untermenü — einziger Ort für Profil/Statistik/Einstellungen/Abmelden. -->
         <mat-menu #userMenu="matMenu">
@@ -183,6 +187,10 @@ import {
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>
+          </a>
+          <a mat-menu-item [href]="kofiUrl" target="_blank" rel="noopener noreferrer">
+            <mat-icon>local_cafe</mat-icon>
+            <span>{{ 'nav.support' | translate }}</span>
           </a>
           <!-- FALLE: Der Theme-Umschalter sitzt sonst NUR in der Profil-Theme-Karte, und die
                setzt einen Login voraus. Da der ThemeService als Default hart „dark" fährt,
@@ -284,6 +292,7 @@ export class NavbarComponent implements OnInit {
 
   /** Einladungslink zum öffentlichen RookHub-Discord (Community). */
   readonly discordUrl = DISCORD_INVITE_URL;
+  readonly kofiUrl = KOFI_URL;
 
   // ===== App-Vollbild ======================================================
   // Schaltet die GANZE GUI (documentElement) ins echte Vollbild — anders als der Brett-

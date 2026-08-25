@@ -8,7 +8,7 @@ import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { filter, interval } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
-import { DISCORD_INVITE_URL, DISCORD_SVG } from './core/community';
+import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from './core/community';
 import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
 import { MenuService } from './core/menu.service';
@@ -102,6 +102,11 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
       <a class="discord-link" [href]="discordUrl" target="_blank" rel="noopener noreferrer"
          [attr.aria-label]="'nav.discord' | translate">
         <mat-icon svgIcon="discord" aria-hidden="true"></mat-icon><span>{{ 'nav.discord' | translate }}</span>
+      </a>
+      <span class="footer-sep">·</span>
+      <a class="kofi-link" [href]="kofiUrl" target="_blank" rel="noopener noreferrer"
+         [attr.aria-label]="'nav.support' | translate">
+        <mat-icon aria-hidden="true">local_cafe</mat-icon><span>{{ 'nav.support' | translate }}</span>
       </a>
     </footer>
     @if (showChangelog) {
@@ -227,6 +232,14 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
       font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
     }
     .discord-link mat-icon svg { display: block; width: 100%; height: 100%; }
+    .kofi-link {
+      display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
+      color: #ff5e5b; font-weight: 600; text-decoration: none;
+    }
+    .kofi-link:hover { color: #e04b48; text-decoration: underline; }
+    .kofi-link mat-icon {
+      font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
+    }
     .feedback-link { color: inherit; text-decoration: none; }
     .feedback-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
@@ -262,6 +275,7 @@ export class AppComponent implements OnInit {
   changelog: ChangelogEntry[] = [];
   /** Einladungslink zum öffentlichen RookHub-Discord (Community) — prominent in der Fußzeile. */
   readonly discordUrl = DISCORD_INVITE_URL;
+  readonly kofiUrl = KOFI_URL;
   showChangelog = false;
   showQuickstart = false;
   showApkUpdate = false;
