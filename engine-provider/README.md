@@ -237,7 +237,12 @@ standardmäßig nach 72 Stunden, egal wie die Aufgabe selbst konfiguriert ist.
 > Kindes nicht an den Elternprozess. Zum sauberen Stoppen daher immer beides:
 > ```powershell
 > Stop-ScheduledTask -TaskName "RookHub Engine Provider"
-> Get-Process python, stockfish-windows-x86-64-* -ErrorAction SilentlyContinue | Stop-Process -Force
+> # NICHT `Get-Process python | Stop-Process`: das trifft JEDEN python.exe auf dem Rechner
+> # (Jupyter-Kernel, laufende Skripte, andere Dienste) und schiesst ihn ohne Rueckfrage ab.
+> Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+>   Where-Object { $_.CommandLine -like '*example-provider.py*' } |
+>   ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+> Get-Process stockfish-windows-x86-64-* -ErrorAction SilentlyContinue | Stop-Process -Force
 > ```
 
 **Der Zombie-Leak:** `example-provider.py` startet die Engine unter Windows über

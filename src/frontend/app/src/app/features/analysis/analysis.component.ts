@@ -434,7 +434,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
             this.selectedEngineId = stored;
             this.applyEngineSelection();
           }
-          if (this.compareOn) this.startCompare();
+          // NICHT unbedingt: applyEngineSelection() oben startet den Vergleich bereits selbst,
+          // wenn Haupt- und Vergleichswahl kollidieren. Ohne diese Bedingung wuerde die eben
+          // gebaute Instanz Millisekunden spaeter wieder zerstoert und neu aufgebaut — im
+          // Browser-Fall eine 7-MB-WASM-Instanziierung fuer nichts.
+          if (this.compareOn && !this.compareEngine) this.startCompare();
           this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
         },
         error: () => {},
@@ -569,9 +573,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.compareLines = [];
     this.compareDepth = 0;
     this.compareNps = 0;
+    // MUSS mit zurueck: sonst klebt die Absturzmeldung an einer Stellung, in der die Engine
+    // noch gar nicht gerechnet hat. Der Service setzt bei neuer FEN selbst crashStreak
+    // zurueck, die Suche kann also problemlos gelingen — die Karte behauptete trotzdem weiter,
+    // die Engine sei abgestuerzt, statt „Berechne…" zu zeigen.
+    this.compareCrashed = false;
     if (this.engineOn && this.dests.size > 0) {
-      this.engine.analyze(fen);
-      this.compareEngine?.analyze(fen);
+      this.runAnalysis(this.engine, fen);
+      this.runAnalysis(this.compareEngine, fen);
     } else {
       this.engine.stop();
       this.compareEngine?.stop();
@@ -622,16 +631,33 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Linienliste stehen, obwohl der Zustand längst stimmt.
     this.cdr.markForCheck();
     this.depth = depth;
-    this.displayLines = lines.map(l => ({
-      evalText: l.evalText,
-      positive: l.scoreType === 'mate' ? l.score > 0 : l.score >= 0,
-      san: this.uciLineToSan(fen, l.pvUci, 12),
-    }));
+    this.displayLines = this.toDisplayLines(fen, lines);
     this.shapes = lines.map((l, i) => {
       const u = l.pvUci[0];
       return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: ARROW_BRUSHES[i] || 'blue' } as DrawShape : null;
     }).filter((s): s is DrawShape => !!s);
     this.updateEval(lines[0] ?? null);
+  }
+
+  /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
+   *  Nebeneinander-Ansicht, die dieselbe Bewertung links anders einfaerbt als rechts, waere
+   *  schlimmer als gar kein Vergleich. Frueher lag die Abbildung zweimal im Code, inklusive der
+   *  feinen Unterscheidung `score > 0` (Matt) gegen `score >= 0` (Zentibauern). */
+  private toDisplayLines(fen: string, lines: AnalysisLine[]): EngineDisplayLine[] {
+    return lines.map(l => ({
+      evalText: l.evalText,
+      positive: l.scoreType === 'mate' ? l.score > 0 : l.score >= 0,
+      san: this.uciLineToSan(fen, l.pvUci, 12),
+    }));
+  }
+
+  /** Gemeinsame Tempo-Formatierung. `nodes === null` = Kurzform (Vergleichs-Engine). */
+  private speedHintFor(nps: number, nodes: number | null): string {
+    if (nps <= 0) return this.translate.instant('analysis.speedWaiting');
+    const speed = this.formatNps(nps);
+    return nodes === null
+      ? this.translate.instant('analysis.speedShort', { speed })
+      : this.translate.instant('analysis.speedHint', { speed, nodes: this.formatCount(nodes) });
   }
 
   /** Text hinter dem (i): Rechengeschwindigkeit der laufenden Analyse.
@@ -640,13 +666,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  siehe CLAUDE.md-Konvention). Daher `toLocaleString` (Browser-Intl, fällt bei unbekannter
    *  Sprache selbst zurück) statt Angulars formatNumber, das bei nicht registrierten
    *  Locale-Daten NG0701 wirft — und zusätzlich ein try/catch. */
-  get speedHint(): string {
-    if (this.nps <= 0) return this.translate.instant('analysis.speedWaiting');
-    return this.translate.instant('analysis.speedHint', {
-      speed: this.formatNps(this.nps),
-      nodes: this.formatCount(this.nodes),
-    });
-  }
+  get speedHint(): string { return this.speedHintFor(this.nps, this.nodes); }
 
   /** 8234567 → „8,2 MN/s" (Tausender/Millionen wie in Schach-Oberflächen üblich). */
   private formatNps(nps: number): string {
@@ -736,8 +756,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  Tiefen-/Linienwechsel den Matt-Fall wieder außer Kraft. */
   private restartSearches(): void {
     if (!this.engineOn || this.dests.size === 0) return;
-    this.engine.analyze(this.currentFen);
-    this.compareEngine?.analyze(this.currentFen);
+    this.runAnalysis(this.engine, this.currentFen);
+    this.runAnalysis(this.compareEngine, this.currentFen);
+  }
+
+  /** analyze() lehnt ab, wenn init() scheitert oder die Engine waehrend des Handshakes zerstoert
+   *  wird. Gemeldet ist das dann bereits ueber engineFatalError$ + reportEngineEvent — hier nur
+   *  noch schlucken, damit daraus kein „Uncaught (in promise)" in der Konsole wird. */
+  private runAnalysis(engine: AnalysisEngineService | undefined, fen: string): void {
+    engine?.analyze(fen).catch(() => {});
   }
 
   /** Sorgt dafür, dass die Vergleichs-Engine eine ANDERE ist als die Haupt-Engine, und merkt
@@ -757,12 +784,24 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.startCompare();
   }
 
-  /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder. */
+  /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder.
+   *  ACHTUNG: template-gebundener Getter in einer Default-Change-Detection-Component, die unter
+   *  einer externen Engine viele Male pro Sekunde markiert wird. Unmemoisiert baute er bei JEDEM
+   *  Durchlauf ein frisches Array frischer Objekte und schlug `analysis.engineBrowser` neu nach —
+   *  und das mehrfach je Durchlauf, weil beide Namens-Getter ihn ebenfalls aufrufen. Der Cache
+   *  haelt bewusst die Sprache mit fest, sonst bliebe die Beschriftung nach einem Sprachwechsel
+   *  auf der alten stehen. */
+  private choicesCache?: { lang: string | null; list: ExternalEngineInfo[]; value: { id: string; name: string }[] };
   get engineChoices(): { id: string; name: string }[] {
-    return [
+    const lang = this.translate.currentLang();   // ngx-translate 18: Signal, kein String
+    const c = this.choicesCache;
+    if (c && c.lang === lang && c.list === this.externalEnginesList) return c.value;
+    const value = [
       { id: 'wasm', name: this.translate.instant('analysis.engineBrowser') },
       ...this.externalEnginesList.map(e => ({ id: e.id, name: e.name })),
     ];
+    this.choicesCache = { lang, list: this.externalEnginesList, value };
+    return value;
   }
 
   /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
@@ -777,6 +816,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     return this.engineChoices.find(c => c.id === this.selectedEngineId)?.name ?? '';
   }
 
+  /** Erzeugung der Vergleichs-Engine als Seam (in Tests ueberschreibbar) — analog zu
+   *  createWorker() im Service. Ohne ihn lief in den Compare-Specs der ECHTE Service: auf dem
+   *  Remote-Pfad in einen TypeError (der analyse-Spy liefert kein Observable), auf dem
+   *  WASM-Pfad in einen echten 7-MB-Worker im Karma-Browser. Die Specs pruefte damit
+   *  Vergleichszustand, den nie jemand angetrieben hatte. */
+  protected createCompareEngine(): AnalysisEngineService { return new AnalysisEngineService(); }
+
   /** Baut die zweite Engine-Instanz auf (bzw. richtet sie neu aus) und startet ihre Suche. */
   private startCompare(): void {
     this.stopCompare();
@@ -788,7 +834,23 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.compareEngineId = 'wasm';
     }
     this.ensureDistinctCompareEngine();
-    const engine = new AnalysisEngineService();
+    // Blieb nur EINE Engine uebrig (keine externe registriert, Token abgelaufen, Liste leer),
+    // konnte ensureDistinctCompareEngine() nichts ausweichen lassen. Dann verglichen sich zwei
+    // Instanzen derselben Engine — im Browser-Fall zwei 7-MB-WASM-Kerne, die sich denselben
+    // Prozessorkern teilen und sich gegenseitig die Rechenleistung halbieren, fuer zwei
+    // garantiert identische Linienlisten. Lieber ehrlich abschalten als das anzubieten.
+    if (this.compareEngineId === this.selectedEngineId) {
+      this.compareOn = false;
+      try { localStorage.setItem(COMPARE_KEY, '0'); } catch {}
+      this.cdr.markForCheck();
+      return;
+    }
+    const engine = this.createCompareEngine();
+    // Die DI-Instanz bekommt ihren Telemetrie-Hook in app.component; diese hier wird von Hand
+    // gebaut und haette gar keinen. Ausgerechnet der Vergleichsmodus verdoppelt aber den
+    // WASM-Speicherdruck und ist damit die wahrscheinlichste Absturzquelle — seine Crashes
+    // duerfen nicht die einzigen sein, die nirgends auftauchen.
+    engine.reportEngineEvent = (kind, detail) => this.engine.reportEngineEvent?.('compare_' + kind, detail);
     engine.setDepth(this.depthSetting);
     engine.setMultiPv(this.linesCount);
     const info = this.externalEnginesList.find(e => e.id === this.compareEngineId) ?? null;
@@ -797,7 +859,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.compareFallbackSub = engine.remoteFallback$.subscribe(f => { this.compareFallback = f; this.cdr.markForCheck(); });
     this.compareErrorSub = engine.engineFatalError$.subscribe(e => { this.compareCrashed = e !== null; this.cdr.markForCheck(); });
     this.compareEngine = engine;
-    if (this.engineOn && this.dests.size > 0) engine.analyze(this.currentFen);
+    if (this.engineOn && this.dests.size > 0) this.runAnalysis(engine, this.currentFen);
   }
 
   private stopCompare(): void {
@@ -820,19 +882,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (fen !== this.currentFen) return;   // Antwort einer bereits verlassenen Stellung
     this.compareDepth = depth;
     this.compareNps = nps;
-    this.compareLines = lines.map(l => ({
-      evalText: l.evalText,
-      positive: l.scoreType === 'mate' ? l.score > 0 : l.score >= 0,
-      san: this.uciLineToSan(fen, l.pvUci, 12),
-    }));
+    this.compareLines = this.toDisplayLines(fen, lines);
     this.cdr.markForCheck();
   }
 
   /** Tempo der Vergleichs-Engine für deren (i) — gleiche Formatierung wie bei der Haupt-Engine. */
-  get compareSpeedHint(): string {
-    if (this.compareNps <= 0) return this.translate.instant('analysis.speedWaiting');
-    return this.translate.instant('analysis.speedShort', { speed: this.formatNps(this.compareNps) });
-  }
+  get compareSpeedHint(): string { return this.speedHintFor(this.compareNps, null); }
 
   onEngineSelect(): void {
     try { localStorage.setItem(PROVIDER_KEY, this.selectedEngineId); } catch {}
@@ -844,11 +899,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
     // Wandert die Haupt-Engine auf die, die gerade als Vergleich läuft, muss die Vergleichs-
     // seite ausweichen — sonst rechnen beide Instanzen dasselbe.
-    if (this.compareOn && this.compareEngineId === this.selectedEngineId) {
-      this.ensureDistinctCompareEngine();
-      this.startCompare();
-    }
-    if (this.engineOn && this.dests.size > 0) this.engine.analyze(this.currentFen);
+    // ensureDistinctCompareEngine() NICHT hier aufrufen: startCompare() macht es als zweiten
+    // Schritt ohnehin. Zwei Aufrufstellen fuer dieselbe Invariante lesen sich, als sicherten sie
+    // Verschiedenes ab, und laden dazu ein, nur eine davon zu „reparieren".
+    if (this.compareOn && this.compareEngineId === this.selectedEngineId) this.startCompare();
+    if (this.engineOn && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
   }
   backToPuzzle(): void {
     if (this.returnTo) this.router.navigateByUrl(this.returnTo);

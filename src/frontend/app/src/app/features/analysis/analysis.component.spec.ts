@@ -18,7 +18,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
     setMultiPv: jasmine.createSpy('setMultiPv'),
     setDepth: jasmine.createSpy('setDepth'),
     setRemoteEngine: jasmine.createSpy('setRemoteEngine'),
-    analyze: jasmine.createSpy('analyze'),
+    analyze: jasmine.createSpy('analyze').and.returnValue(Promise.resolve()),
     stop: () => {},
     destroy: () => {},                  // in ngOnDestroy aufgerufen
   };
@@ -36,8 +36,38 @@ function makeComponent(params: Record<string, string | null>, opts: {
     externalEngines.listEngines = () => { setTimeout(() => { s.next({ hasCredentials: true, tokenInvalid: false, engines: opts.engines }); s.complete(); }); return s.asObservable(); };
   }
   const cdr: any = { markForCheck: jasmine.createSpy('markForCheck'), detectChanges: () => {} };
-  const translate: any = { instant: (k: string, p?: any) => p ? `${k}:${JSON.stringify(p)}` : k };
+  const translate: any = {
+    instant: (k: string, p?: any) => p ? `${k}:${JSON.stringify(p)}` : k,
+    currentLang: () => 'de',   // ngx-translate 18: Signal — engineChoices memoisiert darauf
+  };
   const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de');
+  // Vergleichs-Engine ueber den Seam: sonst baut startCompare() den echten Service und
+  // damit im Karma-Browser einen echten WASM-Worker bzw. laeuft in einen TypeError.
+  c.__compareEngines = [] as any[];
+  c.createCompareEngine = () => {
+    // Spiegelt die oeffentliche Flaeche des Service so weit, wie die Specs sie brauchen:
+    // fatalError$ und engineFatalError$ sind DASSELBE Subject (im echten Service ist das eine
+    // die private Quelle des anderen), depthLimit/linesRequested werden aus den Settern
+    // nachgefuehrt, und destroy() bleibt eine schlichte Funktion — die Specs legen selbst
+    // einen spyOn darauf, und auf einen bestehenden Spy geht das nicht.
+    const fatal = new Subject<string | null>();
+    const ce: any = {
+      analysis$: new Subject(),
+      fatalError$: fatal,
+      engineFatalError$: fatal,
+      remoteFallback$: new Subject(),
+      depthLimit: 0,
+      linesRequested: 0,
+      setMultiPv: jasmine.createSpy('setMultiPv').and.callFake((n: number) => { ce.linesRequested = n; }),
+      setDepth: jasmine.createSpy('setDepth').and.callFake((d: number) => { ce.depthLimit = d; }),
+      setRemoteEngine: jasmine.createSpy('setRemoteEngine'),
+      analyze: jasmine.createSpy('analyze').and.returnValue(Promise.resolve()),
+      stop: () => {},
+      destroy: () => {},
+    };
+    c.__compareEngines.push(ce);
+    return ce;
+  };
   c.__cdr = cdr;
   c.__engine = engine;
   c.__externalEngines = externalEngines;
@@ -468,6 +498,13 @@ describe('AnalysisComponent compare mode', () => {
 // Browser-Engine zurück, MUSS die Beschriftung das sagen — sonst steht „RookHub PC" über
 // Zahlen, die der Browser gerechnet hat.
 describe('AnalysisComponent compare mode labelling on fallback', () => {
+  // MUSS sein: onCompareToggle() schreibt rookhub_analysis_compare='1' nach localStorage.
+  // Jasmine mischt die Spec-Reihenfolge per Default — ohne Aufraeumung sieht ein spaeter
+  // laufendes „is off by default" den Rest und wird je nach Seed rot.
+  const KEYS = ['rookhub_analysis_compare', 'rookhub_analysis_compare_engine',
+                'rookhub_analysis_engine_provider'];
+  afterEach(() => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } });
+
   const ENGINES = [
     { id: 'eei_a', name: 'RookHub Server', maxThreads: 8, maxHash: 512 },
     { id: 'eei_b', name: 'RookHub PC', maxThreads: 30, maxHash: 4096 },
@@ -628,6 +665,85 @@ describe('AnalysisComponent compare mode hardening', () => {
     c.compareOn = false;
     c.onCompareToggle();
     expect(c.compareCrashed).toBeFalse();     // beim Abschalten zurückgesetzt
+    c.ngOnDestroy();
+  });
+});
+
+// Regressionsnetz fuer die Invarianten, die die Codereview als „von nichts erzwungen"
+// beanstandet hat. Jede dieser Specs faellt ohne den zugehoerigen Fix um.
+describe('AnalysisComponent compare mode invariants', () => {
+  const KEYS = ['rookhub_analysis_compare', 'rookhub_analysis_compare_engine',
+                'rookhub_analysis_engine_provider'];
+  afterEach(() => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } });
+
+  const ENGINES = [
+    { id: 'eei_a', name: 'RookHub Server', maxThreads: 8, maxHash: 512 },
+    { id: 'eei_b', name: 'RookHub PC', maxThreads: 30, maxHash: 4096 },
+  ];
+
+  it('refuses to compare the browser engine with itself when no second engine exists', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: [] });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    c.compareOn = true;
+    c.onCompareToggle();
+
+    // Ohne den Fix baute startCompare() hier eine zweite WASM-Instanz: zwei 7-MB-Kerne auf
+    // demselben Prozessorkern, fuer zwei garantiert identische Linienlisten.
+    expect((c as any).compareEngine).toBeUndefined();
+    expect((c as any).__compareEngines.length).toBe(0);
+    expect(c.compareOn).toBeFalse();                       // ehrlich abgeschaltet
+    expect(localStorage.getItem('rookhub_analysis_compare')).toBe('0');
+    c.ngOnDestroy();
+  });
+
+  it('builds the compare engine only once when restoring a colliding selection', async () => {
+    localStorage.setItem('rookhub_analysis_engine_provider', 'eei_a');
+    localStorage.setItem('rookhub_analysis_compare', '1');
+    localStorage.setItem('rookhub_analysis_compare_engine', 'eei_a');   // dieselbe wie Haupt
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+
+    // Vorher lief startCompare() zweimal: applyEngineSelection() baute eine Instanz, die
+    // naechste Zeile in ngOnInit zerstoerte sie sofort wieder und baute eine zweite.
+    expect((c as any).__compareEngines.length).toBe(1);
+    expect((c as any).compareEngine).toBeDefined();
+    c.ngOnDestroy();
+  });
+
+  it('clears the crash flag when the position changes', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    c.compareOn = true;
+    c.onCompareToggle();
+
+    (c as any).compareEngine['fatalError$'].next('crash');
+    expect(c.compareCrashed).toBeTrue();
+
+    (c as any).refresh();
+    // Der Service setzt bei neuer FEN sein Crash-Budget selbst zurueck - die Karte darf dann
+    // nicht weiter behaupten, die Engine sei abgestuerzt.
+    expect(c.compareCrashed).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('routes compare-engine telemetry into the same sink as the main engine', async () => {
+    const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
+    c.ngOnInit();
+    await new Promise(r => setTimeout(r));
+    const sink = jasmine.createSpy('reportEngineEvent');
+    (c as any).engine.reportEngineEvent = sink;
+
+    c.compareOn = true;
+    c.onCompareToggle();
+    (c as any).compareEngine.reportEngineEvent('crash', 'boom');
+
+    // Von Hand gebaute Instanz: ohne Verdrahtung waeren ihre Abstuerze die einzigen,
+    // die nirgends im Log auftauchen - ausgerechnet die mit dem hoechsten Speicherdruck.
+    expect(sink).toHaveBeenCalledWith('compare_crash', 'boom');
     c.ngOnDestroy();
   });
 });

@@ -100,6 +100,9 @@ export class AnalysisEngineService implements OnDestroy {
    *  und lehnte ein Promise ab, das niemand mehr auffängt. Fällt erst mit dem Vergleichsmodus
    *  ins Gewicht, wo Instanzen laufend entstehen und vergehen. */
   private initTimeout?: ReturnType<typeof setTimeout>;
+  /** Abbruch des laufenden init() — nur gesetzt, solange der Handshake läuft. destroy()
+   *  MUSS ihn aufrufen: sonst bleibt ein `await this.init()` fuer immer stehen. */
+  private initFail?: (reason: string) => void;
 
   /** Hänger-Watchdog: liefert die Engine nach `go` binnen `watchdogMs` keine Info-Line → Stall. */
   protected watchdogMs = 9000;
@@ -138,18 +141,26 @@ export class AnalysisEngineService implements OnDestroy {
         this.worker = worker;
       } catch {
         this.initPromise = undefined;   // Retry beim nächsten Aufruf erlauben
+        this.reportEngineEvent?.('init_failed', 'worker constructor threw');
+        this.fatalError$.next('Failed to create Stockfish worker');
         reject('Failed to create Stockfish worker');
         return;
       }
       const fail = (reason: string) => {
         clearTimeout(timeout);
         this.initTimeout = undefined;
+        this.initFail = undefined;
         try { worker.terminate(); } catch { /* ignore */ }
         if (this.worker === worker) this.worker = undefined;
         this.initPromise = undefined;
         this.reportEngineEvent?.('init_failed', reason);
+        // MUSS raus: analyze() bricht bei fehlgeschlagenem init() ab, BEVOR es
+        // state$.next({running:true}) sendet. Ohne diese Meldung kaeme also nie eine Zeile,
+        // die „Berechne…" widerlegt — die Karte behauptete dauerhaft, sie rechne.
+        this.fatalError$.next(reason);
         reject(reason);
       };
+      this.initFail = fail;
       const timeout = setTimeout(() => fail('Stockfish init timeout'), 15000);
       this.initTimeout = timeout;
       worker.onerror = () => fail('Stockfish worker error');
@@ -158,6 +169,7 @@ export class AnalysisEngineService implements OnDestroy {
           worker.removeEventListener('message', onReady);
           clearTimeout(timeout);
           this.initTimeout = undefined;
+          this.initFail = undefined;
           // Ab jetzt: dauerhafter Crash-Handler + Analyse-Listener.
           // FEN ins Crash-Log: ohne die konkrete Stellung ist „RuntimeError: unreachable" nicht
           // reproduzierbar (alle Crashes sähen identisch aus). So lässt sich der Auslöser nachstellen.
@@ -515,6 +527,11 @@ export class AnalysisEngineService implements OnDestroy {
 
   destroy(): void {
     if (this.initTimeout !== undefined) { clearTimeout(this.initTimeout); this.initTimeout = undefined; }
+    // Laufenden Handshake aufloesen, BEVOR der Worker stirbt. Sonst kann `readyok` nie mehr
+    // kommen, das Promise wird nie erfuellt, und das `await this.init()` in analyze() haengt
+    // samt seiner Closure (und der darin gefangenen Component) fuer immer im Speicher.
+    // Frueher rettete das der 15-s-Timer — den raeumt die Zeile darueber jetzt weg.
+    this.initFail?.('Engine destroyed');
     if (this.worker) {
       try { this.send('stop'); this.send('quit'); } catch {}
       this.worker.terminate();
