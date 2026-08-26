@@ -19,7 +19,7 @@ namespace RookHub.Api.IntegrationTests;
 /// InvalidOperationException("could not be translated"), faellt der Test — automatisch und ohne
 /// dass jemand daran denken muss.
 /// </summary>
-[Collection("mariadb")]
+[Collection(ApiFactoryCollection.Name)]
 public class QueryTranslationTests : IAsyncLifetime
 {
     private MariaDbSchema _schema = null!;

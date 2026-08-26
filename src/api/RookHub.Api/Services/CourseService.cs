@@ -1097,29 +1097,36 @@ public class CourseService
 
         var attemptsQuery = _db.CourseAttempts.Where(a => a.UserId == userId && a.BookId == bookId);
         if (resetAt.HasValue) attemptsQuery = attemptsQuery.Where(a => a.AttemptedAt >= resetAt.Value);
-        // Chronologisch sortiert → der erste Eintrag je Puzzle ist der „erste Versuch" (nach Reset).
-        var attempts = await attemptsQuery
-            .OrderBy(a => a.AttemptedAt).ThenBy(a => a.Id)
-            .Select(a => new { a.BookPuzzleId, a.Solved, a.TimeSeconds })
+        // EINE Zeile je PUZZLE statt je VERSUCH. Vorher wurde jeder einzelne Versuch des Users in
+        // diesem Buch geladen — bei jedem /next und /results, und wachsend mit der Historie. Der
+        // „erste Versuch" kommt jetzt aus einer korrelierten Unterabfrage
+        // (ORDER BY AttemptedAt, Id LIMIT 1), also aus GENAU derselben Reihenfolge wie zuvor im
+        // Speicher. Der Reset-Filter wandert dabei nachweislich in die Unterabfrage mit — ohne das
+        // stammte der „erste Versuch" von VOR dem Zurücksetzen und die Trefferquote wäre falsch.
+        var perPuzzle = await attemptsQuery
+            .GroupBy(a => a.BookPuzzleId)
+            .Select(g => new
+            {
+                PuzzleId = g.Key,
+                Seconds = g.Sum(a => a.TimeSeconds),
+                FirstSolved = g.OrderBy(a => a.AttemptedAt).ThenBy(a => a.Id).First().Solved,
+            })
             .ToListAsync();
 
         CourseScopeStatsDto BuildScope(Func<int, bool> inScope, int total)
         {
             var solved = solvedIds.Count(inScope);
-            var scoped = attempts.Where(a => inScope(a.BookPuzzleId)).ToList();
-            var firstTry = new Dictionary<int, bool>();
-            foreach (var a in scoped)
-                if (!firstTry.ContainsKey(a.BookPuzzleId)) firstTry[a.BookPuzzleId] = a.Solved;
-            var firstCorrect = firstTry.Count(kv => kv.Value);
+            var scoped = perPuzzle.Where(p => inScope(p.PuzzleId)).ToList();
+            var firstCorrect = scoped.Count(p => p.FirstSolved);
             return new CourseScopeStatsDto
             {
                 SolvedCount = Math.Min(solved, total),
                 Total = total,
                 ProgressPercent = Percent(solved, total),
-                TotalSeconds = scoped.Sum(a => a.TimeSeconds),
-                AttemptedCount = firstTry.Count,
+                TotalSeconds = scoped.Sum(p => p.Seconds),
+                AttemptedCount = scoped.Count,
                 FirstTryCorrect = firstCorrect,
-                AccuracyPercent = Percent(firstCorrect, firstTry.Count),
+                AccuracyPercent = Percent(firstCorrect, scoped.Count),
             };
         }
 
