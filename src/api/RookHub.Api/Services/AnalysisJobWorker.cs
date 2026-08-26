@@ -46,16 +46,47 @@ public static class AnalysisJobStream
     public static bool ShouldPersist(int lineDepth, int reachedDepth) => lineDepth >= reachedDepth;
 
     /// <summary>Liest den ndjson-Stream zeilenweise und ruft <paramref name="onLine"/> für jede Zeile mit Tiefe.
-    /// Endet mit dem Stream oder per Abbruch (Exception wird durchgereicht).</summary>
-    public static async Task ConsumeAsync(Stream ndjson, Func<string, int, Task> onLine, CancellationToken ct)
+    /// Endet mit dem Stream oder per Abbruch (Exception wird durchgereicht). <paramref name="tally"/> zählt
+    /// mit, WAS über die Leitung kam — beim Abriss ist das die entscheidende Frage.</summary>
+    public static async Task ConsumeAsync(Stream ndjson, Func<string, int, Task> onLine, CancellationToken ct,
+                                          StreamTally? tally = null)
     {
         using var reader = new StreamReader(ndjson);
         while (await reader.ReadLineAsync(ct) is { } line)
         {
+            var now = DateTime.UtcNow;
+            tally?.Note(line, now);
             if (DepthOf(line) is int depth)
                 await onLine(line, depth);
         }
     }
+}
+
+/// <summary>Zählwerk EINES Stream-Laufs. Beantwortet beim Abriss die Frage, an der sich die Ursachen
+/// scheiden: war die Leitung vorher stumm (dann kappt jemand eine untätige Verbindung) oder lief bis
+/// zuletzt Verkehr (dann ist es kein Untätigkeits-Timeout)? Leerzeilen sind die Lebenszeichen des
+/// Providers bzw. des Proxys, Zeilen ohne Tiefe alles Übrige.</summary>
+public sealed class StreamTally
+{
+    public int DataLines { get; private set; }
+    public int Heartbeats { get; private set; }
+    public int OtherLines { get; private set; }
+    public DateTime? LastDataUtc { get; private set; }
+    public DateTime? LastAnyUtc { get; private set; }
+
+    public void Note(string line, DateTime nowUtc)
+    {
+        LastAnyUtc = nowUtc;
+        if (string.IsNullOrWhiteSpace(line)) { Heartbeats++; return; }
+        if (AnalysisJobStream.DepthOf(line) is not null) { DataLines++; LastDataUtc = nowUtc; return; }
+        OtherLines++;
+    }
+
+    /// <summary>Sekunden seit der letzten ZEILE MIT DATEN (null, wenn nie eine kam).</summary>
+    public double? DataGapSeconds(DateTime nowUtc) => LastDataUtc is { } t ? (nowUtc - t).TotalSeconds : null;
+
+    /// <summary>Sekunden seit dem letzten Byte überhaupt — inklusive Lebenszeichen.</summary>
+    public double? AnyGapSeconds(DateTime nowUtc) => LastAnyUtc is { } t ? (nowUtc - t).TotalSeconds : null;
 }
 
 /// <summary>
@@ -264,6 +295,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 string? pendingLine = null; var pendingDepth = job.ReachedDepth;
                 var currentDepth = 0; var currentNps = 0;
                 var gotData = false;
+                var tally = new StreamTally();
                 // Wächter NUR für die erste Zeile: danach dürfen zwischen zwei Iterationen Stunden liegen
                 // (Tiefe 40+ mit mehreren Linien), aber ein stummer Provider soll den Slot nicht ewig halten.
                 using var firstLine = new CancellationTokenSource(_firstLineTimeout);
@@ -296,7 +328,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         // Limit mitgeschickt und beendet den Stream selbst. Bräche der Worker schon bei der
                         // ERSTEN Zeile der Zieltiefe ab, trüge nur die Hauptvariante diese Tiefe — die Linien
                         // 2..K blieben eine Iteration flacher (jede pv hat ihre eigene Tiefe).
-                    }, streamCt);
+                    }, streamCt, tally);
                 }
                 catch (OperationCanceledException) when (firstLine.IsCancellationRequested && !ct.IsCancellationRequested)
                 {
@@ -305,7 +337,29 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     return;
                 }
                 catch (OperationCanceledException) { /* Pause (Live), Löschung oder Shutdown */ }
-                catch (IOException ex) { _logger.LogWarning(ex, "AnalysisJob {JobId}: Stream abgerissen", job.Id); }
+                catch (IOException ex)
+                {
+                    // Die Zahlen entscheiden die Ursachenfrage: kam bis zuletzt Verkehr, ist es KEIN
+                    // Untätigkeits-Timeout; war die Leitung stumm, schon. Deshalb beides getrennt —
+                    // Datenzeilen und Lebenszeichen (Leerzeilen) haben unterschiedliche Aussagekraft.
+                    var now = DateTime.UtcNow;
+                    _logger.LogWarning(ex,
+                        "AnalysisJob {JobId}: Stream abgerissen nach {RunSeconds:F0} s — {DataLines} Datenzeilen, "
+                        + "{Heartbeats} Lebenszeichen, {OtherLines} sonstige; letzte Datenzeile vor {DataGap} s, "
+                        + "letztes Byte vor {AnyGap} s (Engine {EngineId}, Tiefe {Depth}/{Target})",
+                        job.Id, (now - runStart).TotalSeconds, tally.DataLines, tally.Heartbeats, tally.OtherLines,
+                        Fmt(tally.DataGapSeconds(now)), Fmt(tally.AnyGapSeconds(now)), run.EngineId,
+                        currentDepth, job.TargetDepth);
+                }
+
+                var endedAt = DateTime.UtcNow;
+                // Auch das saubere Ende protokollieren — ohne Vergleichsmaßstab sagen die Abriss-Zahlen nichts.
+                _logger.LogInformation(
+                    "AnalysisJob {JobId}: Lauf beendet nach {RunSeconds:F0} s — {DataLines} Datenzeilen, "
+                    + "{Heartbeats} Lebenszeichen, {OtherLines} sonstige; letzte Datenzeile vor {DataGap} s "
+                    + "(Engine {EngineId}, Tiefe {Depth}/{Target})",
+                    job.Id, (endedAt - runStart).TotalSeconds, tally.DataLines, tally.Heartbeats, tally.OtherLines,
+                    Fmt(tally.DataGapSeconds(endedAt)), run.EngineId, currentDepth, job.TargetDepth);
 
                 await PersistProgressAsync(db, job, pendingLine, pendingLine is null ? job.ReachedDepth : pendingDepth,
                                            DateTime.UtcNow - lastPersist, currentDepth, currentNps);
@@ -390,6 +444,9 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             run.Cts.Dispose();
         }
     }
+
+    /// <summary>Sekunden auf eine Stelle, „—" wenn es den Messwert nicht gibt (nie eine Zeile gesehen).</summary>
+    private static string Fmt(double? seconds) => seconds is { } v ? v.ToString("F1") : "—";
 
     /// <summary>Ergebnis + Rechenzeit sichern. Gibt zurück, wie viel Zeit NICHT verbucht wurde (der Bruchteil
     /// unter einer Sekunde) — der Aufrufer schiebt ihn ins nächste Intervall, sonst summierte sich bei jedem

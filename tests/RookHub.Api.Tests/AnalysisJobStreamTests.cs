@@ -37,6 +37,43 @@ public class AnalysisJobStreamTests
     }
 
     [Fact]
+    public async Task ConsumeAsync_Tally_SeparatesDataLinesHeartbeatsAndRest()
+    {
+        // Genau die Frage, die beim Abriss zählt: kam Verkehr — und welcher Art?
+        var ndjson = "{\"depth\":1,\"pvs\":[]}\n\n\n{\"depth\":2,\"pvs\":[]}\nkaputt\n{\"ok\":true}\n";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(ndjson));
+        var tally = new StreamTally();
+        await AnalysisJobStream.ConsumeAsync(stream, (_, _) => Task.CompletedTask, CancellationToken.None, tally);
+
+        Assert.Equal(2, tally.DataLines);
+        Assert.Equal(2, tally.Heartbeats);     // die beiden Leerzeilen
+        Assert.Equal(2, tally.OtherLines);     // „kaputt" und JSON ohne depth
+        Assert.NotNull(tally.LastDataUtc);
+    }
+
+    [Fact]
+    public void Tally_WithoutAnyLine_ReportsNoGaps()
+    {
+        var tally = new StreamTally();
+        Assert.Null(tally.DataGapSeconds(DateTime.UtcNow));
+        Assert.Null(tally.AnyGapSeconds(DateTime.UtcNow));
+    }
+
+    [Fact]
+    public void Tally_HeartbeatKeepsAnyGapSmall_ButDataGapKeepsGrowing()
+    {
+        // Der Unterschied, an dem sich die Ursachen scheiden: die Leitung ist NICHT stumm (AnyGap klein),
+        // obwohl die Engine seit Minuten keine Bewertung geliefert hat (DataGap gross).
+        var t0 = new DateTime(2026, 8, 26, 12, 0, 0, DateTimeKind.Utc);
+        var tally = new StreamTally();
+        tally.Note("{\"depth\":20,\"pvs\":[]}", t0);
+        tally.Note("", t0.AddSeconds(300));
+
+        Assert.Equal(305, tally.DataGapSeconds(t0.AddSeconds(305)));
+        Assert.Equal(5, tally.AnyGapSeconds(t0.AddSeconds(305)));
+    }
+
+    [Fact]
     public async Task ConsumeAsync_StopsOnCancellation()
     {
         // Endloser Stream (Pipe ohne Schreiber) — der Abbruch muss ihn verlassen.

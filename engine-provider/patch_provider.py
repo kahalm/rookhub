@@ -82,6 +82,7 @@ PATCHES = [
      "        self.rookhub_stopping = False\n"
      "\n"
      "        def stream():\n"
+     "            silent = 0.0\n"
      "            while True:\n"
      "                try:\n"
      "                    command, params = self.recv(timeout=ROOKHUB_HEARTBEAT_SECONDS)\n"
@@ -90,8 +91,11 @@ PATCHES = [
      "                    # niemand mehr ein Lebenszeichen (der Upload ist da schon zu).\n"
      "                    if self.rookhub_stopping:\n"
      "                        continue\n"
+     "                    silent += ROOKHUB_HEARTBEAT_SECONDS\n"
+     "                    logging.info(\"Lebenszeichen nach %.0fs Stille\", silent)\n"
      "                    yield b\"\\n\"   # Lebenszeichen: haelt die stumme Verbindung offen\n"
-     "                    continue\n"),
+     "                    continue\n"
+     "                silent = 0.0\n"),
 ]
 
 with open(PATH, encoding="utf-8") as f:
