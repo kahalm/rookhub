@@ -749,3 +749,39 @@ describe('AnalysisComponent compare mode invariants', () => {
     c.ngOnDestroy();
   });
 });
+
+// Suchtimer neben „Tiefe x/y": läuft ab Suchstart einer Stellung, über eine Fortsetzung nach
+// Abriss hinweg (dieselbe Stellung, weiter „läuft"), und friert beim Ende der Suche ein.
+describe('AnalysisComponent Suchtimer', () => {
+  it('formatElapsed rendert m:ss', () => {
+    expect(AnalysisComponent.formatElapsed(5)).toBe('0:05');
+    expect(AnalysisComponent.formatElapsed(65)).toBe('1:05');
+    expect(AnalysisComponent.formatElapsed(720)).toBe('12:00');
+  });
+
+  it('läuft ab Suchstart, über weitere Zeilen hinweg, und friert beim Ende ein', () => {
+    const c = makeComponent({ fen: START });
+    let now = 100_000;
+    c.nowFn = () => now;
+    c.ngOnInit();
+    const st = (running: boolean, depth = 0) =>
+      c.__engine.analysis$.next({ fen: c.currentFen, depth, lines: [], running, nodes: 0, nps: 0 });
+
+    st(true);
+    now += 30_000; c.updateClocks();
+    expect(c.searchTime).toBe('0:30');
+
+    st(true, 27);                       // neue Zeile derselben Suche (auch nach Fortsetzung) → läuft weiter
+    now += 45_000; c.updateClocks();
+    expect(c.searchTime).toBe('1:15');
+
+    st(false, 27);                      // Suche beendet → eingefroren
+    now += 60_000; c.updateClocks();
+    expect(c.searchTime).toBe('1:15');
+
+    st(true, 0);                        // neue Suche (z. B. nach Zug) → Timer beginnt von vorn
+    now += 3_000; c.updateClocks();
+    expect(c.searchTime).toBe('0:03');
+    c.ngOnDestroy();
+  });
+});

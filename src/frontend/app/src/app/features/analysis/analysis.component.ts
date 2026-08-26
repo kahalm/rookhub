@@ -99,7 +99,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
             <mat-card-content>
               <div class="engine-head">
                 <mat-slide-toggle [(ngModel)]="engineOn" (change)="onEngineToggle()">{{ 'analysis.engine' | translate }}</mat-slide-toggle>
-                <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }}</span>
+                <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }} · <span class="search-time" [title]="'analysis.searchTime' | translate">{{ searchTime }}</span></span>
                 <span class="he-spacer"></span>
                 <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
                   <mat-label>{{ 'analysis.maxDepth' | translate }}</mat-label>
@@ -279,6 +279,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
     .engine-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .depth { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .search-time { font-variant-numeric: tabular-nums; }
     .he-spacer { flex: 1 1 auto; }
     .num-field { width: 104px; }
     .engine-field { width: 190px; }
@@ -371,6 +372,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   sinceUpdateSec = 0;
   private lastUpdateAt = Date.now();
   private tickSub?: Subscription;
+  /** Suchzeit der aktuellen Stellung — startet mit dem ersten „läuft" einer Stellung, läuft über eine
+   *  Fortsetzung nach Abriss weiter und friert beim Ende ein. Permanent im Kopf neben „Tiefe x/y". */
+  searchElapsedSec = 0;
+  private searchStartedAt = Date.now();
+  private searchEndedAt: number | null = null;
+  private searchFen = '';
+  /** Uhrquelle (in Tests überschreibbar). */
+  private nowFn: () => number = () => Date.now();
   /** Suchleistung der laufenden Analyse (0 = noch kein Messwert). */
   nodes = 0;
   nps = 0;
@@ -437,8 +446,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => {
+      const wasRunning = this.running;
+      const now = this.nowFn();
       this.running = s.running;
-      this.lastUpdateAt = Date.now();
+      this.lastUpdateAt = now;
+      if (s.running && (!wasRunning || s.fen !== this.searchFen)) {
+        this.searchStartedAt = now; this.searchEndedAt = null; this.searchFen = s.fen;
+      } else if (!s.running && wasRunning) {
+        this.searchEndedAt = now;
+      }
       this.onEngineUpdate(s.fen, s.depth, s.lines, s.nodes, s.nps);
     });
     this.errorSub = this.engine.engineFatalError$.subscribe(e => { this.engineCrashed = e !== null; this.cdr.markForCheck(); });
@@ -446,10 +462,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.cutSub = this.engine.remoteInterrupted$.subscribe(c => { this.remoteCut = c; this.cdr.markForCheck(); });
     // Sekundentakt nur für „rechnet seit …": bei MultiPV 5 vergehen ab Tiefe ~27 Minuten ohne neue
     // Zeile — ohne sichtbare Uhr sieht das aus wie ein Hänger. markForCheck nur bei Wertänderung.
-    this.tickSub = interval(1000).subscribe(() => {
-      const v = this.running ? Math.floor((Date.now() - this.lastUpdateAt) / 1000) : 0;
-      if (v !== this.sinceUpdateSec) { this.sinceUpdateSec = v; this.cdr.markForCheck(); }
-    });
+    this.tickSub = interval(1000).subscribe(() => this.updateClocks());
 
     // External Engines des Lichess-Kontos laden (nur eingeloggt; stiller Hintergrund-Feed —
     // ohne Liste bleibt es einfach beim Browser-WASM). War zuletzt eine External Engine gewählt
@@ -709,8 +722,21 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   get showThinking(): boolean {
     return this.engineOn && !this.terminal && this.running && this.selectedEngineId !== 'wasm' && this.sinceUpdateSec >= 5;
   }
-  get thinkingTime(): string {
-    const m = Math.floor(this.sinceUpdateSec / 60), sec = this.sinceUpdateSec % 60;
+  /** Beide Uhren nachziehen (Sekundentakt): Funkstille seit der letzten Zeile + Suchzeit der Stellung. */
+  private updateClocks(): void {
+    const now = this.nowFn();
+    const v = this.running ? Math.floor((now - this.lastUpdateAt) / 1000) : 0;
+    const e = Math.max(0, Math.floor(((this.searchEndedAt ?? now) - this.searchStartedAt) / 1000));
+    if (v !== this.sinceUpdateSec || e !== this.searchElapsedSec) {
+      this.sinceUpdateSec = v; this.searchElapsedSec = e; this.cdr.markForCheck();
+    }
+  }
+
+  get thinkingTime(): string { return AnalysisComponent.formatElapsed(this.sinceUpdateSec); }
+  /** Suchzeit der aktuellen Stellung als m:ss (läuft, bis die Suche endet; dann eingefroren). */
+  get searchTime(): string { return AnalysisComponent.formatElapsed(this.searchElapsedSec); }
+  static formatElapsed(totalSec: number): string {
+    const m = Math.floor(totalSec / 60), sec = totalSec % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
   }
   /** Erwartung setzen: 4+ Linien × Tiefe ≥ 27 braucht auf einem PC je Iteration Minuten. */

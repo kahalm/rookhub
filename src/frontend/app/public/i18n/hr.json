@@ -2254,6 +2254,7 @@
     "mateBlackWins": "Šah-mat — crni pobjeđuje",
     "stalemate": "Pat — neriješeno",
     "remoteFallback": "Vanjski motor nije dostupan — računa motor u pregledniku.",
+    "searchTime": "Vrijeme pretrage u ovoj poziciji",
     "remoteCutResuming": "Veza s motorom prekinuta na dubini {{depth}}/{{target}} — nastavlja se…",
     "remoteCutFinal": "Veza s motorom prekinuta na dubini {{depth}}/{{target}} — prikazan je zadnji rezultat.",
     "thinkingSince": "Motor računa dubinu {{depth}} već {{time}}",
