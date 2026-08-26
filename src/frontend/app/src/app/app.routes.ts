@@ -35,6 +35,8 @@ export const routes: Routes = [
   // nur eine Frontend-Schwelle vor bereits offenen Daten. Gewertet wird weiterhin nur
   // eingeloggt — Fortschritt und Versuch sind serverseitig [Authorize].
   { path: 'weekly/:weeklyId', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
+  // Auftragsseite VOR `analysis` (eigener Pfad; eingeloggt — Aufträge sind serverseitig [Authorize]).
+  { path: 'analysis/jobs', loadComponent: () => import('./features/analysis/analysis-jobs.component').then(m => m.AnalysisJobsComponent), canActivate: [authGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },
   { path: 'remembered', loadComponent: () => import('./features/remembered/remembered-lines.component').then(m => m.RememberedLinesComponent), canActivate: [authGuard, menuGuard('remembered')] },

@@ -533,6 +533,14 @@ Broker-Fehlern. Beim API-Start werden `Running`-Aufträge auf `Paused` gesetzt. 
 Tiefe ↓ auf/unter das Erreichte → `Done`; Linien ↓ → gespeicherte `pvs` kürzen, kein Neustart; Linien ↑ →
 laufende Suche abbrechen (`IAnalysisJobControl.Interrupt`), zurück in die Queue, Ergebnis bleibt Anzeige.
 Ergebnis = letzte Broker-Zeile als opakes JSON (`ResultJson`), das Frontend mappt es wie den Live-Stream.
+**Frontend (0.380.0)**: Hintergrund-Engine in der Profil-Engine-Karte wählen (`PUT /api/engine/background`);
+das Analysebrett filtert sie aus Live- und Vergleichs-Picker (`backgroundEngineId` aus `GET /api/engine/external`)
+und bietet ein Uhr-Symbol „Im Hintergrund analysieren" (`AnalysisJobDialogComponent`: Tiefe/Linien vorbelegt aus
+den Live-Einstellungen, legt den Auftrag direkt an) sowie den Sprung zur Seite `/analysis/jobs`
+(`AnalysisJobsComponent`: Liste, 10-s-Poll solange Aufträge offen, aufklappen = Brett + gespeicherte Linien
+ohne laufende Engine, Tiefe/Linien nachträglich ändern). Die Abbildung Broker-Zeile → Anzeige teilt sich der
+Live-Pfad mit der Auftragsseite über `features/analysis/engine-lines.util.ts` (`mapBrokerLine`, `uciLineToSan`,
+`toDisplayLines`, `formatElapsed`).
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|

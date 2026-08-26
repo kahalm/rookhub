@@ -554,7 +554,12 @@
       "listFailed": "Die Engine-Liste konnte nicht von Lichess geladen werden. Versuch es gleich noch einmal.",
       "enginesFound": "Auf deinem Lichess-Konto gefundene Engines:",
       "noEngines": "Auf deinem Lichess-Konto ist noch keine External Engine registriert.",
-      "specs": "{{threads}} Threads, {{hash}} MiB Hash"
+      "specs": "{{threads}} Threads, {{hash}} MiB Hash",
+      "backgroundLabel": "Hintergrund-Engine für Aufträge",
+      "backgroundNone": "Keine",
+      "backgroundHint": "Die Hintergrund-Engine rechnet deine Analyse-Aufträge, sobald sie frei ist, und pausiert, solange du live mit einer externen Engine analysierst. Sie erscheint nicht im Live-Picker — am besten eine eigene Engine dafür registrieren (ENGINE_COUNT=2 im Provider).",
+      "backgroundSaved": "Hintergrund-Engine gespeichert.",
+      "backgroundFailed": "Hintergrund-Engine konnte nicht gespeichert werden."
     },
     "offline": {
       "title": "Offline",
@@ -2267,7 +2272,9 @@
       "startpos": "Grundstellung",
       "whiteToMove": "Weiß am Zug",
       "blackToMove": "Schwarz am Zug"
-    }
+    },
+    "queueBackground": "Im Hintergrund analysieren",
+    "openJobs": "Analyse-Aufträge"
   },
   "stats": {
     "title": "Statistik",
@@ -2793,6 +2800,45 @@
       "endless": "Endless",
       "daily": "Tagespuzzle",
       "book": "Buch-Puzzles"
+    }
+  },
+  "analysisJobs": {
+    "title": "Analyse-Aufträge",
+    "toAnalysis": "Zum Analysebrett",
+    "intro": "Stellungen, die die Hintergrund-Engine für dich durchrechnet — einen Auftrag nach dem anderen, pausiert, solange du live extern analysierst. Aufklappen zeigt die gespeicherten Linien.",
+    "empty": "Noch keine Aufträge.",
+    "emptyHint": "Im Analysebrett über das Uhr-Symbol „Im Hintergrund analysieren“ eine Stellung vormerken.",
+    "untitled": "Ohne Titel",
+    "status": {
+      "queued": "wartet",
+      "running": "rechnet",
+      "paused": "pausiert",
+      "done": "fertig",
+      "failed": "gescheitert"
+    },
+    "depthOf": "Tiefe {{reached}}/{{target}}",
+    "lines": "{{count}} Linien",
+    "noResult": "Noch kein Ergebnis — der Auftrag hat noch nicht gerechnet.",
+    "openInBoard": "Im Analysebrett öffnen",
+    "apply": "Übernehmen",
+    "moreLinesHint": "Mehr Linien = die Suche startet neu; das bisherige Ergebnis bleibt sichtbar, bis die neue Suche tiefer ist.",
+    "created": "Auftrag angelegt — er rechnet, sobald die Hintergrund-Engine frei ist.",
+    "createFailed": "Auftrag konnte nicht angelegt werden",
+    "updated": "Auftrag angepasst.",
+    "updateFailed": "Auftrag konnte nicht geändert werden.",
+    "deleteConfirm": "Diesen Analyse-Auftrag löschen?",
+    "deleteFailed": "Auftrag konnte nicht gelöscht werden.",
+    "loadFailed": "Aufträge konnten nicht geladen werden.",
+    "dialog": {
+      "title": "Im Hintergrund analysieren",
+      "depth": "Zieltiefe",
+      "lines": "Linien",
+      "titleLabel": "Titel (optional)",
+      "hint": "Rechnet, sobald die Hintergrund-Engine frei ist, und pausiert, solange du live mit einer externen Engine analysierst. Das Ergebnis findest du unter „Analyse-Aufträge“.",
+      "costHint": "Faustregel: Jede Tiefe ab ~27 dauert ein Vielfaches der vorigen; 4+ Linien vervielfachen die Zeit noch einmal.",
+      "noEngine": "Im Profil ist keine Hintergrund-Engine festgelegt.",
+      "toProfile": "Zum Profil",
+      "submit": "Vormerken"
     }
   }
 }

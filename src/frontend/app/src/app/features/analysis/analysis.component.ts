@@ -15,6 +15,9 @@ import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Subscription, interval } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { AnalysisJobDialogComponent } from './analysis-job-dialog.component';
+import { EngineDisplayLine, formatElapsed as formatElapsedUtil, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
@@ -25,7 +28,6 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
 import { AuthService } from '../../core/auth.service';
 
 interface LineNode { san: string; fen: string; uci: string; }
-interface EngineDisplayLine { evalText: string; san: string; positive: boolean; }
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = 'rookhub_analysis_lines';
@@ -130,6 +132,16 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                           [matTooltip]="'analysis.compareToggle' | translate"
                           (click)="compareOn = !compareOn; onCompareToggle()">
                     <mat-icon>balance</mat-icon>
+                  </button>
+                }
+                @if (auth.isLoggedIn && hasExternalEngines) {
+                  <button mat-icon-button [matTooltip]="'analysis.queueBackground' | translate"
+                          [attr.aria-label]="'analysis.queueBackground' | translate" (click)="openBackgroundJob()">
+                    <mat-icon>schedule</mat-icon>
+                  </button>
+                  <button mat-icon-button [matTooltip]="'analysis.openJobs' | translate"
+                          [attr.aria-label]="'analysis.openJobs' | translate" (click)="openJobs()">
+                    <mat-icon>list_alt</mat-icon>
                   </button>
                 }
               </div>
@@ -363,6 +375,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** External Engines des Lichess-Kontos (leer = kein Picker); Auswahl 'wasm' = Browser. */
   externalEnginesList: ExternalEngineInfo[] = [];
   selectedEngineId = 'wasm';
+  /** Im Profil gewählte Hintergrund-Engine — gehört den Aufträgen, fehlt deshalb im Live-Picker. */
+  backgroundEngineId: string | null = null;
+  /** Mindestens eine externe Engine registriert (inkl. Hintergrund-Engine) → Aufträge sind möglich. */
+  hasExternalEngines = false;
   remoteFallback = false;
   /** Abriss der Remote-Suche vor der Zieltiefe (Hinweis in der Karte; null = keiner). */
   remoteCut: RemoteInterruption | null = null;
@@ -416,7 +432,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
-              @Inject(LOCALE_ID) private locale: string) {
+              @Inject(LOCALE_ID) private locale: string,
+              private dialog?: MatDialog) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -475,10 +492,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       // niemand mehr sieht.
       this.enginesSub = this.externalEngines.listEngines().subscribe({
         next: r => {
-          this.externalEnginesList = r.engines;
+          // Die Hintergrund-Engine gehört den Aufträgen — im Live-Picker (und im Vergleich) taucht sie
+          // nicht auf, sonst konkurrierten zwei Suchen um dieselben Kerne.
+          this.backgroundEngineId = r.backgroundEngineId ?? null;
+          this.hasExternalEngines = r.engines.length > 0;
+          this.externalEnginesList = r.engines.filter(e => e.id !== this.backgroundEngineId);
           let stored: string | null = null;
           try { stored = localStorage.getItem(PROVIDER_KEY); } catch {}
-          if (stored && stored !== 'wasm' && r.engines.some(e => e.id === stored)) {
+          if (stored && stored !== 'wasm' && this.externalEnginesList.some(e => e.id === stored)) {
             this.selectedEngineId = stored;
             this.applyEngineSelection();
           }
@@ -694,11 +715,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  schlimmer als gar kein Vergleich. Frueher lag die Abbildung zweimal im Code, inklusive der
    *  feinen Unterscheidung `score > 0` (Matt) gegen `score >= 0` (Zentibauern). */
   private toDisplayLines(fen: string, lines: AnalysisLine[]): EngineDisplayLine[] {
-    return lines.map(l => ({
-      evalText: l.evalText,
-      positive: l.scoreType === 'mate' ? l.score > 0 : l.score >= 0,
-      san: this.uciLineToSan(fen, l.pvUci, 12),
-    }));
+    return toDisplayLinesUtil(fen, lines, 12);
   }
 
   /** Gemeinsame Tempo-Formatierung. `nodes === null` = Kurzform (Vergleichs-Engine). */
@@ -735,10 +752,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   get thinkingTime(): string { return AnalysisComponent.formatElapsed(this.sinceUpdateSec); }
   /** Suchzeit der aktuellen Stellung als m:ss (läuft, bis die Suche endet; dann eingefroren). */
   get searchTime(): string { return AnalysisComponent.formatElapsed(this.searchElapsedSec); }
-  static formatElapsed(totalSec: number): string {
-    const m = Math.floor(totalSec / 60), sec = totalSec % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  }
+  static formatElapsed(totalSec: number): string { return formatElapsedUtil(totalSec); }
   /** Erwartung setzen: 4+ Linien × Tiefe ≥ 27 braucht auf einem PC je Iteration Minuten. */
   get slowConfigHint(): boolean { return this.linesCount >= 4 && this.depthSetting >= 27; }
 
@@ -777,22 +791,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   private uciLineToSan(fromFen: string, uci: string[], maxPlies: number): string {
-    let c: Chess;
-    try { c = new Chess(fromFen); } catch { return ''; }
-    const out: string[] = [];
-    let moveNo = Math.floor((c.moveNumber?.() ?? 1));
-    let white = c.turn() === 'w';
-    for (let i = 0; i < uci.length && i < maxPlies; i++) {
-      const u = uci[i];
-      let mv;
-      try { mv = c.move({ from: u.substring(0, 2), to: u.substring(2, 4), promotion: u.length > 4 ? u[4] : undefined }); }
-      catch { break; }
-      if (!mv) break;
-      if (white) out.push(moveNo + '. ' + mv.san);
-      else { if (out.length === 0) out.push(moveNo + '... ' + mv.san); else out.push(mv.san); moveNo++; }
-      white = !white;
-    }
-    return out.join(' ');
+    return uciLineToSanUtil(fromFen, uci, maxPlies);
   }
 
   // ---- Controls / IO ----
@@ -979,6 +978,21 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (this.compareOn && this.compareEngineId === this.selectedEngineId) this.startCompare();
     if (this.engineOn && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
   }
+  /** „Im Hintergrund analysieren": Dialog fragt Tiefe/Linien ab und legt den Auftrag an. */
+  openBackgroundJob(): void {
+    if (!this.dialog) return;
+    const ref = this.dialog.open(AnalysisJobDialogComponent, {
+      width: '440px',
+      data: { fen: this.currentFen, depth: this.depthSetting, lines: this.linesCount, hasBackgroundEngine: !!this.backgroundEngineId },
+    });
+    ref.afterClosed().subscribe(job => {
+      if (!job) return;
+      this.snackbar.success(this.translate.instant('analysisJobs.created'));
+      this.cdr.markForCheck();
+    });
+  }
+  openJobs(): void { this.router.navigateByUrl('/analysis/jobs'); }
+
   backToPuzzle(): void {
     if (this.returnTo) this.router.navigateByUrl(this.returnTo);
   }

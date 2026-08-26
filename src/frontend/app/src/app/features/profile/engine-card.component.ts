@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -22,6 +23,7 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
   selector: 'app-engine-card',
   standalone: true,
   imports: [
+    MatSelectModule,
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, TranslatePipe,
   ],
@@ -66,6 +68,16 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
               <li><strong>{{ e.name }}</strong> — {{ 'profile.engine.specs' | translate: { threads: e.maxThreads, hash: e.maxHash } }}</li>
             }
           </ul>
+          <div class="engine-row">
+            <mat-form-field appearance="outline" class="bg-field" subscriptSizing="dynamic">
+              <mat-label>{{ 'profile.engine.backgroundLabel' | translate }}</mat-label>
+              <mat-select [(ngModel)]="backgroundEngineId" name="backgroundEngine" (selectionChange)="saveBackground()">
+                <mat-option [value]="null">{{ 'profile.engine.backgroundNone' | translate }}</mat-option>
+                @for (e of engines; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <p class="engine-hint">{{ 'profile.engine.backgroundHint' | translate }}</p>
         } @else {
           <p class="engine-hint">{{ 'profile.engine.noEngines' | translate }}</p>
         }
@@ -78,6 +90,7 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
     .engine-hint a { color: #90caf9; }
     .engine-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .token-field { width: 320px; max-width: 100%; }
+    .bg-field { width: 320px; max-width: 100%; margin-top: 8px; }
     .masked { color: #ccc; font-size: 0.9rem; }
     .masked code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; }
     .engine-warn { display: flex; align-items: center; gap: 6px; color: #ef9a9a; font-size: 0.85rem; margin: 4px 0 0; }
@@ -95,6 +108,8 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   enginesLoaded = false;
   listFailed = false;
   engines: ExternalEngineInfo[] = [];
+  /** Hintergrund-Engine für Analyseaufträge (null = keine). */
+  backgroundEngineId: string | null = null;
   private listSub?: Subscription;
   private statusSub?: Subscription;
 
@@ -150,9 +165,19 @@ export class EngineCardComponent implements OnInit, OnDestroy {
         this.enginesLoaded = false;
         this.tokenInvalid = false;
         this.listFailed = false;
+        this.backgroundEngineId = null;
         this.cdr.markForCheck();
       },
       error: () => this.snackbar.warn(this.translate.instant('profile.engine.saveFailed')),
+    });
+  }
+
+  /** Hintergrund-Engine speichern — sie rechnet die Analyse-Aufträge und fehlt dafür im Live-Picker. */
+  saveBackground(): void {
+    const chosen = this.backgroundEngineId;
+    this.externalEngines.setBackgroundEngine(chosen).subscribe({
+      next: r => { this.backgroundEngineId = r.backgroundEngineId; this.snackbar.success(this.translate.instant('profile.engine.backgroundSaved')); this.cdr.markForCheck(); },
+      error: () => { this.snackbar.warn(this.translate.instant('profile.engine.backgroundFailed')); this.cdr.markForCheck(); },
     });
   }
 
@@ -165,6 +190,7 @@ export class EngineCardComponent implements OnInit, OnDestroy {
         this.enginesLoaded = true;
         this.tokenInvalid = r.tokenInvalid;
         this.engines = r.engines;
+        this.backgroundEngineId = r.backgroundEngineId ?? null;
         this.listFailed = false;
         this.cdr.markForCheck();
       },

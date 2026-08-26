@@ -554,7 +554,12 @@
       "listFailed": "Popis motora nije se mogao učitati s Lichessa. Pokušaj ponovno za koji trenutak.",
       "enginesFound": "Motori pronađeni na tvom Lichess računu:",
       "noEngines": "Na tvom Lichess računu još nije registriran nijedan vanjski motor.",
-      "specs": "{{threads}} niti, {{hash}} MiB hash"
+      "specs": "{{threads}} niti, {{hash}} MiB hash",
+      "backgroundLabel": "Pozadinski motor za zadatke",
+      "backgroundNone": "Nijedan",
+      "backgroundHint": "Pozadinski motor obrađuje tvoje analize kad god je slobodan i pauzira dok analiziraš uživo vanjskim motorom. Ne prikazuje se u izboru za analizu uživo — najbolje je registrirati zaseban motor (ENGINE_COUNT=2 u provideru).",
+      "backgroundSaved": "Pozadinski motor spremljen.",
+      "backgroundFailed": "Pozadinski motor nije bilo moguće spremiti."
     },
     "offline": {
       "title": "Offline",
@@ -2267,7 +2272,9 @@
       "startpos": "Početna pozicija",
       "whiteToMove": "Bijeli na potezu",
       "blackToMove": "Crni na potezu"
-    }
+    },
+    "queueBackground": "Analiziraj u pozadini",
+    "openJobs": "Analize u pozadini"
   },
   "stats": {
     "title": "Statistika",
@@ -2793,6 +2800,45 @@
       "endless": "Endless",
       "daily": "Dnevna zagonetka",
       "book": "Zagonetke iz knjige"
+    }
+  },
+  "analysisJobs": {
+    "title": "Analize u pozadini",
+    "toAnalysis": "Na ploču za analizu",
+    "intro": "Pozicije koje pozadinski motor računa za tebe — jedan zadatak za drugim, pauzirano dok analiziraš uživo vanjskim motorom. Otvori zadatak da vidiš spremljene varijante.",
+    "empty": "Još nema zadataka.",
+    "emptyHint": "Na ploči za analizu ikonom sata „Analiziraj u pozadini“ dodaj poziciju u red.",
+    "untitled": "Bez naslova",
+    "status": {
+      "queued": "čeka",
+      "running": "računa",
+      "paused": "pauzirano",
+      "done": "gotovo",
+      "failed": "neuspjelo"
+    },
+    "depthOf": "Dubina {{reached}}/{{target}}",
+    "lines": "Varijante: {{count}}",
+    "noResult": "Još nema rezultata — zadatak još nije računao.",
+    "openInBoard": "Otvori na ploči za analizu",
+    "apply": "Primijeni",
+    "moreLinesHint": "Više varijanti = pretraga kreće iznova; dosadašnji rezultat ostaje vidljiv dok nova pretraga ne bude dublja.",
+    "created": "Zadatak dodan — kreće čim pozadinski motor bude slobodan.",
+    "createFailed": "Zadatak nije bilo moguće dodati",
+    "updated": "Zadatak ažuriran.",
+    "updateFailed": "Zadatak nije bilo moguće izmijeniti.",
+    "deleteConfirm": "Izbrisati ovaj zadatak analize?",
+    "deleteFailed": "Zadatak nije bilo moguće izbrisati.",
+    "loadFailed": "Zadatke nije bilo moguće učitati.",
+    "dialog": {
+      "title": "Analiziraj u pozadini",
+      "depth": "Ciljna dubina",
+      "lines": "Varijante",
+      "titleLabel": "Naslov (neobavezno)",
+      "hint": "Kreće čim pozadinski motor bude slobodan i pauzira dok analiziraš uživo vanjskim motorom. Rezultat nalaziš pod „Analize u pozadini“.",
+      "costHint": "Pravilo: svaka dubina iznad ~27 traje višestruko duže od prethodne; 4+ varijante još jednom umnože vrijeme.",
+      "noEngine": "U profilu nije postavljen pozadinski motor.",
+      "toProfile": "Na profil",
+      "submit": "Dodaj u red"
     }
   }
 }

@@ -554,7 +554,12 @@
       "listFailed": "Could not load the engine list from Lichess. Try again in a moment.",
       "enginesFound": "Engines found on your Lichess account:",
       "noEngines": "No external engines registered on your Lichess account yet.",
-      "specs": "{{threads}} threads, {{hash}} MiB hash"
+      "specs": "{{threads}} threads, {{hash}} MiB hash",
+      "backgroundLabel": "Background engine for jobs",
+      "backgroundNone": "None",
+      "backgroundHint": "The background engine works through your analysis jobs whenever it is free and pauses while you analyse live with an external engine. It is hidden from the live picker — best register a dedicated engine for it (ENGINE_COUNT=2 in the provider).",
+      "backgroundSaved": "Background engine saved.",
+      "backgroundFailed": "Could not save the background engine."
     },
     "offline": {
       "title": "Offline",
@@ -2267,7 +2272,9 @@
       "startpos": "Starting position",
       "whiteToMove": "White to move",
       "blackToMove": "Black to move"
-    }
+    },
+    "queueBackground": "Analyse in the background",
+    "openJobs": "Analysis jobs"
   },
   "stats": {
     "title": "Statistics",
@@ -2793,6 +2800,45 @@
       "endless": "Endless",
       "daily": "Daily puzzle",
       "book": "Book puzzles"
+    }
+  },
+  "analysisJobs": {
+    "title": "Analysis jobs",
+    "toAnalysis": "To the analysis board",
+    "intro": "Positions the background engine calculates for you — one job at a time, paused while you analyse live with an external engine. Expand a job to see the stored lines.",
+    "empty": "No jobs yet.",
+    "emptyHint": "On the analysis board, use the clock icon „Analyse in the background“ to queue a position.",
+    "untitled": "Untitled",
+    "status": {
+      "queued": "queued",
+      "running": "running",
+      "paused": "paused",
+      "done": "done",
+      "failed": "failed"
+    },
+    "depthOf": "Depth {{reached}}/{{target}}",
+    "lines": "{{count}} lines",
+    "noResult": "No result yet — this job has not run yet.",
+    "openInBoard": "Open in analysis board",
+    "apply": "Apply",
+    "moreLinesHint": "More lines = the search restarts; the current result stays visible until the new search is deeper.",
+    "created": "Job queued — it runs as soon as the background engine is free.",
+    "createFailed": "Could not create the job",
+    "updated": "Job updated.",
+    "updateFailed": "Could not update the job.",
+    "deleteConfirm": "Delete this analysis job?",
+    "deleteFailed": "Could not delete the job.",
+    "loadFailed": "Could not load the jobs.",
+    "dialog": {
+      "title": "Analyse in the background",
+      "depth": "Target depth",
+      "lines": "Lines",
+      "titleLabel": "Title (optional)",
+      "hint": "Runs as soon as the background engine is free and pauses while you analyse live with an external engine. You will find the result under „Analysis jobs“.",
+      "costHint": "Rule of thumb: every depth beyond ~27 takes a multiple of the previous one; 4+ lines multiply the time again.",
+      "noEngine": "No background engine is set in your profile.",
+      "toProfile": "To the profile",
+      "submit": "Queue"
     }
   }
 }

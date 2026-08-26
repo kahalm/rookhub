@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { EngineAnalyseLine, EngineAnalyseWork } from './external-engine.service';
-import { normalizeCastlingUci } from './castling-uci.util';
+import { mapBrokerLine } from './engine-lines.util';
 
 /** Vom User gewählte External Engine (Lichess-Anbindung); Maxima kommen von der Registrierung. */
 export interface RemoteEngine {
@@ -461,28 +461,9 @@ export class AnalysisEngineService implements OnDestroy {
 
   /** ndjson-Zeile des Brokers → AnalysisLines. cp/mate kommen laut Spez. bereits aus Weiß-Sicht;
    *  Formatierung identisch zu parseInfo, damit die Anzeige beim Umschalten nicht springt. */
+  /** ndjson-Zeile des Brokers → AnalysisLines (siehe `mapBrokerLine` in engine-lines.util). */
   mapRemoteLine(l: EngineAnalyseLine): AnalysisLine[] {
-    return (l.pvs ?? []).slice(0, this.multiPv).map((pv, i) => {
-      const isMate = pv.mate !== undefined && pv.mate !== null;
-      const score = isMate ? pv.mate! : (pv.cp ?? 0);
-      let evalText: string;
-      if (isMate) {
-        evalText = '#' + score;
-      } else {
-        const v = score / 100;
-        evalText = (v > 0 ? '+' : '') + v.toFixed(2);
-      }
-      return {
-        multipv: i + 1,
-        depth: pv.depth ?? l.depth ?? 0,
-        scoreType: isMate ? 'mate' as const : 'cp' as const,
-        score,
-        evalText,
-        // Der Broker liefert Rochaden als König-schlägt-Turm (`e1h1`); `pvUci` muss aber die
-        // Standardform tragen, sonst bricht der SAN-Nachbau der Anzeige an der Rochade ab.
-        pvUci: normalizeCastlingUci(this.currentFen, pv.moves ?? []),
-      };
-    });
+    return mapBrokerLine(this.currentFen, l, this.multiPv);
   }
 
   stop(): void {

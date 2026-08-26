@@ -43,6 +43,24 @@ describe('EngineCardComponent', () => {
     expect(component.tokenInvalid).toBeFalse();
   });
 
+  it('saves the chosen background engine via PUT /api/engine/background', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false, backgroundEngineId: null,
+      engines: [{ id: 'eei_a', name: 'Live', maxThreads: 8, maxHash: 512 }, { id: 'eei_b', name: 'Hintergrund', maxThreads: 8, maxHash: 8192 }],
+    });
+    expect(component.backgroundEngineId).toBeNull();
+
+    component.backgroundEngineId = 'eei_b';
+    component.saveBackground();
+    const req = http.expectOne('/api/engine/background');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ engineId: 'eei_b' });
+    req.flush({ backgroundEngineId: 'eei_b' });
+    expect(component.backgroundEngineId).toBe('eei_b');
+  });
+
   it('flags a rejected token instead of showing an empty list', () => {
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****dead' });

@@ -15,6 +15,8 @@ export interface ExternalEnginesResponse {
   /** Lichess hat den gespeicherten Token abgewiesen (ungültig/abgelaufen/falscher Scope). */
   tokenInvalid: boolean;
   engines: ExternalEngineInfo[];
+  /** Im Profil gewählte Hintergrund-Engine für Analyseaufträge (der Live-Picker blendet sie aus). */
+  backgroundEngineId?: string | null;
 }
 
 export interface EngineCredentialStatus {
@@ -65,6 +67,11 @@ export class ExternalEngineService {
 
   listEngines(): Observable<ExternalEnginesResponse> {
     return this.http.get<ExternalEnginesResponse>('/api/engine/external');
+  }
+
+  /** Hintergrund-Engine festlegen (null = entfernen). */
+  setBackgroundEngine(engineId: string | null): Observable<{ backgroundEngineId: string | null }> {
+    return this.http.put<{ backgroundEngineId: string | null }>('/api/engine/background', { engineId });
   }
 
   /**
