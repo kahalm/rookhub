@@ -538,9 +538,14 @@ nicht laden müssen. **Grenzen und Terminalzustände (0.383.0, aus dem Review)**
 gedeckelt — das Protokoll-Maximum von `work.multiPv`, im Worker ein zweites Mal geklemmt (ein größerer Wert
 wird vom Broker abgewiesen und der Auftrag liefe endlos in die Wiederholung). Der Worker bricht **nicht mehr
 selbst** ab, wenn die Hauptvariante die Zieltiefe erreicht: die Engine bekommt `depth` als Limit und beendet den
-Stream selbst — sonst blieben die Linien 2..K eine Iteration flacher (jede `pv` traegt ihre eigene Tiefe). Ein Lauf
-ohne Tiefenfortschritt erhoeht `FruitlessAttempts`; ab `MaxFruitlessAttempts` (3) gilt der Auftrag als `Failed`
-(Matt-/Pattstellungen liefen sonst ewig im 30-s-Takt). Bleibt die erste Datenzeile binnen
+Stream selbst — sonst blieben die Linien 2..K eine Iteration flacher (jede `pv` traegt ihre eigene Tiefe). Ein KURZER Lauf
+ohne Tiefenfortschritt (< `AnalysisJobs:FruitlessMinRuntimeSeconds`, 60 s) erhoeht `FruitlessAttempts`; ab
+`MaxFruitlessAttempts` (3) gilt der Auftrag als `Failed` (Matt-/Pattstellungen liefen sonst ewig im 30-s-Takt).
+Ein LANGER Lauf ohne Fortschritt zaehlt bewusst NICHT: das ist eine gekappte Verbindung, kein Sackgassen-Beweis.
+**Live aufgetreten**: der Wachhund des offiziellen Providers setzt seinen „zuletzt benutzt"-Stempel erst am
+Stream-ENDE und terminiert jede Suche, die laenger als `--keep-alive` (Vorgabe 300 s) dauert — ab Tiefe 29 mit
+5 Linien jede Iteration. Der Auftrag kam nie tiefer und galt nach drei Runden als gescheitert; Abhilfe beidseitig:
+`KEEP_ALIVE` im Provider hoch (siehe `engine-provider/README.md`) UND diese Laufzeit-Unterscheidung hier. Bleibt die erste Datenzeile binnen
 `AnalysisJobs:FirstLineTimeoutSeconds` (300) aus, wird pausiert statt den Slot des Users unbegrenzt zu halten.
 Unerwartete Ausnahmen setzen den Auftrag in einem EIGENEN Scope auf `Paused` zurueck (sonst stuende er bis zum
 naechsten API-Start auf `Running` und wuerde nie wieder aufgegriffen). `TryCancel` faengt `ObjectDisposedException`

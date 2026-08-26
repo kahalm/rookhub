@@ -64,6 +64,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// <summary>Ohne erste Datenzeile binnen dieser Frist gilt der Provider als nicht rechnend — sonst hinge der
     /// Auftrag unbegrenzt in „läuft" (der HttpClient hat bewusst kein Timeout) und blockierte den Slot des Users.</summary>
     private readonly TimeSpan _firstLineTimeout;
+    /// <summary>Ab dieser Laufzeit gilt „kein Tiefenfortschritt" NICHT mehr als Fehlversuch: eine echte Sackgasse
+    /// (Matt/Patt, abgelehnte Arbeit) endet in Sekunden, ein langer Lauf ohne neue Zeile ist eine gekappte
+    /// Verbindung — dafür darf der Auftrag nicht als gescheitert gelten.</summary>
+    private readonly TimeSpan _fruitlessMinRuntime;
     private readonly ConcurrentDictionary<int, Running> _running = new();   // key = UserId
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
@@ -77,6 +81,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         _idleGrace = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:IdleGraceSeconds") ?? 20, 0, 600));
         _persistInterval = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:PersistIntervalSeconds") ?? 5, 1, 60));
         _firstLineTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FirstLineTimeoutSeconds") ?? 300, 30, 3600));
+        _fruitlessMinRuntime = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FruitlessMinRuntimeSeconds") ?? 60, 5, 3600));
         _tracker.LiveStarted += PauseUser;
     }
 
@@ -302,13 +307,24 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     // Nach drei solchen Runden hätte der Auftrag fälschlich als „gescheitert" gegolten.
                     await PauseAsync(db, job, null, TimeSpan.FromSeconds(30));
                 }
+                else if (DateTime.UtcNow - runStart >= _fruitlessMinRuntime)
+                {
+                    // LANG gerechnet und trotzdem keine tiefere Zeile: keine Sackgasse, sondern eine Umgebung, die
+                    // den Stream vorzeitig kappt — der klassische Fall ist der Wachhund des offiziellen Providers,
+                    // der seinen „zuletzt benutzt"-Stempel erst am Stream-ENDE setzt und eine Suche, die länger als
+                    // `--keep-alive` dauert, mitten im Rechnen terminiert (bei Tiefe 29+ mit 5 Linien der Normalfall;
+                    // Abhilfe dort: KEEP_ALIVE hochsetzen). Das darf NICHT als Fehlversuch zählen, sonst gilt ein
+                    // völlig gesunder Auftrag nach drei Runden als gescheitert — genau so gesehen (Job bei 29/40).
+                    await PauseAsync(db, job, "Stream vorzeitig beendet — wird fortgesetzt", TimeSpan.FromSeconds(30));
+                }
                 else
                 {
-                    // Kein Fortschritt: das kann transient sein — oder deterministisch (Matt-/Patt-Stellung, vom
-                    // Provider abgelehnte Arbeit). Ohne Zähler liefe der Auftrag ewig im 30-s-Takt gegen dieselbe Wand.
+                    // Kein Fortschritt in KURZER Zeit: das ist die deterministische Sackgasse (Matt-/Patt-Stellung,
+                    // vom Provider abgelehnte Arbeit) — dort endet der Stream sofort. Ohne Zähler liefe der Auftrag
+                    // ewig im 30-s-Takt gegen dieselbe Wand.
                     job.FruitlessAttempts++;
                     if (job.FruitlessAttempts >= AnalysisJob.MaxFruitlessAttempts)
-                        await FailAsync(db, job, $"Engine lieferte in {job.FruitlessAttempts} Läufen keine tiefere Bewertung");
+                        await FailAsync(db, job, $"Engine lieferte in {job.FruitlessAttempts} Läufen sofort keine Bewertung");
                     else
                         await PauseAsync(db, job, "Stream vor der Zieltiefe beendet", TimeSpan.FromSeconds(30));
                 }

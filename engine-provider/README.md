@@ -62,7 +62,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `ENGINE_NAME` | Anzeigename in der RookHub-Auswahl |
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
 | `MAX_HASH` | Hash-Tabelle in MiB (leer = 512) |
-| `KEEP_ALIVE` | Sekunden, die eine unbenutzte Engine weiterläuft (leer = 300) |
+| `KEEP_ALIVE` | Sekunden, die eine Engine ohne Stream-Ende weiterläuft (leer = 300). **Für Hintergrund-Analysen hochsetzen** — siehe Warnung unten |
 | `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
 | `ENGINE_COUNT` | Mehrere Engines in diesem Container (leer/1 = eine; max. 16) — siehe unten |
@@ -74,6 +74,25 @@ Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter 
 docker compose up -d     # übernimmt die geänderte .env
 docker compose down      # Provider stoppen (Engine verschwindet dann aus der RookHub-Auswahl)
 ```
+
+### ⚠️ `KEEP_ALIVE` und lange Suchen
+
+Der offizielle Provider setzt seinen „zuletzt benutzt"-Zeitstempel **erst am ENDE** eines Streams
+(`provider.py`: `self.last_used = time.monotonic()` nach dem Yield), sein Wachhund vergleicht aber
+laufend dagegen und terminiert die Engine, sobald `idle_time() > keep_alive`. Eine Suche, die **länger
+als `KEEP_ALIVE` dauert, wird deshalb mitten im Rechnen abgeschossen** — im Log als
+`Terminating idle engine` und einem `EOFError` aus `recv()`.
+
+Für die Live-Analyse fällt das nie auf (Sekunden bis Minuten). Für Hintergrund-Aufträge ist es fatal:
+ab Tiefe ~29 mit 5 Linien braucht **eine einzige Iteration** mehr als die 300 s Vorgabe, der Auftrag
+kommt also nie tiefer und sieht wie ein Fehlschlag aus. Deshalb bei Analyse-Aufträgen hochsetzen:
+
+```dotenv
+KEEP_ALIVE=86400      # 24 h
+```
+
+Der Preis ist gering: der Stockfish-Prozess bleibt länger im RAM — was hier sogar erwünscht ist, weil
+die warme Hashtabelle ein Fortsetzen nach einer Pause fast kostenlos macht.
 
 ### Zwei Engines: Live + Hintergrund
 

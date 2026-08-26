@@ -28,13 +28,17 @@ public class AnalysisJobWorkerTests
 /// der Worker selbst braucht Broker + DB und ist hier nicht instanziierbar).</summary>
 public class AnalysisJobOutcomeTests
 {
-    private static string Outcome(int reached, int target, int atStart, bool cancelledByUs, bool liveActive)
+    /// <param name="runtimeSec">Laufzeit dieses Streams — trennt die deterministische Sackgasse
+    /// (endet in Sekunden) von einer gekappten Verbindung (lief lange und brachte doch nichts).</param>
+    private static string Outcome(int reached, int target, int atStart, bool cancelledByUs, bool liveActive,
+        double runtimeSec = 0, double fruitlessMinSec = 60)
     {
         if (reached >= target) return "done";
         if (cancelledByUs) return "paused";                 // Live-Vorrang/gelöscht/Shutdown — kein Fehlversuch
         if (reached > atStart) return "paused-progress";    // Broker weg, aber es ging voran
         if (liveActive) return "paused-preempted";          // geteilte Engine: Live hat verdrängt
-        return "fruitless";                                 // wirklich nichts erreicht → zählt
+        if (runtimeSec >= fruitlessMinSec) return "paused-cut";   // lange gerechnet, Verbindung gekappt
+        return "fruitless";                                 // sofort nichts erreicht → zählt
     }
 
     [Fact]
@@ -56,6 +60,14 @@ public class AnalysisJobOutcomeTests
         => Assert.Equal("paused-preempted", Outcome(reached: 38, target: 40, atStart: 38, cancelledByUs: false, liveActive: true));
 
     [Fact]
-    public void NoProgressAndNoLive_CountsTowardsFailure()
-        => Assert.Equal("fruitless", Outcome(reached: 38, target: 40, atStart: 38, cancelledByUs: false, liveActive: false));
+    public void NoProgressAfterASHORTrun_CountsTowardsFailure()
+        // Matt-/Pattstellung oder abgelehnte Arbeit: der Stream endet in Sekunden.
+        => Assert.Equal("fruitless", Outcome(reached: 38, target: 40, atStart: 38, cancelledByUs: false, liveActive: false, runtimeSec: 2));
+
+    [Fact]
+    public void NoProgressAfterALONGrun_IsACutConnection_NotAFailure()
+        // Live gesehen: der Wachhund des offiziellen Providers terminiert eine Suche, die länger als
+        // `--keep-alive` (Vorgabe 300 s) dauert — bei Tiefe 29+ mit 5 Linien jede Iteration. Ohne diese
+        // Unterscheidung galt ein gesunder Auftrag nach drei solchen Runden als „gescheitert".
+        => Assert.Equal("paused-cut", Outcome(reached: 29, target: 40, atStart: 29, cancelledByUs: false, liveActive: false, runtimeSec: 300));
 }
