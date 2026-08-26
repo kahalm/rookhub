@@ -192,7 +192,7 @@ public class ChessableAdminController : BaseApiController
             return StatusCode(403, new { message = "Dieser Kurs ist nicht in der Chessable-Bibliothek des Users." });
 
         var adminId = GetUserId();
-        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == adminId && x.Status == "running");
+        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == adminId && x.Status == ChessableImportStatus.Running);
         var import = new ChessableImport
         {
             UserId = adminId,          // Ergebnis (Repertoire/Buch) + Benachrichtigung gehören dem Admin
@@ -200,7 +200,7 @@ public class ChessableAdminController : BaseApiController
             Bid = bid,
             CourseName = string.IsNullOrWhiteSpace(request?.Name) ? "" : request!.Name!.Trim(),
             Target = target,
-            Status = "running",
+            Status = ChessableImportStatus.Running,
             QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow
         };
@@ -223,14 +223,14 @@ public class ChessableAdminController : BaseApiController
     {
         var active = await _db.ChessableImports
             .Include(i => i.User)
-            .Where(i => i.Status == "running" || i.Status == "paused")
+            .Where(i => i.Status == ChessableImportStatus.Running || i.Status == ChessableImportStatus.Paused)
             .ToListAsync();
         var positions = await _queue.FairQueuePositionsAsync();
         // Anzeige in fairer Verarbeitungsreihenfolge: gerade laufende/holende zuerst (nicht in der
         // Positions-Map), dann die wartenden in fairer Reihenfolge (Round-Robin über die User),
         // pausierte zuletzt. So liest das Widget top-down genau so, wie abgearbeitet wird.
         var ordered = active
-            .OrderBy(i => i.Status == "paused" ? 2 : positions.ContainsKey(i.Id) ? 1 : 0)
+            .OrderBy(i => i.Status == ChessableImportStatus.Paused ? 2 : positions.ContainsKey(i.Id) ? 1 : 0)
             .ThenBy(i => positions.GetValueOrDefault(i.Id, 0))
             .ThenBy(i => i.CreatedAt)
             .ToList();

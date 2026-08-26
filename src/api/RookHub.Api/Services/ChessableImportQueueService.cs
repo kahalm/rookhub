@@ -45,7 +45,7 @@ public class ChessableImportQueueService
     public async Task<List<ChessableCourseDto>> EnrichImportStateAsync(List<ChessableCourseDto> courses, int userId, CancellationToken ct)
     {
         var done = await _db.ChessableImports
-            .Where(i => i.UserId == userId && i.Status == "completed")
+            .Where(i => i.UserId == userId && i.Status == ChessableImportStatus.Completed)
             .Select(i => new { i.Bid, i.Target })
             .ToListAsync(ct);
         var rep = done.Where(d => d.Target == "repertoire").Select(d => d.Bid).ToHashSet();
@@ -53,7 +53,7 @@ public class ChessableImportQueueService
         // Bereits eingereihte/laufende Importe (Status "running") → im UI als „in Warteschlange" zeigen,
         // damit man denselben Kurs nicht doppelt einreiht.
         var queued = (await _db.ChessableImports
-            .Where(i => i.UserId == userId && i.Status == "running")
+            .Where(i => i.UserId == userId && i.Status == ChessableImportStatus.Running)
             .Select(i => i.Bid)
             .ToListAsync(ct)).ToHashSet();
         // Gecachte Kurse (Rohdaten in der piratechess-DB) → sofort verfügbar. 1 Bulk-Call; Fehler → leer.
@@ -119,9 +119,9 @@ public class ChessableImportQueueService
     /// laufende/pausierte fehlen (⇒ Position 0, die Anzeige zeigt für die ohnehin den Phasen-Status).</summary>
     public async Task<Dictionary<int, int>> FairQueuePositionsAsync()
     {
-        var running = await _db.ChessableImports.Where(x => x.Status == "running").ToListAsync();
-        var inProgress = running.Count(x => x.Phase != "queued");
-        var order = ChessableImportService.FairOrder(running.Where(x => x.Phase == "queued"));
+        var running = await _db.ChessableImports.Where(x => x.Status == ChessableImportStatus.Running).ToListAsync();
+        var inProgress = running.Count(x => x.Phase != ChessableImportPhase.Queued);
+        var order = ChessableImportService.FairOrder(running.Where(x => x.Phase == ChessableImportPhase.Queued));
         var map = new Dictionary<int, int>();
         for (var idx = 0; idx < order.Count; idx++)
             map[order[idx].Id] = inProgress + idx;
@@ -132,16 +132,18 @@ public class ChessableImportQueueService
     /// <see cref="FairQueuePositionsAsync"/>). 0, wenn er bereits läuft oder nicht mehr wartet.</summary>
     public async Task<int> QueuedAheadAsync(ChessableImport i)
     {
-        if (i.Status != "running" || i.Phase != "queued") return 0;
+        if (i.Status != ChessableImportStatus.Running || i.Phase != ChessableImportPhase.Queued) return 0;
         return (await FairQueuePositionsAsync()).GetValueOrDefault(i.Id, 0);
     }
 
+    // .ToWire() an der DTO-Grenze: die Zustaende sind im Code Enums, gehen aber unveraendert als
+    // Zeichenkette nach aussen — Frontend und RepCheck vergleichen sie woertlich.
     public static ChessableImportDto ToDto(ChessableImport i, int queuedAhead) => new(
-        i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid,
+        i.Id, i.Bid, i.CourseName, i.Target, i.Status.ToWire(), i.Phase.ToWire(), i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid,
         i.ChaptersDone, i.ChaptersTotal, i.LinesDone, i.LinesTotal, queuedAhead, i.CreatedAt, i.StartedAt, i.CompletedAt);
 
     public static ChessableAdminImportDto ToAdminDto(ChessableImport i, int queuedAhead) => new(
-        i.Id, i.UserId, i.User?.Username ?? "?", i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error,
+        i.Id, i.UserId, i.User?.Username ?? "?", i.Bid, i.CourseName, i.Target, i.Status.ToWire(), i.Phase.ToWire(), i.Error,
         i.ResultId, i.Imported, i.Skipped, i.Invalid, i.ChaptersDone, i.ChaptersTotal, i.LinesDone, i.LinesTotal, queuedAhead,
         i.CreatedAt, i.StartedAt, i.CompletedAt);
 }

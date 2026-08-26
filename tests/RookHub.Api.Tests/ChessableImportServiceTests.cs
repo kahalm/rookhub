@@ -88,7 +88,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             UserId = 7, Bid = "b1", CourseName = "Kurs", Target = "repertoire",
-            Status = "running", Phase = "queued", Attempts = ChessableImportService.MaxAttempts,
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, Attempts = ChessableImportService.MaxAttempts,
             CreatedAt = DateTime.UtcNow,
         };
         db.ChessableImports.Add(imp);
@@ -118,7 +118,7 @@ public class ChessableImportServiceTests : IDisposable
 
         var import = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 2. Nf3 Nc6 *", "My Course", "repertoire", 3);
 
-        Assert.Equal("completed", import.Status);
+        Assert.Equal(ChessableImportStatus.Completed, import.Status);
         Assert.NotNull(import.ResultId);
         Assert.True(import.FullyCached);
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
@@ -402,7 +402,7 @@ public class ChessableImportServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var first = await _svc.ImportPgnDirectAsync(7, "424242", PuzzlePgn, "Tactics", "book", 1);
-        Assert.Equal("completed", first.Status);
+        Assert.Equal(ChessableImportStatus.Completed, first.Status);
         Assert.NotNull(first.ResultId);
         var bookId = first.ResultId!.Value;
         var puzzleCount = await _db.BookPuzzles.CountAsync(p => p.BookId == bookId);
@@ -419,7 +419,7 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     private async Task<ChessableImport> SeedImportAsync(
-        string target, string status = "running", string? fetchedPgn = "1. e4 e5 2. Nf3 Nc6 *",
+        string target, ChessableImportStatus status = ChessableImportStatus.Running, string? fetchedPgn = "1. e4 e5 2. Nf3 Nc6 *",
         int attempts = 0, int? resultId = null)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
@@ -427,7 +427,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             UserId = 7, Bid = "b1", CourseName = "Course X", Target = target,
-            Status = status, Phase = "queued", FetchedPgn = fetchedPgn, LineCount = 3,
+            Status = status, Phase = ChessableImportPhase.Queued, FetchedPgn = fetchedPgn, LineCount = 3,
             Attempts = attempts, ResultId = resultId, CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(imp);
@@ -443,7 +443,7 @@ public class ChessableImportServiceTests : IDisposable
         await _svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
         Assert.NotNull(reloaded.ResultId);
         Assert.Null(reloaded.FetchedPgn); // Checkpoint nach Erfolg geleert
         Assert.Equal(3, reloaded.Imported); // LineCount
@@ -470,7 +470,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", TargetRepertoireId = rep1.Id,
-            Status = "running", Phase = "queued", FetchedPgn = "1. e4 e5 2. Nf3 Nc6 *", LineCount = 3, CreatedAt = DateTime.UtcNow
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FetchedPgn = "1. e4 e5 2. Nf3 Nc6 *", LineCount = 3, CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(imp);
         await _db.SaveChangesAsync();
@@ -519,7 +519,7 @@ public class ChessableImportServiceTests : IDisposable
     // ===== Faire Queue-Reihenfolge (Round-Robin über User) =====
 
     private static ChessableImport Q(int id, int userId, int round, DateTime created) =>
-        new() { Id = id, UserId = userId, QueueRound = round, CreatedAt = created, Status = "running", Phase = "queued" };
+        new() { Id = id, UserId = userId, QueueRound = round, CreatedAt = created, Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued };
 
     [Fact]
     public void FairOrder_NewUserGoesSecond_ThenContinuesFirstUser()
@@ -570,23 +570,23 @@ public class ChessableImportServiceTests : IDisposable
             if (!await _db.AppUsers.AnyAsync(u => u.Id == uid))
                 _db.AppUsers.Add(new AppUser { Id = uid, Username = $"u{uid}", PasswordHash = "x" });
         var t0 = DateTime.UtcNow;
-        var u1a = new ChessableImport { UserId = 1, Bid = "u1a", CourseName = "U1A", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
-        var u1b = new ChessableImport { UserId = 1, Bid = "u1b", CourseName = "U1B", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
-        var u2a = new ChessableImport { UserId = 2, Bid = "u2a", CourseName = "U2A", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t0.AddSeconds(2), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u1a = new ChessableImport { UserId = 1, Bid = "u1a", CourseName = "U1A", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u1b = new ChessableImport { UserId = 1, Bid = "u1b", CourseName = "U1B", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u2a = new ChessableImport { UserId = 2, Bid = "u2a", CourseName = "U2A", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t0.AddSeconds(2), FetchedPgn = "1. e4 *", LineCount = 1 };
         _db.ChessableImports.AddRange(u1a, u1b, u2a);
         await _db.SaveChangesAsync();
 
         await _svc.RunNextAsync();
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(u1a.Id))!.Status);
-        Assert.Equal("running", (await _db.ChessableImports.FindAsync(u2a.Id))!.Status); // wartet noch
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(u1a.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Running, (await _db.ChessableImports.FindAsync(u2a.Id))!.Status); // wartet noch
 
         await _svc.RunNextAsync();
         // User2 ist vor U1s zweitem Kurs dran.
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(u2a.Id))!.Status);
-        Assert.Equal("running", (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(u2a.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Running, (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
 
         await _svc.RunNextAsync();
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
     }
 
     [Fact]
@@ -603,15 +603,15 @@ public class ChessableImportServiceTests : IDisposable
             _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
         var t0 = DateTime.UtcNow;
         // Download-Job ist FAIR ZUERST dran (frühere CreatedAt), aber nicht gecacht.
-        var dl = new ChessableImport { UserId = 1, Bid = "dl", CourseName = "DL", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = false, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
-        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var dl = new ChessableImport { UserId = 1, Bid = "dl", CourseName = "DL", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
         _db.ChessableImports.AddRange(dl, cached);
         await _db.SaveChangesAsync();
 
         await _svc.RunNextAsync(fastLane: true);
 
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(cached.Id))!.Status); // gecacht verarbeitet
-        Assert.Equal("queued", (await _db.ChessableImports.FindAsync(dl.Id))!.Phase);        // Download unangetastet
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(cached.Id))!.Status); // gecacht verarbeitet
+        Assert.Equal(ChessableImportPhase.Queued, (await _db.ChessableImports.FindAsync(dl.Id))!.Phase);        // Download unangetastet
     }
 
     [Fact]
@@ -626,7 +626,7 @@ public class ChessableImportServiceTests : IDisposable
         var stale = new ChessableImport
         {
             UserId = 1, Bid = "stale", CourseName = "S", Target = "repertoire",
-            Status = "running", Phase = "queued", FullyCached = true, FetchedPgn = null,
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, FetchedPgn = null,
             CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(stale);
@@ -641,8 +641,8 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunNextAsync(fastLane: true);
 
         var reloaded = await _db.ChessableImports.AsNoTracking().FirstAsync(i => i.Id == stale.Id);
-        Assert.Equal("running", reloaded.Status);
-        Assert.Equal("queued", reloaded.Phase);      // wieder wartend — jetzt für die Download-Lane
+        Assert.Equal(ChessableImportStatus.Running, reloaded.Status);
+        Assert.Equal(ChessableImportPhase.Queued, reloaded.Phase);      // wieder wartend — jetzt für die Download-Lane
         Assert.False(reloaded.FullyCached);          // zurückgestuft
         Assert.Null(reloaded.FetchJobId);            // KEIN Chessable-Fetch gestartet
     }
@@ -654,37 +654,37 @@ public class ChessableImportServiceTests : IDisposable
             _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
         var t0 = DateTime.UtcNow;
         // Unklassifiziert (null) gilt als Download und MUSS gegriffen werden (darf nie hängen bleiben).
-        var nullJob = new ChessableImport { UserId = 1, Bid = "n", CourseName = "N", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = null, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
-        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var nullJob = new ChessableImport { UserId = 1, Bid = "n", CourseName = "N", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = null, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
         _db.ChessableImports.AddRange(nullJob, cached);
         await _db.SaveChangesAsync();
 
         await _svc.RunNextAsync(); // Download-Lane (Default)
 
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(nullJob.Id))!.Status); // null = Download verarbeitet
-        Assert.Equal("queued", (await _db.ChessableImports.FindAsync(cached.Id))!.Phase);      // Fast-Lane-Job unangetastet
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(nullJob.Id))!.Status); // null = Download verarbeitet
+        Assert.Equal(ChessableImportPhase.Queued, (await _db.ChessableImports.FindAsync(cached.Id))!.Phase);      // Fast-Lane-Job unangetastet
     }
 
     [Fact]
     public async Task RunNextAsync_SkipsAlreadyClaimedJob_PicksGenuinelyQueuedOne()
     {
-        // Atomarer Claim: ein bereits von einem anderen Worker übernommener Job (Phase != "queued")
+        // Atomarer Claim: ein bereits von einem anderen Worker übernommener Job (Phase != ChessableImportPhase.Queued)
         // darf NICHT erneut gegriffen werden. Hier ist der fair zuerst dran befindliche Job bereits
         // "fetching" → RunNextAsync überspringt ihn und bearbeitet den nächsten echten "queued"-Job.
         if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
             _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
         var t0 = DateTime.UtcNow;
-        var claimed = new ChessableImport { UserId = 7, Bid = "a", CourseName = "A", Target = "repertoire", Status = "running", Phase = "fetching", QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
-        var queued = new ChessableImport { UserId = 7, Bid = "b", CourseName = "B", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var claimed = new ChessableImport { UserId = 7, Bid = "a", CourseName = "A", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching, QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var queued = new ChessableImport { UserId = 7, Bid = "b", CourseName = "B", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
         _db.ChessableImports.AddRange(claimed, queued);
         await _db.SaveChangesAsync();
 
         await _svc.RunNextAsync();
 
         // Der schon übernommene Job bleibt unangetastet; der echte queued-Job wurde bearbeitet.
-        Assert.Equal("running", (await _db.ChessableImports.FindAsync(claimed.Id))!.Status);
-        Assert.Equal("fetching", (await _db.ChessableImports.FindAsync(claimed.Id))!.Phase);
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(queued.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Running, (await _db.ChessableImports.FindAsync(claimed.Id))!.Status);
+        Assert.Equal(ChessableImportPhase.Fetching, (await _db.ChessableImports.FindAsync(claimed.Id))!.Phase);
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(queued.Id))!.Status);
     }
 
     [Fact]
@@ -695,7 +695,7 @@ public class ChessableImportServiceTests : IDisposable
         // bearbeitet → keine Doppelverarbeitung (kein zweites Repertoire).
         if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
             _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
-        var imp = new ChessableImport { UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = DateTime.UtcNow, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var imp = new ChessableImport { UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = DateTime.UtcNow, FetchedPgn = "1. e4 *", LineCount = 1 };
         _db.ChessableImports.Add(imp);
         await _db.SaveChangesAsync();
 
@@ -704,7 +704,7 @@ public class ChessableImportServiceTests : IDisposable
         await _svc.RunNextAsync();
         await _svc.RunNextAsync();
 
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7)); // nicht doppelt angelegt
     }
 
@@ -724,8 +724,8 @@ public class ChessableImportServiceTests : IDisposable
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         var t0 = DateTime.UtcNow;
-        var j1 = new ChessableImport { UserId = 7, Bid = "j1", CourseName = "", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = false, FetchedPgn = null, CreatedAt = t0 };
-        var j2 = new ChessableImport { UserId = 7, Bid = "j2", CourseName = "", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = false, FetchedPgn = null, CreatedAt = t0.AddSeconds(1) };
+        var j1 = new ChessableImport { UserId = 7, Bid = "j1", CourseName = "", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, FetchedPgn = null, CreatedAt = t0 };
+        var j2 = new ChessableImport { UserId = 7, Bid = "j2", CourseName = "", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, FetchedPgn = null, CreatedAt = t0.AddSeconds(1) };
         _db.ChessableImports.AddRange(j1, j2);
         await _db.SaveChangesAsync();
 
@@ -749,7 +749,7 @@ public class ChessableImportServiceTests : IDisposable
         {
             // Treiber 2 (z. B. Watchdog) feuert parallel — MUSS sofort zurückkehren, ohne j2 zu greifen.
             await svc.RunNextAsync();
-            Assert.Equal("queued", (await _db.ChessableImports.FindAsync(j2.Id))!.Phase); // Gate blockte den 2. Download
+            Assert.Equal(ChessableImportPhase.Queued, (await _db.ChessableImports.FindAsync(j2.Id))!.Phase); // Gate blockte den 2. Download
         }
         finally
         {
@@ -757,13 +757,13 @@ public class ChessableImportServiceTests : IDisposable
             await first.WaitAsync(TimeSpan.FromSeconds(10));
         }
 
-        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(j1.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(j1.Id))!.Status);
     }
 
     [Fact]
     public async Task RunAsync_AlreadyCompleted_IsNoOp()
     {
-        var imp = await SeedImportAsync("repertoire", status: "completed");
+        var imp = await SeedImportAsync("repertoire", status: ChessableImportStatus.Completed);
         await _svc.RunAsync(imp.Id);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
     }
@@ -779,8 +779,8 @@ public class ChessableImportServiceTests : IDisposable
         await _svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("paused", reloaded!.Status);
-        Assert.Equal("bearer-blocked", reloaded.Phase);
+        Assert.Equal(ChessableImportStatus.Paused, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.BearerBlocked, reloaded.Phase);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
     }
 
@@ -805,8 +805,8 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("completed", reloaded!.Status);
-        Assert.NotEqual("bearer-blocked", reloaded.Phase);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.NotEqual(ChessableImportPhase.BearerBlocked, reloaded.Phase);
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
     }
 
@@ -828,7 +828,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("failed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
         // Der fatale Fehlschlag hat den Circuit-Breaker des Bearers geöffnet.
         var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
         Assert.NotNull(cred.BlockedAt);
@@ -864,8 +864,8 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("paused", reloaded!.Status);
-        Assert.Equal("rate-limited", reloaded.Phase);
+        Assert.Equal(ChessableImportStatus.Paused, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.RateLimited, reloaded.Phase);
         Assert.NotNull(reloaded.RateLimitedAt);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
     }
@@ -892,7 +892,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
         var reloadedCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
         Assert.Equal(3, reloadedCred.RateLimitLinesUsed); // Fenster reset (0) + 3 frisch gefetchte Zeilen
@@ -943,8 +943,8 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("completed", reloaded!.Status);
-        Assert.NotEqual("rate-limited", reloaded.Phase);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.NotEqual(ChessableImportPhase.RateLimited, reloaded.Phase);
         // Voll-gecachte Fetches werden nicht gegen das Limit verbucht.
         var reloadedCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
         Assert.Equal(5, reloadedCred.RateLimitLinesUsed);
@@ -973,7 +973,7 @@ public class ChessableImportServiceTests : IDisposable
         await _svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
         Assert.Equal(rep.Id, reloaded.ResultId);
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7)); // kein zweites Repertoire
         Assert.Equal(1, await _db.RepertoireFiles.CountAsync());              // keine zweite Datei
@@ -985,7 +985,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = await SeedImportAsync("repertoire", attempts: ChessableImportService.MaxAttempts);
         await _svc.RunAsync(imp.Id);
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("failed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
         // Glocke: User wird über den fehlgeschlagenen Import benachrichtigt.
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportFailed));
@@ -1027,7 +1027,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(id);   // darf NICHT werfen
 
         var reloaded = await db.ChessableImports.FindAsync(id);
-        Assert.Equal("failed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
         Assert.Equal($"Abgebrochen nach {ChessableImportService.MaxAttempts} Versuchen", reloaded.Error);
         Assert.NotNull(reloaded.CompletedAt);
         Assert.Equal(2, db.AsyncSaves);   // Status-Save + gescheiterter Benachrichtigungs-Save
@@ -1045,7 +1045,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
-            Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(imp);
         await _db.SaveChangesAsync();
@@ -1064,7 +1064,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
         Assert.Equal(5, reloaded.LinesDone);
         Assert.Equal("Real Name", reloaded.CourseName); // aus dem Fetch übernommen
         Assert.NotNull(reloaded.ResultId);
@@ -1087,7 +1087,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
-            Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(imp);
         await _db.SaveChangesAsync();
@@ -1104,7 +1104,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(imp.Id, cts.Token);
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("running", reloaded!.Status);   // NICHT "failed"
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);   // NICHT "failed"
         Assert.Null(reloaded.Error);
     }
 
@@ -1122,7 +1122,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
-            Status = "running", Phase = "queued", Attempts = attempts, CreatedAt = DateTime.UtcNow
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, Attempts = attempts, CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(imp);
         _db.SaveChanges();
@@ -1147,7 +1147,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(id);
 
         var reloaded = await _db.ChessableImports.FindAsync(id);
-        Assert.Equal("running", reloaded!.Status);   // NICHT failed
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);   // NICHT failed
         Assert.Equal(1, reloaded.Attempts);
         Assert.Equal(1, _queue.Count);               // automatisch neu eingereiht (Auto-Restart)
     }
@@ -1172,7 +1172,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(id);
 
         var reloaded = await _db.ChessableImports.FindAsync(id);
-        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
         Assert.Equal(0, _queue.Count);
     }
 
@@ -1187,7 +1187,7 @@ public class ChessableImportServiceTests : IDisposable
         await svc.RunAsync(id);
 
         var reloaded = await _db.ChessableImports.FindAsync(id);
-        Assert.Equal("failed", reloaded!.Status); // letzter Versuch erschöpft → terminal
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status); // letzter Versuch erschöpft → terminal
         Assert.Equal(0, _queue.Count);            // kein weiterer Resume
     }
 
@@ -1286,7 +1286,7 @@ public class ChessableImportServiceTests : IDisposable
         _db.ChessableImports.Add(new ChessableImport
         {
             UserId = user.Id, Bid = "128648", CourseName = "Mine", Target = "repertoire",
-            Status = "running", CreatedAt = DateTime.UtcNow
+            Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
         var svc = BuildSvc(new ScriptedHandler(req =>
@@ -1332,12 +1332,12 @@ public class ChessableImportServiceTests : IDisposable
     [Fact]
     public async Task FailAsync_HealthyDb_MarksFailedAndNotifies()
     {
-        var imp = await SeedImportAsync("repertoire", status: "importing");
+        var imp = await SeedImportAsync("repertoire", status: ChessableImportStatus.Running);
 
         await _svc.FailAsync(imp, "Kaputt");
 
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
-        Assert.Equal("failed", reloaded!.Status);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
         Assert.Equal("Kaputt", reloaded.Error);
         Assert.NotNull(reloaded.CompletedAt);
         Assert.Single(_db.Notifications.Where(n => n.UserId == 7));
@@ -1357,7 +1357,7 @@ public class ChessableImportServiceTests : IDisposable
         var imp = new ChessableImport
         {
             Id = 991, UserId = 7, Bid = "b1", CourseName = "X", Target = "repertoire",
-            Status = "importing", CreatedAt = DateTime.UtcNow,
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing, CreatedAt = DateTime.UtcNow,
         };
         deadDb.ChessableImports.Add(imp);
         await deadDb.SaveChangesAsync();
@@ -1367,7 +1367,7 @@ public class ChessableImportServiceTests : IDisposable
         // Darf NICHT werfen — genau das ist der Vertrag der Haertung.
         await svc.FailAsync(imp, "DB weg");
 
-        Assert.Equal("failed", imp.Status);   // im Speicher gesetzt, nur nicht persistiert
+        Assert.Equal(ChessableImportStatus.Failed, imp.Status);   // im Speicher gesetzt, nur nicht persistiert
     }
 
     [Fact]
@@ -1381,13 +1381,13 @@ public class ChessableImportServiceTests : IDisposable
             _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
         _db.ChessableCredentials.Add(new ChessableCredential { UserId = 7, EncryptedBearer = "egal" });
         await _db.SaveChangesAsync();
-        var imp = await SeedImportAsync("repertoire", status: "fetching");
+        var imp = await SeedImportAsync("repertoire", status: ChessableImportStatus.Running);
 
         await _svc.FailAsync(imp, "Dein Chessable-Konto wurde gesperrt (403 vom Kurs-Endpoint)");
 
         var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
         Assert.NotNull(cred.BlockedAt);
-        Assert.Equal("failed", (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Failed, (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
     }
 
     private sealed class FakeQueue : IBackgroundTaskQueue

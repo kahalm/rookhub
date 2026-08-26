@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -8,8 +9,8 @@ namespace RookHub.Api.Services;
 /// IN-MEMORY <see cref="IBackgroundTaskQueue"/> — und der kann Jobs liegen lassen: die Queue ist
 /// bounded (<c>BoundedChannelFullMode.DropOldest</c>), ein großer Schwung Importe auf einmal verwirft
 /// also die ältesten Tickets; zudem reiht ein FERTIGER Job den nächsten nicht automatisch nach (nur
-/// das Anlegen und ein Stillstand reihen nach). Folge: Importe bleiben auf <c>Status="running"</c> /
-/// <c>Phase="queued"</c> liegen, obwohl gar nichts mehr läuft (Vorfall 2026-06-29: 82 wartende, kein
+/// das Anlegen und ein Stillstand reihen nach). Folge: Importe bleiben auf <c>Status=ChessableImportStatus.Running</c> /
+/// <c>Phase=ChessableImportPhase.Queued</c> liegen, obwohl gar nichts mehr läuft (Vorfall 2026-06-29: 82 wartende, kein
 /// aktiver — Drain erst nach API-Neustart via <see cref="ChessableImportResumeService"/> wieder an).
 ///
 /// Dieser Watchdog prüft periodisch: gibt es wartende Importe (Phase "queued") UND ist KEINER aktiv
@@ -22,14 +23,14 @@ public class ChessableImportWatchdogService : BackgroundService
 {
     /// <summary>Phasen, in denen ein Import AKTIV bearbeitet wird (nicht bloß wartend). Solange einer
     /// davon belegt ist, läuft der Drain — der Watchdog greift dann nicht ein.</summary>
-    internal static readonly string[] InflightPhases = { "claimed", "fetching", "importing" };
+    internal static readonly ChessableImportPhase[] InflightPhases = ChessableImportStates.Inflight;
 
     // Intern überschreibbar für Tests. Startverzögerung lässt den ResumeService beim Hochfahren zuerst
     // greifen; danach im Ruhe-Takt prüfen, nach einem Anstoß zügig weiterdrainen.
     internal TimeSpan StartupDelay = TimeSpan.FromMinutes(1);
     internal TimeSpan IdleInterval = TimeSpan.FromMinutes(2);
     internal TimeSpan BusyDelay = TimeSpan.FromSeconds(2);
-    /// <summary>Wie lange ein wegen Tageslimit pausierter Import (<c>Phase="rate-limited"</c>) wartet,
+    /// <summary>Wie lange ein wegen Tageslimit pausierter Import (<c>Phase=ChessableImportPhase.RateLimited</c>) wartet,
     /// bevor er automatisch wieder freigegeben wird (siehe <see cref="ChessableRateLimiter"/>).</summary>
     internal TimeSpan RateLimitPause = TimeSpan.FromHours(24);
     /// <summary>Wie lange ein Import in einer Inflight-Phase ohne lokalen Treiber beobachtet werden muss,
@@ -91,7 +92,7 @@ public class ChessableImportWatchdogService : BackgroundService
         if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0 || reclaimed > 0;
 
         var queued = await db.ChessableImports.CountAsync(
-            i => i.Status == "running" && i.Phase == "queued" && i.FullyCached != true, ct);
+            i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued && i.FullyCached != true, ct);
         _logger.LogWarning(
             "Chessable-Import-Watchdog: {Queued} wartende Download-Importe, kein aktiver — stoße den Drain an", queued);
 
@@ -100,9 +101,9 @@ public class ChessableImportWatchdogService : BackgroundService
         return true;
     }
 
-    /// <summary>Gibt Importe frei, die wegen des Tages-Zeilenlimits (<c>Phase="rate-limited"</c>)
-    /// seit mindestens <see cref="RateLimitPause"/> pausiert sind: zurück auf <c>Status="running"</c>/
-    /// <c>Phase="queued"</c> (nimmt der normale Drain danach wieder auf). Die Rate-Limit-Prüfung in
+    /// <summary>Gibt Importe frei, die wegen des Tages-Zeilenlimits (<c>Phase=ChessableImportPhase.RateLimited</c>)
+    /// seit mindestens <see cref="RateLimitPause"/> pausiert sind: zurück auf <c>Status=ChessableImportStatus.Running</c>/
+    /// <c>Phase=ChessableImportPhase.Queued</c> (nimmt der normale Drain danach wieder auf). Die Rate-Limit-Prüfung in
     /// <see cref="ChessableImportService.RunAsync"/> läuft beim nächsten Anlauf erneut — das 24h-Fenster
     /// des Bearer-Users ist bis dahin ohnehin abgelaufen, pausiert also nur erneut, falls der User in
     /// der Zwischenzeit über einen ANDEREN Import schon wieder das Limit gerissen hat. Liefert die
@@ -111,13 +112,13 @@ public class ChessableImportWatchdogService : BackgroundService
     {
         var threshold = DateTime.UtcNow - RateLimitPause;
         var expired = await db.ChessableImports
-            .Where(i => i.Status == "paused" && i.Phase == "rate-limited"
+            .Where(i => i.Status == ChessableImportStatus.Paused && i.Phase == ChessableImportPhase.RateLimited
                 && i.RateLimitedAt != null && i.RateLimitedAt <= threshold)
             .ToListAsync(ct);
         foreach (var import in expired)
         {
-            import.Status = "running";
-            import.Phase = "queued";
+            import.Status = ChessableImportStatus.Running;
+            import.Phase = ChessableImportPhase.Queued;
             import.Attempts = 0;
             import.RateLimitedAt = null;
         }
@@ -143,7 +144,7 @@ public class ChessableImportWatchdogService : BackgroundService
     internal async Task<int> ReclaimOrphanedInflightAsync(AppDbContext db, CancellationToken ct = default)
     {
         var inflight = await db.ChessableImports
-            .Where(i => i.Status == "running" && InflightPhases.Contains(i.Phase))
+            .Where(i => i.Status == ChessableImportStatus.Running && InflightPhases.Contains(i.Phase))
             .ToListAsync(ct);
 
         var now = DateTime.UtcNow;
@@ -168,7 +169,7 @@ public class ChessableImportWatchdogService : BackgroundService
                 "Chessable-Import-Watchdog: Import {Id} (bid {Bid}) steht seit {Minutes:0} min in Phase {Phase}, "
                 + "wird aber von niemandem bearbeitet — zurück in die Warteschlange",
                 import.Id, import.Bid, (now - since).TotalMinutes, import.Phase);
-            import.Phase = "queued";
+            import.Phase = ChessableImportPhase.Queued;
             _orphanSince.Remove(import.Id);
             reclaimed++;
         }
@@ -188,11 +189,11 @@ public class ChessableImportWatchdogService : BackgroundService
         // Nur die Download-Lane (alles außer voll-gecacht; null = unklassifiziert zählt als Download).
         // Die schnelle, netzfreie Lane treibt der ChessableImportFastLaneService.
         var hasQueued = await db.ChessableImports
-            .AnyAsync(i => i.Status == "running" && i.Phase == "queued" && i.FullyCached != true, ct);
+            .AnyAsync(i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued && i.FullyCached != true, ct);
         if (!hasQueued) return false;
 
         var hasInflight = await db.ChessableImports
-            .AnyAsync(i => i.Status == "running" && i.FullyCached != true && InflightPhases.Contains(i.Phase), ct);
+            .AnyAsync(i => i.Status == ChessableImportStatus.Running && i.FullyCached != true && InflightPhases.Contains(i.Phase), ct);
         return !hasInflight;
     }
 }

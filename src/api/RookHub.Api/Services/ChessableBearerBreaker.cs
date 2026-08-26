@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -99,7 +100,7 @@ public class ChessableBearerBreaker
 
     /// <summary>
     /// Schließt den Breaker (z. B. nach erfolgreichem „Testen“) und nimmt alle Importe, die WEGEN des
-    /// Breakers pausiert wurden (<c>Status="paused"</c>, <c>Phase="bearer-blocked"</c>), die diesen
+    /// Breakers pausiert wurden (<c>Status=ChessableImportStatus.Paused</c>, <c>Phase=ChessableImportPhase.BearerBlocked</c>), die diesen
     /// Bearer benutzen, wieder auf. Download-Lane-Importe bekommen ein Queue-Ticket; voll-gecachte
     /// (Fast-Lane) holt der Fast-Lane-Service selbst ab. Liefert die Anzahl wieder aufgenommener Importe.
     /// No-op, wenn der Breaker gar nicht offen war.
@@ -113,13 +114,13 @@ public class ChessableBearerBreaker
         cred.BlockedReason = null;
 
         var paused = await _db.ChessableImports
-            .Where(i => i.Status == "paused" && i.Phase == "bearer-blocked"
+            .Where(i => i.Status == ChessableImportStatus.Paused && i.Phase == ChessableImportPhase.BearerBlocked
                 && (i.BearerUserId ?? i.UserId) == bearerUserId)
             .ToListAsync(ct);
         foreach (var imp in paused)
         {
-            imp.Status = "running";
-            imp.Phase = "queued";
+            imp.Status = ChessableImportStatus.Running;
+            imp.Phase = ChessableImportPhase.Queued;
             imp.Attempts = 0;
         }
         await _db.SaveChangesAsync(ct);

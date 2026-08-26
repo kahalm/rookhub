@@ -291,7 +291,7 @@ public class ChessableController : BaseApiController
         // laufenden Import weiter. Gegenstück zum Dedup in ChessableImportService.EnqueueReimportAsync.
         var existing = await _db.ChessableImports.FirstOrDefaultAsync(
             i => i.UserId == userId && i.Bid == bid && i.Target == target
-                && (i.Status == "running" || i.Status == "paused"), ct);
+                && (i.Status == ChessableImportStatus.Running || i.Status == ChessableImportStatus.Paused), ct);
         if (existing is not null)
             return Accepted(ChessableImportQueueService.ToDto(existing, await _queue.QueuedAheadAsync(existing)));
 
@@ -305,14 +305,14 @@ public class ChessableController : BaseApiController
 
         // Round-Robin-Runde einfrieren: wie viele Importe dieses Users sind GERADE schon aktiv?
         // (0 = erster ⇒ Runde 0). Bestimmt die faire Position; siehe ChessableImportService.FairOrder.
-        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == userId && x.Status == "running");
+        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == userId && x.Status == ChessableImportStatus.Running);
         var import = new ChessableImport
         {
             UserId = userId,
             Bid = bid,
             CourseName = string.IsNullOrWhiteSpace(request?.Name) ? "" : request!.Name!.Trim(),
             Target = target,
-            Status = "running",
+            Status = ChessableImportStatus.Running,
             QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow
         };
@@ -358,7 +358,7 @@ public class ChessableController : BaseApiController
         // älteste der offenen Charge und fiel sonst aus dem 20er-Verlaufsfenster (Take). Folge: das
         // Frontend bekäme nur Warteschlangen-Plätze und nie den aktiven Import zu sehen.
         var active = await _db.ChessableImports
-            .Where(i => i.UserId == userId && (i.Status == "running" || i.Status == "paused"))
+            .Where(i => i.UserId == userId && (i.Status == ChessableImportStatus.Running || i.Status == ChessableImportStatus.Paused))
             .ToListAsync();
         var list = recent.UnionBy(active, i => i.Id)
             .OrderByDescending(i => i.CreatedAt)
@@ -374,9 +374,9 @@ public class ChessableController : BaseApiController
     {
         var import = await OwnImportAsync(id);
         if (import is null) return NotFound();
-        if (import.Status is "running" or "paused")
+        if (import.Status is ChessableImportStatus.Running or ChessableImportStatus.Paused)
         {
-            import.Status = "cancelled";
+            import.Status = ChessableImportStatus.Cancelled;
             import.Error = "Vom Nutzer abgebrochen";
             import.CompletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
@@ -391,9 +391,9 @@ public class ChessableController : BaseApiController
     {
         var import = await OwnImportAsync(id);
         if (import is null) return NotFound();
-        if (import.Status == "running")
+        if (import.Status == ChessableImportStatus.Running)
         {
-            import.Status = "paused";
+            import.Status = ChessableImportStatus.Paused;
             await _db.SaveChangesAsync();
         }
         return Ok(ChessableImportQueueService.ToDto(import, 0));
@@ -406,10 +406,10 @@ public class ChessableController : BaseApiController
     {
         var import = await OwnImportAsync(id);
         if (import is null) return NotFound();
-        if (import.Status == "paused")
+        if (import.Status == ChessableImportStatus.Paused)
         {
-            import.Status = "running";
-            import.Phase = "queued";
+            import.Status = ChessableImportStatus.Running;
+            import.Phase = ChessableImportPhase.Queued;
             import.Attempts = 0;
             await _db.SaveChangesAsync();
             await _queue.EnqueueNextAsync();

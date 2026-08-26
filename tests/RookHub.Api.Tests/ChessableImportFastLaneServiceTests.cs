@@ -23,7 +23,7 @@ public class ChessableImportFastLaneServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private async Task SeedAsync(params (string status, string phase, bool? fullyCached)[] jobs)
+    private async Task SeedAsync(params (ChessableImportStatus status, ChessableImportPhase phase, bool? fullyCached)[] jobs)
     {
         foreach (var (status, phase, fc) in jobs)
             _db.ChessableImports.Add(new ChessableImport
@@ -37,8 +37,8 @@ public class ChessableImportFastLaneServiceTests : IDisposable
     [Fact]
     public async Task FreeSlots_CachedQueuedNoneInflight_UpToMaxOrQueued()
     {
-        await SeedAsync(("running", "queued", true), ("running", "queued", true),
-                        ("running", "queued", true), ("running", "queued", true));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued, true), (ChessableImportStatus.Running, ChessableImportPhase.Queued, true),
+                        (ChessableImportStatus.Running, ChessableImportPhase.Queued, true), (ChessableImportStatus.Running, ChessableImportPhase.Queued, true));
         Assert.Equal(3, await ChessableImportFastLaneService.FreeSlotsAsync(_db, 3)); // min(3, 4 wartende)
         Assert.Equal(1, await ChessableImportFastLaneService.FreeSlotsAsync(_db, 1)); // seriell (MaxParallel=1)
     }
@@ -46,16 +46,16 @@ public class ChessableImportFastLaneServiceTests : IDisposable
     [Fact]
     public async Task FreeSlots_SubtractsInflightFromMax()
     {
-        await SeedAsync(("running", "queued", true), ("running", "queued", true),
-                        ("running", "claimed", true), ("running", "importing", true));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued, true), (ChessableImportStatus.Running, ChessableImportPhase.Queued, true),
+                        (ChessableImportStatus.Running, ChessableImportPhase.Claimed, true), (ChessableImportStatus.Running, ChessableImportPhase.Importing, true));
         Assert.Equal(1, await ChessableImportFastLaneService.FreeSlotsAsync(_db, 3)); // min(3-2, 2 wartende)
     }
 
     [Fact]
     public async Task FreeSlots_ZeroWhenMaxReached()
     {
-        await SeedAsync(("running", "queued", true),
-                        ("running", "fetching", true), ("running", "importing", true), ("running", "claimed", true));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued, true),
+                        (ChessableImportStatus.Running, ChessableImportPhase.Fetching, true), (ChessableImportStatus.Running, ChessableImportPhase.Importing, true), (ChessableImportStatus.Running, ChessableImportPhase.Claimed, true));
         Assert.Equal(0, await ChessableImportFastLaneService.FreeSlotsAsync(_db, 3)); // 3 laufen bereits
     }
 
@@ -63,7 +63,7 @@ public class ChessableImportFastLaneServiceTests : IDisposable
     public async Task FreeSlots_IgnoresDownloadAndUnclassified()
     {
         // Nicht-gecacht (false) und unklassifiziert (null) gehören NICHT in die Fast-Lane.
-        await SeedAsync(("running", "queued", false), ("running", "queued", null));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued, false), (ChessableImportStatus.Running, ChessableImportPhase.Queued, null));
         Assert.Equal(0, await ChessableImportFastLaneService.FreeSlotsAsync(_db, 3));
     }
 

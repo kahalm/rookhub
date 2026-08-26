@@ -297,7 +297,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableImports.Add(new ChessableImport
         {
             UserId = 42, Bid = "b1", CourseName = "C", Target = "repertoire",
-            Status = "paused", Phase = "bearer-blocked", FullyCached = false, CreatedAt = DateTime.UtcNow,
+            Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.BearerBlocked, FullyCached = false, CreatedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
 
@@ -309,8 +309,8 @@ public class ChessableControllerTests : IDisposable
         cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
         Assert.Null(cred.BlockedAt); // geschlossen
         var imp = await _db.ChessableImports.SingleAsync();
-        Assert.Equal("running", imp.Status);
-        Assert.Equal("queued", imp.Phase); // wieder aufgenommen
+        Assert.Equal(ChessableImportStatus.Running, imp.Status);
+        Assert.Equal(ChessableImportPhase.Queued, imp.Phase); // wieder aufgenommen
     }
 
     [Fact]
@@ -441,7 +441,7 @@ public class ChessableControllerTests : IDisposable
         Assert.Equal("book", dto.Target);
         Assert.Equal("running", dto.Status);
         Assert.Equal("My Course", dto.CourseName);
-        Assert.True(await _db.ChessableImports.AnyAsync(i => i.UserId == 42 && i.Bid == "bid-1" && i.Status == "running"));
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.UserId == 42 && i.Bid == "bid-1" && i.Status == ChessableImportStatus.Running));
     }
 
     [Fact]
@@ -488,8 +488,8 @@ public class ChessableControllerTests : IDisposable
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = "completed", CreatedAt = DateTime.UtcNow });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "2", Target = "book", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
         var result = await _controller.Courses(refresh: false, CancellationToken.None);
@@ -518,8 +518,8 @@ public class ChessableControllerTests : IDisposable
             UpdatedAt = DateTime.UtcNow
         });
         // Bid 1 hat einen laufenden (eingereihten) Import, Bid 2 nur einen abgeschlossenen.
-        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "2", Target = "book", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
         var result = await _controller.Courses(refresh: false, CancellationToken.None);
@@ -544,9 +544,9 @@ public class ChessableControllerTests : IDisposable
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         // Admin (42) hat Kurs 1 schon als Repertoire → muss markiert sein.
-        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = "completed", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow });
         // Ziel-User (7) hat Kurs 2 als Buch → darf NICHT markiert sein (Markierung gilt für den Admin).
-        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "2", Target = "book", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
         var result = await _admin.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
@@ -702,12 +702,12 @@ public class ChessableControllerTests : IDisposable
     public async Task CancelImport_Running_SetsCancelled()
     {
         await SeedUserAsync(42);
-        var imp = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow };
+        var imp = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow };
         _db.ChessableImports.Add(imp);
         await _db.SaveChangesAsync();
 
         Assert.IsType<OkObjectResult>(await _controller.CancelImport(imp.Id));
-        Assert.Equal("cancelled", (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Cancelled, (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
     }
 
     [Fact]
@@ -715,8 +715,8 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "a", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow });
-        var mine = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "a", Target = "book", Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow });
+        var mine = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow };
         _db.ChessableImports.Add(mine);
         await _db.SaveChangesAsync();
 
@@ -733,7 +733,7 @@ public class ChessableControllerTests : IDisposable
         // Der aktive (gerade verarbeitete) Job ist der ÄLTESTE der offenen Charge.
         var active = new ChessableImport
         {
-            UserId = 42, Bid = "active", Target = "book", Status = "running", Phase = "fetching",
+            UserId = 42, Bid = "active", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching,
             CreatedAt = baseTime
         };
         _db.ChessableImports.Add(active);
@@ -741,7 +741,7 @@ public class ChessableControllerTests : IDisposable
         for (int n = 0; n < 25; n++)
             _db.ChessableImports.Add(new ChessableImport
             {
-                UserId = 42, Bid = $"done-{n}", Target = "book", Status = "completed",
+                UserId = 42, Bid = $"done-{n}", Target = "book", Status = ChessableImportStatus.Completed,
                 CreatedAt = baseTime.AddMinutes(n + 1)
             });
         await _db.SaveChangesAsync();
@@ -762,8 +762,8 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "alice", PasswordHash = "x" });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "a", CourseName = "Alice Kurs", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow.AddMinutes(-5) });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "b", CourseName = "Mein Kurs", Target = "repertoire", Status = "running", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "a", CourseName = "Alice Kurs", Target = "book", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow.AddMinutes(-5) });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "b", CourseName = "Mein Kurs", Target = "repertoire", Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
         var ok = Assert.IsType<OkObjectResult>(await _admin.GetAllImportsAdmin());
@@ -780,9 +780,9 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "alice", PasswordHash = "x" });
-        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "old", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow.AddHours(-2) });
-        var first = new ChessableImport { UserId = 7, Bid = "r1", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow.AddMinutes(-2) };
-        var second = new ChessableImport { UserId = 42, Bid = "r2", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "old", Target = "book", Status = ChessableImportStatus.Completed, CreatedAt = DateTime.UtcNow.AddHours(-2) });
+        var first = new ChessableImport { UserId = 7, Bid = "r1", Target = "book", Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow.AddMinutes(-2) };
+        var second = new ChessableImport { UserId = 42, Bid = "r2", Target = "book", Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow };
         _db.ChessableImports.AddRange(first, second);
         await _db.SaveChangesAsync();
 
@@ -806,10 +806,10 @@ public class ChessableControllerTests : IDisposable
         await SeedUserAsync(42);
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "userB", PasswordHash = "x" });
         var t = DateTime.UtcNow.AddMinutes(-10);
-        var a1 = new ChessableImport { UserId = 42, Bid = "a1", Target = "book", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t.AddSeconds(1) };
-        var a2 = new ChessableImport { UserId = 42, Bid = "a2", Target = "book", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t.AddSeconds(2) };
-        var a3 = new ChessableImport { UserId = 42, Bid = "a3", Target = "book", Status = "running", Phase = "queued", QueueRound = 2, CreatedAt = t.AddSeconds(3) };
-        var b1 = new ChessableImport { UserId = 7, Bid = "b1", Target = "book", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t.AddSeconds(4) };
+        var a1 = new ChessableImport { UserId = 42, Bid = "a1", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t.AddSeconds(1) };
+        var a2 = new ChessableImport { UserId = 42, Bid = "a2", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 1, CreatedAt = t.AddSeconds(2) };
+        var a3 = new ChessableImport { UserId = 42, Bid = "a3", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 2, CreatedAt = t.AddSeconds(3) };
+        var b1 = new ChessableImport { UserId = 7, Bid = "b1", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t.AddSeconds(4) };
         _db.ChessableImports.AddRange(a1, a2, a3, b1);
         await _db.SaveChangesAsync();
 
@@ -831,9 +831,9 @@ public class ChessableControllerTests : IDisposable
         await SeedUserAsync(42);
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "userB", PasswordHash = "x" });
         var t = DateTime.UtcNow.AddMinutes(-10);
-        var fetching = new ChessableImport { UserId = 7, Bid = "fetch", Target = "book", Status = "running", Phase = "fetching", QueueRound = 0, CreatedAt = t.AddSeconds(1) };
-        var qA = new ChessableImport { UserId = 42, Bid = "qA", Target = "book", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t.AddSeconds(2) };
-        var qB = new ChessableImport { UserId = 7, Bid = "qB", Target = "book", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t.AddSeconds(3) };
+        var fetching = new ChessableImport { UserId = 7, Bid = "fetch", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching, QueueRound = 0, CreatedAt = t.AddSeconds(1) };
+        var qA = new ChessableImport { UserId = 42, Bid = "qA", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t.AddSeconds(2) };
+        var qB = new ChessableImport { UserId = 7, Bid = "qB", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 1, CreatedAt = t.AddSeconds(3) };
         _db.ChessableImports.AddRange(fetching, qA, qB);
         await _db.SaveChangesAsync();
 
@@ -885,7 +885,7 @@ public class ChessableControllerTests : IDisposable
         var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "bid-9");
         Assert.Equal(42, imp.UserId);                     // Besitzer = Admin
         Assert.Equal(7, imp.BearerUserId);                // Bearer vom Ziel-User
-        Assert.Equal("running", imp.Status);
+        Assert.Equal(ChessableImportStatus.Running, imp.Status);
     }
 
     [Fact]

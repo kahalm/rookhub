@@ -157,9 +157,9 @@ public class ChessableImportService : ICourseReimporter
         // Verhindert, dass ein erneuter „Update all"-Klick (oder ein Resume/Retry) denselben Kurs ein
         // zweites Mal komplett von Chessable holt — genau die beobachtete N-fache Flut (bid 116242 4×).
         if (await _db.ChessableImports.AnyAsync(
-                x => x.UserId == ownerUserId && x.Bid == bid && (x.Status == "running" || x.Status == "paused"), ct))
+                x => x.UserId == ownerUserId && x.Bid == bid && (x.Status == ChessableImportStatus.Running || x.Status == ChessableImportStatus.Paused), ct))
             return null;
-        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == ownerUserId && x.Status == "running", ct);
+        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == ownerUserId && x.Status == ChessableImportStatus.Running, ct);
         var import = new ChessableImport
         {
             UserId = ownerUserId,
@@ -167,7 +167,7 @@ public class ChessableImportService : ICourseReimporter
             CourseName = courseName ?? string.Empty,
             Target = target,
             TargetRepertoireId = targetRepertoireId,
-            Status = "running",
+            Status = ChessableImportStatus.Running,
             QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow,
             // Lane-Klassifikation: voll-gecachte Kurse → schnelle, netzfreie Lane (kein Warten hinter
@@ -271,7 +271,7 @@ public class ChessableImportService : ICourseReimporter
     private async Task DrainNextAsync(CancellationToken ct, bool fastLane)
     {
         var queued = await _db.ChessableImports
-            .Where(i => i.Status == "running" && i.Phase == "queued"
+            .Where(i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued
                 && (fastLane ? i.FullyCached == true : i.FullyCached != true))
             .ToListAsync(ct);
 
@@ -297,10 +297,10 @@ public class ChessableImportService : ICourseReimporter
             {
                 _db.ChangeTracker.Clear();
                 var stale = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == next.Id, ct);
-                if (stale is not null && stale.Status == "running")
+                if (stale is not null && stale.Status == ChessableImportStatus.Running)
                 {
                     stale.FullyCached = false;
-                    stale.Phase = "queued";
+                    stale.Phase = ChessableImportPhase.Queued;
                     await _db.SaveChangesAsync(ct);
                     _logger.LogWarning(
                         "Chessable-Import {Id} (bid {Bid}) ist nicht mehr voll gecacht — zurückgestuft in die Download-Lane",
@@ -327,16 +327,16 @@ public class ChessableImportService : ICourseReimporter
         if (_db.Database.IsRelational())
         {
             var rows = await _db.ChessableImports
-                .Where(i => i.Id == importId && i.Status == "running" && i.Phase == "queued")
-                .ExecuteUpdateAsync(s => s.SetProperty(i => i.Phase, "claimed"), ct);
+                .Where(i => i.Id == importId && i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued)
+                .ExecuteUpdateAsync(s => s.SetProperty(i => i.Phase, ChessableImportPhase.Claimed), ct);
             return rows == 1;
         }
 
         // InMemory-Fallback: nur claimen, wenn die Phase noch "queued" ist.
         var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
-        if (import is null || import.Status != "running" || import.Phase != "queued")
+        if (import is null || import.Status != ChessableImportStatus.Running || import.Phase != ChessableImportPhase.Queued)
             return false;
-        import.Phase = "claimed";
+        import.Phase = ChessableImportPhase.Claimed;
         await _db.SaveChangesAsync(ct);
         return true;
     }
@@ -354,7 +354,7 @@ public class ChessableImportService : ICourseReimporter
             _logger.LogWarning("ChessableImport {Id} nicht gefunden", importId);
             return;
         }
-        if (import.Status != "running")
+        if (import.Status != ChessableImportStatus.Running)
             return; // bereits abgeschlossen oder fehlgeschlagen — nichts zu tun
 
         // Hol-Beginn festhalten (erste Bearbeitung aus der Queue) — trennt Wartezeit von Holzeit.
@@ -405,8 +405,8 @@ public class ChessableImportService : ICourseReimporter
                     // piratechess-DB-Cache → ein toter Bearer blockt sie nicht, der Import läuft durch.
                     if (cred.BlockedAt is not null && import.FullyCached != true)
                     {
-                        import.Status = "paused";
-                        import.Phase = "bearer-blocked";
+                        import.Status = ChessableImportStatus.Paused;
+                        import.Phase = ChessableImportPhase.BearerBlocked;
                         import.Attempts = 0;
                         await _db.SaveChangesAsync(ct);
                         _logger.LogInformation(
@@ -426,8 +426,8 @@ public class ChessableImportService : ICourseReimporter
                         _rateLimiter.EnsureFreshWindow(cred, now);
                         if (_rateLimiter.IsOverLimit(cred))
                         {
-                            import.Status = "paused";
-                            import.Phase = "rate-limited";
+                            import.Status = ChessableImportStatus.Paused;
+                            import.Phase = ChessableImportPhase.RateLimited;
                             import.Attempts = 0;
                             import.RateLimitedAt = now;
                             await _db.SaveChangesAsync(ct);
@@ -449,7 +449,7 @@ public class ChessableImportService : ICourseReimporter
                 }
                 var mode = import.Target == "book" ? "FirstKeyMove" : "None";
 
-                import.Phase = "fetching";
+                import.Phase = ChessableImportPhase.Fetching;
                 await _db.SaveChangesAsync(ct);
 
                 // Async Job bei piratechess starten (oder bei Resume den gemerkten weiterpollen).
@@ -473,7 +473,7 @@ public class ChessableImportService : ICourseReimporter
                 {
                     // Externen Abbruch/Pause erkennen (anderer Request setzt Status) — Checkpoint bleibt erhalten.
                     await _db.Entry(import).ReloadAsync(ct);
-                    if (import.Status != "running")
+                    if (import.Status != ChessableImportStatus.Running)
                     {
                         _logger.LogInformation("Chessable-Import {Id} während Hol-Phase {Status}", import.Id, import.Status);
                         return;
@@ -542,7 +542,7 @@ public class ChessableImportService : ICourseReimporter
                     // bleibt erhalten, der piratechess-Job läuft weiter bzw. die Rohdaten sind dann gecacht.
                     if (import.Attempts < MaxAttempts)
                     {
-                        import.Phase = "queued";
+                        import.Phase = ChessableImportPhase.Queued;
                         await _db.SaveChangesAsync(ct);
                         _logger.LogWarning(
                             "Chessable-Import {Id} Hol-Phase ohne Fortschritt (Versuch {Attempt}/{Max}) — wird automatisch neu eingereiht",
@@ -557,7 +557,7 @@ public class ChessableImportService : ICourseReimporter
             var courseName = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
 
             // --- Phase 2: Import (idempotent) ---
-            import.Phase = "importing";
+            import.Phase = ChessableImportPhase.Importing;
             await _db.SaveChangesAsync(ct);
 
             if (import.Target == "repertoire")
@@ -565,8 +565,8 @@ public class ChessableImportService : ICourseReimporter
             else
                 await ImportAsBookAsync(import, pgn, courseName, ct);
 
-            import.Status = "completed";
-            import.Phase = "done";
+            import.Status = ChessableImportStatus.Completed;
+            import.Phase = ChessableImportPhase.Done;
             import.FetchedPgn = null; // Checkpoint nicht mehr nötig → Platz freigeben
             import.CompletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
@@ -639,8 +639,8 @@ public class ChessableImportService : ICourseReimporter
             Bid = bid,
             CourseName = name,
             Target = target,
-            Status = "running",
-            Phase = "importing",
+            Status = ChessableImportStatus.Running,
+            Phase = ChessableImportPhase.Importing,
             LineCount = lineCount,
             FullyCached = true,   // Browser lieferte die Daten → kein Download nötig
             CreatedAt = DateTime.UtcNow,
@@ -690,8 +690,8 @@ public class ChessableImportService : ICourseReimporter
                 }
             }
 
-            import.Status = "completed";
-            import.Phase = "done";
+            import.Status = ChessableImportStatus.Completed;
+            import.Phase = ChessableImportPhase.Done;
             import.CompletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
 
@@ -1117,7 +1117,7 @@ public class ChessableImportService : ICourseReimporter
     // ohne eine halbe Chessable-Session zu simulieren.
     internal async Task FailAsync(ChessableImport import, string error)
     {
-        import.Status = "failed";
+        import.Status = ChessableImportStatus.Failed;
         import.Error = Trunc(error, 1000);
         import.CompletedAt = DateTime.UtcNow;
         // Terminalen Status mit CancellationToken.None festschreiben: scheitert ein Import WEGEN einer

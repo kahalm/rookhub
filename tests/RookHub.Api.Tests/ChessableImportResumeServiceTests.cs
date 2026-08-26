@@ -38,25 +38,25 @@ public class ChessableImportResumeServiceTests : IDisposable
     public async Task StartAsync_RequeuesRunningImports_AndFlipsPhaseToQueued()
     {
         _db.ChessableImports.AddRange(
-            new ChessableImport { UserId = 1, Status = "running", Phase = "fetching" },
-            new ChessableImport { UserId = 2, Status = "running", Phase = "importing" },
-            new ChessableImport { UserId = 3, Status = "completed", Phase = "done" });   // nicht betroffen
+            new ChessableImport { UserId = 1, Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching },
+            new ChessableImport { UserId = 2, Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing },
+            new ChessableImport { UserId = 3, Status = ChessableImportStatus.Completed, Phase = ChessableImportPhase.Done });   // nicht betroffen
         await _db.SaveChangesAsync();
 
         var queue = new CountingBgQueue();
         await Service(queue).StartAsync(CancellationToken.None);
 
         Assert.Equal(2, queue.Count);   // ein Ticket je unterbrochenem Import
-        var running = await _db.ChessableImports.Where(i => i.Status == "running").ToListAsync();
-        Assert.All(running, i => Assert.Equal("queued", i.Phase));
-        var completed = await _db.ChessableImports.SingleAsync(i => i.Status == "completed");
-        Assert.Equal("done", completed.Phase);   // unangetastet
+        var running = await _db.ChessableImports.Where(i => i.Status == ChessableImportStatus.Running).ToListAsync();
+        Assert.All(running, i => Assert.Equal(ChessableImportPhase.Queued, i.Phase));
+        var completed = await _db.ChessableImports.SingleAsync(i => i.Status == ChessableImportStatus.Completed);
+        Assert.Equal(ChessableImportPhase.Done, completed.Phase);   // unangetastet
     }
 
     [Fact]
     public async Task StartAsync_NoRunningImports_EnqueuesNothing()
     {
-        _db.ChessableImports.Add(new ChessableImport { UserId = 1, Status = "completed", Phase = "done" });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 1, Status = ChessableImportStatus.Completed, Phase = ChessableImportPhase.Done });
         await _db.SaveChangesAsync();
         var queue = new CountingBgQueue();
         await Service(queue).StartAsync(CancellationToken.None);

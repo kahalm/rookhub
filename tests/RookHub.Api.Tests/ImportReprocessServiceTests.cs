@@ -274,7 +274,7 @@ public class ImportReprocessServiceTests : IDisposable
         _db.ChessableImports.Add(new ChessableImport
         {
             UserId = UserId, Bid = "999", CourseName = "X", Target = "book",
-            Status = "completed", CompletedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow,
+            Status = ChessableImportStatus.Completed, CompletedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
         var stub = new StubCourseReimporter { ReturnId = 1 }; // CachedBids leer → 999 nicht gecacht
@@ -295,7 +295,7 @@ public class ImportReprocessServiceTests : IDisposable
         _db.ChessableImports.Add(new ChessableImport
         {
             UserId = UserId, Bid = "888", CourseName = "X", Target = "book",
-            Status = "completed", CompletedAt = DateTime.UtcNow.AddHours(-48), CreatedAt = DateTime.UtcNow.AddHours(-48),
+            Status = ChessableImportStatus.Completed, CompletedAt = DateTime.UtcNow.AddHours(-48), CreatedAt = DateTime.UtcNow.AddHours(-48),
         });
         await _db.SaveChangesAsync();
         var stub = new StubCourseReimporter { ReturnId = 1 };

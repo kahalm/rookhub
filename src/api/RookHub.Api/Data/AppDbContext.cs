@@ -1082,6 +1082,18 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(i => new { i.UserId, i.CreatedAt });
             e.HasIndex(i => i.Status);
+            // Zustaende liegen als Enum im Code, aber unveraendert als Zeichenkette in der Datenbank:
+            // deshalb braucht die Umstellung KEINE Migration und keine Datenaenderung. Die
+            // Spaltentypen werden ausdruecklich festgehalten (Status varchar(255), weil indiziert;
+            // Phase longtext), sonst leitete EF aus dem Enum andere ab und verlangte eine Migration.
+            e.Property(i => i.Status)
+             .HasConversion(v => v.ToWire(), v => ChessableImportStates.ParseStatus(v))
+             .HasColumnType("varchar(255)")
+             .IsRequired();
+            e.Property(i => i.Phase)
+             .HasConversion(v => v.ToWire(), v => ChessableImportStates.ParsePhase(v))
+             .HasColumnType("longtext")
+             .IsRequired();
             e.HasOne(i => i.User)
              .WithMany()
              .HasForeignKey(i => i.UserId)

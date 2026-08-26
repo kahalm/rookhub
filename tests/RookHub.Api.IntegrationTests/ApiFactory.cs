@@ -30,6 +30,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         // Ebenfalls Pflicht: der Dienst wirft beim Start lieber laut, als den fremden
         // Chessable-Bearer mit einem oeffentlich bekannten Fixwert scheinzuverschluesseln.
         builder.UseSetting("Encryption:Key", "integrationstest-schluessel-egal-welcher");
+        // DataProtection schreibt sonst nach /keys (Prod-Volume) und der Start scheitert lokal
+        // mit UnauthorizedAccessException. Wegwerf-Verzeichnis je Testlauf.
+        builder.UseSetting("DataProtection:KeyPath",
+            Path.Combine(Path.GetTempPath(), "rookhub-it-keys", Guid.NewGuid().ToString("N")));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IHostedService>();

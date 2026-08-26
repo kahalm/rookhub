@@ -195,7 +195,7 @@ public partial class ImportReprocessService
             if (!cached)
             {
                 var lastDone = await _db.ChessableImports
-                    .Where(i => i.Bid == c.Bid && i.Status == "completed" && i.CompletedAt != null)
+                    .Where(i => i.Bid == c.Bid && i.Status == ChessableImportStatus.Completed && i.CompletedAt != null)
                     .OrderByDescending(i => i.CompletedAt)
                     .Select(i => i.CompletedAt)
                     .FirstOrDefaultAsync(CancellationToken.None);

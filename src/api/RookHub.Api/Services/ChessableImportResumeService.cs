@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -33,7 +34,7 @@ public class ChessableImportResumeService : IHostedService
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var running = await db.ChessableImports
-                .Where(i => i.Status == "running")
+                .Where(i => i.Status == ChessableImportStatus.Running)
                 .ToListAsync(cancellationToken);
 
             if (running.Count == 0) return;
@@ -42,7 +43,7 @@ public class ChessableImportResumeService : IHostedService
             // damit sie der faire Picker (RunNextAsync, greift nur Phase "queued") wieder aufnimmt.
             // RunAsync ist resume-fähig (PGN-Checkpoint, idempotent). Je Import ein Ticket.
             foreach (var imp in running)
-                imp.Phase = "queued";
+                imp.Phase = ChessableImportPhase.Queued;
             await db.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Resume: {Count} unterbrochene Chessable-Importe werden fortgesetzt", running.Count);

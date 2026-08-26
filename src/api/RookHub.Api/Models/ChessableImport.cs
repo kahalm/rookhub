@@ -24,11 +24,13 @@ public class ChessableImport
     /// <summary>"repertoire" oder "book".</summary>
     public string Target { get; set; } = string.Empty;
 
-    /// <summary>"running" | "completed" | "failed".</summary>
-    public string Status { get; set; } = "running";
+    /// <summary>Grobzustand. Die Doku hier nannte frueher nur running/completed/failed —
+    /// tatsaechlich benutzt der Code auch paused und cancelled; jetzt erzwingt das Enum die
+    /// Vollstaendigkeit. Gespeichert wird weiter dieselbe Zeichenkette (Werte-Konverter).</summary>
+    public ChessableImportStatus Status { get; set; } = ChessableImportStatus.Running;
 
-    /// <summary>Feinphase innerhalb "running": "queued" | "fetching" | "importing". Für Anzeige + Resume.</summary>
-    public string Phase { get; set; } = "queued";
+    /// <summary>Feinphase innerhalb <see cref="ChessableImportStatus.Running"/>. Für Anzeige + Resume.</summary>
+    public ChessableImportPhase Phase { get; set; } = ChessableImportPhase.Queued;
     public string? Error { get; set; }
 
     /// <summary>Lane-Klassifikation: true = Kurs ist bei piratechess VOLLSTÄNDIG gecacht (kein

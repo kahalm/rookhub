@@ -84,18 +84,18 @@ public class ChessableBearerBreakerTests : IDisposable
         await SeedCredentialAsync(7, blocked: true);
         // Ein Download-Import (FullyCached=false) + ein Fast-Lane-Import (FullyCached=true), beide
         // wegen des Breakers pausiert. Ein vom USER pausierter Import darf NICHT mitgenommen werden.
-        var dl = await SeedImportAsync(7, status: "paused", phase: "bearer-blocked", fullyCached: false);
-        var fast = await SeedImportAsync(7, status: "paused", phase: "bearer-blocked", fullyCached: true);
-        var userPaused = await SeedImportAsync(7, status: "paused", phase: "fetching", fullyCached: false);
+        var dl = await SeedImportAsync(7, status: ChessableImportStatus.Paused, phase: ChessableImportPhase.BearerBlocked, fullyCached: false);
+        var fast = await SeedImportAsync(7, status: ChessableImportStatus.Paused, phase: ChessableImportPhase.BearerBlocked, fullyCached: true);
+        var userPaused = await SeedImportAsync(7, status: ChessableImportStatus.Paused, phase: ChessableImportPhase.Fetching, fullyCached: false);
 
         var resumed = await _breaker.ClearAndResumeAsync(7);
 
         Assert.Equal(2, resumed);
         Assert.Null((await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7)).BlockedAt);
-        Assert.Equal(("running", "queued"), await StatusOf(dl.Id));
-        Assert.Equal(("running", "queued"), await StatusOf(fast.Id));
+        Assert.Equal((ChessableImportStatus.Running, ChessableImportPhase.Queued), await StatusOf(dl.Id));
+        Assert.Equal((ChessableImportStatus.Running, ChessableImportPhase.Queued), await StatusOf(fast.Id));
         // Vom User pausierter Import bleibt unangetastet.
-        Assert.Equal(("paused", "fetching"), await StatusOf(userPaused.Id));
+        Assert.Equal((ChessableImportStatus.Paused, ChessableImportPhase.Fetching), await StatusOf(userPaused.Id));
         // Nur der Download-Import bekommt ein Queue-Ticket (Fast-Lane treibt ihr eigener Loop).
         Assert.Equal(1, _queue.Count);
     }
@@ -113,12 +113,12 @@ public class ChessableBearerBreakerTests : IDisposable
     {
         // Admin (UserId=1) importiert mit dem Bearer von User 7 (BearerUserId=7); Breaker hängt an 7.
         await SeedCredentialAsync(7, blocked: true);
-        var adminImp = await SeedImportAsync(1, status: "paused", phase: "bearer-blocked", fullyCached: false, bearerUserId: 7);
+        var adminImp = await SeedImportAsync(1, status: ChessableImportStatus.Paused, phase: ChessableImportPhase.BearerBlocked, fullyCached: false, bearerUserId: 7);
 
         var resumed = await _breaker.ClearAndResumeAsync(7);
 
         Assert.Equal(1, resumed);
-        Assert.Equal(("running", "queued"), await StatusOf(adminImp.Id));
+        Assert.Equal((ChessableImportStatus.Running, ChessableImportPhase.Queued), await StatusOf(adminImp.Id));
     }
 
     // --- Helpers ---
@@ -138,7 +138,7 @@ public class ChessableBearerBreakerTests : IDisposable
     }
 
     private async Task<ChessableImport> SeedImportAsync(
-        int userId, string status, string phase, bool fullyCached, int? bearerUserId = null)
+        int userId, ChessableImportStatus status, ChessableImportPhase phase, bool fullyCached, int? bearerUserId = null)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
             _db.AppUsers.Add(new AppUser { Id = userId, Username = $"u{userId}", PasswordHash = "x" });
@@ -152,7 +152,7 @@ public class ChessableBearerBreakerTests : IDisposable
         return imp;
     }
 
-    private async Task<(string status, string phase)> StatusOf(int id)
+    private async Task<(ChessableImportStatus status, ChessableImportPhase phase)> StatusOf(int id)
     {
         var imp = await _db.ChessableImports.FindAsync(id);
         return (imp!.Status, imp.Phase);

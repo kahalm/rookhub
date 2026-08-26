@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -23,7 +24,7 @@ namespace RookHub.Api.Services;
 public class ChessableImportFastLaneService : BackgroundService
 {
     /// <summary>Phasen, in denen ein Import aktiv bearbeitet wird (nicht bloß wartend).</summary>
-    internal static readonly string[] InflightPhases = { "claimed", "fetching", "importing" };
+    internal static readonly ChessableImportPhase[] InflightPhases = ChessableImportStates.Inflight;
 
     internal TimeSpan StartupDelay = TimeSpan.FromSeconds(20);
     internal TimeSpan IdleInterval = TimeSpan.FromSeconds(20);
@@ -96,11 +97,11 @@ public class ChessableImportFastLaneService : BackgroundService
     internal static async Task<int> FreeSlotsAsync(AppDbContext db, int maxParallel, CancellationToken ct = default)
     {
         var queued = await db.ChessableImports
-            .CountAsync(i => i.Status == "running" && i.Phase == "queued" && i.FullyCached == true, ct);
+            .CountAsync(i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued && i.FullyCached == true, ct);
         if (queued == 0) return 0;
 
         var inflight = await db.ChessableImports
-            .CountAsync(i => i.Status == "running" && i.FullyCached == true && InflightPhases.Contains(i.Phase), ct);
+            .CountAsync(i => i.Status == ChessableImportStatus.Running && i.FullyCached == true && InflightPhases.Contains(i.Phase), ct);
         return Math.Max(0, Math.Min(maxParallel - inflight, queued));
     }
 }

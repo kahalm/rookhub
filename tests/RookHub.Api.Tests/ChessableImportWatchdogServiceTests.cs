@@ -25,7 +25,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private async Task SeedAsync(params (string status, string phase)[] jobs)
+    private async Task SeedAsync(params (ChessableImportStatus status, ChessableImportPhase phase)[] jobs)
     {
         foreach (var (status, phase) in jobs)
             _db.ChessableImports.Add(new ChessableImport
@@ -40,25 +40,25 @@ public class ChessableImportWatchdogServiceTests : IDisposable
     public async Task IsDrainStalled_True_WhenJobsQueuedButNoneInflight()
     {
         // Vorfall-Lage: viele wartende, keiner aktiv.
-        await SeedAsync(("running", "queued"), ("running", "queued"), ("completed", "done"));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued), (ChessableImportStatus.Running, ChessableImportPhase.Queued), (ChessableImportStatus.Completed, ChessableImportPhase.Done));
         Assert.True(await ChessableImportWatchdogService.IsDrainStalledAsync(_db));
     }
 
     [Theory]
-    [InlineData("claimed")]
-    [InlineData("fetching")]
-    [InlineData("importing")]
-    public async Task IsDrainStalled_False_WhenAJobIsInflight(string inflightPhase)
+    [InlineData(ChessableImportPhase.Claimed)]
+    [InlineData(ChessableImportPhase.Fetching)]
+    [InlineData(ChessableImportPhase.Importing)]
+    public async Task IsDrainStalled_False_WhenAJobIsInflight(ChessableImportPhase inflightPhase)
     {
         // Es läuft etwas → der normale Drain arbeitet, Watchdog hält sich raus.
-        await SeedAsync(("running", "queued"), ("running", inflightPhase));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued), (ChessableImportStatus.Running, inflightPhase));
         Assert.False(await ChessableImportWatchdogService.IsDrainStalledAsync(_db));
     }
 
     [Fact]
     public async Task IsDrainStalled_False_WhenNothingQueued()
     {
-        await SeedAsync(("completed", "done"), ("failed", "fetching"));
+        await SeedAsync((ChessableImportStatus.Completed, ChessableImportPhase.Done), (ChessableImportStatus.Failed, ChessableImportPhase.Fetching));
         Assert.False(await ChessableImportWatchdogService.IsDrainStalledAsync(_db));
     }
 
@@ -84,7 +84,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         var stale = new ChessableImport
         {
             UserId = 1, Bid = "b", CourseName = "C", Target = "repertoire",
-            Status = "paused", Phase = "rate-limited", RateLimitedAt = DateTime.UtcNow.AddHours(-25),
+            Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.RateLimited, RateLimitedAt = DateTime.UtcNow.AddHours(-25),
         };
         _db.ChessableImports.Add(stale);
         await _db.SaveChangesAsync();
@@ -93,8 +93,8 @@ public class ChessableImportWatchdogServiceTests : IDisposable
 
         Assert.Equal(1, count);
         await _db.Entry(stale).ReloadAsync();
-        Assert.Equal("running", stale.Status);
-        Assert.Equal("queued", stale.Phase);
+        Assert.Equal(ChessableImportStatus.Running, stale.Status);
+        Assert.Equal(ChessableImportPhase.Queued, stale.Phase);
         Assert.Null(stale.RateLimitedAt);
     }
 
@@ -104,7 +104,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         var recent = new ChessableImport
         {
             UserId = 1, Bid = "b", CourseName = "C", Target = "repertoire",
-            Status = "paused", Phase = "rate-limited", RateLimitedAt = DateTime.UtcNow.AddHours(-1),
+            Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.RateLimited, RateLimitedAt = DateTime.UtcNow.AddHours(-1),
         };
         _db.ChessableImports.Add(recent);
         await _db.SaveChangesAsync();
@@ -113,8 +113,8 @@ public class ChessableImportWatchdogServiceTests : IDisposable
 
         Assert.Equal(0, count);
         await _db.Entry(recent).ReloadAsync();
-        Assert.Equal("paused", recent.Status);
-        Assert.Equal("rate-limited", recent.Phase);
+        Assert.Equal(ChessableImportStatus.Paused, recent.Status);
+        Assert.Equal(ChessableImportPhase.RateLimited, recent.Phase);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         var bearerBlocked = new ChessableImport
         {
             UserId = 1, Bid = "b", CourseName = "C", Target = "repertoire",
-            Status = "paused", Phase = "bearer-blocked", RateLimitedAt = DateTime.UtcNow.AddHours(-25),
+            Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.BearerBlocked, RateLimitedAt = DateTime.UtcNow.AddHours(-25),
         };
         _db.ChessableImports.Add(bearerBlocked);
         await _db.SaveChangesAsync();
@@ -134,14 +134,14 @@ public class ChessableImportWatchdogServiceTests : IDisposable
 
         Assert.Equal(0, count);
         await _db.Entry(bearerBlocked).ReloadAsync();
-        Assert.Equal("bearer-blocked", bearerBlocked.Phase);
+        Assert.Equal(ChessableImportPhase.BearerBlocked, bearerBlocked.Phase);
     }
 
     [Theory]
-    [InlineData("claimed")]
-    [InlineData("fetching")]
-    [InlineData("importing")]
-    public async Task ReclaimOrphanedInflight_RequeuesZombie_AfterSecondSighting(string phase)
+    [InlineData(ChessableImportPhase.Claimed)]
+    [InlineData(ChessableImportPhase.Fetching)]
+    [InlineData(ChessableImportPhase.Importing)]
+    public async Task ReclaimOrphanedInflight_RequeuesZombie_AfterSecondSighting(ChessableImportPhase phase)
     {
         // Zombie: DB sagt „läuft", aber kein Treiber im Prozess (Job hat seinen Task verloren, ohne
         // einen Terminal-Status zu schreiben) → Lane bliebe sonst dauerhaft belegt.
@@ -150,7 +150,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         var zombie = new ChessableImport
         {
             Id = 990001, UserId = 1, Bid = "b1", CourseName = "C", Target = "book",
-            Status = "running", Phase = phase, Attempts = 2, CreatedAt = DateTime.UtcNow,
+            Status = ChessableImportStatus.Running, Phase = phase, Attempts = 2, CreatedAt = DateTime.UtcNow,
         };
         _db.ChessableImports.Add(zombie);
         await _db.SaveChangesAsync();
@@ -163,7 +163,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
 
         Assert.Equal(1, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
         await _db.Entry(zombie).ReloadAsync();
-        Assert.Equal("queued", zombie.Phase);
+        Assert.Equal(ChessableImportPhase.Queued, zombie.Phase);
         Assert.Equal(2, zombie.Attempts);   // zählt weiter gegen MaxAttempts
     }
 
@@ -173,7 +173,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         var driven = new ChessableImport
         {
             Id = 990002, UserId = 1, Bid = "b2", CourseName = "C", Target = "book",
-            Status = "running", Phase = "fetching", CreatedAt = DateTime.UtcNow,
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching, CreatedAt = DateTime.UtcNow,
         };
         _db.ChessableImports.Add(driven);
         await _db.SaveChangesAsync();
@@ -185,20 +185,20 @@ public class ChessableImportWatchdogServiceTests : IDisposable
             Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
             Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
             await _db.Entry(driven).ReloadAsync();
-            Assert.Equal("fetching", driven.Phase);
+            Assert.Equal(ChessableImportPhase.Fetching, driven.Phase);
         }
 
         // Treiber weg → ab jetzt gilt derselbe Job als verwaist (wieder zwei Sichtungen).
         Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
         Assert.Equal(1, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
         await _db.Entry(driven).ReloadAsync();
-        Assert.Equal("queued", driven.Phase);
+        Assert.Equal(ChessableImportPhase.Queued, driven.Phase);
     }
 
     [Fact]
     public async Task ReclaimOrphanedInflight_IgnoresWaitingAndFinishedImports()
     {
-        await SeedAsync(("running", "queued"), ("completed", "done"), ("paused", "bearer-blocked"));
+        await SeedAsync((ChessableImportStatus.Running, ChessableImportPhase.Queued), (ChessableImportStatus.Completed, ChessableImportPhase.Done), (ChessableImportStatus.Paused, ChessableImportPhase.BearerBlocked));
         var wd = Watchdog();
         wd.OrphanGrace = TimeSpan.Zero;
 
