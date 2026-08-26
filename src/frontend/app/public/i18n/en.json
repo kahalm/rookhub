@@ -105,7 +105,7 @@
       "chessable_token_added": "{{username}} added a Chessable token",
       "chessable_new_course": "New Chessable course “{{courseName}}” for {{username}}",
       "course_shared": "{{username}} shared the course “{{courseName}}” with you",
-      "calc_series_edition_released": "New calculation week available: „{{chapter}}“ ({{book}})",
+      "calc_series_edition_released": "New calculation week available: “{{chapter}}” ({{book}})",
       "repertoire_shared": "{{username}} shared the repertoire “{{repertoireName}}” with you",
       "catalog_request_received": "{{username}} requests “{{itemName}}” from your catalog",
       "catalog_request_approved": "Your request for “{{itemName}}” was approved",
@@ -320,7 +320,7 @@
     "repertoires": {
       "title": "Repertoires",
       "count": "{{count}} repertoires",
-      "viewAll": "View All"
+      "viewAll": "View all"
     },
     "chessableQueue": {
       "title": "Chessable Queue",
@@ -375,7 +375,7 @@
     },
     "analysis": {
       "title": "Analysis",
-      "subtitle": "Analyse a position",
+      "subtitle": "Analyze a position",
       "open": "Open board"
     },
     "messages": {
@@ -427,7 +427,7 @@
       "presets": {
         "struktur": "Structure",
         "ausgewogen": "Balanced",
-        "stellungsbild": "Piece picture"
+        "stellungsbild": "Piece placement"
       },
       "presetHint": {
         "struktur": "Pawn skeleton decides (75%); material, pieces and king barely matter.",
@@ -443,10 +443,10 @@
       "selectNone": "None",
       "noneSelected": "No repertoire selected — pick at least one.",
       "mirrored": "Mirrored hits",
-      "mirroredHint": "Also compare with colours swapped and the board flipped, and keep the better value.",
-      "mirroredBadge": "Found with colours swapped (board mirrored).",
+      "mirroredHint": "Also compare with colors swapped and the board flipped, and keep the better value.",
+      "mirroredBadge": "Found with colors swapped (board mirrored).",
       "sameSide": "Same side to move",
-      "sameSideHint": "Only compare positions where the same colour is to move.",
+      "sameSideHint": "Only compare positions where the same color is to move.",
       "onlyWithMove": "only with {{move}}",
       "onlyWithMoveHint": "Hide hits where this move is not the repertoire move.",
       "none": "Nothing similar found in your repertoires.",
@@ -512,7 +512,7 @@
       "title": "Extension Tokens",
       "subtitle": "Personal access tokens for machine clients (e.g. chess.com extension).",
       "empty": "No tokens yet. Create one if you want to connect the chess.com extension.",
-      "create": "Create Token",
+      "create": "Create token",
       "revoke": "Revoke token",
       "revokeConfirm": "Revoke token \"{{name}}\"? The client will no longer be able to connect.",
       "revokeFailed": "Revoke failed",
@@ -537,7 +537,7 @@
       },
       "show": {
         "title": "Token created",
-        "warning": "This token is shown ONLY now, once. Copy it into your extension — it cannot be retrieved later.",
+        "warning": "This token is shown ONLY once, right now. Copy it into your extension — it cannot be retrieved later.",
         "copy": "Copy",
         "copied": "Copied to clipboard"
       }
@@ -681,7 +681,7 @@
       "loadError": "Could not load stats"
     },
     "revenge": {
-      "menu": "Revenge a Friend",
+      "menu": "Take revenge on a friend",
       "menuOpen": "{{count}} open revenge(s) — go get them!",
       "title": "Revenge on {{name}}",
       "hint": "Puzzles {{name}} failed and hasn't solved yet — crack them and do better!",
@@ -771,7 +771,7 @@
       "sectionExtension": "In RepCheck",
       "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on chess.com / lichess.",
       "sectionOther": "Other repertoires",
-      "sectionOtherHint": "Not used by RepCheck. Toggle \"Use for extension\" in edit to move a repertoire up.",
+      "sectionOtherHint": "Not used by RepCheck. Toggle \"Use for the extension\" in the edit dialog to move a repertoire up.",
       "extensionBadge": "Used by the RepCheck extension",
       "sectionSharedWithMe": "Shared with me",
       "sectionSharedWithMeHint": "Repertoires other members have shared with you.",
@@ -822,7 +822,7 @@
       "sr": {
         "reviewAll": "Review due lines",
         "learnAll": "Learn new lines",
-        "courseActions": "Course actions",
+        "courseActions": "Repertoire actions",
         "chapterActions": "Chapter actions",
         "lineActions": "Line actions",
         "learn": "Learn",
@@ -1262,7 +1262,7 @@
       "startChapter": "Start chapter",
       "tags": "Tags",
       "title": "Course",
-      "chapterPoints": "{score} pts"
+      "chapterPoints": "{{score}} pts"
     },
     "sequential": "Sequential",
     "random": "Random",
@@ -1332,9 +1332,9 @@
       "print": "Print",
       "count": "{{count}} cards",
       "empty": "Nothing to print — no lines selected.",
-      "duplexHint": "Print double-sided (flip on long edge): each back sheet is mirrored so fronts and backs line up. Enable background printing is NOT needed.",
-      "fromWhite": "from White\\u2019s side",
-      "fromBlack": "from Black\\u2019s side",
+      "duplexHint": "Print double-sided (flip on long edge): each back sheet is mirrored so fronts and backs line up. Enabling background printing is NOT needed.",
+      "fromWhite": "from White’s side",
+      "fromBlack": "from Black’s side",
       "noText": "No description for this line.",
       "pick": "Select for flashcards",
       "browseTooltip": "Print selected lines as flashcards — without a selection the current view is printed.",
@@ -1412,7 +1412,7 @@
     },
     "flip": "Flip board",
     "frozen": "Board frozen",
-    "frozenHint": "The board always shows the starting position only. Your clicks are recorded as moves but never moved on the board — you calculate in your head.",
+    "frozenHint": "The board always shows the starting position only. Your clicks are recorded as moves but never played on the board — you calculate in your head.",
     "glyph": {
       "brilliant": "Brilliant move",
       "good": "Good move",
@@ -1424,7 +1424,7 @@
     "symbolToggleHint": "click again to remove",
     "timer": {
       "start": "Start training",
-      "hint": "Accumulated calculation time in this chapter. It only runs while training is started.",
+      "hint": "Accumulated calculation time in this chapter. It only runs while training is running.",
       "stop": "Stop training",
       "running": "Training running — time is being measured",
       "stopped": "Training stopped — no time is measured",
@@ -1710,7 +1710,7 @@
     "game": {
       "visualization": "Visualization (Level {{level}})",
       "vizCountdown": "Pieces disappear in {{seconds}}s...",
-      "vizNoMove": "No move yet — click from-square → target-square.",
+      "vizNoMove": "No move yet — click from-square → target square.",
       "vizShow": "Show",
       "vizShowing": "Showing...",
       "loadingPuzzle": "Loading puzzle...",
@@ -1748,7 +1748,7 @@
       "title": "Game Over",
       "wonTitle": "You win!",
       "wonSubtitle": "You cleared the entire gauntlet.",
-      "wonText": "The chain is beaten – start a new run for the next challenge.",
+      "wonText": "The gauntlet is beaten — start a new run for the next challenge.",
       "exhaustedTitle": "Played out!",
       "exhaustedSubtitle": "You have played through all puzzle rating ranges.",
       "areYouAStockfish": "Are you a Stockfish?",
@@ -1935,7 +1935,7 @@
       "etaUnknown": "running…",
       "etaTooltip": "Estimated completion — the average duration of the recent runs minus the time already elapsed.",
       "watchStart": "Watch closely: check this repo every 10s for a minute (or until the running action finishes)",
-      "watchStop": "Stop watching (back to the 2-minute check)"
+      "watchStop": "Stop watching (back to the 20-second check)"
     },
     "users": {
       "searchLabel": "Search users",
@@ -2067,7 +2067,7 @@
       "none": "No daily puzzle assigned for this date yet.",
       "generate": "Generate daily puzzle",
       "regenerate": "Regenerate",
-      "regenerateConfirm": "Regenerate this daily puzzle? The current puzzle will be retired and never drawn again for daily or random puzzles.",
+      "regenerateConfirm": "Regenerate this daily puzzle? The current puzzle will be retired and never drawn again for daily, random or blind puzzles.",
       "regenerated": "Daily puzzle regenerated.",
       "errors": {
         "load": "Failed to load the daily puzzle.",
@@ -2135,7 +2135,7 @@
       "selectUser": "User",
       "showExpired": "Also show expired",
       "refresh": "Refresh list",
-      "noUsers": "No user has stored a Chessable access yet.",
+      "noUsers": "No user has stored Chessable access yet.",
       "noCourses": "No courses found for this user.",
       "loadError": "Could not load the course list.",
       "importError": "Could not start the download.",
@@ -2170,7 +2170,7 @@
       "allPermissions": "All permissions (superuser).",
       "noPermissions": "No permissions.",
       "assignTitle": "Assign roles to a user",
-      "assignHint": "Search a user, then toggle their roles.",
+      "assignHint": "Search for a user, then toggle their roles.",
       "searchUser": "Search user",
       "rolesFor": "Roles for {{name}}",
       "adminUserNote": "This user is an admin and holds the admin role automatically (managed via the admin toggle).",

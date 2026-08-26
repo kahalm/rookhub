@@ -45,7 +45,7 @@
     "repeatLine": "Ponovno",
     "nextLine": "Sljedeća linija",
     "offlineBadge": "Offline",
-    "offlineHint": "Trening iz offline kopije — rezultati se spremaju na ovom uređaju i automatski sinkroniziraju kad ponovno budete na mreži."
+    "offlineHint": "Trening iz offline kopije — rezultati se spremaju na ovom uređaju i automatski sinkroniziraju kad ponovno budeš na mreži."
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",
@@ -57,7 +57,7 @@
     "unit": {
       "h": "sati",
       "d": "dana",
-      "w": "tjedni",
+      "w": "tjedana",
       "mo": "mjeseci"
     }
   },
@@ -198,7 +198,7 @@
     "stats": "Statistika",
     "trainingGoals": "Trening ciljevi",
     "installApp": "Instaliraj aplikaciju",
-    "themeSystem": "Sustavna tema",
+    "themeSystem": "Tema sustava",
     "themeLight": "Svijetla tema",
     "themeDark": "Tamna tema",
     "help": "Pomoć",
@@ -214,24 +214,24 @@
     "quickstartTitle": "Brzi početak",
     "qs": {
       "randomTitle": "Nasumične zagonetke",
-      "randomDesc": "Nasumične taktičke zagonetke s tvojim osobnim rejtingom — svako rješenje prilagođava tvoj puzzle Elo.",
+      "randomDesc": "Nasumične taktičke zagonetke s tvojim osobnim rejtingom — svako rješenje prilagođava tvoj Elo za zagonetke.",
       "endlessTitle": "Beskonačno",
       "endlessDesc": "Niz sa sve težim zagonetkama — riješi ih što više i obori svoj rekord.",
       "dailyTitle": "Dnevna zagonetka",
       "dailyDesc": "Svaki dan jedna zajednička zagonetka za sve — s dnevnom ljestvicom (i na Discordu).",
       "weeklyTitle": "Tjedna objava",
-      "weeklyDesc": "Tjedni niz zagonetaka iz partije s rokom — za odigrati, s ljestvicom."
+      "weeklyDesc": "Tjedni niz zagonetaka iz partije s rokom — odigraj ga do kraja, s ljestvicom."
     },
     "feedback": "Povratne informacije / Prijavi grešku",
     "updateAvailable": "Dostupna je nova verzija.",
     "offlineQueueFull": "Izvanmrežna memorija je puna — novi rezultati se više ne mogu spremiti za kasniji prijenos.",
     "reload": "Ponovno učitaj",
     "apkUpdate": {
-      "banner": "Dostupna je nova verzija aplikacije – molimo reinstalirajte.",
+      "banner": "Dostupna je nova verzija aplikacije – molimo, instaliraj je ponovno.",
       "install": "Instaliraj sada"
     },
     "impersonation": {
-      "banner": "Pregledavate kao {{user}} (administrator: {{admin}})",
+      "banner": "Pregledavaš kao {{user}} (administrator: {{admin}})",
       "exit": "Natrag na administratora"
     },
     "connectivity": {
@@ -255,7 +255,7 @@
       "rememberMe": "Ostani prijavljen",
       "submit": "Prijava",
       "submitting": "Prijava u tijeku...",
-      "registerLink": "Nemate račun? Registrirajte se",
+      "registerLink": "Nemaš račun? Registriraj se",
       "failed": "Prijava nije uspjela",
       "required": "Prijavi se ili registriraj se za nastavak.",
       "forgotLink": "Zaboravljena lozinka?"
@@ -268,19 +268,19 @@
       "passwordHint": "Najmanje 4 znaka",
       "submit": "Registracija",
       "submitting": "Registracija u tijeku...",
-      "loginLink": "Već imate račun? Prijavite se",
+      "loginLink": "Već imaš račun? Prijavi se",
       "failed": "Registracija nije uspjela",
       "emailHint": "Neobavezno"
     },
     "forgot": {
       "title": "Ponovno postavljanje lozinke",
-      "intro": "Unesite e-mail adresu svog računa. Poslat ćemo vam poveznicu za postavljanje nove lozinke.",
+      "intro": "Unesi e-mail adresu svog računa. Poslat ćemo ti poveznicu za postavljanje nove lozinke.",
       "emailLabel": "E-mail",
       "submit": "Pošalji poveznicu",
       "submitting": "Slanje…",
-      "sent": "Ako adresa pripada računu, poslali smo e-mail s poveznicom za ponovno postavljanje lozinke. Provjerite i mapu neželjene pošte.",
+      "sent": "Ako adresa pripada računu, poslali smo e-mail s poveznicom za ponovno postavljanje lozinke. Provjeri i mapu neželjene pošte.",
       "backToLogin": "Natrag na prijavu",
-      "failed": "Zahtjev nije uspio. Pokušajte ponovno."
+      "failed": "Zahtjev nije uspio. Pokušaj ponovno."
     },
     "reset": {
       "title": "Postavi novu lozinku",
@@ -289,10 +289,10 @@
       "confirmLabel": "Potvrdi lozinku",
       "submit": "Spremi lozinku",
       "submitting": "Spremanje…",
-      "success": "Vaša lozinka je promijenjena. Sada se možete prijaviti.",
+      "success": "Tvoja lozinka je promijenjena. Sada se možeš prijaviti.",
       "failed": "Lozinku nije moguće ponovno postaviti.",
       "mismatch": "Lozinke se ne podudaraju.",
-      "missingToken": "Ova poveznica je nevažeća ili nepotpuna. Zatražite novu poveznicu.",
+      "missingToken": "Ova poveznica je nevažeća ili nepotpuna. Zatraži novu poveznicu.",
       "requestNew": "Zatraži novu poveznicu"
     }
   },
@@ -451,7 +451,7 @@
       "onlyWithMoveHint": "Sakrij pogotke u kojima taj potez nije potez iz repertoara.",
       "none": "Ništa slično nije pronađeno u tvojim repertoarima.",
       "noneWithMove": "Nijedna pozicija u tvojim repertoarima ondje ne nastavlja s {{move}}.",
-      "foundCount": "{{count}} slična pozicija/e",
+      "foundCount": "Slične pozicije: {{count}}",
       "atMove": "potez {{move}}",
       "startPosition": "početna pozicija",
       "openHint": "Otvori ovu poziciju u repertoaru",
@@ -500,13 +500,13 @@
     "fideApplied": "FIDE podaci preuzeti",
     "discord": {
       "title": "Discord",
-      "hint": "Otvori osobnu poveznicu RookHub Discord bota (njegovu /link naredbu ili DM sa zagonetkom) kako bi povezao svoj Discord račun.",
+      "hint": "Otvori osobnu poveznicu RookHub Discord bota (njegovu /link naredbu ili DM sa zagonetkom) da povežeš svoj Discord račun.",
       "unlink": "Prekini povezivanje",
       "unlinked": "Discord povezivanje prekinuto",
       "linked": "Discord račun povezan",
       "linkConflict": "Ovaj Discord račun već je povezan s drugim RookHub korisnikom.",
       "linkFailed": "Povezivanje Discord računa nije uspjelo",
-      "stashed": "Prijavi se ili registriraj kako bi dovršio povezivanje Discord računa."
+      "stashed": "Prijavi se ili registriraj da dovršiš povezivanje Discord računa."
     },
     "tokens": {
       "title": "Tokeni za proširenje",
@@ -565,7 +565,7 @@
       "books": "{{count}} knjiga",
       "clear": "Isprazni predmemoriju",
       "cleared": "Offline predmemorija ispražnjena",
-      "pending": "{{count}} rješenja čeka sinkronizaciju — automatski se učitavaju kad ponovno budete na mreži.",
+      "pending": "{{count}} rješenja čeka sinkronizaciju — automatski se učitavaju kad ponovno budeš na mreži.",
       "repertoires": "{{count}} repertoara"
     },
     "delete": {
@@ -627,24 +627,24 @@
       "dataAccount": "Podaci računa: korisničko ime, adresa e-pošte, lozinka (pohranjena samo kao hash).",
       "dataProfile": "Podaci profila (neobavezno): prikazno/pravo ime, FIDE ID, ChessResults ID, Chess.com/Lichess korisničko ime, neobavezna Discord veza.",
       "dataUsage": "Podaci o korištenju: riješene zagonetke, napredak i statistika u beskonačnom načinu/tečajevima, rejting igre, vremenska oznaka prijave.",
-      "dataTechnical": "Tehnički podaci: IP adresa, zahtijevani krajnji točke s vremenskim oznakama i pseudonimni identifikator posjetitelja (mjerenje dosega) u zapisima poslužitelja.",
+      "dataTechnical": "Tehnički podaci: IP adresa, zahtijevane krajnje točke s vremenskim oznakama i pseudonimni identifikator posjetitelja (mjerenje dosega) u zapisima poslužitelja.",
       "purposesTitle": "Svrhe i pravne osnove",
       "purposes": "Pružanje računa i funkcija (izvršenje ugovora, čl. 6(1)(b) GDPR-a) te operativna sigurnost, analiza pogrešaka i mjerenje dosega putem zapisa (legitimni interes, čl. 6(1)(f) GDPR-a).",
       "thirdTitle": "Primatelji / usluge trećih strana",
       "thirdIntro": "Podaci se ne prodaju. Ovisno o korištenju, uključene su sljedeće usluge:",
       "thirdDiscord": "Discord: samo pri dobrovoljnom povezivanju računa (Discord ID/ime) za prikaz u RookHub Discord botu.",
-      "thirdChessresults": "chess-results.com: podaci o turnirima dohvaćaju se na strani poslužitelja kada postavite ChessResults ID ili učitate turnire.",
-      "thirdChesssites": "Chess.com / Lichess: ako u profilu spremite korisničko ime za te platforme, naš poslužitelj automatski dohvaća njihova javna sučelja za partije — u pozadini prema zadanim postavkama svakih 6 sati dok je za vas aktivan tjedni cilj „partije“, te pri ručnoj sinkronizaciji u ciljevima treninga. Pritom se vaše korisničko ime na toj platformi prenosi njoj; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Pohranjujemo samo broj vaših rapid/klasičnih partija po danu i vrijeme zadnje dohvaćene partije — nikakve poteze partija. Uklonite li korisničko ime u profilu, dohvat izostaje.",
+      "thirdChessresults": "chess-results.com: podaci o turnirima dohvaćaju se na strani poslužitelja kada postaviš ChessResults ID ili učitaš turnire.",
+      "thirdChesssites": "Chess.com / Lichess: ako u profilu spremiš korisničko ime za te platforme, naš poslužitelj automatski šalje upite njihovim javnim sučeljima za partije — u pozadini prema zadanim postavkama svakih 6 sati dok je za tebe aktivan tjedni cilj „partije“, te pri ručnoj sinkronizaciji u ciljevima treninga. Pritom se tvoje korisničko ime na toj platformi prenosi njoj; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Pohranjujemo samo broj tvojih rapid/klasičnih partija po danu i vrijeme zadnje dohvaćene partije — nikakve poteze partija. Ukloniš li korisničko ime u profilu, dohvat izostaje.",
       "thirdLogging": "Elasticsearch/Kibana: vlastito hostano evidentiranje/nadzor na našoj infrastrukturi.",
       "thirdHosting": "Hosting: rad na vlastitoj serverskoj infrastrukturi s TLS reverznim proxyjem.",
       "storageTitle": "Lokalna pohrana (kolačići/pohrana)",
-      "storage": "Ne koristimo kolačiće za praćenje. Pohrana preglednika (localStorage) sadrži npr. token za prijavu, postavke i — ako je omogućeno — zagonetke za offline igranje. Ovi podaci ostaju na vašem uređaju.",
+      "storage": "Ne koristimo kolačiće za praćenje. Pohrana preglednika (localStorage) sadrži npr. tvoj token za prijavu, postavke i — ako je omogućeno — zagonetke za offline igranje. Ovi podaci ostaju na tvojem uređaju.",
       "retentionTitle": "Zadržavanje i brisanje",
-      "retention": "Podaci računa pohranjuju se do brisanja vašeg računa. Možete izbrisati račun u bilo kojem trenutku — identitet i osobni podaci uklanjaju se, anonimizirana statistika zadržava se. Više:",
-      "rightsTitle": "Vaša prava",
-      "rights": "Imate pravo na pristup, ispravak, brisanje, ograničenje, prenosivost podataka i prigovor, kao i pravo podnošenja pritužbe nadzornom tijelu (u Austriji: Datenschutzbehörde).",
+      "retention": "Podaci računa pohranjuju se do brisanja tvojeg računa. Račun možeš izbrisati u bilo kojem trenutku — identitet i osobni podaci uklanjaju se, anonimizirana statistika zadržava se. Više:",
+      "rightsTitle": "Tvoja prava",
+      "rights": "Imaš pravo na pristup, ispravak, brisanje, ograničenje, prenosivost podataka i prigovor, kao i pravo podnošenja pritužbe nadzornom tijelu (u Austriji: Datenschutzbehörde).",
       "contactTitle": "Kontakt",
-      "contact": "Za pitanja o privatnosti javite nam se na",
+      "contact": "Za pitanja o privatnosti javi nam se na",
       "back": "Natrag na prijavu"
     },
     "impressum": {
@@ -665,7 +665,7 @@
       "requests": "Zahtjevi ({{count}})"
     },
     "empty": {
-      "friends": "Još nemate prijatelja. Pretražite korisnike da biste dodali prijatelje!",
+      "friends": "Još nemaš prijatelja. Pretraži korisnike i dodaj prijatelje!",
       "requests": "Nema zahtjeva na čekanju."
     },
     "sentOn": "Poslano {{date}}",
@@ -684,7 +684,7 @@
       "menu": "Osveta prijatelju",
       "menuOpen": "{{count}} otvorenih osveta — idi po njih!",
       "title": "Osveta protiv {{name}}",
-      "hint": "Zagonetke koje {{name}} nije riješio/la — riješi ih i budi bolji/a!",
+      "hint": "Zagonetke u kojima je {{name}} pogriješio/la i koje još nije riješio/la — riješi ih i budi bolji/a!",
       "back": "Natrag na prijatelje",
       "ratingLabel": "Rejting {{rating}}",
       "failCount": "{{count}}× neuspješno",
@@ -756,7 +756,7 @@
       "searchPlaceholder": "Pretraži repertoare…",
       "noMatch": "Nijedan repertoar ne odgovara „{{query}}“.",
       "open": "Otvori",
-      "empty": "Još nema repertoara. Stvorite jedan za početak!",
+      "empty": "Još nema repertoara. Stvori jedan za početak!",
       "loadFailed": "Učitavanje repertoara nije uspjelo",
       "createFailed": "Stvaranje repertoara nije uspjelo",
       "deleteConfirm": "Izbrisati ovaj repertoar?",
@@ -775,7 +775,7 @@
       "extensionBadge": "Koristi ga RepCheck ekstenzija",
       "sectionSharedWithMe": "Podijeljeno sa mnom",
       "sectionSharedWithMeHint": "Repertoari koje su drugi članovi podijelili s tobom.",
-      "offlineListHint": "Offline ste — prikazani su preuzeti repertoari; dostupan je samo trening. Rezultati se sinkroniziraju kad ponovno budete na mreži.",
+      "offlineListHint": "Offline si — prikazani su tvoji preuzeti repertoari; dostupan je samo trening. Rezultati se sinkroniziraju kad ponovno budeš na mreži.",
       "offlineSaveTooltip": "Spremi repertoar offline (trening bez interneta)",
       "offlineRemoveTooltip": "Ukloni offline kopiju",
       "offlineSaved": "\"{{name}}\" spremljeno offline",
@@ -797,7 +797,7 @@
       "create": "Stvori",
       "editTitle": "Uredi repertoar",
       "save": "Spremi",
-      "useForExtension": "Koristi za proširenje",
+      "useForExtension": "Koristi za ekstenziju",
       "useForExtensionHint": "Kada je uključeno, ekstenzija preglednika/userscript koristi ovaj repertoar za otkrivanje odstupanja u analiznom načinu.",
       "chessableCourseId": "ID Chessable tečaja",
       "chessableCourseIdHint": "Numerički ID tečaja iz Chessable URL-a (npr. 12345). Povezuje ovaj repertoar s Chessable tečajem."
@@ -850,9 +850,9 @@
       "empty": "Kraj linije — nema daljnjih poteza."
     },
     "edit": {
-      "uploadHint": "Povucite PGN datoteke ovdje ili kliknite za prijenos",
+      "uploadHint": "Povuci PGN datoteke ovdje ili klikni za prijenos",
       "files": "Datoteke ({{count}})",
-      "empty": "Još nema datoteka. Prenesite PGN datoteke za početak!",
+      "empty": "Još nema datoteka. Prenesi PGN datoteke za početak!",
       "filesSkipped": "{{count}} datoteka preskočeno (samo .pgn do 10 MB)",
       "uploadSuccess": "{{count}} datoteka preneseno",
       "uploadPartial": "{{ok}} preneseno, {{failed}} neuspjelo",
@@ -993,17 +993,17 @@
     "status": {
       "loading": "Učitavanje zagonetke…",
       "loadFailed": "Učitavanje zagonetke nije uspjelo",
-      "offlineNoCache": "Izvan mreže ste i nema spremljenih zagonetki. Otvorite ovu stranicu jednom dok ste na mreži da biste spremili zagonetke za izvanmrežno igranje.",
-      "offlinePoolExhausted": "Nema više izvanmrežnih zagonetki — odigrali ste sve spremljene. Nove će se učitati čim ponovno budete na mreži.",
+      "offlineNoCache": "Izvan mreže si i nema spremljenih zagonetki. Otvori ovu stranicu jednom dok si na mreži kako bi se zagonetke spremile za izvanmrežno igranje.",
+      "offlinePoolExhausted": "Nema više izvanmrežnih zagonetki — odigrao/la si sve spremljene. Nove će se učitati čim ponovno budeš na mreži.",
       "replayLast": "Ponovno odigraj zadnju zagonetku",
-      "watchOpponent": "Pratite protivnikov potez…",
-      "yourTurn": "Vi ste na potezu!",
-      "gaveUpPlayOut": "Predali ste se — sami odigrajte rješenje.",
+      "watchOpponent": "Prati protivnikov potez…",
+      "yourTurn": "Ti si na potezu!",
+      "gaveUpPlayOut": "Predao/la si se — sam/a odigraj rješenje.",
       "thinking": "Stockfish razmišlja…"
     },
     "result": {
       "solutionPlayedOut": "Rješenje odigrano.",
-      "tryYourselfNextTime": "Sljedeći put možda riješite sami!",
+      "tryYourselfNextTime": "Sljedeći put možda riješiš sam/a!",
       "checkmate": "Šah-mat!",
       "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
       "correct": "Točno!",
@@ -1029,10 +1029,10 @@
       "showOriginalSolution": "Prikaži izvorno rješenje"
     },
     "challenge": {
-      "sentCount": "Izazov poslan za {{count}} prijatelja",
+      "sentCount": "Izazov poslan prijateljima ({{count}})",
       "selectAll": "Odaberi sve",
       "send": "Pošalji ({{count}})",
-      "batchResult": "Poslano za {{sent}}, preskočeno {{skipped}}",
+      "batchResult": "Poslano: {{sent}}, preskočeno: {{skipped}}",
       "error": "Izazov nije moguće poslati",
       "unsolvedTitle": "{{count}} tvojih zagonetki još nije riješeno"
     },
@@ -1042,10 +1042,10 @@
       "backToFriend": "Natrag na popis osvete"
     },
     "info": {
-      "rating": "Ocjena"
+      "rating": "Rejting"
     },
     "stats": {
-      "title": "Vaša statistika",
+      "title": "Tvoja statistika",
       "solved": "Riješeno",
       "accuracy": "Točnost",
       "streak": "Niz",
@@ -1064,10 +1064,10 @@
       "stockfishDepth": "Stockfish dubina",
       "enPassantForced": "En passant obavezan",
       "enPassantForcedHint": "Anarchy ploča: kad je en passant moguć, obavezan je.",
-      "offPathWarn": "Upozorenje na krivi skretaj",
+      "offPathWarn": "Upozorenje na krivo skretanje",
       "offPathWarnHint": "Nakon toliko poteza izvan rješenja (protiv Stockfisha) upozori ako više ne dobivaš jasno (+2). 0 = nikad."
     },
-    "offPathWarning": "Možda si ovdje krivo skrenuo — pozicija više nije jasno za tebe. Razmisli o resetu ili predaji.",
+    "offPathWarning": "Možda si ovdje krivo skrenuo/la — pozicija više nije jasno u tvoju korist. Razmisli o resetu ili predaji.",
     "offPathWarningEqual": "Možda si ovdje krivo skrenuo — pozicija više nije izjednačena. Razmisli o resetu ili predaji.",
     "offPath": {
       "h1": "Skrenuo si s rješenja — jedan tvoj potez nije bio predviđeni.",
@@ -1131,7 +1131,7 @@
     "viz": {
       "title": "Vizualizacija (razina {{level}})",
       "countdown": "Figure nestaju za {{seconds}}s…",
-      "noMoveYet": "Još nema poteza — kliknite polje-od → ciljno polje.",
+      "noMoveYet": "Još nema poteza — klikni početno polje → ciljno polje.",
       "show": "Prikaži",
       "showing": "Prikazuje se…",
       "level0Name": "Normalno",
@@ -1170,14 +1170,14 @@
       "button": "Učitaj PGN",
       "uploading": "Učitavanje…",
       "choosePgn": "Odaberi PGN…",
-      "success": "„{{name}}\" stvoren ({{count}} zagonetki)",
+      "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
       "failed": "Učitavanje nije uspjelo. Provjeri PGN."
     },
     "deleteTooltip": "Izbriši tečaj",
     "convertToRepertoireTooltip": "Pretvori u repertoar",
     "convertedToRepertoire": "Tečaj pretvoren u repertoar: {{name}}",
     "convertToRepertoireFailed": "Pretvaranje tečaja u repertoar nije uspjelo",
-    "deleteConfirm": "Izbrisati tečaj „{{name}}\"? Napredak će biti izgubljen.",
+    "deleteConfirm": "Izbrisati tečaj „{{name}}“? Tvoj napredak će biti izgubljen.",
     "deleteFailed": "Tečaj se ne može izbrisati",
     "searchPlaceholder": "Pretraži tečajeve…",
     "noMatch": "Nijedan tečaj ne odgovara „{{query}}“.",
@@ -1191,33 +1191,33 @@
       "addChapter": "Dodaj poglavlje",
       "addChapterTitle": "Dodaj poglavlje",
       "addLines": "Dodaj pozicije",
-      "addLinesHint": "Pozicije se dodaju u poglavlje „{{chapter}}\".",
+      "addLinesHint": "Pozicije se dodaju u poglavlje „{{chapter}}“.",
       "addLinesTitle": "Dodaj pozicije",
       "addedCount": "Dodano pozicija: {{count}}.",
-      "calcBook": "Knjiga za izračun",
-      "calcHint": "Pozicije bez rješenja — obrađuju se u načinu izračuna.",
+      "calcBook": "Knjiga za računanje",
+      "calcHint": "Pozicije bez rješenja — obrađuju se u načinu računanja.",
       "calcPoints": "Bodovi računanja",
       "calcPointsHint": "Bodovi tvoje samoocjene u načinu računanja kroz sve pozicije ovog tečaja, uz najveći mogući broj.",
-      "calcToggle": "Način izračuna",
-      "calcToggleHint": "Posluži ovaj kurs kao pozicije za izračun umjesto zagonetki za rješavanje: zamrznuta ploča, bez rješenja, vlastito drvo analize po poziciji. Postojeće linije ostaju nepromijenjene.",
-      "calcToggleFailed": "Način izračuna nije se mogao promijeniti.",
+      "calcToggle": "Način računanja",
+      "calcToggleHint": "Posluži ovaj tečaj kao pozicije za računanje umjesto zagonetki za rješavanje: zamrznuta ploča, bez rješenja, vlastito stablo analize po poziciji. Postojeće linije ostaju nepromijenjene.",
+      "calcToggleFailed": "Način računanja nije se mogao promijeniti.",
       "chapterDeleted": "Izbrisano varijanti: {{count}}.",
       "chapterName": "Naziv poglavlja",
       "chapterNameHint": "Ostavi prazno da dodaš pozicije bez poglavlja.",
-      "chapterNamePlaceholder": "npr. Izračun 1",
+      "chapterNamePlaceholder": "npr. Računanje 1",
       "chapterReset": "Napredak poništen (varijanti: {{count}}).",
       "chapters": "Poglavlja",
       "deleteChapter": "Izbriši poglavlje",
-      "deleteChapterConfirm": "Izbrisati poglavlje „{{name}}\" sa svih {{count}} varijanti? Time nestaje i napredak svih korisnika za te varijante.",
+      "deleteChapterConfirm": "Izbrisati poglavlje „{{name}}“ sa svih {{count}} varijanti? Time nestaje i napredak svih korisnika za te varijante.",
       "deleteChapterFailed": "Poglavlje nije bilo moguće izbrisati.",
       "deleteLine": "Izbriši varijantu",
       "deleteLineConfirm": "Izbrisati varijantu {{line}}?",
       "deleteLineFailed": "Varijantu nije bilo moguće izbrisati.",
       "difficulty": "Težina",
-      "empty": "Ovaj kurs još nema varijanti.",
-      "emptyManage": "Ovaj kurs je još prazan — preko „Dodaj poglavlje\" ubaci svoje pozicije.",
+      "empty": "Ovaj tečaj još nema varijanti.",
+      "emptyManage": "Ovaj tečaj je još prazan — preko „Dodaj poglavlje“ ubaci svoje pozicije.",
       "file": "Izvorna datoteka",
-      "formatHint": "Jedan FEN po redu. Vodeći broj („1:\", „2.\") se ignorira. Komentar može slijediti nakon „|\" ili u vitičastim zagradama. Pozicije koje su već u knjizi preskaču se.",
+      "formatHint": "Jedan FEN po redu. Vodeći broj („1:“, „2.“) se ignorira. Komentar može slijediti nakon „|“ ili u vitičastim zagradama: „… | Bijeli na potezu — prolazi li napad?“. Pozicije koje su već u knjizi preskaču se.",
       "hasSolution": "Varijanta sa spremljenim rješenjem",
       "insert": "Dodaj",
       "kind": {
@@ -1229,17 +1229,17 @@
       "lineCount": "Varijanti: {{count}}",
       "lines": "Varijante",
       "linesLoadFailed": "Varijante nije bilo moguće učitati.",
-      "linked": "Povezani kurs",
+      "linked": "Povezani tečaj",
       "noLines": "Nema varijanti u ovom poglavlju.",
-      "open": "Detalji kursa",
-      "openTooltip": "Otvori detalje kursa",
-      "owned": "Vlastiti kurs",
+      "open": "Detalji tečaja",
+      "openTooltip": "Otvori detalje tečaja",
+      "owned": "Vlastiti tečaj",
       "pinFailed": "Prikvačivanje nije bilo moguće promijeniti.",
-      "plies": "Poluhodova: {{count}}",
+      "plies": "Polupoteza: {{count}}",
       "positionLines": "Pozicije bez rješenja",
       "positionOnly": "samo pozicija",
       "positions": "Pozicije (jedna po redu)",
-      "progressCalc": "Napredak = obrađene pozicije (spremljeno vlastito drvo analize).",
+      "progressCalc": "Napredak = obrađene pozicije (spremljeno vlastito stablo analize).",
       "progressSolve": "Napredak = riješene varijante.",
       "public": "Javno",
       "quizCount": "{{count}} s rješenjem",
@@ -1252,27 +1252,27 @@
       "renameChapter": "Preimenuj poglavlje",
       "renameFailed": "Poglavlje nije bilo moguće preimenovati.",
       "resetChapter": "Poništi moj napredak",
-      "resetChapterConfirm": "Poništiti tvoj napredak za poglavlje „{{name}}\"? Spremljena drva analize ostaju.",
+      "resetChapterConfirm": "Poništiti tvoj napredak za poglavlje „{{name}}“? Spremljena stabla analize ostaju.",
       "resetChapterFailed": "Poglavlje nije bilo moguće poništiti.",
-      "resetCourse": "Poništi cijeli kurs",
-      "resetCourseConfirm": "Poništiti tvoj napredak za cijeli kurs „{{name}}\"?",
-      "resetCourseFailed": "Kurs nije bilo moguće poništiti.",
+      "resetCourse": "Poništi cijeli tečaj",
+      "resetCourseConfirm": "Poništiti tvoj napredak za cijeli tečaj „{{name}}“?",
+      "resetCourseFailed": "Tečaj nije bilo moguće poništiti.",
       "sharedBy": "Podijelio {{name}}",
-      "skippedCount": "Preskočeno redova: {{count}}:",
+      "skippedCount": "Preskočeni redovi ({{count}}):",
       "startChapter": "Pokreni poglavlje",
       "tags": "Oznake",
-      "title": "Kurs",
-      "chapterPoints": "{score} bod."
+      "title": "Tečaj",
+      "chapterPoints": "{{score}} bod."
     },
     "sequential": "Slijedno",
     "random": "Nasumično",
     "resetTooltip": "Poništi napredak",
     "pinTooltip": "Prikvači na nadzornu ploču",
     "unpinTooltip": "Otkvači s nadzorne ploče",
-    "pinned": "„{{name}}\" prikvačeno na nadzornu ploču",
-    "unpinned": "„{{name}}\" otkvačeno",
+    "pinned": "„{{name}}“ prikvačeno na nadzornu ploču",
+    "unpinned": "„{{name}}“ otkvačeno",
     "pinFailed": "Prikvačivanje nije uspjelo",
-    "resetConfirm": "Poništiti napredak za „{{name}}\"?",
+    "resetConfirm": "Poništiti napredak za „{{name}}“?",
     "loadFailed": "Tečajeve nije moguće učitati",
     "resetFailed": "Poništavanje nije uspjelo",
     "offlineSaveTooltip": "Spremi knjigu offline",
@@ -1332,7 +1332,7 @@
       "print": "Ispis",
       "count": "{{count}} kartica",
       "empty": "Nema ničega za ispis — nijedna linija nije odabrana.",
-      "duplexHint": "Ispišite obostrano (okretanje po dugom rubu): svaki list poleđina je zrcaljen pa se prednje i stražnje strane poklapaju.",
+      "duplexHint": "Ispiši obostrano (okretanje po dugom rubu): svaki list poleđina je zrcaljen pa se prednje i stražnje strane poklapaju. Opcija „Ispis pozadine“ NIJE potrebna.",
       "fromWhite": "iz perspektive bijelog",
       "fromBlack": "iz perspektive crnog",
       "noText": "Nema opisa za ovu liniju.",
@@ -1345,10 +1345,10 @@
       "shuffle": "Promiješaj",
       "digitalHint": "Klikni karticu (ili razmaknica/Enter) za okretanje; ←/→ listaju špil.",
       "markedOnly": "Samo označene",
-      "markedEmpty": "Još nema linija označenih kao flashcard. Označi linije kvačicom u pregledu.",
+      "markedEmpty": "Još nema linija označenih kao kartice. Označi linije kvačicom u pregledu.",
       "markedButton": "Označene",
-      "markedTooltip": "Samo linije koje si označio kao flashcard",
-      "markedMenu": "Flashcards (označene linije)"
+      "markedTooltip": "Samo linije koje si označio kao kartice",
+      "markedMenu": "Kartice (označene linije)"
     },
     "calcPoints": "{{score}} bod.",
     "calculate": "Izračunaj",
@@ -1382,9 +1382,9 @@
       "saved": "Teme za „{{name}}“ spremljene.",
       "error": "Teme nije moguće spremiti."
     },
-    "offlineListHint": "Offline ste — prikazani su preuzeti tečajevi (zadnje poznato stanje).",
+    "offlineListHint": "Offline si — prikazani su tvoji preuzeti tečajevi (zadnje poznato stanje).",
     "startChapterSequential": "Pokreni poglavlje (redom)",
-    "startChapterRandom": "Pokreni poglavlje (slučajno)"
+    "startChapterRandom": "Pokreni poglavlje (nasumično)"
   },
   "calc": {
     "annotate": "Ocjena",
@@ -1488,14 +1488,14 @@
     "savedAt": "Spremljeno {{time}}",
     "saving": "Spremam…",
     "local": {
-      "notice": "Niste prijavljeni: vaše linije, odabir, vrijeme i samoocjena ostaju samo na ovom uređaju.",
+      "notice": "Nisi prijavljen: tvoje varijante, odabir, vrijeme i samoocjena ostaju samo na ovom uređaju.",
       "unavailable": "Na ovom uređaju trenutačno se NIŠTA ne može spremiti (privatni prozor ili je memorija puna): varijante, odabir, vrijeme i ocjena nestat će nakon ponovnog učitavanja.",
-      "signIn": "Prijavite se za spremanje",
+      "signIn": "Prijavi se za spremanje",
       "dismiss": "Sakrij napomenu",
       "hideForNow": "Sakrij za sada (vraća se pri sljedećem neuspjelom spremanju)"
     },
     "chapter": {
-      "done": "Poglavlje „{{chapter}}\" je obrađeno.",
+      "done": "Poglavlje „{{chapter}}“ je obrađeno.",
       "label": "Poglavlje",
       "lastDone": "To je bilo posljednje poglavlje tečaja.",
       "next": "Sljedeće poglavlje: {{chapter}}"
@@ -1506,10 +1506,10 @@
     },
     "copyFen": "Kopiraj FEN",
     "fenCopied": "FEN kopiran",
-    "analyzeLine": "Analiziraj ovu liniju",
+    "analyzeLine": "Analiziraj ovu varijantu",
     "analyze": {
       "open": "Analiza",
-      "hint": "Provjeri svoju liniju s engineom"
+      "hint": "Provjeri svoju varijantu motorom"
     },
     "series": {
       "editEdition": "Uredi izdanje",
@@ -1594,7 +1594,7 @@
       "puzzle": "Zagonetka",
       "result": "Rezultat",
       "time": "Vrijeme",
-      "hints": "Pomoći",
+      "hints": "Savjeti",
       "wrong": "Pogreške",
       "mouseslips": "Omaške",
       "solved": "Riješeno",
@@ -1603,7 +1603,7 @@
     },
     "fromChapter": {
       "button": "Iz poglavlja knjige",
-      "title": "Tjedni post iz poglavlja knjige",
+      "title": "Tjedna objava iz poglavlja knjige",
       "or": "ili",
       "book": "Knjiga",
       "chapter": "Poglavlje",
@@ -1614,13 +1614,13 @@
       "noChapters": "Ova knjiga nema poglavlja.",
       "titlePlaceholder": "Zadano: knjiga + poglavlje",
       "create": "Stvori",
-      "createFailed": "Tjedni post nije moguće stvoriti.",
+      "createFailed": "Tjednu objavu nije moguće stvoriti.",
       "loadBooksFailed": "Knjige nije moguće učitati.",
       "loadChaptersFailed": "Poglavlja nije moguće učitati."
     },
     "mode": {
-      "title": "Kako želiš igrati ovaj tjedni post?",
-      "intro": "Odabir vrijedi za ovaj tjedni post i bilježi se uz svaku zagonetku.",
+      "title": "Kako želiš igrati ovu tjednu objavu?",
+      "intro": "Odabir vrijedi za ovu tjednu objavu i bilježi se uz svaku zagonetku.",
       "training": "Trening način",
       "trainingDesc": "Ploča ostaje zamrznuta — potezi se unose bez povlačenja figura (dosadašnje ponašanje).",
       "easy": "Jednostavan način",
@@ -1641,7 +1641,7 @@
       "patternMates": "Matni obrasci",
       "endgame": "Završnice"
     },
-    "offlineNoCache": "Izvan mreže ste i nema spremljenog niza. Otvorite Endless jednom dok ste na mreži da biste spremili zagonetke za izvanmrežno igranje.",
+    "offlineNoCache": "Izvan mreže si i nema spremljenog niza. Otvori Endless jednom dok si na mreži da spremiš zagonetke za izvanmrežno igranje.",
     "help": {
       "title": "Endless Puzzle Mode",
       "gameplayHeading": "Tijek igre",
@@ -1649,7 +1649,7 @@
       "gameplayP2": "Imaš <strong>3 života</strong>. Kad ostaneš bez života, igra je gotova.",
       "movesHeading": "Potezi i Stockfish",
       "movesP1": "Svaka zagonetka ima <strong>predviđeno rješenje</strong> (niz poteza). Dok igraš ispravne poteze, slijediš tu liniju rješenja.",
-      "movesP2": "Ako odigraš <strong>pogrešan potez</strong>, <strong>Stockfish</strong> (šahovski mehanizam) preuzima protivničku stranu. Tada slobodno nastavljaš igrati protiv Stockfisha. Jačina se podešava putem Stockfish Depth.",
+      "movesP2": "Ako odigraš <strong>pogrešan potez</strong>, <strong>Stockfish</strong> (šahovski motor) preuzima protivničku stranu. Tada slobodno nastavljaš igrati protiv Stockfisha. Jačina se podešava putem Stockfish Depth.",
       "movesItem1": "<strong>Mat Stockfishu</strong> računa se kao alternativno rješenje — bez gubitka života!",
       "movesItem2": "<strong>Stockfish ti da mat</strong> — gubiš život",
       "movesItem3": "Igra protiv Stockfisha nastavlja se beskonačno do mata ili predaje",
@@ -1660,7 +1660,7 @@
       "buttonsGiveUp": "<strong>Give Up</strong> — Predaja, košta život",
       "settingsHeading": "Postavke",
       "settingsStartRating": "<strong>Start Rating</strong> — S kojim rejtingom zagonetke počinješ",
-      "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Jačina mehanizma (1 = vrlo slab, 24 = maksimalna jačina)",
+      "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Jačina motora (1 = vrlo slab, 24 = maksimalna jačina)",
       "settingsThemes": "<strong>Themes</strong> — Opcionalno: samo određene taktičke teme (npr. \"fork pin\")",
       "fasttrackHeading": "Porast težine (Fasttrack)",
       "fasttrackP1": "Porast se prilagođava tvojoj dosadašnjoj izvedbi: analizira tvoje posljednje sesije i izračunava pri kojem rejtingu obično gubiš živote.",
@@ -1710,7 +1710,7 @@
     "game": {
       "visualization": "Vizualizacija (razina {{level}})",
       "vizCountdown": "Figure nestaju za {{seconds}}s...",
-      "vizNoMove": "Još nema poteza — klikni polje-od → ciljno polje.",
+      "vizNoMove": "Još nema poteza — klikni polazno polje → ciljno polje.",
       "vizShow": "Prikaži",
       "vizShowing": "Prikazuje se...",
       "loadingPuzzle": "Učitavanje zagonetke...",
@@ -1729,7 +1729,7 @@
       "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiju predviđenu liniju.",
       "correct": "Točno!",
       "wrong": "Pogrešno!",
-      "gaveUp": "Predano",
+      "gaveUp": "Predaja",
       "continue": "Nastavi",
       "analyze": "Analiziraj",
       "reviewLast": "Analiziraj zadnju zagonetku",
@@ -1748,7 +1748,7 @@
       "title": "Game Over",
       "wonTitle": "Pobjeda!",
       "wonSubtitle": "Prošao si cijeli lanac.",
-      "wonText": "Lanac je svladan – pokreni novi tijek za sljedeći izazov.",
+      "wonText": "Lanac je svladan – pokreni novu igru za sljedeći izazov.",
       "exhaustedTitle": "Sve odigrano!",
       "exhaustedSubtitle": "Prošao si kroz sve raspone rejtinga zagonetki.",
       "areYouAStockfish": "Jesi li ti Stockfish?",
@@ -1816,7 +1816,7 @@
       "checkmate": "Šah-mat!",
       "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
       "fullGame": "Cijela partija",
-      "loadError": "Učitavanje nije uspjelo. Provjerite vezu."
+      "loadError": "Učitavanje nije uspjelo. Provjeri vezu."
     },
     "actions": {
       "reset": "Poništi",
@@ -1839,7 +1839,7 @@
     },
     "settings": {
       "title": "Postavke",
-      "visualizationLevel": "Vizualizacija: Razina {{level}}",
+      "visualizationLevel": "Vizualizacija: razina {{level}}",
       "stockfishDepth": "Stockfish dubina",
       "depthHint": "1 (slabo) – 24 (jako)",
       "mode": "Način",
@@ -1850,9 +1850,9 @@
       "pieces": "Figure"
     },
     "viz": {
-      "titleLevel": "Vizualizacija (Razina {{level}})",
+      "titleLevel": "Vizualizacija (razina {{level}})",
       "countdown": "Figure nestaju za {{seconds}}s...",
-      "noMoveYet": "Još nema poteza — klikni polje-od → ciljno polje.",
+      "noMoveYet": "Još nema poteza — klikni polazno polje → ciljno polje.",
       "show": "Prikaži",
       "showing": "Prikazujem...",
       "level0": "Normalno — Povuci i ispusti",
@@ -1868,7 +1868,7 @@
       "continueRemaining": "Nastavi s preostalima",
       "toOverview": "Na pregled",
       "restart": "Počni ispočetka",
-      "restarted": "Tečaj resetiran — počinjem ispočetka",
+      "restarted": "Tečaj resetiran — počinješ ispočetka",
       "restartFailed": "Resetiranje nije uspjelo",
       "unavailable": "Ovaj tečaj nije dostupan bez prijave.",
       "wholeBook": "Cijela knjiga",
@@ -1935,11 +1935,11 @@
       "etaUnknown": "u tijeku…",
       "etaTooltip": "Procijenjeni završetak — prosječno trajanje zadnjih izvođenja minus već proteklo vrijeme.",
       "watchStart": "Pomno prati: provjeravaj ovaj repozitorij svakih 10 s jednu minutu (ili dok tekuća akcija ne završi)",
-      "watchStop": "Prekini praćenje (natrag na provjeru svake 2 minute)"
+      "watchStop": "Prekini praćenje (natrag na provjeru svakih 20 sekundi)"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
-      "toggleAdmin": "Promijeni administratora",
+      "toggleAdmin": "Promijeni administratorski status",
       "deleteUser": "Izbriši korisnika",
       "deleteConfirm": "Izbrisati korisnika \"{{username}}\"? To se ne može poništiti.",
       "deleted": "Korisnik \"{{username}}\" izbrisan",
@@ -1960,13 +1960,13 @@
         "delete": "Brisanje korisnika nije uspjelo"
       },
       "impersonate": "Prijavi se kao ovaj korisnik",
-      "impersonateStarted": "Sada ste prijavljeni kao {{name}}.",
+      "impersonateStarted": "Sada si prijavljen kao {{name}}.",
       "impersonateFailed": "Prijava kao ovaj korisnik nije uspjela."
     },
     "books": {
       "uploadPgn": "Učitaj PGN-ove",
       "importing": "Uvoz u tijeku…",
-      "poolHint": "Za svaku knjigu odredite u kojim se skupovima zagonetke pojavljuju.",
+      "poolHint": "Za svaku knjigu odredi u kojim se skupovima zagonetke pojavljuju.",
       "searchPlaceholder": "Pretraži knjige…",
       "noMatch": "Nijedna knjiga ne odgovara pretrazi.",
       "rename": "Preimenuj knjigu",
@@ -2076,7 +2076,7 @@
     },
     "puzzles": {
       "title": "Zagonetke",
-      "backfillHint": "Gradi normaliziranu tablicu oznaka (Tags / PuzzleTags) za brzi filtar tema („treniraj najslabije teme\"). Pokreni jednom nakon postavljanja — nakon toga uvoz automatski održava oznake. Radi u pozadini.",
+      "backfillHint": "Gradi normaliziranu tablicu oznaka (Tags / PuzzleTags) za brzi filtar tema („treniraj najslabije teme“). Pokreni jednom nakon postavljanja — nakon toga uvoz automatski održava oznake. Radi u pozadini.",
       "backfillBtn": "Izgradi tablicu oznaka",
       "backfillRunning": "Pokreće se…",
       "backfillConfirm": "Izgraditi/osvježiti tablicu oznaka sada? Radi kao pozadinski zadatak.",
@@ -2085,7 +2085,7 @@
     },
     "menu": {
       "title": "Vidljivost izbornika",
-      "intro": "Odredite tko vidi svaku stavku izbornika. Skrivene stavke blokirane su i pri izravnom otvaranju URL-a stranice. Administratori uvijek vide sve.",
+      "intro": "Odredi tko vidi svaku stavku izbornika. Skrivene stavke blokirane su i pri izravnom otvaranju URL-a stranice. Administratori uvijek vide sve.",
       "level": "Vidljivost",
       "groups": "Grupe",
       "save": "Spremi",
@@ -2154,14 +2154,14 @@
     "roles": {
       "title": "Uloge i dozvole",
       "systemBadge": "Sustav",
-      "intro": "Definirajte uloge iz fiksnog skupa dozvola i dodijelite ih korisnicima. Uloga „admin\" je superkorisnik (sve dozvole) i prati administratorski prekidač na kartici Korisnici.",
+      "intro": "Definiraj uloge iz fiksnog skupa dozvola i dodijeli ih korisnicima. Uloga „admin“ je superkorisnik (sve dozvole) i prati administratorski prekidač na kartici Korisnici.",
       "members": "{{count}} članova",
       "loadError": "Nije moguće učitati uloge.",
       "saveError": "Nije moguće spremiti.",
       "created": "Uloga stvorena.",
       "saved": "Uloga spremljena.",
       "deleted": "Uloga izbrisana.",
-      "confirmDelete": "Izbrisati ulogu „{{name}}\"? Korisnici je gube.",
+      "confirmDelete": "Izbrisati ulogu „{{name}}“? Korisnici je gube.",
       "nameLabel": "Naziv",
       "keyLabel": "Ključ",
       "keyHint": "mala slova, npr. trainer (kasnije nepromjenjivo)",
@@ -2170,7 +2170,7 @@
       "allPermissions": "Sve dozvole (superkorisnik).",
       "noPermissions": "Nema dozvola.",
       "assignTitle": "Dodijeli uloge korisniku",
-      "assignHint": "Pretražite korisnika, zatim uključite njegove uloge.",
+      "assignHint": "Pretraži korisnika, zatim uključi ili isključi njegove uloge.",
       "searchUser": "Pretraži korisnika",
       "rolesFor": "Uloge za {{name}}",
       "adminUserNote": "Ovaj korisnik je administrator i automatski ima admin ulogu (upravlja se administratorskim prekidačem).",
