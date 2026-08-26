@@ -682,9 +682,24 @@ public class BookPuzzleService
         if (puzzles.Count > 10_000)
             throw new InvalidOperationException("Maximum 10000 puzzles per import.");
 
-        var existingLineIds = await _db.BookPuzzles
-            .Select(bp => bp.LineId)
-            .ToHashSetAsync();
+        // NUR die LineIds abfragen, um die es in diesem Import geht. Vorher lud die Zeile die
+        // LineId JEDES Puzzles der gesamten Datenbank in den Speicher, obwohl höchstens 10.000
+        // davon geprüft werden — die Kosten wuchsen also mit dem Gesamtbestand statt mit dem Import.
+        // In Blöcken, damit die IN-Liste nicht ausufert.
+        var incoming = puzzles
+            .Select(p => p.LineId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct()
+            .ToList();
+        var existingLineIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var chunk in incoming.Chunk(500))
+        {
+            var found = await _db.BookPuzzles
+                .Where(bp => chunk.Contains(bp.LineId))
+                .Select(bp => bp.LineId)
+                .ToListAsync();
+            foreach (var id in found) existingLineIds.Add(id);
+        }
 
         // Pro Dateiname ein Book sicherstellen (find-or-create) und BookId setzen, damit
         // auch via Legacy-JSON-Import angelegte Puzzles in den Pools (GetRandom) und in der

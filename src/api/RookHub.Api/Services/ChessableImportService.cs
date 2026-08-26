@@ -812,21 +812,33 @@ public class ChessableImportService : ICourseReimporter
         // Nur die noch nicht vorhandenen Linien anhängen (Dedup per Zugtext gegen den Bestand + innerhalb
         // dieses Batches) → erneutes Durchklicken derselben Linie erzeugt keine Dublette.
         var existing = file.PgnContent ?? string.Empty;
+
+        // Dedup über die EXAKTEN Zugtexte des Bestands. Vorher stand hier
+        // `existing.Contains(moves)` — eine Teilzeichenketten-Suche über das gesamte PGN, mit zwei
+        // Folgen: (1) Eine neue, KÜRZERE Linie, die Präfix einer bereits gespeicherten längeren ist,
+        // galt als Dublette und verschwand stillschweigend. (2) `existing += …` je angehängter Linie
+        // kopierte den ganzen Text erneut — zusammen mit der Suche quadratisch in der PGN-Größe,
+        // und das im Request-Pfad des Live-Appends beim Durchklicken.
+        var seen = SplitPgnGames(existing)
+            .Select(MovetextOf)
+            .Where(m => m.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
         var sb = new StringBuilder(existing.TrimEnd());
         var added = 0;
         foreach (var game in SplitPgnGames(pgn))
         {
             var moves = MovetextOf(game);
             if (moves.Length == 0) continue;
-            if (existing.Contains(moves, StringComparison.Ordinal)) continue;
+            if (!seen.Add(moves)) continue;   // schon im Bestand ODER schon in diesem Batch
             sb.Append("\n\n\n").Append(game.Trim());
-            existing += "\n" + moves;   // Batch-internes Dedup
             added++;
         }
         if (added > 0)
         {
             file.PgnContent = sb.ToString() + "\n";
-            file.FileSize = file.PgnContent.Length;
+            // Bytes, nicht Zeichen: das PGN trägt Kommentare in de/hr, ein Zeichenzähler wies die
+            // Datei damit kleiner aus, als sie auf der Platte ist.
+            file.FileSize = Encoding.UTF8.GetByteCount(file.PgnContent);
             rep.UpdatedAt = DateTime.UtcNow;
             rep.ImportVersion = ImportPipeline.CurrentVersion;
             await _db.SaveChangesAsync(ct);
@@ -891,12 +903,56 @@ public class ChessableImportService : ICourseReimporter
         var hasRep = repIds.Count > 0;
         if (hasRep)
         {
-            var contents = await _db.RepertoireFiles
+            // Das PGN wird NUR fuer Dateien geholt, deren Kennungs-Zwischenspeicher fehlt oder
+            // veraltet ist. Vorher wanderte hier bei jedem Extension-Poll der komplette PGN-Text
+            // jedes passenden Repertoires ueber die Leitung, nur um ihn per Regex zu durchsuchen.
+            var files = await _db.RepertoireFiles
                 .Where(f => repIds.Contains(f.RepertoireId))
-                .Select(f => f.PgnContent).ToListAsync(ct);
-            foreach (var content in contents)
-                foreach (System.Text.RegularExpressions.Match m in ChessableOidRegex.Matches(content ?? string.Empty))
+                .Select(f => new
+                {
+                    f.Id,
+                    f.ChessableOidsCache,
+                    Stale = f.ChessableOidsCache == null || f.ChessableOidsPgnLength != f.PgnContent.Length,
+                    PgnIfStale = (f.ChessableOidsCache == null || f.ChessableOidsPgnLength != f.PgnContent.Length)
+                        ? f.PgnContent : null,
+                })
+                .ToListAsync(ct);
+
+            var rebuilt = new Dictionary<int, (string Cache, int Length)>();
+            foreach (var f in files)
+            {
+                if (!f.Stale)
+                {
+                    foreach (var o in f.ChessableOidsCache!.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                        oids.Add(o);
+                    continue;
+                }
+                var content = f.PgnIfStale ?? string.Empty;
+                var found = new List<string>();
+                foreach (System.Text.RegularExpressions.Match m in ChessableOidRegex.Matches(content))
+                {
                     oids.Add(m.Groups[1].Value);
+                    found.Add(m.Groups[1].Value);
+                }
+                rebuilt[f.Id] = (string.Join('\n', found.Distinct()), content.Length);
+            }
+
+            // Einmalig nachtragen; best-effort, denn die Antwort oben stimmt auch ohne den Nachtrag.
+            if (rebuilt.Count > 0)
+            {
+                try
+                {
+                    var ids = rebuilt.Keys.ToList();
+                    var tracked = await _db.RepertoireFiles.Where(f => ids.Contains(f.Id)).ToListAsync(ct);
+                    foreach (var f in tracked)
+                    {
+                        (f.ChessableOidsCache, var len) = rebuilt[f.Id];
+                        f.ChessableOidsPgnLength = len;
+                    }
+                    await _db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateException) { /* Antwort stimmt trotzdem */ }
+            }
         }
 
         return (oids, hasBook, hasRep);

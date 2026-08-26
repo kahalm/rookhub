@@ -177,6 +177,41 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetImportedOids_CachesTheOidsAndRebuildsThemWhenThePgnGrows()
+    {
+        // Der Extension-Poll darf nicht bei jedem Aufruf das ganze PGN durchsuchen. Nach dem
+        // ersten Aufruf steht die Kennungsliste in der Datei; waechst das PGN, MUSS sie neu
+        // gebaut werden - sonst fehlten frisch durchgeklickte Linien dauerhaft im Overlay.
+        _db.AppUsers.Add(new AppUser { Id = 31, Username = "u31", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(31, "70001", RepLineOid("A", "1. e4 e5 *", "901"), "C", "repertoire");
+        var (oids1, _, _) = await _svc.GetImportedOidsAsync(31, "70001");
+        Assert.Contains("901", oids1);
+
+        _db.ChangeTracker.Clear();
+        var file = await _db.RepertoireFiles.FirstAsync();
+        Assert.Equal("901", file.ChessableOidsCache);
+        Assert.Equal(file.PgnContent.Length, file.ChessableOidsPgnLength);
+
+        // Zweiter Aufruf ohne Aenderung: Zwischenspeicher bleibt, Ergebnis identisch.
+        _db.ChangeTracker.Clear();
+        var (oids2, _, _) = await _svc.GetImportedOidsAsync(31, "70001");
+        Assert.Contains("901", oids2);
+
+        // Neue Linie -> PGN laenger -> Zwischenspeicher veraltet und wird neu gebaut.
+        await _svc.AppendLiveAsync(31, "70001", RepLineOid("B", "1. d4 d5 *", "902"), "C", "repertoire");
+        _db.ChangeTracker.Clear();
+        var (oids3, _, _) = await _svc.GetImportedOidsAsync(31, "70001");
+        Assert.Contains("901", oids3);
+        Assert.Contains("902", oids3);
+
+        _db.ChangeTracker.Clear();
+        var after = await _db.RepertoireFiles.FirstAsync();
+        Assert.Equal(after.PgnContent.Length, after.ChessableOidsPgnLength);
+    }
+
+    [Fact]
     public async Task GetImportedOids_Repertoire_ParsesOidsFromPgn()
     {
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
@@ -236,6 +271,42 @@ public class ChessableImportServiceTests : IDisposable
 
     private static string RepLine(string white, string moves) =>
         $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n\n{moves}\n";
+
+    [Fact]
+    public async Task AppendLive_DedupsOnTheWholeLine_NotOnASubstringOfIt()
+    {
+        // Frueher: existing.Contains(moves) - eine Teilzeichenketten-Suche ueber das GESAMTE PGN.
+        // In der Praxis grenzt das Ergebniszeichen (*) die Linien voneinander ab, der Unterschied
+        // faellt also selten auf; kommt eine Linie OHNE Ergebniszeichen herein, war sie eine
+        // echte Teilzeichenkette der gespeicherten und verschwand lautlos. Jetzt wird der
+        // vollstaendige Zugtext verglichen.
+        _db.AppUsers.Add(new AppUser { Id = 21, Username = "u21", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(21, "50001", RepLine("Mit", "1. e4 e5 *"), "C", "repertoire");
+        var (imp, repId, _) = await _svc.AppendLiveAsync(21, "50001", RepLine("Ohne", "1. e4 e5"), "C", "repertoire");
+
+        Assert.Equal(1, imp);
+        var content = (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == repId!.Value)).PgnContent;
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);
+    }
+
+    [Fact]
+    public async Task AppendLive_FileSizeCountsBytesNotCharacters()
+    {
+        // Das PGN traegt Kommentare in de/hr - ein Zeichenzaehler weist die Datei kleiner aus,
+        // als sie tatsaechlich ist.
+        _db.AppUsers.Add(new AppUser { Id = 22, Username = "u22", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(22, "50002", RepLine("A", "1. e4 e5 *"), "C", "repertoire");
+        var (_, repId, _) = await _svc.AppendLiveAsync(
+            22, "50002", RepLine("B", "1. d4 d5 * { Königsläufer schlägt zurück \u2014 stärker }"), "C", "repertoire");
+
+        var file = await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == repId!.Value);
+        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(file.PgnContent), file.FileSize);
+        Assert.True(file.FileSize > file.PgnContent.Length);   // Umlaute/Gedankenstrich brauchen mehr Bytes
+    }
 
     [Fact]
     public async Task AppendLive_Repertoire_CreatesThenAppends_AndDedups()
