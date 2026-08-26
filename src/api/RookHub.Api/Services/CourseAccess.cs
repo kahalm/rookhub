@@ -19,26 +19,34 @@ public static class CourseAccess
     /// <summary>Darf der User dieses (existierende) Buch als Kurs sehen/bearbeiten?
     /// Admin: immer. Sonst: öffentlicher Kurs, eigenes Buch, direkt geteilt, oder über eine
     /// Gruppe (inkl. „Everyone") freigegeben. Unbekannte BookId → <c>false</c>.</summary>
-    public static async Task<bool> CanAccessAsync(AppDbContext db, int userId, int bookId, bool isAdmin,
+    public static Task<bool> CanAccessAsync(AppDbContext db, int userId, int bookId, bool isAdmin,
         CancellationToken ct = default)
     {
-        if (!await db.Books.AnyAsync(b => b.Id == bookId, ct)) return false;
-        if (isAdmin) return true;
-        // Öffentlicher Kurs: für JEDEN (auch eingeloggt ohne Gruppen-Freigabe) über den Direkt-Link
-        // nutzbar — der eingeloggte Nutzer bekommt dabei serverseitigen Fortschritt.
-        if (await db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic, ct)) return true;
-        // Persönliches Buch des Users (z. B. eigener Chessable-Import) ist immer sichtbar.
-        if (await db.Books.AnyAsync(b => b.Id == bookId && b.OwnerUserId == userId, ct)) return true;
-        // Ein anderer Nutzer hat mir diesen Kurs direkt geteilt.
-        if (await db.CourseShares.AnyAsync(cs => cs.BookId == bookId && cs.RecipientId == userId, ct)) return true;
-        // Kalkulations-Serie (privater Verteiler): steht der Nutzer für dieses Buch im Verteiler,
-        // sieht er den Kurs — auch wenn das Buch nicht (mehr) öffentlich ist. Trägt so das „privat"
-        // der Serie: sobald IsPublic aus ist, gilt hier die Mitgliedschaft (siehe CalcSeriesMember).
-        if (await db.CalcSeriesMembers.AnyAsync(m => m.BookId == bookId && m.UserId == userId, ct)) return true;
-        var everyoneId = await db.Groups.Where(g => g.IsEveryone).Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
-        return await db.BookGroupAccesses.AnyAsync(a => a.BookId == bookId &&
-            (a.GroupId == everyoneId ||
-             db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)), ct);
+        // Auch für Admins gilt: ein Buch, das es nicht gibt, ist nicht zugänglich (404 statt 200).
+        if (isAdmin) return db.Books.AnyAsync(b => b.Id == bookId, ct);
+
+        // EINE Abfrage statt bis zu sieben. Die Zweige sind sämtlich ODER-verknüpft, es gab also
+        // nie einen Grund, sie nacheinander zu fragen — und die Prüfung hängt an jedem
+        // Kurs-Endpunkt (allein CourseService ruft sie an 17 Stellen). Vorbild: BookAccess.ReadableBy.
+        var everyoneIds = db.Groups.Where(g => g.IsEveryone).Select(g => g.Id);
+        return db.Books.AnyAsync(b => b.Id == bookId && (
+            // Öffentlicher Kurs: für JEDEN (auch eingeloggt ohne Gruppen-Freigabe) über den
+            // Direkt-Link nutzbar — der eingeloggte Nutzer bekommt dabei serverseitigen Fortschritt.
+            b.IsPublic
+            // Persönliches Buch des Users (z. B. eigener Chessable-Import) ist immer sichtbar.
+            || b.OwnerUserId == userId
+            // Ein anderer Nutzer hat mir diesen Kurs direkt geteilt.
+            || db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == userId)
+            // Kalkulations-Serie (privater Verteiler): steht der Nutzer für dieses Buch im
+            // Verteiler, sieht er den Kurs — auch wenn das Buch nicht (mehr) öffentlich ist.
+            // Trägt so das „privat" der Serie: sobald IsPublic aus ist, gilt hier die
+            // Mitgliedschaft (siehe CalcSeriesMember).
+            || db.CalcSeriesMembers.Any(m => m.BookId == b.Id && m.UserId == userId)
+            // Über eine Gruppe freigegeben — „Everyone" eingeschlossen.
+            || db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
+                   (everyoneIds.Contains(a.GroupId)
+                    || db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)))
+        ), ct);
     }
 
     /// <summary>
