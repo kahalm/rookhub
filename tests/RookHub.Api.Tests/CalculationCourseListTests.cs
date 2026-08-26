@@ -28,8 +28,7 @@ public class CalculationCourseListTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
         _bookAdmin = new BookAdminService(_db);
-        _courses = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), _bookAdmin,
-            new RepertoireService(_db, new RepertoireAnalyzeService(_db, new MemoryCache(new MemoryCacheOptions()))));
+        _courses = TestServices.Course(_db, bookAdmin: _bookAdmin);
         _calc = new CalculationService(_db);
         _authoring = new CourseAuthoringService(_db);
     }

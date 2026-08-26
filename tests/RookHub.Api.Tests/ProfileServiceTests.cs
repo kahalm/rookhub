@@ -18,7 +18,7 @@ public class ProfileServiceTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         var logger = NullLogger<ProfileService>.Instance;
-        _profileService = new ProfileService(_db, new NoOpTaskQueue(), logger);
+        _profileService = TestServices.Profile(_db, new NoOpTaskQueue(), logger);
     }
 
     public void Dispose() => _db.Dispose();
@@ -284,7 +284,7 @@ public class ProfileServiceTests : IDisposable
     {
         var userId = await CreateUserAsync();
         var queue = new CountingTaskQueue();
-        var service = new ProfileService(_db, queue, NullLogger<ProfileService>.Instance);
+        var service = TestServices.Profile(_db, queue);
 
         // Identität setzen (ein Trigger erwartet).
         await service.UpdateProfileAsync(userId, new UpdateProfileDto { ChessResultsId = "T1", LastName = "Müller" });
@@ -301,7 +301,7 @@ public class ProfileServiceTests : IDisposable
     {
         var userId = await CreateUserAsync();
         var queue = new CountingTaskQueue();
-        var service = new ProfileService(_db, queue, NullLogger<ProfileService>.Instance);
+        var service = TestServices.Profile(_db, queue);
 
         await service.UpdateProfileAsync(userId, new UpdateProfileDto { ChessResultsId = "T1", LastName = "Müller" });
         Assert.Equal(1, queue.EnqueuedCount);

@@ -35,8 +35,8 @@ public class CourseConversionTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _repertoires = new RepertoireService(_db, new RepertoireAnalyzeService(_db, new MemoryCache(new MemoryCacheOptions())));
-        _courses = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db), _repertoires);
+        _repertoires = TestServices.Repertoire(_db);
+        _courses = TestServices.Course(_db, repertoire: _repertoires);
     }
 
     public void Dispose() => _db.Dispose();

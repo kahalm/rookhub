@@ -36,7 +36,7 @@ public class ChessableImportServiceTests : IDisposable
         }).Build();
         _encryption = new EncryptionService(config);
         var cache = new MemoryCache(new MemoryCacheOptions());
-        _repertoires = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
+        _repertoires = TestServices.Repertoire(_db, cache);
         // Default-Proxy wird bei FetchedPgn-Tests nie aufgerufen → Handler wirft, falls doch.
         _svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")));
     }
@@ -53,7 +53,7 @@ public class ChessableImportServiceTests : IDisposable
         var rateLimiter = new ChessableRateLimiter(d, config);
         var repertoires = ReferenceEquals(d, _db)
             ? _repertoires
-            : new RepertoireService(d, new RepertoireAnalyzeService(d, new MemoryCache(new MemoryCacheOptions())));
+            : TestServices.Repertoire(d);
         return new ChessableImportService(d, _encryption, proxy, repertoires, new PgnImportService(d),
             _queue, new NotificationService(d), breaker, rateLimiter, NullLogger<ChessableImportService>.Instance);
     }

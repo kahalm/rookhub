@@ -13,14 +13,13 @@ public class ProfileService
     private readonly ILogger<ProfileService> _logger;
     private readonly BookAdminService _bookAdmin;
 
-    // bookAdmin optional (wie FriendService/NotificationService in CourseService): bestehende
-    // Test-Konstruktionen bleiben gültig; DI injiziert den registrierten Service.
-    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger, BookAdminService? bookAdmin = null)
+    // bookAdmin verpflichtend (siehe CourseService): sonst baut der Dienst an der DI vorbei.
+    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger, BookAdminService bookAdmin)
     {
         _db = db;
         _taskQueue = taskQueue;
         _logger = logger;
-        _bookAdmin = bookAdmin ?? new BookAdminService(db);
+        _bookAdmin = bookAdmin;
     }
 
     public async Task<ProfileDto> GetProfileAsync(int userId)

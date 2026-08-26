@@ -18,8 +18,7 @@ public class CourseServiceThemesTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _svc = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db),
-            new RepertoireService(_db, new RepertoireAnalyzeService(_db, new MemoryCache(new MemoryCacheOptions()))));
+        _svc = TestServices.Course(_db);
     }
 
     public void Dispose() => _db.Dispose();

@@ -22,15 +22,15 @@ public class RepertoireService
     public const int MaxRepertoiresPerUser = 500;
     public const int MaxFilesPerRepertoire = 1000;
 
-    // FriendService/NotificationService sind optional, damit bestehende Test-Konstruktionen ohne
-    // Änderung kompilieren; im DI-Container werden immer die echten Instanzen injiziert.
-    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService? friends = null, NotificationService? notifications = null, RepertoirePositionLookupService? positionLookup = null)
+    // friends/notifications verpflichtend (siehe CourseService). positionLookup bleibt optional:
+    // der ist ECHT optional — der Dienst ruft ihn mit ?. auf und kommt ohne ihn aus.
+    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService friends, NotificationService notifications, RepertoirePositionLookupService? positionLookup = null)
     {
         _db = db;
         _analyzeCache = analyzeCache;
         _positionLookup = positionLookup;
-        _notifications = notifications ?? new NotificationService(db);
-        _friends = friends ?? new FriendService(db, _notifications);
+        _notifications = notifications;
+        _friends = friends;
     }
 
     /// <summary>Beide Repertoire-Positions-Caches eines Users invalidieren (Extension-Analyse + Stellungssuche).</summary>

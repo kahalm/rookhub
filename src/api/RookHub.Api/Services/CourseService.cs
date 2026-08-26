@@ -22,18 +22,19 @@ public class CourseService
     private readonly FriendService _friends;
     private readonly NotificationService _notifications;
 
-    // FriendService/NotificationService sind optional, damit bestehende Test-Konstruktionen ohne
-    // Änderung kompilieren; im DI-Container werden immer die echten Instanzen injiziert. Ohne sie
-    // werden sie aus dem DbContext aufgebaut (beide haben nur schlanke Abhängigkeiten).
-    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService? friends = null, NotificationService? notifications = null)
+    // Alle Abhängigkeiten verpflichtend. Früher waren friends/notifications optional und wurden
+    // sonst hier selbst gebaut — bequem für Tests, aber der Dienst verdrahtete damit an der DI
+    // vorbei, kein Test konnte einen Doppelgänger einschleusen, und die Abhängigkeit war von
+    // außen unsichtbar. Tests bauen jetzt über TestServices.Course(db).
+    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService friends, NotificationService notifications)
     {
         _db = db;
         _logger = logger;
         _pgnImport = pgnImport;
         _bookAdmin = bookAdmin;
         _repertoire = repertoire;
-        _notifications = notifications ?? new NotificationService(db);
-        _friends = friends ?? new FriendService(db, _notifications);
+        _notifications = notifications;
+        _friends = friends;
     }
 
     private static string NormalizeMode(string? mode) =>

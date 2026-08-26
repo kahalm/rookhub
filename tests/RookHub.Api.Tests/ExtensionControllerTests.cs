@@ -27,7 +27,7 @@ public class ExtensionControllerTests : IDisposable
         _db = new AppDbContext(options);
         var cache = new MemoryCache(new MemoryCacheOptions());
         var analyzeService = new RepertoireAnalyzeService(_db, cache);
-        _service = new RepertoireService(_db, analyzeService);
+        _service = TestServices.Repertoire(_db, analyze: analyzeService);
         var trainingGoalService = new TrainingGoalService(_db);
         var encryption = new EncryptionService(new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" })

@@ -18,7 +18,7 @@ public class RepertoireServiceTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         var cache = new MemoryCache(new MemoryCacheOptions());
-        _repertoireService = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
+        _repertoireService = TestServices.Repertoire(_db, cache);
     }
 
     public void Dispose() => _db.Dispose();

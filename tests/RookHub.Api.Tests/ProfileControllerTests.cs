@@ -24,7 +24,7 @@ public class ProfileControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
 
-        _profileService = new ProfileService(_db, new NoOpTaskQueue(), NullLogger<ProfileService>.Instance);
+        _profileService = TestServices.Profile(_db, new NoOpTaskQueue());
 
         // PlayerSearchService is needed but we test SearchPlayers validation separately
         // For controller tests, we pass a null-ish PlayerSearchService only for non-search tests

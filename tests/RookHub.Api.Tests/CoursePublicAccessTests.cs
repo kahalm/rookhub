@@ -25,7 +25,7 @@ public class CoursePublicAccessTests : IDisposable
         var notifications = new NotificationService(_db);
         _svc = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db),
             new BookAdminService(_db),
-            new RepertoireService(_db, new RepertoireAnalyzeService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()))),
+            TestServices.Repertoire(_db),
             new FriendService(_db, notifications), notifications);
     }
 

@@ -208,8 +208,7 @@ public class SolveModeTests : IDisposable
     // --- Kurse / Buchlinien -------------------------------------------------------------
 
     private CourseService BuildCourseService() =>
-        new(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db),
-            new RepertoireService(_db, new RepertoireAnalyzeService(_db, new MemoryCache(new MemoryCacheOptions()))));
+        TestServices.Course(_db);
 
     private async Task<(Book book, BookPuzzle p1, BookPuzzle p2, BookPuzzle p3)> SeedCourseAsync(int ownerUserId)
     {

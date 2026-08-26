@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.381.1", date: "2026-08-26", changes: [
+    { en: "Internal cleanup with no visible effect: three services quietly built parts of themselves when a caller left them out - a shortcut that existed only to keep test code short. It meant tests always got the real notification service writing to the test database, and the wiring existed twice. Those parts are now always passed in, and the tests use one small factory instead.", de: "Innere Aufräumarbeit ohne sichtbare Wirkung: Drei Dienste bauten Teile von sich selbst, wenn der Aufrufer sie wegließ - eine Abkürzung, die es nur gab, um Testcode kurz zu halten. Die Folge war, dass Tests immer den echten Benachrichtigungsdienst bekamen, der in die Testdatenbank schrieb, und dass die Verdrahtung doppelt vorlag. Diese Teile werden jetzt immer übergeben, und die Tests benutzen dafür eine kleine Fabrik." },
+  ] },
   { version: "0.381.0", date: "2026-08-26", changes: [
     { en: "Background-analysed positions now also appear under „Remembered positions“. Creating a job remembers the position once (a position already remembered from Chessable keeps its entry), and every card shows the job right on it: status, reached/target depth, number of lines and the evaluation of the main line — with a link to the jobs page. Remembered positions without a job get a clock button to queue one from there.", de: "Im Hintergrund analysierte Stellungen landen jetzt auch unter „Gemerkte Stellungen“. Beim Anlegen eines Auftrags wird die Stellung einmal gemerkt (eine schon aus Chessable gemerkte Stellung behält ihren Eintrag), und jede Karte zeigt den Auftrag direkt an: Status, erreichte/Ziel-Tiefe, Linienzahl und Bewertung der Hauptvariante — mit Sprung zur Auftragsseite. Gemerkte Stellungen ohne Auftrag bekommen ein Uhr-Symbol, um von dort einen anzulegen." },
   ] },

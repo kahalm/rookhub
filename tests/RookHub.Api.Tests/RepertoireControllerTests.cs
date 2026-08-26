@@ -25,8 +25,8 @@ public class RepertoireControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         var cache = new MemoryCache(new MemoryCacheOptions());
-        _service = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
-        var courseService = new CourseService(_db, Microsoft.Extensions.Logging.Abstractions.NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db), _service);
+        _service = TestServices.Repertoire(_db, cache);
+        var courseService = TestServices.Course(_db, repertoire: _service);
         _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db), courseService, new SharedLineService(_db), new RepertoirePositionLookupService(new RepertoireLineSource(_db, cache), cache), new FlashcardMarkService(_db), new RepertoireSimilarityService(new RepertoireLineSource(_db, cache)));
     }
 
