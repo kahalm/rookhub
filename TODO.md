@@ -2,9 +2,13 @@
 
 Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
+_Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begründung steht dabei) ·
+`[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
+im Archiv. Zuletzt gesichtet: **2026-08-26**._
+
 ## Periodisch
-- [ ] Code Review — letzter: **2026-08-10** → Delta-Review v0.340.0..HEAD (6 Finder, adversarial verifiziert). Funde: 1× Lösungs-Leck GET /api/book-puzzles/{id} für Kalk-Bücher (behoben v0.356.0), 1× toter reviewGoToCore + falsche Changelog-Zusage (behoben v0.356.0), deleteTree-Ehrlichkeit (v0.356.0). 6 unverifizierte calc/front-Funde (Verifier im Session-Limit gestorben) → 2 geparkt, 4 bei nächster calc-Runde gegenprüfen. (vorher 2026-08-07 stack-weit, 51 Fixes v0.340.0)
-- [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-07-12** → alle 25 Sprachdateien JSON-valide. en/de/hr je **1867 Keys**; **hr hatte 2 Lücken (repertoire.dialog.chessableCourseId + Hint) → ergänzt v0.291.34**. Die 22 Weltsprachen weiter hinter en (Fallback greift). (vorher 2026-06-13: hr 73 Lücken → 0.115.1)
+- [ ] Code Review — letzter: **2026-08-25** → Review über `rookhub` (~1800 Quelldateien). 15 Funde, alle verifiziert (kein Fehlalarm), **14 behoben in v0.376.2**: WQL-Wildcard `*` statt `%` im Waisen-Aufräumer (`reap_orphans.ps1` traf NIE etwas und meldete 15-minütlich „ohne Befund“), PID-Recycling bei der Elternprüfung, README-Stopp-Prozedur killte jeden `python.exe`, `init()`-Fehler ohne `fatalError$` (Karte log dauerhaft „Berechne…“), `destroy()` ließ das Init-Promise ungelöst hängen, Selbstvergleich zweier WASM-Kerne, doppeltes `startCompare()`, fehlender Telemetrie-Hook, `compareCrashed` überlebte den Stellungswechsel. **Offen: 1 Fund** (EngineSlot-Umbau, siehe „Bewusste Entscheidung“). +4 Regressionstests (gegengeprüft: fallen ohne die Fixes um). **Einschränkung: faktisch Delta auf die jüngste Arbeit** — im .NET-Teil (1283 Dateien) kam kein einziger Fund heraus, für einen Vollscan unplausibel; API separat nachholen. (vorher 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
+- [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-08-25** → Registercheck der neuen `nav.support`-Strings gegen den Rest der jeweiligen Datei (Anredeform + Wortart der Aktionslabels); 2 von 25 nachgeschärft (v0.376.1): el war formeller Imperativ statt Verbalsubstantiv, hr unnötig lang für einen Menüeintrag. **Gemessener Stand 2026-08-26: `en` = 2281 Keys, `de` und `hr` = 0 Lücken, die 22 Weltsprachen je 1368 fehlend + 32 veraltet** — also rund **60 % jeder dieser Dateien unübersetzt**, nicht die früher notierten ~174 Keys. Wer die App auf Spanisch/Japanisch/Russisch stellt, sieht mehrheitlich Englisch (Fallback greift, siehe i18n-Weltsprachen unten). (vorher 2026-07-12: en/de/hr je 1867 Keys, hr 2 Lücken → v0.291.34; 2026-06-13: hr 73 Lücken)
 - [ ] Security Review — letzter: **2026-08-10** (im Delta-Review mitgelaufen: Auth-/Injection-/Contract-Blickwinkel). Einziger echter Fund = das Kalk-Lösungs-Leck (behoben). Keine CRIT/HIGH offen. (vorher 2026-07-18 6-Wege-Fan-out)
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-08-09** → ES :9200, 7-Tage-Fenster.
   **rookhub Prod: 0 Errors**; 82 Warns, davon 49× `storage_persist_denied` (Browser-Routine → auf
@@ -21,15 +25,6 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
   dran — nur mit Bild-Vergleichstest!), Elastic.Serilog.Sinks 8→9 (Sink-Config-Bruch pruefen),
   TypeScript 7 + zone.js 0.16 (erst wenn Angular sie traegt), xunit.runner 3 / Test.Sdk 18 /
   coverlet 10 (Testinfra, gebuendelt). Python: >=-Ranges, erneuern sich beim Image-Build.
-- [x] Bauernumwandlung (Pawn Promotion) auf Mobile — behoben (vom User bestätigt 2026-06-23).
-- [x] Engine-Hang bei Puzzle→Analyse-Wechsel → behoben in 0.97.5 (engine.destroy() statt stop())
-- [x] BookPuzzle: Ladefehler → endloser Spinner → behoben in 0.97.6 (loadError-Flag + Retry-Button)
-- [x] FriendController: return Forbid(ex.Message) → 500 → war bereits behoben in 0.40.9
-- [x] Friendship TOCTOU-Race → war bereits behoben (PairLow/PairHigh computed columns + Self-Friend-Check)
-- [x] CrawlJob bleibt bei Enqueue-Fehler dauerhaft Queued → behoben in Crawler (Job auf Failed setzen)
-- [x] StockfishService in ngOnDestroy terminate() → war bereits behoben (kein terminate()-Aufruf mehr)
-- [x] RecordAttemptAsync ohne Idempotenz/Limit → behoben in 0.97.8 (30s-Idempotenz + Elo-Guard)
-- [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
 
 ## Runbooks
 
@@ -159,7 +154,7 @@ Read-only-Review je Repo (rookhub-API/-Frontend, crawler, piratechess, schach-bo
 - [x] **Kontolöschung lässt Secrets/PII + öffentliche Links stehen (GDPR)** — ERLEDIGT v0.315.0: `DeleteAccountAsync` (`Services/ProfileService.cs`) entfernt jetzt zusätzlich `ChessableCredentials`, `PasswordResetTokens`, `SavedGames` (/g/), `SharedLines` (/l/), `RememberedPositions` und leert `ManualActivities.Note`. Solve-Statistik + `EndlessProgresses` (Highscore/Stats) bleiben bewusst anonym erhalten. +BE-Test (Secrets/Share-Inhalte weg, Notiz null).
 - [x] **Offline-Schreib-Queue nicht user-scoped → Cross-User-Fehlbuchung** — ERLEDIGT v0.315.0: `PendingRequest.userId` (Stempel aus `rookhub_user` beim Enqueue); `flush`/`sendNext` sendet nur eigene (oder anonyme, userId null) Einträge, fremde bleiben liegen bis IHR User wieder eingeloggt ist. Queue wird bei logout NICHT geleert (user-gestempelt → sicher; versehentliches Logout verliert keine offenen Lösungen). +6 FE-Tests.
 - [x] **Offline-Content-Caches nicht user-scoped, nicht bei Logout geleert** — ERLEDIGT v0.315.0: `AuthService.logout()` ruft `OfflineService.clearAll()` (Repertoire-PGNs, Bücher, Kursliste, Tagespuzzle, idmap, Pools). Trade-off: Re-Download nach explizitem Logout. Rest (`rookhub_course_local_solved_*` = anonyme Kurs-Solve-Ids, `rookhub_daily_elapsed`, Endless-History = server-synced) bewusst belassen (geringe Sensitivität). +FE-Test.
-- [ ] **piratechess: gecachter Kurs ohne Bearer-Ownership-Check** (Defense-in-Depth) — `ChessableDirectController` Cache-Hit-Pfade (`:134-214,289-313,325`) liefern vollen Kurs-PGN + `CachedBids` listet alle Ids ohne Bearer. Nur durch Service-Key+Netz-Isolation+rookhub-Check geschützt; leakt der Service-Key, leaken alle gecachten Kurse. Bewusster Trade-off — optional Ownership auch bei Cache-Hit erzwingen.
+- [~] **piratechess: gecachter Kurs ohne Bearer-Ownership-Check** — **ENTSCHIEDEN 2026-08-09: bewusst NICHT umgesetzt**, siehe Begründung beim Zwilling im Abschnitt „2. Pass (vertieft, Chessable/Import/Auth)“ — die uid-Bindung des Kurs-Caches kollidiert mit dem per Tests fixierten Admin-Feature „Kurs im Namen eines Users laden“. Stand hier faelschlich weiter unter „angehen“. Urspruenglicher Befund: (Defense-in-Depth) — `ChessableDirectController` Cache-Hit-Pfade (`:134-214,289-313,325`) liefern vollen Kurs-PGN + `CachedBids` listet alle Ids ohne Bearer. Nur durch Service-Key+Netz-Isolation+rookhub-Check geschützt; leakt der Service-Key, leaken alle gecachten Kurse. Bewusster Trade-off — optional Ownership auch bei Cache-Hit erzwingen.
 
 ### LOW — Härtung
 - [x] **Crawler SSRF via Redirect** — ERLEDIGT (Crawler `3a6798c`, rookhub v0.315.1): `AllowAutoRedirect=false` (Program.cs) + `SendFollowingRedirectsAsync` folgt Redirects manuell und prüft jeden Hop (https + chess-results.com) VOR dem Absenden (Cap 10, relative Location aufgelöst). GET- UND POST-Pfade (inkl. POST-Antwort der Spielersuche) umgestellt; post-hoc-Check entfällt. +6 Redirect-Tests (207 grün).
@@ -409,7 +404,7 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 ### chessresults_crawler
 - [x] **Body-Logging nach ES** — `LogCrawlRequest` loggte bei jedem erfolgreichen Fetch bis 500 KB Roh-HTML (Spieler-PII + ES-Bloat). In 0.115.1 entfernt (nur noch Größe). (`CrawlerService.cs:700`)
 - [x] **HIGH `/api/health/ip` offen + triggert Outbound** → **erledigt 2026-06-24 (Crawler f5071aa, rookhub v0.184.21):** aus `IsOpenPath` entfernt → API-Key-pflichtig; nur noch `/api/health` (Liveness) offen.
-- [ ] **HIGH VPN-Rotation läuft im Request-Lock** (`RotateVpnAsync` innerhalb `RateLimitAsync`-Semaphore, `:719-723`) → Rotation (+5×1s IP-Poll) blockiert alle Crawls bis 60s-Timeout. **= Dublette** des „HIGH VPN-Rotation läuft IM gehaltenen Semaphor"-Funds im 2026-06-16-Abschnitt; dort führen. Fix: Rotation außerhalb des Request-Locks.
+- [x] **HIGH VPN-Rotation läuft im Request-Lock** → **ERLEDIGT (Crawler v0.260.1), am 2026-08-26 im Code gegengeprüft:** `RateLimitAsync` hält den Semaphor nur noch für den eigentlichen Tunnel-Neustart (da darf ohnehin kein Request raus); die rein informative Public-IP-Ermittlung (5×1 s Polling) läuft detached außerhalb des Locks. Stand hier noch als offener HIGH. Offen bleibt nur der 429/Retry-After-Backoff — geführt beim `[~]`-Zwilling im Crawler-Abschnitt.
 - [x] MED verwaiste `Queued`-Jobs ohne Recovery — **erledigt (0.176.3, Crawler 66722a4):** `CrawlJobRecovery.RecoverStaleJobsAsync` setzt beim Start alle Queued/Running-Jobs auf Failed (in `Program.cs` nach `Migrate()`) → kein dauerhaft blockierter ActiveKey mehr. Tests `CrawlJobRecoveryTests`.
 - [x] MED finaler Status-Save mit bereits gecanceltem Token → **erledigt (0.176.4, Crawler fed3c65):** finaler `SaveChangesAsync(CancellationToken.None)` (Z. 134) → Status wird auch bei Cancellation persistiert. (Hinweis: der mittlere Save bei `:42/70/114` läuft weiter mit `ct` — gewollt, nur der FINALE Status-Save muss garantiert durchgehen.)
 - [x] MED Team-Upsert via `ToDictionaryAsync(t => t.Name)` → **erledigt (0.176.4, Crawler fed3c65):** `CrawlerService.BuildTeamNameMap` (tolerant, kleinste Snr gewinnt) statt ToDictionary; Tests `CrawlerServiceTeamMapTests`.
@@ -417,7 +412,7 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 
 ### piratechess_docker
 - [x] **HIGH curl-Arg-Injektion via `bid`** → behoben (piratechess b398963): Umstieg auf `ProcessStartInfo.ArgumentList` (jeder Wert ein escapetes argv-Token, content-agnostisch → schützt bid/uid/oid/bearer/url). `BuildGetArgs/BuildPostArgs` → `List<string>`, 3 Sicherheitstests. DEV deployed.
-- [ ] **HIGH gluetun `auth = "none"`** (**= Dublette** von „gluetun-Control-Server … auf API-Key-Auth härten" im Refactoring-Abschnitt oben — dort der Master-Eintrag inkl. Crawler-Seite) — Code fertig (piratechess b398963, DEV deployed): GluetunControl-HttpClient sendet `X-API-Key`, WENN `Gluetun:ApiKey` gesetzt (rückwärtskompatibel: ohne Key kein Header). **OFFEN = Aktivierung (koordinierter Restart):** in `/opt/stacks/rookhub-schach{,-dev}/gluetun-auth.toml` `auth="apikey"` + `apikey=<secret>`, `GLUETUN_APIKEY` in beide `.env` → `Gluetun__ApiKey`-Env, dann **gluetun + piratechess-api ZUSAMMEN** neu starten (sonst Mismatch → Rotation bricht). Repo-`gluetun-auth.toml`-Template steht schon auf `apikey` (Platzhalter). Betrifft prod + dev.
+- [~] **HIGH gluetun `auth = "none"`** — *nur Verweis, nicht doppelt abarbeiten:* Master-Eintrag ist „gluetun-Control-Server API-Key“ im Abschnitt Refactoring/Qualität, dort steht der aktuelle Stand (Code beidseitig fertig, offen ist die Deploy-Seite). (**= Dublette** von „gluetun-Control-Server … auf API-Key-Auth härten" im Refactoring-Abschnitt oben — dort der Master-Eintrag inkl. Crawler-Seite) — Code fertig (piratechess b398963, DEV deployed): GluetunControl-HttpClient sendet `X-API-Key`, WENN `Gluetun:ApiKey` gesetzt (rückwärtskompatibel: ohne Key kein Header). **OFFEN = Aktivierung (koordinierter Restart):** in `/opt/stacks/rookhub-schach{,-dev}/gluetun-auth.toml` `auth="apikey"` + `apikey=<secret>`, `GLUETUN_APIKEY` in beide `.env` → `Gluetun__ApiKey`-Env, dann **gluetun + piratechess-api ZUSAMMEN** neu starten (sonst Mismatch → Rotation bricht). Repo-`gluetun-auth.toml`-Template steht schon auf `apikey` (Platzhalter). Betrifft prod + dev.
 - [x] MED `GET /api/vpn/status` ohne Auth → **erledigt 2026-06-24 (piratechess 89a78ac):** `[ServiceKeyAuth]` auf den Status-Endpoint (POST /rotate bleibt JWT). +2 Tests.
 - [x] MED Login-Response roh persistiert → **erledigt 2026-06-24:** `RedactForStorage` redigiert das `jwt`-Feld der Login-Antwort vor dem Speichern; Retention (14 Tage) existiert bereits via `RawResponseRetentionService`.
 - [x] MED ServiceKey-Vergleich zeitkonstant → **erledigt 2026-06-24 (piratechess 5719d0e):** `FixedTimeEquals` + Count-Guard (Duplikat des HIGH-Funds oben).
@@ -447,7 +442,7 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 - [ ] **VPN-Rotation instabil** (live bestätigt: 27 Warns/24h „rotation failed (non-critical)" / „incomplete → forcing VPN restart") — verstärkt die Crawler/piratechess-Rotation-Funde oben; lohnt echte Ursachenanalyse (gluetun-Control-Timing).
 
 ### i18n-Weltsprachen (22 Stück)
-- [ ] Massen-Übersetzung/Bereinigung der 22 erweiterten Sprachen (je ~174 Keys hinter en + 24 veraltete) — braucht Pipeline-/Tooling-Entscheidung (MT vs. manuell). Aktuell unkritisch (Fallback auf en). en/de/hr sind die gepflegten Sprachen und vollständig.
+- [ ] Massen-Übersetzung/Bereinigung der 22 erweiterten Sprachen — **gemessen 2026-08-26: je 1368 von 2281 Keys fehlend (~60 %) + 32 veraltet**, nicht die früher notierten ~174. `en` ist seit dem alten Eintrag um 414 Keys gewachsen, `de`/`hr` sind mitgezogen (0 Lücken), die 22 nicht. Praktische Folge: Diese Oberflächen sind mehrheitlich Englisch — der `fallbackLang: en` verdeckt das nur. Braucht eine Pipeline-/Tooling-Entscheidung (MT mit Review vs. manuell vs. Sprachen mit Restlücke bewusst aus dem Umschalter nehmen). en/de/hr sind die gepflegten Sprachen.
 
 ## Features
 - [x] Start-ELO schneller einpendeln (0.123.0) — betraf den **Standard-/Random-Puzzle-Modus** (persönliche Puzzle-Elo), NICHT Endless. Umgesetzt im Backend `PuzzleService.ProvisionalKFactor`: K-Faktor **×4** (in beide Richtungen — K skaliert Gewinn wie Verlust) bis **≥5 gelöst UND ≥5 gescheitert** (je vizLevel), **×2** bis 10/10, danach normaler K (20). Ersetzt das alte `attemptCount<30?40:20`. Tests in `PuzzleServiceTests`.
@@ -504,3 +499,19 @@ Noel = Calc-Buch 403, Wochen = Datums-Kapitel (je 6 Stellungen), heute öffentli
 Tester-Rückmeldung: nur mündlich (kein Melden-Knopf). Kommentare pro Stellung = bestehendes BookPuzzle.Comment.
 Admin-UI: eigener Bereich (Route/Tab) analog Wochenpost-Verwaltung; Viewer: Serien-Seite mit Ausgaben-Liste
 (Video + Status), freigegebene Ausgabe öffnet den bestehenden Calc-Trainer aufs Wochen-Kapitel.
+
+## Archiv — erledigte Einzelfunde
+
+_Standen frueher unter „Periodisch“, sind aber einmalige Fehlerbehebungen aus der 0.97er-Zeit_
+_und keine wiederkehrenden Aufgaben. Bleiben als Beleg stehen, damit sie nicht erneut_
+_untersucht werden._
+
+- [x] Bauernumwandlung (Pawn Promotion) auf Mobile — behoben (vom User bestätigt 2026-06-23).
+- [x] Engine-Hang bei Puzzle→Analyse-Wechsel → behoben in 0.97.5 (engine.destroy() statt stop())
+- [x] BookPuzzle: Ladefehler → endloser Spinner → behoben in 0.97.6 (loadError-Flag + Retry-Button)
+- [x] FriendController: return Forbid(ex.Message) → 500 → war bereits behoben in 0.40.9
+- [x] Friendship TOCTOU-Race → war bereits behoben (PairLow/PairHigh computed columns + Self-Friend-Check)
+- [x] CrawlJob bleibt bei Enqueue-Fehler dauerhaft Queued → behoben in Crawler (Job auf Failed setzen)
+- [x] StockfishService in ngOnDestroy terminate() → war bereits behoben (kein terminate()-Aufruf mehr)
+- [x] RecordAttemptAsync ohne Idempotenz/Limit → behoben in 0.97.8 (30s-Idempotenz + Elo-Guard)
+- [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
