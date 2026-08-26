@@ -217,6 +217,7 @@ describe('AnalysisEngineService external engine (remote)', () => {
     expect(eng.workers.length).toBe(0);          // kein WASM-Worker gestartet
     expect(sentWork.depth).toBe(22);
     expect(sentWork.threads).toBe(4);            // Engine-Maximum übernommen
+    expect(sentWork.hash).toBe(256);             // Engine meldet weniger als der Deckel → ihr Wert gilt
     expect(sentWork.initialFen).toBe(FEN);
 
     subjects[0].next(line(14, 45, ['e2e4', 'e7e5']));
@@ -224,6 +225,20 @@ describe('AnalysisEngineService external engine (remote)', () => {
     expect(state.depth).toBe(14);
     expect(state.lines[0].evalText).toBe('+0.45');
     expect(state.lines[0].pvUci).toEqual(['e2e4', 'e7e5']);
+  });
+
+  it('requests up to the cap of the hash a strong engine offers', async () => {
+    // Eine Server-Engine meldet gern mehrere GB; frueher wurden davon nur 1024 MB angefordert und
+    // tiefe Suchen rechneten unnoetig viel neu. Ueber dem Deckel wird weiterhin geklemmt.
+    const eng = new TestEngine();
+    let sentWork: any = null;
+    eng.setRemoteEngine({ id: 'eei_big', name: 'Server', maxThreads: 12, maxHash: 8192 }, (_id, work) => {
+      sentWork = work; return new Subject<any>().asObservable();
+    });
+    await eng.analyze(FEN);
+    expect(sentWork.hash).toBe(AnalysisEngineService.MaxRemoteHashMb);
+    expect(AnalysisEngineService.MaxRemoteHashMb).toBe(4096);
+    expect(sentWork.threads).toBe(12);
   });
 
   it('falls back to WASM when the remote analysis fails BEFORE any data', async () => {

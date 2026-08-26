@@ -602,7 +602,10 @@ der lokale Kern zusätzlich gestoppt (`stopLocalSearch`), und `analyze()` prüft
 Scheitert die Remote-Suche VOR der ersten Datenzeile (Provider offline; auch: gar keine Antwort binnen
 12 s), fällt der Service für den Rest der Sitzung still auf WASM zurück und die Seite sagt es
 (`analysis.remoteFallback`); ein Abriss MITTEN im Stream gilt dagegen als beendete Suche (Ergebnis
-bleibt stehen). Token-Verwaltung: Profil-Karte `features/profile/engine-card.component.ts`.
+bleibt stehen). Der angeforderte **Hash** ist auf `AnalysisEngineService.MaxRemoteHashMb` (4096 MB) gedeckelt — die von Lichess
+gemeldete Registrierungs-Grenze (bis 1 TiB) ist keine Aussage darüber, was der Provider-Rechner je Analyse
+allozieren soll; die Hintergrund-Aufträge nehmen dagegen das volle gemeldete Maximum (eigener Prozess, lange
+Läufe). Token-Verwaltung: Profil-Karte `features/profile/engine-card.component.ts`.
 **nginx**: eigene `location /api/engine/` mit `proxy_buffering off` + langen Timeouts — sonst sammelt
 der Proxy die info-Zeilen bzw. kappt eine tiefe Suche nach 60 s. **Das genügt nicht allein**: nginx
 VERBRAUCHT den `X-Accel-Buffering: no`-Header der API und reicht ihn NICHT weiter, ein davor

@@ -55,6 +55,9 @@ export class AnalysisEngineService implements OnDestroy {
   private worker?: Worker;
   private initPromise?: Promise<void>;
 
+  /** Obergrenze der bei einer externen Engine angeforderten Hashtabelle (MB) — siehe analyzeRemote. */
+  static readonly MaxRemoteHashMb = 4096;
+
   private multiPv = 3;
   private depthCap = 22;
 
@@ -410,9 +413,12 @@ export class AnalysisEngineService implements OnDestroy {
       multiPv: this.multiPv,
       depth: this.depthCap,
       threads: engine.maxThreads,
-      // Hash gedeckelt: die volle Registrierungs-Grenze (bis 1 TiB erlaubt) muss der Provider-
-      // Rechner nicht für jede Brett-Analyse allozieren.
-      hash: Math.min(engine.maxHash, 1024),
+      // Hash gedeckelt: die REGISTRIERUNGS-Grenze sagt nur, was Lichess zulässt (bis 1 TiB) — nicht,
+      // was der Provider-Rechner für eine Brett-Analyse hergeben soll. Der Deckel bleibt deshalb,
+      // liegt aber bei MaxRemoteHashMb: was ein Betreiber in seiner Provider-Konfiguration bewusst
+      // einträgt, ist praktisch immer kleiner, und für eine Server-Engine bremste 1 GB tiefe Suchen
+      // spürbar aus (zu kleine Hashtabelle = mehr Neuberechnung je Iteration).
+      hash: Math.min(engine.maxHash, AnalysisEngineService.MaxRemoteHashMb),
     }).subscribe({
       next: line => {
         if (gen !== this.gen) return;
