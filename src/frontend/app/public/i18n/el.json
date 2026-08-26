@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Αλλαγές",
     "quickstartTitle": "Γρήγορη εκκίνηση",
-    "qs": {
-      "subscribeTitle": "Εγγραφή",
-      "subscribeDesc": "Εγγραφείτε σε τουρνουά για γρήγορη πρόσβαση σε παίκτες, αντιστοιχίες και αποτελέσματα.",
-      "monitorTitle": "Παρακολούθηση",
-      "monitorDesc": "Ενεργοποιήστε την παρακολούθηση σε ένα τουρνουά — νέοι γύροι ανιχνεύονται και συλλέγονται αυτόματα.",
-      "favoritesTitle": "Αγαπημένα",
-      "favoritesDesc": "Επισημάνετε παίκτες ή ομάδες ως αγαπημένα για γρήγορη πρόσβαση στην προβολή τουρνουά.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Προσθέστε το ChessResults ID σας στο προφίλ σας — τα επερχόμενα τουρνουά εγγράφονται αυτόματα."
-    },
     "feedback": "Σχόλια / Αναφορά σφάλματος",
     "updateAvailable": "Είναι διαθέσιμη νέα έκδοση.",
     "reload": "Ανανέωση"
@@ -517,7 +507,6 @@
       "giveUp": "Παραίτηση",
       "nextPuzzle": "Επόμενη άσκηση",
       "share": "Κοινοποίηση άσκησης",
-      "loadPuzzle": "Φόρτωση άσκησης",
       "reviewLast": "Επανεξέταση τελευταίας άσκησης",
       "endlessMode": "Ατελείωτος τρόπος",
       "analyze": "Ανάλυση"
@@ -532,15 +521,8 @@
       "streak": "Σερί",
       "best": "Καλύτερο"
     },
-    "settings": {
-      "tooltip": "Ρυθμίσεις"
-    },
     "filters": {
-      "title": "Φίλτρα",
-      "visualization": "Οπτικοποίηση: Επίπεδο {{level}}",
       "difficulty": "Δυσκολία",
-      "difficultyHint": "Ασκήσεις γύρω από το Elo σας ({{elo}})",
-      "depthHint": "1 (αδύναμο) – 24 (δυνατό)",
       "skipSolved": "Παράλειψη λυμένων",
       "worstTags": "Εξάσκηση στα 5 πιο αδύναμα θέματα",
       "worstTagsHint": "Εστίαση στα θέματα που λύνεις χειρότερα"
@@ -620,10 +602,7 @@
       "titleOptional": "Τίτλος (προαιρετικό)"
     },
     "columns": {
-      "scheduled": "Ημερομηνία",
-      "title": "Τίτλος",
-      "actions": "Ενέργειες",
-      "progress": "Your progress"
+      "title": "Τίτλος"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Συνέχεια",
       "analyze": "Ανάλυση",
       "reviewLast": "Ανάλυση τελευταίας άσκησης",
-      "puzzleRating": "Βαθμολογία άσκησης: {{rating}}",
       "levelRange": "Επίπεδο {{level}} ({{min}}–{{max}})",
       "showTags": "Εμφάνιση ετικετών",
       "hideTags": "Απόκρυψη ετικετών",
@@ -815,7 +793,6 @@
       "giveUp": "Παραίτηση",
       "mouseslip": "Ολίσθηση ποντικιού",
       "nextPuzzle": "Επόμενη άσκηση",
-      "again": "Ξανά",
       "skip": "Παράλειψη",
       "viewFullGame": "Προβολή πλήρους παρτίδας",
       "analyze": "Ανάλυση",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Στην επισκόπηση μαθήματος",
-      "sequential": "Διαδοχικό",
-      "random": "Τυχαίο",
       "completed": "Μάθημα ολοκληρώθηκε!",
       "toOverview": "Στην επισκόπηση",
       "wholeBook": "Όλο το βιβλίο",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Στην επισκόπηση εβδομαδιαίων αναρτήσεων",
-      "label": "Εβδομαδιαία ανάρτηση",
       "noPuzzles": "Αυτή η εβδομαδιαία ανάρτηση δεν περιέχει ασκήσεις.",
       "allSolved": "Όλες οι ασκήσεις λύθηκαν!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Χρήστες",
       "books": "Βιβλία",
       "groups": "Ομάδες",
-      "logs": "Αρχεία καταγραφής αιτημάτων",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Διαγραφή βιβλίου",
       "deleteConfirm": "Διαγραφή βιβλίου «{{name}}» με {{count}} άσκηση/ασκήσεις;",
       "deleted": "Το βιβλίο «{{name}}» διαγράφηκε",
-      "imported": "{{imported}} άσκηση/ασκήσεις εισήχθησαν, {{skipped}} παρελείφθησαν",
       "importedCount": "{{count}} άσκηση/ασκήσεις εισήχθησαν",
       "duplicatesCount": "{{count}} διπλότυπα",
       "invalidCount": "{{count}} μη έγκυρα",
@@ -985,28 +957,6 @@
           "load": "Δεν ήταν δυνατή η φόρτωση του στόχου προπόνησης.",
           "save": "Δεν ήταν δυνατή η αποθήκευση του στόχου προπόνησης."
         }
-      }
-    },
-    "logs": {
-      "all": "Όλα",
-      "filter": "Φίλτρο",
-      "reset": "Επαναφορά",
-      "filtered": "(φιλτραρισμένο)",
-      "entryCount": "{{count}} εγγραφές",
-      "status4xx": "4xx+ (σφάλματα)",
-      "status5xx": "5xx (διακομιστής)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Ώρα",
-        "method": "Μέθοδος",
-        "path": "Διαδρομή",
-        "status": "Κατάσταση",
-        "duration": "Διάρκεια",
-        "user": "Χρήστης",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Αποτυχία φόρτωσης αρχείων καταγραφής"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Όλοι οι στόχοι επιτεύχθηκαν"
     },
     "cat": {
-      "puzzles": "Ασκήσεις",
-      "book": "Βιβλίο / Μάθημα",
       "play": "Παιχνίδι"
     },
     "syncPlay": "Ενημέρωση χρόνου παιχνιδιού",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

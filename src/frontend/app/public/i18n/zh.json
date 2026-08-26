@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "更新日志",
     "quickstartTitle": "快速入门",
-    "qs": {
-      "subscribeTitle": "订阅",
-      "subscribeDesc": "订阅比赛，快速查看选手、配对和结果。",
-      "monitorTitle": "监控",
-      "monitorDesc": "开启比赛监控——新轮次将被自动检测和抓取。",
-      "favoritesTitle": "收藏",
-      "favoritesDesc": "在比赛视图中将选手或队伍标记为收藏，方便快速访问。",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "在个人资料中添加你的 ChessResults ID——即将到来的比赛将自动订阅。"
-    },
     "feedback": "反馈 / 报告错误",
     "updateAvailable": "有新版本可用。",
     "reload": "重新加载"
@@ -517,7 +507,6 @@
       "giveUp": "放弃",
       "nextPuzzle": "下一题",
       "share": "分享题目",
-      "loadPuzzle": "加载题目",
       "reviewLast": "查看上一题",
       "endlessMode": "无尽模式",
       "analyze": "分析"
@@ -532,15 +521,8 @@
       "streak": "连续",
       "best": "最佳"
     },
-    "settings": {
-      "tooltip": "设置"
-    },
     "filters": {
-      "title": "筛选",
-      "visualization": "可视化：第 {{level}} 级",
       "difficulty": "难度",
-      "difficultyHint": "接近你的 Elo（{{elo}}）的题目",
-      "depthHint": "1（弱）– 24（强）",
       "skipSolved": "跳过已解",
       "worstTags": "训练最薄弱的5个主题",
       "worstTagsHint": "专注于你解得最差的主题"
@@ -620,10 +602,7 @@
       "titleOptional": "标题（可选）"
     },
     "columns": {
-      "scheduled": "日期",
-      "title": "标题",
-      "actions": "操作",
-      "progress": "Your progress"
+      "title": "标题"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "继续",
       "analyze": "分析",
       "reviewLast": "分析上一题",
-      "puzzleRating": "题目评分：{{rating}}",
       "levelRange": "第 {{level}} 级（{{min}}–{{max}}）",
       "showTags": "显示标签",
       "hideTags": "隐藏标签",
@@ -815,7 +793,6 @@
       "giveUp": "放弃",
       "mouseslip": "误操作",
       "nextPuzzle": "下一题",
-      "again": "再来一次",
       "skip": "跳过",
       "viewFullGame": "查看完整对局",
       "analyze": "分析",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "返回课程概览",
-      "sequential": "顺序",
-      "random": "随机",
       "completed": "课程已完成！",
       "toOverview": "返回概览",
       "wholeBook": "整本书",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "返回每周内容概览",
-      "label": "每周精选",
       "noPuzzles": "此每周内容中没有可播放的题目。",
       "allSolved": "所有题目已完成！",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "用户",
       "books": "书本",
       "groups": "群组",
-      "logs": "请求日志",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "删除书本",
       "deleteConfirm": "删除书本「{{name}}」（共 {{count}} 道题）？",
       "deleted": "书本「{{name}}」已删除",
-      "imported": "已导入 {{imported}} 道题，跳过 {{skipped}} 道",
       "importedCount": "已导入 {{count}} 道题",
       "duplicatesCount": "{{count}} 个重复",
       "invalidCount": "{{count}} 个无效",
@@ -985,28 +957,6 @@
           "load": "无法加载训练目标。",
           "save": "无法保存训练目标。"
         }
-      }
-    },
-    "logs": {
-      "all": "全部",
-      "filter": "筛选",
-      "reset": "重置",
-      "filtered": "（已筛选）",
-      "entryCount": "{{count}} 条记录",
-      "status4xx": "4xx+（错误）",
-      "status5xx": "5xx（服务器）",
-      "status2xx": "2xx+（正常）",
-      "columns": {
-        "time": "时间",
-        "method": "方法",
-        "path": "路径",
-        "status": "状态",
-        "duration": "耗时",
-        "user": "用户",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "加载日志失败"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "全部达标"
     },
     "cat": {
-      "puzzles": "战术题",
-      "book": "书本 / 课程",
       "play": "对局"
     },
     "syncPlay": "更新对局时间",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

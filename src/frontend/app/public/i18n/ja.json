@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "変更履歴",
     "quickstartTitle": "クイックスタート",
-    "qs": {
-      "subscribeTitle": "サブスクライブ",
-      "subscribeDesc": "トーナメントをサブスクライブして、選手・対戦・結果にすばやくアクセスしましょう。",
-      "monitorTitle": "モニター",
-      "monitorDesc": "トーナメントのモニターを有効にすると、新しいラウンドが自動的に検出・取得されます。",
-      "favoritesTitle": "お気に入り",
-      "favoritesDesc": "選手やチームをお気に入りに登録して、トーナメント画面からすばやくアクセスできます。",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "プロフィールに ChessResults ID を設定すると、今後のトーナメントが自動でサブスクライブされます。"
-    },
     "feedback": "フィードバック / バグを報告",
     "updateAvailable": "新しいバージョンが利用可能です。",
     "reload": "再読み込み"
@@ -517,7 +507,6 @@
       "giveUp": "あきらめる",
       "nextPuzzle": "次のパズル",
       "share": "パズルを共有",
-      "loadPuzzle": "パズルを読み込む",
       "reviewLast": "最後のパズルを確認",
       "endlessMode": "エンドレスモード",
       "analyze": "解析"
@@ -532,15 +521,8 @@
       "streak": "連続正解",
       "best": "最高"
     },
-    "settings": {
-      "tooltip": "設定"
-    },
     "filters": {
-      "title": "フィルター",
-      "visualization": "可視化: レベル {{level}}",
       "difficulty": "難易度",
-      "difficultyHint": "あなたの Elo ({{elo}}) 前後のパズル",
-      "depthHint": "1（弱）〜 24（強）",
       "skipSolved": "解済みをスキップ",
       "worstTags": "苦手なテーマ上位5つを練習",
       "worstTagsHint": "最も正答率が低いテーマを重点的に練習"
@@ -620,10 +602,7 @@
       "titleOptional": "タイトル（任意）"
     },
     "columns": {
-      "scheduled": "日付",
-      "title": "タイトル",
-      "actions": "操作",
-      "progress": "Your progress"
+      "title": "タイトル"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "続ける",
       "analyze": "解析",
       "reviewLast": "最後のパズルを解析",
-      "puzzleRating": "パズルレーティング: {{rating}}",
       "levelRange": "レベル {{level}} ({{min}}〜{{max}})",
       "showTags": "タグを表示",
       "hideTags": "タグを非表示",
@@ -815,7 +793,6 @@
       "giveUp": "あきらめる",
       "mouseslip": "マウスミス",
       "nextPuzzle": "次のパズル",
-      "again": "もう一度",
       "skip": "スキップ",
       "viewFullGame": "全対局を見る",
       "analyze": "解析",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "コース一覧へ",
-      "sequential": "順番に",
-      "random": "ランダム",
       "completed": "コース完了！",
       "toOverview": "一覧へ",
       "wholeBook": "本全体",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "週刊投稿一覧へ",
-      "label": "週刊投稿",
       "noPuzzles": "この週刊投稿には再生可能なパズルが含まれていません。",
       "allSolved": "すべてのパズルを解きました！",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "ユーザー",
       "books": "ブック",
       "groups": "グループ",
-      "logs": "リクエストログ",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "ブックを削除",
       "deleteConfirm": "ブック「{{name}}」（{{count}} 問）を削除しますか？",
       "deleted": "ブック「{{name}}」を削除しました",
-      "imported": "{{imported}} 問インポート済み、{{skipped}} 問スキップ",
       "importedCount": "{{count}} 問インポートしました",
       "duplicatesCount": "重複 {{count}} 件",
       "invalidCount": "無効 {{count}} 件",
@@ -985,28 +957,6 @@
           "load": "トレーニング目標を読み込めませんでした。",
           "save": "トレーニング目標を保存できませんでした。"
         }
-      }
-    },
-    "logs": {
-      "all": "すべて",
-      "filter": "フィルター",
-      "reset": "リセット",
-      "filtered": "（フィルター中）",
-      "entryCount": "{{count}} 件",
-      "status4xx": "4xx+（エラー）",
-      "status5xx": "5xx（サーバー）",
-      "status2xx": "2xx+（OK）",
-      "columns": {
-        "time": "時刻",
-        "method": "メソッド",
-        "path": "パス",
-        "status": "ステータス",
-        "duration": "応答時間",
-        "user": "ユーザー",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "ログの読み込みに失敗しました"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "すべての目標達成"
     },
     "cat": {
-      "puzzles": "パズル",
-      "book": "ブック / コース",
       "play": "対局"
     },
     "syncPlay": "対局時間を更新",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

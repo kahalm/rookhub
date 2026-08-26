@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Changelog",
     "quickstartTitle": "Rychlý start",
-    "qs": {
-      "subscribeTitle": "Přihlásit se k odběru",
-      "subscribeDesc": "Přihlaste se k turnajům pro rychlý přístup k hráčům, párování a výsledkům.",
-      "monitorTitle": "Monitor",
-      "monitorDesc": "Zapněte monitor na turnaji – nová kola jsou automaticky detekována a načítána.",
-      "favoritesTitle": "Oblíbení",
-      "favoritesDesc": "Označte hráče nebo týmy jako oblíbené pro rychlý přístup v zobrazení turnaje.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Přidejte své ChessResults ID do profilu – nadcházející turnaje budou automaticky přihlášeny k odběru."
-    },
     "feedback": "Zpětná vazba / Nahlásit chybu",
     "updateAvailable": "Je k dispozici nová verze.",
     "reload": "Obnovit"
@@ -517,7 +507,6 @@
       "giveUp": "Vzdát se",
       "nextPuzzle": "Další úloha",
       "share": "Sdílet úlohu",
-      "loadPuzzle": "Načíst úlohu",
       "reviewLast": "Přezkoumat poslední úlohu",
       "endlessMode": "Nekonečný mód",
       "analyze": "Analyzovat"
@@ -532,15 +521,8 @@
       "streak": "Série",
       "best": "Nejlepší"
     },
-    "settings": {
-      "tooltip": "Nastavení"
-    },
     "filters": {
-      "title": "Filtry",
-      "visualization": "Vizualizace: Úroveň {{level}}",
       "difficulty": "Obtížnost",
-      "difficultyHint": "Úlohy kolem vašeho Elo ({{elo}})",
-      "depthHint": "1 (slabý) – 24 (silný)",
       "skipSolved": "Přeskočit vyřešené",
       "worstTags": "Trénovat 5 nejslabších témat",
       "worstTagsHint": "Zaměř se na témata, která řešíš nejhůř"
@@ -620,10 +602,7 @@
       "titleOptional": "Název (volitelné)"
     },
     "columns": {
-      "scheduled": "Datum",
-      "title": "Název",
-      "actions": "Akce",
-      "progress": "Your progress"
+      "title": "Název"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Pokračovat",
       "analyze": "Analyzovat",
       "reviewLast": "Analyzovat poslední úlohu",
-      "puzzleRating": "Hodnocení úlohy: {{rating}}",
       "levelRange": "Úroveň {{level}} ({{min}}–{{max}})",
       "showTags": "Zobrazit štítky",
       "hideTags": "Skrýt štítky",
@@ -815,7 +793,6 @@
       "giveUp": "Vzdát se",
       "mouseslip": "Překlep myší",
       "nextPuzzle": "Další úloha",
-      "again": "Znovu",
       "skip": "Přeskočit",
       "viewFullGame": "Zobrazit celou partii",
       "analyze": "Analyzovat",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Na přehled kurzů",
-      "sequential": "Postupně",
-      "random": "Náhodně",
       "completed": "Kurz dokončen!",
       "toOverview": "Na přehled",
       "wholeBook": "Celá kniha",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Na přehled týdenních příspěvků",
-      "label": "Týdenní příspěvek",
       "noPuzzles": "Tento týdenní příspěvek neobsahuje žádné hratelné úlohy.",
       "allSolved": "Všechny úlohy vyřešeny!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Uživatelé",
       "books": "Knihy",
       "groups": "Skupiny",
-      "logs": "Protokoly požadavků",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Smazat knihu",
       "deleteConfirm": "Smazat knihu \"{{name}}\" s {{count}} úlohou/úlohami?",
       "deleted": "Kniha \"{{name}}\" smazána",
-      "imported": "{{imported}} úloha/úlohy importována/importovány, {{skipped}} přeskočeno",
       "importedCount": "{{count}} úloha/úlohy importována/importovány",
       "duplicatesCount": "{{count}} duplicitních",
       "invalidCount": "{{count}} neplatných",
@@ -985,28 +957,6 @@
           "load": "Tréninkový cíl se nepodařilo načíst.",
           "save": "Tréninkový cíl se nepodařilo uložit."
         }
-      }
-    },
-    "logs": {
-      "all": "Vše",
-      "filter": "Filtr",
-      "reset": "Resetovat",
-      "filtered": "(filtrováno)",
-      "entryCount": "{{count}} záznamů",
-      "status4xx": "4xx+ (chyby)",
-      "status5xx": "5xx (server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Čas",
-        "method": "Metoda",
-        "path": "Cesta",
-        "status": "Stav",
-        "duration": "Trvání",
-        "user": "Uživatel",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Načtení protokolů se nezdařilo"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Všechny cíle splněny"
     },
     "cat": {
-      "puzzles": "Úlohy",
-      "book": "Kniha / Kurz",
       "play": "Hraní"
     },
     "syncPlay": "Aktualizovat herní čas",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

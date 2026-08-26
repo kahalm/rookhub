@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Değişiklikler",
     "quickstartTitle": "Hızlı Başlangıç",
-    "qs": {
-      "subscribeTitle": "Abone Ol",
-      "subscribeDesc": "Oyunculara, eşleşmelere ve sonuçlara hızlı erişim için turnuvalara abone olun.",
-      "monitorTitle": "İzle",
-      "monitorDesc": "Bir turnuvada izlemeyi etkinleştirin — yeni turlar otomatik olarak algılanır ve taranır.",
-      "favoritesTitle": "Favoriler",
-      "favoritesDesc": "Turnuva görünümünde hızlı erişim için oyuncuları veya takımları favorilere ekleyin.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Profilinize ChessResults ID ekleyin — yaklaşan turnuvalar otomatik olarak abone edilir."
-    },
     "feedback": "Geri bildirim / Hata bildir",
     "updateAvailable": "Yeni bir sürüm mevcut.",
     "reload": "Yenile"
@@ -517,7 +507,6 @@
       "giveUp": "Vazgeç",
       "nextPuzzle": "Sonraki Problem",
       "share": "Problemi Paylaş",
-      "loadPuzzle": "Problem Yükle",
       "reviewLast": "Son problemi incele",
       "endlessMode": "Sonsuz Mod",
       "analyze": "Analiz Et"
@@ -532,15 +521,8 @@
       "streak": "Seri",
       "best": "En İyi"
     },
-    "settings": {
-      "tooltip": "Ayarlar"
-    },
     "filters": {
-      "title": "Filtreler",
-      "visualization": "Görselleştirme: Seviye {{level}}",
       "difficulty": "Zorluk",
-      "difficultyHint": "Elo'nuz ({{elo}}) civarında problemler",
-      "depthHint": "1 (zayıf) – 24 (güçlü)",
       "skipSolved": "Çözülenleri atla",
       "worstTags": "En zayıf 5 temayı çalış",
       "worstTagsHint": "En kötü çözdüğün temalara odaklan"
@@ -620,10 +602,7 @@
       "titleOptional": "Başlık (isteğe bağlı)"
     },
     "columns": {
-      "scheduled": "Tarih",
-      "title": "Başlık",
-      "actions": "İşlemler",
-      "progress": "Your progress"
+      "title": "Başlık"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Devam Et",
       "analyze": "Analiz Et",
       "reviewLast": "Son problemi analiz et",
-      "puzzleRating": "Problem Derecesi: {{rating}}",
       "levelRange": "Seviye {{level}} ({{min}}–{{max}})",
       "showTags": "Etiketleri göster",
       "hideTags": "Etiketleri gizle",
@@ -815,7 +793,6 @@
       "giveUp": "Vazgeç",
       "mouseslip": "Fare kayması",
       "nextPuzzle": "Sonraki problem",
-      "again": "Tekrar",
       "skip": "Atla",
       "viewFullGame": "Tam oyunu gör",
       "analyze": "Analiz Et",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Kurs genel bakışına git",
-      "sequential": "Sıralı",
-      "random": "Rastgele",
       "completed": "Kurs tamamlandı!",
       "toOverview": "Genel bakışa git",
       "wholeBook": "Tüm kitap",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Haftalık gönderi genel bakışına git",
-      "label": "Haftalık Gönderi",
       "noPuzzles": "Bu haftalık gönderi oynanabilir problem içermiyor.",
       "allSolved": "Tüm problemler çözüldü!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Kullanıcılar",
       "books": "Kitaplar",
       "groups": "Gruplar",
-      "logs": "İstek Günlükleri",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Kitabı sil",
       "deleteConfirm": "{{count}} problem içeren \"{{name}}\" kitabı silinsin mi?",
       "deleted": "\"{{name}}\" kitabı silindi",
-      "imported": "{{imported}} problem içe aktarıldı, {{skipped}} atlandı",
       "importedCount": "{{count}} problem içe aktarıldı",
       "duplicatesCount": "{{count}} yinelenen",
       "invalidCount": "{{count}} geçersiz",
@@ -985,28 +957,6 @@
           "load": "Antrenman hedefi yüklenemedi.",
           "save": "Antrenman hedefi kaydedilemedi."
         }
-      }
-    },
-    "logs": {
-      "all": "Tümü",
-      "filter": "Filtrele",
-      "reset": "Sıfırla",
-      "filtered": "(filtrelenmiş)",
-      "entryCount": "{{count}} kayıt",
-      "status4xx": "4xx+ (hatalar)",
-      "status5xx": "5xx (sunucu)",
-      "status2xx": "2xx+ (Tamam)",
-      "columns": {
-        "time": "Saat",
-        "method": "Yöntem",
-        "path": "Yol",
-        "status": "Durum",
-        "duration": "Süre",
-        "user": "Kullanıcı",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Günlükler yüklenemedi"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Tüm hedeflere ulaşıldı"
     },
     "cat": {
-      "puzzles": "Problemler",
-      "book": "Kitap / Kurs",
       "play": "Oynama"
     },
     "syncPlay": "Oynama süresini güncelle",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Список змін",
     "quickstartTitle": "Швидкий старт",
-    "qs": {
-      "subscribeTitle": "Підписка",
-      "subscribeDesc": "Підпишіться на турніри для швидкого доступу до гравців, пар та результатів.",
-      "monitorTitle": "Моніторинг",
-      "monitorDesc": "Увімкніть моніторинг турніру — нові тури виявляються та завантажуються автоматично.",
-      "favoritesTitle": "Улюблені",
-      "favoritesDesc": "Позначте гравців або команди як улюблені для швидкого доступу у перегляді турніру.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Додайте свій ChessResults ID у профілі — підписка на майбутні турніри відбувається автоматично."
-    },
     "feedback": "Відгук / Повідомити про помилку",
     "updateAvailable": "Доступна нова версія.",
     "reload": "Оновити"
@@ -517,7 +507,6 @@
       "giveUp": "Здатися",
       "nextPuzzle": "Наступна задача",
       "share": "Поділитися задачею",
-      "loadPuzzle": "Завантажити задачу",
       "reviewLast": "Переглянути останню задачу",
       "endlessMode": "Нескінченний режим",
       "analyze": "Аналізувати"
@@ -532,15 +521,8 @@
       "streak": "Серія",
       "best": "Найкраще"
     },
-    "settings": {
-      "tooltip": "Налаштування"
-    },
     "filters": {
-      "title": "Фільтри",
-      "visualization": "Візуалізація: Рівень {{level}}",
       "difficulty": "Складність",
-      "difficultyHint": "Задачі біля вашого Elo ({{elo}})",
-      "depthHint": "1 (слабкий) – 24 (сильний)",
       "skipSolved": "Пропускати розв'язані",
       "worstTags": "Тренувати 5 найслабших тем",
       "worstTagsHint": "Фокус на темах, які ви розв’язуєте найгірше"
@@ -620,10 +602,7 @@
       "titleOptional": "Заголовок (необов'язково)"
     },
     "columns": {
-      "scheduled": "Дата",
-      "title": "Заголовок",
-      "actions": "Дії",
-      "progress": "Your progress"
+      "title": "Заголовок"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Продовжити",
       "analyze": "Аналізувати",
       "reviewLast": "Аналізувати останню задачу",
-      "puzzleRating": "Рейтинг задачі: {{rating}}",
       "levelRange": "Рівень {{level}} ({{min}}–{{max}})",
       "showTags": "Показати теги",
       "hideTags": "Сховати теги",
@@ -815,7 +793,6 @@
       "giveUp": "Здатися",
       "mouseslip": "Помилковий хід",
       "nextPuzzle": "Наступна задача",
-      "again": "Ще раз",
       "skip": "Пропустити",
       "viewFullGame": "Переглянути повну партію",
       "analyze": "Аналізувати",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "До огляду курсів",
-      "sequential": "Послідовно",
-      "random": "Випадково",
       "completed": "Курс завершено!",
       "toOverview": "До огляду",
       "wholeBook": "Уся книга",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "До огляду тижневих постів",
-      "label": "Тижневий пост",
       "noPuzzles": "Цей тижневий пост не містить задач для гри.",
       "allSolved": "Всі задачі розв'язано!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Користувачі",
       "books": "Книги",
       "groups": "Групи",
-      "logs": "Журнал запитів",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Видалити книгу",
       "deleteConfirm": "Видалити книгу «{{name}}» з {{count}} задач(ею)?",
       "deleted": "Книгу «{{name}}» видалено",
-      "imported": "{{imported}} задач(у) імпортовано, {{skipped}} пропущено",
       "importedCount": "{{count}} задач(у) імпортовано",
       "duplicatesCount": "{{count}} дублікат(ів)",
       "invalidCount": "{{count}} невалідних",
@@ -985,28 +957,6 @@
           "load": "Не вдалося завантажити навчальну ціль.",
           "save": "Не вдалося зберегти навчальну ціль."
         }
-      }
-    },
-    "logs": {
-      "all": "Всі",
-      "filter": "Фільтр",
-      "reset": "Скинути",
-      "filtered": "(відфільтровано)",
-      "entryCount": "{{count}} записів",
-      "status4xx": "4xx+ (помилки)",
-      "status5xx": "5xx (сервер)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Час",
-        "method": "Метод",
-        "path": "Шлях",
-        "status": "Статус",
-        "duration": "Тривалість",
-        "user": "Користувач",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Не вдалося завантажити журнал"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Всі цілі досягнуто"
     },
     "cat": {
-      "puzzles": "Задачі",
-      "book": "Книга / Курс",
       "play": "Гра"
     },
     "syncPlay": "Оновити час гри",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

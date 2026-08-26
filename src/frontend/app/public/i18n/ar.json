@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "سجل التغييرات",
     "quickstartTitle": "البداية السريعة",
-    "qs": {
-      "subscribeTitle": "الاشتراك",
-      "subscribeDesc": "اشترك في البطولات للوصول السريع إلى اللاعبين والمواجهات والنتائج.",
-      "monitorTitle": "المراقبة",
-      "monitorDesc": "فعّل المراقبة على بطولة — تُكتشف الجولات الجديدة وتُزحف تلقائياً.",
-      "favoritesTitle": "المفضلة",
-      "favoritesDesc": "ضع علامة على اللاعبين أو الفرق كمفضلة للوصول السريع في عرض البطولة.",
-      "chessResultsTitle": "رقم ChessResults",
-      "chessResultsDesc": "أضف رقم ChessResults الخاص بك في ملفك الشخصي — يتم الاشتراك في البطولات القادمة تلقائياً."
-    },
     "feedback": "ملاحظات / الإبلاغ عن خطأ",
     "updateAvailable": "يتوفر إصدار جديد.",
     "reload": "إعادة تحميل"
@@ -517,7 +507,6 @@
       "giveUp": "الاستسلام",
       "nextPuzzle": "اللغز التالي",
       "share": "مشاركة اللغز",
-      "loadPuzzle": "تحميل اللغز",
       "reviewLast": "مراجعة اللغز الأخير",
       "endlessMode": "وضع لا نهاية",
       "analyze": "تحليل"
@@ -532,15 +521,8 @@
       "streak": "السلسلة",
       "best": "الأفضل"
     },
-    "settings": {
-      "tooltip": "الإعدادات"
-    },
     "filters": {
-      "title": "الفلاتر",
-      "visualization": "التصوير الذهني: المستوى {{level}}",
       "difficulty": "الصعوبة",
-      "difficultyHint": "ألغاز حول Elo الخاص بك ({{elo}})",
-      "depthHint": "1 (ضعيف) – 24 (قوي)",
       "skipSolved": "تخطي المحلولة",
       "worstTags": "تدرّب على أضعف 5 مواضيع",
       "worstTagsHint": "ركّز على المواضيع التي تحلّها بأسوأ شكل"
@@ -620,10 +602,7 @@
       "titleOptional": "العنوان (اختياري)"
     },
     "columns": {
-      "scheduled": "التاريخ",
-      "title": "العنوان",
-      "actions": "الإجراءات",
-      "progress": "Your progress"
+      "title": "العنوان"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "متابعة",
       "analyze": "تحليل",
       "reviewLast": "تحليل اللغز الأخير",
-      "puzzleRating": "تقييم اللغز: {{rating}}",
       "levelRange": "المستوى {{level}} ({{min}}–{{max}})",
       "showTags": "إظهار العلامات",
       "hideTags": "إخفاء العلامات",
@@ -815,7 +793,6 @@
       "giveUp": "الاستسلام",
       "mouseslip": "انزلاق الفأرة",
       "nextPuzzle": "اللغز التالي",
-      "again": "مجدداً",
       "skip": "تخطي",
       "viewFullGame": "عرض اللعبة الكاملة",
       "analyze": "تحليل",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "إلى نظرة عامة على الدورات",
-      "sequential": "تسلسلي",
-      "random": "عشوائي",
       "completed": "اكتملت الدورة!",
       "toOverview": "إلى النظرة العامة",
       "wholeBook": "الكتاب كامل",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "إلى نظرة عامة على المنشورات الأسبوعية",
-      "label": "المنشور الأسبوعي",
       "noPuzzles": "لا يحتوي هذا المنشور الأسبوعي على ألغاز قابلة للعب.",
       "allSolved": "تم حل جميع الألغاز!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "المستخدمون",
       "books": "الكتب",
       "groups": "المجموعات",
-      "logs": "سجلات الطلبات",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "حذف الكتاب",
       "deleteConfirm": "حذف الكتاب \"{{name}}\" مع {{count}} لغز؟",
       "deleted": "تم حذف الكتاب \"{{name}}\"",
-      "imported": "تم استيراد {{imported}} لغز، تم تخطي {{skipped}}",
       "importedCount": "تم استيراد {{count}} لغز",
       "duplicatesCount": "{{count}} مكرر",
       "invalidCount": "{{count}} غير صالح",
@@ -985,28 +957,6 @@
           "load": "تعذّر تحميل هدف التدريب.",
           "save": "تعذّر حفظ هدف التدريب."
         }
-      }
-    },
-    "logs": {
-      "all": "الكل",
-      "filter": "فلتر",
-      "reset": "إعادة تعيين",
-      "filtered": "(مفلتر)",
-      "entryCount": "{{count}} إدخال",
-      "status4xx": "4xx+ (أخطاء)",
-      "status5xx": "5xx (خادم)",
-      "status2xx": "2xx+ (ناجح)",
-      "columns": {
-        "time": "الوقت",
-        "method": "الطريقة",
-        "path": "المسار",
-        "status": "الحالة",
-        "duration": "المدة",
-        "user": "المستخدم",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "فشل تحميل السجلات"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "تم بلوغ جميع الأهداف"
     },
     "cat": {
-      "puzzles": "الألغاز",
-      "book": "كتاب / دورة",
       "play": "اللعب"
     },
     "syncPlay": "تحديث وقت اللعب",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

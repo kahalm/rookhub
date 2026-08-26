@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Változásnapló",
     "quickstartTitle": "Gyorsindítás",
-    "qs": {
-      "subscribeTitle": "Feliratkozás",
-      "subscribeDesc": "Iratkozz fel versenyekre, hogy gyorsan elérd a résztvevőket, párosításokat és eredményeket.",
-      "monitorTitle": "Figyelés",
-      "monitorDesc": "Kapcsold be a figyelést egy versenyen – az új körök automatikusan felismerésre és beolvasásra kerülnek.",
-      "favoritesTitle": "Kedvencek",
-      "favoritesDesc": "Jelölj meg játékosokat vagy csapatokat kedvencként a versény nézetben való gyors eléréshez.",
-      "chessResultsTitle": "ChessResults azonosító",
-      "chessResultsDesc": "Add meg a ChessResults azonosítódat a profilodban – a közelgő versenyekre automatikusan feliratkozol."
-    },
     "feedback": "Visszajelzés / Hiba bejelentése",
     "updateAvailable": "Új verzió érhető el.",
     "reload": "Újratöltés"
@@ -517,7 +507,6 @@
       "giveUp": "Feladás",
       "nextPuzzle": "Következő feladvány",
       "share": "Feladvány megosztása",
-      "loadPuzzle": "Feladvány betöltése",
       "reviewLast": "Utolsó feladvány áttekintése",
       "endlessMode": "Végtelen mód",
       "analyze": "Elemzés"
@@ -532,15 +521,8 @@
       "streak": "Sorozat",
       "best": "Legjobb"
     },
-    "settings": {
-      "tooltip": "Beállítások"
-    },
     "filters": {
-      "title": "Szűrők",
-      "visualization": "Vizualizáció: {{level}}. szint",
       "difficulty": "Nehézség",
-      "difficultyHint": "Feladványok az Elo-d körül ({{elo}})",
-      "depthHint": "1 (gyenge) – 24 (erős)",
       "skipSolved": "Megoldottak kihagyása",
       "worstTags": "5 leggyengébb téma gyakorlása",
       "worstTagsHint": "A leggyengébben megoldott témákra fókuszál"
@@ -620,10 +602,7 @@
       "titleOptional": "Cím (opcionális)"
     },
     "columns": {
-      "scheduled": "Dátum",
-      "title": "Cím",
-      "actions": "Műveletek",
-      "progress": "Your progress"
+      "title": "Cím"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Folytatás",
       "analyze": "Elemzés",
       "reviewLast": "Utolsó feladvány elemzése",
-      "puzzleRating": "Feladványértékelés: {{rating}}",
       "levelRange": "{{level}}. szint ({{min}}–{{max}})",
       "showTags": "Címkék mutatása",
       "hideTags": "Címkék elrejtése",
@@ -815,7 +793,6 @@
       "giveUp": "Feladás",
       "mouseslip": "Egércsúszás",
       "nextPuzzle": "Következő feladvány",
-      "again": "Újra",
       "skip": "Kihagyás",
       "viewFullGame": "Teljes játszma megtekintése",
       "analyze": "Elemzés",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Tanfolyam áttekintéséhez",
-      "sequential": "Sorrendben",
-      "random": "Véletlenszerűen",
       "completed": "Tanfolyam teljesítve!",
       "toOverview": "Áttekintéshez",
       "wholeBook": "Teljes könyv",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Heti bejegyzések áttekintéséhez",
-      "label": "Heti bejegyzés",
       "noPuzzles": "Ez a heti bejegyzés nem tartalmaz lejátszható feladványt.",
       "allSolved": "Minden feladvány megoldva!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Felhasználók",
       "books": "Könyvek",
       "groups": "Csoportok",
-      "logs": "Kérési naplók",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Könyv törlése",
       "deleteConfirm": "Törli a(z) \"{{name}}\" könyvet {{count}} feladvánnyal?",
       "deleted": "\"{{name}}\" könyv törölve",
-      "imported": "{{imported}} feladvány importálva, {{skipped}} kihagyva",
       "importedCount": "{{count}} feladvány importálva",
       "duplicatesCount": "{{count}} duplikát",
       "invalidCount": "{{count}} érvénytelen",
@@ -985,28 +957,6 @@
           "load": "Nem sikerült betölteni az edzéscélt.",
           "save": "Nem sikerült menteni az edzéscélt."
         }
-      }
-    },
-    "logs": {
-      "all": "Összes",
-      "filter": "Szűrő",
-      "reset": "Visszaállítás",
-      "filtered": "(szűrt)",
-      "entryCount": "{{count}} bejegyzés",
-      "status4xx": "4xx+ (hibák)",
-      "status5xx": "5xx (szerver)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Idő",
-        "method": "Metódus",
-        "path": "Útvonal",
-        "status": "Állapot",
-        "duration": "Időtartam",
-        "user": "Felhasználó",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Nem sikerült betölteni a naplókat"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Minden cél teljesítve"
     },
     "cat": {
-      "puzzles": "Feladványok",
-      "book": "Könyv / Tanfolyam",
       "play": "Játék"
     },
     "syncPlay": "Játékidő frissítése",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

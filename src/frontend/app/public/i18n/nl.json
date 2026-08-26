@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Changelog",
     "quickstartTitle": "Snelstart",
-    "qs": {
-      "subscribeTitle": "Abonneren",
-      "subscribeDesc": "Abonneer op toernooien voor snelle toegang tot spelers, koppelingen en resultaten.",
-      "monitorTitle": "Monitoren",
-      "monitorDesc": "Schakel de monitor in voor een toernooi — nieuwe ronden worden automatisch gedetecteerd en gecrawld.",
-      "favoritesTitle": "Favorieten",
-      "favoritesDesc": "Markeer spelers of teams als favoriet voor snelle toegang in de toernooiweergave.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Voeg je ChessResults ID toe in je profiel — aankomende toernooien worden automatisch geabonneerd."
-    },
     "feedback": "Feedback / Bug melden",
     "updateAvailable": "Er is een nieuwe versie beschikbaar.",
     "reload": "Herladen"
@@ -517,7 +507,6 @@
       "giveUp": "Opgeven",
       "nextPuzzle": "Volgende puzzel",
       "share": "Puzzel delen",
-      "loadPuzzle": "Puzzel laden",
       "reviewLast": "Laatste puzzel bekijken",
       "endlessMode": "Eindeloze modus",
       "analyze": "Analyseren"
@@ -532,15 +521,8 @@
       "streak": "Reeks",
       "best": "Best"
     },
-    "settings": {
-      "tooltip": "Instellingen"
-    },
     "filters": {
-      "title": "Filters",
-      "visualization": "Visualisatie: niveau {{level}}",
       "difficulty": "Moeilijkheidsgraad",
-      "difficultyHint": "Puzzels rond je Elo ({{elo}})",
-      "depthHint": "1 (zwak) – 24 (sterk)",
       "skipSolved": "Opgeloste overslaan",
       "worstTags": "Train je 5 zwakste thema's",
       "worstTagsHint": "Focus op de thema's die je het slechtst oplost"
@@ -620,10 +602,7 @@
       "titleOptional": "Titel (optioneel)"
     },
     "columns": {
-      "scheduled": "Datum",
-      "title": "Titel",
-      "actions": "Acties",
-      "progress": "Your progress"
+      "title": "Titel"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Doorgaan",
       "analyze": "Analyseren",
       "reviewLast": "Laatste puzzel analyseren",
-      "puzzleRating": "Puzzelrating: {{rating}}",
       "levelRange": "Niveau {{level}} ({{min}}–{{max}})",
       "showTags": "Labels tonen",
       "hideTags": "Labels verbergen",
@@ -815,7 +793,6 @@
       "giveUp": "Opgeven",
       "mouseslip": "Muisfout",
       "nextPuzzle": "Volgende puzzel",
-      "again": "Nogmaals",
       "skip": "Overslaan",
       "viewFullGame": "Volledige partij bekijken",
       "analyze": "Analyseren",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Naar cursusoverzicht",
-      "sequential": "Opeenvolgend",
-      "random": "Willekeurig",
       "completed": "Cursus voltooid!",
       "toOverview": "Naar overzicht",
       "wholeBook": "Hele boek",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Naar overzicht wekelijkse berichten",
-      "label": "Wekelijks bericht",
       "noPuzzles": "Dit wekelijkse bericht bevat geen speelbare puzzels.",
       "allSolved": "Alle puzzels opgelost!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Gebruikers",
       "books": "Boeken",
       "groups": "Groepen",
-      "logs": "Verzoeklogboeken",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Boek verwijderen",
       "deleteConfirm": "Boek \"{{name}}\" met {{count}} puzzel(s) verwijderen?",
       "deleted": "Boek \"{{name}}\" verwijderd",
-      "imported": "{{imported}} puzzel(s) geïmporteerd, {{skipped}} overgeslagen",
       "importedCount": "{{count}} puzzel(s) geïmporteerd",
       "duplicatesCount": "{{count}} duplicaat/duplicaten",
       "invalidCount": "{{count}} ongeldig",
@@ -985,28 +957,6 @@
           "load": "Trainingsdoel laden mislukt.",
           "save": "Trainingsdoel opslaan mislukt."
         }
-      }
-    },
-    "logs": {
-      "all": "Alle",
-      "filter": "Filteren",
-      "reset": "Resetten",
-      "filtered": "(gefilterd)",
-      "entryCount": "{{count}} vermeldingen",
-      "status4xx": "4xx+ (fouten)",
-      "status5xx": "5xx (server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Tijd",
-        "method": "Methode",
-        "path": "Pad",
-        "status": "Status",
-        "duration": "Duur",
-        "user": "Gebruiker",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Logboeken laden mislukt"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Alle doelen gehaald"
     },
     "cat": {
-      "puzzles": "Puzzels",
-      "book": "Boek / Cursus",
       "play": "Spelen"
     },
     "syncPlay": "Speeltijd bijwerken",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

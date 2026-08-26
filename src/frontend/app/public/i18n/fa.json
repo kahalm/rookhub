@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "تغییرات",
     "quickstartTitle": "شروع سریع",
-    "qs": {
-      "subscribeTitle": "اشتراک",
-      "subscribeDesc": "در مسابقات عضو شوید تا دسترسی سریع به بازیکنان، جفت‌بندی‌ها و نتایج داشته باشید.",
-      "monitorTitle": "پایش",
-      "monitorDesc": "پایش مسابقه را فعال کنید — دورهای جدید به‌صورت خودکار شناسایی و جمع‌آوری می‌شوند.",
-      "favoritesTitle": "موردعلاقه‌ها",
-      "favoritesDesc": "بازیکنان یا تیم‌ها را به‌عنوان موردعلاقه علامت‌گذاری کنید تا در نمای مسابقه دسترسی سریع داشته باشید.",
-      "chessResultsTitle": "شناسه ChessResults",
-      "chessResultsDesc": "شناسه ChessResults خود را در پروفایل اضافه کنید — مسابقات پیش‌رو به‌صورت خودکار عضو می‌شوند."
-    },
     "feedback": "بازخورد / گزارش مشکل",
     "updateAvailable": "نسخه جدیدی در دسترس است.",
     "reload": "بارگذاری مجدد"
@@ -517,7 +507,6 @@
       "giveUp": "تسلیم شدن",
       "nextPuzzle": "تاکتیک بعدی",
       "share": "اشتراک‌گذاری تاکتیک",
-      "loadPuzzle": "بارگذاری تاکتیک",
       "reviewLast": "مرور آخرین تاکتیک",
       "endlessMode": "حالت بی‌پایان",
       "analyze": "تحلیل"
@@ -532,15 +521,8 @@
       "streak": "رشته",
       "best": "بهترین"
     },
-    "settings": {
-      "tooltip": "تنظیمات"
-    },
     "filters": {
-      "title": "فیلترها",
-      "visualization": "تجسم: سطح {{level}}",
       "difficulty": "سختی",
-      "difficultyHint": "تاکتیک‌هایی در محدوده Elo شما ({{elo}})",
-      "depthHint": "۱ (ضعیف) – ۲۴ (قوی)",
       "skipSolved": "نادیده گرفتن حل‌شده‌ها",
       "worstTags": "تمرین ۵ موضوع ضعیف‌تر",
       "worstTagsHint": "تمرکز روی موضوع‌هایی که ضعیف‌تر حل می‌کنی"
@@ -620,10 +602,7 @@
       "titleOptional": "عنوان (اختیاری)"
     },
     "columns": {
-      "scheduled": "تاریخ",
-      "title": "عنوان",
-      "actions": "عملیات",
-      "progress": "Your progress"
+      "title": "عنوان"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "ادامه",
       "analyze": "تحلیل",
       "reviewLast": "تحلیل آخرین تاکتیک",
-      "puzzleRating": "رتبه تاکتیک: {{rating}}",
       "levelRange": "سطح {{level}} ({{min}}–{{max}})",
       "showTags": "نمایش برچسب‌ها",
       "hideTags": "پنهان کردن برچسب‌ها",
@@ -815,7 +793,6 @@
       "giveUp": "تسلیم شدن",
       "mouseslip": "لغزش موس",
       "nextPuzzle": "تاکتیک بعدی",
-      "again": "دوباره",
       "skip": "رد کردن",
       "viewFullGame": "مشاهده بازی کامل",
       "analyze": "تحلیل",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "به نمای کلی دوره",
-      "sequential": "ترتیبی",
-      "random": "تصادفی",
       "completed": "دوره تکمیل شد!",
       "toOverview": "به نمای کلی",
       "wholeBook": "کل کتاب",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "به نمای کلی پست‌های هفتگی",
-      "label": "پست هفتگی",
       "noPuzzles": "این پست هفتگی شامل تاکتیک قابل بازی نیست.",
       "allSolved": "همه تاکتیک‌ها حل شدند!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "کاربران",
       "books": "کتاب‌ها",
       "groups": "گروه‌ها",
-      "logs": "لاگ‌های درخواست",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "حذف کتاب",
       "deleteConfirm": "کتاب «{{name}}» با {{count}} تاکتیک حذف شود؟",
       "deleted": "کتاب «{{name}}» حذف شد",
-      "imported": "{{imported}} تاکتیک وارد شد، {{skipped}} نادیده گرفته شد",
       "importedCount": "{{count}} تاکتیک وارد شد",
       "duplicatesCount": "{{count}} تکراری",
       "invalidCount": "{{count}} نامعتبر",
@@ -985,28 +957,6 @@
           "load": "بارگذاری هدف تمرینی ناموفق بود.",
           "save": "ذخیره هدف تمرینی ناموفق بود."
         }
-      }
-    },
-    "logs": {
-      "all": "همه",
-      "filter": "فیلتر",
-      "reset": "بازنشانی",
-      "filtered": "(فیلترشده)",
-      "entryCount": "{{count}} ورودی",
-      "status4xx": "4xx+ (خطاها)",
-      "status5xx": "5xx (سرور)",
-      "status2xx": "2xx+ (موفق)",
-      "columns": {
-        "time": "زمان",
-        "method": "روش",
-        "path": "مسیر",
-        "status": "وضعیت",
-        "duration": "مدت",
-        "user": "کاربر",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "بارگذاری لاگ‌ها ناموفق بود"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "همه اهداف محقق شدند"
     },
     "cat": {
-      "puzzles": "تاکتیک‌ها",
-      "book": "کتاب / دوره",
       "play": "بازی"
     },
     "syncPlay": "به‌روزرسانی زمان بازی",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

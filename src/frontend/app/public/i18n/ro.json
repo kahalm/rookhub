@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Jurnal de modificări",
     "quickstartTitle": "Ghid rapid",
-    "qs": {
-      "subscribeTitle": "Abonare",
-      "subscribeDesc": "Abonează-te la turnee pentru acces rapid la jucători, perechi și rezultate.",
-      "monitorTitle": "Monitorizare",
-      "monitorDesc": "Activează monitorizarea unui turneu — rundele noi sunt detectate și preluate automat.",
-      "favoritesTitle": "Favorite",
-      "favoritesDesc": "Marchează jucători sau echipe ca favorite pentru acces rapid în vizualizarea turneului.",
-      "chessResultsTitle": "ID ChessResults",
-      "chessResultsDesc": "Adaugă ID-ul tău ChessResults în profil — turneele viitoare sunt abonate automat."
-    },
     "feedback": "Feedback / Raportează o eroare",
     "updateAvailable": "O versiune nouă este disponibilă.",
     "reload": "Reîncarcă"
@@ -517,7 +507,6 @@
       "giveUp": "Renunță",
       "nextPuzzle": "Problema următoare",
       "share": "Distribuie problema",
-      "loadPuzzle": "Încarcă problema",
       "reviewLast": "Analizează ultima problemă",
       "endlessMode": "Mod infinit",
       "analyze": "Analizează"
@@ -532,15 +521,8 @@
       "streak": "Serie",
       "best": "Record"
     },
-    "settings": {
-      "tooltip": "Setări"
-    },
     "filters": {
-      "title": "Filtre",
-      "visualization": "Vizualizare: Nivel {{level}}",
       "difficulty": "Dificultate",
-      "difficultyHint": "Probleme în jurul Elo-ului tău ({{elo}})",
-      "depthHint": "1 (slab) – 24 (puternic)",
       "skipSolved": "Omite rezolvate",
       "worstTags": "Antrenează cele mai slabe 5 teme",
       "worstTagsHint": "Concentrează-te pe temele rezolvate cel mai slab"
@@ -620,10 +602,7 @@
       "titleOptional": "Titlu (opțional)"
     },
     "columns": {
-      "scheduled": "Dată",
-      "title": "Titlu",
-      "actions": "Acțiuni",
-      "progress": "Your progress"
+      "title": "Titlu"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Continuă",
       "analyze": "Analizează",
       "reviewLast": "Analizează ultima problemă",
-      "puzzleRating": "Rating problemă: {{rating}}",
       "levelRange": "Nivel {{level}} ({{min}}–{{max}})",
       "showTags": "Arată etichete",
       "hideTags": "Ascunde etichete",
@@ -815,7 +793,6 @@
       "giveUp": "Renunță",
       "mouseslip": "Alunecare mouse",
       "nextPuzzle": "Problema următoare",
-      "again": "Din nou",
       "skip": "Sari",
       "viewFullGame": "Vezi partida completă",
       "analyze": "Analizează",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "La prezentarea generală a cursurilor",
-      "sequential": "Secvențial",
-      "random": "Aleatoriu",
       "completed": "Curs finalizat!",
       "toOverview": "La prezentarea generală",
       "wholeBook": "Toată cartea",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "La prezentarea generală a postărilor săptămânale",
-      "label": "Postare săptămânală",
       "noPuzzles": "Această postare săptămânală nu conține probleme de jucat.",
       "allSolved": "Toate problemele rezolvate!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Utilizatori",
       "books": "Cărți",
       "groups": "Grupuri",
-      "logs": "Jurnale cereri",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Șterge cartea",
       "deleteConfirm": "Ștergi cartea „{{name}}“ cu {{count}} problemă/probleme?",
       "deleted": "Cartea „{{name}}“ ștearsă",
-      "imported": "{{imported}} problemă/probleme importată/importate, {{skipped}} omisă/omise",
       "importedCount": "{{count}} problemă/probleme importată/importate",
       "duplicatesCount": "{{count}} duplicat(e)",
       "invalidCount": "{{count}} invalid(e)",
@@ -985,28 +957,6 @@
           "load": "Obiectivul de antrenament nu a putut fi încărcat.",
           "save": "Obiectivul de antrenament nu a putut fi salvat."
         }
-      }
-    },
-    "logs": {
-      "all": "Toate",
-      "filter": "Filtrează",
-      "reset": "Resetează",
-      "filtered": "(filtrat)",
-      "entryCount": "{{count}} înregistrări",
-      "status4xx": "4xx+ (erori)",
-      "status5xx": "5xx (server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Timp",
-        "method": "Metodă",
-        "path": "Cale",
-        "status": "Status",
-        "duration": "Durată",
-        "user": "Utilizator",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Încărcarea jurnalelor a eșuat"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Toate obiectivele atinse"
     },
     "cat": {
-      "puzzles": "Probleme",
-      "book": "Carte / Curs",
       "play": "Joc"
     },
     "syncPlay": "Actualizează timpul de joc",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

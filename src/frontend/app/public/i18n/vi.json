@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
     "quickstartTitle": "Bắt đầu nhanh",
-    "qs": {
-      "subscribeTitle": "Đăng ký theo dõi",
-      "subscribeDesc": "Đăng ký theo dõi giải đấu để truy cập nhanh danh sách người chơi, lịch thi đấu và kết quả.",
-      "monitorTitle": "Theo dõi",
-      "monitorDesc": "Bật tính năng theo dõi cho một giải đấu — các vòng mới sẽ được phát hiện và cập nhật tự động.",
-      "favoritesTitle": "Yêu thích",
-      "favoritesDesc": "Đánh dấu người chơi hoặc đội yêu thích để truy cập nhanh trong giao diện giải đấu.",
-      "chessResultsTitle": "ID ChessResults",
-      "chessResultsDesc": "Thêm ID ChessResults vào hồ sơ — các giải đấu sắp tới sẽ được đăng ký theo dõi tự động."
-    },
     "feedback": "Phản hồi / Báo lỗi",
     "updateAvailable": "Có phiên bản mới.",
     "reload": "Tải lại"
@@ -517,7 +507,6 @@
       "giveUp": "Bỏ cuộc",
       "nextPuzzle": "Bài tập tiếp theo",
       "share": "Chia sẻ bài tập",
-      "loadPuzzle": "Tải bài tập",
       "reviewLast": "Xem lại bài tập trước",
       "endlessMode": "Chế độ vô tận",
       "analyze": "Phân tích"
@@ -532,15 +521,8 @@
       "streak": "Chuỗi hiện tại",
       "best": "Tốt nhất"
     },
-    "settings": {
-      "tooltip": "Cài đặt"
-    },
     "filters": {
-      "title": "Bộ lọc",
-      "visualization": "Trực quan hóa: Cấp {{level}}",
       "difficulty": "Độ khó",
-      "difficultyHint": "Bài tập xung quanh Elo của bạn ({{elo}})",
-      "depthHint": "1 (yếu) – 24 (mạnh)",
       "skipSolved": "Bỏ qua đã giải",
       "worstTags": "Luyện 5 chủ đề yếu nhất",
       "worstTagsHint": "Tập trung vào các chủ đề bạn giải kém nhất"
@@ -620,10 +602,7 @@
       "titleOptional": "Tiêu đề (tùy chọn)"
     },
     "columns": {
-      "scheduled": "Ngày",
-      "title": "Tiêu đề",
-      "actions": "Thao tác",
-      "progress": "Your progress"
+      "title": "Tiêu đề"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Tiếp tục",
       "analyze": "Phân tích",
       "reviewLast": "Phân tích bài tập trước",
-      "puzzleRating": "Xếp hạng bài tập: {{rating}}",
       "levelRange": "Cấp {{level}} ({{min}}–{{max}})",
       "showTags": "Hiển thị thẻ",
       "hideTags": "Ẩn thẻ",
@@ -815,7 +793,6 @@
       "giveUp": "Bỏ cuộc",
       "mouseslip": "Trượt chuột",
       "nextPuzzle": "Bài tập tiếp theo",
-      "again": "Làm lại",
       "skip": "Bỏ qua",
       "viewFullGame": "Xem toàn bộ ván cờ",
       "analyze": "Phân tích",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Đến tổng quan khóa học",
-      "sequential": "Theo thứ tự",
-      "random": "Ngẫu nhiên",
       "completed": "Đã hoàn thành khóa học!",
       "toOverview": "Đến tổng quan",
       "wholeBook": "Toàn bộ sách",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Đến tổng quan bài đăng hàng tuần",
-      "label": "Bài đăng hàng tuần",
       "noPuzzles": "Bài đăng hàng tuần này không có bài tập nào có thể chơi.",
       "allSolved": "Đã giải tất cả bài tập!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Người dùng",
       "books": "Sách",
       "groups": "Nhóm",
-      "logs": "Nhật ký yêu cầu",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Xóa sách",
       "deleteConfirm": "Xóa sách \"{{name}}\" với {{count}} bài tập?",
       "deleted": "Đã xóa sách \"{{name}}\"",
-      "imported": "Đã nhập {{imported}} bài tập, bỏ qua {{skipped}}",
       "importedCount": "Đã nhập {{count}} bài tập",
       "duplicatesCount": "{{count}} trùng lặp",
       "invalidCount": "{{count}} không hợp lệ",
@@ -985,28 +957,6 @@
           "load": "Không thể tải mục tiêu luyện tập.",
           "save": "Không thể lưu mục tiêu luyện tập."
         }
-      }
-    },
-    "logs": {
-      "all": "Tất cả",
-      "filter": "Lọc",
-      "reset": "Đặt lại",
-      "filtered": "(đã lọc)",
-      "entryCount": "{{count}} mục",
-      "status4xx": "4xx+ (lỗi)",
-      "status5xx": "5xx (máy chủ)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Thời gian",
-        "method": "Phương thức",
-        "path": "Đường dẫn",
-        "status": "Trạng thái",
-        "duration": "Thời lượng",
-        "user": "Người dùng",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Không thể tải nhật ký"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Đã đạt tất cả mục tiêu"
     },
     "cat": {
-      "puzzles": "Bài tập",
-      "book": "Sách / Khóa học",
       "play": "Chơi cờ"
     },
     "syncPlay": "Cập nhật thời gian chơi",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Список изменений",
     "quickstartTitle": "Быстрый старт",
-    "qs": {
-      "subscribeTitle": "Подписка",
-      "subscribeDesc": "Подпишитесь на турниры для быстрого доступа к участникам, жеребьёвке и результатам.",
-      "monitorTitle": "Мониторинг",
-      "monitorDesc": "Включите мониторинг турнира — новые туры обнаруживаются и загружаются автоматически.",
-      "favoritesTitle": "Избранное",
-      "favoritesDesc": "Добавляйте игроков или команды в избранное для быстрого доступа в просмотре турнира.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Добавьте свой ChessResults ID в профиль — предстоящие турниры будут подписываться автоматически."
-    },
     "feedback": "Отзыв / Сообщить об ошибке",
     "updateAvailable": "Доступна новая версия.",
     "reload": "Обновить"
@@ -517,7 +507,6 @@
       "giveUp": "Сдаться",
       "nextPuzzle": "Следующая задача",
       "share": "Поделиться задачей",
-      "loadPuzzle": "Загрузить задачу",
       "reviewLast": "Просмотреть последнюю задачу",
       "endlessMode": "Бесконечный режим",
       "analyze": "Анализ"
@@ -532,15 +521,8 @@
       "streak": "Серия",
       "best": "Рекорд"
     },
-    "settings": {
-      "tooltip": "Настройки"
-    },
     "filters": {
-      "title": "Фильтры",
-      "visualization": "Визуализация: уровень {{level}}",
       "difficulty": "Сложность",
-      "difficultyHint": "Задачи около вашего Elo ({{elo}})",
-      "depthHint": "1 (слабый) – 24 (сильный)",
       "skipSolved": "Пропускать решённые",
       "worstTags": "Тренировать 5 слабейших тем",
       "worstTagsHint": "Фокус на темах, которые вы решаете хуже всего"
@@ -620,10 +602,7 @@
       "titleOptional": "Заголовок (необязательно)"
     },
     "columns": {
-      "scheduled": "Дата",
-      "title": "Заголовок",
-      "actions": "Действия",
-      "progress": "Your progress"
+      "title": "Заголовок"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Продолжить",
       "analyze": "Анализ",
       "reviewLast": "Анализировать последнюю задачу",
-      "puzzleRating": "Рейтинг задачи: {{rating}}",
       "levelRange": "Уровень {{level}} ({{min}}–{{max}})",
       "showTags": "Показать теги",
       "hideTags": "Скрыть теги",
@@ -815,7 +793,6 @@
       "giveUp": "Сдаться",
       "mouseslip": "Промах мышью",
       "nextPuzzle": "Следующая задача",
-      "again": "Ещё раз",
       "skip": "Пропустить",
       "viewFullGame": "Посмотреть полную партию",
       "analyze": "Анализ",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "К обзору курсов",
-      "sequential": "По порядку",
-      "random": "Случайно",
       "completed": "Курс завершён!",
       "toOverview": "К обзору",
       "wholeBook": "Вся книга",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "К обзору еженедельных постов",
-      "label": "Еженедельный пост",
       "noPuzzles": "Этот еженедельный пост не содержит разыгрываемых задач.",
       "allSolved": "Все задачи решены!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Пользователи",
       "books": "Книги",
       "groups": "Группы",
-      "logs": "Журнал запросов",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Удалить книгу",
       "deleteConfirm": "Удалить книгу «{{name}}» с {{count}} задач(ей)?",
       "deleted": "Книга «{{name}}» удалена",
-      "imported": "{{imported}} задач(и) импортировано, {{skipped}} пропущено",
       "importedCount": "{{count}} задач(и) импортировано",
       "duplicatesCount": "{{count}} дубликат(ов)",
       "invalidCount": "{{count}} недействительных",
@@ -985,28 +957,6 @@
           "load": "Не удалось загрузить цель тренировки.",
           "save": "Не удалось сохранить цель тренировки."
         }
-      }
-    },
-    "logs": {
-      "all": "Все",
-      "filter": "Фильтр",
-      "reset": "Сбросить",
-      "filtered": "(отфильтровано)",
-      "entryCount": "{{count}} записей",
-      "status4xx": "4xx+ (ошибки)",
-      "status5xx": "5xx (сервер)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Время",
-        "method": "Метод",
-        "path": "Путь",
-        "status": "Статус",
-        "duration": "Длительность",
-        "user": "Пользователь",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Не удалось загрузить журнал"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Все цели достигнуты"
     },
     "cat": {
-      "puzzles": "Задачи",
-      "book": "Книга / Курс",
       "play": "Игра"
     },
     "syncPlay": "Обновить время игры",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

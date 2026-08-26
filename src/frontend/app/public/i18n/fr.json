@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Journal des modifications",
     "quickstartTitle": "Démarrage rapide",
-    "qs": {
-      "subscribeTitle": "S'abonner",
-      "subscribeDesc": "Abonnez-vous à des tournois pour accéder rapidement aux joueurs, appariements et résultats.",
-      "monitorTitle": "Surveiller",
-      "monitorDesc": "Activez la surveillance sur un tournoi — les nouvelles rondes sont détectées et récupérées automatiquement.",
-      "favoritesTitle": "Favoris",
-      "favoritesDesc": "Marquez des joueurs ou des équipes comme favoris pour y accéder rapidement dans la vue du tournoi.",
-      "chessResultsTitle": "ID ChessResults",
-      "chessResultsDesc": "Ajoutez votre ID ChessResults dans votre profil — les tournois à venir sont abonnés automatiquement."
-    },
     "feedback": "Commentaires / Signaler un bug",
     "updateAvailable": "Une nouvelle version est disponible.",
     "reload": "Recharger"
@@ -517,7 +507,6 @@
       "giveUp": "Abandonner",
       "nextPuzzle": "Puzzle suivant",
       "share": "Partager le puzzle",
-      "loadPuzzle": "Charger le puzzle",
       "reviewLast": "Revoir le dernier puzzle",
       "endlessMode": "Mode infini",
       "analyze": "Analyser"
@@ -532,15 +521,8 @@
       "streak": "Série",
       "best": "Meilleur"
     },
-    "settings": {
-      "tooltip": "Paramètres"
-    },
     "filters": {
-      "title": "Filtres",
-      "visualization": "Visualisation : Niveau {{level}}",
       "difficulty": "Difficulté",
-      "difficultyHint": "Puzzles autour de votre Elo ({{elo}})",
-      "depthHint": "1 (faible) – 24 (fort)",
       "skipSolved": "Ignorer les résolus",
       "worstTags": "Entraîner les 5 thèmes les plus faibles",
       "worstTagsHint": "Cible les thèmes que tu réussis le moins"
@@ -620,10 +602,7 @@
       "titleOptional": "Titre (facultatif)"
     },
     "columns": {
-      "scheduled": "Date",
-      "title": "Titre",
-      "actions": "Actions",
-      "progress": "Your progress"
+      "title": "Titre"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Continuer",
       "analyze": "Analyser",
       "reviewLast": "Analyser le dernier puzzle",
-      "puzzleRating": "Classement du puzzle : {{rating}}",
       "levelRange": "Niveau {{level}} ({{min}}–{{max}})",
       "showTags": "Afficher les tags",
       "hideTags": "Masquer les tags",
@@ -815,7 +793,6 @@
       "giveUp": "Abandonner",
       "mouseslip": "Glissement souris",
       "nextPuzzle": "Puzzle suivant",
-      "again": "Encore",
       "skip": "Passer",
       "viewFullGame": "Voir la partie complète",
       "analyze": "Analyser",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Vers la vue d'ensemble des cours",
-      "sequential": "Séquentiel",
-      "random": "Aléatoire",
       "completed": "Cours terminé !",
       "toOverview": "Vue d'ensemble",
       "wholeBook": "Livre entier",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Vers la vue d'ensemble hebdomadaire",
-      "label": "Post hebdomadaire",
       "noPuzzles": "Ce post hebdomadaire ne contient aucun puzzle jouable.",
       "allSolved": "Tous les puzzles résolus !",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Utilisateurs",
       "books": "Livres",
       "groups": "Groupes",
-      "logs": "Journaux des requêtes",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Supprimer le livre",
       "deleteConfirm": "Supprimer le livre « {{name}} » avec {{count}} puzzle(s) ?",
       "deleted": "Livre « {{name}} » supprimé",
-      "imported": "{{imported}} puzzle(s) importé(s), {{skipped}} ignoré(s)",
       "importedCount": "{{count}} puzzle(s) importé(s)",
       "duplicatesCount": "{{count}} doublon(s)",
       "invalidCount": "{{count}} invalide(s)",
@@ -985,28 +957,6 @@
           "load": "Impossible de charger l'objectif d'entraînement.",
           "save": "Impossible d'enregistrer l'objectif d'entraînement."
         }
-      }
-    },
-    "logs": {
-      "all": "Tout",
-      "filter": "Filtrer",
-      "reset": "Réinitialiser",
-      "filtered": "(filtré)",
-      "entryCount": "{{count}} entrées",
-      "status4xx": "4xx+ (erreurs)",
-      "status5xx": "5xx (serveur)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Heure",
-        "method": "Méthode",
-        "path": "Chemin",
-        "status": "Statut",
-        "duration": "Durée",
-        "user": "Utilisateur",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Impossible de charger les journaux"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Tous les objectifs atteints"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Livre / Cours",
       "play": "Jeu"
     },
     "syncPlay": "Mettre à jour le temps de jeu",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

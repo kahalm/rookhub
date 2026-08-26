@@ -2,16 +2,11 @@
   "repertoireTrainer": {
     "train": "Trainieren",
     "title": "Repertoire-Trainer",
-    "white": "Weiß",
-    "black": "Schwarz",
-    "noCards": "Aktuell nichts fällig — schau später wieder vorbei oder spiel das Repertoire durch, um neue Karten anzulegen.",
     "done": "Sitzung abgeschlossen! {{correct}} von {{total}} richtig.",
     "again": "Erneut trainieren",
-    "remaining": "Verbleibend",
     "whiteToMove": "Weiß am Zug — spiel deinen Repertoirezug.",
     "blackToMove": "Schwarz am Zug — spiel deinen Repertoirezug.",
     "correct": "Richtig!",
-    "tolerated": "Spielbar — aber der Repertoirezug ist {{move}}.",
     "toleratedPlayable": "Spielbarer Zug — aber nicht der Repertoirezug. Finde ihn in der nächsten Runde selbst.",
     "wrong": "Nicht im Repertoire. Der Zug ist {{move}}.",
     "wrongNoHint": "Nicht im Repertoire — nochmal versuchen oder Lösung zeigen.",
@@ -208,7 +203,6 @@
     "themeDark": "Dunkles Design",
     "help": "Hilfe",
     "chessable": "Chessable",
-    "messages": "Nachrichten",
     "leaderboards": "Bestenlisten",
     "remembered": "Gemerkt",
     "groupTraining": "Training",
@@ -345,7 +339,6 @@
     },
     "courses": {
       "title": "Kurse",
-      "subtitle": "Arbeite deine Bücher durch",
       "open": "Kurse öffnen",
       "count": "{{count}} Kurse"
     },
@@ -393,7 +386,6 @@
     "edit": {
       "customize": "Anpassen",
       "done": "Fertig",
-      "reset": "Zurücksetzen",
       "default": "Standard",
       "hint": "Mit dem Auge eine Kachel ein-/ausblenden; mit den Pfeilen oder per Drag & Drop sortieren.",
       "dragAria": "Kachel zum Sortieren ziehen",
@@ -477,32 +469,6 @@
   },
   "pgnViewer": {
     "gameLabel": "Partie",
-    "catalog": {
-      "title": "Katalog",
-      "listTitle": "Verfügbare Kurse & Repertoires",
-      "empty": "Dir wurde noch kein Katalog freigegeben.",
-      "request": "Anfordern",
-      "requested": "Angefordert — der Besitzer entscheidet.",
-      "requestFailed": "Anfrage fehlgeschlagen.",
-      "pending": "Angefragt",
-      "open": "Öffnen",
-      "type": {
-        "course": "Kurs",
-        "repertoire": "Repertoire"
-      },
-      "admin": {
-        "grantsTitle": "Wer darf meinen Katalog sehen?",
-        "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
-        "users": "User",
-        "groups": "Gruppen",
-        "grantsSaved": "Freigabe gespeichert.",
-        "requestsTitle": "Offene Anforderungen",
-        "noRequests": "Keine offenen Anforderungen.",
-        "approve": "Genehmigen",
-        "decline": "Ablehnen",
-        "approved": "Genehmigt & freigegeben."
-      }
-    },
     "nav": {
       "first": "Erster Zug",
       "previous": "Vorheriger Zug",
@@ -533,7 +499,6 @@
     "chessResultsApplied": "ChessResults-Daten übernommen",
     "fideApplied": "FIDE-Daten übernommen",
     "discord": {
-      "catalog": "Katalog",
       "title": "Discord",
       "hint": "Öffne einen persönlichen Link des RookHub-Discord-Bots (dessen /link-Befehl oder eine Puzzle-DM), um dein Discord-Konto zu verknüpfen.",
       "unlink": "Verknüpfung trennen",
@@ -781,7 +746,7 @@
       "undo": "Letzten Zug zurücknehmen",
       "reset": "Filter zurücksetzen"
     },
-        "list": {
+    "list": {
       "title": "Meine Repertoires",
       "new": "Neues Repertoire",
       "fileCount": "{{count}} Dateien",
@@ -848,7 +813,6 @@
       "empty": "Keine Linien in diesem Repertoire gefunden.",
       "noChapter": "(Ohne Kapitel)",
       "toggleChapter": "Kapitel auf-/zuklappen",
-      "trainChapter": "Dieses Kapitel trainieren",
       "color": {
         "title": "Trainingsfarbe",
         "white": "Weiß",
@@ -1057,7 +1021,6 @@
       "giveUp": "Aufgeben",
       "nextPuzzle": "Nächstes Puzzle",
       "share": "Puzzle teilen",
-      "loadPuzzle": "Puzzle laden",
       "reviewLast": "Letztes Puzzle ansehen",
       "endlessMode": "Endlos-Modus",
       "analyze": "Analysieren",
@@ -1066,7 +1029,6 @@
       "showOriginalSolution": "Originale Lösung zeigen"
     },
     "challenge": {
-      "sent": "Challenge gesendet",
       "sentCount": "Challenge an {{count}} Freund(e) gesendet",
       "selectAll": "Alle auswählen",
       "send": "Senden ({{count}})",
@@ -1090,7 +1052,6 @@
       "best": "Beste"
     },
     "settings": {
-      "tooltip": "Einstellungen",
       "title": "Einstellungen",
       "pieces": "Figuren",
       "board": "Brett-Design",
@@ -1118,11 +1079,7 @@
     "anarchyHint2": "Google en passant. 📖 Dein Bauer kann en passant schlagen, und nach der heiligen Anarchy-Regel ist das der einzige legale Zug.",
     "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Schnapp dir den Bauern — alles andere ist diesen Zug illegal. Actual zap.",
     "filters": {
-      "title": "Filter",
-      "visualization": "Visualisierung: Level {{level}}",
       "difficulty": "Schwierigkeit",
-      "difficultyHint": "Puzzles rund um deine Elo ({{elo}})",
-      "depthHint": "1 (schwach) – 24 (stark)",
       "skipSolved": "Gelöste überspringen",
       "worstTags": "5 schwächste Themen trainieren",
       "worstTagsHint": "Übt gezielt deine schwächsten Themen"
@@ -1603,10 +1560,7 @@
       "descriptionOptional": "Beschreibung (optional)"
     },
     "columns": {
-      "scheduled": "Termin",
-      "title": "Titel",
-      "actions": "Aktionen",
-      "progress": "Dein Fortschritt"
+      "title": "Titel"
     },
     "progress": {
       "solvedLabel": "Gelöst",
@@ -1779,7 +1733,6 @@
       "continue": "Fortsetzen",
       "analyze": "Analysieren",
       "reviewLast": "Letztes Puzzle analysieren",
-      "puzzleRating": "Puzzle Rating: {{rating}}",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Tags anzeigen",
       "hideTags": "Tags ausblenden",
@@ -1870,7 +1823,6 @@
       "giveUp": "Aufgeben",
       "mouseslip": "Mausverrutscher",
       "nextPuzzle": "Nächstes Puzzle",
-      "again": "Nochmal",
       "skip": "Überspringen",
       "viewFullGame": "Ganze Partie ansehen",
       "analyze": "Analysieren",
@@ -1911,8 +1863,6 @@
     },
     "course": {
       "backToCourses": "Zur Kursübersicht",
-      "sequential": "Sequenziell",
-      "random": "Zufällig",
       "completed": "Kurs abgeschlossen!",
       "roundFinished": "Zufalls-Runde durch — noch {{remaining}} Aufgaben zu lösen",
       "continueRemaining": "Mit den restlichen weitermachen",
@@ -1930,7 +1880,6 @@
     },
     "weekly": {
       "backToWeekly": "Zur Wochenpost-Übersicht",
-      "label": "Wochenpost",
       "noPuzzles": "Dieser Wochenpost enthält keine spielbaren Puzzles.",
       "allSolved": "Alle Puzzles gelöst!",
       "progress": "{{played}}/{{total}} gespielt · {{solved}} gelöst",
@@ -1979,15 +1928,12 @@
       "runningBuildTooltip": "Dieser Lauf hat das aktuell laufende Frontend gebaut.",
       "notConfigured": "Kein GitHub-Token hinterlegt. Setze GitHub__Token (ein PAT mit actions:read) an der API, um diese Ansicht zu aktivieren.",
       "noRuns": "Noch keine Läufe.",
-      "loadFailed": "CI-Status konnte nicht geladen werden",
       "started": "gestartet",
       "duration": "Dauer",
       "etaIn": "fertig in ~{{time}}",
       "etaSoon": "gleich fertig…",
       "etaUnknown": "läuft…",
       "etaTooltip": "Geschätztes Ende — mittlere Laufzeit der letzten Läufe minus bereits verstrichene Zeit.",
-      "deployed": "Deployt",
-      "deployedTooltip": "Der Build (Lauf), der das aktuell laufende Image des jeweiligen Stacks erzeugt hat.",
       "watchStart": "Genau beobachten: dieses Repo eine Minute lang alle 10 s prüfen (bzw. bis die laufende Aktion fertig ist)",
       "watchStop": "Beobachtung beenden (zurück zur 2-Minuten-Prüfung)"
     },
@@ -2032,7 +1978,6 @@
       "deleteBook": "Buch löschen",
       "deleteConfirm": "Buch \"{{name}}\" mit {{count}} Puzzle(s) löschen?",
       "deleted": "Buch \"{{name}}\" gelöscht",
-      "imported": "{{imported}} Puzzle(s) importiert, {{skipped}} übersprungen",
       "importedCount": "{{count}} Puzzle(s) importiert",
       "duplicatesCount": "{{count}} Duplikat(e)",
       "invalidCount": "{{count}} ungültig",
@@ -2194,7 +2139,6 @@
       "noCourses": "Keine Kurse für diesen User gefunden.",
       "loadError": "Kursliste konnte nicht geladen werden.",
       "importError": "Download konnte nicht gestartet werden.",
-      "import": "In mein Konto laden",
       "done": "In deinen Repertoires",
       "failed": "Fehlgeschlagen",
       "queued": "Position {{n}} in der Warteschlange",
@@ -2260,8 +2204,7 @@
     "sourceBook": "Kurs-/Buch-Puzzle",
     "love": "Lieben",
     "loved": "Geliebt",
-    "loveLast": "Letztes Puzzle",
-    "addTooltip": "Zu Favoriten hinzufügen"
+    "loveLast": "Letztes Puzzle"
   },
   "games": {
     "title": "Gespeicherte Partien",
@@ -2401,7 +2344,6 @@
       "duration": "Dauer",
       "startedAt": "Start",
       "endedAt": "Ende",
-      "endedHint": "Standard ist jetzt. Für Rückdatierung eine frühere Uhrzeit setzen (muss nach dem Start liegen).",
       "startEndHint": "Ändere ein Feld — die anderen beiden werden automatisch nachgezogen; das Ende kann nie in der Zukunft liegen.",
       "noteLabel": "Notiz (optional)",
       "notePlaceholder": "z. B. „Stunde mit Alice, Eröffnungsdrills“",
@@ -2445,9 +2387,6 @@
       "full": "Alle Ziele erreicht"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Buch / Kurs",
-      "chessable": "Chessable",
       "play": "Spielen"
     },
     "syncPlay": "Spielzeit aktualisieren",
@@ -2683,7 +2622,6 @@
     },
     "intro": "Hinterlege deinen Chessable-Bearer einmal — RookHub fragt darüber deine Kurse über die piratechess-API ab. Der Token wird verschlüsselt gespeichert und nicht im Klartext angezeigt.",
     "bearerLabel": "Bearer-Token",
-    "bearerHint": "Bearer findest du im Browser: Chessable → Entwicklertools → Netzwerk → Header „authorization: Bearer …\"",
     "helpLink": "Wie komme ich an meinen Bearer-Token? (Hilfe)",
     "helpIntro": "So holst du deinen Chessable-Bearer-Token aus dem Browser:",
     "helpStep1": "Chessable öffnen, dann die Browser-Entwicklertools (F12) → Tab \"Netzwerk\".",
@@ -2720,7 +2658,6 @@
     "deleted": "Token gelöscht.",
     "test": "Verbindung testen",
     "testing": "Teste…",
-    "loadCourses": "Kurse laden",
     "loadingCourses": "Lade Kurse…",
     "refreshCourses": "Aktualisieren",
     "coursesCachedAt": "Stand: {{date}}",
@@ -2741,7 +2678,6 @@
     "importRepertoireDone": "\"{{name}}\" als Repertoire importiert ({{count}} Linien) — zu finden unter Repertoires.",
     "importBookDone": "\"{{name}}\" als Buch importiert ({{count}} Puzzles) — zu finden unter Kurse.",
     "importFailed": "Import fehlgeschlagen: {{error}}",
-    "importingBanner": "Importiere \"{{name}}\"",
     "phase_queued": "in Warteschlange…",
     "phase_fetching": "hole Kurs…",
     "phase_importing": "importiere…",
@@ -2773,7 +2709,6 @@
   },
   "messages": {
     "title": "Nachrichten",
-    "emptyUser": "Noch keine Nachrichten. Das Admin-Team erreicht dich hier.",
     "adminTeam": "Admin-Team",
     "you": "Du",
     "replyLabel": "Deine Antwort",
@@ -2787,7 +2722,6 @@
     "error": "Die Bestenlisten konnten nicht geladen werden.",
     "empty": "Noch keine Einträge.",
     "period": {
-      "daily": "Heute",
       "weekly": "Diese Woche",
       "monthly": "Dieser Monat",
       "alltime": "Gesamt"
@@ -2816,15 +2750,8 @@
     },
     "update": "Aktualisieren ({{count}})",
     "updateTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu holen (gecachte gehen sofort, ohne Download).",
-    "updateAll": "Alle aktualisieren ({{count}})",
-    "updateAllTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu herunterladen (braucht Internet).",
-    "updateCached": "Aus Cache ({{count}})",
-    "updateCachedTip": "Nur Einträge mit gespeicherter Quelle aufbereiten — kein Download.",
     "working": "Wird aktualisiert…",
     "started": "Aktualisierung gestartet — läuft im Hintergrund.",
-    "doneLocal": "{{count}} aktualisiert.",
-    "doneQueued": "{{count}} werden im Hintergrund neu geladen.",
-    "doneEmpty": "Alles ist bereits aktuell.",
     "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen.",
     "dismiss": "Verstanden"
   },
@@ -2856,7 +2783,6 @@
     "switchedTraining": "Trainingsmodus",
     "switchedEasy": "Einfachmodus",
     "switch": "Spielweise",
-    "split": "{{training}} Training · {{easy}} einfach",
     "scope": {
       "puzzles": "Puzzles",
       "endless": "Endless",

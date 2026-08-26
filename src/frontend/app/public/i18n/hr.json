@@ -2,16 +2,11 @@
   "repertoireTrainer": {
     "train": "Treniraj",
     "title": "Trener repertoara",
-    "white": "Bijeli",
-    "black": "Crni",
-    "noCards": "Trenutno ništa nije na redu — vrati se kasnije ili prođi repertoar da dodaš nove kartice.",
     "done": "Sesija završena! {{correct}} od {{total}} točno.",
     "again": "Treniraj ponovno",
-    "remaining": "Preostalo",
     "whiteToMove": "Bijeli na potezu — odigraj svoj potez iz repertoara.",
     "blackToMove": "Crni na potezu — odigraj svoj potez iz repertoara.",
     "correct": "Točno!",
-    "tolerated": "Igrivo — ali potez iz repertoara je {{move}}.",
     "toleratedPlayable": "Igrivi potez — ali nije iz repertoara. Pronađi ga sam u sljedećem krugu.",
     "wrong": "Nije u repertoaru. Potez je {{move}}.",
     "wrongNoHint": "Nije u repertoaru — pokušaj ponovno ili prikaži rješenje.",
@@ -209,7 +204,6 @@
     "help": "Pomoć",
     "chessable": "Chessable",
     "leaderboards": "Ljestvice",
-    "messages": "Poruke",
     "remembered": "Zapamćeno",
     "groupTraining": "Trening",
     "groupLibrary": "Analiza i zbirka",
@@ -345,7 +339,6 @@
     },
     "courses": {
       "title": "Tečajevi",
-      "subtitle": "Prolazi kroz svoje knjige",
       "open": "Otvori tečajeve",
       "count": "{{count}} tečajeva"
     },
@@ -393,7 +386,6 @@
     "edit": {
       "customize": "Prilagodi",
       "done": "Gotovo",
-      "reset": "Poništi",
       "default": "Zadano",
       "hint": "Okom prikaži ili sakrij pločicu; promijeni redoslijed strelicama ili povlačenjem.",
       "dragAria": "Povuci za promjenu redoslijeda pločice",
@@ -477,32 +469,6 @@
   },
   "pgnViewer": {
     "gameLabel": "Partija",
-    "catalog": {
-      "title": "Katalog",
-      "listTitle": "Dostupni tečajevi i repertoari",
-      "empty": "Nijedan katalog ti još nije podijeljen.",
-      "request": "Zatraži",
-      "requested": "Zatraženo — vlasnik odlučuje.",
-      "requestFailed": "Zahtjev nije uspio.",
-      "pending": "Zatraženo",
-      "open": "Otvori",
-      "type": {
-        "course": "Tečaj",
-        "repertoire": "Repertoar"
-      },
-      "admin": {
-        "grantsTitle": "Tko smije vidjeti moj katalog?",
-        "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
-        "users": "Korisnici",
-        "groups": "Grupe",
-        "grantsSaved": "Pristup spremljen.",
-        "requestsTitle": "Otvoreni zahtjevi",
-        "noRequests": "Nema otvorenih zahtjeva.",
-        "approve": "Odobri",
-        "decline": "Odbij",
-        "approved": "Odobreno i podijeljeno."
-      }
-    },
     "nav": {
       "first": "Prvi potez",
       "previous": "Prethodni potez",
@@ -533,7 +499,6 @@
     "chessResultsApplied": "ChessResults podaci preuzeti",
     "fideApplied": "FIDE podaci preuzeti",
     "discord": {
-      "catalog": "Katalog",
       "title": "Discord",
       "hint": "Otvori osobnu poveznicu RookHub Discord bota (njegovu /link naredbu ili DM sa zagonetkom) kako bi povezao svoj Discord račun.",
       "unlink": "Prekini povezivanje",
@@ -781,7 +746,7 @@
       "undo": "Poništi zadnji potez",
       "reset": "Ukloni filtar"
     },
-        "list": {
+    "list": {
       "title": "Moji repertoari",
       "new": "Novi repertoar",
       "fileCount": "{{count}} datoteka",
@@ -848,7 +813,6 @@
       "empty": "U ovom repertoaru nema pronađenih linija.",
       "noChapter": "(Bez poglavlja)",
       "toggleChapter": "Otvori / zatvori poglavlje",
-      "trainChapter": "Treniraj ovo poglavlje",
       "color": {
         "title": "Boja treniranja",
         "white": "Bijeli",
@@ -1057,7 +1021,6 @@
       "giveUp": "Predaj se",
       "nextPuzzle": "Sljedeća zagonetka",
       "share": "Podijeli zagonetku",
-      "loadPuzzle": "Učitaj zagonetku",
       "reviewLast": "Pregledaj zadnju zagonetku",
       "endlessMode": "Beskonačni način",
       "analyze": "Analiziraj",
@@ -1066,7 +1029,6 @@
       "showOriginalSolution": "Prikaži izvorno rješenje"
     },
     "challenge": {
-      "sent": "Izazov poslan",
       "sentCount": "Izazov poslan za {{count}} prijatelja",
       "selectAll": "Odaberi sve",
       "send": "Pošalji ({{count}})",
@@ -1090,7 +1052,6 @@
       "best": "Najbolje"
     },
     "settings": {
-      "tooltip": "Postavke",
       "title": "Postavke",
       "pieces": "Figure",
       "board": "Tema ploče",
@@ -1118,11 +1079,7 @@
     "anarchyHint2": "Google en passant. 📖 Tvoj pješak može uzeti en passant, a po svetom anarchy pravilu to je jedini legalan potez.",
     "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Zgrabi tog pješaka — sve ostalo je ovaj potez ilegalno. Actual zap.",
     "filters": {
-      "title": "Filtri",
-      "visualization": "Vizualizacija: razina {{level}}",
       "difficulty": "Težina",
-      "difficultyHint": "Zagonetke oko vašeg Ela ({{elo}})",
-      "depthHint": "1 (slabo) – 24 (jako)",
       "skipSolved": "Preskoči riješene",
       "worstTags": "Treniraj 5 najslabijih tema",
       "worstTagsHint": "Fokus na teme koje najslabije rješavaš"
@@ -1603,10 +1560,7 @@
       "descriptionOptional": "Opis (neobavezno)"
     },
     "columns": {
-      "scheduled": "Termin",
-      "title": "Naslov",
-      "actions": "Radnje",
-      "progress": "Tvoj napredak"
+      "title": "Naslov"
     },
     "progress": {
       "solvedLabel": "Riješeno",
@@ -1779,7 +1733,6 @@
       "continue": "Nastavi",
       "analyze": "Analiziraj",
       "reviewLast": "Analiziraj zadnju zagonetku",
-      "puzzleRating": "Rejting zagonetke: {{rating}}",
       "levelRange": "Razina {{level}} ({{min}}–{{max}})",
       "showTags": "Prikaži oznake",
       "hideTags": "Sakrij oznake",
@@ -1870,7 +1823,6 @@
       "giveUp": "Predaj se",
       "mouseslip": "Omaška mišem",
       "nextPuzzle": "Sljedeća zagonetka",
-      "again": "Ponovno",
       "skip": "Preskoči",
       "viewFullGame": "Pogledaj cijelu partiju",
       "analyze": "Analiziraj",
@@ -1911,8 +1863,6 @@
     },
     "course": {
       "backToCourses": "Na pregled tečajeva",
-      "sequential": "Slijedno",
-      "random": "Nasumično",
       "completed": "Tečaj završen!",
       "roundFinished": "Nasumični krug završen — preostalo {{remaining}} zagonetki",
       "continueRemaining": "Nastavi s preostalima",
@@ -1930,7 +1880,6 @@
     },
     "weekly": {
       "backToWeekly": "Na pregled tjednih objava",
-      "label": "Tjedna objava",
       "noPuzzles": "Ova tjedna objava ne sadrži zagonetke za igranje.",
       "allSolved": "Sve zagonetke riješene!",
       "progress": "{{played}}/{{total}} odigrano · {{solved}} riješeno",
@@ -1979,15 +1928,12 @@
       "runningBuildTooltip": "Ovo izvođenje je izgradilo trenutno pokrenuti frontend.",
       "notConfigured": "Nije postavljen GitHub token. Postavi GitHub__Token (PAT s actions:read) na API-ju da omogućiš ovaj prikaz.",
       "noRuns": "Još nema izvođenja.",
-      "loadFailed": "CI status se ne može učitati",
       "started": "pokrenuto",
       "duration": "trajanje",
       "etaIn": "gotovo za ~{{time}}",
       "etaSoon": "samo što nije…",
       "etaUnknown": "u tijeku…",
       "etaTooltip": "Procijenjeni završetak — prosječno trajanje zadnjih izvođenja minus već proteklo vrijeme.",
-      "deployed": "Deployano",
-      "deployedTooltip": "Build (izvođenje) koji je izgradio trenutno pokrenutu sliku svakog stacka.",
       "watchStart": "Pomno prati: provjeravaj ovaj repozitorij svakih 10 s jednu minutu (ili dok tekuća akcija ne završi)",
       "watchStop": "Prekini praćenje (natrag na provjeru svake 2 minute)"
     },
@@ -2032,7 +1978,6 @@
       "deleteBook": "Izbriši knjigu",
       "deleteConfirm": "Izbrisati knjigu \"{{name}}\" s {{count}} zagonetki?",
       "deleted": "Knjiga \"{{name}}\" izbrisana",
-      "imported": "{{imported}} zagonetki uvezeno, {{skipped}} preskočeno",
       "importedCount": "{{count}} zagonetki uvezeno",
       "duplicatesCount": "{{count}} duplikata",
       "invalidCount": "{{count}} nevažeće",
@@ -2194,7 +2139,6 @@
       "noCourses": "Nema pronađenih tečajeva za ovog korisnika.",
       "loadError": "Popis tečajeva nije se mogao učitati.",
       "importError": "Preuzimanje nije moguće pokrenuti.",
-      "import": "Preuzmi u moj račun",
       "done": "U tvojim repertoarima",
       "failed": "Neuspjelo",
       "queued": "pozicija {{n}} u redu",
@@ -2260,8 +2204,7 @@
     "sourceBook": "Zagonetka tečaja / knjige",
     "love": "Sviđa mi se",
     "loved": "Voljeno",
-    "loveLast": "Zadnja zagonetka",
-    "addTooltip": "Dodaj u favorite"
+    "loveLast": "Zadnja zagonetka"
   },
   "games": {
     "title": "Spremljene partije",
@@ -2401,7 +2344,6 @@
       "duration": "Trajanje",
       "startedAt": "Početak",
       "endedAt": "Završetak",
-      "endedHint": "Zadano je „sad“. Postavi raniji datum/vrijeme za povratno bilježenje (mora biti nakon početka).",
       "startEndHint": "Promjena jednog polja automatski ažurira ostala; završetak nikad ne može biti u budućnosti.",
       "noteLabel": "Napomena (neobavezno)",
       "notePlaceholder": "npr. „sat s Alicom, otvaranja“",
@@ -2445,9 +2387,6 @@
       "full": "Svi ciljevi postignuti"
     },
     "cat": {
-      "puzzles": "Zagonetke",
-      "book": "Knjiga / Tečaj",
-      "chessable": "Chessable",
       "play": "Igranje"
     },
     "syncPlay": "Ažuriraj vrijeme igranja",
@@ -2683,7 +2622,6 @@
     },
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -2691,7 +2629,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",
@@ -2752,7 +2689,6 @@
     "importRepertoireDone": "„{{name}}” uvezen kao repertoar ({{count}} linija) — nalazi se pod Repertoari.",
     "importBookDone": "„{{name}}” uvezen kao knjiga ({{count}} zagonetki) — nalazi se pod Tečajevi.",
     "importFailed": "Uvoz nije uspio: {{error}}",
-    "importingBanner": "Uvozim „{{name}}”",
     "phase_queued": "u redu čekanja…",
     "phase_fetching": "dohvaćam tečaj…",
     "phase_importing": "uvozim…",
@@ -2776,7 +2712,6 @@
     "error": "Ljestvice nije moguće učitati.",
     "empty": "Još nema unosa.",
     "period": {
-      "daily": "Danas",
       "weekly": "Ovaj tjedan",
       "monthly": "Ovaj mjesec",
       "alltime": "Sveukupno"
@@ -2796,7 +2731,6 @@
   },
   "messages": {
     "title": "Poruke",
-    "emptyUser": "Još nema poruka. Administratorski tim će te kontaktirati ovdje.",
     "adminTeam": "Administratorski tim",
     "you": "Ti",
     "replyLabel": "Tvoj odgovor",
@@ -2816,15 +2750,8 @@
     },
     "update": "Ažuriraj ({{count}})",
     "updateTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (predmemorirane idu odmah, bez preuzimanja).",
-    "updateAll": "Ažuriraj sve ({{count}})",
-    "updateAllTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (potreban internet).",
-    "updateCached": "Iz predmemorije ({{count}})",
-    "updateCachedTip": "Obradi samo stavke sa spremljenim izvorom — bez preuzimanja.",
     "working": "Ažuriranje…",
     "started": "Ažuriranje pokrenuto — radi u pozadini.",
-    "doneLocal": "{{count}} ažurirano.",
-    "doneQueued": "{{count}} se osvježava u pozadini.",
-    "doneEmpty": "Sve je već ažurno.",
     "failed": "Ažuriranje nije uspjelo. Pokušajte ponovno.",
     "dismiss": "U redu"
   },
@@ -2856,7 +2783,6 @@
     "switchedTraining": "Trening način",
     "switchedEasy": "Jednostavan način",
     "switch": "Način igre",
-    "split": "{{training}} trening · {{easy}} jednostavno",
     "scope": {
       "puzzles": "Zagonetke",
       "endless": "Endless",

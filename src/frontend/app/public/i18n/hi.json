@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "चेंजलॉग",
     "quickstartTitle": "त्वरित शुरुआत",
-    "qs": {
-      "subscribeTitle": "सदस्यता लें",
-      "subscribeDesc": "खिलाड़ियों, पेयरिंग और परिणामों तक त्वरित पहुँच के लिए टूर्नामेंट की सदस्यता लें।",
-      "monitorTitle": "मॉनिटर",
-      "monitorDesc": "किसी टूर्नामेंट पर मॉनिटर चालू करें — नए राउंड स्वतः पहचाने और क्रॉल किए जाते हैं।",
-      "favoritesTitle": "पसंदीदा",
-      "favoritesDesc": "टूर्नामेंट दृश्य में त्वरित पहुँच के लिए खिलाड़ियों या टीमों को पसंदीदा में जोड़ें।",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "अपनी प्रोफ़ाइल में ChessResults ID जोड़ें — आगामी टूर्नामेंट में स्वतः सदस्यता हो जाती है।"
-    },
     "feedback": "फीडबैक / बग रिपोर्ट करें",
     "updateAvailable": "नया संस्करण उपलब्ध है।",
     "reload": "पुनः लोड करें"
@@ -517,7 +507,6 @@
       "giveUp": "हार मानें",
       "nextPuzzle": "अगली पहेली",
       "share": "पहेली साझा करें",
-      "loadPuzzle": "पहेली लोड करें",
       "reviewLast": "पिछली पहेली देखें",
       "endlessMode": "अनंत मोड",
       "analyze": "विश्लेषण करें"
@@ -532,15 +521,8 @@
       "streak": "लगातार",
       "best": "सर्वश्रेष्ठ"
     },
-    "settings": {
-      "tooltip": "सेटिंग्स"
-    },
     "filters": {
-      "title": "फ़िल्टर",
-      "visualization": "विज़ुअलाइज़ेशन: स्तर {{level}}",
       "difficulty": "कठिनाई",
-      "difficultyHint": "आपके Elo ({{elo}}) के आसपास की पहेलियाँ",
-      "depthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
       "skipSolved": "हल की गई छोड़ें",
       "worstTags": "5 सबसे कमज़ोर थीम का अभ्यास करें",
       "worstTagsHint": "उन थीम पर ध्यान दें जिन्हें आप सबसे कम हल करते हैं"
@@ -620,10 +602,7 @@
       "titleOptional": "शीर्षक (वैकल्पिक)"
     },
     "columns": {
-      "scheduled": "दिनांक",
-      "title": "शीर्षक",
-      "actions": "क्रियाएँ",
-      "progress": "Your progress"
+      "title": "शीर्षक"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "जारी रखें",
       "analyze": "विश्लेषण करें",
       "reviewLast": "पिछली पहेली का विश्लेषण करें",
-      "puzzleRating": "पहेली रेटिंग: {{rating}}",
       "levelRange": "स्तर {{level}} ({{min}}–{{max}})",
       "showTags": "टैग दिखाएं",
       "hideTags": "टैग छुपाएं",
@@ -815,7 +793,6 @@
       "giveUp": "हार मानें",
       "mouseslip": "माउस स्लिप",
       "nextPuzzle": "अगली पहेली",
-      "again": "फिर से",
       "skip": "छोड़ें",
       "viewFullGame": "पूरा खेल देखें",
       "analyze": "विश्लेषण करें",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "पाठ्यक्रम अवलोकन पर",
-      "sequential": "क्रमिक",
-      "random": "यादृच्छिक",
       "completed": "पाठ्यक्रम पूर्ण!",
       "toOverview": "अवलोकन पर",
       "wholeBook": "पूरी पुस्तक",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "साप्ताहिक पोस्ट अवलोकन पर",
-      "label": "साप्ताहिक पोस्ट",
       "noPuzzles": "इस साप्ताहिक पोस्ट में कोई खेलने योग्य पहेली नहीं है।",
       "allSolved": "सभी पहेलियाँ हल!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "उपयोगकर्ता",
       "books": "किताबें",
       "groups": "समूह",
-      "logs": "अनुरोध लॉग",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "किताब हटाएं",
       "deleteConfirm": "किताब \"{{name}}\" को {{count}} पहेली(यों) के साथ हटाएं?",
       "deleted": "किताब \"{{name}}\" हटाई गई",
-      "imported": "{{imported}} पहेली(याँ) आयात हुईं, {{skipped}} छोड़ी गईं",
       "importedCount": "{{count}} पहेली(याँ) आयात हुईं",
       "duplicatesCount": "{{count}} डुप्लिकेट",
       "invalidCount": "{{count}} अमान्य",
@@ -985,28 +957,6 @@
           "load": "प्रशिक्षण लक्ष्य लोड नहीं हो सका।",
           "save": "प्रशिक्षण लक्ष्य सहेजा नहीं जा सका।"
         }
-      }
-    },
-    "logs": {
-      "all": "सभी",
-      "filter": "फ़िल्टर",
-      "reset": "रीसेट",
-      "filtered": "(फ़िल्टर किया)",
-      "entryCount": "{{count}} प्रविष्टियाँ",
-      "status4xx": "4xx+ (त्रुटियाँ)",
-      "status5xx": "5xx (सर्वर)",
-      "status2xx": "2xx+ (ठीक है)",
-      "columns": {
-        "time": "समय",
-        "method": "विधि",
-        "path": "पथ",
-        "status": "स्थिति",
-        "duration": "अवधि",
-        "user": "उपयोगकर्ता",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "लॉग लोड करने में विफल"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "सभी लक्ष्य पूर्ण"
     },
     "cat": {
-      "puzzles": "पहेलियाँ",
-      "book": "किताब / पाठ्यक्रम",
       "play": "खेलना"
     },
     "syncPlay": "खेलने का समय अपडेट करें",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

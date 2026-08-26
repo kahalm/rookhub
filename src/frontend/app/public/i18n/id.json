@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Catatan Perubahan",
     "quickstartTitle": "Mulai Cepat",
-    "qs": {
-      "subscribeTitle": "Berlangganan",
-      "subscribeDesc": "Berlangganan turnamen untuk akses cepat ke pemain, pasangan, dan hasil.",
-      "monitorTitle": "Pantau",
-      "monitorDesc": "Aktifkan pemantauan pada turnamen — babak baru terdeteksi dan di-crawl secara otomatis.",
-      "favoritesTitle": "Favorit",
-      "favoritesDesc": "Tandai pemain atau tim sebagai favorit untuk akses cepat di tampilan turnamen.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Tambahkan ChessResults ID Anda di profil — turnamen mendatang akan dilanggani secara otomatis."
-    },
     "feedback": "Umpan balik / Laporkan bug",
     "updateAvailable": "Versi baru tersedia.",
     "reload": "Muat ulang"
@@ -517,7 +507,6 @@
       "giveUp": "Menyerah",
       "nextPuzzle": "Puzzle Berikutnya",
       "share": "Bagikan Puzzle",
-      "loadPuzzle": "Muat Puzzle",
       "reviewLast": "Tinjau puzzle terakhir",
       "endlessMode": "Mode Tanpa Batas",
       "analyze": "Analisis"
@@ -532,15 +521,8 @@
       "streak": "Streak",
       "best": "Terbaik"
     },
-    "settings": {
-      "tooltip": "Pengaturan"
-    },
     "filters": {
-      "title": "Filter",
-      "visualization": "Visualisasi: Level {{level}}",
       "difficulty": "Kesulitan",
-      "difficultyHint": "Puzzle di sekitar Elo Anda ({{elo}})",
-      "depthHint": "1 (lemah) – 24 (kuat)",
       "skipSolved": "Lewati yang sudah diselesaikan",
       "worstTags": "Latih 5 tema terlemah",
       "worstTagsHint": "Fokus pada tema yang paling sulit kamu selesaikan"
@@ -620,10 +602,7 @@
       "titleOptional": "Judul (opsional)"
     },
     "columns": {
-      "scheduled": "Tanggal",
-      "title": "Judul",
-      "actions": "Tindakan",
-      "progress": "Your progress"
+      "title": "Judul"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Lanjutkan",
       "analyze": "Analisis",
       "reviewLast": "Analisis puzzle terakhir",
-      "puzzleRating": "Rating Puzzle: {{rating}}",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Tampilkan tag",
       "hideTags": "Sembunyikan tag",
@@ -815,7 +793,6 @@
       "giveUp": "Menyerah",
       "mouseslip": "Salah klik",
       "nextPuzzle": "Puzzle berikutnya",
-      "again": "Lagi",
       "skip": "Lewati",
       "viewFullGame": "Lihat permainan penuh",
       "analyze": "Analisis",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Ke ikhtisar kursus",
-      "sequential": "Berurutan",
-      "random": "Acak",
       "completed": "Kursus selesai!",
       "toOverview": "Ke ikhtisar",
       "wholeBook": "Seluruh buku",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Ke ikhtisar posting mingguan",
-      "label": "Posting Mingguan",
       "noPuzzles": "Posting mingguan ini tidak berisi puzzle yang bisa dimainkan.",
       "allSolved": "Semua puzzle diselesaikan!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Pengguna",
       "books": "Buku",
       "groups": "Grup",
-      "logs": "Log Permintaan",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Hapus buku",
       "deleteConfirm": "Hapus buku \"{{name}}\" dengan {{count}} puzzle?",
       "deleted": "Buku \"{{name}}\" dihapus",
-      "imported": "{{imported}} puzzle diimpor, {{skipped}} dilewati",
       "importedCount": "{{count}} puzzle diimpor",
       "duplicatesCount": "{{count}} duplikat",
       "invalidCount": "{{count}} tidak valid",
@@ -985,28 +957,6 @@
           "load": "Gagal memuat tujuan latihan.",
           "save": "Gagal menyimpan tujuan latihan."
         }
-      }
-    },
-    "logs": {
-      "all": "Semua",
-      "filter": "Filter",
-      "reset": "Reset",
-      "filtered": "(difilter)",
-      "entryCount": "{{count}} entri",
-      "status4xx": "4xx+ (kesalahan)",
-      "status5xx": "5xx (server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Waktu",
-        "method": "Metode",
-        "path": "Jalur",
-        "status": "Status",
-        "duration": "Durasi",
-        "user": "Pengguna",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Gagal memuat log"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Semua tujuan tercapai"
     },
     "cat": {
-      "puzzles": "Puzzle",
-      "book": "Buku / Kursus",
       "play": "Bermain"
     },
     "syncPlay": "Perbarui waktu bermain",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

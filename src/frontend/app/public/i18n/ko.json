@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "변경 이력",
     "quickstartTitle": "빠른 시작",
-    "qs": {
-      "subscribeTitle": "구독",
-      "subscribeDesc": "대회를 구독하여 선수, 대진표, 결과에 빠르게 접근하세요.",
-      "monitorTitle": "모니터",
-      "monitorDesc": "대회 모니터를 활성화하면 새 라운드가 자동으로 감지되고 수집됩니다.",
-      "favoritesTitle": "즐겨찾기",
-      "favoritesDesc": "대회 뷰에서 빠른 접근을 위해 선수나 팀을 즐겨찾기로 등록하세요.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "프로필에 ChessResults ID를 추가하면 예정된 대회가 자동으로 구독됩니다."
-    },
     "feedback": "피드백 / 버그 신고",
     "updateAvailable": "새 버전이 출시되었습니다.",
     "reload": "새로고침"
@@ -517,7 +507,6 @@
       "giveUp": "포기",
       "nextPuzzle": "다음 퍼즐",
       "share": "퍼즐 공유",
-      "loadPuzzle": "퍼즐 불러오기",
       "reviewLast": "마지막 퍼즐 복습",
       "endlessMode": "무한 모드",
       "analyze": "분석"
@@ -532,15 +521,8 @@
       "streak": "연속",
       "best": "최고"
     },
-    "settings": {
-      "tooltip": "설정"
-    },
     "filters": {
-      "title": "필터",
-      "visualization": "시각화: 레벨 {{level}}",
       "difficulty": "난이도",
-      "difficultyHint": "내 Elo({{elo}}) 기준 퍼즐",
-      "depthHint": "1(약) – 24(강)",
       "skipSolved": "풀은 문제 건너뜀",
       "worstTags": "가장 취약한 테마 5개 훈련",
       "worstTagsHint": "정답률이 가장 낮은 테마에 집중"
@@ -620,10 +602,7 @@
       "titleOptional": "제목 (선택)"
     },
     "columns": {
-      "scheduled": "날짜",
-      "title": "제목",
-      "actions": "작업",
-      "progress": "Your progress"
+      "title": "제목"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "계속",
       "analyze": "분석",
       "reviewLast": "마지막 퍼즐 분석",
-      "puzzleRating": "퍼즐 등급: {{rating}}",
       "levelRange": "레벨 {{level}} ({{min}}–{{max}})",
       "showTags": "태그 보기",
       "hideTags": "태그 숨기기",
@@ -815,7 +793,6 @@
       "giveUp": "포기",
       "mouseslip": "실수 취소",
       "nextPuzzle": "다음 퍼즐",
-      "again": "다시",
       "skip": "건너뜀",
       "viewFullGame": "전체 게임 보기",
       "analyze": "분석",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "코스 개요로",
-      "sequential": "순차",
-      "random": "랜덤",
       "completed": "코스 완료!",
       "toOverview": "개요로",
       "wholeBook": "책 전체",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "주간 게시물 목록으로",
-      "label": "주간 게시물",
       "noPuzzles": "이 주간 게시물에는 플레이 가능한 퍼즐이 없습니다.",
       "allSolved": "모든 퍼즐 완료!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "사용자",
       "books": "교재",
       "groups": "그룹",
-      "logs": "요청 로그",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "교재 삭제",
       "deleteConfirm": "교재 \"{{name}}\"({{count}}개 퍼즐)을 삭제할까요?",
       "deleted": "교재 \"{{name}}\" 삭제됨",
-      "imported": "{{imported}}개 퍼즐 가져옴, {{skipped}}개 건너뜀",
       "importedCount": "{{count}}개 퍼즐 가져옴",
       "duplicatesCount": "{{count}}개 중복",
       "invalidCount": "{{count}}개 유효하지 않음",
@@ -985,28 +957,6 @@
           "load": "훈련 목표를 불러올 수 없습니다.",
           "save": "훈련 목표를 저장할 수 없습니다."
         }
-      }
-    },
-    "logs": {
-      "all": "전체",
-      "filter": "필터",
-      "reset": "초기화",
-      "filtered": "(필터됨)",
-      "entryCount": "{{count}}개 항목",
-      "status4xx": "4xx+ (오류)",
-      "status5xx": "5xx (서버)",
-      "status2xx": "2xx+ (정상)",
-      "columns": {
-        "time": "시간",
-        "method": "메서드",
-        "path": "경로",
-        "status": "상태",
-        "duration": "소요 시간",
-        "user": "사용자",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "로그 로드 실패"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "모든 목표 달성"
     },
     "cat": {
-      "puzzles": "퍼즐",
-      "book": "교재 / 코스",
       "play": "플레이"
     },
     "syncPlay": "플레이 시간 업데이트",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

@@ -2,16 +2,11 @@
   "repertoireTrainer": {
     "train": "Train",
     "title": "Repertoire trainer",
-    "white": "White",
-    "black": "Black",
-    "noCards": "Nothing due right now — come back later, or play through the repertoire to add new cards.",
     "done": "Session complete! {{correct}} of {{total}} correct.",
     "again": "Train again",
-    "remaining": "Remaining",
     "whiteToMove": "White to move — play your repertoire move.",
     "blackToMove": "Black to move — play your repertoire move.",
     "correct": "Correct!",
-    "tolerated": "Playable — but the repertoire move is {{move}}.",
     "toleratedPlayable": "Playable move — but not the repertoire choice. Find the repertoire move on the next round.",
     "wrong": "Not in the repertoire. The move is {{move}}.",
     "wrongNoHint": "Not in the repertoire — try again or reveal the solution.",
@@ -208,7 +203,6 @@
     "themeDark": "Dark theme",
     "help": "Help",
     "chessable": "Chessable",
-    "messages": "Messages",
     "leaderboards": "Leaderboards",
     "remembered": "Remembered",
     "groupTraining": "Training",
@@ -345,7 +339,6 @@
     },
     "courses": {
       "title": "Courses",
-      "subtitle": "Work through your books",
       "open": "Open courses",
       "count": "{{count}} courses"
     },
@@ -393,7 +386,6 @@
     "edit": {
       "customize": "Customize",
       "done": "Done",
-      "reset": "Reset",
       "default": "Default",
       "hint": "Toggle the eye to show or hide a tile; reorder with the arrows or by drag & drop.",
       "dragAria": "Drag to reorder tile",
@@ -477,32 +469,6 @@
   },
   "pgnViewer": {
     "gameLabel": "Game",
-    "catalog": {
-      "title": "Catalog",
-      "listTitle": "Available courses & repertoires",
-      "empty": "No catalog has been shared with you yet.",
-      "request": "Request",
-      "requested": "Requested — the owner will decide.",
-      "requestFailed": "Request failed.",
-      "pending": "Requested",
-      "open": "Open",
-      "type": {
-        "course": "Course",
-        "repertoire": "Repertoire"
-      },
-      "admin": {
-        "grantsTitle": "Who can see my catalog?",
-        "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
-        "users": "Users",
-        "groups": "Groups",
-        "grantsSaved": "Access saved.",
-        "requestsTitle": "Open requests",
-        "noRequests": "No open requests.",
-        "approve": "Approve",
-        "decline": "Decline",
-        "approved": "Approved & shared."
-      }
-    },
     "nav": {
       "first": "First move",
       "previous": "Previous move",
@@ -533,7 +499,6 @@
     "chessResultsApplied": "ChessResults data applied",
     "fideApplied": "FIDE data applied",
     "discord": {
-      "catalog": "Catalog",
       "title": "Discord",
       "hint": "Open a personal link from the RookHub Discord bot (its /link command or a puzzle DM) to connect your Discord account.",
       "unlink": "Unlink",
@@ -781,7 +746,7 @@
       "undo": "Undo last move",
       "reset": "Clear filter"
     },
-        "list": {
+    "list": {
       "title": "My Repertoires",
       "new": "New Repertoire",
       "fileCount": "{{count}} files",
@@ -848,7 +813,6 @@
       "empty": "No lines found in this repertoire.",
       "noChapter": "(No chapter)",
       "toggleChapter": "Expand / collapse chapter",
-      "trainChapter": "Train this chapter",
       "color": {
         "title": "Trained side",
         "white": "White",
@@ -1057,7 +1021,6 @@
       "giveUp": "Give Up",
       "nextPuzzle": "Next Puzzle",
       "share": "Share Puzzle",
-      "loadPuzzle": "Load Puzzle",
       "reviewLast": "Review last puzzle",
       "endlessMode": "Endless Mode",
       "analyze": "Analyze",
@@ -1066,7 +1029,6 @@
       "showOriginalSolution": "Show original solution"
     },
     "challenge": {
-      "sent": "Challenge sent",
       "sentCount": "Challenge sent to {{count}} friend(s)",
       "selectAll": "Select all",
       "send": "Send ({{count}})",
@@ -1090,7 +1052,6 @@
       "best": "Best"
     },
     "settings": {
-      "tooltip": "Settings",
       "title": "Settings",
       "pieces": "Pieces",
       "board": "Board Theme",
@@ -1118,11 +1079,7 @@
     "anarchyHint2": "Google en passant. 📖 Your pawn can take en passant, and under the sacred anarchy rule that's the only legal move.",
     "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Grab that pawn — everything else is illegal this move. Actual zap.",
     "filters": {
-      "title": "Filters",
-      "visualization": "Visualization: Level {{level}}",
       "difficulty": "Difficulty",
-      "difficultyHint": "Puzzles around your Elo ({{elo}})",
-      "depthHint": "1 (weak) – 24 (strong)",
       "skipSolved": "Skip solved",
       "worstTags": "Train 5 worst themes",
       "worstTagsHint": "Focus on the themes you solve worst"
@@ -1603,10 +1560,7 @@
       "descriptionOptional": "Description (optional)"
     },
     "columns": {
-      "scheduled": "Date",
-      "title": "Title",
-      "actions": "Actions",
-      "progress": "Your progress"
+      "title": "Title"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -1779,7 +1733,6 @@
       "continue": "Continue",
       "analyze": "Analyze",
       "reviewLast": "Analyze last puzzle",
-      "puzzleRating": "Puzzle Rating: {{rating}}",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Show tags",
       "hideTags": "Hide tags",
@@ -1870,7 +1823,6 @@
       "giveUp": "Give Up",
       "mouseslip": "Mouseslip",
       "nextPuzzle": "Next puzzle",
-      "again": "Again",
       "skip": "Skip",
       "viewFullGame": "View full game",
       "analyze": "Analyze",
@@ -1911,8 +1863,6 @@
     },
     "course": {
       "backToCourses": "To course overview",
-      "sequential": "Sequential",
-      "random": "Random",
       "completed": "Course completed!",
       "roundFinished": "Random round finished — {{remaining}} puzzles still to solve",
       "continueRemaining": "Continue with remaining",
@@ -1930,7 +1880,6 @@
     },
     "weekly": {
       "backToWeekly": "To weekly post overview",
-      "label": "Weekly Post",
       "noPuzzles": "This weekly post contains no playable puzzles.",
       "allSolved": "All puzzles solved!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved",
@@ -1979,15 +1928,12 @@
       "runningBuildTooltip": "This run built the currently running frontend.",
       "notConfigured": "No GitHub token configured. Set GitHub__Token (a PAT with actions:read) on the API to enable this view.",
       "noRuns": "No runs yet.",
-      "loadFailed": "Could not load CI status",
       "started": "started",
       "duration": "took",
       "etaIn": "done in ~{{time}}",
       "etaSoon": "finishing…",
       "etaUnknown": "running…",
       "etaTooltip": "Estimated completion — the average duration of the recent runs minus the time already elapsed.",
-      "deployed": "Deployed",
-      "deployedTooltip": "The build (run) that produced each stack's currently running image.",
       "watchStart": "Watch closely: check this repo every 10s for a minute (or until the running action finishes)",
       "watchStop": "Stop watching (back to the 2-minute check)"
     },
@@ -2032,7 +1978,6 @@
       "deleteBook": "Delete book",
       "deleteConfirm": "Delete book \"{{name}}\" with {{count}} puzzle(s)?",
       "deleted": "Book \"{{name}}\" deleted",
-      "imported": "{{imported}} puzzle(s) imported, {{skipped}} skipped",
       "importedCount": "{{count}} puzzle(s) imported",
       "duplicatesCount": "{{count}} duplicate(s)",
       "invalidCount": "{{count}} invalid",
@@ -2194,7 +2139,6 @@
       "noCourses": "No courses found for this user.",
       "loadError": "Could not load the course list.",
       "importError": "Could not start the download.",
-      "import": "Download to my account",
       "done": "In your repertoires",
       "failed": "Failed",
       "queued": "position {{n}} in queue",
@@ -2260,8 +2204,7 @@
     "sourceBook": "Course / book puzzle",
     "love": "Love it",
     "loved": "Loved",
-    "loveLast": "Last puzzle",
-    "addTooltip": "Add to favorites"
+    "loveLast": "Last puzzle"
   },
   "games": {
     "title": "Saved games",
@@ -2401,7 +2344,6 @@
       "duration": "Duration",
       "startedAt": "Started at",
       "endedAt": "Ended at",
-      "endedHint": "Default is now. Set an earlier time to backdate the entry (must be after the start time).",
       "startEndHint": "Editing one field updates the others automatically; the end can never be in the future.",
       "noteLabel": "Note (optional)",
       "notePlaceholder": "e.g. \"lesson with Alice, opening drills\"",
@@ -2445,9 +2387,6 @@
       "full": "All goals reached"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "chessable": "Chessable",
       "play": "Playing"
     },
     "syncPlay": "Update playing time",
@@ -2683,7 +2622,6 @@
     },
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "helpLink": "How do I get my bearer token? (help)",
     "helpIntro": "Get your Chessable bearer token from the browser:",
     "helpStep1": "Open Chessable, then the browser DevTools (F12) → Network tab.",
@@ -2720,7 +2658,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "refreshCourses": "Refresh courses",
     "coursesCachedAt": "As of {{date}}",
@@ -2741,7 +2678,6 @@
     "importRepertoireDone": "“{{name}}” imported as repertoire ({{count}} lines) — find it under Repertoires.",
     "importBookDone": "“{{name}}” imported as book ({{count}} puzzles) — find it under Courses.",
     "importFailed": "Import failed: {{error}}",
-    "importingBanner": "Importing “{{name}}”",
     "phase_queued": "queued…",
     "phase_fetching": "fetching course…",
     "phase_importing": "importing…",
@@ -2773,7 +2709,6 @@
   },
   "messages": {
     "title": "Messages",
-    "emptyUser": "No messages yet. The admin team will reach you here.",
     "adminTeam": "Admin team",
     "you": "You",
     "replyLabel": "Your reply",
@@ -2787,7 +2722,6 @@
     "error": "Could not load the leaderboards.",
     "empty": "No entries yet.",
     "period": {
-      "daily": "Today",
       "weekly": "This week",
       "monthly": "This month",
       "alltime": "All time"
@@ -2816,15 +2750,8 @@
     },
     "update": "Update ({{count}})",
     "updateTip": "Reprocess items with a stored source and re-download Chessable items (cached ones update instantly, no download).",
-    "updateAll": "Update all ({{count}})",
-    "updateAllTip": "Reprocess items with a stored source and re-download Chessable items (needs internet).",
-    "updateCached": "From cache ({{count}})",
-    "updateCachedTip": "Only reprocess items with a stored source — no download.",
     "working": "Updating…",
     "started": "Update started — running in the background.",
-    "doneLocal": "{{count}} updated.",
-    "doneQueued": "{{count}} being refreshed in the background.",
-    "doneEmpty": "Everything is already up to date.",
     "failed": "Update failed. Please try again.",
     "dismiss": "Got it"
   },
@@ -2856,7 +2783,6 @@
     "switchedTraining": "Training mode",
     "switchedEasy": "Easy mode",
     "switch": "Playing style",
-    "split": "{{training}} training · {{easy}} easy",
     "scope": {
       "puzzles": "Puzzles",
       "endless": "Endless",

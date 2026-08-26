@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Changelog",
     "quickstartTitle": "Szybki start",
-    "qs": {
-      "subscribeTitle": "Subskrybuj",
-      "subscribeDesc": "Subskrybuj turnieje, aby mieć szybki dostęp do zawodników, par i wyników.",
-      "monitorTitle": "Monitoruj",
-      "monitorDesc": "Włącz monitorowanie turnieju — nowe rundy są wykrywane i pobierane automatycznie.",
-      "favoritesTitle": "Ulubione",
-      "favoritesDesc": "Oznacz zawodników lub drużyny jako ulubione, aby mieć do nich szybki dostęp w widoku turnieju.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Dodaj swój ChessResults ID w profilu — nadchodzące turnieje będą subskrybowane automatycznie."
-    },
     "feedback": "Opinia / Zgłoś błąd",
     "updateAvailable": "Dostępna jest nowa wersja.",
     "reload": "Odśwież"
@@ -517,7 +507,6 @@
       "giveUp": "Poddaj się",
       "nextPuzzle": "Następne zadanie",
       "share": "Udostępnij zadanie",
-      "loadPuzzle": "Załaduj zadanie",
       "reviewLast": "Przejrzyj ostatnie zadanie",
       "endlessMode": "Tryb nieskończony",
       "analyze": "Analizuj"
@@ -532,15 +521,8 @@
       "streak": "Seria",
       "best": "Najlepsza"
     },
-    "settings": {
-      "tooltip": "Ustawienia"
-    },
     "filters": {
-      "title": "Filtry",
-      "visualization": "Wizualizacja: poziom {{level}}",
       "difficulty": "Trudność",
-      "difficultyHint": "Zadania w okolicach Twojego Elo ({{elo}})",
-      "depthHint": "1 (słabe) – 24 (silne)",
       "skipSolved": "Pomijaj rozwiązane",
       "worstTags": "Trenuj 5 najsłabszych tematów",
       "worstTagsHint": "Skup się na tematach, które rozwiązujesz najsłabiej"
@@ -620,10 +602,7 @@
       "titleOptional": "Tytuł (opcjonalny)"
     },
     "columns": {
-      "scheduled": "Data",
-      "title": "Tytuł",
-      "actions": "Akcje",
-      "progress": "Your progress"
+      "title": "Tytuł"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Kontynuuj",
       "analyze": "Analizuj",
       "reviewLast": "Analizuj ostatnie zadanie",
-      "puzzleRating": "Ocena zadania: {{rating}}",
       "levelRange": "Poziom {{level}} ({{min}}–{{max}})",
       "showTags": "Pokaż tagi",
       "hideTags": "Ukryj tagi",
@@ -815,7 +793,6 @@
       "giveUp": "Poddaj się",
       "mouseslip": "Pomyłka myszy",
       "nextPuzzle": "Następne zadanie",
-      "again": "Jeszcze raz",
       "skip": "Pomiń",
       "viewFullGame": "Obejrzyj pełną partię",
       "analyze": "Analizuj",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Do przeglądu kursu",
-      "sequential": "Kolejno",
-      "random": "Losowo",
       "completed": "Kurs ukończony!",
       "toOverview": "Do przeglądu",
       "wholeBook": "Cała książka",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Do przeglądu tygodniowych postów",
-      "label": "Tygodniowy post",
       "noPuzzles": "Ten tygodniowy post nie zawiera zadań do rozwiązania.",
       "allSolved": "Wszystkie zadania rozwiązane!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Użytkownicy",
       "books": "Książki",
       "groups": "Grupy",
-      "logs": "Logi żądań",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Usuń książkę",
       "deleteConfirm": "Usunąć książkę „{{name}}” z {{count}} zadaniem/zadaniami?",
       "deleted": "Książka „{{name}}” usunięta",
-      "imported": "{{imported}} zadanie/zadania zaimportowane, {{skipped}} pominięto",
       "importedCount": "{{count}} zadanie/zadania zaimportowane",
       "duplicatesCount": "{{count}} duplikat(ów)",
       "invalidCount": "{{count}} nieprawidłowych",
@@ -985,28 +957,6 @@
           "load": "Nie udało się załadować celu treningowego.",
           "save": "Nie udało się zapisać celu treningowego."
         }
-      }
-    },
-    "logs": {
-      "all": "Wszystkie",
-      "filter": "Filtr",
-      "reset": "Resetuj",
-      "filtered": "(przefiltrowane)",
-      "entryCount": "{{count}} wpisów",
-      "status4xx": "4xx+ (błędy)",
-      "status5xx": "5xx (serwer)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Czas",
-        "method": "Metoda",
-        "path": "Ścieżka",
-        "status": "Status",
-        "duration": "Czas trwania",
-        "user": "Użytkownik",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Nie udało się załadować logów"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Wszystkie cele osiągnięte"
     },
     "cat": {
-      "puzzles": "Zadania",
-      "book": "Książka / Kurs",
       "play": "Gra"
     },
     "syncPlay": "Aktualizuj czas gry",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",

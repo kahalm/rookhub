@@ -49,16 +49,6 @@
   "app": {
     "changelogTitle": "Ändringslogg",
     "quickstartTitle": "Snabbstart",
-    "qs": {
-      "subscribeTitle": "Prenumerera",
-      "subscribeDesc": "Prenumerera på turneringar för snabb åtkomst till spelare, parningar och resultat.",
-      "monitorTitle": "Övervaka",
-      "monitorDesc": "Aktivera övervakning av en turnering — nya omgångar upptäcks och hämtas automatiskt.",
-      "favoritesTitle": "Favoriter",
-      "favoritesDesc": "Markera spelare eller lag som favoriter för snabb åtkomst i turneringsvyn.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Lägg till ditt ChessResults ID i din profil — kommande turneringar prenumereras automatiskt."
-    },
     "feedback": "Feedback / Rapportera ett fel",
     "updateAvailable": "En ny version är tillgänglig.",
     "reload": "Ladda om"
@@ -517,7 +507,6 @@
       "giveUp": "Ge upp",
       "nextPuzzle": "Nästa uppgift",
       "share": "Dela uppgift",
-      "loadPuzzle": "Ladda uppgift",
       "reviewLast": "Granska senaste uppgiften",
       "endlessMode": "Ändlöst läge",
       "analyze": "Analysera"
@@ -532,15 +521,8 @@
       "streak": "Svit",
       "best": "Bäst"
     },
-    "settings": {
-      "tooltip": "Inställningar"
-    },
     "filters": {
-      "title": "Filter",
-      "visualization": "Visualisering: Nivå {{level}}",
       "difficulty": "Svårighetsgrad",
-      "difficultyHint": "Uppgifter kring ditt Elo ({{elo}})",
-      "depthHint": "1 (svag) – 24 (stark)",
       "skipSolved": "Hoppa över lösta",
       "worstTags": "Träna dina 5 svagaste teman",
       "worstTagsHint": "Fokusera på de teman du löser sämst"
@@ -620,10 +602,7 @@
       "titleOptional": "Titel (valfritt)"
     },
     "columns": {
-      "scheduled": "Datum",
-      "title": "Titel",
-      "actions": "Åtgärder",
-      "progress": "Your progress"
+      "title": "Titel"
     },
     "progress": {
       "solvedLabel": "Solved",
@@ -738,7 +717,6 @@
       "continue": "Fortsätt",
       "analyze": "Analysera",
       "reviewLast": "Analysera senaste uppgiften",
-      "puzzleRating": "Uppgiftsbetyg: {{rating}}",
       "levelRange": "Nivå {{level}} ({{min}}–{{max}})",
       "showTags": "Visa taggar",
       "hideTags": "Dölj taggar",
@@ -815,7 +793,6 @@
       "giveUp": "Ge upp",
       "mouseslip": "Råkade flytta",
       "nextPuzzle": "Nästa uppgift",
-      "again": "Igen",
       "skip": "Hoppa över",
       "viewFullGame": "Visa hela partiet",
       "analyze": "Analysera",
@@ -853,8 +830,6 @@
     },
     "course": {
       "backToCourses": "Till kursöversikt",
-      "sequential": "Sekventiell",
-      "random": "Slumpmässig",
       "completed": "Kursen avslutad!",
       "toOverview": "Till översikt",
       "wholeBook": "Hela boken",
@@ -864,7 +839,6 @@
     },
     "weekly": {
       "backToWeekly": "Till veckoinläggsöversikt",
-      "label": "Veckoinlägg",
       "noPuzzles": "Det här veckoinlägget innehåller inga spelbara uppgifter.",
       "allSolved": "Alla uppgifter lösta!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
@@ -883,7 +857,6 @@
       "users": "Användare",
       "books": "Böcker",
       "groups": "Grupper",
-      "logs": "Begäranloggar",
       "daily": "Daily Puzzle"
     },
     "users": {
@@ -920,7 +893,6 @@
       "deleteBook": "Ta bort bok",
       "deleteConfirm": "Ta bort boken \"{{name}}\" med {{count}} uppgift(er)?",
       "deleted": "Boken \"{{name}}\" borttagen",
-      "imported": "{{imported}} uppgift(er) importerade, {{skipped}} hoppades över",
       "importedCount": "{{count}} uppgift(er) importerade",
       "duplicatesCount": "{{count}} duplikat",
       "invalidCount": "{{count}} ogiltiga",
@@ -985,28 +957,6 @@
           "load": "Det gick inte att läsa in träningsmålet.",
           "save": "Det gick inte att spara träningsmålet."
         }
-      }
-    },
-    "logs": {
-      "all": "Alla",
-      "filter": "Filter",
-      "reset": "Återställ",
-      "filtered": "(filtrerade)",
-      "entryCount": "{{count}} poster",
-      "status4xx": "4xx+ (fel)",
-      "status5xx": "5xx (server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Tid",
-        "method": "Metod",
-        "path": "Sökväg",
-        "status": "Status",
-        "duration": "Varaktighet",
-        "user": "Användare",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Det gick inte att läsa in loggar"
       }
     },
     "daily": {
@@ -1114,8 +1064,6 @@
       "full": "Alla mål uppnådda"
     },
     "cat": {
-      "puzzles": "Uppgifter",
-      "book": "Bok / Kurs",
       "play": "Spelande"
     },
     "syncPlay": "Uppdatera speltid",
@@ -1140,20 +1088,10 @@
       "other": "Other"
     }
   },
-  "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
-  },
   "chessable": {
     "title": "Connect Chessable",
     "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
     "bearerLabel": "Bearer token",
-    "bearerHint": "You can grab the bearer from the browser: Chessable → DevTools → Network → header \"authorization: Bearer …\"",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Token saved.",
@@ -1161,7 +1099,6 @@
     "deleted": "Token deleted.",
     "test": "Test connection",
     "testing": "Testing…",
-    "loadCourses": "Load courses",
     "loadingCourses": "Loading courses…",
     "noToken": "No token stored yet.",
     "currentToken": "Stored: {{masked}}",
