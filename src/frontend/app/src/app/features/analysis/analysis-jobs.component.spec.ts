@@ -77,6 +77,22 @@ describe('AnalysisJobsComponent', () => {
       { queryParams: { fen: START, engine: 'eei_bg', depth: 30, lines: 2 } });
   });
 
+  it('while running it shows the live depth and the live speed, not the stored one', async () => {
+    const { fixture, c, http } = await make();
+    // Fortsetzung: Ergebnis von Tiefe 18, die Engine rechnet gerade erst wieder bei 7 hoch.
+    http.expectOne('/api/analysis-jobs').flush([job(1, { status: 'running', currentDepth: 7, currentNps: 5_400_000 })]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('analysisJobs.runningAt');       // „rechnet bei 7"
+    expect(c.speedOf(c.jobs[0])).toBe('5.400 kN/s');        // laufender Wert, NICHT die 20 kN/s des Ergebnisses
+
+    // Pausiert der Auftrag, zählt wieder das gespeicherte Ergebnis.
+    c.jobs = [{ ...c.jobs[0], status: 'paused', currentDepth: 0, currentNps: 0 } as any];
+    expect(c.speedOf(c.jobs[0])).toBe('20 kN/s');
+  });
+
   it('expanding shows the stored lines as SAN and saving sends the new target', async () => {
     const { fixture, c, http } = await make();
     http.expectOne('/api/analysis-jobs').flush([job(1)]);

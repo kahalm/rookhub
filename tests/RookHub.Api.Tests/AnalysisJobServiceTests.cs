@@ -368,7 +368,7 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PickNext_PrefersLastRunJob_ThenOldest_SkipsBackoff()
+    public async Task PickNextForEngine_PrefersLastRunJob_ThenOldest_SkipsBackoff()
     {
         var u = await UserWithBackgroundEngineAsync();
         var now = DateTime.UtcNow;
@@ -378,16 +378,33 @@ public class AnalysisJobServiceTests : IDisposable
         _db.AnalysisJobs.AddRange(older, sticky, backoff);
         await _db.SaveChangesAsync();
 
-        var pick = await _svc.PickNextAsync(u, now);
+        var pick = await _svc.PickNextForEngineAsync("e", now);
         Assert.Equal(sticky.Id, pick!.Id);           // warme Hashtabelle zuerst
 
         sticky.Status = AnalysisJobStatus.Done; await _db.SaveChangesAsync();
-        pick = await _svc.PickNextAsync(u, now);
+        pick = await _svc.PickNextForEngineAsync("e", now);
         Assert.Equal(older.Id, pick!.Id);            // sonst FIFO; Backoff-Auftrag übersprungen
 
         older.Status = AnalysisJobStatus.Done; await _db.SaveChangesAsync();
-        Assert.Null(await _svc.PickNextAsync(u, now));
-        Assert.NotNull(await _svc.PickNextAsync(u, now.AddMinutes(6)));   // Backoff abgelaufen
+        Assert.Null(await _svc.PickNextForEngineAsync("e", now));
+        Assert.NotNull(await _svc.PickNextForEngineAsync("e", now.AddMinutes(6)));   // Backoff abgelaufen
+    }
+
+    [Fact]
+    public async Task JobsOnDifferentEngines_AreIndependentQueues()
+    {
+        // Die knappe Ressource ist die ENGINE, nicht der Nutzer: zwei Aufträge auf zwei Engines laufen parallel.
+        var u = await UserWithBackgroundEngineAsync();
+        var now = DateTime.UtcNow;
+        _db.AnalysisJobs.AddRange(
+            new AnalysisJob { UserId = u, Fen = START, EngineId = "eei_hier", TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Running, CreatedAt = now.AddMinutes(-9) },
+            new AnalysisJob { UserId = u, Fen = START, EngineId = "eei_dort", TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Queued, CreatedAt = now.AddMinutes(-8) });
+        await _db.SaveChangesAsync();
+
+        var engines = await _svc.EnginesWithRunnableJobsAsync(now);
+        Assert.Equal(["eei_dort"], engines);                                  // nur die mit wartender Arbeit
+        Assert.NotNull(await _svc.PickNextForEngineAsync("eei_dort", now));   // läuft, obwohl der User schon rechnet
+        Assert.Null(await _svc.PickNextForEngineAsync("eei_hier", now));      // dort ist der Auftrag bereits Running
     }
 
     [Fact]

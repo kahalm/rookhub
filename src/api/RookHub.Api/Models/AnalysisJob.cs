@@ -73,6 +73,14 @@ public class AnalysisJob
     /// <summary>Aufsummierte Rechenzeit über alle Läufe (Sekunden).</summary>
     public int SecondsSpent { get; set; }
 
+    /// <summary>Tiefe der zuletzt EMPFANGENEN Zeile — auch wenn sie flacher ist als <see cref="ReachedDepth"/>.
+    /// Nach einer Fortsetzung rechnet die Engine erst wieder von Tiefe 1 hoch; ohne diesen Wert stünde die
+    /// Anzeige minutenlang still, obwohl sie längst arbeitet („rechnet bei 12, Ergebnis von 29").</summary>
+    public int CurrentDepth { get; set; }
+
+    /// <summary>Suchtempo der zuletzt empfangenen Zeile (Knoten/Sekunde) — reine Anzeige.</summary>
+    public int CurrentNps { get; set; }
+
     [MaxLength(500)]
     public string? LastError { get; set; }
 

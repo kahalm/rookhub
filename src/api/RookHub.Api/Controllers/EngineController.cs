@@ -210,9 +210,9 @@ public class EngineController : BaseApiController
 
         // Ein Stream hält eine Verbindung, solange die Engine rechnet — deshalb ein Deckel je User.
         // Begin() meldet dem Hintergrund-Worker zugleich „Live rechnet" → dessen Auftrag pausiert.
-        if (_activity.Begin(userId) > MaxConcurrentStreamsPerUser)
+        if (_activity.Begin(userId, engine.Id) > MaxConcurrentStreamsPerUser)
         {
-            _activity.End(userId);
+            _activity.End(userId, engine.Id);
             return StatusCode(429, new { message = "Too many concurrent analysis streams" });
         }
 
@@ -280,7 +280,7 @@ public class EngineController : BaseApiController
         }
         finally
         {
-            _activity.End(userId);
+            _activity.End(userId, engine.Id);
         }
         return new EmptyResult();
     }

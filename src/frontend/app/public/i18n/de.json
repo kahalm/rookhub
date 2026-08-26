@@ -2855,6 +2855,7 @@
     "restart": "Neu starten",
     "restartTooltip": "Wieder einreihen — das bisherige Ergebnis bleibt erhalten und die Suche setzt dort an.",
     "restarted": "Auftrag wieder eingereiht.",
-    "nodes": "Durchsuchte Stellungen: {{nodes}}"
+    "nodes": "Durchsuchte Stellungen: {{nodes}}",
+    "runningAt": "rechnet bei {{depth}}"
   }
 }

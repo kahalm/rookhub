@@ -3,59 +3,67 @@ using System.Collections.Concurrent;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Zählt je User die offenen LIVE-Analyse-Streams über externe Engines (Singleton). Zwei Abnehmer:
-/// der <c>EngineController</c> (Deckel gleichzeitiger Streams) und der <c>AnalysisJobWorker</c>, der
-/// Hintergrund-Aufträge pausiert, sobald live gerechnet wird (<see cref="LiveStarted"/>), und sie erst
-/// nach einer Ruhephase (<see cref="IdleFor"/>) fortsetzt — sonst konkurrierten zwei Stockfish-Prozesse
-/// um dieselben Kerne und die Live-Analyse wäre nicht mehr „schnell".
+/// Buchführung über die laufenden LIVE-Analyse-Streams (Singleton) — mit zwei Blickwinkeln, weil zwei
+/// verschiedene Fragen daran hängen:
+///
+/// <list type="bullet">
+/// <item><b>je Nutzer</b>: Wie viele Streams hat er offen? (Deckel gegen hundert Tabs, <see cref="ActiveCount"/>)</item>
+/// <item><b>je Engine</b>: Rechnet gerade jemand live darauf? Ein Stockfish-Prozess kann nur EINE Suche —
+/// der Hintergrund-Worker muss deshalb genau den Auftrag pausieren, der auf DIESER Engine liegt, und darf
+/// Aufträge auf anderen Engines ungestört weiterlaufen lassen.</item>
+/// </list>
 /// </summary>
 public class EngineActivityTracker
 {
-    private readonly ConcurrentDictionary<int, int> _active = new();
-    private readonly ConcurrentDictionary<int, DateTime> _lastEnded = new();
+    private readonly ConcurrentDictionary<int, int> _byUser = new();
+    private readonly ConcurrentDictionary<string, int> _byEngine = new();
+    private readonly ConcurrentDictionary<string, DateTime> _engineLastEnded = new();
     private readonly Func<DateTime> _now;
 
     public EngineActivityTracker() : this(() => DateTime.UtcNow) { }
     public EngineActivityTracker(Func<DateTime> now) { _now = now; }
 
-    /// <summary>Feuert, wenn ein User von 0 auf 1 offene Live-Streams geht (nicht bei jedem weiteren).</summary>
-    public event Action<int>? LiveStarted;
-
-    /// <summary>Live-Stream beginnt; liefert die neue Anzahl offener Streams des Users.</summary>
-    public int Begin(int userId)
-    {
-        var n = _active.AddOrUpdate(userId, 1, (_, c) => c + 1);
-        // Der Zähler ist zu diesem Zeitpunkt schon erhöht: wirft ein Abnehmer, käme der Aufrufer nie zu
-        // seinem End() und der User bliebe für immer „live" — der Hintergrund-Worker würde ihn dauerhaft
-        // überspringen. Ein Benachrichtigungs-Fehler darf diese Buchführung nicht beschädigen.
-        if (n == 1)
-        {
-            try { LiveStarted?.Invoke(userId); }
-            catch (Exception ex) { OnNotifyFailed?.Invoke(ex); }
-        }
-        return n;
-    }
+    /// <summary>Feuert mit der Engine-ID, sobald dort der erste Live-Stream beginnt (nicht bei jedem weiteren).</summary>
+    public event Action<string>? LiveStarted;
 
     /// <summary>Diagnose-Haken für Fehler eines <see cref="LiveStarted"/>-Abnehmers (Program.cs verdrahtet Logging).</summary>
     public event Action<Exception>? OnNotifyFailed;
 
-    /// <summary>Live-Stream endet; auf 0 verschwindet der Eintrag (kein Wachstum über die Zeit).</summary>
-    public void End(int userId)
+    /// <summary>Live-Stream beginnt; liefert die neue Anzahl offener Streams DES NUTZERS (für den Deckel).</summary>
+    public int Begin(int userId, string engineId)
     {
-        _lastEnded[userId] = _now();
-        if (_active.AddOrUpdate(userId, 0, (_, c) => c - 1) <= 0)
-            _active.TryRemove(userId, out _);
+        var perUser = _byUser.AddOrUpdate(userId, 1, (_, c) => c + 1);
+        var perEngine = _byEngine.AddOrUpdate(engineId, 1, (_, c) => c + 1);
+        // Der Zähler ist hier schon erhöht: wirft ein Abnehmer, käme der Aufrufer nie zu seinem End() und
+        // die Engine bliebe für immer „belegt" — ein Benachrichtigungsfehler darf die Buchführung nicht kippen.
+        if (perEngine == 1)
+        {
+            try { LiveStarted?.Invoke(engineId); }
+            catch (Exception ex) { OnNotifyFailed?.Invoke(ex); }
+        }
+        return perUser;
     }
 
-    public int ActiveCount(int userId) => _active.TryGetValue(userId, out var n) ? n : 0;
-
-    public bool IsLiveActive(int userId) => ActiveCount(userId) > 0;
-
-    /// <summary>Wie lange der User schon keinen Live-Stream mehr offen hat (Zero, solange einer läuft;
-    /// MaxValue, wenn er nie einen hatte).</summary>
-    public TimeSpan IdleFor(int userId)
+    /// <summary>Live-Stream endet; auf 0 verschwindet der Eintrag (kein Wachstum über die Zeit).</summary>
+    public void End(int userId, string engineId)
     {
-        if (IsLiveActive(userId)) return TimeSpan.Zero;
-        return _lastEnded.TryGetValue(userId, out var t) ? _now() - t : TimeSpan.MaxValue;
+        _engineLastEnded[engineId] = _now();
+        if (_byUser.AddOrUpdate(userId, 0, (_, c) => c - 1) <= 0) _byUser.TryRemove(userId, out _);
+        if (_byEngine.AddOrUpdate(engineId, 0, (_, c) => c - 1) <= 0) _byEngine.TryRemove(engineId, out _);
+    }
+
+    /// <summary>Offene Live-Streams dieses Nutzers (Deckel im Controller).</summary>
+    public int ActiveCount(int userId) => _byUser.TryGetValue(userId, out var n) ? n : 0;
+
+    /// <summary>Rechnet gerade jemand live auf dieser Engine? Dann gehört sie ihm, nicht den Aufträgen.</summary>
+    public bool IsEngineBusy(string engineId) => _byEngine.TryGetValue(engineId, out var n) && n > 0;
+
+    /// <summary>Wie lange auf dieser Engine kein Live-Stream mehr offen ist (Zero, solange einer läuft;
+    /// MaxValue, wenn dort nie einer lief) — der Worker wartet damit eine Ruhephase ab, statt sofort
+    /// wieder loszurechnen, während der Nutzer noch zieht.</summary>
+    public TimeSpan EngineIdleFor(string engineId)
+    {
+        if (IsEngineBusy(engineId)) return TimeSpan.Zero;
+        return _engineLastEnded.TryGetValue(engineId, out var t) ? _now() - t : TimeSpan.MaxValue;
     }
 }

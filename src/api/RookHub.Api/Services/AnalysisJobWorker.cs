@@ -24,6 +24,23 @@ public static class AnalysisJobStream
         catch (JsonException) { return null; }
     }
 
+    /// <summary>Suchtempo einer ndjson-Zeile (Knoten/Sekunde) aus <c>nodes</c> + verstrichener <c>time</c> (ms);
+    /// null, wenn eines fehlt oder 0 ist (die ersten Zeilen tragen oft time=0).</summary>
+    public static int? NpsOf(string line)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(line);
+            var r = doc.RootElement;
+            if (r.ValueKind != JsonValueKind.Object) return null;
+            if (!r.TryGetProperty("nodes", out var n) || n.ValueKind != JsonValueKind.Number) return null;
+            if (!r.TryGetProperty("time", out var t) || t.ValueKind != JsonValueKind.Number) return null;
+            var nodes = n.GetInt64(); var ms = t.GetInt64();
+            return ms > 0 && nodes > 0 ? (int)Math.Min(int.MaxValue, nodes * 1000 / ms) : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
     /// <summary>Eine Fortsetzung (und ein Neustart mit mehr Linien) liefert die flachen Iterationen erneut —
     /// übernommen wird nur, was mindestens so tief ist wie das gespeicherte Ergebnis.</summary>
     public static bool ShouldPersist(int lineDepth, int reachedDepth) => lineDepth >= reachedDepth;
@@ -42,17 +59,18 @@ public static class AnalysisJobStream
 }
 
 /// <summary>
-/// Arbeitet Hintergrund-Analyseaufträge (<see cref="AnalysisJob"/>) über den Lichess-Broker ab — je User
-/// höchstens einer gleichzeitig, auf dessen Hintergrund-Engine. Vorrang der Live-Analyse: meldet der
-/// <see cref="EngineActivityTracker"/> einen Live-Stream des Users, wird dessen laufender Auftrag sofort
-/// abgebrochen (Status Paused — der Provider stoppt Stockfish, die Hashtabelle bleibt warm); erst nach
-/// <c>AnalysisJobs:IdleGraceSeconds</c> Ruhe (Standard 20 s) läuft er weiter. Ergebnis-Zeilen werden nur
+/// Arbeitet Hintergrund-Analyseaufträge (<see cref="AnalysisJob"/>) über den Lichess-Broker ab — höchstens
+/// einer je ENGINE (ein Stockfish-Prozess kann nur eine Suche; Aufträge auf verschiedenen Engines laufen
+/// deshalb parallel). Vorrang der Live-Analyse: meldet der <see cref="EngineActivityTracker"/> einen
+/// Live-Stream AUF EINER ENGINE, wird genau der Auftrag auf dieser Engine abgebrochen (Status Paused — der
+/// Provider stoppt Stockfish, die Hashtabelle bleibt warm), Aufträge auf anderen Engines laufen ungestört
+/// weiter; nach <c>AnalysisJobs:IdleGraceSeconds</c> Ruhe (Standard 20 s) geht es dort weiter. Ergebnis-Zeilen werden nur
 /// übernommen, wenn sie mindestens die gespeicherte Tiefe haben (<see cref="AnalysisJobStream.ShouldPersist"/>).
 /// Kein 10-Minuten-Deckel wie beim Live-Proxy: ein Auftrag darf Stunden rechnen.
 /// </summary>
 public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 {
-    private sealed record Running(int JobId, int UserId, CancellationTokenSource Cts);
+    private sealed record Running(int JobId, string EngineId, CancellationTokenSource Cts);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly EngineActivityTracker _tracker;
@@ -68,7 +86,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// (Matt/Patt, abgelehnte Arbeit) endet in Sekunden, ein langer Lauf ohne neue Zeile ist eine gekappte
     /// Verbindung — dafür darf der Auftrag nicht als gescheitert gelten.</summary>
     private readonly TimeSpan _fruitlessMinRuntime;
-    private readonly ConcurrentDictionary<int, Running> _running = new();   // key = UserId
+    private readonly ConcurrentDictionary<string, Running> _running = new();   // key = EngineId
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
         LichessEngineService lichess, ILogger<AnalysisJobWorker> logger, IConfiguration config)
@@ -82,13 +100,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         _persistInterval = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:PersistIntervalSeconds") ?? 5, 1, 60));
         _firstLineTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FirstLineTimeoutSeconds") ?? 300, 30, 3600));
         _fruitlessMinRuntime = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FruitlessMinRuntimeSeconds") ?? 60, 5, 3600));
-        _tracker.LiveStarted += PauseUser;
+        _tracker.LiveStarted += PauseEngine;
     }
 
-    /// <summary>Laufenden Auftrag eines Users unterbrechen (Live hat Vorrang).</summary>
-    public void PauseUser(int userId)
+    /// <summary>Laufenden Auftrag AUF DIESER ENGINE unterbrechen (Live hat dort Vorrang). Aufträge auf
+    /// anderen Engines bleiben unberührt — sie belegen einen eigenen Prozess.</summary>
+    public void PauseEngine(string engineId)
     {
-        if (_running.TryGetValue(userId, out var r)) TryCancel(r.Cts);
+        if (_running.TryGetValue(engineId, out var r)) TryCancel(r.Cts);
     }
 
     public void Interrupt(int jobId)
@@ -99,9 +118,9 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 
     /// <summary>Abbrechen, ohne an einem gerade beendeten Lauf zu scheitern: zwischen dem Griff ins Dictionary
     /// und dem Cancel kann <see cref="RunJobAsync"/> seinen Eintrag entfernt UND die CTS disposed haben —
-    /// <c>Cancel()</c> würde dann werfen. Der Wurf liefe bei <see cref="PauseUser"/> im LiveStarted-Handler
-    /// bis in den Request-Thread des Live-Streams und ließe dessen Zähler dauerhaft stehen (der User bekäme
-    /// nie wieder einen Hintergrund-Auftrag), bei <see cref="Interrupt"/> würde Ändern/Löschen zu 500.</summary>
+    /// <c>Cancel()</c> würde dann werfen. Der Wurf liefe bei <see cref="PauseEngine"/> im LiveStarted-Handler
+    /// bis in den Request-Thread des Live-Streams und ließe dessen Zähler dauerhaft stehen (die Engine bliebe
+    /// für immer „belegt"), bei <see cref="Interrupt"/> würde Ändern/Löschen zu 500.</summary>
     internal static void TryCancel(CancellationTokenSource cts)
     {
         try { cts.Cancel(); }
@@ -136,23 +155,23 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private async Task TickAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        List<int> users;
+        List<string> engines;
         using (var scope = _scopeFactory.CreateScope())
-            users = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>().UsersWithRunnableJobsAsync(now, ct);
+            engines = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>().EnginesWithRunnableJobsAsync(now, ct);
 
-        foreach (var userId in users)
+        foreach (var engineId in engines)
         {
-            if (_running.ContainsKey(userId)) continue;
-            if (_tracker.IsLiveActive(userId) || _tracker.IdleFor(userId) < _idleGrace) continue;
+            if (_running.ContainsKey(engineId)) continue;                                   // Engine rechnet schon einen Auftrag
+            if (_tracker.IsEngineBusy(engineId) || _tracker.EngineIdleFor(engineId) < _idleGrace) continue;   // Live hat Vorrang
 
             using var scope = _scopeFactory.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<AnalysisJobService>();
-            var job = await svc.PickNextAsync(userId, now, ct);
+            var job = await svc.PickNextForEngineAsync(engineId, now, ct);
             if (job is null) continue;
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var run = new Running(job.Id, userId, cts);
-            if (!_running.TryAdd(userId, run)) { cts.Dispose(); continue; }
+            var run = new Running(job.Id, engineId, cts);
+            if (!_running.TryAdd(engineId, run)) { cts.Dispose(); continue; }
             _ = Task.Run(() => RunJobAsync(run, job.Id, ct), CancellationToken.None);
         }
     }
@@ -169,9 +188,9 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             if (job is null) return;
 
             // Zwischen der Live-Prüfung im Tick und dem Eintrag in _running liegen DB-Roundtrips. Startet in
-            // diesem Fenster ein Live-Stream, lief sein LiveStarted ins Leere (kein Eintrag zum Abbrechen) —
-            // ohne diese zweite Prüfung rechnete der Hintergrund die ganze Live-Sitzung parallel mit.
-            if (_tracker.IsLiveActive(job.UserId))
+            // diesem Fenster ein Live-Stream auf DIESER Engine, lief sein LiveStarted ins Leere (kein Eintrag
+            // zum Abbrechen) — ohne diese zweite Prüfung rechnete der Hintergrund daneben weiter.
+            if (_tracker.IsEngineBusy(run.EngineId))
             {
                 await PauseAsync(db, job, null);
                 return;
@@ -239,6 +258,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 var lastPersist = runStart;
                 var depthAtStart = job.ReachedDepth;
                 string? pendingLine = null; var pendingDepth = job.ReachedDepth;
+                var currentDepth = 0; var currentNps = 0;
                 var gotData = false;
                 // Wächter NUR für die erste Zeile: danach dürfen zwischen zwei Iterationen Stunden liegen
                 // (Tiefe 40+ mit mehreren Linien), aber ein stummer Provider soll den Slot nicht ewig halten.
@@ -251,12 +271,18 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     await AnalysisJobStream.ConsumeAsync(stream, async (line, depth) =>
                     {
                         if (!gotData) { gotData = true; firstLine.CancelAfter(Timeout.Infinite); }   // Wächter entschärfen
-                        if (!AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth)) return;
-                        pendingLine = line; pendingDepth = depth;
+                        // Laufender Stand IMMER mitschreiben — auch wenn die Zeile flacher ist als das Ergebnis.
+                        // Nach einer Fortsetzung rechnet die Engine erst wieder von Tiefe 1 hoch; ohne das stünde
+                        // die Anzeige minutenlang still (keine Tiefe, kein Tempo, nicht einmal die Zeit lief mit).
+                        currentDepth = depth;
+                        currentNps = AnalysisJobStream.NpsOf(line) ?? currentNps;
+                        var keep = AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth);
+                        if (keep) { pendingLine = line; pendingDepth = depth; }
                         var now = DateTime.UtcNow;
-                        if (depth > job.ReachedDepth || now - lastPersist >= _persistInterval)
+                        if ((keep && depth > job.ReachedDepth) || now - lastPersist >= _persistInterval)
                         {
-                            var rest = await PersistProgressAsync(db, job, pendingLine, pendingDepth, now - lastPersist);
+                            var rest = await PersistProgressAsync(db, job, pendingLine, pendingDepth, now - lastPersist,
+                                                                  currentDepth, currentNps);
                             lastPersist = now - rest; pendingLine = null;   // angebrochene Sekunde mitnehmen
                             // Ziel/Linien können sich unterdessen geändert haben (Service in eigenem Scope).
                             await db.Entry(job).ReloadAsync(CancellationToken.None);
@@ -276,16 +302,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 catch (OperationCanceledException) { /* Pause (Live), Löschung oder Shutdown */ }
                 catch (IOException ex) { _logger.LogWarning(ex, "AnalysisJob {JobId}: Stream abgerissen", job.Id); }
 
-                if (pendingLine is not null)
-                    await PersistProgressAsync(db, job, pendingLine, pendingDepth, DateTime.UtcNow - lastPersist);
-                else
-                    await PersistProgressAsync(db, job, null, job.ReachedDepth, DateTime.UtcNow - lastPersist);
+                await PersistProgressAsync(db, job, pendingLine, pendingLine is null ? job.ReachedDepth : pendingDepth,
+                                           DateTime.UtcNow - lastPersist, currentDepth, currentNps);
 
                 await db.Entry(job).ReloadAsync(CancellationToken.None);
                 if (job.ReachedDepth >= job.TargetDepth)
                 {
                     job.Status = AnalysisJobStatus.Done; job.FinishedAt = DateTime.UtcNow; job.UpdatedAt = job.FinishedAt.Value;
                     job.FruitlessAttempts = 0;
+                    job.CurrentDepth = 0; job.CurrentNps = 0;   // es rechnet nichts mehr
                     await db.SaveChangesAsync(CancellationToken.None);
                     _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth}", job.Id, job.ReachedDepth);
                 }
@@ -299,7 +324,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     job.FruitlessAttempts = 0;
                     await PauseAsync(db, job, "Stream vor der Zieltiefe beendet", TimeSpan.FromSeconds(30));
                 }
-                else if (_tracker.IsLiveActive(job.UserId))
+                else if (_tracker.IsEngineBusy(run.EngineId))
                 {
                     // Kein Fortschritt, WEIL der Nutzer live rechnet: teilen sich Live und Hintergrund dieselbe
                     // Engine (nur eine registriert), verdrängt jede Live-Anfrage den laufenden Auftrag — der
@@ -355,7 +380,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         }
         finally
         {
-            _running.TryRemove(new KeyValuePair<int, Running>(run.UserId, run));
+            _running.TryRemove(new KeyValuePair<string, Running>(run.EngineId, run));
             run.Cts.Dispose();
         }
     }
@@ -363,8 +388,11 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// <summary>Ergebnis + Rechenzeit sichern. Gibt zurück, wie viel Zeit NICHT verbucht wurde (der Bruchteil
     /// unter einer Sekunde) — der Aufrufer schiebt ihn ins nächste Intervall, sonst summierte sich bei jedem
     /// Persist ein verlorener Rest, und in der ersten Sekunden-Salve flacher Tiefen ginge fast alles verloren.</summary>
-    private static async Task<TimeSpan> PersistProgressAsync(AppDbContext db, AnalysisJob job, string? line, int depth, TimeSpan elapsed)
+    private static async Task<TimeSpan> PersistProgressAsync(AppDbContext db, AnalysisJob job, string? line, int depth,
+        TimeSpan elapsed, int currentDepth = 0, int currentNps = 0)
     {
+        if (currentDepth > 0) job.CurrentDepth = currentDepth;
+        if (currentNps > 0) job.CurrentNps = currentNps;
         if (line is not null)
         {
             job.ResultJson = line;
@@ -381,6 +409,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private static async Task PauseAsync(AppDbContext db, AnalysisJob job, string? error, TimeSpan? backoff = null)
     {
         job.Status = AnalysisJobStatus.Paused;
+        job.CurrentDepth = 0; job.CurrentNps = 0;   // der laufende Stand gehört zum Lauf, nicht zum Auftrag
         job.LastError = error;
         job.NextAttemptAt = backoff is null ? null : DateTime.UtcNow + backoff;
         job.UpdatedAt = DateTime.UtcNow;
@@ -400,7 +429,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 
     public override void Dispose()
     {
-        _tracker.LiveStarted -= PauseUser;
+        _tracker.LiveStarted -= PauseEngine;
         base.Dispose();
     }
 }

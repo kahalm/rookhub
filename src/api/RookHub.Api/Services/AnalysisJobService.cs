@@ -314,10 +314,14 @@ public class AnalysisJobService
     /// <summary>Nächster laufbereiter Auftrag eines Users: bevorzugt der ZULETZT gelaufene (warme
     /// Hashtabelle — typisch „weiter bis Tiefe 50" direkt nach Abschluss), sonst der älteste. Aufträge
     /// mit Backoff (<see cref="AnalysisJob.NextAttemptAt"/> in der Zukunft) werden übersprungen.</summary>
-    public async Task<AnalysisJob?> PickNextAsync(int userId, DateTime now, CancellationToken ct = default)
+    /// <summary>Nächster laufbereiter Auftrag AUF DIESER ENGINE: bevorzugt der zuletzt dort gelaufene (warme
+    /// Hashtabelle — typisch „weiter bis Tiefe 50" direkt nach Abschluss), sonst der älteste. Die Engine ist die
+    /// knappe Ressource (ein Stockfish-Prozess = eine Suche), nicht der Nutzer: Aufträge auf VERSCHIEDENEN
+    /// Engines laufen deshalb parallel.</summary>
+    public async Task<AnalysisJob?> PickNextForEngineAsync(string engineId, DateTime now, CancellationToken ct = default)
     {
         var runnable = await _db.AnalysisJobs
-            .Where(j => j.UserId == userId
+            .Where(j => j.EngineId == engineId
                 && (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused)
                 && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
             .OrderBy(j => j.CreatedAt)
@@ -325,19 +329,19 @@ public class AnalysisJobService
         if (runnable.Count == 0) return null;
 
         var lastRunId = await _db.AnalysisJobs
-            .Where(j => j.UserId == userId && j.LastRunAt != null)
+            .Where(j => j.EngineId == engineId && j.LastRunAt != null)
             .OrderByDescending(j => j.LastRunAt)
             .Select(j => (int?)j.Id)
             .FirstOrDefaultAsync(ct);
         return runnable.FirstOrDefault(j => j.Id == lastRunId) ?? runnable[0];
     }
 
-    /// <summary>Alle Users mit laufbereiten Aufträgen (für den Worker-Tick).</summary>
-    public Task<List<int>> UsersWithRunnableJobsAsync(DateTime now, CancellationToken ct = default)
+    /// <summary>Alle Engines mit laufbereiten Aufträgen (für den Worker-Tick).</summary>
+    public Task<List<string>> EnginesWithRunnableJobsAsync(DateTime now, CancellationToken ct = default)
         => _db.AnalysisJobs
             .Where(j => (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused)
                 && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
-            .Select(j => j.UserId).Distinct().ToListAsync(ct);
+            .Select(j => j.EngineId).Distinct().ToListAsync(ct);
 
     /// <summary>Beim API-Start: was noch „läuft", läuft nicht mehr — auf Paused, damit es wieder aufgenommen wird.</summary>
     public async Task<int> ResetInterruptedAsync(CancellationToken ct = default)
@@ -383,5 +387,5 @@ public class AnalysisJobService
     public static AnalysisJobDto ToDto(AnalysisJob j) => new(
         j.Id, j.Fen, j.Title, j.EngineId, j.TargetDepth, j.MultiPv, j.Status.ToString().ToLowerInvariant(),
         j.ReachedDepth, j.ResultJson, j.SecondsSpent, j.LastError, j.CreatedAt, j.UpdatedAt, j.LastRunAt, j.FinishedAt,
-        j.EvalText);
+        j.EvalText, j.CurrentDepth, j.CurrentNps);
 }

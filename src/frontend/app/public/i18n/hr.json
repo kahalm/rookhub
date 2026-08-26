@@ -2855,6 +2855,7 @@
     "restart": "Pokreni ponovno",
     "restartTooltip": "Vrati u red — dosadašnji rezultat ostaje i pretraga nastavlja odande.",
     "restarted": "Zadatak je ponovno u redu.",
-    "nodes": "Pretražene pozicije: {{nodes}}"
+    "nodes": "Pretražene pozicije: {{nodes}}",
+    "runningAt": "računa na {{depth}}"
   }
 }

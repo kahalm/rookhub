@@ -26,7 +26,8 @@ public class UpdateAnalysisJobRequest
 public record AnalysisJobDto(
     int Id, string Fen, string? Title, string EngineId, int TargetDepth, int MultiPv, string Status,
     int ReachedDepth, string? ResultJson, int SecondsSpent, string? LastError,
-    DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt, string? EvalText = null);
+    DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt, string? EvalText = null,
+    int CurrentDepth = 0, int CurrentNps = 0);
 
 public class SetBackgroundEngineRequest
 {

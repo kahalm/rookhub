@@ -18,6 +18,11 @@ export interface AnalysisJob {
   resultJson: string | null;
   /** Bewertung der Hauptvariante („+0.35"), serverseitig aus der Ergebniszeile abgeleitet. */
   evalText?: string | null;
+  /** Tiefe der zuletzt empfangenen Zeile des LAUFENDEN Laufs (0 = rechnet gerade nicht). Nach einer
+   *  Fortsetzung liegt sie unter `reachedDepth`, bis die Engine wieder aufgeholt hat. */
+  currentDepth?: number;
+  /** Suchtempo des laufenden Laufs in Knoten/Sekunde (0 = kein Messwert). */
+  currentNps?: number;
   secondsSpent: number;
   lastError: string | null;
   createdAt: string;

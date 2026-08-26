@@ -518,12 +518,17 @@ zugleich die Vorbereitung auf einen späteren RookHub-EIGENEN Broker (Phase 2, g
 
 ### Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist"
 `AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
-Service, Singleton) auf der **Hintergrund-Engine** des Users über denselben Broker-Pfad wie live — je
-User EIN laufender Auftrag, ohne den 10-Minuten-Deckel des Live-Proxys. **Vorrang der Live-Analyse**:
-der `EngineActivityTracker` (Singleton; zählt die Live-Streams je User, ersetzt das frühere statische
-`ActiveStreams`) feuert `LiveStarted` beim Übergang 0→1 → der Worker bricht den laufenden Auftrag
-sofort ab (Status `Paused`; der Provider stoppt Stockfish, die Hashtabelle bleibt warm) und setzt erst
-nach `AnalysisJobs:IdleGraceSeconds` (20 s) Ruhe fort. **Fortsetzungs-Regel**: der Broker liefert nach
+Service, Singleton) über denselben Broker-Pfad wie live — **je ENGINE ein laufender Auftrag** (`_running`
+ist nach `EngineId` verschlüsselt: ein Stockfish-Prozess kann nur EINE Suche; Aufträge auf verschiedenen
+Engines laufen deshalb parallel), ohne den 10-Minuten-Deckel des Live-Proxys. **Vorrang der Live-Analyse**:
+der `EngineActivityTracker` (Singleton; zählt Live-Streams je Nutzer FÜR DEN DECKEL und je Engine FÜR DEN
+VORRANG, ersetzt das frühere statische `ActiveStreams`) feuert `LiveStarted(engineId)` beim Übergang 0→1
+auf einer Engine → der Worker bricht genau den Auftrag auf DIESER Engine ab (Status `Paused`; der Provider
+stoppt Stockfish, die Hashtabelle bleibt warm) und setzt erst nach `AnalysisJobs:IdleGraceSeconds` (20 s)
+Ruhe dort fort; andere Engines bleiben unberührt. **Laufender Stand**: `CurrentDepth`/`CurrentNps` werden
+bei JEDER empfangenen Zeile fortgeschrieben — auch bei den flacheren, die das Ergebnis nicht ersetzen.
+Ohne das stand die Anzeige nach einer Fortsetzung minutenlang still (die Engine rechnet erst von Tiefe 1
+wieder hoch, und ohne Persist lief nicht einmal die Zeit weiter). **Fortsetzungs-Regel**: der Broker liefert nach
 jedem Neustart die flachen Iterationen erneut — übernommen wird nur eine Zeile mit `depth ≥ ReachedDepth`
 (`AnalysisJobStream.ShouldPersist`); dieselbe Regel lässt bei „mehr Linien" das alte Ergebnis stehen, bis
 die neue Suche es überholt. **Sticky hash**: `PickNextAsync` bevorzugt den zuletzt gelaufenen Auftrag

@@ -2855,6 +2855,7 @@
     "restart": "Restart",
     "restartTooltip": "Queue again — the current result is kept and the search continues from there.",
     "restarted": "Job queued again.",
-    "nodes": "Positions searched: {{nodes}}"
+    "nodes": "Positions searched: {{nodes}}",
+    "runningAt": "at depth {{depth}}"
   }
 }
