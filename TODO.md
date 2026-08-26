@@ -10,14 +10,29 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 - [ ] Code Review — letzter: **2026-08-25** → Review über `rookhub` (~1800 Quelldateien). 15 Funde, alle verifiziert (kein Fehlalarm), **14 behoben in v0.376.2**: WQL-Wildcard `*` statt `%` im Waisen-Aufräumer (`reap_orphans.ps1` traf NIE etwas und meldete 15-minütlich „ohne Befund“), PID-Recycling bei der Elternprüfung, README-Stopp-Prozedur killte jeden `python.exe`, `init()`-Fehler ohne `fatalError$` (Karte log dauerhaft „Berechne…“), `destroy()` ließ das Init-Promise ungelöst hängen, Selbstvergleich zweier WASM-Kerne, doppeltes `startCompare()`, fehlender Telemetrie-Hook, `compareCrashed` überlebte den Stellungswechsel. **Offen: 1 Fund** (EngineSlot-Umbau, siehe „Bewusste Entscheidung“). +4 Regressionstests (gegengeprüft: fallen ohne die Fixes um). **Einschränkung: faktisch Delta auf die jüngste Arbeit** — im .NET-Teil (1283 Dateien) kam kein einziger Fund heraus, für einen Vollscan unplausibel; API separat nachholen. (vorher 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-08-26** → alle 25 Sprachdateien JSON-valide; en/de/hr je **2217 Keys** in voller Parität (Platzhalter identisch, keine leeren Werte außer dem gewollten `weekly.oClock`-Suffix) — seit v0.376.4 als Karma-Spec `i18n-parity.spec.ts` dauerhaft erzwungen. Qualitäts-Review per 30 Reviewer + 10 adversariale Verifizierer (je Chunk × en/de/hr): 389 Roh-Funde → **~260 bestätigt und übernommen** (hr ~150: Sie→Du-Form, Chessable-Bereich war englisch, kurs→tečaj, izračun→računanje; de ~75: gemischte „…"-Paare, englisch gebliebene Wörter, Genus/Präpositionen, Ein-Topf-Semantik der Trainingsziele; en ~35: US-Schreibung, Tippfehler). Echte Bugs für ALLE Sprachen: `{score}`-Platzhalter (einfache Klammern), `admin.ci.watchStop` „2 Minuten" (Code: 20 s), literale `\u2019`, `chessable.throughputHint` 15–20/min (Drossel ist ~4/min). Aufräumen: 704 veraltete Keys aus den 22 Weltsprachen, 68 tote Keys überall (31 unter ThemePicker-/VizCard-Namespaces bewusst behalten). Die 22 Weltsprachen hängen weiter ~1360 Keys hinter en (Fallback greift). (vorher 2026-08-25: Registercheck `nav.support` el+hr → v0.376.1; 2026-07-12: hr 2 Lücken → v0.291.34)
 - [ ] Security Review — letzter: **2026-08-10** (im Delta-Review mitgelaufen: Auth-/Injection-/Contract-Blickwinkel). Einziger echter Fund = das Kalk-Lösungs-Leck (behoben). Keine CRIT/HIGH offen. (vorher 2026-07-18 6-Wege-Fan-out)
-- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-08-09** → ES :9200, 7-Tage-Fenster.
-  **rookhub Prod: 0 Errors**; 82 Warns, davon 49× `storage_persist_denied` (Browser-Routine → auf
-  Information gestuft, v0.355.4) + 18× connectivity_restored (Standby-Tabs kahalm/mhoehfeld) + 9×
-  Stockfish-Timeout/Crash (Client-Geräte, beobachten). Crawler: 46 Verbindungs-Retry-Warns
-  (Re-Queue greift), 3 „Crawl failed" (Ids 1324829, „10"). piratechess: 6 Warns. **Fund: beide
-  Disk-HIGH-Alerts (02.+09.08.) waren Fehlalarme des log-watchers** — nacktes „XFS" matchte den
-  wöchentlichen xfs_scrub_all-Timer → Heuristik gefixt (log-watcher v0.19.1) + Regressions-Wache.
-  (vorher 2026-07-12: 5 Errors OG-Render)
+- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-08-26** → ES :9200, 7-Tage-Fenster.
+  **rookhub Prod: 1 Error, 35 Warns.** Error = `POST /api/engine/external/…/analyse` → 502 (24.08. 15:48),
+  gefolgt von 4× ClientLog `engine_analysis_remote_failed` — externe Engine war weg. 20 ClientLog-Warns:
+  10× connectivity_restored, 4× engine_analysis_remote_failed, 3× stockfish_search_timeout, 2× sw_install_failed.
+  12× Turnier-Fetch/Crawl-Fehler = EIN Vorfall (alle in 6 s am 20.08. 00:53), kein Dauerproblem.
+  Crawler: 19 Verbindungs-Warns mit Re-Queue (vorher 46 → Trend gut). piratechess: 15 Warns, ALLE
+  Startrauschen (HTTP_PORTS-Override, DataProtection-Keys) — je 5× ⇒ 5 Neustarts in 7 Tagen.
+  rookhub Dev: 8 Errors/11 Warns, davon 7× „OG: index.html von KEINEM Frontend-Kandidaten abrufbar" (nur Dev).
+  **⚠️ FUND (Monitoring selbst kaputt): Der Level in Kibana ist für JEDE Warnung und JEDEN Fehler falsch.**
+  Jedes Dokument trägt den Level doppelt: verschachtelt `log.level` (immer „Information") und wörtlich
+  gepunktet `"log.level"` (der echte). Ursache bewiesen per `_simulate`: Prozessor [19] der Ingest-Pipeline
+  `logs-schema-normalize` ist `{"set":{"field":"log.level","override":false,"value":"Information"}}` — und aus
+  Sicht der Pipeline IST `ctx.log.level` leer, weil der Serilog-ECS-Sink den Level als gepunkteten Schlüssel
+  schreibt, den ein Ingest-Prozessor nicht als verschachteltes Feld sieht. Folge: Abfragen stimmen zufällig
+  (ES führt beide Werte im selben Feld zusammen), aber wer in Kibana draufschaut, sieht einen 502 als
+  „Information"; Level-Aggregationen zählen jedes Dokument doppelt (179 statt 103 Treffer).
+  **Fix getestet, NICHT ausgerollt** (ES-Infrastruktur, nicht im Repo — vgl. `init-kibana.sh ≠ Repo`):
+  ein Script-Prozessor VOR [19], der den gepunkteten Schlüssel einsammelt —
+  `if (ctx.containsKey("log.level")) { if (ctx.log == null) { ctx.log = [:]; } ctx.log.level = ctx.remove("log.level"); }`
+  In `_simulate` gegen 4 Fälle geprüft: gepunktet Error/Warning → verschachtelt korrekt, ohne Level → Vorgabe
+  „Information", Altformat `level` → weiterhin übernommen. Braucht deine Freigabe + einen Reindex/Neu-Ingest,
+  falls die Historie auch stimmen soll. Zu prüfen: ob der log-watcher auf dem verschachtelten Feld alarmiert.
+  (vorher 2026-08-09: 0 Errors, 82 Warns; Disk-HIGH-Fehlalarme des log-watchers gefixt)
 - [ ] Frameworks + Abhängigkeiten aktualisieren — letzter: **2026-08-09** → In-Range ueberall:
   Angular 22.0→22.1, .NET-Pakete 10.0.10 (rookhub+crawler+piratechess), Anthropic 12.40,
   AngleSharp 1.7.1, Playwright 1.62 (alle Suiten gruen; Frontend-Lock frisch aufgeloest).
