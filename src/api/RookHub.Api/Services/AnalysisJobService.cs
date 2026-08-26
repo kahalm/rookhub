@@ -84,8 +84,49 @@ public class AnalysisJobService
             Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
         };
         _db.AnalysisJobs.Add(job);
+        // Analysierte Stellungen gehören auch in „Gemerkte Stellungen" (dort zeigt die Übersicht den
+        // Auftrag mit Status/Tiefe/Bewertung an) — aber nur EINMAL je Stellung: hat der User sie schon
+        // gemerkt (Chessable-Remember oder früherer Auftrag), bleibt der vorhandene Eintrag.
+        await EnsureRememberedAsync(userId, fen, title, ct);
         await _db.SaveChangesAsync(ct);
         return ToDto(job);
+    }
+
+    /// <summary>Kennzeichnet gemerkte Stellungen, die aus einem Analyseauftrag stammen (interner Link statt Kurs-URL).</summary>
+    public const string RememberedSourceUrl = "/analysis/jobs";
+
+    private async Task EnsureRememberedAsync(int userId, string fen, string? title, CancellationToken ct)
+    {
+        var norm = RepertoireAnalyzeService.NormalizeFen(fen);
+        var existing = await _db.RememberedPositions.Where(p => p.UserId == userId).Select(p => p.Fen).ToListAsync(ct);
+        if (existing.Any(f => RepertoireAnalyzeService.NormalizeFen(f) == norm)) return;
+        _db.RememberedPositions.Add(new RememberedPosition
+        {
+            UserId = userId, Fen = fen, CourseName = title, SourceUrl = RememberedSourceUrl, CreatedAt = DateTime.UtcNow,
+        });
+    }
+
+    /// <summary>Bewertung der Hauptvariante aus der gespeicherten Broker-Zeile („+0.35", „#-3"); null ohne Ergebnis.
+    /// Gleiche Formatierung wie das Frontend (mapBrokerLine) — Weiß-Sicht, cp/100 mit 2 Nachkommastellen.</summary>
+    public static string? EvalTextOf(string? resultJson)
+    {
+        if (string.IsNullOrEmpty(resultJson)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(resultJson);
+            if (!doc.RootElement.TryGetProperty("pvs", out var pvs) || pvs.ValueKind != JsonValueKind.Array || pvs.GetArrayLength() == 0)
+                return null;
+            var pv = pvs[0];
+            if (pv.TryGetProperty("mate", out var mate) && mate.ValueKind == JsonValueKind.Number)
+                return "#" + mate.GetInt32();
+            if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number)
+            {
+                var v = cp.GetInt32() / 100.0;
+                return (v > 0 ? "+" : "") + v.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            return null;
+        }
+        catch (JsonException) { return null; }
     }
 
     /// <summary>

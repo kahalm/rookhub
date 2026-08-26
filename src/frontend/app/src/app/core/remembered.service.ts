@@ -8,8 +8,21 @@ export interface RememberedPosition {
   fen: string;
   courseId: string | null;
   courseName: string | null;
+  /** Kurs-URL (Chessable) ODER interner Pfad (z. B. `/analysis/jobs`, wenn die Stellung aus einem Analyseauftrag stammt). */
   sourceUrl: string | null;
   createdAt: string;
+  /** Hintergrund-Analyseauftrag zu dieser Stellung (jüngster), falls vorhanden. */
+  analysis?: RememberedAnalysis | null;
+}
+
+export interface RememberedAnalysis {
+  jobId: number;
+  status: 'queued' | 'running' | 'paused' | 'done' | 'failed';
+  reachedDepth: number;
+  targetDepth: number;
+  multiPv: number;
+  evalText: string | null;
+  updatedAt: string;
 }
 
 /** Lesen/Löschen der gemerkten Stellungen (Endpoints unter `/api/extension`, JWT genügt). */

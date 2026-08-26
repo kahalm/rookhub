@@ -2781,7 +2781,9 @@
     "errors": {
       "load": "Failed to load remembered positions",
       "delete": "Delete failed"
-    }
+    },
+    "analysisOrigin": "Analysis job",
+    "analysisTooltip": "Background analysis of this position — go to the jobs page"
   },
   "solveMode": {
     "title": "How do you want to play here?",

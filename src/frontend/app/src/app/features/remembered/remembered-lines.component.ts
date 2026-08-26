@@ -10,13 +10,19 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { PreferencesService } from '../../core/preferences.service';
+import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
 import { RememberedService, RememberedPosition } from '../../core/remembered.service';
+import { ExternalEngineService } from '../analysis/external-engine.service';
+import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.component';
 
 /**
  * Zeigt die über die RepCheck-Extension („Remember line" auf chessable.com) gemerkten Stellungen
- * des Users: je Eintrag ein Brett-Vorschau (FEN), Kursname/-Link, Datum + Aktionen
- * (In Analyse öffnen · FEN kopieren · Löschen).
+ * des Users — und die Stellungen der Hintergrund-Analyseaufträge (der Server merkt sie beim Anlegen
+ * eines Auftrags mit): je Eintrag Brett-Vorschau (FEN), Kursname/-Link bzw. interner Link zur
+ * Auftragsseite, Datum, die Analyse-Info des Auftrags (Status, Tiefe, Bewertung) + Aktionen
+ * (In Analyse öffnen · Im Hintergrund analysieren · FEN kopieren · Löschen).
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -49,19 +55,33 @@ import { RememberedService, RememberedPosition } from '../../core/remembered.ser
               </div>
               <div class="meta">
                 <div class="course">
-                  @if (p.sourceUrl) {
-                    <a [href]="p.sourceUrl" target="_blank" rel="noopener">{{ p.courseName || p.courseId || ('remembered.unknownCourse' | translate) }}<mat-icon class="ext">open_in_new</mat-icon></a>
+                  @if (p.sourceUrl && p.sourceUrl.startsWith('/')) {
+                    <a [routerLink]="p.sourceUrl">{{ labelOf(p) }}</a>
+                  } @else if (p.sourceUrl) {
+                    <a [href]="p.sourceUrl" target="_blank" rel="noopener">{{ labelOf(p) }}<mat-icon class="ext">open_in_new</mat-icon></a>
                   } @else {
-                    <span>{{ p.courseName || p.courseId || ('remembered.unknownCourse' | translate) }}</span>
+                    <span>{{ labelOf(p) }}</span>
                   }
                 </div>
                 <div class="date">{{ p.createdAt | date:'medium' }}</div>
+                @if (p.analysis; as a) {
+                  <a class="analysis" routerLink="/analysis/jobs" [matTooltip]="'remembered.analysisTooltip' | translate">
+                    <span class="status" [ngClass]="a.status">{{ ('analysisJobs.status.' + a.status) | translate }}</span>
+                    <span>{{ 'analysisJobs.depthOf' | translate:{ reached: a.reachedDepth, target: a.targetDepth } }} · {{ 'analysisJobs.lines' | translate:{ count: a.multiPv } }}</span>
+                    @if (a.evalText) { <span class="eval" [class.neg]="a.evalText.startsWith('-') || a.evalText.startsWith('#-')">{{ a.evalText }}</span> }
+                  </a>
+                }
                 <div class="fen" [matTooltip]="p.fen">{{ p.fen }}</div>
               </div>
               <div class="actions">
                 <a mat-stroked-button routerLink="/analysis" [queryParams]="{ fen: p.fen }">
                   <mat-icon>science</mat-icon> {{ 'remembered.analyze' | translate }}
                 </a>
+                @if (!p.analysis && auth.isLoggedIn) {
+                  <button mat-icon-button (click)="queueAnalysis(p)" [matTooltip]="'analysis.queueBackground' | translate">
+                    <mat-icon>schedule</mat-icon>
+                  </button>
+                }
                 <button mat-icon-button (click)="copyFen(p)" [matTooltip]="'remembered.copyFen' | translate">
                   <mat-icon>content_copy</mat-icon>
                 </button>
@@ -94,6 +114,17 @@ import { RememberedService, RememberedPosition } from '../../core/remembered.ser
     .date { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .fen { font-family: monospace; font-size: 0.72rem; color: color-mix(in srgb, currentColor 55%, transparent);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .analysis { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.8rem; margin-top: 2px;
+      color: inherit; text-decoration: none; }
+    .analysis:hover { text-decoration: underline; }
+    .status { font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; text-transform: uppercase;
+      background: color-mix(in srgb, currentColor 12%, transparent); }
+    .status.running { background: rgba(46,125,50,.18); color: #2e7d32; }
+    .status.paused { background: rgba(255,160,0,.18); color: #e65100; }
+    .status.done { background: rgba(21,101,192,.15); color: #1565c0; }
+    .status.failed { background: rgba(198,40,40,.15); color: #c62828; }
+    .eval { font-family: monospace; font-weight: 600; color: #2e7d32; }
+    .eval.neg { color: #c62828; }
     .actions { display: flex; align-items: center; gap: 4px; margin-top: auto; }
     .actions a { flex: 1; }
   `]
@@ -103,12 +134,45 @@ export class RememberedLinesComponent implements OnInit {
   loading = true;
   private destroyRef = inject(DestroyRef);
 
+  /** Hintergrund-Engine des Users (für den Dialog: ohne sie nur der Hinweis). null = noch nicht geladen. */
+  private backgroundEngineId: string | null | undefined;
+
   constructor(
     private remembered: RememberedService,
     public preferences: PreferencesService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    public auth: AuthService,
+    private dialog: MatDialog,
+    private externalEngines: ExternalEngineService,
   ) {}
+
+  /** Anzeigename: Kursname, sonst Kurs-ID, sonst bei Auftrags-Stellungen „Analyse-Auftrag", sonst „Unbekannter Kurs". */
+  labelOf(p: RememberedPosition): string {
+    if (p.courseName) return p.courseName;
+    if (p.courseId) return p.courseId;
+    return this.translate.instant(p.analysis || p.sourceUrl?.startsWith('/') ? 'remembered.analysisOrigin' : 'remembered.unknownCourse');
+  }
+
+  /** „Im Hintergrund analysieren" für eine gemerkte Stellung — derselbe Dialog wie im Analysebrett. */
+  queueAnalysis(p: RememberedPosition): void {
+    const open = () => {
+      const ref = this.dialog.open(AnalysisJobDialogComponent, {
+        width: '440px',
+        data: { fen: p.fen, depth: 30, lines: 3, hasBackgroundEngine: !!this.backgroundEngineId },
+      });
+      ref.afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(job => {
+        if (!job) return;
+        this.snackbar.success(this.translate.instant('analysisJobs.created'));
+        this.load();   // Karte zeigt jetzt die Analyse-Info
+      });
+    };
+    if (this.backgroundEngineId !== undefined) { open(); return; }
+    this.externalEngines.listEngines().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: r => { this.backgroundEngineId = r.backgroundEngineId ?? null; open(); },
+      error: () => { this.backgroundEngineId = null; open(); },
+    });
+  }
 
   ngOnInit(): void {
     this.load();

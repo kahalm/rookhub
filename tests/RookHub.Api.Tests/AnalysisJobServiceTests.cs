@@ -60,6 +60,48 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_AddsRememberedPosition_OnceperPosition_WithTitleAndInternalLink()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 30, MultiPv = 3, Title = "Kritisch" });
+        var remembered = await _db.RememberedPositions.SingleAsync();
+        Assert.Equal(START, remembered.Fen);
+        Assert.Equal("Kritisch", remembered.CourseName);
+        Assert.Equal(AnalysisJobService.RememberedSourceUrl, remembered.SourceUrl);
+
+        // Zweiter Auftrag für dieselbe Stellung (andere Zugzähler) → kein zweiter Merk-Eintrag.
+        var sameButCounters = START.Replace(" 0 1", " 3 7");
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = sameButCounters, TargetDepth = 40, MultiPv = 1 });
+        Assert.Equal(1, await _db.RememberedPositions.CountAsync());
+        Assert.Equal(2, await _db.AnalysisJobs.CountAsync());
+    }
+
+    [Fact]
+    public async Task Create_ReusesExistingRememberedPosition_FromChessable()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        _db.RememberedPositions.Add(new RememberedPosition { UserId = u, Fen = START, CourseId = "12345", CourseName = "Kurs" });
+        await _db.SaveChangesAsync();
+
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 30, MultiPv = 3 });
+
+        var remembered = await _db.RememberedPositions.SingleAsync();
+        Assert.Equal("Kurs", remembered.CourseName);        // Chessable-Eintrag bleibt, wie er war
+    }
+
+    [Fact]
+    public void EvalTextOf_FormatsCpAndMate_FromMainLine()
+    {
+        Assert.Equal("+0.35", AnalysisJobService.EvalTextOf("{\"pvs\":[{\"cp\":35},{\"cp\":-12}]}"));
+        Assert.Equal("-1.20", AnalysisJobService.EvalTextOf("{\"pvs\":[{\"cp\":-120}]}"));
+        Assert.Equal("0.00", AnalysisJobService.EvalTextOf("{\"pvs\":[{\"cp\":0}]}"));
+        Assert.Equal("#-3", AnalysisJobService.EvalTextOf("{\"pvs\":[{\"mate\":-3}]}"));
+        Assert.Null(AnalysisJobService.EvalTextOf("{\"pvs\":[]}"));
+        Assert.Null(AnalysisJobService.EvalTextOf(null));
+        Assert.Null(AnalysisJobService.EvalTextOf("kaputt"));
+    }
+
+    [Fact]
     public async Task Create_WithoutBackgroundEngine_Throws()
     {
         var u = await UserWithBackgroundEngineAsync(engine: null);

@@ -103,7 +103,29 @@ public class RememberedPositionService
                     if (p.CourseName is null && p.CourseId is not null && map.TryGetValue(p.CourseId, out var name))
                         p.CourseName = name;
         }
+        await AttachAnalysisAsync(userId, list);
         return list;
+    }
+
+    /// <summary>Hintergrund-Analyseaufträge zu den Stellungen anhängen (Match über die ersten 4 FEN-Felder —
+    /// Zugzähler unterscheiden Chessable-FEN und Analyse-FEN oft). Bei mehreren Aufträgen je Stellung der jüngste.</summary>
+    private async Task AttachAnalysisAsync(int userId, List<RememberedPositionDto> list)
+    {
+        if (list.Count == 0) return;
+        var jobs = await _db.AnalysisJobs.AsNoTracking()
+            .Where(j => j.UserId == userId)
+            .Select(j => new { j.Id, j.Fen, j.Status, j.ReachedDepth, j.TargetDepth, j.MultiPv, j.ResultJson, j.UpdatedAt })
+            .ToListAsync();
+        if (jobs.Count == 0) return;
+        var byFen = jobs
+            .GroupBy(j => RepertoireAnalyzeService.NormalizeFen(j.Fen))
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(j => j.UpdatedAt).First());
+        foreach (var p in list)
+        {
+            if (!byFen.TryGetValue(RepertoireAnalyzeService.NormalizeFen(p.Fen), out var j)) continue;
+            p.Analysis = new RememberedAnalysisDto(j.Id, j.Status.ToString().ToLowerInvariant(), j.ReachedDepth, j.TargetDepth,
+                j.MultiPv, AnalysisJobService.EvalTextOf(j.ResultJson), j.UpdatedAt);
+        }
     }
 
     /// <summary>Löscht eine gemerkte Stellung des Users (idempotent). <c>false</c> wenn nicht vorhanden/fremd.</summary>

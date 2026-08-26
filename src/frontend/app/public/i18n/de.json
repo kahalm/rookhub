@@ -2781,7 +2781,9 @@
     "errors": {
       "load": "Gemerkte Stellungen konnten nicht geladen werden",
       "delete": "Löschen fehlgeschlagen"
-    }
+    },
+    "analysisOrigin": "Analyse-Auftrag",
+    "analysisTooltip": "Hintergrund-Analyse dieser Stellung — zur Auftragsseite"
   },
   "solveMode": {
     "title": "Wie möchtest du hier spielen?",

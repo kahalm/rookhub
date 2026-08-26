@@ -172,7 +172,9 @@ public class RememberLineInputDto
     public string? SourceUrl { get; set; }
 }
 
-/// <summary>Eine gemerkte Stellung (Ausgabe von <c>GET /api/extension/remembered-lines</c>).</summary>
+/// <summary>Eine gemerkte Stellung (Ausgabe von <c>GET /api/extension/remembered-lines</c>).
+/// <c>Analysis</c> = Hintergrund-Analyseauftrag zu DIESER Stellung (FEN-Match über die ersten 4 Felder),
+/// falls es einen gibt — die Übersicht zeigt Status, Tiefe und Bewertung direkt an der Karte.</summary>
 public class RememberedPositionDto
 {
     public int Id { get; set; }
@@ -181,4 +183,9 @@ public class RememberedPositionDto
     public string? CourseName { get; set; }
     public string? SourceUrl { get; set; }
     public DateTime CreatedAt { get; set; }
+    public RememberedAnalysisDto? Analysis { get; set; }
 }
+
+/// <summary>Kurzinfo des Analyseauftrags zu einer gemerkten Stellung (jüngster Auftrag bei mehreren).</summary>
+public record RememberedAnalysisDto(int JobId, string Status, int ReachedDepth, int TargetDepth, int MultiPv,
+    string? EvalText, DateTime UpdatedAt);

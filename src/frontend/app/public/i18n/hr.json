@@ -2781,7 +2781,9 @@
     "errors": {
       "load": "Zapamćene pozicije nije moguće učitati",
       "delete": "Brisanje nije uspjelo"
-    }
+    },
+    "analysisOrigin": "Zadatak analize",
+    "analysisTooltip": "Pozadinska analiza ove pozicije — na stranicu zadataka"
   },
   "solveMode": {
     "title": "Kako želiš igrati ovdje?",

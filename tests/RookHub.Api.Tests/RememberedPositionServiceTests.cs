@@ -159,6 +159,33 @@ public class RememberedPositionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ListAsync_AttachesLatestAnalysisJob_MatchedOnNormalizedFen()
+    {
+        await SeedCredAsync(1);
+        _db.RememberedPositions.Add(new RememberedPosition { UserId = 1, Fen = Fen, CourseId = "1", CreatedAt = DateTime.UtcNow });
+        _db.RememberedPositions.Add(new RememberedPosition { UserId = 1, Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", CreatedAt = DateTime.UtcNow.AddMinutes(-1) });
+        _db.AnalysisJobs.AddRange(
+            new AnalysisJob { UserId = 1, Fen = Fen.Replace(" 0 1", " 5 9"), EngineId = "e", TargetDepth = 30, MultiPv = 2,
+                Status = AnalysisJobStatus.Paused, ReachedDepth = 18, UpdatedAt = DateTime.UtcNow.AddHours(-2),
+                ResultJson = "{\"pvs\":[{\"cp\":10}]}" },
+            new AnalysisJob { UserId = 1, Fen = Fen, EngineId = "e", TargetDepth = 40, MultiPv = 3,
+                Status = AnalysisJobStatus.Done, ReachedDepth = 40, UpdatedAt = DateTime.UtcNow,
+                ResultJson = "{\"pvs\":[{\"cp\":35},{\"cp\":20}]}" },
+            new AnalysisJob { UserId = 2, Fen = Fen, EngineId = "e", TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Done, ReachedDepth = 30 });
+        await _db.SaveChangesAsync();
+
+        var list = await _svc.ListAsync(1);
+
+        var withJob = list.Single(p => p.Fen == Fen);
+        Assert.NotNull(withJob.Analysis);
+        Assert.Equal("done", withJob.Analysis!.Status);        // der jüngere Auftrag gewinnt
+        Assert.Equal(40, withJob.Analysis.ReachedDepth);
+        Assert.Equal(3, withJob.Analysis.MultiPv);
+        Assert.Equal("+0.35", withJob.Analysis.EvalText);
+        Assert.Null(list.Single(p => p.Fen != Fen).Analysis);   // Stellung ohne Auftrag bleibt ohne Info
+    }
+
+    [Fact]
     public async Task DeleteAsync_RemovesOwnEntry_NotForeign()
     {
         var mine = await _svc.SaveAsync(1, new RememberLineInputDto { Fen = Fen, CourseName = "c" });
