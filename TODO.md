@@ -48,6 +48,13 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [ ] **Hintergrund-Analyse: Shutdown wartet nicht auf laufende Auftrags-Tasks** (Review 2026-08-26, low):
+  `AnalysisJobWorker` startet Läufe per fire-and-forget `Task.Run` und cancelt beim Stop nur die CTS; der
+  Prozess kann enden, bevor der letzte Persist/Pause-Schreibvorgang durch ist. Folgen sind begrenzt —
+  `ResetInterruptedAsync` setzt beim nächsten Start alle `Running` auf `Paused`, es geht höchstens die
+  Fortschritts-Zeile der letzten Sekunden verloren. Sauber wäre: Tasks in einer Liste halten und in
+  `StopAsync` mit Frist abwarten.
+
 
 - [ ] **Anon öffentlicher Kurs: Offline-Cache-Verlustfenster** (Delta-Review 2026-08-09, unverifiziert
   belegt per Sonde, LOW): die Cache-Flush-Strategie schreibt nur nach Seite 1 und am Kettenende

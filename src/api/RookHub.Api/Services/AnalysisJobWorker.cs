@@ -163,6 +163,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             var job = await db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId, CancellationToken.None);
             if (job is null) return;
 
+            // Zwischen der Live-Prüfung im Tick und dem Eintrag in _running liegen DB-Roundtrips. Startet in
+            // diesem Fenster ein Live-Stream, lief sein LiveStarted ins Leere (kein Eintrag zum Abbrechen) —
+            // ohne diese zweite Prüfung rechnete der Hintergrund die ganze Live-Sitzung parallel mit.
+            if (_tracker.IsLiveActive(job.UserId))
+            {
+                await PauseAsync(db, job, null);
+                return;
+            }
+
             var token = await svc.TokenAsync(job.UserId, CancellationToken.None);
             if (token is null)
             {
@@ -171,6 +180,13 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             }
             LichessExternalEngine? engine;
             try { engine = await _lichess.ResolveEngineAsync(job.UserId, token, job.EngineId, ct); }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // Live hat begonnen / gelöscht / Shutdown — MUSS vor dem Filter darunter stehen, sonst wäre
+                // der eigene Abbruch als „Lichess nicht erreichbar" mit 60 s Backoff im Auftrag gelandet.
+                await PauseAsync(db, job, null);
+                return;
+            }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 await BackoffAsync(db, job, "Lichess nicht erreichbar", TimeSpan.FromSeconds(60));
@@ -235,8 +251,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         var now = DateTime.UtcNow;
                         if (depth > job.ReachedDepth || now - lastPersist >= _persistInterval)
                         {
-                            await PersistProgressAsync(db, job, pendingLine, pendingDepth, now - lastPersist);
-                            lastPersist = now; pendingLine = null;
+                            var rest = await PersistProgressAsync(db, job, pendingLine, pendingDepth, now - lastPersist);
+                            lastPersist = now - rest; pendingLine = null;   // angebrochene Sekunde mitnehmen
                             // Ziel/Linien können sich unterdessen geändert haben (Service in eigenem Scope).
                             await db.Entry(job).ReloadAsync(CancellationToken.None);
                         }
@@ -320,7 +336,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         }
     }
 
-    private static async Task PersistProgressAsync(AppDbContext db, AnalysisJob job, string? line, int depth, TimeSpan elapsed)
+    /// <summary>Ergebnis + Rechenzeit sichern. Gibt zurück, wie viel Zeit NICHT verbucht wurde (der Bruchteil
+    /// unter einer Sekunde) — der Aufrufer schiebt ihn ins nächste Intervall, sonst summierte sich bei jedem
+    /// Persist ein verlorener Rest, und in der ersten Sekunden-Salve flacher Tiefen ginge fast alles verloren.</summary>
+    private static async Task<TimeSpan> PersistProgressAsync(AppDbContext db, AnalysisJob job, string? line, int depth, TimeSpan elapsed)
     {
         if (line is not null)
         {
@@ -328,9 +347,11 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             job.ReachedDepth = Math.Max(job.ReachedDepth, depth);
             job.EvalText = AnalysisJobService.EvalTextOf(line);   // Listen zeigen nur diesen Wert, ohne die Roh-Zeile zu laden
         }
-        job.SecondsSpent += (int)Math.Max(0, elapsed.TotalSeconds);
+        var whole = (int)Math.Max(0, elapsed.TotalSeconds);
+        job.SecondsSpent += whole;
         job.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(CancellationToken.None);
+        return elapsed > TimeSpan.Zero ? elapsed - TimeSpan.FromSeconds(whole) : TimeSpan.Zero;
     }
 
     private static async Task PauseAsync(AppDbContext db, AnalysisJob job, string? error, TimeSpan? backoff = null)

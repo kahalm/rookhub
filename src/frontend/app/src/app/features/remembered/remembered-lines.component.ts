@@ -209,7 +209,9 @@ export class RememberedLinesComponent implements OnInit {
     if (this.backgroundEngineId !== undefined) { run(!!this.backgroundEngineId); return; }
     this.externalEngines.listEngines().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => { this.backgroundEngineId = r.backgroundEngineId ?? null; run(!!this.backgroundEngineId); },
-      error: () => { this.backgroundEngineId = null; run(false); },
+      // Bei einem Fehlschlag (Lichess kurz weg → 502) NICHT merken: sonst behauptete die Seite den Rest der
+      // Sitzung „keine Hintergrund-Engine", obwohl eine eingerichtet ist. Nächster Versuch fragt neu.
+      error: () => { this.backgroundEngineId = undefined; run(false); },
     });
   }
 
