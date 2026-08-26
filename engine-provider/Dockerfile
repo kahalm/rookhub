@@ -52,6 +52,13 @@ RUN curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/${
       -o /opt/provider.py \
  && echo "${PROVIDER_SHA256}  /opt/provider.py" | sha256sum -c -
 
+# EIN Eingriff in den geholten Provider: ein Lebenszeichen im Analyse-Stream, sonst schliesst der
+# Broker die zwischen zwei tiefen MultiPV-Iterationen minutenlang stumme Verbindung (Begruendung
+# im Skript). Absichtlich NACH der Pruefsumme: gepatcht wird nur der verifizierte Originaltext,
+# und aendert der sich, bricht der Build ab statt still ungepatcht durchzulaufen.
+COPY patch_provider.py /opt/
+RUN python3 /opt/patch_provider.py /opt/provider.py
+
 COPY entrypoint.sh preflight.py /opt/
 RUN chmod +x /opt/entrypoint.sh
 

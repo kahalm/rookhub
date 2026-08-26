@@ -16,12 +16,19 @@ namespace RookHub.Api.Controllers;
 public class AnalysisJobsController : BaseApiController
 {
     private readonly AnalysisJobService _jobs;
+    private readonly AnalysisJobLive _live;
 
-    public AnalysisJobsController(AnalysisJobService jobs) { _jobs = jobs; }
+    public AnalysisJobsController(AnalysisJobService jobs, AnalysisJobLive live) { _jobs = jobs; _live = live; }
 
     [HttpGet]
     public async Task<ActionResult<List<AnalysisJobDto>>> List(CancellationToken ct)
         => Ok(await _jobs.ListAsync(GetUserId(), ct));
+
+    /// <summary>Nur der laufende Stand (Tiefe/Tempo/Zeit) der gerade rechnenden Aufträge — ohne Datenbank,
+    /// damit die Liste ihn im Sekundentakt holen kann. Literal-Route vor <c>{id:int}</c>.</summary>
+    [HttpGet("live")]
+    public ActionResult<List<AnalysisJobLiveDto>> Live()
+        => Ok(_live.ForUser(GetUserId(), DateTime.UtcNow));
 
     [HttpPost]
     public async Task<ActionResult<AnalysisJobDto>> Create([FromBody] CreateAnalysisJobRequest request, CancellationToken ct)

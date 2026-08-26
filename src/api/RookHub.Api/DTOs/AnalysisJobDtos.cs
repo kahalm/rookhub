@@ -29,6 +29,10 @@ public record AnalysisJobDto(
     DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt, string? EvalText = null,
     int CurrentDepth = 0, int CurrentNps = 0);
 
+/// <summary>Laufender Stand EINES rechnenden Auftrags (Arbeitsspeicher, sekündlich abfragbar) —
+/// bewusst winzig, weil die Auftragsliste ihn im Sekundentakt holt.</summary>
+public record AnalysisJobLiveDto(int Id, int Depth, int Nps, int Seconds);
+
 public class SetBackgroundEngineRequest
 {
     /// <summary>Engine-ID oder null/leer zum Entfernen.</summary>

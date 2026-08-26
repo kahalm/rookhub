@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
@@ -92,6 +92,39 @@ describe('AnalysisJobsComponent', () => {
     c.jobs = [{ ...c.jobs[0], status: 'paused', currentDepth: 0, currentNps: 0 } as any];
     expect(c.speedOf(c.jobs[0])).toBe('20 kN/s');
   });
+
+  it('polls the live values every second and keeps the clock ticking between two answers', fakeAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [AnalysisJobsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(AnalysisJobsComponent);
+    const c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/analysis-jobs').flush([job(1, { status: 'running', currentDepth: 7, currentNps: 5_400_000 })]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+
+    tick(1000);
+    http.expectOne('/api/analysis-jobs/live').flush([{ id: 1, depth: 21, nps: 4_300_000, seconds: 200 }]);
+    fixture.detectChanges();
+    expect(c.depthNowOf(c.jobs[0])).toBe(21);                 // laufender Stand schlägt den der Liste
+    expect(c.speedOf(c.jobs[0])).toBe('4.300 kN/s');
+    expect(fixture.nativeElement.textContent).toContain('3:20');
+
+    // Nächste Sekunde: die Uhr läuft schon weiter, BEVOR die Antwort da ist
+    tick(1000);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('3:21');
+    http.expectOne('/api/analysis-jobs/live').flush([]);       // Lauf zu Ende → zurück auf den gespeicherten Stand
+    fixture.detectChanges();
+    expect(c.elapsedOf(c.jobs[0])).toBe('2:05');
+    expect(c.depthNowOf(c.jobs[0])).toBe(7);
+
+    discardPeriodicTasks();
+  }));
 
   it('expanding shows the stored lines as SAN and saving sends the new target', async () => {
     const { fixture, c, http } = await make();

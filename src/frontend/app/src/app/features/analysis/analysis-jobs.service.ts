@@ -31,6 +31,16 @@ export interface AnalysisJob {
   finishedAt: string | null;
 }
 
+/** Laufender Stand EINES rechnenden Auftrags. Kommt aus dem Arbeitsspeicher der API (keine DB), damit
+ *  die Liste ihn im Sekundentakt holen kann: `seconds` wächst aus der Startzeit des Laufs — also auch
+ *  dann, wenn die Engine gerade schweigt und keine neue Zeile liefert. */
+export interface AnalysisJobLive {
+  id: number;
+  depth: number;
+  nps: number;
+  seconds: number;
+}
+
 export interface CreateAnalysisJobRequest {
   fen: string;
   targetDepth: number;
@@ -66,6 +76,11 @@ export class AnalysisJobsService {
 
   list(): Observable<AnalysisJob[]> {
     return this.http.get<AnalysisJob[]>('/api/analysis-jobs');
+  }
+
+  /** Nur Tiefe/Tempo/Zeit der gerade rechnenden Aufträge (winzige Antwort, für den Sekundentakt). */
+  live(): Observable<AnalysisJobLive[]> {
+    return this.http.get<AnalysisJobLive[]>('/api/analysis-jobs/live');
   }
 
   create(req: CreateAnalysisJobRequest): Observable<AnalysisJob> {

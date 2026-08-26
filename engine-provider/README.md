@@ -63,6 +63,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
 | `MAX_HASH` | Hash-Tabelle in MiB (leer = 512) |
 | `KEEP_ALIVE` | Sekunden, die eine Engine ohne Stream-Ende weiterläuft (leer = 300). **Für Hintergrund-Analysen hochsetzen** — siehe Warnung unten |
+| `HEARTBEAT_SECONDS` | Lebenszeichen im Analyse-Stream nach so vielen Sekunden Schweigen (leer = 15, 0 = aus) — siehe unten |
 | `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
 | `ENGINE_COUNT` | Mehrere Engines in diesem Container (leer/1 = eine; max. 16) — siehe unten |
@@ -93,6 +94,20 @@ KEEP_ALIVE=86400      # 24 h
 
 Der Preis ist gering: der Stockfish-Prozess bleibt länger im RAM — was hier sogar erwünscht ist, weil
 die warme Hashtabelle ein Fortsetzen nach einer Pause fast kostenlos macht.
+
+### Lebenszeichen im Analyse-Stream (`HEARTBEAT_SECONDS`)
+
+Der Provider schickt nur `info`-Zeilen **mit `score`** an den Broker. Im MultiPV-Modus liegen zwischen
+zwei fertigen Iterationen bei grosser Tiefe Minuten — der Upload schweigt so lange komplett, und der
+Broker (bzw. das CDN davor) schliesst die stumme Verbindung. Beim Empfänger sieht das aus wie ein
+vorzeitig beendeter Stream; ein Hintergrund-Auftrag verhungert dann reproduzierbar kurz vor dem Ziel,
+weil jeder Neustart wieder von Tiefe 1 hochrechnen muss und nie über die Zeit zwischen zwei Abbrüchen
+hinauskommt (beobachtet: alle 5–9 Minuten ein Abriss, Tiefe blieb bei 29 stehen).
+
+Dieses Image patcht den geholten Provider deshalb an **einer** Stelle (`patch_provider.py`, angewandt
+NACH der Prüfsummen-Kontrolle): schweigt die Engine länger als `HEARTBEAT_SECONDS`, geht eine Leerzeile
+in den Stream. Empfänger ignorieren Leerzeilen; die Verbindung bleibt offen. `HEARTBEAT_SECONDS=0`
+schaltet den Eingriff ab.
 
 ### Zwei Engines: Live + Hintergrund
 

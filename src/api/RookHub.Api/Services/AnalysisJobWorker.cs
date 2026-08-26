@@ -74,6 +74,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly EngineActivityTracker _tracker;
+    private readonly AnalysisJobLive _live;
     private readonly LichessEngineService _lichess;
     private readonly ILogger<AnalysisJobWorker> _logger;
     private readonly TimeSpan _tick;
@@ -89,10 +90,11 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private readonly ConcurrentDictionary<string, Running> _running = new();   // key = EngineId
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
-        LichessEngineService lichess, ILogger<AnalysisJobWorker> logger, IConfiguration config)
+        LichessEngineService lichess, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live)
     {
         _scopeFactory = scopeFactory;
         _tracker = tracker;
+        _live = live;
         _lichess = lichess;
         _logger = logger;
         _tick = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:TickSeconds") ?? 5, 1, 60));
@@ -255,6 +257,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     return;
                 }
                 var runStart = DateTime.UtcNow;
+                // Anzeige-Stand ohne Datenbank: die Zeit läuft ab HIER, auch wenn die Engine noch schweigt.
+                _live.Start(job.Id, job.UserId, job.SecondsSpent, runStart);
                 var lastPersist = runStart;
                 var depthAtStart = job.ReachedDepth;
                 string? pendingLine = null; var pendingDepth = job.ReachedDepth;
@@ -276,6 +280,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         // die Anzeige minutenlang still (keine Tiefe, kein Tempo, nicht einmal die Zeit lief mit).
                         currentDepth = depth;
                         currentNps = AnalysisJobStream.NpsOf(line) ?? currentNps;
+                        _live.Update(job.Id, currentDepth, currentNps);
                         var keep = AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth);
                         if (keep) { pendingLine = line; pendingDepth = depth; }
                         var now = DateTime.UtcNow;
@@ -380,6 +385,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         }
         finally
         {
+            _live.Stop(jobId);
             _running.TryRemove(new KeyValuePair<string, Running>(run.EngineId, run));
             run.Cts.Dispose();
         }

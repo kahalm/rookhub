@@ -528,7 +528,11 @@ stoppt Stockfish, die Hashtabelle bleibt warm) und setzt erst nach `AnalysisJobs
 Ruhe dort fort; andere Engines bleiben unberührt. **Laufender Stand**: `CurrentDepth`/`CurrentNps` werden
 bei JEDER empfangenen Zeile fortgeschrieben — auch bei den flacheren, die das Ergebnis nicht ersetzen.
 Ohne das stand die Anzeige nach einer Fortsetzung minutenlang still (die Engine rechnet erst von Tiefe 1
-wieder hoch, und ohne Persist lief nicht einmal die Zeit weiter). **Fortsetzungs-Regel**: der Broker liefert nach
+wieder hoch, und ohne Persist lief nicht einmal die Zeit weiter). Für die SEKÜNDLICHE Anzeige kommt
+`Services/AnalysisJobLive.cs` (Singleton) dazu: derselbe Stand ohne Datenbank, `Seconds` wächst aus der
+Startzeit des Laufs (läuft also auch, während die Engine schweigt), abrufbar über `GET
+/api/analysis-jobs/live`. Bewusst NICHT über häufigeres Persistieren gelöst — das hieße, für eine reine
+Anzeige jede Sekunde eine Zeile zu schreiben. **Fortsetzungs-Regel**: der Broker liefert nach
 jedem Neustart die flachen Iterationen erneut — übernommen wird nur eine Zeile mit `depth ≥ ReachedDepth`
 (`AnalysisJobStream.ShouldPersist`); dieselbe Regel lässt bei „mehr Linien" das alte Ergebnis stehen, bis
 die neue Suche es überholt. **Sticky hash**: `PickNextAsync` bevorzugt den zuletzt gelaufenen Auftrag
@@ -580,6 +584,7 @@ Nachkommastellen) — vorher sprang die Einheit je nach Tempo zwischen N/s, kN/s
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
+| GET | `/api/analysis-jobs/live` | NUR der laufende Stand der gerade rechnenden Aufträge (`{ id, depth, nps, seconds }`) — aus dem Arbeitsspeicher, ohne DB; die Auftragsliste holt ihn im Sekundentakt (Literal-Route vor `{id:int}`) |
 | GET | `/api/analysis-jobs` | Eigene Aufträge (neueste zuerst) inkl. Status (`queued/running/paused/done/failed`), `reachedDepth`, `resultJson`, `secondsSpent`, `lastError` |
 | POST | `/api/analysis-jobs` | Anlegen `{ fen, targetDepth (1–60), multiPv (1–10), engineId?, title? }` — `engineId` fehlend = Hintergrund-Engine aus dem Profil (keine → 400); FEN muss legal sein; max. 50 offene je User |
 | POST | `/api/analysis-jobs/batch` | Mehrfachauswahl `{ fens[] (1–200), targetDepth, multiPv, engineId? }` → `{ created[], skipped[{fen, reason}] }` mit `invalid` (keine legale FEN) / `duplicate` (nicht gescheiterter Auftrag zur Stellung existiert — auch innerhalb des Batches) / `limit` (Deckel offener Aufträge); nie 4xx wegen einzelner Stellungen |
@@ -649,7 +654,15 @@ Die Karte zeigt zusätzlich „rechnet seit m:ss an Tiefe N" ab 5 s ohne neue Ze
 Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Provider — beim Bauen
 auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (eindeutige Herkunft,
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
-und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). Zwei Fallen, die dort
+und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start) sowie `patch_provider.py`
+— EIN Eingriff in den geholten Provider (angewandt NACH der Prüfsummen-Kontrolle, fehlende Textstelle =
+Build-Abbruch statt stiller No-op): ein **Lebenszeichen** (Leerzeile) im Analyse-Stream nach
+`HEARTBEAT_SECONDS` (15) Schweigen. Grund: der Provider reicht nur `info`-Zeilen MIT `score` weiter, und
+zwischen zwei tiefen MultiPV-Iterationen vergehen Minuten — der Broker (bzw. das CDN davor) schloss die
+stumme Verbindung, bei uns sichtbar als `HttpIOException: The response ended prematurely` alle 5–9 min.
+Der Auftrag kam dadurch nie über Tiefe 29 hinaus (jeder Neustart rechnet von Tiefe 1 hoch). Das ist
+dieselbe Klasse Fehler wie der `NdjsonHeartbeatPump` auf der Strecke API→Browser, nur einen Hop weiter
+vorne (Provider→Broker→API). Zwei Fallen, die dort
 bewusst adressiert sind: der Provider-Token braucht `engine:read` **und `engine:write`** (er
 REGISTRIERT die Engine; RookHub selbst genügt `engine:read`) — ohne Vorabprüfung endete das in einem
 401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt; und die Registrierung

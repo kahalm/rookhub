@@ -216,6 +216,7 @@ try
         tracker.OnNotifyFailed += ex => log.LogError(ex, "Benachrichtigung über Live-Analyse fehlgeschlagen");
         return tracker;
     });
+    builder.Services.AddSingleton<AnalysisJobLive>();
     builder.Services.AddSingleton<AnalysisJobWorker>();
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());

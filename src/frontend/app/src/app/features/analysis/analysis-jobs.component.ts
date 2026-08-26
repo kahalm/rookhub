@@ -15,7 +15,7 @@ import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.compone
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { AnalysisJob, AnalysisJobsService } from './analysis-jobs.service';
+import { AnalysisJob, AnalysisJobLive, AnalysisJobsService } from './analysis-jobs.service';
 import { EngineDisplayLine, formatElapsed, formatKiloNodes, formatKiloNps, mapBrokerLine, toDisplayLines } from './engine-lines.util';
 import { ExternalEngineInfo, ExternalEngineService } from './external-engine.service';
 import { JOB_DEPTH_OPTIONS, JOB_LINE_OPTIONS } from './analysis-job-dialog.component';
@@ -62,11 +62,11 @@ import type { EngineAnalyseLine } from './external-engine.service';
                 </div>
                 <div class="job-meta">
                   {{ 'analysisJobs.depthOf' | translate:{ reached: job.reachedDepth, target: job.targetDepth } }}
-                  @if (job.status === 'running' && job.currentDepth) {
-                    <span class="now">{{ 'analysisJobs.runningAt' | translate:{ depth: job.currentDepth } }}</span>
+                  @if (job.status === 'running' && depthNowOf(job) > 0) {
+                    <span class="now">{{ 'analysisJobs.runningAt' | translate:{ depth: depthNowOf(job) } }}</span>
                   }
                   · {{ 'analysisJobs.lines' | translate:{ count: job.multiPv } }}
-                  · {{ formatElapsed(job.secondsSpent) }}
+                  · {{ elapsedOf(job) }}
                   @if (speedOf(job); as sp) { · {{ sp }} }
                   @if (evalOf(job); as ev) { · <span class="eval" [class.neg]="!ev.positive">{{ ev.evalText }}</span> }
                 </div>
@@ -191,6 +191,8 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   readonly formatElapsed = formatElapsed;
   private pollSub?: Subscription;
   private tick = 0;
+  /** Laufender Stand je Auftrag (Sekundentakt); leer, solange nichts rechnet. */
+  private liveById = new Map<number, AnalysisJobLive>();
   /** Ergebnis-Zeilen je Auftrag — nur bei geändertem resultJson neu gemappt (Template-Getter dürfen nicht rechnen). */
   private linesCache = new Map<number, { json: string | null; fen: string; multiPv: number; lines: EngineDisplayLine[] }>();
   /** Geparste Roh-Zeile je Auftrag (für Tempo/Knoten) — gleiche Cache-Regel. */
@@ -217,12 +219,23 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
       next: r => { this.engines = r.engines; this.cdr.markForCheck(); },
       error: () => {},
     });
-    // Läuft gerade etwas, alle 5 s nachladen (Tiefe/Tempo/Zeit bewegen sich sichtbar); wartet nur etwas,
-    // reicht der ruhigere Takt. Ist alles fertig, ruht der Poll ganz.
-    this.pollSub = interval(5_000).subscribe(() => {
-      if (this.jobs.some(j => j.status === 'running')) { this.load(true); return; }
-      if (this.tick % 2 === 0 && this.jobs.some(j => j.status === 'queued' || j.status === 'paused')) this.load(true);
+    // Zwei Takte: SEKÜNDLICH nur der laufende Stand (winzige Antwort ohne Datenbank — Zeit tickt, Tempo
+    // und Tiefe bleiben aktuell), und deutlich seltener die ganze Liste (Status/Ergebnis/Fehler). Ist alles
+    // fertig, ruht beides.
+    this.pollSub = interval(1_000).subscribe(() => {
       this.tick++;
+      const running = this.jobs.some(j => j.status === 'running');
+      if (running) {
+        // Zwischen zwei Antworten läuft die Uhr lokal weiter — sonst hinge die Anzeige an der Antwortzeit.
+        for (const l of this.liveById.values()) l.seconds++;
+        this.cdr.markForCheck();
+        this.jobsApi.live().subscribe({
+          next: rows => { this.liveById = new Map(rows.map(r => [r.id, r])); this.cdr.markForCheck(); },
+          error: () => {},
+        });
+      } else if (this.liveById.size) { this.liveById.clear(); this.cdr.markForCheck(); }
+      if (running) { if (this.tick % 5 === 0) this.load(true); return; }
+      if (this.tick % 10 === 0 && this.jobs.some(j => j.status === 'queued' || j.status === 'paused')) this.load(true);
     });
   }
 
@@ -253,10 +266,24 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
     return this.editDepth !== job.targetDepth || this.editLines !== job.multiPv || this.editEngineId !== job.engineId;
   }
 
+  /** Verstrichene Rechenzeit: solange gerechnet wird der sekündlich mitlaufende Stand, sonst das
+   *  gespeicherte Ergebnis. */
+  elapsedOf(job: AnalysisJob): string {
+    return formatElapsed(this.liveById.get(job.id)?.seconds ?? job.secondsSpent);
+  }
+
+  /** Tiefe, an der die Engine GERADE rechnet (0 = rechnet nicht/noch keine Zeile). */
+  depthNowOf(job: AnalysisJob): number {
+    return this.liveById.get(job.id)?.depth || job.currentDepth || 0;
+  }
+
   /** Suchtempo in kN/s: solange der Auftrag rechnet der LAUFENDE Wert (bewegt sich), sonst der des
    *  gespeicherten Ergebnisses (der Broker liefert dort nodes + verstrichene time). */
   speedOf(job: AnalysisJob): string | null {
-    if (job.status === 'running' && job.currentNps) return formatKiloNps(job.currentNps);
+    if (job.status === 'running') {
+      const nps = this.liveById.get(job.id)?.nps || job.currentNps;
+      if (nps) return formatKiloNps(nps);
+    }
     const raw = this.rawOf(job);
     if (!raw || !raw.time || !raw.nodes) return null;
     return formatKiloNps(raw.nodes * 1000 / raw.time);
