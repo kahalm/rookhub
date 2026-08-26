@@ -67,6 +67,56 @@ public class GamesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Save_PersistsMoveCount_SoTheListNeedsNoPgn()
+    {
+        var user = await CreateUserAsync();
+        var saved = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5", "Nf3", "d6" }, ExternalId = "mc-1",
+        });
+
+        var row = _db.SavedGames.Single(g => g.Id == saved.Id);
+        Assert.Equal(4, row.MoveCount);
+    }
+
+    [Fact]
+    public async Task Save_Healing_UpdatesMoveCountWithThePgn()
+    {
+        // TryHeal ersetzt das PGN - der Zaehler MUSS mitwandern, sonst zeigt die Liste
+        // dauerhaft die alte Zuglaenge einer Partie, die inzwischen laenger ist.
+        var user = await CreateUserAsync();
+        var input = new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "c5" }, ExternalId = "mc-2" };
+        var first = await _service.SaveAsync(user.Id, input);
+
+        input.Moves = new() { "e4", "c5", "Nf3", "d6", "d4" };
+        await _service.SaveAsync(user.Id, input);
+
+        Assert.Equal(5, _db.SavedGames.Single(g => g.Id == first.Id).MoveCount);
+    }
+
+    [Fact]
+    public async Task List_CountsAndBackfillsRowsSavedBeforeTheCounterExisted()
+    {
+        // Altbestand: MoveCount == null. Die Liste muss trotzdem die richtige Zahl zeigen
+        // UND sie nachtragen, damit dieselbe Zeile ihr PGN nie wieder dafuer hergeben muss.
+        var user = await CreateUserAsync();
+        var saved = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5", "Nf3" }, ExternalId = "mc-3",
+        });
+        var row = _db.SavedGames.Single(g => g.Id == saved.Id);
+        row.MoveCount = null;                      // Zustand vor der Einfuehrung des Feldes
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var list = await _service.ListAsync(user.Id);
+
+        Assert.Equal(3, list.Single(g => g.Id == saved.Id).MoveCount);
+        _db.ChangeTracker.Clear();
+        Assert.Equal(3, _db.SavedGames.Single(g => g.Id == saved.Id).MoveCount);   // nachgetragen
+    }
+
+    [Fact]
     public async Task List_ReturnsOwnGamesNewestFirst()
     {
         var user = await CreateUserAsync();

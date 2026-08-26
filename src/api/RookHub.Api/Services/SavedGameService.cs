@@ -77,6 +77,7 @@ public class SavedGameService
             PlayedAt = dto.PlayedAt,
             SourceUrl = Clip(dto.SourceUrl, 1000),
             Pgn = BuildPgn(moves, dto, result),
+            MoveCount = moves.Count,
             ShareToken = await GenerateUniqueTokenAsync(),
             CreatedAt = DateTime.UtcNow,
         };
@@ -102,24 +103,54 @@ public class SavedGameService
     public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200)
     {
         take = Math.Clamp(take, 1, 500);
-        return await _db.SavedGames.AsNoTracking()
+        // Das PGN (LONGTEXT) wird NUR fuer Zeilen mitgeholt, deren Zaehler noch fehlt. Frueher
+        // stand hier CountPlies(g.Pgn) in der Projektion - eine C#-Methode, die EF nicht
+        // uebersetzen kann: die Spalte wanderte damit fuer JEDE der bis zu 500 Partien ueber die
+        // Leitung, obwohl das Listen-DTO das PGN gar nicht traegt.
+        var rows = await _db.SavedGames.AsNoTracking()
             .Where(g => g.UserId == userId)
             .OrderByDescending(g => g.CreatedAt)
             .Take(take)
-            .Select(g => new SavedGameDto
+            .Select(g => new
             {
-                Id = g.Id,
-                Source = g.Source,
-                White = g.White,
-                Black = g.Black,
-                Result = g.Result,
-                PlayedAt = g.PlayedAt,
-                SourceUrl = g.SourceUrl,
-                ShareToken = g.ShareToken,
-                MoveCount = CountPlies(g.Pgn),
-                CreatedAt = g.CreatedAt,
+                g.Id, g.Source, g.White, g.Black, g.Result, g.PlayedAt,
+                g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt,
+                PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
             })
             .ToListAsync();
+
+        var healed = new Dictionary<int, int>();
+        foreach (var r in rows)
+            if (r.MoveCount == null && r.PgnIfUncounted != null)
+                healed[r.Id] = CountPlies(r.PgnIfUncounted);
+
+        // Einmalig nachtragen, damit dieselbe Zeile ihr PGN nie wieder fuer den Zaehler hergibt.
+        // Bewusst best-effort: schlaegt das Schreiben fehl, stimmt die Anzeige trotzdem.
+        if (healed.Count > 0)
+        {
+            try
+            {
+                var ids = healed.Keys.ToList();
+                var tracked = await _db.SavedGames.Where(g => ids.Contains(g.Id)).ToListAsync();
+                foreach (var g in tracked) g.MoveCount = healed[g.Id];
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException) { /* Anzeige stimmt auch ohne den Nachtrag */ }
+        }
+
+        return rows.Select(r => new SavedGameDto
+        {
+            Id = r.Id,
+            Source = r.Source,
+            White = r.White,
+            Black = r.Black,
+            Result = r.Result,
+            PlayedAt = r.PlayedAt,
+            SourceUrl = r.SourceUrl,
+            ShareToken = r.ShareToken,
+            MoveCount = r.MoveCount ?? (healed.TryGetValue(r.Id, out var c) ? c : 0),
+            CreatedAt = r.CreatedAt,
+        }).ToList();
     }
 
     /// <summary>Detail einer eigenen Partie inkl. PGN; null wenn nicht gefunden / fremd.</summary>
@@ -220,6 +251,7 @@ public class SavedGameService
         if (!moreMoves && !(newHasElo && !oldHasElo)) return false;
 
         existing.Pgn = BuildPgn(moves, dto, result);
+        existing.MoveCount = moves.Count;   // MUSS mit: das PGN wird hier ersetzt
         if (!string.IsNullOrWhiteSpace(dto.White)) existing.White = Clip(dto.White, 120);
         if (!string.IsNullOrWhiteSpace(dto.Black)) existing.Black = Clip(dto.Black, 120);
         existing.Result = result;

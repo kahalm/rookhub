@@ -38,5 +38,16 @@ public class SavedGame
     /// <summary>Eindeutiges URL-sicheres Token für den öffentlichen Teilen-Link (<c>/g/{token}</c>).</summary>
     public string ShareToken { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Zahl der Halbzüge, aus dem PGN vorberechnet. <c>null</c> = noch nie gezählt (Zeilen von vor
+    /// der Einführung des Feldes) — die werden beim nächsten Auflisten nachgetragen.
+    /// Existiert, weil die Listenansicht sonst das komplette PGN (LONGTEXT) jeder Partie laden
+    /// müsste, nur um Züge zu zählen: <c>CountPlies()</c> ist eine C#-Methode und damit in einer
+    /// EF-Projektion nicht übersetzbar, EF holt die Spalte also mit und rechnet im Speicher.
+    /// Bei bis zu 500 Partien je Anfrage ist das die mit Abstand teuerste Spalte — und das DTO
+    /// der Liste trägt das PGN nicht einmal.
+    /// </summary>
+    public int? MoveCount { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
