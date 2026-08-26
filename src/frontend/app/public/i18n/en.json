@@ -2356,8 +2356,8 @@
       "stopFailed": "Could not save the timer entry."
     },
     "theme": {
-      "label": "Topic",
-      "unset": "No topic",
+      "label": "Theme",
+      "unset": "No theme",
       "opening": "Opening",
       "middlegame": "Middlegame",
       "endgame": "Endgame",
@@ -2365,7 +2365,7 @@
       "other": "Other"
     },
     "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
+    "intro": "Set your daily training-time goal and weekly targets and track your progress.",
     "today": "Today",
     "setTitle": "Set your goals",
     "tracker": "Goal tracker",
@@ -2476,7 +2476,7 @@
         "t": "Account & sign-in",
         "p": [
           "You can register with a username and password; an email address is optional. Use »Register« in the top bar to create an account, then sign in with the same credentials.",
-          "Tick »Stay signed in« at login to remain logged in for 30 days instead of just one. You can sign out any time via the account menu (person icon) at the top right."
+          "Tick »Stay signed in« at login to remain logged in for 90 days instead of 30. You can sign out any time via the account menu (person icon) at the top right."
         ]
       },
       "profile": {
@@ -2550,9 +2550,9 @@
       "trainingGoals": {
         "t": "Training goals",
         "p": [
-          "Set daily goals for puzzle and book training (in minutes) plus a weekly goal for games played (rapid/classical) and full training days. Coaches can provide templates per group; your personal goal takes precedence.",
-          "The tracker colors each day by goal completion (none/partial/full) – the daily status comes only from puzzle and book time, while playing is a weekly goal.",
-          "RookHub fetches rapid/classical games automatically from Lichess and chess.com (public, no login there). Use »Sync now« to trigger it immediately. Bullet, blitz and correspondence do not count."
+          "Set one daily training-time goal (in minutes) plus weekly goals for games played (rapid/classical) and full training days. Coaches can provide a default per group; your personal goal takes precedence.",
+          "The tracker colors each day by goal completion (none/partial/full) – the daily status comes from your training time (puzzles, courses, Chessable and logged offline activity), while playing is a weekly goal.",
+          "RookHub fetches rapid/classical games automatically from Lichess and chess.com (public, no login there). Use »Update playing time« to trigger it immediately. Bullet, blitz and correspondence do not count."
         ]
       },
       "stats": {
@@ -2564,8 +2564,8 @@
       "analysis": {
         "t": "Analysis",
         "p": [
-          "Analysis runs entirely locally in your browser via Stockfish (WebAssembly) – no server, even offline. You get several main lines (MultiPV) and evaluations for any position.",
-          "Analysis works without login. On first start the engine downloads about 7 MB once; afterwards it is available offline too."
+          "By default, analysis runs locally in your browser via Stockfish (WebAssembly) – no server, even offline. Optionally you can connect an external engine registered on your Lichess account and compare two engines. You get several main lines (MultiPV) and evaluations for any position.",
+          "Analysis works without login. On first start the browser engine downloads about 7 MB once; afterwards it is available offline too."
         ]
       },
       "repertoires": {
@@ -2600,7 +2600,7 @@
         "p": [
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
           "Two variants with identical functionality exist: a browser extension (available from the Chrome Web Store and, as a signed build, for Firefox) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
-          "Setup: create a token under »Extension tokens« in your profile (scope „extension\"), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
+          "Setup: create a token under »Extension tokens« in your profile (scope “extension”), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
           "Installation, auto-update and details: https://github.com/kahalm/repcheck — the extension is on the Chrome Web Store at https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn and as a signed Firefox build at https://addons.mozilla.org/en-US/firefox/addon/repcheck/, and the Tampermonkey userscript can be imported directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
@@ -2630,7 +2630,7 @@
     "helpIntro": "Get your Chessable bearer token from the browser:",
     "helpStep1": "Open Chessable, then the browser DevTools (F12) → Network tab.",
     "helpStep2": "Reload the Chessable dashboard and find the request \"getUserSettings\".",
-    "helpStep3": "In its request headers, find \"authorization\" — right-click the value and choose \"Copy value\" (or manually copy the part after \"authorization: Bearer \"). That is your token (a JWT, valid about 7 days).",
+    "helpStep3": "In its request headers, find \"authorization\" — right-click the value and choose \"Copy value\" (or manually copy the part after \"authorization: Bearer \"). That is your token (a JWT, valid for about 7 days).",
     "helpNote": "Used only to fetch your own purchased courses for personal backup.",
     "helpRepcheck": "Alternatively, the RepCheck browser extension fetches the token for you:",
     "bookmarkletTitle": "One-click bookmarklet",
@@ -2700,7 +2700,7 @@
     "adminStatus_running": "running",
     "adminStatus_paused": "paused",
     "error": "Error: {{message}}",
-    "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
+    "throughputHint": "Fetching runs at roughly 4 lines/min (throttled to avoid blocks, including VPN pauses). A course with 500 lines takes about 2 hours, 1000 lines about 4 hours.",
     "etaRemaining": "~{{min}} min left",
     "importDuration": "Queue {{queue}} · Fetch {{fetch}}",
     "cachedHint": "Cached — available almost instantly (no Chessable fetch needed)",
@@ -2761,8 +2761,8 @@
   },
   "remembered": {
     "title": "Remembered positions",
-    "hint": "Positions you saved from Chessable via the RepCheck extension („Remember line“).",
-    "empty": "No remembered positions yet. Use „Remember line“ in the RepCheck extension on chessable.com.",
+    "hint": "Positions you saved from Chessable via the RepCheck extension (“Remember line”).",
+    "empty": "No remembered positions yet. Use “Remember line” in the RepCheck extension on chessable.com.",
     "unknownCourse": "Unknown course",
     "analyze": "Analyze",
     "copyFen": "Copy FEN",

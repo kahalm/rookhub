@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.377.2", date: "2026-08-26", changes: [
+    { en: "Translation review, final part: 63 more corrected texts, mostly in the Chessable, training-goals, help and statistics areas. Croatian now consistently uses the informal form and Croatian terms in the Chessable section (which had been left in English); German and English got fixed quote pairs and up-to-date wording — including the Chessable fetch-speed hint, which still promised 15–20 lines per minute although fetching has long been throttled to about 4.", de: "Übersetzungsprüfung, letzter Teil: 63 weitere korrigierte Texte, vor allem in den Bereichen Chessable, Trainingsziele, Hilfe und Statistik. Kroatisch nutzt jetzt durchgehend die Du-Form und kroatische Begriffe im Chessable-Bereich (der englisch geblieben war); Deutsch und Englisch bekamen korrekte Anführungszeichen-Paare und aktuelle Formulierungen — darunter der Hinweis zur Chessable-Holgeschwindigkeit, der noch 15–20 Linien pro Minute versprach, obwohl das Holen längst auf etwa 4 gedrosselt ist." },
+  ] },
   { version: "0.377.1", date: "2026-08-26", changes: [
     { en: "The list of saved games loads faster. It used to fetch the complete game notation of every game just to count the moves - up to 500 of them per request, even though the list itself never shows the notation. The move count is now stored with the game. Games saved before this still get counted correctly, once, and carry the number from then on.", de: "Die Liste der gespeicherten Partien lädt schneller. Sie holte bisher die vollständige Notation jeder Partie nur, um die Züge zu zählen - bei bis zu 500 Partien je Aufruf, obwohl die Liste die Notation gar nicht anzeigt. Die Zugzahl steht jetzt bei der Partie. Vorher gespeicherte Partien werden einmalig korrekt gezählt und tragen die Zahl danach mit sich." },
   ] },
