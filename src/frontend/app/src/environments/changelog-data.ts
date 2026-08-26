@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.377.5", date: "2026-08-26", changes: [
+    { en: "The pawn promotion dialog on the puzzle board is now the same one the analysis board uses. Both had their own copy of identical code - positioning, the piece graphics and the protection against the tap that triggered the move falling straight through onto the topmost choice. Two copies of that means a fix to one of them silently leaves the other broken. Nothing changes for you; the dialog looks and behaves as before.", de: "Der Umwandlungs-Dialog auf dem Puzzle-Brett ist jetzt derselbe, den auch das Analysebrett benutzt. Beide hatten eine eigene Kopie identischen Codes - Positionierung, Figurengrafik und der Schutz davor, dass der auslösende Tap direkt auf die oberste Auswahl durchfällt. Zwei Kopien heißen: Wer eine davon repariert, lässt die andere stillschweigend kaputt. Für dich ändert sich nichts, der Dialog sieht aus und verhält sich wie zuvor." },
+  ] },
   { version: "0.377.4", date: "2026-08-26", changes: [
     { en: "Analysis: a search timer now sits permanently next to „Depth x/y“ in the engine header — it starts with the search on the current position, keeps running through an automatic resume after a dropped stream and freezes when the search ends. The „working on depth N for m:ss“ note from 0.377.0 stays for the case that no new line arrives for 5 seconds.", de: "Analyse: Neben „Tiefe x/y“ im Engine-Kopf steht jetzt permanent ein Suchtimer — er startet mit der Suche auf der aktuellen Stellung, läuft über eine automatische Fortsetzung nach Stream-Abriss weiter und friert beim Ende der Suche ein. Der Hinweis „rechnet seit m:ss an Tiefe N“ aus 0.377.0 bleibt für den Fall, dass 5 Sekunden keine neue Zeile kommt." },
   ] },

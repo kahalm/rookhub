@@ -11,14 +11,15 @@ import { paintCrazyPieces, clearCrazyPieces, CrazyPieceMode } from './board-them
 import {
   BoardFullscreenButtonComponent,
 } from '../../shared/fullscreen/board-fullscreen-button.component';
-
-type PromotionPiece = 'q' | 'r' | 'b' | 'n';
+import {
+  PromotionPickerComponent, PromotionPiece,
+} from '../../shared/promotion-picker/promotion-picker.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-puzzle-board',
   standalone: true,
-  imports: [CommonModule, BoardFullscreenButtonComponent],
+  imports: [CommonModule, BoardFullscreenButtonComponent, PromotionPickerComponent],
   template: `
     <div #fsHost class="board-fs-host">
      @if (allowFullscreen) {
@@ -33,16 +34,14 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
              [style.left.%]="vizSelectOverlayLeft"
              [style.top.%]="vizSelectOverlayTop"></div>
       }
-      @if (showPromotionOverlay) {
-        <div class="promotion-backdrop" (click)="cancelPromotion()"></div>
-        <div class="promotion-choices" [style.left.%]="promotionFilePercent"
-             [class.from-bottom]="promotionFromBottom">
-          @for (piece of promotionPieces; track piece) {
-            <div class="promotion-piece" (click)="selectPromotion(piece)">
-              <div class="piece-icon" [style.backgroundImage]="getPieceImage(piece)"></div>
-            </div>
-          }
-        </div>
+      @if (pendingPromotion) {
+        <app-promotion-picker
+          [color]="promotionColor"
+          [dest]="pendingPromotion.dest"
+          [orientation]="orientation"
+          [pieceSet]="pieceSet"
+          (choose)="selectPromotion($event)"
+          (dismiss)="cancelPromotion()" />
       }
      </div>
      <!-- Vom Consumer in die Vollbild-Hülle projizierte Elemente (z. B. der Kalkulations-Timer).
@@ -79,37 +78,6 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
       position: relative;
       display: block;
       overflow: hidden;
-    }
-    .promotion-backdrop {
-      position: absolute; inset: 0; z-index: 100;
-      background: rgba(0,0,0,0.35);
-    }
-    .promotion-choices {
-      position: absolute; z-index: 101;
-      top: 0; width: 12.5%;
-      display: flex; flex-direction: column;
-    }
-    .promotion-choices.from-bottom {
-      top: auto; bottom: 0;
-      flex-direction: column-reverse;
-    }
-    .promotion-piece {
-      width: 100%; aspect-ratio: 1;
-      background: rgba(255,255,255,0.9);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.1s;
-    }
-    .promotion-piece:first-child { border-radius: 4px 4px 0 0; }
-    .promotion-piece:last-child { border-radius: 0 0 4px 4px; }
-    .promotion-choices.from-bottom .promotion-piece:first-child { border-radius: 0 0 4px 4px; }
-    .promotion-choices.from-bottom .promotion-piece:last-child { border-radius: 4px 4px 0 0; }
-    .promotion-piece:hover { background: rgba(200,220,255,0.95); }
-    .piece-icon {
-      width: 85%; height: 85%;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
     }
     .viz-select-overlay {
       position: absolute;
@@ -177,24 +145,11 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private static readonly VIZ_DRAG_SQUARE_FRACTION = 0.35;
   private static readonly VIZ_DRAG_MIN_PX = 6;
 
-  // Promotion overlay state
-  showPromotionOverlay = false;
-  private pendingPromotion: { orig: Key; dest: Key } | null = null;
-  private promotionColor: 'w' | 'b' = 'w';
-  promotionFilePercent = 0;
-  promotionFromBottom = false;
-  promotionPieces: PromotionPiece[] = ['q', 'r', 'b', 'n'];
-  /** Zeitpunkt (ms), bis zu dem Klicks/Taps auf den Promotion-Dialog ignoriert werden.
-   *  Der Dialog erscheint genau unter dem Finger (auf dem Zielfeld) — auf Touch-Geräten
-   *  fällt der gerade ausgelöste Zug-Tap sonst direkt auf die oberste Auswahl (Dame)
-   *  durch und wandelt ungewollt in die Dame um. Ein kurzes Fenster schluckt diesen Ghost-Tap. */
-  private promotionGuardUntil = 0;
-  private static readonly PROMOTION_GUARD_MS = 400;
-
-  private static readonly PIECE_NAMES: Record<string, Record<PromotionPiece, string>> = {
-    'w': { q: 'wQ', r: 'wR', b: 'wB', n: 'wN' },
-    'b': { q: 'bQ', r: 'bR', b: 'bB', n: 'bN' }
-  };
+  // Umwandlungs-Dialog: Sichtbarkeit HAENGT an pendingPromotion (ein Zustand statt zweier,
+  // die auseinanderlaufen koennen). Positionierung, Figurengrafik und der Ghost-Tap-Schutz
+  // liegen in PromotionPickerComponent - dieselbe, die auch das Analysebrett benutzt.
+  pendingPromotion: { orig: Key; dest: Key } | null = null;
+  promotionColor: 'w' | 'b' = 'w';
 
   ngAfterViewInit(): void {
     this.ensureChessgroundCss();
@@ -426,19 +381,13 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       } catch { /* fallback to orientation */ }
     }
     this.promotionColor = color;
-    const fileIndex = dest.charCodeAt(0) - 'a'.charCodeAt(0);
-    const adjustedFile = this.orientation === 'white' ? fileIndex : 7 - fileIndex;
-    this.promotionFilePercent = adjustedFile * 12.5;
-    const destRank = dest[1];
-    this.promotionFromBottom = (this.orientation === 'white' && destRank === '1') ||
-                                (this.orientation === 'black' && destRank === '8');
-    this.promotionGuardUntil = Date.now() + PuzzleBoardComponent.PROMOTION_GUARD_MS;
-    this.showPromotionOverlay = true;
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.showPromotionOverlay) {
+    // Escape kann kein Ghost-Tap sein, greift also bewusst auch im Guard-Fenster der
+    // Auswahl-Komponente - anders als ein Klick auf den Hintergrund.
+    if (this.pendingPromotion) {
       this.cancelPromotion();
     }
   }
@@ -638,40 +587,18 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     // Farbe von dort ableiten, sonst vom bereits gezogenen Bauern auf dest.
     const piece = this.ground?.state.pieces.get(dest) ?? this.ground?.state.pieces.get(orig);
     this.promotionColor = piece?.color === 'white' ? 'w' : 'b';
-
-    // Calculate file position (0-7 mapped to percentage)
-    const fileChar = dest[0];
-    const fileIndex = fileChar.charCodeAt(0) - 'a'.charCodeAt(0);
-    // If board is flipped, reverse the file
-    const adjustedFile = this.orientation === 'white' ? fileIndex : 7 - fileIndex;
-    this.promotionFilePercent = adjustedFile * 12.5;
-
-    // Show from top if promoting to rank 8 (white's side when white orientation)
-    // Show from bottom if promoting to rank 1
-    const destRank = dest[1];
-    this.promotionFromBottom = (this.orientation === 'white' && destRank === '1') ||
-                                (this.orientation === 'black' && destRank === '8');
-
-    this.promotionGuardUntil = Date.now() + PuzzleBoardComponent.PROMOTION_GUARD_MS;
-    this.showPromotionOverlay = true;
   }
 
   selectPromotion(piece: PromotionPiece): void {
     if (!this.pendingPromotion) return;
-    // Ghost-Tap des Zugs (fällt direkt auf den frisch gerenderten Dialog durch) verwerfen.
-    if (Date.now() < this.promotionGuardUntil) return;
     const { orig, dest } = this.pendingPromotion;
-    this.showPromotionOverlay = false;
     this.pendingPromotion = null;
     this.moveMade.emit({ orig, dest, promotion: piece });
   }
 
   cancelPromotion(): void {
     if (!this.pendingPromotion) return;
-    // Innerhalb des Guard-Fensters keine versehentliche Abwahl durch den durchfallenden Tap.
-    if (Date.now() < this.promotionGuardUntil) return;
-    // Reset the board to undo the visual move chessground already made
-    this.showPromotionOverlay = false;
+    // Brett zuruecksetzen: chessground hat den Zug optisch bereits ausgefuehrt.
     this.pendingPromotion = null;
     // Restore previous position
     if (this.ground) {
@@ -688,12 +615,6 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         }
       });
     }
-  }
-
-  getPieceImage(piece: PromotionPiece): string {
-    const name = PuzzleBoardComponent.PIECE_NAMES[this.promotionColor][piece];
-    const set = this.pieceSet === '_crazy' ? 'cburnett' : (this.pieceSet || 'cburnett');
-    return `url('/piece/${set}/${name}.svg')`;
   }
 
   ngOnDestroy(): void {

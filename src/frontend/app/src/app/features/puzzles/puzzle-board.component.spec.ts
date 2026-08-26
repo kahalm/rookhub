@@ -10,63 +10,47 @@ import { PuzzleBoardComponent } from './puzzle-board.component';
 import { Key } from 'chessground/types';
 
 /**
- * Regressionsschutz gegen die ungewollte Damenumwandlung auf Mobilgeräten:
- * Der Promotion-Dialog erscheint direkt unter dem Finger (auf dem Zielfeld). Ohne Schutz
- * fiel der gerade ausgelöste Zug-Tap/-Klick sofort auf die oberste Auswahl (Dame) durch.
- * Ein kurzes Guard-Fenster muss diesen Ghost-Tap verwerfen, eine spätere Auswahl aber zulassen.
+ * Der Ghost-Tap-Schutz und die Positionierung liegen seit der Zusammenführung in
+ * PromotionPickerComponent (shared/promotion-picker/) und sind dort getestet — inklusive
+ * Guard für choose UND dismiss. Hier bleibt nur, was das Brett selbst verantwortet:
+ * die Auswahl als Zug zu melden und beim Abbruch die von chessground bereits ausgeführte
+ * Bewegung optisch zurückzunehmen.
  */
-describe('PuzzleBoardComponent Promotion-Guard', () => {
+describe('PuzzleBoardComponent Promotion-Anbindung', () => {
   function create(): PuzzleBoardComponent {
     const comp = new PuzzleBoardComponent();
-    // pendingPromotion simulieren (sonst kehren beide Methoden sofort zurück)
-    (comp as unknown as { pendingPromotion: { orig: Key; dest: Key } }).pendingPromotion =
-      { orig: 'a7' as Key, dest: 'a8' as Key };
+    comp.pendingPromotion = { orig: 'a7' as Key, dest: 'a8' as Key };
     return comp;
   }
 
-  function setGuard(comp: PuzzleBoardComponent, untilMs: number): void {
-    (comp as unknown as { promotionGuardUntil: number }).promotionGuardUntil = untilMs;
-  }
-
-  it('selectPromotion verwirft den Ghost-Tap innerhalb des Guard-Fensters', () => {
+  it('meldet die gewählte Figur als Zug und schließt den Dialog', () => {
     const comp = create();
-    setGuard(comp, Date.now() + 10_000);
-    const emit = spyOn(comp.moveMade, 'emit');
-
-    comp.selectPromotion('q');
-
-    expect(emit).not.toHaveBeenCalled();
-    expect(comp.showPromotionOverlay).toBeFalse(); // bleibt unverändert (Dialog war ohnehin nicht offen gesetzt)
-  });
-
-  it('selectPromotion emittiert die gewählte Figur nach Ablauf des Guard-Fensters', () => {
-    const comp = create();
-    setGuard(comp, Date.now() - 1);
     const emit = spyOn(comp.moveMade, 'emit');
 
     comp.selectPromotion('n');
 
     expect(emit).toHaveBeenCalledWith({ orig: 'a7' as Key, dest: 'a8' as Key, promotion: 'n' });
+    expect(comp.pendingPromotion).toBeNull();
   });
 
-  it('cancelPromotion ignoriert den durchfallenden Tap innerhalb des Guard-Fensters', () => {
+  it('schließt den Dialog beim Abbruch, ohne einen Zug zu melden', () => {
     const comp = create();
-    setGuard(comp, Date.now() + 10_000);
+    const emit = spyOn(comp.moveMade, 'emit');
 
     comp.cancelPromotion();
 
-    // pendingPromotion bleibt bestehen -> Dialog wurde nicht abgebrochen
-    expect((comp as unknown as { pendingPromotion: unknown }).pendingPromotion).not.toBeNull();
+    expect(emit).not.toHaveBeenCalled();
+    expect(comp.pendingPromotion).toBeNull();
   });
 
-  it('cancelPromotion bricht nach Ablauf des Guard-Fensters ab', () => {
-    const comp = create();
-    setGuard(comp, Date.now() - 1);
+  it('tut nichts, wenn gar keine Umwandlung offen ist', () => {
+    const comp = new PuzzleBoardComponent();
+    const emit = spyOn(comp.moveMade, 'emit');
 
+    comp.selectPromotion('q');
     comp.cancelPromotion();
 
-    expect((comp as unknown as { pendingPromotion: unknown }).pendingPromotion).toBeNull();
-    expect(comp.showPromotionOverlay).toBeFalse();
+    expect(emit).not.toHaveBeenCalled();
   });
 });
 
