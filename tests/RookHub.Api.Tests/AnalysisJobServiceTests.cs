@@ -137,6 +137,74 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_RejectsMoreThanFiveLines_ProtocolMaximum()
+    {
+        // Das Lichess-Protokoll erlaubt work.multiPv nur 1..5; mehr würde der Broker abweisen und der
+        // Auftrag liefe endlos in die Wiederholung.
+        var u = await UserWithBackgroundEngineAsync();
+        Assert.Equal(5, AnalysisJobService.MaxMultiPv);
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, MultiPv = 6 }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest { Fens = [START], MultiPv = 10 }));
+        var job = await DoneJobAsync(u);
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { MultiPv = 6 }));
+    }
+
+    [Fact]
+    public async Task CreateMany_NullFens_IsBadRequestNotCrash()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest { Fens = null }));
+    }
+
+    [Fact]
+    public async Task Update_MoreLines_LiftsTargetToAtLeastReachedDepth()
+    {
+        // Sonst suchte der Neustart bis zu einer Tiefe UNTER dem Erreichten — der Worker übernähme keine
+        // einzige Zeile (ShouldPersist), die Engine-Zeit wäre verschenkt.
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u, reached: 40, multiPv: 2);
+        job.TargetDepth = 30; await _db.SaveChangesAsync();
+
+        var dto = await _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { MultiPv = 4 });
+
+        Assert.Equal("queued", dto!.Status);
+        Assert.Equal(40, dto.TargetDepth);
+    }
+
+    [Fact]
+    public async Task Update_DepthUp_AlsoRevivesFailedJob_AndResetsCounters()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u, reached: 20);
+        job.Status = AnalysisJobStatus.Failed; job.LastError = "Engine weg"; job.FruitlessAttempts = 3;
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { TargetDepth = 35 });
+
+        Assert.Equal("queued", dto!.Status);
+        Assert.Null(dto.LastError);
+        Assert.Equal(0, (await _db.AnalysisJobs.FindAsync(job.Id))!.FruitlessAttempts);
+    }
+
+    [Fact]
+    public async Task Create_TrimsOldestFinishedJobs_OverTheTotalCap()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < AnalysisJobService.MaxJobsPerUser; i++)
+            _db.AnalysisJobs.Add(new AnalysisJob { UserId = u, Fen = $"8/8/8/8/8/8/8/K6k w - - 0 {i}", EngineId = "e",
+                TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Done, FinishedAt = now.AddMinutes(-i) });
+        await _db.SaveChangesAsync();
+        var oldestId = await _db.AnalysisJobs.OrderBy(j => j.FinishedAt).Select(j => j.Id).FirstAsync();
+
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 30, MultiPv = 3 });
+
+        Assert.Equal(AnalysisJobService.MaxJobsPerUser, await _db.AnalysisJobs.CountAsync(j => j.UserId == u));
+        Assert.Null(await _db.AnalysisJobs.FindAsync(oldestId));   // der älteste FERTIGE ist gewichen
+    }
+
+    [Fact]
     public async Task Create_WithoutBackgroundEngine_Throws()
     {
         var u = await UserWithBackgroundEngineAsync(engine: null);

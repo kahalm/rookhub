@@ -1076,6 +1076,7 @@ public class AppDbContext : DbContext
              .HasForeignKey(j => j.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(j => j.ResultJson).HasColumnType("LONGTEXT");
+            e.Property(j => j.EvalText).HasMaxLength(16);
         });
 
         modelBuilder.Entity<ChessableImport>(e =>

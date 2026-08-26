@@ -209,7 +209,13 @@ try
     builder.Services.AddScoped<CalcSeriesAnnounceService>();
     // Hintergrund-Analyseaufträge: Tracker (Live-Streams je User) + Service + Worker (Singleton, damit
     // der Service laufende Aufträge unterbrechen kann — z. B. beim Löschen).
-    builder.Services.AddSingleton<EngineActivityTracker>();
+    builder.Services.AddSingleton<EngineActivityTracker>(sp =>
+    {
+        var tracker = new EngineActivityTracker();
+        var log = sp.GetRequiredService<ILoggerFactory>().CreateLogger("EngineActivityTracker");
+        tracker.OnNotifyFailed += ex => log.LogError(ex, "Benachrichtigung über Live-Analyse fehlgeschlagen");
+        return tracker;
+    });
     builder.Services.AddSingleton<AnalysisJobWorker>();
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());

@@ -532,7 +532,21 @@ Broker-Fehlern. Beim API-Start werden `Running`-Aufträge auf `Paused` gesetzt. 
 `AnalysisJobService.UpdateAsync`: Tiefe ↑ über das Erreichte → fertiger Auftrag zurück in die Queue;
 Tiefe ↓ auf/unter das Erreichte → `Done`; Linien ↓ → gespeicherte `pvs` kürzen, kein Neustart; Linien ↑ →
 laufende Suche abbrechen (`IAnalysisJobControl.Interrupt`), zurück in die Queue, Ergebnis bleibt Anzeige.
-Ergebnis = letzte Broker-Zeile als opakes JSON (`ResultJson`), das Frontend mappt es wie den Live-Stream.
+Ergebnis = letzte Broker-Zeile als opakes JSON (`ResultJson`), das Frontend mappt es wie den Live-Stream; die
+Bewertung der Hauptvariante steht zusätzlich als `EvalText` in der Zeile, damit Listen die (großen) Roh-Zeilen
+nicht laden müssen. **Grenzen und Terminalzustände (0.383.0, aus dem Review)**: `MultiPv` ist auf **1..5**
+gedeckelt — das Protokoll-Maximum von `work.multiPv`, im Worker ein zweites Mal geklemmt (ein größerer Wert
+wird vom Broker abgewiesen und der Auftrag liefe endlos in die Wiederholung). Der Worker bricht **nicht mehr
+selbst** ab, wenn die Hauptvariante die Zieltiefe erreicht: die Engine bekommt `depth` als Limit und beendet den
+Stream selbst — sonst blieben die Linien 2..K eine Iteration flacher (jede `pv` traegt ihre eigene Tiefe). Ein Lauf
+ohne Tiefenfortschritt erhoeht `FruitlessAttempts`; ab `MaxFruitlessAttempts` (3) gilt der Auftrag als `Failed`
+(Matt-/Pattstellungen liefen sonst ewig im 30-s-Takt). Bleibt die erste Datenzeile binnen
+`AnalysisJobs:FirstLineTimeoutSeconds` (300) aus, wird pausiert statt den Slot des Users unbegrenzt zu halten.
+Unerwartete Ausnahmen setzen den Auftrag in einem EIGENEN Scope auf `Paused` zurueck (sonst stuende er bis zum
+naechsten API-Start auf `Running` und wuerde nie wieder aufgegriffen). `TryCancel` faengt `ObjectDisposedException`
+— zwischen Dictionary-Griff und `Cancel()` kann der Lauf selbst geendet haben, und der Wurf lief bis in den
+Request-Thread des Live-Streams (dessen Zaehler waere fuer immer stehen geblieben). `EngineActivityTracker.Begin`
+kapselt den `LiveStarted`-Aufruf entsprechend. `MaxJobsPerUser` (200) trimmt die aeltesten fertigen Auftraege.
 **Frontend (0.380.0)**: Hintergrund-Engine in der Profil-Engine-Karte wählen (`PUT /api/engine/background`);
 das Analysebrett filtert sie aus Live- und Vergleichs-Picker (`backgroundEngineId` aus `GET /api/engine/external`)
 und bietet ein Uhr-Symbol „Im Hintergrund analysieren" (`AnalysisJobDialogComponent`: Tiefe/Linien vorbelegt aus
@@ -718,7 +732,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | MenuItemGroupAccesses | Welche Gruppe sieht einen gruppen-gegateten Menüeintrag | Composite PK (ItemKey, GroupId), Cascade von MenuItemSetting + Group, Index GroupId |
 | ChessableCredentials | Per-User Chessable-Bearer (1:1) | UserId (unique, Cascade), EncryptedBearer (TEXT, AES via `EncryptionService`), **ChessableUid? (≤32; beim erfolgreichen `POST /api/chessable/test` aus der Chessable-Antwort BEWIESEN gesetzt — nicht aus dem ungeprüften JWT; verknüpft den User mit seiner Chessable-Identität fürs Claimen anonymer getReview-Linien)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Wird vom `ChessableProxyService` an piratechess durchgereicht |
 | LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
-| AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess eei_…), TargetDepth, MultiPv, Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
+| AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess eei_…), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |
 | MessageThreads | Metadaten/Zuweisung einer Konversation (1 Zeile je User) | UserId (PK + FK AppUser Cascade), ClaimedByAdminId? (welcher Admin übernommen hat, **ohne FK** → vermeidet doppelte Cascade-Pfade; Name wird beim Abruf aufgelöst), ClaimedAt?; entsteht mit der ersten Nachricht |
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |

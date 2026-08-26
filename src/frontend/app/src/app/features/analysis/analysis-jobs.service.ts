@@ -16,6 +16,8 @@ export interface AnalysisJob {
   status: AnalysisJobStatus;
   reachedDepth: number;
   resultJson: string | null;
+  /** Bewertung der Hauptvariante („+0.35"), serverseitig aus der Ergebniszeile abgeleitet. */
+  evalText?: string | null;
   secondsSpent: number;
   lastError: string | null;
   createdAt: string;

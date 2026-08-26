@@ -25,9 +25,19 @@ public class EngineActivityTracker
     public int Begin(int userId)
     {
         var n = _active.AddOrUpdate(userId, 1, (_, c) => c + 1);
-        if (n == 1) LiveStarted?.Invoke(userId);
+        // Der Zähler ist zu diesem Zeitpunkt schon erhöht: wirft ein Abnehmer, käme der Aufrufer nie zu
+        // seinem End() und der User bliebe für immer „live" — der Hintergrund-Worker würde ihn dauerhaft
+        // überspringen. Ein Benachrichtigungs-Fehler darf diese Buchführung nicht beschädigen.
+        if (n == 1)
+        {
+            try { LiveStarted?.Invoke(userId); }
+            catch (Exception ex) { OnNotifyFailed?.Invoke(ex); }
+        }
         return n;
     }
+
+    /// <summary>Diagnose-Haken für Fehler eines <see cref="LiveStarted"/>-Abnehmers (Program.cs verdrahtet Logging).</summary>
+    public event Action<Exception>? OnNotifyFailed;
 
     /// <summary>Live-Stream endet; auf 0 verschwindet der Eintrag (kein Wachstum über die Zeit).</summary>
     public void End(int userId)

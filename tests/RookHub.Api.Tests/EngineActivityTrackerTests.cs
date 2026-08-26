@@ -34,6 +34,23 @@ public class EngineActivityTrackerTests
     }
 
     [Fact]
+    public void Begin_KeepsCountingWhenAListenerThrows()
+    {
+        // Regression: warf der LiveStarted-Abnehmer (Worker.PauseUser auf einer bereits disposed CTS), lief der
+        // Aufrufer nie in sein End() — der User galt für immer als „live" und bekam nie wieder einen Auftrag.
+        var t = new EngineActivityTracker();
+        Exception? reported = null;
+        t.OnNotifyFailed += ex => reported = ex;
+        t.LiveStarted += _ => throw new ObjectDisposedException("cts");
+
+        Assert.Equal(1, t.Begin(4));
+        Assert.IsType<ObjectDisposedException>(reported);
+        t.End(4);
+        Assert.False(t.IsLiveActive(4));
+        Assert.Equal(0, t.ActiveCount(4));
+    }
+
+    [Fact]
     public void IdleFor_ZeroWhileActive_MeasuresSinceLastEnd_MaxWhenNever()
     {
         var now = new DateTime(2026, 8, 26, 12, 0, 0, DateTimeKind.Utc);

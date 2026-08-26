@@ -167,10 +167,10 @@ public class RememberedPositionServiceTests : IDisposable
         _db.AnalysisJobs.AddRange(
             new AnalysisJob { UserId = 1, Fen = Fen.Replace(" 0 1", " 5 9"), EngineId = "e", TargetDepth = 30, MultiPv = 2,
                 Status = AnalysisJobStatus.Paused, ReachedDepth = 18, UpdatedAt = DateTime.UtcNow.AddHours(-2),
-                ResultJson = "{\"pvs\":[{\"cp\":10}]}" },
+                ResultJson = "{\"pvs\":[{\"cp\":10}]}", EvalText = "+0.10" },
             new AnalysisJob { UserId = 1, Fen = Fen, EngineId = "e", TargetDepth = 40, MultiPv = 3,
                 Status = AnalysisJobStatus.Done, ReachedDepth = 40, UpdatedAt = DateTime.UtcNow,
-                ResultJson = "{\"pvs\":[{\"cp\":35},{\"cp\":20}]}" },
+                ResultJson = "{\"pvs\":[{\"cp\":35},{\"cp\":20}]}", EvalText = "+0.35" },
             new AnalysisJob { UserId = 2, Fen = Fen, EngineId = "e", TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Done, ReachedDepth = 30 });
         await _db.SaveChangesAsync();
 
@@ -181,7 +181,7 @@ public class RememberedPositionServiceTests : IDisposable
         Assert.Equal("done", withJob.Analysis!.Status);        // der jüngere Auftrag gewinnt
         Assert.Equal(40, withJob.Analysis.ReachedDepth);
         Assert.Equal(3, withJob.Analysis.MultiPv);
-        Assert.Equal("+0.35", withJob.Analysis.EvalText);
+        Assert.Equal("+0.35", withJob.Analysis.EvalText);   // aus der EvalText-Spalte, ohne die Roh-Zeile zu laden
         Assert.Null(list.Single(p => p.Fen != Fen).Analysis);   // Stellung ohne Auftrag bleibt ohne Info
     }
 

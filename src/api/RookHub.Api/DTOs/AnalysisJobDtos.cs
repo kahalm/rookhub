@@ -22,7 +22,7 @@ public class UpdateAnalysisJobRequest
 public record AnalysisJobDto(
     int Id, string Fen, string? Title, string EngineId, int TargetDepth, int MultiPv, string Status,
     int ReachedDepth, string? ResultJson, int SecondsSpent, string? LastError,
-    DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt);
+    DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt, string? EvalText = null);
 
 public class SetBackgroundEngineRequest
 {
@@ -33,7 +33,8 @@ public class SetBackgroundEngineRequest
 /// <summary>Mehrere Stellungen auf einmal vormerken (Mehrfachauswahl in „Gemerkte Stellungen") — eine Tiefe/Linienzahl für alle.</summary>
 public class CreateAnalysisJobsBatchRequest
 {
-    public List<string> Fens { get; set; } = new();
+    /// <summary>Nullable, weil <c>"fens": null</c> im JSON den Initializer aushebelt — der Service macht daraus 400 statt 500.</summary>
+    public List<string>? Fens { get; set; } = new();
     public int TargetDepth { get; set; } = 30;
     public int MultiPv { get; set; } = 3;
     public string? EngineId { get; set; }

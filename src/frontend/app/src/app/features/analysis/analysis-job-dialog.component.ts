@@ -25,7 +25,8 @@ export interface AnalysisJobDialogData {
 
 /** Tiefen zur Auswahl — die tiefen Stufen nur für Aufträge sinnvoll (Live-Picker endet bei 50). */
 export const JOB_DEPTH_OPTIONS = [20, 24, 28, 30, 32, 35, 40, 45, 50, 55, 60];
-export const JOB_LINE_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
+/** Linien: das Lichess-External-Engine-Protokoll erlaubt `work.multiPv` nur 1..5 (mehr weist der Broker ab). */
+export const JOB_LINE_OPTIONS = [1, 2, 3, 4, 5];
 
 /**
  * „Im Hintergrund analysieren": Tiefe + Linien (vorbelegt mit den Live-Einstellungen) und optionaler

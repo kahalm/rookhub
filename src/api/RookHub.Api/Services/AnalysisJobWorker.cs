@@ -61,6 +61,9 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private readonly TimeSpan _tick;
     private readonly TimeSpan _idleGrace;
     private readonly TimeSpan _persistInterval;
+    /// <summary>Ohne erste Datenzeile binnen dieser Frist gilt der Provider als nicht rechnend — sonst hinge der
+    /// Auftrag unbegrenzt in „läuft" (der HttpClient hat bewusst kein Timeout) und blockierte den Slot des Users.</summary>
+    private readonly TimeSpan _firstLineTimeout;
     private readonly ConcurrentDictionary<int, Running> _running = new();   // key = UserId
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
@@ -73,19 +76,31 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         _tick = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:TickSeconds") ?? 5, 1, 60));
         _idleGrace = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:IdleGraceSeconds") ?? 20, 0, 600));
         _persistInterval = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:PersistIntervalSeconds") ?? 5, 1, 60));
+        _firstLineTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FirstLineTimeoutSeconds") ?? 300, 30, 3600));
         _tracker.LiveStarted += PauseUser;
     }
 
     /// <summary>Laufenden Auftrag eines Users unterbrechen (Live hat Vorrang).</summary>
     public void PauseUser(int userId)
     {
-        if (_running.TryGetValue(userId, out var r)) r.Cts.Cancel();
+        if (_running.TryGetValue(userId, out var r)) TryCancel(r.Cts);
     }
 
     public void Interrupt(int jobId)
     {
         foreach (var r in _running.Values)
-            if (r.JobId == jobId) r.Cts.Cancel();
+            if (r.JobId == jobId) TryCancel(r.Cts);
+    }
+
+    /// <summary>Abbrechen, ohne an einem gerade beendeten Lauf zu scheitern: zwischen dem Griff ins Dictionary
+    /// und dem Cancel kann <see cref="RunJobAsync"/> seinen Eintrag entfernt UND die CTS disposed haben —
+    /// <c>Cancel()</c> würde dann werfen. Der Wurf liefe bei <see cref="PauseUser"/> im LiveStarted-Handler
+    /// bis in den Request-Thread des Live-Streams und ließe dessen Zähler dauerhaft stehen (der User bekäme
+    /// nie wieder einen Hintergrund-Auftrag), bei <see cref="Interrupt"/> würde Ändern/Löschen zu 500.</summary>
+    internal static void TryCancel(CancellationTokenSource cts)
+    {
+        try { cts.Cancel(); }
+        catch (ObjectDisposedException) { /* Lauf ist im selben Moment zu Ende gegangen — nichts zu tun */ }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -110,7 +125,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             try { if (!await timer.WaitForNextTickAsync(stoppingToken)) break; }
             catch (OperationCanceledException) { break; }
         }
-        foreach (var r in _running.Values) r.Cts.Cancel();
+        foreach (var r in _running.Values) TryCancel(r.Cts);
     }
 
     private async Task TickAsync(CancellationToken ct)
@@ -176,7 +191,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             var work = new
             {
                 sessionId = $"rh-bg-{job.UserId}", threads = Math.Max(1, engine.MaxThreads),
-                hash = Math.Clamp(engine.MaxHash, 16, 32768), multiPv = job.MultiPv, variant = "chess",
+                hash = Math.Clamp(engine.MaxHash, 16, 32768),
+                // Das Protokoll erlaubt 1..5; ein größerer Wert würde vom Broker abgewiesen und der Auftrag
+                // liefe endlos in die Wiederholung. Zweiter Riegel neben AnalysisJobService.MaxMultiPv.
+                multiPv = Math.Clamp(job.MultiPv, 1, 5), variant = "chess",
                 initialFen = job.Fen, moves = Array.Empty<string>(), depth = job.TargetDepth,
             };
 
@@ -198,13 +216,20 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 }
                 var runStart = DateTime.UtcNow;
                 var lastPersist = runStart;
+                var depthAtStart = job.ReachedDepth;
                 string? pendingLine = null; var pendingDepth = job.ReachedDepth;
-                var reachedTarget = false;
+                var gotData = false;
+                // Wächter NUR für die erste Zeile: danach dürfen zwischen zwei Iterationen Stunden liegen
+                // (Tiefe 40+ mit mehreren Linien), aber ein stummer Provider soll den Slot nicht ewig halten.
+                using var firstLine = new CancellationTokenSource(_firstLineTimeout);
+                using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(ct, firstLine.Token);
+                var streamCt = streamCts.Token;
                 try
                 {
-                    await using var stream = await upstream.Content.ReadAsStreamAsync(ct);
+                    await using var stream = await upstream.Content.ReadAsStreamAsync(streamCt);
                     await AnalysisJobStream.ConsumeAsync(stream, async (line, depth) =>
                     {
+                        if (!gotData) { gotData = true; firstLine.CancelAfter(Timeout.Infinite); }   // Wächter entschärfen
                         if (!AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth)) return;
                         pendingLine = line; pendingDepth = depth;
                         var now = DateTime.UtcNow;
@@ -214,11 +239,20 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                             lastPersist = now; pendingLine = null;
                             // Ziel/Linien können sich unterdessen geändert haben (Service in eigenem Scope).
                             await db.Entry(job).ReloadAsync(CancellationToken.None);
-                            if (job.ReachedDepth >= job.TargetDepth) { reachedTarget = true; run.Cts.Cancel(); }
                         }
-                    }, ct);
+                        // BEWUSST kein Selbst-Abbruch bei erreichter Zieltiefe: die Engine bekommt `depth` als
+                        // Limit mitgeschickt und beendet den Stream selbst. Bräche der Worker schon bei der
+                        // ERSTEN Zeile der Zieltiefe ab, trüge nur die Hauptvariante diese Tiefe — die Linien
+                        // 2..K blieben eine Iteration flacher (jede pv hat ihre eigene Tiefe).
+                    }, streamCt);
                 }
-                catch (OperationCanceledException) { /* Pause (Live), Löschung, Ziel erreicht oder Shutdown */ }
+                catch (OperationCanceledException) when (firstLine.IsCancellationRequested && !ct.IsCancellationRequested)
+                {
+                    await PauseAsync(db, job, "Engine lieferte keine Daten", TimeSpan.FromMinutes(5));
+                    _logger.LogWarning("AnalysisJob {JobId}: keine Datenzeile binnen {Timeout} — pausiert", job.Id, _firstLineTimeout);
+                    return;
+                }
+                catch (OperationCanceledException) { /* Pause (Live), Löschung oder Shutdown */ }
                 catch (IOException ex) { _logger.LogWarning(ex, "AnalysisJob {JobId}: Stream abgerissen", job.Id); }
 
                 if (pendingLine is not null)
@@ -227,18 +261,32 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     await PersistProgressAsync(db, job, null, job.ReachedDepth, DateTime.UtcNow - lastPersist);
 
                 await db.Entry(job).ReloadAsync(CancellationToken.None);
-                if (reachedTarget || job.ReachedDepth >= job.TargetDepth)
+                if (job.ReachedDepth >= job.TargetDepth)
                 {
                     job.Status = AnalysisJobStatus.Done; job.FinishedAt = DateTime.UtcNow; job.UpdatedAt = job.FinishedAt.Value;
+                    job.FruitlessAttempts = 0;
                     await db.SaveChangesAsync(CancellationToken.None);
                     _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth}", job.Id, job.ReachedDepth);
                 }
+                else if (ct.IsCancellationRequested)
+                {
+                    await PauseAsync(db, job, null);   // Live hatte Vorrang / gelöscht / Shutdown — kein Fehlversuch
+                }
+                else if (job.ReachedDepth > depthAtStart)
+                {
+                    // Der Broker hat mitten in der Rechnung abgebrochen, aber es ging voran → einfach weiter.
+                    job.FruitlessAttempts = 0;
+                    await PauseAsync(db, job, "Stream vor der Zieltiefe beendet", TimeSpan.FromSeconds(30));
+                }
                 else
                 {
-                    // Live hatte Vorrang, Stream weg oder Shutdown → später weiter. Ohne Abbruch durch uns
-                    // war es der Broker: kurzer Backoff, sonst hämmert der Tick sofort wieder los.
-                    await PauseAsync(db, job, ct.IsCancellationRequested ? null : "Stream vor der Zieltiefe beendet",
-                        ct.IsCancellationRequested ? null : TimeSpan.FromSeconds(30));
+                    // Kein Fortschritt: das kann transient sein — oder deterministisch (Matt-/Patt-Stellung, vom
+                    // Provider abgelehnte Arbeit). Ohne Zähler liefe der Auftrag ewig im 30-s-Takt gegen dieselbe Wand.
+                    job.FruitlessAttempts++;
+                    if (job.FruitlessAttempts >= AnalysisJob.MaxFruitlessAttempts)
+                        await FailAsync(db, job, $"Engine lieferte in {job.FruitlessAttempts} Läufen keine tiefere Bewertung");
+                    else
+                        await PauseAsync(db, job, "Stream vor der Zieltiefe beendet", TimeSpan.FromSeconds(30));
                 }
             }
         }
@@ -249,6 +297,21 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "AnalysisJob {JobId}: Lauf fehlgeschlagen", jobId);
+            // Der Auftrag steht jetzt auf „Running", ohne dass etwas läuft — und Running wird nirgends wieder
+            // aufgegriffen (nur ResetInterruptedAsync beim Start). Also hier zurückstellen, mit eigenem Scope:
+            // der DbContext des Laufs kann genau der sein, der eben geworfen hat.
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var job = await db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId, CancellationToken.None);
+                if (job is { Status: AnalysisJobStatus.Running })
+                    await PauseAsync(db, job, "Unerwarteter Fehler im Lauf", TimeSpan.FromMinutes(1));
+            }
+            catch (Exception cleanupEx)
+            {
+                _logger.LogError(cleanupEx, "AnalysisJob {JobId}: Zurückstellen nach Fehler misslungen", jobId);
+            }
         }
         finally
         {
@@ -259,7 +322,12 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 
     private static async Task PersistProgressAsync(AppDbContext db, AnalysisJob job, string? line, int depth, TimeSpan elapsed)
     {
-        if (line is not null) { job.ResultJson = line; job.ReachedDepth = Math.Max(job.ReachedDepth, depth); }
+        if (line is not null)
+        {
+            job.ResultJson = line;
+            job.ReachedDepth = Math.Max(job.ReachedDepth, depth);
+            job.EvalText = AnalysisJobService.EvalTextOf(line);   // Listen zeigen nur diesen Wert, ohne die Roh-Zeile zu laden
+        }
         job.SecondsSpent += (int)Math.Max(0, elapsed.TotalSeconds);
         job.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(CancellationToken.None);

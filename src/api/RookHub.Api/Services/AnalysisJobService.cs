@@ -23,7 +23,10 @@ public interface IAnalysisJobControl
 public class AnalysisJobService
 {
     public const int MaxDepth = 60;
-    public const int MaxMultiPv = 10;
+    /// <summary>Obergrenze der Linien: das Lichess-External-Engine-Protokoll erlaubt <c>work.multiPv</c> nur
+    /// 1..5 (der Broker weist mehr beim Deserialisieren ab) — derselbe Deckel wie im Live-Pfad
+    /// (<c>EngineController.BuildWork</c>). Ein höherer Wert würde jeden Lauf in die Wiederholung schicken.</summary>
+    public const int MaxMultiPv = 5;
     /// <summary>Offene Aufträge je User (Queued/Paused/Running) — gegen Endlos-Listen.</summary>
     public const int MaxOpenJobsPerUser = 50;
 
@@ -84,6 +87,7 @@ public class AnalysisJobService
             Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
         };
         _db.AnalysisJobs.Add(job);
+        await TrimAsync(userId, 1, ct);
         // Analysierte Stellungen gehören auch in „Gemerkte Stellungen" (dort zeigt die Übersicht den
         // Auftrag mit Status/Tiefe/Bewertung an) — aber nur EINMAL je Stellung: hat der User sie schon
         // gemerkt (Chessable-Remember oder früherer Auftrag), bleibt der vorhandene Eintrag.
@@ -100,7 +104,8 @@ public class AnalysisJobService
     {
         if (req.TargetDepth is < 1 or > MaxDepth) throw new ArgumentException($"Depth must be 1..{MaxDepth}");
         if (req.MultiPv is < 1 or > MaxMultiPv) throw new ArgumentException($"Lines must be 1..{MaxMultiPv}");
-        if (req.Fens.Count is 0 or > 200) throw new ArgumentException("1..200 positions");
+        var fens = req.Fens ?? [];   // "fens": null hebelt den Initializer aus → 400 statt NullReference/500
+        if (fens.Count is 0 or > 200) throw new ArgumentException("1..200 positions");
 
         var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
         if (engineId is null)
@@ -119,7 +124,7 @@ public class AnalysisJobService
 
         var created = new List<AnalysisJob>(); var skipped = new List<AnalysisJobBatchSkipped>();
         var now = DateTime.UtcNow;
-        foreach (var raw in req.Fens)
+        foreach (var raw in fens)
         {
             var fen = (raw ?? string.Empty).Trim();
             if (fen.Length is 0 or > 120 || !IsLegalFen(fen)) { skipped.Add(new(fen, "invalid")); continue; }
@@ -135,8 +140,29 @@ public class AnalysisJobService
             _db.AnalysisJobs.Add(job); created.Add(job); open++;
             await EnsureRememberedAsync(userId, fen, null, ct);
         }
-        if (created.Count > 0) await _db.SaveChangesAsync(ct);
+        if (created.Count > 0) { await TrimAsync(userId, created.Count, ct); await _db.SaveChangesAsync(ct); }
         return new AnalysisJobBatchResult(created.Select(ToDto).ToList(), skipped);
+    }
+
+    /// <summary>Gesamtzahl behaltener Aufträge je User: <see cref="MaxOpenJobsPerUser"/> deckelt nur die OFFENEN;
+    /// ohne diese Grenze wüchsen Done/Failed unbegrenzt, und jede Liste lüde deren Roh-Zeilen mit.</summary>
+    public const int MaxJobsPerUser = 200;
+
+    /// <summary>Älteste abgeschlossene/gescheiterte Aufträge entfernen, sobald der User über <see cref="MaxJobsPerUser"/>
+    /// liegt. Offene Aufträge bleiben immer stehen. Aufrufer speichert (Teil der laufenden Transaktion).</summary>
+    /// <param name="incoming">Anzahl der in DIESEM Vorgang neu angelegten, noch nicht gespeicherten Aufträge —
+    /// sie zählen mit, sonst stünde der User nach dem Speichern über der Grenze.</param>
+    private async Task TrimAsync(int userId, int incoming, CancellationToken ct)
+    {
+        var total = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId, ct) + incoming;
+        var over = total - MaxJobsPerUser;
+        if (over <= 0) return;
+        var old = await _db.AnalysisJobs
+            .Where(j => j.UserId == userId && (j.Status == AnalysisJobStatus.Done || j.Status == AnalysisJobStatus.Failed))
+            .OrderBy(j => j.FinishedAt ?? j.UpdatedAt)
+            .Take(over)
+            .ToListAsync(ct);
+        if (old.Count > 0) _db.AnalysisJobs.RemoveRange(old);
     }
 
     /// <summary>Kennzeichnet gemerkte Stellungen, die aus einem Analyseauftrag stammen (interner Link statt Kurs-URL).</summary>
@@ -199,6 +225,7 @@ public class AnalysisJobService
             {
                 // Weniger Linien: die gespeicherten Top-k bleiben exakte Bewertungen — nur kürzen.
                 job.ResultJson = TruncatePvs(job.ResultJson, multiPv);
+                job.EvalText = EvalTextOf(job.ResultJson);
             }
             else
             {
@@ -212,8 +239,12 @@ public class AnalysisJobService
 
         if (restart)
         {
+            // Ein Neustart, dessen Zieltiefe UNTER dem Erreichten liegt, könnte die alte Anzeige nie überholen
+            // (der Worker übernimmt nur Zeilen ab ReachedDepth) — die Engine-Zeit wäre verschenkt.
+            job.TargetDepth = Math.Max(job.TargetDepth, job.ReachedDepth);
             _control?.Interrupt(job.Id);
             job.Status = AnalysisJobStatus.Queued;
+            job.FruitlessAttempts = 0;
             job.FinishedAt = null;
         }
         else if (job.ReachedDepth >= job.TargetDepth)
@@ -225,9 +256,14 @@ public class AnalysisJobService
                 job.FinishedAt ??= DateTime.UtcNow;
             }
         }
-        else if (job.Status == AnalysisJobStatus.Done)
+        else if (job.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed)
         {
-            job.Status = AnalysisJobStatus.Queued;   // Tiefe erhöht → weiterrechnen
+            // Zieltiefe erhöht → weiterrechnen. Auch aus Failed heraus (Engine war weg, Token neu hinterlegt,
+            // Stellung deterministisch beendet): dieselbe Regel für beide Endzustände, sonst wäre „Tiefe ↑"
+            // je nach Vorgeschichte mal wirksam und mal nicht. Der Fehlversuchs-Zähler beginnt von vorn.
+            job.Status = AnalysisJobStatus.Queued;
+            job.FruitlessAttempts = 0;
+            job.LastError = null;
             job.FinishedAt = null;
         }
         job.UpdatedAt = DateTime.UtcNow;
@@ -316,5 +352,6 @@ public class AnalysisJobService
 
     public static AnalysisJobDto ToDto(AnalysisJob j) => new(
         j.Id, j.Fen, j.Title, j.EngineId, j.TargetDepth, j.MultiPv, j.Status.ToString().ToLowerInvariant(),
-        j.ReachedDepth, j.ResultJson, j.SecondsSpent, j.LastError, j.CreatedAt, j.UpdatedAt, j.LastRunAt, j.FinishedAt);
+        j.ReachedDepth, j.ResultJson, j.SecondsSpent, j.LastError, j.CreatedAt, j.UpdatedAt, j.LastRunAt, j.FinishedAt,
+        j.EvalText);
 }

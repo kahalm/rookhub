@@ -55,6 +55,21 @@ public class AnalysisJob
     /// <summary>Letzte übernommene Broker-Zeile (opak, LONGTEXT) — null bis zur ersten Zeile.</summary>
     public string? ResultJson { get; set; }
 
+    /// <summary>Bewertung der Hauptvariante als Text („+0.35", „#-3") — abgeleitet aus <see cref="ResultJson"/>,
+    /// aber SEPARAT gespeichert: Listen (Auftragsseite, gemerkte Stellungen) zeigen nur diesen Wert und müssen
+    /// dafür nicht die (bis 256 KB großen) Roh-Zeilen aller Aufträge laden.</summary>
+    [MaxLength(16)]
+    public string? EvalText { get; set; }
+
+    /// <summary>Aufeinanderfolgende Läufe OHNE Tiefenfortschritt. Ein Stream, der deterministisch vor der
+    /// Zieltiefe endet (Matt-/Patt-Stellung, vom Broker abgelehnte Arbeit), liefe sonst ewig in der
+    /// 30-s-Wiederholung; ab <see cref="AnalysisJob.MaxFruitlessAttempts"/> gilt der Auftrag als gescheitert.
+    /// Jeder Lauf mit Fortschritt setzt den Zähler zurück.</summary>
+    public int FruitlessAttempts { get; set; }
+
+    /// <summary>So viele ergebnislose Läufe in Folge, dann Failed.</summary>
+    public const int MaxFruitlessAttempts = 3;
+
     /// <summary>Aufsummierte Rechenzeit über alle Läufe (Sekunden).</summary>
     public int SecondsSpent { get; set; }
 
