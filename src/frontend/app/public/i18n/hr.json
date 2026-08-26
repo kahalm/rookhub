@@ -2250,7 +2250,7 @@
     "engineCrashedReload": "Ponovno učitaj stranicu",
     "engineProvider": "Motor",
     "engineBrowser": "Preglednik",
-    "speedHint": "Brzina: {{speed}}\n\nDosad pretraženih pozicija: {{nodes}}\n\nViše je brže — snažan vanjski motor postiže nekoliko milijuna u sekundi, motor u pregledniku znatno manje.",
+    "speedHint": "Brzina: {{speed}}\n\nDosad pretraženih pozicija: {{nodes}}\n\nViše je brže — jak vanjski motor postiže nekoliko tisuća kN/s, motor u pregledniku znatno manje. (1 kN = 1000 pozicija)",
     "speedWaiting": "Brzina: mjeri se …",
     "compareToggle": "Usporedi dva motora",
     "compareWith": "Usporedi s",
@@ -2850,6 +2850,11 @@
       "batchTitle": "Analiziraj {{count}} pozicija u pozadini"
     },
     "createdMany": "Dodano zadataka: {{count}} — kreću čim pozadinski motor bude slobodan.",
-    "skippedSome": "Preskočeno: {{count}} (već u redu ili nevažeće)."
+    "skippedSome": "Preskočeno: {{count}} (već u redu ili nevažeće).",
+    "engine": "Motor",
+    "restart": "Pokreni ponovno",
+    "restartTooltip": "Vrati u red — dosadašnji rezultat ostaje i pretraga nastavlja odande.",
+    "restarted": "Zadatak je ponovno u redu.",
+    "nodes": "Pretražene pozicije: {{nodes}}"
   }
 }

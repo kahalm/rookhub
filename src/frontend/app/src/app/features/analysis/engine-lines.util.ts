@@ -71,3 +71,26 @@ export function formatElapsed(totalSec: number): string {
   const mm = h > 0 ? m.toString().padStart(2, '0') : String(m);
   return (h > 0 ? h + ':' : '') + mm + ':' + sec.toString().padStart(2, '0');
 }
+
+/**
+ * Zahl mit Tausendertrennung, ohne Nachkommastellen. Locale-abhängig (de: Punkt) mit Fallback,
+ * falls die Locale-Daten fehlen — als Template-Getter darf das nie werfen.
+ */
+export function formatCount(value: number, locale = 'de'): string {
+  const v = Math.round(value);
+  try {
+    return v.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  } catch {
+    return String(v);
+  }
+}
+
+/** Knoten als KILO-Knoten: „8.390 kN". Eine Einheit überall — MN/s und N/s springen sonst je nach Tempo. */
+export function formatKiloNodes(nodes: number, locale = 'de'): string {
+  return formatCount(nodes / 1000, locale) + ' kN';
+}
+
+/** Suchgeschwindigkeit als Kilo-Knoten je Sekunde: „8.390 kN/s". */
+export function formatKiloNps(nps: number, locale = 'de'): string {
+  return formatCount(nps / 1000, locale) + ' kN/s';
+}

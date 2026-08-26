@@ -560,14 +560,21 @@ Live-Pfad mit der Auftragsseite über `features/analysis/engine-lines.util.ts` (
 `SourceUrl = "/analysis/jobs"`, `CourseName = Titel`), und `RememberedPositionService.ListAsync` hängt jeder
 gemerkten Stellung den jüngsten passenden Auftrag als `Analysis` an (Status, Tiefen, Linien, `EvalText` der
 Hauptvariante via `AnalysisJobService.EvalTextOf`). Die Remembered-Seite rendert interne `sourceUrl`s (führender
-`/`) als `routerLink`, zeigt die Analyse-Info als Chip-Zeile und bietet ohne Auftrag das Uhr-Symbol (gleicher Dialog).
+`/`) als `routerLink`, zeigt die Analyse-Info als Chip-Zeile und bietet ohne Auftrag das Uhr-Symbol (gleicher Dialog);
+sie frischt sich alle 10 s auf, SOLANGE ein Auftrag offen ist (`hasOpenJob`) — sonst ruht der Poll ganz.
+**„Im Analysebrett öffnen" (0.384.0)** hängt `engine`/`depth`/`lines` des Auftrags an die URL: das Brett wählt genau
+diese Engine (auch die sonst ausgeblendete Hintergrund-Engine, einmalig und NICHT als Dauerwahl gespeichert) und
+setzt die Suche fort, statt bei Tiefe 0 zu beginnen — der Provider hat die Stellung noch im Hash. Zahlen im
+Engine-Kontext laufen einheitlich über `formatKiloNps`/`formatKiloNodes` (kN, Tausendertrennung, keine
+Nachkommastellen) — vorher sprang die Einheit je nach Tempo zwischen N/s, kN/s und MN/s.
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/analysis-jobs` | Eigene Aufträge (neueste zuerst) inkl. Status (`queued/running/paused/done/failed`), `reachedDepth`, `resultJson`, `secondsSpent`, `lastError` |
 | POST | `/api/analysis-jobs` | Anlegen `{ fen, targetDepth (1–60), multiPv (1–10), engineId?, title? }` — `engineId` fehlend = Hintergrund-Engine aus dem Profil (keine → 400); FEN muss legal sein; max. 50 offene je User |
 | POST | `/api/analysis-jobs/batch` | Mehrfachauswahl `{ fens[] (1–200), targetDepth, multiPv, engineId? }` → `{ created[], skipped[{fen, reason}] }` mit `invalid` (keine legale FEN) / `duplicate` (nicht gescheiterter Auftrag zur Stellung existiert — auch innerhalb des Batches) / `limit` (Deckel offener Aufträge); nie 4xx wegen einzelner Stellungen |
-| PUT | `/api/analysis-jobs/{id}` | Anpassen `{ targetDepth?, multiPv?, title? }` nach den Regeln oben; 404 wenn nicht eigener |
+| PUT | `/api/analysis-jobs/{id}` | Anpassen `{ targetDepth?, multiPv?, title?, engineId? }` nach den Regeln oben; ein Engine-Wechsel bricht den Lauf ab und reiht neu ein (Ergebnis bleibt, neue Engine startet mit kaltem Hash bei `ReachedDepth`); 404 wenn nicht eigener |
+| POST | `/api/analysis-jobs/{id}/restart` | Wieder einreihen (Fehlversuchs-Zähler + Backoff gelöscht, laufender Lauf abgebrochen); das ERGEBNIS bleibt — die Suche setzt bei `ReachedDepth` an. Ein Auftrag mit erreichtem Ziel bleibt `Done` |
 | DELETE | `/api/analysis-jobs/{id}` | Löschen (laufende Suche wird abgebrochen) |
 
 **Vergleichsmodus (0.375.0)**: Der Waagen-Knopf startet eine ZWEITE Engine auf derselben

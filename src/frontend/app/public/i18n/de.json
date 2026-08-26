@@ -2250,7 +2250,7 @@
     "engineCrashedReload": "Seite neu laden",
     "engineProvider": "Engine",
     "engineBrowser": "Browser",
-    "speedHint": "Geschwindigkeit: {{speed}}\n\nBisher durchsuchte Stellungen: {{nodes}}\n\nMehr ist schneller — eine starke externe Engine schafft mehrere Millionen pro Sekunde, die Browser-Engine deutlich weniger.",
+    "speedHint": "Geschwindigkeit: {{speed}}\n\nBisher durchsuchte Stellungen: {{nodes}}\n\nMehr ist schneller — eine starke externe Engine schafft einige tausend kN/s, die Browser-Engine deutlich weniger. (1 kN = 1000 Stellungen)",
     "speedWaiting": "Geschwindigkeit: wird gemessen …",
     "compareToggle": "Zwei Engines vergleichen",
     "compareWith": "Vergleichen mit",
@@ -2850,6 +2850,11 @@
       "batchTitle": "{{count}} Stellungen im Hintergrund analysieren"
     },
     "createdMany": "{{count}} Aufträge angelegt — sie rechnen, sobald die Hintergrund-Engine frei ist.",
-    "skippedSome": "{{count}} übersprungen (bereits vorgemerkt oder ungültig)."
+    "skippedSome": "{{count}} übersprungen (bereits vorgemerkt oder ungültig).",
+    "engine": "Engine",
+    "restart": "Neu starten",
+    "restartTooltip": "Wieder einreihen — das bisherige Ergebnis bleibt erhalten und die Suche setzt dort an.",
+    "restarted": "Auftrag wieder eingereiht.",
+    "nodes": "Durchsuchte Stellungen: {{nodes}}"
   }
 }

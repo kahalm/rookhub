@@ -29,6 +29,7 @@ describe('AnalysisJobsComponent', () => {
   it('lists jobs with status, depth and the main-line evaluation', async () => {
     const { fixture, c, http } = await make();
     http.expectOne('/api/analysis-jobs').flush([job(1), job(2, { status: 'done', resultJson: null })]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
     fixture.detectChanges();
 
     expect(c.jobs.length).toBe(2);
@@ -39,9 +40,47 @@ describe('AnalysisJobsComponent', () => {
     expect(c.evalOf(c.jobs[1])).toBeNull();   // ohne Ergebnis keine Bewertung
   });
 
+  it('shows speed in kN/s, offers engine switch + restart, and hands engine/params to the board', async () => {
+    const { fixture, c, http } = await make();
+    http.expectOne('/api/analysis-jobs').flush([job(1, { status: 'running' })]);
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false, backgroundEngineId: 'eei_bg',
+      engines: [{ id: 'eei_bg', name: 'Hintergrund', maxThreads: 12, maxHash: 8192 },
+                { id: 'eei_live', name: 'Live', maxThreads: 12, maxHash: 4096 }],
+    });
+    fixture.detectChanges();
+
+    // 100 Knoten in 5 ms → 20.000 N/s → 20 kN/s
+    expect(c.speedOf(c.jobs[0])).toBe('20 kN/s');
+    expect(c.nodesOf(c.jobs[0])).toBe('0 kN');
+    expect(fixture.nativeElement.textContent).toContain('20 kN/s');
+
+    c.toggle(c.jobs[0]);
+    fixture.detectChanges();
+    expect(c.editEngineId).toBe('eei_bg');
+    expect(c.dirty(c.jobs[0])).toBeFalse();
+    c.editEngineId = 'eei_live';
+    expect(c.dirty(c.jobs[0])).toBeTrue();
+    c.save(c.jobs[0]);
+    const put = http.expectOne('/api/analysis-jobs/1');
+    expect(put.request.body).toEqual({ targetDepth: 30, multiPv: 2, engineId: 'eei_live' });
+    put.flush(job(1, { engineId: 'eei_live', status: 'queued' }));
+
+    c.restart(c.jobs[0]);
+    const rst = http.expectOne('/api/analysis-jobs/1/restart');
+    expect(rst.request.method).toBe('POST');
+    rst.flush(job(1, { status: 'queued' }));
+
+    const nav = spyOn((c as any).router, 'navigate');
+    c.openInBoard(c.jobs[0]);
+    expect(nav).toHaveBeenCalledWith(['/analysis'],
+      { queryParams: { fen: START, engine: 'eei_bg', depth: 30, lines: 2 } });
+  });
+
   it('expanding shows the stored lines as SAN and saving sends the new target', async () => {
     const { fixture, c, http } = await make();
     http.expectOne('/api/analysis-jobs').flush([job(1)]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
     fixture.detectChanges();
 
     c.toggle(c.jobs[0]);
@@ -53,7 +92,7 @@ describe('AnalysisJobsComponent', () => {
     c.editDepth = 40;
     c.save(c.jobs[0]);
     const put = http.expectOne('/api/analysis-jobs/1');
-    expect(put.request.body).toEqual({ targetDepth: 40, multiPv: 2 });
+    expect(put.request.body).toEqual({ targetDepth: 40, multiPv: 2, engineId: 'eei_bg' });
     put.flush(job(1, { targetDepth: 40, status: 'queued' }));
     expect(c.jobs[0].targetDepth).toBe(40);
   });

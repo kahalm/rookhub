@@ -16,7 +16,8 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisJob, AnalysisJobsService } from './analysis-jobs.service';
-import { EngineDisplayLine, formatElapsed, mapBrokerLine, toDisplayLines } from './engine-lines.util';
+import { EngineDisplayLine, formatElapsed, formatKiloNodes, formatKiloNps, mapBrokerLine, toDisplayLines } from './engine-lines.util';
+import { ExternalEngineInfo, ExternalEngineService } from './external-engine.service';
 import { JOB_DEPTH_OPTIONS, JOB_LINE_OPTIONS } from './analysis-job-dialog.component';
 import type { EngineAnalyseLine } from './external-engine.service';
 
@@ -63,6 +64,7 @@ import type { EngineAnalyseLine } from './external-engine.service';
                   {{ 'analysisJobs.depthOf' | translate:{ reached: job.reachedDepth, target: job.targetDepth } }}
                   · {{ 'analysisJobs.lines' | translate:{ count: job.multiPv } }}
                   · {{ formatElapsed(job.secondsSpent) }}
+                  @if (speedOf(job); as sp) { · {{ sp }} }
                   @if (evalOf(job); as ev) { · <span class="eval" [class.neg]="!ev.positive">{{ ev.evalText }}</span> }
                 </div>
                 @if (job.lastError) { <div class="job-error"><mat-icon>error_outline</mat-icon> {{ job.lastError }}</div> }
@@ -101,10 +103,25 @@ import type { EngineAnalyseLine } from './external-engine.service';
                         @for (n of lineOptions; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
                       </mat-select>
                     </mat-form-field>
-                    <button mat-stroked-button [disabled]="saving || (editDepth === job.targetDepth && editLines === job.multiPv)" (click)="save(job)">
+                    @if (engines.length > 0) {
+                      <mat-form-field appearance="outline" class="engine" subscriptSizing="dynamic">
+                        <mat-label>{{ 'analysisJobs.engine' | translate }}</mat-label>
+                        <mat-select [(ngModel)]="editEngineId">
+                          @for (e of engines; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
+                        </mat-select>
+                      </mat-form-field>
+                    }
+                    <button mat-stroked-button [disabled]="saving || !dirty(job)" (click)="save(job)">
                       <mat-icon>save</mat-icon> {{ 'analysisJobs.apply' | translate }}
                     </button>
+                    @if (job.status !== 'done') {
+                      <button mat-stroked-button [disabled]="saving" (click)="restart(job)"
+                              [matTooltip]="'analysisJobs.restartTooltip' | translate">
+                        <mat-icon>restart_alt</mat-icon> {{ 'analysisJobs.restart' | translate }}
+                      </button>
+                    }
                   </div>
+                  @if (nodesOf(job); as n) { <p class="muted small">{{ 'analysisJobs.nodes' | translate:{ nodes: n } }}</p> }
                   @if (editLines > job.multiPv) { <p class="muted small">{{ 'analysisJobs.moreLinesHint' | translate }}</p> }
                   <p class="muted small fen">{{ job.fen }}</p>
                 </div>
@@ -150,6 +167,7 @@ import type { EngineAnalyseLine } from './external-engine.service';
     .line-san { font-family: 'Roboto Mono', monospace; }
     .edit { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .num { width: 120px; }
+    .engine { width: 220px; }
     @media (max-width: 700px) { .job-body { padding-left: 12px; } .board, .board app-chess-board { width: 100%; max-width: 320px; } }
   `],
 })
@@ -159,6 +177,9 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   expandedId: number | null = null;
   editDepth = 30;
   editLines = 3;
+  editEngineId = '';
+  /** Externe Engines des Kontos — für den Engine-Wechsel je Auftrag (inkl. Hintergrund-Engine). */
+  engines: ExternalEngineInfo[] = [];
   saving = false;
   readonly depthOptions = JOB_DEPTH_OPTIONS;
   readonly lineOptions = JOB_LINE_OPTIONS;
@@ -166,12 +187,30 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   private pollSub?: Subscription;
   /** Ergebnis-Zeilen je Auftrag — nur bei geändertem resultJson neu gemappt (Template-Getter dürfen nicht rechnen). */
   private linesCache = new Map<number, { json: string | null; fen: string; multiPv: number; lines: EngineDisplayLine[] }>();
+  /** Geparste Roh-Zeile je Auftrag (für Tempo/Knoten) — gleiche Cache-Regel. */
+  private rawCache = new Map<number, { json: string | null; raw: EngineAnalyseLine | null }>();
+
+  /** Gespeicherte Broker-Zeile eines Auftrags, geparst; null ohne/mit kaputtem Ergebnis. */
+  private rawOf(job: AnalysisJob): EngineAnalyseLine | null {
+    const c = this.rawCache.get(job.id);
+    if (c && c.json === job.resultJson) return c.raw;
+    let raw: EngineAnalyseLine | null = null;
+    if (job.resultJson) { try { raw = JSON.parse(job.resultJson) as EngineAnalyseLine; } catch { raw = null; } }
+    this.rawCache.set(job.id, { json: job.resultJson, raw });
+    return raw;
+  }
 
   constructor(private jobsApi: AnalysisJobsService, private snackbar: SnackbarService, private translate: TranslateService,
-              private router: Router, public preferences: PreferencesService, private cdr: ChangeDetectorRef) {}
+              private router: Router, public preferences: PreferencesService, private cdr: ChangeDetectorRef,
+              private externalEngines: ExternalEngineService) {}
 
   ngOnInit(): void {
     this.load();
+    // Engine-Liste für den Wechsel je Auftrag (stiller Hintergrund-Feed; ohne sie bleibt die Auswahl aus).
+    this.externalEngines.listEngines().subscribe({
+      next: r => { this.engines = r.engines; this.cdr.markForCheck(); },
+      error: () => {},
+    });
     this.pollSub = interval(10_000).subscribe(() => {
       if (this.jobs.some(j => j.status === 'queued' || j.status === 'running' || j.status === 'paused')) this.load(true);
     });
@@ -196,19 +235,47 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
     this.expandedId = job.id;
     this.editDepth = job.targetDepth;
     this.editLines = job.multiPv;
+    this.editEngineId = job.engineId;
+  }
+
+  /** Gibt es überhaupt etwas zu übernehmen? (sonst bleibt der Knopf aus) */
+  dirty(job: AnalysisJob): boolean {
+    return this.editDepth !== job.targetDepth || this.editLines !== job.multiPv || this.editEngineId !== job.engineId;
+  }
+
+  /** Suchtempo des gespeicherten Ergebnisses in kN/s (der Broker liefert nodes + verstrichene time). */
+  speedOf(job: AnalysisJob): string | null {
+    const raw = this.rawOf(job);
+    if (!raw || !raw.time || !raw.nodes) return null;
+    return formatKiloNps(raw.nodes * 1000 / raw.time);
+  }
+
+  /** Durchsuchte Stellungen des gespeicherten Ergebnisses (kN). */
+  nodesOf(job: AnalysisJob): string | null {
+    const raw = this.rawOf(job);
+    return raw?.nodes ? formatKiloNodes(raw.nodes) : null;
+  }
+
+  restart(job: AnalysisJob): void {
+    if (this.saving) return;
+    this.saving = true;
+    this.jobsApi.restart(job.id).subscribe({
+      next: updated => {
+        this.saving = false;
+        this.jobs = this.jobs.map(j => j.id === updated.id ? updated : j);
+        this.snackbar.success(this.translate.instant('analysisJobs.restarted'));
+        this.cdr.markForCheck();
+      },
+      error: () => { this.saving = false; this.snackbar.warn(this.translate.instant('analysisJobs.updateFailed')); this.cdr.markForCheck(); },
+    });
   }
 
   /** Alle gespeicherten Linien eines Auftrags (SAN), gecacht je resultJson. */
   linesOf(job: AnalysisJob): EngineDisplayLine[] {
     const c = this.linesCache.get(job.id);
     if (c && c.json === job.resultJson && c.fen === job.fen && c.multiPv === job.multiPv) return c.lines;
-    let lines: EngineDisplayLine[] = [];
-    if (job.resultJson) {
-      try {
-        const raw = JSON.parse(job.resultJson) as EngineAnalyseLine;
-        lines = toDisplayLines(job.fen, mapBrokerLine(job.fen, raw, job.multiPv), 14);
-      } catch { lines = []; }
-    }
+    const raw = this.rawOf(job);
+    const lines: EngineDisplayLine[] = raw ? toDisplayLines(job.fen, mapBrokerLine(job.fen, raw, job.multiPv), 14) : [];
     this.linesCache.set(job.id, { json: job.resultJson, fen: job.fen, multiPv: job.multiPv, lines });
     return lines;
   }
@@ -221,7 +288,7 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   save(job: AnalysisJob): void {
     if (this.saving) return;
     this.saving = true;
-    this.jobsApi.update(job.id, { targetDepth: this.editDepth, multiPv: this.editLines }).subscribe({
+    this.jobsApi.update(job.id, { targetDepth: this.editDepth, multiPv: this.editLines, engineId: this.editEngineId }).subscribe({
       next: updated => {
         this.saving = false;
         this.jobs = this.jobs.map(j => j.id === updated.id ? updated : j);
@@ -240,7 +307,12 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Im Analysebrett öffnen und dort MIT DERSELBEN Engine weiterrechnen: der Provider hat die Stellung
+   *  noch in seiner Hashtabelle, die Suche ist also in Sekunden wieder auf der erreichten Tiefe (ein neuer
+   *  Auftrag an dieselbe Engine ersetzt den laufenden — der Hintergrund-Auftrag pausiert dabei sauber). */
   openInBoard(job: AnalysisJob): void {
-    this.router.navigate(['/analysis'], { queryParams: { fen: job.fen } });
+    this.router.navigate(['/analysis'], {
+      queryParams: { fen: job.fen, engine: job.engineId, depth: job.targetDepth, lines: job.multiPv },
+    });
   }
 }

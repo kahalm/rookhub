@@ -51,6 +51,8 @@ export interface UpdateAnalysisJobRequest {
   targetDepth?: number;
   multiPv?: number;
   title?: string | null;
+  /** Andere Engine — bricht den laufenden Lauf ab und reiht neu ein (Ergebnis bleibt). */
+  engineId?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -71,6 +73,11 @@ export class AnalysisJobsService {
 
   update(id: number, req: UpdateAnalysisJobRequest): Observable<AnalysisJob> {
     return this.http.put<AnalysisJob>(`/api/analysis-jobs/${id}`, req);
+  }
+
+  /** Wieder einreihen (nach „gescheitert" oder gefühltem Stillstand); das Ergebnis bleibt erhalten. */
+  restart(id: number): Observable<AnalysisJob> {
+    return this.http.post<AnalysisJob>(`/api/analysis-jobs/${id}/restart`, {});
   }
 
   delete(id: number): Observable<void> {

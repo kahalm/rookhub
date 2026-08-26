@@ -297,6 +297,66 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_EngineChange_RequeuesAndInterrupts_KeepingResult()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u, reached: 25);
+        job.Status = AnalysisJobStatus.Running; job.TargetDepth = 40; await _db.SaveChangesAsync();
+
+        var dto = await _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { EngineId = "eei_stark" });
+
+        Assert.Equal("eei_stark", dto!.EngineId);
+        Assert.Equal("queued", dto.Status);          // andere Engine = anderer Prozess → neu einreihen
+        Assert.Equal(25, dto.ReachedDepth);          // Ergebnis bleibt, die neue setzt dort an
+        Assert.Equal([job.Id], _control.Interrupted);
+    }
+
+    [Fact]
+    public async Task Update_SameEngine_DoesNotRestart()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u, reached: 25);
+        job.Status = AnalysisJobStatus.Paused; job.TargetDepth = 40; await _db.SaveChangesAsync();
+
+        var dto = await _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { EngineId = job.EngineId });
+
+        Assert.Equal("paused", dto!.Status);
+        Assert.Empty(_control.Interrupted);
+    }
+
+    [Fact]
+    public async Task Restart_RequeuesAndClearsCounters_KeepsResult()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u, reached: 38);
+        job.Status = AnalysisJobStatus.Failed; job.TargetDepth = 40; job.FruitlessAttempts = 3;
+        job.LastError = "Engine lieferte keine tiefere Bewertung"; job.NextAttemptAt = DateTime.UtcNow.AddMinutes(5);
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.RestartAsync(u, job.Id);
+
+        Assert.Equal("queued", dto!.Status);
+        Assert.Null(dto.LastError);
+        Assert.Equal(38, dto.ReachedDepth);          // Fortsetzung, kein Neubeginn
+        var fresh = await _db.AnalysisJobs.FindAsync(job.Id);
+        Assert.Equal(0, fresh!.FruitlessAttempts);
+        Assert.Null(fresh.NextAttemptAt);
+    }
+
+    [Fact]
+    public async Task Restart_LeavesAFinishedJobAlone()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u, reached: 40);   // Ziel erreicht → nichts zu rechnen
+
+        var dto = await _svc.RestartAsync(u, job.Id);
+
+        Assert.Equal("done", dto!.Status);
+        Assert.Empty(_control.Interrupted);
+        Assert.Null(await _svc.RestartAsync(999, job.Id));   // fremder Auftrag
+    }
+
+    [Fact]
     public async Task Delete_InterruptsAndRemoves_OnlyOwnJobs()
     {
         var u = await UserWithBackgroundEngineAsync();

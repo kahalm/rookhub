@@ -2250,7 +2250,7 @@
     "engineCrashedReload": "Reload page",
     "engineProvider": "Engine",
     "engineBrowser": "Browser",
-    "speedHint": "Speed: {{speed}}\n\nPositions searched so far: {{nodes}}\n\nHigher is faster — a strong external engine reaches several million per second, the browser engine far less.",
+    "speedHint": "Speed: {{speed}}\n\nPositions searched so far: {{nodes}}\n\nMore is faster — a strong external engine reaches a few thousand kN/s, the browser engine considerably less. (1 kN = 1000 positions)",
     "speedWaiting": "Speed: measuring…",
     "compareToggle": "Compare two engines",
     "compareWith": "Compare with",
@@ -2850,6 +2850,11 @@
       "batchTitle": "Analyse {{count}} positions in the background"
     },
     "createdMany": "{{count}} jobs queued — they run as soon as the background engine is free.",
-    "skippedSome": "{{count}} skipped (already queued or invalid)."
+    "skippedSome": "{{count}} skipped (already queued or invalid).",
+    "engine": "Engine",
+    "restart": "Restart",
+    "restartTooltip": "Queue again — the current result is kept and the search continues from there.",
+    "restarted": "Job queued again.",
+    "nodes": "Positions searched: {{nodes}}"
   }
 }

@@ -55,6 +55,14 @@ public class AnalysisJobsController : BaseApiController
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
+    /// <summary>Auftrag neu anstoßen (nach „gescheitert" oder gefühltem Stillstand) — Ergebnis bleibt erhalten.</summary>
+    [HttpPost("{id:int}/restart")]
+    public async Task<ActionResult<AnalysisJobDto>> Restart(int id, CancellationToken ct)
+    {
+        var dto = await _jobs.RestartAsync(GetUserId(), id, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
         => await _jobs.DeleteAsync(GetUserId(), id, ct) ? NoContent() : NotFound();

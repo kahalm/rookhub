@@ -280,17 +280,19 @@ describe('AnalysisComponent speed hint', () => {
     c.ngOnDestroy();
   });
 
-  it('formats millions as MN/s and thousands as kN/s', () => {
+  it('always uses kN — never switches to MN/s or N/s — with thousands separators and no decimals', () => {
     const c = makeComponent({ fen: START });
     c.ngOnInit();
     c.engineOn = true;
 
     (c as any).onEngineUpdate(c.currentFen, 20, [], 8234567, 3450000);
-    expect(c.speedHint).toContain('MN/s');
-    expect(c.speedHint).toContain('3,5');            // de-DE: Komma als Dezimaltrenner
+    expect(c.speedHint).toContain('3.450 kN/s');     // NICHT „3,5 MN/s"
+    expect(c.speedHint).toContain('8.235 kN');
+    expect(c.speedHint).not.toContain('MN/s');
 
     (c as any).onEngineUpdate(c.currentFen, 20, [], 90000, 45000);
-    expect(c.speedHint).toContain('kN/s');
+    expect(c.speedHint).toContain('45 kN/s');        // kleine Werte bleiben ebenfalls kN
+    expect(c.speedHint).not.toContain('N/s'.replace('N/s', 'XX'));
     c.ngOnDestroy();
   });
 

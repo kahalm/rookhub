@@ -15,6 +15,10 @@ public class UpdateAnalysisJobRequest
     public int? TargetDepth { get; set; }
     public int? MultiPv { get; set; }
     public string? Title { get; set; }
+    /// <summary>Andere Engine für diesen Auftrag (z. B. von der Hintergrund- auf eine stärkere Engine).
+    /// Ein Wechsel bricht den laufenden Lauf ab und reiht neu ein — das Ergebnis bleibt, die neue Engine
+    /// setzt ab der erreichten Tiefe fort (mit kalter Hashtabelle).</summary>
+    public string? EngineId { get; set; }
 }
 
 /// <summary>Auftrag inkl. Ergebnis: <c>ResultJson</c> ist die letzte Broker-Zeile (opak — das Frontend

@@ -215,8 +215,16 @@ public class AnalysisJobService
         if (req.TargetDepth is int d && (d < 1 || d > MaxDepth)) throw new ArgumentException($"Depth must be 1..{MaxDepth}");
         if (req.MultiPv is int m && (m < 1 || m > MaxMultiPv)) throw new ArgumentException($"Lines must be 1..{MaxMultiPv}");
         if (req.Title is { Length: > 200 }) throw new ArgumentException("Title too long");
+        if (req.EngineId is { Length: > 64 }) throw new ArgumentException("Invalid engine id");
 
         var restart = false;
+        if (!string.IsNullOrWhiteSpace(req.EngineId) && req.EngineId.Trim() != job.EngineId)
+        {
+            // Andere Engine = anderer Prozess mit eigener (kalter) Hashtabelle: der laufende Stream gehört
+            // der alten Engine und muss weg. Ergebnis/ReachedDepth bleiben — die neue setzt dort an.
+            job.EngineId = req.EngineId.Trim();
+            restart = true;
+        }
         if (req.Title is not null) job.Title = string.IsNullOrWhiteSpace(req.Title) ? null : req.Title.Trim();
 
         if (req.MultiPv is int multiPv && multiPv != job.MultiPv)
@@ -268,6 +276,28 @@ public class AnalysisJobService
         }
         job.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        return ToDto(job);
+    }
+
+    /// <summary>Auftrag neu anstoßen: zurück in die Queue, Fehlversuchs-Zähler und Backoff gelöscht, ein
+    /// laufender Lauf abgebrochen. Das ERGEBNIS bleibt erhalten — der Lauf setzt ab der erreichten Tiefe fort
+    /// (wer wirklich bei null beginnen will, löscht den Auftrag und legt ihn neu an). Bereits fertige Aufträge
+    /// (Ziel erreicht) bleiben fertig: sie hätten nichts zu rechnen.</summary>
+    public async Task<AnalysisJobDto?> RestartAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var job = await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId, ct);
+        if (job is null) return null;
+        if (job.ReachedDepth < job.TargetDepth)
+        {
+            _control?.Interrupt(job.Id);
+            job.Status = AnalysisJobStatus.Queued;
+            job.FruitlessAttempts = 0;
+            job.LastError = null;
+            job.NextAttemptAt = null;
+            job.FinishedAt = null;
+            job.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
         return ToDto(job);
     }
 

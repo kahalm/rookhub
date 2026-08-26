@@ -17,7 +17,7 @@ import { DrawShape } from 'chessground/draw';
 import { Subscription, interval } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { AnalysisJobDialogComponent } from './analysis-job-dialog.component';
-import { EngineDisplayLine, formatElapsed as formatElapsedUtil, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
+import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
@@ -377,6 +377,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   selectedEngineId = 'wasm';
   /** Im Profil gewählte Hintergrund-Engine — gehört den Aufträgen, fehlt deshalb im Live-Picker. */
   backgroundEngineId: string | null = null;
+  /** Per `?engine=` gewünschte Engine (von der Auftragsseite) — gilt einmalig für diesen Aufruf. */
+  private requestedEngineId: string | null = null;
   /** Mindestens eine externe Engine registriert (inkl. Hintergrund-Engine) → Aufträge sind möglich. */
   hasExternalEngines = false;
   remoteFallback = false;
@@ -460,6 +462,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (from && from.startsWith('/') && !from.startsWith('//') && !from.includes('://')) {
       this.returnTo = from;
     }
+    // Von der Auftragsseite: Engine + Suchparameter des Auftrags übernehmen, damit hier WEITERgerechnet
+    // wird statt neu zu beginnen (gleiche Engine = warmer Hash). Die Wahl gilt nur für diesen Aufruf und
+    // wird bewusst NICHT als Dauereinstellung gespeichert.
+    const engineParam = params.get('engine');
+    if (engineParam && /^[A-Za-z0-9_-]{1,64}$/.test(engineParam)) this.requestedEngineId = engineParam;
+    const depthParam = parseInt(params.get('depth') || '', 10);
+    if (DEPTH_OPTIONS.includes(depthParam)) this.depthSetting = depthParam;
+    const linesParam = parseInt(params.get('lines') || '', 10);
+    if (linesParam >= 1 && linesParam <= 5) this.linesCount = linesParam;
+
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => {
@@ -497,6 +509,19 @@ export class AnalysisComponent implements OnInit, OnDestroy {
           this.backgroundEngineId = r.backgroundEngineId ?? null;
           this.hasExternalEngines = r.engines.length > 0;
           this.externalEnginesList = r.engines.filter(e => e.id !== this.backgroundEngineId);
+          // Kam der Aufruf von einem Auftrag („im Analysebrett öffnen"), gilt DESSEN Engine — auch wenn es
+          // die Hintergrund-Engine ist, die hier sonst ausgeblendet wird. Der Provider hat die Stellung noch
+          // im Hash, die Suche ist damit sofort wieder auf der erreichten Tiefe statt bei null.
+          const wanted = this.requestedEngineId;
+          if (wanted && r.engines.some(e => e.id === wanted)) {
+            if (!this.externalEnginesList.some(e => e.id === wanted))
+              this.externalEnginesList = [...this.externalEnginesList, r.engines.find(e => e.id === wanted)!];
+            this.selectedEngineId = wanted;
+            this.applyEngineSelection();
+            this.requestedEngineId = null;   // nur für diesen Aufruf, nicht als Dauerwahl merken
+            this.cdr.markForCheck();
+            return;
+          }
           let stored: string | null = null;
           try { stored = localStorage.getItem(PROVIDER_KEY); } catch {}
           if (stored && stored !== 'wasm' && this.externalEnginesList.some(e => e.id === stored)) {
@@ -721,10 +746,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Gemeinsame Tempo-Formatierung. `nodes === null` = Kurzform (Vergleichs-Engine). */
   private speedHintFor(nps: number, nodes: number | null): string {
     if (nps <= 0) return this.translate.instant('analysis.speedWaiting');
-    const speed = this.formatNps(nps);
+    const speed = formatKiloNps(nps, this.locale);
     return nodes === null
       ? this.translate.instant('analysis.speedShort', { speed })
-      : this.translate.instant('analysis.speedHint', { speed, nodes: this.formatCount(nodes) });
+      : this.translate.instant('analysis.speedHint', { speed, nodes: formatKiloNodes(nodes, this.locale) });
   }
 
   /** Text hinter dem (i): Rechengeschwindigkeit der laufenden Analyse.
@@ -757,19 +782,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   get slowConfigHint(): boolean { return this.linesCount >= 4 && this.depthSetting >= 27; }
 
   /** 8234567 → „8,2 MN/s" (Tausender/Millionen wie in Schach-Oberflächen üblich). */
-  private formatNps(nps: number): string {
-    if (nps >= 1000000) return this.formatCount(nps / 1000000, 1) + ' MN/s';
-    if (nps >= 1000) return this.formatCount(nps / 1000) + ' kN/s';
-    return this.formatCount(nps) + ' N/s';
-  }
-
-  private formatCount(value: number, digits = 0): string {
-    try {
-      return value.toLocaleString(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    } catch {
-      return value.toFixed(digits);
-    }
-  }
 
   private updateEval(best: AnalysisLine | null): void {
     if (!best) {

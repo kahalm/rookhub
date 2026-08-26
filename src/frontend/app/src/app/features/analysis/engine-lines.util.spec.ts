@@ -1,4 +1,4 @@
-import { formatElapsed, mapBrokerLine, toDisplayLines, uciLineToSan } from './engine-lines.util';
+import { formatCount, formatElapsed, formatKiloNodes, formatKiloNps, mapBrokerLine, toDisplayLines, uciLineToSan } from './engine-lines.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -42,5 +42,25 @@ describe('engine-lines.util', () => {
     expect(formatElapsed(65)).toBe('1:05');
     expect(formatElapsed(3600 + 125)).toBe('1:02:05');
     expect(formatElapsed(-3)).toBe('0:00');
+  });
+});
+
+describe('Zahlformate (Kilo-Knoten, Tausenderpunkt, ohne Nachkomma)', () => {
+  it('formatCount trennt Tausender und rundet auf ganze Zahlen', () => {
+    expect(formatCount(8390.6)).toBe('8.391');
+    expect(formatCount(999)).toBe('999');
+    expect(formatCount(1234567)).toBe('1.234.567');
+    expect(formatCount(0)).toBe('0');
+  });
+
+  it('formatKiloNps/formatKiloNodes nutzen ÜBERALL kN — kein Umschalten auf MN oder N', () => {
+    expect(formatKiloNps(8390000)).toBe('8.390 kN/s');
+    expect(formatKiloNps(1500)).toBe('2 kN/s');       // auch kleine Werte bleiben kN
+    expect(formatKiloNps(0)).toBe('0 kN/s');
+    expect(formatKiloNodes(45231000)).toBe('45.231 kN');
+  });
+
+  it('unbekannte Locale wirft nicht (Template-Getter)', () => {
+    expect(formatCount(1234, 'xx-nonsense')).toMatch(/1.?234/);
   });
 });

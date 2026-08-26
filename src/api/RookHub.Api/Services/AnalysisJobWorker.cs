@@ -294,6 +294,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     job.FruitlessAttempts = 0;
                     await PauseAsync(db, job, "Stream vor der Zieltiefe beendet", TimeSpan.FromSeconds(30));
                 }
+                else if (_tracker.IsLiveActive(job.UserId))
+                {
+                    // Kein Fortschritt, WEIL der Nutzer live rechnet: teilen sich Live und Hintergrund dieselbe
+                    // Engine (nur eine registriert), verdrängt jede Live-Anfrage den laufenden Auftrag — der
+                    // Stream endet dann von SELBST (nicht durch unser Cancel) und sähe wie ein Fehlschlag aus.
+                    // Nach drei solchen Runden hätte der Auftrag fälschlich als „gescheitert" gegolten.
+                    await PauseAsync(db, job, null, TimeSpan.FromSeconds(30));
+                }
                 else
                 {
                     // Kein Fortschritt: das kann transient sein — oder deterministisch (Matt-/Patt-Stellung, vom

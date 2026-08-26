@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +16,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { RememberedService, RememberedPosition } from '../../core/remembered.service';
+
+/** Auffrisch-Takt, solange ein Auftrag offen ist (wie auf der Auftragsseite). */
+const POLL_MS = 10_000;
 import { ExternalEngineService } from '../analysis/external-engine.service';
 import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.component';
 
@@ -174,6 +178,7 @@ export class RememberedLinesComponent implements OnInit {
     public auth: AuthService,
     private dialog: MatDialog,
     private externalEngines: ExternalEngineService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   /** Mehrfachauswahl (nur Stellungen OHNE Auftrag) für „Analysieren" mit einer Tiefe/Linienzahl für alle. */
@@ -238,16 +243,33 @@ export class RememberedLinesComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    // Solange ein Auftrag offen ist, den Stand nachziehen — sonst stünde hier „wartet", während die
+    // Engine längst rechnet. Ruht vollständig, wenn nichts offen ist (kein Dauer-Poll).
+    interval(POLL_MS).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.hasOpenJob) this.load(true);
+    });
   }
 
-  load(): void {
-    this.loading = true;
+  /** Mindestens ein Auftrag noch nicht in einem Endzustand → es lohnt sich nachzuladen. */
+  get hasOpenJob(): boolean {
+    return this.items.some(p => p.analysis
+      && (p.analysis.status === 'queued' || p.analysis.status === 'running' || p.analysis.status === 'paused'));
+  }
+
+  /** @param silent true = Hintergrund-Auffrischung: kein Spinner, kein Fehler-Hinweis (der nächste Lauf heilt). */
+  load(silent = false): void {
+    if (!silent) this.loading = true;
     this.remembered.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: items => {
         this.items = items; this.loading = false;
         for (const id of [...this.selected]) if (!items.some(p => p.id === id && !p.analysis)) this.selected.delete(id);
+        this.cdr.markForCheck();
       },
-      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('remembered.errors.load')); },
+      error: () => {
+        this.loading = false;
+        if (!silent) this.snackbar.info(this.translate.instant('remembered.errors.load'));
+        this.cdr.markForCheck();
+      },
     });
   }
 
