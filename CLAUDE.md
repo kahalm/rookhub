@@ -578,7 +578,13 @@ bewusst adressiert sind: der Provider-Token braucht `engine:read` **und `engine:
 REGISTRIERT die Engine; RookHub selbst genügt `engine:read`) — ohne Vorabprüfung endete das in einem
 401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt; und die Registrierung
 wird über den **Namen** identifiziert (gleicher Name = Aktualisierung, zwei Rechner brauchen zwei
-Namen, sonst überschreiben sie sich).
+Namen, sonst überschreiben sie sich). **`ENGINE_COUNT` (0.378.0)**: ein Container kann mehrere
+Provider = mehrere registrierte Engines fahren (`ENGINE_<i>_NAME/_MAX_THREADS/_MAX_HASH` je Engine,
+sonst `ENGINE_NAME <i>`) — gedacht als „Server Live" + „Server Hintergrund" für die Hintergrund-
+Analyseaufträge; beide dürfen alle Kerne haben, weil RookHub den Hintergrund pausiert, sobald Live
+rechnet. Stirbt ein Provider, endet der Container mit dessen Code (restart zieht alle neu). Der
+Entrypoint ist deshalb bash (`wait -n`); `ENTRYPOINT_DRY_RUN=1` zeigt nur die Aufrufe —
+`engine-provider/test/entrypoint.test.sh` prüft damit den Argument-Aufbau.
 
 ### Client-Diagnostik (offen)
 | Methode | Endpoint | Auth | Zweck |

@@ -25,3 +25,6 @@ services:
     # Rechenlast deckeln, damit die Analyse den Rechner nicht lahmlegt (MAX_THREADS in der
     # .env sollte dazu passen — der Provider selbst kennt dieses Limit nicht):
     # cpus: 4
+    #
+    # Zwei Engines (Live + Hintergrund) aus diesem einen Container: ENGINE_COUNT=2 in der .env,
+    # Namen/Hash je Engine per ENGINE_<i>_NAME / ENGINE_<i>_MAX_HASH — siehe README.

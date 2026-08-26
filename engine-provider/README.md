@@ -65,6 +65,8 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `KEEP_ALIVE` | Sekunden, die eine unbenutzte Engine weiterläuft (leer = 300) |
 | `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
+| `ENGINE_COUNT` | Mehrere Engines in diesem Container (leer/1 = eine; max. 16) — siehe unten |
+| `ENGINE_<i>_NAME` / `_MAX_THREADS` / `_MAX_HASH` | Einstellungen der i-ten Engine (sonst `ENGINE_NAME <i>`, `MAX_THREADS`, `MAX_HASH`) |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
 
@@ -72,6 +74,30 @@ Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter 
 docker compose up -d     # übernimmt die geänderte .env
 docker compose down      # Provider stoppen (Engine verschwindet dann aus der RookHub-Auswahl)
 ```
+
+### Zwei Engines: Live + Hintergrund
+
+Ein Stockfish-Prozess rechnet immer nur **eine** Suche; ein neuer Auftrag an dieselbe Engine
+ersetzt den laufenden. Wer neben der Live-Analyse Stellungen im Hintergrund abarbeiten lassen
+will, braucht deshalb eine **zweite registrierte Engine** — und die kommt aus demselben Container:
+
+```dotenv
+ENGINE_COUNT=2
+ENGINE_1_NAME=RookHub Server Live
+ENGINE_2_NAME=RookHub Server Hintergrund
+MAX_HASH=1024
+ENGINE_2_MAX_HASH=8192      # große Hashtabelle: warme Stellungen überleben Pausen länger
+```
+
+Beide Engines dürfen **alle Kerne** behalten (`MAX_THREADS` leer): RookHub pausiert die
+Hintergrund-Engine, sobald auf der Live-Engine gerechnet wird, und lässt sie erst nach einer
+Ruhephase weiterlaufen — die beiden laufen also praktisch nie gleichzeitig, nur der RAM für zwei
+Hashtabellen fällt doppelt an. In RookHub erscheinen beide Namen in der Engine-Auswahl; welche
+davon die Hintergrund-Engine ist, legst du im Profil fest.
+
+Stirbt einer der Provider, endet der ganze Container mit dessen Exit-Code und `restart:` zieht
+alle Engines gemeinsam neu hoch (kein halb lebender Pool). Die Logzeilen beider Provider laufen
+in einem Strom zusammen; jeder meldet beim Start seinen Namen.
 
 **Auf dem Arbeitsrechner** lohnt sich `MAX_THREADS` ein bis zwei Kerne unter der Kernzahl —
 sonst zieht eine tiefe Analyse den Rechner spürbar zu. Ein zusätzliches `cpus:`-Limit in der
@@ -295,7 +321,8 @@ Der Container startet den **offiziellen Provider von Lichess**
 RookHub). Er wird beim Bauen auf einen festen Commit gepinnt und per Prüfsumme verifiziert,
 statt ins Repo kopiert zu werden — so ist die Herkunft eindeutig, und ein Update ist ein
 Zeilenwechsel im `Dockerfile`. Ergänzt haben wir nur `entrypoint.sh` (baut den Aufruf aus den
-`.env`-Variablen) und `preflight.py` (prüft den Token vorab, damit ein fehlender Scope als
+`.env`-Variablen und startet bei `ENGINE_COUNT`>1 mehrere Provider; `bash test/entrypoint.test.sh`
+prüft den Argument-Aufbau im Trockenlauf) und `preflight.py` (prüft den Token vorab, damit ein fehlender Scope als
 Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace).
 
 Serverseitig ist die Gegenstelle in `rookhub/CLAUDE.md` unter „Externe Engine" beschrieben.
