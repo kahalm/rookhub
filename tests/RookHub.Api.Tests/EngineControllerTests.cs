@@ -53,7 +53,7 @@ public class EngineControllerTests : IDisposable
             new MemoryCache(new MemoryCacheOptions()),
             config,
             NullLogger<LichessEngineService>.Instance);
-        _controller = new EngineController(_db, _encryption, lichess, NullLogger<EngineController>.Instance);
+        _controller = new EngineController(_db, _encryption, lichess, new EngineActivityTracker(), NullLogger<EngineController>.Instance);
         SetUser(42);
     }
 

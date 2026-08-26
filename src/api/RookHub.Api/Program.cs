@@ -207,6 +207,13 @@ try
     builder.Services.AddScoped<CalculationService>();
     builder.Services.AddScoped<CalcEditionService>();
     builder.Services.AddScoped<CalcSeriesAnnounceService>();
+    // Hintergrund-Analyseaufträge: Tracker (Live-Streams je User) + Service + Worker (Singleton, damit
+    // der Service laufende Aufträge unterbrechen kann — z. B. beim Löschen).
+    builder.Services.AddSingleton<EngineActivityTracker>();
+    builder.Services.AddSingleton<AnalysisJobWorker>();
+    builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());
+    builder.Services.AddScoped<AnalysisJobService>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());

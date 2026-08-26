@@ -21,6 +21,11 @@ public class LichessEngineCredential
     [Required]
     public string EncryptedToken { get; set; } = string.Empty;
 
+    /// <summary>Lichess-Engine-ID der HINTERGRUND-Engine für Analyseaufträge (null = keine). Der
+    /// Live-Picker blendet sie aus; der Worker pausiert sie, sobald der Nutzer live extern rechnet.</summary>
+    [MaxLength(64)]
+    public string? BackgroundEngineId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

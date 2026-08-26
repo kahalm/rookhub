@@ -13,8 +13,10 @@ public class SaveLichessTokenRequest
 public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxHash);
 
 /// <summary>Antwort der Engine-Liste. <c>TokenInvalid</c> = Lichess hat den gespeicherten Token
-/// abgewiesen (401/403) — die UI fordert dann zur Neu-Eingabe auf, statt leer auszusehen.</summary>
-public record ExternalEnginesResponse(bool HasCredentials, bool TokenInvalid, List<ExternalEngineDto> Engines);
+/// abgewiesen (401/403) — die UI fordert dann zur Neu-Eingabe auf, statt leer auszusehen.
+/// <c>BackgroundEngineId</c> = im Profil gewählte Hintergrund-Engine (der Live-Picker blendet sie aus).</summary>
+public record ExternalEnginesResponse(bool HasCredentials, bool TokenInvalid, List<ExternalEngineDto> Engines,
+    string? BackgroundEngineId = null);
 
 /// <summary>
 /// Analyse-Anfrage des Frontends. Wird serverseitig validiert, auf die Engine-Maxima geklemmt und

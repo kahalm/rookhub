@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
+    public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
@@ -1063,6 +1064,18 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedToken).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<AnalysisJob>(e =>
+        {
+            // Worker fragt je User nach laufbereiten Aufträgen; Liste sortiert nach Anlage.
+            e.HasIndex(j => new { j.UserId, j.Status });
+            e.HasIndex(j => new { j.UserId, j.CreatedAt });
+            e.HasOne(j => j.User)
+             .WithMany()
+             .HasForeignKey(j => j.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(j => j.ResultJson).HasColumnType("LONGTEXT");
         });
 
         modelBuilder.Entity<ChessableImport>(e =>

@@ -35,25 +35,27 @@ public class EngineController : BaseApiController
     private static readonly TimeSpan MaxStreamDuration = TimeSpan.FromMinutes(10);
 
     /// <summary>Gleichzeitige Analyse-Streams je User (mehrere Tabs sind legitim, hundert nicht).
-    /// Der globale Limiter begrenzt nur die RATE neuer Anfragen, nicht die Zahl offener Ströme.</summary>
+    /// Der globale Limiter begrenzt nur die RATE neuer Anfragen, nicht die Zahl offener Ströme.
+    /// Gezählt wird im <see cref="EngineActivityTracker"/> — der auch dem Hintergrund-Worker sagt,
+    /// wann Live rechnet (Hintergrund pausieren) und seit wann Ruhe ist.</summary>
     private const int MaxConcurrentStreamsPerUser = 4;
 
     /// <summary>Abstand der Leerzeilen-Lebenszeichen im Analyse-Stream (siehe <see cref="NdjsonHeartbeatPump"/>).</summary>
     private static readonly TimeSpan HeartbeatInterval = NdjsonHeartbeatPump.DefaultInterval;
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, int> ActiveStreams = new();
-
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly LichessEngineService _lichess;
+    private readonly EngineActivityTracker _activity;
     private readonly ILogger<EngineController> _logger;
 
     public EngineController(AppDbContext db, EncryptionService encryption,
-        LichessEngineService lichess, ILogger<EngineController> logger)
+        LichessEngineService lichess, EngineActivityTracker activity, ILogger<EngineController> logger)
     {
         _db = db;
         _encryption = encryption;
         _lichess = lichess;
+        _activity = activity;
         _logger = logger;
     }
 
@@ -116,7 +118,7 @@ public class EngineController : BaseApiController
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         var token = cred is null ? null : _encryption.TryDecrypt(cred.EncryptedToken);
         if (token is null)
-            return Ok(new ExternalEnginesResponse(cred is not null, false, []));
+            return Ok(new ExternalEnginesResponse(cred is not null, false, [], cred?.BackgroundEngineId));
 
         try
         {
@@ -124,13 +126,47 @@ public class EngineController : BaseApiController
             var engines = result.Engines
                 .Select(e => new ExternalEngineDto(e.Id, e.Name, e.MaxThreads, e.MaxHash))
                 .ToList();
-            return Ok(new ExternalEnginesResponse(true, result.Unauthorized, engines));
+            return Ok(new ExternalEnginesResponse(true, result.Unauthorized, engines, cred!.BackgroundEngineId));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Lichess-Engine-Liste fehlgeschlagen (User {UserId})", userId);
             return StatusCode(502, new { message = "Lichess unreachable" });
         }
+    }
+
+    /// <summary>Hintergrund-Engine für Analyseaufträge festlegen (null/leer = entfernen). Muss eine der
+    /// registrierten Engines sein — sonst liefe der Worker gegen eine Wand.</summary>
+    [HttpPut("background")]
+    public async Task<IActionResult> SetBackgroundEngine([FromBody] SetBackgroundEngineRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        if (cred is null)
+            return BadRequest(new { message = "No Lichess token stored" });
+        var engineId = string.IsNullOrWhiteSpace(request?.EngineId) ? null : request!.EngineId!.Trim();
+        if (engineId is { Length: > 64 })
+            return BadRequest(new { message = "Invalid engine id" });
+        if (engineId is not null)
+        {
+            var token = _encryption.TryDecrypt(cred.EncryptedToken);
+            if (token is null)
+                return BadRequest(new { message = "Stored token unreadable" });
+            try
+            {
+                if (await _lichess.ResolveEngineAsync(userId, token, engineId, ct) is null)
+                    return NotFound(new { message = "Engine not found" });
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                _logger.LogWarning(ex, "Lichess nicht erreichbar beim Setzen der Hintergrund-Engine (User {UserId})", userId);
+                return StatusCode(502, new { message = "Lichess unreachable" });
+            }
+        }
+        cred.BackgroundEngineId = engineId;
+        cred.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { backgroundEngineId = engineId });
     }
 
     /// <summary>
@@ -173,9 +209,10 @@ public class EngineController : BaseApiController
         object work = BuildWork(request, threads, hash);
 
         // Ein Stream hält eine Verbindung, solange die Engine rechnet — deshalb ein Deckel je User.
-        if (ActiveStreams.AddOrUpdate(userId, 1, (_, n) => n + 1) > MaxConcurrentStreamsPerUser)
+        // Begin() meldet dem Hintergrund-Worker zugleich „Live rechnet" → dessen Auftrag pausiert.
+        if (_activity.Begin(userId) > MaxConcurrentStreamsPerUser)
         {
-            ReleaseStream(userId);
+            _activity.End(userId);
             return StatusCode(429, new { message = "Too many concurrent analysis streams" });
         }
 
@@ -243,16 +280,9 @@ public class EngineController : BaseApiController
         }
         finally
         {
-            ReleaseStream(userId);
+            _activity.End(userId);
         }
         return new EmptyResult();
-    }
-
-    /// <summary>Zähler des Users freigeben; auf 0 die Zeile ganz entfernen (kein Wachstum über die Zeit).</summary>
-    private static void ReleaseStream(int userId)
-    {
-        if (ActiveStreams.AddOrUpdate(userId, 0, (_, n) => n - 1) <= 0)
-            ActiveStreams.TryRemove(userId, out _);
     }
 
     /// <summary>Baut das Lichess-Work-Objekt (oneOf depth/movetime/nodes + gemeinsame Felder).</summary>

@@ -514,6 +514,33 @@ zugleich die Vorbereitung auf einen späteren RookHub-EIGENEN Broker (Phase 2, g
 | GET | `/api/engine/external` | Registrierte External Engines des Kontos — **ohne `clientSecret`** (`{ hasCredentials, tokenInvalid, engines[] }`). Immer 200: `tokenInvalid` sagt, WARUM die Liste leer ist (Lichess wies den Token ab) |
 | POST | `/api/engine/external/{id}/analyse` | Analyse anfordern → **`application/x-ndjson`-Stream** (durchgereicht). Body = `EngineAnalyseRequest` (`sessionId`, `initialFen`, `moves[]`, `multiPv`, GENAU EINES von `depth`/`movetime`/`nodes`, optional `threads`/`hash`); Threads/Hash werden serverseitig auf die von Lichess gemeldeten Engine-Maxima geklemmt, `variant` ist fest `chess`. Abbruch = Verbindung schließen (wandert über den Broker zum Provider) |
 
+| PUT | `/api/engine/background` | Hintergrund-Engine für Analyseaufträge setzen `{ engineId }` (null/leer = entfernen; muss registriert sein → sonst 404). `GET /api/engine/external` liefert sie als `backgroundEngineId` mit — der Live-Picker blendet sie aus |
+
+### Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist"
+`AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
+Service, Singleton) auf der **Hintergrund-Engine** des Users über denselben Broker-Pfad wie live — je
+User EIN laufender Auftrag, ohne den 10-Minuten-Deckel des Live-Proxys. **Vorrang der Live-Analyse**:
+der `EngineActivityTracker` (Singleton; zählt die Live-Streams je User, ersetzt das frühere statische
+`ActiveStreams`) feuert `LiveStarted` beim Übergang 0→1 → der Worker bricht den laufenden Auftrag
+sofort ab (Status `Paused`; der Provider stoppt Stockfish, die Hashtabelle bleibt warm) und setzt erst
+nach `AnalysisJobs:IdleGraceSeconds` (20 s) Ruhe fort. **Fortsetzungs-Regel**: der Broker liefert nach
+jedem Neustart die flachen Iterationen erneut — übernommen wird nur eine Zeile mit `depth ≥ ReachedDepth`
+(`AnalysisJobStream.ShouldPersist`); dieselbe Regel lässt bei „mehr Linien" das alte Ergebnis stehen, bis
+die neue Suche es überholt. **Sticky hash**: `PickNextAsync` bevorzugt den zuletzt gelaufenen Auftrag
+(typisch „weiter bis Tiefe 50" direkt nach Abschluss), sonst FIFO; `NextAttemptAt` = Backoff nach
+Broker-Fehlern. Beim API-Start werden `Running`-Aufträge auf `Paused` gesetzt. Anpassungs-Regeln im
+`AnalysisJobService.UpdateAsync`: Tiefe ↑ über das Erreichte → fertiger Auftrag zurück in die Queue;
+Tiefe ↓ auf/unter das Erreichte → `Done`; Linien ↓ → gespeicherte `pvs` kürzen, kein Neustart; Linien ↑ →
+laufende Suche abbrechen (`IAnalysisJobControl.Interrupt`), zurück in die Queue, Ergebnis bleibt Anzeige.
+Ergebnis = letzte Broker-Zeile als opakes JSON (`ResultJson`), das Frontend mappt es wie den Live-Stream.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/analysis-jobs` | Eigene Aufträge (neueste zuerst) inkl. Status (`queued/running/paused/done/failed`), `reachedDepth`, `resultJson`, `secondsSpent`, `lastError` |
+| POST | `/api/analysis-jobs` | Anlegen `{ fen, targetDepth (1–60), multiPv (1–10), engineId?, title? }` — `engineId` fehlend = Hintergrund-Engine aus dem Profil (keine → 400); FEN muss legal sein; max. 50 offene je User |
+| PUT | `/api/analysis-jobs/{id}` | Anpassen `{ targetDepth?, multiPv?, title? }` nach den Regeln oben; 404 wenn nicht eigener |
+| DELETE | `/api/analysis-jobs/{id}` | Löschen (laufende Suche wird abgebrochen) |
+
 **Vergleichsmodus (0.375.0)**: Der Waagen-Knopf startet eine ZWEITE Engine auf derselben
 Stellung (`compareEngine`), beide Linienlisten stehen untereinander. Möglich ohne Umbau, weil
 `AnalysisEngineService` weder Konstruktor noch `inject()` hat — er lässt sich schlicht per `new`
@@ -675,7 +702,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | MenuItemSettings | Admin-Override der Menü-Sichtbarkeit | ItemKey (PK, string), Level (Enum All/Registered/Groups/Admin); fehlt eine Zeile → Default aus `MenuRegistry` |
 | MenuItemGroupAccesses | Welche Gruppe sieht einen gruppen-gegateten Menüeintrag | Composite PK (ItemKey, GroupId), Cascade von MenuItemSetting + Group, Index GroupId |
 | ChessableCredentials | Per-User Chessable-Bearer (1:1) | UserId (unique, Cascade), EncryptedBearer (TEXT, AES via `EncryptionService`), **ChessableUid? (≤32; beim erfolgreichen `POST /api/chessable/test` aus der Chessable-Antwort BEWIESEN gesetzt — nicht aus dem ungeprüften JWT; verknüpft den User mit seiner Chessable-Identität fürs Claimen anonymer getReview-Linien)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Wird vom `ChessableProxyService` an piratechess durchgereicht |
-| LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`), CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
+| LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
+| AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess eei_…), TargetDepth, MultiPv, Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |
 | MessageThreads | Metadaten/Zuweisung einer Konversation (1 Zeile je User) | UserId (PK + FK AppUser Cascade), ClaimedByAdminId? (welcher Admin übernommen hat, **ohne FK** → vermeidet doppelte Cascade-Pfade; Name wird beim Abruf aufgelöst), ClaimedAt?; entsteht mit der ersten Nachricht |
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |
@@ -710,7 +738,8 @@ src/
                             SchachBotWebhook, BackgroundTaskQueue, Admin, BookAdmin,
                             AdminSeeder, AutoSubscription, RoundMonitor,
                             DailyPuzzleScheduler, Heartbeat,
-                            CalcEdition, CalcSeriesAnnounce(+Scheduler), LichessEngine
+                            CalcEdition, CalcSeriesAnnounce(+Scheduler), LichessEngine,
+                            EngineActivityTracker, AnalysisJob(+Worker), NdjsonHeartbeatPump
     Models/                 EF-Entities (1:1 zum Schema oben)
     DTOs/                   Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
