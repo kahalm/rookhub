@@ -815,6 +815,23 @@ public class CourseControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CourseStats_BlankChapterVariantsCountAsOneChapter()
+    {
+        // Fixiert die Kapitel-Normalisierung (leer / nur Leerzeichen / null -> EIN Kapitel).
+        // Relevant seit die Zaehlung als SQL-Aggregat laeuft: eine Datenbank unterscheidet
+        // '', '  ' und NULL sehr wohl - die Normalisierung MUSS deshalb im Ausdruck stecken,
+        // sonst meldete das Buch drei Kapitel und bekaeme faelschlich einen Kapitel-Block.
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookWithChaptersAsync("Blank", "", "   ", null!);
+
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+
+        Assert.Equal(3, next.Book!.Total);
+        Assert.Null(next.Chapter);        // nur EIN Kapitel -> kein eigener Kapitel-Block
+        Assert.Null(next.ChapterName);
+    }
+
+    [Fact]
     public async Task CourseStats_AccumulateTimeAndFirstTryAccuracy_PerBookAndChapter()
     {
         await CreateUserAsync();

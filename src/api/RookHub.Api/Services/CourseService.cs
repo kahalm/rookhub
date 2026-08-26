@@ -1066,12 +1066,28 @@ public class CourseService
             .FirstOrDefaultAsync();
 
         // Info-/Erklärlinien zählen nicht zum Fortschritt (kein Quiz).
-        var puzzles = await _db.BookPuzzles
-            .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
-            .Select(bp => new { bp.Id, bp.Chapter })
-            .ToListAsync();
-        var chapterOf = puzzles.ToDictionary(p => p.Id, p => NormalizeChapter(p.Chapter));
-        var distinctChapters = puzzles.Select(p => NormalizeChapter(p.Chapter)).Distinct().Count();
+        var puzzleQuery = _db.BookPuzzles.Where(bp => bp.BookId == bookId && !bp.IsInfoOnly);
+
+        // Frueher wurde hier die KOMPLETTE Puzzle-Liste des Buchs (Id + Kapitel) in den Speicher
+        // geladen - bei JEDEM /next und /results, obwohl buchweit nur zwei Zahlen gebraucht werden.
+        // Beide sind SQL-Aggregate. Die Normalisierung aus NormalizeChapter (leer/nur Leerzeichen
+        // -> null) MUSS im Ausdruck mitwandern, sonst zaehlten "", "  " und NULL in der Datenbank
+        // als drei Kapitel statt wie bisher als eines.
+        var bookTotal = await puzzleQuery.CountAsync();
+        var distinctChapters = await puzzleQuery
+            .Select(bp => bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter)
+            .Distinct()
+            .CountAsync();
+
+        // Kapitel-Block nur, wenn das Buch wirklich mehrere Kapitel hat (sonst dupliziert er das Buch).
+        var wantChapter = currentChapterKnown && distinctChapters > 1;
+        // Puzzle-Ids braucht nur der Kapitel-Block - und dann auch nur die des EINEN Kapitels.
+        var chapterPuzzleIds = wantChapter
+            ? (await puzzleQuery
+                .Where(bp => (bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter) == currentChapter)
+                .Select(bp => bp.Id)
+                .ToListAsync()).ToHashSet()
+            : new HashSet<int>();
 
         var solvedIds = (await _db.CoursePuzzleResults
             .Where(cr => cr.UserId == userId && cr.BookId == bookId)
@@ -1086,9 +1102,8 @@ public class CourseService
             .Select(a => new { a.BookPuzzleId, a.Solved, a.TimeSeconds })
             .ToListAsync();
 
-        CourseScopeStatsDto BuildScope(Func<int, bool> inScope)
+        CourseScopeStatsDto BuildScope(Func<int, bool> inScope, int total)
         {
-            var total = puzzles.Count(p => inScope(p.Id));
             var solved = solvedIds.Count(inScope);
             var scoped = attempts.Where(a => inScope(a.BookPuzzleId)).ToList();
             var firstTry = new Dictionary<int, bool>();
@@ -1107,14 +1122,16 @@ public class CourseService
             };
         }
 
-        var book = BuildScope(_ => true);
+        var book = BuildScope(_ => true, bookTotal);
         CourseScopeStatsDto? chapter = null;
         string? chapterName = null;
-        // Kapitel-Block nur, wenn das Buch wirklich mehrere Kapitel hat (sonst dupliziert es das Buch).
-        if (currentChapterKnown && distinctChapters > 1)
+        if (wantChapter)
         {
             chapterName = currentChapter;
-            chapter = BuildScope(id => chapterOf.TryGetValue(id, out var c) && c == currentChapter);
+            // Gleichbedeutend mit dem frueheren chapterOf-Lookup: das Woerterbuch enthielt
+            // ausschliesslich die Nicht-Info-Puzzles des Buchs, der Treffer auf das aktuelle
+            // Kapitel ist genau die Mitgliedschaft in dieser Menge.
+            chapter = BuildScope(chapterPuzzleIds.Contains, chapterPuzzleIds.Count);
         }
         return new CourseStatsBundle(book, chapter, chapterName);
     }
