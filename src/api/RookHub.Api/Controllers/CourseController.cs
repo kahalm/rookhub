@@ -144,13 +144,20 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> HasAnyAccess()
         => Ok(new { hasAccess = await _service.HasAnyAccessAsync(GetUserId(), IsAdmin) });
 
-    /// <summary>Lädt ein PGN als persönlichen Kurs des Users hoch (eigenes Buch, nur für ihn sichtbar).</summary>
+    /// <summary>Legt einen persönlichen Kurs des Users an (eigenes Buch, nur für ihn sichtbar) — mit PGN
+    /// als Inhalt ODER leer, wenn keine Datei mitkommt. Der leere Kurs wird danach auf der Detailseite
+    /// Kapitel für Kapitel gefüllt; ohne Datei ist der Name deshalb Pflicht (er kann nicht aus einem
+    /// Dateinamen abgeleitet werden). Die alte Route <c>upload</c> bleibt gültig.</summary>
+    [HttpPost]
     [HttpPost("upload")]
     [RequestSizeLimit(11 * 1024 * 1024)]  // 10-MB-PGN-Limit + Multipart-Overhead
-    public async Task<ActionResult<CourseListItemDto>> Upload(IFormFile file, [FromForm] string? name)
+    public async Task<ActionResult<CourseListItemDto>> Create(IFormFile? file, [FromForm] string? name)
     {
         if (file == null || file.Length == 0)
-            return BadRequest(new { message = "No file provided." });
+        {
+            try { return Ok(await _service.CreatePersonalCourseAsync(GetUserId(), name ?? string.Empty)); }
+            catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        }
         if (!Path.GetExtension(file.FileName).Equals(".pgn", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { message = "Only .pgn files are allowed." });
         if (file.Length > RepertoireService.MaxFileSize)

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.387.0", date: "2026-08-26", changes: [
+    { en: "In Courses, the „Upload PGN“ button has become „Create course“: a course no longer needs a file to exist. Give it a name and it is created empty, and you land straight on its page to add chapters and positions. A PGN can still be attached — then the course is filled from it right away, exactly as before.", de: "In den Kursen ist aus „PGN hochladen“ ein „Kurs erstellen“ geworden: ein Kurs braucht keine Datei mehr, um zu entstehen. Du gibst ihm einen Namen, er wird leer angelegt, und du landest direkt auf seiner Seite, um Kapitel und Stellungen einzufügen. Ein PGN lässt sich weiterhin anhängen — dann wird der Kurs daraus befüllt, genau wie bisher." },
+  ] },
   { version: "0.386.1", date: "2026-08-26", changes: [
     { en: "Diagnostics for the background analyses that keep getting cut off: when a stream breaks, the log now records what actually came over the line beforehand — how many evaluation lines, how many keep-alive signs of life, how long ago the last of each was, and how long the run lasted. The same numbers are recorded for runs that end normally, so there is something to compare against. This does not fix the cut-offs; it distinguishes a connection that fell silent from one that was cut while busy.", de: "Diagnose für die immer wieder abbrechenden Hintergrund-Analysen: Reißt ein Stream ab, hält das Log jetzt fest, was vorher tatsächlich über die Leitung kam — wie viele Bewertungszeilen, wie viele Lebenszeichen, wie lange das Letzte davon jeweils her ist und wie lange der Lauf ging. Dieselben Zahlen werden bei normal beendeten Läufen mitgeschrieben, damit es einen Vergleichsmaßstab gibt. Das behebt die Abbrüche nicht, aber es unterscheidet eine verstummte Verbindung von einer, die mitten im Verkehr gekappt wurde." },
   ] },

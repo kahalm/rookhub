@@ -707,11 +707,7 @@ public class CourseService
             : displayName.Trim();
         if (name.Length > 200) name = name[..200];
 
-        book.OwnerUserId = userId;
-        book.DisplayName = name;
-        book.Kind = BookKind.Study;
-        book.Tags = "personal";
-        book.UpdatedAt = DateTime.UtcNow;
+        ApplyPersonalCourseMetadata(book, userId, name, DateTime.UtcNow);
         await _db.SaveChangesAsync(ct);
 
         return new CourseListItemDto
@@ -730,6 +726,61 @@ public class CourseService
             LastActivityAt = null,
             IsOwned = true,
         };
+    }
+
+    /// <summary>Legt einen LEEREN persönlichen Kurs an — die Stellungen kommen danach über die
+    /// Kurs-Detailseite dazu (Kapitel + „Stellungen einfügen"). Bewusst ohne PGN-Zwang: nicht jeder Kurs
+    /// entsteht aus einer Datei, viele werden Kapitel für Kapitel von Hand aufgebaut.
+    /// <c>ImportVersion</c> steht sofort auf der aktuellen Pipeline-Version — ein handgepflegtes Buch hat
+    /// kein Quell-PGN und soll nicht im „Aktualisieren"-Banner hängen (gleiche Regel wie beim Einfügen
+    /// von Linien in <see cref="CourseAuthoringService"/>).</summary>
+    public async Task<CourseListItemDto> CreatePersonalCourseAsync(int userId, string displayName, CancellationToken ct = default)
+    {
+        var name = displayName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("A course name is required.");
+        if (name.Length > 200) name = name[..200];
+
+        var now = DateTime.UtcNow;
+        var book = new Book
+        {
+            // Interner Dateiname wie beim PGN-Weg: pro User eindeutig, kollisionsfrei mit globalen
+            // Büchern und Chessable-Importen. Er ist NICHT der Anzeigename.
+            FileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn",
+            ImportVersion = ImportPipeline.CurrentVersion,
+            CreatedAt = now,
+        };
+        ApplyPersonalCourseMetadata(book, userId, name, now);
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync(ct);
+
+        return new CourseListItemDto
+        {
+            BookId = book.Id,
+            FileName = book.FileName,
+            DisplayName = book.DisplayName,
+            Difficulty = book.Difficulty,
+            Rating = book.Rating,
+            Tags = book.Tags,
+            Description = book.Description,
+            PuzzleCount = 0,
+            SolvedCount = 0,
+            ProgressPercent = 0,
+            LastMode = null,
+            LastActivityAt = null,
+            IsOwned = true,
+        };
+    }
+
+    /// <summary>Die Merkmale, die ein Buch zum persönlichen Kurs EINES Users machen — an beiden
+    /// Entstehungswegen (PGN-Upload und leerer Kurs) identisch.</summary>
+    private static void ApplyPersonalCourseMetadata(Book book, int userId, string name, DateTime nowUtc)
+    {
+        book.OwnerUserId = userId;
+        book.DisplayName = name;
+        book.Kind = BookKind.Study;
+        book.Tags = "personal";
+        book.UpdatedAt = nowUtc;
     }
 
     /// <summary>Löscht einen eigenen (selbst hochgeladenen bzw. importierten) Kurs des Users samt

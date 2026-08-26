@@ -227,6 +227,50 @@ public class CourseServiceOwnerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreatePersonalCourse_WithoutPgn_CreatesEmptyOwnedStudyBook()
+    {
+        var dto = await _svc.CreatePersonalCourseAsync(userId: 7, "  Turmendspiele  ");
+
+        Assert.True(dto.IsOwned);
+        Assert.Equal(0, dto.PuzzleCount);          // die Stellungen kommen erst auf der Detailseite dazu
+        Assert.Equal("Turmendspiele", dto.DisplayName);
+
+        var book = await _db.Books.SingleAsync(b => b.Id == dto.BookId);
+        Assert.Equal(7, book.OwnerUserId);
+        Assert.Equal(BookKind.Study, book.Kind);
+        Assert.StartsWith("user-u7-", book.FileName);
+        // Ohne Quell-PGN gibt es nichts neu aufzubereiten — der Kurs darf nicht im „Aktualisieren"-Banner hängen.
+        Assert.Equal(ImportPipeline.CurrentVersion, book.ImportVersion);
+        Assert.Empty(_db.BookPuzzles.Where(bp => bp.BookId == book.Id));
+
+        Assert.True(await _svc.HasAnyAccessAsync(userId: 7, isAdmin: false));
+        Assert.False(await _svc.HasAnyAccessAsync(userId: 8, isAdmin: false));
+    }
+
+    [Fact]
+    public async Task CreatePersonalCourse_WithoutName_ThrowsAndCreatesNoBook()
+    {
+        // Ohne Datei gibt es keinen Dateinamen, aus dem sich ein Anzeigename ableiten liesse.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreatePersonalCourseAsync(userId: 1, "   "));
+        Assert.Empty(_db.Books);
+    }
+
+    [Fact]
+    public async Task CreatePersonalCourse_TrimsOverlongName()
+    {
+        var dto = await _svc.CreatePersonalCourseAsync(userId: 1, new string('x', 250));
+        Assert.Equal(200, dto.DisplayName.Length);
+    }
+
+    [Fact]
+    public async Task CreatePersonalCourse_TwiceForSameUser_KeepsFileNamesUnique()
+    {
+        var a = await _svc.CreatePersonalCourseAsync(userId: 1, "Erster");
+        var b = await _svc.CreatePersonalCourseAsync(userId: 1, "Zweiter");
+        Assert.NotEqual(a.FileName, b.FileName);
+    }
+
+    [Fact]
     public async Task DeletePersonalCourse_Owner_RemovesBook()
     {
         var dto = await _svc.UploadPersonalCourseAsync(userId: 1, "line.pgn", SamplePgn, null);

@@ -906,4 +906,27 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(1, afterReset.Book.FirstTryCorrect);
         Assert.Equal(100, afterReset.Book.AccuracyPercent);
     }
+
+    [Fact]
+    public async Task Create_WithoutFile_CreatesEmptyCourse()
+    {
+        // „Neuen Kurs erstellen" ohne Anhang: der Kurs entsteht leer und wird danach befüllt.
+        var result = await _controller.Create(file: null, name: "Turmendspiele");
+
+        var dto = Assert.IsType<CourseListItemDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal("Turmendspiele", dto.DisplayName);
+        Assert.Equal(0, dto.PuzzleCount);
+        Assert.True(dto.IsOwned);
+        Assert.Equal(UserId, (await _db.Books.SingleAsync(b => b.Id == dto.BookId)).OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Create_WithoutFileAndWithoutName_IsBadRequest()
+    {
+        var result = await _controller.Create(file: null, name: "  ");
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(_db.Books);
+    }
+
 }

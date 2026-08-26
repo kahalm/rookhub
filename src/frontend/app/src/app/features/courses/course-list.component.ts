@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,7 +14,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames, saveCourseListCache, loadCourseListCache } from '../puzzles/book-offline.util';
 import { downloadBlob } from '../../shared/download.util';
-import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
+import { CreateCourseDialogComponent, CreateCourseDialogResult } from './create-course-dialog.component';
 import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
 import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-dialog.component';
 import { CourseThemesDialogComponent, CourseThemesDialogData } from './course-themes-dialog.component';
@@ -33,9 +34,9 @@ import { CourseCardComponent } from './course-card.component';
     <div class="courses-container">
       <div class="header">
         <h1>{{ 'courses.title' | translate }}</h1>
-        <button mat-raised-button color="primary" [disabled]="uploading" (click)="openUploadDialog()">
-          <mat-icon>{{ uploading ? 'hourglass_empty' : 'upload_file' }}</mat-icon>
-          {{ (uploading ? 'courses.upload.uploading' : 'courses.upload.button') | translate }}
+        <button mat-raised-button color="primary" [disabled]="creating" (click)="openCreateDialog()">
+          <mat-icon>{{ creating ? 'hourglass_empty' : 'add' }}</mat-icon>
+          {{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}
         </button>
       </div>
       <p class="intro">{{ 'courses.intro' | translate }}</p>
@@ -232,7 +233,7 @@ export class CourseListComponent implements OnInit {
   savingOffline: number | null = null;
   downloadingPgn: number | null = null;
   /** Läuft gerade ein Upload eines eigenen Kurs-PGN? */
-  uploading = false;
+  creating = false;
   /** bookId, der gerade gelöscht wird (Button-Sperre). */
   deleting: number | null = null;
   /** bookId, dessen Pin gerade umgeschaltet wird (Button-Sperre). */
@@ -250,7 +251,7 @@ export class CourseListComponent implements OnInit {
   /** Buch, dessen Kapitel gerade geladen werden. */
   loadingChapters: number | null = null;
 
-  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog, private auth: AuthService) {}
+  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog, private auth: AuthService, private router: Router) {}
 
   /** Darf der aktuelle Nutzer die Themen-Tags dieses Kurses setzen? Admin (alle) oder Besitzer. */
   canManageThemes(course: CourseListItem): boolean {
@@ -479,32 +480,34 @@ export class CourseListComponent implements OnInit {
     ref.afterClosed().subscribe(changed => { if (changed) this.loadCourses(); });
   }
 
-  /** Öffnet den Upload-Dialog; startet nach Bestätigung den Upload. */
-  openUploadDialog(): void {
-    if (this.uploading) return;
-    const ref = this.dialog.open<UploadCourseDialogComponent, void, UploadCourseDialogResult>(
-      UploadCourseDialogComponent, { width: '440px', maxWidth: '95vw' });
+  /** Öffnet „Neuen Kurs erstellen"; legt nach Bestätigung an — mit angehängtem PGN oder leer. */
+  openCreateDialog(): void {
+    if (this.creating) return;
+    const ref = this.dialog.open<CreateCourseDialogComponent, void, CreateCourseDialogResult>(
+      CreateCourseDialogComponent, { width: '440px', maxWidth: '95vw' });
     ref.afterClosed().subscribe(result => {
       if (!result) return;
-      this.uploadCourseFile(result.file, result.name);
+      this.createCourse(result.name, result.file);
     });
   }
 
-  /** Lädt eine PGN-Datei als persönlichen Kurs hoch und sortiert das Ergebnis in die Liste ein. */
-  uploadCourseFile(file: File, name: string): void {
-    this.uploading = true;
-    this.courseService.uploadCourse(file, name).subscribe({
+  /** Legt den Kurs an und sortiert ihn in die Liste ein. Ein LEERER Kurs führt direkt auf seine
+   *  Detailseite — dort kommen Kapitel und Stellungen hinein, ohne die er nur nutzlos herumstünde. */
+  createCourse(name: string, file: File | null): void {
+    this.creating = true;
+    this.courseService.createCourse(name, file).subscribe({
       next: course => {
-        this.uploading = false;
+        this.creating = false;
         // Neuen Kurs einsortieren (statt kompletten Reload) + Menü/Navbar-Zugriff neu prüfen lassen.
         this.courses = this.sortCourses([...this.courses.filter(c => c.bookId !== course.bookId), course]);
         this.rebuildSections();
         this.courseService.notifyAccessChanged();
-        this.snackbar.info(this.translate.instant('courses.upload.success', { name: course.displayName, count: course.puzzleCount }), { action: 'common.ok', duration: 3000 });
+        if (!file) { this.router.navigate(['/courses', course.bookId]); return; }
+        this.snackbar.info(this.translate.instant('courses.create.success', { name: course.displayName, count: course.puzzleCount }), { action: 'common.ok', duration: 3000 });
       },
       error: err => {
-        this.uploading = false;
-        const msg = err?.error?.message || this.translate.instant('courses.upload.failed');
+        this.creating = false;
+        const msg = err?.error?.message || this.translate.instant('courses.create.failed');
         this.snackbar.info(msg, { action: 'common.ok', duration: 4000 });
       }
     });

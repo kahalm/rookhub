@@ -267,12 +267,13 @@ export class CourseService {
     return this.http.get<CourseListItem[]>('/api/courses');
   }
 
-  /** Lädt ein PGN als persönlichen Kurs hoch (nur für den Nutzer sichtbar). */
-  uploadCourse(file: File, name?: string): Observable<CourseListItem> {
+  /** Legt einen persönlichen Kurs an (nur für den Nutzer sichtbar) — mit PGN als Inhalt oder LEER.
+   *  Ohne Datei entsteht ein Kurs ohne Stellungen, der auf der Detailseite gefüllt wird. */
+  createCourse(name: string, file: File | null = null): Observable<CourseListItem> {
     const form = new FormData();
-    form.append('file', file, file.name);
-    if (name && name.trim()) form.append('name', name.trim());
-    return this.http.post<CourseListItem>('/api/courses/upload', form);
+    if (name.trim()) form.append('name', name.trim());
+    if (file) form.append('file', file, file.name);
+    return this.http.post<CourseListItem>('/api/courses', form);
   }
 
   /** Löscht einen eigenen Kurs des Nutzers. */

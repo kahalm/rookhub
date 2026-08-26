@@ -329,6 +329,7 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 |---------|----------|------|-------|
 | GET | `/api/courses` | Auth | Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle) |
 | GET | `/api/courses/access` | Auth | `{ hasAccess }` — Basis für die Menü-Sichtbarkeit (Admin: true wenn Bücher existieren) |
+| POST | `/api/courses` (Alt-Route `/api/courses/upload`) | Auth | „Neuen Kurs erstellen“: legt einen persönlichen Kurs an (eigenes Buch, nur für den Besitzer sichtbar). Multipart mit `name` und OPTIONALEM `file` (.pgn, max. 10 MB) — **ohne Datei entsteht ein LEERER Kurs**, der danach über die Detailseite Kapitel für Kapitel gefüllt wird (`ImportVersion` steht sofort auf der aktuellen Pipeline-Version, damit ein handgepflegtes Buch nicht im „Aktualisieren“-Banner hängt); ohne Datei ist `name` Pflicht (400), weil es keinen Dateinamen zum Ableiten gibt. MIT Datei gilt die alte Regel: Puzzle-PGN im Chessable-Stil, sonst 400 und kein Buch |
 | GET | `/api/courses/{bookId}/chapters` | Auth | Kapitel des Buchs in Lesereihenfolge inkl. Fortschritt je Kapitel (`index`/`name`/`puzzleCount`/`solvedCount`/`progressPercent`); `name=null` = Sammel-„ohne Kapitel" |
 | GET | `/api/courses/{bookId}/next?mode=&after=&exclude=&chapterIndex=` | Auth | Nächstes ungelöstes Puzzle (siehe `mode` oben); mit `chapterIndex` auf das Kapitel beschränkt (Pool + Fortschritt) |
 | POST | `/api/courses/{bookId}/results` | Auth | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |

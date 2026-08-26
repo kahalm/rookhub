@@ -9,44 +9,52 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DISCORD_INVITE_URL } from '../../core/community';
 
-export interface UploadCourseDialogResult {
-  file: File;
+/** Ergebnis des Dialogs: der Name steht immer, das PGN ist optional — ein Kurs darf leer
+ *  entstehen und wird dann auf der Detailseite Kapitel für Kapitel gefüllt. */
+export interface CreateCourseDialogResult {
   name: string;
+  file: File | null;
 }
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
-  selector: 'app-upload-course-dialog',
+  selector: 'app-create-course-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, TranslatePipe],
   template: `
-    <h2 mat-dialog-title>{{ 'courses.upload.title' | translate }}</h2>
+    <h2 mat-dialog-title>{{ 'courses.create.title' | translate }}</h2>
     <mat-dialog-content>
       <div class="dialog-form">
-        <p class="hint">{{ 'courses.upload.hint' | translate }}</p>
-        <p class="note">
-          {{ 'courses.upload.restriction' | translate }}
-          <a [href]="discordUrl" target="_blank" rel="noopener noreferrer">Discord</a>.
-        </p>
+        <p class="hint">{{ 'courses.create.hint' | translate }}</p>
 
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'courses.upload.nameLabel' | translate }}</mat-label>
-          <input matInput [(ngModel)]="name" name="name" maxlength="200"
-                 [placeholder]="'courses.upload.namePlaceholder' | translate">
+          <mat-label>{{ 'courses.create.nameLabel' | translate }}</mat-label>
+          <input matInput [(ngModel)]="name" name="name" maxlength="200" required
+                 [placeholder]="'courses.create.namePlaceholder' | translate">
         </mat-form-field>
 
         <input #fileInput type="file" accept=".pgn" hidden (change)="onFileSelected($event)">
-        <button mat-stroked-button type="button" class="pick-btn" (click)="fileInput.click()">
-          <mat-icon>upload_file</mat-icon>
-          @if (file) { {{ file.name }} } @else { {{ 'courses.upload.choosePgn' | translate }} }
-        </button>
+        <div class="pgn-row">
+          <button mat-stroked-button type="button" class="pick-btn" (click)="fileInput.click()">
+            <mat-icon>attach_file</mat-icon>
+            @if (file) { {{ file.name }} } @else { {{ 'courses.create.attachPgn' | translate }} }
+          </button>
+          @if (file) {
+            <button mat-icon-button type="button" [attr.aria-label]="'common.delete' | translate"
+                    (click)="clearFile(fileInput)"><mat-icon>close</mat-icon></button>
+          }
+        </div>
+        <p class="note">
+          {{ 'courses.create.pgnNote' | translate }}
+          <a [href]="discordUrl" target="_blank" rel="noopener noreferrer">Discord</a>.
+        </p>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!file"
+      <button mat-raised-button color="primary" [disabled]="!name.trim()"
               (click)="submit()">
-        {{ 'courses.upload.button' | translate }}
+        {{ 'courses.create.button' | translate }}
       </button>
     </mat-dialog-actions>
   `,
@@ -58,22 +66,31 @@ export interface UploadCourseDialogResult {
     .note a { color: #5865F2; font-weight: 500; text-decoration: none; }
     .note a:hover { text-decoration: underline; }
     .pick-btn { align-self: flex-start; }
+    .pgn-row { display: flex; align-items: center; gap: 0.25rem; }
   `]
 })
-export class UploadCourseDialogComponent {
+export class CreateCourseDialogComponent {
   name = '';
   file: File | null = null;
   readonly discordUrl = DISCORD_INVITE_URL;
 
-  constructor(public dialogRef: MatDialogRef<UploadCourseDialogComponent, UploadCourseDialogResult>) {}
+  constructor(public dialogRef: MatDialogRef<CreateCourseDialogComponent, CreateCourseDialogResult>) {}
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.file = input.files?.[0] ?? null;
   }
 
+  /** Angehängtes PGN wieder loswerden — auch im Input selbst, sonst löst dieselbe Datei
+   *  beim erneuten Wählen kein change-Ereignis mehr aus. */
+  clearFile(input: HTMLInputElement): void {
+    this.file = null;
+    input.value = '';
+  }
+
   submit(): void {
-    if (!this.file) return;
-    this.dialogRef.close({ file: this.file, name: this.name.trim() });
+    const name = this.name.trim();
+    if (!name) return;
+    this.dialogRef.close({ name, file: this.file });
   }
 }

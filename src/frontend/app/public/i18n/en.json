@@ -1178,6 +1178,18 @@
       "success": "\"{{name}}\" created ({{count}} puzzles)",
       "failed": "Upload failed. Please check the PGN."
     },
+    "create": {
+      "title": "Create a new course",
+      "hint": "Create your own course — visible only to you. You can add the positions chapter by chapter on the course page afterwards.",
+      "nameLabel": "Course name",
+      "namePlaceholder": "e.g. Rook endgames",
+      "attachPgn": "Attach PGN (optional)",
+      "pgnNote": "An attached PGN has to be a puzzle PGN in Chessable style (with FEN and training markers). Got a different PGN? Ask an admin to import it, or ask in our",
+      "button": "Create course",
+      "creating": "Creating…",
+      "success": "“{{name}}” created ({{count}} puzzles)",
+      "failed": "The course could not be created."
+    },
     "deleteTooltip": "Delete course",
     "convertToRepertoireTooltip": "Convert to repertoire",
     "convertedToRepertoire": "Course converted to repertoire: {{name}}",

@@ -18,7 +18,7 @@ describe('CourseListComponent sorting', () => {
 
   function buildWith(items: CourseListItem[]): CourseListComponent {
     const courseService = { getCourses: () => of(items) } as any;
-    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
     comp.loadCourses();
     return comp;
   }
@@ -70,7 +70,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 2, solvedCount: 0, lastActivityAt: null }),                    // nie begonnen
         item2({ bookId: 3, solvedCount: 10, lastActivityAt: '2026-06-02T10:00:00Z' }), // fertig
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([1]);
     });
@@ -83,7 +83,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 4, solvedCount: 0, isPinned: false }),        // weder gepinnt noch angefangen
         item2({ bookId: 5, solvedCount: 10, isPinned: true }),        // gepinnt, aber schon fertig → NICHT in-progress
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
       comp.loadCourses();
       // Angepinnte zuerst (2, 3), danach der begonnene Rest (1). BookId 4 (weder-noch) und 5 (fertig) draußen.
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([2, 3, 1]);
@@ -93,7 +93,7 @@ describe('CourseListComponent sorting', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.length).toBe(1);
 
@@ -107,8 +107,8 @@ describe('CourseListComponent sorting', () => {
 
     it('canManageThemes: Admin für alle, sonst nur Besitzer', () => {
       const cs = { getCourses: () => of([]) } as any;
-      const admin = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: true } as any);
-      const user = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+      const admin = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: true } as any, {} as any);
+      const user = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
       expect(admin.canManageThemes({ isOwned: false } as any)).toBeTrue();
       expect(user.canManageThemes({ isOwned: true } as any)).toBeTrue();
       expect(user.canManageThemes({ isOwned: false } as any)).toBeFalse();
@@ -119,7 +119,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 1, displayName: 'Sicilian Defense', isOwned: true }),
         item2({ bookId: 2, displayName: 'French Defense', isOwned: true }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
       comp.loadCourses();
       comp.search = 'SICIL';
       expect(comp.filtered.map(c => c.bookId)).toEqual([1]);
@@ -129,7 +129,7 @@ describe('CourseListComponent sorting', () => {
     });
   });
 
-  describe('upload/delete des eigenen Kurses', () => {
+  describe('anlegen/löschen des eigenen Kurses', () => {
     function item3(over: Partial<CourseListItem>): CourseListItem {
       return {
         bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
@@ -139,59 +139,77 @@ describe('CourseListComponent sorting', () => {
     }
     const snackbar = { info: () => {} } as any;
     const translate = { instant: (k: string) => k } as any;
+    const router = { navigate: jasmine.createSpy('navigate') } as any;
 
-    it('hängt einen hochgeladenen Kurs an die Liste und meldet Zugriffsänderung', () => {
-      const uploaded = item3({ bookId: 42, displayName: 'My Course', isOwned: true });
+    it('hängt einen mit PGN angelegten Kurs an die Liste und meldet Zugriffsänderung', () => {
+      const created = item3({ bookId: 42, displayName: 'My Course', isOwned: true });
       const notify = jasmine.createSpy('notifyAccessChanged');
       const courseService = {
         getCourses: () => of([]),
-        uploadCourse: jasmine.createSpy('uploadCourse').and.returnValue(of(uploaded)),
+        createCourse: jasmine.createSpy('createCourse').and.returnValue(of(created)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, router);
       comp.loadCourses();
 
       const file = new File(['pgn'], 'my.pgn');
-      comp.uploadCourseFile(file, 'My Course');
+      comp.createCourse('My Course', file);
 
-      expect(courseService.uploadCourse).toHaveBeenCalledWith(file, 'My Course');
+      expect(courseService.createCourse).toHaveBeenCalledWith('My Course', file);
       expect(comp.courses.map(c => c.bookId)).toEqual([42]);
-      expect(comp.uploading).toBeFalse();
+      expect(comp.creating).toBeFalse();
       expect(notify).toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();   // mit Inhalt bleibt man in der Liste
     });
 
-    it('öffnet den Upload-Dialog und lädt bei Bestätigung hoch', () => {
-      const uploaded = item3({ bookId: 99, displayName: 'From Dialog', isOwned: true });
+    it('führt bei einem LEEREN Kurs direkt auf dessen Detailseite', () => {
+      const created = item3({ bookId: 7, displayName: 'Leer', isOwned: true, puzzleCount: 0 });
+      const nav = jasmine.createSpy('navigate');
       const courseService = {
         getCourses: () => of([]),
-        uploadCourse: jasmine.createSpy('uploadCourse').and.returnValue(of(uploaded)),
+        createCourse: jasmine.createSpy('createCourse').and.returnValue(of(created)),
+        notifyAccessChanged: () => {},
+      } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, { navigate: nav } as any);
+      comp.loadCourses();
+      comp.createCourse('Leer', null);
+
+      expect(courseService.createCourse).toHaveBeenCalledWith('Leer', null);
+      expect(nav).toHaveBeenCalledWith(['/courses', 7]);
+    });
+
+    it('öffnet den Dialog und legt bei Bestätigung an', () => {
+      const created = item3({ bookId: 99, displayName: 'From Dialog', isOwned: true });
+      const courseService = {
+        getCourses: () => of([]),
+        createCourse: jasmine.createSpy('createCourse').and.returnValue(of(created)),
         notifyAccessChanged: () => {},
       } as any;
       const file = new File(['pgn'], 'd.pgn');
-      const dialogRef = { afterClosed: () => of({ file, name: 'From Dialog' }) } as any;
+      const dialogRef = { afterClosed: () => of({ name: 'From Dialog', file }) } as any;
       const dialog = { open: jasmine.createSpy('open').and.returnValue(dialogRef) } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any, router);
       comp.loadCourses();
-      comp.openUploadDialog();
+      comp.openCreateDialog();
 
       expect(dialog.open).toHaveBeenCalled();
-      expect(courseService.uploadCourse).toHaveBeenCalledWith(file, 'From Dialog');
+      expect(courseService.createCourse).toHaveBeenCalledWith('From Dialog', file);
       expect(comp.courses.map(c => c.bookId)).toEqual([99]);
     });
 
-    it('ignoriert einen abgebrochenen Upload-Dialog', () => {
+    it('ignoriert einen abgebrochenen Dialog', () => {
       const courseService = {
         getCourses: () => of([]),
-        uploadCourse: jasmine.createSpy('uploadCourse'),
+        createCourse: jasmine.createSpy('createCourse'),
         notifyAccessChanged: () => {},
       } as any;
       const dialogRef = { afterClosed: () => of(undefined) } as any;
       const dialog = { open: () => dialogRef } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any, router);
       comp.loadCourses();
-      comp.openUploadDialog();
+      comp.openCreateDialog();
 
-      expect(courseService.uploadCourse).not.toHaveBeenCalled();
+      expect(courseService.createCourse).not.toHaveBeenCalled();
     });
 
     it('löscht einen eigenen Kurs nach Bestätigung aus der Liste', () => {
@@ -202,7 +220,7 @@ describe('CourseListComponent sorting', () => {
         deleteCourse: jasmine.createSpy('deleteCourse').and.returnValue(of(void 0)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, {} as any);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
 
@@ -218,7 +236,7 @@ describe('CourseListComponent sorting', () => {
         deleteCourse: jasmine.createSpy('deleteCourse'),
         notifyAccessChanged: () => {},
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, {} as any);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
       expect(courseService.deleteCourse).not.toHaveBeenCalled();
@@ -251,7 +269,7 @@ describe('CourseListComponent offline fallback', () => {
     // Nur a.pgn ist als Buch offline gespeichert.
     saveBookOffline('a.pgn', [], 1);
     const svc: any = { getCourses: jasmine.createSpy().and.returnValues(of(items), throwError(() => new Error('offline'))) };
-    const comp = new CourseListComponent(svc, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+    const comp = new CourseListComponent(svc, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any);
     comp.ngOnInit();                          // Erfolg → Snapshot gecacht
     expect(comp.offlineList).toBeFalse();
     comp.loadCourses();                       // Fehler → Fallback aus dem Cache
@@ -262,7 +280,7 @@ describe('CourseListComponent offline fallback', () => {
   it('keeps the plain error hint when nothing is downloaded', () => {
     const info = jasmine.createSpy('info');
     const svc: any = { getCourses: () => throwError(() => new Error('offline')) };
-    const comp = new CourseListComponent(svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any);
+    const comp = new CourseListComponent(svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any);
     comp.ngOnInit();
     expect(comp.offlineList).toBeFalse();
     expect(comp.courses.length).toBe(0);
@@ -281,7 +299,7 @@ describe('CourseListComponent Offline-Speichern (ehrliche Fehlermeldung)', () =>
     const svc: any = { getBookPuzzles: () => of([{ id: 1, bookFileName: 'b.pgn' }]) };
     const info = jasmine.createSpy('info');
     const comp = new CourseListComponent(
-      svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any);
+      svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any);
     return { comp, info };
   }
   const course = { bookId: 7, fileName: 'b.pgn', displayName: 'B' } as CourseListItem;

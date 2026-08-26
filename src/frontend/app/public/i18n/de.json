@@ -1178,6 +1178,18 @@
       "success": "„{{name}}“ angelegt ({{count}} Puzzles)",
       "failed": "Upload fehlgeschlagen. Bitte PGN prüfen."
     },
+    "create": {
+      "title": "Neuen Kurs erstellen",
+      "hint": "Lege einen eigenen Kurs an — nur für dich sichtbar. Die Stellungen kannst du danach Kapitel für Kapitel auf der Kursseite einfügen.",
+      "nameLabel": "Kursname",
+      "namePlaceholder": "z. B. Turmendspiele",
+      "attachPgn": "PGN anhängen (optional)",
+      "pgnNote": "Ein angehängtes PGN muss ein Puzzle-PGN im Chessable-Stil sein (mit FEN und Trainingsmarkern). Anderes PGN? Wende dich an einen Admin zum Importieren oder frag in unserem",
+      "button": "Kurs erstellen",
+      "creating": "Wird erstellt…",
+      "success": "„{{name}}“ angelegt ({{count}} Puzzles)",
+      "failed": "Kurs konnte nicht erstellt werden."
+    },
     "deleteTooltip": "Kurs löschen",
     "convertToRepertoireTooltip": "In Repertoire umwandeln",
     "convertedToRepertoire": "Kurs als Repertoire angelegt: {{name}}",

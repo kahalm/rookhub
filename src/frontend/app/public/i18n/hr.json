@@ -1178,6 +1178,18 @@
       "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
       "failed": "Učitavanje nije uspjelo. Provjeri PGN."
     },
+    "create": {
+      "title": "Stvori novi tečaj",
+      "hint": "Napravi vlastiti tečaj — vidljiv samo tebi. Pozicije zatim možeš dodavati poglavlje po poglavlje na stranici tečaja.",
+      "nameLabel": "Naziv tečaja",
+      "namePlaceholder": "npr. Završnice s topovima",
+      "attachPgn": "Priloži PGN (opcionalno)",
+      "pgnNote": "Priloženi PGN mora biti PGN sa zagonetkama u Chessable stilu (s FEN-om i oznakama za trening). Imaš drugačiji PGN? Zamoli administratora za uvoz ili pitaj na našem",
+      "button": "Stvori tečaj",
+      "creating": "Stvara se…",
+      "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
+      "failed": "Tečaj nije bilo moguće stvoriti."
+    },
     "deleteTooltip": "Izbriši tečaj",
     "convertToRepertoireTooltip": "Pretvori u repertoar",
     "convertedToRepertoire": "Tečaj pretvoren u repertoar: {{name}}",
