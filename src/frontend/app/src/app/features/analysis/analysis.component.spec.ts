@@ -15,6 +15,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
     analysis$: new Subject(),
     engineFatalError$: new Subject(),   // Crash-Detection-Stream (seit 0.97.10), in ngOnInit subscribed
     remoteFallback$: new Subject(),     // External-Engine-Rückfall (seit 0.372.0)
+    remoteInterrupted$: new Subject(),  // Abriss-Hinweis der Remote-Suche (seit 0.377.0)
     setMultiPv: jasmine.createSpy('setMultiPv'),
     setDepth: jasmine.createSpy('setDepth'),
     setRemoteEngine: jasmine.createSpy('setRemoteEngine'),
@@ -56,6 +57,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
       fatalError$: fatal,
       engineFatalError$: fatal,
       remoteFallback$: new Subject(),
+      remoteInterrupted$: new Subject(),
       depthLimit: 0,
       linesRequested: 0,
       setMultiPv: jasmine.createSpy('setMultiPv').and.callFake((n: number) => { ce.linesRequested = n; }),

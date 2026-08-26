@@ -38,6 +38,9 @@ public class EngineController : BaseApiController
     /// Der globale Limiter begrenzt nur die RATE neuer Anfragen, nicht die Zahl offener Ströme.</summary>
     private const int MaxConcurrentStreamsPerUser = 4;
 
+    /// <summary>Abstand der Leerzeilen-Lebenszeichen im Analyse-Stream (siehe <see cref="NdjsonHeartbeatPump"/>).</summary>
+    private static readonly TimeSpan HeartbeatInterval = NdjsonHeartbeatPump.DefaultInterval;
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, int> ActiveStreams = new();
 
     private readonly AppDbContext _db;
@@ -220,7 +223,10 @@ public class EngineController : BaseApiController
                 try
                 {
                     await using var stream = await upstream.Content.ReadAsStreamAsync(streamCt);
-                    await stream.CopyToAsync(Response.Body, streamCt);
+                    // Kein nacktes CopyToAsync: bei Funkstille des Brokers (MultiPV 5 ab Tiefe ~27
+                    // vergehen Minuten zwischen zwei Zeilen) schreibt der Pump Leerzeilen, damit kein
+                    // Proxy davor (NPM 60 s!) die Verbindung als tot kappt — siehe NdjsonHeartbeatPump.
+                    await NdjsonHeartbeatPump.PumpAsync(stream, Response.Body, HeartbeatInterval, streamCt);
                 }
                 catch (OperationCanceledException)
                 {

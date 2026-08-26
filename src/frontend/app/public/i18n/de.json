@@ -2254,6 +2254,10 @@
     "mateBlackWins": "Schachmatt — Schwarz gewinnt",
     "stalemate": "Patt — remis",
     "remoteFallback": "Externe Engine nicht erreichbar — es rechnet die Browser-Engine.",
+    "remoteCutResuming": "Verbindung zur Engine bei Tiefe {{depth}}/{{target}} abgerissen — wird fortgesetzt…",
+    "remoteCutFinal": "Verbindung zur Engine bei Tiefe {{depth}}/{{target}} abgerissen — gezeigt wird der letzte Stand.",
+    "thinkingSince": "Engine rechnet seit {{time}} an Tiefe {{depth}}",
+    "slowMultiPvHint": "Bei 4+ Linien kann jede Tiefe ab ~27 mehrere Minuten dauern.",
     "setup": {
       "button": "Stellung aufbauen",
       "apply": "Übernehmen",

@@ -57,6 +57,25 @@ describe('ExternalEngineService', () => {
     expect(seen.length).toBe(2);
   });
 
+  it('ignores blank keep-alive lines (server heartbeat) between result lines', () => {
+    // Der API-Proxy schickt bei Funkstille des Brokers alle 20 s ein nacktes "\n" (NdjsonHeartbeatPump),
+    // damit Proxys davor die Verbindung nicht kappen — für den Parser darf das kein Ereignis sein.
+    const seen: EngineAnalyseLine[] = [];
+    let completed = false;
+    svc.analyse('eei_a', WORK).subscribe({ next: l => seen.push(l), complete: () => completed = true });
+    const req = http.expectOne('/api/engine/external/eei_a/analyse');
+    const l1 = '{"time":10,"depth":27,"nodes":100,"pvs":[{"depth":27,"cp":20,"moves":["e2e4"]}]}';
+
+    req.event({ type: HttpEventType.DownloadProgress, loaded: 1, partialText: l1 + '\n\n\n' } as never);
+    expect(seen.length).toBe(1);
+    req.event({ type: HttpEventType.DownloadProgress, loaded: 2, partialText: l1 + '\n\n\n\n\n' } as never);
+    expect(seen.length).toBe(1);
+
+    req.flush(l1 + '\n\n\n\n\n');
+    expect(seen.length).toBe(1);
+    expect(completed).toBeTrue();
+  });
+
   it('ignores a half-received line until it is complete', () => {
     const seen: EngineAnalyseLine[] = [];
     svc.analyse('eei_a', WORK).subscribe(l => seen.push(l));

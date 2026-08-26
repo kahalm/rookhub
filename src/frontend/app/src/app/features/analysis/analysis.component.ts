@@ -14,10 +14,10 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
-import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
+import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
 import { ExternalEngineService, ExternalEngineInfo } from './external-engine.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -147,6 +147,18 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
               }
               @if (remoteFallback && selectedEngineId !== 'wasm') {
                 <p class="remote-fallback"><mat-icon>cloud_off</mat-icon> {{ 'analysis.remoteFallback' | translate }}</p>
+              }
+              @if (remoteCut && selectedEngineId !== 'wasm') {
+                <p class="remote-cut" [class.final]="!remoteCut.resuming">
+                  <mat-icon>{{ remoteCut.resuming ? 'sync' : 'link_off' }}</mat-icon>
+                  {{ (remoteCut.resuming ? 'analysis.remoteCutResuming' : 'analysis.remoteCutFinal') | translate:{ depth: remoteCut.depth, target: remoteCut.target } }}
+                </p>
+              }
+              @if (showThinking) {
+                <p class="thinking">
+                  <mat-icon>hourglass_top</mat-icon>
+                  <span>{{ 'analysis.thinkingSince' | translate:{ time: thinkingTime, depth: depth + 1 } }}@if (slowConfigHint) { — {{ 'analysis.slowMultiPvHint' | translate }}}</span>
+                </p>
               }
               @if (terminal) {
                 <p class="terminal-state"><mat-icon>flag</mat-icon> {{ terminalText }}</p>
@@ -284,6 +296,10 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .terminal-state { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 8px 0 0; }
     .terminal-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .remote-fallback mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .remote-cut, .thinking { display: flex; align-items: center; gap: 6px; font-size: .85rem; margin: 6px 0 0;
+      color: color-mix(in srgb, currentColor 65%, transparent); }
+    .remote-cut.final { color: #e65100; }
+    .remote-cut mat-icon, .thinking mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .back-btn { width: 100%; margin-bottom: 8px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
@@ -347,6 +363,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   externalEnginesList: ExternalEngineInfo[] = [];
   selectedEngineId = 'wasm';
   remoteFallback = false;
+  /** Abriss der Remote-Suche vor der Zieltiefe (Hinweis in der Karte; null = keiner). */
+  remoteCut: RemoteInterruption | null = null;
+  private cutSub?: Subscription;
+  /** Lebenszeichen: läuft die Suche, und wie viele Sekunden kam keine neue Engine-Zeile? (nur Anzeige) */
+  running = false;
+  sinceUpdateSec = 0;
+  private lastUpdateAt = Date.now();
+  private tickSub?: Subscription;
   /** Suchleistung der laufenden Analyse (0 = noch kein Messwert). */
   nodes = 0;
   nps = 0;
@@ -412,9 +436,20 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
-    this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines, s.nodes, s.nps));
+    this.sub = this.engine.analysis$.subscribe(s => {
+      this.running = s.running;
+      this.lastUpdateAt = Date.now();
+      this.onEngineUpdate(s.fen, s.depth, s.lines, s.nodes, s.nps);
+    });
     this.errorSub = this.engine.engineFatalError$.subscribe(e => { this.engineCrashed = e !== null; this.cdr.markForCheck(); });
     this.fallbackSub = this.engine.remoteFallback$.subscribe(f => { this.remoteFallback = f; this.cdr.markForCheck(); });
+    this.cutSub = this.engine.remoteInterrupted$.subscribe(c => { this.remoteCut = c; this.cdr.markForCheck(); });
+    // Sekundentakt nur für „rechnet seit …": bei MultiPV 5 vergehen ab Tiefe ~27 Minuten ohne neue
+    // Zeile — ohne sichtbare Uhr sieht das aus wie ein Hänger. markForCheck nur bei Wertänderung.
+    this.tickSub = interval(1000).subscribe(() => {
+      const v = this.running ? Math.floor((Date.now() - this.lastUpdateAt) / 1000) : 0;
+      if (v !== this.sinceUpdateSec) { this.sinceUpdateSec = v; this.cdr.markForCheck(); }
+    });
 
     // External Engines des Lichess-Kontos laden (nur eingeloggt; stiller Hintergrund-Feed —
     // ohne Liste bleibt es einfach beim Browser-WASM). War zuletzt eine External Engine gewählt
@@ -483,6 +518,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
     this.errorSub?.unsubscribe();
     this.fallbackSub?.unsubscribe();
+    this.cutSub?.unsubscribe();
+    this.tickSub?.unsubscribe();
     this.enginesSub?.unsubscribe();
     this.stopCompare();          // eigene Instanz + deren Worker/Streams beenden
     this.engine.destroy();
@@ -667,6 +704,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  Sprache selbst zurück) statt Angulars formatNumber, das bei nicht registrierten
    *  Locale-Daten NG0701 wirft — und zusätzlich ein try/catch. */
   get speedHint(): string { return this.speedHintFor(this.nps, this.nodes); }
+
+  /** Lebenszeichen der Remote-Suche — erst ab 5 s ohne neue Zeile, damit es im Normalbetrieb nicht flackert. */
+  get showThinking(): boolean {
+    return this.engineOn && !this.terminal && this.running && this.selectedEngineId !== 'wasm' && this.sinceUpdateSec >= 5;
+  }
+  get thinkingTime(): string {
+    const m = Math.floor(this.sinceUpdateSec / 60), sec = this.sinceUpdateSec % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+  /** Erwartung setzen: 4+ Linien × Tiefe ≥ 27 braucht auf einem PC je Iteration Minuten. */
+  get slowConfigHint(): boolean { return this.linesCount >= 4 && this.depthSetting >= 27; }
 
   /** 8234567 → „8,2 MN/s" (Tausender/Millionen wie in Schach-Oberflächen üblich). */
   private formatNps(nps: number): string {

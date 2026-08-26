@@ -2254,6 +2254,10 @@
     "mateBlackWins": "Checkmate — Black wins",
     "stalemate": "Stalemate — draw",
     "remoteFallback": "External engine unavailable — using the browser engine.",
+    "remoteCutResuming": "Connection to the engine dropped at depth {{depth}}/{{target}} — resuming…",
+    "remoteCutFinal": "Connection to the engine dropped at depth {{depth}}/{{target}} — showing the last result.",
+    "thinkingSince": "Engine has been working on depth {{depth}} for {{time}}",
+    "slowMultiPvHint": "With 4+ lines, each depth beyond ~27 can take several minutes.",
     "setup": {
       "button": "Set up position",
       "apply": "Apply",

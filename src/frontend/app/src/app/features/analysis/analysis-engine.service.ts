@@ -14,6 +14,10 @@ export interface RemoteEngine {
 /** Transport der Remote-Analyse — von der Component verdrahtet (hält den Service DI-frei testbar). */
 export type RemoteAnalyseTransport = (engineId: string, work: EngineAnalyseWork) => Observable<EngineAnalyseLine>;
 
+/** Abriss eines Remote-Streams VOR der Zieltiefe (Proxy-Idle-Timeout, Provider weg). `resuming` =
+ *  die Suche wird ab `depth` fortgesetzt; false = aufgegeben, die gezeigten Linien sind der Endstand. */
+export interface RemoteInterruption { depth: number; target: number; resuming: boolean; }
+
 /** Eine Computer-Line (Principal Variation) aus der MultiPV-Analyse. */
 export interface AnalysisLine {
   /** 1-basiert: 1 = beste Line. */
@@ -123,6 +127,18 @@ export class AnalysisEngineService implements OnDestroy {
   /** True sobald die Remote-Analyse VOR der ersten Datenzeile scheiterte → Rest der Sitzung lokal. */
   private remoteFallbackSubject = new BehaviorSubject<boolean>(false);
   readonly remoteFallback$: Observable<boolean> = this.remoteFallbackSubject.asObservable();
+  /** Abriss-Zustand der Remote-Suche (null = keiner) — für den Hinweis in der Analyse-Karte. */
+  private remoteInterruptedSubject = new BehaviorSubject<RemoteInterruption | null>(null);
+  readonly remoteInterrupted$: Observable<RemoteInterruption | null> = this.remoteInterruptedSubject.asObservable();
+  /** Fortsetzungen nach einem Abriss je Stellung; jede weitere nur, wenn seit der letzten die Tiefe wuchs
+   *  (sonst liefe ein toter Provider in eine Endlosschleife). */
+  private static readonly MaxRemoteResumes = 3;
+  private remoteResumes = 0;
+  private remoteResumeBaseDepth = 0;
+  /** Endet der Stream so kurz nach der letzten Zeile, war es die Engine selbst (einzüge Stellung, Matt) —
+   *  ein Proxy-Timeout kappt dagegen erst nach langer Funkstille. Feld statt Konstante: Tests drehen es auf 0. */
+  protected remoteCutSilenceMs = 5000;
+  protected nowFn: () => number = () => Date.now();
 
   get linesRequested(): number { return this.multiPv; }
   get depthLimit(): number { return this.depthCap; }
@@ -237,6 +253,7 @@ export class AnalysisEngineService implements OnDestroy {
     this.remoteEngine = engine;
     if (transport) this.remoteTransport = transport;
     this.remoteFallbackSubject.next(false);
+    this.clearRemoteInterruption();
     this.stopRemote();
     if (engine) this.stopLocalSearch();   // der WASM-Kern soll nicht weiterrechnen
   }
@@ -273,6 +290,7 @@ export class AnalysisEngineService implements OnDestroy {
     // Neue, vom Nutzer angesteuerte Stellung → Crash-Budget zurücksetzen. Der Recovery-Retry aus
     // handleCrash ruft analyze() mit DERSELBEN FEN auf und setzt deshalb bewusst nichts zurück.
     if (fen !== this.currentFen) { this.crashStreak = 0; this.lastCrashFen = null; }
+    this.clearRemoteInterruption();
     this.gen++;
     this.currentFen = fen;
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
@@ -318,28 +336,72 @@ export class AnalysisEngineService implements OnDestroy {
   /** Analyse über die External Engine: der ndjson-Stream des Brokers ersetzt die Worker-info-Zeilen.
    *  Scheitert die Suche VOR der ersten Zeile (Engine/Provider offline, auch: gar keine Antwort
    *  binnen Frist), fällt der Service für den Rest der Sitzung still auf WASM zurück. Ein Abriss
-   *  MITTEN im Stream gilt dagegen als beendete Suche — was da ist, bleibt stehen. */
+   *  MITTEN im Stream vor der Zieltiefe (Proxy-Idle-Timeout — bei MultiPV 5 ab Tiefe ~27 schweigt der
+   *  Broker minutenlang) wird bis zu dreimal ab der erreichten Tiefe fortgesetzt und dem Nutzer
+   *  gemeldet; bleibt die Tiefe zwischen zwei Abrissen stehen, gilt der letzte Stand als Ergebnis. */
   private analyzeRemote(fen: string, engine: RemoteEngine, transport: RemoteAnalyseTransport): void {
+    this.remoteResumes = 0;
+    this.remoteResumeBaseDepth = 0;
+    this.clearRemoteInterruption();
+    this.startRemoteStream(fen, engine, transport, 0);
+  }
+
+  /** Öffnet EINEN Broker-Stream. `resumeFromDepth` > 0 = Fortsetzung nach Abriss: die sichtbaren Linien
+   *  bleiben stehen, und Zeilen unterhalb der schon erreichten Tiefe werden verschluckt — die Engine
+   *  läuft aus der warmen Hashtabelle die flachen Iterationen in Sekunden erneut durch, die Anzeige
+   *  soll dabei nicht von 27 auf 5 zurückspringen. */
+  private startRemoteStream(fen: string, engine: RemoteEngine, transport: RemoteAnalyseTransport, resumeFromDepth: number): void {
     this.gen++;
     const gen = this.gen;
     this.currentFen = fen;
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
     this.partial = new Map();
-    this.lastNodes = 0;
-    this.lastNps = 0;
     this.clearWatchdog();
     this.stopRemote();
-    this.state$.next({ fen, depth: 0, lines: [], running: true, nodes: 0, nps: 0 });
+    const resuming = resumeFromDepth > 0;
+    if (resuming) {
+      this.state$.next({ ...this.state$.value, fen, running: true });
+    } else {
+      this.lastNodes = 0;
+      this.lastNps = 0;
+      this.state$.next({ fen, depth: 0, lines: [], running: true, nodes: 0, nps: 0 });
+    }
 
     let gotData = false;
+    let reached = resumeFromDepth;
+    let lastLineAt = this.nowFn();
     const failBeforeData = () => {
       if (gen !== this.gen || gotData) return;
       this.stopRemote();
+      // Fortsetzung ohne jede Zeile: der Provider ist weg. Das erreichte Ergebnis behalten — nicht
+      // auf WASM kippen, das würde die tiefen Linien durch flache ersetzen.
+      if (resuming) { this.giveUpRemote(reached); return; }
       this.reportEngineEvent?.('remote_failed', engine.id);
       this.remoteFallbackSubject.next(true);
       this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false, nodes: 0, nps: 0 }));
     };
     this.remoteFirstLineGuard = setTimeout(failBeforeData, 12000);
+
+    // Stream zu Ende (complete ODER error), nachdem Daten kamen.
+    const ended = (errored: boolean) => {
+      const silence = this.nowFn() - lastLineAt;
+      const cut = reached < this.depthCap && (errored || silence >= this.remoteCutSilenceMs);
+      if (!cut) {
+        const s = this.state$.value;
+        if (s.running) this.state$.next({ ...s, running: false });
+        return;
+      }
+      this.stopRemote();
+      if (this.remoteResumes < AnalysisEngineService.MaxRemoteResumes && reached > this.remoteResumeBaseDepth) {
+        this.remoteResumes++;
+        this.remoteResumeBaseDepth = reached;
+        this.remoteInterruptedSubject.next({ depth: reached, target: this.depthCap, resuming: true });
+        this.reportEngineEvent?.('remote_resume', `${engine.id} ${reached}/${this.depthCap}`);
+        this.startRemoteStream(fen, engine, transport, reached);
+        return;
+      }
+      this.giveUpRemote(reached);
+    };
 
     this.remoteSub = transport(engine.id, {
       sessionId: this.remoteSessionId,
@@ -355,14 +417,19 @@ export class AnalysisEngineService implements OnDestroy {
       next: line => {
         if (gen !== this.gen) return;
         gotData = true;
+        lastLineAt = this.nowFn();
         if (this.remoteFirstLineGuard !== undefined) { clearTimeout(this.remoteFirstLineGuard); this.remoteFirstLineGuard = undefined; }
         this.remoteFallbackSubject.next(false);
+        const depth = line.depth ?? 0;
+        if (resuming && depth < resumeFromDepth) return;   // flache Wiederholung nach Fortsetzung verschlucken
+        if (resuming) this.clearRemoteInterruption();      // die Fortsetzung liefert wieder → Hinweis weg
+        reached = Math.max(reached, depth);
         // Der Broker liefert `nodes` + verstrichene `time` (ms), aber keine Rate — also selbst
         // rechnen. `time` ist in den ersten Zeilen oft 0: dann den letzten Wert behalten,
         // statt durch null zu teilen (ergäbe Infinity in der Anzeige).
         if (typeof line.nodes === 'number') this.lastNodes = line.nodes;
         if (line.time > 0 && line.nodes > 0) this.lastNps = Math.round(line.nodes * 1000 / line.time);
-        this.state$.next({ fen, depth: line.depth ?? 0, lines: this.mapRemoteLine(line),
+        this.state$.next({ fen, depth, lines: this.mapRemoteLine(line),
                            running: true, nodes: this.lastNodes, nps: this.lastNps });
       },
       complete: () => {
@@ -371,19 +438,25 @@ export class AnalysisEngineService implements OnDestroy {
         // wirklich geantwortet. Sofort umschalten, statt bis zum Ablauf des Wächters eine
         // leere „läuft"-Anzeige stehen zu lassen.
         if (!gotData) { failBeforeData(); return; }
-        const s = this.state$.value;
-        if (s.running) this.state$.next({ ...s, running: false });
+        ended(false);
       },
       error: () => {
         if (gen !== this.gen) return;
-        if (gotData) {
-          const s = this.state$.value;
-          if (s.running) this.state$.next({ ...s, running: false });
-          return;
-        }
-        failBeforeData();
+        if (!gotData) { failBeforeData(); return; }
+        ended(true);
       },
     });
+  }
+
+  /** Abriss endgültig: Hinweis mit Endstand, Suche gilt als beendet, Linien bleiben stehen. */
+  private giveUpRemote(reached: number): void {
+    this.remoteInterruptedSubject.next({ depth: reached, target: this.depthCap, resuming: false });
+    const s = this.state$.value;
+    if (s.running) this.state$.next({ ...s, running: false });
+  }
+
+  private clearRemoteInterruption(): void {
+    if (this.remoteInterruptedSubject.value) this.remoteInterruptedSubject.next(null);
   }
 
   /** ndjson-Zeile des Brokers → AnalysisLines. cp/mate kommen laut Spez. bereits aus Weiß-Sicht;

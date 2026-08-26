@@ -2254,6 +2254,10 @@
     "mateBlackWins": "Šah-mat — crni pobjeđuje",
     "stalemate": "Pat — neriješeno",
     "remoteFallback": "Vanjski motor nije dostupan — računa motor u pregledniku.",
+    "remoteCutResuming": "Veza s motorom prekinuta na dubini {{depth}}/{{target}} — nastavlja se…",
+    "remoteCutFinal": "Veza s motorom prekinuta na dubini {{depth}}/{{target}} — prikazan je zadnji rezultat.",
+    "thinkingSince": "Motor računa dubinu {{depth}} već {{time}}",
+    "slowMultiPvHint": "S 4+ linija svaka dubina iznad ~27 može trajati više minuta.",
     "setup": {
       "button": "Postavi poziciju",
       "apply": "Primijeni",

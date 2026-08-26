@@ -247,7 +247,7 @@ describe('AnalysisEngineService external engine (remote)', () => {
     expect(state.lines[0].pvUci).toEqual(['e2e4']);
   });
 
-  it('keeps the results and does NOT fall back when the stream dies mid-search', async () => {
+  it('keeps the results and does NOT fall back when the stream dies mid-search (resumes instead)', async () => {
     const eng = new TestEngine();
     let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
     eng.analysis$.subscribe(s => state = s);
@@ -263,8 +263,15 @@ describe('AnalysisEngineService external engine (remote)', () => {
 
     expect(fallback).toBeFalse();
     expect(eng.workers.length).toBe(0);          // kein WASM-Neustart
-    expect(state.running).toBeFalse();           // Suche gilt als beendet
+    expect(subjects.length).toBe(2);             // seit 0.377.0: Fortsetzung ab der erreichten Tiefe
+    expect(state.running).toBeTrue();
     expect(state.lines[0].pvUci).toEqual(['d2d4']);   // Ergebnis bleibt stehen
+
+    subjects[1].error(new Error('still dead'));  // Fortsetzung bringt nichts → Endstand, kein WASM
+    await tick();
+    expect(fallback).toBeFalse();
+    expect(state.running).toBeFalse();
+    expect(state.lines[0].pvUci).toEqual(['d2d4']);
   });
 
   it('drops stale lines after switching position (generation guard)', async () => {
@@ -529,5 +536,101 @@ describe('AnalysisEngineService search speed (nodes/nps)', () => {
 
     expect(fallback).toBeTrue();
     expect(eng.workers.length).toBe(1);       // lokale Engine übernimmt sofort
+  });
+});
+
+/**
+ * Abriss der Remote-Suche VOR der Zieltiefe (Proxy-Idle-Timeout): bis zu dreimal ab der erreichten
+ * Tiefe fortsetzen (Linien bleiben, flache Wiederholungen werden verschluckt), sonst ehrlich melden.
+ * Ein Ende direkt nach der letzten Zeile ist dagegen die Engine selbst (einzüge Stellung, Matt).
+ */
+describe('AnalysisEngineService remote cut + resume', () => {
+  const ENGINE = { id: 'eei_a', name: 'SF Heim-PC', maxThreads: 4, maxHash: 256 };
+  const line = (depth: number) => ({ time: 1000, depth, nodes: 1000 * depth, pvs: [{ depth, cp: 10, moves: ['e2e4'] }] });
+
+  function setup(silenceMs = 0) {
+    const eng = new TestEngine();
+    (eng as any).remoteCutSilenceMs = silenceMs;   // Tests warten keine 5 s Funkstille
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+    const cuts: any[] = [];
+    eng.remoteInterrupted$.subscribe(c => cuts.push(c));
+    let fallback = false;
+    eng.remoteFallback$.subscribe(f => fallback = f);
+    const subjects: Subject<any>[] = [];
+    const works: any[] = [];
+    eng.setRemoteEngine(ENGINE, (_id, work) => { works.push(work); const s = new Subject<any>(); subjects.push(s); return s.asObservable(); });
+    eng.setDepth(30);
+    return { eng, get state() { return state; }, cuts, subjects, works, get fallback() { return fallback; } };
+  }
+
+  it('resumes from the reached depth after a cut below the target and keeps the lines', async () => {
+    const t = setup();
+    await t.eng.analyze(FEN);
+    t.subjects[0].next(line(27));
+    t.subjects[0].complete();                                   // Proxy hat gekappt
+
+    expect(t.works.length).toBe(2);                             // zweiter Stream geöffnet …
+    expect(t.cuts.at(-1)).toEqual({ depth: 27, target: 30, resuming: true });
+    expect(t.state.running).toBeTrue();
+    expect(t.state.depth).toBe(27);                             // … die Anzeige bleibt stehen
+    expect(t.state.lines.length).toBe(1);
+
+    t.subjects[1].next(line(5));                                // flache Wiederholung aus der Hashtabelle
+    expect(t.state.depth).toBe(27);
+    t.subjects[1].next(line(28));
+    expect(t.state.depth).toBe(28);
+    expect(t.cuts.at(-1)).toBeNull();                           // Fortsetzung liefert → Hinweis weg
+
+    t.subjects[1].next(line(30));
+    t.subjects[1].complete();                                   // Zieltiefe erreicht = reguläres Ende
+    expect(t.state.running).toBeFalse();
+    expect(t.cuts.at(-1)).toBeNull();
+  });
+
+  it('gives up with a final hint when the resumed stream brings no deeper line', async () => {
+    const t = setup();
+    await t.eng.analyze(FEN);
+    t.subjects[0].next(line(27)); t.subjects[0].complete();
+    t.subjects[1].next(line(27)); t.subjects[1].complete();     // kein Fortschritt seit dem Abriss
+
+    expect(t.works.length).toBe(2);
+    expect(t.cuts.at(-1)).toEqual({ depth: 27, target: 30, resuming: false });
+    expect(t.state.running).toBeFalse();
+    expect(t.state.lines.length).toBe(1);                       // Endstand bleibt sichtbar
+  });
+
+  it('a resumed stream without any line keeps the result instead of falling back to WASM', async () => {
+    const t = setup();
+    await t.eng.analyze(FEN);
+    t.subjects[0].next(line(27)); t.subjects[0].complete();
+    t.subjects[1].complete();                                   // Provider ist weg
+
+    expect(t.fallback).toBeFalse();
+    expect(t.eng.workers.length).toBe(0);
+    expect(t.cuts.at(-1)).toEqual({ depth: 27, target: 30, resuming: false });
+    expect(t.state.depth).toBe(27);
+    expect(t.state.running).toBeFalse();
+  });
+
+  it('an end right after the last line below the target is a regular finish (no cut)', async () => {
+    const t = setup(5000);                                      // echte Funkstille-Schwelle
+    await t.eng.analyze(FEN);
+    t.subjects[0].next(line(3));                                // z. B. einzige legale Antwort
+    t.subjects[0].complete();
+
+    expect(t.works.length).toBe(1);
+    expect(t.cuts.filter(c => c !== null).length).toBe(0);
+    expect(t.state.running).toBeFalse();
+  });
+
+  it('an error mid-stream counts as a cut regardless of silence', async () => {
+    const t = setup(5000);
+    await t.eng.analyze(FEN);
+    t.subjects[0].next(line(12));
+    t.subjects[0].error(new Error('reset'));
+
+    expect(t.works.length).toBe(2);
+    expect(t.cuts.at(-1)).toEqual({ depth: 12, target: 30, resuming: true });
   });
 });
