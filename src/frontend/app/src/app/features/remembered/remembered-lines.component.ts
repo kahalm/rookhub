@@ -11,6 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { MatDialog } from '@angular/material/dialog';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { RememberedService, RememberedPosition } from '../../core/remembered.service';
@@ -30,7 +31,7 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, TranslatePipe, ChessBoardComponent,
+    MatProgressSpinnerModule, MatCheckboxModule, TranslatePipe, ChessBoardComponent,
   ],
   template: `
     <div class="remembered-page">
@@ -38,6 +39,23 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
         <h1>{{ 'remembered.title' | translate }}</h1>
         <p class="hint">{{ 'remembered.hint' | translate }}</p>
       </div>
+
+      @if (!loading && auth.isLoggedIn && selectable.length > 0) {
+        <div class="select-bar" [class.active]="selected.size > 0">
+          <mat-checkbox [checked]="allSelected" [indeterminate]="selected.size > 0 && !allSelected" (change)="toggleAll($event.checked)">
+            {{ 'remembered.selectAll' | translate:{ count: selectable.length } }}
+          </mat-checkbox>
+          @if (selected.size > 0) {
+            <span class="sel-count">{{ 'remembered.selectedCount' | translate:{ count: selected.size } }}</span>
+            <button mat-flat-button color="primary" (click)="queueSelected()">
+              <mat-icon>schedule</mat-icon> {{ 'remembered.analyzeSelected' | translate }}
+            </button>
+            <button mat-button (click)="selected.clear()">{{ 'remembered.clearSelection' | translate }}</button>
+          } @else {
+            <span class="sel-hint">{{ 'remembered.selectHint' | translate }}</span>
+          }
+        </div>
+      }
 
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
@@ -49,7 +67,11 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
       } @else {
         <div class="grid">
           @for (p of items; track p.id) {
-            <mat-card class="item">
+            <mat-card class="item" [class.selected]="selected.has(p.id)">
+              @if (!p.analysis && auth.isLoggedIn) {
+                <mat-checkbox class="pick" [checked]="selected.has(p.id)" (change)="toggleOne(p, $event.checked)"
+                              [attr.aria-label]="'remembered.selectForAnalysis' | translate" />
+              }
               <div class="board">
                 <app-chess-board [fen]="p.fen" [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
               </div>
@@ -103,7 +125,14 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-    .item { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .item { padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .item.selected { outline: 2px solid var(--mat-sys-primary, #3f51b5); }
+    .pick { position: absolute; top: 4px; right: 4px; z-index: 1; background: color-mix(in srgb, var(--mat-sys-surface, #fff) 80%, transparent); border-radius: 4px; }
+    .select-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 10px; margin-bottom: 12px;
+      border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); position: sticky; top: 0; z-index: 2; }
+    .select-bar.active { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent); }
+    .sel-count { font-weight: 600; }
+    .sel-hint { font-size: .85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .board { width: 100%; }
     .board app-chess-board { display: block; width: 100%; }
     .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -147,6 +176,43 @@ export class RememberedLinesComponent implements OnInit {
     private externalEngines: ExternalEngineService,
   ) {}
 
+  /** Mehrfachauswahl (nur Stellungen OHNE Auftrag) für „Analysieren" mit einer Tiefe/Linienzahl für alle. */
+  readonly selected = new Set<number>();
+  get selectable(): RememberedPosition[] { return this.items.filter(p => !p.analysis); }
+  get allSelected(): boolean { return this.selectable.length > 0 && this.selectable.every(p => this.selected.has(p.id)); }
+  toggleOne(p: RememberedPosition, on: boolean): void { if (on) this.selected.add(p.id); else this.selected.delete(p.id); }
+  toggleAll(on: boolean): void {
+    if (on) this.selectable.forEach(p => this.selected.add(p.id)); else this.selected.clear();
+  }
+
+  /** Alle ausgewählten Stellungen mit EINER Tiefe/Linienzahl vormerken (Batch-Endpoint). */
+  queueSelected(): void {
+    const fens = this.items.filter(p => this.selected.has(p.id)).map(p => p.fen);
+    if (fens.length === 0) return;
+    this.withBackgroundEngine(hasEngine => {
+      const ref = this.dialog.open(AnalysisJobDialogComponent, {
+        width: '440px', data: { fens, depth: 30, lines: 3, hasBackgroundEngine: hasEngine },
+      });
+      ref.afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => {
+        if (!res || !('created' in res)) return;
+        const skipped = res.skipped.length;
+        this.snackbar.success(this.translate.instant('analysisJobs.createdMany', { count: res.created.length })
+          + (skipped ? ' ' + this.translate.instant('analysisJobs.skippedSome', { count: skipped }) : ''));
+        this.selected.clear();
+        this.load();
+      });
+    });
+  }
+
+  /** Hintergrund-Engine einmal ermitteln (für den Dialog: ohne sie nur der Hinweis). */
+  private withBackgroundEngine(run: (hasEngine: boolean) => void): void {
+    if (this.backgroundEngineId !== undefined) { run(!!this.backgroundEngineId); return; }
+    this.externalEngines.listEngines().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: r => { this.backgroundEngineId = r.backgroundEngineId ?? null; run(!!this.backgroundEngineId); },
+      error: () => { this.backgroundEngineId = null; run(false); },
+    });
+  }
+
   /** Anzeigename: Kursname, sonst Kurs-ID, sonst bei Auftrags-Stellungen „Analyse-Auftrag", sonst „Unbekannter Kurs". */
   labelOf(p: RememberedPosition): string {
     if (p.courseName) return p.courseName;
@@ -156,21 +222,15 @@ export class RememberedLinesComponent implements OnInit {
 
   /** „Im Hintergrund analysieren" für eine gemerkte Stellung — derselbe Dialog wie im Analysebrett. */
   queueAnalysis(p: RememberedPosition): void {
-    const open = () => {
+    this.withBackgroundEngine(hasEngine => {
       const ref = this.dialog.open(AnalysisJobDialogComponent, {
-        width: '440px',
-        data: { fen: p.fen, depth: 30, lines: 3, hasBackgroundEngine: !!this.backgroundEngineId },
+        width: '440px', data: { fen: p.fen, depth: 30, lines: 3, hasBackgroundEngine: hasEngine },
       });
       ref.afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(job => {
         if (!job) return;
         this.snackbar.success(this.translate.instant('analysisJobs.created'));
         this.load();   // Karte zeigt jetzt die Analyse-Info
       });
-    };
-    if (this.backgroundEngineId !== undefined) { open(); return; }
-    this.externalEngines.listEngines().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: r => { this.backgroundEngineId = r.backgroundEngineId ?? null; open(); },
-      error: () => { this.backgroundEngineId = null; open(); },
     });
   }
 
@@ -178,10 +238,13 @@ export class RememberedLinesComponent implements OnInit {
     this.load();
   }
 
-  private load(): void {
+  load(): void {
     this.loading = true;
     this.remembered.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: items => { this.items = items; this.loading = false; },
+      next: items => {
+        this.items = items; this.loading = false;
+        for (const id of [...this.selected]) if (!items.some(p => p.id === id && !p.analysis)) this.selected.delete(id);
+      },
       error: () => { this.loading = false; this.snackbar.info(this.translate.instant('remembered.errors.load')); },
     });
   }

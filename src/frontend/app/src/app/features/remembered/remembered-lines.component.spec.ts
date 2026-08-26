@@ -54,3 +54,39 @@ describe('RememberedLinesComponent Analyse-Info', () => {
     expect(fixture.componentInstance.labelOf({ ...fixture.componentInstance.items[0], courseName: null })).toBe('remembered.analysisOrigin');
   });
 });
+
+describe('RememberedLinesComponent Mehrfachauswahl', () => {
+  it('bietet Checkboxen nur ohne Auftrag, „alle" wählt genau diese, Auswahl räumt sich nach dem Laden auf', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RememberedLinesComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: { isLoggedIn: true } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RememberedLinesComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const item = (id: number, analysis: any = null) => ({ id, fen: START, courseId: null, courseName: null, sourceUrl: null, createdAt: '2026-08-26T10:00:00Z', analysis });
+    http.expectOne(r => r.url.startsWith('/api/extension/remembered-lines')).flush([
+      item(1), item(2), item(3, { jobId: 9, status: 'done', reachedDepth: 30, targetDepth: 30, multiPv: 1, evalText: '+0.10', updatedAt: '' }),
+    ]);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+
+    expect(c.selectable.map(p => p.id)).toEqual([1, 2]);
+    expect(fixture.nativeElement.querySelectorAll('mat-checkbox.pick').length).toBe(2);
+    c.toggleAll(true);
+    expect([...c.selected].sort()).toEqual([1, 2]);
+    expect(c.allSelected).toBeTrue();
+    c.toggleOne(c.items[1], false);
+    expect(c.allSelected).toBeFalse();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('remembered.selectedCount');
+
+    // Nach dem Neuladen hat Stellung 1 einen Auftrag → fällt aus der Auswahl
+    c.load();
+    http.expectOne(r => r.url.startsWith('/api/extension/remembered-lines')).flush([
+      item(1, { jobId: 10, status: 'queued', reachedDepth: 0, targetDepth: 30, multiPv: 3, evalText: null, updatedAt: '' }), item(2),
+    ]);
+    expect(c.selected.size).toBe(0);
+  });
+});

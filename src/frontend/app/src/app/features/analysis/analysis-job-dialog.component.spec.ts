@@ -43,6 +43,28 @@ describe('AnalysisJobDialogComponent', () => {
     expect(ref.close).toHaveBeenCalledWith(jasmine.objectContaining({ id: 1 }));
   });
 
+  it('batch mode posts all positions at once and closes with the batch result', async () => {
+    const ref = { close: jasmine.createSpy('close') };
+    await TestBed.configureTestingModule({
+      imports: [AnalysisJobDialogComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: MatDialogRef, useValue: ref },
+        { provide: MAT_DIALOG_DATA, useValue: { fens: [FEN, 'x'], depth: 30, lines: 3, hasBackgroundEngine: true } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(AnalysisJobDialogComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.batch).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('analysisJobs.dialog.batchTitle');
+    expect(fixture.nativeElement.querySelector('input[matInput]')).toBeNull();   // kein Titel im Mehrfach-Modus
+
+    c.submit();
+    const req = TestBed.inject(HttpTestingController).expectOne('/api/analysis-jobs/batch');
+    expect(req.request.body).toEqual({ fens: [FEN, 'x'], targetDepth: 30, multiPv: 3 });
+    req.flush({ created: [{ id: 1 }], skipped: [{ fen: 'x', reason: 'invalid' }] });
+    expect(ref.close).toHaveBeenCalledWith(jasmine.objectContaining({ created: [{ id: 1 }] }));
+  });
+
   it('without a background engine it only explains and never posts', async () => {
     const { c, fixture, http } = await make(false);
     expect(fixture.nativeElement.textContent).toContain('analysisJobs.dialog.noEngine');

@@ -2783,7 +2783,13 @@
       "delete": "Brisanje nije uspjelo"
     },
     "analysisOrigin": "Zadatak analize",
-    "analysisTooltip": "Pozadinska analiza ove pozicije — na stranicu zadataka"
+    "analysisTooltip": "Pozadinska analiza ove pozicije — na stranicu zadataka",
+    "selectAll": "Odaberi sve bez zadatka ({{count}})",
+    "selectedCount": "Odabrano: {{count}}",
+    "analyzeSelected": "Analiziraj",
+    "clearSelection": "Poništi odabir",
+    "selectHint": "Označi pozicije i daj ih zajedno analizirati u pozadini.",
+    "selectForAnalysis": "Odaberi za analizu"
   },
   "solveMode": {
     "title": "Kako želiš igrati ovdje?",
@@ -2840,7 +2846,10 @@
       "costHint": "Pravilo: svaka dubina iznad ~27 traje višestruko duže od prethodne; 4+ varijante još jednom umnože vrijeme.",
       "noEngine": "U profilu nije postavljen pozadinski motor.",
       "toProfile": "Na profil",
-      "submit": "Dodaj u red"
-    }
+      "submit": "Dodaj u red",
+      "batchTitle": "Analiziraj {{count}} pozicija u pozadini"
+    },
+    "createdMany": "Dodano zadataka: {{count}} — kreću čim pozadinski motor bude slobodan.",
+    "skippedSome": "Preskočeno: {{count}} (već u redu ili nevažeće)."
   }
 }

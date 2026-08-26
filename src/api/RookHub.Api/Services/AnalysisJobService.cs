@@ -92,6 +92,53 @@ public class AnalysisJobService
         return ToDto(job);
     }
 
+    /// <summary>Mehrere Stellungen mit EINER Tiefe/Linienzahl vormerken. Je Stellung wird höchstens ein Auftrag
+    /// angelegt: illegale FENs, Stellungen mit bereits vorhandenem (nicht gescheitertem) Auftrag und alles
+    /// über dem Deckel offener Aufträge landen mit Grund in <c>Skipped</c> — der Rest wird angelegt.
+    /// Wirft <see cref="ArgumentException"/> bei ungültigen Grenzen, <see cref="InvalidOperationException"/> ohne Hintergrund-Engine.</summary>
+    public async Task<AnalysisJobBatchResult> CreateManyAsync(int userId, CreateAnalysisJobsBatchRequest req, CancellationToken ct = default)
+    {
+        if (req.TargetDepth is < 1 or > MaxDepth) throw new ArgumentException($"Depth must be 1..{MaxDepth}");
+        if (req.MultiPv is < 1 or > MaxMultiPv) throw new ArgumentException($"Lines must be 1..{MaxMultiPv}");
+        if (req.Fens.Count is 0 or > 200) throw new ArgumentException("1..200 positions");
+
+        var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
+        if (engineId is null)
+        {
+            var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+            engineId = cred?.BackgroundEngineId;
+            if (string.IsNullOrEmpty(engineId)) throw new InvalidOperationException("No background engine configured");
+        }
+        if (engineId.Length > 64) throw new ArgumentException("Invalid engine id");
+
+        var existing = await _db.AnalysisJobs.Where(j => j.UserId == userId && j.Status != AnalysisJobStatus.Failed)
+            .Select(j => j.Fen).ToListAsync(ct);
+        var taken = existing.Select(RepertoireAnalyzeService.NormalizeFen).ToHashSet();
+        var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
+            && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
+
+        var created = new List<AnalysisJob>(); var skipped = new List<AnalysisJobBatchSkipped>();
+        var now = DateTime.UtcNow;
+        foreach (var raw in req.Fens)
+        {
+            var fen = (raw ?? string.Empty).Trim();
+            if (fen.Length is 0 or > 120 || !IsLegalFen(fen)) { skipped.Add(new(fen, "invalid")); continue; }
+            var norm = RepertoireAnalyzeService.NormalizeFen(fen);
+            if (!taken.Add(norm)) { skipped.Add(new(fen, "duplicate")); continue; }   // auch Dubletten INNERHALB des Batches
+            if (open >= MaxOpenJobsPerUser) { skipped.Add(new(fen, "limit")); continue; }
+            var job = new AnalysisJob
+            {
+                UserId = userId, Fen = fen, EngineId = engineId, TargetDepth = req.TargetDepth, MultiPv = req.MultiPv,
+                Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
+            };
+            now = now.AddMilliseconds(1);   // FIFO-Reihenfolge = Auswahlreihenfolge
+            _db.AnalysisJobs.Add(job); created.Add(job); open++;
+            await EnsureRememberedAsync(userId, fen, null, ct);
+        }
+        if (created.Count > 0) await _db.SaveChangesAsync(ct);
+        return new AnalysisJobBatchResult(created.Select(ToDto).ToList(), skipped);
+    }
+
     /// <summary>Kennzeichnet gemerkte Stellungen, die aus einem Analyseauftrag stammen (interner Link statt Kurs-URL).</summary>
     public const string RememberedSourceUrl = "/analysis/jobs";
 

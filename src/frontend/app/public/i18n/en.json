@@ -2783,7 +2783,13 @@
       "delete": "Delete failed"
     },
     "analysisOrigin": "Analysis job",
-    "analysisTooltip": "Background analysis of this position — go to the jobs page"
+    "analysisTooltip": "Background analysis of this position — go to the jobs page",
+    "selectAll": "Select all without a job ({{count}})",
+    "selectedCount": "{{count}} selected",
+    "analyzeSelected": "Analyse",
+    "clearSelection": "Clear selection",
+    "selectHint": "Tick positions and have them analysed in the background together.",
+    "selectForAnalysis": "Select for analysis"
   },
   "solveMode": {
     "title": "How do you want to play here?",
@@ -2840,7 +2846,10 @@
       "costHint": "Rule of thumb: every depth beyond ~27 takes a multiple of the previous one; 4+ lines multiply the time again.",
       "noEngine": "No background engine is set in your profile.",
       "toProfile": "To the profile",
-      "submit": "Queue"
-    }
+      "submit": "Queue",
+      "batchTitle": "Analyse {{count}} positions in the background"
+    },
+    "createdMany": "{{count}} jobs queued — they run as soon as the background engine is free.",
+    "skippedSome": "{{count}} skipped (already queued or invalid)."
   }
 }

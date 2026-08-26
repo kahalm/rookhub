@@ -10,10 +10,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
-import { AnalysisJob, AnalysisJobsService } from './analysis-jobs.service';
+import { AnalysisJob, AnalysisJobBatchResult, AnalysisJobsService } from './analysis-jobs.service';
 
 export interface AnalysisJobDialogData {
-  fen: string;
+  /** Einzelstellung — ODER `fens` für den Mehrfach-Modus (dann ohne Titel; Ergebnis = Batch-Resultat). */
+  fen?: string;
+  fens?: string[];
   /** Vorbelegung aus den aktuellen Analyse-Einstellungen. */
   depth: number;
   lines: number;
@@ -37,7 +39,7 @@ export const JOB_LINE_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
   imports: [CommonModule, FormsModule, RouterLink, MatDialogModule, MatButtonModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatIconModule, TranslatePipe],
   template: `
-    <h2 mat-dialog-title>{{ 'analysisJobs.dialog.title' | translate }}</h2>
+    <h2 mat-dialog-title>{{ batch ? ('analysisJobs.dialog.batchTitle' | translate:{ count: data.fens!.length }) : ('analysisJobs.dialog.title' | translate) }}</h2>
     <mat-dialog-content>
       @if (!data.hasBackgroundEngine) {
         <p class="warn"><mat-icon>info_outline</mat-icon> {{ 'analysisJobs.dialog.noEngine' | translate }}</p>
@@ -58,10 +60,12 @@ export const JOB_LINE_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
             </mat-select>
           </mat-form-field>
         </div>
-        <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-          <mat-label>{{ 'analysisJobs.dialog.titleLabel' | translate }}</mat-label>
-          <input matInput [(ngModel)]="title" maxlength="200" (keyup.enter)="submit()" />
-        </mat-form-field>
+        @if (!batch) {
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+            <mat-label>{{ 'analysisJobs.dialog.titleLabel' | translate }}</mat-label>
+            <input matInput [(ngModel)]="title" maxlength="200" (keyup.enter)="submit()" />
+          </mat-form-field>
+        }
         <p class="hint small">{{ 'analysisJobs.dialog.costHint' | translate }}</p>
       }
     </mat-dialog-content>
@@ -92,7 +96,7 @@ export class AnalysisJobDialogComponent {
   busy = false;
 
   constructor(
-    public ref: MatDialogRef<AnalysisJobDialogComponent, AnalysisJob | null>,
+    public ref: MatDialogRef<AnalysisJobDialogComponent, AnalysisJob | AnalysisJobBatchResult | null>,
     @Inject(MAT_DIALOG_DATA) public data: AnalysisJobDialogData,
     private jobs: AnalysisJobsService,
     private snackbar: SnackbarService,
@@ -103,17 +107,23 @@ export class AnalysisJobDialogComponent {
     this.lines = JOB_LINE_OPTIONS.includes(data.lines) ? data.lines : 3;
   }
 
+  /** true = mehrere Stellungen (Mehrfachauswahl in „Gemerkte Stellungen"). */
+  get batch(): boolean { return (this.data.fens?.length ?? 0) > 0; }
+
   submit(): void {
     if (this.busy || !this.data.hasBackgroundEngine) return;
     this.busy = true;
-    this.jobs.create({ fen: this.data.fen, targetDepth: this.depth, multiPv: this.lines, title: this.title.trim() || null })
-      .subscribe({
-        next: job => { this.busy = false; this.ref.close(job); },
-        error: err => {
-          this.busy = false;
-          const msg = err?.error?.message as string | undefined;
-          this.snackbar.warn(this.translate.instant('analysisJobs.createFailed') + (msg ? ` (${msg})` : ''));
-        },
-      });
+    const onError = (err: any) => {
+      this.busy = false;
+      const msg = err?.error?.message as string | undefined;
+      this.snackbar.warn(this.translate.instant('analysisJobs.createFailed') + (msg ? ` (${msg})` : ''));
+    };
+    if (this.batch) {
+      this.jobs.createMany({ fens: this.data.fens!, targetDepth: this.depth, multiPv: this.lines })
+        .subscribe({ next: res => { this.busy = false; this.ref.close(res); }, error: onError });
+      return;
+    }
+    this.jobs.create({ fen: this.data.fen!, targetDepth: this.depth, multiPv: this.lines, title: this.title.trim() || null })
+      .subscribe({ next: job => { this.busy = false; this.ref.close(job); }, error: onError });
   }
 }

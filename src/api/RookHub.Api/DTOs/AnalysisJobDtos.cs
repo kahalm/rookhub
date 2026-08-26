@@ -29,3 +29,18 @@ public class SetBackgroundEngineRequest
     /// <summary>Engine-ID oder null/leer zum Entfernen.</summary>
     public string? EngineId { get; set; }
 }
+
+/// <summary>Mehrere Stellungen auf einmal vormerken (Mehrfachauswahl in „Gemerkte Stellungen") — eine Tiefe/Linienzahl für alle.</summary>
+public class CreateAnalysisJobsBatchRequest
+{
+    public List<string> Fens { get; set; } = new();
+    public int TargetDepth { get; set; } = 30;
+    public int MultiPv { get; set; } = 3;
+    public string? EngineId { get; set; }
+}
+
+/// <summary>Ergebnis des Batch-Anlegens: angelegte Aufträge + übersprungene Stellungen mit Grund
+/// (<c>invalid</c> = keine legale FEN, <c>duplicate</c> = es gibt schon einen nicht gescheiterten Auftrag
+/// zu dieser Stellung, <c>limit</c> = Deckel offener Aufträge erreicht).</summary>
+public record AnalysisJobBatchResult(List<AnalysisJobDto> Created, List<AnalysisJobBatchSkipped> Skipped);
+public record AnalysisJobBatchSkipped(string Fen, string Reason);

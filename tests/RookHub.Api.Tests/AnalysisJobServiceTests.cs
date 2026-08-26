@@ -102,6 +102,41 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateMany_CreatesInOrder_SkipsInvalidDuplicateAndOverLimit()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        const string other = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+        // Bestehender Auftrag zu START → Dublette; im Batch selbst START noch einmal mit anderen Zählern → Dublette
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 30, MultiPv = 3 });
+
+        var res = await _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest
+        {
+            Fens = new List<string> { other, "kein fen", START.Replace(" 0 1", " 2 4"), other },
+            TargetDepth = 35, MultiPv = 2,
+        });
+
+        Assert.Single(res.Created);
+        Assert.Equal(other, res.Created[0].Fen);
+        Assert.Equal(35, res.Created[0].TargetDepth);
+        Assert.Equal(new[] { "invalid", "duplicate", "duplicate" }, res.Skipped.Select(x => x.Reason).ToArray());
+        Assert.Equal(2, await _db.RememberedPositions.CountAsync());   // START (vom Einzelauftrag) + other, je einmal
+    }
+
+    [Fact]
+    public async Task CreateMany_RespectsOpenJobLimit()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        for (var i = 0; i < AnalysisJobService.MaxOpenJobsPerUser; i++)
+            _db.AnalysisJobs.Add(new AnalysisJob { UserId = u, Fen = $"8/8/8/8/8/8/{i}", EngineId = "e", TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Queued });
+        await _db.SaveChangesAsync();
+
+        var res = await _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest { Fens = new List<string> { START } });
+
+        Assert.Empty(res.Created);
+        Assert.Equal("limit", res.Skipped.Single().Reason);
+    }
+
+    [Fact]
     public async Task Create_WithoutBackgroundEngine_Throws()
     {
         var u = await UserWithBackgroundEngineAsync(engine: null);

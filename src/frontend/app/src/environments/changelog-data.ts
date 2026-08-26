@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.382.0", date: "2026-08-26", changes: [
+    { en: "Remembered positions: multi-select and analyse in one go. Tick several positions (only those without a job offer a checkbox; „select all“ picks exactly those), press „Analyse“ and choose depth and number of lines once for all of them. One request creates the jobs in your selection order; positions that are already queued or not a legal position are reported as skipped instead of failing the whole batch.", de: "Gemerkte Stellungen: Mehrfachauswahl und gemeinsam analysieren. Mehrere Stellungen anhaken (nur Stellungen ohne Auftrag bekommen eine Checkbox; „alle“ wählt genau diese), „Analysieren“ drücken und Tiefe sowie Linienzahl einmal für alle festlegen. Ein Request legt die Aufträge in Auswahlreihenfolge an; Stellungen, die schon vorgemerkt oder keine legale Stellung sind, werden als übersprungen gemeldet, statt den ganzen Schwung scheitern zu lassen." },
+  ] },
   { version: "0.381.1", date: "2026-08-26", changes: [
     { en: "Internal cleanup with no visible effect: three services quietly built parts of themselves when a caller left them out - a shortcut that existed only to keep test code short. It meant tests always got the real notification service writing to the test database, and the wiring existed twice. Those parts are now always passed in, and the tests use one small factory instead.", de: "Innere Aufräumarbeit ohne sichtbare Wirkung: Drei Dienste bauten Teile von sich selbst, wenn der Aufrufer sie wegließ - eine Abkürzung, die es nur gab, um Testcode kurz zu halten. Die Folge war, dass Tests immer den echten Benachrichtigungsdienst bekamen, der in die Testdatenbank schrieb, und dass die Verdrahtung doppelt vorlag. Diese Teile werden jetzt immer übergeben, und die Tests benutzen dafür eine kleine Fabrik." },
   ] },

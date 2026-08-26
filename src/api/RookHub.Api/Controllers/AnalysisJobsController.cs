@@ -35,6 +35,15 @@ public class AnalysisJobsController : BaseApiController
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
+    /// <summary>Mehrere Stellungen auf einmal (Mehrfachauswahl) — Übersprungene kommen mit Grund zurück, kein 4xx dafür.</summary>
+    [HttpPost("batch")]
+    public async Task<ActionResult<AnalysisJobBatchResult>> CreateBatch([FromBody] CreateAnalysisJobsBatchRequest request, CancellationToken ct)
+    {
+        try { return Ok(await _jobs.CreateManyAsync(GetUserId(), request, ct)); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     [HttpPut("{id:int}")]
     public async Task<ActionResult<AnalysisJobDto>> Update(int id, [FromBody] UpdateAnalysisJobRequest request, CancellationToken ct)
     {

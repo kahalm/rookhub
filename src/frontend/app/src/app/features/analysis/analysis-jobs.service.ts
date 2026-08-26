@@ -32,6 +32,19 @@ export interface CreateAnalysisJobRequest {
   engineId?: string | null;
 }
 
+export interface CreateAnalysisJobsBatchRequest {
+  fens: string[];
+  targetDepth: number;
+  multiPv: number;
+  engineId?: string | null;
+}
+
+/** Batch-Ergebnis: angelegte Aufträge + übersprungene Stellungen (invalid / duplicate / limit). */
+export interface AnalysisJobBatchResult {
+  created: AnalysisJob[];
+  skipped: { fen: string; reason: 'invalid' | 'duplicate' | 'limit' }[];
+}
+
 export interface UpdateAnalysisJobRequest {
   targetDepth?: number;
   multiPv?: number;
@@ -48,6 +61,10 @@ export class AnalysisJobsService {
 
   create(req: CreateAnalysisJobRequest): Observable<AnalysisJob> {
     return this.http.post<AnalysisJob>('/api/analysis-jobs', req);
+  }
+
+  createMany(req: CreateAnalysisJobsBatchRequest): Observable<AnalysisJobBatchResult> {
+    return this.http.post<AnalysisJobBatchResult>('/api/analysis-jobs/batch', req);
   }
 
   update(id: number, req: UpdateAnalysisJobRequest): Observable<AnalysisJob> {

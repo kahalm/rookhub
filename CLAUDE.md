@@ -552,6 +552,7 @@ Hauptvariante via `AnalysisJobService.EvalTextOf`). Die Remembered-Seite rendert
 |---------|----------|-------|
 | GET | `/api/analysis-jobs` | Eigene Aufträge (neueste zuerst) inkl. Status (`queued/running/paused/done/failed`), `reachedDepth`, `resultJson`, `secondsSpent`, `lastError` |
 | POST | `/api/analysis-jobs` | Anlegen `{ fen, targetDepth (1–60), multiPv (1–10), engineId?, title? }` — `engineId` fehlend = Hintergrund-Engine aus dem Profil (keine → 400); FEN muss legal sein; max. 50 offene je User |
+| POST | `/api/analysis-jobs/batch` | Mehrfachauswahl `{ fens[] (1–200), targetDepth, multiPv, engineId? }` → `{ created[], skipped[{fen, reason}] }` mit `invalid` (keine legale FEN) / `duplicate` (nicht gescheiterter Auftrag zur Stellung existiert — auch innerhalb des Batches) / `limit` (Deckel offener Aufträge); nie 4xx wegen einzelner Stellungen |
 | PUT | `/api/analysis-jobs/{id}` | Anpassen `{ targetDepth?, multiPv?, title? }` nach den Regeln oben; 404 wenn nicht eigener |
 | DELETE | `/api/analysis-jobs/{id}` | Löschen (laufende Suche wird abgebrochen) |
 

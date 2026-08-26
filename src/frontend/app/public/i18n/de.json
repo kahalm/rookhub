@@ -2783,7 +2783,13 @@
       "delete": "Löschen fehlgeschlagen"
     },
     "analysisOrigin": "Analyse-Auftrag",
-    "analysisTooltip": "Hintergrund-Analyse dieser Stellung — zur Auftragsseite"
+    "analysisTooltip": "Hintergrund-Analyse dieser Stellung — zur Auftragsseite",
+    "selectAll": "Alle ohne Auftrag auswählen ({{count}})",
+    "selectedCount": "{{count}} ausgewählt",
+    "analyzeSelected": "Analysieren",
+    "clearSelection": "Auswahl aufheben",
+    "selectHint": "Stellungen anhaken und gemeinsam im Hintergrund analysieren lassen.",
+    "selectForAnalysis": "Für die Analyse auswählen"
   },
   "solveMode": {
     "title": "Wie möchtest du hier spielen?",
@@ -2840,7 +2846,10 @@
       "costHint": "Faustregel: Jede Tiefe ab ~27 dauert ein Vielfaches der vorigen; 4+ Linien vervielfachen die Zeit noch einmal.",
       "noEngine": "Im Profil ist keine Hintergrund-Engine festgelegt.",
       "toProfile": "Zum Profil",
-      "submit": "Vormerken"
-    }
+      "submit": "Vormerken",
+      "batchTitle": "{{count}} Stellungen im Hintergrund analysieren"
+    },
+    "createdMany": "{{count}} Aufträge angelegt — sie rechnen, sobald die Hintergrund-Engine frei ist.",
+    "skippedSome": "{{count}} übersprungen (bereits vorgemerkt oder ungültig)."
   }
 }
