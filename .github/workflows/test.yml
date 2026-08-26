@@ -18,6 +18,37 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet test tests/RookHub.Api.Tests --verbosity normal
 
+  # Zweite API-Suite gegen eine ECHTE MariaDB. Grund: test-rookhub laeuft gegen EF InMemory,
+  # das jede LINQ-Abfrage im Speicher auswertet - auch eine, die MySQL nicht uebersetzen kann.
+  # Solche Abfragen sind dort gruen und werfen erst in Produktion. Nachgestellt und belegt:
+  # eine C#-Methode im Where liess die 2045 InMemory-Tests unberuehrt und faellt hier sofort.
+  # Deckt ausserdem die 139 Migrationen ab, die der Deploy automatisch anwendet.
+  test-rookhub-integration:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      # OHNE database= - jeder Test legt sein eigenes Wegwerf-Schema an und raeumt es weg.
+      # Fehlt die Variable, ueberspringen sich die Tests (siehe MySqlFactAttribute), damit
+      # `dotnet test` ohne Docker lokal gruen bleibt statt rot.
+      - run: dotnet test tests/RookHub.Api.IntegrationTests --verbosity normal
+        env:
+          ROOKHUB_TEST_MYSQL: "server=127.0.0.1;port=3306;user=root;password=test"
+
   test-crawler:
     runs-on: ubuntu-latest
     defaults:
