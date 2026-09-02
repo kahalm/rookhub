@@ -1165,7 +1165,7 @@
   "courses": {
     "title": "Courses",
     "intro": "Work through an imported book puzzle by puzzle — sequentially or randomly. Your progress is saved.",
-    "emptyHint": "No courses yet. Upload a PGN above to create your own course.",
+    "emptyHint": "No courses yet. Create your own course above — with or without a PGN.",
     "upload": {
       "title": "Upload your own course",
       "hint": "Add a puzzle PGN (Chessable style: with FEN and training markers) as a personal course.",

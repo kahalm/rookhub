@@ -1165,7 +1165,7 @@
   "courses": {
     "title": "Kurse",
     "intro": "Arbeite ein importiertes Buch puzzleweise durch — sequenziell oder zufällig. Dein Fortschritt wird gespeichert.",
-    "emptyHint": "Noch keine Kurse. Lade oben ein PGN hoch, um einen eigenen Kurs anzulegen.",
+    "emptyHint": "Noch keine Kurse. Lege oben einen eigenen Kurs an — mit oder ohne PGN.",
     "upload": {
       "title": "Eigenen Kurs hochladen",
       "hint": "Füge ein Puzzle-PGN (Chessable-Stil: mit FEN und Trainingsmarkern) als persönlichen Kurs hinzu.",

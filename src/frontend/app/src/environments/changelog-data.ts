@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.387.1", date: "2026-09-02", changes: [
+    { en: "The empty Courses page no longer tells you to „upload a PGN above“ — that button became „Create course“ in 0.387.0 and works without a file.", de: "Die leere Kursseite fordert nicht mehr auf, „oben ein PGN hochzuladen“ — der Knopf heißt seit 0.387.0 „Kurs erstellen“ und kommt ohne Datei aus." },
+  ] },
   { version: "0.387.0", date: "2026-08-26", changes: [
     { en: "In Courses, the „Upload PGN“ button has become „Create course“: a course no longer needs a file to exist. Give it a name and it is created empty, and you land straight on its page to add chapters and positions. A PGN can still be attached — then the course is filled from it right away, exactly as before.", de: "In den Kursen ist aus „PGN hochladen“ ein „Kurs erstellen“ geworden: ein Kurs braucht keine Datei mehr, um zu entstehen. Du gibst ihm einen Namen, er wird leer angelegt, und du landest direkt auf seiner Seite, um Kapitel und Stellungen einzufügen. Ein PGN lässt sich weiterhin anhängen — dann wird der Kurs daraus befüllt, genau wie bisher." },
   ] },

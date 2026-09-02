@@ -1165,7 +1165,7 @@
   "courses": {
     "title": "Tečajevi",
     "intro": "Prorađuj uvezenu knjigu zagonetku po zagonetku — slijedno ili nasumično. Tvoj napredak se sprema.",
-    "emptyHint": "Još nema tečajeva. Učitaj PGN gore da stvoriš vlastiti tečaj.",
+    "emptyHint": "Još nema tečajeva. Stvori vlastiti tečaj gore — sa ili bez PGN-a.",
     "upload": {
       "title": "Učitaj vlastiti tečaj",
       "hint": "Dodaj PGN sa zagonetkama (Chessable stil: s FEN-om i oznakama treninga) kao osobni tečaj.",
