@@ -149,6 +149,11 @@ public class ChessableControllerTests : IDisposable
         { ChessableUid = "790927", Bid = "228856", Oid = "1", Json = "{\"lesson\":{\"moves\":[]}}" });
         _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
         { ChessableUid = "999999", Bid = "228856", Oid = "2", Json = "{\"lesson\":{\"moves\":[]}}" });
+        // Besitz-Nachweis: der Claim übernimmt nur Linien zu Kursen, die laut Chessable diesem Konto
+        // gehören — sonst könnte jeder unter einer fremden uid Linien einwerfen und sie unterschieben.
+        var seededCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        seededCred.CachedCoursesJson = System.Text.Json.JsonSerializer.Serialize(
+            new List<ChessableCourseDto> { new("228856", "Mein Kurs") });
         await _db.SaveChangesAsync();
 
         // Chessable bestätigt den Bearer und liefert die BEWIESENE uid 790927.

@@ -58,6 +58,9 @@ public class ChessableCourseRefreshScheduler : BackgroundService
             // die ihre uid nie per Bearer verknüpft haben) nach 90 Tagen entsorgen — hält die Anon-Senke klein.
             var reviewLines = scope.ServiceProvider.GetRequiredService<ChessableReviewLineService>();
             var pruned = await reviewLines.PruneAnonOlderThanAsync(TimeSpan.FromDays(90), ct);
+            // Und deutlich früher für uids OHNE verknüpftes Konto: die sind nicht claimbar und damit der
+            // Vorrats-Topf, den der offene Endpoint füllen kann (der legitime Weg dauert Tage, nicht Monate).
+            pruned += await reviewLines.PruneUnlinkedAnonOlderThanAsync(TimeSpan.FromDays(14), ct);
             if (pruned > 0)
                 _logger.LogInformation("Anon-getReview-Retention: {Count} ungeclaimte Zeilen gelöscht", pruned);
         }

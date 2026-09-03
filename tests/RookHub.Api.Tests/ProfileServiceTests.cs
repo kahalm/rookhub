@@ -64,6 +64,16 @@ public class ProfileServiceTests : IDisposable
         _db.SavedGames.Add(new Models.SavedGame { UserId = id, Source = "chess.com", Pgn = "1. e4", ShareToken = "g-tok" });
         _db.SharedLines.Add(new Models.SharedLine { OwnerUserId = id, Pgn = "1. e4", LineHash = "lh", ShareToken = "l-tok" });
         _db.RememberedPositions.Add(new Models.RememberedPosition { UserId = id, Fen = "8/8/8/8/8/8/8/8 w - - 0 1" });
+        // Später dazugekommene Tabellen, die beim Erweitern der Löschung vergessen wurden:
+        _db.UserPushSubscriptions.Add(new Models.UserPushSubscription { UserId = id, Endpoint = "https://push.example/abc", P256dh = "p", Auth = "a" });
+        _db.NotificationPushSettings.Add(new Models.NotificationPushSetting { UserId = id, EnabledCategories = "courses" });
+        _db.CalcSeriesMembers.Add(new Models.CalcSeriesMember { BookId = 4242, UserId = id, IsTester = true });
+        _db.Notifications.Add(new Models.Notification { UserId = id, Type = Models.NotificationType.CourseShared, DataJson = "{}" });
+        _db.AnalysisJobs.Add(new Models.AnalysisJob { UserId = id, Fen = "8/8/8/8/8/8/8/8 w - - 0 1", EngineId = "eei_x", Title = "meine Turmstellung", TargetDepth = 30, MultiPv = 3 });
+        _db.CalculationTrees.Add(new Models.CalculationTree { UserId = id, BookId = 4242, BookPuzzleId = 77, TreeJson = "{\"m\":[]}" });
+        _db.ChessableSessionMoves.Add(new Models.ChessableSessionMove { UserId = id, Bid = "1", Oid = "2", MovesJson = "[]" });
+        _db.ChessableReviewLines.Add(new Models.ChessableReviewLine { UserId = id, Bid = "1", Oid = "2", Json = "{}" });
+        _db.ChessableProblemMoves.Add(new Models.ChessableProblemMove { UserId = id, Bid = "1", Oid = "2" });
         // Manuelle Aktivität bleibt als Statistik, aber die Notiz (PII) wird geleert:
         _db.ManualActivities.Add(new Models.ManualActivity { UserId = id, Date = new DateOnly(2026, 7, 1), Kind = Models.ManualActivityKind.OtbGame, Amount = 1, Note = "gegen Max am Vereinsabend" });
         await _db.SaveChangesAsync();
@@ -96,6 +106,18 @@ public class ProfileServiceTests : IDisposable
         Assert.False(await _db.SavedGames.AnyAsync(g => g.UserId == id));
         Assert.False(await _db.SharedLines.AnyAsync(l => l.OwnerUserId == id));
         Assert.False(await _db.RememberedPositions.AnyAsync(r => r.UserId == id));
+        // Web-Push: ohne diese Zeilen schickte der Server weiter Benachrichtigungen an das Gerät eines
+        // gelöschten Kontos (der Serien-Verteiler sammelt die Id ja weiter ein, solange er sie kennt).
+        Assert.False(await _db.UserPushSubscriptions.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.NotificationPushSettings.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.CalcSeriesMembers.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.Notifications.AnyAsync(x => x.UserId == id));
+        // Analyseaufträge tragen selbst gewählte Titel (PII-nah) und verbrauchten weiter Rechenzeit.
+        Assert.False(await _db.AnalysisJobs.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.CalculationTrees.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.ChessableSessionMoves.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.ChessableReviewLines.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.ChessableProblemMoves.AnyAsync(x => x.UserId == id));
         // Manuelle Aktivität bleibt (Statistik), aber ohne Freitext-Notiz
         var manual = await _db.ManualActivities.SingleAsync(a => a.UserId == id);
         Assert.Null(manual.Note);

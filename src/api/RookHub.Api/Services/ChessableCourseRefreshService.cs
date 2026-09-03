@@ -23,6 +23,8 @@ namespace RookHub.Api.Services;
 public class ChessableCourseRefreshService
 {
     private readonly AppDbContext _db;
+    /// <summary>Optional — nur für den Nach-Claim anonym gesammelter getReview-Linien (siehe RefreshAllAsync).</summary>
+    private readonly ChessableReviewLineService? _reviewLines;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _chessable;
     private readonly ChessableBearerBreaker _breaker;
@@ -36,8 +38,10 @@ public class ChessableCourseRefreshService
         ChessableProxyService chessable,
         ChessableBearerBreaker breaker,
         NotificationService notifications,
-        ILogger<ChessableCourseRefreshService> logger)
+        ILogger<ChessableCourseRefreshService> logger,
+        ChessableReviewLineService? reviewLines = null)
     {
+        _reviewLines = reviewLines;
         _db = db;
         _encryption = encryption;
         _chessable = chessable;
@@ -101,6 +105,21 @@ public class ChessableCourseRefreshService
             cred.CoursesCachedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
             summary.Refreshed++;
+
+            // Anonym gesammelte getReview-Linien nachziehen: der Claim beim „Testen"-Klick übernimmt nur,
+            // was zur bekannten Kursliste des Nutzers gehört (Besitz-Schranke). Wer seinen Bearer
+            // verknüpft, BEVOR je eine Kursliste geholt wurde, hätte sonst nie geclaimt — hier ist die
+            // Liste gerade frisch, also ist das der natürliche zweite Versuch. Best-effort.
+            if (_reviewLines is not null && !string.IsNullOrWhiteSpace(cred.ChessableUid))
+            {
+                try
+                {
+                    var claimed = await _reviewLines.ClaimAnonForUidAsync(cred.UserId, cred.ChessableUid!, ct);
+                    if (claimed > 0)
+                        _logger.LogInformation("Anon-getReview: {Count} Zeilen für User {UserId} nachgeclaimt", claimed, cred.UserId);
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Nach-Claim der Anon-Linien (User {UserId}) fehlgeschlagen", cred.UserId); }
+            }
 
             if (newCourses.Count > 0 && adminIds.Count > 0)
             {

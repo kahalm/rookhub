@@ -198,4 +198,20 @@ public class FriendServiceExtendedTests : IDisposable
         Assert.Empty(await _friendService.SearchUsersAsync("3014", me));
         Assert.Single(await _friendService.SearchUsersAsync("1503", me));
     }
+
+    [Fact]
+    public async Task DeletedAccounts_AreInvisibleToSearchAndRequests()
+    {
+        // Die Konto-Löschung anonymisiert die Zeile IN PLACE (`deleted_{id}`), das Konto bleibt also
+        // in AppUsers. Ohne Filter listete die Suche nach „deleted" alle je gelöschten Konten, und
+        // eine Anfrage dorthin stand beim Absender dauerhaft auf „wartet auf Bestätigung".
+        var me = await CreateUserAsync("searcher");
+        var gone = await CreateUserAsync("deleted_999");
+        var goneUser = await _db.AppUsers.FirstAsync(u => u.Id == gone);
+        goneUser.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        Assert.Empty(await _friendService.SearchUsersAsync("deleted", me));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _friendService.SendRequestAsync(me, gone));
+    }
 }

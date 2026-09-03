@@ -21,6 +21,15 @@ public class ClientLogController : BaseApiController
 
     public ClientLogController(ILogger<ClientLogController> logger) => _logger = logger;
 
+    /// <summary>Die Event-Schlüssel, die das Frontend tatsächlich meldet (Präfixe, weil Engine-Events
+    /// ihren Unterfall anhängen: <c>engine_stockfish_crash</c>, <c>engine_analysis_remote_failed</c>).
+    /// Alles andere ist entweder veraltet oder erfunden — siehe <see cref="Post"/>.</summary>
+    private static readonly string[] WarningKindPrefixes =
+        ["engine_stockfish_", "engine_analysis_", "sw_install_failed", "sw_unrecoverable", "connectivity_restored"];
+
+    private static bool IsKnownWarningKind(string kind)
+        => WarningKindPrefixes.Any(p => kind.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
     [HttpPost]
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
@@ -41,10 +50,13 @@ public class ClientLogController : BaseApiController
         // einer Woche): der Browser verweigert die Speicher-Persistenz-Garantie je nach
         // Einstellung/Modus routinemäßig — das ist Umgebung, keine Störung, und niemand handelt
         // darauf. `connectivity_restored` bleibt Warning: gehäuft zeigt es echte API-Ausfälle.
-        var level = kind.StartsWith("heartbeat", StringComparison.OrdinalIgnoreCase)
-                    || kind.Equals("storage_persist_denied", StringComparison.OrdinalIgnoreCase)
-            ? LogLevel.Information
-            : LogLevel.Warning;
+        // Zusätzlich: WARNUNG nur für Schlüssel, die das Frontend wirklich sendet. Der Endpoint ist
+        // offen (anonyme Nutzer sollen Engine-Abstürze melden können), also bestimmte vorher ein
+        // beliebiger Aufrufer Zahl UND Text der Warnungen im zentralen Log — mit jedes Mal anderem
+        // `kind` ließen sich Warn-Spikes erzeugen und die Signatur-/Cooldown-Gruppierung des
+        // log-watchers umgehen. Unbekannte Schlüssel werden weiter protokolliert (Diagnose bleibt),
+        // aber auf Information: sie können keinen Alarm auslösen.
+        var level = IsKnownWarningKind(kind) ? LogLevel.Warning : LogLevel.Information;
 
         // Domänen-Tags für den zentralen ECS-`tags`-Filter in Kibana: jedes ClientLog trägt `clientlog`;
         // Engine-Crashes/Hänger (Stockfish-WASM) zusätzlich `engine`, damit man sie isoliert filtern kann.

@@ -37,6 +37,12 @@ public class ChessableBearerBreakerTests : IDisposable
     [InlineData("Chessable: Expired token")]
     [InlineData("Please re-enter your bearer token")]
     [InlineData("401 Unauthorized")]
+    // piratechess' EIGENES Urteil bei leerem/unparsbarem Chessable-Body — genau dieser Text fehlte in der
+    // Liste, weshalb der Breaker geschlossen blieb und der Watchdog weiter mit dem toten Token feuerte.
+    [InlineData("Chessable-Job fehlgeschlagen: Invalid bearer")]
+    [InlineData("bad bearer")]
+    // Deutsch, aber im Token-Zusammenhang → weiterhin fatal.
+    [InlineData("Der Zugang ist ungültig geworden, bitte Token erneuern")]
     public void IsBearerFatal_DeadBearer_True(string message)
         => Assert.True(ChessableBearerBreaker.IsBearerFatal(message));
 
@@ -46,6 +52,10 @@ public class ChessableBearerBreakerTests : IDisposable
     [InlineData("Chessable lieferte kein gültiges JSON (Token ungültig oder Zugriff blockiert) — bitte den Bearer neu hinterlegen bzw. die VPN-IP prüfen.")]
     [InlineData("Course fetch hit proxy tunnel 503 (VPN reconnecting), retry 1/3")]
     [InlineData("Connection refused")]
+    // „ungültig" OHNE Token-Bezug: piratechess meldet damit auch einen falschen Tunnel-Index. Öffnete der
+    // Breaker hier, pausierten ALLE Importe des Nutzers wegen eines reinen Konfigurationsfehlers.
+    [InlineData("Ungültiger Tunnel-Index 3 (nur 0..1 vorhanden)")]
+    [InlineData("Ungültige Kurs-ID")]
     [InlineData("")]
     [InlineData(null)]
     public void IsBearerFatal_NotTheBearer_False(string? message)

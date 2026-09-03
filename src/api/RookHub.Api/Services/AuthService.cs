@@ -205,7 +205,11 @@ public class AuthService
             .ToList();
     }
 
-    public async Task ChangePasswordAsync(int userId, ChangePasswordDto dto)
+    /// <summary>Passwort ändern. Liefert ein FRISCHES Token zurück: der rotierte Security-Stamp
+    /// entwertet auch das Token DIESER Sitzung, und ohne Ersatz flog der Nutzer eine Minute später
+    /// (Cache-TTL von <see cref="AuthUserValidation"/>) kommentarlos aus der App — mitten in der
+    /// Arbeit und ohne erkennbaren Zusammenhang zur Passwortänderung.</summary>
+    public async Task<AuthResponseDto> ChangePasswordAsync(int userId, ChangePasswordDto dto)
     {
         var user = await _db.AppUsers.FindAsync(userId)
             ?? throw new KeyNotFoundException("User not found.");
@@ -216,7 +220,23 @@ public class AuthService
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword, BcryptWorkFactor);
         // Security-Stamp rotieren → alle bisherigen JWTs (mit altem sstamp-Claim) werden ungültig.
         user.SecurityStamp = NewSecurityStamp();
+        // API-Tokens (`rkh_…`) tragen KEINEN Stempel-Bezug und laufen ohne Angabe nie ab — der
+        // Stempel widerruft sie also nicht. Nach einer Kompromittierung wäre ein vom Angreifer
+        // angelegtes Extension-Token die verbleibende Hintertür (Repertoire-PGNs lesen, Share-Links
+        // anlegen). Ein Passwortwechsel ist der dokumentierte Wiederherstellungspfad und muss ihn
+        // schließen; die Extension-Tokens des Nutzers müssen danach neu erstellt werden.
+        _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == userId).ToListAsync());
         await _db.SaveChangesAsync();
+        // Gecachten Auth-Zustand verwerfen, sonst gelten fremde Sitzungen bis zu 60 s weiter.
+        if (_loginFailures is not null) AuthUserValidation.Invalidate(_loginFailures, userId);
+
+        return new AuthResponseDto
+        {
+            Token = GenerateJwt(user, extraClaims: await ResolvePermissionClaimsAsync(user.Id)),
+            Username = user.Username,
+            UserId = user.Id,
+            IsAdmin = user.IsAdmin,
+        };
     }
 
     /// <summary>Erzeugt einen frischen, kompakten Security-Stamp (Basis für die Token-Invalidierung).</summary>

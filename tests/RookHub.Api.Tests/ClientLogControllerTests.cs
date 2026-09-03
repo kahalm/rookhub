@@ -104,4 +104,34 @@ public class ClientLogControllerTests
     {
         Assert.False(ClientLogController.IsEngineEvent(kind, detail));
     }
+
+    [Fact]
+    public void Post_KnownDiagnosticKind_IsWarning()
+    {
+        var logger = new TestLogger<ClientLogController>();
+        var ctrl = CreateController(logger);
+
+        ctrl.Post(new ClientLogDto { Kind = "engine_stockfish_crash", Detail = "boom" });
+
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, Assert.Single(logger.Levels));
+    }
+
+    [Theory]
+    [InlineData("engine_crash_84213")]     // frei erfundener Schlüssel
+    [InlineData("totally_made_up")]
+    [InlineData("heartbeat_bot")]          // Routine-Event, war schon vorher Information
+    public void Post_UnknownKind_IsOnlyInformation(string kind)
+    {
+        // Der Endpoint ist offen (anonyme Nutzer sollen Engine-Abstürze melden können). Bestimmte ein
+        // beliebiger Aufrufer damit auch die WARN-Stufe, ließe sich mit jedes Mal anderem `kind` ein
+        // Warn-Spike erzeugen und die Signatur-Gruppierung des log-watchers umgehen — echte Störungen
+        // gingen im Rauschen unter. Protokolliert wird weiter, aber ohne Alarmwirkung.
+        var logger = new TestLogger<ClientLogController>();
+        var ctrl = CreateController(logger);
+
+        ctrl.Post(new ClientLogDto { Kind = kind, Detail = "x" });
+
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, Assert.Single(logger.Levels));
+        Assert.Contains(logger.Messages, m => m.Contains(kind));   // Diagnose bleibt sichtbar
+    }
 }

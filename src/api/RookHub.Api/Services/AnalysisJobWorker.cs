@@ -272,8 +272,24 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             };
 
             HttpResponseMessage upstream;
-            try { upstream = await _lichess.AnalyseAsync(engine, work, ct); }
+            // Frist NUR für die Antwort-KOPFZEILEN: der HttpClient des Brokers ist bewusst timeout-los
+            // (eine Suche darf Stunden dauern), und der `firstLine`-Wächter unten beginnt erst NACH den
+            // Headern. Antwortet der Broker mit Verbindungsaufbau, aber ohne Header — er wartet auf einen
+            // Provider, der nie kommt —, stand `RunJobAsync` hier unbegrenzt: der Auftrag blieb in der
+            // Datenbank auf „läuft" mit Tiefe 0, die Engine blieb belegt, und alle weiteren Aufträge
+            // dieser Engine warteten mit. Auflösbar war das nur durch einen Live-Stream oder Neustart.
+            using var headerCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            headerCts.CancelAfter(_firstLineTimeout);
+            try { upstream = await _lichess.AnalyseAsync(engine, work, headerCts.Token); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { await PauseAsync(db, job, null); return; }
+            catch (OperationCanceledException)
+            {
+                // Nur die Kopfzeilen-Frist ist abgelaufen (der Job-Token ist nicht abgebrochen).
+                _logger.LogWarning("AnalysisJob {JobId}: Broker antwortete nicht binnen {Timeout} (keine Kopfzeilen) — pausiert",
+                    job.Id, _firstLineTimeout);
+                await PauseAsync(db, job, "Broker antwortete nicht", TimeSpan.FromMinutes(5));
+                return;
+            }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 await BackoffAsync(db, job, "Broker nicht erreichbar", TimeSpan.FromSeconds(60));

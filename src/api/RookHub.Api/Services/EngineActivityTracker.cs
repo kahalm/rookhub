@@ -44,12 +44,21 @@ public class EngineActivityTracker
         return perUser;
     }
 
-    /// <summary>Live-Stream endet; auf 0 verschwindet der Eintrag (kein Wachstum über die Zeit).</summary>
+    /// <summary>Live-Stream endet; auf 0 verschwindet der Eintrag (kein Wachstum über die Zeit).
+    ///
+    /// Entfernt wird WERT-bedingt (Schlüssel UND erwarteter Wert 0). Zwischen dem Herunterzählen und
+    /// dem Entfernen kann ein <see cref="Begin"/> derselben Engine liegen — das Analysebrett bricht bei
+    /// jedem Tiefen-/Linienwechsel Stream A ab und öffnet sofort B. Ein unbedingtes
+    /// <c>TryRemove(key)</c> löschte dort den Eintrag des NEUEN Streams: die Engine sähe frei aus,
+    /// der Worker startete daneben einen Hintergrund-Auftrag, und Stockfish bekäme zwei Suchen —
+    /// genau die Invariante „ein Prozess, eine Suche", auf der der Vorrang der Live-Analyse beruht.</summary>
     public void End(int userId, string engineId)
     {
         _engineLastEnded[engineId] = _now();
-        if (_byUser.AddOrUpdate(userId, 0, (_, c) => c - 1) <= 0) _byUser.TryRemove(userId, out _);
-        if (_byEngine.AddOrUpdate(engineId, 0, (_, c) => c - 1) <= 0) _byEngine.TryRemove(engineId, out _);
+        if (_byUser.AddOrUpdate(userId, 0, (_, c) => c - 1) <= 0)
+            _byUser.TryRemove(new KeyValuePair<int, int>(userId, 0));
+        if (_byEngine.AddOrUpdate(engineId, 0, (_, c) => c - 1) <= 0)
+            _byEngine.TryRemove(new KeyValuePair<string, int>(engineId, 0));
     }
 
     /// <summary>Offene Live-Streams dieses Nutzers (Deckel im Controller).</summary>

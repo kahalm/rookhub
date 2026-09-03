@@ -34,6 +34,23 @@ describe('AuthService token expiry', () => {
     expect(svc.token).toBeNull();
   });
 
+  it('tauscht bei der Passwortänderung das gespeicherte Token gegen das frische', () => {
+    // Der Server rotiert dabei den Security-Stamp und entwertet damit auch das Token DIESER Sitzung.
+    // Ohne Austausch flog man eine Minute später kommentarlos raus (der Interceptor loggt bei 401 aus).
+    svc.login('u', 'p').subscribe();
+    http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+    const oldToken = JSON.parse(localStorage.getItem('rookhub_user')!).token;
+
+    svc.changePassword('alt', 'neu').subscribe();
+    const fresh = jwt(7200);
+    http.expectOne('/api/auth/change-password').flush({ token: fresh, username: 'u', userId: 1, isAdmin: false });
+
+    const stored = JSON.parse(localStorage.getItem('rookhub_user')!);
+    expect(stored.token).toBe(fresh);
+    expect(stored.token).not.toBe(oldToken);
+    expect(svc.isLoggedIn).toBeTrue();
+  });
+
   it('reads a valid session token as logged in', () => {
     svc.login('u', 'p').subscribe();
     http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'u', userId: 1, isAdmin: true });

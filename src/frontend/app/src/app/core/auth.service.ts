@@ -167,8 +167,21 @@ export class AuthService {
   }
 
   /** Passwort des eingeloggten Users ändern (aktuelles + neues Passwort). */
-  changePassword(currentPassword: string, newPassword: string): Observable<void> {
-    return this.http.put<void>(`${this.apiUrl}/change-password`, { currentPassword, newPassword });
+  /** Passwort ändern. Die Antwort trägt ein FRISCHES Token: der Server rotiert dabei den
+   *  Security-Stamp und entwertet damit auch das Token DIESER Sitzung — ohne den Austausch flöge
+   *  man eine Minute später kommentarlos raus (der Interceptor loggt bei 401 aus). Nur das Token
+   *  wird ersetzt; `storeUser` würde Präferenzen neu laden und die anonyme Sitzung claimen, was
+   *  hier nichts zu suchen hat. */
+  changePassword(currentPassword: string, newPassword: string): Observable<AuthResponse> {
+    return this.http.put<AuthResponse>(`${this.apiUrl}/change-password`, { currentPassword, newPassword })
+      .pipe(tap(res => this.replaceToken(res)));
+  }
+
+  /** Gespeichertes Token gegen ein neues tauschen, ohne den restlichen Anmelde-Nachlauf. */
+  private replaceToken(user: AuthResponse): void {
+    try { localStorage.setItem('rookhub_user', JSON.stringify(user)); }
+    catch { /* voller/gesperrter Speicher: das Token im Zustand hält die Sitzung bis zum Neuladen */ }
+    this.currentUserSubject.next(user);
   }
 
   logout(): void {

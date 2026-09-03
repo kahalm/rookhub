@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
@@ -27,13 +28,19 @@ public class PasswordResetService
     private readonly IEmailSender _email;
     private readonly IConfiguration _config;
     private readonly ILogger<PasswordResetService> _logger;
+    /// <summary>Derselbe Cache, aus dem <see cref="AuthUserValidation"/> den Auth-Zustand liest —
+    /// nach dem Rotieren des Stempels muss der Eintrag weg, sonst bleiben fremde Sitzungen bis zu
+    /// 60 s gültig. Optional, damit Tests den Service ohne Cache bauen können.</summary>
+    private readonly IMemoryCache? _authCache;
 
-    public PasswordResetService(AppDbContext db, IEmailSender email, IConfiguration config, ILogger<PasswordResetService> logger)
+    public PasswordResetService(AppDbContext db, IEmailSender email, IConfiguration config,
+        ILogger<PasswordResetService> logger, IMemoryCache? authCache = null)
     {
         _db = db;
         _email = email;
         _config = config;
         _logger = logger;
+        _authCache = authCache;
     }
 
     /// <summary>
@@ -113,6 +120,10 @@ public class PasswordResetService
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, BcryptWorkFactor);
         // Security-Stamp rotieren → bestehende JWTs (mit altem sstamp-Claim) werden ungültig.
         user.SecurityStamp = AuthService.NewSecurityStamp();
+        // API-Tokens (`rkh_…`) kennen den Stempel nicht und laufen ohne Angabe nie ab: der Reset ist
+        // DER Weg nach einer Kontoübernahme und muss auch diese Zugänge entwerten, sonst behält ein
+        // Angreifer über sein Extension-Token Zugriff (Repertoire-PGNs, Share-Links, Schreibwege).
+        _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == user.Id).ToListAsync(ct));
         token.UsedAt = now;
 
         // Alle weiteren offenen Tokens des Users ebenfalls entwerten.
@@ -122,6 +133,9 @@ public class PasswordResetService
         foreach (var t in others) t.UsedAt = now;
 
         await _db.SaveChangesAsync(ct);
+        // Gecachten Auth-Zustand verwerfen: sonst laufen die alten Sitzungen des Angreifers noch bis
+        // zu 60 s weiter, obwohl der Widerruf längst in der Datenbank steht.
+        if (_authCache is not null) AuthUserValidation.Invalidate(_authCache, user.Id);
         _logger.LogInformation("PasswordReset: password changed for user {UserId}", user.Id);
     }
 

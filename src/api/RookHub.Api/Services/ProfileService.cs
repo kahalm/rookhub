@@ -280,6 +280,27 @@ public class ProfileService
         // den User genauso). Thread-Metadaten (Claim) hängen daran und gehen mit.
         _db.AdminMessages.RemoveRange(await _db.AdminMessages.Where(m => m.UserId == userId).ToListAsync());
         _db.MessageThreads.RemoveRange(await _db.MessageThreads.Where(t => t.UserId == userId).ToListAsync());
+        // Web-Push: Endpunkt + Schlüssel des GERÄTS. Ohne diese Zeilen schickt der Server weiter
+        // Benachrichtigungen an das Gerät eines gelöschten Kontos — der Verteiler der Kalkulations-Serie
+        // sammelt die Nutzer-Id ja weiter ein, solange die Mitgliedschaft steht (deshalb auch die).
+        _db.UserPushSubscriptions.RemoveRange(await _db.UserPushSubscriptions.Where(x => x.UserId == userId).ToListAsync());
+        _db.NotificationPushSettings.RemoveRange(await _db.NotificationPushSettings.Where(x => x.UserId == userId).ToListAsync());
+        _db.CalcSeriesMembers.RemoveRange(await _db.CalcSeriesMembers.Where(x => x.UserId == userId).ToListAsync());
+        // In-App-Benachrichtigungen tragen Freitext-Daten (Kurs-/Absendernamen) → PII.
+        _db.Notifications.RemoveRange(await _db.Notifications.Where(x => x.UserId == userId).ToListAsync());
+        // Rollen/Rechte: ein gelöschtes Konto behält keine Berechtigung (der Login ist gesperrt, aber
+        // die Zeile wäre bei einer Wiederverwendung der Id ein stiller Rechte-Übertrag).
+        _db.UserRoles.RemoveRange(await _db.UserRoles.Where(x => x.UserId == userId).ToListAsync());
+        // Hintergrund-Analyseaufträge tragen Stellungen samt selbst gewählten Titeln (PII-nah) und
+        // würden nach der Löschung weiter Rechenzeit auf der Engine des Kontos verbrauchen.
+        _db.AnalysisJobs.RemoveRange(await _db.AnalysisJobs.Where(x => x.UserId == userId).ToListAsync());
+        // Chessable-Rohdaten des Nutzers: getReview-Linien, Sitzungszüge und „schwierige Züge" sind
+        // fremder Kursinhalt, an die Person gebunden — keine Statistik, die anonym weiterleben könnte.
+        _db.ChessableReviewLines.RemoveRange(await _db.ChessableReviewLines.Where(x => x.UserId == userId).ToListAsync());
+        _db.ChessableSessionMoves.RemoveRange(await _db.ChessableSessionMoves.Where(x => x.UserId == userId).ToListAsync());
+        _db.ChessableProblemMoves.RemoveRange(await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ToListAsync());
+        // Eigene Analysebäume des Kalkulations-Modus: Nutzerarbeit mit Freitext, kein Aggregat.
+        _db.CalculationTrees.RemoveRange(await _db.CalculationTrees.Where(x => x.UserId == userId).ToListAsync());
         // Manuelle Aktivitäten bleiben als (anonyme) Trainingsstatistik, aber die Freitext-Notiz (PII) wird geleert.
         var manualWithNote = await _db.ManualActivities.Where(a => a.UserId == userId && a.Note != null).ToListAsync();
         foreach (var a in manualWithNote) a.Note = null;

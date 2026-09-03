@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -24,13 +25,42 @@ public class ChessableReviewLineService
     /// bestehender bleiben). Großzügig über einem realen Trainingsbestand (großer Kurs ~1–2k Linien).</summary>
     public const int MaxAnonRowsPerUid = 5000;
 
+    /// <summary>GESAMT-Deckel der Anon-Senke. Der Deckel je uid bindet nichts, solange die uid ein frei
+    /// wählbares Feld des offenen Endpoints ist — ein Skript nimmt einfach fortlaufende uids und legt
+    /// beliebig viele Partitionen an. Die Zeilen sind LONGTEXT-JSON; ohne diese Schranke läuft die
+    /// Datenbank des Stacks voll und ALLE Schreibwege der App stehen, lange bevor ein Alarm greift.</summary>
+    public const int MaxAnonRowsTotal = 200_000;
+
+    /// <summary>Batch-Deckel des OFFENEN Endpoints — deutlich kleiner als <see cref="MaxEntriesPerBatch"/>:
+    /// die Extension schickt je Trainingsschritt eine Handvoll Linien, 500 × 256 KB pro Request braucht
+    /// dort niemand (der Request-Deckel von 16 MB wäre sonst tatsächlich ausschöpfbar).</summary>
+    public const int MaxAnonEntriesPerBatch = 50;
+
     private readonly AppDbContext _db;
     private readonly PgnImportService _pgnImport;
+    private readonly ILogger<ChessableReviewLineService>? _log;
 
-    public ChessableReviewLineService(AppDbContext db, PgnImportService pgnImport)
+    public ChessableReviewLineService(AppDbContext db, PgnImportService pgnImport,
+        ILogger<ChessableReviewLineService>? log = null)
     {
         _db = db;
         _pgnImport = pgnImport;
+        _log = log;
+    }
+
+    /// <summary>Die bids der gecachten Chessable-Kursliste des Nutzers (leer, wenn nie eine geholt wurde).
+    /// Grundlage der Besitz-Schranke in <see cref="ClaimAnonForUidAsync"/>.</summary>
+    private static HashSet<string> OwnedBids(string? cachedCoursesJson)
+    {
+        if (string.IsNullOrEmpty(cachedCoursesJson)) return new HashSet<string>();
+        try
+        {
+            var list = System.Text.Json.JsonSerializer.Deserialize<List<ChessableCourseDto>>(cachedCoursesJson,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return list?.Where(c => !string.IsNullOrWhiteSpace(c.Bid)).Select(c => c.Bid!).ToHashSet()
+                   ?? new HashSet<string>();
+        }
+        catch (System.Text.Json.JsonException) { return new HashSet<string>(); }
     }
 
     /// <summary>
@@ -103,7 +133,7 @@ public class ChessableReviewLineService
                 && e.Json.Length <= MaxJsonLength)
             .GroupBy(e => e.Oid.Trim())
             .Select(g => g.Last())
-            .Take(MaxEntriesPerBatch)
+            .Take(MaxAnonEntriesPerBatch)
             .ToList();
         if (clean.Count == 0) return 0;
 
@@ -113,6 +143,9 @@ public class ChessableReviewLineService
             .ToDictionaryAsync(r => r.Oid, ct);
         // Gesamtbestand dieser uid (über alle bids) für den Deckel — NEUE oids jenseits davon abweisen.
         var uidRowCount = await _db.AnonymousChessableReviewLines.CountAsync(r => r.ChessableUid == uid, ct);
+        // …und der Gesamtbestand der Senke: nur NEUE Zeilen werden abgewiesen, Aktualisierungen
+        // bestehender laufen weiter (ein legitimer Nutzer verliert dadurch nichts).
+        var totalRowCount = await _db.AnonymousChessableReviewLines.CountAsync(ct);
 
         var now = DateTime.UtcNow;
         var written = 0;
@@ -122,10 +155,11 @@ public class ChessableReviewLineService
             if (!existing.TryGetValue(oid, out var row))
             {
                 if (uidRowCount >= MaxAnonRowsPerUid) continue;   // Deckel erreicht → keine neue Zeile
+                if (totalRowCount >= MaxAnonRowsTotal) continue;   // Senke insgesamt voll
                 row = new AnonymousChessableReviewLine { ChessableUid = uid, Bid = bid, Oid = oid, CreatedAt = now };
                 _db.AnonymousChessableReviewLines.Add(row);
                 existing[oid] = row;
-                uidRowCount++;
+                uidRowCount++; totalRowCount++;
             }
             row.Json = e.Json;
             row.ChapterTitle = ExtractChapterTitle(e.Json);
@@ -155,6 +189,19 @@ public class ChessableReviewLineService
             .ToListAsync(ct);
         if (anon.Count == 0) return 0;
 
+        // BESITZ-SCHRANKE. Die Ablage-Seite der Anon-Senke ist unauthentifiziert und kann die uid nicht
+        // prüfen (nur der Claim beweist sie gegen Chessable) — jeder kann also unter einer fremden,
+        // durchprobierbaren uid Linien einwerfen. Ohne diese Schranke übernahm der Claim ALLES und der
+        // anschließende Kurs-Aufbau legte daraus echte Bücher an, samt frei gewähltem Namen und
+        // erfundenen Zügen in einem Kurs, den das Opfer nie importiert hat. Übernommen wird deshalb nur,
+        // was zu einem Kurs seiner EIGENEN, von Chessable gemeldeten Kursliste gehört.
+        var owned = OwnedBids(await _db.ChessableCredentials
+            .Where(c => c.UserId == userId).Select(c => c.CachedCoursesJson).FirstOrDefaultAsync(ct));
+        if (owned.Count == 0) return 0;   // Kursliste (noch) unbekannt → nichts übernehmen, Zeilen bleiben liegen
+        var foreignBids = anon.Where(r => !owned.Contains(r.Bid)).Select(r => r.Bid).Distinct().ToList();
+        anon = anon.Where(r => owned.Contains(r.Bid)).ToList();
+        if (anon.Count == 0) return 0;    // nur fremde bids: liegen lassen, die Retention entsorgt sie
+
         var bids = anon.Select(r => r.Bid).Distinct().ToList();
         var existing = (await _db.ChessableReviewLines
                 .Where(r => r.UserId == userId && bids.Contains(r.Bid))
@@ -181,6 +228,10 @@ public class ChessableReviewLineService
         try { await _db.SaveChangesAsync(ct); }
         catch (DbUpdateException) { _db.ChangeTracker.Clear(); return 0; }
 
+        if (foreignBids.Count > 0)
+            _log?.LogInformation("Claim uid {Uid}: {Count} bid(s) nicht in der Kursliste des Nutzers — übersprungen ({Bids})",
+                uid, foreignBids.Count, string.Join(",", foreignBids.Take(10)));
+
         // Betroffene Kurse aufbauen (getGame gewinnt, Review füllt Lücken) — best-effort je bid.
         foreach (var bid in bids)
         {
@@ -198,6 +249,27 @@ public class ChessableReviewLineService
     {
         var cutoff = DateTime.UtcNow - maxAge;
         var old = await _db.AnonymousChessableReviewLines.Where(r => r.UpdatedAt < cutoff).ToListAsync(ct);
+        if (old.Count == 0) return 0;
+        _db.AnonymousChessableReviewLines.RemoveRange(old);
+        await _db.SaveChangesAsync(ct);
+        return old.Count;
+    }
+
+    /// <summary>Kürzere Retention für uids, zu denen es GAR KEIN verknüpftes Konto gibt. Sie sind bis auf
+    /// Weiteres nicht claimbar (niemand hat diese Chessable-Identität bewiesen) und damit genau der Topf,
+    /// den der offene Endpoint auf Vorrat füllen kann. Der legitime Weg — anonym trainieren, dann Konto
+    /// anlegen und Bearer verknüpfen — liegt in Tagen, nicht in Monaten; wer verknüpft hat, behält die
+    /// volle Frist über <see cref="PruneAnonOlderThanAsync"/>.</summary>
+    public async Task<int> PruneUnlinkedAnonOlderThanAsync(TimeSpan maxAge, CancellationToken ct = default)
+    {
+        var cutoff = DateTime.UtcNow - maxAge;
+        var linked = await _db.ChessableCredentials
+            .Where(c => c.ChessableUid != null)
+            .Select(c => c.ChessableUid!)
+            .ToListAsync(ct);
+        var old = await _db.AnonymousChessableReviewLines
+            .Where(r => r.UpdatedAt < cutoff && !linked.Contains(r.ChessableUid))
+            .ToListAsync(ct);
         if (old.Count == 0) return 0;
         _db.AnonymousChessableReviewLines.RemoveRange(old);
         await _db.SaveChangesAsync(ct);

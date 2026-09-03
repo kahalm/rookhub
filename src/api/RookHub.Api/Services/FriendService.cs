@@ -135,7 +135,10 @@ public class FriendService
             }
         }
 
-        if (!await _db.AppUsers.AnyAsync(u => u.Id == addresseeId))
+        // `DeletedAt == null`: die Konto-Löschung anonymisiert die Zeile IN PLACE (sie heißt danach
+        // `deleted_{id}`), das Konto existiert also weiter. Eine Anfrage dorthin könnte niemand mehr
+        // annehmen und stünde beim Absender dauerhaft auf „wartet auf Bestätigung".
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == addresseeId && u.DeletedAt == null))
             throw new KeyNotFoundException("User not found.");
 
         var friendship = new Friendship
@@ -236,7 +239,7 @@ public class FriendService
         // produziert nichts als Zufalls-Rauschen.
         return await _db.AppUsers
             .Include(u => u.Profile)
-            .Where(u => u.Id != currentUserId &&
+            .Where(u => u.Id != currentUserId && u.DeletedAt == null &&
                        (u.Username.Contains(q) ||
                         (u.Profile != null && (
                             (u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(q)) ||

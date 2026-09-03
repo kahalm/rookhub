@@ -492,4 +492,31 @@ public class AuthServiceTests : IDisposable
             Events.Add(new Entry(logLevel, formatter(state, exception), dict));
         }
     }
+
+    [Fact]
+    public async Task ChangePassword_ReturnsFreshToken_AndRevokesApiTokens()
+    {
+        // Der rotierte Security-Stamp entwertet ALLE bisherigen JWTs — auch das der Sitzung, die das
+        // Passwort ändert. Ohne frisches Token flog der Nutzer eine Minute später (Cache-TTL der
+        // Token-Prüfung) ohne Erklärung raus. Und die `rkh_`-Tokens kennen den Stempel gar nicht: sie
+        // laufen ohne Angabe nie ab und überlebten damit den Wiederherstellungspfad.
+        await _authService.RegisterAsync(new RegisterDto { Username = "pwchange", Email = "pw@x.de", Password = "oldpass123" });
+        var user = await _db.AppUsers.FirstAsync(u => u.Username == "pwchange");
+        var stampBefore = user.SecurityStamp;
+        _db.UserApiTokens.Add(new RookHub.Api.Models.UserApiToken
+        {
+            UserId = user.Id, Name = "ext", TokenHash = "h", Prefix = "rkh_abc", Scope = "extension",
+        });
+        await _db.SaveChangesAsync();
+
+        var res = await _authService.ChangePasswordAsync(user.Id,
+            new ChangePasswordDto { CurrentPassword = "oldpass123", NewPassword = "newpass123" });
+
+        Assert.False(string.IsNullOrWhiteSpace(res.Token));
+        Assert.Equal(user.Id, res.UserId);
+        Assert.Equal("pwchange", res.Username);
+        var after = await _db.AppUsers.FirstAsync(u => u.Id == user.Id);
+        Assert.NotEqual(stampBefore, after.SecurityStamp);
+        Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == user.Id));
+    }
 }

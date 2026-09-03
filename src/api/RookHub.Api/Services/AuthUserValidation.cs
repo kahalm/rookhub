@@ -39,6 +39,11 @@ public static class AuthUserValidation
         return state;
     }
 
+    /// <summary>Den gecachten Auth-Zustand EINES Users verwerfen. Nötig, sobald der Security-Stamp
+    /// rotiert (Passwortänderung/-Reset): ohne das blieben fremde Sitzungen bis zu <see cref="CacheTtl"/>
+    /// weiter gültig, obwohl der Widerruf schon in der Datenbank steht.</summary>
+    public static void Invalidate(IMemoryCache cache, int userId) => cache.Remove(CacheKey(userId));
+
     /// <summary>True, wenn der User existiert und nicht gelöscht ist (mit kurzem Cache).</summary>
     public static async Task<bool> IsActiveUserAsync(
         AppDbContext db, IMemoryCache cache, int userId, CancellationToken ct = default)

@@ -69,7 +69,10 @@ public class AdminMessageService
     public async Task<AdminMessageDto> SendFromAdminAsync(int adminId, int targetUserId, string? body)
     {
         var text = Normalize(body);
-        var exists = await _db.AppUsers.AnyAsync(u => u.Id == targetUserId);
+        // `DeletedAt == null`: gelöschte Konten bleiben als anonymisierte Zeile stehen — eine
+        // Nachricht dorthin läse niemand mehr (der Login ist gesperrt), sie erzeugte nur einen
+        // Thread mit einem `deleted_…`-Namen in der Admin-Liste.
+        var exists = await _db.AppUsers.AnyAsync(u => u.Id == targetUserId && u.DeletedAt == null);
         if (!exists) throw new KeyNotFoundException("User not found.");
 
         var thread = await EnsureThreadAsync(targetUserId);

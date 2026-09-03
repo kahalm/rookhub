@@ -36,6 +36,22 @@ public class ChessableReviewLineServiceTests : IDisposable
         => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "getReview-sample.json"));
 
     // Fixture-Kurs (bid) und Linie (oid), wie in ChessableReviewParserTests belegt.
+    /// <summary>Legt die gecachte Chessable-Kursliste des Nutzers an — der Claim übernimmt nur Linien zu
+    /// Kursen, die dem Konto laut Chessable wirklich gehören (sonst könnte jeder unter einer fremden,
+    /// durchprobierbaren uid Linien einwerfen und sie dem Opfer als Kurs unterschieben).</summary>
+    private async Task GiveUserCoursesAsync(AppUser user, params string[] bids)
+    {
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id,
+            EncryptedBearer = "enc",
+            CachedCoursesJson = System.Text.Json.JsonSerializer.Serialize(
+                bids.Select(b => new ChessableCourseDto(b, $"Kurs {b}")).ToList()),
+            CoursesCachedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+    }
+
     private const string FixtureBid = "228856";
     private const string FixtureOid = "36730415";
 
@@ -243,6 +259,7 @@ public class ChessableReviewLineServiceTests : IDisposable
     public async Task AnonUpsert_ThenClaim_MovesLinesAndBuildsCourse()
     {
         var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, FixtureBid);
         const string uid = "790927";
 
         // token-los: Linie landet in der Anon-Senke (keine UserId), NICHT in ChessableReviewLines
@@ -270,6 +287,7 @@ public class ChessableReviewLineServiceTests : IDisposable
     public async Task ClaimAnon_IsIdempotent_AndNoOpForUnknownUid()
     {
         var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, FixtureBid);
         await _service.UpsertAnonBatchAsync("790927", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
 
         Assert.Equal(1, await _service.ClaimAnonForUidAsync(user.Id, "790927"));
@@ -341,5 +359,61 @@ public class ChessableReviewLineServiceTests : IDisposable
 
         Assert.Equal(1, pruned);
         Assert.Equal("2", (await _db.AnonymousChessableReviewLines.SingleAsync()).Oid);   // die junge bleibt
+    }
+
+    [Fact]
+    public async Task ClaimAnon_SkipsCoursesTheUserDoesNotOwn_AndBuildsNoBook()
+    {
+        // Angriffsfall: die ABLAGE-Seite der Anon-Senke ist unauthentifiziert und kann die uid nicht
+        // prüfen (nur der Claim beweist sie gegen Chessable). Jeder kann also unter einer fremden,
+        // durchprobierbaren uid Linien einwerfen. Vorher übernahm der Claim ALLES und legte daraus
+        // echte Bücher an — mit frei gewähltem Namen und erfundenen Zügen in einem Kurs, den das
+        // Opfer nie besaß. Jetzt zählt nur, was in seiner eigenen Chessable-Kursliste steht.
+        var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, FixtureBid);                 // NUR dieser Kurs gehört ihm
+        await _service.UpsertAnonBatchAsync("790927", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+        await _service.UpsertAnonBatchAsync("790927", "99999", new() { Entry("1", LoadFixture()) });
+
+        var claimed = await _service.ClaimAnonForUidAsync(user.Id, "790927");
+
+        Assert.Equal(1, claimed);                                     // nur die eigene Linie
+        Assert.Equal(FixtureBid, (await _db.ChessableReviewLines.SingleAsync()).Bid);
+        Assert.False(await _db.BookPuzzles.AnyAsync(b => b.BookFileName == $"chessable-u{user.Id}-99999.pgn"));
+        // Die untergeschobene Zeile bleibt in der Anon-Senke liegen und verfällt über die Retention.
+        Assert.Equal(1, await _db.AnonymousChessableReviewLines.CountAsync());
+    }
+
+    [Fact]
+    public async Task ClaimAnon_WithoutKnownCourseList_TakesNothingYet()
+    {
+        // Ohne gecachte Kursliste ist Besitz nicht feststellbar. Dann wird NICHTS übernommen (die
+        // Zeilen bleiben liegen); der nächtliche Kurslisten-Refresh holt den Claim danach nach.
+        var user = await CreateUserAsync();
+        await _service.UpsertAnonBatchAsync("790927", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+
+        Assert.Equal(0, await _service.ClaimAnonForUidAsync(user.Id, "790927"));
+        Assert.Equal(1, await _db.AnonymousChessableReviewLines.CountAsync());
+    }
+
+    [Fact]
+    public async Task PruneUnlinkedAnon_KeepsRowsOfLinkedUids()
+    {
+        // Der Deckel je uid bindet nichts, solange die uid ein frei wählbares Feld des offenen
+        // Endpoints ist. Deshalb verfallen Zeilen ohne verknüpftes Konto deutlich früher — die eines
+        // verknüpften Kontos (claimbar) behalten die volle Frist.
+        var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, FixtureBid);
+        var cred = await _db.ChessableCredentials.FirstAsync();
+        cred.ChessableUid = "790927";
+        await _service.UpsertAnonBatchAsync("790927", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
+        await _service.UpsertAnonBatchAsync("111111", FixtureBid, new() { Entry("2", LoadFixture()) });
+        foreach (var row in await _db.AnonymousChessableReviewLines.ToListAsync())
+            row.UpdatedAt = DateTime.UtcNow.AddDays(-30);
+        await _db.SaveChangesAsync();
+
+        var pruned = await _service.PruneUnlinkedAnonOlderThanAsync(TimeSpan.FromDays(14));
+
+        Assert.Equal(1, pruned);
+        Assert.Equal("790927", (await _db.AnonymousChessableReviewLines.SingleAsync()).ChessableUid);
     }
 }

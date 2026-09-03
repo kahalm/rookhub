@@ -122,6 +122,12 @@ public class AnalysisJobService
         var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
             && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
 
+        // Gemerkte Stellungen EINMAL laden (normalisiert) statt je FEN erneut: bei 200 Stellungen und
+        // 1.000 gemerkten Zeilen wären das sonst 200 Abfragen über die ganze Liste — und die im selben
+        // Batch angelegten fehlten darin ohnehin.
+        var remembered = (await _db.RememberedPositions.Where(p => p.UserId == userId).Select(p => p.Fen).ToListAsync(ct))
+            .Select(RepertoireAnalyzeService.NormalizeFen).ToHashSet();
+
         var created = new List<AnalysisJob>(); var skipped = new List<AnalysisJobBatchSkipped>();
         var now = DateTime.UtcNow;
         foreach (var raw in fens)
@@ -138,7 +144,7 @@ public class AnalysisJobService
             };
             now = now.AddMilliseconds(1);   // FIFO-Reihenfolge = Auswahlreihenfolge
             _db.AnalysisJobs.Add(job); created.Add(job); open++;
-            await EnsureRememberedAsync(userId, fen, null, ct);
+            EnsureRemembered(userId, fen, null, remembered);
         }
         if (created.Count > 0) { await TrimAsync(userId, created.Count, ct); await _db.SaveChangesAsync(ct); }
         return new AnalysisJobBatchResult(created.Select(ToDto).ToList(), skipped);
@@ -170,9 +176,17 @@ public class AnalysisJobService
 
     private async Task EnsureRememberedAsync(int userId, string fen, string? title, CancellationToken ct)
     {
-        var norm = RepertoireAnalyzeService.NormalizeFen(fen);
-        var existing = await _db.RememberedPositions.Where(p => p.UserId == userId).Select(p => p.Fen).ToListAsync(ct);
-        if (existing.Any(f => RepertoireAnalyzeService.NormalizeFen(f) == norm)) return;
+        var remembered = (await _db.RememberedPositions.Where(p => p.UserId == userId).Select(p => p.Fen).ToListAsync(ct))
+            .Select(RepertoireAnalyzeService.NormalizeFen).ToHashSet();
+        EnsureRemembered(userId, fen, title, remembered);
+    }
+
+    /// <summary>Stellung vormerken, falls sie (normalisiert) noch nicht in <paramref name="remembered"/> steht.
+    /// Das Set wird MITGEFÜHRT, damit ein Batch nicht für jede Stellung erneut die ganze Liste des Nutzers
+    /// lädt — und damit Dubletten INNERHALB des Batches ebenfalls greifen.</summary>
+    private void EnsureRemembered(int userId, string fen, string? title, HashSet<string> remembered)
+    {
+        if (!remembered.Add(RepertoireAnalyzeService.NormalizeFen(fen))) return;
         _db.RememberedPositions.Add(new RememberedPosition
         {
             UserId = userId, Fen = fen, CourseName = title, SourceUrl = RememberedSourceUrl, CreatedAt = DateTime.UtcNow,

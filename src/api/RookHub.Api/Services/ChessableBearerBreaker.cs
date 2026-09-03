@@ -70,10 +70,24 @@ public class ChessableBearerBreaker
             // Account gesperrt/gelöscht (z. B. Chessable: „User is banned or deleted").
             "banned", "deleted", "gesperrt", "gelöscht",
             // Token endgültig unbrauchbar (abgelaufen/ungültig → „bitte den Bearer neu hinterlegen").
-            "abgelaufen", "ungültig", "neu hinterlegen",
+            "abgelaufen", "neu hinterlegen",
+            // „Invalid bearer" ist piratechess' EIGENES Urteil, wenn Chessable einen leeren/unparsbaren
+            // Körper zurückgibt (ChessableDirectController: job.Fail(... "Invalid bearer")) — ohne diesen
+            // Eintrag blieb der Breaker geschlossen, obwohl der Proxy den Bearer schon abgeschrieben
+            // hatte, und der Watchdog reihte weiter Importe mit dem toten Token ein (Vorfall 2026-06-30).
+            "invalid bearer", "bad bearer",
             "expired", "invalid token", "re-enter", "reauth", "unauthorized",
         };
-        return fatal.Any(k => m.Contains(k, StringComparison.OrdinalIgnoreCase));
+        if (fatal.Any(k => m.Contains(k, StringComparison.OrdinalIgnoreCase))) return true;
+
+        // „ungültig" allein ist zu unspezifisch: piratechess meldet damit auch einen falschen
+        // Tunnel-Index („Ungültiger Tunnel-Index …"), was den Breaker fälschlich öffnen und alle
+        // Importe des Nutzers pausieren würde. Nur im Token-Zusammenhang gilt es als Bearer-Urteil.
+        return m.Contains("ungültig", StringComparison.OrdinalIgnoreCase)
+            && (m.Contains("token", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("bearer", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("sitzung", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("zugang", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Öffnet den Breaker für den Bearer des angegebenen Users (idempotent: ein bereits

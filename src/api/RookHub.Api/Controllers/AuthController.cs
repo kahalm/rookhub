@@ -84,8 +84,9 @@ public class AuthController : BaseApiController
             return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
-            await _authService.ChangePasswordAsync(GetUserId(), dto);
-            return NoContent();
+            // Antwort trägt ein frisches Token: der rotierte Security-Stamp entwertet auch das Token
+            // dieser Sitzung — das Frontend ersetzt seinen gespeicherten Stand damit und bleibt drin.
+            return Ok(await _authService.ChangePasswordAsync(GetUserId(), dto));
         }
         catch (UnauthorizedAccessException)
         {

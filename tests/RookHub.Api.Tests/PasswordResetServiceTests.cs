@@ -227,4 +227,23 @@ public class PasswordResetServiceTests : IDisposable
             return Task.CompletedTask;
         }
     }
+
+    [Fact]
+    public async Task ResetPassword_RevokesApiTokens()
+    {
+        // Der Reset ist DER Weg nach einer Kontoübernahme. Ein vom Angreifer angelegtes, unbefristetes
+        // Extension-Token kennt den Security-Stamp nicht und behielte sonst die volle Extension-Fläche
+        // (Repertoire-PGNs lesen, Share-Links anlegen, schreiben).
+        var user = await CreateUserAsync("pat@test.com");
+        _db.UserApiTokens.Add(new UserApiToken
+        {
+            UserId = user.Id, Name = "attacker", TokenHash = "h", Prefix = "rkh_evil", Scope = "extension",
+        });
+        await _db.SaveChangesAsync();
+        await _service.RequestResetAsync("pat@test.com");
+        var rawToken = ExtractToken(_email.LastText!);
+
+        await _service.ResetPasswordAsync(rawToken, "BrandNewPass3!");
+        Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == user.Id));
+    }
 }

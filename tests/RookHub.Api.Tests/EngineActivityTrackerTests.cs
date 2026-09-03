@@ -80,4 +80,31 @@ public class EngineActivityTrackerTests
         Assert.Equal(TimeSpan.FromSeconds(25), t.EngineIdleFor(A));
         Assert.Equal(TimeSpan.MaxValue, t.EngineIdleFor(B));   // andere Engine unberührt
     }
+
+    [Fact]
+    public async Task ParallelStreamsOnOneEngine_AreNeverInvisibleWhileRunning()
+    {
+        // Regression: `End` entfernte den Zähler-Eintrag UNBEDINGT, sobald es selbst auf 0 herunterzählte.
+        // Läuft dazwischen ein `Begin` derselben Engine (das Analysebrett bricht bei jedem Tiefen-/
+        // Linienwechsel Stream A ab und öffnet sofort B), löschte das den Eintrag des NEUEN Streams —
+        // die Engine sah frei aus, der Worker startete einen Auftrag daneben und Stockfish bekam zwei
+        // Suchen. Jeder Thread prüft direkt nach seinem eigenen Begin, ob die Engine als belegt gilt.
+        var t = new EngineActivityTracker();
+        var hidden = 0;
+        var churn = Enumerable.Range(0, 8).Select(worker => Task.Run(() =>
+        {
+            for (var i = 0; i < 2000; i++)
+            {
+                t.Begin(worker, A);
+                if (!t.IsEngineBusy(A)) Interlocked.Increment(ref hidden);
+                t.End(worker, A);
+            }
+        }));
+        await Task.WhenAll(churn);
+
+        Assert.Equal(0, hidden);
+        Assert.False(t.IsEngineBusy(A));                 // am Ende ist alles abgerechnet
+        for (var w = 0; w < 8; w++) Assert.Equal(0, t.ActiveCount(w));
+    }
+
 }
