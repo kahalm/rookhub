@@ -3,10 +3,20 @@ import { findPositionInGames, formatSansWithNumbers, normalizeFen } from './posi
 import { applyUserMove, legalDests } from '../../shared/pgn-viewer/board-moves.util';
 
 describe('position-filter.util', () => {
-  it('normalizeFen schneidet Zugzahl/50-Züge-Zähler ab (Spiegel der Server-Normalisierung)', () => {
+  it('normalizeFen behält Brett/Seite/Rochade und lässt ep + Zähler weg (Spiegel der Server-Normalisierung)', () => {
     expect(normalizeFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 3 12'))
-      .toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -');
+      .toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
     expect(normalizeFen('kaputt')).toBe('kaputt');
+  });
+
+  it('normalizeFen ignoriert das en-passant-Feld — dieselbe Stellung matcht mit und ohne', () => {
+    // Der Server lässt ep ausdrücklich weg (RepertoirePositionLookupService.NormalizeKey), damit
+    // Zugumstellungen matchen: dieselbe Stellung entsteht mit Doppelschritt (ep gesetzt) oder über
+    // zwei Einzelschritte (ep „-"). Mit ep im Schlüssel filterte das Brett solche Linien auf 0
+    // heraus („kommt nicht vor"), während „In welchen Repertoires?" sie fand.
+    const withEp = 'rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3';
+    const withoutEp = 'rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3';
+    expect(normalizeFen(withEp)).toBe(normalizeFen(withoutEp));
   });
 
   const games = parsePgnText(

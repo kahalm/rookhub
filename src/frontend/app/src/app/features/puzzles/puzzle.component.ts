@@ -245,6 +245,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
     // Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
     this.longSolve.resolve(this.elapsedSeconds).subscribe(seconds => {
+      if (this.destroyed) return;   // Seite verlassen (Dialog schließt bei Navigation)
       this.recordAttempt(true, seconds);
       // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
       // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
@@ -430,6 +431,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.stopTimer();
     this.stopCountdown();
     this.clearSolutionPlay();

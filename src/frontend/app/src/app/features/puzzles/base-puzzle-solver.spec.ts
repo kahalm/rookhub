@@ -6,6 +6,10 @@ import { StockfishService } from './stockfish.service';
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 class TestSolver extends BasePuzzleSolver {
+  tickCount = 0;
+  protected override onTimerTick(): void { this.tickCount++; }
+  startTimerPublic(initial = 0): void { this.startTimer(initial); }
+  stopTimerPublic(): void { this.stopTimer(); }
   evalRefreshCount = 0;
   altNoticeCount = 0;
   protected handleSolved(): void { this.state = 'SOLVED'; }
@@ -340,6 +344,41 @@ describe('BasePuzzleSolver geduldeter Alternativzug ([%alt])', () => {
     expect(solver.moveIdx).toBe(1);
   }));
 
+  it('Mausrutscher WÄHREND des Alt-Holds nimmt beide Halbzüge zurück und lässt das Brett spielbar', fakeAsync(() => {
+    // FALLE: der Hold steht auf THINKING, obwohl der Solver längst geantwortet hat. Der Mausrutscher
+    // schloss daraus „noch keine Antwort" und nahm nur EINEN Halbzug zurück: die Stellung landete
+    // beim Gegner am Zug, kein Timer lief mehr, es gab keine legalen Züge, und der Mausrutscher war
+    // verbraucht — das Puzzle war nur noch per Zurücksetzen/Aufgeben verlassbar (im Kurs kostete das
+    // den Versuch). Dazu überschrieb der Hold-Timer den zurückgenommenen Stand nachträglich.
+    const stockfish = { getBestMove: () => Promise.resolve('g1f3') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+
+    // 1.e4 automatisch; Schwarz löst e7e5 (Zug 1) — danach antwortet der Solver mit Nf3.
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    solver.setAlts({ 3: ['a7a6'] });
+
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });   // korrekt
+    tick(1200);                                                     // Solver spielt Nf3
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    const beforeAlt = solver.fen;
+
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });   // geduldete Alternative → Hold
+    expect(solver.state).toBe('THINKING');
+
+    solver.mouseslip();
+    // Zwei Halbzüge zurück: eigener Zug e5 UND die Solver-Antwort Nf3 → wieder am Zug.
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    expect(solver.fen).not.toBe(beforeAlt);
+    expect(solver.fen.split(' ')[1]).toBe('b');                     // Schwarz (der Löser) am Zug
+    expect(solver.moveIdx).toBe(1);
+
+    tick(2000);                                                     // Hold-Timer darf nichts mehr tun
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    expect(solver.fen.split(' ')[1]).toBe('b');
+    discardPeriodicTasks();
+  }));
+
   it('nicht als Alternative gelistete falsche Züge bleiben off-path (kein Alt-Hinweis)', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
     const solver = new TestSolver(stockfish);
@@ -404,3 +443,30 @@ describe('BasePuzzleSolver Off-Path-Tipps („falsch abgebogen")', () => {
     expect(solver.hasHints).toBeFalse();   // wieder auf dem Pfad, TestSolver hat keine On-Path-Tipps
   }));
 });
+
+describe('BasePuzzleSolver Lösezeit-Timer', () => {
+  it('startTimer ist idempotent — ein zweiter Start hinterlässt kein Waisen-Intervall', fakeAsync(() => {
+    // FALLE: mehrere Wege setzen ein neues Puzzle auf, OHNE vorher stopTimer() zu rufen
+    // („Überspringen" ist im Kurs mitten im Lösen klickbar, dazu Zurücksetzen, Retry, Navigation).
+    // Ohne clearInterval blieb je Aufruf ein Intervall zurück: es überlebte ngOnDestroy (das nur das
+    // jüngste Handle kennt) und schrieb sekündlich weiter die Zwischenzeit — es belebte damit genau
+    // den Eintrag wieder, den die Versuchs-Erfassung gelöscht hatte, und dasselbe Kurs-Puzzle
+    // startete später mit aufgeblähter Zeit.
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+
+    solver.startTimerPublic();
+    solver.startTimerPublic();     // zweiter Start, ohne zu stoppen
+    solver.startTimerPublic();
+
+    tick(3000);
+    solver.stopTimerPublic();
+    // Genau EIN laufendes Intervall → 3 Ticks. Mit den Waisen wären es 9 gewesen.
+    expect(solver.tickCount).toBe(3);
+
+    tick(3000);                    // nach stopTimer darf gar nichts mehr ticken
+    expect(solver.tickCount).toBe(3);
+    discardPeriodicTasks();
+  }));
+});
+

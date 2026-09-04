@@ -92,4 +92,26 @@ describe('PuzzleService', () => {
     service.getDailyPuzzle('20260630').subscribe();
     httpMock.expectOne('/api/book-puzzles/daily/20260630').flush({});
   });
+
+  it('ensureSessionId funktioniert ohne crypto.randomUUID und ohne localStorage', () => {
+    // `crypto.randomUUID` ist an einen SICHEREN Kontext gebunden und auf dem HTTP-Dev-Stack
+    // `undefined`; bei gesperrten Site-Daten wirft schon der Zugriff auf localStorage. Ungeschützt
+    // riss das JEDE anonyme Versuchs-Meldung mitten im Ablauf ab — im Fehlerfall blieb sogar die
+    // Lösungs-Durchsicht aus, weil die Zeilen NACH recordAttempt nie liefen.
+    // spyOn(Storage.prototype) statt direkter Zuweisung: eine eigene Property am localStorage
+    // würde die Prototyp-Spies ANDERER Suiten verdecken.
+    spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
+    spyOn(Storage.prototype, 'setItem').and.throwError('SecurityError');
+    const realUuid = (crypto as { randomUUID?: () => string }).randomUUID;
+    try {
+      (crypto as { randomUUID?: () => string }).randomUUID = undefined;
+
+      const first = service.ensureSessionId();
+      expect(first).toBeTruthy();
+      expect(service.ensureSessionId()).toBe(first);   // stabil innerhalb der Sitzung
+    } finally {
+      (crypto as { randomUUID?: () => string }).randomUUID = realUuid;
+    }
+  });
+
 });

@@ -91,4 +91,19 @@ describe('ReprocessBannerComponent', () => {
     // Kein zweiter Request: verify() in afterEach würde sonst fehlschlagen.
     expect(c.working).toBeTrue();
   });
+
+  it('ngOnInit übersteht gesperrten localStorage (Elternseite rendert weiter)', () => {
+    // FALLE: `ngOnInit` las den Wegklick-Marker ungeschützt. In Browsern, die Site-Daten blockieren
+    // (Safari „Alle Cookies blockieren", Enterprise-Policy), wirft schon der ZUGRIFF — und zwar
+    // mitten in der Change Detection der Elternseite: die Kursliste rendert dann nicht, obwohl ihre
+    // Daten längst da sind (dieselbe Fehlerklasse wie der Template-Getter-Fund in 0.317.2).
+    spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
+    const fixture = TestBed.createComponent(ReprocessBannerComponent);
+    fixture.componentInstance.section = 'courses';
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+    TestBed.inject(HttpTestingController).expectOne('/api/courses/reprocess/status')
+      .flush({ currentVersion: 2, total: 1, stale: 0, reprocessableLocally: 0, refetchable: 0, needsReimport: 0 });
+  });
+
 });

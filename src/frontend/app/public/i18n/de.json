@@ -1804,7 +1804,8 @@
       "colConfig": "Konfiguration",
       "colMistakes": "Fehler",
       "backToEndless": "Zurück zum Endless Mode"
-    }
+    },
+    "loadFailed": "Es konnten gerade keine neuen Puzzles geladen werden. Bitte später erneut versuchen."
   },
   "book": {
     "alternativeMove": "Auch ein guter Zug — spiel aber den Zug der Hauptvariante.",

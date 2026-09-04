@@ -1804,7 +1804,8 @@
       "colConfig": "Konfiguracija",
       "colMistakes": "Pogreške",
       "backToEndless": "Natrag na Endless Mode"
-    }
+    },
+    "loadFailed": "Trenutno nije bilo moguće učitati nove zagonetke. Pokušaj ponovno kasnije."
   },
   "book": {
     "alternativeMove": "Također dobar potez — ali odigraj potez glavne varijante.",

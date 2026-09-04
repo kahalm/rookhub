@@ -221,14 +221,29 @@ export class PuzzleService {
     return this.http.get<PuzzleBreakdown>('/api/courses/stats/breakdown');
   }
 
+  /** Zuletzt vergebene Id, wenn der Speicher nicht mitspielt (Privatmodus, gesperrte Site-Daten). */
+  private memorySessionId?: string;
+
   private getOrCreateSessionId(): string {
     const key = 'rookhub_puzzle_session';
-    let id = localStorage.getItem(key);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(key, id);
+    // `crypto.randomUUID` ist an einen SICHEREN Kontext gebunden und auf dem HTTP-Dev-Stack
+    // schlicht `undefined`; der Zugriff auf localStorage wirft in Browsern mit gesperrten
+    // Site-Daten. Ungeschützt riss das JEDE anonyme Versuchs-Meldung mitten im Ablauf ab — im
+    // Fehlerfall blieb sogar die Lösungs-Durchsicht aus. Dieselbe Rückfallebene wie im
+    // Endless-Modus und in der Offline-Queue.
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) return stored;
+      const fresh = this.newSessionId();
+      localStorage.setItem(key, fresh);
+      return fresh;
+    } catch {
+      return this.memorySessionId ??= this.newSessionId();
     }
-    return id;
+  }
+
+  private newSessionId(): string {
+    return crypto?.randomUUID?.() ?? `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   /** Anonyme Puzzle-Session-Id (für das Offline-Vormerken anonymer Versuche). */

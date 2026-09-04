@@ -64,6 +64,12 @@ export abstract class BasePuzzleSolver {
   protected altMovesByPly: Record<number, string[]> = {};
   /** Timer, der einen kurz gezeigten Alternativzug wieder zurücknimmt. */
   protected altHoldTimer?: ReturnType<typeof setTimeout>;
+  /** Läuft gerade ein Alternativzug-Hold? Der Zustand ist dabei `THINKING`, obwohl der Solver seine
+   *  Antwort längst gespielt hat und `this.chess` unangetastet ist — ohne dieses Flag hielt der
+   *  Mausrutscher genau das für „Solver hat noch nicht geantwortet" und nahm einen Halbzug zu wenig
+   *  zurück: die Stellung landete beim Gegner am Zug, kein Timer lief mehr, es gab keine legalen
+   *  Züge und der Mausrutscher war verbraucht — nur noch Zurücksetzen oder Aufgeben. */
+  protected altHolding = false;
 
   // ---- Off-Path-Warnung: Weicht der User von der Lösung ab und spielt gegen Stockfish weiter,
   //      wird — sobald die Eval nicht mehr mind. +2 für den Spieler ist — ab dem N-ten off-path-Zug
@@ -181,6 +187,13 @@ export abstract class BasePuzzleSolver {
   protected moveIndex = 0;
   protected startPly = 0;
   protected aborted = false;
+  /** Ist die Komponente zerstört (Seite verlassen)? `MatDialogConfig.closeOnNavigation` ist
+   *  standardmäßig true — die Lange-Lösezeit-Nachfrage schließt bei einem Routenwechsel also
+   *  trotz `disableClose`, und ihr `afterClosed()` feuert NACH `ngOnDestroy`. Ohne diesen Riegel
+   *  lief danach die komplette Abschluss-Kette weiter: Versuch erfassen, Countdown, nächstes
+   *  Puzzle laden — samt neuem Sekunden-Timer auf einer zerstörten Komponente; im Endless-Modus
+   *  schrieb derselbe Pfad einen beendeten Lauf wieder als „aktiv" auf den Server. */
+  protected destroyed = false;
   protected autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   protected moveLog: MoveLogEntry[] = [];
   protected moveStartTime = 0;
@@ -215,6 +228,13 @@ export abstract class BasePuzzleSolver {
   /** Lösezeit-Timer starten (Standard-/Buch-Modus): Stoppuhr nullen + 1-s-Anzeige-Tick.
    * `initialSeconds` setzt eine frühere (persistierte) Lösezeit fort — Tagespuzzle-Wiederbesuch. */
   protected startTimer(initialSeconds = 0): void {
+    // IDEMPOTENT: mehrere Wege setzen ein neues Puzzle auf, ohne vorher stopTimer() zu rufen
+    // („Überspringen" ist im Kurs/Wochenpost MITTEN im Lösen klickbar, dazu Zurücksetzen, Retry,
+    // Kapitel-/Wochen-Navigation). Ohne dieses clearInterval blieb je Aufruf ein Waisen-Intervall
+    // zurück: es überlebte ngOnDestroy (das nur das jüngste Handle kennt) und schrieb sekündlich
+    // weiter die Zwischenzeit — es belebte damit genau den Eintrag wieder, den die
+    // Versuchs-Erfassung gelöscht hatte, und dasselbe Puzzle startete später mit aufgeblähter Zeit.
+    if (this.timerInterval) clearInterval(this.timerInterval);
     this.stopwatch.start(initialSeconds);
     this.elapsedSeconds = initialSeconds;
     this.timerInterval = setInterval(() => {
@@ -280,6 +300,7 @@ export abstract class BasePuzzleSolver {
   protected setupSolver(fen: string, movesStr: string, startPly = 0): void {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     if (this.altHoldTimer) clearTimeout(this.altHoldTimer);
+    this.altHolding = false;
     this.altMovesByPly = {};    // wird von der Komponente nach setupSolver neu gesetzt (nur Buch/Kurs)
     this.clearSolutionPlay();   // evtl. laufende Lösungs-Wiedergabe (nach Aufgeben) stoppen
     this.stopCountdown();
@@ -436,9 +457,11 @@ export abstract class BasePuzzleSolver {
     this.isCheck = probe.isCheck();
     this.dests = new Map();       // während des Holds gesperrt
     this.state = 'THINKING';
+    this.altHolding = true;
     this.onAlternativeMove(userUci);
     if (this.altHoldTimer) clearTimeout(this.altHoldTimer);
     this.altHoldTimer = setTimeout(() => {
+      this.altHolding = false;
       if (this.aborted) return;
       this.lastMove = undefined;
       this.state = 'AWAITING_USER_MOVE';
@@ -529,11 +552,18 @@ export abstract class BasePuzzleSolver {
       // Lösungspfad-Mouseslip: letzten Korrekt-Zug (+ ggf. bereits gespielte Solver-Antwort) rückgängig.
       if (this.moveLog.length === 0) return;
       if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+      // Läuft ein Alternativzug-Hold, ihn abbrechen: sein Timer würde sonst nach Ablauf den
+      // zurückgenommenen Stand mit `AWAITING_USER_MOVE` überschreiben.
+      if (this.altHoldTimer) clearTimeout(this.altHoldTimer);
+      const wasAltHold = this.altHolding;
+      this.altHolding = false;
       this.aborted = false;
       this.solverEpoch++;
       // Im THINKING-State hat der Solver noch nicht geantwortet → nur 1 Zug zurück;
-      // im AWAITING-State hat der Solver bereits gespielt → 2 Züge zurück.
-      const undoCount = this.state === 'AWAITING_USER_MOVE' ? 2 : 1;
+      // im AWAITING-State hat der Solver bereits gespielt → 2 Züge zurück. Der Alternativzug-Hold
+      // steht ebenfalls auf THINKING, DORT hat der Solver aber schon geantwortet (und `this.chess`
+      // ist unangetastet) — er gehört also zu den 2.
+      const undoCount = (this.state === 'AWAITING_USER_MOVE' || wasAltHold) ? 2 : 1;
       for (let i = 0; i < undoCount; i++) this.chess.undo();
       this.moveIndex -= undoCount;
       if (this.visualizationMode) this.vizMoves.splice(-undoCount);

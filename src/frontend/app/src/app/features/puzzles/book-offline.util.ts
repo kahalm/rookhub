@@ -71,6 +71,27 @@ export function removeBookOffline(fileName: string): void {
  */
 const COURSE_LOCAL_SOLVED_PREFIX = 'rookhub_course_local_solved_';
 
+/** Marker: der lokale Cache dieses Buchs ist VOLLSTÄNDIG (die Seiten-Kette lief bis zum Ende).
+ *  Ohne ihn wäre ein Torso — erste Seite geladen, dann Netz weg — beim nächsten Besuch nicht von
+ *  einem kompletten Kurs zu unterscheiden: der anonyme Modus zählte die 300 gecachten Linien als
+ *  Gesamtzahl und meldete nach 300 Aufgaben „Kurs abgeschlossen", während der Rest für diesen
+ *  Browser dauerhaft unerreichbar blieb. */
+const BOOK_COMPLETE_PREFIX = 'rookhub_book_complete_';
+
+export function markBookCacheComplete(bookId: number, complete: boolean): void {
+  try {
+    if (complete) localStorage.setItem(BOOK_COMPLETE_PREFIX + bookId, '1');
+    else localStorage.removeItem(BOOK_COMPLETE_PREFIX + bookId);
+  } catch { /* Quota/Privatmodus — dann gilt der Cache als unvollständig (siehe unten) */ }
+}
+
+/** Gilt der lokale Cache als vollständig? Bei gesperrtem Speicher bewusst `false`: dann wird die
+ *  Seiten-Kette erneut fortgesetzt, was höchstens Netz kostet — im Gegensatz zu still fehlenden
+ *  Linien. */
+export function isBookCacheComplete(bookId: number): boolean {
+  try { return localStorage.getItem(BOOK_COMPLETE_PREFIX + bookId) === '1'; } catch { return false; }
+}
+
 export function loadCourseLocalSolved(bookId: number): number[] {
   try {
     const raw = localStorage.getItem(COURSE_LOCAL_SOLVED_PREFIX + bookId);

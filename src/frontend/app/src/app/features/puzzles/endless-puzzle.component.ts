@@ -523,6 +523,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     // Laufender Run: finalen Live-Zeitstand sichern — der 1-s-Tick kann bis zu 1 s hinterherhängen.
     if (this.sessionInterval && this.lives > 0) this.saveLiveElapsedNow();
     this.stopSessionTimer();
@@ -839,6 +840,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
           }
           return;
         }
+        this.chainFailures = 0;
         this.chain = startIndex === 0 ? block : this.chain.concat(block);
         this.offlinePool = this.chain;
         this.storage.saveOfflinePool(this.chain);
@@ -847,8 +849,19 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         if (then) then();
       },
       error: () => {
-        // Während der Generierung offline geworden: vorhandene Kette weiterspielen bzw. „You win".
-        if (then) then();
+        // FALLE: einfach `then()` (= loadCurrent) rufen führte bei einem SERVER-Fehler in eine
+        // unbegrenzte Schleife — loadCurrent findet keine Kette, landet in handleChainEnd, das
+        // generiert erneut, der Request scheitert wieder … Das Frontend feuerte dauerhaft Requests
+        // (und verstärkte damit die Störung), die Karte blieb für immer auf „lädt" und nannte keinen
+        // Grund. Der ursprüngliche Kommentar galt nur für den OFFLINE-Fall; bei 5xx, Proxy-Fehler
+        // oder Rate-Limit ist `navigator.onLine` weiter true.
+        this.chainFailures++;
+        const canContinue = this.chainIndex < this.chain.length;
+        if (canContinue) { if (then) then(); return; }   // vorhandene Kette weiterspielen
+        if (!navigator.onLine) { this.winRun(); return; } // wirklich offline: Lauf als Sieg beenden
+        // Kein Nachschub und online → ehrlich abbrechen statt endlos zu drehen.
+        this.snackbar.info(this.translate.instant('endless.loadFailed'), { action: 'common.ok', duration: 4000 });
+        this.state = 'CONFIG';
       }
     });
     });
@@ -1062,9 +1075,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.onPuzzleLoaded(this.chain[this.chainIndex]);
   }
 
+  /** Wie oft das Nachladen der Kette in Folge gescheitert ist — Riegel gegen die Endlos-Schleife
+   *  aus handleChainEnd → generateChainBlock → Fehler → handleChainEnd. */
+  private chainFailures = 0;
+  /** Nach so vielen Fehlversuchen in Folge wird nicht mehr nachgeneriert. */
+  private static readonly MaxChainFailures = 3;
+
   /** Kettenende erreicht: online → nächsten Block nachgenerieren; offline → „You win". */
   private handleChainEnd(): void {
-    if (navigator.onLine) {
+    if (navigator.onLine && this.chainFailures < EndlessPuzzleComponent.MaxChainFailures) {
       this.state = 'LOADING';
       this.generateChainBlock(this.chain.length, () => this.loadCurrent());
     } else {
@@ -1168,6 +1187,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor die Zeit gewertet wird;
     // der Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
     this.longSolve.resolve(perPuzzleSeconds).subscribe(seconds => {
+      if (this.destroyed) return;   // Seite verlassen (Dialog schließt bei Navigation)
       this.recordAttempt(true, seconds);
 
       // Bei alternativer Lösung NICHT auto-advancen — der Spieler wählt Weiter / Lösung zeigen.
@@ -1359,11 +1379,17 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.showEval = false;
     if (!this.puzzleLifeLost) {
       this.puzzleLifeLost = true;
+      // Buchführung IDENTISCH zum Fehlzug (loseLife): Fehler-Rating, Sitzungs-Eintrag,
+      // Versuchs-Meldung und — der wichtigste Teil — das Sichern des laufenden Stands.
+      // Vorher zeichnete NUR der 0-Leben-Fall auf: ein „Zurücksetzen" kostete ein Leben, das nie
+      // beim Server ankam, also gab ein simples Neuladen es zurück (die Strafe war beliebig
+      // wiederholbar). Ohne die Sitzungs-Einträge stimmte außerdem die Statistik des Laufs nicht,
+      // und die fehlenden Fehler-Ratings verschoben die automatisch berechnete Schwelle.
+      this.currentSessionMistakes.push(this._currentMinRating);
+      this.pushSessionPuzzle(false);
       this.lives--;
+      this.recordAttempt(false);
       if (this.lives <= 0) {
-        this.currentSessionMistakes.push(this._currentMinRating);
-        this.pushSessionPuzzle(false);
-        this.recordAttempt(false);
         // 0 Lives = Run ist vorbei. Active-State (mit jetzt veralteten Werten) auf
         // dem Server loeschen, damit kein "Unfinished run | 0 lives"-Zombie zurueckbleibt.
         this.storage.saveActiveGameLocal(null);
@@ -1373,6 +1399,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.enterSolutionReview();
         return;
       }
+      this.syncActiveGameToServer();
     }
     this.setupPuzzle(this.puzzle);
   }

@@ -1,4 +1,4 @@
-import { saveBookOffline, getBookOffline, getBookOfflineByBookId, removeBookOffline, hasBookOffline, saveDailyOffline, getDailyOffline } from './book-offline.util';
+import { saveBookOffline, getBookOffline, getBookOfflineByBookId, removeBookOffline, hasBookOffline, saveDailyOffline, getDailyOffline, isBookCacheComplete, markBookCacheComplete } from './book-offline.util';
 import { BookPuzzleDto } from './puzzle.service';
 
 function puzzle(id: number, fileName: string): BookPuzzleDto {
@@ -59,4 +59,22 @@ describe('book-offline.util', () => {
     expect(getDailyOffline('20260603')?.id).toBe(3);   // 14 jüngste bleiben
     expect(getDailyOffline('20260616')?.id).toBe(16);
   });
+
+  it('Vollständigkeits-Marker: unbekannt ⇒ unvollständig, gesetzt ⇒ vollständig, löschbar', () => {
+    // Ohne diesen Marker war ein TORSO (erste Seite geladen, dann Netz weg) nicht von einem
+    // komplett gecachten Kurs zu unterscheiden: der anonyme Modus nahm die 300 gecachten Linien als
+    // Gesamtzahl und meldete nach 300 Aufgaben „Kurs abgeschlossen" — die restlichen 2700 blieben
+    // für diesen Browser dauerhaft unerreichbar, weil nie wieder nachgeladen wurde.
+    expect(isBookCacheComplete(4711)).toBeFalse();
+    markBookCacheComplete(4711, true);
+    expect(isBookCacheComplete(4711)).toBeTrue();
+    markBookCacheComplete(4711, false);
+    expect(isBookCacheComplete(4711)).toBeFalse();
+  });
+
+  it('Vollständigkeits-Marker gilt bei gesperrtem Speicher als NICHT vollständig', () => {
+    spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
+    expect(isBookCacheComplete(4711)).toBeFalse();   // lieber erneut laden als still Linien fehlen
+  });
+
 });

@@ -1804,7 +1804,8 @@
       "colConfig": "Config",
       "colMistakes": "Mistakes",
       "backToEndless": "Back to Endless Mode"
-    }
+    },
+    "loadFailed": "No new puzzles could be loaded right now. Please try again later."
   },
   "book": {
     "alternativeMove": "Also a good move — but play the main line's move.",

@@ -42,7 +42,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
-import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
+import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, isBookCacheComplete, markBookCacheComplete, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
 import { loadDailyElapsed, saveDailyElapsed, clearDailyElapsed } from './daily-elapsed.util';
 import { loadSolveElapsed, saveSolveElapsed, clearSolveElapsed } from './solve-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -520,6 +520,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
     // Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
     this.longSolve.resolve(this.elapsedSeconds).subscribe(seconds => {
+      if (this.destroyed) return;   // Seite verlassen (Dialog schließt bei Navigation)
       this.solveSeconds = seconds;
       this.finalizeSolve();
     });
@@ -774,6 +775,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.dailySub?.unsubscribe();
     this.courseSub?.unsubscribe();
     this.stopTimer();
@@ -922,8 +924,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    */
   private loadAnonCourseNext(after: number | undefined, exclude: number | undefined, hadPuzzle: boolean): void {
     if (this.courseBookId == null) return;
-    if (getBookOfflineByBookId(this.courseBookId)?.length) {
-      if (!this.loadCourseOffline(after, exclude, hadPuzzle)) this.showCourseUnavailable();
+    const cached = getBookOfflineByBookId(this.courseBookId);
+    if (cached?.length) {
+      if (!this.loadCourseOffline(after, exclude, hadPuzzle)) { this.showCourseUnavailable(); return; }
+      // TORSO nachladen: brach die Seiten-Kette beim ersten Besuch ab (Netzfehler auf einer
+      // Folgeseite, Tab geschlossen), lag hier nur die erste Seite — und der Kurs galt mit 300 von
+      // 3000 Linien als „abgeschlossen". Der Marker unterscheidet beides; ist er nicht gesetzt,
+      // wird die Kette im Hintergrund ab der gecachten Länge fortgesetzt (spielbar bleibt es sofort).
+      if (!isBookCacheComplete(this.courseBookId) && (typeof navigator === 'undefined' || navigator.onLine))
+        this.fetchAnonCoursePages(this.courseBookId, [...cached], cached.length, undefined, undefined, false);
       return;
     }
     // Kein lokaler Cache + offline → nicht ins Netz laufen, sondern „nicht verfügbar" zeigen.
@@ -931,27 +940,39 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Seitenweise laden: erste (kleine) Seite → sofort spielbar; restliche Seiten im Hintergrund in
     // den Offline-Cache nachladen. Große öffentliche Kurse (Tausende Puzzles) starten so in ~1 s
     // statt erst nach dem kompletten (mehrere MB großen) Download.
-    const bookId = this.courseBookId;
-    const acc: BookPuzzleDto[] = [];
-    // Cache-Schreiben ist teuer (JSON.stringify über den GANZEN bisherigen Stand): nach JEDER
-    // Seite geschrieben wüchse der Aufwand quadratisch (300+600+…+3000 statt 3000 serialisierte
-    // Puzzles — mehrere MB Main-Thread-Blockade auf Mobilgeräten). Deshalb wird nur EINMAL nach
-    // der ersten Seite geschrieben (sofort spielbar — loadCourseOffline liest aus dem Cache) und
-    // dann erst wieder am ENDE der Kette (letzte Seite bzw. Fehler einer Folgeseite, damit das
-    // bereits Geladene auch einen Reload übersteht).
+    this.fetchAnonCoursePages(this.courseBookId, [], 0, after, exclude, hadPuzzle, true);
+  }
+
+  /**
+   * Seiten-Kette des anonymen Kurses (auch zum FORTSETZEN eines Torsos aufrufbar: `acc` mit dem
+   * gecachten Stand vorbelegen und `skip` auf dessen Länge setzen).
+   *
+   * Cache-Schreiben ist teuer (JSON.stringify über den GANZEN bisherigen Stand): nach JEDER Seite
+   * geschrieben wüchse der Aufwand quadratisch (300+600+…+3000 statt 3000 serialisierte Puzzles —
+   * mehrere MB Main-Thread-Blockade auf Mobilgeräten). Deshalb wird nur EINMAL nach der ersten
+   * Seite geschrieben (sofort spielbar) und dann erst am ENDE der Kette (letzte Seite bzw. Fehler
+   * einer Folgeseite, damit das Geladene einen Reload übersteht).
+   */
+  private fetchAnonCoursePages(bookId: number, acc: BookPuzzleDto[], skip: number,
+    after: number | undefined, exclude: number | undefined, hadPuzzle: boolean,
+    serveFirstPage = false): void {
     const flushCache = (): boolean => {
       const fileName = acc[0]?.bookFileName;
       return fileName ? saveBookOffline(fileName, acc, bookId) : false;
     };
-    const fetchPage = (skip: number, first: boolean): void => {
-      this.courseService.getPublicCourse(bookId, skip, ANON_COURSE_PAGE_SIZE).subscribe({
+    const fetchPage = (pageSkip: number, first: boolean): void => {
+      this.courseService.getPublicCourse(bookId, pageSkip, ANON_COURSE_PAGE_SIZE).subscribe({
         next: page => {
           if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
           if (page?.length) acc.push(...page);
           // Volle Seite → es gibt vermutlich mehr; sonst ist die Kette hier zu Ende.
           const hasMore = !!page && page.length === ANON_COURSE_PAGE_SIZE;
-          if (first || !hasMore) flushCache();
-          if (first) {
+          if (first || !hasMore) {
+            const written = flushCache();
+            // Vollständig NUR melden, wenn der letzte Stand auch wirklich im Speicher liegt.
+            if (!hasMore) markBookCacheComplete(bookId, written);
+          }
+          if (first && serveFirstPage) {
             // Cache-Schreiben kann fehlschlagen (Quota/Privatmodus) — der anonyme Kurs wird NUR
             // aus dem Cache bedient: dann ehrlich „nicht verfügbar" statt endlosem Spinner.
             if (!acc.length || !this.loadCourseOffline(after, exclude, hadPuzzle)) {
@@ -959,19 +980,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
               return;
             }
           }
-          if (hasMore) fetchPage(skip + ANON_COURSE_PAGE_SIZE, false);
+          if (hasMore) fetchPage(pageSkip + ANON_COURSE_PAGE_SIZE, false);
         },
         error: () => {
           if (this.courseBookId !== bookId) return;
           // Nur wenn schon die erste Seite scheitert (nichts geladen) → „nicht verfügbar".
           // Ein Fehler bei einer Folgeseite lässt das bereits Geladene spielbar — dazu den
-          // aufgelaufenen Stand festschreiben (die Zwischenseiten werden nicht mehr geschrieben).
-          if (first && !acc.length) { this.showCourseUnavailable(); return; }
+          // aufgelaufenen Stand festschreiben (die Zwischenseiten werden nicht mehr geschrieben);
+          // der Marker bleibt AUS, damit der nächste Besuch die Kette fortsetzt.
+          if (first && serveFirstPage && !acc.length) { this.showCourseUnavailable(); return; }
           flushCache();
         },
       });
     };
-    fetchPage(0, true);
+    fetchPage(skip, skip === 0);
   }
 
   /** Öffentlicher Kurs anonym nicht (mehr) verfügbar (nicht public / gelöscht). */
@@ -1001,9 +1023,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     let next: BookPuzzleDto | undefined;
 
     if (this.courseModeKind === 'random') {
-      const fresh = book.filter(p => p.id !== cur && !this.offlineCourseSolvedIds.has(p.id));
-      const pick = fresh.length ? fresh : book.filter(p => p.id !== cur);
-      next = (pick.length ? pick : book)[Math.floor(Math.random() * (pick.length || book.length))];
+      // Zufallstopf = QUIZ-Linien, wie serverseitig (CourseService: `quizScope`). Zog er aus dem
+      // ungefilterten Buch, bekam der Spieler reine Info-/Erklärseiten als „Zufallsaufgabe": die
+      // zählen nie als gelöst, der Fortschritt stand still und derselbe Block konnte beliebig oft
+      // kommen — der Kurs erreichte 100 % nie. Betraf offline UND jeden anonymen Aufruf.
+      const fresh = quiz.filter(p => p.id !== cur && !this.offlineCourseSolvedIds.has(p.id));
+      const pick = fresh.length ? fresh : quiz.filter(p => p.id !== cur);
+      const pool = pick.length ? pick : quiz;
+      next = pool.length ? pool[Math.floor(Math.random() * pool.length)] : undefined;
     } else {
       // sequenziell: ab Position nach `after` das erste in dieser Sitzung noch nicht gelöste.
       const start = after != null ? book.findIndex(p => p.id === after) : -1;

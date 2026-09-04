@@ -102,7 +102,12 @@ export class ReprocessBannerComponent implements OnInit {
   constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
-    const raw = Number(localStorage.getItem(this.dismissKey));
+    // try/catch wie beim Schreibweg zwei Methoden weiter unten: in Browsern mit gesperrten
+    // Site-Daten wirft schon der ZUGRIFF auf localStorage — und zwar hier in ngOnInit, also mitten
+    // in der Change Detection der Elternseite. Die Kursliste rendert dann nicht, obwohl ihre Daten
+    // längst geladen sind (dieselbe Fehlerklasse wie der Template-Getter-Fund in 0.317.2).
+    let raw = 0;
+    try { raw = Number(localStorage.getItem(this.dismissKey)); } catch { raw = 0; }
     this.reimportDismissedAt = Number.isFinite(raw) && raw > 0 ? raw : 0;
     this.refresh();
   }

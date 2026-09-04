@@ -1,13 +1,21 @@
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 
 /**
- * Erste 4 FEN-Felder (Brett, Seite am Zug, Rochade, En-passant) — Transpositions-Match
- * unabhängig von Zugzahl/50-Züge-Zähler. Spiegel von `RepertoireAnalyzeService.NormalizeFen`
- * (Server-Stellungssuche); beide Seiten müssen gleich normalisieren.
+ * Erste DREI FEN-Felder (Brett, Seite am Zug, Rochade) — Transpositions-Match unabhängig von
+ * Zugzahl/50-Züge-Zähler UND vom En-passant-Feld. Spiegel von
+ * `RepertoirePositionLookupService.NormalizeKey` (Server-Stellungssuche); beide Seiten müssen
+ * gleich normalisieren.
+ *
+ * WARUM ep NICHT im Schlüssel steht: dieselbe Stellung entsteht mit und ohne ep-Recht, je nachdem
+ * ob die Linie mit einem Doppelschritt endet oder über zwei Einzelschritte dorthin kommt. Mit ep im
+ * Schlüssel filterte das Brett solche Linien auf 0 heraus („kommt nicht vor"), während der Knopf
+ * „In welchen Repertoires?" sie sehr wohl fand — der Server lässt das Feld genau deshalb weg. Der
+ * Fall ist nicht exotisch: schon in den ersten sechs Halbzügen gibt es 226 Stellungen, die sich bei
+ * identischem Brett, Seite und Rochade nur im ep-Feld unterscheiden.
  */
 export function normalizeFen(fen: string): string {
   const parts = fen.split(' ');
-  return parts.length >= 4 ? parts.slice(0, 4).join(' ') : fen;
+  return parts.length >= 3 ? parts.slice(0, 3).join(' ') : fen;
 }
 
 export interface PositionFilterResult {
