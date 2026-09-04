@@ -106,8 +106,19 @@ export class AuthService {
       this.logout();
       return;
     }
+    // Reihenfolge: ERST die Admin-Sitzung zurückschreiben, DANN das Backup löschen. Vorher war es
+    // umgekehrt — warf `setItem` (voller/gesperrter Speicher), war das Backup unwiederbringlich weg,
+    // `rookhub_user` trug weiter das Impersonation-Token und das rote Banner verschwand: der Admin
+    // arbeitete unbemerkt im fremden Konto weiter, ohne Rücksprung.
+    try { localStorage.setItem('rookhub_user', stored); }
+    catch {
+      this.storageFull = true;
+      // Backup NICHT löschen — der Rücksprung bleibt so nach einem Neuladen möglich.
+      this.currentUserSubject.next(admin);
+      this.loadPreferences();
+      return;
+    }
     localStorage.removeItem(this.adminBackupKey);
-    localStorage.setItem('rookhub_user', stored);
     this.currentUserSubject.next(admin);
     this.loadPreferences();
   }
@@ -184,6 +195,11 @@ export class AuthService {
     this.currentUserSubject.next(user);
   }
 
+  /** Wurde ein Schreibversuch in den localStorage abgelehnt (Quota voll / Privatmodus)? Die Sitzung
+   *  läuft dann nur im Speicher: ein Neuladen der Seite loggt aus. Die Profilseite kann darauf
+   *  hinweisen („Offline-Speicher voll — Caches leeren"), statt den Nutzer rätseln zu lassen. */
+  storageFull = false;
+
   logout(): void {
     localStorage.removeItem('rookhub_user');
     localStorage.removeItem('rookhub_admin_user');
@@ -191,7 +207,11 @@ export class AuthService {
     // Pools) beim Abmelden löschen — sonst blieben sie für den NÄCHSTEN Nutzer desselben Geräts
     // les-/sichtbar. Die Offline-Schreib-Queue bleibt bewusst bestehen (sie ist user-gestempelt und
     // geht nur unter demselben Konto raus) → gemerkte Lösungen überstehen ein versehentliches Logout.
-    try { this.injector.get(OfflineService).clearAll(); } catch { /* Storage/DI nicht verfügbar */ }
+    // clearOnLogout (nicht clearAll): räumt zusätzlich die lokalen Nutzer-SPUREN ab. Der
+    // Endless-Modus überträgt lokale Läufe beim ersten Öffnen ins Konto — auf einem geteilten Gerät
+    // erbte der nächste Nutzer sonst Laufhistorie und Highscore des vorigen, sichtbar bis in die
+    // Bestenliste; ebenso Kalkulations-Notizen, lokalen Kursfortschritt und den Menü-Snapshot.
+    try { this.injector.get(OfflineService).clearOnLogout(); } catch { /* Storage/DI nicht verfügbar */ }
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }
@@ -207,7 +227,13 @@ export class AuthService {
   }
 
   private storeUser(user: AuthResponse): void {
-    localStorage.setItem('rookhub_user', JSON.stringify(user));
+    // FALLE: `setItem` läuft im tap() des Login-Streams. Genau dieser Speicher wird von den
+    // Offline-Caches absichtlich vollgeschrieben — ein QuotaExceededError riss damit den
+    // Login-Stream, die Maske meldete „Login fehlgeschlagen" und die Sitzung war auch im Speicher
+    // nicht gesetzt. Der Nutzer kam nicht mehr herein und erfuhr den echten Grund nie. Die Sitzung
+    // gilt jetzt in jedem Fall (in-memory), der Speicherfehler ist nur ein Komfortverlust.
+    try { localStorage.setItem('rookhub_user', JSON.stringify(user)); }
+    catch { this.storageFull = true; }
     this.currentUserSubject.next(user);
     this.claimAnonymousPuzzleSession();
     this.consumeStashedDiscordLink();

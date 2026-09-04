@@ -152,6 +152,17 @@ export class OfflineQueueService {
       next: () => { this.remove(r.id); this.sendThrottled(q, i + 1, currentUserId); },
       error: (e: { status?: number; headers?: { get(name: string): string | null } }) => {
         const status = e?.status ?? 0;
+        // 401/403 = ABGELAUFENE ANMELDUNG, kein dauerhaft fehlerhafter Eintrag. Sie mussten hier
+        // heraus, weil der authInterceptor beim ersten 401 ausloggt: die folgenden Wiederholungen
+        // gingen dann token-los raus, kassierten ebenfalls 401 — und die ganze Warteschlange war
+        // verworfen. Ein Nutzer, der 30 Puzzles im Flugmodus gelöst hat, verlor sie alle ohne eine
+        // einzige Meldung, genau den stillen Verlust, den die Queue verhindern soll. Deshalb: liegen
+        // lassen und den Durchlauf SOFORT beenden (weitere Einträge scheitern ohnehin am selben
+        // Token); nach dem nächsten Login greift der reguläre Flush.
+        if (status === 401 || status === 403) {
+          this.flushing = false;
+          return;
+        }
         // FALLE: 429 (Rate-Limit) und 408 sind KEINE dauerhaften Fehler — würden sie wie 4xx
         // verworfen, löschte ein großer Nachlauf genau die Lösungen, die die Queue schützen soll.
         const permanent = status >= 400 && status < 500 && status !== 429 && status !== 408;

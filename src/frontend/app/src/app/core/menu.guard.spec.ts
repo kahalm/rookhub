@@ -6,12 +6,13 @@ import { AuthService } from './auth.service';
 import { MenuService } from './menu.service';
 
 describe('menuGuard', () => {
-  function configure(loggedIn: boolean, check$: Observable<boolean>) {
+  /** `visible` = die Keys, die der Nutzer laut Snapshot sehen darf (Ausweich-Ziel des Guards). */
+  function configure(loggedIn: boolean, check$: Observable<boolean>, visible: string[] = ['dashboard']) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
-        { provide: MenuService, useValue: { check: () => check$ } },
+        { provide: MenuService, useValue: { check: () => check$, isVisible: (k: string) => visible.includes(k) } },
       ],
     });
   }
@@ -33,6 +34,19 @@ describe('menuGuard', () => {
     const res = runSync() as UrlTree;
     expect(res instanceof UrlTree).toBeTrue();
     expect(res.toString()).toContain('/dashboard');
+  });
+
+  it('weicht auf /help aus, wenn das Dashboard selbst gesperrt ist', () => {
+    // FALLE: /dashboard trägt selbst menuGuard('dashboard'). Ist der Eintrag für den Nutzer
+    // gesperrt, schickte der Guard ihn auf eine Route, die derselbe Guard wieder ablehnt — die
+    // Navigation drehte endlos und der Nutzer landete auf KEINER Seite.
+    configure(true, of(false), ['help']);
+    expect((runSync() as UrlTree).toString()).toContain('/help');
+  });
+
+  it('landet auf /login, wenn gar nichts sichtbar ist (einzige guard-freie Seite)', () => {
+    configure(true, of(false), []);
+    expect((runSync() as UrlTree).toString()).toContain('/login');
   });
 
   it('leitet anonyme Nutzer ohne Sichtbarkeit auf /login um', () => {

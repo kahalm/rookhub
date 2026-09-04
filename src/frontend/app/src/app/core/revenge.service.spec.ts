@@ -25,26 +25,20 @@ describe('RevengeService', () => {
     req.flush({ created: true });
   });
 
-  it('refreshCount updates the unseen badge count', () => {
-    let count = 0;
-    service.unseenCount$.subscribe(c => count = c);
-
-    service.refreshCount();
-    httpMock.expectOne('/api/revenge/notifications/count').flush({ count: 3 });
-
-    expect(count).toBe(3);
+  it('getNotifications liest die eigene Liste', () => {
+    service.getNotifications().subscribe();
+    const req = httpMock.expectOne('/api/revenge/notifications');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 
-  it('markSeen resets the badge count to 0', () => {
-    let count = -1;
-    service.unseenCount$.subscribe(c => count = c);
-
-    service.refreshCount();
-    httpMock.expectOne('/api/revenge/notifications/count').flush({ count: 3 });
-    expect(count).toBe(3);
-
+  it('markSeen quittiert alle Benachrichtigungen', () => {
+    // Der frühere Badge-Zähler dieses Services wurde von NIEMANDEM abonniert (die Glocke bedient
+    // Benachrichtigungen und Admin-Nachrichten) — gepflegter, nie gelesener Zustand, der beim
+    // Nutzerwechsel zudem nicht zurückgesetzt wurde. Deshalb entfernt; hier bleibt der Aufruf.
     service.markSeen().subscribe();
-    httpMock.expectOne('/api/revenge/notifications/seen').flush({});
-    expect(count).toBe(0);
+    const req = httpMock.expectOne('/api/revenge/notifications/seen');
+    expect(req.request.method).toBe('POST');
+    req.flush({});
   });
 });

@@ -9,7 +9,11 @@ const BASE_DELAY_MS = 500;
 export const retryInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError(err => {
-      const retryable = err.status === 502 || err.status === 503 || err.status === 0;
+      // 504 gehört dazu: mit aktivem Service Worker kommt ein Netzfehler NIE als Status 0 an —
+      // der ngsw wandelt gescheiterte Passthrough-Fetches in synthetische 504-Antworten um (der
+      // connectivityInterceptor behandelt sie deshalb schon als Netzfehler). Ohne 504 griff der
+      // Retry genau in der installierten App nicht, für die er gedacht ist.
+      const retryable = err.status === 502 || err.status === 503 || err.status === 504 || err.status === 0;
       // Nur idempotente Methoden erneut versuchen — ein Retry von POST/PUT/DELETE
       // kann doppelte Seiteneffekte ausloesen (z.B. doppelte Puzzle-Attempts).
       const idempotent = req.method === 'GET' || req.method === 'HEAD';

@@ -29,12 +29,20 @@ export class MenuService {
     return this.http.get<string[]>('/api/menu').pipe(
       map(keys => {
         this.saveCache(keys);   // letzten guten Stand für Offline merken
+        this.lastFetchFailed = false;
         return new Set(keys);
       }),
       // Offline / Serverfehler: nicht das Menü leeren, sondern den gecachten Stand behalten.
-      catchError(() => of(this.loadCache())),
+      catchError(() => {
+        this.lastFetchFailed = true;
+        return of(this.loadCache());
+      }),
     );
   }
+
+  /** Ist der letzte Abruf gescheitert (offline / Server weg)? Dann ist ein leeres Ergebnis KEINE
+   *  Aussage über die Sichtbarkeit, sondern schlicht Unwissen — siehe <see cref="check"/>. */
+  private lastFetchFailed = false;
 
   /** Zuletzt gecachte Menü-Keys (leeres Set, wenn nie geladen / kaputt). */
   private loadCache(): Set<string> {
@@ -61,6 +69,14 @@ export class MenuService {
 
   /** Frische, autoritative Sichtbarkeitsprüfung für den Route-Guard. */
   check(key: string): Observable<boolean> {
-    return this.fetch().pipe(map(set => set.has(key)));
+    return this.fetch().pipe(map(set => {
+      if (set.has(key)) return true;
+      // FAIL-OPEN, und zwar echt: der `catchError` der Guards war toter Code, weil `fetch()` jeden
+      // Fehler selbst auffängt und den (womöglich LEEREN) Cache liefert — der Guard sah dann
+      // „nicht sichtbar" statt „unbekannt". Auf einem frischen Gerät ohne Cache sperrte das offline
+      // ausgerechnet die Modi aus, die offline funktionieren sollen (Puzzles, Kurse). Wissen wir es
+      // nicht, entscheidet die Serverseite — die sichert jeden Endpoint ohnehin selbst ab.
+      return this.lastFetchFailed && set.size === 0;
+    }));
   }
 }

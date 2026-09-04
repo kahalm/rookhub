@@ -68,6 +68,30 @@ describe('OfflineQueueService', () => {
     expect(svc.pendingCount()).toBe(0);
   });
 
+  it('verwirft NICHTS bei 401 und bricht den Durchlauf ab (abgelaufene Anmeldung)', () => {
+    // FALLE: 401 zählte als „dauerhaft 4xx" und der Eintrag wurde verworfen. Gleichzeitig loggt der
+    // authInterceptor beim ersten 401 aus — die folgenden Wiederholungen gingen token-los raus,
+    // kassierten ebenfalls 401 und flogen ebenfalls weg. Wer 30 Puzzles im Flugmodus gelöst hatte,
+    // verlor sie ALLE ohne eine einzige Meldung. Nach dem nächsten Login greift der reguläre Flush.
+    svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
+    svc.enqueue('POST', '/api/puzzles/6/attempt', { solved: true });
+    svc.flush();
+    http.expectOne('/api/puzzles/5/attempt')
+      .flush({ message: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(svc.pendingCount()).toBe(2);            // beide Lösungen bleiben gemerkt
+    http.expectNone('/api/puzzles/6/attempt');     // kein token-loser Nachlauf
+  });
+
+  it('verwirft NICHTS bei 403 (Rechte gerade weg)', () => {
+    svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
+    svc.flush();
+    http.expectOne('/api/puzzles/5/attempt')
+      .flush({ message: 'forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(svc.pendingCount()).toBe(1);
+  });
+
   it('verwirft NICHTS bei 429 (Rate-Limit) und pausiert den Nachlauf', () => {
     svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
     svc.enqueue('POST', '/api/puzzles/6/attempt', { solved: true });

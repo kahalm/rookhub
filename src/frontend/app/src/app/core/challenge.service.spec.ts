@@ -17,34 +17,21 @@ describe('ChallengeService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('starts with a badge count of 0', () => {
-    let count = -1;
-    service.incomingCount$.subscribe(c => count = c);
-    expect(count).toBe(0);
-  });
-
-  it('updates the badge count from the incoming list length', () => {
-    let count = 0;
-    service.incomingCount$.subscribe(c => count = c);
-
-    service.getIncoming().subscribe();
+  it('getIncoming() liest die eingehenden Challenges', () => {
+    // Der frühere Badge-Zähler dieses Services wurde nirgends abonniert (die Navbar-Glocke bedient
+    // Benachrichtigungen und Admin-Nachrichten) und beim Nutzerwechsel nicht zurückgesetzt —
+    // deshalb entfernt. Geprüft wird jetzt der Abruf selbst.
+    let received: IncomingChallenge[] = [];
+    service.getIncoming().subscribe(list => received = list);
     const incoming: IncomingChallenge[] = [
       { id: 1, fromUserId: 2, fromUsername: 'a', fromDisplayName: null, puzzleId: 5, source: 'Standard', rating: 1500, themes: null, title: null, createdAt: '' },
       { id: 2, fromUserId: 3, fromUsername: 'b', fromDisplayName: null, puzzleId: 6, source: 'Book', rating: 1600, themes: null, title: 'Kap. 1', createdAt: '' },
     ];
-    httpMock.expectOne('/api/challenges/incoming').flush(incoming);
+    const req = httpMock.expectOne('/api/challenges/incoming');
+    expect(req.request.method).toBe('GET');
+    req.flush(incoming);
 
-    expect(count).toBe(2);
-  });
-
-  it('refreshCount() reads the dedicated count endpoint', () => {
-    let count = 0;
-    service.incomingCount$.subscribe(c => count = c);
-
-    service.refreshCount();
-    httpMock.expectOne('/api/challenges/incoming/count').flush({ count: 4 });
-
-    expect(count).toBe(4);
+    expect(received.length).toBe(2);
   });
 
   it('sendMany() posts toUserIds + puzzleId + source', () => {

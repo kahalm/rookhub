@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 
 /** Quelle des Puzzles einer Challenge — bestimmt Tabelle (Backend) + Deep-Link beim Empfänger. */
 export type PuzzleChallengeSource = 'standard' | 'book';
@@ -40,15 +40,17 @@ export interface ChallengeBatchResult {
 }
 
 /**
- * Puzzle-Challenges zwischen Freunden („schick dieses Puzzle an XY"). Hält den Zähler offener
- * eingehender Challenges reaktiv für das Navbar-Badge.
+ * Puzzle-Challenges zwischen Freunden („schick dieses Puzzle an XY").
+ *
+ * KEIN eigener Badge-Zähler: es gab hier ein BehaviorSubject „fürs Navbar-Badge" samt
+ * `refreshCount()`, das niemand abonnierte und niemand aufrief (die Glocke bedient die
+ * Benachrichtigungen und die Admin-Nachrichten). Gepflegter, nie gelesener Zustand ist eine Falle —
+ * er erbte auch den fehlenden Rücksetzer beim Nutzerwechsel und hätte dem nächsten Nutzer des
+ * Geräts fremde Zahlen gezeigt. Wer ein Badge will, bindet `GET /api/challenges/incoming/count`
+ * dort an, wo es angezeigt wird, und setzt es im Auth-Wechsel zurück.
  */
 @Injectable({ providedIn: 'root' })
 export class ChallengeService {
-  private readonly incomingCount = new BehaviorSubject<number>(0);
-  /** Anzahl offener eingehender Challenges (Navbar-Badge). */
-  readonly incomingCount$ = this.incomingCount.asObservable();
-
   constructor(private http: HttpClient) {}
 
   /** Schickt ein Puzzle als Challenge an einen oder mehrere Freunde auf einmal. */
@@ -57,8 +59,7 @@ export class ChallengeService {
   }
 
   getIncoming(): Observable<IncomingChallenge[]> {
-    return this.http.get<IncomingChallenge[]>('/api/challenges/incoming')
-      .pipe(tap(list => this.incomingCount.next(list.length)));
+    return this.http.get<IncomingChallenge[]>('/api/challenges/incoming');
   }
 
   getOutgoing(): Observable<OutgoingChallenge[]> {
@@ -73,13 +74,5 @@ export class ChallengeService {
 
   resolve(id: number, solved: boolean, timeSpentSeconds: number): Observable<unknown> {
     return this.http.post(`/api/challenges/${id}/resolve`, { solved, timeSpentSeconds });
-  }
-
-  /** Lädt den Badge-Zähler neu (leise; Fehler werden ignoriert). */
-  refreshCount(): void {
-    this.http.get<{ count: number }>('/api/challenges/incoming/count').subscribe({
-      next: r => this.incomingCount.next(r.count),
-      error: () => {}
-    });
   }
 }

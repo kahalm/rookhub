@@ -60,7 +60,7 @@ export class OfflineService {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* ignore */ }
   }
 
-  /** Alle localStorage-Keys, die zu Offline-Caches gehören. */
+  /** Alle localStorage-Keys, die zu Offline-Caches gehören (Größenanzeige + „Cache leeren"). */
   private cacheKeys(): string[] {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -70,6 +70,36 @@ export class OfflineService {
         || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX)) keys.push(k);
     }
     return keys;
+  }
+
+  /** Geräte-lokale Nutzer-SPUREN, die beim Abmelden verschwinden müssen — mehr als die Caches oben.
+   *
+   *  Hintergrund: `logout()` verspricht, dass nichts für den NÄCHSTEN Nutzer desselben Geräts
+   *  sichtbar bleibt. Die Endless-Schlüssel standen nicht auf der Liste, und der Endless-Modus
+   *  ÜBERTRÄGT lokale Läufe beim ersten Öffnen ins Konto (Migration von localStorage zum Server):
+   *  Nutzer B erbte damit auf einem geteilten Gerät die Laufhistorie und den Highscore von A — in
+   *  seiner Statistik und in der Bestenliste. Ebenso die Kalkulations-Notizen und der lokale
+   *  Kursfortschritt (Freitext bzw. fremde Leistung) und der Menü-Snapshot (fremde Sichtbarkeit).
+   *
+   *  Bewusst als PRÄFIX-Liste: eine Handliste einzelner Namen ist genau so gealtert. */
+  private static readonly LocalTracePrefixes = [
+    'rookhub_endless_',            // Konfiguration, Historie, Highscore, laufender Lauf, Ketten-Seed …
+    'rookhub_calc_local_',         // Analysebäume/Bewertungen ohne Konto
+    'rookhub_course_local_solved_',// lokal gelöste Kurs-Linien
+    'rookhub_solve_modes',         // Spielweise je Bereich
+    'rookhub_menu_keys',           // Menü-Sichtbarkeit des vorigen Nutzers
+    'rookhub_puzzle_session',      // anonyme Puzzle-Sitzung
+  ];
+
+  /** Keys, die beim Abmelden gelöscht werden: Offline-Caches UND die lokalen Nutzer-Spuren. */
+  private logoutKeys(): string[] {
+    const keys = new Set(this.cacheKeys());
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (OfflineService.LocalTracePrefixes.some(p => k.startsWith(p))) keys.add(k);
+    }
+    return [...keys];
   }
 
   /** Gesamtgröße der Offline-Caches in Bytes (UTF-16-Annäherung: 2 Byte/Zeichen). */
@@ -95,6 +125,15 @@ export class OfflineService {
   /** Leert alle Offline-Caches (Einstellungen bleiben erhalten). */
   clearAll(): void {
     for (const k of this.cacheKeys()) {
+      try { localStorage.removeItem(k); } catch { /* ignore */ }
+    }
+  }
+
+  /** Beim ABMELDEN aufräumen: Caches PLUS die lokalen Nutzer-Spuren (siehe <c>logoutKeys</c>).
+   *  Getrennt von <see cref="clearAll"/>, weil „Cache leeren" im Profil nur den Platz freigeben
+   *  soll — nicht den laufenden Endless-Lauf oder die Kalkulations-Notizen des ANGEMELDETEN Nutzers. */
+  clearOnLogout(): void {
+    for (const k of this.logoutKeys()) {
       try { localStorage.removeItem(k); } catch { /* ignore */ }
     }
   }

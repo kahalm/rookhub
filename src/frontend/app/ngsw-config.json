@@ -27,6 +27,17 @@
       }
     },
     {
+      "name": "board",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/piece/cburnett/**",
+          "/board/**"
+        ]
+      }
+    },
+    {
       "name": "assets",
       "installMode": "lazy",
       "updateMode": "prefetch",
@@ -34,7 +45,8 @@
         "files": [
           "/icons/**",
           "/media/**",
-          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)",
+          "/piece/**"
         ]
       }
     },
