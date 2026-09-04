@@ -261,6 +261,13 @@ Vollscan über `src/api`, `src/frontend`, Hosted Services, Infrastruktur und Tes
   `compose.*` weiterhin den `KIBANA_BIND`-Schalter (für Stacks, die ES/Kibana selbst mitbringen) +
   einen Hinweis auf den echten Ort. **Rest-Risiko:** Ziel-Adress-Bindung ist KEIN Quell-Filter —
   wer 10.24.13.6 routen kann, kommt durch. Härter ginge nur per `DOCKER-USER`-Kette.
+  **Das VPN-Netz 10.8.0.0/24 ist damit automatisch mit abgedeckt** (Nachfrage 2026-09-04): es
+  terminiert NICHT auf diesem Host (kein wg/tun-Interface), sondern hinter dem Gateway —
+  `ip route get 10.8.0.5` ⇒ `via 10.24.12.12 dev ens18 src 10.24.13.6`. Pakete solcher Clients
+  kommen also auf ens18 MIT ZIEL 10.24.13.6 an und treffen den bestehenden Listener. Wer hier
+  weiter einschränkt (z. B. auf 127.0.0.1), sperrt VPN-Clients mit aus. Bedingung bleibt: die
+  Clients müssen `http://10.24.13.6:5601` ansprechen — 192.168.1.2 (zweite Adresse derselben
+  Netzkarte) ist bewusst zu.
 
 ### Folgepunkte aus derselben Sichtung (Log-Stack, NICHT angefasst)
 
