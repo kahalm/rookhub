@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.394.2", date: "2026-09-04", changes: [
+    { en: "Operations only: the log viewer, which runs without a login, no longer listens on every network interface of the server — only on the host itself and on the local network address it is meant to be used from. Nothing changes for anyone using it; a second address on the same network card is now closed.", de: "Nur Betrieb: Die Log-Ansicht, die ohne Login läuft, lauscht nicht mehr auf allen Netzwerk-Schnittstellen des Servers — nur noch auf dem Host selbst und auf der LAN-Adresse, über die sie genutzt werden soll. Für die Nutzung ändert sich nichts; eine zweite Adresse derselben Netzkarte ist jetzt zu." },
+  ] },
   { version: "0.394.1", date: "2026-09-04", changes: [
     { en: "Documentation only: the full code review of the last two days is recorded in the project's task list — seven waves, the versions they shipped in, and the one finding deliberately left as it is (the log viewer is reachable without a login on the local network; a single setting now restricts it to the host, and that choice is the operator's).", de: "Nur Dokumentation: Der vollständige Code-Review der letzten zwei Tage steht jetzt in der Aufgabenliste des Projekts — sieben Wellen, die jeweiligen Versionen und der eine Fund, der bewusst so bleibt (die Log-Ansicht ist im lokalen Netz ohne Login erreichbar; eine Einstellung beschränkt sie jetzt auf den Host, die Entscheidung liegt beim Betreiber)." },
   ] },

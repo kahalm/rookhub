@@ -252,12 +252,28 @@ Vollscan über `src/api`, `src/frontend`, Hosted Services, Infrastruktur und Tes
 
 ### Bewusste Entscheidungen (kein Fix)
 
-- [ ] **Kibana ist ohne Login auf allen Interfaces veröffentlicht** (`compose.vpn.yml`, Port 5601,
-  `xpack.security.enabled=false`). Wer den Host erreicht, liest den kompletten Log-Index
-  (Request-Pfade mit Ids, Nutzernamen, IPs). NICHT umgestellt, weil der eigene LAN-Zugriff daran
-  hängt (`KIBANA_URL=http://10.24.13.6:5601`). Neu vorbereitet: `KIBANA_BIND=127.0.0.1` in der
-  `.env` beschränkt es auf den Host (Zugang dann per `ssh -L 5601:127.0.0.1:5601 <host>`).
-  Entscheidung liegt beim Betreiber.
+- [x] **Kibana ohne Login auf allen Interfaces** → **entschieden + umgesetzt 2026-09-04**: Der
+  Port lauscht jetzt nur noch auf `127.0.0.1` und `10.24.13.6` (LAN-Adresse von ens18; Maske /23 ⇒
+  das ganze 10.24.12.0–10.24.13.255-Netz erreicht Kibana wie gewünscht). Die zweite Adresse
+  derselben Netzkarte (192.168.1.2) ist damit zu — verifiziert per `ss -ltn` und curl auf alle drei
+  Adressen. **Geändert wurde `/opt/stacks/rookhub-es/compose.yaml`** (Backup daneben), NICHT die
+  Repo-Datei: Prod und Dev teilen sich ES+Kibana längst aus diesem eigenen Stack. Im Repo tragen
+  `compose.*` weiterhin den `KIBANA_BIND`-Schalter (für Stacks, die ES/Kibana selbst mitbringen) +
+  einen Hinweis auf den echten Ort. **Rest-Risiko:** Ziel-Adress-Bindung ist KEIN Quell-Filter —
+  wer 10.24.13.6 routen kann, kommt durch. Härter ginge nur per `DOCKER-USER`-Kette.
+
+### Folgepunkte aus derselben Sichtung (Log-Stack, NICHT angefasst)
+
+- [ ] **Elasticsearch :9200 hängt ohne Auth auf 0.0.0.0** (`/opt/stacks/rookhub-es/compose.yaml`) —
+  das ist die größere Öffnung als Kibana: ohne Security darf jeder Leser auch schreiben und Indizes
+  löschen. Dieselbe Zwei-Adress-Bindung wäre möglich, braucht aber DREI Adressen: 12 Consumer nutzen
+  `http://10.24.13.6:9200`, der Healthcheck `localhost`, und der **log-watcher** kommt über
+  `host.docker.internal` = **172.17.0.1** (docker0) — ohne diese dritte Bindung verliert er ES
+  still. Alternative: log-watcher ins Netz `rookhub-es` hängen und dann `elasticsearch:9200` nutzen.
+- [ ] **log-watcher zeigt auf einen Port, auf dem nichts lauscht**: `ES_URL=http://10.24.13.6:9202`
+  (aus `.env`, im Container bestätigt), der ES-Stack publisht aber **9200**. `ss -ltn` kennt kein
+  9202. Prüfen, ob die ES-gestützten Heuristiken deshalb seit dem ES-Umzug blind laufen (die
+  Disk-Heuristik meldet sich weiterhin, die dürfte aus einer anderen Quelle kommen).
 - Der Linien-Schlüssel wird jetzt auf BEIDEN Wegen gesucht (textuell + brett-kanonisch). Ein
   Aufräumen der Alt-Karten (Phantom-Karten aus der Zeit vor v0.394.0) ist nicht vorgesehen — sie
   stören nicht, der Trainer zeigt sie ohnehin nicht.

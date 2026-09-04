@@ -195,6 +195,9 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - xpack.security.enabled=false
     ports:
+      # HINWEIS: Auf dem Deploy-Host laufen Elasticsearch UND Kibana inzwischen aus einem EIGENEN
+      # Stack (`/opt/stacks/rookhub-es`, von Prod + Dev geteilt) — eine Änderung HIER wirkt dort
+      # nicht. Die Bindung dieses Blocks gilt für einen Stack, der ES/Kibana selbst mitbringt.
       # Kibana läuft mit ABGESCHALTETER Security (xpack.security.enabled=false) und veröffentlicht
       # hier standardmäßig auf ALLEN Host-Interfaces: wer den Host auf diesem Port erreicht, liest
       # ohne Login den kompletten Log-Index (Request-Pfade mit Ids, Nutzernamen, IP-Adressen,
