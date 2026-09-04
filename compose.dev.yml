@@ -169,7 +169,11 @@ services:
       - cluster.name=rookhub-logs
       - cluster.routing.allocation.disk.threshold_enabled=false
     ports:
-      - "${ES_PORT:-9200}:9200"
+      # Elasticsearch laeuft ohne Security: wer den Port erreicht, darf LESEN UND SCHREIBEN
+      # (Indizes loeschen inbegriffen). ES_BIND waehlt die Adresse — Vorgabe 0.0.0.0 (bisheriges
+      # Verhalten), sinnvoll ist die LAN-Adresse des Hosts bzw. 127.0.0.1. Container erreichen den
+      # Host zusaetzlich ueber host.docker.internal (host-gateway = docker0-Gateway).
+      - "${ES_BIND:-0.0.0.0}:${ES_PORT:-9200}:9200"
     volumes:
       - es-data:/usr/share/elasticsearch/data
     healthcheck:

@@ -271,16 +271,22 @@ Vollscan über `src/api`, `src/frontend`, Hosted Services, Infrastruktur und Tes
 
 ### Folgepunkte aus derselben Sichtung (Log-Stack, NICHT angefasst)
 
-- [ ] **Elasticsearch :9200 hängt ohne Auth auf 0.0.0.0** (`/opt/stacks/rookhub-es/compose.yaml`) —
-  das ist die größere Öffnung als Kibana: ohne Security darf jeder Leser auch schreiben und Indizes
-  löschen. Dieselbe Zwei-Adress-Bindung wäre möglich, braucht aber DREI Adressen: 12 Consumer nutzen
-  `http://10.24.13.6:9200`, der Healthcheck `localhost`, und der **log-watcher** kommt über
-  `host.docker.internal` = **172.17.0.1** (docker0) — ohne diese dritte Bindung verliert er ES
-  still. Alternative: log-watcher ins Netz `rookhub-es` hängen und dann `elasticsearch:9200` nutzen.
-- [ ] **log-watcher zeigt auf einen Port, auf dem nichts lauscht**: `ES_URL=http://10.24.13.6:9202`
-  (aus `.env`, im Container bestätigt), der ES-Stack publisht aber **9200**. `ss -ltn` kennt kein
-  9202. Prüfen, ob die ES-gestützten Heuristiken deshalb seit dem ES-Umzug blind laufen (die
-  Disk-Heuristik meldet sich weiterhin, die dürfte aus einer anderen Quelle kommen).
+- [x] **Elasticsearch :9200 ohne Auth auf 0.0.0.0** → **erledigt 2026-09-04**: lauscht jetzt auf
+  `127.0.0.1`, `172.17.0.1` (docker0-Gateway = `host.docker.internal` für Container) und
+  `10.24.13.6` (LAN, die URL aller Consumer + das geroutete VPN-Netz). `192.168.1.2` ist zu.
+  Geändert in `/opt/stacks/rookhub-es/compose.yaml` (Backup daneben), ES neu erzeugt.
+  **Verifiziert nach dem Neustart:** alle drei Adressen antworten, 192.168.1.2 nicht; aus den
+  Containern erreichen `rookhub-api` und `log-watcher` ES über die LAN-Adresse UND über
+  `host.docker.internal`; Kibana 200; die drei Log-Datenströme (rookhub prod/dev, crawler) haben
+  41 s nach dem Neustart wieder frische Dokumente. In den Repo-Vorlagen gibt es analog zu
+  `KIBANA_BIND` jetzt `ES_BIND` (Vorgabe 0.0.0.0 = unverändert).
+- [x] **log-watcher-`ES_URL` zeigte auf Port 9202** → **korrigiert 2026-09-04, war aber KEIN
+  Ausfall**: die Variable ist nur der Vorgabewert für Ziele ohne eigenes `es_url`, und alle neun
+  Ziele in `/opt/stacks/log-watcher-schach/config.yaml` tragen `http://10.24.13.6:9200`. Der
+  Watcher lief also durch (Fenster-Zähler in den Logs belegen es) — der 9202-Rest aus der Zeit des
+  stack-eigenen ES war eine Falle für das nächste hinzugefügte Ziel. `.env` steht jetzt auf 9200,
+  die irreführenden Kommentare in `.env` und `compose.yaml` sind richtiggestellt (Backup daneben).
+  Wirkt beim nächsten Container-Neustart; ein Neustart nur dafür war nicht nötig.
 - Der Linien-Schlüssel wird jetzt auf BEIDEN Wegen gesucht (textuell + brett-kanonisch). Ein
   Aufräumen der Alt-Karten (Phantom-Karten aus der Zeit vor v0.394.0) ist nicht vorgesehen — sie
   stören nicht, der Trainer zeigt sie ohnehin nicht.

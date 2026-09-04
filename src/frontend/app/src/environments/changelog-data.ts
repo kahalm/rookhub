@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.394.4", date: "2026-09-04", changes: [
+    { en: "Operations only: the log database, which runs without a password, no longer listens on every network interface of the server — only on the three addresses its consumers actually use. Log collection was verified to continue afterwards. Nothing changes in the app.", de: "Nur Betrieb: Die Log-Datenbank, die ohne Passwort läuft, lauscht nicht mehr auf allen Netzwerk-Schnittstellen des Servers — nur noch auf den drei Adressen, über die ihre Nutzer sie ansprechen. Dass die Log-Sammlung danach weiterläuft, wurde geprüft. In der App ändert sich nichts." },
+  ] },
   { version: "0.394.3", date: "2026-09-04", changes: [
     { en: "Operations note only: recorded that the VPN network reaches the log viewer through the local address as well, so nobody narrows the setting later and locks those clients out.", de: "Nur eine Betriebs-Notiz: festgehalten, dass das VPN-Netz die Log-Ansicht über die LAN-Adresse mit erreicht — damit die Einstellung später nicht verengt wird und diese Clients aussperrt." },
   ] },
