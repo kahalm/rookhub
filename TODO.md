@@ -235,6 +235,33 @@ leere Karte auf /analysis).
   Rest ⋮; HelpHint statt Absatz-Stapeln; Container an `--page-max-width`; neue Dashboard-Kacheln
   nicht in `DEFAULT_VISIBLE`.
 
+## Code-Review 2026-09-03/04 (rookhub komplett, 7 Bereiche — GEFIXT in v0.388.0–0.394.0)
+
+Vollscan über `src/api`, `src/frontend`, Hosted Services, Infrastruktur und Testnetz (7 Berichte,
+88 Funde). Abgearbeitet in sieben Wellen, jede mit Regressionstests und eigener Version:
+
+| Welle | Version | Bereich |
+|-------|---------|---------|
+| 1 | 0.388.0 | Sicherheit + Robustheit (Auth, Token, Analyse-Worker) |
+| 2 | 0.389.0 | API-Stabilität, Zugriff, Drosseln |
+| 3 | 0.390.0 | Frontend: Offline, Abmelden, Aussperrungen |
+| 4 | 0.391.0 | Löse-Logik (Zeitmessung, Endless, Mausrutscher) |
+| 5 | 0.392.0 | Domänen-Dienste (Reihenfolge, Zeit-Log, Lichess-Sync) |
+| 6 | 0.393.0 | Deploy-Dateien + Testnetz (DSGVO-Löschung, Compose-Drift) |
+| 7 | 0.394.0 | Restfunde (Linien-Schlüssel, Extension-Scope) |
+
+### Bewusste Entscheidungen (kein Fix)
+
+- [ ] **Kibana ist ohne Login auf allen Interfaces veröffentlicht** (`compose.vpn.yml`, Port 5601,
+  `xpack.security.enabled=false`). Wer den Host erreicht, liest den kompletten Log-Index
+  (Request-Pfade mit Ids, Nutzernamen, IPs). NICHT umgestellt, weil der eigene LAN-Zugriff daran
+  hängt (`KIBANA_URL=http://10.24.13.6:5601`). Neu vorbereitet: `KIBANA_BIND=127.0.0.1` in der
+  `.env` beschränkt es auf den Host (Zugang dann per `ssh -L 5601:127.0.0.1:5601 <host>`).
+  Entscheidung liegt beim Betreiber.
+- Der Linien-Schlüssel wird jetzt auf BEIDEN Wegen gesucht (textuell + brett-kanonisch). Ein
+  Aufräumen der Alt-Karten (Phantom-Karten aus der Zeit vor v0.394.0) ist nicht vorgesehen — sie
+  stören nicht, der Trainer zeigt sie ohnehin nicht.
+
 ## Code-Review 2026-08-07 (Stack-weit, alle 6 Repos — GEFIXT in v0.340.0)
 
 Multi-Agent-Review über rookhub (api+frontend), chessresults_crawler, piratechess_docker,
