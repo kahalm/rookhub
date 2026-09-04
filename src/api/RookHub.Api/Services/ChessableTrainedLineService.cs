@@ -1,3 +1,4 @@
+using Chess;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using RookHub.Api.Data;
@@ -81,20 +82,37 @@ public class ChessableTrainedLineService
 
         foreach (var repId in reps)
         {
+            // NUR Dateien laden, die den Marker überhaupt enthalten. Vorher gingen die vollständigen
+            // LONGTEXTs ALLER Dateien des Repertoires über die Leitung (ein importierter Kurs = mehrere
+            // MB), je gemeldeter Linie — obwohl höchstens eine Datei den oid trägt. Der Filter läuft
+            // serverseitig (`LOCATE`), der Transfer entfällt für alles Übrige.
+            var marker = $"[ChessableOid \"{oid}\"]";
             var contents = await _db.RepertoireFiles
-                .Where(f => f.RepertoireId == repId)
+                .Where(f => f.RepertoireId == repId && f.PgnContent.Contains(marker))
                 .Select(f => f.PgnContent)
                 .ToListAsync(ct);
 
             foreach (var content in contents)
             {
-                var sans = MainlineSansForOid(content, oid);
+                var (sans, startFen) = MainlineForOid(content, oid);
                 if (sans is null || sans.Count == 0) continue;
-                var lineKey = LineKeyFromSans(sans);
+                // ZWEI Schlüssel-Kandidaten: der textuell normalisierte (bisheriges Verhalten, hält
+                // bestehende Karten auffindbar) und der über das Brett kanonisierte (die Schreibweise,
+                // die chess.js im Frontend erzeugt — nur der trifft eine Linie mit lang-algebraischen
+                // Tokens wie „Nf3e5"). Gesucht wird unter beiden; ANGELEGT wird unter dem
+                // brett-kanonischen, weil genau den der Trainer später berechnet.
+                var textKey = LineKeyFromSans(sans);
+                var boardSans = BoardCanonicalSans(sans, startFen);
+                var boardKey = boardSans is null ? null : LineKeyFromSans(boardSans);
+                var keys = boardKey is null || boardKey == textKey
+                    ? new[] { textKey }
+                    : new[] { boardKey, textKey };
 
                 var card = await _db.RepertoireCardStates.AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repId
-                        && c.CardKey == lineKey, ct);
+                    .Where(c => c.UserId == userId && c.RepertoireId == repId && keys.Contains(c.CardKey))
+                    .OrderByDescending(c => c.CardKey == keys[0])   // vorhandene Karte gewinnt
+                    .FirstOrDefaultAsync(ct);
+                var lineKey = card?.CardKey ?? boardKey ?? textKey;
 
                 // Neu/nie gelernt → „einmal gelernt" (Stufe 1). Fällig → +1 Stufe. Sonst: Finger weg
                 // (nicht fällige Linien nicht doppelt strecken); pausierte respektieren die Pause.
@@ -117,7 +135,6 @@ public class ChessableTrainedLineService
 
     // ===== PGN: Spiel mit passender ChessableOid finden + Mainline-SANs ziehen =====
 
-    private static readonly Regex EventSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
     private static readonly Regex CommentRegex = new(@"\{[^}]*\}", RegexOptions.Compiled);
     private static readonly Regex NagRegex = new(@"\$\d+", RegexOptions.Compiled);
     private static readonly Regex MoveNumberRegex = new(@"^\d+\.+$", RegexOptions.Compiled);
@@ -127,16 +144,52 @@ public class ChessableTrainedLineService
     /// Klammern werden übersprungen (die SR-Linie ist die Hauptlinie des Spiels), Kommentare/NAGs/
     /// Zugnummern entfernt, Suffix-Annotationen gestrippt (Spiegel von <c>normSan</c>).</summary>
     internal static List<string>? MainlineSansForOid(string? pgn, string oid)
+        => MainlineForOid(pgn, oid).Sans;
+
+    /// <summary>Wie <see cref="MainlineSansForOid"/>, gibt aber auch die Start-FEN des Abschnitts
+    /// mit — die braucht die Brett-Kanonisierung (<see cref="BoardCanonicalSans"/>).</summary>
+    internal static (List<string>? Sans, string? StartFen) MainlineForOid(string? pgn, string oid)
     {
-        if (string.IsNullOrWhiteSpace(pgn)) return null;
+        if (string.IsNullOrWhiteSpace(pgn)) return (null, null);
         var marker = $"[ChessableOid \"{oid}\"]";
-        foreach (var section in EventSplit.Split(pgn))
-        {
-            if (!section.Contains(marker, StringComparison.Ordinal)) continue;
-            return MainlineSans(section);
-        }
-        return null;
+        // NUR das Fenster um den Marker schneiden, statt das GANZE PGN in alle [Event-Abschnitte zu
+        // zerlegen: ein importierter Chessable-Kurs bringt mehrere MB und tausende Linien mit, und
+        // die Extension meldet JEDE trainierte Linie einzeln — der Regex-Split erzeugte je Meldung
+        // tausende Strings, um genau einen Abschnitt zu benutzen.
+        var at = pgn.IndexOf(marker, StringComparison.Ordinal);
+        if (at < 0) return (null, null);
+        var start = LastEventHeaderBefore(pgn, at);
+        var next = NextEventHeaderFrom(pgn, at);
+        var section = next < 0 ? pgn[start..] : pgn[start..next];
+        return (MainlineSans(section), StartFenOf(section));
     }
+
+    /// <summary>Index des letzten <c>[Event …</c>-Headers VOR <paramref name="before"/> (0, wenn keiner).</summary>
+    private static int LastEventHeaderBefore(string pgn, int before)
+    {
+        for (var i = pgn.LastIndexOf("[Event", before, StringComparison.Ordinal); i >= 0;
+             i = i == 0 ? -1 : pgn.LastIndexOf("[Event", i - 1, StringComparison.Ordinal))
+        {
+            if (IsEventHeaderAt(pgn, i)) return i;
+        }
+        return 0;
+    }
+
+    /// <summary>Index des nächsten <c>[Event …</c>-Headers ab <paramref name="from"/> (-1, wenn keiner).</summary>
+    private static int NextEventHeaderFrom(string pgn, int from)
+    {
+        for (var i = pgn.IndexOf("[Event", from, StringComparison.Ordinal); i >= 0;
+             i = pgn.IndexOf("[Event", i + 1, StringComparison.Ordinal))
+        {
+            if (IsEventHeaderAt(pgn, i)) return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Wie der frühere Split-Ausdruck <c>(?=\[Event\s)</c>: nach „[Event" MUSS ein
+    /// Leerzeichen folgen — sonst wäre „[EventDate" ein Abschnittsanfang.</summary>
+    private static bool IsEventHeaderAt(string pgn, int i)
+        => i + 6 < pgn.Length && char.IsWhiteSpace(pgn[i + 6]);
 
     internal static List<string> MainlineSans(string section)
     {
@@ -172,6 +225,79 @@ public class ChessableTrainedLineService
             depth = Math.Max(0, depth - closes);
         }
         return sans;
+    }
+
+    private static readonly Regex FenHeaderRegex =
+        new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
+    // Lange algebraische Notation: [Figur]<von><-|x><nach>[=P]  („e2e4", „Nf3xe5", „Kh8-g8")
+    private static readonly Regex LongAlgRegex =
+        new(@"^([KQRBN]?)([a-h][1-8])[-x]?([a-h][1-8])=?([QRBN])?$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Dieselbe Zugfolge, aber in der SAN-Schreibweise, die auch <b>chess.js</b> im Frontend liefert
+    /// — die Züge werden dazu auf einem Brett NACHGESPIELT und die vom Brett erzeugte SAN genommen.
+    /// <para>Grund: der Linien-Schlüssel entsteht im Frontend aus <c>chess.history()</c>, hier aus
+    /// ROHEN PGN-Tokens. <see cref="CanonicalSan"/> gleicht nur TEXTUELL an (Suffixe, „0-0", „c8Q");
+    /// jede Schreibweise, die erst über die STELLUNG auflösbar ist, driftet weiter: „Nf3e5" (lang
+    /// algebraisch) bleibt „Nf3e5", chess.js schreibt „Nxe5" — anderer Hash, die Karte des Trainers
+    /// wird nicht gefunden, und der Fortschritt rückt still nicht vor, während eine unerreichbare
+    /// Phantom-Karte entsteht. Dass solche Tokens in diesen PGNs vorkommen, belegt der Reparatur-Code
+    /// des Frontends (<c>repertoire-tree.util.ts</c>), der genau dafür existiert.</para>
+    /// <para><c>null</c>, wenn die Stellung oder ein Zug nicht auflösbar ist (dann bleibt es beim
+    /// textuellen Schlüssel) — bewusst KEIN Teilergebnis: ein kürzeres Präfix wäre eine andere Linie.</para>
+    /// </summary>
+    internal static List<string>? BoardCanonicalSans(IReadOnlyList<string> rawSans, string? startFen = null)
+    {
+        if (rawSans.Count == 0) return null;
+        ChessBoard board;
+        try
+        {
+            board = string.IsNullOrWhiteSpace(startFen) ? new ChessBoard() : ChessBoard.LoadFromFen(startFen);
+        }
+        catch { return null; }
+
+        var sans = new List<string>(rawSans.Count);
+        foreach (var raw in rawSans)
+        {
+            var token = CanonicalSan(raw);
+            if (token.Length == 0) return null;
+            Move? found = null;
+            foreach (var m in board.Moves(generateSan: true))
+            {
+                if (Matches(m, token)) { found = m; break; }
+            }
+            if (found is null) return null;
+            sans.Add(string.IsNullOrEmpty(found.San) ? token : CanonicalSan(found.San));
+            try { board.Move(found); } catch { return null; }
+        }
+        return sans;
+    }
+
+    /// <summary>Passt ein legaler Zug zu diesem Token? Erlaubt die kurze SAN des Bretts, reine
+    /// UCI-Form („e2e4") und lange algebraische Notation mit Figur/Trennzeichen („Nf3xe5").</summary>
+    private static bool Matches(Move m, string token)
+    {
+        if (!string.IsNullOrEmpty(m.San) && CanonicalSan(m.San) == token) return true;
+        var uci = m.OriginalPosition.ToString() + m.NewPosition.ToString();
+        var promo = m.Parameter?.ShortStr;
+        var promoChar = !string.IsNullOrEmpty(promo) && promo.StartsWith('=') && promo.Length >= 2
+            ? char.ToLowerInvariant(promo[1]) : '\0';
+        if (promoChar != '\0') uci += promoChar;
+        if (string.Equals(uci, token, StringComparison.OrdinalIgnoreCase)) return true;
+
+        var la = LongAlgRegex.Match(token);
+        if (!la.Success) return false;
+        var candidate = la.Groups[2].Value + la.Groups[3].Value;
+        if (la.Groups[4].Success) candidate += char.ToLowerInvariant(la.Groups[4].Value[0]);
+        return string.Equals(candidate, uci, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Start-FEN eines PGN-Abschnitts (<c>[FEN "…"]</c>), sonst <c>null</c> = Grundstellung.</summary>
+    internal static string? StartFenOf(string section)
+    {
+        var m = FenHeaderRegex.Match(section ?? string.Empty);
+        var fen = m.Success ? m.Groups[1].Value.Trim() : null;
+        return string.IsNullOrWhiteSpace(fen) ? null : fen;
     }
 
     private static bool IsMoveToken(string token)

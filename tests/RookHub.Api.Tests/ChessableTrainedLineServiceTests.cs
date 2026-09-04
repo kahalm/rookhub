@@ -48,6 +48,110 @@ public class ChessableTrainedLineServiceTests : IDisposable
         Assert.Equal(expected, ChessableTrainedLineService.LineKeyFromSans(sans));
     }
 
+    // ===== Abschnitts-Fenster: nur die Linie mit dem oid, nicht das ganze PGN ================
+
+    [Fact]
+    public void MainlineForOid_PicksExactlyTheMarkedSection_InAMultiGamePgn()
+    {
+        // Statt das ganze PGN in alle [Event-Abschnitte zu zerlegen, wird das Fenster um den Marker
+        // geschnitten. Das Ergebnis muss identisch sein — auch für die ERSTE und die LETZTE Linie,
+        // und die Nachbar-Züge dürfen nicht mit hineinrutschen.
+        const string pgn = """
+[Event "Kurs"]
+[White "Erste"]
+[ChessableOid "1"]
+
+1. e4 e5 *
+
+[Event "Kurs"]
+[White "Mitte"]
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[ChessableOid "2"]
+
+1. d4 d5 2. c4 *
+
+[Event "Kurs"]
+[White "Letzte"]
+[ChessableOid "3"]
+
+1. Nf3 Nf6 *
+""";
+        Assert.Equal(new[] { "e4", "e5" }, ChessableTrainedLineService.MainlineSansForOid(pgn, "1"));
+        Assert.Equal(new[] { "d4", "d5", "c4" }, ChessableTrainedLineService.MainlineSansForOid(pgn, "2"));
+        Assert.Equal(new[] { "Nf3", "Nf6" }, ChessableTrainedLineService.MainlineSansForOid(pgn, "3"));
+        Assert.Null(ChessableTrainedLineService.MainlineSansForOid(pgn, "999"));
+
+        // Die Start-FEN gehört zum FENSTER, nicht zum Nachbarn: nur Linie 2 hat einen FEN-Header.
+        Assert.Null(ChessableTrainedLineService.MainlineForOid(pgn, "1").StartFen);
+        Assert.NotNull(ChessableTrainedLineService.MainlineForOid(pgn, "2").StartFen);
+        Assert.Null(ChessableTrainedLineService.MainlineForOid(pgn, "3").StartFen);
+    }
+
+    [Fact]
+    public void MainlineForOid_DoesNotTreatEventDateAsASectionStart()
+    {
+        // Der frühere Split hing an `(?=\[Event\s)` — „[EventDate" ist KEIN Abschnittsanfang.
+        // Das Fenster muss dieselbe Regel anwenden, sonst schneidet es mitten in die Header.
+        const string pgn = """
+[Event "Kurs"]
+[EventDate "2026.09.04"]
+[White "Linie"]
+[ChessableOid "77"]
+
+1. e4 c5 *
+""";
+        Assert.Equal(new[] { "e4", "c5" }, ChessableTrainedLineService.MainlineSansForOid(pgn, "77"));
+    }
+
+    // ===== Brett-Kanonisierung: Schreibweisen, die nur ÜBER DIE STELLUNG auflösbar sind =======
+    // Die textuelle Normalisierung kann „Nf3e5" (lang algebraisch) nicht in „Nxe5" überführen —
+    // dafür braucht es das Brett. Ohne diesen Schritt berechnete der Server einen ANDEREN Hash als
+    // der Trainer, fand die Karte nicht und legte eine unerreichbare Phantom-Karte an.
+
+    [Theory]
+    // lang algebraisch mit Figur + Schlag-x, gemischt mit reiner UCI-Form und Bindestrich-Notation
+    [InlineData(new[] { "e4", "e5", "Nf3", "Nc6", "Nxe5" }, new[] { "e2e4", "e7e5", "Ng1f3", "Nb8c6", "Nf3xe5" })]
+    [InlineData(new[] { "d4", "d5", "Nc3" }, new[] { "d2-d4", "d7-d5", "Nb1-c3" })]
+    // Schlag ohne „x" (kommt in Exporten vor) und eine Rochade mit Nullen im selben Zug
+    [InlineData(new[] { "e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "O-O" },
+                new[] { "e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "0-0" })]
+    public void BoardCanonicalSans_YieldsTheKeyTheTrainerComputes(string[] chessJsSans, string[] rawTokens)
+    {
+        var canonical = ChessableTrainedLineService.BoardCanonicalSans(rawTokens);
+        Assert.NotNull(canonical);
+        Assert.Equal(chessJsSans, canonical);
+        // Und damit derselbe Linien-Schlüssel wie im Frontend.
+        Assert.Equal(ChessableTrainedLineService.LineKeyFromSans(chessJsSans),
+                     ChessableTrainedLineService.LineKeyFromSans(canonical!));
+    }
+
+    [Fact]
+    public void BoardCanonicalSans_UnresolvableLine_ReturnsNull_NotAPrefix()
+    {
+        // Ein nicht auflösbarer Zug darf KEIN kürzeres Präfix liefern — das wäre eine andere Linie
+        // und damit ein Hash, der auf nichts zeigt. Dann bleibt es beim textuellen Schlüssel.
+        Assert.Null(ChessableTrainedLineService.BoardCanonicalSans(new[] { "e4", "Qh5xz9" }));
+        Assert.Null(ChessableTrainedLineService.BoardCanonicalSans(new[] { "e5" }));  // illegal im 1. Zug
+    }
+
+    [Fact]
+    public void BoardCanonicalSans_HonoursTheFenHeaderOfTheSection()
+    {
+        // Eine Linie, die NICHT in der Grundstellung beginnt: ohne die Start-FEN wäre schon der
+        // erste Zug illegal und die Kanonisierung fiele aus.
+        const string pgn = """
+[Event "Kurs"]
+[FEN "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"]
+[ChessableOid "4242"]
+
+1. Ng1f3 Nb8c6 *
+""";
+        var (sans, startFen) = ChessableTrainedLineService.MainlineForOid(pgn, "4242");
+        Assert.NotNull(startFen);
+        var canonical = ChessableTrainedLineService.BoardCanonicalSans(sans!, startFen);
+        Assert.Equal(new[] { "Nf3", "Nc6" }, canonical);
+    }
+
     // ===== Der ECHTE Pfad: PGN-Tokenizer -> Hash (nicht nur die Hilfsfunktionen) ==============
     // Regression: `IsMoveToken` prüfte das erste Zeichen, also fiel eine Rochade mit Nullen
     // ("0-0") still ganz aus der Zugliste — andere LÄNGE, komplett anderer Hash, Karte
@@ -228,6 +332,62 @@ public class ChessableTrainedLineServiceTests : IDisposable
         Assert.Equal(1, card.Level);             // „einmal gelernt"
         Assert.True(card.InPool);
         Assert.True(card.DueAt > DateTime.UtcNow);
+    }
+
+    [Fact]
+    public async Task MarkTrained_LongAlgebraicPgn_AdvancesTheTrainersCard_NoPhantom()
+    {
+        // Das PGN schreibt lang algebraisch („Ng1f3"), der Trainer hat seine Karte aber unter dem
+        // chess.js-Schlüssel („Nf3") liegen. Ohne Brett-Kanonisierung rechnete der Server einen
+        // anderen Hash, fand die Karte nicht (⇒ „actionable") und legte eine ZWEITE, für den
+        // Trainer unerreichbare Karte an: der sichtbare Fortschritt rückte nie vor.
+        const string longAlgPgn = """
+[Event "Kurs"]
+[White "Lang algebraisch"]
+[ChessableOid "911"]
+
+1. e2e4 e7e5 2. Ng1f3 Nb8c6 3. Bf1b5 *
+""";
+        var user = await CreateUserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, "500", longAlgPgn);
+        // Genau der Schlüssel, den das Frontend für diese Linie bildet (chess.js-SAN).
+        var trainerKey = ChessableTrainedLineService.LineKeyFromSans(
+            new[] { "e4", "e5", "Nf3", "Nc6", "Bb5" });
+        _db.RepertoireCardStates.Add(new RepertoireCardState
+        {
+            UserId = user.Id, RepertoireId = rep.Id, CardKey = trainerKey,
+            Level = 3, InPool = true, DueAt = DateTime.UtcNow.AddHours(-1),
+        });
+        await _db.SaveChangesAsync();
+
+        var res = await _svc.MarkTrainedAsync(user.Id, "500", "911");
+
+        Assert.Equal(1, res.RepertoireLinesAdvanced);
+        var card = Assert.Single(_db.RepertoireCardStates.Where(c => c.RepertoireId == rep.Id));
+        Assert.Equal(trainerKey, card.CardKey);   // dieselbe Karte, keine Phantom-Karte daneben
+        Assert.Equal(4, card.Level);              // eine Stufe vorgerückt
+    }
+
+    [Fact]
+    public async Task MarkTrained_LongAlgebraicPgn_NewLine_UsesTheTrainersKey()
+    {
+        // Ohne vorhandene Karte muss die NEUE unter dem brett-kanonischen Schlüssel entstehen —
+        // sonst sieht der Trainer die gerade gelernte Linie weiterhin als ungelernt.
+        const string longAlgPgn = """
+[Event "Kurs"]
+[White "Lang algebraisch"]
+[ChessableOid "912"]
+
+1. e2e4 e7e5 2. Ng1f3 *
+""";
+        var user = await CreateUserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, "500", longAlgPgn);
+
+        var res = await _svc.MarkTrainedAsync(user.Id, "500", "912");
+
+        Assert.Equal(1, res.RepertoireLinesAdvanced);
+        var card = Assert.Single(_db.RepertoireCardStates.Where(c => c.RepertoireId == rep.Id));
+        Assert.Equal(ChessableTrainedLineService.LineKeyFromSans(new[] { "e4", "e5", "Nf3" }), card.CardKey);
     }
 
     [Fact]

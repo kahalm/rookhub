@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Authorization;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -13,6 +14,9 @@ namespace RookHub.Api.Controllers;
 [Route("api/extension")]
 [Authorize]
 [EnableCors("ExtensionPolicy")]
+// Eine Stelle statt 17: prüft je Anfrage, dass ein PAT den Scope „extension" trägt (JWT-Nutzer
+// haben keinen scope-Claim und dürfen immer). Vorher stand dieselbe Zeile in JEDER Action.
+[RequireExtensionScope]
 public class ExtensionController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
@@ -83,19 +87,6 @@ public class ExtensionController : BaseApiController
     }
 
     /// <summary>
-    /// Wenn ein API-Token genutzt wird (User-Identity hat scope-Claim), muss dieser
-    /// <c>extension</c> sein. JWT-User (kein scope-Claim) duerfen immer. Schuetzt davor,
-    /// dass spaeter dazukommende Token-Scopes versehentlich Extension-Daten lesen.
-    /// </summary>
-    private ActionResult? ScopeGuard()
-    {
-        var scope = User.FindFirst("scope")?.Value;
-        if (scope == null) return null; // JWT
-        if (scope == "extension") return null;
-        return Forbid();
-    }
-
-    /// <summary>
     /// Repertoire-Liste fuer Extension-Clients. <paramref name="kind"/> akzeptiert die
     /// String-Repraesentation von <see cref="RepertoireKind"/> (z. B. <c>opening</c>,
     /// case-insensitive). Ohne Filter werden alle Kinds zurueckgegeben.
@@ -103,7 +94,6 @@ public class ExtensionController : BaseApiController
     [HttpGet("repertoires")]
     public async Task<ActionResult<List<ExtensionRepertoireDto>>> GetRepertoires([FromQuery] string? kind = null)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         RepertoireKind? kindFilter = null;
         if (!string.IsNullOrWhiteSpace(kind))
         {
@@ -117,7 +107,6 @@ public class ExtensionController : BaseApiController
     [HttpGet("repertoires/{id}/pgn")]
     public async Task<IActionResult> GetPgn(int id)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         try
         {
             var pgn = await _repertoireService.GetCombinedPgnAsync(id, GetUserId());
@@ -138,7 +127,6 @@ public class ExtensionController : BaseApiController
     [HttpPost("analyze-game")]
     public async Task<ActionResult<AnalyzeGameResponseDto>> AnalyzeGame([FromBody] AnalyzeGameRequestDto dto)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null) return BadRequest(new { message = "Body required." });
         if (dto.Moves == null) dto.Moves = new();
         if (dto.Moves.Count > 600)
@@ -155,7 +143,6 @@ public class ExtensionController : BaseApiController
     [HttpPost("training-activity")]
     public async Task<IActionResult> RecordTrainingActivity([FromBody] ChessableActivityInputDto dto)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null || dto.SecondsActive <= 0)
             return BadRequest(new { message = "secondsActive required and > 0." });
         await _trainingGoalService.RecordChessableActivityAsync(GetUserId(), dto);
@@ -169,7 +156,6 @@ public class ExtensionController : BaseApiController
     [HttpPost("remember-line")]
     public async Task<ActionResult<RememberedPositionDto>> RememberLine([FromBody] RememberLineInputDto dto)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null || !RememberedPositionService.LooksLikeFen(dto.Fen))
             return BadRequest(new { message = "Valid fen required." });
         return Ok(await _rememberedPositionService.SaveAsync(GetUserId(), dto));
@@ -179,7 +165,6 @@ public class ExtensionController : BaseApiController
     [HttpGet("remembered-lines")]
     public async Task<ActionResult<List<RememberedPositionDto>>> GetRememberedLines([FromQuery] int take = 200)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         return Ok(await _rememberedPositionService.ListAsync(GetUserId(), take));
     }
 
@@ -187,7 +172,6 @@ public class ExtensionController : BaseApiController
     [HttpDelete("remembered-lines/{id:int}")]
     public async Task<IActionResult> DeleteRememberedLine(int id)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         return await _rememberedPositionService.DeleteAsync(GetUserId(), id) ? NoContent() : NotFound();
     }
 
@@ -199,7 +183,6 @@ public class ExtensionController : BaseApiController
     [HttpPost("games")]
     public async Task<ActionResult<SavedGameDetailDto>> SaveGame([FromBody] SaveGameInputDto dto)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null) return BadRequest(new { message = "Body required." });
         try
         {
@@ -219,7 +202,6 @@ public class ExtensionController : BaseApiController
     [HttpPost("share-line")]
     public async Task<ActionResult<ShareLineResultDto>> ShareLine([FromBody] ShareExtensionLineInputDto dto, CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null) return BadRequest(new { message = "Body required." });
         var res = await _sharedLineService.CreateStandaloneAsync(GetUserId(), dto.Moves, dto.Title, ct);
         return res == null ? BadRequest(new { message = "No moves." }) : Ok(res);
@@ -237,7 +219,6 @@ public class ExtensionController : BaseApiController
     [RequestSizeLimit(64_000_000)]
     public async Task<IActionResult> ChessableIngest([FromBody] ChessableIngestRequest dto, CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null || !IsValidBid(dto.Bid))
             return BadRequest(new { message = "Invalid or missing bid." });
 
@@ -264,7 +245,6 @@ public class ExtensionController : BaseApiController
     public async Task<ActionResult<ChessableLineTrainedResultDto>> ChessableLineTrained(
         [FromBody] ChessableLineTrainedInputDto dto, CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid2) return forbid2;
         if (dto == null || !IsValidBid(dto.Bid) || string.IsNullOrWhiteSpace(dto.Oid) || dto.Oid.Length > 32
             || !dto.Oid.All(char.IsAsciiDigit))
             return BadRequest(new { message = "Valid bid and oid required." });
@@ -280,7 +260,6 @@ public class ExtensionController : BaseApiController
     public async Task<IActionResult> ChessableProblemMoves([FromBody] ChessableProblemMovesInputDto dto,
         CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid3) return forbid3;
         if (dto == null || !IsValidBid(dto.Bid))
             return BadRequest(new { message = "Valid bid required." });
         var written = await _problemMoves.UpsertBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
@@ -297,7 +276,6 @@ public class ExtensionController : BaseApiController
     public async Task<IActionResult> ChessableSessionMoves([FromBody] ChessableSessionMovesInputDto dto,
         CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid4) return forbid4;
         if (dto == null || !IsValidBid(dto.Bid))
             return BadRequest(new { message = "Valid bid required." });
         var stored = await _sessionMoves.AppendBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
@@ -314,7 +292,6 @@ public class ExtensionController : BaseApiController
     public async Task<IActionResult> ChessableReviewLines([FromBody] ChessableReviewLinesInputDto dto,
         CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null || !IsValidBid(dto.Bid))
             return BadRequest(new { message = "Valid bid required." });
         var userId = GetUserId();
@@ -359,7 +336,6 @@ public class ExtensionController : BaseApiController
     [HttpGet("chessable/progress")]
     public async Task<IActionResult> ChessableProgress([FromQuery] string bid, CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (!IsValidBid(bid)) return BadRequest(new { message = "Invalid bid." });
         var (oids, book, repertoire) = await _chessableImport.GetImportedOidsAsync(GetUserId(), bid, ct);
         return Ok(new ChessableProgressDto(book, repertoire, oids.ToList()));
@@ -377,7 +353,6 @@ public class ExtensionController : BaseApiController
     [RequestSizeLimit(48_000_000)]
     public async Task<IActionResult> ChessableIngestChunk([FromBody] ChessableIngestChunkRequest dto, CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null || string.IsNullOrWhiteSpace(dto.SessionId) || !IsValidBid(dto.Bid))
             return BadRequest(new { message = "sessionId and valid bid required." });
 
@@ -422,7 +397,6 @@ public class ExtensionController : BaseApiController
     [RequestSizeLimit(16_000_000)]
     public async Task<IActionResult> ChessableIngestLive([FromBody] ChessableLiveIngestRequest dto, CancellationToken ct)
     {
-        if (ScopeGuard() is { } forbid) return forbid;
         if (dto == null || !IsValidBid(dto.Bid))
             return BadRequest(new { message = "Invalid or missing bid." });
 

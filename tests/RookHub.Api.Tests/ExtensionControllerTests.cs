@@ -13,6 +13,10 @@ using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
+// HINWEIS Scope-Prüfung: die 17 „if (ScopeGuard() …)"-Zeilen der Actions sind durch EIN
+// Klassen-Attribut ersetzt (`[RequireExtensionScope]`). Ein direkt instanziierter Controller
+// führt keine Filter aus — die frühere „falscher Scope → Forbid"-Prüfung je Action konnte hier
+// also nicht mehr greifen. Sie lebt jetzt in `RequireExtensionScopeTests` (Filter + Verdrahtung).
 public class ExtensionControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
@@ -214,27 +218,6 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetRepertoires_WithForeignScope_Forbidden()
-    {
-        var user = await CreateUserAsync();
-        SetUser(user.Id, scope: "admin"); // anderer Scope → kein Zugriff
-        var result = await _controller.GetRepertoires();
-        Assert.IsType<ForbidResult>(result.Result);
-    }
-
-    [Fact]
-    public async Task GetPgn_WithForeignScope_Forbidden()
-    {
-        var user = await CreateUserAsync();
-        var rep = new Repertoire { UserId = user.Id, Name = "x" };
-        _db.Repertoires.Add(rep);
-        await _db.SaveChangesAsync();
-        SetUser(user.Id, scope: "admin");
-        var result = await _controller.GetPgn(rep.Id);
-        Assert.IsType<ForbidResult>(result);
-    }
-
-    [Fact]
     public async Task RecordTrainingActivity_PersistsRow()
     {
         var user = await CreateUserAsync();
@@ -257,18 +240,6 @@ public class ExtensionControllerTests : IDisposable
         var result = await _controller.RecordTrainingActivity(new ChessableActivityInputDto { SecondsActive = 0 });
 
         Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Empty(_db.ChessableActivities.Where(a => a.UserId == user.Id));
-    }
-
-    [Fact]
-    public async Task RecordTrainingActivity_WithForeignScope_Forbidden()
-    {
-        var user = await CreateUserAsync();
-        SetUser(user.Id, scope: "admin");
-
-        var result = await _controller.RecordTrainingActivity(new ChessableActivityInputDto { SecondsActive = 60 });
-
-        Assert.IsType<ForbidResult>(result);
         Assert.Empty(_db.ChessableActivities.Where(a => a.UserId == user.Id));
     }
 
@@ -301,18 +272,6 @@ public class ExtensionControllerTests : IDisposable
         var result = await _controller.RememberLine(new RememberLineInputDto { Fen = "not-a-fen" });
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Empty(_db.RememberedPositions.Where(p => p.UserId == user.Id));
-    }
-
-    [Fact]
-    public async Task RememberLine_WithForeignScope_Forbidden()
-    {
-        var user = await CreateUserAsync();
-        SetUser(user.Id, scope: "admin");
-
-        var result = await _controller.RememberLine(new RememberLineInputDto { Fen = "8/8/8/8/8/8/8/8 w - - 0 1" });
-
-        Assert.IsType<ForbidResult>(result.Result);
         Assert.Empty(_db.RememberedPositions.Where(p => p.UserId == user.Id));
     }
 
@@ -414,15 +373,6 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task ChessableIngestChunk_WrongScope_Forbidden()
-    {
-        SetUser(7, scope: "other");
-        var res = await _controller.ChessableIngestChunk(
-            new ChessableIngestChunkRequest("s", "424242", "book", null, Chapter("{\"game\":{}}"), false), default);
-        Assert.IsType<ForbidResult>(res);
-    }
-
-    [Fact]
     public async Task ChessableReviewLines_StoresRawAndReturnsCount()
     {
         var user = await CreateUserAsync();
@@ -467,22 +417,6 @@ public class ExtensionControllerTests : IDisposable
         var bp = _db.BookPuzzles.Single(b => b.BookFileName == fileName);
         Assert.Equal("review", bp.Source);
         Assert.Equal("36730415", bp.ChessableOid);
-    }
-
-    [Fact]
-    public async Task ChessableReviewLines_WithForeignScope_Forbidden()
-    {
-        var user = await CreateUserAsync();
-        SetUser(user.Id, scope: "admin");
-
-        var res = await _controller.ChessableReviewLines(new ChessableReviewLinesInputDto
-        {
-            Bid = "228856",
-            Entries = new() { new ChessableReviewLineEntryDto { Oid = "1", Json = "{}" } },
-        }, default);
-
-        Assert.IsType<ForbidResult>(res);
-        Assert.Empty(_db.ChessableReviewLines.Where(r => r.UserId == user.Id));
     }
 
     [Fact]
