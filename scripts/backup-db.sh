@@ -113,15 +113,19 @@ for db in $DATABASES; do
     # pruefen, ob das Archiv valide ist UND plausibel gross — ein abgebrochener
     # Dump erzeugt sonst ein "erfolgreiches", leeres Backup, das erst beim
     # Restore auffliegt.
+    # Beim Verwerfen MUSS auch die Stderr-Datei weg: die Rotation unten filtert '*.sql.gz' und
+    # fasst '<db>-<stamp>.sql.gz.part.err' nie an — ein wiederkehrend fehlschlagender Dump legte
+    # sonst bei jedem Timer-Lauf eine weitere Fehlerdatei ab, die niemand liest und nichts löscht.
     if ! gzip -t "$tmp" 2>/dev/null; then
       log "FEHLER: $db — Archiv ist beschaedigt, verwerfe."
-      rm -f "$tmp"; failed=1; continue
+      cat "$tmp.err" >&2 || true
+      rm -f "$tmp" "$tmp.err"; failed=1; continue
     fi
     size=$(wc -c < "$tmp")
     if [ "$size" -lt 1024 ]; then
       log "FEHLER: $db — Dump nur $size Byte gross, verwerfe."
       cat "$tmp.err" >&2 || true
-      rm -f "$tmp"; failed=1; continue
+      rm -f "$tmp" "$tmp.err"; failed=1; continue
     fi
     rm -f "$tmp.err"
     mv "$tmp" "$target"

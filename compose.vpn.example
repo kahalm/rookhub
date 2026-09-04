@@ -137,7 +137,7 @@ services:
         condition: service_started
     environment:
       ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
-      Jwt__Key: ${JWT_KEY}
+      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://gluetun:8080
@@ -166,6 +166,18 @@ services:
       SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      # Admin-Tab „CI / Actions": GitHub-PAT (actions:read) + Push-Modell. Leer -> Tab/Meldungen aus;
+      # die CI-Endpoints antworten ohne Secret mit 401 (fail-closed).
+      GitHub__Token: ${GITHUB_TOKEN:-}
+      CI__BuildReportSecret: ${CI_BUILD_REPORT_SECRET:-}
+      CI__GithubWebhookSecret: ${CI_GITHUB_WEBHOOK_SECRET:-}
+      # Link auf die Log-Visualisierung im Admin-Header. Leer -> kein Link.
+      Kibana__Url: ${KIBANA_URL:-}
+      # Web-Push (VAPID). Alle drei leer -> Push deaktiviert, Panel zeigt „nicht verfügbar".
+      # Keypair erzeugen: npx web-push generate-vapid-keys
+      WebPush__Subject: ${WEBPUSH_SUBJECT:-}
+      WebPush__PublicKey: ${WEBPUSH_PUBLIC_KEY:-}
+      WebPush__PrivateKey: ${WEBPUSH_PRIVATE_KEY:-}
     volumes:
       # PFLICHT: ohne persistentes /keys haelt ASP.NET die DataProtection-Keys nur im
       # Speicher — jeder Container-Neustart entwertet Reset-Links/geschuetzte Payloads.

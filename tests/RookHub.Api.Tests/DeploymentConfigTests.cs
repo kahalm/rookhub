@@ -52,6 +52,66 @@ public class DeploymentConfigTests
         Assert.Contains("Discord__LinkSecret:", text);
     }
 
+    /// <summary>Die Dateien, mit denen wirklich deployed wird (Kopfzeile: <c>docker compose -f …</c>)
+    /// — der frühere Test sah NUR die <c>*.example</c>-Dateien, und genau dort driftete es
+    /// auseinander: der <c>:?</c>-Startschutz des Encryption-Keys stand im Beispiel, in den echten
+    /// Dateien nicht.</summary>
+    [Theory]
+    [InlineData("compose.vpn.yml")]
+    [InlineData("compose.dev.yml")]
+    [InlineData("compose.dev.vpn.yml")]
+    [InlineData("compose.yml.example")]
+    [InlineData("compose.vpn.example")]
+    public void EveryCompose_GuardsEncryptionKey_AndPassesOptionalSecrets(string file)
+    {
+        var text = ReadRepoFile(file);
+
+        // Leerer Encryption-Key = Schein-Verschlüsselung mit SHA256("") → Start muss abbrechen,
+        // und zwar mit einer COMPOSE-Meldung statt einer Neustartschleife des Containers.
+        Assert.Contains("Encryption__Key: ${ENCRYPTION_KEY:?", text);
+        // Dasselbe für den JWT-Schlüssel: leer heißt hier nicht „Feature aus", sondern
+        // unsignierbare Tokens — der Abbruch gehört in `docker compose`, nicht in eine
+        // Neustartschleife des Containers.
+        Assert.Contains("Jwt__Key: ${JWT_KEY:?", text);
+        // Fail-closed-Endpoints brauchen ihr Secht im Container, sonst bleibt der Admin-CI-Tab
+        // ohne Push-Daten und der GitHub-Webhook antwortet still 401.
+        Assert.Contains("CI__BuildReportSecret:", text);
+        Assert.Contains("CI__GithubWebhookSecret:", text);
+        // „Leer = Feature aus" gilt nur, wenn die Variable den Container überhaupt erreicht.
+        Assert.Contains("WebPush__PublicKey:", text);
+        Assert.Contains("GitHub__Token:", text);
+        Assert.Contains("Kibana__Url:", text);
+        // Der Log-Sink darf den API-Start nicht blockieren (ES rot ⇒ App startet trotzdem).
+        // Nur im api-Block geprüft: Kibana braucht ein gesundes Elasticsearch zu Recht. Die
+        // Beispiel-Stacks bringen gar kein ES mit (externe URL) — dort gibt es nichts zu prüfen.
+        var api = ServiceBlock(text, "api");
+        Assert.DoesNotContain("""
+      elasticsearch:
+        condition: service_healthy
+""", api);
+    }
+
+    /// <summary>Schneidet EINEN Service-Block (<c>  name:</c> bis zum nächsten Eintrag derselben
+    /// Einrückung) aus einer Compose-Datei — damit eine Aussage über den api-Service nicht von den
+    /// Nachbar-Services (Kibana!) beantwortet wird.</summary>
+    private static string ServiceBlock(string compose, string service)
+    {
+        var start = compose.IndexOf($"\n  {service}:\n", StringComparison.Ordinal);
+        Assert.True(start >= 0, $"Service '{service}' nicht gefunden");
+        start++;
+        var next = Regex.Match(compose[(start + 1)..], @"^  [A-Za-z0-9_-]+:$", RegexOptions.Multiline);
+        return next.Success ? compose.Substring(start, next.Index + 1) : compose[start..];
+    }
+
+    [Fact]
+    public void DockerWorkflow_KeepsTheTestGate()
+    {
+        // Fällt diese eine Zeile weg, pushen die Image-Jobs ohne einen einzigen Test — und
+        // Watchtower zieht die Images in derselben Nacht.
+        var text = ReadRepoFile(".github/workflows/docker.yml");
+        Assert.Contains("needs: tests", text);
+    }
+
     [Fact]
     public void TestWorkflow_PinsDotnet10_AndRunsFrontendSpecs()
     {
@@ -61,6 +121,11 @@ public class DeploymentConfigTests
         Assert.Contains("dotnet-version: '10.0.x'", text);
         // Ohne diesen Schritt liefe im Image-Gate kein einziger Frontend-Spec.
         Assert.Contains("ng test", text);
+        // Die drei engine-provider-Tests liefen zuvor in KEINEM Workflow — ein Bump von
+        // PROVIDER_SHA oder ein Umbau von patch_provider.py/entrypoint.sh war damit ungeprüft.
+        Assert.Contains("test/entrypoint.test.sh", text);
+        Assert.Contains("test/supervisor.test.sh", text);
+        Assert.Contains("test/heartbeat.test.py", text);
     }
 
     [Fact]

@@ -136,15 +136,26 @@ def main() -> int:
         idx = all_versions.index(since)
         versions = list(reversed(all_versions[:idx + 1]))  # since..neueste, chronologisch
         print(f'Backfill: poste {len(versions)} Eintraege von v{since} bis v{all_versions[0]}.')
-    elif before and not set(before) <= {'0'}:
+    # „Poste den neuesten Eintrag" ist das Netz für den Fall, dass wir gar keinen Diff auswerten
+    # KONNTEN (erster Push eines Branches mit Null-SHA, `before` fehlt, git-Fehler). Ein Diff, der
+    # sauber lief und keine NEUE Versionszeile enthält, heißt dagegen „nichts zu posten": sonst
+    # postet jede Nachbesserung an einem bestehenden Eintrag (typografische Anführungszeichen!)
+    # und jeder reine Versions-Bump die aktuellste Version ein zweites Mal in den Channel.
+    diff_evaluated = False
+    have_before = bool(before) and not set(before) <= {'0'}
+    if have_before and not since:
         try:
             diff = subprocess.run(
                 ['git', 'diff', f'{before}..{after}', '--', CHANGELOG],
                 capture_output=True, text=True, check=True).stdout
             versions = [v for v in added_versions(diff) if v in entries]
+            diff_evaluated = True
         except subprocess.CalledProcessError as e:
             print(f'git diff fehlgeschlagen ({e}) — Fallback auf neuesten Eintrag.')
     if not versions:
+        if diff_evaluated:
+            print('Kein NEUER Changelog-Eintrag im Diff — nichts zu posten.')
+            return 0
         versions = [next(iter(entries))]  # neuester Eintrag (Datei ist neueste-zuerst)
 
     for v in versions:

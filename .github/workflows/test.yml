@@ -68,6 +68,35 @@ jobs:
       - run: dotnet test tests/ChessResultsCrawler.Tests --verbosity normal
         working-directory: chessresults_crawler
 
+  # Engine-Provider (engine-provider/): das Docker-Setup für den Rechner des Nutzers. Seine drei
+  # Tests liefen in KEINEM Workflow — wer patch_provider.py, entrypoint.sh oder PROVIDER_SHA
+  # anfasste, hatte eine grüne CI und kein einziges ausgeführtes Regressionsnetz. Das Image bauen
+  # wäre teuer (Stockfish-Download); stattdessen wird derselbe GEPINNTE Provider samt Prüfsumme
+  # direkt geholt — die Werte kommen aus dem Dockerfile, damit sie nicht auseinanderlaufen.
+  test-engine-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Gepinnten Provider holen (Prüfsumme wie im Dockerfile)
+        working-directory: engine-provider
+        run: |
+          sha=$(grep -oP 'ARG PROVIDER_SHA=\K\S+' Dockerfile)
+          sum=$(grep -oP 'ARG PROVIDER_SHA256=\K\S+' Dockerfile)
+          test -n "$sha" && test -n "$sum"
+          curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/$sha/example-provider.py" -o /tmp/provider.py
+          echo "$sum  /tmp/provider.py" | sha256sum -c -
+      - run: pip install --quiet requests
+      # Argument-Aufbau + Vorprüfungen (Dry-Run) …
+      - run: bash test/entrypoint.test.sh
+        working-directory: engine-provider
+      # … der ECHTE Fehlerpfad des Multi-Engine-Supervisors …
+      - run: bash test/supervisor.test.sh
+        working-directory: engine-provider
+      # … und der eine Eingriff in den Provider (Lebenszeichen im Analyse-Stream).
+      # Ein explizit übergebener, fehlender Pfad lässt den Test scheitern statt sich zu überspringen.
+      - run: python3 test/heartbeat.test.py /tmp/provider.py
+        working-directory: engine-provider
+
   build-frontend:
     runs-on: ubuntu-latest
     steps:

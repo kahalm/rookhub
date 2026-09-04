@@ -108,7 +108,10 @@ services:
       gluetun:
         condition: service_healthy
       elasticsearch:
-        condition: service_healthy
+        # NUR `service_started`: Elasticsearch ist reiner Log-Sink (Serilog). Auf `service_healthy`
+        # startete die API überhaupt nicht, wenn ES nach einem Reboot nicht hochkam (Heap, Index,
+        # Plattenplatz) — ein Log-Problem wurde so zum Totalausfall der Anwendung.
+        condition: service_started
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
       Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
@@ -138,7 +141,7 @@ services:
       # Chessable-Integration (piratechess-API im externen chessable-bridge Netz).
       Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
       Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
-      Encryption__Key: ${ENCRYPTION_KEY:-}
+      Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein (verschlüsselt den gespeicherten Chessable-Bearer)}
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
       # Optional: GitHub-PAT (actions:read) für den Admin-Tab „CI / Actions". Leer -> Tab zeigt Hinweis.
@@ -148,6 +151,12 @@ services:
       WebPush__Subject: ${WEBPUSH_SUBJECT:-}
       WebPush__PublicKey: ${WEBPUSH_PUBLIC_KEY:-}
       WebPush__PrivateKey: ${WEBPUSH_PRIVATE_KEY:-}
+      # CI-Push-Modell: log-watcher/GitHub-Actions melden laufende Builds an
+      # `POST /api/ci/build-report` bzw. den `workflow_run`-Webhook. Beide Endpoints antworten bei
+      # LEEREM Secret mit 401 (fail-closed) — fehlten sie hier, blieb der Admin-CI-Tab ohne
+      # Push-Daten, ohne dass irgendwo ein Fehler auftauchte.
+      CI__BuildReportSecret: ${CI_BUILD_REPORT_SECRET:-}
+      CI__GithubWebhookSecret: ${CI_GITHUB_WEBHOOK_SECRET:-}
     volumes:
       - dataprotection-keys:/keys
     networks:
@@ -186,7 +195,14 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - xpack.security.enabled=false
     ports:
-      - "${KIBANA_PORT:-5601}:5601"
+      # Kibana läuft mit ABGESCHALTETER Security (xpack.security.enabled=false) und veröffentlicht
+      # hier standardmäßig auf ALLEN Host-Interfaces: wer den Host auf diesem Port erreicht, liest
+      # ohne Login den kompletten Log-Index (Request-Pfade mit Ids, Nutzernamen, IP-Adressen,
+      # Security-Events). Elasticsearch selbst ist bewusst NICHT publiziert.
+      # KIBANA_BIND=127.0.0.1 beschränkt den Zugriff auf den Host (Zugang dann per SSH-Tunnel:
+      # `ssh -L 5601:127.0.0.1:5601 <host>`); Vorgabe bleibt 0.0.0.0, damit ein bestehender
+      # LAN-Zugriff (siehe KIBANA_URL) nicht unangekündigt wegbricht.
+      - "${KIBANA_BIND:-0.0.0.0}:${KIBANA_PORT:-5601}:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy

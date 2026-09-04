@@ -115,4 +115,33 @@ public class QueryTranslationTests : IAsyncLifetime
         Assert.Equal("4711", file.ChessableOidsCache);
         Assert.Equal(file.PgnContent.Length, file.ChessableOidsPgnLength);
     }
+
+    [MySqlFact]
+    public async Task ThemenFilter_MaskiertSqlWildcards()
+    {
+        // Ersetzt den frueheren InMemory-„Test" `GetRandom_ThemeWithSqlWildcard_DoesNotMatch`, der
+        // auf `Assert.True(true)` endete: ohne `EF.Functions.Like`-Uebersetzung kann er die
+        // Maskierung nicht pruefen und konnte per Konstruktion nicht rot werden. Hier laeuft echtes
+        // SQL — ein entferntes `SanitizeLikeInput` faellt sofort auf, weil `_` dann als
+        // Ein-Zeichen-Joker jedes „mateIn2" trifft.
+        var userId = await SeedUserAsync("wildcard");
+        Db.Puzzles.Add(new Puzzle
+        {
+            LichessId = "wc1", Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", Moves = "a1b1",
+            Rating = 1500, Themes = "mateIn2",
+        });
+        await Db.SaveChangesAsync();
+        var svc = Get<PuzzleService>();
+
+        // Gegenprobe zuerst: das WÖRTLICHE Thema muss gefunden werden (sonst prüft der Test nichts).
+        Assert.NotNull(await svc.GetRandomAsync(userId, null, null, themes: "mateIn2", excludeSolved: false));
+
+        // `_` ist in LIKE ein Ein-Zeichen-Joker; maskiert darf „mate_n2" NICHT auf „mateIn2" passen.
+        Assert.Null(await svc.GetRandomAsync(userId, null, null, themes: "mate_n2", excludeSolved: false));
+        // `%` ebenso (Mehrzeichen-Joker).
+        Assert.Null(await svc.GetRandomAsync(userId, null, null, themes: "mate%2", excludeSolved: false));
+        // Und über den ODER-Pfad (themesAny), der dieselbe Maskierung benutzt.
+        Assert.Null(await svc.GetRandomAsync(userId, null, null, themes: null, excludeSolved: false,
+            themesAny: "mate_n2"));
+    }
 }

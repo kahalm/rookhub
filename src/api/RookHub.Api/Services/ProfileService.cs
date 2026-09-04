@@ -301,6 +301,32 @@ public class ProfileService
         _db.ChessableProblemMoves.RemoveRange(await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ToListAsync());
         // Eigene Analysebäume des Kalkulations-Modus: Nutzerarbeit mit Freitext, kein Aggregat.
         _db.CalculationTrees.RemoveRange(await _db.CalculationTrees.Where(x => x.UserId == userId).ToListAsync());
+        // Turnier-Runden-Monitor: personenbezogenes Beobachten eines Turniers (löst Benachrichtigungen
+        // aus) — nach der Löschung gibt es niemanden mehr, der benachrichtigt werden möchte.
+        _db.TournamentMonitors.RemoveRange(await _db.TournamentMonitors.Where(x => x.UserId == userId).ToListAsync());
+        // Eigene Aktivitäts-Vorlagen und laufende Timer: Freitext-Bezeichnungen = PII.
+        _db.ActivityPresets.RemoveRange(await _db.ActivityPresets.Where(x => x.UserId == userId).ToListAsync());
+        _db.ActivityTimers.RemoveRange(await _db.ActivityTimers.Where(x => x.UserId == userId).ToListAsync());
+        // „Gesehen"-Vermerke der Kalkulations-Serie: WER WANN welche Ausgabe geöffnet hat — ein
+        // personenbezogenes Nutzungsprotokoll, keine Statistik (der Verteiler ist ohnehin weg).
+        _db.CalcEditionViews.RemoveRange(await _db.CalcEditionViews.Where(x => x.UserId == userId).ToListAsync());
+        // Katalog-Freigaben/-Anfragen des Nutzers (als Besitzer UND als Anfragender): Freigaben auf
+        // Inhalte eines gelöschten Kontos sind gegenstandslos, die Anfrage nennt beide Personen.
+        _db.CatalogGrants.RemoveRange(await _db.CatalogGrants
+            .Where(x => x.OwnerUserId == userId || x.SubjectUserId == userId).ToListAsync());
+        _db.CatalogRequests.RemoveRange(await _db.CatalogRequests
+            .Where(x => x.OwnerUserId == userId || x.RequesterUserId == userId).ToListAsync());
+        // Chessable-Themenzuordnung + Import-Aufträge: benennen die Kurse der fremden Bibliothek.
+        _db.ChessableCourseThemes.RemoveRange(await _db.ChessableCourseThemes.Where(x => x.UserId == userId).ToListAsync());
+        _db.ChessableImports.RemoveRange(await _db.ChessableImports
+            .Where(x => x.UserId == userId || x.BearerUserId == userId).ToListAsync());
+        // Persönliche Kurs-Verknüpfung (Buch↔Workbook) und Puzzle-Favoriten: reine Nutzerwahl.
+        _db.CourseLinks.RemoveRange(await _db.CourseLinks.Where(x => x.UserId == userId).ToListAsync());
+        _db.FavoritePuzzles.RemoveRange(await _db.FavoritePuzzles.Where(x => x.UserId == userId).ToListAsync());
+        // Repertoire-Lernstand + eigene SR-Intervalle: die Repertoires selbst gehen oben mit, ihre
+        // Karten-Zustände hängen aber an (UserId, LineKey) und blieben sonst als Waisen liegen.
+        _db.RepertoireCardStates.RemoveRange(await _db.RepertoireCardStates.Where(x => x.UserId == userId).ToListAsync());
+        _db.RepertoireSrSettings.RemoveRange(await _db.RepertoireSrSettings.Where(x => x.UserId == userId).ToListAsync());
         // Manuelle Aktivitäten bleiben als (anonyme) Trainingsstatistik, aber die Freitext-Notiz (PII) wird geleert.
         var manualWithNote = await _db.ManualActivities.Where(a => a.UserId == userId && a.Note != null).ToListAsync();
         foreach (var a in manualWithNote) a.Note = null;

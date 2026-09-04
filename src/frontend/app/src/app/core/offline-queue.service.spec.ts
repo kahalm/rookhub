@@ -92,6 +92,21 @@ describe('OfflineQueueService', () => {
     expect(svc.pendingCount()).toBe(1);
   });
 
+  it('behält den Eintrag bei 5xx und bei 408 (Server/Timeout, nicht der Client)', () => {
+    // Die Verwerf-Regel ist eine Grenze: 4xx (außer 401/403/408/429) = dauerhaft, alles andere
+    // bleibt liegen. 5xx und 408 sind die Serverseite — die Lösung darf dort nicht verfallen.
+    svc.enqueue('POST', '/api/puzzles/7/attempt', { solved: true });
+    svc.flush();
+    http.expectOne('/api/puzzles/7/attempt')
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Internal Server Error' });
+    expect(svc.pendingCount()).toBe(1);
+
+    svc.flush();
+    http.expectOne('/api/puzzles/7/attempt')
+      .flush({ message: 'timeout' }, { status: 408, statusText: 'Request Timeout' });
+    expect(svc.pendingCount()).toBe(1);
+  });
+
   it('verwirft NICHTS bei 429 (Rate-Limit) und pausiert den Nachlauf', () => {
     svc.enqueue('POST', '/api/puzzles/5/attempt', { solved: true });
     svc.enqueue('POST', '/api/puzzles/6/attempt', { solved: true });

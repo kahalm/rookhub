@@ -7,6 +7,10 @@
 #      Umgebungsvariable (MYSQL_PWD) und NICHT in der Kommandozeile
 #   3. Sonderzeichen im Passwort (Backslash, ") werden my.cnf-konform escaped
 #   4. trap-Aufraeumen: Host-Tempdatei weg, Container-Kopie per `rm -f` entfernt
+#   5. FEHLERFALL (Dump zu klein): Exit != 0, KEIN Archiv, KEINE Rotation (alte Backups
+#      bleiben!) und keine liegengebliebene .part.err — genau die drei Schutzmechanismen,
+#      die das Skript selbst als „FALLE" kommentiert und die vorher ungetestet waren
+#   6. ERFOLGSFALL: die Rotation raeumt einen wirklich alten Dump weg
 #
 #   ./scripts/tests/test_backup_db.sh                # testet scripts/backup-db.sh
 #   ./scripts/tests/test_backup_db.sh /pfad/zu/alt.sh  # beliebige Version testen
@@ -46,8 +50,10 @@ case "$cmd" in
     # Flags (-i, -e VAR) und Container-Namen ueberspringen, dann dispatchen.
     args=("$@")
     if printf '%s\n' "${args[@]}" | grep -q '^mariadb-dump$'; then
-      # gzip-schlecht komprimierbare Daten -> Archiv > 1 KiB (Mindestgroessen-Check)
-      head -c 8192 /dev/urandom
+      # gzip-schlecht komprimierbare Daten -> Archiv > 1 KiB (Mindestgroessen-Check).
+      # FAKE_DUMP_BYTES steuert die Groesse: klein => das Skript MUSS verwerfen.
+      head -c "${FAKE_DUMP_BYTES:-8192}" /dev/urandom
+      [ -n "${FAKE_DUMP_STDERR:-}" ] && echo "$FAKE_DUMP_STDERR" >&2
     elif printf '%s\n' "${args[@]}" | grep -q '^rm$'; then
       target="${args[${#args[@]}-1]}"
       rm -f "$FAKE_CONTAINER_FS$target"
@@ -118,6 +124,60 @@ if grep -q "^RM: " "$FAKE_DOCKER_LOG" && [ -z "$(find "$FAKE_CONTAINER_FS" -name
 else
   fail "Container-Kopie der defaults-Datei nicht entfernt"
 fi
+
+# ---------------------------------------------------- Lauf 2: Dump zu klein (Fehlerfall)
+# Vorher einen ALTEN Dump hinlegen: er darf NICHT wegrotiert werden, wenn der Lauf scheitert
+# (sonst nimmt der erste kaputte Lauf die letzte funktionierende Historie mit).
+faildir="$sandbox/backups-fail"
+mkdir -p "$faildir"
+: > "$faildir/rookhub-alt.sql.gz"
+touch -d '30 days ago' "$faildir/rookhub-alt.sql.gz"
+
+PATH="$sandbox/bin:$PATH" \
+  MARIADB_ROOT_PASSWORD="$pw" \
+  DB_CONTAINER=fake-mariadb \
+  BACKUP_DIR="$faildir" \
+  FAKE_DUMP_BYTES=10 \
+  FAKE_DUMP_STDERR="mariadb-dump: Got error 1045" \
+  bash "$SCRIPT" > "$sandbox/run-fail.log" 2>&1
+rc_fail=$?
+
+[ "$rc_fail" -ne 0 ] && ok "Fehlerfall: Exit-Code != 0 ($rc_fail)" \
+  || fail "Fehlerfall: Exit-Code 0 trotz zu kleinem Dump"
+if ls "$faildir"/rookhub-2*.sql.gz >/dev/null 2>&1; then
+  fail "Fehlerfall: unbrauchbarer Dump wurde behalten"
+else
+  ok "Fehlerfall: kein Archiv angelegt"
+fi
+[ -e "$faildir/rookhub-alt.sql.gz" ] && ok "Fehlerfall: alter Dump NICHT wegrotiert" \
+  || fail "Fehlerfall: Rotation lief trotz Fehler und loeschte den alten Dump"
+if [ -n "$(find "$faildir" -name '*.part.err' -print -quit)" ]; then
+  fail "Fehlerfall: .part.err liegengeblieben (Rotation fasst sie nie an)"
+else
+  ok "Fehlerfall: keine .part.err zurueckgelassen"
+fi
+grep -q "Rotation uebersprungen" "$sandbox/run-fail.log" \
+  && ok "Fehlerfall: Rotation ausdruecklich uebersprungen" \
+  || fail "Fehlerfall: Log nennt die uebersprungene Rotation nicht"
+
+# ------------------------------------------- Lauf 3: Erfolgsfall raeumt alte Dumps wirklich weg
+rotdir="$sandbox/backups-rot"
+mkdir -p "$rotdir"
+: > "$rotdir/rookhub-alt.sql.gz"
+touch -d '30 days ago' "$rotdir/rookhub-alt.sql.gz"
+
+PATH="$sandbox/bin:$PATH" \
+  MARIADB_ROOT_PASSWORD="$pw" \
+  DB_CONTAINER=fake-mariadb \
+  BACKUP_DIR="$rotdir" \
+  bash "$SCRIPT" > "$sandbox/run-rot.log" 2>&1
+rc_rot=$?
+
+[ "$rc_rot" -eq 0 ] && ok "Erfolgsfall: Exit-Code 0" || fail "Erfolgsfall: Exit-Code $rc_rot"
+[ ! -e "$rotdir/rookhub-alt.sql.gz" ] && ok "Erfolgsfall: alter Dump wegrotiert" \
+  || fail "Erfolgsfall: Rotation entfernte den 30 Tage alten Dump nicht"
+ls "$rotdir"/rookhub-2*.sql.gz >/dev/null 2>&1 && ok "Erfolgsfall: neuer Dump liegt da" \
+  || fail "Erfolgsfall: kein neuer Dump"
 
 echo
 if [ "$fails" -eq 0 ]; then

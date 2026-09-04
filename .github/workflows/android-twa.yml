@@ -152,7 +152,12 @@ jobs:
           path: |
             twa/app-release-bundle.aab
             twa/app-release-signed.apk
-          if-no-files-found: warn
+          # `error` statt `warn`: die beiden Dateien SIND das Produkt dieses Jobs. Vorher endete
+          # ein dev-Build grün mit einem LEEREN Artefakt, wenn Bubblewrap seine Ausgabenamen
+          # änderte oder das Signieren ohne Exit-Code≠0 scheiterte (die prod-Variante fängt das
+          # erst im Release-Schritt ab, den es für dev nicht gibt) — auffallen würde das erst,
+          # wenn jemand die APK installieren will.
+          if-no-files-found: error
 
       # Nur prod: frische APK/AAB an ein GitHub-Release hängen + als "latest" markieren,
       # damit releases/latest/download/app-release-signed.apk immer die aktuelle App liefert.

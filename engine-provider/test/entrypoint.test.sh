@@ -38,4 +38,35 @@ check_fail "ENGINE_COUNT=17 abgelehnt"          run ENGINE_COUNT=17
 check_fail "@-Name abgelehnt (je Engine)"       run ENGINE_COUNT=2 ENGINE_2_NAME='@datei'
 check_fail "@-Name abgelehnt (Einzel-Engine)"   run ENGINE_NAME='@datei'
 
+# 5) Vorprüfungen, die VOR dem Dry-Run-Ausstieg stehen — vorher ungetestet, obwohl sie die
+#    beiden häufigsten Bedienfehler abfangen.
+check_fail "ohne LICHESS_API_TOKEN abgelehnt" \
+    env -i PATH="$PATH" ENTRYPOINT_DRY_RUN=1 ENGINE_PATH="$fake" bash ./entrypoint.sh
+dir=$(mktemp -d)
+check_fail "ENGINE_PATH als Verzeichnis abgelehnt" \
+    env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH="$dir" bash ./entrypoint.sh
+env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH="$dir" bash ./entrypoint.sh > "$out" 2>&1 || true
+check "Verzeichnis-Hinweis genannt"       grep -q 'Das ist ein Verzeichnis' "$out"
+rmdir "$dir"
+
+# 6) `--engine` ist für den Provider eine SHELL-ZEILE: der Pfad muss einfach gequotet ankommen,
+#    ein enthaltenes ' korrekt maskiert. Der subtilste Teil der Datei, bisher ohne Testfall
+#    (alle anderen Fälle benutzen mktemp-Pfade ohne Sonderzeichen).
+tricky_dir=$(mktemp -d)
+tricky="$tricky_dir/my eng'ine"
+printf '#!/bin/sh\n' > "$tricky"; chmod +x "$tricky"
+env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH="$tricky" \
+    bash ./entrypoint.sh > "$out" 2>&1
+# Die Dry-Run-Zeile druckt jedes Argument SHELL-ESCAPED (%q), der Apostroph erscheint dort also
+# zusätzlich mit Backslashes. Für den Vergleich die Backslashes entfernen — übrig bleibt genau die
+# Zeile, die der Provider an `sh -c` gibt: die korrekte Maskierung EINES Apostrophs innerhalb
+# einfacher Anführungszeichen, ohne Backslashes geschrieben also drei Apostrophe hintereinander.
+plain=$(tr -d '\\' < "$out")
+check "Pfad mit Leerzeichen+Apostroph gequotet" \
+    grep -qF -- "exec '$tricky_dir/my eng'''ine'" <<< "$plain"
+# Gegenprobe: der ROHE Pfad (unmaskierter Apostroph) darf NICHT so durchgereicht werden — genau
+# das zerlegte die Shell des Providers und endete beim Nutzer als „exec: not found".
+check_fail "roher Pfad nicht durchgereicht" grep -qF -- "exec '$tricky'" <<< "$plain"
+rm -rf "$tricky_dir"
+
 if [ "$fails" -eq 0 ]; then echo "ALLE TESTS OK"; else echo "$fails Test(s) fehlgeschlagen"; exit 1; fi

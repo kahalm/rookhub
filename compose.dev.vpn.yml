@@ -112,6 +112,12 @@ services:
     image: ghcr.io/kahalm/rookhub-crawler:dev
     container_name: rookhub-crawler-dev
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     network_mode: "service:gluetun"
     depends_on:
       mariadb:
@@ -132,6 +138,12 @@ services:
     image: ghcr.io/kahalm/rookhub-api:dev
     container_name: rookhub-api-dev
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     ports:
       - "${API_PORT}:8080"
     depends_on:
@@ -140,10 +152,12 @@ services:
       gluetun:
         condition: service_healthy
       elasticsearch:
-        condition: service_healthy
+        # NUR `service_started`: Elasticsearch ist reiner Log-Sink (Serilog) — auf `service_healthy`
+        # startete die API nicht, wenn ES nicht hochkam (ein Log-Problem als Totalausfall).
+        condition: service_started
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
-      Jwt__Key: ${JWT_KEY}
+      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://gluetun:8080
@@ -158,10 +172,36 @@ services:
       SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
       GitHub__Token: ${GITHUB_TOKEN:-}
+      # Basis-URL des Frontends für Links in E-Mails (z. B. Passwort-Reset).
+      App__BaseUrl: ${APP_BASE_URL:-}
+      # E-Mail-Versand (Passwort-Reset). SmtpHost leer -> Versand aus (Mail wird nur geloggt).
+      Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
+      Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
+      Email__SmtpUser: ${EMAIL_SMTP_USER:-}
+      Email__SmtpPassword: ${EMAIL_SMTP_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM_ADDRESS:-}
+      Email__FromName: ${EMAIL_FROM_NAME:-RookHub}
+      Email__UseStartTls: ${EMAIL_USE_STARTTLS:-true}
+      # Chessable-Integration (piratechess-API im externen chessable-bridge Netz).
+      Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
+      Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      # PFLICHT: ein LEERER Wert wäre keine abgeschaltete Verschlüsselung, sondern eine
+      # Schein-Verschlüsselung mit dem öffentlich bekannten SHA256("") — deshalb bricht der Start ab.
+      Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein (verschlüsselt den gespeicherten Chessable-Bearer)}
+      # Optional: Claude-API-Key für die Tipp-Generierung (nur Import-/Reprocess-Pfad).
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      # Optional: VAPID-Schlüssel für Web-Push. Alle drei leer -> Push deaktiviert.
+      WebPush__Subject: ${WEBPUSH_SUBJECT:-}
+      WebPush__PublicKey: ${WEBPUSH_PUBLIC_KEY:-}
+      WebPush__PrivateKey: ${WEBPUSH_PRIVATE_KEY:-}
+      # CI-Push-Modell (Admin-Tab „CI / Actions"); leer -> Endpoints antworten 401 (fail-closed).
+      CI__BuildReportSecret: ${CI_BUILD_REPORT_SECRET:-}
+      CI__GithubWebhookSecret: ${CI_GITHUB_WEBHOOK_SECRET:-}
     volumes:
       - dataprotection-keys:/keys
     networks:
       - rookhub-dev
+      - chessable-bridge
 
   # ── Elasticsearch ──────────────────────────────────────────────────────────
   elasticsearch:
@@ -197,7 +237,14 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - xpack.security.enabled=false
     ports:
-      - "${KIBANA_PORT:-5602}:5601"
+      # Kibana läuft mit ABGESCHALTETER Security (xpack.security.enabled=false) und veröffentlicht
+      # hier standardmäßig auf ALLEN Host-Interfaces: wer den Host auf diesem Port erreicht, liest
+      # ohne Login den kompletten Log-Index (Request-Pfade mit Ids, Nutzernamen, IP-Adressen,
+      # Security-Events). Elasticsearch selbst ist bewusst NICHT publiziert.
+      # KIBANA_BIND=127.0.0.1 beschränkt den Zugriff auf den Host (Zugang dann per SSH-Tunnel:
+      # `ssh -L 5601:127.0.0.1:5601 <host>`); Vorgabe bleibt 0.0.0.0, damit ein bestehender
+      # LAN-Zugriff (siehe KIBANA_URL) nicht unangekündigt wegbricht.
+      - "${KIBANA_BIND:-0.0.0.0}:${KIBANA_PORT:-5602}:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -230,6 +277,12 @@ services:
     image: ghcr.io/kahalm/rookhub-frontend:dev
     container_name: rookhub-frontend-dev
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     ports:
       - "${FRONTEND_PORT}:8080"
     depends_on:
@@ -239,6 +292,11 @@ services:
 
 networks:
   rookhub-dev:
+  # Externes Netz von piratechess_docker, damit rookhub-api den piratechess-api-Container
+  # per DNS-Namen erreicht (ohne dieses Netz ist die Chessable-Anbindung unauflösbar).
+  chessable-bridge:
+    external: true
+    name: chessable-bridge
 
 volumes:
   dataprotection-keys:

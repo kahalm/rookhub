@@ -359,12 +359,23 @@ try
     try
     {
         Directory.CreateDirectory(keyPath);
+        // FALLE: `CreateDirectory` wirft bei einem BESTEHENDEN Verzeichnis nicht — egal, welche
+        // Rechte es hat — und `PersistKeysToFileSystem` prüft beim Registrieren gar nichts. Bei
+        // einem Host-Bind-Mount (`- /data/keys:/keys`) gehört das Verzeichnis root, `appuser` darf
+        // nicht schreiben (die `chown`-Rechte des Images wandern nur in ein FRISCHES benanntes
+        // Volume), und der Fallback unten lief nie an: der Start meldete Erfolg, und der erste
+        // „Passwort vergessen"-Request scheiterte Wochen später mit 500 statt einer Mail.
+        // Deshalb hier EINMAL wirklich schreiben.
+        var probe = Path.Combine(keyPath, ".write-probe");
+        File.WriteAllText(probe, DateTime.UtcNow.ToString("O"));
+        File.Delete(probe);
         dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
     }
     catch (Exception ex)
     {
-        // Pfad nicht beschreibbar (z. B. lokale Dev ohne gemountetes /keys) → In-Memory-Keys
-        // (ephemer; ueberleben den Prozess nicht). Kein Startup-Crash deswegen.
+        // Pfad nicht beschreibbar (z. B. lokale Dev ohne gemountetes /keys, oder ein root-eigener
+        // Bind-Mount) → In-Memory-Keys (ephemer; ueberleben den Prozess nicht). Kein Startup-Crash,
+        // aber die Warnung steht ab jetzt BEIM START im Log, nicht erst als 500 im Betrieb.
         Log.Warning(ex, "DataProtection: key path {KeyPath} not writable — falling back to in-memory keys", keyPath);
     }
 

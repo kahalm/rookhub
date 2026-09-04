@@ -38,6 +38,85 @@ public class ProfileServiceTests : IDisposable
         return user.Id;
     }
 
+    /// <summary>Entitäten mit Nutzerbezug, die die Kontolöschung ABSICHTLICH stehen lässt — jeweils
+    /// mit dem Grund. Alles andere MUSS in <c>DeleteAccountAsync</c> auftauchen.</summary>
+    private static readonly Dictionary<string, string> DeletionExempt = new(StringComparer.Ordinal)
+    {
+        ["EndlessSessions"] = "anonyme Laufstatistik (bleibt unter der Id, ohne PII)",
+        ["ManualActivities"] = "Trainingsstatistik; die Notiz (PII) wird geleert statt gelöscht",
+        ["PuzzleAttempts"] = "anonyme Löse-Statistik",
+        ["BookPuzzleAttempts"] = "anonyme Löse-Statistik",
+        ["CourseAttempts"] = "anonymes Zeit-Log des Trainingsziel-Trackers",
+        ["CoursePuzzleResults"] = "anonymer Kursfortschritt",
+        ["CourseInfoViews"] = "anonymer Kursfortschritt",
+        ["CourseProgresses"] = "anonymer Kursfortschritt",
+        ["WeeklyPostAttempts"] = "anonyme Löse-Statistik",
+        ["ChessableActivities"] = "anonymes Zeit-Log (Chessable-Kategorie)",
+        ["PlayTimeDailies"] = "anonyme Partienzählung",
+        ["PlayTimeSyncs"] = "nur Cursor/Zeitstempel, keine PII",
+        ["UserGroups"] = "Gruppenzugehörigkeit trägt keine PII und stirbt mit der Gruppe",
+        ["UserTrainingGoals"] = "Zielwerte (Zahlen), keine PII",
+        ["EndlessProgresses"] = "Konfiguration/Highscore ohne PII",
+        ["SharedPuzzleAttempts"] = "IdentityKey, kein FK auf den Nutzer",
+        ["CourseFlashcardMarks"] = "Markierungen ohne PII",
+        ["RepertoireFlashcardMarks"] = "Markierungen ohne PII",
+        ["CoursePins"] = "Markierungen ohne PII",
+        ["AdminMessages"] = "Konversation mit dem Admin-Team (Nachweis; wird beim Löschen des Threads entfernt)",
+        ["MessageThreads"] = "Metadaten der Admin-Konversation",
+        ["CiBuildReports"] = "kein Nutzerbezug (Repo-Zeile)",
+        ["UserProfiles"] = "wird IN PLACE anonymisiert (über user.Profile), nicht gelöscht — "
+                           + "die Statistik-Tabellen zeigen weiter auf die UserId",
+    };
+
+    [Fact]
+    public void DeleteAccount_CoversEveryUserOwnedTable()
+    {
+        // Die Löschung ANONYMISIERT die Nutzerzeile — es feuert also KEIN Cascade-FK, jede
+        // nutzereigene Tabelle muss von Hand aufgeräumt werden. Der Aufzählungs-Test darüber kann
+        // das nicht absichern: eine NEUE Tabelle steht dort naturgemäß auch nicht. Deshalb hier
+        // gegen das DbContext-Modell prüfen (genau so blieben Push-Abos, Analyseaufträge und
+        // Verteiler-Mitgliedschaften nach der ersten Fassung liegen).
+        var source = ReadDeleteAccountSource();
+        var missing = new List<string>();
+
+        foreach (var prop in typeof(AppDbContext).GetProperties()
+                     .Where(p => p.PropertyType.IsGenericType
+                                 && p.PropertyType.GetGenericTypeDefinition() == typeof(Microsoft.EntityFrameworkCore.DbSet<>)))
+        {
+            var entity = prop.PropertyType.GetGenericArguments()[0];
+            var ownsUser = entity.GetProperty("UserId") != null || entity.GetProperty("OwnerUserId") != null;
+            if (!ownsUser || entity == typeof(Models.AppUser)) continue;
+            if (DeletionExempt.ContainsKey(prop.Name)) continue;
+            if (!source.Contains($"_db.{prop.Name}", StringComparison.Ordinal)) missing.Add(prop.Name);
+        }
+
+        Assert.True(missing.Count == 0,
+            "Nutzereigene Tabelle(n) ohne Behandlung in DeleteAccountAsync (DSGVO-Löschung lässt die "
+            + "Daten dauerhaft liegen — aufräumen ODER mit Grund in DeletionExempt eintragen):\n  "
+            + string.Join("\n  ", missing.OrderBy(m => m, StringComparer.Ordinal)));
+    }
+
+    /// <summary>Quelltext von <c>ProfileService.DeleteAccountAsync</c> (Methodenrumpf). Der Pfad kommt
+    /// über <see cref="CallerFilePathAttribute"/>, ist also im normalen Lauf immer auflösbar — ein
+    /// stilles Überspringen gäbe es hier nicht, der Test scheitert stattdessen.</summary>
+    private static string ReadDeleteAccountSource([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
+    {
+        var dir = Path.GetDirectoryName(thisFile);
+        string? file = null;
+        while (!string.IsNullOrEmpty(dir))
+        {
+            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Services", "ProfileService.cs");
+            if (File.Exists(candidate)) { file = candidate; break; }
+            dir = Path.GetDirectoryName(dir);
+        }
+        Assert.NotNull(file);
+        var src = File.ReadAllText(file!);
+        var start = src.IndexOf("public async Task DeleteAccountAsync", StringComparison.Ordinal);
+        Assert.True(start >= 0, "DeleteAccountAsync nicht gefunden — Methode umbenannt?");
+        var end = src.IndexOf("\n    }\n", start, StringComparison.Ordinal);
+        return end > start ? src[start..end] : src[start..];
+    }
+
     [Fact]
     public async Task DeleteAccount_WrongPassword_Throws_AndKeepsData()
     {
@@ -74,6 +153,12 @@ public class ProfileServiceTests : IDisposable
         _db.ChessableSessionMoves.Add(new Models.ChessableSessionMove { UserId = id, Bid = "1", Oid = "2", MovesJson = "[]" });
         _db.ChessableReviewLines.Add(new Models.ChessableReviewLine { UserId = id, Bid = "1", Oid = "2", Json = "{}" });
         _db.ChessableProblemMoves.Add(new Models.ChessableProblemMove { UserId = id, Bid = "1", Oid = "2" });
+        // Nachträglich dazugekommene nutzereigene Tabellen (vom Reflection-Test aufgedeckt):
+        _db.ChessableImports.Add(new Models.ChessableImport { UserId = id, Bid = "12345", CourseName = "Mein Kurs", Target = "book" });
+        _db.CalcEditionViews.Add(new Models.CalcEditionView { CalcEditionId = 9, UserId = id, ViewedAt = DateTime.UtcNow });
+        _db.FavoritePuzzles.Add(new Models.FavoritePuzzle { UserId = id, PuzzleId = 5 });
+        _db.TournamentMonitors.Add(new Models.TournamentMonitor { UserId = id, CrawlerTournamentId = "42", ActiveUntil = DateTime.UtcNow.AddDays(3) });
+        _db.RepertoireSrSettings.Add(new Models.RepertoireSrSettings { UserId = id, IntervalsJson = "[]" });
         // Manuelle Aktivität bleibt als Statistik, aber die Notiz (PII) wird geleert:
         _db.ManualActivities.Add(new Models.ManualActivity { UserId = id, Date = new DateOnly(2026, 7, 1), Kind = Models.ManualActivityKind.OtbGame, Amount = 1, Note = "gegen Max am Vereinsabend" });
         await _db.SaveChangesAsync();
@@ -118,6 +203,13 @@ public class ProfileServiceTests : IDisposable
         Assert.False(await _db.ChessableSessionMoves.AnyAsync(x => x.UserId == id));
         Assert.False(await _db.ChessableReviewLines.AnyAsync(x => x.UserId == id));
         Assert.False(await _db.ChessableProblemMoves.AnyAsync(x => x.UserId == id));
+        // Die nachträglich ergänzten Tabellen sind ebenfalls leer (keine Waisen mit Kursnamen,
+        // Nutzungsprotokollen oder Beobachtungsaufträgen eines gelöschten Kontos).
+        Assert.False(await _db.ChessableImports.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.CalcEditionViews.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.FavoritePuzzles.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.TournamentMonitors.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.RepertoireSrSettings.AnyAsync(x => x.UserId == id));
         // Manuelle Aktivität bleibt (Statistik), aber ohne Freitext-Notiz
         var manual = await _db.ManualActivities.SingleAsync(a => a.UserId == id);
         Assert.Null(manual.Note);

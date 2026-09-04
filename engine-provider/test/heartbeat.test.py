@@ -16,8 +16,15 @@ import os, shutil, subprocess, sys, tempfile, types
 HERE = os.path.dirname(os.path.abspath(__file__))
 src = sys.argv[1] if len(sys.argv) > 1 else "/opt/provider.py"
 if not os.path.exists(src):
-    print(f"UEBERSPRUNGEN: {src} nicht vorhanden (Pfad zu einer provider.py angeben)")
-    sys.exit(0)
+    # Ein EXPLIZIT übergebener Pfad, der nicht existiert, ist ein Fehler — sonst meldet der
+    # einzige Test des Heartbeat-Eingriffs bei einem Tippfehler im CI-Aufruf still Erfolg.
+    # Nur der Default (/opt/provider.py, außerhalb des Containers nicht vorhanden) wird
+    # übersprungen, damit ein Aufruf ohne Argument auf dem Entwicklungsrechner nichts vortäuscht.
+    explicit = len(sys.argv) > 1
+    print(f"{'FEHLER' if explicit else 'UEBERSPRUNGEN'}: {src} nicht vorhanden"
+          f"{' (Pfad prüfen)' if explicit else ' (Pfad zu einer provider.py angeben)'}",
+          file=sys.stderr if explicit else sys.stdout)
+    sys.exit(1 if explicit else 0)
 
 tmp = tempfile.mkdtemp()
 patched = os.path.join(tmp, "provider_patched.py")

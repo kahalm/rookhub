@@ -285,10 +285,14 @@ public class PatScopeFenceTests
     [Fact]
     public void Fence_IsWiredAfterAuthentication_InProgramCs()
     {
+        // Kein stilles `return` bei nicht gefundenem Quellbaum: dieser Test ist die EINZIGE
+        // Absicherung, dass der Zaun überhaupt in der Pipeline hängt — überspringt er sich selbst,
+        // meldet er Erfolg für eine Prüfung, die nie lief (der Pfad kommt aus [CallerFilePath] und
+        // ist im normalen Lauf immer auflösbar).
         var programCs = FindProgramCs();
-        if (programCs == null) return;   // Quellbaum nicht neben der Testassembly (z. B. Paket-Lauf)
+        Assert.NotNull(programCs);
 
-        var src = File.ReadAllText(programCs);
+        var src = File.ReadAllText(programCs!);
         var auth = src.IndexOf("app.UseAuthentication();", StringComparison.Ordinal);
         var fence = src.IndexOf("app.UsePatScopeFence();", StringComparison.Ordinal);
         Assert.True(auth >= 0, "app.UseAuthentication() fehlt in Program.cs");
@@ -307,9 +311,9 @@ public class PatScopeFenceTests
     public void ProgramCs_HasNoSecondCopyOfTheFence()
     {
         var programCs = FindProgramCs();
-        if (programCs == null) return;
+        Assert.NotNull(programCs);
 
-        var src = File.ReadAllText(programCs);
+        var src = File.ReadAllText(programCs!);
         Assert.DoesNotContain(PatScopeFenceMiddleware.ErrorCode, src, StringComparison.Ordinal);
         Assert.DoesNotContain("\"/api/extension\"", src, StringComparison.Ordinal);
     }

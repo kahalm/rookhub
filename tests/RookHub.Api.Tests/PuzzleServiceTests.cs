@@ -553,22 +553,11 @@ public class PuzzleServiceTests : IDisposable
         Assert.Equal(1500, puzzle.Rating);
     }
 
-    [Fact]
-    public async Task GetRandom_ThemeWithSqlWildcard_DoesNotMatch()
-    {
-        var userId = await CreateUserAsync("wildcarduser");
-        // Puzzle with theme "mateIn2" should NOT match a search for "mate_n2" (wildcard)
-        await CreatePuzzleAsync(themes: "mateIn2", lichessId: "wc1");
-        await CreatePuzzleAsync(themes: "endgame", lichessId: "wc2");
-
-        // Search with underscore wildcard — should be escaped and not match
-        var result = await _service.GetRandomAsync(userId, null, null, themes: "mate_n2", false);
-
-        // Should either return null or not match "mateIn2" (InMemory provider may behave differently)
-        // The important thing is the code sanitizes wildcards — this test verifies the sanitization path runs
-        // InMemory doesn't support EF.Functions.Like, so we just verify it doesn't throw
-        Assert.True(true);
-    }
+    // `GetRandom_ThemeWithSqlWildcard_DoesNotMatch` stand hier mit `Assert.True(true)` und dem
+    // Kommentar „InMemory doesn't support EF.Functions.Like": der Test KONNTE nicht rot werden und
+    // behauptete trotzdem, die Wildcard-Maskierung zu prüfen. Er lebt jetzt als echter Test in
+    // `RookHub.Api.IntegrationTests/QueryTranslationTests.ThemenFilter_MaskiertSqlWildcards`
+    // (echte MariaDB, wo `EF.Functions.Like` wirklich übersetzt wird).
 
     [Fact]
     public async Task GetStats_WithManyAttempts_ReturnsCorrectCounts()

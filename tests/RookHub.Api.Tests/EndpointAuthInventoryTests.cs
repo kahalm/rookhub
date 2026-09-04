@@ -134,6 +134,73 @@ public class EndpointAuthInventoryTests
             "Nicht mehr anonym erreichbar (Whitelist aufräumen):\n  " + string.Join("\n  ", removed));
     }
 
+    /// <summary>Admin-Endpoints, die BEWUSST ohne Berechtigungsattribut auskommen. Leer heißt:
+    /// jede Action unter <c>api/admin…</c> braucht eine Berechtigung.</summary>
+    private static readonly string[] AdminWithoutPermission = [];
+
+    [Fact]
+    public void AdminEndpoints_RequireAPermission()
+    {
+        // Das anonym-Inventar oben deckt nur „Login nötig ja/nein" ab. Die Stufe DARÜBER war
+        // ungeprüft: `AdminController` (Route api/admin) trägt auf Klassenebene nur [Authorize],
+        // die Berechtigung hängt je Action. Eine neue Action ohne [HasPermission] wäre damit für
+        // JEDEN eingeloggten Nutzer aufrufbar — und ein direkter Controller-Test wertet Attribute
+        // ohnehin nie aus (siehe Klassenkommentar).
+        var unguarded = new List<string>();
+        var adminSeen = new List<string>();
+        var asm = typeof(RookHub.Api.Controllers.ProfileController).Assembly;
+        foreach (var type in asm.GetTypes()
+                     .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t))
+                     .OrderBy(t => t.Name, StringComparer.Ordinal))
+        {
+            var prefix = (type.GetCustomAttribute<RouteAttribute>(inherit: true)?.Template ?? "")
+                .Replace("[controller]", type.Name.EndsWith("Controller", StringComparison.Ordinal)
+                    ? type.Name[..^"Controller".Length]
+                    : type.Name, StringComparison.Ordinal);
+            var classGuard = HasPermissionOrRole(type.GetCustomAttributes<AuthorizeAttribute>(inherit: true));
+
+            foreach (var m in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                         .Where(m => !m.IsSpecialName && m.GetCustomAttribute<NonActionAttribute>() == null))
+            {
+                var verbs = m.GetCustomAttributes<HttpMethodAttribute>(inherit: true).ToList();
+                if (verbs.Count == 0) continue;
+                var guarded = classGuard || HasPermissionOrRole(m.GetCustomAttributes<AuthorizeAttribute>(inherit: true));
+                foreach (var v in verbs)
+                {
+                    var t = v.Template ?? "";
+                    var full = t.StartsWith('/') || t.StartsWith("~/", StringComparison.Ordinal)
+                        ? t.TrimStart('~').TrimStart('/')
+                        : string.Join('/', new[] { prefix, t }.Where(s => s.Length > 0));
+                    if (!full.StartsWith("api/admin", StringComparison.OrdinalIgnoreCase)) continue;
+                    foreach (var verb in v.HttpMethods)
+                    {
+                        adminSeen.Add($"{verb} /{full}");
+                        if (!guarded) unguarded.Add($"{verb} /{full}");
+                    }
+                }
+            }
+        }
+
+        // Der Test darf nicht dadurch grün werden, dass er gar keine Admin-Action FINDET
+        // (Routen-Präfix umbenannt, Reflection ins Leere gelaufen).
+        Assert.True(adminSeen.Count > 20, $"Nur {adminSeen.Count} Admin-Actions gefunden — Inventar kaputt?");
+
+        var unexpected = unguarded.Distinct().Except(AdminWithoutPermission)
+            .OrderBy(s => s, StringComparer.Ordinal).ToList();
+        Assert.True(unexpected.Count == 0,
+            "Admin-Endpoint OHNE Berechtigung (für JEDEN eingeloggten Nutzer aufrufbar — "
+            + "[HasPermission(…)] ergänzen; wenn wirklich gewollt: AdminWithoutPermission erweitern):\n  "
+            + string.Join("\n  ", unexpected));
+    }
+
+    /// <summary><c>[HasPermission]</c> ist ein <c>AuthorizeAttribute</c> mit Policy; ein
+    /// <c>[Authorize(Roles=…)]</c> zählt ebenso als Berechtigungsstufe. Ein nacktes
+    /// <c>[Authorize]</c> (nur „eingeloggt") zählt NICHT.</summary>
+    private static bool HasPermissionOrRole(IEnumerable<AuthorizeAttribute> attrs)
+        => attrs.Any(a => a is RookHub.Api.Authorization.HasPermissionAttribute
+                          || !string.IsNullOrEmpty(a.Roles)
+                          || !string.IsNullOrEmpty(a.Policy));
+
     [Fact]
     public void NoDuplicateRouteTemplates()
     {
