@@ -75,11 +75,20 @@ public class LeaderboardService
             .ToListAsync())
             .ToDictionary(x => x.UserId, x => x.Count);
 
-        // #lines from books: gelöste Kurs-Linien je Nutzer. CoursePuzzleResult ist idempotent
-        // (eine Zeile je erstmalig gelöstem (UserId, BookPuzzleId)) → das IST die einzigartige Zählung.
-        var linesPerUser = (await _db.CoursePuzzleResults
-            .Where(r => r.SolvedAt >= from)
-            .GroupBy(r => r.UserId)
+        // #lines from books: gelöste Kurs-Linien je Nutzer — Quelle sind die APPEND-ONLY
+        // `CourseAttempts`, DISTINCT über (UserId, BookPuzzleId) für die einzigartige Zählung.
+        //
+        // Vorher zählte diese Kategorie `CoursePuzzleResults`. Die sind zwar idempotent, werden aber
+        // bei jedem Kurs-Reset, Kapitel-Reset und beim Löschen von Linien/Büchern PHYSISCH entfernt:
+        // wer montags 40 Linien löste und mittwochs den Kurs zurücksetzte, stand in der
+        // Wochen-Bestenliste wieder bei 0, obwohl die 40 Lösungen dieser Woche stattgefunden haben.
+        // Die anderen drei Kategorien hängen ohnehin an append-only Tabellen — nur hier war die
+        // Quelle veränderlich.
+        var linesPerUser = (await _db.CourseAttempts
+            .Where(a => a.Solved && a.AttemptedAt >= from)
+            .Select(a => new { a.UserId, a.BookPuzzleId })
+            .Distinct()
+            .GroupBy(x => x.UserId)
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToListAsync())
             .ToDictionary(x => x.UserId, x => x.Count);

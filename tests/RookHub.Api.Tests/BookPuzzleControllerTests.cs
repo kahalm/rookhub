@@ -86,6 +86,27 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetNextInBook_RoundsBeyondNine_FollowReadingOrder()
+    {
+        // Der Cursor verglich die Runde ORDINAL, die Liste sortierte aber Länge-vor-Text (wie überall
+        // sonst). Bei ungepaddeten Runden „9"/„10" fiel „10" damit VOR „9": von Runde 9 aus fand der
+        // Cursor kein größeres Element und sprang zum Buchanfang zurück — Runde 10 war per „Weiter"
+        // nicht erreichbar.
+        var p2 = await CreateBookPuzzleAsync(lineId: "r.pgn:2", bookFileName: "r.pgn", round: "2");
+        var p9 = await CreateBookPuzzleAsync(lineId: "r.pgn:9", bookFileName: "r.pgn", round: "9");
+        var p10 = await CreateBookPuzzleAsync(lineId: "r.pgn:10", bookFileName: "r.pgn", round: "10");
+
+        var after2 = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetNextInBook(p2.Id)).Value);
+        Assert.Equal(p9.Id, after2.Id);
+
+        var after9 = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetNextInBook(p9.Id)).Value);
+        Assert.Equal(p10.Id, after9.Id);
+
+        var wrap = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetNextInBook(p10.Id)).Value);
+        Assert.Equal(p2.Id, wrap.Id);   // erst nach der letzten Runde zurück an den Anfang
+    }
+
+    [Fact]
     public async Task GetRandomInBook_ReturnsOtherPuzzleFromSameBook()
     {
         var p1 = await CreateBookPuzzleAsync(lineId: "b.pgn:1", bookFileName: "b.pgn");

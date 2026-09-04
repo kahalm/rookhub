@@ -339,6 +339,15 @@ public class CourseService
             var everyoneId = await EveryoneGroupIdAsync();
             booksQuery = booksQuery.Where(b => b.OwnerUserId == userId
                 || _db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == userId)
+                // Verteiler der Kalkulations-Serie: genau dieser Pfad TRÄGT das „privat" der Serie
+                // (sobald IsPublic aus ist, sehen nur noch Mitglieder den Kurs). Er fehlte hier —
+                // ein Mitglied fand den Kurs weder unter /courses noch im Dashboard, sondern nur
+                // über den Deep-Link aus der In-App-Ankündigung.
+                || _db.CalcSeriesMembers.Any(m => m.BookId == b.Id && m.UserId == userId)
+                // Selbst angepinnte Kurse: anpinnen darf man JEDES zugängliche Buch (auch ein
+                // öffentliches über den Direkt-Link), angezeigt wurden Pins aber nur aus dieser
+                // Liste — der Pin blieb also unsichtbar.
+                || _db.CoursePins.Any(p => p.BookId == b.Id && p.UserId == userId)
                 || _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
                     (a.GroupId == everyoneId ||
                      _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId))));
@@ -890,9 +899,10 @@ public class CourseService
                     .Select(bp => new { bp.Id, bp.Round })
                     .FirstOrDefaultAsync();
                 if (cur != null)
-                    pickId = keys.FirstOrDefault(k =>
-                        string.CompareOrdinal(k.Round, cur.Round) > 0 ||
-                        (k.Round == cur.Round && k.Id > cur.Id))?.Id;
+                    // Dieselbe Reihenfolge wie die Sortierung (inkl. Round.Length), siehe
+                    // ChapterOrder.Compare — sonst zeigte „Überspringen" bei Runden „9"/„10"
+                    // dieselbe Aufgabe endlos erneut.
+                    pickId = keys.FirstOrDefault(k => ChapterOrder.Compare(k.Round, k.Id, cur.Round, cur.Id) > 0)?.Id;
             }
             pickId ??= keys.Select(k => (int?)k.Id).FirstOrDefault();
             puzzle = pickId.HasValue

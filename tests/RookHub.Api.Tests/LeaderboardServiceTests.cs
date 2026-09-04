@@ -47,8 +47,13 @@ public class LeaderboardServiceTests : IDisposable
     private void AddEndlessRun(int userId, DateTime createdAt)
         => _db.EndlessSessions.Add(new EndlessSession { UserId = userId, CreatedAt = createdAt, TotalSolved = 5, MaxRating = 1500 });
 
-    private void AddCourseLine(int userId, int bookPuzzleId, DateTime solvedAt)
-        => _db.CoursePuzzleResults.Add(new CoursePuzzleResult { UserId = userId, BookId = 1, BookPuzzleId = bookPuzzleId, SolvedAt = solvedAt });
+    // Quelle der Kategorie „Kurs-Linien" ist das APPEND-ONLY Versuchs-Log, nicht die löschbare
+    // Fortschritts-Menge `CoursePuzzleResults` (ein Kurs-Reset nahm sonst Punkte zurück).
+    private void AddCourseLine(int userId, int bookPuzzleId, DateTime solvedAt, bool solved = true)
+        => _db.CourseAttempts.Add(new CourseAttempt
+        {
+            UserId = userId, BookId = 1, BookPuzzleId = bookPuzzleId, Solved = solved, AttemptedAt = solvedAt,
+        });
 
     private void AddDaily(DateOnly date, int bookPuzzleId)
         => _db.DailyPuzzles.Add(new DailyPuzzle { Date = date, BookPuzzleId = bookPuzzleId });
@@ -165,6 +170,33 @@ public class LeaderboardServiceTests : IDisposable
         Assert.Equal("anna", res.EndlessRuns[0].Name);
         Assert.Equal("ben", res.CourseLines[0].Name);           // ben: 2 Linien führt
         Assert.Equal(2, res.CourseLines[0].Count);
+    }
+
+    [Fact]
+    public async Task GetAsync_CourseLines_SurviveProgressReset_AndCountEachLineOnce()
+    {
+        // Frühere Quelle war `CoursePuzzleResults` — eine Menge, die Kurs-Reset, Kapitel-Reset und
+        // Buchlöschung leeren. Wer seinen Kurs von vorn begann, verlor rückwirkend seinen Platz.
+        var anna = await CreateUserAsync("anna");
+        var now = DateTime.UtcNow;
+
+        AddCourseLine(anna.Id, 100, now);
+        AddCourseLine(anna.Id, 100, now.AddMinutes(-5));          // Wiederholung derselben Linie
+        AddCourseLine(anna.Id, 101, now, solved: false);           // Fehlversuch zählt nicht
+        _db.CoursePuzzleResults.Add(new CoursePuzzleResult
+        {
+            UserId = anna.Id, BookId = 1, BookPuzzleId = 100, SolvedAt = now,
+        });
+        await _db.SaveChangesAsync();
+
+        // Der Reset räumt die Fortschritts-Menge ab — das Log bleibt.
+        _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults);
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetAsync("alltime", viewerId: 0);
+
+        Assert.Equal(1, res.CourseLines[0].Count);                 // eine einzigartige gelöste Linie
+        Assert.Equal("anna", res.CourseLines[0].Name);
     }
 
     [Fact]

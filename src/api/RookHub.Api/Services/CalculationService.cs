@@ -351,8 +351,8 @@ public class CalculationService
         tree!.TreeJson = json;
         tree.UpdatedAt = now;
         ApplyMeta(tree, dto);
-        await _db.SaveChangesAsync(ct);
-        return State(tree);
+        var saved = await SaveWithRaceRetryAsync(tree, t => { t.TreeJson = json; ApplyMeta(t, dto); }, ct);
+        return State(saved);
     }
 
     /// <summary>
@@ -376,8 +376,38 @@ public class CalculationService
             return State(tree!);
         }
         if (changed) tree!.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
-        return State(tree!);
+        var saved = await SaveWithRaceRetryAsync(tree!, t => ApplyMeta(t, dto), ct);
+        return State(saved);
+    }
+
+    /// <summary>
+    /// Speichern mit EINEM Retry auf dem Unique-Index <c>(UserId, BookPuzzleId)</c>.
+    ///
+    /// Das Frontend schickt beim ersten Bearbeiten einer Stellung Baum-Autosave (PUT) und
+    /// Zeit-Flush (PATCH, eigener Timer) praktisch gleichzeitig: beide sehen „keine Zeile", beide
+    /// legen an, und der zweite <c>SaveChanges</c> lief in ein Duplikat → 500 statt Zusammenführen.
+    /// Überall sonst im Repo wird genau dieser Race abgefangen. Beim Retry wird die inzwischen
+    /// vorhandene Zeile geladen und die eigene Änderung darauf angewandt.
+    /// </summary>
+    private async Task<CalculationTree> SaveWithRaceRetryAsync(CalculationTree tree,
+        Action<CalculationTree> apply, CancellationToken ct)
+    {
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return tree;
+        }
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
+        {
+            _db.ChangeTracker.Clear();
+            var existing = await _db.CalculationTrees
+                .FirstOrDefaultAsync(t => t.UserId == tree.UserId && t.BookPuzzleId == tree.BookPuzzleId, ct);
+            if (existing is null) throw;
+            apply(existing);
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return existing;
+        }
     }
 
     /// <summary>Holt die Zeile des Users zu einer Stellung (mit Zugriffsprüfung) oder legt sie an.

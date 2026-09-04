@@ -106,27 +106,75 @@ public class PlayTimeService
 
     // ----- Lichess ---------------------------------------------------------
 
+    /// <summary>Partien je Lichess-Abruf. Lichess deckelt die Antwort auf <c>max</c>; mehr als das
+    /// braucht weitere Seiten (siehe <see cref="FetchLichessAsync"/>).</summary>
+    internal const int LichessPageSize = 300;
+
+    /// <summary>Deckel für EINEN Sync-Lauf (Seiten × <see cref="LichessPageSize"/> = 6000 Partien).
+    /// Was darüber liegt, holt der nächste Lauf — der Cursor steht dann auf der letzten Seite.</summary>
+    internal const int LichessMaxPages = 20;
+
     private async Task<(Dictionary<DateOnly, int>, long)> FetchLichessAsync(string username, long cursor, CancellationToken ct)
     {
         var since = cursor > 0
             ? cursor + 1
             : DateTimeOffset.UtcNow.AddDays(-_firstSyncLookbackDays).ToUnixTimeMilliseconds();
-        var url = $"https://lichess.org/api/games/user/{Uri.EscapeDataString(username)}" +
-                  $"?since={since}&moves=false&clocks=false&evals=false&opening=false&pgnInJson=false&max=300";
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Accept.ParseAdd("application/x-ndjson");
-        using var resp = await _http.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
-        var body = await resp.Content.ReadAsStringAsync(ct);
-        return ParseLichess(body);
+        var perDay = new Dictionary<DateOnly, int>();
+        long newCursor = 0;
+
+        // SEITENWEISE, ÄLTESTE ZUERST (`sort=dateAsc`). Vorher ging genau EIN Abruf mit `max=300` in der
+        // Lichess-Vorgabe-Sortierung (neueste zuerst) raus: wer seit dem letzten Lauf mehr als 300 Partien
+        // gespielt hatte, bekam die 300 NEUESTEN gezählt — und weil der Cursor danach auf deren jüngsten
+        // Zeitstempel sprang, fielen alle älteren dazwischen für immer aus der Statistik. Aufsteigend
+        // sortiert wandert der Cursor stattdessen nur bis zum Ende der geholten Seite, und die nächste
+        // Seite setzt exakt dort an.
+        for (var page = 0; page < LichessMaxPages; page++)
+        {
+            var url = $"https://lichess.org/api/games/user/{Uri.EscapeDataString(username)}" +
+                      $"?since={since}&sort=dateAsc&moves=false&clocks=false&evals=false&opening=false" +
+                      $"&pgnInJson=false&max={LichessPageSize}";
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Accept.ParseAdd("application/x-ndjson");
+            using var resp = await _http.SendAsync(req, ct);
+            resp.EnsureSuccessStatusCode();
+            var body = await resp.Content.ReadAsStringAsync(ct);
+
+            var pageResult = ParseLichessPage(body);
+            foreach (var kv in pageResult.PerDay)
+                perDay[kv.Key] = (perDay.TryGetValue(kv.Key, out var v) ? v : 0) + kv.Value;
+            if (pageResult.NewCursor > newCursor) newCursor = pageResult.NewCursor;
+
+            if (pageResult.Total < LichessPageSize) break;          // letzte Seite
+            // Weiter ab der jüngsten ANGELEGTEN Partie dieser Seite — nicht ab `lastMoveAt`: eine lange
+            // Partie endet nach dem Beginn der nächsten, ihr Ende als Grenze übersprang die dazwischen
+            // begonnenen. Ohne Fortschritt abbrechen, sonst dreht die Schleife auf derselben Seite.
+            if (pageResult.MaxCreatedAt <= 0 || pageResult.MaxCreatedAt + 1 <= since) break;
+            since = pageResult.MaxCreatedAt + 1;
+        }
+
+        return (perDay, newCursor);
     }
+
+    /// <summary>Ergebnis EINER Lichess-Seite: Partien je Tag, Cursor-Kandidat (max <c>lastMoveAt</c>),
+    /// jüngstes <c>createdAt</c> (Seitengrenze) und Gesamtzahl der Zeilen (auch nicht gezählter Partien).</summary>
+    public readonly record struct LichessPage(
+        Dictionary<DateOnly, int> PerDay, long NewCursor, long MaxCreatedAt, int Total);
 
     /// <summary>Parst Lichess-NDJSON zur Anzahl Rapid-/Classical-Partien je UTC-Tag (über createdAt)
     /// + neuem Cursor (max lastMoveAt über ALLE Partien). Rein/testbar.</summary>
     public static (Dictionary<DateOnly, int> perDay, long newCursor) ParseLichess(string ndjson)
     {
+        var page = ParseLichessPage(ndjson);
+        return (page.PerDay, page.NewCursor);
+    }
+
+    /// <summary>Wie <see cref="ParseLichess"/>, liefert zusätzlich die Angaben fürs Weiterblättern.</summary>
+    public static LichessPage ParseLichessPage(string ndjson)
+    {
         var perDay = new Dictionary<DateOnly, int>();
         long newCursor = 0;
+        long maxCreated = 0;
+        var total = 0;
         foreach (var rawLine in ndjson.Split('\n'))
         {
             var line = rawLine.Trim();
@@ -134,7 +182,9 @@ public class PlayTimeService
             using var doc = JsonDocument.Parse(line);
             var root = doc.RootElement;
             if (!root.TryGetProperty("createdAt", out var ca)) continue;
+            total++;
             var createdMs = ca.GetInt64();
+            if (createdMs > maxCreated) maxCreated = createdMs;
             var lastMs = root.TryGetProperty("lastMoveAt", out var la) ? la.GetInt64() : createdMs;
             // Cursor verfolgt ALLE Partien (auch Bullet/Blitz/Korrespondenz), damit sie nicht erneut geladen werden.
             if (lastMs > newCursor) newCursor = lastMs;
@@ -143,7 +193,7 @@ public class PlayTimeService
             var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeMilliseconds(createdMs).UtcDateTime);
             perDay[date] = (perDay.TryGetValue(date, out var v) ? v : 0) + 1;
         }
-        return (perDay, newCursor);
+        return new LichessPage(perDay, newCursor, maxCreated, total);
     }
 
     // ----- chess.com -------------------------------------------------------

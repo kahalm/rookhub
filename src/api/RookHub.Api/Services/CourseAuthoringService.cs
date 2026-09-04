@@ -273,7 +273,7 @@ public class CourseAuthoringService
         var existingFens = existing.Select(e => e.Fen).ToHashSet(StringComparer.Ordinal);
         var existingLineIds = existing.Select(e => e.LineId).ToHashSet(StringComparer.Ordinal);
 
-        var (nextRound, width) = NextRound(existing.Select(e => e.Round));
+        var (nextRound, width, afterForeign) = NextRound(existing.Select(e => e.Round));
         var added = 0;
         foreach (var pos in parsed.Positions)
         {
@@ -290,7 +290,7 @@ public class CourseAuthoringService
             string round, lineId;
             do
             {
-                round = nextRound.ToString(new string('0', width));
+                round = RoundLabel(nextRound, width, afterForeign);
                 lineId = $"{book.FileName}:{round}";
                 nextRound++;
             } while (!existingLineIds.Add(lineId));
@@ -336,19 +336,42 @@ public class CourseAuthoringService
     /// (numerisch korrekt für reine Zahlen, No-op für einheitlich gepolsterte Importe) — vorher
     /// stand „10" zwischen „1" und „2", und die Kapitel mischten sich (TestNoel, 0.331.x).
     /// </summary>
-    internal static (int Next, int Width) NextRound(IEnumerable<string> rounds)
+    internal static (int Next, int Width, bool AfterForeign) NextRound(IEnumerable<string> rounds)
     {
         var max = 0;
         var width = 1;
+        var longestForeign = 0;
         foreach (var raw in rounds)
         {
             var text = (raw ?? string.Empty).Trim();
-            if (text.Length == 0 || !int.TryParse(text, out var value)) continue;
+            if (text.Length == 0) continue;
+            if (!int.TryParse(text, out var value))
+            {
+                // Chessable-Runden sehen aus wie „001.003" — nicht als Zahl parsbar. Sie wurden hier
+                // schlicht übersprungen, sodass eine handgepflegte Linie Round „1" (Länge 1) bekam
+                // und in der Lesereihenfolge (Länge ZUERST) VOR jede Import-Zeile (Länge 7) rutschte:
+                // ein nachträglich eingefügtes Kapitel stand ganz vorn und verschob JEDEN
+                // Solver-Kapitelindex um eins — geteilte Deep-Links zeigten aufs falsche Kapitel.
+                if (text.Length > longestForeign) longestForeign = text.Length;
+                continue;
+            }
             if (value > max) max = value;
             if (text.Length > width) width = text.Length;
         }
-        return (max + 1, width);
+        // Fremdes Rundenformat vorhanden → neue Runde GLEICH LANG und mit führender „9" bauen
+        // (siehe RoundLabel): gleiche Länge + ordinal größer ⇒ sie sortiert hinter alles Bestehende.
+        var afterForeign = longestForeign > 0;
+        if (afterForeign && longestForeign > width) width = longestForeign;
+        return (max + 1, width, afterForeign);
     }
+
+    /// <summary>Runden-Beschriftung für eine neu eingefügte Linie. Ohne fremdes Format schlicht
+    /// zero-gepolstert; MIT (z. B. Chessable „001.003") mit führender „9", damit sie bei gleicher
+    /// Länge ordinal HINTER die Import-Zeilen sortiert statt vor sie.</summary>
+    internal static string RoundLabel(int next, int width, bool afterForeign)
+        => afterForeign
+            ? "9" + next.ToString(new string('0', Math.Max(1, width - 1)))
+            : next.ToString(new string('0', width));
 
     /// <summary>Kapitel umbenennen (leerer neuer Name = „ohne Kapitel"). Ziel darf nicht schon existieren.</summary>
     public async Task<int> RenameChapterAsync(int userId, int bookId, RenameCourseChapterDto dto, bool isAdmin,
@@ -417,6 +440,9 @@ public class CourseAuthoringService
             await _db.CalculationTrees.Where(t => ids.Contains(t.BookPuzzleId)).ToListAsync(ct));
         _db.CourseFlashcardMarks.RemoveRange(
             await _db.CourseFlashcardMarks.Where(m => ids.Contains(m.BookPuzzleId)).ToListAsync(ct));
+        // „Track solves" geteilter Einzel-Puzzles — ohne FK-Navigation, siehe BookAdminService.
+        _db.SharedPuzzleAttempts.RemoveRange(
+            await _db.SharedPuzzleAttempts.Where(a => ids.Contains(a.BookPuzzleId)).ToListAsync(ct));
         _db.BookPuzzles.RemoveRange(lines);
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId, ct);
@@ -427,10 +453,11 @@ public class CourseAuthoringService
     // ===== Eigener Fortschritt ===============================================
 
     /// <summary>
-    /// Setzt den EIGENEN Fortschritt eines Kapitels zurück: gelöste Linien, Zeit-/Versuchs-Log und
-    /// gesehene Info-Linien dieses Kapitels. <c>Book</c>-weites <c>CourseProgress.ResetAt</c> bleibt
-    /// unangetastet (das ist buchweit), ebenso die eigenen Analysebäume des Kalkulations-Modus —
-    /// die sind Arbeit des Nutzers und werden nur einzeln im Modus selbst verworfen.
+    /// Setzt den EIGENEN Fortschritt eines Kapitels zurück: gelöste Linien und gesehene Info-Linien
+    /// dieses Kapitels. <c>Book</c>-weites <c>CourseProgress.ResetAt</c> bleibt unangetastet (das ist
+    /// buchweit), ebenso die eigenen Analysebäume des Kalkulations-Modus (Arbeit des Nutzers) UND das
+    /// Zeit-Log <c>CourseAttempts</c> — sonst schrumpfte die Trainingsziel-Historie rückwirkend,
+    /// genau wie der buchweite Reset es begründet.
     /// <para>Braucht kein Schreibrecht am Buch: jeder, der den Kurs sehen darf, darf seinen eigenen
     /// Fortschritt zurücksetzen.</para>
     /// </summary>
@@ -448,13 +475,15 @@ public class CourseAuthoringService
 
         var results = await _db.CoursePuzzleResults
             .Where(cr => cr.UserId == userId && ids.Contains(cr.BookPuzzleId)).ToListAsync(ct);
-        var attempts = await _db.CourseAttempts
-            .Where(a => a.UserId == userId && ids.Contains(a.BookPuzzleId)).ToListAsync(ct);
         var views = await _db.CourseInfoViews
             .Where(iv => iv.UserId == userId && ids.Contains(iv.BookPuzzleId)).ToListAsync(ct);
 
         _db.CoursePuzzleResults.RemoveRange(results);
-        _db.CourseAttempts.RemoveRange(attempts);
+        // Die `CourseAttempts` bleiben ausdrücklich STEHEN — genau wie beim buchweiten Reset, der das
+        // schon so begründet: sie sind das Zeit-Log des Trainingsziel-Trackers. Wurden sie hier
+        // gelöscht, schrumpfte die Historie RÜCKWIRKEND (ein gestern „voll" erreichter Tag fiel auf
+        // „teilweise", die Wochen-Tage sanken). Für die Kurs-/Kapitelanzeige bringt das Löschen
+        // nichts: die Statistik filtert ohnehin über `ResetAt` bzw. die gelösten Linien.
         _db.CourseInfoViews.RemoveRange(views);
         await _db.SaveChangesAsync(ct);
         return results.Count;

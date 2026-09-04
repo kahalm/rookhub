@@ -70,9 +70,9 @@ public class BookPuzzleService
         var keys = await BookSiblings(current).OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .Select(bp => new { bp.Id, bp.Round })
             .ToListAsync();
-        var nextId = keys.FirstOrDefault(k =>
-                        string.CompareOrdinal(k.Round, current.Round) > 0 ||
-                        (k.Round == current.Round && k.Id > current.Id))?.Id
+        // Cursor-Vergleich über DIESELBE Reihenfolge wie die Sortierung (inkl. Round.Length) —
+        // siehe ChapterOrder.Compare: ordinal allein sprang bei Runden „9"/„10" zurück bzw. gar nicht.
+        var nextId = keys.FirstOrDefault(k => ChapterOrder.Compare(k.Round, k.Id, current.Round, current.Id) > 0)?.Id
                      ?? keys.Select(k => (int?)k.Id).FirstOrDefault();   // am Ende → erstes (Loop)
         if (nextId == null) throw new KeyNotFoundException("No puzzles in book.");
         var next = await BookSiblings(current).Include(bp => bp.Book).FirstAsync(bp => bp.Id == nextId.Value);

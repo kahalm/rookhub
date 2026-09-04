@@ -186,6 +186,11 @@ public class BookAdminService
         // Ebenso die Analysebäume des Kalkulations-Modus (Restrict-FK auf BookPuzzle).
         _db.CalculationTrees.RemoveRange(_db.CalculationTrees.Where(t => t.BookId == id));
         _db.CourseFlashcardMarks.RemoveRange(_db.CourseFlashcardMarks.Where(m => m.BookId == id));
+        // „Track solves"-Zeilen geteilter Einzel-Puzzles: bewusst OHNE FK-Navigation angelegt, also
+        // räumt hier weder die DB noch etwas anderes auf. Ohne diese Zeile blieben sie als Waisen
+        // stehen (der Bereich ist anonym erreichbar, ein geteiltes Puzzle sammelt viele) und die
+        // Zähler-Abfrage lieferte für die tote Id weiter Treffer.
+        _db.SharedPuzzleAttempts.RemoveRange(_db.SharedPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         _db.Books.Remove(book);

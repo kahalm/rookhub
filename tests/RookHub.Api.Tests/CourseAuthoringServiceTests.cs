@@ -378,11 +378,32 @@ public class CourseAuthoringServiceTests : IDisposable
     [Fact]
     public void NextRound_TakesMaxAndWidth()
     {
-        Assert.Equal((1, 1), CourseAuthoringService.NextRound(Array.Empty<string>()));
-        Assert.Equal((3, 1), CourseAuthoringService.NextRound(new[] { "1", "2" }));
-        Assert.Equal((10, 4), CourseAuthoringService.NextRound(new[] { "0001", "0009" }));
-        // Nicht-numerische Runden (Chessable-Kennungen) beeinflussen die Zählung nicht.
-        Assert.Equal((6, 1), CourseAuthoringService.NextRound(new[] { "abc", "5" }));
+        Assert.Equal((1, 1, false), CourseAuthoringService.NextRound(Array.Empty<string>()));
+        Assert.Equal((3, 1, false), CourseAuthoringService.NextRound(new[] { "1", "2" }));
+        Assert.Equal((10, 4, false), CourseAuthoringService.NextRound(new[] { "0001", "0009" }));
+        // Nicht-numerische Runden (Chessable-Kennungen) zählen nicht mit, geben aber die Breite vor.
+        Assert.Equal((6, 3, true), CourseAuthoringService.NextRound(new[] { "abc", "5" }));
+    }
+
+    [Fact]
+    public void RoundLabel_NewLineSortsAfterChessableRounds()
+    {
+        // Chessable-Runden („001.003") sind nicht numerisch: früher fiel die neue Linie auf Round „1"
+        // (Länge 1) zurück und stand in der Lesereihenfolge (Länge ZUERST) vor JEDER Import-Zeile.
+        var rounds = new[] { "001.001", "001.002", "002.001" };
+        var (next, width, afterForeign) = CourseAuthoringService.NextRound(rounds);
+        var label = CourseAuthoringService.RoundLabel(next, width, afterForeign);
+
+        Assert.Equal(rounds[0].Length, label.Length);
+        foreach (var existing in rounds)
+            Assert.True(ChapterOrder.Compare(label, 1, existing, 1) > 0, $"{label} muss hinter {existing} liegen");
+    }
+
+    [Fact]
+    public void RoundLabel_PlainNumericBooksKeepZeroPadding()
+    {
+        var (next, width, afterForeign) = CourseAuthoringService.NextRound(new[] { "0001", "0009" });
+        Assert.Equal("0010", CourseAuthoringService.RoundLabel(next, width, afterForeign));
     }
 
     [Fact]
@@ -497,6 +518,28 @@ public class CourseAuthoringServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteLine_AlsoRemovesSharedTrackAttempts()
+    {
+        // `SharedPuzzleAttempts` hängen ohne FK-Navigation an der Linie (kein Cascade). Beim Löschen
+        // blieben sie als Waisen liegen — und weil der Unique-Index auf (BookPuzzleId, IdentityKey)
+        // steht, brachten die Zähler eines später mit derselben Id angelegten Puzzles die alten
+        // Treffer mit, während ein Besucher gar nicht mehr zählen konnte („nur der erste Versuch").
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id);
+        var line = await SeedLineAsync(book, "1", "K", infoOnly: true, fen: Fen1);
+        var keep = await SeedLineAsync(book, "2", "K", infoOnly: true, fen: Fen2);
+        _db.SharedPuzzleAttempts.AddRange(
+            new SharedPuzzleAttempt { BookPuzzleId = line.Id, IdentityKey = "s:abc", Solved = true },
+            new SharedPuzzleAttempt { BookPuzzleId = keep.Id, IdentityKey = "s:abc", Solved = false });
+        await _db.SaveChangesAsync();
+
+        await _svc.DeleteLineAsync(user.Id, book.Id, line.Id, isAdmin: false);
+
+        var rest = Assert.Single(await _db.SharedPuzzleAttempts.ToListAsync());
+        Assert.Equal(keep.Id, rest.BookPuzzleId);
+    }
+
+    [Fact]
     public async Task DeleteLine_OfAnotherBook_Throws404()
     {
         var user = await CreateUserAsync();
@@ -559,7 +602,35 @@ public class CourseAuthoringServiceTests : IDisposable
         Assert.True(await _db.CoursePuzzleResults.AnyAsync(r => r.UserId == me.Id && r.BookPuzzleId == b.Id));
         Assert.True(await _db.CoursePuzzleResults.AnyAsync(r => r.UserId == other.Id && r.BookPuzzleId == a.Id));
         Assert.Empty(_db.CourseInfoViews);
-        Assert.Equal(2, await _db.CourseAttempts.CountAsync());   // eigener Versuch weg, fremder + „Bleibt" da
+        // Das Zeit-Log bleibt VOLLSTÄNDIG (3 Versuche) — siehe ResetChapterProgress_KeepsTimeLog.
+        Assert.Equal(3, await _db.CourseAttempts.CountAsync());
+    }
+
+    [Fact]
+    public async Task ResetChapterProgress_KeepsTimeLog()
+    {
+        // `CourseAttempts` sind das Zeit-Log des Trainingsziel-Trackers, kein Fortschritts-Merker.
+        // Wurden sie beim Kapitel-Reset gelöscht, schrumpfte die Historie RÜCKWIRKEND: ein gestern
+        // erreichter Tag fiel auf „teilweise" zurück. Der buchweite Reset bewahrt sie längst.
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id);
+        var line = await SeedLineAsync(book, "1", "K", infoOnly: false, fen: Fen1);
+        _db.CoursePuzzleResults.Add(new CoursePuzzleResult
+        {
+            UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id, SolvedAt = DateTime.UtcNow,
+        });
+        _db.CourseAttempts.Add(new CourseAttempt
+        {
+            UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id,
+            TimeSeconds = 900, AttemptedAt = DateTime.UtcNow.AddDays(-1),
+        });
+        await _db.SaveChangesAsync();
+
+        var cleared = await _svc.ResetChapterProgressAsync(user.Id, book.Id, "K", isAdmin: false);
+
+        Assert.Equal(1, cleared);
+        Assert.Empty(_db.CoursePuzzleResults);                       // Fortschritt weg
+        Assert.Equal(900, (await _db.CourseAttempts.SingleAsync()).TimeSeconds);   // gemessene Zeit bleibt
     }
 
     [Fact]

@@ -82,7 +82,10 @@ public class WeeklyPostService
         q = chapterName == null
             ? q.Where(bp => bp.Chapter == null || bp.Chapter == "")
             : q.Where(bp => bp.Chapter == chapterName);
-        return q.OrderBy(bp => bp.Round).ThenBy(bp => bp.Id);
+        // Länge ZUERST, dann ordinal, dann Id — exakt wie ChapterOrder/CourseService. Rein alphabetisch
+        // sortierte „10" vor „9", die gespiegelte Wochenpost-Reihenfolge wich also ab Kapitel-Zeile 10
+        // von der Kurs-Reihenfolge ab, und der index-basierte Fortschritt zeigte auf andere Puzzles.
+        return q.OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
     }
 
     /// <summary>Die Kapitelnamen eines Buchs in Lesereihenfolge — geteilte Logik in

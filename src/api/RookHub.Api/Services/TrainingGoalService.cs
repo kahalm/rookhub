@@ -47,6 +47,13 @@ public class TrainingGoalService
     private const int PerChessableFlushCapSeconds = 3600; // 1 h
     /// <summary>Sanity-Obergrenze für manuell eingetragene OTB-Partien je Eintrag.</summary>
     private const int ManualGamesCap = 50;
+    /// <summary>Deckel für SELBST eingetragene Minuten-Aktivitäten (10 h). Bewusst höher als
+    /// <see cref="PerSessionCapSeconds"/>: der 4-h-Deckel schützt GEMESSENE Sitzungen vor Ausreißern
+    /// (vergessener Tab), ein manueller Eintrag ist dagegen getippt und jederzeit korrigierbar — ein
+    /// Trainingslager-Tag mit 8 h ist echt. Vorher nahm die Eingabe 600 Minuten an und der Tracker
+    /// rechnete still 240 davon an, ohne dass irgendwo etwas von der Kürzung stand.</summary>
+    private const int ManualMinutesCap = 600;
+    private const int ManualMinutesCapSeconds = ManualMinutesCap * 60;
     private const int MaxTrackerWeeks = 53;
 
     // ----- Ziel-Auflösung --------------------------------------------------
@@ -380,11 +387,11 @@ public class TrainingGoalService
         return date;
     }
 
-    /// <summary>OTB-Partien: 1–<see cref="ManualGamesCap"/>; Minuten-Arten: 1–600.</summary>
+    /// <summary>OTB-Partien: 1–<see cref="ManualGamesCap"/>; Minuten-Arten: 1–<see cref="ManualMinutesCap"/>.</summary>
     private static int ClampAmount(ManualActivityKind kind, int amount)
         => kind == ManualActivityKind.OtbGame
             ? Math.Clamp(amount, 1, ManualGamesCap)
-            : Math.Clamp(amount, 1, 600);
+            : Math.Clamp(amount, 1, ManualMinutesCap);
 
     private static ManualActivityDto ToDto(ManualActivity m) => new()
     {
@@ -641,12 +648,12 @@ public class TrainingGoalService
                     Day(m.Date).PlayGames += Math.Clamp(m.Amount, 0, ManualGamesCap);
                     break;
                 case ManualActivityKind.OfflinePuzzle:
-                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.RandomPuzzle,
+                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, ManualMinutesCapSeconds, Src.RandomPuzzle,
                         m.Theme.HasValue ? ThemeFromChessable(m.Theme.Value) : Thm.Tactics);
                     break;
                 case ManualActivityKind.OfflineStudy:
                 case ManualActivityKind.Coaching:
-                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.CourseBook,
+                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, ManualMinutesCapSeconds, Src.CourseBook,
                         m.Theme.HasValue ? ThemeFromChessable(m.Theme.Value) : Thm.Other);
                     break;
             }

@@ -15,6 +15,27 @@ namespace RookHub.Api.Services;
 /// </summary>
 public static class ChapterOrder
 {
+    /// <summary>
+    /// Vergleich ZWEIER Linien in genau derselben Lesereihenfolge, in der überall sortiert wird:
+    /// <c>Round.Length, Round, Id</c>. Die Länge zuerst, damit ungepolsterte Runden numerisch
+    /// stimmen („9" vor „10"); rein ordinal stünde „10" vor „9".
+    ///
+    /// WARUM ES DIESE FUNKTION GIBT: der „Weiter"-Cursor verglich in-memory NUR ordinal
+    /// (<c>CompareOrdinal(Round)</c>) und widersprach damit der SQL-Sortierung. In einem Buch mit
+    /// Runden „1"…„20" fand er ab „9" keinen Nachfolger (alle „1x" sind ordinal kleiner) und fiel
+    /// aufs ERSTE Puzzle zurück: Runde 10–20 waren über „Weiter" unerreichbar, und „Überspringen"
+    /// im Kurs zeigte dieselbe Aufgabe endlos erneut. Chessable-Importe sind wegen der
+    /// „000.000"-Polsterung nicht betroffen, handgepflegte Kurse und PGN-Uploads schon.
+    /// </summary>
+    public static int Compare(string? roundA, int idA, string? roundB, int idB)
+    {
+        var a = roundA ?? string.Empty;
+        var b = roundB ?? string.Empty;
+        if (a.Length != b.Length) return a.Length.CompareTo(b.Length);
+        var byRound = string.CompareOrdinal(a, b);
+        return byRound != 0 ? byRound : idA.CompareTo(idB);
+    }
+
     /// <summary>null/leer/Whitespace → dieselbe Sammel-„ohne Kapitel"-Gruppe (null).</summary>
     public static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw;
 

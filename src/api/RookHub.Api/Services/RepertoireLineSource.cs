@@ -252,6 +252,8 @@ public class RepertoireLineSource
     private static readonly Regex NagRegex = new(@"\$\d+", RegexOptions.Compiled);
     private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex MoveNumberRegex = new(@"^\d+\.+$", RegexOptions.Compiled);
+    /// <summary>Zugnummern samt Punkten IM Text (auch direkt am Zug: „1.e4", „12...Nf6").</summary>
+    private static readonly Regex InlineMoveNumberRegex = new(@"\d+\.{1,3}", RegexOptions.Compiled);
     private static readonly Regex EventHeaderSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
     private static readonly Regex WhiteHeaderRegex = new(@"^\[White\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     private static readonly Regex BlackHeaderRegex = new(@"^\[Black\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
@@ -308,6 +310,13 @@ public class RepertoireLineSource
         movetext = CommentRegex.Replace(movetext, " ");
         movetext = LineCommentRegex.Replace(movetext, " ");
         movetext = NagRegex.Replace(movetext, " ");
+        // Zugnummern ERSETZEN, nicht nur als eigenes Token erkennen: ChessBase, Fritz und SCID
+        // exportieren „1.e4" OHNE Leerzeichen. Ein solches Token fiel durch `IsMoveToken` (beginnt
+        // mit einer Ziffer) und wurde STILL verworfen — damit fehlten ALLE Weißzüge der Datei, das
+        // Nachspielen brach am ersten Halbzug ab und Stellungssuche, Baummodus und die
+        // Abweichungs-Analyse fanden nichts, während derselbe Inhalt im Trainer einwandfrei lief
+        // (der Client-Parser und der Kurs-Import machen genau diese Ersetzung schon).
+        movetext = InlineMoveNumberRegex.Replace(movetext, " ");
         movetext = WhitespaceRegex.Replace(movetext, " ").Trim();
 
         var tokens = new List<string>();

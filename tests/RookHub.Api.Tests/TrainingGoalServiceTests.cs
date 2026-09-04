@@ -739,6 +739,23 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Tracker_CountsFullManualMinutes_NotJustFourHours()
+    {
+        // Die Eingabe nahm bis 600 Minuten an, der Tracker rechnete sie über den 4-h-Deckel für
+        // GEMESSENE Sitzungen und buchte still nur 240 — ein Trainingslager-Tag verschwand zur Hälfte,
+        // ohne dass irgendwo eine Kürzung stand. Selbst eingetragene Zeit zählt jetzt voll.
+        var u = await CreateUserAsync();
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 600, date: today));
+
+        var res = await _service.GetTrackerAsync(u.Id, 1);
+        var day = Assert.Single(res.Days);
+        Assert.Equal(600 * 60, day.TotalSeconds);
+        Assert.Equal(600 * 60, day.BySource.CourseBookSeconds);
+    }
+
+    [Fact]
     public async Task AddManual_FutureDate_Throws()
     {
         var u = await CreateUserAsync();

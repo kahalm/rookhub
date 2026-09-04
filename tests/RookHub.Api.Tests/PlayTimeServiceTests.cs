@@ -144,6 +144,78 @@ public class PlayTimeServiceTests : IDisposable
         Assert.False(await _db.PlayTimeDailies.AnyAsync(p => p.UserId == user.Id));
     }
 
+    [Fact]
+    public async Task SyncUser_MoreGamesThanOnePage_FetchesEveryPage_OldestFirst()
+    {
+        // Regression: EIN Abruf mit `max=300` in der Lichess-Vorgabe-Sortierung (neueste zuerst).
+        // Wer seit dem letzten Lauf mehr Partien gespielt hatte, bekam nur die 300 jüngsten gezählt —
+        // und weil der Cursor auf deren Zeitstempel sprang, fehlten die älteren für immer.
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = "testuser" });
+        await _db.SaveChangesAsync();
+
+        // Zwei vollen Seiten folgt eine halbe — die Partien liegen auf drei verschiedenen Tagen.
+        // Sie müssen INNERHALB des Erstlauf-Rückblicks liegen (Default 30 Tage), sonst stünde die
+        // Startgrenze `since` schon hinter ihnen und das Weiterblättern bräche sofort ab.
+        var oneDay = 86_400_000L;
+        var day0 = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-3), TimeSpan.Zero).ToUnixTimeMilliseconds();
+        string Page(int index, int count) => string.Join('\n', Enumerable.Range(0, count).Select(i =>
+        {
+            var created = day0 + index * oneDay + i * 1000;
+            return $"{{\"speed\":\"rapid\",\"createdAt\":{created},\"lastMoveAt\":{created + 600_000}}}";
+        }));
+
+        var requested = new List<string>();
+        var pages = new[]
+        {
+            Page(0, PlayTimeService.LichessPageSize),
+            Page(1, PlayTimeService.LichessPageSize),
+            Page(2, 7),
+        };
+        var http = new HttpClient(new FakeHandler(req =>
+        {
+            var uri = req.RequestUri!.ToString();
+            requested.Add(uri);
+            var body = requested.Count <= pages.Length ? pages[requested.Count - 1] : string.Empty;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8) };
+        }));
+        var service = new PlayTimeService(http, _db, new ConfigurationBuilder().Build(), NullLogger<PlayTimeService>.Instance);
+
+        await service.SyncUserAsync(user.Id);
+
+        Assert.Equal(3, requested.Count);                             // zwei volle Seiten + Rest
+        Assert.All(requested, u => Assert.Contains("sort=dateAsc", u));  // älteste zuerst
+        // Seite 2 setzt genau hinter der jüngsten ANGELEGTEN Partie von Seite 1 an.
+        var lastCreatedOnPage1 = day0 + (PlayTimeService.LichessPageSize - 1) * 1000L;
+        Assert.Contains($"since={lastCreatedOnPage1 + 1}", requested[1]);
+
+        var total = await _db.PlayTimeDailies
+            .Where(d => d.UserId == user.Id && d.Platform == PlayTimeService.Lichess)
+            .SumAsync(d => d.Games);
+        Assert.Equal(2 * PlayTimeService.LichessPageSize + 7, total);  // KEINE Partie fällt weg
+        Assert.Equal(3, await _db.PlayTimeDailies.CountAsync(d => d.UserId == user.Id));
+    }
+
+    [Fact]
+    public void ParseLichessPage_ReportsTotalAndNewestCreatedAt()
+    {
+        var ndjson = string.Join('\n', new[]
+        {
+            $"{{\"speed\":\"rapid\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            // Bullet zählt nicht als Partie, ist aber eine geholte ZEILE — sonst bricht das
+            // Weiterblättern zu früh ab (Seite voll, aber „Total" kleiner als die Seitengröße).
+            $"{{\"speed\":\"bullet\",\"createdAt\":{Created + 5000},\"lastMoveAt\":{Last}}}",
+        });
+
+        var page = PlayTimeService.ParseLichessPage(ndjson);
+
+        Assert.Equal(2, page.Total);
+        Assert.Equal(Created + 5000, page.MaxCreatedAt);
+        Assert.Equal(1, page.PerDay[new DateOnly(2023, 11, 14)]);
+    }
+
     private sealed class FakeHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;

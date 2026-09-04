@@ -55,6 +55,22 @@ public class RepertoireAnalyzeServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GlueedMoveNumbers_StillParsedAsRepertoireMoves()
+    {
+        // Viele Exporte (auch Chessable-Downloads) schreiben die Zugnummer OHNE Leerzeichen an den
+        // Zug: „1.e4 e5 2.Nf3". Der Tokenizer trennte nur an Leerzeichen, „1.e4" war damit kein
+        // bekannter Zug — das Repertoire galt als leer und JEDE Partie wich schon im ersten Zug ab,
+        // während der Client-Parser dieselbe Datei sauber las.
+        var userId = await SeedUserWithOpeningAsync("[Event \"x\"]\n\n1.e4 e5 2.Nf3 Nc6 *");
+        var result = await _analyze.AnalyzeAsync(userId, new AnalyzeGameRequestDto
+        {
+            Moves = new() { "e4", "e5", "Nf3", "Nc6" },
+        });
+        Assert.Equal(-1, result.Deviation);
+        Assert.Equal(4, result.InRepertoire.Count);
+    }
+
+    [Fact]
     public async Task GameInRepertoire_NoDeviation()
     {
         var userId = await SeedUserWithOpeningAsync("[Event \"x\"]\n\n1. e4 e5 2. Nf3 Nc6 *");

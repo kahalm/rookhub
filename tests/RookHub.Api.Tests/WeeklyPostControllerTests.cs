@@ -694,6 +694,35 @@ public class WeeklyPostControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateFromChapter_RoundsBeyondNine_MatchCourseReadingOrder()
+    {
+        // Die Wochenpost sortierte rein ordinal — „010" nach „009" ist dort noch richtig, aber
+        // sobald ein Buch UNGEPADDETE Runden trägt („9", „10"), stellte die Textsortierung „10" vor
+        // „9". Die gespiegelte Reihenfolge wich damit von der Kurs-Reihenfolge ab, und weil der
+        // Wochenpost-Fortschritt am INDEX hängt, zeigten „gespielt"-Marken auf andere Puzzles.
+        var book = new Book { FileName = "flat.pgn", DisplayName = "Flach" };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        foreach (var round in new[] { "9", "10", "2" })
+            _db.BookPuzzles.Add(new BookPuzzle
+            {
+                LineId = $"flat:{round}", BookFileName = "flat.pgn", BookId = book.Id, Round = round,
+                Chapter = "K", Fen = "8/8/8/8/8/8/4K3/4k3 w - - 0 1", Moves = $"e2e3 {round}", StartPly = -1,
+            });
+        await _db.SaveChangesAsync();
+        SetUser(1, admin: true);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = book.Id, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+
+        // Erwartung = Lesereihenfolge des Kurses: 2, 9, 10 (Länge zuerst, dann ordinal).
+        Assert.Equal(new[] { "e2e3 2", "e2e3 9", "e2e3 10" }, play.Puzzles.Select(p => p.Moves).ToArray());
+    }
+
+    [Fact]
     public async Task CreateFromChapter_SecondChapter_ExcludesInfoOnlyLines()
     {
         var bookId = await SeedBookWithChaptersAsync();

@@ -69,6 +69,36 @@ public class CalculationCourseListTests : IDisposable
     }
 
     [Fact]
+    public async Task SeriesMemberAndPinnedBook_AppearInCourseList()
+    {
+        // Der Verteiler der Kalkulations-Serie IST der Zugriffspfad, der das „privat" der Serie
+        // trägt (CourseAccess kennt ihn), und angepinnt werden darf jedes zugängliche Buch. Die
+        // Kursliste filterte beides weg: das Mitglied fand seinen Kurs nur über den Deep-Link der
+        // Ankündigung, und ein Pin auf ein öffentliches Buch blieb unsichtbar.
+        var owner = await CreateUserAsync("owner");
+        var member = await CreateUserAsync("member");
+        var pinner = await CreateUserAsync("pinner");
+
+        var series = await SeedBookAsync(owner.Id, isCalculation: true);
+        series.IsPublic = false;
+        var pinned = await SeedBookAsync(owner.Id, isCalculation: false);
+        pinned.IsPublic = true;
+        await _db.SaveChangesAsync();
+        await SeedLineAsync(series, "1", infoOnly: true);
+        await SeedLineAsync(pinned, "1", infoOnly: false);
+
+        _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = series.Id, UserId = member.Id });
+        _db.CoursePins.Add(new CoursePin { BookId = pinned.Id, UserId = pinner.Id, PinnedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(series.Id, (await _courses.GetCoursesAsync(member.Id, isAdmin: false)).Single().BookId);
+        Assert.Equal(pinned.Id, (await _courses.GetCoursesAsync(pinner.Id, isAdmin: false)).Single().BookId);
+        // Wer keinen der beiden Pfade hat, sieht weiterhin nichts.
+        var stranger = await CreateUserAsync("stranger");
+        Assert.Empty(await _courses.GetCoursesAsync(stranger.Id, isAdmin: false));
+    }
+
+    [Fact]
     public async Task CalculationBook_CountsAllPositions_AndTreesAsDone()
     {
         var user = await CreateUserAsync();
