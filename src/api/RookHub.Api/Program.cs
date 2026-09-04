@@ -216,6 +216,9 @@ try
         tracker.OnNotifyFailed += ex => log.LogError(ex, "Benachrichtigung über Live-Analyse fehlgeschlagen");
         return tracker;
     });
+    // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
+    // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand).
+    builder.Services.AddHostedService<AnonymousDataRetentionService>();
     builder.Services.AddSingleton<AnalysisJobLive>();
     builder.Services.AddSingleton<AnalysisJobWorker>();
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
@@ -459,6 +462,20 @@ try
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
+        // Nutzer-Suche (Autocomplete in der Freundesliste): eigene Partition PRO USER. Vorher lief sie
+        // auf der „auth"-Policy — und Endpoint-Limiter partitionieren nach (Policy-Name, Key), also
+        // teilten sich Suche und Login/Registrierung/Reset EIN 10/min-Fenster je IP: zehn
+        // Tastenanschläge sperrten hinter einem NAT (Schule, Verein) die Anmeldung für eine Minute.
+        options.AddPolicy("user-search", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 30,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }));
         // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.
@@ -648,8 +665,13 @@ try
     {
         try
         {
-            await db.Database.CanConnectAsync();
-            return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+            // FALLE: `CanConnectAsync` WIRFT bei einer toten Datenbank nicht, es liefert `false`. Der
+            // verworfene Rückgabewert machte /health zu einem „immer gesund" — und daran hängen der
+            // Docker-Healthcheck in Produktion und die service_healthy-Kette der e2e-Läufe.
+            var ok = await db.Database.CanConnectAsync();
+            return ok
+                ? Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow })
+                : Results.Json(new { status = "unhealthy", timestamp = DateTime.UtcNow }, statusCode: 503);
         }
         catch
         {

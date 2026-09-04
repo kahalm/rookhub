@@ -159,20 +159,31 @@ public class ChessableProxyService
     private record CachedDto(bool Cached);
     private record CachedBidsDto(List<string> Bids);
 
-    private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
+    private async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode) return;
 
         var body = await response.Content.ReadAsStringAsync(ct);
         // piratechess gibt { "message": "..." } zurueck — herausziehen falls vorhanden.
-        var message = body;
+        string? message = null;
         try
         {
             using var doc = JsonDocument.Parse(body);
             if (doc.RootElement.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.String)
-                message = msg.GetString() ?? body;
+                message = msg.GetString();
         }
-        catch (JsonException) { /* not JSON — keep raw */ }
+        catch (JsonException) { /* nicht JSON — siehe unten */ }
+
+        // Ohne erkennbare Proxy-Meldung NICHT den Roh-Body durchreichen: die Controller geben
+        // `ex.Message` unverändert an den Browser, und bei einer Störung ist das die HTML-Fehlerseite
+        // von nginx/Kestrel — inklusive Server-Version und Hostnamen, in Dev auch mal ein Stacktrace.
+        // Der Crawler-Pfad macht es über seinen Exception-Filter genauso. Der Roh-Body bleibt im Log.
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            _logger?.LogWarning("Chessable-Proxy antwortete {Status}; Body (gekürzt): {Body}",
+                (int)response.StatusCode, body.Length > 500 ? body[..500] : body);
+            message = "Chessable-Dienst nicht erreichbar (bitte später erneut versuchen).";
+        }
 
         throw new ChessableProxyException(response.StatusCode, message);
     }

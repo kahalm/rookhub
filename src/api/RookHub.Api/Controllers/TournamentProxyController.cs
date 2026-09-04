@@ -173,9 +173,14 @@ public class TournamentProxyController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Diagnose: aktuelle Austritts-IP des Crawler-VPNs. NUR Admin — der Crawler selbst
+    /// gatet diesen Endpoint aus gutem Grund (die IP identifiziert die Crawler-Identität gegenüber
+    /// chess-results.com, und wer sie kennt, kann sie gezielt beobachten oder sperren). Das Frontend
+    /// ruft ihn nicht auf; er ist reines Werkzeug.</summary>
     [HttpGet("crawler/ip")]
     public async Task<IActionResult> GetCrawlerIp()
     {
+        if (!User.IsInRole("Admin")) return NotFound();
         var result = await _proxy.GetAsync("/api/health/ip", RequestCt);
         return Ok(result);
     }

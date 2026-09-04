@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -51,7 +52,14 @@ public class SubscriptionController : BaseApiController
         };
 
         _db.TournamentSubscriptions.Add(sub);
-        await _db.SaveChangesAsync();
+        // Race-Catch: zwischen der Prüfung oben und hier kann ein zweiter Request desselben Nutzers
+        // (Doppelklick, zweiter Tab, Offline-Queue-Flush) dieselbe Zeile eingefügt haben. Der
+        // Unique-Index schlägt dann zu — ohne diesen Fang wurde daraus ein 500 statt eines 409.
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
+        {
+            return Conflict(new { message = "Already subscribed to this tournament." });
+        }
 
         return Ok(new TournamentSubscriptionDto
         {

@@ -25,12 +25,20 @@ public class RoundMonitorService : BackgroundService
             {
                 await CheckAllMonitorsAsync(stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            // FALLE: `ex is not OperationCanceledException` schloss AUSGERECHNET den häufigsten Fall aus.
+            // Ein HttpClient-Timeout zum Crawler wirft eine TaskCanceledException (= OperationCanceled)
+            // OHNE dass `stoppingToken` gesetzt ist — die flog aus ExecuteAsync heraus, und weil
+            // BackgroundServiceExceptionBehavior nirgends gesetzt ist, beendet der .NET-Default
+            // (StopHost) den ganzen API-Prozess. Deshalb wie in allen anderen Hosted Services hier:
+            // nur der ECHTE Shutdown darf durch.
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { throw; }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in RoundMonitorService loop");
             }
 
-            await Task.Delay(30_000, stoppingToken);
+            try { await Task.Delay(30_000, stoppingToken); }
+            catch (OperationCanceledException) { break; }
         }
     }
 
@@ -143,7 +151,10 @@ public class RoundMonitorService : BackgroundService
                 monitor.LastCheckedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            // Auch hier: ein Crawler-Timeout ist eine OperationCanceledException ohne Shutdown — die darf
+            // den Monitor-Durchlauf nicht verlassen, sonst reißt sie den ganzen Dienst mit.
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex)
             {
                 _logger.LogWarning(ex,
                     "Error checking monitor for tournament {TournamentId}",

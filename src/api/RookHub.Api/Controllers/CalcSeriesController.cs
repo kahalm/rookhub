@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Data;
+using Microsoft.EntityFrameworkCore;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -18,13 +20,31 @@ namespace RookHub.Api.Controllers;
 public class CalcSeriesController : BaseApiController
 {
     private readonly CalcEditionService _service;
-    public CalcSeriesController(CalcEditionService service) => _service = service;
+    private readonly AppDbContext _db;
+    public CalcSeriesController(CalcEditionService service, AppDbContext db)
+    {
+        _service = service;
+        _db = db;
+    }
 
-    /// <summary>Betrachter: freigegebene Ausgaben eines Buchs inkl. Video (keine Entwürfe).</summary>
+    /// <summary>Betrachter: freigegebene Ausgaben eines Buchs inkl. Video (keine Entwürfe).
+    ///
+    /// GEGATET wie der Kurs selbst: anonym nur bei einem öffentlichen Buch, eingeloggt über
+    /// <see cref="CourseAccess.CanAccessAsync"/> (das kennt Besitzer, Freigaben, Gruppen UND den
+    /// privaten Verteiler der Serie). Ohne diese Prüfung war der eigentliche Inhalt einer PRIVATEN
+    /// Serie — die Video-URLs der freigegebenen Wochen — per Buch-Id-Iteration ohne Login lesbar,
+    /// und das „privat schalten" über <c>IsPublic=false</c> griff hier nicht.</summary>
     [HttpGet("{bookId:int}")]
     [AllowAnonymous]
     public async Task<ActionResult<List<CalcEditionDto>>> ListVisible(int bookId, CancellationToken ct)
-        => Ok(await _service.ListVisibleAsync(bookId, ct));
+    {
+        var userId = GetUserIdOrNull();
+        var allowed = userId is null
+            ? await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic, ct)
+            : await CourseAccess.CanAccessAsync(_db, userId.Value, bookId, IsAdmin, ct);
+        if (!allowed) return NotFound();
+        return Ok(await _service.ListVisibleAsync(bookId, ct));
+    }
 
     /// <summary>Verwaltung: ALLE Ausgaben (inkl. Entwürfe). Nur Besitzer/Admin.</summary>
     [HttpGet("{bookId:int}/manage")]

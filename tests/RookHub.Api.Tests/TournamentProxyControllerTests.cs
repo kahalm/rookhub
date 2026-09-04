@@ -1,8 +1,10 @@
 using System.Net;
+using System.Security.Claims;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Controllers;
@@ -427,6 +429,7 @@ public class TournamentProxyControllerTests : IDisposable
     public async Task GetCrawlerIp_ReturnsOk()
     {
         SetupResponse("{\"ip\":\"1.2.3.4\"}");
+        SetUserRole(isAdmin: true);   // der Endpoint ist admin-gegatet (verrät die VPN-Austritts-IP)
 
         var result = await _controller.GetCrawlerIp() as OkObjectResult;
 
@@ -437,6 +440,7 @@ public class TournamentProxyControllerTests : IDisposable
     public async Task GetCrawlerIp_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
+        SetUserRole(isAdmin: true);
 
         await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetCrawlerIp());
     }
@@ -471,6 +475,40 @@ public class TournamentProxyControllerTests : IDisposable
         Assert.Null(M(nameof(TournamentProxyController.GetAll))
             .GetCustomAttribute<AllowAnonymousAttribute>());
     }
+    [Fact]
+    public async Task GetCrawlerIp_NonAdmin_IsNotFound()
+    {
+        // Der Endpoint verrät die Austritts-IP des Crawler-VPNs (Crawler-Identität gegenüber
+        // chess-results.com). Der Crawler selbst gatet ihn; RookHub reichte ihn an JEDEN
+        // angemeldeten Nutzer durch, ohne dass das Frontend ihn überhaupt aufruft.
+        SetupResponse("{\"ip\":\"203.0.113.7\"}");
+        SetUserRole(isAdmin: false);
+
+        Assert.IsType<NotFoundResult>(await _controller.GetCrawlerIp());
+    }
+
+    [Fact]
+    public async Task GetCrawlerIp_Admin_ReturnsIp()
+    {
+        SetupResponse("{\"ip\":\"203.0.113.7\"}");
+        SetUserRole(isAdmin: true);
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetCrawlerIp());
+        Assert.Contains("203.0.113.7", System.Text.Json.JsonSerializer.Serialize(ok.Value));
+    }
+
+    private void SetUserRole(bool isAdmin)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "5") };
+        if (isAdmin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test")),
+            },
+        };
+    }
 }
 
 /// <summary>
@@ -496,4 +534,5 @@ public class MockHttpMessageHandler : HttpMessageHandler
             Content = new StringContent("{}", Encoding.UTF8, "application/json")
         });
     }
+
 }

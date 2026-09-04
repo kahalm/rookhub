@@ -356,7 +356,9 @@ RookHub). Er wird beim Bauen auf einen festen Commit gepinnt und per Prüfsumme 
 statt ins Repo kopiert zu werden — so ist die Herkunft eindeutig, und ein Update ist ein
 Zeilenwechsel im `Dockerfile`. Ergänzt haben wir nur `entrypoint.sh` (baut den Aufruf aus den
 `.env`-Variablen und startet bei `ENGINE_COUNT`>1 mehrere Provider; `bash test/entrypoint.test.sh`
-prüft den Argument-Aufbau im Trockenlauf) und `preflight.py` (prüft den Token vorab, damit ein fehlender Scope als
+prüft den Argument-Aufbau im Trockenlauf, `bash test/supervisor.test.sh` den echten Fehlerpfad bei
+mehreren Engines: stirbt einer, muss der Container mit DESSEN Code enden — sonst greift
+`restart: unless-stopped` nicht) und `preflight.py` (prüft den Token vorab, damit ein fehlender Scope als
 Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace).
 
 Serverseitig ist die Gegenstelle in `rookhub/CLAUDE.md` unter „Externe Engine" beschrieben.

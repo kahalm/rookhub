@@ -301,7 +301,7 @@ public class ChessableControllerTests : IDisposable
         cred.BlockedReason = "Chessable: User is banned or deleted";
         _db.ChessableImports.Add(new ChessableImport
         {
-            UserId = 42, Bid = "b1", CourseName = "C", Target = "repertoire",
+            UserId = 42, Bid = "111111", CourseName = "C", Target = "repertoire",
             Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.BearerBlocked, FullyCached = false, CreatedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
@@ -343,7 +343,7 @@ public class ChessableControllerTests : IDisposable
         cred.BlockedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        var result = await _controller.StartImport("b1", new StartChessableImportRequest("repertoire", null));
+        var result = await _controller.StartImport("111111", new StartChessableImportRequest("repertoire", null));
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(0, await _db.ChessableImports.CountAsync()); // nicht eingereiht
@@ -433,20 +433,20 @@ public class ChessableControllerTests : IDisposable
             UserId = 42,
             EncryptedBearer = _encryption.Encrypt("bearer"),
             // Kurs liegt in der Bibliothek des Users → Import erlaubt (Eigentums-Check).
-            CachedCoursesJson = "[{\"bid\":\"bid-1\",\"name\":\"My Course\"}]",
+            CachedCoursesJson = "[{\"bid\":\"228856\",\"name\":\"My Course\"}]",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
 
-        var result = await _controller.StartImport("bid-1", new StartChessableImportRequest("book", "My Course"));
+        var result = await _controller.StartImport("228856", new StartChessableImportRequest("book", "My Course"));
 
         var accepted = Assert.IsType<AcceptedResult>(result);
         var dto = Assert.IsType<ChessableImportDto>(accepted.Value);
         Assert.Equal("book", dto.Target);
         Assert.Equal("running", dto.Status);
         Assert.Equal("My Course", dto.CourseName);
-        Assert.True(await _db.ChessableImports.AnyAsync(i => i.UserId == 42 && i.Bid == "bid-1" && i.Status == ChessableImportStatus.Running));
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.UserId == 42 && i.Bid == "228856" && i.Status == ChessableImportStatus.Running));
     }
 
     [Fact]
@@ -458,25 +458,25 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 42, EncryptedBearer = _encryption.Encrypt("bearer"),
-            CachedCoursesJson = "[{\"bid\":\"bid-1\",\"name\":\"My Course\"}]",
+            CachedCoursesJson = "[{\"bid\":\"228856\",\"name\":\"My Course\"}]",
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
 
         var first = Assert.IsType<ChessableImportDto>(
             Assert.IsType<AcceptedResult>(
-                await _controller.StartImport("bid-1", new StartChessableImportRequest("book", "My Course"))).Value);
+                await _controller.StartImport("228856", new StartChessableImportRequest("book", "My Course"))).Value);
         var second = Assert.IsType<ChessableImportDto>(
             Assert.IsType<AcceptedResult>(
-                await _controller.StartImport("bid-1", new StartChessableImportRequest("book", "My Course"))).Value);
+                await _controller.StartImport("228856", new StartChessableImportRequest("book", "My Course"))).Value);
 
         Assert.Equal(first.Id, second.Id);
-        Assert.Equal(1, await _db.ChessableImports.CountAsync(i => i.UserId == 42 && i.Bid == "bid-1"));
+        Assert.Equal(1, await _db.ChessableImports.CountAsync(i => i.UserId == 42 && i.Bid == "228856"));
 
         // Anderes Ziel (Repertoire statt Buch) ist ein eigener Import und bleibt erlaubt.
         var other = Assert.IsType<ChessableImportDto>(
             Assert.IsType<AcceptedResult>(
-                await _controller.StartImport("bid-1", new StartChessableImportRequest("repertoire", "My Course"))).Value);
+                await _controller.StartImport("228856", new StartChessableImportRequest("repertoire", "My Course"))).Value);
         Assert.NotEqual(first.Id, other.Id);
     }
 
@@ -664,21 +664,21 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 42, EncryptedBearer = _encryption.Encrypt("bearer"),
-            // Bibliothek enthält NUR bid-1; der User versucht den fremden (ggf. gecachten) bid-999 zu importieren.
-            CachedCoursesJson = "[{\"bid\":\"bid-1\",\"name\":\"Mine\"}]",
+            // Bibliothek enthält NUR 228856; der User versucht den fremden (ggf. gecachten) 999999 zu importieren.
+            CachedCoursesJson = "[{\"bid\":\"228856\",\"name\":\"Mine\"}]",
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
         // Frische Kursliste (Fallback) liefert ebenfalls NICHT den fremden bid → Import muss verweigert werden.
         _handler.Reply = (req, _) => req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses"
-            ? JsonResponse(HttpStatusCode.OK, new[] { new { bid = "bid-1", name = "Mine" } })
+            ? JsonResponse(HttpStatusCode.OK, new[] { new { bid = "228856", name = "Mine" } })
             : new HttpResponseMessage(HttpStatusCode.OK);
 
-        var result = await _controller.StartImport("bid-999", new StartChessableImportRequest("book", "Geklaut"));
+        var result = await _controller.StartImport("999999", new StartChessableImportRequest("book", "Geklaut"));
 
         var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);
-        Assert.False(await _db.ChessableImports.AnyAsync(i => i.Bid == "bid-999"));
+        Assert.False(await _db.ChessableImports.AnyAsync(i => i.Bid == "999999"));
     }
 
     [Fact]
@@ -688,7 +688,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 42, EncryptedBearer = _encryption.Encrypt("b"),
-            CachedCoursesJson = "[{\"bid\":\"bid-x\",\"name\":\"X\"}]",   // Kurs in der Bibliothek → Import erlaubt
+            CachedCoursesJson = "[{\"bid\":\"777777\",\"name\":\"X\"}]",   // Kurs in der Bibliothek → Import erlaubt
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
@@ -697,7 +697,7 @@ public class ChessableControllerTests : IDisposable
             ? JsonResponse(HttpStatusCode.OK, new { cached = true })
             : new HttpResponseMessage(HttpStatusCode.OK);
 
-        var result = await _controller.StartImport("bid-x", new StartChessableImportRequest("repertoire", "X"));
+        var result = await _controller.StartImport("777777", new StartChessableImportRequest("repertoire", "X"));
 
         var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
         Assert.Equal(0, dto.QueuedAhead);
@@ -856,7 +856,7 @@ public class ChessableControllerTests : IDisposable
     public async Task AdminStartImport_UnknownUser_Returns404()
     {
         await SeedUserAsync(42); // Aufrufer = Admin
-        var result = await _admin.StartImportForUserAdmin(999, "bid-1", new AdminChessableImportRequest(null));
+        var result = await _admin.StartImportForUserAdmin(999, "228856", new AdminChessableImportRequest(null));
         Assert.IsType<NotFoundObjectResult>(result);
     }
 
@@ -865,7 +865,7 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         await SeedUserAsync(7); // Ziel-User ohne Bearer
-        var result = await _admin.StartImportForUserAdmin(7, "bid-1", new AdminChessableImportRequest(null));
+        var result = await _admin.StartImportForUserAdmin(7, "228856", new AdminChessableImportRequest(null));
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -877,17 +877,17 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 7, EncryptedBearer = _encryption.Encrypt("user7-bearer"),
-            CachedCoursesJson = "[{\"bid\":\"bid-9\",\"name\":\"Holzkurs\"}]",   // Kurs in Bibliothek des Ziel-Users
+            CachedCoursesJson = "[{\"bid\":\"555555\",\"name\":\"Holzkurs\"}]",   // Kurs in Bibliothek des Ziel-Users
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
 
-        var result = await _admin.StartImportForUserAdmin(7, "bid-9", new AdminChessableImportRequest("Holzkurs"));
+        var result = await _admin.StartImportForUserAdmin(7, "555555", new AdminChessableImportRequest("Holzkurs"));
 
         var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
         Assert.Equal("repertoire", dto.Target);           // landet als Repertoire
         Assert.Equal("Holzkurs", dto.CourseName);
-        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "bid-9");
+        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "555555");
         Assert.Equal(42, imp.UserId);                     // Besitzer = Admin
         Assert.Equal(7, imp.BearerUserId);                // Bearer vom Ziel-User
         Assert.Equal(ChessableImportStatus.Running, imp.Status);
@@ -901,16 +901,16 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 7, EncryptedBearer = _encryption.Encrypt("user7-bearer"),
-            CachedCoursesJson = "[{\"bid\":\"bid-b\",\"name\":\"Buchkurs\"}]",   // Kurs in Bibliothek des Ziel-Users
+            CachedCoursesJson = "[{\"bid\":\"888888\",\"name\":\"Buchkurs\"}]",   // Kurs in Bibliothek des Ziel-Users
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
 
-        var result = await _admin.StartImportForUserAdmin(7, "bid-b", new AdminChessableImportRequest("Buchkurs", "book"));
+        var result = await _admin.StartImportForUserAdmin(7, "888888", new AdminChessableImportRequest("Buchkurs", "book"));
 
         var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
         Assert.Equal("book", dto.Target);                 // landet als Buch/Kurs
-        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "bid-b");
+        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "888888");
         Assert.Equal("book", imp.Target);
         Assert.Equal(42, imp.UserId);                     // Besitzer weiterhin Admin
         Assert.Equal(7, imp.BearerUserId);
@@ -921,7 +921,7 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         await SeedUserAsync(7);
-        var result = await _admin.StartImportForUserAdmin(7, "bid-x", new AdminChessableImportRequest(null, "video"));
+        var result = await _admin.StartImportForUserAdmin(7, "777777", new AdminChessableImportRequest(null, "video"));
         Assert.IsType<BadRequestObjectResult>(result);
     }
 

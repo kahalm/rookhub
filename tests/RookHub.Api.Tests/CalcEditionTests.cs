@@ -1,3 +1,7 @@
+using RookHub.Api.Controllers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -341,5 +345,76 @@ public class CalcEditionTests : IDisposable
         var byUser = await _db.Notifications.GroupBy(n => n.UserId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
         Assert.Equal(1, byUser.Single(x => x.Key == TesterId).Count);   // Tester NICHT doppelt
         Assert.Equal(1, byUser.Single(x => x.Key == ViewerId).Count);   // Betrachter genau einmal
+    }
+
+    // ---- Zugriffsschranke der öffentlichen Ausgaben-Liste (Review 2026-09-03) ----
+
+    private CalcSeriesController Controller(int? userId, bool isAdmin = false)
+    {
+        var claims = new List<Claim>();
+        if (userId is not null) claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.Value.ToString()));
+        if (isAdmin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        return new CalcSeriesController(_editions, _db)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, userId is null ? null : "test")),
+                },
+            },
+        };
+    }
+
+    private async Task<int> SeedSeriesBookAsync(bool isPublic, int ownerUserId = 999)
+    {
+        var book = new Book { FileName = $"serie-{Guid.NewGuid():N}.pgn", DisplayName = "Serie", IsPublic = isPublic, OwnerUserId = ownerUserId };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        _db.CalcEditions.Add(new CalcEdition
+        {
+            BookId = book.Id, Chapter = "Woche 1", Title = "W1",
+            VideoUrl = "https://youtu.be/geheim", PublishAt = DateTime.UtcNow.AddDays(-1),
+        });
+        await _db.SaveChangesAsync();
+        return book.Id;
+    }
+
+    [Fact]
+    public async Task ListVisible_PrivateBook_Anonymous_IsNotFound()
+    {
+        // Der Inhalt einer PRIVATEN Serie sind genau diese Video-URLs. Ohne Gate war die Liste per
+        // Buch-Id-Iteration ohne Login lesbar — „privat schalten" über IsPublic griff hier nicht.
+        var bookId = await SeedSeriesBookAsync(isPublic: false);
+
+        Assert.IsType<NotFoundResult>((await Controller(null).ListVisible(bookId, default)).Result);
+    }
+
+    [Fact]
+    public async Task ListVisible_PublicBook_Anonymous_ReturnsEditions()
+    {
+        var bookId = await SeedSeriesBookAsync(isPublic: true);
+
+        var ok = Assert.IsType<OkObjectResult>((await Controller(null).ListVisible(bookId, default)).Result);
+        Assert.Single(Assert.IsAssignableFrom<List<CalcEditionDto>>(ok.Value));
+    }
+
+    [Fact]
+    public async Task ListVisible_PrivateBook_DistributionMember_ReturnsEditions()
+    {
+        var bookId = await SeedSeriesBookAsync(isPublic: false);
+        _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = bookId, UserId = 42 });
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>((await Controller(42).ListVisible(bookId, default)).Result);
+        Assert.Single(Assert.IsAssignableFrom<List<CalcEditionDto>>(ok.Value));
+    }
+
+    [Fact]
+    public async Task ListVisible_PrivateBook_StrangerLoggedIn_IsNotFound()
+    {
+        var bookId = await SeedSeriesBookAsync(isPublic: false);
+
+        Assert.IsType<NotFoundResult>((await Controller(77).ListVisible(bookId, default)).Result);
     }
 }

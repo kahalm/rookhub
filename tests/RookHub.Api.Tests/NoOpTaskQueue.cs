@@ -13,6 +13,14 @@ public class NoOpTaskQueue : IWebhookTaskQueue
 
     public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         => throw new NotImplementedException("NoOpTaskQueue does not support dequeue");
+
+    public int PendingCount => 0;
+
+    public bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
+    {
+        workItem = null;
+        return false;
+    }
 }
 
 /// <summary>No-op <see cref="IBackgroundTaskQueue"/> für Tests, die einen Dienst nur konstruieren
@@ -24,6 +32,14 @@ public class NoOpBackgroundTaskQueue : IBackgroundTaskQueue
 
     public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         => throw new NotImplementedException("NoOpBackgroundTaskQueue does not support dequeue");
+
+    public int PendingCount => 0;
+
+    public bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
+    {
+        workItem = null;
+        return false;
+    }
 }
 
 /// <summary>
@@ -42,6 +58,14 @@ public class CountingTaskQueue : IWebhookTaskQueue
 
     public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         => throw new NotImplementedException("CountingTaskQueue does not support dequeue");
+
+    public int PendingCount => 0;
+
+    public bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
+    {
+        workItem = null;
+        return false;
+    }
 }
 
 /// <summary>
@@ -56,4 +80,12 @@ public class ImmediateTaskQueue : IWebhookTaskQueue
 
     public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         => throw new NotImplementedException("ImmediateTaskQueue does not support dequeue");
+
+    public int PendingCount => 0;
+
+    public bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
+    {
+        workItem = null;
+        return false;
+    }
 }

@@ -10,6 +10,9 @@ on:
   push:
     branches: [master]
     paths:
+      # Die EINTRÄGE stehen in changelog-data.ts (Split seit v0.355.0); changelog.ts bleibt in der
+      # Liste, damit ein reiner Versions-Bump ohne Eintrag ebenfalls einen Lauf auslöst.
+      - src/frontend/app/src/environments/changelog-data.ts
       - src/frontend/app/src/environments/changelog.ts
   workflow_dispatch:
     inputs:

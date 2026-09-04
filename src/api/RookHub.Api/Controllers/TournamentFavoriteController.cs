@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Services;
+using RookHub.Api.Validation;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -61,7 +63,13 @@ public class TournamentFavoriteController : BaseApiController
         };
 
         _db.TournamentFavorites.Add(fav);
-        await _db.SaveChangesAsync();
+        // Race-Catch wie bei den Abos: der Unique-Index ist die eigentliche Wahrheit, die Prüfung
+        // oben nur die schnelle Antwort (Doppelklick/zweiter Tab landete sonst auf 500).
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
+        {
+            return Conflict(new { message = "Already favorited." });
+        }
 
         return Ok(new TournamentFavoriteDto
         {
@@ -92,6 +100,8 @@ public class TournamentFavoriteController : BaseApiController
     [HttpDelete("by-player/{tournamentId}/{playerSnr}")]
     public async Task<IActionResult> DeleteByPlayer(string tournamentId, int playerSnr)
     {
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament id." });
         var fav = await _db.TournamentFavorites
             .FirstOrDefaultAsync(f => f.UserId == GetUserId()
                                    && f.CrawlerTournamentId == tournamentId
@@ -126,7 +136,11 @@ public class TournamentFavoriteController : BaseApiController
         };
 
         _db.TournamentFavorites.Add(fav);
-        await _db.SaveChangesAsync();
+        try { await _db.SaveChangesAsync(); }   // Race-Catch, siehe Create()
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
+        {
+            return Conflict(new { message = "Already favorited." });
+        }
 
         return Ok(new TournamentFavoriteDto
         {
@@ -141,6 +155,8 @@ public class TournamentFavoriteController : BaseApiController
     [HttpDelete("by-team/{tournamentId}/{teamSnr}")]
     public async Task<IActionResult> DeleteByTeam(string tournamentId, int teamSnr)
     {
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament id." });
         var fav = await _db.TournamentFavorites
             .FirstOrDefaultAsync(f => f.UserId == GetUserId()
                                    && f.CrawlerTournamentId == tournamentId
@@ -158,6 +174,8 @@ public class TournamentFavoriteController : BaseApiController
     [HttpGet("settings/{tournamentId}")]
     public async Task<IActionResult> GetSettings(string tournamentId)
     {
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament id." });
         var setting = await _db.TournamentUserSettings
             .FirstOrDefaultAsync(s => s.UserId == GetUserId() && s.CrawlerTournamentId == tournamentId);
 
@@ -168,6 +186,11 @@ public class TournamentFavoriteController : BaseApiController
     [HttpPut("settings/{tournamentId}")]
     public async Task<IActionResult> SaveSettings(string tournamentId, [FromBody] TournamentSettingsDto dto)
     {
+        // Der Route-Parameter kam ungeprüft in eine Spalte mit MaxLength(50): beim ersten Speichern
+        // einer längeren Id warf MariaDB „Data too long" und der Aufrufer bekam 500 statt 400 (die
+        // DTO-Pfade erzwingen das Muster längst, der Monitor-Controller prüft hier ebenfalls).
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament id." });
         var userId = GetUserId();
         var setting = await _db.TournamentUserSettings
             .FirstOrDefaultAsync(s => s.UserId == userId && s.CrawlerTournamentId == tournamentId);
@@ -187,7 +210,20 @@ public class TournamentFavoriteController : BaseApiController
             setting.ShowFavoritesOnly = dto.ShowFavoritesOnly;
         }
 
-        await _db.SaveChangesAsync();
+        // Upsert-Race: legen zwei parallele Requests dieselbe Einstellungszeile an, schlägt der
+        // Unique-Index beim zweiten zu. Hier ist die richtige Antwort NICHT 409 (der Aufrufer wollte
+        // nur speichern), sondern: bestehende Zeile laden und den Wunsch darauf anwenden.
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
+        {
+            _db.ChangeTracker.Clear();
+            var existing = await _db.TournamentUserSettings
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.CrawlerTournamentId == tournamentId);
+            if (existing is null) throw;
+            existing.ShowFavoritesOnly = dto.ShowFavoritesOnly;
+            await _db.SaveChangesAsync();
+            return Ok(new { showFavoritesOnly = existing.ShowFavoritesOnly });
+        }
         return Ok(new { showFavoritesOnly = setting.ShowFavoritesOnly });
     }
 }

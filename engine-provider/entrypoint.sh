@@ -121,14 +121,25 @@ fi
 # enden. Die Logzeilen der Provider laufen unpräfixiert zusammen (jeder meldet beim Start
 # seinen Namen; LOG_LEVEL=debug zeigt je Job die Engine).
 PIDS=()
-trap 'kill "${PIDS[@]}" 2>/dev/null; wait; exit 143' TERM INT
+# `|| true` hinter kill/wait: unter `set -e` beendete ein fehlgeschlagenes kill (Prozess schon weg)
+# bzw. ein wait auf einen mit Exit≠0 gestorbenen Kindprozess die Shell SOFORT — der Trap wäre
+# mitten im Aufräumen abgebrochen und der Container mit dem falschen Code beendet.
+trap 'kill "${PIDS[@]}" 2>/dev/null || true; wait || true; exit 143' TERM INT
 for ((i = 1; i <= ENGINE_COUNT; i++)); do
     build_args "$i"
     echo "Starte Engine-Provider $i/$ENGINE_COUNT: $ENGINE_PATH als '$(engine_name "$i")'"
     python /opt/provider.py "${ARGS[@]}" &
     PIDS+=("$!")
 done
-wait -n "${PIDS[@]}"; code=$?
+# FALLE `set -e`: `wait -n` liefert den Exit-Code des zuerst beendeten Kindes — bei Exit≠0 (genau der
+# Fehlerfall!) riss das unter `set -e` die Shell mit, BEVOR die Meldung und das Aufräumen liefen.
+# Sichtbar war das als „FEHLER … (Exit 0)" ausgerechnet im harmlosen Fall und als komplettes
+# Schweigen im echten. Deshalb den Code hier bewusst einsammeln statt abbrechen.
+code=0
+wait -n "${PIDS[@]}" || code=$?
 echo "FEHLER: Ein Engine-Provider hat sich beendet (Exit $code) — alle Engines werden neu gestartet." >&2
-kill "${PIDS[@]}" 2>/dev/null; wait
+kill "${PIDS[@]}" 2>/dev/null || true
+wait || true
+# Exit 0 wäre hier gelogen: der Container SOLL neu starten (restart: unless-stopped greift nur bei ≠0).
+[ "$code" -eq 0 ] && code=70
 exit "$code"

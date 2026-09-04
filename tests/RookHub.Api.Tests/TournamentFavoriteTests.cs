@@ -302,4 +302,27 @@ public class TournamentFavoriteTests : IDisposable
     }
 
     #endregion
+
+    [Fact]
+    public async Task SaveSettings_OverlongTournamentId_IsBadRequest_NotServerError()
+    {
+        // Der Route-Parameter kam ungeprüft in eine Spalte mit MaxLength(50): MariaDB warf beim
+        // Speichern „Data too long", der Aufrufer bekam 500 und der log-watcher einen Fehlalarm.
+        var userId = await CreateUserAsync("settings-user");
+        var controller = CreateController(userId);
+
+        var result = await controller.SaveSettings(new string('9', 60), new TournamentSettingsDto { ShowFavoritesOnly = true });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(_db.TournamentUserSettings);
+    }
+
+    [Fact]
+    public async Task GetSettings_InvalidTournamentId_IsBadRequest()
+    {
+        var userId = await CreateUserAsync("settings-user2");
+        var controller = CreateController(userId);
+
+        Assert.IsType<BadRequestObjectResult>(await controller.GetSettings("../../etc/passwd"));
+    }
 }

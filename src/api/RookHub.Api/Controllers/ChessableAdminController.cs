@@ -172,8 +172,8 @@ public class ChessableAdminController : BaseApiController
     [HttpPost("admin/users/{userId:int}/import/{bid}")]
     public async Task<IActionResult> StartImportForUserAdmin(int userId, string bid, [FromBody] AdminChessableImportRequest? request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(bid))
-            return BadRequest(new { message = "bid is required" });
+        if (string.IsNullOrWhiteSpace(bid) || bid.Length > 12 || !bid.All(char.IsAsciiDigit))
+            return BadRequest(new { message = "bid must be numeric (max 12 digits)" });
         // Leeres Ziel ⇒ "repertoire" (Default + rückwärtskompatibel zu Clients ohne target).
         var target = string.IsNullOrWhiteSpace(request?.Target) ? "repertoire" : request!.Target!.Trim().ToLowerInvariant();
         if (target is not ("repertoire" or "book"))
@@ -192,6 +192,15 @@ public class ChessableAdminController : BaseApiController
             return StatusCode(403, new { message = "Dieser Kurs ist nicht in der Chessable-Bibliothek des Users." });
 
         var adminId = GetUserId();
+        // Dedup wie im User-Controller: der Fund „Doppel-Klick erzeugt parallelen Voll-Fetch" wurde
+        // 2026-08-07 nur dort behoben, diese ausgegliederte Admin-Kopie blieb ohne Prüfung — jeder
+        // weitere Klick holte den kompletten Kurs erneut (Tageslimit + IP-Block-Risiko).
+        var running = await _db.ChessableImports.FirstOrDefaultAsync(
+            i => i.UserId == adminId && i.BearerUserId == userId && i.Bid == bid && i.Target == target
+                && (i.Status == ChessableImportStatus.Running || i.Status == ChessableImportStatus.Paused), ct);
+        if (running is not null)
+            return Accepted(ChessableImportQueueService.ToDto(running, await _queue.QueuedAheadAsync(running)));
+
         var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == adminId && x.Status == ChessableImportStatus.Running);
         var import = new ChessableImport
         {

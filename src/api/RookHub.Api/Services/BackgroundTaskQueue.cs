@@ -6,6 +6,22 @@ public interface IBackgroundTaskQueue
 {
     ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem);
     ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken);
+
+    /// <summary>Wartende, noch nicht abgeholte Arbeiten. Wird beim Herunterfahren protokolliert: die
+    /// Queue ist reiner Arbeitsspeicher, ein Neustart (nächtlich per Watchtower!) verwirft ihren Inhalt —
+    /// vorher lautlos. Wer den Verlust nicht verkraftet, braucht einen DB-gestützten Zustand wie die
+    /// Chessable-Importe (Status + Watchdog) statt dieser Queue.</summary>
+    /// Standard-Implementierung „leer": die Test-Doubles (No-Op/Counting/Immediate) halten gar keine
+    /// Queue und sollen nicht jedes Mal mitwachsen, wenn hier ein Diagnose-Glied dazukommt.</summary>
+    int PendingCount => 0;
+
+    /// <summary>Eine wartende Arbeit sofort abholen, ohne zu blocken (Rest-Drain beim Herunterfahren);
+    /// <c>false</c>, wenn nichts wartet. Standard-Implementierung wie bei <see cref="PendingCount"/>.</summary>
+    bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
+    {
+        workItem = null;
+        return false;
+    }
 }
 
 public class BackgroundTaskQueue : IBackgroundTaskQueue
@@ -46,6 +62,11 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     {
         return await _queue.Reader.ReadAsync(cancellationToken);
     }
+
+    public int PendingCount => _queue.Reader.Count;
+
+    public bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
+        => _queue.Reader.TryRead(out workItem);
 }
 
 /// <summary>
@@ -98,6 +119,37 @@ public sealed class WebhookTaskWorker : BackgroundService
             }
         }
     }
+
+    /// <summary>Beim Herunterfahren: kurz nachdrainen, was schon in der Queue liegt, und den Rest
+    /// SICHTBAR machen. Die Queue lebt nur im Arbeitsspeicher — ohne diese Zeilen verschwanden
+    /// Tag-Backfills, Tipp-Generierung und Auto-Subscription-Tickets beim (nächtlichen) Neustart
+    /// ohne eine einzige Logzeile. Das Zeitbudget ist knapp, weil Docker nach ~10 s hart abschießt.</summary>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken);
+        var pending = _queue.PendingCount;
+        if (pending == 0) return;
+
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(TimeSpan.FromSeconds(5));
+        var done = 0;
+        while (!budget.IsCancellationRequested && _queue.TryDequeue(out var item) && item is not null)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                await item(scope.ServiceProvider, budget.Token);
+                done++;
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Rest-Arbeit beim Herunterfahren fehlgeschlagen"); }
+        }
+        var lost = _queue.PendingCount;
+        if (lost > 0)
+            _logger.LogWarning("Herunterfahren: {Done} von {Pending} wartenden Arbeiten noch erledigt, {Lost} verworfen "
+                + "(die Queue ist nicht persistent — betroffene Arbeiten müssen erneut angestoßen werden)", done, pending, lost);
+        else
+            _logger.LogInformation("Herunterfahren: {Done} wartende Arbeiten noch erledigt", done);
+    }
 }
 
 public class BackgroundTaskWorker : BackgroundService
@@ -132,5 +184,36 @@ public class BackgroundTaskWorker : BackgroundService
                 _logger.LogError(ex, "Background task failed");
             }
         }
+    }
+
+    /// <summary>Beim Herunterfahren: kurz nachdrainen, was schon in der Queue liegt, und den Rest
+    /// SICHTBAR machen. Die Queue lebt nur im Arbeitsspeicher — ohne diese Zeilen verschwanden
+    /// Tag-Backfills, Tipp-Generierung und Auto-Subscription-Tickets beim (nächtlichen) Neustart
+    /// ohne eine einzige Logzeile. Das Zeitbudget ist knapp, weil Docker nach ~10 s hart abschießt.</summary>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken);
+        var pending = _queue.PendingCount;
+        if (pending == 0) return;
+
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(TimeSpan.FromSeconds(5));
+        var done = 0;
+        while (!budget.IsCancellationRequested && _queue.TryDequeue(out var item) && item is not null)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                await item(scope.ServiceProvider, budget.Token);
+                done++;
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Rest-Arbeit beim Herunterfahren fehlgeschlagen"); }
+        }
+        var lost = _queue.PendingCount;
+        if (lost > 0)
+            _logger.LogWarning("Herunterfahren: {Done} von {Pending} wartenden Arbeiten noch erledigt, {Lost} verworfen "
+                + "(die Queue ist nicht persistent — betroffene Arbeiten müssen erneut angestoßen werden)", done, pending, lost);
+        else
+            _logger.LogInformation("Herunterfahren: {Done} wartende Arbeiten noch erledigt", done);
     }
 }

@@ -26,7 +26,11 @@ import time
 import urllib.error
 import urllib.request
 
-CHANGELOG = 'src/frontend/app/src/environments/changelog.ts'
+# ACHTUNG: die EINTRÄGE stehen seit dem Changelog-Split (v0.355.0) in changelog-data.ts;
+# changelog.ts trägt nur noch APP_VERSION + Typen. Zeigte dieser Pfad auf die alte Datei,
+# fand `parse_entries` nichts, `main()` stieg mit Exit 0 aus — und der Workflow blieb grün,
+# während rund 32 Versionen unangekündigt liefen. Deshalb unten auch Exit 1 bei „keine Einträge".
+CHANGELOG = 'src/frontend/app/src/environments/changelog-data.ts'
 _ENTRY_RE = re.compile(
     r'\{\s*version:\s*"(?P<version>[^"]+)",\s*date:\s*"(?P<date>[^"]+)"')
 _EN_RE = re.compile(r'\ben:\s*"(?P<en>(?:[^"\\]|\\.)*)"')
@@ -114,8 +118,11 @@ def main() -> int:
     with open(CHANGELOG, encoding='utf-8') as f:
         entries = parse_entries(f.read())
     if not entries:
-        print('Keine Changelog-Einträge gefunden.')
-        return 0
+        # Kein leerer Changelog, sondern ein kaputter Pfad/Parser: laut scheitern, statt grün zu
+        # bleiben (genau daran blieb der Ausfall nach dem Changelog-Split ein halbes Jahr unbemerkt).
+        print(f'FEHLER: keine Changelog-Einträge in {CHANGELOG} gefunden — Pfad/Format geändert?',
+              file=sys.stderr)
+        return 1
 
     # Backfill (workflow_dispatch mit since_version): alle Eintraege von dieser
     # Version bis zum neuesten nachreichen — z. B. nach einem defekten Webhook.

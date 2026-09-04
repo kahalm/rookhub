@@ -152,7 +152,7 @@ public class FriendController : BaseApiController
     }
 
     [HttpGet("search")]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("user-search")]
     public async Task<ActionResult<List<UserSearchResultDto>>> Search([FromQuery] string q)
     {
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)

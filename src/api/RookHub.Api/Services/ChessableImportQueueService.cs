@@ -74,6 +74,12 @@ public class ChessableImportQueueService
     /// fehlt der bid dort, wird die Liste EINMAL frisch geladen (deckt frisch gekaufte Kurse / leeren
     /// Cache ab) und der Cache aktualisiert. Nicht verifizierbar (Bearer kaputt / Chessable-Fehler) ⇒
     /// fail-closed (kein Import).</summary>
+    /// <summary>So lange gilt eine gerade geholte Kursliste als aktuell genug, um einen unbekannten
+    /// Kurs OHNE weiteren Chessable-Abruf abzulehnen (siehe Kommentar in
+    /// <see cref="UserOwnsCourseAsync"/>). Ein neu gekaufter Kurs ist damit spätestens nach dieser
+    /// Frist importierbar — bzw. sofort, sobald die Kursliste anderswo aktualisiert wurde.</summary>
+    public static readonly TimeSpan CourseListRefreshCooldown = TimeSpan.FromMinutes(5);
+
     public async Task<bool> UserOwnsCourseAsync(ChessableCredential cred, string bid, CancellationToken ct)
     {
         bool Has(string? json) =>
@@ -82,6 +88,15 @@ public class ChessableImportQueueService
                .Any(c => c.Bid == bid);
 
         if (Has(cred.CachedCoursesJson)) return true;
+
+        // DROSSEL für den Live-Abruf: ein NEGATIVES Ergebnis lässt sich nicht cachen (die bid bleibt
+        // ja weiter nicht in der Liste), also holte eine Schleife auf einen unbekannten Kurs bei JEDEM
+        // Request frisch von Chessable — über den geteilten VPN-Pool und ohne Rate-Limit, weil der
+        // Import-Endpoint bewusst davon ausgenommen ist. Genau die Verbrennung von IP/Cloudflare-
+        // Budget, gegen die `POST /test` und `?refresh=true` wieder unter den Limiter gestellt wurden.
+        // Deshalb: höchstens einmal je Frist frisch fragen, sonst fail-closed antworten.
+        if (cred.CoursesCachedAt is { } cachedAt && DateTime.UtcNow - cachedAt < CourseListRefreshCooldown)
+            return false;
 
         var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
         if (bearer is null) return false;
