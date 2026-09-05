@@ -2871,6 +2871,37 @@
     "restartTooltip": "Wieder einreihen — das bisherige Ergebnis bleibt erhalten und die Suche setzt dort an.",
     "restarted": "Auftrag wieder eingereiht.",
     "nodes": "Durchsuchte Stellungen: {{nodes}}",
-    "runningAt": "rechnet bei {{depth}}"
+    "runningAt": "rechnet bei {{depth}}",
+    "toGames": "Partie-Analysen"
+  },
+  "gameAnalysis": {
+    "title": "Partie-Analysen",
+    "intro": "Eine ganze Partie einwerfen — die Hintergrund-Engine rechnet jede Stellung durch. Das dauert; die Partie zeigt ihren Fortschritt und lässt sich jederzeit ansehen.",
+    "pgnLabel": "PGN der Partie",
+    "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
+    "depth": "Tiefe",
+    "depthHint": "Tiefe 30 ist der Kompromiss aus Aussagekraft und Dauer — 40 kostet grob das Zehnfache.",
+    "start": "Analyse starten",
+    "started": "Analyse gestartet",
+    "startFailed": "Analyse ließ sich nicht starten",
+    "loadFailed": "Partie-Analysen konnten nicht geladen werden",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "empty": "Noch keine Partie analysiert.",
+    "untitled": "Ohne Titel",
+    "toJobs": "Einzel-Aufträge",
+    "progress": "{{done}} von {{total}} Stellungen",
+    "depthLines": "Tiefe {{depth}} · {{lines}} Varianten",
+    "notFound": "Diese Analyse gibt es nicht (mehr).",
+    "back": "Zur Übersicht",
+    "prev": "Zug zurück",
+    "next": "Zug vor",
+    "flip": "Brett drehen",
+    "startPosition": "Ausgangsstellung",
+    "status": {
+      "pending": "wartet",
+      "running": "rechnet",
+      "done": "fertig",
+      "failed": "gescheitert"
+    }
   }
 }

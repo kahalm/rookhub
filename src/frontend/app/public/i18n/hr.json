@@ -2871,6 +2871,37 @@
     "restartTooltip": "Vrati u red — dosadašnji rezultat ostaje i pretraga nastavlja odande.",
     "restarted": "Zadatak je ponovno u redu.",
     "nodes": "Pretražene pozicije: {{nodes}}",
-    "runningAt": "računa na {{depth}}"
+    "runningAt": "računa na {{depth}}",
+    "toGames": "Analize partija"
+  },
+  "gameAnalysis": {
+    "title": "Analize partija",
+    "intro": "Ubaci cijelu partiju — pozadinski stroj proračunava svaku poziciju. To traje; partija pokazuje napredak i može se pogledati u svakom trenutku.",
+    "pgnLabel": "PGN partije",
+    "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
+    "depth": "Dubina",
+    "depthHint": "Dubina 30 je ravnoteža između uvida i trajanja — 40 košta otprilike deset puta više.",
+    "start": "Pokreni analizu",
+    "started": "Analiza pokrenuta",
+    "startFailed": "Analizu nije bilo moguće pokrenuti",
+    "loadFailed": "Analize partija nije bilo moguće učitati",
+    "deleteFailed": "Brisanje nije uspjelo",
+    "empty": "Još nijedna partija nije analizirana.",
+    "untitled": "Bez naslova",
+    "toJobs": "Pojedinačni nalozi",
+    "progress": "{{done}} od {{total}} pozicija",
+    "depthLines": "Dubina {{depth}} · {{lines}} varijanti",
+    "notFound": "Ova analiza više ne postoji.",
+    "back": "Natrag na popis",
+    "prev": "Potez natrag",
+    "next": "Potez naprijed",
+    "flip": "Okreni ploču",
+    "startPosition": "Početna pozicija",
+    "status": {
+      "pending": "čeka",
+      "running": "računa",
+      "done": "gotovo",
+      "failed": "neuspjelo"
+    }
   }
 }

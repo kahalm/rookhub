@@ -2871,6 +2871,37 @@
     "restartTooltip": "Queue again — the current result is kept and the search continues from there.",
     "restarted": "Job queued again.",
     "nodes": "Positions searched: {{nodes}}",
-    "runningAt": "at depth {{depth}}"
+    "runningAt": "at depth {{depth}}",
+    "toGames": "Game analyses"
+  },
+  "gameAnalysis": {
+    "title": "Game analyses",
+    "intro": "Hand in a whole game — the background engine works through every position. That takes a while; the game shows its progress and can be viewed at any time.",
+    "pgnLabel": "PGN of the game",
+    "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
+    "depth": "Depth",
+    "depthHint": "Depth 30 balances insight and runtime — depth 40 costs roughly ten times as much.",
+    "start": "Start analysis",
+    "started": "Analysis started",
+    "startFailed": "Could not start the analysis",
+    "loadFailed": "Could not load the game analyses",
+    "deleteFailed": "Delete failed",
+    "empty": "No game analysed yet.",
+    "untitled": "Untitled",
+    "toJobs": "Single positions",
+    "progress": "{{done}} of {{total}} positions",
+    "depthLines": "Depth {{depth}} · {{lines}} lines",
+    "notFound": "This analysis no longer exists.",
+    "back": "Back to the list",
+    "prev": "Previous move",
+    "next": "Next move",
+    "flip": "Flip board",
+    "startPosition": "Starting position",
+    "status": {
+      "pending": "waiting",
+      "running": "running",
+      "done": "done",
+      "failed": "failed"
+    }
   }
 }

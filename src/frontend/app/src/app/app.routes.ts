@@ -36,6 +36,9 @@ export const routes: Routes = [
   // eingeloggt — Fortschritt und Versuch sind serverseitig [Authorize].
   { path: 'weekly/:weeklyId', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
   // Auftragsseite VOR `analysis` (eigener Pfad; eingeloggt — Aufträge sind serverseitig [Authorize]).
+  // Literal vor Parameter: /analysis/games/:id darf nicht als Auftrags-Id verstanden werden.
+  { path: 'analysis/games/:id', loadComponent: () => import('./features/analysis/game-analysis-detail.component').then(m => m.GameAnalysisDetailComponent), canActivate: [authGuard] },
+  { path: 'analysis/games', loadComponent: () => import('./features/analysis/game-analyses.component').then(m => m.GameAnalysesComponent), canActivate: [authGuard] },
   { path: 'analysis/jobs', loadComponent: () => import('./features/analysis/analysis-jobs.component').then(m => m.AnalysisJobsComponent), canActivate: [authGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },

@@ -39,7 +39,12 @@ import type { EngineAnalyseLine } from './external-engine.service';
     <div class="jobs-container">
       <div class="header">
         <h1>{{ 'analysisJobs.title' | translate }}</h1>
-        <a mat-stroked-button routerLink="/analysis"><mat-icon>arrow_back</mat-icon> {{ 'analysisJobs.toAnalysis' | translate }}</a>
+        <span class="head-actions">
+          <a mat-stroked-button routerLink="/analysis/games">
+            <mat-icon>sports_esports</mat-icon> {{ 'analysisJobs.toGames' | translate }}
+          </a>
+          <a mat-stroked-button routerLink="/analysis"><mat-icon>arrow_back</mat-icon> {{ 'analysisJobs.toAnalysis' | translate }}</a>
+        </span>
       </div>
       <p class="muted intro">{{ 'analysisJobs.intro' | translate }}</p>
 
@@ -136,6 +141,7 @@ import type { EngineAnalyseLine } from './external-engine.service';
     </div>
   `,
   styles: [`
+    .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .jobs-container { padding: 1rem; max-width: min(var(--page-max-width, 1240px), 96vw); margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .header h1 { margin: 0; }
