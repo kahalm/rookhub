@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.395.1", date: "2026-09-05", changes: [
+    { en: "The statistics page no longer stretches the app sideways on a phone held upright. The „by rating\" columns ran past the screen edge and dragged the whole page with them — about two screens of sideways scrolling — and because menus are positioned against the page, tapping the hamburger jumped to the far right and put the Training and Account submenus outside the visible area. The columns now scroll inside their own strip, as the activity heatmap already did.", de: "Die Statistik-Seite dehnt die App im Hochformat nicht mehr zur Seite. Die Säulen von „Nach Rating\" liefen über den Bildschirmrand hinaus und zogen die ganze Seite mit — rund zwei Bildschirme Scroll nach rechts — und weil Menüs gegen die Seite positioniert werden, sprang ein Tipp aufs Hamburger-Menü ganz nach rechts und legte die Untermenüs zu Training und Konto außerhalb des Sichtbereichs ab. Die Säulen scrollen jetzt in ihrem eigenen Streifen, so wie die Aktivitäts-Heatmap darunter schon immer." },
+  ] },
   { version: "0.395.0", date: "2026-09-05", changes: [
     { en: "The quick start you get after signing up is now clickable: every entry takes you straight into that mode instead of just describing it. New in the list: the public course „Mate in 1/2/3\" with 4,462 checkmate puzzles — it starts in order, so you begin with mate in one and work your way up.", de: "Der Schnellstart nach der Registrierung ist jetzt anklickbar: Jeder Eintrag führt direkt in den Modus, statt ihn nur zu beschreiben. Neu in der Liste: der öffentliche Kurs „Matt in 1/2/3\" mit 4462 Mattaufgaben — er startet der Reihe nach, du beginnst also beim Matt in einem Zug und arbeitest dich hoch." },
   ] },

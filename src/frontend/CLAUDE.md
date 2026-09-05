@@ -183,6 +183,26 @@ Der Bestand enthält ~80 bewusst stille Fehler-Handler. Die Grenze:
   null/false zurück und die Aufrufer zeigen es an) — ein vorgetäuschtes „gespeichert" ist der
   teuerste Fehler dieser Kategorie.
 
+## Kein horizontaler Seiten-Scroll (Hochformat)
+
+Breite Inhalte — Tabellen, Balken-/Säulenstreifen, Heatmaps, Diagramme — brauchen **ein eigenes
+`overflow-x: auto`** auf ihrem Container. Läuft stattdessen die SEITE über, ist nicht nur das
+Scrollen unschön: **CDK-Overlays positionieren sich gegen das verbreiterte Dokument**, und die
+Untermenüs des Hamburger-Menüs landen außerhalb des Sichtfelds (unten rechts, nur beim Rauszoomen
+sichtbar). Genau so gemeldet für `/stats` (2026-09-05): `.bands` (Rating-Säulen, 200er-Schritte
+⇒ 14–18 Säulen à min. 28 px) hatte kein `overflow-x` und dehnte die Seite um rund zwei Bildschirme.
+
+Faustregeln:
+- Streifen aus `@for`-Kindern: `overflow-x: auto` auf den Streifen, `flex: 1 0 <Mindestbreite>` auf
+  die Kinder (füllt bei Platz, schrumpft nie unter die Beschriftung).
+- Tabellen: `min-width` auf die Tabelle, `overflow-x: auto` auf den Wrapper (Muster
+  `.recent-scroll`/`.recent-table` in `stats.component`).
+- Testbar: Host auf 390 px setzen, viele Elemente rendern, `container.scrollWidth <=
+  container.clientWidth` prüfen (siehe `stats.component.spec.ts`) — der Test fällt gegen die alte
+  Fassung um und ist damit mehr als Dekoration.
+- **Falle beim Kommentieren**: Die `styles: [...]`-Blöcke sind Template-Literale — ein Backtick im
+  CSS-Kommentar beendet den String und der Build stirbt mit Sass-/TS-Fehlern weit entfernt.
+
 ## Build-Konfiguration
 
 - Budget: 1.5MB warning / 2MB error (initial bundle; angehoben, da der Single-Source-Changelog stetig wächst)

@@ -398,8 +398,17 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .theme-fill { height: 100%; background: #1976d2; }
     .theme-fill.warn { background: #e53935; }
     .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
-    .bands { display: flex; align-items: stretch; gap: 6px; height: 140px; padding-top: 8px; }
-    .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 28px; height: 100%; }
+    /* Die Baender sind BREITER als ein Hochkant-Handy: 200er-Schritte ueber die ganze
+       Rating-Spanne ergeben schnell 14-18 Saeulen. Ohne eigenes overflow-x wuchs damit die SEITE
+       (rund zwei Bildschirme Scroll nach rechts) - und weil CDK-Overlays gegen das verbreiterte
+       Dokument rechnen, landeten die Untermenues des Hamburger-Menues unten rechts ausserhalb des
+       Sichtfelds. Breite Inhalte scrollen deshalb IN IHREM Container, wie die Heatmap darunter.
+       ACHTUNG: keine Backticks in diesen Kommentaren - der styles-Block ist ein Template-Literal. */
+    .bands { display: flex; align-items: stretch; gap: 6px; height: 140px; padding-top: 8px; overflow-x: auto; }
+    /* flex: 1 0 34px - fuellt die Karte, wenn Platz ist, schrumpft aber NICHT unter die
+       Beschriftung (sonst ueberlappen Zahl und Rating-Grenze); dann scrollt der Streifen. */
+    .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1 0 34px; height: 100%; }
+    .band-lbl, .band-cnt { white-space: nowrap; }
     .band-bar { width: 60%; flex: 1; display: flex; align-items: flex-end; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 3px; }
     .band-fill { width: 100%; background: #43a047; border-radius: 3px; min-height: 2px; }
     .band-lbl { font-size: .65rem; color: color-mix(in srgb, currentColor 47%, transparent); }
