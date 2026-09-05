@@ -13,6 +13,12 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
 
+/** Umwandlungsfigur aus dem SAN („e8=Q+" → „q"); leer, wenn der Zug keine Umwandlung ist. */
+function promotionOf(san: string | undefined): string {
+  const i = san?.indexOf('=') ?? -1;
+  return i >= 0 && san!.length > i + 1 ? san![i + 1].toLowerCase() : '';
+}
+
 /**
  * Punktepartie (`/guess/:id`): Zug für Zug raten, sofort eine Rückmeldung samt Punkten, dann rückt
  * die Partie zwei Halbzüge weiter (eigener Zug + Antwort des Gegners).
@@ -201,7 +207,10 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
 
   onMove(m: UserBoardMove): void {
     if (!this.canGuess) return;
-    this.send(m.from + m.to);
+    // Das Brett meldet nur Ausgangs- und Zielfeld; die Umwandlungsfigur steht ausschliesslich im SAN
+    // (`applyUserMove` wandelt immer in eine Dame um). Ohne sie ginge „e7e8" statt „e7e8q" zum
+    // Server — dort kein legaler Zug, und JEDE Umwandlung waere mit 400 abgeprallt.
+    this.send(m.from + m.to + promotionOf(m.san));
   }
 
   skip(): void {

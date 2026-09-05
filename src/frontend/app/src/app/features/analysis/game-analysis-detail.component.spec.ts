@@ -69,6 +69,34 @@ describe('GameAnalysisDetailComponent', () => {
     expect(c.currentFen).toBe('fen-after-e5');
   });
 
+  it('zeigt am Ende die SCHLUSSSTELLUNG, nicht die davor', () => {
+    // Gespeichert ist je Zeile nur die Stellung VOR dem Zug. Ohne Nachspielen des letzten Zuges
+    // zeigte das Brett beim letzten Halbzug dieselbe Stellung wie einen Zug zuvor — die
+    // Schlussstellung liess sich gar nicht ansehen.
+    const start = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    const afterE4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
+    const fixture = TestBed.createComponent(GameAnalysisDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses/5').flush({
+      id: 5, title: 'A – B', white: 'A', black: 'B', result: '*', event: null,
+      targetDepth: 30, multiPv: 5, engineId: 'eei_x', status: 'done',
+      plyCount: 2, analyzedPlies: 2, lastError: null,
+      createdAt: '2026-09-05T10:00:00Z', finishedAt: null,
+      positions: [
+        { ply: 0, moveNumber: 1, white: true, san: 'e4', uci: 'e2e4', fen: start, evalText: '+0.30', depth: 30, analyzed: true },
+        { ply: 1, moveNumber: 1, white: false, san: 'e5', uci: 'e7e5', fen: afterE4, evalText: '-0.20', depth: 30, analyzed: true },
+      ],
+    });
+    const c = fixture.componentInstance;
+
+    c.go(1);
+    expect(c.currentFen).toBe(afterE4);
+    c.go(1);
+    expect(c.index).toBe(1);
+    expect(c.currentFen).not.toBe(afterE4);
+    expect(c.currentFen).toContain('4p3');   // nach 1.e4 e5
+  });
+
   it('zeigt den Fortschritt, solange noch gerechnet wird', () => {
     const c = load().componentInstance;
     expect(c.percent).toBe(67);   // 2 von 3

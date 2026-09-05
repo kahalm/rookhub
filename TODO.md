@@ -63,6 +63,34 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [ ] **Punktepartie/Partie-Analyse: Reste aus dem Review 2026-09-06** (die 8 behobenen Funde stehen
+  im Changelog 0.399.1; das hier bleibt bewusst liegen):
+  1. **Eine gescheiterte Partie-Analyse laesst sich nicht neu anstossen.** Ohne hinterlegte
+     Hintergrund-Engine setzt `EnqueueNextAsync` die Partie auf `Failed`, `PumpOneAsync` steigt
+     danach sofort wieder aus — auch wenn der Nutzer die Engine anschliessend eintraegt. Heute
+     bleibt nur Loeschen + neu anlegen. Ein `POST /api/game-analyses/{id}/restart` (Status zurueck
+     auf `Pending`, `LastError` leeren) waere die kleine Loesung. Nebenbei: die Erkennung laeuft
+     ueber `ex.Message.Contains("engine")` — ein eigener Ausnahmetyp im `AnalysisJobService` waere
+     die ehrlichere Fassung.
+  2. **`GET /api/game-analyses/{id}` liefert JEDEN Zug der Partie** (San + Uci je Halbzug), waehrend
+     die Punktepartie penibel darauf achtet, den Partiezug erst NACH dem Raten herauszugeben. Heute
+     harmlos (die Partie ist das eigene hochgeladene PGN), aber sobald Phase 1 den „kuratierten
+     Bestand" bringt, ist die Regel ueber den Nachbar-Endpoint ausgehebelt. Dann muessen die Zuege
+     einer fremden/kuratierten Analyse hinter dem Fortschritt der Sitzung stehen.
+  3. **Ein NICHT gelisteter Zug wird mit „aehnlich" (2 Punkte) gedeckelt** (`GuessScoring`): liegen
+     die Top-5 dicht beieinander (ruhige Stellung), ist die Obergrenze „schlechtester gelisteter
+     Zug" fast so gut wie der Partiezug — ein klarer Patzer bekommt dann 2 Punkte. Bewusst so
+     gebaut, aber der erste Kandidat fuers Nachjustieren an echten Laeufen (z. B. Deckel auf
+     „schlechter"/0 Punkte, oder die Stellung ueberspringen).
+  4. **Von Hand geloeschte Analyse-Auftraege einer laufenden Partie kommen zurueck**: die Pumpe
+     reiht die Stellung 20 s spaeter erneut ein. Wer eine Partie stoppen will, muss die ANALYSE
+     loeschen — das ist richtig, aber nirgends erklaert (Hinweistext auf `/analysis/jobs`).
+  5. **`POST /api/game-analyses` nimmt ein PGN beliebiger Groesse** (Spalte ist LONGTEXT; nur die
+     Halbzuege sind auf 300 gedeckelt). Der Repertoire-Upload deckelt bei 10 MB — dieselbe Schranke
+     waere hier konsequent.
+  6. **`/guess` zeigt je spielbarer Partie einen gefuellten Primaer-Knopf** — die UI-Dichte-Regel
+     (CLAUDE.md) will genau EINEN pro Screen. Bei zehn analysierten Partien sind es zehn.
+
 - [ ] **„Punktepartie" — Meisterpartie Zug für Zug erraten** (Feature-Skizze 2026-09-05):
   Dritter Kurs-Modus neben Solver (Linie mit Lösung) und Kalkulation (Stellung ohne Lösung): eine ganze
   Partie, ab einem Zug rät der Nutzer für EINE Seite, bekommt je Zug eine Stufe + Punkte und am Ende eine

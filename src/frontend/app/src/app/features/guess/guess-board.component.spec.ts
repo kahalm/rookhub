@@ -67,6 +67,14 @@ describe('GuessBoardComponent', () => {
     expect(c.session!.points).toBe(5);
   });
 
+  it('schickt bei einer Umwandlung die Figur mit', () => {
+    // Das Brett meldet nur from/to; die Figur steht nur im SAN. Ohne sie ginge „e7e8" zum Server —
+    // dort kein legaler Zug, und JEDE Umwandlung waere mit 400 abgeprallt.
+    const c = load().componentInstance;
+    c.onMove({ from: 'e7', to: 'e8', san: 'e8=Q+', fen: 'egal' });
+    expect(http.expectOne('/api/guess-sessions/3/guess').request.body.uci).toBe('e7e8q');
+  });
+
   it('passen schickt einen leeren Zug (0 Punkte, keine Strafe)', () => {
     const c = load().componentInstance;
     c.skip();

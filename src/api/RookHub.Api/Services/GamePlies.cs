@@ -67,15 +67,10 @@ public static class GamePlies
     }
 
     /// <summary>UCI eines Zuges des Bretts — Rochade als Königszug (<c>e1g1</c>), nicht als
-    /// König-schlägt-Turm; der Broker liefert die andere Form, die beim EINLESEN umgeschrieben wird.</summary>
-    public static string ToUci(Move m)
-    {
-        var u = m.OriginalPosition.ToString() + m.NewPosition.ToString();
-        var promo = m.Parameter?.ShortStr;
-        if (!string.IsNullOrEmpty(promo) && promo.StartsWith('=') && promo.Length >= 2)
-            u += char.ToLowerInvariant(promo[1]);
-        return u;
-    }
+    /// König-schlägt-Turm; der Broker liefert die andere Form, die beim EINLESEN umgeschrieben wird.
+    /// Reicht bewusst an <see cref="PgnParser.ToUci"/> durch: die Zugliste der Partie kommt von dort,
+    /// eine zweite Fassung derselben Regeln waere die erste Stelle, an der beide auseinanderlaufen.</summary>
+    public static string ToUci(Move m) => PgnParser.ToUci(m);
 
     public static string StartFen() => new ChessBoard().ToFen();
 

@@ -232,6 +232,68 @@ public class GuessSessionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task NochNichtGerechneteStellung_wirdNichtVerbrannt()
+    {
+        // Spielbar ist eine Partie schon ab der ERSTEN fertigen Stellung — die Sitzung kann der
+        // Engine also davonlaufen. Frueher wurde so eine Stellung stumm mit 0 gewertet und nie
+        // wieder gezeigt; der Nutzer arbeitete sich punktlos durch die halbe Partie.
+        var (user, analysis) = await SeedAsync();
+        var ply2 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 2);
+        ply2.CandidatesJson = null;   // rechnet noch
+        await _db.SaveChangesAsync();
+
+        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
+        });
+        await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e4" });
+
+        var state = await _svc.GetAsync(user.Id, session.Id);
+        Assert.Equal(2, state!.Position!.Ply);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "g1f3" }));
+        Assert.Single(_db.GuessMoves);   // der Halbzug ist NICHT verbraucht
+
+        // Sobald die Engine nachgezogen hat, geht es normal weiter.
+        ply2.CandidatesJson = "[{\"uci\":\"" + ply2.GameMoveUci + "\",\"cp\":30}]";
+        await _db.SaveChangesAsync();
+        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = ply2.GameMoveUci });
+        Assert.Equal("gameMove", res.Grade);
+    }
+
+    [Fact]
+    public async Task BewertungNachDemZug_zeigtMattAlsMatt()
+    {
+        // Regression: die Anzeige rechnete mit der VERGLEICHSZAHL (Matt = 1000 Bauern) und schrieb
+        // „+997.00" statt „#-3" unter das Brett.
+        var (user, analysis) = await SeedAsync();
+        var ply1 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 1);
+        ply1.CandidatesJson = "[{\"uci\":\"" + ply1.GameMoveUci + "\",\"mate\":3}]";
+        await _db.SaveChangesAsync();
+
+        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
+        });
+        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e4" });
+
+        Assert.Equal("#-3", res.EvalText);
+    }
+
+    [Fact]
+    public async Task StartPly_wirdAufDiePartieBegrenzt()
+    {
+        // Ohne Deckel lief `start++` bei int.MaxValue in den negativen Bereich.
+        var (user, analysis) = await SeedAsync();
+        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = int.MaxValue,
+        });
+        Assert.True(dto.StartPly >= 0);
+        Assert.True(dto.StartPly <= GameAnalysisDefaults.MaxPlies + 1);
+    }
+
+    [Fact]
     public async Task FremdeSitzungIstUnsichtbar()
     {
         var (owner, analysis) = await SeedAsync();

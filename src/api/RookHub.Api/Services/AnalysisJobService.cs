@@ -50,7 +50,12 @@ public class AnalysisJobService
 
     /// <summary>Anlegen. Wirft <see cref="ArgumentException"/> bei ungültiger Eingabe und
     /// <see cref="InvalidOperationException"/>, wenn keine Hintergrund-Engine bestimmt ist.</summary>
-    public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default)
+    /// <param name="remember">Stellung zusätzlich unter „Gemerkte Stellungen" ablegen. Vorgabe <c>true</c>
+    /// (der Nutzer hat sie von Hand eingereiht, dort will er sie wiederfinden). Maschinell erzeugte
+    /// Aufträge — die Partie-Analyse legt je Halbzug einen an — setzen <c>false</c>: eine 80-Halbzug-Partie
+    /// spülte sonst 80 Zeilen in die Merkliste und lüde bei JEDEM Auftrag die ganze Liste erneut.</param>
+    public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
+        bool remember = true)
     {
         var fen = (req.Fen ?? string.Empty).Trim();
         if (fen.Length is 0 or > 120 || !IsLegalFen(fen))
@@ -91,7 +96,7 @@ public class AnalysisJobService
         // Analysierte Stellungen gehören auch in „Gemerkte Stellungen" (dort zeigt die Übersicht den
         // Auftrag mit Status/Tiefe/Bewertung an) — aber nur EINMAL je Stellung: hat der User sie schon
         // gemerkt (Chessable-Remember oder früherer Auftrag), bleibt der vorhandene Eintrag.
-        await EnsureRememberedAsync(userId, fen, title, ct);
+        if (remember) await EnsureRememberedAsync(userId, fen, title, ct);
         await _db.SaveChangesAsync(ct);
         return ToDto(job);
     }

@@ -52,6 +52,21 @@ public static class GuessScoring
         public double Pawns => MateIn is int m
             ? (m >= 0 ? MateBasePawns - Math.Min(m, 999) : -(MateBasePawns - Math.Min(-m, 999)))
             : (Cp ?? 0) / 100.0;
+
+        /// <summary>Dieselbe Bewertung aus Sicht der GEGENSEITE (die Stellung nach dem Zug gehoert ihr).</summary>
+        public Eval Negated => new(Cp is int c ? -c : null, MateIn is int m ? -m : null);
+
+        /// <summary>Anzeigetext („+0.34" / „#3"). EINE Stelle, sonst rutscht ein Matt anderswo als
+        /// „+997.00" durch — <see cref="Pawns"/> ist eine Vergleichszahl, kein Anzeigewert.</summary>
+        public string Text
+        {
+            get
+            {
+                if (MateIn is int m) return "#" + m;
+                var v = (Cp ?? 0) / 100.0;
+                return (v > 0 ? "+" : "") + v.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
     }
 
     /// <summary>Ein Zug der Kandidatenliste (MultiPV) mit seiner Bewertung.</summary>

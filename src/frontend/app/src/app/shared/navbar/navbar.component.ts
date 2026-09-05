@@ -274,7 +274,8 @@ export class NavbarComponent implements OnInit {
    *  (Community braucht keinen Getter — der Discord-Link ist immer da.) */
   get anyTraining(): boolean {
     return this.can('puzzles') || this.can('weekly') || this.can('training-goals')
-      || this.can('repertoires') || this.can('favorites') || (this.showCourses && this.can('courses'));
+      || this.can('repertoires') || this.can('guess') || this.can('favorites')
+      || (this.showCourses && this.can('courses'));
   }
   get anyLibrary(): boolean {
     return this.can('analysis') || this.can('games') || this.can('remembered')

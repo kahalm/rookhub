@@ -25,3 +25,17 @@ export function applyUserMove(fen: string, from: string, to: string): { san: str
     return null;
   }
 }
+
+/** Stellung NACH einem UCI-Zug (`e2e4`, Umwandlung `e7e8q`); `null`, wenn der Zug dort nicht geht.
+ *  Anders als `applyUserMove` respektiert das die Umwandlungsfigur, kommt also auch mit einer
+ *  gespeicherten Partie-Zugliste zurecht (Unterverwandlung `e7e8n`). */
+export function fenAfterUci(fen: string, uci: string): string | null {
+  if (!uci || uci.length < 4) return null;
+  try {
+    const chess = new Chess(fen);
+    chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci.length > 4 ? uci[4] : undefined });
+    return chess.fen();
+  } catch {
+    return null;
+  }
+}

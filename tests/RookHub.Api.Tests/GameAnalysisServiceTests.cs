@@ -227,6 +227,69 @@ public class GameAnalysisServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_schwemmtDieMerklisteNicht_zu()
+    {
+        // Regression: `AnalysisJobService.CreateAsync` legt jede eingereihte Stellung zusaetzlich unter
+        // „Gemerkte Stellungen" ab — sinnvoll fuer den von Hand eingereihten Einzelauftrag, aber eine
+        // Partie erzeugt je Halbzug einen Auftrag und haette die Merkliste des Nutzers geflutet.
+        var user = await CreateUserWithEngineAsync();
+
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Empty(_db.RememberedPositions.Where(r => r.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task Pump_raeumtUebernommeneAuftraegeAb()
+    {
+        // Der kopierte Auftrag hat seinen Zweck erfuellt. Bliebe er stehen, fuellte eine Partie 80 der
+        // 200 Zeilen von MaxJobsPerUser — nach drei Partien haette der Trimmer die von Hand
+        // eingereihten Auftraege des Nutzers verdraengt.
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var pos = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .OrderBy(p => p.Ply).FirstAsync();
+        var jobId = pos.AnalysisJobId!.Value;
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == jobId);
+        job.Status = AnalysisJobStatus.Done;
+        job.ReachedDepth = 30;
+        job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(dto.Id);
+
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == jobId));
+        var again = await _db.GameAnalysisPositions.FirstAsync(p => p.Id == pos.Id);
+        Assert.NotNull(again.CandidatesJson);
+        Assert.Null(again.AnalysisJobId);   // kein Zeiger auf einen geloeschten Auftrag
+    }
+
+    [Fact]
+    public async Task Delete_nimmtDiePunktepartienMit()
+    {
+        // GuessSessions zeigen per RESTRICT auf die Analyse: ohne dieses Aufraeumen scheiterte das
+        // Loeschen in MySQL mit einem Fremdschluessel-Fehler (500 statt 204).
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+        pos.CandidatesJson = "[{\"uci\":\"" + pos.GameMoveUci + "\",\"cp\":10}]";
+        await _db.SaveChangesAsync();
+
+        var session = new GuessSession { UserId = user.Id, GameAnalysisId = dto.Id, StartPly = 0, CurrentPly = 0 };
+        session.Moves.Add(new GuessMove { Ply = 0, PlayedUci = pos.GameMoveUci, Grade = GuessGrade.GameMove });
+        _db.GuessSessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _svc.DeleteAsync(user.Id, dto.Id));
+
+        Assert.Empty(_db.GuessSessions);
+        Assert.Empty(_db.GuessMoves);
+        Assert.Empty(_db.GameAnalyses);
+    }
+
+    [Fact]
     public async Task FremdeAnalyseIstUnsichtbar()
     {
         var owner = await CreateUserWithEngineAsync();

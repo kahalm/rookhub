@@ -38,7 +38,8 @@ public static class BrokerCandidates
 
         // Weiß am Zug? Dann bleibt die Broker-Bewertung, sonst wird sie gedreht.
         var whiteToMove = fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "w";
-        var legal = board.Moves(generateSan: true);
+        // Nur die UCI-Form wird verglichen — SAN zu erzeugen kostet hier je Stellung Arbeit fuer nichts.
+        var legal = board.Moves(generateSan: false);
 
         try
         {
@@ -114,13 +115,8 @@ public static class BrokerCandidates
     {
         if (candidates.Count == 0) return null;
         var c = candidates[0];
-        if (c.Mate is int m) return "#" + m;
-        if (c.Cp is int cp)
-        {
-            var v = cp / 100.0;
-            return (v > 0 ? "+" : "") + v.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-        }
-        return null;
+        if (c.Cp is null && c.Mate is null) return null;
+        return new GuessScoring.Eval(c.Cp, c.Mate).Text;
     }
 
     private static string? FirstMove(JsonElement moves)
@@ -141,14 +137,15 @@ public static class BrokerCandidates
         var wanted = brokerUci.Trim().ToLowerInvariant();
         foreach (var m in legal)
         {
-            if (GamePlies.ToUci(m) == wanted) return GamePlies.ToUci(m);
+            var uci = GamePlies.ToUci(m);
+            if (uci == wanted) return uci;
             // Rochade: Königszug auf das Turmfeld (e1h1 / e1a1).
             if (m.Parameter?.ShortStr is "O-O" or "O-O-O")
             {
                 var kingFrom = m.OriginalPosition.ToString();
                 var rookFile = m.Parameter.ShortStr == "O-O" ? "h" : "a";
                 var rank = kingFrom[1];
-                if (wanted == kingFrom + rookFile + rank) return GamePlies.ToUci(m);
+                if (wanted == kingFrom + rookFile + rank) return uci;
             }
         }
         return null;

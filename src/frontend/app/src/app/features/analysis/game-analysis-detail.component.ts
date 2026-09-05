@@ -9,6 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -148,12 +149,23 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
     return a && a.plyCount > 0 ? Math.round((100 * a.analyzedPlies) / a.plyCount) : 0;
   }
 
-  /** Stellung NACH dem gewählten Zug — also die FEN des nächsten Halbzugs; am Ende die letzte. */
+  /**
+   * Stellung NACH dem gewählten Zug — also die FEN des nächsten Halbzugs.
+   *
+   * <p>Für den LETZTEN Zug gibt es keinen nächsten Halbzug mehr: gespeichert ist je Zeile nur die
+   * Stellung DAVOR. Ohne `endFen` zeigte das Brett dort dieselbe Stellung wie einen Zug zuvor — die
+   * Schlussstellung der Partie liess sich gar nicht ansehen. Sie wird deshalb einmal beim Laden
+   * nachgespielt.</p>
+   */
   get currentFen(): string {
     if (this.positions.length === 0) return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     const next = this.positions[this.index + 1];
-    return next ? next.fen : this.positions[this.positions.length - 1].fen;
+    if (next) return next.fen;
+    return this.endFen ?? this.positions[this.positions.length - 1].fen;
   }
+
+  /** Schlussstellung (letzte Zeile + ihr Zug); `null`, wenn sie sich nicht nachspielen laesst. */
+  private endFen: string | null = null;
 
   get lastMove(): [string, string] | undefined {
     const p = this.positions[this.index];
@@ -196,6 +208,8 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
       next: a => {
         this.analysis = a;
         this.positions = a.positions ?? [];
+        const last = this.positions[this.positions.length - 1];
+        this.endFen = last ? fenAfterUci(last.fen, last.uci) : null;
         this.loading = false;
         this.cdr.markForCheck();
       },

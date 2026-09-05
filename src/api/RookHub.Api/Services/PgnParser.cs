@@ -340,7 +340,10 @@ public static partial class PgnParser
         return PermissiveSan.TryResolve(fen, sanMoves);
     }
 
-    private static string ToUci(Move m)
+    /// <summary>Zug → Standard-UCI (Rochade als Koenigszug <c>e1g1</c>, Umwandlung <c>e7e8q</c>).
+    /// Oeffentlich, damit <see cref="GamePlies"/> dieselbe Schreibweise benutzt statt sie zu kopieren —
+    /// die beiden MUESSEN zeichengleich sein, sonst findet die Partie-Analyse ihre eigenen Zuege nicht.</summary>
+    public static string ToUci(Move m)
     {
         var u = m.OriginalPosition.ToString() + m.NewPosition.ToString();
         var ss = m.Parameter?.ShortStr;

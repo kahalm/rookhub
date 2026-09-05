@@ -96,12 +96,26 @@ public class GameAnalysisService
 
     public async Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default)
     {
+        // Nur die Spalten der Liste holen: `Pgn` ist LONGTEXT und wuerde hier fuer JEDE Partie
+        // mitgelesen, obwohl die Uebersicht ihn nie anzeigt.
         var rows = await _db.GameAnalyses.AsNoTracking()
             .Where(g => g.UserId == userId)
             .OrderByDescending(g => g.CreatedAt)
-            .Select(g => new { Analysis = g, Analyzed = g.Positions.Count(p => p.CandidatesJson != null) })
+            .Select(g => new
+            {
+                g.Id, g.Title, g.White, g.Black, g.Result, g.Event, g.TargetDepth, g.MultiPv,
+                g.EngineId, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt,
+                Analyzed = g.Positions.Count(p => p.CandidatesJson != null),
+            })
             .ToListAsync(ct);
-        return rows.Select(r => ToDto(r.Analysis, r.Analyzed)).ToList();
+        return rows.Select(r => new GameAnalysisDto
+        {
+            Id = r.Id, Title = r.Title, White = r.White, Black = r.Black, Result = r.Result,
+            Event = r.Event, TargetDepth = r.TargetDepth, MultiPv = r.MultiPv, EngineId = r.EngineId,
+            Status = r.Status.ToString().ToLowerInvariant(), PlyCount = r.PlyCount,
+            AnalyzedPlies = r.Analyzed, LastError = r.LastError,
+            CreatedAt = r.CreatedAt, FinishedAt = r.FinishedAt,
+        }).ToList();
     }
 
     public async Task<GameAnalysisDto?> GetAsync(int userId, int id, CancellationToken ct = default)
@@ -147,6 +161,21 @@ public class GameAnalysisService
             catch (Exception ex) { _logger.LogDebug(ex, "GameAnalysis: Auftrag {JobId} liess sich nicht loeschen", jobId); }
         }
 
+        // Punktepartien auf dieser Analyse zuerst: die Sitzung zeigt per RESTRICT auf die Analyse
+        // (zwei Cascade-Pfade auf GuessMoves waeren sonst unzulaessig, siehe AppDbContext) — ohne
+        // dieses Aufraeumen scheitert das Loeschen in MySQL mit einem Fremdschluessel-Fehler (500).
+        var sessions = await _db.GuessSessions
+            .Where(s => s.GameAnalysisId == analysis.Id)
+            .Select(s => s.Id)
+            .ToListAsync(ct);
+        if (sessions.Count > 0)
+        {
+            _db.GuessMoves.RemoveRange(
+                await _db.GuessMoves.Where(m => sessions.Contains(m.GuessSessionId)).ToListAsync(ct));
+            _db.GuessSessions.RemoveRange(
+                await _db.GuessSessions.Where(s => sessions.Contains(s.Id)).ToListAsync(ct));
+        }
+
         _db.GameAnalysisPositions.RemoveRange(analysis.Positions);
         _db.GameAnalyses.Remove(analysis);
         await _db.SaveChangesAsync(ct);
@@ -167,7 +196,11 @@ public class GameAnalysisService
         foreach (var id in ids)
         {
             ct.ThrowIfCancellationRequested();
-            if (await PumpOneAsync(id, ct)) moved++;
+            // Je Partie abschirmen: eine einzige stolpernde Analyse darf nicht den ganzen Durchlauf
+            // abbrechen — sonst kaeme keine der dahinterliegenden Partien je an die Reihe.
+            try { if (await PumpOneAsync(id, ct)) moved++; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex) { _logger.LogWarning(ex, "GameAnalysis {Id}: Durchlauf uebersprungen", id); }
         }
         return moved;
     }
@@ -211,9 +244,17 @@ public class GameAnalysisService
         if (pending.Count == 0) return false;
 
         var jobIds = pending.Select(p => p.AnalysisJobId!.Value).ToList();
-        var jobs = await _db.AnalysisJobs.AsNoTracking()
+        // Getrackt laden: uebernommene Auftraege werden gleich mitgeloescht (siehe unten).
+        var jobs = await _db.AnalysisJobs
             .Where(j => jobIds.Contains(j.Id))
             .ToDictionaryAsync(j => j.Id, ct);
+
+        // Ein uebernommener Auftrag hat seinen Zweck erfuellt: das Ergebnis liegt kopiert bei der
+        // Stellung. Bliebe er stehen, fuellte eine einzige Partie 80 der 200 Zeilen, die
+        // AnalysisJobService.MaxJobsPerUser je Nutzer haelt — nach drei Partien haette der Trimmer
+        // die von Hand eingereihten Auftraege des Nutzers verdraengt und die Auftragsliste
+        // bestuende nur noch aus Partie-Halbzuegen.
+        var consumed = new List<AnalysisJob>();
 
         var changed = false;
         foreach (var pos in pending)
@@ -247,6 +288,8 @@ public class GameAnalysisService
                     _logger.LogWarning("GameAnalysis {Id}: Ergebnis von Auftrag {JobId} unlesbar (Ply {Ply})",
                         analysis.Id, job.Id, pos.Ply);
                 }
+                pos.AnalysisJobId = null;
+                consumed.Add(job);
             }
             else if (job.Status == AnalysisJobStatus.Failed)
             {
@@ -254,9 +297,13 @@ public class GameAnalysisService
                 // wiederholen — leere Liste, die Partie läuft weiter.
                 pos.CandidatesJson = "[]";
                 pos.AnalyzedAt = DateTime.UtcNow;
+                // Der gescheiterte Auftrag bleibt stehen — seine Fehlermeldung ist die einzige
+                // Erklaerung, warum diese Stellung ohne Bewertung dasteht.
+                pos.AnalysisJobId = null;
                 changed = true;
             }
         }
+        if (consumed.Count > 0) _db.AnalysisJobs.RemoveRange(consumed);
         return changed;
     }
 
@@ -287,7 +334,9 @@ public class GameAnalysisService
                     TargetDepth = analysis.TargetDepth,
                     MultiPv = analysis.MultiPv,
                     EngineId = analysis.EngineId,
-                }, ct);
+                    // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
+                    // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
+                }, ct, remember: false);
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }

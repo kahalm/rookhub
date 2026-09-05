@@ -41,9 +41,11 @@ public class GuessSessionService
             throw new InvalidOperationException("Diese Partie ist noch nicht analysiert.");
 
         var guessWhite = req.GuessWhite ?? true;
-        var start = req.StartPly ?? DefaultSkipPlies;
+        // Auf die Partie eingrenzen, BEVOR ausgerichtet wird: ohne Deckel liefe `start++` bei
+        // int.MaxValue in den negativen Bereich (unchecked) und die Sitzung startete mit einem
+        // sinnlosen StartPly, gegen den auch der Fortschritt gezaehlt wuerde.
+        var start = Math.Clamp(req.StartPly ?? DefaultSkipPlies, 0, GameAnalysisDefaults.MaxPlies);
         // Auf den ersten Halbzug der geratenen Seite ausrichten (Weiß = gerade Plies).
-        if (start < 0) start = 0;
         if (start % 2 == 0 != guessWhite) start++;
 
         var session = new GuessSession
@@ -77,8 +79,29 @@ public class GuessSessionService
             .Take(100)
             .ToListAsync(ct);
 
+        // Kopfdaten und Halbzuege der beteiligten Partien EINMAL holen. Zuvor stellte jede Sitzung
+        // zwei eigene Abfragen (Partie-Kopf + Zaehlung) — bei 100 Laeufen 200 Rundreisen, und der
+        // Partie-Kopf zog jedes Mal das LONGTEXT-`Pgn` mit.
+        var analysisIds = sessions.Select(s => s.GameAnalysisId).Distinct().ToList();
+        var heads = await _db.GameAnalyses.AsNoTracking()
+            .Where(g => analysisIds.Contains(g.Id))
+            .Select(g => new { g.Id, Head = new AnalysisHead(g.Title, g.White, g.Black) })
+            .ToDictionaryAsync(x => x.Id, x => x.Head, ct);
+        var pliesByAnalysis = (await _db.GameAnalysisPositions.AsNoTracking()
+                .Where(p => analysisIds.Contains(p.GameAnalysisId))
+                .Select(p => new { p.GameAnalysisId, p.Ply })
+                .ToListAsync(ct))
+            .GroupBy(x => x.GameAnalysisId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Ply).ToArray());
+
         var result = new List<GuessSessionDto>(sessions.Count);
-        foreach (var s in sessions) result.Add(await BuildDtoAsync(s, ct, withPosition: false));
+        foreach (var s in sessions)
+        {
+            var plies = pliesByAnalysis.TryGetValue(s.GameAnalysisId, out var arr) ? arr : Array.Empty<int>();
+            var total = plies.Count(ply => ply >= s.StartPly && (ply % 2 == 0) == s.GuessWhite);
+            result.Add(await BuildDtoAsync(s, ct, withPosition: false,
+                head: heads.TryGetValue(s.GameAnalysisId, out var h) ? h : default, totalGuesses: total));
+        }
         return result;
     }
 
@@ -96,6 +119,13 @@ public class GuessSessionService
         var position = await _db.GameAnalysisPositions.AsNoTracking()
             .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == session.CurrentPly, ct)
             ?? throw new InvalidOperationException("Zu dieser Sitzung gibt es keine Stellung mehr.");
+
+        // Die Sitzung darf einer Partie davonlaufen, die noch gerechnet wird (spielbar ist sie ab der
+        // ERSTEN fertigen Stellung). Eine Stellung ohne Kandidatenliste hat keinen Bezugspunkt: sie
+        // hier zu werten hiesse, sie ohne Punkte zu verbrennen und nie wieder zu zeigen — der Nutzer
+        // arbeitete sich mit 0 durch die halbe Partie. Also stehenbleiben und darauf hinweisen.
+        if (position.CandidatesJson is null)
+            throw new InvalidOperationException("Diese Stellung wird noch gerechnet — gleich nochmal versuchen.");
 
         var playedUci = string.IsNullOrWhiteSpace(req.Uci) ? null : req.Uci.Trim().ToLowerInvariant();
         GuessGrade? grade = null;
@@ -212,14 +242,17 @@ public class GuessSessionService
     /// </summary>
     private async Task AdvanceToPlayableAsync(GuessSession session, CancellationToken ct)
     {
+        // Nur die Halbzuege der GERATENEN Seite und nur die drei Spalten, die hier gelesen werden —
+        // `Fen`/`EvalText` blieben sonst bei jedem Rateversuch fuer den ganzen Partierest mit dabei.
         var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply >= session.CurrentPly)
+            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply >= session.CurrentPly
+                        && (p.Ply % 2 == 0) == session.GuessWhite)
             .OrderBy(p => p.Ply)
+            .Select(p => new { p.Ply, p.CandidatesJson, p.GameMoveUci })
             .ToListAsync(ct);
 
         foreach (var p in positions)
         {
-            if (p.Ply % 2 == 0 != session.GuessWhite) continue;   // Zug der Gegenseite
             if (p.CandidatesJson is null) break;                  // noch nicht gerechnet → hier warten
             var candidates = BrokerCandidates.FromJson(p.CandidatesJson);
             if (candidates.Any(c => string.Equals(c.Uci, p.GameMoveUci, StringComparison.OrdinalIgnoreCase)))
@@ -240,10 +273,18 @@ public class GuessSessionService
         }
     }
 
-    private async Task<GuessSessionDto> BuildDtoAsync(GuessSession session, CancellationToken ct, bool withPosition = true)
+    /// <summary>Was die Sitzungs-Anzeige von der Partie braucht — bewusst OHNE <c>Pgn</c> (LONGTEXT).</summary>
+    private readonly record struct AnalysisHead(string? Title, string? White, string? Black);
+
+    /// <param name="head">Vorab geladene Kopfdaten (Listen-Pfad); <c>null</c> = selbst nachschlagen.</param>
+    /// <param name="totalGuesses">Vorab gezaehlte Halbzuege (Listen-Pfad); <c>null</c> = selbst zaehlen.</param>
+    private async Task<GuessSessionDto> BuildDtoAsync(GuessSession session, CancellationToken ct,
+        bool withPosition = true, AnalysisHead? head = null, int? totalGuesses = null)
     {
-        var analysis = await _db.GameAnalyses.AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Id == session.GameAnalysisId, ct);
+        var analysis = head ?? await _db.GameAnalyses.AsNoTracking()
+            .Where(g => g.Id == session.GameAnalysisId)
+            .Select(g => new AnalysisHead(g.Title, g.White, g.Black))
+            .FirstOrDefaultAsync(ct);
 
         var moves = session.Moves ?? new List<GuessMove>();
         var points = moves.Where(m => m.Grade is not null).Sum(m => GuessGrades.PointsFor(m.Grade!.Value));
@@ -253,9 +294,9 @@ public class GuessSessionService
         {
             Id = session.Id,
             GameAnalysisId = session.GameAnalysisId,
-            Title = analysis?.Title,
-            White = analysis?.White,
-            Black = analysis?.Black,
+            Title = analysis.Title,
+            White = analysis.White,
+            Black = analysis.Black,
             GuessWhite = session.GuessWhite,
             StartPly = session.StartPly,
             Status = session.Status == GuessSessionStatus.Done ? "done" : "running",
@@ -264,7 +305,7 @@ public class GuessSessionService
             MovesPlayed = moves.Count,
             GameMoveHits = hits,
             SecondsSpent = session.SecondsSpent,
-            TotalGuesses = await CountGuessablePliesAsync(session, ct),
+            TotalGuesses = totalGuesses ?? await CountGuessablePliesAsync(session, ct),
         };
 
         if (withPosition && session.Status == GuessSessionStatus.Running)
@@ -301,8 +342,9 @@ public class GuessSessionService
             .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == ply, ct);
         var candidates = BrokerCandidates.FromJson(next?.CandidatesJson);
         if (candidates.Count == 0) return null;
-        var pawns = -candidates[0].Eval.Pawns;   // Sicht drehen: dort ist der Gegner am Zug
-        return (pawns > 0 ? "+" : "") + pawns.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        // Sicht drehen (dort ist der Gegner am Zug) und ueber den gemeinsamen Formatierer ausgeben —
+        // die vorige Fassung rechnete mit `Pawns` und machte aus „Matt in 3" ein „+997.00".
+        return candidates[0].Eval.Negated.Text;
     }
 
     /// <summary>SAN eines UCI-Zuges in einer Stellung; <c>null</c>, wenn der Zug dort nicht geht.</summary>
