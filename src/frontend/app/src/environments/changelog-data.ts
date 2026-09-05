@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.394.5", date: "2026-09-05", changes: [
+    { en: "Planning note only: a sketch for a new training mode — guessing a master game move by move and scoring points for it — is now parked in the project's task list, including the decisions it would rest on.", de: "Nur eine Planungsnotiz: Die Skizze für einen neuen Trainingsmodus — eine Meisterpartie Zug für Zug erraten und dafür Punkte bekommen — liegt jetzt samt den nötigen Entscheidungen in der Aufgabenliste des Projekts." },
+  ] },
   { version: "0.394.4", date: "2026-09-04", changes: [
     { en: "Operations only: the log database, which runs without a password, no longer listens on every network interface of the server — only on the three addresses its consumers actually use. Log collection was verified to continue afterwards. Nothing changes in the app.", de: "Nur Betrieb: Die Log-Datenbank, die ohne Passwort läuft, lauscht nicht mehr auf allen Netzwerk-Schnittstellen des Servers — nur noch auf den drei Adressen, über die ihre Nutzer sie ansprechen. Dass die Log-Sammlung danach weiterläuft, wurde geprüft. In der App ändert sich nichts." },
   ] },

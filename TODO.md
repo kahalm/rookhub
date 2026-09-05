@@ -63,6 +63,31 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [ ] **„Punktepartie" — Meisterpartie Zug für Zug erraten** (Feature-Skizze 2026-09-05):
+  Dritter Kurs-Modus neben Solver (Linie mit Lösung) und Kalkulation (Stellung ohne Lösung): eine ganze
+  Partie, ab einem Zug rät der Nutzer für EINE Seite, bekommt je Zug eine Stufe + Punkte und am Ende eine
+  Summe gegen den Par-Schnitt. Klassiker aus der Trainingsliteratur (Horowitz' *Solitaire Chess*,
+  Pandolfini in *Chess Life*, King *How Good Is Your Chess?*); digital bei ChessTempo (0–12 + Glicko je
+  STELLUNG), chessgames.com (−3…+3 + Par) und ChessBase-Nachspieltraining.
+  **Skizze mit Datenmodell/Endpoints/Phasen: <https://claude.ai/code/artifact/3f24aa57-053f-4d1f-9af1-e098b9aa5814>**
+  Die vier tragenden Entscheidungen daraus:
+  1. **Die Fortsetzung darf den Server nicht verlassen** — Stellung für Stellung ausliefern, Partiezug erst
+     NACH dem Raten (dieselbe Disziplin wie `CalculationService` mit `BookPuzzle.Moves`); als Endpoint-Test
+     festnageln, sonst steht die Lösung im Netzwerk-Tab.
+  2. **Engine vorher, nicht währenddessen** — je Ply eine Kandidatenliste (Top-K) über die bestehenden
+     Hintergrund-Analyseaufträge (`/api/analysis-jobs/batch`, bis 200 FENs, Live-Vorrang bleibt). ~40
+     Stellungen je Partie × ~20 s ⇒ ~90 Partien je Engine und Nacht; „freigegeben" ist deshalb ein eigener
+     Zustand. Fallen wie im Analysebrett: `castling-uci.util.ts` (e1h1) und Bewertung NICHT spiegeln,
+     aber auf „Seite am Zug" normalisieren.
+  3. **Stufe speichern, Punkte ableiten** (`GuessGrades.PointsFor`, exakt wie `CalculationGrades`);
+     Schwellen über die Differenz der GEWINNERWARTUNG (Lichess-Formel), nicht über Centipawns.
+  4. **Kein Rating in Phase 1** — ohne Schwierigkeitsdaten wäre es geraten. Par (Schnitt der anderen) ist
+     ehrlich und liefert die Daten, aus denen später ein Rating je Stellung entsteht.
+  Neue Tabellen: `GuessGames` · `GuessPositions` · `GuessSessions` · `GuessMoves`; Menü-Key `guess`.
+  Offen (Entscheidung User): Quelle in Phase 1 (Upload + „Partien" vs. kuratierter Bestand), Zeit im
+  Trainingsziele-Tracker (Empfehlung: bestehende Kategorie speisen, KEIN viertes Zielfeld), Discord-Anbindung
+  erst wenn Par läuft.
+
 - [ ] **Hintergrund-Analyse: Shutdown wartet nicht auf laufende Auftrags-Tasks** (Review 2026-08-26, low):
   `AnalysisJobWorker` startet Läufe per fire-and-forget `Task.Run` und cancelt beim Stop nur die CTS; der
   Prozess kann enden, bevor der letzte Persist/Pause-Schreibvorgang durch ist. Folgen sind begrenzt —
