@@ -58,6 +58,8 @@ public class AppDbContext : DbContext
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
+    public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
+    public DbSet<GuessMove> GuessMoves => Set<GuessMove>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
@@ -1089,6 +1091,23 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             // Kandidatenliste: klein je Zeile, aber 5 Varianten mit Zug+Bewertung je Halbzug summieren sich.
             e.Property(p => p.CandidatesJson).HasColumnType("LONGTEXT");
+        });
+
+        modelBuilder.Entity<GuessSession>(e =>
+        {
+            e.HasIndex(x => new { x.UserId, x.StartedAt });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            // Restrict statt Cascade: sonst gäbe es zwei Cascade-Pfade auf GuessMoves
+            // (User → Session → Move und Analyse → Session → Move) — MySQL lehnt das ab.
+            e.HasOne(x => x.GameAnalysis).WithMany().HasForeignKey(x => x.GameAnalysisId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GuessMove>(e =>
+        {
+            e.HasIndex(x => new { x.GuessSessionId, x.Ply }).IsUnique();
+            e.HasOne(x => x.GuessSession).WithMany(s => s.Moves).HasForeignKey(x => x.GuessSessionId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<AnalysisJob>(e =>

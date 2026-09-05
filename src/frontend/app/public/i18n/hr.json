@@ -207,7 +207,8 @@
     "remembered": "Zapamćeno",
     "groupTraining": "Trening",
     "groupLibrary": "Analiza i zbirka",
-    "groupCommunity": "Zajednica"
+    "groupCommunity": "Zajednica",
+    "guess": "Bodovna partija"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -2902,6 +2903,53 @@
       "running": "računa",
       "done": "gotovo",
       "failed": "neuspjelo"
+    }
+  },
+  "guess": {
+    "title": "Bodovna partija",
+    "intro": "Pogodi analiziranu partiju potez po potez: preuzimaš jednu stranu, odigraš svoj potez i odmah dobiješ bodove — mjereno prema potezu koji je stvarno odigran.",
+    "startNew": "Nova bodovna partija",
+    "yourRuns": "Tvoji prolazi",
+    "play": "Igraj",
+    "toAnalyses": "Analize partija",
+    "sideLabel": "Igraš",
+    "white": "Bijeli",
+    "black": "Crni",
+    "untitled": "Bez naslova",
+    "noGames": "Još nijedna partija nije analizirana.",
+    "analyseFirst": "Najprije analiziraj partiju",
+    "analysed": "{{done}} od {{total}} pozicija izračunato",
+    "score": "{{points}} od {{max}} bodova",
+    "hits": "{{hits}} od {{moves}} poteza partije pogođeno",
+    "progress": "{{done}} od {{total}} poteza",
+    "skip": "Preskoči",
+    "yourTurn": "Ti si na potezu ({{move}})",
+    "youPlayed": "Ti: {{move}}",
+    "gamePlayed": "Partija: {{move}}",
+    "reply": "Odgovor: {{move}}",
+    "evalAfter": "Pozicija nakon toga: {{eval}}",
+    "finished": "Prolaz završen",
+    "review": "Pregled",
+    "playingWhite": "Igraš bijelim",
+    "playingBlack": "Igraš crnim",
+    "notFound": "Ova bodovna partija više ne postoji.",
+    "back": "Natrag na popis",
+    "startFailed": "Bodovnu partiju nije bilo moguće pokrenuti",
+    "moveFailed": "Potez nije bilo moguće ocijeniti",
+    "deleteFailed": "Brisanje nije uspjelo",
+    "status": {
+      "running": "u tijeku",
+      "done": "završeno"
+    },
+    "grade": {
+      "muchWorse": "Znatno lošije",
+      "worse": "Lošije",
+      "similar": "Jednako dobro",
+      "gameMove": "Potez iz partije",
+      "onlyMove": "Jedini potez",
+      "better": "Bolje od partije",
+      "clearlyBetter": "Znatno bolje",
+      "skipped": "Preskočeno"
     }
   }
 }

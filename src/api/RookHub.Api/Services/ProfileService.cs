@@ -301,6 +301,15 @@ public class ProfileService
         _db.ChessableProblemMoves.RemoveRange(await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ToListAsync());
         // Eigene Analysebäume des Kalkulations-Modus: Nutzerarbeit mit Freitext, kein Aggregat.
         _db.CalculationTrees.RemoveRange(await _db.CalculationTrees.Where(x => x.UserId == userId).ToListAsync());
+        // Punktepartie-Durchläufe samt geratenen Zügen: reine Nutzerarbeit an konkreten Partien.
+        // MUSS vor den Partie-Analysen stehen — die Sitzung zeigt per Restrict auf die Analyse.
+        var guessSessions = await _db.GuessSessions.Where(g => g.UserId == userId).Select(g => g.Id).ToListAsync();
+        if (guessSessions.Count > 0)
+        {
+            _db.GuessMoves.RemoveRange(
+                await _db.GuessMoves.Where(m => guessSessions.Contains(m.GuessSessionId)).ToListAsync());
+            _db.GuessSessions.RemoveRange(await _db.GuessSessions.Where(g => g.UserId == userId).ToListAsync());
+        }
         // Partie-Analysen samt ihrer Stellungen: PGN und Kandidatenlisten sind Nutzerarbeit an
         // konkreten Partien (oft eigenen) — keine anonyme Statistik. Die Stellungen hängen per
         // Cascade daran, werden hier aber explizit mitgenommen (InMemory cascadet nicht).

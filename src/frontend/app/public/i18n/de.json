@@ -207,7 +207,8 @@
     "remembered": "Gemerkt",
     "groupTraining": "Training",
     "groupLibrary": "Analyse & Sammlung",
-    "groupCommunity": "Community"
+    "groupCommunity": "Community",
+    "guess": "Punktepartie"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2902,6 +2903,53 @@
       "running": "rechnet",
       "done": "fertig",
       "failed": "gescheitert"
+    }
+  },
+  "guess": {
+    "title": "Punktepartie",
+    "intro": "Eine analysierte Partie Zug für Zug erraten: Du übernimmst eine Seite, setzt deinen Zug und bekommst sofort Punkte — gemessen am Zug, der wirklich gespielt wurde.",
+    "startNew": "Neue Punktepartie",
+    "yourRuns": "Deine Durchläufe",
+    "play": "Spielen",
+    "toAnalyses": "Partie-Analysen",
+    "sideLabel": "Du spielst",
+    "white": "Weiß",
+    "black": "Schwarz",
+    "untitled": "Ohne Titel",
+    "noGames": "Es ist noch keine Partie analysiert.",
+    "analyseFirst": "Zuerst eine Partie analysieren",
+    "analysed": "{{done}} von {{total}} Stellungen gerechnet",
+    "score": "{{points}} von {{max}} Punkten",
+    "hits": "{{hits}} von {{moves}} Partiezügen getroffen",
+    "progress": "{{done}} von {{total}} Zügen",
+    "skip": "Passen",
+    "yourTurn": "Du bist am Zug ({{move}})",
+    "youPlayed": "Du: {{move}}",
+    "gamePlayed": "Partie: {{move}}",
+    "reply": "Antwort: {{move}}",
+    "evalAfter": "Stellung danach: {{eval}}",
+    "finished": "Durchlauf beendet",
+    "review": "Rückblick",
+    "playingWhite": "Du spielst Weiß",
+    "playingBlack": "Du spielst Schwarz",
+    "notFound": "Diese Punktepartie gibt es nicht (mehr).",
+    "back": "Zur Übersicht",
+    "startFailed": "Punktepartie ließ sich nicht starten",
+    "moveFailed": "Zug konnte nicht gewertet werden",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "status": {
+      "running": "läuft",
+      "done": "beendet"
+    },
+    "grade": {
+      "muchWorse": "Deutlich schlechter",
+      "worse": "Schlechter",
+      "similar": "Gleichwertig",
+      "gameMove": "Der Partiezug",
+      "onlyMove": "Der einzige Zug",
+      "better": "Besser als die Partie",
+      "clearlyBetter": "Deutlich besser",
+      "skipped": "Gepasst"
     }
   }
 }

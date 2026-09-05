@@ -207,7 +207,8 @@
     "remembered": "Remembered",
     "groupTraining": "Training",
     "groupLibrary": "Analysis & collection",
-    "groupCommunity": "Community"
+    "groupCommunity": "Community",
+    "guess": "Point game"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2902,6 +2903,53 @@
       "running": "running",
       "done": "done",
       "failed": "failed"
+    }
+  },
+  "guess": {
+    "title": "Point game",
+    "intro": "Guess an analysed game move by move: you take one side, play your move and get points right away — measured against the move that was actually played.",
+    "startNew": "New point game",
+    "yourRuns": "Your runs",
+    "play": "Play",
+    "toAnalyses": "Game analyses",
+    "sideLabel": "You play",
+    "white": "White",
+    "black": "Black",
+    "untitled": "Untitled",
+    "noGames": "No game has been analysed yet.",
+    "analyseFirst": "Analyse a game first",
+    "analysed": "{{done}} of {{total}} positions computed",
+    "score": "{{points}} of {{max}} points",
+    "hits": "{{hits}} of {{moves}} game moves found",
+    "progress": "{{done}} of {{total}} moves",
+    "skip": "Pass",
+    "yourTurn": "Your move ({{move}})",
+    "youPlayed": "You: {{move}}",
+    "gamePlayed": "Game: {{move}}",
+    "reply": "Reply: {{move}}",
+    "evalAfter": "Position after: {{eval}}",
+    "finished": "Run finished",
+    "review": "Review",
+    "playingWhite": "You play White",
+    "playingBlack": "You play Black",
+    "notFound": "This point game no longer exists.",
+    "back": "Back to the list",
+    "startFailed": "Could not start the point game",
+    "moveFailed": "The move could not be scored",
+    "deleteFailed": "Delete failed",
+    "status": {
+      "running": "running",
+      "done": "finished"
+    },
+    "grade": {
+      "muchWorse": "Much worse",
+      "worse": "Worse",
+      "similar": "Just as good",
+      "gameMove": "The game move",
+      "onlyMove": "The only move",
+      "better": "Better than the game",
+      "clearlyBetter": "Clearly better",
+      "skipped": "Passed"
     }
   }
 }

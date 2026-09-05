@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.399.0", date: "2026-09-05", changes: [
+    { en: "New training mode: the point game. Take one side of an analysed game, guess each move, and get points right away — measured against the move that was actually played. Ten points for a move clearly better than the game, eight for finding the only move that held the position, five for the game move itself, two for an equally good alternative, and a deduction only for a real blunder. Passing costs nothing. At the end you get a review of every move side by side. Under Training · Point game.", de: "Neuer Trainingsmodus: die Punktepartie. Du übernimmst eine Seite einer analysierten Partie, rätst jeden Zug und bekommst sofort Punkte — gemessen an dem Zug, der wirklich gespielt wurde. Zehn Punkte für einen Zug, der deutlich besser ist als die Partie, acht fürs Finden des einzigen haltbaren Zuges, fünf für den Partiezug selbst, zwei für eine gleichwertige Alternative, Abzug nur für einen echten Patzer. Passen kostet nichts. Am Ende steht ein Rückblick auf jeden Zug. Unter Training · Punktepartie." },
+  ] },
   { version: "0.398.0", date: "2026-09-05", changes: [
     { en: "Whole-game analysis now has a screen: paste a game under Analysis · Game analyses, pick a depth and start it. Each game shows how far the engine has got, and you can walk through the game move by move while it is still running — board on the left, the moves with their evaluations on the right, arrow keys to step.", de: "Die Partie-Analyse hat jetzt eine Oberfläche: Unter Analyse · Partie-Analysen eine Partie einfügen, Tiefe wählen, starten. Jede Partie zeigt, wie weit die Engine ist, und man kann sie schon durchblättern, während noch gerechnet wird — Brett links, die Züge mit ihrer Bewertung rechts, Pfeiltasten zum Blättern." },
   ] },

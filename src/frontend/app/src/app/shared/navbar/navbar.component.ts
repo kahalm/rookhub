@@ -123,6 +123,7 @@ import {
           @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
           @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
+          @if (can('guess')) { <button mat-menu-item routerLink="/guess">{{ 'nav.guess' | translate }}</button> }
           @if (can('favorites')) { <button mat-menu-item routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
         </mat-menu>
         <mat-menu #libraryMenu="matMenu">
