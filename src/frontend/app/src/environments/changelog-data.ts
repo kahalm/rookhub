@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.396.0", date: "2026-09-05", changes: [
+    { en: "Groundwork for the new „point game\" training mode: the rule that turns a guessed move into points now exists and is fully tested — measured against the move actually played in the game, with a bonus when the game move was the only one that held the position. Nothing is playable yet; this is the piece everything else will be built on.", de: "Grundstein für den neuen Trainingsmodus „Punktepartie\": Die Regel, die aus einem geratenen Zug Punkte macht, steht und ist vollständig getestet — gemessen wird gegen den tatsächlich gespielten Partiezug, mit Zuschlag, wenn dieser der einzige haltbare Zug war. Spielbar ist noch nichts; das ist das Stück, auf dem alles Weitere aufbaut." },
+  ] },
   { version: "0.395.1", date: "2026-09-05", changes: [
     { en: "The statistics page no longer stretches the app sideways on a phone held upright. The „by rating\" columns ran past the screen edge and dragged the whole page with them — about two screens of sideways scrolling — and because menus are positioned against the page, tapping the hamburger jumped to the far right and put the Training and Account submenus outside the visible area. The columns now scroll inside their own strip, as the activity heatmap already did.", de: "Die Statistik-Seite dehnt die App im Hochformat nicht mehr zur Seite. Die Säulen von „Nach Rating\" liefen über den Bildschirmrand hinaus und zogen die ganze Seite mit — rund zwei Bildschirme Scroll nach rechts — und weil Menüs gegen die Seite positioniert werden, sprang ein Tipp aufs Hamburger-Menü ganz nach rechts und legte die Untermenüs zu Training und Konto außerhalb des Sichtbereichs ab. Die Säulen scrollen jetzt in ihrem eigenen Streifen, so wie die Aktivitäts-Heatmap darunter schon immer." },
   ] },
