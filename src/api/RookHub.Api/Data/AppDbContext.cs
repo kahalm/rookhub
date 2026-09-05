@@ -56,6 +56,8 @@ public class AppDbContext : DbContext
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+    public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
+    public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
@@ -1064,6 +1066,29 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedToken).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<GameAnalysis>(e =>
+        {
+            e.HasIndex(g => new { g.UserId, g.CreatedAt });
+            e.HasIndex(g => g.Status);   // die Pumpe holt sich die unfertigen
+            e.HasOne(g => g.User)
+             .WithMany()
+             .HasForeignKey(g => g.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+        });
+
+        modelBuilder.Entity<GameAnalysisPosition>(e =>
+        {
+            // Je Partie gibt es jeden Halbzug genau einmal.
+            e.HasIndex(p => new { p.GameAnalysisId, p.Ply }).IsUnique();
+            e.HasOne(p => p.GameAnalysis)
+             .WithMany(g => g.Positions)
+             .HasForeignKey(p => p.GameAnalysisId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Kandidatenliste: klein je Zeile, aber 5 Varianten mit Zug+Bewertung je Halbzug summieren sich.
+            e.Property(p => p.CandidatesJson).HasColumnType("LONGTEXT");
         });
 
         modelBuilder.Entity<AnalysisJob>(e =>

@@ -301,6 +301,16 @@ public class ProfileService
         _db.ChessableProblemMoves.RemoveRange(await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ToListAsync());
         // Eigene Analysebäume des Kalkulations-Modus: Nutzerarbeit mit Freitext, kein Aggregat.
         _db.CalculationTrees.RemoveRange(await _db.CalculationTrees.Where(x => x.UserId == userId).ToListAsync());
+        // Partie-Analysen samt ihrer Stellungen: PGN und Kandidatenlisten sind Nutzerarbeit an
+        // konkreten Partien (oft eigenen) — keine anonyme Statistik. Die Stellungen hängen per
+        // Cascade daran, werden hier aber explizit mitgenommen (InMemory cascadet nicht).
+        var gameAnalysisIds = await _db.GameAnalyses.Where(g => g.UserId == userId).Select(g => g.Id).ToListAsync();
+        if (gameAnalysisIds.Count > 0)
+        {
+            _db.GameAnalysisPositions.RemoveRange(
+                await _db.GameAnalysisPositions.Where(p => gameAnalysisIds.Contains(p.GameAnalysisId)).ToListAsync());
+            _db.GameAnalyses.RemoveRange(await _db.GameAnalyses.Where(g => g.UserId == userId).ToListAsync());
+        }
         // Turnier-Runden-Monitor: personenbezogenes Beobachten eines Turniers (löst Benachrichtigungen
         // aus) — nach der Löschung gibt es niemanden mehr, der benachrichtigt werden möchte.
         _db.TournamentMonitors.RemoveRange(await _db.TournamentMonitors.Where(x => x.UserId == userId).ToListAsync());

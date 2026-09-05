@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.397.0", date: "2026-09-05", changes: [
+    { en: "A whole game can now be analysed in one go: hand in a PGN and the background engine works through every position of the game — depth 30, five lines each — instead of you queueing them one by one. The game shows its progress while it runs, and the results are kept with the game, so the usual clean-up of old analysis jobs cannot take them away. Groundwork for the „point game\" mode; the API is there, the screen for it follows.", de: "Eine ganze Partie lässt sich jetzt in einem Rutsch analysieren: PGN einwerfen, und die Hintergrund-Engine arbeitet jede Stellung der Partie ab — Tiefe 30, je fünf Varianten — statt sie einzeln einzureihen. Die Partie zeigt währenddessen ihren Fortschritt, und die Ergebnisse liegen bei der Partie, sodass das übliche Aufräumen alter Analyseaufträge sie nicht mehr wegnehmen kann. Grundlage für den Modus „Punktepartie\"; die Schnittstelle steht, die Oberfläche folgt." },
+  ] },
   { version: "0.396.0", date: "2026-09-05", changes: [
     { en: "Groundwork for the new „point game\" training mode: the rule that turns a guessed move into points now exists and is fully tested — measured against the move actually played in the game, with a bonus when the game move was the only one that held the position. Nothing is playable yet; this is the piece everything else will be built on.", de: "Grundstein für den neuen Trainingsmodus „Punktepartie\": Die Regel, die aus einem geratenen Zug Punkte macht, steht und ist vollständig getestet — gemessen wird gegen den tatsächlich gespielten Partiezug, mit Zuschlag, wenn dieser der einzige haltbare Zug war. Spielbar ist noch nichts; das ist das Stück, auf dem alles Weitere aufbaut." },
   ] },

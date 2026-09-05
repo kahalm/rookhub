@@ -224,6 +224,9 @@ try
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddScoped<AnalysisJobService>();
+    builder.Services.AddScoped<GameAnalysisService>();
+    // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
+    builder.Services.AddHostedService<GameAnalysisPumpService>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
