@@ -70,4 +70,17 @@ describe('i18n Sprachdateien', () => {
       expect(stale).withContext(`${lang}: Keys, die en nicht kennt`).toEqual([]);
     }
   });
+  it('kennt zu jedem Schnellstart-Eintrag Titel und Beschreibung (alle gepflegten Sprachen)', async () => {
+    // `quickstartItems` baut die i18n-Keys aus dem `key` zusammen (`app.qs.<key>Title|Desc`) —
+    // ein neuer Eintrag ohne Texte fiele sonst erst im UI als roher Schlüssel auf.
+    const keys = ['random', 'mate', 'endless', 'daily', 'weekly'];
+    for (const lang of ['en', ...FORMAT_LOCALES.filter(l => l !== 'en')]) {
+      const flat = await load(lang);
+      for (const key of keys) {
+        expect(flat[`app.qs.${key}Title`]).withContext(`${lang}: app.qs.${key}Title`).toBeTruthy();
+        expect(flat[`app.qs.${key}Desc`]).withContext(`${lang}: app.qs.${key}Desc`).toBeTruthy();
+      }
+    }
+  });
+
 });

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.395.0", date: "2026-09-05", changes: [
+    { en: "The quick start you get after signing up is now clickable: every entry takes you straight into that mode instead of just describing it. New in the list: the public course „Mate in 1/2/3\" with 4,462 checkmate puzzles — it starts in order, so you begin with mate in one and work your way up.", de: "Der Schnellstart nach der Registrierung ist jetzt anklickbar: Jeder Eintrag führt direkt in den Modus, statt ihn nur zu beschreiben. Neu in der Liste: der öffentliche Kurs „Matt in 1/2/3\" mit 4462 Mattaufgaben — er startet der Reihe nach, du beginnst also beim Matt in einem Zug und arbeitest dich hoch." },
+  ] },
   { version: "0.394.5", date: "2026-09-05", changes: [
     { en: "Planning note only: a sketch for a new training mode — guessing a master game move by move and scoring points for it — is now parked in the project's task list, including the decisions it would rest on.", de: "Nur eine Planungsnotiz: Die Skizze für einen neuen Trainingsmodus — eine Meisterpartie Zug für Zug erraten und dafür Punkte bekommen — liegt jetzt samt den nötigen Entscheidungen in der Aufgabenliste des Projekts." },
   ] },

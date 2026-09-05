@@ -138,22 +138,15 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
             <h3>{{ 'app.quickstartTitle' | translate }}</h3>
             <button (click)="showQuickstart = false" [attr.aria-label]="'common.close' | translate" cdkFocusInitial>&times;</button>
           </div>
-          <div class="qs-item">
-            <span class="qs-icon">&#x1F3B2;</span>
-            <div><strong>{{ 'app.qs.randomTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.randomDesc' | translate }}</span></div>
-          </div>
-          <div class="qs-item">
-            <span class="qs-icon">&#x267E;</span>
-            <div><strong>{{ 'app.qs.endlessTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.endlessDesc' | translate }}</span></div>
-          </div>
-          <div class="qs-item">
-            <span class="qs-icon">&#x1F4C5;</span>
-            <div><strong>{{ 'app.qs.dailyTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.dailyDesc' | translate }}</span></div>
-          </div>
-          <div class="qs-item">
-            <span class="qs-icon">&#x1F4F0;</span>
-            <div><strong>{{ 'app.qs.weeklyTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.weeklyDesc' | translate }}</span></div>
-          </div>
+          @for (item of quickstartItems; track item.key) {
+            <a class="qs-item" [routerLink]="item.link" (click)="showQuickstart = false">
+              <span class="qs-icon" aria-hidden="true">{{ item.icon }}</span>
+              <div>
+                <strong>{{ 'app.qs.' + item.key + 'Title' | translate }}</strong><br>
+                <span class="qs-desc">{{ 'app.qs.' + item.key + 'Desc' | translate }}</span>
+              </div>
+            </a>
+          }
         </div>
       </div>
     }
@@ -261,7 +254,19 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
     .changelog-date { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; margin-left: 8px; }
     .changelog-entry ul { margin: 4px 0 0 20px; padding: 0; }
     .changelog-entry li { font-size: 0.85rem; margin-bottom: 2px; }
-    .qs-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+    /* Jeder Eintrag ist ein Link direkt in den Modus — der Schnellstart erscheint nach der
+       Registrierung, da ist „wo klicke ich jetzt?" die eigentliche Frage. */
+    .qs-item {
+      display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px;
+      color: inherit; text-decoration: none;
+      padding: 8px 10px; margin-left: -10px; margin-right: -10px;
+      border-radius: 6px; border: 1px solid transparent;
+    }
+    .qs-item:hover, .qs-item:focus-visible {
+      background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.18);
+    }
+    .qs-item:focus-visible { outline: 2px solid #90caf9; outline-offset: 1px; }
+    .qs-item strong { color: #90caf9; }
     .qs-icon { font-size: 1.4rem; min-width: 28px; text-align: center; }
     .qs-desc { font-size: 0.85rem; color: #aaa; }
   `]
@@ -278,6 +283,29 @@ export class AppComponent implements OnInit {
   readonly kofiUrl = KOFI_URL;
   showChangelog = false;
   showQuickstart = false;
+
+  /**
+   * Die Einträge des Schnellstarts — Titel/Beschreibung kommen aus `app.qs.<key>Title|Desc`.
+   * Jeder Eintrag führt DIREKT in den Modus (der Schnellstart poppt nach der Registrierung auf,
+   * dort hilft ein Link mehr als eine Beschreibung).
+   *
+   * `mate` zeigt auf den öffentlichen Kurs „Mate in 1/2/3" (Polgar 5334, Prod-Buch 340) und startet
+   * ihn SEQUENZIELL — die Aufgaben stehen dort nach Schwierigkeit, das ist für Neulinge der
+   * sinnvolle Einstieg. Die Buch-Id ist umgebungsabhängig: existiert sie nicht (Dev), fängt der
+   * `courseAccessGuard` das ab und leitet weiter, statt eine leere Seite zu zeigen.
+   */
+  /** Buch-Id des öffentlichen Kurses „Mate in 1/2/3" (Prod). Eine Stelle, falls sie sich ändert.
+   *  MUSS vor `quickstartItems` stehen — sonst nutzt der Feld-Initialisierer sie vor der Deklaration. */
+  static readonly MateCourseBookId = 340;
+
+  readonly quickstartItems: { key: string; icon: string; link: string }[] = [
+    { key: 'random',  icon: '\u{1F3B2}', link: '/puzzles' },
+    { key: 'mate',    icon: '\u265B',    link: `/courses/${AppComponent.MateCourseBookId}/sequential` },
+    { key: 'endless', icon: '\u267E',    link: '/puzzles/endless' },
+    { key: 'daily',   icon: '\u{1F4C5}', link: '/puzzles/daily/today' },
+    { key: 'weekly',  icon: '\u{1F4F0}', link: '/weekly' },
+  ];
+
   showApkUpdate = false;
   /** Details-Panel des Verbindungs-Banners (Offline-Info bzw. VPN/DNS-Hinweise) ausgeklappt? */
   showConnDetails = false;

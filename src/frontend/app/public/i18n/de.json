@@ -215,6 +215,8 @@
     "qs": {
       "randomTitle": "Zufalls-Puzzle",
       "randomDesc": "Zufällige Taktikaufgaben mit persönlicher Wertungszahl – jede Lösung passt dein Puzzle-Elo an.",
+      "mateTitle": "Matt in 1/2/3",
+      "mateDesc": "Kurs mit 4462 Mattaufgaben nach Schwierigkeit sortiert – von Matt in 1 bis Matt in 3, der Reihe nach.",
       "endlessTitle": "Endlos",
       "endlessDesc": "Ein Lauf mit stetig steigender Schwierigkeit – löse so viele wie möglich und knacke deinen Highscore.",
       "dailyTitle": "Tagespuzzle",

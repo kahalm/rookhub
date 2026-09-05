@@ -215,6 +215,8 @@
     "qs": {
       "randomTitle": "Nasumične zagonetke",
       "randomDesc": "Nasumične taktičke zagonetke s tvojim osobnim rejtingom — svako rješenje prilagođava tvoj Elo za zagonetke.",
+      "mateTitle": "Mat u 1/2/3",
+      "mateDesc": "Tečaj s 4462 matne zagonetke poredane po težini — od mata u 1 do mata u 3, jedna za drugom.",
       "endlessTitle": "Beskonačno",
       "endlessDesc": "Niz sa sve težim zagonetkama — riješi ih što više i obori svoj rekord.",
       "dailyTitle": "Dnevna zagonetka",

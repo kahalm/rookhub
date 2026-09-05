@@ -215,6 +215,8 @@
     "qs": {
       "randomTitle": "Random puzzles",
       "randomDesc": "Random tactics puzzles with your personal rating — every solve adjusts your puzzle Elo.",
+      "mateTitle": "Mate in 1/2/3",
+      "mateDesc": "A course of 4,462 checkmate puzzles ordered by difficulty — from mate in 1 up to mate in 3, one after another.",
       "endlessTitle": "Endless",
       "endlessDesc": "A run with steadily rising difficulty — solve as many as you can and beat your high score.",
       "dailyTitle": "Daily puzzle",

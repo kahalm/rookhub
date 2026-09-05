@@ -57,6 +57,25 @@ describe('AppComponent lifecycle', () => {
     TestBed.overrideComponent(AppComponent, { set: { template: '', imports: [] } });
   });
 
+  it('verlinkt jeden Schnellstart-Eintrag in seinen Modus (Matt-Kurs sequenziell)', () => {
+    // Der Schnellstart erscheint direkt nach der Registrierung — dort ist „wo klicke ich jetzt?"
+    // die eigentliche Frage, deshalb ist jeder Eintrag ein Link und keine bloße Beschreibung.
+    const fixture = TestBed.createComponent(AppComponent);
+    const items = fixture.componentInstance.quickstartItems;
+
+    expect(items.map(i => i.key)).toEqual(['random', 'mate', 'endless', 'daily', 'weekly']);
+    expect(items.map(i => i.link)).toEqual([
+      '/puzzles',
+      `/courses/${AppComponent.MateCourseBookId}/sequential`,
+      '/puzzles/endless',
+      '/puzzles/daily/today',
+      '/weekly',
+    ]);
+    // Sequenziell ist Absicht: die Mattaufgaben stehen im Kurs nach Schwierigkeit.
+    expect(items.find(i => i.key === 'mate')!.link).toContain('/sequential');
+    expect(items.every(i => i.icon.length > 0)).toBeTrue();
+  });
+
   it('tears down its root-level subscriptions on destroy', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges(); // ngOnInit → legt die Subscriptions an
