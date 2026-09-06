@@ -290,6 +290,9 @@ try
     // Turnierverzeichnis: naechtlicher Sweep der chess-results-Turniersuche (03:00 UTC),
     // Nachbarlaender taeglich, alle uebrigen Foederationen rotierend ueber die Woche.
     builder.Services.AddHostedService<TournamentDirectoryScheduler>();
+    // Traegt Basisname/Gruppenschluessel im Altbestand nach (einmalig, idempotent) — ohne das
+    // bleibt die Gruppen-Zusammenfassung bis zum naechsten Sweep unsichtbar.
+    builder.Services.AddHostedService<TournamentGroupingBackfillService>();
 
     // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
     builder.Services.AddHttpClient<GithubActionsService>(client =>

@@ -387,7 +387,6 @@ public class TournamentDirectoryService
     private void Apply(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now)
     {
         entry.Name = Truncate(row.Name, 500);
-        entry.BaseName = Truncate(TournamentNameGrouping.BaseName(row.Name), 500);
         entry.Federation = Truncate(row.Federation, 3);
         entry.State = Truncate(row.State, 100);
         entry.StartDate = row.StartDate;
@@ -404,7 +403,8 @@ public class TournamentDirectoryService
         entry.PlayerCount = row.PlayerCount;
         entry.UpstreamUpdatedAt = row.LastUpdatedApproxUtc;
         entry.ChangeHash = ComputeChangeHash(row.StartDate, row.EndDate, row.Location);
-        entry.GroupKey = ComputeGroupKey(entry);
+        // Nach Name, Termin und Ort - der Gruppenschluessel liest genau diese Felder.
+        ApplyGrouping(entry);
         entry.LastSeenAt = now;
         entry.UpdatedAt = now;
     }
@@ -441,6 +441,18 @@ public class TournamentDirectoryService
     /// Ort muessen uebereinstimmen. Alle vier zusammen, weil der Name allein nicht reicht — ein
     /// Vereinsabend, der jede Woche „KK Bardejov" heisst, waere sonst ein einziger Eintrag.
     /// </summary>
+    /// <summary>
+    /// Setzt Basisname und Gruppenschluessel aus den bereits gefuellten Feldern des Eintrags.
+    /// Eine Stelle fuer beides, weil der Schluessel den Basisnamen braucht — und weil das
+    /// Nachtragen im Altbestand (<see cref="TournamentGroupingBackfillService"/>) genau dieselbe
+    /// Rechnung machen MUSS, sonst gruppiert der Bestand anders als der naechste Sweep.
+    /// </summary>
+    internal static void ApplyGrouping(TournamentDirectoryEntry entry)
+    {
+        entry.BaseName = Truncate(TournamentNameGrouping.BaseName(entry.Name), 500);
+        entry.GroupKey = ComputeGroupKey(entry);
+    }
+
     internal static string ComputeGroupKey(TournamentDirectoryEntry entry)
     {
         var payload = string.Join('|',
