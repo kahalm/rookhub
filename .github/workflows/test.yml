@@ -117,5 +117,10 @@ jobs:
       # Frontend-Spec im Gate, das die Image-Pushes freigibt.
       - run: npx ng test --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
-      - run: npx ng build --configuration=production
+      # Seit der Turnier-Trennung hat der Workspace ZWEI Projekte — ohne Projektnamen bricht
+      # `ng build` mit „Cannot determine project for command" ab. Beide bauen: das Gate soll
+      # jedes der beiden Images abfangen, bevor es gepusht wird.
+      - run: npx ng build app --configuration=production
+        working-directory: src/frontend/app
+      - run: npx ng build turnier --configuration=production
         working-directory: src/frontend/app
