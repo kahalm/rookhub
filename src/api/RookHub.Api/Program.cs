@@ -346,6 +346,20 @@ try
             client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
     });
 
+    // Eigener Client fuer den Verzeichnis-Sweep: eine Turniersuche wartet legitim hinter dem
+    // prozessweiten Rate-Limiter des Crawlers und ggf. einer VPN-Rotation (Tunnel-Neustart alle
+    // 20 Anfragen). Mit den 30 s des geteilten Clients lief in Dev die neunte Foederation in
+    // Folge zuverlaessig in den Timeout. Der Live-Pfad behaelt seine kurze Leine.
+    var directoryTimeout = TimeSpan.FromSeconds(
+        Math.Clamp(builder.Configuration.GetValue("TournamentDirectory:CrawlerTimeoutSeconds", 180), 30, 900));
+    builder.Services.AddHttpClient(TournamentDirectoryService.CrawlerClientName, client =>
+    {
+        client.BaseAddress = crawlerUri;
+        client.Timeout = directoryTimeout;
+        if (!string.IsNullOrEmpty(crawlerApiKey))
+            client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
+    });
+
     // Lichess External-Engine (Client-Modus): Engine-Liste via lichess.org, Analyse-Streams via
     // Broker (engine.lichess.ovh). Timeout bewusst unendlich — Analyse-Streams laufen lange und
     // enden über den Abbruch des Browsers (RequestAborted); die kurze Engine-Liste schützt sich

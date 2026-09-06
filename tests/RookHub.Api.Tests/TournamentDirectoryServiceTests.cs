@@ -28,12 +28,12 @@ public class TournamentDirectoryServiceTests : IDisposable
     private static readonly DateOnly Today = new(2026, 9, 6);
 
     private TournamentDirectoryService CreateService(string responseJson, HttpStatusCode status = HttpStatusCode.OK)
+        => CreateService(new StubHandler(responseJson, status));
+
+    private TournamentDirectoryService CreateService(HttpMessageHandler handler)
     {
-        var crawler = new CrawlerProxyService(new HttpClient(new StubHandler(responseJson, status))
-        {
-            BaseAddress = new Uri("http://crawler:8080")
-        });
-        return new TournamentDirectoryService(_db, crawler, new GeocodingService(_db),
+        var factory = new StubHttpClientFactory(handler);
+        return new TournamentDirectoryService(_db, factory, new GeocodingService(_db),
             new NotificationService(_db, new NoOpTaskQueue()), new TestLogger<TournamentDirectoryService>());
     }
 
@@ -223,6 +223,48 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Equal(sweptAfterSuccess, sweep.LastSweptAt);
         Assert.Equal(1, sweep.ConsecutiveFailures);
         Assert.NotNull(sweep.LastError);
+    }
+
+    [Fact]
+    public async Task SweepFederationAsync_HttpClientTimeout_IsRecordedInsteadOfThrown()
+    {
+        // Ein HttpClient-Timeout ist eine TaskCanceledException, obwohl NIEMAND abgebrochen hat.
+        // Fiele sie durch, waere der Lauf hier zu Ende — in Dev genau so passiert (500 statt
+        // acht erfolgreicher Foederationen).
+        var service = CreateService(new TimeoutForFederationHandler("AUT", "[]"));
+
+        var (result, _) = await service.SweepFederationAsync("AUT", Today);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Timeout", result.Error);
+        Assert.Equal(1, (await _db.TournamentDirectorySweeps.SingleAsync()).ConsecutiveFailures);
+    }
+
+    [Fact]
+    public async Task RunSweepAsync_OneFederationTimingOut_DoesNotStopTheOthers()
+    {
+        var body = $"[{Row("111", "Open", "2026-12-18", "2026-12-20", "Ranshofen")}]";
+        var service = CreateService(new TimeoutForFederationHandler("GER", body));
+
+        var results = await service.RunSweepAsync(["AUT", "GER", "SUI"]);
+
+        Assert.Equal(3, results.Count);
+        Assert.True(results[0].Succeeded);
+        Assert.False(results[1].Succeeded);
+        Assert.True(results[2].Succeeded);
+    }
+
+    [Fact]
+    public async Task RunSweepAsync_CallerCancels_StillPropagates()
+    {
+        // Die Gegenprobe zum Timeout-Fall: ein ECHTER Abbruch durch den Aufrufer muss weiter
+        // durchschlagen, sonst laeuft der Sweep beim Herunterfahren stur weiter.
+        var service = CreateService("[]");
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.RunSweepAsync(["AUT"], cts.Token));
     }
 
     [Fact]
@@ -481,6 +523,42 @@ public class TournamentDirectoryServiceTests : IDisposable
         _db.TournamentDirectoryEntries.AddRange(models);
         await _db.SaveChangesAsync();
         return models.Select(m => m.Id).ToList();
+    }
+
+    private sealed class StubHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpMessageHandler _handler;
+        public StubHttpClientFactory(HttpMessageHandler handler) => _handler = handler;
+
+        public HttpClient CreateClient(string name) =>
+            new(_handler, disposeHandler: false) { BaseAddress = new Uri("http://crawler:8080") };
+    }
+
+    /// <summary>
+    /// Antwortet fuer eine bestimmte Foederation mit einem HttpClient-TIMEOUT (also einer
+    /// TaskCanceledException OHNE dass der Aufrufer abgebrochen haette) und sonst normal.
+    /// </summary>
+    private sealed class TimeoutForFederationHandler : HttpMessageHandler
+    {
+        private readonly string _federation;
+        private readonly string _body;
+
+        public TimeoutForFederationHandler(string federation, string body)
+        {
+            _federation = federation;
+            _body = body;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (request.RequestUri!.Query.Contains($"fed={_federation}", StringComparison.Ordinal))
+                throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout of 30 seconds elapsing.");
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(_body, Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     private sealed class StubHandler : HttpMessageHandler

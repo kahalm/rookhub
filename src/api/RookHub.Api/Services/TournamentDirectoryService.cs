@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -39,21 +41,26 @@ public class TournamentDirectoryService
 
     private const int MaxRows = 2000;
 
+    /// <summary>
+    /// Name des eigenen Crawler-Clients (laengeres Zeitlimit als der Live-Pfad, siehe Program.cs).
+    /// </summary>
+    public const string CrawlerClientName = "CrawlerDirectory";
+
     private readonly AppDbContext _db;
-    private readonly CrawlerProxyService _crawler;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly GeocodingService _geocoding;
     private readonly NotificationService _notifications;
     private readonly ILogger<TournamentDirectoryService> _log;
 
     public TournamentDirectoryService(
         AppDbContext db,
-        CrawlerProxyService crawler,
+        IHttpClientFactory httpClientFactory,
         GeocodingService geocoding,
         NotificationService notifications,
         ILogger<TournamentDirectoryService> log)
     {
         _db = db;
-        _crawler = crawler;
+        _httpClientFactory = httpClientFactory;
         _geocoding = geocoding;
         _notifications = notifications;
         _log = log;
@@ -109,10 +116,14 @@ public class TournamentDirectoryService
         {
             var path = $"/api/tournament-search?fed={Uri.EscapeDataString(federation)}" +
                        $"&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&maxRows={MaxRows}";
-            var json = await _crawler.GetAsync(path, ct);
-            rows = ParseRows(json);
+            rows = ParseRows(await FetchAsync(path, ct));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // Ein HttpClient-TIMEOUT kommt als TaskCanceledException — also als
+        // OperationCanceledException, obwohl der Aufrufer gar nichts abgebrochen hat. Ein Filter
+        // auf den Typ allein liess ihn durch und riss den ganzen Sweep mit: in Dev beendete die
+        // eine Foederation, die hinter einer VPN-Rotation wartete, den Lauf der acht anderen mit
+        // einem 500er. Durchgereicht wird deshalb nur, was der AUFRUFER abgebrochen hat.
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             // Fehlgeschlagener Sweep: LastSweptAt bleibt ALT. Damit nimmt die Rotation die
             // Foederation gleich wieder vor - und die Verschwunden-Erkennung setzt nicht auf
@@ -199,6 +210,25 @@ public class TournamentDirectoryService
 
         return (new DirectorySweepResult(federation, rows.Count, added.Count, updated, changed.Count, removed.Count),
                 added.Select(e => e.Id).ToList());
+    }
+
+    /// <summary>
+    /// Holt eine Trefferliste vom Crawler. Eigener Client (<see cref="CrawlerClientName"/>) statt
+    /// des geteilten Live-Proxys, weil eine Suche hinter dem Rate-Limiter des Crawlers legitim
+    /// laenger braucht als die 30 s, die fuer eine Live-Abfrage richtig sind.
+    /// </summary>
+    private async Task<JsonElement> FetchAsync(string path, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient(CrawlerClientName);
+        using var response = await client.GetAsync(path, ct);
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        if (!response.IsSuccessStatusCode)
+            throw new CrawlerRequestException(response.StatusCode, body);
+
+        return string.IsNullOrWhiteSpace(body)
+            ? JsonSerializer.Deserialize<JsonElement>("[]")
+            : JsonSerializer.Deserialize<JsonElement>(body);
     }
 
     // ----- Benachrichtigungen ----------------------------------------------
