@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -29,6 +29,12 @@ describe('TournamentDirectoryComponent', () => {
   let fixture: ComponentFixture<TournamentDirectoryComponent>;
   let component: TournamentDirectoryComponent;
   let http: HttpTestingController;
+  let navigate: jasmine.Spy;
+
+  // Die Ansicht ueberlebt einen Seitenwechsel im localStorage — ohne Aufraeumen faerbte der
+  // Zustand eines Tests auf den naechsten ab.
+  beforeEach(() => localStorage.removeItem(TournamentDirectoryComponent.ViewKey));
+  afterEach(() => localStorage.removeItem(TournamentDirectoryComponent.ViewKey));
 
   async function setup(queryParams: Record<string, string> = {}) {
     await TestBed.configureTestingModule({
@@ -46,6 +52,7 @@ describe('TournamentDirectoryComponent', () => {
     fixture = TestBed.createComponent(TournamentDirectoryComponent);
     component = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     fixture.detectChanges();
   }
 
@@ -99,15 +106,73 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
-  it('lädt ein per Deep-Link gemeldetes Turnier einzeln nach', async () => {
+  it('führt ein per Deep-Link gemeldetes Turnier direkt auf seine Detailseite', async () => {
     // Das Turnier aus einer Absage- oder Änderungsmeldung liegt womöglich ausserhalb des
     // Umkreises oder ist abgesagt — in der gefilterten Liste wäre es nicht zu finden.
     await setup({ t: '1457129' });
     flushProfiles([]);
-    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', 'Gemeldetes Turnier'));
+
+    expect(navigate).toHaveBeenCalledWith(['/tournaments/calendar', '1457129']);
+    // Und die Liste darunter wird gar nicht erst geholt — man bleibt nicht hier.
+    http.verify();
+  });
+
+  it('öffnet ein angeklicktes Turnier als eigene Seite', async () => {
+    await setup();
+    flushProfiles([]);
     flushList([]);
 
-    expect(component.selected?.name).toBe('Gemeldetes Turnier');
+    component.select(entry('42'));
+    expect(navigate).toHaveBeenCalledWith(['/tournaments/calendar', '42']);
+    http.verify();
+  });
+
+  it('baut nach der Rückkehr dieselbe Ansicht wieder auf', async () => {
+    // Ohne das fiele der Weg „Turnier öffnen → zurück" auf die Vorgabefilter zurück.
+    await setup();
+    flushProfiles([profile(3, 'Zuhause'), profile(4, 'Ferienhaus')]);
+    flushList([]);
+
+    component.filter.profileId = 4;
+    component.searchText = 'Braunau';
+    component.applyRangePreset('year');
+    http.expectOne(r => r.url === '/api/tournament-directory').flush({ items: [], total: 0, truncated: false });
+    http.verify();
+
+    // Seite verlassen und neu betreten — der TestBed muss dafuer wirklich zurueckgesetzt werden.
+    TestBed.resetTestingModule();
+    await setup();
+    flushProfiles([profile(3, 'Zuhause'), profile(4, 'Ferienhaus')]);
+    const req = flushList([]);
+
+    expect(component.filter.profileId).toBe(4);
+    expect(component.searchText).toBe('Braunau');
+    expect(component.rangePreset).toBe('year');
+    expect(req.request.params.get('q')).toBe('Braunau');
+    http.verify();
+  });
+
+  it('vergisst ein gelöschtes Suchprofil und nimmt das erste, das es noch gibt', async () => {
+    // Sonst suchte die Seite weiter um Koordinaten, zu denen es kein Profil mehr gibt.
+    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({ profileId: 99 }));
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+
+    expect(component.filter.profileId).toBe(3);
+    http.verify();
+  });
+
+  it('behält „kein Umkreis" als getroffene Wahl bei', async () => {
+    // Null ist hier etwas anderes als „noch nichts gewählt" — sonst schnappt die Vorauswahl
+    // bei jeder Rückkehr wieder zu.
+    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({ profileId: null }));
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    const req = flushList([]);
+
+    expect(component.filter.profileId).toBeNull();
+    expect(req.request.params.has('profileId')).toBeFalse();
     http.verify();
   });
 

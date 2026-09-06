@@ -3015,7 +3015,12 @@
       "players": "Teilnehmer",
       "organizer": "Veranstalter",
       "arbiter": "Hauptschiedsrichter",
-      "groups": "Gruppen"
+      "groups": "Gruppen",
+      "back": "Zurück zum Kalender",
+      "director": "Turnierleitung",
+      "results": "Teilnehmer und Ergebnisse",
+      "notImportedHint": "Teilnehmer, Paarungen und Tabelle liegen noch nicht auf RookHub. Merke das Turnier, dann werden sie zum Spielbeginn von selbst geholt.",
+      "venueMap": "Austragungsort"
     },
     "calendar": {
       "previousMonth": "Voriger Monat",

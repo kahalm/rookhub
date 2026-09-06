@@ -49,12 +49,6 @@
 
 .hint.warn { background: color-mix(in srgb, var(--mat-sys-error) 18%, transparent); }
 
-.group-link {
-  display: inline-block;
-  margin: 0 0.5rem 0.2rem 0;
-  color: var(--mat-sys-primary);
-}
-
 .hint {
   display: flex;
   align-items: center;
@@ -136,35 +130,6 @@
 
 .more-row { display: flex; justify-content: center; margin-top: 1rem; }
 
-.detail-card { margin-top: 1rem; padding: 1rem; }
-
-.detail-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.detail-head h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin: 0 0 1rem;
-  font-size: 0.9rem;
-}
-
-.detail-grid dt { color: color-mix(in srgb, currentColor 60%, transparent); }
-.detail-grid dd { margin: 0; }
-
-.detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
 
 @media (max-width: 768px) {
@@ -175,6 +140,4 @@
   .players-field,
   .date-field { width: 100%; min-width: 0; }
   .filter-toggle { width: 100%; }
-  .detail-grid { grid-template-columns: 1fr; }
-  .detail-grid dt { margin-top: 0.4rem; }
 }

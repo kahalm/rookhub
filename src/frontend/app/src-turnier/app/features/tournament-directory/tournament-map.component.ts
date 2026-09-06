@@ -25,16 +25,14 @@ export type BoundsString = string;
   selector: 'app-tournament-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div class="map-host" #mapEl></div>`,
+  template: `<div class="map-host" #mapEl [style.height]="height"></div>`,
   styles: [`
     .map-host {
       width: 100%;
-      height: min(70vh, 640px);
       border-radius: 12px;
       overflow: hidden;
       background: var(--mat-sys-surface-container);
     }
-    @media (max-width: 768px) { .map-host { height: 60vh; } }
   `],
 })
 export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestroy {
@@ -43,6 +41,14 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() entries: DirectoryEntry[] = [];
   /** Mittelpunkt der Umkreissuche; zeichnet Kreis + Fadenkreuz. */
   @Input() centre: { lat: number; lon: number; radiusKm: number } | null = null;
+  /**
+   * Den Umkreis auch ZEICHNEN. Auf der Turnier-Detailseite dient der Mittelpunkt nur dem
+   * Einpassen des Ausschnitts — ein eingefaerbter Kreis um den Austragungsort waere dort eine
+   * Aussage ueber eine Umgebung, die niemand getroffen hat.
+   */
+  @Input() showRadius = true;
+  /** Hoehe der Karte als CSS-Laenge; die Detailseite braucht eine kleinere als der Kalender. */
+  @Input() height = 'min(70vh, 640px)';
 
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
   /** Feuert, wenn Kacheln nicht geladen werden koennen — sonst bleibt die Karte stumm schwarz. */
@@ -134,26 +140,29 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     const key = `${this.centre.lat}|${this.centre.lon}|${this.centre.radiusKm}`;
 
-    const centre: L.LatLngExpression = [this.centre.lat, this.centre.lon];
-    // interactive: false ist hier keine Feinheit — eine Leaflet-Flaeche faengt Mausereignisse
-    // standardmaessig ab. Der Umkreis liegt ueber den Turnieren, und innerhalb der eingefaerbten
-    // Flaeche kam kein Mouseover mehr bei den Punkten an.
-    const circle = L.circle(centre, {
-      radius: this.centre.radiusKm * 1000,
-      color: '#1a73e8',
-      weight: 1,
-      fillOpacity: 0.06,
-      interactive: false,
-    });
-    circle.addTo(this.radiusLayer);
-    L.circleMarker(centre, { radius: 4, color: '#1a73e8', fillOpacity: 1, interactive: false })
-      .addTo(this.radiusLayer);
+    const centre = L.latLng(this.centre.lat, this.centre.lon);
+    if (this.showRadius) {
+      // interactive: false ist hier keine Feinheit — eine Leaflet-Flaeche faengt Mausereignisse
+      // standardmaessig ab. Der Umkreis liegt ueber den Turnieren, und innerhalb der eingefaerbten
+      // Flaeche kam kein Mouseover mehr bei den Punkten an.
+      L.circle(centre, {
+        radius: this.centre.radiusKm * 1000,
+        color: '#1a73e8',
+        weight: 1,
+        fillOpacity: 0.06,
+        interactive: false,
+      }).addTo(this.radiusLayer);
+      L.circleMarker(centre, { radius: 4, color: '#1a73e8', fillOpacity: 1, interactive: false })
+        .addTo(this.radiusLayer);
+    }
 
     // NUR beim ersten Mal bzw. bei einem WIRKLICH anderen Mittelpunkt einpassen. Sonst zieht jede
-    // Aenderungserkennung die Ansicht zurueck und Zoomen ist unmoeglich.
+    // Aenderungserkennung die Ansicht zurueck und Zoomen ist unmoeglich. Der Ausschnitt wird aus
+    // dem Radius GERECHNET statt aus dem Kreis geholt: L.Circle.getBounds() braucht eine Karte
+    // unter sich, und ohne gezeichneten Umkreis gibt es keinen Kreis, den man fragen koennte.
     if (this.lastFitted !== key) {
       this.lastFitted = key;
-      this.map.fitBounds(circle.getBounds(), { padding: [16, 16] });
+      this.map.fitBounds(centre.toBounds(this.centre.radiusKm * 2000), { padding: [16, 16] });
     }
   }
 

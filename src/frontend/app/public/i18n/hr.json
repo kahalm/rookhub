@@ -3015,7 +3015,12 @@
       "players": "Igrači",
       "organizer": "Organizator",
       "arbiter": "Glavni sudac",
-      "groups": "Skupine"
+      "groups": "Skupine",
+      "back": "Natrag na kalendar",
+      "director": "Vodstvo turnira",
+      "results": "Sudionici i rezultati",
+      "notImportedHint": "Sudionici, parovi i tablica još nisu na RookHubu. Označi turnir i bit će dohvaćeni sami od sebe kad turnir počne.",
+      "venueMap": "Mjesto održavanja"
     },
     "calendar": {
       "previousMonth": "Prethodni mjesec",

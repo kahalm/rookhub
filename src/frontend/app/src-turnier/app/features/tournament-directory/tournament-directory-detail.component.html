@@ -1,0 +1,120 @@
+<div class="detail-page">
+  <div class="crumbs">
+    <button mat-button (click)="back()">
+      <mat-icon>arrow_back</mat-icon>
+      {{ 'tournamentDirectory.detail.back' | translate }}
+    </button>
+  </div>
+
+  @if (loading) {
+    <app-loading-spinner />
+  } @else if (notFound || !entry) {
+    <mat-card class="detail-card">
+      <p class="muted">{{ 'tournamentDirectory.unknownTournament' | translate }}</p>
+    </mat-card>
+  } @else {
+    <mat-card class="detail-card" [class.cancelled]="entry.cancelled">
+      <h1>{{ entry.name }}</h1>
+
+      <div class="badges">
+        <span class="badge">{{ 'tournamentDirectory.speed.' + entry.speed | translate }}</span>
+        @if (entry.playerCount) {
+          <span class="badge">{{ 'tournamentDirectory.players' | translate: { count: entry.playerCount } }}</span>
+        }
+        @if (entry.groupSize > 1) {
+          <span class="badge">{{ 'tournamentDirectory.groupCount' | translate: { count: entry.groupSize } }}</span>
+        }
+        @if (entry.cancelled) {
+          <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
+        }
+      </div>
+
+      <dl class="detail-grid">
+        <dt>{{ 'tournamentDirectory.detail.date' | translate }}</dt>
+        <dd>{{ entry.startDate }}@if (entry.endDate && entry.endDate !== entry.startDate) { <span> – {{ entry.endDate }}</span> }</dd>
+        @if (entry.location) {
+          <dt>{{ 'tournamentDirectory.detail.place' | translate }}</dt>
+          <dd>{{ entry.location }}</dd>
+        }
+        @if (entry.state) {
+          <dt>{{ 'tournamentDirectory.detail.region' | translate }}</dt>
+          <dd>{{ entry.state }}@if (entry.federation) { <span> ({{ entry.federation }})</span> }</dd>
+        }
+        @if (entry.timeControl) {
+          <dt>{{ 'tournamentDirectory.detail.timeControl' | translate }}</dt>
+          <dd>{{ entry.timeControl }}</dd>
+        }
+        @if (entry.rounds) {
+          <dt>{{ 'tournamentDirectory.detail.rounds' | translate }}</dt>
+          <dd>{{ entry.rounds }}</dd>
+        }
+        @if (entry.groupSize > 1) {
+          <dt>{{ 'tournamentDirectory.detail.groups' | translate }}</dt>
+          <dd>
+            @for (g of entry.groups; track g.chessResultsId) {
+              <a class="group-link" [href]="chessResultsUrl(g.chessResultsId)"
+                 target="_blank" rel="noopener noreferrer">
+                {{ g.label || g.chessResultsId }}@if (g.playerCount) { <span class="muted"> ({{ g.playerCount }})</span> }
+              </a>
+            }
+          </dd>
+        }
+        @if (entry.organizer) {
+          <dt>{{ 'tournamentDirectory.detail.organizer' | translate }}</dt>
+          <dd>{{ entry.organizer }}</dd>
+        }
+        @if (entry.director) {
+          <dt>{{ 'tournamentDirectory.detail.director' | translate }}</dt>
+          <dd>{{ entry.director }}</dd>
+        }
+        @if (entry.chiefArbiter) {
+          <dt>{{ 'tournamentDirectory.detail.arbiter' | translate }}</dt>
+          <dd>{{ entry.chiefArbiter }}</dd>
+        }
+      </dl>
+
+      <div class="detail-actions">
+        @if (!entry.subscribed) {
+          <button mat-flat-button color="primary" (click)="bookmark()">
+            <mat-icon>bookmark_add</mat-icon>
+            {{ 'tournamentDirectory.bookmark' | translate }}
+          </button>
+        } @else {
+          <span class="muted">
+            <mat-icon inline>bookmark</mat-icon>
+            {{ 'tournamentDirectory.bookmarkedTooltip' | translate }}
+          </span>
+        }
+        @if (imported) {
+          <a mat-stroked-button [routerLink]="['/tournaments', imported.id]">
+            <mat-icon>table_chart</mat-icon>
+            {{ 'tournamentDirectory.detail.results' | translate }}
+          </a>
+        }
+        <a mat-stroked-button [href]="chessResultsUrl(entry.chessResultsId)"
+           target="_blank" rel="noopener noreferrer">
+          <mat-icon>open_in_new</mat-icon>
+          {{ 'tournamentDirectory.openChessResults' | translate }}
+        </a>
+      </div>
+
+      @if (!imported) {
+        <p class="muted hint">{{ 'tournamentDirectory.detail.notImportedHint' | translate }}</p>
+      }
+    </mat-card>
+
+    @if (entry.lat != null && entry.lon != null) {
+      <mat-card class="map-card">
+        <h2>{{ 'tournamentDirectory.detail.venueMap' | translate }}</h2>
+        @if (entry.geoSource === 'Region') {
+          <p class="hint">{{ 'tournamentDirectory.approximate' | translate }}</p>
+        }
+        @if (tilesFailed) {
+          <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
+        }
+        <app-tournament-map [entries]="pins" [centre]="mapCentre" [showRadius]="false"
+                            height="320px" (tilesFailed)="onTilesFailed()" />
+      </mat-card>
+    }
+  }
+</div>

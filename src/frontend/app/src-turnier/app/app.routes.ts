@@ -12,6 +12,9 @@ export const routes: Routes = [
   { path: 'tournaments', loadComponent: () => import('./features/tournaments/tournament-list.component').then(m => m.TournamentListComponent), canActivate: [authGuard] },
   // Literal vor Parameter: /tournaments/calendar darf nicht als Turnier-Id gelesen werden.
   { path: 'tournaments/calendar', loadComponent: () => import('./features/tournament-directory/tournament-directory.component').then(m => m.TournamentDirectoryComponent), canActivate: [authGuard] },
+  // Ein Turnier aus dem Verzeichnis. Drei Segmente, kollidiert also nicht mit 'tournaments/:id'
+  // (das ist die Ansicht eines schon GEHOLTEN Turniers mit Teilnehmern und Paarungen).
+  { path: 'tournaments/calendar/:id', loadComponent: () => import('./features/tournament-directory/tournament-directory-detail.component').then(m => m.TournamentDirectoryDetailComponent), canActivate: [authGuard] },
   { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), canActivate: [authGuard] },
 
   // Geteilter Turnier-Link, ohne Anmeldung lesbar.

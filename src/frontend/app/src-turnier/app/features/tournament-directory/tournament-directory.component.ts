@@ -95,10 +95,22 @@ export class TournamentDirectoryComponent implements OnInit {
   calendarMonth = new Date().getMonth() + 1;
   calendarLoading = false;
 
-  selected: DirectoryEntry | null = null;
+  /**
+   * Schluessel der gemerkten Ansicht. Ohne sie faellt der Weg „Turnier oeffnen → zurueck" auf die
+   * Vorgabefilter zurueck — man muesste Zeitraum, Reiter und Monat jedes Mal neu einstellen.
+   */
+  static readonly ViewKey = 'rh.turnier.directoryView';
+
+  /**
+   * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
+   * mat-tab-group meldet seinen Startindex sofort, und ohne diese Sperre liefe die erste
+   * Abfrage zweimal — einmal mit dem halb aufgebauten Filter.
+   */
+  private ready = false;
 
   ngOnInit(): void {
     this.applyRangePreset('quarter', false);
+    this.restoreView();
 
     this.profileService.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: profiles => {
@@ -186,8 +198,9 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   reload(): void {
+    if (!this.ready) return;
     this.page = 1;
-    this.selected = null;
+    this.storeView();
     if (this.tab === 'list') this.loadList();
     if (this.tab === 'map' && this.lastBounds) this.loadPins(this.lastBounds);
     if (this.tab === 'calendar') this.loadCalendar();
@@ -236,6 +249,7 @@ export class TournamentDirectoryComponent implements OnInit {
   onMonthChanged(event: { year: number; month: number }): void {
     this.calendarYear = event.year;
     this.calendarMonth = event.month;
+    this.storeView();
     this.loadCalendar();
   }
 
@@ -257,16 +271,15 @@ export class TournamentDirectoryComponent implements OnInit {
 
   // ----- Detail + Aktionen -------------------------------------------------
 
+  /**
+   * Liste, Karte und Kalender fuehren alle hierher: das Turnier bekommt eine eigene Seite mit
+   * eigener Adresse. Die aufklappende Karte darunter war weder teilbar noch als Lesezeichen zu
+   * sichern, und der Zurueck-Knopf des Browsers fuehrte aus dem Kalender heraus statt aus dem
+   * Detail. Die Filterleiste ueberlebt den Weg (siehe storeView).
+   */
   select(entry: DirectoryEntry): void {
-    this.selected = entry;
-  }
-
-  closeDetail(): void {
-    this.selected = null;
-  }
-
-  chessResultsUrl(entry: DirectoryEntry): string {
-    return `https://chess-results.com/tnr${entry.chessResultsId}.aspx?lan=1`;
+    this.storeView();
+    this.router.navigate(['/tournaments/calendar', entry.chessResultsId]);
   }
 
   /**
@@ -338,26 +351,107 @@ export class TournamentDirectoryComponent implements OnInit {
     const params = this.route.snapshot.queryParamMap;
 
     const profileId = Number(params.get('profile'));
+    const storedIsValid = this.storedProfileId != null
+      && this.profiles.some(p => p.id === this.storedProfileId);
     if (profileId && this.profiles.some(p => p.id === profileId)) {
       this.filter.profileId = profileId;
+    } else if (storedIsValid) {
+      this.filter.profileId = this.storedProfileId;
+    } else if (this.hasStoredProfile && this.storedProfileId === null) {
+      this.filter.profileId = null;        // „kein Umkreis" war eine WAHL, keine fehlende Angabe
     } else if (this.profiles.length > 0) {
       this.filter.profileId = this.profiles[0].id;
     }
 
+    this.ready = true;
+
     const tournamentId = params.get('t');
     if (tournamentId) {
-      // Ein gemeldetes Turnier kann ausserhalb des aktuellen Umkreises oder abgesagt sein —
-      // deshalb einzeln nachladen statt in der gefilterten Liste zu suchen.
-      this.directory.get(tournamentId).subscribe({
-        next: entry => (this.selected = entry),
-        error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.unknownTournament')),
-      });
+      // Ein gemeldetes Turnier kann ausserhalb des aktuellen Umkreises oder abgesagt sein — es in
+      // der gefilterten Liste zu suchen ginge also fehl. Die Detailseite holt es einzeln.
+      this.router.navigate(['/tournaments/calendar', tournamentId]);
+      return;
     }
 
-    this.loadList();
+    this.reload();
   }
 
-  clearDeepLink(): void {
-    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+  // ----- Gemerkte Ansicht ---------------------------------------------------
+
+  /** Was die Filterleiste zeigt — genug, um nach einem Seitenwechsel dasselbe Bild aufzubauen. */
+  private storeView(): void {
+    try {
+      localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({
+        tab: this.tab,
+        rangePreset: this.rangePreset,
+        from: this.filter.from,
+        to: this.filter.to,
+        federation: this.filter.federation,
+        speed: this.filter.speed,
+        text: this.filter.text,
+        weekendOnly: this.filter.weekendOnly,
+        minPlayers: this.filter.minPlayers,
+        profileId: this.filter.profileId,
+        calendarYear: this.calendarYear,
+        calendarMonth: this.calendarMonth,
+      }));
+    } catch {
+      // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
+      // lassen — dann faengt man eben wieder bei der Vorgabe an.
+    }
   }
+
+  private restoreView(): void {
+    let stored: Record<string, unknown> | null = null;
+    try {
+      const raw = localStorage.getItem(TournamentDirectoryComponent.ViewKey);
+      stored = raw ? JSON.parse(raw) : null;
+    } catch {
+      stored = null;                       // unlesbar/kaputt: Vorgabe bleibt stehen
+    }
+    if (!stored || typeof stored !== 'object') return;
+
+    const tab = stored['tab'];
+    if (tab === 'list' || tab === 'map' || tab === 'calendar') this.tab = tab;
+
+    const preset = stored['rangePreset'];
+    if (typeof preset === 'string' && (DIRECTORY_RANGE_PRESETS as string[]).includes(preset)) {
+      this.applyRangePreset(preset as DirectoryRangePreset, false);
+      // Ein selbst gewaehlter Zeitraum steht nicht in rangeFor — der kommt aus dem Speicher.
+      if (preset === 'custom') {
+        this.filter.from = str(stored['from']);
+        this.filter.to = str(stored['to']);
+      }
+    }
+
+    this.filter.federation = str(stored['federation']);
+    this.filter.text = str(stored['text']);
+    this.filter.weekendOnly = stored['weekendOnly'] === true;
+    this.filter.minPlayers = typeof stored['minPlayers'] === 'number' ? stored['minPlayers'] : null;
+
+    const speed = stored['speed'];
+    if (typeof speed === 'string' && this.speeds.includes(speed as TournamentSpeed)) {
+      this.filter.speed = speed as TournamentSpeed;
+    }
+
+    // Das Profil wird erst uebernommen, wenn es die Liste noch kennt (applyQueryParams) —
+    // ein geloeschtes Profil darf die Umkreissuche nicht auf tote Koordinaten stellen.
+    this.storedProfileId = typeof stored['profileId'] === 'number' ? stored['profileId'] : null;
+    this.hasStoredProfile = 'profileId' in stored;
+
+    const year = stored['calendarYear'];
+    const month = stored['calendarMonth'];
+    if (typeof year === 'number' && typeof month === 'number' && month >= 1 && month <= 12) {
+      this.calendarYear = year;
+      this.calendarMonth = month;
+    }
+  }
+
+  private storedProfileId: number | null = null;
+  private hasStoredProfile = false;
+}
+
+/** Aus dem gemerkten Zustand: ein nicht leerer String oder `null`. Alles andere ist Muell. */
+function str(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
 }

@@ -3015,7 +3015,12 @@
       "players": "Players",
       "organizer": "Organizer",
       "arbiter": "Chief arbiter",
-      "groups": "Sections"
+      "groups": "Sections",
+      "back": "Back to the calendar",
+      "director": "Tournament director",
+      "results": "Entrants and results",
+      "notImportedHint": "The entrants, pairings and standings are not on RookHub yet. Bookmark the tournament and they will be fetched by themselves once it starts.",
+      "venueMap": "Venue"
     },
     "calendar": {
       "previousMonth": "Previous month",

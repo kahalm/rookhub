@@ -15,6 +15,15 @@ export class TournamentListService {
     return this.http.get<{ items: Tournament[]; totalCount: number }>(`/api/tournaments?pageSize=${pageSize}`);
   }
 
+  /**
+   * EIN schon geholtes Turnier. Die Crawler-Route loest sowohl die interne Nummer als auch die
+   * chess-results-Nummer auf — von der Verzeichnis-Detailseite kommt letztere. Nicht geholt = 404,
+   * das ist hier der Normalfall und kein Fehler.
+   */
+  getTournament(id: string | number): Observable<Tournament> {
+    return this.http.get<Tournament>(`/api/tournaments/${id}`);
+  }
+
   getSubscriptions(): Observable<Subscription[]> {
     return this.http.get<Subscription[]>('/api/subscriptions');
   }
