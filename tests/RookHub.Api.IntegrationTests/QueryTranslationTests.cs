@@ -247,4 +247,43 @@ public class QueryTranslationTests : IAsyncLifetime
         Assert.Equal(["111", "112"], braunau.Members.Select(m => m.ChessResultsId));
     }
 
+
+    /// <summary>
+    /// Mehrere Foederationen/Bedenkzeiten aus einem Suchprofil landen als `Contains` einer Liste
+    /// im Where. InMemory wertet das in C# aus und winkt es durch — hier muss MySQL es wirklich
+    /// uebersetzen (IN-Liste; die Bedenkzeit ist ein Enum und geht als Zahl raus).
+    /// </summary>
+    [MySqlFact]
+    public async Task Search_WithSeveralFederationsAndSpeeds_TranslatesToSql()
+    {
+        Db.TournamentDirectoryEntries.AddRange(
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "a", Name = "AUT Standard", Federation = "AUT",
+                Speed = TournamentSpeed.Standard, StartDate = new DateOnly(2026, 10, 10),
+                EndDate = new DateOnly(2026, 10, 12),
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "b", Name = "GER Rapid", Federation = "GER",
+                Speed = TournamentSpeed.Rapid, StartDate = new DateOnly(2026, 10, 10),
+                EndDate = new DateOnly(2026, 10, 12),
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "c", Name = "ITA Blitz", Federation = "ITA",
+                Speed = TournamentSpeed.Blitz, StartDate = new DateOnly(2026, 10, 10),
+                EndDate = new DateOnly(2026, 10, 12),
+            });
+        await Db.SaveChangesAsync();
+
+        var svc = Get<TournamentDirectoryQueryService>();
+        var result = await svc.SearchAsync(new DirectorySearchQuery
+        {
+            Federations = ["AUT", "GER"],
+            Speeds = [TournamentSpeed.Standard, TournamentSpeed.Rapid],
+        });
+
+        Assert.Equal(["a", "b"], result.Items.Select(i => i.Entry.ChessResultsId).Order());
+    }
 }
