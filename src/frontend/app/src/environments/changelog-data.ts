@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.406.2", date: "2026-09-06", changes: [
+    { en: "A script for the one-off setup of the tournament calendar: `scripts/gazetteer-import.sh` logs in, loads the place gazetteer, runs a first sweep and prints how many tournaments ended up with coordinates. It asks for the password interactively, so it never ends up in a shell history.", de: "Ein Skript für die einmalige Einrichtung des Turnierkalenders: `scripts/gazetteer-import.sh` meldet sich an, lädt das Ortslexikon, stößt einen ersten Lauf an und sagt am Ende, wie viele Turniere Koordinaten bekommen haben. Das Passwort wird interaktiv abgefragt und landet damit in keiner Shell-History." },
+  ] },
   { version: "0.406.1", date: "2026-09-06", changes: [
     { en: "Documentation for the tournament calendar: the new endpoints and tables are in CLAUDE.md, and the one-off step after the next deployment is in TODO.md — the place gazetteer has to be imported once, otherwise no tournament has coordinates and the map and radius search stay empty while the list works.", de: "Doku zum Turnierkalender: Die neuen Endpunkte und Tabellen stehen in CLAUDE.md, der einmalige Schritt nach dem nächsten Deploy in TODO.md — das Ortslexikon muss einmal importiert werden, sonst hat kein Turnier Koordinaten und Karte wie Umkreissuche bleiben leer, während die Liste funktioniert." },
   ] },

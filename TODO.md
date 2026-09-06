@@ -18,6 +18,10 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
   Bundesland-Mittelpunkt.
 - [ ] Ersten Sweep anstossen statt bis 03:00 UTC zu warten:
   `POST /api/admin/tournament-directory/sweep {"federations":["AUT","GER","SUI"]}`.
+- Beides zusammen erledigt `bash scripts/gazetteer-import.sh [API-URL]` (fragt das Passwort
+  interaktiv ab, Default-URL ist der Dev-Stack). **Dev-Stand 2026-09-06:** deployed, Import
+  steht noch aus — das `ADMIN_PASSWORD` in der Dev-`.env` passt nicht mehr zum gespeicherten
+  Hash, der Login damit scheitert mit 401.
 
 ## Periodisch
 - [ ] Code Review — letzter: **2026-08-25** → Review über `rookhub` (~1800 Quelldateien). 15 Funde, alle verifiziert (kein Fehlalarm), **14 behoben in v0.376.2**: WQL-Wildcard `*` statt `%` im Waisen-Aufräumer (`reap_orphans.ps1` traf NIE etwas und meldete 15-minütlich „ohne Befund“), PID-Recycling bei der Elternprüfung, README-Stopp-Prozedur killte jeden `python.exe`, `init()`-Fehler ohne `fatalError$` (Karte log dauerhaft „Berechne…“), `destroy()` ließ das Init-Promise ungelöst hängen, Selbstvergleich zweier WASM-Kerne, doppeltes `startCompare()`, fehlender Telemetrie-Hook, `compareCrashed` überlebte den Stellungswechsel. **Offen: 1 Fund** (EngineSlot-Umbau, siehe „Bewusste Entscheidung“). +4 Regressionstests (gegengeprüft: fallen ohne die Fixes um). **Einschränkung: faktisch Delta auf die jüngste Arbeit** — im .NET-Teil (1283 Dateien) kam kein einziger Fund heraus, für einen Vollscan unplausibel; API separat nachholen. (vorher 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
