@@ -39,6 +39,15 @@ public class TournamentDirectoryService
     /// </summary>
     internal int MissedSweepsUntilRemoved { get; set; } = 2;
 
+    /// <summary>
+    /// Pause zwischen zwei Foederationen. Gemessen (Dev, 2026-09-06): einzeln beantwortet
+    /// chess-results eine Suche in 2 s — neun Suchen als Salve liessen vier davon in einen
+    /// 180-s-Timeout laufen. Die Gegenseite drosselt eine Burst-Folge also spuerbar, und der
+    /// Crawler wartet die Drosselung mit seinem eigenen Backoff aus. Fuer einen naechtlichen Lauf
+    /// sind ein paar Sekunden je Foederation nichts; ein halb fehlgeschlagener Lauf schon.
+    /// </summary>
+    internal TimeSpan DelayBetweenFederations { get; set; } = TimeSpan.FromSeconds(8);
+
     private const int MaxRows = 2000;
 
     /// <summary>
@@ -81,6 +90,9 @@ public class TournamentDirectoryService
         foreach (var federation in federations)
         {
             ct.ThrowIfCancellationRequested();
+            if (results.Count > 0 && DelayBetweenFederations > TimeSpan.Zero)
+                await Task.Delay(DelayBetweenFederations, ct);
+
             var (result, added) = await SweepFederationAsync(federation, today, ct);
             results.Add(result);
             newEntryIds.AddRange(added);

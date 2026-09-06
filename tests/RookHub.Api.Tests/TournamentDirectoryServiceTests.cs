@@ -34,7 +34,11 @@ public class TournamentDirectoryServiceTests : IDisposable
     {
         var factory = new StubHttpClientFactory(handler);
         return new TournamentDirectoryService(_db, factory, new GeocodingService(_db),
-            new NotificationService(_db, new NoOpTaskQueue()), new TestLogger<TournamentDirectoryService>());
+            new NotificationService(_db, new NoOpTaskQueue()), new TestLogger<TournamentDirectoryService>())
+        {
+            // Ohne das schliefe jeder Mehr-Foederationen-Test acht Sekunden je Schritt.
+            DelayBetweenFederations = TimeSpan.Zero,
+        };
     }
 
     private static string Row(string id, string name, string start, string end, string location,
@@ -252,6 +256,26 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.True(results[0].Succeeded);
         Assert.False(results[1].Succeeded);
         Assert.True(results[2].Succeeded);
+    }
+
+    [Fact]
+    public async Task RunSweepAsync_PausesBetweenFederations_ButNotBeforeTheFirst()
+    {
+        // Die Pause haelt die Salve von chess-results fern; vor der ERSTEN Foederation waere sie
+        // nur verlorene Zeit.
+        var service = CreateService("[]");
+        service.DelayBetweenFederations = TimeSpan.FromMilliseconds(120);
+
+        var start = DateTime.UtcNow;
+        await service.RunSweepAsync(["AUT"]);
+        var single = DateTime.UtcNow - start;
+
+        start = DateTime.UtcNow;
+        await service.RunSweepAsync(["AUT", "GER", "SUI"]);
+        var triple = DateTime.UtcNow - start;
+
+        Assert.True(single < TimeSpan.FromMilliseconds(120), $"Erste Foederation wartete {single}");
+        Assert.True(triple >= TimeSpan.FromMilliseconds(240), $"Drei Foederationen brauchten nur {triple}");
     }
 
     [Fact]

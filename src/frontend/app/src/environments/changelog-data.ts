@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.406.6", date: "2026-09-06", changes: [
+    { en: "The nightly tournament sweep now pauses briefly between federations. Measured on the dev server: asked one at a time, chess-results answers a search in two seconds — asked as a burst of nine, four of them ran into a three-minute timeout. The other side throttles a rapid series, and a few seconds of spacing per federation is nothing for a nightly job, whereas a half-failed run is.", de: "Der nächtliche Turnier-Lauf pausiert jetzt kurz zwischen den Föderationen. Auf dem Dev-Server gemessen: einzeln gefragt beantwortet chess-results eine Suche in zwei Sekunden — als Salve von neun liefen vier in einen Drei-Minuten-Timeout. Die Gegenseite drosselt eine schnelle Folge, und ein paar Sekunden Abstand je Föderation sind für einen nächtlichen Lauf nichts, ein halb fehlgeschlagener Lauf schon." },
+  ] },
   { version: "0.406.5", date: "2026-09-06", changes: [
     { en: "Noted what the tournament directory actually looks like on the dev server: 1689 tournaments from nine federations, 1334 of them placed on the map. The 79 % is honest rather than flattering — the earlier 94 % was measured on Austrian data alone, and foreign region names rarely match the gazetteer, so the fallback to a region centre almost never fires abroad.", de: "Festgehalten, wie das Turnierverzeichnis auf dem Dev-Server wirklich aussieht: 1689 Turniere aus neun Föderationen, davon 1334 auf der Karte verortet. Die 79 % sind die ehrliche Zahl statt der schmeichelhaften — die früheren 94 % waren allein an österreichischen Daten gemessen, und ausländische Regionsnamen passen selten aufs Ortslexikon, der Rückfall auf die Regionsmitte greift außerhalb Österreichs also kaum." },
   ] },
