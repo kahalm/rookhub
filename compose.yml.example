@@ -34,6 +34,7 @@
 #   CHESSABLE_SERVICE_KEY=
 #   DISCORD_LINK_SECRET=       required for linking Discord accounts
 #   APP_BASE_URL=              public frontend URL, used in e-mail links (password reset)
+#   TURNIER_BASE_URL=          public URL of the tournament site (link previews)
 #   EMAIL_SMTP_HOST/PORT/USER/PASSWORD/FROM_ADDRESS/FROM_NAME/USE_STARTTLS
 #   ELASTICSEARCH_URL=         Serilog sink; unset = file/console logging only
 #   SCHACH_BOT_WEBHOOK_URL/SCHACH_BOT_WEBHOOK_SECRET/SCHACH_BOT_STATS_SECRET
@@ -41,6 +42,7 @@
 #
 # Ports:
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
+#   ${TURNIER_PORT}      -> Tournament site (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 ###############################################################################
@@ -110,6 +112,8 @@ services:
       # Optional – leer lassen schaltet das jeweilige Feature still ab.
       Discord__LinkSecret: ${DISCORD_LINK_SECRET:-}
       App__BaseUrl: ${APP_BASE_URL:-}
+      # Eigene Domain der Turnierseite — og:url geteilter Turnier-Links (/t/{id}).
+      App__TurnierBaseUrl: ${TURNIER_BASE_URL:-}
       Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
       Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
       Email__SmtpUser: ${EMAIL_SMTP_USER:-}
@@ -160,6 +164,25 @@ services:
       # FALLE: nginx laeuft im Image als non-root User und lauscht deshalb auf 8080,
       # NICHT auf 80 — ein 80er-Mapping ergibt einen tot wirkenden Stack.
       - "${FRONTEND_PORT}:8080"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Turnierseite (Angular + nginx) ─────────────────────────────────────────
+  # Eigene Domain (turnier.oberschmid.homes), eigenes Image — aber dieselbe API, dieselbe
+  # Datenbank und dieselbe Anmeldung wie RookHub. Muss im selben Netz liegen, weil der nginx
+  # /api/ an den Servicenamen `api` weiterreicht.
+  turnier:
+    image: ghcr.io/kahalm/rookhub-turnier:latest
+    container_name: rookhub-turnier
+    restart: unless-stopped
+    ports:
+      - "${TURNIER_PORT}:8080"
     depends_on:
       - api
     healthcheck:

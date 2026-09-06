@@ -46,6 +46,7 @@
 #
 # Ports:
 #   ${FRONTEND_PORT}     -> Frontend (nginx)
+#   ${TURNIER_PORT}      -> Turnierseite (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 #   ${ES_PORT:-9201}     -> Elasticsearch
@@ -174,6 +175,8 @@ services:
       GitHub__Token: ${GITHUB_TOKEN:-}
       # Basis-URL des Frontends für Links in E-Mails (z. B. Passwort-Reset).
       App__BaseUrl: ${APP_BASE_URL:-}
+      # Eigene Domain der Turnierseite — og:url geteilter Turnier-Links (/t/{id}).
+      App__TurnierBaseUrl: ${TURNIER_BASE_URL:-}
       # E-Mail-Versand (Passwort-Reset). SmtpHost leer -> Versand aus (Mail wird nur geloggt).
       Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
       Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
@@ -289,6 +292,27 @@ services:
       start_period: 10s
     ports:
       - "${FRONTEND_PORT}:8080"
+    depends_on:
+      - api
+    networks:
+      - rookhub-dev
+
+  # ── Turnierseite (Angular + nginx) ─────────────────────────────────────────
+  # Zweites Angular-Projekt desselben Workspaces, eigene Domain — aber dieselbe API, dieselbe
+  # Datenbank und dieselbe Anmeldung. Muss im selben Netz liegen, weil sein nginx /api/ an den
+  # Servicenamen `api` weiterreicht.
+  turnier:
+    image: ghcr.io/kahalm/rookhub-turnier:dev
+    container_name: rookhub-turnier-dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "${TURNIER_PORT}:8080"
     depends_on:
       - api
     networks:

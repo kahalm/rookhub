@@ -838,14 +838,40 @@ src/
                             ForwardedHeaders (private Peers only)
     Dockerfile              Multi-stage .NET Build
   frontend/
-    app/                    Angular 19 CLI-Projekt (siehe src/frontend/CLAUDE.md)
-    nginx.conf              Proxy /api/ → api:8080, SPA-Fallback
-    Dockerfile              Multi-stage Node Build + nginx
+    app/                    Angular-Workspace mit ZWEI Projekten (siehe src/frontend/CLAUDE.md):
+                            src/ = RookHub, src-turnier/ = Turnierseite (Alias @rh/* teilt den Code)
+    nginx.conf              Proxy /api/ → api:8080, OSM-Kachel-Cache, OG-Weiche, SPA-Fallback
+                            (dieselbe Datei in BEIDEN Images)
+    Dockerfile              Multi-stage Node Build + nginx; `--build-arg APP_PROJECT=turnier`
+                            baut daraus das Turnier-Image
 tests/
   RookHub.Api.Tests/        xUnit, eine Testklasse je Controller/Service
                             (Helpers: CapturingLogger, TestLogger, NoOpTaskQueue,
                              DiscordTokenTestHelper)
 ```
+
+## Zwei Oberflächen: RookHub + Turnierseite
+
+Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.homes`
+(Dev: `turnier-dev.oberschmid.homes`) — eigene PWA, eigenes App-Symbol, eigenes Image
+`ghcr.io/kahalm/rookhub-turnier:{dev,latest}`. Geteilt wird alles darunter: **eine** API,
+**eine** Datenbank, **ein** Konto.
+
+- **Ein Quellbaum, zwei Angular-Projekte** (`app` und `turnier` in derselben `angular.json`).
+  Die Turnierseite importiert Auth, i18n und die kleinen Bausteine per Alias `@rh/*` aus
+  `src/app/` — keine Kopie, eine Änderung wirkt auf beiden Seiten.
+- **Ein Dockerfile, zwei Images**: `APP_PROJECT` entscheidet, welches Bundle in den nginx kommt.
+  Die CI baut beide aus demselben Kontext (`build-frontend`, `build-turnier`).
+- **Anmeldung**: das JWT liegt in `localStorage` und ist damit an die Herkunft gebunden — eine
+  Domain kann die andere nicht mitlesen. Der Sprung zwischen den Seiten nimmt deshalb einen
+  Einmal-Code mit (`POST /api/auth/handoff` → `?h=<code>` → `POST /api/auth/handoff/exchange`,
+  60 s gültig, genau einmal einlösbar; siehe `core/handoff.service.ts`).
+- **Link-Vorschau**: `/t/{id}` lebt jetzt auf der Turnierseite. Der nginx sagt der API über
+  `X-Og-Site` (aus `$host` abgeleitet), welche SPA-Shell sie anreichern soll und welche Domain in
+  `og:url` gehört (`App:TurnierBaseUrl`) — sonst bekäme der Besucher die RookHub-Shell serviert
+  und landete auf dem Dashboard.
+- **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
+  `/api/` an den Servicenamen `api` weiterreicht.
 
 ## Lokales Development
 

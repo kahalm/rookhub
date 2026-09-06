@@ -71,3 +71,38 @@ jobs:
             GIT_SHA=${{ github.sha }}
             GIT_REF=${{ github.ref_name }}
           tags: ${{ steps.meta.outputs.tags }}
+
+  # Turnierseite (turnier.oberschmid.homes): dasselbe Frontend-Verzeichnis, dasselbe Dockerfile —
+  # nur ein anderes Angular-Projekt des Workspaces (APP_PROJECT). Eigenes Image, damit die beiden
+  # Seiten getrennt ausgerollt werden koennen.
+  build-turnier:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v6
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/kahalm/rookhub-turnier
+          tags: |
+            type=raw,value=dev,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - uses: docker/build-push-action@v7
+        with:
+          context: src/frontend
+          push: true
+          build-args: |
+            APP_PROJECT=turnier
+            GIT_SHA=${{ github.sha }}
+            GIT_REF=${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.tags }}

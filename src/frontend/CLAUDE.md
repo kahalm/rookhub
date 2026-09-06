@@ -15,6 +15,23 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - `/api/*` wird in Docker von nginx auf die RookHub API geproxied (nginx.conf)
 - Bei `ng serve` muss ein Proxy oder die API auf einem erreichbaren Port laufen
 
+## Zwei Projekte in einem Workspace
+
+`angular.json` enthaelt **zwei** Anwendungen, die sich node_modules und den Quellbaum teilen:
+
+| Projekt | Quelle | Bundle | Image | Domain |
+|---------|--------|--------|-------|--------|
+| `app` | `src/` | `dist/app/browser` | `rookhub-frontend` | rookhub(-dev).oberschmid.homes |
+| `turnier` | `src-turnier/` | `dist/turnier/browser` | `rookhub-turnier` | turnier(-dev).oberschmid.homes |
+
+- `src-turnier/` enthaelt nur, was die Turnierseite EIGEN hat: Einstiegspunkt, Routen, Navbar und
+  die Turnier-Features. Alles Geteilte (Auth, Interceptors, i18n, shared/) kommt per Pfad-Alias
+  **`@rh/*` → `src/app/*`** — kein zweiter Bestand, kein Nachziehen von Hand.
+- Eigene Dateien der Turnierseite: `src-turnier/`, `public-turnier/` (eigenes Manifest, wird ueber
+  `public/` drueberkopiert), `tsconfig.turnier.json`, `ngsw-config.turnier.json`.
+- Bauen: `npx ng build turnier --configuration=production` bzw. `npx ng serve turnier`.
+- `ng test` deckt weiterhin das Projekt `app` ab — die geteilten Bausteine sind damit getestet.
+
 ## Tech Stack
 
 | Komponente | Version |

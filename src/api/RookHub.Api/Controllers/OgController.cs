@@ -41,11 +41,15 @@ public class OgController : ControllerBase
         var path = Request.Headers["X-Original-URI"].ToString();
         if (string.IsNullOrWhiteSpace(path)) path = Request.Query["path"].ToString();
 
-        var html = await _index.GetIndexHtmlAsync(ct);
+        // Welche der beiden Seiten fragt? Der nginx setzt X-Og-Site anhand des Hosts. Davon haengt
+        // BEIDES ab: welche SPA-Shell ausgeliefert wird und auf welche Domain og:url zeigt.
+        var site = Request.Headers["X-Og-Site"].ToString();
+
+        var html = await _index.GetIndexHtmlAsync(site, ct);
         if (string.IsNullOrEmpty(html))
             return StatusCode(StatusCodes.Status502BadGateway, "frontend unavailable");
 
-        var page = await _meta.ResolvePageAsync(path, BaseUrl(), ct);
+        var page = await _meta.ResolvePageAsync(path, BaseUrl(site), ct);
         if (page is not null)
             html = Inject(html, page);
 
@@ -67,7 +71,23 @@ public class OgController : ControllerBase
         return File(png, "image/png");
     }
 
-    private string BaseUrl() => ResolveBaseUrl(_config["App:BaseUrl"], Request);
+    private string BaseUrl(string? site = null) => ResolveBaseUrl(ConfiguredBaseUrl(site), Request);
+
+    /// <summary>
+    /// Konfigurierte Basis-URL der anfragenden Seite: die Turnierseite laeuft unter eigener Domain,
+    /// ein <c>/t/{id}</c>-Link dort darf nicht auf RookHub zeigen (dort gibt es die Route nicht mehr).
+    /// Ohne eigene Konfiguration faellt die Turnierseite auf <c>App:BaseUrl</c> zurueck.
+    /// </summary>
+    private string? ConfiguredBaseUrl(string? site)
+        => ConfiguredBaseUrl(site, _config["App:BaseUrl"], _config["App:TurnierBaseUrl"]);
+
+    internal static string? ConfiguredBaseUrl(string? site, string? appBaseUrl, string? turnierBaseUrl)
+    {
+        if (string.Equals(site, OgIndexHtmlProvider.TurnierSite, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(turnierBaseUrl))
+            return turnierBaseUrl;
+        return appBaseUrl;
+    }
 
     /// <summary>
     /// Basis-URL für og:url/og:image: bevorzugt die konfigurierte <c>App:BaseUrl</c> (dieselbe Quelle

@@ -215,6 +215,7 @@
           },
           "configurations": {
             "production": {
+              "serviceWorker": "ngsw-config.turnier.json",
               "budgets": [
                 {
                   "type": "initial",

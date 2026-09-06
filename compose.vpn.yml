@@ -130,6 +130,8 @@ services:
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
       # Basis-URL des Frontends fuer Links in E-Mails (z.B. Passwort-Reset).
       App__BaseUrl: ${APP_BASE_URL:-}
+      # Eigene Domain der Turnierseite — og:url geteilter Turnier-Links (/t/{id}).
+      App__TurnierBaseUrl: ${TURNIER_BASE_URL:-}
       # E-Mail-Versand (Passwort-Reset). SmtpHost leer -> Versand aus (Mail wird nur geloggt).
       Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
       Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
@@ -248,6 +250,31 @@ services:
       start_period: 10s
     ports:
       - "${FRONTEND_PORT}:8080"
+    depends_on:
+      - api
+    networks:
+      - rookhub
+
+  # ── Turnierseite (Angular + nginx) ─────────────────────────────────────────
+  # Zweites Angular-Projekt desselben Workspaces, eigene Domain — aber dieselbe API, dieselbe
+  # Datenbank und dieselbe Anmeldung. Muss im selben Netz liegen, weil sein nginx /api/ an den
+  # Servicenamen `api` weiterreicht.
+  turnier:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      args:
+        APP_PROJECT: turnier
+    container_name: rookhub-turnier
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "${TURNIER_PORT}:8080"
     depends_on:
       - api
     networks:

@@ -1,3 +1,4 @@
+using RookHub.Api.Controllers;
 using RookHub.Api.Services.Og;
 
 namespace RookHub.Api.Tests;
@@ -75,5 +76,47 @@ public class OgTests
         var a = svc.RenderBoard(StartFen);
         var b = svc.RenderBoard(StartFen);
         Assert.Same(a, b);
+    }
+
+    // ── Zwei Seiten, zwei Shells (RookHub + turnier.oberschmid.homes) ──────────────────────────
+
+    [Fact]
+    public void ConfiguredBaseUrl_TurnierSite_PrefersTurnierBaseUrl()
+    {
+        // Ein /t/{id}-Link lebt auf der Turnierseite — og:url darf nicht auf RookHub zeigen,
+        // wo es die Route seit der Trennung nicht mehr gibt.
+        var url = OgController.ConfiguredBaseUrl("turnier", "https://rookhub.example", "https://turnier.example");
+        Assert.Equal("https://turnier.example", url);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("rookhub")]
+    public void ConfiguredBaseUrl_OtherSites_UseAppBaseUrl(string? site)
+    {
+        var url = OgController.ConfiguredBaseUrl(site, "https://rookhub.example", "https://turnier.example");
+        Assert.Equal("https://rookhub.example", url);
+    }
+
+    [Fact]
+    public void ConfiguredBaseUrl_TurnierWithoutOwnConfig_FallsBackToAppBaseUrl()
+    {
+        var url = OgController.ConfiguredBaseUrl("turnier", "https://rookhub.example", null);
+        Assert.Equal("https://rookhub.example", url);
+    }
+
+    [Fact]
+    public void BuildCandidates_ConfiguredUrlComesFirst_AndIsDeduped()
+    {
+        var candidates = OgIndexHtmlProvider.BuildCandidates("http://turnier:8080/", "http://turnier:8080", "http://rookhub-turnier:8080");
+        Assert.Equal(new[] { "http://turnier:8080/index.html", "http://rookhub-turnier:8080/index.html" }, candidates);
+    }
+
+    [Fact]
+    public void BuildCandidates_WithoutConfiguration_KeepsDefaults()
+    {
+        var candidates = OgIndexHtmlProvider.BuildCandidates(null, "http://frontend:8080", "http://rookhub-frontend:8080");
+        Assert.Equal(new[] { "http://frontend:8080/index.html", "http://rookhub-frontend:8080/index.html" }, candidates);
     }
 }
