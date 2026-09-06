@@ -45,6 +45,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() centre: { lat: number; lon: number; radiusKm: number } | null = null;
 
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
+  /** Feuert, wenn Kacheln nicht geladen werden koennen — sonst bleibt die Karte stumm schwarz. */
+  @Output() tilesFailed = new EventEmitter<void>();
   /** Feuert nach jedem Verschieben/Zoomen mit dem neuen Ausschnitt. */
   @Output() boundsChanged = new EventEmitter<BoundsString>();
 
@@ -61,11 +63,17 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       zoomControl: true,
     });
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Gleiche Herkunft: nginx holt die Kachel bei OpenStreetMap und legt sie in seinen Cache.
+    // Direkt aus dem Browser zu laden setzt voraus, dass JEDER Betrachter selbst ins offene Netz
+    // kommt — ueber den WireGuard-Weg ist das nicht so, und die Karte blieb schwarz.
+    const tiles = L.tileLayer('/tiles/{z}/{x}/{y}.png', {
       maxZoom: 18,
       // Pflichtangabe der OSM-Nutzungsbedingungen.
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(this.map);
+    });
+    // Eine stumm fehlschlagende Kachel sieht aus wie eine kaputte Seite. Einmal melden reicht.
+    tiles.once('tileerror', () => this.tilesFailed.emit());
+    tiles.addTo(this.map);
 
     this.markerLayer = L.layerGroup().addTo(this.map);
     this.radiusLayer = L.layerGroup().addTo(this.map);

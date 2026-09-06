@@ -21,7 +21,7 @@ function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
     startDate: '2026-12-18', endDate: '2026-12-20', location: 'Ranshofen',
     timeControl: '90 min', speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: 7, playerCount: 20, lat: 48.2, lon: 13.0, geoSource: 'City', geoPlaceName: 'Ranshofen',
-    distanceKm: 12.5, cancelled: false, subscribed: false,
+    distanceKm: 12.5, cancelled: false, subscribed: false, groupSize: 1, groups: [],
   };
 }
 
@@ -186,20 +186,78 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
-  it('setzt den Filter zurück, behält aber „ab heute"', async () => {
+  it('schränkt standardmäßig aufs kommende Quartal ein', async () => {
+    // Ohne Vorgabe stehen über tausend Turniere bis weit ins nächste Jahr in der Liste.
+    await setup();
+    flushProfiles([]);
+    const req = flushList([]);
+
+    const from = new Date(req.request.params.get('from')!);
+    const to = new Date(req.request.params.get('to')!);
+    const monate = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+    expect(component.rangePreset).toBe('quarter');
+    expect(monate).toBe(3);
+    http.verify();
+  });
+
+  it('lässt „Alles Kommende" das Enddatum weg', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.applyRangePreset('all');
+    const req = http.expectOne(r => r.url === '/api/tournament-directory');
+    expect(req.request.params.has('from')).toBeTrue();
+    expect(req.request.params.has('to')).toBeFalse();
+    req.flush({ items: [], total: 0, truncated: false });
+    http.verify();
+  });
+
+  it('zählt nur die eingeklappten Zusatzfilter', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    expect(component.activeExtraFilters).toBe(0);
+    component.filter.speed = 'Blitz';
+    component.filter.weekendOnly = true;
+    expect(component.activeExtraFilters).toBe(2);
+    // Der Zeitraum gehört zur immer sichtbaren Zeile und zählt deshalb nicht mit.
+    component.applyRangePreset('year');
+    http.expectOne(r => r.url === '/api/tournament-directory').flush({ items: [], total: 0, truncated: false });
+    expect(component.activeExtraFilters).toBe(2);
+    http.verify();
+  });
+
+  it('setzt den Filter zurück und landet wieder beim Quartal', async () => {
     await setup();
     flushProfiles([profile(1, 'Zuhause')]);
     flushList([]);
 
     component.filter.text = 'Braunau';
     component.filter.speed = 'Blitz';
+    component.applyRangePreset('all');
+    http.expectOne(r => r.url === '/api/tournament-directory').flush({ items: [], total: 0, truncated: false });
+
     component.resetFilter();
     const req = http.expectOne(r => r.url === '/api/tournament-directory');
 
     expect(component.filter.speed).toBeNull();
     expect(component.filter.profileId).toBeNull();
-    expect(req.request.params.has('from')).toBeTrue();
+    expect(component.rangePreset).toBe('quarter');
+    expect(req.request.params.has('to')).toBeTrue();
     req.flush({ items: [], total: 0, truncated: false });
+    http.verify();
+  });
+
+  it('meldet fehlgeschlagene Kartenkacheln, statt schwarz zu bleiben', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    expect(component.tilesFailed).toBeFalse();
+    component.onTilesFailed();
+    expect(component.tilesFailed).toBeTrue();
     http.verify();
   });
 

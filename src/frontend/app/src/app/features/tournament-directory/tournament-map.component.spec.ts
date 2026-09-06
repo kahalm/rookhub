@@ -9,7 +9,7 @@ function entry(id: string, lat: number | null, lon: number | null,
     startDate: '2026-10-10', endDate: '2026-10-12', location: 'Salzburg', timeControl: null,
     speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: null, playerCount: null, lat, lon, geoSource, geoPlaceName: null,
-    distanceKm: null, cancelled: false, subscribed: false,
+    distanceKm: null, cancelled: false, subscribed: false, groupSize: 1, groups: [],
   };
 }
 
@@ -45,6 +45,13 @@ describe('TournamentMapComponent', () => {
     component.centre = { lat: 47.8, lon: 13.04, radiusKm: 50 };
 
     expect(() => fixture.detectChanges()).not.toThrow();
+  });
+
+  it('holt die Kacheln von der eigenen Herkunft, nicht direkt von OpenStreetMap', () => {
+    // Direkt zu laden setzt voraus, dass jeder Betrachter selbst ins offene Netz kommt.
+    fixture.detectChanges();
+    const src = fixture.nativeElement.querySelector('img.leaflet-tile')?.getAttribute('src') ?? '';
+    expect(src.startsWith('/tiles/')).toBeTrue();
   });
 
   it('räumt die Karte beim Zerstören ab', () => {

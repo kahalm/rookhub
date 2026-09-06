@@ -3013,7 +3013,8 @@
       "rounds": "Runden",
       "players": "Teilnehmer",
       "organizer": "Veranstalter",
-      "arbiter": "Hauptschiedsrichter"
+      "arbiter": "Hauptschiedsrichter",
+      "groups": "Gruppen"
     },
     "calendar": {
       "previousMonth": "Voriger Monat",
@@ -3045,6 +3046,18 @@
       "errorPlace": "Bitte einen Ort aus der Liste wählen — der Server braucht Koordinaten.",
       "saveError": "Das Suchprofil konnte nicht gespeichert werden."
     },
-    "speedFilter": "Nach Bedenkzeit filtern"
+    "speedFilter": "Nach Bedenkzeit filtern",
+    "moreFilters": "Filter",
+    "minPlayers": "Mind. Teilnehmer",
+    "groupCount": "{{count}} Gruppen",
+    "tilesFailed": "Die Kartenkacheln ließen sich nicht laden. Die Turniere sitzen richtig, nur die Hintergrundkarte fehlt.",
+    "range": {
+      "label": "Zeitraum",
+      "quarter": "Nächstes Quartal",
+      "halfYear": "Nächste sechs Monate",
+      "year": "Nächste zwölf Monate",
+      "all": "Alles Kommende",
+      "custom": "Eigener Zeitraum"
+    }
   }
 }

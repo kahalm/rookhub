@@ -9,6 +9,8 @@
   <ItemGroup>
     <!-- Test-Assembly darf interne Member sehen (z. B. Timing-Hooks im AutoSubscriptionService). -->
     <InternalsVisibleTo Include="RookHub.Api.Tests" />
+    <!-- Die Integrationssuite prueft dieselben internen Helfer gegen echtes MariaDB. -->
+    <InternalsVisibleTo Include="RookHub.Api.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>

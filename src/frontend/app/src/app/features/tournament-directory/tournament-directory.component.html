@@ -6,19 +6,46 @@
     </h1>
   </div>
 
-  <!-- Filterleiste: gilt fuer alle drei Ansichten -->
+  <!-- Filterleiste: eine Zeile sichtbar, der Rest ausklappbar. Vorher standen Profil, Suche,
+       zwei Datumsfelder, drei Bedenkzeit-Chips, ein Schalter und „Zuruecksetzen" nebeneinander —
+       das war die halbe Seite, bevor ein einziges Turnier zu sehen war. -->
   <div class="filter-bar">
     <mat-form-field appearance="outline" class="profile-field">
       <mat-label>{{ 'tournamentDirectory.profile.label' | translate }}</mat-label>
       <mat-select [ngModel]="filter.profileId" (ngModelChange)="onProfileChange($event)">
         <mat-option [value]="null">{{ 'tournamentDirectory.profile.none' | translate }}</mat-option>
         @for (profile of profiles; track profile.id) {
-          <mat-option [value]="profile.id">
-            {{ profile.name }} · {{ profile.radiusKm }} km
-          </mat-option>
+          <mat-option [value]="profile.id">{{ profile.name }} · {{ profile.radiusKm }} km</mat-option>
         }
       </mat-select>
     </mat-form-field>
+
+    <mat-form-field appearance="outline" class="range-field">
+      <mat-label>{{ 'tournamentDirectory.range.label' | translate }}</mat-label>
+      <mat-select [ngModel]="rangePreset" (ngModelChange)="applyRangePreset($event)">
+        @for (preset of rangePresets; track preset) {
+          <mat-option [value]="preset">{{ 'tournamentDirectory.range.' + preset | translate }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>{{ 'tournamentDirectory.search' | translate }}</mat-label>
+      <input matInput [(ngModel)]="searchText" (keyup.enter)="reload()" />
+      @if (searchText) {
+        <button matSuffix mat-icon-button (click)="searchText = ''; reload()"
+                [attr.aria-label]="'common.clear' | translate">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+
+    <button mat-stroked-button class="filter-toggle" (click)="filtersOpen = !filtersOpen"
+            [attr.aria-expanded]="filtersOpen">
+      <mat-icon>tune</mat-icon>
+      {{ 'tournamentDirectory.moreFilters' | translate }}@if (activeExtraFilters) { <span> ({{ activeExtraFilters }})</span> }
+    </button>
 
     <button mat-icon-button [matMenuTriggerFor]="profileMenu"
             [attr.aria-label]="'tournamentDirectory.profile.manage' | translate">
@@ -40,47 +67,42 @@
         </button>
       }
     </mat-menu>
-
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-icon matPrefix>search</mat-icon>
-      <mat-label>{{ 'tournamentDirectory.search' | translate }}</mat-label>
-      <input matInput [(ngModel)]="searchText" (keyup.enter)="reload()" />
-      @if (searchText) {
-        <button matSuffix mat-icon-button (click)="searchText = ''; reload()"
-                [attr.aria-label]="'common.clear' | translate">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="date-field">
-      <mat-label>{{ 'tournamentDirectory.from' | translate }}</mat-label>
-      <input matInput type="date" [(ngModel)]="filter.from" (change)="reload()" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="date-field">
-      <mat-label>{{ 'tournamentDirectory.to' | translate }}</mat-label>
-      <input matInput type="date" [(ngModel)]="filter.to" (change)="reload()" />
-    </mat-form-field>
-
-    <!-- chip-listbox statt anklickbarer chips: die Optionen sind damit von Haus aus
-         tastaturbedienbar und tragen ihren Auswahlzustand selbst. Ein erneuter Klick auf die
-         gewaehlte Bedenkzeit hebt sie wieder auf. -->
-    <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
-                      [attr.aria-label]="'tournamentDirectory.speedFilter' | translate">
-      @for (speed of speeds; track speed) {
-        <mat-chip-option [value]="speed">
-          {{ 'tournamentDirectory.speed.' + speed | translate }}
-        </mat-chip-option>
-      }
-    </mat-chip-listbox>
-
-    <mat-slide-toggle [(ngModel)]="filter.weekendOnly" (change)="reload()">
-      {{ 'tournamentDirectory.weekendOnly' | translate }}
-    </mat-slide-toggle>
-
-    <button mat-button (click)="resetFilter()">{{ 'tournamentDirectory.reset' | translate }}</button>
   </div>
+
+  @if (filtersOpen) {
+    <div class="filter-extra">
+      @if (rangePreset === 'custom') {
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>{{ 'tournamentDirectory.from' | translate }}</mat-label>
+          <input matInput type="date" [(ngModel)]="filter.from" (change)="reload()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>{{ 'tournamentDirectory.to' | translate }}</mat-label>
+          <input matInput type="date" [(ngModel)]="filter.to" (change)="reload()" />
+        </mat-form-field>
+      }
+
+      <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
+                        [attr.aria-label]="'tournamentDirectory.speedFilter' | translate">
+        @for (speed of speeds; track speed) {
+          <mat-chip-option [value]="speed">
+            {{ 'tournamentDirectory.speed.' + speed | translate }}
+          </mat-chip-option>
+        }
+      </mat-chip-listbox>
+
+      <mat-slide-toggle [(ngModel)]="filter.weekendOnly" (change)="reload()">
+        {{ 'tournamentDirectory.weekendOnly' | translate }}
+      </mat-slide-toggle>
+
+      <mat-form-field appearance="outline" class="players-field">
+        <mat-label>{{ 'tournamentDirectory.minPlayers' | translate }}</mat-label>
+        <input matInput type="number" min="0" [(ngModel)]="filter.minPlayers" (change)="reload()" />
+      </mat-form-field>
+
+      <button mat-button (click)="resetFilter()">{{ 'tournamentDirectory.reset' | translate }}</button>
+    </div>
+  }
 
   @if (profiles.length === 0) {
     <p class="hint">
@@ -137,6 +159,9 @@
                   @if (entry.playerCount) {
                     <span class="badge">{{ 'tournamentDirectory.players' | translate: { count: entry.playerCount } }}</span>
                   }
+                  @if (entry.groupSize > 1) {
+                    <span class="badge">{{ 'tournamentDirectory.groupCount' | translate: { count: entry.groupSize } }}</span>
+                  }
                   @if (entry.cancelled) {
                     <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
                   }
@@ -158,8 +183,12 @@
     <mat-tab [label]="'tournamentDirectory.tabs.map' | translate">
       <div class="tab-body">
         @if (tab === 'map') {
+          @if (tilesFailed) {
+            <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
+          }
           <app-tournament-map [entries]="pins" [centre]="mapCentre"
                               (boundsChanged)="onBoundsChanged($event)"
+                              (tilesFailed)="onTilesFailed()"
                               (entrySelected)="select($event)" />
           <p class="muted count">
             {{ 'tournamentDirectory.pins' | translate: { count: pins.length } }}
@@ -211,6 +240,17 @@
         @if (selected.playerCount) {
           <dt>{{ 'tournamentDirectory.detail.players' | translate }}</dt>
           <dd>{{ selected.playerCount }}</dd>
+        }
+        @if (selected.groupSize > 1) {
+          <dt>{{ 'tournamentDirectory.detail.groups' | translate }}</dt>
+          <dd>
+            @for (g of selected.groups; track g.chessResultsId) {
+              <a class="group-link" [href]="'https://chess-results.com/tnr' + g.chessResultsId + '.aspx?lan=1'"
+                 target="_blank" rel="noopener noreferrer">
+                {{ g.label || g.chessResultsId }}@if (g.playerCount) { <span class="muted"> ({{ g.playerCount }})</span> }
+              </a>
+            }
+          </dd>
         }
         @if (selected.organizer) {
           <dt>{{ 'tournamentDirectory.detail.organizer' | translate }}</dt>

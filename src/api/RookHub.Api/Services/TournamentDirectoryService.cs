@@ -387,6 +387,7 @@ public class TournamentDirectoryService
     private void Apply(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now)
     {
         entry.Name = Truncate(row.Name, 500);
+        entry.BaseName = Truncate(TournamentNameGrouping.BaseName(row.Name), 500);
         entry.Federation = Truncate(row.Federation, 3);
         entry.State = Truncate(row.State, 100);
         entry.StartDate = row.StartDate;
@@ -403,6 +404,7 @@ public class TournamentDirectoryService
         entry.PlayerCount = row.PlayerCount;
         entry.UpstreamUpdatedAt = row.LastUpdatedApproxUtc;
         entry.ChangeHash = ComputeChangeHash(row.StartDate, row.EndDate, row.Location);
+        entry.GroupKey = ComputeGroupKey(entry);
         entry.LastSeenAt = now;
         entry.UpdatedAt = now;
     }
@@ -434,6 +436,22 @@ public class TournamentDirectoryService
     /// Teilnehmerzahl, Schiedsrichter oder ein neuer "Last update"-Zeitstempel bleiben bewusst
     /// draussen - sonst meldet jede wachsende Meldeliste eine "Aenderung".
     /// </summary>
+    /// <summary>
+    /// Schluessel, der die Gruppen EINES Turniers zusammenfasst: Basisname, Foederation, Termin und
+    /// Ort muessen uebereinstimmen. Alle vier zusammen, weil der Name allein nicht reicht — ein
+    /// Vereinsabend, der jede Woche „KK Bardejov" heisst, waere sonst ein einziger Eintrag.
+    /// </summary>
+    internal static string ComputeGroupKey(TournamentDirectoryEntry entry)
+    {
+        var payload = string.Join('|',
+            GeoTextNormalizer.Normalize(entry.BaseName ?? entry.Name),
+            entry.Federation ?? "",
+            entry.StartDate?.ToString("yyyy-MM-dd") ?? "",
+            entry.EndDate?.ToString("yyyy-MM-dd") ?? "",
+            GeoTextNormalizer.Normalize(entry.LocationText));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant()[..32];
+    }
+
     internal static string ComputeChangeHash(DateOnly? start, DateOnly? end, string? location)
     {
         var payload = string.Join('|',

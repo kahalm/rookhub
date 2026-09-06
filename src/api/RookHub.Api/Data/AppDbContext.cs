@@ -308,6 +308,8 @@ public class AppDbContext : DbContext
             e.HasIndex(d => new { d.Federation, d.EndDate });
             // Vorfilter der Umkreissuche: Bounding-Box auf Lat/Lon, exakte Distanz danach in C#.
             e.HasIndex(d => new { d.Lat, d.Lon });
+            // Listen- und Kalenderabfragen gruppieren darueber.
+            e.HasIndex(d => d.GroupKey);
         });
 
         modelBuilder.Entity<TournamentSearchProfile>(e =>

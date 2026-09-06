@@ -213,4 +213,38 @@ public class QueryTranslationTests : IAsyncLifetime
         Assert.Equal("Wien", byName[0].Name);
     }
 
+
+    [MySqlFact]
+    public async Task Turnierverzeichnis_GruppierungUebersetzt()
+    {
+        // GroupBy mit COALESCE auf einen berechneten Schluessel plus Min/Count je Gruppe — genau
+        // die Sorte Abfrage, die EF InMemory klaglos im Speicher rechnet und ein Provider ablehnen
+        // kann. Zusaetzlich der Altbestand ohne Schluessel: NULL == NULL darf die Zeilen nicht in
+        // einen Topf werfen.
+        TournamentDirectoryEntry Entry(string name, string id, string? key) => new()
+        {
+            ChessResultsId = id, Name = name, BaseName = TournamentNameGrouping.BaseName(name),
+            Federation = "AUT", StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 10),
+            LocationText = "Ranshofen", PlayerCount = 10, GeoSource = GeoSource.None, GroupKey = key,
+        };
+
+        var a = Entry("Open Braunau 2026 A", "111", null);
+        var b = Entry("Open Braunau 2026 B", "112", null);
+        a.GroupKey = TournamentDirectoryService.ComputeGroupKey(a);
+        b.GroupKey = TournamentDirectoryService.ComputeGroupKey(b);
+        Db.TournamentDirectoryEntries.AddRange(a, b,
+            Entry("Altbestand eins", "201", null),
+            Entry("Altbestand zwei", "202", null));
+        await Db.SaveChangesAsync();
+
+        var svc = Get<TournamentDirectoryQueryService>();
+        var result = await svc.SearchAsync(new DirectorySearchQuery());
+
+        // Die zwei Gruppen von Braunau = ein Eintrag, die beiden schluessellosen je einer.
+        Assert.Equal(3, result.Total);
+        var braunau = result.Items.Single(i => i.Members.Count == 2);
+        Assert.Equal("Open Braunau 2026", braunau.Entry.BaseName);
+        Assert.Equal(["111", "112"], braunau.Members.Select(m => m.ChessResultsId));
+    }
+
 }

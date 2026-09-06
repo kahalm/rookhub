@@ -26,7 +26,8 @@ import { TournamentCalendarComponent } from './tournament-calendar.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
 import {
-  DirectoryCalendarDay, DirectoryEntry, DirectoryFilter, EMPTY_FILTER, SearchProfile, TournamentSpeed,
+  DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter, DirectoryRangePreset,
+  EMPTY_FILTER, SearchProfile, TournamentSpeed, rangeFor,
 } from './tournament-directory.model';
 
 type ViewTab = 'list' | 'map' | 'calendar';
@@ -66,7 +67,14 @@ export class TournamentDirectoryComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly speeds: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
+  readonly rangePresets = DIRECTORY_RANGE_PRESETS;
   readonly pageSize = 50;
+
+  /** Vorgabe: das kommende Quartal (siehe rangeFor). */
+  rangePreset: DirectoryRangePreset = 'quarter';
+  /** Die Zusatzfilter stehen eingeklappt — die Leiste war sonst die halbe Seite. */
+  filtersOpen = false;
+  tilesFailed = false;
 
   tab: ViewTab = 'list';
   filter: DirectoryFilter = { ...EMPTY_FILTER };
@@ -90,8 +98,7 @@ export class TournamentDirectoryComponent implements OnInit {
   selected: DirectoryEntry | null = null;
 
   ngOnInit(): void {
-    const today = new Date();
-    this.filter.from = isoDate(today);
+    this.applyRangePreset('quarter', false);
 
     this.profileService.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: profiles => {
@@ -126,14 +133,35 @@ export class TournamentDirectoryComponent implements OnInit {
     this.reload();
   }
 
+  onTilesFailed(): void {
+    this.tilesFailed = true;
+  }
+
   onSpeedChange(speed: TournamentSpeed | null): void {
     this.filter.speed = speed ?? null;
     this.reload();
   }
 
+  applyRangePreset(preset: DirectoryRangePreset, reload = true): void {
+    this.rangePreset = preset;
+    if (preset !== 'custom') {
+      const range = rangeFor(preset);
+      this.filter.from = range.from;
+      this.filter.to = range.to;
+    }
+    if (reload) this.reload();
+  }
+
+  /** Wie viele Zusatzfilter aktiv sind — steht als Zahl am eingeklappten „Filter"-Knopf. */
+  get activeExtraFilters(): number {
+    return (this.filter.speed ? 1 : 0)
+      + (this.filter.weekendOnly ? 1 : 0)
+      + (this.filter.minPlayers ? 1 : 0);
+  }
+
   resetFilter(): void {
-    this.filter = { ...EMPTY_FILTER, from: isoDate(new Date()) };
-    this.reload();
+    this.filter = { ...EMPTY_FILTER };
+    this.applyRangePreset('quarter');
   }
 
   onTabChange(index: number): void {
@@ -316,9 +344,4 @@ export class TournamentDirectoryComponent implements OnInit {
   clearDeepLink(): void {
     this.router.navigate([], { relativeTo: this.route, queryParams: {} });
   }
-}
-
-function isoDate(date: Date): string {
-  const pad = (value: number) => (value < 10 ? `0${value}` : `${value}`);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

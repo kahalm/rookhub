@@ -11,7 +11,7 @@ function entry(id: string, name: string): DirectoryEntry {
     startDate: null, endDate: null, location: null, timeControl: null, speed: 'Standard',
     organizer: null, director: null, chiefArbiter: null, rounds: null, playerCount: null,
     lat: null, lon: null, geoSource: 'None', geoPlaceName: null, distanceKm: null,
-    cancelled: false, subscribed: false,
+    cancelled: false, subscribed: false, groupSize: 1, groups: [],
   };
 }
 

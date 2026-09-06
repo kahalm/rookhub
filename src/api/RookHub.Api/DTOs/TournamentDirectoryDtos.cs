@@ -30,10 +30,22 @@ public class DirectoryEntryDto
     public bool Cancelled { get; set; }
     public bool Subscribed { get; set; }
 
-    public static DirectoryEntryDto FromEntity(TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false) => new()
+    /// <summary>
+    /// Wie viele Gruppen desselben Turniers dieser Eintrag zusammenfasst (1 = einzelnes Turnier).
+    /// chess-results fuehrt „Open Braunau 2026 A/B/C" als drei Zeilen; hier ist es eine.
+    /// </summary>
+    public int GroupSize { get; set; } = 1;
+
+    /// <summary>Die Gruppen mit ihrer Beschriftung — leer, wo chess-results den Zusatz abschnitt.</summary>
+    public List<DirectoryGroupMemberDto> Groups { get; set; } = [];
+
+    public static DirectoryEntryDto FromEntity(
+        TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
+        IReadOnlyList<TournamentDirectoryEntry>? groups = null) => new()
     {
         ChessResultsId = e.ChessResultsId,
-        Name = e.Name,
+        // Bei mehreren Gruppen der Name OHNE Kuerzel — „Open Braunau 2026" statt „… A".
+        Name = groups is { Count: > 1 } ? (e.BaseName ?? e.Name) : e.Name,
         Federation = e.Federation,
         State = e.State,
         StartDate = e.StartDate,
@@ -45,7 +57,6 @@ public class DirectoryEntryDto
         Director = e.Director,
         ChiefArbiter = e.ChiefArbiter,
         Rounds = e.Rounds,
-        PlayerCount = e.PlayerCount,
         Lat = e.Lat,
         Lon = e.Lon,
         GeoSource = e.GeoSource.ToString(),
@@ -53,7 +64,29 @@ public class DirectoryEntryDto
         DistanceKm = distanceKm is null ? null : Math.Round(distanceKm.Value, 1),
         Cancelled = e.RemovedAt != null,
         Subscribed = subscribed,
+        GroupSize = groups?.Count ?? 1,
+        // Die Teilnehmerzahl der Gruppen summiert sich — sie ist die Groesse des GANZEN Turniers.
+        PlayerCount = groups is { Count: > 1 } ? groups.Sum(g => g.PlayerCount ?? 0) : e.PlayerCount,
+        Groups = groups is { Count: > 1 }
+            ? groups.Select(g => new DirectoryGroupMemberDto
+            {
+                ChessResultsId = g.ChessResultsId,
+                Label = Services.TournamentNameGrouping.GroupLabel(g.Name),
+                PlayerCount = g.PlayerCount,
+                Rounds = g.Rounds,
+            }).ToList()
+            : [],
     };
+}
+
+/// <summary>Eine Gruppe (A/B/C) innerhalb eines zusammengefassten Turniers.</summary>
+public class DirectoryGroupMemberDto
+{
+    public string ChessResultsId { get; set; } = "";
+    /// <summary>„A", „Gruppe 2" — leer, wenn chess-results den Zusatz im Namen abgeschnitten hat.</summary>
+    public string Label { get; set; } = "";
+    public int? PlayerCount { get; set; }
+    public int? Rounds { get; set; }
 }
 
 public class DirectoryPageDto

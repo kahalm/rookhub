@@ -20,7 +20,21 @@
   margin-bottom: 0.5rem;
 }
 
-.profile-field { min-width: 200px; }
+.profile-field { min-width: 180px; }
+.range-field { min-width: 170px; }
+.players-field { width: 150px; }
+.filter-toggle { white-space: nowrap; }
+
+.filter-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+}
 .search-field { min-width: 220px; flex: 1 1 220px; }
 .date-field { width: 165px; }
 
@@ -31,6 +45,14 @@
   flex-wrap: nowrap;
   overflow-x: auto;
   max-width: 100%;
+}
+
+.hint.warn { background: color-mix(in srgb, var(--mat-sys-error) 18%, transparent); }
+
+.group-link {
+  display: inline-block;
+  margin: 0 0.5rem 0.2rem 0;
+  color: var(--mat-sys-primary);
 }
 
 .hint {
@@ -148,8 +170,11 @@
 @media (max-width: 768px) {
   .page { padding: 0.75rem 0.5rem; }
   .profile-field,
+  .range-field,
   .search-field,
+  .players-field,
   .date-field { width: 100%; min-width: 0; }
+  .filter-toggle { width: 100%; }
   .detail-grid { grid-template-columns: 1fr; }
   .detail-grid dt { margin-top: 0.4rem; }
 }

@@ -7,6 +7,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -185,6 +186,108 @@ public class TournamentDirectoryControllerTests : IDisposable
         var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
 
         Assert.False(page.Items.Single().Subscribed);
+    }
+
+    // ----- Gruppen eines Turniers -------------------------------------------
+
+    [Fact]
+    public async Task Search_GroupsTheSectionsOfOneTournamentIntoOneEntry()
+    {
+        // chess-results fuehrt „Open Braunau 2026 A/B/C" als drei Zeilen mit eigenem dbkey.
+        await AddGroupedAsync("Open Braunau 2026 A", "111", players: 12);
+        await AddGroupedAsync("Open Braunau 2026 B", "112", players: 8);
+        await AddGroupedAsync("Open Braunau 2026 C", "113", players: 5);
+
+        var page = await SearchAsync();
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(1, page.Total);
+        Assert.Equal("Open Braunau 2026", item.Name);      // ohne Kuerzel
+        Assert.Equal(3, item.GroupSize);
+        Assert.Equal(25, item.PlayerCount);                 // Summe ueber alle Gruppen
+        Assert.Equal(["A", "B", "C"], item.Groups.Select(g => g.Label));
+        Assert.Equal(["111", "112", "113"], item.Groups.Select(g => g.ChessResultsId));
+    }
+
+    [Fact]
+    public async Task Search_GroupsIdenticallyNamedSections_WhenChessResultsTruncatedTheSuffix()
+    {
+        // Der echte Fall aus Suedtirol: der Name ist bei ~50 Zeichen abgeschnitten, alle drei
+        // Gruppen heissen deshalb gleich.
+        const string name = "5° Torneo Internazionale Ortisei \"ad Gredine\" - Op";
+        await AddGroupedAsync(name, "201");
+        await AddGroupedAsync(name, "202");
+        await AddGroupedAsync(name, "203");
+
+        var page = await SearchAsync();
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(3, item.GroupSize);
+        Assert.All(item.Groups, g => Assert.Equal("", g.Label));   // kein Kuerzel mehr da
+    }
+
+    [Fact]
+    public async Task Search_SameVenueAndDateButDifferentTournaments_StayApart()
+    {
+        // Vereinsabende am selben Ort mit Platzhalter-Datum: verschiedene Turniere, kein Verbund.
+        await AddGroupedAsync("KK Bardejov - 1.11.2025", "301");
+        await AddGroupedAsync("KK Bardejov - 25.10.2025", "302");
+        await AddGroupedAsync("PS Bardejov - 28.6.2025", "303");
+
+        var page = await SearchAsync();
+
+        Assert.Equal(3, page.Total);
+        Assert.All(page.Items, i => Assert.Equal(1, i.GroupSize));
+    }
+
+    [Fact]
+    public async Task Search_SameNameButDifferentDates_StayApart()
+    {
+        await AddGroupedAsync("Sommercup A", "401", start: new DateOnly(2026, 10, 10));
+        await AddGroupedAsync("Sommercup B", "402", start: new DateOnly(2026, 11, 14));
+
+        Assert.Equal(2, (await SearchAsync()).Total);
+    }
+
+    [Fact]
+    public async Task Search_PagingCountsTournaments_NotSections()
+    {
+        // Ein viergruppiges Open darf eine Seite nicht zu einem Viertel fuellen.
+        for (var i = 0; i < 4; i++)
+            await AddGroupedAsync($"Grosses Open 2026 {(char)('A' + i)}", $"50{i}");
+        await AddGroupedAsync("Ein anderes Turnier", "600");
+
+        var page = await SearchAsync();
+
+        Assert.Equal(2, page.Total);
+        Assert.Equal(2, page.Items.Count);
+    }
+
+    [Fact]
+    public async Task Search_RadiusPath_GroupsAsWell()
+    {
+        await AddGroupedAsync("Open Braunau 2026 A", "111", lat: 47.81, lon: 13.05);
+        await AddGroupedAsync("Open Braunau 2026 B", "112", lat: 47.81, lon: 13.05);
+
+        var page = await SearchAsync(lat: 47.80, lon: 13.04, radiusKm: 50);
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(2, item.GroupSize);
+        Assert.NotNull(item.DistanceKm);
+    }
+
+    [Fact]
+    public async Task Search_EntriesWithoutGroupKey_DoNotCollapseIntoOne()
+    {
+        // Altbestand aus der Zeit vor der Gruppierung: NULL == NULL waere ein einziger Riesen-Topf.
+        _db.TournamentDirectoryEntries.AddRange(
+            NewEntry("Turnier eins", "701", groupKey: null),
+            NewEntry("Turnier zwei", "702", groupKey: null));
+        await _db.SaveChangesAsync();
+
+        var page = await SearchAsync();
+
+        Assert.Equal(2, page.Total);
     }
 
     // ----- Eingabepruefung --------------------------------------------------
@@ -385,6 +488,36 @@ public class TournamentDirectoryControllerTests : IDisposable
             new GeoPlace { Country = "AT", Name = "Wien", NameNormalized = "wien", Lat = 48.21, Lon = 16.37, Kind = GeoPlaceKind.City, Population = 1_900_000 },
             new GeoPlace { Country = "AT", Name = "Wiener Neudorf", NameNormalized = "wiener neudorf", Lat = 48.08, Lon = 16.32, Kind = GeoPlaceKind.City, Population = 9_000 });
         _db.SaveChanges();
+    }
+
+    private TournamentDirectoryEntry NewEntry(
+        string name, string id, DateOnly? start = null, double? lat = null, double? lon = null,
+        int players = 10, string location = "Ranshofen", bool withKey = true, string? groupKey = "auto")
+    {
+        var entry = new TournamentDirectoryEntry
+        {
+            ChessResultsId = id,
+            Name = name,
+            BaseName = TournamentNameGrouping.BaseName(name),
+            Federation = "AUT",
+            StartDate = start ?? new DateOnly(2026, 10, 10),
+            EndDate = start ?? new DateOnly(2026, 10, 10),
+            LocationText = location,
+            PlayerCount = players,
+            Lat = lat,
+            Lon = lon,
+            GeoSource = lat is null ? GeoSource.None : GeoSource.City,
+        };
+        entry.GroupKey = groupKey == "auto" ? TournamentDirectoryService.ComputeGroupKey(entry) : groupKey;
+        return entry;
+    }
+
+    private async Task AddGroupedAsync(
+        string name, string id, DateOnly? start = null, double? lat = null, double? lon = null,
+        int players = 10, string location = "Ranshofen")
+    {
+        _db.TournamentDirectoryEntries.Add(NewEntry(name, id, start, lat, lon, players, location));
+        await _db.SaveChangesAsync();
     }
 
     private async Task<DirectoryPageDto> SearchAsync(

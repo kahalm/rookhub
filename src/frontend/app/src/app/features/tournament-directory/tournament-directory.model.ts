@@ -27,6 +27,18 @@ export interface DirectoryEntry {
   distanceKm: number | null;
   cancelled: boolean;
   subscribed: boolean;
+  /** Wie viele Gruppen desselben Turniers dieser Eintrag zusammenfasst (1 = einzelnes Turnier). */
+  groupSize: number;
+  groups: DirectoryGroupMember[];
+}
+
+/** Eine Gruppe (A/B/C) innerhalb eines zusammengefassten Turniers. */
+export interface DirectoryGroupMember {
+  chessResultsId: string;
+  /** „A", „Gruppe 2" — leer, wenn chess-results den Zusatz im Namen abgeschnitten hat. */
+  label: string;
+  playerCount: number | null;
+  rounds: number | null;
 }
 
 export interface DirectoryPage {
@@ -79,6 +91,36 @@ export interface DirectoryFilter {
   weekendOnly: boolean;
   minPlayers: number | null;
   profileId: number | null;
+}
+
+/** Benannte Zeitraeume der Filterleiste. `custom` blendet die beiden Datumsfelder ein. */
+export type DirectoryRangePreset = 'quarter' | 'halfYear' | 'year' | 'all' | 'custom';
+
+export const DIRECTORY_RANGE_PRESETS: DirectoryRangePreset[] =
+  ['quarter', 'halfYear', 'year', 'all', 'custom'];
+
+/**
+ * Vorgabe ist das kommende Quartal: ohne Einschraenkung stehen ueber tausend Turniere bis weit
+ * ins naechste Jahr in der Liste, und die ersten Bildschirme davon sind nie die interessanten.
+ */
+export function rangeFor(preset: DirectoryRangePreset, today = new Date()): { from: string | null; to: string | null } {
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const plusMonths = (m: number) => {
+    const d = new Date(today);
+    d.setMonth(d.getMonth() + m);
+    return d;
+  };
+  switch (preset) {
+    case 'quarter': return { from: iso(today), to: iso(plusMonths(3)) };
+    case 'halfYear': return { from: iso(today), to: iso(plusMonths(6)) };
+    case 'year': return { from: iso(today), to: iso(plusMonths(12)) };
+    case 'all': return { from: iso(today), to: null };
+    case 'custom': return { from: null, to: null };
+  }
+}
+
+function pad(value: number): string {
+  return value < 10 ? `0${value}` : `${value}`;
 }
 
 export const EMPTY_FILTER: DirectoryFilter = {

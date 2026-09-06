@@ -3013,7 +3013,8 @@
       "rounds": "Kola",
       "players": "Igrači",
       "organizer": "Organizator",
-      "arbiter": "Glavni sudac"
+      "arbiter": "Glavni sudac",
+      "groups": "Skupine"
     },
     "calendar": {
       "previousMonth": "Prethodni mjesec",
@@ -3045,6 +3046,18 @@
       "errorPlace": "Odaberi mjesto s popisa — poslužitelju trebaju koordinate.",
       "saveError": "Profil pretrage nije se mogao spremiti."
     },
-    "speedFilter": "Filtriraj po tempu igre"
+    "speedFilter": "Filtriraj po tempu igre",
+    "moreFilters": "Filtri",
+    "minPlayers": "Najmanje prijavljenih",
+    "groupCount": "{{count}} skupina",
+    "tilesFailed": "Karta se nije mogla učitati. Turniri su na pravim mjestima, nedostaje samo podloga.",
+    "range": {
+      "label": "Razdoblje",
+      "quarter": "Sljedeće tromjesečje",
+      "halfYear": "Sljedećih šest mjeseci",
+      "year": "Sljedećih dvanaest mjeseci",
+      "all": "Sve nadolazeće",
+      "custom": "Vlastito razdoblje"
+    }
   }
 }

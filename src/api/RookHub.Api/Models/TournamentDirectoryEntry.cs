@@ -35,6 +35,22 @@ public class TournamentDirectoryEntry
     [Required, MaxLength(500)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Der Name ohne Gruppen-Kuerzel („Open Braunau 2026" fuer die Gruppen A/B/C). Wird angezeigt,
+    /// wenn mehrere Gruppen zu einem Eintrag zusammengefasst sind.
+    /// </summary>
+    [MaxLength(500)]
+    public string? BaseName { get; set; }
+
+    /// <summary>
+    /// Klammert die Gruppen EINES Turniers zusammen: Hash aus Basisname, Foederation, Termin und
+    /// Ort. chess-results fuehrt jede Gruppe als eigene Zeile mit eigenem dbkey — ohne diesen
+    /// Schluessel steht ein viergruppiges Open viermal in der Liste. Vorberechnet, damit die
+    /// Datenbank danach gruppieren kann, ohne jede Zeile zu laden.
+    /// </summary>
+    [MaxLength(32)]
+    public string? GroupKey { get; set; }
+
     /// <summary>FIDE-Foederationscode (AUT, GER, ...) - zugleich der Sweep-Schluessel.</summary>
     [MaxLength(3)]
     public string? Federation { get; set; }

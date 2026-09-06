@@ -21,8 +21,18 @@ public sealed record DirectorySearchQuery
     public int PageSize { get; init; } = 50;
 }
 
+/// <summary>
+/// Ein Listeneintrag. <paramref name="Members"/> sind die weiteren Gruppen desselben Turniers
+/// (A/B/C) — der Haupteintrag steht in <paramref name="Entry"/>, die Liste enthaelt ALLE Gruppen
+/// inklusive ihm, damit die Anzeige sie beschriften und verlinken kann.
+/// </summary>
+public sealed record DirectoryGroupItem(
+    TournamentDirectoryEntry Entry,
+    double? DistanceKm,
+    IReadOnlyList<TournamentDirectoryEntry> Members);
+
 public sealed record DirectorySearchResult(
-    List<(TournamentDirectoryEntry Entry, double? DistanceKm)> Items, int Total, bool Truncated);
+    List<DirectoryGroupItem> Items, int Total, bool Truncated);
 
 /// <summary>
 /// Lesende Abfragen aufs Turnierverzeichnis.
@@ -57,13 +67,24 @@ public class TournamentDirectoryQueryService
         var radius = query.RadiusKm;
         if (query.Lat is not { } lat || query.Lon is not { } lon || radius is not > 0)
         {
-            var total = await filtered.CountAsync(ct);
-            var items = await filtered
-                .OrderBy(e => e.StartDate).ThenBy(e => e.Name)
+            // Gruppieren IN SQL, damit die Seitennavigation ueber Turniere zaehlt und nicht ueber
+            // Gruppen: ein viergruppiges Open darf eine Seite nicht zu einem Viertel fuellen.
+            // Zeilen aus der Zeit vor der Gruppierung haben noch keinen Schluessel. Sie duerfen
+            // NICHT alle in einen Topf fallen (NULL == NULL waere genau das) — bis der naechste
+            // Sweep sie nachtraegt, steht jede fuer sich.
+            var groups = filtered
+                .GroupBy(e => e.GroupKey ?? "id:" + e.Id)
+                .Select(g => new { Key = g.Key, Start = g.Min(x => x.StartDate), PrimaryId = g.Min(x => x.Id) });
+
+            var total = await groups.CountAsync(ct);
+            var keys = await groups
+                .OrderBy(g => g.Start).ThenBy(g => g.PrimaryId)
                 .Skip((page - 1) * pageSize).Take(pageSize)
                 .ToListAsync(ct);
-            return new DirectorySearchResult(
-                items.Select(e => (e, (double?)null)).ToList(), total, false);
+
+            var items = await LoadGroupsAsync(filtered, keys.Select(k => k.Key).ToList(),
+                keys.Select(k => k.PrimaryId).ToList(), null, ct);
+            return new DirectorySearchResult(items, total, false);
         }
 
         var box = GeoDistance.BoundingBox(lat, lon, radius.Value);
@@ -80,14 +101,51 @@ public class TournamentDirectoryQueryService
         var withDistance = candidates
             .Select(e => (Entry: e, Distance: GeoDistance.Haversine(lat, lon, e.Lat!.Value, e.Lon!.Value)))
             .Where(x => x.Distance <= radius.Value)
-            .OrderBy(x => x.Entry.StartDate).ThenBy(x => x.Distance)
+            .ToList();
+
+        // Im Umkreis liegen die Zeilen ohnehin im Speicher — hier ist Gruppieren in C# billiger
+        // als eine zweite Abfrage, und die Distanz haengt schon an jeder Zeile.
+        var grouped = withDistance
+            .GroupBy(x => x.Entry.GroupKey ?? $"id:{x.Entry.Id}")
+            .Select(g =>
+            {
+                var members = g.OrderBy(x => x.Entry.ChessResultsId, StringComparer.Ordinal)
+                    .Select(x => x.Entry).ToList();
+                return new DirectoryGroupItem(members[0], Math.Round(g.Min(x => x.Distance), 1), members);
+            })
+            .OrderBy(x => x.Entry.StartDate).ThenBy(x => x.DistanceKm)
             .ToList();
 
         return new DirectorySearchResult(
-            withDistance.Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(x => (x.Entry, (double?)x.Distance)).ToList(),
-            withDistance.Count,
+            grouped.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+            grouped.Count,
             truncated);
+    }
+
+    /// <summary>
+    /// Laedt zu den ausgewaehlten Gruppen-Schluesseln ALLE Mitglieder in EINER Abfrage (nicht je
+    /// Gruppe eine) und ordnet sie den Haupteintraegen zu.
+    /// </summary>
+    private async Task<List<DirectoryGroupItem>> LoadGroupsAsync(
+        IQueryable<TournamentDirectoryEntry> filtered, List<string> keys, List<int> primaryIds,
+        Func<TournamentDirectoryEntry, double?>? distance, CancellationToken ct)
+    {
+        if (keys.Count == 0) return [];
+
+        var rows = await filtered
+            .Where(e => keys.Contains(e.GroupKey ?? "id:" + e.Id))
+            .ToListAsync(ct);
+        var byKey = rows.GroupBy(e => e.GroupKey ?? "id:" + e.Id)
+            .ToDictionary(g => g.Key, g => g.OrderBy(e => e.ChessResultsId, StringComparer.Ordinal).ToList());
+
+        var items = new List<DirectoryGroupItem>(primaryIds.Count);
+        foreach (var (key, primaryId) in keys.Zip(primaryIds))
+        {
+            if (!byKey.TryGetValue(key, out var members) || members.Count == 0) continue;
+            var primary = members.FirstOrDefault(m => m.Id == primaryId) ?? members[0];
+            items.Add(new DirectoryGroupItem(primary, distance?.Invoke(primary), members));
+        }
+        return items;
     }
 
     /// <summary>

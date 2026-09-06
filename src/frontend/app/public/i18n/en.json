@@ -3013,7 +3013,8 @@
       "rounds": "Rounds",
       "players": "Players",
       "organizer": "Organizer",
-      "arbiter": "Chief arbiter"
+      "arbiter": "Chief arbiter",
+      "groups": "Sections"
     },
     "calendar": {
       "previousMonth": "Previous month",
@@ -3045,6 +3046,18 @@
       "errorPlace": "Please pick a place from the list — the server needs coordinates.",
       "saveError": "Could not save the search profile."
     },
-    "speedFilter": "Filter by time control"
+    "speedFilter": "Filter by time control",
+    "moreFilters": "Filters",
+    "minPlayers": "Min. entries",
+    "groupCount": "{{count}} sections",
+    "tilesFailed": "Map tiles could not be loaded. The tournaments are placed correctly, only the background map is missing.",
+    "range": {
+      "label": "Period",
+      "quarter": "Next quarter",
+      "halfYear": "Next six months",
+      "year": "Next twelve months",
+      "all": "Everything upcoming",
+      "custom": "Custom period"
+    }
   }
 }

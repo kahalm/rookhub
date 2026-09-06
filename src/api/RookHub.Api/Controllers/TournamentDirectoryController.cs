@@ -59,7 +59,7 @@ public class TournamentDirectoryController : BaseApiController
         {
             Items = result.Items
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    subscribed.Contains(i.Entry.ChessResultsId)))
+                    subscribed.Contains(i.Entry.ChessResultsId), i.Members))
                 .ToList(),
             Total = result.Total,
             Truncated = result.Truncated,
@@ -123,7 +123,7 @@ public class TournamentDirectoryController : BaseApiController
             var items = result.Items
                 .Where(i => Covers(i.Entry, day))
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    subscribed.Contains(i.Entry.ChessResultsId)))
+                    subscribed.Contains(i.Entry.ChessResultsId), i.Members))
                 .ToList();
             days.Add(new DirectoryCalendarDayDto { Date = day, Items = items });
         }
