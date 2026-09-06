@@ -19,6 +19,10 @@ public class AppDbContext : DbContext
     public DbSet<TournamentFavorite> TournamentFavorites => Set<TournamentFavorite>();
     public DbSet<TournamentUserSetting> TournamentUserSettings => Set<TournamentUserSetting>();
     public DbSet<TournamentMonitor> TournamentMonitors => Set<TournamentMonitor>();
+    public DbSet<TournamentDirectoryEntry> TournamentDirectoryEntries => Set<TournamentDirectoryEntry>();
+    public DbSet<TournamentSearchProfile> TournamentSearchProfiles => Set<TournamentSearchProfile>();
+    public DbSet<TournamentDirectorySweep> TournamentDirectorySweeps => Set<TournamentDirectorySweep>();
+    public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<Tag> Tags => Set<Tag>();
@@ -293,6 +297,33 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(m => new { m.UserId, m.CrawlerTournamentId }).IsUnique();
+        });
+
+        modelBuilder.Entity<TournamentDirectoryEntry>(e =>
+        {
+            e.HasIndex(d => d.ChessResultsId).IsUnique();
+            // Kalender-/Listenabfragen laufen ueber das Enddatum; der Sweep zusaetzlich je Foederation.
+            e.HasIndex(d => d.EndDate);
+            e.HasIndex(d => new { d.Federation, d.EndDate });
+            // Vorfilter der Umkreissuche: Bounding-Box auf Lat/Lon, exakte Distanz danach in C#.
+            e.HasIndex(d => new { d.Lat, d.Lon });
+        });
+
+        modelBuilder.Entity<TournamentSearchProfile>(e =>
+        {
+            e.HasOne(p => p.User)
+             .WithMany(u => u.TournamentSearchProfiles)
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(p => new { p.UserId, p.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<GeoPlace>(e =>
+        {
+            e.HasIndex(g => new { g.Country, g.PostalCode });
+            e.HasIndex(g => new { g.Country, g.NameNormalized });
+            e.HasIndex(g => g.NameNormalized);
         });
 
         modelBuilder.Entity<Puzzle>(e =>

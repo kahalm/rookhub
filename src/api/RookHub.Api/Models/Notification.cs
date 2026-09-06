@@ -46,6 +46,17 @@ public static class NotificationType
     /// <summary>Neue Runde/Paarungen in einem abonnierten Turnier (→ Glocke der Abonnenten,
     /// Link auf die Turnier-Detailseite). Daten: tournamentName, round.</summary>
     public const string TournamentNewRound = "tournament_new_round";
+    /// <summary>Der naechtliche Verzeichnis-Sweep hat neue Turniere im Umkreis eines gespeicherten
+    /// Suchprofils gefunden (→ Glocke des Profil-Besitzers, Link auf den Turnierkalender).
+    /// Bewusst AGGREGIERT: eine Meldung je Profil und Lauf, nicht eine je Turnier.
+    /// Daten: profileName, count, firstName (Name des ersten Treffers), radiusKm.</summary>
+    public const string TournamentNearbyNew = "tournament_nearby_new";
+    /// <summary>Termin oder Spielort eines gemerkten Turniers haben sich geaendert (→ Glocke der
+    /// Abonnenten). Daten: tournamentName, oldDate, newDate, oldLocation, newLocation.</summary>
+    public const string TournamentChanged = "tournament_changed";
+    /// <summary>Ein gemerktes Turnier ist aus der chess-results-Suche verschwunden — vermutlich
+    /// abgesagt (→ Glocke der Abonnenten). Daten: tournamentName, date.</summary>
+    public const string TournamentCancelled = "tournament_cancelled";
     /// <summary>Ein neuer Benutzer hat sich registriert (→ Glocke aller Admins, Link „/admin").
     /// Daten: username.</summary>
     public const string NewUserRegistered = "new_user_registered";

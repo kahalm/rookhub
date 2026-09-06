@@ -88,7 +88,8 @@ public class PushNotificationService
         "friend_request_received" or "friend_request_accepted" => "friends",
         "challenge_received" or "challenge_resolved" or "revenge_performed" => "puzzles",
         "admin_message_received" or "user_message_received" => "messages",
-        "tournament_new_round" => "tournaments",
+        "tournament_new_round" or "tournament_nearby_new" or "tournament_changed"
+            or "tournament_cancelled" => "tournaments",
         "new_user_registered" => "admin",
         _ => "other",
     };

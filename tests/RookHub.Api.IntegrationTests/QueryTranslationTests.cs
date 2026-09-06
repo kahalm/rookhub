@@ -144,4 +144,73 @@ public class QueryTranslationTests : IAsyncLifetime
         Assert.Null(await svc.GetRandomAsync(userId, null, null, themes: null, excludeSolved: false,
             themesAny: "mate_n2"));
     }
+
+    [MySqlFact]
+    public async Task Turnierverzeichnis_UmkreisUndFilterUebersetzen()
+    {
+        // Die Umkreissuche laeuft bewusst zweistufig: Bounding-Box in SQL, exakte Distanz danach
+        // in C#. Hier zaehlt der SQL-Teil — Datumsueberlappung mit COALESCE, das vorberechnete
+        // Wochenend-Flag (DateOnly.DayOfWeek uebersetzt der Provider NICHT) und die Lat/Lon-Box.
+        Db.TournamentDirectoryEntries.AddRange(
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "1", Name = "Nah am Mittelpunkt", Federation = "AUT",
+                StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
+                StartsOnWeekend = true, Lat = 47.80, Lon = 13.04, Speed = TournamentSpeed.Standard,
+                PlayerCount = 30, LocationText = "Salzburg", GeoSource = GeoSource.City,
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "2", Name = "Weit weg", Federation = "AUT",
+                StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
+                StartsOnWeekend = true, Lat = 48.21, Lon = 16.37, Speed = TournamentSpeed.Standard,
+                PlayerCount = 30, LocationText = "Wien", GeoSource = GeoSource.City,
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "3", Name = "Langlaeufer ragt herein", Federation = "AUT",
+                StartDate = new DateOnly(2026, 8, 1), EndDate = new DateOnly(2026, 11, 30),
+                StartsOnWeekend = false, Lat = 47.81, Lon = 13.05, Speed = TournamentSpeed.Standard,
+                PlayerCount = 30, LocationText = "Salzburg Umgebung", GeoSource = GeoSource.City,
+            });
+        await Db.SaveChangesAsync();
+
+        var svc = Get<TournamentDirectoryQueryService>();
+
+        var radius = await svc.SearchAsync(new DirectorySearchQuery
+        {
+            From = new DateOnly(2026, 10, 1), To = new DateOnly(2026, 10, 31),
+            Lat = 47.80, Lon = 13.04, RadiusKm = 50,
+            Federation = "AUT", Speed = TournamentSpeed.Standard, Text = "Salzburg", MinPlayers = 10,
+        });
+        Assert.Equal(2, radius.Total);   // "1" und der hereinragende Langlaeufer "3"
+
+        var weekend = await svc.SearchAsync(new DirectorySearchQuery { WeekendOnly = true });
+        Assert.Equal(2, weekend.Total);
+
+        var pins = await svc.MapPinsAsync(new DirectorySearchQuery(), 47.0, 48.0, 12.0, 14.0);
+        Assert.Equal(2, pins.Count);
+
+        Assert.NotNull(await svc.GetAsync("1"));
+    }
+
+    [MySqlFact]
+    public async Task Ortsvorschlaege_UebersetzenPraefixUndSortierung()
+    {
+        Db.GeoPlaces.AddRange(
+            new GeoPlace { Country = "AT", PostalCode = "5400", Name = "Hallein", NameNormalized = "hallein", Lat = 47.68, Lon = 13.1, Kind = GeoPlaceKind.PostalCode },
+            new GeoPlace { Country = "AT", Name = "Wien", NameNormalized = "wien", Lat = 48.21, Lon = 16.37, Kind = GeoPlaceKind.City, Population = 1_900_000 },
+            new GeoPlace { Country = "AT", Name = "Wiener Neudorf", NameNormalized = "wiener neudorf", Lat = 48.08, Lon = 16.32, Kind = GeoPlaceKind.City, Population = 9_000 });
+        await Db.SaveChangesAsync();
+
+        var svc = Get<TournamentDirectoryQueryService>();
+
+        Assert.Equal("Hallein", Assert.Single(await svc.SuggestPlacesAsync("54")).Name);
+
+        // Die Sortierung enthaelt einen booleschen Ausdruck (exakter Treffer zuerst) — genau die
+        // Sorte Klausel, die InMemory klaglos schluckt und ein Provider ablehnen kann.
+        var byName = await svc.SuggestPlacesAsync("Wien");
+        Assert.Equal("Wien", byName[0].Name);
+    }
+
 }

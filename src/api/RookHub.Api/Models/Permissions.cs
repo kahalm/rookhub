@@ -44,6 +44,10 @@ public static class Permissions
     /// <summary>Katalog-Freigaben (CatalogGrants) verwalten.</summary>
     public const string CatalogManage = "catalog.manage";
 
+    /// <summary>Turnierverzeichnis (Admin): Sweep ausloesen, Ortslexikon importieren,
+    /// Koordinaten korrigieren.</summary>
+    public const string TournamentsManage = "tournaments.manage";
+
     /// <summary>Rollen &amp; Berechtigungen verwalten (Rollen anlegen/bearbeiten/zuweisen). Sensibel —
     /// wer das hat, kann sich effektiv beliebige weitere Rechte geben; standardmäßig nur die admin-Rolle.</summary>
     public const string RolesManage = "roles.manage";
@@ -52,6 +56,7 @@ public static class Permissions
     public static readonly IReadOnlyList<string> All = new[]
     {
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
-        GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage, RolesManage,
+        GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
+        TournamentsManage, RolesManage,
     };
 }

@@ -184,6 +184,11 @@ try
     builder.Services.AddScoped<RepertoirePositionLookupService>();
     builder.Services.AddScoped<RepertoireSimilarityService>();
     builder.Services.AddScoped<PlayerSearchService>();
+    // Turnierverzeichnis: Sweep, Umkreis-Aufloesung und der (nur per Admin ausgeloeste) Import
+    // des GeoNames-Ortslexikons.
+    builder.Services.AddScoped<GeocodingService>();
+    builder.Services.AddScoped<TournamentDirectoryService>();
+    builder.Services.AddScoped<TournamentDirectoryQueryService>();
     builder.Services.AddScoped<PuzzleTaggingService>();
     builder.Services.AddScoped<PuzzleStatsService>();
     builder.Services.AddScoped<PuzzleService>();
@@ -281,6 +286,9 @@ try
     builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
     // Kalkulations-Serie: kündigt freigegebene Wochen an den Verteiler an (Standard alle 5 min).
     builder.Services.AddHostedService<CalcSeriesAnnounceScheduler>();
+    // Turnierverzeichnis: naechtlicher Sweep der chess-results-Turniersuche (03:00 UTC),
+    // Nachbarlaender taeglich, alle uebrigen Foederationen rotierend ueber die Woche.
+    builder.Services.AddHostedService<TournamentDirectoryScheduler>();
 
     // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
     builder.Services.AddHttpClient<GithubActionsService>(client =>
@@ -352,6 +360,13 @@ try
     {
         client.BaseAddress = new Uri("https://api.chesstools.org");
         client.Timeout = TimeSpan.FromSeconds(15);
+    });
+
+    // Gazetteer-Import (GeoNames, CC BY 4.0). Grosszuegiges Timeout: cities15000 sind ~11 MB,
+    // und der Import laeuft nur, wenn ein Admin ihn ausloest - nie im Anfrageweg eines Nutzers.
+    builder.Services.AddHttpClient<GazetteerImportService>(client =>
+    {
+        client.Timeout = TimeSpan.FromMinutes(5);
     });
 
     // Data Protection — Keys auf gemountetes Volume persistieren, damit sie Neustarts
