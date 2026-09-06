@@ -54,6 +54,9 @@ export function notificationCategory(type: string): NotificationCategory {
     case 'user_message_received':
       return 'messages';
     case 'tournament_new_round':
+    case 'tournament_nearby_new':
+    case 'tournament_changed':
+    case 'tournament_cancelled':
       return 'tournaments';
     case 'new_user_registered':
       return 'admin';
@@ -75,6 +78,9 @@ export function notificationIcon(n: AppNotification): string {
     case 'admin_message_received': return 'mail';
     case 'user_message_received': return 'mark_email_unread';
     case 'tournament_new_round': return 'emoji_events';
+    case 'tournament_nearby_new': return 'event';
+    case 'tournament_changed': return 'edit_calendar';
+    case 'tournament_cancelled': return 'event_busy';
     case 'new_user_registered': return 'group_add';
     case 'chessable_token_added': return 'vpn_key';
     case 'chessable_new_course': return 'library_add';

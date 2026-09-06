@@ -109,7 +109,10 @@
       "repertoire_shared": "{{username}} shared the repertoire “{{repertoireName}}” with you",
       "catalog_request_received": "{{username}} requests “{{itemName}}” from your catalog",
       "catalog_request_approved": "Your request for “{{itemName}}” was approved",
-      "catalog_request_declined": "Your request for “{{itemName}}” was declined"
+      "catalog_request_declined": "Your request for “{{itemName}}” was declined",
+      "tournament_nearby_new": "{{count}} new tournaments within {{radiusKm}} km of “{{profileName}}”, e.g. {{firstName}}",
+      "tournament_changed": "“{{tournamentName}}” has changed: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
+      "tournament_cancelled": "“{{tournamentName}}” ({{date}}) has disappeared from chess-results — probably cancelled"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -208,7 +211,8 @@
     "groupTraining": "Training",
     "groupLibrary": "Analysis & collection",
     "groupCommunity": "Community",
-    "guess": "Point game"
+    "guess": "Point game",
+    "tournamentCalendar": "Tournament calendar"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2136,7 +2140,8 @@
         "chessable": "Chessable import",
         "install": "Install app",
         "help": "Help",
-        "leaderboards": "Leaderboards"
+        "leaderboards": "Leaderboards",
+        "tournament-calendar": "Tournament calendar"
       }
     },
     "messages": {
@@ -2963,5 +2968,83 @@
       "clearlyBetter": "Clearly better",
       "skipped": "Passed"
     }
+  },
+  "tournamentDirectory": {
+    "title": "Tournament calendar",
+    "help": "Tournaments are read from chess-results every night. Save a search profile with your location and radius — the same profile drives the list, the map, the calendar and the notification about new tournaments nearby.",
+    "search": "Search name, venue, organizer",
+    "from": "From",
+    "to": "Until",
+    "weekendOnly": "Weekend",
+    "reset": "Reset",
+    "empty": "No tournaments match these filters.",
+    "count": "{{shown}} of {{total}} tournaments",
+    "loadMore": "Show more",
+    "loadError": "Could not load the tournament directory.",
+    "truncated": "Too many tournaments in this area — reduce the radius to see all of them.",
+    "distance": "{{km}} km",
+    "players": "{{count}} players",
+    "cancelled": "Cancelled",
+    "approximate": "Only roughly located: the venue could not be resolved, the pin shows the middle of the region.",
+    "pins": "{{count}} tournaments in view",
+    "bookmark": "Bookmark",
+    "bookmarked": "Bookmarked. You will be told when the date or venue changes.",
+    "bookmarkedTooltip": "Bookmarked — changes to date and venue are announced",
+    "bookmarkError": "Could not bookmark this tournament.",
+    "openChessResults": "Open on chess-results",
+    "unknownTournament": "This tournament is not in the directory (yet).",
+    "noProfileHint": "No search profile yet. With one you get a radius search and a notification about new tournaments nearby.",
+    "tabs": {
+      "list": "List",
+      "map": "Map",
+      "calendar": "Calendar"
+    },
+    "speed": {
+      "Standard": "Standard",
+      "Rapid": "Rapid",
+      "Blitz": "Blitz",
+      "Unknown": "Unknown"
+    },
+    "detail": {
+      "date": "Date",
+      "place": "Venue",
+      "region": "Region",
+      "timeControl": "Time control",
+      "rounds": "Rounds",
+      "players": "Players",
+      "organizer": "Organizer",
+      "arbiter": "Chief arbiter"
+    },
+    "calendar": {
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "more": "+{{count}} more",
+      "empty": "No tournaments this month."
+    },
+    "profile": {
+      "label": "Search profile",
+      "none": "No radius",
+      "manage": "Manage search profiles",
+      "new": "New search profile",
+      "edit": "Edit",
+      "delete": "Delete",
+      "newTitle": "New search profile",
+      "editTitle": "Edit search profile",
+      "name": "Name",
+      "namePlaceholder": "e.g. at home",
+      "place": "Place or postcode",
+      "placePlaceholder": "e.g. 5020 Salzburg",
+      "radius": "Radius: {{km}} km",
+      "speeds": "Time controls",
+      "speedsHint": "Empty = all time controls",
+      "minPlayers": "Minimum entries",
+      "weekendOnly": "Only tournaments starting on a weekend",
+      "notifyNew": "Notify me about new tournaments in this radius",
+      "errorName": "Please give the profile a name.",
+      "errorPlace": "Please pick a place from the list — the server needs coordinates.",
+      "saveError": "Could not save the search profile."
+    },
+    "speedFilter": "Filter by time control"
   }
 }

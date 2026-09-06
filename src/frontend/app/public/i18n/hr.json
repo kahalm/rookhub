@@ -109,7 +109,10 @@
       "repertoire_shared": "{{username}} je s tobom podijelio repertoar „{{repertoireName}}“",
       "catalog_request_received": "{{username}} traži „{{itemName}}“ iz tvog kataloga",
       "catalog_request_approved": "Tvoj zahtjev za „{{itemName}}“ je odobren",
-      "catalog_request_declined": "Tvoj zahtjev za „{{itemName}}“ je odbijen"
+      "catalog_request_declined": "Tvoj zahtjev za „{{itemName}}“ je odbijen",
+      "tournament_nearby_new": "{{count}} novih turnira u polumjeru od {{radiusKm}} km oko „{{profileName}}“, npr. {{firstName}}",
+      "tournament_changed": "„{{tournamentName}}“ se promijenio: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
+      "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) je nestao s chess-resultsa — vjerojatno otkazan"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -208,7 +211,8 @@
     "groupTraining": "Trening",
     "groupLibrary": "Analiza i zbirka",
     "groupCommunity": "Zajednica",
-    "guess": "Bodovna partija"
+    "guess": "Bodovna partija",
+    "tournamentCalendar": "Kalendar turnira"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -2136,7 +2140,8 @@
         "chessable": "Chessable uvoz",
         "install": "Instaliraj aplikaciju",
         "help": "Pomoć",
-        "leaderboards": "Ljestvice"
+        "leaderboards": "Ljestvice",
+        "tournament-calendar": "Kalendar turnira"
       }
     },
     "messages": {
@@ -2963,5 +2968,83 @@
       "clearlyBetter": "Znatno bolje",
       "skipped": "Preskočeno"
     }
+  },
+  "tournamentDirectory": {
+    "title": "Kalendar turnira",
+    "help": "Turniri se svake noći čitaju s chess-resultsa. Spremi profil pretrage s mjestom i polumjerom — isti profil vodi popis, kartu, kalendar i obavijest o novim turnirima u blizini.",
+    "search": "Traži naziv, mjesto, organizatora",
+    "from": "Od",
+    "to": "Do",
+    "weekendOnly": "Vikend",
+    "reset": "Poništi",
+    "empty": "Nema turnira za ove filtre.",
+    "count": "{{shown}} od {{total}} turnira",
+    "loadMore": "Prikaži više",
+    "loadError": "Imenik turnira nije se mogao učitati.",
+    "truncated": "Previše turnira na ovom području — smanji polumjer da vidiš sve.",
+    "distance": "{{km}} km",
+    "players": "{{count}} igrača",
+    "cancelled": "Otkazano",
+    "approximate": "Samo približno locirano: mjesto igranja nije prepoznato, točka pokazuje sredinu regije.",
+    "pins": "{{count}} turnira u prikazu",
+    "bookmark": "Zabilježi",
+    "bookmarked": "Zabilježeno. Javit ćemo ti se ako se promijeni datum ili mjesto.",
+    "bookmarkedTooltip": "Zabilježeno — promjene datuma i mjesta se javljaju",
+    "bookmarkError": "Turnir se nije mogao zabilježiti.",
+    "openChessResults": "Otvori na chess-resultsu",
+    "unknownTournament": "Ovaj turnir (još) nije u imeniku.",
+    "noProfileHint": "Još nema profila pretrage. S njim dobivaš pretragu po polumjeru i obavijest o novim turnirima u blizini.",
+    "tabs": {
+      "list": "Popis",
+      "map": "Karta",
+      "calendar": "Kalendar"
+    },
+    "speed": {
+      "Standard": "Standardni",
+      "Rapid": "Ubrzani",
+      "Blitz": "Blic",
+      "Unknown": "Nepoznato"
+    },
+    "detail": {
+      "date": "Datum",
+      "place": "Mjesto igranja",
+      "region": "Regija",
+      "timeControl": "Tempo igre",
+      "rounds": "Kola",
+      "players": "Igrači",
+      "organizer": "Organizator",
+      "arbiter": "Glavni sudac"
+    },
+    "calendar": {
+      "previousMonth": "Prethodni mjesec",
+      "nextMonth": "Sljedeći mjesec",
+      "today": "Danas",
+      "more": "+{{count}} više",
+      "empty": "Ovaj mjesec nema turnira."
+    },
+    "profile": {
+      "label": "Profil pretrage",
+      "none": "Bez polumjera",
+      "manage": "Upravljaj profilima pretrage",
+      "new": "Novi profil pretrage",
+      "edit": "Uredi",
+      "delete": "Obriši",
+      "newTitle": "Novi profil pretrage",
+      "editTitle": "Uredi profil pretrage",
+      "name": "Naziv",
+      "namePlaceholder": "npr. Kod kuće",
+      "place": "Mjesto ili poštanski broj",
+      "placePlaceholder": "npr. 10000 Zagreb",
+      "radius": "Polumjer: {{km}} km",
+      "speeds": "Tempo igre",
+      "speedsHint": "Prazno = svi tempi",
+      "minPlayers": "Najmanje prijavljenih",
+      "weekendOnly": "Samo turniri koji počinju vikendom",
+      "notifyNew": "Obavijesti me o novim turnirima u ovom polumjeru",
+      "errorName": "Molimo daj profilu naziv.",
+      "errorPlace": "Odaberi mjesto s popisa — poslužitelju trebaju koordinate.",
+      "saveError": "Profil pretrage nije se mogao spremiti."
+    },
+    "speedFilter": "Filtriraj po tempu igre"
   }
 }

@@ -137,6 +137,7 @@ import {
         <mat-menu #communityMenu="matMenu">
           @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
           @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
+          @if (can('tournament-calendar')) { <button mat-menu-item routerLink="/tournaments/calendar">{{ 'nav.tournamentCalendar' | translate }}</button> }
           @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
             <mat-icon svgIcon="discord"></mat-icon>

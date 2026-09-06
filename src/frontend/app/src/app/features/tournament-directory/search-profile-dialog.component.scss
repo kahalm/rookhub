@@ -1,0 +1,39 @@
+:host { display: block; padding: 1.25rem; max-width: 460px; }
+
+.dialog-title { margin: 0 0 1rem; font-size: 1.2rem; }
+
+.form { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.suggestions {
+  list-style: none;
+  margin: -0.5rem 0 0.75rem;
+  padding: 0;
+  max-height: 190px;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+}
+
+.suggestions button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.suggestions button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.suggestions button:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
+
+.radius { display: flex; flex-direction: column; margin-bottom: 0.5rem; }
+.radius mat-slider { width: 100%; }
+
+.ok { color: var(--mat-sys-primary); }
+
+.error { color: var(--mat-sys-error); margin: 0.25rem 0 0; font-size: 0.85rem; }
+
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }

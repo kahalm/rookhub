@@ -1,0 +1,126 @@
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cal-month {
+  font-size: 1.1rem;
+  font-weight: 500;
+  min-width: 11ch;
+  text-align: center;
+}
+
+.cal-today { margin-left: auto; }
+
+.cal-grid.loading { opacity: 0.5; }
+
+.cal-head,
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cal-head { margin-bottom: 4px; }
+.cal-week { margin-bottom: 4px; }
+
+.cal-weekday {
+  text-align: center;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.cal-cell {
+  min-height: 92px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.cal-cell.out-of-month { opacity: 0.42; }
+
+.cal-cell.today {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -2px;
+}
+
+.cal-daynum {
+  font-size: 0.78rem;
+  color: color-mix(in srgb, currentColor 65%, transparent);
+}
+
+.cal-entry {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent);
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-entry:hover { background: color-mix(in srgb, var(--mat-sys-primary) 28%, transparent); }
+.cal-entry:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
+.cal-entry.cancelled { text-decoration: line-through; opacity: 0.6; }
+
+.cal-more {
+  font-size: 0.7rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  padding-left: 4px;
+}
+
+.agenda-day { margin-bottom: 14px; }
+
+.agenda-label {
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+  color: color-mix(in srgb, currentColor 75%, transparent);
+}
+
+.agenda-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--mat-sys-surface-container-low);
+  color: inherit;
+}
+
+.agenda-entry:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
+.agenda-entry.cancelled .agenda-name { text-decoration: line-through; opacity: 0.6; }
+
+.agenda-place {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+
+.mobile-only { display: none; }
+
+@media (max-width: 768px) {
+  .desktop-only { display: none; }
+  .mobile-only { display: block; }
+}

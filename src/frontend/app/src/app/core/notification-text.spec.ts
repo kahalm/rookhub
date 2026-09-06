@@ -93,3 +93,27 @@ describe('notificationCategory', () => {
     expect(NOTIFICATION_CATEGORIES).toEqual(['courses', 'friends', 'puzzles', 'messages', 'tournaments', 'admin', 'other']);
   });
 });
+
+
+describe('Turnierverzeichnis-Benachrichtigungen', () => {
+  it('ordnet alle drei Verzeichnis-Typen der Kategorie tournaments zu', () => {
+    // Die Kategorie steuert auch die Push-Schalter — sie MUSS die Server-Seite
+    // (PushNotificationService.CategoryOf) spiegeln, sonst landen die Meldungen
+    // in einem Bereich, den der Nutzer gar nicht abonnieren kann.
+    expect(notificationCategory('tournament_nearby_new')).toBe('tournaments');
+    expect(notificationCategory('tournament_changed')).toBe('tournaments');
+    expect(notificationCategory('tournament_cancelled')).toBe('tournaments');
+  });
+
+  it('gibt jedem Typ ein eigenes Icon', () => {
+    expect(notificationIcon(notif('tournament_nearby_new'))).toBe('event');
+    expect(notificationIcon(notif('tournament_changed'))).toBe('edit_calendar');
+    expect(notificationIcon(notif('tournament_cancelled'))).toBe('event_busy');
+  });
+
+  it('rendert den Text ueber notifications.type.<typ>', () => {
+    const t = fakeTranslate();
+    expect(notificationText(t, notif('tournament_changed', { tournamentName: 'Open Braunau' })))
+      .toBe('notifications.type.tournament_changed');
+  });
+});

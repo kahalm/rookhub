@@ -1,0 +1,62 @@
+<div class="cal-toolbar">
+  <button mat-icon-button (click)="previousMonth()"
+          [attr.aria-label]="'tournamentDirectory.calendar.previousMonth' | translate">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="cal-month">{{ monthLabel }}</span>
+  <button mat-icon-button (click)="nextMonth()"
+          [attr.aria-label]="'tournamentDirectory.calendar.nextMonth' | translate">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+  <button mat-stroked-button class="cal-today" (click)="today()">
+    {{ 'tournamentDirectory.calendar.today' | translate }}
+  </button>
+</div>
+
+<!-- Desktop: Monatsraster -->
+<div class="cal-grid desktop-only" [class.loading]="loading">
+  <div class="cal-head">
+    @for (label of weekdayLabels; track label) {
+      <div class="cal-weekday">{{ label }}</div>
+    }
+  </div>
+  @for (week of weeks; track $index) {
+    <div class="cal-week">
+      @for (cell of week; track trackByDate($index, cell)) {
+        <div class="cal-cell" [class.out-of-month]="!cell.inMonth" [class.today]="cell.isToday">
+          <div class="cal-daynum">{{ cell.dayOfMonth }}</div>
+          @for (entry of cell.entries.slice(0, 3); track trackById($index, entry)) {
+            <button type="button" class="cal-entry" [class.cancelled]="entry.cancelled"
+                    (click)="entrySelected.emit(entry)" [title]="entry.name">
+              {{ entry.name }}
+            </button>
+          }
+          @if (cell.entries.length > 3) {
+            <div class="cal-more">
+              {{ 'tournamentDirectory.calendar.more' | translate: { count: cell.entries.length - 3 } }}
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Mobil: Agenda statt Raster -->
+<div class="cal-agenda mobile-only">
+  @if (agenda.length === 0 && !loading) {
+    <p class="muted">{{ 'tournamentDirectory.calendar.empty' | translate }}</p>
+  }
+  @for (day of agenda; track day.date) {
+    <div class="agenda-day">
+      <div class="agenda-label">{{ day.label }}</div>
+      @for (entry of day.entries; track trackById($index, entry)) {
+        <button type="button" class="agenda-entry" [class.cancelled]="entry.cancelled"
+                (click)="entrySelected.emit(entry)">
+          <span class="agenda-name">{{ entry.name }}</span>
+          @if (entry.location) { <span class="agenda-place">{{ entry.location }}</span> }
+        </button>
+      }
+    </div>
+  }
+</div>

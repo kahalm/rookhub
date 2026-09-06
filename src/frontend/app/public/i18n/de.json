@@ -109,7 +109,10 @@
       "repertoire_shared": "{{username}} hat das Repertoire „{{repertoireName}}“ mit dir geteilt",
       "catalog_request_received": "{{username}} fordert „{{itemName}}“ aus deinem Katalog an",
       "catalog_request_approved": "Deine Anfrage für „{{itemName}}“ wurde genehmigt",
-      "catalog_request_declined": "Deine Anfrage für „{{itemName}}“ wurde abgelehnt"
+      "catalog_request_declined": "Deine Anfrage für „{{itemName}}“ wurde abgelehnt",
+      "tournament_nearby_new": "{{count}} neue Turniere im Umkreis von {{radiusKm}} km um „{{profileName}}“, z. B. {{firstName}}",
+      "tournament_changed": "„{{tournamentName}}“ hat sich geändert: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
+      "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) ist von chess-results verschwunden — vermutlich abgesagt"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -208,7 +211,8 @@
     "groupTraining": "Training",
     "groupLibrary": "Analyse & Sammlung",
     "groupCommunity": "Community",
-    "guess": "Punktepartie"
+    "guess": "Punktepartie",
+    "tournamentCalendar": "Turnierkalender"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2136,7 +2140,8 @@
         "chessable": "Chessable-Import",
         "install": "App installieren",
         "help": "Hilfe",
-        "leaderboards": "Bestenlisten"
+        "leaderboards": "Bestenlisten",
+        "tournament-calendar": "Turnierkalender"
       }
     },
     "messages": {
@@ -2963,5 +2968,83 @@
       "clearlyBetter": "Deutlich besser",
       "skipped": "Gepasst"
     }
+  },
+  "tournamentDirectory": {
+    "title": "Turnierkalender",
+    "help": "Die Turniere werden jede Nacht von chess-results gelesen. Leg ein Suchprofil mit Ort und Umkreis an — dasselbe Profil steuert Liste, Karte, Kalender und die Meldung über neue Turniere in der Nähe.",
+    "search": "Name, Ort, Veranstalter suchen",
+    "from": "Ab",
+    "to": "Bis",
+    "weekendOnly": "Wochenende",
+    "reset": "Zurücksetzen",
+    "empty": "Zu diesen Filtern gibt es keine Turniere.",
+    "count": "{{shown}} von {{total}} Turnieren",
+    "loadMore": "Mehr anzeigen",
+    "loadError": "Das Turnierverzeichnis konnte nicht geladen werden.",
+    "truncated": "Zu viele Turniere in diesem Gebiet — verkleinere den Umkreis, um alle zu sehen.",
+    "distance": "{{km}} km",
+    "players": "{{count}} Teilnehmer",
+    "cancelled": "Abgesagt",
+    "approximate": "Nur ungefähr verortet: Der Spielort ließ sich nicht auflösen, der Punkt zeigt die Mitte der Region.",
+    "pins": "{{count}} Turniere im Ausschnitt",
+    "bookmark": "Merken",
+    "bookmarked": "Gemerkt. Du erfährst es, wenn sich Termin oder Ort ändern.",
+    "bookmarkedTooltip": "Gemerkt — Termin- und Ortsänderungen werden gemeldet",
+    "bookmarkError": "Das Turnier konnte nicht gemerkt werden.",
+    "openChessResults": "Auf chess-results öffnen",
+    "unknownTournament": "Dieses Turnier steht (noch) nicht im Verzeichnis.",
+    "noProfileHint": "Noch kein Suchprofil. Damit bekommst du eine Umkreissuche und eine Meldung über neue Turniere in der Nähe.",
+    "tabs": {
+      "list": "Liste",
+      "map": "Karte",
+      "calendar": "Kalender"
+    },
+    "speed": {
+      "Standard": "Standard",
+      "Rapid": "Schnellschach",
+      "Blitz": "Blitz",
+      "Unknown": "Unbekannt"
+    },
+    "detail": {
+      "date": "Termin",
+      "place": "Spielort",
+      "region": "Region",
+      "timeControl": "Bedenkzeit",
+      "rounds": "Runden",
+      "players": "Teilnehmer",
+      "organizer": "Veranstalter",
+      "arbiter": "Hauptschiedsrichter"
+    },
+    "calendar": {
+      "previousMonth": "Voriger Monat",
+      "nextMonth": "Nächster Monat",
+      "today": "Heute",
+      "more": "+{{count}} weitere",
+      "empty": "In diesem Monat kein Turnier."
+    },
+    "profile": {
+      "label": "Suchprofil",
+      "none": "Kein Umkreis",
+      "manage": "Suchprofile verwalten",
+      "new": "Neues Suchprofil",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "newTitle": "Neues Suchprofil",
+      "editTitle": "Suchprofil bearbeiten",
+      "name": "Name",
+      "namePlaceholder": "z. B. Zuhause",
+      "place": "Ort oder Postleitzahl",
+      "placePlaceholder": "z. B. 5020 Salzburg",
+      "radius": "Umkreis: {{km}} km",
+      "speeds": "Bedenkzeiten",
+      "speedsHint": "Leer = alle Bedenkzeiten",
+      "minPlayers": "Mindestteilnehmer",
+      "weekendOnly": "Nur Turniere, die am Wochenende beginnen",
+      "notifyNew": "Über neue Turniere in diesem Umkreis benachrichtigen",
+      "errorName": "Bitte gib dem Profil einen Namen.",
+      "errorPlace": "Bitte einen Ort aus der Liste wählen — der Server braucht Koordinaten.",
+      "saveError": "Das Suchprofil konnte nicht gespeichert werden."
+    },
+    "speedFilter": "Nach Bedenkzeit filtern"
   }
 }

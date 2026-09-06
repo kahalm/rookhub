@@ -1,0 +1,68 @@
+<h2 class="dialog-title">
+  {{ (data.profile ? 'tournamentDirectory.profile.editTitle' : 'tournamentDirectory.profile.newTitle') | translate }}
+</h2>
+
+<div class="form">
+  <mat-form-field appearance="outline">
+    <mat-label>{{ 'tournamentDirectory.profile.name' | translate }}</mat-label>
+    <input matInput [(ngModel)]="name" maxlength="100"
+           [placeholder]="'tournamentDirectory.profile.namePlaceholder' | translate" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>{{ 'tournamentDirectory.profile.place' | translate }}</mat-label>
+    <input matInput [ngModel]="placeQuery" (ngModelChange)="onPlaceInput($event)" maxlength="200"
+           [placeholder]="'tournamentDirectory.profile.placePlaceholder' | translate" />
+    @if (searching) { <mat-icon matSuffix>hourglass_empty</mat-icon> }
+    @if (lat !== null && !searching) { <mat-icon matSuffix class="ok">place</mat-icon> }
+  </mat-form-field>
+
+  @if (suggestions.length) {
+    <ul class="suggestions">
+      @for (s of suggestions; track s.label) {
+        <li><button type="button" (click)="choose(s)">{{ s.label }}</button></li>
+      }
+    </ul>
+  }
+
+  <div class="radius">
+    <label for="radius-slider">
+      {{ 'tournamentDirectory.profile.radius' | translate: { km: radiusKm } }}
+    </label>
+    <mat-slider min="5" max="500" step="5" discrete>
+      <input matSliderThumb id="radius-slider" [(ngModel)]="radiusKm" />
+    </mat-slider>
+  </div>
+
+  <mat-form-field appearance="outline">
+    <mat-label>{{ 'tournamentDirectory.profile.speeds' | translate }}</mat-label>
+    <mat-select [(ngModel)]="selectedSpeeds" multiple>
+      @for (speed of speeds; track speed) {
+        <mat-option [value]="speed">
+          {{ 'tournamentDirectory.speed.' + speed | translate }}
+        </mat-option>
+      }
+    </mat-select>
+    <mat-hint>{{ 'tournamentDirectory.profile.speedsHint' | translate }}</mat-hint>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>{{ 'tournamentDirectory.profile.minPlayers' | translate }}</mat-label>
+    <input matInput type="number" min="0" max="10000" [(ngModel)]="minPlayers" />
+  </mat-form-field>
+
+  <mat-checkbox [(ngModel)]="weekendOnly">
+    {{ 'tournamentDirectory.profile.weekendOnly' | translate }}
+  </mat-checkbox>
+
+  <mat-checkbox [(ngModel)]="notifyNew">
+    {{ 'tournamentDirectory.profile.notifyNew' | translate }}
+  </mat-checkbox>
+
+  @if (error) { <p class="error">{{ error | translate }}</p> }
+</div>
+
+<div class="dialog-actions">
+  <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" (click)="save()">{{ 'common.save' | translate }}</button>
+</div>

@@ -1,0 +1,243 @@
+<div class="page">
+  <div class="page-head">
+    <h1>
+      {{ 'tournamentDirectory.title' | translate }}
+      <app-help-hint [text]="'tournamentDirectory.help' | translate" />
+    </h1>
+  </div>
+
+  <!-- Filterleiste: gilt fuer alle drei Ansichten -->
+  <div class="filter-bar">
+    <mat-form-field appearance="outline" class="profile-field">
+      <mat-label>{{ 'tournamentDirectory.profile.label' | translate }}</mat-label>
+      <mat-select [ngModel]="filter.profileId" (ngModelChange)="onProfileChange($event)">
+        <mat-option [value]="null">{{ 'tournamentDirectory.profile.none' | translate }}</mat-option>
+        @for (profile of profiles; track profile.id) {
+          <mat-option [value]="profile.id">
+            {{ profile.name }} · {{ profile.radiusKm }} km
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-icon-button [matMenuTriggerFor]="profileMenu"
+            [attr.aria-label]="'tournamentDirectory.profile.manage' | translate">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #profileMenu="matMenu">
+      <button mat-menu-item (click)="newProfile()">
+        <mat-icon>add_location_alt</mat-icon>
+        <span>{{ 'tournamentDirectory.profile.new' | translate }}</span>
+      </button>
+      @if (activeProfile) {
+        <button mat-menu-item (click)="editProfile(activeProfile!)">
+          <mat-icon>edit</mat-icon>
+          <span>{{ 'tournamentDirectory.profile.edit' | translate }}</span>
+        </button>
+        <button mat-menu-item (click)="deleteProfile(activeProfile!)">
+          <mat-icon>delete</mat-icon>
+          <span>{{ 'tournamentDirectory.profile.delete' | translate }}</span>
+        </button>
+      }
+    </mat-menu>
+
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>{{ 'tournamentDirectory.search' | translate }}</mat-label>
+      <input matInput [(ngModel)]="searchText" (keyup.enter)="reload()" />
+      @if (searchText) {
+        <button matSuffix mat-icon-button (click)="searchText = ''; reload()"
+                [attr.aria-label]="'common.clear' | translate">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>{{ 'tournamentDirectory.from' | translate }}</mat-label>
+      <input matInput type="date" [(ngModel)]="filter.from" (change)="reload()" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>{{ 'tournamentDirectory.to' | translate }}</mat-label>
+      <input matInput type="date" [(ngModel)]="filter.to" (change)="reload()" />
+    </mat-form-field>
+
+    <!-- chip-listbox statt anklickbarer chips: die Optionen sind damit von Haus aus
+         tastaturbedienbar und tragen ihren Auswahlzustand selbst. Ein erneuter Klick auf die
+         gewaehlte Bedenkzeit hebt sie wieder auf. -->
+    <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
+                      [attr.aria-label]="'tournamentDirectory.speedFilter' | translate">
+      @for (speed of speeds; track speed) {
+        <mat-chip-option [value]="speed">
+          {{ 'tournamentDirectory.speed.' + speed | translate }}
+        </mat-chip-option>
+      }
+    </mat-chip-listbox>
+
+    <mat-slide-toggle [(ngModel)]="filter.weekendOnly" (change)="reload()">
+      {{ 'tournamentDirectory.weekendOnly' | translate }}
+    </mat-slide-toggle>
+
+    <button mat-button (click)="resetFilter()">{{ 'tournamentDirectory.reset' | translate }}</button>
+  </div>
+
+  @if (profiles.length === 0) {
+    <p class="hint">
+      {{ 'tournamentDirectory.noProfileHint' | translate }}
+      <button mat-stroked-button (click)="newProfile()">
+        {{ 'tournamentDirectory.profile.new' | translate }}
+      </button>
+    </p>
+  }
+
+  <mat-tab-group [selectedIndex]="tab === 'list' ? 0 : tab === 'map' ? 1 : 2"
+                 (selectedIndexChange)="onTabChange($event)">
+    <mat-tab [label]="'tournamentDirectory.tabs.list' | translate">
+      <div class="tab-body">
+        @if (loading && entries.length === 0) {
+          <app-loading-spinner />
+        } @else if (entries.length === 0) {
+          <p class="muted">{{ 'tournamentDirectory.empty' | translate }}</p>
+        } @else {
+          @if (truncated) {
+            <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>
+          }
+          <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries.length, total: total } }}</p>
+          <div class="entry-grid">
+            @for (entry of entries; track trackById($index, entry)) {
+              <mat-card class="entry-card" [class.cancelled]="entry.cancelled">
+                <div class="entry-head">
+                  <button type="button" class="entry-name" (click)="select(entry)">{{ entry.name }}</button>
+                  @if (entry.subscribed) {
+                    <mat-icon class="flag" [matTooltip]="'tournamentDirectory.bookmarkedTooltip' | translate">
+                      bookmark
+                    </mat-icon>
+                  }
+                </div>
+                <div class="entry-line">
+                  <mat-icon inline>event</mat-icon>
+                  <span>{{ entry.startDate }}@if (entry.endDate && entry.endDate !== entry.startDate) { <span> – {{ entry.endDate }}</span> }</span>
+                </div>
+                @if (entry.location) {
+                  <div class="entry-line">
+                    <mat-icon inline>place</mat-icon>
+                    <span>{{ entry.location }}</span>
+                    @if (entry.geoSource === 'Region') {
+                      <mat-icon inline class="approx"
+                                [matTooltip]="'tournamentDirectory.approximate' | translate">help_outline</mat-icon>
+                    }
+                  </div>
+                }
+                <div class="entry-meta">
+                  @if (entry.distanceKm !== null) {
+                    <span class="badge">{{ 'tournamentDirectory.distance' | translate: { km: entry.distanceKm } }}</span>
+                  }
+                  <span class="badge">{{ 'tournamentDirectory.speed.' + entry.speed | translate }}</span>
+                  @if (entry.playerCount) {
+                    <span class="badge">{{ 'tournamentDirectory.players' | translate: { count: entry.playerCount } }}</span>
+                  }
+                  @if (entry.cancelled) {
+                    <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
+                  }
+                </div>
+              </mat-card>
+            }
+          </div>
+          @if (entries.length < total) {
+            <div class="more-row">
+              <button mat-stroked-button (click)="loadMore()" [disabled]="loading">
+                {{ 'tournamentDirectory.loadMore' | translate }}
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab [label]="'tournamentDirectory.tabs.map' | translate">
+      <div class="tab-body">
+        @if (tab === 'map') {
+          <app-tournament-map [entries]="pins" [centre]="mapCentre"
+                              (boundsChanged)="onBoundsChanged($event)"
+                              (entrySelected)="select($event)" />
+          <p class="muted count">
+            {{ 'tournamentDirectory.pins' | translate: { count: pins.length } }}
+            @if (mapLoading) { <span> · {{ 'common.loading' | translate }}</span> }
+          </p>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab [label]="'tournamentDirectory.tabs.calendar' | translate">
+      <div class="tab-body">
+        @if (tab === 'calendar') {
+          <app-tournament-calendar [days]="calendarDays" [year]="calendarYear" [month]="calendarMonth"
+                                   [locale]="calendarLocale" [loading]="calendarLoading"
+                                   (monthChanged)="onMonthChanged($event)"
+                                   (entrySelected)="select($event)" />
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  @if (selected) {
+    <mat-card class="detail-card">
+      <div class="detail-head">
+        <h2>{{ selected.name }}</h2>
+        <button mat-icon-button (click)="closeDetail()" [attr.aria-label]="'common.close' | translate">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <dl class="detail-grid">
+        <dt>{{ 'tournamentDirectory.detail.date' | translate }}</dt>
+        <dd>{{ selected.startDate }}@if (selected.endDate && selected.endDate !== selected.startDate) { <span> – {{ selected.endDate }}</span> }</dd>
+        @if (selected.location) {
+          <dt>{{ 'tournamentDirectory.detail.place' | translate }}</dt>
+          <dd>{{ selected.location }}</dd>
+        }
+        @if (selected.state) {
+          <dt>{{ 'tournamentDirectory.detail.region' | translate }}</dt>
+          <dd>{{ selected.state }}@if (selected.federation) { <span> ({{ selected.federation }})</span> }</dd>
+        }
+        @if (selected.timeControl) {
+          <dt>{{ 'tournamentDirectory.detail.timeControl' | translate }}</dt>
+          <dd>{{ selected.timeControl }}</dd>
+        }
+        @if (selected.rounds) {
+          <dt>{{ 'tournamentDirectory.detail.rounds' | translate }}</dt>
+          <dd>{{ selected.rounds }}</dd>
+        }
+        @if (selected.playerCount) {
+          <dt>{{ 'tournamentDirectory.detail.players' | translate }}</dt>
+          <dd>{{ selected.playerCount }}</dd>
+        }
+        @if (selected.organizer) {
+          <dt>{{ 'tournamentDirectory.detail.organizer' | translate }}</dt>
+          <dd>{{ selected.organizer }}</dd>
+        }
+        @if (selected.chiefArbiter) {
+          <dt>{{ 'tournamentDirectory.detail.arbiter' | translate }}</dt>
+          <dd>{{ selected.chiefArbiter }}</dd>
+        }
+      </dl>
+      <div class="detail-actions">
+        @if (!selected.subscribed) {
+          <button mat-flat-button color="primary" (click)="bookmark(selected!)">
+            <mat-icon>bookmark_add</mat-icon>
+            {{ 'tournamentDirectory.bookmark' | translate }}
+          </button>
+        } @else {
+          <span class="muted">
+            <mat-icon inline>bookmark</mat-icon>
+            {{ 'tournamentDirectory.bookmarkedTooltip' | translate }}
+          </span>
+        }
+        <a mat-stroked-button [href]="chessResultsUrl(selected!)" target="_blank" rel="noopener noreferrer">
+          <mat-icon>open_in_new</mat-icon>
+          {{ 'tournamentDirectory.openChessResults' | translate }}
+        </a>
+      </div>
+    </mat-card>
+  }
+</div>
