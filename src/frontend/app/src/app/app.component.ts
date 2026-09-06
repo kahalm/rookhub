@@ -1,3 +1,4 @@
+import { HandoffService } from './core/handoff.service';
 import { Component, OnInit, HostBinding, HostListener, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -272,6 +273,8 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
   `]
 })
 export class AppComponent implements OnInit {
+  private handoff = inject(HandoffService);
+
   version = environment.version;
   production = environment.production;
   /** Changelog-Eintraege — LEER bis zum ersten Oeffnen des Overlays: das Array (~0,9 MB Prosa,
@@ -403,6 +406,10 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Kommt der Aufrufer per Sprung von der Turnierseite, bringt er einen Einmal-Code mit — den
+    // gegen eine eigene Anmeldung tauschen, bevor die erste Seite ihre Daten holt.
+    void this.handoff.consumeIncoming();
+
     // App-Vollbild-Zustand nachführen (Navbar-Schalter, Esc, F11-Wechsel).
     const offFs = onFullscreenChange(() => this.appFullscreen = isFullscreen(document.documentElement));
     this.destroyRef.onDestroy(offFs);

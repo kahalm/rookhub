@@ -10,6 +10,8 @@
   },
   "include": [
     "src/**/*.spec.ts",
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "src-turnier/**/*.spec.ts",
+    "src-turnier/**/*.d.ts"
   ]
 }

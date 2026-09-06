@@ -9,8 +9,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
+import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
 
 /**
  * Rein präsentationale Darstellung der Turnier-Tabs (Spieler/Teams/Paarungen)

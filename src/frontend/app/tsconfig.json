@@ -16,7 +16,13 @@
     "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
-    "module": "ES2022"
+    "module": "ES2022",
+    /* Die Turnier-App liegt im selben Workspace und teilt sich Auth, i18n und die kleinen
+       Bausteine mit RookHub — per Alias statt Kopie, damit eine Aenderung nicht zweimal
+       passieren muss. */
+    "paths": {
+      "@rh/*": ["./src/app/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

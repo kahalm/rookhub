@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { SnackbarService } from '../../core/snackbar.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
+import { QrCodeComponent } from '@rh/shared/qr-code/qr-code.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,

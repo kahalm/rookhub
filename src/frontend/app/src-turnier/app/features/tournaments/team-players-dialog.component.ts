@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe } from '@ngx-translate/core';
-import { TournamentPlayer } from '../../core/models';
+import { TournamentPlayer } from '@rh/core/models';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,

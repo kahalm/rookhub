@@ -50,7 +50,7 @@ const DEFAULT_VISIBLE = [
 const DEFAULT_ORDER = [
   ...DEFAULT_VISIBLE,
   'repertoires', 'leaderboards',
-  'activityTimer', 'favorites', 'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
+  'activityTimer', 'favorites', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
 ];
 /** Im Standard ausgeblendete Kacheln (alles außer DEFAULT_VISIBLE). */
 const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id));
@@ -331,12 +331,7 @@ export class DashboardComponent implements OnInit {
       subtitle: () => ({ key: 'dashboard.leaderboards.subtitle' }),
       buttons: [{ labelKey: 'dashboard.leaderboards.view', link: '/leaderboards' }],
     },
-    tournaments: {
-      id: 'tournaments', icon: 'emoji_events', titleKey: 'dashboard.subscriptions.title',
-      eligible: () => this.menuKeys.has('tournaments'),
-      subtitle: () => ({ key: 'dashboard.subscriptions.count', params: { count: this.subscriptionCount } }),
-      buttons: [{ labelKey: 'dashboard.subscriptions.browse', link: '/tournaments' }],
-    },
+
     friends: {
       id: 'friends', icon: 'people', titleKey: 'dashboard.friends.title',
       eligible: () => this.menuKeys.has('friends'),

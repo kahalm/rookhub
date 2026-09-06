@@ -3059,5 +3059,9 @@
       "all": "Everything upcoming",
       "custom": "Custom period"
     }
+  },
+  "turnier": {
+    "brand": "Tournaments",
+    "toRookHub": "To RookHub"
   }
 }

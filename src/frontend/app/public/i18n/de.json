@@ -3059,5 +3059,9 @@
       "all": "Alles Kommende",
       "custom": "Eigener Zeitraum"
     }
+  },
+  "turnier": {
+    "brand": "Turniere",
+    "toRookHub": "Zu RookHub"
   }
 }

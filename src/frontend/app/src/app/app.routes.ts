@@ -20,10 +20,6 @@ export const routes: Routes = [
   { path: 'repertoires/:id/train', loadComponent: () => import('./features/repertoire/repertoire-trainer.component').then(m => m.RepertoireTrainerComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'repertoires/:id/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'repertoires/:id', loadComponent: () => import('./features/repertoire/repertoire-detail.component').then(m => m.RepertoireDetailComponent), canActivate: [authGuard, menuGuard('repertoires')] },
-  { path: 'tournaments', loadComponent: () => import('./features/tournaments/tournament-list.component').then(m => m.TournamentListComponent), canActivate: [authGuard, menuGuard('tournaments')] },
-  // Literal vor Parameter: /tournaments/calendar darf nicht als Turnier-Id gelesen werden.
-  { path: 'tournaments/calendar', loadComponent: () => import('./features/tournament-directory/tournament-directory.component').then(m => m.TournamentDirectoryComponent), canActivate: [authGuard, menuGuard('tournament-calendar')] },
-  { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), canActivate: [authGuard, menuGuard('tournaments')] },
   { path: 'puzzles/endless/history', loadComponent: () => import('./features/puzzles/endless-history.component').then(m => m.EndlessHistoryComponent), canActivate: [authGuard] },
   { path: 'puzzles/endless', loadComponent: () => import('./features/puzzles/endless-puzzle.component').then(m => m.EndlessPuzzleComponent) },
   { path: 'puzzles/book/:id', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
@@ -64,7 +60,6 @@ export const routes: Routes = [
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'chessable', loadComponent: () => import('./features/chessable/chessable.component').then(m => m.ChessableComponent), canActivate: [authGuard, menuGuard('chessable')] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
-  { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
   { path: 'help', loadComponent: () => import('./features/help/help.component').then(m => m.HelpComponent), canActivate: [menuGuard('help')] },

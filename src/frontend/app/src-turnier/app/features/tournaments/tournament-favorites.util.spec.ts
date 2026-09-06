@@ -1,4 +1,4 @@
-import { TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
+import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
 import {
   computeFavoriteNames,
   filterPlayersByFavorites,

@@ -1,3 +1,4 @@
+import { HandoffService } from '../../core/handoff.service';
 import { Component, EventEmitter, Output, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of, switchMap, catchError, merge, map, timer } from 'rxjs';
@@ -136,8 +137,13 @@ import {
         </mat-menu>
         <mat-menu #communityMenu="matMenu">
           @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
-          @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('tournament-calendar')) { <button mat-menu-item routerLink="/tournaments/calendar">{{ 'nav.tournamentCalendar' | translate }}</button> }
+          <!-- Turniere leben seit der Herausloesung auf der eigenen Seite; der Sprung nimmt die
+               Anmeldung mit (Einmal-Code, siehe HandoffService). -->
+          @if (turnierUrl) {
+            <button mat-menu-item (click)="toTurnier()">
+              <mat-icon>open_in_new</mat-icon> {{ 'nav.tournaments' | translate }}
+            </button>
+          }
           @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
             <mat-icon svgIcon="discord"></mat-icon>
@@ -260,6 +266,11 @@ import {
   `]
 })
 export class NavbarComponent implements OnInit {
+  /** Turniere sind eine eigene Seite — Sprung mit Anmelde-Uebergabe statt Router-Link. */
+  private handoff = inject(HandoffService);
+  get turnierUrl(): string | null { return this.handoff.partnerUrl; }
+  toTurnier(): void { void this.handoff.jump('tournaments'); }
+
   @Output() changelogClick = new EventEmitter<void>();
   @Output() quickstartClick = new EventEmitter<void>();
 

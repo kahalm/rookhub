@@ -5,15 +5,15 @@ import { PublicTournamentService } from '../../core/public-tournament.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { SnackbarService } from '../../core/snackbar.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
-import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
 
 @Component({

@@ -1,5 +1,5 @@
 import { Sort } from '@angular/material/sort';
-import { DisplayPairing } from '../../core/models';
+import { DisplayPairing } from '@rh/core/models';
 
 /**
  * Geteilte Tabellen-Logik für die Turnier-Ansichten (authentifiziert =

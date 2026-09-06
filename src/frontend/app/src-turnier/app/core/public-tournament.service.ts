@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tournament, TournamentPlayer, TournamentTeam } from './models';
+import { Tournament, TournamentPlayer, TournamentTeam } from '@rh/core/models';
 
 /**
  * Lese-Calls der öffentlichen Turnier-Detailseite (`/api/tournaments/{id}/...`), gekapselt als

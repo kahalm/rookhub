@@ -52,10 +52,10 @@ describe('app.routes', () => {
   });
 
   it('lässt die übrigen zweiteiligen Routen unangetastet', async () => {
-    expect(await matchedPath('/tournaments/9')).toBe('tournaments/:id');
+    // /tournaments/:id und /t/:id gibt es hier nicht mehr — Turniere sind eine eigene Seite
+    // (turnier.oberschmid.homes), siehe src-turnier.
     expect(await matchedPath('/puzzles/12')).toBe('puzzles/:id');
     expect(await matchedPath('/weekly/5')).toBe('weekly/:weeklyId');
-    expect(await matchedPath('/t/5')).toBe('t/:id');
     expect(await matchedPath('/g/abc')).toBe('g/:token');
     expect(await matchedPath('/l/abc')).toBe('l/:token');
     expect(await matchedPath('/friends/3/stats')).toBe('friends/:userId/stats');

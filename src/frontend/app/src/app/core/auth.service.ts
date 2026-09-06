@@ -77,6 +77,18 @@ export class AuthService {
   }
 
   /**
+   * Uebernimmt eine anderswo entstandene Anmeldung als die eigene — heute der Sprung zwischen
+   * RookHub und der Turnierseite (siehe `HandoffService`). Bewusst getrennt von `impersonate`:
+   * hier wird nichts gesichert und nichts markiert, es ist eine ganz normale Anmeldung, die nur
+   * nicht ueber die Anmeldemaske kam.
+   */
+  adoptSession(user: AuthResponse): void {
+    localStorage.setItem('rookhub_user', JSON.stringify(user));
+    this.currentUserSubject.next(user);
+    this.loadPreferences();
+  }
+
+  /**
    * „Als Nutzer einsteigen": sichert die aktuelle (Admin-)Session und übernimmt das
    * vom Server gelieferte Impersonation-Token. Rücksprung via {@link stopImpersonation}.
    */

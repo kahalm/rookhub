@@ -1,0 +1,15 @@
+/* Build-Konfiguration der Turnier-App (zweites Projekt im selben Workspace). */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/turnier",
+    "types": []
+  },
+  "files": [
+    "src-turnier/main.ts"
+  ],
+  "include": [
+    "src-turnier/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

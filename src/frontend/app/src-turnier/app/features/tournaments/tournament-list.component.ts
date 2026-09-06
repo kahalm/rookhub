@@ -4,15 +4,15 @@ import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { SnackbarService } from '../../core/snackbar.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { forkJoin } from 'rxjs';
-import { Tournament, Subscription, CrawlJob } from '../../core/models';
+import { Tournament, Subscription, CrawlJob } from '@rh/core/models';
 import { TournamentListService } from '../../core/tournament-list.service';
 
 @Component({

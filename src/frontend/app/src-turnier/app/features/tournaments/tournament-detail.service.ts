@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite, TournamentMonitorStatus, CrawlJob } from '../../core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite, TournamentMonitorStatus, CrawlJob } from '@rh/core/models';
 
 /**
  * Kapselt alle HTTP-Endpunkte rund um die Turnier-Detailansicht

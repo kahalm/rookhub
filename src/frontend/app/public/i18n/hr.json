@@ -3059,5 +3059,9 @@
       "all": "Sve nadolazeće",
       "custom": "Vlastito razdoblje"
     }
+  },
+  "turnier": {
+    "brand": "Turniri",
+    "toRookHub": "Na RookHub"
   }
 }

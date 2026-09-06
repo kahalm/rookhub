@@ -1,4 +1,4 @@
-import { TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
+import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
 
 /** Aufgelöste Favoriten-Namen (für die „nur Favoriten"-Filterung der Tabellen). */
 export interface FavoriteNames {

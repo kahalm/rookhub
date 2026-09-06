@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tournament, Subscription, CrawlJob } from './models';
+import { Tournament, Subscription, CrawlJob } from '@rh/core/models';
 
 /**
  * Kapselt die HTTP-Calls der Turnierliste (Liste/Abos/Crawl-Job), damit `tournament-list.component`
