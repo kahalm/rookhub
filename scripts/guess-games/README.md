@@ -57,8 +57,13 @@ dem Manifest ist ein Vorschlag, kein Zwang — die Seite waehlt der Spieler beim
   „Matt in 1/2/3"), braucht es ein Seed-Konto plus ein Sichtbarkeits-Kennzeichen.
 - **Analysetiefe**: die Vorgabe 30 ist fuer ein ganzes Paket teuer. Gemessen auf dem Deploy-Host
   (Ryzen 7 5700G, 12 Threads, 4 GB Hash, 5 Linien, Stockfish im `rookhub-engine-provider`):
-  **Tiefe 22 = 28 s** fuer eine Mittelspielstellung, also grob 8 h fuer die 1072 Stellungen des
-  Pakets. Aeltere Auftraege in der Dev-Datenbank liefen mit **Tiefe 40 rund 1,5 h je Stellung** —
-  auf ein Paket hochgerechnet Monate. Tiefe 30 liegt dazwischen; fuer die Frage, um die es hier
-  geht („war der geratene Zug besser oder schlechter als der Partiezug"), reicht eine deutlich
-  kleinere Tiefe als fuer eine Eroeffnungsanalyse.
+
+  | Tiefe | Mittelspiel (Morphy) | Mittelspiel (Kasparow) | hochgerechnet auf 1072 Stellungen |
+  |------:|---------------------:|-----------------------:|----------------------------------:|
+  |    22 |               28,0 s |                 22,6 s |                            ~7,5 h |
+  |    26 |              142,3 s |                  71,8 s |                             ~32 h |
+  |    30 |              391,4 s |                      - |                    ~5 Tage |
+
+  Fuer die Frage, um die es hier geht — war der geratene Zug besser oder schlechter als der
+  Partiezug —, reicht eine deutlich kleinere Tiefe als fuer eine Eroeffnungsanalyse. Das Paket ist
+  deshalb mit **Tiefe 22** angesetzt; eine Eroeffnungsstellung war damit in 13 s durch.
