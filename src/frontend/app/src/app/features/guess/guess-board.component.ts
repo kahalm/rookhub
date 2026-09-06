@@ -245,7 +245,14 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       && this.session.status === 'running';
   }
 
-  get browsing(): boolean { return this.browseIndex !== null; }
+  /**
+   * „Schaut gerade zurueck" — und damit gesperrt. Der LETZTE Introzug ist die Ausnahme: die
+   * Stellung danach IST die Aufgabe, dort darf gezogen werden.
+   */
+  get browsing(): boolean {
+    const i = this.browseIndex;
+    return i !== null && i !== (this.session?.intro.length ?? 0) - 1;
+  }
 
   /** Was das Brett zeigt: die Aufgabe (bzw. der gehaltene Zug) — oder die angeklickte Eröffnungsstellung. */
   get viewFen(): string {
@@ -299,7 +306,15 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.service.get(id).subscribe({
-      next: s => { this.apply(s); this.loading = false; this.cdr.markForCheck(); },
+      next: s => {
+        this.apply(s);
+        // Nicht mitten in der Partie einsteigen: erst die Grundstellung zeigen, damit man sich die
+        // Eroeffnung anschauen kann. Am LETZTEN Introzug steht die Aufgabe — ab dort darf geraten
+        // werden, „Zur Aufgabe" ist die Abkuerzung dorthin.
+        if (s.intro.length) this.browseIndex = -1;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
       error: () => { this.loading = false; this.cdr.markForCheck(); },
     });
   }
@@ -330,21 +345,36 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       next: res => {
         this.busy = false;
         this.last = res;
-        // Ein anderer Zug als der Partiezug bleibt stehen, damit man sieht, was man gespielt hat —
-        // die naechste Aufgabe wartet hinter „Weiter". Der Partiezug selbst und das Passen ruecken
-        // sofort vor (da gibt es nichts zu vergleichen).
-        const after = uci && uci !== res.gameMoveUci ? fenAfterUci(fenBefore, uci) : null;
-        if (after && res.session.status === 'running' && res.session.position) {
+        const mine = uci ? fenAfterUci(fenBefore, uci) : null;
+        if (res.session.status !== 'running') {
+          // Sitzung durch: es gibt keine naechste Aufgabe, `apply` wuerde das Brett also gar nicht
+          // anfassen — die geschlagene Figur spraenge zurueck und das Brett zeigte die Stellung VOR
+          // dem Schlusszug. Deshalb hier den letzten Zug selbst aufs Brett legen (beim Passen den
+          // Partiezug, denn der ist ja gespielt worden).
+          const shown = mine ?? fenAfterUci(fenBefore, res.gameMoveUci);
+          const shownUci = uci ?? res.gameMoveUci;
+          this.session = res.session;
+          this.holding = false;
+          this.pending = null;
+          this.browseIndex = null;
+          if (shown) {
+            this.boardFen = shown;
+            this.lastMove = [shownUci.slice(0, 2), shownUci.slice(2, 4)];
+          }
+          this.loadReview(id);
+        } else if (mine && uci !== res.gameMoveUci && res.session.position) {
+          // Ein anderer Zug als der Partiezug bleibt stehen, damit man sieht, was man gespielt hat —
+          // die naechste Aufgabe wartet hinter „Weiter".
           this.session = res.session;              // Punkte/Fortschritt sofort mitnehmen
           this.pending = res.session;
           this.holding = true;
           this.browseIndex = null;   // der eigene Zug soll zu sehen sein, nicht die Eroeffnung
-          this.boardFen = after;
+          this.boardFen = mine;
           this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
         } else {
+          // Partiezug getroffen oder gepasst: sofort auf die naechste Aufgabe.
           this.apply(res.session);
         }
-        if (res.session.status === 'done') this.loadReview(id);
         this.cdr.markForCheck();
       },
       error: err => {

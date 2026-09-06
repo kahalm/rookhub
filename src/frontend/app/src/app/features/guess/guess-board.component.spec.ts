@@ -125,11 +125,13 @@ describe('GuessBoardComponent', () => {
  */
 describe('GuessBoardComponent Zug stehen lassen', () => {
   const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-  const INTRO: GuessIntroMove[] = [
-    { ply: 0, moveNumber: 1, white: true, san: 'e4', uci: 'e2e4', fen: 'nach-e4' },
-    { ply: 1, moveNumber: 1, white: false, san: 'e5', uci: 'e7e5', fen: 'nach-e5' },
-  ];
   const FEN8 = 'rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5b2/PPP2PPP/RNBQKB1R w KQkq - 0 5';
+  // Wie der Server es liefert: je Zug die Stellung DANACH — die des letzten ist die Aufgabe selbst
+  // (im Backend als `dto.Position.Fen == dto.Intro[^1].Fen` festgenagelt).
+  const INTRO: GuessIntroMove[] = [
+    { ply: 6, moveNumber: 4, white: true, san: 'dxe5', uci: 'd4e5', fen: 'nach-dxe5' },
+    { ply: 7, moveNumber: 4, white: false, san: 'Bxf3', uci: 'g4f3', fen: FEN8 },
+  ];
   const FEN10 = 'rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 0 6';
   let http: HttpTestingController;
 
@@ -160,7 +162,14 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   });
   afterEach(() => http.verify());
 
+  /** Laedt und geht auf die Aufgabe — beim Oeffnen steht das Brett jetzt auf der Grundstellung. */
   function load() {
+    const c = loadAtStart();
+    c.browse(null);
+    return c;
+  }
+
+  function loadAtStart() {
     const fixture = TestBed.createComponent(GuessBoardComponent);
     fixture.detectChanges();
     http.expectOne('/api/guess-sessions/3').flush(base());
@@ -239,9 +248,9 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.viewFen).withContext('zeigt zunaechst die Aufgabe').toBe(FEN8);
     expect(c.canGuess).toBeTrue();
 
-    c.browse(1);                                  // 1...e5 anschauen
-    expect(c.viewFen).toBe('nach-e5');
-    expect(c.viewLastMove).toEqual(['e7', 'e5']);
+    c.browse(0);                                  // 4.dxe5 anschauen — eine Stellung VOR der Aufgabe
+    expect(c.viewFen).toBe('nach-dxe5');
+    expect(c.viewLastMove).toEqual(['d4', 'e5']);
     expect(c.canGuess).withContext('kein Raten in einer alten Stellung').toBeFalse();
 
     c.browse(-1);                                 // Grundstellung
@@ -268,5 +277,39 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
     expect(c.browsing).withContext('nach dem Zug steht die naechste Aufgabe').toBeFalse();
     expect(c.viewFen).toBe(FEN10);
+  });
+
+  it('startet bei Zug 1, nicht bei der ersten Aufgabe', () => {
+    const c = loadAtStart();
+    expect(c.browseIndex).withContext('Grundstellung').toBe(-1);
+    expect(c.viewFen).toBe(START);
+    expect(c.canGuess).withContext('erst durchklicken').toBeFalse();
+
+    c.browse(0);                                   // 4.dxe5 — noch nicht die Aufgabe
+    expect(c.canGuess).toBeFalse();
+
+    c.browse(INTRO.length - 1);                    // letzter Eroeffnungszug = die Aufgabe
+    expect(c.viewFen).withContext('das ist die Aufgabenstellung').toBe(FEN8);
+    expect(c.browsing).toBeFalse();
+    expect(c.canGuess).withContext('ab hier darf gezogen werden').toBeTrue();
+  });
+
+  it('der letzte Zug bleibt auf dem Brett stehen', () => {
+    // Ohne naechste Aufgabe fasste `apply` das Brett gar nicht an — die Figur sprang zurueck und
+    // das Brett zeigte die Stellung VOR dem Schlusszug.
+    const c = load();
+    c.onMove({ from: 'd1', to: 'f3', san: 'Qxf3', fen: 'egal' });
+    http.expectOne('/api/guess-sessions/3/guess').flush({
+      grade: 'onlyMove', points: 8, playedSan: 'Qxf3', gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
+      replySan: null, replyUci: null, diffCp: 0, evalText: null,
+      session: base({ status: 'done', position: null, points: 8, maxPoints: 10, movesPlayed: 1 }),
+    });
+    http.expectOne('/api/guess-sessions/3/review').flush([]);
+
+    expect(c.session!.status).toBe('done');
+    expect(c.boardFen).withContext('Dame steht auf f3').toContain('5Q2');
+    expect(c.boardFen).not.toBe(FEN8);
+    expect(c.lastMove).toEqual(['d1', 'f3']);
+    expect(c.canGuess).toBeFalse();
   });
 });

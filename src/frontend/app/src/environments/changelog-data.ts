@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.402.0", date: "2026-09-06", changes: [
+    { en: "Point game: the last move of a game can now be played. It was scored correctly, but the piece jumped straight back and the board showed the position before the final move - with no next task to load, the board was simply never updated.", de: "Punktepartie: Der letzte Zug einer Partie lässt sich jetzt spielen. Gewertet wurde er richtig, aber die Figur sprang sofort zurück und das Brett zeigte die Stellung vor dem Schlusszug - weil es keine nächste Aufgabe mehr zu laden gab, wurde das Brett schlicht nie aktualisiert." },
+    { en: "Point game: a session now opens at the start of the game instead of jumping straight to your first task. You click through the opening, and at its last move you are on the task and can move; Back to the task is the shortcut for anyone who wants to get going right away.", de: "Punktepartie: Eine Sitzung öffnet jetzt am Anfang der Partie, statt gleich zur ersten Aufgabe zu springen. Man klickt sich durch die Eröffnung, und beim letzten Zug steht die Aufgabe und man kann ziehen; Zur Aufgabe ist die Abkürzung für alle, die sofort loslegen wollen." },
+  ] },
   { version: "0.401.0", date: "2026-09-06", changes: [
     { en: "Point game: the opening before your first task can now be clicked through. Under the board stand the moves that led to the position - click one and the board shows how it looked back then, click back and you are on the task again. Guessing stays blocked while you look around, so a move in an old position cannot be mistaken for an answer.", de: "Punktepartie: Die Eröffnung vor deiner ersten Aufgabe lässt sich jetzt durchklicken. Unter dem Brett stehen die Züge, die zu der Stellung geführt haben - ein Klick zeigt, wie es damals aussah, ein Klick zurück bringt dich zur Aufgabe. Solange du schaust, ist das Raten gesperrt, damit ein Zug in einer alten Stellung nicht als Antwort durchgeht." },
   ] },
