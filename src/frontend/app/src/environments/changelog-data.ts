@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.410.3", date: "2026-09-06", changes: [
+    { en: "Back in the test run: splitting the tournament pages into their own app quietly took 81 of their tests out of it — the runner collects specs per project, and the new project had no test setup. Nothing turned red, the number just dropped. It has a setup now, and the build gate runs both projects by name — without a name the runner no longer reliably picks the main one, which would have skipped 1911 tests just as quietly.", de: "Wieder im Testlauf: Die Aufteilung der Turnierseiten in eine eigene App hat 81 ihrer Tests still herausgenommen — der Läufer sammelt Specs je Projekt ein, und das neue Projekt hatte keine Test-Einrichtung. Nichts wurde rot, die Zahl sank nur. Jetzt hat es eine, und die Bau-Kette ruft beide Projekte namentlich auf — ohne Namen wählt der Läufer nicht mehr verlässlich das Hauptprojekt, womit ebenso lautlos 1911 Tests übersprungen worden wären." },
+  ] },
   { version: "0.410.2", date: "2026-09-06", changes: [
     { en: "Clicking a friend request notification now takes you to the request instead of the friends list. The link pointed at the friends page, which opens on the wrong tab — the request sits under ‚Requests‘, and you had to find it yourself. It now opens that tab with the request highlighted, accept and decline one click away. If it has already been answered, the page says so instead of looking empty.", de: "Ein Klick auf die Freundschaftsanfrage führt jetzt zur Anfrage statt zur Freundesliste. Der Link zeigte auf die Freundesseite, die auf dem falschen Tab aufgeht — die Anfrage steht unter „Anfragen“, und man musste sie selbst suchen. Jetzt öffnet sich dieser Tab mit hervorgehobener Anfrage, Annehmen und Ablehnen liegen einen Klick daneben. Ist sie schon beantwortet, sagt die Seite das, statt leer zu wirken." },
   ] },

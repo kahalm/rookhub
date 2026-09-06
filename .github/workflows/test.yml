@@ -115,7 +115,14 @@ jobs:
         run: echo "CHROME_BIN=$(command -v google-chrome || command -v chromium-browser || command -v chromium || true)" >> "$GITHUB_ENV"
       # Der Build faengt nur Compile-Fehler — ohne diesen Schritt liefe kein einziger
       # Frontend-Spec im Gate, das die Image-Pushes freigibt.
-      - run: npx ng test --watch=false --browsers=ChromeHeadlessNoSandbox
+      # BEIDE Projekte NAMENTLICH, aus zwei Gruenden: der Karma-Builder sammelt Specs je PROJEKT
+      # ein (nach dem Umzug nach src-turnier liefen deren 17 Spec-Dateien = 81 Tests gar nicht
+      # mehr mit, ohne dass etwas rot wurde), und sobald es zwei Test-Targets gibt, waehlt
+      # `ng test` OHNE Projektnamen nicht mehr verlaesslich das Hauptprojekt — gemessen lief dann
+      # nur noch die kleine App (81 statt 1911 Tests), wieder lautlos.
+      - run: npx ng test app --watch=false --browsers=ChromeHeadlessNoSandbox
+        working-directory: src/frontend/app
+      - run: npx ng test turnier --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
       # Seit der Turnier-Trennung hat der Workspace ZWEI Projekte — ohne Projektnamen bricht
       # `ng build` mit „Cannot determine project for command" ab. Beide bauen: das Gate soll

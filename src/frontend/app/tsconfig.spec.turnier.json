@@ -1,0 +1,17 @@
+/* Test-Konfiguration der Turnier-App. Eigene Datei, weil der Karma-Builder die Spec-Dateien am
+   PROJEKT entlang einsammelt: mit dem Umzug nach src-turnier fielen 17 Spec-Dateien (81 Tests)
+   aus dem Lauf des Haupt-Projekts heraus, ohne dass etwas rot wurde. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec-turnier",
+    "types": [
+      "jasmine"
+    ]
+  },
+  "include": [
+    "src-turnier/**/*.spec.ts",
+    "src-turnier/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}
