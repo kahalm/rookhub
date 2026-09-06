@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, Subject } from 'rxjs';
 import { FriendsComponent } from './friends.component';
@@ -199,3 +199,72 @@ describe('FriendsComponent pending sent requests', () => {
     httpMock.verify();
   });
 });
+
+describe('FriendsComponent Deep-Link aus der Benachrichtigung', () => {
+  function setup(queryParams: Record<string, string>, requests: unknown[] = []) {
+    const info = jasmine.createSpy('info');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info, success: () => {} } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } } },
+      ],
+    });
+    TestBed.overrideComponent(FriendsComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/friends').flush([]);
+    http.expectOne('/api/friends/requests').flush(requests);
+    http.expectOne('/api/friends/requests/sent').flush([]);
+    return { component: fixture.componentInstance, http, info };
+  }
+
+  const request = (id: number) => ({ friendshipId: id, requesterUsername: 'alice', createdAt: '2026-09-06T10:00:00Z' });
+
+  it('öffnet den Anfragen-Tab statt der Freundesliste', () => {
+    // Der eigentliche Fund: der Link zeigte auf /friends, also auf Tab 0 — die Anfrage lag auf Tab 1.
+    const { component, http } = setup({ tab: 'requests', request: '42' }, [request(42)]);
+
+    expect(component.tabIndex).toBe(1);
+    expect(component.highlightRequestId).toBe(42);
+    http.verify();
+  });
+
+  it('bleibt ohne Parameter auf der Freundesliste', () => {
+    const { component, http } = setup({});
+
+    expect(component.tabIndex).toBe(0);
+    expect(component.highlightRequestId).toBeNull();
+    http.verify();
+  });
+
+  it('sagt Bescheid, wenn die Anfrage schon beantwortet ist', () => {
+    // Sonst landet man auf einem leeren Tab und weiß nicht, warum.
+    const { component, http, info } = setup({ tab: 'requests', request: '42' }, []);
+
+    expect(component.highlightRequestId).toBeNull();
+    expect(info).toHaveBeenCalled();
+    http.verify();
+  });
+
+  it('hebt nur die gemeinte Anfrage hervor', () => {
+    const { component, http } = setup({ tab: 'requests', request: '7' }, [request(6), request(7), request(8)]);
+
+    expect(component.highlightRequestId).toBe(7);
+    http.verify();
+  });
+
+  it('versteht auch den Herausforderungen-Tab', () => {
+    const { component, http } = setup({ tab: 'challenges' });
+
+    expect(component.tabIndex).toBe(2);
+    http.verify();
+  });
+});
+

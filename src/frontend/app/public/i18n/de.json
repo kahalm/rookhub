@@ -750,7 +750,8 @@
       "sent": "Gesendet (wartet auf Bestätigung)",
       "awaiting": "wartet auf Bestätigung",
       "emptySent": "Keine ausstehenden gesendeten Anfragen.",
-      "withdrawn": "Anfrage zurückgezogen."
+      "withdrawn": "Anfrage zurückgezogen.",
+      "gone": "Diese Freundschaftsanfrage gibt es nicht mehr — sie wurde bereits beantwortet."
     }
   },
   "repertoire": {

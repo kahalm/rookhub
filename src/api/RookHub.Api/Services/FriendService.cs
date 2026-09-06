@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -161,10 +162,18 @@ public class FriendService
             throw new InvalidOperationException("A friendship or request already exists.");
         }
 
-        // Adressat benachrichtigen: neue Freundschaftsanfrage.
+        // Adressat benachrichtigen: neue Freundschaftsanfrage. Der Link zeigt auf den ANFRAGEN-Tab
+        // und nennt die Anfrage — „/friends" landete auf der Freundesliste, wo die Anfrage gar nicht
+        // steht und man sie erst suchen musste. Die Id steht zusaetzlich in den Daten, damit die
+        // Oberflaeche sie hervorheben kann.
         var requesterName = await UsernameAsync(requesterId);
         await _notifications.CreateAsync(addresseeId, NotificationType.FriendRequestReceived,
-            new Dictionary<string, string> { ["username"] = requesterName }, "/friends");
+            new Dictionary<string, string>
+            {
+                ["username"] = requesterName,
+                ["friendshipId"] = friendship.Id.ToString(CultureInfo.InvariantCulture),
+            },
+            $"/friends?tab=requests&request={friendship.Id}");
 
         return friendship;
     }

@@ -750,7 +750,8 @@
       "sent": "Poslano (čeka potvrdu)",
       "awaiting": "čeka potvrdu",
       "emptySent": "Nema poslanih zahtjeva na čekanju.",
-      "withdrawn": "Zahtjev povučen."
+      "withdrawn": "Zahtjev povučen.",
+      "gone": "Ovaj zahtjev za prijateljstvo više ne postoji — već je odgovoren."
     }
   },
   "repertoire": {

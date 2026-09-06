@@ -5,7 +5,7 @@ import { switchMap, catchError, tap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FriendsService } from '../../core/friends.service';
-import { RouterModule, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
@@ -61,7 +61,7 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
         </mat-card>
       }
 
-      <mat-tab-group>
+      <mat-tab-group [selectedIndex]="tabIndex" (selectedIndexChange)="tabIndex = $event">
         <mat-tab [label]="'friends.tabs.friends' | translate:{ count: friends.length }">
           @if (loading) {
             <app-loading-spinner />
@@ -99,7 +99,8 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
           <h3 class="section-title">{{ 'friends.requests.incoming' | translate }}</h3>
           <mat-list>
             @for (req of requests; track req.friendshipId) {
-              <mat-list-item>
+              <mat-list-item [class.req-highlight]="req.friendshipId === highlightRequestId"
+                             [attr.data-request-id]="req.friendshipId">
                 <span matListItemTitle>{{ req.requesterUsername }}</span>
                 <span matListItemLine>{{ 'friends.sentOn' | translate:{ date: (req.createdAt | date) } }}</span>
                 <div matListItemMeta>
@@ -194,6 +195,17 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
     </div>
   `,
   styles: [`
+    /* Aus der Benachrichtigung angesteuerte Anfrage kurz hervorheben — sonst sucht man sie
+       in einer langen Liste. */
+    .req-highlight {
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent);
+      animation: reqPulse 2.4s ease-out 1;
+    }
+    @keyframes reqPulse {
+      0% { background: color-mix(in srgb, var(--mat-sys-primary) 38%, transparent); }
+      100% { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
+    }
     .friends-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
     .search-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .search-field { flex: 1; min-width: 0; margin-bottom: -1.25em; }
@@ -217,6 +229,11 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 export class FriendsComponent implements OnInit {
   friends: Friend[] = [];
   requests: FriendRequest[] = [];
+  /** 0 = Freunde, 1 = Anfragen, 2 = Herausforderungen. Aus `?tab=` vorbelegt. */
+  tabIndex = 0;
+  /** Aus `?request=` — die Anfrage, die die Benachrichtigung meinte. */
+  highlightRequestId: number | null = null;
+  private highlightPending = false;
   sentRequests: SentFriendRequest[] = [];
   searchResults: UserSearchResult[] = [];
   incoming: IncomingChallenge[] = [];
@@ -237,7 +254,8 @@ export class FriendsComponent implements OnInit {
     private router: Router,
     private challenge: ChallengeService,
     private revenge: RevengeService,
-    private notif: InAppNotificationService
+    private notif: InAppNotificationService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -252,7 +270,46 @@ export class FriendsComponent implements OnInit {
     this.notif.arrived$.pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => this.loadData(true));
+    this.applyDeepLink();
     this.loadData();
+  }
+
+  /**
+   * Die Benachrichtigung zu einer Freundschaftsanfrage verlinkt auf `?tab=requests&request=<id>`.
+   * Ohne das landete man auf der Freundesliste — die Anfrage steht aber auf einem anderen Tab, und
+   * man musste sie dort selbst suchen.
+   */
+  private applyDeepLink(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const tab = params.get('tab');
+    if (tab === 'requests') this.tabIndex = 1;
+    else if (tab === 'challenges') this.tabIndex = 2;
+
+    const request = Number(params.get('request'));
+    if (request > 0) {
+      this.highlightRequestId = request;
+      this.highlightPending = true;
+    }
+  }
+
+  /**
+   * Nach dem Laden pruefen, ob es die angesteuerte Anfrage ueberhaupt noch gibt. Eine schon
+   * beantwortete Anfrage laesst die Seite sonst wortlos leer wirken.
+   */
+  private resolveHighlight(): void {
+    if (!this.highlightPending || this.highlightRequestId === null) return;
+    this.highlightPending = false;
+
+    const target = this.requests.find(r => r.friendshipId === this.highlightRequestId);
+    if (!target) {
+      this.highlightRequestId = null;
+      this.snackbar.info(this.translate.instant('friends.requests.gone'));
+      return;
+    }
+    // Erst nach dem Rendern scrollen — vorher gibt es die Zeile noch nicht.
+    setTimeout(() => document
+      .querySelector(`[data-request-id="${target.friendshipId}"]`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
   }
 
   loadData(quiet = false): void {
@@ -262,7 +319,7 @@ export class FriendsComponent implements OnInit {
       error: () => { this.loading = false; this.snackbar.info(this.translate.instant('friends.errors.loadFriends')); }
     });
     this.friendsService.getRequests().subscribe({
-      next: r => this.requests = r,
+      next: r => { this.requests = r; this.resolveHighlight(); },
       error: () => this.snackbar.info(this.translate.instant('friends.errors.loadRequests'))
     });
     this.friendsService.getSentRequests().subscribe({

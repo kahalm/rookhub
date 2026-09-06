@@ -750,7 +750,8 @@
       "sent": "Sent (awaiting confirmation)",
       "awaiting": "awaiting confirmation",
       "emptySent": "No pending sent requests.",
-      "withdrawn": "Request withdrawn."
+      "withdrawn": "Request withdrawn.",
+      "gone": "This friend request no longer exists — it has already been answered."
     }
   },
   "repertoire": {

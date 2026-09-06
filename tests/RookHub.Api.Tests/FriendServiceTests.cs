@@ -125,4 +125,23 @@ public class FriendServiceTests : IDisposable
         var results = await _friendService.SearchUsersAsync(new string('a', 200), me);
         Assert.Empty(results);
     }
+
+    [Fact]
+    public async Task SendRequest_NotificationPointsAtTheRequestsTab_NotTheFriendsList()
+    {
+        // „/friends" oeffnete die FREUNDESLISTE — die Anfrage steht aber auf einem anderen Tab und
+        // musste dort gesucht werden. Der Link nennt jetzt Tab und Anfrage.
+        var alice = await CreateUserAsync("alice");
+        var bob = await CreateUserAsync("bob");
+
+        var friendship = await _friendService.SendRequestAsync(alice, bob);
+
+        var notification = await _db.Notifications.SingleAsync(n => n.UserId == bob);
+        Assert.Equal(Models.NotificationType.FriendRequestReceived, notification.Type);
+        Assert.Equal($"/friends?tab=requests&request={friendship.Id}", notification.Link);
+        // Die Id steht zusaetzlich in den Daten, damit die Oberflaeche die Zeile hervorheben kann.
+        Assert.Contains($"\"friendshipId\":\"{friendship.Id}\"", notification.DataJson);
+        Assert.Contains("\"username\":\"alice\"", notification.DataJson);
+    }
+
 }
