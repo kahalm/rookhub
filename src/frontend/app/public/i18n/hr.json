@@ -457,6 +457,8 @@
       "foundCount": "Slične pozicije: {{count}}",
       "atMove": "potez {{move}}",
       "startPosition": "početna pozicija",
+      "prevMove": "Jedan potez natrag",
+      "nextMove": "Jedan potez naprijed",
       "openHint": "Otvori ovu poziciju u repertoaru",
       "moveHitExact": "→ i ovdje {{move}}",
       "moveHitSameTarget": "→ ovdje {{move}} (isto ciljno polje)",

@@ -457,6 +457,8 @@
       "foundCount": "{{count}} ähnliche Stellung(en)",
       "atMove": "Zug {{move}}",
       "startPosition": "Ausgangsstellung",
+      "prevMove": "Einen Zug zurück",
+      "nextMove": "Einen Zug vor",
       "openHint": "Diese Stellung im Repertoire öffnen",
       "moveHitExact": "→ hier auch {{move}}",
       "moveHitSameTarget": "→ hier {{move}} (gleiches Zielfeld)",

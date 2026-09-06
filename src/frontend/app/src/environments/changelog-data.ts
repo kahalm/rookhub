@@ -8,6 +8,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.404.0", date: "2026-09-06", changes: [
+    { en: "Point game: the opening is now a proper move list under the board - one line per move, White and Black side by side - with clear back and forward buttons above it. Clicking a single move still works.", de: "Punktepartie: Die Eröffnung steht jetzt als richtige Zugliste unter dem Brett - eine Zeile je Zug, Weiß und Schwarz nebeneinander - mit deutlichen Vor- und Zurück-Knöpfen darüber. Einen einzelnen Zug direkt anzuklicken geht weiterhin." },
+    { en: "Point game: your own move no longer twitches. It used to jump to the target square, back to where it came from and forward again, because locking the board briefly redrew the old position while the server was still answering. The move now stays put from the moment you let go.", de: "Punktepartie: Der eigene Zug zuckt nicht mehr. Die Figur sprang bisher aufs Zielfeld, kurz zurück und wieder hin, weil das Sperren des Bretts währenddessen die alte Stellung zeichnete, solange der Server noch antwortete. Der Zug steht jetzt ab dem Loslassen." },
+    { en: "Point game: after your first guess, clicking the last opening move no longer unlocked the board. It showed an old position while a move there would have been scored against the current task.", de: "Punktepartie: Nach dem ersten Rateversuch gab ein Klick auf den letzten Eröffnungszug das Brett nicht mehr frei. Es zeigte eine alte Stellung, ein Zug dort wäre aber gegen die aktuelle Aufgabe gewertet worden." },
+  ] },
   { version: "0.403.0", date: "2026-09-06", changes: [
     { en: "Point game: in the review at the end, every move where something better than the game move existed now carries a small info mark. It names the best move with its evaluation - and the move from the game with its own, but only when you played something else; otherwise the row already says it.", de: "Punktepartie: Im Rückblick am Ende trägt jetzt jeder Zug, bei dem es etwas Besseres als den Partiezug gab, ein kleines Info-Zeichen. Dahinter stehen der beste Zug mit seiner Bewertung - und der Zug aus der Partie mit seiner, aber nur wenn du etwas anderes gespielt hast; sonst steht er ohnehin in der Zeile." },
   ] },

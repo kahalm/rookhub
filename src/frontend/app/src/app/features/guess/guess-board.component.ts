@@ -65,19 +65,35 @@ function promotionOf(san: string | undefined): string {
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet"
                              [playable]="canGuess" (userMove)="onMove($event)" />
 
-            <!-- Die Eröffnung bis zum Einstieg: anklickbar, das Brett zeigt die Stellung danach. -->
+            <!-- Die Eröffnung bis zum Einstieg: durchblättern oder einen Zug direkt anklicken. -->
             @if (session.intro.length) {
-              <div class="intro">
-                <button type="button" class="ib" [class.on]="browseIndex === -1" (click)="browse(-1)"
-                        [attr.title]="'guess.startPosition' | translate">&#124;&lt;</button>
-                @for (m of session.intro; track m.ply) {
-                  <button type="button" class="ib" [class.on]="browseIndex === $index" (click)="browse($index)">
-                    @if (m.white) { <span class="no">{{ m.moveNumber }}.</span> }{{ m.san }}
+              <div class="opening">
+                <div class="onav">
+                  <button mat-icon-button (click)="browse(-1)" [disabled]="atStart"
+                          [attr.title]="'guess.startPosition' | translate"><mat-icon>first_page</mat-icon></button>
+                  <button mat-icon-button (click)="step(-1)" [disabled]="atStart"
+                          [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
+                  <button mat-icon-button (click)="step(1)" [disabled]="atTask"
+                          [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
+                  <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
+                    {{ 'guess.toTask' | translate }}
                   </button>
-                }
-                @if (browsing) {
-                  <button type="button" class="ib back" (click)="browse(null)">{{ 'guess.toTask' | translate }}</button>
-                }
+                </div>
+                <div class="omoves">
+                  @for (row of introRows; track row.no) {
+                    <div class="orow">
+                      <span class="no">{{ row.no }}.</span>
+                      @if (row.wIdx >= 0) {
+                        <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
+                                (click)="browse(row.wIdx)">{{ row.w }}</button>
+                      } @else { <span class="mv muted">…</span> }
+                      @if (row.b !== null) {
+                        <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
+                                (click)="browse(row.bIdx)">{{ row.b }}</button>
+                      } @else { <span></span> }
+                    </div>
+                  }
+                </div>
               </div>
             }
             @if (session.status === 'running' && !holding) {
@@ -174,14 +190,20 @@ function promotionOf(san: string | undefined): string {
     .side-col { flex: 1 1 280px; max-width: 440px; display: flex; flex-direction: column; gap: 10px; }
     .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-    /* Eine Zeile, die IN SICH scrollt — sonst dehnt eine lange Eröffnung die Seite. */
-    .intro { display: flex; gap: 2px; margin-top: 8px; overflow-x: auto; padding-bottom: 2px; }
-    .intro .ib { flex: 0 0 auto; background: none; border: 0; cursor: pointer; color: inherit;
-                 font: inherit; font-size: .85rem; padding: 2px 6px; border-radius: 3px; }
-    .intro .ib:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
-    .intro .ib.on { background: color-mix(in srgb, currentColor 22%, transparent); font-weight: 600; }
-    .intro .ib.back { margin-left: 6px; text-decoration: underline; }
-    .intro .no { color: color-mix(in srgb, currentColor 55%, transparent); margin-right: 2px; }
+    /* Eröffnung: Navigation oben, darunter die Züge UNTEREINANDER (Nr. · Weiß · Schwarz). */
+    .opening { margin-top: 8px; }
+    .onav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+    .onav button[mat-stroked-button] { margin-left: 8px; }
+    /* Schmal halten: eine Zugliste, die sich ueber die ganze Brettbreite zieht, liest sich schlecht. */
+    .omoves { margin-top: 4px; max-width: 260px; max-height: 30vh; overflow-y: auto; }
+    .orow { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 4px; align-items: baseline;
+            padding: 1px 2px; }
+    .orow .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem;
+                text-align: right; font-variant-numeric: tabular-nums; }
+    .orow .mv { text-align: left; background: none; border: 0; color: inherit; font: inherit;
+                padding: 1px 6px; border-radius: 3px; cursor: pointer; }
+    .orow .mv:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+    .orow .mv.on { background: color-mix(in srgb, currentColor 22%, transparent); font-weight: 600; }
     .held .hg { font-weight: 600; }
     .held .hd { font-variant-numeric: tabular-nums; }
     .held.g-worse .hd, .held.g-muchWorse .hd { color: #c62828; }
@@ -251,12 +273,44 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * „Schaut gerade zurueck" — und damit gesperrt. Der LETZTE Introzug ist die Ausnahme: die
-   * Stellung danach IST die Aufgabe, dort darf gezogen werden.
+   * „Schaut gerade zurueck" — und damit gesperrt. Ausnahme ist der LETZTE Introzug, dessen Stellung
+   * die erste Aufgabe IST — aber nur, SOLANGE NOCH NICHTS GERATEN WURDE. Danach liegt die Aufgabe
+   * weiter vorn; ohne diese Bedingung koennte man dort in einer alten Stellung ziehen und der Zug
+   * wuerde gegen die aktuelle Aufgabe gewertet.
    */
   get browsing(): boolean {
     const i = this.browseIndex;
-    return i !== null && i !== (this.session?.intro.length ?? 0) - 1;
+    if (i === null) return false;
+    const last = (this.session?.intro.length ?? 0) - 1;
+    return !(i === last && (this.session?.movesPlayed ?? 0) === 0);
+  }
+
+  /** Steht das Brett auf der Aufgabe (dann fuehrt „vor" nirgendwohin)? */
+  get atTask(): boolean { return !this.browsing; }
+  get atStart(): boolean { return this.browseIndex === -1; }
+
+  /** Die Eroeffnung als Zeilen „Nr. · Weiss · Schwarz" — je Halbzug der Index fuers Anklicken. */
+  get introRows(): { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] {
+    const rows: { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] = [];
+    const intro = this.session?.intro ?? [];
+    for (let i = 0; i < intro.length; i++) {
+      const m = intro[i];
+      if (m.white) rows.push({ no: m.moveNumber, w: m.san, wIdx: i, b: null, bIdx: -1 });
+      else if (rows.length && rows[rows.length - 1].b === null) {
+        rows[rows.length - 1].b = m.san;
+        rows[rows.length - 1].bIdx = i;
+      } else rows.push({ no: m.moveNumber, w: '…', wIdx: -1, b: m.san, bIdx: i });
+    }
+    return rows;
+  }
+
+  /** Einen Halbzug vor (+1) oder zurueck (-1); ueber das Ende hinaus landet man auf der Aufgabe. */
+  step(delta: number): void {
+    const n = this.session?.intro.length ?? 0;
+    const cur = this.browseIndex === null ? n : this.browseIndex;
+    const next = cur + delta;
+    if (next >= n) { this.browse(null); return; }
+    this.browse(Math.max(-1, next));
   }
 
   /** Was das Brett zeigt: die Aufgabe (bzw. der gehaltene Zug) — oder die angeklickte Eröffnungsstellung. */
@@ -345,6 +399,19 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     this.busy = true;
     const seconds = Math.min(3600, Math.max(0, Math.round((Date.now() - this.since) / 1000)));
     const fenBefore = this.boardFen;
+    const lastBefore = this.lastMove;
+
+    // Den eigenen Zug SOFORT uebernehmen, nicht erst mit der Antwort. Sonst passiert Folgendes:
+    // `busy` sperrt das Brett, das loest ein `ngOnChanges` mit der ALTEN Stellung aus, und
+    // Chessground animiert die gerade gezogene Figur zurueck — 25 ms spaeter kommt die Antwort und
+    // schiebt sie wieder hin. Genau das sichtbare Zucken beim Ziehen.
+    if (uci) {
+      const optimistic = fenAfterUci(fenBefore, uci);
+      if (optimistic) {
+        this.boardFen = optimistic;
+        this.lastMove = [uci.slice(0, 2), uci.slice(2, 4)];
+      }
+    }
 
     this.service.guess(id, uci, seconds).subscribe({
       next: res => {
@@ -384,6 +451,10 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.busy = false;
+        // Der Zug wurde nicht gewertet — also auch nicht stehen lassen, sonst stuende das Brett
+        // auf einer Stellung, die es fuer den Server nie gab.
+        this.boardFen = fenBefore;
+        this.lastMove = lastBefore;
         // Der Nutzer hat gerade gezogen — ein stiller Fehlschlag wäre hier das Schlimmste.
         this.snackbar.warn(err?.error?.message || this.translate.instant('guess.moveFailed'));
         this.cdr.markForCheck();

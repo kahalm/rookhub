@@ -457,6 +457,8 @@
       "foundCount": "{{count}} similar position(s)",
       "atMove": "move {{move}}",
       "startPosition": "starting position",
+      "prevMove": "One move back",
+      "nextMove": "One move forward",
       "openHint": "Open this position in the repertoire",
       "moveHitExact": "→ {{move}} here too",
       "moveHitSameTarget": "→ here {{move}} (same target square)",

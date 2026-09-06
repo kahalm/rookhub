@@ -116,6 +116,7 @@ describe('GuessBoardComponent', () => {
     // Der Nutzer hat gerade gezogen — kein stiller Fehlschlag, und das Brett bleibt bedienbar.
     expect(c.busy).toBeFalse();
     expect(c.canGuess).toBeTrue();
+    expect(c.boardFen).withContext('nicht gewerteter Zug bleibt nicht stehen').toBe('fen-8');
   });
 });
 
@@ -333,5 +334,58 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     const only = c.infoText(row({ bestSan: 'Bc4', bestEval: '+2.40' }));
     expect(only).not.toContain('guess.info.gameMove');
     expect(only).toContain('guess.info.bestMove');
+  });
+
+  it('der eigene Zug steht sofort, nicht erst mit der Antwort', () => {
+    // Sonst setzt das Sperren des Bretts (busy) es kurz auf die alte Stellung zurueck und die
+    // Figur zuckt: hin, zurueck, wieder hin.
+    const c = load();
+    c.onMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: 'egal' });
+    expect(c.boardFen).withContext('Laeufer schon auf c4').toContain('2B1P3');
+    expect(c.lastMove).toEqual(['f1', 'c4']);
+    http.expectOne('/api/guess-sessions/3/guess').flush({
+      grade: 'worse', points: 0, playedSan: 'Bc4', gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
+      replySan: 'dxe5', replyUci: 'd6e5', diffCp: -120, evalText: '+1.83', session: nextSession,
+    });
+    expect(c.holding).toBeTrue();
+    expect(c.boardFen).withContext('bleibt dort stehen').toContain('2B1P3');
+  });
+
+  it('nach dem ersten Zug ist der letzte Eroeffnungszug wieder nur Ansicht', () => {
+    // Der Kurzschluss „letzter Introzug == Aufgabe" gilt NUR, solange nichts geraten wurde. Ohne
+    // diese Bedingung koennte man dort in einer alten Stellung ziehen — gewertet gegen die aktuelle.
+    const c = load();
+    guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
+
+    c.browse(INTRO.length - 1);
+    expect(c.browsing).withContext('jetzt eine alte Stellung').toBeTrue();
+    expect(c.canGuess).toBeFalse();
+  });
+
+  it('vor und zurueck blaettern durch die Eroeffnung', () => {
+    const c = loadAtStart();
+    expect(c.atStart).toBeTrue();
+    expect(c.atTask).toBeFalse();
+
+    c.step(1);
+    expect(c.browseIndex).toBe(0);
+    c.step(1);
+    expect(c.browseIndex).toBe(INTRO.length - 1);
+    expect(c.atTask).withContext('letzter Introzug ist die erste Aufgabe').toBeTrue();
+
+    c.step(-1);
+    expect(c.browseIndex).toBe(0);
+    c.step(-5);
+    expect(c.browseIndex).withContext('nicht vor die Grundstellung').toBe(-1);
+  });
+
+  it('die Zugliste steht untereinander, je Zeile Weiss und Schwarz', () => {
+    const c = loadAtStart();
+    expect(c.introRows.length).toBe(1);              // 4.dxe5 Bxf3 = eine Zeile
+    expect(c.introRows[0].no).toBe(4);
+    expect(c.introRows[0].w).toBe('dxe5');
+    expect(c.introRows[0].b).toBe('Bxf3');
+    expect(c.introRows[0].wIdx).toBe(0);
+    expect(c.introRows[0].bIdx).toBe(1);
   });
 });
