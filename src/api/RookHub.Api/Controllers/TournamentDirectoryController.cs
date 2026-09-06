@@ -95,7 +95,7 @@ public class TournamentDirectoryController : BaseApiController
     /// deshalb an jedem seiner Tage - genau so, wie ein Kalender es zeigen soll.
     /// </summary>
     [HttpGet("calendar")]
-    public async Task<ActionResult<List<DirectoryCalendarDayDto>>> Calendar(
+    public async Task<ActionResult<DirectoryCalendarDto>> Calendar(
         [FromQuery] int year, [FromQuery] int month,
         [FromQuery] double? lat = null, [FromQuery] double? lon = null, [FromQuery] int? radiusKm = null,
         [FromQuery] string? fed = null, [FromQuery] string? speed = null, [FromQuery] string? q = null,
@@ -119,17 +119,24 @@ public class TournamentDirectoryController : BaseApiController
         var subscribed = await SubscribedIdsAsync(
             result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
 
+        // Die Turniere EINMAL, die Tage nur mit ihren Nummern — ein mehrtaegiges Turnier stand
+        // vorher an jedem seiner Tage voll ausgeschrieben da (siehe DirectoryCalendarDto).
+        var tournaments = result.Items
+            .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
+                i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members))
+            .ToList();
+
         var days = new List<DirectoryCalendarDayDto>();
         for (var day = first; day <= last; day = day.AddDays(1))
         {
-            var items = result.Items
-                .Where(i => Covers(i.Entry, day))
-                .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members))
-                .ToList();
-            days.Add(new DirectoryCalendarDayDto { Date = day, Items = items });
+            days.Add(new DirectoryCalendarDayDto
+            {
+                Date = day,
+                Ids = result.Items.Where(i => Covers(i.Entry, day))
+                    .Select(i => i.Entry.ChessResultsId).ToList(),
+            });
         }
-        return Ok(days);
+        return Ok(new DirectoryCalendarDto { Tournaments = tournaments, Days = days });
     }
 
     [HttpGet("{chessResultsId}")]

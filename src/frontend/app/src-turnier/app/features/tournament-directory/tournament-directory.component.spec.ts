@@ -234,7 +234,7 @@ describe('TournamentDirectoryComponent', () => {
     const req = http.expectOne(r => r.url === '/api/tournament-directory/calendar');
     expect(req.request.params.get('year')).toBe('2027');
     expect(req.request.params.get('month')).toBe('1');
-    req.flush([]);
+    req.flush({ tournaments: [], days: [] });
     http.verify();
   });
 

@@ -380,13 +380,32 @@ public class TournamentDirectoryControllerTests : IDisposable
         await AddEntryAsync("1", "Dreitaeger", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
 
         var result = await CreateController(1).Calendar(2026, 10);
-        var days = Assert.IsType<List<DirectoryCalendarDayDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
 
-        Assert.Equal(31, days.Count);
-        Assert.Empty(days.Single(d => d.Date.Day == 9).Items);
+        Assert.Equal(31, cal.Days.Count);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 9).Ids);
         foreach (var day in new[] { 10, 11, 12 })
-            Assert.Single(days.Single(d => d.Date.Day == day).Items);
-        Assert.Empty(days.Single(d => d.Date.Day == 13).Items);
+            Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == day).Ids);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 13).Ids);
+    }
+
+    [Fact]
+    public async Task Calendar_DescribesEachTournamentOnlyOnce()
+    {
+        // Der teure Teil war die Wiederholung: ein Monat auf dem Dev-Server hatte 5962 Eintraege
+        // fuer 200 verschiedene Turniere — 3 MB JSON, von denen 97 % dasselbe noch einmal sagten.
+        await AddEntryAsync("1", "Dreitaeger", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Eintaeger", new DateOnly(2026, 10, 11), new DateOnly(2026, 10, 11));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(2, cal.Tournaments.Count);
+        Assert.Equal(["1", "2"], cal.Tournaments.Select(t => t.ChessResultsId).Order());
+        // Jede Nummer eines Tages muss auch beschrieben sein, sonst laeuft die Anzeige ins Leere.
+        var known = cal.Tournaments.Select(t => t.ChessResultsId).ToHashSet();
+        Assert.All(cal.Days.SelectMany(d => d.Ids), id => Assert.Contains(id, known));
+        Assert.Equal(["1", "2"], cal.Days.Single(d => d.Date.Day == 11).Ids.Order());
     }
 
     [Theory]

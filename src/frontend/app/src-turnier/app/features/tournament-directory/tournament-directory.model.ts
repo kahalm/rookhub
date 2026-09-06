@@ -53,6 +53,17 @@ export interface DirectoryCalendarDay {
   items: DirectoryEntry[];
 }
 
+/**
+ * So kommt der Monat vom Server: die Turniere EINMAL, die Tage nur mit ihren Nummern. Ein
+ * mehrtaegiges Turnier steht an jedem seiner Tage — voll ausgeschrieben waren das auf dem
+ * Dev-Server 5962 Eintraege fuer 200 verschiedene Turniere, also 3 MB je Monat. Der Dienst setzt
+ * daraus wieder `DirectoryCalendarDay[]` zusammen (dasselbe Objekt an mehreren Tagen, keine Kopie).
+ */
+export interface DirectoryCalendarResponse {
+  tournaments: DirectoryEntry[];
+  days: { date: string; ids: string[] }[];
+}
+
 export interface SearchProfile {
   id: number;
   name: string;

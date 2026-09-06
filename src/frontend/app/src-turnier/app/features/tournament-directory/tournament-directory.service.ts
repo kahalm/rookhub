@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import {
-  DirectoryCalendarDay, DirectoryEntry, DirectoryFilter, DirectoryPage, GeoPlaceSuggestion,
+  DirectoryCalendarDay, DirectoryCalendarResponse, DirectoryEntry, DirectoryFilter, DirectoryPage,
+  GeoPlaceSuggestion,
 } from './tournament-directory.model';
 
 /**
@@ -30,7 +31,8 @@ export class TournamentDirectoryService {
     // Jahr und Monat bestimmen den Zeitraum — from/to aus der Filterleiste wären hier widersprüchlich.
     const { from, to, ...rest } = filter;
     const params = this.toParams(rest as DirectoryFilter).set('year', year).set('month', month);
-    return this.http.get<DirectoryCalendarDay[]>('/api/tournament-directory/calendar', { params });
+    return this.http.get<DirectoryCalendarResponse>('/api/tournament-directory/calendar', { params })
+      .pipe(map(res => expandCalendar(res)));
   }
 
   get(chessResultsId: string): Observable<DirectoryEntry> {
@@ -57,4 +59,20 @@ export class TournamentDirectoryService {
     if (filter.profileId) params = params.set('profileId', filter.profileId);
     return params;
   }
+}
+
+/**
+ * Setzt den Monat wieder zu Tagen mit Turnieren zusammen. Dasselbe Turnier steht an mehreren Tagen
+ * als DASSELBE Objekt — die Ansicht vergleicht Eintraege ueber `chessResultsId`, aber Kopien waeren
+ * genau die Verschwendung, die auf der Leitung gerade abgeschafft wurde. Eine Nummer ohne
+ * Beschreibung wird uebergangen statt als Luecke gerendert.
+ */
+export function expandCalendar(res: DirectoryCalendarResponse): DirectoryCalendarDay[] {
+  const byId = new Map((res.tournaments ?? []).map(t => [t.chessResultsId, t]));
+  return (res.days ?? []).map(day => ({
+    date: day.date,
+    items: (day.ids ?? [])
+      .map(id => byId.get(id))
+      .filter((e): e is DirectoryEntry => e !== undefined),
+  }));
 }

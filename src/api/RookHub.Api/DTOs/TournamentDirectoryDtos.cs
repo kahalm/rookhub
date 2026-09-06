@@ -97,11 +97,26 @@ public class DirectoryPageDto
     public bool Truncated { get; set; }
 }
 
-/// <summary>Ein Tag im Kalender mit den an diesem Tag LAUFENDEN Turnieren.</summary>
+/// <summary>
+/// Ein Kalendermonat: die Turniere EINMAL, die Tage nur mit ihren Nummern.
+///
+/// <para>Vorher stand an jedem Tag der VOLLE Eintrag. Ein mehrtaegiges Turnier steht an jedem
+/// seiner Tage, und ein Monat auf dem Dev-Server hatte damit 5962 Eintraege fuer 200 verschiedene
+/// Turniere — 3 MB JSON, von denen 97 % Wiederholung waren. Der Kalender ist die Startseite der
+/// Turnierseite, das war also der Aufbau JEDES Aufrufs.</para>
+/// </summary>
+public class DirectoryCalendarDto
+{
+    /// <summary>Jedes Turnier des Monats genau einmal.</summary>
+    public List<DirectoryEntryDto> Tournaments { get; set; } = [];
+    public List<DirectoryCalendarDayDto> Days { get; set; } = [];
+}
+
+/// <summary>Ein Tag im Kalender mit den Nummern der an diesem Tag LAUFENDEN Turniere.</summary>
 public class DirectoryCalendarDayDto
 {
     public DateOnly Date { get; set; }
-    public List<DirectoryEntryDto> Items { get; set; } = [];
+    public List<string> Ids { get; set; } = [];
 }
 
 public class DirectorySearchProfileDto

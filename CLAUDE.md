@@ -258,7 +258,7 @@ nichts gecrawlt.
 |---------|----------|-------|
 | GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#) |
 | GET | `/api/tournament-directory/map?bbox=minLat,minLon,maxLat,maxLon` | Kartenmarker im Ausschnitt (gedeckelt) |
-| GET | `/api/tournament-directory/calendar?year&month` | Tages-Buckets; mehrtaegige Turniere stehen an JEDEM ihrer Tage |
+| GET | `/api/tournament-directory/calendar?year&month` | Ein Monat: `tournaments` (jedes Turnier EINMAL) + `days` (je Tag nur die Nummern der laufenden). Mehrtaegige Turniere stehen an JEDEM ihrer Tage — voll ausgeschrieben waren das 5962 Eintraege fuer 200 Turniere, also ~3 MB je Monat; das Frontend setzt es in `expandCalendar` wieder zusammen |
 | GET | `/api/tournament-directory/{chessResultsId}` | Einzelnes Turnier (auch abgesagte) |
 | GET | `/api/tournament-directory/places?q=` | Ortsvorschlaege aus dem Gazetteer (PLZ oder Name) |
 | GET/POST/PUT/DELETE | `/api/tournament-search-profiles[/{id}]` | Gespeicherte Umkreise; steuern Ansicht UND naechtliche Meldung |

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import { DirectoryFilter, EMPTY_FILTER } from './tournament-directory.model';
+import { DirectoryCalendarDay, DirectoryFilter, EMPTY_FILTER } from './tournament-directory.model';
 
 describe('TournamentDirectoryService', () => {
   let service: TournamentDirectoryService;
@@ -85,7 +85,40 @@ describe('TournamentDirectoryService', () => {
     expect(req.request.params.get('year')).toBe('2026');
     expect(req.request.params.get('month')).toBe('10');
     expect(req.request.params.get('profileId')).toBe('3');
-    req.flush([]);
+    req.flush({ tournaments: [], days: [] });
+  });
+
+  it('setzt den Monat aus Turnieren und Tagesnummern wieder zusammen', () => {
+    // Der Server schickt jedes Turnier EINMAL. Voll ausgeschrieben waren das auf dem Dev-Server
+    // 5962 Einträge für 200 verschiedene Turniere — 3 MB je Monat, 97 % davon Wiederholung.
+    let days: DirectoryCalendarDay[] = [];
+    service.calendar(filter({}), 2026, 10).subscribe(d => (days = d));
+
+    http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({
+      tournaments: [{ chessResultsId: '1', name: 'Dreitäger' }, { chessResultsId: '2', name: 'Eintäger' }],
+      days: [
+        { date: '2026-10-10', ids: ['1'] },
+        { date: '2026-10-11', ids: ['1', '2'] },
+        { date: '2026-10-12', ids: [] },
+      ],
+    });
+
+    expect(days.map(d => d.items.map(i => i.name))).toEqual([['Dreitäger'], ['Dreitäger', 'Eintäger'], []]);
+    // Dasselbe Turnier an mehreren Tagen ist DASSELBE Objekt — Kopien wären genau die
+    // Verschwendung, die auf der Leitung gerade abgeschafft wurde.
+    expect(days[0].items[0]).toBe(days[1].items[0]);
+  });
+
+  it('übergeht eine Tagesnummer ohne Beschreibung, statt eine Lücke zu rendern', () => {
+    let days: DirectoryCalendarDay[] = [];
+    service.calendar(filter({}), 2026, 10).subscribe(d => (days = d));
+
+    http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({
+      tournaments: [{ chessResultsId: '1', name: 'Da' }],
+      days: [{ date: '2026-10-10', ids: ['1', 'fehlt'] }],
+    });
+
+    expect(days[0].items.map(i => i.name)).toEqual(['Da']);
   });
 
   it('holt ein einzelnes Turnier und Ortsvorschläge', () => {
