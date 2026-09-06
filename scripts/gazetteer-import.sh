@@ -6,7 +6,8 @@
 #
 # Aufruf:  bash scripts/gazetteer-import.sh [API-Basis-URL]
 #          Default-URL ist der Dev-Stack (http://127.0.0.1:5002).
-# Das Passwort wird interaktiv abgefragt und nirgends protokolliert.
+# Das Passwort wird interaktiv abgefragt, geht ueber die Umgebung weiter (nicht als
+# Argument — das stuende in der Prozessliste) und wird nirgends protokolliert.
 set -euo pipefail
 
 API="${1:-http://127.0.0.1:5002}"
@@ -17,10 +18,13 @@ read -rp "Admin-Benutzername [admin]: " ADMIN_USER
 ADMIN_USER="${ADMIN_USER:-admin}"
 read -rsp "Passwort: " PASS; echo
 
-TOKEN=$(curl -sS -X POST "$API/api/auth/login" -H 'Content-Type: application/json' \
-  --data-binary @<(python3 -c '
-import json,sys
-print(json.dumps({"username": sys.argv[1], "password": sys.argv[2]}))' "$ADMIN_USER" "$PASS") \
+# Benutzername und Passwort gehen ueber die UMGEBUNG an python, nicht als Argumente:
+# Argumente stehen in /proc/<pid>/cmdline und sind damit fuer jeden Nutzer des Rechners
+# lesbar, solange der Aufruf laeuft. /proc/<pid>/environ gehoert dagegen nur dem Besitzer.
+TOKEN=$(ADMIN_USER="$ADMIN_USER" PASS="$PASS" python3 -c '
+import json, os
+print(json.dumps({"username": os.environ["ADMIN_USER"], "password": os.environ["PASS"]}))' \
+  | curl -sS -X POST "$API/api/auth/login" -H 'Content-Type: application/json' --data-binary @- \
   | python3 -c 'import sys,json;
 try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")' || true)
