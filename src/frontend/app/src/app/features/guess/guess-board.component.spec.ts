@@ -5,7 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { GuessBoardComponent } from './guess-board.component';
-import { GuessSession } from './guess.service';
+import { GuessIntroMove, GuessSession } from './guess.service';
 
 function session(over: Partial<GuessSession> = {}): GuessSession {
   return {
@@ -13,7 +13,7 @@ function session(over: Partial<GuessSession> = {}): GuessSession {
     guessWhite: true, startPly: 8, status: 'running',
     points: 0, maxPoints: 0, movesPlayed: 0, gameMoveHits: 0, secondsSpent: 0,
     position: { ply: 8, moveNumber: 5, whiteToMove: true, fen: 'fen-8', lastMoveUci: 'e7e5' },
-    totalGuesses: 10, ...over,
+    totalGuesses: 10, startFen: null, intro: [], ...over,
   };
 }
 
@@ -124,6 +124,11 @@ describe('GuessBoardComponent', () => {
  * einem SCHLECHTEN Zug genannt — bei gleichwertig/besser genuegt der Partiezug selbst.
  */
 describe('GuessBoardComponent Zug stehen lassen', () => {
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const INTRO: GuessIntroMove[] = [
+    { ply: 0, moveNumber: 1, white: true, san: 'e4', uci: 'e2e4', fen: 'nach-e4' },
+    { ply: 1, moveNumber: 1, white: false, san: 'e5', uci: 'e7e5', fen: 'nach-e5' },
+  ];
   const FEN8 = 'rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5b2/PPP2PPP/RNBQKB1R w KQkq - 0 5';
   const FEN10 = 'rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 0 6';
   let http: HttpTestingController;
@@ -134,7 +139,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
       guessWhite: true, startPly: 8, status: 'running',
       points: 0, maxPoints: 0, movesPlayed: 0, gameMoveHits: 0, secondsSpent: 0,
       position: { ply: 8, moveNumber: 5, whiteToMove: true, fen: FEN8, lastMoveUci: 'c8g4' },
-      totalGuesses: 10, ...over,
+      totalGuesses: 10, startFen: START, intro: INTRO, ...over,
     };
   }
   const nextSession = base({
@@ -227,5 +232,41 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     const c4 = load();
     guess(c4, 'f1', 'c4', 'Bc4', { grade: 'better', points: 8, diffCp: 15 });
     expect(c4.evalDelta).withContext('knapp besser: nur der Partiezug').toBeNull();
+  });
+
+  it('die Eroeffnung laesst sich durchklicken, das Brett bleibt dabei gesperrt', () => {
+    const c = load();
+    expect(c.viewFen).withContext('zeigt zunaechst die Aufgabe').toBe(FEN8);
+    expect(c.canGuess).toBeTrue();
+
+    c.browse(1);                                  // 1...e5 anschauen
+    expect(c.viewFen).toBe('nach-e5');
+    expect(c.viewLastMove).toEqual(['e7', 'e5']);
+    expect(c.canGuess).withContext('kein Raten in einer alten Stellung').toBeFalse();
+
+    c.browse(-1);                                 // Grundstellung
+    expect(c.viewFen).toBe(START);
+    expect(c.viewLastMove).withContext('davor wurde nichts gezogen').toBeUndefined();
+
+    c.browse(null);                               // zurueck zur Aufgabe
+    expect(c.browsing).toBeFalse();
+    expect(c.viewFen).toBe(FEN8);
+    expect(c.canGuess).toBeTrue();
+  });
+
+  it('waehrend des Durchklickens wird kein Zug angenommen', () => {
+    // Sonst wuerde ein Zug in einer ALTEN Stellung als Rateversuch fuer die aktuelle Aufgabe gewertet.
+    const c = load();
+    c.browse(0);
+    c.onMove({ from: 'd1', to: 'f3', san: 'Qxf3', fen: 'egal' });
+    http.expectNone('/api/guess-sessions/3/guess');
+
+    c.skip();                                   // auch Passen muss waehrenddessen wirkungslos sein
+    http.expectNone('/api/guess-sessions/3/guess');
+
+    c.browse(null);
+    guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
+    expect(c.browsing).withContext('nach dem Zug steht die naechste Aufgabe').toBeFalse();
+    expect(c.viewFen).toBe(FEN10);
   });
 });

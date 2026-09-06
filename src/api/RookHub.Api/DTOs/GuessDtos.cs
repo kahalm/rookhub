@@ -43,6 +43,28 @@ public class GuessSessionDto
     public GuessPositionDto? Position { get; set; }
     /// <summary>Wie viele Halbzüge der geratenen Seite insgesamt anstehen (für den Fortschritt).</summary>
     public int TotalGuesses { get; set; }
+
+    /// <summary>Stellung vor dem ERSTEN Zug der Partie — Anfangspunkt zum Durchklicken der Eröffnung.</summary>
+    public string? StartFen { get; set; }
+
+    /// <summary>Die Züge VOR dem Einstieg (<see cref="StartPly"/>): der Weg, auf dem die Stellung
+    /// entstanden ist. Nur in der Einzelansicht gefüllt, nicht in der Liste — die Übersicht braucht
+    /// ihn nicht und er wäre dort je Sitzung ein zweiter Satz Zeilen.</summary>
+    public List<GuessIntroMoveDto> Intro { get; set; } = new();
+}
+
+/// <summary>Ein Zug der Eröffnung vor dem Einstieg — mit der Stellung, die er ERZEUGT (nicht der
+/// davor): ein Klick darauf soll genau das zeigen, was nach diesem Zug auf dem Brett stand.</summary>
+public class GuessIntroMoveDto
+{
+    public int Ply { get; set; }
+    public int MoveNumber { get; set; }
+    /// <summary>Zug von Weiß?</summary>
+    public bool White { get; set; }
+    public string San { get; set; } = string.Empty;
+    public string Uci { get; set; } = string.Empty;
+    /// <summary>Stellung NACH diesem Zug.</summary>
+    public string Fen { get; set; } = string.Empty;
 }
 
 public class GuessPositionDto

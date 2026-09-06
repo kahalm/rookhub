@@ -325,6 +325,33 @@ public class GuessSessionService
                     LastMoveUci = previous?.GameMoveUci,
                 };
             }
+
+            // Die Eröffnung vor dem Einstieg zum Durchklicken. Je Zug wird die Stellung DANACH
+            // geliefert — das ist die `Fen` des FOLGENDEN Halbzugs (eine Stellungszeile hält immer
+            // die Stellung VOR ihrem Zug). Für den letzten Introzug ist das die Einstiegsstellung,
+            // die es hier immer gibt, weil StartPly nie hinter dem letzten Halbzug liegt.
+            if (session.StartPly > 0)
+            {
+                var intro = await _db.GameAnalysisPositions.AsNoTracking()
+                    .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply <= session.StartPly)
+                    .OrderBy(p => p.Ply)
+                    .Select(p => new { p.Ply, p.Fen, p.GameMoveSan, p.GameMoveUci })
+                    .ToListAsync(ct);
+                if (intro.Count > 0)
+                {
+                    dto.StartFen = intro[0].Fen;
+                    for (var i = 0; i + 1 < intro.Count && intro[i].Ply < session.StartPly; i++)
+                        dto.Intro.Add(new GuessIntroMoveDto
+                        {
+                            Ply = intro[i].Ply,
+                            MoveNumber = intro[i].Ply / 2 + 1,
+                            White = intro[i].Ply % 2 == 0,
+                            San = intro[i].GameMoveSan,
+                            Uci = intro[i].GameMoveUci,
+                            Fen = intro[i + 1].Fen,
+                        });
+                }
+            }
         }
         return dto;
     }

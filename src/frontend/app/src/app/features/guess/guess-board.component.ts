@@ -60,12 +60,28 @@ function promotionOf(san: string | undefined): string {
 
         <div class="body">
           <div class="board-col">
-            <app-chess-board [fen]="boardFen" [lastMove]="lastMove" [flipped]="!session.guessWhite"
+            <app-chess-board [fen]="viewFen" [lastMove]="viewLastMove" [flipped]="!session.guessWhite"
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet"
                              [playable]="canGuess" (userMove)="onMove($event)" />
+
+            <!-- Die Eröffnung bis zum Einstieg: anklickbar, das Brett zeigt die Stellung danach. -->
+            @if (session.intro.length) {
+              <div class="intro">
+                <button type="button" class="ib" [class.on]="browseIndex === -1" (click)="browse(-1)"
+                        [attr.title]="'guess.startPosition' | translate">&#124;&lt;</button>
+                @for (m of session.intro; track m.ply) {
+                  <button type="button" class="ib" [class.on]="browseIndex === $index" (click)="browse($index)">
+                    @if (m.white) { <span class="no">{{ m.moveNumber }}.</span> }{{ m.san }}
+                  </button>
+                }
+                @if (browsing) {
+                  <button type="button" class="ib back" (click)="browse(null)">{{ 'guess.toTask' | translate }}</button>
+                }
+              </div>
+            }
             @if (session.status === 'running' && !holding) {
               <div class="actions">
-                <button mat-stroked-button (click)="skip()" [disabled]="busy">
+                <button mat-stroked-button (click)="skip()" [disabled]="busy || browsing">
                   <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
                 </button>
                 <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
@@ -153,6 +169,14 @@ function promotionOf(san: string | undefined): string {
     .side-col { flex: 1 1 280px; max-width: 440px; display: flex; flex-direction: column; gap: 10px; }
     .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    /* Eine Zeile, die IN SICH scrollt — sonst dehnt eine lange Eröffnung die Seite. */
+    .intro { display: flex; gap: 2px; margin-top: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .intro .ib { flex: 0 0 auto; background: none; border: 0; cursor: pointer; color: inherit;
+                 font: inherit; font-size: .85rem; padding: 2px 6px; border-radius: 3px; }
+    .intro .ib:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+    .intro .ib.on { background: color-mix(in srgb, currentColor 22%, transparent); font-weight: 600; }
+    .intro .ib.back { margin-left: 6px; text-decoration: underline; }
+    .intro .no { color: color-mix(in srgb, currentColor 55%, transparent); margin-right: 2px; }
     .held .hg { font-weight: 600; }
     .held .hd { font-variant-numeric: tabular-nums; }
     .held.g-worse .hd, .held.g-muchWorse .hd { color: #c62828; }
@@ -201,6 +225,13 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   holding = false;
   private pending: GuessSession | null = null;
 
+  /**
+   * Welcher Zug der Eröffnung gerade angeschaut wird: `null` = die Aufgabe selbst, `-1` = die
+   * Stellung vor dem ersten Zug, sonst der Index in `session.intro`. Nur eine ANSICHT — der
+   * Zustand der Sitzung bleibt davon unberührt, das Brett ist derweil gesperrt.
+   */
+  browseIndex: number | null = null;
+
   /** Was das Brett zeigt: die zu ratende Stellung bzw. nach einem Zug die Stellung danach. */
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   lastMove?: [string, string];
@@ -210,7 +241,30 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   get boardTheme(): string { return this.prefs.boardTheme; }
   get pieceSet(): string { return this.prefs.pieceSet; }
   get canGuess(): boolean {
-    return !!this.session?.position && !this.busy && !this.holding && this.session.status === 'running';
+    return !!this.session?.position && !this.busy && !this.holding && !this.browsing
+      && this.session.status === 'running';
+  }
+
+  get browsing(): boolean { return this.browseIndex !== null; }
+
+  /** Was das Brett zeigt: die Aufgabe (bzw. der gehaltene Zug) — oder die angeklickte Eröffnungsstellung. */
+  get viewFen(): string {
+    if (this.browseIndex === null) return this.boardFen;
+    if (this.browseIndex < 0) return this.session?.startFen || this.boardFen;
+    return this.session?.intro[this.browseIndex]?.fen || this.boardFen;
+  }
+
+  get viewLastMove(): [string, string] | undefined {
+    if (this.browseIndex === null) return this.lastMove;
+    if (this.browseIndex < 0) return undefined;                 // Grundstellung: es gab keinen Zug
+    const uci = this.session?.intro[this.browseIndex]?.uci;
+    return uci ? [uci.slice(0, 2), uci.slice(2, 4)] : undefined;
+  }
+
+  /** Einen Eröffnungszug anschauen (`null` = zurück zur Aufgabe, `-1` = Grundstellung). */
+  browse(index: number | null): void {
+    this.browseIndex = index;
+    this.cdr.markForCheck();
   }
 
   /**
@@ -284,6 +338,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
           this.session = res.session;              // Punkte/Fortschritt sofort mitnehmen
           this.pending = res.session;
           this.holding = true;
+          this.browseIndex = null;   // der eigene Zug soll zu sehen sein, nicht die Eroeffnung
           this.boardFen = after;
           this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
         } else {
@@ -313,6 +368,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   private apply(s: GuessSession): void {
     this.session = s;
     this.since = Date.now();
+    this.browseIndex = null;        // neue Aufgabe → Brett zurueck auf die Aufgabe
     if (s.position) {
       this.boardFen = s.position.fen;
       this.lastMove = s.position.lastMoveUci

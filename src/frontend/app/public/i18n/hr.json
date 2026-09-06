@@ -2928,6 +2928,8 @@
     "youPlayed": "Ti: {{move}}",
     "gamePlayed": "Partija: {{move}}",
     "gameMoveWouldBe": "Potez partije bio je {{move}}",
+    "toTask": "Natrag na zadatak",
+    "startPosition": "Početni položaj",
     "evalDelta": "{{delta}} u odnosu na potez partije",
     "continue": "Dalje",
     "reply": "Odgovor: {{move}}",

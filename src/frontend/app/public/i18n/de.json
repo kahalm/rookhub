@@ -2928,6 +2928,8 @@
     "youPlayed": "Du: {{move}}",
     "gamePlayed": "Partie: {{move}}",
     "gameMoveWouldBe": "Der Partiezug war {{move}}",
+    "toTask": "Zur Aufgabe",
+    "startPosition": "Grundstellung",
     "evalDelta": "{{delta}} gegenüber dem Partiezug",
     "continue": "Weiter",
     "reply": "Antwort: {{move}}",

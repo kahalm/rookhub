@@ -324,4 +324,57 @@ public class GuessSessionServiceTests : IDisposable
         // Ohne StartPly wird die Eröffnung gezeigt statt abgefragt — Raten ab Zug 1 prüft Buchwissen.
         Assert.Equal(GuessSessionService.DefaultSkipPlies, dto.StartPly);
     }
+    // ---- Eroeffnung vor dem Einstieg (durchklickbar) ----
+
+    [Fact]
+    public async Task Start_WithSkippedOpening_DeliversTheMovesBeforeIt()
+    {
+        var (user, analysis) = await SeedAsync();
+
+        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 4,   // ab 3.Bb5
+        });
+
+        Assert.Equal(4, dto.StartPly);
+        Assert.Equal(4, dto.Intro.Count);                       // e4 e5 Nf3 Nc6
+        Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6" }, dto.Intro.Select(m => m.San));
+        Assert.Equal(new[] { 1, 1, 2, 2 }, dto.Intro.Select(m => m.MoveNumber));
+        Assert.Equal(new[] { true, false, true, false }, dto.Intro.Select(m => m.White));
+
+        // Jeder Eintrag traegt die Stellung NACH seinem Zug — die des letzten ist die Einstiegsstellung.
+        Assert.Equal(dto.Position!.Fen, dto.Intro[^1].Fen);
+        Assert.NotNull(dto.StartFen);
+        Assert.StartsWith("rnbqkbnr/pppppppp", dto.StartFen);   // Grundstellung vor 1.e4
+        Assert.All(dto.Intro, m => Assert.NotEqual(dto.StartFen, m.Fen));
+    }
+
+    [Fact]
+    public async Task Start_FromTheFirstMove_HasNothingToClickThrough()
+    {
+        var (user, analysis) = await SeedAsync();
+
+        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
+        });
+
+        Assert.Empty(dto.Intro);
+        Assert.Null(dto.StartFen);
+    }
+
+    [Fact]
+    public async Task List_LeavesTheOpeningOut()
+    {
+        var (user, analysis) = await SeedAsync();
+        await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 4,
+        });
+
+        // Die Uebersicht braucht die Eroeffnung nicht — sie waere dort je Sitzung ein zweiter Satz Zeilen.
+        var list = await _svc.ListAsync(user.Id);
+        Assert.All(list, s => Assert.Empty(s.Intro));
+    }
+
 }

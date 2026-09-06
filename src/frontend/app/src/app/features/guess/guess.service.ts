@@ -15,6 +15,16 @@ export interface GuessPosition {
   lastMoveUci: string | null;
 }
 
+/** Ein Zug der Eröffnung vor dem Einstieg — `fen` ist die Stellung NACH diesem Zug. */
+export interface GuessIntroMove {
+  ply: number;
+  moveNumber: number;
+  white: boolean;
+  san: string;
+  uci: string;
+  fen: string;
+}
+
 export interface GuessSession {
   id: number;
   gameAnalysisId: number;
@@ -32,6 +42,10 @@ export interface GuessSession {
   /** `null`, wenn die Sitzung durch ist. */
   position: GuessPosition | null;
   totalGuesses: number;
+  /** Stellung vor dem ersten Zug der Partie (nur wenn es eine Eröffnung zum Durchklicken gibt). */
+  startFen: string | null;
+  /** Die Züge vor dem Einstieg — leer, wenn ab dem ersten Zug geraten wird. */
+  intro: GuessIntroMove[];
 }
 
 /** Antwort auf einen Rateversuch — HIER kommt der Partiezug zum ersten Mal mit. */

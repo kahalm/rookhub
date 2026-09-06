@@ -2928,6 +2928,8 @@
     "youPlayed": "You: {{move}}",
     "gamePlayed": "Game: {{move}}",
     "gameMoveWouldBe": "The game move was {{move}}",
+    "toTask": "Back to the task",
+    "startPosition": "Starting position",
     "evalDelta": "{{delta}} against the game move",
     "continue": "Continue",
     "reply": "Reply: {{move}}",

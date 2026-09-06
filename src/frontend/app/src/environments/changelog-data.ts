@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.401.0", date: "2026-09-06", changes: [
+    { en: "Point game: the opening before your first task can now be clicked through. Under the board stand the moves that led to the position - click one and the board shows how it looked back then, click back and you are on the task again. Guessing stays blocked while you look around, so a move in an old position cannot be mistaken for an answer.", de: "Punktepartie: Die Eröffnung vor deiner ersten Aufgabe lässt sich jetzt durchklicken. Unter dem Brett stehen die Züge, die zu der Stellung geführt haben - ein Klick zeigt, wie es damals aussah, ein Klick zurück bringt dich zur Aufgabe. Solange du schaust, ist das Raten gesperrt, damit ein Zug in einer alten Stellung nicht als Antwort durchgeht." },
+  ] },
   { version: "0.400.1", date: "2026-09-06", changes: [
     { en: "Point game: when your move was clearly better than the game move, the board now also tells you by how much - the same number that already appeared for a move that was worse. In between, where the difference is under a fifth of a pawn, the game move alone still says everything.", de: "Punktepartie: War dein Zug deutlich besser als der Partiezug, steht jetzt auch dabei, um wie viel - dieselbe Zahl, die es bei einem schlechteren Zug schon gab. Dazwischen, wo der Unterschied unter einem Fünftel Bauern liegt, sagt der Partiezug allein weiterhin alles." },
   ] },
