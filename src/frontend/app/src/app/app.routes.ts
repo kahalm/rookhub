@@ -67,6 +67,14 @@ export const routes: Routes = [
   { path: 'privacy', loadComponent: () => import('./features/legal/privacy.component').then(m => m.PrivacyComponent) },
   { path: 'impressum', loadComponent: () => import('./features/legal/impressum.component').then(m => m.ImpressumComponent) },
   { path: 'account-deletion', loadComponent: () => import('./features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
+  // Turniere sind seit v0.409.0 eine eigene Seite. Diese drei Adressen bleiben hier als
+  // AUFFANGSTELLE stehen (nicht ersatzlos gestrichen): alte Lesezeichen, geteilte /t/{id}-Links
+  // und die Dashboard-Liste „Abonnierte Turniere" zeigen weiter dorthin — ohne sie fallen sie in
+  // die Kurz-URL-Route unten, bekommen 404 und landen still auf dem Dashboard.
+  { path: 'tournaments', loadComponent: () => import('./features/tournaments-moved/tournaments-moved.component').then(m => m.TournamentsMovedComponent) },
+  { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments-moved/tournaments-moved.component').then(m => m.TournamentsMovedComponent) },
+  { path: 't/:id', loadComponent: () => import('./features/tournaments-moved/tournaments-moved.component').then(m => m.TournamentsMovedComponent) },
+
   // Kurz-URL öffentlicher Kurse: /{slug} → leitet auf den Kurs weiter. MUSS als vorletzte Route
   // stehen (nach allen literalen Top-Level-Routen, vor dem Catch-all), damit sie nur unbekannte
   // Einzelsegmente abfängt und keine echte Seite verdeckt.

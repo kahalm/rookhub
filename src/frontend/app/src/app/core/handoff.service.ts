@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, AuthResponse } from './auth.service';
 import { partnerSiteUrl } from './partner-site';
@@ -25,6 +26,7 @@ import { partnerSiteUrl } from './partner-site';
 export class HandoffService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
+  private router = inject(Router);
 
   /** Parametername in der Ziel-URL. */
   static readonly Param = 'h';
@@ -71,6 +73,7 @@ export class HandoffService {
         const res = await firstValueFrom(
           this.http.post<AuthResponse>('/api/auth/handoff/exchange', { code }));
         this.auth.adoptSession(res);
+        this.leaveLoginMask();
         return true;
       } catch {
         return false;                            // abgelaufen/verbraucht → Anmeldemaske
@@ -91,9 +94,26 @@ export class HandoffService {
     try {
       const res = await firstValueFrom(this.http.post<AuthResponse>('/api/auth/session', {}));
       this.auth.adoptSession(res);
+      this.leaveLoginMask();
       return true;
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Holt den Nutzer aus der Anmeldemaske heraus, falls er dort inzwischen gelandet ist.
+   *
+   * <p>Der Aufruf hier laeuft aus dem `ngOnInit` der Wurzelkomponente und ist ASYNCHRON — die
+   * erste Router-Navigation startet direkt danach, also BEVOR die Anmeldung steht. Der authGuard
+   * sieht dann „nicht angemeldet" und schickt auf `/login?returnUrl=…`. Kurz darauf gelingt die
+   * Uebernahme, aber niemand navigiert zurueck: der Nutzer sitzt angemeldet vor dem
+   * Anmeldeformular. Betrifft beide Wege — den Einmal-Code UND die geteilte Anmeldung.</p>
+   */
+  private leaveLoginMask(): void {
+    const url = new URL(location.href);
+    if (!url.pathname.endsWith('/login')) return;
+    const back = url.searchParams.get('returnUrl');
+    void this.router.navigateByUrl(back && back.startsWith('/') ? back : '/');
   }
 }

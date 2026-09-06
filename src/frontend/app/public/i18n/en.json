@@ -2968,7 +2968,9 @@
       "better": "Better than the game",
       "clearlyBetter": "Clearly better",
       "skipped": "Passed"
-    }
+    },
+    "prevMove": "Previous move",
+    "nextMove": "Next move"
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",
@@ -3072,5 +3074,10 @@
   "turnier": {
     "brand": "Tournaments",
     "toRookHub": "To RookHub"
+  },
+  "tournamentsMoved": {
+    "leaving": "Tournaments have moved to their own site — taking you there.",
+    "noPartner": "Tournaments have moved to their own site.",
+    "link": "Open the tournament site"
   }
 }

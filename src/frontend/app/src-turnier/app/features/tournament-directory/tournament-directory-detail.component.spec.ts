@@ -87,6 +87,21 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(component.imported()).toBeNull();
   });
 
+  it('lässt eine verspätete Antwort nicht das Turnier eines anderen setzen', async () => {
+    // Bei einem reinen Parameterwechsel wird die Komponente nicht zerstört — takeUntilDestroyed
+    // greift also nicht. Ohne Vergleich mit dem ANGEZEIGTEN Eintrag führte „Ergebnisse" zum
+    // falschen Turnier.
+    await setup('111');
+    http.expectOne('/api/tournament-directory/111').flush(entry('111'));
+    const spaet = http.expectOne('/api/tournaments/111');
+
+    // Weiter zu einem anderen Turnier, bevor die erste Nachfrage antwortet.
+    component.entry.set(entry('222'));
+    spaet.flush({ id: 9, chessResultsId: '111', name: 'Das alte' });
+
+    expect(component.imported()).toBeNull();
+  });
+
   it('merkt das Turnier und schaltet die Anzeige sofort um', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));

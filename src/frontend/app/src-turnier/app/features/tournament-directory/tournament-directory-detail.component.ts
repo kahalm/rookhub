@@ -130,10 +130,15 @@ export class TournamentDirectoryDetailComponent implements OnInit {
    * unsere ist, wird geprueft (die beiden Nummernkreise koennen sich theoretisch ueberschneiden).
    */
   private lookupImported(entry: DirectoryEntry): void {
+    // Gegen die verspaetete Antwort: bei einem reinen Parameterwechsel wird die Komponente NICHT
+    // zerstoert, `takeUntilDestroyed` greift also nicht. Ohne den Vergleich mit dem gerade
+    // ANGEZEIGTEN Eintrag setzt die Antwort zu Turnier A das Ergebnis, waehrend B auf dem Schirm
+    // steht — der Knopf „Ergebnisse" fuehrte dann zum falschen Turnier.
     this.tournaments.getTournament(entry.chessResultsId).pipe(
       catchError(() => of(null)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(t => {
+      if (this.entry()?.chessResultsId !== entry.chessResultsId) return;
       this.imported.set(t && t.chessResultsId === entry.chessResultsId ? t : null);
     });
   }

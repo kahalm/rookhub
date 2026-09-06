@@ -112,6 +112,9 @@ public class TournamentSearchProfileController : BaseApiController
 
     // -----------------------------------------------------------------------
 
+    /// <summary>Passt als CSV noch in `TournamentSearchProfile.Federations` (varchar(200)).</summary>
+    private const int MaxFederations = 40;
+
     private static string? Validate(SearchProfileInputDto input)
     {
         if (string.IsNullOrWhiteSpace(input.Name)) return "Name is required.";
@@ -129,6 +132,15 @@ public class TournamentSearchProfileController : BaseApiController
             if (fed.Length != 3 || !fed.All(char.IsAsciiLetter))
                 return $"Unknown federation '{fed}'.";
         }
+
+        // Die ANZAHL zaehlt auch: die Liste landet als CSV in einer varchar(200)-Spalte. 60 gueltige
+        // Codes ergeben eine zu lange Zeichenkette, und die DbUpdateException faellt nicht unter
+        // den Unique-Filter des Aufrufers — das waere ein 500er, den jeder Angemeldete ausloesen
+        // kann. Mehr als alle 261 Foederationen kann ohnehin niemand meinen.
+        if ((input.Federations?.Count ?? 0) > MaxFederations)
+            return $"At most {MaxFederations} federations per profile.";
+        if ((input.Speeds?.Count ?? 0) > AllowedSpeeds.Length)
+            return "Too many time controls.";
         return null;
     }
 

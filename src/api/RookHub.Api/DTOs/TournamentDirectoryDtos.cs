@@ -110,6 +110,12 @@ public class DirectoryCalendarDto
     /// <summary>Jedes Turnier des Monats genau einmal.</summary>
     public List<DirectoryEntryDto> Tournaments { get; set; } = [];
     public List<DirectoryCalendarDayDto> Days { get; set; } = [];
+
+    /// <summary>
+    /// true = der Monat hat mehr Turniere, als diese Antwort traegt. Ohne diese Angabe faellt ein
+    /// Deckel niemandem auf: der Kalender saehe schlicht vollstaendig aus.
+    /// </summary>
+    public bool Truncated { get; set; }
 }
 
 /// <summary>Ein Tag im Kalender mit den Nummern der an diesem Tag LAUFENDEN Turniere.</summary>

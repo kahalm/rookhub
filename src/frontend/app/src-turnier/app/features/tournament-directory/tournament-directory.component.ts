@@ -208,16 +208,29 @@ export class TournamentDirectoryComponent implements OnInit {
 
   // ----- Liste ------------------------------------------------------------
 
+  /**
+   * Zaehler gegen ueberholte Antworten. Ohne ihn liest der Antwort-Handler `this.page` zum
+   * ANTWORTZEITPUNKT: „Mehr laden" (Seite 2) anstossen, sofort den Filter wechseln — die
+   * Antwort auf Seite 2 des ALTEN Filters trifft ein, sieht `page === 1` und ERSETZT die Liste
+   * damit. Der falsche Stand bleibt dann stehen, samt Gesamtzahl.
+   */
+  private listGeneration = 0;
+  private pinsGeneration = 0;
+
   loadList(): void {
     this.loading = true;
-    this.directory.search(this.filter, this.page, this.pageSize).subscribe({
+    const generation = ++this.listGeneration;
+    const requestedPage = this.page;
+    this.directory.search(this.filter, requestedPage, this.pageSize).subscribe({
       next: page => {
-        this.entries = this.page === 1 ? page.items : [...this.entries, ...page.items];
+        if (generation !== this.listGeneration) return;
+        this.entries = requestedPage === 1 ? page.items : [...this.entries, ...page.items];
         this.total = page.total;
         this.truncated = page.truncated;
         this.loading = false;
       },
       error: () => {
+        if (generation !== this.listGeneration) return;
         this.loading = false;
         this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError'));
       },
@@ -238,9 +251,17 @@ export class TournamentDirectoryComponent implements OnInit {
 
   private loadPins(bounds: string): void {
     this.mapLoading = true;
+    // Beim erneuten Betreten des Karten-Reiters laufen zwei Abfragen gegeneinander: `reload()`
+    // fragt mit dem GEMERKTEN Ausschnitt, die frisch aufgebaute Karte meldet direkt danach ihren
+    // eigenen. Ohne Zaehler gewinnt die zufaellig spaetere Antwort.
+    const generation = ++this.pinsGeneration;
     this.directory.map(this.filter, bounds).subscribe({
-      next: pins => { this.pins = pins; this.mapLoading = false; },
-      error: () => { this.mapLoading = false; },
+      next: pins => {
+        if (generation !== this.pinsGeneration) return;
+        this.pins = pins;
+        this.mapLoading = false;
+      },
+      error: () => { if (generation === this.pinsGeneration) this.mapLoading = false; },
     });
   }
 

@@ -51,9 +51,17 @@ describe('app.routes', () => {
     expect(await matchedPath('/repertoires/12')).toBe('repertoires/:id');
   });
 
+  it('faengt die umgezogenen Turnier-Adressen ab, statt sie in die Slug-Route laufen zu lassen', async () => {
+    // Turniere sind eine eigene Seite (turnier.oberschmid.homes). Die Routen hier ERSATZLOS zu
+    // streichen war ein Fehler: alte Lesezeichen, geteilte /t/{id}-Links und die Dashboard-Liste
+    // „Abonnierte Turniere" zeigen weiter dorthin — sie fielen dann NICHT ins Catch-all, sondern
+    // in ':slug/:chapter', bekamen 404 und landeten still auf dem Dashboard.
+    expect(await matchedPath('/tournaments')).toBe('tournaments');
+    expect(await matchedPath('/tournaments/9')).toBe('tournaments/:id');
+    expect(await matchedPath('/t/5')).toBe('t/:id');
+  });
+
   it('lässt die übrigen zweiteiligen Routen unangetastet', async () => {
-    // /tournaments/:id und /t/:id gibt es hier nicht mehr — Turniere sind eine eigene Seite
-    // (turnier.oberschmid.homes), siehe src-turnier.
     expect(await matchedPath('/puzzles/12')).toBe('puzzles/:id');
     expect(await matchedPath('/weekly/5')).toBe('weekly/:weeklyId');
     expect(await matchedPath('/g/abc')).toBe('g/:token');

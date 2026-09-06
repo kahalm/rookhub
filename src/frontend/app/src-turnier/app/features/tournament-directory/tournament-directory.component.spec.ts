@@ -198,6 +198,30 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  it('lässt eine überholte Antwort die Liste NICHT ersetzen', async () => {
+    // „Mehr laden" (Seite 2) anstossen, sofort den Filter wechseln: die alte Antwort traf früher
+    // auf `page === 1` und ersetzte die Liste durch Seite 2 des vorigen Filters.
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1')], 200);
+
+    component.loadMore();
+    const stale = http.expectOne(r => r.url === '/api/tournament-directory');
+    expect(stale.request.params.get('page')).toBe('2');
+
+    component.searchText = 'Braunau';
+    component.reload();
+    const fresh = http.expectOne(r => r.url === '/api/tournament-directory');
+
+    // Erst die ÜBERHOLTE Antwort, dann die aktuelle.
+    stale.flush({ items: [entry('alt')], total: 200, truncated: false });
+    fresh.flush({ items: [entry('neu')], total: 1, truncated: false });
+
+    expect(component.entries.map(e => e.chessResultsId)).toEqual(['neu']);
+    expect(component.total).toBe(1);
+    http.verify();
+  });
+
   it('hängt weitere Seiten an, statt sie zu ersetzen', async () => {
     await setup();
     flushProfiles([]);

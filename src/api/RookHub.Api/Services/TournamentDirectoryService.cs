@@ -50,6 +50,9 @@ public class TournamentDirectoryService
 
     private const int MaxRows = 2000;
 
+    /// <summary>Blockgroesse beim Nachladen der neuen Eintraege fuer die Umkreis-Meldung.</summary>
+    private const int NotifyLookupBatch = 500;
+
     /// <summary>
     /// Name des eigenen Crawler-Clients (laengeres Zeitlimit als der Live-Pfad, siehe Program.cs).
     /// </summary>
@@ -152,6 +155,24 @@ public class TournamentDirectoryService
             .ToListAsync(ct);
         var byId = existing.ToDictionary(e => e.ChessResultsId, StringComparer.Ordinal);
 
+        // Und die Zeilen NACHLADEN, die zwar geliefert wurden, aber nicht ins Fenster passen.
+        // Ohne das gilt ein VERSCHOBENES Turnier als neu: gespeichert mit Ende im Maerz, vom
+        // Veranstalter auf November verlegt, faellt es beim Mai-Lauf aus `existing` heraus, die
+        // Suche liefert es aber weiterhin — der Einfuegeversuch laeuft in den Unique-Index auf
+        // ChessResultsId und reisst den GANZEN Lauf mit (SaveChanges liegt ausserhalb des
+        // try/catch weiter oben). Ausgerechnet die Terminaenderung also, fuer die das
+        // Aenderungs-Feature gebaut wurde. Fremde Foederation absichtlich NICHT eingeschraenkt:
+        // ein Turnier kann auch die Foederation wechseln, und der Unique-Index gilt global.
+        var strays = rows.Select(r => r.ChessResultsId).Where(id => !byId.ContainsKey(id)).Distinct().ToList();
+        if (strays.Count > 0)
+        {
+            foreach (var stray in await _db.TournamentDirectoryEntries
+                         .Where(e => strays.Contains(e.ChessResultsId)).ToListAsync(ct))
+            {
+                byId[stray.ChessResultsId] = stray;
+            }
+        }
+
         var now = DateTime.UtcNow;
         var added = new List<TournamentDirectoryEntry>();
         var changed = new List<(TournamentDirectoryEntry Entry, string? OldDate, string? OldLocation)>();
@@ -191,13 +212,32 @@ public class TournamentDirectoryService
                 await GeocodeAsync(entry, ct);
                 _db.TournamentDirectoryEntries.Add(entry);
                 added.Add(entry);
+                // Sonst legt dieselbe Nummer, zweimal in EINER Trefferliste, zwei Zeilen an —
+                // und laeuft in denselben Unique-Index.
+                byId[entry.ChessResultsId] = entry;
             }
         }
 
         // Nicht mehr geliefert: erst zaehlen, dann (ab MissedSweepsUntilRemoved) als abgesagt melden.
+        //
+        // ABER NUR bei einer VOLLSTAENDIGEN Trefferliste. chess-results kappt bei MaxRows Zeilen,
+        // und ueber 18 Monate liegen grosse Foederationen darueber. Der Schwanz der Liste fehlt
+        // dann JEDE Nacht an derselben Stelle — die Karenz von zwei Laeufen faengt einen
+        // einzelnen Ausfall ab, nicht eine systematische Luecke. Ohne diese Bremse meldet der
+        // zweite Lauf reihenweise Absagen fuer Turniere, die stattfinden.
+        var truncated = rows.Count >= MaxRows;
+        if (truncated)
+        {
+            _log.LogWarning(
+                "Verzeichnis-Sweep {Federation}: Trefferliste bei {Rows} Zeilen abgeschnitten — " +
+                "Verschwunden-Erkennung uebersprungen", federation, rows.Count);
+        }
+
         var seen = rows.Select(r => r.ChessResultsId).ToHashSet(StringComparer.Ordinal);
         var removed = new List<TournamentDirectoryEntry>();
-        foreach (var entry in existing.Where(e => e.RemovedAt == null && !seen.Contains(e.ChessResultsId)))
+        foreach (var entry in truncated
+                     ? []
+                     : existing.Where(e => e.RemovedAt == null && !seen.Contains(e.ChessResultsId)))
         {
             entry.MissedSweeps++;
             entry.UpdatedAt = now;
@@ -303,12 +343,21 @@ public class TournamentDirectoryService
             .ToListAsync(ct);
         if (profiles.Count == 0) return 0;
 
-        var candidates = await _db.TournamentDirectoryEntries.AsNoTracking()
-            .Where(e => newEntryIds.Contains(e.Id)
-                        && e.Lat != null && e.Lon != null
-                        && e.RemovedAt == null
-                        && e.StartDate != null && e.StartDate >= today)
-            .ToListAsync(ct);
+        // Die Kandidaten werden in Bloecken geholt. Eine `Contains`-Liste uebersetzt der Provider
+        // in inline-Konstanten; beim ERSTEN Lauf nach einem Deploy sind das ueber alle
+        // Foederationen zusammen bis zu sechsstellig viele Nummern — ein Statement von mehreren
+        // MB, das an `max_allowed_packet` scheitert. Der Wurf kaeme dann NACH allen erfolgreichen
+        // Sweeps: die Daten stehen, aber keine einzige Umkreis-Meldung geht raus.
+        var candidates = new List<TournamentDirectoryEntry>();
+        foreach (var block in newEntryIds.Distinct().Chunk(NotifyLookupBatch))
+        {
+            candidates.AddRange(await _db.TournamentDirectoryEntries.AsNoTracking()
+                .Where(e => block.Contains(e.Id)
+                            && e.Lat != null && e.Lon != null
+                            && e.RemovedAt == null
+                            && e.StartDate != null && e.StartDate >= today)
+                .ToListAsync(ct));
+        }
         if (candidates.Count == 0) return 0;
 
         var notified = 0;
@@ -456,12 +505,34 @@ public class TournamentDirectoryService
     internal static string ComputeGroupKey(TournamentDirectoryEntry entry)
     {
         var payload = string.Join('|',
-            GeoTextNormalizer.Normalize(entry.BaseName ?? entry.Name),
+            GroupText(entry.BaseName ?? entry.Name),
             entry.Federation ?? "",
             entry.StartDate?.ToString("yyyy-MM-dd") ?? "",
             entry.EndDate?.ToString("yyyy-MM-dd") ?? "",
-            GeoTextNormalizer.Normalize(entry.LocationText));
+            GroupText(entry.LocationText));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant()[..32];
+    }
+
+    /// <summary>
+    /// Der Textanteil des Gruppenschluessels.
+    ///
+    /// <para><c>GeoTextNormalizer.Normalize</c> wirft alles weg, was nach der Diakritika-Zerlegung
+    /// nicht <c>[a-z0-9]</c> ist — bei kyrillischer, griechischer oder ostasiatischer Schrift ist
+    /// das der GANZE Text. Zwei verschiedene bulgarische Turniere am selben Ort und Termin haetten
+    /// damit denselben Schluessel bekommen und waeren in Liste und Kalender zu EINEM verschmolzen;
+    /// eines davon waere unsichtbar geworden. Genau der Fehler, den der Klassenkommentar von
+    /// <see cref="TournamentNameGrouping"/> als den teureren bezeichnet — die Rotation faehrt alle
+    /// 261 Foederationen ab, darunter BUL, GRE, RUS, UKR, SRB, GEO, ARM, CHN, JPN, KOR.</para>
+    ///
+    /// <para>Bleibt nach dem Normalisieren nichts uebrig, entscheidet deshalb der Rohtext
+    /// (getrimmt, kleingeschrieben). Der ist weniger robust gegen Schreibvarianten — aber
+    /// „zusammengefasst, was nicht zusammengehoert" ist der schlimmere Ausgang als „getrennt
+    /// gelassen, was zusammengehoert".</para>
+    /// </summary>
+    private static string GroupText(string? value)
+    {
+        var normalized = GeoTextNormalizer.Normalize(value);
+        return normalized.Length > 0 ? normalized : (value ?? "").Trim().ToLowerInvariant();
     }
 
     internal static string ComputeChangeHash(DateOnly? start, DateOnly? end, string? location)

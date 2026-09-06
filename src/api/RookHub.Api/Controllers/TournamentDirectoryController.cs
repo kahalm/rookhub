@@ -23,6 +23,9 @@ public class TournamentDirectoryController : BaseApiController
 
     private static readonly Regex FederationPattern = new(@"^[A-Za-z]{3}$", RegexOptions.Compiled);
 
+    /// <summary>Obergrenze der Turniere EINES Monats — jenseits davon meldet die Antwort `truncated`.</summary>
+    private const int CalendarMaxTournaments = 1500;
+
     private readonly TournamentDirectoryQueryService _query;
     private readonly AppDbContext _db;
 
@@ -113,9 +116,12 @@ public class TournamentDirectoryController : BaseApiController
             lat, lon, radiusKm, fed, speed, q, weekendOnly, minPlayers, profileId, 1, 200, ct);
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
-        // Der Monat ist die Obergrenze: mehr als 200 gleichzeitig laufende Turniere im selben
-        // Umkreis gibt es nicht, und eine Kalenderzelle zeigt ohnehin nur die ersten paar.
-        var result = await _query.SearchAsync(parsed.Query! with { Page = 1, PageSize = 200 }, ct);
+        // Ein Monat OHNE Umkreis umfasst alle Foederationen — auf dem Dev-Server sind das
+        // dreistellig viele Turniere, und der Kalender ist die Startseite der Turnierseite, wird
+        // also regelmaessig ungefiltert aufgerufen. Der frueher hier stehende Deckel von 200 war
+        // deshalb keine grosszuegige Reserve, sondern der Grund, warum genau 200 gezaehlt wurden.
+        // Was jenseits der Grenze liegt, wird gemeldet statt verschwiegen (`Truncated`).
+        var result = await _query.SearchAsync(parsed.Query! with { Page = 1, PageSize = CalendarMaxTournaments }, ct);
         var subscribed = await SubscribedIdsAsync(
             result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
 
@@ -136,7 +142,12 @@ public class TournamentDirectoryController : BaseApiController
                     .Select(i => i.Entry.ChessResultsId).ToList(),
             });
         }
-        return Ok(new DirectoryCalendarDto { Tournaments = tournaments, Days = days });
+        return Ok(new DirectoryCalendarDto
+        {
+            Tournaments = tournaments,
+            Days = days,
+            Truncated = result.Truncated || result.Total > tournaments.Count,
+        });
     }
 
     [HttpGet("{chessResultsId}")]
@@ -222,6 +233,9 @@ public class TournamentDirectoryController : BaseApiController
         if (lat is { } la && la is < -90 or > 90) return (null, "lat out of range.");
         if (lon is { } lo && lo is < -180 or > 180) return (null, "lon out of range.");
 
+        List<string> profileFeds = [];
+        List<TournamentSpeed> profileSpeeds = [];
+
         if (profileId is { } id)
         {
             var profile = await _db.TournamentSearchProfiles.AsNoTracking()
@@ -234,13 +248,20 @@ public class TournamentDirectoryController : BaseApiController
             weekendOnly = profile.WeekendOnly;
             minPlayers = profile.MinPlayers;
 
-            var profileFeds = TournamentDirectoryService.SplitCsv(profile.Federations);
-            if (fed is null && profileFeds.Count == 1) fed = profileFeds[0];
+            // ALLE Werte des Profils, nicht nur der eine Sonderfall. Frueher wurde ein Profil mit
+            // mehreren Foederationen/Bedenkzeiten beim Filtern uebergangen — die naechtliche
+            // Meldung wertet sie aber vollstaendig aus (MatchesProfile). Ein Profil soll
+            // reproduzierbar dasselbe liefern wie die Meldung, sonst ist es zwei Dinge.
+            if (fed is null) profileFeds = TournamentDirectoryService.SplitCsv(profile.Federations);
 
-            var profileSpeeds = TournamentDirectoryService.SplitCsv(profile.Speeds);
-            if (parsedSpeed is null && profileSpeeds.Count == 1
-                && Enum.TryParse<TournamentSpeed>(profileSpeeds[0], ignoreCase: true, out var single))
-                parsedSpeed = single;
+            if (parsedSpeed is null)
+            {
+                profileSpeeds = TournamentDirectoryService.SplitCsv(profile.Speeds)
+                    .Select(v => Enum.TryParse<TournamentSpeed>(v, ignoreCase: true, out var s) ? s : (TournamentSpeed?)null)
+                    .Where(v => v is not null)
+                    .Select(v => v!.Value)
+                    .ToList();
+            }
         }
 
         return (new DirectorySearchQuery
@@ -252,6 +273,8 @@ public class TournamentDirectoryController : BaseApiController
             RadiusKm = radiusKm,
             Federation = fed,
             Speed = parsedSpeed,
+            Federations = profileFeds.Count > 0 ? profileFeds : null,
+            Speeds = profileSpeeds.Count > 0 ? profileSpeeds : null,
             Text = string.IsNullOrWhiteSpace(text) ? null : text.Trim(),
             WeekendOnly = weekendOnly,
             MinPlayers = minPlayers,

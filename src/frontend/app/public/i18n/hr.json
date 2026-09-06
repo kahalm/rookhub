@@ -2968,7 +2968,9 @@
       "better": "Bolje od partije",
       "clearlyBetter": "Znatno bolje",
       "skipped": "Preskočeno"
-    }
+    },
+    "prevMove": "Prethodni potez",
+    "nextMove": "Sljedeći potez"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",
@@ -3072,5 +3074,10 @@
   "turnier": {
     "brand": "Turniri",
     "toRookHub": "Na RookHub"
+  },
+  "tournamentsMoved": {
+    "leaving": "Turniri imaju vlastitu stranicu — preusmjeravamo te.",
+    "noPartner": "Turniri imaju vlastitu stranicu.",
+    "link": "Otvori stranicu turnira"
   }
 }

@@ -29,11 +29,14 @@ describe('TournamentMapComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('meldet den sichtbaren Ausschnitt im Serverformat', () => {
+  it('meldet den sichtbaren Ausschnitt im Serverformat', async () => {
     let bounds: string | null = null;
     component.boundsChanged.subscribe(b => (bounds = b));
 
     fixture.detectChanges();   // ngAfterViewInit legt die Karte an
+    // Der erste Bericht kommt bewusst erst NACH dem laufenden Durchlauf (sonst NG0100 beim
+    // Elternteil, der daraufhin sein Ladeflag setzt).
+    await Promise.resolve();
 
     expect(bounds).not.toBeNull();
     expect(bounds!).toMatch(/^-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+$/);
@@ -51,7 +54,7 @@ describe('TournamentMapComponent', () => {
     expect(() => fixture.detectChanges()).not.toThrow();
   });
 
-  it('zeigt beim Start den GANZEN Umkreis, nicht einen Ausschnitt davon', () => {
+  it('zeigt beim Start den GANZEN Umkreis, nicht einen Ausschnitt davon', async () => {
     // Passt Leaflet auf eine Flaeche der Groesse 0 ein, rechnet es die groesstmoegliche
     // Vergroesserung aus — man landet tief in einer Strasse statt beim ganzen Umkreis.
     const lat = 47.8, lon = 13.04, radiusKm = 100;
@@ -60,6 +63,7 @@ describe('TournamentMapComponent', () => {
     component.centre = { lat, lon, radiusKm };
 
     fixture.detectChanges();
+    await Promise.resolve();
 
     const [minLat, minLon, maxLat, maxLon] = bounds!.split(',').map(Number);
     const dLat = radiusKm / 111.32;

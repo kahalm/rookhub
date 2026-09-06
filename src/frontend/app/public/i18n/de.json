@@ -2968,7 +2968,9 @@
       "better": "Besser als die Partie",
       "clearlyBetter": "Deutlich besser",
       "skipped": "Gepasst"
-    }
+    },
+    "prevMove": "Vorheriger Zug",
+    "nextMove": "Nächster Zug"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",
@@ -3072,5 +3074,10 @@
   "turnier": {
     "brand": "Turniere",
     "toRookHub": "Zu RookHub"
+  },
+  "tournamentsMoved": {
+    "leaving": "Turniere haben eine eigene Seite — du wirst weitergeleitet.",
+    "noPartner": "Turniere haben eine eigene Seite.",
+    "link": "Zur Turnierseite"
   }
 }

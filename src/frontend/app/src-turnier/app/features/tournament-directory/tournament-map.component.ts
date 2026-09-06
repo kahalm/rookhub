@@ -149,7 +149,9 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     this.applyCentre();
     this.applyEntries();
-    this.emitBounds();
+    // Erst NACH dem laufenden Durchlauf melden: der Elternteil setzt daraufhin sein Ladeflag,
+    // das in seinem Template schon gelesen wurde — im Dev-Build ist das ein NG0100.
+    queueMicrotask(() => this.emitBounds());
   }
 
   ngOnChanges(changes: SimpleChanges): void {

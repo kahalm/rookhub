@@ -13,6 +13,15 @@ public sealed record DirectorySearchQuery
     public int? RadiusKm { get; init; }
     public string? Federation { get; init; }
     public TournamentSpeed? Speed { get; init; }
+
+    /// <summary>
+    /// Mehrere Foederationen bzw. Bedenkzeiten — so, wie ein Suchprofil sie fuehrt. Frueher wurde
+    /// ein Profil mit MEHR als einem Wert beim Filtern schlicht ignoriert, waehrend die
+    /// naechtliche Meldung die ganze Liste auswertete: die Ansicht zeigte dann Blitzturniere aus
+    /// Italien, gemeldet wurde nur AUT/GER-Standard. Ein Profil muss beides gleich beantworten.
+    /// </summary>
+    public IReadOnlyList<string>? Federations { get; init; }
+    public IReadOnlyList<TournamentSpeed>? Speeds { get; init; }
     public string? Text { get; init; }
     public bool WeekendOnly { get; init; }
     public int? MinPlayers { get; init; }
@@ -111,7 +120,13 @@ public class TournamentDirectoryQueryService
             {
                 var members = g.OrderBy(x => x.Entry.ChessResultsId, StringComparer.Ordinal)
                     .Select(x => x.Entry).ToList();
-                return new DirectoryGroupItem(members[0], Math.Round(g.Min(x => x.Distance), 1), members);
+                // Hauptvertreter ist die KLEINSTE Id — dieselbe Regel wie im Weg ohne Umkreis
+                // (dort `g.Min(x => x.Id)`). Sonst traegt dasselbe Turnier je nach gesetztem
+                // Radius eine andere chessResultsId, und ein Link aus der einen Ansicht zeigt in
+                // der anderen ins Leere. (Nach ChessResultsId zu sortieren waere ausserdem eine
+                // Text-Sortierung von Zahlen: „1000" kaeme vor „999".)
+                var primary = members.MinBy(m => m.Id)!;
+                return new DirectoryGroupItem(primary, Math.Round(g.Min(x => x.Distance), 1), members);
             })
             .OrderBy(x => x.Entry.StartDate).ThenBy(x => x.DistanceKm)
             .ToList();
@@ -234,9 +249,19 @@ public class TournamentDirectoryQueryService
             var fed = query.Federation.Trim().ToUpperInvariant();
             source = source.Where(e => e.Federation == fed);
         }
+        else if (query.Federations is { Count: > 0 } feds)
+        {
+            var list = feds.Select(f => f.Trim().ToUpperInvariant()).ToList();
+            source = source.Where(e => e.Federation != null && list.Contains(e.Federation));
+        }
 
         if (query.Speed is { } speed)
             source = source.Where(e => e.Speed == speed);
+        else if (query.Speeds is { Count: > 0 } speeds)
+        {
+            var list = speeds.ToList();
+            source = source.Where(e => list.Contains(e.Speed));
+        }
 
         if (query.MinPlayers is { } min)
             source = source.Where(e => e.PlayerCount >= min);

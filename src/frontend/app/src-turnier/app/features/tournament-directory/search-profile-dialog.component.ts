@@ -70,13 +70,20 @@ export class SearchProfileDialogComponent {
       this.weekendOnly = profile.weekendOnly;
       this.minPlayers = profile.minPlayers;
       this.notifyNew = profile.notifyNew;
+      // Der gespeicherte Ortstext gehoert zu den gespeicherten Koordinaten — sonst gilt er beim
+      // Oeffnen sofort als „abweichend" und die Koordinaten waeren weg.
+      this.chosenLabel = profile.placeQuery ?? null;
     }
 
     // switchMap statt verschachtelter Subscribes: bei schnellem Tippen darf nicht die Antwort
     // einer aelteren Anfrage die neuere ueberschreiben.
     this.placeTerm$.pipe(
       debounceTime(250),
-      distinctUntilChanged(),
+      // Der Vergleich muss die ANGEZEIGTEN Vorschlaege mit einbeziehen: „ab" tippen, auf „a"
+      // loeschen (Liste geleert), wieder „b" — derselbe Begriff, aber die Liste ist leer und das
+      // Sanduhr-Flag steht. Ohne diese Bedingung verwirft distinctUntilChanged die Anfrage, und
+      // die Sanduhr bleibt fuer immer.
+      distinctUntilChanged((a, b) => a === b && this.suggestions.length > 0),
       switchMap(term => this.directory.places(term)),
       takeUntilDestroyed(),
     ).subscribe({
@@ -85,18 +92,35 @@ export class SearchProfileDialogComponent {
     });
   }
 
+  /** Die Beschriftung, zu der die aktuell gehaltenen Koordinaten gehoeren. */
+  private chosenLabel: string | null = null;
+
   onPlaceInput(value: string): void {
     this.placeQuery = value;
-    if (value.trim().length < 2) {
+
+    // Weicht der Text von der zuletzt GEWAEHLTEN Beschriftung ab, gelten die Koordinaten nicht
+    // mehr. Ohne das speichert „Zuhause/Wien" nach dem Umtippen auf „Berlin" die Wiener
+    // Koordinaten unter dem Namen Berlin — und dieses Profil steuert Ansicht UND naechtliche
+    // Meldung, die Falschangabe waere danach nirgends zu sehen.
+    if (value.trim() !== (this.chosenLabel ?? '').trim()) {
+      this.lat = null;
+      this.lon = null;
+      this.chosenLabel = null;
+    }
+
+    const term = value.trim();
+    if (term.length < 2) {
       this.suggestions = [];
+      this.searching = false;
       return;
     }
     this.searching = true;
-    this.placeTerm$.next(value.trim());
+    this.placeTerm$.next(term);
   }
 
   choose(suggestion: GeoPlaceSuggestion): void {
     this.placeQuery = suggestion.label;
+    this.chosenLabel = suggestion.label;
     this.lat = suggestion.lat;
     this.lon = suggestion.lon;
     this.suggestions = [];

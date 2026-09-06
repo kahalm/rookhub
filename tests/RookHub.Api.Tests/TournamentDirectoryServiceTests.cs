@@ -602,4 +602,101 @@ public class TournamentDirectoryServiceTests : IDisposable
                 Content = new StringContent(_body, Encoding.UTF8, "application/json")
             });
     }
+
+    // ----- Funde aus der Durchsicht ----------------------------------------
+
+    [Fact]
+    public async Task Sweep_MovedTournamentOutOfTheOldWindow_IsUpdated_NotInsertedTwice()
+    {
+        // Genau der Fall, fuer den das Aenderungs-Feature gebaut wurde: gespeichert mit Ende im
+        // Maerz, vom Veranstalter auf November verlegt. Beim naechsten Lauf faellt die Zeile aus
+        // dem Suchfenster, die Trefferliste bringt sie aber weiterhin — wird sie dann als NEU
+        // eingefuegt, laeuft der Unique-Index auf ChessResultsId an und reisst den Lauf mit.
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "12345", Name = "Open Alt", Federation = "AUT",
+            StartDate = new DateOnly(2026, 3, 10), EndDate = new DateOnly(2026, 3, 15),
+            LocationText = "Salzburg", FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var svc = CreateService($"[{Row("12345", "Open Neu", "2026-11-10", "2026-11-15", "Salzburg")}]");
+        var (result, _) = await svc.SweepFederationAsync("AUT", Today);
+
+        Assert.Equal(0, result.Added);
+        Assert.Equal(1, result.Updated);
+        var entry = Assert.Single(_db.TournamentDirectoryEntries);
+        Assert.Equal(new DateOnly(2026, 11, 10), entry.StartDate);
+    }
+
+    [Fact]
+    public async Task Sweep_SameIdTwiceInOneResponse_CreatesOneRow()
+    {
+        var svc = CreateService($"[{Row("777", "Doppelt", "2026-10-01", "2026-10-03", "Wien")}," +
+                                $"{Row("777", "Doppelt", "2026-10-01", "2026-10-03", "Wien")}]");
+
+        await svc.SweepFederationAsync("AUT", Today);
+
+        Assert.Single(_db.TournamentDirectoryEntries);
+    }
+
+    [Fact]
+    public async Task Sweep_TruncatedResultList_DoesNotCountAnythingAsMissing()
+    {
+        // chess-results kappt bei 2000 Zeilen. Ueber 18 Monate liegen grosse Foederationen
+        // darueber, und der Schwanz fehlt dann JEDE Nacht an derselben Stelle — die Karenz von
+        // zwei Laeufen faengt einen einzelnen Ausfall ab, keine systematische Luecke. Ohne Bremse
+        // meldet der zweite Lauf reihenweise Absagen fuer Turniere, die stattfinden.
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "alt", Name = "Faellt hinten runter", Federation = "GER",
+            StartDate = new DateOnly(2027, 1, 5), EndDate = new DateOnly(2027, 1, 7),
+            FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var rows = string.Join(',', Enumerable.Range(0, 2000)
+            .Select(i => Row($"g{i}", $"Turnier {i}", "2026-10-01", "2026-10-02", "Berlin", "GER")));
+        var svc = CreateService($"[{rows}]");
+
+        var (result, _) = await svc.SweepFederationAsync("GER", Today);
+
+        Assert.Equal(0, result.Removed);
+        var alt = await _db.TournamentDirectoryEntries.FirstAsync(e => e.ChessResultsId == "alt");
+        Assert.Equal(0, alt.MissedSweeps);
+        Assert.Null(alt.RemovedAt);
+    }
+
+    [Fact]
+    public void GroupKey_KeepsNonLatinNamesApart()
+    {
+        // Kyrillisch/Griechisch/CJK ueberlebt die Normalisierung nicht — der normalisierte Text
+        // ist LEER. Zwei verschiedene Turniere am selben Ort und Termin haetten damit denselben
+        // Schluessel bekommen und waeren in der Liste zu einem verschmolzen.
+        TournamentDirectoryEntry Entry(string name, string place) => new()
+        {
+            ChessResultsId = name, Name = name, BaseName = name, Federation = "BUL",
+            StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
+            LocationText = place,
+        };
+
+        var a = TournamentDirectoryService.ComputeGroupKey(Entry("Софийски турнир", "София"));
+        var b = TournamentDirectoryService.ComputeGroupKey(Entry("Пловдивски турнир", "София"));
+
+        Assert.NotEqual(a, b);
+    }
+
+    [Fact]
+    public void GroupKey_StillGroupsTheSameNonLatinTournament()
+    {
+        TournamentDirectoryEntry Entry(string id) => new()
+        {
+            ChessResultsId = id, Name = "Софийски турнир", BaseName = "Софийски турнир",
+            Federation = "BUL", StartDate = new DateOnly(2026, 10, 10),
+            EndDate = new DateOnly(2026, 10, 12), LocationText = "София",
+        };
+
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(Entry("1")),
+                     TournamentDirectoryService.ComputeGroupKey(Entry("2")));
+    }
 }

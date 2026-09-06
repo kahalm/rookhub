@@ -215,14 +215,32 @@ public class GazetteerImportService
     /// <summary>
     /// Ersetzt die vom Filter erfassten Zeilen durch die neuen. In Baetchen, mit geleertem
     /// Change-Tracker: 25k getrackte Entities machen jeden weiteren SaveChanges quadratisch teuer.
+    ///
+    /// <para><b>Loeschen und Schreiben liegen in EINER Transaktion.</b> Ohne sie ist das Loeschen
+    /// sofort endgueltig, und ein Abbruch zwischen zwei Baetchen (das <c>ct</c> ist
+    /// <c>HttpContext.RequestAborted</c> — ein Reverse-Proxy mit 60 s Zeitlimit reicht dafuer)
+    /// laesst das Ortslexikon halb geloescht zurueck. Auffallen wuerde das niemandem: der Request
+    /// ist ja schon weg, und die Verortung liefert danach einfach stiller weniger Treffer.</para>
+    ///
+    /// <para>Der InMemory-Provider kennt weder <c>ExecuteDelete</c> noch Transaktionen — deshalb
+    /// die Weiche ueber <c>IsRelational()</c>; die Tests liegen auf ParsePostalLines/ParseCityLines,
+    /// dieser Pfad wird auf dem Dev-Stack von Hand abgenommen.</para>
     /// </summary>
     private async Task ReplaceAsync(
         List<GeoPlace> places, System.Linq.Expressions.Expression<Func<GeoPlace, bool>> scope, CancellationToken ct)
     {
+        if (!_db.Database.IsRelational())
+        {
+            _db.GeoPlaces.RemoveRange(_db.GeoPlaces.Where(scope));
+            _db.GeoPlaces.AddRange(places);
+            await _db.SaveChangesAsync(ct);
+            return;
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
         // ExecuteDelete statt RemoveRange: 25k getrackte Entities zu laden, nur um sie zu
-        // loeschen, kostet mehr als der Import selbst. Preis: der InMemory-Provider kann das
-        // nicht, deshalb liegen die Tests auf ParsePostalLines/ParseCityLines und dieser Pfad
-        // wird auf dem Dev-Stack von Hand abgenommen.
+        // loeschen, kostet mehr als der Import selbst.
         await _db.GeoPlaces.Where(scope).ExecuteDeleteAsync(ct);
 
         for (var offset = 0; offset < places.Count; offset += BatchSize)
@@ -231,6 +249,8 @@ public class GazetteerImportService
             await _db.SaveChangesAsync(ct);
             _db.ChangeTracker.Clear();
         }
+
+        await tx.CommitAsync(ct);
     }
 
     private static bool TryParseCoordinate(string text, out double value) =>

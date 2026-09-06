@@ -138,7 +138,10 @@ public class AdminTournamentDirectoryController : BaseApiController
         entry.Lat = input.Lat;
         entry.Lon = input.Lon;
         entry.GeoSource = GeoSource.Manual;
-        entry.GeoPlaceName = input.PlaceName?.Trim();
+        // Gekappt: die Spalte ist varchar(200), und eine zu lange Eingabe waere sonst ein 500er
+        // statt einer gespeicherten Korrektur.
+        var placeName = input.PlaceName?.Trim();
+        entry.GeoPlaceName = placeName is { Length: > 200 } ? placeName[..200] : placeName;
         entry.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 

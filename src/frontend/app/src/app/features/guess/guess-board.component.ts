@@ -320,11 +320,25 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     return this.session?.history[this.browseIndex]?.fen || this.boardFen;
   }
 
+  /**
+   * Der hervorgehobene Zug — als STABILES Tupel gemerkt. Ein Getter, der beim Blaettern jedes Mal
+   * ein neues `[from, to]`-Literal liefert, laesst unter Default-Change-Detection in JEDEM
+   * Durchlauf `ngOnChanges` des Bretts feuern; chessground zeichnet dann jedes Mal komplett neu.
+   * Dieselbe Falle wie beim Kartenmittelpunkt im Turnierkalender.
+   */
+  private lastMoveCache?: [string, string];
+  private lastMoveKey = '';
+
   get viewLastMove(): [string, string] | undefined {
     if (this.browseIndex === null) return this.lastMove;
     if (this.browseIndex < 0) return undefined;                 // Grundstellung: es gab keinen Zug
     const uci = this.session?.history[this.browseIndex]?.uci;
-    return uci ? [uci.slice(0, 2), uci.slice(2, 4)] : undefined;
+    const key = uci ?? '';
+    if (key !== this.lastMoveKey) {
+      this.lastMoveKey = key;
+      this.lastMoveCache = uci ? [uci.slice(0, 2), uci.slice(2, 4)] : undefined;
+    }
+    return this.lastMoveCache;
   }
 
   /** Einen Eröffnungszug anschauen (`null` = zurück zur Aufgabe, `-1` = Grundstellung). */

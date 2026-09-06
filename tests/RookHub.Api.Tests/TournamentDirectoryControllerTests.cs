@@ -355,6 +355,37 @@ public class TournamentDirectoryControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_WithProfileId_HonoursALLFederationsAndSpeeds()
+    {
+        // Frueher wurde ein Profil mit MEHR als einem Wert beim Filtern uebergangen, waehrend die
+        // naechtliche Meldung die ganze Liste auswertet: die Ansicht zeigte dann Blitzturniere aus
+        // Italien, gemeldet wurde nur AUT/GER-Standard. Ein Profil muss beides gleich beantworten.
+        var userId = await CreateUserAsync();
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = userId, Name = "Nachbarn", Lat = 47.80, Lon = 13.04, RadiusKm = 2000,
+            Federations = "AUT,GER", Speeds = "Standard,Rapid",
+        });
+        await _db.SaveChangesAsync();
+        var profileId = _db.TournamentSearchProfiles.Single().Id;
+
+        await AddEntryAsync("1", "AUT Standard", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            47.81, 13.05, fed: "AUT", speed: TournamentSpeed.Standard);
+        await AddEntryAsync("2", "GER Rapid", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            48.13, 11.58, fed: "GER", speed: TournamentSpeed.Rapid);
+        await AddEntryAsync("3", "ITA Blitz", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            46.50, 11.35, fed: "ITA", speed: TournamentSpeed.Blitz);
+        await AddEntryAsync("4", "AUT Blitz", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            47.82, 13.06, fed: "AUT", speed: TournamentSpeed.Blitz);
+
+        var result = await CreateController(userId).Search(null, null, null, null, null, null, null, null,
+            profileId: profileId);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1", "2"], page.Items.Select(i => i.ChessResultsId).Order());
+    }
+
+    [Fact]
     public async Task Search_ForeignProfileId_IsRejected()
     {
         var mine = await CreateUserAsync("mine");
@@ -387,6 +418,19 @@ public class TournamentDirectoryControllerTests : IDisposable
         foreach (var day in new[] { 10, 11, 12 })
             Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == day).Ids);
         Assert.Empty(cal.Days.Single(d => d.Date.Day == 13).Ids);
+    }
+
+    [Fact]
+    public async Task Calendar_SaysSoWhenItCouldNotShowEverything()
+    {
+        // Ein Deckel, den niemand sieht, ist schlimmer als ein Deckel: der Kalender saehe
+        // schlicht vollstaendig aus.
+        await AddEntryAsync("1", "Eins", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.False(cal.Truncated);
     }
 
     [Fact]

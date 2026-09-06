@@ -226,4 +226,20 @@ public class TournamentSearchProfileControllerTests : IDisposable
         Assert.Null(stored.Speeds);
         Assert.Null(stored.Federations);
     }
+
+    [Fact]
+    public async Task Create_WithAbsurdlyManyFederations_IsRejectedInsteadOfCrashing()
+    {
+        // Die Liste landet als CSV in einer varchar(200)-Spalte. Ohne Anzahl-Pruefung waere das
+        // eine DbUpdateException — die der Unique-Filter nicht faengt, also ein 500er, den jeder
+        // Angemeldete ausloesen kann.
+        var userId = await CreateUserAsync("viele");
+        var input = Input("Zu viele");
+        input.Federations = Enumerable.Range(0, 80).Select(i => $"A{(char)('A' + i % 26)}{(char)('A' + i / 26)}").ToList();
+
+        var result = await CreateController(userId).Create(input, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(_db.TournamentSearchProfiles);
+    }
 }
