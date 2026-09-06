@@ -7,6 +7,15 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 ## Nach dem naechsten PROD-Deploy erledigen
+- [ ] **Turnierseite auf PROD scharf schalten** (Dev laeuft seit 2026-09-06). Reihenfolge:
+  1. Tag setzen (nur mit Zustimmung!) — `rookhub-turnier:latest` entsteht ausschliesslich im Tag-Lauf.
+  2. `/opt/stacks/rookhub-schach/.env`: `TURNIER_PORT=8093`,
+     `TURNIER_BASE_URL=https://turnier.oberschmid.homes`.
+  3. `compose.yaml`: `turnier`-Service (Image `:latest`, Container `rookhub-turnier`, Port
+     `${TURNIER_PORT}:8080`, Netz `rookhub`) + `App__TurnierBaseUrl` an der API — Vorlage steht in
+     `compose.vpn.yml`. API muss einmal neu, sonst kennt sie die Variable nicht.
+  4. NPM-Proxy-Host `turnier.oberschmid.homes` → `http 10.24.13.6:8093`, Wildcard-Zertifikat
+     `*.oberschmid.homes` (id 4), Block Common Exploits + Websockets an — wie `rookhub`.
 - [ ] **Turnierverzeichnis: Ortslexikon importieren.** Ohne diesen einmaligen Schritt hat KEIN
   Turnier Koordinaten — Umkreissuche und Karte bleiben leer, die Liste funktioniert.
   `bash scripts/gazetteer-import.sh https://<prod-api>` erledigt alles (Passwort interaktiv):
