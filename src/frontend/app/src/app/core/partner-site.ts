@@ -34,3 +34,15 @@ export function partnerSiteUrl(host: string = location.hostname, protocol: strin
   if (!other || parts.length < 2) return null;
   return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
 }
+
+/**
+ * Domaene fuer Cookies, die sich BEIDE Oberflaechen teilen sollen (z. B. der Design-Modus):
+ * `.oberschmid.homes` fuer `rookhub-dev.oberschmid.homes`. `null`, wenn der Host keine der beiden
+ * Seiten ist — auf einer IP oder localhost gibt es keine gemeinsame Elterndomaene, und ein Cookie
+ * darauf zu setzen wuerde stillschweigend nichts tun.
+ */
+export function sharedCookieDomain(host: string = location.hostname): string | null {
+  if (!siteKindOf(host)) return null;
+  const parts = host.split('.');
+  return parts.length >= 2 ? '.' + parts.slice(1).join('.') : null;
+}

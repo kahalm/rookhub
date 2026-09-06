@@ -25,16 +25,16 @@
       @for (cell of week; track trackByDate($index, cell)) {
         <div class="cal-cell" [class.out-of-month]="!cell.inMonth" [class.today]="cell.isToday">
           <div class="cal-daynum">{{ cell.dayOfMonth }}</div>
-          @for (entry of cell.entries.slice(0, 3); track trackById($index, entry)) {
+          @for (entry of visibleEntries(cell); track trackById($index, entry)) {
             <button type="button" class="cal-entry" [class.cancelled]="entry.cancelled"
                     (click)="entrySelected.emit(entry)" [title]="entry.name">
               {{ entry.name }}
             </button>
           }
-          @if (cell.entries.length > 3) {
-            <div class="cal-more">
-              {{ 'tournamentDirectory.calendar.more' | translate: { count: cell.entries.length - 3 } }}
-            </div>
+          @if (hiddenCount(cell) > 0) {
+            <button type="button" class="cal-more" (click)="expand(cell.date)">
+              {{ 'tournamentDirectory.calendar.more' | translate: { count: hiddenCount(cell) } }}
+            </button>
           }
         </div>
       }

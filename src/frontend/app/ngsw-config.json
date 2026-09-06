@@ -17,6 +17,16 @@
       }
     },
     {
+      "name": "fonts",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/fonts/**"
+        ]
+      }
+    },
+    {
       "name": "i18n",
       "installMode": "prefetch",
       "updateMode": "prefetch",
@@ -61,18 +71,5 @@
       }
     }
   ],
-  "dataGroups": [
-    {
-      "name": "google-fonts",
-      "urls": [
-        "https://fonts.googleapis.com/**",
-        "https://fonts.gstatic.com/**"
-      ],
-      "cacheConfig": {
-        "strategy": "performance",
-        "maxSize": 40,
-        "maxAge": "365d"
-      }
-    }
-  ]
+  "dataGroups": []
 }

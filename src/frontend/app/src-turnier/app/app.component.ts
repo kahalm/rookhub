@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { TurnierNavbarComponent } from './shell/turnier-navbar.component';
 import { LocaleService } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
+import { ThemeService } from '@rh/core/theme.service';
 
 @Component({
   selector: 'trn-root',
@@ -21,6 +22,9 @@ import { HandoffService } from '@rh/core/handoff.service';
 export class TurnierAppComponent implements OnInit {
   private locale = inject(LocaleService);
   private handoff = inject(HandoffService);
+  // Nur injizieren genuegt: der Dienst liest den geteilten Modus und setzt die Klasse am
+  // <html>-Element selbst. Ohne ihn stand die Turnierseite immer im hellen Grundzustand.
+  private theme = inject(ThemeService);
 
   ngOnInit(): void {
     this.locale.init();

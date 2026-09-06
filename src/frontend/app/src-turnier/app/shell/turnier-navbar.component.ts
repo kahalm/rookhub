@@ -5,10 +5,12 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { LocaleService, AppLang } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
+import { ThemeService } from '@rh/core/theme.service';
 
 /**
  * Kopfzeile der Turnierseite. Bewusst schmal: zwei Wege (Liste, Kalender), Sprache, Konto — und
@@ -19,7 +21,7 @@ import { HandoffService } from '@rh/core/handoff.service';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [CommonModule, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule,
-    MatIconModule, MatMenuModule, TranslatePipe],
+    MatIconModule, MatMenuModule, MatTooltipModule, TranslatePipe],
   template: `
     <mat-toolbar color="primary" class="tb">
       <a class="brand" routerLink="/tournaments">{{ 'turnier.brand' | translate }}</a>
@@ -39,6 +41,10 @@ import { HandoffService } from '@rh/core/handoff.service';
         </button>
       }
 
+      <button mat-icon-button (click)="theme.toggle()"
+              [matTooltip]="themeLabel" [attr.aria-label]="themeLabel">
+        <mat-icon>{{ themeIcon }}</mat-icon>
+      </button>
       <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
         <mat-icon>language</mat-icon>
       </button>
@@ -78,6 +84,8 @@ export class TurnierNavbarComponent {
   private locale = inject(LocaleService);
   private translate = inject(TranslateService);
   private handoff = inject(HandoffService);
+  readonly theme = inject(ThemeService);
+
   private router = inject(Router);
 
   readonly languages: AppLang[] = ['en', 'de', 'hr'];
@@ -92,4 +100,18 @@ export class TurnierNavbarComponent {
     this.auth.logout();
     void this.router.navigate(['/login']);
   }
+
+  /** Beschriftung wie in RookHub — dieselben Schluessel, damit beide Seiten gleich sprechen. */
+  get themeLabel(): string {
+    const key = { system: 'nav.themeSystem', light: 'nav.themeLight', dark: 'nav.themeDark' }[this.theme.preference];
+    return this.translate.instant(key);
+  }
+
+  /** Sonne = hell, Mond = dunkel, Automatik = Systemvorgabe. */
+  get themeIcon(): string {
+    return this.theme.preference === 'light' ? 'light_mode'
+      : this.theme.preference === 'dark' ? 'dark_mode'
+      : 'brightness_auto';
+  }
+
 }

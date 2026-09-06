@@ -30,7 +30,10 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - Eigene Dateien der Turnierseite: `src-turnier/`, `public-turnier/` (eigenes Manifest, wird ueber
   `public/` drueberkopiert), `tsconfig.turnier.json`, `ngsw-config.turnier.json`.
 - Bauen: `npx ng build turnier --configuration=production` bzw. `npx ng serve turnier`.
-- `ng test` deckt weiterhin das Projekt `app` ab — die geteilten Bausteine sind damit getestet.
+- Testen: **beide Projekte namentlich** — `npx ng test app` UND `npx ng test turnier`. Der
+  Karma-Builder sammelt Specs je PROJEKT ein; ohne eigenes Test-Target liefen die 17
+  Spec-Dateien der Turnierseite gar nicht mit. Und `ng test` OHNE Projektnamen waehlt bei zwei
+  Test-Targets nicht mehr verlaesslich `app` (gemessen 81 statt 1911 Tests) — beides lautlos.
 
 ## Tech Stack
 

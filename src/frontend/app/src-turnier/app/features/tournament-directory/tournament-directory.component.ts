@@ -115,9 +115,25 @@ export class TournamentDirectoryComponent implements OnInit {
     return this.profiles.find(p => p.id === this.filter.profileId) ?? null;
   }
 
+  /**
+   * Der Mittelpunkt fuer die Karte — als STABILES Objekt. Ein Getter, der jedes Mal ein neues
+   * Objektliteral zurueckgibt, laesst unter Default-Change-Detection in JEDEM Zyklus ein
+   * ngOnChanges der Karte feuern; die hat daraufhin ihre Ansicht neu eingepasst, und Zoomen war
+   * nicht moeglich.
+   */
+  private centreCache: { lat: number; lon: number; radiusKm: number } | null = null;
+  private centreKey = '';
+
   get mapCentre(): { lat: number; lon: number; radiusKm: number } | null {
     const profile = this.activeProfile;
-    return profile ? { lat: profile.lat, lon: profile.lon, radiusKm: profile.radiusKm } : null;
+    const key = profile ? `${profile.lat}|${profile.lon}|${profile.radiusKm}` : '';
+    if (key !== this.centreKey) {
+      this.centreKey = key;
+      this.centreCache = profile
+        ? { lat: profile.lat, lon: profile.lon, radiusKm: profile.radiusKm }
+        : null;
+    }
+    return this.centreCache;
   }
 
   /** Setter statt Getter-Filter: unter Default-Change-Detection liefe ein Getter jeden Zyklus. */

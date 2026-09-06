@@ -54,6 +54,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   private markerLayer?: L.LayerGroup;
   private radiusLayer?: L.LayerGroup;
   private resizeObserver?: ResizeObserver;
+  /** Auf welchen Mittelpunkt zuletzt eingepasst wurde — verhindert das Zurueckspringen beim Zoomen. */
+  private lastFitted: string | null = null;
 
   ngAfterViewInit(): void {
     this.map = L.map(this.mapEl.nativeElement, {
@@ -128,19 +130,31 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   private applyCentre(): void {
     if (!this.map || !this.radiusLayer) return;
     this.radiusLayer.clearLayers();
-    if (!this.centre) return;
+    if (!this.centre) { this.lastFitted = null; return; }
+
+    const key = `${this.centre.lat}|${this.centre.lon}|${this.centre.radiusKm}`;
 
     const centre: L.LatLngExpression = [this.centre.lat, this.centre.lon];
+    // interactive: false ist hier keine Feinheit — eine Leaflet-Flaeche faengt Mausereignisse
+    // standardmaessig ab. Der Umkreis liegt ueber den Turnieren, und innerhalb der eingefaerbten
+    // Flaeche kam kein Mouseover mehr bei den Punkten an.
     const circle = L.circle(centre, {
       radius: this.centre.radiusKm * 1000,
       color: '#1a73e8',
       weight: 1,
       fillOpacity: 0.06,
+      interactive: false,
     });
     circle.addTo(this.radiusLayer);
-    L.circleMarker(centre, { radius: 4, color: '#1a73e8', fillOpacity: 1 }).addTo(this.radiusLayer);
+    L.circleMarker(centre, { radius: 4, color: '#1a73e8', fillOpacity: 1, interactive: false })
+      .addTo(this.radiusLayer);
 
-    this.map.fitBounds(circle.getBounds(), { padding: [16, 16] });
+    // NUR beim ersten Mal bzw. bei einem WIRKLICH anderen Mittelpunkt einpassen. Sonst zieht jede
+    // Aenderungserkennung die Ansicht zurueck und Zoomen ist unmoeglich.
+    if (this.lastFitted !== key) {
+      this.lastFitted = key;
+      this.map.fitBounds(circle.getBounds(), { padding: [16, 16] });
+    }
   }
 
   private emitBounds(): void {

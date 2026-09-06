@@ -33,7 +33,7 @@
 }
 
 .cal-cell {
-  min-height: 92px;
+  min-height: 112px;
   padding: 4px;
   border-radius: 8px;
   background: var(--mat-sys-surface-container-low);
@@ -78,10 +78,19 @@
 .cal-entry.cancelled { text-decoration: line-through; opacity: 0.6; }
 
 .cal-more {
+  font: inherit;
   font-size: 0.7rem;
+  text-align: left;
   color: color-mix(in srgb, currentColor 60%, transparent);
-  padding-left: 4px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
 }
+
+.cal-more:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.cal-more:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
 
 .agenda-day { margin-bottom: 14px; }
 

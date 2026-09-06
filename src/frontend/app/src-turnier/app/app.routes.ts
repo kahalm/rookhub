@@ -17,6 +17,8 @@ export const routes: Routes = [
   // Geteilter Turnier-Link, ohne Anmeldung lesbar.
   { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },
 
-  { path: '', pathMatch: 'full', redirectTo: 'tournaments' },
-  { path: '**', redirectTo: 'tournaments' },
+  // Startziel ist der KALENDER, nicht die Liste der importierten Turniere: wer die Turnierseite
+  // aufruft, will wissen, was ansteht — die Liste zeigt nur, was schon jemand geholt hat.
+  { path: '', pathMatch: 'full', redirectTo: 'tournaments/calendar' },
+  { path: '**', redirectTo: 'tournaments/calendar' },
 ];

@@ -68,6 +68,31 @@ export class TournamentCalendarComponent implements OnChanges {
     this.monthChanged.emit({ year: now.getFullYear(), month: now.getMonth() + 1 });
   }
 
+  /**
+   * Wie viele Turniere eine Zelle zeigt, bevor sie zusammenfasst. Vier passen in die Zellenhoehe;
+   * bei drei stand schon bei vier Terminen ein „+1 weitere", obwohl noch Platz war.
+   */
+  static readonly VisiblePerDay = 4;
+
+  /** Tage, die der Nutzer aufgeklappt hat — dort stehen ALLE Turniere. */
+  private expanded = new Set<string>();
+
+  visibleEntries(cell: CalendarCell): DirectoryEntry[] {
+    return this.expanded.has(cell.date)
+      ? cell.entries
+      : cell.entries.slice(0, TournamentCalendarComponent.VisiblePerDay);
+  }
+
+  hiddenCount(cell: CalendarCell): number {
+    if (this.expanded.has(cell.date)) return 0;
+    return Math.max(0, cell.entries.length - TournamentCalendarComponent.VisiblePerDay);
+  }
+
+  /** „+n weitere" klappt den Tag auf, statt die restlichen Turniere unerreichbar zu lassen. */
+  expand(date: string): void {
+    this.expanded.add(date);
+  }
+
   trackByDate = (_: number, cell: CalendarCell) => cell.date;
   trackById = (_: number, entry: DirectoryEntry) => entry.chessResultsId;
 
@@ -113,6 +138,8 @@ export class TournamentCalendarComponent implements OnChanges {
       if (week >= 4 && row.every(cell => !cell.inMonth)) { weeks.pop(); break; }
     }
     this.weeks = weeks;
+    // Ein Monatswechsel beginnt wieder eingeklappt — sonst bleibt ein aufgeklappter 14. haengen.
+    this.expanded.clear();
 
     const dayFormatter = new Intl.DateTimeFormat(this.locale,
       { weekday: 'short', day: 'numeric', month: 'short' });

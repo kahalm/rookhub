@@ -11,8 +11,10 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#3f51b5">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Selbst ausgeliefert statt von fonts.googleapis.com: ein blockierendes Stylesheet von dort
+       laesst die Seite in den Timeout laufen, wenn der Browser das offene Netz nicht erreicht
+       (ueber WireGuard gemessen: 5-10 s bis zum ersten Bild). -->
+  <link href="fonts/fonts.css" rel="stylesheet">
 </head>
 <body>
   <trn-root></trn-root>
