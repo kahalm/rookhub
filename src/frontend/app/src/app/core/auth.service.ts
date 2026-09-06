@@ -224,6 +224,11 @@ export class AuthService {
     // erbte der nächste Nutzer sonst Laufhistorie und Highscore des vorigen, sichtbar bis in die
     // Bestenliste; ebenso Kalkulations-Notizen, lokalen Kursfortschritt und den Menü-Snapshot.
     try { this.injector.get(OfflineService).clearOnLogout(); } catch { /* Storage/DI nicht verfügbar */ }
+    // Die GETEILTE Anmeldung mit beenden: sie liegt als Cookie auf der Elterndomaene und ist der
+    // einzige Teil dieser Sitzung, den localStorage.removeItem nicht erreicht. Bliebe sie stehen,
+    // holte sich die Seite beim naechsten Aufruf genau die Anmeldung zurueck, die man gerade
+    // beendet hat. Ohne Rueckmeldung abschicken — ein Abmelden darf an nichts haengen.
+    this.http.post('/api/auth/session/end', {}).subscribe({ error: () => { /* egal */ } });
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }

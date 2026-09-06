@@ -117,6 +117,13 @@ services:
       Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
+      # Geteilte Anmeldung ueber beide Oberflaechen (RookHub + Turnierseite): gemeinsame
+      # Elterndomaene des Cookies, z. B. ".oberschmid.homes". LEER = Funktion aus (localhost/IP
+      # haben keine gemeinsame Domaene, ein Cookie dorthin waere ein stiller Fehlschlag).
+      Auth__SharedSessionDomain: ${AUTH_SHARED_SESSION_DOMAIN:-}
+      # Dev und Prod teilen sich die Elterndomaene — mit gleichem Namen ueberschreiben sich ihre
+      # Cookies gegenseitig. Auf Dev deshalb einen eigenen Namen setzen (z. B. rh_session_dev).
+      Auth__SharedSessionCookie: ${AUTH_SHARED_SESSION_COOKIE:-}
       Crawler__BaseUrl: http://gluetun:8080
       Crawler__ApiKey: ${CRAWLER_API_KEY}
       Discord__LinkSecret: ${DISCORD_LINK_SECRET}

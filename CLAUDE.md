@@ -83,6 +83,8 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | POST | `/api/auth/login` | Login, gibt JWT zurück (`rememberMe` → 30 Tage statt 1 Tag) |
 | POST | `/api/auth/forgot-password` | „Passwort vergessen" `{ email }` — schickt (falls die Adresse zu einem aktiven Konto gehört) einen einmaligen Reset-Link (TTL 1 h) per Mail. Antwortet IMMER 200 (keine User-Enumeration). Versand via `PasswordResetService` + `IEmailSender` (SMTP/MailKit); ohne `Email:SmtpHost` wird die Mail nur geloggt. Link-Basis = `App:BaseUrl` |
 | POST | `/api/auth/reset-password` | Neues Passwort setzen `{ token, newPassword }` — 204 bei Erfolg, 400 bei ungültigem/abgelaufenem/verbrauchtem Token. Token ist einmalig (`UsedAt`) |
+| POST | `/api/auth/session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`). 401 = keine, ohne Unterscheidung; ein untaugliches Cookie wird dabei gelöscht |
+| POST | `/api/auth/session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
 
 ### Profil (auth)
 | Methode | Endpoint | Zweck |
@@ -863,9 +865,21 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
 - **Ein Dockerfile, zwei Images**: `APP_PROJECT` entscheidet, welches Bundle in den nginx kommt.
   Die CI baut beide aus demselben Kontext (`build-frontend`, `build-turnier`).
 - **Anmeldung**: das JWT liegt in `localStorage` und ist damit an die Herkunft gebunden — eine
-  Domain kann die andere nicht mitlesen. Der Sprung zwischen den Seiten nimmt deshalb einen
-  Einmal-Code mit (`POST /api/auth/handoff` → `?h=<code>` → `POST /api/auth/handoff/exchange`,
-  60 s gültig, genau einmal einlösbar; siehe `core/handoff.service.ts`).
+  Domain kann die andere nicht mitlesen. Zwei Wege überbrücken das, beide in
+  `core/handoff.service.ts`:
+  1. **Sprung über das Menü** — nimmt einen Einmal-Code mit (`POST /api/auth/handoff` →
+     `?h=<code>` → `POST /api/auth/handoff/exchange`, 60 s gültig, genau einmal einlösbar).
+  2. **Geteilte Anmeldung** (seit v0.413.0, `Services/SharedSessionService.cs`) — für den
+     Normalfall „ich rufe die andere Seite direkt auf". Beim Anmelden legt die API ein Cookie auf
+     der gemeinsamen Elterndomäne ab (`Auth:SharedSessionDomain`, z. B. `.oberschmid.homes`;
+     Name `Auth:SharedSessionCookie`, auf Dev ein ANDERER als in Prod — sonst überschreiben sich
+     die beiden Umgebungen gegenseitig auf derselben Domäne). Beide Oberflächen tauschen es beim
+     Start über `POST /api/auth/session` gegen ihre eigene Anmeldung; `logout()` beendet es über
+     `POST /api/auth/session/end`. Das Cookie trägt ein Token mit EIGENEM Adressaten
+     (`rookhub-shared-session`) — der JWT-Handler der API weist es ab, es öffnet also nur diesen
+     einen Endpunkt; dazu `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`. **Leere Domäne = aus**
+     (localhost/IP haben keine gemeinsame Domäne). Eine schon offene Seite der Gegenrichtung
+     merkt eine Abmeldung erst beim nächsten Laden — sie hält ihr eigenes JWT.
 - **Link-Vorschau**: `/t/{id}` lebt jetzt auf der Turnierseite. Der nginx sagt der API über
   `X-Og-Site` (aus `$host` abgeleitet), welche SPA-Shell sie anreichern soll und welche Domain in
   `og:url` gehört (`App:TurnierBaseUrl`) — sonst bekäme der Besucher die RookHub-Shell serviert

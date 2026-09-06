@@ -14,6 +14,12 @@ import { partnerSiteUrl } from './partner-site';
  *
  * <p>Ohne Anmeldung wird schlicht ohne Code gesprungen — dann landet man drueben auf der
  * oeffentlichen Seite bzw. der Anmeldemaske.</p>
+ *
+ * <p>Der Code deckt aber nur den KLICK im Menue ab. Wer die Turnierseite direkt aufruft, nachdem
+ * er sich vorhin in RookHub angemeldet hat, bringt keinen mit — dafuer gibt es die GETEILTE
+ * Anmeldung: der Server legt beim Anmelden ein Cookie auf der gemeinsamen Elterndomaene ab, und
+ * <c>consumeIncoming</c> tauscht es beim Start gegen eine eigene Anmeldung (siehe
+ * <c>SharedSessionService</c> auf der Serverseite).</p>
  */
 @Injectable({ providedIn: 'root' })
 export class HandoffService {
@@ -52,19 +58,42 @@ export class HandoffService {
   async consumeIncoming(): Promise<boolean> {
     const url = new URL(location.href);
     const code = url.searchParams.get(HandoffService.Param);
-    if (!code) return false;
 
-    url.searchParams.delete(HandoffService.Param);
-    history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
+    if (code) {
+      url.searchParams.delete(HandoffService.Param);
+      history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
+    }
 
     if (this.auth.isLoggedIn) return false;      // schon angemeldet: Code einfach verfallen lassen
+
+    if (code) {
+      try {
+        const res = await firstValueFrom(
+          this.http.post<AuthResponse>('/api/auth/handoff/exchange', { code }));
+        this.auth.adoptSession(res);
+        return true;
+      } catch {
+        return false;                            // abgelaufen/verbraucht → Anmeldemaske
+      }
+    }
+
+    return this.adoptSharedSession();
+  }
+
+  /**
+   * Ohne Code: besteht auf der Schwesterseite schon eine Anmeldung? Nachweis ist das Cookie auf
+   * der gemeinsamen Elterndomaene — es ist <c>HttpOnly</c>, hier also nicht lesbar; nur der Server
+   * kann sagen, ob es taugt. 401 ist der Normalfall (nicht angemeldet, oder es gibt gar keine
+   * gemeinsame Domaene) und bleibt deshalb still.
+   */
+  async adoptSharedSession(): Promise<boolean> {
+    if (this.auth.isLoggedIn) return false;
     try {
-      const res = await firstValueFrom(
-        this.http.post<AuthResponse>('/api/auth/handoff/exchange', { code }));
+      const res = await firstValueFrom(this.http.post<AuthResponse>('/api/auth/session', {}));
       this.auth.adoptSession(res);
       return true;
     } catch {
-      return false;                              // abgelaufen/verbraucht → Anmeldemaske
+      return false;
     }
   }
 }

@@ -184,4 +184,28 @@ describe('AuthService logout clears offline content', () => {
     expect(localStorage.getItem('rookhub_offline_settings')).not.toBeNull();
     expect(localStorage.getItem('rookhub_lang')).toBe('de');
   });
+
+  it('beendet auch die geteilte Anmeldung der Schwesterseite', () => {
+    // Sie liegt als Cookie auf der Elterndomaene — der einzige Teil dieser Sitzung, den
+    // localStorage.removeItem nicht erreicht. Bliebe sie stehen, holte sich die Seite beim
+    // nächsten Aufruf genau die Anmeldung zurück, die man gerade beendet hat.
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+
+    svc.logout();
+
+    http.expectOne({ method: 'POST', url: '/api/auth/session/end' }).flush(null, { status: 204, statusText: 'No Content' });
+    http.verify();
+  });
+
+  it('meldet trotzdem ab, wenn der Server dabei nicht mitspielt', () => {
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+
+    svc.logout();
+    http.expectOne('/api/auth/session/end').flush('weg', { status: 500, statusText: 'Server Error' });
+
+    expect(localStorage.getItem('rookhub_user')).toBeNull();
+    http.verify();
+  });
 });

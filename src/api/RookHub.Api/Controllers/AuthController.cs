@@ -15,13 +15,15 @@ public class AuthController : BaseApiController
     private readonly AuthService _authService;
     private readonly PasswordResetService _passwordReset;
     private readonly AuthHandoffService _handoff;
+    private readonly SharedSessionService _sharedSession;
 
     public AuthController(AuthService authService, PasswordResetService passwordReset,
-        AuthHandoffService handoff)
+        AuthHandoffService handoff, SharedSessionService sharedSession)
     {
         _authService = authService;
         _passwordReset = passwordReset;
         _handoff = handoff;
+        _sharedSession = sharedSession;
     }
 
     [HttpPost("register")]
@@ -30,6 +32,7 @@ public class AuthController : BaseApiController
         try
         {
             var result = await _authService.RegisterAsync(dto);
+            await WriteSharedSessionAsync(result);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -44,6 +47,7 @@ public class AuthController : BaseApiController
         try
         {
             var result = await _authService.LoginAsync(dto);
+            await WriteSharedSessionAsync(result);
             return Ok(result);
         }
         catch (UnauthorizedAccessException)
@@ -78,8 +82,81 @@ public class AuthController : BaseApiController
     public async Task<ActionResult<AuthResponseDto>> HandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
     {
         var res = await _handoff.RedeemAsync(dto?.Code, ct);
-        return res is null ? BadRequest(new { message = "Handoff code is not valid." }) : Ok(res);
+        if (res is null) return BadRequest(new { message = "Handoff code is not valid." });
+        await WriteSharedSessionAsync(res, ct);
+        return Ok(res);
     }
+
+    // ===== Geteilte Anmeldung ueber beide Oberflaechen (siehe SharedSessionService) =====
+
+    /// <summary>
+    /// Holt sich die Anmeldung, die auf der Schwesterseite schon besteht — Nachweis ist das Cookie
+    /// auf der gemeinsamen Elterndomaene. Offen, weil der Aufrufer hier ja noch nicht angemeldet
+    /// IST. 401 heisst schlicht „keine geteilte Anmeldung", ohne Unterscheidung: kein Cookie,
+    /// abgelaufen, Konto geloescht oder die Funktion gar nicht eingerichtet.
+    /// </summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("session")]
+    public async Task<ActionResult<AuthResponseDto>> SharedSession(CancellationToken ct)
+    {
+        var cookie = Request.Cookies[_sharedSession.CookieName];
+        var res = await _sharedSession.RedeemAsync(cookie, ct);
+        if (res is null)
+        {
+            // Ein Cookie, das nicht (mehr) taugt, gehoert weg — sonst fragt jede Seite bei jedem
+            // Start erneut danach und bekommt bis in 30 Tagen dieselbe Absage.
+            if (cookie != null) DeleteSharedSessionCookie();
+            return Unauthorized(new { message = "No shared session." });
+        }
+        await WriteSharedSessionAsync(res, ct);
+        return Ok(res);
+    }
+
+    /// <summary>
+    /// Beendet die geteilte Anmeldung (Abmelden). Bewusst offen und immer 204: das Cookie zu
+    /// loeschen ist nichts, wofuer man angemeldet sein muesste, und ein 401 beim Abmelden waere
+    /// die verkehrte Antwort.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("session/end")]
+    public IActionResult EndSharedSession()
+    {
+        DeleteSharedSessionCookie();
+        return NoContent();
+    }
+
+    /// <summary>Legt das Cookie neu an. Tut nichts, solange keine Elterndomaene eingerichtet ist.</summary>
+    private async Task WriteSharedSessionAsync(AuthResponseDto res, CancellationToken ct = default)
+    {
+        var value = await _sharedSession.IssueAsync(res.UserId, ct);
+        if (value is null) return;
+        Response.Cookies.Append(_sharedSession.CookieName, value, SharedSessionCookieOptions(
+            DateTimeOffset.UtcNow.Add(SharedSessionService.Lifetime)));
+    }
+
+    private void DeleteSharedSessionCookie()
+    {
+        if (_sharedSession.CookieDomain is null) return;
+        // Loeschen heisst: dasselbe Cookie mit abgelaufenem Datum. Domaene und Pfad MUESSEN dabei
+        // uebereinstimmen, sonst legt der Browser ein zweites an und das alte bleibt liegen.
+        Response.Cookies.Append(_sharedSession.CookieName, "",
+            SharedSessionCookieOptions(DateTimeOffset.UnixEpoch));
+    }
+
+    private CookieOptions SharedSessionCookieOptions(DateTimeOffset expires) => new()
+    {
+        Domain = _sharedSession.CookieDomain,
+        Path = SharedSessionService.CookiePath,
+        HttpOnly = true,
+        Secure = true,
+        // Lax statt None: das Cookie soll bei einer fremd ausgeloesten Anfrage gar nicht erst
+        // mitgehen. Beide Oberflaechen sind Subdomains derselben Domaene, also same-site — fuer
+        // sie aendert Lax nichts.
+        SameSite = SameSiteMode.Lax,
+        Expires = expires,
+        IsEssential = true,
+    };
 
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
