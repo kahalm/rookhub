@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.399.3", date: "2026-09-06", changes: [
+    { en: "Fixed in the point game: only the first guessed move went through. From the second move on the board still highlighted the squares but refused to play the move, so the game could not be continued. The board and the layer that draws it disagreed about whose turn it was after a guessed move.", de: "In der Punktepartie behoben: Nur der erste geratene Zug ging durch. Ab dem zweiten markierte das Brett zwar noch die Felder, führte den Zug aber nicht mehr aus — die Partie ließ sich nicht fortsetzen. Brett und die Zeichenschicht darunter waren sich nach einem geratenen Zug uneins, wer am Zug ist." },
+  ] },
   { version: "0.399.2", date: "2026-09-06", changes: [
     { en: "Turning a repertoire into a course used to fail with the wrong explanation while the repertoire was still empty: it said the repertoire had no puzzle lines, when in truth nothing had been imported yet. An empty repertoire now says exactly that and names the two ways to fill it — upload a PGN file, or fetch the Chessable course with the RepCheck extension.", de: "Ein Repertoire in einen Kurs umzuwandeln scheiterte bei einem noch leeren Repertoire mit der falschen Begründung: Es hieß, das Repertoire enthalte keine Puzzle-Linien — dabei war schlicht noch nichts importiert. Ein leeres Repertoire sagt das jetzt und nennt die beiden Wege, es zu füllen: eine PGN-Datei hochladen oder den Chessable-Kurs mit der RepCheck-Erweiterung holen." },
   ] },

@@ -6,7 +6,7 @@ import { Api } from 'chessground/api';
 import { Config } from 'chessground/config';
 import { Key } from 'chessground/types';
 import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
-import { applyUserMove, legalDests } from './board-moves.util';
+import { applyUserMove, legalDests, turnColorOf } from './board-moves.util';
 
 /** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). */
 export interface UserBoardMove { from: string; to: string; san: string; fen: string; }
@@ -106,6 +106,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.ground = Chessground(el, {
       fen: this.fen,
       viewOnly: false,
+      turnColor: turnColorOf(this.fen),
       orientation: this.flipped ? 'black' : 'white',
       lastMove: this.lastMove as Key[] | undefined,
       animation: { enabled: true, duration: 200 },
@@ -133,6 +134,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (changes['fen'] || changes['lastMove'] || changes['flipped'] || changes['playable']) {
       this.ground.set({
         fen: this.fen,
+        // MUSS mitgegeben werden: Chessground dreht `turnColor` nach jedem Nutzerzug selbst um und
+        // stellt ihn beim Setzen einer FEN nicht wieder her (siehe `turnColorOf`). Ohne diese Zeile
+        // steht er nach dem ersten geratenen Zug auf der Gegenseite, und `isMovable` weist jeden
+        // weiteren Zug ab — das Brett markiert dann noch die Felder, fuehrt den Zug aber nicht aus.
+        turnColor: turnColorOf(this.fen),
         orientation: this.flipped ? 'black' : 'white',
         lastMove: this.lastMove as Key[] | undefined,
         ...this.interactionConfig(),

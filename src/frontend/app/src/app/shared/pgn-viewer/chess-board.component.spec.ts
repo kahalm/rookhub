@@ -92,3 +92,68 @@ describe('ChessBoardComponent Vollbild', () => {
     expect(fixture.nativeElement.querySelector('.cb-wrap .board-fs-btn')).toBeNull();
   });
 });
+
+/**
+ * Zugfolge wie in der Punktepartie: Der Aufrufer setzt den gemeldeten Zug NICHT selbst um,
+ * sondern sperrt das Brett (playable=false) und bindet nach der Serverantwort die naechste
+ * Stellung zurueck. Danach muss das Brett wieder bespielbar sein — mit den Zielfeldern der
+ * NEUEN Stellung, nicht denen der alten.
+ */
+describe('ChessBoardComponent Zugfolge (Punktepartie)', () => {
+  const FEN8 = 'rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5b2/PPP2PPP/RNBQKB1R w KQkq - 0 5';
+  const FEN10 = 'rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 0 6';
+
+  function make(fen: string) {
+    const host = document.createElement('div');
+    host.style.width = '400px';
+    document.body.appendChild(host);
+    const el = document.createElement('div');
+    host.appendChild(el);
+    const c = new ChessBoardComponent();
+    (c as any).boardEl = { nativeElement: el };
+    c.fen = fen;
+    c.playable = true;
+    c.ngAfterViewInit();
+    return { c, host };
+  }
+
+  it('bindet die naechste Stellung zurueck und ist wieder bespielbar', () => {
+    const { c, host } = make(FEN8);
+    const ground = (c as any).ground;
+    expect(ground).withContext('Chessground initialisiert').toBeDefined();
+
+    let emitted: any = null;
+    c.userMove.subscribe((m: any) => (emitted = m));
+    (c as any).onBoardMove('d1', 'f3');
+    expect(emitted.san).toBe('Qxf3');
+
+    // Das macht Chessground bei einem echten Nutzerzug SELBST (`baseUserMove`): es dreht seinen
+    // eigenen `turnColor` um. Genau dieser Zustand wird von einer neu gesetzten FEN nicht
+    // zurueckgestellt — deshalb hier nachstellen, sonst prueft der Test die halbe Wahrheit.
+    ground.state.turnColor = 'black';
+    ground.state.movable.dests = undefined;
+
+    // Elternteil: busy -> gesperrt, FEN noch die alte
+    c.playable = false;
+    c.ngOnChanges({ playable: {} as any });
+
+    // Serverantwort: naechste Stellung, wieder frei
+    c.fen = FEN10;
+    c.playable = true;
+    c.ngOnChanges({ fen: {} as any, playable: {} as any });
+
+    const st = (c as any).ground.state;
+    expect(st.pieces.get('f3')?.role).withContext('weisse Dame steht auf f3').toBe('queen');
+    expect(st.pieces.get('d6')).withContext('d6 ist leer').toBeUndefined();
+    expect(st.movable.color).withContext('Weiss ist am Zug').toBe('white');
+    const dests = st.movable.dests as Map<string, string[]> | undefined;
+    expect(dests).withContext('Zielfelder vorhanden').toBeTruthy();
+    expect(Array.from(dests!.get('f1') ?? [])).withContext('Lf1 kann nach c4').toContain('c4');
+    // Der eigentliche Fund: ohne `turnColor` bleibt er auf Schwarz stehen, `isMovable` weist dann
+    // JEDEN weiteren Zug ab — das Brett zeigt noch die Zielfelder, fuehrt den Zug aber nicht aus.
+    expect(st.turnColor).withContext('Seite am Zug passt zur FEN').toBe('white');
+
+    c.ngOnDestroy();
+    host.remove();
+  });
+});

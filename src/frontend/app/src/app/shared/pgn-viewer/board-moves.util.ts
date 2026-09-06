@@ -39,3 +39,14 @@ export function fenAfterUci(fen: string, uci: string): string | null {
     return null;
   }
 }
+
+/**
+ * Seite am Zug aus der FEN. Chessground fuehrt `turnColor` als EIGENEN Zustand neben den Figuren:
+ * `baseUserMove` dreht ihn nach jedem Nutzerzug um, und `configure` setzt ihn NICHT aus einer
+ * uebergebenen FEN zurueck. Wer ein Brett benutzt, das den Nutzerzug nicht selbst uebernimmt,
+ * sondern die naechste Stellung zurueckbindet, muss `turnColor` deshalb mitgeben — sonst steht er
+ * dauerhaft falsch und `isMovable` weist ab dem ZWEITEN Zug jeden Zug ab.
+ */
+export function turnColorOf(fen: string): 'white' | 'black' {
+  return fen?.split(' ')[1] === 'b' ? 'black' : 'white';
+}
