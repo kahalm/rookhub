@@ -2928,6 +2928,10 @@
     "youPlayed": "Du: {{move}}",
     "gamePlayed": "Partie: {{move}}",
     "gameMoveWouldBe": "Der Partiezug war {{move}}",
+    "info": {
+      "gameMove": "Zug aus der Partie: {{move}} - Bewertung {{eval}}",
+      "bestMove": "Bester Zug: {{move}} - Bewertung {{eval}}"
+    },
     "toTask": "Zur Aufgabe",
     "startPosition": "Grundstellung",
     "evalDelta": "{{delta}} gegenüber dem Partiezug",

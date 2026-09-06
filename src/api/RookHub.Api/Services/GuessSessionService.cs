@@ -199,20 +199,44 @@ public class GuessSessionService
             .Where(p => p.GameAnalysisId == session.GameAnalysisId && plies.Contains(p.Ply))
             .ToDictionaryAsync(p => p.Ply, ct);
 
-        return session.Moves.OrderBy(m => m.Ply).Select(m => new GuessReviewMoveDto
+        var rows = new List<GuessReviewMoveDto>();
+        foreach (var m in session.Moves.OrderBy(m => m.Ply))
         {
-            Ply = m.Ply,
-            MoveNumber = m.Ply / 2 + 1,
-            White = m.Ply % 2 == 0,
-            GameSan = positions.TryGetValue(m.Ply, out var p) ? p.GameMoveSan : string.Empty,
-            PlayedSan = m.PlayedUci is null || !positions.ContainsKey(m.Ply)
-                ? null
-                : SanOf(positions[m.Ply].Fen, m.PlayedUci),
-            Grade = m.Grade is GuessGrade g ? CamelCase(g.ToString()) : null,
-            Points = m.Grade is GuessGrade g2 ? GuessGrades.PointsFor(g2) : 0,
-            DiffCp = m.DiffCp,
-            SecondsSpent = m.SecondsSpent,
-        }).ToList();
+            positions.TryGetValue(m.Ply, out var p);
+            var row = new GuessReviewMoveDto
+            {
+                Ply = m.Ply,
+                MoveNumber = m.Ply / 2 + 1,
+                White = m.Ply % 2 == 0,
+                GameSan = p?.GameMoveSan ?? string.Empty,
+                PlayedSan = m.PlayedUci is null || p is null ? null : SanOf(p.Fen, m.PlayedUci),
+                Grade = m.Grade is GuessGrade g ? CamelCase(g.ToString()) : null,
+                Points = m.Grade is GuessGrade g2 ? GuessGrades.PointsFor(g2) : 0,
+                DiffCp = m.DiffCp,
+                SecondsSpent = m.SecondsSpent,
+            };
+
+            // Der beste Zug der Engine samt Bewertung — und die des Partiezuges zum Vergleich.
+            // Beide aus DERSELBEN Liste, also aus Sicht der Seite am Zug. Ausgeliefert wird nichts
+            // Neues: die Sitzung ist an dieser Stelle vorbei, es gibt keine Loesung mehr zu schuetzen.
+            if (p?.CandidatesJson is not null)
+            {
+                var candidates = BrokerCandidates.FromJson(p.CandidatesJson);
+                if (candidates.Count > 0)
+                {
+                    row.BestSan = SanOf(p.Fen, candidates[0].Uci);
+                    row.BestEval = candidates[0].Eval.Text;
+                }
+                foreach (var c in candidates)
+                    if (string.Equals(c.Uci, p.GameMoveUci, StringComparison.OrdinalIgnoreCase))
+                    {
+                        row.GameEval = c.Eval.Text;
+                        break;
+                    }
+            }
+            rows.Add(row);
+        }
+        return rows;
     }
 
     public async Task<bool> DeleteAsync(int userId, int sessionId, CancellationToken ct = default)

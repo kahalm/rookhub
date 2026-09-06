@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.403.0", date: "2026-09-06", changes: [
+    { en: "Point game: in the review at the end, every move where something better than the game move existed now carries a small info mark. It names the best move with its evaluation - and the move from the game with its own, but only when you played something else; otherwise the row already says it.", de: "Punktepartie: Im Rückblick am Ende trägt jetzt jeder Zug, bei dem es etwas Besseres als den Partiezug gab, ein kleines Info-Zeichen. Dahinter stehen der beste Zug mit seiner Bewertung - und der Zug aus der Partie mit seiner, aber nur wenn du etwas anderes gespielt hast; sonst steht er ohnehin in der Zeile." },
+  ] },
   { version: "0.402.0", date: "2026-09-06", changes: [
     { en: "Point game: the last move of a game can now be played. It was scored correctly, but the piece jumped straight back and the board showed the position before the final move - with no next task to load, the board was simply never updated.", de: "Punktepartie: Der letzte Zug einer Partie lässt sich jetzt spielen. Gewertet wurde er richtig, aber die Figur sprang sofort zurück und das Brett zeigte die Stellung vor dem Schlusszug - weil es keine nächste Aufgabe mehr zu laden gab, wurde das Brett schlicht nie aktualisiert." },
     { en: "Point game: a session now opens at the start of the game instead of jumping straight to your first task. You click through the opening, and at its last move you are on the task and can move; Back to the task is the shortcut for anyone who wants to get going right away.", de: "Punktepartie: Eine Sitzung öffnet jetzt am Anfang der Partie, statt gleich zur ersten Aufgabe zu springen. Man klickt sich durch die Eröffnung, und beim letzten Zug steht die Aufgabe und man kann ziehen; Zur Aufgabe ist die Abkürzung für alle, die sofort loslegen wollen." },

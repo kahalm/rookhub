@@ -72,6 +72,11 @@ export interface GuessReviewMove {
   points: number;
   diffCp: number | null;
   secondsSpent: number;
+  /** Bester Zug der Engine samt Bewertung; `null`, wenn die Stellung keine Kandidatenliste hat. */
+  bestSan: string | null;
+  bestEval: string | null;
+  /** Bewertung des Partiezuges — zum Vergleich mit dem besten Zug. */
+  gameEval: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

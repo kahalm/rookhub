@@ -99,7 +99,8 @@ describe('GuessBoardComponent', () => {
       session: session({ status: 'done', position: null, points: 5, maxPoints: 10, movesPlayed: 1 }),
     });
     http.expectOne('/api/guess-sessions/3/review').flush([
-      { ply: 8, moveNumber: 5, white: true, gameSan: 'Nf3', playedSan: 'Nf3', grade: 'gameMove', points: 5, diffCp: 0, secondsSpent: 9 },
+      { ply: 8, moveNumber: 5, white: true, gameSan: 'Nf3', playedSan: 'Nf3', grade: 'gameMove', points: 5,
+        diffCp: 0, secondsSpent: 9, bestSan: 'Nf3', bestEval: '+0.30', gameEval: '+0.30' },
     ]);
 
     expect(c.review.length).toBe(1);
@@ -311,5 +312,26 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.boardFen).not.toBe(FEN8);
     expect(c.lastMove).toEqual(['d1', 'f3']);
     expect(c.canGuess).toBeFalse();
+  });
+
+  it('das Info-Zeichen erscheint nur, wo es etwas Besseres gab', () => {
+    const c = load();
+    const row = (over: any) => ({
+      ply: 8, moveNumber: 5, white: true, gameSan: 'Qxf3', playedSan: 'Qxf3', grade: 'gameMove',
+      points: 5, diffCp: 0, secondsSpent: 9, bestSan: 'Qxf3', bestEval: '+1.75', gameEval: '+1.75', ...over,
+    });
+
+    expect(c.hasBetter(row({}))).withContext('Partiezug war der beste').toBeFalse();
+    expect(c.hasBetter(row({ bestSan: 'Bc4' }))).toBeTrue();
+    expect(c.hasBetter(row({ bestSan: null }))).withContext('keine Kandidatenliste').toBeFalse();
+
+    // Eigener Zug abweichend -> beide Zeilen; eigener Zug = Partiezug -> nur der beste.
+    const both = c.infoText(row({ bestSan: 'Bc4', bestEval: '+2.40', playedSan: 'Nc3' }));
+    expect(both).toContain('guess.info.gameMove');
+    expect(both).toContain('guess.info.bestMove');
+
+    const only = c.infoText(row({ bestSan: 'Bc4', bestEval: '+2.40' }));
+    expect(only).not.toContain('guess.info.gameMove');
+    expect(only).toContain('guess.info.bestMove');
   });
 });

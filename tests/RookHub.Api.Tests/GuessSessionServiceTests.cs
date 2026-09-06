@@ -377,4 +377,50 @@ public class GuessSessionServiceTests : IDisposable
         Assert.All(list, s => Assert.Empty(s.Intro));
     }
 
+    // ---- Rueckblick: bester Zug + Bewertungen ----
+
+    [Fact]
+    public async Task Review_NamesTheBestMoveAndBothEvaluations()
+    {
+        var (user, analysis) = await SeedAsync();
+        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
+        });
+
+        // Die Seed-Kandidatenliste fuehrt den Partiezug (+30) vor einer schwaecheren Alternative (-80),
+        // der Partiezug IST hier also der beste Zug.
+        var first = await _svc.GetAsync(user.Id, session.Id);
+        var pos = await _db.GameAnalysisPositions.FirstAsync(x => x.GameAnalysisId == analysis.Id && x.Ply == 0);
+        await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = pos.GameMoveUci });
+
+        var review = await _svc.ReviewAsync(user.Id, session.Id);
+        var row = Assert.Single(review!);
+        Assert.Equal(pos.GameMoveSan, row.BestSan);          // hier deckungsgleich
+        Assert.Equal("+0.30", row.BestEval);
+        Assert.Equal("+0.30", row.GameEval);
+        Assert.NotNull(first);
+    }
+
+    [Fact]
+    public async Task Review_WithoutCandidates_LeavesTheExtrasEmpty()
+    {
+        var (user, analysis) = await SeedAsync(analyzeAll: false);
+        // Ohne Kandidatenliste laesst sich die Sitzung nicht starten — also eine Stellung nachtragen.
+        var p0 = await _db.GameAnalysisPositions.FirstAsync(x => x.GameAnalysisId == analysis.Id && x.Ply == 0);
+        p0.CandidatesJson = "[]";                            // vorhanden, aber leer
+        await _db.SaveChangesAsync();
+
+        var session = new GuessSession { UserId = user.Id, GameAnalysisId = analysis.Id, GuessWhite = true, CurrentPly = 0 };
+        session.Moves.Add(new GuessMove { Ply = 0, PlayedUci = null, SecondsSpent = 3 });
+        _db.GuessSessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var review = await _svc.ReviewAsync(user.Id, session.Id);
+        var row = Assert.Single(review!);
+        Assert.Null(row.BestSan);
+        Assert.Null(row.BestEval);
+        Assert.Null(row.GameEval);
+    }
+
 }

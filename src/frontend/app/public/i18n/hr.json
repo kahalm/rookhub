@@ -2928,6 +2928,10 @@
     "youPlayed": "Ti: {{move}}",
     "gamePlayed": "Partija: {{move}}",
     "gameMoveWouldBe": "Potez partije bio je {{move}}",
+    "info": {
+      "gameMove": "Potez iz partije: {{move}} - procjena {{eval}}",
+      "bestMove": "Najbolji potez: {{move}} - procjena {{eval}}"
+    },
     "toTask": "Natrag na zadatak",
     "startPosition": "Početni položaj",
     "evalDelta": "{{delta}} u odnosu na potez partije",

@@ -112,4 +112,12 @@ public class GuessReviewMoveDto
     public int Points { get; set; }
     public int? DiffCp { get; set; }
     public int SecondsSpent { get; set; }
+
+    /// <summary>Bester Zug der Engine in dieser Stellung und seine Bewertung — <c>null</c>, wenn die
+    /// Stellung keine Kandidatenliste hat. Interessant ist er nur, wenn er NICHT der Partiezug war.</summary>
+    public string? BestSan { get; set; }
+    public string? BestEval { get; set; }
+
+    /// <summary>Bewertung des Partiezuges (aus derselben Liste), zum Vergleich mit dem besten Zug.</summary>
+    public string? GameEval { get; set; }
 }

@@ -10,6 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
@@ -33,7 +34,7 @@ function promotionOf(san: string | undefined): string {
   selector: 'app-guess-board',
   standalone: true,
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent],
+    MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent],
   template: `
     <div class="gb-container">
       @if (loading) {
@@ -143,6 +144,10 @@ function promotionOf(san: string | undefined): string {
                           <span class="game">{{ r.gameSan }}</span>
                           <span class="yours">{{ r.playedSan || '–' }}</span>
                           <span class="pts">{{ r.points > 0 ? '+' : '' }}{{ r.points }}</span>
+                          <!-- Nur wo es etwas Besseres gab als den Partiezug. -->
+                          @if (hasBetter(r)) {
+                            <app-help-hint [text]="infoText(r)" icon="info_outline" />
+                          } @else { <span></span> }
                         </div>
                       }
                     </div>
@@ -193,7 +198,7 @@ function promotionOf(san: string | undefined): string {
     .g-muchWorse .pts { color: #c62828; }
     /* Der Rückblick kann lang sein — er scrollt IN SICH, nicht die Seite. */
     .review { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
-    .rev-row { display: grid; grid-template-columns: 44px 1fr 1fr 44px; gap: 8px; align-items: baseline;
+    .rev-row { display: grid; grid-template-columns: 44px 1fr 1fr 44px 22px; gap: 8px; align-items: baseline;
                padding: 2px 4px; border-radius: 3px; }
     .rev-row .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem; }
     .rev-row .game { font-weight: 600; }
@@ -405,6 +410,26 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
         ? [s.position.lastMoveUci.slice(0, 2), s.position.lastMoveUci.slice(2, 4)]
         : undefined;
     }
+  }
+
+  /** Gab es in dieser Stellung einen besseren Zug als den der Partie? Nur dann lohnt das ⓘ. */
+  hasBetter(r: GuessReviewMove): boolean {
+    return !!r.bestSan && r.bestSan !== r.gameSan;
+  }
+
+  /**
+   * Der Text hinter dem ⓘ. Den PARTIEZUG nur, wenn etwas anderes gespielt wurde — sonst steht er
+   * schon in der Zeile und die Wiederholung sagt nichts.
+   */
+  infoText(r: GuessReviewMove): string {
+    const lines: string[] = [];
+    if (r.playedSan && r.playedSan !== r.gameSan) {
+      lines.push(this.translate.instant('guess.info.gameMove',
+        { move: r.gameSan, eval: r.gameEval || '?' }));
+    }
+    lines.push(this.translate.instant('guess.info.bestMove',
+      { move: r.bestSan, eval: r.bestEval || '?' }));
+    return lines.join('\n\n');
   }
 
   private loadReview(id: number): void {
