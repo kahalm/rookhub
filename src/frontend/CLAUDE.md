@@ -223,6 +223,28 @@ Faustregeln:
 - **Falle beim Kommentieren**: Die `styles: [...]`-Blöcke sind Template-Literale — ein Backtick im
   CSS-Kommentar beendet den String und der Build stirbt mit Sass-/TS-Fehlern weit entfernt.
 
+
+### Service Worker: was bei einer neuen Version wirklich geladen wird
+
+Gemessen am Turnier-Image (2026-09-06): der ngsw laedt bei jeder neuen Version die
+`prefetch`-Gruppen komplett neu, BEVOR er umschaltet — und erst die naechste Navigation zeigt
+die neue Fassung. Deshalb fuehlt sich „die neue Version ist da" traeger an, als die Seitengroesse
+vermuten laesst.
+
+| Gruppe | Dateien | Groesse |
+|---|---|---|
+| app (Bundles) | 35 | ~1,5 MB |
+| i18n | 25 | ~1,5 MB |
+| fonts | 11 | ~368 KB |
+
+**Die Bundles und die Schriften tragen einen Inhalts-Hash im Namen** — unveraenderte Dateien
+kommen aus dem HTTP-Cache, real neu geladen wird nur, was sich geaendert hat. **Die Sprachdateien
+NICHT**: `/i18n/de.json` heisst immer gleich, der ngsw muss also alle 25 bei jeder Version neu
+holen — 1,5 MB, von denen ein Nutzer genau eine braucht. Die Gruppe steht deshalb auf
+`installMode: lazy` (`updateMode` bleibt `prefetch`): geholt wird die Sprache, die der Nutzer
+tatsaechlich oeffnet, und die bleibt danach auch offline verfuegbar. Der Preis: eine Sprache, die
+auf diesem Geraet noch NIE benutzt wurde, laesst sich offline nicht umstellen.
+
 ## Build-Konfiguration
 
 - Budget: 1.5MB warning / 2MB error (initial bundle; angehoben, da der Single-Source-Changelog stetig wächst)

@@ -28,7 +28,7 @@
     },
     {
       "name": "i18n",
-      "installMode": "prefetch",
+      "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
         "files": [
