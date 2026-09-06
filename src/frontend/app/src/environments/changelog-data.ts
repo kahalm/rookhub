@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.407.0", date: "2026-09-06", changes: [
+    { en: "Groundwork for the separate tournament site: an account can now hand its login over to a sister site on another address. The jump carries a one-time code that lives for a minute and works exactly once, so no long-lived login ends up in the browser history. Nothing visible yet - the site itself follows.", de: "Grundstein für die eigene Turnierseite: Ein Konto kann seine Anmeldung jetzt an eine Schwesterseite unter anderer Adresse übergeben. Der Sprung nimmt einen Einmal-Code mit, der eine Minute lebt und genau einmal wirkt - so landet keine dauerhafte Anmeldung im Browserverlauf. Zu sehen ist noch nichts, die Seite folgt." },
+  ] },
   { version: "0.406.6", date: "2026-09-06", changes: [
     { en: "The nightly tournament sweep now pauses briefly between federations. Measured on the dev server: asked one at a time, chess-results answers a search in two seconds — asked as a burst of nine, four of them ran into a three-minute timeout. The other side throttles a rapid series, and a few seconds of spacing per federation is nothing for a nightly job, whereas a half-failed run is.", de: "Der nächtliche Turnier-Lauf pausiert jetzt kurz zwischen den Föderationen. Auf dem Dev-Server gemessen: einzeln gefragt beantwortet chess-results eine Suche in zwei Sekunden — als Salve von neun liefen vier in einen Drei-Minuten-Timeout. Die Gegenseite drosselt eine schnelle Folge, und ein paar Sekunden Abstand je Föderation sind für einen nächtlichen Lauf nichts, ein halb fehlgeschlagener Lauf schon." },
   ] },

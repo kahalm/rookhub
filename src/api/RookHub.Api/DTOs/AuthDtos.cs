@@ -99,3 +99,10 @@ public class ResetPasswordDto
     [Required, MinLength(PasswordPolicyAttribute.MinimumLength), MaxLength(1024), PasswordPolicy]
     public string NewPassword { get; set; } = string.Empty;
 }
+
+/// <summary>Einloesung eines Anmelde-Uebergabe-Codes (siehe <c>AuthHandoffService</c>).</summary>
+public class HandoffExchangeDto
+{
+    [Required, MaxLength(200)]
+    public string Code { get; set; } = string.Empty;
+}

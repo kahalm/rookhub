@@ -35,7 +35,8 @@ public class AuthControllerTests : IDisposable
         _authService = new AuthService(_db, config, NullLogger<AuthService>.Instance);
         var resetService = new PasswordResetService(
             _db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance);
-        _controller = new AuthController(_authService, resetService);
+        var handoff = new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance);
+        _controller = new AuthController(_authService, resetService, handoff);
     }
 
     public void Dispose() => _db.Dispose();

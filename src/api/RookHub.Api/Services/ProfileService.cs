@@ -272,6 +272,10 @@ public class ProfileService
         // diese Zeile bliebe ein fremder, weiterhin gültiger Lichess-Token dauerhaft in der DB.
         _db.LichessEngineCredentials.RemoveRange(await _db.LichessEngineCredentials.Where(c => c.UserId == userId).ToListAsync());
         _db.PasswordResetTokens.RemoveRange(await _db.PasswordResetTokens.Where(t => t.UserId == userId).ToListAsync());
+        // Ein noch offener Uebergabe-Code wuerde sonst nach der Loeschung noch Sekunden lang
+        // eine Anmeldung erzeugen (der Einloeser prueft zwar DeletedAt — die Zeile hat hier aber
+        // ohnehin nichts mehr verloren).
+        _db.AuthHandoffTokens.RemoveRange(await _db.AuthHandoffTokens.Where(t => t.UserId == userId).ToListAsync());
         // Öffentlich abrufbare Inhalte mit Klarnamen/Fremddaten: geteilte Partien (/g/{token}) und
         // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.
         _db.SavedGames.RemoveRange(await _db.SavedGames.Where(g => g.UserId == userId).ToListAsync());

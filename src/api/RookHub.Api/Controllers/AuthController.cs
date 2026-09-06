@@ -14,11 +14,14 @@ public class AuthController : BaseApiController
 {
     private readonly AuthService _authService;
     private readonly PasswordResetService _passwordReset;
+    private readonly AuthHandoffService _handoff;
 
-    public AuthController(AuthService authService, PasswordResetService passwordReset)
+    public AuthController(AuthService authService, PasswordResetService passwordReset,
+        AuthHandoffService handoff)
     {
         _authService = authService;
         _passwordReset = passwordReset;
+        _handoff = handoff;
     }
 
     [HttpPost("register")]
@@ -54,6 +57,30 @@ public class AuthController : BaseApiController
     /// gehoert — einen Reset-Link per Mail. Antwortet IMMER neutral mit 200 (keine
     /// User-Enumeration), unabhaengig davon, ob die Adresse existiert.
     /// </summary>
+    // ===== Anmelde-Uebergabe zwischen den Oberflaechen (RookHub ↔ Turnierseite) =====
+
+    /// <summary>Einmal-Code fuer den Sprung zur anderen Oberflaeche. Der Rohwert kommt NUR hier
+    /// heraus und lebt Sekunden (<see cref="AuthHandoffService.Lifetime"/>).</summary>
+    [Authorize]
+    [HttpPost("handoff")]
+    public async Task<IActionResult> Handoff(CancellationToken ct)
+    {
+        var code = await _handoff.IssueAsync(GetUserId(), ct);
+        return Ok(new { code, expiresInSeconds = (int)AuthHandoffService.Lifetime.TotalSeconds });
+    }
+
+    /// <summary>Loest einen Uebergabe-Code gegen eine eigene Anmeldung ein. Offen, weil der Aufrufer
+    /// hier ja noch nicht angemeldet IST — der Code ist der Nachweis. 400 sagt bewusst nur, dass es
+    /// nicht ging: unbekannt, abgelaufen und verbraucht sind von aussen nicht zu unterscheiden.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("handoff/exchange")]
+    public async Task<ActionResult<AuthResponseDto>> HandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
+    {
+        var res = await _handoff.RedeemAsync(dto?.Code, ct);
+        return res is null ? BadRequest(new { message = "Handoff code is not valid." }) : Ok(res);
+    }
+
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {

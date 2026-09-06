@@ -53,6 +53,7 @@ public class AppDbContext : DbContext
     public DbSet<DailyPuzzle> DailyPuzzles => Set<DailyPuzzle>();
     public DbSet<UserApiToken> UserApiTokens => Set<UserApiToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<AuthHandoffToken> AuthHandoffTokens => Set<AuthHandoffToken>();
     public DbSet<GroupTrainingGoal> GroupTrainingGoals => Set<GroupTrainingGoal>();
     public DbSet<UserTrainingGoal> UserTrainingGoals => Set<UserTrainingGoal>();
     public DbSet<PlayTimeDaily> PlayTimeDailies => Set<PlayTimeDaily>();
@@ -1059,6 +1060,17 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<PasswordResetToken>(e =>
         {
             // Unique-Index auf TokenHash → O(1)-Lookup beim Einloesen.
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.UserId);
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AuthHandoffToken>(e =>
+        {
+            // Wie beim Passwort-Reset: Unique-Index auf den Hash → O(1) beim Einloesen.
             e.HasIndex(t => t.TokenHash).IsUnique();
             e.HasIndex(t => t.UserId);
             e.HasOne(t => t.User)

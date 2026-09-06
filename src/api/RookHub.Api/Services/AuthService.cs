@@ -189,6 +189,21 @@ public class AuthService
         };
     }
 
+    /// <summary>
+    /// Baut eine Anmeldung fuer einen bereits FESTSTEHENDEN Nutzer — ohne Passwortpruefung, weil die
+    /// anderswo passiert ist (heute: die Anmelde-Uebergabe zwischen den Oberflaechen, siehe
+    /// <see cref="AuthHandoffService"/>). Dieselben Claims wie beim Login, damit ein uebergebenes
+    /// Token nicht heimlich weniger kann als ein erlogenes.
+    /// </summary>
+    public async Task<AuthResponseDto> IssueTokenAsync(AppUser user, bool rememberMe = false) =>
+        new AuthResponseDto
+        {
+            Token = GenerateJwt(user, rememberMe, await ResolvePermissionClaimsAsync(user.Id)),
+            Username = user.Username,
+            UserId = user.Id,
+            IsAdmin = user.IsAdmin,
+        };
+
     /// <summary>Löst die effektiven Permissions eines Users (über seine Rollen) als <c>perm</c>-Claims
     /// auf — landen im JWT und werden vom <see cref="Authorization.PermissionAuthorizationHandler"/>
     /// geprüft. Trade-off: das Token ist bis zum nächsten Login stale; eine Rollenänderung wirkt erst
