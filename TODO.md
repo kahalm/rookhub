@@ -6,6 +6,19 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## Nach dem naechsten Deploy erledigen
+- [ ] **Turnierverzeichnis: Ortslexikon importieren** (v0.405.0/0.406.0). Ohne diesen einmaligen
+  Schritt hat KEIN Turnier Koordinaten — Umkreissuche und Karte bleiben leer, die Liste
+  funktioniert. Als Admin (Permission `tournaments.manage`) nacheinander:
+  `POST /api/admin/tournament-directory/gazetteer/cities` (weltweite Ortsliste, ~11 MB) und
+  `POST /api/admin/tournament-directory/gazetteer/postal/{iso2}` fuer AT, DE, CH, IT, CZ, SK, HU,
+  SI, LI. Danach `POST /api/admin/tournament-directory/geocode-missing`, damit die bereits
+  eingesammelten Turniere ihre Pins bekommen. Kontrolle: `GET /api/admin/tournament-directory/status`
+  — an oesterreichischen Daten gemessen sind ~94 % exakt (PLZ/Ort), der Rest faellt auf den
+  Bundesland-Mittelpunkt.
+- [ ] Ersten Sweep anstossen statt bis 03:00 UTC zu warten:
+  `POST /api/admin/tournament-directory/sweep {"federations":["AUT","GER","SUI"]}`.
+
 ## Periodisch
 - [ ] Code Review — letzter: **2026-08-25** → Review über `rookhub` (~1800 Quelldateien). 15 Funde, alle verifiziert (kein Fehlalarm), **14 behoben in v0.376.2**: WQL-Wildcard `*` statt `%` im Waisen-Aufräumer (`reap_orphans.ps1` traf NIE etwas und meldete 15-minütlich „ohne Befund“), PID-Recycling bei der Elternprüfung, README-Stopp-Prozedur killte jeden `python.exe`, `init()`-Fehler ohne `fatalError$` (Karte log dauerhaft „Berechne…“), `destroy()` ließ das Init-Promise ungelöst hängen, Selbstvergleich zweier WASM-Kerne, doppeltes `startCompare()`, fehlender Telemetrie-Hook, `compareCrashed` überlebte den Stellungswechsel. **Offen: 1 Fund** (EngineSlot-Umbau, siehe „Bewusste Entscheidung“). +4 Regressionstests (gegengeprüft: fallen ohne die Fixes um). **Einschränkung: faktisch Delta auf die jüngste Arbeit** — im .NET-Teil (1283 Dateien) kam kein einziger Fund heraus, für einen Vollscan unplausibel; API separat nachholen. (vorher 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-08-26** → alle 25 Sprachdateien JSON-valide; en/de/hr je **2217 Keys** in voller Parität (Platzhalter identisch, keine leeren Werte außer dem gewollten `weekly.oClock`-Suffix) — seit v0.376.4 als Karma-Spec `i18n-parity.spec.ts` dauerhaft erzwungen. Qualitäts-Review per 30 Reviewer + 10 adversariale Verifizierer (je Chunk × en/de/hr): 389 Roh-Funde → **~260 bestätigt und übernommen** (hr ~150: Sie→Du-Form, Chessable-Bereich war englisch, kurs→tečaj, izračun→računanje; de ~75: gemischte „…"-Paare, englisch gebliebene Wörter, Genus/Präpositionen, Ein-Topf-Semantik der Trainingsziele; en ~35: US-Schreibung, Tippfehler). Echte Bugs für ALLE Sprachen: `{score}`-Platzhalter (einfache Klammern), `admin.ci.watchStop` „2 Minuten" (Code: 20 s), literale `\u2019`, `chessable.throughputHint` 15–20/min (Drossel ist ~4/min). Aufräumen: 704 veraltete Keys aus den 22 Weltsprachen, 68 tote Keys überall (31 unter ThemePicker-/VizCard-Namespaces bewusst behalten). Die 22 Weltsprachen hängen weiter ~1360 Keys hinter en (Fallback greift). (vorher 2026-08-25: Registercheck `nav.support` el+hr → v0.376.1; 2026-07-12: hr 2 Lücken → v0.291.34)

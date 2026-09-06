@@ -247,6 +247,29 @@ RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `Enc
 | GET/POST/DELETE | `/api/tournament-favorites[/{id}]` | Favoriten verwalten |
 | GET/POST | `/api/tournament-monitor[/{id}]` | Per-Turnier-User-Einstellungen + Runden-Monitor (Round-Watch, Auto-Subscribe) |
 
+### Turnierverzeichnis / Turnierkalender (auth)
+Gefuellt vom naechtlichen Sweep der chess-results-Turniersuche (`TournamentDirectoryScheduler`,
+03:00 UTC; Nachbarlaender taeglich, uebrige Foederationen rotierend). Rein lesend — hier wird
+nichts gecrawlt.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#) |
+| GET | `/api/tournament-directory/map?bbox=minLat,minLon,maxLat,maxLon` | Kartenmarker im Ausschnitt (gedeckelt) |
+| GET | `/api/tournament-directory/calendar?year&month` | Tages-Buckets; mehrtaegige Turniere stehen an JEDEM ihrer Tage |
+| GET | `/api/tournament-directory/{chessResultsId}` | Einzelnes Turnier (auch abgesagte) |
+| GET | `/api/tournament-directory/places?q=` | Ortsvorschlaege aus dem Gazetteer (PLZ oder Name) |
+| GET/POST/PUT/DELETE | `/api/tournament-search-profiles[/{id}]` | Gespeicherte Umkreise; steuern Ansicht UND naechtliche Meldung |
+| GET | `/api/admin/tournament-directory/status` | Sweep-Zustand je Foederation + Geocoding-Quote |
+| POST | `/api/admin/tournament-directory/sweep` | Sweep fuer 1–20 Foederationen sofort ausfuehren |
+| POST | `/api/admin/tournament-directory/gazetteer/postal/{iso2}` | GeoNames-PLZ eines Landes importieren |
+| POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
+| GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
+| POST | `/api/admin/tournament-directory/geocode-missing` | Nicht verortete Eintraege erneut aufloesen |
+| PUT | `/api/admin/tournament-directory/{id}/coordinates` | Koordinaten von Hand setzen (GeoSource=Manual, ueberlebt den Sweep) |
+
+Die `/api/admin/...`-Routen haengen an der Permission `tournaments.manage`.
+
 ### Book-Puzzles (offen + Admin)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -718,6 +741,10 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | Friendships | Freundesliste | RequesterId, AddresseeId (unique pair), Status (Pending/Accepted/Declined) |
 | PuzzleChallenges | Puzzle an Freund(e) schicken | FromUserId, ToUserId (beide Restrict-FK auf AppUser), **Source (Enum Standard/Book)** + PuzzleId (polymorph, **kein FK** — je nach Source `Puzzles.Id` oder `BookPuzzles.Id`), Status (Pending/Solved/Failed), CreatedAt, ResolvedAt?, TimeSpentSeconds?; Index (ToUserId, Status) + (FromUserId) + (Source, PuzzleId) |
 | RevengeNotifications | Revanche an gescheitertem Puzzle | AvengerUserId, TargetUserId, PuzzleId (alle Restrict), Solved, CreatedAt, SeenAt?; Index (TargetUserId, SeenAt) |
+| TournamentDirectoryEntries | Turnierverzeichnis aus der chess-results-Suche | ChessResultsId (unique), Name, Federation, State, StartDate/EndDate, **StartsOnWeekend** (vorberechnet — `DateOnly.DayOfWeek` uebersetzt der MySQL-Provider nicht), LocationText, TimeControlText, Speed, Rounds, PlayerCount, **Lat/Lon/GeoSource/GeoPlaceName**, FirstSeenAt/LastSeenAt/**MissedSweeps**/RemovedAt, **ChangeHash** (nur Termin+Ort); Index (EndDate), (Federation, EndDate), (Lat, Lon) |
+| TournamentSearchProfiles | Gespeicherte Umkreise je Nutzer | UserId (Cascade), Name, PlaceQuery, Lat/Lon, RadiusKm, Federations/Speeds (CSV), WeekendOnly, MinPlayers, NotifyNew; unique (UserId, Name) |
+| TournamentDirectorySweeps | Buchfuehrung je Foederation | Federation (PK), LastSweptAt (**nur bei Erfolg**), LastAttemptedAt, LastRowCount, LastError, ConsecutiveFailures |
+| GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet/reprozessierbar — heute meist No-op, da live ausgewertet)** |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName, EventDate (`DateOnly?`, Turniertermin — steuert Refresh-Crawl + Bot-Turnier-Einordnung) |
