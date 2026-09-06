@@ -5,7 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { GuessBoardComponent } from './guess-board.component';
-import { GuessIntroMove, GuessSession } from './guess.service';
+import { GuessHistoryMove, GuessSession } from './guess.service';
 
 function session(over: Partial<GuessSession> = {}): GuessSession {
   return {
@@ -13,7 +13,7 @@ function session(over: Partial<GuessSession> = {}): GuessSession {
     guessWhite: true, startPly: 8, status: 'running',
     points: 0, maxPoints: 0, movesPlayed: 0, gameMoveHits: 0, secondsSpent: 0,
     position: { ply: 8, moveNumber: 5, whiteToMove: true, fen: 'fen-8', lastMoveUci: 'e7e5' },
-    totalGuesses: 10, startFen: null, intro: [], ...over,
+    totalGuesses: 10, startFen: null, history: [], ...over,
   };
 }
 
@@ -130,7 +130,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   const FEN8 = 'rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5b2/PPP2PPP/RNBQKB1R w KQkq - 0 5';
   // Wie der Server es liefert: je Zug die Stellung DANACH — die des letzten ist die Aufgabe selbst
   // (im Backend als `dto.Position.Fen == dto.Intro[^1].Fen` festgenagelt).
-  const INTRO: GuessIntroMove[] = [
+  const HISTORY: GuessHistoryMove[] = [
     { ply: 6, moveNumber: 4, white: true, san: 'dxe5', uci: 'd4e5', fen: 'nach-dxe5' },
     { ply: 7, moveNumber: 4, white: false, san: 'Bxf3', uci: 'g4f3', fen: FEN8 },
   ];
@@ -143,7 +143,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
       guessWhite: true, startPly: 8, status: 'running',
       points: 0, maxPoints: 0, movesPlayed: 0, gameMoveHits: 0, secondsSpent: 0,
       position: { ply: 8, moveNumber: 5, whiteToMove: true, fen: FEN8, lastMoveUci: 'c8g4' },
-      totalGuesses: 10, startFen: START, intro: INTRO, ...over,
+      totalGuesses: 10, startFen: START, history: HISTORY, ...over,
     };
   }
   const nextSession = base({
@@ -290,7 +290,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     c.browse(0);                                   // 4.dxe5 — noch nicht die Aufgabe
     expect(c.canGuess).toBeFalse();
 
-    c.browse(INTRO.length - 1);                    // letzter Eroeffnungszug = die Aufgabe
+    c.browse(HISTORY.length - 1);                    // letzter Eroeffnungszug = die Aufgabe
     expect(c.viewFen).withContext('das ist die Aufgabenstellung').toBe(FEN8);
     expect(c.browsing).toBeFalse();
     expect(c.canGuess).withContext('ab hier darf gezogen werden').toBeTrue();
@@ -351,18 +351,16 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.boardFen).withContext('bleibt dort stehen').toContain('2B1P3');
   });
 
-  it('nach dem ersten Zug ist der letzte Eroeffnungszug wieder nur Ansicht', () => {
-    // Der Kurzschluss „letzter Introzug == Aufgabe" gilt NUR, solange nichts geraten wurde. Ohne
-    // diese Bedingung koennte man dort in einer alten Stellung ziehen — gewertet gegen die aktuelle.
-    const c = load();
-    guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
-
-    c.browse(INTRO.length - 1);
-    expect(c.browsing).withContext('jetzt eine alte Stellung').toBeTrue();
-    expect(c.canGuess).toBeFalse();
+  it('die Pfeile fuehren nie ueber die Aufgabe hinaus', () => {
+    // Der Verlauf endet beim Zug VOR der Aufgabe — ein Schritt weiter waere die Loesung.
+    const c = loadAtStart();
+    for (let i = 0; i < 10; i++) c.step(1);
+    expect(c.atTask).toBeTrue();
+    expect(c.viewFen).withContext('die Aufgabe, nicht die Stellung danach').toBe(FEN8);
+    expect(c.browseIndex === null || c.browseIndex === HISTORY.length - 1).toBeTrue();
   });
 
-  it('vor und zurueck blaettern durch die Eroeffnung', () => {
+  it('vor und zurueck blaettern durch den Verlauf', () => {
     const c = loadAtStart();
     expect(c.atStart).toBeTrue();
     expect(c.atTask).toBeFalse();
@@ -370,8 +368,9 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     c.step(1);
     expect(c.browseIndex).toBe(0);
     c.step(1);
-    expect(c.browseIndex).toBe(INTRO.length - 1);
-    expect(c.atTask).withContext('letzter Introzug ist die erste Aufgabe').toBeTrue();
+    // Am Ende des Verlaufs steht die Aufgabe — dafuer ist `null` die kanonische Form.
+    expect(c.browseIndex).toBeNull();
+    expect(c.atTask).toBeTrue();
 
     c.step(-1);
     expect(c.browseIndex).toBe(0);
@@ -381,11 +380,11 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
 
   it('die Zugliste steht untereinander, je Zeile Weiss und Schwarz', () => {
     const c = loadAtStart();
-    expect(c.introRows.length).toBe(1);              // 4.dxe5 Bxf3 = eine Zeile
-    expect(c.introRows[0].no).toBe(4);
-    expect(c.introRows[0].w).toBe('dxe5');
-    expect(c.introRows[0].b).toBe('Bxf3');
-    expect(c.introRows[0].wIdx).toBe(0);
-    expect(c.introRows[0].bIdx).toBe(1);
+    expect(c.historyRows.length).toBe(1);              // 4.dxe5 Bxf3 = eine Zeile
+    expect(c.historyRows[0].no).toBe(4);
+    expect(c.historyRows[0].w).toBe('dxe5');
+    expect(c.historyRows[0].b).toBe('Bxf3');
+    expect(c.historyRows[0].wIdx).toBe(0);
+    expect(c.historyRows[0].bIdx).toBe(1);
   });
 });

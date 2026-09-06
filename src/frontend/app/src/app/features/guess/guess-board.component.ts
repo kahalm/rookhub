@@ -65,37 +65,6 @@ function promotionOf(san: string | undefined): string {
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet"
                              [playable]="canGuess" (userMove)="onMove($event)" />
 
-            <!-- Die Eröffnung bis zum Einstieg: durchblättern oder einen Zug direkt anklicken. -->
-            @if (session.intro.length) {
-              <div class="opening">
-                <div class="onav">
-                  <button mat-icon-button (click)="browse(-1)" [disabled]="atStart"
-                          [attr.title]="'guess.startPosition' | translate"><mat-icon>first_page</mat-icon></button>
-                  <button mat-icon-button (click)="step(-1)" [disabled]="atStart"
-                          [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
-                  <button mat-icon-button (click)="step(1)" [disabled]="atTask"
-                          [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
-                  <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
-                    {{ 'guess.toTask' | translate }}
-                  </button>
-                </div>
-                <div class="omoves">
-                  @for (row of introRows; track row.no) {
-                    <div class="orow">
-                      <span class="no">{{ row.no }}.</span>
-                      @if (row.wIdx >= 0) {
-                        <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
-                                (click)="browse(row.wIdx)">{{ row.w }}</button>
-                      } @else { <span class="mv muted">…</span> }
-                      @if (row.b !== null) {
-                        <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
-                                (click)="browse(row.bIdx)">{{ row.b }}</button>
-                      } @else { <span></span> }
-                    </div>
-                  }
-                </div>
-              </div>
-            }
             @if (session.status === 'running' && !holding) {
               <div class="actions">
                 <button mat-stroked-button (click)="skip()" [disabled]="busy || browsing">
@@ -116,9 +85,6 @@ function promotionOf(san: string | undefined): string {
                 </button>
               </div>
             }
-          </div>
-
-          <div class="side-col">
             @if (last) {
               <mat-card class="feedback" [class]="'g-' + (last.grade || 'skipped')">
                 <mat-card-content>
@@ -140,6 +106,40 @@ function promotionOf(san: string | undefined): string {
               </mat-card>
             }
 
+            <!-- Die Partie bis hierhin (Eröffnung + gelöste Züge): blättern oder direkt anklicken. -->
+            @if (session.history.length) {
+              <div class="opening">
+                <div class="onav">
+                  <button mat-icon-button (click)="browse(-1)" [disabled]="atStart"
+                          [attr.title]="'guess.startPosition' | translate"><mat-icon>first_page</mat-icon></button>
+                  <button mat-icon-button (click)="step(-1)" [disabled]="atStart"
+                          [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
+                  <button mat-icon-button (click)="step(1)" [disabled]="atTask"
+                          [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
+                  <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
+                    {{ 'guess.toTask' | translate }}
+                  </button>
+                </div>
+                <div class="omoves">
+                  @for (row of historyRows; track row.no) {
+                    <div class="orow">
+                      <span class="no">{{ row.no }}.</span>
+                      @if (row.wIdx >= 0) {
+                        <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
+                                (click)="browse(row.wIdx)">{{ row.w }}</button>
+                      } @else { <span class="mv muted">…</span> }
+                      @if (row.b !== null) {
+                        <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
+                                (click)="browse(row.bIdx)">{{ row.b }}</button>
+                      } @else { <span></span> }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="side-col">
             @if (session.status === 'done') {
               <mat-card class="done">
                 <mat-card-content>
@@ -254,7 +254,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
 
   /**
    * Welcher Zug der Eröffnung gerade angeschaut wird: `null` = die Aufgabe selbst, `-1` = die
-   * Stellung vor dem ersten Zug, sonst der Index in `session.intro`. Nur eine ANSICHT — der
+   * Stellung vor dem ersten Zug, sonst der Index in `session.history`. Nur eine ANSICHT — der
    * Zustand der Sitzung bleibt davon unberührt, das Brett ist derweil gesperrt.
    */
   browseIndex: number | null = null;
@@ -273,28 +273,24 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * „Schaut gerade zurueck" — und damit gesperrt. Ausnahme ist der LETZTE Introzug, dessen Stellung
-   * die erste Aufgabe IST — aber nur, SOLANGE NOCH NICHTS GERATEN WURDE. Danach liegt die Aufgabe
-   * weiter vorn; ohne diese Bedingung koennte man dort in einer alten Stellung ziehen und der Zug
-   * wuerde gegen die aktuelle Aufgabe gewertet.
+   * „Schaut gerade zurueck" — und damit gesperrt. Der LETZTE Eintrag des Verlaufs erzeugt IMMER die
+   * Aufgabenstellung (der Server schneidet die Liste genau davor ab), dort darf also gezogen werden.
    */
   get browsing(): boolean {
     const i = this.browseIndex;
-    if (i === null) return false;
-    const last = (this.session?.intro.length ?? 0) - 1;
-    return !(i === last && (this.session?.movesPlayed ?? 0) === 0);
+    return i !== null && i !== (this.session?.history.length ?? 0) - 1;
   }
 
   /** Steht das Brett auf der Aufgabe (dann fuehrt „vor" nirgendwohin)? */
   get atTask(): boolean { return !this.browsing; }
   get atStart(): boolean { return this.browseIndex === -1; }
 
-  /** Die Eroeffnung als Zeilen „Nr. · Weiss · Schwarz" — je Halbzug der Index fuers Anklicken. */
-  get introRows(): { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] {
+  /** Der Verlauf als Zeilen „Nr. · Weiss · Schwarz" — je Halbzug der Index fuers Anklicken. */
+  get historyRows(): { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] {
     const rows: { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] = [];
-    const intro = this.session?.intro ?? [];
-    for (let i = 0; i < intro.length; i++) {
-      const m = intro[i];
+    const history = this.session?.history ?? [];
+    for (let i = 0; i < history.length; i++) {
+      const m = history[i];
       if (m.white) rows.push({ no: m.moveNumber, w: m.san, wIdx: i, b: null, bIdx: -1 });
       else if (rows.length && rows[rows.length - 1].b === null) {
         rows[rows.length - 1].b = m.san;
@@ -304,12 +300,16 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     return rows;
   }
 
-  /** Einen Halbzug vor (+1) oder zurueck (-1); ueber das Ende hinaus landet man auf der Aufgabe. */
+  /**
+   * Einen Halbzug vor (+1) oder zurueck (-1). Das ENDE ist der letzte Eintrag des Verlaufs, also die
+   * Aufgabenstellung — weiter geht es nicht, und genau deshalb kann das Blaettern die Loesung nicht
+   * verraten.
+   */
   step(delta: number): void {
-    const n = this.session?.intro.length ?? 0;
-    const cur = this.browseIndex === null ? n : this.browseIndex;
+    const n = this.session?.history.length ?? 0;
+    const cur = this.browseIndex ?? n - 1;
     const next = cur + delta;
-    if (next >= n) { this.browse(null); return; }
+    if (next >= n - 1) { this.browse(null); return; }
     this.browse(Math.max(-1, next));
   }
 
@@ -317,13 +317,13 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   get viewFen(): string {
     if (this.browseIndex === null) return this.boardFen;
     if (this.browseIndex < 0) return this.session?.startFen || this.boardFen;
-    return this.session?.intro[this.browseIndex]?.fen || this.boardFen;
+    return this.session?.history[this.browseIndex]?.fen || this.boardFen;
   }
 
   get viewLastMove(): [string, string] | undefined {
     if (this.browseIndex === null) return this.lastMove;
     if (this.browseIndex < 0) return undefined;                 // Grundstellung: es gab keinen Zug
-    const uci = this.session?.intro[this.browseIndex]?.uci;
+    const uci = this.session?.history[this.browseIndex]?.uci;
     return uci ? [uci.slice(0, 2), uci.slice(2, 4)] : undefined;
   }
 
@@ -367,10 +367,10 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     this.service.get(id).subscribe({
       next: s => {
         this.apply(s);
-        // Nicht mitten in der Partie einsteigen: erst die Grundstellung zeigen, damit man sich die
-        // Eroeffnung anschauen kann. Am LETZTEN Introzug steht die Aufgabe — ab dort darf geraten
-        // werden, „Zur Aufgabe" ist die Abkuerzung dorthin.
-        if (s.intro.length) this.browseIndex = -1;
+        // Eine NEUE Sitzung faengt am Anfang der Partie an, damit man sich die Eroeffnung ansehen
+        // kann; am letzten Eintrag des Verlaufs steht die Aufgabe, ab dort darf geraten werden.
+        // Eine fortgesetzte Sitzung startet dagegen dort, wo man aufgehoert hat.
+        if (s.history.length && s.movesPlayed === 0) this.browseIndex = -1;
         this.loading = false;
         this.cdr.markForCheck();
       },

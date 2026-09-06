@@ -350,29 +350,29 @@ public class GuessSessionService
                 };
             }
 
-            // Die Eröffnung vor dem Einstieg zum Durchklicken. Je Zug wird die Stellung DANACH
+            // Die Partie bis zur aktuellen Aufgabe zum Durchblättern. Je Zug wird die Stellung DANACH
             // geliefert — das ist die `Fen` des FOLGENDEN Halbzugs (eine Stellungszeile hält immer
-            // die Stellung VOR ihrem Zug). Für den letzten Introzug ist das die Einstiegsstellung,
-            // die es hier immer gibt, weil StartPly nie hinter dem letzten Halbzug liegt.
-            if (session.StartPly > 0)
+            // die Stellung VOR ihrem Zug). Für den letzten Eintrag ist das die AUFGABENSTELLUNG; die
+            // Liste hört damit genau vor der Lösung auf und kann sie nicht verraten.
+            if (session.CurrentPly > 0)
             {
-                var intro = await _db.GameAnalysisPositions.AsNoTracking()
-                    .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply <= session.StartPly)
+                var played = await _db.GameAnalysisPositions.AsNoTracking()
+                    .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply <= session.CurrentPly)
                     .OrderBy(p => p.Ply)
                     .Select(p => new { p.Ply, p.Fen, p.GameMoveSan, p.GameMoveUci })
                     .ToListAsync(ct);
-                if (intro.Count > 0)
+                if (played.Count > 0)
                 {
-                    dto.StartFen = intro[0].Fen;
-                    for (var i = 0; i + 1 < intro.Count && intro[i].Ply < session.StartPly; i++)
-                        dto.Intro.Add(new GuessIntroMoveDto
+                    dto.StartFen = played[0].Fen;
+                    for (var i = 0; i + 1 < played.Count && played[i].Ply < session.CurrentPly; i++)
+                        dto.History.Add(new GuessHistoryMoveDto
                         {
-                            Ply = intro[i].Ply,
-                            MoveNumber = intro[i].Ply / 2 + 1,
-                            White = intro[i].Ply % 2 == 0,
-                            San = intro[i].GameMoveSan,
-                            Uci = intro[i].GameMoveUci,
-                            Fen = intro[i + 1].Fen,
+                            Ply = played[i].Ply,
+                            MoveNumber = played[i].Ply / 2 + 1,
+                            White = played[i].Ply % 2 == 0,
+                            San = played[i].GameMoveSan,
+                            Uci = played[i].GameMoveUci,
+                            Fen = played[i + 1].Fen,
                         });
                 }
             }

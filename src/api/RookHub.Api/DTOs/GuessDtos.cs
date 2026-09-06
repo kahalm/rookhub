@@ -44,18 +44,22 @@ public class GuessSessionDto
     /// <summary>Wie viele Halbzüge der geratenen Seite insgesamt anstehen (für den Fortschritt).</summary>
     public int TotalGuesses { get; set; }
 
-    /// <summary>Stellung vor dem ERSTEN Zug der Partie — Anfangspunkt zum Durchklicken der Eröffnung.</summary>
+    /// <summary>Stellung vor dem ERSTEN Zug der Partie — Anfangspunkt zum Durchblättern.</summary>
     public string? StartFen { get; set; }
 
-    /// <summary>Die Züge VOR dem Einstieg (<see cref="StartPly"/>): der Weg, auf dem die Stellung
-    /// entstanden ist. Nur in der Einzelansicht gefüllt, nicht in der Liste — die Übersicht braucht
-    /// ihn nicht und er wäre dort je Sitzung ein zweiter Satz Zeilen.</summary>
-    public List<GuessIntroMoveDto> Intro { get; set; } = new();
+    /// <summary>
+    /// Die Partie BIS HIERHIN: alle Halbzüge vor der aktuellen Aufgabe (<see cref="StartPly"/>-Vorlauf
+    /// plus alles, was seither gespielt wurde). Der LETZTE Eintrag erzeugt die Aufgabenstellung — die
+    /// Liste endet also genau dort, wo die Lösung anfinge. Genau deshalb ist sie der Bewegungsraum der
+    /// Blätter-Pfeile: weiter als bis hierhin kann man gar nicht kommen.
+    /// <para>Nur in der Einzelansicht gefüllt, nicht in der Liste.</para>
+    /// </summary>
+    public List<GuessHistoryMoveDto> History { get; set; } = new();
 }
 
-/// <summary>Ein Zug der Eröffnung vor dem Einstieg — mit der Stellung, die er ERZEUGT (nicht der
-/// davor): ein Klick darauf soll genau das zeigen, was nach diesem Zug auf dem Brett stand.</summary>
-public class GuessIntroMoveDto
+/// <summary>Ein bereits gespielter Halbzug — mit der Stellung, die er ERZEUGT (nicht der davor):
+/// ein Klick darauf soll genau das zeigen, was nach diesem Zug auf dem Brett stand.</summary>
+public class GuessHistoryMoveDto
 {
     public int Ply { get; set; }
     public int MoveNumber { get; set; }

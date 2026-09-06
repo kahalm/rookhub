@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.406.3", date: "2026-09-06", changes: [
+    { en: "Point game: the arrows now walk the whole game so far - the opening plus every move you have already solved - and they stop at the position you are being asked about. Stepping past the last opening move used to show the position after it and gave the answer away.", de: "Punktepartie: Die Pfeile blättern jetzt durch die ganze bisherige Partie - Eröffnung plus alle schon gelösten Züge - und enden bei der Stellung, nach der gefragt wird. Ein Schritt über den letzten Eröffnungszug hinaus zeigte bisher die Stellung danach und verriet damit die Lösung." },
+    { en: "Point game: once you start solving, the evaluation of your move sits directly under the board and the move list with the arrows moves below it.", de: "Punktepartie: Sobald du zu lösen beginnst, steht die Auswertung deines Zuges direkt unter dem Brett und die Zugliste mit den Pfeilen rutscht darunter." },
+  ] },
   { version: "0.406.2", date: "2026-09-06", changes: [
     { en: "A script for the one-off setup of the tournament calendar: `scripts/gazetteer-import.sh` logs in, loads the place gazetteer, runs a first sweep and prints how many tournaments ended up with coordinates. It asks for the password interactively, so it never ends up in a shell history.", de: "Ein Skript für die einmalige Einrichtung des Turnierkalenders: `scripts/gazetteer-import.sh` meldet sich an, lädt das Ortslexikon, stößt einen ersten Lauf an und sagt am Ende, wie viele Turniere Koordinaten bekommen haben. Das Passwort wird interaktiv abgefragt und landet damit in keiner Shell-History." },
   ] },
