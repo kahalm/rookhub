@@ -435,6 +435,61 @@ public class TournamentDirectoryControllerTests : IDisposable
     // ----- Detail -----------------------------------------------------------
 
     [Fact]
+    public async Task Get_ShowsTheWholeTournament_NotJustTheClickedSection()
+    {
+        // Die Liste fasst A/B/C zu einem Eintrag zusammen. Zeigte das Detail nur die angeklickte
+        // Gruppe, widerspraeche der Deep-Link aus einer Benachrichtigung genau der Liste, aus der
+        // er stammt.
+        await AddGroupedAsync("Open Braunau 2026 A", "111", players: 12);
+        await AddGroupedAsync("Open Braunau 2026 B", "112", players: 8);
+
+        var result = await CreateController(1).Get("112", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("112", dto.ChessResultsId);       // die angefragte Gruppe bleibt der Bezug
+        Assert.Equal("Open Braunau 2026", dto.Name);   // aber der Name ist der des Turniers
+        Assert.Equal(2, dto.GroupSize);
+        Assert.Equal(20, dto.PlayerCount);
+        Assert.Equal(["111", "112"], dto.Groups.Select(g => g.ChessResultsId));
+    }
+
+    [Fact]
+    public async Task Get_SingleTournament_StaysUngrouped()
+    {
+        await AddGroupedAsync("Ein einzelnes Turnier", "500", players: 9);
+
+        var result = await CreateController(1).Get("500", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(1, dto.GroupSize);
+        Assert.Empty(dto.Groups);
+        Assert.Equal(9, dto.PlayerCount);
+    }
+
+    [Fact]
+    public async Task Subscribing_ToOneSection_MarksTheWholeTournament()
+    {
+        // Gemerkt wird das TURNIER. Wer Gruppe B abonniert hat, soll nicht bei Gruppe A wieder
+        // „merken" angeboten bekommen.
+        var userId = await CreateUserAsync();
+        await AddGroupedAsync("Open Braunau 2026 A", "111");
+        await AddGroupedAsync("Open Braunau 2026 B", "112");
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = userId, CrawlerTournamentId = "112", TournamentName = "Open Braunau 2026 B"
+        });
+        await _db.SaveChangesAsync();
+
+        var list = await CreateController(userId).Search(null, null, null, null, null, null, null, null);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(list.Result).Value);
+        Assert.True(Assert.Single(page.Items).Subscribed);
+
+        var detail = await CreateController(userId).Get("111", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(detail.Result).Value);
+        Assert.True(dto.Subscribed);
+    }
+
+    [Fact]
     public async Task Get_UnknownTournament_Is404()
     {
         var result = await CreateController(1).Get("123456", default);

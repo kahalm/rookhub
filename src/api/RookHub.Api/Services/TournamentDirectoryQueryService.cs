@@ -165,9 +165,27 @@ public class TournamentDirectoryQueryService
             .ToListAsync(ct);
     }
 
-    public async Task<TournamentDirectoryEntry?> GetAsync(string chessResultsId, CancellationToken ct = default) =>
-        await _db.TournamentDirectoryEntries.AsNoTracking()
+    /// <summary>
+    /// Ein Turnier SAMT seiner Gruppen. Die Liste fasst A/B/C zu einem Eintrag zusammen — die
+    /// Detailansicht muss dasselbe Turnier zeigen, sonst widerspricht der Deep-Link aus einer
+    /// Benachrichtigung der Liste, aus der er stammt.
+    /// </summary>
+    public async Task<DirectoryGroupItem?> GetAsync(string chessResultsId, CancellationToken ct = default)
+    {
+        var entry = await _db.TournamentDirectoryEntries.AsNoTracking()
             .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct);
+        if (entry is null) return null;
+
+        var members = entry.GroupKey is null
+            ? [entry]
+            : await _db.TournamentDirectoryEntries.AsNoTracking()
+                .Where(e => e.GroupKey == entry.GroupKey)
+                .ToListAsync(ct);
+
+        // Angezeigt wird die angefragte Gruppe; die Mitglieder liefern Name, Summe und Verlinkung.
+        return new DirectoryGroupItem(
+            entry, null, members.OrderBy(m => m.ChessResultsId, StringComparer.Ordinal).ToList());
+    }
 
     /// <summary>Ortsvorschlaege fuers Suchprofil-Formular: Postleitzahl oder Ortsname.</summary>
     public async Task<List<GeoPlace>> SuggestPlacesAsync(string term, int limit = 10, CancellationToken ct = default)

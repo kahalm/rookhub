@@ -53,13 +53,14 @@ public class TournamentDirectoryController : BaseApiController
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
         var result = await _query.SearchAsync(parsed.Query!, ct);
-        var subscribed = await SubscribedIdsAsync(result.Items.Select(i => i.Entry.ChessResultsId), ct);
+        var subscribed = await SubscribedIdsAsync(
+            result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
 
         return Ok(new DirectoryPageDto
         {
             Items = result.Items
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    subscribed.Contains(i.Entry.ChessResultsId), i.Members))
+                    i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members))
                 .ToList(),
             Total = result.Total,
             Truncated = result.Truncated,
@@ -115,7 +116,8 @@ public class TournamentDirectoryController : BaseApiController
         // Der Monat ist die Obergrenze: mehr als 200 gleichzeitig laufende Turniere im selben
         // Umkreis gibt es nicht, und eine Kalenderzelle zeigt ohnehin nur die ersten paar.
         var result = await _query.SearchAsync(parsed.Query! with { Page = 1, PageSize = 200 }, ct);
-        var subscribed = await SubscribedIdsAsync(result.Items.Select(i => i.Entry.ChessResultsId), ct);
+        var subscribed = await SubscribedIdsAsync(
+            result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
 
         var days = new List<DirectoryCalendarDayDto>();
         for (var day = first; day <= last; day = day.AddDays(1))
@@ -123,7 +125,7 @@ public class TournamentDirectoryController : BaseApiController
             var items = result.Items
                 .Where(i => Covers(i.Entry, day))
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    subscribed.Contains(i.Entry.ChessResultsId), i.Members))
+                    i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members))
                 .ToList();
             days.Add(new DirectoryCalendarDayDto { Date = day, Items = items });
         }
@@ -136,11 +138,11 @@ public class TournamentDirectoryController : BaseApiController
         if (!Regex.IsMatch(chessResultsId, @"^\d{1,10}$"))
             return BadRequest(new { message = "Invalid tournament id." });
 
-        var entry = await _query.GetAsync(chessResultsId, ct);
-        if (entry is null) return NotFound();
+        var item = await _query.GetAsync(chessResultsId, ct);
+        if (item is null) return NotFound();
 
-        var subscribed = await SubscribedIdsAsync([chessResultsId], ct);
-        return Ok(DirectoryEntryDto.FromEntity(entry, null, subscribed.Contains(chessResultsId)));
+        var subscribed = await SubscribedIdsAsync(item.Members.Select(m => m.ChessResultsId), ct);
+        return Ok(DirectoryEntryDto.FromEntity(item.Entry, null, subscribed.Count > 0, item.Members));
     }
 
     /// <summary>Ortsvorschlaege (PLZ oder Name) fuer das Suchprofil-Formular.</summary>

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.410.4", date: "2026-09-06", changes: [
+    { en: "Opening a tournament from a notification link now shows the whole tournament, not just the one section that was clicked — the list already combined the sections, so the detail view contradicted the list it came from. And a tournament counts as bookmarked when any of its sections is; before, bookmarking section B still offered ‚bookmark‘ on section A.", de: "Ein Turnier über den Link aus einer Benachrichtigung zu öffnen zeigt jetzt das ganze Turnier statt nur der angeklickten Gruppe — die Liste fasst die Gruppen ja schon zusammen, die Detailansicht widersprach also der Liste, aus der sie kam. Und ein Turnier gilt als gemerkt, sobald eine seiner Gruppen gemerkt ist; vorher bot Gruppe A noch „merken“ an, obwohl Gruppe B schon gemerkt war." },
+  ] },
   { version: "0.410.3", date: "2026-09-06", changes: [
     { en: "Back in the test run: splitting the tournament pages into their own app quietly took 81 of their tests out of it — the runner collects specs per project, and the new project had no test setup. Nothing turned red, the number just dropped. It has a setup now, and the build gate runs both projects by name — without a name the runner no longer reliably picks the main one, which would have skipped 1911 tests just as quietly.", de: "Wieder im Testlauf: Die Aufteilung der Turnierseiten in eine eigene App hat 81 ihrer Tests still herausgenommen — der Läufer sammelt Specs je Projekt ein, und das neue Projekt hatte keine Test-Einrichtung. Nichts wurde rot, die Zahl sank nur. Jetzt hat es eine, und die Bau-Kette ruft beide Projekte namentlich auf — ohne Namen wählt der Läufer nicht mehr verlässlich das Hauptprojekt, womit ebenso lautlos 1911 Tests übersprungen worden wären." },
   ] },

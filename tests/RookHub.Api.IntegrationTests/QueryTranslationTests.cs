@@ -191,7 +191,7 @@ public class QueryTranslationTests : IAsyncLifetime
         var pins = await svc.MapPinsAsync(new DirectorySearchQuery(), 47.0, 48.0, 12.0, 14.0);
         Assert.Equal(2, pins.Count);
 
-        Assert.NotNull(await svc.GetAsync("1"));
+        Assert.NotNull((await svc.GetAsync("1"))?.Entry);
     }
 
     [MySqlFact]
