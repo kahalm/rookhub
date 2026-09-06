@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -62,12 +63,24 @@ function promotionOf(san: string | undefined): string {
             <app-chess-board [fen]="boardFen" [lastMove]="lastMove" [flipped]="!session.guessWhite"
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet"
                              [playable]="canGuess" (userMove)="onMove($event)" />
-            @if (session.status === 'running') {
+            @if (session.status === 'running' && !holding) {
               <div class="actions">
                 <button mat-stroked-button (click)="skip()" [disabled]="busy">
                   <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
                 </button>
                 <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
+              </div>
+            }
+            <!-- Dein Zug steht auf dem Brett; DARUNTER, was die Partie gespielt hat. -->
+            @if (holding && last) {
+              <div class="held" [class]="'g-' + (last.grade || 'skipped')">
+                <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: last.gameMoveSan } }}</span>
+                @if (evalDelta) {
+                  <span class="hd">{{ 'guess.evalDelta' | translate:{ delta: evalDelta } }}</span>
+                }
+                <button mat-flat-button color="primary" (click)="continueGame()">
+                  {{ 'guess.continue' | translate }} <mat-icon>arrow_forward</mat-icon>
+                </button>
               </div>
             }
           </div>
@@ -139,6 +152,10 @@ function promotionOf(san: string | undefined): string {
     .board-col { flex: 1 1 320px; max-width: 520px; }
     .side-col { flex: 1 1 280px; max-width: 440px; display: flex; flex-direction: column; gap: 10px; }
     .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .held .hg { font-weight: 600; }
+    .held .hd { font-variant-numeric: tabular-nums; }
+    .held.g-worse .hd, .held.g-muchWorse .hd { color: #c62828; }
     .feedback .fb-head { display: flex; align-items: baseline; gap: 10px; }
     .feedback .pts { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .feedback .grade { font-weight: 600; }
@@ -175,6 +192,14 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   loading = true;
   busy = false;
 
+  /**
+   * Ein Zug, der NICHT der Partiezug war, bleibt auf dem Brett stehen — mit der Info darunter,
+   * was die Partie gespielt hat. Erst „Weiter" rückt auf die nächste Aufgabe vor. Die Sitzung ist
+   * serverseitig längst weitergerückt; zurückgehalten wird nur die ANZEIGE (`pending`).
+   */
+  holding = false;
+  private pending: GuessSession | null = null;
+
   /** Was das Brett zeigt: die zu ratende Stellung bzw. nach einem Zug die Stellung danach. */
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   lastMove?: [string, string];
@@ -183,7 +208,20 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
 
   get boardTheme(): string { return this.prefs.boardTheme; }
   get pieceSet(): string { return this.prefs.pieceSet; }
-  get canGuess(): boolean { return !!this.session?.position && !this.busy && this.session.status === 'running'; }
+  get canGuess(): boolean {
+    return !!this.session?.position && !this.busy && !this.holding && this.session.status === 'running';
+  }
+
+  /** Schlecht = Minus- oder Nullrunde: nur DA interessiert der Abstand zum Partiezug. */
+  get isPoor(): boolean { return this.last?.grade === 'worse' || this.last?.grade === 'muchWorse'; }
+
+  /** Bewertungsänderung gegenüber dem Partiezug in Bauerneinheiten — nur bei einem schlechten Zug. */
+  get evalDelta(): string | null {
+    const cp = this.last?.diffCp;
+    if (cp === null || cp === undefined || !this.isPoor) return null;
+    const pawns = cp / 100;
+    return (pawns > 0 ? '+' : '') + pawns.toFixed(2);
+  }
 
   get moveLabel(): string {
     const p = this.session?.position;
@@ -223,12 +261,25 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     if (!id) return;
     this.busy = true;
     const seconds = Math.min(3600, Math.max(0, Math.round((Date.now() - this.since) / 1000)));
+    const fenBefore = this.boardFen;
 
     this.service.guess(id, uci, seconds).subscribe({
       next: res => {
         this.busy = false;
         this.last = res;
-        this.apply(res.session);
+        // Ein anderer Zug als der Partiezug bleibt stehen, damit man sieht, was man gespielt hat —
+        // die naechste Aufgabe wartet hinter „Weiter". Der Partiezug selbst und das Passen ruecken
+        // sofort vor (da gibt es nichts zu vergleichen).
+        const after = uci && uci !== res.gameMoveUci ? fenAfterUci(fenBefore, uci) : null;
+        if (after && res.session.status === 'running' && res.session.position) {
+          this.session = res.session;              // Punkte/Fortschritt sofort mitnehmen
+          this.pending = res.session;
+          this.holding = true;
+          this.boardFen = after;
+          this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
+        } else {
+          this.apply(res.session);
+        }
         if (res.session.status === 'done') this.loadReview(id);
         this.cdr.markForCheck();
       },
@@ -239,6 +290,15 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  /** „Weiter": die zurueckgehaltene naechste Aufgabe aufs Brett holen. */
+  continueGame(): void {
+    const s = this.pending;
+    this.pending = null;
+    this.holding = false;
+    if (s) this.apply(s);          // setzt Brett + Denkzeit-Start; die Lesezeit zaehlt nicht mit
+    this.cdr.markForCheck();
   }
 
   private apply(s: GuessSession): void {

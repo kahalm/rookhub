@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.400.0", date: "2026-09-06", changes: [
+    { en: "Point game: a move that was not the game move now stays on the board. Underneath it you read which move the game actually played, and only then does Continue bring up the next position — before, the board jumped on immediately and you never saw what you had done. If your move was as good as the game move or better, only the game move is named; if it was worse, the difference to it is shown as well.", de: "Punktepartie: Ein Zug, der nicht der Partiezug war, bleibt jetzt auf dem Brett stehen. Darunter steht, welchen Zug die Partie gespielt hat, und erst Weiter holt die nächste Stellung — vorher sprang das Brett sofort weiter und man sah nie, was man selbst gezogen hatte. War der eigene Zug so gut wie der Partiezug oder besser, wird nur der Partiezug genannt; war er schlechter, steht der Abstand dazu daneben." },
+  ] },
   { version: "0.399.3", date: "2026-09-06", changes: [
     { en: "Fixed in the point game: only the first guessed move went through. From the second move on the board still highlighted the squares but refused to play the move, so the game could not be continued. The board and the layer that draws it disagreed about whose turn it was after a guessed move.", de: "In der Punktepartie behoben: Nur der erste geratene Zug ging durch. Ab dem zweiten markierte das Brett zwar noch die Felder, führte den Zug aber nicht mehr aus — die Partie ließ sich nicht fortsetzen. Brett und die Zeichenschicht darunter waren sich nach einem geratenen Zug uneins, wer am Zug ist." },
   ] },
