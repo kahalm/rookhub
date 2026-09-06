@@ -3064,6 +3064,9 @@
       "year": "Nächste zwölf Monate",
       "all": "Alles Kommende",
       "custom": "Eigener Zeitraum"
+    },
+    "map": {
+      "openDetail": "Turnierseite öffnen"
     }
   },
   "turnier": {

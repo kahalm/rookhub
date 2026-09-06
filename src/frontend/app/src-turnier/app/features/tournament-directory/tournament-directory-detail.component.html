@@ -6,13 +6,13 @@
     </button>
   </div>
 
-  @if (loading) {
+  @if (loading()) {
     <app-loading-spinner />
-  } @else if (notFound || !entry) {
+  } @else if (notFound() || !entry()) {
     <mat-card class="detail-card">
       <p class="muted">{{ 'tournamentDirectory.unknownTournament' | translate }}</p>
     </mat-card>
-  } @else {
+  } @else if (entry(); as entry) {
     <mat-card class="detail-card" [class.cancelled]="entry.cancelled">
       <h1>{{ entry.name }}</h1>
 
@@ -85,8 +85,8 @@
             {{ 'tournamentDirectory.bookmarkedTooltip' | translate }}
           </span>
         }
-        @if (imported) {
-          <a mat-stroked-button [routerLink]="['/tournaments', imported.id]">
+        @if (imported()) {
+          <a mat-stroked-button [routerLink]="['/tournaments', imported()!.id]">
             <mat-icon>table_chart</mat-icon>
             {{ 'tournamentDirectory.detail.results' | translate }}
           </a>
@@ -98,7 +98,7 @@
         </a>
       </div>
 
-      @if (!imported) {
+      @if (!imported()) {
         <p class="muted hint">{{ 'tournamentDirectory.detail.notImportedHint' | translate }}</p>
       }
     </mat-card>
@@ -109,10 +109,10 @@
         @if (entry.geoSource === 'Region') {
           <p class="hint">{{ 'tournamentDirectory.approximate' | translate }}</p>
         }
-        @if (tilesFailed) {
+        @if (tilesFailed()) {
           <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
         }
-        <app-tournament-map [entries]="pins" [centre]="mapCentre" [showRadius]="false"
+        <app-tournament-map [entries]="pins()" [centre]="mapCentre()" [showRadius]="false"
                             height="320px" (tilesFailed)="onTilesFailed()" />
       </mat-card>
     }

@@ -669,3 +669,36 @@ _untersucht werden._
 - [x] StockfishService in ngOnDestroy terminate() → war bereits behoben (kein terminate()-Aufruf mehr)
 - [x] RecordAttemptAsync ohne Idempotenz/Limit → behoben in 0.97.8 (30s-Idempotenz + Elo-Guard)
 - [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
+
+## HTTP-Antworten loesen keine Aenderungserkennung aus (gemessen 2026-09-06, v0.413.2)
+
+`provideHttpClient()` benutzt seit Angular 20/22 von sich aus **`fetch` statt `XMLHttpRequest`**
+(nachgemessen im laufenden Build: 0 XHR, alle `/api`-Aufrufe ueber fetch, obwohl `withFetch()`
+nirgends im Code steht). zone.js patcht fetch zwar, aber die Fortsetzung nach dem Lesen des
+Antwort-Stroms laeuft in der ROOT-Zone: im Abonnenten ist `NgZone.isInAngularZone() === false`.
+Eine gewoehnliche Feldzuweisung loest damit KEINEN Durchlauf aus — und genau darauf ist diese
+Anwendung gebaut (einfache Felder, Default-Change-Detection, kaum Signale).
+
+Sichtbar wurde es an der stillsten Seite: die Turnier-Detailseite blieb im Ladezustand stehen,
+obwohl die Daten da waren. Behoben wurde dort der EINZELFALL (Anzeigezustand als Signale —
+Signal-Schreibvorgaenge melden sich beim Planer selbst und sind zonen-unabhaengig).
+
+**Was noch offen ist:** alle uebrigen Seiten haengen weiter davon ab, dass kurz nach der Antwort
+irgendetwas anderes einen Durchlauf ausloest (eine Animation, ein Material-Overlay, das Nachladen
+einer Sprachdatei). In Produktion faellt das heute nicht auf, im Dev-Server sehr wohl. Es ist der
+wahrscheinlichste Grund fuer „die Seite braucht gefuehlt lange, bis etwas erscheint".
+
+Zwei Wege wurden PROBIERT und wieder verworfen, weil sie das beobachtete Verhalten nicht behoben
+haben (die Messungen sind reproduzierbar):
+- Ein Interceptor, der die Antwort per `NgZone.run` zurueck in die Zone holt: der Abonnent lief
+  danach nachweislich in der Zone (`isInAngularZone() === true`), ein Durchlauf kam trotzdem nicht.
+- Zusaetzlich ein ausdrueckliches `ApplicationRef.tick()` je Antwort — auch synchron direkt nach
+  dem Abonnenten: die Liste im `mat-tab` blieb leer. Ein `detectChanges` auf der Komponente selbst
+  (Angular-Devtools `applyChanges`) rendert dagegen sofort. Das deutet darauf hin, dass der Inhalt
+  als verpflanzte Ansicht in einem OnPush-Vorfahren (`MatTabBody`) haengt und nur ueber
+  `markForCheck` der DEKLARIERENDEN Komponente erreicht wird — also ueber Signale.
+
+**Naechster Schritt (bewusst nicht unbeaufsichtigt gemacht):** die Anzeige-Zustaende der
+haeufig benutzten Seiten auf Signale umstellen, beginnend bei denen, deren Inhalt in einem
+`mat-tab` liegt (`TournamentDirectoryComponent`). Das ist mechanisch, aber breit — und eine
+falsche Stelle faellt erst im Betrieb auf, deshalb gehoert es in einen eigenen, gepruefen Durchgang.

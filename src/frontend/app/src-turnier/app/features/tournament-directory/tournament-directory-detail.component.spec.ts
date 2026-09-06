@@ -52,9 +52,9 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
     flushImportLookup('1457129');
 
-    expect(component.entry?.name).toBe('Open Braunau 2026');
-    expect(component.loading).toBeFalse();
-    expect(component.notFound).toBeFalse();
+    expect(component.entry()?.name).toBe('Open Braunau 2026');
+    expect(component.loading()).toBeFalse();
+    expect(component.notFound()).toBeFalse();
     http.verify();
   });
 
@@ -63,8 +63,8 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.expectOne('/api/tournament-directory/999')
       .flush('weg', { status: 404, statusText: 'Not Found' });
 
-    expect(component.notFound).toBeTrue();
-    expect(component.entry).toBeNull();
+    expect(component.notFound()).toBeTrue();
+    expect(component.entry()).toBeNull();
     // Ohne Eintrag wird auch nicht nach einem geholten Turnier gesucht.
     http.verify();
   });
@@ -74,7 +74,7 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
     flushImportLookup('1457129', { id: 12, chessResultsId: '1457129', name: 'Open Braunau 2026' });
 
-    expect(component.imported?.id).toBe(12);
+    expect(component.imported()?.id).toBe(12);
   });
 
   it('nimmt kein fremdes Turnier, das nur zufällig auf die interne Nummer passt', async () => {
@@ -84,7 +84,7 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
     flushImportLookup('1457129', { id: 1457129, chessResultsId: '888', name: 'Ganz anderes' });
 
-    expect(component.imported).toBeNull();
+    expect(component.imported()).toBeNull();
   });
 
   it('merkt das Turnier und schaltet die Anzeige sofort um', async () => {
@@ -95,7 +95,7 @@ describe('TournamentDirectoryDetailComponent', () => {
     component.bookmark();
     http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
 
-    expect(component.entry?.subscribed).toBeTrue();
+    expect(component.entry()?.subscribed).toBeTrue();
     http.verify();
   });
 
@@ -104,11 +104,11 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
     flushImportLookup('1457129');
 
-    expect(component.pins.length).toBe(1);
-    expect(component.mapCentre).toEqual({ lat: 48.2, lon: 13.0, radiusKm: 6 });
+    expect(component.pins().length).toBe(1);
+    expect(component.mapCentre()).toEqual({ lat: 48.2, lon: 13.0, radiusKm: 6 });
     // Und derselbe Getter liefert dasselbe OBJEKT — ein frisches Literal je Zyklus liesse die
     // Karte in jeder Änderungserkennung neu einpassen (genau der Zoom-Fehler im Kalender).
-    expect(component.mapCentre).toBe(component.mapCentre);
+    expect(component.mapCentre()).toBe(component.mapCentre());
   });
 
   it('lässt die Karte weg, wenn das Turnier nicht verortet ist', async () => {
@@ -117,8 +117,8 @@ describe('TournamentDirectoryDetailComponent', () => {
       .flush(entry('1457129', { lat: null, lon: null, geoSource: 'None' }));
     flushImportLookup('1457129');
 
-    expect(component.pins).toEqual([]);
-    expect(component.mapCentre).toBeNull();
+    expect(component.pins()).toEqual([]);
+    expect(component.mapCentre()).toBeNull();
   });
 
   it('führt zurück in den Kalender statt in den Browserverlauf', async () => {

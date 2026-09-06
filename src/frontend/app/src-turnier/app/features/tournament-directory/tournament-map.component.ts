@@ -1,7 +1,8 @@
 import {
   AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input,
-  OnChanges, OnDestroy, Output, SimpleChanges, ViewChild,
+  OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject,
 } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { DirectoryEntry } from './tournament-directory.model';
 
@@ -20,6 +21,9 @@ export type BoundsString = string;
  *  - Leaflets Stylesheet liegt in angular.json unter `styles` (global) und NICHT in dieser
  *    Komponente: die View-Encapsulation wuerde es wegkapseln und die Kachel-Positionierung
  *    zerlegen. Es sind ~15 kB — der Preis dafuer, dass die Karte ueberhaupt richtig sitzt.
+ *  - Ein Klick auf einen Punkt oeffnet ein POPUP, nicht die Detailseite. Wer auf der Karte
+ *    sucht, vergleicht — jeder Klick, der die Karte verlaesst, reisst diesen Faden ab (und den
+ *    Ausschnitt gleich mit). Erst der Klick auf den TITEL im Popup fuehrt weiter.
  */
 @Component({
   selector: 'app-tournament-map',
@@ -33,9 +37,53 @@ export type BoundsString = string;
       overflow: hidden;
       background: var(--mat-sys-surface-container);
     }
+
+    /* Leaflet haengt den Popup-Inhalt in einen EIGENEN Container ausserhalb dieses Templates —
+       die View-Encapsulation erreicht ihn nicht. Deshalb ::ng-deep, auf den Host beschraenkt. */
+    :host ::ng-deep .tm-popup { display: flex; flex-direction: column; gap: 4px; }
+
+    :host ::ng-deep .tm-popup-title {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.3;
+      text-align: left;
+      color: var(--mat-sys-primary);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    :host ::ng-deep .tm-popup-line { margin: 0; font-size: 0.82rem; }
+
+    :host ::ng-deep .tm-popup-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+
+    :host ::ng-deep .tm-badge {
+      font-size: 0.72rem;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: color-mix(in srgb, currentColor 12%, transparent);
+    }
+
+    :host ::ng-deep .tm-badge-warn {
+      background: color-mix(in srgb, var(--mat-sys-error) 22%, transparent);
+    }
+
+    :host ::ng-deep .tm-popup-hint {
+      margin: 2px 0 0;
+      font-size: 0.72rem;
+      opacity: 0.7;
+    }
   `],
 })
 export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestroy {
+  private readonly translate = inject(TranslateService);
+
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
   @Input() entries: DirectoryEntry[] = [];
@@ -90,7 +138,13 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     // Die Karte wird in einem mat-tab gerendert und startet deshalb oft mit Hoehe 0.
     // Ohne invalidateSize bleibt sie danach grau.
-    this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+    this.resizeObserver = new ResizeObserver(() => {
+      this.map?.invalidateSize();
+      // Und der Ausschnitt muss NACHGEHOLT werden: passt Leaflet auf eine 0x0-Flaeche ein,
+      // rechnet es die groesstmoegliche Vergroesserung aus — man landet tief in einer Strasse
+      // statt beim ganzen Umkreis, und invalidateSize behaelt diese Vergroesserung bei.
+      this.applyCentre();
+    });
     this.resizeObserver.observe(this.mapEl.nativeElement);
 
     this.applyCentre();
@@ -128,9 +182,68 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       });
 
       marker.bindTooltip(tooltipHtml(entry), { direction: 'top', offset: [0, -6] });
-      marker.on('click', () => this.entrySelected.emit(entry));
+      // Klick = Popup (siehe Klassenkommentar), NICHT der Sprung auf die Detailseite.
+      marker.bindPopup(() => this.buildPopup(entry), { offset: [0, -4], minWidth: 220, maxWidth: 300 });
+      // Beim geoeffneten Popup stuende der Hover-Hinweis mit demselben Inhalt daneben.
+      marker.on('popupopen', () => marker.closeTooltip());
       marker.addTo(this.markerLayer);
     }
+  }
+
+  /**
+   * Der Popup-Inhalt als echtes DOM statt als HTML-Zeichenkette: der Titel braucht einen
+   * Klick-Horcher, und Turnier- und Ortsnamen kommen von chess-results — also fremder Text, der
+   * in kein innerHTML gehoert. `textContent` macht die Frage gegenstandslos.
+   */
+  private buildPopup(entry: DirectoryEntry): HTMLElement {
+    const root = document.createElement('div');
+    root.className = 'tm-popup';
+
+    const title = document.createElement('button');
+    title.type = 'button';
+    title.className = 'tm-popup-title';
+    title.textContent = entry.name;
+    title.title = this.text('tournamentDirectory.map.openDetail');
+    title.addEventListener('click', () => this.entrySelected.emit(entry));
+    root.appendChild(title);
+
+    root.appendChild(this.line(dateRange(entry)));
+    if (entry.location) root.appendChild(this.line(entry.location));
+
+    const badges = document.createElement('div');
+    badges.className = 'tm-popup-badges';
+    const add = (label: string, warn = false) => {
+      const span = document.createElement('span');
+      span.className = warn ? 'tm-badge tm-badge-warn' : 'tm-badge';
+      span.textContent = label;
+      badges.appendChild(span);
+    };
+
+    if (entry.distanceKm !== null) add(this.text('tournamentDirectory.distance', { km: entry.distanceKm }));
+    add(this.text('tournamentDirectory.speed.' + entry.speed));
+    if (entry.playerCount) add(this.text('tournamentDirectory.players', { count: entry.playerCount }));
+    if (entry.groupSize > 1) add(this.text('tournamentDirectory.groupCount', { count: entry.groupSize }));
+    if (entry.cancelled) add(this.text('tournamentDirectory.cancelled'), true);
+    root.appendChild(badges);
+
+    const hint = document.createElement('p');
+    hint.className = 'tm-popup-hint';
+    hint.textContent = this.text('tournamentDirectory.map.openDetail');
+    root.appendChild(hint);
+
+    return root;
+  }
+
+  private line(value: string): HTMLElement {
+    const p = document.createElement('p');
+    p.className = 'tm-popup-line';
+    p.textContent = value;
+    return p;
+  }
+
+  /** `instant` genuegt hier: ein Popup gibt es erst nach einem Klick, die Texte stehen laengst. */
+  private text(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
   }
 
   private applyCentre(): void {
@@ -160,7 +273,11 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     // Aenderungserkennung die Ansicht zurueck und Zoomen ist unmoeglich. Der Ausschnitt wird aus
     // dem Radius GERECHNET statt aus dem Kreis geholt: L.Circle.getBounds() braucht eine Karte
     // unter sich, und ohne gezeichneten Umkreis gibt es keinen Kreis, den man fragen koennte.
-    if (this.lastFitted !== key) {
+    //
+    // Als eingepasst gilt es aber ERST, wenn die Flaeche eine Groesse hatte: auf 0x0 liefert
+    // Leaflet die groesstmoegliche Vergroesserung, und die bliebe fuer immer stehen.
+    const size = this.map.getSize();
+    if (this.lastFitted !== key && size.x > 0 && size.y > 0) {
       this.lastFitted = key;
       this.map.fitBounds(centre.toBounds(this.centre.radiusKm * 2000), { padding: [16, 16] });
     }
@@ -175,10 +292,14 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 }
 
 function tooltipHtml(entry: DirectoryEntry): string {
-  const when = [entry.startDate, entry.endDate].filter(Boolean);
-  const range = when.length === 2 && when[0] !== when[1] ? `${when[0]} – ${when[1]}` : (when[0] ?? '');
-  return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(range)}` +
+  return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(dateRange(entry))}` +
          (entry.location ? `<br>${escapeHtml(entry.location)}` : '');
+}
+
+/** „18.12. – 20.12." bzw. nur der eine Tag; leer, wenn chess-results gar kein Datum lieferte. */
+function dateRange(entry: DirectoryEntry): string {
+  const when = [entry.startDate, entry.endDate].filter(Boolean);
+  return when.length === 2 && when[0] !== when[1] ? `${when[0]} – ${when[1]}` : (when[0] ?? '');
 }
 
 /** Turnier- und Ortsnamen kommen von chess-results — also fremder Text in einem innerHTML-Tooltip. */

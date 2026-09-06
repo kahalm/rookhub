@@ -3064,6 +3064,9 @@
       "year": "Next twelve months",
       "all": "Everything upcoming",
       "custom": "Custom period"
+    },
+    "map": {
+      "openDetail": "Open the tournament page"
     }
   },
   "turnier": {

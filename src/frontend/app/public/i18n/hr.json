@@ -3064,6 +3064,9 @@
       "year": "Sljedećih dvanaest mjeseci",
       "all": "Sve nadolazeće",
       "custom": "Vlastito razdoblje"
+    },
+    "map": {
+      "openDetail": "Otvori stranicu turnira"
     }
   },
   "turnier": {

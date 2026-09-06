@@ -13,6 +13,7 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 import { MessageService } from '../../core/message.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService } from '../../core/theme.service';
+import { HandoffService } from '../../core/handoff.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 
@@ -33,6 +34,7 @@ describe('NavbarComponent', () => {
         { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },
         { provide: Router, useValue: { navigateByUrl: () => {} } },
+        { provide: HandoffService, useValue: { jump: () => Promise.resolve(), partnerUrl: null } },
       ],
     });
     return TestBed.runInInjectionContext(() => new NavbarComponent(
@@ -74,6 +76,17 @@ describe('NavbarComponent', () => {
     expect(event.stopPropagation).toHaveBeenCalled();
     expect(markAllSeen).toHaveBeenCalled();
     expect(nav.notifications.length).toBe(0); // gelesene bleiben nur über „Alle anzeigen" sichtbar
+  });
+
+  it('springt auf den Turnierkalender, nicht auf die Liste der geholten Turniere', () => {
+    // Dasselbe Startziel, das die Turnierseite auch beim direkten Aufruf wählt: wer hinüber geht,
+    // will wissen, was ansteht — die Liste zeigt nur, was schon jemand geholt hat.
+    const nav = build();
+    const jump = spyOn(TestBed.inject(HandoffService), 'jump').and.resolveTo();
+
+    nav.toTurnier();
+
+    expect(jump).toHaveBeenCalledWith('tournaments/calendar');
   });
 
   it('openNotification markiert als gelesen und entfernt die Benachrichtigung aus der Glocke', () => {

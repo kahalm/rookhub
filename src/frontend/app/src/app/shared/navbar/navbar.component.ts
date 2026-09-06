@@ -269,7 +269,9 @@ export class NavbarComponent implements OnInit {
   /** Turniere sind eine eigene Seite — Sprung mit Anmelde-Uebergabe statt Router-Link. */
   private handoff = inject(HandoffService);
   get turnierUrl(): string | null { return this.handoff.partnerUrl; }
-  toTurnier(): void { void this.handoff.jump('tournaments'); }
+  // Ziel ist der KALENDER, nicht die Liste der schon geholten Turniere — dasselbe Startziel,
+  // das die Turnierseite auch beim direkten Aufruf waehlt (siehe deren app.routes).
+  toTurnier(): void { void this.handoff.jump('tournaments/calendar'); }
 
   @Output() changelogClick = new EventEmitter<void>();
   @Output() quickstartClick = new EventEmitter<void>();
