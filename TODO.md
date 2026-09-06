@@ -6,22 +6,17 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
-## Nach dem naechsten Deploy erledigen
-- [ ] **Turnierverzeichnis: Ortslexikon importieren** (v0.405.0/0.406.0). Ohne diesen einmaligen
-  Schritt hat KEIN Turnier Koordinaten — Umkreissuche und Karte bleiben leer, die Liste
-  funktioniert. Als Admin (Permission `tournaments.manage`) nacheinander:
-  `POST /api/admin/tournament-directory/gazetteer/cities` (weltweite Ortsliste, ~11 MB) und
-  `POST /api/admin/tournament-directory/gazetteer/postal/{iso2}` fuer AT, DE, CH, IT, CZ, SK, HU,
-  SI, LI. Danach `POST /api/admin/tournament-directory/geocode-missing`, damit die bereits
-  eingesammelten Turniere ihre Pins bekommen. Kontrolle: `GET /api/admin/tournament-directory/status`
-  — an oesterreichischen Daten gemessen sind ~94 % exakt (PLZ/Ort), der Rest faellt auf den
-  Bundesland-Mittelpunkt.
-- [ ] Ersten Sweep anstossen statt bis 03:00 UTC zu warten:
-  `POST /api/admin/tournament-directory/sweep {"federations":["AUT","GER","SUI"]}`.
-- Beides zusammen erledigt `bash scripts/gazetteer-import.sh [API-URL]` (fragt das Passwort
-  interaktiv ab, Default-URL ist der Dev-Stack). **Dev-Stand 2026-09-06:** deployed, Import
-  steht noch aus — das `ADMIN_PASSWORD` in der Dev-`.env` passt nicht mehr zum gespeicherten
-  Hash, der Login damit scheitert mit 401.
+## Nach dem naechsten PROD-Deploy erledigen
+- [ ] **Turnierverzeichnis: Ortslexikon importieren.** Ohne diesen einmaligen Schritt hat KEIN
+  Turnier Koordinaten — Umkreissuche und Karte bleiben leer, die Liste funktioniert.
+  `bash scripts/gazetteer-import.sh https://<prod-api>` erledigt alles (Passwort interaktiv):
+  cities15000 + PLZ fuer AT/DE/CH/IT/CZ/SK/HU/SI/LI, erster Sweep, `geocode-missing`, Statistik.
+- [x] **Dev erledigt (2026-09-06)**: 1689 Turniere aus 9 Foederationen, 1334 davon verortet (79 %),
+  124 603 Ortslexikon-Eintraege. Die 355 ohne Pin sind ehrlich unaufloesbar — 163 haben in
+  chess-results gar keine Ortsangabe, der Rest sind Kuerzel wie „BKM" (ungarischer Komitatscode).
+  Die 94 % aus der Vorab-Messung galten fuer OESTERREICH; ueber neun Laender gemischt sind es 79 %,
+  weil auslaendische Bundeslandnamen selten auf die GeoNames-admin1-Namen passen (`Region`-Fallback
+  greift nur 45-mal). Wer die Quote heben will, braucht Landessprachen-Aliase im Gazetteer.
 
 ## Periodisch
 - [ ] Code Review — letzter: **2026-08-25** → Review über `rookhub` (~1800 Quelldateien). 15 Funde, alle verifiziert (kein Fehlalarm), **14 behoben in v0.376.2**: WQL-Wildcard `*` statt `%` im Waisen-Aufräumer (`reap_orphans.ps1` traf NIE etwas und meldete 15-minütlich „ohne Befund“), PID-Recycling bei der Elternprüfung, README-Stopp-Prozedur killte jeden `python.exe`, `init()`-Fehler ohne `fatalError$` (Karte log dauerhaft „Berechne…“), `destroy()` ließ das Init-Promise ungelöst hängen, Selbstvergleich zweier WASM-Kerne, doppeltes `startCompare()`, fehlender Telemetrie-Hook, `compareCrashed` überlebte den Stellungswechsel. **Offen: 1 Fund** (EngineSlot-Umbau, siehe „Bewusste Entscheidung“). +4 Regressionstests (gegengeprüft: fallen ohne die Fixes um). **Einschränkung: faktisch Delta auf die jüngste Arbeit** — im .NET-Teil (1283 Dateien) kam kein einziger Fund heraus, für einen Vollscan unplausibel; API separat nachholen. (vorher 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
