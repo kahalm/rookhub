@@ -156,6 +156,7 @@ function promotionOf(san: string | undefined): string {
     .held .hg { font-weight: 600; }
     .held .hd { font-variant-numeric: tabular-nums; }
     .held.g-worse .hd, .held.g-muchWorse .hd { color: #c62828; }
+    .held.g-clearlyBetter .hd { color: #2e7d32; }
     .feedback .fb-head { display: flex; align-items: baseline; gap: 10px; }
     .feedback .pts { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .feedback .grade { font-weight: 600; }
@@ -212,13 +213,21 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     return !!this.session?.position && !this.busy && !this.holding && this.session.status === 'running';
   }
 
-  /** Schlecht = Minus- oder Nullrunde: nur DA interessiert der Abstand zum Partiezug. */
-  get isPoor(): boolean { return this.last?.grade === 'worse' || this.last?.grade === 'muchWorse'; }
+  /**
+   * Wann der Abstand zum Partiezug eine Zahl wert ist: wenn der eigene Zug schlechter war (dann will
+   * man wissen, wie teuer) — und wenn er DEUTLICH besser war (dann will man wissen, wie viel man
+   * gefunden hat). Dazwischen (gleichwertig, knapp besser: unter 0,2 Bauern Unterschied) sagt die
+   * Zahl nichts, was die Stufe nicht schon sagt, und der Partiezug allein genügt.
+   */
+  get showsDelta(): boolean {
+    const g = this.last?.grade;
+    return g === 'worse' || g === 'muchWorse' || g === 'clearlyBetter';
+  }
 
-  /** Bewertungsänderung gegenüber dem Partiezug in Bauerneinheiten — nur bei einem schlechten Zug. */
+  /** Bewertungsänderung gegenüber dem Partiezug in Bauerneinheiten (siehe <c>showsDelta</c>). */
   get evalDelta(): string | null {
     const cp = this.last?.diffCp;
-    if (cp === null || cp === undefined || !this.isPoor) return null;
+    if (cp === null || cp === undefined || !this.showsDelta) return null;
     const pawns = cp / 100;
     return (pawns > 0 ? '+' : '') + pawns.toFixed(2);
   }

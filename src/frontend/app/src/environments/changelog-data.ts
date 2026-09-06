@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.400.1", date: "2026-09-06", changes: [
+    { en: "Point game: when your move was clearly better than the game move, the board now also tells you by how much - the same number that already appeared for a move that was worse. In between, where the difference is under a fifth of a pawn, the game move alone still says everything.", de: "Punktepartie: War dein Zug deutlich besser als der Partiezug, steht jetzt auch dabei, um wie viel - dieselbe Zahl, die es bei einem schlechteren Zug schon gab. Dazwischen, wo der Unterschied unter einem Fünftel Bauern liegt, sagt der Partiezug allein weiterhin alles." },
+  ] },
   { version: "0.400.0", date: "2026-09-06", changes: [
     { en: "Point game: a move that was not the game move now stays on the board. Underneath it you read which move the game actually played, and only then does Continue bring up the next position — before, the board jumped on immediately and you never saw what you had done. If your move was as good as the game move or better, only the game move is named; if it was worse, the difference to it is shown as well.", de: "Punktepartie: Ein Zug, der nicht der Partiezug war, bleibt jetzt auf dem Brett stehen. Darunter steht, welchen Zug die Partie gespielt hat, und erst Weiter holt die nächste Stellung — vorher sprang das Brett sofort weiter und man sah nie, was man selbst gezogen hatte. War der eigene Zug so gut wie der Partiezug oder besser, wird nur der Partiezug genannt; war er schlechter, steht der Abstand dazu daneben." },
   ] },

@@ -206,19 +206,26 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.boardFen).toBe(FEN10);
   });
 
-  it('schlechter Zug nennt den Abstand, gleichwertiger nicht', () => {
+  it('Abstand nur bei schlecht und bei deutlich besser', () => {
     const c1 = load();
     guess(c1, 'f1', 'c4', 'Bc4', { grade: 'muchWorse', points: -2, diffCp: -240 });
-    expect(c1.isPoor).toBeTrue();
+    expect(c1.showsDelta).toBeTrue();
     expect(c1.evalDelta).toBe('-2.40');
 
+    // Deutlich besser: die Zahl sagt, wie viel man gefunden hat — mit Vorzeichen.
     const c2 = load();
-    guess(c2, 'f1', 'c4', 'Bc4', { grade: 'similar', points: 2, diffCp: -5 });
-    expect(c2.isPoor).toBeFalse();
-    expect(c2.evalDelta).withContext('gut oder besser: nur der Partiezug').toBeNull();
+    guess(c2, 'f1', 'c4', 'Bc4', { grade: 'clearlyBetter', points: 10, diffCp: 60 });
+    expect(c2.showsDelta).toBeTrue();
+    expect(c2.evalDelta).toBe('+0.60');
 
+    // Dazwischen sagt die Zahl nichts, was die Stufe nicht schon sagt.
     const c3 = load();
-    guess(c3, 'f1', 'c4', 'Bc4', { grade: 'clearlyBetter', points: 10, diffCp: 60 });
+    guess(c3, 'f1', 'c4', 'Bc4', { grade: 'similar', points: 2, diffCp: -5 });
+    expect(c3.showsDelta).toBeFalse();
     expect(c3.evalDelta).toBeNull();
+
+    const c4 = load();
+    guess(c4, 'f1', 'c4', 'Bc4', { grade: 'better', points: 8, diffCp: 15 });
+    expect(c4.evalDelta).withContext('knapp besser: nur der Partiezug').toBeNull();
   });
 });
