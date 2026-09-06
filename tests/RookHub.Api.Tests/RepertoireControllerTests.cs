@@ -390,7 +390,30 @@ public class RepertoireControllerTests : IDisposable
 
         var result = await _controller.ConvertToCourse(rep.Id);
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Null(CodeOf(bad));                                              // NICHT der Leer-Fall
         Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt bei Fehlschlag
     }
+
+    /// <summary>Angelegt, aber nie eine PGN importiert: eigener Code, damit das Frontend nicht
+    /// fälschlich „keine Puzzle-Linien" meldet, wo in Wahrheit noch gar nichts drin ist.
+    /// (Fund aus den Prod-Logs vom 2026-09-05, siehe TODO.md.)</summary>
+    [Fact]
+    public async Task ConvertToCourse_EmptyRepertoire_BadRequest_WithEmptyCode_KeepsRepertoire()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await CreateRepertoireAsync(user.Id, "Nimzo");                // ohne Dateien
+
+        var result = await _controller.ConvertToCourse(rep.Id);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("repertoire_empty", CodeOf(bad));
+        Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt erhalten
+        Assert.False(await _db.Books.AnyAsync(b => b.OwnerUserId == user.Id));  // kein Kurs-Torso
+    }
+
+    /// <summary>Liest das optionale <c>code</c>-Feld aus dem anonymen Fehlerobjekt (null, wenn keins da).</summary>
+    private static string? CodeOf(BadRequestObjectResult bad) =>
+        bad.Value?.GetType().GetProperty("code")?.GetValue(bad.Value) as string;
 }

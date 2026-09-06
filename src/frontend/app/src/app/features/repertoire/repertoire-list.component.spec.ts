@@ -55,6 +55,49 @@ describe('RepertoireListComponent search filter', () => {
 });
 
 /**
+ * „In Kurs umwandeln": der 400er hat zwei Ursachen, die der Nutzer unterscheiden können muss.
+ * Leeres Repertoire (Server schickt code 'repertoire_empty') -> Hinweis auf den fehlenden Import;
+ * PGN ohne Puzzle-Marker -> Hinweis auf die fehlenden Puzzle-Linien.
+ * (Fund aus den Prod-Logs vom 2026-09-05, siehe TODO.md.)
+ */
+describe('RepertoireListComponent convertToCourse Fehlermeldungen', () => {
+  function make(error: unknown) {
+    const shown: string[] = [];
+    const repertoireService = { convertToCourse: () => throwError(() => error) } as any;
+    const snackbar = { info: (msg: string) => shown.push(msg) } as any;
+    const translate = { instant: (key: string) => key } as any;
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, snackbar, translate);
+    comp.repertoires = [{ id: 7, name: 'Nimzo', kind: 1, fileCount: 0, isPublic: false }] as any;
+    return { comp, shown };
+  }
+
+  it('leeres Repertoire (code repertoire_empty) nennt den fehlenden Import', () => {
+    const { comp, shown } = make({ status: 400, error: { code: 'repertoire_empty' } });
+    comp.convertToCourse({ id: 7 } as any);
+    expect(shown).toEqual(['repertoire.list.convertToCourseEmpty']);
+    expect(comp.converting).toBeNull();
+  });
+
+  it('PGN ohne Puzzle-Marker bleibt bei der bisherigen Meldung', () => {
+    const { comp, shown } = make({ status: 400, error: { message: 'No playable lines found in the PGN.' } });
+    comp.convertToCourse({ id: 7 } as any);
+    expect(shown).toEqual(['repertoire.list.convertToCourseNoPuzzles']);
+  });
+
+  it('anderer Fehler fällt auf die allgemeine Meldung zurück', () => {
+    const { comp, shown } = make({ status: 500, error: {} });
+    comp.convertToCourse({ id: 7 } as any);
+    expect(shown).toEqual(['repertoire.list.convertToCourseFailed']);
+  });
+
+  it('die Karte bleibt bei einem Fehler in der Liste', () => {
+    const { comp } = make({ status: 400, error: { code: 'repertoire_empty' } });
+    comp.convertToCourse({ id: 7 } as any);
+    expect(comp.repertoires.map(r => r.id)).toEqual([7]);
+  });
+});
+
+/**
  * Offline-Verhalten der Liste: Download-Toggle (PGN + SR-Zustände + Intervalle cachen) und
  * Fallback auf heruntergeladene Repertoires, wenn der Server nicht erreichbar ist.
  */

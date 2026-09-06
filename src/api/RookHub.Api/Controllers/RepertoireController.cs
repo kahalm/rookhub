@@ -347,7 +347,9 @@ public class RepertoireController : BaseApiController
     /// persönlichen Kurs an und ENTFERNT anschließend das Original-Repertoire. Funktioniert nur mit
     /// Puzzle-PGN im Chessable-Stil (FEN + Round + Trainingsmarker je Zug); ein reines Eröffnungs-
     /// Repertoire ohne Puzzle-Marker liefert 400 (kein quiz-barer Inhalt) — dann bleibt das Repertoire
-    /// erhalten (Löschung passiert erst NACH erfolgreicher Kurs-Erstellung).</summary>
+    /// erhalten (Löschung passiert erst NACH erfolgreicher Kurs-Erstellung). Ein noch leeres Repertoire
+    /// (keine PGN importiert) liefert ebenfalls 400, aber mit <c>code = "repertoire_empty"</c>, damit das
+    /// Frontend den Unterschied zeigen kann.</summary>
     [HttpPost("{id}/convert-to-course")]
     public async Task<IActionResult> ConvertToCourse(int id)
     {
@@ -359,6 +361,13 @@ public class RepertoireController : BaseApiController
                 return NotFound(new { message = "Repertoire not found." });
             var detail = await _repertoireService.GetByIdAsync(id, userId);
             var pgn = await _repertoireService.GetCombinedPgnAsync(id, userId);
+            // Ein LEERES Repertoire (angelegt, aber nie eine PGN importiert) ist ein anderer Fall als
+            // „PGN vorhanden, aber ohne Puzzle-Linien". Ohne eigenen Code landen beide in derselben
+            // 400-Meldung des Frontends („keine Puzzle-Linien"), die dem Nutzer das falsche Problem
+            // nennt und den eigentlichen nächsten Schritt (PGN hochladen / Kurs über die Extension
+            // holen) verschweigt. Siehe TODO.md, Fund aus den Prod-Logs vom 2026-09-05.
+            if (string.IsNullOrWhiteSpace(pgn))
+                return BadRequest(new { message = "Repertoire is empty - import a PGN first.", code = "repertoire_empty" });
             var course = await _courseService.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name);
             // Verschieben statt Kopieren: das Original-Repertoire nach erfolgreicher Umwandlung entfernen.
             await _repertoireService.DeleteAsync(id, userId);

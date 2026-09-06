@@ -378,8 +378,14 @@ export class RepertoireListComponent implements OnInit {
       },
       error: (e) => {
         this.converting = null;
-        // 400 = kein quiz-barer Inhalt (reines Eröffnungs-PGN) → klaren Hinweis zeigen.
-        const key = e?.status === 400 ? 'repertoire.list.convertToCourseNoPuzzles' : 'repertoire.list.convertToCourseFailed';
+        // 400 hat zwei Ursachen, die der Nutzer klar unterscheiden können muss:
+        // code 'repertoire_empty' = noch gar kein PGN drin (dann fehlt der Import, nicht der Puzzle-Marker),
+        // sonst = PGN vorhanden, aber kein quiz-barer Inhalt (reines Eröffnungs-PGN).
+        const key = e?.status === 400
+          ? (e?.error?.code === 'repertoire_empty'
+            ? 'repertoire.list.convertToCourseEmpty'
+            : 'repertoire.list.convertToCourseNoPuzzles')
+          : 'repertoire.list.convertToCourseFailed';
         this.snackbar.info(this.translate.instant(key), { action: 'common.ok', duration: 4000 });
       }
     });

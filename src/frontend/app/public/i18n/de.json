@@ -772,6 +772,7 @@
       "convertToCourse": "In Kurs",
       "convertedToCourse": "Repertoire als Kurs angelegt: {{name}}",
       "convertToCourseNoPuzzles": "Dieses Repertoire enthält keine Puzzle-Linien (Chessable-Stil: FEN + Trainingsmarker) und kann daher nicht in einen Kurs umgewandelt werden.",
+      "convertToCourseEmpty": "Dieses Repertoire ist noch leer - es wurde noch keine PGN importiert. Lade eine PGN-Datei hoch oder hole den Chessable-Kurs mit der RepCheck-Erweiterung, dann kannst du es in einen Kurs umwandeln.",
       "convertToCourseFailed": "Repertoire konnte nicht in einen Kurs umgewandelt werden",
       "updateFailed": "Repertoire konnte nicht aktualisiert werden",
       "extHint": "Tipp: Mit der passenden Browser-Erweiterung (für Chrome und Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",

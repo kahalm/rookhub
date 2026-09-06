@@ -772,6 +772,7 @@
       "convertToCourse": "U tečaj",
       "convertedToCourse": "Repertoar pretvoren u tečaj: {{name}}",
       "convertToCourseNoPuzzles": "Ovaj repertoar nema zagonetke (Chessable-stil: FEN + oznake treninga) pa se ne može pretvoriti u tečaj.",
+      "convertToCourseEmpty": "Ovaj repertoar je još prazan - nijedna PGN datoteka još nije uvezena. Učitaj PGN datoteku ili dohvati Chessable tečaj pomoću RepCheck proširenja, pa ga zatim možeš pretvoriti u tečaj.",
       "convertToCourseFailed": "Pretvaranje repertoara u tečaj nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
       "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (za Chrome i Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
