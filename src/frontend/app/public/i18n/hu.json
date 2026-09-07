@@ -53,14 +53,60 @@
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
     "chessable": "Chessable",
-    "catalog": "Katalógus"
+    "catalog": "Katalógus",
+    "favorites": "Kedvencek",
+    "fullscreen": "Teljes képernyő",
+    "fullscreenExit": "Teljes képernyő elhagyása (Esc)",
+    "games": "Játszmák",
+    "help": "Súgó",
+    "leaderboards": "Ranglisták",
+    "remembered": "Megjelöltek",
+    "groupTraining": "Edzés",
+    "groupLibrary": "Elemzés és gyűjtemény",
+    "groupCommunity": "Közösség",
+    "guess": "Pontjátszma",
+    "tournamentCalendar": "Versenynaptár",
+    "tournamentHistory": "Versenyeim"
   },
   "app": {
     "changelogTitle": "Változásnapló",
     "quickstartTitle": "Gyorsindítás",
     "feedback": "Visszajelzés / Hiba bejelentése",
     "updateAvailable": "Új verzió érhető el.",
-    "reload": "Újratöltés"
+    "reload": "Újratöltés",
+    "qs": {
+      "randomTitle": "Véletlen feladványok",
+      "randomDesc": "Véletlenszerű taktikai feladványok személyes értékszámmal – minden megoldás igazít a feladvány-Elódon.",
+      "mateTitle": "Matt 1/2/3 lépésben",
+      "mateDesc": "Tanfolyam 4462 mattfeladvánnyal, nehézség szerint sorba rendezve – az 1 lépéses matttól a 3 lépésesig, egymás után.",
+      "endlessTitle": "Végtelen",
+      "endlessDesc": "Folyamatosan növekvő nehézségű futam – oldj meg minél többet, és döntsd meg a rekordodat.",
+      "dailyTitle": "Napi feladvány",
+      "dailyDesc": "Minden nap egy közös feladvány mindenkinek – napi ranglistával (a Discordon is).",
+      "weeklyTitle": "Heti posta",
+      "weeklyDesc": "Heti feladványsorozat egy játszmából, határidővel – végigjátszásra, ranglistával."
+    },
+    "offlineQueueFull": "Az offline tároló megtelt — az új eredményeket már nem lehet elmenteni a későbbi feltöltéshez.",
+    "apkUpdate": {
+      "banner": "Új appverzió érhető el – telepítsd újra.",
+      "install": "Telepítés most"
+    },
+    "impersonation": {
+      "banner": "{{user}} néven vagy bejelentkezve (admin: {{admin}})",
+      "exit": "Vissza az adminhoz"
+    },
+    "connectivity": {
+      "offline": "Offline vagy — nincs internetkapcsolat.",
+      "unreachable": "A RookHub-szerver nem érhető el — lehet, hogy az internetkapcsolatod vagy egy VPN/szűrő blokkolja a hozzáférést.",
+      "details": "Részletek",
+      "retry": "Próbáld újra",
+      "offlineInfo": "Az előre letöltött feladványok, tanfolyamok és a napi feladvány offline is működnek. A megoldásaid az eszközön tárolódnak, és automatikusan szinkronizálódnak, amint újra online vagy.",
+      "hintsTitle": "Az eszközöd online, de a RookHub-szerver nem érhető el. Lehetséges okok:",
+      "hint1": "Ellenőrizd az eszköz internetkapcsolatát (Wi-Fi / mobiladat).",
+      "hint2": "Egy VPN, reklámblokkoló vagy „Threat Protection”-funkció (pl. NordVPN, AdGuard) DNS-en keresztül blokkolhatja a RookHubot — kapcsold ki próbaképpen rövid időre, vagy vedd fel kivételként a rookhub.oberschmid.homes címet.",
+      "hint3": "Androidon állítsd a „Privát DNS”-t „Automatikus”-ra (Beállítások → Hálózat és internet).",
+      "hint4": "Ha a probléma továbbra is fennáll, a szerver lehet, hogy átmenetileg nem elérhető — próbáld meg később újra."
+    }
   },
   "auth": {
     "login": {
@@ -136,6 +182,78 @@
       "title": "Repertoárok",
       "count": "{{count}} repertoár",
       "viewAll": "Összes megtekintése"
+    },
+    "chessableQueue": {
+      "title": "Chessable-várólista",
+      "count": "{{count}} aktív importálás",
+      "view": "Összes megtekintése",
+      "heading": "Aktív Chessable-importálások"
+    },
+    "trainingGoals": {
+      "title": "Edzéscélok",
+      "subtitle": "Kövesd a napi edzésed",
+      "open": "Célok megnyitása"
+    },
+    "activityTimer": {
+      "title": "Edzésidőzítő",
+      "subtitle": "Indíts sablont, rögzítsd az offline időt"
+    },
+    "courses": {
+      "title": "Tanfolyamok",
+      "open": "Tanfolyamok megnyitása",
+      "count": "{{count}} tanfolyam"
+    },
+    "pinnedCourses": {
+      "title": "Kitűzött tanfolyamok",
+      "subtitle": "{{count}} kitűzve",
+      "empty": "Tűzz ki egy tanfolyamot (📌 a Tanfolyamok oldalon), hogy közvetlenül innen indíthasd.",
+      "viewAll": "Összes tanfolyam"
+    },
+    "leaderboards": {
+      "title": "Ranglisták",
+      "subtitle": "Nézd meg, hol állsz",
+      "view": "Ranglisták megtekintése"
+    },
+    "games": {
+      "title": "Játszmák",
+      "subtitle": "A mentett játszmáid",
+      "open": "Játszmák megnyitása"
+    },
+    "favorites": {
+      "title": "Kedvencek",
+      "count": "{{count}} kedvelt feladvány",
+      "open": "Kedvencek megnyitása"
+    },
+    "weekly": {
+      "title": "Heti posta",
+      "subtitle": "A hét feladványai",
+      "view": "Heti posta megnyitása"
+    },
+    "stats": {
+      "title": "Statisztika",
+      "subtitle": "A feladvány-Elo görbéd",
+      "view": "Statisztika megtekintése"
+    },
+    "analysis": {
+      "title": "Elemzés",
+      "subtitle": "Elemezz egy állást",
+      "open": "Tábla megnyitása"
+    },
+    "messages": {
+      "title": "Üzenetek",
+      "subtitle": "Írj az admin csapatnak",
+      "open": "Üzenetek megnyitása"
+    },
+    "edit": {
+      "customize": "Testreszabás",
+      "done": "Kész",
+      "default": "Alapértelmezett",
+      "hint": "A szemmel jelenítesz meg vagy rejtesz el egy csempét; a nyilakkal vagy fogd és vidd módszerrel rendezed át.",
+      "dragAria": "Húzd a csempét az átrendezéshez",
+      "moveUp": "Fel",
+      "moveDown": "Le",
+      "hideAria": "Csempe elrejtése",
+      "showAria": "Csempe megjelenítése"
     }
   },
   "pgnViewer": {
@@ -144,7 +262,8 @@
       "first": "Első lépés",
       "previous": "Előző lépés",
       "next": "Következő lépés",
-      "last": "Utolsó lépés"
+      "last": "Utolsó lépés",
+      "flip": "Tábla megfordítása"
     }
   },
   "profile": {
@@ -221,7 +340,8 @@
       "books": "{{count}} könyv",
       "clear": "Gyorsítótár törlése",
       "cleared": "Offline gyorsítótár törölve",
-      "pending": "{{count}} megoldás szinkronizálásra vár – automatikusan feltöltődnek, amikor visszakerülsz online."
+      "pending": "{{count}} megoldás szinkronizálásra vár – automatikusan feltöltődnek, amikor visszakerülsz online.",
+      "repertoires": "{{count}} repertoár"
     },
     "delete": {
       "title": "Fiók törlése",
@@ -241,7 +361,40 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
-    }
+    },
+    "engine": {
+      "title": "Külső motor (Lichess)",
+      "hint": "Erősebb motor az elemzőtáblához: a RookHub bármelyik külső motort tudja használni, amely a Lichess-fiókodon regisztrálva van — a saját géped a hivatalos providerrel vagy egy bérelt felhőmotor. Ehhez tárolj el itt egy Lichess API-tokent engine:read jogosultsággal.",
+      "createToken": "Lichess-token létrehozása (engine:read)",
+      "tokenLabel": "Lichess API-token",
+      "stored": "Mentett token",
+      "saved": "Token elmentve",
+      "saveFailed": "A tokent nem sikerült elmenteni",
+      "tokenInvalid": "A Lichess elutasította ezt a tokent. Hozz létre egy újat engine:read jogosultsággal.",
+      "listFailed": "A motorlistát nem sikerült betölteni a Lichessről. Próbáld újra egy pillanat múlva.",
+      "enginesFound": "A Lichess-fiókodon talált motorok:",
+      "noEngines": "A Lichess-fiókodon még nincs regisztrálva külső motor.",
+      "specs": "{{threads}} szál, {{hash}} MiB hash",
+      "backgroundLabel": "Háttérmotor a feladatokhoz",
+      "backgroundNone": "Nincs",
+      "backgroundHint": "A háttérmotor akkor dolgozza fel az elemzési feladataidat, amikor éppen szabad, és szünetel, amíg élőben elemzel külső motorral. Az élő választóban nem jelenik meg — érdemes külön motort regisztrálni hozzá (ENGINE_COUNT=2 a szolgáltatónál).",
+      "backgroundSaved": "Háttérmotor elmentve.",
+      "backgroundFailed": "A háttérmotort nem sikerült elmenteni."
+    },
+    "changePwd": {
+      "title": "Jelszó módosítása",
+      "button": "Jelszó módosítása",
+      "current": "Jelenlegi jelszó",
+      "new": "Új jelszó",
+      "confirm": "Új jelszó megerősítése",
+      "save": "Jelszó módosítása",
+      "saving": "Mentés...",
+      "done": "A jelszó sikeresen megváltozott.",
+      "wrongPassword": "A jelenlegi jelszó helytelen.",
+      "mismatch": "A jelszavak nem egyeznek.",
+      "failed": "A jelszót nem sikerült módosítani."
+    },
+    "displayNameHint": "Ez jelenik meg másoknak a „{{username}}” helyett."
   },
   "legal": {
     "accountDeletion": {
@@ -319,7 +472,67 @@
       "sendRequest": "Nem sikerült elküldeni a kérést",
       "acceptRequest": "Nem sikerült elfogadni a kérést",
       "declineRequest": "Nem sikerült elutasítani a kérést",
-      "removeFriend": "Nem sikerült eltávolítani a barátot"
+      "removeFriend": "Nem sikerült eltávolítani a barátot",
+      "withdrawRequest": "A kérést nem sikerült visszavonni."
+    },
+    "stats": {
+      "title": "Statisztika-összehasonlítás",
+      "compare": "Statisztika összehasonlítása",
+      "you": "Te",
+      "back": "Vissza az ismerősökhöz",
+      "themes": "Témák összehasonlítása",
+      "theme": "Téma",
+      "noThemes": "Még nincsenek közös téma-adatok.",
+      "loadError": "A statisztikát nem sikerült betölteni"
+    },
+    "revenge": {
+      "menu": "Revans egy ismerős ellen",
+      "menuOpen": "{{count}} nyitott revans — oldd meg őket!",
+      "title": "Revans {{name}} ellen",
+      "hint": "Feladványok, amelyeken {{name}} elbukott és még nem oldotta meg — oldd meg őket, és csináld jobban!",
+      "back": "Vissza az ismerősökhöz",
+      "ratingLabel": "Értékszám {{rating}}",
+      "failCount": "{{count}}× elbukva",
+      "solve": "Megoldás",
+      "empty": "{{name}} listáján nincs nyitott vereség — nincs mit megbosszulni!",
+      "doneTitle": "Már kész ({{count}})",
+      "review": "Feladvány megtekintése",
+      "loadError": "A revans-listát nem sikerült betölteni"
+    },
+    "challenges": {
+      "tab": "Kihívások ({{count}})",
+      "inbox": "Beérkezett",
+      "sent": "Elküldött",
+      "fromLine": "Feladó: {{name}} · értékszám {{rating}}",
+      "toLine": "Címzett: {{name}} · értékszám {{rating}}",
+      "solve": "Megoldás",
+      "emptyInbox": "Nincs nyitott kihívás.",
+      "emptySent": "Még nem küldtél kihívást.",
+      "statusSolved": "megoldva {{time}} mp alatt",
+      "statusFailed": "elbukva",
+      "statusPending": "nyitott"
+    },
+    "revengeNotifications": {
+      "title": "Revans a feladványaidon",
+      "solved": "{{name}} megoldotta a feladványt, amelyen te elbuktál (értékszám {{rating}}) 😈",
+      "failed": "{{name}} szintén elbukott a feladványodon (értékszám {{rating}}) 😅",
+      "openPuzzle": "Feladvány megnyitása",
+      "empty": "Még nincs revans-próbálkozás a feladványaidon."
+    },
+    "aria": {
+      "sendRequest": "Ismerőskérés küldése",
+      "accept": "Kérés elfogadása",
+      "decline": "Kérés elutasítása",
+      "removeFriend": "Ismerős eltávolítása",
+      "withdraw": "Kérés visszavonása"
+    },
+    "requests": {
+      "incoming": "Beérkező",
+      "sent": "Elküldve (megerősítésre vár)",
+      "awaiting": "megerősítésre vár",
+      "emptySent": "Nincs függőben lévő elküldött kérés.",
+      "withdrawn": "Kérés visszavonva.",
+      "gone": "Ez az ismerőskérés már nem létezik — időközben megválaszolták."
     }
   },
   "repertoire": {
@@ -336,7 +549,29 @@
       "createFailed": "Nem sikerült létrehozni a repertoárt",
       "deleteConfirm": "Törli ezt a repertoárt?",
       "deleteFailed": "Nem sikerült törölni a repertoárt",
-      "updateFailed": "A repertoár nem frissíthető"
+      "updateFailed": "A repertoár nem frissíthető",
+      "searchPlaceholder": "Repertoárok keresése…",
+      "noMatch": "Nincs találat a „{{query}}” kifejezésre.",
+      "convertToCourse": "Tanfolyammá",
+      "convertedToCourse": "A repertoárból tanfolyam lett: {{name}}",
+      "convertToCourseNoPuzzles": "Ez a repertoár nem tartalmaz feladvány-változatokat (Chessable-stílus: FEN + edzésjelölők), ezért nem alakítható tanfolyammá.",
+      "convertToCourseEmpty": "Ez a repertoár még üres - nincs importált PGN. Tölts fel egy PGN-fájlt, vagy hozd le a Chessable-tanfolyamot a RepCheck bővítménnyel, utána alakíthatod tanfolyammá.",
+      "convertToCourseFailed": "A repertoárt nem sikerült tanfolyammá alakítani",
+      "extHint": "Tipp: a megfelelő böngészőbővítménnyel (Chrome-hoz és Firefoxhoz) vagy a Tampermonkey-userscripttel közvetlenül a chess.com és a lichess.org oldalán látod a repertoártól való eltéréseket — de csak elemző módban (az elemzőtáblán).",
+      "extHintLink": "Tudj meg többet a súgóban",
+      "sectionExtension": "A RepCheckben",
+      "sectionExtensionHint": "Repertoárok, amelyeket a RepCheck bővítmény a chess.com / lichess oldalon összevet.",
+      "sectionOther": "További repertoárok",
+      "sectionOtherHint": "A RepCheck nem használja. A szerkesztő ablakban a „Használat a bővítményhez” kapcsolóval tolhatsz egy repertoárt felülre.",
+      "extensionBadge": "A RepCheck bővítmény használja",
+      "sectionSharedWithMe": "Velem megosztva",
+      "sectionSharedWithMeHint": "Repertoárok, amelyeket más tagok megosztottak veled.",
+      "offlineListHint": "Offline vagy — a letöltött repertoárjaid látszanak; csak az edzés érhető el. Az eredmények szinkronizálódnak, amint újra online vagy.",
+      "offlineSaveTooltip": "Repertoár mentése offline (edzés internet nélkül)",
+      "offlineRemoveTooltip": "Offline másolat eltávolítása",
+      "offlineSaved": "A „{{name}}” offline mentve",
+      "offlineRemoved": "A „{{name}}” eltávolítva az offline tárból",
+      "offlineFailed": "A repertoárt nem sikerült offline menteni"
     },
     "detail": {
       "noDescription": "Nincs leírás",
@@ -352,7 +587,11 @@
       "kind": "Kategória",
       "create": "Létrehozás",
       "editTitle": "Repertoár szerkesztése",
-      "save": "Mentés"
+      "save": "Mentés",
+      "useForExtension": "Használat a bővítményhez",
+      "useForExtensionHint": "Ha be van kapcsolva, a böngészőbővítmény/userscript ezt a repertoárt használja az eltérések felismerésére, amíg egy játszmát elemzel.",
+      "chessableCourseId": "Chessable-tanfolyam azonosítója",
+      "chessableCourseIdHint": "A tanfolyam számazonosítója a Chessable-URL-ből (pl. 12345). Ez köti össze a repertoárt egy Chessable-tanfolyammal."
     },
     "kind": {
       "none": "—",
@@ -362,7 +601,38 @@
     },
     "lines": {
       "allLines": "Összes vonal",
-      "empty": "Nincs vonal ebben a repertoárban."
+      "empty": "Nincs vonal ebben a repertoárban.",
+      "noChapter": "(Fejezet nélkül)",
+      "toggleChapter": "Fejezet ki-/becsukása",
+      "color": {
+        "title": "Edzésszín",
+        "white": "Világos",
+        "black": "Sötét",
+        "tooltip": "Melyik színnel edzed ezt a fejezetet (automatikusan felismerve — itt javíthatod, ha téves)"
+      },
+      "sr": {
+        "reviewAll": "Esedékes változatok ismétlése",
+        "learnAll": "Új változatok tanulása",
+        "courseActions": "Repertoár-műveletek",
+        "chapterActions": "Fejezet-műveletek",
+        "lineActions": "Változat-műveletek",
+        "learn": "Tanulás",
+        "review": "Ismétlés",
+        "addToPool": "Gyakorlókészletbe",
+        "makeDue": "Legyen most esedékes",
+        "makeAllDue": "Mind legyen most esedékes",
+        "addAll": "Mind a készletbe",
+        "pause": "Szünet",
+        "resume": "Folytatás",
+        "pauseAll": "Mind szüneteltetése",
+        "resumeAll": "Mind folytatása",
+        "status": {
+          "new": "Még nincs a készletben",
+          "due": "Most esedékes",
+          "scheduled": "A készletben — ütemezve",
+          "paused": "Szüneteltetve"
+        }
+      }
     },
     "tree": {
       "start": "Kezdet",
@@ -379,6 +649,37 @@
       "uploadPartial": "{{ok}} feltöltve, {{failed}} sikertelen",
       "downloadFailed": "Letöltés sikertelen",
       "deleteConfirm": "Törli ezt a fájlt?"
+    },
+    "positionFilter": {
+      "hint": "Lépj a táblán, hogy állás szerint szűrd a változatokat.",
+      "matches": "{{count}} változat tartalmazza ezt az állást",
+      "undo": "Utolsó lépés visszavonása",
+      "reset": "Szűrő törlése"
+    },
+    "share": {
+      "action": "Megosztás",
+      "title": "„{{name}}” megosztása",
+      "hint": "Válaszd ki, mely ismerőseiddel osztod meg ezt a repertoárt. Megnézhetik, letölthetik és saját haladással edzhetik, de nem szerkeszthetik és nem oszthatják tovább.",
+      "sharedWith": "Megosztva vele",
+      "pickFriends": "Ismerősök hozzáadása",
+      "noFriends": "Még nincs ismerősöd, akivel megoszthatnád.",
+      "shareButton": "Megosztás ({{count}})",
+      "unshareTooltip": "Hozzáférés visszavonása",
+      "sharedBy": "megosztotta: {{name}}",
+      "shared": "Megosztva {{count}} ismerőssel.",
+      "sharedPartial": "Megosztva: {{shared}}; {{skipped}} kihagyva.",
+      "nothingShared": "Senki sem került hozzáadásra (már meg van osztva, vagy nem ismerős).",
+      "unshared": "{{name}} hozzáférése visszavonva.",
+      "failed": "A megosztás nem sikerült.",
+      "loadFailed": "A megosztási információkat nem sikerült betölteni."
+    },
+    "shareLine": {
+      "action": "Változat megosztása",
+      "title": "Ennek a változatnak a megosztása",
+      "hint": "Bárki, akinek megvan ez a link, lejátszhatja a változatot — fiók sem kell hozzá.",
+      "notFound": "Ez a megosztott változat nem létezik (vagy törölték).",
+      "defaultTitle": "Repertoár-változat",
+      "error": "A megosztási linket nem sikerült létrehozni."
     }
   },
   "tournaments": {
@@ -405,7 +706,8 @@
       "added": "{{name}} hozzáadva a kedvencekhez",
       "removed": "{{name}} eltávolítva a kedvencekből",
       "addedShort": "{{name}} kedvencnek jelölve",
-      "removedShort": "{{name}} eltávolítva"
+      "removedShort": "{{name}} eltávolítva",
+      "toggleAria": "Kedvenc ki-/bekapcsolása"
     },
     "players": {
       "snr": "Ssz.",
@@ -444,7 +746,13 @@
     },
     "list": {
       "title": "Versenyek",
-      "crawlerUnavailable": "Nem sikerült csatlakozni a verseny-beolvasóhoz. Ellenőrizd, hogy a beolvasó szolgáltatás fut-e."
+      "crawlerUnavailable": "Nem sikerült csatlakozni a verseny-beolvasóhoz. Ellenőrizd, hogy a beolvasó szolgáltatás fut-e.",
+      "emptyBookmarks": "Még nem jelöltél meg versenyt. Jelöld meg őket a naptárban — itt fognak megjelenni.",
+      "upcoming": "Következik",
+      "past": "Lezárult",
+      "noDate": "nincs időpont",
+      "unsubscribeFailed": "A megjelölést nem sikerült visszavonni.",
+      "crawlConnectionLost": "Megszakadt a kapcsolat a crawl-feladattal"
     },
     "detail": {
       "loadTournamentFailed": "Nem sikerült betölteni a versenyt",
@@ -502,7 +810,10 @@
       "share": "Feladvány megosztása",
       "reviewLast": "Utolsó feladvány áttekintése",
       "endlessMode": "Végtelen mód",
-      "analyze": "Elemzés"
+      "analyze": "Elemzés",
+      "challengeFriend": "Küldés ismerősnek",
+      "noFriends": "Nincs kihívható ismerős",
+      "showOriginalSolution": "Eredeti megoldás mutatása"
     },
     "info": {
       "rating": "Értékelés"
@@ -525,7 +836,12 @@
       "easy": "Könnyű",
       "normal": "Normál",
       "hard": "Nehéz",
-      "veryHard": "Nagyon nehéz"
+      "veryHard": "Nagyon nehéz",
+      "veryEasyDesc": "Feladványok kb. 600 Elóval a szinted alatt — bemelegítéshez vagy a technika gyakorlásához.",
+      "easyDesc": "Feladványok kb. 300 Elóval a szinted alatt — gördülékeny megoldáshoz.",
+      "normalDesc": "Feladványok a te szinteden — optimális edzés.",
+      "hardDesc": "Feladványok kb. 300 Elóval a szinted felett — megdolgoztat és fejleszt.",
+      "veryHardDesc": "Feladványok kb. 600 Elóval a szinted felett — nagyon igényes."
     },
     "theme": {
       "mode": "Mód",
@@ -540,18 +856,98 @@
       "countdown": "A bábuk {{seconds}} másodperc múlva eltűnnek…",
       "noMoveYet": "Még nincs lépés – kattints a forrás-mezőre → célmezőre.",
       "show": "Mutatás",
-      "showing": "Mutatás…"
+      "showing": "Mutatás…",
+      "level0Name": "Normál",
+      "level1Name": "Vakjáték",
+      "level2Name": "Korongok",
+      "level3Name": "Sötét",
+      "level4Name": "Láthatatlan",
+      "modeSelectAria": "Vizualizációs mód kiválasztása",
+      "level0Desc": "Drag & drop — a tábla látható, nincs korlátozás.",
+      "level1Desc": "A tábla befagyasztva, a lépések csak szövegként látszanak.",
+      "level2Desc": "A bábukat 3 mp után színes korongok váltják fel.",
+      "level3Desc": "A bábukat 3 mp után fekete korongok váltják fel.",
+      "level4Desc": "A bábuk 3 mp után teljesen eltűnnek."
     },
     "share": {
       "title": "Feladvány megosztása",
       "copied": "Link másolva!",
-      "copyFailed": "Sikertelen másolás"
+      "copyFailed": "Sikertelen másolás",
+      "current": "Aktuális feladvány",
+      "previous": "Előző feladvány"
+    },
+    "challenge": {
+      "sentCount": "Kihívás elküldve {{count}} ismerősnek",
+      "selectAll": "Mind kijelölése",
+      "send": "Küldés ({{count}})",
+      "batchResult": "Elküldve {{sent}} címzettnek, {{skipped}} kihagyva",
+      "error": "A kihívást nem sikerült elküldeni",
+      "unsolvedTitle": "{{count}} feladványod még nincs megoldva"
+    },
+    "revengeDone": {
+      "title": "Revans teljesítve!",
+      "summary": "{{name}} {{total}} feladványából {{solved}} feladványt bosszultál meg.",
+      "backToFriend": "Vissza a revans-listához"
+    },
+    "settings": {
+      "title": "Beállítások",
+      "pieces": "Bábuk",
+      "board": "Tábla kinézete",
+      "mode": "Mód",
+      "modeFixed": "Fix",
+      "modeRandom": "Véletlenszerű",
+      "modeCrazy": "Őrült",
+      "visualization": "Vizualizáció",
+      "vizArrow": "Ellenfél lépésének nyila",
+      "stockfishDepth": "Stockfish-mélység",
+      "enPassantForced": "Kötelező en passant",
+      "enPassantForcedHint": "Anarchy-tábla: ha van en passant ütés, akkor kötelező eljátszani.",
+      "offPathWarn": "Figyelmeztetés rossz elágazásnál",
+      "offPathWarnHint": "Ennyi lépés után a megoldáson kívül (Stockfish ellen) figyelmeztet, ha már nem nyersz egyértelműen (+2). 0 = soha."
+    },
+    "offPathWarning": "Lehet, hogy itt tévedtél — az állás már nem egyértelműen nyert számodra. Érdemes visszaállítani vagy feladni.",
+    "offPathWarningEqual": "Lehet, hogy itt tévedtél — az állás már nem kiegyensúlyozott. Érdemes visszaállítani vagy feladni.",
+    "offPath": {
+      "h1": "Letértél a megoldásról — az egyik lépésed nem a tervezett volt.",
+      "h2": "Végy vissza egy lépést: nem a jelenlegi állás, hanem egy korábbi elágazás volt a rossz.",
+      "h3": "A(z) {{n}}. lépésed volt a rossz elágazás — gondold át újra.",
+      "h3any": "Az egyik első lépésed volt a rossz elágazás — gondold át újra."
+    },
+    "anarchyHint1": "Holy hell! 🇫🇷 Az en passant kötelező — ha en passant ütés van a táblán, KÖTELEZŐ eljátszanod. Kivétel nincs.",
+    "anarchyHint2": "Google en passant. 📖 A gyalogod üthet en passant, és a szent anarchy-szabály szerint ez az egyetlen szabályos lépés.",
+    "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Kapd el azt a gyalogot — ebben a lépésben minden más szabálytalan. Actual zap.",
+    "hints": {
+      "show": "Tipp",
+      "next": "Következő tipp",
+      "t1Check": "Kényszerítő lépés — kezdd a sakkokkal (ellenőrzőlista: sakk, ütés, fenyegetés).",
+      "t1Capture": "Egy ütés a kulcs — vedd végig az ellenőrzőlistát: sakk, ütés, fenyegetés.",
+      "t1Quiet": "Nincs sakk, nincs ütés — találd meg a csendes lépést, amely döntő fenyegetést hoz (a sakk–ütés–fenyegetés lista „F”-je).",
+      "t2Piece": "A {{piece}} lép.",
+      "t3Move": "Játszd: {{move}}.",
+      "flag": "Rossz tippek",
+      "flagged": "Rossz tippek ✓",
+      "flagTitle": "Jelöld meg rossznak ezeket a tippeket",
+      "flagSaved": "Tippek rossznak megjelölve.",
+      "flagCleared": "Megjelölés eltávolítva.",
+      "flagError": "A megjelölést nem sikerült menteni.",
+      "pieces": {
+        "pawn": "gyalog",
+        "knight": "huszár",
+        "bishop": "futó",
+        "rook": "bástya",
+        "queen": "vezér",
+        "king": "király",
+        "piece": "bábu"
+      }
+    },
+    "bar": {
+      "more": "Több"
     }
   },
   "courses": {
     "title": "Tanfolyamok",
     "intro": "Dolgozz végig egy importált könyvet feladványról feladványra – sorban vagy véletlenszerűen. A haladásod mentésre kerül.",
-    "emptyHint": "Még nincs importált könyv. Importálj könyveket az admin területen a \"Könyvek\" alatt.",
+    "emptyHint": "Még nincs importált könyv. Importálj könyveket az admin területen a „Könyvek” alatt.",
     "sectionPublic": "Nyilvános kurzusok",
     "sectionPublicHint": "A csoportjaidon keresztül megosztott kurzusok.",
     "sectionChessable": "Chessable kurzusok",
@@ -574,15 +970,228 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Folyamatban",
-    "sectionInProgressHint": "Megkezdett, még be nem fejezett kurzusok."
+    "sectionInProgressHint": "Megkezdett, még be nem fejezett kurzusok.",
+    "detail": {
+      "skippedCount": "{{count}} sor kihagyva:",
+      "startChapter": "Fejezet indítása",
+      "tags": "Címkék",
+      "title": "Tanfolyam",
+      "chapterPoints": "{{score}} pont",
+      "addChapter": "Fejezet hozzáadása",
+      "addChapterTitle": "Fejezet hozzáadása",
+      "addLines": "Állások hozzáadása",
+      "addLinesHint": "Az állások a(z) „{{chapter}}” fejezet végére kerülnek.",
+      "addLinesTitle": "Állások hozzáadása",
+      "addedCount": "{{count}} állás hozzáadva.",
+      "calcBook": "Számolási könyv",
+      "calcHint": "Megoldás nélküli állások — számolási módban dolgozod fel őket.",
+      "calcPoints": "Számolási pontok",
+      "calcPointsHint": "A tanfolyam összes állásán a számolási módban adott önértékelésedből származó pontok, az elérhető maximum mellett.",
+      "calcToggle": "Számolási mód",
+      "calcToggleHint": "Ezt a tanfolyamot ne megoldandó feladványokként, hanem kiszámolandó állásokként adja: befagyasztott tábla, nincs megoldás, állásonként saját elemzési fa. A meglévő változatok érintetlenek maradnak.",
+      "calcToggleFailed": "A számolási módot nem sikerült átkapcsolni.",
+      "chapterDeleted": "{{count}} változat törölve.",
+      "chapterName": "Fejezet neve",
+      "chapterNameHint": "Hagyd üresen, ha az állásokat fejezet nélkül szeretnéd létrehozni.",
+      "chapterNamePlaceholder": "pl. Számolás 1",
+      "chapterReset": "Haladás visszaállítva ({{count}} változat).",
+      "chapters": "Fejezetek",
+      "deleteChapter": "Fejezet törlése",
+      "deleteChapterConfirm": "Törlöd a(z) „{{name}}” fejezetet mind a(z) {{count}} változatával együtt? Ezzel az összes felhasználó haladása is eltűnik ezekhez a változatokhoz.",
+      "deleteChapterFailed": "A fejezetet nem sikerült törölni.",
+      "deleteLine": "Változat törlése",
+      "deleteLineConfirm": "Törlöd a(z) {{line}} változatot?",
+      "deleteLineFailed": "A változatot nem sikerült törölni.",
+      "difficulty": "Nehézség",
+      "empty": "Ennek a tanfolyamnak még nincsenek változatai.",
+      "emptyManage": "Ez a tanfolyam még üres — a „Fejezet hozzáadása” gombbal illeszd be az állásaidat.",
+      "file": "Forrásfájl",
+      "formatHint": "Soronként egy FEN. A sor elején álló szám („1:”, „2.”) figyelmen kívül marad. Megjegyzés a „|” jel után vagy kapcsos zárójelben állhat: „… | Világos lép — elég a támadás?”. A könyvben már szereplő állásokat kihagyjuk.",
+      "hasSolution": "Változat mentett megoldással",
+      "insert": "Beillesztés",
+      "kind": {
+        "Puzzle": "Feladványkönyv",
+        "Study": "Tanulmánykönyv"
+      },
+      "lastActivity": "Utoljára használva",
+      "line": "{{number}}. sor:",
+      "lineCount": "{{count}} változat",
+      "lines": "Változatok",
+      "linesLoadFailed": "A változatokat nem sikerült betölteni.",
+      "linked": "Kapcsolt tanfolyam",
+      "noLines": "Ebben a fejezetben nincsenek változatok.",
+      "open": "Tanfolyam részletei",
+      "openTooltip": "A tanfolyam részletes oldalának megnyitása",
+      "owned": "Saját tanfolyam",
+      "pinFailed": "A kitűzést nem sikerült módosítani.",
+      "plies": "{{count}} féllépés",
+      "positionLines": "Megoldás nélküli állások",
+      "positionOnly": "csak állás",
+      "positions": "Állások (soronként egy)",
+      "progressCalc": "Haladás = a feldolgozott állások (saját elemzési fa elmentve).",
+      "progressSolve": "Haladás = megoldott változatok.",
+      "public": "Nyilvános",
+      "quizCount": "{{count}} megoldással",
+      "rating": "Értékelés",
+      "reason": {
+        "duplicate": "már szerepel ebben a könyvben",
+        "invalid_fen": "nem használható állás",
+        "too_many": "sorkorlát elérve"
+      },
+      "renameChapter": "Fejezet átnevezése",
+      "renameFailed": "A fejezetet nem sikerült átnevezni.",
+      "resetChapter": "A haladásom visszaállítása",
+      "resetChapterConfirm": "Visszaállítod a haladásodat a(z) „{{name}}” fejezetnél? A mentett elemzési fák megmaradnak.",
+      "resetChapterFailed": "A fejezetet nem sikerült visszaállítani.",
+      "resetCourse": "A teljes tanfolyam visszaállítása",
+      "resetCourseConfirm": "Visszaállítod a haladásodat az egész „{{name}}” tanfolyamnál?",
+      "resetCourseFailed": "A tanfolyamot nem sikerült visszaállítani.",
+      "sharedBy": "Megosztotta: {{name}}"
+    },
+    "pinTooltip": "Rögzítés az irányítópultra",
+    "unpinTooltip": "Levétel az irányítópultról",
+    "pinned": "A(z) „{{name}}” rögzítve az irányítópultodra",
+    "unpinned": "A(z) „{{name}}” levéve az irányítópultról",
+    "pinFailed": "A rögzítést nem sikerült frissíteni",
+    "downloadPgnTooltip": "Letöltés PGN-ként",
+    "downloadFailed": "A PGN letöltése nem sikerült.",
+    "infoLines": "+{{count}} infó",
+    "infoLinesTooltip": "Magyarázó / mintabevezető változatok (nincs kérdés, csak végigkattintható)",
+    "sectionSharedWithMe": "Velem megosztva",
+    "sectionSharedWithMeHint": "Tanfolyamok, amelyeket más tagok megosztottak veled.",
+    "share": {
+      "title": "A(z) „{{name}}” megosztása",
+      "tooltip": "Tanfolyam megosztása",
+      "hint": "Válaszd ki azokat az ismerősöket, akikkel megosztod ezt a tanfolyamot. Saját haladással dolgozhatják végig, de nem szerkeszthetik és nem oszthatják tovább.",
+      "sharedWith": "Megosztva vele",
+      "pickFriends": "Ismerősök hozzáadása",
+      "noFriends": "Még nincs ismerősöd, akivel megoszthatnád.",
+      "shareButton": "Megosztás ({{count}})",
+      "unshareTooltip": "Hozzáférés visszavonása",
+      "sharedBy": "megosztotta: {{name}}",
+      "shared": "Megosztva {{count}} ismerőssel.",
+      "sharedPartial": "Megosztva vele: {{shared}}; {{skipped}} kihagyva.",
+      "nothingShared": "Senki sem került hozzá (már meg van osztva, vagy nem ismerős).",
+      "unshared": "{{name}} hozzáférése visszavonva.",
+      "failed": "A megosztás nem sikerült.",
+      "loadFailed": "A megosztási adatokat nem sikerült betölteni."
+    },
+    "link": {
+      "title": "A(z) „{{name}}” összekapcsolása",
+      "hint": "Kapcsold össze ezt a tanfolyamot egy másikkal (pl. a hozzá tartozó munkafüzettel), hogy edzés közben gyorsan válthass köztük.",
+      "currently": "Összekapcsolva ezzel: {{name}}",
+      "unlink": "Kapcsolat megszüntetése",
+      "noCandidates": "Nincs más tanfolyam az összekapcsoláshoz.",
+      "pick": "Összekapcsolás tanfolyammal",
+      "linkButton": "Összekapcsolás",
+      "linked": "Tanfolyamok összekapcsolva.",
+      "unlinked": "Kapcsolat megszüntetve.",
+      "failed": "Az összekapcsolás nem sikerült.",
+      "tooltip": "Összekapcsolás másik tanfolyammal (könyv ↔ munkafüzet)",
+      "linkedTooltip": "Összekapcsolva ezzel: {{name}} — kattints a módosításhoz",
+      "openLinked": "Összekapcsolt tanfolyam megnyitása"
+    },
+    "moreActions": "További műveletek",
+    "browseTooltip": "Változatok átnézése",
+    "flashcards": {
+      "title": "Tanulókártyák",
+      "button": "Tanulókártyák",
+      "print": "Nyomtatás",
+      "count": "{{count}} kártya",
+      "empty": "Nincs mit nyomtatni — nincs kiválasztott változat.",
+      "duplexHint": "Nyomtass kétoldalasan (a hosszú él mentén fordítva): minden hátoldali lap tükrözve van, így az elő- és hátoldalak fedik egymást. A hátterek nyomtatását NEM kell bekapcsolni.",
+      "fromWhite": "világos szemszögéből",
+      "fromBlack": "sötét szemszögéből",
+      "noText": "Ehhez a változathoz nincs leírás.",
+      "pick": "Kijelölés tanulókártyának",
+      "browseTooltip": "A kijelölt változatok nyomtatása tanulókártyaként — kijelölés nélkül az aktuális nézet kerül nyomtatásra.",
+      "chapterMenu": "Tanulókártyák nyomtatása",
+      "digital": "Digitális",
+      "printView": "Nyomtatási nézet",
+      "flip": "Kártya megfordítása",
+      "shuffle": "Keverés",
+      "digitalHint": "Kattints a kártyára (vagy Szóköz/Enter) a megfordításához; a ←/→ lapoz a pakliban.",
+      "markedOnly": "Csak a megjelöltek",
+      "markedEmpty": "Még egy változat sincs tanulókártyaként megjelölve. Az átnézés nézetben a jelölőnégyzettel jelölhetsz meg változatokat.",
+      "markedButton": "Megjelöltek",
+      "markedTooltip": "Csak az általad tanulókártyaként megjelölt változatok",
+      "markedMenu": "Tanulókártyák (megjelölt változatok)"
+    },
+    "calcPoints": "{{score}} pont",
+    "calculate": "Számolás",
+    "browse": {
+      "title": "Átnézés",
+      "back": "Vissza a tanfolyamokhoz",
+      "allChapters": "Minden fejezet",
+      "noChapter": "Fejezet nélkül",
+      "lineCount": "{{count}} változat",
+      "empty": "Ennek a tanfolyamnak nincsenek változatai.",
+      "line": "Változat",
+      "infoLine": "Magyarázó változat (nincs kérdés)",
+      "selectHint": "Válassz balra egy változatot a megtekintéséhez.",
+      "first": "Első lépés",
+      "last": "Utolsó lépés",
+      "play": "Automatikus lejátszás",
+      "pause": "Szünet",
+      "prevLine": "Előző változat",
+      "nextLine": "Következő változat",
+      "loadFailed": "A tanfolyamot nem sikerült betölteni.",
+      "solved": "Sikerült",
+      "failed": "Nem sikerült",
+      "favorite": "Változat kedvelése",
+      "unfavorite": "Kedvelés visszavonása",
+      "share": "Változat megosztása"
+    },
+    "themes": {
+      "title": "Tanfolyam témái",
+      "tooltip": "Témák szerkesztése",
+      "hint": "Milyen témákat fed le a(z) „{{name}}”? A tanfolyamra fordított edzésidő a haladásodban egyenlően oszlik el a kiválasztott témák között. Nincs kiválasztás = taktika.",
+      "saved": "A(z) „{{name}}” témái mentve.",
+      "error": "A témákat nem sikerült menteni."
+    },
+    "offlineListHint": "Offline vagy — a letöltött tanfolyamaid láthatók (utolsó ismert állapot).",
+    "startChapterSequential": "Fejezet indítása (sorrendben)",
+    "startChapterRandom": "Fejezet indítása (véletlenszerűen)",
+    "upload": {
+      "title": "Saját tanfolyam feltöltése",
+      "hint": "Adj hozzá egy feladvány-PGN-t (Chessable-stílus: FEN-nel és edzésjelölőkkel) személyes tanfolyamként.",
+      "restriction": "Ez csak ilyen stílusú feladvány-PGN-ekkel működik. Más PGN-ed van? Kérd meg egy adminisztrátort, hogy importálja, vagy kérdezz a",
+      "nameLabel": "Tanfolyam neve",
+      "namePlaceholder": "Opcionális — különben a fájlnévből",
+      "button": "PGN feltöltése",
+      "uploading": "Feltöltés…",
+      "choosePgn": "PGN kiválasztása…",
+      "success": "„{{name}}” létrehozva ({{count}} feladvány)",
+      "failed": "A feltöltés nem sikerült. Kérlek, ellenőrizd a PGN-t."
+    },
+    "create": {
+      "title": "Új tanfolyam létrehozása",
+      "hint": "Hozz létre saját tanfolyamot — csak te látod. Az állásokat utána fejezetről fejezetre adhatod hozzá a tanfolyam oldalán.",
+      "nameLabel": "Tanfolyam neve",
+      "namePlaceholder": "pl. Bástyavégjátékok",
+      "attachPgn": "PGN csatolása (opcionális)",
+      "pgnNote": "A csatolt PGN-nek Chessable-stílusú feladvány-PGN-nek kell lennie (FEN-nel és edzésjelölőkkel). Más PGN-ed van? Kérd meg egy adminisztrátort, hogy importálja, vagy kérdezz a",
+      "button": "Tanfolyam létrehozása",
+      "creating": "Létrehozás…",
+      "success": "„{{name}}” létrehozva ({{count}} feladvány)",
+      "failed": "A tanfolyamot nem sikerült létrehozni."
+    },
+    "deleteTooltip": "Tanfolyam törlése",
+    "convertToRepertoireTooltip": "Átalakítás repertoárrá",
+    "convertedToRepertoire": "A tanfolyam repertoárként létrejött: {{name}}",
+    "convertToRepertoireFailed": "A tanfolyamot nem sikerült repertoárrá alakítani",
+    "deleteConfirm": "Törlöd a(z) „{{name}}” tanfolyamot? A haladásod elvész.",
+    "deleteFailed": "A tanfolyamot nem sikerült törölni",
+    "searchPlaceholder": "Tanfolyamok keresése…",
+    "noMatch": "Egy tanfolyam sem illik erre: „{{query}}”."
   },
   "weekly": {
     "title": "Heti",
     "intro": "A heti sakk-bejegyzések, amelyeken végigléphetsz. A dátum és az idő jelzi, mikor van ütemezve a bejegyzés.",
-    "oClock": "",
+    "oClock": "óra",
     "play": "Végiglejátszás",
     "empty": "Még nincsenek heti bejegyzések.",
-    "deleteConfirm": "Törli a(z) \"{{title}}\" heti bejegyzést?",
+    "deleteConfirm": "Törlöd a(z) „{{title}}” heti bejegyzést?",
     "created": "Heti bejegyzés létrehozva",
     "deleted": "Heti bejegyzés törölve",
     "loadFailed": "Nem sikerült betölteni a heti bejegyzéseket",
@@ -592,7 +1201,8 @@
     "fields": {
       "date": "Dátum",
       "time": "Idő",
-      "titleOptional": "Cím (opcionális)"
+      "titleOptional": "Cím (opcionális)",
+      "descriptionOptional": "Leírás (opcionális)"
     },
     "columns": {
       "title": "Cím"
@@ -608,7 +1218,9 @@
       "choosePgn": "PGN kiválasztása",
       "titlePlaceholder": "fájlnévből",
       "create": "Létrehozás",
-      "hint": "Alapértelmezett: utolsó dátum + 7 nap, ugyanaz az idő (egyébként 19:00)."
+      "hint": "Alapértelmezett: utolsó dátum + 7 nap, ugyanaz az idő (egyébként 19:00).",
+      "descriptionPlaceholder": "rövid megjegyzés, megjelenik és kikerül a Discordra",
+      "invalidFile": "Válassz egy legfeljebb 10 MB-os .pgn fájlt."
     },
     "leaderboard": {
       "toggle": "Leaderboard",
@@ -617,6 +1229,51 @@
       "time": "Time",
       "completed": "Played all puzzles",
       "empty": "No one has played yet."
+    },
+    "breakdown": {
+      "title": "Részletezés: {{name}}",
+      "open": "Feladványonkénti részletek",
+      "empty": "Még nincs lejátszott feladvány.",
+      "loadFailed": "A részletezést nem sikerült betölteni.",
+      "untitled": "(cím nélkül)",
+      "puzzle": "Feladvány",
+      "result": "Eredmény",
+      "time": "Idő",
+      "hints": "Tippek",
+      "wrong": "Hibás lépések",
+      "mouseslips": "Elcsúszások",
+      "solved": "Megoldva",
+      "failed": "Nincs megoldva",
+      "totalRow": "Összesen ({{played}}/{{total}} lejátszva)"
+    },
+    "fromChapter": {
+      "button": "Könyvfejezetből",
+      "title": "Heti poszt könyvfejezetből",
+      "or": "vagy",
+      "book": "Könyv",
+      "chapter": "Fejezet",
+      "searchBook": "Könyv keresése…",
+      "searchChapter": "Fejezet keresése…",
+      "noMatch": "Nincs találat",
+      "noChapter": "Fejezet nélkül",
+      "noChapters": "Ennek a könyvnek nincsenek fejezetei.",
+      "titlePlaceholder": "Alapértelmezés: könyv + fejezet",
+      "create": "Létrehozás",
+      "createFailed": "A heti posztot nem sikerült létrehozni.",
+      "loadBooksFailed": "A könyveket nem sikerült betölteni.",
+      "loadChaptersFailed": "A fejezeteket nem sikerült betölteni."
+    },
+    "mode": {
+      "title": "Hogyan szeretnéd játszani ezt a heti posztot?",
+      "intro": "A választás erre a heti posztra vonatkozik, és minden feladványnál rögzítjük.",
+      "training": "Edzésmód",
+      "trainingDesc": "A tábla befagyasztva marad — a lépéseket bábuk húzása nélkül adod meg (eddigi működés).",
+      "easy": "Egyszerű mód",
+      "easyDesc": "Húzd a bábukat a szokásos módon, mint bármelyik más feladványnál.",
+      "switchHint": "Bármikor válthatsz — a következő feladványtól érvényes.",
+      "switchedTraining": "Edzésmód — a következő feladványtól.",
+      "switchedEasy": "Egyszerű mód — a következő feladványtól.",
+      "split": "{{training}} edzés · {{easy}} egyszerű"
     }
   },
   "endless": {
@@ -682,7 +1339,9 @@
       "continue": "Folytatás",
       "archiveAndNew": "Archiválás és új játék",
       "newGame": "Új játék",
-      "start": "Kezdés"
+      "start": "Kezdés",
+      "clearThemes": "Összes törlése",
+      "advanced": "Finomhangolás"
     },
     "game": {
       "visualization": "Vizualizáció ({{level}}. szint)",
@@ -718,7 +1377,8 @@
       "statLevel": "Szint",
       "statSolved": "Megoldva",
       "statTime": "Idő",
-      "phaseLabel": "{{phase}}. fázis ({{step}}. lépés)"
+      "phaseLabel": "{{phase}}. fázis ({{step}}. lépés)",
+      "showOriginalSolution": "Eredeti megoldás mutatása"
     },
     "gameOver": {
       "title": "Játék vége",
@@ -740,7 +1400,8 @@
       "archiveRun": "Futam archiválása",
       "archived": "Archiválva",
       "playAgain": "Újrajátszás",
-      "backToPuzzles": "Vissza a feladványokhoz"
+      "backToPuzzles": "Vissza a feladványokhoz",
+      "backToHistory": "Vissza az előzményekhez"
     },
     "history": {
       "title": "Végtelen feladvány előzmények",
@@ -762,7 +1423,17 @@
       "colConfig": "Konfiguráció",
       "colMistakes": "Hibák",
       "backToEndless": "Vissza a Végtelen módhoz"
-    }
+    },
+    "themePreset": {
+      "label": "Gyorsválasztás",
+      "blitzMate": "Matt 1 lépésben",
+      "mateHunt": "Mattvadászat 1–2",
+      "basicTactics": "Alaptaktika",
+      "combinations": "Kombináció és áldozat",
+      "patternMates": "Mintamattok",
+      "endgame": "Végjátékok"
+    },
+    "loadFailed": "Most nem sikerült új feladványokat betölteni. Kérlek, próbáld meg később."
   },
   "book": {
     "difficulty": "Nehézség",
@@ -779,7 +1450,8 @@
       "gaveUpSolution": "Feladtad – íme a megoldás",
       "checkmate": "Matt!",
       "altSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",
-      "fullGame": "Teljes játszma"
+      "fullGame": "Teljes játszma",
+      "loadError": "A betöltés nem sikerült. Kérlek, ellenőrizd a kapcsolatot."
     },
     "actions": {
       "reset": "Visszaállítás",
@@ -795,7 +1467,10 @@
       "prevDaily": "Előző nap",
       "nextDaily": "Következő nap",
       "sharePuzzle": "Feladvány megosztása",
-      "backToPuzzle": "Vissza a feladványhoz"
+      "backToPuzzle": "Vissza a feladványhoz",
+      "showOriginalSolution": "Eredeti megoldás mutatása",
+      "prev": "Vissza",
+      "next": "Tovább"
     },
     "settings": {
       "title": "Beállítások",
@@ -828,19 +1503,51 @@
       "wholeBook": "Teljes könyv",
       "noChapter": "Nincs fejezet",
       "accuracyHint": "Első próbálkozásra siker",
-      "timeHint": "Összes eltöltött idő"
+      "timeHint": "Összes eltöltött idő",
+      "roundFinished": "Véletlen forduló kész — még {{remaining}} feladat vár megoldásra",
+      "continueRemaining": "Folytatás a maradékkal",
+      "restart": "Kezdés elölről",
+      "restarted": "Tanfolyam visszaállítva — kezdjük elölről",
+      "restartFailed": "A visszaállítás nem sikerült",
+      "unavailable": "Ez a tanfolyam bejelentkezés nélkül nem érhető el.",
+      "etaHint": "Becsült hátralévő idő a befejezésig az eddigi tempód alapján",
+      "switchLinkedTooltip": "Váltás erre: {{name}}"
     },
     "weekly": {
       "backToWeekly": "Heti bejegyzések áttekintéséhez",
       "noPuzzles": "Ez a heti bejegyzés nem tartalmaz lejátszható feladványt.",
       "allSolved": "Minden feladvány megoldva!",
-      "progress": "{{played}}/{{total}} played · {{solved}} solved"
+      "progress": "{{played}}/{{total}} played · {{solved}} solved",
+      "guestHint": "Vendégként játszol — az eredményed nem számít."
     },
     "longSolve": {
       "title": "Elég sokáig tartott",
       "question": "{{time}} időt töltöttél ezzel a feladvánnyal. Tényleg ennyi ideig tartott, vagy közben távol voltál?",
       "wasAway": "Távol voltam",
       "reallyTookThatLong": "Igen, tényleg ennyi volt"
+    },
+    "alternativeMove": "Ez is jó lépés — de a fő változat lépését játszd.",
+    "hints": {
+      "show": "Tipp",
+      "next": "Következő tipp",
+      "flag": "Buta tippek",
+      "flagged": "Buta tippek ✓",
+      "flagTitle": "Ezeknek a tippeknek a rossznak jelölése (admin)",
+      "flagSaved": "Tippek rossznak jelölve.",
+      "flagCleared": "Jelölés eltávolítva.",
+      "flagError": "A jelölést nem sikerült menteni."
+    },
+    "track": {
+      "solved": "Megoldva",
+      "failed": "Sikertelen"
+    },
+    "info": {
+      "title": "Magyarázó változat",
+      "subtitle": "Csak magyarázat — kattints végig, nincs mit megoldani."
+    },
+    "variation": {
+      "previewing": "Egy változatot mutat a kommentárból",
+      "back": "Vissza"
     }
   },
   "admin": {
@@ -850,7 +1557,13 @@
       "users": "Felhasználók",
       "books": "Könyvek",
       "groups": "Csoportok",
-      "daily": "Daily Puzzle"
+      "daily": "Daily Puzzle",
+      "puzzles": "Feladványok",
+      "menu": "Menü",
+      "messages": "Üzenetek",
+      "courseDl": "Tanfolyamok letöltése",
+      "ci": "CI / Actions",
+      "roles": "Szerepek"
     },
     "users": {
       "searchLabel": "Felhasználók keresése",
@@ -873,7 +1586,10 @@
         "load": "Nem sikerült betölteni a felhasználókat",
         "toggleAdmin": "Nem sikerült váltani az admin jogosultságot",
         "delete": "Nem sikerült törölni a felhasználót"
-      }
+      },
+      "impersonate": "Belépés ezzel a felhasználóval",
+      "impersonateStarted": "Most {{name}} néven vagy bejelentkezve.",
+      "impersonateFailed": "Nem sikerült belépni ezzel a felhasználóval."
     },
     "books": {
       "uploadPgn": "PGN(ek) feltöltése",
@@ -899,7 +1615,8 @@
         "blind": "Vakon",
         "visibleFor": "Látható (tanfolyamok)",
         "actions": "Műveletek",
-        "kind": "Type"
+        "kind": "Type",
+        "public": "Nyilvános"
       },
       "errors": {
         "load": "Nem sikerült betölteni a könyveket",
@@ -911,6 +1628,20 @@
       "kind": {
         "puzzle": "Puzzle book",
         "study": "Study book"
+      },
+      "searchPlaceholder": "Könyvek keresése…",
+      "noMatch": "Nincs a keresésnek megfelelő könyv.",
+      "rename": "Könyv átnevezése",
+      "renamePrompt": "Új könyvnév:",
+      "publicHint": "Nyilvános: ez a tanfolyam regisztráció nélkül, a közvetlen linkjén keresztül használható. A névtelen látogatók haladása helyben, a böngészőben marad.",
+      "slugPlaceholder": "álnév, pl. mate1",
+      "slugHint": "Opcionális rövid álnév a nyilvános linkhez: a tanfolyam ekkor a /<álnév> címen érhető el (pl. /mate1). Kisbetűk, számjegyek és kötőjelek, egyedi. Üresen = nincs álnév.",
+      "filters": {
+        "title": "Szűrő",
+        "reset": "Szűrők törlése",
+        "all": "Mind",
+        "yes": "Igen",
+        "no": "Nem"
       }
     },
     "groups": {
@@ -950,7 +1681,9 @@
           "load": "Nem sikerült betölteni az edzéscélt.",
           "save": "Nem sikerült menteni az edzéscélt."
         }
-      }
+      },
+      "everyoneBadge": "Mindenki",
+      "everyoneHint": "Minden felhasználó automatikusan tagja ennek a csoportnak. A tagság nem szerkeszthető. Ossz meg egy könyvet/tanfolyamot ezzel a csoporttal, hogy mindenki számára látható legyen."
     },
     "daily": {
       "intro": "Regenerate the daily puzzle for a date. The link stays the same — only the puzzle behind it changes. The previously assigned puzzle is retired and will never be drawn again for daily, random or blind puzzles.",
@@ -967,6 +1700,141 @@
       "errors": {
         "load": "Failed to load the daily puzzle.",
         "regenerate": "Failed to regenerate the daily puzzle."
+      }
+    },
+    "ci": {
+      "title": "GitHub Actions",
+      "subtitle": "Repónként az utolsó 5 futás · élőben webhookon át, frissítés 20 másodpercenként (👁 kattintás = a repó figyelése 10 másodpercenként)",
+      "updated": "Frissítve",
+      "runningBuild": "futó build",
+      "live": "élő",
+      "runningBuildTooltip": "Ez a futás építette az éppen futó frontendet.",
+      "notConfigured": "Nincs beállítva GitHub-token. Állítsd be a GitHub__Token értéket (egy PAT actions:read joggal) az API-n, hogy ez a nézet működjön.",
+      "noRuns": "Még nincsenek futások.",
+      "started": "indítva",
+      "duration": "időtartam",
+      "etaIn": "kész kb. {{time}} múlva",
+      "etaSoon": "mindjárt kész…",
+      "etaUnknown": "fut…",
+      "etaTooltip": "Becsült befejezés — a legutóbbi futások átlagos időtartama mínusz az eddig eltelt idő.",
+      "watchStart": "Pontos figyelés: ennek a repónak az ellenőrzése egy percen át 10 másodpercenként (illetve amíg a futó művelet be nem fejeződik)",
+      "watchStop": "Figyelés befejezése (vissza a 20 másodperces ellenőrzésre)"
+    },
+    "puzzles": {
+      "title": "Feladványok",
+      "backfillHint": "Felépíti a normalizált címketáblát (Tags / PuzzleTags), amelyet a gyors témaszűrő („leggyengébb témák edzése”) használ. A telepítés után egyszer futtasd le — utána az import tartja naprakészen a címkéket. Háttérfeladatként fut.",
+      "backfillBtn": "Címketábla felépítése",
+      "backfillRunning": "Indítás…",
+      "backfillConfirm": "Felépíted / frissíted most a feladvány-címketáblát? Háttérfeladatként fut.",
+      "backfillStarted": "A címke-utótöltés elindult (a háttérben fut).",
+      "backfillError": "Nem sikerült elindítani az utótöltést."
+    },
+    "menu": {
+      "title": "Menü láthatósága",
+      "intro": "Határozd meg, ki melyik menüpontot látja. A rejtett bejegyzések akkor is le vannak tiltva, ha az oldal URL-jét közvetlenül nyitod meg. Az adminok mindig mindent látnak.",
+      "level": "Láthatóság",
+      "groups": "Csoportok",
+      "save": "Mentés",
+      "saved": "A menü láthatósága elmentve.",
+      "saveError": "A menü láthatóságát nem sikerült elmenteni.",
+      "loadError": "A menü láthatóságát nem sikerült betölteni.",
+      "levels": {
+        "All": "Mindenki (kijelentkezve is)",
+        "Registered": "Regisztrált felhasználók",
+        "Groups": "Meghatározott csoportok",
+        "Admin": "Csak adminok"
+      },
+      "items": {
+        "dashboard": "Irányítópult",
+        "repertoires": "Repertoárok",
+        "tournaments": "Versenyek",
+        "friends": "Ismerősök",
+        "puzzles": "Feladványok",
+        "training-goals": "Edzéscélok",
+        "analysis": "Elemzés",
+        "weekly": "Heti poszt",
+        "courses": "Tanfolyamok",
+        "stats": "Statisztika",
+        "chessable": "Chessable-import",
+        "install": "Alkalmazás telepítése",
+        "help": "Súgó",
+        "leaderboards": "Ranglisták",
+        "tournament-calendar": "Versenynaptár"
+      }
+    },
+    "messages": {
+      "title": "Közvetlen üzenetek",
+      "intro": "Írj egy felhasználónak; itt tud válaszolni. A beszélgetés szálként folytatódik.",
+      "searchUser": "Felhasználó keresése…",
+      "noThreads": "Még nincsenek beszélgetések.",
+      "selectThread": "Válassz egy beszélgetést, vagy indíts egy újat.",
+      "emptyThread": "Még nincsenek üzenetek — írd meg az elsőt.",
+      "writeLabel": "Az üzeneted",
+      "unclaimed": "nyitott",
+      "claimedBy": "Kezeli: {{name}}",
+      "claim": "Átvétel",
+      "takeOver": "Átvétel",
+      "release": "Visszaadás"
+    },
+    "courseDl": {
+      "title": "Tanfolyamok letöltése felhasználóktól",
+      "intro": "Húzz át egy Chessable-tanfolyamot, amely egy felhasználó tulajdona, repertoárként a saját fiókodba — az ő tárolt Chessable-hozzáférésén keresztül. Csak azok a felhasználók szerepelnek a listán, akik mentettek Chessable-bearert.",
+      "selectUser": "Felhasználó",
+      "showExpired": "A lejártak megjelenítése is",
+      "refresh": "Lista frissítése",
+      "noUsers": "Még egyetlen felhasználó sem adott meg Chessable-hozzáférést.",
+      "noCourses": "Nem található tanfolyam ehhez a felhasználóhoz.",
+      "loadError": "A tanfolyamlistát nem sikerült betölteni.",
+      "importError": "A letöltést nem sikerült elindítani.",
+      "done": "A repertoárjaidban",
+      "failed": "Sikertelen",
+      "queued": "{{n}}. hely a sorban",
+      "alreadyQueued": "Már a sorban van",
+      "hideLoaded": "Betöltött tanfolyamok elrejtése",
+      "allLoaded": "Minden tanfolyam már be van töltve.",
+      "lines": "változat",
+      "estimate": "Méret becslése",
+      "estimateError": "A becslés nem sikerült",
+      "cachedInstant": "gyorsítótárazva (azonnal)",
+      "min": "perc"
+    },
+    "roles": {
+      "title": "Szerepkörök és jogosultságok",
+      "systemBadge": "Rendszer",
+      "intro": "Definiálj szerepköröket a rögzített jogosultságkészletből, és rendeld hozzá őket a felhasználókhoz. Az „admin” szerepkör a szuperfelhasználó (minden jog), és a Felhasználók fülön lévő admin-kapcsolót követi.",
+      "members": "{{count}} tag",
+      "loadError": "A szerepköröket nem sikerült betölteni.",
+      "saveError": "Nem sikerült menteni.",
+      "created": "Szerepkör létrehozva.",
+      "saved": "Szerepkör elmentve.",
+      "deleted": "Szerepkör törölve.",
+      "confirmDelete": "Törlöd a(z) „{{name}}” szerepkört? A felhasználók elveszítik.",
+      "nameLabel": "Név",
+      "keyLabel": "Kulcs",
+      "keyHint": "kisbetűvel, pl. trainer (később nem módosítható)",
+      "createTitle": "Szerepkör létrehozása",
+      "createBtn": "Szerepkör létrehozása",
+      "allPermissions": "Minden jogosultság (szuperfelhasználó).",
+      "noPermissions": "Nincsenek jogosultságok.",
+      "assignTitle": "Szerepkörök hozzárendelése egy felhasználóhoz",
+      "assignHint": "Keress egy felhasználót, majd kapcsold be vagy ki a szerepköreit.",
+      "searchUser": "Felhasználó keresése",
+      "rolesFor": "{{name}} szerepkörei",
+      "adminUserNote": "Ez a felhasználó admin, és automatikusan viseli az admin szerepkört (az admin-kapcsolóval vezérelve).",
+      "userRolesSaved": "A felhasználói szerepkörök elmentve.",
+      "perm": {
+        "users_manage": "Felhasználók kezelése",
+        "books_manage": "Könyvek/tanfolyamok kezelése",
+        "puzzles_manage": "Standard feladványok kezelése",
+        "daily_manage": "Napi feladvány kezelése",
+        "weeklyposts_manage": "Heti posztok kezelése",
+        "groups_manage": "Csoportok kezelése",
+        "messages_admin": "Admin-üzenetek",
+        "chessable_admin": "Chessable-admin",
+        "ci_view": "CI / Actions megtekintése",
+        "menu_manage": "Menü láthatóságának kezelése",
+        "catalog_manage": "Katalógus-engedélyek kezelése",
+        "roles_manage": "Szerepkörök és jogosultságok kezelése"
       }
     }
   },
@@ -987,7 +1855,36 @@
     "loadFen": "FEN betöltése",
     "copyFen": "FEN másolása",
     "pgn": "PGN",
-    "loadPgn": "PGN betöltése"
+    "loadPgn": "PGN betöltése",
+    "engineCrashed": "Az elemző motor összeomlott, és nem sikerült helyreállítani.",
+    "engineCrashedReload": "Oldal újratöltése",
+    "engineProvider": "Motor",
+    "engineBrowser": "Böngésző",
+    "speedHint": "Sebesség: {{speed}}\n\nEddig átvizsgált állások: {{nodes}}\n\nA több gyorsabb — egy erős külső motor néhány ezer kN/s-ot ér el, a böngészőmotor lényegesen kevesebbet. (1 kN = 1000 állás)",
+    "speedWaiting": "Sebesség: mérés folyamatban …",
+    "compareToggle": "Két motor összehasonlítása",
+    "compareWith": "Összehasonlítás ezzel",
+    "speedShort": "Sebesség: {{speed}}",
+    "mateWhiteWins": "Matt — világos nyer",
+    "mateBlackWins": "Matt — sötét nyer",
+    "stalemate": "Patt — döntetlen",
+    "remoteFallback": "A külső motor nem érhető el — a böngészőmotor számol.",
+    "searchTime": "Keresési idő ebben az állásban",
+    "remoteCutResuming": "A motorral megszakadt a kapcsolat {{depth}}/{{target}} mélységnél — folytatás…",
+    "remoteCutFinal": "A motorral megszakadt a kapcsolat {{depth}}/{{target}} mélységnél — az utolsó állás látható.",
+    "thinkingSince": "A motor már {{time}} ideje számol a(z) {{depth}}. mélységen",
+    "slowMultiPvHint": "4+ változat esetén a ~27 feletti mélységek egyenként több percig is tarthatnak.",
+    "setup": {
+      "button": "Állás felépítése",
+      "apply": "Alkalmaz",
+      "erase": "Radír",
+      "clear": "Tábla ürítése",
+      "startpos": "Alapállás",
+      "whiteToMove": "Világos lép",
+      "blackToMove": "Sötét lép"
+    },
+    "queueBackground": "Elemzés a háttérben",
+    "openJobs": "Elemzési feladatok"
   },
   "stats": {
     "title": "Statisztikák",
@@ -1011,7 +1908,11 @@
     "byTheme": "Téma szerint",
     "byRating": "Értékelés szerint (megoldva)",
     "byRatingHint": "Megoldott feladványok értékelési sávonként – egérrel az átlagra.",
-    "activity": "Aktivitás"
+    "activity": "Aktivitás",
+    "modeStandard": "Standard",
+    "modeCourse": "Tanfolyamok",
+    "courseEmpty": "Még nincs tanfolyam-próbálkozás.",
+    "worstThemes": "Leggyengébb témák"
   },
   "trainingGoals": {
     "manual": {
@@ -1078,8 +1979,78 @@
       "middlegame": "Middlegame",
       "endgame": "Endgame",
       "tactics": "Tactics",
-      "other": "Other"
-    }
+      "other": "Other",
+      "label": "Téma",
+      "unset": "Nincs téma"
+    },
+    "tabs": {
+      "goals": "Célok",
+      "history": "Előzmények",
+      "log": "Rögzítés",
+      "chessable": "Chessable"
+    },
+    "presets": {
+      "title": "Tevékenység-sablonok",
+      "subtitle": "Újrafelhasználható gyorsindító bejegyzések a vezérlőpult időzítőjéhez (offline feladványedzés, offline tanulás, edzői óra).",
+      "labelLabel": "Név",
+      "labelPlaceholder": "pl. „Edzés Alice-szel” vagy „Kramnik-könyv olvasása”",
+      "kindLabel": "Kategória",
+      "add": "Sablon létrehozása",
+      "empty": "Még nincs sablon — hozz létre egyet, hogy használni tudd a vezérlőpult gyorsindító időzítőjét.",
+      "deleteConfirm": "Törlöd a(z) „{{label}}” sablont?",
+      "deleteFailed": "A sablont nem sikerült törölni.",
+      "saveFailed": "A sablont nem sikerült menteni."
+    },
+    "timer": {
+      "stop": "Leállítás és mentés",
+      "discard": "Elvetés",
+      "discardTooltip": "Az időzítő eldobása anélkül, hogy bejegyzés jönne létre.",
+      "discardConfirm": "Elveted a futó időzítőt? Semmi sem kerül mentésre.",
+      "discardFailed": "Az időzítőt nem sikerült elvetni.",
+      "noPresets": "Hozz létre előbb egy sablont (név + kategória), hogy aktiválhasd a gyorsindító időzítőt.",
+      "pickPreset": "Válassz sablont az időzítő indításához:",
+      "managePresets": "Sablonok kezelése",
+      "replaceConfirm": "Már fut egy időzítő. Indítasz újat (a futó mentés nélkül elveszik)?",
+      "started": "Időzítő elindítva: {{label}}",
+      "startFailed": "Az időzítőt nem sikerült elindítani.",
+      "stopTitle": "Időzítő leállítása és mentése",
+      "stopHint": "Az eltelt idő offline tevékenységként kerül mentésre. Elfelejtetted leállítani? Igazítsd a kezdést, a véget vagy az időtartamot — a másik kettő automatikusan követi.",
+      "duration": "Időtartam",
+      "startedAt": "Kezdés",
+      "endedAt": "Vége",
+      "startEndHint": "Ha az egyik mezőt módosítod, a másik kettő automatikusan igazodik; a vége soha nem lehet a jövőben.",
+      "noteLabel": "Megjegyzés (nem kötelező)",
+      "notePlaceholder": "pl. „óra Alice-szel, megnyitásgyakorlatok”",
+      "saveEntry": "Bejegyzés mentése",
+      "savedEntry": "Mentve: {{minutes}} perc",
+      "stopFailed": "Az időzítő-bejegyzést nem sikerült menteni."
+    },
+    "chessable": {
+      "title": "Chessable-tanfolyamok",
+      "intro": "A Chessable-edzésidőd tanfolyamonként. Rendelj témát egy tanfolyamhoz, hogy az ideje helyesen számítson bele — hasznos, ha egy tanfolyam nem párosítható RookHub-repertoárhoz.",
+      "unassignedOnly": "Csak téma nélküli tanfolyamok",
+      "none": "Még nincs rögzített Chessable-tanfolyam.",
+      "noneUnassigned": "Minden tanfolyamnak van témája.",
+      "course": "Chessable-tanfolyam",
+      "themeLabel": "Téma",
+      "clear": "— (nincs)",
+      "auto": "auto",
+      "autoHint": "A téma automatikusan egy megfelelő RookHub-repertoárból származik.",
+      "lines": "{{count}} változat",
+      "linesHint": "Befejezett változatok (a bővítmény v1.34 óta számolja) — a változatonkénti átlagidővel.",
+      "unassigned": "nincs hozzárendelve",
+      "saved": "Téma mentve"
+    },
+    "period": {
+      "day": "Nap",
+      "week": "Hét",
+      "month": "Hónap",
+      "year": "Év",
+      "all": "Összesen"
+    },
+    "prevPeriod": "Előző időszak",
+    "nextPeriod": "Következő időszak",
+    "noActivityPeriod": "Ebben az időszakban nincs rögzített edzésidő."
   },
   "chessable": {
     "title": "Connect Chessable",
@@ -1101,7 +2072,78 @@
     "error": "Error: {{message}}",
     "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
     "etaRemaining": "~{{min}} min left",
-    "importDuration": "Queue {{queue}} · Fetch {{fetch}}"
+    "importDuration": "Queue {{queue}} · Fetch {{fetch}}",
+    "rateNotice": {
+      "title": "Az importálás szándékosan lassú",
+      "body": "A Chessable blokkolásai miatt a lekérési ütem erősen le van fojtva — jelenleg percenként nagyjából 4 kérésre. Egy 1000 változatot tartalmazó tanfolyam importálása így jó 4 órát vesz igénybe. Kérlek, légy türelmes — így nem tiltják le a fiókokat."
+    },
+    "helpLink": "Hogyan jutok hozzá a bearer tokenemhez? (súgó)",
+    "helpIntro": "Így szerzed meg a Chessable-bearer-tokenedet a böngészőből:",
+    "helpStep1": "Nyisd meg a Chessable-t, majd a böngésző fejlesztői eszközeit (F12) → „Hálózat” fül.",
+    "helpStep2": "Töltsd újra a Chessable-irányítópultot, és keresd meg a „getUserSettings” kérést.",
+    "helpStep3": "Annak kérésfejlécei között keresd az „authorization” bejegyzést — kattints jobb gombbal az értékre, és válaszd a „Copy value” lehetőséget (vagy másold ki kézzel az „authorization: Bearer ” utáni részt). Ez a te tokened (egy JWT, kb. 7 napig érvényes).",
+    "helpNote": "Csak arra használjuk, hogy lekérjük a saját megvásárolt tanfolyamaidat személyes biztonsági mentéshez.",
+    "helpRepcheck": "Alternatívaként a RepCheck böngészőbővítmény automatikusan megszerzi a tokent:",
+    "bookmarkletTitle": "Egykattintásos bookmarklet",
+    "bookmarkletIntro": "Még egyszerűbb a kézi másolásnál: egy bookmarklet lekéri a tokenedet a chessable.com oldalon, és átadja a RookHubnak.",
+    "bookmarkletDrag": "Húzd ezt a gombot a könyvjelzősávodra:",
+    "bookmarkletLinkLabel": "Chessable-bejelentkezés lekérése → RookHub",
+    "bookmarkletStep1": "Húzd a fenti gombot a böngésződ könyvjelzősávjára (egyszeri beállítás).",
+    "bookmarkletStep2": "Jelentkezz be a megszokott módon a chessable.com oldalon (ha megjelenik, oldd meg a Cloudflare-ellenőrzést).",
+    "bookmarkletStep3": "Kattints a könyvjelzőre — a RookHub megnyílik, és automatikusan elmenti a tokenedet.",
+    "bookmarkletReceived": "Chessable-token átvéve a bookmarklettel.",
+    "bookmarkletNoLogin": "Nem található Chessable-bejelentkezés. Kérlek, előbb jelentkezz be a chessable.com oldalon, majd kattints újra.",
+    "queueTitle": "Az import-várólistád",
+    "queuePopup": "A tanfolyam bekerült a várólistára — gyere vissza később. Jelenleg még {{ahead}} tanfolyam van előtted.",
+    "queueStarted": "Az importálás elindult — a feldolgozás most zajlik.",
+    "queuePos": "várakozási hely: {{pos}}",
+    "statusPaused": "szüneteltetve",
+    "importCancelled": "A(z) „{{name}}” importálása megszakítva.",
+    "pause": "Szüneteltetés",
+    "resume": "Folytatás",
+    "cancel": "Mégse",
+    "disclaimerTitle": "Használat saját felelősségre",
+    "disclaimerText": "Használat saját felelősségre! Hogy sérti-e bármelyik felhasználási feltételt, azt nem tudom. Ha kitiltanak a Chessable-ről, az nem az én hibám. Csak személyes biztonsági mentésre használd.",
+    "disclaimerAccept": "Értem — tovább",
+    "disclaimerDecline": "Mégse",
+    "refreshCourses": "Frissítés",
+    "coursesCachedAt": "Állapot: {{date}}",
+    "testNow": "Bearer tesztelése most",
+    "testFailed": "A bearer tesztje sikertelen.",
+    "statusBlocked": "Bearer letiltva — nincs lekérés, amíg meg nem erősíted az érvényességét.",
+    "blockedTitle": "Chessable-bearer letiltva",
+    "blockedInfo": "A Chessable elutasította ezt a bearert (a fiók letiltva/törölve, vagy a token lejárt). Minden vele küldött kérés szünetel, amíg a „Tesztelés” gombbal meg nem erősíted az érvényességét. A várakozó importok sikeres teszt után automatikusan folytatódnak.",
+    "importRepertoire": "Repertoárként",
+    "importBook": "Könyvként",
+    "doneRepertoire": "Repertoár",
+    "doneBook": "Könyv",
+    "importRepertoireDone": "A(z) „{{name}}” repertoárként importálva ({{count}} változat) — a Repertoárok között találod.",
+    "importBookDone": "A(z) „{{name}}” könyvként importálva ({{count}} feladvány) — a Tanfolyamok között találod.",
+    "importFailed": "Az importálás sikertelen: {{error}}",
+    "phase_queued": "várólistán…",
+    "phase_fetching": "tanfolyam letöltése…",
+    "phase_importing": "importálás…",
+    "phase_done": "kész",
+    "phase_rate-limited": "napi limit elérve, újrapróbálkozás 24 óra múlva…",
+    "fetchProgress": "{{ch}}/{{total}}. fejezet · {{lines}} változat",
+    "fetchProgressTotal": "{{ch}}/{{total}}. fejezet · {{lines}}/{{linesTotal}} változat",
+    "adminImportsTitle": "Összes import (admin)",
+    "adminImportsSubtitle": "Az összes felhasználó Chessable-importjai — aktuális várólista és előzmények.",
+    "adminNoImports": "Még nincs import.",
+    "target_repertoire": "Repertoár",
+    "target_book": "Könyv",
+    "adminStatus_completed": "befejezve",
+    "adminStatus_failed": "sikertelen",
+    "adminStatus_cancelled": "megszakítva",
+    "adminStatus_running": "fut",
+    "adminStatus_paused": "szüneteltetve",
+    "cachedHint": "Gyorsítótárazva — szinte azonnal elérhető (nem kell Chessable-lekérés)",
+    "banWarning": {
+      "title": "Kitiltási kockázat: import a RookHubon keresztül",
+      "body": "Amikor a RookHub importál egy tanfolyamot, azt szerveroldalon tölti le a Chessable-ről, megosztott VPN-/adatközponti IP-címekről, a nálad eltárolt bearer tokennel. A Chessable aktívan blokkolja ezeket az IP-ket, és éppen ez a fiókod alatt futó kötegelt lekérés az a minta, ami miatt a Chessable-fiókodat megjelölhetik vagy letilthatják. Használat saját felelősségre.",
+      "repcheck": "Lényegesen biztonságosabb az import a RepCheck böngészőbővítménnyel. Az a saját, bejelentkezett Chessable-munkameneteden belül, a saját IP-címedről fut — a kérései normál böngészésnek látszanak, nem szerveroldali lekaparásnak.",
+      "manual": "A legbiztonságosabb a kézi RepCheck-változat (v1), amelynél te magad, egyesével indítasz el egy tanfolyamot a saját böngésződből: technikailag ez is sérti a Chessable felhasználási feltételeit, a gyakorlatban azonban alig különböztethető meg a normál használattól, így a Chessable számára jóformán láthatatlan."
+    }
   },
   "notifications": {
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
@@ -1249,6 +2291,937 @@
       "approve": "Jóváhagyás",
       "decline": "Elutasítás",
       "approved": "Jóváhagyva és megosztva."
+    }
+  },
+  "positionInReps": {
+    "button": "Mely repertoárokban?",
+    "loading": "Repertoárjaid átvizsgálása…",
+    "error": "A keresés nem sikerült. Próbáld újra.",
+    "none": "Ez az állás egyik repertoárodban sem szerepel.",
+    "foundCount": "{{reps}} repertoár · {{lines}} változat",
+    "unnamedLine": "(névtelen változat)",
+    "train": "Változat edzése",
+    "view": "Változat megtekintése",
+    "sharedBadge": "megosztva",
+    "sharedHint": "Egy másik felhasználó osztotta meg veled",
+    "mode": {
+      "list": "Listanézet",
+      "tree": "Fanézet",
+      "similar": "Hasonló állások"
+    },
+    "tree": {
+      "foundCount": "{{reps}} repertoár · {{lines}} előfordulás",
+      "noContinuation": "Itt véget ér a repertoár — nincs rögzített folytatás.",
+      "truncated": "A fa lerövidítve (nagyon sok elágazás).",
+      "linesThrough": "{{count}} változat halad át ezen a lépésen",
+      "lineEnd": "Itt véget ér egy változat",
+      "playHint": "Lépés lejátszása a táblán",
+      "expandHint": "Ki-/becsukás",
+      "expandNode": "Kinyitás",
+      "collapseNode": "Becsukás"
+    },
+    "similar": {
+      "preset": "Összehasonlítás",
+      "presets": {
+        "struktur": "Szerkezet",
+        "ausgewogen": "Kiegyensúlyozott",
+        "stellungsbild": "Bábuelhelyezés"
+      },
+      "presetHint": {
+        "struktur": "A gyalogszerkezet dönt (75%); az anyag, a bábuk és a király alig esik latba.",
+        "ausgewogen": "Gyalogszerkezet 50%, anyag 20%, bábuelhelyezés 20%, király 10%.",
+        "stellungsbild": "A bábuk elhelyezkedése számít a legtöbbet (45%), a gyalogszerkezet 30%."
+      },
+      "move": "Lépés",
+      "movePlaceholder": "pl. Nd5",
+      "moveHint": "Opcionális: egy lépés, amit itt fontolgatsz. Azok az állások kerülnek előrébb, ahol a repertoárod tényleg ezt játssza.",
+      "moveIllegal": "Ebben az állásban nem szabályos lépés.",
+      "repertoires": "Repertoárok",
+      "selectAll": "Mind",
+      "selectNone": "Egyik sem",
+      "noneSelected": "Nincs kiválasztva repertoár — válassz legalább egyet.",
+      "mirrored": "Tükrözött találatok",
+      "mirroredHint": "Összehasonlítás felcserélt színekkel és tükrözött táblával is, a jobbik értéket számítva.",
+      "mirroredBadge": "Színcserével találva (tükrözött tábla).",
+      "sameSide": "Ugyanaz a szín lép",
+      "sameSideHint": "Csak olyan állásokat hasonlíts össze, ahol ugyanaz a szín lép.",
+      "onlyWithMove": "csak {{move}} esetén",
+      "onlyWithMoveHint": "Azokat a találatokat rejtsd el, ahol ez a lépés nem a repertoárlépés.",
+      "none": "Nem található hasonló a repertoárjaidban.",
+      "noneWithMove": "A repertoárjaidban egyetlen állás sem folytatódik így: {{move}}.",
+      "foundCount": "{{count}} hasonló állás",
+      "atMove": "lépés: {{move}}",
+      "startPosition": "kiindulási állás",
+      "prevMove": "Egy lépéssel vissza",
+      "nextMove": "Egy lépéssel előre",
+      "openHint": "Állás megnyitása a repertoárban",
+      "moveHitExact": "→ itt is {{move}}",
+      "moveHitSameTarget": "→ itt {{move}} (ugyanaz a célmező)",
+      "positionScore": "állás {{score}}",
+      "positionScoreHint": "Csak magának az állásnak a hasonlósága — a nagy szám a lépéstalálatot is hozzászámolja.",
+      "parts": {
+        "pawns": "Szerkezet",
+        "material": "Anyag",
+        "pieces": "Bábuk",
+        "king": "Király"
+      }
+    }
+  },
+  "calc": {
+    "annotate": "Értékelés",
+    "clearAnnotations": "Értékelések eltávolítása",
+    "comment": "Megjegyzés",
+    "commentPlaceholder": "Megjegyzés…",
+    "deleteFromCursor": "Lépés vissza",
+    "deleteLine": "Változat törlése",
+    "doneCount": "{{done}} / {{total}} feldolgozva",
+    "emptyBook": "Ez a könyv még nem tartalmaz állásokat.",
+    "eval": {
+      "equal": "Kiegyenlített állás",
+      "whiteSlight": "Világos áll valamivel jobban",
+      "blackSlight": "Sötét áll valamivel jobban",
+      "whiteClear": "Világos egyértelműen jobban áll",
+      "blackClear": "Sötét egyértelműen jobban áll",
+      "whiteWinning": "Világos nyer",
+      "blackWinning": "Sötét nyer",
+      "unclear": "Tisztázatlan állás",
+      "compensation": "Kompenzáció az anyagért",
+      "attack": "Támadással",
+      "initiative": "Kezdeményezéssel",
+      "counterplay": "Ellenjátékkal",
+      "zugzwang": "Lépéskényszer"
+    },
+    "flip": "Tábla megfordítása",
+    "frozen": "Tábla befagyasztva",
+    "frozenHint": "A tábla mindig csak a kiindulási állást mutatja. A kattintásaid lépésként rögzülnek, de sosem kerülnek a táblára — fejben számolsz.",
+    "glyph": {
+      "brilliant": "Briliáns lépés",
+      "good": "Jó lépés",
+      "interesting": "Érdekes lépés",
+      "dubious": "Kétes lépés",
+      "mistake": "Hiba",
+      "blunder": "Súlyos hiba"
+    },
+    "symbolToggleHint": "kattints újra az eltávolításhoz",
+    "timer": {
+      "start": "Edzés indítása",
+      "hint": "A fejezetben összegyűlt számolási idő. Csak elindított edzés közben fut.",
+      "stop": "Edzés leállítása",
+      "running": "Az edzés fut — az idő mérése folyik",
+      "stopped": "Az edzés leállítva — nem mérünk időt",
+      "unavailable": "Az edzés csak akkor indítható, ha már betöltődött egy állás.",
+      "notRunning": "Az edzés nem fut — ezt az időt nem mérjük.",
+      "editTitle": "Fejezetidő módosítása",
+      "editFor": "Fejezet: {{chapter}}",
+      "editHint": "Kattints a módosításhoz",
+      "hours": "Óra",
+      "minutes": "Perc",
+      "seconds": "Másodperc",
+      "editNote": "Ez a fejezet-óra — emlékeztető ezen az eszközön. Az állásonként mért gondolkodási idő érintetlen marad: az valódi mérésből származik."
+    },
+    "illegalPosition": "Ez a diagram nem szabályos sakkállás — itt nem lehet lépéseket bevinni.",
+    "jumpTo": "Ugrás állásra",
+    "keyboardHint": "A ← / → a változaton belül mozog, a ↑ / ↓ változatot vált. Elágazáshoz válassz ki egy lépést a változat közepén, és játssz egy másik lépést.",
+    "lines": "Változataim",
+    "loadFailed": "A számolási könyvet nem sikerült betölteni.",
+    "newLine": "Új változat a kiindulási állástól",
+    "nextPosition": "Következő állás",
+    "noLines": "Még nincs változat — kattints egy lépésre a táblán, hogy létrehozz egyet.",
+    "notSavedYet": "Még nincs mentve",
+    "prevPosition": "Előző állás",
+    "review": {
+      "chapterScore": "{{score}} pont",
+      "chapterSummary": "{{score}} pont · {{time}}",
+      "choiceHint": "Az első lépés, amely mellett elköteleződtél.",
+      "choose": "Megjelölés a választásomként",
+      "chooseHint": "Rögzítsd ezt az első lépést (kattints újra a visszavonáshoz). Állásonként pontosan egy választás.",
+      "grade": {
+        "moveNoMainLine": "Jó lépés, de hibák a fő változatban",
+        "moveNoSideLines": "Jó lépés, de hibák a mellékváltozatokban",
+        "notSolved": "Nincs megoldva",
+        "solved": "Megoldva — fő és mellékváltozatok",
+        "someIdeas": "Voltak ötletek, de nem a lépés"
+      },
+      "gradeShort": {
+        "moveNoMainLine": "lépés, fő változat mellé",
+        "moveNoSideLines": "lépés, mellékváltozatok mellé",
+        "notSolved": "nincs megoldva",
+        "solved": "megoldva",
+        "someIdeas": "voltak ötletek"
+      },
+      "noChoice": "Még nincs rögzítve",
+      "saveFailed": "A választást, az időt és az értékelést nem sikerült menteni.",
+      "selfRatingHint": "Nézd meg a megoldást a könyvben, aztán válaszd ki a szintedet — a kalkulációs mód sosem mutat megoldást.",
+      "timeHint": "Aktív gondolkodási idő ezen az álláson (szünetel, amíg a fül a háttérben van).",
+      "totalPointsChapterHint": "Ennek a FEJEZETNEK a pontjai az önértékelésedből, az elérhető maximum mellett — a lista csak ezt a fejezetet mutatja.",
+      "result": "Eredmény",
+      "resultHint": "Értékeld magad az állást (megnyitja a szinteket).",
+      "bookPoints": "Teljes könyv: {{score}} pont",
+      "dialog": {
+        "choice": "A(z) {{move}} lépés mellett döntöttél.",
+        "clear": "Értékelés visszavonása",
+        "noChoice": "Nem rögzítettél lépést.",
+        "title": "Az eredményed"
+      },
+      "positionTime": "Állás"
+    },
+    "saveFailed": "A változataidat nem sikerült menteni.",
+    "savedAt": "Mentve {{time}}",
+    "saving": "Mentés…",
+    "local": {
+      "notice": "Nem vagy bejelentkezve: a változatok, a döntés, az idő és az értékelés csak ezen az eszközön maradnak.",
+      "unavailable": "Ezen az eszközön most SEMMIT sem lehet menteni (privát ablak vagy tele a tároló): a változatok, a döntés, az idő és az értékelés újratöltés után elvesznek.",
+      "signIn": "Jelentkezz be a mentéshez",
+      "dismiss": "Megjegyzés elrejtése",
+      "hideForNow": "Elrejtés egyelőre (a következő sikertelen mentésnél újra megjelenik)"
+    },
+    "chapter": {
+      "done": "A(z) „{{chapter}}” fejezet feldolgozva.",
+      "label": "Fejezet",
+      "lastDone": "Ez volt a tanfolyam utolsó fejezete.",
+      "next": "Következő fejezet: {{chapter}}"
+    },
+    "keyboardHelp": "Billentyűparancsok",
+    "settings": {
+      "title": "Tábla-beállítások"
+    },
+    "copyFen": "FEN másolása",
+    "fenCopied": "FEN másolva",
+    "analyzeLine": "Ennek a változatnak az elemzése",
+    "analyze": {
+      "open": "Elemzés",
+      "hint": "Ellenőrizd a változatodat a motorral"
+    },
+    "series": {
+      "editEdition": "Kiadás szerkesztése",
+      "newEdition": "Új kiadás",
+      "planEdition": "Kiadás ütemezése",
+      "videoUrl": "Videó-URL",
+      "publishAt": "Megjelenés időpontja",
+      "testerPreviewAt": "Tesztelői előnézet (opcionális)",
+      "hint": "A tesztelők a tesztelői időponttól látják ezt a fejezetet, mindenki más a megjelenéstől. Hagyd üresen a tesztelői mezőt, ha nincs korai hozzáférés.",
+      "watchVideo": "Videó megtekintése",
+      "releasesOn": "megjelenik: {{date}}",
+      "saved": "Kiadás mentve",
+      "deleted": "Kiadás törölve",
+      "saveFailed": "A kiadást nem sikerült menteni.",
+      "members": "Sorozat terjesztési listája",
+      "membersHint": "Tagokat felhasználónévvel adhatsz hozzá. Amint a könyvet nyilvánosról privátra állítod, már csak a listán szereplő tagok nyithatják meg. A tesztelők ráadásul egy hetet már a tesztelői előnézet időpontjától látnak.",
+      "membersLoadFailed": "A tagokat nem sikerült betölteni.",
+      "username": "Felhasználónév",
+      "tester": "Tesztelő",
+      "testerHint": "Egy hetet már a tesztelői előnézet időpontjától lát.",
+      "addMember": "Hozzáadás",
+      "noMembers": "Még nincsenek tagok.",
+      "userNotFound": "Nincs ilyen nevű felhasználó.",
+      "memberAdded": "Tag hozzáadva",
+      "memberRemoved": "Tag eltávolítva",
+      "removeMember": "Tag eltávolítása",
+      "seenCount": "{{seen}}/{{total}} megtekintve",
+      "seenNone": "Még nincs megnyitva"
+    }
+  },
+  "favorites": {
+    "title": "Kedvenc feladványok",
+    "hint": "Azok a feladványok, amelyeket megoldás vagy feladás után szívvel jelöltél meg, ide kerülnek — bármikor újrajátszhatod vagy elemezheted őket.",
+    "empty": "Még nincsenek kedvenc feladványok. Egy feladvány megoldása (vagy feladása) után koppints a szívre, hogy idekerüljön.",
+    "rating": "Értékszám",
+    "replay": "Megoldás újra",
+    "analyze": "Elemzés",
+    "removeTooltip": "Eltávolítás a kedvencek közül",
+    "removeError": "A kedvencet nem sikerült eltávolítani.",
+    "sourceStandard": "Standard feladvány",
+    "sourceBook": "Tanfolyam-/könyvfeladvány",
+    "love": "Szeretem",
+    "loved": "Kedvenc",
+    "loveLast": "Utolsó feladvány"
+  },
+  "games": {
+    "title": "Mentett játszmák",
+    "hint": "Azok a játszmák, amelyeket a chess.com-on vagy a lichessen a RepCheck böngészőbővítménnyel mentesz, itt jelennek meg.",
+    "empty": "Még nincsenek mentett játszmák. Egy chess.com- vagy lichess-elemzőoldalon kattints a RepCheck bővítményben a „Játszma mentése” gombra.",
+    "moves": "lépés",
+    "replay": "Újrajátszás",
+    "openInAnalysis": "Megnyitás az elemzésben",
+    "share": "Megosztási link másolása",
+    "shareCopied": "A megosztási link a vágólapra másolva",
+    "openOriginal": "Eredeti játszma megnyitása",
+    "loadError": "A játszmát nem sikerült betölteni.",
+    "deleteConfirm": "Törlöd ezt a mentett játszmát?",
+    "deleteError": "A játszmát nem sikerült törölni.",
+    "shared": {
+      "notFound": "Ez a megosztott játszma nem létezik, vagy eltávolították."
+    }
+  },
+  "analysisJobs": {
+    "loadFailed": "A megbízásokat nem sikerült betölteni.",
+    "dialog": {
+      "title": "Elemzés a háttérben",
+      "depth": "Célmélység",
+      "lines": "Változatok",
+      "titleLabel": "Cím (nem kötelező)",
+      "hint": "Akkor számol, amint a háttérmotor szabad, és szünetel, amíg élőben külső motorral elemzel. Az eredményt az „Elemzési megbízások” alatt találod.",
+      "costHint": "Ökölszabály: nagyjából 27-től minden mélység a sokszorosa az előzőnek; 4+ változat még egyszer megsokszorozza az időt.",
+      "noEngine": "A profilodban nincs háttérmotor beállítva.",
+      "toProfile": "A profilhoz",
+      "submit": "Előjegyzés",
+      "batchTitle": "{{count}} állás elemzése a háttérben"
+    },
+    "createdMany": "{{count}} megbízás létrehozva — akkor számolnak, amint a háttérmotor szabad.",
+    "skippedSome": "{{count}} kihagyva (már előjegyezve vagy érvénytelen).",
+    "engine": "Motor",
+    "restart": "Újraindítás",
+    "restartTooltip": "Újra sorba állítás — az eddigi eredmény megmarad, és a keresés ott folytatódik.",
+    "restarted": "A megbízás újra sorba állt.",
+    "nodes": "Átvizsgált állások: {{nodes}}",
+    "runningAt": "{{depth}} mélységnél számol",
+    "toGames": "Játszmaelemzések",
+    "title": "Elemzési feladatok",
+    "toAnalysis": "Az elemzőtáblához",
+    "intro": "Állások, amelyeket a háttérmotor számol ki neked — egyszerre egy feladat, és szünetel, amíg élőben, külső motorral elemzel. A feladatot kinyitva látod a tárolt változatokat.",
+    "empty": "Még nincsenek feladatok.",
+    "emptyHint": "Az elemzőtáblán az óra ikonnal („Elemzés a háttérben”) jegyezhetsz elő egy állást.",
+    "untitled": "Cím nélkül",
+    "status": {
+      "queued": "várakozik",
+      "running": "számol",
+      "paused": "szüneteltetve",
+      "done": "kész",
+      "failed": "sikertelen"
+    },
+    "depthOf": "Mélység: {{reached}}/{{target}}",
+    "lines": "{{count}} változat",
+    "noResult": "Még nincs eredmény — ez a feladat még nem futott.",
+    "openInBoard": "Megnyitás az elemzőtáblán",
+    "apply": "Átvétel",
+    "moreLinesHint": "Több változat = a keresés újraindul; az eddigi eredmény látható marad, amíg az új keresés mélyebbre nem jut.",
+    "created": "Feladat felvéve — amint a háttérmotor szabad, elkezd számolni.",
+    "createFailed": "A feladatot nem sikerült létrehozni",
+    "updated": "Feladat módosítva.",
+    "updateFailed": "A feladatot nem sikerült módosítani.",
+    "deleteConfirm": "Törlöd ezt az elemzési feladatot?",
+    "deleteFailed": "A feladatot nem sikerült törölni."
+  },
+  "gameAnalysis": {
+    "title": "Játszmaelemzések",
+    "intro": "Dobj be egy egész játszmát — a háttérmotor minden állást végigszámol. Ez eltart egy ideig; a játszma mutatja a haladását, és bármikor megnézheted.",
+    "pgnLabel": "A játszma PGN-je",
+    "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
+    "depth": "Mélység",
+    "depthHint": "A 30-as mélység jó kompromisszum a megbízhatóság és az időtartam között — a 40 nagyjából tízszer annyiba kerül.",
+    "start": "Elemzés indítása",
+    "started": "Elemzés elindítva",
+    "startFailed": "Az elemzést nem sikerült elindítani",
+    "loadFailed": "A játszmaelemzéseket nem sikerült betölteni",
+    "deleteFailed": "A törlés nem sikerült",
+    "empty": "Még nincs elemzett játszma.",
+    "untitled": "Cím nélkül",
+    "toJobs": "Egyedi megbízások",
+    "progress": "{{done}} / {{total}} állás",
+    "depthLines": "Mélység {{depth}} · {{lines}} változat",
+    "notFound": "Ez az elemzés (már) nem létezik.",
+    "back": "Vissza az áttekintéshez",
+    "prev": "Előző lépés",
+    "next": "Következő lépés",
+    "flip": "Tábla megfordítása",
+    "startPosition": "Kiindulási állás",
+    "status": {
+      "pending": "várakozik",
+      "running": "számol",
+      "done": "kész",
+      "failed": "meghiúsult"
+    }
+  },
+  "guess": {
+    "title": "Pontjátszma",
+    "intro": "Találd ki egy elemzett játszma lépéseit egyenként: az egyik oldalt te vezeted, meglépsz, és rögtön pontot kapsz — ahhoz a lépéshez mérve, amit valóban játszottak.",
+    "startNew": "Új pontjátszma",
+    "yourRuns": "A meneteid",
+    "play": "Játék",
+    "toAnalyses": "Játszmaelemzések",
+    "sideLabel": "Te játszol",
+    "white": "Világos",
+    "black": "Sötét",
+    "untitled": "Cím nélkül",
+    "noGames": "Még nincs elemzett játszma.",
+    "analyseFirst": "Előbb elemezz egy játszmát",
+    "analysed": "{{done}} / {{total}} állás kiszámolva",
+    "score": "{{points}} / {{max}} pont",
+    "hits": "{{hits}} / {{moves}} játszmalépés eltalálva",
+    "progress": "{{done}} / {{total}} lépés",
+    "skip": "Passz",
+    "yourTurn": "Te lépsz ({{move}})",
+    "youPlayed": "Te: {{move}}",
+    "gamePlayed": "Játszma: {{move}}",
+    "gameMoveWouldBe": "A játszmalépés {{move}} volt",
+    "info": {
+      "gameMove": "Lépés a játszmából: {{move}} - értékelés {{eval}}",
+      "bestMove": "Legjobb lépés: {{move}} - értékelés {{eval}}"
+    },
+    "toTask": "Vissza a feladathoz",
+    "startPosition": "Alapállás",
+    "evalDelta": "{{delta}} a játszmalépéshez képest",
+    "continue": "Tovább",
+    "reply": "Válasz: {{move}}",
+    "evalAfter": "Állás utána: {{eval}}",
+    "finished": "A menet véget ért",
+    "review": "Visszatekintés",
+    "playingWhite": "Világossal játszol",
+    "playingBlack": "Sötéttel játszol",
+    "notFound": "Ez a pontjátszma (már) nem létezik.",
+    "back": "Vissza az áttekintéshez",
+    "startFailed": "A pontjátszmát nem sikerült elindítani",
+    "moveFailed": "A lépést nem sikerült értékelni",
+    "deleteFailed": "A törlés nem sikerült",
+    "status": {
+      "running": "fut",
+      "done": "befejezve"
+    },
+    "grade": {
+      "muchWorse": "Sokkal rosszabb",
+      "worse": "Rosszabb",
+      "similar": "Ugyanolyan jó",
+      "gameMove": "A játszmalépés",
+      "onlyMove": "Az egyetlen lépés",
+      "better": "Jobb, mint a játszmában",
+      "clearlyBetter": "Lényegesen jobb",
+      "skipped": "Passzolva"
+    },
+    "prevMove": "Előző lépés",
+    "nextMove": "Következő lépés"
+  },
+  "tournamentDirectory": {
+    "title": "Versenynaptár",
+    "help": "A versenyeket minden éjjel beolvassuk azokról az oldalakról, amelyek közzéteszik a naptárukat — ma a chess-results és a FIDE-naptár, később több is. Hozz létre egy keresési profilt hellyel és körzettel — ugyanez a profil vezérli a listát, a térképet, a naptárat és a közeli új versenyekről szóló értesítést.",
+    "search": "Név, helyszín, szervező keresése",
+    "from": "Ettől",
+    "to": "Eddig",
+    "weekendOnly": "Hétvége",
+    "reset": "Visszaállítás",
+    "empty": "Ezekre a szűrőkre nincs verseny.",
+    "count": "{{shown}} / {{total}} verseny",
+    "loadMore": "Több megjelenítése",
+    "loadError": "A versenyjegyzéket nem sikerült betölteni.",
+    "truncated": "Túl sok verseny van ezen a területen — csökkentsd a körzetet, hogy mindet lásd.",
+    "distance": "{{km}} km",
+    "players": "{{count}} résztvevő",
+    "cancelled": "Elmarad",
+    "approximate": "Csak hozzávetőlegesen behatárolva: a játszóhelyet nem sikerült feloldani, a pont a régió közepét mutatja.",
+    "pins": "{{count}} verseny a képkivágatban",
+    "bookmark": "Megjelölés",
+    "bookmarkRemove": "Megjelölés visszavonása",
+    "bookmarkRemoved": "Már nincs megjelölve. Maga a verseny megmarad.",
+    "bookmarkRemoveError": "A megjelölést nem sikerült visszavonni. Kérlek, próbáld újra.",
+    "bookmarked": "Megjelölve. Szólunk, ha az időpont vagy a helyszín megváltozik.",
+    "bookmarkedTooltip": "Megjelölve — az időpont- és helyszínváltozásokat jelezzük",
+    "bookmarkError": "A versenyt nem sikerült megjelölni.",
+    "openChessResults": "Megnyitás a chess-results oldalon",
+    "unknownTournament": "Ez a verseny (még) nem szerepel a jegyzékben.",
+    "noProfileHint": "Még nincs keresési profil. Ezzel körzeti keresést és értesítést kapsz a közeli új versenyekről.",
+    "tabs": {
+      "list": "Lista",
+      "map": "Térkép",
+      "calendar": "Naptár"
+    },
+    "speed": {
+      "Standard": "Hosszú",
+      "Rapid": "Rapid",
+      "Blitz": "Villám",
+      "Unknown": "Ismeretlen"
+    },
+    "detail": {
+      "date": "Időpont",
+      "place": "Helyszín",
+      "region": "Régió",
+      "timeControl": "Időbeosztás",
+      "rounds": "Fordulók",
+      "players": "Résztvevők",
+      "organizer": "Szervező",
+      "arbiter": "Főbíró",
+      "groups": "Csoportok",
+      "back": "Vissza a naptárhoz",
+      "director": "Versenyvezetés",
+      "results": "Résztvevők és eredmények",
+      "notImportedHint": "A résztvevők, a párosítások és a tabella még nincsenek fenn a RookHubon. Jelöld meg a versenyt, és rögtön lehívjuk őket.",
+      "venueMap": "Rendezés helye",
+      "importing": "A verseny lehívása folyik…",
+      "importDone": "A verseny lehívva — a résztvevők és az eredmények elérhetők.",
+      "importFailed": "A versenyt nem sikerült lehívni. Megjelölve marad, és magától újra lehívjuk.",
+      "toCalendar": "Hozzáadás a saját naptáramhoz",
+      "calendarDone": "A naptárbejegyzés elkészült — a felvételhez nyisd meg a fájlt.",
+      "calendarFailed": "A naptárbejegyzést nem sikerült létrehozni ezen az eszközön.",
+      "playDates": "Játéknapok",
+      "sources": "Megtalálva itt",
+      "notOnChessResults": "Nincs meghirdetve a chess-results oldalon — résztvevők, párosítások és tabella itt nem érhető el."
+    },
+    "calendar": {
+      "previousMonth": "Előző hónap",
+      "nextMonth": "Következő hónap",
+      "today": "Ma",
+      "more": "+{{count}} további",
+      "empty": "Ebben a hónapban nincs verseny."
+    },
+    "profile": {
+      "label": "Keresési profil",
+      "none": "Nincs körzet",
+      "manage": "Keresési profilok kezelése",
+      "new": "Új keresési profil",
+      "edit": "Szerkesztés",
+      "delete": "Törlés",
+      "newTitle": "Új keresési profil",
+      "editTitle": "Keresési profil szerkesztése",
+      "name": "Név",
+      "namePlaceholder": "pl. Otthon",
+      "place": "Település vagy irányítószám",
+      "placePlaceholder": "pl. 5020 Salzburg",
+      "radius": "Körzet: {{km}} km",
+      "speeds": "Időbeosztások",
+      "speedsHint": "Üresen = minden időbeosztás",
+      "minPlayers": "Minimális résztvevőszám",
+      "weekendOnly": "Csak hétvégén kezdődő versenyek",
+      "notifyNew": "Értesíts az ebben a körzetben induló új versenyekről",
+      "errorName": "Adj nevet a profilnak.",
+      "errorPlace": "Válassz egy települést a listából — a szervernek koordináták kellenek.",
+      "saveError": "A keresési profilt nem sikerült menteni."
+    },
+    "speedFilter": "Szűrés időbeosztás szerint",
+    "moreFilters": "Szűrők",
+    "minPlayers": "Min. résztvevő",
+    "groupCount": "{{count}} csoport",
+    "tilesFailed": "A térképcsempéket nem sikerült betölteni. A versenyek a helyükön ülnek, csak a háttértérkép hiányzik.",
+    "range": {
+      "label": "Időszak",
+      "quarter": "A következő negyedév",
+      "halfYear": "A következő hat hónap",
+      "year": "A következő tizenkét hónap",
+      "all": "Minden közelgő",
+      "custom": "Egyéni időszak"
+    },
+    "map": {
+      "openDetail": "Versenyoldal megnyitása",
+      "thisVenue": "Ez a helyszín: {{name}}"
+    },
+    "bookmarkedImporting": "Megjelölve. A verseny letöltése folyik — a résztvevők és az eredmények mindjárt jönnek.",
+    "place": {
+      "label": "Település",
+      "hint": "Keress rá, vagy használd a helyzetedet",
+      "useCurrent": "A jelenlegi helyzetem használata",
+      "error": {
+        "unsupported": "Ez a böngésző nem tud helyzetet megadni.",
+        "denied": "A helyzethez való hozzáférés le van tiltva. A böngésző beállításaiban ennél az oldalnál engedélyezheted.",
+        "unavailable": "A helyzetedet most nem sikerült meghatározni.",
+        "timeout": "A helymeghatározás túl sokáig tartott. Próbáld meg még egyszer."
+      }
+    },
+    "radius": {
+      "label": "Körzet",
+      "any": "Bárhol",
+      "km": "{{km}} km"
+    },
+    "kindFilter": "Egyéni vagy csapat",
+    "kind": {
+      "Individual": "Egyéni",
+      "Team": "Csapat",
+      "Unknown": "Nincs besorolva"
+    },
+    "ageFilter": "Korosztály",
+    "age": {
+      "U8": "U8",
+      "U10": "U10",
+      "U12": "U12",
+      "U14": "U14",
+      "U16": "U16",
+      "U18": "U18",
+      "U20": "U20",
+      "YouthUnspecified": "Ifjúsági",
+      "Senior": "Szeniorok"
+    },
+    "genderFilter": "Nemi kategória",
+    "gender": {
+      "Female": "Lányok / nők",
+      "Male": "Fiúk / férfiak",
+      "Open": "Nyílt"
+    },
+    "adultsOnly": "Csak felnőtt",
+    "hideLeagues": "Ligák elrejtése",
+    "audienceHelp": "Az „egyéni vagy csapat” magától a chess-resultstól jön — és minden, amit nem ismer fel csapatversenyként, egyéninek számít.\n\nA korosztály és a nemi kategória nem mezőből jön: olyan nincs, ezért a verseny nevéből olvassuk ki. Ez ott működik, ahol a név megnevezi a kategóriát („U12 lány”, „UNDER 16 BOYS”) — és sehol ott, ahol nem.\n\nA „Csak felnőtt” mindent elrejt, aminek ifjúsági jelölés van a nevében. A szeniorok maradnak — a szeniorsakk felnőttsakk.\n\nA liga egy egész szezonon át futó csapatverseny, vagy olyan, amelyik ezt a nevében is kimondja.\n\nValami rossz fiókba került? Minden versenyoldalon van „hibás esemény jelentése”, és ott azt kérdezzük, hogyan hívják az ilyen versenyeket a te vidékeden. Épp ez az, ami mindenkinek javít rajta.",
+    "missing": {
+      "cta": "Hiányzik a versenyed? Itt jelentsd be",
+      "blurb": "Nem minden szervező ott hirdet, ahonnan ez a jegyzék olvas. Egy hivatalos oldalra mutató link pótolható.",
+      "title": "Hiányzó versenyforrás bejelentése",
+      "lead": "Ez a jegyzék olyan versenyoldalakból töltődik fel, amelyek közzéteszik a naptárukat — aki máshol hirdet, az itt nem szerepel. A legtöbbet nem egyetlen időpont segít, hanem egy LINK: egy hivatalos oldal, amelyen a versenyeitek szerepelnek, rendszeresen kiolvasható, és onnantól mind megjelenik.",
+      "link": "Link a hivatalos oldalra",
+      "linkHint": "Szövetségi naptár, klubhonlap, versenysorozat oldala — minél hivatalosabb, annál jobb",
+      "linkRequired": "Adj meg egy teljes linket, amely http:// vagy https:// kezdetű.",
+      "message": "Van még valami, amit tudnunk kellene? (nem kötelező)",
+      "thanks": "Köszönjük — megnézzük az oldalt.",
+      "sendError": "Az üzenetet nem sikerült elküldeni. Próbáld meg még egyszer."
+    },
+    "report": {
+      "cta": "Hibás esemény jelentése",
+      "title": "Hibás bejegyzés jelentése",
+      "lead": "Mondd el, mi a hibás itt. Minden mező szabadon hagyható — a szöveg is: ha egy szó nélkül küldöd el, az is annyit mond, hogy „ezzel itt valami nem stimmel”.",
+      "current": "Jelenleg tárolva",
+      "message": "Mi a hiba?",
+      "learnTitle": "Két kérdés, amely ezen az egy versenyen túl is segít",
+      "namePattern": "Hogyan hívják az ilyen versenyeket a te vidékeden?",
+      "namePatternHint": "A kort és a közönséget a verseny nevéből olvassuk ki, és ezek a nevek helyiek — Tirolban az utánpótlásversenyt „Schachrallye”-nak hívják. Aki egyszer megnevez egy ilyen jelölést, azzal eléri, hogy a sorozat minden jövőbeli kiírása jó helyre kerüljön.",
+      "sourceLink": "Egy oldal, amelyen ez jobban látszik",
+      "thanks": "Köszönjük — a jelzés megérkezett, és tudunk rá válaszolni.",
+      "sendError": "A jelzést nem sikerült elküldeni. Próbáld meg még egyszer."
+    },
+    "card": {
+      "openDetail": "Versenyoldal megnyitása",
+      "ignored": "elrejtve",
+      "hide": "Elrejtés nekem",
+      "show": "Mutasd újra",
+      "hidden": "Elrejtve. Kimarad a kereséseidből, amíg újra meg nem mutatod.",
+      "shown": "Újra látható.",
+      "hideError": "Nem sikerült elrejteni. Próbáld meg még egyszer.",
+      "showIgnored": "Elrejtettek mutatása",
+      "rounds": "{{count}} forduló, {{from}} – {{to}}"
+    },
+    "source": {
+      "Unknown": "Ismeretlen forrás",
+      "ChessResults": "chess-results",
+      "Fide": "FIDE-naptár",
+      "Manual": "Kézzel felvéve"
+    }
+  },
+  "turnier": {
+    "brand": "Versenyek",
+    "toRookHub": "A RookHubra",
+    "profile": {
+      "title": "A profilom",
+      "person": "Név és e-mail",
+      "nameHelp": "A versenytörténet a chess-resultson keres rád, és ott a NÉV alapján megy a keresés — szám szerinti keresés nincs. Vezetéknév nélkül ez az oldal nem tud versenytörténetet mutatni.\n\nA megjelenített név az, amit mások látnak. A bejelentkezési neved sosem látszik.",
+      "displayNameHint": "Ez látszik másoknak a „{{username}}” helyett.",
+      "identity": "Játékosazonosítók",
+      "identityHelp": "Két embert is hívhatnak ugyanúgy, és a névkeresés mindkettőt hozza. Egy FIDE-azonosító vagy egy chess-results-azonosító dönti el, melyikük vagy te.\n\nEnélkül a versenytörténet az összes névrokonod összes versenyét mutatja — és ez fel is tűnik, mert olyan versenyek lesznek benne, amelyeket sosem játszottál.\n\nMindkét szám ott áll a saját chess-results-játékosoldaladon.",
+      "saveError": "Nem sikerült menteni. Próbáld meg még egyszer.",
+      "loadError": "A profilt nem sikerült betölteni."
+    },
+    "history": {
+      "title": "A versenyeim",
+      "help": "Melyik versenyeket játszottad, melyek jönnek még, és a lejátszottakban a pontjaid, a helyezésed és a teljesítmény-értékszámod.\n\nAz adatok a chess-resultsról jönnek, és ott a NÉV alapján megy a keresés — a vezetéknevednek tehát benne kell lennie a profilodban. Egy FIDE-azonosító vagy chess-results-azonosító dönti el, melyik névrokonod vagy te; enélkül más, veled azonos nevű emberek versenyei is idekerülnek.\n\nAz eredményeket versenyről versenyre hozzuk le, és utána megőrizzük. Egy hosszú versenytörténet első megtekintése ezért fokozatosan telik meg.",
+      "onlyMe": "Csak én",
+      "inexact": "azonosító nélkül",
+      "pending": "{{count}} eredmény letöltése…",
+      "upcoming": "Még jön",
+      "played": "Lejátszva",
+      "rankOf": "{{rank}} / {{of}}",
+      "roundsShort": "{{count}} forduló",
+      "performanceTooltip": "Teljesítmény-értékszám. Az értékszámod a verseny elején: {{before}}.",
+      "fetchingResult": "eredmény letöltése…",
+      "noSingleResult": "nincs egyéni eredmény",
+      "noSingleResultTooltip": "A chess-results ehhez a versenyhez nem vezet egyéni eredményt — a várakozás itt nem segít.",
+      "noName": "A profilodból hiányzik a vezetéknév — a chess-resultson név alapján keresünk, tehát nincs mit kikeresni.",
+      "sourceUnavailable": "A chess-results nem volt elérhető. Az utoljára lehozott állapot látszik.",
+      "empty": "Ezen a néven nem találtunk versenyt.",
+      "loadError": "A versenytörténetet nem sikerült betölteni.",
+      "fetching": "A verseny letöltése folyik — ez eltart egy pillanatig.",
+      "fetchSlow": "Még tart a letöltés. A feladat fut tovább; nézz vissza egy perc múlva.",
+      "fetchFailed": "A versenyt nem sikerült lehozni. Próbáld meg később.",
+      "friendWithoutName": "nincs név a profilban",
+      "playedCount": "{{count}} lejátszott verseny",
+      "noRating": "nincs értékszám",
+      "withoutDate": "Dátum nélkül",
+      "speed": {
+        "standard": "Hosszú",
+        "rapid": "Rapid",
+        "blitz": "Villám",
+        "unknown": "időbeosztás nélkül"
+      },
+      "countGames": "{{count}} játszma",
+      "countsTooltip": "Ebben az időbeosztásban lejátszott játszmák.",
+      "noFriendsYet": "Vegyél fel ismerősöket a RookHubon, hogy összevethesd velük a versenytörténetedet.",
+      "allSpeeds": "Mind"
+    }
+  },
+  "turnierAdmin": {
+    "title": "Belépés felhasználóként",
+    "lead": "Nézd meg a versenyoldalt valaki más fiókjával — így lehet megválaszolni, hogy „miért üres a naptára?”. Egy piros sáv végig jelzi, és vissza is vezet. A többi adminisztráció a RookHubban marad.",
+    "none": "Ehhez egy fiók sem illik.",
+    "loadFailed": "A fióklistát nem sikerült betölteni."
+  },
+  "tournamentsMoved": {
+    "leaving": "A versenyeknek saját oldaluk lett — átirányítunk.",
+    "noPartner": "A versenyeknek saját oldaluk lett.",
+    "link": "A versenyoldalra"
+  },
+  "help": {
+    "s": {
+      "feedback": {
+        "p": [
+          "Hibát találtál, vagy van egy kívánságod? A láblécben a „Visszajelzés / hiba jelentése” ponton keresztül közvetlenül a GitHub hibakövetőjéhez jutsz. A gyorsindító áttekintést bármikor megnyithatod a sávban lévő info-ikonnal."
+        ],
+        "t": "Visszajelzés és segítség"
+      },
+      "welcome": {
+        "t": "Üdvözlünk a RookHubban",
+        "p": [
+          "A RookHub a központi sakkportálod: élő versenyadatok a chess-results.com oldalról, napi és végtelen feladványedzés, könyvtanfolyamok, a Heti Posta, személyes edzéscélok, helyben futó motoros elemzés, valamint profil- és ismerősfunkciók – mindez egy helyen.",
+          "Sok minden fiók nélkül is működik (feladványok, elemzés, napi feladvány). A személyes fejlődéshez, a verseny-feliratkozásokhoz, az ismerősökhöz és az edzéscélokhoz jelentkezz be. Ez az oldal minden területet elmagyaráz – a tartalomjegyzékkel közvetlenül a kívánt részre ugorhatsz."
+        ]
+      },
+      "account": {
+        "t": "Fiók és bejelentkezés",
+        "p": [
+          "Felhasználónévvel és jelszóval regisztrálhatsz; az e-mail-cím megadása nem kötelező. A felső sávban a „Regisztráció” gombbal hozol létre fiókot, majd ugyanezekkel az adatokkal jelentkezel be.",
+          "Bejelentkezéskor jelöld be a „Maradjak bejelentkezve” lehetőséget, hogy 30 nap helyett 90 napig maradj bejelentkezve. Kijelentkezni bármikor tudsz a jobb felül lévő fiókmenüben (személy ikon)."
+        ]
+      },
+      "profile": {
+        "t": "Profil és sakkidentitás",
+        "p": [
+          "A profilodban adod meg a megjelenített nevedet és a kapcsolataidat: FIDE-azonosító, ChessResults-azonosító, chess.com- és Lichess-felhasználónév. Ezek kötik össze a RookHubot a külső sakkfiókjaiddal.",
+          "Ha megadod a ChessResults-azonosítódat, a közelgő versenyekre automatikusan feliratkozunk helyetted. A chess.com- és Lichess-nevedet az edzéscéljaid játék-követéséhez használjuk.",
+          "A játékoskeresővel (vezeték- és keresztnév szerint) megtalálod magad a ChessResults/FIDE adataiban, és közvetlenül átveheted a helyes azonosítót. A nyilvános profilod másoknak csak szűkített nézetet mutat – valódi név, ChessResults-azonosító és Discord nélkül."
+        ]
+      },
+      "discord": {
+        "catalog": "Katalógus",
+        "t": "Discord összekapcsolása",
+        "p": [
+          "Ha a sakkbot aktív a Discordodon, összekapcsolhatod a RookHub-fiókodat a Discorddal. A bot küld neked egy linket tokennel; ha be vagy jelentkezve, a kapcsolat azonnal létrejön, egyébként a következő bejelentkezésed után.",
+          "Összekapcsolva a napi feladvány és a Heti Posta ranglistáin a Discord-neveddel jelensz meg, és a bot meg tudja mutatni az edzési fejlődésedet. A kapcsolatot a profilodban bármikor bonthatod.",
+          "Az összekapcsolástól függetlenül mindenkit szívesen látunk a Discord-közösségünkben — csatlakozz a https://discord.gg/wczc4BJtMf címen, hogy beszélgess, kérdezz és kövesd a híreket."
+        ]
+      },
+      "friends": {
+        "t": "Ismerősök",
+        "p": [
+          "Az „Ismerősök” alatt más felhasználókra kereshetsz, és ismerőskérelmeket küldhetsz. A beérkező kérelmeket a „Kérelmek” fülön találod, ott elfogadhatod vagy elutasíthatod őket.",
+          "Egy kérelmet csak a címzett erősíthet meg. A meglévő ismerősi kapcsolatok bármikor megszüntethetők."
+        ]
+      },
+      "tournaments": {
+        "t": "Versenyek",
+        "p": [
+          "A RookHub élőben tölti le a versenyadatokat a chess-results.com oldalról. A versenylistában versenyekre kereshetsz, és megnyithatod a részleteket játékosokkal, csapatokkal, párosításokkal és egyéni eredményekkel – a fordulót a választómezőben állítod be.",
+          "A „Feliratkozás” gombbal kitűzöl egy versenyt a gyors eléréshez. A fordulófigyelő automatikusan felismeri az új fordulókat, és letölti őket. Játékosokat vagy csapatokat kedvencnek jelölhetsz, hogy kiemelve jelenjenek meg a nézetben.",
+          "Versenyenként személyes beállításokat is menthetsz, például kiemeléseket és jegyzeteket."
+        ]
+      },
+      "puzzles": {
+        "t": "Feladványok",
+        "p": [
+          "A standard feladványmód taktikai feladatokat ad neked egy nagy készletből. A megoldást közvetlenül a táblán lépheted le; a helyes és a hibás lépésekről azonnal visszajelzést kapsz.",
+          "A feladványok téma szerint szűrhetők. Bejelentkezve a fejlődésed a feladvány-Elo értékeddel együtt mentésre kerül – bejelentkezés nélkül is gyakorolhatsz, de a fejlődés akkor csak helyben, az eszközön marad."
+        ]
+      },
+      "endless": {
+        "t": "Végtelen mód",
+        "p": [
+          "A végtelen módban egyre nehezebb feladványok folyamatos sorozatát oldod meg, amíg túl sok hibát nem vétesz. A kezdő Elo értéket, a témákat, a fast-track küszöböket és a Stockfish-mélységet magad állítod be.",
+          "A rekordodat és a befejezett munkameneteket elmentjük; az előzményeket a fiókmenü „Feladvány-előzmények” pontja alatt látod, és a régi munkameneteket archiválhatod."
+        ]
+      },
+      "daily": {
+        "t": "Napi feladvány",
+        "p": [
+          "Minden nap (UTC szerint) van egy fix napi feladvány, amely mindenkinek ugyanaz – így közvetlenül összemérhetitek magatokat.",
+          "A megoldás után látod az összes megoldó ranglistáját. „Megoldónak” az számít, aki első próbálkozásra megoldja a feladványt. Ha össze vagy kapcsolva a Discorddal, a neved a bot Discord-beágyazásában is megjelenik."
+        ]
+      },
+      "courses": {
+        "t": "Tanfolyamok",
+        "p": [
+          "A tanfolyamok importált sakk-könyvek, amelyeket feladványról feladványra dolgozol át. Hogy mely könyveket látod, a csoportos engedélyeidtől függ; az adminisztrátorok mindegyiket látják.",
+          "Választhatsz a könyv sorrendje (sorban haladva) és a véletlen sorrend között. A fejlődésed könyvenként mentődik, és mindkét mód között közös; egy tanfolyam fejlődését vissza is állíthatod.",
+          "A „Tanfolyamok” menüpont csak akkor jelenik meg, ha legalább egy könyvet engedélyeztek neked."
+        ]
+      },
+      "weekly": {
+        "t": "Heti Posta",
+        "p": [
+          "A Heti Posta a sakkbot heti bejegyzéseit képezi le: egy játszma vagy tanulmány határidővel, amelyet feladványról feladványra játszol végig. Az olvasás bejelentkezés nélkül megy, a végigjátszáshoz be kell jelentkezned.",
+          "A „Kész” azt jelenti, hogy minden feladványt lejátszottál (akár megoldottad, akár nem). A feladás vagy az egy lépés utáni visszaállítás hibás próbálkozásnak számít. Élő ranglista mutatja az összes résztvevőt."
+        ]
+      },
+      "trainingGoals": {
+        "t": "Edzéscélok",
+        "p": [
+          "Állíts be egy napi edzésidő-célt (percben), valamint heti célokat a lejátszott játszmákra (rapid/hosszú) és a teljes edzésnapokra. Az edzők csoportonként megadhatnak alapértelmezést; a személyes célod élvez elsőbbséget.",
+          "A követő minden napot a célteljesítés szerint színez (semmi/részleges/teljes) – a napi állapot az edzésidődből adódik (feladványok, tanfolyamok, Chessable és a rögzített offline tevékenység), a játék pedig heti cél.",
+          "A rapid és hosszú játszmákat a RookHub automatikusan letölti a Lichessről és a chess.comról (nyilvános adatok, ott nem kell bejelentkezned). A „Játékidő frissítése” gombbal azonnal elindíthatod. A bullet, a villám és a levelezési játszmák nem számítanak."
+        ]
+      },
+      "stats": {
+        "t": "Statisztika",
+        "p": [
+          "A fiókmenü „Statisztika” pontja alatt látod a feladvány-Elo görbédet és a megoldott feladványaid további, időbeli kiértékeléseit."
+        ]
+      },
+      "analysis": {
+        "t": "Elemzés",
+        "p": [
+          "Az elemzés alapértelmezés szerint helyben, a böngésződben fut Stockfishsel (WebAssembly) – szerver nélkül, offline is. Emellett összekapcsolhatsz egy, a Lichess-fiókodban regisztrált külső motort, és két motort össze is hasonlíthatsz. Több fő változatot (MultiPV) és kiértékelést kapsz minden állásra.",
+          "Az elemzés bejelentkezés nélkül is használható. Az első indításkor a böngészőmotor egyszer letölt kb. 7 MB-ot; utána offline is rendelkezésre áll."
+        ]
+      },
+      "repertoires": {
+        "t": "Repertoárok",
+        "p": [
+          "A repertoárok PGN-fájlok gyűjteményei (megnyitás/középjáték/végjáték), amelyeket feltöltesz és kezelsz. Fájlokat fogd és vidd módszerrel adhatsz hozzá, letöltheted őket, és lekérheted az egyesített PGN-t (fájlonként max. 10 MB).",
+          "Az opcionális böngészőbővítménnyel, illetve a userscripttel a megnyitási repertoárjaidat közvetlenül játék közben ellenőrizheted a chess.comon és a lichess.orgon (lásd „Böngészőbővítmény és userscript”)."
+        ]
+      },
+      "offline": {
+        "t": "Offline és app-telepítés",
+        "p": [
+          "A RookHub egy Progressive Web App: appként telepítheted, és sok mindent offline is használhatsz. A feladványok, a végtelen készlet, egész könyvek és a Stockfish-motor előre gyorsítótárba kerülnek.",
+          "Az offline megoldott feladványok sorba kerülnek, és automatikusan szinkronizálódnak, amint újra online vagy. Android-telepítési útmutatót az APK-val együtt a fiókmenü „App telepítése” pontja alatt találsz."
+        ]
+      },
+      "settings": {
+        "t": "Megjelenés és nyelv",
+        "p": [
+          "A nap/hold ikonnal válthatsz a világos, a sötét és a rendszer szerinti megjelenés között. A földgömb ikon a nyelvet állítja át – a RookHub 25 nyelvet beszél, és a választásodat elmentjük."
+        ]
+      },
+      "tokens": {
+        "t": "API-tokenek és chess.com-bővítmény",
+        "p": [
+          "A profilodban személyes API-tokeneket hozhatsz létre, pl. a chess.com-böngészőbővítményhez, amely közvetlenül a táblánál mutatja a repertoárjaidat. A nyers tokent csak egyszer, a létrehozáskor mutatjuk meg – másold ki azonnal.",
+          "A tokeneknek van hatókörük (scope) és opcionális lejárati dátumuk, és bármikor visszavonhatók."
+        ]
+      },
+      "extension": {
+        "t": "Böngészőbővítmény és userscript (RepCheck)",
+        "p": [
+          "A RepCheck a chess.com és a lichess.org elemzőoldalain kiemeli, melyik lépéstől lép ki a játszmád a tárolt megnyitási repertoárodból. A repertoár közben a szerveren marad – a bővítmény csak az aktuális játszma lépéslistáját küldi el, és az eltérést kapja vissza.",
+          "Két, azonos működésű változat létezik: egy böngészőbővítmény (elérhető a Chrome Web Store-ban, valamint aláírt változatként Firefoxhoz) és egy Tampermonkey-userscript, amely minden olyan böngészőben fut, amelyen van Tampermonkey/Greasemonkey.",
+          "Beállítás: hozz létre a profilodban a „Bővítmény-tokenek” alatt egy tokent („extension” hatókörrel), nyisd meg a chess.comon vagy a lichess.orgon a repertoársávban a fogaskerék-panelt, add meg a RookHub-URL-edet és a tokent, majd kattints a „Csatlakozás” gombra.",
+          "Telepítés, automatikus frissítés és részletek: https://github.com/kahalm/repcheck — a bővítmény a Chrome Web Store-ban a https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn címen, aláírt Firefox-változatként pedig a https://addons.mozilla.org/en-US/firefox/addon/repcheck/ címen érhető el, a Tampermonkey-userscript pedig közvetlenül a https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js címről importálható."
+        ]
+      },
+      "privacy": {
+        "t": "Adatvédelem és fiók törlése",
+        "p": [
+          "Az impresszumot és az adatvédelmi tájékoztatót a megfelelő oldalakon éred el. A fiókodat magad is törölheted: ilyenkor az identitásod és a személyes adataid anonimizálódnak, az anonimizált statisztika pedig megmarad (GDPR)."
+        ]
+      }
+    },
+    "title": "Súgó és útmutató",
+    "subtitle": "Minden, amit a RookHubról tudnod kell – lépésről lépésre.",
+    "tocTitle": "Tartalom",
+    "backToTop": "Vissza a tetejére"
+  },
+  "messages": {
+    "title": "Üzenetek",
+    "adminTeam": "Admin-csapat",
+    "you": "Te",
+    "replyLabel": "A válaszod",
+    "send": "Küldés",
+    "sendError": "Az üzenetet nem sikerült elküldeni.",
+    "emptyUserCanWrite": "Még nincsenek üzenetek. Írj lent az admin-csapatnak — a választ itt kapod meg.",
+    "writeLabel": "Az üzeneted"
+  },
+  "leaderboards": {
+    "title": "Ranglisták",
+    "error": "A ranglistákat nem sikerült betölteni.",
+    "empty": "Még nincsenek bejegyzések.",
+    "period": {
+      "weekly": "Ezen a héten",
+      "monthly": "Ebben a hónapban",
+      "alltime": "Összesített"
+    },
+    "category": {
+      "puzzles": "Megoldott feladványok",
+      "endlessRuns": "Endless-futamok",
+      "courseLines": "Tanfolyam-változatok",
+      "dailyPuzzles": "Megoldott napi feladványok"
+    },
+    "unit": {
+      "puzzles": "feladvány",
+      "runs": "futam",
+      "lines": "változat",
+      "daily": "napi feladvány"
+    }
+  },
+  "reprocess": {
+    "available": {
+      "courses": "{{count}} tanfolyam régebbi feldolgozást használ, és frissíthető — pl. hogy megjelenjenek a könyv lépésenkénti megjegyzései.",
+      "repertoires": "{{count}} repertoár régebbi feldolgozást használ, és frissíthető."
+    },
+    "needsReimport": {
+      "courses": "{{count}} kézzel feltöltött tanfolyam nem frissíthető automatikusan — importáld újra a PGN-t a legújabb feldolgozáshoz.",
+      "repertoires": "{{count}} repertoár kézi újraimportálást igényel a frissítéshez."
+    },
+    "update": "Frissítés ({{count}})",
+    "updateTip": "A tárolt forrással rendelkező elemek újrafeldolgozása és a Chessable-elemek újbóli letöltése (a gyorsítótárazottak azonnal frissülnek, letöltés nélkül).",
+    "working": "Frissítés folyamatban…",
+    "started": "A frissítés elindult — a háttérben fut.",
+    "failed": "A frissítés sikertelen. Kérlek, próbáld újra.",
+    "dismiss": "Értem"
+  },
+  "remembered": {
+    "title": "Megjelölt állások",
+    "hint": "Állások, amelyeket a RepCheck-bővítménnyel jelöltél meg a Chessable-ről („Remember line”).",
+    "empty": "Még nincsenek megjelölt állások. Használd a „Remember line” funkciót a RepCheck-bővítményben a chessable.com oldalon.",
+    "unknownCourse": "Ismeretlen tanfolyam",
+    "analyze": "Elemzés",
+    "copyFen": "FEN másolása",
+    "delete": "Törlés",
+    "copied": "FEN másolva",
+    "copyFailed": "A másolás sikertelen",
+    "deleteConfirm": "Törlöd ezt a megjelölt állást?",
+    "errors": {
+      "load": "A megjelölt állásokat nem sikerült betölteni",
+      "delete": "A törlés sikertelen"
+    },
+    "analysisOrigin": "Elemzési feladat",
+    "analysisTooltip": "Ennek az állásnak a háttérelemzése — ugrás a feladatok oldalára",
+    "selectAll": "Összes kijelölése, amelyhez nincs feladat ({{count}})",
+    "selectedCount": "{{count}} kijelölve",
+    "analyzeSelected": "Elemzés",
+    "clearSelection": "Kijelölés megszüntetése",
+    "selectHint": "Jelöld be az állásokat, és elemeztesd őket együtt a háttérben.",
+    "selectForAnalysis": "Kijelölés elemzéshez"
+  },
+  "solveMode": {
+    "title": "Hogyan szeretnél itt játszani?",
+    "titleFor": "Hogyan szeretnéd játszani ezt: „{{scope}}”?",
+    "intro": "Területenként egyszer kérdezünk rá. A választásodat megjegyezzük — bármikor átválthatsz.",
+    "training": "Edzésmód",
+    "trainingDesc": "A tábla befagyasztva marad — a lépéseket bábuk mozgatása nélkül adod meg (a beállított vizualizációs szinted érvényes).",
+    "easy": "Egyszerű mód",
+    "easyDesc": "Mozgasd a bábukat a szokásos módon, mint bármelyik más táblán.",
+    "switchHint": "Bármikor átválthatsz a megoldó ⋮ menüjén keresztül.",
+    "switchedTraining": "Edzésmód",
+    "switchedEasy": "Egyszerű mód",
+    "switch": "Játékmód",
+    "scope": {
+      "puzzles": "Feladványok",
+      "endless": "Endless",
+      "daily": "Napi feladvány",
+      "book": "Könyv-feladványok"
+    }
+  },
+  "install": {
+    "pageTitle": "RookHub telepítése",
+    "pageIntro": "Telepítsd a RookHubot appként az eszközödre. Válaszd azt a változatot, amelyik a rendszeredhez illik.",
+    "apk": {
+      "title": "Android-app (APK)",
+      "desc": "Töltsd le a natív Android-appot APK-fájlként, és telepítsd kézzel.",
+      "step1": "Koppints lent az „APK letöltése” gombra – legjobb, ha közvetlenül az Android-eszközödön.",
+      "step2": "Nyisd meg a letöltött fájlt. Ha rákérdez, engedélyezd a böngésződnek az „Ismeretlen forrásból való telepítést”.",
+      "step3": "Erősítsd meg a telepítést – kész. A RookHub appként jelenik meg az indítóban.",
+      "download": "APK letöltése",
+      "downloadAnyway": "APK letöltése mégis",
+      "unavailable": "Az APK közvetlen telepítése csak Androidon lehetséges – a jelenlegi rendszereden nem. A fájlt ettől függetlenül letöltheted, és átmásolhatod egy Android-eszközre."
+    },
+    "pwa": {
+      "title": "Telepítés appként (PWA)",
+      "desc": "A RookHubot közvetlenül a böngészőből telepíti – Androidon, Windowson, macOS-en és Linuxon. Utána saját ablakban és offline is fut.",
+      "button": "Telepítés most",
+      "installed": "A RookHub ezen az eszközön már appként telepítve van.",
+      "iosTitle": "iPhone / iPad (Safari)",
+      "ios1": "Nyisd meg ezt az oldalt Safariban.",
+      "ios2": "Koppints lent a Megosztás ikonra.",
+      "ios3": "Válaszd a „Hozzáadás a kezdőképernyőhöz” lehetőséget, és erősítsd meg a „Hozzáadás” gombbal.",
+      "unavailable": "Az appként való közvetlen telepítés a jelenlegi böngésződben/rendszereden nem lehetséges. Nyisd meg a RookHubot Chrome-ban vagy Edge-ben, hogy telepíthesd az appot."
     }
   }
 }

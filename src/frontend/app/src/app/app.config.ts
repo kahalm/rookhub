@@ -8,6 +8,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import localeHr from '@angular/common/locales/hr';
+import localeHu from '@angular/common/locales/hu';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
@@ -22,6 +23,7 @@ import { resolveStartupLocale } from './core/locale.service';
 // statt immer en-US. Die effektive Start-Locale steckt im LOCALE_ID-Provider unten.
 registerLocaleData(localeDe);
 registerLocaleData(localeHr);
+registerLocaleData(localeHu);
 
 export const appConfig: ApplicationConfig = {
   providers: [

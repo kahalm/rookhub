@@ -8,6 +8,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import localeHr from '@angular/common/locales/hr';
+import localeHu from '@angular/common/locales/hu';
 
 import { routes } from './app.routes';
 import { authInterceptor } from '@rh/core/auth.interceptor';
@@ -18,6 +19,7 @@ import { resolveStartupLocale } from '@rh/core/locale.service';
 
 registerLocaleData(localeDe);
 registerLocaleData(localeHr);
+registerLocaleData(localeHu);
 
 /**
  * Die Turnierseite teilt sich Auth, Sprache und die HTTP-Kette mit RookHub (Import ueber `@rh/*`,

@@ -59,7 +59,14 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 
 ## Lokalisierung (ngx-translate)
 
-- **Sprachen**: `en` (Default/Fallback), `de`, `hr`. Übersetzungen liegen in `public/i18n/{en,de,hr}.json` (statisch unter `/i18n/*.json` ausgeliefert).
+- **Sprachen**: `en` (Default/Fallback), `de`, `hr`, `hu` — die VOLLSTÄNDIG gepflegten. Sie stehen in
+  `FORMAT_LOCALES` (`core/locale.service.ts`), und wer dort eine Sprache einträgt, verpflichtet sich zur
+  Vollständigkeit: `i18n-parity.spec.ts` verlangt für genau diese dieselben Keys wie `en`, mit gleichen
+  `{{Platzhaltern}}` und ohne leere Werte. Die übrigen 21 `SUPPORTED_LANGS` sind Teilübersetzungen und
+  fallen Key für Key auf `en` zurück. Alle Dateien liegen in `public/i18n/<code>.json` (statisch unter
+  `/i18n/*.json` ausgeliefert); für `FORMAT_LOCALES` werden zusätzlich die Angular-Locale-Daten
+  registriert (`registerLocaleData` in BEIDEN `app.config.ts`) — ohne das formatieren Datums- und
+  Zahlen-Pipes über `en`.
 - **Setup**: `provideTranslateService({ fallbackLang: 'en', loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }) })` in `app.config.ts`. `@ngx-translate/core` + `@ngx-translate/http-loader` **v18** (voll standalone: **kein `TranslateModule` mehr** → `TranslatePipe` importieren; `currentLang`/`fallbackLang` sind **Signals** → `currentLang()`; `defaultLang`/`getDefaultLang()` → `getFallbackLang()`; in Specs statt `TranslateModule.forRoot()` → `provideTranslateService({ fallbackLang: 'en' })` in `providers`).
 - **`core/locale.service.ts`**: ermittelt Startsprache (localStorage `rookhub_lang` → Browser → `en`), `use(lang)` persistiert. Wird in `AppComponent`-Konstruktor via `init()` gestartet. Sprachumschalter (Globus-Icon) in der Navbar.
 - **Verwendung**: Templates `{{ 'ns.key' | translate }}` bzw. Attribute via Binding (`[attr.title]="'ns.key' | translate"`); dynamische Strings im TS via `TranslateService.instant('ns.key', { param })` mit `{{param}}`-Platzhaltern. Jede Standalone-Component, die übersetzt, importiert `TranslatePipe` (ngx-translate 18 — `TranslateModule` gibt es nicht mehr).

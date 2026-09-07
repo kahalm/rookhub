@@ -26,10 +26,13 @@ export type AppLang = (typeof SUPPORTED_LANGS)[number];
 const RTL_LANGS: readonly AppLang[] = ['ar', 'fa'];
 
 // Sprachen, für die wir Angular-Locale-Daten registrieren (für DatePipe/DecimalPipe etc.).
-// Nur die tatsächlich übersetzten Sprachen; alle anderen formatieren über 'en'
+// Zugleich die Liste der VOLLSTÄNDIG gepflegten Sprachen: `i18n-parity.spec.ts` verlangt für
+// genau diese dieselben Schlüssel wie in `en` — wer hier eine Sprache einträgt, verpflichtet sich
+// zur Vollständigkeit. Alle übrigen SUPPORTED_LANGS fallen Schlüssel für Schlüssel auf 'en'
+// zurück; sie formatieren auch über 'en'
 // (vermeidet „Missing locale data"-Fehler bei nicht registrierten Locales). 'en' ist
 // in Angular eingebaut und muss nicht registriert werden.
-export const FORMAT_LOCALES: readonly string[] = ['en', 'de', 'hr'];
+export const FORMAT_LOCALES: readonly string[] = ['en', 'de', 'hr', 'hu'];
 
 /**
  * Ermittelt die Start-Locale für `LOCALE_ID` (Bootstrap) — gleiche Quelle wie
