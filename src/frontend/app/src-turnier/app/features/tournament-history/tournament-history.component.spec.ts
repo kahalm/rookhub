@@ -201,6 +201,40 @@ describe('TournamentHistoryComponent', () => {
   });
 
   /**
+   * Der Filter greift UEBERALL gleich — Liste, Jahresgruppen und Summen. Eine Zeile, die eine
+   * andere Menge zusammenfasst als die Tabelle darunter, waere schlimmer als kein Filter.
+   */
+  it('schränkt Liste UND Auswertung auf die gewählte Bedenkzeit ein', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '1', speed: 'blitz', performanceRating: 1600, endDate: '2025-01-06' }),
+        played({ chessResultsId: '2', speed: 'standard', performanceRating: 1800, endDate: '2025-08-30' }),
+      ],
+    })]);
+
+    component.onSpeedFilter('blitz');
+
+    const h = component.current()!;
+    expect(component.past(h).map(e => e.chessResultsId)).toEqual(['1']);
+    expect(component.summary(h).speeds.map(s => s.speed)).toEqual(['blitz']);
+    expect(component.summary(h).played).toBe(1);
+  });
+
+  /** Angeboten werden nur Klassen, in denen dieses Konto wirklich gespielt hat. */
+  it('bietet nur vorhandene Bedenkzeiten als Filter an', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '1', speed: 'blitz' }),
+        played({ chessResultsId: '2', speed: 'standard' }),
+      ],
+    })]);
+
+    expect(component.availableSpeeds()).toEqual(['standard', 'blitz']);
+  });
+
+  /**
    * Turniere und Partien sind zwei verschiedene Groessen: fuenf Wochenend-Opens sind fuenf
    * Turniere und rund 25 Partien, eine Ligasaison ein Turnier und drei Partien.
    */

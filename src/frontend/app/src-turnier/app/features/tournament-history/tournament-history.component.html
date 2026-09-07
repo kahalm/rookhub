@@ -30,6 +30,18 @@
   }
 
   <div class="filter-bar">
+    <!-- Nach BEDENKZEIT einschraenken. Angeboten werden nur die Klassen, in denen dieses Konto
+         wirklich gespielt hat — ein Knopf, der garantiert eine leere Tabelle liefert, ist keiner. -->
+    @if (availableSpeeds().length > 1) {
+      <mat-button-toggle-group class="speed-filter" [value]="speedFilter()"
+                               (change)="onSpeedFilter($event.value)" hideSingleSelectionIndicator>
+        <mat-button-toggle [value]="null">{{ 'turnier.history.allSpeeds' | translate }}</mat-button-toggle>
+        @for (speed of availableSpeeds(); track speed) {
+          <mat-button-toggle [value]="speed">{{ ('turnier.history.speed.' + speed) | translate }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+    }
+
     @if (friends().length === 0) {
       <span class="hint">{{ 'turnier.history.noFriendsYet' | translate }}</span>
     }

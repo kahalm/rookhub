@@ -3207,10 +3207,10 @@
         "blitz": "Blitz",
         "unknown": "ohne Bedenkzeit"
       },
-      "countTournaments": "{{count}} Turniere",
       "countGames": "{{count}} Partien",
-      "countsTooltip": "Turniere und gespielte Partien in dieser Bedenkzeit.",
-      "noFriendsYet": "Füge auf RookHub Freunde hinzu, um deinen Verlauf mit ihrem zu vergleichen."
+      "countsTooltip": "Gespielte Partien in dieser Bedenkzeit.",
+      "noFriendsYet": "Füge auf RookHub Freunde hinzu, um deinen Verlauf mit ihrem zu vergleichen.",
+      "allSpeeds": "Alle"
     }
   },
   "turnierAdmin": {

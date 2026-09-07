@@ -3207,10 +3207,10 @@
         "blitz": "Blitz",
         "unknown": "no time control"
       },
-      "countTournaments": "{{count}} tournaments",
       "countGames": "{{count}} games",
-      "countsTooltip": "Tournaments and games played in this time control.",
-      "noFriendsYet": "Add friends on RookHub to compare your history with theirs."
+      "countsTooltip": "Games played in this time control.",
+      "noFriendsYet": "Add friends on RookHub to compare your history with theirs.",
+      "allSpeeds": "All"
     }
   },
   "turnierAdmin": {

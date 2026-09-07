@@ -3207,10 +3207,10 @@
         "blitz": "Blic",
         "unknown": "bez vremenske kontrole"
       },
-      "countTournaments": "turnira: {{count}}",
       "countGames": "partija: {{count}}",
-      "countsTooltip": "Turniri i odigrane partije u ovoj vremenskoj kontroli.",
-      "noFriendsYet": "Dodaj prijatelje na RookHubu da usporediš svoju povijest s njihovom."
+      "countsTooltip": "Odigrane partije u ovoj vremenskoj kontroli.",
+      "noFriendsYet": "Dodaj prijatelje na RookHubu da usporediš svoju povijest s njihovom.",
+      "allSpeeds": "Sve"
     }
   },
   "turnierAdmin": {

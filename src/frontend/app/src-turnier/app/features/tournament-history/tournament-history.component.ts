@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription, catchError, of, switchMap, takeWhile, timer } from 'rxjs';
@@ -15,7 +16,7 @@ import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
-import { HISTORY_SPEEDS, HistoryFriend, PlayerHistory, PlayerHistoryEntry, SpeedSummary } from './tournament-history.model';
+import { HISTORY_SPEEDS, HistoryFriend, HistorySpeed, PlayerHistory, PlayerHistoryEntry, SpeedSummary } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
 
 /**
@@ -52,8 +53,8 @@ export interface HistoryTab {
   selector: 'app-tournament-history',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatButtonModule, MatCardModule, MatIconModule,
-    MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
+    CommonModule, FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule,
+    MatIconModule, MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent,
   ],
   templateUrl: './tournament-history.component.html',
@@ -114,6 +115,32 @@ export class TournamentHistoryComponent implements OnInit {
     const index = this.tabs().findIndex(t => t.userId === id);
     return index < 0 ? 0 : index;
   });
+
+  /**
+   * Auf welche Bedenkzeit die Ansicht eingeschraenkt ist. `null` = alle.
+   *
+   * <p>Der Filter greift ueberall gleich: Liste, Jahresgruppen UND Summen. Eine Zeile, die eine
+   * andere Menge zusammenfasst als die Tabelle darunter, ist schlimmer als kein Filter.</p>
+   */
+  readonly speedFilter = signal<HistorySpeed | null>(null);
+
+  /** Nur die Klassen anbieten, in denen dieses Konto ueberhaupt gespielt hat. */
+  readonly availableSpeeds = computed(() => {
+    const history = this.current();
+    if (!history) return [];
+    const present = new Set(history.entries.map(e => e.speed));
+    return HISTORY_SPEEDS.filter(s => present.has(s));
+  });
+
+  onSpeedFilter(speed: HistorySpeed | null): void {
+    this.speedFilter.set(speed);
+  }
+
+  /** Die Eintraege, die der Filter durchlaesst. */
+  private filtered(entries: PlayerHistoryEntry[]): PlayerHistoryEntry[] {
+    const speed = this.speedFilter();
+    return speed === null ? entries : entries.filter(e => e.speed === speed);
+  }
 
   /** Schluessel des gemerkten Reiters — sonst faengt man nach jedem Besuch wieder bei sich an. */
   static readonly ViewKey = 'rh.turnier.historyView';
@@ -246,14 +273,14 @@ export class TournamentHistoryComponent implements OnInit {
    */
   upcoming(history: PlayerHistory): PlayerHistoryEntry[] {
     const today = this.today();
-    return history.entries
+    return this.filtered(history.entries)
       .filter(e => e.endDate !== null && e.endDate >= today)
       .sort((a, b) => (a.endDate ?? '').localeCompare(b.endDate ?? ''));
   }
 
   past(history: PlayerHistory): PlayerHistoryEntry[] {
     const today = this.today();
-    return history.entries.filter(e => e.endDate === null || e.endDate < today);
+    return this.filtered(history.entries).filter(e => e.endDate === null || e.endDate < today);
   }
 
   private today(): string {
@@ -319,17 +346,21 @@ export class TournamentHistoryComponent implements OnInit {
   }
 
   /**
-   * „3 Turniere · 14 Partien" in einer Klammer — Turniere und Partien sind zwei verschiedene
-   * Groessen (fuenf Wochenend-Opens sind fuenf Turniere und rund 25 Partien, eine Ligasaison ein
-   * Turnier und drei Partien). Kennt noch keine Karte die Partienzahl, steht nur die Turnierzahl
-   * da statt einer erfundenen Null.
+   * Die PARTIEN in einer Klammer — mehr nicht.
+   *
+   * <p>Hier stand zusaetzlich die Zahl der Turniere je Klasse, und die Zeile las sich damit als
+   * „12 Turniere · 67 Partien" hinter jeder einzelnen Bedenkzeit. Das ist dreimal dieselbe
+   * Buchhaltung nebeneinander; die Gesamtzahl der Turniere steht ohnehin am Anfang der Zeile, und
+   * innerhalb einer Klasse ist die PARTIENzahl die aussagekraeftigere Groesse (fuenf
+   * Wochenend-Opens sind fuenf Turniere und rund 25 Partien, eine Ligasaison ein Turnier und drei
+   * Partien).</p>
+   *
+   * <p>Kennt noch keine Karte die Partienzahl, bleibt die Klammer WEG statt eine erfundene Null
+   * zu zeigen.</p>
    */
   counts(summary: SpeedSummary): string {
-    const tournaments = this.translate.instant('turnier.history.countTournaments', { count: summary.played });
-    if (summary.games === null) return `(${tournaments})`;
-
-    const games = this.translate.instant('turnier.history.countGames', { count: summary.games });
-    return `(${tournaments} · ${games})`;
+    if (summary.games === null) return '';
+    return `(${this.translate.instant('turnier.history.countGames', { count: summary.games })})`;
   }
 
   /**
