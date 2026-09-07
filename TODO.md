@@ -177,6 +177,29 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [ ] **Turnierverlauf: die Spielerkarte sparen, wo das Turnier schon importiert ist** (Frage des
+  Nutzers 2026-09-07, bewusst nur vermerkt). Heute wird JE Spieler UND Turnier eine Spielerkarte
+  geholt (`art=9&snr=`), weil Punkte, Performance, Platz und Elo-Aenderung nur dort stehen. Geteilt
+  wird schon, was dem TURNIER gehoert: die Turnierdaten in der Crawler-DB und die Bedenkzeit
+  (`TournamentTimeControls`, je `ChessResultsId` einmal); und was dem SPIELER gehoert
+  (`PlayerTournamentResults`, `PlayerHistorySyncs`), haengt am `PlayerKey` und nicht am Konto — zwei
+  Konten derselben Person und jeder Freund, der den Verlauf ansieht, teilen es sich.
+
+  **Was noch ginge:** ist ein Turnier VOLLSTAENDIG importiert, liegen die Rundenergebnisse aller
+  Spieler bereits in der Crawler-DB (`PlayerResults`: Ergebnis, Gegner, **Gegner-Elo** je Runde).
+  Daraus lassen sich **Punkte und Performance rechnen** — ein DB-Zugriff statt eines Seitenabrufs,
+  und zwar fuer JEDEN Spieler dieses Turniers.
+
+  **Der Vorbehalt, der die Sache begrenzt:** `Players` fuehrt weder Punkte noch Platz (nur
+  Name/Titel/FideId/Elo/Land/Brett/Snr). Der **Platz waere nur ueber die Punktzahl geschaetzt** (die
+  Feinwertung fehlt) und die **Elo-Aenderung gar nicht ableitbar** (K-Faktor + die Rundung von
+  chess-results). Von vier Zahlen also zwei exakt, eine ungefaehr, eine nicht.
+
+  **Vorschlag:** die Karte nicht ersetzen, sondern ueberspringen, wo das Turnier importiert ist und
+  Punkte + Performance genuegen; fuer Platz und Elo-Aenderung weiterhin die Karte. **Lohnt sich erst,
+  wenn mehrere Konten dieselben Turniere spielen** (Vereinskollegen in derselben Liga) — am
+  Dev-Stand ist von 23 Turnieren eines importiert, der Gewinn waere heute ein einzelner Abruf.
+
 - [ ] **Punktepartie/Partie-Analyse: Reste aus dem Review 2026-09-06** (die 8 behobenen Funde stehen
   im Changelog 0.399.1; das hier bleibt bewusst liegen):
   1. **Eine gescheiterte Partie-Analyse laesst sich nicht neu anstossen.** Ohne hinterlegte
