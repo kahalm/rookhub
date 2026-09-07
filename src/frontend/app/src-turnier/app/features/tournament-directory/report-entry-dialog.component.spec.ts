@@ -15,7 +15,7 @@ function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
     rounds: 7, playerCount: 40, lat: 47.16, lon: 11.86, geoSource: 'City',
     geoPlaceName: 'St. Veit in Defereggen', distanceKm: null, cancelled: false, subscribed: false,
     groupSize: 1, groups: [], venues: [], kind: 'Team', isLeague: true,
-    ageGroups: [], gender: 'Female', ...over,
+    ageGroups: [], gender: 'Female', ignored: false, roundDates: [], sources: [], ...over,
   };
 }
 

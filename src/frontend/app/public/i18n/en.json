@@ -3146,6 +3146,17 @@
       "sourceLink": "A page where this is easier to see",
       "thanks": "Thank you — the report has arrived and we can reply to it.",
       "sendError": "The report could not be sent. Please try again."
+    },
+    "card": {
+      "openDetail": "Open tournament page",
+      "ignored": "hidden",
+      "hide": "Hide for me",
+      "show": "Show again",
+      "hidden": "Hidden. It stays out of your searches until you show it again.",
+      "shown": "Shown again.",
+      "hideError": "Could not be hidden. Please try again.",
+      "showIgnored": "Show hidden ones",
+      "rounds": "{{count}} rounds, {{from}} to {{to}}"
     }
   },
   "turnier": {

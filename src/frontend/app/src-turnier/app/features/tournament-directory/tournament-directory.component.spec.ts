@@ -25,6 +25,7 @@ function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
     rounds: 7, playerCount: 20, lat: 48.2, lon: 13.0, geoSource: 'City', geoPlaceName: 'Ranshofen',
     distanceKm: 12.5, cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
     kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
+    ignored: false, roundDates: [], sources: [],
   };
 }
 
@@ -262,24 +263,6 @@ describe('TournamentDirectoryComponent', () => {
     expect(req.request.params.get('year')).toBe('2027');
     expect(req.request.params.get('month')).toBe('1');
     req.flush({ tournaments: [], days: [] });
-    http.verify();
-  });
-
-  it('merkt das Turnier, holt es gleich mit und markiert es sofort', async () => {
-    await setup();
-    flushProfiles([]);
-    flushList([entry('111')]);
-
-    component.bookmark(component.entries()[0]);
-    http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
-    // „Merken" heisst auch „holen" — sonst kaeme das Turnier erst zum Spielbeginn.
-    const crawl = http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' });
-    expect(crawl.request.body).toEqual({ chessResultsId: '111', jobType: 'Full' });
-    crawl.flush({ id: 5, status: 'Pending' });
-
-    // Der Haken haengt am Eintrag IN DER LISTE, nicht am uebergebenen Objekt: die Liste liegt in
-    // einem Signal, und eine Mutation daran wuerde die Ansicht nicht erreichen.
-    expect(component.entries()[0].subscribed).toBeTrue();
     http.verify();
   });
 

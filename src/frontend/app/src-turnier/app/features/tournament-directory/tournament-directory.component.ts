@@ -23,11 +23,14 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
-import { TournamentListService } from '../../core/tournament-list.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
 import { SearchProfileService } from './search-profile.service';
 import { TournamentCalendarComponent } from './tournament-calendar.component';
+import { TournamentCardComponent } from './tournament-card.component';
+import {
+  TournamentCardDialogComponent, TournamentCardDialogData,
+} from './tournament-card-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
 import {
@@ -66,7 +69,8 @@ type ViewTab = 'list' | 'map' | 'calendar';
     MatChipsModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule,
     MatMenuModule, MatProgressSpinnerModule, MatSelectModule, MatSlideToggleModule, MatTabsModule,
     MatTooltipModule, TranslatePipe,
-    LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentMapComponent,
+    LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
+    TournamentMapComponent,
   ],
   templateUrl: './tournament-directory.component.html',
   styleUrls: ['./tournament-directory.component.scss'],
@@ -74,7 +78,6 @@ type ViewTab = 'list' | 'map' | 'calendar';
 export class TournamentDirectoryComponent implements OnInit {
   private readonly directory = inject(TournamentDirectoryService);
   private readonly profileService = inject(SearchProfileService);
-  private readonly tournaments = inject(TournamentListService);
   private readonly geolocation = inject(GeolocationService);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(SnackbarService);
@@ -399,7 +402,8 @@ export class TournamentDirectoryComponent implements OnInit {
       + (this.filter.ageGroups.length > 0 ? 1 : 0)
       + (this.filter.genders.length > 0 ? 1 : 0)
       + (this.filter.adultsOnly ? 1 : 0)
-      + (this.filter.hideLeagues ? 1 : 0);
+      + (this.filter.hideLeagues ? 1 : 0)
+      + (this.filter.includeIgnored ? 1 : 0);
   }
 
   resetFilter(): void {
@@ -468,7 +472,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.loadPins(bounds);
   }
 
-  private loadPins(bounds: string): void {
+  loadPins(bounds: string): void {
     this.mapLoading.set(true);
     // Beim erneuten Betreten des Karten-Reiters laufen zwei Abfragen gegeneinander: `reload()`
     // fragt mit dem GEMERKTEN Ausschnitt, die frisch aufgebaute Karte meldet direkt danach ihren
@@ -523,22 +527,51 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   /**
-   * „Merken" legt ein Turnier-Abo an UND holt das Turnier (siehe
-   * `TournamentListService.bookmarkAndImport`): Termin- und Ortsaenderungen werden gemeldet, und
-   * Teilnehmer, Paarungen und Tabelle stehen sofort bereit statt erst zum Spielbeginn.
+   * Ein Turnier wurde aus- oder wieder eingeblendet. Zeigt der Filter Ausgeblendete NICHT mit,
+   * faellt die Zeile sofort heraus — sonst stuende sie bis zum naechsten Laden da und
+   * verschwaende dann ohne erkennbaren Anlass. Die Gesamtzahl wandert mit, sonst behauptet die
+   * Zeile darueber „12 von 40", waehrend elf zu sehen sind.
    */
-  bookmark(entry: DirectoryEntry): void {
-    this.tournaments.bookmarkAndImport(entry.chessResultsId, entry.name).subscribe({
-      next: ({ job }) => {
-        // Die Liste haelt Objekte des Signals — eine Kopie mit gesetztem Flag statt einer
-        // Mutation, sonst merkt das Signal die Aenderung nicht.
-        this.entries.update(list => list.map(
-          e => (e.chessResultsId === entry.chessResultsId ? { ...e, subscribed: true } : e)));
-        this.snackbar.success(this.translate.instant(
-          job ? 'tournamentDirectory.bookmarkedImporting' : 'tournamentDirectory.bookmarked'));
-      },
-      error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError')),
+  onIgnoredChanged(event: { entry: DirectoryEntry; ignored: boolean }): void {
+    if (!event.ignored || this.filter.includeIgnored) return;
+
+    this.entries.update(list => list.filter(e => e.chessResultsId !== event.entry.chessResultsId));
+    this.total.update(total => Math.max(0, total - 1));
+  }
+
+  /**
+   * Im KALENDER fuehrt ein Klick nicht direkt auf die Detailseite, sondern oeffnet die
+   * Kurzansicht als Fenster: im Monatsraster ist ein Tag ein paar Zeilen hoch, die Kurzansicht
+   * passt dort nicht hinein, und wer den Kalender verlaesst, verliert beim Vergleichen den
+   * Monat. Erst der Klick auf den NAMEN im Fenster fuehrt weiter.
+   */
+  openFromCalendar(entry: DirectoryEntry): void {
+    const data: TournamentCardDialogData = { entry };
+    const ref = this.dialog.open(TournamentCardDialogComponent, { data, width: '340px' });
+
+    ref.afterClosed().subscribe(chosen => {
+      if (chosen) {
+        this.select(chosen);
+        return;
+      }
+      // Nichts gewaehlt, aber vielleicht aus-/eingeblendet: der Kalender kann keine einzelne
+      // Zeile herausnehmen, ein Turnier steht an mehreren Tagen. Also neu laden.
+      if (ref.componentInstance?.ignored ?? false) this.reload();
     });
+  }
+
+  /**
+   * Aus der KARTE heraus aus-/eingeblendet. Anders als in der Liste laesst sich hier kein
+   * einzelner Punkt entfernen, ohne den Ausschnitt neu zu holen — und ein Turnier kann mehrere
+   * Punkte haben.
+   */
+  onIgnoredFromMap(): void {
+    if (this.lastBounds) this.loadPins(this.lastBounds);
+  }
+
+  onIncludeIgnoredChange(includeIgnored: boolean): void {
+    this.filter.includeIgnored = includeIgnored;
+    this.reload();
   }
 
   trackById = (_: number, entry: DirectoryEntry) => entry.chessResultsId;
@@ -668,6 +701,7 @@ export class TournamentDirectoryComponent implements OnInit {
         genders: this.filter.genders,
         adultsOnly: this.filter.adultsOnly,
         hideLeagues: this.filter.hideLeagues,
+        includeIgnored: this.filter.includeIgnored,
         calendarYear: this.calendarYear,
         calendarMonth: this.calendarMonth,
       }));
@@ -706,6 +740,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.filter.minPlayers = typeof stored['minPlayers'] === 'number' ? stored['minPlayers'] : null;
     this.filter.adultsOnly = stored['adultsOnly'] === true;
     this.filter.hideLeagues = stored['hideLeagues'] === true;
+    this.filter.includeIgnored = stored['includeIgnored'] === true;
 
     const speed = stored['speed'];
     if (typeof speed === 'string' && this.speeds.includes(speed as TournamentSpeed)) {

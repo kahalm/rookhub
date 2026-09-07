@@ -1,10 +1,11 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input,
-  OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject,
+  AfterViewInit, ChangeDetectionStrategy, Component, ComponentRef, ElementRef, EventEmitter,
+  Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, ViewContainerRef, inject,
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { MapPinMarker } from './map-pin-marker';
+import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry, DirectoryVenue } from './tournament-directory.model';
 
 /** Sichtbarer Kartenausschnitt als „minLat,minLon,maxLat,maxLon" — Serverformat. */
@@ -92,6 +93,11 @@ const PinHeight = MapPinMarker.heightAbove(PinRadius);
 })
 export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly translate = inject(TranslateService);
+  /**
+   * Fuer das Popup: Leaflet haelt seinen Inhalt in einem EIGENEN Container ausserhalb dieses
+   * Templates, die Kurzansicht muss dort also von Hand erzeugt und wieder abgeraeumt werden.
+   */
+  private readonly viewContainer = inject(ViewContainerRef);
 
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
@@ -119,6 +125,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Output() tilesFailed = new EventEmitter<void>();
   /** Feuert nach jedem Verschieben/Zoomen mit dem neuen Ausschnitt. */
   @Output() boundsChanged = new EventEmitter<BoundsString>();
+  /** Ein Turnier wurde aus dem Popup heraus aus- oder wieder eingeblendet. */
+  @Output() entryIgnored = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
 
   private map?: L.Map;
   private markerLayer?: L.LayerGroup;
@@ -177,6 +185,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   }
 
   ngOnDestroy(): void {
+    this.destroyPopup();
     this.resizeObserver?.disconnect();
     this.map?.remove();
     this.map = undefined;
@@ -184,6 +193,9 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
   private applyEntries(): void {
     if (!this.markerLayer) return;
+    // Die Marker verschwinden — mit ihnen das offene Popup, dessen Komponente sonst haengen
+    // bleibt.
+    this.destroyPopup();
     this.markerLayer.clearLayers();
 
     for (const entry of this.entries) {
@@ -219,56 +231,44 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * Klick-Horcher, und Turnier- und Ortsnamen kommen von chess-results — also fremder Text, der
    * in kein innerHTML gehoert. `textContent` macht die Frage gegenstandslos.
    */
+  /**
+   * Der Popup-Inhalt ist die GEMEINSAME Kurzansicht (`TournamentCardComponent`) — dieselbe wie in
+   * Liste und Kalender, mit denselben vier Aktionen. Vorher war das hier ein von Hand gebauter
+   * DOM-Baum ohne Aktionen: wer auf der Karte ein Turnier fand, musste erst auf die Detailseite,
+   * um es zu merken.
+   *
+   * <para>Erzeugt wird sie dynamisch, weil Leaflet den Popup-Inhalt in einem eigenen Container
+   * ausserhalb dieses Templates haelt. Ueber den ViewContainerRef bleibt sie trotzdem Teil der
+   * Aenderungserkennung dieser Komponente — nur so aktualisieren sich die Symbole nach einem
+   * Klick.</para>
+   *
+   * <para>Es gibt immer nur EIN offenes Popup; die vorige Ansicht wird deshalb beim Erzeugen der
+   * naechsten abgeraeumt und in `ngOnDestroy` ein letztes Mal. Ohne das haengt je geoeffnetem
+   * Punkt eine Komponente samt Abonnements im Speicher.</para>
+   */
   private buildPopup(entry: DirectoryEntry, spot: DirectoryVenue): HTMLElement {
-    const root = document.createElement('div');
-    root.className = 'tm-popup';
+    this.destroyPopup();
 
-    const title = document.createElement('button');
-    title.type = 'button';
-    title.className = 'tm-popup-title';
-    title.textContent = entry.name;
-    title.title = this.text('tournamentDirectory.map.openDetail');
-    title.addEventListener('click', () => this.entrySelected.emit(entry));
-    root.appendChild(title);
+    const card = this.viewContainer.createComponent(TournamentCardComponent);
+    card.setInput('entry', entry);
+    card.setInput('overview', true);
+    card.setInput('venueName', spot.name);
+    card.instance.selected.subscribe(selected => this.entrySelected.emit(selected));
+    card.instance.ignoredChanged.subscribe(change => this.entryIgnored.emit(change));
+    // Sofort rendern: Leaflet erwartet ein FERTIGES Element und misst danach die Popup-Groesse.
+    card.changeDetectorRef.detectChanges();
 
-    root.appendChild(this.line(dateRange(entry)));
-    if (entry.location) root.appendChild(this.line(entry.location));
-    // Bei mehreren Spielorten sagen, WELCHER hier gemeint ist — sonst zeigen n Punkte n-mal
-    // denselben Text und man weiss nicht, worauf man geklickt hat.
-    if (entry.venues.length > 1) {
-      root.appendChild(this.line(this.text('tournamentDirectory.map.thisVenue', { name: spot.name })));
-    }
-
-    const badges = document.createElement('div');
-    badges.className = 'tm-popup-badges';
-    const add = (label: string, warn = false) => {
-      const span = document.createElement('span');
-      span.className = warn ? 'tm-badge tm-badge-warn' : 'tm-badge';
-      span.textContent = label;
-      badges.appendChild(span);
-    };
-
-    if (entry.distanceKm !== null) add(this.text('tournamentDirectory.distance', { km: entry.distanceKm }));
-    add(this.text('tournamentDirectory.speed.' + entry.speed));
-    if (entry.playerCount) add(this.text('tournamentDirectory.players', { count: entry.playerCount }));
-    if (entry.groupSize > 1) add(this.text('tournamentDirectory.groupCount', { count: entry.groupSize }));
-    if (entry.cancelled) add(this.text('tournamentDirectory.cancelled'), true);
-    root.appendChild(badges);
-
-    const hint = document.createElement('p');
-    hint.className = 'tm-popup-hint';
-    hint.textContent = this.text('tournamentDirectory.map.openDetail');
-    root.appendChild(hint);
-
-    return root;
+    this.popup = card;
+    return card.location.nativeElement as HTMLElement;
   }
 
-  private line(value: string): HTMLElement {
-    const p = document.createElement('p');
-    p.className = 'tm-popup-line';
-    p.textContent = value;
-    return p;
+  private popup?: ComponentRef<TournamentCardComponent>;
+
+  private destroyPopup(): void {
+    this.popup?.destroy();
+    this.popup = undefined;
   }
+
 
   /** `instant` genuegt hier: ein Popup gibt es erst nach einem Klick, die Texte stehen laengst. */
   private text(key: string, params?: Record<string, unknown>): string {

@@ -50,6 +50,15 @@ export class TournamentDirectoryService {
       .pipe(map(res => res.body ?? null));
   }
 
+  /**
+   * Ein Turnier fuer sich ausblenden bzw. wieder zeigen. Idempotent auf beiden Seiten — zweimal
+   * ausblenden ist dasselbe wie einmal.
+   */
+  setIgnored(chessResultsId: string, ignored: boolean): Observable<void> {
+    const url = `/api/tournament-directory/${chessResultsId}/ignore`;
+    return ignored ? this.http.post<void>(url, {}) : this.http.delete<void>(url);
+  }
+
   /** „Falsches Event melden" — alle Felder freiwillig, auch der Text. */
   report(chessResultsId: string, report: DirectoryReport): Observable<void> {
     return this.http.post<void>(`/api/tournament-directory/${chessResultsId}/report`, report);
@@ -85,6 +94,7 @@ export class TournamentDirectoryService {
     if (filter.genders?.length) params = params.set('genders', filter.genders.join(','));
     if (filter.adultsOnly) params = params.set('adultsOnly', true);
     if (filter.hideLeagues) params = params.set('hideLeagues', true);
+    if (filter.includeIgnored) params = params.set('includeIgnored', true);
     return params;
   }
 }

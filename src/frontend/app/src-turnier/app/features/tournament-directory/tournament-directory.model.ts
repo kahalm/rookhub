@@ -68,11 +68,34 @@ export interface DirectoryEntry {
   venues: DirectoryVenue[];
   /** Einzel oder Mannschaft — aus der chess-results-Turnierart, nicht geraten. */
   kind: TournamentKind;
+  /** Vom aufrufenden Nutzer ausgeblendet — nur gesetzt, wenn der Filter Ausgeblendete mitanzeigt. */
+  ignored: boolean;
+  /** Die einzelnen Spieltermine, wenn bekannt. Leer = es gilt der Zeitraum start..ende. */
+  roundDates: DirectoryRound[];
+  /** Auf welchen Seiten dieses Turnier gefunden wurde. */
+  sources: DirectorySource[];
   /** Saisonwettbewerb statt Turnier (abgeleitet). */
   isLeague: boolean;
   /** Aus dem NAMEN gelesene Klassen; leer = offenes Erwachsenenturnier. */
   ageGroups: TournamentAgeGroup[];
   gender: TournamentGender;
+}
+
+/**
+ * Ein Spieltermin — eine Runde mit ihrem Datum. Bei einer Liga sind das elf Tage von September
+ * bis April, nicht die 200 dazwischen.
+ */
+export interface DirectoryRound {
+  round: number;
+  date: string;
+  time: string | null;
+}
+
+/** Eine Seite, auf der dieses Turnier gefunden wurde. */
+export interface DirectorySource {
+  kind: 'Unknown' | 'ChessResults' | 'Fide' | 'Manual';
+  externalId: string;
+  url: string | null;
 }
 
 /** Ein einzelner Spielort eines Turniers mit mehreren. */
@@ -165,6 +188,11 @@ export interface DirectoryFilter {
   /** Nur Turniere ohne JUGENDmerkmal. Seniorenturniere bleiben sichtbar. */
   adultsOnly: boolean;
   hideLeagues: boolean;
+  /**
+   * Die selbst ausgeblendeten Turniere mitanzeigen. Ohne den Schalter waeren sie
+   * unwiederbringlich weg, und niemand wuesste, was er einmal weggeklickt hat.
+   */
+  includeIgnored: boolean;
 }
 
 /** Benannte Zeitraeume der Filterleiste. `custom` blendet die beiden Datumsfelder ein. */
@@ -202,6 +230,7 @@ export const EMPTY_FILTER: DirectoryFilter = {
   federation: null, speed: null, text: null, weekendOnly: false,
   minPlayers: null, profileId: null,
   kinds: [], ageGroups: [], genders: [], adultsOnly: false, hideLeagues: false,
+  includeIgnored: false,
 };
 
 /**

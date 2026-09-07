@@ -17,7 +17,8 @@ function entry(id: string, over: Partial<DirectoryEntry> = {}): DirectoryEntry {
     chiefArbiter: null, rounds: 7, playerCount: 42, lat: 48.2, lon: 13.0, geoSource: 'City',
     geoPlaceName: 'Ranshofen', distanceKm: null, cancelled: false, subscribed: false,
     groupSize: 1, groups: [], venues: [],
-    kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open', ...over,
+    kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
+    ignored: false, roundDates: [], sources: [], ...over,
   };
 }
 

@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { TournamentMapComponent } from './tournament-map.component';
 import { DirectoryEntry } from './tournament-directory.model';
@@ -12,6 +15,7 @@ function entry(id: string, lat: number | null, lon: number | null,
     rounds: null, playerCount: null, lat, lon, geoSource, geoPlaceName: null,
     distanceKm: null, cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
     kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
+    ignored: false, roundDates: [], sources: [],
   };
 }
 
@@ -22,7 +26,12 @@ describe('TournamentMapComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TournamentMapComponent],
-      providers: [provideTranslateService({ fallbackLang: 'en' })],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        // Das Popup ist inzwischen die gemeinsame Kurzansicht; die spricht mit dem Server
+        // (merken, ausblenden) und braucht deshalb einen HttpClient.
+        provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(TournamentMapComponent);
     component = fixture.componentInstance;
@@ -103,7 +112,7 @@ describe('TournamentMapComponent', () => {
     canvas!.dispatchEvent(new MouseEvent('mouseup', at));
     canvas!.dispatchEvent(new MouseEvent('click', at));
 
-    const popup = host.querySelector<HTMLElement>('.leaflet-popup-content .tm-popup');
+    const popup = host.querySelector<HTMLElement>('.leaflet-popup-content .tc');
     expect(popup).withContext('kein Popup geöffnet').not.toBeNull();
     return popup!;
   }
@@ -123,7 +132,7 @@ describe('TournamentMapComponent', () => {
 
     const popup = openPopupAtCentre();
 
-    expect(popup.querySelector('.tm-popup-title')?.textContent).toBe('Turnier 1');
+    expect(popup.querySelector('.tc-name')?.textContent?.trim()).toBe('Turnier 1');
     expect(selected).withContext('darf beim bloßen Anklicken NICHT weiterführen').toBeNull();
   });
 
@@ -132,7 +141,7 @@ describe('TournamentMapComponent', () => {
     component.entrySelected.subscribe(e => (selected = e));
     centredOn(entry('1', 47.8, 13.04));
 
-    openPopupAtCentre().querySelector<HTMLButtonElement>('.tm-popup-title')!.click();
+    openPopupAtCentre().querySelector<HTMLButtonElement>('.tc-name')!.click();
 
     expect(selected).not.toBeNull();
     expect(selected!.chessResultsId).toBe('1');
@@ -145,10 +154,17 @@ describe('TournamentMapComponent', () => {
     centredOn(e);
 
     const popup = openPopupAtCentre();
-    const lines = [...popup.querySelectorAll('.tm-popup-line')].map(n => n.textContent);
-    expect(lines).toEqual(['2026-10-10 – 2026-10-12', 'Salzburg']);
-    expect(popup.querySelectorAll('.tm-badge').length).toBeGreaterThanOrEqual(3);
-    expect(popup.querySelector('.tm-badge-warn')).withContext('abgesagt fehlt').not.toBeNull();
+    // Der Text enthaelt die Symbolnamen des mat-icon davor — geprueft wird deshalb auf
+    // Enthaltensein, nicht auf Gleichheit.
+    const lines = [...popup.querySelectorAll('.tc-line')].map(n => n.textContent ?? '');
+    expect(lines.length).toBe(2);
+    expect(lines[0]).toContain('2026-10-10 – 2026-10-12');
+    expect(lines[1]).toContain('Salzburg');
+    expect(popup.querySelectorAll('.badge').length).toBeGreaterThanOrEqual(3);
+    expect(popup.querySelector('.badge.warn')).withContext('abgesagt fehlt').not.toBeNull();
+
+    // Und die vier Aktionen, die die Kurzansicht ueberall gleich anbietet.
+    expect(popup.querySelectorAll('.tc-actions button').length).toBe(4);
   });
 
   it('zoomt auf Wunsch eine Stufe weiter heraus als der eingepasste Ausschnitt', async () => {

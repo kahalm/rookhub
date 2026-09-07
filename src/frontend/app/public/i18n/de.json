@@ -3146,6 +3146,17 @@
       "sourceLink": "Eine Seite, auf der man das besser sieht",
       "thanks": "Danke — die Meldung ist angekommen, und wir können darauf antworten.",
       "sendError": "Die Meldung konnte nicht gesendet werden. Bitte noch einmal versuchen."
+    },
+    "card": {
+      "openDetail": "Turnierseite öffnen",
+      "ignored": "ausgeblendet",
+      "hide": "Für mich ausblenden",
+      "show": "Wieder zeigen",
+      "hidden": "Ausgeblendet. Es bleibt aus deinen Suchen heraus, bis du es wieder zeigst.",
+      "shown": "Wieder eingeblendet.",
+      "hideError": "Konnte nicht ausgeblendet werden. Bitte noch einmal versuchen.",
+      "showIgnored": "Ausgeblendete zeigen",
+      "rounds": "{{count}} Runden, {{from}} bis {{to}}"
     }
   },
   "turnier": {

@@ -179,6 +179,10 @@
         {{ 'tournamentDirectory.hideLeagues' | translate }}
       </mat-slide-toggle>
 
+      <mat-slide-toggle [ngModel]="filter.includeIgnored" (ngModelChange)="onIncludeIgnoredChange($event)">
+        {{ 'tournamentDirectory.card.showIgnored' | translate }}
+      </mat-slide-toggle>
+
       <app-help-hint [text]="'tournamentDirectory.audienceHelp' | translate" />
 
       <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
@@ -227,44 +231,9 @@
           <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}</p>
           <div class="entry-grid">
             @for (entry of entries(); track trackById($index, entry)) {
-              <mat-card class="entry-card" [class.cancelled]="entry.cancelled">
-                <div class="entry-head">
-                  <button type="button" class="entry-name" (click)="select(entry)">{{ entry.name }}</button>
-                  @if (entry.subscribed) {
-                    <mat-icon class="flag" [matTooltip]="'tournamentDirectory.bookmarkedTooltip' | translate">
-                      bookmark
-                    </mat-icon>
-                  }
-                </div>
-                <div class="entry-line">
-                  <mat-icon inline>event</mat-icon>
-                  <span>{{ entry.startDate }}@if (entry.endDate && entry.endDate !== entry.startDate) { <span> – {{ entry.endDate }}</span> }</span>
-                </div>
-                @if (entry.location) {
-                  <div class="entry-line">
-                    <mat-icon inline>place</mat-icon>
-                    <span>{{ entry.location }}</span>
-                    @if (entry.geoSource === 'Region') {
-                      <mat-icon inline class="approx"
-                                [matTooltip]="'tournamentDirectory.approximate' | translate">help_outline</mat-icon>
-                    }
-                  </div>
-                }
-                <div class="entry-meta">
-                  @if (entry.distanceKm !== null) {
-                    <span class="badge">{{ 'tournamentDirectory.distance' | translate: { km: entry.distanceKm } }}</span>
-                  }
-                  <span class="badge">{{ 'tournamentDirectory.speed.' + entry.speed | translate }}</span>
-                  @if (entry.playerCount) {
-                    <span class="badge">{{ 'tournamentDirectory.players' | translate: { count: entry.playerCount } }}</span>
-                  }
-                  @if (entry.groupSize > 1) {
-                    <span class="badge">{{ 'tournamentDirectory.groupCount' | translate: { count: entry.groupSize } }}</span>
-                  }
-                  @if (entry.cancelled) {
-                    <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
-                  }
-                </div>
+              <mat-card class="entry-card">
+                <app-tournament-card [entry]="entry" (selected)="select($event)"
+                                     (ignoredChanged)="onIgnoredChanged($event)" />
               </mat-card>
             }
           </div>
@@ -288,6 +257,7 @@
           <app-tournament-map [entries]="pins()" [centre]="mapCentre"
                               (boundsChanged)="onBoundsChanged($event)"
                               (tilesFailed)="onTilesFailed()"
+                              (entryIgnored)="onIgnoredFromMap()"
                               (entrySelected)="select($event)" />
           <p class="muted count">
             {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
@@ -303,7 +273,7 @@
           <app-tournament-calendar [days]="calendarDays()" [year]="calendarYear" [month]="calendarMonth"
                                    [locale]="calendarLocale" [loading]="calendarLoading()"
                                    (monthChanged)="onMonthChanged($event)"
-                                   (entrySelected)="select($event)" />
+                                   (entrySelected)="openFromCalendar($event)" />
         }
       </div>
     </mat-tab>

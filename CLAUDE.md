@@ -1044,6 +1044,33 @@ dem Pin im Leeren) und die Ausdehnung fuers Neuzeichnen (`_updateBounds` — son
 Renderer die oberen zwei Drittel weg). Popup- und Tooltip-Offsets kommen aus
 `MapPinMarker.heightAbove`.
 
+**EINE Kurzansicht fuer alle drei Ansichten** (`tournament-card.component.ts`, Stand 0.425.0).
+Liste, Karte und Kalender zeigten dasselbe Turnier dreimal verschieden: die Liste als Karte mit
+Lesezeichen, die Karte als von Hand gebauten DOM-Baum ohne Aktionen, der Kalender als nackten
+Knopf mit dem Namen. Wer auf der Karte ein Turnier fand, musste erst auf die Detailseite, nur um
+es zu merken. Jetzt ist es eine Komponente mit vier Aktionen (merken, in den Kalender
+uebertragen, ausblenden, melden), und **die Aktionen macht die Komponente SELBST** — alle vier
+betreffen genau dieses Turnier, sie in drei Eltern je viermal zu verdrahten waere derselbe Code
+dreimal. Nach draussen geht nur, was den Eltern gehoert: `selected` (die Liste merkt vorher ihren
+Filterzustand) und `ignoredChanged` (die Liste laesst die Zeile fallen, die Karte holt ihren
+Ausschnitt neu, der Kalender laedt neu — dort steht ein Turnier an mehreren Tagen).
+
+Drei Dinge, die dabei nicht kippen duerfen: (1) Im **Karten-Popup** wird die Komponente
+DYNAMISCH erzeugt (`ViewContainerRef.createComponent` + `changeDetectorRef.detectChanges()`,
+Element aus `ref.location.nativeElement`), weil Leaflet den Popup-Inhalt in einem eigenen
+Container ausserhalb des Templates haelt; sie wird beim naechsten Popup, beim `clearLayers` und in
+`ngOnDestroy` abgeraeumt, sonst haengt je geoeffnetem Punkt eine Komponente samt Abonnements im
+Speicher. (2) Der eigene Zustand (`busy`/`subscribed`/`ignored`) liegt in **Signalen** und wird
+aus dem Eintrag nur VORBELEGT — den Eintrag zu mutieren erreichte die Elternanzeige nicht
+(OnPush), und die HTTP-Antworten kommen ohnehin ausserhalb der Zone an. (3) Die Komponente
+importiert `MatDialogModule` selbst: sie oeffnet den Melde-Dialog und steht in drei verschiedenen
+Eltern, auf deren Importe darf sie sich nicht verlassen.
+
+Im **Kalender** oeffnet ein Klick die Kurzansicht als kleines Fenster
+(`tournament-card-dialog.component.ts`) statt direkt auf die Detailseite zu fuehren: im
+Monatsraster ist ein Tag ein paar Zeilen hoch, und wer vergleicht, verliert beim Wegnavigieren den
+Monat. Erst der Klick auf den Namen fuehrt weiter.
+
 **Rueckmeldungen** (beide gehen in den Admin-Nachrichtenkanal, siehe API-Abschnitt):
 `report-entry-dialog.component.ts` auf der Detailseite („falsches Event melden", mit dem
 IST-Stand daneben und der Lern-Frage nach regionalen Turniernamen) und

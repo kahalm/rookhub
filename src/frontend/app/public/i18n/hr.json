@@ -3146,6 +3146,17 @@
       "sourceLink": "Stranica na kojoj se to bolje vidi",
       "thanks": "Hvala — prijava je došla i možemo na nju odgovoriti.",
       "sendError": "Prijava se nije mogla poslati. Pokušaj ponovno."
+    },
+    "card": {
+      "openDetail": "Otvori stranicu turnira",
+      "ignored": "skriveno",
+      "hide": "Sakrij za mene",
+      "show": "Ponovno prikaži",
+      "hidden": "Skriveno. Ostaje izvan tvojih pretraga dok ga ponovno ne prikažeš.",
+      "shown": "Ponovno prikazano.",
+      "hideError": "Nije se moglo sakriti. Pokušaj ponovno.",
+      "showIgnored": "Prikaži skrivene",
+      "rounds": "{{count}} kola, {{from}} do {{to}}"
     }
   },
   "turnier": {
