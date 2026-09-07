@@ -32,16 +32,19 @@ public class AdminTournamentDirectoryController : BaseApiController
         TournamentDirectoryService directory,
         GazetteerImportService gazetteer,
         GeocodingService geocoding,
-        VenueDisambiguationService disambiguation)
+        VenueDisambiguationService disambiguation,
+        TournamentRoundPlanService roundPlans)
     {
         _db = db;
         _directory = directory;
         _gazetteer = gazetteer;
         _geocoding = geocoding;
         _disambiguation = disambiguation;
+        _roundPlans = roundPlans;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
+    private readonly TournamentRoundPlanService _roundPlans;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -163,6 +166,22 @@ public class AdminTournamentDirectoryController : BaseApiController
         await _db.SaveChangesAsync(ct);
 
         return Ok(new { entry.ChessResultsId, entry.Lat, entry.Lon, GeoSource = entry.GeoSource.ToString() });
+    }
+
+    /// <summary>
+    /// Die SPIELTERMINE langlaufender Turniere nachtragen — von Hand auslösbar, damit der
+    /// Bestand nicht auf die naechtlichen Chargen warten muss.
+    ///
+    /// <para>Ein Seitenabruf je Turnier (chess-results art=14), deshalb gedeckelt. Siehe
+    /// <see cref="TournamentRoundPlanService"/>: Start und Ende einer Liga sagen nicht, wann
+    /// gespielt wird, und der Kalender zeigte sie deshalb an rund 200 Tagen statt an ihren elf
+    /// Spieltagen.</para>
+    /// </summary>
+    [HttpPost("round-plans")]
+    public async Task<IActionResult> RoundPlans([FromQuery] int limit = 100, CancellationToken ct = default)
+    {
+        var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), ct);
+        return Ok(new { result.Checked, result.WithPlan, result.Failed });
     }
 
     /// <summary>

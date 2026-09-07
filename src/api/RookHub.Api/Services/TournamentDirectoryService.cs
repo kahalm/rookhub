@@ -210,7 +210,18 @@ public class TournamentDirectoryService
                 updated++;
 
                 if (oldHash is not null && oldHash != entry.ChangeHash)
+                {
                     changed.Add((entry, oldDate, oldLocation));
+                    // Der Termin hat sich geaendert — die gespeicherten Spieltermine sind damit
+                    // Makulatur. Der Vermerk faellt weg, der naechste Rundenplan-Durchgang holt
+                    // sie neu; bis dahin gilt wieder der ganze Zeitraum, was zwar ungenau, aber
+                    // nicht falsch ist.
+                    if (!string.Equals(oldDate, FormatRange(entry.StartDate, entry.EndDate),
+                            StringComparison.Ordinal))
+                    {
+                        entry.RoundPlanCheckedAt = null;
+                    }
+                }
 
                 // Nur neu verorten, wenn sich der Ortstext wirklich geaendert hat - sonst wuerde
                 // jede Nacht der gesamte Bestand durch den Gazetteer laufen.

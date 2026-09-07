@@ -28,6 +28,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     private readonly string[] _dailyFederations;
     private readonly int _weeklyBatchSize;
     private readonly int _disambiguationBatchSize;
+    private readonly int _roundPlanBatchSize;
     private readonly bool _enabled;
 
     public TournamentDirectoryScheduler(
@@ -52,6 +53,14 @@ public class TournamentDirectoryScheduler : BackgroundService
         // Seitenabruf bei chess-results; 0 schaltet den Schritt ab.
         _disambiguationBatchSize = Math.Clamp(
             configuration.GetValue("TournamentDirectory:DisambiguationBatchSize", 50), 0, 500);
+
+        // Der Rundenplan-Durchgang darf grosszuegiger sein als die Spielort-Aufloesung: ein
+        // Abruf je Turnier auf einer 17-kB-Seite, und der Nutzen ist unmittelbar sichtbar (eine
+        // Liga stand an rund 200 Kalendertagen statt an ihren elf Spieltagen). Am Dev-Stand
+        // waren 610 Eintraege nachzutragen — mit 200 je Nacht ist der Bestand in drei Naechten
+        // durch, danach kommen nur die neuen dazu.
+        _roundPlanBatchSize = Math.Clamp(
+            configuration.GetValue("TournamentDirectory:RoundPlanBatchSize", 200), 0, 1000);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -117,6 +126,22 @@ public class TournamentDirectoryScheduler : BackgroundService
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 _logger.LogWarning(ex, "Turnierverzeichnis: Spielort-Aufloesung fehlgeschlagen");
+            }
+
+            // Und die Spieltermine der langlaufenden Turniere — eigener Fang aus demselben
+            // Grund: was schon durch ist, soll nicht wegen eines Nachtrags als gescheitert
+            // gelten.
+            try
+            {
+                if (_roundPlanBatchSize > 0)
+                {
+                    var roundPlans = scope.ServiceProvider.GetRequiredService<TournamentRoundPlanService>();
+                    await roundPlans.RunAsync(_roundPlanBatchSize, ct);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: Rundenplan-Durchgang fehlgeschlagen");
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

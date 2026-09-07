@@ -48,7 +48,9 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
                 new TestLogger<GazetteerImportService>(), config),
             geocoding,
             new VenueDisambiguationService(_db, factory,
-                new TestLogger<VenueDisambiguationService>()));
+                new TestLogger<VenueDisambiguationService>()),
+            new TournamentRoundPlanService(_db, factory,
+                new TestLogger<TournamentRoundPlanService>()));
     }
 
     /// <summary>

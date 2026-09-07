@@ -3124,9 +3124,9 @@
     "audienceHelp": "Einzel gegen Mannschaft kommt von chess-results selbst.\n\nAltersklasse und Geschlechtsklasse nicht: dafür gibt es kein Feld, sie werden aus dem Turniernamen gelesen. Das trifft gut, wo der Name die Klasse nennt („U12 weiblich\", „UNDER 16 BOYS\"), und gar nicht, wo er sie verschweigt. „Nur Erwachsene\" blendet alles mit Jugendmerkmal im Namen aus; Senioren bleiben, Seniorenschach ist Erwachsenenschach.\n\nEine Liga ist ein Mannschaftswettbewerb über eine ganze Saison — oder einer, der es im Namen sagt.\n\nEtwas in der falschen Schublade? Auf einer Turnierseite gibt es „falsches Event melden\" — und dort wird gefragt, wie solche Turniere in deiner Region heißen. Genau das verbessert es für alle.",
     "missing": {
       "cta": "Dein Turnier fehlt? Hier eintragen",
-      "blurb": "Das Verzeichnis liest chess-results. Woanders ausgeschriebene Turniere sind für es unsichtbar.",
+      "blurb": "Nicht jeder Veranstalter schreibt dort aus, wo dieses Verzeichnis liest. Ein Link auf eine offizielle Seite lässt sich ergänzen.",
       "title": "Fehlende Turnierquelle melden",
-      "lead": "Dieses Verzeichnis füllt sich aus der chess-results-Turniersuche — wer dort nicht ausschreibt, kommt hier nicht vor. Am meisten hilft dabei nicht ein einzelner Termin, sondern ein LINK: eine offizielle Seite, auf der deine Turniere stehen, lässt sich regelmäßig auslesen, und dann erscheinen von da an alle.",
+      "lead": "Dieses Verzeichnis füllt sich aus Turnierseiten, die ihre Kalender veröffentlichen — wer woanders ausschreibt, kommt hier nicht vor. Am meisten hilft dabei nicht ein einzelner Termin, sondern ein LINK: eine offizielle Seite, auf der deine Turniere stehen, lässt sich regelmäßig auslesen, und dann erscheinen von da an alle.",
       "link": "Link auf die offizielle Seite",
       "linkHint": "Verbandskalender, Vereinsseite, Seite der Turnierreihe — je offizieller, desto besser",
       "linkRequired": "Bitte einen vollständigen Link angeben, der mit http:// oder https:// beginnt.",

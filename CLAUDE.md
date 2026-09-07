@@ -325,11 +325,32 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
 | POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen. **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual` bleibt in jedem Fall unberuehrt |
+| POST | `/api/admin/tournament-directory/round-plans?limit=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
 | POST | `/api/admin/tournament-directory/classify` | Publikum + Format des GANZEN Bestands aus den Turniernamen neu ableiten (Jugendklasse, Geschlechtsklasse, Liga) — braucht kein Netz. Der Weg, eine nachgeruestete Wortliste im `TournamentClassifier` auf den Altbestand anzuwenden; die Turnier**art** bleibt unangetastet (die kommt aus der Quelle) |
 | POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
 | PUT | `/api/admin/tournament-directory/{id}/coordinates` | Koordinaten von Hand setzen (GeoSource=Manual, ueberlebt den Sweep) |
 
 Die `/api/admin/...`-Routen haengen an der Permission `tournaments.manage`.
+
+**Spieltermine: warum Start und Ende nicht genuegen.** Ein Eintrag traegt Start und Ende, und der
+Kalender zeichnet ein mehrtaegiges Turnier an JEDEM Tag dazwischen. Bei einem Wochenend-Open ist
+das richtig. Bei einer LIGA ist es falsch: „26.09.2026 bis 17.04.2027" sind elf Runden mit zwei
+bis fuenf Wochen Abstand — die Liga stand damit an rund 200 Kalendertagen, an denen nichts
+gespielt wird, und verdeckte die Turniere, die es wirklich gibt. Am Dev-Stand gemessen: **610
+offene Eintraege laufen laenger als acht Tage, 527 davon ueber 40 Tage.**
+
+`TournamentRoundPlanService` holt die Termine (chess-results `art=14`, ~17 kB — die kleinste
+Ansicht, die sie traegt; `art=2` kostet 33 kB, `art=3` 182 kB) und legt sie in
+`TournamentDirectoryRounds` ab. Die Auswahl haengt an der **DAUER, nicht am Liga-Merkmal**: ob
+etwas eine Liga IST, wird geraten, ob sein Zeitraum luegt, steht fest — mehr als
+`MinSpanDays` (8) Tage und mehr als eine Runde. Eine monatelange Vereinsmeisterschaft ist keine
+Liga und braucht die Termine genauso. `RoundPlanCheckedAt` verhindert Wiederholungen und wird
+**auch bei einem leeren Plan** gesetzt (der haeufige Fall, der sich merken lassen muss); ein
+NETZfehler laesst ihn dagegen leer. Der Sweep leert ihn, wenn sich der Termin geaendert hat.
+`TournamentDirectory:RoundPlanBatchSize` (Vorgabe 200, 0 = aus) je Nacht.
+
+Im Kalender gilt: **hat ein Eintrag Spieltermine, zaehlen NUR sie** (`Covers`); sonst wie bisher
+der ganze Zeitraum. Die Termine gehen als `roundDates` im DTO mit, die Detailseite zeigt sie.
 
 **Publikum und Format eines Turniers — was aus der Quelle kommt und was aus dem Namen.**
 `Kind` (Einzel/Mannschaft) ist QUELLENDATUM: die chess-results-Turniersuche hat ein Turnierart-Feld
@@ -833,6 +854,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentSearchProfiles | Gespeicherte Umkreise je Nutzer | UserId (Cascade), Name, PlaceQuery, Lat/Lon, RadiusKm, Federations/Speeds (CSV), WeekendOnly, MinPlayers, NotifyNew; unique (UserId, Name) |
 | TournamentDirectorySweeps | Buchfuehrung je Foederation | Federation (PK), LastSweptAt (**nur bei Erfolg**), LastAttemptedAt, LastRowCount, LastError, ConsecutiveFailures |
 | TournamentDirectoryVenues | ALLE Spielorte eines Turniers — bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit", „Schwaz/Jenbach/Kufstein"; auf dem Dev-Stand 270 Eintraege). Die Koordinaten am Eintrag bleiben der HAUPT-Spielort (der erste); die Tabelle traegt nur Turniere mit MEHR als einem. Umkreissuche und Karte fragen sie mit: ein Turnier gilt als in der Naehe, wenn EINER seiner Orte in der Box liegt, und die angezeigte Entfernung ist die zum naechsten | TournamentDirectoryEntryId (Cascade), Ordinal (0 = Hauptort), Name (≤200), SourceText? (≤300, der Textabschnitt — Nachvollziehbarkeit), Lat/Lon, GeoSource; Index (Lat, Lon) + (EntryId, Ordinal) |
+| TournamentDirectoryRounds | Die einzelnen SPIELTERMINE eines Turniers. Start und Ende sagen bei einer Liga nicht, wann gespielt wird — elf Runden von September bis April liegen Wochen auseinander, und der Kalender zeigte die Liga deshalb an rund 200 Tagen ohne Schach. Gefuellt vom `TournamentRoundPlanService` (chess-results `art=14`), nur fuer Eintraege ueber 8 Tage mit mehr als einer Runde. Leer = nicht bekannt, dann gilt der ganze Zeitraum | TournamentDirectoryEntryId (Cascade), Number (Rundennummer), Date, TimeText? (≤40, Rohtext „14:00 Uhr" — fuer den Kalender zaehlt der Tag); Index (Date) + **UNIQUE (EntryId, Number)** |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet/reprozessierbar — heute meist No-op, da live ausgewertet)** |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |

@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<TournamentSearchProfile> TournamentSearchProfiles => Set<TournamentSearchProfile>();
     public DbSet<TournamentDirectorySweep> TournamentDirectorySweeps => Set<TournamentDirectorySweep>();
     public DbSet<TournamentDirectoryVenue> TournamentDirectoryVenues => Set<TournamentDirectoryVenue>();
+    public DbSet<TournamentDirectoryRound> TournamentDirectoryRounds => Set<TournamentDirectoryRound>();
     public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
@@ -323,6 +324,18 @@ public class AppDbContext : DbContext
             // wenn EINER seiner Spielorte in der Box liegt.
             e.HasIndex(v => new { v.Lat, v.Lon });
             e.HasIndex(v => new { v.TournamentDirectoryEntryId, v.Ordinal });
+        });
+
+        modelBuilder.Entity<TournamentDirectoryRound>(e =>
+        {
+            e.HasOne(r => r.Entry)
+             .WithMany(d => d.RoundDates)
+             .HasForeignKey(r => r.TournamentDirectoryEntryId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Der Kalender fragt „welche Turniere spielen an DIESEM Tag" — mit dem Datum vorn
+            // laeuft das ueber den Index statt ueber einen Scan aller Spieltermine.
+            e.HasIndex(r => r.Date);
+            e.HasIndex(r => new { r.TournamentDirectoryEntryId, r.Number }).IsUnique();
         });
 
         modelBuilder.Entity<TournamentSearchProfile>(e =>

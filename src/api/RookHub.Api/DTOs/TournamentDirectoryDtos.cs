@@ -61,6 +61,13 @@ public class DirectoryEntryDto
     /// <summary>„Open", „Female" oder „Male".</summary>
     public string Gender { get; set; } = nameof(TournamentGender.Open);
 
+    /// <summary>
+    /// Die einzelnen SPIELTERMINE, wenn sie bekannt sind. Bei einer Liga sind das elf Tage von
+    /// September bis April — nicht die 200 Tage dazwischen. Leer heisst „nicht bekannt": dann
+    /// gilt der Zeitraum von <see cref="StartDate"/> bis <see cref="EndDate"/>.
+    /// </summary>
+    public List<DirectoryRoundDto> RoundDates { get; set; } = [];
+
     public static DirectoryEntryDto FromEntity(
         TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
         IReadOnlyList<TournamentDirectoryEntry>? groups = null) => new()
@@ -87,6 +94,10 @@ public class DirectoryEntryDto
         Cancelled = e.RemovedAt != null,
         Subscribed = subscribed,
         Kind = e.Kind.ToString(),
+        RoundDates = e.RoundDates
+            .OrderBy(r => r.Number)
+            .Select(r => new DirectoryRoundDto { Round = r.Number, Date = r.Date, Time = r.TimeText })
+            .ToList(),
         IsLeague = e.IsLeague,
         AgeGroups = AgeGroupNames(e.AgeGroups),
         Gender = e.Gender.ToString(),
@@ -120,6 +131,15 @@ public class DirectoryEntryDto
             .Where(g => g != TournamentAgeGroups.None && groups.HasFlag(g))
             .Select(g => g.ToString())
             .ToList();
+}
+
+/// <summary>Ein Spieltermin eines Turniers — eine Runde mit ihrem Datum.</summary>
+public class DirectoryRoundDto
+{
+    public int Round { get; set; }
+    public DateOnly Date { get; set; }
+    /// <summary>Uhrzeit als Rohtext („14:00 Uhr").</summary>
+    public string? Time { get; set; }
 }
 
 /// <summary>Ein einzelner Spielort eines Turniers mit mehreren.</summary>

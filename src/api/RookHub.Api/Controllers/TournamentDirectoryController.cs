@@ -334,8 +334,22 @@ public class TournamentDirectoryController : BaseApiController
 
     // -----------------------------------------------------------------------
 
+    /// <summary>
+    /// Findet dieses Turnier an diesem Tag statt?
+    ///
+    /// <para>Sind SPIELTERMINE bekannt, gelten NUR sie. Das ist der Unterschied zwischen elf
+    /// Spieltagen und rund 200 Tagen Kalenderrauschen: eine Liga laeuft von September bis April,
+    /// gespielt wird an elf Terminen mit Wochen Abstand (siehe
+    /// <see cref="TournamentDirectoryRound"/>).</para>
+    ///
+    /// <para>Ohne Termine gilt wie bisher der ganze Zeitraum — bei einem Wochenend-Open ist das
+    /// richtig, und bei einem langlaufenden Turnier ohne hinterlegten Plan ist es das Beste, was
+    /// bekannt ist.</para>
+    /// </summary>
     private static bool Covers(TournamentDirectoryEntry entry, DateOnly day)
     {
+        if (entry.RoundDates.Count > 0) return entry.RoundDates.Any(r => r.Date == day);
+
         var start = entry.StartDate ?? entry.EndDate;
         var end = entry.EndDate ?? entry.StartDate;
         return start is not null && end is not null && day >= start && day <= end;

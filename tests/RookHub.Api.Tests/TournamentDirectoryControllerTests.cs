@@ -769,6 +769,54 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.Equal(["U10", "U12"], Assert.Single(page.Items).AgeGroups);
     }
 
+    // ----- Spieltermine im Kalender -----------------------------------------
+
+    /// <summary>
+    /// Sind Spieltermine bekannt, steht das Turnier NUR an ihnen. Eine Liga laeuft von September
+    /// bis April und wurde vorher an jedem Tag dazwischen gezeichnet — rund 200 Tage, an denen
+    /// nichts gespielt wird und die die Turniere verdeckten, die es wirklich gibt.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_EntryWithRoundDates_AppearsOnlyOnThoseDays()
+    {
+        var entry = new TournamentDirectoryEntry
+        {
+            ChessResultsId = "1479344", Name = "TMM 1.Klasse", Federation = "AUT",
+            StartDate = new DateOnly(2026, 9, 26), EndDate = new DateOnly(2027, 4, 17),
+            Rounds = 11,
+            RoundDates =
+            [
+                new TournamentDirectoryRound { Number = 1, Date = new DateOnly(2026, 10, 10) },
+                new TournamentDirectoryRound { Number = 2, Date = new DateOnly(2026, 10, 24) },
+            ],
+        };
+        _db.TournamentDirectoryEntries.Add(entry);
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var month = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        var withEntry = month.Days.Where(d => d.Ids.Count > 0).Select(d => d.Date).ToList();
+        Assert.Equal([new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 24)], withEntry);
+        // Das Turnier selbst steht EINMAL in der Liste, samt seinen Terminen.
+        Assert.Equal(2, Assert.Single(month.Tournaments).RoundDates.Count);
+    }
+
+    /// <summary>
+    /// Ohne Spieltermine gilt weiter der ganze Zeitraum. Bei einem mehrtaegigen Open ist das
+    /// richtig — dort wird an aufeinanderfolgenden Tagen gespielt.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_EntryWithoutRoundDates_StillSpansItsWholeRange()
+    {
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var month = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(3, month.Days.Count(d => d.Ids.Count > 0));
+    }
+
     // ----- Naechster Ort zu Koordinaten -------------------------------------
 
     [Fact]

@@ -184,6 +184,22 @@ public class TournamentDirectoryEntry
     /// Koordinaten am Eintrag selbst sind der ERSTE davon (siehe <see cref="TournamentDirectoryVenue"/>).
     /// </summary>
     public List<TournamentDirectoryVenue> Venues { get; set; } = [];
+
+    /// <summary>
+    /// Die einzelnen SPIELTERMINE, wenn sie bekannt sind. Bei einer Liga ist das der Unterschied
+    /// zwischen „elf Spieltagen" und „200 Tagen Kalenderrauschen" — siehe
+    /// <see cref="TournamentDirectoryRound"/>. Leer heisst „nicht abgefragt oder nicht
+    /// hinterlegt": dann gilt der ganze Zeitraum.
+    /// </summary>
+    public List<TournamentDirectoryRound> RoundDates { get; set; } = [];
+
+    /// <summary>
+    /// Wann zuletzt versucht wurde, den Rundenplan zu holen. Ohne diesen Vermerk holte der
+    /// naechtliche Durchgang immer wieder dieselben Seiten — und die meisten Turniere haben gar
+    /// keinen Plan hinterlegt, der Fehlversuch ist also der Normalfall und muss sich merken
+    /// lassen. Wird beim Sweep geleert, sobald sich der Termin des Turniers geaendert hat.
+    /// </summary>
+    public DateTime? RoundPlanCheckedAt { get; set; }
 }
 
 /// <summary>Bedenkzeit-Kategorie, aus dem Freitext geraten.</summary>

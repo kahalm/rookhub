@@ -130,6 +130,7 @@ public class TournamentDirectoryQueryService
                         || e.Venues.Any(v => v.Lat >= box.MinLat && v.Lat <= box.MaxLat
                                              && v.Lon >= box.MinLon && v.Lon <= box.MaxLon))
             .Include(e => e.Venues)
+            .Include(e => e.RoundDates)
             .Take(MaxMaterialized + 1)
             .ToListAsync(ct);
 
@@ -178,8 +179,14 @@ public class TournamentDirectoryQueryService
     {
         if (keys.Count == 0) return [];
 
+        // Spielorte UND Spieltermine mitladen: die Karte zeichnet je Ort einen Pin, und der
+        // Kalender entscheidet ueber die Termine, an welchen Tagen ein Turnier ueberhaupt steht.
+        // Ohne die Termine faellt er stillschweigend auf „ganzer Zeitraum" zurueck — genau die
+        // Auskunft, die bei einer Liga falsch ist.
         var rows = await filtered
             .Where(e => keys.Contains(e.GroupKey ?? "id:" + e.Id))
+            .Include(e => e.Venues)
+            .Include(e => e.RoundDates)
             .ToListAsync(ct);
         var byKey = rows.GroupBy(e => e.GroupKey ?? "id:" + e.Id)
             .ToDictionary(g => g.Key, g => g.OrderBy(e => e.ChessResultsId, StringComparer.Ordinal).ToList());
