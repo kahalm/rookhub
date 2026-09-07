@@ -60,11 +60,16 @@ public class VenueDisambiguationService
     /// </summary>
     public async Task<DisambiguationResult> RunAsync(int limit, CancellationToken ct = default)
     {
+        // Nur Turniere, die noch nicht vorbei sind: ein Seitenabruf fuer einen Pin, den niemand
+        // mehr sucht, ist verschwendet. (Erster Durchgang lief nach StartDate aufsteigend — und
+        // damit ausgerechnet die aeltesten, laengst gespielten Turniere ab.)
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var candidates = await _db.TournamentDirectoryEntries
             .Include(e => e.Venues)
             .Where(e => e.RemovedAt == null
                         && e.LocationText != null
                         && e.TeamHintCheckedAt == null
+                        && ((e.EndDate ?? e.StartDate) == null || (e.EndDate ?? e.StartDate) >= today)
                         && (e.GeoSource == GeoSource.Ambiguous || e.GeoSource == GeoSource.City))
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 500))
@@ -98,41 +103,70 @@ public class VenueDisambiguationService
         var iso2 = FideCountryCodes.ToIso2(entry.Federation);
         if (iso2 is null) return false;
 
-        // Welcher Ortsname wurde ueberhaupt gesucht? Der erste Abschnitt, der im Lexikon etwas trifft.
-        var searched = await FirstMatchingNameAsync(entry.LocationText, iso2, ct);
-        if (searched is null) return false;
+        // JEDEN Ortsabschnitt pruefen, nicht nur den ersten. Der erste Durchgang sah bei
+        // „Mayrhofen, St.Veit" nur „Mayrhofen" an — und ausgerechnet das ist der eindeutige Teil;
+        // der Fehler steckt im zweiten.
+        List<string>? teams = null;
+        var changed = false;
 
-        var widened = await _db.GeoPlaces.AsNoTracking()
-            .Where(g => g.Country == iso2 && g.NameNormalized.StartsWith(searched))
-            .ToListAsync(ct);
-        // Nur laengere Namen bringen etwas Neues; genau ein Kandidat ist kein Zweifelsfall.
-        if (widened.Count < 2) return false;
-
-        var teams = await FetchTeamNamesAsync(entry.ChessResultsId, ct);
-        if (teams.Count == 0) return false;
-
-        var pick = PickByTeamHint(widened, searched, teams);
-        if (pick is null) return false;
-
-        entry.Lat = pick.Lat;
-        entry.Lon = pick.Lon;
-        entry.GeoSource = GeoSource.TeamHint;
-        entry.GeoPlaceName = pick.Name.Length <= 200 ? pick.Name : pick.Name[..200];
-        entry.UpdatedAt = DateTime.UtcNow;
-
-        // Der Hauptort der Spielort-Liste wandert mit.
-        var primary = entry.Venues.OrderBy(v => v.Ordinal).FirstOrDefault();
-        if (primary is not null)
+        foreach (var segment in GeoTextNormalizer.VenueSegments(entry.LocationText))
         {
-            primary.Lat = pick.Lat;
-            primary.Lon = pick.Lon;
-            primary.Name = entry.GeoPlaceName;
-            primary.GeoSource = GeoSource.TeamHint;
+            var searched = await FirstMatchingNameAsync(segment, iso2, ct);
+            if (searched is null) continue;
+
+            var widened = await _db.GeoPlaces.AsNoTracking()
+                .Where(g => g.Country == iso2 && g.NameNormalized.StartsWith(searched))
+                .ToListAsync(ct);
+
+            // Nur ein LAENGERER Name bringt etwas Neues. Ohne diese Bedingung wird fuer jeden
+            // mehrfach vorkommenden Ortsnamen („Mayrhofen" gibt es viermal, alle gleich benannt)
+            // eine Turnierseite geholt, die nichts entscheiden kann.
+            if (!widened.Any(w => w.NameNormalized.Length > searched.Length)) continue;
+
+            teams ??= await FetchTeamNamesAsync(entry.ChessResultsId, ct);
+            if (teams.Count == 0) return false;
+
+            var pick = PickByTeamHint(widened, searched, teams);
+            if (pick is null) continue;
+
+            ApplyPick(entry, segment, pick);
+            changed = true;
         }
+        return changed;
+    }
+
+    /// <summary>
+    /// Uebernimmt den gefundenen Ort — im passenden Spielort (erkannt am Textabschnitt, aus dem er
+    /// stammt) und, wenn das der Hauptort ist, auch in den Koordinaten des Eintrags selbst.
+    /// </summary>
+    private void ApplyPick(TournamentDirectoryEntry entry, string segment, GeoPlace pick)
+    {
+        var name = pick.Name.Length <= 200 ? pick.Name : pick.Name[..200];
+
+        var venue = entry.Venues.FirstOrDefault(v =>
+            string.Equals(v.SourceText, segment, StringComparison.OrdinalIgnoreCase));
+        if (venue is not null)
+        {
+            venue.Lat = pick.Lat;
+            venue.Lon = pick.Lon;
+            venue.Name = name;
+            venue.GeoSource = GeoSource.TeamHint;
+        }
+
+        // Der Eintrag traegt den HAUPT-Spielort. Er wandert mit, wenn genau der gemeint war —
+        // oder wenn es gar keine Spielort-Liste gibt (Einzelort).
+        var isPrimary = venue is null || venue.Ordinal == 0;
+        if (isPrimary)
+        {
+            entry.Lat = pick.Lat;
+            entry.Lon = pick.Lon;
+            entry.GeoPlaceName = name;
+            entry.GeoSource = GeoSource.TeamHint;
+        }
+        entry.UpdatedAt = DateTime.UtcNow;
 
         _log.LogInformation("Spielort von {Id} ueber Vereinsnamen auf {Place} gesetzt",
             entry.ChessResultsId, pick.Name);
-        return true;
     }
 
     /// <summary>Der erste Ortsname aus dem Text, den das Lexikon kennt (normalisiert).</summary>
