@@ -42,6 +42,12 @@ FIDE-Erfahrung als Warnung: dort fuehrte der erste gefundene Endpunkt ausschlies
 der VERGANGENHEIT, und das Urteil „bringt nichts" war deshalb falsch — die gepflegte Ansicht war
 eine andere URL.
 
+**Ergebnisse der Pruefung stehen in `docs/turnierquellen.md`** — je Quelle Urteil, ob es eine
+„kuenftig"-Ansicht gibt, der Zugangsweg, was robots.txt fuer UNSEREN Crawler sagt und ob ein
+Rechtsvorbehalt gegen automatisierte Nutzung besteht. Dort auch drei Lehren, die die Pruefung
+selbst gebracht hat (nicht beim ersten Endpunkt aufhoeren; ein 403 ist nicht automatisch
+Bot-Schutz; robots.txt sind zwei getrennte Fragen).
+
 **Global / softwaregebunden**
 - https://chess-results.com/ (laeuft)
 - https://result.vegachess.com/
