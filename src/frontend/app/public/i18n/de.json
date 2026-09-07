@@ -3198,8 +3198,6 @@
       "pending": "hole {{count}} Ergebnisse…",
       "upcoming": "Kommt noch",
       "played": "Gespielt",
-      "summary": "{{played}} Turniere, {{points}} Punkte",
-      "avgPerformance": "Performance im Schnitt {{rating}}",
       "rankOf": "{{rank}} von {{of}}",
       "roundsShort": "{{count}} Runden",
       "performanceTooltip": "Performance-Rating. Deine Wertung zu Turnierbeginn: {{before}}.",
@@ -3214,7 +3212,16 @@
       "fetchSlow": "Wird noch geholt. Der Auftrag läuft weiter; schau in einer Minute nochmal.",
       "fetchFailed": "Das Turnier konnte nicht geholt werden. Bitte später nochmal.",
       "friendWithoutName": "kein Name im Profil",
-      "noFriendsWithName": "Keiner deiner Freunde hat bisher einen Namen im Profil eingetragen — ohne den gibt es keinen Turnierverlauf zum Vergleichen."
+      "noFriendsWithName": "Keiner deiner Freunde hat bisher einen Namen im Profil eingetragen — ohne den gibt es keinen Turnierverlauf zum Vergleichen.",
+      "playedCount": "{{count}} Turniere gespielt",
+      "noRating": "keine Wertung",
+      "withoutDate": "Ohne Datum",
+      "speed": {
+        "standard": "Turnier",
+        "rapid": "Schnell",
+        "blitz": "Blitz",
+        "unknown": "unbekannt"
+      }
     }
   },
   "turnierAdmin": {

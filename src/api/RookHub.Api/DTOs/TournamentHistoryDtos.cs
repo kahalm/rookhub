@@ -37,7 +37,10 @@ public class PlayerHistoryDto
             _ => "ok",
         },
         Pending = history.PendingResults,
-        Entries = history.Results.Select(PlayerHistoryEntryDto.From).ToList(),
+        Entries = history.Results
+            .Select(r => PlayerHistoryEntryDto.From(
+                r, history.Speeds.GetValueOrDefault(r.ChessResultsId, TournamentSpeed.Unknown)))
+            .ToList(),
     };
 }
 
@@ -65,6 +68,14 @@ public class PlayerHistoryEntryDto
     public bool HasResult { get; set; }
 
     /// <summary>
+    /// Bedenkzeit-Klasse: „standard" (Turnierschach), „rapid" (Schnellschach), „blitz" — oder
+    /// „unknown", solange die Turnierseite dafuer noch nicht geholt wurde. Sie steht hier, weil
+    /// eine Performance im Blitz und eine im Turnierschach zwei verschiedene Zahlen sind, auch
+    /// wenn beide „Performance" heissen.
+    /// </summary>
+    public string Speed { get; set; } = "unknown";
+
+    /// <summary>
     /// Wurde die Spielerkarte schon abgerufen? Trennt die zwei Faelle hinter einem fehlenden
     /// Ergebnis: „wird noch geholt" (false) und „chess-results fuehrt hier keines" (true, etwa
     /// wenn die Karte des Turniers ueber diese Startnummer keinen Player-info-Block hat). Ohne
@@ -72,8 +83,15 @@ public class PlayerHistoryEntryDto
     /// </summary>
     public bool CardFetched { get; set; }
 
-    public static PlayerHistoryEntryDto From(PlayerTournamentResult r) => new()
+    public static PlayerHistoryEntryDto From(PlayerTournamentResult r, TournamentSpeed speed) => new()
     {
+        Speed = speed switch
+        {
+            TournamentSpeed.Standard => "standard",
+            TournamentSpeed.Rapid => "rapid",
+            TournamentSpeed.Blitz => "blitz",
+            _ => "unknown",
+        },
         ChessResultsId = r.ChessResultsId,
         Name = r.TournamentName,
         EndDate = r.EndDate,

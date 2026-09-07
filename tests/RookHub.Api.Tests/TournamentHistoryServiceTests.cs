@@ -410,6 +410,11 @@ public class TournamentHistoryServiceTests : IDisposable
 
         Assert.Equal(1, sweep.Players);
         Assert.Equal(1, sweep.Cards);
+        Assert.Equal(1, sweep.TimeControls);
+        // Die Bedenkzeit gehoert dem TURNIER und wird gleich mit eingeordnet.
+        var speed = await _db.TournamentTimeControls.SingleAsync();
+        Assert.Equal("90 min + 30 sec", speed.TimeControlText);
+        Assert.Equal(TournamentSpeed.Standard, speed.Speed);
         var result = await _db.PlayerTournamentResults.SingleAsync();
         Assert.Equal(3m, result.Points);
         Assert.Equal(2013, result.PerformanceRating);
@@ -435,6 +440,9 @@ public class TournamentHistoryServiceTests : IDisposable
         var sweep = await CreateService().RefreshAllAsync(1);
 
         Assert.Equal(1, sweep.Cards);
+        // Der Deckel gilt fuer die SUMME der Abrufe: nach der einen Karte ist Schluss, die
+        // Bedenkzeiten kommen in der naechsten Nacht.
+        Assert.Equal(0, sweep.TimeControls);
         Assert.Equal(1, await _db.PlayerTournamentResults.CountAsync(r => r.CardFetchedAt != null));
     }
 
@@ -466,6 +474,58 @@ public class TournamentHistoryServiceTests : IDisposable
 
         Assert.Equal(0, sweep.Players);
         Assert.Equal(0, _handler.HistoryCalls);
+    }
+
+    // ----- Die Bedenkzeit ---------------------------------------------------
+
+    /// <summary>
+    /// Die Bedenkzeit gehoert dem TURNIER, nicht der Teilnahme: zwei Konten im selben Open teilen
+    /// sie sich, und der Abruf faellt nur einmal an.
+    /// </summary>
+    [Fact]
+    public async Task FetchTimeControlAsync_IsFetchedOncePerTournament()
+    {
+        await CreateService().FetchTimeControlAsync("1206267");
+        await CreateService().FetchTimeControlAsync("1206267");
+
+        Assert.Equal(1, _handler.InfoCalls);
+        Assert.Equal(TournamentSpeed.Standard, (await _db.TournamentTimeControls.SingleAsync()).Speed);
+    }
+
+    /// <summary>
+    /// Auch OHNE gefundene Bedenkzeit wird ein Ergebnis vermerkt — sonst wuerde dieselbe Seite bei
+    /// jedem Durchgang erneut geholt. Ein NETZfehler legt dagegen nichts an.
+    /// </summary>
+    [Fact]
+    public async Task FetchTimeControlAsync_EmptyIsRemembered_ButFailureIsNot()
+    {
+        _handler.Info = """{"tournamentId":"1","timeControl":null}""";
+        await CreateService().FetchTimeControlAsync("1206267");
+
+        var stored = await _db.TournamentTimeControls.SingleAsync();
+        Assert.Null(stored.TimeControlText);
+        Assert.Equal(TournamentSpeed.Unknown, stored.Speed);
+
+        _handler.InfoStatus = HttpStatusCode.InternalServerError;
+        await CreateService().FetchTimeControlAsync("1479344");
+        Assert.False(await _db.TournamentTimeControls.AnyAsync(t => t.ChessResultsId == "1479344"));
+    }
+
+    /// <summary>Die Klasse reist mit dem Verlauf mit — die Ansicht trennt danach ihre Auswertung.</summary>
+    [Fact]
+    public async Task GetAsync_CarriesTheSpeedOfEachTournament()
+    {
+        var userId = await CreateUserAsync();
+        _handler.History = TeamRow;
+        _db.TournamentTimeControls.Add(new TournamentTimeControl
+        {
+            ChessResultsId = "1206267", TimeControlText = "5 min + 3 sec", Speed = TournamentSpeed.Blitz,
+        });
+        await _db.SaveChangesAsync();
+
+        var history = Assert.Single(await CreateService().GetAsync([userId]));
+
+        Assert.Equal(TournamentSpeed.Blitz, history.Speeds["1206267"]);
     }
 
     // ----- Der Zeitplan -----------------------------------------------------
@@ -503,22 +563,37 @@ public class TournamentHistoryServiceTests : IDisposable
     {
         public string History { get; set; } = "[]";
         public string Card { get; set; } = """{"hasResult":false}""";
+        /// <summary>Die Turnierdetails — dort steht die Bedenkzeit, die Trefferliste kennt sie nicht.</summary>
+        public string Info { get; set; } = """{"tournamentId":"1","timeControl":"90 min + 30 sec"}""";
         public HttpStatusCode HistoryStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode CardStatus { get; set; } = HttpStatusCode.OK;
+        public HttpStatusCode InfoStatus { get; set; } = HttpStatusCode.OK;
         public int HistoryCalls { get; private set; }
         public int CardCalls { get; private set; }
+        public int InfoCalls { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var url = request.RequestUri?.ToString() ?? "";
-            var card = url.Contains("player-card", StringComparison.Ordinal);
-            if (card) CardCalls++; else HistoryCalls++;
-
-            return Task.FromResult(new HttpResponseMessage(card ? CardStatus : HistoryStatus)
+            if (url.Contains("player-card", StringComparison.Ordinal))
             {
-                Content = new StringContent(card ? Card : History, Encoding.UTF8, "application/json"),
-            });
+                CardCalls++;
+                return Reply(CardStatus, Card);
+            }
+            if (url.Contains("tournament-info", StringComparison.Ordinal))
+            {
+                InfoCalls++;
+                return Reply(InfoStatus, Info);
+            }
+            HistoryCalls++;
+            return Reply(HistoryStatus, History);
         }
+
+        private static Task<HttpResponseMessage> Reply(HttpStatusCode status, string body) =>
+            Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
     }
 
     private sealed class ClientFactory(HttpMessageHandler handler) : IHttpClientFactory

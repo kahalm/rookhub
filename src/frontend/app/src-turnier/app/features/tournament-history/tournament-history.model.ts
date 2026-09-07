@@ -1,6 +1,19 @@
 /** Warum ein Konto keinen Verlauf hat — ein Grund ist besser als eine leere Tabelle. */
 export type HistoryStatus = 'ok' | 'noName' | 'sourceUnavailable';
 
+/** Bedenkzeit-Klasse eines Turniers, abgeleitet aus der Bedenkzeit auf chess-results. */
+export type HistorySpeed = 'standard' | 'rapid' | 'blitz' | 'unknown';
+
+/** Die drei Klassen in der Reihenfolge, in der sie ueberall stehen: von lang nach kurz. */
+export const HISTORY_SPEEDS: HistorySpeed[] = ['standard', 'rapid', 'blitz'];
+
+/** Was in einer Klasse zusammenkommt: wie viele Turniere und welche mittlere Performance. */
+export interface SpeedSummary {
+  speed: HistorySpeed;
+  played: number;
+  performance: number | null;
+}
+
 export interface PlayerHistoryEntry {
   chessResultsId: string;
   name: string;
@@ -21,6 +34,12 @@ export interface PlayerHistoryEntry {
    * hier kein Einzelergebnis" — sonst wartet man auf eine Zahl, die nie kommt.
    */
   cardFetched: boolean;
+  /**
+   * Bedenkzeit-Klasse. Eine Performance im Blitz und eine im Turnierschach sind zwei
+   * verschiedene Zahlen, auch wenn beide „Performance" heissen — deshalb steht sie an jeder
+   * Zeile und trennt die Auswertung. `unknown`, solange die Turnierseite dafuer fehlt.
+   */
+  speed: HistorySpeed;
 }
 
 export interface PlayerHistory {

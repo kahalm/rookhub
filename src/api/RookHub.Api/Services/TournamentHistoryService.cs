@@ -81,7 +81,12 @@ public class TournamentHistoryService
         string DisplayName,
         HistoryStatus Status,
         List<PlayerTournamentResult> Results,
-        int PendingResults);
+        int PendingResults,
+        /// <summary>
+        /// Bedenkzeit-Klasse je Turnier. Sie gehoert dem TURNIER und wird deshalb nicht an der
+        /// Teilnahme gefuehrt — zwei Freunde im selben Open teilen sie sich.
+        /// </summary>
+        IReadOnlyDictionary<string, TournamentSpeed> Speeds);
 
     /// <summary>
     /// Der Verlauf mehrerer Konten. Mehrere, weil die Ansicht auf Freunde umschaltbar ist und
@@ -106,7 +111,9 @@ public class TournamentHistoryService
             var identity = IdentityOf(profile.LastName, profile.FirstName, profile.FideId, profile.ChessResultsId);
             if (identity is null)
             {
-                histories.Add(new PlayerHistory(profile.UserId, name, HistoryStatus.NoName, [], 0));
+                histories.Add(new PlayerHistory(
+                    profile.UserId, name, HistoryStatus.NoName, [], 0,
+                    new Dictionary<string, TournamentSpeed>()));
                 continue;
             }
 
@@ -117,13 +124,18 @@ public class TournamentHistoryService
                 .ToListAsync(ct);
 
             var pending = QueueMissingCards(identity, results);
-            histories.Add(new PlayerHistory(profile.UserId, name, status, results, pending));
+            histories.Add(new PlayerHistory(
+                profile.UserId, name, status, results, pending, await SpeedsForAsync(results, ct)));
         }
         return histories;
     }
 
-    /// <summary>Was ein Hintergrund-Durchgang bewegt hat — fuers Protokoll.</summary>
-    public sealed record HistorySweep(int Players, int Cards, int Unavailable);
+    /// <summary>
+    /// Was ein Hintergrund-Durchgang bewegt hat — fuers Protokoll. Karten und Bedenkzeiten sind
+    /// zwei verschiedene Seiten und werden getrennt gezaehlt; der DECKEL gilt fuer ihre Summe,
+    /// denn beide kosten denselben Abruf hinter demselben Rate-Limiter.
+    /// </summary>
+    public sealed record HistorySweep(int Players, int Cards, int TimeControls, int Unavailable);
 
     /// <summary>
     /// Der Hintergrund-Durchgang: Trefferlisten auffrischen und fehlende Spielerkarten holen, fuer
@@ -157,6 +169,7 @@ public class TournamentHistoryService
 
         var players = 0;
         var cards = 0;
+        var timeControls = 0;
         var unavailable = 0;
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -167,9 +180,9 @@ public class TournamentHistoryService
             if (await RefreshListIfStaleAsync(identity, ct) == HistoryStatus.SourceUnavailable) unavailable++;
             players++;
 
-            // Ist der Kartendeckel erreicht, laufen die LISTEN weiter — sie kosten einen Abruf je
+            // Ist der Abruf-Deckel erreicht, laufen die LISTEN weiter — sie kosten einen Abruf je
             // Konto und sind das, was neue Turniere ueberhaupt sichtbar macht.
-            if (cards >= maxCards) continue;
+            if (cards + timeControls >= maxCards) continue;
 
             // Dieselbe Auswahl wie <see cref="NeedsCard"/>, hier aber ausgeschrieben: die Methode
             // uebersetzt der Provider nicht, und die Filterung gehoert in die Datenbank.
@@ -177,7 +190,7 @@ public class TournamentHistoryService
                 .Where(r => r.PlayerKey == identity.Key && r.CardFetchedAt == null && r.Snr > 0
                             && r.EndDate != null && r.EndDate < today)
                 .OrderByDescending(r => r.EndDate)
-                .Take(maxCards - cards)
+                .Take(maxCards - cards - timeControls)
                 .ToListAsync(ct);
 
             foreach (var result in missing)
@@ -186,9 +199,32 @@ public class TournamentHistoryService
                 await FetchCardAsync(identity.Key, result.ChessResultsId, result.Snr, ct);
                 cards++;
             }
+
+            // Die BEDENKZEIT fehlt auch bei Turnieren, deren Karte laengst da ist (sie kam erst
+            // spaeter dazu). Sie haengt am Turnier, nicht am Konto — zwei Abfragen statt einer
+            // Unterabfrage, weil der MySQL-Provider die nicht verlaesslich uebersetzt.
+            if (cards + timeControls >= maxCards) continue;
+
+            var playedIds = await _db.PlayerTournamentResults
+                .Where(r => r.PlayerKey == identity.Key)
+                .Select(r => r.ChessResultsId)
+                .Distinct()
+                .ToListAsync(ct);
+            var known = await _db.TournamentTimeControls
+                .Where(t => playedIds.Contains(t.ChessResultsId))
+                .Select(t => t.ChessResultsId)
+                .ToListAsync(ct);
+
+            foreach (var id in playedIds.Except(known, StringComparer.Ordinal)
+                         .Take(maxCards - cards - timeControls))
+            {
+                if (ct.IsCancellationRequested) break;
+                await FetchTimeControlAsync(id, ct);
+                timeControls++;
+            }
         }
 
-        return new HistorySweep(players, cards, unavailable);
+        return new HistorySweep(players, cards, timeControls, unavailable);
     }
 
     /// <summary>
@@ -336,6 +372,55 @@ public class TournamentHistoryService
     }
 
     /// <summary>
+    /// Die Bedenkzeit-Klassen der Turniere dieser Liste — ein Nachschlagen, kein Abruf.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, TournamentSpeed>> SpeedsForAsync(
+        List<PlayerTournamentResult> results, CancellationToken ct)
+    {
+        if (results.Count == 0) return new Dictionary<string, TournamentSpeed>();
+
+        var ids = results.Select(r => r.ChessResultsId).Distinct().ToList();
+        return await _db.TournamentTimeControls.AsNoTracking()
+            .Where(t => ids.Contains(t.ChessResultsId))
+            .ToDictionaryAsync(t => t.ChessResultsId, t => t.Speed, StringComparer.Ordinal, ct);
+    }
+
+    /// <summary>
+    /// Holt die BEDENKZEIT eines Turniers, falls sie noch fehlt. Ein eigener Seitenabruf: die
+    /// Spielersuche liefert sie nicht, und ohne sie stuenden Blitz- und Turnierschach-Performance
+    /// in derselben Spalte, als waeren sie vergleichbar.
+    ///
+    /// <para>Ein Ergebnis wird AUCH ohne gefundene Bedenkzeit vermerkt (sonst wuerde dieselbe
+    /// Seite bei jedem Durchgang erneut geholt); ein NETZfehler legt dagegen nichts an — der ist
+    /// keine Auskunft ueber das Turnier. Oeffentlich, weil der Hintergrund-Auftrag sie in einem
+    /// eigenen Scope aufruft.</para>
+    /// </summary>
+    public async Task FetchTimeControlAsync(string chessResultsId, CancellationToken ct = default)
+    {
+        if (await _db.TournamentTimeControls.AnyAsync(t => t.ChessResultsId == chessResultsId, ct)) return;
+
+        CrawlerTournamentInfo? info;
+        try
+        {
+            info = await FetchTournamentInfoFromCrawlerAsync(chessResultsId, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _log.LogWarning(ex, "Bedenkzeit {Id} nicht erreichbar", chessResultsId);
+            return;
+        }
+
+        _db.TournamentTimeControls.Add(new TournamentTimeControl
+        {
+            ChessResultsId = chessResultsId,
+            TimeControlText = Truncate(info?.TimeControl, 300) is { Length: > 0 } text ? text : null,
+            Speed = TournamentSpeedClassifier.Classify(info?.TimeControl),
+            FetchedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
     /// Fehlt zu diesem Eintrag noch die Spielerkarte — und lohnt der Abruf?
     ///
     /// <para><b>Das Kriterium ist der TERMIN, nicht der Platz.</b> Urspruenglich stand hier
@@ -375,6 +460,9 @@ public class TournamentHistoryService
             {
                 var scoped = provider.GetRequiredService<TournamentHistoryService>();
                 await scoped.FetchCardAsync(key, chessResultsId, snr, token);
+                // Dieselbe Gelegenheit fuer die Bedenkzeit: sie gehoert dem Turnier, wird also
+                // hoechstens EINMAL geholt, egal wie viele Konten das Turnier gespielt haben.
+                await scoped.FetchTimeControlAsync(chessResultsId, token);
             });
         }
         return missing.Count;
@@ -454,6 +542,24 @@ public class TournamentHistoryService
             ? null
             : JsonSerializer.Deserialize<CrawlerPlayerCard>(json, JsonOptions);
     }
+
+    private async Task<CrawlerTournamentInfo?> FetchTournamentInfoFromCrawlerAsync(
+        string chessResultsId, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
+        using var response = await client.GetAsync(
+            $"/api/tournament-search/tournament-info?id={Uri.EscapeDataString(chessResultsId)}", ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<CrawlerTournamentInfo>(json, JsonOptions);
+    }
+
+    internal sealed record CrawlerTournamentInfo(
+        string TournamentId, string? Name, string? DateText, string? Location, string? TimeControl,
+        int? TotalRounds);
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

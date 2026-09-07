@@ -74,6 +74,41 @@ public class PlayerTournamentResult
 }
 
 /// <summary>
+/// Die BEDENKZEIT eines Turniers — je Turnier EINMAL, nicht je Spieler.
+///
+/// <para><b>Warum eine eigene Tabelle.</b> Die Angabe gehoert dem Turnier, nicht der Teilnahme:
+/// zwei Freunde im selben Open teilen sie, und sie kostet einen eigenen Seitenabruf
+/// (chess-results fuehrt sie nur in der Turnierdetail-Ansicht, die Spielersuche liefert sie
+/// nicht). An der Teilnahme gefuehrt wuerde derselbe Abruf je Konto wiederholt — genau der
+/// Fehler, den der spielerbezogene Schluessel von <see cref="PlayerTournamentResult"/> vermeidet.
+/// </para>
+///
+/// <para><b>Warum Text UND Klasse.</b> Der Rohtext ist das, was auf der Seite steht („90 min +
+/// 30 sec / Zug"); die Klasse ist eine Ableitung daraus (<see cref="TournamentSpeedClassifier"/>).
+/// Beides zu speichern heisst: eine geaenderte Einordnungsregel laesst sich auf den Bestand
+/// anwenden, ohne jede Seite erneut zu holen.</para>
+/// </summary>
+public class TournamentTimeControl
+{
+    /// <summary>chess-results-Turniernummer.</summary>
+    [MaxLength(20)]
+    public string ChessResultsId { get; set; } = string.Empty;
+
+    /// <summary>Rohtext der Bedenkzeit; <c>null</c>, wenn die Seite keine nennt.</summary>
+    [MaxLength(300)]
+    public string? TimeControlText { get; set; }
+
+    /// <summary>Abgeleitete Klasse: Blitz / Schnellschach / Turnierschach.</summary>
+    public TournamentSpeed Speed { get; set; } = TournamentSpeed.Unknown;
+
+    /// <summary>
+    /// Wann abgerufen. Gesetzt AUCH ohne gefundene Bedenkzeit — sonst wuerde dieselbe Seite bei
+    /// jedem Durchgang erneut geholt. Ein NETZfehler legt dagegen keine Zeile an.
+    /// </summary>
+    public DateTime FetchedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
 /// Wann die Turnierliste EINES Spielers zuletzt geholt wurde. Ein Abruf je Spieler und
 /// Zeitfenster — ohne diesen Vermerk holte jeder Seitenaufruf die Trefferliste erneut.
 /// </summary>

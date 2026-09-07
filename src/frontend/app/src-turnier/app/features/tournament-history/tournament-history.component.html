@@ -63,11 +63,21 @@
           <h2>{{ history.displayName }}</h2>
 
           @if (history.status === 'ok' && summary(history).played > 0) {
+            <!-- Statt einer Gesamtpunktzahl (die Blitz zu Turnierschach addierte und nur mit der
+                 Zeit wuchs) die Performance JE Bedenkzeit-Klasse — getrennt, weil 1900 im Blitz
+                 und 1900 im Turnierschach nicht dieselbe Leistung sind. -->
             <span class="summary">
-              {{ 'turnier.history.summary' | translate: {
-                   played: summary(history).played, points: summary(history).points } }}
-              @if (summary(history).performance !== null) {
-                <span> · {{ 'turnier.history.avgPerformance' | translate: { rating: summary(history).performance } }}</span>
+              {{ 'turnier.history.playedCount' | translate: { count: summary(history).played } }}
+              @for (s of summary(history).speeds; track s.speed) {
+                <span class="speed-sum">
+                  · {{ ('turnier.history.speed.' + s.speed) | translate }}
+                  @if (s.performance !== null) {
+                    {{ s.performance }}
+                  } @else {
+                    <span class="muted">{{ 'turnier.history.noRating' | translate }}</span>
+                  }
+                  <span class="muted">({{ s.played }})</span>
+                </span>
               }
             </span>
           }
@@ -103,16 +113,42 @@
 
         @if (past(history).length > 0) {
           <h3>{{ 'turnier.history.played' | translate }}</h3>
+
+          <!-- Nach JAHREN: eine durchlaufende Liste beantwortet die Frage nicht, um die es hier
+               geht („wie lief die Saison"), und je Jahr steht dieselbe Auswertung wie oben. -->
+          @for (group of years(history); track group.year) {
+            <div class="year-head">
+              <h4>{{ group.year || ('turnier.history.withoutDate' | translate) }}</h4>
+              <span class="summary">
+                @for (s of group.speeds; track s.speed) {
+                  <span class="speed-sum">
+                    {{ ('turnier.history.speed.' + s.speed) | translate }}
+                    @if (s.performance !== null) {
+                      {{ s.performance }}
+                    } @else {
+                      <span class="muted">{{ 'turnier.history.noRating' | translate }}</span>
+                    }
+                    <span class="muted">({{ s.played }})</span>
+                  </span>
+                }
+              </span>
+            </div>
+
           <!-- Eigenes overflow-x: die Zahlenspalten sind auf einem Handy breiter als der
                Bildschirm, und eine ueberlaufende SEITE verschiebt die CDK-Overlays. -->
           <div class="rows-scroll">
             <div class="rows">
-              @for (entry of past(history); track trackById($index, entry)) {
+              @for (entry of group.entries; track trackById($index, entry)) {
                 <button type="button" class="row" (click)="open(entry)"
                         [disabled]="opening() !== null"
                         [class.busy]="opening() === entry.chessResultsId">
                   <span class="row-date">{{ entry.endDate }}</span>
-                  <span class="row-name">{{ entry.name }}</span>
+                  <span class="row-name">
+                    {{ entry.name }}
+                    @if (entry.speed !== 'unknown') {
+                      <span class="speed-tag" [class]="'speed-' + entry.speed">{{ ('turnier.history.speed.' + entry.speed) | translate }}</span>
+                    }
+                  </span>
 
                   @if (entry.hasResult) {
                     <span class="row-num">{{ entry.points }}</span>
@@ -146,6 +182,7 @@
               }
             </div>
           </div>
+          }
         }
 
         @if (history.status === 'ok' && history.entries.length === 0) {

@@ -3198,8 +3198,6 @@
       "pending": "fetching {{count}} results…",
       "upcoming": "Coming up",
       "played": "Played",
-      "summary": "{{played}} tournaments, {{points}} points",
-      "avgPerformance": "average performance {{rating}}",
       "rankOf": "{{rank}} of {{of}}",
       "roundsShort": "{{count}} rounds",
       "performanceTooltip": "Performance rating. Your rating going in: {{before}}.",
@@ -3214,7 +3212,16 @@
       "fetchSlow": "Still being fetched. The job keeps running; look again in a minute.",
       "fetchFailed": "The tournament could not be fetched. Please try again later.",
       "friendWithoutName": "no name in profile",
-      "noFriendsWithName": "None of your friends has entered a name in their profile yet — without one there is no tournament history to compare."
+      "noFriendsWithName": "None of your friends has entered a name in their profile yet — without one there is no tournament history to compare.",
+      "playedCount": "{{count}} tournaments played",
+      "noRating": "no rating",
+      "withoutDate": "Without a date",
+      "speed": {
+        "standard": "Classical",
+        "rapid": "Rapid",
+        "blitz": "Blitz",
+        "unknown": "unknown"
+      }
     }
   },
   "turnierAdmin": {

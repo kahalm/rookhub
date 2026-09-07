@@ -17,7 +17,7 @@ import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { TournamentListService } from '../../core/tournament-list.service';
-import { HistoryFriend, PlayerHistory, PlayerHistoryEntry } from './tournament-history.model';
+import { HISTORY_SPEEDS, HistoryFriend, PlayerHistory, PlayerHistoryEntry, SpeedSummary } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
 
 /** Wessen Verlauf gezeigt wird. */
@@ -224,19 +224,60 @@ export class TournamentHistoryComponent implements OnInit {
   }
 
   /**
-   * Die Summe der gespielten Turniere — Punkte und Schnitt der Performance. Ein Verlauf ohne
-   * Summe laesst einen selbst zusammenzaehlen, und genau darum sieht man ihn an.
+   * Die gespielten Turniere nach JAHREN, neueste zuerst — und je Jahr dieselbe Auswertung wie
+   * oben. Eine ungeteilte Liste ueber Jahre hinweg beantwortet die Frage nicht, um die es hier
+   * geht („wie lief die Saison"), und eine Zahl ueber alles erst recht nicht.
    */
-  summary(history: PlayerHistory): { played: number; points: number; performance: number | null } {
-    const played = this.past(history).filter(e => e.hasResult);
-    const rated = played.filter(e => e.performanceRating !== null);
+  years(history: PlayerHistory): { year: string; entries: PlayerHistoryEntry[]; speeds: SpeedSummary[] }[] {
+    const groups = new Map<string, PlayerHistoryEntry[]>();
+    for (const entry of this.past(history)) {
+      // Ohne Datum gibt es kein Jahr — solche Zeilen kommen ans Ende, in eine eigene Gruppe.
+      const year = entry.endDate ? entry.endDate.slice(0, 4) : '';
+      (groups.get(year) ?? groups.set(year, []).get(year)!).push(entry);
+    }
 
+    return [...groups.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([year, entries]) => ({ year, entries, speeds: this.speedSummaries(entries) }));
+  }
+
+  /**
+   * Wie viele Turniere und welche mittlere Performance je Bedenkzeit-Klasse.
+   *
+   * <p><b>Warum die Gesamtpunkte hier nicht mehr stehen.</b> „57 Punkte" ueber alle Turniere
+   * hinweg addiert Blitzpartien zu Turnierpartien und Fuenfrundige zu Elfrundigen — die Zahl
+   * wuchs mit der Zeit und sagte sonst nichts. Die Performance je Klasse dagegen ist genau die
+   * Auskunft, die man sucht, und sie ist NUR getrennt lesbar: 1900 im Blitz und 1900 im
+   * Turnierschach sind nicht dieselbe Leistung.</p>
+   *
+   * <p>Klassen ohne ein einziges Turnier fallen weg; eine Klasse mit Turnieren, aber ohne
+   * gewertete Performance, bleibt mit ihrer Zahl stehen (der Unterschied zwischen „nicht
+   * gespielt" und „keine Wertung" gehoert nicht verwischt).</p>
+   */
+  speedSummaries(entries: PlayerHistoryEntry[]): SpeedSummary[] {
+    const played = entries.filter(e => e.hasResult);
+
+    return HISTORY_SPEEDS.map(speed => {
+      const mine = played.filter(e => e.speed === speed);
+      const rated = mine.filter(e => e.performanceRating !== null);
+      return {
+        speed,
+        played: mine.length,
+        performance: rated.length === 0
+          ? null
+          : Math.round(rated.reduce((sum, e) => sum + (e.performanceRating ?? 0), 0) / rated.length),
+      };
+    }).filter(s => s.played > 0);
+  }
+
+  /**
+   * Die Summe der gespielten Turniere je Konto: Anzahl und Performance JE KLASSE.
+   */
+  summary(history: PlayerHistory): { played: number; speeds: SpeedSummary[] } {
+    const past = this.past(history);
     return {
-      played: played.length,
-      points: played.reduce((sum, e) => sum + (e.points ?? 0), 0),
-      performance: rated.length === 0
-        ? null
-        : Math.round(rated.reduce((sum, e) => sum + (e.performanceRating ?? 0), 0) / rated.length),
+      played: past.filter(e => e.hasResult).length,
+      speeds: this.speedSummaries(past),
     };
   }
 

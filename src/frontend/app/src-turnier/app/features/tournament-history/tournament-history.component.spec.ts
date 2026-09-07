@@ -13,7 +13,8 @@ function played(over: Partial<PlayerHistoryEntry> = {}): PlayerHistoryEntry {
   return {
     chessResultsId: '1107064', name: 'Schach Tirol Open 2025', endDate: '2025-08-30',
     rank: 56, playerCount: 56, rounds: 9, points: 1.5, performanceRating: 1740,
-    ratingChange: -51.6, ratingBefore: 1923, hasResult: true, cardFetched: true, ...over,
+    ratingChange: -51.6, ratingBefore: 1923, hasResult: true, cardFetched: true,
+    speed: 'standard', ...over,
   };
 }
 
@@ -168,20 +169,57 @@ describe('TournamentHistoryComponent', () => {
    * Ein Verlauf ohne Summe laesst einen selbst zusammenzaehlen — und genau darum sieht man ihn
    * an. Gezaehlt werden nur die Turniere MIT Ergebnis.
    */
-  it('summiert Punkte und mittelt die Performance über die gespielten', async () => {
+  it('mittelt die Performance JE Bedenkzeit-Klasse', async () => {
     const req = await setup();
     req.flush([history({
       entries: [
-        played({ points: 1.5, performanceRating: 1740 }),
-        played({ chessResultsId: '2', points: 4, performanceRating: 1860 }),
-        played({ chessResultsId: '3', hasResult: false, points: null, performanceRating: null }),
+        played({ performanceRating: 1740, speed: 'standard' }),
+        played({ chessResultsId: '2', performanceRating: 1860, speed: 'standard' }),
+        played({ chessResultsId: '3', performanceRating: 1600, speed: 'blitz' }),
+        played({ chessResultsId: '4', hasResult: false, points: null, performanceRating: null }),
       ],
     })]);
 
     const summary = component.summary(component.histories()[0]);
-    expect(summary.played).toBe(2);
-    expect(summary.points).toBe(5.5);
-    expect(summary.performance).toBe(1800);
+    expect(summary.played).toBe(3);
+    // Turnierschach und Blitz getrennt — 1900 im Blitz ist nicht 1900 im Turnierschach.
+    expect(summary.speeds.map(s => [s.speed, s.played, s.performance]))
+      .toEqual([['standard', 2, 1800], ['blitz', 1, 1600]]);
+  });
+
+  /** Eine Klasse ohne gewertete Performance bleibt mit ihrer Anzahl stehen. */
+  it('unterscheidet „nicht gespielt" von „keine Wertung"', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [played({ performanceRating: null, speed: 'rapid' })],
+    })]);
+
+    const speeds = component.summary(component.histories()[0]).speeds;
+    expect(speeds.length).toBe(1);
+    expect(speeds[0].speed).toBe('rapid');
+    expect(speeds[0].performance).toBeNull();
+  });
+
+  /**
+   * Gespielte Turniere stehen nach JAHREN getrennt, neueste zuerst — eine durchlaufende Liste
+   * beantwortet die Frage „wie lief die Saison" nicht.
+   */
+  it('gruppiert die gespielten Turniere nach Jahren, neueste zuerst', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '1', endDate: '2025-08-30', performanceRating: 1700 }),
+        played({ chessResultsId: '2', endDate: '2024-05-10', performanceRating: 1600 }),
+        played({ chessResultsId: '3', endDate: '2025-01-06', performanceRating: 1800 }),
+      ],
+    })]);
+
+    const years = component.years(component.histories()[0]);
+    expect(years.map(g => g.year)).toEqual(['2025', '2024']);
+    expect(years[0].entries.length).toBe(2);
+    // Je Jahr dieselbe Auswertung wie oben.
+    expect(years[0].speeds[0].performance).toBe(1750);
+    expect(years[1].speeds[0].performance).toBe(1600);
   });
 
   /**

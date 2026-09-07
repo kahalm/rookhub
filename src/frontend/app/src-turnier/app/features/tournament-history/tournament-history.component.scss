@@ -130,3 +130,36 @@ h3 {
    nicht als „nichts passiert" gelesen wird (das Holen dauert bis zu zwei Minuten). */
 .row.busy { opacity: 0.6; }
 .row:disabled { cursor: default; }
+
+/* --- Bedenkzeit-Klassen ---------------------------------------------------
+   Eine Performance im Blitz und eine im Turnierschach sind zwei verschiedene Zahlen. Die Klasse
+   steht deshalb an jeder Zeile UND in jeder Summe; zwei Kanaele (Text + Farbton), damit sie nicht
+   allein an der Farbe haengt. */
+.speed-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  color: color-mix(in srgb, currentColor 75%, transparent);
+}
+.speed-tag.speed-blitz { background: color-mix(in srgb, #f4a70e 18%, transparent); }
+.speed-tag.speed-rapid { background: color-mix(in srgb, #3f8cff 16%, transparent); }
+.speed-tag.speed-standard { background: color-mix(in srgb, currentColor 8%, transparent); }
+
+.speed-sum { white-space: nowrap; margin-right: 0.5rem; }
+
+/* Die Jahres-Ueberschrift traegt ihre eigene Auswertung — auf schmalen Schirmen untereinander. */
+.year-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 0.35rem;
+}
+.year-head h4 { margin: 0; font-size: 0.95rem; }
+.year-head .summary { font-size: 0.85rem; }

@@ -3198,8 +3198,6 @@
       "pending": "dohvaćam {{count}} rezultata…",
       "upcoming": "Slijedi",
       "played": "Odigrano",
-      "summary": "{{played}} turnira, {{points}} bodova",
-      "avgPerformance": "performance u prosjeku {{rating}}",
       "rankOf": "{{rank}} od {{of}}",
       "roundsShort": "{{count}} kola",
       "performanceTooltip": "Performance rating. Tvoja ocjena na početku turnira: {{before}}.",
@@ -3214,7 +3212,16 @@
       "fetchSlow": "Još se dohvaća. Zadatak se nastavlja; pogledaj ponovno za minutu.",
       "fetchFailed": "Turnir se nije mogao dohvatiti. Pokušaj kasnije.",
       "friendWithoutName": "nema imena u profilu",
-      "noFriendsWithName": "Nitko od tvojih prijatelja još nije unio ime u profil — bez njega nema turnirske povijesti za usporedbu."
+      "noFriendsWithName": "Nitko od tvojih prijatelja još nije unio ime u profil — bez njega nema turnirske povijesti za usporedbu.",
+      "playedCount": "odigrano turnira: {{count}}",
+      "noRating": "bez ocjene",
+      "withoutDate": "Bez datuma",
+      "speed": {
+        "standard": "Standardni",
+        "rapid": "Ubrzani",
+        "blitz": "Blic",
+        "unknown": "nepoznato"
+      }
     }
   },
   "turnierAdmin": {

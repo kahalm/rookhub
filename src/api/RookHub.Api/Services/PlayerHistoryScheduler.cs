@@ -35,8 +35,8 @@ public class PlayerHistoryScheduler : BackgroundService
         _logger = logger;
         _enabled = configuration.GetValue("PlayerHistory:Enabled", true);
 
-        // Wie viele Spielerkarten ein Lauf holt. Jede ist ein Seitenabruf hinter dem
-        // Rate-Limiter; was nicht mehr hineinpasst, kommt in der naechsten Nacht.
+        // Wie viele SEITEN ein Lauf holt (Spielerkarten und Bedenkzeiten zusammen). Jede ist ein
+        // Abruf hinter dem Rate-Limiter; was nicht mehr hineinpasst, kommt in der naechsten Nacht.
         _maxCards = Math.Clamp(configuration.GetValue("PlayerHistory:MaxCardsPerRun", 200), 0, 2000);
 
         // 0 schaltet den Startlauf ab.
@@ -98,12 +98,12 @@ public class PlayerHistoryScheduler : BackgroundService
 
             if (sweep.Unavailable > 0)
                 _logger.LogWarning(
-                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten geholt, {Unavailable} Trefferlisten nicht erreichbar",
-                    sweep.Players, sweep.Cards, sweep.Unavailable);
+                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Unavailable} Trefferlisten nicht erreichbar",
+                    sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Unavailable);
             else
                 _logger.LogInformation(
-                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten geholt",
-                    sweep.Players, sweep.Cards);
+                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt",
+                    sweep.Players, sweep.Cards, sweep.TimeControls);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
