@@ -156,6 +156,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     public async Task<IActionResult> GeocodeMissing([FromQuery] int limit = 1000, CancellationToken ct = default)
     {
         var entries = await _db.TournamentDirectoryEntries
+            .Include(e => e.Venues)
             .Where(e => e.RemovedAt == null && e.Lat == null && e.GeoSource != GeoSource.Manual)
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 10000))
@@ -164,14 +165,38 @@ public class AdminTournamentDirectoryController : BaseApiController
         var resolved = 0;
         foreach (var entry in entries)
         {
-            var result = await _geocoding.ResolveAsync(entry.LocationText, entry.State, entry.Federation, ct);
-            if (result is null) continue;
+            // Alle Spielorte, nicht nur einen: bei Ligen nennt der Ortstext mehrere.
+            var results = await _geocoding.ResolveManyAsync(
+                entry.LocationText, entry.State, entry.Federation, ct);
+            var located = results.Where(r => r.Source != GeoSource.Ambiguous).ToList();
+            var primary = located.FirstOrDefault();
 
-            entry.Lat = result.Lat;
-            entry.Lon = result.Lon;
-            entry.GeoSource = result.Source;
-            entry.GeoPlaceName = result.PlaceName;
+            if (primary is null)
+            {
+                // Mehrdeutig bleibt ohne Pin — aber als solches vermerkt, damit die Arbeitsliste
+                // „gefunden, aber unklar" von „nichts gefunden" unterscheiden kann.
+                if (results.Any(r => r.Source == GeoSource.Ambiguous) && entry.GeoSource != GeoSource.Ambiguous)
+                {
+                    entry.GeoSource = GeoSource.Ambiguous;
+                    entry.UpdatedAt = DateTime.UtcNow;
+                }
+                continue;
+            }
+
+            entry.Lat = primary.Lat;
+            entry.Lon = primary.Lon;
+            entry.GeoSource = primary.Source;
+            entry.GeoPlaceName = primary.PlaceName;
             entry.UpdatedAt = DateTime.UtcNow;
+
+            if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
+            entry.Venues = located.Count < 2 ? [] : located
+                .Select((r, i) => new TournamentDirectoryVenue
+                {
+                    Ordinal = i, Name = r.PlaceName, SourceText = r.SourceText,
+                    Lat = r.Lat, Lon = r.Lon, GeoSource = r.Source,
+                })
+                .ToList();
             resolved++;
         }
         await _db.SaveChangesAsync(ct);

@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<TournamentDirectoryEntry> TournamentDirectoryEntries => Set<TournamentDirectoryEntry>();
     public DbSet<TournamentSearchProfile> TournamentSearchProfiles => Set<TournamentSearchProfile>();
     public DbSet<TournamentDirectorySweep> TournamentDirectorySweeps => Set<TournamentDirectorySweep>();
+    public DbSet<TournamentDirectoryVenue> TournamentDirectoryVenues => Set<TournamentDirectoryVenue>();
     public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
@@ -310,6 +311,18 @@ public class AppDbContext : DbContext
             e.HasIndex(d => new { d.Lat, d.Lon });
             // Listen- und Kalenderabfragen gruppieren darueber.
             e.HasIndex(d => d.GroupKey);
+        });
+
+        modelBuilder.Entity<TournamentDirectoryVenue>(e =>
+        {
+            e.HasOne(v => v.Entry)
+             .WithMany(d => d.Venues)
+             .HasForeignKey(v => v.TournamentDirectoryEntryId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Der Vorfilter der Umkreissuche laeuft jetzt HIER: ein Turnier gilt als in der Naehe,
+            // wenn EINER seiner Spielorte in der Box liegt.
+            e.HasIndex(v => new { v.Lat, v.Lon });
+            e.HasIndex(v => new { v.TournamentDirectoryEntryId, v.Ordinal });
         });
 
         modelBuilder.Entity<TournamentSearchProfile>(e =>

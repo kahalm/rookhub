@@ -150,7 +150,10 @@ public class TournamentDirectoryService
             return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), []);
         }
 
+        // Die Spielorte MIT laden: ohne sie steht `entry.Venues` leer da, ReplaceVenues loescht
+        // nichts, und die alten Zeilen sammeln sich mit jedem naechtlichen Lauf an.
         var existing = await _db.TournamentDirectoryEntries
+            .Include(e => e.Venues)
             .Where(e => e.Federation == federation && (e.EndDate == null || e.EndDate >= from))
             .ToListAsync(ct);
         var byId = existing.ToDictionary(e => e.ChessResultsId, StringComparer.Ordinal);
@@ -167,6 +170,7 @@ public class TournamentDirectoryService
         if (strays.Count > 0)
         {
             foreach (var stray in await _db.TournamentDirectoryEntries
+                         .Include(e => e.Venues)
                          .Where(e => strays.Contains(e.ChessResultsId)).ToListAsync(ct))
             {
                 byId[stray.ChessResultsId] = stray;
@@ -458,26 +462,62 @@ public class TournamentDirectoryService
         entry.UpdatedAt = now;
     }
 
+    /// <summary>
+    /// Verortet einen Eintrag — mit ALLEN Spielorten, die im Ortstext stehen.
+    ///
+    /// <para>Die Koordinaten am Eintrag bleiben der HAUPT-Spielort (der erste): Kalender, Detail
+    /// und der Bounding-Box-Index haengen daran. Die vollstaendige Liste steht in
+    /// <see cref="TournamentDirectoryEntry.Venues"/>, und die Umkreissuche fragt sie — sonst faende
+    /// sie ein Liga-Turnier nicht, das zur Haelfte vor der Haustuer stattfindet.</para>
+    /// </summary>
     private async Task GeocodeAsync(TournamentDirectoryEntry entry, CancellationToken ct)
     {
         // Eine von Hand gesetzte Koordinate nie ueberschreiben - sie ist die Korrektur eines
         // Fehlgriffs und wuerde sonst jede Nacht zurueckfallen.
         if (entry.GeoSource == GeoSource.Manual) return;
 
-        var result = await _geocoding.ResolveAsync(entry.LocationText, entry.State, entry.Federation, ct);
-        if (result is null)
-        {
-            entry.Lat = null;
-            entry.Lon = null;
-            entry.GeoSource = GeoSource.None;
-            entry.GeoPlaceName = null;
-            return;
-        }
+        var results = await _geocoding.ResolveManyAsync(
+            entry.LocationText, entry.State, entry.Federation, ct);
 
-        entry.Lat = result.Lat;
-        entry.Lon = result.Lon;
-        entry.GeoSource = result.Source;
-        entry.GeoPlaceName = Truncate(result.PlaceName, 200);
+        // Mehrdeutig heisst: KEINE Koordinaten, aber ein Vermerk fuer die Arbeitsliste.
+        var located = results.Where(r => r.Source != GeoSource.Ambiguous).ToList();
+        var primary = located.FirstOrDefault();
+
+        entry.Lat = primary?.Lat;
+        entry.Lon = primary?.Lon;
+        entry.GeoPlaceName = primary is null ? null : Truncate(primary.PlaceName, 200);
+        entry.GeoSource = primary?.Source
+            ?? (results.Any(r => r.Source == GeoSource.Ambiguous) ? GeoSource.Ambiguous : GeoSource.None);
+
+        ReplaceVenues(entry, located);
+    }
+
+    /// <summary>
+    /// Setzt die Spielorte neu. Vorhandene Zeilen werden geloescht und neu geschrieben statt
+    /// abgeglichen: es sind hoechstens eine Handvoll je Turnier, und ein Abgleich ueber Namen
+    /// waere aufwendiger als der Neuaufbau.
+    /// </summary>
+    private void ReplaceVenues(TournamentDirectoryEntry entry, List<GeocodeResult> located)
+    {
+        if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
+        entry.Venues = [];
+
+        // Ein einzelner Spielort braucht keine Zeile — er steht schon am Eintrag. Die Tabelle
+        // traegt nur, was dort NICHT abbildbar ist.
+        if (located.Count < 2) return;
+
+        for (var i = 0; i < located.Count; i++)
+        {
+            entry.Venues.Add(new TournamentDirectoryVenue
+            {
+                Ordinal = i,
+                Name = Truncate(located[i].PlaceName, 200),
+                SourceText = located[i].SourceText is { } t ? Truncate(t, 300) : null,
+                Lat = located[i].Lat,
+                Lon = located[i].Lon,
+                GeoSource = located[i].Source,
+            });
+        }
     }
 
     /// <summary>

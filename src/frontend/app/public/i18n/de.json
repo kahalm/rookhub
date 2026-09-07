@@ -3074,7 +3074,8 @@
       "custom": "Eigener Zeitraum"
     },
     "map": {
-      "openDetail": "Turnierseite öffnen"
+      "openDetail": "Turnierseite öffnen",
+      "thisVenue": "Dieser Spielort: {{name}}"
     },
     "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich."
   },

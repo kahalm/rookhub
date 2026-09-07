@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DirectoryEntry, DirectoryVenue } from './tournament-directory.model';
 
 /** Sichtbarer Kartenausschnitt als „minLat,minLon,maxLat,maxLon" — Serverformat. */
 export type BoundsString = string;
@@ -178,24 +178,27 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.markerLayer.clearLayers();
 
     for (const entry of this.entries) {
-      if (entry.lat == null || entry.lon == null) continue;
-
-      const marker = L.circleMarker([entry.lat, entry.lon], {
+      // Ein Punkt JE SPIELORT: bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit").
+      // Mit nur dem Hauptort verschwaende ein Turnier die Haelfte seiner Orte, und die
+      // Umkreissuche fand es nicht, obwohl es zur Haelfte vor der Haustuer stattfindet.
+      for (const spot of venuesOf(entry)) {
+      const marker = L.circleMarker([spot.lat, spot.lon], {
         radius: 7,
         weight: 2,
         // Nur ungefaehr verortete Turniere (Bundesland-Mittelpunkt) sichtbar abschwaechen —
         // sonst suggeriert ein knackiger Pin eine Genauigkeit, die er nicht hat.
-        color: entry.geoSource === 'Region' ? '#9aa0a6' : '#1a73e8',
-        fillColor: entry.geoSource === 'Region' ? '#c8ccd0' : '#4285f4',
-        fillOpacity: entry.geoSource === 'Region' ? 0.45 : 0.8,
+        color: spot.geoSource === 'Region' ? '#9aa0a6' : '#1a73e8',
+        fillColor: spot.geoSource === 'Region' ? '#c8ccd0' : '#4285f4',
+        fillOpacity: spot.geoSource === 'Region' ? 0.45 : 0.8,
       });
 
-      marker.bindTooltip(tooltipHtml(entry), { direction: 'top', offset: [0, -6] });
+      marker.bindTooltip(tooltipHtml(entry, spot), { direction: 'top', offset: [0, -6] });
       // Klick = Popup (siehe Klassenkommentar), NICHT der Sprung auf die Detailseite.
-      marker.bindPopup(() => this.buildPopup(entry), { offset: [0, -4], minWidth: 220, maxWidth: 300 });
+      marker.bindPopup(() => this.buildPopup(entry, spot), { offset: [0, -4], minWidth: 220, maxWidth: 300 });
       // Beim geoeffneten Popup stuende der Hover-Hinweis mit demselben Inhalt daneben.
       marker.on('popupopen', () => marker.closeTooltip());
       marker.addTo(this.markerLayer);
+      }
     }
   }
 
@@ -204,7 +207,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * Klick-Horcher, und Turnier- und Ortsnamen kommen von chess-results — also fremder Text, der
    * in kein innerHTML gehoert. `textContent` macht die Frage gegenstandslos.
    */
-  private buildPopup(entry: DirectoryEntry): HTMLElement {
+  private buildPopup(entry: DirectoryEntry, spot: DirectoryVenue): HTMLElement {
     const root = document.createElement('div');
     root.className = 'tm-popup';
 
@@ -218,6 +221,11 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     root.appendChild(this.line(dateRange(entry)));
     if (entry.location) root.appendChild(this.line(entry.location));
+    // Bei mehreren Spielorten sagen, WELCHER hier gemeint ist — sonst zeigen n Punkte n-mal
+    // denselben Text und man weiss nicht, worauf man geklickt hat.
+    if (entry.venues.length > 1) {
+      root.appendChild(this.line(this.text('tournamentDirectory.map.thisVenue', { name: spot.name })));
+    }
 
     const badges = document.createElement('div');
     badges.className = 'tm-popup-badges';
@@ -306,9 +314,21 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   }
 }
 
-function tooltipHtml(entry: DirectoryEntry): string {
+function tooltipHtml(entry: DirectoryEntry, spot: DirectoryVenue): string {
+  const place = entry.venues.length > 1 ? spot.name : (entry.location ?? '');
   return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(dateRange(entry))}` +
-         (entry.location ? `<br>${escapeHtml(entry.location)}` : '');
+         (place ? `<br>${escapeHtml(place)}` : '');
+}
+
+/**
+ * Die zu zeichnenden Punkte eines Turniers: die Liste der Spielorte, wenn es mehrere gibt, sonst
+ * der eine Ort am Eintrag selbst. Nicht verortete Turniere liefern nichts.
+ */
+function venuesOf(entry: DirectoryEntry): DirectoryVenue[] {
+  if (entry.venues.length > 0) return entry.venues;
+  if (entry.lat == null || entry.lon == null) return [];
+  return [{ name: entry.geoPlaceName ?? entry.location ?? '', lat: entry.lat, lon: entry.lon,
+            geoSource: entry.geoSource }];
 }
 
 /** „18.12. – 20.12." bzw. nur der eine Tag; leer, wenn chess-results gar kein Datum lieferte. */

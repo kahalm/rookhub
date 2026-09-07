@@ -21,7 +21,7 @@ function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
     startDate: '2026-12-18', endDate: '2026-12-20', location: 'Ranshofen',
     timeControl: '90 min', speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: 7, playerCount: 20, lat: 48.2, lon: 13.0, geoSource: 'City', geoPlaceName: 'Ranshofen',
-    distanceKm: 12.5, cancelled: false, subscribed: false, groupSize: 1, groups: [],
+    distanceKm: 12.5, cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
   };
 }
 

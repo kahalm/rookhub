@@ -3074,7 +3074,8 @@
       "custom": "Custom period"
     },
     "map": {
-      "openDetail": "Open the tournament page"
+      "openDetail": "Open the tournament page",
+      "thisVenue": "This venue: {{name}}"
     },
     "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment."
   },

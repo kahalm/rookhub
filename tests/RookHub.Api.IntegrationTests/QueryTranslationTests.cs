@@ -286,4 +286,49 @@ public class QueryTranslationTests : IAsyncLifetime
 
         Assert.Equal(["a", "b"], result.Items.Select(i => i.Entry.ChessResultsId).Order());
     }
+
+    /// <summary>
+    /// Die Umkreissuche muss ein Turnier auch ueber seinen ZWEITEN Spielort finden. Die Bedingung
+    /// dafuer ist eine Unterabfrage (`e.Venues.Any(...)`) — InMemory wertet die in C# aus und
+    /// winkt sie durch; hier muss MySQL sie wirklich uebersetzen.
+    /// </summary>
+    [MySqlFact]
+    public async Task Search_FindsTournamentByItsSecondVenue()
+    {
+        var liga = new TournamentDirectoryEntry
+        {
+            ChessResultsId = "liga", Name = "Frauenbundesliga", Federation = "AUT",
+            StartDate = new DateOnly(2026, 11, 27), EndDate = new DateOnly(2027, 3, 14),
+            // Hauptort Mayrhofen (Tirol) …
+            Lat = 47.17, Lon = 11.87, GeoSource = GeoSource.City, GeoPlaceName = "Mayrhofen",
+            Venues =
+            [
+                new TournamentDirectoryVenue { Ordinal = 0, Name = "Mayrhofen", Lat = 47.17, Lon = 11.87, GeoSource = GeoSource.City },
+                // … zweiter Ort St. Veit an der Glan (Kaernten), 250 km entfernt.
+                new TournamentDirectoryVenue { Ordinal = 1, Name = "St. Veit an der Glan", Lat = 46.77, Lon = 14.36, GeoSource = GeoSource.PostalCode },
+            ],
+        };
+        Db.TournamentDirectoryEntries.Add(liga);
+        await Db.SaveChangesAsync();
+
+        var svc = Get<TournamentDirectoryQueryService>();
+
+        // Umkreis um Klagenfurt: nur der ZWEITE Spielort liegt darin.
+        var nearKlagenfurt = await svc.SearchAsync(new DirectorySearchQuery
+        {
+            Lat = 46.62, Lon = 14.31, RadiusKm = 40,
+        });
+        var found = Assert.Single(nearKlagenfurt.Items);
+        Assert.Equal("liga", found.Entry.ChessResultsId);
+        // Die Entfernung ist die zum NAECHSTEN Spielort, nicht die zum Hauptort.
+        Assert.NotNull(found.DistanceKm);
+        Assert.True(found.DistanceKm < 40, $"Entfernung {found.DistanceKm} km sollte die zum zweiten Ort sein");
+
+        // Und ein Umkreis, in dem KEINER der beiden liegt, findet es nicht.
+        var nearVienna = await svc.SearchAsync(new DirectorySearchQuery
+        {
+            Lat = 48.21, Lon = 16.37, RadiusKm = 30,
+        });
+        Assert.Empty(nearVienna.Items);
+    }
 }

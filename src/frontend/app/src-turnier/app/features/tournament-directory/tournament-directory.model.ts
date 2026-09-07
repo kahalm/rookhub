@@ -2,7 +2,10 @@
 export type TournamentSpeed = 'Unknown' | 'Standard' | 'Rapid' | 'Blitz';
 
 /** Herkunft der Koordinaten — `Region` heisst: nur ungefaehr (Bundesland-Mittelpunkt). */
-export type GeoSourceKind = 'None' | 'PostalCode' | 'City' | 'Region' | 'Manual' | 'Nominatim';
+export type GeoSourceKind =
+  | 'None' | 'PostalCode' | 'City' | 'Region' | 'Manual' | 'Nominatim'
+  /** Ortsname gefunden, aber mehrdeutig — bewusst OHNE Koordinaten (siehe Server). */
+  | 'Ambiguous';
 
 export interface DirectoryEntry {
   chessResultsId: string;
@@ -30,6 +33,19 @@ export interface DirectoryEntry {
   /** Wie viele Gruppen desselben Turniers dieser Eintrag zusammenfasst (1 = einzelnes Turnier). */
   groupSize: number;
   groups: DirectoryGroupMember[];
+  /**
+   * ALLE Spielorte, sobald es mehr als einen gibt (Ligen: „Mayrhofen, St.Veit"). Leer bei einem
+   * einzelnen Ort — der steht dann in lat/lon/geoPlaceName.
+   */
+  venues: DirectoryVenue[];
+}
+
+/** Ein einzelner Spielort eines Turniers mit mehreren. */
+export interface DirectoryVenue {
+  name: string;
+  lat: number;
+  lon: number;
+  geoSource: GeoSourceKind;
 }
 
 /** Eine Gruppe (A/B/C) innerhalb eines zusammengefassten Turniers. */

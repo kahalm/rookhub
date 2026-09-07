@@ -90,14 +90,31 @@ public class GeocodingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResolveAsync_AmbiguousName_LargestPlaceWins()
+    public async Task ResolveAsync_AmbiguousNameFarApart_NoLongerGuessesByPopulation()
     {
+        // Bis 0.418.0 gewann hier die groessere Einwohnerzahl. Fuer weit auseinanderliegende
+        // Gleichnamige ist das eine Muenze: am Dev-Stand 171 solche Eintraege, davon 29 mit
+        // nachweislich falschem Pin (bis 489 km daneben). „Neustadt" gibt es in Deutschland
+        // dutzendfach — die Turnhalle steht nicht zwingend in der groesseren Stadt.
         Seed(City("DE", "Neustadt", 49.35, 8.14, 53_000),
              City("DE", "Neustadt", 51.02, 13.75, 900));
 
         var result = await _service.ResolveAsync("Turnhalle Neustadt", null, "GER");
 
-        Assert.Equal(49.35, result!.Lat, 2);
+        Assert.Equal(GeoSource.Ambiguous, result!.Source);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AmbiguousNameCloseTogether_StillPicksTheLargestPlace()
+    {
+        // Dicht beieinander ist die Wahl gleichgueltig — dort bleibt es bei der Einwohnerzahl.
+        Seed(City("DE", "Neustadt", 49.35, 8.14, 53_000),
+             City("DE", "Neustadt", 49.37, 8.16, 900));
+
+        var result = await _service.ResolveAsync("Turnhalle Neustadt", null, "GER");
+
+        Assert.Equal(GeoSource.City, result!.Source);
+        Assert.Equal(49.35, result.Lat, 2);
     }
 
     [Fact]
@@ -146,6 +163,178 @@ public class GeocodingServiceTests : IDisposable
         Seed(Postal("DE", "5400", "Irgendwo in Deutschland", 51.0, 10.0));
 
         Assert.Null(await _service.ResolveAsync("5400 Hallein", null, "AUT"));
+    }
+
+    // ----- Mehrere Spielorte -----------------------------------------------
+
+    /// <summary>Ein verlaesslich verorteter Anker fuer die Dichte-Entscheidung.</summary>
+    private void Anchor(double lat, double lon, GeoSource source = GeoSource.PostalCode)
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = Guid.NewGuid().ToString("N")[..8], Name = "Anker",
+            Lat = lat, Lon = lon, GeoSource = source,
+        });
+        _db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task ResolveMany_TwoVenuesSeparatedByComma_YieldsBoth()
+    {
+        // Der Fall aus der Abnahme: „Mayrhofen, St.Veit" ist eine Liga mit ZWEI Spielorten.
+        // Ohne Zerlegung bildete die Kandidatenerzeugung „st veit" ueber das Komma hinweg und
+        // gewann gegen „mayrhofen", weil laengere Wortfolgen kuerzere schlagen — der Pin sass
+        // 250 km entfernt.
+        Seed(City("AT", "Mayrhofen", 47.17, 11.87, 3900),
+             City("AT", "St. Veit", 46.77, 14.36, 12600));
+
+        var venues = await _service.ResolveManyAsync("Mayrhofen, St.Veit", null, "AUT");
+
+        Assert.Equal(2, venues.Count);
+        Assert.Equal("Mayrhofen", venues[0].PlaceName);          // erster im Text = Hauptort
+        Assert.Equal("St. Veit", venues[1].PlaceName);
+    }
+
+    [Fact]
+    public async Task ResolveMany_ThreeVenuesWithSlashes_YieldsAll()
+    {
+        Seed(City("AT", "Schwaz", 47.35, 11.71, 13600),
+             City("AT", "Jenbach", 47.39, 11.78, 7100),
+             City("AT", "Kufstein", 47.58, 12.17, 19000));
+
+        var venues = await _service.ResolveManyAsync("Schwaz/Jenbach/Kufstein", null, "AUT");
+
+        Assert.Equal(["Schwaz", "Jenbach", "Kufstein"], venues.Select(v => v.PlaceName));
+    }
+
+    [Fact]
+    public async Task ResolveMany_AddressWithCommas_IsONEVenue()
+    {
+        // Adressen benutzen dieselben Trenner wie Ortslisten. Der PLZ-Weg laeuft deshalb VOR der
+        // Zerlegung — sonst waere jede Adresse ploetzlich drei Spielorte.
+        Seed(Postal("AT", "5020", "Salzburg", 47.80, 13.04));
+
+        var venues = await _service.ResolveManyAsync(
+            "ASKOE Sportzentrum, Eichetstrasse 29-31, 5020 Salzburg", null, "AUT");
+
+        Assert.Single(venues);
+        Assert.Equal(GeoSource.PostalCode, venues[0].Source);
+    }
+
+    [Fact]
+    public async Task ResolveMany_TwoPostalCodesFarApart_AreTwoVenues()
+    {
+        Seed(Postal("AT", "6290", "Mayrhofen", 47.17, 11.87),
+             Postal("AT", "9300", "St. Veit an der Glan", 46.77, 14.36));
+
+        var venues = await _service.ResolveManyAsync(
+            "6290 Mayrhofen / 9300 St. Veit an der Glan", null, "AUT");
+
+        Assert.Equal(2, venues.Count);
+    }
+
+    [Fact]
+    public async Task ResolveMany_AbbreviatedPlaceNameStillKeepsItsPostalCode()
+    {
+        // chess-results schreibt „St.Veit", im Ortslexikon steht „St. Veit an der Glan".
+        // Ohne die Wortanfang-Pruefung verliert dieser Spielort seine Postleitzahl — und damit
+        // die verlaesslichste Verortung, die es fuer ihn gibt.
+        Seed(Postal("AT", "9300", "St. Veit an der Glan", 46.77, 14.36));
+
+        var venues = await _service.ResolveManyAsync("9300 St.Veit", null, "AUT");
+
+        Assert.Single(venues);
+        Assert.Equal(GeoSource.PostalCode, venues[0].Source);
+        Assert.Equal(46.77, venues[0].Lat, 2);
+    }
+
+    [Fact]
+    public async Task ResolveMany_NeighbouringPostalCodes_AreONEVenue()
+    {
+        // 24 Wiener Postleitzahlen sind ein Ort, nicht 24.
+        Seed(Postal("AT", "1010", "Wien", 48.208, 16.372),
+             Postal("AT", "1020", "Wien", 48.216, 16.400));
+
+        var venues = await _service.ResolveManyAsync("1010 Wien und 1020 Wien", null, "AUT");
+
+        Assert.Single(venues);
+    }
+
+    // ----- Mehrdeutige Ortsnamen -------------------------------------------
+
+    [Fact]
+    public async Task Resolve_AmbiguousNameFarApart_WithoutAnchors_GivesNoCoordinates()
+    {
+        // „Muenster" gibt es 19-mal, bis 489 km auseinander. Ein Pin, der Genauigkeit behauptet
+        // und sie nicht hat, ist schlimmer als kein Pin.
+        Seed(Postal("DE", "48143", "Münster", 51.96, 7.63),
+             Postal("DE", "84579", "Münster", 48.26, 12.71));
+
+        var result = await _service.ResolveAsync("Münster", null, "GER");
+
+        Assert.NotNull(result);
+        Assert.Equal(GeoSource.Ambiguous, result!.Source);
+        Assert.Equal(0, result.Lat);
+    }
+
+    [Fact]
+    public async Task Resolve_AmbiguousNameFarApart_IsDecidedByTournamentDensity()
+    {
+        // Wo ein Schachklub Turniere austraegt, stehen mehrere verlaessliche Pins.
+        Seed(Postal("AT", "4020", "Linz", 48.31, 14.29),
+             Postal("AT", "8530", "Linz", 46.75, 15.13));
+        Anchor(48.30, 14.30);
+        Anchor(48.32, 14.28);
+
+        var result = await _service.ResolveAsync("Linz, Oberbank Donau Forum", null, "AUT");
+
+        Assert.Equal(GeoSource.City, result!.Source);
+        Assert.Equal(48.31, result.Lat, 2);
+    }
+
+    [Fact]
+    public async Task Resolve_Density_IgnoresPinsThatAreThemselvesGuesses()
+    {
+        // An „Baernbach" nachgestellt: zaehlte man ALLE Pins, waehlten die falschen Pins den
+        // falschen Ort — die Fehler bestaetigten sich selbst. Nur PLZ/manuell zaehlen.
+        Seed(Postal("AT", "8572", "Bärnbach", 47.07, 15.13),
+             Postal("AT", "6373", "Bärnbach", 47.47, 12.42));
+        Anchor(47.07, 15.13);                                   // verlaesslich, richtiger Ort
+        Anchor(47.47, 12.42, GeoSource.City);                   // geraten
+        Anchor(47.47, 12.42, GeoSource.City);                   // geraten
+        Anchor(47.47, 12.42, GeoSource.City);                   // geraten
+
+        var result = await _service.ResolveAsync("Volkshaus Bärnbach", null, "AUT");
+
+        Assert.Equal(47.07, result!.Lat, 2);
+    }
+
+    [Fact]
+    public async Task Resolve_SameNameCloseTogether_StillPicksWithoutAsking()
+    {
+        // 24 Wiener Postleitzahlen sind kein Zweifelsfall — dort entscheidet wie bisher die
+        // Einwohnerzahl, ohne Umweg ueber die Dichte.
+        Seed(Postal("AT", "1010", "Wien", 48.208, 16.372),
+             Postal("AT", "1020", "Wien", 48.216, 16.400));
+
+        var result = await _service.ResolveAsync("alle Wien (Schachhaus)", null, "AUT");
+
+        // Kein Zweifelsfall, also auch keine Nachfrage bei der Dichte: die 24 Wiener
+        // Postleitzahlen liegen alle in Wien, jede Wahl ist richtig.
+        Assert.Equal(GeoSource.City, result!.Source);
+        Assert.Equal(48.2, result.Lat, 1);
+    }
+
+    [Fact]
+    public async Task Resolve_AmbiguousButRegionKnown_FallsBackToTheRegionCentre()
+    {
+        Seed(Postal("DE", "48143", "Münster", 51.96, 7.63),
+             Postal("DE", "84579", "Münster", 48.26, 12.71),
+             Region("DE", "Bavaria", 48.80, 11.28));
+
+        var result = await _service.ResolveAsync("Münster", "Bavaria", "GER");
+
+        Assert.Equal(GeoSource.Region, result!.Source);
     }
 }
 

@@ -16,6 +16,15 @@ public enum GeoSource
     Region = 3,
     Manual = 4,
     Nominatim = 5,
+    /// <summary>
+    /// Ein Ortsname wurde gefunden, war aber MEHRDEUTIG — der Name gibt es an mehreren, weit
+    /// auseinanderliegenden Stellen, und keine Zusatzinformation entscheidet. Gemessen auf dem
+    /// Dev-Stand: 171 Eintraege, davon 29 mit einem nachweislich falschen Pin (bis 489 km
+    /// daneben). Solche Eintraege bekommen deshalb KEINE Koordinaten und landen in der
+    /// Admin-Arbeitsliste — ein Pin, der Genauigkeit behauptet und sie nicht hat, ist schlimmer
+    /// als kein Pin.
+    /// </summary>
+    Ambiguous = 6,
 }
 
 /// <summary>
@@ -128,6 +137,12 @@ public class TournamentDirectoryEntry
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// ALLE Spielorte. Bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit"); die
+    /// Koordinaten am Eintrag selbst sind der ERSTE davon (siehe <see cref="TournamentDirectoryVenue"/>).
+    /// </summary>
+    public List<TournamentDirectoryVenue> Venues { get; set; } = [];
 }
 
 /// <summary>Bedenkzeit-Kategorie, aus dem Freitext geraten.</summary>
@@ -138,3 +153,4 @@ public enum TournamentSpeed
     Rapid = 2,
     Blitz = 3,
 }
+

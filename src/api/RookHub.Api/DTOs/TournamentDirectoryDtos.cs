@@ -39,6 +39,13 @@ public class DirectoryEntryDto
     /// <summary>Die Gruppen mit ihrer Beschriftung — leer, wo chess-results den Zusatz abschnitt.</summary>
     public List<DirectoryGroupMemberDto> Groups { get; set; } = [];
 
+    /// <summary>
+    /// ALLE Spielorte, sobald es mehr als einen gibt (Ligen: „Mayrhofen, St.Veit"). Leer bei einem
+    /// einzelnen Ort — der steht dann in Lat/Lon/GeoPlaceName. Die Karte zeichnet je Ort einen
+    /// Punkt, sonst verschwaende ein Turnier die Haelfte seiner Orte.
+    /// </summary>
+    public List<DirectoryVenueDto> Venues { get; set; } = [];
+
     public static DirectoryEntryDto FromEntity(
         TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
         IReadOnlyList<TournamentDirectoryEntry>? groups = null) => new()
@@ -67,6 +74,13 @@ public class DirectoryEntryDto
         GroupSize = groups?.Count ?? 1,
         // Die Teilnehmerzahl der Gruppen summiert sich — sie ist die Groesse des GANZEN Turniers.
         PlayerCount = groups is { Count: > 1 } ? groups.Sum(g => g.PlayerCount ?? 0) : e.PlayerCount,
+        Venues = e.Venues
+            .OrderBy(v => v.Ordinal)
+            .Select(v => new DirectoryVenueDto
+            {
+                Name = v.Name, Lat = v.Lat, Lon = v.Lon, GeoSource = v.GeoSource.ToString(),
+            })
+            .ToList(),
         Groups = groups is { Count: > 1 }
             ? groups.Select(g => new DirectoryGroupMemberDto
             {
@@ -77,6 +91,15 @@ public class DirectoryEntryDto
             }).ToList()
             : [],
     };
+}
+
+/// <summary>Ein einzelner Spielort eines Turniers mit mehreren.</summary>
+public class DirectoryVenueDto
+{
+    public string Name { get; set; } = "";
+    public double Lat { get; set; }
+    public double Lon { get; set; }
+    public string GeoSource { get; set; } = "";
 }
 
 /// <summary>Eine Gruppe (A/B/C) innerhalb eines zusammengefassten Turniers.</summary>

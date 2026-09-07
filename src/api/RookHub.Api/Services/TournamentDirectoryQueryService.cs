@@ -97,19 +97,27 @@ public class TournamentDirectoryQueryService
         }
 
         var box = GeoDistance.BoundingBox(lat, lon, radius.Value);
+        // Ein Turnier zaehlt, wenn EINER seiner Spielorte in der Box liegt. Bei Ligen nennt
+        // chess-results mehrere („Mayrhofen, St.Veit") — mit dem Hauptort allein faende die
+        // Umkreissuche ein Turnier nicht, das zur Haelfte vor der Haustuer stattfindet.
         var candidates = await filtered
-            .Where(e => e.Lat != null && e.Lon != null
-                        && e.Lat >= box.MinLat && e.Lat <= box.MaxLat
-                        && e.Lon >= box.MinLon && e.Lon <= box.MaxLon)
+            .Where(e => (e.Lat != null && e.Lon != null
+                         && e.Lat >= box.MinLat && e.Lat <= box.MaxLat
+                         && e.Lon >= box.MinLon && e.Lon <= box.MaxLon)
+                        || e.Venues.Any(v => v.Lat >= box.MinLat && v.Lat <= box.MaxLat
+                                             && v.Lon >= box.MinLon && v.Lon <= box.MaxLon))
+            .Include(e => e.Venues)
             .Take(MaxMaterialized + 1)
             .ToListAsync(ct);
 
         var truncated = candidates.Count > MaxMaterialized;
         if (truncated) candidates.RemoveAt(candidates.Count - 1);
 
+        // Die Entfernung ist die zum NAECHSTEN Spielort — danach fragt „was ist in meiner Naehe".
         var withDistance = candidates
-            .Select(e => (Entry: e, Distance: GeoDistance.Haversine(lat, lon, e.Lat!.Value, e.Lon!.Value)))
-            .Where(x => x.Distance <= radius.Value)
+            .Select(e => (Entry: e, Distance: NearestVenueKm(e, lat, lon)))
+            .Where(x => x.Distance is not null && x.Distance <= radius.Value)
+            .Select(x => (x.Entry, Distance: x.Distance!.Value))
             .ToList();
 
         // Im Umkreis liegen die Zeilen ohnehin im Speicher — hier ist Gruppieren in C# billiger
@@ -172,9 +180,12 @@ public class TournamentDirectoryQueryService
         int limit = 2000, CancellationToken ct = default)
     {
         return await ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query)
-            .Where(e => e.Lat != null && e.Lon != null
-                        && e.Lat >= minLat && e.Lat <= maxLat
-                        && e.Lon >= minLon && e.Lon <= maxLon)
+            .Where(e => (e.Lat != null && e.Lon != null
+                         && e.Lat >= minLat && e.Lat <= maxLat
+                         && e.Lon >= minLon && e.Lon <= maxLon)
+                        || e.Venues.Any(v => v.Lat >= minLat && v.Lat <= maxLat
+                                             && v.Lon >= minLon && v.Lon <= maxLon))
+            .Include(e => e.Venues)
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 5000))
             .ToListAsync(ct);
@@ -278,5 +289,23 @@ public class TournamentDirectoryQueryService
         }
 
         return source;
+    }
+
+    /// <summary>
+    /// Entfernung zum NAECHSTEN Spielort — `null`, wenn das Turnier nicht verortet ist. Die
+    /// Koordinaten am Eintrag sind der Hauptort und werden mitgezaehlt; die Tabelle traegt nur
+    /// Turniere mit MEHREREN Orten.
+    /// </summary>
+    private static double? NearestVenueKm(TournamentDirectoryEntry entry, double lat, double lon)
+    {
+        double? best = entry.Lat is { } la && entry.Lon is { } lo
+            ? GeoDistance.Haversine(lat, lon, la, lo)
+            : null;
+        foreach (var venue in entry.Venues)
+        {
+            var d = GeoDistance.Haversine(lat, lon, venue.Lat, venue.Lon);
+            if (best is null || d < best) best = d;
+        }
+        return best;
     }
 }

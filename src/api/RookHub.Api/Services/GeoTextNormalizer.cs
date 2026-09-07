@@ -88,4 +88,32 @@ public static class GeoTextNormalizer
         }
         return candidates;
     }
+
+    /// <summary>
+    /// Trennzeichen, die im Ortstext MEHRERE Spielorte voneinander abgrenzen: Komma,
+    /// Schraegstrich, Semikolon, „und", „&amp;". Kein Ortsname enthaelt eines davon.
+    /// </summary>
+    private static readonly Regex VenueSeparators =
+        new(@"[,;/]|\bund\b|&", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Zerlegt den Ortstext in ABSCHNITTE — einen je moeglichem Spielort.
+    ///
+    /// <para>Der Grund steht in „Mayrhofen, St.Veit": ohne Zerlegung bildet die
+    /// Kandidatenerzeugung die Wortfolge „st veit" ueber das Komma hinweg, und weil laengere
+    /// Wortfolgen kuerzere schlagen (damit „Bad Ischl" nicht als „Ischl" landet), gewinnt sie
+    /// gegen „mayrhofen" — der Pin sass 250 km entfernt in Tirol, obwohl der erste Ort im Text
+    /// Mayrhofen ist. Eine Wortfolge darf einen Trenner also nicht ueberspringen.</para>
+    ///
+    /// <para>Adressen benutzen dieselben Trenner („Halle 1, Eichetstrasse 29, 5020 Salzburg") —
+    /// dort liefert der PLZ-Weg die Antwort und wird VOR dieser Zerlegung versucht.</para>
+    /// </summary>
+    public static List<string> VenueSegments(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return [];
+        return VenueSeparators.Split(text)
+            .Select(part => part.Trim())
+            .Where(part => part.Length > 0)
+            .ToList();
+    }
 }

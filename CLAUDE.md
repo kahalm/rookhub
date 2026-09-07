@@ -254,6 +254,32 @@ Gefuellt vom naechtlichen Sweep der chess-results-Turniersuche (`TournamentDirec
 03:00 UTC; Nachbarlaender taeglich, uebrige Foederationen rotierend). Rein lesend — hier wird
 nichts gecrawlt.
 
+**Verortung (`GeocodingService`, ueberarbeitet in 0.418.0).** Der Spielort ist Freitext und nennt
+bei Ligen MEHRERE Orte. Die Reihenfolge:
+
+1. **Postleitzahl** — auf wenige Kilometer genau. Mehrere weit auseinanderliegende PLZ = mehrere
+   Spielorte. Dieser Weg laeuft VOR der Zerlegung, weil Adressen dieselben Trennzeichen benutzen
+   („Halle 1, Eichetstrasse 29, 5020 Salzburg" ist EIN Ort, nicht drei). Der Ortsname des Treffers
+   muss im Text vorkommen — sonst gewinnt eine Hausnummer, die wie eine PLZ aussieht. Als
+   Bestaetigung zaehlt auch ein WORTANFANG ab 4 Zeichen: chess-results schreibt „9300 St.Veit",
+   im Lexikon steht „St. Veit an der Glan".
+2. **Ortsnamen je Abschnitt** (`GeoTextNormalizer.VenueSegments`, Trenner `, ; / und &`). Ohne die
+   Zerlegung bildete die Kandidatenerzeugung Wortfolgen ueber das Komma hinweg, und weil laengere
+   Wortfolgen kuerzere schlagen, gewann in „Mayrhofen, St.Veit" das „st veit" — der Pin sass
+   250 km entfernt in Tirol, obwohl der erste Ort im Text Mayrhofen ist.
+3. **Regionsmitte** aus der Bundesland-Spalte.
+
+**Mehrdeutige Namen bekommen KEINEN Pin.** Liegen die gleichnamigen Kandidaten weniger als 5 km
+auseinander (24 Wiener PLZ), ist die Wahl gleichgueltig und die Einwohnerzahl entscheidet wie
+bisher. Sonst entscheidet die **Turnierdichte**: wie viele Turniere mit VERLAESSLICHER Verortung
+(PLZ oder von Hand) liegen im Umkreis von 12 km? Wo ein Schachklub Turniere austraegt, stehen
+mehrere. Bewusst nur verlaessliche Pins — zaehlte man alle mit, bestaetigten die falschen Pins sich
+selbst (an „Baernbach" nachgestellt: alle Pins waehlen den falschen Ort, verlaessliche den
+richtigen). Bleibt es unentschieden, gibt es keine Koordinaten und `GeoSource.Ambiguous` als
+Vermerk fuer die Arbeitsliste. Gemessen am Dev-Stand vor der Aenderung: 171 Eintraege mit
+Kandidaten > 50 km auseinander, davon 29 mit nachweislich falschem Pin (bis 489 km, „Muenster"
+gibt es 19-mal).
+
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#) |
@@ -746,6 +772,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentDirectoryEntries | Turnierverzeichnis aus der chess-results-Suche | ChessResultsId (unique), Name, Federation, State, StartDate/EndDate, **StartsOnWeekend** (vorberechnet — `DateOnly.DayOfWeek` uebersetzt der MySQL-Provider nicht), LocationText, TimeControlText, Speed, Rounds, PlayerCount, **Lat/Lon/GeoSource/GeoPlaceName**, FirstSeenAt/LastSeenAt/**MissedSweeps**/RemovedAt, **ChangeHash** (nur Termin+Ort); Index (EndDate), (Federation, EndDate), (Lat, Lon) |
 | TournamentSearchProfiles | Gespeicherte Umkreise je Nutzer | UserId (Cascade), Name, PlaceQuery, Lat/Lon, RadiusKm, Federations/Speeds (CSV), WeekendOnly, MinPlayers, NotifyNew; unique (UserId, Name) |
 | TournamentDirectorySweeps | Buchfuehrung je Foederation | Federation (PK), LastSweptAt (**nur bei Erfolg**), LastAttemptedAt, LastRowCount, LastError, ConsecutiveFailures |
+| TournamentDirectoryVenues | ALLE Spielorte eines Turniers — bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit", „Schwaz/Jenbach/Kufstein"; auf dem Dev-Stand 270 Eintraege). Die Koordinaten am Eintrag bleiben der HAUPT-Spielort (der erste); die Tabelle traegt nur Turniere mit MEHR als einem. Umkreissuche und Karte fragen sie mit: ein Turnier gilt als in der Naehe, wenn EINER seiner Orte in der Box liegt, und die angezeigte Entfernung ist die zum naechsten | TournamentDirectoryEntryId (Cascade), Ordinal (0 = Hauptort), Name (≤200), SourceText? (≤300, der Textabschnitt — Nachvollziehbarkeit), Lat/Lon, GeoSource; Index (Lat, Lon) + (EntryId, Ordinal) |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet/reprozessierbar — heute meist No-op, da live ausgewertet)** |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |

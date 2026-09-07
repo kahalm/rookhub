@@ -10,7 +10,7 @@ function entry(id: string, lat: number | null, lon: number | null,
     startDate: '2026-10-10', endDate: '2026-10-12', location: 'Salzburg', timeControl: null,
     speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: null, playerCount: null, lat, lon, geoSource, geoPlaceName: null,
-    distanceKm: null, cancelled: false, subscribed: false, groupSize: 1, groups: [],
+    distanceKm: null, cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
   };
 }
 
@@ -175,6 +175,33 @@ describe('TournamentMapComponent', () => {
 
     // Eine Zoomstufe = doppelter Ausschnitt.
     expect(weitSpan / engSpan).toBeCloseTo(2, 1);
+  });
+
+  it('zeichnet je Spielort einen Punkt, nicht nur den Hauptort', () => {
+    // Bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit"). Mit nur dem Hauptort
+    // verschwände ein Turnier die Hälfte seiner Orte.
+    const liga = entry('1', 47.17, 11.87);
+    liga.venues = [
+      { name: 'Mayrhofen', lat: 47.17, lon: 11.87, geoSource: 'City' },
+      { name: 'St. Veit an der Glan', lat: 46.77, lon: 14.36, geoSource: 'PostalCode' },
+    ];
+    component.entries = [liga];
+    // Weit genug herausgezoomt, dass beide Orte im Bild sind.
+    component.centre = { lat: 47.0, lon: 13.1, radiusKm: 200 };
+
+    fixture.detectChanges();
+
+    // Die Punkte liegen auf der Leinwand — gezählt wird über die Leaflet-Ebene.
+    const layers = (component as unknown as { markerLayer: { getLayers(): unknown[] } }).markerLayer;
+    expect(layers.getLayers().length).toBe(2);
+  });
+
+  it('zeichnet ohne Spielort-Liste weiterhin den einen Ort des Eintrags', () => {
+    component.entries = [entry('1', 47.8, 13.04)];
+    fixture.detectChanges();
+
+    const layers = (component as unknown as { markerLayer: { getLayers(): unknown[] } }).markerLayer;
+    expect(layers.getLayers().length).toBe(1);
   });
 
   it('räumt die Karte beim Zerstören ab', () => {
