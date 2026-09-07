@@ -7,6 +7,23 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
+
+## Liga-Termine: der Kalender zeigt sie an JEDEM Tag der Saison (gemeldet 2026-09-07)
+
+Ein Liga-Eintrag traegt nur Start und Ende („2026-02-22" bis „2026-10-24"), und der Kalender
+zeichnet ein mehrtaegiges Turnier an jedem Tag dazwischen. Eine Saison laeuft aber in einzelnen
+Runden mit Wochen Abstand — die Liga steht damit an rund 200 Tagen im Kalender, an denen nichts
+gespielt wird, und verdeckt die Turniere, die wirklich stattfinden.
+
+Was es braucht: die RUNDENTERMINE. Die stehen auf der Turnierseite im Rundenplan
+(Runde/Datum/Uhrzeit) — ein Seitenabruf je Turnier, also nur fuer Ligen sinnvoll
+(`IsLeague`, eine Minderheit). Danach eine Tabelle `TournamentDirectoryRounds`
+(EntryId, Nummer, Datum) und im Kalender: hat ein Eintrag Rundentermine, gilt er NUR an diesen
+Tagen; sonst wie bisher der ganze Zeitraum.
+
+Erst messen: fuer wie viele der Liga-Eintraege liefert die Turnierseite ueberhaupt einen
+Rundenplan mit Datumsangaben, und wie viele Abrufe waeren das je Nacht?
+
 ## Turnierverlauf-Lasche (offen, vom Nutzer gewuenscht 2026-09-07)
 
 Eine vierte Lasche auf der Turnierseite: die vergangenen UND kuenftigen Turniere des eigenen
