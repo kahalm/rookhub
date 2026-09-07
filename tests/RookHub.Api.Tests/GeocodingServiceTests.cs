@@ -336,6 +336,49 @@ public class GeocodingServiceTests : IDisposable
 
         Assert.Equal(GeoSource.Region, result!.Source);
     }
+
+    [Fact]
+    public async Task ResolveMany_AddressWithoutPostalCode_IsONEVenue_TheLastPlaceInIt()
+    {
+        // Gemessen am Dev-Stand: von 262 als mehrortig erkannten Eintraegen hatten 191 eine
+        // ZIFFER im Text und waren durchweg Adressen, die die Zerlegung zerschnitten hat —
+        // „Festsaal der Gemeinde Schwarzach, Marktplatz 4, Schwarzach" wurde zu ZWEI Spielorten
+        // desselben Ortes. Ohne Postleitzahl (Brasilien, Argentinien: keine im Ortslexikon) traf
+        // das die zwei groessten Foederationen im Bestand.
+        Seed(City("AT", "Hauptplatz", 48.0, 14.0, 200),
+             City("AT", "Ansfelden", 48.21, 14.29, 16000));
+
+        var venues = await _service.ResolveManyAsync(
+            "Rathauskeller, Hauptplatz 40, Haid/Ansfelden", null, "AUT");
+
+        // Ein Ort — und zwar der HINTERE: vorn stehen Gebaeude und Strasse.
+        Assert.Single(venues);
+        Assert.Equal("Ansfelden", venues[0].PlaceName);
+    }
+
+    [Fact]
+    public async Task ResolveMany_SameTownTwiceInAnAddress_IsNotTwoVenues()
+    {
+        Seed(City("AT", "Schwarzach", 47.32, 13.15, 3600));
+
+        var venues = await _service.ResolveManyAsync(
+            "Festsaal der Gemeinde Schwarzach, Marktplatz 4, Schwarzach", null, "AUT");
+
+        Assert.Single(venues);
+    }
+
+    [Fact]
+    public async Task ResolveMany_VenueListWithoutDigits_StaysMultiVenue()
+    {
+        // Die Gegenprobe: eine echte Liste hat keine Hausnummer.
+        Seed(City("AT", "Bad Häring", 47.51, 12.11, 2600),
+             City("AT", "Schwaz", 47.35, 11.71, 13600),
+             City("AT", "Kufstein", 47.58, 12.17, 19000));
+
+        var venues = await _service.ResolveManyAsync("Bad Häring/Schwaz/Kufstein", null, "AUT");
+
+        Assert.Equal(3, venues.Count);
+    }
 }
 
 public class GazetteerImportParsingTests

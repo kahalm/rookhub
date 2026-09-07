@@ -267,6 +267,16 @@ bei Ligen MEHRERE Orte. Die Reihenfolge:
    Zerlegung bildete die Kandidatenerzeugung Wortfolgen ueber das Komma hinweg, und weil laengere
    Wortfolgen kuerzere schlagen, gewann in „Mayrhofen, St.Veit" das „st veit" — der Pin sass
    250 km entfernt in Tirol, obwohl der erste Ort im Text Mayrhofen ist.
+
+   **Adresse oder Ortsliste? Eine ZIFFER im Text entscheidet das** (0.419.2). Eine Liste von
+   Spielorten nennt Ortsnamen („Mayrhofen / St. Veit/Glan", „Bad Haering/Schwaz/Jenbach/Absam/
+   Kufstein"), eine Adresse hat eine Hausnummer. Am Dev-Stand nachgemessen: von 262 als mehrortig
+   erkannten Eintraegen hatten **191 eine Ziffer und waren durchweg Adressen**, die die Zerlegung
+   zerschnitten hat („Festsaal der Gemeinde Schwarzach, Marktplatz 4, Schwarzach" wurde zu ZWEI
+   Spielorten desselben Ortes). Am haertesten traf es BRA und ARG — die zwei groessten
+   Foederationen im Bestand, fuer die keine Postleitzahlen importiert sind, sodass der PLZ-Weg
+   dort nie greift. Mit Ziffer gilt deshalb der LETZTE Treffer als der EINE Spielort: vorn stehen
+   Gebaeude und Strasse, der Ort weiter hinten.
 3. **Regionsmitte** aus der Bundesland-Spalte.
 
 **Vereinsnamen als letzter Entscheider (`VenueDisambiguationService`, 0.419.0).** Es gibt einen

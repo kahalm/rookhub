@@ -71,6 +71,15 @@ public class GeocodingService
         var byPostal = await ResolveAllPostalCodesAsync(locationText, iso2, ct);
         if (byPostal.Count > 0) return byPostal;
 
+        // Adresse oder Ortsliste? Eine ZIFFER im Text entscheidet das ueberraschend zuverlaessig:
+        // eine Liste von Spielorten nennt Ortsnamen („Mayrhofen / St. Veit/Glan", „Bad Haering/
+        // Schwaz/Jenbach/Absam/Kufstein"), eine Adresse hat eine Hausnummer. Am Dev-Stand
+        // nachgemessen: von 262 als mehrortig erkannten Eintraegen hatten 191 eine Ziffer — und
+        // waren durchweg Adressen, die die Zerlegung zerschnitten hat („Festsaal der Gemeinde
+        // Schwarzach, Marktplatz 4, Schwarzach" wurde zu ZWEI Spielorten desselben Ortes). Die 71
+        // ohne Ziffer waren echte Listen.
+        var looksLikeAddress = locationText?.Any(char.IsDigit) == true;
+
         var bySegment = new List<GeocodeResult>();
         var ambiguous = false;
         foreach (var segment in GeoTextNormalizer.VenueSegments(locationText))
@@ -81,6 +90,13 @@ public class GeocodingService
             if (bySegment.Any(v => GeoDistance.Haversine(v.Lat, v.Lon, hit.Lat, hit.Lon) < SameTownKm)) continue;
             bySegment.Add(hit);
         }
+
+        // Bei einer Adresse gilt der LETZTE Treffer: in „Rathauskeller, Hauptplatz 40,
+        // Haid/Ansfelden" und „Karl-Marx-Schule, Plauen, Forststr. 60" steht vorn das Gebaeude
+        // und die Strasse, der Ort weiter hinten. Zerlegt wird trotzdem — nur eben zu EINEM
+        // Spielort; ohne die Zerlegung bildete die Kandidatensuche wieder Wortfolgen ueber die
+        // Kommas hinweg.
+        if (looksLikeAddress && bySegment.Count > 1) return [bySegment[^1]];
         if (bySegment.Count > 0) return bySegment;
 
         var region = await ResolveByRegionAsync(state, iso2, ct);
