@@ -101,7 +101,19 @@ public class TournamentRoundPlanService
                         // nicht. Der Vergleich gegen ein VERSCHOBENES Startdatum tut dasselbe und
                         // laeuft in SQL.
                         && e.EndDate > e.StartDate!.Value.AddDays(MinSpanDays))
-            .OrderBy(e => e.StartDate)
+            // Der am LAENGSTEN nicht gepruefte zuerst (nie geprueft = null gewinnt), danach der
+            // fruehere Termin. Mit `retryEmpty` ist das der Unterschied zwischen konvergieren und
+            // im Kreis laufen: sortiert nach Termin nimmt JEDER Durchgang wieder dieselben
+            // vordersten Turniere, und die sind nach dem ersten Durchgang genau die, von denen
+            // man schon WEISS, dass sie keinen Plan haben. Auf Dev nachgemessen: von den 200
+            // eines zweiten Durchgangs waeren 159 gerade erst geprueft gewesen — 159
+            // Seitenabrufe fuer eine Antwort, die man hatte, waehrend 252 aeltere Vermerke nie
+            // an die Reihe kaemen.
+            // Kein `== null ? 0 : 1` davor: aufsteigend sortiert stehen NULLs in MariaDB (und in
+            // LINQ-to-Objects) ohnehin vorn — der Fall „nie geprueft" gewinnt also von selbst,
+            // und die Reihenfolge braucht kein CASE, das der Provider uebersetzen muesste.
+            .OrderBy(e => e.RoundPlanCheckedAt)
+            .ThenBy(e => e.StartDate)
             .Take(limit)
             .ToListAsync(ct);
 

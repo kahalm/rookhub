@@ -282,6 +282,54 @@ public class TournamentRoundPlanServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Mit <c>retryEmpty</c> muss ein ZWEITER Durchgang andere Turniere vornehmen als der erste.
+    ///
+    /// <para><b>Warum das ein eigener Test ist.</b> Die Auswahl lief nach Startdatum, und damit
+    /// nahm jeder Durchgang wieder die vordersten — nach dem ersten Durchgang genau die, von denen
+    /// man schon WEISS, dass sie keinen Plan haben. Auf Dev nachgemessen: von den 200 eines
+    /// zweiten Durchgangs waeren 159 gerade erst geprueft gewesen, waehrend 252 aeltere Vermerke
+    /// nie an die Reihe gekommen waeren. Wiederholtes Aufrufen konvergierte also nicht, es lief im
+    /// Kreis — und zwar mit einem Seitenabruf je Runde. Sortiert wird deshalb nach dem ALTER des
+    /// Vermerks (nie geprueft zuerst).</para>
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_WithRetryEmpty_TakesTheLeastRecentlyCheckedFirst()
+    {
+        // Frueher Termin, gerade eben geprueft: nach Startdatum waere das der erste Kandidat.
+        var justChecked = await AddLeagueAsync("1000001", start: new DateOnly(2026, 9, 26));
+        justChecked.RoundPlanCheckedAt = DateTime.UtcNow;
+
+        // Spaeterer Termin, aber der Vermerk ist alt — dieses gehoert vorgenommen.
+        var stale = await AddLeagueAsync("1000002", start: new DateOnly(2026, 11, 1),
+            end: new DateOnly(2027, 5, 1));
+        stale.RoundPlanCheckedAt = DateTime.UtcNow.AddHours(-5);
+
+        // Und ein nie geprueftes mit dem SPAETESTEN Termin: das muss trotzdem zuerst kommen.
+        var never = await AddLeagueAsync("1000003", start: new DateOnly(2026, 12, 1),
+            end: new DateOnly(2027, 6, 1));
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService(ElevenRounds).RunAsync(1, retryEmpty: true);
+
+        // Geprueft wird, WELCHER Eintrag drankam — nicht wie viele Runden die Vorlage traegt
+        // (der Dienst uebernimmt nur Termine INNERHALB des Zeitraums des Turniers).
+        Assert.Equal(1, result.Checked);
+        Assert.NotEmpty(await Rounds(never));
+        Assert.Empty(await Rounds(stale));
+        Assert.Empty(await Rounds(justChecked));
+
+        // Zweiter Durchgang: jetzt der ALTE Vermerk, nicht wieder der eben gepruefte.
+        Assert.Equal(1, (await CreateService(ElevenRounds).RunAsync(1, retryEmpty: true)).Checked);
+        Assert.NotEmpty(await Rounds(stale));
+        Assert.Empty(await Rounds(justChecked));
+    }
+
+    private async Task<List<TournamentDirectoryRound>> Rounds(TournamentDirectoryEntry entry) =>
+        await _db.TournamentDirectoryRounds
+            .Where(r => r.TournamentDirectoryEntryId == entry.Id)
+            .ToListAsync();
+
+    /// <summary>
     /// Antwortet wie <see cref="StubHandler"/>, bricht den Durchgang aber NACH der
     /// <paramref name="cancelAfter"/>-ten Anfrage ab — so, wie ein abgebrochener Aufruf, ein
     /// API-Neustart oder ein Deploy mitten in einem zehnminuetigen Lauf es tut.
