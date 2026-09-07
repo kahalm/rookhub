@@ -28,8 +28,18 @@ jobs:
           filters: .github/filters.yml
 
   # Test-Gate: blockiert alle Image-Pushes, bis Tests grün sind (reusable test.yml)
+  #
+  # Die Rechte MUESSEN hier stehen, und zwar als OBERGRENZE fuer alles, was test.yml verlangt:
+  # ein aufgerufener Workflow darf nicht mehr haben als der aufrufende Job. Die Repo-Vorgabe ist
+  # `contents: read` — verlangt dort ein Job `pull-requests: read` (dorny/paths-filter braucht es
+  # im pull_request-Fall) und steht es hier nicht, weist GitHub den GANZEN Lauf ab, bevor ein
+  # Schritt laeuft: `startup_failure`, keine Jobs, kein Image, und in der API keine Annotation,
+  # die es erklaert. Genau so gesehen bei v0.434.2 und v0.434.3.
   tests:
     uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+      pull-requests: read
 
   build-api:
     needs: [changes, tests]

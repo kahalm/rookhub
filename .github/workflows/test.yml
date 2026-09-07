@@ -18,10 +18,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       turnier: ${{ steps.filter.outputs.turnier }}
       crawler: ${{ steps.filter.outputs.crawler }}
-      # Index-Schreibweise, NICHT `outputs.engine-provider`: in einem Ausdruck ist der
-      # Bindestrich der MINUS-Operator, `outputs.engine` minus `provider` — der ganze
-      # Workflow startet dann nicht mehr (`startup_failure`, kein Job, kein Image).
-      engine-provider: ${{ steps.filter.outputs['engine-provider'] }}
+      engine-provider: ${{ steps.filter.outputs.engine-provider }}
     permissions:
       contents: read
       pull-requests: read
@@ -107,7 +104,7 @@ jobs:
   # direkt geholt — die Werte kommen aus dem Dockerfile, damit sie nicht auseinanderlaufen.
   test-engine-provider:
     needs: changes
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs['engine-provider'] == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.engine-provider == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

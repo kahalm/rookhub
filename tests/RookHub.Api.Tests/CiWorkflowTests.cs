@@ -91,39 +91,49 @@ public class CiWorkflowTests
     }
 
     /// <summary>
-    /// In einem Actions-AUSDRUCK ist der Bindestrich der MINUS-Operator:
-    /// <c>outputs.engine-provider</c> liest GitHub als <c>outputs.engine</c> minus
-    /// <c>provider</c>. Der Ausdruck ist damit ungueltig, und das kostet nicht einen Job,
-    /// sondern den ganzen Lauf — `startup_failure`, kein einziger Schritt, kein Image, und in
-    /// der Job-Liste steht nichts, was man anklicken koennte.
+    /// Jedes Recht, das ein Job im AUFGERUFENEN Workflow verlangt, muss der aufrufende
+    /// <c>tests:</c>-Job in <c>docker.yml</c> ebenfalls gewaehren.
     ///
-    /// <para>Live passiert (v0.434.2): EINE solche Zeile in den `outputs:` des
-    /// `changes`-Jobs liess beide Workflows nicht mehr anlaufen — waehrend die YAML-Datei
-    /// syntaktisch tadellos ist und jeder Linter sie durchwinkt. Richtig ist die
-    /// Index-Schreibweise <c>outputs['engine-provider']</c>; an der EINEN Stelle, die den
-    /// Filter abfragt, stand sie schon, in der Ausgabe-Zuweisung nicht.</para>
+    /// <para><b>Warum das der teuerste Fehler dieser Datei ist.</b> Ein aufgerufener Workflow
+    /// darf nicht mehr Rechte haben als sein Aufrufer, und die Repo-Vorgabe ist
+    /// <c>contents: read</c>. Verlangt ein Job in <c>test.yml</c> mehr — <c>pull-requests: read</c>,
+    /// das dorny/paths-filter im pull_request-Fall braucht — und der <c>tests:</c>-Job nennt es
+    /// nicht, dann weist GitHub den GANZEN Lauf ab, BEVOR ein Schritt laeuft: `startup_failure`,
+    /// null Jobs, kein Test, kein Image. Es gibt dazu keine Annotation in der API und keine
+    /// anklickbare Zeile in der Job-Liste, und die Datei ist einwandfreies YAML — actionlint
+    /// winkt sie durch. Passiert bei v0.434.2 (Rechte in test.yml dazugekommen, Aufrufer nicht
+    /// nachgezogen) und deshalb auch bei v0.434.3 unbemerkt geblieben.</para>
     /// </summary>
-    [Theory]
-    [InlineData(Docker)]
-    [InlineData(Tests)]
-    public void NoWorkflowExpression_ReadsAHyphenatedNameWithDotSyntax(string workflow)
+    [Fact]
+    public void CallerJob_GrantsEveryPermissionTheCalledWorkflowAsksFor()
     {
-        var text = ReadRepoFile(workflow);
+        var wanted = PermissionScopes(ReadRepoFile(Tests));
+        var granted = PermissionScopes(CallerTestsJob());
 
-        // Nur INNERHALB von ${{ }} suchen: ein Kommentar, der die falsche Form ZITIERT (wie der
-        // in test.yml, der genau davor warnt), ist kein Fehler — und ein Test, der daran
-        // scheitert, verbietet das Erklaeren.
-        var offenders = Regex.Matches(text, @"\$\{\{(.*?)\}\}", RegexOptions.Singleline)
-            .SelectMany(expr => Regex.Matches(
-                    expr.Groups[1].Value,
-                    @"(?:outputs|inputs|vars|env)\.[A-Za-z_][A-Za-z0-9_]*-[A-Za-z0-9_]")
-                .Select(m => m.Value))
-            .Distinct()
-            .ToList();
+        var missing = wanted.Except(granted).ToList();
 
-        Assert.True(offenders.Count == 0,
-            "Bindestrich = Minus im Ausdruck; stattdessen outputs['name-mit-strich'] benutzen: "
-            + string.Join(", ", offenders));
+        Assert.True(missing.Count == 0,
+            "test.yml verlangt Rechte, die der `tests:`-Job in docker.yml nicht gewaehrt — der "
+            + "Lauf startet dann gar nicht: " + string.Join(", ", missing));
+    }
+
+    /// <summary>Alle <c>scope: stufe</c>-Paare unter einem <c>permissions:</c>-Block.</summary>
+    private static HashSet<string> PermissionScopes(string yaml) =>
+        Regex.Matches(yaml, @"(?ms)^(?<indent>\s*)permissions:\s*$(?<body>(?:\n\k<indent>\s+\S.*)+)")
+            .SelectMany(block => Regex.Matches(block.Groups["body"].Value,
+                    @"^\s*(?<scope>[a-z-]+):\s*(?<level>read|write|none)\s*$",
+                    RegexOptions.Multiline)
+                .Select(m => $"{m.Groups["scope"].Value}: {m.Groups["level"].Value}"))
+            .ToHashSet();
+
+    /// <summary>Der <c>tests:</c>-Job aus docker.yml — der Aufrufer des Test-Workflows.</summary>
+    private static string CallerTestsJob()
+    {
+        var text = ReadRepoFile(Docker);
+        var block = Regex.Match(text, @"(?ms)^  tests:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+
+        Assert.Contains("uses: ./.github/workflows/test.yml", block);
+        return block;
     }
 
     /// <summary>
