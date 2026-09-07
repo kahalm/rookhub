@@ -67,6 +67,9 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   /** Laeuft gerade ein Holen-Auftrag (nach dem Merken)? */
   readonly importing = signal(false);
 
+  /** Laeuft gerade ein Abo-Schreibvorgang? Sperrt den Knopf gegen den Doppelklick. */
+  readonly busy = signal(false);
+
   ngOnInit(): void {
     this.route.paramMap.pipe(
       switchMap(params => {
@@ -192,6 +195,30 @@ export class TournamentDirectoryDetailComponent implements OnInit {
         if (job) this.watchImport(job.id, entry);
       },
       error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError')),
+    });
+  }
+
+  /**
+   * Merken zuruecknehmen — auch das gehoert auf DIE Seite, auf der man es gesetzt hat. Geloescht
+   * wird nur der Vermerk „melde mir Termin- und Ortsaenderungen"; das schon geholte Turnier samt
+   * Teilnehmern und Tabelle bleibt (es gehoert nicht einem Nutzer).
+   */
+  removeBookmark(): void {
+    const entry = this.entry();
+    if (!entry?.chessResultsId || this.busy()) return;
+    this.busy.set(true);
+
+    this.tournaments.unsubscribeByTournament(entry.chessResultsId).subscribe({
+      next: () => {
+        this.busy.set(false);
+        // Neues Objekt statt Mutation: ein Signal meldet nur eine geaenderte REFERENZ.
+        this.entry.set({ ...entry, subscribed: false });
+        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarkRemoved'));
+      },
+      error: () => {
+        this.busy.set(false);
+        this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkRemoveError'));
+      },
     });
   }
 

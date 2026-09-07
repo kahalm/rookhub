@@ -225,4 +225,45 @@ describe('TournamentMapComponent', () => {
     fixture.detectChanges();
     expect(() => fixture.destroy()).not.toThrow();
   });
+  /**
+   * Der Punkt zeigt „gemerkt" mit an — vorher unterschied er es GAR NICHT, die Auskunft stand nur
+   * im Popup, also erst nach dem Klick auf den Punkt, den man ohne die Auskunft nicht kennt.
+   * Zwei Kanaele (Farbe UND Ringdicke), weil Farbe allein nicht fuer jeden trennt.
+   */
+  it('hebt gemerkte Turniere auf der Karte hervor', () => {
+    const gemerkt = { ...entry('1', 47.8, 13.0), subscribed: true };
+    const offen = entry('2', 47.9, 13.1);
+    fixture.componentRef.setInput('entries', [gemerkt, offen]);
+    fixture.detectChanges();
+
+    const stile = markerStyles(component);
+    expect(stile.length).toBe(2);
+    const [a, b] = stile;
+    expect(a.fillColor).not.toBe(b.fillColor);
+    expect(a.weight).not.toBe(b.weight);
+  });
+
+  /**
+   * Wird im Popup gemerkt, faerbt sich der Punkt SOFORT um — ein Neuladen des Ausschnitts wuerde
+   * das offene Popup zuschlagen.
+   */
+  it('färbt den Punkt nach dem Merken um, ohne neu zu laden', () => {
+    const e = entry('1', 47.8, 13.0);
+    fixture.componentRef.setInput('entries', [e]);
+    fixture.detectChanges();
+    const vorher = markerStyles(component)[0].fillColor;
+
+    component.applySubscribed(e, true);
+
+    expect(e.subscribed).toBeTrue();
+    expect(markerStyles(component)[0].fillColor).not.toBe(vorher);
+  });
 });
+
+/** Die gezeichneten Stile der Marker — Leaflet haelt sie in `options`. */
+function markerStyles(component: TournamentMapComponent): { fillColor?: string; weight?: number }[] {
+  const styles: { fillColor?: string; weight?: number }[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (component as any).markerLayer?.eachLayer((l: any) => styles.push(l.options));
+  return styles;
+}

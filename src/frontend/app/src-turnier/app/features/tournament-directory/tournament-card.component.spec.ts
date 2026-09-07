@@ -81,13 +81,50 @@ describe('TournamentCardComponent', () => {
     http.verify();
   });
 
-  /** Ein zweiter Klick auf ein schon gemerktes Turnier legt kein zweites Abo an. */
-  it('merkt nicht zweimal', () => {
+  /** Die KARTE faerbt ihren Punkt daraufhin um, ohne den Ausschnitt neu zu laden. */
+  it('meldet das Merken nach draußen', () => {
+    setup();
+    let change: { entry: DirectoryEntry; subscribed: boolean } | null = null;
+    component.subscribedChanged.subscribe(c => (change = c));
+
+    component.bookmark();
+    http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+    http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' }).flush({ id: 5, status: 'Pending' });
+
+    expect(change!.subscribed).toBeTrue();
+  });
+
+  /**
+   * Der Merken-Knopf ist ein UMSCHALTER. Vorher tat ein zweiter Klick GAR NICHTS — wer sich
+   * vertippt hatte, musste das Abo woanders suchen.
+   */
+  it('nimmt das Merken beim zweiten Klick zurück', () => {
     setup({ subscribed: true });
+    let change: { entry: DirectoryEntry; subscribed: boolean } | null = null;
+    component.subscribedChanged.subscribe(c => (change = c));
 
     component.bookmark();
 
+    const req = http.expectOne('/api/subscriptions/by-tournament/1457129');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(component.subscribed()).toBeFalse();
+    expect(change!.subscribed).toBeFalse();
+    // Kein zweites Abo und kein Holen-Auftrag.
     http.verify();
+  });
+
+  /** Scheitert das Loesen, bleibt „gemerkt" stehen — kein Symbol, das zurueckspringt. */
+  it('lässt „gemerkt" bei einem Fehlschlag stehen', () => {
+    setup({ subscribed: true });
+
+    component.bookmark();
+    http.expectOne('/api/subscriptions/by-tournament/1457129')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(component.subscribed()).toBeTrue();
+    expect(component.busy()).toBeFalse();
   });
 
   it('blendet das Turnier aus und meldet das nach draußen', () => {

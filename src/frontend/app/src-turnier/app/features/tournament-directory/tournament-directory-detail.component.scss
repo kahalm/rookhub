@@ -83,6 +83,9 @@ span.group-link { color: inherit; }
   gap: 4px 12px;
 }
 
+/* Die gefuellte Marke in der Akzentfarbe sagt „gemerkt", der Text daneben, was ein Klick tut. */
+.detail-actions .on { color: var(--mat-sys-primary); }
+
 .detail-actions {
   display: flex;
   flex-wrap: wrap;

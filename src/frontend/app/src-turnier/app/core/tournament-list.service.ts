@@ -57,6 +57,14 @@ export class TournamentListService {
     return this.http.delete(`/api/subscriptions/${subscriptionId}`);
   }
 
+  /**
+   * Abo loesen, ohne die Abo-Id zu kennen — die Kurzansicht kennt nur das Turnier. Idempotent:
+   * „war schon nicht gemerkt" ist kein Fehler, der Knopf ist ein Umschalter.
+   */
+  unsubscribeByTournament(crawlerTournamentId: string): Observable<unknown> {
+    return this.http.delete(`/api/subscriptions/by-tournament/${crawlerTournamentId}`);
+  }
+
   startCrawl(chessResultsId: string): Observable<CrawlJob> {
     return this.http.post<CrawlJob>('/api/tournaments/crawl', { chessResultsId, jobType: 'Full' });
   }

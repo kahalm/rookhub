@@ -282,7 +282,8 @@ ChessResultsId bewusst nicht heraus, und dabei bleibt es).
 ### Turnier-Abos + Favoriten + Monitor (auth)
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
-| GET/POST/DELETE | `/api/subscriptions[/{id}]` | Abonnierte Turniere verwalten |
+| GET/POST/DELETE | `/api/subscriptions[/{id:int}]` | Abonnierte Turniere verwalten |
+| DELETE | `/api/subscriptions/by-tournament/{crawlerTournamentId}` | Abo ueber die TURNIER-Nummer loesen statt ueber die Abo-Id — die Kurzansicht auf Karte, Liste und Kalender kennt das Turnier, nicht das Abo. **Idempotent** (204 auch ohne Abo): der Merken-Knopf ist ein Umschalter, und „war schon nicht gemerkt" ist kein Fehlerfall. Literal-Route VOR `{id:int}` |
 | GET/POST/DELETE | `/api/tournament-favorites[/{id}]` | Favoriten verwalten |
 | GET/POST | `/api/tournament-monitor[/{id}]` | Per-Turnier-User-Einstellungen + Runden-Monitor (Round-Watch, Auto-Subscribe) |
 
@@ -1166,6 +1167,16 @@ aus dem Eintrag nur VORBELEGT — den Eintrag zu mutieren erreichte die Elternan
 (OnPush), und die HTTP-Antworten kommen ohnehin ausserhalb der Zone an. (3) Die Komponente
 importiert `MatDialogModule` selbst: sie oeffnet den Melde-Dialog und steht in drei verschiedenen
 Eltern, auf deren Importe darf sie sich nicht verlassen.
+
+**Der Merken-Knopf ist ein UMSCHALTER, und die KARTE zeigt den Zustand mit** (0.430.0). Zwei
+Fehler, die zusammengehoerten: ein zweiter Klick tat gar nichts (`if (subscribed) return`), und
+der Pin unterschied gemerkt/nicht gemerkt ueberhaupt nicht — die Auskunft stand nur in der
+Kurzansicht, also erst nach dem Klick auf den richtigen Punkt, den man ohne die Auskunft nicht
+kennt. `pinStyle()` in `tournament-map.component.ts` faerbt gemerkte Punkte in einem eigenen
+Farbton UND mit dickerem Ring (**zwei Kanaele** — Farbe allein trennt nicht fuer jeden), die
+Abschwaechung fuer „nur ungefaehr verortet" bleibt darunter erhalten. Gemerkte werden ZULETZT
+gezeichnet und liegen damit oben. Nach einem Klick faerbt `applySubscribed()` nur die Punkte
+DIESES Turniers um — die Ausschnitts-Daten neu zu laden wuerde das offene Popup zuschlagen.
 
 Im **Kalender** oeffnet ein Klick die Kurzansicht als kleines Fenster
 (`tournament-card-dialog.component.ts`) statt direkt auf die Detailseite zu fuehren: im

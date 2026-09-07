@@ -70,7 +70,33 @@ public class SubscriptionController : BaseApiController
         });
     }
 
-    [HttpDelete("{id}")]
+    /// <summary>
+    /// Abo loesen ueber die TURNIER-Nummer statt ueber die Abo-Id.
+    ///
+    /// <para>Warum es das braucht: die Kurzansicht auf Karte, Liste und Kalender kennt das
+    /// Turnier, nicht das Abo — der Merken-Knopf konnte deshalb nur ANlegen und tat beim zweiten
+    /// Klick gar nichts. Ueber die Abo-Id zu gehen hiesse, erst die ganze Abo-Liste zu holen, um
+    /// darin eine Id zu suchen, die der Server ohnehin kennt.</para>
+    ///
+    /// <para><b>Idempotent</b> (204 auch ohne Abo): der Knopf ist ein Umschalter, und „war schon
+    /// nicht gemerkt" ist kein Fehlerfall, den ein Nutzer sehen muesste. Literal-Route VOR
+    /// <c>{id:int}</c> — sonst liest der Router „by-tournament" als Id.</para>
+    /// </summary>
+    [HttpDelete("by-tournament/{crawlerTournamentId}")]
+    public async Task<IActionResult> DeleteByTournament(string crawlerTournamentId)
+    {
+        var sub = await _db.TournamentSubscriptions
+            .FirstOrDefaultAsync(s => s.CrawlerTournamentId == crawlerTournamentId
+                                      && s.UserId == GetUserId());
+        if (sub != null)
+        {
+            _db.TournamentSubscriptions.Remove(sub);
+            await _db.SaveChangesAsync();
+        }
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
         var sub = await _db.TournamentSubscriptions

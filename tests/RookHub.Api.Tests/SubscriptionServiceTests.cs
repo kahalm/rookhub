@@ -171,4 +171,41 @@ public class SubscriptionServiceTests : IDisposable
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
+
+    /// <summary>
+    /// Abo loesen ueber die TURNIER-Nummer. Gebraucht von der Kurzansicht auf Karte, Liste und
+    /// Kalender: die kennt das Turnier, nicht das Abo — ueber die Abo-Id zu gehen hiesse, erst
+    /// die ganze Abo-Liste zu holen, um eine Id zu suchen, die der Server ohnehin kennt.
+    /// </summary>
+    [Fact]
+    public async Task DeleteByTournament_RemovesOnlyTheOwnSubscription()
+    {
+        var mine = await CreateUserAsync("ich");
+        var other = await CreateUserAsync("jemand");
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = mine, CrawlerTournamentId = "1457129", TournamentName = "Braunau" },
+            new TournamentSubscription { UserId = mine, CrawlerTournamentId = "1405166", TournamentName = "Liga" },
+            new TournamentSubscription { UserId = other, CrawlerTournamentId = "1457129", TournamentName = "Braunau" });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(mine).DeleteByTournament("1457129");
+
+        Assert.IsType<NoContentResult>(result);
+        // Das eigene ist weg, das des anderen Nutzers und das andere eigene stehen.
+        Assert.Equal(["1405166"], await _db.TournamentSubscriptions
+            .Where(s => s.UserId == mine).Select(s => s.CrawlerTournamentId).ToListAsync());
+        Assert.Single(_db.TournamentSubscriptions.Where(s => s.UserId == other));
+    }
+
+    /// <summary>
+    /// IDEMPOTENT: der Knopf ist ein Umschalter, und „war schon nicht gemerkt" ist kein Fehler,
+    /// den ein Nutzer sehen muesste (zwei Klicks, ein langsames Netz — schon passiert).
+    /// </summary>
+    [Fact]
+    public async Task DeleteByTournament_WithoutSubscription_IsNoContent()
+    {
+        var userId = await CreateUserAsync();
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).DeleteByTournament("999"));
+    }
 }

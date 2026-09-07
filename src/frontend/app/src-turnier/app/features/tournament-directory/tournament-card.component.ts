@@ -110,7 +110,7 @@ import { DirectoryEntry } from './tournament-directory.model';
              fehlender. -->
         @if (bookmarkable) {
           <button mat-icon-button (click)="bookmark()" [disabled]="busy()"
-                  [matTooltip]="(subscribed() ? 'tournamentDirectory.bookmarkedTooltip' : 'tournamentDirectory.bookmark') | translate"
+                  [matTooltip]="(subscribed() ? 'tournamentDirectory.bookmarkRemove' : 'tournamentDirectory.bookmark') | translate"
                   [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
             <mat-icon [class.on]="subscribed()">{{ subscribed() ? 'bookmark' : 'bookmark_add' }}</mat-icon>
           </button>
@@ -198,7 +198,13 @@ import { DirectoryEntry } from './tournament-directory.model';
       padding-top: 0.2rem;
     }
 
+    /* „Gemerkt" muss man SEHEN, ohne den Nachbarknopf zum Vergleich zu haben: gefuellte Marke,
+       Akzentfarbe und ein getoenter Grund. Nur ein anderes Glyph (bookmark vs. bookmark_add) ist
+       auf 24 px kein Unterschied, den man ohne Vergleich erkennt. */
     .tc-actions .on { color: var(--mat-sys-primary); }
+    .tc-actions button:has(.on) {
+      background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent);
+    }
 
     /* Im Karten-Popup und im Kalender-Fenster ist der Platz knapp: kleinere Symbole, kein
        zusaetzlicher Abstand oben. */
@@ -229,6 +235,13 @@ export class TournamentCardComponent {
    * naechsten Laden verschwindet.
    */
   @Output() ignoredChanged = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
+
+  /**
+   * „Gemerkt" hat sich geaendert. Gebraucht von der KARTE: der Punkt zeigt diesen Zustand mit an
+   * und muss sich sofort umfaerben — die Ausschnitts-Daten neu zu laden wuerde stattdessen das
+   * gerade offene Popup zuschlagen.
+   */
+  @Output() subscribedChanged = new EventEmitter<{ entry: DirectoryEntry; subscribed: boolean }>();
 
   /**
    * Eigene Signale fuer die drei Zustaende, die diese Komponente selbst aendert. Sie werden aus
@@ -273,25 +286,57 @@ export class TournamentCardComponent {
    * Spielbeginn.
    */
   /**
-   * Merken geht nur mit einer chess-results-Nummer: das Abo traegt sie, und der Crawl-Auftrag
+   * Der Merken-Knopf ist ein UMSCHALTER: derselbe Knopf legt das Abo an und loest es wieder.
+   *
+   * <p>Vorher tat ein zweiter Klick gar nichts (`if (this.subscribed()) return`) — wer sich
+   * vertippt hatte, musste das Abo woanders suchen. Ein Symbol, das seinen Zustand zeigt, muss
+   * ihn auch zuruecknehmen koennen.</p>
+   *
+   * <p>Merken setzt eine chess-results-Nummer voraus: das Abo traegt sie, und der Crawl-Auftrag
    * braucht sie. Ein FIDE-Turnier hat keine — der Knopf erscheint dort gar nicht (siehe
-   * `bookmarkable`), diese Pruefung ist der zweite Riegel.
+   * `bookmarkable`), diese Pruefung ist der zweite Riegel.</p>
    */
   bookmark(): void {
     const chessResultsId = this.entry.chessResultsId;
-    if (chessResultsId === null || this.subscribed() || this.busy()) return;
+    if (chessResultsId === null || this.busy()) return;
+    if (this.subscribed()) {
+      this.removeBookmark(chessResultsId);
+      return;
+    }
     this.busy.set(true);
 
     this.tournaments.bookmarkAndImport(chessResultsId, this.entry.name).subscribe({
       next: ({ job }) => {
         this.busy.set(false);
         this.subscribedOverride.set(true);
+        this.subscribedChanged.emit({ entry: this.entry, subscribed: true });
         this.snackbar.success(this.translate.instant(
           job ? 'tournamentDirectory.bookmarkedImporting' : 'tournamentDirectory.bookmarked'));
       },
       error: () => {
         this.busy.set(false);
         this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError'));
+      },
+    });
+  }
+
+  /**
+   * Merken zuruecknehmen. Das schon GEHOLTE Turnier bleibt bestehen — geloescht wird nur der
+   * Vermerk „melde mir Termin- und Ortsaenderungen"; die Teilnehmerliste eines Turniers gehoert
+   * nicht einem Nutzer.
+   */
+  private removeBookmark(chessResultsId: string): void {
+    this.busy.set(true);
+    this.tournaments.unsubscribeByTournament(chessResultsId).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.subscribedOverride.set(false);
+        this.subscribedChanged.emit({ entry: this.entry, subscribed: false });
+        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarkRemoved'));
+      },
+      error: () => {
+        this.busy.set(false);
+        this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkRemoveError'));
       },
     });
   }

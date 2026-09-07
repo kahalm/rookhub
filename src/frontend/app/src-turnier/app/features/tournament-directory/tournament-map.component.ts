@@ -197,20 +197,22 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     // bleibt.
     this.destroyPopup();
     this.markerLayer.clearLayers();
+    this.markersByEntry.clear();
 
-    for (const entry of this.entries) {
+    // Gemerkte ZULETZT: Leaflet zeichnet in Reihenfolge des Hinzufuegens, und ein gemerkter Punkt
+    // soll nicht unter einem beliebigen anderen liegen. In einer Stadt mit dreissig Turnieren ist
+    // genau das der Unterschied zwischen „ich sehe meins" und „ich suche meins".
+    const ordered = [...this.entries].sort(
+      (a, b) => Number(a.subscribed) - Number(b.subscribed));
+
+    for (const entry of ordered) {
       // Ein Punkt JE SPIELORT: bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit").
       // Mit nur dem Hauptort verschwaende ein Turnier die Haelfte seiner Orte, und die
       // Umkreissuche fand es nicht, obwohl es zur Haelfte vor der Haustuer stattfindet.
       for (const spot of venuesOf(entry)) {
       const marker = new MapPinMarker([spot.lat, spot.lon], {
         radius: PinRadius,
-        weight: 2,
-        // Nur ungefaehr verortete Turniere (Bundesland-Mittelpunkt) sichtbar abschwaechen —
-        // sonst suggeriert ein knackiger Pin eine Genauigkeit, die er nicht hat.
-        color: spot.geoSource === 'Region' ? '#9aa0a6' : '#1a73e8',
-        fillColor: spot.geoSource === 'Region' ? '#c8ccd0' : '#4285f4',
-        fillOpacity: spot.geoSource === 'Region' ? 0.45 : 0.8,
+        ...pinStyle(entry, spot),
       });
 
       // Popup und Hinweis muessen ueber den KOPF des Pins ausgerichtet werden, nicht ueber
@@ -222,8 +224,32 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       // Beim geoeffneten Popup stuende der Hover-Hinweis mit demselben Inhalt daneben.
       marker.on('popupopen', () => marker.closeTooltip());
       marker.addTo(this.markerLayer);
+      // Fuer das Umfaerben ohne Neuladen (siehe applySubscribed).
+      const known = this.markersByEntry.get(entry.id);
+      if (known) known.push({ marker, spot }); else this.markersByEntry.set(entry.id, [{ marker, spot }]);
       }
     }
+  }
+
+  /**
+   * Alle Punkte EINES Turniers samt ihrem Spielort — ein Turnier kann mehrere haben, und jeder
+   * traegt seine eigene Genauigkeit (die in den Stil eingeht).
+   */
+  private readonly markersByEntry =
+    new Map<string, { marker: MapPinMarker; spot: DirectoryVenue }[]>();
+
+  /**
+   * Faerbt die Punkte eines Turniers um, nachdem sich „gemerkt" geaendert hat.
+   *
+   * <p>Bewusst kein Neuladen des Ausschnitts: das wuerde die Marker wegwerfen und damit das
+   * Popup zuschlagen, in dem der Nutzer gerade geklickt hat. Der Eintrag wird ebenfalls
+   * mitgeschrieben, damit ein spaeteres `applyEntries` (Ausschnitt verschoben) denselben Zustand
+   * zeichnet.</p>
+   */
+  applySubscribed(entry: DirectoryEntry, subscribed: boolean): void {
+    entry.subscribed = subscribed;
+    for (const { marker, spot } of this.markersByEntry.get(entry.id) ?? [])
+      marker.setStyle(pinStyle(entry, spot));
   }
 
   /**
@@ -255,6 +281,9 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     card.setInput('venueName', spot.name);
     card.instance.selected.subscribe(selected => this.entrySelected.emit(selected));
     card.instance.ignoredChanged.subscribe(change => this.entryIgnored.emit(change));
+    // Nur umfaerben, nicht neu laden — sonst schlaegt das gerade offene Popup zu.
+    card.instance.subscribedChanged.subscribe(
+      change => this.applySubscribed(change.entry, change.subscribed));
     // Sofort rendern: Leaflet erwartet ein FERTIGES Element und misst danach die Popup-Groesse.
     card.changeDetectorRef.detectChanges();
 
@@ -324,6 +353,39 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.boundsChanged.emit(
       `${b.getSouth().toFixed(5)},${b.getWest().toFixed(5)},${b.getNorth().toFixed(5)},${b.getEast().toFixed(5)}`);
   }
+}
+
+/**
+ * Wie ein Punkt aussieht. Zwei Angaben stecken darin, und beide muessen ohne Legende ablesbar
+ * sein:
+ *
+ * <p><b>Gemerkt</b> — ein eigener FARBTON (Amber statt Blau) plus ein dickerer Ring. Zwei Kanaele
+ * bewusst: Farbe allein trennt fuer einen Teil der Betrachter nicht, und auf einer Karte mit
+ * dreissig blauen Punkten in einer Stadt ist „meins" sonst nicht zu finden. Vorher unterschied
+ * der Punkt es GAR NICHT — die Auskunft stand nur im Popup, also erst nach einem Klick auf den
+ * richtigen Punkt, den man ohne die Auskunft nicht kennt.</p>
+ *
+ * <p><b>Nur ungefaehr verortet</b> (Bundesland-Mittelpunkt) — sichtbar abgeschwaecht, sonst
+ * suggeriert ein knackiger Pin eine Genauigkeit, die er nicht hat. Diese Abschwaechung gilt auch
+ * fuer gemerkte, damit die Aussage nicht verlorengeht.</p>
+ */
+function pinStyle(entry: DirectoryEntry, spot: DirectoryVenue): L.PathOptions {
+  const vague = spot.geoSource === 'Region';
+  if (entry.subscribed) {
+    return {
+      // Kraeftiger Rand + dicker Ring: der Punkt soll aus einer blauen Menge herausstechen.
+      color: '#b06000',
+      fillColor: '#f9ab00',
+      weight: 3,
+      fillOpacity: vague ? 0.55 : 0.95,
+    };
+  }
+  return {
+    color: vague ? '#9aa0a6' : '#1a73e8',
+    fillColor: vague ? '#c8ccd0' : '#4285f4',
+    weight: 2,
+    fillOpacity: vague ? 0.45 : 0.8,
+  };
 }
 
 function tooltipHtml(entry: DirectoryEntry, spot: DirectoryVenue): string {

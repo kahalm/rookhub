@@ -246,6 +246,39 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(dates).toEqual(['1. 2026-09-26', '2. 2026-10-10']);
   });
 
+  /**
+   * Was sich auf dieser Seite setzen laesst, muss sich hier auch zuruecknehmen lassen — vorher
+   * stand dort nur der Vermerk „gemerkt" ohne Weg zurueck.
+   */
+  it('nimmt das Merken auf der Detailseite zurück', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { subscribed: true }));
+    flushImportLookup('1457129');
+
+    component.removeBookmark();
+
+    const req = http.expectOne('/api/subscriptions/by-tournament/1457129');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(component.entry()?.subscribed).toBeFalse();
+    expect(component.busy()).toBeFalse();
+    http.verify();
+  });
+
+  it('lässt „gemerkt" stehen, wenn das Lösen scheitert', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { subscribed: true }));
+    flushImportLookup('1457129');
+
+    component.removeBookmark();
+    http.expectOne('/api/subscriptions/by-tournament/1457129')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(component.entry()?.subscribed).toBeTrue();
+    expect(component.busy()).toBeFalse();
+  });
+
   it('sagt es, wenn die Datei auf diesem Geraet nicht erstellt werden konnte', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));

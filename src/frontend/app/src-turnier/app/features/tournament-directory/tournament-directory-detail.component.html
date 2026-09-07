@@ -116,10 +116,13 @@
             {{ 'tournamentDirectory.bookmark' | translate }}
           </button>
         } @else {
-          <span class="muted">
-            <mat-icon inline>bookmark</mat-icon>
-            {{ 'tournamentDirectory.bookmarkedTooltip' | translate }}
-          </span>
+          <!-- Kein blosser Vermerk: was sich setzen laesst, muss sich hier auch zuruecknehmen
+               lassen. Sekundaer, damit die primaere Aktion der Seite nicht „aufheben" ist. -->
+          <button mat-stroked-button (click)="removeBookmark()" [disabled]="busy()"
+                  [matTooltip]="'tournamentDirectory.bookmarkedTooltip' | translate">
+            <mat-icon class="on">bookmark</mat-icon>
+            {{ 'tournamentDirectory.bookmarkRemove' | translate }}
+          </button>
         }
         @if (imported()) {
           <a mat-stroked-button [routerLink]="['/tournaments', imported()!.id]">
