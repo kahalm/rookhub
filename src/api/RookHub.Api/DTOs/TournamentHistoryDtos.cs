@@ -64,6 +64,14 @@ public class PlayerHistoryEntryDto
     /// </summary>
     public bool HasResult { get; set; }
 
+    /// <summary>
+    /// Wurde die Spielerkarte schon abgerufen? Trennt die zwei Faelle hinter einem fehlenden
+    /// Ergebnis: „wird noch geholt" (false) und „chess-results fuehrt hier keines" (true, etwa
+    /// wenn die Karte des Turniers ueber diese Startnummer keinen Player-info-Block hat). Ohne
+    /// das stand in beiden Faellen „noch kein Ergebnis" — und im zweiten wartete man vergebens.
+    /// </summary>
+    public bool CardFetched { get; set; }
+
     public static PlayerHistoryEntryDto From(PlayerTournamentResult r) => new()
     {
         ChessResultsId = r.ChessResultsId,
@@ -77,6 +85,7 @@ public class PlayerHistoryEntryDto
         RatingChange = r.RatingChange,
         RatingBefore = r.RatingInternational,
         HasResult = r.Points is not null || r.PerformanceRating is not null,
+        CardFetched = r.CardFetchedAt is not null,
     };
 }
 

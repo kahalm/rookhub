@@ -54,6 +54,26 @@ public class TournamentHistoryServiceTests : IDisposable
           "snr":118,"identNumber":"144749","fideId":"1693034","rank":null,"rounds":11,"playerCount":226}]
         """;
 
+    /// <summary>
+    /// Ein MANNSCHAFTSturnier, wie die Spielersuche es liefert: gespielt, mit Startnummer, aber
+    /// OHNE Platz — chess-results weist dort keinen Einzelplatz aus.
+    /// </summary>
+    private static string TeamRow =>
+        $$"""
+        [{"tournamentId":"1206267","tournamentName":"TMM 2.Klasse","endDate":"{{DateTime.UtcNow.AddMonths(-5):yyyy/MM/dd}}",
+          "snr":73,"identNumber":"144749","fideId":"1693034","rank":null,"rounds":11,"playerCount":211}]
+        """;
+
+    /// <summary>
+    /// Ein Turnier, das erst noch stattfindet — kein Platz, kein Ergebnis. Das Datum ist RELATIV:
+    /// ein fest eingetragenes Jahr macht den Test irgendwann still zum Gegenteil seiner Aussage.
+    /// </summary>
+    private static string FutureRow =>
+        $$"""
+        [{"tournamentId":"1479344","tournamentName":"TMM 1.Klasse","endDate":"{{DateTime.UtcNow.AddYears(1):yyyy/MM/dd}}",
+          "snr":118,"identNumber":"144749","fideId":"1693034","rank":null,"rounds":11,"playerCount":226}]
+        """;
+
     private const string Card = """
         {"points":1.5,"rank":56,"performanceRating":1740,"ratingChange":-51.6,
          "ratingInternational":1923,"hasResult":true}
@@ -312,6 +332,168 @@ public class TournamentHistoryServiceTests : IDisposable
 
         Assert.Equal(1.5m, (await _db.PlayerTournamentResults
             .SingleAsync(r => r.ChessResultsId == "1107064")).Points);
+    }
+
+    // ----- Mannschaftsturniere ----------------------------------------------
+
+    /// <summary>
+    /// Eine Zeile OHNE Platz in der Trefferliste ist nicht zwingend ein kuenftiges Turnier:
+    /// chess-results weist bei MANNSCHAFTSturnieren keinen Einzelplatz aus, die SPIELERKARTE
+    /// kennt Punkte und Performance dort aber sehr wohl. Am echten Konto waren das acht von elf
+    /// offenen Zeilen, die dauerhaft „noch kein Ergebnis" zeigten. Das Kriterium ist deshalb der
+    /// TERMIN, nicht der Platz.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_PlayedTeamTournamentWithoutRank_IsQueuedAnyway()
+    {
+        var userId = await CreateUserAsync();
+        _handler.History = TeamRow;
+        var queue = new CountingQueue();
+
+        var history = Assert.Single(await CreateService(queue).GetAsync([userId]));
+
+        Assert.Equal(1, history.PendingResults);
+        Assert.Equal(1, queue.Count);
+    }
+
+    /// <summary>Ein KUENFTIGES Turnier bleibt aussen vor — es hat noch kein Ergebnis.</summary>
+    [Fact]
+    public async Task GetAsync_FutureTournament_IsNotQueued()
+    {
+        var userId = await CreateUserAsync();
+        _handler.History = FutureRow;
+        var queue = new CountingQueue();
+
+        var history = Assert.Single(await CreateService(queue).GetAsync([userId]));
+
+        Assert.Equal(0, history.PendingResults);
+        Assert.Equal(0, queue.Count);
+    }
+
+    /// <summary>
+    /// Der Platz der KARTE ist der genauere — ein zweiter Listen-Abruf darf ihn nicht wieder auf
+    /// „kein Platz" zuruecksetzen. Genau das passierte bei Mannschaftsturnieren: die Trefferliste
+    /// laesst die Spalte dort dauerhaft leer.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_ListRefresh_KeepsTheRankFromTheCard()
+    {
+        var userId = await CreateUserAsync();
+        _handler.History = TeamRow;
+        _handler.Card = """{"points":3,"rank":34,"performanceRating":2013,"hasResult":true}""";
+        await CreateService().GetAsync([userId]);
+        await CreateService().FetchCardAsync("fide:1693034", "1206267", 73);
+
+        var sync = await _db.PlayerHistorySyncs.SingleAsync();
+        sync.LastFetchedAt = DateTime.UtcNow.AddDays(-1);
+        await _db.SaveChangesAsync();
+        await CreateService().GetAsync([userId]);
+
+        Assert.Equal(34, (await _db.PlayerTournamentResults
+            .SingleAsync(r => r.ChessResultsId == "1206267")).Rank);
+    }
+
+    // ----- Der Hintergrund-Durchgang ----------------------------------------
+
+    /// <summary>
+    /// Der naechtliche Durchgang holt Liste UND Karten, ohne dass jemand die Seite offen hat —
+    /// vorher entstand der Verlauf ausschliesslich beim Ansehen.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAllAsync_FetchesListAndCards_WithoutAnyoneWatching()
+    {
+        await CreateUserAsync();
+        _handler.History = TeamRow;
+        _handler.Card = """{"points":3,"rank":34,"performanceRating":2013,"hasResult":true}""";
+
+        var sweep = await CreateService().RefreshAllAsync(50);
+
+        Assert.Equal(1, sweep.Players);
+        Assert.Equal(1, sweep.Cards);
+        var result = await _db.PlayerTournamentResults.SingleAsync();
+        Assert.Equal(3m, result.Points);
+        Assert.Equal(2013, result.PerformanceRating);
+    }
+
+    /// <summary>
+    /// Der Deckel gilt fuer den GANZEN Lauf: ein Vielspieler soll die uebrigen Konten nicht
+    /// aushungern. Der Rest kommt in der naechsten Nacht.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAllAsync_StopsAtTheCardLimit()
+    {
+        await CreateUserAsync();
+        var played = DateTime.UtcNow.AddMonths(-5).ToString("yyyy-MM-dd");
+        _handler.History = $$"""
+            [{"tournamentId":"1206267","tournamentName":"TMM 2.Klasse","endDate":"{{played}}",
+              "snr":73,"identNumber":"144749","fideId":"1693034","rank":null,"rounds":11,"playerCount":211},
+             {"tournamentId":"1206271","tournamentName":"TMM Landesliga","endDate":"{{played}}",
+              "snr":68,"identNumber":"144749","fideId":"1693034","rank":null,"rounds":9,"playerCount":195}]
+            """;
+        _handler.Card = """{"points":3,"rank":34,"performanceRating":2013,"hasResult":true}""";
+
+        var sweep = await CreateService().RefreshAllAsync(1);
+
+        Assert.Equal(1, sweep.Cards);
+        Assert.Equal(1, await _db.PlayerTournamentResults.CountAsync(r => r.CardFetchedAt != null));
+    }
+
+    /// <summary>
+    /// Zwei Konten desselben Spielers teilen sich den Zwischenspeicher — ein zweiter Abruf fuer
+    /// denselben Schluessel braechte nichts.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAllAsync_SamePlayerTwice_FetchesTheListOnce()
+    {
+        await CreateUserAsync("konto1");
+        await CreateUserAsync("konto2");
+        _handler.History = TeamRow;
+
+        var sweep = await CreateService().RefreshAllAsync(0);
+
+        Assert.Equal(1, sweep.Players);
+        Assert.Equal(1, _handler.HistoryCalls);
+    }
+
+    /// <summary>Ohne Nachnamen gibt es keine Spielersuche — das Konto wird uebersprungen.</summary>
+    [Fact]
+    public async Task RefreshAllAsync_ProfileWithoutName_IsSkipped()
+    {
+        await CreateUserAsync("ohnename", lastName: null, fideId: null, chessResultsId: null);
+        _handler.History = TeamRow;
+
+        var sweep = await CreateService().RefreshAllAsync(50);
+
+        Assert.Equal(0, sweep.Players);
+        Assert.Equal(0, _handler.HistoryCalls);
+    }
+
+    // ----- Der Zeitplan -----------------------------------------------------
+
+    /// <summary>
+    /// 04:30 UTC liegt bewusst NACH dem Verzeichnis-Sweep (03:00): beide sprechen ueber denselben
+    /// prozessweiten Rate-Limiter mit chess-results.
+    /// </summary>
+    [Fact]
+    public void TimeUntilNextRun_BeforeTheRunTime_WaitsUntilToday()
+    {
+        var delay = PlayerHistoryScheduler.TimeUntilNextRun(new DateTime(2026, 9, 7, 2, 30, 0, DateTimeKind.Utc));
+        Assert.Equal(TimeSpan.FromHours(2), delay);
+    }
+
+    [Fact]
+    public void TimeUntilNextRun_AfterTheRunTime_WaitsUntilTomorrow()
+    {
+        var delay = PlayerHistoryScheduler.TimeUntilNextRun(new DateTime(2026, 9, 7, 6, 30, 0, DateTimeKind.Utc));
+        Assert.Equal(TimeSpan.FromHours(22), delay);
+    }
+
+    /// <summary>Null Wartezeit wuerde die Schleife in derselben Sekunde erneut feuern.</summary>
+    [Fact]
+    public void TimeUntilNextRun_ExactlyAtRunTime_DoesNotReturnZero()
+    {
+        var delay = PlayerHistoryScheduler.TimeUntilNextRun(new DateTime(2026, 9, 7, 4, 30, 0, DateTimeKind.Utc));
+        Assert.True(delay >= TimeSpan.FromSeconds(1));
     }
 
     // ----- Attrappen --------------------------------------------------------

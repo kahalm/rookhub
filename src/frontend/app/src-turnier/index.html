@@ -5,12 +5,26 @@
   <title>Turniere</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <!-- BEWUSST kein icons/icon.svg: die Turnierseite hat ihre Symbole als Raster (design/*.png),
+       keine Vektorfassung. Bliebe der Verweis stehen, lieferte der Build RookHubs SVG aus —
+       public-turnier/ wird ueber public/ gelegt, und was dort fehlt, faellt auf RookHub zurueck.
+       Genau so kam die Turnierseite bisher zu fremden Symbolen. -->
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#3f51b5">
+  <!-- Aus dem Symbol gemessen, nicht geraten (siehe public-turnier/ASSETS.md). -->
+  <meta name="theme-color" content="#172345">
+
+  <!-- Standard-Vorschaubild der SEITE. Fuer einen geteilten Turnier-Link erzeugt der Server ein
+       eigenes Bild (OgImageService, /t/{id}) — dieses hier greift fuer die Startseite. -->
+  <meta property="og:title" content="Turniere">
+  <meta property="og:description" content="Turnierkalender, Turnierverzeichnis und Turnierdaten.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
   <!-- Selbst ausgeliefert statt von fonts.googleapis.com: ein blockierendes Stylesheet von dort
        laesst die Seite in den Timeout laufen, wenn der Browser das offene Netz nicht erreicht
        (ueber WireGuard gemessen: 5-10 s bis zum ersten Bild). -->

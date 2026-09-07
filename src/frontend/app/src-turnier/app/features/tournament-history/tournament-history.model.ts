@@ -16,6 +16,11 @@ export interface PlayerHistoryEntry {
   ratingBefore: number | null;
   /** `false` heisst „noch nicht gespielt" ODER „wird gerade geholt" (das Datum unterscheidet). */
   hasResult: boolean;
+  /**
+   * Ist die Spielerkarte schon abgerufen? Trennt „wird noch geholt" von „chess-results fuehrt
+   * hier kein Einzelergebnis" — sonst wartet man auf eine Zahl, die nie kommt.
+   */
+  cardFetched: boolean;
 }
 
 export interface PlayerHistory {

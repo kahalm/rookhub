@@ -1,4 +1,65 @@
-# Eigene Symbole für die Turnierseite
+# Assets der Turnierseite
+
+**Stand 0.433.0: eingebaut.** Die Vorlagen liegen als `design/Designer.png`, `design/Designer2.png`
+und `design/Designer3.png` im Repo-Wurzelverzeichnis; alles unter `public-turnier/` ist daraus
+ABGELEITET und kann jederzeit neu erzeugt werden (Rezept unten).
+
+## Rollenverteilung der drei Vorlagen
+
+| Vorlage | Rolle | Warum diese |
+|---|---|---|
+| `Designer.png` (1254×1254) | normales Symbol, Apple-Touch, favicon | Motiv fuellt die Flaeche (aeusserste Ecke bei 94 % des Radius) — richtig fuer ein Symbol MIT eigenem Rahmen |
+| `Designer2.png` (1254×1254) | maskable | Motiv nur 45 × 54 % der Kante, aeusserste Ecke bei **70 %** des Radius — liegt damit im Sicherheitskreis (80 %), Android kann nichts Wesentliches wegschneiden |
+| `Designer3.png` (1536×1024) | OG-Vorschaubild | Motiv links, Freiraum rechts — Platz fuer eine spaeter aufgelegte Ueberschrift |
+
+## Aus dem Bild GEMESSENE Palette
+
+Nicht geraten, sondern aus den Vorlagen ausgelesen (haeufigste Randfarbe bzw. Akzentton):
+
+| Rolle | Wert | Verwendet in |
+|---|---|---|
+| Grund (Marineblau) | `#172345` | `manifest.webmanifest` (`background_color`, `theme_color`), `<meta name="theme-color">` |
+| Figur (Gebrochenes Weiss) | `#f3f0ea` | nur im Bild |
+| Akzent (Amber) | `#f4a70e` | nur im Bild — derselbe Ton traegt auf der Karte die GEMERKTEN Turniere |
+
+## Erzeugte Dateien
+
+| Datei | Groesse | Quelle |
+|---|---|---|
+| `favicon.ico` | 16 + 32 + 48 in einer Datei | `Designer.png` |
+| `icons/icon-192.png`, `icons/icon-512.png` | quadratisch | `Designer.png` |
+| `icons/icon-192-maskable.png`, `icons/icon-512-maskable.png` | quadratisch | `Designer2.png` |
+| `icons/apple-touch-icon.png` | 180×180 | `Designer.png` |
+| `og-image.png` | 1200×630 | `Designer3.png`, senkrecht zentriert beschnitten |
+
+**Bewusst KEIN `icons/icon.svg`**: es gibt keine Vektorfassung. Der Verweis darauf ist aus
+`src-turnier/index.html` entfernt — denn `public-turnier/` wird UEBER `public/` gelegt, und was
+hier fehlt, faellt still auf RookHubs Symbol zurueck. Genau so trug die Turnierseite bis 0.433.0
+das falsche Logo: das Manifest verwies auf Symbole, die es hier nie gab. `TurnierAssetTests`
+nagelt beides fest.
+
+## Neu erzeugen
+
+```python
+from PIL import Image
+base = Image.open('design/Designer.png').convert('RGB')      # normal
+mask = Image.open('design/Designer2.png').convert('RGB')     # maskable
+og   = Image.open('design/Designer3.png').convert('RGB')     # Vorschaubild
+for size in (192, 512):
+    base.resize((size, size), Image.LANCZOS).save(f'public-turnier/icons/icon-{size}.png', optimize=True)
+    mask.resize((size, size), Image.LANCZOS).save(f'public-turnier/icons/icon-{size}-maskable.png', optimize=True)
+base.resize((180, 180), Image.LANCZOS).save('public-turnier/icons/apple-touch-icon.png', optimize=True)
+base.resize((256, 256), Image.LANCZOS).save('public-turnier/favicon.ico', format='ICO',
+                                            sizes=[(16, 16), (32, 32), (48, 48)])
+h = round(og.width / (1200 / 630)); top = (og.height - h) // 2
+og.crop((0, top, og.width, top + h)).resize((1200, 630), Image.LANCZOS) \
+  .save('public-turnier/og-image.png', optimize=True)
+```
+
+---
+
+# Der Prompt, aus dem die Vorlagen entstanden sind
+
 
 Die Turnierseite (`turnier.oberschmid.homes`) benutzt heute die Symbole von RookHub — den
 weißen Turm auf Indigo aus `public/icons/`. Auf dem Startbildschirm eines Handys stehen damit

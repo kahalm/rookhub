@@ -1119,6 +1119,16 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   und landete auf dem Dashboard.
 - **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
   `/api/` an den Servicenamen `api` weiterreicht.
+- **Eigene Symbole** (`public-turnier/`, seit 0.433.0): Vorlagen in `design/Designer{,2,3}.png`,
+  alles darunter ist ABGELEITET (Rezept in `public-turnier/ASSETS.md`). Die Rollenteilung ist
+  keine Geschmacksfrage: `Designer.png` fuellt seinen Rahmen (aeusserste Ecke bei 94 % des
+  Radius) und taugt fuer `any`, `Designer2.png` haelt das Motiv bei 70 % und taugt damit fuer
+  `maskable` (Android darf ab 80 % beschneiden), `Designer3.png` ist das 1200×630-Vorschaubild.
+  **Die Falle, die hier lange unbemerkt lief**: `public-turnier/` wird UEBER `public/` gelegt —
+  eine dort FEHLENDE Datei faellt still auf RookHubs Fassung zurueck, ohne 404 und ohne
+  Warnung. Das Manifest verwies auf Symbole, die es nie gab, und die Turnierseite trug deshalb
+  RookHubs Logo. `TurnierAssetTests` haelt jeden Verweis gegen die Dateien auf der Platte und
+  prueft zusaetzlich, dass kein `icon.svg` verwiesen wird (es gibt keine Vektorfassung).
 - **Turnierverlauf** (`src-turnier/app/features/tournament-history/`, Route
   `/tournaments/history`, Navbar): gespielte und kommende Turniere mit Platz, Punkten,
   Performance-Rating und Elo-Aenderung, umschaltbar auf Freunde (alle oder einzeln). Der EIGENE

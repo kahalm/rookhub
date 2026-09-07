@@ -296,6 +296,9 @@ try
     // Turnierverzeichnis: naechtlicher Sweep der chess-results-Turniersuche (03:00 UTC),
     // Nachbarlaender taeglich, alle uebrigen Foederationen rotierend ueber die Woche.
     builder.Services.AddHostedService<TournamentDirectoryScheduler>();
+    // „Meine Turniere": frischt Trefferlisten und Spielerkarten taeglich (04:30 UTC) im
+    // Hintergrund auf, damit der Verlauf nicht erst beim Ansehen entsteht.
+    builder.Services.AddHostedService<PlayerHistoryScheduler>();
     // Traegt Basisname/Gruppenschluessel im Altbestand nach (einmalig, idempotent) — ohne das
     // bleibt die Gruppen-Zusammenfassung bis zum naechsten Sweep unsichtbar.
     builder.Services.AddHostedService<TournamentGroupingBackfillService>();

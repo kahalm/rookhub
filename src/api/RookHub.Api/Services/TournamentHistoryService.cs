@@ -122,6 +122,75 @@ public class TournamentHistoryService
         return histories;
     }
 
+    /// <summary>Was ein Hintergrund-Durchgang bewegt hat — fuers Protokoll.</summary>
+    public sealed record HistorySweep(int Players, int Cards, int Unavailable);
+
+    /// <summary>
+    /// Der Hintergrund-Durchgang: Trefferlisten auffrischen und fehlende Spielerkarten holen, fuer
+    /// JEDES Konto mit Identitaet — ohne dass jemand die Seite offen hat.
+    ///
+    /// <para><b>Warum das noetig ist.</b> Bis hierher wurde ausschliesslich beim Seitenaufruf
+    /// geholt: die Karten liefen als Hintergrund-Auftraege an, aber gedeckelt auf 25 je Aufruf,
+    /// und die Seite fragte nur rund eine Minute lang nach. Wer die Seite schloss, liess den Rest
+    /// liegen; wer sie oeffnete, sah eine halb gefuellte Tabelle. Ein naechtlicher Durchgang
+    /// dreht das um — die Tabelle steht, wenn man sie aufmacht.</para>
+    ///
+    /// <para>Sequenziell und gedeckelt, weil jeder Abruf durch den Rate-Limiter des Crawlers
+    /// laeuft. Der Deckel gilt fuer den ganzen Lauf, nicht je Konto: ein Vielspieler soll die
+    /// uebrigen nicht aushungern — sein Rest kommt in der naechsten Nacht.</para>
+    /// </summary>
+    public async Task<HistorySweep> RefreshAllAsync(int maxCards, CancellationToken ct = default)
+    {
+        var profiles = await _db.UserProfiles.AsNoTracking()
+            .Where(p => p.LastName != null && p.LastName != "")
+            .Select(p => new { p.LastName, p.FirstName, p.FideId, p.ChessResultsId })
+            .ToListAsync(ct);
+
+        // Nach SCHLUESSEL zusammenfassen: zwei Konten desselben Spielers — oder zwei Namensgleiche
+        // ohne Kennung — teilen sich den Zwischenspeicher, ein zweiter Abruf braechte nichts.
+        var identities = new Dictionary<string, PlayerIdentity>(StringComparer.Ordinal);
+        foreach (var profile in profiles)
+        {
+            var identity = IdentityOf(profile.LastName, profile.FirstName, profile.FideId, profile.ChessResultsId);
+            if (identity is not null) identities.TryAdd(identity.Key, identity);
+        }
+
+        var players = 0;
+        var cards = 0;
+        var unavailable = 0;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        foreach (var identity in identities.Values)
+        {
+            if (ct.IsCancellationRequested) break;
+
+            if (await RefreshListIfStaleAsync(identity, ct) == HistoryStatus.SourceUnavailable) unavailable++;
+            players++;
+
+            // Ist der Kartendeckel erreicht, laufen die LISTEN weiter — sie kosten einen Abruf je
+            // Konto und sind das, was neue Turniere ueberhaupt sichtbar macht.
+            if (cards >= maxCards) continue;
+
+            // Dieselbe Auswahl wie <see cref="NeedsCard"/>, hier aber ausgeschrieben: die Methode
+            // uebersetzt der Provider nicht, und die Filterung gehoert in die Datenbank.
+            var missing = await _db.PlayerTournamentResults
+                .Where(r => r.PlayerKey == identity.Key && r.CardFetchedAt == null && r.Snr > 0
+                            && r.EndDate != null && r.EndDate < today)
+                .OrderByDescending(r => r.EndDate)
+                .Take(maxCards - cards)
+                .ToListAsync(ct);
+
+            foreach (var result in missing)
+            {
+                if (ct.IsCancellationRequested) break;
+                await FetchCardAsync(identity.Key, result.ChessResultsId, result.Snr, ct);
+                cards++;
+            }
+        }
+
+        return new HistorySweep(players, cards, unavailable);
+    }
+
     /// <summary>
     /// Wer der Spieler ist. Der Nachname ist Pflicht — die chess-results-Spielersuche kennt keine
     /// Suche ueber die Ident-Nummer, sie sucht ueber den NAMEN. Die Kennung entscheidet danach,
@@ -235,7 +304,10 @@ public class TournamentHistoryService
             result.Snr = row.Snr ?? result.Snr;
             result.TournamentName = Truncate(row.TournamentName, 500);
             result.EndDate = ParseDate(row.EndDate) ?? result.EndDate;
-            result.Rank = row.Rank;
+            // Steht die Karte schon, gilt IHR Platz. Die Trefferliste rundet bei Gleichstand und
+            // laesst den Platz bei Mannschaftsturnieren ganz weg — ein zweiter Listenabruf haette
+            // den genaueren Wert sonst wieder auf „-" gesetzt.
+            if (result.CardFetchedAt is null) result.Rank = row.Rank;
             result.Rounds = row.Rounds;
             result.PlayerCount = row.PlayerCount;
             result.UpdatedAt = now;
@@ -264,16 +336,30 @@ public class TournamentHistoryService
     }
 
     /// <summary>
-    /// Reiht die fehlenden Spielerkarten in den Hintergrund und sagt, wie viele es sind.
+    /// Fehlt zu diesem Eintrag noch die Spielerkarte — und lohnt der Abruf?
     ///
-    /// <para>Nur GESPIELTE Turniere: ein kuenftiges hat kein Ergebnis, und der Platz in der
-    /// Trefferliste steht dort auf „-". Neueste zuerst — das letzte Turnier ist das, dessen
-    /// Ergebnis man sucht.</para>
+    /// <para><b>Das Kriterium ist der TERMIN, nicht der Platz.</b> Urspruenglich stand hier
+    /// <c>Rank is not null</c>, weil ein kuenftiges Turnier in der Trefferliste auf „-" steht.
+    /// Dasselbe „-" steht dort aber auch bei jedem MANNSCHAFTSturnier — chess-results weist in
+    /// der Spielersuche keinen Einzelplatz aus. Am echten Konto waren das acht von elf offenen
+    /// Zeilen (Ligen, Mannschaftsmeisterschaften), die dauerhaft „noch kein Ergebnis" zeigten,
+    /// obwohl die Spielerkarte Punkte und Performance sehr wohl kennt. Ein gespieltes Turnier
+    /// erkennt man am Enddatum in der Vergangenheit — und erst am Tag DANACH, damit kein
+    /// Zwischenstand der letzten Runde als Endergebnis einfriert.</para>
+    /// </summary>
+    internal static bool NeedsCard(PlayerTournamentResult result, DateOnly today) =>
+        result.CardFetchedAt is null && result.Snr > 0
+        && result.EndDate is not null && result.EndDate < today;
+
+    /// <summary>
+    /// Reiht die fehlenden Spielerkarten in den Hintergrund und sagt, wie viele es sind.
+    /// Neueste zuerst — das letzte Turnier ist das, dessen Ergebnis man sucht.
     /// </summary>
     private int QueueMissingCards(PlayerIdentity identity, List<PlayerTournamentResult> results)
     {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var missing = results
-            .Where(r => r.CardFetchedAt is null && r.Rank is not null && r.Snr > 0)
+            .Where(r => NeedsCard(r, today))
             .OrderByDescending(r => r.EndDate)
             .ToList();
         if (missing.Count == 0) return 0;

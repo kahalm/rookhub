@@ -13,7 +13,7 @@ function played(over: Partial<PlayerHistoryEntry> = {}): PlayerHistoryEntry {
   return {
     chessResultsId: '1107064', name: 'Schach Tirol Open 2025', endDate: '2025-08-30',
     rank: 56, playerCount: 56, rounds: 9, points: 1.5, performanceRating: 1740,
-    ratingChange: -51.6, ratingBefore: 1923, hasResult: true, ...over,
+    ratingChange: -51.6, ratingBefore: 1923, hasResult: true, cardFetched: true, ...over,
   };
 }
 
@@ -182,6 +182,27 @@ describe('TournamentHistoryComponent', () => {
     expect(summary.played).toBe(2);
     expect(summary.points).toBe(5.5);
     expect(summary.performance).toBe(1800);
+  });
+
+  /**
+   * Ein fehlendes Ergebnis hat ZWEI Ursachen, und sie verlangen Verschiedenes vom Leser: „wird
+   * gerade geholt" heisst warten, „chess-results fuehrt hier keines" heisst, dass Warten nichts
+   * bringt. Vorher stand in beiden Faellen „noch kein Ergebnis".
+   */
+  it('unterscheidet „wird geholt" von „es gibt hier keines"', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '9', hasResult: false, cardFetched: false, points: null, performanceRating: null }),
+        played({ chessResultsId: '8', hasResult: false, cardFetched: true, points: null, performanceRating: null }),
+      ],
+      pending: 1,
+    })]);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('turnier.history.fetchingResult');
+    expect(text).toContain('turnier.history.noSingleResult');
   });
 
   /**
