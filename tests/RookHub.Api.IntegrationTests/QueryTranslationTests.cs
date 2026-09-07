@@ -52,6 +52,56 @@ public class QueryTranslationTests : IAsyncLifetime
         return u.Id;
     }
 
+    /// <summary>
+    /// Der Publikumsfilter des Turnierverzeichnisses rechnet BITWEISE: die Alters-/Nachwuchsklassen
+    /// liegen als Bitfeld in einer Spalte, und ein Turnier passt, wenn sich Gesuchtes und
+    /// Gefuehrtes ueberschneiden. Genau die Sorte Ausdruck, die EF InMemory im Speicher ausrechnet
+    /// und deren Uebersetzung erst gegen echtes MariaDB auffaellt — dasselbe gilt fuer die
+    /// Gegenprobe „gar keine Jugendklasse" des Schalters „nur Erwachsene".
+    /// </summary>
+    [MySqlFact]
+    public async Task Turnierverzeichnis_UebersetztDenBitweisenPublikumsfilter()
+    {
+        var query = Get<TournamentDirectoryQueryService>();
+        Db.TournamentDirectoryEntries.AddRange(
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "it-audience-1", Name = "Landesmeisterschaft U10 U12",
+                Federation = "AUT", StartDate = new DateOnly(2026, 10, 10),
+                EndDate = new DateOnly(2026, 10, 12),
+                AgeGroups = TournamentAgeGroups.U10 | TournamentAgeGroups.U12,
+                Gender = TournamentGender.Female, Kind = TournamentKind.Individual,
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "it-audience-2", Name = "Open Braunau",
+                Federation = "AUT", StartDate = new DateOnly(2026, 10, 10),
+                EndDate = new DateOnly(2026, 10, 12),
+                Kind = TournamentKind.Team, IsLeague = true,
+            });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var overlap = await query.SearchAsync(new DirectorySearchQuery
+        {
+            Federation = "AUT", AgeGroups = TournamentAgeGroups.U12,
+            Genders = [TournamentGender.Female], Kinds = [TournamentKind.Individual],
+        });
+        Assert.Equal("it-audience-1", Assert.Single(overlap.Items).Entry.ChessResultsId);
+
+        var adults = await query.SearchAsync(new DirectorySearchQuery
+        {
+            Federation = "AUT", AdultsOnly = true,
+        });
+        Assert.Equal("it-audience-2", Assert.Single(adults.Items).Entry.ChessResultsId);
+
+        var withoutLeagues = await query.SearchAsync(new DirectorySearchQuery
+        {
+            Federation = "AUT", HideLeagues = true,
+        });
+        Assert.Equal("it-audience-1", Assert.Single(withoutLeagues.Items).Entry.ChessResultsId);
+    }
+
     [MySqlFact]
     public async Task Partienliste_UebersetztUndZaehltDieZuegeNach()
     {

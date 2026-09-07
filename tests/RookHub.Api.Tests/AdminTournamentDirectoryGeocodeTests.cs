@@ -51,6 +51,68 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
                 new TestLogger<VenueDisambiguationService>()));
     }
 
+    /// <summary>
+    /// Der Nachtrag fuer den Altbestand. Publikum und Format stehen im NAMEN, der schon in der
+    /// Datenbank liegt — es braucht also kein Netz, um 4000 bestehende Eintraege einzuordnen. Ohne
+    /// diesen Knopf blieben sie bis zum naechsten naechtlichen Sweep unklassifiziert, und der
+    /// Filter „nur Erwachsene" liesse eine halb leere Liste zurueck.
+    /// </summary>
+    [Fact]
+    public async Task Classify_ExistingEntries_AreCategorisedFromTheirNames()
+    {
+        _db.TournamentDirectoryEntries.AddRange(
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "1", Name = "Landesmeisterschaft U12 weiblich", Federation = "AUT",
+                StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "2", Name = "Tiroler Landesliga", Federation = "AUT",
+                StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2027, 4, 1),
+            },
+            new TournamentDirectoryEntry
+            {
+                ChessResultsId = "3", Name = "Open Braunau 2026 A", Federation = "AUT",
+                StartDate = new DateOnly(2026, 12, 18), EndDate = new DateOnly(2026, 12, 20),
+            });
+        await _db.SaveChangesAsync();
+
+        var result = await Controller().Classify();
+
+        Assert.IsType<OkObjectResult>(result);
+        var byId = await _db.TournamentDirectoryEntries.ToDictionaryAsync(e => e.ChessResultsId);
+        Assert.Equal(TournamentAgeGroups.U12, byId["1"].AgeGroups);
+        Assert.Equal(TournamentGender.Female, byId["1"].Gender);
+        Assert.True(byId["2"].IsLeague);
+        Assert.Equal(TournamentAgeGroups.None, byId["3"].AgeGroups);
+        Assert.False(byId["3"].IsLeague);
+    }
+
+    /// <summary>
+    /// Die Turnier<b>art</b> bleibt unangetastet: sie kommt aus einer zweiten
+    /// chess-results-Abfrage, nicht aus dem Namen. Wuerde dieser Knopf sie mitschreiben, machte er
+    /// aus „noch nicht geklaert" ein falsches „Einzelturnier".
+    /// </summary>
+    [Fact]
+    public async Task Classify_LeavesTheTournamentKindAlone()
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "1", Name = "Steirischer Mannschaftscup", Federation = "AUT",
+            StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
+            Kind = TournamentKind.Unknown,
+        });
+        await _db.SaveChangesAsync();
+
+        await Controller().Classify();
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(TournamentKind.Unknown, entry.Kind);
+        // Und ohne bekannte Art greift die Dauerregel nicht — „Mannschaftscup" allein ist keine Liga.
+        Assert.False(entry.IsLeague);
+    }
+
     /// <summary>Wird in diesen Tests nie benutzt — ein Aufruf ist ein Fehler, kein Zufall.</summary>
     private sealed class UnusedHandler : HttpMessageHandler
     {

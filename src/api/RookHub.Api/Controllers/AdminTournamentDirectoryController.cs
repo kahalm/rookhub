@@ -166,6 +166,56 @@ public class AdminTournamentDirectoryController : BaseApiController
     }
 
     /// <summary>
+    /// Publikum und Format des GANZEN Bestands aus den Turniernamen neu ableiten (Jugendklasse,
+    /// Geschlechtsklasse, Liga).
+    ///
+    /// <para>Braucht kein Netz — die drei Merkmale stehen im Namen, der schon in der Datenbank
+    /// liegt. Genau deshalb gibt es diesen Knopf: nach einem Deploy waeren die 4000 bestehenden
+    /// Eintraege sonst bis zum naechsten naechtlichen Sweep unklassifiziert, und der Filter
+    /// „nur Erwachsene" liesse eine halb leere Liste zurueck. Und wenn eine Wortliste im
+    /// <see cref="TournamentClassifier"/> nachgeruestet wird (etwa „Schachrallye" = Nachwuchs),
+    /// ist das der Weg, sie auf den Bestand anzuwenden.</para>
+    ///
+    /// <para>Die Turnier<b>art</b> (Einzel/Mannschaft) bleibt unangetastet: die kommt aus einer
+    /// zweiten chess-results-Abfrage, nicht aus dem Namen — sie fuellt der naechste Sweep.</para>
+    /// </summary>
+    [HttpPost("classify")]
+    public async Task<IActionResult> Classify(CancellationToken ct = default)
+    {
+        var entries = await _db.TournamentDirectoryEntries.ToListAsync(ct);
+        var changed = 0;
+
+        foreach (var entry in entries)
+        {
+            var ageGroups = TournamentClassifier.AgeGroupsOf(entry.Name);
+            var gender = TournamentClassifier.GenderOf(entry.Name);
+            var isLeague = TournamentClassifier.LooksLikeLeague(
+                entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
+
+            if (entry.AgeGroups == ageGroups && entry.Gender == gender && entry.IsLeague == isLeague)
+                continue;
+
+            entry.AgeGroups = ageGroups;
+            entry.Gender = gender;
+            entry.IsLeague = isLeague;
+            changed++;
+        }
+
+        if (changed > 0) await _db.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            examined = entries.Count,
+            changed,
+            youth = entries.Count(e => (e.AgeGroups & TournamentClassifier.YouthMask) != TournamentAgeGroups.None),
+            female = entries.Count(e => e.Gender == TournamentGender.Female),
+            male = entries.Count(e => e.Gender == TournamentGender.Male),
+            leagues = entries.Count(e => e.IsLeague),
+            teams = entries.Count(e => e.Kind == TournamentKind.Team),
+        });
+    }
+
+    /// <summary>
     /// Alle noch nicht verorteten Eintraege erneut durch den Gazetteer schicken - nach einem
     /// frischen Import der eigentliche Nutzen: die Zeilen von gestern bekommen ihre Pins.
     /// </summary>

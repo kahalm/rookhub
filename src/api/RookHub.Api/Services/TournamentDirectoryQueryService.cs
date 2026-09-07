@@ -26,6 +26,29 @@ public sealed record DirectorySearchQuery
     public bool WeekendOnly { get; init; }
     public int? MinPlayers { get; init; }
     public bool IncludeCancelled { get; init; }
+
+    /// <summary>Einzel und/oder Mannschaft. Leer = beides, und auch das noch Ungeklaerte.</summary>
+    public IReadOnlyList<TournamentKind>? Kinds { get; init; }
+
+    /// <summary>
+    /// Gesuchte Alters-/Nachwuchsklassen. <c>None</c> = keine Einschraenkung. Ein Turnier passt,
+    /// wenn es MINDESTENS eine der gesuchten Klassen fuehrt — „U12" soll die „U8-U18"-Meisterschaft
+    /// finden, nicht nur reine U12-Turniere.
+    /// </summary>
+    public TournamentAgeGroups AgeGroups { get; init; } = TournamentAgeGroups.None;
+
+    /// <summary>Gesuchte Geschlechtsklassen. Leer = alle.</summary>
+    public IReadOnlyList<TournamentGender>? Genders { get; init; }
+
+    /// <summary>
+    /// Nur Turniere OHNE Jugendmerkmal im Namen. Seniorenturniere bleiben sichtbar — Seniorenschach
+    /// ist Erwachsenenschach.
+    /// </summary>
+    public bool AdultsOnly { get; init; }
+
+    /// <summary>Saisonwettbewerbe ausblenden (siehe TournamentClassifier.LooksLikeLeague).</summary>
+    public bool HideLeagues { get; init; }
+
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 50;
 }
@@ -214,6 +237,47 @@ public class TournamentDirectoryQueryService
     }
 
     /// <summary>Ortsvorschlaege fuers Suchprofil-Formular: Postleitzahl oder Ortsname.</summary>
+    /// <summary>
+    /// Der naechstgelegene Ort zu einem Koordinatenpaar — die Umkehrung der Ortssuche.
+    ///
+    /// <para>Gebraucht fuer den Browser-Standort: der liefert Koordinaten, im Ortsfeld soll aber
+    /// ein NAME stehen. Aufgeloest wird gegen den lokalen Gazetteer, nicht gegen einen Web-Dienst:
+    /// die Koordinaten eines Nutzers sind das Letzte, was diese Anwendung nach draussen geben
+    /// sollte, und offline ginge es ohnehin nicht.</para>
+    ///
+    /// <para>Erst eine Bounding-Box in SQL (laeuft auf dem Lat/Lon-Index), dann die exakte
+    /// Distanz in C# — dieselbe Zweiteilung wie in der Umkreissuche, weil der MySQL-Provider
+    /// `Math.Acos`/`Cos`/`Sin` nicht verlaesslich uebersetzt. Die Box waechst in Schritten, damit
+    /// ein Standort in duenn besiedelter Gegend nicht ohne Antwort bleibt, ein Standort in der
+    /// Stadt aber nicht halb Europa materialisiert.</para>
+    /// </summary>
+    public async Task<GeoPlace?> NearestPlaceAsync(double lat, double lon, CancellationToken ct = default)
+    {
+        foreach (var radiusKm in NearestSearchRadiiKm)
+        {
+            var box = GeoDistance.BoundingBox(lat, lon, radiusKm);
+            var candidates = await _db.GeoPlaces.AsNoTracking()
+                .Where(g => g.Lat >= box.MinLat && g.Lat <= box.MaxLat
+                            && g.Lon >= box.MinLon && g.Lon <= box.MaxLon)
+                .Take(MaxMaterialized)
+                .ToListAsync(ct);
+            if (candidates.Count == 0) continue;
+
+            var nearest = candidates
+                .Select(g => (Place: g, Distance: GeoDistance.Haversine(lat, lon, g.Lat, g.Lon)))
+                .Where(x => x.Distance <= radiusKm)
+                // Bei gleicher Entfernung der groessere Ort: „Wien" ist die brauchbarere Antwort
+                // als ein gleich weit entfernter Weiler am Stadtrand.
+                .OrderBy(x => x.Distance).ThenByDescending(x => x.Place.Population)
+                .FirstOrDefault();
+            if (nearest.Place is not null) return nearest.Place;
+        }
+        return null;
+    }
+
+    /// <summary>Suchradien fuer den naechsten Ort, aufsteigend — der erste Treffer gewinnt.</summary>
+    private static readonly int[] NearestSearchRadiiKm = [10, 50, 200];
+
     public async Task<List<GeoPlace>> SuggestPlacesAsync(string term, int limit = 10, CancellationToken ct = default)
     {
         term = term.Trim();
@@ -273,6 +337,37 @@ public class TournamentDirectoryQueryService
             var list = speeds.ToList();
             source = source.Where(e => list.Contains(e.Speed));
         }
+
+        if (query.Kinds is { Count: > 0 } kinds)
+        {
+            var list = kinds.ToList();
+            source = source.Where(e => list.Contains(e.Kind));
+        }
+
+        if (query.Genders is { Count: > 0 } genders)
+        {
+            var list = genders.ToList();
+            source = source.Where(e => list.Contains(e.Gender));
+        }
+
+        // Bitweises UND in SQL: die Klassen liegen als Bitfeld in EINER Spalte, und ein Turnier
+        // passt, wenn sich die gesuchten mit den gefuehrten UEBERSCHNEIDEN. EF InMemory rechnet das
+        // im Speicher aus und wuerde einen Uebersetzungsfehler verschlucken — deshalb steht die
+        // Abfrage zusaetzlich in QueryTranslationTests.
+        if (query.AgeGroups != TournamentAgeGroups.None)
+        {
+            var wanted = query.AgeGroups;
+            source = source.Where(e => (e.AgeGroups & wanted) != TournamentAgeGroups.None);
+        }
+
+        if (query.AdultsOnly)
+        {
+            const TournamentAgeGroups youth = TournamentClassifier.YouthMask;
+            source = source.Where(e => (e.AgeGroups & youth) == TournamentAgeGroups.None);
+        }
+
+        if (query.HideLeagues)
+            source = source.Where(e => !e.IsLeague);
 
         if (query.MinPlayers is { } min)
             source = source.Where(e => e.PlayerCount >= min);

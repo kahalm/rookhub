@@ -46,6 +46,21 @@ public class DirectoryEntryDto
     /// </summary>
     public List<DirectoryVenueDto> Venues { get; set; } = [];
 
+    /// <summary>„Individual", „Team" oder „Unknown" (noch nicht geklaert) — aus der Quelle.</summary>
+    public string Kind { get; set; } = nameof(TournamentKind.Unknown);
+
+    /// <summary>Saisonwettbewerb statt Turnier — abgeleitet, siehe TournamentClassifier.</summary>
+    public bool IsLeague { get; set; }
+
+    /// <summary>
+    /// Alters-/Nachwuchsklassen als Namen („U12", „U14", „YouthUnspecified", „Senior") — aus dem
+    /// Turniernamen gelesen. Leer = offenes Erwachsenenturnier.
+    /// </summary>
+    public List<string> AgeGroups { get; set; } = [];
+
+    /// <summary>„Open", „Female" oder „Male".</summary>
+    public string Gender { get; set; } = nameof(TournamentGender.Open);
+
     public static DirectoryEntryDto FromEntity(
         TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
         IReadOnlyList<TournamentDirectoryEntry>? groups = null) => new()
@@ -71,6 +86,10 @@ public class DirectoryEntryDto
         DistanceKm = distanceKm is null ? null : Math.Round(distanceKm.Value, 1),
         Cancelled = e.RemovedAt != null,
         Subscribed = subscribed,
+        Kind = e.Kind.ToString(),
+        IsLeague = e.IsLeague,
+        AgeGroups = AgeGroupNames(e.AgeGroups),
+        Gender = e.Gender.ToString(),
         GroupSize = groups?.Count ?? 1,
         // Die Teilnehmerzahl der Gruppen summiert sich — sie ist die Groesse des GANZEN Turniers.
         PlayerCount = groups is { Count: > 1 } ? groups.Sum(g => g.PlayerCount ?? 0) : e.PlayerCount,
@@ -91,6 +110,16 @@ public class DirectoryEntryDto
             }).ToList()
             : [],
     };
+
+    /// <summary>
+    /// Das Bitfeld als Namensliste. Bewusst nicht als Zahl: ein Frontend, das „4" bekommt, muss
+    /// die Bit-Belegung nachbauen — und stimmt dann irgendwann nicht mehr mit dem Server ueberein.
+    /// </summary>
+    internal static List<string> AgeGroupNames(TournamentAgeGroups groups) =>
+        Enum.GetValues<TournamentAgeGroups>()
+            .Where(g => g != TournamentAgeGroups.None && groups.HasFlag(g))
+            .Select(g => g.ToString())
+            .ToList();
 }
 
 /// <summary>Ein einzelner Spielort eines Turniers mit mehreren.</summary>
@@ -218,4 +247,93 @@ public class GeoPlaceSuggestionDto
     public string? PostalCode { get; set; }
     public double Lat { get; set; }
     public double Lon { get; set; }
+}
+
+/// <summary>
+/// Die Publikums- und Formatfilter der Filterleiste, gebuendelt als EIN Bindungs-Objekt.
+///
+/// <para>Sie gehoeren an alle drei Ansichten (Liste, Karte, Kalender) und waeren dort sonst
+/// fuenfmal drei Parameter — die Signaturen sind schon lang. Gebunden wird aus der Query
+/// (<c>?kinds=team&amp;ageGroups=U12,U14&amp;genders=female&amp;adultsOnly=true&amp;hideLeagues=true</c>);
+/// Listen kommen kommagetrennt, wie ueberall in diesem Verzeichnis.</para>
+/// </summary>
+public class DirectoryAudienceQuery
+{
+    /// <summary>„individual", „team", „unknown" — kommagetrennt. Leer = alles.</summary>
+    public string? Kinds { get; set; }
+
+    /// <summary>„u8", „u10", … „senior" — kommagetrennt. Leer = keine Einschraenkung.</summary>
+    public string? AgeGroups { get; set; }
+
+    /// <summary>„open", „female", „male" — kommagetrennt.</summary>
+    public string? Genders { get; set; }
+
+    /// <summary>Nur Turniere ohne Jugendmerkmal im Namen.</summary>
+    public bool AdultsOnly { get; set; }
+
+    /// <summary>Saisonwettbewerbe ausblenden.</summary>
+    public bool HideLeagues { get; set; }
+}
+
+/// <summary>
+/// „Dieses Turnier ist falsch eingeordnet" — die Meldung eines Nutzers. JEDES Feld ist freiwillig:
+/// wer nur auf den Knopf drueckt, meldet „hier stimmt etwas nicht", und auch das ist brauchbar.
+/// Die Vorschlaege kommen als FREITEXT und nicht als Enum-Werte an — ein Mensch soll „ist eine
+/// Jugendliga, U10 bis U14" schreiben koennen, ohne die interne Wertetabelle zu kennen.
+/// </summary>
+public class DirectoryReportDto
+{
+    /// <summary>Was aus Sicht des Melders falsch ist.</summary>
+    [MaxLength(2000)]
+    public string? Message { get; set; }
+
+    [MaxLength(300)]
+    public string? Location { get; set; }
+
+    [MaxLength(60)]
+    public string? Kind { get; set; }
+
+    [MaxLength(120)]
+    public string? AgeGroups { get; set; }
+
+    [MaxLength(60)]
+    public string? Gender { get; set; }
+
+    [MaxLength(60)]
+    public string? Speed { get; set; }
+
+    public bool? IsLeague { get; set; }
+
+    /// <summary>
+    /// „Wie heissen solche Turniere bei euch?" — die wertvollste Frage des ganzen Formulars.
+    ///
+    /// <para>Alter und Publikum eines Turniers stehen nur im Namen, und die Namen sind REGIONAL:
+    /// in Tirol heisst das Nachwuchsturnier „Schachrallye", woanders anders. Solche Kennungen kann
+    /// niemand von aussen erraten — wer sie einmal nennt, verbessert die Einordnung fuer alle
+    /// kuenftigen Ausschreibungen derselben Reihe (Wortliste im TournamentClassifier).</para>
+    /// </summary>
+    [MaxLength(200)]
+    public string? NamePattern { get; set; }
+
+    /// <summary>
+    /// Eine Seite, auf der die richtige Einordnung besser ersichtlich ist (Ausschreibung,
+    /// Verbandskalender). Oft schneller als jede Erklaerung im Freitext.
+    /// </summary>
+    [MaxLength(500)]
+    public string? SourceLink { get; set; }
+}
+
+/// <summary>
+/// „Mein Turnier fehlt hier" — der Hinweis auf eine Quelle, die noch nicht gecrawlt wird. Der
+/// LINK ist das Pflichtfeld: eine Verbands- oder Vereinsseite laesst sich zusaetzlich auswerten,
+/// eine Aufzaehlung einzelner Termine im Freitext nicht.
+/// </summary>
+public class DirectorySourceSuggestionDto
+{
+    /// <summary>Moeglichst offizielle Seite, auf der die Turniere dieses Veranstalters stehen.</summary>
+    [Required, MaxLength(500)]
+    public string? Link { get; set; }
+
+    [MaxLength(2000)]
+    public string? Message { get; set; }
 }

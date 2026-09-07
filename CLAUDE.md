@@ -310,11 +310,14 @@ gibt es 19-mal).
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
-| GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#) |
+| GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&kinds&ageGroups&genders&adultsOnly&hideLeagues&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#). `q` sucht in Name, Ort UND Veranstalter. Die fuenf Publikums-/Formatfilter binden als EIN Objekt (`DirectoryAudienceQuery`) und gelten fuer Liste, Karte und Kalender gleich: `kinds` individual/team/unknown, `ageGroups` u8…u20/youthUnspecified/senior (**Ueberschneidung**, nicht Gleichheit — „u12" findet die U8-U18-Meisterschaft), `genders` open/female/male, `adultsOnly` (kein JUGENDmerkmal; Senioren bleiben sichtbar), `hideLeagues`. Ein unbekannter Wert ist ein **400**, kein stilles Ignorieren |
 | GET | `/api/tournament-directory/map?bbox=minLat,minLon,maxLat,maxLon` | Kartenmarker im Ausschnitt (gedeckelt) |
 | GET | `/api/tournament-directory/calendar?year&month` | Ein Monat: `tournaments` (jedes Turnier EINMAL) + `days` (je Tag nur die Nummern der laufenden). Mehrtaegige Turniere stehen an JEDEM ihrer Tage — voll ausgeschrieben waren das 5962 Eintraege fuer 200 Turniere, also ~3 MB je Monat; das Frontend setzt es in `expandCalendar` wieder zusammen |
 | GET | `/api/tournament-directory/{chessResultsId}` | Einzelnes Turnier (auch abgesagte) |
 | GET | `/api/tournament-directory/places?q=` | Ortsvorschlaege aus dem Gazetteer (PLZ oder Name) |
+| GET | `/api/tournament-directory/places/nearest?lat&lon` | Naechstgelegener Gazetteer-Ort zu Koordinaten — fuer das Ortsfeld, wenn der BROWSER den Standort liefert (die Koordinaten des Nutzers verlassen den Server nicht). 204, wenn im Umkreis von 200 km kein Ort im Lexikon liegt |
+| POST | `/api/tournament-directory/{chessResultsId}/report` | „Falsches Event melden" — Rueckmeldung zu einem Eintrag `{ message?, location?, kind?, ageGroups?, gender?, speed?, isLeague?, namePattern?, sourceLink? }`, ALLE Felder freiwillig. Landet im bestehenden **Admin-Nachrichtenkanal** (`AdminMessageService.SendFromUserAsync`) statt in einer eigenen Tabelle: dort gibt es Oberflaeche, Glocke und — entscheidend — einen Rueckweg zum Melder. `namePattern` ist die Lern-Frage („bei uns heissen die Jugendturniere Schachrallye") und wandert in die Wortlisten des `TournamentClassifier` |
+| POST | `/api/tournament-directory/suggest-source` | „Mein Turnier fehlt" `{ link, message? }` — Hinweis auf eine noch nicht gecrawlte Quelle. Der **Link ist Pflicht** (nur absolutes http/https): ein Verbandskalender laesst sich zusaetzlich auswerten, eine Aufzaehlung im Freitext nicht |
 | GET/POST/PUT/DELETE | `/api/tournament-search-profiles[/{id}]` | Gespeicherte Umkreise; steuern Ansicht UND naechtliche Meldung |
 | GET | `/api/admin/tournament-directory/status` | Sweep-Zustand je Foederation + Geocoding-Quote |
 | POST | `/api/admin/tournament-directory/sweep` | Sweep fuer 1–20 Foederationen sofort ausfuehren |
@@ -322,10 +325,38 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
 | POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen. **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual` bleibt in jedem Fall unberuehrt |
+| POST | `/api/admin/tournament-directory/classify` | Publikum + Format des GANZEN Bestands aus den Turniernamen neu ableiten (Jugendklasse, Geschlechtsklasse, Liga) — braucht kein Netz. Der Weg, eine nachgeruestete Wortliste im `TournamentClassifier` auf den Altbestand anzuwenden; die Turnier**art** bleibt unangetastet (die kommt aus der Quelle) |
 | POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
 | PUT | `/api/admin/tournament-directory/{id}/coordinates` | Koordinaten von Hand setzen (GeoSource=Manual, ueberlebt den Sweep) |
 
 Die `/api/admin/...`-Routen haengen an der Permission `tournaments.manage`.
+
+**Publikum und Format eines Turniers — was aus der Quelle kommt und was aus dem Namen.**
+`Kind` (Einzel/Mannschaft) ist QUELLENDATUM: die chess-results-Turniersuche hat ein Turnierart-Feld
+(`combo_art`), und die Arten **2** („Rundenturnier fuer Mannschaften") und **3** („Schweizer System
+fuer Mannschaften") sind genau die Mannschaftsturniere. Der Sweep fragt sie deshalb in **zwei
+zusaetzlichen Durchgaengen** je Foederation ab (`&art=2`, `&art=3`) — also drei Crawler-Requests
+statt einem. Faellt ein solcher Durchgang aus ODER laeuft er in die 2000-Zeilen-Grenze, bleibt die
+gespeicherte Art **unangetastet** (`Unknown` heisst „noch nicht geklaert"): ein Netzausfall darf
+nicht den halben Bestand auf „Einzel" umschreiben.
+
+`AgeGroups`, `Gender` und `IsLeague` sind ABLEITUNGEN (`Services/TournamentClassifier.cs`, rein
+statisch, Wortlisten an EINER Stelle zum Nachruesten). Alter und Geschlecht stehen nirgends als
+Spalte — auch nicht auf der Turnierseite — sondern nur im Namen, und der traegt sie erstaunlich
+verlaesslich („Landesmeisterschaft U12 weiblich", „UNDER 16 GIRLS"). Zwei Fallen sind dort bewusst
+geschlossen und je mit einem Test festgenagelt: **„U2000" ist eine Ratinggrenze, kein Alter**
+(hoechstens zwei Ziffern + Wortgrenze), und **„men" steckt in „women" und „Damen", „male" in
+„female"** — als Teilzeichenkette gesucht war jedes Frauenturnier gleichzeitig ein Herrenturnier
+und damit (beides gesetzt) wieder ein offenes; diese beiden zaehlen deshalb nur als ganzes Wort.
+Ein freistehendes „w"/„m" ist in diesen Namen eine GRUPPE („Open Braunau 2026 B") und zaehlt nur
+direkt hinter der Altersklasse („U12w"). Liga = Liga-Wort im Namen ODER Mannschaftsturnier ueber
+mindestens 35 Tage (eine Saison laeuft Oktober bis April, ein Mannschaftsturnier am Wochenende
+einen Tag); die Dauerregel gilt NUR fuer Mannschaftsturniere, sonst waere jede monatelange
+Vereinsmeisterschaft eine Liga. Nachwuchs ohne genannte Klasse (`YouthUnspecified`) faengt eine
+Wortliste, in der auch **regionale Eigennamen** stehen — „Schachrallye" ist in Tirol immer
+Nachwuchs. Solche Kennungen kann niemand von aussen erraten; genau dafuer fragt das Melde-Formular
+(`POST .../report`, Feld `namePattern`) danach, und `POST .../classify` wendet die erweiterte Liste
+auf den Altbestand an.
 
 ### Book-Puzzles (offen + Admin)
 | Methode | Endpoint | Auth | Zweck |
@@ -798,7 +829,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | Friendships | Freundesliste | RequesterId, AddresseeId (unique pair), Status (Pending/Accepted/Declined) |
 | PuzzleChallenges | Puzzle an Freund(e) schicken | FromUserId, ToUserId (beide Restrict-FK auf AppUser), **Source (Enum Standard/Book)** + PuzzleId (polymorph, **kein FK** — je nach Source `Puzzles.Id` oder `BookPuzzles.Id`), Status (Pending/Solved/Failed), CreatedAt, ResolvedAt?, TimeSpentSeconds?; Index (ToUserId, Status) + (FromUserId) + (Source, PuzzleId) |
 | RevengeNotifications | Revanche an gescheitertem Puzzle | AvengerUserId, TargetUserId, PuzzleId (alle Restrict), Solved, CreatedAt, SeenAt?; Index (TargetUserId, SeenAt) |
-| TournamentDirectoryEntries | Turnierverzeichnis aus der chess-results-Suche | ChessResultsId (unique), Name, Federation, State, StartDate/EndDate, **StartsOnWeekend** (vorberechnet — `DateOnly.DayOfWeek` uebersetzt der MySQL-Provider nicht), LocationText, TimeControlText, Speed, Rounds, PlayerCount, **Lat/Lon/GeoSource/GeoPlaceName**, FirstSeenAt/LastSeenAt/**MissedSweeps**/RemovedAt, **ChangeHash** (nur Termin+Ort); Index (EndDate), (Federation, EndDate), (Lat, Lon) |
+| TournamentDirectoryEntries | Turnierverzeichnis aus der chess-results-Suche | ChessResultsId (unique), Name, Federation, State, StartDate/EndDate, **StartsOnWeekend** (vorberechnet — `DateOnly.DayOfWeek` uebersetzt der MySQL-Provider nicht), LocationText, TimeControlText, Speed, Rounds, PlayerCount, **Lat/Lon/GeoSource/GeoPlaceName**, FirstSeenAt/LastSeenAt/**MissedSweeps**/RemovedAt, **ChangeHash** (nur Termin+Ort), **Kind** (Einzel/Mannschaft — AUS DER QUELLE, siehe unten), **IsLeague** + **AgeGroups** (Flags-Bitfeld U8…U20/YouthUnspecified/Senior) + **Gender** (Open/Female/Male), beide abgeleitet vom `TournamentClassifier`; Index (EndDate), (Federation, EndDate), (Lat, Lon) |
 | TournamentSearchProfiles | Gespeicherte Umkreise je Nutzer | UserId (Cascade), Name, PlaceQuery, Lat/Lon, RadiusKm, Federations/Speeds (CSV), WeekendOnly, MinPlayers, NotifyNew; unique (UserId, Name) |
 | TournamentDirectorySweeps | Buchfuehrung je Foederation | Federation (PK), LastSweptAt (**nur bei Erfolg**), LastAttemptedAt, LastRowCount, LastError, ConsecutiveFailures |
 | TournamentDirectoryVenues | ALLE Spielorte eines Turniers — bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit", „Schwaz/Jenbach/Kufstein"; auf dem Dev-Stand 270 Eintraege). Die Koordinaten am Eintrag bleiben der HAUPT-Spielort (der erste); die Tabelle traegt nur Turniere mit MEHR als einem. Umkreissuche und Karte fragen sie mit: ein Turnier gilt als in der Naehe, wenn EINER seiner Orte in der Box liegt, und die angezeigte Entfernung ist die zum naechsten | TournamentDirectoryEntryId (Cascade), Ordinal (0 = Hauptort), Name (≤200), SourceText? (≤300, der Textabschnitt — Nachvollziehbarkeit), Lat/Lon, GeoSource; Index (Lat, Lon) + (EntryId, Ordinal) |

@@ -585,6 +585,14 @@ public class TournamentDirectoryServiceTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Antwortet auf die Trefferliste mit <c>body</c> — und auf die MANNSCHAFTS-Durchgaenge
+    /// (<c>art=2</c>/<c>art=3</c>) getrennt davon, standardmaessig mit einer leeren Liste.
+    ///
+    /// <para>Die Trennung ist wesentlich: ohne sie bekaeme jeder Durchgang dieselbe Liste zurueck
+    /// und der Sweep hielte JEDES Turnier fuer ein Mannschaftsturnier. Die Vorgabe „leer" heisst
+    /// also „alles Einzelturniere" und laesst die uebrigen Tests dasselbe bedeuten wie vorher.</para>
+    /// </summary>
     private sealed class StubHandler : HttpMessageHandler
     {
         private readonly string _body;
@@ -596,11 +604,138 @@ public class TournamentDirectoryServiceTests : IDisposable
             _status = status;
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(new HttpResponseMessage(_status)
+        public string TeamBody { get; set; } = "[]";
+        public HttpStatusCode TeamStatus { get; set; } = HttpStatusCode.OK;
+        public List<string> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var url = request.RequestUri?.ToString() ?? "";
+            Requests.Add(url);
+            var isTeamPass = url.Contains("&art=", StringComparison.Ordinal);
+
+            return Task.FromResult(new HttpResponseMessage(isTeamPass ? TeamStatus : _status)
             {
-                Content = new StringContent(_body, Encoding.UTF8, "application/json")
+                Content = new StringContent(isTeamPass ? TeamBody : _body, Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    // ----- Publikum, Format und Turnierart ---------------------------------
+
+    /// <summary>
+    /// Einzel gegen Mannschaft kommt AUS DER QUELLE: die chess-results-Turniersuche hat ein
+    /// Turnierart-Feld, und der Sweep fragt die beiden Mannschafts-Arten in einem zweiten
+    /// Durchgang gezielt ab. Am Namen waere „SK Aachen 2 - SF Katernberg" nicht zu erkennen.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_TeamPass_ClassifiesTheKindFromTheSource()
+    {
+        var handler = new StubHandler(
+            $"[{Row("111", "Landescup", "2026-10-03", "2026-10-04", "Wien")}," +
+            $"{Row("222", "Open Braunau", "2026-12-18", "2026-12-20", "Ranshofen")}]",
+            HttpStatusCode.OK)
+        {
+            TeamBody = $"[{Row("111", "Landescup", "2026-10-03", "2026-10-04", "Wien")}]",
+        };
+
+        await CreateService(handler).SweepFederationAsync("AUT", Today);
+
+        var entries = await _db.TournamentDirectoryEntries.ToDictionaryAsync(e => e.ChessResultsId);
+        Assert.Equal(TournamentKind.Team, entries["111"].Kind);
+        Assert.Equal(TournamentKind.Individual, entries["222"].Kind);
+        // Zwei Zusatzabfragen, eine je Mannschafts-Turnierart.
+        Assert.Equal(2, handler.Requests.Count(r => r.Contains("&art=", StringComparison.Ordinal)));
+    }
+
+    /// <summary>
+    /// Faellt der Mannschafts-Durchgang aus, bleibt die BEKANNTE Turnierart stehen. Wuerde sie
+    /// stattdessen auf „Einzel" fallen, schriebe ein einzelner Netzausfall den halben Bestand um —
+    /// und der Filter „nur Mannschaftsturniere" liefe am naechsten Morgen leer.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_TeamPassFails_KeepsTheKnownKind()
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "111", Name = "Landescup", Federation = "AUT",
+            StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
+            LocationText = "Wien", Kind = TournamentKind.Team,
+        });
+        await _db.SaveChangesAsync();
+
+        var handler = new StubHandler($"[{Row("111", "Landescup", "2026-10-03", "2026-10-04", "Wien")}]",
+            HttpStatusCode.OK) { TeamStatus = HttpStatusCode.InternalServerError };
+
+        var (result, _) = await CreateService(handler).SweepFederationAsync("AUT", Today);
+
+        // Der Sweep selbst gelingt — die Turnierart ist ein Zusatz, kein Fundament.
+        Assert.True(result.Succeeded);
+        Assert.Equal(TournamentKind.Team, (await _db.TournamentDirectoryEntries.SingleAsync()).Kind);
+    }
+
+    /// <summary>
+    /// Eine abgeschnittene Mannschaftsliste ist genauso wenig verwertbar wie ein Fehler: der
+    /// fehlende Schwanz waere lauter falsche „Einzelturniere".
+    /// </summary>
+    [Fact]
+    public async Task Sweep_TeamPassTruncated_KeepsTheKnownKind()
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "111", Name = "Landescup", Federation = "AUT",
+            StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
+            LocationText = "Wien", Kind = TournamentKind.Team,
+        });
+        await _db.SaveChangesAsync();
+
+        var handler = new StubHandler($"[{Row("111", "Landescup", "2026-10-03", "2026-10-04", "Wien")}]",
+            HttpStatusCode.OK)
+        {
+            TeamBody = $"[{Row("111", "A", "2026-10-03", "2026-10-04", "Wien")}," +
+                       $"{Row("112", "B", "2026-10-03", "2026-10-04", "Wien")}]",
+        };
+        var service = CreateService(handler);
+        service.MaxRows = 2;   // die Mannschaftsliste laeuft damit genau ins Limit
+
+        await service.SweepFederationAsync("AUT", Today);
+
+        Assert.Equal(TournamentKind.Team, (await _db.TournamentDirectoryEntries.SingleAsync()).Kind);
+    }
+
+    /// <summary>
+    /// Alter und Geschlecht stehen nur im NAMEN — die Turniersuche kennt keine Spalte dafuer. Der
+    /// Sweep wertet sie beim Schreiben aus, damit die Filterleiste in SQL filtern kann.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_ReadsAudienceFromTheTournamentName()
+    {
+        var service = CreateService(
+            $"[{Row("111", "Landesmeisterschaft U12 weiblich", "2026-10-03", "2026-10-04", "Wien")}]");
+
+        await service.SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(TournamentAgeGroups.U12, entry.AgeGroups);
+        Assert.Equal(TournamentGender.Female, entry.Gender);
+        Assert.False(entry.IsLeague);
+    }
+
+    [Fact]
+    public async Task Sweep_TeamEventOverAWholeSeason_IsMarkedAsALeague()
+    {
+        var handler = new StubHandler(
+            $"[{Row("111", "Steirischer Mannschaftscup", "2026-10-01", "2027-04-15", "Graz")}]",
+            HttpStatusCode.OK)
+        {
+            TeamBody = $"[{Row("111", "Steirischer Mannschaftscup", "2026-10-01", "2027-04-15", "Graz")}]",
+        };
+
+        await CreateService(handler).SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(TournamentKind.Team, entry.Kind);
+        Assert.True(entry.IsLeague);
     }
 
     // ----- Funde aus der Durchsicht ----------------------------------------

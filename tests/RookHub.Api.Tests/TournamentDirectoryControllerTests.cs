@@ -7,7 +7,6 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
-using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -29,7 +28,8 @@ public class TournamentDirectoryControllerTests : IDisposable
 
     private TournamentDirectoryController CreateController(int userId)
     {
-        var controller = new TournamentDirectoryController(new TournamentDirectoryQueryService(_db), _db);
+        var controller = new TournamentDirectoryController(new TournamentDirectoryQueryService(_db), _db,
+            new AdminMessageService(_db, new NotificationService(_db)));
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -640,9 +640,275 @@ public class TournamentDirectoryControllerTests : IDisposable
 
     private async Task<DirectoryPageDto> SearchAsync(
         string? from = null, string? to = null, double? lat = null, double? lon = null, int? radiusKm = null,
-        string? fed = null, string? speed = null, string? q = null, bool weekendOnly = false)
+        string? fed = null, string? speed = null, string? q = null, bool weekendOnly = false,
+        DirectoryAudienceQuery? audience = null)
     {
-        var result = await CreateController(1).Search(from, to, lat, lon, radiusKm, fed, speed, q, weekendOnly);
+        var result = await CreateController(1).Search(
+            from, to, lat, lon, radiusKm, fed, speed, q, weekendOnly, audience: audience);
         return Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    // ----- Publikum + Format ------------------------------------------------
+
+    /// <summary>
+    /// Ein Turnier mit Merkmalen. Die drei abgeleiteten Felder werden hier BEWUSST von Hand
+    /// gesetzt statt ueber den Klassifizierer: was aus einem Namen folgt, gehoert in dessen
+    /// eigene Tests — hier wird nur gefiltert.
+    /// </summary>
+    private async Task AddAudienceEntryAsync(
+        string id, string name, TournamentKind kind = TournamentKind.Individual,
+        TournamentAgeGroups ageGroups = TournamentAgeGroups.None,
+        TournamentGender gender = TournamentGender.Open, bool isLeague = false)
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = id, Name = name, Federation = "AUT",
+            StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
+            Kind = kind, AgeGroups = ageGroups, Gender = gender, IsLeague = isLeague,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Search_KindFilter_KeepsOnlyTeamEvents()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau");
+        await AddAudienceEntryAsync("2", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Kinds = "team" });
+
+        Assert.Equal("2", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// Ueberschneidung, nicht Gleichheit: „U12" muss die U8-U18-Meisterschaft finden. Waere hier
+    /// auf Gleichheit geprueft, fiele genau die grosse Ausschreibung durch, die ein Elternteil
+    /// sucht.
+    /// </summary>
+    [Fact]
+    public async Task Search_AgeGroupFilter_MatchesEventsCoveringSeveralClasses()
+    {
+        await AddAudienceEntryAsync("1", "Landesmeisterschaft U10 U12 U14",
+            ageGroups: TournamentAgeGroups.U10 | TournamentAgeGroups.U12 | TournamentAgeGroups.U14);
+        await AddAudienceEntryAsync("2", "U18 Cup", ageGroups: TournamentAgeGroups.U18);
+        await AddAudienceEntryAsync("3", "Open Braunau");
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { AgeGroups = "u12" });
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    [Fact]
+    public async Task Search_GenderFilter_KeepsFemaleSections()
+    {
+        await AddAudienceEntryAsync("1", "U12 weiblich",
+            ageGroups: TournamentAgeGroups.U12, gender: TournamentGender.Female);
+        await AddAudienceEntryAsync("2", "U12 maennlich",
+            ageGroups: TournamentAgeGroups.U12, gender: TournamentGender.Male);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Genders = "female" });
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// „Nur Erwachsene" heisst: kein JUGENDmerkmal. Ein Seniorenturnier bleibt sichtbar —
+    /// Seniorenschach ist Erwachsenenschach, und das Gegenteil waere eine Alterssperre nach oben.
+    /// </summary>
+    [Fact]
+    public async Task Search_AdultsOnly_HidesYouthButKeepsSeniors()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau");
+        await AddAudienceEntryAsync("2", "Jugendmeisterschaft", ageGroups: TournamentAgeGroups.YouthUnspecified);
+        await AddAudienceEntryAsync("3", "U12 Cup", ageGroups: TournamentAgeGroups.U12);
+        await AddAudienceEntryAsync("4", "Seniorenmeisterschaft", ageGroups: TournamentAgeGroups.Senior);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { AdultsOnly = true });
+
+        Assert.Equal(["1", "4"], page.Items.Select(i => i.ChessResultsId).OrderBy(x => x).ToArray());
+    }
+
+    [Fact]
+    public async Task Search_HideLeagues_DropsSeasonCompetitions()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau");
+        await AddAudienceEntryAsync("2", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { HideLeagues = true });
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// Ein unbekannter Wert ist ein FEHLER. Still zu ignorieren waere schlimmer als abzulehnen:
+    /// die Anzeige zeigte dann eine ungefilterte Liste und behauptete in der Filterleiste das
+    /// Gegenteil.
+    /// </summary>
+    [Theory]
+    [InlineData("u13", null, null)]
+    [InlineData(null, "mixed", null)]
+    [InlineData(null, null, "pairs")]
+    public async Task Search_UnknownAudienceValue_IsRejected(string? ages, string? genders, string? kinds)
+    {
+        var result = await CreateController(1).Search(audience: new DirectoryAudienceQuery
+        {
+            AgeGroups = ages, Genders = genders, Kinds = kinds,
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Search_AgeGroupNames_AreReportedOnTheEntry()
+    {
+        await AddAudienceEntryAsync("1", "Landesmeisterschaft U10 U12",
+            ageGroups: TournamentAgeGroups.U10 | TournamentAgeGroups.U12);
+
+        var page = await SearchAsync();
+
+        Assert.Equal(["U10", "U12"], Assert.Single(page.Items).AgeGroups);
+    }
+
+    // ----- Naechster Ort zu Koordinaten -------------------------------------
+
+    [Fact]
+    public async Task NearestPlace_PrefersTheClosestPlace()
+    {
+        SeedPlaces();
+
+        var result = await CreateController(1).NearestPlace(48.09, 16.31, default);
+        var place = Assert.IsType<GeoPlaceSuggestionDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("Wiener Neudorf (AT)", place.Label);
+    }
+
+    /// <summary>
+    /// Kein Ort in Reichweite ist kein Fehler: die Koordinaten des Nutzers gelten trotzdem, nur
+    /// das Namensfeld bleibt leer. Ein 404 haette die Umkreissuche mitgerissen.
+    /// </summary>
+    [Fact]
+    public async Task NearestPlace_NothingWithinRange_IsNoContent()
+    {
+        SeedPlaces();
+
+        var result = await CreateController(1).NearestPlace(-33.86, 151.2, default);
+
+        Assert.IsType<NoContentResult>(result.Result);
+    }
+
+    [Theory]
+    [InlineData(91.0, 0.0)]
+    [InlineData(0.0, 181.0)]
+    public async Task NearestPlace_OutOfRange_IsRejected(double lat, double lon)
+    {
+        var result = await CreateController(1).NearestPlace(lat, lon, default);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Rueckmeldungen ---------------------------------------------------
+
+    /// <summary>
+    /// Die Falschmeldung geht in den ADMIN-Nachrichtenkanal — dort gibt es eine Oberflaeche, eine
+    /// Glocke und, das Entscheidende, einen Rueckweg zum Melder.
+    /// </summary>
+    [Fact]
+    public async Task Report_LandsInTheAdminMessageThread()
+    {
+        var userId = await CreateUserAsync("melder");
+        await AddAudienceEntryAsync("1405166", "Tiroler Landesliga", TournamentKind.Team, isLeague: true);
+
+        var result = await CreateController(userId).Report("1405166",
+            new DirectoryReportDto { Message = "Spielort ist Mayrhofen, nicht St. Veit.", Location = "Mayrhofen" },
+            default);
+
+        Assert.IsType<NoContentResult>(result);
+        var message = Assert.Single(await _db.AdminMessages.ToListAsync());
+        Assert.Equal(userId, message.UserId);
+        Assert.False(message.FromAdmin);
+        Assert.Contains("1405166", message.Body);
+        Assert.Contains("Mayrhofen", message.Body);
+        // Der IST-Stand gehoert dazu, sonst muss der Admin fuer jede Meldung erst nachsehen.
+        Assert.Contains("Team", message.Body);
+    }
+
+    /// <summary>
+    /// Die beiden Lern-Fragen des Formulars. Sie sind der eigentliche Gewinn: „bei uns heissen die
+    /// Jugendturniere Schachrallye" ist eine Regel fuer ALLE kuenftigen Ausschreibungen dieser
+    /// Reihe, nicht bloss eine Korrektur an diesem einen Eintrag. Darum stehen sie benannt in der
+    /// Nachricht und nicht im Freitext, wo sie beim Durchsehen untergingen.
+    /// </summary>
+    [Fact]
+    public async Task Report_LearningAnswers_AreNamedInTheMessage()
+    {
+        var userId = await CreateUserAsync("melder");
+        await AddAudienceEntryAsync("1", "Schachrallye Telfs 2026 Gruppe B");
+
+        await CreateController(userId).Report("1", new DirectoryReportDto
+        {
+            NamePattern = "Schachrallye = immer Nachwuchs",
+            SourceLink = "https://www.tiroler-schachverband.at/jugend",
+        }, default);
+
+        var body = Assert.Single(await _db.AdminMessages.ToListAsync()).Body;
+        Assert.Contains("Solche Turniere heissen dort: Schachrallye = immer Nachwuchs", body);
+        Assert.Contains("Besser ersichtlich auf: https://www.tiroler-schachverband.at/jugend", body);
+    }
+
+    [Fact]
+    public async Task Report_UnknownTournament_IsNotFound()
+    {
+        var userId = await CreateUserAsync("melder");
+
+        var result = await CreateController(userId).Report("999", new DirectoryReportDto(), default);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    /// <summary>Ein Knopfdruck ohne ein Wort ist eine gueltige Meldung („hier stimmt was nicht").</summary>
+    [Fact]
+    public async Task Report_WithoutAnyText_IsStillAccepted()
+    {
+        var userId = await CreateUserAsync("melder");
+        await AddAudienceEntryAsync("1", "Open Braunau");
+
+        var result = await CreateController(userId).Report("1", new DirectoryReportDto(), default);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Single(await _db.AdminMessages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SuggestSource_StoresTheLink()
+    {
+        var userId = await CreateUserAsync("melder");
+
+        var result = await CreateController(userId).SuggestSource(new DirectorySourceSuggestionDto
+        {
+            Link = "https://www.tiroler-schachverband.at/termine",
+            Message = "Unsere Turniere stehen nicht auf chess-results.",
+        });
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Contains("tiroler-schachverband.at", Assert.Single(await _db.AdminMessages.ToListAsync()).Body);
+    }
+
+    /// <summary>
+    /// Ohne Link ist der Hinweis nicht verwertbar — ein Verbandskalender laesst sich crawlen, ein
+    /// Satz Freitext nicht. Und ein „javascript:"-Link waere nur eine Falle fuer den Admin, der
+    /// die Meldung spaeter anklickt.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("tiroler-schachverband.at")]
+    [InlineData("javascript:alert(1)")]
+    public async Task SuggestSource_WithoutAUsableLink_IsRejected(string? link)
+    {
+        var userId = await CreateUserAsync("melder");
+
+        var result = await CreateController(userId).SuggestSource(
+            new DirectorySourceSuggestionDto { Link = link, Message = "bitte crawlen" });
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 }

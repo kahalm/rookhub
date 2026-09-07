@@ -48,7 +48,18 @@ public class TournamentDirectoryService
     /// </summary>
     internal TimeSpan DelayBetweenFederations { get; set; } = TimeSpan.FromSeconds(8);
 
-    private const int MaxRows = 2000;
+    /// <summary>
+    /// Zeilenlimit einer Trefferliste. Einstellbar wie die uebrigen Sweep-Groessen, damit die
+    /// Tests die ABGESCHNITTENE Liste nachstellen koennen, ohne 2000 Zeilen zu erfinden — genau
+    /// der Fall, in dem sowohl die Verschwunden-Erkennung als auch die Turnierart aussetzen muss.
+    /// </summary>
+    internal int MaxRows { get; set; } = 2000;
+
+    /// <summary>
+    /// Die Turnierarten der chess-results-Suche, die MANNSCHAFTSturniere liefern: 2 Rundenturnier
+    /// fuer Mannschaften, 3 Schweizer System fuer Mannschaften.
+    /// </summary>
+    private static readonly string[] TeamTournamentTypes = ["2", "3"];
 
     /// <summary>Blockgroesse beim Nachladen der neuen Eintraege fuer die Umkreis-Meldung.</summary>
     private const int NotifyLookupBatch = 500;
@@ -150,6 +161,8 @@ public class TournamentDirectoryService
             return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), []);
         }
 
+        var teamIds = await FetchTeamIdsAsync(federation, from, to, ct);
+
         // Die Spielorte MIT laden: ohne sie steht `entry.Venues` leer da, ReplaceVenues loescht
         // nichts, und die alten Zeilen sammeln sich mit jedem naechtlichen Lauf an.
         var existing = await _db.TournamentDirectoryEntries
@@ -191,7 +204,7 @@ public class TournamentDirectoryService
                 var oldLocation = entry.LocationText;
                 var oldLocationText = entry.LocationText;
 
-                Apply(row, entry, now);
+                Apply(row, entry, now, teamIds);
                 entry.MissedSweeps = 0;
                 entry.RemovedAt = null;
                 updated++;
@@ -212,7 +225,7 @@ public class TournamentDirectoryService
                     FirstSeenAt = now,
                     CreatedAt = now,
                 };
-                Apply(row, entry, now);
+                Apply(row, entry, now, teamIds);
                 await GeocodeAsync(entry, ct);
                 _db.TournamentDirectoryEntries.Add(entry);
                 added.Add(entry);
@@ -266,6 +279,55 @@ public class TournamentDirectoryService
 
         return (new DirectorySweepResult(federation, rows.Count, added.Count, updated, changed.Count, removed.Count),
                 added.Select(e => e.Id).ToList());
+    }
+
+    /// <summary>
+    /// Welche Turniere dieser Foederation sind MANNSCHAFTSturniere?
+    ///
+    /// <para>Die chess-results-Turniersuche kennt die Turnierart als Suchfeld — Art 2
+    /// („Rundenturnier fuer Mannschaften") und 3 („Schweizer System fuer Mannschaften"). Zwei
+    /// zusaetzliche Abfragen je Foederation beantworten damit aus der QUELLE, was sonst am
+    /// Turniernamen geraten werden muesste; „Liga" im Namen ist ein Indiz, „SK Aachen 2 - SF
+    /// Katernberg" keines.</para>
+    ///
+    /// <para>Zwei Faelle geben <c>null</c> zurueck, also „unbekannt", und lassen die gespeicherte
+    /// Art unangetastet: ein FEHLER (sonst wuerde ein Netzausfall den halben Bestand auf „Einzel"
+    /// umschreiben) und eine ABGESCHNITTENE Liste (chess-results kappt bei
+    /// <see cref="MaxRows"/> Zeilen — der fehlende Schwanz waere sonst lauter falsche
+    /// Einzelturniere).</para>
+    /// </summary>
+    private async Task<HashSet<string>?> FetchTeamIdsAsync(
+        string federation, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var art in TeamTournamentTypes)
+        {
+            List<CrawlerDirectoryRow> rows;
+            try
+            {
+                var path = $"/api/tournament-search?fed={Uri.EscapeDataString(federation)}" +
+                           $"&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&maxRows={MaxRows}&art={art}";
+                rows = ParseRows(await FetchAsync(path, ct));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _log.LogWarning(ex,
+                    "Mannschafts-Durchgang {Federation} (Art {Art}) fehlgeschlagen — Turnierart bleibt unveraendert",
+                    federation, art);
+                return null;
+            }
+
+            if (rows.Count >= MaxRows)
+            {
+                _log.LogWarning(
+                    "Mannschafts-Durchgang {Federation} (Art {Art}) bei {Rows} Zeilen abgeschnitten — " +
+                    "Turnierart bleibt unveraendert", federation, art, rows.Count);
+                return null;
+            }
+
+            foreach (var row in rows) ids.Add(row.ChessResultsId);
+        }
+        return ids;
     }
 
     /// <summary>
@@ -437,7 +499,13 @@ public class TournamentDirectoryService
 
     // ----- Abbildung + Hilfsfunktionen -------------------------------------
 
-    private void Apply(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now)
+    /// <summary>
+    /// Uebertraegt eine Trefferzeile auf den Eintrag. <paramref name="teamIds"/> ist das Ergebnis
+    /// des Mannschafts-Durchgangs; <c>null</c> heisst „konnte nicht geklaert werden" und laesst
+    /// eine bereits bekannte Turnierart ausdruecklich in Ruhe.
+    /// </summary>
+    private void Apply(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now,
+        HashSet<string>? teamIds)
     {
         entry.Name = Truncate(row.Name, 500);
         entry.Federation = Truncate(row.Federation, 3);
@@ -456,6 +524,20 @@ public class TournamentDirectoryService
         entry.PlayerCount = row.PlayerCount;
         entry.UpstreamUpdatedAt = row.LastUpdatedApproxUtc;
         entry.ChangeHash = ComputeChangeHash(row.StartDate, row.EndDate, row.Location);
+
+        if (teamIds is not null)
+        {
+            entry.Kind = teamIds.Contains(row.ChessResultsId)
+                ? TournamentKind.Team
+                : TournamentKind.Individual;
+        }
+        // Publikum und Format haengen am Namen (Alter/Geschlecht) bzw. an Art und Dauer (Liga) —
+        // beides also NACH den Feldern oben und nach der Turnierart auswerten.
+        entry.AgeGroups = TournamentClassifier.AgeGroupsOf(entry.Name);
+        entry.Gender = TournamentClassifier.GenderOf(entry.Name);
+        entry.IsLeague = TournamentClassifier.LooksLikeLeague(
+            entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
+
         // Nach Name, Termin und Ort - der Gruppenschluessel liest genau diese Felder.
         ApplyGrouping(entry);
         entry.LastSeenAt = now;

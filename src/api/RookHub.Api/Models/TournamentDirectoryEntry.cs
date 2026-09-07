@@ -153,6 +153,33 @@ public class TournamentDirectoryEntry
     public DateTime? TeamHintCheckedAt { get; set; }
 
     /// <summary>
+    /// Einzel- oder Mannschaftsturnier. Kommt AUS DER QUELLE: die chess-results-Turniersuche hat
+    /// ein Turnierart-Feld, und die Arten 2/3 („Rundenturnier/Schweizer System fuer
+    /// Mannschaften") sind genau die Mannschaftsturniere. Der Sweep fragt sie deshalb in einem
+    /// zweiten Durchgang gezielt ab, statt am Namen zu raten. <c>Unknown</c> heisst „noch nicht
+    /// geklaert" — und nur das; ein fehlgeschlagener Klassifizierungs-Durchgang darf eine schon
+    /// bekannte Art nicht auf „Einzel" zuruecksetzen.
+    /// </summary>
+    public TournamentKind Kind { get; set; } = TournamentKind.Unknown;
+
+    /// <summary>
+    /// Liga (Saisonwettbewerb) statt Turnier. Abgeleitet, nicht gemeldet — siehe
+    /// <see cref="Services.TournamentClassifier.LooksLikeLeague"/>. Steht als eigene Spalte, damit
+    /// der Schalter „Ligen ausblenden" in SQL filtern kann.
+    /// </summary>
+    public bool IsLeague { get; set; }
+
+    /// <summary>
+    /// Jugend-/Seniorenklassen aus dem Namen. Ein Turnier kann mehrere fuehren („Landesmeisterschaft
+    /// U8-U18"), daher ein Bitfeld. <c>None</c> = kein Merkmal im Namen = offenes
+    /// Erwachsenenturnier.
+    /// </summary>
+    public TournamentAgeGroups AgeGroups { get; set; } = TournamentAgeGroups.None;
+
+    /// <summary>Geschlechtsklasse aus dem Namen; <c>Open</c> ist der Normalfall.</summary>
+    public TournamentGender Gender { get; set; } = TournamentGender.Open;
+
+    /// <summary>
     /// ALLE Spielorte. Bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit"); die
     /// Koordinaten am Eintrag selbst sind der ERSTE davon (siehe <see cref="TournamentDirectoryVenue"/>).
     /// </summary>
@@ -168,3 +195,41 @@ public enum TournamentSpeed
     Blitz = 3,
 }
 
+/// <summary>Einzel- oder Mannschaftsturnier, wie die chess-results-Turniersuche es fuehrt.</summary>
+public enum TournamentKind
+{
+    /// <summary>Noch nicht geklaert (Altbestand, oder der Klassifizierungs-Durchgang fiel aus).</summary>
+    Unknown = 0,
+    Individual = 1,
+    Team = 2,
+}
+
+/// <summary>
+/// Alters-/Nachwuchsklassen eines Turniers. Bitfeld, weil eine Ausschreibung mehrere Klassen an
+/// einem Termin fuehren kann. <c>Senior</c> ist ausdruecklich KEINE Jugendklasse — Seniorenschach
+/// ist Erwachsenenschach und bleibt beim Schalter „nur Erwachsene" sichtbar.
+/// </summary>
+[Flags]
+public enum TournamentAgeGroups
+{
+    None = 0,
+    U8 = 1,
+    U10 = 2,
+    U12 = 4,
+    U14 = 8,
+    U16 = 16,
+    U18 = 32,
+    U20 = 64,
+    /// <summary>„Jugendmeisterschaft", „Schachrallye" — Nachwuchs ohne genannte Klasse.</summary>
+    YouthUnspecified = 128,
+    Senior = 256,
+}
+
+/// <summary>Geschlechtsklasse eines Turniers.</summary>
+public enum TournamentGender
+{
+    /// <summary>Kein Merkmal im Namen — der Normalfall, offen fuer alle.</summary>
+    Open = 0,
+    Female = 1,
+    Male = 2,
+}

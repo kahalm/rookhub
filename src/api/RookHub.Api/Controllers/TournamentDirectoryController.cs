@@ -23,16 +23,22 @@ public class TournamentDirectoryController : BaseApiController
 
     private static readonly Regex FederationPattern = new(@"^[A-Za-z]{3}$", RegexOptions.Compiled);
 
+    /// <summary>Die chess-results-Turniernummer ist rein numerisch.</summary>
+    private static readonly Regex TournamentIdPattern = new(@"^\d{1,10}$", RegexOptions.Compiled);
+
     /// <summary>Obergrenze der Turniere EINES Monats — jenseits davon meldet die Antwort `truncated`.</summary>
     private const int CalendarMaxTournaments = 1500;
 
     private readonly TournamentDirectoryQueryService _query;
     private readonly AppDbContext _db;
+    private readonly AdminMessageService _messages;
 
-    public TournamentDirectoryController(TournamentDirectoryQueryService query, AppDbContext db)
+    public TournamentDirectoryController(
+        TournamentDirectoryQueryService query, AppDbContext db, AdminMessageService messages)
     {
         _query = query;
         _db = db;
+        _messages = messages;
     }
 
     /// <summary>
@@ -48,11 +54,12 @@ public class TournamentDirectoryController : BaseApiController
         [FromQuery] string? fed = null, [FromQuery] string? speed = null, [FromQuery] string? q = null,
         [FromQuery] bool weekendOnly = false, [FromQuery] int? minPlayers = null,
         [FromQuery] int? profileId = null,
+        [FromQuery] DirectoryAudienceQuery? audience = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
         var parsed = await BuildQueryAsync(from, to, lat, lon, radiusKm, fed, speed, q,
-            weekendOnly, minPlayers, profileId, page, pageSize, ct);
+            weekendOnly, minPlayers, profileId, audience, page, pageSize, ct);
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
         var result = await _query.SearchAsync(parsed.Query!, ct);
@@ -79,14 +86,15 @@ public class TournamentDirectoryController : BaseApiController
         [FromQuery] string? from = null, [FromQuery] string? to = null,
         [FromQuery] string? fed = null, [FromQuery] string? speed = null, [FromQuery] string? q = null,
         [FromQuery] bool weekendOnly = false, [FromQuery] int? minPlayers = null,
-        [FromQuery] int? profileId = null, [FromQuery] int limit = 2000,
+        [FromQuery] int? profileId = null, [FromQuery] DirectoryAudienceQuery? audience = null,
+        [FromQuery] int limit = 2000,
         CancellationToken ct = default)
     {
         if (!TryParseBoundingBox(bbox, out var box))
             return BadRequest(new { message = "bbox must be minLat,minLon,maxLat,maxLon." });
 
         var parsed = await BuildQueryAsync(from, to, null, null, null, fed, speed, q,
-            weekendOnly, minPlayers, profileId, 1, 1, ct);
+            weekendOnly, minPlayers, profileId, audience, 1, 1, ct);
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
         var pins = await _query.MapPinsAsync(parsed.Query!, box.MinLat, box.MaxLat, box.MinLon, box.MaxLon, limit, ct);
@@ -103,7 +111,7 @@ public class TournamentDirectoryController : BaseApiController
         [FromQuery] double? lat = null, [FromQuery] double? lon = null, [FromQuery] int? radiusKm = null,
         [FromQuery] string? fed = null, [FromQuery] string? speed = null, [FromQuery] string? q = null,
         [FromQuery] bool weekendOnly = false, [FromQuery] int? minPlayers = null,
-        [FromQuery] int? profileId = null,
+        [FromQuery] int? profileId = null, [FromQuery] DirectoryAudienceQuery? audience = null,
         CancellationToken ct = default)
     {
         if (year is < 1990 or > 2100 || month is < 1 or > 12)
@@ -113,7 +121,7 @@ public class TournamentDirectoryController : BaseApiController
         var last = first.AddMonths(1).AddDays(-1);
 
         var parsed = await BuildQueryAsync(first.ToString("yyyy-MM-dd"), last.ToString("yyyy-MM-dd"),
-            lat, lon, radiusKm, fed, speed, q, weekendOnly, minPlayers, profileId, 1, 200, ct);
+            lat, lon, radiusKm, fed, speed, q, weekendOnly, minPlayers, profileId, audience, 1, 200, ct);
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
         // Ein Monat OHNE Umkreis umfasst alle Foederationen — auf dem Dev-Server sind das
@@ -182,6 +190,162 @@ public class TournamentDirectoryController : BaseApiController
         }).ToList());
     }
 
+    /// <summary>
+    /// „Dieses Turnier ist falsch eingeordnet" — Rueckmeldung eines Nutzers zu einem Eintrag.
+    ///
+    /// <para>Landet ABSICHTLICH im bestehenden Admin-Nachrichtenkanal und nicht in einer eigenen
+    /// Tabelle: dort gibt es schon eine Oberflaeche (Admin-Tab „Nachrichten"), eine Glocke bei
+    /// allen Admins und — das Entscheidende — einen Rueckweg. Eine Meldung „der Ort ist falsch"
+    /// braucht haeufig eine Rueckfrage, und eine Tabelle ohne Antwortmoeglichkeit haette die
+    /// nicht. Die vorgeschlagenen Korrekturen stehen als lesbarer Text mit drin; angewandt werden
+    /// sie ueber die Admin-Endpunkte des Verzeichnisses, mit Augenmass.</para>
+    ///
+    /// <para>Alle Felder sind freiwillig — auch der Text. Ein Knopfdruck ohne ein Wort ist eine
+    /// gueltige Meldung („hier stimmt was nicht"), und die Huerde soll niedrig sein.</para>
+    /// </summary>
+    [HttpPost("{chessResultsId}/report")]
+    public async Task<IActionResult> Report(
+        string chessResultsId, [FromBody] DirectoryReportDto dto, CancellationToken ct)
+    {
+        if (!TournamentIdPattern.IsMatch((chessResultsId ?? "").Trim()))
+            return BadRequest(new { message = "Invalid tournament ID." });
+
+        var entry = await _db.TournamentDirectoryEntries.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct);
+        if (entry is null) return NotFound();
+
+        await _messages.SendFromUserAsync(GetUserId(), BuildReportBody(entry, dto));
+        return NoContent();
+    }
+
+    /// <summary>
+    /// „Mein Turnier fehlt" — ein Hinweis auf eine QUELLE, die dieses Verzeichnis noch nicht kennt.
+    ///
+    /// <para>Das Verzeichnis speist sich aus der chess-results-Turniersuche. Wer dort nicht
+    /// ausschreibt, kommt hier nicht vor — und genau diese Turniere sind die Luecke, die niemand
+    /// von innen sehen kann. Wichtig ist deshalb nicht der Turniername, sondern der LINK: eine
+    /// Verbandsseite oder ein Vereinskalender laesst sich zusaetzlich crawlen, eine Aufzaehlung
+    /// einzelner Termine nicht. Der Link ist Pflicht, der Text nicht.</para>
+    ///
+    /// <para>Geht denselben Weg wie die Falschmeldung: Admin-Nachrichtenkanal, damit
+    /// Rueckfragen moeglich sind.</para>
+    /// </summary>
+    [HttpPost("suggest-source")]
+    public async Task<IActionResult> SuggestSource([FromBody] DirectorySourceSuggestionDto dto)
+    {
+        var link = (dto.Link ?? "").Trim();
+        if (link.Length == 0)
+            return BadRequest(new { message = "A link to the source is required." });
+
+        // Nur http/https: ein „javascript:"- oder „data:"-Link waere hier nichts als eine Falle
+        // fuer den Admin, der die Meldung spaeter anklickt.
+        if (!Uri.TryCreate(link, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return BadRequest(new { message = "The link must be an absolute http(s) URL." });
+        }
+
+        var lines = new List<string>
+        {
+            "Hinweis auf eine fehlende Turnierquelle",
+            uri.ToString(),
+        };
+        if (!string.IsNullOrWhiteSpace(dto.Message))
+        {
+            lines.Add("");
+            lines.Add(dto.Message.Trim());
+        }
+
+        var body = string.Join("\n", lines);
+        await _messages.SendFromUserAsync(GetUserId(), body.Length > 4000 ? body[..4000] : body);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Die Meldung als lesbare Nachricht. Bewusst mit dem IST-Stand daneben: ohne ihn muesste der
+    /// Admin fuer jede Meldung erst nachsehen, was das Verzeichnis ueberhaupt behauptet.
+    /// </summary>
+    internal static string BuildReportBody(TournamentDirectoryEntry entry, DirectoryReportDto dto)
+    {
+        var lines = new List<string>
+        {
+            $"Meldung zum Turnierverzeichnis: {entry.Name} ({entry.ChessResultsId})",
+            $"https://chess-results.com/tnr{entry.ChessResultsId}.aspx?lan=1",
+            "",
+            $"Ist-Stand: Ort „{entry.LocationText}\" ({entry.GeoPlaceName ?? "nicht verortet"}, {entry.GeoSource}), " +
+            $"Art {entry.Kind}, {(entry.IsLeague ? "Liga" : "kein Liga-Wettbewerb")}, " +
+            $"Klassen {(entry.AgeGroups == TournamentAgeGroups.None ? "keine" : entry.AgeGroups.ToString())}, " +
+            $"Geschlecht {entry.Gender}, Bedenkzeit {entry.Speed}",
+        };
+
+        var corrections = new List<string>();
+        if (!string.IsNullOrWhiteSpace(dto.Location)) corrections.Add($"Ort: {dto.Location.Trim()}");
+        if (!string.IsNullOrWhiteSpace(dto.Kind)) corrections.Add($"Art: {dto.Kind.Trim()}");
+        if (!string.IsNullOrWhiteSpace(dto.AgeGroups)) corrections.Add($"Klassen: {dto.AgeGroups.Trim()}");
+        if (!string.IsNullOrWhiteSpace(dto.Gender)) corrections.Add($"Geschlecht: {dto.Gender.Trim()}");
+        if (dto.IsLeague is { } league) corrections.Add($"Liga: {(league ? "ja" : "nein")}");
+        if (!string.IsNullOrWhiteSpace(dto.Speed)) corrections.Add($"Bedenkzeit: {dto.Speed.Trim()}");
+
+        if (corrections.Count > 0)
+        {
+            lines.Add("");
+            lines.Add("Vorschlag: " + string.Join("; ", corrections));
+        }
+
+        // Die beiden Lern-Antworten getrennt und benannt: die eine kann in die Wortliste des
+        // Klassifizierers wandern, die andere in die Quellenliste. Im Freitext untergegangen
+        // waeren sie beim Durchsehen von 50 Meldungen nicht wiederzufinden.
+        if (!string.IsNullOrWhiteSpace(dto.NamePattern))
+        {
+            lines.Add("");
+            lines.Add($"Solche Turniere heissen dort: {dto.NamePattern.Trim()}");
+        }
+        if (!string.IsNullOrWhiteSpace(dto.SourceLink))
+        {
+            lines.Add("");
+            lines.Add($"Besser ersichtlich auf: {dto.SourceLink.Trim()}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Message))
+        {
+            lines.Add("");
+            lines.Add(dto.Message.Trim());
+        }
+
+        // AdminMessage.Body ist auf 4000 Zeichen begrenzt; der Freitext ist im DTO schon
+        // gedeckelt, der Rest kann durch einen langen Turniernamen theoretisch anlaufen.
+        var body = string.Join("\n", lines);
+        return body.Length > 4000 ? body[..4000] : body;
+    }
+
+    /// <summary>
+    /// Der naechstgelegene Ort zu Koordinaten — fuer das Ortsfeld, wenn der Browser den Standort
+    /// liefert. Aufgeloest gegen den lokalen Gazetteer; die Koordinaten des Nutzers verlassen den
+    /// Server nicht. 204, wenn im Umkreis von 200 km kein Ort im Lexikon liegt (dann bleibt das
+    /// Feld leer, aber die Koordinaten gelten trotzdem).
+    /// </summary>
+    [HttpGet("places/nearest")]
+    public async Task<ActionResult<GeoPlaceSuggestionDto>> NearestPlace(
+        [FromQuery] double lat, [FromQuery] double lon, CancellationToken ct)
+    {
+        if (lat is < -90 or > 90) return BadRequest(new { message = "lat out of range." });
+        if (lon is < -180 or > 180) return BadRequest(new { message = "lon out of range." });
+
+        var place = await _query.NearestPlaceAsync(lat, lon, ct);
+        if (place is null) return NoContent();
+
+        return Ok(new GeoPlaceSuggestionDto
+        {
+            Label = place.PostalCode is null
+                ? $"{place.Name} ({place.Country})"
+                : $"{place.PostalCode} {place.Name} ({place.Country})",
+            Country = place.Country,
+            PostalCode = place.PostalCode,
+            Lat = place.Lat,
+            Lon = place.Lon,
+        });
+    }
+
     // -----------------------------------------------------------------------
 
     private static bool Covers(TournamentDirectoryEntry entry, DateOnly day)
@@ -207,7 +371,7 @@ public class TournamentDirectoryController : BaseApiController
     private async Task<(DirectorySearchQuery? Query, string? Error)> BuildQueryAsync(
         string? from, string? to, double? lat, double? lon, int? radiusKm,
         string? fed, string? speed, string? text, bool weekendOnly, int? minPlayers,
-        int? profileId, int page, int pageSize, CancellationToken ct)
+        int? profileId, DirectoryAudienceQuery? audience, int page, int pageSize, CancellationToken ct)
     {
         DateOnly? fromDate = null, toDate = null;
         if (from is not null && !TryParseIsoDate(from, out fromDate)) return (null, "from must be yyyy-MM-dd.");
@@ -232,6 +396,16 @@ public class TournamentDirectoryController : BaseApiController
         if (radiusKm is { } r && r is < 1 or > 2000) return (null, "radiusKm must be between 1 and 2000.");
         if (lat is { } la && la is < -90 or > 90) return (null, "lat out of range.");
         if (lon is { } lo && lo is < -180 or > 180) return (null, "lon out of range.");
+
+        if (!TryParseEnumCsv<TournamentKind>(audience?.Kinds, out var kinds))
+            return (null, "kinds must be a comma-separated list of individual, team, unknown.");
+        if (!TryParseEnumCsv<TournamentGender>(audience?.Genders, out var genders))
+            return (null, "genders must be a comma-separated list of open, female, male.");
+        if (!TryParseEnumCsv<TournamentAgeGroups>(audience?.AgeGroups, out var ageList))
+            return (null, "ageGroups must be a comma-separated list of u8, u10, u12, u14, u16, u18, u20, youthUnspecified, senior.");
+
+        var ageGroups = TournamentAgeGroups.None;
+        foreach (var group in ageList) ageGroups |= group;
 
         List<string> profileFeds = [];
         List<TournamentSpeed> profileSpeeds = [];
@@ -278,9 +452,32 @@ public class TournamentDirectoryController : BaseApiController
             Text = string.IsNullOrWhiteSpace(text) ? null : text.Trim(),
             WeekendOnly = weekendOnly,
             MinPlayers = minPlayers,
+            Kinds = kinds.Count > 0 ? kinds : null,
+            Genders = genders.Count > 0 ? genders : null,
+            AgeGroups = ageGroups,
+            AdultsOnly = audience?.AdultsOnly ?? false,
+            HideLeagues = audience?.HideLeagues ?? false,
             Page = page,
             PageSize = pageSize,
         }, null);
+    }
+
+    /// <summary>
+    /// Eine kommagetrennte Liste von Enum-Namen. Ein unbekannter Name ist ein FEHLER, kein
+    /// Grund zum Ueberspringen: wer „ageGroups=u13" schickt, soll das erfahren und nicht eine
+    /// stillschweigend ungefilterte Liste bekommen.
+    /// </summary>
+    internal static bool TryParseEnumCsv<T>(string? csv, out List<T> values) where T : struct, Enum
+    {
+        values = [];
+        if (string.IsNullOrWhiteSpace(csv)) return true;
+
+        foreach (var part in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!Enum.TryParse<T>(part, ignoreCase: true, out var value)) return false;
+            if (!values.Contains(value)) values.Add(value);
+        }
+        return true;
     }
 
     internal static bool TryParseBoundingBox(string? bbox,
