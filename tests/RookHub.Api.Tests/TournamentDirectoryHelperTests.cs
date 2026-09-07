@@ -350,4 +350,47 @@ public class TournamentDirectorySchedulerTests : IDisposable
 
         Assert.Equal(["FIJ"], run);
     }
+
+    /// <summary>
+    /// Der naechtliche Durchgang MUSS die FIDE-Detailangaben mitholen — und der Dienst muss
+    /// registriert sein.
+    ///
+    /// <para><b>Warum das geprueft wird, und warum als Quelltext-Pruefung.</b> Der Fehler, um den
+    /// es geht, ist heute schon zweimal passiert: ein Feature war ausgerollt und trotzdem wirkungslos
+    /// (die Spieltermine, weil der Parser die falsche Tabelle nahm; die Turnierart, weil kein Sweep
+    /// nach der Auslieferung lief). Ein Nachtrag OHNE Aufruf im Scheduler waere genau derselbe Fall:
+    /// jedes neue FIDE-Ereignis kaeme mit Name, Termin und Ort herein und wuerde nie wieder
+    /// angefasst — ohne Fehler, ohne Hinweis, nur mit dauerhaft leeren Feldern.</para>
+    ///
+    /// <para>Die Alternative waere, den ganzen Host hochzufahren, um EINEN Aufruf zu beobachten;
+    /// dafuer ist der Scheduler nicht zerlegt (nur <c>TimeUntilNextRun</c> und
+    /// <c>BuildRunListAsync</c> sind herausgezogen). Diese Pruefung faengt den Fall, der wirklich
+    /// vorkommt — dass der Aufruf vergessen oder beim Umbau entfernt wird.</para>
+    /// </summary>
+    [Fact]
+    public void NightlyRun_AlsoFetchesTheFideEventDetails()
+    {
+        var scheduler = ReadSource("src/api/RookHub.Api/Services/TournamentDirectoryScheduler.cs");
+        var program = ReadSource("src/api/RookHub.Api/Program.cs");
+
+        Assert.Contains("GetRequiredService<FideEventDetailService>()", scheduler);
+        Assert.Contains("FideDetailBatchSize", scheduler);
+        Assert.Contains("AddScoped<FideEventDetailService>()", program);
+
+        // Und NICHT mit retryEmpty: ein Ereignis ohne gepflegte Angaben ist der haeufige Fall und
+        // darf nicht jede Nacht erneut abgefragt werden.
+        Assert.Contains("details.RunAsync(_fideDetailBatchSize, retryEmpty: false", scheduler);
+    }
+
+    private static string ReadSource(string relativePath)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "compose.dev.yml")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var path = Path.Combine(dir!.FullName, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(path), $"Datei fehlt: {relativePath}");
+        return File.ReadAllText(path);
+    }
 }

@@ -29,6 +29,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     private readonly int _weeklyBatchSize;
     private readonly int _disambiguationBatchSize;
     private readonly int _roundPlanBatchSize;
+    private readonly int _fideDetailBatchSize;
     private readonly int _fideYears;
     private readonly bool _enabled;
 
@@ -66,6 +67,13 @@ public class TournamentDirectoryScheduler : BackgroundService
         // Wie viele Jahre des FIDE-Kalenders je Nacht: das laufende plus die naechsten. Drei
         // Abrufe, denn weiter voraus fuehrt FIDE praktisch nichts (2028 war leer). 0 = aus.
         _fideYears = Math.Clamp(configuration.GetValue("TournamentDirectory:FideYears", 3), 0, 5);
+
+        // Kleiner als die Rundenplan-Portion, weil es viel weniger zu tun gibt: der
+        // FIDE-Jahreskalender bringt je Nacht eine Handvoll neuer Ereignisse, und nur die haben
+        // noch keine Detailangaben. 50 holt einen Rueckstand in wenigen Naechten auf und kostet
+        // im eingeschwungenen Zustand fast nichts.
+        _fideDetailBatchSize = Math.Clamp(
+            configuration.GetValue("TournamentDirectory:FideDetailBatchSize", 50), 0, 500);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -166,6 +174,27 @@ public class TournamentDirectoryScheduler : BackgroundService
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 _logger.LogWarning(ex, "Turnierverzeichnis: FIDE-Durchgang fehlgeschlagen");
+            }
+
+            // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
+            // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
+            // Bedenkzeit, kein System und keine Anschrift.
+            //
+            // Ohne diesen Block bliebe der Nachtrag eine Handarbeit — jedes neue FIDE-Ereignis
+            // kaeme mit Name, Termin und Ort herein und wuerde nie wieder angefasst. `retryEmpty`
+            // steht bewusst auf false: ein Ereignis ohne gepflegte Angaben ist der haeufige Fall
+            // und darf nicht jede Nacht erneut abgefragt werden.
+            try
+            {
+                if (_fideDetailBatchSize > 0)
+                {
+                    var details = scope.ServiceProvider.GetRequiredService<FideEventDetailService>();
+                    await details.RunAsync(_fideDetailBatchSize, retryEmpty: false, ct);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: FIDE-Detail-Durchgang fehlgeschlagen");
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
