@@ -21,8 +21,25 @@ public class TournamentSpeedClassifierTests
     [InlineData("3min + 2sek/Zug", TournamentSpeed.Blitz)]
     [InlineData("1min+2sec", TournamentSpeed.Blitz)]
     [InlineData("7 min + 5 sec/Zug", TournamentSpeed.Rapid)]
+    // Am Dev-Stand tatsaechlich vorgefunden — sechs Turniere blieben ohne Klasse, obwohl die
+    // Bedenkzeit dastand: das MINUTENZEICHEN, die nackte Kurzform und eine fremde Sprache.
+    [InlineData("90'/40m + 30'/end & 30\"/m", TournamentSpeed.Standard)]
+    [InlineData("90'/40 moves + 30'/end & 30\"/move from move 1", TournamentSpeed.Standard)]
+    [InlineData("90+30", TournamentSpeed.Standard)]
+    [InlineData("10 minuta po igraču", TournamentSpeed.Rapid)]
+    [InlineData("5+3", TournamentSpeed.Blitz)]
     public void Classify_RealWorldTimeControls(string text, TournamentSpeed expected)
         => Assert.Equal(expected, TournamentSpeedClassifier.Classify(text));
+
+    /// <summary>
+    /// Die nackte Kurzform gilt nur, wenn der Text aus NICHTS anderem besteht — sonst verschluckt
+    /// sie Zahlenpaare aus Fliesstext („Runde 1+2 am Samstag") und macht daraus eine Bedenkzeit.
+    /// </summary>
+    [Theory]
+    [InlineData("Runde 1+2 am Samstag")]
+    [InlineData("Gruppe A 3+4")]
+    public void Classify_ShorthandOnlyCountsWhenItIsTheWholeText(string text)
+        => Assert.Equal(TournamentSpeed.Unknown, TournamentSpeedClassifier.Classify(text));
 
     [Theory]
     [InlineData(null)]

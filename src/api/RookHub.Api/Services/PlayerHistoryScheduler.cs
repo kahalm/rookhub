@@ -98,12 +98,12 @@ public class PlayerHistoryScheduler : BackgroundService
 
             if (sweep.Unavailable > 0)
                 _logger.LogWarning(
-                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Unavailable} Trefferlisten nicht erreichbar",
-                    sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Unavailable);
+                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet, {Unavailable} Trefferlisten nicht erreichbar",
+                    sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified, sweep.Unavailable);
             else
                 _logger.LogInformation(
-                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt",
-                    sweep.Players, sweep.Cards, sweep.TimeControls);
+                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet",
+                    sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

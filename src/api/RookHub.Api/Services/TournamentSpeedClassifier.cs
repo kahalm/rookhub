@@ -18,11 +18,30 @@ public static class TournamentSpeedClassifier
     private static readonly Regex HoursPattern = new(
         @"(\d+)\s*(?:h\b|std|stunden|stunde)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Minuten — auch als MINUTENZEICHEN geschrieben. chess-results nutzt beides: „90 min",
+    /// „10 minuta po igraču" (kroatisch) und „90'/40m + 30'/end". Am Dev-Stand blieben genau
+    /// deshalb sechs Turniere ohne Klasse, obwohl die Bedenkzeit dastand — der Apostroph war die
+    /// haeufigste Schreibweise darunter.
+    /// </summary>
     private static readonly Regex MinutesPattern = new(
-        @"(\d+)\s*(?:min\b|min\.|minutes|minuten|minute)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(\d+)\s*(?:min\b|min\.|minutes|minuten|minute|minuta|minut|'|′)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Das Inkrement in Sekunden — ebenfalls mit Zeichen („30″/move", „30 sec"). Das
+    /// Sekundenzeichen steht dabei fuer sich; das MINUTENzeichen faengt das Muster darueber.
+    /// </summary>
     private static readonly Regex IncrementPattern = new(
-        @"(\d+)\s*(?:sec|sek)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(\d+)\s*(?:sec|sek|""|″)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Die nackte Kurzform „90+30" — Grundzeit in Minuten, Inkrement in Sekunden, ohne jede
+    /// Einheit. Nur als GANZE Angabe zulaessig (der Text besteht aus nichts anderem), sonst
+    /// verschluckte sie Zahlenpaare aus Fliesstext wie „Runde 1+2".
+    /// </summary>
+    private static readonly Regex BareShorthandPattern = new(
+        @"^\s*(\d{1,3})\s*\+\s*(\d{1,3})\s*$", RegexOptions.Compiled);
 
     public static TournamentSpeed Classify(string? timeControlText)
     {
@@ -40,6 +59,17 @@ public static class TournamentSpeedClassifier
     internal static int? TotalMinutes(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
+
+        // „90+30": Grundzeit in Minuten, Inkrement in Sekunden. Zuerst geprueft, weil die
+        // allgemeinen Muster daran nichts finden — es steht keine Einheit im Text.
+        var shorthand = BareShorthandPattern.Match(text);
+        if (shorthand.Success
+            && int.TryParse(shorthand.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var shortBase)
+            && int.TryParse(shorthand.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var shortInc))
+        {
+            var shortTotal = shortBase + shortInc;
+            return shortTotal is > 0 and <= 600 ? shortTotal : null;
+        }
 
         int? baseMinutes = null;
         var minuteMatch = MinutesPattern.Match(text);

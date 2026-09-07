@@ -156,7 +156,8 @@ public class TournamentHistoryService
     /// zwei verschiedene Seiten und werden getrennt gezaehlt; der DECKEL gilt fuer ihre Summe,
     /// denn beide kosten denselben Abruf hinter demselben Rate-Limiter.
     /// </summary>
-    public sealed record HistorySweep(int Players, int Cards, int TimeControls, int Unavailable);
+    public sealed record HistorySweep(
+        int Players, int Cards, int TimeControls, int Reclassified, int Unavailable);
 
     /// <summary>
     /// Der Hintergrund-Durchgang: Trefferlisten auffrischen und fehlende Spielerkarten holen, fuer
@@ -187,6 +188,10 @@ public class TournamentHistoryService
             var identity = IdentityOf(profile.LastName, profile.FirstName, profile.FideId, profile.ChessResultsId);
             if (identity is not null) identities.TryAdd(identity.Key, identity);
         }
+
+        // Zuerst das, was NICHTS kostet: gespeicherte Texte neu einordnen. Eine verbesserte
+        // Regel erreicht den Bestand damit ohne einen einzigen Seitenabruf.
+        var reclassified = await ReclassifyTimeControlsAsync(ct);
 
         var players = 0;
         var cards = 0;
@@ -246,7 +251,7 @@ public class TournamentHistoryService
             }
         }
 
-        return new HistorySweep(players, cards, timeControls, unavailable);
+        return new HistorySweep(players, cards, timeControls, reclassified, unavailable);
     }
 
     /// <summary>
@@ -442,6 +447,37 @@ public class TournamentHistoryService
         if (existing is null) _db.TournamentTimeControls.Add(row);
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Ordnet GESPEICHERTE Bedenkzeit-Texte neu ein — ohne einen einzigen Abruf.
+    ///
+    /// <para>Genau dafuer liegt der Rohtext neben der Klasse: aendert sich die Einordnungsregel,
+    /// wirkt sie auf den Bestand, statt 700 Seiten erneut zu holen. Am Dev-Stand blieben sechs
+    /// Turniere ohne Klasse, obwohl die Bedenkzeit dastand — „90'/40m + 30'/end & 30″/m",
+    /// „90+30" und „10 minuta po igraču" kannte der Klassifizierer nicht.</para>
+    ///
+    /// <para>Angefasst werden nur Zeilen, die HEUTE unbekannt sind: eine schon eingeordnete
+    /// nachtraeglich umzuschreiben waere eine stille Korrektur an Daten, die jemand bereits
+    /// gesehen hat.</para>
+    /// </summary>
+    public async Task<int> ReclassifyTimeControlsAsync(CancellationToken ct = default)
+    {
+        var rows = await _db.TournamentTimeControls
+            .Where(t => t.Speed == TournamentSpeed.Unknown && t.TimeControlText != null)
+            .ToListAsync(ct);
+
+        var changed = 0;
+        foreach (var row in rows)
+        {
+            var speed = TournamentSpeedClassifier.Classify(row.TimeControlText);
+            if (speed == TournamentSpeed.Unknown) continue;
+            row.Speed = speed;
+            changed++;
+        }
+
+        if (changed > 0) await _db.SaveChangesAsync(ct);
+        return changed;
     }
 
     /// <summary>

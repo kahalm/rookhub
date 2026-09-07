@@ -605,6 +605,48 @@ public class TournamentHistoryServiceTests : IDisposable
         Assert.Equal(TournamentSpeed.Blitz, history.Speeds["1206267"]);
     }
 
+    /// <summary>
+    /// Eine verbesserte Einordnungsregel erreicht den BESTAND ohne einen einzigen Abruf — genau
+    /// dafuer liegt der Rohtext neben der Klasse. Am Dev-Stand blieben sechs Turniere ohne Klasse,
+    /// obwohl die Bedenkzeit dastand („90'/40m + 30'/end", „90+30", „10 minuta po igraču").
+    /// </summary>
+    [Fact]
+    public async Task ReclassifyTimeControlsAsync_UsesTheStoredText_WithoutFetching()
+    {
+        _db.TournamentTimeControls.AddRange(
+            new TournamentTimeControl { ChessResultsId = "1", TimeControlText = "90+30", Speed = TournamentSpeed.Unknown },
+            new TournamentTimeControl { ChessResultsId = "2", TimeControlText = "10 minuta po igraču", Speed = TournamentSpeed.Unknown });
+        await _db.SaveChangesAsync();
+
+        var changed = await CreateService().ReclassifyTimeControlsAsync();
+
+        Assert.Equal(2, changed);
+        Assert.Equal(TournamentSpeed.Standard, (await _db.TournamentTimeControls.SingleAsync(t => t.ChessResultsId == "1")).Speed);
+        Assert.Equal(TournamentSpeed.Rapid, (await _db.TournamentTimeControls.SingleAsync(t => t.ChessResultsId == "2")).Speed);
+        // Kein Netz im Spiel.
+        Assert.Equal(0, _handler.InfoCalls);
+    }
+
+    /// <summary>
+    /// Angefasst werden nur die HEUTE unbekannten. Eine schon eingeordnete Zeile nachtraeglich
+    /// umzuschreiben waere eine stille Korrektur an Daten, die jemand bereits gesehen hat — und
+    /// ein Text, aus dem weiterhin nichts zu lesen ist, bleibt unbekannt.
+    /// </summary>
+    [Fact]
+    public async Task ReclassifyTimeControlsAsync_LeavesTheAlreadyClassifiedAndTheUnreadableAlone()
+    {
+        _db.TournamentTimeControls.AddRange(
+            new TournamentTimeControl { ChessResultsId = "1", TimeControlText = "5 min", Speed = TournamentSpeed.Standard },
+            new TournamentTimeControl { ChessResultsId = "2", TimeControlText = "nach Vereinbarung", Speed = TournamentSpeed.Unknown });
+        await _db.SaveChangesAsync();
+
+        var changed = await CreateService().ReclassifyTimeControlsAsync();
+
+        Assert.Equal(0, changed);
+        Assert.Equal(TournamentSpeed.Standard, (await _db.TournamentTimeControls.SingleAsync(t => t.ChessResultsId == "1")).Speed);
+        Assert.Equal(TournamentSpeed.Unknown, (await _db.TournamentTimeControls.SingleAsync(t => t.ChessResultsId == "2")).Speed);
+    }
+
     // ----- Der Zeitplan -----------------------------------------------------
 
     /// <summary>
