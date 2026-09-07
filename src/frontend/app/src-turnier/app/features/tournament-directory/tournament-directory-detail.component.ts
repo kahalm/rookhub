@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -13,6 +14,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { CrawlJob, Tournament } from '@rh/core/models';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { TournamentListService } from '../../core/tournament-list.service';
+import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
 import { DirectoryEntry } from './tournament-directory.model';
@@ -53,6 +55,7 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialog = inject(MatDialog);
 
   readonly entry = signal<DirectoryEntry | null>(null);
   readonly loading = signal(true);
@@ -98,6 +101,18 @@ export class TournamentDirectoryDetailComponent implements OnInit {
     const e = this.entry();
     return e && e.lat != null ? [e] : [];
   });
+
+  /**
+   * „Falsches Event melden". Der Dialog fragt nicht nur, was falsch ist, sondern auch, wie solche
+   * Turniere in der Region des Melders heissen — genau daran laesst sich die Einordnung kuenftiger
+   * Ausgaben derselben Reihe verbessern.
+   */
+  reportEntry(): void {
+    const entry = this.entry();
+    if (!entry) return;
+    const data: ReportEntryDialogData = { entry };
+    this.dialog.open(ReportEntryDialogComponent, { data, width: '560px', maxHeight: '90vh' });
+  }
 
   chessResultsUrl(id: string): string {
     return `https://chess-results.com/tnr${id}.aspx?lan=1`;

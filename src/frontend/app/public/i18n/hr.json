@@ -83,7 +83,8 @@
     "whiteToMove": "Bijeli na potezu",
     "blackToMove": "Crni na potezu",
     "copy": "Kopiraj",
-    "error": "Nešto je pošlo po zlu."
+    "error": "Nešto je pošlo po zlu.",
+    "send": "Pošalji"
   },
   "notifications": {
     "title": "Obavijesti",
@@ -3077,7 +3078,82 @@
       "openDetail": "Otvori stranicu turnira",
       "thisVenue": "Ovo mjesto: {{name}}"
     },
-    "bookmarkedImporting": "Označeno. Turnir se dohvaća — sudionici i rezultati slijede odmah."
+    "bookmarkedImporting": "Označeno. Turnir se dohvaća — sudionici i rezultati slijede odmah.",
+    "place": {
+      "label": "Mjesto",
+      "hint": "Traži ili koristi lokaciju",
+      "useCurrent": "Koristi moju trenutnu lokaciju",
+      "error": {
+        "unsupported": "Ovaj pregljednik ne može prijaviti lokaciju.",
+        "denied": "Pristup lokaciji je blokiran. Možeš ga dopustiti u postavkama pregljednika za ovu stranicu.",
+        "unavailable": "Tvoja lokacija se trenutno nije mogla odrediti.",
+        "timeout": "Određivanje lokacije trajalo je predugo. Pokušaj ponovno."
+      }
+    },
+    "radius": {
+      "label": "U krugu",
+      "any": "Svugdje",
+      "km": "{{km}} km"
+    },
+    "kindFilter": "Pojedinačno ili ekipno",
+    "kind": {
+      "Individual": "Pojedinačno",
+      "Team": "Ekipno",
+      "Unknown": "Nerazvrstano"
+    },
+    "ageFilter": "Uzrasna kategorija",
+    "age": {
+      "U8": "U8",
+      "U10": "U10",
+      "U12": "U12",
+      "U14": "U14",
+      "U16": "U16",
+      "U18": "U18",
+      "U20": "U20",
+      "YouthUnspecified": "Mladi",
+      "Senior": "Seniori"
+    },
+    "genderFilter": "Kategorija po spolu",
+    "gender": {
+      "Female": "Djevojke / žene",
+      "Male": "Dječaci / muškarci",
+      "Open": "Otvoreno"
+    },
+    "adultsOnly": "Samo odrasli",
+    "hideLeagues": "Sakrij lige",
+    "audienceHelp": "Pojedinačno ili ekipno dolazi s chess-resultsa.\n\nUzrast i spol ne: za njih ne postoji polje, čitaju se iz imena turnira. To dobro pogađa gdje ime navodi kategoriju („U12 djevojke\", „UNDER 16 BOYS\"), a nikako gdje je ne navodi. „Samo odrasli\" skriva sve s oznakom mladih u imenu; seniori ostaju, senirski šah je šah odraslih.\n\nLiga je ekipno natjecanje kroz cijelu sezonu — ili ono koje to kaže u svom imenu.\n\nNešto u pogrešnoj kategoriji? Na stranici turnira postoji „prijavi pogrešan turnir\" — i tamo se pita kako se takvi turniri zovu u tvojoj regiji. Upravo to popravlja stvar za sve.",
+    "missing": {
+      "cta": "Tvoj turnir nedostaje? Prijavi ga ovdje",
+      "blurb": "Imenik čita chess-results. Turniri objavljeni drugdje za njega su nevidljivi.",
+      "title": "Prijavi izvor turnira koji nedostaje",
+      "lead": "Ovaj imenik puni se iz chess-results pretrage turnira — kdo tamo ne objavljuje, ovdje se ne pojavljuje. Najviše pomaže ne pojedinačni datum, nego LINK: službena stranica na kojoj su navedeni tvoji turniri može se redovno čitati, i tada se od tada pojavljuju svi.",
+      "link": "Link na službenu stranicu",
+      "linkHint": "Kalendar saveza, stranica kluba, stranica serije turnira — što službenije, to bolje",
+      "linkRequired": "Navedi potpuni link koji počinje s http:// ili https://.",
+      "message": "Još nešto što bismo trebali znati? (neobavezno)",
+      "thanks": "Hvala — pogledat ćemo stranicu.",
+      "sendError": "Poruka se nije mogla poslati. Pokušaj ponovno."
+    },
+    "report": {
+      "cta": "Prijavi pogrešan turnir",
+      "title": "Prijavi pogrešan unos",
+      "lead": "Reci nam što je ovdje pogrešno. Sve je neobavezno — i tekst: slanje bez ijedne riječi ipak kaže „s ovim nešto nije u redu\".",
+      "current": "Trenutno zapisano",
+      "message": "Što je pogrešno?",
+      "location": "Točno mjesto",
+      "kind": "Pojedinačno ili ekipno",
+      "ageGroups": "Uzrasna kategorija",
+      "gender": "Kategorija po spolu",
+      "speed": "Tempo igre",
+      "isLeague": "Ovo je liga (sezonsko natjecanje)",
+      "learnTitle": "Dva pitanja koja pomažu i izvan ovog jednog turnira",
+      "namePattern": "Kako se takvi turniri zovu u tvojoj regiji?",
+      "namePatternHint": "Uzrast i publika čitaju se iz imena turnira, a ta imena su lokalna — u Tirolu se turnir za mlade zove „Schachrallye\". Kdo takvu oznaku jednom navede, osigurava da se svako buduće izdanje te serije ispravno razvrsta.",
+      "sourceLink": "Stranica na kojoj se to bolje vidi",
+      "thanks": "Hvala — prijava je došla i možemo na nju odgovoriti.",
+      "sendError": "Prijava se nije mogla poslati. Pokušaj ponovno.",
+      "unset": "ostavi nepromijenjeno"
+    }
   },
   "turnier": {
     "brand": "Turniri",

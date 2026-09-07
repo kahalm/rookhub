@@ -11,6 +11,7 @@ function entry(id: string, lat: number | null, lon: number | null,
     speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: null, playerCount: null, lat, lon, geoSource, geoPlaceName: null,
     distanceKm: null, cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
+    kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
   };
 }
 

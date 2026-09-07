@@ -83,7 +83,8 @@
     "whiteToMove": "White to move",
     "blackToMove": "Black to move",
     "copy": "Copy",
-    "error": "Something went wrong."
+    "error": "Something went wrong.",
+    "send": "Send"
   },
   "notifications": {
     "title": "Notifications",
@@ -3077,7 +3078,82 @@
       "openDetail": "Open the tournament page",
       "thisVenue": "This venue: {{name}}"
     },
-    "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment."
+    "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment.",
+    "place": {
+      "label": "Place",
+      "hint": "Search or use my location",
+      "useCurrent": "Use my current location",
+      "error": {
+        "unsupported": "This browser cannot report a location.",
+        "denied": "Location access is blocked. You can allow it in the browser settings for this site.",
+        "unavailable": "Your location could not be determined right now.",
+        "timeout": "Determining your location took too long. Please try again."
+      }
+    },
+    "radius": {
+      "label": "Within",
+      "any": "Anywhere",
+      "km": "{{km}} km"
+    },
+    "kindFilter": "Individual or team",
+    "kind": {
+      "Individual": "Individual",
+      "Team": "Team",
+      "Unknown": "Unclassified"
+    },
+    "ageFilter": "Age group",
+    "age": {
+      "U8": "U8",
+      "U10": "U10",
+      "U12": "U12",
+      "U14": "U14",
+      "U16": "U16",
+      "U18": "U18",
+      "U20": "U20",
+      "YouthUnspecified": "Youth",
+      "Senior": "Seniors"
+    },
+    "genderFilter": "Gender section",
+    "gender": {
+      "Female": "Girls / women",
+      "Male": "Boys / men",
+      "Open": "Open"
+    },
+    "adultsOnly": "Adults only",
+    "hideLeagues": "Hide leagues",
+    "audienceHelp": "Individual against team comes from chess-results itself.\n\nAge group and gender section do not: no field carries them, so they are read from the tournament name. That works well where the name states the class (\"U12 girls\", \"UNDER 16 BOYS\") and not at all where it does not. \"Adults only\" hides everything with a youth marker in its name; seniors stay, seniors' chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has \"report wrong event\" — and it asks what tournaments of that kind are called in your region, which is what improves this for everyone.",
+    "missing": {
+      "cta": "Your event missing? Add it here",
+      "blurb": "The directory reads chess-results. Tournaments announced elsewhere are invisible to it.",
+      "title": "Add a missing tournament source",
+      "lead": "This directory is filled from the chess-results tournament search — whoever does not announce there does not appear here. What helps most is not a single date but a LINK: an official page where your tournaments are listed can be read regularly, so all of them show up from now on.",
+      "link": "Link to the official page",
+      "linkHint": "Association calendar, club page, series page — the more official, the better",
+      "linkRequired": "Please give a complete link starting with http:// or https://.",
+      "message": "Anything else we should know? (optional)",
+      "thanks": "Thank you — we will look at the page.",
+      "sendError": "The message could not be sent. Please try again."
+    },
+    "report": {
+      "cta": "Report wrong event",
+      "title": "Report a wrong entry",
+      "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says \"something is off with this one\".",
+      "current": "Currently stored",
+      "message": "What is wrong?",
+      "location": "Correct place",
+      "kind": "Individual or team",
+      "ageGroups": "Age group(s)",
+      "gender": "Gender section",
+      "speed": "Time control",
+      "isLeague": "This is a league (season competition)",
+      "learnTitle": "Two questions that help beyond this one tournament",
+      "namePattern": "What are tournaments like this called in your region?",
+      "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol the youth event is a \"Schachrallye\". Name such a pattern once and every future edition of that series is classified correctly.",
+      "sourceLink": "A page where this is easier to see",
+      "thanks": "Thank you — the report has arrived and we can reply to it.",
+      "sendError": "The report could not be sent. Please try again.",
+      "unset": "leave as is"
+    }
   },
   "turnier": {
     "brand": "Tournaments",

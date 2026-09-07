@@ -4,10 +4,17 @@ import {
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
+import { MapPinMarker } from './map-pin-marker';
 import { DirectoryEntry, DirectoryVenue } from './tournament-directory.model';
 
 /** Sichtbarer Kartenausschnitt als „minLat,minLon,maxLat,maxLon" — Serverformat. */
 export type BoundsString = string;
+
+/** Kopfradius eines Turnier-Pins in Pixeln. */
+const PinRadius = 7;
+
+/** Wie hoch der Pin ueber seinem Ort steht — Ausrichtung von Popup und Hinweis. */
+const PinHeight = MapPinMarker.heightAbove(PinRadius);
 
 /**
  * Leaflet-Karte mit den Turnier-Pins. Wie bei den Schachbrett-Komponenten besitzt die Komponente
@@ -15,9 +22,11 @@ export type BoundsString = string;
  * taucht in keiner anderen Datei auf.
  *
  * Zwei bewusste Entscheidungen:
- *  - `preferCanvas` + `circleMarker` statt DOM-Marker: ein paar tausend Pins bringen die
- *    DOM-Variante zum Kriechen, im Canvas bleibt sie fluessig. Eine Cluster-Bibliothek waere eine
- *    weitere Abhaengigkeit fuer dasselbe Ergebnis.
+ *  - `preferCanvas` statt DOM-Marker: ein paar tausend Marken bringen die DOM-Variante zum
+ *    Kriechen, im Canvas bleibt sie fluessig. Eine Cluster-Bibliothek waere eine weitere
+ *    Abhaengigkeit fuer dasselbe Ergebnis. Die Pin-FORM (unten spitz, oben rund) kommt deshalb
+ *    aus einer eigenen Canvas-Marke, `MapPinMarker` — sie zeigt auf ihren Ort, waehrend ein
+ *    Kreis behauptet, der Ort liege in seiner schwer zu treffenden Mitte.
  *  - Leaflets Stylesheet liegt in angular.json unter `styles` (global) und NICHT in dieser
  *    Komponente: die View-Encapsulation wuerde es wegkapseln und die Kachel-Positionierung
  *    zerlegen. Es sind ~15 kB — der Preis dafuer, dass die Karte ueberhaupt richtig sitzt.
@@ -182,8 +191,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       // Mit nur dem Hauptort verschwaende ein Turnier die Haelfte seiner Orte, und die
       // Umkreissuche fand es nicht, obwohl es zur Haelfte vor der Haustuer stattfindet.
       for (const spot of venuesOf(entry)) {
-      const marker = L.circleMarker([spot.lat, spot.lon], {
-        radius: 7,
+      const marker = new MapPinMarker([spot.lat, spot.lon], {
+        radius: PinRadius,
         weight: 2,
         // Nur ungefaehr verortete Turniere (Bundesland-Mittelpunkt) sichtbar abschwaechen —
         // sonst suggeriert ein knackiger Pin eine Genauigkeit, die er nicht hat.
@@ -192,9 +201,12 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
         fillOpacity: spot.geoSource === 'Region' ? 0.45 : 0.8,
       });
 
-      marker.bindTooltip(tooltipHtml(entry, spot), { direction: 'top', offset: [0, -6] });
+      // Popup und Hinweis muessen ueber den KOPF des Pins ausgerichtet werden, nicht ueber
+      // seinen Ankerpunkt — sonst liegen sie mitten auf der Marke.
+      marker.bindTooltip(tooltipHtml(entry, spot), { direction: 'top', offset: [0, -PinHeight] });
       // Klick = Popup (siehe Klassenkommentar), NICHT der Sprung auf die Detailseite.
-      marker.bindPopup(() => this.buildPopup(entry, spot), { offset: [0, -4], minWidth: 220, maxWidth: 300 });
+      marker.bindPopup(() => this.buildPopup(entry, spot),
+        { offset: [0, -PinHeight + 4], minWidth: 220, maxWidth: 300 });
       // Beim geoeffneten Popup stuende der Hover-Hinweis mit demselben Inhalt daneben.
       marker.on('popupopen', () => marker.closeTooltip());
       marker.addTo(this.markerLayer);

@@ -974,6 +974,46 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
 - **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
   `/api/` an den Servicenamen `api` weiterreicht.
 
+### Turnierkalender-Filterleiste (Stand 0.421.0)
+
+Die Leiste ist um „was ist in meiner Naehe, und wann" gebaut: **Ort** (Autocomplete gegen den
+Gazetteer + `my_location`-Knopf), **Umkreis** (gestufte Werte, kein Schieber) und **Zeitraum**.
+Die Textsuche (Name/Ort/Veranstalter) steht in den ausklappbaren Zusatzfiltern — wer die Seite
+oeffnet, sucht meist kein Turnier, dessen Namen er schon kennt. Suchprofile leben im ⋮-Menue;
+ist eines gewaehlt, ZEIGT das Ortsfeld dessen Ort, und beim Anfassen von Ort oder Radius wird
+daraus ein selbst gefuehrter Mittelpunkt (`profileId` faellt weg, `lat`/`lon`/`radiusKm` gehen
+mit) — sonst behauptet die Leiste eines und der Server rechnet ein anderes.
+
+**Der Browser-Standort laeuft ueber zwei Schritte** (`src-turnier/app/core/geolocation.service.ts`
++ `GET /api/tournament-directory/places/nearest`): die Ortung liefert Koordinaten, ins Feld gehoert
+ein NAME. Aufgeloest wird gegen den LOKALEN Gazetteer — die Koordinaten eines Nutzers sind das
+Letzte, was diese Anwendung nach draussen geben sollte. Findet sich kein Ort, gelten die
+Koordinaten trotzdem (dann stehen sie selbst im Feld). Der Standort wird NIE von selbst abgefragt:
+eine unaufgeforderte Abfrage beim Seitenaufruf loest eine Berechtigungsfrage ohne erkennbaren
+Anlass aus, die im Zweifel abgelehnt wird — und danach ist der Knopf wirkungslos.
+
+**Alles, was aus einer HTTP-Antwort kommt, liegt in Signalen** (`entries`, `total`, `pins`,
+`calendarDays`, `loading`, …). Das ist die Behebung des gemeldeten Fehlers „ich sehe das Ergebnis
+erst, wenn ich von Karte auf Liste wechsle": `provideHttpClient()` laeuft ueber `fetch`, zone.js
+traegt die Angular-Zone NICHT durch den Antwort-Strom, und eine Feldzuweisung im Abonnenten loest
+darum keine Aenderungserkennung aus. Der FILTER bleibt bewusst ein einfaches Objekt — er wird nur
+durch Eingaben geaendert, und die laufen in der Zone. Siehe TODO.md fuer die uebrigen Seiten.
+
+**Die Karten-Pins** sind eine eigene Canvas-Marke (`features/tournament-directory/map-pin-marker.ts`,
+erbt von `L.CircleMarker`): Leaflet kennt im Canvas nur Kreise, und `divIcon`-Marker bringen bei
+ein paar tausend Marken den Browser zum Kriechen. Ueberschrieben sind DREI Dinge, und sie muessen
+zusammenpassen: die gezeichnete Form (`_updatePath`), der Trefferbereich (`_containsPoint` — Kopf
+UEBER dem Anker plus zulaufender Schwanz; der geerbte Kreis um den Anker laege zur Haelfte unter
+dem Pin im Leeren) und die Ausdehnung fuers Neuzeichnen (`_updateBounds` — sonst schneidet der
+Renderer die oberen zwei Drittel weg). Popup- und Tooltip-Offsets kommen aus
+`MapPinMarker.heightAbove`.
+
+**Rueckmeldungen** (beide gehen in den Admin-Nachrichtenkanal, siehe API-Abschnitt):
+`report-entry-dialog.component.ts` auf der Detailseite („falsches Event melden", mit dem
+IST-Stand daneben und der Lern-Frage nach regionalen Turniernamen) und
+`missing-tournament-dialog.component.ts` unter allen drei Ansichten („dein Turnier fehlt?",
+Pflicht-Link).
+
 ## Lokales Development
 
 ### Kompletter Stack via Docker

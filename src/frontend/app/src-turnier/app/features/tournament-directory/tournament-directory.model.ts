@@ -7,6 +7,34 @@ export type GeoSourceKind =
   /** Ortsname gefunden, aber mehrdeutig — bewusst OHNE Koordinaten (siehe Server). */
   | 'Ambiguous';
 
+/** Einzel- oder Mannschaftsturnier. `Unknown` = noch nicht geklaert, nicht „keins von beidem". */
+export type TournamentKind = 'Unknown' | 'Individual' | 'Team';
+
+/** Geschlechtsklasse; `Open` ist der Normalfall. */
+export type TournamentGender = 'Open' | 'Female' | 'Male';
+
+/**
+ * Alters-/Nachwuchsklassen, wie der Server sie benennt. `YouthUnspecified` = Nachwuchs ohne
+ * genannte Klasse („Jugendmeisterschaft", „Schachrallye"), `Senior` ist ausdruecklich KEINE
+ * Jugendklasse.
+ */
+export type TournamentAgeGroup =
+  'U8' | 'U10' | 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'YouthUnspecified' | 'Senior';
+
+/** Die Klassen, die als Filter-Chips angeboten werden — in der Reihenfolge der Leiste. */
+export const DIRECTORY_AGE_GROUPS: TournamentAgeGroup[] =
+  ['U8', 'U10', 'U12', 'U14', 'U16', 'U18', 'U20', 'YouthUnspecified', 'Senior'];
+
+export const DIRECTORY_GENDERS: TournamentGender[] = ['Female', 'Male'];
+
+export const DIRECTORY_KINDS: TournamentKind[] = ['Individual', 'Team'];
+
+/**
+ * Angebotene Umkreise in km. Bewusst gestufte Werte statt eines Schiebers: „112 km" ist keine
+ * Angabe, die jemand meint, und ein Schieber laedt bei jedem Pixel neu.
+ */
+export const DIRECTORY_RADII: number[] = [10, 25, 50, 100, 200, 500];
+
 export interface DirectoryEntry {
   chessResultsId: string;
   name: string;
@@ -38,6 +66,13 @@ export interface DirectoryEntry {
    * einzelnen Ort — der steht dann in lat/lon/geoPlaceName.
    */
   venues: DirectoryVenue[];
+  /** Einzel oder Mannschaft — aus der chess-results-Turnierart, nicht geraten. */
+  kind: TournamentKind;
+  /** Saisonwettbewerb statt Turnier (abgeleitet). */
+  isLeague: boolean;
+  /** Aus dem NAMEN gelesene Klassen; leer = offenes Erwachsenenturnier. */
+  ageGroups: TournamentAgeGroup[];
+  gender: TournamentGender;
 }
 
 /** Ein einzelner Spielort eines Turniers mit mehreren. */
@@ -118,6 +153,18 @@ export interface DirectoryFilter {
   weekendOnly: boolean;
   minPlayers: number | null;
   profileId: number | null;
+
+  /** Leer = alles. Sonst nur diese Turnierarten. */
+  kinds: TournamentKind[];
+  /**
+   * Gesuchte Klassen. Der Server prueft UEBERSCHNEIDUNG: „U12" findet auch die
+   * „U8-U18"-Meisterschaft, denn genau die ist gemeint.
+   */
+  ageGroups: TournamentAgeGroup[];
+  genders: TournamentGender[];
+  /** Nur Turniere ohne JUGENDmerkmal. Seniorenturniere bleiben sichtbar. */
+  adultsOnly: boolean;
+  hideLeagues: boolean;
 }
 
 /** Benannte Zeitraeume der Filterleiste. `custom` blendet die beiden Datumsfelder ein. */
@@ -154,4 +201,31 @@ export const EMPTY_FILTER: DirectoryFilter = {
   from: null, to: null, lat: null, lon: null, radiusKm: null,
   federation: null, speed: null, text: null, weekendOnly: false,
   minPlayers: null, profileId: null,
+  kinds: [], ageGroups: [], genders: [], adultsOnly: false, hideLeagues: false,
 };
+
+/**
+ * Was in der Umkreis-Auswahl steht, wenn kein Ort gewaehlt ist. Der Vorgabewert greift erst,
+ * sobald ein Ort da ist — vorher waere ein Radius ohne Mittelpunkt eine Angabe ohne Wirkung.
+ */
+export const DEFAULT_RADIUS_KM = 100;
+
+/**
+ * „Falsches Event melden". JEDES Feld ist freiwillig — wer nur auf den Knopf drueckt, meldet
+ * „hier stimmt etwas nicht", und auch das ist brauchbar.
+ *
+ * `namePattern` ist die wertvollste Frage des Formulars: Alter und Publikum stehen nur im Namen,
+ * und diese Namen sind REGIONAL („Schachrallye" ist in Tirol immer Nachwuchs). Wer eine solche
+ * Kennung einmal nennt, verbessert die Einordnung aller kuenftigen Ausgaben derselben Reihe.
+ */
+export interface DirectoryReport {
+  message: string | null;
+  location: string | null;
+  kind: string | null;
+  ageGroups: string | null;
+  gender: string | null;
+  speed: string | null;
+  isLeague: boolean | null;
+  namePattern: string | null;
+  sourceLink: string | null;
+}

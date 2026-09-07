@@ -5,6 +5,8 @@ import { Router, provideRouter } from '@angular/router';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of, throwError } from 'rxjs';
+import { GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryComponent } from './tournament-directory.component';
 import { DirectoryEntry, SearchProfile } from './tournament-directory.model';
 
@@ -22,6 +24,7 @@ function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
     timeControl: '90 min', speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: 7, playerCount: 20, lat: 48.2, lon: 13.0, geoSource: 'City', geoPlaceName: 'Ranshofen',
     distanceKm: 12.5, cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
+    kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
   };
 }
 
@@ -71,8 +74,8 @@ describe('TournamentDirectoryComponent', () => {
     flushProfiles([profile(1, 'Zuhause')]);
     flushList([entry('111')]);
 
-    expect(component.profiles.length).toBe(1);
-    expect(component.entries.length).toBe(1);
+    expect(component.profiles().length).toBe(1);
+    expect(component.entries().length).toBe(1);
     http.verify();
   });
 
@@ -185,7 +188,7 @@ describe('TournamentDirectoryComponent', () => {
     let req = http.expectOne(r => r.url === '/api/tournament-directory');
     expect(req.request.params.get('page')).toBe('2');
     req.flush({ items: [entry('2')], total: 200, truncated: false });
-    expect(component.entries.length).toBe(2);
+    expect(component.entries().length).toBe(2);
 
     component.searchText = 'Braunau';
     component.reload();
@@ -194,7 +197,7 @@ describe('TournamentDirectoryComponent', () => {
     expect(req.request.params.get('q')).toBe('Braunau');
     req.flush({ items: [entry('3')], total: 1, truncated: false });
     // Seite 1 ersetzt, statt an die alte Liste anzuhängen.
-    expect(component.entries.length).toBe(1);
+    expect(component.entries().length).toBe(1);
     http.verify();
   });
 
@@ -217,8 +220,8 @@ describe('TournamentDirectoryComponent', () => {
     stale.flush({ items: [entry('alt')], total: 200, truncated: false });
     fresh.flush({ items: [entry('neu')], total: 1, truncated: false });
 
-    expect(component.entries.map(e => e.chessResultsId)).toEqual(['neu']);
-    expect(component.total).toBe(1);
+    expect(component.entries().map(e => e.chessResultsId)).toEqual(['neu']);
+    expect(component.total()).toBe(1);
     http.verify();
   });
 
@@ -231,7 +234,7 @@ describe('TournamentDirectoryComponent', () => {
     http.expectOne(r => r.url === '/api/tournament-directory')
       .flush({ items: [entry('2')], total: 100, truncated: false });
 
-    expect(component.entries.map(e => e.chessResultsId)).toEqual(['1', '2']);
+    expect(component.entries().map(e => e.chessResultsId)).toEqual(['1', '2']);
     http.verify();
   });
 
@@ -245,7 +248,7 @@ describe('TournamentDirectoryComponent', () => {
     expect(req.request.params.get('bbox')).toBe('47.0,12.0,48.0,14.0');
     req.flush([entry('1')]);
 
-    expect(component.pins.length).toBe(1);
+    expect(component.pins().length).toBe(1);
     http.verify();
   });
 
@@ -265,17 +268,18 @@ describe('TournamentDirectoryComponent', () => {
   it('merkt das Turnier, holt es gleich mit und markiert es sofort', async () => {
     await setup();
     flushProfiles([]);
-    flushList([]);
+    flushList([entry('111')]);
 
-    const target = entry('111');
-    component.bookmark(target);
+    component.bookmark(component.entries()[0]);
     http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
     // „Merken" heisst auch „holen" — sonst kaeme das Turnier erst zum Spielbeginn.
     const crawl = http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' });
     expect(crawl.request.body).toEqual({ chessResultsId: '111', jobType: 'Full' });
     crawl.flush({ id: 5, status: 'Pending' });
 
-    expect(target.subscribed).toBeTrue();
+    // Der Haken haengt am Eintrag IN DER LISTE, nicht am uebergebenen Objekt: die Liste liegt in
+    // einem Signal, und eine Mutation daran wuerde die Ansicht nicht erreichen.
+    expect(component.entries()[0].subscribed).toBeTrue();
     http.verify();
   });
 
@@ -348,9 +352,9 @@ describe('TournamentDirectoryComponent', () => {
     flushProfiles([]);
     flushList([]);
 
-    expect(component.tilesFailed).toBeFalse();
+    expect(component.tilesFailed()).toBeFalse();
     component.onTilesFailed();
-    expect(component.tilesFailed).toBeTrue();
+    expect(component.tilesFailed()).toBeTrue();
     http.verify();
   });
 
@@ -359,7 +363,270 @@ describe('TournamentDirectoryComponent', () => {
     http.expectOne('/api/tournament-search-profiles').flush('kaputt', { status: 500, statusText: 'Server Error' });
     flushList([entry('1')]);
 
-    expect(component.entries.length).toBe(1);
+    expect(component.entries().length).toBe(1);
+    http.verify();
+  });
+
+  // ----- Ort, Umkreis und Standort ---------------------------------------
+
+  it('nimmt einen Ort aus der Ortsliste als Suchmittelpunkt', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onPlaceInput('Hallein');
+    // Die Ortssuche laeuft entprellt — ohne Warten liegt noch keine Anfrage vor.
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const suggest = http.expectOne(r => r.url === '/api/tournament-directory/places');
+    expect(suggest.request.params.get('q')).toBe('Hallein');
+    suggest.flush([{ label: '5400 Hallein (AT)', country: 'AT', postalCode: '5400', lat: 47.68, lon: 13.1 }]);
+
+    component.choosePlace(component.placeSuggestions()[0]);
+    const req = flushList([]);
+
+    expect(req.request.params.get('lat')).toBe('47.68');
+    expect(req.request.params.get('lon')).toBe('13.1');
+    // Ohne Vorgabe waere ein Mittelpunkt ohne Radius eine Angabe ohne Wirkung.
+    expect(req.request.params.get('radiusKm')).toBe('100');
+    http.verify();
+  });
+
+  /**
+   * Ein selbst gewaehlter Ort ERSETZT das Profil. Liefe beides mit, gewaenne serverseitig das
+   * Profil — das Ortsfeld behauptete dann etwas anderes, als die Liste darunter zeigt.
+   */
+  it('legt bei eigener Ortswahl das Suchprofil ab', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+    expect(component.filter.profileId).toBe(3);
+
+    component.choosePlace({ label: 'Wien (AT)', country: 'AT', postalCode: null, lat: 48.21, lon: 16.37 });
+    const req = flushList([]);
+
+    expect(component.filter.profileId).toBeNull();
+    expect(req.request.params.get('profileId')).toBeNull();
+    expect(req.request.params.get('lat')).toBe('48.21');
+    http.verify();
+  });
+
+  /**
+   * Text im Ortsfeld, der nicht zum gewaehlten Treffer passt, entwertet die Koordinaten. Ohne
+   * das sucht die Seite weiter um Wien, waehrend „Berlin" im Feld steht.
+   */
+  it('verwirft die Koordinaten, sobald der Ortstext abweicht', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.choosePlace({ label: 'Wien (AT)', country: 'AT', postalCode: null, lat: 48.21, lon: 16.37 });
+    flushList([]);
+
+    component.onPlaceInput('Berl');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places').flush([]);
+
+    expect(component.filter.lat).toBeNull();
+    expect(component.filter.lon).toBeNull();
+    http.verify();
+  });
+
+  it('übernimmt den Browser-Standort und trägt den nächsten Ort als Namen ein', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOnProperty(geolocation, 'supported').and.returnValue(true);
+    spyOn(geolocation, 'current').and.returnValue(of({ lat: 47.27, lon: 11.39, accuracyM: 30 }));
+
+    component.useCurrentLocation();
+
+    // Die Suche laeuft SOFORT mit den Koordinaten — der Ortsname ist Beiwerk.
+    const req = flushList([]);
+    expect(req.request.params.get('lat')).toBe('47.27');
+    expect(req.request.params.get('radiusKm')).toBe('100');
+
+    const nearest = http.expectOne(r => r.url === '/api/tournament-directory/places/nearest');
+    nearest.flush({ label: '6020 Innsbruck (AT)', country: 'AT', postalCode: '6020', lat: 47.27, lon: 11.39 });
+
+    expect(component.placeLabel).toBe('6020 Innsbruck (AT)');
+    http.verify();
+  });
+
+  /**
+   * Kein Ort im Lexikon in Reichweite (Server: 204) darf die Suche nicht anhalten — die
+   * Koordinaten sind ja da. Dann stehen sie selbst im Feld.
+   */
+  it('behält die Koordinaten, wenn kein Ortsname gefunden wird', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOnProperty(geolocation, 'supported').and.returnValue(true);
+    spyOn(geolocation, 'current').and.returnValue(of({ lat: -33.86, lon: 151.2, accuracyM: 50 }));
+
+    component.useCurrentLocation();
+    flushList([]);
+    http.expectOne(r => r.url === '/api/tournament-directory/places/nearest')
+      .flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(component.filter.lat).toBe(-33.86);
+    expect(component.placeLabel).toBe('-33.860, 151.200');
+    http.verify();
+  });
+
+  it('meldet eine abgelehnte Standortfreigabe als solche', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOn(geolocation, 'current').and.returnValue(throwError(() => 'denied'));
+
+    component.useCurrentLocation();
+
+    // Unterschieden von „geht gerade nicht": nur hier hilft die Browser-Einstellung.
+    expect(component.locationError()).toBe('denied');
+    expect(component.locating()).toBeFalse();
+    http.verify();
+  });
+
+  it('schickt einen selbst gewählten Umkreis mit und löst das Profil ab', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+
+    component.onRadiusChange(25);
+    const req = flushList([]);
+
+    // Der Server nimmt bei gesetztem profileId DESSEN Radius — das Feld zeigte dann 25 km und
+    // die Liste 100.
+    expect(req.request.params.get('profileId')).toBeNull();
+    expect(req.request.params.get('radiusKm')).toBe('25');
+    expect(req.request.params.get('lat')).toBe('47.8');
+    http.verify();
+  });
+
+  // ----- Publikum und Format ---------------------------------------------
+
+  it('schickt Turnierart, Klassen und Geschlecht kommagetrennt mit', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onKindsChange(['Team']);
+    flushList([]);
+    component.onAgeGroupsChange(['U12', 'U14']);
+    flushList([]);
+    component.onGendersChange(['Female']);
+    const req = flushList([]);
+
+    expect(req.request.params.get('kinds')).toBe('Team');
+    expect(req.request.params.get('ageGroups')).toBe('U12,U14');
+    expect(req.request.params.get('genders')).toBe('Female');
+    http.verify();
+  });
+
+  /**
+   * „Nur Erwachsene" und eine gewaehlte Jugendklasse ergeben zwingend eine leere Liste — das
+   * meint niemand, also schliessen sie sich gegenseitig aus.
+   */
+  it('schließt „nur Erwachsene" und eine Jugendklasse gegenseitig aus', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onAgeGroupsChange(['U12']);
+    flushList([]);
+    component.onAdultsOnlyChange(true);
+    let req = flushList([]);
+
+    expect(component.filter.ageGroups).toEqual([]);
+    expect(req.request.params.get('adultsOnly')).toBe('true');
+    expect(req.request.params.get('ageGroups')).toBeNull();
+
+    component.onAgeGroupsChange(['U12']);
+    req = flushList([]);
+    expect(component.filter.adultsOnly).toBeFalse();
+    expect(req.request.params.get('adultsOnly')).toBeNull();
+    http.verify();
+  });
+
+  it('sendet leere Filterlisten gar nicht', async () => {
+    await setup();
+    flushProfiles([]);
+    const req = flushList([]);
+
+    // Ein `kinds=` beantwortet die Frage „welche Arten" mit „keine" statt mit „alle".
+    expect(req.request.params.get('kinds')).toBeNull();
+    expect(req.request.params.get('ageGroups')).toBeNull();
+    expect(req.request.params.get('genders')).toBeNull();
+    http.verify();
+  });
+
+  /**
+   * Ein Wert, den eine spaetere Fassung nicht mehr kennt, wuerde als Filter weiterlaufen, die
+   * Liste unerklaerlich leer halten — und der Server wiese ihn mit 400 ab.
+   */
+  it('verwirft unbekannte Filterwerte aus der gemerkten Ansicht', async () => {
+    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({
+      tab: 'list', ageGroups: ['U12', 'U13'], kinds: ['Team', 'Doubles'], genders: ['Mixed'],
+    }));
+
+    await setup();
+    flushProfiles([]);
+    const req = flushList([]);
+
+    expect(component.filter.ageGroups).toEqual(['U12']);
+    expect(component.filter.kinds).toEqual(['Team']);
+    expect(req.request.params.get('genders')).toBeNull();
+    http.verify();
+  });
+
+  it('merkt einen selbst gesetzten Ort über den Seitenwechsel hinweg', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    component.choosePlace({ label: 'Wien (AT)', country: 'AT', postalCode: null, lat: 48.21, lon: 16.37 });
+    flushList([]);
+
+    // Zweiter Aufbau, wie nach „Turnier oeffnen → zurueck".
+    TestBed.resetTestingModule();
+    await setup();
+    flushProfiles([]);
+    const req = flushList([]);
+
+    expect(component.placeLabel).toBe('Wien (AT)');
+    expect(req.request.params.get('lat')).toBe('48.21');
+    http.verify();
+  });
+
+  /**
+   * Der Hinweis steht UNTER den Reitern, gilt also fuer alle drei Ansichten. Die Luecke ist in
+   * jeder gleich unsichtbar: das Verzeichnis speist sich aus chess-results, und wer dort nicht
+   * ausschreibt, kommt hier nicht vor.
+   */
+  it('zeigt unter allen drei Ansichten den Hinweis auf ein fehlendes Turnier', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('.missing-row');
+    expect(row).withContext('Hinweiszeile fehlt').toBeTruthy();
+    expect(row.querySelector('button')).toBeTruthy();
+
+    for (const tab of [1, 2]) {
+      component.onTabChange(tab);
+      if (tab === 2) {
+        http.expectOne(r => r.url === '/api/tournament-directory/calendar')
+          .flush({ tournaments: [], days: [] });
+      }
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.missing-row')).toBeTruthy();
+    }
     http.verify();
   });
 });

@@ -12,6 +12,7 @@ function entry(id: string, name: string): DirectoryEntry {
     organizer: null, director: null, chiefArbiter: null, rounds: null, playerCount: null,
     lat: null, lon: null, geoSource: 'None', geoPlaceName: null, distanceKm: null,
     cancelled: false, subscribed: false, groupSize: 1, groups: [], venues: [],
+    kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
   };
 }
 

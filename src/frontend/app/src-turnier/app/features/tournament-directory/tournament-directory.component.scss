@@ -21,6 +21,10 @@
 }
 
 .profile-field { min-width: 180px; }
+/* Der Ort ist das wichtigste Feld der Leiste und darf den Platz nehmen, den er braucht —
+   Ortsnamen aus dem Gazetteer sind lang („5400 Hallein (AT)"). */
+.place-field { min-width: 240px; flex: 1 1 240px; }
+.radius-field { width: 140px; }
 .range-field { min-width: 170px; }
 .players-field { width: 150px; }
 .filter-toggle { white-space: nowrap; }
@@ -130,11 +134,27 @@
 
 .more-row { display: flex; justify-content: center; margin-top: 1rem; }
 
+/* „Dein Turnier fehlt?" — steht unter den Reitern, gilt also fuer alle drei Ansichten. Leise
+   gehalten: ein Hinweis am Ende der Liste, kein Aufruf, der mit den Turnieren konkurriert. */
+.missing-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+  font-size: 0.85rem;
+}
+
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
 
 @media (max-width: 768px) {
   .page { padding: 0.75rem 0.5rem; }
   .profile-field,
+  .place-field,
+  .radius-field,
   .range-field,
   .search-field,
   .players-field,

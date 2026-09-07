@@ -6,6 +6,23 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+
+## Turnierverlauf-Lasche (offen, vom Nutzer gewuenscht 2026-09-07)
+
+Eine vierte Lasche auf der Turnierseite: die vergangenen UND kuenftigen Turniere des eigenen
+Kontos, umschaltbar auf Freunde (alle oder einzeln auswaehlbar), je Turnier mit Punktezahl und
+Elo-Performance.
+
+Was schon da ist: `UserProfile.ChessResultsId`, der `AutoSubscriptionService` findet ueber die
+Spielersuche Turniere, an denen der Nutzer selbst teilgenommen hat, und der Crawler liefert
+`/api/tournaments/{id}/players/{snr}/results`. Was fehlt: eine Zusammenfuehrung „Konto → alle
+Turniere → mein Ergebnis darin", die Freundes-Sicht (Sichtbarkeit! `PublicProfileDto` gibt die
+ChessResultsId bewusst NICHT heraus) und die Frage, woher die Elo-Performance kommt — die
+Turnierseite von chess-results nennt sie je Spieler, der eigene Bestand nicht.
+
+Erst messen: fuer wie viele Konten mit ChessResultsId liefert die Spielersuche ueberhaupt eine
+vollstaendige Turnierhistorie, und wie viele Seitenabrufe kostet das je Konto?
+
 ## Nach dem naechsten PROD-Deploy erledigen
 - [ ] **Turnierseite auf PROD scharf schalten** (Dev laeuft seit 2026-09-06). Reihenfolge:
   1. Tag setzen (nur mit Zustimmung!) — `rookhub-turnier:latest` entsteht ausschliesslich im Tag-Lauf.

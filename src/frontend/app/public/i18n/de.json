@@ -83,7 +83,8 @@
     "whiteToMove": "Weiß am Zug",
     "blackToMove": "Schwarz am Zug",
     "copy": "Kopieren",
-    "error": "Da ist etwas schiefgelaufen."
+    "error": "Da ist etwas schiefgelaufen.",
+    "send": "Senden"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -3077,7 +3078,82 @@
       "openDetail": "Turnierseite öffnen",
       "thisVenue": "Dieser Spielort: {{name}}"
     },
-    "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich."
+    "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich.",
+    "place": {
+      "label": "Ort",
+      "hint": "Suchen oder Standort verwenden",
+      "useCurrent": "Meinen aktuellen Standort verwenden",
+      "error": {
+        "unsupported": "Dieser Browser kann keinen Standort melden.",
+        "denied": "Der Zugriff auf den Standort ist gesperrt. In den Browser-Einstellungen für diese Seite lässt er sich erlauben.",
+        "unavailable": "Dein Standort konnte gerade nicht bestimmt werden.",
+        "timeout": "Die Standortbestimmung hat zu lange gedauert. Bitte noch einmal versuchen."
+      }
+    },
+    "radius": {
+      "label": "Umkreis",
+      "any": "Überall",
+      "km": "{{km}} km"
+    },
+    "kindFilter": "Einzel oder Mannschaft",
+    "kind": {
+      "Individual": "Einzel",
+      "Team": "Mannschaft",
+      "Unknown": "Nicht eingeordnet"
+    },
+    "ageFilter": "Altersklasse",
+    "age": {
+      "U8": "U8",
+      "U10": "U10",
+      "U12": "U12",
+      "U14": "U14",
+      "U16": "U16",
+      "U18": "U18",
+      "U20": "U20",
+      "YouthUnspecified": "Jugend",
+      "Senior": "Senioren"
+    },
+    "genderFilter": "Geschlechtsklasse",
+    "gender": {
+      "Female": "Mädchen / Frauen",
+      "Male": "Knaben / Herren",
+      "Open": "Offen"
+    },
+    "adultsOnly": "Nur Erwachsene",
+    "hideLeagues": "Ligen ausblenden",
+    "audienceHelp": "Einzel gegen Mannschaft kommt von chess-results selbst.\n\nAltersklasse und Geschlechtsklasse nicht: dafür gibt es kein Feld, sie werden aus dem Turniernamen gelesen. Das trifft gut, wo der Name die Klasse nennt („U12 weiblich\", „UNDER 16 BOYS\"), und gar nicht, wo er sie verschweigt. „Nur Erwachsene\" blendet alles mit Jugendmerkmal im Namen aus; Senioren bleiben, Seniorenschach ist Erwachsenenschach.\n\nEine Liga ist ein Mannschaftswettbewerb über eine ganze Saison — oder einer, der es im Namen sagt.\n\nEtwas in der falschen Schublade? Auf einer Turnierseite gibt es „falsches Event melden\" — und dort wird gefragt, wie solche Turniere in deiner Region heißen. Genau das verbessert es für alle.",
+    "missing": {
+      "cta": "Dein Turnier fehlt? Hier eintragen",
+      "blurb": "Das Verzeichnis liest chess-results. Woanders ausgeschriebene Turniere sind für es unsichtbar.",
+      "title": "Fehlende Turnierquelle melden",
+      "lead": "Dieses Verzeichnis füllt sich aus der chess-results-Turniersuche — wer dort nicht ausschreibt, kommt hier nicht vor. Am meisten hilft dabei nicht ein einzelner Termin, sondern ein LINK: eine offizielle Seite, auf der deine Turniere stehen, lässt sich regelmäßig auslesen, und dann erscheinen von da an alle.",
+      "link": "Link auf die offizielle Seite",
+      "linkHint": "Verbandskalender, Vereinsseite, Seite der Turnierreihe — je offizieller, desto besser",
+      "linkRequired": "Bitte einen vollständigen Link angeben, der mit http:// oder https:// beginnt.",
+      "message": "Sonst noch etwas, das wir wissen sollten? (freiwillig)",
+      "thanks": "Danke — wir sehen uns die Seite an.",
+      "sendError": "Die Nachricht konnte nicht gesendet werden. Bitte noch einmal versuchen."
+    },
+    "report": {
+      "cta": "Falsches Event melden",
+      "title": "Falschen Eintrag melden",
+      "lead": "Sag uns, was hier falsch steht. Alles ist freiwillig — auch der Text: Absenden ohne ein Wort sagt immerhin „mit dem hier stimmt etwas nicht\".",
+      "current": "Aktuell gespeichert",
+      "message": "Was ist falsch?",
+      "location": "Richtiger Ort",
+      "kind": "Einzel oder Mannschaft",
+      "ageGroups": "Altersklasse(n)",
+      "gender": "Geschlechtsklasse",
+      "speed": "Bedenkzeit",
+      "isLeague": "Das ist eine Liga (Saisonwettbewerb)",
+      "learnTitle": "Zwei Fragen, die über dieses eine Turnier hinaus helfen",
+      "namePattern": "Wie heißen solche Turniere in deiner Region?",
+      "namePatternHint": "Alter und Publikum werden aus dem Turniernamen gelesen, und diese Namen sind regional — in Tirol heißt das Nachwuchsturnier „Schachrallye\". Wer so eine Kennung einmal nennt, sorgt dafür, dass jede künftige Ausgabe dieser Reihe richtig eingeordnet wird.",
+      "sourceLink": "Eine Seite, auf der man das besser sieht",
+      "thanks": "Danke — die Meldung ist angekommen, und wir können darauf antworten.",
+      "sendError": "Die Meldung konnte nicht gesendet werden. Bitte noch einmal versuchen.",
+      "unset": "unverändert lassen"
+    }
   },
   "turnier": {
     "brand": "Turniere",

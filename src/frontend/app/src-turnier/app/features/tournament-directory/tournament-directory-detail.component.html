@@ -102,6 +102,12 @@
           <mat-icon>open_in_new</mat-icon>
           {{ 'tournamentDirectory.openChessResults' | translate }}
         </a>
+        <!-- Leise, aber sichtbar: Ort und Einordnung sind an vielen Stellen erschlossen, nicht
+             gemeldet — ohne einen Rueckweg bleibt jeder Fehlgriff unbemerkt stehen. -->
+        <button mat-button (click)="reportEntry()">
+          <mat-icon>flag</mat-icon>
+          {{ 'tournamentDirectory.report.cta' | translate }}
+        </button>
       </div>
 
       @if (importing()) {
