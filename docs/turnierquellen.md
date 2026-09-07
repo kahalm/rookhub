@@ -59,6 +59,15 @@ polnischen Verbands. Siehe unten.
 | **schaakbond.nl** | ⚠️ **aussichtsreich** | 173 kuenftige (gemessen), offene WordPress-REST-API; Runden/Teilnehmer fehlen ganz — Niederlande |
 | **echecs.asso.fr** | ⚠️ **aussichtsreich** | 102/43/11/10 kuenftige (Sep–Dez, gemessen); Datenbankschutz-Klausel im Impressum — Frankreich |
 | **chessarbiter.com** | ✅ **bester Fund** | **611** kuenftige (gemessen), ein Abruf, kein Vorbehalt — Polen |
+| **englishchess.org.uk/events** | ✅ **sehr gut** | **320** Events, offene Events-Calendar-API **mit PLZ UND Koordinaten** — England |
+| **schachbund.de** (Turnierdatenbank) | ✅ **gut** | ~104 kuenftige, RSS je Bundesland, kein Vorbehalt, ueberwiegend ZUSATZ — Deutschland |
+| chessmanager.com (Archivrunde) | ⚠️ Anfrage lohnt | **901–950** kuenftige aus **48 Laendern** — aber `ClaudeBot` gesperrt + Art.-4-Vorbehalt |
+| chess.ca | ⚠️ | 170 kuenftige als JSON-Volldump; **keine stabile Kennung**, keine PLZ — Kanada |
+| aicf.in | ⚠️ schwach | 98 kuenftige, kein Vorbehalt — aber keine PLZ, Kennungen doppelt vergeben — Indien |
+| schack.se | ⚠️ schwach | 183 kuenftige per JSON — aber **0 von 183 mit Ort** — Schweden |
+| shakkiliitto.fi | ⚠️ nicht vorrangig | 270 kuenftige, Freitext ohne PLZ, hohe Ueberschneidung mit chess-results — Finnland |
+| swisschess.ch | ❌ | Die brauchbare API liegt auf `cms.swisschess.ch` — `Disallow: /` fuer JEDEN |
+| tournamentservice.com | ❌ | `ClaudeBot` gesperrt UND `*` sperrt die Turnierliste ausdruecklich — Norwegen |
 | chesspairings.org | ⚠️ kleiner Ertrag | **Erste Quelle ohne jeden Vorbehalt** + JSON-LD mit Koordinaten — aber nur 27 kuenftige, Kleinstevents |
 | ratings.uschess.org | ❌ | Reines Ratingsystem, nur abgerechnete Turniere |
 | **new.uschess.org/upcoming-tournaments** | ⚠️ **aussichtsreich** | Der TLA-Ankuendigungskalender: serverseitiges Drupal, Umkreisfilter, TLA-Nummer als Kennung |
@@ -621,3 +630,317 @@ gerettet (vegaresults, vegachess), bei einer war es aus der Analyseumgebung hera
 erreichbar, und bei `status=next` von vegaresults gab es trotz 5790 Aufnahmen keinen einzigen
 passenden Snapshot — der Archiv-Crawler klickt nur den Standardzustand eines Formulars ab. Was
 hinter einem nicht-vorbelegten Filter liegt, ist im Archiv systematisch unsichtbar.
+
+### ✅ englishchess.org.uk/events (ECF, England) — der zweitbeste Fund
+
+**Sechster Fall von „nicht diese URL, sondern jene", und der lehrreichste**: BEIDE genannten
+Adressen sind Sackgassen, die Antwort ist ein DRITTER Host derselben Familie.
+
+- `rating.englishchess.org.uk` fuehrt **0** kuenftige Turniere. `/events/list` heisst „List of
+  Events **Received**" und ist nach MELDEdatum sortiert — ein Ergebnisprotokoll.
+- `ecflms.org.uk` ist nur ein Vanity-Alias, der auf `lms.englishchess.org.uk` weiterleitet (das
+  Liga-Verwaltungssystem). Dort gibt es kuenftige Spieltermine, aber **keine globale Liste** — nur
+  je Organisation, ohne Volltextsuche und ohne Index der Organisationen. Nicht messbar ohne
+  Vollcrawl. Die Apex-Domain selbst zeigte in Archiv-Aufnahmen zuletzt eine cPanel-Parkseite —
+  im Zweifel `lms.englishchess.org.uk` verwenden, nicht die Vanity-Adresse.
+- **Die Antwort ist `www.englishchess.org.uk/events/`**: WordPress mit „The Events Calendar",
+  und damit eine **offene, dokumentierte** REST-API (Standard-Plugin, kein Reverse Engineering):
+  `GET /wp-json/tribe/events/v1/events?page=&per_page=&start_date=&end_date=&venue=&organizer=&categories=`
+  plus `/venues`, `/organizers`, `/categories`.
+- **320 Events, 23 Seiten à 14** (Feld `total`/`total_pages`), Snapshot **2026-01-28**, sortiert ab
+  „jetzt" aufwaerts.
+- **Der eigentliche Gewinn sind die Felder**: das eingebettete JSON-LD traegt
+  `venue.address` mit **`postalCode`** UND **fertige `geo.latitude/longitude`**. Damit entfaellt
+  fuer diese Quelle unser Geocoding komplett — die einzige der 15 Quellen, die Koordinaten
+  mitliefert. Dazu Name, Start/Ende mit Zeitzone, kanonische URL, **numerische WP-Post-Id als
+  stabile Kennung**.
+  **Fehlt**: Bedenkzeit und Rundenzahl als Spalte (nur textlich aus Namen/Kategorie ableitbar,
+  also ein Fall fuer den `TournamentClassifier`), Teilnehmerzahl (wie ueberall vor dem Turnier).
+- **robots.txt (A)**: `ClaudeBot: Disallow: /` auf **allen drei** Hosts, dazu GPTBot, CCBot,
+  Google-Extended, Amazonbot, Bytespider, Applebot-Extended, meta-externalagent. Nichts live
+  geholt — alle Angaben aus dem Archiv, je mit Snapshot-Datum.
+- **robots.txt (B)**: `User-agent: *` erlaubt; auf `www` zusaetzlich gesperrt `/images/`, `/CBV/`,
+  `/FM_uploads/`, `/PGN/`, `/membership*`, `/members-only*` — **`/events/`, `/event/`, `/venue/`
+  und `/wp-json/` sind NICHT gesperrt**. `Crawl delay: 10`.
+- **Rechtsvorbehalt**: `Content-Signal: search=yes, ai-train=no, use=reference` mit ausdruecklichem
+  Verweis auf Art. 4 DSM-Richtlinie. Verboten ist das TRAINIEREN; `use=reference` deckt unseren
+  Fall (Fakten als Referenz mit Link) — dieselbe Lage wie bei US Chess.
+
+### ✅ schachbund.de (DSB, Deutschland) — kleiner Ertrag, aber echter ZUSATZ
+
+Nicht die Startseite, sondern die **Turnierdatenbank**. Deutschland ist ueber chess-results
+teilweise abgedeckt, die Frage war deshalb nicht „gibt es Turniere", sondern „gibt es welche, die
+chess-results NICHT hat".
+
+- **Antwort: ueberwiegend ja.** Es ist ein reines MELDE-System („Termin selbst eintragen"), ohne
+  chess-results-Konto oder Ergebnismeldung. Klarer Zusatz bei Vereins-Abendturnieren,
+  Jugend-Cups, **Fernschach**, **Problemschach**, Online und Schach960 — Kategorien, die
+  chess-results praktisch nie fuehrt. Dublette bei den groesseren, etablierten Serien; der
+  offizielle DSB-Terminplan (Bundesliga-Runden, Schiedsrichterkurse) ist teils gar kein Turnier.
+- **~104 eindeutige kuenftige Eintraege** (106 mit zwei Doppelungen), **09.09.2026–19.03.2027**,
+  ueber 25 Kategorien (16 Bundeslaender, Baden/Wuerttemberg getrennt, Oesterreich/Europa/Welt,
+  Fernschach/Blindenschach/Problemschach/Online/960). Groesste: NRW 22, Bayern 19. Mehrere
+  Bundeslaender bei 0 — ungenutzt, nicht technisch leer.
+- **Zwei Wege, beide serverseitig**: (a) **RSS/XML je Region**
+  `share/feed-turnierdatenbank-{region}.xml`, (b) HTML `turnierdatenbank-{region}.html`.
+  **Falle beim Slug**: zusammengesetzte Namen verlieren den Bindestrich
+  (`nordrheinwestfalen`, `rheinlandpfalz`, `sachsenanhalt`) — den Slug aus der Fusszeile
+  ablesen, nicht aus einer Namenskonvention raten.
+- **Zweite Falle, harmlos aber toedlich wenn unbekannt**: der Erstaufruf liefert nur
+  `<title>Einen Moment …</title>` mit `document.cookie="dwzc=1"; location.reload()`. Das ist ein
+  **JS-Cookie-Gate, keine SPA** — mit `Cookie: dwzc=1` kommt sofort das volle Contao-HTML. Kein
+  Bot-Schutz, kein Headless-Browser noetig.
+- **robots.txt (A)/(B)**: kein KI-Bot-Block. `*` sperrt die **DWZ-Ratingdatenbank**
+  (`/turnier.html`, `/turnier/`, `/dwz-turniere*`, `/spieler/`, `/verein/`, `/verband/`) —
+  **`/turnierdatenbank*.html` und `/turnierdetails/` sind frei**. `Crawl-delay: 5`.
+  Kein `Content-Signal`, kein `ai.txt`, keine Scraping-Klausel im Impressum.
+- **Fehlt**: Bedenkzeit, Rundenzahl, Teilnehmerzahl, und **keine stabile numerische Kennung** —
+  nur der Contao-Slug. Ort ist Freitext, **PLZ nur in 6 von 15 Stichproben**. Ohne harte Id
+  braeuchte es die Fuzzy-Zuordnung wie beim FIDE-Kalender (Datum + Name).
+- **Wichtiger Nebenfund**: die **Landesverbaende fuehren eigene, getrennte Kalender**
+  (`schachbund-bayern.de/turniere/`, `schach-in-nrw.de`, `sjnrw.de` fuer die NRW-Jugend) — ohne
+  Einbettung der DSB-Datenbank. Das ist ein Dutzend weiterer, unabhaengiger Quellen; gehoert auf
+  die Kandidatenliste.
+
+### ⚠️ chessmanager.com — die Archivrunde dreht das Urteil ins „Anfrage lohnt sich"
+
+Die Sperre bleibt (`ClaudeBot: Disallow: /` + Art.-4-Vorbehalt), aber jetzt ist BELEGT, was dahinter
+liegt — und es ist die ertragreichste Quelle der ganzen Pruefung. Alles aus dem Archiv, je mit
+Snapshot-Datum; chessmanager.com selbst wurde nicht erneut angefragt.
+
+- **Es gibt DREI Reiter, nicht einen**: `finished` / `active` (Vorgabe) / **`upcoming`**. Genau die
+  FIDE-Lehre: `/en-us/tournaments` ist NICHT die Zukunftsansicht.
+- **`/en-us/tournaments/upcoming`, Snapshot 2025-05-14**: Seite 1 = 51 Karten, **alle** mit
+  Startdatum in der Zukunft; die Blaetterung endet bei `offset=900` → **901–950 kuenftige
+  Turniere weltweit an einem Stichtag**. Zum Vergleich `active`: 301–550 je nach Snapshot, und
+  dort mischen sich Klub-Ladder-Turniere mit Fantasiedaten wie „1/1/32" hinein.
+- **48 verschiedene Laender** ueber die Stichproben, darunter Vietnam, Philippinen, Brasilien,
+  Sri Lanka, Uganda, Sambia, Mongolei — **deutlich globaler als chess-results und FIDE**, die
+  europalastig sind. Auf Seite 1 allein Polen 23.
+- **Fast alle Zielfelder stehen DIREKT in der Listenkarte**: Name, Land (ISO2 + Klartext), Ort,
+  Start–Ende, **Rundenzahl** („0/9" = 9 geplant), Bedenkzeit-Kategorie. Ein Abruf fuer bis zu 50
+  Turniere — **billiger als unser chess-results-Sweep**. Nur die exakte Bedenkzeit („10' +5\"")
+  und der 3-Buchstaben-Foederationscode brauchen die Detailseite, die zusaetzlich ein
+  **Schema.org-`Event`-JSON-LD** traegt.
+- **Blaetterung**: reiner GET-Parameter `offset` in 50er-Schritten, klickbare Links, kein
+  Infinite-Scroll. **Filter sind echte GET-Parameter**: `name`, `date_start`, `date_end`,
+  `country` (3-Buchstaben wie FIDE), `city`, `city_radius` (0/100/250 km), `tempo[]`,
+  `options[]` (fide/local). Serverseitige Filterung spart Seiten.
+- **Stabile Kennung**: numerische Turnier-Id im Pfad (`/en-us/tournaments/{id}`), Mix aus alten
+  kleinen Zahlen und neueren 16-stelligen — eindeutig nutzbar.
+- **Einordnung**: der gemessene Ertrag (≈900 kuenftige, 48 Laender, fast alle Felder ohne
+  Zweitabruf) rechtfertigt eine **offene Anfrage nach Datenzugang** beim Betreiber. Das Archiv
+  umgeht nur den technischen Weg, nicht die Rechtserklaerung ueber den Inhalt.
+- **Offen**: ob das Karten-HTML heute noch dem Muster von Maerz 2026 entspricht (es aenderte sich
+  zwischen Feb und Maerz 2025 einmal), ob Cloudflare einen erlaubten Crawler technisch
+  durchlaesst, und ob die Teilnehmerzahl-Luecke systematisch ist.
+
+### ⚠️ new.uschess.org — die Archivrunde: bestaetigt, mit einem wichtigen Vorbehalt
+
+Serverseitig gerendert, **bestaetigt in drei unabhaengigen Snapshots** (2024-02-13, 2023-03-23,
+2025-03-13): die Turniere liegen als `<div class="views-row">` direkt im HTML, 20 je Seite.
+
+- **Mengen, je mit Snapshot**: 2023-03-23 (alle) → `page=26`, also bis ~540; 2022-11-06 (nur
+  FIDE-gewertet) → `page=2`, also ~60; 2025-03-13 → `page=45`, also bis ~920.
+- **Der Vorbehalt, der die Zahl relativiert**: die Liste ist durch **wiederkehrende Vereinsabende**
+  aufgeblaeht — dieselbe Serie („Tuesday Night Action") erscheint EINMAL JE TERMIN, ohne
+  Serien-Zusammenfassung. Echte einmalige Turniere sind ein Bruchteil. Ein Import ohne
+  Entdopplung wuerde dieselbe Veranstaltung vielfach anlegen.
+- **Parameter, aus echten archivierten URLs 2021–2025 extrahiert** (nicht geraten): `combine`
+  (Freitext), `field_event_address_administrative_area` (Bundesstaat-Kuerzel oder `All`),
+  `field_event_dates_occurrences[min]`/`[max]` (`MM/DD/YYYY`), `field_fide_rated_value` (0/1 —
+  **verschwand zwischen Snapshots**, die Oberflaeche wurde umgebaut),
+  `field_online_event_value` (`All`/`2`), `field_geofield_proximity[value]` (**gestuft**: 10, 25,
+  50, 60, 100 Meilen), `…[origin_address]` (in allen echten Beispielen eine **5-stellige ZIP**,
+  kein Freitext), `field_banner_line_value[Label]` (Heritage/Grand Prix/…), `page` (0-basiert).
+- **PLZ: NICHT in der Liste** (nur „Stadt, Bundesstaat"), **JA auf der Detailseite**
+  (`field_event_address`: „201 N 17th St, Philadelphia, PA 19103") → ein Abruf je Turnier, wie
+  `art=9` bei chess-results. Die Detailseite traegt zusaetzlich `field_number_of_sections`,
+  `field_gp_points`, Preisgeld, `field_fide_rated`, Barrierefreiheit, Veranstalter — aber
+  **kein** Rundenzahl- oder Bedenkzeit-Feld und **kein** Datum (das steht nur in der Liste).
+- **Kein JSON, kein RSS**: kein `<link rel="alternate">` fuer diese Ansicht, CDX-Suche nach
+  `*feed*`/`*format=json*` unter `new.uschess.org` liefert null Treffer.
+- **Keine oeffentliche TLA-Nummer** im Text — nur eine interne Drupal-`entityId` (Beispiel 36434)
+  aus einem eingebetteten `dataLayer`-Skript. Undokumentiert, aber die einzige technische Id.
+- **Bedenkzeit-Notation, echte Beispiele**: `30+0` · `G/90, 30…` · `4SS, G15+5` ·
+  `5SS, G/3 d2 (double round, 10 games)` · `5SS, 40/80, SD/30, d30` · `4SS, G/60;d5` ·
+  `3-RR, G/45 d5` · `Game 5, no increment or delay`. Muster `{N}{SS|RR}`, dann `G/x` oder
+  Mehrstufen `Zuege/Minuten, SD/Minuten`, optional `d<n>` (Delay) oder `+<n>` (Inkrement) —
+  Freitext mit uneinheitlichen Trennzeichen, kein festes Schema. **Ein eigener Parser, und einer
+  mit Testvektoren.**
+
+### ⚠️ chess.ca (Kanada) — sauberer JSON-Volldump ohne stabile Kennung
+
+- **Kein Rating-Archiv wie US Chess** — nur der Ankuendigungsweg, `/en/events/` (bzw.
+  `/fr/evenements/`). Organisatoren melden per Formular.
+- **170 kuenftige von 183 Eintraegen**, **10.09.2026–15.08.2027**, live gemessen. Davon 164
+  inlaendische Praesenzturniere, 10 online, 9 im Ausland (Team-Kanada-Delegationen). Stark
+  Ontario-lastig: 125/183 = 68 %.
+- **Der Zugang ist ungewoehnlich und angenehm**: die Seite rendert serverseitig nur ein leeres
+  Svelte-Geruest, verweist aber auf eine **statische** Datei `/ext/cfc-data.<hash>.js`, die den
+  **kompletten Datensatz als JSON** enthaelt (`window.ws_cfc_data = {…};`). Ein `curl`, kein
+  JavaScript, kein API-Aufruf. **Aber**: der Hash wechselt bei jedem Site-Build → der Abruf muss
+  ZWEISTUFIG sein (HTML holen, Dateinamen herausziehen, dann die Datei), nie hartkodiert.
+- **robots.txt (A)/(B)**: `www.chess.ca/robots.txt` ist woertlich nur `User-agent: *` — keine
+  Disallow-Zeile, kein `Content-Signal`. Beide Fragen „ja". `forums.chess.ca` sperrt dagegen
+  ClaudeBot & Co. mit Art.-4-Vorbehalt — dort liegen aber nur Freitext-Threads, nicht die Daten.
+- **Der Ausschluss-Kandidat ist die Kennung**: `oid` ist **nur die Listenposition** (1..N) —
+  belegt an zwei Archiv-Aufnahmen (2023-08-15 und 2025-09-04), beide beginnen wieder bei 1. Es
+  braeuchte also eine eigene Kennung aus Name+Datum+Ort samt Fuzzy-Zuordnung, wie beim
+  FIDE-Kalender.
+- **Fehlt sonst**: PLZ und Adresse ganz (nur `city` + Provinzkuerzel — unser PLZ-zuerst-Geocoding
+  greift NIE), Bedenkzeit, Rundenzahl, Teilnehmerzahl. Die `url`-Felder zeigen auf Drittseiten
+  (Vereinsseite, Google-Formular, PDF, Facebook) — kein eigenes Permalink, also linkrot-anfaellig.
+
+### ⚠️ aicf.in (Indien) — kein Vorbehalt, aber schwache Daten
+
+- **98 kuenftige** von 329 Tabellenzeilen, **2026-09-07 bis 2027-03-26**, live gemessen
+  (`/all-events/`, ein WordPress-Gutenberg-Tabellenblock, serverseitig, keine Blaetterung).
+  Dazu `/upcoming-nationals/` mit 14 nationalen Meisterschaften.
+- **robots.txt (A)/(B)**: nur `Disallow: /wp-admin/`. Kein KI-Bot-Block, **kein
+  `Content-Signal`**, keine Scraping-Klausel (die Nutzungsbedingungen regeln nur Zahlungen).
+  Beide Fragen also „ja" — die dritte Quelle ohne Vorbehalt.
+- **Aber die Daten taugen kaum**: **keine PLZ** (unser Geocoding-Vorrang entfaellt komplett),
+  keine Bedenkzeit, keine Rundenzahl, keine Teilnehmerzahl, **keine eigene Turnier-URL** (nur ein
+  geteilter PDF-Link bei 75 % der Zeilen). Und die Kennung ist unbrauchbar: **„Event Code" wird
+  wiederverwendet** — Code 469820 traegt zwei verschiedene Turniere. Nur als Kompositschluessel
+  (Code+Name+Datum) tauglich.
+- **Datenqualitaet der Orte**: 98 verschiedene Ortsangaben auf 329 Zeilen, ohne jede Struktur —
+  mal Stadt, mal Bundesstaat, mal abgekuerzt („UP", „MP"), mit Tippfehler-Klammern
+  („Ahiyanagar (ahmednagar), Maharashtra") und einer buchstaeblich doppelten Zeile, die sich nur
+  in einem geschuetzten Leerzeichen unterscheidet. Dazu 230 von 329 Zeilen in der Vergangenheit,
+  also eigene Datumsfilterung noetig.
+- **Vor jeder Umsetzung zu messen**: die Ueberschneidung mit chess-results. Die „FIDE Rated"-
+  Turniere dieser Liste duerften dort ohnehin stehen.
+
+### ⚠️ schack.se (Schweden) — JSON-API ohne einen einzigen Ort
+
+- **Nicht `www.schack.se`** (301 auf den Webshop), sondern die **bare Domain**.
+  `member.schack.se` (Eigenrating) ist vollstaendig gesperrt und nur per JavaScript.
+- **Offene, dokumentierte API** („The Events Calendar Pro", derselbe Standard wie bei der ECF):
+  `GET https://schack.se/wp-json/tribe/events/v1/events?categories=inbjudningar&per_page=50&page=N&starts_after=…`
+- **183 kuenftige** Kalendereintraege, **2026-09-11 bis 2027-02-15**; davon Kategorie
+  „Taevlingsinbjudan" **76** = 42 echte Turnierausschreibungen + 33 **Liga-Spieltage** (je ein
+  Eintrag pro Runde — dieselbe Falle wie bei chess-results-Ligen) + 1 online.
+- **Der Ausschlussgrund**: **0 von 183** Eintraegen haben ein befuelltes `venue` — kein Ort, keine
+  Adresse, keine PLZ, auch nicht im Freitext. Hoechstens zufaellig im Namen („Trelleborg Open").
+  Unsere Pipeline setzt beim Ort an; das ist nicht nachruestbar ohne Fremdseiten-Auslesen je
+  Veranstalter. Auch Bedenkzeit, Rundenzahl und Teilnehmerzahl fehlen ganz.
+- **robots.txt (A)/(B)**: kein KI-Bot-Block, aber `*` sperrt **`/kalender`** und `/page` — die
+  HTML-Kalenderseite ist also auch fuer UNS verboten, der REST-Pfad nicht. `Crawl-delay: 20`.
+  Kein Rechtsvorbehalt gefunden.
+- Stabile Kennung (`id`, `slug`, `global_id`) und URL sind vorhanden — es fehlt nur alles, was den
+  Eintrag brauchbar machen wuerde.
+
+### ⚠️ shakkiliitto.fi (Finnland) — nicht vorrangig
+
+- **Nicht `shakki.net`**: die Seite sagt selbst, dass der Verband den Kalender fuehrt
+  („Kotimaisten turnausten kilpailukalenteria… vastaa Suomen Shakkiliitto"). Die Antwort ist
+  `https://www.shakkiliitto.fi/kilpailukalenteri-2026/`.
+- **275 Eintraege, 270 kuenftig**, **8.9.2026–30.8.2027**. Achtung: „2026" meint die SAISON
+  Herbst 2026 bis Sommer 2027, der Jahreswechsel liegt mitten in der Liste.
+- **Kein JSON** (kein `tapahtuma`-Inhaltstyp in `wp-json`, kein Events-Calendar-Plugin), kein
+  JSON-LD. Serverseitiges HTML, aber reiner Freitext. Nur **229 von 275 (83 %)** haben eine
+  Detailseite, dort Adresse **ohne PLZ**. Bedenkzeit und Rundenzahl nur vereinzelt und unscharf
+  („10–20").
+- **robots.txt (A)/(B)**: beide „ja", nur `/wp-admin/` gesperrt. Kein Rechtsvorbehalt gefunden.
+- **Warum nicht vorrangig**: `fed=FIN` laeuft im normalen Sweep bereits mit (dort 50 Turniere),
+  und die Ueberschneidung ist hoch — wiederkehrende Serien stehen in beiden. Der Mehrwert liegt
+  bei ungewerteten Klubabenden.
+- **Ein Fehler, der die Falle zeigt**: die automatisierte Erstauswertung las Januar-Termine als
+  2026 statt 2027 — genau der Saisonumbruch. Wer das baut, braucht dafuer einen Test.
+  Ausserdem stehen Absagen inline im Freitext („…PERUTTU!") statt als Feld: ein Crawler liest ein
+  abgesagtes Turnier sonst als aktiv ein.
+
+### ❌ swisschess.ch — die brauchbare API liegt hinter `Disallow: /`
+
+Zweiter Fall nach Daenemark, in dem auch (B) „nein" lautet — und der bitterste, weil die Daten
+gut waeren.
+
+- **159 kuenftige Termine** (157 einzigartig), **07.09.2026–11.12.2027**, ueber eine **offene
+  Directus-REST-API**: `cms.swisschess.ch/items/event_items` mit Filter/Sort/Join, saubere
+  JSON-Antwort ohne Anmeldung.
+- **Und genau dieser Host sperrt alles**: `cms.swisschess.ch/robots.txt` = `User-agent: *` /
+  `Disallow: /`. Kein Bot ausgenommen, also auch unser eigener nicht. Die Hauptdomain
+  `swisschess.ch` erlaubt dagegen alles (`Disallow:` leer).
+- **Was erlaubt bleibt, ist duenn**: die HTML-Seite `/de|fr|it/kalender` traegt dasselbe Schema in
+  einem Nuxt-`__NUXT_DATA__`-Skript (serverseitig, kein JavaScript noetig) — aber nur ein
+  rollierendes **1-Monats-Fenster mit ~32 Eintraegen**, und Weiterblaettern laeuft ueber
+  `POST /api/calendar/events` mit **Cloudflare-Turnstile**-Token. Das waere Anti-Bot-Umgehung und
+  ist ausgeschlossen.
+- **Alle drei Sprachpfade liefern denselben Datentopf** — es gibt keine besser gepflegte Fassung;
+  die Titel sind organisch mehrsprachig (Organisator-Text).
+- **Inhaltlich waere es ZUSATZ**: von 157 sind ~42 reine Verbands-Verwaltungstermine
+  (SMM/SGM-Runden, Anmeldeschluss, Delegiertenversammlung), die uebrigen ~115 ueberwiegend
+  Vereins- und Freizeitevents, die chess-results nicht fuehrt — darunter Turniere auf
+  **vegaresults.com**, dem zweiten Schweizer Ergebnissystem. Zwei Eintraege (Schacholympiade)
+  sind Dubletten zu unserem FIDE-Kalender.
+- **Felder**: PLZ nur bei **18 von 159 (11 %)**, dafuer **Koordinaten schon bei 16 (10 %)**.
+  Bedenkzeit grob bei 24, **Rundenzahl und Teilnehmerzahl fehlen ganz**. Kennung nur die interne
+  Directus-Id; 26 % der Eintraege haben gar keine URL, 74 % eine externe.
+- **Einordnung**: die Sperre wirkt eher unbeabsichtigt als scraping-feindlich (ein offenes
+  Directus-Backend mit pauschalem robots.txt). Eine Anfrage nach Freigabe oder einem Schluessel
+  ist der naheliegende Weg. **Ohne Freigabe: nicht umsetzen.**
+
+### ❌ tournamentservice.com (Norwegen) — doppelt gesperrt
+
+- Die Zieldomaene war aus der Analyseumgebung **nicht erreichbar** (Pakete auf 80 und 443
+  verworfen, kein RST) — schon das deutet auf aktive Abwehr gegen Cloud-Zugriffe.
+- Auf der Schwester-Instanz `www1.tournamentservice.com` (dieselbe Software TS6, dasselbe
+  /24-Subnetz, `www4` teilt sogar die IP der Hauptdomain) steht:
+  `User-agent: ClaudeBot` / `Disallow: /`. Da die robots.txt dort erkennbar ein zentral
+  gepflegtes TS6-Template ist (die Disallow-Liste nennt genau die TS6-Endpunkte
+  `PlayerDetails.aspx`, `KeepSessionAlive.aspx`, `GetPGN`, `eventmap`), gilt das mit hoher
+  Wahrscheinlichkeit auch fuer die Hauptdomain.
+- **Und (B) ist ebenfalls „nein"**: `User-agent: *` sperrt dort ausdruecklich
+  `Disallow: /TournamentList.aspx?Srch`, `/TournamentList.aspx?`, `/Tournamentlist.aspx`,
+  `/tournamentlist.aspx` — jeweils mit dem Kommentar „# CPU intensive". Genau die Turnierliste,
+  in allen Schreibweisen.
+- Inhaltlich waere es interessant gewesen: TS6 ist eine mandantenfaehige Arbiter-Software mit
+  Integration in den norwegischen Verband UND die FIDE-Datenbank und listet Turniere VIELER
+  Vereine — strukturell also wie chess-results, nicht wie Tornelo. `tournamentservice.net` ist
+  eine gleichnamige, voellig andere Plattform fuer Billard.
+- **Naechster Schritt, falls Skandinavien geschlossen werden soll**: den norwegischen Verband
+  (Sjakkforbund) nach einem offiziellen Feed fragen, nicht diese Plattform auslesen.
+
+## Gesamtbild nach 15 geprueften Quellen
+
+**Der Ausschlussgrund war fast nie die Technik.** Von 15 Quellen scheiterten 6 an einer
+Rechts- oder robots-Frage, obwohl sie technisch brauchbar waren; 4 an ihrer Bauart (JavaScript-App
+ohne serverseitige Daten, oder nur eigene Plattform-Turniere); 2 daran, dass sie ausschliesslich
+Vergangenes fuehren. Uebrig bleiben 3 Quellen, die man morgen anfangen koennte, und 2, fuer die
+eine E-Mail der naechste Schritt ist.
+
+**Was ich umsetzen wuerde, in dieser Reihenfolge:**
+
+1. **`chessarbiter.com` (Polen)** — 611 kuenftige in EINEM Abruf, kein Vorbehalt, zweistufig wie
+   unser bestehender Sweep. Bestes Verhaeltnis von Ertrag zu Aufwand, das die Pruefung gefunden
+   hat.
+2. **`englishchess.org.uk/events` (England)** — 320 Events ueber eine dokumentierte
+   Standard-API, und die **einzige Quelle mit fertigen Koordinaten UND PLZ**. Unser Geocoding
+   entfaellt dort ganz. `Crawl-delay: 10` beachten.
+3. **`schaakbond.nl` (Niederlande)** — 173 kuenftige, ein ganzes Jahr Vorlauf, offene
+   WordPress-API. Runden und Teilnehmerzahl fehlen; `Crawl-delay: 15` macht die Detailseiten zu
+   einem Nachtlauf mit Deckel.
+4. **`echecs.asso.fr` (Frankreich)** und **`schachbund.de` (Deutschland)** — beide brauchbar,
+   beide mit dem Verfahren, das wir fuer chess-results schon haben (ASP.NET-Postback bzw.
+   Cookie-Gate + RSS). Frankreich hat den Datenbankschutz-Passus, Deutschland keinen.
+5. **Anfragen statt Crawler**: `chessmanager.com` (≈900 kuenftige aus 48 Laendern — der groesste
+   Ertrag ueberhaupt, aber ausdrueckliche KI-Sperre) und `cms.swisschess.ch` (gute API hinter
+   einem pauschalen `Disallow: /`, das unbeabsichtigt wirkt). Beide haben ein Interesse daran,
+   dass ihre Turniere gefunden werden.
+
+**Was ich nicht umsetzen wuerde**: `schack.se` (kein einziger Ort), `chess.ca` (keine stabile
+Kennung, keine PLZ), `aicf.in` (Kennungen doppelt vergeben, keine PLZ), `shakkiliitto.fi`
+(hohe Ueberschneidung, Saison-Jahresfalle), `caissachess.net` und `new.uschess.org` (USA — nur
+sinnvoll, wenn US-Abdeckung ausdruecklich gewuenscht ist; bei US Chess zusaetzlich die
+Serien-Entdopplung).
+
+**Und ein Nebenergebnis, das eigene Arbeit waere**: `torneionline.com` (Italien, 14 523 Turniere
+seit 2000, Bedenkzeit im Klartext, Teilnehmerzahl, kein Vorbehalt) und `danbase.skak.dk`
+(Daenemark, 1890er bis heute, keine robots.txt) sind gute Quellen fuer den **Turnierverlauf**
+eines Spielers — das Feature, das heute nur chess-results kennt.
+
+**Ausserdem gefunden**: die deutschen LANDESverbaende fuehren eigene, von schachbund.de getrennte
+Kalender (Bayern, NRW, NRW-Jugend nachgewiesen). Das ist ein Dutzend weiterer Quellen desselben
+guten Typs — Verband, Ankuendigungen, kein kommerzielles Interesse.
