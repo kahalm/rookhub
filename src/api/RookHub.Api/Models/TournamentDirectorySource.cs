@@ -1,0 +1,65 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace RookHub.Api.Models;
+
+/// <summary>Eine Turnierseite, von der ein Verzeichniseintrag stammt.</summary>
+public enum DirectorySourceKind
+{
+    /// <summary>Altbestand ohne Herkunftsvermerk.</summary>
+    Unknown = 0,
+
+    /// <summary>chess-results.com — die Turniersuche, aus der das Verzeichnis heute lebt.</summary>
+    ChessResults = 1,
+
+    /// <summary>
+    /// calendar.fide.com. Technisch abfragbar (POST <c>calendar_server.php</c> mit
+    /// <c>show=apilist</c> liefert JSON), inhaltlich am 2026-09-07 aber wertlos: 661 Ereignisse,
+    /// ALLE aus 2025, nichts in der Zukunft. Der Wert steht hier, damit die Quelle einen Namen
+    /// hat, sobald sie wieder gepflegt wird.
+    /// </summary>
+    Fide = 2,
+
+    /// <summary>Von Hand eingetragen — etwa nach einem Hinweis ueber „mein Turnier fehlt".</summary>
+    Manual = 3,
+}
+
+/// <summary>
+/// Auf WELCHER Seite dieses Turnier gefunden wurde — und unter welcher Nummer dort.
+///
+/// <para><b>Warum eine eigene Tabelle.</b> Dasselbe Turnier steht auf mehreren Seiten, und es
+/// werden mehr: chess-results heute, morgen ein Verbandskalender, der ueber „mein Turnier fehlt"
+/// gemeldet wurde. Ohne Herkunftsvermerk ist spaeter nicht mehr zu sagen, woher eine Angabe kommt
+/// — und genau das entscheidet, welche Angabe bei einem Widerspruch gewinnt und welche Seite man
+/// aufruft, um nachzusehen.</para>
+///
+/// <para><b>Was diese Tabelle heute NICHT ist.</b> Die Identitaet eines Eintrags haengt weiterhin
+/// an <see cref="TournamentDirectoryEntry.ChessResultsId"/>: die Nummer ist der Schluessel der
+/// Adresse (<c>/tournaments/calendar/{id}</c>), des Abos, des Crawl-Auftrags und des
+/// Teilen-Links. Solange keine zweite Quelle wirklich Turniere liefert, waere es
+/// Vorratsarbeit, das umzubauen. Sobald eine es tut, ist der Weg: eine eigene Schluesselspalte am
+/// Eintrag, `ChessResultsId` wird zu einer Quelle unter mehreren (nullable), und die genannten
+/// vier Stellen holen die chess-results-Nummer aus DIESER Tabelle.</para>
+/// </summary>
+public class TournamentDirectorySource
+{
+    public int Id { get; set; }
+
+    public int TournamentDirectoryEntryId { get; set; }
+    public TournamentDirectoryEntry Entry { get; set; } = null!;
+
+    public DirectorySourceKind Kind { get; set; }
+
+    /// <summary>
+    /// Die Nummer, unter der DIESE Seite das Turnier fuehrt (chess-results-dbkey, FIDE-event_id).
+    /// Global eindeutig je Quelle — eine Nummer gehoert zu genau einem Turnier.
+    /// </summary>
+    [Required, MaxLength(60)]
+    public string ExternalId { get; set; } = string.Empty;
+
+    /// <summary>Die Seite selbst, zum Nachsehen. Fuer chess-results aus der Nummer gebildet.</summary>
+    [MaxLength(500)]
+    public string? Url { get; set; }
+
+    public DateTime FirstSeenAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
+}

@@ -169,6 +169,37 @@ public class AdminTournamentDirectoryController : BaseApiController
     }
 
     /// <summary>
+    /// Den HERKUNFTSVERMERK fuer den Altbestand nachtragen: jeder bestehende Eintrag stammt aus
+    /// der chess-results-Turniersuche, seine <c>ChessResultsId</c> ist die Nummer dort.
+    ///
+    /// <para>Der naechtliche Sweep vermerkt das von selbst — aber erst, wenn er die Foederation
+    /// wieder vornimmt, und die Rotation braucht dafuer eine Woche. Braucht kein Netz.</para>
+    /// </summary>
+    [HttpPost("backfill-sources")]
+    public async Task<IActionResult> BackfillSources(CancellationToken ct = default)
+    {
+        var entries = await _db.TournamentDirectoryEntries
+            .Include(e => e.Sources)
+            .Where(e => !e.Sources.Any(s => s.Kind == DirectorySourceKind.ChessResults))
+            .ToListAsync(ct);
+
+        var now = DateTime.UtcNow;
+        foreach (var entry in entries)
+        {
+            // FirstSeenAt des Eintrags, nicht „jetzt": der Vermerk soll sagen, seit wann die
+            // Quelle das Turnier fuehrt, und das ist bekannt.
+            TournamentDirectoryService.NoteSource(
+                entry, DirectorySourceKind.ChessResults, entry.ChessResultsId, now);
+            var source = entry.Sources[^1];
+            source.FirstSeenAt = entry.FirstSeenAt;
+            source.LastSeenAt = entry.LastSeenAt;
+        }
+
+        if (entries.Count > 0) await _db.SaveChangesAsync(ct);
+        return Ok(new { added = entries.Count });
+    }
+
+    /// <summary>
     /// Die SPIELTERMINE langlaufender Turniere nachtragen — von Hand auslösbar, damit der
     /// Bestand nicht auf die naechtlichen Chargen warten muss.
     ///

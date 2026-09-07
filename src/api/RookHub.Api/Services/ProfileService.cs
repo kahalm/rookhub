@@ -261,6 +261,7 @@ public class ProfileService
         // Turnier-Suchprofile: sie tragen die Koordinaten des Wohnorts und benannte Zweitorte
         // ("Ferienhaus Kaernten") — das ist persoenlicher als jedes Turnier-Abo.
         _db.TournamentSearchProfiles.RemoveRange(await _db.TournamentSearchProfiles.Where(p => p.UserId == userId).ToListAsync());
+        _db.TournamentDirectoryIgnores.RemoveRange(await _db.TournamentDirectoryIgnores.Where(i => i.UserId == userId).ToListAsync());
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
         // API-Tokens (chess.com-Extension u. a.) widerrufen — ein gelöschtes Konto behält keinen Zugang.
         _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == userId).ToListAsync());

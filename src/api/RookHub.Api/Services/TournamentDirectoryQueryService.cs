@@ -27,6 +27,19 @@ public sealed record DirectorySearchQuery
     public int? MinPlayers { get; init; }
     public bool IncludeCancelled { get; init; }
 
+    /// <summary>
+    /// Wessen ausgeblendete Turniere herausgehalten werden sollen. <c>null</c> = niemandes (die
+    /// Verwaltungs-Abfragen).
+    /// </summary>
+    public int? ForUserId { get; init; }
+
+    /// <summary>
+    /// Die vom Nutzer ausgeblendeten Turniere MITanzeigen — der Schalter in der Filterleiste.
+    /// Ohne ihn waeren sie unwiederbringlich weg, und niemand wuesste, was er einmal
+    /// weggeklickt hat.
+    /// </summary>
+    public bool IncludeIgnored { get; init; }
+
     /// <summary>Einzel und/oder Mannschaft. Leer = beides, und auch das noch Ungeklaerte.</summary>
     public IReadOnlyList<TournamentKind>? Kinds { get; init; }
 
@@ -131,6 +144,7 @@ public class TournamentDirectoryQueryService
                                              && v.Lon >= box.MinLon && v.Lon <= box.MaxLon))
             .Include(e => e.Venues)
             .Include(e => e.RoundDates)
+            .Include(e => e.Sources)
             .Take(MaxMaterialized + 1)
             .ToListAsync(ct);
 
@@ -187,6 +201,7 @@ public class TournamentDirectoryQueryService
             .Where(e => keys.Contains(e.GroupKey ?? "id:" + e.Id))
             .Include(e => e.Venues)
             .Include(e => e.RoundDates)
+            .Include(e => e.Sources)
             .ToListAsync(ct);
         var byKey = rows.GroupBy(e => e.GroupKey ?? "id:" + e.Id)
             .ToDictionary(g => g.Key, g => g.OrderBy(e => e.ChessResultsId, StringComparer.Ordinal).ToList());
@@ -313,11 +328,19 @@ public class TournamentDirectoryQueryService
             .ToListAsync(ct);
     }
 
-    private static IQueryable<TournamentDirectoryEntry> ApplyFilters(
+    private IQueryable<TournamentDirectoryEntry> ApplyFilters(
         IQueryable<TournamentDirectoryEntry> source, DirectorySearchQuery query)
     {
         if (!query.IncludeCancelled)
             source = source.Where(e => e.RemovedAt == null);
+
+        // Als EXISTS-Unterabfrage und nicht als materialisierte Liste: wer viel wegklickt, hat
+        // sonst irgendwann einen Filter mit hunderten Nummern in jeder Abfrage.
+        if (query.ForUserId is { } userId && !query.IncludeIgnored)
+        {
+            source = source.Where(e => !_db.TournamentDirectoryIgnores
+                .Any(i => i.UserId == userId && i.ChessResultsId == e.ChessResultsId));
+        }
 
         // Ueberlappung statt Enthaltensein: ein zehntaegiges Open, das in den Zeitraum
         // hineinragt, gehoert in den Kalender - auch wenn es davor begann.

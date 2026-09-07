@@ -317,6 +317,7 @@ gibt es 19-mal).
 | GET | `/api/tournament-directory/places?q=` | Ortsvorschlaege aus dem Gazetteer (PLZ oder Name) |
 | GET | `/api/tournament-directory/places/nearest?lat&lon` | Naechstgelegener Gazetteer-Ort zu Koordinaten — fuer das Ortsfeld, wenn der BROWSER den Standort liefert (die Koordinaten des Nutzers verlassen den Server nicht). 204, wenn im Umkreis von 200 km kein Ort im Lexikon liegt |
 | POST | `/api/tournament-directory/{chessResultsId}/report` | „Falsches Event melden" — Rueckmeldung zu einem Eintrag `{ message?, location?, kind?, ageGroups?, gender?, speed?, isLeague?, namePattern?, sourceLink? }`, ALLE Felder freiwillig. Landet im bestehenden **Admin-Nachrichtenkanal** (`AdminMessageService.SendFromUserAsync`) statt in einer eigenen Tabelle: dort gibt es Oberflaeche, Glocke und — entscheidend — einen Rueckweg zum Melder. `namePattern` ist die Lern-Frage („bei uns heissen die Jugendturniere Schachrallye") und wandert in die Wortlisten des `TournamentClassifier` |
+| POST/DELETE | `/api/tournament-directory/{chessResultsId}/ignore` | Ein Turnier FUER MICH ausblenden bzw. wieder zeigen (idempotent). Es verschwindet aus Liste, Karte und Kalender — und aus der naechtlichen Umkreis-Meldung; nur mit `audience.includeIgnored=true` kommt es mit (und traegt dann `ignored: true`). Die DETAILseite zeigt es immer, dorthin ist man absichtlich gegangen |
 | POST | `/api/tournament-directory/suggest-source` | „Mein Turnier fehlt" `{ link, message? }` — Hinweis auf eine noch nicht gecrawlte Quelle. Der **Link ist Pflicht** (nur absolutes http/https): ein Verbandskalender laesst sich zusaetzlich auswerten, eine Aufzaehlung im Freitext nicht |
 | GET/POST/PUT/DELETE | `/api/tournament-search-profiles[/{id}]` | Gespeicherte Umkreise; steuern Ansicht UND naechtliche Meldung |
 | GET | `/api/admin/tournament-directory/status` | Sweep-Zustand je Foederation + Geocoding-Quote |
@@ -325,6 +326,7 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
 | POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen. **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual` bleibt in jedem Fall unberuehrt |
+| POST | `/api/admin/tournament-directory/backfill-sources` | Herkunftsvermerk fuer den Altbestand nachtragen (jeder bestehende Eintrag stammt aus chess-results). Braucht kein Netz; der Sweep tut es von selbst, aber erst nach einer Rotationswoche |
 | POST | `/api/admin/tournament-directory/round-plans?limit=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
 | POST | `/api/admin/tournament-directory/classify` | Publikum + Format des GANZEN Bestands aus den Turniernamen neu ableiten (Jugendklasse, Geschlechtsklasse, Liga) — braucht kein Netz. Der Weg, eine nachgeruestete Wortliste im `TournamentClassifier` auf den Altbestand anzuwenden; die Turnier**art** bleibt unangetastet (die kommt aus der Quelle) |
 | POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
@@ -351,6 +353,16 @@ NETZfehler laesst ihn dagegen leer. Der Sweep leert ihn, wenn sich der Termin ge
 
 Im Kalender gilt: **hat ein Eintrag Spieltermine, zaehlen NUR sie** (`Covers`); sonst wie bisher
 der ganze Zeitraum. Die Termine gehen als `roundDates` im DTO mit, die Detailseite zeigt sie.
+
+**Woher ein Eintrag stammt (`TournamentDirectorySources`).** Der Sweep vermerkt bei jedem
+Turnier, auf welcher Seite es gefunden wurde (`NoteSource`) — n-zu-n, weil dasselbe Turnier auf
+mehreren steht und es mehr werden. **Der FIDE-Kalender wurde dafuer geprueft** (2026-09-07):
+`POST calendar.fide.com/calendar_server.php` mit `show=apilist` liefert saubere JSON-Zeilen
+(`event_id`, `event_name`, `eventDates`, `city`, `country`, `time_control`, `event_type`, 10 je
+Seite, kein robots.txt) — inhaltlich aber **661 Ereignisse, ALLE aus 2025, nichts in der
+Zukunft**; der Datumsfilter nimmt nur ISO und gibt fuer 2026 null zurueck. Fuer ein Verzeichnis,
+dessen Zweck „was steht an" ist, bringt das heute nichts, deshalb ist die Quelle nur BENANNT
+(`DirectorySourceKind.Fide`) und wird nicht gelesen.
 
 **Publikum und Format eines Turniers — was aus der Quelle kommt und was aus dem Namen.**
 `Kind` (Einzel/Mannschaft) ist QUELLENDATUM: die chess-results-Turniersuche hat ein Turnierart-Feld
@@ -855,6 +867,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentDirectorySweeps | Buchfuehrung je Foederation | Federation (PK), LastSweptAt (**nur bei Erfolg**), LastAttemptedAt, LastRowCount, LastError, ConsecutiveFailures |
 | TournamentDirectoryVenues | ALLE Spielorte eines Turniers — bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit", „Schwaz/Jenbach/Kufstein"; auf dem Dev-Stand 270 Eintraege). Die Koordinaten am Eintrag bleiben der HAUPT-Spielort (der erste); die Tabelle traegt nur Turniere mit MEHR als einem. Umkreissuche und Karte fragen sie mit: ein Turnier gilt als in der Naehe, wenn EINER seiner Orte in der Box liegt, und die angezeigte Entfernung ist die zum naechsten | TournamentDirectoryEntryId (Cascade), Ordinal (0 = Hauptort), Name (≤200), SourceText? (≤300, der Textabschnitt — Nachvollziehbarkeit), Lat/Lon, GeoSource; Index (Lat, Lon) + (EntryId, Ordinal) |
 | TournamentDirectoryRounds | Die einzelnen SPIELTERMINE eines Turniers. Start und Ende sagen bei einer Liga nicht, wann gespielt wird — elf Runden von September bis April liegen Wochen auseinander, und der Kalender zeigte die Liga deshalb an rund 200 Tagen ohne Schach. Gefuellt vom `TournamentRoundPlanService` (chess-results `art=14`), nur fuer Eintraege ueber 8 Tage mit mehr als einer Runde. Leer = nicht bekannt, dann gilt der ganze Zeitraum | TournamentDirectoryEntryId (Cascade), Number (Rundennummer), Date, TimeText? (≤40, Rohtext „14:00 Uhr" — fuer den Kalender zaehlt der Tag); Index (Date) + **UNIQUE (EntryId, Number)** |
+| TournamentDirectorySources | Auf WELCHER Seite ein Turnier gefunden wurde und unter welcher Nummer dort — **n-zu-n**, dasselbe Turnier steht auf mehreren. Ohne Herkunftsvermerk ist spaeter nicht zu sagen, woher eine Angabe kommt, und genau das entscheidet bei Widerspruch. **Heute NICHT die Identitaet**: die haengt weiter an `TournamentDirectoryEntry.ChessResultsId` (Adresse, Abo, Crawl-Auftrag, Teilen-Link); sobald eine zweite Quelle wirklich Turniere liefert, braucht der Eintrag eine eigene Schluesselspalte | TournamentDirectoryEntryId (Cascade), Kind (Unknown/ChessResults/Fide/Manual), ExternalId (≤60), Url? (≤500), FirstSeenAt, LastSeenAt; **UNIQUE (Kind, ExternalId)** + Index (EntryId) |
+| TournamentDirectoryIgnores | „Dieses Turnier will ich nicht sehen" je Nutzer. Gemerkt wird die chess-results-NUMMER und nicht die Eintrags-Id (ein Eintrag kann verschwinden und wiederkommen, die Entscheidung soll gelten) — deshalb auch kein FK aufs Turnier, wie bei `TournamentSubscription` | UserId (Cascade), ChessResultsId (≤20), CreatedAt; **UNIQUE (UserId, ChessResultsId)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet/reprozessierbar — heute meist No-op, da live ausgewertet)** |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |

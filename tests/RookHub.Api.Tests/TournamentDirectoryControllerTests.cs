@@ -641,9 +641,9 @@ public class TournamentDirectoryControllerTests : IDisposable
     private async Task<DirectoryPageDto> SearchAsync(
         string? from = null, string? to = null, double? lat = null, double? lon = null, int? radiusKm = null,
         string? fed = null, string? speed = null, string? q = null, bool weekendOnly = false,
-        DirectoryAudienceQuery? audience = null)
+        DirectoryAudienceQuery? audience = null, int userId = 1)
     {
-        var result = await CreateController(1).Search(
+        var result = await CreateController(userId).Search(
             from, to, lat, lon, radiusKm, fed, speed, q, weekendOnly, audience: audience);
         return Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
     }
@@ -851,6 +851,119 @@ public class TournamentDirectoryControllerTests : IDisposable
     {
         var result = await CreateController(1).NearestPlace(lat, lon, default);
         Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Ausblenden je Nutzer ---------------------------------------------
+
+    /// <summary>
+    /// Ein ausgeblendetes Turnier verschwindet aus der Liste. Der Filter ist persoenlich: das
+    /// Verzeichnis kennt tausende Turniere, und ein Teil davon ist fuer einen bestimmten Menschen
+    /// dauerhaft uninteressant — die Liga, in der er nicht spielt.
+    /// </summary>
+    [Fact]
+    public async Task Search_IgnoredTournament_IsHidden()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Ignore("2", default));
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(userId).Search()).Result).Value);
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// Ausgeblendetes gilt NUR fuer den, der es ausgeblendet hat — sonst waere es eine
+    /// Moderation und keine persoenliche Auswahl.
+    /// </summary>
+    [Fact]
+    public async Task Search_IgnoredByOneUser_StaysVisibleForAnother()
+    {
+        var mine = await CreateUserAsync("ich");
+        var other = await CreateUserAsync("andere");
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(mine).Ignore("2", default);
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(other).Search()).Result).Value);
+        Assert.Single(page.Items);
+    }
+
+    /// <summary>
+    /// Ohne diesen Schalter waere ein weggeklicktes Turnier unwiederbringlich weg, und niemand
+    /// wuesste, was er einmal ausgeblendet hat. Die Antwort sagt dann auch, WELCHE es sind.
+    /// </summary>
+    [Fact]
+    public async Task Search_IncludeIgnored_ShowsThemAndMarksThem()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(userId).Ignore("2", default);
+
+        var page = await SearchAsync(userId: userId,
+            audience: new DirectoryAudienceQuery { IncludeIgnored = true });
+
+        Assert.Equal(2, page.Items.Count);
+        Assert.True(page.Items.Single(i => i.ChessResultsId == "2").Ignored);
+        Assert.False(page.Items.Single(i => i.ChessResultsId == "1").Ignored);
+    }
+
+    [Fact]
+    public async Task Unignore_BringsItBack()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(userId).Ignore("2", default);
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore("2", default));
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(userId).Search()).Result).Value);
+        Assert.Single(page.Items);
+    }
+
+    /// <summary>Zweimal ausblenden ist dasselbe wie einmal — und zweimal zeigen auch.</summary>
+    [Fact]
+    public async Task Ignore_Twice_IsTheSameAsOnce()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        await CreateController(userId).Ignore("2", default);
+        await CreateController(userId).Ignore("2", default);
+        Assert.Single(await _db.TournamentDirectoryIgnores.ToListAsync());
+
+        await CreateController(userId).Unignore("2", default);
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore("2", default));
+    }
+
+    /// <summary>
+    /// Die DETAILseite zeigt ein ausgeblendetes Turnier trotzdem — dorthin ist man absichtlich
+    /// gegangen. Sie sagt nur, dass es ausgeblendet ist, damit man es zuruecknehmen kann.
+    /// </summary>
+    [Fact]
+    public async Task Get_IgnoredTournament_IsStillReturnedAndMarked()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(userId).Ignore("2", default);
+
+        var result = await CreateController(userId).Get("2", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.True(dto.Ignored);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("12345678901")]
+    public async Task Ignore_InvalidId_IsRejected(string id)
+    {
+        Assert.IsType<BadRequestObjectResult>(await CreateController(1).Ignore(id, default));
+        Assert.IsType<BadRequestObjectResult>(await CreateController(1).Unignore(id, default));
     }
 
     // ----- Rueckmeldungen ---------------------------------------------------

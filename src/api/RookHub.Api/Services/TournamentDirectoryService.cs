@@ -167,6 +167,7 @@ public class TournamentDirectoryService
         // nichts, und die alten Zeilen sammeln sich mit jedem naechtlichen Lauf an.
         var existing = await _db.TournamentDirectoryEntries
             .Include(e => e.Venues)
+            .Include(e => e.Sources)
             .Where(e => e.Federation == federation && (e.EndDate == null || e.EndDate >= from))
             .ToListAsync(ct);
         var byId = existing.ToDictionary(e => e.ChessResultsId, StringComparer.Ordinal);
@@ -184,6 +185,7 @@ public class TournamentDirectoryService
         {
             foreach (var stray in await _db.TournamentDirectoryEntries
                          .Include(e => e.Venues)
+                         .Include(e => e.Sources)
                          .Where(e => strays.Contains(e.ChessResultsId)).ToListAsync(ct))
             {
                 byId[stray.ChessResultsId] = stray;
@@ -437,11 +439,26 @@ public class TournamentDirectoryService
         }
         if (candidates.Count == 0) return 0;
 
+        // Was ein Nutzer AUSGEBLENDET hat, wird ihm auch nicht gemeldet. Eine Benachrichtigung
+        // ueber ein Turnier, das man weggeklickt hat, ist genau die Art Meldung, die einen dazu
+        // bringt, alle abzuschalten. Nur die Nutzer mit meldenden Profilen und nur die
+        // Kandidaten-Nummern werden geladen — das sind wenige Zeilen.
+        var candidateIds = candidates.Select(e => e.ChessResultsId).ToList();
+        var userIds = profiles.Select(p => p.UserId).Distinct().ToList();
+        var ignored = (await _db.TournamentDirectoryIgnores.AsNoTracking()
+                .Where(i => userIds.Contains(i.UserId) && candidateIds.Contains(i.ChessResultsId))
+                .Select(i => new { i.UserId, i.ChessResultsId })
+                .ToListAsync(ct))
+            .GroupBy(i => i.UserId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ChessResultsId).ToHashSet(StringComparer.Ordinal));
+
         var notified = 0;
         foreach (var profile in profiles)
         {
+            var hidden = ignored.GetValueOrDefault(profile.UserId);
             var matches = candidates
                 .Where(e => MatchesProfile(e, profile))
+                .Where(e => hidden is null || !hidden.Contains(e.ChessResultsId))
                 .OrderBy(e => e.StartDate)
                 .ToList();
             if (matches.Count == 0) continue;
@@ -553,7 +570,46 @@ public class TournamentDirectoryService
         ApplyGrouping(entry);
         entry.LastSeenAt = now;
         entry.UpdatedAt = now;
+        NoteSource(entry, DirectorySourceKind.ChessResults, row.ChessResultsId, now);
     }
+
+    /// <summary>
+    /// Vermerkt, dass dieses Turnier auf DIESER Seite gefunden wurde. Beim ersten Mal angelegt,
+    /// danach nur der Zeitstempel — der sagt, ob die Quelle das Turnier noch fuehrt.
+    ///
+    /// <para>Dasselbe Turnier steht auf mehreren Seiten, und es werden mehr; ohne
+    /// Herkunftsvermerk ist spaeter nicht zu sagen, woher eine Angabe kommt (siehe
+    /// <see cref="TournamentDirectorySource"/>).</para>
+    /// </summary>
+    internal static void NoteSource(
+        TournamentDirectoryEntry entry, DirectorySourceKind kind, string externalId, DateTime now)
+    {
+        if (string.IsNullOrWhiteSpace(externalId)) return;
+
+        var source = entry.Sources.FirstOrDefault(
+            s => s.Kind == kind && string.Equals(s.ExternalId, externalId, StringComparison.Ordinal));
+        if (source is null)
+        {
+            entry.Sources.Add(new TournamentDirectorySource
+            {
+                Kind = kind,
+                ExternalId = externalId,
+                Url = UrlFor(kind, externalId),
+                FirstSeenAt = now,
+                LastSeenAt = now,
+            });
+            return;
+        }
+        source.LastSeenAt = now;
+    }
+
+    /// <summary>Die Seite, auf der das Turnier bei dieser Quelle steht.</summary>
+    internal static string? UrlFor(DirectorySourceKind kind, string externalId) => kind switch
+    {
+        DirectorySourceKind.ChessResults => $"https://chess-results.com/tnr{externalId}.aspx?lan=1",
+        DirectorySourceKind.Fide => $"https://calendar.fide.com/calendar.php?id={externalId}",
+        _ => null,
+    };
 
     /// <summary>
     /// Verortet einen Eintrag — mit ALLEN Spielorten, die im Ortstext stehen.

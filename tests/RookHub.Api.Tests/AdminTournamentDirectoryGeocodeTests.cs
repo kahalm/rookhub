@@ -115,6 +115,48 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
         Assert.False(entry.IsLeague);
     }
 
+    /// <summary>
+    /// Der Herkunftsvermerk fuer den Altbestand. Der naechtliche Sweep traegt ihn von selbst
+    /// nach, aber erst wenn er die Foederation wieder vornimmt — die Rotation braucht dafuer
+    /// eine Woche. Der Vermerk uebernimmt die Zeitstempel des EINTRAGS, nicht „jetzt": seit wann
+    /// die Quelle das Turnier fuehrt, ist bekannt.
+    /// </summary>
+    [Fact]
+    public async Task BackfillSources_ExistingEntries_GetTheirChessResultsOrigin()
+    {
+        var seen = new DateTime(2026, 5, 1, 3, 0, 0, DateTimeKind.Utc);
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "1457129", Name = "Open Braunau", Federation = "AUT",
+            FirstSeenAt = seen, LastSeenAt = seen.AddDays(30),
+        });
+        await _db.SaveChangesAsync();
+
+        await Controller().BackfillSources();
+
+        var source = Assert.Single(await _db.TournamentDirectorySources.ToListAsync());
+        Assert.Equal(DirectorySourceKind.ChessResults, source.Kind);
+        Assert.Equal("1457129", source.ExternalId);
+        Assert.Equal(seen, source.FirstSeenAt);
+    }
+
+    /// <summary>Ein zweiter Aufruf legt nichts doppelt an.</summary>
+    [Fact]
+    public async Task BackfillSources_RunTwice_AddsNothingTheSecondTime()
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            ChessResultsId = "1", Name = "Open", Federation = "AUT",
+        });
+        await _db.SaveChangesAsync();
+
+        await Controller().BackfillSources();
+        _db.ChangeTracker.Clear();
+        await Controller().BackfillSources();
+
+        Assert.Single(await _db.TournamentDirectorySources.ToListAsync());
+    }
+
     /// <summary>Wird in diesen Tests nie benutzt — ein Aufruf ist ein Fehler, kein Zufall.</summary>
     private sealed class UnusedHandler : HttpMessageHandler
     {

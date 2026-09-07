@@ -31,6 +31,12 @@ public class DirectoryEntryDto
     public bool Subscribed { get; set; }
 
     /// <summary>
+    /// Vom aufrufenden Nutzer ausgeblendet. Nur `true`, wenn der Filter ausgeblendete
+    /// mitanzeigt — sonst waeren sie gar nicht in der Antwort.
+    /// </summary>
+    public bool Ignored { get; set; }
+
+    /// <summary>
     /// Wie viele Gruppen desselben Turniers dieser Eintrag zusammenfasst (1 = einzelnes Turnier).
     /// chess-results fuehrt „Open Braunau 2026 A/B/C" als drei Zeilen; hier ist es eine.
     /// </summary>
@@ -68,9 +74,16 @@ public class DirectoryEntryDto
     /// </summary>
     public List<DirectoryRoundDto> RoundDates { get; set; } = [];
 
+    /// <summary>
+    /// Auf welchen Seiten dieses Turnier gefunden wurde. Heute meist genau eine (chess-results);
+    /// die Liste steht hier, weil es mehr werden und die Anzeige dann sagen kann, woher eine
+    /// Angabe stammt.
+    /// </summary>
+    public List<DirectorySourceDto> Sources { get; set; } = [];
+
     public static DirectoryEntryDto FromEntity(
         TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
-        IReadOnlyList<TournamentDirectoryEntry>? groups = null) => new()
+        IReadOnlyList<TournamentDirectoryEntry>? groups = null, bool ignored = false) => new()
     {
         ChessResultsId = e.ChessResultsId,
         // Bei mehreren Gruppen der Name OHNE Kuerzel — „Open Braunau 2026" statt „… A".
@@ -93,7 +106,15 @@ public class DirectoryEntryDto
         DistanceKm = distanceKm is null ? null : Math.Round(distanceKm.Value, 1),
         Cancelled = e.RemovedAt != null,
         Subscribed = subscribed,
+        Ignored = ignored,
         Kind = e.Kind.ToString(),
+        Sources = e.Sources
+            .OrderBy(x => x.Kind)
+            .Select(x => new DirectorySourceDto
+            {
+                Kind = x.Kind.ToString(), ExternalId = x.ExternalId, Url = x.Url,
+            })
+            .ToList(),
         RoundDates = e.RoundDates
             .OrderBy(r => r.Number)
             .Select(r => new DirectoryRoundDto { Round = r.Number, Date = r.Date, Time = r.TimeText })
@@ -131,6 +152,16 @@ public class DirectoryEntryDto
             .Where(g => g != TournamentAgeGroups.None && groups.HasFlag(g))
             .Select(g => g.ToString())
             .ToList();
+}
+
+/// <summary>Eine Seite, auf der dieses Turnier gefunden wurde.</summary>
+public class DirectorySourceDto
+{
+    /// <summary>„ChessResults", „Fide", „Manual".</summary>
+    public string Kind { get; set; } = "";
+    /// <summary>Die Nummer, unter der diese Seite das Turnier fuehrt.</summary>
+    public string ExternalId { get; set; } = "";
+    public string? Url { get; set; }
 }
 
 /// <summary>Ein Spieltermin eines Turniers — eine Runde mit ihrem Datum.</summary>
@@ -293,6 +324,12 @@ public class DirectoryAudienceQuery
 
     /// <summary>Saisonwettbewerbe ausblenden.</summary>
     public bool HideLeagues { get; set; }
+
+    /// <summary>
+    /// Die selbst ausgeblendeten Turniere MITanzeigen. Ohne den Schalter waeren sie
+    /// unwiederbringlich weg, und niemand wuesste, was er einmal weggeklickt hat.
+    /// </summary>
+    public bool IncludeIgnored { get; set; }
 }
 
 /// <summary>

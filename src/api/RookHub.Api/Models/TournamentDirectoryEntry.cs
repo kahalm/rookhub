@@ -200,6 +200,12 @@ public class TournamentDirectoryEntry
     /// lassen. Wird beim Sweep geleert, sobald sich der Termin des Turniers geaendert hat.
     /// </summary>
     public DateTime? RoundPlanCheckedAt { get; set; }
+
+    /// <summary>
+    /// Auf welchen Seiten dieses Turnier gefunden wurde. Dasselbe Turnier steht auf mehreren, und
+    /// es werden mehr — siehe <see cref="TournamentDirectorySource"/>.
+    /// </summary>
+    public List<TournamentDirectorySource> Sources { get; set; } = [];
 }
 
 /// <summary>Bedenkzeit-Kategorie, aus dem Freitext geraten.</summary>

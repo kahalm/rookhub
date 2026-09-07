@@ -834,4 +834,116 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Equal(TournamentDirectoryService.ComputeGroupKey(Entry("1")),
                      TournamentDirectoryService.ComputeGroupKey(Entry("2")));
     }
+
+    // ----- Herkunft eines Eintrags ------------------------------------------
+
+    /// <summary>
+    /// Jeder Eintrag vermerkt, auf WELCHER Seite er gefunden wurde und unter welcher Nummer.
+    /// Dasselbe Turnier steht auf mehreren Seiten, und es werden mehr — ohne den Vermerk ist
+    /// spaeter nicht zu sagen, woher eine Angabe stammt.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_NewEntry_RecordsWhereItWasFound()
+    {
+        var service = CreateService($"[{Row("111", "Open Braunau", "2026-12-18", "2026-12-20", "Ranshofen")}]");
+
+        await service.SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.Include(e => e.Sources).SingleAsync();
+        var source = Assert.Single(entry.Sources);
+        Assert.Equal(DirectorySourceKind.ChessResults, source.Kind);
+        Assert.Equal("111", source.ExternalId);
+        Assert.Equal("https://chess-results.com/tnr111.aspx?lan=1", source.Url);
+    }
+
+    /// <summary>
+    /// Ein zweiter Lauf legt keinen zweiten Vermerk an — er schreibt nur fort, wann die Quelle
+    /// das Turnier zuletzt gefuehrt hat.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_SecondRun_UpdatesTheSourceInsteadOfAddingOne()
+    {
+        var rows = $"[{Row("111", "Open Braunau", "2026-12-18", "2026-12-20", "Ranshofen")}]";
+        await CreateService(rows).SweepFederationAsync("AUT", Today);
+        var first = (await _db.TournamentDirectoryEntries.Include(e => e.Sources).SingleAsync())
+            .Sources[0].LastSeenAt;
+
+        _db.ChangeTracker.Clear();
+        await CreateService(rows).SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.Include(e => e.Sources).SingleAsync();
+        var source = Assert.Single(entry.Sources);
+        Assert.True(source.LastSeenAt >= first);
+    }
+
+    /// <summary>
+    /// Der Vermerk ist n-zu-n gedacht: ein Eintrag kann auf mehreren Seiten stehen. Eine zweite
+    /// Quelle traegt sich neben die erste, sie ersetzt sie nicht.
+    /// </summary>
+    [Fact]
+    public void NoteSource_SecondSite_IsAddedAlongsideTheFirst()
+    {
+        var entry = new TournamentDirectoryEntry { ChessResultsId = "111", Name = "Open" };
+        var now = DateTime.UtcNow;
+
+        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.ChessResults, "111", now);
+        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.Fide, "3051", now);
+        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.ChessResults, "111", now);
+
+        Assert.Equal(2, entry.Sources.Count);
+        Assert.Contains(entry.Sources, s => s.Kind == DirectorySourceKind.Fide && s.ExternalId == "3051");
+    }
+
+    /// <summary>
+    /// Was ein Nutzer ausgeblendet hat, wird ihm auch nicht gemeldet. Eine Benachrichtigung ueber
+    /// ein weggeklicktes Turnier ist genau die Art Meldung, die einen dazu bringt, alle
+    /// abzuschalten.
+    /// </summary>
+    [Fact]
+    public async Task NotifyNearby_IgnoredTournament_IsNotReported()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = userId, Name = "Zuhause", Lat = 48.2, Lon = 13.0, RadiusKm = 100, NotifyNew = true,
+        });
+        var entry = new TournamentDirectoryEntry
+        {
+            ChessResultsId = "111", Name = "Landesliga", Federation = "AUT",
+            StartDate = Today.AddDays(30), EndDate = Today.AddDays(31),
+            Lat = 48.21, Lon = 13.01,
+        };
+        _db.TournamentDirectoryEntries.Add(entry);
+        _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore
+        {
+            UserId = userId, ChessResultsId = "111",
+        });
+        await _db.SaveChangesAsync();
+
+        var notified = await CreateService("[]").NotifyNearbyAsync([entry.Id], Today);
+
+        Assert.Equal(0, notified);
+        Assert.Empty(await _db.Notifications.ToListAsync());
+    }
+
+    /// <summary>Die Gegenprobe: ohne Ausblendung wird gemeldet.</summary>
+    [Fact]
+    public async Task NotifyNearby_WithoutIgnore_IsReported()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = userId, Name = "Zuhause", Lat = 48.2, Lon = 13.0, RadiusKm = 100, NotifyNew = true,
+        });
+        var entry = new TournamentDirectoryEntry
+        {
+            ChessResultsId = "111", Name = "Landesliga", Federation = "AUT",
+            StartDate = Today.AddDays(30), EndDate = Today.AddDays(31),
+            Lat = 48.21, Lon = 13.01,
+        };
+        _db.TournamentDirectoryEntries.Add(entry);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(1, await CreateService("[]").NotifyNearbyAsync([entry.Id], Today));
+    }
 }

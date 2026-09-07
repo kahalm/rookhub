@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
     public DbSet<TournamentDirectorySweep> TournamentDirectorySweeps => Set<TournamentDirectorySweep>();
     public DbSet<TournamentDirectoryVenue> TournamentDirectoryVenues => Set<TournamentDirectoryVenue>();
     public DbSet<TournamentDirectoryRound> TournamentDirectoryRounds => Set<TournamentDirectoryRound>();
+    public DbSet<TournamentDirectorySource> TournamentDirectorySources => Set<TournamentDirectorySource>();
+    public DbSet<TournamentDirectoryIgnore> TournamentDirectoryIgnores => Set<TournamentDirectoryIgnore>();
     public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
@@ -336,6 +338,28 @@ public class AppDbContext : DbContext
             // laeuft das ueber den Index statt ueber einen Scan aller Spieltermine.
             e.HasIndex(r => r.Date);
             e.HasIndex(r => new { r.TournamentDirectoryEntryId, r.Number }).IsUnique();
+        });
+
+        modelBuilder.Entity<TournamentDirectorySource>(e =>
+        {
+            e.HasOne(x => x.Entry)
+             .WithMany(d => d.Sources)
+             .HasForeignKey(x => x.TournamentDirectoryEntryId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Eine Nummer gehoert zu genau EINEM Turnier — sonst waere beim Zusammenfuehren
+            // zweier Quellen nicht entscheidbar, welcher Eintrag gemeint ist.
+            e.HasIndex(x => new { x.Kind, x.ExternalId }).IsUnique();
+            e.HasIndex(x => x.TournamentDirectoryEntryId);
+        });
+
+        modelBuilder.Entity<TournamentDirectoryIgnore>(e =>
+        {
+            e.HasOne(i => i.User)
+             .WithMany()
+             .HasForeignKey(i => i.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Zweimal ausblenden ist dasselbe wie einmal.
+            e.HasIndex(i => new { i.UserId, i.ChessResultsId }).IsUnique();
         });
 
         modelBuilder.Entity<TournamentSearchProfile>(e =>

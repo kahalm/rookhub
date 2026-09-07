@@ -65,12 +65,15 @@ public class TournamentDirectoryController : BaseApiController
         var result = await _query.SearchAsync(parsed.Query!, ct);
         var subscribed = await SubscribedIdsAsync(
             result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
+        var ignored = await IgnoredIdsAsync(
+            result.Items.Select(i => i.Entry.ChessResultsId), parsed.Query!.IncludeIgnored, ct);
 
         return Ok(new DirectoryPageDto
         {
             Items = result.Items
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members))
+                    i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members,
+                    ignored.Contains(i.Entry.ChessResultsId)))
                 .ToList(),
             Total = result.Total,
             Truncated = result.Truncated,
@@ -98,7 +101,16 @@ public class TournamentDirectoryController : BaseApiController
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
         var pins = await _query.MapPinsAsync(parsed.Query!, box.MinLat, box.MaxLat, box.MinLon, box.MaxLon, limit, ct);
-        return Ok(pins.Select(p => DirectoryEntryDto.FromEntity(p)).ToList());
+        var pinSubscribed = await SubscribedIdsAsync(pins.Select(p => p.ChessResultsId), ct);
+        var pinIgnored = await IgnoredIdsAsync(
+            pins.Select(p => p.ChessResultsId), parsed.Query!.IncludeIgnored, ct);
+
+        // Die Karte braucht Haken und Ausblend-Merkmal jetzt ebenfalls: ihr Punkt-Fenster ist
+        // dieselbe Karte wie in Liste und Kalender und zeigt dieselben Schaltflaechen.
+        return Ok(pins
+            .Select(p => DirectoryEntryDto.FromEntity(p, null,
+                pinSubscribed.Contains(p.ChessResultsId), null, pinIgnored.Contains(p.ChessResultsId)))
+            .ToList());
     }
 
     /// <summary>
@@ -135,9 +147,13 @@ public class TournamentDirectoryController : BaseApiController
 
         // Die Turniere EINMAL, die Tage nur mit ihren Nummern — ein mehrtaegiges Turnier stand
         // vorher an jedem seiner Tage voll ausgeschrieben da (siehe DirectoryCalendarDto).
+        var calendarIgnored = await IgnoredIdsAsync(
+            result.Items.Select(i => i.Entry.ChessResultsId), parsed.Query!.IncludeIgnored, ct);
+
         var tournaments = result.Items
             .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members))
+                i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members,
+                calendarIgnored.Contains(i.Entry.ChessResultsId)))
             .ToList();
 
         var days = new List<DirectoryCalendarDayDto>();
@@ -168,7 +184,9 @@ public class TournamentDirectoryController : BaseApiController
         if (item is null) return NotFound();
 
         var subscribed = await SubscribedIdsAsync(item.Members.Select(m => m.ChessResultsId), ct);
-        return Ok(DirectoryEntryDto.FromEntity(item.Entry, null, subscribed.Count > 0, item.Members));
+        var isIgnored = await IgnoredIdsAsync([item.Entry.ChessResultsId], true, ct);
+        return Ok(DirectoryEntryDto.FromEntity(item.Entry, null, subscribed.Count > 0, item.Members,
+            isIgnored.Contains(item.Entry.ChessResultsId)));
     }
 
     /// <summary>Ortsvorschlaege (PLZ oder Name) fuer das Suchprofil-Formular.</summary>
@@ -188,6 +206,62 @@ public class TournamentDirectoryController : BaseApiController
             Lat = p.Lat,
             Lon = p.Lon,
         }).ToList());
+    }
+
+    /// <summary>
+    /// Ein Turnier fuer MICH ausblenden. Es verschwindet aus Liste, Karte und Kalender — und aus
+    /// der naechtlichen Umkreis-Meldung, denn eine Meldung ueber ein weggeklicktes Turnier ist
+    /// genau die Art Benachrichtigung, die einen dazu bringt, alle abzuschalten.
+    ///
+    /// <para>Idempotent: zweimal ausblenden ist dasselbe wie einmal.</para>
+    /// </summary>
+    [HttpPost("{chessResultsId}/ignore")]
+    public async Task<IActionResult> Ignore(string chessResultsId, CancellationToken ct)
+    {
+        var id = (chessResultsId ?? "").Trim();
+        if (!TournamentIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
+
+        var userId = GetUserId();
+        if (await _db.TournamentDirectoryIgnores
+                .AnyAsync(i => i.UserId == userId && i.ChessResultsId == id, ct))
+        {
+            return NoContent();
+        }
+
+        _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore
+        {
+            UserId = userId,
+            ChessResultsId = id,
+        });
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        // Zwei gleichzeitige Klicks laufen in den Unique-Index. Das Ergebnis ist genau das
+        // gewuenschte, also kein Fehler.
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex))
+        {
+            return NoContent();
+        }
+        return NoContent();
+    }
+
+    /// <summary>Ein ausgeblendetes Turnier wieder zeigen (idempotent).</summary>
+    [HttpDelete("{chessResultsId}/ignore")]
+    public async Task<IActionResult> Unignore(string chessResultsId, CancellationToken ct)
+    {
+        var id = (chessResultsId ?? "").Trim();
+        if (!TournamentIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
+
+        var userId = GetUserId();
+        var row = await _db.TournamentDirectoryIgnores
+            .FirstOrDefaultAsync(i => i.UserId == userId && i.ChessResultsId == id, ct);
+        if (row is not null)
+        {
+            _db.TournamentDirectoryIgnores.Remove(row);
+            await _db.SaveChangesAsync(ct);
+        }
+        return NoContent();
     }
 
     /// <summary>
@@ -355,6 +429,27 @@ public class TournamentDirectoryController : BaseApiController
         return start is not null && end is not null && day >= start && day <= end;
     }
 
+    /// <summary>
+    /// Welche dieser Turniere hat der Nutzer ausgeblendet? Nur gebraucht, wenn der Filter
+    /// ausgeblendete MITanzeigt — sonst sind sie ohnehin nicht in der Antwort, und die Abfrage
+    /// waere verschwendet.
+    /// </summary>
+    private async Task<HashSet<string>> IgnoredIdsAsync(
+        IEnumerable<string> ids, bool needed, CancellationToken ct)
+    {
+        if (!needed) return [];
+
+        var list = ids.Distinct().ToList();
+        if (list.Count == 0) return [];
+
+        var userId = GetUserId();
+        return (await _db.TournamentDirectoryIgnores
+                .Where(i => i.UserId == userId && list.Contains(i.ChessResultsId))
+                .Select(i => i.ChessResultsId)
+                .ToListAsync(ct))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
     private async Task<HashSet<string>> SubscribedIdsAsync(IEnumerable<string> ids, CancellationToken ct)
     {
         var list = ids.Distinct().ToList();
@@ -452,6 +547,10 @@ public class TournamentDirectoryController : BaseApiController
             Text = string.IsNullOrWhiteSpace(text) ? null : text.Trim(),
             WeekendOnly = weekendOnly,
             MinPlayers = minPlayers,
+            // Ausgeblendete Turniere gehoeren dem NUTZER, nicht dem Filter — deshalb wandert die
+            // Kennung mit in die Abfrage und nicht eine fertige Liste von Nummern.
+            ForUserId = GetUserId(),
+            IncludeIgnored = audience?.IncludeIgnored ?? false,
             Kinds = kinds.Count > 0 ? kinds : null,
             Genders = genders.Count > 0 ? genders : null,
             AgeGroups = ageGroups,
