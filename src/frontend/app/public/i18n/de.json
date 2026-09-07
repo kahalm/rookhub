@@ -3025,7 +3025,10 @@
       "venueMap": "Austragungsort",
       "importing": "Turnier wird geholt…",
       "importDone": "Turnier geholt — Teilnehmer und Ergebnisse sind da.",
-      "importFailed": "Das Turnier konnte nicht geholt werden. Es bleibt gemerkt und wird von selbst erneut geholt."
+      "importFailed": "Das Turnier konnte nicht geholt werden. Es bleibt gemerkt und wird von selbst erneut geholt.",
+      "toCalendar": "In privaten Kalender übertragen",
+      "calendarDone": "Kalendereintrag erstellt — zum Übernehmen die Datei öffnen.",
+      "calendarFailed": "Der Kalendereintrag konnte auf diesem Gerät nicht erstellt werden."
     },
     "calendar": {
       "previousMonth": "Voriger Monat",

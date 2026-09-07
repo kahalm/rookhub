@@ -91,6 +91,12 @@
             {{ 'tournamentDirectory.detail.results' | translate }}
           </a>
         }
+        @if (entry.startDate) {
+          <button mat-stroked-button (click)="addToCalendar()">
+            <mat-icon>event_available</mat-icon>
+            {{ 'tournamentDirectory.detail.toCalendar' | translate }}
+          </button>
+        }
         <a mat-stroked-button [href]="chessResultsUrl(entry.chessResultsId)"
            target="_blank" rel="noopener noreferrer">
           <mat-icon>open_in_new</mat-icon>

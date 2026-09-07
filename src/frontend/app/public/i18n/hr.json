@@ -3025,7 +3025,10 @@
       "venueMap": "Mjesto održavanja",
       "importing": "Turnir se dohvaća…",
       "importDone": "Turnir dohvaćen — sudionici i rezultati su tu.",
-      "importFailed": "Turnir se nije mogao dohvatiti. Ostaje označen i bit će dohvaćen sam od sebe."
+      "importFailed": "Turnir se nije mogao dohvatiti. Ostaje označen i bit će dohvaćen sam od sebe.",
+      "toCalendar": "Prenesi u vlastiti kalendar",
+      "calendarDone": "Unos u kalendar je stvoren — otvori datoteku da ga preuzmeš.",
+      "calendarFailed": "Unos u kalendar nije se mogao stvoriti na ovom uređaju."
     },
     "calendar": {
       "previousMonth": "Prethodni mjesec",

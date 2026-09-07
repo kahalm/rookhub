@@ -7,6 +7,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { TournamentDirectoryDetailComponent } from './tournament-directory-detail.component';
 import { DirectoryEntry } from './tournament-directory.model';
+import { SnackbarService } from '@rh/core/snackbar.service';
 
 function entry(id: string, over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
@@ -165,5 +166,49 @@ describe('TournamentDirectoryDetailComponent', () => {
     const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     component.back();
     expect(navigate).toHaveBeenCalledWith(['/tournaments/calendar']);
+  });
+
+  // ----- In den privaten Kalender uebertragen -------------------------------
+
+  it('baut aus dem Turnier einen Ganztages-Termin mit allem, was bekannt ist', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+
+    const event = component.calendarEvent()!;
+
+    expect(event.uid).toBe('chess-results-1457129@rookhub');
+    expect(event.title).toBe('Open Braunau 2026');
+    expect(event.start).toBe('2026-12-18');
+    expect(event.end).toBe('2026-12-20');
+    expect(event.location).toBe('Ranshofen');
+    expect(event.url).toBe('https://chess-results.com/tnr1457129.aspx?lan=1');
+    // Nur, was auch stimmt: Bedenkzeit, Runden, Gemeldete, Veranstalter.
+    expect(event.description).toContain('90 min');
+    expect(event.description).toContain('7');
+    expect(event.description).toContain('SK Braunau');
+  });
+
+  it('bietet keinen Termin an, solange kein Datum bekannt ist', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129')
+      .flush(entry('1457129', { startDate: null, endDate: null }));
+    flushImportLookup('1457129');
+
+    expect(component.calendarEvent()).toBeNull();
+  });
+
+  it('sagt es, wenn die Datei auf diesem Geraet nicht erstellt werden konnte', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    // Gesperrter Speicher / Umgebung ohne Blob-URLs — der Nutzer darf nicht ins Leere klicken.
+    spyOn(URL, 'createObjectURL').and.throwError('kein Blob');
+
+    component.addToCalendar();
+
+    expect(warn).toHaveBeenCalled();
   });
 });

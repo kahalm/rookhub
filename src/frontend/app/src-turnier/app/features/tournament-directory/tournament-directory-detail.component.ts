@@ -11,6 +11,7 @@ import { catchError, of, switchMap, take, takeWhile, timer } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { CrawlJob, Tournament } from '@rh/core/models';
+import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { TournamentListService } from '../../core/tournament-list.service';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
@@ -100,6 +101,57 @@ export class TournamentDirectoryDetailComponent implements OnInit {
 
   chessResultsUrl(id: string): string {
     return `https://chess-results.com/tnr${id}.aspx?lan=1`;
+  }
+
+  /**
+   * Den Termin in den eigenen Kalender uebertragen — als .ics-Datei.
+   *
+   * <p>Ein Weg fuer alle Systeme: Android bietet beim Oeffnen den Kalender an, iOS uebergibt die
+   * Datei direkt an Kalender, am Rechner uebernimmt sie Outlook, Apple Kalender oder
+   * Thunderbird. Ein `intent://`-Link waere kuerzer, wirkt aber nur in Chrome fuer Android — und
+   * der Termin laeuft hier ueber KEINEN fremden Dienst, was bei „privater Kalender" der Punkt
+   * ist. Details in `core/ics.ts`.</p>
+   */
+  addToCalendar(): void {
+    const event = this.calendarEvent();
+    if (!event) return;
+    if (downloadIcs(buildIcs(event), icsFileName(event.title))) {
+      this.snackbar.success(this.translate.instant('tournamentDirectory.detail.calendarDone'));
+    } else {
+      this.snackbar.warn(this.translate.instant('tournamentDirectory.detail.calendarFailed'));
+    }
+  }
+
+  /**
+   * Der Termin, wie er in den Kalender geht — `null`, solange kein Startdatum bekannt ist (ohne
+   * Datum gibt es keinen Termin, und der Knopf ist dann auch nicht zu sehen).
+   *
+   * <p>Oeffentlich, weil hier die ganze Abbildung Turnier → Termin steckt: sie laesst sich so
+   * pruefen, ohne einen Download auszuloesen.</p>
+   */
+  calendarEvent(): CalendarEvent | null {
+    const e = this.entry();
+    if (!e?.startDate) return null;
+
+    // Nur, was auch stimmt: chess-results liefert Rundenzahl und Gemeldete nicht immer.
+    const facts = [
+      e.timeControl,
+      e.rounds ? this.translate.instant('tournamentDirectory.detail.rounds') + ': ' + e.rounds : null,
+      e.playerCount ? this.translate.instant('tournamentDirectory.players', { count: e.playerCount }) : null,
+      e.organizer ? this.translate.instant('tournamentDirectory.detail.organizer') + ': ' + e.organizer : null,
+      this.chessResultsUrl(e.chessResultsId),
+    ].filter(Boolean);
+
+    return {
+      // Dieselbe Kennung aktualisiert den Termin spaeter, statt ihn zu verdoppeln.
+      uid: `chess-results-${e.chessResultsId}@rookhub`,
+      title: e.name,
+      start: e.startDate,
+      end: e.endDate,
+      location: e.location,
+      description: facts.join('\n'),
+      url: this.chessResultsUrl(e.chessResultsId),
+    };
   }
 
   onTilesFailed(): void {
