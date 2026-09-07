@@ -254,6 +254,30 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [x] **Jeder gecrawlte Bestand braucht eine FASSUNG, nicht nur einen Zeitstempel** (ERLEDIGT v0.441.0: `RoundPlanVersion`, `TeamHintVersion`, `FideDetailVersion` + Migration `AddCrawlFetchVersions`; die Fassungen starten bei 1, der Bestand steht auf 0 und wird damit vom naechsten Durchgang von selbst nachgeholt) (Idee des
+  Nutzers 2026-09-07, bisher nur halb umgesetzt). „Geprueft am 15:50" sagt NICHT, WOMIT geprueft
+  wurde. Faellt ein Parser-Fehler spaeter auf, ist der Vermerk eine Luege, die jede Wiederholung
+  verhindert — und der Behelf ist ein manueller Schalter (`retryEmpty`), den jemand kennen und
+  ausfuehren muss. Mit einer Fassung passiert es von selbst: `…Version < Current…Version` → beim
+  naechsten Durchgang genau EINMAL neu holen.
+
+  **Schon so gebaut:** `TournamentHistoryService.CurrentCardVersion` (Spielerkarte) und
+  `CurrentTimeControlVersion` (Bedenkzeit); Vorbild ist `ImportPipeline.CurrentVersion` mit dem
+  „Aktualisieren (N)"-Banner. Beide haben sich am selben Tag bewaehrt: die Kartenfassung brachte
+  dem Bestand die nachtraeglich ergaenzte Partienzahl, die Bedenkzeit-Fassung verhinderte, dass ein
+  Postback-Fehler als „dieses Turnier nennt keine Bedenkzeit" einfriert.
+
+  **Offen — drei Zeitstempel auf `TournamentDirectoryEntry` ohne Fassung:**
+  `RoundPlanCheckedAt` (der akute Fall: 452 Eintraege tragen einen Vermerk aus der Zeit VOR dem
+  Blatt-Tabellen-Fix, u. a. tnr1438343 mit 0 gespeicherten von 9 abrufbaren Terminen),
+  `TeamHintCheckedAt` und `FideDetailCheckedAt`.
+
+  **Zuschnitt, falls es gebaut wird:** eine Fassung JE DATENART, nicht eine globale Crawler-Version
+  — ein Fix am Rundenplan-Parser sagt nichts ueber die Spielerkarte aus, und eine globale Zahl
+  wuerde bei jedem Crawler-Release Tausende Seiten neu holen (bei ~6 s je Abruf hinter dem
+  Rate-Limiter: Stunden). Einmalig bleibt danach noch der Altbestand: die heutigen Vermerke haben
+  keine Fassung, brauchen also EIN `retryEmpty`/Backfill — danach nie wieder.
+
 - [ ] **Turnierverlauf: die Spielerkarte sparen, wo das Turnier schon importiert ist** (Frage des
   Nutzers 2026-09-07, bewusst nur vermerkt). Heute wird JE Spieler UND Turnier eine Spielerkarte
   geholt (`art=9&snr=`), weil Punkte, Performance, Platz und Elo-Aenderung nur dort stehen. Geteilt

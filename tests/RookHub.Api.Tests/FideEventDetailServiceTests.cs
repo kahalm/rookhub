@@ -102,6 +102,38 @@ public class FideEventDetailServiceTests : IDisposable
     /// trotzdem gesetzt werden, sonst wird dieselbe Seite jede Nacht erneut geholt. Das ist
     /// dieselbe Regel wie beim Rundenplan: „nachgesehen, nichts hinterlegt" ist ein ERGEBNIS.
     /// </summary>
+    /// <summary>
+    /// Aendert sich der Parser oder der Weg zum Detail-Fragment, muss der BESTAND mit — der
+    /// Zeitstempel allein sagt nur, DASS geholt wurde. Eine aeltere Fassung holt der naechste
+    /// Durchgang von selbst nach, ohne dass jemand `retryEmpty` von Hand ausloest.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_AnOlderVersion_IsFetchedAgain()
+    {
+        var entry = await AddFideEntryAsync();
+        entry.FideDetailCheckedAt = DateTime.UtcNow.AddDays(-1);
+        entry.FideDetailVersion = 0;
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService(FullDetail).RunAsync(10);
+
+        Assert.Equal(1, result.Checked);
+        var after = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(FideEventDetailService.CurrentVersion, after.FideDetailVersion);
+    }
+
+    /// <summary>Auf dem aktuellen Stand bleibt es liegen — sonst waere die Fassung wertlos.</summary>
+    [Fact]
+    public async Task RunAsync_TheCurrentVersion_IsLeftAlone()
+    {
+        var entry = await AddFideEntryAsync();
+        entry.FideDetailCheckedAt = DateTime.UtcNow.AddDays(-1);
+        entry.FideDetailVersion = FideEventDetailService.CurrentVersion;
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(0, (await CreateService(FullDetail).RunAsync(10)).Checked);
+    }
+
     [Fact]
     public async Task RunAsync_SparseDetail_StillMarksItChecked()
     {

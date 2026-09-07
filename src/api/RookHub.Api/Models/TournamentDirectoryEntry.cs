@@ -175,6 +175,14 @@ public class TournamentDirectoryEntry
     public DateTime? TeamHintCheckedAt { get; set; }
 
     /// <summary>
+    /// Mit WELCHER Fassung der Spielort zuletzt aufgeloest wurde
+    /// (<see cref="VenueDisambiguationService.CurrentVersion"/>). Der Zeitstempel allein sagt nur,
+    /// DASS nachgesehen wurde — nach einer Regel- oder Parser-Aenderung ist er eine Luege, die
+    /// jede Wiederholung verhindert.
+    /// </summary>
+    public int TeamHintVersion { get; set; }
+
+    /// <summary>
     /// Einzel- oder Mannschaftsturnier. Kommt AUS DER QUELLE: die chess-results-Turniersuche hat
     /// ein Turnierart-Feld, und die Arten 2/3 („Rundenturnier/Schweizer System fuer
     /// Mannschaften") sind genau die Mannschaftsturniere. Der Sweep fragt sie deshalb in einem
@@ -238,12 +246,36 @@ public class TournamentDirectoryEntry
     public DateTime? RoundPlanCheckedAt { get; set; }
 
     /// <summary>
+    /// Mit welcher Fassung der Rundenplan zuletzt geholt wurde
+    /// (<see cref="TournamentRoundPlanService.CurrentVersion"/>).
+    ///
+    /// <para><b>Der Fall, der das ausgeloest hat:</b> 452 Eintraege trugen einen Vermerk aus der
+    /// Zeit VOR der Parser-Reparatur (die Rundenplan-Tabelle wurde als Wrapper statt als Blatt
+    /// gelesen, Ergebnis: leere Liste ohne Fehler). „Geprueft" verhinderte danach jede
+    /// Wiederholung — tnr1438343 hatte null gespeicherte von neun abrufbaren Terminen. Mit einer
+    /// Fassung holt der naechste Durchgang solche Eintraege von selbst nach, statt auf einen
+    /// manuellen Schalter zu warten.</para>
+    ///
+    /// <para>Wird zusammen mit <see cref="RoundPlanCheckedAt"/> geleert, wenn sich der Termin
+    /// geaendert hat: die beiden beantworten verschiedene Fragen („fuer diesen Termin schon
+    /// nachgesehen" und „mit welchem Parser"), und eine Fassung ohne Vermerk behauptete etwas
+    /// ueber einen Abruf, den es nicht mehr gibt.</para>
+    /// </summary>
+    public int RoundPlanVersion { get; set; }
+
+    /// <summary>
     /// Wann zuletzt versucht wurde, die FIDE-Detailangaben zu holen. Derselbe Gedanke wie bei
     /// <see cref="RoundPlanCheckedAt"/>: ein Abruf je Ereignis, und ein Ereignis ohne gepflegte
     /// Angaben ist kein Fehler, sondern ein Ergebnis, das sich merken lassen muss. Nur fuer
     /// Eintraege mit einer FIDE-Herkunft ueberhaupt gesetzt.
     /// </summary>
     public DateTime? FideDetailCheckedAt { get; set; }
+
+    /// <summary>
+    /// Mit welcher Fassung die FIDE-Detailangaben zuletzt geholt wurden
+    /// (<see cref="FideEventDetailService.CurrentVersion"/>).
+    /// </summary>
+    public int FideDetailVersion { get; set; }
 
     /// <summary>
     /// Auf welchen Seiten dieses Turnier gefunden wurde. Dasselbe Turnier steht auf mehreren, und

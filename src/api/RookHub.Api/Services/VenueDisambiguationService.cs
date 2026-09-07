@@ -30,6 +30,16 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class VenueDisambiguationService
 {
+    /// <summary>
+    /// Fassung dieses Abrufs. **Erhoehen, sobald sich die Aufloesungs-REGEL oder der Parser der
+    /// Vereinsliste aendert** — der naechtliche Durchgang nimmt dann jeden aelteren Eintrag genau
+    /// EINMAL erneut vor. Ohne das sagt `TeamHintCheckedAt` nur, DASS nachgesehen wurde, und eine
+    /// verbesserte Regel erreicht den Bestand nie.
+    ///
+    /// <para>1 = Stand 2026-09-07 (Beleg-Regel ueber unterscheidende Woerter).</para>
+    /// </summary>
+    public const int CurrentVersion = 1;
+
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<VenueDisambiguationService> _log;
@@ -68,7 +78,7 @@ public class VenueDisambiguationService
             .Include(e => e.Venues)
             .Where(e => e.RemovedAt == null
                         && e.LocationText != null
-                        && e.TeamHintCheckedAt == null
+                        && (e.TeamHintCheckedAt == null || e.TeamHintVersion < CurrentVersion)
                         // Die Vereinsliste steht auf der chess-results-Turnierseite — ohne
                         // Nummer dort ist sie nicht erreichbar (FIDE-Eintraege).
                         && e.ChessResultsId != null
@@ -83,6 +93,7 @@ public class VenueDisambiguationService
         foreach (var entry in candidates)
         {
             entry.TeamHintCheckedAt = DateTime.UtcNow;
+            entry.TeamHintVersion = CurrentVersion;
             try
             {
                 if (await TryRefineAsync(entry, ct)) resolved++;

@@ -233,6 +233,10 @@ public class TournamentDirectoryService
                             StringComparison.Ordinal))
                     {
                         entry.RoundPlanCheckedAt = null;
+                        // Die FASSUNG faellt mit weg: sie beantwortet „mit welchem Parser
+                        // geholt" und haenge sonst an einem Eintrag ohne Vermerk — eine Aussage
+                        // ueber einen Abruf, den es nicht mehr gibt.
+                        entry.RoundPlanVersion = 0;
                     }
                 }
 

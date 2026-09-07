@@ -334,11 +334,33 @@ Turnierschach-Performance in derselben Spalte, als waeren sie vergleichbar. Sie 
    schlaegt die Ableitung aus dem Freitext (`TournamentSpeedClassifier` rechnet nur, wenn sie
    fehlt) — „90 Min. / 40 Zuege + 30 Min. + 30 Sekunden ab Zug 1" richtig zu addieren ist Raten.
 
-**Beide Abrufe tragen eine FASSUNG** (`CurrentCardVersion`, `CurrentTimeControlVersion`). „Einmal
-geholt, nie wieder" spart Abrufe, friert aber jeden Parser-Fehler und jedes spaeter ergaenzte Feld
-fuer immer ein — eine Zeile mit `Speed = Unknown` saehe hinterher aus wie „das Turnier nennt keine
-Bedenkzeit". Steht die Zahl unter der aktuellen, holt der naechtliche Durchgang die Seite genau
-EINMAL nach. Dieselbe Klasse Problem wie `RoundPlanCheckedAt` im Verzeichnis.
+**JEDER gecrawlte Bestand traegt eine FASSUNG, nicht nur einen Zeitstempel.** „Geprueft am 15:50"
+sagt NICHT, WOMIT geprueft wurde: faellt ein Parser-Fehler spaeter auf, ist der Vermerk eine Luege,
+die jede Wiederholung verhindert — und der Behelf waere ein manueller Schalter, den jemand kennen
+und ausfuehren muss. Steht die Fassung unter der aktuellen, holt der naechtliche Durchgang den
+Eintrag genau EINMAL nach.
+
+| Datenart | Fassung | Erhoehen, wenn sich aendert |
+|---|---|---|
+| Spielerkarte | `TournamentHistoryService.CurrentCardVersion` | die Karten-Felder oder ihr Parser |
+| Bedenkzeit | `TournamentHistoryService.CurrentTimeControlVersion` | der Weg zu den Turnierdetails oder ihr Parser |
+| Rundenplan | `TournamentRoundPlanService.CurrentVersion` | `FindTableByHeaders` / `ParseRoundPlanAsync` |
+| Spielort ueber Vereinsnamen | `VenueDisambiguationService.CurrentVersion` | die Aufloesungs-Regel |
+| FIDE-Details | `FideEventDetailService.CurrentVersion` | `ParseEventAsync` oder der Weg zum Fragment |
+
+**Eine Fassung JE DATENART, keine globale Crawler-Version**: ein Fix am Rundenplan-Parser sagt
+nichts ueber die Spielerkarte aus, und eine globale Zahl holte bei jedem Crawler-Release Tausende
+Seiten neu (bei ~6 s je Abruf hinter dem Rate-Limiter: Stunden).
+
+**`RoundPlanVersion` wird MIT `RoundPlanCheckedAt` geleert**, wenn der Sweep eine Terminaenderung
+sieht: die beiden beantworten verschiedene Fragen („fuer diesen Termin schon nachgesehen" und „mit
+welchem Parser"), und eine Fassung ohne Vermerk behauptete etwas ueber einen Abruf, den es nicht
+mehr gibt.
+
+Die drei Belege, an denen das Muster entstand: der Bestand haette die nachtraeglich ergaenzte
+Partienzahl NIE bekommen; ein Postback-Fehler waere als „dieses Turnier nennt keine Bedenkzeit"
+eingefroren; und 452 Eintraege trugen einen Rundenplan-Vermerk aus der Zeit vor der
+Parser-Reparatur (tnr1438343: null gespeicherte von neun abrufbaren Terminen).
 
 **Die PARTIENZAHL kommt von der Spielerkarte** (`GamesPlayed`), nicht aus der Rundenzahl: in einer
 Liga wird ein Spieler an einem TEIL der Termine aufgestellt, die Trefferliste meldet trotzdem alle

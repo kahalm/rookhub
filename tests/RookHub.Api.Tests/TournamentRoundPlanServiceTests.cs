@@ -81,6 +81,42 @@ public class TournamentRoundPlanServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Der Vermerk „geprueft" sagt nur, DASS nachgesehen wurde — nicht womit. Nach der
+    /// Parser-Reparatur trugen 452 Eintraege einen aus der Zeit davor, u. a. tnr1438343 mit null
+    /// gespeicherten von neun abrufbaren Terminen; „geprueft" verhinderte jede Wiederholung. Eine
+    /// aeltere FASSUNG holt der naechste Durchgang deshalb von selbst nach.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_AnOlderVersion_IsFetchedAgain()
+    {
+        var entry = await AddLeagueAsync();
+        entry.RoundPlanCheckedAt = DateTime.UtcNow.AddHours(-1);
+        entry.RoundPlanVersion = 0;                       // Stand vor der Reparatur
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService(ElevenRounds).RunAsync(10);
+
+        Assert.Equal(1, result.Checked);
+        var after = await _db.TournamentDirectoryEntries.Include(e => e.RoundDates).SingleAsync();
+        Assert.Equal(4, after.RoundDates.Count);
+        Assert.Equal(TournamentRoundPlanService.CurrentVersion, after.RoundPlanVersion);
+    }
+
+    /// <summary>Auf dem aktuellen Stand wird NICHT erneut geholt — sonst waere die Fassung wertlos.</summary>
+    [Fact]
+    public async Task RunAsync_TheCurrentVersion_IsLeftAlone()
+    {
+        var entry = await AddLeagueAsync();
+        entry.RoundPlanCheckedAt = DateTime.UtcNow.AddHours(-1);
+        entry.RoundPlanVersion = TournamentRoundPlanService.CurrentVersion;
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService(ElevenRounds).RunAsync(10);
+
+        Assert.Equal(0, result.Checked);
+    }
+
+    /// <summary>
     /// Ein Wochenend-Open braucht das nicht — dort spielt man an aufeinanderfolgenden Tagen, und
     /// der Zeitraum ist die richtige Auskunft. Jeder Abruf, der hier gespart wird, ist eine
     /// Anfrage weniger an chess-results.
@@ -237,15 +273,19 @@ public class TournamentRoundPlanServiceTests : IDisposable
 
     /// <summary>
     /// Ein Eintrag, der als geprueft gilt und KEINEN Termin hat, wird mit `retryEmpty` erneut
-    /// vorgenommen — sonst waere die Behebung eines kaputten Holens fuer den bestehenden Bestand
-    /// wirkungslos (auf Dev genau so passiert: 337 geprueft, 0 Termine, weil der Parser die
-    /// Wrapper-Tabelle griff).
+    /// vorgenommen. Der Schalter bleibt fuer den Fall noetig, in dem die Fassung NICHT hilft: das
+    /// Holen war zur aktuellen Fassung erfolgreich, hat aber nichts gefunden — und man will
+    /// trotzdem nachsehen (etwa weil der Veranstalter den Plan inzwischen nachgetragen hat).
+    ///
+    /// <para>Der andere Fall — geprueft mit einer AELTEREN Fassung — braucht ihn seit
+    /// `RoundPlanVersion` nicht mehr; deshalb steht hier ausdruecklich die aktuelle Fassung.</para>
     /// </summary>
     [Fact]
     public async Task RunAsync_RetryEmpty_NimmtLeerGeprueftesErneutVor()
     {
         var entry = await AddLeagueAsync();
         entry.RoundPlanCheckedAt = DateTime.UtcNow.AddDays(-1);
+        entry.RoundPlanVersion = TournamentRoundPlanService.CurrentVersion;
         await _db.SaveChangesAsync();
 
         // Ohne den Schalter bleibt es liegen.

@@ -46,6 +46,17 @@ public class TournamentRoundPlanService
     /// zehntaegiges Festival („jeden Tag eine Runde") in Ruhe und greifen ab dem, was eine Saison
     /// ist.
     /// </summary>
+    /// <summary>
+    /// Fassung dieses Abrufs. **Erhoehen, sobald sich am WEG oder am PARSER etwas aendert** —
+    /// konkret an `FindTableByHeaders` oder `ParseRoundPlanAsync` im Crawler. Der naechtliche
+    /// Durchgang holt dann jeden aelteren Eintrag genau EINMAL nach.
+    ///
+    /// <para>1 = Stand nach der Blatt-Tabellen-Reparatur (2026-09-07). Der Bestand steht auf 0
+    /// und wird damit sofort nachgeholt — genau die 452 Eintraege, deren Vermerk gegen den
+    /// kaputten Parser entstand.</para>
+    /// </summary>
+    public const int CurrentVersion = 1;
+
     internal int MinSpanDays { get; set; } = 8;
 
     /// <summary>
@@ -89,6 +100,11 @@ public class TournamentRoundPlanService
         var candidates = await _db.TournamentDirectoryEntries
             .Include(e => e.RoundDates)
             .Where(e => (e.RoundPlanCheckedAt == null
+                         // Mit einer aelteren FASSUNG geprueft: der Vermerk sagt nur, DASS
+                         // nachgesehen wurde, nicht womit. 452 Eintraege trugen einen aus der
+                         // Zeit vor der Parser-Reparatur — der naechste Durchgang holt sie damit
+                         // von selbst nach, statt auf `retryEmpty` von Hand zu warten.
+                         || e.RoundPlanVersion < CurrentVersion
                          || (retryEmpty && e.RoundDates.Count == 0))
                         && e.RemovedAt == null
                         // Der Rundenplan steht auf der chess-results-Turnierseite — ohne Nummer
@@ -155,6 +171,7 @@ public class TournamentRoundPlanService
                 }
 
                 entry.RoundPlanCheckedAt = DateTime.UtcNow;
+                entry.RoundPlanVersion = CurrentVersion;
                 if (rounds.Count > 0)
                 {
                     Replace(entry, rounds);

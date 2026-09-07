@@ -35,6 +35,15 @@ public record FideDetailResult(int Checked, int WithDetails, int Geocoded);
 public class FideEventDetailService
 {
     /// <summary>
+    /// Fassung dieses Abrufs. **Erhoehen, sobald sich `ParseEventAsync` im Crawler oder der Weg
+    /// zum Detail-Fragment aendert** — der naechtliche Durchgang holt dann jedes aeltere Ereignis
+    /// genau EINMAL nach, ohne dass jemand `retryEmpty` von Hand ausloest.
+    ///
+    /// <para>1 = Stand 2026-09-07 (erste Fassung des Detail-Nachlaufs).</para>
+    /// </summary>
+    public const int CurrentVersion = 1;
+
+    /// <summary>
     /// Zwischenstand alle 25 Ereignisse — dieselbe Lehre wie beim Rundenplan: ein Durchgang ueber
     /// 150 Ereignisse laeuft Minuten, und wurde erst am Ende geschrieben, verwarf ein Abbruch,
     /// ein API-Neustart oder ein Deploy die ganze Arbeit.
@@ -73,6 +82,7 @@ public class FideEventDetailService
         var candidates = await _db.TournamentDirectoryEntries
             .Where(e => e.RemovedAt == null
                         && (e.FideDetailCheckedAt == null
+                            || e.FideDetailVersion < CurrentVersion
                             || (retryEmpty && (e.TimeControlText == null || e.TimeControlText == "")))
                         && _db.TournamentDirectorySources.Any(s =>
                             s.TournamentDirectoryEntryId == e.Id && s.Kind == DirectorySourceKind.Fide))
@@ -119,6 +129,7 @@ public class FideEventDetailService
                 }
 
                 entry.FideDetailCheckedAt = now;
+                entry.FideDetailVersion = CurrentVersion;
                 if (detail is null) continue;
 
                 if (Apply(entry, detail)) withDetails++;

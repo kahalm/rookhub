@@ -129,6 +129,32 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Contains("Salzburg Kongresshaus", notification.DataJson);
     }
 
+    /// <summary>
+    /// Aendert sich der TERMIN, sind die gespeicherten Spieltermine Makulatur — der Vermerk faellt
+    /// weg, und die FASSUNG muss mit. Die beiden beantworten verschiedene Fragen („fuer diesen
+    /// Termin schon nachgesehen" und „mit welchem Parser"); bliebe die Fassung stehen, haenge sie
+    /// an einem Eintrag ohne Vermerk und behauptete etwas ueber einen Abruf, den es nicht mehr
+    /// gibt.
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_DateChanged_ClearsTheRoundPlanMarkAndItsVersion()
+    {
+        await CreateService($"[{Row("111", "Open", "2026-12-18", "2026-12-20", "Ranshofen")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        entry.RoundPlanCheckedAt = DateTime.UtcNow.AddDays(-1);
+        entry.RoundPlanVersion = TournamentRoundPlanService.CurrentVersion;
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("111", "Open", "2027-01-08", "2027-01-10", "Ranshofen")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        var after = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Null(after.RoundPlanCheckedAt);
+        Assert.Equal(0, after.RoundPlanVersion);
+    }
+
     [Fact]
     public async Task SweepFederationAsync_OnlyPlayerCountGrew_IsNoChange()
     {
