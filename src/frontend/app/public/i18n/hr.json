@@ -3128,7 +3128,7 @@
     },
     "adultsOnly": "Samo odrasli",
     "hideLeagues": "Sakrij lige",
-    "audienceHelp": "Pojedinačno ili ekipno dolazi s chess-resultsa.\n\nUzrast i spol ne: za njih ne postoji polje, čitaju se iz imena turnira. To dobro pogađa gdje ime navodi kategoriju („U12 djevojke\", „UNDER 16 BOYS\"), a nikako gdje je ne navodi. „Samo odrasli\" skriva sve s oznakom mladih u imenu; seniori ostaju, senirski šah je šah odraslih.\n\nLiga je ekipno natjecanje kroz cijelu sezonu — ili ono koje to kaže u svom imenu.\n\nNešto u pogrešnoj kategoriji? Na stranici turnira postoji „prijavi pogrešan turnir\" — i tamo se pita kako se takvi turniri zovu u tvojoj regiji. Upravo to popravlja stvar za sve.",
+    "audienceHelp": "Pojedinačno ili ekipno dolazi sa samog chess-resultsa — i sve što nije prepoznato kao ekipni turnir računa se kao pojedinačno.\n\nUzrasna i rodna kategorija ne dolaze iz nijednog polja: takvo ne postoji, pa se čitaju iz imena turnira. To radi gdje ime navodi kategoriju („U12 djevojke“, „UNDER 16 BOYS“), a nikako gdje je ne navodi.\n\n„Samo odrasli“ skriva sve s uzrasnom oznakom u imenu. Seniori ostaju — seniorski šah je šah odraslih.\n\nLiga je ekipno natjecanje kroz cijelu sezonu ili ono koje to kaže u svom imenu.\n\nNešto je u pogrešnoj kutiji? Na stranici turnira postoji „prijavi pogrešan događaj“ i pita kako se takvi turniri zovu u tvojoj regiji. To je ono što ovo popravlja za sve.",
     "missing": {
       "cta": "Tvoj turnir nedostaje? Prijavi ga ovdje",
       "blurb": "Ne svaki organizator objavljuje tamo gdje ovaj imenik čita. Link na službenu stranicu može se dodati.",

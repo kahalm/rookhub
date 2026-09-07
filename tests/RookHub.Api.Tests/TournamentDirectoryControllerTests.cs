@@ -689,6 +689,39 @@ public class TournamentDirectoryControllerTests : IDisposable
     }
 
     /// <summary>
+    /// „EINZEL" schliesst das Nicht-Eingeordnete mit ein.
+    ///
+    /// <para>Aus der Quelle kommt nur die Auskunft „ist eine MANNSCHAFTS-Turnierart"; alles andere
+    /// ist Einzel. `Unknown` heisst dabei „die Mannschafts-Abfrage lief hier noch nicht" (die
+    /// Foederationen rotieren ueber eine Woche) oder „sie fiel aus" — kein eigener Fall fuer
+    /// jemanden, der ein Turnier sucht. Als eigener Fall gefuehrt lieferte „Einzel" eine halb
+    /// leere Liste, obwohl der Bestand voll davon ist.</para>
+    /// </summary>
+    [Fact]
+    public async Task Search_KindIndividual_IncludesUnclassified()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau", TournamentKind.Individual);
+        await AddAudienceEntryAsync("2", "Noch nicht geklaert", TournamentKind.Unknown);
+        await AddAudienceEntryAsync("3", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Kinds = "individual" });
+
+        Assert.Equal(["1", "2"], page.Items.Select(i => i.ChessResultsId).Order());
+    }
+
+    /// <summary>Die Gegenprobe: „Mannschaft" bleibt exakt und zieht nichts Unklares herein.</summary>
+    [Fact]
+    public async Task Search_KindTeam_ExcludesUnclassified()
+    {
+        await AddAudienceEntryAsync("1", "Noch nicht geklaert", TournamentKind.Unknown);
+        await AddAudienceEntryAsync("2", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Kinds = "team" });
+
+        Assert.Equal("2", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
     /// Ueberschneidung, nicht Gleichheit: „U12" muss die U8-U18-Meisterschaft finden. Waere hier
     /// auf Gleichheit geprueft, fiele genau die grosse Ausschreibung durch, die ein Elternteil
     /// sucht.

@@ -187,6 +187,15 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   max-width: 320px;
   font-size: 12.5px;
   line-height: 1.45;
+  /* Ein Hilfetext kann mehrere Absaetze haben (der Publikumsfilter des Turnierkalenders: 659
+     Zeichen). Ohne Hoehenbegrenzung MIT Bildlauf wird er einfach abgeschnitten — gemeldet
+     2026-09-07, der Text endete mitten im Satz, und zwar ohne jeden Hinweis darauf. `pointer-
+     events` muss dafuer an sein: die Flaeche ist sonst nicht greifbar und damit nicht rollbar
+     (HelpHint laesst sich per Klick festhalten, der Hover allein wuerde zu wenig Zeit geben). */
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  pointer-events: auto;
+  overscroll-behavior: contain;
 }
 
 /* ===== Kalkulations-Modus: Kopfzeile der App rückt nach rechts =====

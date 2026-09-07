@@ -3128,7 +3128,7 @@
     },
     "adultsOnly": "Adults only",
     "hideLeagues": "Hide leagues",
-    "audienceHelp": "Individual against team comes from chess-results itself.\n\nAge group and gender section do not: no field carries them, so they are read from the tournament name. That works well where the name states the class (\"U12 girls\", \"UNDER 16 BOYS\") and not at all where it does not. \"Adults only\" hides everything with a youth marker in its name; seniors stay, seniors' chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has \"report wrong event\" — and it asks what tournaments of that kind are called in your region, which is what improves this for everyone.",
+    "audienceHelp": "Individual or team comes from chess-results itself — and anything not recognised as a team event counts as individual.\n\nAge group and gender section do not come from a field: there is none, so they are read from the tournament name. That works where the name states the class („U12 girls“, „UNDER 16 BOYS“) and not at all where it does not.\n\n„Adults only“ hides everything with a youth marker in its name. Seniors stay — seniors’ chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has „report wrong event“, and it asks what tournaments of that kind are called in your region. That is what improves it for everyone.",
     "missing": {
       "cta": "Your event missing? Add it here",
       "blurb": "Not every organiser announces where this directory reads. A link to an official page can be added.",

@@ -18,6 +18,74 @@ am geratenen `IsLeague`**: ob etwas eine Liga IST, wird geschlossen, ob sein Zei
 fest. `RoundPlanCheckedAt` wird auch bei LEEREM Plan gesetzt (der haeufige Fall) und bei einem
 Netzfehler nicht; `TournamentDirectory:RoundPlanBatchSize` (200) deckelt die Abrufe je Nacht.
 
+## Lange Hilfetexte gehoeren nicht in einen Hover-Tooltip
+
+Gemeldet 2026-09-07: der Publikums-Hilfetext des Turnierkalenders brach mitten im Satz ab. Ursache
+war die fehlende Hoehenbegrenzung der Tooltip-Flaeche — sie wuchs ueber den Bildschirm hinaus und
+wurde ohne jeden Hinweis abgeschnitten. Behoben in 0.430.1 (`max-height: min(60vh, 420px)` +
+Bildlauf + `pointer-events: auto` an `.hh-tooltip`), damit ist der Text vollstaendig erreichbar.
+
+Die eigentliche Frage bleibt offen: ein Text mit fuenf Absaetzen (700+ Zeichen) ist in einem
+Hover-Tooltip am falschen Ort — dass man darin rollen KANN, sieht man ihm nicht an.
+`HelpHintComponent` koennte ab einer Laenge (~280 Zeichen) statt des Tooltips einen kleinen Dialog
+oeffnen. NICHT sofort gemacht, weil die Komponente in RookHub an vielen Stellen steckt und ein
+`MatDialog` in ihr die Specs aller Eltern-Komponenten anfasst — das ist eine eigene, saubere
+Aenderung samt Durchsicht der betroffenen Tests, kein Nebenbei.
+
+## Weitere Turnierquellen (Liste vom Nutzer, 2026-09-07)
+
+Kandidaten fuer das Turnierverzeichnis. Zwei laufen schon (`chess-results`, `calendar.fide.com`,
+siehe `TournamentDirectorySources`); der Rest ist ungeprueft — je Quelle braucht es die Antwort
+auf drei Fragen, BEVOR sich Arbeit lohnt: (1) liefert sie KUENFTIGE Turniere mit Datum und Ort,
+(2) ist sie maschinell lesbar ohne Anmeldung, (3) sagt ihre robots.txt/AGB etwas dagegen. Die
+FIDE-Erfahrung als Warnung: dort fuehrte der erste gefundene Endpunkt ausschliesslich Ereignisse
+der VERGANGENHEIT, und das Urteil „bringt nichts" war deshalb falsch — die gepflegte Ansicht war
+eine andere URL.
+
+**Global / softwaregebunden**
+- https://chess-results.com/ (laeuft)
+- https://result.vegachess.com/
+- https://www.vegaresult.com/en/tournaments.php
+- https://tornelo.com/
+- https://www.chessmanager.com/
+- https://vesus.org/
+- https://www.torneionline.com/
+- https://caissachess.net/
+- https://circlechess.com/
+- https://chesspairings.org/
+
+**Nationale Verbandssysteme**
+- https://ratings.uschess.org/ — USA, MUIR (neu)
+- https://www.uschess.org/msa/ — USA, MSA (Archiv)
+- https://www.echecs.asso.fr/ListeTournois.aspx?Action=RES — Frankreich
+- https://www.chessarbiter.com/ — Polen
+- https://tournamentservice.com/TournamentList.aspx — Norwegen
+- https://schaken.nl/zoek-een-toernooi/ — Niederlande
+- https://schaakbond.nl/toernooien/ — Niederlande
+- https://www.ecflms.org.uk/ — England, ungeprueft
+- https://rating.englishchess.org.uk/ — England, ungeprueft
+- https://www.schachbund.de/ — Deutschland
+- https://www.swisschess.ch/ — Schweiz
+- https://www.skak.dk/ — Daenemark, ungeprueft
+- https://www.schack.se/ — Schweden, ungeprueft
+- https://www.shakki.net/ — Finnland, ungeprueft
+- https://ratings.ruchess.ru/ — Russland, ungeprueft
+- https://aicf.in/ — Indien
+- https://www.cbx.org.br/ — Brasilien
+- https://www.chess.ca/ — Kanada
+- https://ratings.fide.com/
+- https://calendar.fide.com/ (laeuft, `show=showYear&page=<Jahr>`)
+
+**Live-Uebertragung** — eine andere Sorte: keine Ausschreibungen, sondern LAUFENDE Partien. Fuer
+das Verzeichnis nur mittelbar interessant (ein Turnier, das uebertragen wird, findet statt), fuer
+eine spaetere „laeuft gerade"-Ansicht dagegen die Hauptquelle.
+- https://lichess.org/broadcast
+- https://www.chess.com/events
+- https://followchess.com/
+- https://www.chessbomb.com/
+- https://view.livechesscloud.com/
+- https://clono.no/
+
 ## Nach dem naechsten PROD-Deploy erledigen
 - [ ] **Turnierseite auf PROD scharf schalten** (Dev laeuft seit 2026-09-06). Reihenfolge:
   1. Tag setzen (nur mit Zustimmung!) — `rookhub-turnier:latest` entsteht ausschliesslich im Tag-Lauf.

@@ -374,6 +374,17 @@ public class TournamentDirectoryQueryService
         if (query.Kinds is { Count: > 0 } kinds)
         {
             var list = kinds.ToList();
+            // „EINZEL" schliesst das Nicht-Eingeordnete MIT ein. Aus der Quelle kommt nur die
+            // Auskunft „ist eine MANNSCHAFTS-Turnierart" (chess-results `art=2|3`); alles andere
+            // ist Einzel — und `Unknown` heisst genau: bei diesem Eintrag lief die
+            // Mannschafts-Abfrage noch nicht (Rotationswoche) oder sie fiel aus. Fuer den
+            // Suchenden ist das kein eigener Fall, und ihn als eigenen zu fuehren hiess: „Einzel"
+            // liefert eine halb leere Liste, obwohl der Bestand voll davon ist.
+            //
+            // In der SPALTE bleibt `Unknown` bewusst stehen: ein Netzausfall darf den Bestand
+            // nicht auf „Einzel" umschreiben (siehe TournamentDirectoryService.Apply).
+            if (list.Contains(TournamentKind.Individual) && !list.Contains(TournamentKind.Unknown))
+                list.Add(TournamentKind.Unknown);
             source = source.Where(e => list.Contains(e.Kind));
         }
 
