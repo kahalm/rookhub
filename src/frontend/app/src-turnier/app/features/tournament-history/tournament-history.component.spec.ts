@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { TournamentHistoryComponent } from './tournament-history.component';
 import { HistoryFriend, PlayerHistory, PlayerHistoryEntry } from './tournament-history.model';
 
@@ -183,14 +184,55 @@ describe('TournamentHistoryComponent', () => {
     expect(summary.performance).toBe(1800);
   });
 
-  it('führt ein angeklicktes Turnier auf seine Seite', async () => {
+  /**
+   * Ein Klick fuehrt auf das TURNIER, nicht ins Verzeichnis. Vorher ging er auf
+   * `/tournaments/calendar/{id}` und landete bei der Mehrheit der Verlaufs-Eintraege auf „steht
+   * (noch) nicht im Verzeichnis" — und das heilt nicht: der naechtliche Sweep liest nur 30 Tage
+   * zurueck, ein 2024 gespieltes Turnier steht dort NIE.
+   */
+  it('führt bei einem schon geholten Turnier direkt zu dessen Seite', async () => {
     const req = await setup();
     req.flush([history()]);
     const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
 
     component.open(played());
 
-    expect(navigate).toHaveBeenCalledWith(['/tournaments/calendar', '1107064']);
+    http.expectOne('/api/tournaments/1107064').flush({ id: 42, chessResultsId: '1107064', name: 'X' });
+
+    expect(navigate).toHaveBeenCalledWith(['/tournaments', 42]);
+    expect(component.opening()).toBeNull();
+  });
+
+  /** Ist es NICHT geholt, wird der Holen-Auftrag eingereiht — der einzige Weg dorthin. */
+  it('reiht das Holen ein, wenn das Turnier fehlt', async () => {
+    const req = await setup();
+    req.flush([history()]);
+
+    component.open(played());
+
+    http.expectOne('/api/tournaments/1107064')
+      .flush('weg', { status: 404, statusText: 'Not Found' });
+    const crawl = http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' });
+    expect(crawl.request.body).toEqual({ chessResultsId: '1107064', jobType: 'Full' });
+    crawl.flush({ id: 7, status: 'Pending' });
+
+    expect(component.opening()).toBe('1107064');
+  });
+
+  /** Laesst sich der Auftrag nicht einreihen, wird das gesagt statt endlos gewartet. */
+  it('meldet einen gescheiterten Holen-Auftrag', async () => {
+    const req = await setup();
+    req.flush([history()]);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+
+    component.open(played());
+    http.expectOne('/api/tournaments/1107064')
+      .flush('weg', { status: 404, statusText: 'Not Found' });
+    http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' })
+      .flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(warn).toHaveBeenCalled();
+    expect(component.opening()).toBeNull();
   });
 
   /**

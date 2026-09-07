@@ -125,3 +125,8 @@ h3 {
   .page { padding: 0.75rem 0.5rem; }
   .whose-field, .pick-field { width: 100%; min-width: 0; }
 }
+
+/* Der Eintrag, dessen Turnier gerade geholt wird: sichtbar beschaeftigt, damit ein zweiter Klick
+   nicht als „nichts passiert" gelesen wird (das Holen dauert bis zu zwei Minuten). */
+.row.busy { opacity: 0.6; }
+.row:disabled { cursor: default; }

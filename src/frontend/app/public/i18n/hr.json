@@ -3206,7 +3206,10 @@
       "noName": "U tvojem profilu nedostaje prezime — chess-results se traži po imenu, nema se što potražiti.",
       "sourceUnavailable": "chess-results nije bio dostupan. Prikazuje se zadnje dohvaćeno stanje.",
       "empty": "Pod ovim imenom nisu nađeni turniri.",
-      "loadError": "Povijest se nije mogla učitati."
+      "loadError": "Povijest se nije mogla učitati.",
+      "fetching": "Turnir se dohvaća — ovo traje trenutak.",
+      "fetchSlow": "Još se dohvaća. Zadatak se nastavlja; pogledaj ponovno za minutu.",
+      "fetchFailed": "Turnir se nije mogao dohvatiti. Pokušaj kasnije."
     }
   },
   "turnierAdmin": {

@@ -10,11 +10,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription, timer } from 'rxjs';
-import { TranslatePipe } from '@ngx-translate/core';
+import { Subscription, catchError, of, switchMap, takeWhile, timer } from 'rxjs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { AuthService } from '@rh/core/auth.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
+import { TournamentListService } from '../../core/tournament-list.service';
 import { HistoryFriend, PlayerHistory, PlayerHistoryEntry } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
 
@@ -52,6 +54,18 @@ export class TournamentHistoryComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly tournaments = inject(TournamentListService);
+  private readonly snackbar = inject(SnackbarService);
+  private readonly translate = inject(TranslateService);
+
+  /**
+   * Welches Turnier gerade geoeffnet wird (chess-results-Nummer) — sperrt weitere Klicks und
+   * traegt die Wartezeit-Anzeige.
+   */
+  readonly opening = signal<string | null>(null);
+
+  /** Wie lange auf einen Holen-Auftrag gewartet wird: 4 s x 30 = rund zwei Minuten. */
+  private static readonly MaxImportPolls = 30;
 
   readonly histories = signal<PlayerHistory[]>([]);
   readonly friends = signal<HistoryFriend[]>([]);
@@ -219,8 +233,71 @@ export class TournamentHistoryComponent implements OnInit {
     };
   }
 
+  /**
+   * Ein Klick fuehrt auf das TURNIER, nicht ins Verzeichnis.
+   *
+   * <p>Vorher ging er auf `/tournaments/calendar/{id}` — und landete bei der Mehrheit der
+   * Verlaufs-Eintraege auf „steht (noch) nicht im Verzeichnis". Das ist kein Zufall und heilt
+   * auch nicht von selbst: der naechtliche Sweep liest nur das Fenster von 30 Tagen zurueck bis
+   * 18 Monate voraus. Ein Turnier, das man 2024 gespielt hat, wird dort NIE stehen.</p>
+   *
+   * <p>Ist es schon geholt, fuehrt der Klick direkt zu Teilnehmern, Paarungen und den eigenen
+   * Ergebnissen. Ist es das nicht, wird der Holen-Auftrag eingereiht und danach dorthin
+   * gewechselt — der Weg, auf dem ein vergangenes Turnier hier ueberhaupt ansehbar wird.</p>
+   */
   open(entry: PlayerHistoryEntry): void {
-    this.router.navigate(['/tournaments/calendar', entry.chessResultsId]);
+    if (this.opening()) return;
+    this.opening.set(entry.chessResultsId);
+
+    this.tournaments.getTournament(entry.chessResultsId).pipe(
+      catchError(() => of(null)),
+    ).subscribe(tournament => {
+      if (tournament) {
+        this.opening.set(null);
+        void this.router.navigate(['/tournaments', tournament.id]);
+        return;
+      }
+      this.fetchThenOpen(entry);
+    });
+  }
+
+  /**
+   * Turnier holen und danach hinwechseln. Der Auftrag laeuft serverseitig weiter, auch wenn hier
+   * nicht mehr gewartet wird — deshalb ein DECKEL auf das Nachfragen (rund zwei Minuten) und eine
+   * Meldung statt eines endlosen Wartens.
+   */
+  private fetchThenOpen(entry: PlayerHistoryEntry): void {
+    this.snackbar.info(this.translate.instant('turnier.history.fetching'));
+
+    this.tournaments.startCrawl(entry.chessResultsId).pipe(
+      catchError(() => of(null)),
+    ).subscribe(job => {
+      if (!job) {
+        this.opening.set(null);
+        this.snackbar.warn(this.translate.instant('turnier.history.fetchFailed'));
+        return;
+      }
+      this.pollImport(entry);
+    });
+  }
+
+  private pollImport(entry: PlayerHistoryEntry): void {
+    timer(0, TournamentHistoryComponent.PollMs).pipe(
+      switchMap(() => this.tournaments.getTournament(entry.chessResultsId)
+        .pipe(catchError(() => of(null)))),
+      // Solange nichts da ist, weiterfragen — hoechstens `MaxImportPolls` mal.
+      takeWhile((t, i) => t === null && i < TournamentHistoryComponent.MaxImportPolls, true),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(tournament => {
+      if (tournament) {
+        this.opening.set(null);
+        void this.router.navigate(['/tournaments', tournament.id]);
+      } else if (this.opening() === entry.chessResultsId) {
+        // Deckel erreicht: der Auftrag laeuft weiter, aber hier wird nicht weiter gewartet.
+        this.opening.set(null);
+        this.snackbar.info(this.translate.instant('turnier.history.fetchSlow'));
+      }
+    });
   }
 
   trackById = (_: number, entry: PlayerHistoryEntry) => entry.chessResultsId;

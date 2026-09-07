@@ -3206,7 +3206,10 @@
       "noName": "Your last name is missing from your profile — chess-results is searched by name, so there is nothing to look up.",
       "sourceUnavailable": "chess-results could not be reached. What is shown is the last state fetched.",
       "empty": "No tournaments found under this name.",
-      "loadError": "The history could not be loaded."
+      "loadError": "The history could not be loaded.",
+      "fetching": "Fetching the tournament — this takes a moment.",
+      "fetchSlow": "Still being fetched. The job keeps running; look again in a minute.",
+      "fetchFailed": "The tournament could not be fetched. Please try again later."
     }
   },
   "turnierAdmin": {

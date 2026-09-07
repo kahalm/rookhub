@@ -76,7 +76,9 @@
           <h3>{{ 'turnier.history.upcoming' | translate }}</h3>
           <div class="rows">
             @for (entry of upcoming(history); track trackById($index, entry)) {
-              <button type="button" class="row upcoming" (click)="open(entry)">
+              <button type="button" class="row upcoming" (click)="open(entry)"
+                      [disabled]="opening() !== null"
+                      [class.busy]="opening() === entry.chessResultsId">
                 <span class="row-date">{{ entry.endDate }}</span>
                 <span class="row-name">{{ entry.name }}</span>
                 <span class="row-meta">
@@ -96,7 +98,9 @@
           <div class="rows-scroll">
             <div class="rows">
               @for (entry of past(history); track trackById($index, entry)) {
-                <button type="button" class="row" (click)="open(entry)">
+                <button type="button" class="row" (click)="open(entry)"
+                        [disabled]="opening() !== null"
+                        [class.busy]="opening() === entry.chessResultsId">
                   <span class="row-date">{{ entry.endDate }}</span>
                   <span class="row-name">{{ entry.name }}</span>
 

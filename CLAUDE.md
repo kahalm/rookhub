@@ -1089,6 +1089,12 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   man eine halbe Tabelle und hielte sie fuer endgueltig. (2) Ist „alle Freunde" die GEMERKTE
   Auswahl, laedt der Verlauf erst NACH der Freundesliste — er muss wissen, wen er meint, sonst
   ist die gemerkte Auswahl beim Wiederkommen wirkungslos (genau so aufgefallen).
+  **Ein Klick fuehrt auf das TURNIER, nicht ins Verzeichnis** (0.430.2). Der Kalendereintrag war
+  fuer die Mehrheit der Verlaufs-Eintraege eine Sackgasse („steht (noch) nicht im Verzeichnis"),
+  und das heilt nicht: der Sweep liest nur `[heute − 30 Tage, heute + 18 Monate]` — ein 2024
+  gespieltes Turnier steht dort NIE. Ist es geholt → `/tournaments/{id}`; ist es das nicht →
+  Holen-Auftrag einreihen und nachfragen (`MaxImportPolls` 30 × 4 s ≈ zwei Minuten, danach eine
+  Meldung statt endlosen Wartens).
 - **Profilseite**: die Turnierseite hat ihre EIGENE (`src-turnier/app/features/profile/`, Route
   `/profile`, im Konto-Menue) — Vor-/Nachname, Anzeigename, E-Mail und die beiden
   Spielerkennungen, ueber denselben `PUT /api/profile`. Bewusst nicht RookHubs Profilseite

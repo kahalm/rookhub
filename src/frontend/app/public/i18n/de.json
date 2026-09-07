@@ -3206,7 +3206,10 @@
       "noName": "In deinem Profil fehlt der Nachname — chess-results wird über den Namen gesucht, es gibt also nichts nachzuschlagen.",
       "sourceUnavailable": "chess-results war nicht erreichbar. Gezeigt wird der letzte geholte Stand.",
       "empty": "Unter diesem Namen wurden keine Turniere gefunden.",
-      "loadError": "Der Verlauf konnte nicht geladen werden."
+      "loadError": "Der Verlauf konnte nicht geladen werden.",
+      "fetching": "Turnier wird geholt — das dauert einen Moment.",
+      "fetchSlow": "Wird noch geholt. Der Auftrag läuft weiter; schau in einer Minute nochmal.",
+      "fetchFailed": "Das Turnier konnte nicht geholt werden. Bitte später nochmal."
     }
   },
   "turnierAdmin": {
