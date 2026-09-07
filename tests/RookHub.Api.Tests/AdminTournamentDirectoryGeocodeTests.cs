@@ -52,7 +52,9 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
             new TournamentRoundPlanService(_db, factory,
                 new TestLogger<TournamentRoundPlanService>()),
             new FideDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<FideDirectorySweepService>()));
+                new TestLogger<FideDirectorySweepService>()),
+            new FideEventDetailService(_db, factory, geocoding,
+                new TestLogger<FideEventDetailService>()));
     }
 
     /// <summary>

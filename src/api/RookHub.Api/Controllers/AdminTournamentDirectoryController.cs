@@ -34,7 +34,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         GeocodingService geocoding,
         VenueDisambiguationService disambiguation,
         TournamentRoundPlanService roundPlans,
-        FideDirectorySweepService fide)
+        FideDirectorySweepService fide,
+        FideEventDetailService fideDetails)
     {
         _db = db;
         _directory = directory;
@@ -43,11 +44,13 @@ public class AdminTournamentDirectoryController : BaseApiController
         _disambiguation = disambiguation;
         _roundPlans = roundPlans;
         _fide = fide;
+        _fideDetails = fideDetails;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
     private readonly TournamentRoundPlanService _roundPlans;
     private readonly FideDirectorySweepService _fide;
+    private readonly FideEventDetailService _fideDetails;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -252,6 +255,27 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithPlan, result.Failed });
+    }
+
+    /// <summary>
+    /// Die DETAILangaben der FIDE-Eintraege nachtragen — Bedenkzeit, Turniersystem, Runden- und
+    /// Teilnehmerzahl und die Anschrift des Spielorts. Ein Abruf je Ereignis, deshalb gedeckelt.
+    ///
+    /// <para>Die FIDE-Jahresansicht, aus der der Sweep liest, traegt je Ereignis nur Name, Termin
+    /// und Ort. Am Dev-Stand hiess das: von 144 FIDE-eigenen Eintraegen hatte KEIN EINZIGER eine
+    /// Bedenkzeit oder eine Rundenzahl. Der groesste Gewinn ist dabei die Anschrift — sie traegt
+    /// oft eine Postleitzahl, und das ist der genaueste Weg des Geocoders.</para>
+    ///
+    /// <para><c>retryEmpty=true</c> nimmt auch Eintraege vor, die als geprueft gelten und dennoch
+    /// keine Bedenkzeit tragen; bewusst opt-in, weil ein Ereignis ohne gepflegte Angaben der
+    /// haeufige Fall ist und jeder erneute Versuch wieder einen Abruf kostet.</para>
+    /// </summary>
+    [HttpPost("fide-details")]
+    public async Task<IActionResult> FideDetails([FromQuery] int limit = 100,
+        [FromQuery] bool retryEmpty = false, CancellationToken ct = default)
+    {
+        var result = await _fideDetails.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
+        return Ok(new { result.Checked, result.WithDetails, result.Geocoded });
     }
 
     /// <summary>

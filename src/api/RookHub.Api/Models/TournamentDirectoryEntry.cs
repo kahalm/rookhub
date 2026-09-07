@@ -185,6 +185,20 @@ public class TournamentDirectoryEntry
     public TournamentKind Kind { get; set; } = TournamentKind.Unknown;
 
     /// <summary>
+    /// Das TURNIERSYSTEM — Schweizer System oder Rundenturnier.
+    ///
+    /// <para>Kommt wie <see cref="Kind"/> aus der Quelle und aus DENSELBEN Abfragen: die vier
+    /// chess-results-Turnierarten sind das Kreuzprodukt aus beidem (0 Schweizer Einzel,
+    /// 1 Rundenturnier Einzel, 2 Rundenturnier Mannschaft, 3 Schweizer Mannschaft). Wer die vier
+    /// Durchgaenge ohnehin macht, bekommt das System geschenkt.</para>
+    ///
+    /// <para>Bei FIDE-Eintraegen stammt es aus dem Feld „Tournament system" des Detail-Fragments
+    /// und kann dort auch <see cref="TournamentSystem.Other"/> sein (so steht die
+    /// 46. Schacholympiade da). <c>Unknown</c> heisst wie ueberall „noch nicht geklaert".</para>
+    /// </summary>
+    public TournamentSystem System { get; set; } = TournamentSystem.Unknown;
+
+    /// <summary>
     /// Liga (Saisonwettbewerb) statt Turnier. Abgeleitet, nicht gemeldet — siehe
     /// <see cref="Services.TournamentClassifier.LooksLikeLeague"/>. Steht als eigene Spalte, damit
     /// der Schalter „Ligen ausblenden" in SQL filtern kann.
@@ -224,6 +238,14 @@ public class TournamentDirectoryEntry
     public DateTime? RoundPlanCheckedAt { get; set; }
 
     /// <summary>
+    /// Wann zuletzt versucht wurde, die FIDE-Detailangaben zu holen. Derselbe Gedanke wie bei
+    /// <see cref="RoundPlanCheckedAt"/>: ein Abruf je Ereignis, und ein Ereignis ohne gepflegte
+    /// Angaben ist kein Fehler, sondern ein Ergebnis, das sich merken lassen muss. Nur fuer
+    /// Eintraege mit einer FIDE-Herkunft ueberhaupt gesetzt.
+    /// </summary>
+    public DateTime? FideDetailCheckedAt { get; set; }
+
+    /// <summary>
     /// Auf welchen Seiten dieses Turnier gefunden wurde. Dasselbe Turnier steht auf mehreren, und
     /// es werden mehr — siehe <see cref="TournamentDirectorySource"/>.
     /// </summary>
@@ -246,6 +268,26 @@ public enum TournamentKind
     Unknown = 0,
     Individual = 1,
     Team = 2,
+}
+
+/// <summary>
+/// Das Turniersystem. Bewusst getrennt von <see cref="TournamentKind"/>: chess-results fuehrt
+/// beides als EIN Feld (vier Arten = Kreuzprodukt), aber es sind zwei Fragen — „spielen
+/// Mannschaften?" und „jeder gegen jeden oder Schweizer System?".
+/// </summary>
+public enum TournamentSystem
+{
+    /// <summary>Noch nicht geklaert — nicht „keins".</summary>
+    Unknown = 0,
+    Swiss = 1,
+    RoundRobin = 2,
+
+    /// <summary>
+    /// Etwas anderes, und die Quelle sagt es ausdruecklich. Gibt es nur bei FIDE, wo das Feld
+    /// „Tournament system" diesen Wert kennt (die 46. Schacholympiade steht so da) — und
+    /// unterscheidet sich von <see cref="Unknown"/> genau darin, dass nachgesehen wurde.
+    /// </summary>
+    Other = 3,
 }
 
 /// <summary>

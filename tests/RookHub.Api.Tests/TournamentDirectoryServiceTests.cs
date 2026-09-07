@@ -586,12 +586,16 @@ public class TournamentDirectoryServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Antwortet auf die Trefferliste mit <c>body</c> — und auf die MANNSCHAFTS-Durchgaenge
-    /// (<c>art=2</c>/<c>art=3</c>) getrennt davon, standardmaessig mit einer leeren Liste.
+    /// Antwortet auf die Trefferliste mit <c>body</c> — und auf jeden TURNIERART-Durchgang
+    /// (<c>art=0..3</c>) getrennt davon, standardmaessig mit einer leeren Liste.
     ///
     /// <para>Die Trennung ist wesentlich: ohne sie bekaeme jeder Durchgang dieselbe Liste zurueck
-    /// und der Sweep hielte JEDES Turnier fuer ein Mannschaftsturnier. Die Vorgabe „leer" heisst
-    /// also „alles Einzelturniere" und laesst die uebrigen Tests dasselbe bedeuten wie vorher.</para>
+    /// und der Sweep ordnete JEDES Turnier der zuerst abgefragten Art zu. Die Vorgabe „ueberall
+    /// leer" heisst „in keiner Art gefunden" und laesst Art und System unangetastet — genau das,
+    /// was die uebrigen Tests brauchen.</para>
+    ///
+    /// <para><see cref="TeamBody"/> beantwortet <c>art=2</c> („Rundenturnier fuer
+    /// Mannschaften"); fuer die uebrigen drei Arten gibt es <see cref="ArtBodies"/>.</para>
     /// </summary>
     private sealed class StubHandler : HttpMessageHandler
     {
@@ -604,7 +608,16 @@ public class TournamentDirectoryServiceTests : IDisposable
             _status = status;
         }
 
-        public string TeamBody { get; set; } = "[]";
+        /// <summary>Antwort je Turnierart; fehlt eine, gilt die leere Liste.</summary>
+        public Dictionary<string, string> ArtBodies { get; } = [];
+
+        /// <summary>Bequemer Zugriff auf <c>art=2</c> — der haeufigste Fall in den Tests.</summary>
+        public string TeamBody
+        {
+            get => ArtBodies.TryGetValue("2", out var b) ? b : "[]";
+            set => ArtBodies["2"] = value;
+        }
+
         public HttpStatusCode TeamStatus { get; set; } = HttpStatusCode.OK;
         public List<string> Requests { get; } = [];
 
@@ -612,11 +625,20 @@ public class TournamentDirectoryServiceTests : IDisposable
         {
             var url = request.RequestUri?.ToString() ?? "";
             Requests.Add(url);
-            var isTeamPass = url.Contains("&art=", StringComparison.Ordinal);
 
-            return Task.FromResult(new HttpResponseMessage(isTeamPass ? TeamStatus : _status)
+            var art = System.Text.RegularExpressions.Regex.Match(url, @"&art=(\d)");
+            if (!art.Success)
             {
-                Content = new StringContent(isTeamPass ? TeamBody : _body, Encoding.UTF8, "application/json")
+                return Task.FromResult(new HttpResponseMessage(_status)
+                {
+                    Content = new StringContent(_body, Encoding.UTF8, "application/json"),
+                });
+            }
+
+            var body = ArtBodies.TryGetValue(art.Groups[1].Value, out var b) ? b : "[]";
+            return Task.FromResult(new HttpResponseMessage(TeamStatus)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
             });
         }
     }
@@ -643,9 +665,16 @@ public class TournamentDirectoryServiceTests : IDisposable
 
         var entries = await _db.TournamentDirectoryEntries.ToDictionaryAsync(e => e.ChessResultsId);
         Assert.Equal(TournamentKind.Team, entries["111"].Kind);
-        Assert.Equal(TournamentKind.Individual, entries["222"].Kind);
-        // Zwei Zusatzabfragen, eine je Mannschafts-Turnierart.
-        Assert.Equal(2, handler.Requests.Count(r => r.Contains("&art=", StringComparison.Ordinal)));
+        // Art 2 ist „Rundenturnier fuer Mannschaften" — die Art traegt BEIDE Angaben.
+        Assert.Equal(TournamentSystem.RoundRobin, entries["111"].System);
+
+        // „222" steht in keiner der vier Listen: das ist eine Aussage ueber die Quelle, nicht
+        // ueber das Turnier, und laesst deshalb beides unangetastet.
+        Assert.Equal(TournamentKind.Unknown, entries["222"].Kind);
+        Assert.Equal(TournamentSystem.Unknown, entries["222"].System);
+
+        // Vier Zusatzabfragen, eine je Turnierart.
+        Assert.Equal(4, handler.Requests.Count(r => r.Contains("&art=", StringComparison.Ordinal)));
     }
 
     /// <summary>

@@ -168,6 +168,7 @@ try
     builder.Services.AddScoped<SharedSessionService>();
     builder.Services.AddScoped<VenueDisambiguationService>();
     builder.Services.AddScoped<TournamentRoundPlanService>();
+    builder.Services.AddScoped<FideEventDetailService>();
     builder.Services.AddScoped<ViewStateService>();
     builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<FideDirectorySweepService>();

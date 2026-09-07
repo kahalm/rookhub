@@ -59,7 +59,18 @@ public class TournamentDirectoryService
     /// Die Turnierarten der chess-results-Suche, die MANNSCHAFTSturniere liefern: 2 Rundenturnier
     /// fuer Mannschaften, 3 Schweizer System fuer Mannschaften.
     /// </summary>
-    private static readonly string[] TeamTournamentTypes = ["2", "3"];
+    /// <summary>
+    /// Die vier chess-results-Turnierarten und was sie bedeuten. Sie sind das KREUZPRODUKT aus
+    /// „Mannschaft?" und „welches System?" — wer die Durchgaenge ohnehin macht, bekommt beide
+    /// Angaben aus derselben Abfrage.
+    /// </summary>
+    private static readonly (string Art, TournamentKind Kind, TournamentSystem System)[] ArtPasses =
+    [
+        ("0", TournamentKind.Individual, TournamentSystem.Swiss),
+        ("1", TournamentKind.Individual, TournamentSystem.RoundRobin),
+        ("2", TournamentKind.Team,       TournamentSystem.RoundRobin),
+        ("3", TournamentKind.Team,       TournamentSystem.Swiss),
+    ];
 
     /// <summary>Blockgroesse beim Nachladen der neuen Eintraege fuer die Umkreis-Meldung.</summary>
     private const int NotifyLookupBatch = 500;
@@ -161,7 +172,7 @@ public class TournamentDirectoryService
             return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), []);
         }
 
-        var teamIds = await FetchTeamIdsAsync(federation, from, to, ct);
+        var artMap = await FetchArtMapAsync(federation, from, to, ct);
 
         // Die Spielorte MIT laden: ohne sie steht `entry.Venues` leer da, ReplaceVenues loescht
         // nichts, und die alten Zeilen sammeln sich mit jedem naechtlichen Lauf an.
@@ -206,7 +217,7 @@ public class TournamentDirectoryService
                 var oldLocation = entry.LocationText;
                 var oldLocationText = entry.LocationText;
 
-                Apply(row, entry, now, teamIds);
+                Apply(row, entry, now, artMap);
                 entry.MissedSweeps = 0;
                 entry.RemovedAt = null;
                 updated++;
@@ -241,7 +252,7 @@ public class TournamentDirectoryService
                     FirstSeenAt = now,
                     CreatedAt = now,
                 };
-                Apply(row, entry, now, teamIds);
+                Apply(row, entry, now, artMap);
                 await GeocodeAsync(entry, ct);
                 _db.TournamentDirectoryEntries.Add(entry);
                 added.Add(entry);
@@ -298,25 +309,27 @@ public class TournamentDirectoryService
     }
 
     /// <summary>
-    /// Welche Turniere dieser Foederation sind MANNSCHAFTSturniere?
+    /// Welche Turnierart hat jedes Turnier dieser Foederation — Einzel oder Mannschaft, Schweizer
+    /// System oder Rundenturnier?
     ///
-    /// <para>Die chess-results-Turniersuche kennt die Turnierart als Suchfeld — Art 2
-    /// („Rundenturnier fuer Mannschaften") und 3 („Schweizer System fuer Mannschaften"). Zwei
+    /// <para>Die chess-results-Turniersuche kennt die Turnierart als Suchfeld, und ihre vier
+    /// Werte sind genau das Kreuzprodukt beider Fragen (siehe <see cref="ArtPasses"/>). Vier
     /// zusaetzliche Abfragen je Foederation beantworten damit aus der QUELLE, was sonst am
-    /// Turniernamen geraten werden muesste; „Liga" im Namen ist ein Indiz, „SK Aachen 2 - SF
+    /// Turniernamen geraten werden muesste: „Liga" im Namen ist ein Indiz, „SK Aachen 2 - SF
     /// Katernberg" keines.</para>
     ///
-    /// <para>Zwei Faelle geben <c>null</c> zurueck, also „unbekannt", und lassen die gespeicherte
-    /// Art unangetastet: ein FEHLER (sonst wuerde ein Netzausfall den halben Bestand auf „Einzel"
-    /// umschreiben) und eine ABGESCHNITTENE Liste (chess-results kappt bei
-    /// <see cref="MaxRows"/> Zeilen — der fehlende Schwanz waere sonst lauter falsche
-    /// Einzelturniere).</para>
+    /// <para><b>Alles oder nichts.</b> Zwei Faelle geben <c>null</c> zurueck, also „unbekannt",
+    /// und lassen Art UND System unangetastet: ein FEHLER (sonst wuerde ein Netzausfall den
+    /// halben Bestand umschreiben) und eine ABGESCHNITTENE Liste (chess-results kappt bei
+    /// <see cref="MaxRows"/> Zeilen — der fehlende Schwanz waere sonst lauter falsch eingeordnete
+    /// Turniere). Das gilt fuer JEDEN der vier Durchgaenge: faellt einer aus, ist die Zuordnung
+    /// unvollstaendig, und eine halbe Wahrheit ist hier schlechter als keine.</para>
     /// </summary>
-    private async Task<HashSet<string>?> FetchTeamIdsAsync(
-        string federation, DateOnly from, DateOnly to, CancellationToken ct)
+    private async Task<Dictionary<string, (TournamentKind Kind, TournamentSystem System)>?>
+        FetchArtMapAsync(string federation, DateOnly from, DateOnly to, CancellationToken ct)
     {
-        var ids = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var art in TeamTournamentTypes)
+        var map = new Dictionary<string, (TournamentKind, TournamentSystem)>(StringComparer.Ordinal);
+        foreach (var (art, kind, system) in ArtPasses)
         {
             List<CrawlerDirectoryRow> rows;
             try
@@ -328,7 +341,7 @@ public class TournamentDirectoryService
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 _log.LogWarning(ex,
-                    "Mannschafts-Durchgang {Federation} (Art {Art}) fehlgeschlagen — Turnierart bleibt unveraendert",
+                    "Turnierart-Durchgang {Federation} (Art {Art}) fehlgeschlagen — Art und System bleiben unveraendert",
                     federation, art);
                 return null;
             }
@@ -336,14 +349,16 @@ public class TournamentDirectoryService
             if (rows.Count >= MaxRows)
             {
                 _log.LogWarning(
-                    "Mannschafts-Durchgang {Federation} (Art {Art}) bei {Rows} Zeilen abgeschnitten — " +
-                    "Turnierart bleibt unveraendert", federation, art, rows.Count);
+                    "Turnierart-Durchgang {Federation} (Art {Art}) bei {Rows} Zeilen abgeschnitten — " +
+                    "Art und System bleiben unveraendert", federation, art, rows.Count);
                 return null;
             }
 
-            foreach (var row in rows) ids.Add(row.ChessResultsId);
+            // Ein Turnier steht in genau EINER Art; taucht es doch zweimal auf, gilt der erste
+            // Treffer, statt die Zuordnung stillschweigend zu ueberschreiben.
+            foreach (var row in rows) map.TryAdd(row.ChessResultsId, (kind, system));
         }
-        return ids;
+        return map;
     }
 
     /// <summary>
@@ -537,12 +552,12 @@ public class TournamentDirectoryService
     // ----- Abbildung + Hilfsfunktionen -------------------------------------
 
     /// <summary>
-    /// Uebertraegt eine Trefferzeile auf den Eintrag. <paramref name="teamIds"/> ist das Ergebnis
-    /// des Mannschafts-Durchgangs; <c>null</c> heisst „konnte nicht geklaert werden" und laesst
-    /// eine bereits bekannte Turnierart ausdruecklich in Ruhe.
+    /// Uebertraegt eine Trefferzeile auf den Eintrag. <paramref name="artMap"/> ist das Ergebnis
+    /// der vier Turnierart-Durchgaenge; <c>null</c> heisst „konnte nicht geklaert werden" und
+    /// laesst eine bereits bekannte Art UND ein bekanntes System ausdruecklich in Ruhe.
     /// </summary>
     private void Apply(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now,
-        HashSet<string>? teamIds)
+        Dictionary<string, (TournamentKind Kind, TournamentSystem System)>? artMap)
     {
         entry.Name = Truncate(row.Name, 500);
         entry.Federation = Truncate(row.Federation, 3);
@@ -562,11 +577,13 @@ public class TournamentDirectoryService
         entry.UpstreamUpdatedAt = row.LastUpdatedApproxUtc;
         entry.ChangeHash = ComputeChangeHash(row.StartDate, row.EndDate, row.Location);
 
-        if (teamIds is not null)
+        // Nur wenn ALLE vier Durchgaenge standen. Ein Turnier, das in keinem davon auftauchte,
+        // bleibt bewusst unangetastet: die Arten decken zwar alles ab, was die Suche anbietet,
+        // aber „in keiner Liste" ist eine Aussage ueber die Quelle, nicht ueber das Turnier.
+        if (artMap is not null && artMap.TryGetValue(row.ChessResultsId, out var art))
         {
-            entry.Kind = teamIds.Contains(row.ChessResultsId)
-                ? TournamentKind.Team
-                : TournamentKind.Individual;
+            entry.Kind = art.Kind;
+            entry.System = art.System;
         }
         // Publikum und Format haengen am Namen (Alter/Geschlecht) bzw. an Art und Dauer (Liga) —
         // beides also NACH den Feldern oben und nach der Turnierart auswerten.
