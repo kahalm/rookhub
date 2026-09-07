@@ -14,7 +14,7 @@ function played(over: Partial<PlayerHistoryEntry> = {}): PlayerHistoryEntry {
     chessResultsId: '1107064', name: 'Schach Tirol Open 2025', endDate: '2025-08-30',
     rank: 56, playerCount: 56, rounds: 9, points: 1.5, performanceRating: 1740,
     ratingChange: -51.6, ratingBefore: 1923, hasResult: true, cardFetched: true,
-    speed: 'standard', ...over,
+    speed: 'standard', gamesPlayed: null, ...over,
   };
 }
 
@@ -59,10 +59,10 @@ describe('TournamentHistoryComponent', () => {
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
-    // Die Freundesliste zuerst: ist „alle Freunde" die gemerkte Auswahl, laedt der Verlauf
-    // erst DANACH — er muss ja wissen, wen er meint.
+    // Der EIGENE Verlauf laeuft sofort los; die Freundesliste fuellt daneben die Reiter.
+    const own = http.expectOne(r => r.url === '/api/tournament-history');
     http.expectOne('/api/tournament-history/friends').flush(friends);
-    return http.expectOne(r => r.url === '/api/tournament-history');
+    return own;
   }
 
   it('lädt zuerst nur den eigenen Verlauf', async () => {
@@ -70,41 +70,54 @@ describe('TournamentHistoryComponent', () => {
 
     expect(req.request.params.get('userIds')).toBe('1');
     req.flush([history()]);
-    expect(component.histories().length).toBe(1);
+    expect(component.current()).not.toBeNull();
     expect(component.loading()).toBeFalse();
     http.verify();
   });
 
+  /** Ein Reiter je Konto: ich zuerst, danach die Freunde — auch die ohne Namen im Profil. */
+  it('legt für jedes Konto einen Reiter an', async () => {
+    const req = await setup([
+      { userId: 7, displayName: 'A', exact: true, hasName: true },
+      { userId: 8, displayName: 'B', exact: false, hasName: false },
+    ]);
+    req.flush([history()]);
+
+    expect(component.tabs().map(t => [t.userId, t.enabled])).toEqual([[1, true], [7, true], [8, false]]);
+    expect(component.activeIndex()).toBe(0);
+  });
+
   /**
-   * Der eigene Verlauf ist IMMER dabei. „Nur Freunde" waere eine Ansicht, in der man sich selbst
-   * sucht — und der Vergleich ist der Zweck der Umschaltung.
+   * Ein Reiter = EIN Abruf. „Alle Freunde auf einmal" hiesse, fuer jedes Konto eine Trefferliste
+   * bei chess-results zu holen — auch fuer die, die niemand ansieht.
    */
-  it('nimmt bei „alle Freunde" den eigenen Verlauf mit', async () => {
+  it('lädt beim Reiterwechsel genau das eine Konto', async () => {
     const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
     first.flush([history()]);
 
-    component.onWhoseChange('all');
+    component.onTabChange(1);
 
     const req = http.expectOne(r => r.url === '/api/tournament-history');
-    expect(req.request.params.get('userIds')).toBe('1,7');
-    req.flush([history(), history({ userId: 7, displayName: 'Freund' })]);
+    expect(req.request.params.get('userIds')).toBe('7');
+    req.flush([history({ userId: 7, displayName: 'Freund' })]);
+    expect(component.current()?.userId).toBe(7);
     http.verify();
   });
 
-  it('fragt bei einzelner Auswahl nur die gewählten Freunde', async () => {
-    const first = await setup([
-      { userId: 7, displayName: 'A', exact: true, hasName: true },
-      { userId: 8, displayName: 'B', exact: false, hasName: true },
-    ]);
+  /** Ein schon geoeffneter Reiter steht beim Zurueckwechseln sofort wieder da. */
+  it('behält geladene Reiter im Zwischenspeicher', async () => {
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
     first.flush([history()]);
 
-    component.onWhoseChange('pick');
-    http.expectOne(r => r.url === '/api/tournament-history').flush([history()]);
-    component.onPickedChange([8]);
+    component.onTabChange(1);
+    http.expectOne(r => r.url === '/api/tournament-history')
+      .flush([history({ userId: 7, displayName: 'Freund' })]);
 
-    const req = http.expectOne(r => r.url === '/api/tournament-history');
-    expect(req.request.params.get('userIds')).toBe('1,8');
-    req.flush([history()]);
+    component.onTabChange(0);
+    // Die Tabelle steht sofort — der Abruf laeuft nur zum Auffrischen daneben.
+    expect(component.current()?.userId).toBe(1);
+    expect(component.loading()).toBeFalse();
+    http.expectOne(r => r.url === '/api/tournament-history').flush([history()]);
   });
 
   /**
@@ -160,7 +173,7 @@ describe('TournamentHistoryComponent', () => {
       ],
     })]);
 
-    const h = component.histories()[0];
+    const h = component.current()!;
     expect(component.past(h).map(e => e.chessResultsId)).toEqual(['1107064']);
     expect(component.upcoming(h).map(e => e.chessResultsId)).toEqual(['2']);
   });
@@ -180,11 +193,40 @@ describe('TournamentHistoryComponent', () => {
       ],
     })]);
 
-    const summary = component.summary(component.histories()[0]);
+    const summary = component.summary(component.current()!);
     expect(summary.played).toBe(3);
     // Turnierschach und Blitz getrennt — 1900 im Blitz ist nicht 1900 im Turnierschach.
     expect(summary.speeds.map(s => [s.speed, s.played, s.performance]))
       .toEqual([['standard', 2, 1800], ['blitz', 1, 1600]]);
+  });
+
+  /**
+   * Turniere und Partien sind zwei verschiedene Groessen: fuenf Wochenend-Opens sind fuenf
+   * Turniere und rund 25 Partien, eine Ligasaison ein Turnier und drei Partien.
+   */
+  it('summiert die gespielten Partien je Klasse', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ speed: 'blitz', gamesPlayed: 9, performanceRating: 1700 }),
+        played({ chessResultsId: '2', speed: 'blitz', gamesPlayed: 13, performanceRating: 1700 }),
+      ],
+    })]);
+
+    const blitz = component.summary(component.current()!).speeds[0];
+    expect(blitz.played).toBe(2);
+    expect(blitz.games).toBe(22);
+  });
+
+  /**
+   * Kennt noch keine Karte die Partienzahl, steht KEINE Zahl da statt einer erfundenen Null —
+   * die Karten vor der Zaehlung tragen sie nicht, der naechtliche Durchgang holt sie nach.
+   */
+  it('erfindet keine Partienzahl, wo keine bekannt ist', async () => {
+    const req = await setup();
+    req.flush([history({ entries: [played({ speed: 'blitz', gamesPlayed: null })] })]);
+
+    expect(component.summary(component.current()!).speeds[0].games).toBeNull();
   });
 
   /**
@@ -201,7 +243,7 @@ describe('TournamentHistoryComponent', () => {
       ],
     })]);
 
-    const speeds = component.summary(component.histories()[0]).speeds;
+    const speeds = component.summary(component.current()!).speeds;
     expect(speeds.map(s => [s.speed, s.played, s.performance])).toEqual([['unknown', 2, 1800]]);
   });
 
@@ -215,7 +257,7 @@ describe('TournamentHistoryComponent', () => {
       ],
     })]);
 
-    expect(component.summary(component.histories()[0]).speeds.map(s => s.speed))
+    expect(component.summary(component.current()!).speeds.map(s => s.speed))
       .toEqual(['blitz', 'unknown']);
   });
 
@@ -226,7 +268,7 @@ describe('TournamentHistoryComponent', () => {
       entries: [played({ performanceRating: null, speed: 'rapid' })],
     })]);
 
-    const speeds = component.summary(component.histories()[0]).speeds;
+    const speeds = component.summary(component.current()!).speeds;
     expect(speeds.length).toBe(1);
     expect(speeds[0].speed).toBe('rapid');
     expect(speeds[0].performance).toBeNull();
@@ -246,7 +288,7 @@ describe('TournamentHistoryComponent', () => {
       ],
     })]);
 
-    const years = component.years(component.histories()[0]);
+    const years = component.years(component.current()!);
     expect(years.map(g => g.year)).toEqual(['2025', '2024']);
     expect(years[0].entries.length).toBe(2);
     // Je Jahr dieselbe Auswertung wie oben.
@@ -259,7 +301,7 @@ describe('TournamentHistoryComponent', () => {
    * hat, bekam eine leere Auswahl und keinen Grund dafuer. Sie stehen jetzt da — nur nicht
    * auswaehlbar.
    */
-  it('führt Freunde ohne Namen im Profil auf, aber nicht als Auswahl', async () => {
+  it('führt Freunde ohne Namen im Profil auf, aber gesperrt', async () => {
     const req = await setup([
       { userId: 7, displayName: 'Mit Name', exact: true, hasName: true },
       { userId: 8, displayName: 'Ohne Name', exact: false, hasName: false },
@@ -267,21 +309,18 @@ describe('TournamentHistoryComponent', () => {
     req.flush([history()]);
 
     expect(component.friends().length).toBe(2);
-    expect(component.selectableFriends().map(f => f.userId)).toEqual([7]);
+    expect(component.tabs().filter(t => t.enabled).map(t => t.userId)).toEqual([1, 7]);
   });
 
-  /** „Alle Freunde" darf nur die meinen, bei denen es etwas zu holen gibt. */
-  it('nimmt bei „alle Freunde" nur die mit Namen', async () => {
-    const req = await setup([
-      { userId: 7, displayName: 'Mit Name', exact: true, hasName: true },
-      { userId: 8, displayName: 'Ohne Name', exact: false, hasName: false },
-    ]);
+  /** Ein gesperrter Reiter laedt nichts — dort gibt es nichts zu holen. */
+  it('lädt für einen gesperrten Reiter nichts nach', async () => {
+    const req = await setup([{ userId: 8, displayName: 'Ohne Name', exact: false, hasName: false }]);
     req.flush([history()]);
 
-    component.onWhoseChange('all');
-    const call = http.expectOne(r => r.url === '/api/tournament-history');
-    expect(call.request.params.get('userIds')).toBe('1,7');
-    call.flush([history()]);
+    // Material laesst einen gesperrten Reiter gar nicht erst waehlen; ruft ihn doch jemand auf,
+    // bleibt es beim eigenen Verlauf.
+    expect(component.tabs()[1].enabled).toBeFalse();
+    http.verify();
   });
 
   /**
@@ -360,29 +399,52 @@ describe('TournamentHistoryComponent', () => {
    * Ueberholte Antworten duerfen die Tabelle nicht bestimmen: wer waehrend eines laufenden
    * Abrufs umschaltet, bekaeme sonst den Stand der alten Auswahl.
    */
-  it('verwirft die Antwort einer überholten Auswahl', async () => {
+  it('verwirft die Antwort eines überholten Reiters', async () => {
     const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
 
-    component.onWhoseChange('all');
+    component.onTabChange(1);
     const second = http.expectOne(r => r.url === '/api/tournament-history');
 
-    // Die ALTE Antwort trifft nach der neuen Auswahl ein.
-    second.flush([history(), history({ userId: 7, displayName: 'Freund' })]);
+    // Die ALTE Antwort trifft nach dem Wechsel ein und darf den Reiter nicht bestimmen.
+    second.flush([history({ userId: 7, displayName: 'Freund' })]);
     first.flush([history()]);
 
-    expect(component.histories().length).toBe(2);
+    expect(component.current()?.userId).toBe(7);
   });
 
-  it('merkt die Auswahl über den Seitenwechsel hinweg', async () => {
+  it('merkt den Reiter über den Seitenwechsel hinweg', async () => {
     const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
     first.flush([history()]);
-    component.onWhoseChange('all');
-    http.expectOne(r => r.url === '/api/tournament-history').flush([history()]);
+    component.onTabChange(1);
+    http.expectOne(r => r.url === '/api/tournament-history')
+      .flush([history({ userId: 7, displayName: 'Freund' })]);
 
     TestBed.resetTestingModule();
     const again = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
 
-    expect(again.request.params.get('userIds')).toBe('1,7');
-    again.flush([history()]);
+    expect(again.request.params.get('userIds')).toBe('7');
+    again.flush([history({ userId: 7, displayName: 'Freund' })]);
+  });
+
+  /**
+   * Der gemerkte Reiter kann weg sein (Freundschaft aufgeloest) — dann zurueck auf den eigenen,
+   * statt auf einen Reiter zu zeigen, den es nicht mehr gibt.
+   */
+  it('fällt auf den eigenen Reiter zurück, wenn der gemerkte fehlt', async () => {
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    first.flush([history()]);
+    component.onTabChange(1);
+    http.expectOne(r => r.url === '/api/tournament-history')
+      .flush([history({ userId: 7, displayName: 'Freund' })]);
+
+    TestBed.resetTestingModule();
+    const again = await setup([]);          // der Freund ist weg
+    expect(again.request.params.get('userIds')).toBe('7');
+    again.flush([history({ userId: 7, displayName: 'Freund' })]);
+
+    const back = http.expectOne(r => r.url === '/api/tournament-history');
+    expect(back.request.params.get('userIds')).toBe('1');
+    back.flush([history()]);
+    expect(component.activeUserId()).toBe(1);
   });
 });

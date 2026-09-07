@@ -511,6 +511,83 @@ public class TournamentHistoryServiceTests : IDisposable
         Assert.False(await _db.TournamentTimeControls.AnyAsync(t => t.ChessResultsId == "1479344"));
     }
 
+    /// <summary>
+    /// chess-results NENNT die Klasse selbst (in Klammern hinter der Beschriftung). Diese Angabe
+    /// schlaegt die Ableitung aus dem Freitext: eine Bedenkzeit wie „90 Min. / 40 Zuege + 30 Min."
+    /// richtig zu addieren ist Raten, „(Standard)" ist eine Aussage.
+    /// </summary>
+    [Theory]
+    [InlineData("Standard", TournamentSpeed.Standard)]
+    [InlineData("Rapid", TournamentSpeed.Rapid)]
+    [InlineData("Blitz", TournamentSpeed.Blitz)]
+    public async Task FetchTimeControlAsync_PrefersTheClassTheSourceStates(string kind, TournamentSpeed expected)
+    {
+        // Der TEXT wuerde auf Turnierschach hinauslaufen — die Quelle sagt etwas anderes.
+        _handler.Info = $$"""{"tournamentId":"1","timeControl":"90 min + 30 sec","timeControlKind":"{{kind}}"}""";
+
+        await CreateService().FetchTimeControlAsync("1206267");
+
+        Assert.Equal(expected, (await _db.TournamentTimeControls.SingleAsync()).Speed);
+    }
+
+    /// <summary>Ohne genannte Klasse rechnet der Klassifizierer aus dem Freitext.</summary>
+    [Fact]
+    public async Task FetchTimeControlAsync_WithoutAStatedClass_FallsBackToTheText()
+    {
+        _handler.Info = """{"tournamentId":"1","timeControl":"5 min + 3 sec"}""";
+
+        await CreateService().FetchTimeControlAsync("1206267");
+
+        Assert.Equal(TournamentSpeed.Blitz, (await _db.TournamentTimeControls.SingleAsync()).Speed);
+    }
+
+    /// <summary>
+    /// „Einmal geholt, nie wieder" friert einen PARSER-Fehler fuer immer ein — eine Zeile mit
+    /// `Unknown` saehe danach aus wie „das Turnier nennt keine Bedenkzeit". Genau das ist
+    /// passiert (der GET lieferte die Turnierdetails gar nicht). Eine aeltere Fassung wird
+    /// deshalb einmal nachgeholt.
+    /// </summary>
+    [Fact]
+    public async Task FetchTimeControlAsync_AnOlderVersion_IsFetchedAgain()
+    {
+        _db.TournamentTimeControls.Add(new TournamentTimeControl
+        {
+            ChessResultsId = "1206267", Speed = TournamentSpeed.Unknown, Version = 1,
+        });
+        await _db.SaveChangesAsync();
+
+        await CreateService().FetchTimeControlAsync("1206267");
+
+        var row = await _db.TournamentTimeControls.SingleAsync();
+        Assert.Equal(TournamentSpeed.Standard, row.Speed);
+        Assert.Equal(TournamentHistoryService.CurrentTimeControlVersion, row.Version);
+        Assert.Equal(1, _handler.InfoCalls);
+    }
+
+    /// <summary>
+    /// Dieselbe Falle bei der Spielerkarte: ein spaeter ergaenztes Feld (die Partienzahl) bekaeme
+    /// der Bestand nie, weil ein abgeschlossenes Turnier sonst nur einmal geholt wird.
+    /// </summary>
+    [Fact]
+    public async Task FetchCardAsync_AnOlderCardVersion_IsFetchedAgain()
+    {
+        var userId = await CreateUserAsync();
+        _handler.History = TeamRow;
+        _handler.Card = """{"points":3,"rank":34,"performanceRating":2013,"gamesPlayed":7,"hasResult":true}""";
+        await CreateService().GetAsync([userId]);
+
+        var stored = await _db.PlayerTournamentResults.SingleAsync();
+        stored.CardFetchedAt = DateTime.UtcNow.AddDays(-1);
+        stored.CardVersion = 1;
+        await _db.SaveChangesAsync();
+
+        await CreateService().FetchCardAsync("fide:1693034", "1206267", 73);
+
+        var after = await _db.PlayerTournamentResults.SingleAsync();
+        Assert.Equal(7, after.GamesPlayed);
+        Assert.Equal(TournamentHistoryService.CurrentCardVersion, after.CardVersion);
+    }
+
     /// <summary>Die Klasse reist mit dem Verlauf mit — die Ansicht trennt danach ihre Auswertung.</summary>
     [Fact]
     public async Task GetAsync_CarriesTheSpeedOfEachTournament()
@@ -564,7 +641,7 @@ public class TournamentHistoryServiceTests : IDisposable
         public string History { get; set; } = "[]";
         public string Card { get; set; } = """{"hasResult":false}""";
         /// <summary>Die Turnierdetails — dort steht die Bedenkzeit, die Trefferliste kennt sie nicht.</summary>
-        public string Info { get; set; } = """{"tournamentId":"1","timeControl":"90 min + 30 sec"}""";
+        public string Info { get; set; } = """{"tournamentId":"1","timeControl":"90 min + 30 sec","timeControlKind":"Standard"}""";
         public HttpStatusCode HistoryStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode CardStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode InfoStatus { get; set; } = HttpStatusCode.OK;

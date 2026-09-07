@@ -3189,11 +3189,7 @@
     "history": {
       "title": "Meine Turniere",
       "help": "Welche Turniere du gespielt hast, welche noch kommen, und in den gespielten deine Punkte, deinen Platz und dein Performance-Rating.\n\nDie Daten kommen von chess-results, und dort wird über den NAMEN gesucht — dein Nachname muss also im Profil stehen. Eine FIDE-ID oder chess-results-ID entscheidet, welcher deiner Namensgleichen du bist; ohne sie stehen hier Turniere anderer Menschen mit deinem Namen.\n\nDie Ergebnisse werden Turnier für Turnier geholt und danach behalten. Der erste Blick auf eine lange Historie füllt sich deshalb nach und nach.",
-      "whose": "Wessen",
       "onlyMe": "Nur ich",
-      "withAllFriends": "Ich und alle Freunde",
-      "withSomeFriends": "Ich und ausgewählte Freunde",
-      "friends": "Freunde",
       "inexact": "ohne Kennung",
       "pending": "hole {{count}} Ergebnisse…",
       "upcoming": "Kommt noch",
@@ -3212,7 +3208,6 @@
       "fetchSlow": "Wird noch geholt. Der Auftrag läuft weiter; schau in einer Minute nochmal.",
       "fetchFailed": "Das Turnier konnte nicht geholt werden. Bitte später nochmal.",
       "friendWithoutName": "kein Name im Profil",
-      "noFriendsWithName": "Keiner deiner Freunde hat bisher einen Namen im Profil eingetragen — ohne den gibt es keinen Turnierverlauf zum Vergleichen.",
       "playedCount": "{{count}} Turniere gespielt",
       "noRating": "keine Wertung",
       "withoutDate": "Ohne Datum",
@@ -3221,7 +3216,11 @@
         "rapid": "Schnell",
         "blitz": "Blitz",
         "unknown": "ohne Bedenkzeit"
-      }
+      },
+      "countTournaments": "{{count}} Turniere",
+      "countGames": "{{count}} Partien",
+      "countsTooltip": "Turniere und gespielte Partien in dieser Bedenkzeit.",
+      "noFriendsYet": "Füge auf RookHub Freunde hinzu, um deinen Verlauf mit ihrem zu vergleichen."
     }
   },
   "turnierAdmin": {

@@ -15,10 +15,17 @@ export type HistorySpeed = 'standard' | 'rapid' | 'blitz' | 'unknown';
  */
 export const HISTORY_SPEEDS: HistorySpeed[] = ['standard', 'rapid', 'blitz', 'unknown'];
 
-/** Was in einer Klasse zusammenkommt: wie viele Turniere und welche mittlere Performance. */
+/**
+ * Was in einer Klasse zusammenkommt: Turniere, PARTIEN und die mittlere Performance.
+ *
+ * <p>Turniere und Partien sind zwei verschiedene Groessen: fuenf Wochenend-Opens sind fuenf
+ * Turniere und rund 25 Partien, eine Ligasaison ein Turnier und drei Partien.</p>
+ */
 export interface SpeedSummary {
   speed: HistorySpeed;
   played: number;
+  /** Summe der gespielten Partien; `null`, solange keine einzige Karte sie kennt. */
+  games: number | null;
   performance: number | null;
 }
 
@@ -42,6 +49,11 @@ export interface PlayerHistoryEntry {
    * hier kein Einzelergebnis" — sonst wartet man auf eine Zahl, die nie kommt.
    */
   cardFetched: boolean;
+  /**
+   * Tatsaechlich gespielte Partien — nicht die Rundenzahl des Turniers: in einer Liga wird ein
+   * Spieler an einem TEIL der Termine aufgestellt. `null`, solange die Karte sie nicht kennt.
+   */
+  gamesPlayed: number | null;
   /**
    * Bedenkzeit-Klasse. Eine Performance im Blitz und eine im Turnierschach sind zwei
    * verschiedene Zahlen, auch wenn beide „Performance" heissen — deshalb steht sie an jeder

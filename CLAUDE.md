@@ -320,10 +320,29 @@ Performance sehr wohl kennt. Geholt wird ab dem Tag NACH dem Ende, sonst friert 
 ein; und `MergeAsync` setzt den Platz nur, solange keine Karte da ist (der Kartenwert ist der
 genauere).
 
-**Die BEDENKZEIT ist eine zweite Seite** (Crawler `GET /api/tournament-search/tournament-info?id=`,
-art=0&turdet=YES): die Spielersuche fuehrt sie nicht, und ohne sie stehen eine Blitz- und eine
+**Die BEDENKZEIT ist eine zweite Seite** (Crawler `GET /api/tournament-search/tournament-info?id=`):
+die Spielersuche fuehrt sie nicht, und ohne sie stehen eine Blitz- und eine
 Turnierschach-Performance in derselben Spalte, als waeren sie vergleichbar. Sie landet in
 `TournamentTimeControls` (je Turnier einmal) und reist als `speed` mit jedem Verlaufs-Eintrag mit.
+
+**Zwei Fallen, die dabei live aufgetreten sind:**
+1. **Ein GET liefert die Turnierdetails NICHT.** chess-results blendet sie bei allem, was laenger
+   als fuenf Tage vorbei ist, hinter einem Knopf aus („all links for tournaments older than 5 days
+   are shown after clicking the following button") — dahinter ein ASP.NET-Postback auf
+   `cb_alleDetails`. Ohne ihn kommt die Startrangliste zurueck und jedes Feld ist `null`.
+2. **Das Label traegt die KLASSE**: „Time control (Standard)", nicht „Time control". Diese Angabe
+   schlaegt die Ableitung aus dem Freitext (`TournamentSpeedClassifier` rechnet nur, wenn sie
+   fehlt) — „90 Min. / 40 Zuege + 30 Min. + 30 Sekunden ab Zug 1" richtig zu addieren ist Raten.
+
+**Beide Abrufe tragen eine FASSUNG** (`CurrentCardVersion`, `CurrentTimeControlVersion`). „Einmal
+geholt, nie wieder" spart Abrufe, friert aber jeden Parser-Fehler und jedes spaeter ergaenzte Feld
+fuer immer ein — eine Zeile mit `Speed = Unknown` saehe hinterher aus wie „das Turnier nennt keine
+Bedenkzeit". Steht die Zahl unter der aktuellen, holt der naechtliche Durchgang die Seite genau
+EINMAL nach. Dieselbe Klasse Problem wie `RoundPlanCheckedAt` im Verzeichnis.
+
+**Die PARTIENZAHL kommt von der Spielerkarte** (`GamesPlayed`), nicht aus der Rundenzahl: in einer
+Liga wird ein Spieler an einem TEIL der Termine aufgestellt, die Trefferliste meldet trotzdem alle
+elf Runden. Gezaehlt werden die Kartenzeilen MIT Gegner — ein Freilos ist keine Partie.
 
 ### Turnier-Abos + Favoriten + Monitor (auth)
 | Methode | Endpoint | Zweck |
@@ -1022,8 +1041,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentDirectoryRounds | Die einzelnen SPIELTERMINE eines Turniers. Start und Ende sagen bei einer Liga nicht, wann gespielt wird — elf Runden von September bis April liegen Wochen auseinander, und der Kalender zeigte die Liga deshalb an rund 200 Tagen ohne Schach. Gefuellt vom `TournamentRoundPlanService` (chess-results `art=14`), nur fuer Eintraege ueber 8 Tage mit mehr als einer Runde. Leer = nicht bekannt, dann gilt der ganze Zeitraum | TournamentDirectoryEntryId (Cascade), Number (Rundennummer), Date, TimeText? (≤40, Rohtext „14:00 Uhr" — fuer den Kalender zaehlt der Tag); Index (Date) + **UNIQUE (EntryId, Number)** |
 | TournamentDirectorySources | Auf WELCHER Seite ein Turnier gefunden wurde und unter welcher Nummer dort — **n-zu-n**, dasselbe Turnier steht auf mehreren. Ohne Herkunftsvermerk ist spaeter nicht zu sagen, woher eine Angabe kommt, und genau das entscheidet bei Widerspruch. Die Identitaet des Eintrags liegt seit 0.428.0 in `TournamentDirectoryEntry.PublicId` — genau weil mit dem FIDE-Kalender eine zweite Quelle wirklich Turniere liefert und die chess-results-Nummer dort fehlt | TournamentDirectoryEntryId (Cascade), Kind (Unknown/ChessResults/Fide/Manual), ExternalId (≤60), Url? (≤500), FirstSeenAt, LastSeenAt; **UNIQUE (Kind, ExternalId)** + Index (EntryId) |
 | TournamentDirectoryIgnores | „Dieses Turnier will ich nicht sehen" je Nutzer. Gemerkt wird die IDENTITAET (`PublicId`) und nicht die Eintrags-Id (ein Eintrag kann verschwinden und wiederkommen, die Entscheidung soll gelten) — deshalb auch kein FK aufs Turnier, wie bei `TournamentSubscription` | UserId (Cascade), PublicId (≤24), CreatedAt; **UNIQUE (UserId, PublicId)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
-| PlayerTournamentResults | Zwischenspeicher des Turnierverlaufs: die Teilnahme EINES Spielers an EINEM Turnier samt Ergebnis. Der Schluessel ist der **SPIELER, nicht das Konto** — die Historie ist fuer jeden dieselbe, ein Freund benutzt denselben Speicher. Die Kartenwerte werden genau einmal geholt (ein abgeschlossenes Turnier aendert sich nie wieder) | PlayerKey (≤40, `fide:…`/`cr:…`/`name:…`), ChessResultsId (≤20), Snr, TournamentName (≤500), EndDate?, Rank?/Rounds?/PlayerCount? (aus der Trefferliste), Points? (5,2)/PerformanceRating?/RatingChange? (6,2)/RatingInternational? (aus der Spielerkarte), CardFetchedAt? (gesetzt AUCH bei leerem Ergebnis — sonst wird dieselbe Seite jedes Mal erneut geholt; bei einem NETZfehler dagegen nicht), UpdatedAt; **UNIQUE (PlayerKey, ChessResultsId)** + Index (PlayerKey, EndDate) |
-| TournamentTimeControls | Die BEDENKZEIT eines Turniers — je TURNIER, nicht je Teilnahme: zwei Konten im selben Open teilen sie sich, und sie kostet einen eigenen Seitenabruf (chess-results fuehrt sie nur in der Turnierdetail-Ansicht, die Spielersuche liefert sie nicht). Gespeichert wird Rohtext UND abgeleitete Klasse, damit eine geaenderte Einordnungsregel ohne neuen Abruf auf den Bestand wirkt | ChessResultsId (PK, ≤20), TimeControlText? (≤300, „90 min + 30 sec / Zug"), Speed (`TournamentSpeed`, via `TournamentSpeedClassifier`), FetchedAt (gesetzt AUCH ohne gefundene Bedenkzeit — sonst wird dieselbe Seite bei jedem Durchgang erneut geholt; ein NETZfehler legt nichts an) |
+| PlayerTournamentResults | Zwischenspeicher des Turnierverlaufs: die Teilnahme EINES Spielers an EINEM Turnier samt Ergebnis. Der Schluessel ist der **SPIELER, nicht das Konto** — die Historie ist fuer jeden dieselbe, ein Freund benutzt denselben Speicher. Die Kartenwerte werden genau einmal geholt (ein abgeschlossenes Turnier aendert sich nie wieder) | PlayerKey (≤40, `fide:…`/`cr:…`/`name:…`), ChessResultsId (≤20), Snr, TournamentName (≤500), EndDate?, Rank?/Rounds?/PlayerCount? (aus der Trefferliste), Points? (5,2)/PerformanceRating?/RatingChange? (6,2)/RatingInternational? (aus der Spielerkarte), **GamesPlayed?** (gespielte Partien von der KARTE — nicht die Rundenzahl), **CardVersion** (Fassung des Kartenabrufs; aeltere werden einmal nachgeholt, sonst bekaeme der Bestand ein spaeter ergaenztes Feld nie), CardFetchedAt? (gesetzt AUCH bei leerem Ergebnis — sonst wird dieselbe Seite jedes Mal erneut geholt; bei einem NETZfehler dagegen nicht), UpdatedAt; **UNIQUE (PlayerKey, ChessResultsId)** + Index (PlayerKey, EndDate) |
+| TournamentTimeControls | Die BEDENKZEIT eines Turniers — je TURNIER, nicht je Teilnahme: zwei Konten im selben Open teilen sie sich, und sie kostet einen eigenen Seitenabruf (chess-results fuehrt sie nur in der Turnierdetail-Ansicht, die Spielersuche liefert sie nicht). Gespeichert wird Rohtext UND abgeleitete Klasse, damit eine geaenderte Einordnungsregel ohne neuen Abruf auf den Bestand wirkt | ChessResultsId (PK, ≤20), TimeControlText? (≤300, „90 min + 30 sec / Zug"), Speed (`TournamentSpeed`, via `TournamentSpeedClassifier`), FetchedAt (gesetzt AUCH ohne gefundene Bedenkzeit — sonst wird dieselbe Seite bei jedem Durchgang erneut geholt; ein NETZfehler legt nichts an), **Version** (Fassung des Abrufs; aeltere werden EINMAL nachgeholt, sonst friert ein Parser-Fehler als „nennt keine Bedenkzeit" ein) |
 | PlayerHistorySyncs | Wann die Trefferliste EINES Spielers zuletzt geholt wurde (TTL 12 h). Nach einem Fehlschlag bleibt der Zeitstempel ALT, damit der naechste Aufruf es wieder versucht statt zwoelf Stunden zu warten | PlayerKey (PK, ≤40), LastFetchedAt, LastError? (≤500) |
 | UserViewStates | Anzeige-Zustand EINER Seite fuer EINEN Nutzer (heute die Filterleiste des Turnierkalenders). Fuer den Server **OPAK** — nur JSON-Gueltigkeit, Objekt-Form und Groesse werden geprueft; er wird nie abgefragt. `ViewKey` kommt aus `ViewStateService.AllowedKeys`, sonst waere das ein freier Speicher je Nutzer | UserId (Cascade), ViewKey (≤64), Json (**text**, ≤8192 Zeichen — `varchar(8192)` zaehlte in utf8mb4 mit 32 KB gegen das 64-KB-Zeilenlimit), UpdatedAt; **UNIQUE (UserId, ViewKey)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
@@ -1179,11 +1198,16 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
 - **Turnierverlauf** (`src-turnier/app/features/tournament-history/`, Route
   `/tournaments/history`, Navbar): gespielte und kommende Turniere mit Platz, Punkten,
   Performance-Rating und Elo-Aenderung, umschaltbar auf Freunde (alle oder einzeln).
-  **Ausgewertet wird JE BEDENKZEIT-KLASSE** (Turnier/Schnell/Blitz) und **je JAHR**: eine
-  Gesamtpunktzahl addierte Blitz zu Turnierschach und Fuenfrundige zu Elfrundigen — sie wuchs nur
-  mit der Zeit. Eine Performance ist ausserdem NUR getrennt lesbar; 1900 im Blitz ist nicht 1900 im
-  Turnierschach. Die Freundes-Auswahl fuehrt ALLE angenommenen Freunde, die ohne Namen im Profil
-  ausgegraut mit Grund (vorher gefiltert — wer nur solche Freunde hat, sah eine leere Auswahl). Der EIGENE
+  **Ausgewertet wird JE BEDENKZEIT-KLASSE** (Turnier/Schnell/Blitz/ohne Angabe) und **je JAHR**,
+  mit Turnier- UND Partienzahl: eine Gesamtpunktzahl addierte Blitz zu Turnierschach und
+  Fuenfrundige zu Elfrundigen — sie wuchs nur mit der Zeit. Eine Performance ist ausserdem NUR
+  getrennt lesbar; 1900 im Blitz ist nicht 1900 im Turnierschach. **`unknown` ist eine eigene
+  Gruppe** und faellt nicht heraus: die Bedenkzeit steht auf einer eigenen Seite, die erst der
+  naechtliche Durchgang holt — ohne diese Gruppe war die Uebersicht direkt nach dem Deploy leer.
+  **Ein REITER je Konto** (ich zuerst, dann die Freunde) statt einer Auswahlliste; jeder Reiter
+  laedt genau EIN Konto (alle auf einmal hiesse: eine chess-results-Abfrage je Freund, auch fuer
+  die, die niemand ansieht), einmal geladene bleiben im Zwischenspeicher. Freunde ohne Namen im
+  Profil behalten ihren Reiter — gesperrt und mit Grund, statt kommentarlos zu fehlen. Der EIGENE
   Verlauf bleibt bei jeder Auswahl dabei — „nur Freunde" waere eine Ansicht, in der man sich
   selbst sucht, und der Vergleich ist der Zweck. Zwei Dinge, die dabei nicht kippen duerfen:
   (1) Die Seite fragt NACH, solange `pending > 0` (Server holt die Ergebnisse einzeln im

@@ -54,6 +54,13 @@ public class PlayerHistoryEntryDto
     public int? PlayerCount { get; set; }
     public int? Rounds { get; set; }
 
+    /// <summary>
+    /// Tatsaechlich gespielte Partien — nicht die Rundenzahl: in einer Liga wird ein Spieler an
+    /// einem TEIL der Termine aufgestellt. <c>null</c> bei Karten, die vor dieser Zaehlung geholt
+    /// wurden; der naechtliche Durchgang traegt sie einmalig nach.
+    /// </summary>
+    public int? GamesPlayed { get; set; }
+
     public decimal? Points { get; set; }
     /// <summary>Turnier-Leistung — die Zahl, um die es hier eigentlich geht.</summary>
     public int? PerformanceRating { get; set; }
@@ -98,6 +105,7 @@ public class PlayerHistoryEntryDto
         Rank = r.Rank,
         PlayerCount = r.PlayerCount,
         Rounds = r.Rounds,
+        GamesPlayed = r.GamesPlayed,
         Points = r.Points,
         PerformanceRating = r.PerformanceRating,
         RatingChange = r.RatingChange,

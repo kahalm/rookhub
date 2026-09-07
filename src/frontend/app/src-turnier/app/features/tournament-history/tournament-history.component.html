@@ -6,42 +6,32 @@
     </h1>
   </div>
 
+  <!-- Ein Reiter je Konto: ich zuerst, danach die Freunde. Vorher stand hier eine Auswahlliste,
+       die man erst aufklappen musste, um zu sehen, wen es ueberhaupt gibt. Freunde OHNE Namen im
+       Profil bekommen ihren Reiter trotzdem — gesperrt und mit Grund, statt kommentarlos zu
+       fehlen. -->
+  @if (tabs().length > 1) {
+    <mat-tab-group class="whose-tabs" [selectedIndex]="activeIndex()"
+                   (selectedIndexChange)="onTabChange($event)" mat-stretch-tabs="false">
+      @for (tab of tabs(); track trackByTab($index, tab)) {
+        <mat-tab [disabled]="!tab.enabled">
+          <ng-template mat-tab-label>
+            <span [matTooltip]="tab.enabled
+                    ? (tab.exact ? '' : ('turnier.history.inexact' | translate))
+                    : ('turnier.history.friendWithoutName' | translate)">
+              {{ tab.label }}
+              @if (tab.enabled && !tab.exact) { <mat-icon inline class="warn-icon">help_outline</mat-icon> }
+              @if (!tab.enabled) { <mat-icon inline class="warn-icon">block</mat-icon> }
+            </span>
+          </ng-template>
+        </mat-tab>
+      }
+    </mat-tab-group>
+  }
+
   <div class="filter-bar">
-    <mat-form-field appearance="outline" class="whose-field">
-      <mat-label>{{ 'turnier.history.whose' | translate }}</mat-label>
-      <mat-select [ngModel]="whose" (ngModelChange)="onWhoseChange($event)">
-        <mat-option value="me">{{ 'turnier.history.onlyMe' | translate }}</mat-option>
-        <!-- Massgeblich sind die Freunde MIT Namen: ohne Nachnamen im Profil gibt es keine
-             Spielersuche und damit nichts zu vergleichen. -->
-        <mat-option value="all" [disabled]="selectableFriends().length === 0">
-          {{ 'turnier.history.withAllFriends' | translate }}
-        </mat-option>
-        <mat-option value="pick" [disabled]="selectableFriends().length === 0">
-          {{ 'turnier.history.withSomeFriends' | translate }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    @if (whose === 'pick') {
-      <mat-form-field appearance="outline" class="pick-field">
-        <mat-label>{{ 'turnier.history.friends' | translate }}</mat-label>
-        <mat-select [ngModel]="picked" (ngModelChange)="onPickedChange($event)" multiple>
-          @for (friend of friends(); track friend.userId) {
-            <mat-option [value]="friend.userId" [disabled]="!friend.hasName">
-              {{ friend.displayName }}
-              @if (!friend.hasName) {
-                <span class="inexact">·&nbsp;{{ 'turnier.history.friendWithoutName' | translate }}</span>
-              } @else if (!friend.exact) {
-                <span class="inexact">·&nbsp;{{ 'turnier.history.inexact' | translate }}</span>
-              }
-            </mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    }
-
-    @if (friends().length > 0 && selectableFriends().length === 0) {
-      <span class="hint">{{ 'turnier.history.noFriendsWithName' | translate }}</span>
+    @if (friends().length === 0) {
+      <span class="hint">{{ 'turnier.history.noFriendsYet' | translate }}</span>
     }
 
     @if (pending() > 0) {
@@ -52,12 +42,12 @@
     }
   </div>
 
-  @if (loading() && histories().length === 0) {
+  @if (loading()) {
     <app-loading-spinner />
   } @else if (failed()) {
     <p class="hint warn">{{ 'turnier.history.loadError' | translate }}</p>
   } @else {
-    @for (history of histories(); track trackByUser($index, history)) {
+    @if (current(); as history) {
       <mat-card class="player-card">
         <div class="player-head">
           <h2>{{ history.displayName }}</h2>
@@ -76,7 +66,8 @@
                   } @else {
                     <span class="muted">{{ 'turnier.history.noRating' | translate }}</span>
                   }
-                  <span class="muted">({{ s.played }})</span>
+                  <span class="muted"
+                        [matTooltip]="'turnier.history.countsTooltip' | translate">{{ counts(s) }}</span>
                 </span>
               }
             </span>
@@ -128,7 +119,8 @@
                     } @else {
                       <span class="muted">{{ 'turnier.history.noRating' | translate }}</span>
                     }
-                    <span class="muted">({{ s.played }})</span>
+                    <span class="muted"
+                          [matTooltip]="'turnier.history.countsTooltip' | translate">{{ counts(s) }}</span>
                   </span>
                 }
               </span>

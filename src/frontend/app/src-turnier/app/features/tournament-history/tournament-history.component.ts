@@ -5,10 +5,8 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription, catchError, of, switchMap, takeWhile, timer } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -20,8 +18,21 @@ import { TournamentListService } from '../../core/tournament-list.service';
 import { HISTORY_SPEEDS, HistoryFriend, PlayerHistory, PlayerHistoryEntry, SpeedSummary } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
 
-/** Wessen Verlauf gezeigt wird. */
-type Whose = 'me' | 'all' | 'pick';
+/**
+ * Ein Reiter: ein KONTO. Der eigene steht vorn, danach die Freunde.
+ *
+ * <p>Freunde ohne Namen im Profil bekommen ihren Reiter trotzdem — nur gesperrt: ohne Nachnamen
+ * gibt es keine chess-results-Spielersuche und damit keinen Verlauf. Sie ganz wegzulassen war der
+ * frühere Zustand und hinterliess eine Auswahl, die ohne Grund leer war.</p>
+ */
+export interface HistoryTab {
+  userId: number;
+  label: string;
+  /** Ist etwas zu holen? `false` = kein Nachname im Profil. */
+  enabled: boolean;
+  /** Traegt das Profil eine Kennung? Sonst sind Namensgleiche mit dabei. */
+  exact: boolean;
+}
 
 /**
  * Der Turnierverlauf: gespielte und kommende Turniere, je mit Platz, Punkten und
@@ -41,9 +52,8 @@ type Whose = 'me' | 'all' | 'pick';
   selector: 'app-tournament-history',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatButtonModule, MatCardModule, MatChipsModule,
-    MatFormFieldModule, MatIconModule, MatSelectModule, MatTooltipModule, RouterLink,
-    TranslatePipe,
+    CommonModule, FormsModule, MatButtonModule, MatCardModule, MatIconModule,
+    MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent,
   ],
   templateUrl: './tournament-history.component.html',
@@ -67,73 +77,91 @@ export class TournamentHistoryComponent implements OnInit {
   /** Wie lange auf einen Holen-Auftrag gewartet wird: 4 s x 30 = rund zwei Minuten. */
   private static readonly MaxImportPolls = 30;
 
-  readonly histories = signal<PlayerHistory[]>([]);
-  readonly friends = signal<HistoryFriend[]>([]);
-
   /**
-   * Die Freunde, mit denen sich wirklich vergleichen laesst. Die Liste enthaelt bewusst AUCH die
-   * ohne Namen im Profil (sonst stand dort nichts und niemand wusste warum), aber auswaehlbar
-   * sind nur diese hier — und an ihnen haengt, ob die Umschaltung ueberhaupt etwas anbietet.
+   * Die schon geladenen Verlaeufe, nach Konto. Ein einmal geoeffneter Reiter bleibt damit beim
+   * Zurueckwechseln sofort da — und jeder Reiter kostet einen eigenen Abruf, der sich so nicht
+   * wiederholt.
    */
-  readonly selectableFriends = computed(() => this.friends().filter(f => f.hasName));
+  readonly loaded = signal<Record<number, PlayerHistory>>({});
+  readonly friends = signal<HistoryFriend[]>([]);
   readonly loading = signal(true);
   readonly failed = signal(false);
 
-  whose: Whose = 'me';
-  /** Bei `pick`: die ausgewaehlten Freunde. */
-  picked: number[] = [];
+  /** Welcher Reiter offen ist — `null`, solange die eigene Kennung nicht feststeht. */
+  readonly activeUserId = signal<number | null>(null);
 
-  /** Schluessel der gemerkten Auswahl — sonst stellt man sie nach jedem Besuch neu ein. */
+  /** Der Verlauf des offenen Reiters. */
+  readonly current = computed(() => {
+    const id = this.activeUserId();
+    return id === null ? null : this.loaded()[id] ?? null;
+  });
+
+  /**
+   * Ein Reiter je Konto: ich zuerst, danach die Freunde. Gesperrte (kein Name im Profil) bleiben
+   * sichtbar — mit Grund, statt kommentarlos zu fehlen.
+   */
+  readonly tabs = computed<HistoryTab[]>(() => {
+    const me = this.auth.currentUser;
+    const mine: HistoryTab[] = me
+      ? [{ userId: me.userId, label: this.translate.instant('turnier.history.onlyMe'), enabled: true, exact: true }]
+      : [];
+
+    return [
+      ...mine,
+      ...this.friends().map(f => ({
+        userId: f.userId, label: f.displayName, enabled: f.hasName, exact: f.exact,
+      })),
+    ];
+  });
+
+  /** Der Index des offenen Reiters — was `mat-tab-group` braucht. */
+  readonly activeIndex = computed(() => {
+    const id = this.activeUserId();
+    const index = this.tabs().findIndex(t => t.userId === id);
+    return index < 0 ? 0 : index;
+  });
+
+  /** Schluessel des gemerkten Reiters — sonst faengt man nach jedem Besuch wieder bei sich an. */
   static readonly ViewKey = 'rh.turnier.historyView';
 
   ngOnInit(): void {
-    this.restore();
+    const me = this.auth.currentUser?.userId ?? null;
+    const remembered = this.restore();
 
-    // „Alle Freunde" braucht die LISTE, um zu wissen, wen es meint. Ist sie die gemerkte
-    // Auswahl, muss deshalb erst sie da sein — sonst laedt die Seite beim Wiederkommen nur den
-    // eigenen Verlauf und die gemerkte Auswahl waere wirkungslos.
-    const needsFriends = this.whose === 'all';
+    // Der EIGENE Verlauf laedt sofort — er ist der erste Reiter und der haeufige Fall. Auf die
+    // Freundesliste zu warten hiesse, die eigene Tabelle hinter einem zweiten Abruf zu verstecken.
+    const start = remembered ?? me;
+    if (start !== null) this.select(start);
 
     this.history.friends().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: friends => {
         this.friends.set(friends);
-        if (needsFriends) this.load();
+        // Der gemerkte Reiter kann inzwischen weg sein (Freundschaft aufgeloest) — dann zurueck
+        // auf den eigenen, statt auf einen Reiter zu zeigen, den es nicht gibt.
+        if (remembered !== null && remembered !== me && !friends.some(f => f.userId === remembered && f.hasName)) {
+          if (me !== null) this.select(me);
+        }
       },
       error: () => {
-        // Ohne Freundesliste bleibt der eigene Verlauf — die Umschaltung fehlt dann eben.
+        // Ohne Freundesliste bleibt der eigene Verlauf — die Reiter fehlen dann eben.
         this.friends.set([]);
-        if (needsFriends) this.load();
+        if (remembered !== null && remembered !== me && me !== null) this.select(me);
       },
     });
-
-    if (!needsFriends) this.load();
   }
 
-  // ----- Auswahl ----------------------------------------------------------
+  // ----- Reiter -----------------------------------------------------------
 
-  onWhoseChange(whose: Whose): void {
-    this.whose = whose;
-    this.store();
-    this.load();
+  onTabChange(index: number): void {
+    const tab = this.tabs()[index];
+    if (tab && tab.userId !== this.activeUserId()) this.select(tab.userId);
   }
 
-  onPickedChange(picked: number[]): void {
-    this.picked = picked ?? [];
-    this.store();
-    this.load();
-  }
-
-  /**
-   * Der eigene Verlauf ist IMMER dabei. „Nur Freunde" waere eine Ansicht, in der man sich selbst
-   * sucht — und der Vergleich ist der Zweck der Umschaltung.
-   */
-  private selectedUserIds(): number[] {
-    const me = this.auth.currentUser?.userId;
-    const mine = me ? [me] : [];
-
-    if (this.whose === 'all') return [...mine, ...this.selectableFriends().map(f => f.userId)];
-    if (this.whose === 'pick') return [...mine, ...this.picked];
-    return mine;
+  /** Reiter oeffnen: gemerkte Fassung sofort zeigen, dann frisch laden. */
+  private select(userId: number): void {
+    this.activeUserId.set(userId);
+    this.store(userId);
+    this.load(userId);
   }
 
   // ----- Laden ------------------------------------------------------------
@@ -146,24 +174,40 @@ export class TournamentHistoryComponent implements OnInit {
    */
   private generation = 0;
 
-  load(): void {
-    this.loading.set(true);
+  /**
+   * Den Verlauf EINES Kontos laden. Ein Reiter = ein Abruf: „alle Freunde auf einmal" hiesse, fuer
+   * jedes Konto eine Trefferliste bei chess-results zu holen, auch fuer die, die niemand ansieht.
+   */
+  load(userId: number): void {
+    // Schon geladen? Dann bleibt die Tabelle stehen und wird nur aufgefrischt — sonst blitzt bei
+    // jedem Reiterwechsel ein Ladebalken ueber einer Ansicht auf, die es schon gibt.
+    this.loading.set(this.loaded()[userId] === undefined);
     this.failed.set(false);
     this.pollSubscription?.unsubscribe();
 
     const generation = ++this.generation;
-    this.history.get(this.selectedUserIds()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.history.get([userId]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: histories => {
         if (generation !== this.generation) return;
-        this.histories.set(histories);
+        this.remember(histories);
         this.loading.set(false);
-        this.schedulePoll(generation);
+        this.schedulePoll(generation, userId);
       },
       error: () => {
         if (generation !== this.generation) return;
         this.loading.set(false);
         this.failed.set(true);
       },
+    });
+  }
+
+  /** Antworten in den Zwischenspeicher legen — je Konto eine Zeile. */
+  private remember(histories: PlayerHistory[]): void {
+    if (histories.length === 0) return;
+    this.loaded.update(current => {
+      const next = { ...current };
+      for (const history of histories) next[history.userId] = history;
+      return next;
     });
   }
 
@@ -175,7 +219,7 @@ export class TournamentHistoryComponent implements OnInit {
 
   private polls = 0;
 
-  private schedulePoll(generation: number): void {
+  private schedulePoll(generation: number, userId: number): void {
     if (this.pending() === 0) { this.polls = 0; return; }
     if (this.polls >= TournamentHistoryComponent.MaxPolls) return;
 
@@ -184,20 +228,21 @@ export class TournamentHistoryComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (generation !== this.generation) return;
-        this.history.get(this.selectedUserIds())
+        this.history.get([userId])
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: histories => {
               if (generation !== this.generation) return;
-              this.histories.set(histories);
-              this.schedulePoll(generation);
+              this.remember(histories);
+              this.schedulePoll(generation, userId);
             },
             error: () => { /* still: der naechste Versuch kommt beim naechsten Laden */ },
           });
       });
   }
 
-  readonly pending = computed(() => this.histories().reduce((sum, h) => sum + h.pending, 0));
+  /** Wie viele Ergebnisse im OFFENEN Reiter noch fehlen. */
+  readonly pending = computed(() => this.current()?.pending ?? 0);
 
   // ----- Aufteilung -------------------------------------------------------
 
@@ -265,14 +310,32 @@ export class TournamentHistoryComponent implements OnInit {
     return HISTORY_SPEEDS.map(speed => {
       const mine = played.filter(e => e.speed === speed);
       const rated = mine.filter(e => e.performanceRating !== null);
+      // Partien nur summieren, wo eine Karte sie kennt — sonst zaehlte ein Turnier ohne Angabe
+      // als null Partien und die Summe waere stillschweigend zu klein.
+      const counted = mine.filter(e => e.gamesPlayed !== null);
       return {
         speed,
         played: mine.length,
+        games: counted.length === 0 ? null : counted.reduce((sum, e) => sum + (e.gamesPlayed ?? 0), 0),
         performance: rated.length === 0
           ? null
           : Math.round(rated.reduce((sum, e) => sum + (e.performanceRating ?? 0), 0) / rated.length),
       };
     }).filter(s => s.played > 0);
+  }
+
+  /**
+   * „3 Turniere · 14 Partien" in einer Klammer — Turniere und Partien sind zwei verschiedene
+   * Groessen (fuenf Wochenend-Opens sind fuenf Turniere und rund 25 Partien, eine Ligasaison ein
+   * Turnier und drei Partien). Kennt noch keine Karte die Partienzahl, steht nur die Turnierzahl
+   * da statt einer erfundenen Null.
+   */
+  counts(summary: SpeedSummary): string {
+    const tournaments = this.translate.instant('turnier.history.countTournaments', { count: summary.played });
+    if (summary.games === null) return `(${tournaments})`;
+
+    const games = this.translate.instant('turnier.history.countGames', { count: summary.games });
+    return `(${tournaments} · ${games})`;
   }
 
   /**
@@ -354,34 +417,28 @@ export class TournamentHistoryComponent implements OnInit {
   }
 
   trackById = (_: number, entry: PlayerHistoryEntry) => entry.chessResultsId;
-  trackByUser = (_: number, history: PlayerHistory) => history.userId;
+  trackByTab = (_: number, tab: HistoryTab) => tab.userId;
 
   // ----- Gemerkte Auswahl -------------------------------------------------
 
-  private store(): void {
+  private store(userId: number): void {
     try {
-      localStorage.setItem(TournamentHistoryComponent.ViewKey,
-        JSON.stringify({ whose: this.whose, picked: this.picked }));
+      localStorage.setItem(TournamentHistoryComponent.ViewKey, JSON.stringify({ userId }));
     } catch {
       // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
-      // lassen — dann faengt man eben wieder bei „nur ich" an.
+      // lassen — dann faengt man eben wieder beim eigenen Reiter an.
     }
   }
 
-  private restore(): void {
+  /** Der zuletzt geoeffnete Reiter, oder `null`. */
+  private restore(): number | null {
     try {
       const raw = localStorage.getItem(TournamentHistoryComponent.ViewKey);
       const stored = raw ? JSON.parse(raw) : null;
-      if (!stored || typeof stored !== 'object') return;
-
-      if (stored.whose === 'me' || stored.whose === 'all' || stored.whose === 'pick') {
-        this.whose = stored.whose;
-      }
-      if (Array.isArray(stored.picked)) {
-        this.picked = stored.picked.filter((v: unknown) => typeof v === 'number');
-      }
+      return stored && typeof stored.userId === 'number' ? stored.userId : null;
     } catch {
-      // unlesbar/kaputt: Vorgabe bleibt stehen
+      // unlesbar/kaputt: der eigene Reiter bleibt die Vorgabe
+      return null;
     }
   }
 }

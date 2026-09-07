@@ -53,6 +53,27 @@ public class TournamentHistoryService
     internal TimeSpan ListTtl { get; set; } = TimeSpan.FromHours(12);
 
     /// <summary>
+    /// Fassung des Kartenabrufs. Erhoehen, sobald die Karte ein FELD mehr liefert, das der
+    /// Bestand nicht hat — der naechtliche Durchgang holt dann jede aeltere Zeile genau EINMAL
+    /// nach. Ohne diesen Zaehler bliebe ein spaeter ergaenztes Feld fuer alle bestehenden
+    /// Turniere fuer immer leer (die Karte wird sonst nie wieder geholt).
+    ///
+    /// <para>1 = Punkte/Platz/Performance/Elo-Aenderung. 2 = zusaetzlich die gespielten Partien
+    /// (2026-09-07).</para>
+    /// </summary>
+    public const int CurrentCardVersion = 2;
+
+    /// <summary>
+    /// Fassung des Bedenkzeit-Abrufs. Erhoehen, wenn sich am Weg oder am Parser etwas aendert —
+    /// der naechtliche Durchgang holt dann jede aeltere Zeile genau EINMAL nach.
+    ///
+    /// <para>1 = erster Wurf (der GET lieferte die Turnierdetails gar nicht, die Zeilen waeren
+    /// alle „unbekannt" geblieben). 2 = mit dem Postback auf „Turnierdetails anzeigen" und der
+    /// Klasse, die chess-results selbst nennt (2026-09-07).</para>
+    /// </summary>
+    public const int CurrentTimeControlVersion = 2;
+
+    /// <summary>
     /// Wie viele Spielerkarten je Aufruf in den Hintergrund gehen. Deckel, weil jede einen
     /// Seitenabruf kostet: bei einem frischen Konto sind zwoelf offen, bei einem Vielspieler
     /// hundert, und die sollen nicht in einem Rutsch gegen chess-results laufen.
@@ -187,7 +208,8 @@ public class TournamentHistoryService
             // Dieselbe Auswahl wie <see cref="NeedsCard"/>, hier aber ausgeschrieben: die Methode
             // uebersetzt der Provider nicht, und die Filterung gehoert in die Datenbank.
             var missing = await _db.PlayerTournamentResults
-                .Where(r => r.PlayerKey == identity.Key && r.CardFetchedAt == null && r.Snr > 0
+                .Where(r => r.PlayerKey == identity.Key && r.Snr > 0
+                            && (r.CardFetchedAt == null || r.CardVersion < CurrentCardVersion)
                             && r.EndDate != null && r.EndDate < today)
                 .OrderByDescending(r => r.EndDate)
                 .Take(maxCards - cards - timeControls)
@@ -211,7 +233,7 @@ public class TournamentHistoryService
                 .Distinct()
                 .ToListAsync(ct);
             var known = await _db.TournamentTimeControls
-                .Where(t => playedIds.Contains(t.ChessResultsId))
+                .Where(t => playedIds.Contains(t.ChessResultsId) && t.Version >= CurrentTimeControlVersion)
                 .Select(t => t.ChessResultsId)
                 .ToListAsync(ct);
 
@@ -397,7 +419,9 @@ public class TournamentHistoryService
     /// </summary>
     public async Task FetchTimeControlAsync(string chessResultsId, CancellationToken ct = default)
     {
-        if (await _db.TournamentTimeControls.AnyAsync(t => t.ChessResultsId == chessResultsId, ct)) return;
+        var existing = await _db.TournamentTimeControls
+            .FirstOrDefaultAsync(t => t.ChessResultsId == chessResultsId, ct);
+        if (existing is not null && existing.Version >= CurrentTimeControlVersion) return;
 
         CrawlerTournamentInfo? info;
         try
@@ -410,15 +434,30 @@ public class TournamentHistoryService
             return;
         }
 
-        _db.TournamentTimeControls.Add(new TournamentTimeControl
-        {
-            ChessResultsId = chessResultsId,
-            TimeControlText = Truncate(info?.TimeControl, 300) is { Length: > 0 } text ? text : null,
-            Speed = TournamentSpeedClassifier.Classify(info?.TimeControl),
-            FetchedAt = DateTime.UtcNow,
-        });
+        var row = existing ?? new TournamentTimeControl { ChessResultsId = chessResultsId };
+        row.TimeControlText = Truncate(info?.TimeControl, 300) is { Length: > 0 } text ? text : null;
+        row.Speed = SpeedOf(info);
+        row.FetchedAt = DateTime.UtcNow;
+        row.Version = CurrentTimeControlVersion;
+        if (existing is null) _db.TournamentTimeControls.Add(row);
+
         await _db.SaveChangesAsync(ct);
     }
+
+    /// <summary>
+    /// Die Klasse eines Turniers. chess-results NENNT sie selbst — in Klammern hinter der
+    /// Beschriftung („Time control (Standard)") — und diese Angabe schlaegt jede Ableitung aus dem
+    /// Freitext: „90 Min. / 40 Zuege + 30 Min. + 30 Sekunden ab Zug 1" richtig zu addieren ist
+    /// Raten, „(Standard)" ist eine Aussage. Nur wenn sie fehlt, rechnet
+    /// <see cref="TournamentSpeedClassifier"/>.
+    /// </summary>
+    internal static TournamentSpeed SpeedOf(CrawlerTournamentInfo? info) => info?.TimeControlKind?.Trim() switch
+    {
+        "Standard" => TournamentSpeed.Standard,
+        "Rapid" => TournamentSpeed.Rapid,
+        "Blitz" => TournamentSpeed.Blitz,
+        _ => TournamentSpeedClassifier.Classify(info?.TimeControl),
+    };
 
     /// <summary>
     /// Fehlt zu diesem Eintrag noch die Spielerkarte — und lohnt der Abruf?
@@ -433,7 +472,8 @@ public class TournamentHistoryService
     /// Zwischenstand der letzten Runde als Endergebnis einfriert.</para>
     /// </summary>
     internal static bool NeedsCard(PlayerTournamentResult result, DateOnly today) =>
-        result.CardFetchedAt is null && result.Snr > 0
+        (result.CardFetchedAt is null || result.CardVersion < CurrentCardVersion)
+        && result.Snr > 0
         && result.EndDate is not null && result.EndDate < today;
 
     /// <summary>
@@ -477,7 +517,9 @@ public class TournamentHistoryService
     {
         var result = await _db.PlayerTournamentResults
             .FirstOrDefaultAsync(r => r.PlayerKey == playerKey && r.ChessResultsId == chessResultsId, ct);
-        if (result is null || result.CardFetchedAt is not null) return;
+        // Schon geholt UND auf dem aktuellen Stand? Dann nichts zu tun — ein abgeschlossenes
+        // Turnier aendert sich nie wieder. Eine aeltere Fassung wird dagegen einmal nachgeholt.
+        if (result is null || (result.CardFetchedAt is not null && result.CardVersion >= CurrentCardVersion)) return;
 
         CrawlerPlayerCard? card;
         try
@@ -495,10 +537,14 @@ public class TournamentHistoryService
         // Auch ein LEERES Ergebnis wird vermerkt — sonst wird dieselbe Seite bei jedem Aufruf
         // erneut geholt. „Keine Werte" heisst hier: das Turnier wurde noch nicht gespielt.
         result.CardFetchedAt = DateTime.UtcNow;
+        result.CardVersion = CurrentCardVersion;
         result.UpdatedAt = DateTime.UtcNow;
 
         if (card is { HasResult: true })
         {
+            // Die Partienzahl steht auch dann, wenn sonst nichts Neues kam — sie ist der Grund
+            // fuer die Fassung 2.
+            result.GamesPlayed = card.GamesPlayed ?? result.GamesPlayed;
             result.Points = card.Points;
             result.PerformanceRating = card.PerformanceRating;
             result.RatingChange = card.RatingChange;
@@ -559,7 +605,7 @@ public class TournamentHistoryService
 
     internal sealed record CrawlerTournamentInfo(
         string TournamentId, string? Name, string? DateText, string? Location, string? TimeControl,
-        int? TotalRounds);
+        string? TimeControlKind, int? TotalRounds);
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -570,7 +616,7 @@ public class TournamentHistoryService
 
     internal sealed record CrawlerPlayerCard(
         decimal? Points, int? Rank, int? PerformanceRating, decimal? RatingChange,
-        int? RatingInternational, bool HasResult);
+        int? RatingInternational, int? GamesPlayed, bool HasResult);
 
     private static DateOnly? ParseDate(string? text)
     {

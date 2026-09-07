@@ -64,11 +64,28 @@ public class PlayerTournamentResult
     public int? RatingInternational { get; set; }
 
     /// <summary>
+    /// Tatsaechlich GESPIELTE Partien — nicht die Rundenzahl des Turniers. In einer Liga steht ein
+    /// Spieler an Brett 17 und wird an einem Teil der Termine aufgestellt; <see cref="Rounds"/>
+    /// meldet trotzdem alle elf. <c>null</c> bei Karten, die vor dieser Zaehlung geholt wurden
+    /// (siehe <see cref="CardVersion"/>).
+    /// </summary>
+    public int? GamesPlayed { get; set; }
+
+    /// <summary>
     /// Wann die Spielerkarte geholt wurde. <c>null</c> = noch nicht versucht; gesetzt bleibt es
     /// auch dann, wenn die Karte keine Werte hatte (kuenftiges Turnier) — sonst wuerde dieselbe
     /// Seite immer wieder geholt.
     /// </summary>
     public DateTime? CardFetchedAt { get; set; }
+
+    /// <summary>
+    /// Mit welcher Fassung des Kartenabrufs diese Zeile entstand. Ein abgeschlossenes Turnier
+    /// aendert sich nie wieder — die Karte wird deshalb genau einmal geholt, und ohne diesen
+    /// Zaehler bekaeme der Bestand ein spaeter ergaenztes Feld (hier: die Partienzahl) NIE.
+    /// Steht die Zahl unter <see cref="TournamentHistoryService.CurrentCardVersion"/>, holt der
+    /// naechtliche Durchgang die Karte ein weiteres Mal — einmalig, nicht bei jedem Lauf.
+    /// </summary>
+    public int CardVersion { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
@@ -106,6 +123,16 @@ public class TournamentTimeControl
     /// jedem Durchgang erneut geholt. Ein NETZfehler legt dagegen keine Zeile an.
     /// </summary>
     public DateTime FetchedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Mit welcher Fassung des Abrufs diese Zeile entstand. „Einmal geholt, nie wieder" spart
+    /// Abrufe — friert aber auch einen PARSER-Fehler fuer immer ein: eine Zeile mit
+    /// <c>Speed = Unknown</c> saehe danach aus wie „das Turnier nennt keine Bedenkzeit". Genau das
+    /// ist hier passiert (der GET lieferte die Details gar nicht). Steht die Zahl unter
+    /// <see cref="TournamentHistoryService.CurrentTimeControlVersion"/>, holt der naechtliche
+    /// Durchgang die Seite ein weiteres Mal — einmalig, nicht bei jedem Lauf.
+    /// </summary>
+    public int Version { get; set; }
 }
 
 /// <summary>

@@ -3189,11 +3189,7 @@
     "history": {
       "title": "Moji turniri",
       "help": "Koje si turnire igrao, koji još dolaze, i u odigranima tvoji bodovi, tvoje mjesto i tvoj performance rating.\n\nPodaci dolaze s chess-resultsa, a tamo se traži po IMENU — tvoje prezime mora biti u profilu. FIDE ID ili chess-results ID odlučuje koji si od svojih imenjaka; bez njega ovdje stoje turniri drugih ljudi s tvojim imenom.\n\nRezultati se dohvaćaju turnir po turnir i zatim čuvaju. Prvi pogled na dugu povijest zato se puni postupno.",
-      "whose": "Čije",
       "onlyMe": "Samo ja",
-      "withAllFriends": "Ja i svi prijatelji",
-      "withSomeFriends": "Ja i odabrani prijatelji",
-      "friends": "Prijatelji",
       "inexact": "bez identifikatora",
       "pending": "dohvaćam {{count}} rezultata…",
       "upcoming": "Slijedi",
@@ -3212,7 +3208,6 @@
       "fetchSlow": "Još se dohvaća. Zadatak se nastavlja; pogledaj ponovno za minutu.",
       "fetchFailed": "Turnir se nije mogao dohvatiti. Pokušaj kasnije.",
       "friendWithoutName": "nema imena u profilu",
-      "noFriendsWithName": "Nitko od tvojih prijatelja još nije unio ime u profil — bez njega nema turnirske povijesti za usporedbu.",
       "playedCount": "odigrano turnira: {{count}}",
       "noRating": "bez ocjene",
       "withoutDate": "Bez datuma",
@@ -3221,7 +3216,11 @@
         "rapid": "Ubrzani",
         "blitz": "Blic",
         "unknown": "bez vremenske kontrole"
-      }
+      },
+      "countTournaments": "turnira: {{count}}",
+      "countGames": "partija: {{count}}",
+      "countsTooltip": "Turniri i odigrane partije u ovoj vremenskoj kontroli.",
+      "noFriendsYet": "Dodaj prijatelje na RookHubu da usporediš svoju povijest s njihovom."
     }
   },
   "turnierAdmin": {

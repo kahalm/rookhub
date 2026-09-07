@@ -20,8 +20,6 @@
   margin-bottom: 0.5rem;
 }
 
-.whose-field { min-width: 200px; }
-.pick-field { min-width: 240px; flex: 1 1 240px; }
 .inexact { opacity: 0.6; font-size: 0.8rem; }
 
 .pending {
@@ -123,7 +121,6 @@ h3 {
 
 @media (max-width: 768px) {
   .page { padding: 0.75rem 0.5rem; }
-  .whose-field, .pick-field { width: 100%; min-width: 0; }
 }
 
 /* Der Eintrag, dessen Turnier gerade geholt wird: sichtbar beschaeftigt, damit ein zweiter Klick
@@ -163,3 +160,9 @@ h3 {
 }
 .year-head h4 { margin: 0; font-size: 0.95rem; }
 .year-head .summary { font-size: 0.85rem; }
+
+/* --- Reiter je Konto ------------------------------------------------------
+   Loeste die Auswahlliste ab: die musste man aufklappen, um ueberhaupt zu sehen, wen es gibt.
+   Gesperrte Reiter (Freund ohne Namen im Profil) bleiben sichtbar — mit Grund im Tooltip. */
+.whose-tabs { margin-bottom: 0.5rem; }
+.whose-tabs .warn-icon { font-size: 1rem; margin-left: 0.2rem; opacity: 0.7; }
