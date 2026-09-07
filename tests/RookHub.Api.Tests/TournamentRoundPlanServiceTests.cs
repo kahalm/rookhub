@@ -282,6 +282,28 @@ public class TournamentRoundPlanServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Rundenzahl 0 heisst „unbekannt", nicht „eine Runde" — so ein Eintrag MUSS gefragt werden.
+    ///
+    /// <para>Die chess-results-Turniersuche laesst die Spalte oft leer. Die Auswahl verlangte
+    /// <c>Rounds &gt; 1</c> und schloss diese Eintraege damit fuer immer aus, ohne sie je gefragt
+    /// zu haben — waehrend der Kalender sie ueber ihren ganzen Zeitraum zeichnet. Auf Dev
+    /// gezaehlt: 132 langlaufende Eintraege mit Rundenzahl 0, und in einer Stichprobe von fuenf
+    /// hatten VIER einen veroeffentlichten Plan (einer mit zwoelf Terminen von Oktober bis
+    /// Maerz). So gemeldet an tnr1474416.</para>
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_UnknownRoundCount_IsStillFetched()
+    {
+        await AddLeagueAsync(rounds: 0);
+
+        var result = await CreateService(ElevenRounds).RunAsync(10);
+
+        Assert.Equal(1, result.Checked);
+        Assert.Equal(1, result.WithPlan);
+        Assert.NotEmpty(await _db.TournamentDirectoryRounds.ToListAsync());
+    }
+
+    /// <summary>
     /// Mit <c>retryEmpty</c> muss ein ZWEITER Durchgang andere Turniere vornehmen als der erste.
     ///
     /// <para><b>Warum das ein eigener Test ist.</b> Die Auswahl lief nach Startdatum, und damit

@@ -94,7 +94,14 @@ public class TournamentRoundPlanService
                         // Der Rundenplan steht auf der chess-results-Turnierseite — ohne Nummer
                         // dort ist er nicht erreichbar (FIDE-Eintraege).
                         && e.ChessResultsId != null
-                        && e.Rounds > 1
+                        // `!= 1`, NICHT `> 1`: die Turniersuche laesst die Rundenzahl oft leer,
+                        // und dann steht hier 0 — das heisst „unbekannt", nicht „eine Runde".
+                        // Mit `> 1` fielen genau diese Eintraege heraus, ohne je gefragt worden zu
+                        // sein. Auf Dev gezaehlt: 132 langlaufende Eintraege mit Rounds = 0; in
+                        // einer Stichprobe von fuenf hatten VIER einen Plan (einer mit 12
+                        // Terminen von Oktober bis Maerz). Ein Turnier mit genau EINER Runde
+                        // braucht dagegen keinen Plan und bleibt draussen.
+                        && e.Rounds != 1
                         && e.StartDate != null && e.EndDate != null
                         && e.EndDate >= today
                         // Kein DATEDIFF: der Provider uebersetzt die Differenz zweier DateOnly

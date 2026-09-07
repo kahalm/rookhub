@@ -8,6 +8,83 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] FIDE-Detailangaben nachtragen — EIN Abruf je Ereignis, alle Felder da (2026-09-07)
+
+Gemeldet als „bei den FIDE-Turnieren bist du noch sehr zaghaft mit den Details". Zu Recht. Am
+Dev-Stand gezaehlt:
+
+| | FIDE-eigene (144) | beide Quellen (7) | nur chess-results (4923) |
+|---|---|---|---|
+| Bedenkzeit-Text | **0** | 7 | 4444 |
+| Speed-Klasse | **0** | 6 | 2030 |
+| Rundenzahl | — | 5 | 3465 |
+| Teilnehmerzahl | — | 6 | 4486 |
+| verortet | 81 | 6 | 2855 |
+
+**Warum es fehlt:** die Jahresansicht (`show=showYear`, die wir lesen) ist keine Tabelle, sondern
+eine Kartenliste — je Ereignis ein Link plus EIN `span.session-time` mit
+`"01 May - 07 May / Malmo (SWE)"`. Mehr steht dort nicht, und `showYear` **ignoriert** die Filter
+`event_type`/`time_control` der eigenen Oberflaeche (nachgemessen: alle sechs Varianten liefern
+dieselben 143 Ereignisse — der billige Trick wie `art=2/3` bei chess-results geht hier NICHT).
+
+**Woher die Details kommen:** `GET calendar_server.php?id=<id>&preview=0` — das HTML-Fragment,
+das `js/tabs.js` in die Ereignisseite nachlaedt (die Seite selbst ist zu 100 % Geruest: zwei
+verschiedene Ereignis-Ids liefern byte-identische 84 956 Bytes). Nachgestellt an id=17954, und das
+Fragment traegt beschriftete Felder:
+
+```
+Type of event              Over-the-Board Tournament
+Time control               Standard                       -> Speed
+Time control description    90 minutes with 30 second increment from move 1   -> TimeControlText
+Tournament system          Round-Robin                    -> Kind? (siehe unten)
+Number of rounds           9                              -> Rounds
+Number of players          10                             -> PlayerCount
+Country / City             Spain / Zaragoza               -> State/LocationText
+Venue Address              Via Iberica, 69, 77, 50012 Zaragoza, Spain   -> MIT PLZ!
+Website / E-mail           ...
+Organizers / Arbiters      Name (FED) + Rolle             -> Organizer/ChiefArbiter
+```
+
+Die **Venue-Adresse mit Postleitzahl** ist dabei der groesste Gewinn: der `GeocodingService` hat
+mit einer PLZ seinen genauesten Weg, und genau der greift bei FIDE-Eintraegen heute nie (81 von 144
+verortet, und das ueber Ortsnamen).
+
+**Kosten und Zuschnitt:** ein Abruf je Ereignis, also dieselbe Klasse wie der Rundenplan — 144
+Eintraege ≈ 9 Minuten hinter dem Limiter. Ein abgeschlossenes Ereignis aendert sich nie wieder,
+also einmalig je Ereignis. Umsetzung analog `TournamentRoundPlanService`: Crawler-Endpunkt
+`GET /api/fide-calendar/event?id=` (zustandslos, neben `rounds`/`teams`/`tournament-info`),
+in rookhub ein gedeckelter Nachlauf mit `FideDetailCheckedAt` gegen Wiederholungen, und
+zwischenspeichern alle N Ereignisse (die Lehre aus dem Rundenplan-Lauf).
+
+**Offen zu pruefen, bevor man es baut:** ob `Tournament system` bei Mannschaftsereignissen etwas
+wie „Team Round-Robin" sagt — dann kaeme `Kind` fuer FIDE-Eintraege daher. Als FILTER gibt FIDE
+Einzel/Mannschaft nicht her.
+
+**Turniere auf BEIDEN Quellen** (heute 7): zusammengefuehrt bei Terminabstand <= 1 Tag UND
+mindestens zwei gemeinsamen unterscheidenden Namenswoertern. Faktisch gewinnt chess-results — nicht
+durch eine Vorrangregel, sondern weil die FIDE-Jahresansicht die Detailfelder nicht liefert. Mit
+dem Nachlauf oben waere zu entscheiden, wer bei Widerspruch gilt (Vorschlag: chess-results fuer
+Termin/Ort, FIDE fuer die Bedenkzeit-Beschreibung — dort ist sie ausgeschrieben).
+
+## [ ] `Kind` ist im GANZEN Bestand `Unknown` — es fehlt nur ein Sweep (gemessen 2026-09-07)
+
+Kein einziger der 5074 offenen Eintraege ist als Mannschaftsturnier erkannt. Nachgeprueft, und es
+ist NICHT kaputt: der Crawler liefert (`art=2` → 16 Treffer fuer AUT, `art=3` → 3), und die Regel
+im Sweep ist richtig (`Kind` wird nur geschrieben, wenn BEIDE Zusatz-Durchgaenge erfolgreich waren
+— `teamIds is not null`; ein Netzausfall darf den Bestand nicht auf „Einzel" umschreiben). Das
+Merkmal kam am 2026-09-07 um 12:43, der letzte Sweep lief 03:1x — also davor. Der naechtliche
+Sweep traegt es nach, aber erst ueber eine Rotationswoche; fuer eine einzelne Foederation sofort:
+`POST /api/admin/tournament-directory/sweep` mit `AUT`.
+
+## [ ] Mannschaftsturnier ohne Rundenzahl importiert nichts (von Kopie 2 gemeldet, 2026-09-07)
+
+`tnr1221888` („2. Bundesliga West AUT 2025-26") importiert 208 Spieler und 11 Mannschaften, aber
+NULL Runden: `ParseTotalRoundsAsync` findet auf der `art=0`-Seite dieses Mannschaftsturniers kein
+„nach N Runden", und weil `TotalRounds` dann 0 ist, greift auch der Fallback
+`Enumerable.Range(1, TotalRounds)` nicht. Folge: keine Paarungen, keine Ergebnisse — im Frontend
+sieht das aus wie „nicht geholt". Gehoert zur selben Familie wie der Rundenplan-Parse-Fehler
+(v0.432.1): das Ergebnis ist leer, ohne Fehler und ohne Hinweis.
+
 ## [x] Liga-Termine: der Kalender zeigt sie an JEDEM Tag der Saison (gemeldet + erledigt 2026-09-07)
 
 Erledigt in **0.423.0** (Termine holen + Kalender) und **0.428.0** (auf der Turnierseite
