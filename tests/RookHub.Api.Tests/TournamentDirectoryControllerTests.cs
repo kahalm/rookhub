@@ -420,6 +420,78 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.Empty(cal.Days.Single(d => d.Date.Day == 13).Ids);
     }
 
+    /// <summary>
+    /// Gemeldet an tnr1474416 („II Vipiteno Chess Festival - 2° torneo rapid", 10min + 5sec,
+    /// 11.08. bis 20.09.): ein RAPID-Turnier belegte 41 Kalendertage und verdeckte, was an diesen
+    /// Tagen wirklich gespielt wird. Die Angabe stammt so von chess-results, und einen Rundenplan
+    /// gibt es dort nicht — es steht deshalb nur noch an seinem STARTtag.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_LongRapidWithoutRoundDates_AppearsOnlyOnItsFirstDay()
+    {
+        await AddEntryAsync("1", "Festival rapid", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31),
+            speed: TournamentSpeed.Rapid);
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == 1).Ids);
+        foreach (var day in new[] { 2, 15, 31 })
+            Assert.Empty(cal.Days.Single(d => d.Date.Day == day).Ids);
+    }
+
+    /// <summary>
+    /// Der Gegenfall, den die Regel NICHT treffen darf: ein ehrliches mehrtaegiges Open im
+    /// Turnierschach — neun Tage, eine Runde pro Tag, ohne hinterlegten Plan. Es an acht von neun
+    /// Tagen verschwinden zu lassen waere derselbe Schaden wie vorher, nur unauffaelliger.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_MultiDayStandardOpen_StillAppearsOnEveryDay()
+    {
+        await AddEntryAsync("1", "Neun-Tage-Open", new DateOnly(2026, 10, 3), new DateOnly(2026, 10, 11));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        foreach (var day in new[] { 3, 7, 11 })
+            Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == day).Ids);
+    }
+
+    /// <summary>
+    /// Auch im Turnierschach hat der Zeitraum eine Grenze: ueber drei Wochen wird nirgends am
+    /// Stueck gespielt.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_VeryLongStandardEntry_AppearsOnlyOnItsFirstDay()
+    {
+        await AddEntryAsync("1", "Vereinsmeisterschaft", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 30));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == 1).Ids);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 20).Ids);
+    }
+
+    /// <summary>Sind SPIELTERMINE bekannt, gelten weiterhin nur sie — die Grenze greift gar nicht.</summary>
+    [Fact]
+    public async Task Calendar_WithRoundDates_TheLimitDoesNotApply()
+    {
+        await AddEntryAsync("1", "Liga", new DateOnly(2026, 10, 1), new DateOnly(2027, 4, 30));
+        var entry = _db.TournamentDirectoryEntries.Single();
+        _db.TournamentDirectoryRounds.Add(new TournamentDirectoryRound
+        {
+            TournamentDirectoryEntryId = entry.Id, Number = 1, Date = new DateOnly(2026, 10, 18),
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == 18).Ids);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 1).Ids);
+    }
+
     [Fact]
     public async Task Calendar_SaysSoWhenItCouldNotShowEverything()
     {

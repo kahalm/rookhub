@@ -476,8 +476,23 @@ null Spieltermine in der Datenbank). `Checked` im Ergebnis zaehlt bewusst die VE
 die erfolgreichen — daran haengt die Abbruchbedingung „nochmal starten, bis 0 kommt", und ein
 Durchgang mit lauter Fehlschlaegen meldete sonst „nichts mehr zu tun".
 
-Im Kalender gilt: **hat ein Eintrag Spieltermine, zaehlen NUR sie** (`Covers`); sonst wie bisher
-der ganze Zeitraum. Die Termine gehen als `roundDates` im DTO mit, die Detailseite zeigt sie.
+Im Kalender gilt: **hat ein Eintrag Spieltermine, zaehlen NUR sie** (`Covers`). Die Termine gehen
+als `roundDates` im DTO mit, die Detailseite zeigt sie.
+
+**Ohne Termine gilt der Zeitraum nur, solange er plausibel ist** (0.437.1). Gemeldet an
+tnr1474416 („II Vipiteno Chess Festival - 2° torneo rapid", 10min + 5sec): Zeitraum 11.08. bis
+20.09., also 41 Kalendertage, an denen der Eintrag alles andere verdeckte. Die Angabe stammt so
+von chess-results (per `tournament-info` gegengeprueft), und einen Rundenplan gibt es dort nicht —
+die Abfrage liefert eine LEERE Liste, es ist also nicht „noch nicht geholt". Ein solcher Eintrag
+steht nur an seinem STARTtag; ihn ganz wegzulassen waere falsch, er findet ja statt.
+
+**Die Grenze haengt an der TURNIERART, nicht nur an der Dauer** (`MaxSpreadDays` 21,
+`MaxFastSpreadDays` 8): „laenger als acht Tage" allein traefe auch das ehrliche mehrtaegige Open
+(neun Tage, eine Runde pro Tag, kein hinterlegter Plan) — es verschwaende an acht von neun Tagen,
+und das faellt weniger auf als der Fehler davor. Ein Schnell- oder Blitzturnier ueber mehr als eine
+Woche kann dagegen nicht durchgehend sein. Am Dev-Stand gemessen: 603 der 715 termin-losen
+Langlaeufer ziehen sich auf ihren Starttag zusammen, die 112 mehrtaegigen Standard-Turniere
+zwischen 9 und 21 Tagen bleiben unangetastet.
 
 **Woher ein Eintrag stammt (`TournamentDirectorySources`).** Der Sweep vermerkt bei jedem
 Turnier, auf welcher Seite es gefunden wurde (`NoteSource`) — n-zu-n, weil dasselbe Turnier auf

@@ -419,6 +419,21 @@ public class TournamentDirectoryController : BaseApiController
     // -----------------------------------------------------------------------
 
     /// <summary>
+    /// Ab wann ein Zeitraum OHNE hinterlegte Spieltermine nicht mehr als durchgehend gespielt
+    /// gilt. Drei Wochen sind bewusst grosszuegig: ein Open ueber zwei Wochen gibt es wirklich,
+    /// ein Turnier, an dem einundvierzig Tage am Stueck gespielt wird, nicht.
+    /// </summary>
+    internal const int MaxSpreadDays = 21;
+
+    /// <summary>
+    /// Dieselbe Grenze fuer SCHNELL- und BLITZturniere — und viel enger, weil die Turnierart die
+    /// Dauer schon beantwortet: ein Blitzturnier ueber sechs Wochen ist ein Widerspruch, gemeldet
+    /// an tnr1474416 („II Vipiteno Chess Festival - 2° torneo rapid", 10min + 5sec, 11.08. bis
+    /// 20.09.). Acht Tage, wie beim Rundenplan-Dienst (<see cref="TournamentRoundPlanService"/>).
+    /// </summary>
+    internal const int MaxFastSpreadDays = 8;
+
+    /// <summary>
     /// Findet dieses Turnier an diesem Tag statt?
     ///
     /// <para>Sind SPIELTERMINE bekannt, gelten NUR sie. Das ist der Unterschied zwischen elf
@@ -426,9 +441,21 @@ public class TournamentDirectoryController : BaseApiController
     /// gespielt wird an elf Terminen mit Wochen Abstand (siehe
     /// <see cref="TournamentDirectoryRound"/>).</para>
     ///
-    /// <para>Ohne Termine gilt wie bisher der ganze Zeitraum — bei einem Wochenend-Open ist das
-    /// richtig, und bei einem langlaufenden Turnier ohne hinterlegten Plan ist es das Beste, was
-    /// bekannt ist.</para>
+    /// <para><b>Ohne Termine gilt der Zeitraum nur, solange er plausibel ist.</b> Gemeldet an
+    /// tnr1474416: ein RAPID-Turnier mit dem Zeitraum 11.08. bis 20.09. belegte 41 Kalendertage
+    /// und verdeckte, was an diesen Tagen wirklich gespielt wird. Die Angabe stammt so von
+    /// chess-results, und einen Rundenplan gibt es dort nicht (die Abfrage liefert eine leere
+    /// Liste) — es ist also nicht „noch nicht geholt", sondern nicht vorhanden. Am Dev-Stand sind
+    /// 715 Eintraege in dieser Lage.</para>
+    ///
+    /// <para><b>Warum nicht schlicht „laenger als acht Tage".</b> Das traefe auch das ehrliche
+    /// mehrtaegige Open: neun Tage, eine Runde pro Tag, kein hinterlegter Plan — es verschwaende
+    /// an acht von neun Tagen, und das faellt weniger auf als der heutige Fehler. Die TURNIERART
+    /// trennt die Faelle: ein Schnell- oder Blitzturnier ueber mehr als eine Woche kann nicht
+    /// durchgehend sein, ein Turnierschach-Open ueber zwei Wochen sehr wohl. Am Dev-Stand
+    /// gemessen: 603 der 715 Eintraege werden damit auf ihren Starttag zusammengezogen, und die
+    /// 112 mehrtaegigen Standard-Turniere zwischen neun und einundzwanzig Tagen bleiben
+    /// unangetastet.</para>
     /// </summary>
     private static bool Covers(TournamentDirectoryEntry entry, DateOnly day)
     {
@@ -436,7 +463,26 @@ public class TournamentDirectoryController : BaseApiController
 
         var start = entry.StartDate ?? entry.EndDate;
         var end = entry.EndDate ?? entry.StartDate;
-        return start is not null && end is not null && day >= start && day <= end;
+        if (start is null || end is null) return false;
+
+        // Unplausibel lang: dann steht der Eintrag nur an seinem STARTtag. Ihn ganz wegzulassen
+        // waere falsch — er findet ja statt, nur eben nicht an jedem Tag dazwischen.
+        return SpreadsOverItsWholeSpan(entry, start.Value, end.Value)
+            ? day >= start && day <= end
+            : day == start;
+    }
+
+    /// <summary>
+    /// Darf dieser Eintrag ohne Spieltermine ueber seinen ganzen Zeitraum gezeigt werden?
+    /// </summary>
+    internal static bool SpreadsOverItsWholeSpan(
+        TournamentDirectoryEntry entry, DateOnly start, DateOnly end)
+    {
+        var days = end.DayNumber - start.DayNumber + 1;
+        var limit = entry.Speed is TournamentSpeed.Rapid or TournamentSpeed.Blitz
+            ? MaxFastSpreadDays
+            : MaxSpreadDays;
+        return days <= limit;
     }
 
     /// <summary>
