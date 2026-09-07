@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, map, of, switchMap } from 'rxjs';
 import { Tournament, Subscription, CrawlJob } from '@rh/core/models';
 
 /**
@@ -22,6 +22,27 @@ export class TournamentListService {
    */
   getTournament(id: string | number): Observable<Tournament> {
     return this.http.get<Tournament>(`/api/tournaments/${id}`);
+  }
+
+  /**
+   * „Merken" heisst auch „holen".
+   *
+   * <p>Ein Abo allein legt nur einen Vermerk an: Teilnehmer, Paarungen und Tabelle kommen erst,
+   * wenn der Abo-Refresh das Turnier zum Spielbeginn von selbst holt — bei einem Turnier in drei
+   * Monaten also in drei Monaten. Wer etwas merkt, will es aber ANSEHEN koennen. Deshalb wird der
+   * Crawl-Auftrag gleich mit eingereiht.</p>
+   *
+   * <p>Liess er sich nicht einreihen, bleibt das Abo trotzdem stehen (`job: null`) — gemerkt ist
+   * gemerkt, und der naechste Refresh holt es ohnehin.</p>
+   */
+  bookmarkAndImport(chessResultsId: string, tournamentName: string):
+      Observable<{ subscription: Subscription; job: CrawlJob | null }> {
+    return this.subscribe(chessResultsId, tournamentName).pipe(
+      switchMap(subscription => this.startCrawl(chessResultsId).pipe(
+        map(job => ({ subscription, job: job as CrawlJob | null })),
+        catchError(() => of({ subscription, job: null })),
+      )),
+    );
   }
 
   getSubscriptions(): Observable<Subscription[]> {

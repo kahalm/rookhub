@@ -304,15 +304,16 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   /**
-   * „Merken" legt ein ganz normales Turnier-Abo an. Zwei Wirkungen: Termin- und Ortsaenderungen
-   * werden gemeldet, und der Abo-Refresh holt die Teilnehmer- und Rundendaten zum Spielbeginn von
-   * selbst nach — man muss das Turnier nicht von Hand importieren.
+   * „Merken" legt ein Turnier-Abo an UND holt das Turnier (siehe
+   * `TournamentListService.bookmarkAndImport`): Termin- und Ortsaenderungen werden gemeldet, und
+   * Teilnehmer, Paarungen und Tabelle stehen sofort bereit statt erst zum Spielbeginn.
    */
   bookmark(entry: DirectoryEntry): void {
-    this.tournaments.subscribe(entry.chessResultsId, entry.name).subscribe({
-      next: () => {
+    this.tournaments.bookmarkAndImport(entry.chessResultsId, entry.name).subscribe({
+      next: ({ job }) => {
         entry.subscribed = true;
-        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarked'));
+        this.snackbar.success(this.translate.instant(
+          job ? 'tournamentDirectory.bookmarkedImporting' : 'tournamentDirectory.bookmarked'));
       },
       error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError')),
     });

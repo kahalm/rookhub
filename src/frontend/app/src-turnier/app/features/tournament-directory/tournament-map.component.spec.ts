@@ -150,6 +150,33 @@ describe('TournamentMapComponent', () => {
     expect(popup.querySelector('.tm-badge-warn')).withContext('abgesagt fehlt').not.toBeNull();
   });
 
+  it('zoomt auf Wunsch eine Stufe weiter heraus als der eingepasste Ausschnitt', async () => {
+    // Auf der Detailseite sitzt der eingepasste Ausschnitt so knapp um den Ort, dass die
+    // Umgebung fehlt, an der man ihn erkennt.
+    const centre = { lat: 47.8, lon: 13.04, radiusKm: 6 };
+
+    let eng: string | null = null;
+    component.boundsChanged.subscribe(b => (eng = b));
+    component.centre = centre;
+    fixture.detectChanges();
+    await Promise.resolve();
+    const engSpan = Number(eng!.split(',')[2]) - Number(eng!.split(',')[0]);
+
+    fixture.destroy();
+    fixture = TestBed.createComponent(TournamentMapComponent);
+    component = fixture.componentInstance;
+    let weit: string | null = null;
+    component.boundsChanged.subscribe(b => (weit = b));
+    component.centre = centre;
+    component.zoomOutSteps = 1;
+    fixture.detectChanges();
+    await Promise.resolve();
+    const weitSpan = Number(weit!.split(',')[2]) - Number(weit!.split(',')[0]);
+
+    // Eine Zoomstufe = doppelter Ausschnitt.
+    expect(weitSpan / engSpan).toBeCloseTo(2, 1);
+  });
+
   it('räumt die Karte beim Zerstören ab', () => {
     fixture.detectChanges();
     expect(() => fixture.destroy()).not.toThrow();

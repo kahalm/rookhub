@@ -3021,8 +3021,11 @@
       "back": "Back to the calendar",
       "director": "Tournament director",
       "results": "Entrants and results",
-      "notImportedHint": "The entrants, pairings and standings are not on RookHub yet. Bookmark the tournament and they will be fetched by themselves once it starts.",
-      "venueMap": "Venue"
+      "notImportedHint": "The entrants, pairings and standings are not on RookHub yet. Bookmark the tournament and they will be fetched right away.",
+      "venueMap": "Venue",
+      "importing": "Fetching the tournament…",
+      "importDone": "Tournament fetched — entrants and results are available.",
+      "importFailed": "The tournament could not be fetched. It stays bookmarked and will be fetched again by itself."
     },
     "calendar": {
       "previousMonth": "Previous month",
@@ -3069,7 +3072,8 @@
     },
     "map": {
       "openDetail": "Open the tournament page"
-    }
+    },
+    "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment."
   },
   "turnier": {
     "brand": "Tournaments",

@@ -97,6 +97,13 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() showRadius = true;
   /** Hoehe der Karte als CSS-Laenge; die Detailseite braucht eine kleinere als der Kalender. */
   @Input() height = 'min(70vh, 640px)';
+  /**
+   * Nach dem Einpassen um so viele Stufen HERAUSzoomen. Auf der Detailseite eine: der eingepasste
+   * Ausschnitt sitzt so knapp um den Ort, dass die Umgebung fehlt, an der man ihn erkennt.
+   * Ausdruecklich als Stufen und nicht ueber einen groesseren Radius — „eine Stufe" ist dann auch
+   * genau eine, unabhaengig von Seitenverhaeltnis und Randabstand.
+   */
+  @Input() zoomOutSteps = 0;
 
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
   /** Feuert, wenn Kacheln nicht geladen werden koennen — sonst bleibt die Karte stumm schwarz. */
@@ -282,6 +289,12 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     if (this.lastFitted !== key && size.x > 0 && size.y > 0) {
       this.lastFitted = key;
       this.map.fitBounds(centre.toBounds(this.centre.radiusKm * 2000), { padding: [16, 16] });
+      // animate: false — sonst ist der Zoom beim ersten Bericht des Ausschnitts noch nicht
+      // angewandt (die Animation laeuft asynchron), und die Karte startet mit einer Bewegung,
+      // die niemand ausgeloest hat.
+      if (this.zoomOutSteps > 0) {
+        this.map.setZoom(this.map.getZoom() - this.zoomOutSteps, { animate: false });
+      }
     }
   }
 

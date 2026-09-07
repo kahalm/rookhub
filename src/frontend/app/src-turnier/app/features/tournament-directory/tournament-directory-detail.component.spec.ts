@@ -102,15 +102,35 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(component.imported()).toBeNull();
   });
 
-  it('merkt das Turnier und schaltet die Anzeige sofort um', async () => {
+  it('merkt das Turnier, holt es gleich mit und schaltet die Anzeige um', async () => {
+    // Ein Abo allein legt nur einen Vermerk an — Teilnehmer und Tabelle kaemen erst zum
+    // Spielbeginn. Wer etwas merkt, will es aber ansehen koennen.
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
     flushImportLookup('1457129');
 
     component.bookmark();
     http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+    const crawl = http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' });
+    expect(crawl.request.body).toEqual({ chessResultsId: '1457129', jobType: 'Full' });
+    crawl.flush({ id: 7, status: 'Pending' });
 
     expect(component.entry()?.subscribed).toBeTrue();
+    expect(component.importing()).toBeTrue();
+    http.verify();
+  });
+
+  it('bleibt gemerkt, wenn sich der Holen-Auftrag nicht einreihen laesst', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+
+    component.bookmark();
+    http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+    http.expectOne('/api/tournaments/crawl').flush('nein', { status: 500, statusText: 'Server Error' });
+
+    expect(component.entry()?.subscribed).toBeTrue();
+    expect(component.importing()).toBeFalse();
     http.verify();
   });
 

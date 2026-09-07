@@ -7,10 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, of, switchMap, take, takeWhile, timer } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
-import { Tournament } from '@rh/core/models';
+import { CrawlJob, Tournament } from '@rh/core/models';
 import { TournamentListService } from '../../core/tournament-list.service';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
@@ -60,6 +60,8 @@ export class TournamentDirectoryDetailComponent implements OnInit {
 
   /** Das schon geholte Turnier, falls es eines gibt — dann fuehrt ein Knopf zu Ergebnissen. */
   readonly imported = signal<Tournament | null>(null);
+  /** Laeuft gerade ein Holen-Auftrag (nach dem Merken)? */
+  readonly importing = signal(false);
 
   ngOnInit(): void {
     this.route.paramMap.pipe(
@@ -104,17 +106,54 @@ export class TournamentDirectoryDetailComponent implements OnInit {
     this.tilesFailed.set(true);
   }
 
+  /**
+   * „Merken" legt das Abo an UND holt das Turnier (siehe
+   * `TournamentListService.bookmarkAndImport`). Hier wird der Auftrag zusaetzlich VERFOLGT: ist er
+   * durch, erscheint der Knopf zu Teilnehmern und Ergebnissen von selbst — sonst muesste man die
+   * Seite neu laden, um zu sehen, dass das Merken etwas gebracht hat.
+   */
   bookmark(): void {
     const entry = this.entry();
     if (!entry) return;
-    this.tournaments.subscribe(entry.chessResultsId, entry.name).subscribe({
-      next: () => {
+    this.tournaments.bookmarkAndImport(entry.chessResultsId, entry.name).subscribe({
+      next: ({ job }) => {
         // Neues Objekt statt Mutation: ein Signal meldet nur eine geaenderte REFERENZ.
         this.entry.set({ ...entry, subscribed: true });
-        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarked'));
+        this.snackbar.success(this.translate.instant(
+          job ? 'tournamentDirectory.bookmarkedImporting' : 'tournamentDirectory.bookmarked'));
+        if (job) this.watchImport(job.id, entry);
       },
       error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError')),
     });
+  }
+
+  /**
+   * Verfolgt den Holen-Auftrag, bis er fertig ist — hoechstens rund zwei Minuten. Danach wird
+   * nicht weitergefragt: der Auftrag laeuft serverseitig ohnehin weiter, und die naechste
+   * Seitenansicht sieht das Ergebnis. Ein Fehler beim Nachfragen beendet das Verfolgen still.
+   */
+  private watchImport(jobId: number, entry: DirectoryEntry): void {
+    this.importing.set(true);
+    timer(2000, 3000).pipe(
+      switchMap(() => this.tournaments.getCrawlJob(jobId).pipe(catchError(() => of(null)))),
+      takeWhile(job => job !== null && job.status !== 'Completed' && job.status !== 'Failed', true),
+      take(40),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(job => this.onImportProgress(job, entry));
+  }
+
+  private onImportProgress(job: CrawlJob | null, entry: DirectoryEntry): void {
+    // Zwischenzeitlich ein anderes Turnier geoeffnet? Dann gehoert das Ergebnis nicht hierher.
+    if (this.entry()?.chessResultsId !== entry.chessResultsId) return;
+    if (job === null) { this.importing.set(false); return; }
+    if (job.status === 'Completed') {
+      this.importing.set(false);
+      this.lookupImported(entry);
+      this.snackbar.success(this.translate.instant('tournamentDirectory.detail.importDone'));
+    } else if (job.status === 'Failed') {
+      this.importing.set(false);
+      this.snackbar.warn(this.translate.instant('tournamentDirectory.detail.importFailed'));
+    }
   }
 
   back(): void {

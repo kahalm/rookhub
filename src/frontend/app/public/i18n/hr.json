@@ -3021,8 +3021,11 @@
       "back": "Natrag na kalendar",
       "director": "Vodstvo turnira",
       "results": "Sudionici i rezultati",
-      "notImportedHint": "Sudionici, parovi i tablica još nisu na RookHubu. Označi turnir i bit će dohvaćeni sami od sebe kad turnir počne.",
-      "venueMap": "Mjesto održavanja"
+      "notImportedHint": "Sudionici, parovi i tablica još nisu na RookHubu. Označi turnir i bit će odmah dohvaćeni.",
+      "venueMap": "Mjesto održavanja",
+      "importing": "Turnir se dohvaća…",
+      "importDone": "Turnir dohvaćen — sudionici i rezultati su tu.",
+      "importFailed": "Turnir se nije mogao dohvatiti. Ostaje označen i bit će dohvaćen sam od sebe."
     },
     "calendar": {
       "previousMonth": "Prethodni mjesec",
@@ -3069,7 +3072,8 @@
     },
     "map": {
       "openDetail": "Otvori stranicu turnira"
-    }
+    },
+    "bookmarkedImporting": "Označeno. Turnir se dohvaća — sudionici i rezultati slijede odmah."
   },
   "turnier": {
     "brand": "Turniri",

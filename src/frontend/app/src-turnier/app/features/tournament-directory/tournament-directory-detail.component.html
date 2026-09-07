@@ -98,7 +98,9 @@
         </a>
       </div>
 
-      @if (!imported()) {
+      @if (importing()) {
+        <p class="muted hint">{{ 'tournamentDirectory.detail.importing' | translate }}</p>
+      } @else if (!imported()) {
         <p class="muted hint">{{ 'tournamentDirectory.detail.notImportedHint' | translate }}</p>
       }
     </mat-card>
@@ -113,7 +115,7 @@
           <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
         }
         <app-tournament-map [entries]="pins()" [centre]="mapCentre()" [showRadius]="false"
-                            height="320px" (tilesFailed)="onTilesFailed()" />
+                            [zoomOutSteps]="1" height="320px" (tilesFailed)="onTilesFailed()" />
       </mat-card>
     }
   }

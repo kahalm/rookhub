@@ -262,7 +262,7 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
-  it('markiert ein gemerktes Turnier sofort, ohne die Liste neu zu laden', async () => {
+  it('merkt das Turnier, holt es gleich mit und markiert es sofort', async () => {
     await setup();
     flushProfiles([]);
     flushList([]);
@@ -270,6 +270,10 @@ describe('TournamentDirectoryComponent', () => {
     const target = entry('111');
     component.bookmark(target);
     http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+    // „Merken" heisst auch „holen" — sonst kaeme das Turnier erst zum Spielbeginn.
+    const crawl = http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' });
+    expect(crawl.request.body).toEqual({ chessResultsId: '111', jobType: 'Full' });
+    crawl.flush({ id: 5, status: 'Pending' });
 
     expect(target.subscribed).toBeTrue();
     http.verify();
