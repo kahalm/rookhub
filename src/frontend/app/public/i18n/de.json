@@ -3140,19 +3140,12 @@
       "lead": "Sag uns, was hier falsch steht. Alles ist freiwillig — auch der Text: Absenden ohne ein Wort sagt immerhin „mit dem hier stimmt etwas nicht\".",
       "current": "Aktuell gespeichert",
       "message": "Was ist falsch?",
-      "location": "Richtiger Ort",
-      "kind": "Einzel oder Mannschaft",
-      "ageGroups": "Altersklasse(n)",
-      "gender": "Geschlechtsklasse",
-      "speed": "Bedenkzeit",
-      "isLeague": "Das ist eine Liga (Saisonwettbewerb)",
       "learnTitle": "Zwei Fragen, die über dieses eine Turnier hinaus helfen",
       "namePattern": "Wie heißen solche Turniere in deiner Region?",
       "namePatternHint": "Alter und Publikum werden aus dem Turniernamen gelesen, und diese Namen sind regional — in Tirol heißt das Nachwuchsturnier „Schachrallye\". Wer so eine Kennung einmal nennt, sorgt dafür, dass jede künftige Ausgabe dieser Reihe richtig eingeordnet wird.",
       "sourceLink": "Eine Seite, auf der man das besser sieht",
       "thanks": "Danke — die Meldung ist angekommen, und wir können darauf antworten.",
-      "sendError": "Die Meldung konnte nicht gesendet werden. Bitte noch einmal versuchen.",
-      "unset": "unverändert lassen"
+      "sendError": "Die Meldung konnte nicht gesendet werden. Bitte noch einmal versuchen."
     }
   },
   "turnier": {

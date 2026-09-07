@@ -214,18 +214,16 @@ export const DEFAULT_RADIUS_KM = 100;
  * „Falsches Event melden". JEDES Feld ist freiwillig — wer nur auf den Knopf drueckt, meldet
  * „hier stimmt etwas nicht", und auch das ist brauchbar.
  *
+ * Strukturierte Vorschlagsfelder (Ort, Art, Klasse, Bedenkzeit, Liga) standen hier einmal und
+ * sind wieder weg: sie verlangten genau die Wertetabelle, die ein Melder nicht kennen muss.
+ *
  * `namePattern` ist die wertvollste Frage des Formulars: Alter und Publikum stehen nur im Namen,
  * und diese Namen sind REGIONAL („Schachrallye" ist in Tirol immer Nachwuchs). Wer eine solche
  * Kennung einmal nennt, verbessert die Einordnung aller kuenftigen Ausgaben derselben Reihe.
  */
 export interface DirectoryReport {
+  /** Was aus Sicht des Melders falsch ist — Freitext, freiwillig. */
   message: string | null;
-  location: string | null;
-  kind: string | null;
-  ageGroups: string | null;
-  gender: string | null;
-  speed: string | null;
-  isLeague: boolean | null;
   namePattern: string | null;
   sourceLink: string | null;
 }

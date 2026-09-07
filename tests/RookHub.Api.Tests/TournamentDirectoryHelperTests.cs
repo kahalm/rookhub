@@ -96,6 +96,64 @@ public class GeoTextNormalizerTests
         Assert.Contains("wien", candidates);
         Assert.DoesNotContain(candidates, c => c.All(char.IsDigit));
     }
+
+    // ----- Der Schraegstrich: Ortsliste oder abgekuerzter Name? -------------
+
+    /// <summary>
+    /// chess-results kuerzt die Bindewoerter des amtlichen Namens weg. Verglichen wird deshalb
+    /// Wort fuer Wort ohne sie, und jedes Textwort muss ein WORTANFANG des zugehoerigen
+    /// Gazetteer-Wortes sein.
+    /// </summary>
+    [Theory]
+    [InlineData("st veit glan", "st veit an der glan")]
+    [InlineData("spittal drau", "spittal an der drau")]
+    [InlineData("frankfurt m", "frankfurt am main")]
+    [InlineData("klagenfurt worthersee", "klagenfurt am worthersee")]
+    [InlineData("neumarkt w", "neumarkt am wallersee")]
+    public void DescribesSamePlace_AbbreviatedName_Matches(string text, string place)
+    {
+        Assert.True(GeoTextNormalizer.DescribesSamePlace(text, place));
+    }
+
+    /// <summary>
+    /// Die wichtigere Haelfte: was NICHT als Abkuerzung durchgehen darf. Die Wortzahl ist die
+    /// Bedingung, die „Sorocaba/SP" (Ort/Bundesstaat, 83 der 105 Schraegstrich-Faelle am
+    /// Dev-Stand) weiterhin durch die Zerlegung laufen laesst.
+    /// </summary>
+    [Theory]
+    [InlineData("sorocaba sp", "sorocaba")]              // Wortzahl passt nicht
+    [InlineData("schwaz jenbach", "schwaz")]             // eine echte Ortsliste
+    [InlineData("st veit glan", "st veit im jauntal")]   // anderes unterscheidendes Wort
+    [InlineData("st veit glan", "st veit am vogau")]
+    [InlineData("ischl", "bad ischl")]                   // „bad" gehoert zum Namen, ist kein Bindewort
+    [InlineData("", "st veit an der glan")]
+    public void DescribesSamePlace_DifferentPlace_DoesNot(string text, string place)
+    {
+        Assert.False(GeoTextNormalizer.DescribesSamePlace(text, place));
+    }
+
+    /// <summary>
+    /// Der Schraegstrich ist KEIN Spielort-Trenner mehr — sonst zerfaellt „St. Veit/Glan", noch
+    /// bevor es als ein Name geprueft werden kann. Komma, Semikolon, „und" und „&amp;" bleiben.
+    /// </summary>
+    [Fact]
+    public void VenueSegments_SlashIsNotASeparator()
+    {
+        Assert.Equal(["Schwaz/Jenbach"], GeoTextNormalizer.VenueSegments("Schwaz/Jenbach"));
+        Assert.Equal(["Mayrhofen", "St. Veit/Glan"],
+            GeoTextNormalizer.VenueSegments("Mayrhofen, St. Veit/Glan"));
+        Assert.Equal(["Graz", "Leoben"], GeoTextNormalizer.VenueSegments("Graz und Leoben"));
+    }
+
+    [Fact]
+    public void SlashParts_SplitsOnlyOnSlashes()
+    {
+        Assert.Equal(["Schwaz", "Jenbach", "Kufstein"],
+            GeoTextNormalizer.SlashParts("Schwaz/Jenbach/Kufstein"));
+        Assert.Equal(["Vereinstreff St. Veit", "Glan"],
+            GeoTextNormalizer.SlashParts("Vereinstreff St. Veit/Glan"));
+        Assert.Empty(GeoTextNormalizer.SlashParts(null));
+    }
 }
 
 public class GeoDistanceTests

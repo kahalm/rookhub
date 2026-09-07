@@ -1,18 +1,14 @@
 import { Component, Inject, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import {
-  DIRECTORY_AGE_GROUPS, DIRECTORY_KINDS, DirectoryEntry, TournamentSpeed,
-} from './tournament-directory.model';
+import { DirectoryEntry } from './tournament-directory.model';
 
 export interface ReportEntryDialogData {
   entry: DirectoryEntry;
@@ -21,8 +17,11 @@ export interface ReportEntryDialogData {
 /**
  * „Falsches Event melden."
  *
- * <p>Der Zweck ist NICHT, dass der Nutzer die Datenbank pflegt — die Vorschlagsfelder sind
- * Bequemlichkeit. Der Zweck sind die zwei Fragen am Ende: Alter und Publikum eines Turniers
+ * <p>Der Zweck ist NICHT, dass der Nutzer die Datenbank pflegt. Strukturierte Vorschlagsfelder
+ * (Ort, Art, Klasse, Bedenkzeit, Liga) standen hier einmal und sind wieder weg: sie verlangten
+ * genau die Wertetabelle, die der Melder nicht kennen muss, und machten aus einer Rueckmeldung
+ * ein Formular. Ein Satz Freitext sagt dasselbe besser. Der eigentliche Zweck sind die zwei
+ * Fragen am Ende: Alter und Publikum eines Turniers
  * stehen nur im Namen, und diese Namen sind regional („Schachrallye" ist in Tirol immer
  * Nachwuchs). Solche Kennungen kann von aussen niemand erraten; wer sie einmal nennt, verbessert
  * die Einordnung aller kuenftigen Ausgaben derselben Reihe — nicht nur dieses einen Eintrags.</p>
@@ -35,8 +34,8 @@ export interface ReportEntryDialogData {
   selector: 'app-report-entry-dialog',
   standalone: true,
   imports: [
-    FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatSelectModule, TranslatePipe,
+    FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule,
+    MatInputModule, TranslatePipe,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'tournamentDirectory.report.title' | translate }}</h2>
@@ -51,69 +50,19 @@ export interface ReportEntryDialogData {
 
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'tournamentDirectory.report.message' | translate }}</mat-label>
-        <textarea matInput rows="3" [(ngModel)]="message"></textarea>
+        <textarea matInput rows="4" [(ngModel)]="message"></textarea>
       </mat-form-field>
-
-      <mat-form-field appearance="outline" class="full">
-        <mat-icon matPrefix>place</mat-icon>
-        <mat-label>{{ 'tournamentDirectory.report.location' | translate }}</mat-label>
-        <input matInput [(ngModel)]="location" />
-      </mat-form-field>
-
-      <div class="row">
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'tournamentDirectory.report.kind' | translate }}</mat-label>
-          <mat-select [(ngModel)]="kind">
-            <mat-option [value]="null">{{ 'tournamentDirectory.report.unset' | translate }}</mat-option>
-            @for (option of kinds; track option) {
-              <mat-option [value]="option">{{ 'tournamentDirectory.kind.' + option | translate }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'tournamentDirectory.report.gender' | translate }}</mat-label>
-          <mat-select [(ngModel)]="gender">
-            <mat-option [value]="null">{{ 'tournamentDirectory.report.unset' | translate }}</mat-option>
-            @for (option of genders; track option) {
-              <mat-option [value]="option">{{ 'tournamentDirectory.gender.' + option | translate }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'tournamentDirectory.report.speed' | translate }}</mat-label>
-          <mat-select [(ngModel)]="speed">
-            <mat-option [value]="null">{{ 'tournamentDirectory.report.unset' | translate }}</mat-option>
-            @for (option of speeds; track option) {
-              <mat-option [value]="option">{{ 'tournamentDirectory.speed.' + option | translate }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-      </div>
-
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>{{ 'tournamentDirectory.report.ageGroups' | translate }}</mat-label>
-        <mat-select [(ngModel)]="selectedAgeGroups" multiple>
-          @for (group of ageGroups; track group) {
-            <mat-option [value]="group">{{ 'tournamentDirectory.age.' + group | translate }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-checkbox [(ngModel)]="isLeague">
-        {{ 'tournamentDirectory.report.isLeague' | translate }}
-      </mat-checkbox>
 
       <h3 class="learn">{{ 'tournamentDirectory.report.learnTitle' | translate }}</h3>
+
+      <p class="learn-hint">{{ 'tournamentDirectory.report.namePatternHint' | translate }}</p>
 
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'tournamentDirectory.report.namePattern' | translate }}</mat-label>
         <input matInput [(ngModel)]="namePattern" />
-        <mat-hint>{{ 'tournamentDirectory.report.namePatternHint' | translate }}</mat-hint>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="full spaced">
+      <mat-form-field appearance="outline" class="full">
         <mat-icon matPrefix>link</mat-icon>
         <mat-label>{{ 'tournamentDirectory.report.sourceLink' | translate }}</mat-label>
         <input matInput type="url" inputmode="url" placeholder="https://" [(ngModel)]="sourceLink" />
@@ -132,10 +81,22 @@ export interface ReportEntryDialogData {
     </mat-dialog-actions>
   `,
   styles: [`
-    .lead { margin: 0 0 0.75rem; font-size: 0.9rem; }
+    /* Der Dialog ist eine SPALTE mit gleichmaessigen Abstaenden. Die Felder tragen ihren
+       Abstand nicht selbst: ein mat-form-field mit mehrzeiligem mat-hint ist hoeher als seine
+       Box, und ohne einen Abstand am Container schiebt der Hinweistext sich unter das
+       naechste Feld — genau das
+       war am unteren Teil dieses Dialogs zu sehen. */
+    mat-dialog-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding-top: 0.5rem;
+    }
+
+    .lead { margin: 0; font-size: 0.9rem; }
 
     .current {
-      margin: 0 0 1rem;
+      margin: 0;
       padding: 0.5rem 0.75rem;
       border-radius: 8px;
       background: var(--mat-sys-surface-container-low);
@@ -143,14 +104,19 @@ export interface ReportEntryDialogData {
     }
 
     .full { width: 100%; }
-    /* Der Hinweistext unter dem Namensmuster ist mehrzeilig — ohne Abstand laeuft er ins
-       naechste Feld. */
-    .spaced { margin-top: 1.75rem; }
-    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .row mat-form-field { flex: 1 1 150px; }
-    .learn { margin: 1.5rem 0 0.5rem; font-size: 0.95rem; }
-    .error { color: var(--mat-sys-error); font-size: 0.85rem; margin: 0.5rem 0 0; }
-    mat-dialog-content { display: flex; flex-direction: column; }
+
+    /* Die zwei Lern-Fragen sind ein eigener Block — sie fragen nicht nach DIESEM Turnier,
+       sondern nach der Regel dahinter. Die Trennlinie sagt das. */
+    .learn {
+      margin: 0.5rem 0 0;
+      padding-top: 1rem;
+      border-top: 1px solid var(--mat-sys-outline-variant);
+      font-size: 0.95rem;
+    }
+
+    .learn-hint { margin: 0; font-size: 0.82rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+
+    .error { color: var(--mat-sys-error); font-size: 0.85rem; margin: 0; }
   `],
 })
 export class ReportEntryDialogComponent {
@@ -158,18 +124,7 @@ export class ReportEntryDialogComponent {
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
 
-  readonly kinds = DIRECTORY_KINDS;
-  readonly genders = ['Open', 'Female', 'Male'];
-  readonly speeds: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
-  readonly ageGroups = DIRECTORY_AGE_GROUPS;
-
   message = '';
-  location = '';
-  kind: string | null = null;
-  gender: string | null = null;
-  speed: string | null = null;
-  selectedAgeGroups: string[] = [];
-  isLeague = false;
   namePattern = '';
   sourceLink = '';
 
@@ -179,11 +134,7 @@ export class ReportEntryDialogComponent {
   constructor(
     private dialogRef: MatDialogRef<ReportEntryDialogComponent, boolean>,
     @Inject(MAT_DIALOG_DATA) public data: ReportEntryDialogData,
-  ) {
-    // Der Haken steht auf dem IST-Stand. Sonst hiesse ein nicht angefasster Haken „das ist keine
-    // Liga" und die Meldung widersprueche stillschweigend dem, was drinsteht.
-    this.isLeague = data.entry.isLeague;
-  }
+  ) {}
 
   /**
    * Was das Verzeichnis heute behauptet — in einer Zeile. Ohne sie meldet jemand einen Ort, der
@@ -213,16 +164,6 @@ export class ReportEntryDialogComponent {
 
     this.directory.report(this.data.entry.chessResultsId, {
       message: this.message.trim() || null,
-      location: this.location.trim() || null,
-      kind: this.kind,
-      // Kommagetrennt: der Server nimmt hier bewusst FREITEXT — ein Mensch soll auch
-      // „U10 bis U14" schreiben koennen, ohne die interne Wertetabelle zu kennen.
-      ageGroups: this.selectedAgeGroups.length > 0 ? this.selectedAgeGroups.join(', ') : null,
-      gender: this.gender,
-      speed: this.speed,
-      // Nur mitschicken, wenn er vom gespeicherten Stand ABWEICHT — sonst stuende in jeder
-      // Meldung ein „Vorschlag", der nichts vorschlaegt.
-      isLeague: this.isLeague === this.data.entry.isLeague ? null : this.isLeague,
       namePattern: this.namePattern.trim() || null,
       sourceLink: this.sourceLink.trim() || null,
     }).subscribe({

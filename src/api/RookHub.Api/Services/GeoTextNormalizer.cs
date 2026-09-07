@@ -93,8 +93,32 @@ public static class GeoTextNormalizer
     /// Trennzeichen, die im Ortstext MEHRERE Spielorte voneinander abgrenzen: Komma,
     /// Schraegstrich, Semikolon, „und", „&amp;". Kein Ortsname enthaelt eines davon.
     /// </summary>
+    /// <summary>
+    /// Trennzeichen zwischen SPIELORTEN. Der Schraegstrich steht bewusst NICHT dabei — er ist
+    /// zweideutig: „Schwaz/Jenbach/Kufstein" sind drei Orte, „St. Veit/Glan" und „Frankfurt/M"
+    /// sind einer. Aufgeloest wird das ueber <see cref="SlashParts"/>: der Geocoder probiert den
+    /// Abschnitt ZUERST als EINEN Namen und zerlegt erst, wenn das nichts findet.
+    /// </summary>
     private static readonly Regex VenueSeparators =
-        new(@"[,;/]|\bund\b|&", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        new(@"[,;]|\bund\b|&", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex SlashSeparator = new("/", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Bindewoerter in Ortsnamen. „St. Veit an der Glan" und „St. Veit/Glan" bezeichnen dasselbe,
+    /// „Frankfurt am Main" und „Frankfurt/M" ebenso — chess-results kuerzt genau diese Woerter
+    /// weg. Ohne sie ist der abgekuerzte Name nicht auf den amtlichen abzubilden.
+    ///
+    /// <para>Bewusst NUR Bindewoerter: „sankt", „bad" oder „neu" gehoeren zum Namen und
+    /// unterscheiden Orte („Bad Ischl" gegen „Ischl"). Die Liste im VenueDisambiguationService
+    /// ist laenger, weil sie eine andere Frage beantwortet — welches Wort in einem VEREINSnamen
+    /// unterscheidend ist.</para>
+    /// </summary>
+    private static readonly HashSet<string> NameConnectives = new(StringComparer.Ordinal)
+    {
+        "an", "am", "im", "in", "auf", "ob", "bei", "vor", "zu", "zur", "zum",
+        "der", "die", "das", "dem", "den",
+    };
 
     /// <summary>
     /// Zerlegt den Ortstext in ABSCHNITTE — einen je moeglichem Spielort.
@@ -116,4 +140,49 @@ public static class GeoTextNormalizer
             .Where(part => part.Length > 0)
             .ToList();
     }
+
+    /// <summary>
+    /// Ein Abschnitt am SCHRAEGSTRICH zerlegt. Nur zu benutzen, NACHDEM der ganze Abschnitt als
+    /// EIN Ortsname erfolglos probiert wurde — sonst wird aus „Vereinstreff St. Veit/Glan" ein
+    /// „St. Veit" (das es in Tirol gibt) und ein „Glan", und der Pin sitzt 250 km entfernt im
+    /// falschen Bundesland. Genau so gemeldet fuer tnr1351833.
+    /// </summary>
+    public static List<string> SlashParts(string? segment)
+    {
+        if (string.IsNullOrWhiteSpace(segment)) return [];
+        return SlashSeparator.Split(segment)
+            .Select(part => part.Trim())
+            .Where(part => part.Length > 0)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Beschreibt der (normalisierte) Text denselben Ort wie ein Gazetteer-Name, nur abgekuerzt?
+    ///
+    /// <para>Verglichen wird Wort fuer Wort ohne Bindewoerter, und jedes Textwort muss ein
+    /// WORTANFANG des zugehoerigen Gazetteer-Wortes sein. „st veit glan" trifft damit „st veit an
+    /// der glan", „frankfurt m" trifft „frankfurt am main", „spittal drau" trifft „spittal an der
+    /// drau".</para>
+    ///
+    /// <para>„sorocaba sp" trifft „sorocaba" ausdruecklich NICHT — die Wortzahl passt nicht. Das
+    /// ist die Bedingung, die die brasilianische Schreibweise Ort/Bundesstaat weiterhin durch die
+    /// Zerlegung laufen laesst (83 der 105 Schraegstrich-Faelle am Dev-Stand).</para>
+    /// </summary>
+    public static bool DescribesSamePlace(string? normalizedText, string? normalizedPlaceName)
+    {
+        var text = Distinctive(normalizedText);
+        var place = Distinctive(normalizedPlaceName);
+        if (text.Count == 0 || text.Count != place.Count) return false;
+
+        for (var i = 0; i < text.Count; i++)
+        {
+            if (!place[i].StartsWith(text[i], StringComparison.Ordinal)) return false;
+        }
+        return true;
+    }
+
+    private static List<string> Distinctive(string? normalized) =>
+        (normalized ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => !NameConnectives.Contains(w))
+            .ToList();
 }

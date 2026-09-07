@@ -818,7 +818,7 @@ public class TournamentDirectoryControllerTests : IDisposable
         await AddAudienceEntryAsync("1405166", "Tiroler Landesliga", TournamentKind.Team, isLeague: true);
 
         var result = await CreateController(userId).Report("1405166",
-            new DirectoryReportDto { Message = "Spielort ist Mayrhofen, nicht St. Veit.", Location = "Mayrhofen" },
+            new DirectoryReportDto { Message = "Spielort ist Mayrhofen, nicht St. Veit." },
             default);
 
         Assert.IsType<NoContentResult>(result);

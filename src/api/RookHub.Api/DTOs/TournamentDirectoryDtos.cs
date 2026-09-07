@@ -278,31 +278,17 @@ public class DirectoryAudienceQuery
 /// <summary>
 /// „Dieses Turnier ist falsch eingeordnet" — die Meldung eines Nutzers. JEDES Feld ist freiwillig:
 /// wer nur auf den Knopf drueckt, meldet „hier stimmt etwas nicht", und auch das ist brauchbar.
-/// Die Vorschlaege kommen als FREITEXT und nicht als Enum-Werte an — ein Mensch soll „ist eine
-/// Jugendliga, U10 bis U14" schreiben koennen, ohne die interne Wertetabelle zu kennen.
+///
+/// Strukturierte Vorschlagsfelder (Ort, Art, Klasse, Bedenkzeit, Liga) standen hier einmal und
+/// sind wieder weg: sie verlangten vom Melder genau die Wertetabelle, die er nicht kennen muss,
+/// und machten aus einer Rueckmeldung ein Formular. Ein Satz Freitext sagt dasselbe besser —
+/// den IST-Stand stellt der Server ohnehin daneben.
 /// </summary>
 public class DirectoryReportDto
 {
     /// <summary>Was aus Sicht des Melders falsch ist.</summary>
     [MaxLength(2000)]
     public string? Message { get; set; }
-
-    [MaxLength(300)]
-    public string? Location { get; set; }
-
-    [MaxLength(60)]
-    public string? Kind { get; set; }
-
-    [MaxLength(120)]
-    public string? AgeGroups { get; set; }
-
-    [MaxLength(60)]
-    public string? Gender { get; set; }
-
-    [MaxLength(60)]
-    public string? Speed { get; set; }
-
-    public bool? IsLeague { get; set; }
 
     /// <summary>
     /// „Wie heissen solche Turniere bei euch?" — die wertvollste Frage des ganzen Formulars.

@@ -3140,19 +3140,12 @@
       "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says \"something is off with this one\".",
       "current": "Currently stored",
       "message": "What is wrong?",
-      "location": "Correct place",
-      "kind": "Individual or team",
-      "ageGroups": "Age group(s)",
-      "gender": "Gender section",
-      "speed": "Time control",
-      "isLeague": "This is a league (season competition)",
       "learnTitle": "Two questions that help beyond this one tournament",
       "namePattern": "What are tournaments like this called in your region?",
       "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol the youth event is a \"Schachrallye\". Name such a pattern once and every future edition of that series is classified correctly.",
       "sourceLink": "A page where this is easier to see",
       "thanks": "Thank you — the report has arrived and we can reply to it.",
-      "sendError": "The report could not be sent. Please try again.",
-      "unset": "leave as is"
+      "sendError": "The report could not be sent. Please try again."
     }
   },
   "turnier": {

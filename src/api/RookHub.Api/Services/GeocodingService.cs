@@ -84,11 +84,24 @@ public class GeocodingService
         var ambiguous = false;
         foreach (var segment in GeoTextNormalizer.VenueSegments(locationText))
         {
-            var hit = await ResolveByPlaceNameAsync(segment, iso2, ct);
-            if (hit is null) continue;
-            if (hit.Source == GeoSource.Ambiguous) { ambiguous = true; continue; }
-            if (bySegment.Any(v => GeoDistance.Haversine(v.Lat, v.Lon, hit.Lat, hit.Lon) < SameTownKm)) continue;
-            bySegment.Add(hit);
+            // Der Schraegstrich ist zweideutig (siehe ResolveSlashJoinedNameAsync): erst wird
+            // geprueft, ob eine Wortfolge UEBER ihn hinweg einen Ort benennt — dann ist es einer.
+            // Nur wenn nicht, wird zerlegt.
+            var joined = segment.Contains('/', StringComparison.Ordinal)
+                ? await ResolveSlashJoinedNameAsync(segment, iso2, ct)
+                : null;
+            var parts = joined is null && segment.Contains('/', StringComparison.Ordinal)
+                ? GeoTextNormalizer.SlashParts(segment)
+                : [segment];
+
+            foreach (var part in parts)
+            {
+                var hit = joined ?? await ResolveByPlaceNameAsync(part, iso2, ct);
+                if (hit is null) continue;
+                if (hit.Source == GeoSource.Ambiguous) { ambiguous = true; continue; }
+                if (bySegment.Any(v => GeoDistance.Haversine(v.Lat, v.Lon, hit.Lat, hit.Lon) < SameTownKm)) continue;
+                bySegment.Add(hit);
+            }
         }
 
         // Bei einer Adresse gilt der LETZTE Treffer: in „Rathauskeller, Hauptplatz 40,
@@ -172,6 +185,100 @@ public class GeocodingService
         var group = matches.Where(m => m.NameNormalized == winner).ToList();
         return await ChooseAsync(group, locationText, ct);
     }
+
+    /// <summary>
+    /// Beschreibt ein Abschnitt MIT Schraegstrich einen einzigen Ort?
+    ///
+    /// <para>Der Schraegstrich ist zweideutig: „Schwaz/Jenbach/Kufstein" sind drei Spielorte,
+    /// „St. Veit/Glan" und „Frankfurt/M" sind einer — dort kuerzt chess-results die Bindewoerter
+    /// des amtlichen Namens weg („St. Veit AN DER Glan", „Frankfurt AM Main").</para>
+    ///
+    /// <para>Entschieden wird das ueber Wortfolgen, die den Schraegstrich UEBERSPANNEN: nur sie
+    /// pruefen die Frage „ist das ein Name". Eine Wortfolge, die ganz innerhalb eines Teils
+    /// liegt, beweist nichts — „schwaz" trifft, aber „Schwaz/Jenbach/Kufstein" ist deswegen
+    /// nicht ein Ort. Genau daran ist die erste Fassung dieser Pruefung gescheitert.</para>
+    ///
+    /// <para><c>null</c> heisst „kein ueberspannender Treffer" — dann wird zerlegt.</para>
+    /// </summary>
+    private async Task<GeocodeResult?> ResolveSlashJoinedNameAsync(
+        string segment, string? iso2, CancellationToken ct)
+    {
+        var parts = GeoTextNormalizer.SlashParts(segment)
+            .Select(p => $" {GeoTextNormalizer.Normalize(p)} ")
+            .ToList();
+        if (parts.Count < 2) return null;
+
+        var spanning = GeoTextNormalizer.PlaceCandidates(segment)
+            .Where(c => !parts.Any(p => p.Contains($" {c} ", StringComparison.Ordinal)))
+            .Take(MaxAbbreviationLookups)
+            .ToList();
+        if (spanning.Count == 0) return null;
+
+        var exact = await Materialize(
+            _db.GeoPlaces.AsNoTracking().Where(g => spanning.Contains(g.NameNormalized)), iso2, ct);
+        var winner = spanning.FirstOrDefault(c => exact.Any(m => m.NameNormalized == c));
+        if (winner is not null)
+            return await ChooseAsync(exact.Where(m => m.NameNormalized == winner).ToList(), segment, ct);
+
+        foreach (var candidate in spanning)
+        {
+            var abbreviated = await ResolveAbbreviatedNameAsync(candidate, iso2, ct);
+            if (abbreviated is not null) return await ChooseAsync(abbreviated, segment, ct);
+        }
+        return null;
+    }
+
+    private async Task<List<GeoPlace>> Materialize(
+        IQueryable<GeoPlace> query, string? iso2, CancellationToken ct)
+    {
+        if (iso2 is not null) query = query.Where(g => g.Country == iso2);
+        return await query.ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Wie viele Kandidaten hoechstens als ABKUERZUNG nachgeschlagen werden. Jeder kostet eine
+    /// Abfrage; die laengsten stehen vorn, und ab dem vierten wird es nicht mehr besser.
+    /// </summary>
+    private const int MaxAbbreviationLookups = 4;
+
+    /// <summary>Kuerzeste Laenge eines Wortanfangs, mit dem gesucht wird — „st" allein traefe zu viel.</summary>
+    private const int MinAbbreviationPrefix = 4;
+
+    /// <summary>
+    /// Ein ABGEKUERZTER Ortsname: „St. Veit/Glan" fuer „St. Veit an der Glan", „Frankfurt/M" fuer
+    /// „Frankfurt am Main". chess-results laesst die Bindewoerter weg, und der so entstandene
+    /// Name steht in keinem Lexikon.
+    ///
+    /// <para>Gesucht wird mit allen Woertern AUSSER dem letzten als Wortanfang — das ist der
+    /// Teil, der unverkuerzt bleibt („st veit", „frankfurt") — und die Kandidaten werden danach
+    /// Wort fuer Wort geprueft (siehe <c>GeoTextNormalizer.DescribesSamePlace</c>).</para>
+    ///
+    /// <para>Warum das noetig ist: „Vereinstreff St. Veit/Glan" wurde am Schraegstrich zerlegt,
+    /// „St. Veit" gibt es im Lexikon genau EINMAL — in Tirol — und der Eintrag sah damit
+    /// vollkommen eindeutig aus. Der Pin sass 250 km entfernt im falschen Bundesland, und
+    /// nichts daran war als Zweifelsfall erkennbar (tnr1351833).</para>
+    /// </summary>
+    private async Task<List<GeoPlace>?> ResolveAbbreviatedNameAsync(
+        string candidate, string? iso2, CancellationToken ct)
+    {
+        var words = candidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 2) return null;
+
+        var prefix = string.Join(' ', words[..^1]);
+        if (prefix.Length < MinAbbreviationPrefix) return null;
+
+        var query = _db.GeoPlaces.AsNoTracking().Where(g => g.NameNormalized.StartsWith(prefix));
+        if (iso2 is not null) query = query.Where(g => g.Country == iso2);
+
+        var group = (await query.Take(MaxAbbreviationCandidates).ToListAsync(ct))
+            .Where(g => GeoTextNormalizer.DescribesSamePlace(candidate, g.NameNormalized))
+            .ToList();
+
+        return group.Count > 0 ? group : null;
+    }
+
+    /// <summary>Deckel fuer die Wortanfangs-Suche — ein kurzer Anfang trifft sonst halbe Laender.</summary>
+    private const int MaxAbbreviationCandidates = 200;
 
     /// <summary>
     /// Waehlt unter gleichnamigen Orten — und sagt „weiss nicht", wenn nichts entscheidet.

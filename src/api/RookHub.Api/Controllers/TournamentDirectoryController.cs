@@ -278,20 +278,6 @@ public class TournamentDirectoryController : BaseApiController
             $"Geschlecht {entry.Gender}, Bedenkzeit {entry.Speed}",
         };
 
-        var corrections = new List<string>();
-        if (!string.IsNullOrWhiteSpace(dto.Location)) corrections.Add($"Ort: {dto.Location.Trim()}");
-        if (!string.IsNullOrWhiteSpace(dto.Kind)) corrections.Add($"Art: {dto.Kind.Trim()}");
-        if (!string.IsNullOrWhiteSpace(dto.AgeGroups)) corrections.Add($"Klassen: {dto.AgeGroups.Trim()}");
-        if (!string.IsNullOrWhiteSpace(dto.Gender)) corrections.Add($"Geschlecht: {dto.Gender.Trim()}");
-        if (dto.IsLeague is { } league) corrections.Add($"Liga: {(league ? "ja" : "nein")}");
-        if (!string.IsNullOrWhiteSpace(dto.Speed)) corrections.Add($"Bedenkzeit: {dto.Speed.Trim()}");
-
-        if (corrections.Count > 0)
-        {
-            lines.Add("");
-            lines.Add("Vorschlag: " + string.Join("; ", corrections));
-        }
-
         // Die beiden Lern-Antworten getrennt und benannt: die eine kann in die Wortliste des
         // Klassifizierers wandern, die andere in die Quellenliste. Im Freitext untergegangen
         // waeren sie beim Durchsehen von 50 Meldungen nicht wiederzufinden.

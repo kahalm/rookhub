@@ -53,50 +53,33 @@ describe('ReportEntryDialogComponent', () => {
     component.send();
 
     const req = http.expectOne('/api/tournament-directory/1405166/report');
-    expect(req.request.body.message).toBeNull();
-    expect(req.request.body.location).toBeNull();
+    expect(req.request.body).toEqual({ message: null, namePattern: null, sourceLink: null });
     req.flush(null);
 
     expect(closed).toHaveBeenCalledWith(true);
     http.verify();
   });
 
-  it('schickt die Korrekturen und die beiden Lern-Antworten mit', () => {
+  /**
+   * Was der Dialog schickt, ist ein Satz Freitext plus die zwei Lern-Antworten. Strukturierte
+   * Korrekturfelder (Ort, Art, Klasse, Bedenkzeit, Liga) standen hier einmal und sind wieder
+   * weg: sie verlangten vom Melder die interne Wertetabelle und machten aus einer Rueckmeldung
+   * ein Formular.
+   */
+  it('schickt Freitext und die beiden Lern-Antworten mit', () => {
     const component = setup();
     component.message = 'Gespielt wird in St. Veit an der Glan.';
-    component.location = 'St. Veit an der Glan';
-    component.selectedAgeGroups = ['U10', 'U12'];
     component.namePattern = 'Schachrallye = immer Nachwuchs';
     component.sourceLink = 'https://www.tiroler-schachverband.at/jugend';
 
     component.send();
 
     const body = http.expectOne('/api/tournament-directory/1405166/report').request.body;
-    expect(body.location).toBe('St. Veit an der Glan');
-    // Kommagetrennt: der Server nimmt hier Freitext, damit ein Mensch auch „U10 bis U14"
-    // schreiben kann.
-    expect(body.ageGroups).toBe('U10, U12');
-    expect(body.namePattern).toBe('Schachrallye = immer Nachwuchs');
-    expect(body.sourceLink).toBe('https://www.tiroler-schachverband.at/jugend');
-  });
-
-  /**
-   * Der Liga-Haken startet auf dem IST-Stand und wird nur mitgeschickt, wenn er davon ABWEICHT.
-   * Sonst stuende in jeder Meldung ein „Vorschlag", der nichts vorschlaegt — und ein nicht
-   * angefasster Haken widerspraeche stillschweigend dem, was gespeichert ist.
-   */
-  it('schickt den Liga-Haken nur bei Abweichung mit', () => {
-    let component = setup({ isLeague: true });
-    expect(component.isLeague).toBeTrue();
-
-    component.send();
-    expect(http.expectOne('/api/tournament-directory/1405166/report').request.body.isLeague).toBeNull();
-
-    TestBed.resetTestingModule();
-    component = setup({ isLeague: true });
-    component.isLeague = false;
-    component.send();
-    expect(http.expectOne('/api/tournament-directory/1405166/report').request.body.isLeague).toBeFalse();
+    expect(body).toEqual({
+      message: 'Gespielt wird in St. Veit an der Glan.',
+      namePattern: 'Schachrallye = immer Nachwuchs',
+      sourceLink: 'https://www.tiroler-schachverband.at/jugend',
+    });
   });
 
   /**

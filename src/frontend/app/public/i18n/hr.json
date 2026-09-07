@@ -3140,19 +3140,12 @@
       "lead": "Reci nam što je ovdje pogrešno. Sve je neobavezno — i tekst: slanje bez ijedne riječi ipak kaže „s ovim nešto nije u redu\".",
       "current": "Trenutno zapisano",
       "message": "Što je pogrešno?",
-      "location": "Točno mjesto",
-      "kind": "Pojedinačno ili ekipno",
-      "ageGroups": "Uzrasna kategorija",
-      "gender": "Kategorija po spolu",
-      "speed": "Tempo igre",
-      "isLeague": "Ovo je liga (sezonsko natjecanje)",
       "learnTitle": "Dva pitanja koja pomažu i izvan ovog jednog turnira",
       "namePattern": "Kako se takvi turniri zovu u tvojoj regiji?",
       "namePatternHint": "Uzrast i publika čitaju se iz imena turnira, a ta imena su lokalna — u Tirolu se turnir za mlade zove „Schachrallye\". Kdo takvu oznaku jednom navede, osigurava da se svako buduće izdanje te serije ispravno razvrsta.",
       "sourceLink": "Stranica na kojoj se to bolje vidi",
       "thanks": "Hvala — prijava je došla i možemo na nju odgovoriti.",
-      "sendError": "Prijava se nije mogla poslati. Pokušaj ponovno.",
-      "unset": "ostavi nepromijenjeno"
+      "sendError": "Prijava se nije mogla poslati. Pokušaj ponovno."
     }
   },
   "turnier": {

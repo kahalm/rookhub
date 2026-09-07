@@ -367,6 +367,105 @@ public class GeocodingServiceTests : IDisposable
         Assert.Single(venues);
     }
 
+    // ----- Der Schraegstrich: Ortsliste oder abgekuerzter Name? -------------
+
+    /// <summary>
+    /// Der gemeldete Fehlgriff (tnr1351833): Ortstext „Vereinstreff St. Veit/Glan", Bundesland
+    /// Kaernten — der Pin sass in TIROL, 250 km entfernt. Der Schraegstrich wurde als
+    /// Spielort-Trenner verbraucht, „St. Veit" gibt es im Lexikon genau EINMAL, und damit sah der
+    /// Eintrag vollkommen eindeutig aus. Nichts daran war als Zweifelsfall erkennbar.
+    /// </summary>
+    [Fact]
+    public async Task ResolveMany_AbbreviatedNameWithSlash_FindsTheOfficialPlace()
+    {
+        Seed(City("AT", "St. Veit", 47.3167, 11.0667, 0),                 // Tirol
+             City("AT", "St. Veit an der Glan", 46.7681, 14.3603, 12500)); // Kaernten
+
+        var venues = await _service.ResolveManyAsync("Vereinstreff St. Veit/Glan", "Kärnten", "AUT");
+
+        var venue = Assert.Single(venues);
+        Assert.Equal("St. Veit an der Glan", venue.PlaceName);
+    }
+
+    /// <summary>
+    /// Dasselbe Muster, anderer Ort: „Spittal/Drau" ist „Spittal an der Drau". Vorher landete der
+    /// Pin auf dem FLUSS-Abschnitt „Drau", weil der als eigener Spielort gelesen wurde.
+    /// </summary>
+    [Fact]
+    public async Task ResolveMany_SlashBeforeARiverName_IsOnePlace()
+    {
+        Seed(City("AT", "Drau", 46.60, 13.20, 0),
+             City("AT", "Spittal an der Drau", 46.7889, 13.4972, 15400));
+
+        var venues = await _service.ResolveManyAsync("Spittal/Drau", "Kärnten", "AUT");
+
+        Assert.Equal("Spittal an der Drau", Assert.Single(venues).PlaceName);
+    }
+
+    /// <summary>
+    /// Auch ein EINZELNER Buchstabe hinter dem Schraegstrich ist eine Abkuerzung: „Frankfurt/M"
+    /// ist „Frankfurt am Main". Verglichen wird Wortanfang gegen Wortanfang, ohne Bindewoerter.
+    /// </summary>
+    [Fact]
+    public async Task ResolveMany_SingleLetterAbbreviation_IsResolved()
+    {
+        Seed(City("DE", "Frankfurt am Main", 50.1106, 8.6822, 750000),
+             City("DE", "Frankfurt (Oder)", 52.3412, 14.5487, 57000));
+
+        var venues = await _service.ResolveManyAsync("Frankfurt/M", null, "GER");
+
+        Assert.Equal("Frankfurt am Main", Assert.Single(venues).PlaceName);
+    }
+
+    /// <summary>
+    /// Die Gegenprobe, die die erste Fassung dieser Regel umgeworfen hat: „Schwaz" allein ist ein
+    /// Treffer, beweist aber NICHT, dass „Schwaz/Jenbach/Kufstein" ein Ort ist. Gewertet werden
+    /// nur Wortfolgen, die den Schraegstrich UEBERSPANNEN.
+    /// </summary>
+    [Fact]
+    public async Task ResolveMany_RealVenueList_IsNotCollapsedIntoOne()
+    {
+        Seed(City("AT", "Schwaz", 47.35, 11.71, 13600),
+             City("AT", "Jenbach", 47.39, 11.78, 7100),
+             City("AT", "Kufstein", 47.58, 12.17, 19000));
+
+        var venues = await _service.ResolveManyAsync("Schwaz/Jenbach/Kufstein", null, "AUT");
+
+        Assert.Equal(["Schwaz", "Jenbach", "Kufstein"], venues.Select(v => v.PlaceName));
+    }
+
+    /// <summary>
+    /// Die brasilianische Schreibweise Ort/Bundesstaat — 83 der 105 Schraegstrich-Faelle am
+    /// Dev-Stand. „sorocaba sp" hat zwei unterscheidende Woerter, „Sorocaba" eines: die Wortzahl
+    /// passt nicht, es ist keine Abkuerzung, und die Zerlegung bleibt zustaendig.
+    /// </summary>
+    [Fact]
+    public async Task ResolveMany_PlaceWithStateSuffix_StillResolvesToThePlace()
+    {
+        Seed(City("BR", "Sorocaba", -23.5015, -47.4526, 687000));
+
+        var venues = await _service.ResolveManyAsync("Sorocaba/SP", "São Paulo (SP)", "BRA");
+
+        Assert.Equal("Sorocaba", Assert.Single(venues).PlaceName);
+    }
+
+    /// <summary>
+    /// Ein abgekuerzter Name darf nicht raten: passt der Wortanfang auf ZWEI weit auseinander
+    /// liegende Orte, gibt es keinen Pin — dieselbe Regel wie bei jedem anderen mehrdeutigen
+    /// Namen.
+    /// </summary>
+    [Fact]
+    public async Task ResolveMany_AmbiguousAbbreviation_GetsNoPin()
+    {
+        Seed(City("AT", "Neumarkt an der Ybbs", 48.10, 15.10, 1000),
+             City("AT", "Neumarkt am Wallersee", 47.95, 13.23, 6300));
+
+        var venues = await _service.ResolveManyAsync("Neumarkt/W", null, "AUT");
+
+        // „neumarkt w" trifft „…am Wallersee", nicht „…an der Ybbs" — ein eindeutiger Treffer.
+        Assert.Equal("Neumarkt am Wallersee", Assert.Single(venues).PlaceName);
+    }
+
     [Fact]
     public async Task ResolveMany_VenueListWithoutDigits_StaysMultiVenue()
     {
