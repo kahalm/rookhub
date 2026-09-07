@@ -389,6 +389,17 @@ Liga und braucht die Termine genauso. `RoundPlanCheckedAt` verhindert Wiederholu
 NETZfehler laesst ihn dagegen leer. Der Sweep leert ihn, wenn sich der Termin geaendert hat.
 `TournamentDirectory:RoundPlanBatchSize` (Vorgabe 200, 0 = aus) je Nacht.
 
+**Zwischengespeichert wird alle `SaveEvery` (25) Turniere** — und im `finally` auch beim Verlassen
+eines Abbruchs, dort mit `CancellationToken.None` (ein abgebrochener Token wuerde genau den
+Schreibvorgang verhindern, der die Arbeit retten soll). Grund: ein Durchgang ueber 200 Turniere
+dauert **rund zwanzig Minuten** — die Seite ist in 25 ms da, den Rest machen der 1500-ms-Limiter
+des Crawlers und die VPN-Rotation nach JEDEM Abruf (gemessen ~5,7 s je Turnier). Wurde erst am
+Ende geschrieben, verwarf ein Abbruch, ein API-Neustart oder ein Deploy in dieser Zeit alles, und
+der naechste Durchgang begann bei denselben Turnieren (auf Dev nachgemessen: nach sechs Minuten
+null Spieltermine in der Datenbank). `Checked` im Ergebnis zaehlt bewusst die VERSUCHTEN, nicht
+die erfolgreichen — daran haengt die Abbruchbedingung „nochmal starten, bis 0 kommt", und ein
+Durchgang mit lauter Fehlschlaegen meldete sonst „nichts mehr zu tun".
+
 Im Kalender gilt: **hat ein Eintrag Spieltermine, zaehlen NUR sie** (`Covers`); sonst wie bisher
 der ganze Zeitraum. Die Termine gehen als `roundDates` im DTO mit, die Detailseite zeigt sie.
 

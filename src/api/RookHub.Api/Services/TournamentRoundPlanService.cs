@@ -48,6 +48,18 @@ public class TournamentRoundPlanService
     /// </summary>
     internal int MinSpanDays { get; set; } = 8;
 
+    /// <summary>
+    /// Nach wie vielen Turnieren zwischengespeichert wird.
+    ///
+    /// <para>Ein Durchgang ueber 200 Turniere dauert rund ZEHN MINUTEN — nicht wegen der Seite
+    /// (die ist in 25 ms da), sondern wegen des Rate-Limiters des Crawlers und der VPN-Rotation
+    /// nach jedem Abruf, zusammen rund 3 s je Turnier. Alles erst am Ende zu schreiben heisst:
+    /// ein Abbruch, ein API-Neustart oder ein Deploy in dieser Zeit verwirft die GANZE Arbeit,
+    /// und der naechste Durchgang beginnt bei denselben Turnieren — auf Dev genau so gemessen
+    /// (nach sechs Minuten standen 0 Spieltermine in der Datenbank).</para>
+    /// </summary>
+    internal int SaveEvery { get; set; } = 25;
+
     /// <summary>Ergebnis eines Durchgangs — fuer Log und Admin-Antwort.</summary>
     public sealed record RoundPlanResult(int Checked, int WithPlan, int Failed);
 
@@ -79,42 +91,69 @@ public class TournamentRoundPlanService
             .Take(limit)
             .ToListAsync(ct);
 
+        // ATTEMPTED, nicht „erfolgreich": daran haengt die Abbruchbedingung des Aufrufers
+        // („nochmal starten, bis 0 zurueckkommt"). Zaehlte hier nur der Erfolg, meldete ein
+        // Durchgang, in dem ALLE Abrufe scheitern, „0 geprueft" — also „nichts mehr zu tun",
+        // obwohl nichts getan wurde.
+        var attempted = 0;
         var withPlan = 0;
         var failed = 0;
 
-        foreach (var entry in candidates)
+        try
         {
-            List<CrawlerRoundDate> rounds;
-            try
+            foreach (var entry in candidates)
             {
-                rounds = await FetchRoundPlanAsync(entry.ChessResultsId!, ct);
-            }
-            // Ein HttpClient-TIMEOUT kommt als TaskCanceledException, also als
-            // OperationCanceledException, obwohl der Aufrufer nichts abgebrochen hat.
-            // Durchgereicht wird nur, was der AUFRUFER abgebrochen hat.
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                // Der Vermerk bleibt LEER: ein Netzfehler ist keine Auskunft ueber das Turnier,
-                // und beim naechsten Durchgang soll es wieder vorkommen.
-                failed++;
-                _log.LogWarning(ex, "Rundenplan {Id} konnte nicht geholt werden", entry.ChessResultsId);
-                continue;
-            }
+                attempted++;
+                List<CrawlerRoundDate> rounds;
+                try
+                {
+                    rounds = await FetchRoundPlanAsync(entry.ChessResultsId!, ct);
+                }
+                // Ein HttpClient-TIMEOUT kommt als TaskCanceledException, also als
+                // OperationCanceledException, obwohl der Aufrufer nichts abgebrochen hat.
+                // Durchgereicht wird nur, was der AUFRUFER abgebrochen hat.
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    // Der Vermerk bleibt LEER: ein Netzfehler ist keine Auskunft ueber das Turnier,
+                    // und beim naechsten Durchgang soll es wieder vorkommen.
+                    failed++;
+                    _log.LogWarning(ex, "Rundenplan {Id} konnte nicht geholt werden", entry.ChessResultsId);
+                    continue;
+                }
 
-            entry.RoundPlanCheckedAt = DateTime.UtcNow;
-            if (rounds.Count == 0) continue;
+                entry.RoundPlanCheckedAt = DateTime.UtcNow;
+                if (rounds.Count > 0)
+                {
+                    Replace(entry, rounds);
+                    withPlan++;
+                }
 
-            Replace(entry, rounds);
-            withPlan++;
+                // Zwischenstand sichern (siehe SaveEvery): was hier steht, muss ein Abbruch in
+                // den naechsten Minuten nicht noch einmal holen. Ueberspringt ein gescheiterter
+                // Abruf gerade diese Grenze, wird beim naechsten Block bzw. im `finally`
+                // geschrieben — ein Fehlschlag hinterlaesst ohnehin keine Aenderung.
+                if (attempted % SaveEvery == 0) await _db.SaveChangesAsync(ct);
+            }
         }
-
-        if (candidates.Count > 0) await _db.SaveChangesAsync(ct);
+        finally
+        {
+            // Laeuft auf JEDEM Weg — auch bei Abbruch oder unerwarteter Ausnahme, und dann ist es
+            // genau die Rettung des angefangenen Blocks. Bewusst mit CancellationToken.None: ein
+            // abgebrochener Token wuerde diesen Schreibvorgang verhindern, also das verwerfen,
+            // was er sichern soll. Ein Fehlschlag DABEI darf die eigentliche Ausnahme nicht
+            // verdecken — deshalb nur geloggt.
+            try { await _db.SaveChangesAsync(CancellationToken.None); }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Rundenplan: Zwischenstand konnte nicht gespeichert werden");
+            }
+        }
 
         _log.LogInformation(
             "Rundenplan-Durchgang: {Checked} geprueft, {WithPlan} mit Plan, {Failed} fehlgeschlagen",
-            candidates.Count, withPlan, failed);
+            attempted, withPlan, failed);
 
-        return new RoundPlanResult(candidates.Count, withPlan, failed);
+        return new RoundPlanResult(attempted, withPlan, failed);
     }
 
     /// <summary>

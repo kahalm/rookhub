@@ -18,11 +18,14 @@ namespace RookHub.Api.Tests;
 public class TournamentRoundPlanServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    /// <summary>Gemerkt, damit ein Test einen ZWEITEN Kontext auf dieselbe Datenbank oeffnen kann
+    /// — nur so ist zu sehen, was wirklich gespeichert wurde und was bloss verfolgt wird.</summary>
+    private readonly string _dbName = Guid.NewGuid().ToString();
 
     public TournamentRoundPlanServiceTests()
     {
         _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            .UseInMemoryDatabase(_dbName).Options);
     }
 
     public void Dispose() => _db.Dispose();
@@ -198,6 +201,39 @@ public class TournamentRoundPlanServiceTests : IDisposable
             new(handler, disposeHandler: false) { BaseAddress = new Uri("http://crawler:8080") };
     }
 
+    /// <summary>
+    /// Ein Durchgang ueber 200 Turniere dauert rund zehn Minuten (Rate-Limiter des Crawlers plus
+    /// VPN-Rotation, ~3 s je Abruf). Wurde erst am ENDE gespeichert, verwarf ein Abbruch in
+    /// dieser Zeit die ganze Arbeit — auf Dev nachgemessen: nach sechs Minuten standen 0
+    /// Spieltermine in der Datenbank, und der naechste Durchgang haette bei denselben Turnieren
+    /// begonnen. Geprueft wird deshalb gegen einen FRISCHEN Kontext: nur was gespeichert ist,
+    /// ist dort zu sehen.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_Abbruch_BehaeltDenZwischenstand()
+    {
+        for (var i = 0; i < 5; i++)
+            await AddLeagueAsync($"14793{i}0");
+
+        using var cts = new CancellationTokenSource();
+        var service = new TournamentRoundPlanService(
+            _db, new StubClientFactory(new CancellingHandler(ElevenRounds, cancelAfter: 4, cts)),
+            new TestLogger<TournamentRoundPlanService>())
+        { SaveEvery = 2 };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RunAsync(10, cts.Token));
+
+        // Frischer Kontext auf DERSELBEN InMemory-Datenbank: sieht ausschliesslich Gespeichertes.
+        using var fresh = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(_dbName).Options);
+        var gesichert = await fresh.TournamentDirectoryEntries
+            .CountAsync(e => e.RoundPlanCheckedAt != null);
+
+        Assert.Equal(4, gesichert);
+        Assert.Equal(4, await fresh.TournamentDirectoryRounds
+            .Select(r => r.TournamentDirectoryEntryId).Distinct().CountAsync());
+    }
+
     private sealed class StubHandler(string body, HttpStatusCode status) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
@@ -205,5 +241,26 @@ public class TournamentRoundPlanServiceTests : IDisposable
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             });
+    }
+
+    /// <summary>
+    /// Antwortet wie <see cref="StubHandler"/>, bricht den Durchgang aber NACH der
+    /// <paramref name="cancelAfter"/>-ten Anfrage ab — so, wie ein abgebrochener Aufruf, ein
+    /// API-Neustart oder ein Deploy mitten in einem zehnminuetigen Lauf es tut.
+    /// </summary>
+    private sealed class CancellingHandler(string body, int cancelAfter, CancellationTokenSource cts)
+        : HttpMessageHandler
+    {
+        private int _calls;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (++_calls >= cancelAfter) cts.Cancel();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
     }
 }
