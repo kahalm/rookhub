@@ -22,6 +22,7 @@ import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { ViewStateService } from '@rh/core/view-state.service';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
@@ -87,6 +88,7 @@ export class TournamentDirectoryComponent implements OnInit {
   // takeUntilDestroyed() ohne Argument verlangt einen Injection-Context. In ngOnInit gibt es
   // keinen (NG0203) — deshalb die DestroyRef als Feld holen und explizit durchreichen.
   private readonly destroyRef = inject(DestroyRef);
+  private readonly viewStates = inject(ViewStateService);
 
   readonly speeds: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
   readonly rangePresets = DIRECTORY_RANGE_PRESETS;
@@ -128,6 +130,19 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   static readonly ViewKey = 'rh.turnier.directoryView';
 
+  /** Dieselbe Ansicht beim NUTZER (Server) — die Kennung muss in `ViewStateService.AllowedKeys` stehen. */
+  static readonly StateKey = 'turnier.directory';
+
+  /**
+   * Wie lange nach der letzten Aenderung gewartet wird, bevor der Zustand zum Server geht.
+   * `storeView()` laeuft bei JEDER Aenderung der Leiste — eine Tastatureingabe im Suchfeld sind
+   * ein Dutzend davon, und die will niemand als ein Dutzend Schreibvorgaenge sehen.
+   */
+  private static readonly PersistDebounceMs = 1200;
+
+  /** Der gedrosselte Weg zum Server. */
+  private readonly persist = new Subject<Record<string, unknown>>();
+
   /**
    * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
    * mat-tab-group meldet seinen Startindex sofort, und ohne diese Sperre liefe die erste
@@ -139,6 +154,8 @@ export class TournamentDirectoryComponent implements OnInit {
     this.applyRangePreset('quarter', false);
     this.restoreView();
     this.watchPlaceInput();
+    this.watchPersist();
+    this.syncStoredView();
 
     this.profileService.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: profiles => {
@@ -678,37 +695,64 @@ export class TournamentDirectoryComponent implements OnInit {
 
   // ----- Gemerkte Ansicht ---------------------------------------------------
 
+  private watchPersist(): void {
+    this.persist.pipe(
+      debounceTime(TournamentDirectoryComponent.PersistDebounceMs),
+      // Nichts schicken, was schon oben steht — das Umschalten zwischen zwei Reitern und zurueck
+      // ist kein neuer Zustand.
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      switchMap(state => this.viewStates.save(TournamentDirectoryComponent.StateKey, state)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe();
+  }
+
   /** Was die Filterleiste zeigt — genug, um nach einem Seitenwechsel dasselbe Bild aufzubauen. */
+  private viewState(): Record<string, unknown> {
+    return {
+      tab: this.tab,
+      rangePreset: this.rangePreset,
+      from: this.filter.from,
+      to: this.filter.to,
+      federation: this.filter.federation,
+      speed: this.filter.speed,
+      text: this.filter.text,
+      weekendOnly: this.filter.weekendOnly,
+      minPlayers: this.filter.minPlayers,
+      profileId: this.filter.profileId,
+      lat: this.filter.lat,
+      lon: this.filter.lon,
+      radiusKm: this.filter.radiusKm,
+      placeLabel: this.placeLabel,
+      kinds: this.filter.kinds,
+      ageGroups: this.filter.ageGroups,
+      genders: this.filter.genders,
+      adultsOnly: this.filter.adultsOnly,
+      hideLeagues: this.filter.hideLeagues,
+      includeIgnored: this.filter.includeIgnored,
+      calendarYear: this.calendarYear,
+      calendarMonth: this.calendarMonth,
+    };
+  }
+
+  /**
+   * Zustand sichern — geraetelokal SOFORT und beim Nutzer (Server) verzoegert.
+   *
+   * <p>Beides, und zwar aus zwei verschiedenen Gruenden: der lokale Speicher traegt den Weg
+   * „Turnier oeffnen → zurueck" ohne einen einzigen Abruf, der Server traegt ihn ueber GERAETE —
+   * der Umkreis, den man am Rechner eingestellt hat, war am Handy weg.</p>
+   *
+   * <p>Der Server-Schreibvorgang ist gedrosselt: `storeView()` laeuft bei jeder Aenderung der
+   * Leiste, und eine Tastatureingabe im Suchfeld sind ein Dutzend davon.</p>
+   */
   private storeView(): void {
+    const state = this.viewState();
     try {
-      localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({
-        tab: this.tab,
-        rangePreset: this.rangePreset,
-        from: this.filter.from,
-        to: this.filter.to,
-        federation: this.filter.federation,
-        speed: this.filter.speed,
-        text: this.filter.text,
-        weekendOnly: this.filter.weekendOnly,
-        minPlayers: this.filter.minPlayers,
-        profileId: this.filter.profileId,
-        lat: this.filter.lat,
-        lon: this.filter.lon,
-        radiusKm: this.filter.radiusKm,
-        placeLabel: this.placeLabel,
-        kinds: this.filter.kinds,
-        ageGroups: this.filter.ageGroups,
-        genders: this.filter.genders,
-        adultsOnly: this.filter.adultsOnly,
-        hideLeagues: this.filter.hideLeagues,
-        includeIgnored: this.filter.includeIgnored,
-        calendarYear: this.calendarYear,
-        calendarMonth: this.calendarMonth,
-      }));
+      localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify(state));
     } catch {
       // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
       // lassen — dann faengt man eben wieder bei der Vorgabe an.
     }
+    this.persist.next(state);
   }
 
   private restoreView(): void {
@@ -719,6 +763,37 @@ export class TournamentDirectoryComponent implements OnInit {
     } catch {
       stored = null;                       // unlesbar/kaputt: Vorgabe bleibt stehen
     }
+    this.applyStoredView(stored);
+  }
+
+  /**
+   * Den beim NUTZER gespeicherten Zustand nachziehen (siehe `ViewStateService`).
+   *
+   * <p>Reihenfolge mit Absicht: erst der geraetelokale Zustand (sofort, ohne Abruf — kein
+   * Aufblitzen der Vorgabefilter), dann der vom Server. Weicht der ab, ist ER der juengere:
+   * geschrieben hat ihn das Geraet, an dem zuletzt gefiltert wurde. Nur dann wird neu geladen —
+   * sonst kostete jeder Seitenaufruf zwei Abfragen.</p>
+   *
+   * <p>Hat der Server nichts, wird der lokale Zustand hinaufgeschoben: beim ersten Aufruf nach
+   * dieser Aenderung steht dort noch nichts, und die bestehende Einstellung soll nicht verloren
+   * gehen.</p>
+   */
+  private syncStoredView(): void {
+    this.viewStates.get<Record<string, unknown>>(TournamentDirectoryComponent.StateKey)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(remote => {
+        if (!remote) {
+          this.persist.next(this.viewState());
+          return;
+        }
+        if (JSON.stringify(remote) === JSON.stringify(this.viewState())) return;
+
+        this.applyStoredView(remote);
+        if (this.ready) this.reload();
+      });
+  }
+
+  private applyStoredView(stored: Record<string, unknown> | null): void {
     if (!stored || typeof stored !== 'object') return;
 
     const tab = stored['tab'];

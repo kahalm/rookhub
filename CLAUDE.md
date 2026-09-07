@@ -459,6 +459,35 @@ Nachwuchs. Solche Kennungen kann niemand von aussen erraten; genau dafuer fragt 
 (`POST .../report`, Feld `namePattern`) danach, und `POST .../classify` wendet die erweiterte Liste
 auf den Altbestand an.
 
+### Anzeige-Zustand einer Seite je NUTZER (auth)
+Die Filterleiste des Turnierkalenders lag nur im `localStorage` und war damit an ein GERAET
+gebunden — der Umkreis vom Schreibtisch war am Handy weg, obwohl es die Einstellung eines Nutzers
+ist. `UserViewStates` haelt sie serverseitig.
+
+**Der Inhalt ist fuer den Server OPAK** (geprueft werden nur JSON-Gueltigkeit, Objekt-Form und
+`ViewStateService.MaxJsonLength` = 8192): er wird nirgends abgefragt oder gefiltert, und die
+Filterleiste bekommt weiter Felder — jedes als Spalte zu fuehren waere eine Migration je Feld ohne
+jeden Nutzen in SQL (dasselbe Vorgehen wie beim Analysebaum, `CalculationTree.TreeJson`). Die
+Spalte ist `text`, nicht `varchar(8192)`: letzteres zaehlt in utf8mb4 mit 32 KB gegen das
+64-KB-Zeilenlimit von MariaDB.
+
+**`ViewKey` ist eine ERLAUBTE Kennung** (`ViewStateService.AllowedKeys`, heute nur
+`turnier.directory`) — ohne diese Liste waere der Endpunkt ein Schluessel-Wert-Speicher je Nutzer
+fuer beliebige Inhalte.
+
+Frontend (`core/view-state.service.ts` + `TournamentDirectoryComponent`): beim Oeffnen gilt ZUERST
+die lokale Kopie (ohne Abruf, damit die Vorgabefilter nicht aufblitzen), danach der Server-Stand —
+weicht er ab, gewinnt ER (ihn schrieb das Geraet, an dem zuletzt gefiltert wurde) und NUR dann wird
+neu geladen. Hat der Server nichts, wird der lokale Zustand hinaufgeschoben. Geschrieben wird
+gedrosselt (`PersistDebounceMs` 1200), weil `storeView()` bei jeder Aenderung der Leiste laeuft.
+Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/view-state/{key}` | Gespeicherter Zustand; **204**, wenn es keinen gibt (Normalfall beim ersten Aufruf, kein Fehler). 404 bei unbekannter Kennung |
+| PUT | `/api/view-state/{key}` | Zustand speichern — der Rumpf IST der Zustand (ein JSON-Objekt), nicht ein DTO mit einem Feld darin |
+| DELETE | `/api/view-state/{key}` | Zustand verwerfen (idempotent) |
+
 ### Book-Puzzles (offen + Admin)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -939,6 +968,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentDirectoryIgnores | „Dieses Turnier will ich nicht sehen" je Nutzer. Gemerkt wird die IDENTITAET (`PublicId`) und nicht die Eintrags-Id (ein Eintrag kann verschwinden und wiederkommen, die Entscheidung soll gelten) — deshalb auch kein FK aufs Turnier, wie bei `TournamentSubscription` | UserId (Cascade), PublicId (≤24), CreatedAt; **UNIQUE (UserId, PublicId)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | PlayerTournamentResults | Zwischenspeicher des Turnierverlaufs: die Teilnahme EINES Spielers an EINEM Turnier samt Ergebnis. Der Schluessel ist der **SPIELER, nicht das Konto** — die Historie ist fuer jeden dieselbe, ein Freund benutzt denselben Speicher. Die Kartenwerte werden genau einmal geholt (ein abgeschlossenes Turnier aendert sich nie wieder) | PlayerKey (≤40, `fide:…`/`cr:…`/`name:…`), ChessResultsId (≤20), Snr, TournamentName (≤500), EndDate?, Rank?/Rounds?/PlayerCount? (aus der Trefferliste), Points? (5,2)/PerformanceRating?/RatingChange? (6,2)/RatingInternational? (aus der Spielerkarte), CardFetchedAt? (gesetzt AUCH bei leerem Ergebnis — sonst wird dieselbe Seite jedes Mal erneut geholt; bei einem NETZfehler dagegen nicht), UpdatedAt; **UNIQUE (PlayerKey, ChessResultsId)** + Index (PlayerKey, EndDate) |
 | PlayerHistorySyncs | Wann die Trefferliste EINES Spielers zuletzt geholt wurde (TTL 12 h). Nach einem Fehlschlag bleibt der Zeitstempel ALT, damit der naechste Aufruf es wieder versucht statt zwoelf Stunden zu warten | PlayerKey (PK, ≤40), LastFetchedAt, LastError? (≤500) |
+| UserViewStates | Anzeige-Zustand EINER Seite fuer EINEN Nutzer (heute die Filterleiste des Turnierkalenders). Fuer den Server **OPAK** — nur JSON-Gueltigkeit, Objekt-Form und Groesse werden geprueft; er wird nie abgefragt. `ViewKey` kommt aus `ViewStateService.AllowedKeys`, sonst waere das ein freier Speicher je Nutzer | UserId (Cascade), ViewKey (≤64), Json (**text**, ≤8192 Zeichen — `varchar(8192)` zaehlte in utf8mb4 mit 32 KB gegen das 64-KB-Zeilenlimit), UpdatedAt; **UNIQUE (UserId, ViewKey)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet/reprozessierbar — heute meist No-op, da live ausgewertet)** |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |

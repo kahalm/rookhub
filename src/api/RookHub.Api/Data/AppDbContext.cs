@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
     public DbSet<TournamentDirectoryVenue> TournamentDirectoryVenues => Set<TournamentDirectoryVenue>();
     public DbSet<TournamentDirectoryRound> TournamentDirectoryRounds => Set<TournamentDirectoryRound>();
     public DbSet<TournamentDirectorySource> TournamentDirectorySources => Set<TournamentDirectorySource>();
+    public DbSet<UserViewState> UserViewStates => Set<UserViewState>();
     public DbSet<TournamentDirectoryIgnore> TournamentDirectoryIgnores => Set<TournamentDirectoryIgnore>();
     public DbSet<PlayerTournamentResult> PlayerTournamentResults => Set<PlayerTournamentResult>();
     public DbSet<PlayerHistorySync> PlayerHistorySyncs => Set<PlayerHistorySync>();
@@ -345,6 +346,14 @@ public class AppDbContext : DbContext
             // laeuft das ueber den Index statt ueber einen Scan aller Spieltermine.
             e.HasIndex(r => r.Date);
             e.HasIndex(r => new { r.TournamentDirectoryEntryId, r.Number }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserViewState>(e =>
+        {
+            // Ein Zustand je Nutzer UND Ansicht — der Upsert haengt daran.
+            e.HasIndex(v => new { v.UserId, v.ViewKey }).IsUnique();
+            e.HasOne(v => v.User).WithMany().HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<TournamentDirectorySource>(e =>

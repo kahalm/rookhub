@@ -58,6 +58,21 @@ describe('TournamentDirectoryComponent', () => {
     http = TestBed.inject(HttpTestingController);
     navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     fixture.detectChanges();
+    flushViewState();
+  }
+
+  /**
+   * Die Filterleiste fragt beim Start den beim NUTZER gespeicherten Zustand ab. In den Tests
+   * antwortet er mit 204 („nichts gespeichert") — der interessante Fall ist der eigene Test
+   * weiter unten, hier wuerde er nur jede Erwartung verschieben.
+   *
+   * <p>Auf das 204 folgt ein PUT (der lokale Zustand wird hinaufgeschoben) — der ist gedrosselt
+   * und faellt in den Tests nie an, weil dort keine Zeit vergeht.</p>
+   */
+  function flushViewState(state: Record<string, unknown> | null = null) {
+    const req = http.expectOne('/api/view-state/turnier.directory');
+    if (state) req.flush(state);
+    else req.flush(null, { status: 204, statusText: 'No Content' });
   }
 
   function flushProfiles(profiles: SearchProfile[]) {
@@ -610,6 +625,60 @@ describe('TournamentDirectoryComponent', () => {
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.missing-row')).toBeTruthy();
     }
+    http.verify();
+  });
+  /**
+   * Die Filtereinstellung gehoert dem NUTZER, nicht dem Browser: der Umkreis, den man am Rechner
+   * eingestellt hat, war am Handy weg (nur `localStorage`). Weicht der beim Nutzer gespeicherte
+   * Zustand ab, ist ER der juengere — geschrieben hat ihn das Geraet, an dem zuletzt gefiltert
+   * wurde.
+   */
+  it('übernimmt den beim Nutzer gespeicherten Zustand und lädt damit neu', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TournamentDirectoryComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TournamentDirectoryComponent);
+    component = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.detectChanges();
+
+    // Der Server hat einen Zustand: Reiter „Karte", eigener Umkreis, Text gesetzt.
+    http.expectOne('/api/view-state/turnier.directory').flush({
+      tab: 'map', rangePreset: 'quarter', federation: 'GER', text: 'open',
+      lat: 47.8, lon: 13.04, radiusKm: 50, placeLabel: 'Salzburg',
+      kinds: [], ageGroups: [], genders: [],
+    });
+    flushProfiles([]);
+
+    expect(component.tab).toBe('map');
+    expect(component.filter.federation).toBe('GER');
+    expect(component.filter.text).toBe('open');
+    expect(component.filter.radiusKm).toBe(50);
+    expect(component.filter.lat).toBe(47.8);
+  });
+
+  /**
+   * Hat der Server nichts, wird der geraetelokale Zustand hinaufgeschoben — beim ersten Aufruf
+   * nach dieser Aenderung steht dort noch nichts, und die bestehende Einstellung soll nicht
+   * verloren gehen. Der Weg ist gedrosselt, gepruefft wird deshalb der ausgeloeste Wunsch.
+   */
+  it('lädt ohne gespeicherten Zustand einfach mit der Vorgabe', async () => {
+    await setup();
+    flushProfiles([]);
+
+    // Kein zweiter Ladevorgang: nichts weicht ab, also nichts nachzuziehen.
+    const list = flushList([]);
+    expect(list.request.params.has('from')).toBeTrue();
     http.verify();
   });
 });
