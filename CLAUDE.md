@@ -365,7 +365,7 @@ gibt es 19-mal).
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
 | POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen. **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual` bleibt in jedem Fall unberuehrt |
 | POST | `/api/admin/tournament-directory/backfill-sources` | Herkunftsvermerk fuer den Altbestand nachtragen (jeder bestehende Eintrag stammt aus chess-results). Braucht kein Netz; der Sweep tut es von selbst, aber erst nach einer Rotationswoche |
-| POST | `/api/admin/tournament-directory/round-plans?limit=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
+| POST | `/api/admin/tournament-directory/round-plans?limit=&retryEmpty=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
 | POST | `/api/admin/tournament-directory/fide?years=` | Den FIDE-Kalender sofort lesen (Vorgabe: laufendes Jahr + 2). Ein Seitenabruf je Jahr; neue Ereignisse kommen mit `ChessResultsId = null` dazu, erkannte werden mit dem bestehenden Eintrag verschmolzen |
 | POST | `/api/admin/tournament-directory/classify` | Publikum + Format des GANZEN Bestands aus den Turniernamen neu ableiten (Jugendklasse, Geschlechtsklasse, Liga) — braucht kein Netz. Der Weg, eine nachgeruestete Wortliste im `TournamentClassifier` auf den Altbestand anzuwenden; die Turnier**art** bleibt unangetastet (die kommt aus der Quelle) |
 | POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
@@ -389,6 +389,16 @@ Liga und braucht die Termine genauso. `RoundPlanCheckedAt` verhindert Wiederholu
 **auch bei einem leeren Plan** gesetzt (der haeufige Fall, der sich merken lassen muss); ein
 NETZfehler laesst ihn dagegen leer. Der Sweep leert ihn, wenn sich der Termin geaendert hat.
 `TournamentDirectory:RoundPlanBatchSize` (Vorgabe 200, 0 = aus) je Nacht.
+
+**`retryEmpty=true`** nimmt auch Eintraege vor, die als geprueft gelten und KEINEN Termin haben.
+Gebraucht, weil das Holen selbst kaputt sein kann: chess-results baut sein Layout aus Tabellen, die
+Rundenplan-Tabelle steckt drei Ebenen tief, und `FindTableByHeaders` nahm die erste Tabelle, deren
+Kopfzeile die Spaltennamen „enthaelt" — `TextContent` ist REKURSIV, also enthaelt schon die
+aeusserste Wrapper-Tabelle sie. Ergebnis: leere Liste, ohne Fehler (auf Dev gemessen: 337 geprueft,
+0 Termine). Behoben im Crawler (eine Datentabelle ist ein BLATT, `FindTableByHeaders` bevorzugt
+Tabellen ohne verschachtelte Tabelle) — aber der Vermerk „geprueft" haette jede Wiederholung
+verhindert, deshalb dieser Schalter. Bewusst opt-in: ein Turnier ohne veroeffentlichten Plan ist
+der haeufige Fall.
 
 **Zwischengespeichert wird alle `SaveEvery` (25) Turniere** — und im `finally` auch beim Verlassen
 eines Abbruchs, dort mit `CancellationToken.None` (ein abgebrochener Token wuerde genau den

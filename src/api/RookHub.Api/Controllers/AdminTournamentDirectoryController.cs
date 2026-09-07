@@ -241,10 +241,16 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// gespielt wird, und der Kalender zeigte sie deshalb an rund 200 Tagen statt an ihren elf
     /// Spieltagen.</para>
     /// </summary>
+    /// <param name="retryEmpty">
+    /// Auch Eintraege erneut vornehmen, die als geprueft gelten, aber keinen Termin haben.
+    /// Gebraucht, wenn das HOLEN kaputt war und deshalb lauter leere Plaene vermerkt wurden —
+    /// ohne das bliebe die Behebung fuer den bestehenden Bestand wirkungslos.
+    /// </param>
     [HttpPost("round-plans")]
-    public async Task<IActionResult> RoundPlans([FromQuery] int limit = 100, CancellationToken ct = default)
+    public async Task<IActionResult> RoundPlans([FromQuery] int limit = 100,
+        [FromQuery] bool retryEmpty = false, CancellationToken ct = default)
     {
-        var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), ct);
+        var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithPlan, result.Failed });
     }
 

@@ -221,7 +221,8 @@ public class TournamentRoundPlanServiceTests : IDisposable
             new TestLogger<TournamentRoundPlanService>())
         { SaveEvery = 2 };
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RunAsync(10, cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.RunAsync(10, retryEmpty: false, cts.Token));
 
         // Frischer Kontext auf DERSELBEN InMemory-Datenbank: sieht ausschliesslich Gespeichertes.
         using var fresh = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
@@ -232,6 +233,43 @@ public class TournamentRoundPlanServiceTests : IDisposable
         Assert.Equal(4, gesichert);
         Assert.Equal(4, await fresh.TournamentDirectoryRounds
             .Select(r => r.TournamentDirectoryEntryId).Distinct().CountAsync());
+    }
+
+    /// <summary>
+    /// Ein Eintrag, der als geprueft gilt und KEINEN Termin hat, wird mit `retryEmpty` erneut
+    /// vorgenommen — sonst waere die Behebung eines kaputten Holens fuer den bestehenden Bestand
+    /// wirkungslos (auf Dev genau so passiert: 337 geprueft, 0 Termine, weil der Parser die
+    /// Wrapper-Tabelle griff).
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_RetryEmpty_NimmtLeerGeprueftesErneutVor()
+    {
+        var entry = await AddLeagueAsync();
+        entry.RoundPlanCheckedAt = DateTime.UtcNow.AddDays(-1);
+        await _db.SaveChangesAsync();
+
+        // Ohne den Schalter bleibt es liegen.
+        Assert.Equal(0, (await CreateService(ElevenRounds).RunAsync(10)).Checked);
+
+        var result = await CreateService(ElevenRounds).RunAsync(10, retryEmpty: true);
+
+        Assert.Equal(1, result.Checked);
+        Assert.Equal(1, result.WithPlan);
+        Assert.Equal(4, (await _db.TournamentDirectoryEntries
+            .Include(e => e.RoundDates).SingleAsync()).RoundDates.Count);
+    }
+
+    /// <summary>
+    /// Wer schon Termine hat, wird auch mit dem Schalter NICHT erneut geholt — der Sinn ist die
+    /// Reparatur der Leeren, nicht ein Rundumschlag.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_RetryEmpty_LaesstVorhandenePlaeneInRuhe()
+    {
+        await AddLeagueAsync();
+        await CreateService(ElevenRounds).RunAsync(10);
+
+        Assert.Equal(0, (await CreateService(ElevenRounds).RunAsync(10, retryEmpty: true)).Checked);
     }
 
     private sealed class StubHandler(string body, HttpStatusCode status) : HttpMessageHandler

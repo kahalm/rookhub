@@ -141,7 +141,7 @@ public class TournamentDirectoryScheduler : BackgroundService
                 if (_roundPlanBatchSize > 0)
                 {
                     var roundPlans = scope.ServiceProvider.GetRequiredService<TournamentRoundPlanService>();
-                    await roundPlans.RunAsync(_roundPlanBatchSize, ct);
+                    await roundPlans.RunAsync(_roundPlanBatchSize, retryEmpty: false, ct);
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

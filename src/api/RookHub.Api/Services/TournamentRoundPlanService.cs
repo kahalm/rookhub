@@ -68,14 +68,28 @@ public class TournamentRoundPlanService
     /// Startdatum, damit die naechstliegenden Turniere zuerst kommen — ein Plan fuer ein Turnier
     /// in achtzehn Monaten sieht niemand.
     /// </summary>
-    public async Task<RoundPlanResult> RunAsync(int limit, CancellationToken ct = default)
+    /// <param name="retryEmpty">
+    /// Auch Eintraege vornehmen, die als geprueft gelten, aber KEINEN Termin haben.
+    ///
+    /// <para>Gebraucht, wenn das Holen selbst kaputt war: der Parser griff auf der echten Seite
+    /// die Wrapper-Tabelle statt der Datentabelle und lieferte durchweg leere Plaene (auf Dev
+    /// gemessen: 337 geprueft, 0 Termine). Der Vermerk „geprueft" verhindert danach jede
+    /// Wiederholung — ohne diesen Schalter waere die Behebung des Parsers fuer den bestehenden
+    /// Bestand wirkungslos.</para>
+    ///
+    /// <para>Bewusst OPT-IN: ein Turnier ohne veroeffentlichten Plan ist der haeufige Fall, und
+    /// dauerhaft eingeschaltet wuerde es jede Nacht erneut abgefragt.</para>
+    /// </param>
+    public async Task<RoundPlanResult> RunAsync(
+        int limit, bool retryEmpty = false, CancellationToken ct = default)
     {
         if (limit <= 0) return new RoundPlanResult(0, 0, 0);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var candidates = await _db.TournamentDirectoryEntries
             .Include(e => e.RoundDates)
-            .Where(e => e.RoundPlanCheckedAt == null
+            .Where(e => (e.RoundPlanCheckedAt == null
+                         || (retryEmpty && e.RoundDates.Count == 0))
                         && e.RemovedAt == null
                         // Der Rundenplan steht auf der chess-results-Turnierseite — ohne Nummer
                         // dort ist er nicht erreichbar (FIDE-Eintraege).
