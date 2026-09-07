@@ -1,18 +1,14 @@
 import { Injectable } from '@angular/core';
-import { sharedCookieDomain } from './partner-site';
+import {
+  onSharedPreferenceChange, readSharedPreference, writeSharedPreference,
+} from './shared-preference';
 
 export type AppTheme = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'rookhub_app_theme';
 
-/**
- * Derselbe Wert zusaetzlich als Cookie auf der ELTERNdomaene — RookHub und die Turnierseite sind
- * zwei Origins und teilen den localStorage nicht. Ein Cookie auf `.oberschmid.homes` sehen beide.
- * Es ist eine reine Anzeige-Einstellung, also bewusst lesbar (kein HttpOnly) und ohne jeden
- * Geheimnis-Charakter.
- */
+/** Geteilt mit der Turnierseite — Mechanismus in `shared-preference.ts`. */
 const COOKIE_KEY = 'rookhub_theme';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -44,13 +40,10 @@ export class ThemeService {
 
     // Wechselt man zwischen zwei offenen Tabs der beiden Seiten hin und her, soll die
     // Umschaltung mitkommen — Cookies melden sich nicht von selbst.
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
-      const current = readCookie();
-      if (current && current !== this._preference) {
-        this._preference = current;
-        this.apply();
-      }
+    onSharedPreferenceChange(COOKIE_KEY, () => this._preference, value => {
+      if (!isTheme(value)) return;
+      this._preference = value;
+      this.apply();
     });
 
     this.apply();
@@ -59,7 +52,7 @@ export class ThemeService {
   setPreference(pref: AppTheme): void {
     this._preference = pref;
     try { localStorage.setItem(STORAGE_KEY, pref); } catch {}
-    writeCookie(pref);
+    writeSharedPreference(COOKIE_KEY, pref);
     this.apply();
   }
 
@@ -85,21 +78,6 @@ function readLocal(): AppTheme | null {
 }
 
 function readCookie(): AppTheme | null {
-  try {
-    const hit = document.cookie.split(';')
-      .map(c => c.trim())
-      .find(c => c.startsWith(COOKIE_KEY + '='));
-    const value = hit ? decodeURIComponent(hit.slice(COOKIE_KEY.length + 1)) : null;
-    return isTheme(value) ? value : null;
-  } catch { return null; }
-}
-
-function writeCookie(pref: AppTheme): void {
-  const domain = sharedCookieDomain();
-  if (!domain) return;                      // kein gemeinsamer Elternteil (IP/localhost)
-  try {
-    const secure = location.protocol === 'https:' ? '; Secure' : '';
-    document.cookie =
-      `${COOKIE_KEY}=${pref}; domain=${domain}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
-  } catch {}
+  const value = readSharedPreference(COOKIE_KEY);
+  return isTheme(value) ? value : null;
 }

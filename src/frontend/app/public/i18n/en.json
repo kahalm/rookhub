@@ -615,7 +615,8 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
-    }
+    },
+    "displayNameHint": "Shown to others instead of „{{username}}“."
   },
   "legal": {
     "accountDeletion": {

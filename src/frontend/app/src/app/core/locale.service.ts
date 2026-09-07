@@ -1,7 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import {
+  onSharedPreferenceChange, readSharedPreference, writeSharedPreference,
+} from './shared-preference';
 
 const LANG_KEY = 'rookhub_lang';
+
+/**
+ * Dieselbe Sprache auf BEIDEN Oberflaechen. RookHub und die Turnierseite sind zwei Origins und
+ * teilen den `localStorage` nicht — wer hier Deutsch waehlte, sass dort weiter in Englisch. Das
+ * Cookie auf der gemeinsamen Elterndomaene sehen beide; Mechanismus in `shared-preference.ts`
+ * (dasselbe Verfahren wie beim Design-Modus).
+ */
+const LANG_COOKIE = 'rookhub_lang';
 
 // Weltweit relevante Sprachen. Übersetzungen: public/i18n/<code>.json
 // (fehlende Keys fallen automatisch auf 'en' zurück).
@@ -27,8 +38,10 @@ export const FORMAT_LOCALES: readonly string[] = ['en', 'de', 'hr'];
  * Gibt nur eine in {@link FORMAT_LOCALES} registrierte Locale zurück.
  */
 export function resolveStartupLocale(): string {
-  let lang: string | null = null;
-  try { lang = localStorage.getItem(LANG_KEY); } catch {}
+  // Die GETEILTE Wahl zuerst: sie ist die, die der Nutzer zuletzt auf einer der beiden Seiten
+  // getroffen hat. Sonst der geraetelokale Wert, sonst der Browser.
+  let lang: string | null = readSharedPreference(LANG_COOKIE);
+  if (!lang) { try { lang = localStorage.getItem(LANG_KEY); } catch {} }
   if (!lang && typeof navigator !== 'undefined' && navigator.language) {
     lang = navigator.language.split('-')[0];
   }
@@ -83,6 +96,13 @@ export class LocaleService {
     const lang = this.resolveInitial();
     this.translate.use(lang);
     this.applyHtmlAttrs(lang);
+
+    // Wechselt man zwischen zwei offenen Tabs der beiden Seiten, soll die Sprachwahl mitkommen —
+    // Cookies melden sich nicht von selbst.
+    onSharedPreferenceChange(LANG_COOKIE, () => this.current, value => {
+      const next = this.normalize(value);
+      if (next) this.apply(next);
+    });
   }
 
   get current(): AppLang {
@@ -90,9 +110,16 @@ export class LocaleService {
   }
 
   use(lang: AppLang): void {
+    this.apply(lang);
+    try { localStorage.setItem(LANG_KEY, lang); } catch {}
+    // Damit die andere Oberflaeche dieselbe Sprache zeigt.
+    writeSharedPreference(LANG_COOKIE, lang);
+  }
+
+  /** Umschalten OHNE zu speichern — der Weg fuer eine anderswo getroffene Wahl. */
+  private apply(lang: AppLang): void {
     this.translate.use(lang);
     this.applyHtmlAttrs(lang);
-    try { localStorage.setItem(LANG_KEY, lang); } catch {}
   }
 
   /** Setzt <html lang> und dir (rtl für Arabisch/Persisch, sonst ltr). */
@@ -102,7 +129,13 @@ export class LocaleService {
     el.dir = RTL_LANGS.includes(lang) ? 'rtl' : 'ltr';
   }
 
+  /**
+   * Reihenfolge: die GETEILTE Wahl (zuletzt auf einer der beiden Seiten getroffen) → der
+   * geraetelokale Wert → die Browsersprache → Englisch.
+   */
   private resolveInitial(): AppLang {
+    const shared = this.normalize(readSharedPreference(LANG_COOKIE));
+    if (shared) return shared;
     try {
       const stored = this.normalize(localStorage.getItem(LANG_KEY));
       if (stored) return stored;

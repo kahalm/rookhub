@@ -1095,6 +1095,19 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   gespieltes Turnier steht dort NIE. Ist es geholt → `/tournaments/{id}`; ist es das nicht →
   Holen-Auftrag einreihen und nachfragen (`MaxImportPolls` 30 × 4 s ≈ zwei Minuten, danach eine
   Meldung statt endlosen Wartens).
+- **Geteilte Anzeige-Einstellungen** (`core/shared-preference.ts`): Design-Modus UND **Sprache**
+  liegen in einem Cookie auf der gemeinsamen Elterndomaene — zwei Origins teilen den
+  `localStorage` nicht, eine Sprachwahl auf der einen Seite liess die andere sonst in Englisch
+  sitzen. Der Mechanismus (lesen/schreiben/`visibilitychange`) steht dort EINMAL; vorher trug der
+  Design-Modus seine eigene Kopie. Ohne gemeinsame Elterndomaene (localhost, IP) passiert nichts —
+  der geraetelokale Wert traegt dann weiter.
+- **Das Identitaets-Formular ist GETEILT** (`shared/profile-identity-form/`): Name, Anzeigename,
+  E-Mail und die zwei Spielerkennungen samt SPIELERSUCHE, benutzt von RookHubs Profilseite und der
+  der Turnierseite. Vorher zweimal getippt — und darum fehlte der Turnierseite die Suche, obwohl
+  dort alles an den Kennungen haengt. Die Komponente aendert das uebergebene Objekt direkt und
+  speichert NICHT: was gespeichert wird, entscheidet die Seite (RookHub schickt chess.com/Lichess
+  mit, die Turnierseite bewusst nicht). `ngModelOptions: standalone`, damit sie sich nicht im
+  `<form>` der Elternkomponente registriert.
 - **Profilseite**: die Turnierseite hat ihre EIGENE (`src-turnier/app/features/profile/`, Route
   `/profile`, im Konto-Menue) — Vor-/Nachname, Anzeigename, E-Mail und die beiden
   Spielerkennungen, ueber denselben `PUT /api/profile`. Bewusst nicht RookHubs Profilseite

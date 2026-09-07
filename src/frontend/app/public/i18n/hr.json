@@ -615,7 +615,8 @@
       "system": "Sustav",
       "light": "Svijetlo",
       "dark": "Tamno"
-    }
+    },
+    "displayNameHint": "Prikazuje se drugima umjesto „{{username}}“."
   },
   "legal": {
     "accountDeletion": {

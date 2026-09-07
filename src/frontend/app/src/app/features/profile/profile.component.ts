@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { ProfileIdentityFormComponent } from '../../shared/profile-identity-form/profile-identity-form.component';
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { ApiTokensComponent } from './api-tokens.component';
 import { EngineCardComponent } from './engine-card.component';
@@ -41,20 +42,6 @@ interface Profile {
   bookStockfishDepth: number | null;
 }
 
-interface PlayerSearchResult {
-  chessResultsResults: PlayerSearchItem[];
-  fideResults: PlayerSearchItem[];
-}
-
-interface PlayerSearchItem {
-  name: string;
-  fideId: string | null;
-  chessResultsId: string | null;
-  elo: number | null;
-  country: string | null;
-  title: string | null;
-}
-
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-profile',
@@ -63,7 +50,7 @@ interface PlayerSearchItem {
     MatButtonModule, MatProgressSpinnerModule, MatListModule,
     MatIconModule, MatDividerModule, TranslatePipe, LoadingSpinnerComponent,
     ApiTokensComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
-    ChangePasswordCardComponent, DeleteAccountCardComponent],
+    ChangePasswordCardComponent, DeleteAccountCardComponent, ProfileIdentityFormComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -75,89 +62,11 @@ interface PlayerSearchItem {
           </mat-card-header>
           <mat-card-content>
             <form (ngSubmit)="save()" class="profile-form">
-              <div class="name-row">
-                <mat-form-field appearance="outline">
-                  <mat-label>{{ 'profile.firstName' | translate }}</mat-label>
-                  <input matInput [(ngModel)]="profile.firstName" name="firstName">
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>{{ 'profile.lastName' | translate }}</mat-label>
-                  <input matInput [(ngModel)]="profile.lastName" name="lastName">
-                </mat-form-field>
-                <button mat-stroked-button type="button" (click)="searchPlayer()"
-                  [disabled]="!profile.lastName || profile.lastName.trim().length < 2 || searching"
-                  class="search-btn">
-                  @if (searching) {
-                    <mat-spinner diameter="20"></mat-spinner>
-                  } @else {
-                    <mat-icon>search</mat-icon> {{ 'profile.searchPlayer' | translate }}
-                  }
-                </button>
-              </div>
+              <!-- Name, Anzeigename, E-Mail und die Spielerkennungen samt Spielersuche stehen in
+                   EINER Komponente, die auch die Turnierseite benutzt: sie gehen ohnehin ueber
+                   denselben PUT /api/profile, waren aber zweimal getippt. -->
+              <app-profile-identity-form [profile]="profile" />
 
-              @if (searchResults) {
-                <div class="search-results">
-                  @if (searchResults.chessResultsResults.length === 0 && searchResults.fideResults.length === 0) {
-                    <p class="no-results">{{ 'profile.noResults' | translate }}</p>
-                  }
-
-                  @if (searchResults.chessResultsResults.length > 0) {
-                    <h4>ChessResults</h4>
-                    <mat-list>
-                      @for (p of searchResults.chessResultsResults; track p.name + p.chessResultsId) {
-                        <mat-list-item class="search-item" (click)="selectChessResultsPlayer(p)">
-                          <span class="player-info">
-                            @if (p.title) { <strong class="title">{{ p.title }}</strong> }
-                            {{ p.name }}
-                            @if (p.elo) { <span class="elo">({{ p.elo }})</span> }
-                            @if (p.country) { <span class="country">{{ p.country }}</span> }
-                            @if (p.chessResultsId) { <span class="id">CR: {{ p.chessResultsId }}</span> }
-                            @if (p.fideId) { <span class="id">FIDE: {{ p.fideId }}</span> }
-                          </span>
-                          <mat-icon class="select-icon">arrow_forward</mat-icon>
-                        </mat-list-item>
-                      }
-                    </mat-list>
-                  }
-
-                  @if (searchResults.fideResults.length > 0) {
-                    <h4>FIDE</h4>
-                    <mat-list>
-                      @for (p of searchResults.fideResults; track p.name + p.fideId) {
-                        <mat-list-item class="search-item" (click)="selectFidePlayer(p)">
-                          <span class="player-info">
-                            @if (p.title) { <strong class="title">{{ p.title }}</strong> }
-                            {{ p.name }}
-                            @if (p.elo) { <span class="elo">({{ p.elo }})</span> }
-                            @if (p.country) { <span class="country">{{ p.country }}</span> }
-                            @if (p.fideId) { <span class="id">FIDE: {{ p.fideId }}</span> }
-                          </span>
-                          <mat-icon class="select-icon">arrow_forward</mat-icon>
-                        </mat-list-item>
-                      }
-                    </mat-list>
-                  }
-                </div>
-              }
-
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'profile.email' | translate }}</mat-label>
-                <input matInput type="email" [(ngModel)]="profile.email" name="email"
-                       autocomplete="email" inputmode="email">
-                <mat-hint>{{ 'profile.emailHint' | translate }}</mat-hint>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'profile.displayName' | translate }}</mat-label>
-                <input matInput [(ngModel)]="profile.displayName" name="displayName">
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'profile.fideId' | translate }}</mat-label>
-                <input matInput [(ngModel)]="profile.fideId" name="fideId">
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'profile.chessResultsId' | translate }}</mat-label>
-                <input matInput [(ngModel)]="profile.chessResultsId" name="chessResultsId">
-              </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'profile.chessComUsername' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.chessComUsername" name="chessComUsername">
@@ -254,9 +163,7 @@ export class ProfileComponent implements OnInit {
   profile: Profile | null = null;
   loading = true;
   saving = false;
-  searching = false;
   unlinking = false;
-  searchResults: PlayerSearchResult | null = null;
 
   constructor(
     private profileService: ProfileService,
@@ -272,49 +179,6 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  searchPlayer(): void {
-    if (!this.profile?.lastName || this.profile.lastName.trim().length < 2) return;
-    this.searching = true;
-    this.searchResults = null;
-
-    this.profileService.searchPlayer<PlayerSearchResult>(
-      this.profile.lastName.trim(), this.profile.firstName?.trim() || undefined).subscribe({
-      next: (results) => {
-        this.searching = false;
-        this.searchResults = results;
-
-        // Auto-fill if exactly one result per source.
-        const crSingle = results.chessResultsResults.length === 1 ? results.chessResultsResults[0] : null;
-        const fideSingle = results.fideResults.length === 1 ? results.fideResults[0] : null;
-        if (crSingle) {
-          this.selectChessResultsPlayer(crSingle);
-        }
-        // FIDE-Treffer nur auto-uebernehmen, wenn der CR-Treffer nicht bereits eine
-        // (zum CR-Spieler gehoerende) FIDE-Id geliefert hat — sonst wuerde ein evtl.
-        // fremder Einzel-FIDE-Treffer diese ueberschreiben.
-        if (fideSingle && !(crSingle && crSingle.fideId)) {
-          this.selectFidePlayer(fideSingle);
-        }
-      },
-      error: () => {
-        this.searching = false;
-        this.snackbar.info(this.translate.instant('profile.searchFailed'));
-      }
-    });
-  }
-
-  selectChessResultsPlayer(p: PlayerSearchItem): void {
-    if (!this.profile) return;
-    if (p.chessResultsId) this.profile.chessResultsId = p.chessResultsId;
-    if (p.fideId) this.profile.fideId = p.fideId;
-    this.snackbar.success(this.translate.instant('profile.chessResultsApplied'));
-  }
-
-  selectFidePlayer(p: PlayerSearchItem): void {
-    if (!this.profile) return;
-    if (p.fideId) this.profile.fideId = p.fideId;
-    this.snackbar.success(this.translate.instant('profile.fideApplied'));
-  }
 
   save(): void {
     if (!this.profile) return;

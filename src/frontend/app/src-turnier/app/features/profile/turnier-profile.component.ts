@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
+import { ProfileIdentityFormComponent } from '@rh/shared/profile-identity-form/profile-identity-form.component';
 import { ProfileService } from '@rh/core/profile.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 
@@ -45,6 +46,7 @@ interface TurnierProfile {
   imports: [
     FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule,
     MatInputModule, TranslatePipe, LoadingSpinnerComponent, HelpHintComponent,
+    ProfileIdentityFormComponent,
   ],
   template: `
     <div class="page">
@@ -53,55 +55,18 @@ interface TurnierProfile {
       @if (loading()) {
         <app-loading-spinner />
       } @else if (profile(); as p) {
+        <!-- Dieselben sechs Felder samt Spielersuche wie in RookHub — EINE Komponente
+             (shared/profile-identity-form), nicht zwei Formulare mit demselben Inhalt. Die
+             Suche ist der Grund, warum das hier mehr ist als ein Aufraeumen: sie fuellt die
+             Kennungen, und an denen haengt der Turnierverlauf. -->
         <mat-card class="card">
           <h2>
             {{ 'turnier.profile.person' | translate }}
             <app-help-hint [text]="'turnier.profile.nameHelp' | translate" />
-          </h2>
-
-          <div class="row">
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'profile.firstName' | translate }}</mat-label>
-              <input matInput [(ngModel)]="p.firstName" name="firstName" autocomplete="given-name" />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'profile.lastName' | translate }}</mat-label>
-              <input matInput [(ngModel)]="p.lastName" name="lastName" autocomplete="family-name" />
-            </mat-form-field>
-          </div>
-
-          <mat-form-field appearance="outline" class="full">
-            <mat-label>{{ 'profile.displayName' | translate }}</mat-label>
-            <input matInput [(ngModel)]="p.displayName" name="displayName" />
-            <mat-hint>{{ 'turnier.profile.displayNameHint' | translate: { username: p.username } }}</mat-hint>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full spaced">
-            <mat-label>{{ 'profile.email' | translate }}</mat-label>
-            <input matInput type="email" [(ngModel)]="p.email" name="email"
-                   autocomplete="email" inputmode="email" />
-            <mat-hint>{{ 'profile.emailHint' | translate }}</mat-hint>
-          </mat-form-field>
-        </mat-card>
-
-        <mat-card class="card spaced">
-          <h2>
-            {{ 'turnier.profile.identity' | translate }}
             <app-help-hint [text]="'turnier.profile.identityHelp' | translate" />
           </h2>
 
-          <div class="row">
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'profile.fideId' | translate }}</mat-label>
-              <input matInput [(ngModel)]="p.fideId" name="fideId" inputmode="numeric" />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'profile.chessResultsId' | translate }}</mat-label>
-              <input matInput [(ngModel)]="p.chessResultsId" name="chessResultsId" inputmode="numeric" />
-            </mat-form-field>
-          </div>
+          <app-profile-identity-form [profile]="p" />
         </mat-card>
 
         <div class="actions">
