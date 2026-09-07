@@ -9,12 +9,33 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Welche Bereiche hat dieser Push angefasst? Muster in `.github/filters.yml` (dieselbe Datei
+  # steuert die Test-Jobs). Ein TAG-Lauf baut IMMER alle drei Images: `:latest` entsteht nur dort,
+  # und ein Release mit einem ausgelassenen Image waere unvollstaendig.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      turnier: ${{ steps.filter.outputs.turnier }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/filters.yml
+
   # Test-Gate: blockiert alle Image-Pushes, bis Tests grün sind (reusable test.yml)
   tests:
     uses: ./.github/workflows/test.yml
 
   build-api:
-    needs: tests
+    needs: [changes, tests]
+    if: >-
+      ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
+          && (startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,7 +63,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
 
   build-frontend:
-    needs: tests
+    needs: [changes, tests]
+    if: >-
+      ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
+          && (startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -76,7 +100,10 @@ jobs:
   # nur ein anderes Angular-Projekt des Workspaces (APP_PROJECT). Eigenes Image, damit die beiden
   # Seiten getrennt ausgerollt werden koennen.
   build-turnier:
-    needs: tests
+    needs: [changes, tests]
+    if: >-
+      ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
+          && (startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.turnier == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

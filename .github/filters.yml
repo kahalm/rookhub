@@ -1,0 +1,60 @@
+# Pfad-Filter fuer BEIDE Workflows (dorny/paths-filter) — bewusst in EINER Datei.
+# `test.yml` und `docker.yml` fragen dieselben Namen ab; stuenden die Muster zweimal da, liefen
+# sie auseinander, und das faellt nicht auf: ein zu enger Filter laesst einen Job still aus.
+#
+# ZWEI REGELN, die hier nicht kippen duerfen:
+#  1. Jeder Filter enthaelt die CI-Dateien selbst. Wer an einem Workflow schraubt, will alles
+#     laufen sehen — sonst prueft die Aenderung sich selbst nicht.
+#  2. Anker werden hoechstens EINE Ebene tief eingesetzt (`*frontend` in `turnier`). Eine
+#     verschachtelte Verschachtelung waere darauf angewiesen, dass die Action beliebig tief
+#     flach macht; die CI-Pfade stehen deshalb ausgeschrieben statt als zweiter Anker.
+#
+# Der Gewinn sind RUNNER-MINUTEN, nicht Wartezeit: die Jobs laufen ohnehin parallel (ein Lauf
+# dauert ~4-5 min). Eine reine Doku-Aenderung startet jetzt gar nichts mehr.
+
+# Backend: die API selbst und ihre beiden Test-Projekte.
+api:
+  - '.github/workflows/**'
+  - '.github/filters.yml'
+  - 'src/api/**'
+  - 'tests/**'
+
+# Der geteilte Teil der Angular-Projekte. `src-turnier/` importiert per Alias @rh/* aus
+# `src/app/` — eine Aenderung DORT trifft BEIDE Bundles, deshalb steht dieser Block auch im
+# turnier-Filter. Ohne das bliebe das Turnier-Image nach einer Aenderung an geteiltem Code alt.
+frontend: &frontend
+  - '.github/workflows/**'
+  - '.github/filters.yml'
+  - 'src/frontend/app/src/**'
+  - 'src/frontend/app/public/**'
+  - 'src/frontend/app/angular.json'
+  - 'src/frontend/app/package.json'
+  - 'src/frontend/app/package-lock.json'
+  - 'src/frontend/app/tsconfig*.json'
+  - 'src/frontend/app/karma.conf.js'
+  - 'src/frontend/app/ngsw-config.json'
+  - 'src/frontend/Dockerfile'
+  - 'src/frontend/nginx.conf'
+
+# Was NUR die Turnierseite hat — plus alles Geteilte von oben.
+turnier:
+  - *frontend
+  - 'src/frontend/app/src-turnier/**'
+  - 'src/frontend/app/public-turnier/**'
+  - 'src/frontend/app/ngsw-config.turnier.json'
+
+# Es gibt bewusst KEINEN dritten Filter „alle Specs": der Spec-Job (`ng test app` UND
+# `ng test turnier`) fragt schlicht `frontend ODER turnier` ab — ein weiterer Anker haette eine
+# zweite Verschachtelungsebene gebraucht (siehe Regel 2 oben).
+
+engine-provider:
+  - '.github/workflows/**'
+  - '.github/filters.yml'
+  - 'engine-provider/**'
+
+# Der Crawler ist ein EIGENES Repo; dieser Job holt ihn und laesst seine Tests laufen. Fuer
+# rookhub ist er nur dann eine Aussage, wenn sich hier die Gegenstelle aendert (Proxy-Routen).
+crawler:
+  - '.github/workflows/**'
+  - '.github/filters.yml'
+  - 'src/api/**'
