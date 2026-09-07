@@ -1048,6 +1048,16 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   und landete auf dem Dashboard.
 - **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
   `/api/` an den Servicenamen `api` weiterreicht.
+- **Turnierverlauf** (`src-turnier/app/features/tournament-history/`, Route
+  `/tournaments/history`, Navbar): gespielte und kommende Turniere mit Platz, Punkten,
+  Performance-Rating und Elo-Aenderung, umschaltbar auf Freunde (alle oder einzeln). Der EIGENE
+  Verlauf bleibt bei jeder Auswahl dabei — „nur Freunde" waere eine Ansicht, in der man sich
+  selbst sucht, und der Vergleich ist der Zweck. Zwei Dinge, die dabei nicht kippen duerfen:
+  (1) Die Seite fragt NACH, solange `pending > 0` (Server holt die Ergebnisse einzeln im
+  Hintergrund) — mit Deckel (`MaxPolls` 15), sonst laeuft sie endlos; ohne das Nachfragen saehe
+  man eine halbe Tabelle und hielte sie fuer endgueltig. (2) Ist „alle Freunde" die GEMERKTE
+  Auswahl, laedt der Verlauf erst NACH der Freundesliste — er muss wissen, wen er meint, sonst
+  ist die gemerkte Auswahl beim Wiederkommen wirkungslos (genau so aufgefallen).
 - **Profilseite**: die Turnierseite hat ihre EIGENE (`src-turnier/app/features/profile/`, Route
   `/profile`, im Konto-Menue) — Vor-/Nachname, Anzeigename, E-Mail und die beiden
   Spielerkennungen, ueber denselben `PUT /api/profile`. Bewusst nicht RookHubs Profilseite

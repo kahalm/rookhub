@@ -30,6 +30,7 @@ import { ThemeService } from '@rh/core/theme.service';
         <a mat-button routerLink="/tournaments" routerLinkActive="on"
            [routerLinkActiveOptions]="{ exact: true }">{{ 'nav.tournaments' | translate }}</a>
         <a mat-button routerLink="/tournaments/calendar" routerLinkActive="on">{{ 'nav.tournamentCalendar' | translate }}</a>
+        <a mat-button routerLink="/tournaments/history" routerLinkActive="on">{{ 'nav.tournamentHistory' | translate }}</a>
       </nav>
 
       <span class="spacer"></span>

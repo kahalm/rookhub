@@ -1,0 +1,136 @@
+<div class="page">
+  <div class="page-head">
+    <h1>
+      {{ 'turnier.history.title' | translate }}
+      <app-help-hint [text]="'turnier.history.help' | translate" />
+    </h1>
+  </div>
+
+  <div class="filter-bar">
+    <mat-form-field appearance="outline" class="whose-field">
+      <mat-label>{{ 'turnier.history.whose' | translate }}</mat-label>
+      <mat-select [ngModel]="whose" (ngModelChange)="onWhoseChange($event)">
+        <mat-option value="me">{{ 'turnier.history.onlyMe' | translate }}</mat-option>
+        <mat-option value="all" [disabled]="friends().length === 0">
+          {{ 'turnier.history.withAllFriends' | translate }}
+        </mat-option>
+        <mat-option value="pick" [disabled]="friends().length === 0">
+          {{ 'turnier.history.withSomeFriends' | translate }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (whose === 'pick') {
+      <mat-form-field appearance="outline" class="pick-field">
+        <mat-label>{{ 'turnier.history.friends' | translate }}</mat-label>
+        <mat-select [ngModel]="picked" (ngModelChange)="onPickedChange($event)" multiple>
+          @for (friend of friends(); track friend.userId) {
+            <mat-option [value]="friend.userId">
+              {{ friend.displayName }}
+              @if (!friend.exact) { <span class="inexact">·&nbsp;{{ 'turnier.history.inexact' | translate }}</span> }
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
+    @if (pending() > 0) {
+      <span class="pending">
+        <mat-icon inline>hourglass_top</mat-icon>
+        {{ 'turnier.history.pending' | translate: { count: pending() } }}
+      </span>
+    }
+  </div>
+
+  @if (loading() && histories().length === 0) {
+    <app-loading-spinner />
+  } @else if (failed()) {
+    <p class="hint warn">{{ 'turnier.history.loadError' | translate }}</p>
+  } @else {
+    @for (history of histories(); track trackByUser($index, history)) {
+      <mat-card class="player-card">
+        <div class="player-head">
+          <h2>{{ history.displayName }}</h2>
+
+          @if (history.status === 'ok' && summary(history).played > 0) {
+            <span class="summary">
+              {{ 'turnier.history.summary' | translate: {
+                   played: summary(history).played, points: summary(history).points } }}
+              @if (summary(history).performance !== null) {
+                <span> · {{ 'turnier.history.avgPerformance' | translate: { rating: summary(history).performance } }}</span>
+              }
+            </span>
+          }
+        </div>
+
+        @if (history.status === 'noName') {
+          <p class="hint">
+            {{ 'turnier.history.noName' | translate }}
+            <a mat-stroked-button routerLink="/profile">{{ 'nav.profile' | translate }}</a>
+          </p>
+        } @else if (history.status === 'sourceUnavailable') {
+          <p class="hint warn">{{ 'turnier.history.sourceUnavailable' | translate }}</p>
+        }
+
+        @if (upcoming(history).length > 0) {
+          <h3>{{ 'turnier.history.upcoming' | translate }}</h3>
+          <div class="rows">
+            @for (entry of upcoming(history); track trackById($index, entry)) {
+              <button type="button" class="row upcoming" (click)="open(entry)">
+                <span class="row-date">{{ entry.endDate }}</span>
+                <span class="row-name">{{ entry.name }}</span>
+                <span class="row-meta">
+                  @if (entry.rounds) {
+                    {{ 'turnier.history.roundsShort' | translate: { count: entry.rounds } }}
+                  }
+                </span>
+              </button>
+            }
+          </div>
+        }
+
+        @if (past(history).length > 0) {
+          <h3>{{ 'turnier.history.played' | translate }}</h3>
+          <!-- Eigenes overflow-x: die Zahlenspalten sind auf einem Handy breiter als der
+               Bildschirm, und eine ueberlaufende SEITE verschiebt die CDK-Overlays. -->
+          <div class="rows-scroll">
+            <div class="rows">
+              @for (entry of past(history); track trackById($index, entry)) {
+                <button type="button" class="row" (click)="open(entry)">
+                  <span class="row-date">{{ entry.endDate }}</span>
+                  <span class="row-name">{{ entry.name }}</span>
+
+                  @if (entry.hasResult) {
+                    <span class="row-num">{{ entry.points }}</span>
+                    <span class="row-num rank">
+                      @if (entry.rank) {
+                        {{ 'turnier.history.rankOf' | translate: { rank: entry.rank, of: entry.playerCount } }}
+                      }
+                    </span>
+                    <span class="row-num perf"
+                          [matTooltip]="'turnier.history.performanceTooltip' | translate: { before: entry.ratingBefore }">
+                      {{ entry.performanceRating }}
+                    </span>
+                    <span class="row-num change"
+                          [class.up]="(entry.ratingChange ?? 0) > 0"
+                          [class.down]="(entry.ratingChange ?? 0) < 0">
+                      @if (entry.ratingChange !== null) {
+                        {{ entry.ratingChange > 0 ? '+' : '' }}{{ entry.ratingChange }}
+                      }
+                    </span>
+                  } @else {
+                    <span class="row-num muted" colspan="4">{{ 'turnier.history.noResultYet' | translate }}</span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (history.status === 'ok' && history.entries.length === 0) {
+          <p class="muted">{{ 'turnier.history.empty' | translate }}</p>
+        }
+      </mat-card>
+    }
+  }
+</div>

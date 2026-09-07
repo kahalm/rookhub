@@ -12,6 +12,10 @@ export const routes: Routes = [
   { path: 'tournaments', loadComponent: () => import('./features/tournaments/tournament-list.component').then(m => m.TournamentListComponent), canActivate: [authGuard] },
   // Literal vor Parameter: /tournaments/calendar darf nicht als Turnier-Id gelesen werden.
   { path: 'tournaments/calendar', loadComponent: () => import('./features/tournament-directory/tournament-directory.component').then(m => m.TournamentDirectoryComponent), canActivate: [authGuard] },
+  // Gespielte und kommende Turniere des eigenen Kontos, umschaltbar auf Freunde. Literal, muss
+  // also vor 'tournaments/:id' stehen.
+  { path: 'tournaments/history', loadComponent: () => import('./features/tournament-history/tournament-history.component').then(m => m.TournamentHistoryComponent), canActivate: [authGuard] },
+
   // Ein Turnier aus dem Verzeichnis. Drei Segmente, kollidiert also nicht mit 'tournaments/:id'
   // (das ist die Ansicht eines schon GEHOLTEN Turniers mit Teilnehmern und Paarungen).
   { path: 'tournaments/calendar/:id', loadComponent: () => import('./features/tournament-directory/tournament-directory-detail.component').then(m => m.TournamentDirectoryDetailComponent), canActivate: [authGuard] },

@@ -1,0 +1,127 @@
+.page {
+  max-width: min(var(--page-max-width), 96vw);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.page-head h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.4rem;
+  margin: 0 0 0.75rem;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.whose-field { min-width: 200px; }
+.pick-field { min-width: 240px; flex: 1 1 240px; }
+.inexact { opacity: 0.6; font-size: 0.8rem; }
+
+.pending {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+.player-card { padding: 0.9rem; margin-bottom: 1rem; }
+
+.player-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.player-head h2 { font-size: 1.05rem; margin: 0; }
+.summary { font-size: 0.85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+
+h3 {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 1rem 0 0.4rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+/* Die Zahlenspalten sind auf einem Handy breiter als der Bildschirm. Eigenes overflow-x, damit
+   nicht die SEITE ueberlaeuft — sonst positionieren sich die CDK-Overlays gegen das verbreiterte
+   Dokument und die Menues landen ausserhalb des Sichtfelds. */
+.rows-scroll { overflow-x: auto; }
+
+.rows { display: flex; flex-direction: column; }
+
+.row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(10rem, 1fr) 3rem 6rem 4rem 4rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 34rem;
+  padding: 0.4rem 0.3rem;
+  border: 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover { background: var(--mat-sys-surface-container-low); }
+.row:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
+
+/* Kuenftige Turniere haben keine Zahlenspalten — schmaleres Raster statt leerer Zellen. */
+.row.upcoming {
+  grid-template-columns: 6.5rem minmax(10rem, 1fr) 5rem;
+  min-width: 0;
+}
+
+.row-date {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+.row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.row-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.row-meta { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+.rank, .row-meta { white-space: nowrap; }
+.perf { font-weight: 500; }
+.change.up { color: var(--mat-sys-primary); }
+.change.down { color: var(--mat-sys-error); }
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+  font-size: 0.9rem;
+}
+
+.hint.warn { background: color-mix(in srgb, var(--mat-sys-error) 18%, transparent); }
+.muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+
+@media (max-width: 768px) {
+  .page { padding: 0.75rem 0.5rem; }
+  .whose-field, .pick-field { width: 100%; min-width: 0; }
+}

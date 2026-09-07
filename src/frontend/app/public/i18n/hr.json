@@ -213,7 +213,8 @@
     "groupLibrary": "Analiza i zbirka",
     "groupCommunity": "Zajednica",
     "guess": "Bodovna partija",
-    "tournamentCalendar": "Kalendar turnira"
+    "tournamentCalendar": "Kalendar turnira",
+    "tournamentHistory": "Moji turniri"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -3171,6 +3172,29 @@
       "identityHelp": "Dvije osobe mogu nositi isto ime, a pretraga po imenu vraća obje. FIDE ID ili chess-results ID odlučuje koja si od njih.\n\nBez njega povijest prikazuje sve turnire svih imenjaka — i to ćeš primijetiti, jer će u njoj biti turniri koje nikada nisi igrao.\n\nOba broja nalaze se na tvojoj chess-results stranici igrača.",
       "saveError": "Nije se moglo spremiti. Pokušaj ponovno.",
       "loadError": "Profil se nije mogao učitati."
+    },
+    "history": {
+      "title": "Moji turniri",
+      "help": "Koje si turnire igrao, koji još dolaze, i u odigranima tvoji bodovi, tvoje mjesto i tvoj performance rating.\n\nPodaci dolaze s chess-resultsa, a tamo se traži po IMENU — tvoje prezime mora biti u profilu. FIDE ID ili chess-results ID odlučuje koji si od svojih imenjaka; bez njega ovdje stoje turniri drugih ljudi s tvojim imenom.\n\nRezultati se dohvaćaju turnir po turnir i zatim čuvaju. Prvi pogled na dugu povijest zato se puni postupno.",
+      "whose": "Čije",
+      "onlyMe": "Samo ja",
+      "withAllFriends": "Ja i svi prijatelji",
+      "withSomeFriends": "Ja i odabrani prijatelji",
+      "friends": "Prijatelji",
+      "inexact": "bez identifikatora",
+      "pending": "dohvaćam {{count}} rezultata…",
+      "upcoming": "Slijedi",
+      "played": "Odigrano",
+      "summary": "{{played}} turnira, {{points}} bodova",
+      "avgPerformance": "performance u prosjeku {{rating}}",
+      "rankOf": "{{rank}} od {{of}}",
+      "roundsShort": "{{count}} kola",
+      "performanceTooltip": "Performance rating. Tvoja ocjena na početku turnira: {{before}}.",
+      "noResultYet": "još nema rezultata",
+      "noName": "U tvojem profilu nedostaje prezime — chess-results se traži po imenu, nema se što potražiti.",
+      "sourceUnavailable": "chess-results nije bio dostupan. Prikazuje se zadnje dohvaćeno stanje.",
+      "empty": "Pod ovim imenom nisu nađeni turniri.",
+      "loadError": "Povijest se nije mogla učitati."
     }
   },
   "tournamentsMoved": {

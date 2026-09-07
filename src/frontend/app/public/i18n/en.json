@@ -213,7 +213,8 @@
     "groupLibrary": "Analysis & collection",
     "groupCommunity": "Community",
     "guess": "Point game",
-    "tournamentCalendar": "Tournament calendar"
+    "tournamentCalendar": "Tournament calendar",
+    "tournamentHistory": "My tournaments"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -3171,6 +3172,29 @@
       "identityHelp": "Two people can share a name, and the search by name returns both. A FIDE ID or a chess-results ID decides which of them is you.\n\nWithout one, the history shows every tournament of everyone with your name — and you will notice, because there will be tournaments in it you never played.\n\nBoth numbers are on your own chess-results player page.",
       "saveError": "Could not be saved. Please try again.",
       "loadError": "The profile could not be loaded."
+    },
+    "history": {
+      "title": "My tournaments",
+      "help": "Which tournaments you have played, which are still coming, and in the played ones your score, your place and your performance rating.\n\nThe data comes from chess-results, and it is looked up by NAME — so your last name has to be in your profile. A FIDE ID or chess-results ID decides which of your namesakes is you; without one, tournaments of other people with your name appear here.\n\nResults are fetched one tournament at a time and kept afterwards. The first look at a long history therefore fills up gradually.",
+      "whose": "Whose",
+      "onlyMe": "Only me",
+      "withAllFriends": "Me and all friends",
+      "withSomeFriends": "Me and selected friends",
+      "friends": "Friends",
+      "inexact": "no identifier",
+      "pending": "fetching {{count}} results…",
+      "upcoming": "Coming up",
+      "played": "Played",
+      "summary": "{{played}} tournaments, {{points}} points",
+      "avgPerformance": "average performance {{rating}}",
+      "rankOf": "{{rank}} of {{of}}",
+      "roundsShort": "{{count}} rounds",
+      "performanceTooltip": "Performance rating. Your rating going in: {{before}}.",
+      "noResultYet": "no result yet",
+      "noName": "Your last name is missing from your profile — chess-results is searched by name, so there is nothing to look up.",
+      "sourceUnavailable": "chess-results could not be reached. What is shown is the last state fetched.",
+      "empty": "No tournaments found under this name.",
+      "loadError": "The history could not be loaded."
     }
   },
   "tournamentsMoved": {
