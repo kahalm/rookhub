@@ -11,7 +11,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 
 function entry(id: string, over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
-    chessResultsId: id, name: 'Open Braunau 2026', federation: 'AUT', state: 'Oberösterreich',
+    id, chessResultsId: id, name: 'Open Braunau 2026', federation: 'AUT', state: 'Oberösterreich',
     startDate: '2026-12-18', endDate: '2026-12-20', location: 'Ranshofen',
     timeControl: '90 min', speed: 'Standard', organizer: 'SK Braunau', director: null,
     chiefArbiter: null, rounds: 7, playerCount: 42, lat: 48.2, lon: 13.0, geoSource: 'City',
@@ -198,6 +198,52 @@ describe('TournamentDirectoryDetailComponent', () => {
     flushImportLookup('1457129');
 
     expect(component.calendarEvent()).toBeNull();
+  });
+
+  /**
+   * Ein Turnier aus dem FIDE-Kalender hat keine chess-results-Nummer. Alles, was daran haengt,
+   * muss dort verschwinden — der Link dorthin, das Merken (Abo + Holen-Auftrag) und die
+   * Nachfrage, ob es schon geholt wurde. Ausblenden und Melden laufen ueber die IDENTITAET und
+   * bleiben.
+   */
+  it('lässt bei einem Turnier ohne chess-results-Nummer Merken, Link und Nachfrage weg', async () => {
+    await setup('f14805');
+    http.expectOne('/api/tournament-directory/f14805')
+      .flush(entry('f14805', {
+        chessResultsId: null,
+        sources: [{ kind: 'Fide', externalId: '14805', url: 'https://calendar.fide.com/calendar.php?id=14805' }],
+      }));
+    fixture.detectChanges();
+
+    // Kein Blick in die Crawler-Datenbank — dort kann es dieses Turnier gar nicht geben.
+    http.verify();
+
+    const html = fixture.nativeElement.textContent as string;
+    expect(html).toContain('tournamentDirectory.detail.notOnChessResults');
+    expect(fixture.nativeElement.querySelectorAll('a[href*="chess-results.com"]').length).toBe(0);
+    expect(fixture.nativeElement.querySelector('a[href*="calendar.fide.com"]')).toBeTruthy();
+
+    component.bookmark();
+    http.verify();
+  });
+
+  /**
+   * Bei einer Liga sagt der Zeitraum fast nichts (September bis April), die Runden sagen alles.
+   */
+  it('zeigt die Spieltermine, sobald mehr als einer bekannt ist', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', {
+      roundDates: [
+        { round: 1, date: '2026-09-26', time: '14:00' },
+        { round: 2, date: '2026-10-10', time: '14:00' },
+      ],
+    }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+
+    const dates = [...fixture.nativeElement.querySelectorAll('.play-date')]
+      .map((n: Element) => n.textContent?.trim());
+    expect(dates).toEqual(['1. 2026-09-26', '2. 2026-10-10']);
   });
 
   it('sagt es, wenn die Datei auf diesem Geraet nicht erstellt werden konnte', async () => {

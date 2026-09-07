@@ -234,6 +234,9 @@ public class TournamentDirectoryService
             {
                 entry = new TournamentDirectoryEntry
                 {
+                    // Fuer einen chess-results-Eintrag ist die Identitaet die Nummer dort — die
+                    // Adressen, Abos und Teilen-Links, die es schon gibt, bleiben damit gueltig.
+                    PublicId = row.ChessResultsId,
                     ChessResultsId = row.ChessResultsId,
                     FirstSeenAt = now,
                     CreatedAt = now,
@@ -369,11 +372,15 @@ public class TournamentDirectoryService
     {
         if (changed.Count == 0) return;
 
-        var ids = changed.Select(c => c.Entry.ChessResultsId).ToList();
+        // Ein Abo traegt die chess-results-Nummer; ein Eintrag ohne sie kann keine Abonnenten
+        // haben und faellt hier heraus.
+        var ids = changed.Select(c => c.Entry.ChessResultsId).Where(id => id is not null)
+            .Select(id => id!).ToList();
         var subscribers = await SubscribersByTournamentAsync(ids, ct);
 
         foreach (var (entry, oldDate, oldLocation) in changed)
         {
+            if (entry.ChessResultsId is null) continue;
             if (!subscribers.TryGetValue(entry.ChessResultsId, out var userIds)) continue;
 
             await _notifications.CreateManyAsync(userIds, NotificationType.TournamentChanged,
@@ -385,7 +392,7 @@ public class TournamentDirectoryService
                     ["oldLocation"] = oldLocation ?? "",
                     ["newLocation"] = entry.LocationText ?? "",
                 },
-                DetailLink(entry.ChessResultsId));
+                DetailLink(entry.PublicId));
         }
     }
 
@@ -394,10 +401,12 @@ public class TournamentDirectoryService
         if (removed.Count == 0) return;
 
         var subscribers = await SubscribersByTournamentAsync(
-            removed.Select(e => e.ChessResultsId).ToList(), ct);
+            removed.Select(e => e.ChessResultsId).Where(id => id is not null)
+                .Select(id => id!).ToList(), ct);
 
         foreach (var entry in removed)
         {
+            if (entry.ChessResultsId is null) continue;
             if (!subscribers.TryGetValue(entry.ChessResultsId, out var userIds)) continue;
 
             await _notifications.CreateManyAsync(userIds, NotificationType.TournamentCancelled,
@@ -406,7 +415,7 @@ public class TournamentDirectoryService
                     ["tournamentName"] = entry.Name,
                     ["date"] = FormatRange(entry.StartDate, entry.EndDate) ?? "",
                 },
-                DetailLink(entry.ChessResultsId));
+                DetailLink(entry.PublicId));
         }
     }
 
@@ -443,14 +452,14 @@ public class TournamentDirectoryService
         // ueber ein Turnier, das man weggeklickt hat, ist genau die Art Meldung, die einen dazu
         // bringt, alle abzuschalten. Nur die Nutzer mit meldenden Profilen und nur die
         // Kandidaten-Nummern werden geladen — das sind wenige Zeilen.
-        var candidateIds = candidates.Select(e => e.ChessResultsId).ToList();
+        var candidateIds = candidates.Select(e => e.PublicId).ToList();
         var userIds = profiles.Select(p => p.UserId).Distinct().ToList();
         var ignored = (await _db.TournamentDirectoryIgnores.AsNoTracking()
-                .Where(i => userIds.Contains(i.UserId) && candidateIds.Contains(i.ChessResultsId))
-                .Select(i => new { i.UserId, i.ChessResultsId })
+                .Where(i => userIds.Contains(i.UserId) && candidateIds.Contains(i.PublicId))
+                .Select(i => new { i.UserId, i.PublicId })
                 .ToListAsync(ct))
             .GroupBy(i => i.UserId)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.ChessResultsId).ToHashSet(StringComparer.Ordinal));
+            .ToDictionary(g => g.Key, g => g.Select(x => x.PublicId).ToHashSet(StringComparer.Ordinal));
 
         var notified = 0;
         foreach (var profile in profiles)
@@ -458,7 +467,7 @@ public class TournamentDirectoryService
             var hidden = ignored.GetValueOrDefault(profile.UserId);
             var matches = candidates
                 .Where(e => MatchesProfile(e, profile))
-                .Where(e => hidden is null || !hidden.Contains(e.ChessResultsId))
+                .Where(e => hidden is null || !hidden.Contains(e.PublicId))
                 .OrderBy(e => e.StartDate)
                 .ToList();
             if (matches.Count == 0) continue;
@@ -741,7 +750,7 @@ public class TournamentDirectoryService
         return $"{start.Value:yyyy-MM-dd} - {end.Value:yyyy-MM-dd}";
     }
 
-    private static string DetailLink(string chessResultsId) => $"/tournaments/calendar?t={chessResultsId}";
+    private static string DetailLink(string publicId) => $"/tournaments/calendar?t={publicId}";
 
     private static string Truncate(string? value, int max) =>
         value is null ? "" : value.Length <= max ? value : value[..max];

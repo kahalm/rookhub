@@ -64,6 +64,25 @@ h2 {
   color: var(--mat-sys-primary);
 }
 
+a.group-link { text-decoration: underline; }
+span.group-link { color: inherit; }
+
+/* Die Spieltermine einer Liga sind elf Angaben — als Reihe umbrechender Marken lesbar,
+   untereinander gestapelt nicht. */
+.play-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.play-date { white-space: nowrap; }
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 .detail-actions {
   display: flex;
   flex-wrap: wrap;

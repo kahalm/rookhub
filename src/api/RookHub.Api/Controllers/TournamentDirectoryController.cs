@@ -26,6 +26,14 @@ public class TournamentDirectoryController : BaseApiController
     /// <summary>Die chess-results-Turniernummer ist rein numerisch.</summary>
     private static readonly Regex TournamentIdPattern = new(@"^\d{1,10}$", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Die IDENTITAET eines Verzeichniseintrags: eine chess-results-Nummer oder ein
+    /// Quellen-Kuerzel plus Nummer (<c>f14805</c> fuer den FIDE-Kalender). Bewusst eng — der Wert
+    /// steht in Adressen und wird als Schluessel verglichen; hoechstens zehn Ziffern, wie die
+    /// chess-results-Nummer sie hat.
+    /// </summary>
+    private static readonly Regex PublicIdPattern = new(@"^[a-z]?\d{1,10}$", RegexOptions.Compiled);
+
     /// <summary>Obergrenze der Turniere EINES Monats — jenseits davon meldet die Antwort `truncated`.</summary>
     private const int CalendarMaxTournaments = 1500;
 
@@ -66,14 +74,14 @@ public class TournamentDirectoryController : BaseApiController
         var subscribed = await SubscribedIdsAsync(
             result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
         var ignored = await IgnoredIdsAsync(
-            result.Items.Select(i => i.Entry.ChessResultsId), parsed.Query!.IncludeIgnored, ct);
+            result.Items.Select(i => i.Entry.PublicId), parsed.Query!.IncludeIgnored, ct);
 
         return Ok(new DirectoryPageDto
         {
             Items = result.Items
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                    i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members,
-                    ignored.Contains(i.Entry.ChessResultsId)))
+                    i.Members.Any(m => m.ChessResultsId is not null && subscribed.Contains(m.ChessResultsId)), i.Members,
+                    ignored.Contains(i.Entry.PublicId)))
                 .ToList(),
             Total = result.Total,
             Truncated = result.Truncated,
@@ -103,13 +111,13 @@ public class TournamentDirectoryController : BaseApiController
         var pins = await _query.MapPinsAsync(parsed.Query!, box.MinLat, box.MaxLat, box.MinLon, box.MaxLon, limit, ct);
         var pinSubscribed = await SubscribedIdsAsync(pins.Select(p => p.ChessResultsId), ct);
         var pinIgnored = await IgnoredIdsAsync(
-            pins.Select(p => p.ChessResultsId), parsed.Query!.IncludeIgnored, ct);
+            pins.Select(p => p.PublicId), parsed.Query!.IncludeIgnored, ct);
 
         // Die Karte braucht Haken und Ausblend-Merkmal jetzt ebenfalls: ihr Punkt-Fenster ist
         // dieselbe Karte wie in Liste und Kalender und zeigt dieselben Schaltflaechen.
         return Ok(pins
             .Select(p => DirectoryEntryDto.FromEntity(p, null,
-                pinSubscribed.Contains(p.ChessResultsId), null, pinIgnored.Contains(p.ChessResultsId)))
+                p.ChessResultsId is not null && pinSubscribed.Contains(p.ChessResultsId), null, pinIgnored.Contains(p.PublicId)))
             .ToList());
     }
 
@@ -148,12 +156,12 @@ public class TournamentDirectoryController : BaseApiController
         // Die Turniere EINMAL, die Tage nur mit ihren Nummern — ein mehrtaegiges Turnier stand
         // vorher an jedem seiner Tage voll ausgeschrieben da (siehe DirectoryCalendarDto).
         var calendarIgnored = await IgnoredIdsAsync(
-            result.Items.Select(i => i.Entry.ChessResultsId), parsed.Query!.IncludeIgnored, ct);
+            result.Items.Select(i => i.Entry.PublicId), parsed.Query!.IncludeIgnored, ct);
 
         var tournaments = result.Items
             .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
-                i.Members.Any(m => subscribed.Contains(m.ChessResultsId)), i.Members,
-                calendarIgnored.Contains(i.Entry.ChessResultsId)))
+                i.Members.Any(m => m.ChessResultsId is not null && subscribed.Contains(m.ChessResultsId)), i.Members,
+                calendarIgnored.Contains(i.Entry.PublicId)))
             .ToList();
 
         var days = new List<DirectoryCalendarDayDto>();
@@ -163,7 +171,7 @@ public class TournamentDirectoryController : BaseApiController
             {
                 Date = day,
                 Ids = result.Items.Where(i => Covers(i.Entry, day))
-                    .Select(i => i.Entry.ChessResultsId).ToList(),
+                    .Select(i => i.Entry.PublicId).ToList(),
             });
         }
         return Ok(new DirectoryCalendarDto
@@ -174,19 +182,19 @@ public class TournamentDirectoryController : BaseApiController
         });
     }
 
-    [HttpGet("{chessResultsId}")]
-    public async Task<ActionResult<DirectoryEntryDto>> Get(string chessResultsId, CancellationToken ct)
+    [HttpGet("{id}")]
+    public async Task<ActionResult<DirectoryEntryDto>> Get(string id, CancellationToken ct)
     {
-        if (!Regex.IsMatch(chessResultsId, @"^\d{1,10}$"))
+        if (!PublicIdPattern.IsMatch(id ?? ""))
             return BadRequest(new { message = "Invalid tournament id." });
 
-        var item = await _query.GetAsync(chessResultsId, ct);
+        var item = await _query.GetAsync(id, ct);
         if (item is null) return NotFound();
 
         var subscribed = await SubscribedIdsAsync(item.Members.Select(m => m.ChessResultsId), ct);
-        var isIgnored = await IgnoredIdsAsync([item.Entry.ChessResultsId], true, ct);
+        var isIgnored = await IgnoredIdsAsync([item.Entry.PublicId], true, ct);
         return Ok(DirectoryEntryDto.FromEntity(item.Entry, null, subscribed.Count > 0, item.Members,
-            isIgnored.Contains(item.Entry.ChessResultsId)));
+            isIgnored.Contains(item.Entry.PublicId)));
     }
 
     /// <summary>Ortsvorschlaege (PLZ oder Name) fuer das Suchprofil-Formular.</summary>
@@ -215,15 +223,15 @@ public class TournamentDirectoryController : BaseApiController
     ///
     /// <para>Idempotent: zweimal ausblenden ist dasselbe wie einmal.</para>
     /// </summary>
-    [HttpPost("{chessResultsId}/ignore")]
-    public async Task<IActionResult> Ignore(string chessResultsId, CancellationToken ct)
+    [HttpPost("{id}/ignore")]
+    public async Task<IActionResult> Ignore(string id, CancellationToken ct)
     {
-        var id = (chessResultsId ?? "").Trim();
-        if (!TournamentIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
+        id = (id ?? "").Trim();
+        if (!PublicIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
 
         var userId = GetUserId();
         if (await _db.TournamentDirectoryIgnores
-                .AnyAsync(i => i.UserId == userId && i.ChessResultsId == id, ct))
+                .AnyAsync(i => i.UserId == userId && i.PublicId == id, ct))
         {
             return NoContent();
         }
@@ -231,7 +239,7 @@ public class TournamentDirectoryController : BaseApiController
         _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore
         {
             UserId = userId,
-            ChessResultsId = id,
+            PublicId = id,
         });
         try
         {
@@ -247,15 +255,15 @@ public class TournamentDirectoryController : BaseApiController
     }
 
     /// <summary>Ein ausgeblendetes Turnier wieder zeigen (idempotent).</summary>
-    [HttpDelete("{chessResultsId}/ignore")]
-    public async Task<IActionResult> Unignore(string chessResultsId, CancellationToken ct)
+    [HttpDelete("{id}/ignore")]
+    public async Task<IActionResult> Unignore(string id, CancellationToken ct)
     {
-        var id = (chessResultsId ?? "").Trim();
-        if (!TournamentIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
+        id = (id ?? "").Trim();
+        if (!PublicIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
 
         var userId = GetUserId();
         var row = await _db.TournamentDirectoryIgnores
-            .FirstOrDefaultAsync(i => i.UserId == userId && i.ChessResultsId == id, ct);
+            .FirstOrDefaultAsync(i => i.UserId == userId && i.PublicId == id, ct);
         if (row is not null)
         {
             _db.TournamentDirectoryIgnores.Remove(row);
@@ -277,15 +285,15 @@ public class TournamentDirectoryController : BaseApiController
     /// <para>Alle Felder sind freiwillig — auch der Text. Ein Knopfdruck ohne ein Wort ist eine
     /// gueltige Meldung („hier stimmt was nicht"), und die Huerde soll niedrig sein.</para>
     /// </summary>
-    [HttpPost("{chessResultsId}/report")]
+    [HttpPost("{id}/report")]
     public async Task<IActionResult> Report(
-        string chessResultsId, [FromBody] DirectoryReportDto dto, CancellationToken ct)
+        string id, [FromBody] DirectoryReportDto dto, CancellationToken ct)
     {
-        if (!TournamentIdPattern.IsMatch((chessResultsId ?? "").Trim()))
+        if (!PublicIdPattern.IsMatch((id ?? "").Trim()))
             return BadRequest(new { message = "Invalid tournament ID." });
 
         var entry = await _db.TournamentDirectoryEntries.AsNoTracking()
-            .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct);
+            .FirstOrDefaultAsync(e => e.PublicId == id, ct);
         if (entry is null) return NotFound();
 
         await _messages.SendFromUserAsync(GetUserId(), BuildReportBody(entry, dto));
@@ -343,8 +351,10 @@ public class TournamentDirectoryController : BaseApiController
     {
         var lines = new List<string>
         {
-            $"Meldung zum Turnierverzeichnis: {entry.Name} ({entry.ChessResultsId})",
-            $"https://chess-results.com/tnr{entry.ChessResultsId}.aspx?lan=1",
+            $"Meldung zum Turnierverzeichnis: {entry.Name} ({entry.PublicId})",
+            entry.ChessResultsId is null
+                ? "(nicht auf chess-results ausgeschrieben)"
+                : $"https://chess-results.com/tnr{entry.ChessResultsId}.aspx?lan=1",
             "",
             $"Ist-Stand: Ort „{entry.LocationText}\" ({entry.GeoPlaceName ?? "nicht verortet"}, {entry.GeoSource}), " +
             $"Art {entry.Kind}, {(entry.IsLeague ? "Liga" : "kein Liga-Wettbewerb")}, " +
@@ -439,18 +449,23 @@ public class TournamentDirectoryController : BaseApiController
     {
         if (!needed) return [];
 
-        var list = ids.Distinct().ToList();
+        var list = ids.Where(id => id is not null).Select(id => id!).Distinct().ToList();
         if (list.Count == 0) return [];
 
         var userId = GetUserId();
         return (await _db.TournamentDirectoryIgnores
-                .Where(i => i.UserId == userId && list.Contains(i.ChessResultsId))
-                .Select(i => i.ChessResultsId)
+                .Where(i => i.UserId == userId && list.Contains(i.PublicId))
+                .Select(i => i.PublicId)
                 .ToListAsync(ct))
             .ToHashSet(StringComparer.Ordinal);
     }
 
-    private async Task<HashSet<string>> SubscribedIdsAsync(IEnumerable<string> ids, CancellationToken ct)
+    /// <summary>
+    /// Welche dieser Turniere hat der Nutzer gemerkt? Der Abgleich laeuft ueber die
+    /// chess-results-NUMMER, weil das Abo sie traegt und der Refresh-Crawl sie braucht — ein
+    /// FIDE-Eintrag ohne Nummer kann deshalb nicht gemerkt werden und faellt hier heraus.
+    /// </summary>
+    private async Task<HashSet<string>> SubscribedIdsAsync(IEnumerable<string?> ids, CancellationToken ct)
     {
         var list = ids.Distinct().ToList();
         if (list.Count == 0) return [];

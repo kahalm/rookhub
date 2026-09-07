@@ -2976,7 +2976,7 @@
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",
-    "help": "Tournaments are read from chess-results every night. Save a search profile with your location and radius — the same profile drives the list, the map, the calendar and the notification about new tournaments nearby.",
+    "help": "Tournaments are read every night from the pages that publish their calendars — chess-results and the FIDE calendar today, more later. Save a search profile with your location and radius — the same profile drives the list, the map, the calendar and the notification about new tournaments nearby.",
     "search": "Search name, venue, organizer",
     "from": "From",
     "to": "Until",
@@ -3030,7 +3030,10 @@
       "importFailed": "The tournament could not be fetched. It stays bookmarked and will be fetched again by itself.",
       "toCalendar": "Add to my calendar",
       "calendarDone": "Calendar entry created — open the file to add it.",
-      "calendarFailed": "The calendar entry could not be created on this device."
+      "calendarFailed": "The calendar entry could not be created on this device.",
+      "playDates": "Playing dates",
+      "sources": "Found on",
+      "notOnChessResults": "Not announced on chess-results — no players, pairings or table here."
     },
     "calendar": {
       "previousMonth": "Previous month",
@@ -3158,6 +3161,12 @@
       "hideError": "Could not be hidden. Please try again.",
       "showIgnored": "Show hidden ones",
       "rounds": "{{count}} rounds, {{from}} to {{to}}"
+    },
+    "source": {
+      "Unknown": "Unknown source",
+      "ChessResults": "chess-results",
+      "Fide": "FIDE calendar",
+      "Manual": "Entered by hand"
     }
   },
   "turnier": {

@@ -169,6 +169,7 @@ try
     builder.Services.AddScoped<VenueDisambiguationService>();
     builder.Services.AddScoped<TournamentRoundPlanService>();
     builder.Services.AddScoped<TournamentHistoryService>();
+    builder.Services.AddScoped<FideDirectorySweepService>();
     builder.Services.AddScoped<ProfileService>();
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<NotificationService>();

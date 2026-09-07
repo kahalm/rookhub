@@ -241,10 +241,13 @@ public class TournamentDirectoryQueryService
     /// Detailansicht muss dasselbe Turnier zeigen, sonst widerspricht der Deep-Link aus einer
     /// Benachrichtigung der Liste, aus der er stammt.
     /// </summary>
-    public async Task<DirectoryGroupItem?> GetAsync(string chessResultsId, CancellationToken ct = default)
+    public async Task<DirectoryGroupItem?> GetAsync(string publicId, CancellationToken ct = default)
     {
         var entry = await _db.TournamentDirectoryEntries.AsNoTracking()
-            .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct);
+            .Include(e => e.Venues)
+            .Include(e => e.RoundDates)
+            .Include(e => e.Sources)
+            .FirstOrDefaultAsync(e => e.PublicId == publicId, ct);
         if (entry is null) return null;
 
         var members = entry.GroupKey is null
@@ -339,7 +342,7 @@ public class TournamentDirectoryQueryService
         if (query.ForUserId is { } userId && !query.IncludeIgnored)
         {
             source = source.Where(e => !_db.TournamentDirectoryIgnores
-                .Any(i => i.UserId == userId && i.ChessResultsId == e.ChessResultsId));
+                .Any(i => i.UserId == userId && i.PublicId == e.PublicId));
         }
 
         // Ueberlappung statt Enthaltensein: ein zehntaegiges Open, das in den Zeitraum

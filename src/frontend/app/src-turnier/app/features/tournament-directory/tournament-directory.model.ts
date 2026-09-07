@@ -36,7 +36,17 @@ export const DIRECTORY_KINDS: TournamentKind[] = ['Individual', 'Team'];
 export const DIRECTORY_RADII: number[] = [10, 25, 50, 100, 200, 500];
 
 export interface DirectoryEntry {
-  chessResultsId: string;
+  /**
+   * Die IDENTITAET dieses Turniers — der Wert in der Adresse, beim Ausblenden und beim Melden.
+   * Fuer chess-results-Turniere die Nummer dort, fuer FIDE-Turniere `f<Nummer>`.
+   */
+  id: string;
+  /**
+   * Die chess-results-Nummer — `null`, wenn das Turnier dort nicht ausgeschrieben ist (der
+   * FIDE-Kalender ist die zweite Quelle). Daran haengt, was chess-results BRAUCHT: merken (das
+   * Abo traegt die Nummer), holen, Ergebnisse. Ohne sie duerfen diese Knoepfe nicht erscheinen.
+   */
+  chessResultsId: string | null;
   name: string;
   federation: string | null;
   state: string | null;
@@ -108,7 +118,8 @@ export interface DirectoryVenue {
 
 /** Eine Gruppe (A/B/C) innerhalb eines zusammengefassten Turniers. */
 export interface DirectoryGroupMember {
-  chessResultsId: string;
+  id: string;
+  chessResultsId: string | null;
   /** „A", „Gruppe 2" — leer, wenn chess-results den Zusatz im Namen abgeschnitten hat. */
   label: string;
   playerCount: number | null;

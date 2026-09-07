@@ -7,7 +7,7 @@ import { DirectoryCalendarDay, DirectoryEntry } from './tournament-directory.mod
 
 function entry(id: string, name: string): DirectoryEntry {
   return {
-    chessResultsId: id, name, federation: 'AUT', state: null,
+    id, chessResultsId: id, name, federation: 'AUT', state: null,
     startDate: null, endDate: null, location: null, timeControl: null, speed: 'Standard',
     organizer: null, director: null, chiefArbiter: null, rounds: null, playerCount: null,
     lat: null, lon: null, geoSource: 'None', geoPlaceName: null, distanceKm: null,

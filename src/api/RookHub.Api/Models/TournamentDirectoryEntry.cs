@@ -45,9 +45,31 @@ public class TournamentDirectoryEntry
 {
     public int Id { get; set; }
 
-    /// <summary>chess-results-dbkey, identisch mit der ID in tnr&lt;id&gt;.aspx.</summary>
-    [Required, MaxLength(20)]
-    public string ChessResultsId { get; set; } = string.Empty;
+    /// <summary>
+    /// Die IDENTITAET dieses Eintrags — der Schluessel in der Adresse
+    /// (<c>/tournaments/calendar/{id}</c>), im Ausblenden, in der Meldung und im Teilen-Link.
+    ///
+    /// <para><b>Warum es diese Spalte gibt.</b> Bis 0.427.0 war das die
+    /// chess-results-Nummer, weil es nur diese eine Quelle gab. Seit dem FIDE-Kalender gibt es
+    /// Turniere OHNE chess-results-Nummer — und die brauchen trotzdem eine Adresse. Fuer
+    /// chess-results-Eintraege ist der Wert identisch mit <see cref="ChessResultsId"/> (bewusst
+    /// doppelt gehalten: so bleibt jede Abfrage einfach, und 20 Zeichen auf fuenftausend Zeilen
+    /// sind kein Preis), fuer FIDE-Eintraege lautet er <c>f&lt;Ereignisnummer&gt;</c>.</para>
+    /// </summary>
+    [Required, MaxLength(24)]
+    public string PublicId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// chess-results-dbkey, identisch mit der ID in tnr&lt;id&gt;.aspx — <c>null</c>, wenn das
+    /// Turnier dort nicht ausgeschrieben ist.
+    ///
+    /// <para>Daran haengt alles, was chess-results BRAUCHT: das Turnier holen (Crawl-Auftrag),
+    /// es merken (das Abo traegt dieselbe Nummer), die Vereinsnamen zur Ortsaufloesung und den
+    /// Rundenplan. Ein FIDE-Eintrag kann das alles nicht, und die Anzeige muss es sagen statt
+    /// Knoepfe anzubieten, die ins Leere fuehren.</para>
+    /// </summary>
+    [MaxLength(20)]
+    public string? ChessResultsId { get; set; }
 
     [Required, MaxLength(500)]
     public string Name { get; set; } = string.Empty;

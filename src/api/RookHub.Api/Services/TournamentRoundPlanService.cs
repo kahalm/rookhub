@@ -65,6 +65,9 @@ public class TournamentRoundPlanService
             .Include(e => e.RoundDates)
             .Where(e => e.RoundPlanCheckedAt == null
                         && e.RemovedAt == null
+                        // Der Rundenplan steht auf der chess-results-Turnierseite — ohne Nummer
+                        // dort ist er nicht erreichbar (FIDE-Eintraege).
+                        && e.ChessResultsId != null
                         && e.Rounds > 1
                         && e.StartDate != null && e.EndDate != null
                         && e.EndDate >= today
@@ -84,7 +87,7 @@ public class TournamentRoundPlanService
             List<CrawlerRoundDate> rounds;
             try
             {
-                rounds = await FetchRoundPlanAsync(entry.ChessResultsId, ct);
+                rounds = await FetchRoundPlanAsync(entry.ChessResultsId!, ct);
             }
             // Ein HttpClient-TIMEOUT kommt als TaskCanceledException, also als
             // OperationCanceledException, obwohl der Aufrufer nichts abgebrochen hat.

@@ -523,7 +523,7 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   select(entry: DirectoryEntry): void {
     this.storeView();
-    this.router.navigate(['/tournaments/calendar', entry.chessResultsId]);
+    this.router.navigate(['/tournaments/calendar', entry.id]);
   }
 
   /**
@@ -535,7 +535,7 @@ export class TournamentDirectoryComponent implements OnInit {
   onIgnoredChanged(event: { entry: DirectoryEntry; ignored: boolean }): void {
     if (!event.ignored || this.filter.includeIgnored) return;
 
-    this.entries.update(list => list.filter(e => e.chessResultsId !== event.entry.chessResultsId));
+    this.entries.update(list => list.filter(e => e.id !== event.entry.id));
     this.total.update(total => Math.max(0, total - 1));
   }
 
@@ -574,7 +574,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.reload();
   }
 
-  trackById = (_: number, entry: DirectoryEntry) => entry.chessResultsId;
+  trackById = (_: number, entry: DirectoryEntry) => entry.id;
 
   /**
    * „Mein Turnier fehlt". Steht unter allen drei Ansichten, weil die Luecke in jeder gleich

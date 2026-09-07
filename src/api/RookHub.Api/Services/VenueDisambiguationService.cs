@@ -69,6 +69,9 @@ public class VenueDisambiguationService
             .Where(e => e.RemovedAt == null
                         && e.LocationText != null
                         && e.TeamHintCheckedAt == null
+                        // Die Vereinsliste steht auf der chess-results-Turnierseite — ohne
+                        // Nummer dort ist sie nicht erreichbar (FIDE-Eintraege).
+                        && e.ChessResultsId != null
                         && ((e.EndDate ?? e.StartDate) == null || (e.EndDate ?? e.StartDate) >= today)
                         && (e.GeoSource == GeoSource.Ambiguous || e.GeoSource == GeoSource.City))
             .OrderBy(e => e.StartDate)
@@ -123,7 +126,7 @@ public class VenueDisambiguationService
             // eine Turnierseite geholt, die nichts entscheiden kann.
             if (!widened.Any(w => w.NameNormalized.Length > searched.Length)) continue;
 
-            teams ??= await FetchTeamNamesAsync(entry.ChessResultsId, ct);
+            teams ??= await FetchTeamNamesAsync(entry.ChessResultsId!, ct);
             if (teams.Count == 0) return false;
 
             var pick = PickByTeamHint(widened, searched, teams);

@@ -162,7 +162,7 @@ export class ReportEntryDialogComponent {
     this.sending.set(true);
     this.failed.set(false);
 
-    this.directory.report(this.data.entry.chessResultsId, {
+    this.directory.report(this.data.entry.id, {
       message: this.message.trim() || null,
       namePattern: this.namePattern.trim() || null,
       sourceLink: this.sourceLink.trim() || null,

@@ -539,7 +539,7 @@ public class TournamentDirectoryServiceTests : IDisposable
     {
         var models = entries.Select(e => new TournamentDirectoryEntry
         {
-            ChessResultsId = e.Id, Name = e.Name, Federation = "AUT",
+            PublicId = e.Id, ChessResultsId = e.Id, Name = e.Name, Federation = "AUT",
             Lat = e.Lat, Lon = e.Lon, StartDate = e.Start, EndDate = e.Start,
             GeoSource = e.Lat is null ? GeoSource.None : GeoSource.City,
         }).ToList();
@@ -658,7 +658,7 @@ public class TournamentDirectoryServiceTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "111", Name = "Landescup", Federation = "AUT",
+            PublicId = "111", ChessResultsId = "111", Name = "Landescup", Federation = "AUT",
             StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
             LocationText = "Wien", Kind = TournamentKind.Team,
         });
@@ -683,7 +683,7 @@ public class TournamentDirectoryServiceTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "111", Name = "Landescup", Federation = "AUT",
+            PublicId = "111", ChessResultsId = "111", Name = "Landescup", Federation = "AUT",
             StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
             LocationText = "Wien", Kind = TournamentKind.Team,
         });
@@ -749,7 +749,7 @@ public class TournamentDirectoryServiceTests : IDisposable
         // eingefuegt, laeuft der Unique-Index auf ChessResultsId an und reisst den Lauf mit.
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "12345", Name = "Open Alt", Federation = "AUT",
+            PublicId = "12345", ChessResultsId = "12345", Name = "Open Alt", Federation = "AUT",
             StartDate = new DateOnly(2026, 3, 10), EndDate = new DateOnly(2026, 3, 15),
             LocationText = "Salzburg", FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
         });
@@ -784,7 +784,7 @@ public class TournamentDirectoryServiceTests : IDisposable
         // meldet der zweite Lauf reihenweise Absagen fuer Turniere, die stattfinden.
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "alt", Name = "Faellt hinten runter", Federation = "GER",
+            PublicId = "alt", ChessResultsId = "alt", Name = "Faellt hinten runter", Federation = "GER",
             StartDate = new DateOnly(2027, 1, 5), EndDate = new DateOnly(2027, 1, 7),
             FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
         });
@@ -909,14 +909,14 @@ public class TournamentDirectoryServiceTests : IDisposable
         });
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = "111", Name = "Landesliga", Federation = "AUT",
+            PublicId = "111", ChessResultsId = "111", Name = "Landesliga", Federation = "AUT",
             StartDate = Today.AddDays(30), EndDate = Today.AddDays(31),
             Lat = 48.21, Lon = 13.01,
         };
         _db.TournamentDirectoryEntries.Add(entry);
         _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore
         {
-            UserId = userId, ChessResultsId = "111",
+            UserId = userId, PublicId = "111",
         });
         await _db.SaveChangesAsync();
 
@@ -937,7 +937,7 @@ public class TournamentDirectoryServiceTests : IDisposable
         });
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = "111", Name = "Landesliga", Federation = "AUT",
+            PublicId = "111", ChessResultsId = "111", Name = "Landesliga", Federation = "AUT",
             StartDate = Today.AddDays(30), EndDate = Today.AddDays(31),
             Lat = 48.21, Lon = 13.01,
         };

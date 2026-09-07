@@ -27,9 +27,14 @@ public class TournamentDirectoryIgnore
     public int UserId { get; set; }
     public AppUser User { get; set; } = null!;
 
-    /// <summary>chess-results-dbkey des ausgeblendeten Turniers.</summary>
-    [Required, MaxLength(20)]
-    public string ChessResultsId { get; set; } = string.Empty;
+    /// <summary>
+    /// Die Identitaet des ausgeblendeten Turniers (<see cref="TournamentDirectoryEntry.PublicId"/>)
+    /// — nicht die Eintrags-Id: der Eintrag kann verschwinden und wiederkommen (die Absage-Karenz
+    /// setzt <c>RemovedAt</c>), und dann soll die Entscheidung des Nutzers noch gelten. Deshalb
+    /// auch kein Fremdschluessel, dieselbe Ueberlegung wie bei <c>TournamentSubscription</c>.
+    /// </summary>
+    [Required, MaxLength(24)]
+    public string PublicId { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

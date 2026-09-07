@@ -94,7 +94,7 @@ export class TournamentCalendarComponent implements OnChanges {
   }
 
   trackByDate = (_: number, cell: CalendarCell) => cell.date;
-  trackById = (_: number, entry: DirectoryEntry) => entry.chessResultsId;
+  trackById = (_: number, entry: DirectoryEntry) => entry.id;
 
   private buildWeekdayLabels(): void {
     const formatter = new Intl.DateTimeFormat(this.locale, { weekday: 'short' });

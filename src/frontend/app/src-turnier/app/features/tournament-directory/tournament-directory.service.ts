@@ -35,8 +35,8 @@ export class TournamentDirectoryService {
       .pipe(map(res => expandCalendar(res)));
   }
 
-  get(chessResultsId: string): Observable<DirectoryEntry> {
-    return this.http.get<DirectoryEntry>(`/api/tournament-directory/${chessResultsId}`);
+  get(id: string): Observable<DirectoryEntry> {
+    return this.http.get<DirectoryEntry>(`/api/tournament-directory/${id}`);
   }
 
   /**
@@ -54,14 +54,14 @@ export class TournamentDirectoryService {
    * Ein Turnier fuer sich ausblenden bzw. wieder zeigen. Idempotent auf beiden Seiten — zweimal
    * ausblenden ist dasselbe wie einmal.
    */
-  setIgnored(chessResultsId: string, ignored: boolean): Observable<void> {
-    const url = `/api/tournament-directory/${chessResultsId}/ignore`;
+  setIgnored(id: string, ignored: boolean): Observable<void> {
+    const url = `/api/tournament-directory/${id}/ignore`;
     return ignored ? this.http.post<void>(url, {}) : this.http.delete<void>(url);
   }
 
   /** „Falsches Event melden" — alle Felder freiwillig, auch der Text. */
-  report(chessResultsId: string, report: DirectoryReport): Observable<void> {
-    return this.http.post<void>(`/api/tournament-directory/${chessResultsId}/report`, report);
+  report(id: string, report: DirectoryReport): Observable<void> {
+    return this.http.post<void>(`/api/tournament-directory/${id}/report`, report);
   }
 
   /** „Mein Turnier fehlt" — der Link ist Pflicht, er ist der verwertbare Teil. */
@@ -101,12 +101,12 @@ export class TournamentDirectoryService {
 
 /**
  * Setzt den Monat wieder zu Tagen mit Turnieren zusammen. Dasselbe Turnier steht an mehreren Tagen
- * als DASSELBE Objekt — die Ansicht vergleicht Eintraege ueber `chessResultsId`, aber Kopien waeren
+ * als DASSELBE Objekt — die Ansicht vergleicht Eintraege ueber ihre `id`, aber Kopien waeren
  * genau die Verschwendung, die auf der Leitung gerade abgeschafft wurde. Eine Nummer ohne
  * Beschreibung wird uebergangen statt als Luecke gerendert.
  */
 export function expandCalendar(res: DirectoryCalendarResponse): DirectoryCalendarDay[] {
-  const byId = new Map((res.tournaments ?? []).map(t => [t.chessResultsId, t]));
+  const byId = new Map((res.tournaments ?? []).map(t => [t.id, t]));
   return (res.days ?? []).map(day => ({
     date: day.date,
     items: (day.ids ?? [])

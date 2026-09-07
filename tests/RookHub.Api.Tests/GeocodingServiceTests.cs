@@ -172,7 +172,7 @@ public class GeocodingServiceTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = Guid.NewGuid().ToString("N")[..8], Name = "Anker",
+            PublicId = Guid.NewGuid().ToString("N")[..8], ChessResultsId = Guid.NewGuid().ToString("N")[..8], Name = "Anker",
             Lat = lat, Lon = lon, GeoSource = source,
         });
         _db.SaveChanges();

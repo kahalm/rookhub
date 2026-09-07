@@ -9,7 +9,8 @@ import { DirectoryEntry } from './tournament-directory.model';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
-    chessResultsId: '1405166', name: 'Frauenbundesliga', federation: 'AUT', state: 'Tirol',
+    id: '1405166', chessResultsId: '1405166', name: 'Frauenbundesliga', federation: 'AUT',
+    state: 'Tirol',
     startDate: '2026-11-14', endDate: '2027-03-15', location: 'Mayrhofen, St.Veit',
     timeControl: '90 min', speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: 7, playerCount: 40, lat: 47.16, lon: 11.86, geoSource: 'City',

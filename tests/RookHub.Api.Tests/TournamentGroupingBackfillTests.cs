@@ -25,7 +25,7 @@ public class TournamentGroupingBackfillTests : IDisposable
     {
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = crId,
+            PublicId = crId, ChessResultsId = crId,
             Name = name,
             Federation = "AUT",
             StartDate = new DateOnly(2026, 7, 1),
@@ -65,7 +65,7 @@ public class TournamentGroupingBackfillTests : IDisposable
 
         var reference = new TournamentDirectoryEntry
         {
-            ChessResultsId = "1",
+            PublicId = "1", ChessResultsId = "1",
             Name = entry.Name,
             Federation = entry.Federation,
             StartDate = entry.StartDate,

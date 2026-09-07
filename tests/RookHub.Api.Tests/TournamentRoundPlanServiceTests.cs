@@ -42,7 +42,7 @@ public class TournamentRoundPlanServiceTests : IDisposable
     {
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = id,
+            PublicId = id, ChessResultsId = id,
             Name = "TMM 1.Klasse 2026/2027",
             Federation = "AUT",
             StartDate = start ?? new DateOnly(2026, 9, 26),

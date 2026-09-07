@@ -95,7 +95,7 @@ describe('TournamentDirectoryService', () => {
     service.calendar(filter({}), 2026, 10).subscribe(d => (days = d));
 
     http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({
-      tournaments: [{ chessResultsId: '1', name: 'Dreitäger' }, { chessResultsId: '2', name: 'Eintäger' }],
+      tournaments: [{ id: '1', name: 'Dreitäger' }, { id: '2', name: 'Eintäger' }],
       days: [
         { date: '2026-10-10', ids: ['1'] },
         { date: '2026-10-11', ids: ['1', '2'] },
@@ -114,7 +114,7 @@ describe('TournamentDirectoryService', () => {
     service.calendar(filter({}), 2026, 10).subscribe(d => (days = d));
 
     http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({
-      tournaments: [{ chessResultsId: '1', name: 'Da' }],
+      tournaments: [{ id: '1', name: 'Da' }],
       days: [{ date: '2026-10-10', ids: ['1', 'fehlt'] }],
     });
 

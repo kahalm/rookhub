@@ -19,7 +19,7 @@ function profile(id: number, name: string): SearchProfile {
 
 function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
   return {
-    chessResultsId: id, name, federation: 'AUT', state: 'Salzburg',
+    id, chessResultsId: id, name, federation: 'AUT', state: 'Salzburg',
     startDate: '2026-12-18', endDate: '2026-12-20', location: 'Ranshofen',
     timeControl: '90 min', speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: 7, playerCount: 20, lat: 48.2, lon: 13.0, geoSource: 'City', geoPlaceName: 'Ranshofen',
@@ -221,7 +221,7 @@ describe('TournamentDirectoryComponent', () => {
     stale.flush({ items: [entry('alt')], total: 200, truncated: false });
     fresh.flush({ items: [entry('neu')], total: 1, truncated: false });
 
-    expect(component.entries().map(e => e.chessResultsId)).toEqual(['neu']);
+    expect(component.entries().map(e => e.id)).toEqual(['neu']);
     expect(component.total()).toBe(1);
     http.verify();
   });
@@ -235,7 +235,7 @@ describe('TournamentDirectoryComponent', () => {
     http.expectOne(r => r.url === '/api/tournament-directory')
       .flush({ items: [entry('2')], total: 100, truncated: false });
 
-    expect(component.entries().map(e => e.chessResultsId)).toEqual(['1', '2']);
+    expect(component.entries().map(e => e.id)).toEqual(['1', '2']);
     http.verify();
   });
 

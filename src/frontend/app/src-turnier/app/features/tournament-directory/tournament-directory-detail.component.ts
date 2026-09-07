@@ -154,18 +154,18 @@ export class TournamentDirectoryDetailComponent implements OnInit {
       e.rounds ? this.translate.instant('tournamentDirectory.detail.rounds') + ': ' + e.rounds : null,
       e.playerCount ? this.translate.instant('tournamentDirectory.players', { count: e.playerCount }) : null,
       e.organizer ? this.translate.instant('tournamentDirectory.detail.organizer') + ': ' + e.organizer : null,
-      this.chessResultsUrl(e.chessResultsId),
+      e.chessResultsId === null ? null : this.chessResultsUrl(e.chessResultsId),
     ].filter(Boolean);
 
     return {
       // Dieselbe Kennung aktualisiert den Termin spaeter, statt ihn zu verdoppeln.
-      uid: `chess-results-${e.chessResultsId}@rookhub`,
+      uid: `chess-results-${e.id}@rookhub`,
       title: e.name,
       start: e.startDate,
       end: e.endDate,
       location: e.location,
       description: facts.join('\n'),
-      url: this.chessResultsUrl(e.chessResultsId),
+      url: e.chessResultsId === null ? null : this.chessResultsUrl(e.chessResultsId),
     };
   }
 
@@ -182,6 +182,7 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   bookmark(): void {
     const entry = this.entry();
     if (!entry) return;
+    if (entry.chessResultsId === null) return;
     this.tournaments.bookmarkAndImport(entry.chessResultsId, entry.name).subscribe({
       next: ({ job }) => {
         // Neues Objekt statt Mutation: ein Signal meldet nur eine geaenderte REFERENZ.
@@ -211,7 +212,7 @@ export class TournamentDirectoryDetailComponent implements OnInit {
 
   private onImportProgress(job: CrawlJob | null, entry: DirectoryEntry): void {
     // Zwischenzeitlich ein anderes Turnier geoeffnet? Dann gehoert das Ergebnis nicht hierher.
-    if (this.entry()?.chessResultsId !== entry.chessResultsId) return;
+    if (this.entry()?.id !== entry.id) return;
     if (job === null) { this.importing.set(false); return; }
     if (job.status === 'Completed') {
       this.importing.set(false);
@@ -240,11 +241,12 @@ export class TournamentDirectoryDetailComponent implements OnInit {
     // zerstoert, `takeUntilDestroyed` greift also nicht. Ohne den Vergleich mit dem gerade
     // ANGEZEIGTEN Eintrag setzt die Antwort zu Turnier A das Ergebnis, waehrend B auf dem Schirm
     // steht — der Knopf „Ergebnisse" fuehrte dann zum falschen Turnier.
+    if (entry.chessResultsId === null) return;
     this.tournaments.getTournament(entry.chessResultsId).pipe(
       catchError(() => of(null)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(t => {
-      if (this.entry()?.chessResultsId !== entry.chessResultsId) return;
+      if (this.entry()?.id !== entry.id) return;
       this.imported.set(t && t.chessResultsId === entry.chessResultsId ? t : null);
     });
   }

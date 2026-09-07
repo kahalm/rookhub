@@ -33,7 +33,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         GazetteerImportService gazetteer,
         GeocodingService geocoding,
         VenueDisambiguationService disambiguation,
-        TournamentRoundPlanService roundPlans)
+        TournamentRoundPlanService roundPlans,
+        FideDirectorySweepService fide)
     {
         _db = db;
         _directory = directory;
@@ -41,10 +42,12 @@ public class AdminTournamentDirectoryController : BaseApiController
         _geocoding = geocoding;
         _disambiguation = disambiguation;
         _roundPlans = roundPlans;
+        _fide = fide;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
     private readonly TournamentRoundPlanService _roundPlans;
+    private readonly FideDirectorySweepService _fide;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -134,7 +137,7 @@ public class AdminTournamentDirectoryController : BaseApiController
             .Where(e => e.RemovedAt == null && e.Lat == null)
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 500))
-            .Select(e => new { e.ChessResultsId, e.Name, e.Federation, e.State, e.LocationText, e.StartDate })
+            .Select(e => new { e.PublicId, e.ChessResultsId, e.Name, e.Federation, e.State, e.LocationText, e.StartDate })
             .ToListAsync(ct);
 
         return Ok(entries);
@@ -144,15 +147,15 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// Koordinaten von Hand setzen. Die Quelle wird auf <see cref="GeoSource.Manual"/> gesetzt -
     /// damit ueberschreibt der naechtliche Sweep die Korrektur nicht wieder.
     /// </summary>
-    [HttpPut("{chessResultsId}/coordinates")]
+    [HttpPut("{id}/coordinates")]
     public async Task<IActionResult> SetCoordinates(
-        string chessResultsId, [FromBody] CoordinateInput input, CancellationToken ct)
+        string id, [FromBody] CoordinateInput input, CancellationToken ct)
     {
         if (input.Lat is < -90 or > 90 || input.Lon is < -180 or > 180)
             return BadRequest(new { message = "Coordinates out of range." });
 
         var entry = await _db.TournamentDirectoryEntries
-            .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct);
+            .FirstOrDefaultAsync(e => e.PublicId == id, ct);
         if (entry is null) return NotFound();
 
         entry.Lat = input.Lat;
@@ -165,7 +168,34 @@ public class AdminTournamentDirectoryController : BaseApiController
         entry.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
-        return Ok(new { entry.ChessResultsId, entry.Lat, entry.Lon, GeoSource = entry.GeoSource.ToString() });
+        return Ok(new { entry.PublicId, entry.ChessResultsId, entry.Lat, entry.Lon, GeoSource = entry.GeoSource.ToString() });
+    }
+
+    /// <summary>
+    /// Den FIDE-Kalender sofort einlesen — sonst wartet er auf den naechtlichen Lauf.
+    ///
+    /// <para>Ein Abruf je Jahr. Die Jahre werden im Dienst AUFSTEIGEND abgearbeitet, weil die
+    /// Jahres-Zuordnung eines Ereignisses ueber den Jahreswechsel daran haengt.</para>
+    /// </summary>
+    [HttpPost("fide")]
+    public async Task<IActionResult> Fide(
+        [FromQuery] string? years = null, CancellationToken ct = default)
+    {
+        var list = new List<int>();
+        foreach (var part in (years ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!int.TryParse(part, out var year) || year is < 2000 or > 2100)
+                return BadRequest(new { message = "years must be a comma-separated list of years between 2000 and 2100." });
+            list.Add(year);
+        }
+        // Ohne Angabe das laufende Jahr plus die zwei naechsten — weiter voraus fuehrt FIDE
+        // praktisch nichts.
+        if (list.Count == 0) list = [.. Enumerable.Range(DateTime.UtcNow.Year, 3)];
+
+        var result = await _fide.RunAsync(list, ct);
+        return result.Succeeded
+            ? Ok(new { result.Fetched, result.Added, result.Updated, result.MergedIntoExisting })
+            : StatusCode(502, new { message = result.Error, result.Fetched, result.Added });
     }
 
     /// <summary>
@@ -178,9 +208,12 @@ public class AdminTournamentDirectoryController : BaseApiController
     [HttpPost("backfill-sources")]
     public async Task<IActionResult> BackfillSources(CancellationToken ct = default)
     {
+        // Nur Eintraege, die WIRKLICH von chess-results kommen — ein FIDE-Eintrag hat dort
+        // keine Nummer und bekommt seinen Vermerk von seinem eigenen Durchgang.
         var entries = await _db.TournamentDirectoryEntries
             .Include(e => e.Sources)
-            .Where(e => !e.Sources.Any(s => s.Kind == DirectorySourceKind.ChessResults))
+            .Where(e => e.ChessResultsId != null
+                        && !e.Sources.Any(s => s.Kind == DirectorySourceKind.ChessResults))
             .ToListAsync(ct);
 
         var now = DateTime.UtcNow;
@@ -189,7 +222,7 @@ public class AdminTournamentDirectoryController : BaseApiController
             // FirstSeenAt des Eintrags, nicht „jetzt": der Vermerk soll sagen, seit wann die
             // Quelle das Turnier fuehrt, und das ist bekannt.
             TournamentDirectoryService.NoteSource(
-                entry, DirectorySourceKind.ChessResults, entry.ChessResultsId, now);
+                entry, DirectorySourceKind.ChessResults, entry.ChessResultsId!, now);
             var source = entry.Sources[^1];
             source.FirstSeenAt = entry.FirstSeenAt;
             source.LastSeenAt = entry.LastSeenAt;

@@ -29,6 +29,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     private readonly int _weeklyBatchSize;
     private readonly int _disambiguationBatchSize;
     private readonly int _roundPlanBatchSize;
+    private readonly int _fideYears;
     private readonly bool _enabled;
 
     public TournamentDirectoryScheduler(
@@ -61,6 +62,10 @@ public class TournamentDirectoryScheduler : BackgroundService
         // durch, danach kommen nur die neuen dazu.
         _roundPlanBatchSize = Math.Clamp(
             configuration.GetValue("TournamentDirectory:RoundPlanBatchSize", 200), 0, 1000);
+
+        // Wie viele Jahre des FIDE-Kalenders je Nacht: das laufende plus die naechsten. Drei
+        // Abrufe, denn weiter voraus fuehrt FIDE praktisch nichts (2028 war leer). 0 = aus.
+        _fideYears = Math.Clamp(configuration.GetValue("TournamentDirectory:FideYears", 3), 0, 5);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -142,6 +147,25 @@ public class TournamentDirectoryScheduler : BackgroundService
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 _logger.LogWarning(ex, "Turnierverzeichnis: Rundenplan-Durchgang fehlgeschlagen");
+            }
+
+            // Und der FIDE-Kalender als zweite Quelle. Eigener Fang wie die uebrigen Nachtraege:
+            // ein Ausfall dort darf den erledigten chess-results-Sweep nicht als gescheitert
+            // erscheinen lassen.
+            try
+            {
+                if (_fideYears > 0)
+                {
+                    var fide = scope.ServiceProvider.GetRequiredService<FideDirectorySweepService>();
+                    var year = DateTime.UtcNow.Year;
+                    // AUFSTEIGEND — die Jahres-Zuordnung eines Ereignisses ueber den
+                    // Jahreswechsel haengt daran (siehe FideDirectorySweepService).
+                    await fide.RunAsync([.. Enumerable.Range(year, _fideYears)], ct);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: FIDE-Durchgang fehlgeschlagen");
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

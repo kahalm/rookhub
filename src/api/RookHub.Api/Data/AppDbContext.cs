@@ -308,6 +308,11 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<TournamentDirectoryEntry>(e =>
         {
+            // Die IDENTITAET des Eintrags — Adresse, Ausblenden, Meldung, Teilen-Link.
+            e.HasIndex(d => d.PublicId).IsUnique();
+            // Die chess-results-Nummer bleibt eindeutig, ist aber seit dem FIDE-Kalender
+            // NULLABLE: MySQL erlaubt mehrere NULL in einem Unique-Index, mehrere Eintraege ohne
+            // chess-results-Nummer sind damit kein Problem.
             e.HasIndex(d => d.ChessResultsId).IsUnique();
             // Kalender-/Listenabfragen laufen ueber das Enddatum; der Sweep zusaetzlich je Foederation.
             e.HasIndex(d => d.EndDate);
@@ -361,7 +366,7 @@ public class AppDbContext : DbContext
              .HasForeignKey(i => i.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             // Zweimal ausblenden ist dasselbe wie einmal.
-            e.HasIndex(i => new { i.UserId, i.ChessResultsId }).IsUnique();
+            e.HasIndex(i => new { i.UserId, i.PublicId }).IsUnique();
         });
 
         modelBuilder.Entity<PlayerTournamentResult>(e =>

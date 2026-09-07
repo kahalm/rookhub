@@ -6,7 +6,18 @@ namespace RookHub.Api.DTOs;
 /// <summary>Ein Verzeichniseintrag, wie ihn Liste, Kalender und Detailansicht brauchen.</summary>
 public class DirectoryEntryDto
 {
-    public string ChessResultsId { get; set; } = "";
+    /// <summary>
+    /// Die IDENTITAET dieses Turniers — der Wert in der Adresse, beim Ausblenden und beim Melden.
+    /// Fuer chess-results-Turniere die Nummer dort, fuer FIDE-Turniere <c>f&lt;Nummer&gt;</c>.
+    /// </summary>
+    public string Id { get; set; } = "";
+
+    /// <summary>
+    /// Die chess-results-Nummer — <c>null</c>, wenn das Turnier dort nicht ausgeschrieben ist.
+    /// Daran haengt, was chess-results BRAUCHT: merken (das Abo traegt die Nummer), holen,
+    /// Ergebnisse. Ohne sie darf die Anzeige diese Knoepfe nicht anbieten.
+    /// </summary>
+    public string? ChessResultsId { get; set; }
     public string Name { get; set; } = "";
     public string? Federation { get; set; }
     public string? State { get; set; }
@@ -85,6 +96,7 @@ public class DirectoryEntryDto
         TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
         IReadOnlyList<TournamentDirectoryEntry>? groups = null, bool ignored = false) => new()
     {
+        Id = e.PublicId,
         ChessResultsId = e.ChessResultsId,
         // Bei mehreren Gruppen der Name OHNE Kuerzel — „Open Braunau 2026" statt „… A".
         Name = groups is { Count: > 1 } ? (e.BaseName ?? e.Name) : e.Name,
@@ -135,6 +147,7 @@ public class DirectoryEntryDto
         Groups = groups is { Count: > 1 }
             ? groups.Select(g => new DirectoryGroupMemberDto
             {
+                Id = g.PublicId,
                 ChessResultsId = g.ChessResultsId,
                 Label = Services.TournamentNameGrouping.GroupLabel(g.Name),
                 PlayerCount = g.PlayerCount,
@@ -185,7 +198,10 @@ public class DirectoryVenueDto
 /// <summary>Eine Gruppe (A/B/C) innerhalb eines zusammengefassten Turniers.</summary>
 public class DirectoryGroupMemberDto
 {
-    public string ChessResultsId { get; set; } = "";
+    /// <summary>Identitaet dieser Gruppe (siehe DirectoryEntryDto.Id).</summary>
+    public string Id { get; set; } = "";
+    /// <summary>chess-results-Nummer dieser Gruppe; <c>null</c> bei einer fremden Quelle.</summary>
+    public string? ChessResultsId { get; set; }
     /// <summary>„A", „Gruppe 2" — leer, wenn chess-results den Zusatz im Namen abgeschnitten hat.</summary>
     public string Label { get; set; } = "";
     public int? PlayerCount { get; set; }

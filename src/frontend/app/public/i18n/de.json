@@ -2976,7 +2976,7 @@
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",
-    "help": "Die Turniere werden jede Nacht von chess-results gelesen. Leg ein Suchprofil mit Ort und Umkreis an — dasselbe Profil steuert Liste, Karte, Kalender und die Meldung über neue Turniere in der Nähe.",
+    "help": "Die Turniere werden jede Nacht von den Seiten gelesen, die ihre Kalender veröffentlichen — heute chess-results und der FIDE-Kalender, später mehr. Leg ein Suchprofil mit Ort und Umkreis an — dasselbe Profil steuert Liste, Karte, Kalender und die Meldung über neue Turniere in der Nähe.",
     "search": "Name, Ort, Veranstalter suchen",
     "from": "Ab",
     "to": "Bis",
@@ -3030,7 +3030,10 @@
       "importFailed": "Das Turnier konnte nicht geholt werden. Es bleibt gemerkt und wird von selbst erneut geholt.",
       "toCalendar": "In privaten Kalender übertragen",
       "calendarDone": "Kalendereintrag erstellt — zum Übernehmen die Datei öffnen.",
-      "calendarFailed": "Der Kalendereintrag konnte auf diesem Gerät nicht erstellt werden."
+      "calendarFailed": "Der Kalendereintrag konnte auf diesem Gerät nicht erstellt werden.",
+      "playDates": "Spieltermine",
+      "sources": "Gefunden auf",
+      "notOnChessResults": "Nicht auf chess-results ausgeschrieben — Teilnehmer, Paarungen und Tabelle gibt es hier nicht."
     },
     "calendar": {
       "previousMonth": "Voriger Monat",
@@ -3158,6 +3161,12 @@
       "hideError": "Konnte nicht ausgeblendet werden. Bitte noch einmal versuchen.",
       "showIgnored": "Ausgeblendete zeigen",
       "rounds": "{{count}} Runden, {{from}} bis {{to}}"
+    },
+    "source": {
+      "Unknown": "Unbekannte Quelle",
+      "ChessResults": "chess-results",
+      "Fide": "FIDE-Kalender",
+      "Manual": "Von Hand eingetragen"
     }
   },
   "turnier": {

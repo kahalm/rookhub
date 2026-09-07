@@ -50,7 +50,9 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
             new VenueDisambiguationService(_db, factory,
                 new TestLogger<VenueDisambiguationService>()),
             new TournamentRoundPlanService(_db, factory,
-                new TestLogger<TournamentRoundPlanService>()));
+                new TestLogger<TournamentRoundPlanService>()),
+            new FideDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<FideDirectorySweepService>()));
     }
 
     /// <summary>
@@ -65,17 +67,17 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
         _db.TournamentDirectoryEntries.AddRange(
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "1", Name = "Landesmeisterschaft U12 weiblich", Federation = "AUT",
+                PublicId = "1", ChessResultsId = "1", Name = "Landesmeisterschaft U12 weiblich", Federation = "AUT",
                 StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "2", Name = "Tiroler Landesliga", Federation = "AUT",
+                PublicId = "2", ChessResultsId = "2", Name = "Tiroler Landesliga", Federation = "AUT",
                 StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2027, 4, 1),
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "3", Name = "Open Braunau 2026 A", Federation = "AUT",
+                PublicId = "3", ChessResultsId = "3", Name = "Open Braunau 2026 A", Federation = "AUT",
                 StartDate = new DateOnly(2026, 12, 18), EndDate = new DateOnly(2026, 12, 20),
             });
         await _db.SaveChangesAsync();
@@ -101,7 +103,7 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "1", Name = "Steirischer Mannschaftscup", Federation = "AUT",
+            PublicId = "1", ChessResultsId = "1", Name = "Steirischer Mannschaftscup", Federation = "AUT",
             StartDate = new DateOnly(2026, 10, 3), EndDate = new DateOnly(2026, 10, 4),
             Kind = TournamentKind.Unknown,
         });
@@ -127,7 +129,7 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
         var seen = new DateTime(2026, 5, 1, 3, 0, 0, DateTimeKind.Utc);
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "1457129", Name = "Open Braunau", Federation = "AUT",
+            PublicId = "1457129", ChessResultsId = "1457129", Name = "Open Braunau", Federation = "AUT",
             FirstSeenAt = seen, LastSeenAt = seen.AddDays(30),
         });
         await _db.SaveChangesAsync();
@@ -146,7 +148,7 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = "1", Name = "Open", Federation = "AUT",
+            PublicId = "1", ChessResultsId = "1", Name = "Open", Federation = "AUT",
         });
         await _db.SaveChangesAsync();
 
@@ -174,7 +176,7 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
     {
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = id, Name = "Turnier " + id, Federation = "DEU_unused",
+            PublicId = id, ChessResultsId = id, Name = "Turnier " + id, Federation = "DEU_unused",
             LocationText = location, Lat = lat, Lon = lon, GeoSource = source,
         };
         entry.Federation = "GER";

@@ -105,11 +105,16 @@ import { DirectoryEntry } from './tournament-directory.model';
       </div>
 
       <div class="tc-actions">
-        <button mat-icon-button (click)="bookmark()" [disabled]="busy()"
-                [matTooltip]="(subscribed() ? 'tournamentDirectory.bookmarkedTooltip' : 'tournamentDirectory.bookmark') | translate"
-                [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
-          <mat-icon [class.on]="subscribed()">{{ subscribed() ? 'bookmark' : 'bookmark_add' }}</mat-icon>
-        </button>
+        <!-- Merken setzt eine chess-results-Nummer voraus (Abo + Crawl-Auftrag tragen sie). Ein
+             FIDE-Turnier hat keine, und ein Knopf, der ins Leere fuehrt, ist schlimmer als ein
+             fehlender. -->
+        @if (bookmarkable) {
+          <button mat-icon-button (click)="bookmark()" [disabled]="busy()"
+                  [matTooltip]="(subscribed() ? 'tournamentDirectory.bookmarkedTooltip' : 'tournamentDirectory.bookmark') | translate"
+                  [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
+            <mat-icon [class.on]="subscribed()">{{ subscribed() ? 'bookmark' : 'bookmark_add' }}</mat-icon>
+          </button>
+        }
 
         @if (entry.startDate) {
           <button mat-icon-button (click)="addToCalendar()"
@@ -242,6 +247,11 @@ export class TournamentCardComponent {
     return this.ignoredOverride() ?? this.entry.ignored;
   }
 
+  /** Laesst sich dieses Turnier merken? Nur mit chess-results-Nummer (Abo + Crawl-Auftrag). */
+  get bookmarkable(): boolean {
+    return this.entry.chessResultsId !== null;
+  }
+
   get dateText(): string {
     const start = this.entry.startDate;
     const end = this.entry.endDate;
@@ -262,11 +272,17 @@ export class TournamentCardComponent {
    * Ortsaenderungen werden dann gemeldet, und die Ergebnisse stehen bereit statt erst zum
    * Spielbeginn.
    */
+  /**
+   * Merken geht nur mit einer chess-results-Nummer: das Abo traegt sie, und der Crawl-Auftrag
+   * braucht sie. Ein FIDE-Turnier hat keine — der Knopf erscheint dort gar nicht (siehe
+   * `bookmarkable`), diese Pruefung ist der zweite Riegel.
+   */
   bookmark(): void {
-    if (this.subscribed() || this.busy()) return;
+    const chessResultsId = this.entry.chessResultsId;
+    if (chessResultsId === null || this.subscribed() || this.busy()) return;
     this.busy.set(true);
 
-    this.tournaments.bookmarkAndImport(this.entry.chessResultsId, this.entry.name).subscribe({
+    this.tournaments.bookmarkAndImport(chessResultsId, this.entry.name).subscribe({
       next: ({ job }) => {
         this.busy.set(false);
         this.subscribedOverride.set(true);
@@ -295,7 +311,7 @@ export class TournamentCardComponent {
     const next = !this.ignored();
     this.busy.set(true);
 
-    this.directory.setIgnored(this.entry.chessResultsId, next).subscribe({
+    this.directory.setIgnored(this.entry.id, next).subscribe({
       next: () => {
         this.busy.set(false);
         this.ignoredOverride.set(next);
@@ -315,7 +331,13 @@ export class TournamentCardComponent {
     this.dialog.open(ReportEntryDialogComponent, { data, width: '560px', maxHeight: '90vh' });
   }
 
-  private calendarEvent(): CalendarEvent | null {
+  /**
+   * Der Termin, wie er in den Kalender geht — `null` ohne Startdatum (dann fehlt der Knopf).
+   *
+   * <p>Oeffentlich, weil hier die ganze Abbildung Turnier → Termin steckt: sie laesst sich so
+   * pruefen, ohne einen Download auszuloesen.</p>
+   */
+  calendarEvent(): CalendarEvent | null {
     const entry = this.entry;
     if (!entry.startDate) return null;
 
@@ -324,11 +346,16 @@ export class TournamentCardComponent {
       entry.timeControl,
       entry.rounds ? this.translate.instant('tournamentDirectory.detail.roundsCount', { count: entry.rounds }) : null,
       entry.organizer,
-      `https://chess-results.com/tnr${entry.chessResultsId}.aspx?lan=1`,
+      entry.chessResultsId === null
+        ? null
+        : `https://chess-results.com/tnr${entry.chessResultsId}.aspx?lan=1`,
     ].filter((l): l is string => !!l);
 
     return {
-      uid: `directory-${entry.chessResultsId}@rookhub`,
+      // Die Kennung ist die IDENTITAET des Turniers, nicht die chess-results-Nummer: dieselbe
+      // Kennung aktualisiert den Termin im Kalender des Nutzers statt ihn zu verdoppeln, und ein
+      // FIDE-Turnier hat keine chess-results-Nummer.
+      uid: `directory-${entry.id}@rookhub`,
       title: entry.name,
       start: entry.startDate,
       end: entry.endDate ?? entry.startDate,

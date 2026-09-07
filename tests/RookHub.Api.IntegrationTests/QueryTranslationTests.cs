@@ -66,7 +66,7 @@ public class QueryTranslationTests : IAsyncLifetime
         Db.TournamentDirectoryEntries.AddRange(
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "it-audience-1", Name = "Landesmeisterschaft U10 U12",
+                PublicId = "it-audience-1", ChessResultsId = "it-audience-1", Name = "Landesmeisterschaft U10 U12",
                 Federation = "AUT", StartDate = new DateOnly(2026, 10, 10),
                 EndDate = new DateOnly(2026, 10, 12),
                 AgeGroups = TournamentAgeGroups.U10 | TournamentAgeGroups.U12,
@@ -74,7 +74,7 @@ public class QueryTranslationTests : IAsyncLifetime
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "it-audience-2", Name = "Open Braunau",
+                PublicId = "it-audience-2", ChessResultsId = "it-audience-2", Name = "Open Braunau",
                 Federation = "AUT", StartDate = new DateOnly(2026, 10, 10),
                 EndDate = new DateOnly(2026, 10, 12),
                 Kind = TournamentKind.Team, IsLeague = true,
@@ -204,21 +204,21 @@ public class QueryTranslationTests : IAsyncLifetime
         Db.TournamentDirectoryEntries.AddRange(
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "1", Name = "Nah am Mittelpunkt", Federation = "AUT",
+                PublicId = "1", ChessResultsId = "1", Name = "Nah am Mittelpunkt", Federation = "AUT",
                 StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
                 StartsOnWeekend = true, Lat = 47.80, Lon = 13.04, Speed = TournamentSpeed.Standard,
                 PlayerCount = 30, LocationText = "Salzburg", GeoSource = GeoSource.City,
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "2", Name = "Weit weg", Federation = "AUT",
+                PublicId = "2", ChessResultsId = "2", Name = "Weit weg", Federation = "AUT",
                 StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
                 StartsOnWeekend = true, Lat = 48.21, Lon = 16.37, Speed = TournamentSpeed.Standard,
                 PlayerCount = 30, LocationText = "Wien", GeoSource = GeoSource.City,
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "3", Name = "Langlaeufer ragt herein", Federation = "AUT",
+                PublicId = "3", ChessResultsId = "3", Name = "Langlaeufer ragt herein", Federation = "AUT",
                 StartDate = new DateOnly(2026, 8, 1), EndDate = new DateOnly(2026, 11, 30),
                 StartsOnWeekend = false, Lat = 47.81, Lon = 13.05, Speed = TournamentSpeed.Standard,
                 PlayerCount = 30, LocationText = "Salzburg Umgebung", GeoSource = GeoSource.City,
@@ -273,7 +273,7 @@ public class QueryTranslationTests : IAsyncLifetime
         // einen Topf werfen.
         TournamentDirectoryEntry Entry(string name, string id, string? key) => new()
         {
-            ChessResultsId = id, Name = name, BaseName = TournamentNameGrouping.BaseName(name),
+            PublicId = id, ChessResultsId = id, Name = name, BaseName = TournamentNameGrouping.BaseName(name),
             Federation = "AUT", StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 10),
             LocationText = "Ranshofen", PlayerCount = 10, GeoSource = GeoSource.None, GroupKey = key,
         };
@@ -309,19 +309,19 @@ public class QueryTranslationTests : IAsyncLifetime
         Db.TournamentDirectoryEntries.AddRange(
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "a", Name = "AUT Standard", Federation = "AUT",
+                PublicId = "a", ChessResultsId = "a", Name = "AUT Standard", Federation = "AUT",
                 Speed = TournamentSpeed.Standard, StartDate = new DateOnly(2026, 10, 10),
                 EndDate = new DateOnly(2026, 10, 12),
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "b", Name = "GER Rapid", Federation = "GER",
+                PublicId = "b", ChessResultsId = "b", Name = "GER Rapid", Federation = "GER",
                 Speed = TournamentSpeed.Rapid, StartDate = new DateOnly(2026, 10, 10),
                 EndDate = new DateOnly(2026, 10, 12),
             },
             new TournamentDirectoryEntry
             {
-                ChessResultsId = "c", Name = "ITA Blitz", Federation = "ITA",
+                PublicId = "c", ChessResultsId = "c", Name = "ITA Blitz", Federation = "ITA",
                 Speed = TournamentSpeed.Blitz, StartDate = new DateOnly(2026, 10, 10),
                 EndDate = new DateOnly(2026, 10, 12),
             });
@@ -347,7 +347,7 @@ public class QueryTranslationTests : IAsyncLifetime
     {
         var liga = new TournamentDirectoryEntry
         {
-            ChessResultsId = "liga", Name = "Frauenbundesliga", Federation = "AUT",
+            PublicId = "liga", ChessResultsId = "liga", Name = "Frauenbundesliga", Federation = "AUT",
             StartDate = new DateOnly(2026, 11, 27), EndDate = new DateOnly(2027, 3, 14),
             // Hauptort Mayrhofen (Tirol) …
             Lat = 47.17, Lon = 11.87, GeoSource = GeoSource.City, GeoPlaceName = "Mayrhofen",

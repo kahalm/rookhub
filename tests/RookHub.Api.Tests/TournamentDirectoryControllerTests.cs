@@ -56,7 +56,7 @@ public class TournamentDirectoryControllerTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = id, Name = name, Federation = fed,
+            PublicId = id, ChessResultsId = id, Name = name, Federation = fed,
             StartDate = start, EndDate = end,
             StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
             Lat = lat, Lon = lon, Speed = speed, PlayerCount = players,
@@ -559,9 +559,17 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.IsType<NotFoundResult>(result.Result);
     }
 
+    /// <summary>
+    /// Die Identitaet eines Eintrags ist eine chess-results-Nummer oder ein Quellen-Kuerzel plus
+    /// Nummer („f14805" fuer den FIDE-Kalender). Alles andere wird abgewiesen — der Wert steht in
+    /// Adressen und wird als Schluessel verglichen.
+    /// </summary>
     [Theory]
     [InlineData("abc")]
     [InlineData("12345678901")]
+    [InlineData("f")]
+    [InlineData("fide-14805")]
+    [InlineData("../etc")]
     public async Task Get_InvalidId_IsRejected(string id)
     {
         var result = await CreateController(1).Get(id, default);
@@ -614,7 +622,7 @@ public class TournamentDirectoryControllerTests : IDisposable
     {
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = id,
+            PublicId = id, ChessResultsId = id,
             Name = name,
             BaseName = TournamentNameGrouping.BaseName(name),
             Federation = "AUT",
@@ -662,7 +670,7 @@ public class TournamentDirectoryControllerTests : IDisposable
     {
         _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
         {
-            ChessResultsId = id, Name = name, Federation = "AUT",
+            PublicId = id, ChessResultsId = id, Name = name, Federation = "AUT",
             StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
             Kind = kind, AgeGroups = ageGroups, Gender = gender, IsLeague = isLeague,
         });
@@ -781,7 +789,7 @@ public class TournamentDirectoryControllerTests : IDisposable
     {
         var entry = new TournamentDirectoryEntry
         {
-            ChessResultsId = "1479344", Name = "TMM 1.Klasse", Federation = "AUT",
+            PublicId = "1479344", ChessResultsId = "1479344", Name = "TMM 1.Klasse", Federation = "AUT",
             StartDate = new DateOnly(2026, 9, 26), EndDate = new DateOnly(2027, 4, 17),
             Rounds = 11,
             RoundDates =
@@ -960,6 +968,7 @@ public class TournamentDirectoryControllerTests : IDisposable
     [Theory]
     [InlineData("abc")]
     [InlineData("12345678901")]
+    [InlineData("fide-14805")]
     public async Task Ignore_InvalidId_IsRejected(string id)
     {
         Assert.IsType<BadRequestObjectResult>(await CreateController(1).Ignore(id, default));

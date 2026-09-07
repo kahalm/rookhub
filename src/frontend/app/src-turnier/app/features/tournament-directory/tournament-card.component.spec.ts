@@ -8,7 +8,8 @@ import { DirectoryEntry } from './tournament-directory.model';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
-    chessResultsId: '1457129', name: 'Open Braunau', federation: 'AUT', state: 'Salzburg',
+    id: '1457129', chessResultsId: '1457129', name: 'Open Braunau', federation: 'AUT',
+    state: 'Salzburg',
     startDate: '2026-12-18', endDate: '2026-12-20', location: 'Ranshofen',
     timeControl: '90 min', speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: 7, playerCount: 42, lat: 48.2, lon: 13.0, geoSource: 'City', geoPlaceName: 'Ranshofen',
@@ -176,6 +177,46 @@ describe('TournamentCardComponent', () => {
 
     fixture.nativeElement.querySelector('.tc-name').click();
 
-    expect(selected!.chessResultsId).toBe('1457129');
+    expect(selected!.id).toBe('1457129');
+  });
+
+  /**
+   * Ein Turnier aus dem FIDE-Kalender hat KEINE chess-results-Nummer — und Merken heisst Abo
+   * plus Holen-Auftrag, die beide daran haengen. Der Knopf muss dort verschwinden: einer, der
+   * nichts tun kann, ist schlimmer als ein fehlender.
+   */
+  it('lässt den Merken-Knopf weg, wenn das Turnier nicht auf chess-results steht', () => {
+    setup({ id: 'f14805', chessResultsId: null });
+
+    expect(fixture.nativeElement.querySelectorAll('.tc-actions button').length).toBe(3);
+    expect(component.bookmarkable).toBeFalse();
+
+    component.bookmark();
+
+    http.verify();
+  });
+
+  /** Ausblenden und Melden gehen ueber die IDENTITAET, nicht ueber die chess-results-Nummer. */
+  it('blendet auch ein Turnier ohne chess-results-Nummer aus', () => {
+    setup({ id: 'f14805', chessResultsId: null });
+
+    component.toggleIgnore();
+
+    http.expectOne('/api/tournament-directory/f14805/ignore').flush(null);
+
+    expect(component.ignored()).toBeTrue();
+    http.verify();
+  });
+
+  /**
+   * Der Kalendereintrag traegt die IDENTITAET als Kennung: dieselbe Kennung aktualisiert den
+   * Termin statt ihn zu verdoppeln, und ohne chess-results-Nummer gaebe es sonst gar keine.
+   */
+  it('nimmt die Identität als Kennung des Kalendereintrags und lässt den Link weg', () => {
+    setup({ id: 'f14805', chessResultsId: null });
+
+    const event = component.calendarEvent()!;
+    expect(event.uid).toBe('directory-f14805@rookhub');
+    expect(event.description).not.toContain('chess-results.com');
   });
 });

@@ -32,6 +32,16 @@
       <dl class="detail-grid">
         <dt>{{ 'tournamentDirectory.detail.date' | translate }}</dt>
         <dd>{{ entry.startDate }}@if (entry.endDate && entry.endDate !== entry.startDate) { <span> – {{ entry.endDate }}</span> }</dd>
+        <!-- Bei einer Liga sagt der Zeitraum fast nichts: September bis April, gespielt an elf
+             Tagen. Stehen die Runden fest, gehoeren sie hierher. -->
+        @if (entry.roundDates.length > 1) {
+          <dt>{{ 'tournamentDirectory.detail.playDates' | translate }}</dt>
+          <dd class="play-dates">
+            @for (r of entry.roundDates; track r.round) {
+              <span class="play-date">{{ r.round }}. {{ r.date }}</span>
+            }
+          </dd>
+        }
         @if (entry.location) {
           <dt>{{ 'tournamentDirectory.detail.place' | translate }}</dt>
           <dd>{{ entry.location }}</dd>
@@ -51,11 +61,17 @@
         @if (entry.groupSize > 1) {
           <dt>{{ 'tournamentDirectory.detail.groups' | translate }}</dt>
           <dd>
-            @for (g of entry.groups; track g.chessResultsId) {
-              <a class="group-link" [href]="chessResultsUrl(g.chessResultsId)"
-                 target="_blank" rel="noopener noreferrer">
-                {{ g.label || g.chessResultsId }}@if (g.playerCount) { <span class="muted"> ({{ g.playerCount }})</span> }
-              </a>
+            @for (g of entry.groups; track g.id) {
+              @if (g.chessResultsId) {
+                <a class="group-link" [href]="chessResultsUrl(g.chessResultsId)"
+                   target="_blank" rel="noopener noreferrer">
+                  {{ g.label || g.id }}@if (g.playerCount) { <span class="muted"> ({{ g.playerCount }})</span> }
+                </a>
+              } @else {
+                <span class="group-link">
+                  {{ g.label || g.id }}@if (g.playerCount) { <span class="muted"> ({{ g.playerCount }})</span> }
+                </span>
+              }
             }
           </dd>
         }
@@ -71,10 +87,30 @@
           <dt>{{ 'tournamentDirectory.detail.arbiter' | translate }}</dt>
           <dd>{{ entry.chiefArbiter }}</dd>
         }
+        <!-- Dasselbe Turnier steht oft auf mehreren Seiten. Wo es gefunden wurde, gehoert
+             hierher: das macht einen falschen Eintrag nachvollziehbar. -->
+        @if (entry.sources.length) {
+          <dt>{{ 'tournamentDirectory.detail.sources' | translate }}</dt>
+          <dd class="sources">
+            @for (src of entry.sources; track src.kind + src.externalId) {
+              @if (src.url) {
+                <a [href]="src.url" target="_blank" rel="noopener noreferrer">
+                  {{ 'tournamentDirectory.source.' + src.kind | translate }}
+                </a>
+              } @else {
+                <span>{{ 'tournamentDirectory.source.' + src.kind | translate }}</span>
+              }
+            }
+          </dd>
+        }
       </dl>
 
       <div class="detail-actions">
-        @if (!entry.subscribed) {
+        <!-- Merken heisst Abo UND Holen — beides haengt an der chess-results-Nummer. Ein Turnier
+             aus einer anderen Quelle hat keine; ein Knopf, der nichts tun kann, gehoert weg. -->
+        @if (entry.chessResultsId === null) {
+          <span class="muted">{{ 'tournamentDirectory.detail.notOnChessResults' | translate }}</span>
+        } @else if (!entry.subscribed) {
           <button mat-flat-button color="primary" (click)="bookmark()">
             <mat-icon>bookmark_add</mat-icon>
             {{ 'tournamentDirectory.bookmark' | translate }}
@@ -97,11 +133,13 @@
             {{ 'tournamentDirectory.detail.toCalendar' | translate }}
           </button>
         }
-        <a mat-stroked-button [href]="chessResultsUrl(entry.chessResultsId)"
-           target="_blank" rel="noopener noreferrer">
-          <mat-icon>open_in_new</mat-icon>
-          {{ 'tournamentDirectory.openChessResults' | translate }}
-        </a>
+        @if (entry.chessResultsId) {
+          <a mat-stroked-button [href]="chessResultsUrl(entry.chessResultsId)"
+             target="_blank" rel="noopener noreferrer">
+            <mat-icon>open_in_new</mat-icon>
+            {{ 'tournamentDirectory.openChessResults' | translate }}
+          </a>
+        }
         <!-- Leise, aber sichtbar: Ort und Einordnung sind an vielen Stellen erschlossen, nicht
              gemeldet — ohne einen Rueckweg bleibt jeder Fehlgriff unbemerkt stehen. -->
         <button mat-button (click)="reportEntry()">
@@ -112,7 +150,7 @@
 
       @if (importing()) {
         <p class="muted hint">{{ 'tournamentDirectory.detail.importing' | translate }}</p>
-      } @else if (!imported()) {
+      } @else if (!imported() && entry.chessResultsId !== null) {
         <p class="muted hint">{{ 'tournamentDirectory.detail.notImportedHint' | translate }}</p>
       }
     </mat-card>

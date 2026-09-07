@@ -8,21 +8,15 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## Liga-Termine: der Kalender zeigt sie an JEDEM Tag der Saison (gemeldet 2026-09-07)
+## [x] Liga-Termine: der Kalender zeigt sie an JEDEM Tag der Saison (gemeldet + erledigt 2026-09-07)
 
-Ein Liga-Eintrag traegt nur Start und Ende („2026-02-22" bis „2026-10-24"), und der Kalender
-zeichnet ein mehrtaegiges Turnier an jedem Tag dazwischen. Eine Saison laeuft aber in einzelnen
-Runden mit Wochen Abstand — die Liga steht damit an rund 200 Tagen im Kalender, an denen nichts
-gespielt wird, und verdeckt die Turniere, die wirklich stattfinden.
-
-Was es braucht: die RUNDENTERMINE. Die stehen auf der Turnierseite im Rundenplan
-(Runde/Datum/Uhrzeit) — ein Seitenabruf je Turnier, also nur fuer Ligen sinnvoll
-(`IsLeague`, eine Minderheit). Danach eine Tabelle `TournamentDirectoryRounds`
-(EntryId, Nummer, Datum) und im Kalender: hat ein Eintrag Rundentermine, gilt er NUR an diesen
-Tagen; sonst wie bisher der ganze Zeitraum.
-
-Erst messen: fuer wie viele der Liga-Eintraege liefert die Turnierseite ueberhaupt einen
-Rundenplan mit Datumsangaben, und wie viele Abrufe waeren das je Nacht?
+Erledigt in **0.423.0** (Termine holen + Kalender) und **0.428.0** (auf der Turnierseite
+sichtbar). Gemessen, wie hier gefordert: **610 offene Eintraege laufen laenger als acht Tage, 527
+davon ueber 40 Tage** — der Rundenplan (`art=14`, ~17 kB; `art=2` kostet 33 kB, `art=3` 182 kB)
+traegt Runde/Datum/Uhrzeit als saubere Tabelle. Die Auswahl haengt bewusst an der **DAUER, nicht
+am geratenen `IsLeague`**: ob etwas eine Liga IST, wird geschlossen, ob sein Zeitraum luegt, steht
+fest. `RoundPlanCheckedAt` wird auch bei LEEREM Plan gesetzt (der haeufige Fall) und bei einem
+Netzfehler nicht; `TournamentDirectory:RoundPlanBatchSize` (200) deckelt die Abrufe je Nacht.
 
 ## Nach dem naechsten PROD-Deploy erledigen
 - [ ] **Turnierseite auf PROD scharf schalten** (Dev laeuft seit 2026-09-06). Reihenfolge:
@@ -34,6 +28,13 @@ Rundenplan mit Datumsangaben, und wie viele Abrufe waeren das je Nacht?
      `compose.vpn.yml`. API muss einmal neu, sonst kennt sie die Variable nicht.
   4. NPM-Proxy-Host `turnier.oberschmid.homes` → `http 10.24.13.6:8093`, Wildcard-Zertifikat
      `*.oberschmid.homes` (id 4), Block Common Exploits + Websockets an — wie `rookhub`.
+- [ ] **Turnierverzeichnis: Nachtraege fuer den Altbestand laufen lassen** (auch auf DEV nach
+  0.428.0 noetig, dort noch offen). `bash scripts/directory-backfill.sh <api-url> [limit]` macht
+  alle vier mit einer Anmeldung: `classify` (Publikum/Format aus den Namen), `backfill-sources`
+  (Herkunftsvermerk), `round-plans?limit=200` (Spieltermine, ein Abruf je Turnier — mehrfach
+  aufrufen, bis nichts mehr kommt) und `fide` (FIDE-Kalender, ein Abruf je Jahr). Die ersten zwei
+  brauchen kein Netz; der Sweep holt das alles von selbst nach, aber erst nach einer
+  Rotationswoche.
 - [ ] **Turnierverzeichnis: Ortslexikon importieren.** Ohne diesen einmaligen Schritt hat KEIN
   Turnier Koordinaten — Umkreissuche und Karte bleiben leer, die Liste funktioniert.
   `bash scripts/gazetteer-import.sh https://<prod-api>` erledigt alles (Passwort interaktiv):

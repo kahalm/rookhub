@@ -9,7 +9,7 @@ import { DirectoryEntry } from './tournament-directory.model';
 function entry(id: string, lat: number | null, lon: number | null,
                geoSource: DirectoryEntry['geoSource'] = 'City'): DirectoryEntry {
   return {
-    chessResultsId: id, name: `Turnier ${id}`, federation: 'AUT', state: null,
+    id, chessResultsId: id, name: `Turnier ${id}`, federation: 'AUT', state: null,
     startDate: '2026-10-10', endDate: '2026-10-12', location: 'Salzburg', timeControl: null,
     speed: 'Standard', organizer: null, director: null, chiefArbiter: null,
     rounds: null, playerCount: null, lat, lon, geoSource, geoPlaceName: null,
@@ -144,7 +144,7 @@ describe('TournamentMapComponent', () => {
     openPopupAtCentre().querySelector<HTMLButtonElement>('.tc-name')!.click();
 
     expect(selected).not.toBeNull();
-    expect(selected!.chessResultsId).toBe('1');
+    expect(selected!.id).toBe('1');
   });
 
   it('zeigt Termin, Ort und die Kurzangaben im Popup', () => {
