@@ -4,8 +4,16 @@ export type HistoryStatus = 'ok' | 'noName' | 'sourceUnavailable';
 /** Bedenkzeit-Klasse eines Turniers, abgeleitet aus der Bedenkzeit auf chess-results. */
 export type HistorySpeed = 'standard' | 'rapid' | 'blitz' | 'unknown';
 
-/** Die drei Klassen in der Reihenfolge, in der sie ueberall stehen: von lang nach kurz. */
-export const HISTORY_SPEEDS: HistorySpeed[] = ['standard', 'rapid', 'blitz'];
+/**
+ * Die Klassen in der Reihenfolge, in der sie ueberall stehen: von lang nach kurz — und `unknown`
+ * am Ende.
+ *
+ * <p><b>`unknown` gehoert dazu.</b> Die Bedenkzeit steht auf einer eigenen Seite, die erst der
+ * naechtliche Durchgang holt; und manche Turniere nennen gar keine. Faellt die Klasse aus der
+ * Auswertung, verschwindet mit ihr die PERFORMANCE — also genau die Zahl, um die es hier geht.
+ * Direkt nach dem Deploy war jedes Turnier `unknown` und die Uebersicht damit leer.</p>
+ */
+export const HISTORY_SPEEDS: HistorySpeed[] = ['standard', 'rapid', 'blitz', 'unknown'];
 
 /** Was in einer Klasse zusammenkommt: wie viele Turniere und welche mittlere Performance. */
 export interface SpeedSummary {

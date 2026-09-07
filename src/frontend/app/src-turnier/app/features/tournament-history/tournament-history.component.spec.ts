@@ -187,6 +187,38 @@ describe('TournamentHistoryComponent', () => {
       .toEqual([['standard', 2, 1800], ['blitz', 1, 1600]]);
   });
 
+  /**
+   * Direkt nach einem Deploy ist jedes Turnier `unknown` — die Bedenkzeit steht auf einer eigenen
+   * Seite, die erst der naechtliche Durchgang holt. Faellt diese Gruppe aus der Auswertung, ist die
+   * Uebersicht LEER und die Performance verschwunden. Genau so gemeldet.
+   */
+  it('zählt Turniere ohne bekannte Bedenkzeit als eigene Gruppe', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ performanceRating: 1700, speed: 'unknown' }),
+        played({ chessResultsId: '2', performanceRating: 1900, speed: 'unknown' }),
+      ],
+    })]);
+
+    const speeds = component.summary(component.histories()[0]).speeds;
+    expect(speeds.map(s => [s.speed, s.played, s.performance])).toEqual([['unknown', 2, 1800]]);
+  });
+
+  /** Bekannte Klassen stehen VOR den unklassifizierten. */
+  it('stellt die eingeordneten Klassen voran', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ performanceRating: 1700, speed: 'unknown' }),
+        played({ chessResultsId: '2', performanceRating: 1900, speed: 'blitz' }),
+      ],
+    })]);
+
+    expect(component.summary(component.histories()[0]).speeds.map(s => s.speed))
+      .toEqual(['blitz', 'unknown']);
+  });
+
   /** Eine Klasse ohne gewertete Performance bleibt mit ihrer Anzahl stehen. */
   it('unterscheidet „nicht gespielt" von „keine Wertung"', async () => {
     const req = await setup();

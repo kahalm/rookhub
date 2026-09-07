@@ -3220,7 +3220,7 @@
         "standard": "Turnier",
         "rapid": "Schnell",
         "blitz": "Blitz",
-        "unknown": "unbekannt"
+        "unknown": "ohne Bedenkzeit"
       }
     }
   },

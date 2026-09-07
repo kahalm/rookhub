@@ -3220,7 +3220,7 @@
         "standard": "Classical",
         "rapid": "Rapid",
         "blitz": "Blitz",
-        "unknown": "unknown"
+        "unknown": "no time control"
       }
     }
   },

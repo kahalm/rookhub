@@ -253,6 +253,11 @@ export class TournamentHistoryComponent implements OnInit {
    * <p>Klassen ohne ein einziges Turnier fallen weg; eine Klasse mit Turnieren, aber ohne
    * gewertete Performance, bleibt mit ihrer Zahl stehen (der Unterschied zwischen „nicht
    * gespielt" und „keine Wertung" gehoert nicht verwischt).</p>
+   *
+   * <p><b>Turniere ohne bekannte Bedenkzeit zaehlen als eigene Gruppe</b> statt herauszufallen:
+   * die Angabe steht auf einer eigenen Seite, die erst der naechtliche Durchgang holt, und manche
+   * Turniere nennen gar keine. Ohne diese Gruppe waere die Uebersicht direkt nach einem Deploy
+   * leer — die Performance verschwaende, bloss weil die Einordnung noch fehlt.</p>
    */
   speedSummaries(entries: PlayerHistoryEntry[]): SpeedSummary[] {
     const played = entries.filter(e => e.hasResult);
