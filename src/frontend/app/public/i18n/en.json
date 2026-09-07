@@ -3161,7 +3161,17 @@
   },
   "turnier": {
     "brand": "Tournaments",
-    "toRookHub": "To RookHub"
+    "toRookHub": "To RookHub",
+    "profile": {
+      "title": "My profile",
+      "person": "Name and email",
+      "nameHelp": "The tournament history looks you up on chess-results, and it searches by NAME — there is no lookup by number there. Without a last name this site cannot show you a history.\n\nThe display name is what other people see. Your login name is never shown.",
+      "displayNameHint": "Shown to others instead of „{{username}}“.",
+      "identity": "Player identifiers",
+      "identityHelp": "Two people can share a name, and the search by name returns both. A FIDE ID or a chess-results ID decides which of them is you.\n\nWithout one, the history shows every tournament of everyone with your name — and you will notice, because there will be tournaments in it you never played.\n\nBoth numbers are on your own chess-results player page.",
+      "saveError": "Could not be saved. Please try again.",
+      "loadError": "The profile could not be loaded."
+    }
   },
   "tournamentsMoved": {
     "leaving": "Tournaments have moved to their own site — taking you there.",

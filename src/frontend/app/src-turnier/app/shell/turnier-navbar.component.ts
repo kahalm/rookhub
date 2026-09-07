@@ -60,6 +60,9 @@ import { ThemeService } from '@rh/core/theme.service';
         </button>
         <mat-menu #userMenu="matMenu">
           <div class="who" mat-menu-item disabled>{{ auth.currentUser?.username }}</div>
+          <a mat-menu-item routerLink="/profile">
+            <mat-icon>badge</mat-icon> {{ 'nav.profile' | translate }}
+          </a>
           <button mat-menu-item (click)="logout()">
             <mat-icon>logout</mat-icon> {{ 'nav.logout' | translate }}
           </button>

@@ -26,6 +26,8 @@ public class AppDbContext : DbContext
     public DbSet<TournamentDirectoryRound> TournamentDirectoryRounds => Set<TournamentDirectoryRound>();
     public DbSet<TournamentDirectorySource> TournamentDirectorySources => Set<TournamentDirectorySource>();
     public DbSet<TournamentDirectoryIgnore> TournamentDirectoryIgnores => Set<TournamentDirectoryIgnore>();
+    public DbSet<PlayerTournamentResult> PlayerTournamentResults => Set<PlayerTournamentResult>();
+    public DbSet<PlayerHistorySync> PlayerHistorySyncs => Set<PlayerHistorySync>();
     public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
@@ -361,6 +363,18 @@ public class AppDbContext : DbContext
             // Zweimal ausblenden ist dasselbe wie einmal.
             e.HasIndex(i => new { i.UserId, i.ChessResultsId }).IsUnique();
         });
+
+        modelBuilder.Entity<PlayerTournamentResult>(e =>
+        {
+            // Der Schluessel ist der SPIELER, nicht das Konto: die Historie ist fuer jeden
+            // dieselbe, und ein Freund soll denselben Zwischenspeicher benutzen.
+            e.HasIndex(r => new { r.PlayerKey, r.ChessResultsId }).IsUnique();
+            e.HasIndex(r => new { r.PlayerKey, r.EndDate });
+            e.Property(r => r.Points).HasPrecision(5, 2);
+            e.Property(r => r.RatingChange).HasPrecision(6, 2);
+        });
+
+        modelBuilder.Entity<PlayerHistorySync>(e => e.HasKey(x => x.PlayerKey));
 
         modelBuilder.Entity<TournamentSearchProfile>(e =>
         {

@@ -17,6 +17,10 @@ export const routes: Routes = [
   { path: 'tournaments/calendar/:id', loadComponent: () => import('./features/tournament-directory/tournament-directory-detail.component').then(m => m.TournamentDirectoryDetailComponent), canActivate: [authGuard] },
   { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), canActivate: [authGuard] },
 
+  // Name, Anzeigename, E-Mail und die Spielerkennungen. Dieselbe API wie in RookHub, aber ohne
+  // deren Chessable-/Engine-/Token-Sammlung: die hat auf einer Turnierseite nichts zu tun.
+  { path: 'profile', loadComponent: () => import('./features/profile/turnier-profile.component').then(m => m.TurnierProfileComponent), canActivate: [authGuard] },
+
   // Geteilter Turnier-Link, ohne Anmeldung lesbar.
   { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },
 

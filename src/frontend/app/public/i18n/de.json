@@ -3161,7 +3161,17 @@
   },
   "turnier": {
     "brand": "Turniere",
-    "toRookHub": "Zu RookHub"
+    "toRookHub": "Zu RookHub",
+    "profile": {
+      "title": "Mein Profil",
+      "person": "Name und E-Mail",
+      "nameHelp": "Der Turnierverlauf sucht dich auf chess-results, und dort wird über den NAMEN gesucht — eine Suche über eine Nummer gibt es nicht. Ohne Nachnamen kann diese Seite keinen Verlauf zeigen.\n\nDer Anzeigename ist der, den andere sehen. Dein Anmeldename wird nie angezeigt.",
+      "displayNameHint": "Wird anderen statt „{{username}}“ angezeigt.",
+      "identity": "Spielerkennungen",
+      "identityHelp": "Zwei Menschen können denselben Namen tragen, und die Namenssuche liefert beide. Eine FIDE-ID oder eine chess-results-ID entscheidet, welcher davon du bist.\n\nOhne sie zeigt der Verlauf alle Turniere aller Namensgleichen — und du merkst das, weil Turniere darin stehen, die du nie gespielt hast.\n\nBeide Nummern stehen auf deiner eigenen chess-results-Spielerseite.",
+      "saveError": "Konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
+      "loadError": "Das Profil konnte nicht geladen werden."
+    }
   },
   "tournamentsMoved": {
     "leaving": "Turniere haben eine eigene Seite — du wirst weitergeleitet.",

@@ -168,6 +168,7 @@ try
     builder.Services.AddScoped<SharedSessionService>();
     builder.Services.AddScoped<VenueDisambiguationService>();
     builder.Services.AddScoped<TournamentRoundPlanService>();
+    builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<ProfileService>();
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<NotificationService>();

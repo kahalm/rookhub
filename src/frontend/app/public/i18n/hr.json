@@ -3161,7 +3161,17 @@
   },
   "turnier": {
     "brand": "Turniri",
-    "toRookHub": "Na RookHub"
+    "toRookHub": "Na RookHub",
+    "profile": {
+      "title": "Moj profil",
+      "person": "Ime i e-pošta",
+      "nameHelp": "Povijest turnira traži te na chess-resultsu, a tamo se traži po IMENU — pretraga po broju ne postoji. Bez prezimena ova stranica ne može prikazati povijest.\n\nPrikazano ime je ono koje drugi vide. Tvoje ime za prijavu nikada se ne prikazuje.",
+      "displayNameHint": "Prikazuje se drugima umjesto „{{username}}“.",
+      "identity": "Identifikatori igrača",
+      "identityHelp": "Dvije osobe mogu nositi isto ime, a pretraga po imenu vraća obje. FIDE ID ili chess-results ID odlučuje koja si od njih.\n\nBez njega povijest prikazuje sve turnire svih imenjaka — i to ćeš primijetiti, jer će u njoj biti turniri koje nikada nisi igrao.\n\nOba broja nalaze se na tvojoj chess-results stranici igrača.",
+      "saveError": "Nije se moglo spremiti. Pokušaj ponovno.",
+      "loadError": "Profil se nije mogao učitati."
+    }
   },
   "tournamentsMoved": {
     "leaving": "Turniri imaju vlastitu stranicu — preusmjeravamo te.",

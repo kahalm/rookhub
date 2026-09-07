@@ -242,6 +242,43 @@ RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `Enc
 | GET | `/api/chessable/admin/users/{userId}/courses?refresh=` | **Admin**: Kursliste eines Users (mit dessen Bearer; Import-Status gegen die eigenen Admin-Importe markiert) |
 | POST | `/api/chessable/admin/users/{userId}/import/{bid}` | **Admin**: lädt Kurs `{bid}` eines Users ins EIGENE Admin-Konto — als Repertoire ODER Buch (`{ name?, target? }`; `target` "repertoire"/"book", Default "repertoire"). Import-Besitzer = Admin (`UserId`), Bearer vom Ziel-User (`BearerUserId`). 404 unbek. User, 400 wenn Ziel-User keinen Bearer hat / `target` ungültig |
 
+### Turnierverlauf (auth)
+Welche Turniere ein Spieler gespielt hat, welche noch kommen, und in den gespielten Punkte, Platz
+und Performance-Rating. Umschaltbar auf Freunde.
+
+**Zwei Quellen, zwei Kostenklassen** (gemessen 2026-09-07 an einem echten Konto): die
+chess-results-SPIELERSUCHE liefert in EINEM Abruf ALLE Teilnahmen eines Spielers — vergangene und
+kuenftige, je Zeile mit Datum, Platz, Runden-/Teilnehmerzahl und der STARTNUMMER (die steht in
+keiner Spalte, nur im Link auf den Namen). Punkte, Performance-Rating und Elo-Aenderung stehen
+dagegen nur auf der SPIELERKARTE (`art=9&snr=`), und die kostet EINEN Abruf je Turnier. Bei dem
+gemessenen Konto: 23 Turniere, 12 davon gespielt — also 1 + 12 Abrufe fuer die vollstaendige
+Historie, rund zwanzig Sekunden hinter dem Rate-Limiter des Crawlers.
+
+Daraus die Aufteilung im `TournamentHistoryService`: die LISTE wird beim Aufruf geholt, wenn sie
+aelter als `ListTtl` (12 h) ist — ein Abruf, die Ansicht steht damit sofort mit Termin und Platz.
+Die KARTEN laufen ueber die `IBackgroundTaskQueue` nach (`MaxCardsPerRequest` = 25 je Aufruf); ein
+abgeschlossenes Turnier aendert sich nie wieder, der Zwischenspeicher gilt also fuer immer. Die
+Antwort nennt `pending`, damit die Ansicht sich selbst nachladen kann statt eine halbe Tabelle als
+endgueltig auszugeben. Ein KUENFTIGES Turnier bekommt gar keinen Kartenabruf (kein Ergebnis, Platz
+in der Trefferliste „-") — das sparte 11 der 23.
+
+**Der Zwischenspeicher haengt am SPIELER, nicht am Konto** (`PlayerTournamentResult.PlayerKey` =
+`fide:1693034` bzw. `cr:144749`): die Historie ist fuer jeden dieselbe, ein Freund soll denselben
+Speicher benutzen. Die FIDE-Kennung hat Vorrang, weil bei einem AUSLANDS-Turnier in der
+chess-results-Ident-Spalte „0" steht und dann allein sie die Identitaet traegt. Ohne Nachnamen im
+Profil gibt es keinen Verlauf (Status `noName`) — die Spielersuche sucht ueber den NAMEN, es gibt
+dort keine Suche ueber eine Nummer. Ohne Kennung gilt der Name allein, und dann sieht man
+Namensgleiche mit; die Auswahl markiert das (`exact: false`).
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/tournament-history?userIds=` | Verlauf; ohne Parameter der eigene. Fremde Konten muessen **angenommene Freunde** sein (sonst 403, fuer die ganze Anfrage — ein still uebersprungenes Konto waere eine Luecke ohne Erklaerung); max. 20 je Aufruf. Je Konto `status` (`ok`/`noName`/`sourceUnavailable`), `entries` und `pending` |
+| GET | `/api/tournament-history/friends` | Welche Freunde ueberhaupt einen Verlauf haben (Nachname im Profil), je mit `exact` — traegt das Profil eine Kennung? |
+
+Sichtbarkeit wie bei `/api/friends/{userId}/stats`: die Daten sind auf chess-results oeffentlich,
+die VERKNUEPFUNG von Konto und Spielerkennung ist es nicht (`PublicProfileDto` gibt die
+ChessResultsId bewusst nicht heraus, und dabei bleibt es).
+
 ### Turnier-Abos + Favoriten + Monitor (auth)
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
@@ -869,6 +906,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentDirectoryRounds | Die einzelnen SPIELTERMINE eines Turniers. Start und Ende sagen bei einer Liga nicht, wann gespielt wird — elf Runden von September bis April liegen Wochen auseinander, und der Kalender zeigte die Liga deshalb an rund 200 Tagen ohne Schach. Gefuellt vom `TournamentRoundPlanService` (chess-results `art=14`), nur fuer Eintraege ueber 8 Tage mit mehr als einer Runde. Leer = nicht bekannt, dann gilt der ganze Zeitraum | TournamentDirectoryEntryId (Cascade), Number (Rundennummer), Date, TimeText? (≤40, Rohtext „14:00 Uhr" — fuer den Kalender zaehlt der Tag); Index (Date) + **UNIQUE (EntryId, Number)** |
 | TournamentDirectorySources | Auf WELCHER Seite ein Turnier gefunden wurde und unter welcher Nummer dort — **n-zu-n**, dasselbe Turnier steht auf mehreren. Ohne Herkunftsvermerk ist spaeter nicht zu sagen, woher eine Angabe kommt, und genau das entscheidet bei Widerspruch. **Heute NICHT die Identitaet**: die haengt weiter an `TournamentDirectoryEntry.ChessResultsId` (Adresse, Abo, Crawl-Auftrag, Teilen-Link); sobald eine zweite Quelle wirklich Turniere liefert, braucht der Eintrag eine eigene Schluesselspalte | TournamentDirectoryEntryId (Cascade), Kind (Unknown/ChessResults/Fide/Manual), ExternalId (≤60), Url? (≤500), FirstSeenAt, LastSeenAt; **UNIQUE (Kind, ExternalId)** + Index (EntryId) |
 | TournamentDirectoryIgnores | „Dieses Turnier will ich nicht sehen" je Nutzer. Gemerkt wird die chess-results-NUMMER und nicht die Eintrags-Id (ein Eintrag kann verschwinden und wiederkommen, die Entscheidung soll gelten) — deshalb auch kein FK aufs Turnier, wie bei `TournamentSubscription` | UserId (Cascade), ChessResultsId (≤20), CreatedAt; **UNIQUE (UserId, ChessResultsId)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
+| PlayerTournamentResults | Zwischenspeicher des Turnierverlaufs: die Teilnahme EINES Spielers an EINEM Turnier samt Ergebnis. Der Schluessel ist der **SPIELER, nicht das Konto** — die Historie ist fuer jeden dieselbe, ein Freund benutzt denselben Speicher. Die Kartenwerte werden genau einmal geholt (ein abgeschlossenes Turnier aendert sich nie wieder) | PlayerKey (≤40, `fide:…`/`cr:…`/`name:…`), ChessResultsId (≤20), Snr, TournamentName (≤500), EndDate?, Rank?/Rounds?/PlayerCount? (aus der Trefferliste), Points? (5,2)/PerformanceRating?/RatingChange? (6,2)/RatingInternational? (aus der Spielerkarte), CardFetchedAt? (gesetzt AUCH bei leerem Ergebnis — sonst wird dieselbe Seite jedes Mal erneut geholt; bei einem NETZfehler dagegen nicht), UpdatedAt; **UNIQUE (PlayerKey, ChessResultsId)** + Index (PlayerKey, EndDate) |
+| PlayerHistorySyncs | Wann die Trefferliste EINES Spielers zuletzt geholt wurde (TTL 12 h). Nach einem Fehlschlag bleibt der Zeitstempel ALT, damit der naechste Aufruf es wieder versucht statt zwoelf Stunden zu warten | PlayerKey (PK, ≤40), LastFetchedAt, LastError? (≤500) |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet/reprozessierbar — heute meist No-op, da live ausgewertet)** |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
@@ -1009,6 +1048,15 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   und landete auf dem Dashboard.
 - **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
   `/api/` an den Servicenamen `api` weiterreicht.
+- **Profilseite**: die Turnierseite hat ihre EIGENE (`src-turnier/app/features/profile/`, Route
+  `/profile`, im Konto-Menue) — Vor-/Nachname, Anzeigename, E-Mail und die beiden
+  Spielerkennungen, ueber denselben `PUT /api/profile`. Bewusst nicht RookHubs Profilseite
+  wiederverwendet: die ist eine Sammlung aus Chessable-Zugang, Engine-Token, API-Tokens,
+  Brett-Einstellungen und Offline-Speicher. Und bewusst nicht weggelassen: der **Nachname** ist
+  die Voraussetzung fuer den Turnierverlauf (die chess-results-Spielersuche sucht ueber den
+  Namen), die Kennungen entscheiden bei Namensgleichheit. Gespeichert wird nur dieser Teil —
+  ein vollstaendiges Profil-Objekt zurueckzuschicken ueberschriebe die RookHub-Einstellungen mit
+  dem Stand einer Seite, die sie nicht kennt.
 
 ### Turnierkalender-Filterleiste (Stand 0.421.0)
 
