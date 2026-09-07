@@ -41,4 +41,10 @@ export interface HistoryFriend {
   displayName: string;
   /** Traegt das Profil eine Kennung? Wenn nicht, sind Namensgleiche mit dabei. */
   exact: boolean;
+  /**
+   * Steht ein Nachname im Profil? Ohne ihn gibt es keinen Verlauf — der Freund steht trotzdem in
+   * der Liste, nur nicht auswaehlbar: eine leere Auswahl nennt keinen Grund, ein ausgegrauter
+   * Eintrag schon.
+   */
+  hasName: boolean;
 }

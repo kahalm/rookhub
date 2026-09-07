@@ -11,10 +11,12 @@
       <mat-label>{{ 'turnier.history.whose' | translate }}</mat-label>
       <mat-select [ngModel]="whose" (ngModelChange)="onWhoseChange($event)">
         <mat-option value="me">{{ 'turnier.history.onlyMe' | translate }}</mat-option>
-        <mat-option value="all" [disabled]="friends().length === 0">
+        <!-- Massgeblich sind die Freunde MIT Namen: ohne Nachnamen im Profil gibt es keine
+             Spielersuche und damit nichts zu vergleichen. -->
+        <mat-option value="all" [disabled]="selectableFriends().length === 0">
           {{ 'turnier.history.withAllFriends' | translate }}
         </mat-option>
-        <mat-option value="pick" [disabled]="friends().length === 0">
+        <mat-option value="pick" [disabled]="selectableFriends().length === 0">
           {{ 'turnier.history.withSomeFriends' | translate }}
         </mat-option>
       </mat-select>
@@ -25,13 +27,21 @@
         <mat-label>{{ 'turnier.history.friends' | translate }}</mat-label>
         <mat-select [ngModel]="picked" (ngModelChange)="onPickedChange($event)" multiple>
           @for (friend of friends(); track friend.userId) {
-            <mat-option [value]="friend.userId">
+            <mat-option [value]="friend.userId" [disabled]="!friend.hasName">
               {{ friend.displayName }}
-              @if (!friend.exact) { <span class="inexact">·&nbsp;{{ 'turnier.history.inexact' | translate }}</span> }
+              @if (!friend.hasName) {
+                <span class="inexact">·&nbsp;{{ 'turnier.history.friendWithoutName' | translate }}</span>
+              } @else if (!friend.exact) {
+                <span class="inexact">·&nbsp;{{ 'turnier.history.inexact' | translate }}</span>
+              }
             </mat-option>
           }
         </mat-select>
       </mat-form-field>
+    }
+
+    @if (friends().length > 0 && selectableFriends().length === 0) {
+      <span class="hint">{{ 'turnier.history.noFriendsWithName' | translate }}</span>
     }
 
     @if (pending() > 0) {

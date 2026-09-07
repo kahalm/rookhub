@@ -4,7 +4,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ProfileService } from '@rh/core/profile.service';
@@ -61,7 +60,7 @@ export interface PlayerSearchResult {
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [
     FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule,
-    MatListModule, MatProgressSpinnerModule, TranslatePipe,
+    MatProgressSpinnerModule, TranslatePipe,
   ],
   template: `
     <div class="pif-names">
@@ -92,50 +91,50 @@ export interface PlayerSearchResult {
         }
         @if (results.chessResultsResults.length) {
           <h4>ChessResults</h4>
-          <mat-list>
+          <div class="pif-hits">
             @for (p of results.chessResultsResults; track p.name + p.chessResultsId) {
-              <mat-list-item class="pif-hit" (click)="selectChessResultsPlayer(p)">
+              <button type="button" class="pif-hit" (click)="selectChessResultsPlayer(p)">
                 <span class="pif-player">
                   @if (p.title) { <strong>{{ p.title }}</strong> }
-                  {{ p.name }}
+                  <span class="pif-name">{{ p.name }}</span>
                   @if (p.elo) { <span class="muted">({{ p.elo }})</span> }
                   @if (p.country) { <span class="muted">{{ p.country }}</span> }
                   @if (p.chessResultsId) { <span class="muted">CR: {{ p.chessResultsId }}</span> }
                   @if (p.fideId) { <span class="muted">FIDE: {{ p.fideId }}</span> }
                 </span>
                 <mat-icon>arrow_forward</mat-icon>
-              </mat-list-item>
+              </button>
             }
-          </mat-list>
+          </div>
         }
         @if (results.fideResults.length) {
           <h4>FIDE</h4>
-          <mat-list>
+          <div class="pif-hits">
             @for (p of results.fideResults; track p.name + p.fideId) {
-              <mat-list-item class="pif-hit" (click)="selectFidePlayer(p)">
+              <button type="button" class="pif-hit" (click)="selectFidePlayer(p)">
                 <span class="pif-player">
                   @if (p.title) { <strong>{{ p.title }}</strong> }
-                  {{ p.name }}
+                  <span class="pif-name">{{ p.name }}</span>
                   @if (p.elo) { <span class="muted">({{ p.elo }})</span> }
                   @if (p.country) { <span class="muted">{{ p.country }}</span> }
                   @if (p.fideId) { <span class="muted">FIDE: {{ p.fideId }}</span> }
                 </span>
                 <mat-icon>arrow_forward</mat-icon>
-              </mat-list-item>
+              </button>
             }
-          </mat-list>
+          </div>
         }
       </div>
     }
 
-    <mat-form-field appearance="outline" class="pif-full">
+    <mat-form-field appearance="outline" class="pif-full" subscriptSizing="dynamic">
       <mat-label>{{ 'profile.displayName' | translate }}</mat-label>
       <input matInput [(ngModel)]="profile.displayName" [ngModelOptions]="{ standalone: true }"
              name="displayName">
       <mat-hint>{{ 'profile.displayNameHint' | translate: { username: profile.username } }}</mat-hint>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="pif-full">
+    <mat-form-field appearance="outline" class="pif-full" subscriptSizing="dynamic">
       <mat-label>{{ 'profile.email' | translate }}</mat-label>
       <input matInput type="email" [(ngModel)]="profile.email" [ngModelOptions]="{ standalone: true }"
              name="email" autocomplete="email" inputmode="email">
@@ -159,13 +158,29 @@ export interface PlayerSearchResult {
     :host { display: block; }
     .pif-names, .pif-ids { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
     .pif-names mat-form-field, .pif-ids mat-form-field { flex: 1 1 12rem; }
-    .pif-search { margin-top: 8px; }
-    .pif-full { width: 100%; }
-    .pif-results { margin-bottom: 8px; }
-    .pif-results h4 { margin: 4px 0; }
-    .pif-hit { cursor: pointer; }
+    /* Der Knopf steht neben den Feldern und soll auf HOEHE der Eingabe liegen, nicht an deren
+       Oberkante — ein Material-Feld ist 56 px hoch, der Knopf 36 px. */
+    .pif-search { margin-top: 10px; align-self: flex-start; }
+    /* Die zwei Felder mit Hinweistext tragen subscriptSizing="dynamic": bei fester Groesse ist
+       nur EINE Zeile reserviert, und der laengere Hinweis (E-Mail) lief in das Feld darunter. */
+    .pif-full { width: 100%; margin-bottom: 1rem; }
+    .pif-results { margin: 4px 0 16px; }
+    .pif-results h4 { margin: 8px 0 4px; }
+
+    .pif-hits { display: flex; flex-direction: column; gap: 4px; }
+    /* Eigene Zeile statt mat-list-item: dessen Aufbau erwartet ausgezeichnete Kinder
+       (matListItemTitle …); mit blossem Text darin fiel die Zeilenhoehe zusammen und die
+       Angaben klebten aneinander. */
+    .pif-hit {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      width: 100%; padding: 10px 12px; min-height: 44px;
+      border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+      border-radius: 8px; background: transparent; color: inherit;
+      font: inherit; text-align: left; cursor: pointer;
+    }
     .pif-hit:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .pif-player { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: baseline; }
+    .pif-player { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; line-height: 1.5; }
+    .pif-name { font-weight: 500; }
     .muted { opacity: 0.7; }
   `],
 })

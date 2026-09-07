@@ -152,11 +152,13 @@ public class TournamentHistoryControllerTests : IDisposable
     }
 
     /// <summary>
-    /// Die Auswahl bietet nur Freunde an, bei denen etwas zu sehen ist — ein Freund ohne Namen im
-    /// Profil ist in der Liste nur eine Enttaeuschung.
+    /// ALLE angenommenen Freunde stehen in der Liste — auch die ohne Namen im Profil, dann aber
+    /// mit `hasName: false`. Vorher wurden sie ausgefiltert, und wer nur solche Freunde hat, bekam
+    /// eine leere Auswahl ohne jeden Grund („ich habe Freunde, kann aber keine auswaehlen").
+    /// Brauchbare zuerst, damit die Liste nicht mit Konten ohne Verlauf beginnt.
     /// </summary>
     [Fact]
-    public async Task Friends_OnlyThoseWithAUsableIdentity()
+    public async Task Friends_ListsEveryone_ButMarksThoseWithoutAName()
     {
         var me = await CreateUserAsync("ich");
         var withName = await CreateUserAsync("mitname");
@@ -167,7 +169,13 @@ public class TournamentHistoryControllerTests : IDisposable
         var result = await Controller(me).Friends();
         var list = Assert.IsType<List<HistoryFriendDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
 
-        Assert.Equal(withName, Assert.Single(list).UserId);
+        Assert.Equal(2, list.Count);
+        Assert.Equal(withName, list[0].UserId);
+        Assert.True(list[0].HasName);
+        Assert.Equal(withoutName, list[1].UserId);
+        Assert.False(list[1].HasName);
+        // Ohne Namen gibt es auch keine Kennung, die etwas genauer machen koennte.
+        Assert.False(list[1].Exact);
     }
 
     /// <summary>

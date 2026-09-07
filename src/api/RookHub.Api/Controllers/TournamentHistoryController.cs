@@ -71,8 +71,14 @@ public class TournamentHistoryController : BaseApiController
     }
 
     /// <summary>
-    /// Welche Freunde haben ueberhaupt einen Verlauf? Die Auswahl soll nur die anbieten, bei denen
-    /// etwas zu sehen ist — ein Freund ohne Namen im Profil ist in der Liste nur eine Enttaeuschung.
+    /// Die angenommenen Freunde fuer die Umschaltung — ALLE, auch die ohne Namen im Profil.
+    ///
+    /// <para><b>Warum nicht mehr gefiltert.</b> Bis hierher kamen nur Freunde MIT Namen heraus, mit
+    /// der Begruendung, ein Freund ohne Verlauf sei in der Liste nur eine Enttaeuschung. In der
+    /// Praxis war das Ergebnis schlimmer: wer Freunde hat, die ihren Namen nicht eingetragen haben,
+    /// bekam eine LEERE Auswahl und keinen Grund dafuer — gemeldet als „ich habe Freunde, kann aber
+    /// keine auswaehlen". Jetzt stehen sie da und tragen mit, ob etwas zu holen ist
+    /// (<c>hasName</c>); die Ansicht zeigt sie ausgegraut mit dem Grund.</para>
     /// </summary>
     [HttpGet("friends")]
     public async Task<ActionResult<List<HistoryFriendDto>>> Friends(CancellationToken ct = default)
@@ -100,16 +106,20 @@ public class TournamentHistoryController : BaseApiController
                 Row = r,
                 Identity = TournamentHistoryService.IdentityOf(r.LastName, r.FirstName, r.FideId, r.ChessResultsId),
             })
-            .Where(x => x.Identity is not null)
             .Select(x => new HistoryFriendDto
             {
                 UserId = x.Row.UserId,
                 DisplayName = x.Row.DisplayName ?? x.Row.Username,
+                // Ohne Nachnamen im Profil gibt es keine Spielersuche und damit keinen Verlauf.
+                HasName = x.Identity is not null,
                 // Ohne Kennung sucht die Historie ueber den NAMEN und findet damit auch
                 // Namensgleiche. Das gehoert gesagt, nicht verschwiegen.
-                Exact = x.Identity!.FideId is not null || x.Identity.IdentNumber is not null,
+                Exact = x.Identity is not null
+                    && (x.Identity.FideId is not null || x.Identity.IdentNumber is not null),
             })
-            .OrderBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            // Die brauchbaren zuerst — sonst steht die Auswahl voll mit Konten ohne Verlauf.
+            .OrderByDescending(f => f.HasName)
+            .ThenBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList());
     }
 

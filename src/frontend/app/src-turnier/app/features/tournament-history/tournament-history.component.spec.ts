@@ -79,7 +79,7 @@ describe('TournamentHistoryComponent', () => {
    * sucht — und der Vergleich ist der Zweck der Umschaltung.
    */
   it('nimmt bei „alle Freunde" den eigenen Verlauf mit', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
     first.flush([history()]);
 
     component.onWhoseChange('all');
@@ -92,8 +92,8 @@ describe('TournamentHistoryComponent', () => {
 
   it('fragt bei einzelner Auswahl nur die gewählten Freunde', async () => {
     const first = await setup([
-      { userId: 7, displayName: 'A', exact: true },
-      { userId: 8, displayName: 'B', exact: false },
+      { userId: 7, displayName: 'A', exact: true, hasName: true },
+      { userId: 8, displayName: 'B', exact: false, hasName: true },
     ]);
     first.flush([history()]);
 
@@ -185,6 +185,36 @@ describe('TournamentHistoryComponent', () => {
   });
 
   /**
+   * Gemeldet als „ich habe Freunde, kann aber keine auswaehlen": wer Freunde OHNE Namen im Profil
+   * hat, bekam eine leere Auswahl und keinen Grund dafuer. Sie stehen jetzt da — nur nicht
+   * auswaehlbar.
+   */
+  it('führt Freunde ohne Namen im Profil auf, aber nicht als Auswahl', async () => {
+    const req = await setup([
+      { userId: 7, displayName: 'Mit Name', exact: true, hasName: true },
+      { userId: 8, displayName: 'Ohne Name', exact: false, hasName: false },
+    ]);
+    req.flush([history()]);
+
+    expect(component.friends().length).toBe(2);
+    expect(component.selectableFriends().map(f => f.userId)).toEqual([7]);
+  });
+
+  /** „Alle Freunde" darf nur die meinen, bei denen es etwas zu holen gibt. */
+  it('nimmt bei „alle Freunde" nur die mit Namen', async () => {
+    const req = await setup([
+      { userId: 7, displayName: 'Mit Name', exact: true, hasName: true },
+      { userId: 8, displayName: 'Ohne Name', exact: false, hasName: false },
+    ]);
+    req.flush([history()]);
+
+    component.onWhoseChange('all');
+    const call = http.expectOne(r => r.url === '/api/tournament-history');
+    expect(call.request.params.get('userIds')).toBe('1,7');
+    call.flush([history()]);
+  });
+
+  /**
    * Ein fehlendes Ergebnis hat ZWEI Ursachen, und sie verlangen Verschiedenes vom Leser: „wird
    * gerade geholt" heisst warten, „chess-results fuehrt hier keines" heisst, dass Warten nichts
    * bringt. Vorher stand in beiden Faellen „noch kein Ergebnis".
@@ -261,7 +291,7 @@ describe('TournamentHistoryComponent', () => {
    * Abrufs umschaltet, bekaeme sonst den Stand der alten Auswahl.
    */
   it('verwirft die Antwort einer überholten Auswahl', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
 
     component.onWhoseChange('all');
     const second = http.expectOne(r => r.url === '/api/tournament-history');
@@ -274,13 +304,13 @@ describe('TournamentHistoryComponent', () => {
   });
 
   it('merkt die Auswahl über den Seitenwechsel hinweg', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
     first.flush([history()]);
     component.onWhoseChange('all');
     http.expectOne(r => r.url === '/api/tournament-history').flush([history()]);
 
     TestBed.resetTestingModule();
-    const again = await setup([{ userId: 7, displayName: 'Freund', exact: true }]);
+    const again = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
 
     expect(again.request.params.get('userIds')).toBe('1,7');
     again.flush([history()]);

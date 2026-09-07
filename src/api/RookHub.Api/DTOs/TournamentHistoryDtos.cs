@@ -100,4 +100,11 @@ public class HistoryFriendDto
     /// ueber den NAMEN und findet damit auch Namensgleiche. Das gehoert gesagt.
     /// </summary>
     public bool Exact { get; set; }
+
+    /// <summary>
+    /// Steht ein Nachname im Profil? Ohne ihn gibt es keine Spielersuche und damit keinen Verlauf.
+    /// Solche Freunde werden trotzdem aufgefuehrt — nur nicht auswaehlbar: eine leere Auswahl
+    /// nennt keinen Grund, ein ausgegrauter Eintrag schon.
+    /// </summary>
+    public bool HasName { get; set; }
 }

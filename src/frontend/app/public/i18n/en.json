@@ -3212,7 +3212,9 @@
       "loadError": "The history could not be loaded.",
       "fetching": "Fetching the tournament — this takes a moment.",
       "fetchSlow": "Still being fetched. The job keeps running; look again in a minute.",
-      "fetchFailed": "The tournament could not be fetched. Please try again later."
+      "fetchFailed": "The tournament could not be fetched. Please try again later.",
+      "friendWithoutName": "no name in profile",
+      "noFriendsWithName": "None of your friends has entered a name in their profile yet — without one there is no tournament history to compare."
     }
   },
   "turnierAdmin": {

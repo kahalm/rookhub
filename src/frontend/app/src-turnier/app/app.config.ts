@@ -11,6 +11,7 @@ import localeHr from '@angular/common/locales/hr';
 
 import { routes } from './app.routes';
 import { authInterceptor } from '@rh/core/auth.interceptor';
+import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.interceptor';
 import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { resolveStartupLocale } from '@rh/core/locale.service';
@@ -30,7 +31,7 @@ export const turnierConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
-    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
     provideTranslateService({
       fallbackLang: 'en',

@@ -69,6 +69,13 @@ export class TournamentHistoryComponent implements OnInit {
 
   readonly histories = signal<PlayerHistory[]>([]);
   readonly friends = signal<HistoryFriend[]>([]);
+
+  /**
+   * Die Freunde, mit denen sich wirklich vergleichen laesst. Die Liste enthaelt bewusst AUCH die
+   * ohne Namen im Profil (sonst stand dort nichts und niemand wusste warum), aber auswaehlbar
+   * sind nur diese hier — und an ihnen haengt, ob die Umschaltung ueberhaupt etwas anbietet.
+   */
+  readonly selectableFriends = computed(() => this.friends().filter(f => f.hasName));
   readonly loading = signal(true);
   readonly failed = signal(false);
 
@@ -124,7 +131,7 @@ export class TournamentHistoryComponent implements OnInit {
     const me = this.auth.currentUser?.userId;
     const mine = me ? [me] : [];
 
-    if (this.whose === 'all') return [...mine, ...this.friends().map(f => f.userId)];
+    if (this.whose === 'all') return [...mine, ...this.selectableFriends().map(f => f.userId)];
     if (this.whose === 'pick') return [...mine, ...this.picked];
     return mine;
   }
