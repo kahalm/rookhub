@@ -903,6 +903,249 @@ gut waeren.
 - **Naechster Schritt, falls Skandinavien geschlossen werden soll**: den norwegischen Verband
   (Sjakkforbund) nach einem offiziellen Feed fragen, nicht diese Plattform auslesen.
 
+## Runde 2: Oesterreich und alle acht Nachbarlaender (2026-09-07)
+
+Auftrag: „pruefe Oesterreich und alle Nachbarlaender und erfass mal was gehen wuerde." Neun
+Laender; Deutschland (`schachbund.de` ✅) und die Schweiz (`swisschess.ch` ❌, API hinter
+`Disallow: /`) standen schon oben und wurden nicht doppelt geprueft. Die uebrigen sieben liefen
+parallel, jeder mit derselben Frage: **bringt die Quelle Turniere, die nicht ohnehin auf
+chess-results stehen?**
+
+| Land | Quelle | Urteil | Kuenftige | Nicht auf CR | Abrufe |
+|---|---|---|---|---|---|
+| **Oesterreich** | chess-results `Kalender.aspx` | ✅ **sofort** | 143 | **93** | **1** |
+| Italien | federscacchi.com | ✅ | 285 | ~80 % | 1 |
+| Ungarn | chess.hu `/app/versenynaptar.json` | ✅ | 106 | 20 % + Monate Vorlauf | 1 |
+| Slowakei | chess.sk REST-API | ✅ | 79 | 53 % | 1 (+1 je Detail) |
+| Slowenien | sah-zveza.si | ✅ | 78 | ~92 % | 4 (+1 je Detail) |
+| Tschechien | chess.cz | ⚠️ billig mitnehmen | 38 echte | 34 % (13) | 1 |
+| Oesterreich | 9 Landesverbaende | ⚠️ nachrangig | 173 | 34 % | 9 |
+| Liechtenstein | schach.li | ❌ | **1** | **0** | – |
+
+### ✅ Der wichtigste Fund kommt aus der Quelle, die wir schon benutzen
+
+**chess-results hat ZWEI Datensaetze, und wir lesen nur einen.** Die **Turniersuche**
+(`TurnierSuche.aspx`, unser heutiger Sweep) fuellt sich erst, wenn der Veranstalter sein Turnier
+in Swiss-Manager anlegt — typisch Tage bis Wochen vorher. Der **Ankuendigungs-Kalender**
+(`Kalender.aspx`) wird vom Veranstalter vorab gepflegt.
+
+Gemessen fuer AUT, Start ab 2026-09-07:
+
+| | 09/26 | 10/26 | 11/26 | 12/26 | 01/27 | 02/27 | 03/27 | 04/27 |
+|---|---|---|---|---|---|---|---|---|
+| Turniersuche (heute) | 80 | 47 | **8** | **7** | 5 | 8 | 0 | 2 |
+| Ankuendigungs-Kalender | 21 | 25 | **23** | **16** | 9 | 11 | 9 | 10 |
+| **davon uns unbekannt** | 6 | 11 | **16** | **13** | 7 | 8 | 9 | 9 |
+
+**143 kuenftige Eintraege, 93 davon fehlen in der Turniersuche.** Die Turniersuche bricht nach
+zwei Monaten ein, der Kalender traegt gleichmaessig ueber 15 Monate — also genau ueber das
+Fenster, das unser Verzeichnis eigentlich abdecken will (`heute + 18 Monate`).
+
+Zwei Abrufwege, beide ohne neue Rechtslage (`chess-results.com/robots.txt`: `User-agent: *` →
+`Allow: /`):
+
+```
+GET  https://chess-results.com/DownloadQuery.aspx?luser=AUT$3tt08K$&art=3   # 100 Eintraege
+POST https://chess-results.com/Kalender.aspx?lan=1                          # 143, vollstaendig
+     __EVENTTARGET = ctl00$P1$combo_landsel$DropDownList1
+     ctl00$P1$combo_landsel$DropDownList1 = AUT
+     ctl00$P1$combo_kat$DropDownList1     = 0     (2=Jugend, 3=Senioren, 5=Frauen)
+```
+
+Der POST ist derselbe ASP.NET-Postback-Ablauf, den `CrawlerService.SearchTournamentsAsync` schon
+beherrscht. **Der Haken: kein Ortsfeld** — 89 % der Eintraege verlinken aber auf die
+Turnierseite, und 80 % tragen ein Ausschreibungs-PDF.
+
+**Das ist mehr Ertrag als alle neun oesterreichischen Landesverbaende zusammen, bei rund einem
+Prozent des Aufwands.** Und es gilt vermutlich fuer JEDE Foederation, nicht nur AUT.
+
+### ❌ chess.at (OeSB) — das K.-o.-Kriterium in Reinform
+
+`chess.at/termine.html` enthaelt keine eigenen Daten, nur den Satz „Oesterreichische Termine siehe
+Terminkalender **Chess-Results**". Der Jugendkalender ist woertlich ein
+`<iframe src="https://chess-results.com/DownloadQuery.aspx?luser=AUT$3tt08K$&art=7">`.
+
+### ⚠️ Die neun oesterreichischen Landesverbaende
+
+173 kuenftige Eintraege, neun verschiedene CMS, **66 % schon auf chess-results** (19 von 29
+stichprobenweise geprueft). Der Befund dahinter ist wichtiger als die Quote: wiederkehrende
+Turniere landen fast alle irgendwann auf chess-results — nur SPAET. Die „Offene Welser
+Stadtmeisterschaft" ist zwoelf Tage vor dem Termin dort nicht auffindbar, obwohl die Ausgabe 2025
+steht.
+
+Lohnend waeren allenfalls drei: **Oberoesterreich** (`schach.at/termine/`, 29 Eintraege, **52 %
+mit PLZ** gegen 27 % bei chess-results, und Bedenkzeit + Publikum kommen aus einem AUSWAHLFELD
+statt aus dem Namen — also autoritativ statt geraten), **Steiermark + Vorarlberg** (identisches
+The-Events-Calendar-JSON, EIN Parser fuer beide, 68 Eintraege) und **Tirol** (40). Wien hat gar
+keinen strukturierten Kalender, nur ein PDF-Raster mit Liga-Kuerzeln.
+
+**Rechtlicher Vorbehalt bei zwei davon**, woertlich aus dem Impressum:
+- `schach.at` (OOe): „Diese Webseite mit komplettem Inhalt darf weder fuer private noch fuer
+  kommerzielle Zwecke kopiert, verbreitet, veraendert oder Dritten zugaenglich gemacht werden."
+- `noe-schach.at`: „Eine Vervielfaeltigung oder Verwendung in anderen elektronischen oder
+  gedruckten Publikationen ist ohne ausdrueckliche Zustimmung des Autors (NOeSV) nicht gestattet."
+
+Nackte Termine sind Fakten und nicht geschuetzt, aber genau darauf berufe sich ein Betreiber —
+**vor einer Uebernahme anfragen**. Drei Hoster sperren ausserdem den UA-String `ClaudeBot` auf
+Applikationsebene (chess-vienna.at 403, noe-schach.at und schachinsalzburg.at 510 ModSecurity);
+das ist eine Hoster-Blacklist, keine Entscheidung des Verbands — ein eigener UA kam bei allen
+durch.
+
+### ✅ Italien — federscacchi.com, 285 in EINEM Abruf
+
+```
+GET https://www.federscacchi.com/fsi/index.php/calendario/calendario
+    ?dtiniric=2026-09-07&dtfinric=2027-12-31&ord=1&senso=Asc&ric=1
+→ „Trovati 285 eventi", 1,26 MB
+```
+
+**Die Falle ist hier real:** ohne `ric=1` zeigt die Seite nur das Suchformular, wer die nackte URL
+abruft, misst null.
+
+Alle Felder stehen INLINE — Name, Termin, Region, Provinz, Ort, **Bedenkzeit** (`90' + 30'' bonus`),
+**Rundenzahl** (`9 (8)`), Schiedsrichter, Ausschreibungs-PDF, Einfuegedatum. Kein Abruf je Turnier
+noetig. Fuer die laufende Pflege sortiert `ord=5&senso=Desc` nach Einfuegedatum, jeder Eintrag
+traegt eine fortlaufende Id — ein Delta-Abruf muss nur bis zur letzten bekannten lesen.
+
+**Warum die 80 % dauerhaft sind:** von 285 Eintraegen verlinkt **kein einziger** auf
+chess-results. 82 verlinken auf vesus.org, 4 auf vegaresults. Italien faehrt sein Turnierwesen auf
+Vega/vesus — das ist keine Momentaufnahme, sondern die Entscheidung eines ganzen Verbands.
+Trefferquote der Namensstichprobe: **3 von 15**.
+
+Keine robots.txt (404 auf allen Varianten), keine Nutzungsbedingungen, keine UA-Diskriminierung
+(vier UAs geprueft, alle 200). Kein Turniersystem-Feld, keine Einzel/Mannschaft-Kennung, **keine
+PLZ** — dafuer immer die Provinz, was italienische Namensgleichheit aufloest.
+
+**Suedtirol**: `schachbund.it/kalender` existiert deutschsprachig, ist aber tot — fuenf Eintraege,
+juengster 22.03.2026, also **0 kuenftige**. Ueber die FSI kommt Suedtirol mit (`reg=21` → 2,
+Trentino `reg=16` → 4).
+
+### ✅ Ungarn — chess.hu, ein POST
+
+```
+POST https://chess.hu/app/versenynaptar.json    (leerer Rumpf)  → 106 Turniere, 31 KB
+```
+
+**GET antwortet 404** — wer den Endpunkt so prueft, haelt ihn fuer tot. Ohne Parameter ist die
+Antwort genau die kuenftige Ansicht.
+
+Der Ertrag ist ueberwiegend **Vorlauf**: ab November 2026 fuehrt chess.hu 41 Turniere, chess-results
+5. Im Rueckblick auf einen abgeschlossenen Zeitraum landen 80 % irgendwann doch auf chess-results,
+**20 % nie**. 20 Namen einzeln geprueft: 19 nicht auf chess-results.
+
+Das JSON traegt nur neun Felder (Name, Termin, Ort, Jugend-/FIDE-Flag, Id) — Bedenkzeit,
+Rundenzahl, System und die Adresse MIT PLZ stehen in der Inline-Ausschreibung der Detailseite
+(server-gerendert, `post.php?p={id}`), in der Stichprobe 5 von 10 vorhanden.
+
+Fallen: `from_date` ist `MM.DD` OHNE Jahr (das steht in `from_year`); `helyszin=kulfoldi` heisst
+nicht „im Ausland" (alle 15 so markierten liegen in Ungarn); **150-Zeilen-Deckel ohne
+Fehlermeldung**; `place = "Helyszin kesobb"` („Ort spaeter", 11 Eintraege) und `"Online"` duerfen
+keinen Pin bekommen.
+
+### ✅ Slowakei — chess.sk, offizielle REST-API
+
+```
+GET https://www.chess.sk/api/turnaje.php/v1/tournaments   → 79 kuenftige, 34 KB
+```
+
+OpenAPI-Spec unter `/api/swagger.yaml`, im Footer als „**Free api specification**" verlinkt,
+`Access-Control-Allow-Origin: *`, und die Beschreibung laedt woertlich zur Nutzung ein: „*If you
+need more, just ask for it - sekretariat@chess.sk*". 20 Monate Vorlauf (bis 2028-05).
+
+**53 % nicht auf chess-results**, und die Aufteilung ist aufschlussreich: im Nahbereich
+(bis 12/2026) 45 %, ab 2027 **85 %**. Dauerhafter Ueberschuss sind nicht FIDE-gewertete
+Klub- und Barturniere (13-Runden-Barliga, GPX-Serien, Ortsturniere).
+
+**Geschenk:** 26 Eintraege tragen die chess-results-Nummer selbst mit — ein exakter Dedup-Schluessel
+gegen `TournamentDirectoryEntries.ChessResultsId` statt Namensraterei.
+
+Bedenkzeit, Rundenzahl und System stecken zusammen im Freitext `Systém` („Švajčiarsky systém na 7
+kôl, tempo 2 × 15 min + 5 sek/ťah"), aber sehr regelmaessig. `Typ turnaja` (std/rpd/blz/onl)
+mappt 1:1 auf `Speed`. Ort sauber, **PLZ nur 1 von 9**. Nicht-Turniere (Schulungen, Ferienlager)
+sind mit drin und muessen ueber den Namen gefiltert werden.
+
+robots.txt: `User-agent: * / Allow: /`, danach 622 namentlich gesperrte Bots aus einer
+Blocklist von 2021 — ClaudeBot und GPTBot kommen darin nicht vor.
+
+### ✅ Slowenien — sah-zveza.si, Faktor elf
+
+**78 kuenftige gegen 7 auf chess-results** im selben Zeitraum. Der Kalender verlinkt in **keinem
+einzigen** der 78 Eintraege dorthin.
+
+Der Rueckblick auf einen abgeschlossenen Monat trennt Vorlauf von echter Luecke: von 88
+Juni-Eintraegen landeten **36 (41 %) nie** auf chess-results. Ganze Serien fehlen dort strukturell
+(woechentliches Hitropotezni Železničar, ŠK Malečnik, Gurman — Dutzende Ausgaben, ein Treffer).
+
+```
+GET https://www.sah-zveza.si/prireditve/iskalnik/?action=filter&klubska=on&drzavna=on
+    &mednarodna=on&vecdnevna=on&ciklusi=on&festivali=on&kraj=0&leto=0&mesec=0&page=1
+```
+Vier Seiten a 30 Zeilen. **Die Trefferliste traegt die PLZ** (74 von 78 gueltig) — Verortung ohne
+Detailabruf. Die Detailseite liefert danach Adresse mit Hausnummer, Bedenkzeit, Rundenzahl,
+System (`Švicar` / `Berger`) und Veranstalter.
+
+Fallen: das `leto`-Dropdown listet nur bis 2026, `leto=2027` funktioniert aber trotzdem — wer sich
+auf das Dropdown verlaesst, haelt 2027 fuer leer. **Absagen stehen im NAMEN** (`ODPADE;`,
+`ODPOVEDANO`), nicht in einem Statusfeld.
+
+**Vorbehalt:** keine robots.txt (404 seit mindestens 2025-07), keine Nutzungsbedingungen, kein
+Copyright-Hinweis — aber ein grober nginx-UA-Filter, der jede Zeichenfolge „bot" blockt, **auch
+Googlebot und bingbot**. Das ist ein kopierter Schnipsel, keine ueberlegte Absage; trotzdem ist
+hier eine kurze Mail an `info@sah-zveza.si` das Sauberste.
+
+### ⚠️ Tschechien — billig mitnehmen, kein Volumen
+
+```
+GET https://www.chess.cz/vypis-vsech-udalosti/   → 90 Eintraege, 304 KB, EIN Abruf
+```
+
+Die billigste bisher gepruefte Quelle — keine Paginierung, kein Formular, keine Detailseiten
+(nachgeprueft: die tragen nichts Zusaetzliches). Aber die 90 zerfallen in **19 Nicht-Turniere**
+(Schiedsrichterschulungen, Trainingslager, Sitzungen), **33 Ligarunden** (die auf genau zwei
+chess-results-Turniere zeigen) und **38 echte Turniere**, von denen 13 nicht auf chess-results
+stehen. Rund 1,6 zusaetzliche Turniere je Monat.
+
+Zum Vergleich fuehrt chess-results fuer CZE im selben Zeitraum 146 — dort ist die Abdeckung
+**viermal dichter**. Der erwartete Vorlaufeffekt bleibt aus, weil die weit vorne liegenden
+chess.cz-Eintraege zu 86 % Ligarunden und grosse Festivals sind.
+
+**Zwei Dinge machen es trotzdem attraktiv:** wo eine Ueberschneidung besteht, liefert chess.cz die
+chess-results-Nummer direkt mit — exakte statt heuristischer Zuordnung. Und die 33 Ligarunden
+sind genau das, wofuer wir sonst `art=14` je Turnier abrufen: **Spieltermine geschenkt**.
+
+Falle bei der Gegenpruefung: `txt_bez` auf chess-results ist **diakritik-sensitiv** — „Granát"
+findet, „Granat" findet nichts.
+
+### ❌ Liechtenstein — sauber, frei, und ohne jeden Zugewinn
+
+`schach.li/agenda.html` ist server-gerendert, traegt hCalendar-Microformat mit ISO-Daten und die
+volle Adresse **mit PLZ** — und fuehrt **ein** kuenftiges Turnier. Dasselbe steht auf
+chess-results (dort als drei Zeilen, eine je Altersklasse). Zugewinn **null**.
+
+chess-results fuehrt fuer LIE insgesamt 44 Zeilen ueber sechs Jahre, inklusive
+Vereinsmeisterschaften — das Turnier-Universum ist dort vollstaendig abgebildet, und die LCF
+verlinkt fuer Teilnehmerlisten selbst dorthin.
+
+Der einzige Mehrwert waere die Adresse mit PLZ. Bei ein bis drei Turnieren im Jahr ist das
+billiger von Hand gesetzt (`PUT /api/admin/tournament-directory/{id}/coordinates`,
+`GeoSource=Manual` ueberlebt den Sweep) als ein Parser fuer ein Einzelstueck-CMS, dessen ICS-Feed
+ausgerechnet unter dem einzigen `Disallow: /route/` liegt.
+
+### Reihenfolge nach Ertrag je Aufwand
+
+1. **chess-results-Ankuendigungskalender** — ein Endpunkt, +93 AUT-Turniere, dieselbe Domain,
+   dieselbe Rechtslage, und der Ablauf ist schon implementiert. Danach dasselbe fuer die uebrigen
+   Foederationen probieren.
+2. **Italien** — 285 in einem Abruf, alle Felder inline, keinerlei Vorbehalt.
+3. **Slowenien** — Faktor elf gegenueber chess-results, PLZ in der Liste. Vorher eine Mail.
+4. **Slowakei** — offizielle API, die ausdruecklich zur Nutzung einlaedt, 26 gratis
+   Dedup-Schluessel.
+5. **Ungarn** — ein POST, vor allem Vorlauf.
+6. **Tschechien** — billig, kleiner Ertrag, aber Ligatermine geschenkt.
+7. **Oberoesterreich** (PLZ-Qualitaet, autoritative Bedenkzeit) und **Steiermark+Vorarlberg**
+   (ein Parser fuer zwei) — nur, wenn Ortsqualitaet wirklich gebraucht wird. Vorher anfragen.
+8. **Liechtenstein**: nicht anbinden.
+
 ## Gesamtbild nach 15 geprueften Quellen
 
 **Der Ausschlussgrund war fast nie die Technik.** Von 15 Quellen scheiterten 6 an einer
