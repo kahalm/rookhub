@@ -13,14 +13,28 @@
 #   2. backfill-sources Herkunftsvermerk nachtragen (jeder Altbestand stammt aus chess-results).
 #   3. round-plans      SPIELTERMINE langlaufender Turniere holen — ein Seitenabruf je Turnier,
 #                       deshalb gedeckelt (LIMIT). Mehrfach aufrufbar, der Rest bleibt liegen.
+#                       RETRY_EMPTY=true nimmt zusaetzlich die Eintraege vor, die als geprueft
+#                       gelten und KEINEN Termin haben. Gebraucht, wenn das Holen selbst kaputt
+#                       war: der Vermerk „geprueft" verhindert sonst jede Wiederholung fuer
+#                       immer (so aufgefallen — 452 geprueft, 0 Termine, weil der Parser die
+#                       Wrapper- statt der Datentabelle nahm). Bewusst nicht die Vorgabe: ein
+#                       Turnier ohne veroeffentlichten Plan ist der HAEUFIGE Fall, und jeder
+#                       dieser Eintraege kostet wieder einen Seitenabruf.
 #   4. fide             Den FIDE-Kalender lesen (laufendes Jahr + 2, ein Abruf je Jahr).
 #
-# Aufruf:  bash scripts/directory-backfill.sh [API-Basis-URL] [ROUND_PLAN_LIMIT]
-#          Default-URL ist der Dev-Stack (http://127.0.0.1:5002), Default-Limit 200.
+# Aufruf:  bash scripts/directory-backfill.sh [API-Basis-URL] [ROUND_PLAN_LIMIT] [RETRY_EMPTY]
+#          Default-URL ist der Dev-Stack (http://127.0.0.1:5002), Default-Limit 200,
+#          RETRY_EMPTY standardmaessig false.
 set -euo pipefail
 
 API="${1:-http://127.0.0.1:5002}"
 LIMIT="${2:-200}"
+RETRY_EMPTY="${3:-false}"
+
+case "$RETRY_EMPTY" in
+  true|false) ;;
+  *) echo "RETRY_EMPTY muss 'true' oder 'false' sein (war: '$RETRY_EMPTY')." >&2; exit 2 ;;
+esac
 
 read -rp "Admin-Benutzername [admin]: " ADMIN_USER
 ADMIN_USER="${ADMIN_USER:-admin}"
@@ -57,8 +71,8 @@ run "Publikum und Format aus den Turniernamen ableiten" \
     "$API/api/admin/tournament-directory/classify"
 run "Herkunftsvermerk fuer den Altbestand nachtragen" \
     "$API/api/admin/tournament-directory/backfill-sources"
-run "Spieltermine langlaufender Turniere holen (max. $LIMIT)" \
-    "$API/api/admin/tournament-directory/round-plans?limit=$LIMIT"
+run "Spieltermine langlaufender Turniere holen (max. $LIMIT, retryEmpty=$RETRY_EMPTY)" \
+    "$API/api/admin/tournament-directory/round-plans?limit=$LIMIT&retryEmpty=$RETRY_EMPTY"
 run "FIDE-Kalender lesen" \
     "$API/api/admin/tournament-directory/fide"
 

@@ -18,7 +18,10 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       turnier: ${{ steps.filter.outputs.turnier }}
       crawler: ${{ steps.filter.outputs.crawler }}
-      engine-provider: ${{ steps.filter.outputs.engine-provider }}
+      # Index-Schreibweise, NICHT `outputs.engine-provider`: in einem Ausdruck ist der
+      # Bindestrich der MINUS-Operator, `outputs.engine` minus `provider` — der ganze
+      # Workflow startet dann nicht mehr (`startup_failure`, kein Job, kein Image).
+      engine-provider: ${{ steps.filter.outputs['engine-provider'] }}
     permissions:
       contents: read
       pull-requests: read

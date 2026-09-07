@@ -91,6 +91,59 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// In einem Actions-AUSDRUCK ist der Bindestrich der MINUS-Operator:
+    /// <c>outputs.engine-provider</c> liest GitHub als <c>outputs.engine</c> minus
+    /// <c>provider</c>. Der Ausdruck ist damit ungueltig, und das kostet nicht einen Job,
+    /// sondern den ganzen Lauf — `startup_failure`, kein einziger Schritt, kein Image, und in
+    /// der Job-Liste steht nichts, was man anklicken koennte.
+    ///
+    /// <para>Live passiert (v0.434.2): EINE solche Zeile in den `outputs:` des
+    /// `changes`-Jobs liess beide Workflows nicht mehr anlaufen — waehrend die YAML-Datei
+    /// syntaktisch tadellos ist und jeder Linter sie durchwinkt. Richtig ist die
+    /// Index-Schreibweise <c>outputs['engine-provider']</c>; an der EINEN Stelle, die den
+    /// Filter abfragt, stand sie schon, in der Ausgabe-Zuweisung nicht.</para>
+    /// </summary>
+    [Theory]
+    [InlineData(Docker)]
+    [InlineData(Tests)]
+    public void NoWorkflowExpression_ReadsAHyphenatedNameWithDotSyntax(string workflow)
+    {
+        var text = ReadRepoFile(workflow);
+
+        // Nur INNERHALB von ${{ }} suchen: ein Kommentar, der die falsche Form ZITIERT (wie der
+        // in test.yml, der genau davor warnt), ist kein Fehler — und ein Test, der daran
+        // scheitert, verbietet das Erklaeren.
+        var offenders = Regex.Matches(text, @"\$\{\{(.*?)\}\}", RegexOptions.Singleline)
+            .SelectMany(expr => Regex.Matches(
+                    expr.Groups[1].Value,
+                    @"(?:outputs|inputs|vars|env)\.[A-Za-z_][A-Za-z0-9_]*-[A-Za-z0-9_]")
+                .Select(m => m.Value))
+            .Distinct()
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            "Bindestrich = Minus im Ausdruck; stattdessen outputs['name-mit-strich'] benutzen: "
+            + string.Join(", ", offenders));
+    }
+
+    /// <summary>
+    /// Die Betriebs-Skripte liegen nicht im API-Baum, ihre Tests aber schon
+    /// (<c>DeploymentConfigTests</c>). Faellt `scripts/**` aus dem api-Filter, startet eine
+    /// Aenderung, die NUR ein Skript beruehrt, keinen einzigen Job — und ausgerechnet der Test,
+    /// der dieses Skript festnagelt, bleibt stehen. Dieselbe Klasse Fehler wie Regel 1 der
+    /// Filter-Datei, nur eine Ebene weiter.
+    /// </summary>
+    [Fact]
+    public void ApiFilter_CoversTheOperationsScripts()
+    {
+        var text = ReadRepoFile(Filters);
+        var block = Regex.Match(text, @"(?ms)^api:\s*$(.*?)(?=^\S|\z)").Groups[1].Value;
+
+        Assert.Contains("tests/**", block);
+        Assert.Contains("scripts/**", block);
+    }
+
+    /// <summary>
     /// Ein TAG-Lauf muss ALLE Images bauen: `:latest` entsteht nur dort, und beim Tag gibt es
     /// keinen Vorgaenger-Stand, gegen den ein Filter sinnvoll vergleichen koennte.
     /// </summary>

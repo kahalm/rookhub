@@ -103,13 +103,22 @@ public class DeploymentConfigTests
         return next.Success ? compose.Substring(start, next.Index + 1) : compose[start..];
     }
 
+    /// <summary>
+    /// Ohne Test-Tor pushen die Image-Jobs ohne einen einzigen Test — und Watchtower zieht die
+    /// Images in derselben Nacht.
+    ///
+    /// <para>Geprueft wird der NAME `tests` in `needs`, nicht mehr die Zeile `needs: tests`:
+    /// seit 0.434.2 steht dort die Listenform `needs: [changes, tests]`, und der alte
+    /// Zeichenketten-Vergleich schlug damit fehl, obwohl das Tor genau da war. Was die
+    /// Image-Jobs mit dem Ergebnis machen, pruefen die feineren Faelle in
+    /// <c>CiWorkflowTests</c>.</para>
+    /// </summary>
     [Fact]
     public void DockerWorkflow_KeepsTheTestGate()
     {
-        // Fällt diese eine Zeile weg, pushen die Image-Jobs ohne einen einzigen Test — und
-        // Watchtower zieht die Images in derselben Nacht.
         var text = ReadRepoFile(".github/workflows/docker.yml");
-        Assert.Contains("needs: tests", text);
+
+        Assert.Matches(@"needs:\s*(tests\b|\[[^\]]*\btests\b)", text);
     }
 
     [Fact]
@@ -173,5 +182,58 @@ public class DeploymentConfigTests
         Assert.Contains("mariadb-dump", ReadRepoFile("scripts/backup-db.sh"));
         Assert.Contains("_ilm/policy", ReadRepoFile("scripts/es_log_retention.py"));
         Assert.Contains("Restore", ReadRepoFile("docs/backup.md"));
+    }
+
+    /// <summary>
+    /// Der Rundenplan-Schritt des Nachtrags MUSS `retryEmpty` durchreichen — und zwar als
+    /// Variable, nicht als festen Wert.
+    ///
+    /// <para><b>Warum das einen Test wert ist.</b> Ohne den Schalter nimmt der Endpunkt nur
+    /// Eintraege ohne `RoundPlanCheckedAt` vor. War das Holen selbst kaputt (auf Dev gemessen:
+    /// 452 als geprueft vermerkt, 0 Spieltermine, weil der Parser die Wrapper- statt der
+    /// Datentabelle nahm), dann verhindert genau dieser Vermerk jede Wiederholung — fuer immer,
+    /// lautlos, und der Kalender zeigt die Liga weiter an 200 spielfreien Tagen. Ein Skript, das
+    /// den Schalter nicht anbietet, laesst den Bestand also nicht reparieren.</para>
+    /// </summary>
+    [Fact]
+    public void DirectoryBackfill_PassesRetryEmptyThroughToRoundPlans()
+    {
+        var text = ReadRepoFile("scripts/directory-backfill.sh");
+
+        Assert.Contains("round-plans?limit=$LIMIT&retryEmpty=$RETRY_EMPTY", text);
+    }
+
+    /// <summary>
+    /// Und der Schalter ist AUS, solange ihn niemand setzt: jeder erneut vorgenommene Eintrag
+    /// kostet einen Seitenabruf, und „kein veroeffentlichter Plan" ist der haeufige Fall. Ein
+    /// unbedacht voreingestelltes `true` machte aus dem Nachtrag jedes Mal einen Lauf ueber den
+    /// halben Bestand.
+    /// </summary>
+    [Fact]
+    public void DirectoryBackfill_LeavesRetryEmptyOffByDefault()
+    {
+        var text = ReadRepoFile("scripts/directory-backfill.sh");
+
+        Assert.Contains("RETRY_EMPTY=\"${3:-false}\"", text);
+    }
+
+    /// <summary>
+    /// Ein Tippfehler im Schalter muss ABBRECHEN, nicht still als „nicht true" durchgehen: der
+    /// Lauf saehe erfolgreich aus, taete aber nichts, und auffallen wuerde es erst an der
+    /// Datenbank. Geprueft wird VOR der Passwortabfrage.
+    /// </summary>
+    [Fact]
+    public void DirectoryBackfill_RejectsAnUnknownRetryEmptyValue()
+    {
+        var text = ReadRepoFile("scripts/directory-backfill.sh");
+
+        var check = text.IndexOf("case \"$RETRY_EMPTY\" in", StringComparison.Ordinal);
+        var prompt = text.IndexOf("read -rsp", StringComparison.Ordinal);
+
+        Assert.True(check >= 0, "Keine Pruefung von RETRY_EMPTY gefunden.");
+        Assert.Contains("true|false)", text);
+        Assert.True(check < prompt,
+            "Die Pruefung muss vor der Passwortabfrage stehen — sonst tippt man erst das "
+            + "Passwort und erfaehrt danach, dass das Argument falsch war.");
     }
 }
