@@ -311,7 +311,7 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/gazetteer/postal/{iso2}` | GeoNames-PLZ eines Landes importieren |
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
-| POST | `/api/admin/tournament-directory/geocode-missing` | Nicht verortete Eintraege erneut aufloesen |
+| POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen. **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual` bleibt in jedem Fall unberuehrt |
 | POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
 | PUT | `/api/admin/tournament-directory/{id}/coordinates` | Koordinaten von Hand setzen (GeoSource=Manual, ueberlebt den Sweep) |
 

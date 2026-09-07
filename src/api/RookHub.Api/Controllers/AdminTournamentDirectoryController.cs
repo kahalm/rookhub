@@ -170,16 +170,25 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// frischen Import der eigentliche Nutzen: die Zeilen von gestern bekommen ihre Pins.
     /// </summary>
     [HttpPost("geocode-missing")]
-    public async Task<IActionResult> GeocodeMissing([FromQuery] int limit = 1000, CancellationToken ct = default)
+    public async Task<IActionResult> GeocodeMissing(
+        [FromQuery] int limit = 1000, [FromQuery] bool force = false, CancellationToken ct = default)
     {
+        // `force` nimmt auch SCHON verortete Eintraege vor. Gebraucht wird das, wenn sich die
+        // Verortungs-REGELN aendern: der naechtliche Sweep verortet einen bestehenden Eintrag nur
+        // neu, wenn sich sein Ortstext geaendert hat (sonst liefe jede Nacht der ganze Bestand
+        // durch den Gazetteer). Ein falscher Pin aus einer alten Regel bliebe damit fuer immer
+        // stehen. Von Hand gesetzte Koordinaten bleiben in JEDEM Fall unberuehrt.
         var entries = await _db.TournamentDirectoryEntries
             .Include(e => e.Venues)
-            .Where(e => e.RemovedAt == null && e.Lat == null && e.GeoSource != GeoSource.Manual)
+            .Where(e => e.RemovedAt == null
+                        && e.GeoSource != GeoSource.Manual
+                        && (force || e.Lat == null))
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 10000))
             .ToListAsync(ct);
 
         var resolved = 0;
+        var cleared = 0;
         foreach (var entry in entries)
         {
             // Alle Spielorte, nicht nur einen: bei Ligen nennt der Ortstext mehrere.
@@ -191,10 +200,23 @@ public class AdminTournamentDirectoryController : BaseApiController
             if (primary is null)
             {
                 // Mehrdeutig bleibt ohne Pin — aber als solches vermerkt, damit die Arbeitsliste
-                // „gefunden, aber unklar" von „nichts gefunden" unterscheiden kann.
-                if (results.Any(r => r.Source == GeoSource.Ambiguous) && entry.GeoSource != GeoSource.Ambiguous)
+                // „gefunden, aber unklar" von „nichts gefunden" unterscheiden kann. Bei `force`
+                // wird ein bestehender Pin dabei ENTFERNT: er stammt aus einer Regel, die wir
+                // gerade als unzuverlaessig erkannt haben.
+                var ambiguous = results.Any(r => r.Source == GeoSource.Ambiguous);
+                var target = ambiguous ? GeoSource.Ambiguous : GeoSource.None;
+                if (force && entry.Lat != null)
                 {
-                    entry.GeoSource = GeoSource.Ambiguous;
+                    entry.Lat = null;
+                    entry.Lon = null;
+                    entry.GeoPlaceName = null;
+                    if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
+                    entry.Venues = [];
+                    cleared++;
+                }
+                if (entry.GeoSource != target)
+                {
+                    entry.GeoSource = target;
                     entry.UpdatedAt = DateTime.UtcNow;
                 }
                 continue;
@@ -218,7 +240,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         }
         await _db.SaveChangesAsync(ct);
 
-        return Ok(new { examined = entries.Count, resolved });
+        return Ok(new { examined = entries.Count, resolved, cleared });
     }
 
     public class SweepRequest
