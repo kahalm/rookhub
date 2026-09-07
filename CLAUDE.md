@@ -28,6 +28,31 @@ Es gibt **zwei gleichwertige, funktionierende Arbeitskopien** des gesamten Stack
 
 Die beiden Kopien werden NICHT automatisch synchronisiert — jede committet/pusht für sich. Nach Merges ggf. per `git pull` abgleichen.
 
+### Die beiden Agenten KÖNNEN und SOLLEN miteinander reden
+
+`ListAgents` listet die andere laufende Sitzung (Name + ob sie gerade beschäftigt ist),
+`SendMessage` schickt ihr eine Nachricht — Adresse ist der Name aus der Liste. Beide Richtungen
+sind erlaubt und erwünscht. Der Lock schützt nur die eigene Arbeitskopie; alles, was über das
+gemeinsame `master` läuft, lässt sich nur durch REDEN entschärfen.
+
+Wann eine Nachricht fällig ist:
+
+- **Vor einem Push**, wenn die andere Sitzung beschäftigt ist — ein „ich pushe jetzt" spart dem
+  anderen einen Rebase-Konflikt. `changelog.ts`/`changelog-data.ts` kollidieren dabei IMMER, weil
+  beide Seiten `APP_VERSION` anfassen.
+- **Wenn ein fremder Commit etwas kaputt gemacht hat**, das man selbst repariert hat — sonst baut
+  der andere dasselbe Muster wieder ein. Am 2026-09-07 hielt `e522efc4` die CI komplett an
+  (`startup_failure`, kein Image für zwei Versionen); ohne Rückmeldung hätte niemand dort erfahren,
+  woran es lag.
+- **Bevor man eine Datei umbaut, an der der andere gerade sichtbar arbeitet** (letzte Commits
+  ansehen: `git log --oneline -5`).
+- **Wenn man den eigenen Lock freigibt** und noch Arbeit offen ist, die der andere übernehmen kann.
+
+Zwei Grenzen: eine Nachricht platzt in die laufende Arbeit des anderen — also kurz und mit einer
+selbsterklärenden ERSTEN Zeile (nur die sieht der Mensch als Vorschau). Und niemals den anderen
+etwas tun lassen, was in der eigenen Sitzung von der Berechtigungsabfrage abgelehnt wurde: das
+umgeht die Entscheidung des Nutzers, statt sie einzuholen.
+
 ## Zusammenspiel der Projekte
 
 ```
