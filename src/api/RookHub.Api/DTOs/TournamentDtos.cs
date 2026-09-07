@@ -8,6 +8,13 @@ public class TournamentSubscriptionDto
     public string CrawlerTournamentId { get; set; } = string.Empty;
     public string TournamentName { get; set; } = string.Empty;
     public DateTime SubscribedAt { get; set; }
+
+    /// <summary>
+    /// Der TURNIERtermin (nicht der Zeitpunkt des Merkens). Eine Merkliste ohne Datum laesst sich
+    /// nicht ordnen — und die Frage an eine solche Liste ist „was steht als Naechstes an".
+    /// <c>null</c> bei Altbestand, der vor dem Termin-Feld gemerkt wurde.
+    /// </summary>
+    public DateOnly? EventDate { get; set; }
 }
 
 public class CreateSubscriptionDto

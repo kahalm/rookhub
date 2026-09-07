@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "比赛",
-      "importTitle": "导入比赛",
-      "importSubtitle": "输入 chess-results.com 比赛 ID 以抓取数据",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "例如：1234567",
-      "idHintPrefix": "来自 chess-results.com/tnr 的数字",
-      "idHintSuffix": ".aspx",
-      "crawl": "抓取",
-      "crawling": "正在抓取比赛 {{id}}… 任务 #{{jobId}}",
-      "crawlerUnavailable": "无法连接到比赛爬虫。请确认爬虫服务正在运行。",
-      "details": "详情",
-      "hide": "隐藏",
-      "empty": "未找到比赛。",
-      "showHidden": "显示 {{count}} 个已隐藏",
-      "imported": "比赛已导入！",
-      "crawlStartFailed": "启动抓取失败",
-      "crawlFailed": "抓取失败",
-      "crawlConnectionLost": "与抓取任务的连接已断开"
+      "crawlerUnavailable": "无法连接到比赛爬虫。请确认爬虫服务正在运行。"
     },
     "detail": {
       "loadTournamentFailed": "加载比赛失败",

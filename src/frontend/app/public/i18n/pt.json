@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Torneios",
-      "importTitle": "Importar torneio",
-      "importSubtitle": "Introduza um ID de torneio do chess-results.com para importar",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "ex. 1234567",
-      "idHintPrefix": "O número em chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Importar",
-      "crawling": "A importar torneio {{id}}... Tarefa #{{jobId}}",
-      "crawlerUnavailable": "Não foi possível ligar ao importador de torneios. Certifique-se de que o serviço está em execução.",
-      "details": "Detalhes",
-      "hide": "Ocultar",
-      "empty": "Nenhum torneio encontrado.",
-      "showHidden": "Mostrar {{count}} ocultos",
-      "imported": "Torneio importado!",
-      "crawlStartFailed": "Falha ao iniciar importação",
-      "crawlFailed": "Importação falhou",
-      "crawlConnectionLost": "Ligação à tarefa de importação perdida"
+      "crawlerUnavailable": "Não foi possível ligar ao importador de torneios. Certifique-se de que o serviço está em execução."
     },
     "detail": {
       "loadTournamentFailed": "Falha ao carregar torneio",

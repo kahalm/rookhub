@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Toernooien",
-      "importTitle": "Toernooi importeren",
-      "importSubtitle": "Voer een chess-results.com toernooi-ID in om het te crawlen",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "bijv. 1234567",
-      "idHintPrefix": "Het getal van chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Crawlen",
-      "crawling": "Toernooi {{id}} crawlen... Taak #{{jobId}}",
-      "crawlerUnavailable": "Geen verbinding met de toernooi-crawler. Controleer of de crawler actief is.",
-      "details": "Details",
-      "hide": "Verbergen",
-      "empty": "Geen toernooien gevonden.",
-      "showHidden": "{{count}} verborgen tonen",
-      "imported": "Toernooi geïmporteerd!",
-      "crawlStartFailed": "Crawl starten mislukt",
-      "crawlFailed": "Crawlen mislukt",
-      "crawlConnectionLost": "Verbinding met crawltaak verbroken"
+      "crawlerUnavailable": "Geen verbinding met de toernooi-crawler. Controleer of de crawler actief is."
     },
     "detail": {
       "loadTournamentFailed": "Toernooi laden mislukt",

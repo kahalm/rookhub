@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Турніри",
-      "importTitle": "Імпортувати турнір",
-      "importSubtitle": "Введіть ID турніру з chess-results.com для завантаження",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "наприклад, 1234567",
-      "idHintPrefix": "Число з chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Завантажити",
-      "crawling": "Завантаження турніру {{id}}… Завдання #{{jobId}}",
-      "crawlerUnavailable": "Не вдалося підключитися до сервісу завантаження турнірів. Переконайтеся, що сервіс запущений.",
-      "details": "Деталі",
-      "hide": "Сховати",
-      "empty": "Турнірів не знайдено.",
-      "showHidden": "Показати {{count}} прихованих",
-      "imported": "Турнір імпортовано!",
-      "crawlStartFailed": "Не вдалося розпочати завантаження",
-      "crawlFailed": "Помилка завантаження",
-      "crawlConnectionLost": "З'єднання із завданням завантаження перервано"
+      "crawlerUnavailable": "Не вдалося підключитися до сервісу завантаження турнірів. Переконайтеся, що сервіс запущений."
     },
     "detail": {
       "loadTournamentFailed": "Не вдалося завантажити турнір",

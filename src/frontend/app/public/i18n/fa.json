@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "مسابقات",
-      "importTitle": "وارد کردن مسابقه",
-      "importSubtitle": "شناسه مسابقه chess-results.com را برای جمع‌آوری وارد کنید",
-      "chessResultsId": "شناسه Chess-Results",
-      "idPlaceholder": "مثلاً ۱۲۳۴۵۶۷",
-      "idHintPrefix": "عدد از chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "جمع‌آوری",
-      "crawling": "جمع‌آوری مسابقه {{id}}... کار #{{jobId}}",
-      "crawlerUnavailable": "اتصال به جمع‌آورنده مسابقات برقرار نشد. اطمینان حاصل کنید که سرویس جمع‌آورنده در حال اجراست.",
-      "details": "جزئیات",
-      "hide": "پنهان کردن",
-      "empty": "مسابقه‌ای یافت نشد.",
-      "showHidden": "نمایش {{count}} پنهان‌شده",
-      "imported": "مسابقه وارد شد!",
-      "crawlStartFailed": "شروع جمع‌آوری ناموفق بود",
-      "crawlFailed": "جمع‌آوری ناموفق بود",
-      "crawlConnectionLost": "اتصال به کار جمع‌آوری قطع شد"
+      "crawlerUnavailable": "اتصال به جمع‌آورنده مسابقات برقرار نشد. اطمینان حاصل کنید که سرویس جمع‌آورنده در حال اجراست."
     },
     "detail": {
       "loadTournamentFailed": "بارگذاری مسابقه ناموفق بود",

@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Giải đấu",
-      "importTitle": "Nhập giải đấu",
-      "importSubtitle": "Nhập ID giải đấu từ chess-results.com để thu thập dữ liệu",
-      "chessResultsId": "ID Chess-Results",
-      "idPlaceholder": "ví dụ: 1234567",
-      "idHintPrefix": "Số từ chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Thu thập dữ liệu",
-      "crawling": "Đang thu thập giải đấu {{id}}... Công việc #{{jobId}}",
-      "crawlerUnavailable": "Không thể kết nối đến bộ thu thập giải đấu. Hãy đảm bảo dịch vụ thu thập đang chạy.",
-      "details": "Chi tiết",
-      "hide": "Ẩn",
-      "empty": "Không tìm thấy giải đấu.",
-      "showHidden": "Hiển thị {{count}} ẩn",
-      "imported": "Đã nhập giải đấu!",
-      "crawlStartFailed": "Không thể bắt đầu thu thập",
-      "crawlFailed": "Thu thập thất bại",
-      "crawlConnectionLost": "Mất kết nối đến công việc thu thập"
+      "crawlerUnavailable": "Không thể kết nối đến bộ thu thập giải đấu. Hãy đảm bảo dịch vụ thu thập đang chạy."
     },
     "detail": {
       "loadTournamentFailed": "Không thể tải giải đấu",

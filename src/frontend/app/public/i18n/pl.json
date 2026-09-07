@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Turnieje",
-      "importTitle": "Importuj turniej",
-      "importSubtitle": "Podaj ID turnieju z chess-results.com, aby go pobrać",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "np. 1234567",
-      "idHintPrefix": "Numer z chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Pobierz",
-      "crawling": "Pobieranie turnieju {{id}}... Zadanie #{{jobId}}",
-      "crawlerUnavailable": "Nie można połączyć się z crawlerem turniejów. Upewnij się, że usługa crawlera działa.",
-      "details": "Szczegóły",
-      "hide": "Ukryj",
-      "empty": "Nie znaleziono turniejów.",
-      "showHidden": "Pokaż {{count}} ukrytych",
-      "imported": "Turniej zaimportowany!",
-      "crawlStartFailed": "Nie udało się uruchomić pobierania",
-      "crawlFailed": "Pobieranie nie powiodło się",
-      "crawlConnectionLost": "Utracono połączenie z zadaniem pobierania"
+      "crawlerUnavailable": "Nie można połączyć się z crawlerem turniejów. Upewnij się, że usługa crawlera działa."
     },
     "detail": {
       "loadTournamentFailed": "Nie udało się załadować turnieju",

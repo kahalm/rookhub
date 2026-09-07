@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Τουρνουά",
-      "importTitle": "Εισαγωγή τουρνουά",
-      "importSubtitle": "Εισαγάγετε ένα ID τουρνουά chess-results.com για συλλογή δεδομένων",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "π.χ. 1234567",
-      "idHintPrefix": "Ο αριθμός από chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Συλλογή",
-      "crawling": "Συλλογή τουρνουά {{id}}… Εργασία #{{jobId}}",
-      "crawlerUnavailable": "Αδύνατη σύνδεση με τον συλλέκτη τουρνουά. Βεβαιωθείτε ότι η υπηρεσία συλλέκτη λειτουργεί.",
-      "details": "Λεπτομέρειες",
-      "hide": "Απόκρυψη",
-      "empty": "Δεν βρέθηκαν τουρνουά.",
-      "showHidden": "Εμφάνιση {{count}} κρυφών",
-      "imported": "Το τουρνουά εισήχθη!",
-      "crawlStartFailed": "Αποτυχία εκκίνησης συλλογής",
-      "crawlFailed": "Αποτυχία συλλογής",
-      "crawlConnectionLost": "Χάθηκε η σύνδεση με την εργασία συλλογής"
+      "crawlerUnavailable": "Αδύνατη σύνδεση με τον συλλέκτη τουρνουά. Βεβαιωθείτε ότι η υπηρεσία συλλέκτη λειτουργεί."
     },
     "detail": {
       "loadTournamentFailed": "Αποτυχία φόρτωσης τουρνουά",

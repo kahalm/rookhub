@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "トーナメント",
-      "importTitle": "トーナメントをインポート",
-      "importSubtitle": "chess-results.com のトーナメント ID を入力してクロールします",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "例: 1234567",
-      "idHintPrefix": "chess-results.com/tnr の番号",
-      "idHintSuffix": ".aspx",
-      "crawl": "クロール",
-      "crawling": "トーナメント {{id}} をクロール中... ジョブ #{{jobId}}",
-      "crawlerUnavailable": "トーナメントクローラーに接続できませんでした。クローラーサービスが起動しているか確認してください。",
-      "details": "詳細",
-      "hide": "非表示",
-      "empty": "トーナメントが見つかりません。",
-      "showHidden": "非表示の {{count}} 件を表示",
-      "imported": "トーナメントをインポートしました！",
-      "crawlStartFailed": "クロールの開始に失敗しました",
-      "crawlFailed": "クロールに失敗しました",
-      "crawlConnectionLost": "クロールジョブへの接続が切れました"
+      "crawlerUnavailable": "トーナメントクローラーに接続できませんでした。クローラーサービスが起動しているか確認してください。"
     },
     "detail": {
       "loadTournamentFailed": "トーナメントの読み込みに失敗しました",

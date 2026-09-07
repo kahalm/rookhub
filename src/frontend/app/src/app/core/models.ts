@@ -69,6 +69,8 @@ export interface Subscription {
   tournamentName: string;
   subscribedAt: string;
   tournamentDbId: number | null;
+  /** Der TURNIERtermin (nicht der Zeitpunkt des Merkens); `null` bei Altbestand. */
+  eventDate: string | null;
 }
 
 // ── Friends ─────────────────────────────────────────────────────────────

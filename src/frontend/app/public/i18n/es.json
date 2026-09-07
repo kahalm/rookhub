@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Torneos",
-      "importTitle": "Importar torneo",
-      "importSubtitle": "Introduce un ID de torneo de chess-results.com para procesarlo",
-      "chessResultsId": "ID de Chess-Results",
-      "idPlaceholder": "p. ej. 1234567",
-      "idHintPrefix": "El número de chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Procesar",
-      "crawling": "Procesando torneo {{id}}... Tarea n.º {{jobId}}",
-      "crawlerUnavailable": "No se pudo conectar al procesador de torneos. Asegúrate de que el servicio esté en ejecución.",
-      "details": "Detalles",
-      "hide": "Ocultar",
-      "empty": "No se encontraron torneos.",
-      "showHidden": "Mostrar {{count}} ocultos",
-      "imported": "¡Torneo importado!",
-      "crawlStartFailed": "Error al iniciar el procesamiento",
-      "crawlFailed": "Error en el procesamiento",
-      "crawlConnectionLost": "Se perdió la conexión con la tarea de procesamiento"
+      "crawlerUnavailable": "No se pudo conectar al procesador de torneos. Asegúrate de que el servicio esté en ejecución."
     },
     "detail": {
       "loadTournamentFailed": "Error al cargar el torneo",

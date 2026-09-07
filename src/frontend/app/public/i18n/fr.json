@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Tournois",
-      "importTitle": "Importer un tournoi",
-      "importSubtitle": "Saisissez un ID de tournoi chess-results.com pour le récupérer",
-      "chessResultsId": "ID Chess-Results",
-      "idPlaceholder": "ex. 1234567",
-      "idHintPrefix": "Le numéro de chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Récupérer",
-      "crawling": "Récupération du tournoi {{id}}... Tâche n°{{jobId}}",
-      "crawlerUnavailable": "Impossible de se connecter au récupérateur de tournois. Assurez-vous que le service est en cours d'exécution.",
-      "details": "Détails",
-      "hide": "Masquer",
-      "empty": "Aucun tournoi trouvé.",
-      "showHidden": "Afficher {{count}} masqué(s)",
-      "imported": "Tournoi importé !",
-      "crawlStartFailed": "Impossible de démarrer la récupération",
-      "crawlFailed": "Récupération échouée",
-      "crawlConnectionLost": "Connexion perdue avec la tâche de récupération"
+      "crawlerUnavailable": "Impossible de se connecter au récupérateur de tournois. Assurez-vous que le service est en cours d'exécution."
     },
     "detail": {
       "loadTournamentFailed": "Impossible de charger le tournoi",

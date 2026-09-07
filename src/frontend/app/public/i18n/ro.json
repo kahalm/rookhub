@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Turnee",
-      "importTitle": "Importă turneu",
-      "importSubtitle": "Introdu un ID de turneu de pe chess-results.com pentru preluare",
-      "chessResultsId": "ID Chess-Results",
-      "idPlaceholder": "ex. 1234567",
-      "idHintPrefix": "Numărul din chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Preia date",
-      "crawling": "Se preiau datele turneului {{id}}... Job #{{jobId}}",
-      "crawlerUnavailable": "Nu s-a putut conecta la serviciul de preluare date. Asigură-te că serviciul rulează.",
-      "details": "Detalii",
-      "hide": "Ascunde",
-      "empty": "Niciun turneu găsit.",
-      "showHidden": "Arată {{count}} ascunse",
-      "imported": "Turneu importat!",
-      "crawlStartFailed": "Pornirea preluării a eșuat",
-      "crawlFailed": "Preluarea a eșuat",
-      "crawlConnectionLost": "Conexiunea la jobul de preluare a fost pierdută"
+      "crawlerUnavailable": "Nu s-a putut conecta la serviciul de preluare date. Asigură-te că serviciul rulează."
     },
     "detail": {
       "loadTournamentFailed": "Încărcarea turneului a eșuat",

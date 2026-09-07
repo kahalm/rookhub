@@ -27,7 +27,8 @@ public class SubscriptionController : BaseApiController
                 Id = s.Id,
                 CrawlerTournamentId = s.CrawlerTournamentId,
                 TournamentName = s.TournamentName,
-                SubscribedAt = s.SubscribedAt
+                SubscribedAt = s.SubscribedAt,
+                EventDate = s.EventDate,
             })
             .ToListAsync();
 

@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "البطولات",
-      "importTitle": "استيراد بطولة",
-      "importSubtitle": "أدخل رقم بطولة من chess-results.com لزحفها",
-      "chessResultsId": "رقم Chess-Results",
-      "idPlaceholder": "مثال: 1234567",
-      "idHintPrefix": "الرقم من chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "زحف",
-      "crawling": "جارٍ زحف البطولة {{id}}... المهمة #{{jobId}}",
-      "crawlerUnavailable": "تعذّر الاتصال بزاحف البطولة. تأكد من تشغيل خدمة الزاحف.",
-      "details": "التفاصيل",
-      "hide": "إخفاء",
-      "empty": "لم يتم العثور على بطولات.",
-      "showHidden": "عرض {{count}} مخفي",
-      "imported": "تم استيراد البطولة!",
-      "crawlStartFailed": "فشل بدء الزحف",
-      "crawlFailed": "فشل الزحف",
-      "crawlConnectionLost": "انقطع الاتصال بمهمة الزحف"
+      "crawlerUnavailable": "تعذّر الاتصال بزاحف البطولة. تأكد من تشغيل خدمة الزاحف."
     },
     "detail": {
       "loadTournamentFailed": "فشل تحميل البطولة",

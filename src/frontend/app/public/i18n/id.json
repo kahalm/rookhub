@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Turnamen",
-      "importTitle": "Impor Turnamen",
-      "importSubtitle": "Masukkan ID turnamen chess-results.com untuk di-crawl",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "mis. 1234567",
-      "idHintPrefix": "Angka dari chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Crawl",
-      "crawling": "Men-crawl turnamen {{id}}... Job #{{jobId}}",
-      "crawlerUnavailable": "Tidak dapat terhubung ke crawler turnamen. Pastikan layanan crawler sedang berjalan.",
-      "details": "Detail",
-      "hide": "Sembunyikan",
-      "empty": "Tidak ada turnamen ditemukan.",
-      "showHidden": "Tampilkan {{count}} yang tersembunyi",
-      "imported": "Turnamen berhasil diimpor!",
-      "crawlStartFailed": "Gagal memulai crawl",
-      "crawlFailed": "Crawl gagal",
-      "crawlConnectionLost": "Koneksi ke pekerjaan crawl terputus"
+      "crawlerUnavailable": "Tidak dapat terhubung ke crawler turnamen. Pastikan layanan crawler sedang berjalan."
     },
     "detail": {
       "loadTournamentFailed": "Gagal memuat turnamen",

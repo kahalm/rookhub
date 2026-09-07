@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "टूर्नामेंट",
-      "importTitle": "टूर्नामेंट आयात करें",
-      "importSubtitle": "क्रॉल करने के लिए chess-results.com टूर्नामेंट ID दर्ज करें",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "जैसे 1234567",
-      "idHintPrefix": "chess-results.com/tnr से नंबर",
-      "idHintSuffix": ".aspx",
-      "crawl": "क्रॉल करें",
-      "crawling": "टूर्नामेंट {{id}} क्रॉल हो रहा है... जॉब #{{jobId}}",
-      "crawlerUnavailable": "टूर्नामेंट क्रॉलर से कनेक्ट नहीं हो सका। सुनिश्चित करें कि क्रॉलर सेवा चल रही है।",
-      "details": "विवरण",
-      "hide": "छुपाएं",
-      "empty": "कोई टूर्नामेंट नहीं मिला।",
-      "showHidden": "{{count}} छुपे हुए दिखाएं",
-      "imported": "टूर्नामेंट आयात किया!",
-      "crawlStartFailed": "क्रॉल शुरू करने में विफल",
-      "crawlFailed": "क्रॉल विफल",
-      "crawlConnectionLost": "क्रॉल जॉब से कनेक्शन खो गया"
+      "crawlerUnavailable": "टूर्नामेंट क्रॉलर से कनेक्ट नहीं हो सका। सुनिश्चित करें कि क्रॉलर सेवा चल रही है।"
     },
     "detail": {
       "loadTournamentFailed": "टूर्नामेंट लोड करने में विफल",

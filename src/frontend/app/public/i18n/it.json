@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Tornei",
-      "importTitle": "Importa torneo",
-      "importSubtitle": "Inserisci un ID torneo di chess-results.com per acquisirlo",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "es. 1234567",
-      "idHintPrefix": "Il numero da chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Acquisisci",
-      "crawling": "Acquisizione torneo {{id}}... Lavoro n° {{jobId}}",
-      "crawlerUnavailable": "Impossibile connettersi al crawler dei tornei. Assicurati che il servizio crawler sia in esecuzione.",
-      "details": "Dettagli",
-      "hide": "Nascondi",
-      "empty": "Nessun torneo trovato.",
-      "showHidden": "Mostra {{count}} nascosti",
-      "imported": "Torneo importato!",
-      "crawlStartFailed": "Impossibile avviare l'acquisizione",
-      "crawlFailed": "Acquisizione non riuscita",
-      "crawlConnectionLost": "Connessione al lavoro di acquisizione persa"
+      "crawlerUnavailable": "Impossibile connettersi al crawler dei tornei. Assicurati che il servizio crawler sia in esecuzione."
     },
     "detail": {
       "loadTournamentFailed": "Impossibile caricare il torneo",

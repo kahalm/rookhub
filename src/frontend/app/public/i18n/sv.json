@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Turneringar",
-      "importTitle": "Importera turnering",
-      "importSubtitle": "Ange ett chess-results.com-turnerings-ID för att hämta det",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "t.ex. 1234567",
-      "idHintPrefix": "Numret från chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Hämta",
-      "crawling": "Hämtar turnering {{id}}… Jobb #{{jobId}}",
-      "crawlerUnavailable": "Kunde inte ansluta till turneringshämtaren. Kontrollera att hämtartjänsten körs.",
-      "details": "Detaljer",
-      "hide": "Dölj",
-      "empty": "Inga turneringar hittades.",
-      "showHidden": "Visa {{count}} dolda",
-      "imported": "Turnering importerad!",
-      "crawlStartFailed": "Det gick inte att starta hämtning",
-      "crawlFailed": "Hämtningen misslyckades",
-      "crawlConnectionLost": "Tappade anslutningen till hämtningsjobbet"
+      "crawlerUnavailable": "Kunde inte ansluta till turneringshämtaren. Kontrollera att hämtartjänsten körs."
     },
     "detail": {
       "loadTournamentFailed": "Det gick inte att läsa in turnering",

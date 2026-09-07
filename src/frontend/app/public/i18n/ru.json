@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Турниры",
-      "importTitle": "Импорт турнира",
-      "importSubtitle": "Введите ID турнира с chess-results.com для сканирования",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "напр. 1234567",
-      "idHintPrefix": "Число из chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Сканировать",
-      "crawling": "Сканирование турнира {{id}}… Задание #{{jobId}}",
-      "crawlerUnavailable": "Не удалось подключиться к сканеру турниров. Убедитесь, что служба сканера запущена.",
-      "details": "Подробности",
-      "hide": "Скрыть",
-      "empty": "Турниры не найдены.",
-      "showHidden": "Показать {{count}} скрытых",
-      "imported": "Турнир импортирован!",
-      "crawlStartFailed": "Не удалось запустить сканирование",
-      "crawlFailed": "Ошибка сканирования",
-      "crawlConnectionLost": "Потеряно соединение с заданием сканирования"
+      "crawlerUnavailable": "Не удалось подключиться к сканеру турниров. Убедитесь, что служба сканера запущена."
     },
     "detail": {
       "loadTournamentFailed": "Не удалось загрузить турнир",

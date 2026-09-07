@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Versenyek",
-      "importTitle": "Verseny importálása",
-      "importSubtitle": "Adjon meg egy chess-results.com versenyazonosítót a beolvasáshoz",
-      "chessResultsId": "Chess-Results azonosító",
-      "idPlaceholder": "pl. 1234567",
-      "idHintPrefix": "A szám a chess-results.com/tnr",
-      "idHintSuffix": ".aspx oldalról",
-      "crawl": "Beolvasás",
-      "crawling": "{{id}} verseny beolvasása... Feladat #{{jobId}}",
-      "crawlerUnavailable": "Nem sikerült csatlakozni a verseny-beolvasóhoz. Ellenőrizd, hogy a beolvasó szolgáltatás fut-e.",
-      "details": "Részletek",
-      "hide": "Elrejtés",
-      "empty": "Nem található verseny.",
-      "showHidden": "{{count}} rejtett megjelenítése",
-      "imported": "Verseny importálva!",
-      "crawlStartFailed": "Nem sikerült elindítani a beolvasást",
-      "crawlFailed": "Sikertelen beolvasás",
-      "crawlConnectionLost": "Megszakadt a kapcsolat a beolvasási feladattal"
+      "crawlerUnavailable": "Nem sikerült csatlakozni a verseny-beolvasóhoz. Ellenőrizd, hogy a beolvasó szolgáltatás fut-e."
     },
     "detail": {
       "loadTournamentFailed": "Nem sikerült betölteni a versenyt",

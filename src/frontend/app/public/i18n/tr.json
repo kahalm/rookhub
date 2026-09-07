@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Turnuvalar",
-      "importTitle": "Turnuva İçe Aktar",
-      "importSubtitle": "Taramak için chess-results.com turnuva ID girin",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "örn. 1234567",
-      "idHintPrefix": "chess-results.com/tnr'deki sayı",
-      "idHintSuffix": ".aspx",
-      "crawl": "Tara",
-      "crawling": "{{id}} turnuvası taranıyor... İş #{{jobId}}",
-      "crawlerUnavailable": "Turnuva tarayıcısına bağlanılamadı. Tarayıcı hizmetinin çalıştığından emin olun.",
-      "details": "Ayrıntılar",
-      "hide": "Gizle",
-      "empty": "Turnuva bulunamadı.",
-      "showHidden": "{{count}} gizleni göster",
-      "imported": "Turnuva içe aktarıldı!",
-      "crawlStartFailed": "Tarama başlatılamadı",
-      "crawlFailed": "Tarama başarısız",
-      "crawlConnectionLost": "Tarama işiyle bağlantı kesildi"
+      "crawlerUnavailable": "Turnuva tarayıcısına bağlanılamadı. Tarayıcı hizmetinin çalıştığından emin olun."
     },
     "detail": {
       "loadTournamentFailed": "Turnuva yüklenemedi",

@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "Turnaje",
-      "importTitle": "Importovat turnaj",
-      "importSubtitle": "Zadejte ID turnaje z chess-results.com pro jeho načtení",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "např. 1234567",
-      "idHintPrefix": "Číslo z chess-results.com/tnr",
-      "idHintSuffix": ".aspx",
-      "crawl": "Načíst",
-      "crawling": "Načítám turnaj {{id}}... Úloha č. {{jobId}}",
-      "crawlerUnavailable": "Nelze se připojit k modulu pro načítání turnajů. Ujistěte se, že je služba spuštěna.",
-      "details": "Podrobnosti",
-      "hide": "Skrýt",
-      "empty": "Žádné turnaje nenalezeny.",
-      "showHidden": "Zobrazit {{count}} skrytých",
-      "imported": "Turnaj importován!",
-      "crawlStartFailed": "Spuštění načítání se nezdařilo",
-      "crawlFailed": "Načítání selhalo",
-      "crawlConnectionLost": "Připojení k úloze načítání bylo přerušeno"
+      "crawlerUnavailable": "Nelze se připojit k modulu pro načítání turnajů. Ujistěte se, že je služba spuštěna."
     },
     "detail": {
       "loadTournamentFailed": "Načtení turnaje se nezdařilo",

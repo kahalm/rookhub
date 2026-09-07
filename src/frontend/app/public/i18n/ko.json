@@ -435,23 +435,7 @@
     },
     "list": {
       "title": "대회",
-      "importTitle": "대회 가져오기",
-      "importSubtitle": "chess-results.com 대회 ID를 입력하여 수집하세요",
-      "chessResultsId": "Chess-Results ID",
-      "idPlaceholder": "예: 1234567",
-      "idHintPrefix": "chess-results.com/tnr의 숫자",
-      "idHintSuffix": ".aspx",
-      "crawl": "수집",
-      "crawling": "대회 {{id}} 수집 중... 작업 #{{jobId}}",
-      "crawlerUnavailable": "대회 수집기에 연결할 수 없습니다. 수집기 서비스가 실행 중인지 확인하세요.",
-      "details": "상세",
-      "hide": "숨기기",
-      "empty": "대회를 찾을 수 없습니다.",
-      "showHidden": "{{count}}개 숨김 항목 표시",
-      "imported": "대회 가져오기 완료!",
-      "crawlStartFailed": "수집 시작 실패",
-      "crawlFailed": "수집 실패",
-      "crawlConnectionLost": "수집 작업 연결 끊김"
+      "crawlerUnavailable": "대회 수집기에 연결할 수 없습니다. 수집기 서비스가 실행 중인지 확인하세요."
     },
     "detail": {
       "loadTournamentFailed": "대회 로드 실패",
