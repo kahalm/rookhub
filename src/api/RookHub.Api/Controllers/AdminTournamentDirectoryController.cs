@@ -35,7 +35,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         VenueDisambiguationService disambiguation,
         TournamentRoundPlanService roundPlans,
         FideDirectorySweepService fide,
-        FideEventDetailService fideDetails)
+        FideEventDetailService fideDetails,
+        TournamentCalendarSweepService calendar)
     {
         _db = db;
         _directory = directory;
@@ -45,12 +46,14 @@ public class AdminTournamentDirectoryController : BaseApiController
         _roundPlans = roundPlans;
         _fide = fide;
         _fideDetails = fideDetails;
+        _calendar = calendar;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
     private readonly TournamentRoundPlanService _roundPlans;
     private readonly FideDirectorySweepService _fide;
     private readonly FideEventDetailService _fideDetails;
+    private readonly TournamentCalendarSweepService _calendar;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -255,6 +258,25 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithPlan, result.Failed });
+    }
+
+    /// <summary>
+    /// Den ANKUENDIGUNGS-Kalender von chess-results lesen — den zweiten Datenbestand derselben
+    /// Seite. Ein Abruf fuer alle 16 Foederationen, die ihn benutzen.
+    ///
+    /// <para>Die Turniersuche, aus der das Verzeichnis lebt, fuellt sich erst beim
+    /// Swiss-Manager-Upload — typisch Tage bis Wochen vorher. Der Kalender wird VORAB gepflegt:
+    /// fuer AUT am 2026-09-07 gemessen 143 kuenftige Eintraege, <b>93 davon fehlten in der
+    /// Suche</b>.</para>
+    ///
+    /// <para><c>fed</c> leer oder <c>-</c> nimmt alle auf einmal.</para>
+    /// </summary>
+    [HttpPost("calendar")]
+    public async Task<IActionResult> Calendar([FromQuery] string? fed = null, CancellationToken ct = default)
+    {
+        var federation = string.IsNullOrWhiteSpace(fed) ? "-" : fed.Trim().ToUpperInvariant();
+        var result = await _calendar.RunAsync(federation, ct);
+        return Ok(new { result.Read, result.Added, result.Matched, result.Merged });
     }
 
     /// <summary>

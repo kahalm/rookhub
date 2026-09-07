@@ -176,6 +176,21 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: FIDE-Durchgang fehlgeschlagen");
             }
 
+            // Der ANKUENDIGUNGS-Kalender von chess-results. Laeuft NACH dem Sweep: der legt die
+            // Eintraege an, die der Kalender dann nur noch zuordnen muss, statt sie ein zweites
+            // Mal anzulegen. Ein Abruf fuer alle 16 Foederationen, die ihn benutzen.
+            //
+            // Kein eigener Deckel: es ist EIN Abruf, unabhaengig von der Bestandsgroesse.
+            try
+            {
+                var calendar = scope.ServiceProvider.GetRequiredService<TournamentCalendarSweepService>();
+                await calendar.RunAsync("-", ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: Ankuendigungskalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.

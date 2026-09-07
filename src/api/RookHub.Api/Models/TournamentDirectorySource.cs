@@ -21,6 +21,19 @@ public enum DirectorySourceKind
 
     /// <summary>Von Hand eingetragen — etwa nach einem Hinweis ueber „mein Turnier fehlt".</summary>
     Manual = 3,
+
+    /// <summary>
+    /// Der ANKUENDIGUNGS-Kalender von chess-results (<c>Kalender.aspx</c>) — dieselbe Seite wie
+    /// <see cref="ChessResults"/>, aber ein anderer Datenbestand.
+    ///
+    /// <para>Die Turniersuche fuellt sich, wenn der Veranstalter seine Swiss-Manager-Datei
+    /// hochlaedt — typisch Tage bis Wochen vorher. Der Kalender wird VORAB gepflegt. Am
+    /// 2026-09-07 fuer AUT gemessen: die Suche kannte 8 im November beginnende Turniere und 7 im
+    /// Dezember, der Kalender 23 und 16; von 143 kuenftigen Kalendereintraegen fehlten 93 in der
+    /// Suche. Getrennt gefuehrt, weil die beiden Bestaende auseinanderlaufen und man bei einem
+    /// Widerspruch wissen muss, welcher es sagt.</para>
+    /// </summary>
+    ChessResultsCalendar = 4,
 }
 
 /// <summary>
