@@ -3206,6 +3206,12 @@
       "loadError": "Povijest se nije mogla učitati."
     }
   },
+  "turnierAdmin": {
+    "title": "Prijavi se kao korisnik",
+    "lead": "Pogledaj turnirsku stranicu s računom druge osobe — način da odgovoriš na „zašto je njegov kalendar prazan?“. Crvena traka to govori cijelo vrijeme i vodi natrag. Sve ostalo iz administracije ostaje u RookHubu.",
+    "none": "Nijedan račun ne odgovara tome.",
+    "loadFailed": "Popis računa nije se mogao učitati."
+  },
   "tournamentsMoved": {
     "leaving": "Turniri imaju vlastitu stranicu — preusmjeravamo te.",
     "noPartner": "Turniri imaju vlastitu stranicu.",

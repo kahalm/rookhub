@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '@rh/core/auth.guard';
+import { adminGuard } from '@rh/core/admin.guard';
 
 /**
  * Die Turnierseite hat bewusst wenige Wege: Liste, Kalender, Detail — plus die geteilte
@@ -24,6 +25,10 @@ export const routes: Routes = [
   // Name, Anzeigename, E-Mail und die Spielerkennungen. Dieselbe API wie in RookHub, aber ohne
   // deren Chessable-/Engine-/Token-Sammlung: die hat auf einer Turnierseite nichts zu tun.
   { path: 'profile', loadComponent: () => import('./features/profile/turnier-profile.component').then(m => m.TurnierProfileComponent), canActivate: [authGuard] },
+
+  // Fuer Admins: als ein Nutzer einsteigen. Bewusst NICHT RookHubs zehn-Laschen-Panel — dessen
+  // Laschen fuehren zu Bereichen, die es hier nicht gibt (siehe TurnierAdminComponent).
+  { path: 'admin', loadComponent: () => import('./features/admin/turnier-admin.component').then(m => m.TurnierAdminComponent), canActivate: [authGuard, adminGuard] },
 
   // Geteilter Turnier-Link, ohne Anmeldung lesbar.
   { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },

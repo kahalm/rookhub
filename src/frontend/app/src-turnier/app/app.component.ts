@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, OnInit, inject } from '@angular/cor
 import { RouterOutlet } from '@angular/router';
 import { TurnierNavbarComponent } from './shell/turnier-navbar.component';
 import { AppFooterComponent } from '@rh/shared/app-footer/app-footer.component';
+import { ImpersonationBannerComponent } from '@rh/shared/impersonation-banner/impersonation-banner.component';
 import { LocaleService } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
@@ -10,8 +11,11 @@ import { ThemeService } from '@rh/core/theme.service';
   selector: 'trn-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [RouterOutlet, TurnierNavbarComponent, AppFooterComponent],
+  imports: [RouterOutlet, TurnierNavbarComponent, AppFooterComponent, ImpersonationBannerComponent],
   template: `
+    <!-- Derselbe rote Streifen wie in RookHub: ein Einstieg in ein fremdes Konto ohne sichtbaren
+         Hinweis ist die gefaehrliche Variante. -->
+    <app-impersonation-banner />
     <trn-navbar />
     <main><router-outlet /></main>
     <app-footer />

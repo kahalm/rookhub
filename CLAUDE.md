@@ -1087,6 +1087,19 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   ein vollstaendiges Profil-Objekt zurueckzuschicken ueberschriebe die RookHub-Einstellungen mit
   dem Stand einer Seite, die sie nicht kennt.
 
+### Als ein Nutzer einsteigen — auf BEIDEN Oberflaechen (0.429.0)
+
+Der Einstieg selbst ist unveraendert (`POST /api/admin/users/{id}/impersonate`, das Token traegt
+die Rollen des ZIELS). Neu ist, dass die Turnierseite ihn anbietet: `/admin` dort ist
+`src-turnier/app/features/admin/turnier-admin.component.ts` — Kontenliste plus Einstieg, und sonst
+nichts. **Bewusst nicht RookHubs Admin-Panel eingebunden**: dessen zehn Laschen (Buecher,
+Tagespuzzle, Puzzle-Themen, Chessable, Menue-Sichtbarkeit, CI, Rollen) fuehren zu Bereichen, die es
+auf der Turnierseite nicht gibt — sie waeren mehrheitlich Wege ins Leere. Der rote Streifen ist
+dagegen GETEILT (`shared/impersonation-banner/`, in beiden Huellen eingehaengt): ein Einstieg ohne
+sichtbaren Hinweis ist die gefaehrliche Variante, und das darf auf keiner der beiden Seiten anders
+sein. Der Ausgang fuehrt auf `/admin` (beide Seiten haben eine solche Seite) und frischt das Menue
+auf.
+
 ### Turnierkalender-Filterleiste (Stand 0.421.0)
 
 Die Leiste ist um „was ist in meiner Naehe, und wann" gebaut: **Ort** (Autocomplete gegen den

@@ -3206,6 +3206,12 @@
       "loadError": "The history could not be loaded."
     }
   },
+  "turnierAdmin": {
+    "title": "Sign in as a user",
+    "lead": "Open the tournament site with someone elses account — the way to answer „why is their calendar empty“. A red banner says so the whole time, and it takes you back. Everything else in administration stays in RookHub.",
+    "none": "No account matches that.",
+    "loadFailed": "The account list could not be loaded."
+  },
   "tournamentsMoved": {
     "leaving": "Tournaments have moved to their own site — taking you there.",
     "noPartner": "Tournaments have moved to their own site.",

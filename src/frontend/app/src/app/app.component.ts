@@ -10,6 +10,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { filter, interval } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { DISCORD_SVG } from './core/community';
+import { ImpersonationBannerComponent } from './shared/impersonation-banner/impersonation-banner.component';
 import { AppFooterComponent } from './shared/app-footer/app-footer.component';
 import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
@@ -34,7 +35,7 @@ import { APK_VERSION } from '../environments/changelog';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslatePipe, A11yModule, MatIconModule, AppFooterComponent],
+  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslatePipe, A11yModule, MatIconModule, AppFooterComponent, ImpersonationBannerComponent],
   changeDetection: ChangeDetectionStrategy.Default,
   template: `
     @if (showApkUpdate) {
@@ -71,15 +72,7 @@ import { APK_VERSION } from '../environments/changelog';
         }
       </div>
     }
-    @if (auth.isImpersonating) {
-      <div class="imp-banner">
-        <span class="imp-text">
-          <span class="imp-icon">&#x1F464;</span>
-          {{ 'app.impersonation.banner' | translate: { user: auth.currentUser?.username, admin: auth.impersonatorUsername } }}
-        </span>
-        <button class="imp-exit" (click)="exitImpersonation()">{{ 'app.impersonation.exit' | translate }}</button>
-      </div>
-    }
+    <app-impersonation-banner />
     <app-navbar (changelogClick)="footer.openChangelog()" (quickstartClick)="showQuickstart = true" />
     @if (appFullscreen) {
       <!-- Im App-Vollbild sind Navbar + Fußzeile ausgeblendet (maximaler Platz fürs Brett) —
@@ -115,17 +108,6 @@ import { APK_VERSION } from '../environments/changelog';
   `,
   styles: [`
     :host { display: block; }
-    .imp-banner {
-      display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
-      background: #b71c1c; color: #fff; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;
-      position: sticky; top: 0; z-index: 1100;
-    }
-    .imp-icon { margin-right: 4px; }
-    .imp-exit {
-      background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5);
-      border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
-    }
-    .imp-exit:hover { background: rgba(255,255,255,0.3); }
     .apk-banner {
       display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
       background: #e65100; color: #fff; padding: 6px 14px; font-size: 0.85rem; font-weight: 500;
@@ -472,10 +454,4 @@ export class AppComponent implements OnInit {
     this.showApkUpdate = false;
   }
 
-  /** Impersonation beenden, Menü neu laden und zurück ins Admin-Panel. */
-  exitImpersonation(): void {
-    this.auth.stopImpersonation();
-    this.menu.refresh();
-    this.router.navigate(['/admin']);
-  }
 }

@@ -64,6 +64,13 @@ import { ThemeService } from '@rh/core/theme.service';
           <a mat-menu-item routerLink="/profile">
             <mat-icon>badge</mat-icon> {{ 'nav.profile' | translate }}
           </a>
+          <!-- Nur fuer Admins, und nur EIN Punkt: als ein Nutzer einsteigen. Das uebrige
+               Admin-Panel bleibt in RookHub. -->
+          @if (auth.isAdmin) {
+            <a mat-menu-item routerLink="/admin">
+              <mat-icon>login</mat-icon> {{ 'turnierAdmin.title' | translate }}
+            </a>
+          }
           <button mat-menu-item (click)="logout()">
             <mat-icon>logout</mat-icon> {{ 'nav.logout' | translate }}
           </button>

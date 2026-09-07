@@ -3206,6 +3206,12 @@
       "loadError": "Der Verlauf konnte nicht geladen werden."
     }
   },
+  "turnierAdmin": {
+    "title": "Als Nutzer einsteigen",
+    "lead": "Die Turnierseite mit dem Konto eines anderen ansehen — der Weg, „warum ist dessen Kalender leer?“ zu beantworten. Ein roter Streifen sagt es die ganze Zeit und führt zurück. Alles Übrige der Verwaltung bleibt in RookHub.",
+    "none": "Kein Konto passt dazu.",
+    "loadFailed": "Die Kontenliste konnte nicht geladen werden."
+  },
   "tournamentsMoved": {
     "leaving": "Turniere haben eine eigene Seite — du wirst weitergeleitet.",
     "noPartner": "Turniere haben eine eigene Seite.",
