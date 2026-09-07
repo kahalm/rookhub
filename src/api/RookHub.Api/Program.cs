@@ -166,6 +166,7 @@ try
     builder.Services.AddScoped<PasswordResetService>();
     builder.Services.AddScoped<AuthHandoffService>();
     builder.Services.AddScoped<SharedSessionService>();
+    builder.Services.AddScoped<VenueDisambiguationService>();
     builder.Services.AddScoped<ProfileService>();
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<NotificationService>();

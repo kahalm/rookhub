@@ -27,6 +27,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     private readonly ILogger<TournamentDirectoryScheduler> _logger;
     private readonly string[] _dailyFederations;
     private readonly int _weeklyBatchSize;
+    private readonly int _disambiguationBatchSize;
     private readonly bool _enabled;
 
     public TournamentDirectoryScheduler(
@@ -46,6 +47,11 @@ public class TournamentDirectoryScheduler : BackgroundService
         // 0 = nur die taegliche Stufe, keine Weltrotation.
         _weeklyBatchSize = Math.Clamp(configuration.GetValue("TournamentDirectory:WeeklyBatchSize", 40), 0, 261);
         _enabled = configuration.GetValue("TournamentDirectory:Enabled", true);
+
+        // Wie viele Turniere je Nacht ueber die Vereinsnamen aufgeloest werden. Jedes kostet einen
+        // Seitenabruf bei chess-results; 0 schaltet den Schritt ab.
+        _disambiguationBatchSize = Math.Clamp(
+            configuration.GetValue("TournamentDirectory:DisambiguationBatchSize", 50), 0, 500);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -95,6 +101,23 @@ public class TournamentDirectoryScheduler : BackgroundService
             if (failed.Count > 0)
                 _logger.LogWarning("Turnierverzeichnis: {Count} Foederationen fehlgeschlagen ({List})",
                     failed.Count, string.Join(", ", failed));
+
+            // Danach eine GEDECKELTE Runde Spielort-Aufloesung ueber die Vereinsnamen: sie kostet
+            // einen Seitenabruf je Turnier, arbeitet sich also Nacht fuer Nacht durch den Rueckstand
+            // statt ihn in einem Lauf abzuarbeiten. Ein Fehlschlag hier darf den Sweep, der schon
+            // durch ist, nicht als gescheitert erscheinen lassen — deshalb der eigene Fang.
+            try
+            {
+                if (_disambiguationBatchSize > 0)
+                {
+                    var disambiguation = scope.ServiceProvider.GetRequiredService<VenueDisambiguationService>();
+                    await disambiguation.RunAsync(_disambiguationBatchSize, ct);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: Spielort-Aufloesung fehlgeschlagen");
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

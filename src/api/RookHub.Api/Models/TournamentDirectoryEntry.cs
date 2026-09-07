@@ -25,6 +25,14 @@ public enum GeoSource
     /// als kein Pin.
     /// </summary>
     Ambiguous = 6,
+    /// <summary>
+    /// Ueber die VEREINSNAMEN des Turniers entschieden. chess-results kuerzt den Spielort ab
+    /// („St.Veit"), und diese Abkuerzung kann zufaellig exakt der Name eines ANDEREN Ortes sein —
+    /// „St. Veit" liegt in Tirol, gemeint war „St. Veit an der Glan" in Kaernten. Aus dem Namen
+    /// allein ist das nicht zu erkennen; die Vereinsnamen tragen die Unterscheidung mit
+    /// („SV ASKOE St. Veit/Glan"). Siehe <c>VenueDisambiguationService</c>.
+    /// </summary>
+    TeamHint = 7,
 }
 
 /// <summary>
@@ -137,6 +145,12 @@ public class TournamentDirectoryEntry
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Wann zuletzt versucht wurde, den Spielort ueber die Vereinsnamen aufzuloesen. Ohne diesen
+    /// Vermerk holte der naechtliche Durchgang immer wieder dieselben Turnierseiten.
+    /// </summary>
+    public DateTime? TeamHintCheckedAt { get; set; }
 
     /// <summary>
     /// ALLE Spielorte. Bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit"); die

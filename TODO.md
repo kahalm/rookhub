@@ -702,3 +702,25 @@ haben (die Messungen sind reproduzierbar):
 haeufig benutzten Seiten auf Signale umstellen, beginnend bei denen, deren Inhalt in einem
 `mat-tab` liegt (`TournamentDirectoryComponent`). Das ist mechanisch, aber breit — und eine
 falsche Stelle faellt erst im Betrieb auf, deshalb gehoert es in einen eigenen, gepruefen Durchgang.
+
+## Spielort: Ausschreibungs-PDF als genaueste Quelle (geparkt, 2026-09-07)
+
+Die dritte und genaueste Quelle fuer den Spielort ist die **Ausschreibung**, die chess-results je
+Turnier als PDF verlinkt („Download invitation"). Nachgemessen an tnr1405166 steht dort, was weder
+Trefferliste noch Turnierseite noch Spielplan hergeben — der Ort **je Runde**:
+
+```
+27.–29.11.2026  →  Mayrhofen
+12.–14.03.2027  →  St. Veit/Glan
+```
+
+Damit waere ein Liga-Turnier nicht nur mit mehreren Orten verortet, sondern mit dem Ort JE Termin.
+
+**Warum geparkt:** das ist ein eigenes Teilsystem, nicht eine Regel mehr — PDF-Abruf, Textextraktion,
+und ein Parser fuer Freitext in wechselndem Aufbau (jeder Veranstalter schreibt seine Ausschreibung
+anders). Dazu hat nicht jedes Turnier eine; die Trefferliste sagt nicht, ob es eine gibt. Der Nutzen
+liegt vor allem bei Ligen, und die sind ein kleiner Teil des Bestands.
+
+**Reihenfolge, wenn es angegangen wird:** erst messen, bei wie vielen Turnieren mit mehreren
+Spielorten ueberhaupt eine Ausschreibung verlinkt ist und wie viele davon einen Ort je Runde
+nennen — vorher ist der Aufwand nicht einschaetzbar.

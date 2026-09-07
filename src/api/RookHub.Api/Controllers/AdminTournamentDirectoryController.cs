@@ -31,12 +31,29 @@ public class AdminTournamentDirectoryController : BaseApiController
         AppDbContext db,
         TournamentDirectoryService directory,
         GazetteerImportService gazetteer,
-        GeocodingService geocoding)
+        GeocodingService geocoding,
+        VenueDisambiguationService disambiguation)
     {
         _db = db;
         _directory = directory;
         _gazetteer = gazetteer;
         _geocoding = geocoding;
+        _disambiguation = disambiguation;
+    }
+
+    private readonly VenueDisambiguationService _disambiguation;
+
+    /// <summary>
+    /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
+    /// der Abkuerzungs-Fall („St.Veit" ist Tirol ODER, gemeint, „St. Veit an der Glan" in
+    /// Kaernten). Kostet EINEN Seitenabruf je Turnier und ist deshalb gedeckelt; jedes Turnier
+    /// wird nur einmal versucht (`TeamHintCheckedAt`).
+    /// </summary>
+    [HttpPost("disambiguate")]
+    public async Task<IActionResult> Disambiguate([FromQuery] int limit = 50, CancellationToken ct = default)
+    {
+        var result = await _disambiguation.RunAsync(limit, ct);
+        return Ok(new { result.Checked, result.Resolved, result.Failed });
     }
 
     /// <summary>Zustand je Foederation plus die Geocoding-Quote - der Gesundheitsblick.</summary>

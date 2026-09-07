@@ -269,6 +269,24 @@ bei Ligen MEHRERE Orte. Die Reihenfolge:
    250 km entfernt in Tirol, obwohl der erste Ort im Text Mayrhofen ist.
 3. **Regionsmitte** aus der Bundesland-Spalte.
 
+**Vereinsnamen als letzter Entscheider (`VenueDisambiguationService`, 0.419.0).** Es gibt einen
+Fall, den keine Namensregel loesen kann: die Abkuerzung im Ortstext ist ZUFAELLIG exakt der Name
+eines anderen Ortes. Nachgestellt an tnr1405166 — Ortstext „Mayrhofen, St.Veit", im Lexikon heisst
+genau ein Eintrag „St. Veit" und der liegt in TIROL; gemeint ist laut Ausschreibung „St. Veit an
+der Glan" in Kaernten, 250 km entfernt. Das sieht nicht einmal mehrdeutig aus. Die Vereinsliste des
+Turniers nennt dagegen „SV ASKOE St. Veit/Glan".
+
+Der Dienst erweitert die Kandidaten deshalb auf laengere Namen (alles, was mit dem gesuchten
+beginnt) und setzt einen Pin **nur mit Beleg**: ein Vereinsname muss ein UNTERSCHEIDENDES Wort des
+laengeren Namens als GANZES Wort enthalten („glan" — nicht als Teil von „Glanegg"). Fuellwoerter
+(an, der, sankt, bad, neu …) zaehlen nicht, Gleichstand zwischen verschiedenen Orten entscheidet
+nichts. Ohne Beleg bleibt alles, wie es war. Ergebnis: `GeoSource.TeamHint`.
+
+Kosten: EIN Seitenabruf je Turnier (Crawler-Endpunkt `GET /api/tournament-search/teams?id=`,
+zustandslos). Deshalb gedeckelt — `TournamentDirectory:DisambiguationBatchSize` (Vorgabe 50, 0 =
+aus) je Nacht nach dem Sweep, und `TournamentDirectoryEntry.TeamHintCheckedAt` verhindert, dass
+dieselben Seiten wieder geholt werden. Von Hand: `POST /api/admin/tournament-directory/disambiguate?limit=`.
+
 **Mehrdeutige Namen bekommen KEINEN Pin.** Liegen die gleichnamigen Kandidaten weniger als 5 km
 auseinander (24 Wiener PLZ), ist die Wahl gleichgueltig und die Einwohnerzahl entscheidet wie
 bisher. Sonst entscheidet die **Turnierdichte**: wie viele Turniere mit VERLAESSLICHER Verortung
@@ -294,6 +312,7 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
 | POST | `/api/admin/tournament-directory/geocode-missing` | Nicht verortete Eintraege erneut aufloesen |
+| POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
 | PUT | `/api/admin/tournament-directory/{id}/coordinates` | Koordinaten von Hand setzen (GeoSource=Manual, ueberlebt den Sweep) |
 
 Die `/api/admin/...`-Routen haengen an der Permission `tournaments.manage`.
