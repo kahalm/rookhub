@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TurnierNavbarComponent } from './shell/turnier-navbar.component';
+import { AppFooterComponent } from '@rh/shared/app-footer/app-footer.component';
 import { LocaleService } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
@@ -9,14 +10,15 @@ import { ThemeService } from '@rh/core/theme.service';
   selector: 'trn-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [RouterOutlet, TurnierNavbarComponent],
+  imports: [RouterOutlet, TurnierNavbarComponent, AppFooterComponent],
   template: `
     <trn-navbar />
     <main><router-outlet /></main>
+    <app-footer />
   `,
   styles: [`
-    :host { display: block; min-height: 100vh; }
-    main { display: block; }
+    :host { display: flex; flex-direction: column; min-height: 100vh; }
+    main { display: block; flex: 1; }
   `],
 })
 export class TurnierAppComponent implements OnInit {

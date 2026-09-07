@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.415.0", date: "2026-09-07", changes: [
+    { en: "The tournament site has the same footer as RookHub: version with the changelog behind it, help, feedback, Discord and Ko-fi. It is literally the same footer, not a copy — the next entry lands on both sides at once. Only the help link differs, because the help page exists on RookHub alone; from the tournament site it points there.", de: "Die Turnierseite hat dieselbe Fußzeile wie RookHub: Version mit dem Änderungsverlauf dahinter, Hilfe, Rückmeldung, Discord und Ko-fi. Es ist buchstäblich dieselbe Fußzeile, keine Kopie — der nächste Eintrag landet auf beiden Seiten zugleich. Nur der Hilfe-Link unterscheidet sich, weil es die Hilfeseite allein in RookHub gibt; von der Turnierseite zeigt er dorthin." },
+  ] },
   { version: "0.414.1", date: "2026-09-07", changes: [
     { en: "The new multi-federation filter is now checked against a real database, not only the in-memory stand-in the other tests use. That stand-in evaluates every query in memory and therefore accepts ones the real database cannot translate — the class of mistake that only ever shows up in production.", de: "Der neue Mehrfach-Filter für Föderationen wird jetzt gegen eine echte Datenbank geprüft, nicht nur gegen den Speicher-Ersatz, mit dem die übrigen Tests laufen. Der wertet jede Abfrage im Speicher aus und nimmt deshalb auch solche an, die die echte Datenbank gar nicht übersetzen kann — genau die Art Fehler, die sonst erst im Betrieb auffällt." },
   ] },

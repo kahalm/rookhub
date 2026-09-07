@@ -9,7 +9,8 @@ import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { filter, interval } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
-import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from './core/community';
+import { DISCORD_SVG } from './core/community';
+import { AppFooterComponent } from './shared/app-footer/app-footer.component';
 import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
 import { MenuService } from './core/menu.service';
@@ -28,12 +29,12 @@ import {
   exitFullscreen, isFullscreen, onFullscreenChange,
 } from './shared/fullscreen/fullscreen.util';
 import { environment } from '../environments/environment';
-import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
+import { APK_VERSION } from '../environments/changelog';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslatePipe, A11yModule, MatIconModule],
+  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslatePipe, A11yModule, MatIconModule, AppFooterComponent],
   changeDetection: ChangeDetectionStrategy.Default,
   template: `
     @if (showApkUpdate) {
@@ -79,7 +80,7 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
         <button class="imp-exit" (click)="exitImpersonation()">{{ 'app.impersonation.exit' | translate }}</button>
       </div>
     }
-    <app-navbar (changelogClick)="openChangelog()" (quickstartClick)="showQuickstart = true" />
+    <app-navbar (changelogClick)="footer.openChangelog()" (quickstartClick)="showQuickstart = true" />
     @if (appFullscreen) {
       <!-- Im App-Vollbild sind Navbar + Fußzeile ausgeblendet (maximaler Platz fürs Brett) —
            dieser schwebende Knopf ist neben Esc der Weg zurück. -->
@@ -90,47 +91,7 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
       </button>
     }
     <main><router-outlet /></main>
-    <footer class="app-footer">
-      <span class="version-link" role="button" tabindex="0"
-            [attr.aria-label]="'app.changelogTitle' | translate"
-            (click)="toggleChangelog()"
-            (keydown.enter)="toggleChangelog()" (keydown.space)="$event.preventDefault(); toggleChangelog()">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
-      <span class="footer-sep">·</span>
-      <a class="feedback-link" routerLink="/help">{{ 'nav.help' | translate }}</a>
-      <span class="footer-sep">·</span>
-      <a class="feedback-link" href="https://github.com/kahalm/rookhub/issues" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
-      <span class="footer-sep">·</span>
-      <a class="discord-link" [href]="discordUrl" target="_blank" rel="noopener noreferrer"
-         [attr.aria-label]="'nav.discord' | translate">
-        <mat-icon svgIcon="discord" aria-hidden="true"></mat-icon><span>{{ 'nav.discord' | translate }}</span>
-      </a>
-      <span class="footer-sep">·</span>
-      <a class="kofi-link" [href]="kofiUrl" target="_blank" rel="noopener noreferrer"
-         [attr.aria-label]="'nav.support' | translate">
-        <mat-icon aria-hidden="true">local_cafe</mat-icon><span>{{ 'nav.support' | translate }}</span>
-      </a>
-    </footer>
-    @if (showChangelog) {
-      <div class="changelog-overlay" (click)="showChangelog = false">
-        <div class="changelog-content" (click)="$event.stopPropagation()"
-             role="dialog" aria-modal="true" [attr.aria-label]="'app.changelogTitle' | translate" cdkTrapFocus>
-          <div class="changelog-header">
-            <h3>{{ 'app.changelogTitle' | translate }}</h3>
-            <button (click)="showChangelog = false" [attr.aria-label]="'common.close' | translate" cdkFocusInitial>&times;</button>
-          </div>
-          @for (entry of changelog; track entry.version) {
-            <div class="changelog-entry">
-              <strong>v{{ entry.version }}</strong> <span class="changelog-date">{{ entry.date }}</span>
-              <ul>
-                @for (change of entry.changes; track change.en) {
-                  <li>{{ changeText(change) }}</li>
-                }
-              </ul>
-            </div>
-          }
-        </div>
-      </div>
-    }
+    <app-footer #footer />
     @if (showQuickstart) {
       <div class="changelog-overlay" (click)="showQuickstart = false">
         <div class="changelog-content quickstart-content" (click)="$event.stopPropagation()"
@@ -192,12 +153,14 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
     .conn-details p { margin: 4px 0; }
     .conn-details ul { margin: 4px 0 4px 18px; padding: 0; }
     .conn-details li { margin-bottom: 3px; }
-    .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
     /* App-Vollbild: Kopf- und Fußleiste weg, der Inhalt (v. a. das Brett) bekommt den ganzen
        Schirm. Gesteuert über die Host-Klasse (JS-Flag), nicht über :root:fullscreen — so zählt
        ein einzelnes Brett im Vollbild nicht mit. */
     :host(.app-fullscreen) app-navbar,
-    :host(.app-fullscreen) .app-footer { display: none; }
+    /* Die Fusszeile ist eine eigene Komponente (AppFooterComponent) — hier zaehlt ihr
+       HOST-Element. Die Klasse .app-footer liegt in deren eigener, gekapselter Ansicht und
+       waere von hier aus nicht erreichbar. */
+    :host(.app-fullscreen) app-footer { display: none; }
     .app-fs-exit {
       position: fixed;
       top: 6px; right: 6px;
@@ -213,30 +176,6 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
     }
     .app-fs-exit:hover, .app-fs-exit:focus-visible { opacity: 1; background: rgba(0, 0, 0, 0.6); }
     .app-fs-exit mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    @media (max-width: 768px) { .app-footer { display: none; } }
-    .version-link { cursor: pointer; }
-    .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
-    .footer-sep { margin: 0 6px; color: color-mix(in srgb, currentColor 40%, transparent); }
-    .discord-link {
-      display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
-      color: #5865F2; font-weight: 600; text-decoration: none;
-    }
-    .discord-link:hover { color: #4752c4; text-decoration: underline; }
-    .discord-link mat-icon {
-      font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
-    }
-    .discord-link mat-icon svg { display: block; width: 100%; height: 100%; }
-    .kofi-link {
-      display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
-      color: #ff5e5b; font-weight: 600; text-decoration: none;
-    }
-    .kofi-link:hover { color: #e04b48; text-decoration: underline; }
-    .kofi-link mat-icon {
-      font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
-    }
-    .feedback-link { color: inherit; text-decoration: none; }
-    .feedback-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
-    .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
     .changelog-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       display: flex; align-items: center; justify-content: center; z-index: 1000;
@@ -275,16 +214,8 @@ import { APK_VERSION, ChangelogEntry } from '../environments/changelog';
 export class AppComponent implements OnInit {
   private handoff = inject(HandoffService);
 
-  version = environment.version;
-  production = environment.production;
-  /** Changelog-Eintraege — LEER bis zum ersten Oeffnen des Overlays: das Array (~0,9 MB Prosa,
-   *  changelog-data.ts) wird bewusst per dynamic import() nachgeladen statt eager gebundelt,
-   *  sonst laege die komplette Versionshistorie im Initial-Bundle (groesster Perf-Hebel). */
-  changelog: ChangelogEntry[] = [];
-  /** Einladungslink zum öffentlichen RookHub-Discord (Community) — prominent in der Fußzeile. */
-  readonly discordUrl = DISCORD_INVITE_URL;
-  readonly kofiUrl = KOFI_URL;
-  showChangelog = false;
+  // Version, Changelog-Overlay und die Fusszeilen-Links liegen in AppFooterComponent —
+  // dieselbe Fusszeile benutzt auch die Turnierseite.
   showQuickstart = false;
 
   /**
@@ -314,44 +245,14 @@ export class AppComponent implements OnInit {
   showConnDetails = false;
   private readonly APK_UPDATE_LS_KEY = 'rookhub_apk_seen_version';
 
-  /** Escape schließt das offene Overlay (Changelog/Quickstart) — Tastatur-Bedienbarkeit. */
-  @HostListener('document:keydown.escape')
-  onEscape(): void { this.showChangelog = false; this.showQuickstart = false; }
-
-  /** Laufender Changelog-Nachlade-Vorgang — Feld, damit Tests den async-Ablauf awaiten können. */
-  changelogLoad?: Promise<void>;
-
-  /** Overlay öffnen (Navbar-Menü) — lädt die Einträge beim ersten Öffnen nach. */
-  openChangelog(): void {
-    this.showChangelog = true;
-    this.changelogLoad = this.loadChangelog();
-  }
-
-  /** Overlay per Footer-Versionslink auf-/zuklappen. */
-  toggleChangelog(): void {
-    this.showChangelog = !this.showChangelog;
-    if (this.showChangelog) this.changelogLoad = this.loadChangelog();
-  }
-
   /**
-   * Changelog-Daten lazy laden: erst beim Öffnen des Overlays, genau einmal. Fehlschlag
-   * (offline ohne SW-Cache / Chunk nach Deploy weg) bleibt still — das Overlay zeigt dann nur
-   * den Kopf, der nächste Öffnen-Versuch lädt erneut (kein „loaded"-Flag bei Fehler).
+   * Escape schliesst den Schnellstart — Tastatur-Bedienbarkeit. Das Changelog-Overlay schliesst
+   * sich selbst (es gehoert zur Fusszeile, siehe `AppFooterComponent`).
    */
-  private async loadChangelog(): Promise<void> {
-    if (this.changelog.length > 0) return;
-    try {
-      const m = await import('../environments/changelog-data');
-      this.changelog = m.CHANGELOG;
-    } catch { /* naechstes Oeffnen versucht es erneut */ }
-  }
+  @HostListener('document:keydown.escape')
+  onEscape(): void { this.showQuickstart = false; }
 
   private dlHandled = false;
-
-  /** Changelog-Eintrag in der aktiven UI-Sprache (de → Deutsch, sonst Englisch als Default/Fallback). */
-  changeText(change: { en: string; de: string }): string {
-    return this.translate.currentLang() === 'de' ? change.de : change.en;
-  }
 
   private destroyRef = inject(DestroyRef);
 
