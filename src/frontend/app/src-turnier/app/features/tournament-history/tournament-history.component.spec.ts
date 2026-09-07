@@ -295,6 +295,26 @@ describe('TournamentHistoryComponent', () => {
       .toEqual(['blitz', 'unknown']);
   });
 
+  /**
+   * chess-results schreibt eine 0 in die Performance-Spalte, wenn es sie NICHT berechnet hat
+   * (Gegner ohne Wertung, sehr wenige Partien, 0 % oder 100 %). Als Wertung gelesen zieht sie den
+   * Schnitt nach unten — gemeldet an einem Konto, bei dem vier solche Turniere standen.
+   */
+  it('rechnet eine Performance von 0 nicht in den Schnitt', async () => {
+    const req = await setup();
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '1', performanceRating: 1800 }),
+        played({ chessResultsId: '2', performanceRating: 0 }),
+      ],
+    })]);
+
+    const speeds = component.summary(component.current()!).speeds;
+    // Beide Turniere zaehlen als gespielt, aber nur eines traegt eine Wertung.
+    expect(speeds[0].played).toBe(2);
+    expect(speeds[0].performance).toBe(1800);
+  });
+
   /** Eine Klasse ohne gewertete Performance bleibt mit ihrer Anzahl stehen. */
   it('unterscheidet „nicht gespielt" von „keine Wertung"', async () => {
     const req = await setup();

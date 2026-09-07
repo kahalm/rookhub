@@ -20,6 +20,12 @@ import { HISTORY_SPEEDS, HistoryFriend, HistorySpeed, PlayerHistory, PlayerHisto
 import { TournamentHistoryService } from './tournament-history.service';
 
 /**
+ * Ab welcher Zahl eine Performance eine Aussage ist. chess-results traegt eine 0 ein, wenn es sie
+ * nicht berechnet — als Wertung gelesen zieht sie jeden Schnitt nach unten.
+ */
+const MinPlausiblePerformance = 500;
+
+/**
  * Ein Reiter: ein KONTO. Der eigene steht vorn, danach die Freunde.
  *
  * <p>Freunde ohne Namen im Profil bekommen ihren Reiter trotzdem — nur gesperrt: ohne Nachnamen
@@ -330,7 +336,11 @@ export class TournamentHistoryComponent implements OnInit {
 
     return HISTORY_SPEEDS.map(speed => {
       const mine = played.filter(e => e.speed === speed);
-      const rated = mine.filter(e => e.performanceRating !== null);
+      // Eine Performance unter 500 gibt es nicht — chess-results schreibt dort eine 0, wenn es
+      // sie NICHT berechnet hat (Gegner ohne Wertung, sehr wenige Partien, 0 % oder 100 %). Der
+      // Server raeumt solche Werte inzwischen weg; die Ansicht rechnet sie zusaetzlich nicht mit,
+      // damit ein alter Bestand keinen Schnitt verdirbt.
+      const rated = mine.filter(e => (e.performanceRating ?? 0) >= MinPlausiblePerformance);
       // Partien nur summieren, wo eine Karte sie kennt — sonst zaehlte ein Turnier ohne Angabe
       // als null Partien und die Summe waere stillschweigend zu klein.
       const counted = mine.filter(e => e.gamesPlayed !== null);

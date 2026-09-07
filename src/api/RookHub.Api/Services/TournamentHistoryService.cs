@@ -74,6 +74,17 @@ public class TournamentHistoryService
     public const int CurrentTimeControlVersion = 2;
 
     /// <summary>
+    /// Ab welcher Zahl eine Performance eine AUSSAGE ist und kein Platzhalter.
+    ///
+    /// <para>chess-results schreibt in die Performance-Spalte eine <c>0</c>, wenn es sie nicht
+    /// berechnet — bei Gegnern ohne Wertung, bei sehr wenigen Partien, bei 0 % oder 100 %. Als
+    /// echte Zahl uebernommen zieht sie jeden Schnitt nach unten: am Dev-Konto vier Turniere, die
+    /// Punkte und Elo-Aenderung tragen, aber eben keine Performance. Eine Wertungszahl unter 500
+    /// gibt es in keiner Liste, die Grenze trennt also sauber.</para>
+    /// </summary>
+    public const int MinPlausiblePerformance = 500;
+
+    /// <summary>
     /// Wie viele Spielerkarten je Aufruf in den Hintergrund gehen. Deckel, weil jede einen
     /// Seitenabruf kostet: bei einem frischen Konto sind zwoelf offen, bei einem Vielspieler
     /// hundert, und die sollen nicht in einem Rutsch gegen chess-results laufen.
@@ -192,6 +203,7 @@ public class TournamentHistoryService
         // Zuerst das, was NICHTS kostet: gespeicherte Texte neu einordnen. Eine verbesserte
         // Regel erreicht den Bestand damit ohne einen einzigen Seitenabruf.
         var reclassified = await ReclassifyTimeControlsAsync(ct);
+        await ClearImplausiblePerformancesAsync(ct);
 
         var players = 0;
         var cards = 0;
@@ -450,6 +462,25 @@ public class TournamentHistoryService
     }
 
     /// <summary>
+    /// Raeumt gespeicherte Platzhalter-Performances weg — ohne Abruf.
+    ///
+    /// <para>Vor dieser Pruefung wurde die <c>0</c> von chess-results als echte Wertung
+    /// uebernommen. Der Bestand traegt sie noch, und weil ein abgeschlossenes Turnier nie wieder
+    /// geholt wird, bliebe sie fuer immer im Schnitt stehen.</para>
+    /// </summary>
+    public async Task<int> ClearImplausiblePerformancesAsync(CancellationToken ct = default)
+    {
+        var rows = await _db.PlayerTournamentResults
+            .Where(r => r.PerformanceRating != null && r.PerformanceRating < MinPlausiblePerformance)
+            .ToListAsync(ct);
+        if (rows.Count == 0) return 0;
+
+        foreach (var row in rows) row.PerformanceRating = null;
+        await _db.SaveChangesAsync(ct);
+        return rows.Count;
+    }
+
+    /// <summary>
     /// Ordnet GESPEICHERTE Bedenkzeit-Texte neu ein — ohne einen einzigen Abruf.
     ///
     /// <para>Genau dafuer liegt der Rohtext neben der Klasse: aendert sich die Einordnungsregel,
@@ -582,7 +613,11 @@ public class TournamentHistoryService
             // fuer die Fassung 2.
             result.GamesPlayed = card.GamesPlayed ?? result.GamesPlayed;
             result.Points = card.Points;
-            result.PerformanceRating = card.PerformanceRating;
+            // Eine 0 (oder etwas ebenso Unmoegliches) heisst „nicht berechnet" — als Zahl
+            // uebernommen waere sie eine Behauptung, die den Schnitt verdirbt.
+            result.PerformanceRating = card.PerformanceRating >= MinPlausiblePerformance
+                ? card.PerformanceRating
+                : null;
             result.RatingChange = card.RatingChange;
             result.RatingInternational = card.RatingInternational;
             // Der Platz der KARTE ist der genauere: die Trefferliste rundet bei Gleichstand.

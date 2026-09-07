@@ -476,6 +476,49 @@ public class TournamentHistoryServiceTests : IDisposable
         Assert.Equal(0, _handler.HistoryCalls);
     }
 
+    /// <summary>
+    /// chess-results schreibt eine <c>0</c> in die Performance-Spalte, wenn es sie NICHT
+    /// berechnet hat (Gegner ohne Wertung, sehr wenige Partien, 0 % oder 100 %). Als Wertung
+    /// uebernommen zieht sie jeden Schnitt nach unten — am Dev-Konto vier Turniere, die Punkte und
+    /// Elo-Aenderung tragen, aber keine Performance.
+    /// </summary>
+    [Fact]
+    public async Task FetchCardAsync_APerformanceOfZero_IsNotAValue()
+    {
+        var userId = await CreateUserAsync();
+        _handler.History = TeamRow;
+        _handler.Card = """{"points":0.5,"rank":34,"performanceRating":0,"ratingChange":-8,"hasResult":true}""";
+        await CreateService().GetAsync([userId]);
+
+        await CreateService().FetchCardAsync("fide:1693034", "1206267", 73);
+
+        var result = await _db.PlayerTournamentResults.SingleAsync();
+        Assert.Null(result.PerformanceRating);
+        // Punkte und Elo-Aenderung stehen sehr wohl — nur die Performance fehlt.
+        Assert.Equal(0.5m, result.Points);
+        Assert.Equal(-8m, result.RatingChange);
+    }
+
+    /// <summary>
+    /// Der BESTAND traegt die alten Nullen noch, und ein abgeschlossenes Turnier wird nie wieder
+    /// geholt — sie muessen also ohne Abruf verschwinden.
+    /// </summary>
+    [Fact]
+    public async Task ClearImplausiblePerformancesAsync_RemovesThePlaceholders()
+    {
+        _db.PlayerTournamentResults.AddRange(
+            new PlayerTournamentResult { PlayerKey = "k", ChessResultsId = "1", PerformanceRating = 0, Points = 0.5m },
+            new PlayerTournamentResult { PlayerKey = "k", ChessResultsId = "2", PerformanceRating = 1800 });
+        await _db.SaveChangesAsync();
+
+        var cleared = await CreateService().ClearImplausiblePerformancesAsync();
+
+        Assert.Equal(1, cleared);
+        Assert.Null((await _db.PlayerTournamentResults.SingleAsync(r => r.ChessResultsId == "1")).PerformanceRating);
+        Assert.Equal(1800, (await _db.PlayerTournamentResults.SingleAsync(r => r.ChessResultsId == "2")).PerformanceRating);
+        Assert.Equal(0, _handler.CardCalls);
+    }
+
     // ----- Die Bedenkzeit ---------------------------------------------------
 
     /// <summary>
