@@ -3074,7 +3074,10 @@
     },
     "map": {
       "openDetail": "Open the tournament page",
-      "thisVenue": "This venue: {{name}}"
+      "thisVenue": "This venue: {{name}}",
+      "samePoint": "{{count}} tournaments at this point",
+      "samePointVague": "For these tournaments only the region is known, not the exact venue.",
+      "backToList": "‹ Back to the list ({{count}})"
     },
     "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment.",
     "place": {

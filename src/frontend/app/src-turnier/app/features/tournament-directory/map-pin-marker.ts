@@ -27,7 +27,32 @@ const HeadDistance = 1.55;
  */
 const TangentAngle = Math.acos(1 / HeadDistance);
 
+/** Was diese Marke zusaetzlich zum Kreis kennt. */
+export interface MapPinMarkerOptions extends L.CircleMarkerOptions {
+  /**
+   * Wie viele Turniere auf DIESEM Punkt liegen. Ab 2 traegt der Kopf die Zahl — anders waere
+   * nicht zu sehen, dass hinter der Marke mehr als ein Turnier steckt: liegen zwei Pins exakt
+   * uebereinander, ist der untere unerreichbar und der Betrachter haelt den oberen fuer alles,
+   * was es dort gibt.
+   */
+  count?: number;
+}
+
 export class MapPinMarker extends L.CircleMarker {
+  /** Die Zahl im Kopf; leer, solange der Punkt fuer genau ein Turnier steht. */
+  private readonly label: string;
+  /** Ihre Schrift — EINMAL beim Anlegen gerechnet, nicht bei jedem Neuzeichnen. */
+  private readonly labelFont: string;
+
+  constructor(latlng: L.LatLngExpression, options: MapPinMarkerOptions = {}) {
+    super(latlng, options);
+    const count = options.count ?? 1;
+    this.label = count > 1 ? countLabel(count) : '';
+    this.labelFont = this.label
+      ? `bold ${labelSize(options.radius ?? 10, this.label)}px system-ui, sans-serif`
+      : '';
+  }
+
   // Ohne `override`: die drei Namen sind Leaflet-Interna und stehen nicht in den
   // veroeffentlichten Typen, TypeScript sieht also keine Basis-Deklaration zum Ueberschreiben.
   // Zur Laufzeit ruft der Renderer genau diese auf.
@@ -51,6 +76,17 @@ export class MapPinMarker extends L.CircleMarker {
     ctx.lineTo(point.x, point.y);
     ctx.closePath();
     renderer._fillStroke(ctx, this);
+
+    if (!this.label) return;
+    // Weiss auf dem gefuellten Kopf — save/restore, weil der Canvas-Renderer EINE Leinwand fuer
+    // alle Marken benutzt und Schrift-/Farbeinstellungen sonst in die naechste hineinlaufen.
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = this.labelFont;
+    ctx.fillText(this.label, point.x, point.y - r * HeadDistance);
+    ctx.restore();
   }
 
   /**
@@ -92,6 +128,30 @@ export class MapPinMarker extends L.CircleMarker {
   static heightAbove(radius: number): number {
     return Math.round(radius * (HeadDistance + 1));
   }
+}
+
+/** Die Zahl im Kopf — mehr als drei Stellen sind dort nicht mehr lesbar. */
+export function countLabel(count: number): string {
+  return count > 999 ? '999+' : String(count);
+}
+
+/**
+ * Kopfradius fuer einen Punkt, auf dem `count` Turniere liegen: je Stelle drei Pixel mehr.
+ *
+ * <p>Ohne das Wachsen stuende „111" in einem 14 px grossen Kopf. Der groessere Kopf ist dabei
+ * nicht nur Platz fuer die Ziffern — er ist das erste, was auffaellt: eine Marke, die anders
+ * aussieht als ihre Nachbarn, wird angeklickt.</p>
+ */
+export function pinRadiusFor(base: number, count: number): number {
+  return count < 2 ? base : base + 3 * countLabel(count).length;
+}
+
+/**
+ * Schriftgroesse, die INNEN passt — begrenzt sowohl durch die Hoehe des Kopfes als auch durch
+ * seine Breite (drei Ziffern brauchen mehr Breite als eine, der Kopf bleibt aber rund).
+ */
+function labelSize(radius: number, label: string): number {
+  return Math.max(7, Math.round(Math.min(radius * 1.3, (radius * 1.7) / label.length)));
 }
 
 /** Nur die Teile des Canvas-Renderers, die hier gebraucht werden (Leaflet-Interna). */

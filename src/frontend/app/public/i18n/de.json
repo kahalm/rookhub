@@ -3074,7 +3074,10 @@
     },
     "map": {
       "openDetail": "Turnierseite öffnen",
-      "thisVenue": "Dieser Spielort: {{name}}"
+      "thisVenue": "Dieser Spielort: {{name}}",
+      "samePoint": "{{count}} Turniere an diesem Punkt",
+      "samePointVague": "Für diese Turniere ist nur die Region bekannt, nicht der genaue Ort.",
+      "backToList": "‹ Zurück zur Liste ({{count}})"
     },
     "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich.",
     "place": {

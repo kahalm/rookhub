@@ -2799,7 +2799,10 @@
     },
     "map": {
       "openDetail": "Versenyoldal megnyitása",
-      "thisVenue": "Ez a helyszín: {{name}}"
+      "thisVenue": "Ez a helyszín: {{name}}",
+      "samePoint": "{{count}} verseny ezen a ponton",
+      "samePointVague": "Ezeknél a versenyeknél csak a régió ismert, a pontos helyszín nem.",
+      "backToList": "‹ Vissza a listához ({{count}})"
     },
     "bookmarkedImporting": "Megjelölve. A verseny letöltése folyik — a résztvevők és az eredmények mindjárt jönnek.",
     "place": {

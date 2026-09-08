@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { MapPinMarker } from './map-pin-marker';
+import { MapPinMarker, countLabel, pinRadiusFor } from './map-pin-marker';
 
 /**
  * Die Pin-Form ist keine Dekoration: die SPITZE sitzt auf dem Ort, der klickbare Kopf steht
@@ -73,5 +73,57 @@ describe('MapPinMarker', () => {
     expect(internals._point.y - top).toBeGreaterThanOrEqual(MapPinMarker.heightAbove(7));
     // Nach unten nur bis zur Spitze plus Klick-Toleranz — nicht um einen ganzen Radius.
     expect(bottom - internals._point.y).toBeLessThan(7);
+  });
+
+  // ----- Die Anzahl im Kopf ---------------------------------------------------------
+
+  /**
+   * Zeichnet den Pin mit einem gefaelschten Renderer und gibt zurueck, was als TEXT in die
+   * Leinwand ging. Der echte Canvas-Renderer zeichnet erst im naechsten Bildaufbau — hier geht es
+   * um den Inhalt, nicht um den Zeitpunkt.
+   */
+  function drawnText(count: number): string[] {
+    const marker = new MapPinMarker([47.8, 13.04], { radius: 7, count });
+    marker.addTo(map);
+
+    const drawn: string[] = [];
+    const ctx = {
+      beginPath: () => {}, arc: () => {}, lineTo: () => {}, closePath: () => {},
+      save: () => {}, restore: () => {}, fillText: (t: string) => drawn.push(t),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const self = marker as any;
+    const echt = self._renderer;
+    self._renderer = {
+      _drawing: true, _ctx: ctx, _fillStroke: () => {},
+      _bounds: { intersects: () => true },
+    };
+    self._updatePath();
+    // Zurueckgeben, sonst scheitert das Abraeumen der Karte am gefaelschten Renderer.
+    self._renderer = echt;
+    return drawn;
+  }
+
+  it('schreibt die Anzahl in den Kopf, sobald mehrere Turniere auf dem Punkt liegen', () => {
+    // Ohne die Zahl sieht ein Punkt mit fünf Turnieren aus wie einer mit einem — und vier davon
+    // sind unerreichbar, weil ihre Pins exakt darunter liegen.
+    expect(drawnText(5)).toEqual(['5']);
+  });
+
+  it('lässt den Kopf eines einzelnen Turniers leer', () => {
+    // „1" auf jedem Punkt wäre nur Rauschen.
+    expect(drawnText(1)).toEqual([]);
+  });
+
+  it('lässt den Kopf mit der Stellenzahl wachsen', () => {
+    // „111" in einem 14 px grossen Kopf wäre nicht zu lesen.
+    expect(pinRadiusFor(7, 1)).toBe(7);
+    expect(pinRadiusFor(7, 9)).toBeLessThan(pinRadiusFor(7, 99));
+    expect(pinRadiusFor(7, 99)).toBeLessThan(pinRadiusFor(7, 111));
+  });
+
+  it('kürzt vierstellige Anzahlen ab, statt sie unlesbar zu quetschen', () => {
+    expect(countLabel(999)).toBe('999');
+    expect(countLabel(1000)).toBe('999+');
   });
 });

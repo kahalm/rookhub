@@ -3074,7 +3074,10 @@
     },
     "map": {
       "openDetail": "Otvori stranicu turnira",
-      "thisVenue": "Ovo mjesto: {{name}}"
+      "thisVenue": "Ovo mjesto: {{name}}",
+      "samePoint": "{{count}} turnira na ovoj točki",
+      "samePointVague": "Za ove turnire poznata je samo regija, ne i točno mjesto igranja.",
+      "backToList": "‹ Natrag na popis ({{count}})"
     },
     "bookmarkedImporting": "Označeno. Turnir se dohvaća — sudionici i rezultati slijede odmah.",
     "place": {

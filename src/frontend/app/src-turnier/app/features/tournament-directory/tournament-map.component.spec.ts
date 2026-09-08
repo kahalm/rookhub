@@ -100,7 +100,7 @@ describe('TournamentMapComponent', () => {
    * DOM-Knoten — der Klick muss an die richtige Pixelstelle. Deshalb setzen die Tests den
    * Mittelpunkt auf dieselben Koordinaten wie das Turnier: dann liegt der Punkt genau mittig.
    */
-  function openPopupAtCentre(): HTMLElement {
+  function clickCentre(): void {
     const host: HTMLElement = fixture.nativeElement;
     const canvas = host.querySelector<HTMLCanvasElement>('canvas.leaflet-zoom-animated');
     expect(canvas).withContext('keine Zeichenfläche für die Punkte').not.toBeNull();
@@ -111,16 +111,30 @@ describe('TournamentMapComponent', () => {
     canvas!.dispatchEvent(new MouseEvent('mousedown', at));
     canvas!.dispatchEvent(new MouseEvent('mouseup', at));
     canvas!.dispatchEvent(new MouseEvent('click', at));
+  }
 
+  /** Die Kurzansicht im geöffneten Popup (ein Punkt, der für genau EIN Turnier steht). */
+  function openPopupAtCentre(): HTMLElement {
+    clickCentre();
+    const host: HTMLElement = fixture.nativeElement;
     const popup = host.querySelector<HTMLElement>('.leaflet-popup-content .tc');
     expect(popup).withContext('kein Popup geöffnet').not.toBeNull();
     return popup!;
   }
 
+  /** Der Popup-Inhalt eines GEBÜNDELTEN Punktes — die Liste bzw. die Ansicht darunter. */
+  function openGroupAtCentre(): HTMLElement {
+    clickCentre();
+    const host: HTMLElement = fixture.nativeElement;
+    const popup = host.querySelector<HTMLElement>('.leaflet-popup-content .tm-group');
+    expect(popup).withContext('kein Popup geöffnet').not.toBeNull();
+    return popup!;
+  }
+
   /** Turnier und Kartenmittelpunkt auf dieselbe Stelle legen — der Punkt sitzt dann mittig. */
-  function centredOn(e: DirectoryEntry): void {
-    component.entries = [e];
-    component.centre = { lat: e.lat!, lon: e.lon!, radiusKm: 5 };
+  function centredOn(...es: DirectoryEntry[]): void {
+    component.entries = es;
+    component.centre = { lat: es[0].lat!, lon: es[0].lon!, radiusKm: 5 };
     fixture.detectChanges();
   }
 
@@ -221,6 +235,71 @@ describe('TournamentMapComponent', () => {
     expect(layers.getLayers().length).toBe(1);
   });
 
+  // ----- Mehrere Turniere auf DERSELBEN Koordinate ----------------------------------
+  //
+  // Gemeldet an zwei Tiroler Ligen, deren Ortstext nur „Tirol" lautet: beide sitzen auf der
+  // Landesmitte, und der zweite Pin lag exakt unter dem ersten — unerreichbar, ohne dass etwas
+  // darauf hindeutete.
+
+  it('fasst Punkte auf derselben Koordinate zu EINEM Pin mit Anzahl zusammen', () => {
+    component.entries = [entry('1', 47.2178, 11.6411, 'Region'),
+                         entry('2', 47.2178, 11.6411, 'Region'),
+                         entry('3', 47.2178, 11.6411, 'Region')];
+    fixture.detectChanges();
+
+    const pins = markerOptions(component);
+    expect(pins.length).withContext('drei Pins übereinander statt einem').toBe(1);
+    expect(pins[0].count).toBe(3);
+  });
+
+  it('lässt Turniere auf verschiedenen Koordinaten einzeln', () => {
+    component.entries = [entry('1', 47.8, 13.04), entry('2', 47.9, 13.1)];
+    fixture.detectChanges();
+
+    const pins = markerOptions(component);
+    expect(pins.length).toBe(2);
+    // Ohne Bündelung trägt der Pin keine Zahl — „1" auf jedem Punkt wäre nur Rauschen.
+    expect(pins.every(p => p.count === 1)).toBeTrue();
+  });
+
+  it('nennt im Popup JEDES Turnier des Punktes, nicht nur das oberste', () => {
+    centredOn(entry('1', 47.2178, 11.6411, 'Region'),
+              entry('2', 47.2178, 11.6411, 'Region'));
+
+    const rows = [...openGroupAtCentre().querySelectorAll('.tm-group-name')]
+      .map(n => n.textContent?.trim());
+
+    expect(rows).toEqual(['Turnier 1', 'Turnier 2']);
+  });
+
+  it('führt von der Liste in die Kurzansicht und wieder zurück', () => {
+    centredOn(entry('1', 47.2178, 11.6411, 'Region'),
+              entry('2', 47.2178, 11.6411, 'Region'));
+    const popup = openGroupAtCentre();
+
+    popup.querySelectorAll<HTMLButtonElement>('.tm-group-row')[1].click();
+
+    expect(popup.querySelector('.tc-name')?.textContent?.trim()).toBe('Turnier 2');
+
+    popup.querySelector<HTMLButtonElement>('.tm-group-back')!.click();
+
+    expect(popup.querySelectorAll('.tm-group-row').length).toBe(2);
+    expect(popup.querySelector('.tc')).withContext('Kurzansicht nicht abgeräumt').toBeNull();
+  });
+
+  it('hebt den gebündelten Punkt hervor, sobald EINES seiner Turniere gemerkt ist', () => {
+    const a = entry('1', 47.2178, 11.6411, 'Region');
+    const b = entry('2', 47.2178, 11.6411, 'Region');
+    component.entries = [a, b];
+    fixture.detectChanges();
+    const vorher = markerStyles(component)[0].fillColor;
+
+    component.applySubscribed(b, true);
+
+    // Ein gemerktes Turnier unter fünf anderen ginge sonst unter — der Punkt gehört ihnen allen.
+    expect(markerStyles(component)[0].fillColor).not.toBe(vorher);
+  });
+
   it('räumt die Karte beim Zerstören ab', () => {
     fixture.detectChanges();
     expect(() => fixture.destroy()).not.toThrow();
@@ -259,6 +338,14 @@ describe('TournamentMapComponent', () => {
     expect(markerStyles(component)[0].fillColor).not.toBe(vorher);
   });
 });
+
+/** Die Marker-Optionen inkl. Anzahl der Turniere auf dem Punkt. */
+function markerOptions(component: TournamentMapComponent): { count?: number }[] {
+  const options: { count?: number }[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (component as any).markerLayer?.eachLayer((l: any) => options.push(l.options));
+  return options;
+}
 
 /** Die gezeichneten Stile der Marker — Leaflet haelt sie in `options`. */
 function markerStyles(component: TournamentMapComponent): { fillColor?: string; weight?: number }[] {
