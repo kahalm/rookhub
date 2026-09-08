@@ -69,6 +69,13 @@ const PinRadius = 7;
           </select>
         </label>
 
+        <button type="button" class="legend-toggle" (click)="toggleLegend()"
+                [attr.aria-expanded]="legendOpen()">
+          <span class="chevron" [class.open]="legendOpen()">&#9656;</span>
+          {{ 'tournamentDirectory.map.legendTitle' | translate }}
+        </button>
+
+        @if (legendOpen()) {
         <ul class="legend">
           @for (category of legend(); track category.key) {
             <li>
@@ -89,6 +96,7 @@ const PinRadius = 7;
             <i class="vague"></i> {{ 'tournamentDirectory.map.legend.approximate' | translate }}
           </li>
         </ul>
+        }
       </div>
     </div>
   `,
@@ -131,7 +139,24 @@ const PinRadius = 7;
       font: inherit;
     }
 
-    .legend { margin: 6px 0 0; padding: 0; list-style: none; }
+    .legend-toggle {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-top: 5px;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      opacity: 0.85;
+    }
+
+    .chevron { display: inline-block; transition: transform 120ms; }
+    .chevron.open { transform: rotate(90deg); }
+
+    .legend { margin: 4px 0 0; padding: 0; list-style: none; }
     .legend li { display: flex; align-items: center; gap: 5px; }
 
     .legend i {
@@ -319,6 +344,17 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * dann bis zur naechsten Aenderung unsichtbar.
    */
   private readonly mixedShown = signal(false);
+
+  /**
+   * Ist die Legende aufgeklappt? Zugeklappt als Vorgabe: sie erklaert eine Bildsprache, die man
+   * EINMAL nachliest — dauerhaft aufgeklappt verdeckt sie auf einem Handy ein Viertel der Karte,
+   * also genau das, wofuer man sie aufgeschlagen hat.
+   */
+  readonly legendOpen = signal(false);
+
+  toggleLegend(): void {
+    this.legendOpen.update(open => !open);
+  }
 
   pickColourBy(event: Event): void {
     const chosen = (event.target as HTMLSelectElement).value as PinColourBy;

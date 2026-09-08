@@ -3094,7 +3094,8 @@
         "mixed": "mixed",
         "bookmarked": "bookmarked",
         "approximate": "approximate location only"
-      }
+      },
+      "legendTitle": "Legend"
     },
     "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment.",
     "place": {

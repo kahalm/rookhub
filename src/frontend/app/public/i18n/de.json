@@ -3094,7 +3094,8 @@
         "mixed": "gemischt",
         "bookmarked": "gemerkt",
         "approximate": "nur ungefähr verortet"
-      }
+      },
+      "legendTitle": "Legende"
     },
     "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich.",
     "place": {

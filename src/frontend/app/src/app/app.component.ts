@@ -4,10 +4,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { SwUpdate, VersionReadyEvent, VersionInstallationFailedEvent } from '@angular/service-worker';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
-import { filter, interval } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { DISCORD_SVG } from './core/community';
 import { ImpersonationBannerComponent } from './shared/impersonation-banner/impersonation-banner.component';
@@ -21,6 +19,7 @@ import { FullscreenOverlayService } from './shared/fullscreen/fullscreen-overlay
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
 import { PwaInstallService } from './core/pwa-install.service';
 import { ClientLogService } from './core/client-log.service';
+import { AppUpdateService } from './core/app-update.service';
 import { ConnectivityService } from './core/connectivity.service';
 import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
@@ -258,7 +257,7 @@ export class AppComponent implements OnInit {
     private discordLink: DiscordLinkService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
-    private swUpdate: SwUpdate,
+    private appUpdate: AppUpdateService,
     // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
     _offlineQueue: OfflineQueueService,
     // App-weit instanziieren: holt den CDK-Overlay-Container im Vollbild ins Vollbild-Element,
@@ -308,37 +307,9 @@ export class AppComponent implements OnInit {
     setTimeout(() => this.offlinePrefetch.prefetchAll(), 3000);
     window.addEventListener('online', () => this.offlinePrefetch.prefetchAll());
 
-    // Service Worker: neue Version verfügbar → Hinweis mit „Neu laden".
-    if (this.swUpdate.isEnabled) {
-      this.swUpdate.versionUpdates
-        .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'), takeUntilDestroyed(this.destroyRef))
-        .subscribe(() => {
-          const ref = this.snackbar.show(this.translate.instant('app.updateAvailable'), { action: 'app.reload', duration: 0 });
-          ref.onAction().subscribe(() => document.location.reload());
-        });
-      // Gescheiterte Update-Installation (Hash-Mismatch, fehlende Chunks nach Deploy, Abbruch)
-      // an die API melden (→ Kibana) — die Vorstufe des unrecoverable-Zustands. Nur Telemetrie.
-      this.swUpdate.versionUpdates
-        .pipe(filter((e): e is VersionInstallationFailedEvent => e.type === 'VERSION_INSTALLATION_FAILED'), takeUntilDestroyed(this.destroyRef))
-        .subscribe(e => this.clientLog.report('sw_install_failed', e.error));
-      // Kaputter SW-Zustand (UNRECOVERABLE_STATE: gecachtes Asset fehlt im Cache UND ist nach einem
-      // Deploy auch am Server weg). Ein blinder reload() heilt den Zustand nicht — er feuerte sofort
-      // wieder und die App hing in einer Endlos-Reload-Schleife (Prod-Vorfall 2026-07-15). Stattdessen:
-      // Event melden, SW deregistrieren + ngsw-Caches löschen, genau EINMAL neu laden.
-      this.swUpdate.unrecoverable
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(ev => { this.swRecovery = this.recoverFromBrokenServiceWorker(ev.reason); });
-
-      // Aktiv nach neuen Versionen suchen — sonst merkt ein lange offener Tab / eine installierte PWA
-      // ein Deploy nie (der SW prüft von sich aus nur beim (Neu-)Start). checkForUpdate() lädt ngsw.json
-      // neu → bei neuer Version feuert oben VERSION_READY und der „Neu laden"-Hinweis erscheint.
-      // Auslöser: gleich beim Start, alle 15 min, und wann immer der Tab wieder in den Vordergrund kommt.
-      this.checkForAppUpdate();
-      interval(15 * 60 * 1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.checkForAppUpdate());
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') this.checkForAppUpdate();
-      });
-    }
+    // Service Worker: neue Fassung, gescheiterte Installation, kaputter Zustand und die
+    // aktive Suche - alles im geteilten AppUpdateService, den auch die Turnierseite nutzt.
+    this.appUpdate.start(this.destroyRef);
 
     // Persistenten Storage anfordern: Android evict bei Speicherdruck einzelne SW-Cache-Einträge
     // (z. B. einen Lazy-Chunk, während die referenzierende index.html bleibt) — die deploy-
@@ -358,42 +329,8 @@ export class AppComponent implements OnInit {
     });
   }
 
-  /** Guard-Key: pro Tab-Session höchstens EIN automatischer Recovery-Reload. */
-  private static readonly SW_RECOVERY_GUARD_KEY = 'rookhub_sw_recovery_reload';
-  /** Laufende SW-Selbstheilung — Feld, damit Tests den async-Ablauf deterministisch awaiten können. */
-  swRecovery?: Promise<void>;
-
-  /**
-   * SW-Selbstheilung bei UNRECOVERABLE_STATE: Diagnose-Event an die API melden, alle Service-Worker-
-   * Registrierungen entfernen und die ngsw-Caches löschen, danach genau einmal neu laden
-   * (sessionStorage-Guard verhindert die Reload-Schleife). Schlägt der Guard fehl oder lief der
-   * Reload schon, läuft die App ohne SW weiter (Netz-direkt) statt endlos zu reloaden.
-   */
-  private async recoverFromBrokenServiceWorker(reason: string): Promise<void> {
-    this.clientLog.report('sw_unrecoverable', reason);
-
-    let alreadyReloaded = true; // Default: NICHT reloaden (sicher gegen Schleife), außer Guard ist setzbar
-    try {
-      alreadyReloaded = sessionStorage.getItem(AppComponent.SW_RECOVERY_GUARD_KEY) === '1';
-      if (!alreadyReloaded) sessionStorage.setItem(AppComponent.SW_RECOVERY_GUARD_KEY, '1');
-    } catch { /* Storage nicht verfügbar → kein Auto-Reload */ }
-
-    try {
-      const regs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
-      await Promise.all(regs.map(r => r.unregister()));
-      if (typeof caches !== 'undefined') {
-        const keys = await caches.keys();
-        await Promise.all(keys.filter(k => k.startsWith('ngsw:')).map(k => caches.delete(k)));
-      }
-    } catch { /* best effort — Reload unten registriert den SW ohnehin frisch */ }
-
-    if (!alreadyReloaded) this.reloadApp();
-  }
-
-  /** In Methode gekapselt, damit Tests den harten Reload abfangen können. */
-  protected reloadApp(): void {
-    document.location.reload();
-  }
+  /** Laufende SW-Selbstheilung - Testhaken; die Arbeit macht der geteilte Dienst. */
+  get swRecovery(): Promise<void> | undefined { return this.appUpdate.recovery; }
 
   /** Laufende Persistenz-Anfrage — Feld, damit Tests den async-Ablauf deterministisch awaiten können. */
   storagePersist?: Promise<void>;
@@ -415,11 +352,6 @@ export class AppComponent implements OnInit {
   }
 
   /** Nach einer neuen App-Version suchen (fehlertolerant; SW evtl. noch nicht registriert). */
-  private checkForAppUpdate(): void {
-    if (!this.swUpdate.isEnabled) return;
-    this.swUpdate.checkForUpdate().catch(() => { /* SW noch nicht bereit / offline → ignorieren */ });
-  }
-
   /**
    * Bot-Link `?dl=<token>`: eingeloggt -> sofort verknüpfen; anonym -> Token vormerken
    * (wird nach Login/Registrierung automatisch eingelöst). Param wird aus der URL entfernt.

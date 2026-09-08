@@ -2819,7 +2819,8 @@
         "mixed": "vegyes",
         "bookmarked": "megjelölve",
         "approximate": "csak hozzávetőleges helyszín"
-      }
+      },
+      "legendTitle": "Jelmagyarázat"
     },
     "bookmarkedImporting": "Megjelölve. A verseny letöltése folyik — a résztvevők és az eredmények mindjárt jönnek.",
     "place": {

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TurnierNavbarComponent } from './shell/turnier-navbar.component';
 import { AppFooterComponent } from '@rh/shared/app-footer/app-footer.component';
@@ -6,6 +6,7 @@ import { ImpersonationBannerComponent } from '@rh/shared/impersonation-banner/im
 import { LocaleService } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
+import { AppUpdateService } from '@rh/core/app-update.service';
 
 @Component({
   selector: 'trn-root',
@@ -31,9 +32,18 @@ export class TurnierAppComponent implements OnInit {
   // Nur injizieren genuegt: der Dienst liest den geteilten Modus und setzt die Klasse am
   // <html>-Element selbst. Ohne ihn stand die Turnierseite immer im hellen Grundzustand.
   private theme = inject(ThemeService);
+  /**
+   * Der Hinweis auf eine neue Fassung. Die Turnierseite registriert seit ihrem ersten Tag einen
+   * Service Worker, hatte aber nie einen Hinweis darauf, dass eine neue Fassung bereitliegt —
+   * ein offener Tab lief nach einem Deploy also unbegrenzt auf der ALTEN weiter, ohne jedes
+   * Anzeichen. Derselbe Dienst wie in RookHub, keine zweite Fassung.
+   */
+  private appUpdate = inject(AppUpdateService);
+  private destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
     this.locale.init();
+    this.appUpdate.start(this.destroyRef);
     // Kommt der Aufrufer per Sprung von RookHub, bringt er einen Einmal-Code mit — den gegen eine
     // eigene Anmeldung tauschen, BEVOR die erste Seite ihre Daten holt.
     void this.handoff.consumeIncoming();

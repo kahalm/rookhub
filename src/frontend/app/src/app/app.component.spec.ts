@@ -12,6 +12,7 @@ import { OfflineQueueService } from './core/offline-queue.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
 import { PwaInstallService } from './core/pwa-install.service';
 import { ClientLogService } from './core/client-log.service';
+import { AppUpdateService } from './core/app-update.service';
 import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
@@ -151,7 +152,7 @@ describe('AppComponent lifecycle', () => {
       const reportSpy = spyOn(clientLog, 'report');
       const fixture = TestBed.createComponent(AppComponent);
       fixture.detectChanges();
-      const reloadSpy = spyOn<any>(fixture.componentInstance, 'reloadApp');
+      const reloadSpy = spyOn<any>(TestBed.inject(AppUpdateService), 'reloadApp');
 
       unrecoverable.next({ reason: 'hash mismatch' });
       await fixture.componentInstance.swRecovery; // async-Selbstheilung deterministisch abwarten
@@ -165,7 +166,7 @@ describe('AppComponent lifecycle', () => {
       sessionStorage.setItem(GUARD_KEY, '1');
       const fixture = TestBed.createComponent(AppComponent);
       fixture.detectChanges();
-      const reloadSpy = spyOn<any>(fixture.componentInstance, 'reloadApp');
+      const reloadSpy = spyOn<any>(TestBed.inject(AppUpdateService), 'reloadApp');
 
       unrecoverable.next({ reason: 'hash mismatch' });
       await fixture.componentInstance.swRecovery;

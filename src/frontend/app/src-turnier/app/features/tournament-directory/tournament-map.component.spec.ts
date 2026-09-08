@@ -338,6 +338,8 @@ describe('TournamentMapComponent', () => {
 
     expect(markerStyles(component)[0].fillColor).toBe('#79808a');
     // Und die Legende erklärt die graue Marke, sobald es eine gibt.
+    fixture.nativeElement.querySelector('.legend-toggle').click();
+    fixture.detectChanges();
     const legende: string = fixture.nativeElement.querySelector('.legend').textContent;
     expect(legende).toContain('tournamentDirectory.map.legend.mixed');
   });
@@ -358,6 +360,8 @@ describe('TournamentMapComponent', () => {
 
   it('listet in der Legende die Klassen des gewählten Merkmals', () => {
     fixture.detectChanges();
+    fixture.nativeElement.querySelector('.legend-toggle').click();
+    fixture.detectChanges();
     const zeilen = [...fixture.nativeElement.querySelectorAll('.legend li')]
       .map((n: Element) => n.textContent?.trim());
 
@@ -365,6 +369,24 @@ describe('TournamentMapComponent', () => {
     // „gemerkt" und „nur ungefähr" liegen ÜBER dem Merkmal und stehen deshalb immer dabei.
     expect(zeilen.at(-2)).toContain('tournamentDirectory.map.legend.bookmarked');
     expect(zeilen.at(-1)).toContain('tournamentDirectory.map.legend.approximate');
+  });
+
+  it('hält die Legende zugeklappt, bis jemand sie aufschlägt', () => {
+    // Sie erklärt eine Bildsprache, die man EINMAL nachliest — dauerhaft aufgeklappt verdeckt sie
+    // auf einem Handy ein Viertel der Karte, also genau das, wofür man sie aufgeschlagen hat.
+    fixture.detectChanges();
+    const host: HTMLElement = fixture.nativeElement;
+
+    expect(host.querySelector('.legend')).withContext('Legende steht offen').toBeNull();
+    expect(host.querySelector('.legend-toggle')!.getAttribute('aria-expanded')).toBe('false');
+    // Die AUSWAHL bleibt sichtbar — sie ist das Bedienelement, nicht die Erklärung.
+    expect(host.querySelector('.colour-by select')).not.toBeNull();
+
+    host.querySelector<HTMLButtonElement>('.legend-toggle')!.click();
+    fixture.detectChanges();
+
+    expect(host.querySelectorAll('.legend li').length).toBeGreaterThan(0);
+    expect(host.querySelector('.legend-toggle')!.getAttribute('aria-expanded')).toBe('true');
   });
 
   /**
