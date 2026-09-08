@@ -179,6 +179,30 @@ describe('TournamentHistoryComponent', () => {
   });
 
   /**
+   * „3" allein sagt nicht, ob das aus drei oder aus neun Partien kam. Die Partienzahl steht auf
+   * der Spielerkarte und ist NICHT die Rundenzahl des Turniers — in einer Liga wird ein Spieler
+   * an einem Teil der Termine aufgestellt.
+   */
+  it('schreibt die Punkte als Anteil an den gespielten Partien', async () => {
+    const req = await setup();
+    req.flush([history({ entries: [played({ points: 2, gamesPlayed: 5 })] })]);
+    fixture.detectChanges();
+
+    const zelle = fixture.nativeElement.querySelector('.rows .row .row-num');
+    expect(zelle.textContent.replace(/\s/g, '')).toBe('2/5');
+  });
+
+  it('laesst den Nenner weg, solange die Partienzahl fehlt', async () => {
+    // Erfundene Nenner sind schlimmer als eine blanke Punktzahl.
+    const req = await setup();
+    req.flush([history({ entries: [played({ points: 2, gamesPlayed: null })] })]);
+    fixture.detectChanges();
+
+    const zelle = fixture.nativeElement.querySelector('.rows .row .row-num');
+    expect(zelle.textContent.replace(/\s/g, '')).toBe('2');
+  });
+
+  /**
    * Ein Verlauf ohne Summe laesst einen selbst zusammenzaehlen — und genau darum sieht man ihn
    * an. Gezaehlt werden nur die Turniere MIT Ergebnis.
    */

@@ -3231,7 +3231,8 @@
       "countGames": "partija: {{count}}",
       "countsTooltip": "Odigrane partije u ovoj vremenskoj kontroli.",
       "noFriendsYet": "Dodaj prijatelje na RookHubu da usporediš svoju povijest s njihovom.",
-      "allSpeeds": "Sve"
+      "allSpeeds": "Sve",
+      "pointsTooltip": "Bodovi iz odigranih partija. Broj partija dolazi s kartona igrača, ne iz broja kola turnira."
     }
   },
   "turnierAdmin": {

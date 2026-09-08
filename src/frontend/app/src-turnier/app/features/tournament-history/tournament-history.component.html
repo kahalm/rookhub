@@ -155,7 +155,12 @@
                   </span>
 
                   @if (entry.hasResult) {
-                    <span class="row-num">{{ entry.points }}</span>
+                    <!-- Punkte AUS gespielten Partien: „3" allein sagt nicht, ob das aus
+                         drei oder aus neun Partien kam. Die Partienzahl steht auf der
+                         Spielerkarte und ist nicht die Rundenzahl - in einer Liga wird ein
+                         Spieler an einem TEIL der Termine aufgestellt. Ohne sie bleibt es
+                         bei der blanken Punktzahl statt eines erfundenen Nenners. -->
+                    <span class="row-num" [matTooltip]="'turnier.history.pointsTooltip' | translate">{{ entry.points }}@if (entry.gamesPlayed !== null) {<span class="of-games">/{{ entry.gamesPlayed }}</span>}</span>
                     <span class="row-num rank">
                       @if (entry.rank) {
                         {{ 'turnier.history.rankOf' | translate: { rank: entry.rank, of: entry.playerCount } }}

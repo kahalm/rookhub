@@ -170,3 +170,9 @@ h3 {
 /* Der Bedenkzeit-Filter steht in der Leiste ueber der Tabelle und bleibt auf schmalen Schirmen
    umbruchfaehig — vier Knoepfe passen quer nicht auf ein Handy. */
 .speed-filter { flex-wrap: wrap; }
+
+/* Der Nenner ist die Nebenangabe: die Punktzahl bleibt die Zahl, die man liest. */
+.of-games {
+  opacity: 0.6;
+  font-size: 0.9em;
+}

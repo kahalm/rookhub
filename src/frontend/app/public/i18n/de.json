@@ -3231,7 +3231,8 @@
       "countGames": "{{count}} Partien",
       "countsTooltip": "Gespielte Partien in dieser Bedenkzeit.",
       "noFriendsYet": "Füge auf RookHub Freunde hinzu, um deinen Verlauf mit ihrem zu vergleichen.",
-      "allSpeeds": "Alle"
+      "allSpeeds": "Alle",
+      "pointsTooltip": "Punkte aus gespielten Partien. Die Partienzahl kommt von der Spielerkarte, nicht aus der Rundenzahl des Turniers."
     }
   },
   "turnierAdmin": {

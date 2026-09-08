@@ -3231,7 +3231,8 @@
       "countGames": "{{count}} games",
       "countsTooltip": "Games played in this time control.",
       "noFriendsYet": "Add friends on RookHub to compare your history with theirs.",
-      "allSpeeds": "All"
+      "allSpeeds": "All",
+      "pointsTooltip": "Points from games played. The number of games comes from the player card, not from the tournament round count."
     }
   },
   "turnierAdmin": {

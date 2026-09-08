@@ -2956,7 +2956,8 @@
       "countGames": "{{count}} játszma",
       "countsTooltip": "Ebben az időbeosztásban lejátszott játszmák.",
       "noFriendsYet": "Vegyél fel ismerősöket a RookHubon, hogy összevethesd velük a versenytörténetedet.",
-      "allSpeeds": "Mind"
+      "allSpeeds": "Mind",
+      "pointsTooltip": "Pontok a lejátszott játszmákból. A játszmák száma a játékoskártyáról származik, nem a verseny fordulószámából."
     }
   },
   "turnierAdmin": {
