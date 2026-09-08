@@ -33,6 +33,18 @@ public enum GeoSource
     /// („SV ASKOE St. Veit/Glan"). Siehe <c>VenueDisambiguationService</c>.
     /// </summary>
     TeamHint = 7,
+
+    /// <summary>
+    /// Die QUELLE hat die Koordinaten selbst mitgeliefert — es wurde nichts aufgeloest und nichts
+    /// geraten.
+    ///
+    /// <para>Gibt es bisher nur beim englischen Verband: dessen Spielstaetten-Endpunkt fuehrt
+    /// <c>geo_lat</c>/<c>geo_lng</c> (bei zwei Dritteln der Turniere). Das ist die genaueste
+    /// Angabe, die es geben kann, und sie wird deshalb wie eine von Hand gesetzte behandelt: der
+    /// Neuaufloesungs-Lauf (<c>geocode-missing?force=true</c>) laesst sie stehen. Ein
+    /// Ortslexikon-Treffer waere dagegen bestenfalls die Stadtmitte.</para>
+    /// </summary>
+    SourceProvided = 8,
 }
 
 /// <summary>

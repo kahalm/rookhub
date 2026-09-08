@@ -102,6 +102,15 @@ public enum DirectorySourceKind
     /// Problemschach, Schach960.</para>
     /// </summary>
     GermanChessFederation = 11,
+
+    /// <summary>
+    /// Der Kalender des englischen Verbands (englishchess.org.uk).
+    ///
+    /// <para>Eine der groessten Luecken im Bestand: 256 kuenftige Turniere, 86 % davon nicht auf
+    /// chess-results. Und die einzige Quelle, die KOORDINATEN mitliefert — fuer zwei Drittel der
+    /// Turniere entfaellt das Geocoding vollstaendig.</para>
+    /// </summary>
+    EnglishChessFederation = 12,
 }
 
 /// <summary>

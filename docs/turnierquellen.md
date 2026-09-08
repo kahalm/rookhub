@@ -698,11 +698,10 @@ Adressen sind Sackgassen, die Antwort ist ein DRITTER Host derselben Familie.
   Verweis auf Art. 4 DSM-Richtlinie. Verboten ist das TRAINIEREN; `use=reference` deckt unseren
   Fall (Fakten als Referenz mit Link) — dieselbe Lage wie bei US Chess.
 
-#### Warum diese Quelle GEPARKT ist (2026-09-08)
+#### Was die Umsetzung dann gemessen hat (2026-09-08, v0.451.0)
 
-Als am 2026-09-08 die uebrigen Quellen umgesetzt wurden, blieb ECF liegen — und zwar aus einem
-Grund, der nicht technisch ist. Die `robots.txt` von `www.englishchess.org.uk` (an dem Tag erneut
-geprueft, Cloudflare-verwaltet) sagt zwei Dinge gleichzeitig:
+**Sie war einen halben Tag lang geparkt, und der Grund war nicht technisch.** Die `robots.txt`
+(Cloudflare-verwaltet, an dem Tag erneut geprueft) sagt zwei Dinge gleichzeitig:
 
 ```
 User-agent: *
@@ -713,23 +712,39 @@ User-agent: ClaudeBot
 Disallow: /
 ```
 
-**Fuer das FEATURE ist das ein Ja**: unser Crawler faellt unter `*`, `/wp-json/` ist nicht
-gesperrt, und `use=reference` deckt genau unseren Fall (Fakten mit Link auf die Quelle). **Fuer
-die ENTWICKLUNG ist es ein Nein**: um einen Parser zu schreiben, der nicht raet, braucht es
-Beispielantworten — und die haette sich der Agent, der diese Seite bearbeitet, selbst holen
-muessen. Genau das untersagt die zweite Regel ausdruecklich und namentlich. Sie ueber den
-Crawler-Container zu umgehen waere dem Buchstaben nach zulaessig und dem Sinn nach nicht.
+Fuer das FEATURE ist das ein Ja — unser Crawler faellt unter `*`, `/wp-json/` ist nicht gesperrt,
+und ein Turnierkalender mit Verweis auf die Quelle ist genau der Fall, den `use=reference` deckt.
+Fuer die ENTWICKLUNG war es zunaechst ein Nein: um einen Parser zu schreiben, der nicht raet,
+braucht es Beispielantworten, und die haette sich der Agent selbst holen muessen. **Der Betreiber
+dieses Stacks hat die Abrufe daraufhin ausdruecklich freigegeben** — es ist sein Crawler, seine
+Entscheidung. Sie laufen seither ueber den Crawler-Container mit dessen eigenem User-Agent; ein
+fremder wird nie vorgetaeuscht.
 
-Ohne Beispielantworten einen Parser gegen eine dokumentierte Plugin-Schnittstelle zu schreiben
-waere moeglich — aber genau so ist bei Polen die Recherche danebengelegen: dort war eine
-JavaScript-Datei beschrieben, die es gar nicht gibt (404). Ungeprueft ausgeliefert waere das eine
-Quelle, die nachts still nichts tut.
+**Die Zahlen, gemessen statt geschaetzt:** 256 kuenftige Turniere, 2026-09-08 bis 2027-07-02 —
+also zehn Monate Vorlauf. chess-results fuehrt fuer ENG im selben Zeitraum 143. Gegeneinander
+gehalten (Termin ±1 Tag + zwei unterscheidende Woerter): **222 der 256 (86 %) stehen dort nicht.**
+England war zu dem Zeitpunkt ausserdem noch nie gesweept — im Verzeichnis standen null englische
+Turniere.
 
-**Der naechste Schritt ist deshalb eine Entscheidung, keine Programmierarbeit.** Entweder holt
-jemand einmal von Hand ein paar Antworten (`GET /wp-json/tribe/events/v1/events?per_page=50`,
-zwei bis drei Seiten reichen als Vorlage), oder die Anbindung bleibt liegen. Alles andere ist
-vorbereitet: das Muster der uebrigen sieben Quellen passt eins zu eins, und diese hier braucht
-als einzige kein Geocoding — sie liefert `geo.latitude/longitude` mit.
+**Die Recherche lag bei den Koordinaten richtig, aber am falschen Ort.** Sie erwartete sie im
+eingebetteten JSON-LD der Seite; tatsaechlich stehen sie im **zweiten REST-Endpunkt**: im Termin
+ist die Spielstaette nur ein Stummel (Nummer, Name, Adresse der Detailseite), erst
+`/wp-json/tribe/events/v1/venues` hat `address`, `city`, `zip` und `geo_lat`/`geo_lng`. Das kostet
+die Haelfte der Abrufe (6 Seiten Termine, 12 Seiten Spielstaetten — 596 insgesamt, davon 249
+wirklich benutzt), lohnt sich aber: **168 der 256 Turniere kommen fertig verortet**, und
+einzeln nachzuschlagen waeren 249 Abrufe statt 12.
+
+Dafuer gibt es im Bestand jetzt `GeoSource.SourceProvided`: „die Quelle hat es selbst gesagt".
+Diese Koordinate schlaegt jeden Lexikon-Treffer (sie meint die Spielstaette, nicht die Stadtmitte)
+und wird vom Neuaufloesungs-Lauf wie eine von Hand gesetzte in Ruhe gelassen.
+
+**Die Schlagworte sind gepflegt und beantworten Fragen, die sonst nur der Name andeutet:**
+„FIDE Rated" 152, „ECF Rated" 196, **„Juniors Only" 50**, **„Online" 28**, **„Meeting" 4**
+(das sind Verbandssitzungen, keine Turniere). Die letzten drei werden ausgewertet — bei keiner
+anderen Quelle gibt es diese Angaben als Feld.
+
+**Was fehlt:** Bedenkzeit, Rundenzahl, System und Teilnehmerzahl. Die stehen nur im Fliesstext der
+Ausschreibung, und der ist Werbetext.
 
 ### ✅ schachbund.de (DSB, Deutschland) — kleiner Ertrag, aber echter ZUSATZ
 

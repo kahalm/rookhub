@@ -177,6 +177,7 @@ try
     builder.Services.AddScoped<ChessCzDirectorySweepService>();
     builder.Services.AddScoped<ChessArbiterDirectorySweepService>();
     builder.Services.AddScoped<SchachbundDirectorySweepService>();
+    builder.Services.AddScoped<EcfDirectorySweepService>();
     builder.Services.AddScoped<ViewStateService>();
     builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<FideDirectorySweepService>();

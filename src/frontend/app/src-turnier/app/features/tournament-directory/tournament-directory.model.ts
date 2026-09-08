@@ -5,7 +5,11 @@ export type TournamentSpeed = 'Unknown' | 'Standard' | 'Rapid' | 'Blitz';
 export type GeoSourceKind =
   | 'None' | 'PostalCode' | 'City' | 'Region' | 'Manual' | 'Nominatim'
   /** Ortsname gefunden, aber mehrdeutig — bewusst OHNE Koordinaten (siehe Server). */
-  | 'Ambiguous';
+  | 'Ambiguous'
+  /** Über die Vereinsnamen des Turniers entschieden (Abkürzungs-Fall, siehe Server). */
+  | 'TeamHint'
+  /** Die Quelle hat die Koordinaten selbst mitgeliefert — genauer geht es nicht. */
+  | 'SourceProvided';
 
 /** Einzel- oder Mannschaftsturnier. `Unknown` = noch nicht geklaert, nicht „keins von beidem". */
 export type TournamentKind = 'Unknown' | 'Individual' | 'Team';

@@ -281,6 +281,19 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: schachbund-Turnierdatenbank fehlgeschlagen");
             }
 
+            // Der englische Verbandskalender. Zwei geblaetterte Endpunkte mit der Wartezeit aus
+            // der robots.txt der Quelle — rund drei Minuten, und die einzige Quelle, die die
+            // Koordinaten gleich mitbringt.
+            try
+            {
+                var ecf = scope.ServiceProvider.GetRequiredService<EcfDirectorySweepService>();
+                await ecf.RunAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: ECF-Kalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.

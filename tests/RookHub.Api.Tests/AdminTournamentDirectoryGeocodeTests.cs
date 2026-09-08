@@ -70,7 +70,9 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
             new ChessArbiterDirectorySweepService(_db, factory, geocoding, config,
                 new TestLogger<ChessArbiterDirectorySweepService>()),
             new SchachbundDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<SchachbundDirectorySweepService>()));
+                new TestLogger<SchachbundDirectorySweepService>()),
+            new EcfDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<EcfDirectorySweepService>()));
     }
 
     /// <summary>

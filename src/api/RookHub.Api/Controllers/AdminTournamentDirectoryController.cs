@@ -43,7 +43,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         ChessHuDirectorySweepService chessHu,
         ChessCzDirectorySweepService chessCz,
         ChessArbiterDirectorySweepService chessArbiter,
-        SchachbundDirectorySweepService schachbund)
+        SchachbundDirectorySweepService schachbund,
+        EcfDirectorySweepService ecf)
     {
         _db = db;
         _directory = directory;
@@ -61,6 +62,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _chessCz = chessCz;
         _chessArbiter = chessArbiter;
         _schachbund = schachbund;
+        _ecf = ecf;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -75,6 +77,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly ChessCzDirectorySweepService _chessCz;
     private readonly ChessArbiterDirectorySweepService _chessArbiter;
     private readonly SchachbundDirectorySweepService _schachbund;
+    private readonly EcfDirectorySweepService _ecf;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -300,6 +303,26 @@ public class AdminTournamentDirectoryController : BaseApiController
     }
 
     /// <summary>
+    /// Den Kalender des englischen Verbands (ECF) lesen.
+    ///
+    /// <para>256 kuenftige Turniere, 86 % davon nicht auf chess-results — und als einzige Quelle
+    /// liefert sie KOORDINATEN mit (fuer zwei Drittel der Turniere entfaellt das Geocoding
+    /// damit). Ein Durchgang holt zwei geblaetterte Endpunkte mit der Wartezeit aus der
+    /// robots.txt der Quelle und dauert rund drei Minuten.</para>
+    ///
+    /// <para><c>Updated</c> in der Antwort zaehlt die VERORTETEN Eintraege.</para>
+    /// </summary>
+    [HttpPost("ecf")]
+    public async Task<IActionResult> Ecf(CancellationToken ct = default)
+    {
+        var result = await _ecf.RunAsync(ct);
+        return Ok(new
+        {
+            result.Read, result.Added, result.Matched, result.Retired, Located = result.Updated,
+        });
+    }
+
+    /// <summary>
     /// Die Turnierdatenbank des Deutschen Schachbunds lesen.
     ///
     /// <para>Ihr Wert ist nicht die Menge (rund 104 Eintraege), sondern die ART: ein reines
@@ -517,6 +540,9 @@ public class AdminTournamentDirectoryController : BaseApiController
             .Include(e => e.Venues)
             .Where(e => e.RemovedAt == null
                         && e.GeoSource != GeoSource.Manual
+                        // Von der Quelle mitgelieferte Koordinaten sind genauer als alles, was das
+                        // Ortslexikon daraus machen kann — sie bleiben wie die von Hand gesetzten.
+                        && e.GeoSource != GeoSource.SourceProvided
                         && (force || e.Lat == null))
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 10000))
