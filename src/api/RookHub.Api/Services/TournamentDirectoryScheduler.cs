@@ -215,6 +215,20 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: SZS-Kalender fehlgeschlagen");
             }
 
+            // Der slowakische Verbandskalender. Er kostet mehr als die uebrigen — ein Abruf der
+            // Schnittstelle plus einer je Turnier fuer die Detailseite (mit Pause, rund eine
+            // Minute fuer 79 Turniere) — und liefert dafuer als einzige Quelle Anschrift,
+            // Bedenkzeit, Rundenzahl und System auf einmal.
+            try
+            {
+                var chessSk = scope.ServiceProvider.GetRequiredService<ChessSkDirectorySweepService>();
+                await chessSk.RunAsync(details: true, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: chess.sk-Kalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.

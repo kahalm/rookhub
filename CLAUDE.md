@@ -454,6 +454,9 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/backfill-sources` | Herkunftsvermerk fuer den Altbestand nachtragen (jeder bestehende Eintrag stammt aus chess-results). Braucht kein Netz; der Sweep tut es von selbst, aber erst nach einer Rotationswoche |
 | POST | `/api/admin/tournament-directory/round-plans?limit=&retryEmpty=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
 | POST | `/api/admin/tournament-directory/fide?years=` | Den FIDE-Kalender sofort lesen (Vorgabe: laufendes Jahr + 2). Ein Seitenabruf je Jahr; neue Ereignisse kommen mit `ChessResultsId = null` dazu, erkannte werden mit dem bestehenden Eintrag verschmolzen |
+| POST | `/api/admin/tournament-directory/fsi?months=` | Den Kalender des ITALIENISCHEN Verbands lesen (ein Abruf, alle Felder inline). Siehe „Zusatzquellen" unten |
+| POST | `/api/admin/tournament-directory/szs` | Den Kalender des SLOWENISCHEN Verbands lesen (vier Seitenabrufe, PLZ steht in der Liste) |
+| POST | `/api/admin/tournament-directory/chess-sk?details=` | Den Kalender des SLOWAKISCHEN Verbands lesen — ein Abruf der Schnittstelle plus einer je Turnier fuer die Detailseite; `details=false` laesst den teuren Teil weg |
 | POST | `/api/admin/tournament-directory/classify` | Publikum + Format des GANZEN Bestands aus den Turniernamen neu ableiten (Jugendklasse, Geschlechtsklasse, Liga) — braucht kein Netz. Der Weg, eine nachgeruestete Wortliste im `TournamentClassifier` auf den Altbestand anzuwenden; die Turnier**art** bleibt unangetastet (die kommt aus der Quelle) |
 | POST | `/api/admin/tournament-directory/disambiguate?limit=` | Spielort ueber die VEREINSNAMEN aufloesen (Abkuerzungs-Fall, siehe unten) — ein Seitenabruf je Turnier, gedeckelt |
 | PUT | `/api/admin/tournament-directory/{id}/coordinates` | Koordinaten von Hand setzen (GeoSource=Manual, ueberlebt den Sweep) |
@@ -543,6 +546,24 @@ unterscheidende Woerter teilen (oder eines plus denselben Ort); sonst kommt es a
 mit `ChessResultsId = null` dazu. Online-Ereignisse (`ONL`) bekommen keine Koordinaten. Geplant
 ueber `TournamentDirectory:FideYears` (Vorgabe 3 Jahre) nach dem naechtlichen Sweep, von Hand
 `POST /api/admin/tournament-directory/fide`.
+
+**Die VERBANDSKALENDER sind die dritte Quellenart** (`Services/ExternalDirectorySource.cs` traegt
+das Gemeinsame, je Land ein `…DirectorySweepService`). Jede stellt dieselben vier Fragen: kenne ich
+das Turnier schon (Termin ±1 Tag + zwei unterscheidende Woerter, ODER — nur chess.sk — die
+mitgelieferte chess-results-Nummer, dann exakt), habe ich es selbst schon angelegt
+(`<praefix><fremde-id>`), hat die Turniersuche es eingeholt (dann eigenen Eintrag zurueckziehen),
+und woher kommt die Angabe (`TournamentDirectorySources`). **Eine Zusatzquelle fuellt nur
+LUECKEN** (`FillIfEmpty`) — ersetzte sie vorhandene Werte, entschiede die Reihenfolge der
+naechtlichen Durchgaenge, welche Angabe gilt. Die Turnier**art** bleibt dabei immer `Unknown`:
+keine dieser Quellen sagt etwas darueber.
+
+| Land | Praefix | Kosten | Was sie kann, was die anderen nicht koennen |
+|---|---|---|---|
+| Italien (FSI) | `it` | 1 Abruf (1,25 MB) | Von 285 Eintraegen verlinkt KEINER nach chess-results — Italien faehrt auf Vega/vesus. Keine PLZ, dafuer die Provinz (loest „Marino" auf) |
+| Slowenien (SZS) | `sl` | 4 Abrufe | Faktor elf gegenueber chess-results; die PLZ steht schon in der TREFFERLISTE. Absagen stehen nur im Namen („ODPADE") — solche Turniere werden nicht angelegt |
+| Slowakei (chess.sk) | `sk` | 1 + je Turnier 1 | Die einzige mit angebotener Schnittstelle. Liefert als einzige Anschrift MIT PLZ, Bedenkzeit, Rundenzahl, System und Bedenkzeit-Klasse — aber erst die Detailseite. Nennt bei einem Drittel die chess-results-Nummer selbst. Schulungen/Trainingslager stehen mit drin und bleiben draussen |
+
+Vollstaendige Messungen und die Rechtslage je Quelle: `docs/turnierquellen.md`.
 
 **Publikum und Format eines Turniers — was aus der Quelle kommt und was aus dem Namen.**
 `Kind` (Einzel/Mannschaft) ist QUELLENDATUM: die chess-results-Turniersuche hat ein Turnierart-Feld

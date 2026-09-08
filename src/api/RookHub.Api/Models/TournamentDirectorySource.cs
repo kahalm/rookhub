@@ -54,6 +54,17 @@ public enum DirectorySourceKind
     /// POSTLEITZAHL, die Verortung braucht also keinen Abruf je Turnier.</para>
     /// </summary>
     SlovenianChessFederation = 6,
+
+    /// <summary>
+    /// Der Kalender des slowakischen Verbands (chess.sk).
+    ///
+    /// <para>Die einzige gepruefte Quelle mit einer AUSDRUECKLICH angebotenen Schnittstelle (im
+    /// Fussteil als „Free api specification" verlinkt). 79 kuenftige Turniere, 53 % davon ohne
+    /// chess-results-Verweis — und der Rest ist der eigentliche Gewinn: 27 Eintraege nennen die
+    /// chess-results-Nummer selbst, die Zuordnung ist dort also EXAKT statt ueber einen
+    /// Namensvergleich geraten.</para>
+    /// </summary>
+    SlovakChessFederation = 7,
 }
 
 /// <summary>

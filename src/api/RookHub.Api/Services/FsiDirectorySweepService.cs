@@ -73,7 +73,6 @@ public class FsiDirectorySweepService
                 {
                     // chess-results kennt das Turnier. Die FSI fuellt nur Luecken — Bedenkzeit und
                     // Rundenzahl fehlen dort oefter, als man denkt.
-                    var before = (match.TimeControlText, match.Rounds);
                     var text = match.TimeControlText;
                     var rounds = match.Rounds;
                     var changed = ExternalDirectorySource.FillIfEmpty(row.TimeControl, ref text, 300);

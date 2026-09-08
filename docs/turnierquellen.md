@@ -1061,11 +1061,40 @@ gegen `TournamentDirectoryEntries.ChessResultsId` statt Namensraterei.
 
 Bedenkzeit, Rundenzahl und System stecken zusammen im Freitext `Systém` („Švajčiarsky systém na 7
 kôl, tempo 2 × 15 min + 5 sek/ťah"), aber sehr regelmaessig. `Typ turnaja` (std/rpd/blz/onl)
-mappt 1:1 auf `Speed`. Ort sauber, **PLZ nur 1 von 9**. Nicht-Turniere (Schulungen, Ferienlager)
-sind mit drin und muessen ueber den Namen gefiltert werden.
+mappt 1:1 auf `Speed`. Nicht-Turniere (Schulungen, Ferienlager) sind mit drin und muessen ueber
+den Namen gefiltert werden.
 
 robots.txt: `User-agent: * / Allow: /`, danach 622 namentlich gesperrte Bots aus einer
 Blocklist von 2021 — ClaudeBot und GPTBot kommen darin nicht vor.
+
+#### Was die Umsetzung dann gemessen hat (2026-09-08, v0.445.0)
+
+**Die Schnittstelle allein reicht nicht.** Ihr ganzer Inhalt sind Name, Termin, Ort, Staat und
+drei Verweise — genau die elf Felder der Spezifikation. Bedenkzeit, Rundenzahl, System und
+**Anschrift** stehen nur auf der Detailseite, und die ist HTML. Ein Abruf je Turnier, deshalb mit
+700 ms Pause und Deckel (79 Turniere ≈ eine Minute).
+
+**Die Anschrift ist der Grund, warum sich das lohnt** — und sie korrigiert das obige Urteil
+„PLZ nur 1 von 9": das galt fuer das Feld `mesto` der LISTE. Auf der Detailseite tragen
+**35 von 79** Anschriften eine Postleitzahl („Slovnaft Business Center, Vlčie hrdlo 1/A,
+824 12 Bratislava"), und der slowakische Bestand im Lexikon ist mit 5233 Eintraegen vollstaendig.
+
+**Die Detailseite ist sprachneutral lesbar.** Ihre Felder tragen englische CSS-Klassen
+(`datagridphp_detail_td_field_system`, `_miesto`, `_trn_type`) — gelesen wird ueber die Klasse,
+nicht ueber die slowakische Beschriftung daneben. Eine uebersetzte Oberflaeche braecht den Parser
+also nicht.
+
+Die Zahlen am 2026-09-08: **27** (nicht 26) Eintraege mit chess-results-Nummer; `Typ turnaja` bei
+**63 von 79** gesetzt (Rapid 41, Blitz 11, Standard 10, Online 1), die uebrigen 16 stehen auf
+„Nie je nastavené" und bekommen ihre Klasse aus dem Bedenkzeit-Text; `Systém` bei 65 von 79
+gefuellt, daraus 50-mal das System, 55-mal die Rundenzahl und 57-mal die Bedenkzeit; **4**
+Nicht-Turniere (drei Schiedsrichter-Lehrgaenge, ein Trainerseminar); 30 von 79 Ortsangaben mit
+Stadtteil-Zusatz („Bratislava - mestská časť Rača"), der fuer die Verortung wegfaellt.
+
+Drei Dinge, die der Freitext lehrt: „Schweizer System" steht in **vier** Schreibweisen da,
+einschliesslich des Tippfehlers „Šviačiarský" (deshalb `sv\w*ciar` statt einer festen
+Zeichenkette); ein Teil der Eintraege ist auf **Englisch** geschrieben („Number of rounds: 7");
+und „8 **dvoj**kôl" sind acht DOPPELrunden — dort bleibt die Rundenzahl lieber unbekannt.
 
 ### ✅ Slowenien — sah-zveza.si, Faktor elf
 
@@ -1138,8 +1167,8 @@ ausgerechnet unter dem einzigen `Disallow: /route/` liegt.
    Foederationen probieren.
 2. **Italien** — 285 in einem Abruf, alle Felder inline, keinerlei Vorbehalt.
 3. **Slowenien** — Faktor elf gegenueber chess-results, PLZ in der Liste. Vorher eine Mail.
-4. **Slowakei** — offizielle API, die ausdruecklich zur Nutzung einlaedt, 26 gratis
-   Dedup-Schluessel.
+4. **Slowakei** — offizielle API, die ausdruecklich zur Nutzung einlaedt, 27 gratis
+   Dedup-Schluessel. *(umgesetzt in v0.445.0)*
 5. **Ungarn** — ein POST, vor allem Vorlauf.
 6. **Tschechien** — billig, kleiner Ertrag, aber Ligatermine geschenkt.
 7. **Oberoesterreich** (PLZ-Qualitaet, autoritative Bedenkzeit) und **Steiermark+Vorarlberg**

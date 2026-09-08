@@ -38,7 +38,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         FideEventDetailService fideDetails,
         TournamentCalendarSweepService calendar,
         FsiDirectorySweepService fsi2,
-        SzsDirectorySweepService szs)
+        SzsDirectorySweepService szs,
+        ChessSkDirectorySweepService chessSk)
     {
         _db = db;
         _directory = directory;
@@ -51,6 +52,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _calendar = calendar;
         _fsi2 = fsi2;
         _szs = szs;
+        _chessSk = chessSk;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -60,6 +62,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly TournamentCalendarSweepService _calendar;
     private readonly FsiDirectorySweepService _fsi2;
     private readonly SzsDirectorySweepService _szs;
+    private readonly ChessSkDirectorySweepService _chessSk;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -282,6 +285,25 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _szs.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Kalender des slowakischen Verbands (chess.sk) lesen — die reichhaltigste Zusatzquelle.
+    ///
+    /// <para>Sie liefert als einzige alles auf einmal: Anschrift MIT Postleitzahl, Bedenkzeit,
+    /// Rundenzahl, Turniersystem und die Bedenkzeit-Klasse als ausdrueckliche Angabe. Und sie
+    /// nennt bei einem Drittel der Eintraege die chess-results-NUMMER selbst — die Zuordnung zum
+    /// bestehenden Bestand ist dort exakt statt ueber Namen geraten.</para>
+    ///
+    /// <para><paramref name="details"/> steuert den teuren Teil: mit <c>false</c> bleibt es bei
+    /// dem EINEN Abruf der Schnittstelle (Name, Termin, Ort), ohne Anschrift und Bedenkzeit.</para>
+    /// </summary>
+    [HttpPost("chess-sk")]
+    public async Task<IActionResult> ChessSk([FromQuery] bool details = true,
+        CancellationToken ct = default)
+    {
+        var result = await _chessSk.RunAsync(details, ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
     /// <summary>

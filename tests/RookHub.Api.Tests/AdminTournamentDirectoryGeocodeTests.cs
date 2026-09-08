@@ -60,7 +60,9 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
             new FsiDirectorySweepService(_db, factory, geocoding,
                 new TestLogger<FsiDirectorySweepService>()),
             new SzsDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<SzsDirectorySweepService>()));
+                new TestLogger<SzsDirectorySweepService>()),
+            new ChessSkDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<ChessSkDirectorySweepService>()));
     }
 
     /// <summary>

@@ -68,6 +68,22 @@ public static class ExternalDirectorySource
             words.Intersect(FideDirectorySweepService.DistinctiveWords(c.Name)).Count() >= 2);
     }
 
+    /// <summary>
+    /// Denselben Eintrag ueber die chess-results-NUMMER finden — der exakte Weg, wenn die Quelle
+    /// sie selbst nennt.
+    ///
+    /// <para>Er schlaegt <see cref="FindMatchAsync"/> in jeder Hinsicht: kein Termin-Fenster, kein
+    /// Wortvergleich, keine Verwechslung zweier Turniere derselben Woche am selben Ort. Nur
+    /// chess.sk liefert sie heute mit (27 von 79 Eintraegen, Feld „Swiss manager URL"); wo sie
+    /// fehlt, bleibt der Namensvergleich.</para>
+    /// </summary>
+    public static Task<TournamentDirectoryEntry?> FindByChessResultsIdAsync(
+        AppDbContext db, string? chessResultsId, CancellationToken ct) =>
+        chessResultsId is { Length: > 0 }
+            ? db.TournamentDirectoryEntries.FirstOrDefaultAsync(
+                e => e.ChessResultsId == chessResultsId && e.RemovedAt == null, ct)
+            : Task.FromResult<TournamentDirectoryEntry?>(null);
+
     /// <summary>Den eigenen, frueher angelegten Eintrag holen (<c>null</c>, wenn es keinen gibt).</summary>
     public static Task<TournamentDirectoryEntry?> FindOwnAsync(
         AppDbContext db, string publicId, CancellationToken ct) =>
