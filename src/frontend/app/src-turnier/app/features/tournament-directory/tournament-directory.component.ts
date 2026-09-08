@@ -26,6 +26,7 @@ import { ViewStateService } from '@rh/core/view-state.service';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
+import { PIN_COLOUR_SCHEMES, PinColourBy } from './pin-palette';
 import { SearchProfileService } from './search-profile.service';
 import { TournamentCalendarComponent } from './tournament-calendar.component';
 import { TournamentCardComponent } from './tournament-card.component';
@@ -731,6 +732,7 @@ export class TournamentDirectoryComponent implements OnInit {
       includeIgnored: this.filter.includeIgnored,
       calendarYear: this.calendarYear,
       calendarMonth: this.calendarMonth,
+      mapColourBy: this.mapColourBy,
     };
   }
 
@@ -793,6 +795,19 @@ export class TournamentDirectoryComponent implements OnInit {
       });
   }
 
+  /**
+   * Wonach die Karten-Pins eingefaerbt werden. Liegt HIER und nicht in der Karte, damit die Wahl
+   * im gespeicherten Anzeigezustand mitreist — sonst waere sie nach jedem Turnierbesuch und auf
+   * jedem zweiten Geraet wieder die Vorgabe.
+   */
+  mapColourBy: PinColourBy = 'speed';
+
+  onColourByChange(colourBy: PinColourBy): void {
+    this.mapColourBy = colourBy;
+    // Kein reload(): das Merkmal aendert nur die FARBE der Punkte, nicht die Auswahl.
+    this.storeView();
+  }
+
   private applyStoredView(stored: Record<string, unknown> | null): void {
     if (!stored || typeof stored !== 'object') return;
 
@@ -820,6 +835,11 @@ export class TournamentDirectoryComponent implements OnInit {
     const speed = stored['speed'];
     if (typeof speed === 'string' && this.speeds.includes(speed as TournamentSpeed)) {
       this.filter.speed = speed as TournamentSpeed;
+    }
+
+    const colourBy = stored['mapColourBy'];
+    if (typeof colourBy === 'string' && (PIN_COLOUR_SCHEMES as string[]).includes(colourBy)) {
+      this.mapColourBy = colourBy as PinColourBy;
     }
 
     this.filter.kinds = pick(stored['kinds'], DIRECTORY_KINDS);

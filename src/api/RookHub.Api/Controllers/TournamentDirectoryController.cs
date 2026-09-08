@@ -109,15 +109,19 @@ public class TournamentDirectoryController : BaseApiController
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
         var pins = await _query.MapPinsAsync(parsed.Query!, box.MinLat, box.MaxLat, box.MinLon, box.MaxLon, limit, ct);
-        var pinSubscribed = await SubscribedIdsAsync(pins.Select(p => p.ChessResultsId), ct);
+        // Ueber ALLE Gruppen eines Turniers: gemerkt ist es, wenn eine davon abonniert ist — das
+        // Abo haengt an der chess-results-Nummer der einzelnen Gruppe, der Punkt am Turnier.
+        var pinSubscribed = await SubscribedIdsAsync(
+            pins.SelectMany(p => p.Members).Select(m => m.ChessResultsId), ct);
         var pinIgnored = await IgnoredIdsAsync(
-            pins.Select(p => p.PublicId), parsed.Query!.IncludeIgnored, ct);
+            pins.Select(p => p.Entry.PublicId), parsed.Query!.IncludeIgnored, ct);
 
         // Die Karte braucht Haken und Ausblend-Merkmal jetzt ebenfalls: ihr Punkt-Fenster ist
         // dieselbe Karte wie in Liste und Kalender und zeigt dieselben Schaltflaechen.
         return Ok(pins
-            .Select(p => DirectoryEntryDto.FromEntity(p, null,
-                p.ChessResultsId is not null && pinSubscribed.Contains(p.ChessResultsId), null, pinIgnored.Contains(p.PublicId)))
+            .Select(p => DirectoryEntryDto.FromEntity(p.Entry, null,
+                p.Members.Any(m => m.ChessResultsId is not null && pinSubscribed.Contains(m.ChessResultsId)),
+                p.Members, pinIgnored.Contains(p.Entry.PublicId)))
             .ToList());
     }
 

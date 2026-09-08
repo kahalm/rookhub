@@ -255,6 +255,8 @@
             <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
           }
           <app-tournament-map [entries]="pins()" [centre]="mapCentre"
+                              [colourBy]="mapColourBy"
+                              (colourByChange)="onColourByChange($event)"
                               (boundsChanged)="onBoundsChanged($event)"
                               (tilesFailed)="onTilesFailed()"
                               (entryIgnored)="onIgnoredFromMap()"

@@ -36,6 +36,11 @@ export interface MapPinMarkerOptions extends L.CircleMarkerOptions {
    * was es dort gibt.
    */
   count?: number;
+  /**
+   * Farbe dieser Zahl. Vorgabe Weiss — das traegt auf allen bunten Fuellungen. Auf einer HELLEN
+   * (grau = „nicht eingeordnet") muss sie dunkel sein, sonst steht die Anzahl unlesbar da.
+   */
+  labelColor?: string;
 }
 
 export class MapPinMarker extends L.CircleMarker {
@@ -43,6 +48,8 @@ export class MapPinMarker extends L.CircleMarker {
   private readonly label: string;
   /** Ihre Schrift — EINMAL beim Anlegen gerechnet, nicht bei jedem Neuzeichnen. */
   private readonly labelFont: string;
+  /** Ihre Farbe; siehe `MapPinMarkerOptions.labelColor`. */
+  private readonly labelColor: string;
 
   constructor(latlng: L.LatLngExpression, options: MapPinMarkerOptions = {}) {
     super(latlng, options);
@@ -51,6 +58,7 @@ export class MapPinMarker extends L.CircleMarker {
     this.labelFont = this.label
       ? `bold ${labelSize(options.radius ?? 10, this.label)}px system-ui, sans-serif`
       : '';
+    this.labelColor = options.labelColor ?? '#fff';
   }
 
   // Ohne `override`: die drei Namen sind Leaflet-Interna und stehen nicht in den
@@ -81,7 +89,7 @@ export class MapPinMarker extends L.CircleMarker {
     // Weiss auf dem gefuellten Kopf — save/restore, weil der Canvas-Renderer EINE Leinwand fuer
     // alle Marken benutzt und Schrift-/Farbeinstellungen sonst in die naechste hineinlaufen.
     ctx.save();
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = this.labelColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = this.labelFont;

@@ -3077,7 +3077,24 @@
       "thisVenue": "Dieser Spielort: {{name}}",
       "samePoint": "{{count}} Turniere an diesem Punkt",
       "samePointVague": "Für diese Turniere ist nur die Region bekannt, nicht der genaue Ort.",
-      "backToList": "‹ Zurück zur Liste ({{count}})"
+      "backToList": "‹ Zurück zur Liste ({{count}})",
+      "colourBy": "Einfärben nach",
+      "colourScheme": {
+        "speed": "Bedenkzeit",
+        "kind": "Einzel oder Mannschaft",
+        "youth": "Nachwuchs",
+        "gender": "Geschlechtsklasse"
+      },
+      "youth": {
+        "youth": "Nachwuchs",
+        "senior": "Senioren",
+        "adult": "Erwachsene"
+      },
+      "legend": {
+        "mixed": "gemischt",
+        "bookmarked": "gemerkt",
+        "approximate": "nur ungefähr verortet"
+      }
     },
     "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich.",
     "place": {

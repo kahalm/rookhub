@@ -292,12 +292,102 @@ describe('TournamentMapComponent', () => {
     const b = entry('2', 47.2178, 11.6411, 'Region');
     component.entries = [a, b];
     fixture.detectChanges();
-    const vorher = markerStyles(component)[0].fillColor;
+    const vorher = markerStyles(component)[0].color;
 
     component.applySubscribed(b, true);
 
     // Ein gemerktes Turnier unter fünf anderen ginge sonst unter — der Punkt gehört ihnen allen.
-    expect(markerStyles(component)[0].fillColor).not.toBe(vorher);
+    expect(markerStyles(component)[0].color).not.toBe(vorher);
+  });
+
+  // ----- Einfärben nach einem Merkmal --------------------------------------------------
+
+  it('färbt die Punkte nach dem gewählten Merkmal, nicht nach „gemerkt"', () => {
+    // „Wo ist ein Schnellschachturnier" soll ohne einen einzigen Klick zu beantworten sein.
+    component.entries = [entry('1', 47.8, 13.04), { ...entry('2', 47.9, 13.1), speed: 'Rapid' }];
+    fixture.detectChanges();
+
+    const [standard, rapid] = markerStyles(component);
+    expect(standard.fillColor).not.toBe(rapid.fillColor);
+  });
+
+  it('schaltet auf ein anderes Merkmal um und meldet die Wahl nach draußen', () => {
+    const gewaehlt: string[] = [];
+    component.colourByChange.subscribe(c => gewaehlt.push(c));
+    component.entries = [entry('1', 47.8, 13.04), { ...entry('2', 47.9, 13.1), kind: 'Team' }];
+    fixture.detectChanges();
+    const vorher = markerStyles(component).map(s => s.fillColor);
+
+    const select: HTMLSelectElement =
+      fixture.nativeElement.querySelector('.colour-by select');
+    select.value = 'kind';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(gewaehlt).toEqual(['kind']);
+    // Nach Turnierart unterscheiden sich die beiden, nach Bedenkzeit taten sie es nicht.
+    expect(vorher[0]).toBe(vorher[1]);
+    const nachher = markerStyles(component).map(s => s.fillColor);
+    expect(nachher[0]).not.toBe(nachher[1]);
+  });
+
+  it('behauptet auf einem gemischten Bündel keine Klasse', () => {
+    component.entries = [{ ...entry('1', 47.2178, 11.6411), speed: 'Rapid' },
+                         { ...entry('2', 47.2178, 11.6411), speed: 'Blitz' }];
+    fixture.detectChanges();
+
+    expect(markerStyles(component)[0].fillColor).toBe('#79808a');
+    // Und die Legende erklärt die graue Marke, sobald es eine gibt.
+    const legende: string = fixture.nativeElement.querySelector('.legend').textContent;
+    expect(legende).toContain('tournamentDirectory.map.legend.mixed');
+  });
+
+  it('zeigt „gemerkt" als Ring, damit die Füllung die Klasse behalten kann', () => {
+    const gemerkt = { ...entry('1', 47.8, 13.0), subscribed: true };
+    const offen = entry('2', 47.9, 13.1);
+    component.entries = [offen, gemerkt];
+    fixture.detectChanges();
+
+    const stile = markerStyles(component);
+    const g = stile.find(s => s.weight === 4);
+    expect(g).withContext('gemerkt ohne dicken Ring').toBeDefined();
+    // Dieselbe Bedenkzeit, also dieselbe Füllung — unterschieden wird über den Rand.
+    expect(stile[0].fillColor).toBe(stile[1].fillColor);
+    expect(g!.color).not.toBe(stile.find(s => s.weight === 2)!.color);
+  });
+
+  it('listet in der Legende die Klassen des gewählten Merkmals', () => {
+    fixture.detectChanges();
+    const zeilen = [...fixture.nativeElement.querySelectorAll('.legend li')]
+      .map((n: Element) => n.textContent?.trim());
+
+    expect(zeilen[0]).toContain('tournamentDirectory.speed.Standard');
+    // „gemerkt" und „nur ungefähr" liegen ÜBER dem Merkmal und stehen deshalb immer dabei.
+    expect(zeilen.at(-2)).toContain('tournamentDirectory.map.legend.bookmarked');
+    expect(zeilen.at(-1)).toContain('tournamentDirectory.map.legend.approximate');
+  });
+
+  /**
+   * Leaflet schiebt die Karte selbst, damit ein Popup am Rand ins Bild passt. Meldet man dieses
+   * Schieben als neuen Ausschnitt, lädt der Elternteil die Punkte neu — und wirft damit genau das
+   * Popup weg, für das die Karte eben gerückt ist.
+   */
+  it('meldet Leaflets eigenes Rücken für ein Popup NICHT als neuen Ausschnitt', async () => {
+    fixture.detectChanges();
+    await Promise.resolve();
+
+    let gemeldet = 0;
+    component.boundsChanged.subscribe(() => gemeldet++);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (component as any).map;
+
+    map.fire('autopanstart');
+    map.fire('moveend');
+    expect(gemeldet).withContext('das Rücken fürs Popup wurde gemeldet').toBe(0);
+
+    // Die NÄCHSTE echte Bewegung meldet wieder.
+    map.fire('moveend');
+    expect(gemeldet).toBe(1);
   });
 
   it('räumt die Karte beim Zerstören ab', () => {
@@ -307,7 +397,9 @@ describe('TournamentMapComponent', () => {
   /**
    * Der Punkt zeigt „gemerkt" mit an — vorher unterschied er es GAR NICHT, die Auskunft stand nur
    * im Popup, also erst nach dem Klick auf den Punkt, den man ohne die Auskunft nicht kennt.
-   * Zwei Kanaele (Farbe UND Ringdicke), weil Farbe allein nicht fuer jeden trennt.
+   *
+   * <p>Getragen wird es vom RING (Farbe UND Dicke), seit die Fuellung die Klasse des gewaehlten
+   * Merkmals zeigt. Zwei Kanaele bleiben es damit weiterhin.</p>
    */
   it('hebt gemerkte Turniere auf der Karte hervor', () => {
     const gemerkt = { ...entry('1', 47.8, 13.0), subscribed: true };
@@ -318,7 +410,7 @@ describe('TournamentMapComponent', () => {
     const stile = markerStyles(component);
     expect(stile.length).toBe(2);
     const [a, b] = stile;
-    expect(a.fillColor).not.toBe(b.fillColor);
+    expect(a.color).not.toBe(b.color);
     expect(a.weight).not.toBe(b.weight);
   });
 
@@ -330,12 +422,13 @@ describe('TournamentMapComponent', () => {
     const e = entry('1', 47.8, 13.0);
     fixture.componentRef.setInput('entries', [e]);
     fixture.detectChanges();
-    const vorher = markerStyles(component)[0].fillColor;
+    const vorher = markerStyles(component)[0].color;
 
     component.applySubscribed(e, true);
 
     expect(e.subscribed).toBeTrue();
-    expect(markerStyles(component)[0].fillColor).not.toBe(vorher);
+    // Der RING wechselt; die Fuellung gehoert dem eingefaerbten Merkmal und bleibt.
+    expect(markerStyles(component)[0].color).not.toBe(vorher);
   });
 });
 
@@ -348,8 +441,10 @@ function markerOptions(component: TournamentMapComponent): { count?: number }[] 
 }
 
 /** Die gezeichneten Stile der Marker — Leaflet haelt sie in `options`. */
-function markerStyles(component: TournamentMapComponent): { fillColor?: string; weight?: number }[] {
-  const styles: { fillColor?: string; weight?: number }[] = [];
+function markerStyles(
+  component: TournamentMapComponent,
+): { fillColor?: string; weight?: number; color?: string }[] {
+  const styles: { fillColor?: string; weight?: number; color?: string }[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (component as any).markerLayer?.eachLayer((l: any) => styles.push(l.options));
   return styles;

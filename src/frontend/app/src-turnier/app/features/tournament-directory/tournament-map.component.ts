@@ -1,12 +1,16 @@
 import {
   AfterViewInit, ChangeDetectionStrategy, Component, ComponentRef, ElementRef, EventEmitter,
   Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, ViewContainerRef, inject,
+  signal,
 } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { MapPinMarker, pinRadiusFor } from './map-pin-marker';
 import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry, DirectoryVenue } from './tournament-directory.model';
+import {
+  MIXED, PIN_COLOUR_SCHEMES, PinCategory, PinColourBy, commonCategory, legendOf,
+} from './pin-palette';
 
 /** Sichtbarer Kartenausschnitt als „minLat,minLon,maxLat,maxLon" — Serverformat. */
 export type BoundsString = string;
@@ -46,14 +50,103 @@ const PinRadius = 7;
   selector: 'app-tournament-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div class="map-host" #mapEl [style.height]="height"></div>`,
+  imports: [TranslatePipe],
+  template: `
+    <div class="map-wrap" #wrapEl>
+      <div class="map-host" #mapEl [style.height]="height"></div>
+
+      <!-- Kartenzubehoer, kein Formular: es steht UEBER der Karte und darf ihre Ereignisse nicht
+           ausloesen (siehe disableClickPropagation in ngAfterViewInit). -->
+      <div class="map-chrome" #chromeEl>
+        <label class="colour-by">
+          <span>{{ 'tournamentDirectory.map.colourBy' | translate }}</span>
+          <select [value]="colourBy" (change)="pickColourBy($event)">
+            @for (scheme of schemes; track scheme) {
+              <option [value]="scheme">
+                {{ 'tournamentDirectory.map.colourScheme.' + scheme | translate }}
+              </option>
+            }
+          </select>
+        </label>
+
+        <ul class="legend">
+          @for (category of legend(); track category.key) {
+            <li>
+              <i [style.background]="category.fill" [style.border-color]="category.stroke"></i>
+              {{ category.label | translate }}
+            </li>
+          }
+          @if (hasMixed()) {
+            <li>
+              <i [style.background]="mixed.fill" [style.border-color]="mixed.stroke"></i>
+              {{ mixed.label | translate }}
+            </li>
+          }
+          <li>
+            <i class="marked"></i> {{ 'tournamentDirectory.map.legend.bookmarked' | translate }}
+          </li>
+          <li>
+            <i class="vague"></i> {{ 'tournamentDirectory.map.legend.approximate' | translate }}
+          </li>
+        </ul>
+      </div>
+    </div>
+  `,
   styles: [`
+    .map-wrap { position: relative; }
+
     .map-host {
       width: 100%;
       border-radius: 12px;
       overflow: hidden;
       background: var(--mat-sys-surface-container);
     }
+
+    /* Unten links: Leaflets eigene Bedienelemente sitzen oben links (Zoom) und unten rechts
+       (Quellenangabe) — dazwischen ist der einzige freie Platz, der beides nicht verdeckt. */
+    .map-chrome {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      z-index: 500;                 /* ueber den Kacheln, unter Leaflets Popups (700) */
+      max-width: min(42%, 240px);
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      font-size: 0.72rem;
+      line-height: 1.35;
+    }
+
+    .colour-by { display: flex; flex-direction: column; gap: 2px; }
+    .colour-by > span { font-weight: 600; }
+
+    .colour-by select {
+      max-width: 100%;
+      padding: 2px 4px;
+      border: 1px solid var(--mat-sys-outline);
+      border-radius: 4px;
+      background: var(--mat-sys-surface);
+      color: inherit;
+      font: inherit;
+    }
+
+    .legend { margin: 6px 0 0; padding: 0; list-style: none; }
+    .legend li { display: flex; align-items: center; gap: 5px; }
+
+    .legend i {
+      flex: none;
+      width: 11px;
+      height: 11px;
+      border: 2px solid transparent;
+      border-radius: 50%;
+    }
+
+    /* „Gemerkt" und „nur ungefaehr" sind KEINE Klassen des gewaehlten Merkmals, sondern liegen
+       darueber — deshalb zeigen sie keine Farbe, sondern nur ihren eigenen Kanal: den dicken
+       dunklen Ring bzw. die Abschwaechung. */
+    .legend i.marked { background: transparent; border-color: #202124; }
+    .legend i.vague { background: color-mix(in srgb, currentColor 25%, transparent); }
 
     /* Leaflet haengt den Popup-Inhalt in einen EIGENEN Container ausserhalb dieses Templates —
        die View-Encapsulation erreicht ihn nicht. Deshalb ::ng-deep, auf den Host beschraenkt. */
@@ -185,6 +278,12 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * genau eine, unabhaengig von Seitenverhaeltnis und Randabstand.
    */
   @Input() zoomOutSteps = 0;
+  /**
+   * Wonach die Punkte eingefaerbt werden. Kommt von aussen, damit die Wahl den Weg
+   * „Turnier oeffnen -> zurueck" und den Geraetewechsel ueberlebt (der Elternteil legt sie in
+   * seinen gespeicherten Anzeigezustand).
+   */
+  @Input() colourBy: PinColourBy = 'speed';
 
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
   /** Feuert, wenn Kacheln nicht geladen werden koennen — sonst bleibt die Karte stumm schwarz. */
@@ -193,6 +292,41 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Output() boundsChanged = new EventEmitter<BoundsString>();
   /** Ein Turnier wurde aus dem Popup heraus aus- oder wieder eingeblendet. */
   @Output() entryIgnored = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
+  /** Der Betrachter hat ein anderes Merkmal zum Einfaerben gewaehlt. */
+  @Output() colourByChange = new EventEmitter<PinColourBy>();
+
+  @ViewChild('chromeEl', { static: true }) chromeEl!: ElementRef<HTMLDivElement>;
+
+  readonly schemes = PIN_COLOUR_SCHEMES;
+  readonly mixed = MIXED;
+
+  /** Die Klassen des gewaehlten Merkmals — die Legende zeichnet sie in dieser Reihenfolge. */
+  legend(): PinCategory[] {
+    return legendOf(this.colourBy);
+  }
+
+  /**
+   * Steht auf der Karte gerade ein gebuendelter Punkt mit UNTERSCHIEDLICHEN Klassen? Nur dann
+   * gehoert „gemischt" in die Legende — sonst erklaerte sie eine Farbe, die nirgends vorkommt.
+   */
+  hasMixed(): boolean {
+    return this.mixedShown();
+  }
+
+  /**
+   * Ein SIGNAL, kein Feld: gesetzt wird es in `applyEntries`, und das laeuft auch aus
+   * `ngAfterViewInit` — also nach dem ersten Zeichnen. Bei OnPush bliebe die Zeile „gemischt"
+   * dann bis zur naechsten Aenderung unsichtbar.
+   */
+  private readonly mixedShown = signal(false);
+
+  pickColourBy(event: Event): void {
+    const chosen = (event.target as HTMLSelectElement).value as PinColourBy;
+    if (chosen === this.colourBy) return;
+    this.colourBy = chosen;
+    this.applyEntries();
+    this.colourByChange.emit(chosen);
+  }
 
   private map?: L.Map;
   private markerLayer?: L.LayerGroup;
@@ -225,6 +359,11 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.radiusLayer = L.layerGroup().addTo(this.map);
 
     this.map.on('moveend', () => this.emitBounds());
+    // Leaflet schiebt die Karte selbst, damit ein Popup am Rand ins Bild passt. Dieses Schieben
+    // ist KEIN neuer Ausschnitt im Sinne des Elternteils: meldete man es, laedt er die Punkte
+    // neu, `applyEntries` wirft alle Marker weg — und mit ihnen genau das Popup, fuer das die
+    // Karte eben gerueckt ist. Gemeldet als „nach dem Verschieben verschwindet der Hinweis".
+    this.map.on('autopanstart', () => (this.autoPanning = true));
     // Beim Umschalten Liste <-> Einzelansicht aendert sich die Groesse des Inhalts; ohne ein
     // `update()` behaelt Leaflet die alte Kachelgroesse und der Inhalt haengt heraus.
     this.map.on('popupopen', e => (this.openPopup = (e as L.PopupEvent).popup));
@@ -241,6 +380,10 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     });
     this.resizeObserver.observe(this.mapEl.nativeElement);
 
+    // Ohne das zieht ein Klick auf die Auswahl die Karte mit und das Rad darueber zoomt sie.
+    L.DomEvent.disableClickPropagation(this.chromeEl.nativeElement);
+    L.DomEvent.disableScrollPropagation(this.chromeEl.nativeElement);
+
     this.applyCentre();
     this.applyEntries();
     // Erst NACH dem laufenden Durchlauf melden: der Elternteil setzt daraufhin sein Ladeflag,
@@ -250,7 +393,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.map) return;
-    if (changes['entries']) this.applyEntries();
+    if (changes['entries'] || changes['colourBy']) this.applyEntries();
     if (changes['centre']) this.applyCentre();
   }
 
@@ -269,8 +412,14 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.markerLayer.clearLayers();
     this.groupsByEntry.clear();
 
+    let mixed = false;
+
     for (const group of groupByPoint(this.entries)) {
       const count = group.members.length;
+      // Die Klasse gehoert dem BUENDEL: liegen Turniere verschiedener Klassen auf demselben
+      // Punkt, darf er keine behaupten (siehe MIXED).
+      group.category = commonCategory(group.members.map(m => m.entry), this.colourBy);
+      if (group.category === MIXED && count > 1) mixed = true;
       // Der Kopf waechst mit der Stellenzahl (siehe pinRadiusFor) — damit waechst auch, wie hoch
       // der Pin ueber seinem Ort steht, und Popup und Hinweis muessen das mitmachen.
       const radius = pinRadiusFor(PinRadius, count);
@@ -279,6 +428,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       const marker = new MapPinMarker([group.lat, group.lon], {
         radius,
         count,
+        labelColor: group.category.darkLabel ? '#202124' : '#fff',
         ...groupStyle(group),
       });
       group.marker = marker;
@@ -300,6 +450,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
         if (known) known.push(group); else this.groupsByEntry.set(entry.id, [group]);
       }
     }
+
+    this.mixedShown.set(mixed);
   }
 
   /**
@@ -545,8 +697,18 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     }
   }
 
+  /** Laeuft gerade Leaflets eigenes Ruecken fuer ein Popup? Siehe `autopanstart`. */
+  private autoPanning = false;
+
   private emitBounds(): void {
     if (!this.map) return;
+    if (this.autoPanning) {
+      // Nur DIESE eine Bewegung ueberspringen — die naechste echte meldet den Ausschnitt wieder.
+      // Der uebersprungene Ausschnitt ist ein paar Dutzend Pixel groesser als der gemeldete; was
+      // dort neu hereinragt, kommt beim naechsten Verschieben mit.
+      this.autoPanning = false;
+      return;
+    }
     const b = this.map.getBounds();
     this.boundsChanged.emit(
       `${b.getSouth().toFixed(5)},${b.getWest().toFixed(5)},${b.getNorth().toFixed(5)},${b.getEast().toFixed(5)}`);
@@ -563,6 +725,8 @@ interface PinGroup {
   lon: number;
   members: PinMember[];
   marker?: MapPinMarker;
+  /** Die gemeinsame Klasse des gewaehlten Merkmals; `MIXED`, wenn sie sich unterscheiden. */
+  category: PinCategory;
 }
 
 /** Ein Turnier an diesem Punkt samt dem Spielort, mit dem es hierher kam. */
@@ -594,7 +758,8 @@ function groupByPoint(entries: DirectoryEntry[]): PinGroup[] {
       const key = `${spot.lat.toFixed(5)}|${spot.lon.toFixed(5)}`;
       const group = byPoint.get(key);
       if (group) group.members.push({ entry, spot });
-      else byPoint.set(key, { lat: spot.lat, lon: spot.lon, members: [{ entry, spot }] });
+      else byPoint.set(key,
+        { lat: spot.lat, lon: spot.lon, members: [{ entry, spot }], category: MIXED });
     }
   }
   return [...byPoint.values()]
@@ -618,41 +783,36 @@ function placeOf(group: PinGroup): string {
 }
 
 function groupStyle(group: PinGroup): L.PathOptions {
-  return pinStyle(hasSubscribed(group), isVague(group));
+  return pinStyle(group.category, hasSubscribed(group), isVague(group));
 }
 
 /**
  * Wie ein Punkt aussieht. Zwei Angaben stecken darin, und beide muessen ohne Legende ablesbar
  * sein:
  *
- * <p><b>Gemerkt</b> — ein eigener FARBTON (Amber statt Blau) plus ein dickerer Ring. Zwei Kanaele
- * bewusst: Farbe allein trennt fuer einen Teil der Betrachter nicht, und auf einer Karte mit
- * dreissig blauen Punkten in einer Stadt ist „meins" sonst nicht zu finden. Vorher unterschied
- * der Punkt es GAR NICHT — die Auskunft stand nur im Popup, also erst nach einem Klick auf den
- * richtigen Punkt, den man ohne die Auskunft nicht kennt.</p>
+ * <p><b>Die KLASSE des gewaehlten Merkmals</b> traegt die FUELLUNG (Bedenkzeit, Turnierart,
+ * Nachwuchs, Geschlechtsklasse — siehe `pin-palette`). Das ist der Kanal, den man ueberfliegen
+ * kann: „wo ist ein Schnellschachturnier" beantwortet sich damit ohne einen einzigen Klick.</p>
+ *
+ * <p><b>Gemerkt</b> — ein dicker, fast schwarzer RING. Frueher war das die Fuellung (Amber), aber
+ * die traegt jetzt die Klasse, und zwei Bedeutungen auf einem Kanal sind keine Auskunft. Der Ring
+ * ist dafuer der richtige Platz: „gemerkt" ist eine Ja/Nein-Angabe, und ein Rand um eine beliebige
+ * Fuellung bleibt in jeder Farbe erkennbar. Gemerkte werden ausserdem ZULETZT gezeichnet und
+ * liegen damit oben.</p>
  *
  * <p><b>Nur ungefaehr verortet</b> (Bundesland-Mittelpunkt) — sichtbar abgeschwaecht, sonst
  * suggeriert ein knackiger Pin eine Genauigkeit, die er nicht hat. Diese Abschwaechung gilt auch
  * fuer gemerkte, damit die Aussage nicht verlorengeht.</p>
  *
- * <p>Die dritte Angabe — wie VIELE Turniere auf dem Punkt liegen — traegt der Pin als Zahl im
+ * <p>Die vierte Angabe — wie VIELE Turniere auf dem Punkt liegen — traegt der Pin als Zahl im
  * Kopf (siehe `MapPinMarker`), nicht als weitere Farbe: eine Anzahl ist eine Anzahl.</p>
  */
-function pinStyle(subscribed: boolean, vague: boolean): L.PathOptions {
-  if (subscribed) {
-    return {
-      // Kraeftiger Rand + dicker Ring: der Punkt soll aus einer blauen Menge herausstechen.
-      color: '#b06000',
-      fillColor: '#f9ab00',
-      weight: 3,
-      fillOpacity: vague ? 0.55 : 0.95,
-    };
-  }
+function pinStyle(category: PinCategory, subscribed: boolean, vague: boolean): L.PathOptions {
   return {
-    color: vague ? '#9aa0a6' : '#1a73e8',
-    fillColor: vague ? '#c8ccd0' : '#4285f4',
-    weight: 2,
-    fillOpacity: vague ? 0.45 : 0.8,
+    color: subscribed ? '#202124' : category.stroke,
+    fillColor: category.fill,
+    weight: subscribed ? 4 : 2,
+    fillOpacity: vague ? 0.45 : 0.85,
   };
 }
 

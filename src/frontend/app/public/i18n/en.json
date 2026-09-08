@@ -3077,7 +3077,24 @@
       "thisVenue": "This venue: {{name}}",
       "samePoint": "{{count}} tournaments at this point",
       "samePointVague": "For these tournaments only the region is known, not the exact venue.",
-      "backToList": "‹ Back to the list ({{count}})"
+      "backToList": "‹ Back to the list ({{count}})",
+      "colourBy": "Colour by",
+      "colourScheme": {
+        "speed": "Time control",
+        "kind": "Individual or team",
+        "youth": "Youth",
+        "gender": "Gender class"
+      },
+      "youth": {
+        "youth": "Youth",
+        "senior": "Seniors",
+        "adult": "Adults"
+      },
+      "legend": {
+        "mixed": "mixed",
+        "bookmarked": "bookmarked",
+        "approximate": "approximate location only"
+      }
     },
     "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment.",
     "place": {

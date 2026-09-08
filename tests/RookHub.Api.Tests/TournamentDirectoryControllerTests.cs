@@ -548,6 +548,36 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.Equal("1", Assert.Single(pins).ChessResultsId);
     }
 
+    /// <summary>
+    /// Die Karte fasst die Gruppen EINES Turniers zu EINEM Punkt zusammen — genau wie die Liste.
+    ///
+    /// <para>Vorher tat sie es nicht, und damit widersprachen sich zwei Ansichten desselben
+    /// Bestandes: die Liste zeigte „24th ASEAN+ Age-Group Championships" als eine Zeile, die Karte
+    /// legte 19 Punkte uebereinander auf denselben Spielort — und weil deckungsgleiche Pins
+    /// einander verdecken, war davon genau einer erreichbar. Am Dev-Stand gemessen: 2952
+    /// verortete Zeilen sind 2344 Turniere.</para>
+    /// </summary>
+    [Fact]
+    public async Task Map_GroupsSectionsOfOneTournament_LikeTheList()
+    {
+        // Gleicher Name-Stamm, Termin und Ort => derselbe Gruppenschluessel (A/B/C).
+        await AddGroupedAsync("Open Ranshofen 2026 A", "801", new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddGroupedAsync("Open Ranshofen 2026 B", "802", new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddGroupedAsync("Open Ranshofen 2026 C", "803", new DateOnly(2026, 10, 10), 47.80, 13.04);
+        // Ein anderes Turnier am selben Ort bleibt ein eigener Punkt.
+        await AddGroupedAsync("Blitzabend", "804", new DateOnly(2026, 10, 11), 47.80, 13.04);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0");
+        var pins = Assert.IsType<List<DirectoryEntryDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(2, pins.Count);
+        var open = Assert.Single(pins, p => p.ChessResultsId == "801");
+        Assert.Equal(3, open.GroupSize);
+        // Alle drei Gruppen bleiben verlinkbar — zusammengefasst heisst nicht weggelassen.
+        Assert.Equal(["801", "802", "803"], open.Groups.Select(g => g.ChessResultsId!).Order());
+        Assert.Equal(1, Assert.Single(pins, p => p.ChessResultsId == "804").GroupSize);
+    }
+
     [Theory]
     [InlineData("47.0,12.0,48.0")]
     [InlineData("nord,12.0,48.0,14.0")]

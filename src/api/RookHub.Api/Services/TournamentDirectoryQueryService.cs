@@ -220,11 +220,11 @@ public class TournamentDirectoryQueryService
     /// Kartenmarker: nur die Zeilen mit Koordinaten in der sichtbaren Box, hart gedeckelt. Ohne
     /// Deckel wuerde ein herausgezoomtes Europa zehntausende Pins in eine Antwort packen.
     /// </summary>
-    public async Task<List<TournamentDirectoryEntry>> MapPinsAsync(
+    public async Task<List<DirectoryGroupItem>> MapPinsAsync(
         DirectorySearchQuery query, double minLat, double maxLat, double minLon, double maxLon,
         int limit = 2000, CancellationToken ct = default)
     {
-        return await ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query)
+        var rows = await ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query)
             .Where(e => (e.Lat != null && e.Lon != null
                          && e.Lat >= minLat && e.Lat <= maxLat
                          && e.Lon >= minLon && e.Lon <= maxLon)
@@ -234,6 +234,28 @@ public class TournamentDirectoryQueryService
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 5000))
             .ToListAsync(ct);
+
+        // Gruppiert wie die LISTE, mit demselben Schluessel und derselben Wahl des
+        // Hauptvertreters (kleinste Id). Ohne das widersprechen sich die beiden Ansichten
+        // desselben Bestandes: die Liste zeigt „24th ASEAN+ Age-Group Championships" als EINE
+        // Zeile, die Karte legte 19 Punkte uebereinander auf denselben Spielort. Am Dev-Stand
+        // gemessen: 2952 verortete Zeilen sind 2344 Turniere — 608 Punkte waren Gruppen
+        // desselben Turniers, und auf einem Punkt allein 54 statt 3.
+        //
+        // Die Mitglieder kommen aus dem AUSSCHNITT, nicht aus dem ganzen Bestand: das spart die
+        // zweite Abfrage mit einer IN-Liste ueber bis zu 2000 Schluessel. Gruppen eines Turniers
+        // teilen sich seinen Spielort, liegen also ohnehin miteinander im Bild; nur ein Turnier
+        // mit Gruppen an VERSCHIEDENEN Orten kann am Bildrand eine kleinere Gruppenzahl zeigen
+        // als die Liste.
+        return rows
+            .GroupBy(e => e.GroupKey ?? $"id:{e.Id}")
+            .Select(g =>
+            {
+                var members = g.OrderBy(m => m.ChessResultsId, StringComparer.Ordinal).ToList();
+                return new DirectoryGroupItem(members.MinBy(m => m.Id)!, null, members);
+            })
+            .OrderBy(i => i.Entry.StartDate)
+            .ToList();
     }
 
     /// <summary>
