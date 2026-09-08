@@ -173,6 +173,7 @@ try
     builder.Services.AddScoped<FsiDirectorySweepService>();
     builder.Services.AddScoped<SzsDirectorySweepService>();
     builder.Services.AddScoped<ChessSkDirectorySweepService>();
+    builder.Services.AddScoped<ChessHuDirectorySweepService>();
     builder.Services.AddScoped<ViewStateService>();
     builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<FideDirectorySweepService>();

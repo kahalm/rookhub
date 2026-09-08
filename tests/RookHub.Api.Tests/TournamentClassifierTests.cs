@@ -180,6 +180,44 @@ public class TournamentClassifierTests
     }
 
     /// <summary>
+    /// Nachwuchs OHNE genannte Klasse, in den Sprachen der angebundenen Kalender. Am Bestand
+    /// nachgemessen (5081 Namen): 42 Treffer, kein falscher — und ohne diese Woerter waere jedes
+    /// davon fuer den Jugendfilter ein Erwachsenenturnier gewesen.
+    /// </summary>
+    [Theory]
+    [InlineData("Ifjúsági Rapid Grand Prix Hédervár")]
+    [InlineData("Zalaegerszeg Grand Prix Gyermek nyílt rapid sakkverseny")]
+    [InlineData("FIDE OPEN Banská Bystrica a VC mládeže 2026")]
+    [InlineData("Majstrovstvá Slovenska dorasteneckých družstiev 2026")]
+    [InlineData("Mistrovství Čech mládeže do 16 let - Fide Open")]
+    [InlineData("9. Velká cena Lysé nad Labem - mladší žáci")]
+    [InlineData("1. mladinska liga za leto 2026")]
+    [InlineData("Campionato Giovanile Italiano 2026")]
+    public void AgeGroupsOf_ReadsYouthInTheSourceLanguages(string name) =>
+        Assert.Equal(TournamentAgeGroups.YouthUnspecified, TournamentClassifier.AgeGroupsOf(name));
+
+    /// <summary>
+    /// Steht die KLASSE im Namen, gilt sie — das unbestimmte Jugendwort daneben darf sie nicht
+    /// verwaessern (sonst faende der Filter „U12" auch das, was nur „Jugend" heisst, und
+    /// umgekehrt).
+    /// </summary>
+    [Fact]
+    public void AgeGroupsOf_ANamedClassBeatsTheGenericYouthWord() =>
+        Assert.Equal(TournamentAgeGroups.U16,
+            TournamentClassifier.AgeGroupsOf("Mistrovství Čech mládeže U16"));
+
+    /// <summary>
+    /// Und was KEIN Jugendturnier ist, wird auch keins: das sind die Namen, an denen die neuen
+    /// Wortstaemme haetten anschlagen koennen.
+    /// </summary>
+    [Theory]
+    [InlineData("Terézváros Open, 2026")]
+    [InlineData("Turnaj mesta Košice 2026")]
+    [InlineData("Open Internazionale di Roma 2026")]
+    public void AgeGroupsOf_LeavesAdultEventsAlone(string name) =>
+        Assert.Equal(TournamentAgeGroups.None, TournamentClassifier.AgeGroupsOf(name));
+
+    /// <summary>
     /// Die Sprachen der angebundenen Verbandskalender. Ohne sie waere der Filter „nur Frauen" fuer
     /// jedes italienische, slowenische, slowakische, tschechische und ungarische Turnier blind —
     /// und das sind zusammen mehr Eintraege als der deutschsprachige Bestand.

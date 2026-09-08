@@ -65,6 +65,15 @@ public enum DirectorySourceKind
     /// Namensvergleich geraten.</para>
     /// </summary>
     SlovakChessFederation = 7,
+
+    /// <summary>
+    /// Der Kalender des ungarischen Verbands (chess.hu).
+    ///
+    /// <para>Sein Ertrag ist VORLAUF: ab November 2026 fuehrt er 41 Turniere, wo chess-results 5
+    /// kennt. Im Rueckblick landen 80 % irgendwann doch dort — 20 % nie. Ein Abruf (ein POST; ein
+    /// GET antwortet 404) bringt den ganzen Kalender.</para>
+    /// </summary>
+    HungarianChessFederation = 8,
 }
 
 /// <summary>

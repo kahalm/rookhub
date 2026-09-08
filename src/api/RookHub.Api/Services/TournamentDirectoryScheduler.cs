@@ -229,6 +229,18 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: chess.sk-Kalender fehlgeschlagen");
             }
 
+            // Der ungarische Verbandskalender. Ein Abruf — aber ein langsamer (rund 75 Sekunden
+            // fuer 31 kB), deshalb steht er hinter den uebrigen.
+            try
+            {
+                var chessHu = scope.ServiceProvider.GetRequiredService<ChessHuDirectorySweepService>();
+                await chessHu.RunAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: chess.hu-Kalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.

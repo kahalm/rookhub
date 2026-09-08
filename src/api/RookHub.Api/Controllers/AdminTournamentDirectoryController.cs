@@ -39,7 +39,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         TournamentCalendarSweepService calendar,
         FsiDirectorySweepService fsi2,
         SzsDirectorySweepService szs,
-        ChessSkDirectorySweepService chessSk)
+        ChessSkDirectorySweepService chessSk,
+        ChessHuDirectorySweepService chessHu)
     {
         _db = db;
         _directory = directory;
@@ -53,6 +54,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _fsi2 = fsi2;
         _szs = szs;
         _chessSk = chessSk;
+        _chessHu = chessHu;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -63,6 +65,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly FsiDirectorySweepService _fsi2;
     private readonly SzsDirectorySweepService _szs;
     private readonly ChessSkDirectorySweepService _chessSk;
+    private readonly ChessHuDirectorySweepService _chessHu;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -284,6 +287,20 @@ public class AdminTournamentDirectoryController : BaseApiController
     public async Task<IActionResult> Szs(CancellationToken ct = default)
     {
         var result = await _szs.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Kalender des ungarischen Verbands (chess.hu) lesen.
+    ///
+    /// <para>Ein Abruf fuer den ganzen Kalender; sein Ertrag ist vor allem VORLAUF (ab November
+    /// 2026: 41 Turniere dort gegen 5 auf chess-results). Der Abruf dauert lange — die Quelle
+    /// braucht fuer ihre 31 kB rund 75 Sekunden.</para>
+    /// </summary>
+    [HttpPost("chess-hu")]
+    public async Task<IActionResult> ChessHu(CancellationToken ct = default)
+    {
+        var result = await _chessHu.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
     }
 

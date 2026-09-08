@@ -44,10 +44,19 @@ public static class TournamentClassifier
     /// „Schachrallye"). Ohne diese Liste zaehlte so ein Turnier als Erwachsenenturnier und stuende
     /// trotz des Schalters „nur Erwachsene" mitten in der Liste.
     /// </summary>
+    /// <summary>
+    /// Nachwuchs ohne genannte Klasse. Die zweite Zeile sind die Sprachen der angebundenen
+    /// Kalender — ohne sie waere der Jugendfilter fuer den ungarischen, slowakischen,
+    /// tschechischen, slowenischen und italienischen Bestand blind, und das sind zusammen mehr
+    /// Turniere als der deutschsprachige. Am Bestand nachgemessen (5081 Namen): 42 Treffer, kein
+    /// falscher — „mladez" 29 (tschechisch/slowakisch „mladez"), „ifjusag" 5, „mladinsk" 3,
+    /// „zaci" 2 (tschechisch „zaci"), „gyermek" 2, „dorast" 1.
+    /// </summary>
     private static readonly string[] YouthWords =
     [
         "jugend", "schueler", "schuler", "schulschach", "school", "nachwuchs", "kinder", "junior", "youth",
         "cadet", "kids", "scholar", "mladi", "kadet", "rallye", "rally", "minis",
+        "ifjusag", "gyermek", "utanpotlas", "mladez", "mladinsk", "dorast", "ziac", "zaci", "giovanil",
     ];
 
     /// <summary>

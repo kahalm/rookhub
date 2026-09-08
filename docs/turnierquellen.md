@@ -1042,6 +1042,35 @@ nicht „im Ausland" (alle 15 so markierten liegen in Ungarn); **150-Zeilen-Deck
 Fehlermeldung**; `place = "Helyszin kesobb"` („Ort spaeter", 11 Eintraege) und `"Online"` duerfen
 keinen Pin bekommen.
 
+#### Was die Umsetzung dann gemessen hat (2026-09-08, v0.446.0)
+
+**Das Feld `ifjusagi` („Jugend") ist unbrauchbar** — und das ist der wichtigste Fund. Es steht bei
+**77 von 107** Turnieren auf „igen", darunter „Terézváros Open", „Félegyházi Libafesztivál" (ein
+Gaensefest) und die „Weltbegegnung schachspielender Ungarn". Es beantwortet nicht „ist ein
+Jugendturnier", sondern etwas wie „Jugendliche duerfen mitspielen". Uebernommen waeren drei
+Viertel des ungarischen Bestands faelschlich Jugendturniere gewesen, und der Filter „nur
+Erwachsene" haette fuer Ungarn fast nichts mehr uebrig gelassen. Die Einordnung kommt deshalb aus
+dem Namen — dafuer hat der Klassifizierer „ifjusag" und „gyermek" gelernt (und bei der
+Gelegenheit „mladez", „dorast", „ziac", „zaci", „mladinsk", „giovanil": 42 Treffer im
+Altbestand, kein falscher).
+
+**Die Detailseite lohnt nicht, und das ist nachgerechnet.** Sie traegt ausser Ort, **Komitat** und
+Terminen nur eine Anmelde-Adresse und meist einen PDF-Verweis — keine Bedenkzeit, keine
+Rundenzahl, keine Anschrift. Das Komitat waere der einzige Zugewinn, und er ist keiner: von 52
+verschiedenen Ortsnamen des Kalenders stehen **46 im Lexikon, davon nur drei mehrdeutig** — und
+die drei (Győr, Szekszárd, Veszprém) sind es innerhalb derselben Stadt, wo die
+5-km-Regel des Geocoders ohnehin greift. Die sechs Nichttreffer sind kein Ortsproblem, sondern
+Mehrort-Ligen („Hmvhely, Makó, Mórahalom, Szeged, Szentes, Üllés"), Platzhalter und Gebaeudenamen.
+Also ein Abruf, nicht 108 — anders als bei chess.sk, wo die Detailseite die Postleitzahl traegt.
+
+**Der Abruf ist langsam: 75 Sekunden fuer 31 kB.** Mit dem ueblichen halben Minuten-Limit saehe
+die Quelle wie ein Dauerausfall aus; ihr Client bekommt 180 Sekunden. Die Detailseiten sind
+dagegen flott (3 s) — es ist der Kalender-Endpunkt selbst.
+
+**robots.txt** (geprueft): `User-agent: *` sperrt `/wp-admin/`, `/wp-includes/`, **`/hu/`** und
+**`/en/`**. Der Endpunkt liegt unter `/app/`, die Detailseiten im Wurzelverzeichnis — beides nicht
+betroffen. Kein TDM-Vorbehalt.
+
 ### ✅ Slowakei — chess.sk, offizielle REST-API
 
 ```
@@ -1169,7 +1198,7 @@ ausgerechnet unter dem einzigen `Disallow: /route/` liegt.
 3. **Slowenien** — Faktor elf gegenueber chess-results, PLZ in der Liste. Vorher eine Mail.
 4. **Slowakei** — offizielle API, die ausdruecklich zur Nutzung einlaedt, 27 gratis
    Dedup-Schluessel. *(umgesetzt in v0.445.0)*
-5. **Ungarn** — ein POST, vor allem Vorlauf.
+5. **Ungarn** — ein POST, vor allem Vorlauf. *(umgesetzt in v0.446.0)*
 6. **Tschechien** — billig, kleiner Ertrag, aber Ligatermine geschenkt.
 7. **Oberoesterreich** (PLZ-Qualitaet, autoritative Bedenkzeit) und **Steiermark+Vorarlberg**
    (ein Parser fuer zwei) — nur, wenn Ortsqualitaet wirklich gebraucht wird. Vorher anfragen.
