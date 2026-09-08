@@ -58,7 +58,9 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
             new TournamentCalendarSweepService(_db, factory,
                 new TestLogger<TournamentCalendarSweepService>()),
             new FsiDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<FsiDirectorySweepService>()));
+                new TestLogger<FsiDirectorySweepService>()),
+            new SzsDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<SzsDirectorySweepService>()));
     }
 
     /// <summary>

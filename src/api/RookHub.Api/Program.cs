@@ -171,6 +171,7 @@ try
     builder.Services.AddScoped<FideEventDetailService>();
     builder.Services.AddScoped<TournamentCalendarSweepService>();
     builder.Services.AddScoped<FsiDirectorySweepService>();
+    builder.Services.AddScoped<SzsDirectorySweepService>();
     builder.Services.AddScoped<ViewStateService>();
     builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<FideDirectorySweepService>();

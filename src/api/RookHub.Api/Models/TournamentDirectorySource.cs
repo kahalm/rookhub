@@ -44,6 +44,16 @@ public enum DirectorySourceKind
     /// dort also, und zwar dauerhaft.</para>
     /// </summary>
     ItalianChessFederation = 5,
+
+    /// <summary>
+    /// Der Kalender des slowenischen Verbands (sah-zveza.si).
+    ///
+    /// <para>Das krasseste Verhaeltnis aller geprueften Quellen: 78 kuenftige Turniere gegen 7
+    /// auf chess-results. Und nicht bloss Vorlauf — im Rueckblick auf einen abgeschlossenen Monat
+    /// erscheinen 36 von 88 Eintraegen dort NIE. Sein Sonderwert: die Trefferliste traegt die
+    /// POSTLEITZAHL, die Verortung braucht also keinen Abruf je Turnier.</para>
+    /// </summary>
+    SlovenianChessFederation = 6,
 }
 
 /// <summary>

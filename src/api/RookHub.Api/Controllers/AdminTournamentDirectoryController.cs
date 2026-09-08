@@ -37,7 +37,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         FideDirectorySweepService fide,
         FideEventDetailService fideDetails,
         TournamentCalendarSweepService calendar,
-        FsiDirectorySweepService fsi2)
+        FsiDirectorySweepService fsi2,
+        SzsDirectorySweepService szs)
     {
         _db = db;
         _directory = directory;
@@ -49,6 +50,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _fideDetails = fideDetails;
         _calendar = calendar;
         _fsi2 = fsi2;
+        _szs = szs;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -57,6 +59,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly FideEventDetailService _fideDetails;
     private readonly TournamentCalendarSweepService _calendar;
     private readonly FsiDirectorySweepService _fsi2;
+    private readonly SzsDirectorySweepService _szs;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -261,6 +264,24 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithPlan, result.Failed });
+    }
+
+    /// <summary>
+    /// Den Kalender des slowenischen Verbands (SZS) lesen.
+    ///
+    /// <para>Das krasseste Verhaeltnis aller geprueften Quellen: 78 kuenftige Turniere gegen 7 auf
+    /// chess-results. Und nicht bloss Vorlauf — im Rueckblick auf einen abgeschlossenen Monat
+    /// erscheinen 36 von 88 Eintraegen dort NIE.</para>
+    ///
+    /// <para>Sein Sonderwert: die Trefferliste traegt die POSTLEITZAHL, die Verortung braucht also
+    /// keinen Abruf je Turnier. Abgesagte Turniere (im Namen gekennzeichnet) werden nicht angelegt
+    /// und bestehende zurueckgezogen.</para>
+    /// </summary>
+    [HttpPost("szs")]
+    public async Task<IActionResult> Szs(CancellationToken ct = default)
+    {
+        var result = await _szs.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
     }
 
     /// <summary>
