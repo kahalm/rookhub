@@ -698,6 +698,39 @@ Adressen sind Sackgassen, die Antwort ist ein DRITTER Host derselben Familie.
   Verweis auf Art. 4 DSM-Richtlinie. Verboten ist das TRAINIEREN; `use=reference` deckt unseren
   Fall (Fakten als Referenz mit Link) — dieselbe Lage wie bei US Chess.
 
+#### Warum diese Quelle GEPARKT ist (2026-09-08)
+
+Als am 2026-09-08 die uebrigen Quellen umgesetzt wurden, blieb ECF liegen — und zwar aus einem
+Grund, der nicht technisch ist. Die `robots.txt` von `www.englishchess.org.uk` (an dem Tag erneut
+geprueft, Cloudflare-verwaltet) sagt zwei Dinge gleichzeitig:
+
+```
+User-agent: *
+Content-Signal: search=yes,ai-train=no,use=reference
+Allow: /
+
+User-agent: ClaudeBot
+Disallow: /
+```
+
+**Fuer das FEATURE ist das ein Ja**: unser Crawler faellt unter `*`, `/wp-json/` ist nicht
+gesperrt, und `use=reference` deckt genau unseren Fall (Fakten mit Link auf die Quelle). **Fuer
+die ENTWICKLUNG ist es ein Nein**: um einen Parser zu schreiben, der nicht raet, braucht es
+Beispielantworten — und die haette sich der Agent, der diese Seite bearbeitet, selbst holen
+muessen. Genau das untersagt die zweite Regel ausdruecklich und namentlich. Sie ueber den
+Crawler-Container zu umgehen waere dem Buchstaben nach zulaessig und dem Sinn nach nicht.
+
+Ohne Beispielantworten einen Parser gegen eine dokumentierte Plugin-Schnittstelle zu schreiben
+waere moeglich — aber genau so ist bei Polen die Recherche danebengelegen: dort war eine
+JavaScript-Datei beschrieben, die es gar nicht gibt (404). Ungeprueft ausgeliefert waere das eine
+Quelle, die nachts still nichts tut.
+
+**Der naechste Schritt ist deshalb eine Entscheidung, keine Programmierarbeit.** Entweder holt
+jemand einmal von Hand ein paar Antworten (`GET /wp-json/tribe/events/v1/events?per_page=50`,
+zwei bis drei Seiten reichen als Vorlage), oder die Anbindung bleibt liegen. Alles andere ist
+vorbereitet: das Muster der uebrigen sieben Quellen passt eins zu eins, und diese hier braucht
+als einzige kein Geocoding — sie liefert `geo.latitude/longitude` mit.
+
 ### ✅ schachbund.de (DSB, Deutschland) — kleiner Ertrag, aber echter ZUSATZ
 
 Nicht die Startseite, sondern die **Turnierdatenbank**. Deutschland ist ueber chess-results
