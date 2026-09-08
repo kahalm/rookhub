@@ -15,6 +15,11 @@
 #   5. FEHLERFALL: ein gescheiterter Lauf beendet das Skript mit Exit != 0.
 #   6. Der DECKEL greift: meldet der Endpunkt endlos dieselbe Zahl, bricht das
 #      Skript nach MAX_ROUNDS ab statt ewig zu laufen.
+#   7. Jede ZUSATZQUELLE wird genau einmal angestossen — eine vergessene waere
+#      eine Quelle, die nach einem Deploy bis zum naechsten Nachtlauf schweigt.
+#   8. Polen wird WIEDERHOLT, bis keine Detailseite mehr geholt wird (dort ist
+#      der Abruf je Turnier gedeckelt, ein Durchgang reicht also nicht).
+#   9. SKIP_SOURCES=1 laesst beides aus, die langen Nachtraege laufen trotzdem.
 #
 #   ./scripts/tests/test_directory_runs.sh                 # testet scripts/directory-runs.sh
 #   ./scripts/tests/test_directory_runs.sh /pfad/zu/alt.sh # beliebige Version testen
@@ -52,6 +57,11 @@ case "$url" in
       # Zwei volle Durchgaenge, dann leer.
       if [ "$n" -le 2 ]; then echo '{"checked":200,"withDetails":180,"geocoded":90}'
       else echo '{"checked":0,"withDetails":0,"geocoded":0}'; fi ;;
+  *"/chess-arbiter"*)
+      n=$(cat "$STATE/pl" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$STATE/pl"
+      # Zwei Durchgaenge mit Detailseiten, dann keine mehr.
+      if [ "$n" -le 2 ]; then echo '{"read":611,"added":150,"details":150}'
+      else echo '{"read":611,"added":0,"details":0}'; fi ;;
   *"/round-plans"*)
       n=$(cat "$STATE/plans" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$STATE/plans"
       if [ "$n" -le 1 ]; then echo '{"checked":200,"withPlan":41,"failed":0}'
@@ -109,6 +119,34 @@ grep -q 'geheim123' "$CALLS" \
 
 # 5. Foederationen normalisiert
 grep -q '"AUT"' "$CALLS" && check "Foederation im Rumpf" ok || check "Foederation im Rumpf" no
+
+# 6. Jede Zusatzquelle genau einmal
+for route in /calendar /fsi /szs /chess-sk /chess-hu /chess-cz /schachbund; do
+  n=$(grep -c -- "$route" "$CALLS")
+  [ "$n" -eq 1 ] && check "Quelle $route einmal angestossen" ok \
+    || { check "Quelle $route einmal angestossen" no; echo "     war: $n"; }
+done
+
+# 7. Polen wiederholt sich, bis keine Detailseite mehr kommt
+[ "$(grep -c '/chess-arbiter' "$CALLS")" -eq 3 ] \
+  && check "Polen: 2 volle Durchgaenge + 1 leerer, dann Stopp" ok \
+  || { check "Polen: 2 volle + 1 leerer" no; echo "     war: $(grep -c '/chess-arbiter' "$CALLS")"; }
+
+# 8. Und die Quellen laufen VOR den beiden langen Nachtraegen — kurz vor lang.
+first_source=$(grep -n -- '/schachbund' "$CALLS" | head -1 | cut -d: -f1)
+first_long=$(grep -n -- '/fide-details' "$CALLS" | head -1 | cut -d: -f1)
+[ -n "$first_source" ] && [ -n "$first_long" ] && [ "$first_source" -lt "$first_long" ] \
+  && check "Zusatzquellen vor den langen Nachtraegen" ok \
+  || check "Zusatzquellen vor den langen Nachtraegen" no
+
+# ---------------------------------------------------------------------------
+echo "== SKIP_SOURCES=1 laesst die Quellen aus"
+out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" SKIP_SOURCES=1 \
+      run_script bash "$SCRIPT" http://api.test AUT 200)
+grep -q -e '/schachbund' -e '/chess-arbiter' "$CALLS" \
+  && check "keine Quelle bei SKIP_SOURCES=1" no || check "keine Quelle bei SKIP_SOURCES=1" ok
+grep -q '/fide-details' "$CALLS" \
+  && check "die langen Nachtraege trotzdem" ok || check "die langen Nachtraege trotzdem" no
 
 # ---------------------------------------------------------------------------
 echo "== Sweep ausgelassen (leere Foederationsliste)"

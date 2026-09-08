@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
-# Die drei Nachtrags-Laeufe des Turnierverzeichnisses, mit EINER Anmeldung.
+# Die Nachtrags-Laeufe des Turnierverzeichnisses, mit EINER Anmeldung.
+#
+# Sie laufen auch jede Nacht von selbst (TournamentDirectoryScheduler, 03:00 UTC). Dieses Skript
+# ist der Weg, sie SOFORT anzustossen — nach einem Deploy, der eine neue Quelle mitbringt, oder
+# wenn man nicht bis morgen warten will.
 #
 # Reihenfolge ist Absicht — kurz vor lang, damit man frueh sieht, ob etwas grundsaetzlich klemmt:
 #   1. sweep         Turnierart + System der genannten Foederationen (Vorgabe AUT).
 #                    Vier Crawler-Abrufe je Foederation, rund zehn Sekunden.
-#   2. fide-details  Bedenkzeit, Turniersystem, Runden-/Teilnehmerzahl und vor allem die
+#   2. quellen       Die acht Zusatzquellen neben der chess-results-Turniersuche: der
+#                    Ankuendigungskalender, Italien, Slowenien, Slowakei, Ungarn, Tschechien,
+#                    Deutschland — je ein Aufruf. Zusammen rund zehn Minuten, das meiste davon
+#                    Ungarn (75 s je Abruf) und Deutschland (zwei Abrufe je Region mit der
+#                    Wartezeit aus deren robots.txt).
+#   3. polen         Eigener Schritt, weil er WIEDERHOLT wird: die Liste kostet einen Abruf, die
+#                    Detailseite einen je noch unbekanntem Turnier — und die sind gedeckelt. Bei
+#                    611 Turnieren braucht es ein paar Durchgaenge, bis nichts mehr kommt.
+#   4. fide-details  Bedenkzeit, Turniersystem, Runden-/Teilnehmerzahl und vor allem die
 #                    ANSCHRIFT der FIDE-Eintraege. Ein Abruf je Ereignis (~144), rund 9 Minuten.
-#   3. round-plans   Spieltermine langlaufender Turniere, mit `retryEmpty`. Ein Abruf je Turnier
+#   5. round-plans   Spieltermine langlaufender Turniere, mit `retryEmpty`. Ein Abruf je Turnier
 #                    (~615 Kandidaten), rund 50 Minuten.
 #
 # Die beiden langen Schritte laufen SO LANGE, BIS NICHTS MEHR KOMMT (hoechstens `MAX_ROUNDS`
@@ -19,6 +31,9 @@
 #   API-Basis-URL   Vorgabe http://127.0.0.1:5002 (Dev-Stack)
 #   FOEDERATIONEN   Komma-getrennt, Vorgabe AUT. Leer ("") laesst den Sweep aus.
 #   LIMIT           Turniere je Durchgang, Vorgabe 200
+#
+# SKIP_SOURCES=1 laesst die Zusatzquellen und Polen aus (Schritte 2 und 3) — der Weg, wenn nur
+# die beiden langen Nachtraege gebraucht werden.
 #
 # Beispiele:
 #   bash scripts/directory-runs.sh                          # Dev, AUT, 200
@@ -113,6 +128,42 @@ run_until_done() {
   fi
   echo "  Summe: $total vorgenommen."
 }
+
+# ---------------------------------------------------------------------------
+# 2. Die Zusatzquellen — je ein Aufruf
+# ---------------------------------------------------------------------------
+# Ein Fehlschlag hier beendet das Skript NICHT: die Quellen sind voneinander unabhaengig, und ein
+# Ausfall bei einer soll die uebrigen nicht mitnehmen (dieselbe Regel wie im naechtlichen Lauf).
+source_run() {
+  local title="$1" path="$2"
+  echo
+  echo "== $title =="
+  if ! post "$API$path"; then
+    echo "  FEHLGESCHLAGEN"
+    FAILED=1
+    return
+  fi
+  echo
+}
+
+if [ "${SKIP_SOURCES:-0}" != "1" ]; then
+  source_run "Ankuendigungskalender (chess-results, 16 Foederationen)" \
+             "/api/admin/tournament-directory/calendar"
+  source_run "Italien (FSI)"            "/api/admin/tournament-directory/fsi"
+  source_run "Slowenien (SZS)"          "/api/admin/tournament-directory/szs"
+  source_run "Slowakei (chess.sk)"      "/api/admin/tournament-directory/chess-sk"
+  source_run "Ungarn (chess.hu)"        "/api/admin/tournament-directory/chess-hu"
+  source_run "Tschechien (chess.cz)"    "/api/admin/tournament-directory/chess-cz"
+  source_run "Deutschland (schachbund)" "/api/admin/tournament-directory/schachbund"
+fi
+
+# Polen: die Liste ist ein Abruf, die Detailseiten sind gedeckelt — deshalb wiederholt, bis keine
+# mehr geholt wird. `Details` zaehlt die gelesenen Detailseiten.
+if [ "${SKIP_SOURCES:-0}" != "1" ]; then
+  run_until_done "Polen (chessarbiter) — Liste und Detailseiten" \
+                 "/api/admin/tournament-directory/chess-arbiter" \
+                 "details"
+fi
 
 run_until_done "FIDE-Detailangaben (Bedenkzeit, System, Anschrift)" \
                "/api/admin/tournament-directory/fide-details?limit=$LIMIT" \
