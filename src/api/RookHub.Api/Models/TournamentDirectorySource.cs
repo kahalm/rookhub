@@ -93,6 +93,15 @@ public enum DirectorySourceKind
     /// TEILNEHMERZAHL schon vor dem Turnier nennt.</para>
     /// </summary>
     PolishChessFederation = 10,
+
+    /// <summary>
+    /// Die Turnierdatenbank des Deutschen Schachbunds (schachbund.de).
+    ///
+    /// <para>Ein reines Meldesystem ohne Ergebnismeldung — deshalb stehen dort Turnierarten, die
+    /// chess-results praktisch nie fuehrt: Vereins-Abendturniere, Jugend-Cups, Fernschach,
+    /// Problemschach, Schach960.</para>
+    /// </summary>
+    GermanChessFederation = 11,
 }
 
 /// <summary>

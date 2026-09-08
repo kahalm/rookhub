@@ -729,6 +729,36 @@ chess-results NICHT hat".
 - **Fehlt**: Bedenkzeit, Rundenzahl, Teilnehmerzahl, und **keine stabile numerische Kennung** —
   nur der Contao-Slug. Ort ist Freitext, **PLZ nur in 6 von 15 Stichproben**. Ohne harte Id
   braeuchte es die Fuzzy-Zuordnung wie beim FIDE-Kalender (Datum + Name).
+#### Was die Umsetzung dann gemessen hat (2026-09-08, v0.449.0)
+
+**Die Zahlen halten:** 106 Zeilen, 104 verschiedene Termine ueber 25 Regionen (zwei stehen in
+zwei Regionen), 50 davon mehrtaegig.
+
+**Der RSS-Feed allein reicht NICHT — die Seite ist die bessere Quelle.** Die Recherche nannte
+beide Wege gleichwertig; gemessen sind sie es nicht. Der Feed traegt als Beschreibung die
+Ausschreibung, und die ist Freitext des Veranstalters: **nur 3 von 96** gliedern sie so, dass ein
+Ortsabschnitt herauszulesen waere. Die **Uebersichtsseite** dagegen hat je Termin eine eigene
+Zeile mit Anschrift — **105 von 106**, davon 26 mit Postleitzahl. Ohne sie gaebe es fuer diese
+Quelle praktisch keinen Pin.
+
+Gelesen werden deshalb **beide**: die Seite fuer Termin, Name und Anschrift, der Feed fuer
+Rundenzahl (60 von 96) und Bedenkzeit (29 von 96), die auf der Seite gar nicht stehen. Zwei
+Abrufe je Region, mit der `Crawl-delay: 5` aus der robots.txt der Quelle.
+
+**Der Termin kommt aus dem `title`-Attribut**, nicht aus dem Datumsblock: dort steht er
+vollstaendig ausgeschrieben („12.09.2026 10:00–13.09.2026 16:30"), waehrend der Block bei
+mehrtaegigen Turnieren abkuerzt („12. - 13.09.2026") und ueber den Monatswechsel raten liesse.
+
+**Die Slug-Falle ist bestaetigt**: die Seite heisst `turnierdatenbank-nordrhein-westfalen.html`,
+der Feed `feed-turnierdatenbank-nordrheinwestfalen.xml`. Mit Bindestrich antwortet der Feed 404 —
+betrifft fuenf der 25 Regionen. Die Regionen werden von der Uebersichtsseite GELESEN, nicht
+geraten; gerade in den Sonderkategorien liegt der Wert dieser Quelle.
+
+**„europa" und „welt" sind keine Laender.** Dort standen zuletzt Kreta, Lettland, Suedtirol und
+ein Kreuzfahrtschiff. Solche Eintraege bekommen keine Foederation — eine falsche waere schlechter
+als keine. Dasselbe gilt fuer Fernschach und Onlineschach, die im Ortsfeld ihren Server nennen
+(„BdF-Server", „Online") und deshalb keinen Pin bekommen.
+
 - **Wichtiger Nebenfund**: die **Landesverbaende fuehren eigene, getrennte Kalender**
   (`schachbund-bayern.de/turniere/`, `schach-in-nrw.de`, `sjnrw.de` fuer die NRW-Jugend) — ohne
   Einbettung der DSB-Datenbank. Das ist ein Dutzend weiterer, unabhaengiger Quellen; gehoert auf

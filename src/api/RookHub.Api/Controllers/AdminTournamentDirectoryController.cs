@@ -42,7 +42,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         ChessSkDirectorySweepService chessSk,
         ChessHuDirectorySweepService chessHu,
         ChessCzDirectorySweepService chessCz,
-        ChessArbiterDirectorySweepService chessArbiter)
+        ChessArbiterDirectorySweepService chessArbiter,
+        SchachbundDirectorySweepService schachbund)
     {
         _db = db;
         _directory = directory;
@@ -59,6 +60,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _chessHu = chessHu;
         _chessCz = chessCz;
         _chessArbiter = chessArbiter;
+        _schachbund = schachbund;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -72,6 +74,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly ChessHuDirectorySweepService _chessHu;
     private readonly ChessCzDirectorySweepService _chessCz;
     private readonly ChessArbiterDirectorySweepService _chessArbiter;
+    private readonly SchachbundDirectorySweepService _schachbund;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -294,6 +297,24 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _szs.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Die Turnierdatenbank des Deutschen Schachbunds lesen.
+    ///
+    /// <para>Ihr Wert ist nicht die Menge (rund 104 Eintraege), sondern die ART: ein reines
+    /// Meldesystem ohne Ergebnismeldung, in dem Vereins-Abendturniere, Jugend-Cups, Fernschach,
+    /// Problemschach und Schach960 stehen — Kategorien, die chess-results praktisch nie
+    /// fuehrt.</para>
+    ///
+    /// <para>Der Durchgang dauert einige Minuten: zwei Abrufe je Region mit der Wartezeit, die
+    /// die Quelle in ihrer robots.txt nennt.</para>
+    /// </summary>
+    [HttpPost("schachbund")]
+    public async Task<IActionResult> Schachbund(CancellationToken ct = default)
+    {
+        var result = await _schachbund.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
     /// <summary>

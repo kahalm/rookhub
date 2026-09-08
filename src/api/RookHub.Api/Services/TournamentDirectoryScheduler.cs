@@ -268,6 +268,19 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: chessarbiter-Kalender fehlgeschlagen");
             }
 
+            // Die Turnierdatenbank des Deutschen Schachbunds. Sie dauert am laengsten (zwei
+            // Abrufe je Region mit der Wartezeit aus ihrer robots.txt) und steht deshalb zuletzt.
+            try
+            {
+                var schachbund = scope.ServiceProvider
+                    .GetRequiredService<SchachbundDirectorySweepService>();
+                await schachbund.RunAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: schachbund-Turnierdatenbank fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.
