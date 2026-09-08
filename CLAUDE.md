@@ -456,6 +456,7 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/fide?years=` | Den FIDE-Kalender sofort lesen (Vorgabe: laufendes Jahr + 2). Ein Seitenabruf je Jahr; neue Ereignisse kommen mit `ChessResultsId = null` dazu, erkannte werden mit dem bestehenden Eintrag verschmolzen |
 | POST | `/api/admin/tournament-directory/fsi?months=` | Den Kalender des ITALIENISCHEN Verbands lesen (ein Abruf, alle Felder inline). Siehe „Zusatzquellen" unten |
 | POST | `/api/admin/tournament-directory/szs` | Den Kalender des SLOWENISCHEN Verbands lesen (vier Seitenabrufe, PLZ steht in der Liste) |
+| POST | `/api/admin/tournament-directory/chess-arbiter?details=` | Den Kalender des POLNISCHEN Verbands lesen — 611 kuenftige Turniere in einem Abruf; `details` deckelt die Detailseiten (ein Abruf je noch unbekanntem Turnier) |
 | POST | `/api/admin/tournament-directory/chess-cz` | Den Terminkalender des TSCHECHISCHEN Verbands lesen — bringt neben Turnieren die SPIELTERMINE der drei Mannschaftsmeisterschaften mit (`RoundDates` in der Antwort) |
 | POST | `/api/admin/tournament-directory/chess-hu` | Den Kalender des UNGARISCHEN Verbands lesen (ein POST beim Crawler; die Quelle braucht dafuer rund 75 Sekunden) |
 | POST | `/api/admin/tournament-directory/chess-sk?details=` | Den Kalender des SLOWAKISCHEN Verbands lesen — ein Abruf der Schnittstelle plus einer je Turnier fuer die Detailseite; `details=false` laesst den teuren Teil weg |
@@ -565,6 +566,7 @@ keine dieser Quellen sagt etwas darueber.
 | Slowenien (SZS) | `sl` | 4 Abrufe | Faktor elf gegenueber chess-results; die PLZ steht schon in der TREFFERLISTE. Absagen stehen nur im Namen („ODPADE") — solche Turniere werden nicht angelegt |
 | Slowakei (chess.sk) | `sk` | 1 + je Turnier 1 | Die einzige mit angebotener Schnittstelle. Liefert als einzige Anschrift MIT PLZ, Bedenkzeit, Rundenzahl, System und Bedenkzeit-Klasse — aber erst die Detailseite. Nennt bei einem Drittel die chess-results-Nummer selbst. Schulungen/Trainingslager stehen mit drin und bleiben draussen |
 | Ungarn (chess.hu) | `hu` | 1 Abruf (POST, ~75 s) | Vor allem VORLAUF: ab November 2026 41 Turniere gegen 5. Nur Name, Termin, Ort — die Detailseite bringt gemessen nichts (46 von 52 Ortsnamen sind im Lexikon eindeutig). Ihr Feld „ifjusagi" heisst NICHT Jugendturnier (77 von 107 „ja") und wird nicht uebernommen |
+| Polen (chessarbiter) | `pl<jahr>-<nr>` | 1 + je NEUEM Turnier 1 | Die ergiebigste Einzelquelle: 611 kuenftige Turniere in EINEM Abruf. Die Liste nennt kein Jahr (kommt aus der Sortierung); die Detailseite bringt Enddatum, Bedenkzeit, Rundenzahl, System — und als einzige Quelle die TEILNEHMERZAHL schon vor dem Turnier. „Schon geholt" steht in der `Url` des Herkunftsvermerks |
 | Tschechien (chess.cz) | `cz`+Hash | 1 Abruf | Klein im Volumen (38 echte Turniere, 13 neu), aber sie liefert SPIELTERMINE: 33 Ligarunden werden zu drei Eintraegen mit je elf Runden — sonst je Turnier ein eigener `art=14`-Abruf. Ergaenzt nur FEHLENDE Runden. Ihre Kennung ist ein bis zu 57 Zeichen langer Slug, deshalb als Kurzwert gespeichert |
 
 Vollstaendige Messungen und die Rechtslage je Quelle: `docs/turnierquellen.md`.

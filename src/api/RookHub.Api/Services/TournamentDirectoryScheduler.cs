@@ -254,6 +254,20 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: chess.cz-Kalender fehlgeschlagen");
             }
 
+            // Der polnische Verbandskalender — die ergiebigste Einzelquelle (611 kuenftige
+            // Turniere in einem Abruf). Die Detailseiten holt er nur fuer noch unbekannte
+            // Turniere und gedeckelt; der Bestand ist damit nach wenigen Naechten vollstaendig.
+            try
+            {
+                var chessArbiter = scope.ServiceProvider
+                    .GetRequiredService<ChessArbiterDirectorySweepService>();
+                await chessArbiter.RunAsync(null, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: chessarbiter-Kalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.

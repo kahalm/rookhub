@@ -41,7 +41,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         SzsDirectorySweepService szs,
         ChessSkDirectorySweepService chessSk,
         ChessHuDirectorySweepService chessHu,
-        ChessCzDirectorySweepService chessCz)
+        ChessCzDirectorySweepService chessCz,
+        ChessArbiterDirectorySweepService chessArbiter)
     {
         _db = db;
         _directory = directory;
@@ -57,6 +58,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _chessSk = chessSk;
         _chessHu = chessHu;
         _chessCz = chessCz;
+        _chessArbiter = chessArbiter;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -69,6 +71,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly ChessSkDirectorySweepService _chessSk;
     private readonly ChessHuDirectorySweepService _chessHu;
     private readonly ChessCzDirectorySweepService _chessCz;
+    private readonly ChessArbiterDirectorySweepService _chessArbiter;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -291,6 +294,28 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _szs.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Kalender des polnischen Verbands (chessarbiter.com) lesen — die ergiebigste
+    /// Einzelquelle: 611 kuenftige Turniere in EINEM Abruf.
+    ///
+    /// <para>Zweistufig: die Liste kostet einen Abruf, die Detailseite (Enddatum, Bedenkzeit,
+    /// Rundenzahl, System, Teilnehmerzahl) einen JE TURNIER. Sie wird nur fuer noch unbekannte
+    /// Turniere geholt und ist mit <paramref name="details"/> gedeckelt (Vorgabe:
+    /// <c>TournamentDirectory:ChessArbiterDetailBatchSize</c>, 150). <c>Updated</c> in der
+    /// Antwort zaehlt die gelesenen Detailseiten.</para>
+    /// </summary>
+    [HttpPost("chess-arbiter")]
+    public async Task<IActionResult> ChessArbiter([FromQuery] int? details = null,
+        CancellationToken ct = default)
+    {
+        var result = await _chessArbiter.RunAsync(
+            details is { } limit ? Math.Clamp(limit, 0, 1000) : null, ct);
+        return Ok(new
+        {
+            result.Read, result.Added, result.Matched, result.Retired, Details = result.Updated,
+        });
     }
 
     /// <summary>

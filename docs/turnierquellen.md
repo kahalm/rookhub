@@ -488,6 +488,38 @@ traegt „© 2010-2018 Polski Zwiazek Szachowy", Kontakt `biuro@pzszach.pl`.
   („Stadt / chess.com") — dieselbe Online-Erkennung wie beim FIDE-`ONL`-Fall. Teilnehmerzahl fuer
   kuenftige Turniere strukturell nicht verfuegbar (wie chess-results/FIDE) — im UI als „–".
 
+#### Was die Umsetzung dann gemessen hat (2026-09-08, v0.448.0)
+
+**Die Zahlen halten:** 611 geplante Turniere in einem Abruf (320 kB, 0,9 s), 2026-09-09 bis
+2026-12-30, alle mit eindeutiger Kennung.
+
+**Die Detailseite ist ANDERS als erwartet — und besser.** Die Recherche hatte
+`capro_tournament.js` beschrieben; die Datei gibt es nicht (404 auf allen geprueften Varianten).
+Stattdessen liefert `/turnieje/{jahr}/ti_{id}` **8,5 kB server-gerendertes HTML**, in dem jede
+Angabe eine ENGLISCHE Beschriftung traegt (`Tr("Start date:","")`) und ihr Wert in der Zelle
+dahinter steht. Kein JavaScript, keine Vorlagen-Heuristik, und unabhaengig von der eingestellten
+Oberflaechensprache. Daraus kommen Enddatum, Anschrift, Bedenkzeit („90' + 30'' na ruch"),
+Rundenzahl, System — **und die Teilnehmerzahl**.
+
+**Die Teilnehmerzahl ist der stille Sonderfall.** Sie steht dort auch bei einem GEPLANTEN Turnier
+(„No. of players: 12"). chess-results und FIDE nennen sie fuer die Zukunft grundsaetzlich nicht —
+der Filter „mindestens N Teilnehmer" wirkt fuer polnische Turniere damit als einziger im Bestand
+schon vor dem Termin.
+
+**Das Jahr steht nirgends in der Liste**, und das Jahr im Adresspfad ist nicht das Turnierjahr,
+sondern das Jahr, in dem der Eintrag ANGELEGT wurde — bei neun der 611 steht dort 2024 oder 2025.
+Verlaesslich ist die Sortierung: nachgemessen sind alle 611 Zeilen streng nach Termin geordnet,
+ohne eine einzige Ausnahme. Der Jahreszaehler laeuft also mit und springt beim Monatsrueckschritt
+weiter.
+
+**Die Woiwodschaft loest sich selbst auf:** die Zeile nennt das Kuerzel („Poland,SL"), die
+Auswahlliste DERSELBEN Antwort den Namen („Śląskie (SL)"). Keine zweite Anfrage, und keine
+Tabelle im Quelltext, die veralten koennte.
+
+**Was noch fehlt: der polnische Postleitzahl-Bestand.** Im Lexikon stehen fuer PL nur 363 Orte
+(`cities15000`) und keine Postleitzahlen — kleinere Spielorte finden deshalb keinen Pin. Der
+Import ist ein Knopfdruck: `POST /api/admin/tournament-directory/gazetteer/postal/PL`.
+
 ### ⚠️ echecs.asso.fr (FFE, Frankreich) — brauchbar, mit einem Vorbehalt
 
 Dritter Fall von „nicht diese URL, sondern jene" — hier fehlten der genannten URL nur die
@@ -1249,7 +1281,7 @@ eine E-Mail der naechste Schritt ist.
 
 **Was ich umsetzen wuerde, in dieser Reihenfolge:**
 
-1. **`chessarbiter.com` (Polen)** — 611 kuenftige in EINEM Abruf, kein Vorbehalt, zweistufig wie
+1. **`chessarbiter.com` (Polen)** *(umgesetzt in v0.448.0)* — 611 kuenftige in EINEM Abruf, kein Vorbehalt, zweistufig wie
    unser bestehender Sweep. Bestes Verhaeltnis von Ertrag zu Aufwand, das die Pruefung gefunden
    hat.
 2. **`englishchess.org.uk/events` (England)** — 320 Events ueber eine dokumentierte

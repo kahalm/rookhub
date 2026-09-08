@@ -84,6 +84,15 @@ public enum DirectorySourceKind
     /// wird.</para>
     /// </summary>
     CzechChessFederation = 9,
+
+    /// <summary>
+    /// Der Kalender des polnischen Verbands (chessarbiter.com).
+    ///
+    /// <para>Die ergiebigste Einzelquelle des Projekts: 611 kuenftige Turniere in EINEM Abruf,
+    /// mehr als alle uebrigen Verbandskalender zusammen. Und die einzige, die die
+    /// TEILNEHMERZAHL schon vor dem Turnier nennt.</para>
+    /// </summary>
+    PolishChessFederation = 10,
 }
 
 /// <summary>
