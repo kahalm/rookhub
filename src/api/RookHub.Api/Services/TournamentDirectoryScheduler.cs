@@ -191,6 +191,19 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: Ankuendigungskalender fehlgeschlagen");
             }
 
+            // Der italienische Verbandskalender. Eigener Fang wie die uebrigen Zusatzquellen: ein
+            // Ausfall dort darf den erledigten chess-results-Sweep nicht als gescheitert
+            // erscheinen lassen. Ein Abruf, unabhaengig von der Bestandsgroesse.
+            try
+            {
+                var fsi = scope.ServiceProvider.GetRequiredService<FsiDirectorySweepService>();
+                await fsi.RunAsync(18, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: FSI-Kalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.

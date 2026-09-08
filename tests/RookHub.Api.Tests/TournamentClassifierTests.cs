@@ -178,4 +178,42 @@ public class TournamentClassifierTests
             "Vereinsmeisterschaft SK Hietzing", TournamentKind.Individual,
             new DateOnly(2026, 10, 1), new DateOnly(2027, 4, 15)));
     }
+
+    /// <summary>
+    /// Die Sprachen der angebundenen Verbandskalender. Ohne sie waere der Filter „nur Frauen" fuer
+    /// jedes italienische, slowenische, slowakische, tschechische und ungarische Turnier blind —
+    /// und das sind zusammen mehr Eintraege als der deutschsprachige Bestand.
+    /// </summary>
+    [Theory]
+    [InlineData("Campionato Italiano Femminile 2026", TournamentGender.Female)]
+    [InlineData("Campionato Italiano Maschile 2026", TournamentGender.Male)]
+    [InlineData("Državno prvenstvo ženske 2026", TournamentGender.Female)]
+    [InlineData("Državno prvenstvo moški 2026", TournamentGender.Male)]
+    [InlineData("Majstrovstvá SR dievčat 2026", TournamentGender.Female)]
+    [InlineData("Majstrovstvá SR chlapcov 2026", TournamentGender.Male)]
+    [InlineData("Mistrovství ČR dívky 2026", TournamentGender.Female)]
+    [InlineData("Országos női sakkverseny 2026", TournamentGender.Female)]
+    [InlineData("Országos férfi sakkverseny 2026", TournamentGender.Male)]
+    // Und der Normalfall bleibt offen: kein Merkmal im Namen heisst „offen", nicht „unbekannt".
+    [InlineData("Open Internazionale di Roma 2026", TournamentGender.Open)]
+    [InlineData("Turnaj mesta Košice 2026", TournamentGender.Open)]
+    public void GenderOf_UnderstandsTheSourceLanguages(string name, TournamentGender expected) =>
+        Assert.Equal(expected, TournamentClassifier.GenderOf(name));
+
+    /// <summary>
+    /// Ligen in denselben Sprachen. „ligy"/"lige" sind Beugungen, die das deutsche „liga" NICHT
+    /// trifft — und ohne sie stuende eine tschechische Liga mit ihrem ganzen Saisonzeitraum im
+    /// Kalender, also an rund 200 spielfreien Tagen.
+    /// </summary>
+    [Theory]
+    [InlineData("Extraliga 2026/27", true)]
+    [InlineData("2. ligy skupina B", true)]
+    [InlineData("1. slovenska liga 2026", true)]
+    [InlineData("Campionato Italiano a Squadre 2026", true)]
+    [InlineData("Mistrovství družstev 2026", true)]
+    [InlineData("Országos csapatbajnokság 2026", true)]
+    [InlineData("Open Internazionale di Roma 2026", false)]
+    public void LooksLikeLeague_UnderstandsTheSourceLanguages(string name, bool expected) =>
+        Assert.Equal(expected, TournamentClassifier.LooksLikeLeague(
+            name, TournamentKind.Unknown, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 2)));
 }

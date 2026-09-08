@@ -62,10 +62,27 @@ public static class TournamentClassifier
     /// „Damenliga", „Maedchenmeisterschaft".
     /// </summary>
     private static readonly string[] FemaleParts =
-        ["damen", "frauen", "maedchen", "madchen", "girl", "women", "weiblich", "female", "feminin", "zenske"];
+    [
+        "damen", "frauen", "maedchen", "madchen", "girl", "women", "weiblich", "female", "feminin",
+        // Die Sprachen der angebundenen Verbandskalender. Ohne sie waere der Filter „nur Frauen"
+        // fuer jedes italienische, slowenische, slowakische, tschechische und ungarische Turnier
+        // blind — und das sind zusammen mehr Eintraege als der deutschsprachige Bestand.
+        "femminile",                       // it
+        "zenske", "zensk", "zenska",       // sl/sk/cs (normalisiert aus zenské/ženská)
+        "dievcat", "divky", "dievca",      // sk/cs Maedchen
+        "noi", "leany", "lany",            // hu (noi = Frauen, leany = Maedchen)
+    ];
 
     private static readonly string[] MaleParts =
-        ["herren", "knaben", "burschen", "boy", "maennlich", "mannlich", "muski"];
+    [
+        "herren", "knaben", "burschen", "boy", "maennlich", "mannlich", "muski",
+        // Dieselben Sprachen. „maschile" enthaelt kein Frauenwort, „chlapc"/"fiu" ebenso nicht —
+        // die Falle „men steckt in women" wiederholt sich hier also nicht.
+        "maschile",                        // it
+        "moski", "muzi", "muzsk",          // sl/sk/cs
+        "chlapc", "hosi",                  // sk/cs Knaben
+        "fiu", "ferfi",                    // hu (fiu = Knabe, ferfi = Herren)
+    ];
 
     /// <summary>
     /// Diese beiden duerfen NUR als ganzes Wort zaehlen: „men" steckt in „women" UND in „Damen",
@@ -84,6 +101,9 @@ public static class TournamentClassifier
     [
         "liga", "klasse", "mannschaftsmeisterschaft", "mannschaftskampf", "wettkampf",
         "team championship", "teamchampionship", "division", "ekipno",
+        // Die Sprachen der angebundenen Kalender. „ligy"/"lige" sind Beugungen von liga und
+        // werden von „liga" NICHT getroffen; „csapat" ist ungarisch fuer Mannschaft.
+        "ligy", "lige", "campionato a squadre", "squadre", "druzstev", "druzstiev", "csapat",
     ];
 
     /// <summary>

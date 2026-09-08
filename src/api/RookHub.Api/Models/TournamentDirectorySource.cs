@@ -34,6 +34,16 @@ public enum DirectorySourceKind
     /// Widerspruch wissen muss, welcher es sagt.</para>
     /// </summary>
     ChessResultsCalendar = 4,
+
+    /// <summary>
+    /// Der Kalender des italienischen Verbands (federscacchi.com).
+    ///
+    /// <para>Die wichtigste Zusatzquelle: Italien faehrt sein Turnierwesen auf Vega/vesus, nicht
+    /// auf chess-results — von 285 Eintraegen verlinkt KEIN EINZIGER dorthin, und eine
+    /// Namensstichprobe von 15 fand nur 3. Rund vier Fuenftel der italienischen Turniere fehlen
+    /// dort also, und zwar dauerhaft.</para>
+    /// </summary>
+    ItalianChessFederation = 5,
 }
 
 /// <summary>

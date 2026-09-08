@@ -36,7 +36,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         TournamentRoundPlanService roundPlans,
         FideDirectorySweepService fide,
         FideEventDetailService fideDetails,
-        TournamentCalendarSweepService calendar)
+        TournamentCalendarSweepService calendar,
+        FsiDirectorySweepService fsi2)
     {
         _db = db;
         _directory = directory;
@@ -47,6 +48,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _fide = fide;
         _fideDetails = fideDetails;
         _calendar = calendar;
+        _fsi2 = fsi2;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -54,6 +56,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly FideDirectorySweepService _fide;
     private readonly FideEventDetailService _fideDetails;
     private readonly TournamentCalendarSweepService _calendar;
+    private readonly FsiDirectorySweepService _fsi2;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -258,6 +261,24 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithPlan, result.Failed });
+    }
+
+    /// <summary>
+    /// Den Kalender des italienischen Verbands (FSI) lesen — die wichtigste Zusatzquelle.
+    ///
+    /// <para>Italien faehrt sein Turnierwesen auf Vega/vesus, nicht auf chess-results: von 285
+    /// Eintraegen des FSI-Kalenders verlinkt KEIN EINZIGER dorthin, und eine Namensstichprobe von
+    /// 15 fand nur 3. Rund vier Fuenftel der italienischen Turniere fehlen dort, dauerhaft.</para>
+    ///
+    /// <para>Ein Abruf fuer alles — Name, Termin, Region, Provinz, Ort, Bedenkzeit und Rundenzahl
+    /// stehen inline. Kennt chess-results ein Turnier schon, fuellt die FSI nur Luecken; sie
+    /// ueberschreibt keinen vorhandenen Wert.</para>
+    /// </summary>
+    [HttpPost("fsi")]
+    public async Task<IActionResult> Fsi([FromQuery] int months = 18, CancellationToken ct = default)
+    {
+        var result = await _fsi2.RunAsync(Math.Clamp(months, 1, 36), ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
     /// <summary>
