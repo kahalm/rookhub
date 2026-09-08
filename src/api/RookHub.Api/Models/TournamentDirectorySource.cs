@@ -74,6 +74,16 @@ public enum DirectorySourceKind
     /// GET antwortet 404) bringt den ganzen Kalender.</para>
     /// </summary>
     HungarianChessFederation = 8,
+
+    /// <summary>
+    /// Der Terminkalender des tschechischen Verbands (chess.cz).
+    ///
+    /// <para>Klein im Volumen (rund 38 echte Turniere, 13 nicht auf chess-results — dort stehen
+    /// im selben Zeitraum 146), aber er liefert etwas, das sonst teuer ist: 33 LIGARUNDEN, also
+    /// fertige Spieltermine, fuer die sonst je Turnier eine eigene chess-results-Seite geholt
+    /// wird.</para>
+    /// </summary>
+    CzechChessFederation = 9,
 }
 
 /// <summary>

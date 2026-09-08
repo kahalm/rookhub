@@ -40,7 +40,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         FsiDirectorySweepService fsi2,
         SzsDirectorySweepService szs,
         ChessSkDirectorySweepService chessSk,
-        ChessHuDirectorySweepService chessHu)
+        ChessHuDirectorySweepService chessHu,
+        ChessCzDirectorySweepService chessCz)
     {
         _db = db;
         _directory = directory;
@@ -55,6 +56,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _szs = szs;
         _chessSk = chessSk;
         _chessHu = chessHu;
+        _chessCz = chessCz;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -66,6 +68,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly SzsDirectorySweepService _szs;
     private readonly ChessSkDirectorySweepService _chessSk;
     private readonly ChessHuDirectorySweepService _chessHu;
+    private readonly ChessCzDirectorySweepService _chessCz;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -288,6 +291,26 @@ public class AdminTournamentDirectoryController : BaseApiController
     {
         var result = await _szs.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Terminkalender des tschechischen Verbands (chess.cz) lesen.
+    ///
+    /// <para>Ein Abruf. Sein Wert liegt weniger im Volumen als in den LIGARUNDEN: aus elf
+    /// Kalenderzeilen „2. ligy – N. kolo" wird EIN Eintrag mit elf Spielterminen — Termine, fuer
+    /// die sonst je Turnier eine eigene chess-results-Seite geholt wird. Ergaenzt werden nur
+    /// FEHLENDE Runden; was von chess-results kommt, bleibt stehen.</para>
+    ///
+    /// <para><c>Updated</c> in der Antwort zaehlt hier die ergaenzten SPIELTERMINE.</para>
+    /// </summary>
+    [HttpPost("chess-cz")]
+    public async Task<IActionResult> ChessCz(CancellationToken ct = default)
+    {
+        var result = await _chessCz.RunAsync(ct);
+        return Ok(new
+        {
+            result.Read, result.Added, result.Matched, result.Retired, RoundDates = result.Updated,
+        });
     }
 
     /// <summary>

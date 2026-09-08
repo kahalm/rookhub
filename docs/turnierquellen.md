@@ -1174,6 +1174,41 @@ sind genau das, wofuer wir sonst `art=14` je Turnier abrufen: **Spieltermine ges
 Falle bei der Gegenpruefung: `txt_bez` auf chess-results ist **diakritik-sensitiv** — „Granát"
 findet, „Granat" findet nichts.
 
+#### Was die Umsetzung dann gemessen hat (2026-09-08, v0.447.0)
+
+**Die 33 Ligarunden sind der eigentliche Grund, und sie sind mehr wert als das Volumen.** Sie
+gehoeren zu genau drei Meisterschaften — „šachy.cz Extraliga" (11 Runden, tnr1464172), „2. ligy"
+(11, tnr1470450) und „1. ligy" (11, ohne Verweis). Aus elf Kalenderzeilen wird EIN Eintrag mit
+elf Spielterminen; 22 davon landen ueber die mitgelieferte chess-results-Nummer direkt am
+bestehenden Eintrag. Ohne diese Quelle kostet derselbe Rundenplan je Turnier einen eigenen
+`art=14`-Abruf hinter dem 1500-ms-Limiter.
+
+**Die Seite hat DREI Laschen, und die erste enthaelt alle.** „Nejbližší akce" fuehrt alle 89
+Termine, „Mistrovské soutěže" (41) und „Kalendář mládeže" (8) sind Teilmengen und stehen im
+Markup ein zweites Mal — 138 Zeilen fuer 89 Termine. Ohne Entdopplung ueber den Slug bekaeme
+jeder zweite Eintrag ein Duplikat. Die Jugend-Lasche ist dabei ein Gewinn: anders als das
+ungarische Jugend-Feld ist sie verlaesslich (8 von 89, alle richtig) und traegt einen Fall, den
+kein Namensmuster faengt — „Mistrovství Čech 8 – 10 let" nennt seine Altersklasse als Spanne.
+
+**Diese Quelle hat keine Nummer.** Im Markup steht nirgends eine Id; die Identitaet ist der
+Adressbestandteil der Detailseite („turnovsky-granat-5"), und der wird bis zu **57 Zeichen** lang
+— `PublicId` fasst 24. Gespeichert wird deshalb ein Kurzwert (`cz` + 12 Hex aus SHA-256), der
+lesbare Slug steht vollstaendig im Herkunftsvermerk. Gekuerzt wird ausdruecklich NICHT:
+„1-ligy-1-kolo" und „1-ligy-10-kolo" unterscheiden sich am Ende.
+
+**Der Zeitraum steht in drei Formen da** — „12. 9. 26", „5. - 11. 9. 26" und
+„31. 10. - 7. 11. 26" — mit dem Jahr EINMAL am Ende und zweistellig. Ueber den Jahreswechsel
+gehoert es zum Ende, der Anfang liegt dann im Jahr davor.
+
+Ein Faehnchen je Zeile nennt das Land (131× CZ, 2× SK, 2× MN). Das MN ist ein Datenfehler der
+Quelle — der European Club Cup spielt in Herceg Novi, also Montenegro — und wird durchgereicht
+statt korrigiert.
+
+**robots.txt** (geprueft): `User-agent: *` sperrt `/wp-admin/`, `/souteze/vyber-kraje/`,
+`/soutez` und `/druzstvo`. Die Terminliste liegt unter `/vypis-vsech-udalosti/`, ist also nicht
+betroffen; die Detailseiten unter `/akce/` ebenso wenig (sie werden ohnehin nicht geholt, sie
+tragen nichts Zusaetzliches).
+
 ### ❌ Liechtenstein — sauber, frei, und ohne jeden Zugewinn
 
 `schach.li/agenda.html` ist server-gerendert, traegt hCalendar-Microformat mit ISO-Daten und die
@@ -1199,7 +1234,7 @@ ausgerechnet unter dem einzigen `Disallow: /route/` liegt.
 4. **Slowakei** — offizielle API, die ausdruecklich zur Nutzung einlaedt, 27 gratis
    Dedup-Schluessel. *(umgesetzt in v0.445.0)*
 5. **Ungarn** — ein POST, vor allem Vorlauf. *(umgesetzt in v0.446.0)*
-6. **Tschechien** — billig, kleiner Ertrag, aber Ligatermine geschenkt.
+6. **Tschechien** — billig, kleiner Ertrag, aber Ligatermine geschenkt. *(umgesetzt in v0.447.0)*
 7. **Oberoesterreich** (PLZ-Qualitaet, autoritative Bedenkzeit) und **Steiermark+Vorarlberg**
    (ein Parser fuer zwei) — nur, wenn Ortsqualitaet wirklich gebraucht wird. Vorher anfragen.
 8. **Liechtenstein**: nicht anbinden.

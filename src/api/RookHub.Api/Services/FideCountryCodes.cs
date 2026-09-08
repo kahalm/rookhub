@@ -40,4 +40,32 @@ public static class FideCountryCodes
 
     public static string? ToIso2(string? fideCode) =>
         !string.IsNullOrWhiteSpace(fideCode) && Map.TryGetValue(fideCode.Trim(), out var iso) ? iso : null;
+
+    /// <summary>
+    /// Der Rueckweg: ISO-2 auf den Foederations-Code. Gebraucht, wo eine Quelle ihr Land als
+    /// Laenderfaehnchen fuehrt (chess.cz) — der Bestand kennt aber nur Foederationen.
+    ///
+    /// <para>Mehrere Foederationen zeigen auf dasselbe Land (ENG/SCO/WLS auf GB). Der Rueckweg
+    /// braucht dort eine ENTSCHEIDUNG, und sie steht ausdruecklich da statt sich aus der
+    /// Reihenfolge eines Dictionary zu ergeben: GB wird zu ENG, MK zu MKD, IM zu IOM.</para>
+    /// </summary>
+    public static string? FromIso2(string? iso2)
+    {
+        if (string.IsNullOrWhiteSpace(iso2)) return null;
+        return Reverse.TryGetValue(iso2.Trim(), out var code) ? code : null;
+    }
+
+    private static readonly Dictionary<string, string> Preferred = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["GB"] = "ENG", ["MK"] = "MKD", ["IM"] = "IOM",
+    };
+
+    private static readonly Dictionary<string, string> Reverse =
+        Map.GroupBy(pair => pair.Value, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => Preferred.TryGetValue(group.Key, out var pick)
+                    ? pick
+                    : group.Select(pair => pair.Key).Order(StringComparer.Ordinal).First(),
+                StringComparer.OrdinalIgnoreCase);
 }

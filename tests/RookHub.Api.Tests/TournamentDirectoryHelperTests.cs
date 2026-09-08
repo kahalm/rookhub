@@ -230,6 +230,43 @@ public class FideCountryCodesTests
     [InlineData(null)]
     public void ToIso2_UnknownCode_ReturnsNull_RatherThanGuessing(string? fide) =>
         Assert.Null(FideCountryCodes.ToIso2(fide));
+
+    /// <summary>
+    /// Der Rueckweg — gebraucht, seit eine Quelle ihr Land als Laenderfaehnchen fuehrt (chess.cz).
+    /// </summary>
+    [Theory]
+    [InlineData("CZ", "CZE")]
+    [InlineData("SK", "SVK")]
+    [InlineData("cz", "CZE")]
+    [InlineData("XX", null)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    public void FromIso2_MapsBack(string? iso2, string? expected) =>
+        Assert.Equal(expected, FideCountryCodes.FromIso2(iso2));
+
+    /// <summary>
+    /// Mehrere Foederationen zeigen auf dasselbe Land (ENG/SCO/WLS auf GB). Der Rueckweg braucht
+    /// dort eine ENTSCHEIDUNG, und die muss festliegen statt von der Reihenfolge eines Dictionary
+    /// abzuhaengen.
+    /// </summary>
+    [Theory]
+    [InlineData("GB", "ENG")]
+    [InlineData("MK", "MKD")]
+    [InlineData("IM", "IOM")]
+    public void FromIso2_ResolvesTheAmbiguousOnesTheSameWayEveryTime(string iso2, string expected) =>
+        Assert.Equal(expected, FideCountryCodes.FromIso2(iso2));
+
+    /// <summary>Hin und zurueck muss bei jedem Land wieder dasselbe Land ergeben.</summary>
+    [Fact]
+    public void FromIso2_AndBack_IsStable()
+    {
+        foreach (var iso2 in FideCountryCodes.KnownIso2)
+        {
+            var federation = FideCountryCodes.FromIso2(iso2);
+            Assert.NotNull(federation);
+            Assert.Equal(iso2, FideCountryCodes.ToIso2(federation));
+        }
+    }
 }
 
 public class FederationCatalogTests

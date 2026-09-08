@@ -241,6 +241,19 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: chess.hu-Kalender fehlgeschlagen");
             }
 
+            // Der tschechische Verbandskalender. Er laeuft VOR dem Rundenplan-Nachtrag, weil er
+            // Spieltermine mitbringt: was er schon eingetragen hat, muss dort nicht mehr geholt
+            // werden.
+            try
+            {
+                var chessCz = scope.ServiceProvider.GetRequiredService<ChessCzDirectorySweepService>();
+                await chessCz.RunAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: chess.cz-Kalender fehlgeschlagen");
+            }
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.
