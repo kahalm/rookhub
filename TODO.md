@@ -331,6 +331,23 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [ ] **Polen: 79 % der Detailseiten tragen keine Angaben — und werden trotzdem jede Nacht erneut
+  geholt.** Der 301-Fehler ist behoben (Crawler holt jetzt `/turnieje/{jahr}/ti_{id}/` MIT
+  Schraegstrich), aber damit wird das Zweite sichtbar: in einer Stichprobe von 14 Turnieren hatten
+  nur 3 die server-gerenderte Datenseite (8,5 kB), die uebrigen 11 liefern eine 4,1-kB-
+  JavaScript-Huelle ohne eine einzige Angabe — das Turnier-Paket des Veranstalters entscheidet
+  das. `ParseDetail` gibt dort `null` zurueck, der Crawler antwortet 404, und
+  `ChessArbiterDirectorySweepService` vermerkt die `Url` nur bei Erfolg. Ein solches Turnier bleibt
+  also fuer immer Kandidat: jeder Durchgang verbraucht sein `ChessArbiterDetailBatchSize`-Budget
+  (150) an denselben Seiten, und die ~130 Turniere, bei denen es etwas zu holen GAEBE, kommen nie
+  an die Reihe.
+  Die Entscheidung, die dafuer noch fehlt: „gefragt, es gibt dort nichts" muss vom „Abruf ist
+  gescheitert" unterscheidbar werden. Zwei Wege — (a) der Crawler antwortet auf eine erreichte
+  Seite ohne Angaben mit **204** statt 404, RookHub vermerkt das als erledigt; (b) eine
+  `ChessArbiterDetailVersion` am Eintrag nach dem Muster von `RoundPlanVersion`/`CardVersion`
+  (dann wuerde ein spaeter server-gerendertes Turnier bei einer Versionserhoehung EINMAL neu
+  gefragt). (b) ist naeher am Bestand, kostet aber eine Migration.
+
 - [x] **Jeder gecrawlte Bestand braucht eine FASSUNG, nicht nur einen Zeitstempel** (ERLEDIGT v0.441.0: `RoundPlanVersion`, `TeamHintVersion`, `FideDetailVersion` + Migration `AddCrawlFetchVersions`; die Fassungen starten bei 1, der Bestand steht auf 0 und wird damit vom naechsten Durchgang von selbst nachgeholt) (Idee des
   Nutzers 2026-09-07, bisher nur halb umgesetzt). „Geprueft am 15:50" sagt NICHT, WOMIT geprueft
   wurde. Faellt ein Parser-Fehler spaeter auf, ist der Vermerk eine Luege, die jede Wiederholung
