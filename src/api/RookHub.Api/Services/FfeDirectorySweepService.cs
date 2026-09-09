@@ -124,8 +124,8 @@ public class FfeDirectorySweepService
                     // chess-results kennt das Turnier — bei Frankreich der Ausnahmefall (2 von 40).
                     // Dann bleibt es bei einem Herkunftsvermerk: die Turnierseite zu holen, nur um
                     // Luecken zu fuellen, waere ein Abruf fuer einen Eintrag, der schon steht.
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.FrenchChessFederation, row.EventId, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.FrenchChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -185,8 +185,8 @@ public class FfeDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
-                ExternalDirectorySource.NoteSource(own, DirectorySourceKind.FrenchChessFederation,
-                    row.EventId, hasDetail ? row.Url : null, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.FrenchChessFederation,
+                    row.EventId, hasDetail ? row.Url : null, now, ct);
 
                 if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {

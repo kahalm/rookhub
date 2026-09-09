@@ -110,8 +110,8 @@ public class SjakkDirectorySweepService
                 // (chess-results fuehrt fuer NOR nichts), aber genau dafuer ist er da.
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.NorwegianChessFederation, row.EventId, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.NorwegianChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -160,9 +160,9 @@ public class SjakkDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
-                ExternalDirectorySource.NoteSource(own,
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.NorwegianChessFederation, row.EventId,
-                    hasDetail ? row.Url : null, now);
+                    hasDetail ? row.Url : null, now, ct);
 
                 if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
             }

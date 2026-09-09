@@ -76,8 +76,8 @@ public class SzsDirectorySweepService
                 var match = await ExternalDirectorySource.FindMatchAsync(_db, "SLO", date, row.Name, ct);
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -117,8 +117,8 @@ public class SzsDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now, ct);
 
                 if (locationChanged || own.Lat is null)
                 {

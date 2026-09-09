@@ -96,8 +96,8 @@ public class KnsbDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(
-                        match, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, 
+                        match, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -144,8 +144,8 @@ public class KnsbDirectorySweepService
                     own.Speed = speed;
                 }
 
-                ExternalDirectorySource.NoteSource(
-                    own, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, 
+                    own, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
 
                 if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
             }

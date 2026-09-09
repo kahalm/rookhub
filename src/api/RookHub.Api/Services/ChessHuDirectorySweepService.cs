@@ -67,8 +67,8 @@ public class ChessHuDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.HungarianChessFederation, row.EventId, null, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.HungarianChessFederation, row.EventId, null, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -106,8 +106,8 @@ public class ChessHuDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.HungarianChessFederation, row.EventId, null, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.HungarianChessFederation, row.EventId, null, now, ct);
 
                 // Ohne Spielort keine Koordinaten: „Online" und „Helyszín később" stehen im
                 // Orts-Feld, sind aber keine Orte.

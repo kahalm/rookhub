@@ -45,7 +45,7 @@ public class ExternalDirectorySourceTests : IDisposable
             StartDate = Soon,
             EndDate = Soon,
         };
-        ExternalDirectorySource.NoteSource(entry, kind, externalId, url, DateTime.UtcNow);
+        await ExternalDirectorySource.NoteSourceAsync(_db, entry, kind, externalId, url, DateTime.UtcNow);
         _db.TournamentDirectoryEntries.Add(entry);
         await _db.SaveChangesAsync();
         return entry;
@@ -70,7 +70,7 @@ public class ExternalDirectorySourceTests : IDisposable
         Assert.NotNull(found);
         Assert.Single(found!.Sources);
 
-        ExternalDirectorySource.NoteSource(found, DirectorySourceKind.ItalianChessFederation,
+        await ExternalDirectorySource.NoteSourceAsync(night2, found, DirectorySourceKind.ItalianChessFederation,
             "123", null, DateTime.UtcNow);
         await night2.SaveChangesAsync();
 
@@ -104,16 +104,73 @@ public class ExternalDirectorySourceTests : IDisposable
     /// nach 283 s Crawlen, das damit weggeworfen war.
     /// </summary>
     [Fact]
-    public void NoteSource_RefusesAnExternalIdThatDoesNotFitTheColumn()
+    public async Task NoteSource_RefusesAnExternalIdThatDoesNotFitTheColumn()
     {
         var entry = new TournamentDirectoryEntry { PublicId = "1", Name = "Turnier" };
         var tooLong = new string('x', ExternalDirectorySource.MaxExternalIdLength + 1);
 
-        var ex = Assert.Throws<ArgumentException>(() => ExternalDirectorySource.NoteSource(
-            entry, DirectorySourceKind.WelshChessUnion, tooLong, null, DateTime.UtcNow));
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => ExternalDirectorySource.NoteSourceAsync(
+            _db, entry, DirectorySourceKind.WelshChessUnion, tooLong, null, DateTime.UtcNow));
 
         Assert.Contains("Kennung", ex.Message);
         Assert.Empty(entry.Sources);
+    }
+
+    /// <summary>
+    /// Haengt die Kennung schon an einem ANDEREN Eintrag, wird der Vermerk UMGEHAENGT statt ein
+    /// zweiter angelegt. Der eindeutige Index liegt auf (Kind, ExternalId) und gilt ueber den
+    /// ganzen Bestand; die Suche im Eintrag selbst sieht ihn nicht. Am 2026-09-09 starben daran
+    /// drei Quellen gleichzeitig („Duplicate entry '8-75923'"), nachdem neue Eintraege die
+    /// Zuordnung verschoben hatten.
+    /// </summary>
+    [Fact]
+    public async Task NoteSource_MovesANoteThatHangsOnAnotherEntry()
+    {
+        var alt = await SeedAsync("hu75923", null, "Rittmann Emlekverseny",
+            DirectorySourceKind.HungarianChessFederation, "75923");
+        var neu = new TournamentDirectoryEntry
+        {
+            PublicId = "1499999", ChessResultsId = "1499999", Name = "Rittmann Emlekverseny",
+            Federation = "HUN", StartDate = Soon, EndDate = Soon,
+        };
+        _db.TournamentDirectoryEntries.Add(neu);
+        await _db.SaveChangesAsync();
+
+        await ExternalDirectorySource.NoteSourceAsync(_db, neu,
+            DirectorySourceKind.HungarianChessFederation, "75923", null, DateTime.UtcNow);
+        await _db.SaveChangesAsync();
+
+        using var check = Create();
+        var note = Assert.Single(check.TournamentDirectorySources
+            .Where(s => s.Kind == DirectorySourceKind.HungarianChessFederation && s.ExternalId == "75923")
+            .ToList());
+        Assert.Equal(neu.Id, note.TournamentDirectoryEntryId);
+        Assert.NotEqual(alt.Id, note.TournamentDirectoryEntryId);
+    }
+
+    /// <summary>
+    /// Und ein NEU angelegter Eintrag (Id noch 0) bekommt den Vermerk genauso — dort laeuft das
+    /// Umhaengen ueber die Navigation, den Fremdschluessel setzt EF beim Speichern.
+    /// </summary>
+    [Fact]
+    public async Task NoteSource_MovesANoteToAnEntryThatIsNotSavedYet()
+    {
+        await SeedAsync("hu75924", null, "Alt", DirectorySourceKind.HungarianChessFederation, "75924");
+        var frisch = new TournamentDirectoryEntry
+        {
+            PublicId = "1499998", ChessResultsId = "1499998", Name = "Neu",
+            Federation = "HUN", StartDate = Soon, EndDate = Soon,
+        };
+
+        await ExternalDirectorySource.NoteSourceAsync(_db, frisch,
+            DirectorySourceKind.HungarianChessFederation, "75924", null, DateTime.UtcNow);
+        _db.TournamentDirectoryEntries.Add(frisch);
+        await _db.SaveChangesAsync();
+
+        using var check = Create();
+        var note = Assert.Single(check.TournamentDirectorySources
+            .Where(s => s.ExternalId == "75924").ToList());
+        Assert.Equal(frisch.Id, note.TournamentDirectoryEntryId);
     }
 
     /// <summary>Und die Laenge der Grenze ist die der SPALTE — sonst waere die Wache eine Meinung.</summary>
@@ -203,7 +260,7 @@ public class ExternalDirectorySourceTests : IDisposable
         Assert.NotNull(found);
         Assert.Empty(found!.Sources);
 
-        ExternalDirectorySource.NoteSource(found, DirectorySourceKind.ChessResults,
+        await ExternalDirectorySource.NoteSourceAsync(night2, found, DirectorySourceKind.ChessResults,
             "alt1", null, DateTime.UtcNow);
         await night2.SaveChangesAsync();
 

@@ -80,8 +80,8 @@ public class SchachbundDirectorySweepService
                     if (changed && match.Speed == TournamentSpeed.Unknown)
                         match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
 
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
                     matched++;
                     if (changed) updated++;
 
@@ -129,8 +129,8 @@ public class SchachbundDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
 
                 if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {

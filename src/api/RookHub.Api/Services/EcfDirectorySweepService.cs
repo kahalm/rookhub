@@ -82,8 +82,8 @@ public class EcfDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -122,8 +122,8 @@ public class EcfDirectorySweepService
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
                 ApplyYouthMark(own, row.YouthOnly);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
 
                 if (await ApplyCoordinatesAsync(own, row, locationChanged, ct)) located++;
 

@@ -104,8 +104,8 @@ public class ChessScotlandDirectorySweepService
                 // Eintrag — hier wird nur der Herkunftsvermerk gesetzt.
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.ScottishChessFederation, row.Slug, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.ScottishChessFederation, row.Slug, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -160,9 +160,9 @@ public class ChessScotlandDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
-                ExternalDirectorySource.NoteSource(own,
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.ScottishChessFederation, row.Slug,
-                    hasDetail ? row.Url : null, now);
+                    hasDetail ? row.Url : null, now, ct);
 
                 if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
             }

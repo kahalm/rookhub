@@ -137,8 +137,9 @@ public static class ExternalDirectorySource
     /// jede Nacht eine neue Zeile an.
     /// </summary>
     /// <exception cref="ArgumentException">Die Kennung ist laenger als die Spalte.</exception>
-    public static void NoteSource(TournamentDirectoryEntry entry, DirectorySourceKind kind,
-        string? externalId, string? url, DateTime now)
+    public static async Task NoteSourceAsync(AppDbContext db, TournamentDirectoryEntry entry,
+        DirectorySourceKind kind, string? externalId, string? url, DateTime now,
+        CancellationToken ct = default)
     {
         if (externalId is not { Length: > 0 }) return;
 
@@ -167,6 +168,30 @@ public static class ExternalDirectorySource
         {
             existing.LastSeenAt = now;
             if (url is { Length: > 0 } && existing.Url is null) existing.Url = Truncate(url, 500);
+            return;
+        }
+
+        // UMHAENGEN, wenn die Kennung schon an einem ANDEREN Eintrag haengt. Der eindeutige Index
+        // liegt auf (Kind, ExternalId) und gilt damit ueber den ganzen Bestand — die Suche oben
+        // sieht aber nur die Vermerke DIESES Eintrags. Aendert sich die Zuordnung einer Quelle
+        // (ihr Turnier wird jetzt einem chess-results-Eintrag zugeordnet statt dem eigenen), legte
+        // der Lauf einen zweiten Vermerk an und starb an „Duplicate entry".
+        //
+        // Am 2026-09-09 auf Dev an DREI Quellen gleichzeitig aufgetreten (Ungarn, Tschechien,
+        // Ankuendigungskalender), ausgeloest von ueber 400 neuen Eintraegen aus den am selben Tag
+        // reparierten Quellen: die Namens-/Terminvergleiche landeten seither auf anderen Eintraegen.
+        //
+        // Umhaengen statt Verwerfen, weil der Vermerk sagt „diese Quelle kennt das Turnier unter
+        // X" — gehoert das Turnier jetzt zu einem anderen Eintrag, gehoert der Vermerk mit dorthin.
+        // Ueber die NAVIGATION, nicht ueber den Fremdschluessel: bei einem neu angelegten Eintrag
+        // ist die Id noch 0, EF setzt sie beim Speichern selbst.
+        var elsewhere = await db.TournamentDirectorySources
+            .FirstOrDefaultAsync(s => s.Kind == kind && s.ExternalId == externalId, ct);
+        if (elsewhere is not null)
+        {
+            elsewhere.LastSeenAt = now;
+            if (url is { Length: > 0 } && elsewhere.Url is null) elsewhere.Url = Truncate(url, 500);
+            entry.Sources.Add(elsewhere);
             return;
         }
 

@@ -128,8 +128,8 @@ public class ChessCzDirectorySweepService
 
         if (match is not null)
         {
-            ExternalDirectorySource.NoteSource(match,
-                DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now);
+            await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now, ct);
             counts.Matched++;
 
             if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -171,8 +171,8 @@ public class ChessCzDirectorySweepService
         own.RemovedAt = null;
         ExternalDirectorySource.ApplyClassification(own);
         ApplyYouthMark(own, row.Youth);
-        ExternalDirectorySource.NoteSource(own,
-            DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now, ct);
 
         if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
         {
@@ -247,8 +247,8 @@ public class ChessCzDirectorySweepService
             ApplyYouthMark(entry, rounds.Any(r => r.Youth));
         }
 
-        ExternalDirectorySource.NoteSource(entry, DirectorySourceKind.CzechChessFederation,
-            SeriesKey(series), null, now);
+        await ExternalDirectorySource.NoteSourceAsync(_db, entry, DirectorySourceKind.CzechChessFederation,
+            SeriesKey(series, entry.PublicId), null, now, ct);
         counts.Rounds += AddMissingRounds(entry, rounds);
     }
 
@@ -312,9 +312,22 @@ public class ChessCzDirectorySweepService
     /// </summary>
     internal static string PublicIdOf(string slug) => "cz" + ShortHash(slug);
 
-    /// <summary>Der Herkunftsvermerk einer Meisterschaft — sie hat keinen eigenen Slug.</summary>
-    internal static string SeriesKey(string series) =>
-        ExternalDirectorySource.Truncate($"serie:{series}", 60)!;
+    /// <summary>
+    /// Der Herkunftsvermerk einer Meisterschaft — sie hat keinen eigenen Slug.
+    ///
+    /// <para><b>Je EINTRAG, nicht je Serie.</b> Eine Meisterschaft der Quelle ist bei
+    /// chess-results MEHRERE Turniere: die „2. ligy" sind die Gruppen A bis F, also sechs
+    /// Eintraege, und alle bekommen dieselben Spieltermine. Ein Schluessel je Serie kann aber nur
+    /// an EINEM haengen — der eindeutige Index liegt auf (Kind, ExternalId). Am 2026-09-09
+    /// scheiterte die Quelle deshalb mit „Duplicate entry '9-serie:2. ligy'", sobald sie die
+    /// zweite Gruppe vornahm.</para>
+    ///
+    /// <para>Gehasht statt zusammengesetzt: Serienname plus Kennung sprengen die 60 Zeichen der
+    /// Spalte, und einen SCHLUESSEL zu kuerzen ist die schlechteste Wahl (siehe
+    /// <see cref="ExternalDirectorySource.NoteSourceAsync"/>).</para>
+    /// </summary>
+    internal static string SeriesKey(string series, string publicId) =>
+        "czs" + ShortHash($"{series}|{publicId}");
 
     private static string ShortHash(string value)
     {

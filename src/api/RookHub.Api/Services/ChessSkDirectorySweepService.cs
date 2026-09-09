@@ -88,8 +88,8 @@ public class ChessSkDirectorySweepService
                 if (match is not null)
                 {
                     if (FillGaps(match, row)) updated++;
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.SlovakChessFederation, row.EventId, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.SlovakChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -142,8 +142,8 @@ public class ChessSkDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.SlovakChessFederation, row.EventId, row.Url, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.SlovakChessFederation, row.EventId, row.Url, now, ct);
 
                 // Ein ONLINE-Turnier hat keinen Spielort. Ihm einen Pin zu geben waere eine
                 // Behauptung ueber die Wirklichkeit — dieselbe Regel wie bei den ONL-Ereignissen

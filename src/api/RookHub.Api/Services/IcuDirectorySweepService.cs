@@ -122,8 +122,8 @@ public class IcuDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match, DirectorySourceKind.IrishChessUnion,
-                        row.EventId, DetailUrl(row, detail), now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match, DirectorySourceKind.IrishChessUnion,
+                        row.EventId, DetailUrl(row, detail), now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -166,8 +166,8 @@ public class IcuDirectorySweepService
 
                 if (detail?.PlayerCount is > 0) own.PlayerCount = detail.PlayerCount;
 
-                ExternalDirectorySource.NoteSource(own, DirectorySourceKind.IrishChessUnion,
-                    row.EventId, DetailUrl(row, detail), now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.IrishChessUnion,
+                    row.EventId, DetailUrl(row, detail), now, ct);
 
                 await ApplyCoordinatesAsync(own, row, locationChanged, ct);
 

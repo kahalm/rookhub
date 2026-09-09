@@ -82,8 +82,8 @@ public class FsiDirectorySweepService
                     if (changed && match.Speed == TournamentSpeed.Unknown)
                         match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
 
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.ItalianChessFederation, row.EventId, null, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
                     matched++;
                     if (changed) updated++;
 
@@ -126,8 +126,8 @@ public class FsiDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.ItalianChessFederation, row.EventId, null, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
 
                 // Verortet wird nur, wenn der Ortstext neu ist oder noch kein Pin steht — sonst
                 // liefe das Lexikon jede Nacht fuer 283 unveraenderte Eintraege.

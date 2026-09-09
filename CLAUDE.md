@@ -602,6 +602,17 @@ keine dieser Quellen sagt etwas darueber.
 | Polen (chessarbiter) | `pl<jahr>-<nr>` | 1 + je NEUEM Turnier 1 | Die ergiebigste Einzelquelle: 611 kuenftige Turniere in EINEM Abruf. Die Liste nennt kein Jahr (kommt aus der Sortierung); die Detailseite bringt Enddatum, Bedenkzeit, Rundenzahl, System — und als einzige Quelle die TEILNEHMERZAHL schon vor dem Turnier. **Nur ~20 % der Turniere haben ueberhaupt eine server-gerenderte Datenseite**, die uebrigen liefern eine JavaScript-Huelle: der Crawler antwortet dort mit **204** (gefragt, nichts da — endgueltig) statt 404 (nicht zu holen — wiederholen), und `ChessArbiterDetailVersion` vermerkt es. Die `Url` im Herkunftsvermerk heisst weiter GELESEN, nicht bloss gefragt |
 | Tschechien (chess.cz) | `cz`+Hash | 1 Abruf | Klein im Volumen (38 echte Turniere, 13 neu), aber sie liefert SPIELTERMINE: 33 Ligarunden werden zu drei Eintraegen mit je elf Runden — sonst je Turnier ein eigener `art=14`-Abruf. Ergaenzt nur FEHLENDE Runden. Ihre Kennung ist ein bis zu 57 Zeichen langer Slug, deshalb als Kurzwert gespeichert |
 
+**Kein VPN-Ausgang erreicht alle Quellen — deshalb wird gewechselt und wiederholt.** Mehrere
+Verbandsseiten sperren ganze Hosting-Netze, und zwar verschiedene: am 2026-09-09 gemessen kam vom
+deutschen AirVPN-Ausgang (alle auf M247) keine TCP-Verbindung zu `federscacchi.com` (ITA) und
+`frsah.ro` (ROU) zustande, vom niederlaendischen (Global Layer) keine zu `chess.sk` (SVK). Ein
+fester Standort tauscht also nur ein Land gegen ein anderes. Der Crawler wiederholt einen
+Quellen-Abruf deshalb bis zu fuenf Mal und wechselt zwischen den Versuchen den Ausgang
+(`RotateOnConnectFailureHandler`, an allen 16 Quellen-Clients). Wiederholt wird NUR das
+Nicht-Zustandekommen der Verbindung — eine Antwort der Quelle, auch 403 oder 500, ist eine Auskunft
+und wird durchgereicht. Die Rotation selbst liegt in `VpnReadinessGate` und haelt dabei den
+Crawl-Riegel (`CrawlerService.CrawlGate`): waehrend stop→pause→start ist der Tunnel unten.
+
 Vollstaendige Messungen und die Rechtslage je Quelle: `docs/turnierquellen.md`.
 
 **Publikum und Format eines Turniers — was aus der Quelle kommt und was aus dem Namen.**
@@ -1552,6 +1563,14 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Wichtige Konventionen
 
+- **Ein Herkunftsvermerk WANDERT, er wird nicht doppelt angelegt** (seit 0.453.13) – Der eindeutige Index liegt auf
+  (`Kind`, `ExternalId`) und gilt ueber den GANZEN Bestand. `ExternalDirectorySource.NoteSourceAsync` sieht deshalb
+  nicht nur die Vermerke des uebergebenen Eintrags, sondern fragt die Tabelle: haengt die Kennung woanders, wird der
+  Vermerk UMGEHAENGT (ueber die Navigation, damit es auch bei einem noch nicht gespeicherten Eintrag geht). Am
+  2026-09-09 starben daran drei Quellen gleichzeitig (Ungarn, Tschechien, Ankuendigungskalender), ausgeloest von 400
+  neuen Eintraegen, die die Namens-/Terminvergleiche auf andere Eintraege verschoben haben. Und: deckt eine
+  Quellen-Kennung mehrere Eintraege ab (die tschechische „2. ligy" sind die Gruppen A bis F), MUSS der Schluessel den
+  Eintrag enthalten — `ChessCzDirectorySweepService.SeriesKey(series, publicId)`.
 - **Eine fremde Kennung wird NIE gekuerzt** (seit 0.453.11) – `TournamentDirectorySource.ExternalId` ist 60 Zeichen
   lang und ein SCHLUESSEL. Wer laenger liefert, bekommt von `ExternalDirectorySource.NoteSource` eine
   `ArgumentException` mit Klartext und vermerkt stattdessen einen KURZSCHLUESSEL (Hash der Quellen-Kennung, siehe

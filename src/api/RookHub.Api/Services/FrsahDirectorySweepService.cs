@@ -71,8 +71,8 @@ public class FrsahDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -111,8 +111,8 @@ public class FrsahDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now, ct);
 
                 if (await ApplyCoordinatesAsync(own, locationChanged, ct)) located++;
 

@@ -95,8 +95,8 @@ public class ChessArbiterDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.PolishChessFederation, row.Key, row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.PolishChessFederation, row.Key, row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -168,8 +168,8 @@ public class ChessArbiterDirectorySweepService
 
                 // Die Adresse im Vermerk bleibt der Herkunftsbeleg — sie steht nur da, wenn die
                 // Seite auch etwas hergab (`ChessArbiterDetailVersion` sagt, dass gefragt wurde).
-                ExternalDirectorySource.NoteSource(own, DirectorySourceKind.PolishChessFederation,
-                    row.Key, detailRead ? row.Url : null, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.PolishChessFederation,
+                    row.Key, detailRead ? row.Url : null, now, ct);
 
                 if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {

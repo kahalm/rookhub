@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.453.13", date: "2026-09-09", changes: [
+    { en: "Three more federation calendars deliver again: Hungary, Czechia and the announcement calendar. Each of them died as soon as one of its tournaments had moved to a different entry in the directory. And because no single network exit reaches every federation site, a source is now retried up to five times through a different exit instead of being given up on. Slovakia, Italy and Romania no longer depend on which exit happens to be in use.", de: "Drei weitere Verbandskalender liefern wieder: Ungarn, Tschechien und der Ankündigungskalender. Jeder von ihnen starb, sobald eines seiner Turniere im Verzeichnis einem anderen Eintrag zugeordnet worden war. Und weil kein einzelner Netzausgang alle Verbandsseiten erreicht, wird eine Quelle jetzt bis zu fünf Mal über einen anderen Ausgang wiederholt statt aufgegeben. Slowakei, Italien und Rumänien hängen damit nicht mehr davon ab, welcher Ausgang gerade in Benutzung ist." },
+  ] },
   { version: "0.453.12", date: "2026-09-09", changes: [
     { en: "The nightly refresh of the tournament calendar works again for the neighbouring countries. As soon as one of the federation calendars had contributed a tournament without a chess-results number, the run for that whole country died — which since the start of the week meant Austria, Italy, Hungary, Slovenia, Czechia, Slovakia and Germany, so exactly the countries that are refreshed daily.", de: "Der nächtliche Abgleich des Turnierkalenders läuft für die Nachbarländer wieder. Sobald einer der Verbandskalender ein Turnier ohne chess-results-Nummer beigetragen hatte, starb der Lauf für dieses ganze Land — seit Wochenbeginn also für Österreich, Italien, Ungarn, Slowenien, Tschechien, die Slowakei und Deutschland, somit genau für die Länder, die täglich aktualisiert werden." },
   ] },

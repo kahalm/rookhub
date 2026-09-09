@@ -79,8 +79,8 @@ public class WcuDirectorySweepService
 
                 if (match is not null)
                 {
-                    ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.WelshChessUnion, PublicIdOf(row.EventId), row.Url, now);
+                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
+                        DirectorySourceKind.WelshChessUnion, PublicIdOf(row.EventId), row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -118,8 +118,8 @@ public class WcuDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.WelshChessUnion, PublicIdOf(row.EventId), row.Url, now);
+                await ExternalDirectorySource.NoteSourceAsync(_db, own,
+                    DirectorySourceKind.WelshChessUnion, PublicIdOf(row.EventId), row.Url, now, ct);
 
                 if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {
