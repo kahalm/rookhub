@@ -66,6 +66,38 @@ durch eine Vorrangregel, sondern weil die FIDE-Jahresansicht die Detailfelder ni
 dem Nachlauf oben waere zu entscheiden, wer bei Widerspruch gilt (Vorschlag: chess-results fuer
 Termin/Ort, FIDE fuer die Bedenkzeit-Beschreibung — dort ist sie ausgeschrieben).
 
+## [ ] Postleitzahlen fehlen fuer die halbe dritte Runde (2026-09-09)
+
+Im Ortslexikon stehen Postleitzahlen heute nur fuer **AT (19 225), DE (23 297) und SK (5 233)**.
+Fuer GB, IE, FR, NO, RO und SE gibt es **null** — dort traegt allein der Ortsname, und der ist der
+ungenauere Weg (Stadtmitte statt Spielstaette).
+
+Der Import ist ein Knopfdruck je Land
+(`POST /api/admin/tournament-directory/gazetteer/postal/{iso2}`) und wirkt RUECKWIRKEND auf den
+ganzen Bestand dieser Laender, nicht nur auf die neuen Quellen. Er steht seit v0.453.0 als
+Schritt 0 in `scripts/directory-runs.sh` und braucht nur das Admin-Passwort.
+
+Nachgemessen, was daran haengt: Norwegen 42 Ortsnamen im Lexikon gegen 1831 moegliche; Wales
+liefert bei 30 von 38 Turnieren eine Postleitzahl mit, Schottland bei 8 von 43, England bei 118
+von 256.
+
+**Der Ausdruck, der Postleitzahlen im Freitext findet, konnte die britischen und irischen bis
+v0.453.0 gar nicht sehen** — er war rein numerisch, „CF31 3NR" und „D02 XY45" waren fuer ihn
+nichts. Das ist behoben; ohne den Import bringt es aber weiterhin nichts.
+
+## [ ] Der niederlaendische Kalender kennt keinen Spielort (2026-09-09)
+
+Die KNSB-Liste hat strukturell kein Ortsfeld — er steht nur auf der Detailseite. Bei einer
+geforderten Wartezeit von 15 Sekunden waeren das 45 Minuten fuer die 177 Eintraege des
+Erstbestands, deshalb bewusst nicht gebaut. Folge: 177 Turniere stehen in Liste und Kalender, aber
+nicht auf der Karte und nicht in der Umkreissuche.
+
+**Der Weg, falls es sich lohnt**, ist derselbe wie bei Irland, Frankreich, Norwegen und
+Schottland: ein gedeckelter Nachlauf (`KnsbDetailBatchSize`), der die Detailseite je NEUEM Turnier
+einmal holt und „schon geholt" an der `Url` des Herkunftsvermerks erkennt. Bei 40 je Nacht ist der
+Erstbestand nach fuenf Naechten durch, danach kostet er fast nichts. Die Machinerie steht bei den
+vier genannten Quellen schon.
+
 ## [ ] Verschwundene Turniere der ZUSATZQUELLEN werden nie zurueckgezogen (2026-09-08)
 
 Der chess-results-Sweep fuehrt `MissedSweeps`: taucht ein Turnier in der Trefferliste nicht mehr

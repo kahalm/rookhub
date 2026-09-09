@@ -296,6 +296,36 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: ECF-Kalender fehlgeschlagen");
             }
 
+            // Die sechs Quellen der dritten Runde (Europa ausserhalb der Nachbarschaft). Jede in
+            // ihrem eigenen Fang: sie sind voneinander unabhaengig, und ein Ausfall bei einer darf
+            // die uebrigen nicht mitnehmen.
+            //
+            // Reihenfolge nach KOSTEN, billig zuerst — dasselbe Prinzip wie oben: faellt etwas
+            // grundsaetzlich aus (Netz, Crawler tot), sieht man es nach Sekunden statt nach einer
+            // Viertelstunde.
+            await RunSourceAsync(scope, "Rumaenien (FRSah)",
+                s => s.GetRequiredService<FrsahDirectorySweepService>().RunAsync(ct), ct);
+
+            await RunSourceAsync(scope, "Wales (WCU)",
+                s => s.GetRequiredService<WcuDirectorySweepService>().RunAsync(ct), ct);
+
+            await RunSourceAsync(scope, "Niederlande (KNSB)",
+                s => s.GetRequiredService<KnsbDirectorySweepService>().RunAsync(ct), ct);
+
+            await RunSourceAsync(scope, "Schottland (Chess Scotland)",
+                s => s.GetRequiredService<ChessScotlandDirectorySweepService>().RunAsync(null, ct), ct);
+
+            await RunSourceAsync(scope, "Irland (ICU)",
+                s => s.GetRequiredService<IcuDirectorySweepService>().RunAsync(null, ct), ct);
+
+            await RunSourceAsync(scope, "Norwegen (sjakk.no)",
+                s => s.GetRequiredService<SjakkDirectorySweepService>().RunAsync(null, ct), ct);
+
+            // Frankreich zuletzt: zwoelf Monatsseiten plus bis zu 150 Turnierseiten sind der
+            // laengste Durchgang der Reihe.
+            await RunSourceAsync(scope, "Frankreich (FFE)",
+                s => s.GetRequiredService<FfeDirectorySweepService>().RunAsync(12, null, ct), ct);
+
             // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
             // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
             // Bedenkzeit, kein System und keine Anschrift.
@@ -355,4 +385,27 @@ public class TournamentDirectoryScheduler : BackgroundService
         run.AddRange(rotating);
         return run;
     }
+
+    /// <summary>
+    /// Eine Zusatzquelle laufen lassen und ihren Ausfall eindaemmen.
+    ///
+    /// <para>Der Fang war zehnmal ausgeschrieben, bevor die dritte Runde ihn auf ein Dutzend
+    /// gebracht haette. Die Regel dahinter ist bei allen dieselbe und wichtiger als die
+    /// Wiederholung: die Quellen sind voneinander unabhaengig, und ein Netzausfall bei einer darf
+    /// weder die uebrigen noch den erledigten chess-results-Sweep als gescheitert erscheinen
+    /// lassen. Ein ABBRUCH des Dienstes ist dagegen kein Quellenfehler und wird durchgereicht.</para>
+    /// </summary>
+    private async Task RunSourceAsync(IServiceScope scope, string name,
+        Func<IServiceProvider, Task> run, CancellationToken ct)
+    {
+        try
+        {
+            await run(scope.ServiceProvider);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Turnierverzeichnis: {Source} fehlgeschlagen", name);
+        }
+    }
+
 }

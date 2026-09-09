@@ -121,7 +121,8 @@ grep -q 'geheim123' "$CALLS" \
 grep -q '"AUT"' "$CALLS" && check "Foederation im Rumpf" ok || check "Foederation im Rumpf" no
 
 # 6. Jede Zusatzquelle genau einmal
-for route in /calendar /fsi /szs /chess-sk /chess-hu /chess-cz /schachbund; do
+for route in /calendar /fsi /szs /chess-sk /chess-hu /chess-cz /schachbund /ecf /icu /ffe \
+             /sjakk /chess-scotland /frsah /wcu /knsb; do
   n=$(grep -c -- "$route" "$CALLS")
   [ "$n" -eq 1 ] && check "Quelle $route einmal angestossen" ok \
     || { check "Quelle $route einmal angestossen" no; echo "     war: $n"; }
@@ -138,6 +139,30 @@ first_long=$(grep -n -- '/fide-details' "$CALLS" | head -1 | cut -d: -f1)
 [ -n "$first_source" ] && [ -n "$first_long" ] && [ "$first_source" -lt "$first_long" ] \
   && check "Zusatzquellen vor den langen Nachtraegen" ok \
   || check "Zusatzquellen vor den langen Nachtraegen" no
+
+# ---------------------------------------------------------------------------
+echo "== Der PLZ-Import laeuft NUR auf Wunsch"
+# Der Import zieht je Land eine Datei von GeoNames. Liefe er bei jedem Aufruf mit, waere das
+# Minuten Wartezeit fuer etwas, das sich im Jahr kaum aendert.
+out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" \
+      run_script bash "$SCRIPT" http://api.test "" 200)
+grep -q '/gazetteer/postal/' "$CALLS" \
+  && check "ohne GAZETTEER kein Import" no || check "ohne GAZETTEER kein Import" ok
+
+out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" GAZETTEER=1 \
+      run_script bash "$SCRIPT" http://api.test "" 200)
+n=$(grep -c '/gazetteer/postal/' "$CALLS")
+[ "$n" -eq 7 ] && check "mit GAZETTEER=1 alle sieben Laender" ok \
+  || { check "mit GAZETTEER=1 alle sieben Laender" no; echo "     war: $n"; }
+grep -q '/gazetteer/postal/GB' "$CALLS" \
+  && check "GB ist dabei (dort fehlen sie am schmerzlichsten)" ok \
+  || check "GB ist dabei" no
+
+# Und er laeuft VOR allem anderen — jede Quelle danach verortet besser als davor.
+first_gaz=$(grep -n -- '/gazetteer/postal/' "$CALLS" | head -1 | cut -d: -f1)
+first_other=$(grep -n -- '/fide-details' "$CALLS" | head -1 | cut -d: -f1)
+[ -n "$first_gaz" ] && [ -n "$first_other" ] && [ "$first_gaz" -lt "$first_other" ] \
+  && check "Import vor den uebrigen Laeufen" ok || check "Import vor den uebrigen Laeufen" no
 
 # ---------------------------------------------------------------------------
 echo "== SKIP_SOURCES=1 laesst die Quellen aus"

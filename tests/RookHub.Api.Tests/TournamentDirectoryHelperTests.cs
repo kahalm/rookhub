@@ -83,6 +83,54 @@ public class GeoTextNormalizerTests
         Assert.DoesNotContain("37", candidates);
     }
 
+    /// <summary>
+    /// Die britischen Inseln schreiben ihre Postleitzahl alphanumerisch. Bis zur dritten Runde war
+    /// der Ausdruck rein numerisch — „CF31 3NR" war damit keine Postleitzahl, sondern gar nichts,
+    /// und die walisische Quelle liefert sie bei 30 von 38 Turnieren mit.
+    /// </summary>
+    [Theory]
+    [InlineData("Bridgend Life Centre, Bridgend CF31 3NR", "CF31 3NR")]
+    [InlineData("Pembroke, SA714LA", "SA714LA")]
+    [InlineData("The Clissold Arms, London N2 9HR", "N2 9HR")]
+    [InlineData("Durham Clayport Library, Durham DH1 1WA", "DH1 1WA")]
+    public void PostalCandidates_FindsBritishCodes(string text, string expected) =>
+        Assert.Contains(expected.Replace(" ", ""),
+            GeoTextNormalizer.PostalCandidates(text).Select(c => c.Replace(" ", "")));
+
+    /// <summary>
+    /// Und beide Schreibweisen werden angeboten: die Quelle klebt die Postleitzahl gern an die
+    /// Anschrift („SA714LA"), das Lexikon speichert sie mit Leerzeichen („SA71 4LA"). Welche
+    /// stimmt, entscheidet der Gazetteer-Treffer — nicht dieser Ausdruck.
+    /// </summary>
+    [Fact]
+    public void PostalCandidates_OffersBothSpellingsOfABritishCode()
+    {
+        var candidates = GeoTextNormalizer.PostalCandidates("Pembroke SA714LA");
+
+        Assert.Contains("SA714LA", candidates);
+        Assert.Contains("SA71 4LA", candidates);
+    }
+
+    /// <summary>Irische Eircodes trennen nach den ERSTEN drei Zeichen, nicht vor den letzten drei.</summary>
+    [Fact]
+    public void PostalCandidates_OffersTheIrishSpellingToo()
+    {
+        var candidates = GeoTextNormalizer.PostalCandidates("Dublin D02XY45");
+
+        Assert.Contains("D02 XY45", candidates);
+    }
+
+    /// <summary>
+    /// Und der bestehende Ziffern-Weg bleibt unberuehrt — das ist der Fall, den fast ganz Europa
+    /// benutzt.
+    /// </summary>
+    [Theory]
+    [InlineData("Halle 1, Eichetstrasse 29, 5020 Salzburg", "5020")]
+    [InlineData("Vlcie hrdlo 1/A, 824 12 Bratislava", "824 12")]
+    [InlineData("80807 Muenchen", "80807")]
+    public void PostalCandidates_StillFindsNumericCodes(string text, string expected) =>
+        Assert.Contains(expected, GeoTextNormalizer.PostalCandidates(text));
+
     [Fact]
     public void PostalCandidates_KeepsCompactVariantOfSeparatedCodes()
     {

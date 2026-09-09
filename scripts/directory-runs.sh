@@ -6,11 +6,14 @@
 # wenn man nicht bis morgen warten will.
 #
 # Reihenfolge ist Absicht — kurz vor lang, damit man frueh sieht, ob etwas grundsaetzlich klemmt:
+#   0. gazetteer     NUR mit GAZETTEER=1: Postleitzahlen fuer GB/IE/FR/NO/RO/NL/SE nachladen.
+#                    Der genaueste Weg der Verortung — heute gibt es sie nur fuer AT, DE und SK.
 #   1. sweep         Turnierart + System der genannten Foederationen (Vorgabe AUT).
 #                    Vier Crawler-Abrufe je Foederation, rund zehn Sekunden.
-#   2. quellen       Die acht Zusatzquellen neben der chess-results-Turniersuche: der
+#   2. quellen       Die sechzehn Zusatzquellen neben der chess-results-Turniersuche: der
 #                    Ankuendigungskalender, Italien, Slowenien, Slowakei, Ungarn, Tschechien,
-#                    Deutschland — je ein Aufruf. Zusammen rund zehn Minuten, das meiste davon
+#                    Deutschland, England, Irland, Frankreich, Norwegen, Schottland, Rumaenien,
+#                    Wales und die Niederlande — je ein Aufruf. Zusammen rund zehn Minuten, das meiste davon
 #                    Ungarn (75 s je Abruf) und Deutschland (zwei Abrufe je Region mit der
 #                    Wartezeit aus deren robots.txt).
 #   3. polen         Eigener Schritt, weil er WIEDERHOLT wird: die Liste kostet einen Abruf, die
@@ -77,6 +80,31 @@ post() { curl -fsS -H "Authorization: Bearer $TOKEN" -X POST "$@"; }
 field() { python3 -c 'import sys,json
 try: print(int(json.load(sys.stdin).get(sys.argv[1], 0)))
 except Exception: print(0)' "$1"; }
+
+# ---------------------------------------------------------------------------
+# 0. Postleitzahlen der Laender, fuer die es noch keine gibt
+# ---------------------------------------------------------------------------
+# Der genaueste Weg der Verortung ist die Postleitzahl — und im Lexikon stehen heute nur die von
+# AT, DE und SK. Fuer alles andere traegt allein der Ortsname, also die Stadtmitte statt der
+# Spielstaette. Der Import laeuft je Land gegen GeoNames und wirkt RUECKWIRKEND auf den ganzen
+# Bestand, nicht nur auf die neuen Quellen.
+#
+# Er steht VOR allem anderen, weil jede Quelle danach besser verortet als davor. Und er laeuft nur
+# auf Wunsch: er zieht je Land eine Datei von GeoNames und dauert seine Zeit.
+#   GAZETTEER=1 bash scripts/directory-runs.sh …
+if [ "${GAZETTEER:-0}" = "1" ]; then
+  echo
+  echo "== Postleitzahlen importieren =="
+  for ISO in GB IE FR NO RO NL SE; do
+    printf '  %s: ' "$ISO"
+    post "$API/api/admin/tournament-directory/gazetteer/postal/$ISO" \
+      | python3 -c 'import sys,json
+try:
+    d = json.load(sys.stdin)
+    print(f"{d.get(\"imported\", 0)} Orte" + (f" — {d[\"error\"]}" if d.get("error") else ""))
+except Exception: print("keine Antwort")' || { echo "FEHLGESCHLAGEN"; FAILED=1; }
+  done
+fi
 
 # ---------------------------------------------------------------------------
 # 1. Sweep: Turnierart (Einzel/Mannschaft) UND System (Schweizer/Rundenturnier)
@@ -155,6 +183,14 @@ if [ "${SKIP_SOURCES:-0}" != "1" ]; then
   source_run "Ungarn (chess.hu)"        "/api/admin/tournament-directory/chess-hu"
   source_run "Tschechien (chess.cz)"    "/api/admin/tournament-directory/chess-cz"
   source_run "Deutschland (schachbund)" "/api/admin/tournament-directory/schachbund"
+  source_run "England (ECF)"            "/api/admin/tournament-directory/ecf"
+  source_run "Irland (ICU)"             "/api/admin/tournament-directory/icu"
+  source_run "Frankreich (FFE)"         "/api/admin/tournament-directory/ffe"
+  source_run "Norwegen (sjakk.no)"      "/api/admin/tournament-directory/sjakk"
+  source_run "Schottland"               "/api/admin/tournament-directory/chess-scotland"
+  source_run "Rumaenien (FRSah)"        "/api/admin/tournament-directory/frsah"
+  source_run "Wales (WCU)"              "/api/admin/tournament-directory/wcu"
+  source_run "Niederlande (KNSB)"       "/api/admin/tournament-directory/knsb"
 fi
 
 # Polen: die Liste ist ein Abruf, die Detailseiten sind gedeckelt — deshalb wiederholt, bis keine

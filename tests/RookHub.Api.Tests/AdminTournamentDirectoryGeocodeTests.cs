@@ -72,7 +72,21 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
             new SchachbundDirectorySweepService(_db, factory, geocoding,
                 new TestLogger<SchachbundDirectorySweepService>()),
             new EcfDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<EcfDirectorySweepService>()));
+                new TestLogger<EcfDirectorySweepService>()),
+            new IcuDirectorySweepService(_db, factory, geocoding, config,
+                new TestLogger<IcuDirectorySweepService>()),
+            new FfeDirectorySweepService(_db, factory, geocoding, config,
+                new TestLogger<FfeDirectorySweepService>()),
+            new SjakkDirectorySweepService(_db, factory, geocoding, config,
+                new TestLogger<SjakkDirectorySweepService>()),
+            new ChessScotlandDirectorySweepService(_db, factory, geocoding, config,
+                new TestLogger<ChessScotlandDirectorySweepService>()),
+            new FrsahDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<FrsahDirectorySweepService>()),
+            new WcuDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<WcuDirectorySweepService>()),
+            new KnsbDirectorySweepService(_db, factory,
+                new TestLogger<KnsbDirectorySweepService>()));
     }
 
     /// <summary>

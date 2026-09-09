@@ -54,6 +54,7 @@ public static class ExternalDirectorySource
         var to = start.AddDays(MatchDayTolerance);
 
         var candidates = await db.TournamentDirectoryEntries
+            .Include(e => e.Sources)
             .Where(e => e.ChessResultsId != null
                         && e.RemovedAt == null
                         && (federation == null || e.Federation == federation)
@@ -80,14 +81,39 @@ public static class ExternalDirectorySource
     public static Task<TournamentDirectoryEntry?> FindByChessResultsIdAsync(
         AppDbContext db, string? chessResultsId, CancellationToken ct) =>
         chessResultsId is { Length: > 0 }
-            ? db.TournamentDirectoryEntries.FirstOrDefaultAsync(
-                e => e.ChessResultsId == chessResultsId && e.RemovedAt == null, ct)
+            ? db.TournamentDirectoryEntries
+                .Include(e => e.Sources)
+                .FirstOrDefaultAsync(
+                    e => e.ChessResultsId == chessResultsId && e.RemovedAt == null, ct)
             : Task.FromResult<TournamentDirectoryEntry?>(null);
 
-    /// <summary>Den eigenen, frueher angelegten Eintrag holen (<c>null</c>, wenn es keinen gibt).</summary>
+    /// <summary>
+    /// Den eigenen, frueher angelegten Eintrag holen (<c>null</c>, wenn es keinen gibt).
+    ///
+    /// <para><b>Das <c>Include</c> ist keine Bequemlichkeit, es haelt den Bestand ganz.</b> Alle
+    /// drei Suchwege hier geben ihren Fund an <see cref="NoteSource"/> weiter, und der entscheidet
+    /// anhand von <c>entry.Sources</c>, ob er einen Vermerk AUFFRISCHT oder einen neuen ANLEGT.
+    /// Ohne geladene Sammlung ist sie in einem frischen Scope leer — also in jeder Nacht ausser
+    /// der ersten, in der ein Eintrag entsteht. Die Folge waere eine zweite Zeile mit derselben
+    /// <c>(Kind, ExternalId)</c>, und darauf liegt ein EINDEUTIGER Index: der Durchgang bricht
+    /// beim Speichern ab, und zwar der ganze, nicht nur die eine Zeile.</para>
+    ///
+    /// <para>Dieselbe leere Sammlung laesst ausserdem jedes „habe ich das schon geholt?" mit Nein
+    /// antworten — <c>ChessArbiterDirectorySweepService.HasDetail</c> und die gleichnamigen
+    /// Pruefungen der uebrigen Quellen lesen genau dieses Feld. Polen haette damit seine 150
+    /// Detailseiten JEDE Nacht neu geholt.</para>
+    ///
+    /// <para>Aufgefallen beim Bau der franzoesischen Quelle, bevor eine der neun betroffenen
+    /// Quellen ihre zweite Nacht erlebt hat (auf Dev standen zu dem Zeitpunkt nur Vermerke der
+    /// Arten 1 und 2). Lazy Loading ist bewusst nicht eingeschaltet — es waere hier die
+    /// bequemere, aber die schlechtere Loesung: eine Abfrage je Eintrag statt einer je
+    /// Durchgang.</para>
+    /// </summary>
     public static Task<TournamentDirectoryEntry?> FindOwnAsync(
         AppDbContext db, string publicId, CancellationToken ct) =>
-        db.TournamentDirectoryEntries.FirstOrDefaultAsync(e => e.PublicId == publicId, ct);
+        db.TournamentDirectoryEntries
+            .Include(e => e.Sources)
+            .FirstOrDefaultAsync(e => e.PublicId == publicId, ct);
 
     /// <summary>
     /// Zieht den eigenen Eintrag zurueck, wenn die Turniersuche dieselbe Veranstaltung inzwischen

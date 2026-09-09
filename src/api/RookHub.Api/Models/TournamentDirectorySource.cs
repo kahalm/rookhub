@@ -111,6 +111,52 @@ public enum DirectorySourceKind
     /// Turniere entfaellt das Geocoding vollstaendig.</para>
     /// </summary>
     EnglishChessFederation = 12,
+
+    /// <summary>
+    /// Der Kalender der Irish Chess Union (icu.ie).
+    ///
+    /// <para>81 kuenftige Turniere, 94 % davon nicht auf chess-results. Einzelne Detailseiten
+    /// verlinken die chess-results-Nummer selbst — dort ist die Zuordnung exakt.</para>
+    /// </summary>
+    IrishChessUnion = 13,
+
+    /// <summary>
+    /// Der Kalender des franzoesischen Verbands (echecs.asso.fr).
+    ///
+    /// <para>Der groesste Ertrag der dritten Runde: von 40 gegengeprueften Turnieren stehen
+    /// ZWEI auf chess-results. Die FFE fuehrt die nicht-FIDE-gewerteten Vereinsturniere, die
+    /// dort praktisch gar nicht vorkommen.</para>
+    /// </summary>
+    FrenchChessFederation = 14,
+
+    /// <summary>
+    /// Der Aktivitaeten-Feed des norwegischen Verbands (sjakk.no).
+    ///
+    /// <para>Der eindeutigste Fall der Runde: chess-results fuehrt fuer NOR NULL kuenftige
+    /// Turniere, der Feed 81. Der Haken ist der Ort — der Feed hat kein Adressfeld.</para>
+    /// </summary>
+    NorwegianChessFederation = 15,
+
+    /// <summary>Der Kalender von Chess Scotland (chessscotland.com) — 44 kuenftige in EINEM Abruf, bis 2028.</summary>
+    ScottishChessFederation = 16,
+
+    /// <summary>
+    /// Der Kalender des rumaenischen Verbands (frsah.ro) — wie England „The Events Calendar",
+    /// ein Abruf, 31 kuenftige Turniere samt der nationalen Mannschaftsligen.
+    /// </summary>
+    RomanianChessFederation = 17,
+
+    /// <summary>
+    /// Der Saisonkalender der Welsh Chess Union (welshchessunion.uk) — Fliesstext mit
+    /// vollstaendiger Postleitzahl, aber OHNE stabile Kennung.
+    /// </summary>
+    WelshChessUnion = 18,
+
+    /// <summary>
+    /// Der Terminkalender des niederlaendischen Verbands (schaakbond.nl) — 177 kuenftige
+    /// Eintraege gegen 12 auf chess-results, aber ohne Rundenzahl und Teilnehmerzahl.
+    /// </summary>
+    DutchChessFederation = 19,
 }
 
 /// <summary>

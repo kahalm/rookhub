@@ -178,6 +178,13 @@ try
     builder.Services.AddScoped<ChessArbiterDirectorySweepService>();
     builder.Services.AddScoped<SchachbundDirectorySweepService>();
     builder.Services.AddScoped<EcfDirectorySweepService>();
+    builder.Services.AddScoped<IcuDirectorySweepService>();
+    builder.Services.AddScoped<FfeDirectorySweepService>();
+    builder.Services.AddScoped<SjakkDirectorySweepService>();
+    builder.Services.AddScoped<ChessScotlandDirectorySweepService>();
+    builder.Services.AddScoped<FrsahDirectorySweepService>();
+    builder.Services.AddScoped<WcuDirectorySweepService>();
+    builder.Services.AddScoped<KnsbDirectorySweepService>();
     builder.Services.AddScoped<ViewStateService>();
     builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<FideDirectorySweepService>();

@@ -11,8 +11,26 @@ namespace RookHub.Api.Services;
 /// </summary>
 public static class GeoTextNormalizer
 {
+    /// <summary>
+    /// Woran eine Postleitzahl im Freitext zu erkennen ist. Der erste Teil deckt die ZIFFERN-Form
+    /// ab (fast ganz Europa), der zweite die alphanumerische der britischen Inseln.
+    ///
+    /// <para><b>Warum der zweite Teil dazugekommen ist.</b> Bis dahin war der Ausdruck rein
+    /// numerisch — und damit war „CF31 3NR" (Wales) oder „D02 XY45" (Irland) keine Postleitzahl,
+    /// sondern gar nichts. Aufgefallen beim Bau der walisischen Quelle: sie liefert bei 30 von 38
+    /// Turnieren eine vollstaendige Postleitzahl mit, und keine einzige waere je gefunden worden.
+    /// Dasselbe gilt fuer England, Schottland und Irland — vier der Quellen der dritten
+    /// Runde.</para>
+    ///
+    /// <para>Falsche Treffer sind dabei harmlos und bewusst in Kauf genommen: was eine
+    /// Postleitzahl IST, entscheidet weiterhin der Gazetteer-Treffer und nicht dieser Ausdruck.
+    /// Ein Kandidat, den es im Lexikon nicht gibt, findet dort schlicht nichts.</para>
+    /// </summary>
     private static readonly Regex PostalTokenPattern = new(
-        @"\b\d{3}[ -]?\d{2,3}\b|\b\d{3,6}\b", RegexOptions.Compiled);
+        @"\b\d{3}[ -]?\d{2,3}\b|\b\d{3,6}\b" +
+        @"|\b[A-Za-z]{1,2}\d[A-Za-z\d]?[ -]?\d[A-Za-z]{2}\b" +
+        @"|\b[A-Za-z]\d{2}[ -]?[A-Za-z\d]{4}\b",
+        RegexOptions.Compiled);
 
     private static readonly Regex NonWordPattern = new(@"[^a-z0-9]+", RegexOptions.Compiled);
 
@@ -59,8 +77,31 @@ public static class GeoTextNormalizer
             // "1090 Wien" und "SE-114 35": die Variante ohne Trenner mit aufnehmen.
             var compact = token.Replace(" ", "").Replace("-", "");
             if (compact != token && !result.Contains(compact)) result.Add(compact);
+
+            // Und der Weg zurueck: die walisische Quelle schreibt „SA714LA" ohne Leerzeichen,
+            // GeoNames speichert „SA71 4LA" mit. Ohne diese Variante findet der zusammengezogene
+            // Wert im Lexikon nichts — der haeufigere Fall bei den britischen Inseln, wo die
+            // Quellen die Postleitzahl gern an die Anschrift kleben.
+            foreach (var spaced in Spaced(compact))
+                if (!result.Contains(spaced)) result.Add(spaced);
         }
         return result;
+    }
+
+    /// <summary>
+    /// Aus einem zusammengezogenen Wert die Schreibweise MIT Trennstelle. Britische
+    /// Postleitzahlen trennen vor den letzten drei Zeichen („SA714LA" → „SA71 4LA"), irische
+    /// Eircodes nach den ersten dreien („D02XY45" → „D02 XY45"). Beide Varianten werden angeboten;
+    /// welche stimmt, entscheidet das Lexikon.
+    /// </summary>
+    private static IEnumerable<string> Spaced(string compact)
+    {
+        if (compact.Length is < 5 or > 8) yield break;
+        if (!compact.All(char.IsLetterOrDigit)) yield break;
+        if (!compact.Any(char.IsAsciiLetter)) yield break;
+
+        yield return compact[..^3] + " " + compact[^3..];
+        if (compact.Length > 3) yield return compact[..3] + " " + compact[3..];
     }
 
     /// <summary>

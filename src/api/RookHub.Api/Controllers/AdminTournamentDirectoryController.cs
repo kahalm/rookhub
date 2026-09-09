@@ -44,7 +44,14 @@ public class AdminTournamentDirectoryController : BaseApiController
         ChessCzDirectorySweepService chessCz,
         ChessArbiterDirectorySweepService chessArbiter,
         SchachbundDirectorySweepService schachbund,
-        EcfDirectorySweepService ecf)
+        EcfDirectorySweepService ecf,
+        IcuDirectorySweepService icu,
+        FfeDirectorySweepService ffe,
+        SjakkDirectorySweepService sjakk,
+        ChessScotlandDirectorySweepService chessScotland,
+        FrsahDirectorySweepService frsah,
+        WcuDirectorySweepService wcu,
+        KnsbDirectorySweepService knsb)
     {
         _db = db;
         _directory = directory;
@@ -63,6 +70,13 @@ public class AdminTournamentDirectoryController : BaseApiController
         _chessArbiter = chessArbiter;
         _schachbund = schachbund;
         _ecf = ecf;
+        _icu = icu;
+        _ffe = ffe;
+        _sjakk = sjakk;
+        _chessScotland = chessScotland;
+        _frsah = frsah;
+        _wcu = wcu;
+        _knsb = knsb;
     }
 
     private readonly VenueDisambiguationService _disambiguation;
@@ -78,6 +92,13 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly ChessArbiterDirectorySweepService _chessArbiter;
     private readonly SchachbundDirectorySweepService _schachbund;
     private readonly EcfDirectorySweepService _ecf;
+    private readonly IcuDirectorySweepService _icu;
+    private readonly FfeDirectorySweepService _ffe;
+    private readonly SjakkDirectorySweepService _sjakk;
+    private readonly ChessScotlandDirectorySweepService _chessScotland;
+    private readonly FrsahDirectorySweepService _frsah;
+    private readonly WcuDirectorySweepService _wcu;
+    private readonly KnsbDirectorySweepService _knsb;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -301,6 +322,121 @@ public class AdminTournamentDirectoryController : BaseApiController
         var result = await _szs.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
     }
+
+    /// <summary>
+    /// Den Kalender der Irish Chess Union lesen — 81 kuenftige Turniere, 94 % davon nicht auf
+    /// chess-results.
+    ///
+    /// <para>30 der 81 bringen ihre Koordinaten aus der Trefferseite mit. <paramref name="details"/>
+    /// deckelt den teuren Teil: die Detailseite kauft nur den exakten Zuordnungsschluessel und die
+    /// Meldezahl, keine weiteren Koordinaten. Mit 0 bleibt sie ganz aus.</para>
+    /// </summary>
+    [HttpPost("icu")]
+    public async Task<IActionResult> Icu([FromQuery] int? details = null, CancellationToken ct = default)
+    {
+        var result = await _icu.RunAsync(Clamp(details), ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Kalender des franzoesischen Verbands (FFE) lesen — der groesste Ertrag der dritten
+    /// Runde: von 40 gegengeprueften Turnieren stehen ZWEI auf chess-results.
+    ///
+    /// <para><paramref name="months"/> Monatsseiten (Vorgabe 12) in EINEM Durchgang; die
+    /// Turnierseite je Turnier genau einmal, gedeckelt ueber <paramref name="details"/>. Sie wird
+    /// gebraucht: Enddatum, Bedenkzeit und Postleitzahl gibt es nur dort.</para>
+    /// </summary>
+    [HttpPost("ffe")]
+    public async Task<IActionResult> Ffe([FromQuery] int months = 12,
+        [FromQuery] int? details = null, CancellationToken ct = default)
+    {
+        var result = await _ffe.RunAsync(Math.Clamp(months, 1, 24), Clamp(details), ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Aktivitaeten-Feed des norwegischen Verbands lesen — chess-results kennt fuer NOR NULL
+    /// kuenftige Turniere, der Feed 81.
+    ///
+    /// <para><b>Die Verortung ist die Schwaeche dieser Quelle</b>: der Feed hat kein Adressfeld,
+    /// der Ort steht nur auf der Detailseite und dort nur bei einem Fuenftel. Gemessen sind rund
+    /// 25 % verortbar — nach einem norwegischen Postleitzahl-Import etwa ein Drittel.</para>
+    /// </summary>
+    [HttpPost("sjakk")]
+    public async Task<IActionResult> Sjakk([FromQuery] int? details = null, CancellationToken ct = default)
+    {
+        var result = await _sjakk.RunAsync(Clamp(details), ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Kalender von Chess Scotland lesen — 44 kuenftige Turniere bis 2028 in EINEM Abruf,
+    /// mit strukturierter Bedenkzeit-Klasse.
+    ///
+    /// <para><b>Auch hier ist der Ort die Schwaeche</b>: die Liste nennt keinen, und in den
+    /// Ausschreibungen der Detailseiten steht bei knapp einem Fuenftel eine Postleitzahl. Solange
+    /// das Lexikon fuer Grossbritannien keine Postleitzahlen kennt, traegt allein ein Ortsname im
+    /// selben Satz.</para>
+    /// </summary>
+    [HttpPost("chess-scotland")]
+    public async Task<IActionResult> ChessScotland([FromQuery] int? details = null,
+        CancellationToken ct = default)
+    {
+        var result = await _chessScotland.RunAsync(Clamp(details), ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Kalender des rumaenischen Verbands (FRSah) lesen — EIN Abruf, 31 kuenftige Turniere.
+    ///
+    /// <para>Anders als bei England steckt die Spielstaette schon im Ereignis; der zweite Abruf
+    /// auf den Spielstaetten-Endpunkt entfaellt. Die fuenf Eintraege OHNE Spielstaette sind genau
+    /// die nationalen Mannschaftsligen — und genau die fehlen auf chess-results.</para>
+    /// </summary>
+    [HttpPost("frsah")]
+    public async Task<IActionResult> Frsah(CancellationToken ct = default)
+    {
+        var result = await _frsah.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Saisonkalender der Welsh Chess Union lesen — EIN Abruf, die billigste aller Quellen.
+    ///
+    /// <para>30 der 38 Turniere nennen eine vollstaendige Postleitzahl. Die Quelle hat KEINE
+    /// eigene Kennung; sie wird aus Termin und Anschrift gebildet, bewusst ohne den Namen (der
+    /// wird dort nachweislich nachtraeglich korrigiert).</para>
+    /// </summary>
+    [HttpPost("wcu")]
+    public async Task<IActionResult> Wcu(CancellationToken ct = default)
+    {
+        var result = await _wcu.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Terminkalender des niederlaendischen Verbands lesen — 177 kuenftige Eintraege gegen 12
+    /// auf chess-results, in zwei Abrufen.
+    ///
+    /// <para><b>Diese Quelle nennt keinen Spielort</b>, und zwar strukturell: die Liste hat kein
+    /// Ortsfeld, er stuende nur auf der Detailseite. Bei einer geforderten Wartezeit von 15
+    /// Sekunden waeren das 45 Minuten fuer den Erstbestand — bewusst nicht gebaut. Die Eintraege
+    /// erscheinen deshalb in Liste und Kalender, aber nicht auf der Karte. Die Bedenkzeit-Klasse
+    /// kommt dafuer strukturiert aus der Quelle.</para>
+    /// </summary>
+    [HttpPost("knsb")]
+    public async Task<IActionResult> Knsb(CancellationToken ct = default)
+    {
+        var result = await _knsb.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Der Deckel fuer die Detailabrufe: <c>null</c> heisst „nimm die Vorgabe aus der
+    /// Konfiguration", ein Wert wird auf 0..1000 begrenzt. 0 schaltet den teuren Teil ab.
+    /// </summary>
+    private static int? Clamp(int? details) =>
+        details is { } value ? Math.Clamp(value, 0, 1000) : null;
 
     /// <summary>
     /// Den Kalender des englischen Verbands (ECF) lesen.
