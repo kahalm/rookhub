@@ -150,6 +150,10 @@ services:
       # Chessable-Integration (piratechess-API im externen chessable-bridge Netz).
       Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
       Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      # false schaltet den RookHub-EIGENEN Chessable-Weg ab (Bearer, Kurs-Import, naechtlicher
+      # Kurslisten-Refresh); /api/chessable/* antwortet dann 404. Die RepCheck-EXTENSION
+      # (/api/extension/*) bleibt davon unberuehrt. Vorgabe an.
+      Chessable__Enabled: ${CHESSABLE_ENABLED:-true}
       Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein (verschlüsselt den gespeicherten Chessable-Bearer)}
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}

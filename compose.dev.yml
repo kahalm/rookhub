@@ -124,6 +124,10 @@ services:
       # der AES-Schluessel fuer den verschluesselt persistierten User-Bearer.
       Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
       Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      # false schaltet den RookHub-EIGENEN Chessable-Weg ab (Bearer, Kurs-Import, naechtlicher
+      # Kurslisten-Refresh); /api/chessable/* antwortet dann 404. Die RepCheck-EXTENSION
+      # (/api/extension/*) bleibt davon unberuehrt. Vorgabe an.
+      Chessable__Enabled: ${CHESSABLE_ENABLED:-true}
       Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein (verschlüsselt den gespeicherten Chessable-Bearer)}
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       # Ohne Key bleibt das Feature inaktiv; stockfish ist im API-Image enthalten.

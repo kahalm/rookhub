@@ -130,6 +130,10 @@ services:
       Email__UseStartTls: ${EMAIL_USE_STARTTLS:-true}
       Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
       Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      # false schaltet den RookHub-EIGENEN Chessable-Weg ab (Bearer, Kurs-Import, naechtlicher
+      # Kurslisten-Refresh); /api/chessable/* antwortet dann 404. Die RepCheck-EXTENSION
+      # (/api/extension/*) bleibt davon unberuehrt. Vorgabe an.
+      Chessable__Enabled: ${CHESSABLE_ENABLED:-true}
       # PFLICHT, sobald der Chessable-Import genutzt wird: ein LEERER Wert wäre kein
       # "Feature aus", sondern eine Schein-Verschlüsselung mit dem öffentlich bekannten
       # Fixschlüssel SHA256("") — deshalb bricht der Start hier bewusst ab.

@@ -282,15 +282,26 @@ try
     builder.Services.AddHostedService<BackgroundTaskWorker>();
     // Eigene Queue + Consumer NUR für schach-bot-Webhooks, damit Solver-Updates nicht
     // hinter/unter einem Chessable-Import-Schwung in der allgemeinen Queue verhungern.
+    // Schalter fuer den RookHub-eigenen Chessable-Weg (siehe unten). Vorgabe AN, damit eine
+    // Installation ohne die Variable sich wie bisher verhaelt.
+    var chessableEnabled = builder.Configuration.GetValue("Chessable:Enabled", true);
     builder.Services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
     builder.Services.AddHostedService<WebhookTaskWorker>();
-    // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
-    builder.Services.AddHostedService<ChessableImportResumeService>();
-    // Download-Lane-Sicherheitsnetz: stößt wartende (nicht-gecachte) Importe an, falls der
-    // Queue-Antrieb steht (bounded-DropOldest-Ticketverlust / fehlende Nachreihung nach Abschluss).
-    builder.Services.AddHostedService<ChessableImportWatchdogService>();
-    // Schnelle Lane: treibt voll-gecachte Importe sofort + seriell, parallel zur Download-Lane.
-    builder.Services.AddHostedService<ChessableImportFastLaneService>();
+    // Der RookHub-EIGENE Chessable-Weg (Bearer hinterlegen, Kurse ueber piratechess holen) laesst
+    // sich abschalten: `Chessable:Enabled=false`. Dann laufen weder die Import-Lanes noch der
+    // naechtliche Kurslisten-Refresh, und `/api/chessable/*` antwortet 404. Der Weg ueber die
+    // RepCheck-EXTENSION (`/api/extension/*`) ist davon UNBERUEHRT — genau darum geht es beim
+    // Abschalten: alle sollen vorerst die Extension benutzen (Entscheidung 2026-09-09).
+    if (chessableEnabled)
+    {
+        // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
+        builder.Services.AddHostedService<ChessableImportResumeService>();
+        // Download-Lane-Sicherheitsnetz: stößt wartende (nicht-gecachte) Importe an, falls der
+        // Queue-Antrieb steht (bounded-DropOldest-Ticketverlust / fehlende Nachreihung nach Abschluss).
+        builder.Services.AddHostedService<ChessableImportWatchdogService>();
+        // Schnelle Lane: treibt voll-gecachte Importe sofort + seriell, parallel zur Download-Lane.
+        builder.Services.AddHostedService<ChessableImportFastLaneService>();
+    }
     builder.Services.AddSingleton<AutoSubscriptionService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
     builder.Services.AddHostedService<RoundMonitorService>();
@@ -299,8 +310,11 @@ try
     // Taegliche Tagespuzzle-Zuordnung um 00:00 UTC (siehe DailyPuzzles-Tabelle).
     builder.Services.AddHostedService<DailyPuzzleScheduler>();
     // Taeglicher Chessable-Kurslisten-Refresh (04:00 UTC): aktualisiert alle hinterlegten Bearer,
-    // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen.
-    builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
+    // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen. Nur wenn der eigene
+    // Chessable-Weg ueberhaupt an ist — sonst liefe er jede Nacht gegen eine abgeschaltete
+    // Funktion und sperrte dabei womoeglich Bearer.
+    if (chessableEnabled)
+        builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
     // Kalkulations-Serie: kündigt freigegebene Wochen an den Verteiler an (Standard alle 5 min).
     builder.Services.AddHostedService<CalcSeriesAnnounceScheduler>();
     // Turnierverzeichnis: naechtlicher Sweep der chess-results-Turniersuche (03:00 UTC),

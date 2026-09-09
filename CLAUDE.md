@@ -252,6 +252,15 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 | POST | `/api/tournaments/crawl/player-details` | `/api/crawl/player-details` |
 
 ### Chessable-Integration (auth, leitet an piratechess-API weiter)
+
+> **Abschaltbar: `Chessable:Enabled=false`** (`CHESSABLE_ENABLED=false`, Vorgabe an). Dann antwortet
+> `/api/chessable/*` mit **404**, und die Import-Lanes sowie der naechtliche Kurslisten-Refresh
+> laufen gar nicht erst an. Der Weg ueber die **RepCheck-Extension** (`/api/extension/*`) bleibt
+> UNBERUEHRT — genau darum geht es: **auf PROD seit 2026-09-09 abgeschaltet**, alle sollen vorerst
+> die Extension benutzen. Der Menue-Eintrag `chessable` steht dort ohnehin schon auf `Admin`, die
+> Seite ist also auch ohne den Schalter nicht erreichbar; der Schalter schliesst die Endpunkte und
+> den Nachtlauf.
+
 RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `EncryptionService` → `ChessableCredentials.EncryptedBearer`). Alle Chessable-HTTP-Calls (curl-impersonate gegen Cloudflare) liegen im piratechess-Stack; `ChessableProxyService` reicht den Bearer pro Request an `POST /api/chessable/direct/*` durch und authentifiziert sich mit dem `X-Service-Key`-Header (`Chessable:ServiceKey` ↔ piratechess `Service:ApiKey`). Netzwerk: externes Docker-Netz `chessable-bridge` (von piratechess_docker bereitgestellt). **Admin-Download „im Namen eines Users"**: `ChessableImport.BearerUserId` (nullable) entkoppelt Bearer-Quelle von Besitzer — der Service lädt den Bearer von `BearerUserId ?? UserId`. Admin-Import setzt `UserId`=Admin (Repertoire + Notification beim Admin), `BearerUserId`=Ziel-User; piratechess ist stateless, der gespeicherte Bearer des Ziel-Users genügt.
 
 | Methode | Endpoint | Zweck |

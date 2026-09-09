@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.454.0", date: "2026-09-09", changes: [
+    { en: "Chessable can now be switched off on the server side. Where it is off, the pages and endpoints for storing a Chessable login and importing courses through RookHub are gone, and the nightly course refresh does not run. Everything that goes through the RepCheck browser extension keeps working exactly as before.", de: "Chessable lässt sich jetzt serverseitig abschalten. Wo es aus ist, gibt es die Seiten und Schnittstellen zum Hinterlegen eines Chessable-Zugangs und zum Kurs-Import über RookHub nicht mehr, und der nächtliche Kursabgleich läuft nicht. Alles, was über die RepCheck-Browsererweiterung läuft, arbeitet unverändert weiter." },
+  ] },
   { version: "0.453.14", date: "2026-09-09", changes: [
     { en: "The announcement calendar delivers again. It kept its own copy of the code that records where a tournament came from, and so it was the one source that did not learn to move such a record when a tournament changes hands. It now uses the shared one.", de: "Der Ankündigungskalender liefert wieder. Er hielt eine eigene Fassung des Codes, der vermerkt, woher ein Turnier kommt, und war damit die einzige Quelle, die einen solchen Vermerk nicht umhängen konnte, wenn ein Turnier den Eintrag wechselt. Er benutzt jetzt den gemeinsamen." },
   ] },

@@ -13,6 +13,9 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace RookHub.Api.Tests;
 
@@ -49,10 +52,40 @@ public class ChessableControllerTests : IDisposable
         var queueSvc = new ChessableImportQueueService(_db, _proxy, _encryption, queue);
         var reviewLines = new ChessableReviewLineService(_db, new PgnImportService(_db));
         _controller = new ChessableController(_db, _encryption, _proxy, breaker,
-            new NotificationService(_db), queueSvc, reviewLines, NullLogger<ChessableController>.Instance);
+            new NotificationService(_db), queueSvc, reviewLines, Config(true),
+            NullLogger<ChessableController>.Instance);
         _admin = new ChessableAdminController(_db, _encryption, _proxy, breaker,
             queueSvc, NullLogger<ChessableAdminController>.Instance);
         SetUser(42);
+    }
+
+    /// <summary>Konfiguration mit dem Chessable-Schalter.</summary>
+    private static IConfiguration Config(bool enabled) =>
+        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Chessable:Enabled"] = enabled ? "true" : "false",
+        }).Build();
+
+    /// <summary>
+    /// Abgeschaltet antwortet JEDER Endpunkt des Controllers mit 404 — die Funktion ist dann nicht
+    /// vorhanden. Seit 2026-09-09 auf Prod so eingestellt: der RookHub-eigene Chessable-Weg ist aus,
+    /// alle benutzen die RepCheck-Extension (`ExtensionController`, davon unberuehrt).
+    /// </summary>
+    [Fact]
+    public void Abgeschaltet_antwortetJederEndpunktMit404()
+    {
+        var aus = new ChessableController(_db, _encryption, _proxy,
+            new ChessableBearerBreaker(_db, new NoOpTaskQueue(), NullLogger<ChessableBearerBreaker>.Instance),
+            new NotificationService(_db), null!, null!, Config(false),
+            NullLogger<ChessableController>.Instance);
+
+        var context = new ActionExecutingContext(
+            new ActionContext(new DefaultHttpContext(), new RouteData(), new ControllerActionDescriptor()),
+            [], new Dictionary<string, object?>(), aus);
+
+        aus.OnActionExecuting(context);
+
+        Assert.IsType<NotFoundObjectResult>(context.Result);
     }
 
     public void Dispose() => _db.Dispose();

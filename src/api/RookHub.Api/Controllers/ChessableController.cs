@@ -7,6 +7,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace RookHub.Api.Controllers;
 
@@ -27,7 +28,7 @@ namespace RookHub.Api.Controllers;
 // Fenster, 429 beim ~16. Add). POST /test und GET /courses (insb. ?refresh=true) lösen dagegen einen
 // Live-Fetch zu Chessable über den geteilten VPN-Pool aus — eine Schleife darauf konnte ungebremst
 // die IP verbrennen/Cloudflare-Blocks provozieren; sie unterliegen wieder dem globalen Limiter.
-public class ChessableController : BaseApiController
+public class ChessableController : BaseApiController, IActionFilter
 {
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
@@ -38,6 +39,22 @@ public class ChessableController : BaseApiController
     private readonly ChessableReviewLineService _reviewLines;
     private readonly ILogger<ChessableController> _logger;
 
+    /// <summary>
+    /// Ist der RookHub-EIGENE Chessable-Weg abgeschaltet (<c>Chessable:Enabled=false</c>), antwortet
+    /// jeder Endpunkt dieses Controllers mit 404 — die Funktion ist dann nicht vorhanden, und das
+    /// ist die ehrlichste Auskunft. Der Weg ueber die RepCheck-EXTENSION (<c>ExtensionController</c>)
+    /// ist UNBERUEHRT: genau darum geht es beim Abschalten (Entscheidung 2026-09-09, alle sollen
+    /// vorerst die Extension benutzen). 404 und nicht 403, weil es keine Rechtefrage ist.
+    /// </summary>
+    public void OnActionExecuting(ActionExecutingContext context)
+    {
+        if (!_enabled) context.Result = NotFound(new { message = "Chessable is disabled." });
+    }
+
+    public void OnActionExecuted(ActionExecutedContext context) { }
+
+    private readonly bool _enabled;
+
     public ChessableController(
         AppDbContext db,
         EncryptionService encryption,
@@ -46,8 +63,10 @@ public class ChessableController : BaseApiController
         NotificationService notifications,
         ChessableImportQueueService queue,
         ChessableReviewLineService reviewLines,
+        IConfiguration configuration,
         ILogger<ChessableController> logger)
     {
+        _enabled = configuration.GetValue("Chessable:Enabled", true);
         _db = db;
         _encryption = encryption;
         _chessable = chessable;
