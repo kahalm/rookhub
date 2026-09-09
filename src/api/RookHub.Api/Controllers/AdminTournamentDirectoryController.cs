@@ -662,10 +662,15 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// <summary>
     /// Alle noch nicht verorteten Eintraege erneut durch den Gazetteer schicken - nach einem
     /// frischen Import der eigentliche Nutzen: die Zeilen von gestern bekommen ihre Pins.
+    ///
+    /// <para><b>Nimmt ohne <paramref name="limit"/> den GANZEN Bestand vor</b>, und das ist Absicht:
+    /// der Lauf braucht kein Netz (lokales Ortslexikon, 6598 Eintraege in 14 s), also gibt es
+    /// nichts zu portionieren. Ein Deckel liefert KEINE zweite Portion — die Auswahl hat keine
+    /// Fortschrittsmarke, ein zweiter Aufruf sieht wieder dieselben ersten N.</para>
     /// </summary>
     [HttpPost("geocode-missing")]
     public async Task<IActionResult> GeocodeMissing(
-        [FromQuery] int limit = 1000, [FromQuery] bool force = false, CancellationToken ct = default)
+        [FromQuery] int limit = 0, [FromQuery] bool force = false, CancellationToken ct = default)
     {
         // `force` nimmt auch SCHON verortete Eintraege vor. Gebraucht wird das, wenn sich die
         // Verortungs-REGELN aendern: der naechtliche Sweep verortet einen bestehenden Eintrag nur
@@ -689,7 +694,15 @@ public class AdminTournamentDirectoryController : BaseApiController
                         && e.GeoSource != GeoSource.TeamHint
                         && (force || e.Lat == null))
             .OrderBy(e => e.StartDate)
-            .Take(Math.Clamp(limit, 1, 10000))
+            // KEIN Deckel als Vorgabe: dieser Lauf braucht kein Netz. Der Geocoder rechnet gegen
+            // das lokale Ortslexikon, der ganze Bestand (6598 Eintraege) war in 14 Sekunden durch.
+            // Ein Deckel taeuschte hier Portionen vor, die es nicht gibt: die Auswahl hat keine
+            // Fortschrittsmarke, ein zweiter Aufruf saehe also WIEDER dieselben ersten N. Am
+            // 2026-09-09 live vorgefuehrt — sieben Aufrufe mit `limit=1000` meldeten je „1000
+            // geprueft, 0 verortet", waehrend 1876 Eintraege dahinter nie an die Reihe kamen.
+            // `limit > 0` bleibt als Notbremse fuer den Fall, dass ein Lauf doch einmal zu lange
+            // dauert; dann gilt aber dieselbe Einschraenkung, und der Aufrufer muss es wissen.
+            .Take(limit > 0 ? Math.Min(limit, 100_000) : int.MaxValue)
             .ToListAsync(ct);
 
         var resolved = 0;

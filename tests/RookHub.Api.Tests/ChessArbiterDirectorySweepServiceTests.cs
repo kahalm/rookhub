@@ -239,6 +239,68 @@ public class ChessArbiterDirectorySweepServiceTests : IDisposable
     }
 
     /// <summary>Zwei Routen, ein Handler: die Liste und die Detailseite.</summary>
+    /// <summary>
+    /// Der HAEUFIGE Fall dieser Quelle: der Crawler holt die Seite und sie traegt keine Angaben
+    /// (JavaScript-Huelle). Das ist eine ENDGUELTIGE Auskunft und wird vermerkt — sonst wird
+    /// dasselbe Turnier jede Nacht erneut gefragt. Auf Dev gezaehlt: nur 3 von 14 Turnieren haben
+    /// eine Datenseite, die uebrigen ~480 verbrauchten damit das ganze Budget an sich selbst.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_DetailPageWithoutFields_IsNotAskedAgain()
+    {
+        var json = $"[{Row("Memorial")}]";
+        var first = await CreateService(json, NoContent).RunAsync();
+
+        Assert.Equal(1, first.Added);
+        Assert.Equal(0, first.Updated);          // es gab nichts zu uebernehmen
+        Assert.Equal(1, _routes.DetailCalls);
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Equal(ChessArbiterDirectorySweepService.CurrentDetailVersion, entry.ChessArbiterDetailVersion);
+
+        var second = await CreateService(json, NoContent).RunAsync();
+
+        Assert.Equal(0, _routes.DetailCalls);    // nicht noch einmal gefragt
+        Assert.Equal(0, second.Updated);
+    }
+
+    /// <summary>
+    /// Und die leere Seite hinterlaesst KEINE Adresse im Herkunftsvermerk: die ist der Beleg, dass
+    /// dort etwas zu lesen war. „Gefragt" steht in der Fassung, „gelesen" in der Adresse.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_DetailPageWithoutFields_LeavesNoSourceUrl()
+    {
+        await CreateService($"[{Row("Memorial")}]", NoContent).RunAsync();
+
+        var source = Assert.Single(_db.TournamentDirectorySources.ToList());
+        Assert.Null(source.Url);
+    }
+
+    /// <summary>
+    /// Eine Fassungserhoehung holt jeden Eintrag genau EINMAL nach — der Sinn der Fassung
+    /// gegenueber einem blossen Zeitstempel. Hier nachgestellt, indem die gespeicherte Fassung
+    /// unter die aktuelle gesetzt wird.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_AnOlderDetailVersion_IsAskedOnceMore()
+    {
+        var json = $"[{Row("Memorial")}]";
+        await CreateService(json, NoContent).RunAsync();
+
+        var entry = _db.TournamentDirectoryEntries.First();
+        entry.ChessArbiterDetailVersion = ChessArbiterDirectorySweepService.CurrentDetailVersion - 1;
+        await _db.SaveChangesAsync();
+
+        await CreateService(json, Detail()).RunAsync();
+
+        Assert.Equal(1, _routes.DetailCalls);
+        Assert.Equal(9, _db.TournamentDirectoryEntries.First().Rounds);
+    }
+
+    /// <summary>Antwort des Crawlers auf die Detailseite. <see cref="NoContent"/> ist der Sonderfall,
+    /// um den es hier geht: Seite geholt, keine Angaben — endgueltig, nicht wiederholen.</summary>
+    internal const string NoContent = "\u0000204";
+
     private sealed class RouteHandler : HttpMessageHandler
     {
         private readonly string _list;
@@ -259,6 +321,8 @@ public class ChessArbiterDirectorySweepServiceTests : IDisposable
             if (path.EndsWith("/detail", StringComparison.Ordinal))
             {
                 DetailCalls++;
+                if (_detail == NoContent)
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
                 return Task.FromResult(_detail is null
                     ? new HttpResponseMessage(HttpStatusCode.NotFound)
                     : Ok(_detail));

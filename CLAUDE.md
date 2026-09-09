@@ -347,6 +347,7 @@ Eintrag genau EINMAL nach.
 | Rundenplan | `TournamentRoundPlanService.CurrentVersion` | `FindTableByHeaders` / `ParseRoundPlanAsync` |
 | Spielort ueber Vereinsnamen | `VenueDisambiguationService.CurrentVersion` | die Aufloesungs-Regel |
 | FIDE-Details | `FideEventDetailService.CurrentVersion` | `ParseEventAsync` oder der Weg zum Fragment |
+| Polen-Detailseite | `ChessArbiterDirectorySweepService.CurrentDetailVersion` | `ParseDetail` im Crawler liest mehr oder anderes |
 
 **Eine Fassung JE DATENART, keine globale Crawler-Version**: ein Fix am Rundenplan-Parser sagt
 nichts ueber die Spielerkarte aus, und eine globale Zahl holte bei jedem Crawler-Release Tausende
@@ -417,6 +418,10 @@ laengeren Namens als GANZES Wort enthalten („glan" — nicht als Teil von „G
 (an, der, sankt, bad, neu …) zaehlen nicht, Gleichstand zwischen verschiedenen Orten entscheidet
 nichts. Ohne Beleg bleibt alles, wie es war. Ergebnis: `GeoSource.TeamHint`.
 
+**Ohne Pin zuerst**: der Topf enthaelt Eintraege ganz ohne Koordinaten (dort ist alles zu gewinnen) und schon
+gepinnte, bei denen der Vereinsname nur KORRIGIERT — am 2026-09-09 auf Dev 153 gegen 919. Allein nach Termin
+sortiert kamen die 153 verstreut dran, bei 50 Abrufen je Nacht also ueber Wochen.
+
 Kosten: EIN Seitenabruf je Turnier (Crawler-Endpunkt `GET /api/tournament-search/teams?id=`,
 zustandslos). Deshalb gedeckelt — `TournamentDirectory:DisambiguationBatchSize` (Vorgabe 50, 0 =
 aus) je Nacht nach dem Sweep, und `TournamentDirectoryEntry.TeamHintCheckedAt` verhindert, dass
@@ -450,7 +455,7 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/gazetteer/postal/{iso2}` | GeoNames-PLZ eines Landes importieren |
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
-| POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen. **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual` bleibt in jedem Fall unberuehrt |
+| POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen — **ohne `limit` den GANZEN Bestand**: der Lauf braucht kein Netz (lokales Lexikon, 6598 Eintraege in 14 s), und ein Deckel liefert KEINE zweite Portion (die Auswahl hat keine Fortschrittsmarke, ein zweiter Aufruf sieht wieder dieselben ersten N — am 2026-09-09 live erlebt). **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual`, `SourceProvided` und `TeamHint` bleiben in jedem Fall unberuehrt — der Vereinsnamen-Beleg ist eine Auskunft, die die Namensregel nicht reproduzieren kann |
 | POST | `/api/admin/tournament-directory/backfill-sources` | Herkunftsvermerk fuer den Altbestand nachtragen (jeder bestehende Eintrag stammt aus chess-results). Braucht kein Netz; der Sweep tut es von selbst, aber erst nach einer Rotationswoche |
 | POST | `/api/admin/tournament-directory/round-plans?limit=&retryEmpty=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
 | POST | `/api/admin/tournament-directory/fide?years=` | Den FIDE-Kalender sofort lesen (Vorgabe: laufendes Jahr + 2). Ein Seitenabruf je Jahr; neue Ereignisse kommen mit `ChessResultsId = null` dazu, erkannte werden mit dem bestehenden Eintrag verschmolzen |
@@ -594,7 +599,7 @@ keine dieser Quellen sagt etwas darueber.
 | Niederlande (KNSB) | `nl`+Hash | 2 Abrufe (15 s Pause) | 177 kuenftige gegen 12. Bedenkzeit-Klasse kommt strukturiert aus einer Taxonomie. **Der Spielort fehlt strukturell** — er stuende nur auf der Detailseite, und 177 × 15 s waeren 45 Minuten; bewusst nicht gebaut. Die Eintraege stehen in Liste und Kalender, nicht auf der Karte |
 | England (ECF) | `en<nr>` | 12 Seiten, **~200 s** | 278 kuenftige Turniere (gemessen 2026-09-09), **86 % nicht auf chess-results**. Die mit ABSTAND langsamste Quelle, und nicht wegen des Servers: ihre robots.txt verlangt „Crawl delay: 10", das Warten IST die Laufzeit. Sie ist der Grund, warum `TournamentDirectoryService.DefaultCrawlerTimeoutSeconds` 600 s betraegt — mit den frueheren 180 s lief sie in JEDER Nacht in den Timeout, ohne je ein Turnier zu liefern. Die EINZIGE Quelle mit Koordinaten (`geo_lat`/`geo_lng` im Spielstaetten-Endpunkt, 168 von 256) → `GeoSource.SourceProvided`, kein Geocoding. Ihre Schlagworte sind gepflegt: „Meeting" ist kein Turnier, „Online" hat keinen Ort, „Juniors Only" ist eine verlaessliche Jugend-Angabe |
 | Deutschland (schachbund) | `de`+Hash | 2 je Region (25) | Ein reines MELDE-System: hier stehen Vereins-Abendturniere, Jugend-Cups, Fernschach, Problemschach und Schach960 — Arten, die chess-results nie fuehrt. Die SEITE traegt die Anschrift (105 von 106), der FEED Rundenzahl und Bedenkzeit; beides wird gebraucht. „europa"/„welt" sind keine Laender und bekommen keine Foederation |
-| Polen (chessarbiter) | `pl<jahr>-<nr>` | 1 + je NEUEM Turnier 1 | Die ergiebigste Einzelquelle: 611 kuenftige Turniere in EINEM Abruf. Die Liste nennt kein Jahr (kommt aus der Sortierung); die Detailseite bringt Enddatum, Bedenkzeit, Rundenzahl, System — und als einzige Quelle die TEILNEHMERZAHL schon vor dem Turnier. „Schon geholt" steht in der `Url` des Herkunftsvermerks |
+| Polen (chessarbiter) | `pl<jahr>-<nr>` | 1 + je NEUEM Turnier 1 | Die ergiebigste Einzelquelle: 611 kuenftige Turniere in EINEM Abruf. Die Liste nennt kein Jahr (kommt aus der Sortierung); die Detailseite bringt Enddatum, Bedenkzeit, Rundenzahl, System — und als einzige Quelle die TEILNEHMERZAHL schon vor dem Turnier. **Nur ~20 % der Turniere haben ueberhaupt eine server-gerenderte Datenseite**, die uebrigen liefern eine JavaScript-Huelle: der Crawler antwortet dort mit **204** (gefragt, nichts da — endgueltig) statt 404 (nicht zu holen — wiederholen), und `ChessArbiterDetailVersion` vermerkt es. Die `Url` im Herkunftsvermerk heisst weiter GELESEN, nicht bloss gefragt |
 | Tschechien (chess.cz) | `cz`+Hash | 1 Abruf | Klein im Volumen (38 echte Turniere, 13 neu), aber sie liefert SPIELTERMINE: 33 Ligarunden werden zu drei Eintraegen mit je elf Runden — sonst je Turnier ein eigener `art=14`-Abruf. Ergaenzt nur FEHLENDE Runden. Ihre Kennung ist ein bis zu 57 Zeichen langer Slug, deshalb als Kurzwert gespeichert |
 
 Vollstaendige Messungen und die Rechtslage je Quelle: `docs/turnierquellen.md`.

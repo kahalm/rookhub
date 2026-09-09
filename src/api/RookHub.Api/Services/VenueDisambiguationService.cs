@@ -84,7 +84,15 @@ public class VenueDisambiguationService
                         && e.ChessResultsId != null
                         && ((e.EndDate ?? e.StartDate) == null || (e.EndDate ?? e.StartDate) >= today)
                         && (e.GeoSource == GeoSource.Ambiguous || e.GeoSource == GeoSource.City))
-            .OrderBy(e => e.StartDate)
+            // OHNE PIN ZUERST, dann nach Termin. Der Topf enthaelt zwei sehr verschiedene Faelle:
+            // Eintraege ganz ohne Koordinaten (dort gibt es nichts zu verlieren und alles zu
+            // gewinnen) und schon gepinnte, bei denen der Vereinsname den Pin nur KORRIGIEREN
+            // wuerde. Am 2026-09-09 auf Dev gezaehlt: 153 ohne Pin gegen 919 mit — allein nach
+            // Termin sortiert kamen die 153 verstreut zwischen den 919 dran, bei 50 Abrufen je
+            // Nacht also ueber Wochen. Der Abruf kostet eine Seite, die Reihenfolge entscheidet
+            // damit, wie schnell sich die Arbeit auszahlt.
+            .OrderByDescending(e => e.Lat == null)
+            .ThenBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 500))
             .ToListAsync(ct);
 

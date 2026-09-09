@@ -331,57 +331,6 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
-- [ ] **`geocode-missing` arbeitet keinen Rueckstand ab — es sieht bei jedem Aufruf dieselben
-  Eintraege.** Die Auswahl ist `OrderBy(StartDate).Take(limit)` ohne jede Fortschrittsmarke. Am
-  2026-09-09 live vorgefuehrt: sieben Aufrufe mit `limit=1000` meldeten je „1000 geprueft, 0
-  verortet" — die 2476 offenen Eintraege wurden nie erreicht, nur die ersten 1000 immer wieder. Erst
-  ein Aufruf mit `limit=10000` (dem Deckel) nahm alle 2874 vor und verortete 82. Solange das so
-  ist, MUSS der Deckel den ganzen Bestand umfassen; ein kleinerer Wert ist nicht „eine Portion",
-  sondern „immer dieselbe Portion". Saubere Loesung waere eine Marke wie `RoundPlanCheckedAt`
-  (dann auch nach Alter sortierbar) — das ist eine Migration. Dieselbe Klasse Fehler wie beim
-  Rundenplan-Nachtrag (dort behoben, indem die Auswahl nach dem Alter des Vermerks sortiert).
-
-- [ ] **Polen: 79 % der Detailseiten tragen keine Angaben — und werden trotzdem jede Nacht erneut
-  geholt.** Der 301-Fehler ist behoben (Crawler holt jetzt `/turnieje/{jahr}/ti_{id}/` MIT
-  Schraegstrich), aber damit wird das Zweite sichtbar: in einer Stichprobe von 14 Turnieren hatten
-  nur 3 die server-gerenderte Datenseite (8,5 kB), die uebrigen 11 liefern eine 4,1-kB-
-  JavaScript-Huelle ohne eine einzige Angabe — das Turnier-Paket des Veranstalters entscheidet
-  das. `ParseDetail` gibt dort `null` zurueck, der Crawler antwortet 404, und
-  `ChessArbiterDirectorySweepService` vermerkt die `Url` nur bei Erfolg. Ein solches Turnier bleibt
-  also fuer immer Kandidat: jeder Durchgang verbraucht sein `ChessArbiterDetailBatchSize`-Budget
-  (150) an denselben Seiten, und die ~130 Turniere, bei denen es etwas zu holen GAEBE, kommen nie
-  an die Reihe.
-  Die Entscheidung, die dafuer noch fehlt: „gefragt, es gibt dort nichts" muss vom „Abruf ist
-  gescheitert" unterscheidbar werden. Zwei Wege — (a) der Crawler antwortet auf eine erreichte
-  Seite ohne Angaben mit **204** statt 404, RookHub vermerkt das als erledigt; (b) eine
-  `ChessArbiterDetailVersion` am Eintrag nach dem Muster von `RoundPlanVersion`/`CardVersion`
-  (dann wuerde ein spaeter server-gerendertes Turnier bei einer Versionserhoehung EINMAL neu
-  gefragt). (b) ist naeher am Bestand, kostet aber eine Migration.
-
-- [x] **Jeder gecrawlte Bestand braucht eine FASSUNG, nicht nur einen Zeitstempel** (ERLEDIGT v0.441.0: `RoundPlanVersion`, `TeamHintVersion`, `FideDetailVersion` + Migration `AddCrawlFetchVersions`; die Fassungen starten bei 1, der Bestand steht auf 0 und wird damit vom naechsten Durchgang von selbst nachgeholt) (Idee des
-  Nutzers 2026-09-07, bisher nur halb umgesetzt). „Geprueft am 15:50" sagt NICHT, WOMIT geprueft
-  wurde. Faellt ein Parser-Fehler spaeter auf, ist der Vermerk eine Luege, die jede Wiederholung
-  verhindert — und der Behelf ist ein manueller Schalter (`retryEmpty`), den jemand kennen und
-  ausfuehren muss. Mit einer Fassung passiert es von selbst: `…Version < Current…Version` → beim
-  naechsten Durchgang genau EINMAL neu holen.
-
-  **Schon so gebaut:** `TournamentHistoryService.CurrentCardVersion` (Spielerkarte) und
-  `CurrentTimeControlVersion` (Bedenkzeit); Vorbild ist `ImportPipeline.CurrentVersion` mit dem
-  „Aktualisieren (N)"-Banner. Beide haben sich am selben Tag bewaehrt: die Kartenfassung brachte
-  dem Bestand die nachtraeglich ergaenzte Partienzahl, die Bedenkzeit-Fassung verhinderte, dass ein
-  Postback-Fehler als „dieses Turnier nennt keine Bedenkzeit" einfriert.
-
-  **Offen — drei Zeitstempel auf `TournamentDirectoryEntry` ohne Fassung:**
-  `RoundPlanCheckedAt` (der akute Fall: 452 Eintraege tragen einen Vermerk aus der Zeit VOR dem
-  Blatt-Tabellen-Fix, u. a. tnr1438343 mit 0 gespeicherten von 9 abrufbaren Terminen),
-  `TeamHintCheckedAt` und `FideDetailCheckedAt`.
-
-  **Zuschnitt, falls es gebaut wird:** eine Fassung JE DATENART, nicht eine globale Crawler-Version
-  — ein Fix am Rundenplan-Parser sagt nichts ueber die Spielerkarte aus, und eine globale Zahl
-  wuerde bei jedem Crawler-Release Tausende Seiten neu holen (bei ~6 s je Abruf hinter dem
-  Rate-Limiter: Stunden). Einmalig bleibt danach noch der Altbestand: die heutigen Vermerke haben
-  keine Fassung, brauchen also EIN `retryEmpty`/Backfill — danach nie wieder.
-
 - [ ] **Turnierverlauf: die Spielerkarte sparen, wo das Turnier schon importiert ist** (Frage des
   Nutzers 2026-09-07, bewusst nur vermerkt). Heute wird JE Spieler UND Turnier eine Spielerkarte
   geholt (`art=9&snr=`), weil Punkte, Performance, Platz und Elo-Aenderung nur dort stehen. Geteilt

@@ -195,6 +195,21 @@ public class TournamentDirectoryEntry
     public int TeamHintVersion { get; set; }
 
     /// <summary>
+    /// Fassung des POLEN-Detailabrufs (chessarbiter). <c>0</c> = noch nie gefragt.
+    ///
+    /// <para><b>Warum eine Fassung und nicht nur „gefragt":</b> bei dieser Quelle hat nur ein Teil
+    /// der Turniere eine server-gerenderte Datenseite (Stichprobe 2026-09-09: 3 von 14), die
+    /// uebrigen liefern eine JavaScript-Huelle ohne eine Angabe. Diese Antwort ist endgueltig und
+    /// muss vermerkt werden, sonst wird das Turnier jede Nacht erneut gefragt und verbraucht das
+    /// Abruf-Budget. Ein bloßer Zeitstempel waere aber eine Luege, sobald der Parser besser wird
+    /// oder die Quelle ihre Seiten umstellt — dann holt eine erhoehte
+    /// <see cref="Services.ChessArbiterDirectorySweepService.CurrentDetailVersion"/> jeden Eintrag
+    /// genau EINMAL nach. Dasselbe Muster wie <see cref="RoundPlanVersion"/> und
+    /// <see cref="TeamHintVersion"/>.</para>
+    /// </summary>
+    public int ChessArbiterDetailVersion { get; set; }
+
+    /// <summary>
     /// Einzel- oder Mannschaftsturnier. Kommt AUS DER QUELLE: die chess-results-Turniersuche hat
     /// ein Turnierart-Feld, und die Arten 2/3 („Rundenturnier/Schweizer System fuer
     /// Mannschaften") sind genau die Mannschaftsturniere. Der Sweep fragt sie deshalb in einem

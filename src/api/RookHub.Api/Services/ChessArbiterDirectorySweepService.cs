@@ -30,9 +30,22 @@ namespace RookHub.Api.Services;
 /// nach dem Turnier). Der Filter „mindestens N Teilnehmer" wirkt fuer polnische Turniere damit
 /// als einziger im Bestand schon vor dem Termin.</para>
 /// </summary>
+/// <summary>Wie eine Detail-Abfrage ausgegangen ist — Gegenstueck zum gleichnamigen Typ im
+/// Crawler. „Geholt, keine Angaben" ist endgueltig und wird vermerkt, „nicht zu holen" nicht.</summary>
+internal enum ChessArbiterDetailOutcome
+{
+    Parsed,
+    Empty,
+    Unavailable,
+}
+
 public class ChessArbiterDirectorySweepService
 {
     private const int SaveEvery = 25;
+
+    /// <summary>Fassung des Detailabrufs — erhoehen, wenn <c>ParseDetail</c> im Crawler mehr oder
+    /// anderes liest. Eintraege mit kleinerer Fassung werden genau einmal nachgefragt.</summary>
+    public const int CurrentDetailVersion = 1;
 
     /// <summary>
     /// Pause zwischen zwei Detailabrufen. Die Quelle laeuft auf sichtbar alter Infrastruktur
@@ -125,23 +138,38 @@ public class ChessArbiterDirectorySweepService
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
 
-                // Der Detailabruf lohnt nur einmal je Turnier. „Schon geholt" steht in der
-                // Adresse des Herkunftsvermerks — sie wird erst dabei gesetzt.
+                // Der Detailabruf lohnt nur einmal je Turnier — und „schon gefragt" heisst hier
+                // ausdruecklich AUCH „gefragt, die Seite traegt nichts". Vorher stand das nur in
+                // der Adresse des Herkunftsvermerks, und die wird ausschliesslich bei ERFOLG
+                // gesetzt: die rund 480 polnischen Turniere ohne Datenseite blieben damit fuer
+                // immer Kandidat und verbrauchten jede Nacht das ganze Budget an sich selbst.
                 var hasDetail = HasDetail(own, row.Key);
+                // Traegt der Vermerk schon eine Adresse, wurde die Seite frueher GELESEN (nicht
+                // bloss gefragt) — dann bleibt sie stehen.
+                var detailRead = HasReadDetail(own, row.Key);
                 if (!hasDetail && budget > 0)
                 {
                     budget--;
-                    if (await LoadDetailAsync(own, row, ct))
+                    var outcome = await LoadDetailAsync(own, row, ct);
+                    if (outcome != ChessArbiterDetailOutcome.Unavailable)
+                    {
+                        // Auch die leere Seite ist eine Auskunft: Fassung setzen, nicht wiederholen.
+                        own.ChessArbiterDetailVersion = CurrentDetailVersion;
+                        hasDetail = true;
+                    }
+                    if (outcome == ChessArbiterDetailOutcome.Parsed)
                     {
                         updated++;
-                        hasDetail = true;
+                        detailRead = true;
                         locationChanged = true;   // die Anschrift ist genauer als der Listenort
                     }
                     await Task.Delay(DetailDelay, ct);
                 }
 
+                // Die Adresse im Vermerk bleibt der Herkunftsbeleg — sie steht nur da, wenn die
+                // Seite auch etwas hergab (`ChessArbiterDetailVersion` sagt, dass gefragt wurde).
                 ExternalDirectorySource.NoteSource(own, DirectorySourceKind.PolishChessFederation,
-                    row.Key, hasDetail ? row.Url : null, now);
+                    row.Key, detailRead ? row.Url : null, now);
 
                 if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {
@@ -170,20 +198,25 @@ public class ChessArbiterDirectorySweepService
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 
-    /// <summary>
-    /// Ob die Detailseite dieses Turniers schon gelesen wurde — erkennbar an der Adresse im
-    /// Herkunftsvermerk.
-    /// </summary>
+    /// <summary>Wurde die Detailseite dieses Turniers schon mit der AKTUELLEN Fassung gefragt?
+    /// Die Adresse im Herkunftsvermerk zaehlt weiter mit — Eintraege aus der Zeit vor der Spalte
+    /// haben sie, und die sollen nicht alle noch einmal gefragt werden.</summary>
     internal static bool HasDetail(TournamentDirectoryEntry entry, string externalId) =>
+        entry.ChessArbiterDetailVersion >= CurrentDetailVersion || HasReadDetail(entry, externalId);
+
+    /// <summary>Wurde die Detailseite je mit ERGEBNIS gelesen? Die Adresse im Herkunftsvermerk ist
+    /// der Beleg; sie wird nur bei Erfolg gesetzt und ist zugleich die Bruecke fuer den Altbestand
+    /// aus der Zeit vor <see cref="TournamentDirectoryEntry.ChessArbiterDetailVersion"/>.</summary>
+    internal static bool HasReadDetail(TournamentDirectoryEntry entry, string externalId) =>
         entry.Sources.Any(s => s.Kind == DirectorySourceKind.PolishChessFederation
                                && s.ExternalId == externalId
                                && s.Url is { Length: > 0 });
 
-    private async Task<bool> LoadDetailAsync(
+    private async Task<ChessArbiterDetailOutcome> LoadDetailAsync(
         TournamentDirectoryEntry entry, CrawlerChessArbiterEvent row, CancellationToken ct)
     {
-        var detail = await FetchDetailAsync(row.Year, row.EventId, ct);
-        if (detail is null) return false;
+        var (outcome, detail) = await FetchDetailAsync(row.Year, row.EventId, ct);
+        if (detail is null) return outcome;
 
         // Das Detail-Startdatum ist das genauere: die Liste nennt kein Jahr, es wird aus der
         // Reihenfolge erschlossen. Weicht es ab, gilt die Seite.
@@ -211,7 +244,7 @@ public class ChessArbiterDirectorySweepService
             entry.Speed = TournamentSpeedClassifier.Classify(detail.TimeControl);
 
         ExternalDirectorySource.ApplyClassification(entry);
-        return true;
+        return ChessArbiterDetailOutcome.Parsed;
     }
 
     /// <summary>
@@ -253,9 +286,14 @@ public class ChessArbiterDirectorySweepService
     /// Die Detailseite EINES Turniers. Ein Fehlschlag ist kein Grund, den Durchgang abzubrechen —
     /// der Eintrag steht dann eben nur mit dem, was die Liste hergibt, und wird beim naechsten
     /// Durchgang erneut versucht.
+    ///
+    /// <para><b>204 ist nicht 404.</b> Der Crawler antwortet mit 204, wenn er die Seite geholt hat
+    /// und sie keine Angaben traegt — eine endgueltige Auskunft, die der Aufrufer sich merken darf.
+    /// 404 heisst „nicht zu holen" und wird wiederholt. Vorher war beides <c>null</c>, und die rund
+    /// 480 polnischen Turniere ohne Datenseite wurden jede Nacht erneut gefragt.</para>
     /// </summary>
-    private async Task<CrawlerChessArbiterDetail?> FetchDetailAsync(
-        string year, string id, CancellationToken ct)
+    private async Task<(ChessArbiterDetailOutcome Outcome, CrawlerChessArbiterDetail? Detail)>
+        FetchDetailAsync(string year, string id, CancellationToken ct)
     {
         try
         {
@@ -263,19 +301,25 @@ public class ChessArbiterDirectorySweepService
             using var response = await client.GetAsync(
                 $"/api/chess-arbiter-calendar/detail?year={Uri.EscapeDataString(year)}" +
                 $"&id={Uri.EscapeDataString(id)}", ct);
-            if (!response.IsSuccessStatusCode) return null;
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                return (ChessArbiterDetailOutcome.Empty, null);
+            if (!response.IsSuccessStatusCode)
+                return (ChessArbiterDetailOutcome.Unavailable, null);
 
             var body = await response.Content.ReadAsStringAsync(ct);
             var row = JsonSerializer.Deserialize<ChessArbiterDetailRow>(body, JsonOptions);
+            // Leerer Rumpf trotz 200: wie 204 zu behandeln waere geraten — der Crawler sagt es
+            // ausdruecklich, alles andere ist eine unerwartete Antwort und wird wiederholt.
             return row is null
-                ? null
-                : new CrawlerChessArbiterDetail(ParseDate(row.StartDate), ParseDate(row.EndDate),
-                    row.Place, row.TimeControl, row.Rounds, row.System, row.PlayerCount);
+                ? (ChessArbiterDetailOutcome.Unavailable, null)
+                : (ChessArbiterDetailOutcome.Parsed,
+                   new CrawlerChessArbiterDetail(ParseDate(row.StartDate), ParseDate(row.EndDate),
+                       row.Place, row.TimeControl, row.Rounds, row.System, row.PlayerCount));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _log.LogWarning(ex, "chessarbiter: Detailseite {Year}/{Id} nicht lesbar", year, id);
-            return null;
+            return (ChessArbiterDetailOutcome.Unavailable, null);
         }
     }
 
