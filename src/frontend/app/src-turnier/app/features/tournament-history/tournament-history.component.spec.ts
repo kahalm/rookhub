@@ -28,6 +28,23 @@ function history(over: Partial<PlayerHistory> = {}): PlayerHistory {
  * und der eigene Verlauf ist bei jeder Auswahl dabei — „nur Freunde" waere eine Ansicht, in der
  * man sich selbst sucht.
  */
+/**
+ * Viewport des Test-Dokuments (das Karma-iframe) auf eine feste Breite stellen und danach
+ * zuruecksetzen. Media-Queries messen den VIEWPORT, nicht den Host — ein Test, der ein
+ * Desktop-Raster prueft, ohne die Breite festzulegen, haengt davon ab, wie breit Karma sein
+ * Fenster gerade oeffnet: lokal 800 px (Desktop-Raster), in der CI schmaler (Handy-Raster) —
+ * genau so ist die Pruefung der Textzelle dort umgefallen. Ohne iframe (Karma-Debug-Seite im
+ * Hauptfenster) wird ehrlich ausgesetzt statt gegen eine Zufallsbreite zu messen.
+ */
+async function withViewport(width: number, run: () => void | Promise<void>): Promise<void> {
+  const frame = window.frameElement as HTMLElement | null;
+  if (!frame) { pending('Karma laeuft nicht im iframe — der Viewport laesst sich nicht verstellen'); return; }
+  const prev = frame.style.width;
+  frame.style.width = `${width}px`;
+  await new Promise<void>(r => requestAnimationFrame(() => r()));
+  try { await run(); } finally { frame.style.width = prev; }
+}
+
 describe('TournamentHistoryComponent', () => {
   let fixture: ComponentFixture<TournamentHistoryComponent>;
   let component: TournamentHistoryComponent;
@@ -426,12 +443,16 @@ describe('TournamentHistoryComponent', () => {
     // 78px hohe Zeile mitten in der Tabelle.
     const cells = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.row .row-num.span-rest'));
     expect(cells.length).toBe(2);
-    for (const cell of cells) {
-      const style = getComputedStyle(cell);
-      expect(style.gridColumnStart).toBe('3');
-      expect(style.gridColumnEnd).toBe('-1');
-      expect(style.whiteSpace).toBe('nowrap');
-    }
+    // Das ist das SCHREIBTISCH-Raster; am Handy (<= 768 px) nimmt die Zelle die ganze zweite
+    // Zeile. Deshalb den Viewport festlegen statt die Fensterbreite von Karma zu erben.
+    await withViewport(1024, () => {
+      for (const cell of cells) {
+        const style = getComputedStyle(cell);
+        expect(style.gridColumnStart).toBe('3');
+        expect(style.gridColumnEnd).toBe('-1');
+        expect(style.whiteSpace).toBe('nowrap');
+      }
+    });
   });
 
   /**
@@ -525,12 +546,7 @@ describe('TournamentHistoryComponent', () => {
    * VIEWPORT; deshalb wird hier das Karma-iframe selbst schmal gestellt (wie in der Navbar-Spec).
    */
   it('zeigt die Ergebniszeilen am Handy zweizeilig, ohne Quer-Scrollen', async () => {
-    const frame = window.frameElement as HTMLElement | null;
-    if (!frame) { pending('Karma laeuft nicht im iframe — der Viewport laesst sich nicht verstellen'); return; }
-    const prevWidth = frame.style.width;
-    frame.style.width = '360px';
-    await new Promise<void>(r => requestAnimationFrame(() => r()));
-    try {
+    await withViewport(360, async () => {
       expect(window.innerWidth).withContext('Viewport nicht verstellt').toBeLessThanOrEqual(360);
       const req = await setup();
       const host = fixture.nativeElement as HTMLElement;
@@ -553,9 +569,7 @@ describe('TournamentHistoryComponent', () => {
       const change = row.querySelector('.row-num.change') as HTMLElement;
       expect(pts.getBoundingClientRect().top).toBeGreaterThan(date.getBoundingClientRect().bottom - 1);
       expect(Math.abs(change.getBoundingClientRect().top - pts.getBoundingClientRect().top)).toBeLessThan(4);
-    } finally {
-      frame.style.width = prevWidth;
-    }
+    });
   });
 
   /**
