@@ -304,6 +304,10 @@
       "mismatch": "Die Passwörter stimmen nicht überein.",
       "missingToken": "Dieser Link ist ungültig oder unvollständig. Bitte fordere einen neuen Link an.",
       "requestNew": "Neuen Link anfordern"
+    },
+    "storage": {
+      "evicted": "Der Browser-Speicher war voll. Offline-Daten (heruntergeladene Kurse, Repertoires, Puzzle-Pools) wurden gelöscht, damit deine Anmeldung erhalten bleibt. Du kannst sie jederzeit erneut herunterladen.",
+      "full": "Deine Anmeldung konnte nicht gespeichert werden: der Browser-Speicher ist voll oder gesperrt. Sie gilt nur bis zum Neuladen dieser Seite. Leere im Profil den Offline-Speicher oder schaffe im Browser Platz."
     }
   },
   "dashboard": {

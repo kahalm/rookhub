@@ -304,6 +304,10 @@
       "mismatch": "The passwords do not match.",
       "missingToken": "This link is invalid or incomplete. Please request a new reset link.",
       "requestNew": "Request new link"
+    },
+    "storage": {
+      "evicted": "Your browser storage was full. Offline data (downloaded courses, repertoires, puzzle pools) was cleared so that your login is kept. You can download it again at any time.",
+      "full": "Your login could not be saved: the browser storage is full or locked. It only lasts until you reload this page. Clear the offline storage in your profile or free up space in your browser."
     }
   },
   "dashboard": {

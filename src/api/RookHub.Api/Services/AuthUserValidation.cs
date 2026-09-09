@@ -57,10 +57,28 @@ public static class AuthUserValidation
     /// </summary>
     public static async Task<bool> IsTokenValidAsync(
         AppDbContext db, IMemoryCache cache, int userId, string? tokenStamp, CancellationToken ct = default)
+        => await CheckTokenAsync(db, cache, userId, tokenStamp, ct) == TokenRejection.None;
+
+    /// <summary>Wie <see cref="IsTokenValidAsync"/>, sagt aber WARUM — der JWT-Handler loggt den
+    /// Grund (<see cref="JwtTokenGate"/>), sonst ist ein 401 in den Logs nicht von einem falschen
+    /// Passwort zu unterscheiden.</summary>
+    public static async Task<TokenRejection> CheckTokenAsync(
+        AppDbContext db, IMemoryCache cache, int userId, string? tokenStamp, CancellationToken ct = default)
     {
         var state = await GetStateAsync(db, cache, userId, ct);
-        if (!state.Active) return false;
-        if (tokenStamp == null || state.SecurityStamp == null) return true;   // Grandfathering
-        return tokenStamp == state.SecurityStamp;
+        if (!state.Active) return TokenRejection.InactiveUser;
+        if (tokenStamp == null || state.SecurityStamp == null) return TokenRejection.None;   // Grandfathering
+        return tokenStamp == state.SecurityStamp ? TokenRejection.None : TokenRejection.StampMismatch;
     }
+}
+
+/// <summary>Ergebnis der Kontostand-Prüfung eines formal gültigen Tokens.</summary>
+public enum TokenRejection
+{
+    /// <summary>Token bleibt gültig.</summary>
+    None = 0,
+    /// <summary>Konto fehlt oder ist gelöscht/anonymisiert.</summary>
+    InactiveUser,
+    /// <summary>Security-Stamp passt nicht mehr (Passwort geändert/zurückgesetzt).</summary>
+    StampMismatch,
 }

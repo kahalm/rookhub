@@ -156,6 +156,10 @@
       "mismatch": "A jelszavak nem egyeznek.",
       "missingToken": "Ez a hivatkozás érvénytelen vagy hiányos. Kérjen új hivatkozást.",
       "requestNew": "Új hivatkozás kérése"
+    },
+    "storage": {
+      "evicted": "A böngésző tárhelye megtelt. Az offline adatok (letöltött tanfolyamok, repertoárok, feladványkészletek) törlődtek, hogy a bejelentkezésed megmaradjon. Bármikor újra letöltheted őket.",
+      "full": "A bejelentkezésedet nem sikerült elmenteni: a böngésző tárhelye megtelt vagy zárolt, ezért csak az oldal újratöltéséig érvényes. Töröld a profilodban az offline tárhelyet, vagy szabadíts fel helyet a böngészőben."
     }
   },
   "dashboard": {

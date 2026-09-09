@@ -1,7 +1,24 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+
+/**
+ * Hat der SERVER das Token abgelehnt? Nur dann ist ein 401 ein Grund, die Sitzung wegzuwerfen.
+ *
+ * <p>Der JWT-Handler antwortet auf ein abgelaufenes, falsch signiertes oder per Security-Stamp
+ * entwertetes Token mit <c>WWW-Authenticate: Bearer error="invalid_token"</c>. Ein Controller, der
+ * selbst 401 zurückgibt — falsches aktuelles Passwort bei „Passwort ändern" oder „Konto löschen",
+ * falsches Passwort bei einem erneuten Login, „keine geteilte Anmeldung" — setzt diesen Header
+ * NICHT. Vorher galt jeder 401 als Rauswurf: am 2026-09-09 tippte ein Nutzer beim Passwortwechsel
+ * das alte Passwort falsch und stand auf der Anmeldemaske, vier Fehlversuche später hielt er die
+ * App für vergesslich. Der Header kommt durch beide nginx-Stufen (geprüft auf Dev und Prod).</p>
+ */
+export function isTokenRejection(err: unknown): boolean {
+  if (!(err instanceof HttpErrorResponse) || err.status !== 401) return false;
+  const challenge = err.headers?.get('WWW-Authenticate') ?? '';
+  return /error="?invalid_token"?/i.test(challenge);
+}
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -17,7 +34,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(request).pipe(
     catchError(err => {
-      if (err.status === 401 && authService.isLoggedIn) {
+      if (isTokenRejection(err) && authService.isLoggedIn) {
         authService.logout();
       }
       return throwError(() => err);

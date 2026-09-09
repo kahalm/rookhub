@@ -94,8 +94,17 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 
 1. Login/Register -> `AuthService.login()` / `.register()` -> POST an `/api/auth/*`
 2. Response enthaelt JWT -> wird in `localStorage` als `rookhub_user` gespeichert
-3. `authInterceptor` haengt `Authorization: Bearer <token>` an alle Requests
-4. `authGuard` prueft `AuthService.isLoggedIn` -> redirect zu `/login` wenn nicht eingeloggt
+3. `authInterceptor` haengt `Authorization: Bearer <token>` an alle `/api`-Requests. Er loggt NUR aus, wenn der
+   Server das Token ablehnt (`WWW-Authenticate: Bearer error="invalid_token"`, siehe `isTokenRejection`) — ein
+   Controller-401 wie „aktuelles Passwort falsch" beendet die Sitzung nicht (Regression 2026-09-09)
+4. `authGuard` prueft `AuthService.isLoggedIn` -> redirect zu `/login?returnUrl=…` wenn nicht eingeloggt;
+   `guestGuard` ist das Gegenstueck auf `/login`/`/register`: Angemeldete landen auf `returnUrl` bzw. `/`
+   (`core/return-url.util.ts` sichert das Ziel gegen offene Weiterleitungen, EINE Fassung fuer Maske,
+   Registrierung und Guard). `?switch=1` ist die bewusste Tuer zur Maske fuer einen Konto-Wechsel ohne
+   vorheriges Abmelden. Gilt ebenso in der Turnierseite (`src-turnier`, Import ueber `@rh/*`)
+4a. Speichern der Sitzung (`AuthService.persistSession`): ist der localStorage voll, werden die Offline-Caches
+   geraeumt und erneut geschrieben; scheitert auch das, sagt eine Snackbar, dass die Anmeldung nur bis zum
+   Neuladen haelt (`storageFull`, Kibana-Event `ClientLog storage_full`). Vorher blieb das stumm
 5. `AuthService.currentUser$` (BehaviorSubject) fuer reaktive UI-Updates (Navbar etc.)
 
 ## Routing

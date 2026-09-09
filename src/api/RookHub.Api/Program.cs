@@ -117,22 +117,15 @@ try
             // (insb. nach Logout/Passwortwechsel) nicht unnötig lange akzeptiert werden.
             ClockSkew = TimeSpan.FromMinutes(1)
         };
-        // Gelöschte/anonymisierte Konten dürfen ihr noch gültiges JWT nicht weiterverwenden:
-        // nach erfolgreicher Signatur-/Lifetime-Prüfung zusätzlich gegen DeletedAt verifizieren.
+        // Gelöschte/anonymisierte Konten dürfen ihr noch gültiges JWT nicht weiterverwenden, ein
+        // rotierter Security-Stamp (Passwortwechsel) entwertet es ebenfalls — und jede Ablehnung wird
+        // GELOGGT (Logger RookHub.Api.JwtAuth), sonst ist ein 401 nicht von einem falschen Passwort zu
+        // unterscheiden. Ein Datenbankfehler während der Prüfung lässt den Request durch statt den
+        // Client auszuloggen. Details und Begründung in JwtTokenGate.
         options.Events = new JwtBearerEvents
         {
-            OnTokenValidated = async ctx =>
-            {
-                var idStr = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!int.TryParse(idStr, out var uid)) return;
-                var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                var cache = ctx.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
-                // Zusätzlich zum Gelöscht-Check den Security-Stamp prüfen: nach Passwort-Reset/-Änderung
-                // passt der sstamp-Claim nicht mehr → Token wird abgelehnt (Alt-Token ohne Claim bleiben gültig).
-                var stamp = ctx.Principal?.FindFirstValue("sstamp");
-                if (!await AuthUserValidation.IsTokenValidAsync(db, cache, uid, stamp, ctx.HttpContext.RequestAborted))
-                    ctx.Fail("User account is deleted or the token has been invalidated.");
-            }
+            OnTokenValidated = JwtTokenGate.OnTokenValidatedAsync,
+            OnAuthenticationFailed = JwtTokenGate.OnAuthenticationFailedAsync,
         };
     })
     .AddScheme<ApiTokenAuthenticationOptions, ApiTokenAuthenticationHandler>(

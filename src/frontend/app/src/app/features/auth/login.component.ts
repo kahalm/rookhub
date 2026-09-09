@@ -11,6 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { sanitizeReturnUrl } from '../../core/return-url.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -89,14 +90,10 @@ export class LoginComponent {
 
   constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
-    this.returnUrl = this.sanitizeReturnUrl(raw);
+    this.returnUrl = sanitizeReturnUrl(raw);
     this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';
   }
 
-  private sanitizeReturnUrl(url: string): string {
-    if (!url.startsWith('/') || url.startsWith('//') || url.includes('://')) return '/dashboard';
-    return url;
-  }
 
   onSubmit(): void {
     this.loading = true;

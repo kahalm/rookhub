@@ -304,6 +304,10 @@
       "mismatch": "Lozinke se ne podudaraju.",
       "missingToken": "Ova poveznica je nevažeća ili nepotpuna. Zatraži novu poveznicu.",
       "requestNew": "Zatraži novu poveznicu"
+    },
+    "storage": {
+      "evicted": "Spremište preglednika bilo je puno. Izvanmrežni podaci (preuzeti tečajevi, repertoari, skupovi zagonetki) izbrisani su kako bi tvoja prijava ostala sačuvana. Možeš ih ponovno preuzeti bilo kada.",
+      "full": "Prijavu nije bilo moguće spremiti: spremište preglednika je puno ili zaključano. Vrijedi samo do ponovnog učitavanja ove stranice. Isprazni izvanmrežno spremište u profilu ili oslobodi prostor u pregledniku."
     }
   },
   "dashboard": {

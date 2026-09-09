@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '@rh/core/auth.guard';
+import { guestGuard } from '@rh/core/guest.guard';
 import { adminGuard } from '@rh/core/admin.guard';
 
 /**
@@ -7,8 +8,8 @@ import { adminGuard } from '@rh/core/admin.guard';
  * oeffentliche Ansicht und die Anmeldung (dieselben Komponenten wie in RookHub, ueber `@rh/*`).
  */
 export const routes: Routes = [
-  { path: 'login', loadComponent: () => import('@rh/features/auth/login.component').then(m => m.LoginComponent) },
-  { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent) },
+  { path: 'login', loadComponent: () => import('@rh/features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
+  { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },
 
   { path: 'tournaments', loadComponent: () => import('./features/tournaments/tournament-list.component').then(m => m.TournamentListComponent), canActivate: [authGuard] },
   // Literal vor Parameter: /tournaments/calendar darf nicht als Turnier-Id gelesen werden.

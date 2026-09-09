@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService } from './auth.service';
+import { OfflineService } from './offline.service';
 
 // Minimaler JWT (nur der payload-Teil wird ausgewertet) mit relativem exp.
 function jwt(expSecondsFromNow: number): string {
@@ -207,5 +208,75 @@ describe('AuthService logout clears offline content', () => {
 
     expect(localStorage.getItem('rookhub_user')).toBeNull();
     http.verify();
+  });
+});
+
+describe('AuthService: voller Browser-Speicher', () => {
+  let svc: AuthService;
+  let http: HttpTestingController;
+  let offline: OfflineService;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    svc = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+    offline = TestBed.inject(OfflineService);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  function quotaError(): Error {
+    const e = new Error('QuotaExceededError');
+    e.name = 'QuotaExceededError';
+    return e;
+  }
+
+  function loginOk(): void {
+    svc.login('u', 'p').subscribe();
+    http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+  }
+
+  it('räumt bei vollem Speicher die Offline-Caches und speichert die Anmeldung danach', () => {
+    // Vorher blieb die Anmeldung im Tab hängen: nach jedem Neuladen stand die Maske, ohne Hinweis.
+    const original = Storage.prototype.setItem;
+    let failures = 1;
+    spyOn(Storage.prototype, 'setItem').and.callFake(function (this: Storage, key: string, value: string) {
+      if (key === 'rookhub_user' && failures-- > 0) throw quotaError();
+      return original.call(this, key, value);
+    });
+    const clear = spyOn(offline, 'clearAll').and.callThrough();
+
+    loginOk();
+
+    expect(clear).toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem('rookhub_user')!).username).toBe('u');
+    expect(svc.storageFull).toBeFalse();
+    expect(svc.isLoggedIn).toBeTrue();
+  });
+
+  it('hält die Sitzung im Speicher des Tabs und markiert storageFull, wenn auch das Räumen nicht reicht', () => {
+    spyOn(Storage.prototype, 'setItem').and.callFake((key: string) => {
+      if (key === 'rookhub_user') throw quotaError();
+    });
+
+    loginOk();
+
+    expect(svc.storageFull).toBeTrue();
+    expect(svc.isLoggedIn).toBeTrue();          // die Anmeldung gilt trotzdem — nur nicht über ein Neuladen hinaus
+    expect(localStorage.getItem('rookhub_user')).toBeNull();
+  });
+
+  it('setzt storageFull zurück, sobald das Speichern wieder klappt', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError(quotaError());
+    loginOk();
+    expect(svc.storageFull).toBeTrue();
+
+    (Storage.prototype.setItem as jasmine.Spy).and.callThrough();
+    svc.adoptSession({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+    expect(svc.storageFull).toBeFalse();
+    expect(localStorage.getItem('rookhub_user')).not.toBeNull();
   });
 });

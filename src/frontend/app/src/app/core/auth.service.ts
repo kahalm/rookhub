@@ -2,7 +2,10 @@ import { DestroyRef, Injectable, Injector, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { OfflineService } from './offline.service';
+import { SnackbarService } from './snackbar.service';
+import { ClientLogService } from './client-log.service';
 
 export interface AuthResponse {
   token: string;
@@ -113,7 +116,7 @@ export class AuthService {
    * nicht ueber die Anmeldemaske kam.
    */
   adoptSession(user: AuthResponse): void {
-    localStorage.setItem('rookhub_user', JSON.stringify(user));
+    this.persistSession(user);
     this.currentUserSubject.next(user);
     this.loadPreferences();
   }
@@ -129,7 +132,7 @@ export class AuthService {
       localStorage.setItem(this.adminBackupKey, JSON.stringify(admin));
     }
     const user: AuthResponse = { ...target, impersonating: true };
-    localStorage.setItem('rookhub_user', JSON.stringify(user));
+    this.persistSession(user);
     this.currentUserSubject.next(user);
     this.loadPreferences();
   }
@@ -231,15 +234,55 @@ export class AuthService {
 
   /** Gespeichertes Token gegen ein neues tauschen, ohne den restlichen Anmelde-Nachlauf. */
   private replaceToken(user: AuthResponse): void {
-    try { localStorage.setItem('rookhub_user', JSON.stringify(user)); }
-    catch { /* voller/gesperrter Speicher: das Token im Zustand hält die Sitzung bis zum Neuladen */ }
+    this.persistSession(user);
     this.currentUserSubject.next(user);
   }
 
-  /** Wurde ein Schreibversuch in den localStorage abgelehnt (Quota voll / Privatmodus)? Die Sitzung
-   *  läuft dann nur im Speicher: ein Neuladen der Seite loggt aus. Die Profilseite kann darauf
-   *  hinweisen („Offline-Speicher voll — Caches leeren"), statt den Nutzer rätseln zu lassen. */
+  /** Konnte die Sitzung auch nach dem Räumen der Offline-Caches nicht gespeichert werden (Quota voll
+   *  / Privatmodus / gesperrter Speicher)? Sie läuft dann nur im Speicher des Tabs: ein Neuladen loggt
+   *  aus. Der Nutzer erfährt es sofort per Snackbar (siehe {@link persistSession}). */
   storageFull = false;
+
+  /**
+   * Die Sitzung in den localStorage schreiben — und wenn der voll ist, Platz schaffen statt aufgeben.
+   *
+   * <p>Der Speicher ist je Origin auf wenige MB begrenzt, und genau dorthin schreiben die
+   * Offline-Caches (Bücher, Repertoires, Puzzle-Pools) bewusst viel. Scheiterte `setItem`, lebte die
+   * Anmeldung nur noch im Tab: nach jedem Neuladen stand die Anmeldemaske, ohne jeden Hinweis — das
+   * Flag `storageFull` wurde gesetzt und von niemandem gelesen. Die Offline-Daten sind jederzeit
+   * erneut herunterladbar, die Anmeldung nicht — also weichen sie. Klappt es auch danach nicht, sagt
+   * es die App wenigstens, statt den Nutzer beim nächsten Neuladen rätseln zu lassen.</p>
+   *
+   * @returns `true`, wenn die Sitzung jetzt im Speicher liegt.
+   */
+  private persistSession(user: AuthResponse): boolean {
+    const json = JSON.stringify(user);
+    try { localStorage.setItem('rookhub_user', json); this.storageFull = false; return true; }
+    catch { /* voll oder gesperrt → einmal räumen und erneut versuchen */ }
+
+    try { this.injector.get(OfflineService).clearAll(); } catch { /* Storage/DI nicht verfügbar */ }
+    try {
+      localStorage.setItem('rookhub_user', json);
+      this.storageFull = false;
+      this.notifyStorage('auth.storage.evicted', 'storage_full_evicted', false);
+      return true;
+    } catch {
+      this.storageFull = true;
+      this.notifyStorage('auth.storage.full', 'storage_full', true);
+      return false;
+    }
+  }
+
+  /** Nutzer informieren + Diagnose-Event für Kibana — beides best-effort, hier darf nichts werfen
+   *  (die Anmeldung selbst ist längst gültig). */
+  private notifyStorage(i18nKey: string, kind: string, warn: boolean): void {
+    try {
+      const text = this.injector.get(TranslateService).instant(i18nKey);
+      const snack = this.injector.get(SnackbarService);
+      if (warn) snack.warn(text, { duration: 10000 }); else snack.info(text, { duration: 8000 });
+    } catch { /* ohne Übersetzung/Snackbar (Tests, sehr früher Start) bleibt es still */ }
+    try { this.injector.get(ClientLogService).report(kind); } catch { /* egal */ }
+  }
 
   logout(): void {
     localStorage.removeItem('rookhub_user');
@@ -277,9 +320,9 @@ export class AuthService {
     // Offline-Caches absichtlich vollgeschrieben — ein QuotaExceededError riss damit den
     // Login-Stream, die Maske meldete „Login fehlgeschlagen" und die Sitzung war auch im Speicher
     // nicht gesetzt. Der Nutzer kam nicht mehr herein und erfuhr den echten Grund nie. Die Sitzung
-    // gilt jetzt in jedem Fall (in-memory), der Speicherfehler ist nur ein Komfortverlust.
-    try { localStorage.setItem('rookhub_user', JSON.stringify(user)); }
-    catch { this.storageFull = true; }
+    // gilt jetzt in jedem Fall (in-memory); persistSession räumt bei vollem Speicher die Caches und
+    // sagt es, wenn auch das nicht reicht.
+    this.persistSession(user);
     this.currentUserSubject.next(user);
     this.claimAnonymousPuzzleSession();
     this.consumeStashedDiscordLink();
