@@ -272,7 +272,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         {
             // FirstSeenAt des Eintrags, nicht „jetzt": der Vermerk soll sagen, seit wann die
             // Quelle das Turnier fuehrt, und das ist bekannt.
-            TournamentDirectoryService.NoteSource(
+            await TournamentDirectoryService.NoteSourceAsync(_db, 
                 entry, DirectorySourceKind.ChessResults, entry.ChessResultsId!, now);
             var source = entry.Sources[^1];
             source.FirstSeenAt = entry.FirstSeenAt;

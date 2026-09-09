@@ -92,12 +92,20 @@ public class ChessCzDirectorySweepService
         _log.LogInformation(
             "chess.cz-Kalender: {Read} gelesen, {Added} neu, {Matched} zugeordnet, {Retired} zurueckgezogen, {Rounds} Spieltermine ergaenzt",
             events.Count, counts.Added, counts.Matched, counts.Retired, counts.Rounds);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz, Bremse
+        // gegen halbe Laeufe — siehe RetireVanishedAsync).
+        var retired = counts.Retired + await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.CzechChessFederation, counts.Delivered, now, ct);
         return new ExternalSweepResult(events.Count, counts.Added, counts.Rounds, counts.Matched,
-            counts.Retired);
+            retired);
     }
 
     private sealed class Counts
     {
+        /// <summary>Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung.
+        /// Steht hier und nicht in RunAsync, weil die Unterroutinen die Vermerke schreiben.</summary>
+        public List<string> Delivered { get; } = [];
+
         public int Added, Matched, Retired, Rounds, Processed;
     }
 
@@ -128,6 +136,7 @@ public class ChessCzDirectorySweepService
 
         if (match is not null)
         {
+            counts.Delivered.Add(row.EventId);
             await ExternalDirectorySource.NoteSourceAsync(_db, match,
                 DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now, ct);
             counts.Matched++;
@@ -171,6 +180,7 @@ public class ChessCzDirectorySweepService
         own.RemovedAt = null;
         ExternalDirectorySource.ApplyClassification(own);
         ApplyYouthMark(own, row.Youth);
+        counts.Delivered.Add(row.EventId);
         await ExternalDirectorySource.NoteSourceAsync(_db, own,
             DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now, ct);
 
@@ -247,6 +257,7 @@ public class ChessCzDirectorySweepService
             ApplyYouthMark(entry, rounds.Any(r => r.Youth));
         }
 
+        counts.Delivered.Add(SeriesKey(series, entry.PublicId));
         await ExternalDirectorySource.NoteSourceAsync(_db, entry, DirectorySourceKind.CzechChessFederation,
             SeriesKey(series, entry.PublicId), null, now, ct);
         counts.Rounds += AddMissingRounds(entry, rounds);

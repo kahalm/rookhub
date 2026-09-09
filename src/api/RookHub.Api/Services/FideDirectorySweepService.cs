@@ -118,7 +118,7 @@ public class FideDirectorySweepService
         if (entry is not null)
         {
             Apply(entry, ev, now);
-            TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.Fide, ev.EventId, now);
+            await TournamentDirectoryService.NoteSourceAsync(_db, entry, DirectorySourceKind.Fide, ev.EventId, now);
             return Outcome.Updated;
         }
 
@@ -127,7 +127,7 @@ public class FideDirectorySweepService
         var existing = await FindSameTournamentAsync(ev, ct);
         if (existing is not null)
         {
-            TournamentDirectoryService.NoteSource(existing, DirectorySourceKind.Fide, ev.EventId, now);
+            await TournamentDirectoryService.NoteSourceAsync(_db, existing, DirectorySourceKind.Fide, ev.EventId, now);
             return Outcome.Merged;
         }
 
@@ -142,7 +142,7 @@ public class FideDirectorySweepService
         };
         Apply(entry, ev, now);
         await GeocodeAsync(entry, ev, ct);
-        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.Fide, ev.EventId, now);
+        await TournamentDirectoryService.NoteSourceAsync(_db, entry, DirectorySourceKind.Fide, ev.EventId, now);
         _db.TournamentDirectoryEntries.Add(entry);
         return Outcome.Added;
     }

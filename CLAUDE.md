@@ -1572,6 +1572,17 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Wichtige Konventionen
 
+- **Verschwundene Turniere: NUR die Quelle, die ein Turnier fuehrt, darf es zurueckziehen** (seit 0.454.1) –
+  Die Turniersuche zaehlt `MissedSweeps` und meldet ab dem zweiten Fehlschlag „abgesagt" (mit Benachrichtigung),
+  **beschraenkt auf Eintraege MIT chess-results-Nummer**: die 15 Verbandskalender und der FIDE-Kalender fuehren
+  Turniere, die dort per Definition nicht vorkommen, und sammelten sonst jede Nacht einen Fehlschlag. Am 2026-09-09
+  live passiert (ein schachbund-Turnier stand nach zwei GER-Sweeps auf abgesagt, obwohl es stattfindet).
+  Die Zusatzquellen ziehen seit 0.454.1 selbst zurueck (`ExternalDirectorySource.RetireVanishedAsync`) — mit vier
+  Schranken: nur kuenftige Eintraege, nur ohne chess-results-Nummer, nur wenn diese Quelle der EINZIGE
+  Herkunftsvermerk ist, und **gar nicht**, wenn ein Lauf nichts oder weniger als die Haelfte der Kandidaten liefert
+  (dieselbe Lehre wie die MaxRows-Bremse: eine systematische Luecke wiederholt sich jede Nacht, die Karenz von zwei
+  Laeufen faengt sie NICHT ab). Der chess-results-ANKUENDIGUNGSkalender zieht bewusst nichts zurueck — nur ~70 % seiner
+  Zeilen tragen eine Kennung, und ohne stabile Kennung ist „fehlt" nicht von „umbenannt" zu unterscheiden.
 - **Ein Herkunftsvermerk WANDERT, er wird nicht doppelt angelegt** (seit 0.453.13) – Der eindeutige Index liegt auf
   (`Kind`, `ExternalId`) und gilt ueber den GANZEN Bestand. `ExternalDirectorySource.NoteSourceAsync` sieht deshalb
   nicht nur die Vermerke des uebergebenen Eintrags, sondern fragt die Tabelle: haengt die Kennung woanders, wird der
@@ -1579,7 +1590,9 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   2026-09-09 starben daran drei Quellen gleichzeitig (Ungarn, Tschechien, Ankuendigungskalender), ausgeloest von 400
   neuen Eintraegen, die die Namens-/Terminvergleiche auf andere Eintraege verschoben haben. Und: deckt eine
   Quellen-Kennung mehrere Eintraege ab (die tschechische „2. ligy" sind die Gruppen A bis F), MUSS der Schluessel den
-  Eintrag enthalten — `ChessCzDirectorySweepService.SeriesKey(series, publicId)`.
+  Eintrag enthalten — `ChessCzDirectorySweepService.SeriesKey(series, publicId)`. Es gab DREI Fassungen dieser Einfuege-Logik
+  (der gemeinsame Helfer, eine im Ankuendigungskalender, eine als `TournamentDirectoryService.NoteSource`) — seit
+  0.454.1 laufen alle ueber den Helfer.
 - **Eine fremde Kennung wird NIE gekuerzt** (seit 0.453.11) – `TournamentDirectorySource.ExternalId` ist 60 Zeichen
   lang und ein SCHLUESSEL. Wer laenger liefert, bekommt von `ExternalDirectorySource.NoteSource` eine
   `ArgumentException` mit Klartext und vermerkt stattdessen einen KURZSCHLUESSEL (Hash der Quellen-Kennung, siehe

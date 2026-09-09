@@ -51,6 +51,8 @@ public class ChessHuDirectorySweepService
 
         var now = DateTime.UtcNow;
         int added = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -67,6 +69,7 @@ public class ChessHuDirectorySweepService
 
                 if (match is not null)
                 {
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.HungarianChessFederation, row.EventId, null, now, ct);
                     matched++;
@@ -106,6 +109,7 @@ public class ChessHuDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.HungarianChessFederation, row.EventId, null, now, ct);
 
@@ -135,6 +139,11 @@ public class ChessHuDirectorySweepService
         _log.LogInformation(
             "chess.hu-Kalender: {Read} gelesen, {Added} neu, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.HungarianChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, 0, matched, retired);
     }
 

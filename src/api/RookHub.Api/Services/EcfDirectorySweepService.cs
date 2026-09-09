@@ -53,6 +53,8 @@ public class EcfDirectorySweepService
 
         var now = DateTime.UtcNow;
         int added = 0, located = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -82,6 +84,7 @@ public class EcfDirectorySweepService
 
                 if (match is not null)
                 {
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -122,6 +125,7 @@ public class EcfDirectorySweepService
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
                 ApplyYouthMark(own, row.YouthOnly);
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
 
@@ -139,6 +143,11 @@ public class EcfDirectorySweepService
         _log.LogInformation(
             "ECF-Kalender: {Read} gelesen, {Added} neu, {Located} verortet, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, located, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.EnglishChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, located, matched, retired);
     }
 

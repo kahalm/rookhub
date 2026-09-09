@@ -53,6 +53,8 @@ public class ChessSkDirectorySweepService
 
         var now = DateTime.UtcNow;
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -88,6 +90,7 @@ public class ChessSkDirectorySweepService
                 if (match is not null)
                 {
                     if (FillGaps(match, row)) updated++;
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.SlovakChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -142,6 +145,7 @@ public class ChessSkDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.SlovakChessFederation, row.EventId, row.Url, now, ct);
 
@@ -172,6 +176,11 @@ public class ChessSkDirectorySweepService
         _log.LogInformation(
             "chess.sk-Kalender: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, updated, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.SlovakChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 

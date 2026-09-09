@@ -252,7 +252,7 @@ public class TournamentDirectoryService
                 var oldLocation = entry.LocationText;
                 var oldLocationText = entry.LocationText;
 
-                Apply(row, entry, now, artMap);
+                await ApplyAsync(row, entry, now, artMap, ct);
                 entry.MissedSweeps = 0;
                 entry.RemovedAt = null;
                 updated++;
@@ -291,7 +291,7 @@ public class TournamentDirectoryService
                     FirstSeenAt = now,
                     CreatedAt = now,
                 };
-                Apply(row, entry, now, artMap);
+                await ApplyAsync(row, entry, now, artMap, ct);
                 await GeocodeAsync(entry, ct);
                 _db.TournamentDirectoryEntries.Add(entry);
                 added.Add(entry);
@@ -318,9 +318,19 @@ public class TournamentDirectoryService
 
         var seen = rows.Select(r => r.ChessResultsId).ToHashSet(StringComparer.Ordinal);
         var removed = new List<TournamentDirectoryEntry>();
+        // NUR Eintraege MIT chess-results-Nummer. Ein Eintrag ohne Nummer kann in dieser
+        // Trefferliste per Definition nicht vorkommen — er stammt aus einem Verbandskalender oder
+        // dem FIDE-Kalender, und genau das ist deren Sinn: sie fuehren Turniere, die chess-results
+        // NICHT hat. Ohne diese Bedingung sammelte jeder solche Eintrag jede Nacht einen
+        // Fehlschlag und galt beim zweiten als ABGESAGT — samt Benachrichtigung an Abonnenten.
+        // Am 2026-09-09 live passiert: das „ANSBACHER 24 Stunden Blitzturnier" aus dem Kalender des
+        // Deutschen Schachbunds stand nach zwei GER-Sweeps auf abgesagt, obwohl es stattfindet.
+        // Ein Eintrag einer Zusatzquelle kann nur von DIESER Quelle zurueckgezogen werden
+        // (ExternalDirectorySource.RetireVanishedAsync).
         foreach (var entry in truncated
                      ? []
-                     : existing.Where(e => e.RemovedAt == null && !seen.Contains(e.ChessResultsId)))
+                     : existing.Where(e => e.RemovedAt == null && e.ChessResultsId is not null
+                                           && !seen.Contains(e.ChessResultsId)))
         {
             entry.MissedSweeps++;
             entry.UpdatedAt = now;
@@ -595,8 +605,9 @@ public class TournamentDirectoryService
     /// der vier Turnierart-Durchgaenge; <c>null</c> heisst „konnte nicht geklaert werden" und
     /// laesst eine bereits bekannte Art UND ein bekanntes System ausdruecklich in Ruhe.
     /// </summary>
-    private void Apply(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now,
-        Dictionary<string, (TournamentKind Kind, TournamentSystem System)>? artMap)
+    private async Task ApplyAsync(CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now,
+        Dictionary<string, (TournamentKind Kind, TournamentSystem System)>? artMap,
+        CancellationToken ct)
     {
         entry.Name = Truncate(row.Name, 500);
         entry.Federation = Truncate(row.Federation, 3);
@@ -635,7 +646,7 @@ public class TournamentDirectoryService
         ApplyGrouping(entry);
         entry.LastSeenAt = now;
         entry.UpdatedAt = now;
-        NoteSource(entry, DirectorySourceKind.ChessResults, row.ChessResultsId, now);
+        await NoteSourceAsync(_db, entry, DirectorySourceKind.ChessResults, row.ChessResultsId, now, ct);
     }
 
     /// <summary>
@@ -646,26 +657,21 @@ public class TournamentDirectoryService
     /// Herkunftsvermerk ist spaeter nicht zu sagen, woher eine Angabe kommt (siehe
     /// <see cref="TournamentDirectorySource"/>).</para>
     /// </summary>
-    internal static void NoteSource(
-        TournamentDirectoryEntry entry, DirectorySourceKind kind, string externalId, DateTime now)
+    /// <para>Reicht an <see cref="ExternalDirectorySource.NoteSourceAsync"/> durch und ergaenzt nur
+    /// die Adresse, die sich hier aus der Quellenart ableiten laesst. Vorher stand hier eine EIGENE
+    /// Fassung der Einfuege-Logik — die dritte im Haus, und wie die beiden anderen sah sie nur die
+    /// Vermerke des uebergebenen Eintrags. Verschiebt sich die Zuordnung einer Kennung auf einen
+    /// anderen Eintrag, starb der Lauf am eindeutigen Index (Kind, ExternalId); genau das ist am
+    /// 2026-09-09 drei Quellen passiert. Der FIDE-Kalender verschmilzt Ereignisse regelmaessig in
+    /// bestehende Eintraege (heute 7 Stueck) und lief damit in dieselbe Falle.</para>
+    internal static Task NoteSourceAsync(AppDbContext db,
+        TournamentDirectoryEntry entry, DirectorySourceKind kind, string externalId, DateTime now,
+        CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(externalId)) return;
+        if (string.IsNullOrWhiteSpace(externalId)) return Task.CompletedTask;
 
-        var source = entry.Sources.FirstOrDefault(
-            s => s.Kind == kind && string.Equals(s.ExternalId, externalId, StringComparison.Ordinal));
-        if (source is null)
-        {
-            entry.Sources.Add(new TournamentDirectorySource
-            {
-                Kind = kind,
-                ExternalId = externalId,
-                Url = UrlFor(kind, externalId),
-                FirstSeenAt = now,
-                LastSeenAt = now,
-            });
-            return;
-        }
-        source.LastSeenAt = now;
+        return ExternalDirectorySource.NoteSourceAsync(
+            db, entry, kind, externalId, UrlFor(kind, externalId), now, ct);
     }
 
     /// <summary>Die Seite, auf der das Turnier bei dieser Quelle steht.</summary>

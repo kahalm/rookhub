@@ -55,6 +55,8 @@ public class FsiDirectorySweepService
 
         var now = DateTime.UtcNow;
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -82,6 +84,7 @@ public class FsiDirectorySweepService
                     if (changed && match.Speed == TournamentSpeed.Unknown)
                         match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
 
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
                     matched++;
@@ -126,6 +129,7 @@ public class FsiDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
 
@@ -155,6 +159,11 @@ public class FsiDirectorySweepService
         _log.LogInformation(
             "FSI-Kalender: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, updated, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.ItalianChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 

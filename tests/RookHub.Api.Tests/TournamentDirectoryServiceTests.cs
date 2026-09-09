@@ -973,14 +973,14 @@ public class TournamentDirectoryServiceTests : IDisposable
     /// Quelle traegt sich neben die erste, sie ersetzt sie nicht.
     /// </summary>
     [Fact]
-    public void NoteSource_SecondSite_IsAddedAlongsideTheFirst()
+    public async Task NoteSource_SecondSite_IsAddedAlongsideTheFirst()
     {
         var entry = new TournamentDirectoryEntry { ChessResultsId = "111", Name = "Open" };
         var now = DateTime.UtcNow;
 
-        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.ChessResults, "111", now);
-        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.Fide, "3051", now);
-        TournamentDirectoryService.NoteSource(entry, DirectorySourceKind.ChessResults, "111", now);
+        await TournamentDirectoryService.NoteSourceAsync(_db, entry, DirectorySourceKind.ChessResults, "111", now);
+        await TournamentDirectoryService.NoteSourceAsync(_db, entry, DirectorySourceKind.Fide, "3051", now);
+        await TournamentDirectoryService.NoteSourceAsync(_db, entry, DirectorySourceKind.ChessResults, "111", now);
 
         Assert.Equal(2, entry.Sources.Count);
         Assert.Contains(entry.Sources, s => s.Kind == DirectorySourceKind.Fide && s.ExternalId == "3051");

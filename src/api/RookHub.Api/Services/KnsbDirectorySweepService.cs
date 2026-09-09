@@ -78,6 +78,8 @@ public class KnsbDirectorySweepService
 
         var now = DateTime.UtcNow;
         int added = 0, speedResolved = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -96,6 +98,7 @@ public class KnsbDirectorySweepService
 
                 if (match is not null)
                 {
+                    delivered.Add(externalId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, 
                         match, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
                     matched++;
@@ -144,6 +147,7 @@ public class KnsbDirectorySweepService
                     own.Speed = speed;
                 }
 
+                delivered.Add(externalId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, 
                     own, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
 
@@ -159,6 +163,11 @@ public class KnsbDirectorySweepService
         _log.LogInformation(
             "KNSB-Kalender: {Read} gelesen, {Added} neu, {SpeedResolved} mit neu bekannter Bedenkzeit, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, speedResolved, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.DutchChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, speedResolved, matched, retired);
     }
 

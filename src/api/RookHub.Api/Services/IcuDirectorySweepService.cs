@@ -77,6 +77,8 @@ public class IcuDirectorySweepService
         var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
         var now = DateTime.UtcNow;
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -122,6 +124,7 @@ public class IcuDirectorySweepService
 
                 if (match is not null)
                 {
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match, DirectorySourceKind.IrishChessUnion,
                         row.EventId, DetailUrl(row, detail), now, ct);
                     matched++;
@@ -166,6 +169,7 @@ public class IcuDirectorySweepService
 
                 if (detail?.PlayerCount is > 0) own.PlayerCount = detail.PlayerCount;
 
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.IrishChessUnion,
                     row.EventId, DetailUrl(row, detail), now, ct);
 
@@ -183,6 +187,11 @@ public class IcuDirectorySweepService
         _log.LogInformation(
             "ICU-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, updated, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.IrishChessUnion, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 

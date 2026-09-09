@@ -103,6 +103,8 @@ public class FfeDirectorySweepService
         var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
         var now = DateTime.UtcNow;
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -124,6 +126,7 @@ public class FfeDirectorySweepService
                     // chess-results kennt das Turnier — bei Frankreich der Ausnahmefall (2 von 40).
                     // Dann bleibt es bei einem Herkunftsvermerk: die Turnierseite zu holen, nur um
                     // Luecken zu fuellen, waere ein Abruf fuer einen Eintrag, der schon steht.
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.FrenchChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -185,6 +188,7 @@ public class FfeDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.FrenchChessFederation,
                     row.EventId, hasDetail ? row.Url : null, now, ct);
 
@@ -212,6 +216,11 @@ public class FfeDirectorySweepService
         _log.LogInformation(
             "FFE-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Turnierseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, updated, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.FrenchChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 

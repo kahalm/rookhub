@@ -128,6 +128,78 @@ public static class ExternalDirectorySource
         return true;
     }
 
+    /// <summary>Wie oft eine Quelle einen Eintrag nicht mehr liefern muss, bis er als
+    /// zurueckgezogen gilt. Wie bei der Turniersuche zwei — ein einzelner Ausfall der Quelle
+    /// (halb geladene Seite, Netzfehler) darf kein Turnier absagen.</summary>
+    public const int MissesUntilRetired = 2;
+
+    /// <summary>
+    /// Zieht Eintraege zurueck, die eine ZUSATZQUELLE nicht mehr liefert.
+    ///
+    /// <para>Die Turniersuche macht das seit langem (<c>MissedSweeps</c> in
+    /// <see cref="TournamentDirectoryService"/>), die 15 Verbandskalender bisher NICHT: ein Turnier,
+    /// das aus dem polnischen oder italienischen Kalender verschwand, blieb bei uns fuer immer
+    /// stehen. Ihr Zaehler „zurueckgezogen" bedeutet etwas anderes, naemlich
+    /// <see cref="RetireIfSuperseded"/>.</para>
+    ///
+    /// <para><b>Vier Schranken, und jede hat einen Grund:</b></para>
+    /// <list type="number">
+    /// <item><b>Nur KUENFTIGE Eintraege.</b> Was vorbei ist, sagt niemand mehr ab, und die Quellen
+    /// lassen Vergangenes irgendwann fallen — das ist kein Verschwinden.</item>
+    /// <item><b>Nur Eintraege OHNE chess-results-Nummer.</b> Fuehrt die Turniersuche dasselbe
+    /// Turnier, entscheidet SIE ueber sein Verschwinden; sie sieht mehr als ein Verbandskalender.</item>
+    /// <item><b>Nur Eintraege, deren EINZIGER Herkunftsvermerk diese Quelle ist.</b> Steht ein
+    /// Turnier auf zwei Kalendern, ist sein Fehlen auf einem keine Absage.</item>
+    /// <item><b>Bremse gegen halbe Laeufe.</b> Liefert ein Lauf nichts oder weniger als die HAELFTE
+    /// der Kandidaten, wird gar nicht geprueft. Genau dafuer gibt es bei der Turniersuche die
+    /// MaxRows-Bremse: eine systematische Luecke (eine von 25 Regionen faellt aus, eine von 12
+    /// Monatsseiten) faengt die Karenz von zwei Laeufen NICHT ab, sie wiederholt sich jede Nacht.</item>
+    /// </list>
+    /// </summary>
+    /// <param name="deliveredExternalIds">Die Kennungen, die DIESER Lauf geliefert hat.</param>
+    /// <returns>Wie viele Eintraege zurueckgezogen wurden.</returns>
+    public static async Task<int> RetireVanishedAsync(AppDbContext db, DirectorySourceKind kind,
+        IReadOnlyCollection<string> deliveredExternalIds, DateTime now, CancellationToken ct = default)
+    {
+        if (deliveredExternalIds.Count == 0) return 0;
+
+        var today = DateOnly.FromDateTime(now);
+        var candidates = await db.TournamentDirectoryEntries
+            .Include(e => e.Sources)
+            .Where(e => e.RemovedAt == null
+                        && e.ChessResultsId == null
+                        && (e.EndDate ?? e.StartDate) >= today
+                        && e.Sources.Count == 1
+                        && e.Sources.Any(s => s.Kind == kind))
+            .ToListAsync(ct);
+        if (candidates.Count == 0) return 0;
+
+        // Die Bremse: ein Lauf, der weniger als die Haelfte der Kandidaten liefert, ist
+        // unvollstaendig und kein Beleg fuer Absagen.
+        if (deliveredExternalIds.Count * 2 < candidates.Count) return 0;
+
+        var delivered = deliveredExternalIds.ToHashSet(StringComparer.Ordinal);
+        var retired = 0;
+        foreach (var entry in candidates)
+        {
+            var externalId = entry.Sources.First(s => s.Kind == kind).ExternalId;
+            if (delivered.Contains(externalId))
+            {
+                if (entry.MissedSweeps != 0) { entry.MissedSweeps = 0; entry.UpdatedAt = now; }
+                continue;
+            }
+
+            entry.MissedSweeps++;
+            entry.UpdatedAt = now;
+            if (entry.MissedSweeps < MissesUntilRetired) continue;
+            entry.RemovedAt = now;
+            retired++;
+        }
+
+        if (retired > 0 || candidates.Any(c => c.UpdatedAt == now)) await db.SaveChangesAsync(ct);
+        return retired;
+    }
+
     /// <summary>Laenge der Spalte <see cref="TournamentDirectorySource.ExternalId"/>.</summary>
     public const int MaxExternalIdLength = 60;
 

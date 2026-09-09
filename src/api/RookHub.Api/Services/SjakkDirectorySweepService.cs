@@ -90,6 +90,8 @@ public class SjakkDirectorySweepService
         var now = DateTime.UtcNow;
         var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -110,6 +112,7 @@ public class SjakkDirectorySweepService
                 // (chess-results fuehrt fuer NOR nichts), aber genau dafuer ist er da.
                 if (match is not null)
                 {
+                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.NorwegianChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -160,6 +163,7 @@ public class SjakkDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
+                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.NorwegianChessFederation, row.EventId,
                     hasDetail ? row.Url : null, now, ct);
@@ -176,6 +180,11 @@ public class SjakkDirectorySweepService
         _log.LogInformation(
             "sjakk.no-Aktivitaeten: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, updated, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.NorwegianChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 

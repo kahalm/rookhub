@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.454.1", date: "2026-09-09", changes: [
+    { en: "Tournaments that vanish from a federation calendar now disappear from the calendar here too, and tournaments that never were on chess-results are no longer wrongly marked as cancelled. That second one was doing real damage: everything the fifteen federation calendars contribute was being retired within two nightly runs, and subscribers would have been told a tournament was cancelled when it takes place. A source only ever retires what it lists itself, and a half-loaded run cancels nothing.", de: "Turniere, die aus einem Verbandskalender verschwinden, verschwinden jetzt auch hier aus dem Kalender — und Turniere, die nie auf chess-results standen, werden nicht mehr fälschlich als abgesagt geführt. Das Zweite hat echten Schaden angerichtet: alles, was die fünfzehn Verbandskalender beitragen, wurde innerhalb von zwei Nachtläufen zurückgezogen, und Abonnenten hätten eine Absage für ein Turnier bekommen, das stattfindet. Eine Quelle zieht nur zurück, was sie selbst führt, und ein halb geladener Lauf sagt nichts ab." },
+  ] },
   { version: "0.454.0", date: "2026-09-09", changes: [
     { en: "Chessable can now be switched off on the server side. Where it is off, the pages and endpoints for storing a Chessable login and importing courses through RookHub are gone, and the nightly course refresh does not run. Everything that goes through the RepCheck browser extension keeps working exactly as before.", de: "Chessable lässt sich jetzt serverseitig abschalten. Wo es aus ist, gibt es die Seiten und Schnittstellen zum Hinterlegen eines Chessable-Zugangs und zum Kurs-Import über RookHub nicht mehr, und der nächtliche Kursabgleich läuft nicht. Alles, was über die RepCheck-Browsererweiterung läuft, arbeitet unverändert weiter." },
   ] },

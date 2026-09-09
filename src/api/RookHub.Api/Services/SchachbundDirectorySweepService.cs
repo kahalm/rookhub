@@ -54,6 +54,8 @@ public class SchachbundDirectorySweepService
 
         var now = DateTime.UtcNow;
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        var delivered = new List<string>();
 
         try
         {
@@ -80,6 +82,7 @@ public class SchachbundDirectorySweepService
                     if (changed && match.Speed == TournamentSpeed.Unknown)
                         match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
 
+                    delivered.Add(PublicIdOf(row.EventId));
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
                     matched++;
@@ -129,6 +132,7 @@ public class SchachbundDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
+                delivered.Add(PublicIdOf(row.EventId));
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
 
@@ -156,6 +160,11 @@ public class SchachbundDirectorySweepService
         _log.LogInformation(
             "schachbund-Turnierdatenbank: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
             events.Count, added, updated, matched, retired);
+        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
+        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
+        retired += await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.GermanChessFederation, delivered, now, ct);
+
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
 

@@ -202,6 +202,11 @@ public class TournamentCalendarSweepService
     /// vermerkt — ein Vermerk ohne Kennung liesse sich beim naechsten Durchgang nicht
     /// wiedererkennen und legte jede Nacht eine neue Zeile an.
     /// </summary>
+    /// <para><b>Diese Quelle zieht bewusst NICHTS zurueck</b> (anders als die 15 Verbandskalender,
+    /// siehe <see cref="ExternalDirectorySource.RetireVanishedAsync"/>): nur rund 70 % ihrer Zeilen
+    /// tragen ueberhaupt eine Kalender-Nummer, und ohne stabile Kennung ist ein fehlender Eintrag
+    /// nicht von einem umbenannten zu unterscheiden. Ein Turnier faelschlich abzusagen ist der
+    /// teurere Fehler.</para>
     /// <para>Laeuft ueber den GEMEINSAMEN Helfer: der eindeutige Index auf (Kind, ExternalId) gilt
     /// ueber den ganzen Bestand, und diese eigene Fassung sah nur die Vermerke des uebergebenen
     /// Eintrags. Verschob sich die Zuordnung einer Kalender-Nummer auf einen anderen Eintrag,
