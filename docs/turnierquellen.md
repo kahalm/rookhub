@@ -1760,24 +1760,99 @@ wichtiger als der Durchschnitt:
 
 - **Griechenland (22 %)**: GeoNames hat fuer `GR` ueberhaupt keinen PLZ-Datensatz (404). Hier
   hilft kein Import.
-- **Ukraine (30 %)**: 29 596 PLZ eingespielt, **null** Wirkung. Die Ortstexte sind **kyrillisch**
-  („Запоріжжя", „с.Гаївка, Волинська обл."), das Lexikon lateinisch. Das braucht
-  Alternativnamen-Abgleich, nicht mehr Daten.
+- **Ukraine (30 %)**: 29 596 PLZ eingespielt, **null** Wirkung — die Ursache steht weiter unten
+  und ist nicht die, die hier zuerst stand („kyrillisch gegen lateinisch").
 - **Niederlande (1 %)**: strukturell ohne Spielort, bekannt und bewusst.
-- **Deutschland (47 %)** trotz 23 297 PLZ: siehe den naechsten Punkt, das ist ein Fehler.
+- **Deutschland (47 %)** trotz 23 297 PLZ: zwei verschiedene Ursachen, siehe unten — und die
+  kleinere ist die, die hier zuerst als die ganze ausgegeben wurde.
 
-### Ein Normalisierungs-Fehler, den erst diese Messung sichtbar machte
+### Zwei Ursachen, nicht eine — und die erste Fassung dieses Abschnitts war falsch gewichtet
 
-Deutschland bleibt bei 47 %, obwohl das Lexikon vollstaendig ist. Unter den unverorteten
-Eintraegen stehen Ortstexte, die eigentlich trivial sind: `Kiel`, `Lübeck`, `Karlsruhe, GER` —
-und **`Muenchen`**.
+Hier stand zuerst, Deutschlands 47 % lägen daran, dass `GeoTextNormalizer.Normalize` die
+ASCII-Umschrift „Muenchen" nicht auf „München" abbildet. Das ist ein echter Fehler, aber er
+erklärt ein Fünftel. Aufgeschlüsselt nach dem Vermerk, den die Verortung selbst hinterlässt:
 
-`GeoTextNormalizer.Normalize` faltet `ü → u`. „München" wird damit zu `munchen`, die
-ASCII-Umschrift „Muenchen" aber zu `muenchen`. Die beiden treffen sich nie. Genau diese Umschrift
-schreibt chess-results aber regelmaessig, weil sie aus Systemen ohne Umlaute kommt. Dasselbe gilt
-fuer `ae` und `oe`.
+| `GeoSource` | Deutschland | ganzer Bestand |
+|---|---|---|
+| `Ambiguous` (Kandidaten zu weit auseinander, Turnierdichte entscheidet nicht) | **225** | 1 745 |
+| `None` (gar kein Kandidat) | 53 | 4 289 |
 
-Die naheliegende Behebung — beim Suchen zusaetzlich `ue → u` falten — ist **falsch**: sie macht
-aus „Quedlinburg" `qudlinburg`. Der tragfaehige Weg ist, beim IMPORT eine zweite normalisierte
-Schreibweise mitzuschreiben (Namen mit `ä/ö/ü/ß` bekommen zusaetzlich ihre Umschrift-Form), damit
-beide Eingaben denselben Eintrag treffen. Steht in `TODO.md`.
+`Kiel`, `Lübeck`, `Karlsruhe, GER` und `Münster / GER` stehen alle auf **Ambiguous** — und sie
+stehen einwandfrei im Lexikon (`Kiel` als Stadt und als rund dreißig PLZ-Zeilen, alle auf `kiel`
+normalisiert). Es fehlt dort kein Name, es verweigert die Mehrdeutigkeitsregel den Pin. Das ist
+dieselbe Regel, die die 19 Münster auseinanderhält, also kein Fehler, sondern eine Entscheidung,
+die bei blanken Städtenamen zu selten fällt: der Tiebreak braucht verlässlich verortete
+Nachbarturniere, und die gibt es in einem frisch gesweepten Land nicht. Er könnte sich mit
+dichterem Bestand von selbst entspannen — vor einem Eingriff also erst neu messen.
+
+Nur `Muenchen` steht auf **None**, und dort greift der Umschrift-Fall: `Normalize` faltet
+`ü → u`, „München" wird zu `munchen`, „Muenchen" zu `muenchen`. Die beiden treffen sich nie, und
+chess-results schreibt diese Form regelmäßig, weil sie aus Systemen ohne Umlaute kommt.
+
+**Die Ukraine ist derselbe Mechanismus, nur schärfer.** `Normalize` ersetzt am Ende alles außer
+`[a-z0-9]` durch Leerzeichen. Kyrillisch fällt dabei nicht falsch aus, sondern **restlos weg**:
+„Київ" wird zu einer leeren Zeichenkette. Gemessen: **29 547 der 29 571 eingespielten ukrainischen
+PLZ-Zeilen tragen einen leeren normalisierten Namen.** Und weil der PLZ-Weg eine Bestätigung
+braucht — der Ortsname des Treffers muss im Text vorkommen, sonst gewinnt eine Hausnummer, die wie
+eine PLZ aussieht — kann diese Bestätigung dort **nie** gelingen. Das, und nicht ein
+Schriften-Mismatch, ist der Grund für die Nullwirkung.
+
+**Russland ist der gleiche Fall im zehnfachen Maßstab, und damit die größte Verortungslücke des
+ganzen Verzeichnisses**: 43 538 PLZ-Zeilen, davon **33 305 mit leerem Namen**, Ortstexte
+kyrillisch („Истра", „Владивосток") — bei **2 003 Turnieren und 7 % Verortung**. Die Ukraine hat
+179. Wer den Aufwand einer zweiten Schreibweise gegen 179 Zeilen rechnet, rechnet ihn falsch.
+
+**Behoben in v0.456.0** (`GeoPlace.NameTranscribed`, zweite normalisierte Spalte samt Index,
+gefüllt beim Import, beidseitig verglichen): Umlaute ausgeschrieben, Kyrillisch und Griechisch
+umgeschrieben. Beim SUCHEN wird bewusst nicht gefaltet — `ue → u` machte aus „Quedlinburg"
+`qudlinburg`; dafür gibt es eine Gegenprobe als Test. Der Befund, der die
+GeoNames-Alternativnamen erspart hat: GeoNames benutzt für ukrainische Namen dieselbe
+Umschrift-Konvention (г→h, и→y, і→i), also treffen sich „Запоріжжя" und der lateinische
+GeoNames-Name „Zaporizhzhia" über eine gemeinsame Umschrift — **kein Zusatzarchiv nötig**.
+
+**Nach dem Deploy muss einmal `POST /api/admin/tournament-directory/gazetteer/transcribe` laufen**
+(rein lokal, wiederholbar). Ohne diesen Lauf ist die Spalte für die rund 200 000 Altzeilen leer,
+und nur nach dem Deploy importierte Länder profitieren — es waren 40 Länder, die vorher
+eingespielt wurden.
+
+## Alle 257 Föderationen gesweept (2026-09-09, nachts)
+
+Auftrag: „kannst du nicht einmal alle Föderationen sweepen?" — 185 waren offen, in zehn Runden à
+20 abgefragt.
+
+**Ergebnis: 257 von 257 erfolgreich, 0 Fehlschläge, 12 681 neue Turniere in 83 Minuten.** Der
+Bestand geht von 9 578 auf **22 259 Turniere, 7 204 davon künftig**.
+
+**Der Ertrag steckte fast vollständig in den ersten drei Runden** (11 808 der 12 681) und dort in
+neun Ländern, die niemand vermutet hätte: **ENG, FRA, NED, POL, NOR, IRL, SCO, WLS und DEN waren
+nie gesweept** — also genau neun Länder, für die ein Verbandskalender GEBAUT ist. Deren Kalender
+lieferten Turniere, ohne dass es etwas gab, womit sie sich abgleichen konnten; die hohen
+„neu"-Zahlen der englischen und polnischen Quelle waren zum Teil ein Artefakt davon. Dazu kamen
+RUS, IND, USA, CHN, JPN, KAZ, UZB, MEX und ganz Südamerika außer Argentinien und Brasilien. Die
+Runden 4 bis 10 mit 145 Föderationen brachten zusammen 873.
+
+Damit steht der Vorlauf-Vergleich auf breiterer Grundlage, und er kippt an der Spitze:
+
+| Land | künftig | Vorlauf | Kalender? |
+|---|---|---|---|
+| **POL** | **753** | **13,94** | ja |
+| ITA | 314 | 11,63 | ja |
+| NED | 189 | 8,22 | ja |
+| FRA | 193 | 6,03 | ja |
+| AUT | 255 | 3,45 | ja |
+| ENG | 420 | 3,44 | ja |
+| IND | 489 | 0,32 | nein |
+| RUS | 456 | 0,29 | nein |
+
+**Polen ist jetzt die größte Föderation nach künftigen Turnieren und hat den besten Vorlauf
+überhaupt** — 611 künftige aus dem Verbandskalender plus 181 aus der Turniersuche. Indien und
+Russland stehen mit je rund 2 000 Einträgen dicht dahinter in der MENGE, aber bei einem Vorlauf um
+0,3: dort ist chess-results ein Archiv. Die sechs vordersten Plätze halten Länder mit
+angebundenem Kalender, die Rangfolge der ersten Messung bleibt also nicht nur bestehen, sie wird
+deutlicher.
+
+Postleitzahlen wurden danach für 26 weitere Länder eingespielt (RU ZA PE MX PH CO MY CL TH ID KR
+JP CN KE MA DZ PK BD LK EC UY CR GT DO SG HK; für KZ, IR, IL, AM, GE und GR gibt es bei GeoNames
+keinen Datensatz). Verortung damit **58 %** von 22 259 — absolut von 6 201 auf 12 894 Einträge.
+Mexiko 40 → 82 %, Vietnam 39 → 51 %, Indien 99 %. Russland bleibt bei 7 %, bis der
+Umschrift-Nachlauf gefahren ist.
