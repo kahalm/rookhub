@@ -467,6 +467,53 @@ public class TournamentDirectorySchedulerTests : IDisposable
         Assert.Contains("details.RunAsync(_fideDetailBatchSize, retryEmpty: false", scheduler);
     }
 
+    /// <summary>Alle Sweep-Dienste der API — die Namenskonvention IST die Liste.</summary>
+    public static TheoryData<string> SweepServices()
+    {
+        var data = new TheoryData<string>();
+        foreach (var name in typeof(TournamentDirectoryService).Assembly
+                     .GetTypes()
+                     .Where(t => t is { IsClass: true, IsAbstract: false, IsPublic: true })
+                     .Select(t => t.Name)
+                     .Where(n => n.EndsWith("DirectorySweepService", StringComparison.Ordinal))
+                     .OrderBy(n => n, StringComparer.Ordinal))
+        {
+            data.Add(name);
+        }
+        return data;
+    }
+
+    /// <summary>
+    /// Jede gebaute Zusatzquelle muss nachts auch AUFGERUFEN werden.
+    ///
+    /// <para>Eine Quelle besteht aus vier Teilen an vier Stellen: dem Parser im Crawler, dem
+    /// Sweep-Dienst, seiner Registrierung in <c>Program.cs</c> und dem Aufruf im Zeitplan. Fehlt
+    /// der LETZTE, ist alles gruen — Tests, Registrierung, sogar der Admin-Endpunkt von Hand —
+    /// und die Quelle liefert trotzdem nie ein Turnier. Kein Fehler, kein Log-Eintrag, nichts,
+    /// woran es auffiele; man merkt es Wochen spaeter daran, dass ein Land fehlt. Bei 16
+    /// Zusatzquellen ist die Liste im Zeitplan nicht mehr im Kopf zu behalten.</para>
+    ///
+    /// <para>Dieselbe Klasse Fehler wie ein Tippfehler in einem CI-Pfadfilter
+    /// (<see cref="CiWorkflowTests"/>): ein ausgelassener Schritt, der sich als Stille aeussert.</para>
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(SweepServices))]
+    public void NightlyRun_CallsEverySweepService(string service) =>
+        Assert.True(
+            ReadSource("src/api/RookHub.Api/Services/TournamentDirectoryScheduler.cs")
+                .Contains(service, StringComparison.Ordinal),
+            $"{service} wird im naechtlichen Zeitplan nicht aufgerufen — die Quelle liefert dann "
+            + "nie ein Turnier, ohne dass irgendwo ein Fehler entsteht");
+
+    /// <summary>
+    /// Und dass die Namenskonvention ueberhaupt etwas findet: faende sie nichts, waere die Zusage
+    /// oben leer und winkte jede Luecke durch.
+    /// </summary>
+    [Fact]
+    public void TheSweepServiceConvention_ActuallyFindsThem() =>
+        Assert.True(SweepServices().Count >= 15,
+            $"nur {SweepServices().Count} Sweep-Dienste gefunden — stimmt die Namenskonvention noch?");
+
     private static string ReadSource(string relativePath)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
