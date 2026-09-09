@@ -1,4 +1,4 @@
-import { Injectable, Injector } from '@angular/core';
+import { DestroyRef, Injectable, Injector, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -21,7 +21,35 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<AuthResponse | null>(this.getStoredUser());
   currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient, private router: Router, private injector: Injector) {}
+  /**
+   * Ob der Injektor schon abgeraeumt ist. Gebraucht, weil mehrere Stellen hier einen DYNAMISCHEN
+   * Import machen und den Dienst erst im `then` aus dem Injektor holen — bis dahin kann der
+   * Injektor weg sein.
+   */
+  private destroyed = false;
+
+  constructor(private http: HttpClient, private router: Router, private injector: Injector) {
+    inject(DestroyRef).onDestroy(() => this.destroyed = true);
+  }
+
+  /**
+   * Einen Dienst holen, der hinter einem dynamischen Import liegt — und dabei aushalten, dass der
+   * Injektor in der Zwischenzeit abgeraeumt wurde.
+   *
+   * <p>Das ist kein hypothetischer Fall. Ein `import(...)` loest asynchron auf, und niemand bricht
+   * es ab; laeuft die Anmeldung kurz vor dem Ende einer Sitzung (im Test: vor dem Abbau der
+   * TestBed), kommt das `then` NACH der Zerstoerung an und `injector.get` wirft NG0205. In der CI
+   * ist genau das aufgetreten — dort mit einer anderen Chrome-Fassung und unter Last, waehrend
+   * lokal alle 256 Tests durchliefen. Ein Fehler, der nur woanders auftritt, ist trotzdem einer:
+   * im Browser trifft es den Nutzer, der sich anmeldet und die Seite sofort verlaesst.</p>
+   *
+   * <p>Bewusst kein `try/catch` um den ganzen Aufruf: das verschluckte auch echte Fehler AUS dem
+   * geholten Dienst. Geprueft wird nur das eine, was hier schiefgehen kann.</p>
+   */
+  private withService<T>(get: () => T, use: (service: T) => void): void {
+    if (this.destroyed) return;
+    use(get());
+  }
 
   get isLoggedIn(): boolean {
     return this.getValidUser() !== null;
@@ -136,9 +164,8 @@ export class AuthService {
   }
 
   private loadPreferences(): void {
-    import('./preferences.service').then(m => {
-      this.injector.get(m.PreferencesService).loadFromServer();
-    });
+    import('./preferences.service').then(m =>
+      this.withService(() => this.injector.get(m.PreferencesService), p => p.loadFromServer()));
   }
 
   /**
@@ -255,9 +282,8 @@ export class AuthService {
     this.claimAnonymousPuzzleSession();
     this.consumeStashedDiscordLink();
     // Sync user preferences from server (overwrites localStorage)
-    import('./preferences.service').then(m => {
-      this.injector.get(m.PreferencesService).loadFromServer();
-    });
+    import('./preferences.service').then(m =>
+      this.withService(() => this.injector.get(m.PreferencesService), p => p.loadFromServer()));
   }
 
   /**
@@ -266,25 +292,23 @@ export class AuthService {
    * Discord-ID automatisch mit dem neuen Account verknüpft.
    */
   private consumeStashedDiscordLink(): void {
-    import('./discord-link.service').then(m => {
-      this.injector.get(m.DiscordLinkService).consumeStashed();
-    });
+    import('./discord-link.service').then(m =>
+      this.withService(() => this.injector.get(m.DiscordLinkService), d => d.consumeStashed()));
   }
 
   private claimAnonymousPuzzleSession(): void {
     const sessionId = localStorage.getItem('rookhub_puzzle_session');
     if (!sessionId) return;
     // Lazy import to avoid circular dependency
-    import('../features/puzzles/puzzle.service').then(m => {
-      const puzzleService = this.injector.get(m.PuzzleService);
-      puzzleService.claimSession().subscribe();
-      puzzleService.claimBookPuzzleSession().subscribe();
-    });
+    import('../features/puzzles/puzzle.service').then(m =>
+      this.withService(() => this.injector.get(m.PuzzleService), puzzleService => {
+        puzzleService.claimSession().subscribe();
+        puzzleService.claimBookPuzzleSession().subscribe();
+      }));
     // Also claim endless puzzle progress
-    import('../features/puzzles/endless-storage.service').then(m => {
-      const endlessStorage = this.injector.get(m.EndlessStorageService);
-      endlessStorage.claimEndlessSession().subscribe();
-    });
+    import('../features/puzzles/endless-storage.service').then(m =>
+      this.withService(() => this.injector.get(m.EndlessStorageService),
+        endlessStorage => endlessStorage.claimEndlessSession().subscribe()));
   }
 
   private getStoredUser(): AuthResponse | null {
