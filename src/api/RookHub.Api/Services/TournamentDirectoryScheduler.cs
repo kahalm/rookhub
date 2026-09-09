@@ -30,6 +30,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     private readonly int _disambiguationBatchSize;
     private readonly int _roundPlanBatchSize;
     private readonly int _fideDetailBatchSize;
+    private readonly int _catchUpAfterHours;
     private readonly int _fideYears;
     private readonly bool _enabled;
 
@@ -74,6 +75,13 @@ public class TournamentDirectoryScheduler : BackgroundService
         // im eingeschwungenen Zustand fast nichts.
         _fideDetailBatchSize = Math.Clamp(
             configuration.GetValue("TournamentDirectory:FideDetailBatchSize", 50), 0, 500);
+
+        // Ab welchem Alter des letzten erfolgreichen Sweeps beim START nachgeholt wird. 20 h
+        // statt 24, damit ein Neustand kurz VOR der ueblichen Uhrzeit nicht bis zum Folgetag
+        // wartet — und deutlich mehr als ein Arbeitstag voller Deploys, damit nicht jedes
+        // Deploy einen Lauf ausloest (siehe CatchUpAge).
+        _catchUpAfterHours = Math.Clamp(
+            configuration.GetValue("TournamentDirectory:CatchUpAfterHours", 20), 0, 168);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -81,6 +89,29 @@ public class TournamentDirectoryScheduler : BackgroundService
         if (!_enabled)
         {
             _logger.LogInformation("Turnierverzeichnis: Sweep per Konfiguration abgeschaltet");
+            return;
+        }
+
+        // AUFHOLEN nach einem Neustart, bevor die Warteschleife beginnt.
+        //
+        // Warum das noetig ist: die Warteschleife unten ist EIN `Task.Delay` bis 03:00 UTC, und
+        // jeder Neustart setzt sie neu an. Wird tagsueber mehrfach deployt, laeuft der Container
+        // nie durchgehend von einem Deploy bis zur Uhrzeit — der Sweep kommt dann NIE dran. Am
+        // Dev-Stand nachgemessen: er lief genau EINMAL (2026-09-07, 03:00:29 bis 03:11:58), und
+        // danach nie wieder; 44 von 257 Foederationen waren je erfolgreich gesweept, die uebrigen
+        // 213 holte niemand nach. Spanien stand deshalb bei einem einzigen Eintrag.
+        try
+        {
+            if (await ShouldCatchUpAsync(stoppingToken))
+            {
+                _logger.LogInformation(
+                    "Turnierverzeichnis: Aufhol-Lauf nach Neustart (letzter Sweep aelter als {Hours} h)",
+                    _catchUpAfterHours);
+                await RunOnceAsync(stoppingToken);
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
             return;
         }
 
@@ -97,6 +128,42 @@ public class TournamentDirectoryScheduler : BackgroundService
             await RunOnceAsync(stoppingToken);
         }
     }
+
+    /// <summary>
+    /// Ist der letzte ERFOLGREICHE Sweep laenger her als die Karenz?
+    ///
+    /// <para><b>Warum am Marker und nicht an der Startzeit.</b> „Zehn Minuten nach jedem Start"
+    /// waere die naheliegende Bauform (der Turnierverlauf-Nachlauf macht es so), hier aber
+    /// gefaehrlich: die Zusatzquellen zaehlen ihre Verschwunden-Karenz in LAEUFEN, nicht in Tagen
+    /// (<c>ExternalDirectorySource.MissesUntilRetired</c>). Jedes Deploy waere ein Lauf — bei drei
+    /// Deploys an einem Nachmittag gaelte ein Turnier, dessen Quelle einmal kurz nichts
+    /// ausliefert, binnen einer Stunde als abgesagt, samt Benachrichtigung an die Abonnenten.
+    /// Der Marker verhindert das von selbst: nach dem ersten Aufhol-Lauf steht er neu, das zweite
+    /// und dritte Deploy loesen keinen weiteren aus.</para>
+    ///
+    /// <para>Ohne jeden erfolgreichen Sweep (frische Datenbank) wird nachgeholt — dort ist
+    /// „nie gelaufen" das staerkste Argument dafuer.</para>
+    /// </summary>
+    private async Task<bool> ShouldCatchUpAsync(CancellationToken ct)
+    {
+        if (_catchUpAfterHours <= 0) return false;
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var last = await db.TournamentDirectorySweeps.AsNoTracking()
+            .Where(s => s.LastSweptAt != null)
+            .MaxAsync(s => s.LastSweptAt, ct);
+
+        return IsStale(last, DateTime.UtcNow, _catchUpAfterHours);
+    }
+
+    /// <summary>
+    /// Die Entscheidung allein, damit sie ohne Datenbank pruefbar ist. <c>null</c> heisst „noch
+    /// nie erfolgreich gesweept" und ist immer ueberfaellig.
+    /// </summary>
+    internal static bool IsStale(DateTime? lastSweptUtc, DateTime nowUtc, int catchUpAfterHours) =>
+        lastSweptUtc is not { } last || nowUtc - last >= TimeSpan.FromHours(catchUpAfterHours);
 
     public static TimeSpan TimeUntilNextRun(DateTime nowUtc)
     {

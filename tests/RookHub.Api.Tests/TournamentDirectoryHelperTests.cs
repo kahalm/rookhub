@@ -525,4 +525,65 @@ public class TournamentDirectorySchedulerTests : IDisposable
         Assert.True(File.Exists(path), $"Datei fehlt: {relativePath}");
         return File.ReadAllText(path);
     }
+
+    // ----- Aufhol-Lauf nach einem Neustart ---------------------------------
+
+    /// <summary>
+    /// Der Sweep muss nach einem Neustart nachgeholt werden, wenn er zu lange her ist.
+    ///
+    /// <para><b>Der Fehler, um den es geht.</b> Die Warteschleife ist EIN <c>Task.Delay</c> bis
+    /// 03:00 UTC, und jeder Neustart setzt sie neu an. Wird tagsueber mehrfach deployt, laeuft der
+    /// Container nie durchgehend von einem Deploy bis zur Uhrzeit — der Sweep kommt dann NIE dran.
+    /// Am Dev-Stand nachgemessen: er lief genau EINMAL (2026-09-07, 03:00:29 bis 03:11:58) und
+    /// danach nie wieder; 44 von 257 Foederationen waren je erfolgreich gesweept, Spanien stand
+    /// bei einem einzigen Eintrag.</para>
+    /// </summary>
+    [Fact]
+    public void IsStale_ALongTimeSinceTheLastSweep_CatchesUp()
+    {
+        var now = new DateTime(2026, 9, 9, 17, 0, 0, DateTimeKind.Utc);
+
+        Assert.True(TournamentDirectoryScheduler.IsStale(now.AddHours(-48), now, 20));
+        Assert.True(TournamentDirectoryScheduler.IsStale(now.AddHours(-20), now, 20));
+    }
+
+    /// <summary>
+    /// „Noch nie erfolgreich gesweept" ist das staerkste Argument fuers Nachholen — eine frische
+    /// Datenbank soll nicht bis zur naechsten Nacht warten.
+    /// </summary>
+    [Fact]
+    public void IsStale_NeverSwept_CatchesUp() =>
+        Assert.True(TournamentDirectoryScheduler.IsStale(null, DateTime.UtcNow, 20));
+
+    /// <summary>
+    /// DIE entscheidende Eigenschaft: ein zweiter Neustand kurz nach dem Aufhol-Lauf loest
+    /// KEINEN weiteren aus.
+    ///
+    /// <para>Ohne diese Bedingung waere die naheliegende Bauform „zehn Minuten nach jedem Start"
+    /// (so macht es der Turnierverlauf-Nachlauf) hier gefaehrlich: die Zusatzquellen zaehlen ihre
+    /// Verschwunden-Karenz in LAEUFEN, nicht in Tagen. Jedes Deploy waere ein Lauf — bei drei
+    /// Deploys an einem Nachmittag gaelte ein Turnier, dessen Quelle einmal kurz nichts
+    /// ausliefert, binnen einer Stunde als abgesagt, samt Benachrichtigung an die Abonnenten.</para>
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(19)]
+    public void IsStale_ShortlyAfterACatchUp_DoesNotRunAgain(int hoursSince)
+    {
+        var now = new DateTime(2026, 9, 9, 17, 0, 0, DateTimeKind.Utc);
+
+        Assert.False(TournamentDirectoryScheduler.IsStale(now.AddHours(-hoursSince), now, 20));
+    }
+
+    /// <summary>Karenz 0 schaltet das Nachholen ab — der Weg zurueck zum alten Verhalten.</summary>
+    [Fact]
+    public void IsStale_WithoutAGracePeriod_IsAlwaysTrueButTheCallerSkipsIt()
+    {
+        // Die Entscheidung selbst kennt die Abschaltung nicht; sie liegt beim Aufrufer
+        // (`_catchUpAfterHours <= 0` → gar nicht fragen). Hier nur festgehalten, dass 0 Stunden
+        // „alles ist ueberfaellig" bedeutet und deshalb NICHT als Karenz taugt.
+        var now = DateTime.UtcNow;
+        Assert.True(TournamentDirectoryScheduler.IsStale(now, now, 0));
+    }
 }
