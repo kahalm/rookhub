@@ -241,6 +241,12 @@ public class GeoTextNormalizerTests
     [InlineData("Москва", "RU", "moskva")]
     [InlineData("Београд", "RS", "beograd")]
     [InlineData("София", "BG", "sofiia")]
+    // Zentralasien: eigene Buchstaben, die vorher restlos wegfielen.
+    [InlineData("Қарағанды", "KZ", "karagandy")]
+    [InlineData("Өскемен", "KZ", "oskemen")]
+    [InlineData("Алматы", "KZ", "almaty")]
+    [InlineData("Бишкек", "KG", "bishkek")]
+    [InlineData("Улаанбаатар", "MN", "ulaanbaatar")]
     // Griechisch — von der Landeswahl unberuehrt.
     [InlineData("Αθήνα", "GR", "athina")]
     [InlineData("Θεσσαλονίκη", null, "thessaloniki")]

@@ -106,6 +106,22 @@ public static class GeoTextNormalizer
     /// <para>Beide Seiten benutzen dieselbe Auswahl — der Lexikon-Eintrag ueber
     /// <c>GeoPlace.Country</c>, der Suchtext ueber das Land des Turniers. Ohne Land gilt die
     /// allgemeine Tabelle.</para>
+    ///
+    /// <para><b>Was diese Wahl NICHT kann, damit es niemand fuer einen Fehler haelt.</b> Die
+    /// Foederation eines Turniers ist nicht immer ein Land: <c>ACC</c> ist ein
+    /// chess-results-Sammelcode (Serbien, Slowakei, Indien, England, Malaysia gemischt),
+    /// <c>CAT</c> ist Katalonien, <c>FID</c> und <c>ONL</c> sind gar keine Orte —
+    /// <c>FideCountryCodes.Map</c> ordnet ihnen bewusst kein Land zu. Fuer sie gilt die
+    /// allgemeine Tabelle, was fuer Serbisch und Russisch richtig ist und nur fuer einen
+    /// UKRAINISCHEN Ortstext unter einem Nicht-UA-Code falsch waere. Gemessen: 14 Eintraege mit
+    /// kyrillischem Ortstext tragen ueberhaupt keine brauchbare Foederation. Bewusst nicht
+    /// gebaut — wer hier eine „falsche" ukrainische Umschrift sieht, hat diesen Fall vor sich und
+    /// nicht einen Fehler in der Tabellenwahl.</para>
+    ///
+    /// <para>Weissrussland (100 Eintraege) laeuft ueber die allgemeine Tabelle, obwohl die
+    /// amtliche belarussische Umschrift <c>г</c> als <c>h</c> schreibt: die ASCII-Namen von
+    /// GeoNames sind dort teils russisch abgeleitet („Gomel"), teils belarussisch („Homyel"). Das
+    /// entscheidet eine Messung nach dem ersten Nachlauf, nicht eine Annahme.</para>
     /// </summary>
     private static Dictionary<char, string> TableFor(string? iso2) =>
         string.Equals(iso2, "UA", StringComparison.OrdinalIgnoreCase) ? UkrainianTable : GeneralTable;
@@ -144,6 +160,12 @@ public static class GeoTextNormalizer
         // Serbisch, Makedonisch, Bulgarisch
         ['ђ'] = "dj", ['ј'] = "j", ['љ'] = "lj", ['њ'] = "nj", ['ћ'] = "c", ['џ'] = "dz",
         ['ѕ'] = "dz", ['ѓ'] = "g", ['ќ'] = "k",
+        // Kasachisch, Kirgisisch, Mongolisch, Baschkirisch — dieselben Zeichen in BEIDEN Tabellen,
+        // deshalb hier. Ohne sie fiel jeder dieser Buchstaben weg und aus „Қарағанды" wurde
+        // „araandy" statt „karagandy": am 2026-09-09 auf Dev 167 Eintraege (KAZ 140, MGL 17,
+        // KGZ 8, UZB 2) mit kyrillischem Ortstext und 6 Pins zusammen.
+        ['қ'] = "k", ['ғ'] = "g", ['ұ'] = "u", ['ү'] = "u", ['ө'] = "o", ['ә'] = "a",
+        ['ң'] = "n", ['һ'] = "h", ['ѳ'] = "f", ['ҳ'] = "kh", ['ҷ'] = "ch", ['ҹ'] = "j",
         // Griechisch
         ['α'] = "a", ['β'] = "v", ['γ'] = "g", ['δ'] = "d", ['ε'] = "e", ['ζ'] = "z",
         ['η'] = "i", ['θ'] = "th", ['ι'] = "i", ['κ'] = "k", ['λ'] = "l", ['μ'] = "m",
