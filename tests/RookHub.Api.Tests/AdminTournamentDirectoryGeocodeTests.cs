@@ -275,6 +275,27 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
         Assert.Equal(GeoSource.Manual, entry.GeoSource);
     }
 
+    [Fact]
+    public async Task GeocodeMissing_WithForce_NeverTouchesAClubNameResolution()
+    {
+        // Der ueber die Vereinsnamen aufgeloeste Spielort ist BELEGT (ein Seitenabruf hat gezeigt,
+        // welches „St. Veit" gemeint ist) — die Namensregel kann diesen Fall gar nicht loesen und
+        // wuerde daraus wieder „mehrdeutig, kein Pin" machen. Weil `TeamHintCheckedAt` einen
+        // zweiten Abruf verhindert, waere die Arbeit unwiederbringlich weg.
+        await EntryAsync("1", "St. Veit", 46.77, 14.36, GeoSource.TeamHint);
+        SeedPlaces(new GeoPlace { Country = "AT", PostalCode = "9300", Name = "St. Veit", Lat = 46.77, Lon = 14.36, Kind = GeoPlaceKind.PostalCode },
+                   new GeoPlace { Country = "AT", PostalCode = "6373", Name = "St. Veit", Lat = 47.29, Lon = 12.35, Kind = GeoPlaceKind.PostalCode });
+
+        var result = await Controller().GeocodeMissing(limit: 100, force: true);
+        var body = Assert.IsType<OkObjectResult>(result).Value!;
+
+        Assert.Equal(0, Prop(body, "examined"));   // gar nicht erst vorgenommen
+        Assert.Equal(0, Prop(body, "cleared"));
+        var entry = await _db.TournamentDirectoryEntries.FirstAsync();
+        Assert.Equal(46.77, entry.Lat);
+        Assert.Equal(GeoSource.TeamHint, entry.GeoSource);
+    }
+
     private static int Prop(object body, string name) =>
         Convert.ToInt32(body.GetType().GetProperty(name)!.GetValue(body));
 }

@@ -679,6 +679,14 @@ public class AdminTournamentDirectoryController : BaseApiController
                         // Von der Quelle mitgelieferte Koordinaten sind genauer als alles, was das
                         // Ortslexikon daraus machen kann — sie bleiben wie die von Hand gesetzten.
                         && e.GeoSource != GeoSource.SourceProvided
+                        // Ebenso der ueber die VEREINSNAMEN aufgeloeste Spielort: dort hat ein
+                        // Seitenabruf BEWIESEN, welcher von mehreren gleichnamigen Orten gemeint
+                        // ist (`VenueDisambiguationService`) — genau der Fall, den die Namensregel
+                        // per Definition nicht loesen kann. Am 2026-09-09 auf Dev vorgefuehrt: ein
+                        // `force`-Lauf machte aus allen 17 solchen Pins wieder „mehrdeutig, kein
+                        // Pin", und weil `TeamHintCheckedAt` einen zweiten Abruf verhindert, waere
+                        // die Arbeit fuer immer weg gewesen.
+                        && e.GeoSource != GeoSource.TeamHint
                         && (force || e.Lat == null))
             .OrderBy(e => e.StartDate)
             .Take(Math.Clamp(limit, 1, 10000))

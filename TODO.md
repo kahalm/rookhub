@@ -331,6 +331,16 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
    aktiv bleiben, bis auch seltene Rückkehrer ihn abgeholt haben (Tage, nicht Minuten).
 
 ## Geparkt
+- [ ] **`geocode-missing` arbeitet keinen Rueckstand ab — es sieht bei jedem Aufruf dieselben
+  Eintraege.** Die Auswahl ist `OrderBy(StartDate).Take(limit)` ohne jede Fortschrittsmarke. Am
+  2026-09-09 live vorgefuehrt: sieben Aufrufe mit `limit=1000` meldeten je „1000 geprueft, 0
+  verortet" — die 2476 offenen Eintraege wurden nie erreicht, nur die ersten 1000 immer wieder. Erst
+  ein Aufruf mit `limit=10000` (dem Deckel) nahm alle 2874 vor und verortete 82. Solange das so
+  ist, MUSS der Deckel den ganzen Bestand umfassen; ein kleinerer Wert ist nicht „eine Portion",
+  sondern „immer dieselbe Portion". Saubere Loesung waere eine Marke wie `RoundPlanCheckedAt`
+  (dann auch nach Alter sortierbar) — das ist eine Migration. Dieselbe Klasse Fehler wie beim
+  Rundenplan-Nachtrag (dort behoben, indem die Auswahl nach dem Alter des Vermerks sortiert).
+
 - [ ] **Polen: 79 % der Detailseiten tragen keine Angaben — und werden trotzdem jede Nacht erneut
   geholt.** Der 301-Fehler ist behoben (Crawler holt jetzt `/turnieje/{jahr}/ti_{id}/` MIT
   Schraegstrich), aber damit wird das Zweite sichtbar: in einer Stichprobe von 14 Turnieren hatten
