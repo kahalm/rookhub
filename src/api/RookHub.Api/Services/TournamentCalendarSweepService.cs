@@ -83,7 +83,7 @@ public class TournamentCalendarSweepService
                 // Der haeufige Fall: die Turniersuche kennt das Turnier inzwischen auch. Nur den
                 // Herkunftsvermerk setzen — der Kalender hat kein Feld, das die Suche nicht
                 // besser fuehrt.
-                NoteSource(match, row, now);
+                await NoteSourceAsync(match, row, now, ct);
                 matched++;
 
                 // Und wenn wir es frueher SELBST angelegt hatten, ist das jetzt ein Duplikat:
@@ -110,7 +110,7 @@ public class TournamentCalendarSweepService
                 own.LastSeenAt = now;
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
-                NoteSource(own, row, now);
+                await NoteSourceAsync(own, row, now, ct);
                 continue;
             }
 
@@ -146,7 +146,7 @@ public class TournamentCalendarSweepService
                 entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
 
             _db.TournamentDirectoryEntries.Add(entry);
-            NoteSource(entry, row, now);
+            await NoteSourceAsync(entry, row, now, ct);
             added++;
         }
 
@@ -202,26 +202,18 @@ public class TournamentCalendarSweepService
     /// vermerkt — ein Vermerk ohne Kennung liesse sich beim naechsten Durchgang nicht
     /// wiedererkennen und legte jede Nacht eine neue Zeile an.
     /// </summary>
-    private void NoteSource(TournamentDirectoryEntry entry, CrawlerCalendarEntry row, DateTime now)
+    /// <para>Laeuft ueber den GEMEINSAMEN Helfer: der eindeutige Index auf (Kind, ExternalId) gilt
+    /// ueber den ganzen Bestand, und diese eigene Fassung sah nur die Vermerke des uebergebenen
+    /// Eintrags. Verschob sich die Zuordnung einer Kalender-Nummer auf einen anderen Eintrag,
+    /// starb der Lauf an „Duplicate entry" — am 2026-09-09 mit `4-10814` genau so passiert,
+    /// waehrend die 15 anderen Quellen ueber den Helfer schon umhaengten.</para>
+    private Task NoteSourceAsync(TournamentDirectoryEntry entry, CrawlerCalendarEntry row,
+        DateTime now, CancellationToken ct)
     {
-        if (row.CalendarId is not { Length: > 0 } id) return;
+        if (row.CalendarId is not { Length: > 0 } id) return Task.CompletedTask;
 
-        var existing = entry.Sources.FirstOrDefault(
-            s => s.Kind == DirectorySourceKind.ChessResultsCalendar && s.ExternalId == id);
-        if (existing is not null)
-        {
-            existing.LastSeenAt = now;
-            return;
-        }
-
-        entry.Sources.Add(new TournamentDirectorySource
-        {
-            Kind = DirectorySourceKind.ChessResultsCalendar,
-            ExternalId = id,
-            Url = Truncate(row.Url, 500),
-            FirstSeenAt = now,
-            LastSeenAt = now,
-        });
+        return ExternalDirectorySource.NoteSourceAsync(_db, entry,
+            DirectorySourceKind.ChessResultsCalendar, id, row.Url, now, ct);
     }
 
     // ----- Crawler ----------------------------------------------------------

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.453.14", date: "2026-09-09", changes: [
+    { en: "The announcement calendar delivers again. It kept its own copy of the code that records where a tournament came from, and so it was the one source that did not learn to move such a record when a tournament changes hands. It now uses the shared one.", de: "Der Ankündigungskalender liefert wieder. Er hielt eine eigene Fassung des Codes, der vermerkt, woher ein Turnier kommt, und war damit die einzige Quelle, die einen solchen Vermerk nicht umhängen konnte, wenn ein Turnier den Eintrag wechselt. Er benutzt jetzt den gemeinsamen." },
+  ] },
   { version: "0.453.13", date: "2026-09-09", changes: [
     { en: "Three more federation calendars deliver again: Hungary, Czechia and the announcement calendar. Each of them died as soon as one of its tournaments had moved to a different entry in the directory. And because no single network exit reaches every federation site, a source is now retried up to five times through a different exit instead of being given up on. Slovakia, Italy and Romania no longer depend on which exit happens to be in use.", de: "Drei weitere Verbandskalender liefern wieder: Ungarn, Tschechien und der Ankündigungskalender. Jeder von ihnen starb, sobald eines seiner Turniere im Verzeichnis einem anderen Eintrag zugeordnet worden war. Und weil kein einzelner Netzausgang alle Verbandsseiten erreicht, wird eine Quelle jetzt bis zu fünf Mal über einen anderen Ausgang wiederholt statt aufgegeben. Slowakei, Italien und Rumänien hängen damit nicht mehr davon ab, welcher Ausgang gerade in Benutzung ist." },
   ] },
