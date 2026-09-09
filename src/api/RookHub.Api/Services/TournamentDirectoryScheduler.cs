@@ -241,9 +241,11 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning(ex, "Turnierverzeichnis: chess.hu-Kalender fehlgeschlagen");
             }
 
-            // Der tschechische Verbandskalender. Er laeuft VOR dem Rundenplan-Nachtrag, weil er
-            // Spieltermine mitbringt: was er schon eingetragen hat, muss dort nicht mehr geholt
-            // werden.
+            // Der tschechische Verbandskalender. Er bringt SPIELTERMINE mit (die Ligarunden), und
+            // er laeuft NACH dem Rundenplan-Nachtrag — das kostet nichts: dessen Auswahl haengt an
+            // `RoundPlanCheckedAt`, nicht daran, ob schon Termine dastehen. Ein heute Nacht
+            // angelegter Liga-Eintrag kommt also morgen dort an die Reihe, und findet
+            // chess-results keinen Plan (leere Antwort), bleiben die hier eingetragenen stehen.
             try
             {
                 var chessCz = scope.ServiceProvider.GetRequiredService<ChessCzDirectorySweepService>();

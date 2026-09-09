@@ -1390,3 +1390,143 @@ eines Spielers — das Feature, das heute nur chess-results kennt.
 **Ausserdem gefunden**: die deutschen LANDESverbaende fuehren eigene, von schachbund.de getrennte
 Kalender (Bayern, NRW, NRW-Jugend nachgewiesen). Das ist ein Dutzend weiterer Quellen desselben
 guten Typs — Verband, Ankuendigungen, kein kommerzielles Interesse.
+
+
+## Runde 3: das uebrige Europa (2026-09-09)
+
+Auftrag: „such dir fuer alle fehlenden europaeischen Laender die Seiten und vermerke diese."
+Sechs Gruppen, drei gleichzeitig, jede mit derselben Frage wie in Runde 2: **bringt die Quelle
+Turniere, die nicht ohnehin auf chess-results stehen?** Jede Zahl unten ist gemessen, nicht
+geschaetzt; die chess-results-Vergleichszahl kommt je Land aus dem eigenen Crawler
+(`/api/tournament-search?fed=<FED>&from=2026-09-09&to=2027-07-31`).
+
+| Land | Urteil | Kuenftige | auf chess-results | Grund in einem Satz |
+|---|---|---|---|---|
+| **Irland** | ✅ | 81 | 19 | 94 % fehlen dort; robots.txt praktisch leer |
+| **Frankreich** | ✅ | (Bestand) | — | nur 2 von 40 gegengeprueften stehen dort (5 %) |
+| **Schottland** | ✅ | 44 | 8 | eine einzige Seite bis 2028, Bedenkzeit-Klasse strukturiert |
+| **Rumaenien** | ✅ | 31 | 73 | ein Abruf, 32 % neu, darunter die ganzen Mannschaftsligen |
+| **Wales** | ✅ | ≥29 | 5 | vollstaendige UK-Postleitzahlen im Fliesstext |
+| **Norwegen** | ✅ | 81 | **0** | Eventfeed offen; chess-results kennt NOR gar nicht |
+| Niederlande | ⚠️ | 177 | 12 | grosser Zusatz, aber Rundenzahl und Teilnehmer fehlen strukturell |
+| Georgien | ⚠️ | 13 | 5 | 85 % neu, aber keine stabile Kennung und keine Anschrift |
+| Kroatien | ⚠️ | 9 (+9) | 70 | sauber, aber kleiner Zusatz; keine Anschrift bei den Spielstaetten |
+| Bosnien | ⚠️ | 4 | 37 | 2 echte Luecken, aber unstrukturierter Fliesstext |
+| Aserbaidschan | ⚠️ | 6 | 8 | 4 neu, aber CSRF/Session noetig fuer wenige Zeilen |
+| Island | ⚠️ | 54 (nur lfd. Monat) | 7 | robots.txt erlaubt nur den aktuellen Monat, jede Navigation ist gesperrt |
+| Finnland | ⚠️ | 270 | 17 | hohe Ueberschneidung, keine Postleitzahl — Befund unveraendert |
+| Schweden | ⚠️ | 181 | 23 | **0 von 181 mit Ortsfeld** — nicht verortbar |
+| Tuerkei | ⚠️ | 3 ab heute | 12 | Jahrestabelle mit 44 Zeilen, aber fast alles schon vorbei |
+| Montenegro | ⚠️ | 3 | 1 | technisch sauber, aber drei Turniere tragen keinen eigenen Dienst |
+| Albanien | ⚠️ | 3 | 2 | dasselbe |
+| Litauen | ⚠️ | 12 | 22 | 11 davon schon dort — netto ein Turnier |
+| Lettland | ⚠️ | — | 73 | JS-SPA ohne sichtbare Schnittstelle; dort ohnehin gut abgedeckt |
+| Spanien | ❌ | ~7 | 180 | Verbandskalender ist nur der institutionelle Terminplan; der Rest liegt auf 17 Regionalverbaenden |
+| Belgien | ❌ | 0 erreichbar | **0** | Kalender ist ein eingebettetes Looker-Studio-Dashboard ohne Daten im Antworttext |
+| Bulgarien | ❌ | 0 erreichbar | 37 | drei konkurrierende Verbandsnamen, keiner erreichbar (DNS / 403 / geparkt / leeres Wix-Widget) |
+| Serbien | ❌ | 1 | 117 | eine verwertbare Zeile |
+| Griechenland | ❌ | ~7/Jahr | 52 | nur das Archiv der eigenen Meisterschaften, ohne Ortsfeld, 100 % Ueberschneidung |
+| Portugal | ❌ | 8 | 69 | sechs davon schon dort |
+| Ukraine | ❌ | ~1 | 24 | Verbandskalender seit 2011 tot |
+| Armenien | ❌ | 0 | 15 | Endpunkt funktioniert, Kalender ist leer (vier Monate geprueft) |
+| Nordmazedonien | ❌ | 0 | 4 | Seite seit 13 Monaten nicht aktualisiert |
+| Kosovo | ❌ | 0 | 0 | sauberste Tabelle der Runde — aber jede Zeile vergangen. Fuer die naechste Jahrestabelle vormerken |
+| Moldau | ❌ | ~16/Jahr | 0 | ein Blogbeitrag, Datum ohne Jahresangabe |
+| Zypern | ❌ | 0 | 3 | JS-SPA ohne serverseitigen Inhalt, leere Sitemap |
+| Luxemburg | ❌ | ~2 neu | **0** | nur ein PDF-Saisonkalender |
+| Andorra | ❌ | 1 | 1 | dasselbe eine Turnier |
+| Monaco | ❌ | 0 | 0 | kein Kalender vorhanden |
+| Daenemark | ❌ | — | 0 | `Disallow: /` fuer JEDEN Crawler; die offene Zweitdomaene ist rein historisch |
+| Israel | ⚠️ | 98 Turniertage | 24 | grosse Luecke, aber der Endpunkt mit den Turnierdaten liess sich nicht rekonstruieren |
+| Isle of Man | ⚠️ | 11/Saison | 0 | eigene Turnierverwaltung, aber nur geschlossene Klub-Ligadivisionen |
+| Faeroeer | ❌ | **0** | 1 | Plugin und Technik sauber, Kalender aber leer — negativer Zugewinn |
+| San Marino | ❌ | 0 | 0 | reiner Nachrichten-Blog ohne Vorlauf; robots.txt sperrt ClaudeBot UND GPTBot namentlich |
+| Guernsey | ❌ | 1 | 1 | Klub-Kalender seit 2022 tot; das eine Festival steht schon dort |
+| Jersey | ❌ | 0 | 0 | Ein-Seiten-Werbeseite ohne jede Struktur |
+| Malta | ❓ | — | 7 | wie Estland von hier aus nicht erreichbar — kein Urteil ueber die Quelle |
+| Estland | ❓ | — | 2 | von unserer Infrastruktur aus nicht erreichbar — siehe unten, das ist kein Urteil ueber die Quelle |
+| Belarus / Russland | ❌ | — | 0 / 415 | von hier aus nicht erreichbar; bei RUS ausserdem die dichteste chess-results-Abdeckung ueberhaupt |
+
+### Vier Lehren, die ueber die einzelnen Laender hinausgehen
+
+**1. „Nicht erreichbar" ist oft eine Aussage ueber UNS, nicht ueber die Quelle.** Drei Hosts der
+Balkan-Gruppe waren zunaechst tot (TCP-Timeout) und nach einer VPN-IP-Rotation sofort da. Estland
+wurde daraufhin nachgemessen, und das Ergebnis ist eindeutig:
+
+```
+DNS      maleliit.ee → 185.7.252.220   loest auf
+TCP 443  vom Host                      Verbindung steht
+TCP 443  ueber das VPN                 keine Verbindung
+```
+
+Die estnische Seite lebt — unsere Ausgangs-IP ist dort gesperrt. **Malta zeigt dasselbe Bild**
+(TCP-Timeout ohne RST auf Port 80 und 443), und auch dort fuehrt chess-results sieben kuenftige
+Turniere, die Seite ist also mit Sicherheit nicht tot. Beide Laender sind deshalb mit ❓ vermerkt
+und nicht mit ❌: ein Urteil ueber eine Quelle, die man nicht erreicht hat, waere keines. Fuer den Betrieb heisst das: ein
+naechtlicher Durchgang braucht bei einem Timeout einen Wiederholversuch NACH Rotation, sonst faellt
+eine gesunde Quelle sporadisch und grundlos aus. Serbien und Montenegro zeigten zusaetzlich beim
+Erstzugriff eine voruebergehende JS-Bot-Pruefung, die beim zweiten Versuch verschwand.
+
+**2. „The Events Calendar" ist das wiederkehrende Muster.** Vier der geprueften Verbaende fahren
+WordPress mit diesem Plugin und haben damit ohne eigenes Zutun eine dokumentierte REST-API
+(`/wp-json/tribe/events/v1/events` plus `/venues` mit `address`, `zip`, `geo_lat`, `geo_lng`) —
+England laeuft schon so, Rumaenien und Kroatien koennten es. Es lohnt sich, das bei JEDER neuen
+Quelle als Erstes zu probieren; es kostet einen Abruf und spart im Erfolgsfall den ganzen Parser.
+
+**3. Eine unlesbare robots.txt ist ein Vermerk wert, keine stille Annahme.** `frsah.ro` (Rumaenien)
+antwortet auf `/robots.txt` selbst mit **403**, waehrend Inhalt und REST-API klaglos 200 liefern.
+RFC 9309 regelt genau das: ein 4xx auf die robots.txt heisst „keine Einschraenkungen". Danach wird
+gehandelt — aber es steht hier, damit niemand spaeter glaubt, die Regel sei geprueft worden.
+
+**4. Klein ist nicht dasselbe wie nutzlos, aber meistens doch.** Montenegro (3 Turniere gegen 1)
+und Albanien (3 gegen 2) verdoppeln rechnerisch den Bestand ihres Landes. Trotzdem ⚠️ statt ✅: der
+Massstab ist Liechtenstein aus Runde 1 — ein eigener Dienst mit Tests, Zeitplan und naechtlichem
+Abruf rechnet sich nicht fuer drei Zeilen, die von Hand schneller eingetragen sind. Dasselbe gilt
+fuer Litauen (netto ein Turnier) und die Tuerkei (drei datierte Zeilen ab heute).
+
+### Die sechs, die angebunden werden — mit dem, was die Umsetzung braucht
+
+**Irland — `icu.ie`** · `GET https://www.icu.ie/events`, serverseitig gerendertes HTML, paginiert,
+rund 20 Eintraege je Abruf; die Listenseite nennt selbst „81 of 81". Detailseite je Turnier unter
+`/events/{id}` — die Nummer ist damit eine echte, stabile Kennung. Einzelne Detailseiten verlinken
+sogar direkt die chess-results-Nummer (stichprobenartig geprueft, korrekt), das waere derselbe
+exakte Dedup-Schluessel wie bei chess.sk.
+
+**Frankreich — `echecs.asso.fr`** · `ListeTournois.aspx?Action=RES&Mois=<1-12>&Annee=<Jahr>`; ohne
+die Parameter zeigt die Seite nur ein rollierendes Fenster. robots.txt auf beiden Hosts 404. Der
+Ertrag ist der groesste der Runde: die FFE fuehrt die nicht-FIDE-gewerteten Vereinsturniere, die
+chess-results praktisch gar nicht kennt.
+
+**Schottland — `chessscotland.com`** · `GET /calendar/upcoming`, EINE Seite, 44 Eintraege bis 2028,
+robots.txt 404. Die Bedenkzeit-KLASSE steht strukturiert dabei — sonst muss sie ueberall aus dem
+Namen erschlossen werden.
+
+**Rumaenien — `frsah.ro`** · `GET /wp-json/tribe/events/v1/events?per_page=50&page=1`, ein Abruf,
+31 Turniere (Antwort-Header `x-tec-total`), 84 % mit Ort. Plus `/venues` wie bei England. Keine
+Postleitzahl, keine Koordinaten. Zur robots.txt siehe Lehre 3.
+
+**Wales — `welshchessunion.uk`** · `GET /calendar/`, eine statische Saisonseite, ≥29 Eintraege mit
+vollstaendiger Anschrift inklusive UK-Postleitzahl. **Keine stabile Kennung** — die Zuordnung muss
+ueber Termin und Name laufen. Und ein Befund, der zum Muster dieser Reihe gehoert: die robots.txt
+sperrt gezielt den bequemen **ICS-Export** (`ai1ec_exporter_controller`), erlaubt aber die
+Fliesstext-Seite. Die umstaendlichere Route ist hier die einzige zulaessige.
+
+**Norwegen — `sjakk.no`** · `GET /aktiviteter-feed.rss`, EIN Abruf, 542 kB, 1000 Eintraege, davon
+81 kuenftig. chess-results kennt fuer NOR **null** kuenftige Turniere — der Zugewinn ist damit
+rechnerisch vollstaendig. Der Haken: **kein Adressfeld**, nur Titel und Vereinsname. Das ist
+dieselbe Schwaeche, an der Schweden scheitert; anders als dort traegt ein norwegischer Vereinsname
+aber meist den Ort („Oslo Schakselskap"). Vor der Anbindung nachmessen, wie viele sich so verorten
+lassen — nicht danach.
+
+### Zwei geparkte Faelle mit konkretem naechsten Schritt
+
+**Israel** ist die groesste ungehobene Luecke der Runde: ueber den funktionierenden
+`ShowDay`-Endpunkt gemessen **98 Turniertage** im Vergleichszeitraum gegen 24 auf chess-results.
+Der Endpunkt, der die Turnierdaten selbst liefert (`ShowTournaments`), liess sich aber trotz mehr
+als zehn Parameter-Varianten nicht rekonstruieren. Das ist kein Rechts- und kein
+Erreichbarkeitsproblem, sondern schlicht eine unbekannte Aufrufform — sie braucht einen echten
+Netzwerkmitschnitt aus dem Browser, dann ist der Rest Routine.
+
+**Estland und Malta** brauchen einen Abruf ueber eine andere Ausgangs-IP. Solange das nicht
+passiert ist, steht dort ❓ und kein Urteil.
+

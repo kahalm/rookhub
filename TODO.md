@@ -66,6 +66,25 @@ durch eine Vorrangregel, sondern weil die FIDE-Jahresansicht die Detailfelder ni
 dem Nachlauf oben waere zu entscheiden, wer bei Widerspruch gilt (Vorschlag: chess-results fuer
 Termin/Ort, FIDE fuer die Bedenkzeit-Beschreibung — dort ist sie ausgeschrieben).
 
+## [ ] Verschwundene Turniere der ZUSATZQUELLEN werden nie zurueckgezogen (2026-09-08)
+
+Der chess-results-Sweep fuehrt `MissedSweeps`: taucht ein Turnier in der Trefferliste nicht mehr
+auf, zaehlt der Vermerk hoch, und nach mehreren Durchgaengen gilt der Eintrag als entfernt. **Die
+neun Zusatzquellen tun das nicht.** Sie legen an und frischen auf (`LastSeenAt`), aber ein
+Turnier, das aus dem Verbandskalender verschwindet — abgesagt, verlegt, geloescht —, bleibt bei
+uns fuer immer stehen. Sichtbar wird es erst, wenn der Termin vorbei ist.
+
+Zwei Faelle sind schon heute abgedeckt und zeigen, dass es geht: Slowenien zieht als abgesagt
+gekennzeichnete Turniere zurueck, Tschechien und die Slowakei die als Schulung erkannten. Was
+fehlt, ist der Fall „steht einfach nicht mehr drin".
+
+**Der Weg** waere ein gemeinsamer Nachlauf in `ExternalDirectorySource`: nach einem erfolgreichen
+Durchgang alle eigenen Eintraege DIESER Quellenart heraussuchen, deren `LastSeenAt` aelter ist als
+der gerade begonnene Lauf, und dort `MissedSweeps` hochzaehlen bzw. ab einer Schwelle
+`RemovedAt` setzen. Wichtig dabei: **nur nach einem Durchgang, der wirklich Daten hatte** — bei
+einer leeren oder halben Antwort wuerde er sonst den halben Bestand zurueckziehen. Genau deshalb
+ist es kein Einzeiler und steht hier statt im Code.
+
 ## [ ] `Kind` ist im GANZEN Bestand `Unknown` — es fehlt nur ein Sweep (gemessen 2026-09-07)
 
 Kein einziger der 5074 offenen Eintraege ist als Mannschaftsturnier erkannt. Nachgeprueft, und es
