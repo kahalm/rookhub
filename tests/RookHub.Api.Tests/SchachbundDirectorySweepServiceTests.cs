@@ -176,7 +176,12 @@ public class SchachbundDirectorySweepServiceTests : IDisposable
 
         var source = Assert.Single(_db.TournamentDirectorySources.ToList());
         Assert.Equal(DirectorySourceKind.GermanChessFederation, source.Kind);
-        Assert.Equal("ccm-rapidturnier-2026", source.ExternalId);
+        // Der KURZSCHLUESSEL, auch wenn dieser Slug (21 Zeichen) noch gepasst haette: EINE Form je
+        // Quelle. Lange Slugs gibt es wirklich — an ihnen scheiterte die Quelle jede Nacht mit
+        // „Data too long for column", nach 283 s hoeflichen Crawlens. Lesbar bleibt die Herkunft in
+        // der `Url`, und genau dafuer ist sie da.
+        Assert.Equal(SchachbundDirectorySweepService.PublicIdOf("ccm-rapidturnier-2026"), source.ExternalId);
+        Assert.True(source.ExternalId.Length <= ExternalDirectorySource.MaxExternalIdLength);
         Assert.Equal("https://www.schachbund.de/turnierdetails/ccm-rapidturnier-2026.html", source.Url);
     }
 

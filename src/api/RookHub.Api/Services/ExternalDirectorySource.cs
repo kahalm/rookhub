@@ -128,15 +128,38 @@ public static class ExternalDirectorySource
         return true;
     }
 
+    /// <summary>Laenge der Spalte <see cref="TournamentDirectorySource.ExternalId"/>.</summary>
+    public const int MaxExternalIdLength = 60;
+
     /// <summary>
     /// Herkunftsvermerk setzen oder auffrischen. Ohne fremde Kennung wird NICHTS vermerkt: ein
     /// Vermerk ohne Kennung liesse sich beim naechsten Durchgang nicht wiedererkennen und legte
     /// jede Nacht eine neue Zeile an.
     /// </summary>
+    /// <exception cref="ArgumentException">Die Kennung ist laenger als die Spalte.</exception>
     public static void NoteSource(TournamentDirectoryEntry entry, DirectorySourceKind kind,
         string? externalId, string? url, DateTime now)
     {
         if (externalId is not { Length: > 0 }) return;
+
+        // ABBRUCH mit Klartext statt Abschneiden. Die Kennung ist ein SCHLUESSEL: gekuerzt koennten
+        // zwei verschiedene Turniere denselben bekommen und in Liste und Kalender zu einem
+        // verschmelzen — der teuerste Fehler dieser Klasse (siehe TournamentNameGrouping).
+        // Gehasht waere es noch schlimmer: die Suchen der Quellen vergleichen die ROHE Kennung
+        // (`s.ExternalId == slug`), fanden ihren Vermerk also nie wieder und liefen bei jedem
+        // Durchgang in den eindeutigen Index.
+        //
+        // Am 2026-09-09 auf Dev gefunden: Wales und Deutschland fuehren keine Turniernummer, ihre
+        // Kennung entsteht aus Termin und Anschrift und ist damit laenger als 60 Zeichen. Beide
+        // Quellen scheiterten jede Nacht mit „Data too long for column 'ExternalId'" — bei
+        // Deutschland erst nach 283 s hoeflichen Crawlens, das den ganzen Durchgang wegwarf. Die
+        // Meldung stand nur als innere Ausnahme eines DbUpdateException im Log.
+        if (externalId.Length > MaxExternalIdLength)
+            throw new ArgumentException(
+                $"Quelle {kind} liefert eine {externalId.Length} Zeichen lange Kennung, die Spalte "
+                + $"haelt {MaxExternalIdLength}. Einen KURZSCHLUESSEL vermerken (Hash der Quellen-"
+                + "Kennung, wie WcuDirectorySweepService.PublicIdOf) — nicht abschneiden.",
+                nameof(externalId));
 
         var existing = entry.Sources.FirstOrDefault(
             s => s.Kind == kind && s.ExternalId == externalId);

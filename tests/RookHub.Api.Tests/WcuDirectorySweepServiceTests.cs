@@ -127,7 +127,16 @@ public class WcuDirectorySweepServiceTests : IDisposable
 
         var source = Assert.Single(_db.TournamentDirectorySources.ToList());
         Assert.Equal(DirectorySourceKind.WelshChessUnion, source.Kind);
-        Assert.Equal("2026-11-01|2026-11-01|best western heronston hotel, bridgend", source.ExternalId);
+        // Der KURZSCHLUESSEL, nicht der rohe Quellen-Schluessel: der ist hier 61 Zeichen lang und
+        // passt nicht in die Spalte (60). Diese Zusicherung stand vorher auf dem rohen Wert und war
+        // gruen — die InMemory-Datenbank prueft keine Spaltenlaengen, gegen MariaDB scheiterte die
+        // Quelle dagegen JEDE Nacht mit „Data too long for column".
+        // Dieser Schluessel ist mit genau 60 Zeichen haarscharf noch durchgegangen — deshalb fiel
+        // der Fehler hier nie auf. Eine Zeile mehr Anschrift, und die Quelle scheiterte.
+        var raw = "2026-11-01|2026-11-01|best western heronston hotel, bridgend";
+        Assert.Equal(ExternalDirectorySource.MaxExternalIdLength, raw.Length);
+        Assert.Equal(WcuDirectorySweepService.PublicIdOf(raw), source.ExternalId);
+        Assert.True(source.ExternalId.Length <= ExternalDirectorySource.MaxExternalIdLength);
         Assert.Equal("https://www.welshchessunion.uk/calendar/", source.Url);
     }
 

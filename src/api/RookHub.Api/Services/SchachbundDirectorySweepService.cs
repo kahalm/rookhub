@@ -81,7 +81,7 @@ public class SchachbundDirectorySweepService
                         match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
 
                     ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.GermanChessFederation, row.EventId, row.Url, now);
+                        DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now);
                     matched++;
                     if (changed) updated++;
 
@@ -130,7 +130,7 @@ public class SchachbundDirectorySweepService
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
                 ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.GermanChessFederation, row.EventId, row.Url, now);
+                    DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now);
 
                 if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {
@@ -191,6 +191,10 @@ public class SchachbundDirectorySweepService
     /// Diese Quelle hat keine Nummer — ihre Kennung ist der Adressbestandteil der Detailseite
     /// („ccm-monatliches-rapidturnier-10-september-2026-12-3", 51 Zeichen). Die Spalte fasst 24,
     /// also ein Kurzwert; der lesbare Slug steht vollstaendig im Herkunftsvermerk.
+    /// <para>Derselbe Kurzwert ist auch die KENNUNG im Herkunftsvermerk — der Slug der Quelle ist
+    /// laenger als die 60 Zeichen von <see cref="Models.TournamentDirectorySource.ExternalId"/>, und
+    /// die Quelle warf deshalb jede Nacht nach 283 s hoeflichen Crawlens den ganzen Durchgang weg
+    /// (2026-09-09 gefunden, 0 Eintraege im Bestand).</para>
     /// </summary>
     internal static string PublicIdOf(string slug)
     {

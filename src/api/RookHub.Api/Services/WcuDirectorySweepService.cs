@@ -80,7 +80,7 @@ public class WcuDirectorySweepService
                 if (match is not null)
                 {
                     ExternalDirectorySource.NoteSource(match,
-                        DirectorySourceKind.WelshChessUnion, row.EventId, row.Url, now);
+                        DirectorySourceKind.WelshChessUnion, PublicIdOf(row.EventId), row.Url, now);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -119,7 +119,7 @@ public class WcuDirectorySweepService
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
                 ExternalDirectorySource.NoteSource(own,
-                    DirectorySourceKind.WelshChessUnion, row.EventId, row.Url, now);
+                    DirectorySourceKind.WelshChessUnion, PublicIdOf(row.EventId), row.Url, now);
 
                 if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
                 {
@@ -168,6 +168,10 @@ public class WcuDirectorySweepService
     /// aus Termin und Anschrift gebildeter Schluessel (siehe <c>WcuCalendarService.EventKeyOf</c>
     /// im Crawler). Hier wird daraus nur noch der Kurzwert fuer die 24 Zeichen von
     /// <see cref="TournamentDirectoryEntry.PublicId"/>.
+    /// <para>Derselbe Kurzwert ist auch die KENNUNG im Herkunftsvermerk. Der Schluessel der
+    /// Quelle ist eine Zeile aus Termin und Anschrift und damit laenger als die 60 Zeichen von
+    /// <see cref="Models.TournamentDirectorySource.ExternalId"/> — die Quelle scheiterte deshalb
+    /// jede Nacht an „Data too long for column" (2026-09-09 gefunden, 0 Eintraege im Bestand).</para>
     /// </summary>
     internal static string PublicIdOf(string key)
     {
