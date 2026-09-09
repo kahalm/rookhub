@@ -20,6 +20,10 @@
 #   8. Polen wird WIEDERHOLT, bis keine Detailseite mehr geholt wird (dort ist
 #      der Abruf je Turnier gedeckelt, ein Durchgang reicht also nicht).
 #   9. SKIP_SOURCES=1 laesst beides aus, die langen Nachtraege laufen trotzdem.
+#  10. ZUGEWINN-Regel bei den Spielterminen: dort kann `checked` nie 0 werden
+#      (retryEmpty haelt jedes planlose Turnier im Topf), also endet der Lauf
+#      nach IDLE_ROUNDS Durchgaengen ohne `withPlan`. Ein Zugewinn setzt den
+#      Zaehler zurueck; IDLE_ROUNDS=0 schaltet die Regel ab.
 #
 #   ./scripts/tests/test_directory_runs.sh                 # testet scripts/directory-runs.sh
 #   ./scripts/tests/test_directory_runs.sh /pfad/zu/alt.sh # beliebige Version testen
@@ -220,6 +224,90 @@ out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" CALLS="$CALLS" STA
   || { check "haelt bei MAX_ROUNDS an" no; echo "     war: $(grep -c '/fide-details' "$CALLS")"; }
 grep -q 'Deckel von 3' <<<"$out" && check "sagt, dass noch etwas offen ist" ok \
   || { check "sagt, dass noch etwas offen ist" no; echo "$out" | tail -5; }
+
+# ---------------------------------------------------------------------------
+echo "== Spieltermine: Schluss, wenn nichts mehr dazukommt"
+# Der Fall vom 2026-09-09: `checked` bleibt bei 200, weil retryEmpty die planlosen Turniere im
+# Topf haelt — ohne die Zugewinn-Regel liefe das bis MAX_ROUNDS (gut vier Stunden fuer nichts).
+rm -rf "$sandbox/bin" "$sandbox/state"; mkdir -p "$sandbox/bin" "$sandbox/state"
+cat > "$sandbox/bin/curl" <<'FAKE'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$CALLS"
+url=""; for a in "$@"; do case "$a" in http*) url="$a";; esac; done
+case "$url" in
+  *"/api/auth/login") echo '{"token":"tok"}' ;;
+  *"/round-plans"*)
+      # Immer 200 geprueft, NIE ein Plan — genau der Leerlauf.
+      echo '{"checked":200,"withPlan":0,"failed":0}' ;;
+  *"/fide-details"*)  echo '{"checked":0,"withDetails":0,"geocoded":0}' ;;
+  *)                  echo '{}' ;;
+esac
+FAKE
+chmod +x "$sandbox/bin/curl"
+: > "$CALLS"
+out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" CALLS="$CALLS" STATE="$sandbox/state" \
+      SKIP_SOURCES=1 MAX_ROUNDS=20 bash "$SCRIPT" http://api.test "" 200 2>&1)
+n=$(grep -c '/round-plans' "$CALLS")
+[ "$n" -eq 2 ] && check "haelt nach 2 Durchgaengen ohne Zugewinn an" ok \
+  || { check "haelt nach 2 Durchgaengen ohne Zugewinn an" no; echo "     war: $n"; }
+grep -q 'ohne Zugewinn' <<<"$out" && check "sagt, warum Schluss ist" ok \
+  || { check "sagt, warum Schluss ist" no; echo "$out" | tail -6; }
+grep -q 'Deckel von 20' <<<"$out" \
+  && { check "keine irrefuehrende Deckel-Meldung" no; } || check "keine irrefuehrende Deckel-Meldung" ok
+
+# ---------------------------------------------------------------------------
+echo "== Ein Zugewinn setzt den Leerlauf-Zaehler zurueck"
+# Sonst wuerde eine unglueckliche Strecke ohne Plan einen Lauf beenden, der noch etwas findet.
+rm -rf "$sandbox/bin" "$sandbox/state"; mkdir -p "$sandbox/bin" "$sandbox/state"
+cat > "$sandbox/bin/curl" <<'FAKE'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$CALLS"
+url=""; for a in "$@"; do case "$a" in http*) url="$a";; esac; done
+case "$url" in
+  *"/api/auth/login") echo '{"token":"tok"}' ;;
+  *"/round-plans"*)
+      n=$(cat "$STATE/plans" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$STATE/plans"
+      # Durchgang 1 leer, 2 mit Plan (Zaehler zurueck), 3 + 4 leer -> Schluss nach 4.
+      case "$n" in
+        2) echo '{"checked":200,"withPlan":7,"failed":0}' ;;
+        *) echo '{"checked":200,"withPlan":0,"failed":0}' ;;
+      esac ;;
+  *"/fide-details"*)  echo '{"checked":0,"withDetails":0,"geocoded":0}' ;;
+  *)                  echo '{}' ;;
+esac
+FAKE
+chmod +x "$sandbox/bin/curl"
+: > "$CALLS"
+out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" CALLS="$CALLS" STATE="$sandbox/state" \
+      SKIP_SOURCES=1 MAX_ROUNDS=20 bash "$SCRIPT" http://api.test "" 200 2>&1)
+n=$(grep -c '/round-plans' "$CALLS")
+[ "$n" -eq 4 ] && check "laeuft nach einem Zugewinn weiter (4 Durchgaenge)" ok \
+  || { check "laeuft nach einem Zugewinn weiter (4 Durchgaenge)" no; echo "     war: $n"; }
+grep -q '7 mit Zugewinn' <<<"$out" && check "nennt den Zugewinn in der Summe" ok \
+  || { check "nennt den Zugewinn in der Summe" no; echo "$out" | tail -4; }
+
+# ---------------------------------------------------------------------------
+echo "== IDLE_ROUNDS=0 schaltet die Regel ab"
+# Der Weg, wenn man den alten Leerlauf bewusst will (etwa um einen Verdacht zu pruefen).
+rm -rf "$sandbox/bin" "$sandbox/state"; mkdir -p "$sandbox/bin" "$sandbox/state"
+cat > "$sandbox/bin/curl" <<'FAKE'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$CALLS"
+url=""; for a in "$@"; do case "$a" in http*) url="$a";; esac; done
+case "$url" in
+  *"/api/auth/login") echo '{"token":"tok"}' ;;
+  *"/round-plans"*)   echo '{"checked":200,"withPlan":0,"failed":0}' ;;
+  *"/fide-details"*)  echo '{"checked":0,"withDetails":0,"geocoded":0}' ;;
+  *)                  echo '{}' ;;
+esac
+FAKE
+chmod +x "$sandbox/bin/curl"
+: > "$CALLS"
+out=$(printf 'admin\ngeheim123\n' | PATH="$sandbox/bin:$PATH" CALLS="$CALLS" STATE="$sandbox/state" \
+      SKIP_SOURCES=1 MAX_ROUNDS=3 IDLE_ROUNDS=0 bash "$SCRIPT" http://api.test "" 200 2>&1)
+n=$(grep -c '/round-plans' "$CALLS")
+[ "$n" -eq 3 ] && check "laeuft ohne die Regel bis MAX_ROUNDS" ok \
+  || { check "laeuft ohne die Regel bis MAX_ROUNDS" no; echo "     war: $n"; }
 
 echo
 [ "$fails" -eq 0 ] && { echo "ALLE TESTS OK"; exit 0; } || { echo "$fails FEHLER"; exit 1; }

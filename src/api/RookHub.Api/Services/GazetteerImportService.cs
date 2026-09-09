@@ -237,20 +237,36 @@ public class GazetteerImportService
             return;
         }
 
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
-
-        // ExecuteDelete statt RemoveRange: 25k getrackte Entities zu laden, nur um sie zu
-        // loeschen, kostet mehr als der Import selbst.
-        await _db.GeoPlaces.Where(scope).ExecuteDeleteAsync(ct);
-
-        for (var offset = 0; offset < places.Count; offset += BatchSize)
+        // Die Transaktion MUSS in der Execution-Strategy laufen: `EnableRetryOnFailure`
+        // (Program.cs) schaltet `MySqlRetryingExecutionStrategy` ein, und die verweigert eine
+        // selbst geoeffnete Transaktion — bei einem Wiederholversuch waere sonst unklar, ob nur
+        // die einzelne Anweisung oder der ganze Block erneut laufen soll. Ohne die Umklammerung
+        // scheitert JEDER Import mit „does not support user-initiated transactions": am
+        // 2026-09-09 kamen so alle sieben Laender des PLZ-Imports mit 500 zurueck, und die
+        // Verortung blieb auf dem Ortsnamen sitzen. Dasselbe Muster wie in
+        // <c>AdminService.ClearPuzzlesAsync</c>.
+        //
+        // Der Block ist wiederholbar: er loescht den ganzen Bereich und fuellt ihn aus
+        // <paramref name="places"/> neu — er haengt also nicht davon ab, wie weit ein
+        // abgebrochener Versuch gekommen war.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            _db.GeoPlaces.AddRange(places.Skip(offset).Take(BatchSize));
-            await _db.SaveChangesAsync(ct);
-            _db.ChangeTracker.Clear();
-        }
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-        await tx.CommitAsync(ct);
+            // ExecuteDelete statt RemoveRange: 25k getrackte Entities zu laden, nur um sie zu
+            // loeschen, kostet mehr als der Import selbst.
+            await _db.GeoPlaces.Where(scope).ExecuteDeleteAsync(ct);
+
+            for (var offset = 0; offset < places.Count; offset += BatchSize)
+            {
+                _db.GeoPlaces.AddRange(places.Skip(offset).Take(BatchSize));
+                await _db.SaveChangesAsync(ct);
+                _db.ChangeTracker.Clear();
+            }
+
+            await tx.CommitAsync(ct);
+        });
     }
 
     private static bool TryParseCoordinate(string text, out double value) =>

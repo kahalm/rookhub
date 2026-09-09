@@ -30,6 +30,16 @@
 # `checked` zaehlt die VERSUCHTEN, nicht die erfolgreichen — genau deshalb ist „bis 0" die
 # richtige Abbruchbedingung und nicht „bis nichts mehr gefunden wird".
 #
+# ZWEITE Abbruchbedingung fuer die Spieltermine: dort kann „bis 0" NIE eintreten. Der Schritt
+# laeuft mit `retryEmpty`, und damit bleibt jedes Turnier ohne Termine dauerhaft Kandidat — der
+# Durchgang meldet also bis in alle Ewigkeit `checked: 200`. Am 2026-09-09 nachgemessen: von 580
+# Kandidaten bekamen 308 in den ERSTEN ZWEI Durchgaengen ihren Plan, die restlichen 272 haben auf
+# chess-results keinen; die Durchgaenge 3 bis 11 waren rund 1800 Seitenabrufe fuer null neue
+# Termine, und ohne Eingriff waeren es 20 geworden (gut vier Stunden). Deshalb bricht der Lauf
+# jetzt auch ab, wenn `IDLE_ROUNDS` Durchgaenge (Vorgabe 2) nacheinander KEINEN Zugewinn melden
+# (`withPlan`). Ein Zugewinn setzt den Zaehler zurueck. Falls doch noch etwas offen ist: nochmal
+# starten — der Vermerk sortiert nach Alter, der naechste Anlauf nimmt also die aeltesten zuerst.
+#
 # Aufruf:  bash scripts/directory-runs.sh [API-Basis-URL] [FOEDERATIONEN] [LIMIT]
 #   API-Basis-URL   Vorgabe http://127.0.0.1:5002 (Dev-Stack)
 #   FOEDERATIONEN   Komma-getrennt, Vorgabe AUT. Leer ("") laesst den Sweep aus.
@@ -51,6 +61,9 @@ LIMIT="${3:-200}"
 # Deckel gegen eine Endlosschleife, falls ein Durchgang dauerhaft dieselbe Zahl meldet (etwa weil
 # der Crawler jeden Abruf abweist): 20 x 200 = 4000 Turniere, weit ueber jedem echten Rueckstand.
 MAX_ROUNDS="${MAX_ROUNDS:-20}"
+
+# Wie viele Durchgaenge ohne Zugewinn den Lauf beenden (siehe Kopf). 0 schaltet die Regel aus.
+IDLE_ROUNDS="${IDLE_ROUNDS:-2}"
 
 read -rp "Admin-Benutzername [admin]: " ADMIN_USER
 ADMIN_USER="${ADMIN_USER:-admin}"
@@ -126,9 +139,12 @@ fi
 # 2. + 3. Die beiden langen Laeufe, je bis nichts mehr kommt
 # ---------------------------------------------------------------------------
 # $1 Ueberschrift · $2 Pfad mit Parametern · $3 Name des Zaehlerfeldes in der Antwort
+# $4 (optional) Name des ZUGEWINN-Feldes: melden `IDLE_ROUNDS` Durchgaenge nacheinander dort 0,
+#    ist Schluss. Nur fuer Schritte noetig, deren Kandidatenmenge sich nicht leert (siehe Kopf) —
+#    wo `checked` von selbst 0 wird, bleibt es bei der einfachen Regel.
 run_until_done() {
-  local title="$1" path="$2" counter="$3"
-  local round=1 total=0
+  local title="$1" path="$2" counter="$3" gain_field="${4:-}"
+  local round=1 total=0 gained=0 idle=0 stopped_idle=0
 
   echo
   echo "== $title =="
@@ -145,8 +161,24 @@ run_until_done() {
     n=$(printf '%s' "$out" | field "$counter")
     total=$((total + n))
 
+    # Zugewinn mitzaehlen, BEVOR abgebrochen wird — die Summe unten soll auch den letzten
+    # Durchgang enthalten.
+    if [ -n "$gain_field" ]; then
+      local g
+      g=$(printf '%s' "$out" | field "$gain_field")
+      gained=$((gained + g))
+      if [ "$g" -gt 0 ]; then idle=0; else idle=$((idle + 1)); fi
+    fi
+
     # 0 heisst „keine Kandidaten mehr" — das ist das Ende, nicht ein Fehlschlag.
     [ "$n" -eq 0 ] && break
+
+    if [ -n "$gain_field" ] && [ "$IDLE_ROUNDS" -gt 0 ] && [ "$idle" -ge "$IDLE_ROUNDS" ]; then
+      echo "  $idle Durchgaenge ohne Zugewinn ($gain_field) — hier ist nichts mehr zu holen."
+      stopped_idle=1
+      break
+    fi
+
     round=$((round + 1))
   done
 
@@ -154,7 +186,18 @@ run_until_done() {
     echo "  Deckel von $MAX_ROUNDS Durchgaengen erreicht — es sind noch Kandidaten offen."
     echo "  Nochmal starten, oder MAX_ROUNDS hochsetzen."
   fi
-  echo "  Summe: $total vorgenommen."
+  if [ -n "$gain_field" ]; then
+    echo "  Summe: $total vorgenommen, $gained mit Zugewinn ($gain_field)."
+    # Ein Lauf, der NUR wegen des Deckels endet, hat vermutlich noch etwas offen; einer, der wegen
+    # Zugewinn-Null endet, ist fertig. Das auseinanderzuhalten ist der ganze Zweck der Meldung.
+    # Als `if`, nicht als `&&`: unter `set -e` waere ein false-Ergebnis am FUNKTIONSENDE der
+    # Rueckgabewert der Funktion — und damit das Ende des ganzen Skripts.
+    if [ "$stopped_idle" -eq 1 ]; then
+      echo "  Fertig — ein weiterer Anlauf braucht einen neuen Aufruf."
+    fi
+  else
+    echo "  Summe: $total vorgenommen."
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -205,9 +248,10 @@ run_until_done "FIDE-Detailangaben (Bedenkzeit, System, Anschrift)" \
                "/api/admin/tournament-directory/fide-details?limit=$LIMIT" \
                "checked"
 
+# `withPlan` als Zugewinn: `checked` kann hier nie 0 werden (retryEmpty, siehe Kopf).
 run_until_done "Spieltermine langlaufender Turniere (retryEmpty)" \
                "/api/admin/tournament-directory/round-plans?limit=$LIMIT&retryEmpty=true" \
-               "checked"
+               "checked" "withPlan"
 
 echo
 [ "$FAILED" -eq 0 ] && echo "Alle Laeufe durch." \
