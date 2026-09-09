@@ -36,12 +36,14 @@ export class AuthService {
    * Einen Dienst holen, der hinter einem dynamischen Import liegt — und dabei aushalten, dass der
    * Injektor in der Zwischenzeit abgeraeumt wurde.
    *
-   * <p>Das ist kein hypothetischer Fall. Ein `import(...)` loest asynchron auf, und niemand bricht
-   * es ab; laeuft die Anmeldung kurz vor dem Ende einer Sitzung (im Test: vor dem Abbau der
-   * TestBed), kommt das `then` NACH der Zerstoerung an und `injector.get` wirft NG0205. In der CI
-   * ist genau das aufgetreten — dort mit einer anderen Chrome-Fassung und unter Last, waehrend
-   * lokal alle 256 Tests durchliefen. Ein Fehler, der nur woanders auftritt, ist trotzdem einer:
-   * im Browser trifft es den Nutzer, der sich anmeldet und die Seite sofort verlaesst.</p>
+   * <p>Ein `import(...)` loest asynchron auf, und niemand bricht es ab. Meldet sich jemand an und
+   * verlaesst die Seite sofort wieder, kommt das `then` NACH dem Abbau des Injektors an, und
+   * `injector.get` wirft NG0205. Latent seit 0.413.0, an fuenf Stellen dieser Datei.</p>
+   *
+   * <p><b>Was hier NICHT der Beleg ist, obwohl es danach aussieht:</b> im Karma-Protokoll steht
+   * NG0205 zu Dutzenden — auch in gruenen Laeufen, gezaehlt 72-mal in einem. Das ist der
+   * TestBed-Abbau, kein Fehlschlag, und es hat mit dieser Reparatur nichts zu tun. Wer den Race
+   * beheben will, sucht ihn im Browser (Anmelden, sofort weg), nicht im Testprotokoll.</p>
    *
    * <p>Bewusst kein `try/catch` um den ganzen Aufruf: das verschluckte auch echte Fehler AUS dem
    * geholten Dienst. Geprueft wird nur das eine, was hier schiefgehen kann.</p>

@@ -1502,6 +1502,13 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   `turnier`-Filter enthält den GETEILTEN Frontend-Code (beide Angular-Projekte importieren aus `src/app`).
   Ein neuer Job braucht also einen Filter — ein Tippfehler im Namen ist ein leerer Output und damit ein
   Job, der ab da nie mehr läuft.
+  **Handstart** (seit 0.453.3): `gh workflow run docker.yml` baut ALLE drei Images und lässt vorher ALLE
+  Tests laufen — bei `workflow_dispatch` bleibt der Filter-Schritt aus (dorny hielte master gegen master
+  und setzte jeden Filter auf `false`), die Job-Bedingungen fangen den Fall über `github.event_name` ab.
+  Gebraucht für den Fall, den die Pfadfilter selbst erzeugen: master ist rot (hier fremdverschuldet
+  geerbt), der reparierende Push berührt nur Frontend-Pfade, und damit hat `build-api` zwei Versionen
+  lang nicht gebaut — master grün, Code gepusht, und auf Dev läuft trotzdem der Stand von vorgestern
+  (2026-09-09, Dev hing auf 0.452.1). Der Handstart auf master schiebt `:dev`, nicht `:latest`.
 - **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 
 ## Versionierung

@@ -24,14 +24,22 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v6
+      # Beim Handstart von `docker.yml` (workflow_dispatch) gibt es keinen Vorgaenger-Stand zum
+      # Vergleichen; der Schritt bleibt aus, und die Bedingungen unten lassen dann ALLES laufen.
+      # Ohne das waeren bei einem Handstart alle Filter leer — es entstuende ein Image, das kein
+      # einziger Test gesehen hat.
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name != 'workflow_dispatch'
         with:
           filters: .github/filters.yml
 
   test-rookhub:
     needs: changes
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.api == 'true' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -50,7 +58,10 @@ jobs:
   # Deckt ausserdem die 139 Migrationen ab, die der Deploy automatisch anwendet.
   test-rookhub-integration:
     needs: changes
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.api == 'true' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
     services:
       mariadb:
@@ -78,7 +89,10 @@ jobs:
 
   test-crawler:
     needs: changes
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.crawler == 'true' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.crawler == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -104,7 +118,10 @@ jobs:
   # direkt geholt — die Werte kommen aus dem Dockerfile, damit sie nicht auseinanderlaufen.
   test-engine-provider:
     needs: changes
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.engine-provider == 'true' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.engine-provider == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -130,7 +147,11 @@ jobs:
 
   build-frontend:
     needs: changes
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.turnier == 'true' }}
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.frontend == 'true'
+          || needs.changes.outputs.turnier == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

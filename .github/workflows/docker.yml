@@ -4,6 +4,14 @@ on:
   push:
     branches: [master]
     tags: ['v*']
+  # Von Hand ausloesbar (`gh workflow run docker.yml`) — und dann laeuft ALLES, genau wie bei
+  # einem Tag. Gebraucht fuer den Fall, den die Pfadfilter erzeugen: ein Push auf master ist rot
+  # (hier: fremdverschuldet geerbt), der reparierende Push beruehrt nur Frontend-Pfade, und damit
+  # ist `build-api` seit zwei Versionen nicht mehr gelaufen. Der master-Stand ist dann gruen und
+  # gepusht, aber es gibt kein Image dazu — ohne diesen Knopf hilft nur ein Alibi-Commit in den
+  # richtigen Pfad. Aufgetreten am 2026-09-09: 0.453.0/0.453.1 rot, 0.453.2 gruen, aber
+  # `build-api: skipped` — auf Dev lief noch der Stand von 0.452.1.
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -22,8 +30,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+      # Beim Handstart gibt es keinen Vorgaenger-Stand zum Vergleichen (dorny hielte master gegen
+      # master und setzte alles auf `false`). Der Schritt bleibt deshalb aus, die Outputs sind
+      # leer — und die Job-Bedingungen unten fangen den Fall ueber `github.event_name` ab.
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name != 'workflow_dispatch'
         with:
           filters: .github/filters.yml
 
@@ -45,7 +57,9 @@ jobs:
     needs: [changes, tests]
     if: >-
       ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
-          && (startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.api == 'true') }}
+          && (github.event_name == 'workflow_dispatch'
+              || startsWith(github.ref, 'refs/tags/v')
+              || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -76,7 +90,9 @@ jobs:
     needs: [changes, tests]
     if: >-
       ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
-          && (startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.frontend == 'true') }}
+          && (github.event_name == 'workflow_dispatch'
+              || startsWith(github.ref, 'refs/tags/v')
+              || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -113,7 +129,9 @@ jobs:
     needs: [changes, tests]
     if: >-
       ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
-          && (startsWith(github.ref, 'refs/tags/v') || needs.changes.outputs.turnier == 'true') }}
+          && (github.event_name == 'workflow_dispatch'
+              || startsWith(github.ref, 'refs/tags/v')
+              || needs.changes.outputs.turnier == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

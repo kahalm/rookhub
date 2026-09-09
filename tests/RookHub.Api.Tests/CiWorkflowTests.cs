@@ -188,4 +188,75 @@ public class CiWorkflowTests
         Assert.Contains("needs.tests.result != 'failure'", block);
         Assert.Contains("needs.tests.result != 'cancelled'", block);
     }
+
+    /// <summary>
+    /// Der Handstart (`gh workflow run docker.yml`) muss es GEBEN — sonst gibt es keinen Weg zu
+    /// einem Image, wenn die Pfadfilter den Job weggelassen haben.
+    ///
+    /// <para>Der Fall ist real und nicht theoretisch: ein Push auf master faellt rot aus (hier
+    /// geerbt von einem fremden Test), der reparierende Push beruehrt nur Frontend-Pfade, und
+    /// damit hat `build-api` zwei Versionen lang nicht gebaut. master ist gruen, der Code ist
+    /// gepusht — und auf Dev laeuft trotzdem der Stand von vorgestern. Ohne diesen Knopf ist der
+    /// einzige Ausweg ein Alibi-Commit in einen Pfad, der den Filter trifft.</para>
+    /// </summary>
+    [Fact]
+    public void DockerWorkflow_CanBeStartedByHand() =>
+        Assert.Matches(@"(?m)^  workflow_dispatch:\s*$", ReadRepoFile(Docker));
+
+    /// <summary>
+    /// Und dann muss er auch ALLE drei Images bauen — ein Handstart, der wieder nur einen Teil
+    /// baut, loest genau das Problem nicht, fuer das er da ist.
+    /// </summary>
+    [Theory]
+    [InlineData("build-api")]
+    [InlineData("build-frontend")]
+    [InlineData("build-turnier")]
+    public void EveryImageJob_AlsoBuildsOnAManualRun(string job)
+    {
+        var text = ReadRepoFile(Docker);
+        var block = Regex.Match(text, $@"(?ms)^  {Regex.Escape(job)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+
+        Assert.Contains("github.event_name == 'workflow_dispatch'", block);
+    }
+
+    /// <summary>
+    /// Beim Handstart bleibt der Filter-Schritt AUS. dorny/paths-filter braucht einen
+    /// Vorgaenger-Stand; bei `workflow_dispatch` haelt es master gegen master und setzt jeden
+    /// Filter auf `false`. Liefe der Schritt, entschiede also ausgerechnet beim Handstart ein
+    /// leerer Vergleich — und es liefe gar nichts.
+    /// </summary>
+    [Theory]
+    [InlineData(Docker)]
+    [InlineData(Tests)]
+    public void OnAManualRun_ThePathFilterStepIsSkipped(string workflow)
+    {
+        var text = ReadRepoFile(workflow);
+        var step = Regex.Match(text, @"(?ms)^      - uses: dorny/paths-filter@v3\s*$(.*?)(?=^      - |^  \S|\z)")
+            .Groups[1].Value;
+
+        Assert.Contains("filters: .github/filters.yml", step);
+        Assert.Contains("if: github.event_name != 'workflow_dispatch'", step);
+    }
+
+    /// <summary>
+    /// Weil der Filter-Schritt beim Handstart ausbleibt, muss JEDER Job in `test.yml`, der einen
+    /// Filter abfragt, den Handstart selbst durchlassen. Sonst waere das Test-Gate bei einem
+    /// Handstart leer und es entstuende ein Image, das kein einziger Test gesehen hat — das
+    /// Gegenteil dessen, was der Knopf soll.
+    /// </summary>
+    [Fact]
+    public void OnAManualRun_EveryTestJob_StillRuns()
+    {
+        var text = ReadRepoFile(Tests);
+
+        foreach (Match job in Regex.Matches(text, @"(?ms)^  (?<name>[a-z][a-z0-9-]*):\s*$(?<body>.*?)(?=^  [a-z]|\z)"))
+        {
+            var body = job.Groups["body"].Value;
+            if (!body.Contains("needs.changes.outputs", StringComparison.Ordinal)) continue;
+
+            Assert.True(body.Contains("github.event_name == 'workflow_dispatch'", StringComparison.Ordinal),
+                $"test.yml-Job '{job.Groups["name"].Value}' laeuft bei einem Handstart nicht mit — "
+                + "das Image entstuende ungeprueft");
+        }
+    }
 }
