@@ -26,16 +26,19 @@ import { SnackbarService } from '../../core/snackbar.service';
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.usernameLabel' | translate }}</mat-label>
-              <input matInput [(ngModel)]="username" name="username" required minlength="3">
+              <!-- Handy-Tastatur: ohne autocapitalize="none" wurde der Benutzername als 'Kahalm' statt 'kahalm'
+                   eingegeben und so gespeichert; new-password laesst den Passwort-Manager ein starkes Passwort vorschlagen. -->
+              <input matInput [(ngModel)]="username" name="username" required minlength="3"
+                     autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.emailLabel' | translate }}</mat-label>
-              <input matInput type="email" [(ngModel)]="email" name="email" email>
+              <input matInput type="email" [(ngModel)]="email" name="email" email autocomplete="email">
               <mat-hint>{{ 'auth.register.emailHint' | translate }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.passwordLabel' | translate }}</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="4">
+              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="4" autocomplete="new-password">
               <mat-hint>{{ 'auth.register.passwordHint' | translate }}</mat-hint>
             </mat-form-field>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">

@@ -1,4 +1,4 @@
-import { Component, HostListener, inject } from '@angular/core';
+import { Component, HostListener, Input, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
@@ -26,7 +26,7 @@ import { partnerSiteUrl } from '../../core/partner-site';
   standalone: true,
   imports: [RouterLink, MatIconModule, A11yModule, TranslatePipe],
   template: `
-    <footer class="app-footer">
+    <footer class="app-footer" [class.hide-on-mobile]="hideOnMobile">
       <span class="version-link" role="button" tabindex="0"
             [attr.aria-label]="'app.changelogTitle' | translate"
             (click)="toggleChangelog()"
@@ -77,7 +77,17 @@ import { partnerSiteUrl } from '../../core/partner-site';
   `,
   styles: [`
     .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
-    @media (max-width: 768px) { .app-footer { display: none; } }
+    /* Am Handy ausblenden ist RookHubs Vorgabe (das Menue traegt Hilfe/Changelog/Discord
+       selbst). Die Turnierseite hat keinen solchen Ersatz und schaltet es per Input ab —
+       die Klasse traegt die Absicht der Huelle, nicht ein Selektor auf ein Wurzel-Tag. */
+    @media (max-width: 768px) { .app-footer.hide-on-mobile { display: none; } }
+    @media (max-width: 768px) {
+      /* Wo die Fusszeile am Handy stehen bleibt (Turnierseite), sind ihre Links der einzige Weg
+         zu Version, Hilfe und Rueckmeldung — als 14 px hoher Fliesstext waren sie kaum zu
+         treffen. Padding statt groesserer Schrift: die Zeile bleibt eine Fusszeile. Auf RookHub
+         ist sie hier ohnehin ausgeblendet, die Regel wirkt dort nicht. */
+      .app-footer a, .app-footer .version-link { display: inline-block; padding: 10px 4px; }
+    }
     .version-link { cursor: pointer; }
     .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .footer-sep { margin: 0 6px; color: color-mix(in srgb, currentColor 40%, transparent); }
@@ -101,6 +111,28 @@ import { partnerSiteUrl } from '../../core/partner-site';
     .feedback-link { color: inherit; text-decoration: none; }
     .feedback-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
+    /* Das Overlay liegt in DIESER Ansicht — die gleichnamigen Regeln in RookHubs AppComponent
+       sind dort gekapselt und erreichen es nicht: der Changelog stand ungestylt im Seitenfluss
+       unter der Fusszeile (kein Abdunkeln, kein Kasten, kein Scrollen). AppComponent behaelt
+       ihre Kopie fuer das Quickstart-Overlay. */
+    .changelog-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .changelog-content {
+      background: #1e1e1e; color: #ccc; border-radius: 8px; padding: 24px;
+      max-width: 500px; width: min(90%, calc(100vw - 32px)); max-height: 80vh; overflow-y: auto;
+    }
+    .changelog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .changelog-header h3 { margin: 0; color: #fff; }
+    .changelog-header button {
+      background: none; border: none; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 1.5rem; cursor: pointer;
+    }
+    .changelog-header button:hover { color: inherit; }
+    .changelog-entry { margin-bottom: 12px; }
+    .changelog-date { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; margin-left: 8px; }
+    .changelog-entry ul { margin: 4px 0 0 20px; padding: 0; }
+    .changelog-entry li { font-size: 0.85rem; margin-bottom: 2px; }
   `],
 })
 export class AppFooterComponent {
@@ -111,6 +143,13 @@ export class AppFooterComponent {
   readonly production = environment.production;
   readonly discordUrl = DISCORD_INVITE_URL;
   readonly kofiUrl = KOFI_URL;
+
+  /**
+   * Bis 768px ausblenden? Vorgabe ja (RookHub: das Menue fuehrt zu Hilfe, Changelog und
+   * Discord). Die Turnierseite setzt false — dort waere die Fusszeile am Handy sonst der
+   * einzige, aber unsichtbare Weg zu Version, Hilfe und Rueckmeldung gewesen.
+   */
+  @Input() hideOnMobile = true;
 
   /** Hat DIESE App eine eigene Hilfeseite? (RookHub ja, die Turnierseite nein.) */
   readonly helpRoute = this.router.config.some(r => r.path === 'help');

@@ -84,7 +84,8 @@
     "blackToMove": "Black to move",
     "copy": "Copy",
     "error": "Something went wrong.",
-    "send": "Send"
+    "send": "Send",
+    "undo": "Undo"
   },
   "notifications": {
     "title": "Notifications",
@@ -974,7 +975,9 @@
       "past": "Past",
       "noDate": "no date",
       "unsubscribeFailed": "Could not remove the bookmark.",
-      "crawlConnectionLost": "Lost connection to crawl job"
+      "crawlConnectionLost": "Lost connection to crawl job",
+      "unsubscribed": "Bookmark removed",
+      "undoFailed": "Undo failed — bookmark it again in the calendar."
     },
     "detail": {
       "loadTournamentFailed": "Failed to load tournament",

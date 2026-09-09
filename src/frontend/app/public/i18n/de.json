@@ -84,7 +84,8 @@
     "blackToMove": "Schwarz am Zug",
     "copy": "Kopieren",
     "error": "Da ist etwas schiefgelaufen.",
-    "send": "Senden"
+    "send": "Senden",
+    "undo": "Rückgängig"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -974,7 +975,9 @@
       "past": "Vorbei",
       "noDate": "kein Termin",
       "unsubscribeFailed": "Das Merken konnte nicht zurückgenommen werden.",
-      "crawlConnectionLost": "Verbindung zum Crawl-Job verloren"
+      "crawlConnectionLost": "Verbindung zum Crawl-Job verloren",
+      "unsubscribed": "Merken zurückgenommen",
+      "undoFailed": "Rückgängig hat nicht geklappt — im Kalender neu merken."
     },
     "detail": {
       "loadTournamentFailed": "Turnier konnte nicht geladen werden",

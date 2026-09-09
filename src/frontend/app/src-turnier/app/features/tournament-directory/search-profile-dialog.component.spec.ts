@@ -95,6 +95,18 @@ describe('SearchProfileDialogComponent', () => {
     expect(component.suggestions).toEqual([]);
   });
 
+  it('rastet den Umkreis-Schieber in 25-km-Schritten ab 25 km', async () => {
+    // 5-km-Schritte waren auf dem Handy nicht zu treffen: 99 Stufen auf ~260 px Spur sind
+    // ~2,6 px je Stufe, der Finger sprang um +-20 km. Die Vorgabe 100 muss auf dem Raster liegen.
+    await setup();
+
+    const slider: HTMLElement = fixture.nativeElement.querySelector('mat-slider');
+    expect(slider.getAttribute('min')).toBe('25');
+    expect(slider.getAttribute('max')).toBe('500');
+    expect(slider.getAttribute('step')).toBe('25');
+    expect(component.radiusKm % 25).toBe(0);
+  });
+
   it('macht aus einer Null-Teilnehmerzahl kein Filterkriterium', async () => {
     await setup();
     component.name = 'Zuhause';

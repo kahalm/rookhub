@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { Subject } from 'rxjs';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subscription } from '@rh/core/models';
 import { TournamentListComponent } from './tournament-list.component';
 
@@ -95,5 +97,51 @@ describe('TournamentListComponent', () => {
       .flush('kaputt', { status: 500, statusText: 'Server Error' });
 
     expect(component.upcoming().length).toBe(1);
+  });
+
+  /**
+   * Der Loesen-Knopf ist ein reines Icon am rechten Rand — ein Fehltipp auf dem Handy darf nicht
+   * endgueltig sein. „Rueckgaengig" im Snackbar merkt neu und legt das ALTE Objekt mit der NEUEN
+   * Id zurueck (Termin bleibt, Zeile bleibt in ihrem Abschnitt) — nicht die Server-Antwort.
+   */
+  it('legt die Zeile per Rückgängig mit neuer Id wieder an', async () => {
+    await setup([sub({ id: 7 })]);
+    const action = new Subject<void>();
+    const snackbar = TestBed.inject(SnackbarService);
+    const show = spyOn(snackbar, 'show').and.returnValue({ onAction: () => action.asObservable() } as never);
+
+    component.unbookmark(sub({ id: 7 }));
+    http.expectOne(r => r.url === '/api/subscriptions/7' && r.method === 'DELETE').flush(null);
+    expect(component.upcoming().length).toBe(0);
+    expect(show).toHaveBeenCalledWith('tournaments.list.unsubscribed', { action: 'common.undo', duration: 6000 });
+
+    action.next();
+    const post = http.expectOne(r => r.url === '/api/subscriptions' && r.method === 'POST');
+    expect(post.request.body).toEqual({ crawlerTournamentId: '1107064', tournamentName: 'Schach Tirol Open' });
+    // Server-Antwort absichtlich ohne Termin: die Zeile behaelt trotzdem ihren.
+    post.flush(sub({ id: 8, eventDate: null }));
+
+    expect(component.upcoming().map(s => s.id)).toEqual([8]);
+    expect(component.upcoming()[0].eventDate).toBe('2026-12-01');
+    http.verify();
+  });
+
+  /** Scheitert das Neu-Merken, bleibt die Zeile weg und die Meldung sagt es — kein stilles Nichts. */
+  it('meldet, wenn Rückgängig scheitert', async () => {
+    await setup([sub({ id: 7 })]);
+    const action = new Subject<void>();
+    const snackbar = TestBed.inject(SnackbarService);
+    spyOn(snackbar, 'show').and.returnValue({ onAction: () => action.asObservable() } as never);
+    const warn = spyOn(snackbar, 'warn').and.returnValue(undefined as never);
+
+    component.unbookmark(sub({ id: 7 }));
+    http.expectOne(r => r.url === '/api/subscriptions/7').flush(null);
+
+    action.next();
+    http.expectOne(r => r.url === '/api/subscriptions' && r.method === 'POST')
+      .flush('kaputt', { status: 500, statusText: 'Server Error' });
+
+    expect(component.upcoming().length).toBe(0);
+    expect(warn).toHaveBeenCalledWith('tournaments.list.undoFailed');
   });
 });

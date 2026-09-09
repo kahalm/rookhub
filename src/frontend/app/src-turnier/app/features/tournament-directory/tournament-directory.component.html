@@ -13,7 +13,9 @@
     <!-- Ort: der Mittelpunkt der Umkreissuche. Er kommt entweder aus einem gespeicherten
          Suchprofil, aus der Ortsliste oder vom Browser — das Feld zeigt in JEDEM Fall, was
          gerade gilt, sonst behauptet die Leiste etwas anderes als die Liste darunter. -->
-    <mat-form-field appearance="outline" class="place-field">
+    <!-- subscriptSizing=dynamic auf den drei Feldern: keines zeigt Hint oder Fehler, der
+         reservierte Streifen darunter kostete auf dem Handy ~22 px je Feldzeile. -->
+    <mat-form-field appearance="outline" class="place-field" subscriptSizing="dynamic">
       <mat-icon matPrefix>place</mat-icon>
       <mat-label>{{ 'tournamentDirectory.place.label' | translate }}</mat-label>
       <input matInput [ngModel]="placeLabel" (ngModelChange)="onPlaceInput($event)"
@@ -41,7 +43,7 @@
       }
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="radius-field">
+    <mat-form-field appearance="outline" class="radius-field" subscriptSizing="dynamic">
       <mat-label>{{ 'tournamentDirectory.radius.label' | translate }}</mat-label>
       <mat-select [ngModel]="filter.radiusKm" (ngModelChange)="onRadiusChange($event)">
         <mat-option [value]="null">{{ 'tournamentDirectory.radius.any' | translate }}</mat-option>
@@ -51,7 +53,7 @@
       </mat-select>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="range-field">
+    <mat-form-field appearance="outline" class="range-field" subscriptSizing="dynamic">
       <mat-label>{{ 'tournamentDirectory.range.label' | translate }}</mat-label>
       <mat-select [ngModel]="rangePreset" (ngModelChange)="applyRangePreset($event)">
         @for (preset of rangePresets; track preset) {

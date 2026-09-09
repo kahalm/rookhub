@@ -15,6 +15,12 @@ import { ThemeService } from '@rh/core/theme.service';
 /**
  * Kopfzeile der Turnierseite. Bewusst schmal: zwei Wege (Liste, Kalender), Sprache, Konto — und
  * der Sprung zurueck nach RookHub, der die Anmeldung mitnimmt.
+ *
+ * <p>Am Handy (bis 768px, der Bruch der ganzen App) traegt die Zeile nur Marke, ☰ und
+ * Anmelden bzw. Konto. Vorher standen die drei Textlinks plus RookHub, Design, Sprache und
+ * Anmelden in EINER Zeile ohne Umbruch — die Toolbar war rund 670px breit, die GANZE Seite
+ * scrollte seitwaerts, und Anmelden wie Sprachwechsel lagen ausserhalb des Schirms. Alles, was
+ * nicht in die Zeile passt, liegt jetzt im ☰-Menue (dasselbe Muster wie RookHubs Navbar).</p>
  */
 @Component({
   selector: 'trn-navbar',
@@ -35,18 +41,42 @@ import { ThemeService } from '@rh/core/theme.service';
 
       <span class="spacer"></span>
 
+      <!-- Nur bis 768px sichtbar: die drei Wege, der RookHub-Sprung, Design und Sprache aus der
+           Zeile — die passte am Handy nicht in den Schirm. Anmelden/Konto bleibt draussen: die
+           eine Aktion je Seite gehoert nicht in ein Menue. -->
+      <button mat-icon-button class="narrow" [matMenuTriggerFor]="navMenu" [attr.aria-label]="'nav.menu' | translate">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <mat-menu #navMenu="matMenu">
+        <a mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</a>
+        <a mat-menu-item routerLink="/tournaments/calendar">{{ 'nav.tournamentCalendar' | translate }}</a>
+        <a mat-menu-item routerLink="/tournaments/history">{{ 'nav.tournamentHistory' | translate }}</a>
+        @if (partnerUrl) {
+          <button mat-menu-item (click)="toRookHub()">
+            <mat-icon>open_in_new</mat-icon> {{ 'turnier.toRookHub' | translate }}
+          </button>
+        }
+        <button mat-menu-item (click)="theme.toggle()">
+          <mat-icon>{{ themeIcon }}</mat-icon> {{ themeLabel }}
+        </button>
+        <!-- Dasselbe Sprachmenue wie der Globus in der Zeile — kein zweiter Bestand. -->
+        <button mat-menu-item [matMenuTriggerFor]="langMenu">
+          <mat-icon>language</mat-icon> {{ 'nav.language' | translate }}
+        </button>
+      </mat-menu>
+
       @if (partnerUrl) {
-        <button mat-button (click)="toRookHub()" [attr.title]="'turnier.toRookHub' | translate">
+        <button mat-button class="wide" (click)="toRookHub()" [attr.title]="'turnier.toRookHub' | translate">
           <mat-icon>open_in_new</mat-icon>
-          <span class="wide">{{ 'turnier.toRookHub' | translate }}</span>
+          <span>{{ 'turnier.toRookHub' | translate }}</span>
         </button>
       }
 
-      <button mat-icon-button (click)="theme.toggle()"
+      <button mat-icon-button class="wide" (click)="theme.toggle()"
               [matTooltip]="themeLabel" [attr.aria-label]="themeLabel">
         <mat-icon>{{ themeIcon }}</mat-icon>
       </button>
-      <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
+      <button mat-icon-button class="wide" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
         <mat-icon>language</mat-icon>
       </button>
       <mat-menu #langMenu="matMenu">
@@ -86,8 +116,16 @@ import { ThemeService } from '@rh/core/theme.service';
     .links { display: flex; gap: 2px; }
     .spacer { flex: 1 1 auto; }
     .who { opacity: .7; font-size: .85rem; }
-    /* Auf schmalen Geräten nur das Symbol — der Text sprengt sonst die Zeile. */
-    @media (max-width: 700px) { .wide { display: none; } }
+    /* Das ☰ gibt es nur am Handy; am Schreibtisch stehen alle Wege in der Zeile. */
+    .narrow { display: none; }
+    /* EINE Bruchstelle (768px wie ueberall in der App, vorher 700px hier): Textlinks, RookHub,
+       Design und Sprache verschwinden aus der Zeile und liegen im ☰-Menue. Ohne das war die
+       Toolbar am Handy rund 670px breit und die ganze Seite scrollte seitwaerts. inline-block
+       ist der Vorgabewert des Material-Icon-Knopfs — nur den Vorgabe-„none" von oben aufheben. */
+    @media (max-width: 768px) {
+      .links, .wide { display: none; }
+      .narrow { display: inline-block; }
+    }
   `],
 })
 export class TurnierNavbarComponent {

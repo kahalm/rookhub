@@ -64,7 +64,9 @@ h3 {
   grid-template-columns: 6.5rem minmax(10rem, 1fr) 3rem 6rem 4rem 4rem;
   align-items: center;
   gap: 0.5rem;
-  min-width: 34rem;
+  /* >= Summe der Spalten-Minima (33.5rem) + 5 gaps (2.5rem) + Padding (0.6rem) = 36.6rem,
+     sonst ragt die letzte Spalte ueber Trennlinie/Hover-Flaeche hinaus. */
+  min-width: 37rem;
   padding: 0.4rem 0.3rem;
   border: 0;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
@@ -78,9 +80,13 @@ h3 {
 .row:hover { background: var(--mat-sys-surface-container-low); }
 .row:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
 
-/* Kuenftige Turniere haben keine Zahlenspalten — schmaleres Raster statt leerer Zellen. */
+/* Kuenftige Turniere haben keine Zahlenspalten — schmaleres Raster statt leerer Zellen.
+   Der Name darf auf 0 schrumpfen (Ellipse): mit minmax(10rem, 1fr) war die Zeile auf einem
+   360er-Handy breiter als die Karte, „9 Runden" ragte rechts heraus und die SEITE bekam
+   horizontalen Scroll. Die Rundenspalte nimmt nur ihre Textbreite — als geteilter Grid-Track
+   bleibt sie ueber alle Zeilen ausgerichtet. */
 .row.upcoming {
-  grid-template-columns: 6.5rem minmax(10rem, 1fr) 5rem;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
   min-width: 0;
 }
 
@@ -97,6 +103,10 @@ h3 {
   text-align: right;
   font-size: 0.9rem;
 }
+
+/* Textzelle statt der vier Zahlenspalten („Ergebnis wird geholt …", „kein Einzelergebnis"):
+   ohne den Spann wurde der Text in die 3rem-Punktespalte gequetscht und brach wortweise um. */
+.row-num.span-rest { grid-column: 3 / -1; text-align: left; white-space: nowrap; }
 
 .row-meta { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
 .rank, .row-meta { white-space: nowrap; }
@@ -121,6 +131,21 @@ h3 {
 
 @media (max-width: 768px) {
   .page { padding: 0.75rem 0.5rem; }
+
+  /* Jede Zeile ist ein Knopf; mit ~32px Hoehe trifft der Daumen leicht die Nachbarzeile — und
+     der Klick startet u. U. einen minutenlangen Hol-Auftrag. */
+  .row { min-height: 44px; }
+
+  /* Der umgebrochene Bedenkzeit-Filter: als 28px-Pille mit overflow:hidden endete Reihe 1 hart
+     mitten im Rund, Reihe 2 stand ohne Trennlinie darunter. Kleinerer Radius (der Token steuert
+     auch die ::before-Radien der Knoepfe), Knoepfe fuellen ihre Reihe, und eine Linie zwischen
+     den Reihen — in Reihe 1 verschwindet sie unter dem Gruppenrand (overflow:hidden). */
+  .speed-filter { --mat-button-toggle-shape: 12px; }
+  .speed-filter .mat-button-toggle {
+    flex: 1 1 auto;
+    border-top: 1px solid var(--mat-sys-outline);
+    margin-top: -1px;
+  }
 }
 
 /* Der Eintrag, dessen Turnier gerade geholt wird: sichtbar beschaeftigt, damit ein zweiter Klick
@@ -168,7 +193,8 @@ h3 {
 .whose-tabs .warn-icon { font-size: 1rem; margin-left: 0.2rem; opacity: 0.7; }
 
 /* Der Bedenkzeit-Filter steht in der Leiste ueber der Tabelle und bleibt auf schmalen Schirmen
-   umbruchfaehig — vier Knoepfe passen quer nicht auf ein Handy. */
+   umbruchfaehig — fuenf Knoepfe („Alle" + vier Klassen) passen quer nicht auf ein Handy. Wie die
+   umgebrochenen Reihen aussehen, regelt der Handy-Block in @media (max-width: 768px) oben. */
 .speed-filter { flex-wrap: wrap; }
 
 /* Der Nenner ist die Nebenangabe: die Punktzahl bleibt die Zahl, die man liest. */

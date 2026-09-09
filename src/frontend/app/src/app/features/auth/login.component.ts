@@ -30,11 +30,14 @@ import { SnackbarService } from '../../core/snackbar.service';
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.usernameLabel' | translate }}</mat-label>
-              <input matInput [(ngModel)]="username" name="username" required autofocus>
+              <!-- Handy-Tastatur: iOS setzte den ersten Buchstaben gross und die Autokorrektur machte aus dem
+                   Benutzernamen ein Woerterbuchwort; autocomplete gibt dem Passwort-Manager den Fuell-Hinweis. -->
+              <input matInput [(ngModel)]="username" name="username" required autofocus
+                     autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.passwordLabel' | translate }}</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required>
+              <input matInput type="password" [(ngModel)]="password" name="password" required autocomplete="current-password">
             </mat-form-field>
             <mat-checkbox [(ngModel)]="rememberMe" name="rememberMe">{{ 'auth.login.rememberMe' | translate }}</mat-checkbox>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
@@ -57,12 +60,18 @@ import { SnackbarService } from '../../core/snackbar.service';
   styles: [`
     .auth-container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 80vh; }
     .legal-links { margin-top: 1rem; text-align: center; font-size: 0.8rem; }
-    .legal-links a { color: #90caf9; }
+    /* Theme-Token statt festem Hellblau: im hellen Modus war #90caf9 auf Weiss praktisch unsichtbar.
+       Beruehrziel 39px hoch (12px Padding) fuer den Daumen; das negative Margin haelt die Layouthoehe bei 15px,
+       damit sich nichts verschiebt (die Karte endet 16px hoeher, es gibt keine Ueberlappung). */
+    .legal-links a { color: var(--mat-sys-primary); display: inline-block; padding: 12px 4px; margin: -12px 0; }
     .legal-links span { color: color-mix(in srgb, currentColor 53%, transparent); margin: 0 6px; }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-required { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     mat-form-field { width: 100%; }
+    /* Handy: 'Noch kein Konto? Registrieren' und 'Passwort vergessen?' passen nicht nebeneinander und brachen
+       innerhalb des 40px-Buttons zweizeilig um (bei grosser Systemschrift lief der Text aus dem Kasten). */
+    @media (max-width: 768px) { mat-card-actions { flex-wrap: wrap; } }
   `]
 })
 export class LoginComponent {

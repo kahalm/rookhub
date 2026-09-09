@@ -36,13 +36,16 @@ import { MenuService } from '@rh/core/menu.service';
   styles: [`
     .imp-banner {
       display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
-      background: #b71c1c; color: #fff; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;
+      background: #b71c1c; color: #fff; padding: 4px 12px; font-size: 0.85rem; font-weight: 500;
       position: sticky; top: 0; z-index: 1100;
     }
     .imp-icon { margin-right: 4px; }
+    /* min-height 40px: der Knopf war ~24px hoch und am Handy schwer zu treffen — die einzige
+       Aktion im Streifen. Ein <button> zentriert seinen Inhalt vertikal selbst; das Streifen-
+       Padding oben ist dafuer von 6 auf 4px runter, damit er nur um ~12px waechst. */
     .imp-exit {
       background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5);
-      border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
+      border-radius: 4px; min-height: 40px; padding: 0 12px; cursor: pointer; font: inherit; font-weight: 600;
     }
     .imp-exit:hover { background: rgba(255,255,255,0.3); }
   `],

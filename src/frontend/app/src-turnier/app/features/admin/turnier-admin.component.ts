@@ -93,8 +93,15 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
       padding: 8px 0; border-bottom: 1px solid var(--mat-sys-outline-variant);
     }
     .ta-users li:last-child { border-bottom: 0; }
-    .ta-name { font-weight: 500; }
+    /* Ein Benutzername (bis 50 Zeichen, ohne Leerzeichen) konnte nicht umbrechen: auf 360 px ist die
+       Zeile 296 px breit, ein 45-Zeichen-Name misst 386 px - Karte und Seite scrollten horizontal.
+       Spiegel von .ta-mail, ohne max-width. */
+    .ta-name { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
     .ta-admin { color: var(--mat-sys-primary); }
+    /* Vom Template benutzt, war aber nirgends definiert (View-Encapsulation laesst die .muted-Regeln
+       der anderen Turnier-Komponenten nicht hierher wirken): im umgebrochenen Textlauf auf dem Handy
+       standen Name und E-Mail in derselben Farbe, die Adresse las sich wie ein zweiter Name. */
+    .muted { color: var(--mat-sys-on-surface-variant); }
     /* Die Adresse schiebt den Knopf nach rechts und bricht selbst um, statt die Zeile zu dehnen. */
     .ta-mail { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
   `],

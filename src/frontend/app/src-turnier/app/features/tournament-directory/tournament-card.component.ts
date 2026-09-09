@@ -147,13 +147,25 @@ import { DirectoryEntry } from './tournament-directory.model';
 
     .tc.cancelled, .tc.ignored { opacity: 0.6; }
 
+    /* Der Name ist die EINZIGE Flaeche, die zur Detailseite fuehrt. Als Knopf ohne Padding war
+       er bei einzeiligen Namen ~20 px hoch — halb so hoch wie das 40-px-Beruehrziel, ein knapp
+       daneben gesetzter Tipp traf nichts. Padding vergroessert die Trefferflaeche, das negative
+       Margin gleicht es aus, sodass Text und Kartenlayout genau bleiben, wo sie waren.
+       position: relative hebt den Knopf in der Malreihenfolge ueber die Datumszeile darunter —
+       sonst bekaeme deren Box die Tipps im ueberlappenden Streifen und die untere Haelfte des
+       Zugewinns waere wirkungslos. */
     .tc-name {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      position: relative;
       font: inherit;
       font-weight: 500;
       text-align: left;
       background: none;
       border: 0;
-      padding: 0;
+      padding: 0.6rem 0;
+      margin: -0.6rem 0;
       color: inherit;
       cursor: pointer;
     }

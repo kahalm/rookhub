@@ -1,5 +1,11 @@
 import { of, throwError } from 'rxjs';
 import { ResetPasswordComponent } from './reset-password.component';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
 
 describe('ResetPasswordComponent', () => {
   function make(token: string, resetReturn = of(void 0)) {
@@ -50,5 +56,31 @@ describe('ResetPasswordComponent', () => {
     c.onSubmit();
     expect(snackbar.warn).toHaveBeenCalledWith('expired');
     expect(c.loading).toBeFalse();
+  });
+});
+
+/**
+ * Gerendertes Template: beide Passwortfelder tragen new-password, damit der Passwort-Manager ein neues Passwort
+ * vorschlaegt und nicht das alte einfuellt.
+ */
+describe('ResetPasswordComponent Template (Mobil-Attribute)', () => {
+  it('setzt autocomplete="new-password" auf beiden Passwortfeldern', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ResetPasswordComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ResetPasswordComponent);
+    // Ohne Token zeigt die Karte nur den Hinweis; das Formular braucht ein Token.
+    fixture.componentInstance.token = 'tok';
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('input[name="password"]')!.getAttribute('autocomplete')).toBe('new-password');
+    expect(el.querySelector('input[name="confirm"]')!.getAttribute('autocomplete')).toBe('new-password');
   });
 });

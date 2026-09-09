@@ -84,7 +84,8 @@
     "blackToMove": "Crni na potezu",
     "copy": "Kopiraj",
     "error": "Nešto je pošlo po zlu.",
-    "send": "Pošalji"
+    "send": "Pošalji",
+    "undo": "Poništi"
   },
   "notifications": {
     "title": "Obavijesti",
@@ -974,7 +975,9 @@
       "past": "Prošlo",
       "noDate": "bez datuma",
       "unsubscribeFailed": "Zabilješku nije bilo moguće ukloniti.",
-      "crawlConnectionLost": "Izgubljena veza s poslom dohvaćanja"
+      "crawlConnectionLost": "Izgubljena veza s poslom dohvaćanja",
+      "unsubscribed": "Zabilješka uklonjena",
+      "undoFailed": "Poništavanje nije uspjelo — zabilježi ponovno u kalendaru."
     },
     "detail": {
       "loadTournamentFailed": "Učitavanje turnira nije uspjelo",

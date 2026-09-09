@@ -14,8 +14,14 @@
   background: var(--mat-sys-surface-container);
 }
 
+/* min-height 44 px: die Vorschlaege („5400 Hallein (AT)", „5401 Hallein …") standen als
+   ~36 px hohe Zeilen lueckenlos uebereinander — auf dem Handy traf man leicht den Nachbarort,
+   und das Profil steuert danach Ansicht UND naechtliche Umkreismeldung. Flex statt block, damit
+   der Text in der hoeheren Zeile mittig sitzt. */
 .suggestions button {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   width: 100%;
   text-align: left;
   font: inherit;

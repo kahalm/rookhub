@@ -60,6 +60,30 @@ describe('MapPinMarker', () => {
   });
 
   /**
+   * Auf Touch-Geraeten gibt die Karte dem Canvas-Renderer 8 px Toleranz (tournament-map): ein
+   * Tipp knapp neben dem 14-px-Kopf soll den Pin treffen statt ins Leere zu gehen. Die Marke
+   * muss diese Toleranz vom RENDERER uebernehmen — eine eigene Konstante wuesste nichts davon.
+   */
+  it('nimmt mit Renderer-Toleranz einen Tipp neben dem Kopf an', () => {
+    map.remove();
+    map = L.map(host, {
+      preferCanvas: true, renderer: L.canvas({ tolerance: 8 }), center: [47.8, 13.04], zoom: 10,
+    });
+    const marker = pin();
+    const head = marker._point.subtract(L.point(0, 11));
+
+    expect(marker._containsPoint(head.add(L.point(12, 0)))).toBeTrue();
+  });
+
+  it('weist ohne Renderer-Toleranz denselben Tipp neben dem Kopf ab', () => {
+    // Maus: praezise — und der Hover-Hinweis soll nicht 8 px neben dem Pin aufgehen.
+    const marker = pin();
+    const head = marker._point.subtract(L.point(0, 11));
+
+    expect(marker._containsPoint(head.add(L.point(12, 0)))).toBeFalse();
+  });
+
+  /**
    * Die Ausdehnung fuer den Renderer muss nach OBEN ueber Kopf und Schwanz reichen. Bliebe sie
    * das geerbte Quadrat um den Anker, schnitte der Renderer den halben Pin weg, sobald er am Rand
    * des neu zu zeichnenden Bereichs liegt.
@@ -125,5 +149,24 @@ describe('MapPinMarker', () => {
   it('kürzt vierstellige Anzahlen ab, statt sie unlesbar zu quetschen', () => {
     expect(countLabel(999)).toBe('999');
     expect(countLabel(1000)).toBe('999+');
+  });
+
+  /**
+   * Die Zahl muss auf dem Handy lesbar bleiben: mit dem alten Faktor stand „111" in 9 px und
+   * „999+" in 8 px. Gemessen an der Schrift, die in die Leinwand geht — und sie darf den Kopf
+   * trotzdem nicht ueberragen.
+   */
+  it('schreibt die Anzahl mindestens 11 px groß und trotzdem in den Kopf', () => {
+    for (const count of [5, 12, 111, 1000]) {
+      const radius = pinRadiusFor(7, count);
+      const marker = new MapPinMarker([47.8, 13.04], { radius, count });
+      const font = (marker as unknown as { labelFont: string }).labelFont;
+      const px = Number(/(\d+)px/.exec(font)![1]);
+
+      expect(px).withContext(`Anzahl ${count}`).toBeGreaterThanOrEqual(11);
+      // ~0,6 em je fetter Ziffer.
+      expect(px * 0.6 * countLabel(count).length).withContext(`Anzahl ${count}`)
+        .toBeLessThanOrEqual(2 * radius);
+    }
   });
 });

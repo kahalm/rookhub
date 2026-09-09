@@ -15,6 +15,12 @@ interface CalendarCell {
   entries: DirectoryEntry[];
 }
 
+interface AgendaDay {
+  date: string;
+  label: string;
+  entries: DirectoryEntry[];
+}
+
 /**
  * Monatsraster von Hand statt Kalender-Bibliothek. Der Grund ist nicht Sparsamkeit: jede
  * Kalender-Bibliothek bringt ihre eigene Lokalisierung mit, die neben den 25 ngx-translate-Dateien
@@ -44,7 +50,7 @@ export class TournamentCalendarComponent implements OnChanges {
   monthLabel = '';
 
   /** Unter 768px ist das Raster unlesbar — dort zeigt das Template diese Agenda-Liste. */
-  agenda: { date: string; label: string; entries: DirectoryEntry[] }[] = [];
+  agenda: AgendaDay[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['locale'] || !this.weekdayLabels.length) this.buildWeekdayLabels();
@@ -91,6 +97,26 @@ export class TournamentCalendarComponent implements OnChanges {
   /** „+n weitere" klappt den Tag auf, statt die restlichen Turniere unerreichbar zu lassen. */
   expand(date: string): void {
     this.expanded.add(date);
+  }
+
+  /**
+   * Deckel fuer die Handy-Agenda. Die listete jedes Turnier an jedem seiner Tage ohne Grenze —
+   * mit dem Standardfilter (kein Umkreis) waren das fuer einen Monat rund 2750 Knopf-Zeilen
+   * untereinander: kilometerlanges Scrollen, kein Ueberblick, spuerbar traege beim Rendern.
+   * Sechs statt der vier des Rasters, weil hier keine Zellenhoehe begrenzt, sondern nur die
+   * Bildschirmhoehe: sechs Eintraege sind etwa eine Handy-Seite je Tag.
+   */
+  static readonly AgendaVisiblePerDay = 6;
+
+  visibleAgendaEntries(day: AgendaDay): DirectoryEntry[] {
+    return this.expanded.has(day.date)
+      ? day.entries
+      : day.entries.slice(0, TournamentCalendarComponent.AgendaVisiblePerDay);
+  }
+
+  hiddenAgendaCount(day: AgendaDay): number {
+    if (this.expanded.has(day.date)) return 0;
+    return Math.max(0, day.entries.length - TournamentCalendarComponent.AgendaVisiblePerDay);
   }
 
   trackByDate = (_: number, cell: CalendarCell) => cell.date;
@@ -143,8 +169,13 @@ export class TournamentCalendarComponent implements OnChanges {
 
     const dayFormatter = new Intl.DateTimeFormat(this.locale,
       { weekday: 'short', day: 'numeric', month: 'short' });
+    // Nur Tage des angezeigten Monats: beim Blaettern setzt der Elter Jahr/Monat sofort, `days`
+    // aber erst mit der Antwort (Mobilfunk 1–3 s, nach einem Ladefehler gar nicht). Bis dahin
+    // standen unter „Oktober 2026" die September-Turniere. Das Raster hat das Problem nicht,
+    // weil es seine Zellen per Datum fuellt — die Agenda uebernimmt die Tage 1:1.
+    const monthPrefix = `${this.year}-${pad(this.month)}`;
     this.agenda = this.days
-      .filter(d => d.items.length > 0)
+      .filter(d => d.date.startsWith(monthPrefix) && d.items.length > 0)
       .map(d => ({
         date: d.date.slice(0, 10),
         label: dayFormatter.format(new Date(d.date.slice(0, 10) + 'T00:00:00Z')),

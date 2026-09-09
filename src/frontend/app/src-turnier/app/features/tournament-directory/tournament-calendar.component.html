@@ -42,19 +42,24 @@
   }
 </div>
 
-<!-- Mobil: Agenda statt Raster -->
-<div class="cal-agenda mobile-only">
+<!-- Mobil: Agenda statt Raster; blendet beim Laden ab wie das Raster -->
+<div class="cal-agenda mobile-only" [class.loading]="loading">
   @if (agenda.length === 0 && !loading) {
     <p class="muted">{{ 'tournamentDirectory.calendar.empty' | translate }}</p>
   }
   @for (day of agenda; track day.date) {
     <div class="agenda-day">
       <div class="agenda-label">{{ day.label }}</div>
-      @for (entry of day.entries; track trackById($index, entry)) {
+      @for (entry of visibleAgendaEntries(day); track trackById($index, entry)) {
         <button type="button" class="agenda-entry" [class.cancelled]="entry.cancelled"
                 (click)="entrySelected.emit(entry)">
           <span class="agenda-name">{{ entry.name }}</span>
           @if (entry.location) { <span class="agenda-place">{{ entry.location }}</span> }
+        </button>
+      }
+      @if (hiddenAgendaCount(day) > 0) {
+        <button type="button" class="cal-more" (click)="expand(day.date)">
+          {{ 'tournamentDirectory.calendar.more' | translate: { count: hiddenAgendaCount(day) } }}
         </button>
       }
     </div>

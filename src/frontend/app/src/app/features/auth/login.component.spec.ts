@@ -1,6 +1,12 @@
 import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
 
 function make(queryParams: Record<string, string> = {}, prefill = new AuthPrefillService()) {
   const auth: any = { login: jasmine.createSpy('login').and.returnValue(of({})) };
@@ -69,5 +75,33 @@ describe('LoginComponent', () => {
     expect(snackbar.warn).toHaveBeenCalledWith('nope');
     expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(c.loading).toBeFalse();
+  });
+});
+
+/**
+ * Gerendertes Template: die Mobil-Attribute der Eingabefelder (Handy-Tastatur ohne Grossschreibung/Autokorrektur
+ * beim Benutzernamen, Passwort-Manager-Hinweise) duerfen bei einem Template-Umbau nicht stillschweigend verloren gehen.
+ */
+describe('LoginComponent Template (Mobil-Attribute)', () => {
+  it('setzt autocomplete/autocapitalize/autocorrect/spellcheck auf den Eingabefeldern', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const user = el.querySelector('input[name="username"]')!;
+    expect(user.getAttribute('autocomplete')).toBe('username');
+    expect(user.getAttribute('autocapitalize')).toBe('none');
+    expect(user.getAttribute('autocorrect')).toBe('off');
+    expect(user.getAttribute('spellcheck')).toBe('false');
+    expect(el.querySelector('input[name="password"]')!.getAttribute('autocomplete')).toBe('current-password');
   });
 });

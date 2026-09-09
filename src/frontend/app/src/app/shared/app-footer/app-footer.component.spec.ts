@@ -11,12 +11,16 @@ import { environment } from '../../../environments/environment';
  * per dynamic import() erst beim Oeffnen.
  */
 describe('AppFooterComponent', () => {
-  function build(routes: { path: string }[] = []) {
+  function buildFixture(routes: { path: string }[] = []) {
     TestBed.configureTestingModule({
       providers: [provideRouter(routes.map(r => ({ path: r.path, children: [] }))),
                   provideTranslateService({ fallbackLang: 'en' })],
     });
-    return TestBed.createComponent(AppFooterComponent).componentInstance;
+    return TestBed.createComponent(AppFooterComponent);
+  }
+
+  function build(routes: { path: string }[] = []) {
+    return buildFixture(routes).componentInstance;
   }
 
   it('nennt den Discord-Einladungslink und die laufende Version', () => {
@@ -65,6 +69,42 @@ describe('AppFooterComponent', () => {
     footer.onEscape();
 
     expect(footer.showChangelog).toBeFalse();
+  });
+
+  /**
+   * Das Overlay lag frueher ungestylt im Seitenfluss UNTER der Fusszeile: die gleichnamigen
+   * Regeln in RookHubs AppComponent sind dort gekapselt und erreichen diese Ansicht nicht.
+   * Karma wendet Komponenten-Styles an — position: fixed ist der Beleg, dass die Regeln HIER liegen.
+   */
+  it('stylt das Changelog-Overlay selbst (fixed, nicht im Seitenfluss)', async () => {
+    const fixture = buildFixture();
+    fixture.detectChanges();
+    // Ueber den KLICK oeffnen, nicht ueber die Methode: Angular 22 prueft eine View nur, wenn
+    // etwas sie als geaendert markiert hat — ein DOM-Ereignis tut das, ein direkter Aufruf
+    // nicht (dieselbe Falle wie bei HTTP-Antworten, siehe render-after-http.interceptor).
+    (fixture.nativeElement.querySelector('.version-link') as HTMLElement).click();
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('.changelog-overlay') as HTMLElement | null;
+    expect(overlay).withContext('Overlay nicht gerendert').not.toBeNull();
+    expect(getComputedStyle(overlay!).position).toBe('fixed');
+
+    await fixture.componentInstance.changelogLoad;   // dynamic import nicht offen lassen
+  });
+
+  // ----- Ausblenden am Handy: Vorgabe ja, per Input abschaltbar (Turnierseite) --------------
+
+  it('traegt hide-on-mobile nur, wenn hideOnMobile gesetzt ist', () => {
+    const fixture = buildFixture();
+    fixture.detectChanges();
+    const footerEl = fixture.nativeElement.querySelector('.app-footer') as HTMLElement;
+
+    expect(fixture.componentInstance.hideOnMobile).withContext('Vorgabe fuer RookHub').toBeTrue();
+    expect(footerEl.classList.contains('hide-on-mobile')).toBeTrue();
+
+    fixture.componentRef.setInput('hideOnMobile', false);
+    fixture.detectChanges();
+    expect(footerEl.classList.contains('hide-on-mobile')).toBeFalse();
   });
 
   // ----- Der eine Teil, der sich zwischen den Oberflaechen unterscheidet ----

@@ -62,8 +62,10 @@ interface TurnierProfile {
         <mat-card class="card">
           <h2>
             {{ 'turnier.profile.person' | translate }}
-            <app-help-hint [text]="'turnier.profile.nameHelp' | translate" />
-            <app-help-hint [text]="'turnier.profile.identityHelp' | translate" />
+            <!-- EIN Hilfe-Icon fuer Name UND Kennungen, wie in training-goals. Zwei gleiche
+                 ?-Icons nebeneinander (22 px, 7 px Abstand) sind nicht unterscheidbar — auf dem
+                 Handy trifft man zufaellig eines und sieht nur die halbe Erklaerung. -->
+            <app-help-hint [text]="('turnier.profile.nameHelp' | translate) + '\n\n' + ('turnier.profile.identityHelp' | translate)" />
           </h2>
 
           <app-profile-identity-form [profile]="p" />

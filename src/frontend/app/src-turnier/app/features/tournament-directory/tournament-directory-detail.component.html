@@ -167,8 +167,11 @@
         @if (tilesFailed()) {
           <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
         }
+        <!-- Genau EIN Pin: Einfaerben-Auswahl und Legende haetten hier nichts zu erklaeren und
+             verdeckten auf dem Handy ein Viertel der kleinen Karte. -->
         <app-tournament-map [entries]="pins()" [centre]="mapCentre()" [showRadius]="false"
-                            [zoomOutSteps]="1" height="320px" (tilesFailed)="onTilesFailed()" />
+                            [showChrome]="false" [zoomOutSteps]="1" height="320px"
+                            (tilesFailed)="onTilesFailed()" />
       </mat-card>
     }
   }

@@ -43,6 +43,22 @@ describe('TurnierAppComponent', () => {
       .withContext('keine geteilte Fusszeile').not.toBeNull();
   });
 
+  /**
+   * RookHub blendet die Fusszeile bis 768px aus (Vorgabe der geteilten Komponente); auf der
+   * Turnierseite ist sie am Handy der einzige Weg zu Version, Hilfe und Rueckmeldung und
+   * bleibt deshalb stehen. Gelesen wird der INPUT (Signal- oder Feld-Form), nicht die
+   * CSS-Klasse — die gehoert der Komponente, nicht der Huelle.
+   */
+  it('laesst die Fusszeile auch am Handy stehen (hideOnMobile = false)', () => {
+    const fixture = TestBed.createComponent(TurnierAppComponent);
+    fixture.detectChanges();
+
+    const footer = fixture.debugElement.query(By.directive(AppFooterComponent))
+      .componentInstance as { hideOnMobile: boolean | (() => boolean) };
+    const value = typeof footer.hideOnMobile === 'function' ? footer.hideOnMobile() : footer.hideOnMobile;
+    expect(value).withContext('Fusszeile wuerde am Handy verschwinden').toBeFalse();
+  });
+
   it('nennt die Version und haelt das Changelog bis zum Oeffnen leer', () => {
     const fixture = TestBed.createComponent(TurnierAppComponent);
     fixture.detectChanges();

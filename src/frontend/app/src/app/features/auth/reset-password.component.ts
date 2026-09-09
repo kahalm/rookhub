@@ -28,12 +28,12 @@ import { SnackbarService } from '../../core/snackbar.service';
             <form (ngSubmit)="onSubmit()" class="auth-form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.reset.passwordLabel' | translate }}</mat-label>
-                <input matInput type="password" [(ngModel)]="password" name="password" required minlength="4" autofocus>
+                <input matInput type="password" [(ngModel)]="password" name="password" required minlength="4" autofocus autocomplete="new-password">
                 <mat-hint>{{ 'auth.reset.passwordHint' | translate }}</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.reset.confirmLabel' | translate }}</mat-label>
-                <input matInput type="password" [(ngModel)]="confirm" name="confirm" required minlength="4">
+                <input matInput type="password" [(ngModel)]="confirm" name="confirm" required minlength="4" autocomplete="new-password">
               </mat-form-field>
               <button mat-raised-button color="primary" type="submit" [disabled]="loading || !canSubmit">
                 {{ loading ? ('auth.reset.submitting' | translate) : ('auth.reset.submit' | translate) }}
@@ -54,6 +54,9 @@ import { SnackbarService } from '../../core/snackbar.service';
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     .auth-info { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     mat-form-field { width: 100%; }
+    /* Handy: 'Neuen Link anfordern' und 'Zurueck zur Anmeldung' passen nicht nebeneinander (gleiches Muster wie
+       im Login) und brachen innerhalb des 40px-Buttons zweizeilig um. */
+    @media (max-width: 768px) { mat-card-actions { flex-wrap: wrap; } }
   `]
 })
 export class ResetPasswordComponent {

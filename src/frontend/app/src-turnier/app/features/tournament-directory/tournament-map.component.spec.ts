@@ -181,6 +181,61 @@ describe('TournamentMapComponent', () => {
     expect(popup.querySelectorAll('.tc-actions button').length).toBe(4);
   });
 
+  // ----- Handy: Popup-Breite und Trefferflaeche --------------------------------------
+
+  /** Karte so breit wie ein kleines Handy bzw. ein Desktop. Der Host ist ein Inline-Element. */
+  function mapWidth(px: number): void {
+    const host: HTMLElement = fixture.nativeElement;
+    host.style.display = 'block';
+    host.style.width = `${px}px`;
+  }
+
+  it('macht das Popup auf einer schmalen Karte schmaler als die Karte', () => {
+    // Auf 360 px war es 3 px breiter als die Karte: rechter Rand und ein Drittel des
+    // Schliessen-X abgeschnitten.
+    mapWidth(344);
+    centredOn(entry('1', 47.8, 13.04));
+
+    const [popup] = popupOptions(component);
+    expect(popup.maxWidth!).toBeLessThanOrEqual(344 - 60);
+    expect(popup.minWidth!).toBeLessThanOrEqual(popup.maxWidth!);
+  });
+
+  it('lässt die Popup-Breite am Desktop unverändert', () => {
+    mapWidth(800);
+    centredOn(entry('1', 47.8, 13.04));
+
+    const [popup] = popupOptions(component);
+    expect(popup.minWidth).toBe(220);
+    expect(popup.maxWidth).toBe(300);
+  });
+
+  /**
+   * Auf Touch-Geraeten bekommt der Canvas-Renderer 8 px Klick-Toleranz: ein einzelner Pin ist
+   * ~16 px breit und mit dem Finger kaum zu treffen. Mit der Maus nicht — die ist praezise, und
+   * der Hover-Hinweis soll nicht neben dem Pin aufgehen.
+   */
+  it('gibt dem Renderer auf Touch-Geräten 8 px Klick-Toleranz', () => {
+    fakePointer(true);
+    fixture.detectChanges();
+
+    expect(rendererTolerance(component)).toBe(8);
+  });
+
+  it('lässt die Klick-Toleranz mit der Maus bei 0', () => {
+    fakePointer(false);
+    fixture.detectChanges();
+
+    expect(rendererTolerance(component)).toBe(0);
+  });
+
+  /** Taeuscht das Zeigegeraet vor; alle anderen Medienabfragen laufen weiter ans Original. */
+  function fakePointer(coarse: boolean): void {
+    const original = window.matchMedia.bind(window);
+    spyOn(window, 'matchMedia').and.callFake((query: string) =>
+      query === '(pointer: coarse)' ? ({ matches: coarse } as MediaQueryList) : original(query));
+  }
+
   it('zoomt auf Wunsch eine Stufe weiter heraus als der eingepasste Ausschnitt', async () => {
     // Auf der Detailseite sitzt der eingepasste Ausschnitt so knapp um den Ort, dass die
     // Umgebung fehlt, an der man ihn erkennt.
@@ -389,6 +444,19 @@ describe('TournamentMapComponent', () => {
     expect(host.querySelector('.legend-toggle')!.getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('blendet Auswahl und Legende aus, wenn die Karte ohne Zubehör gewünscht ist', () => {
+    // Die Detailseite zeigt genau EINEN Pin: die Legende erklaert dort nichts, die Auswahl faerbt
+    // nichts um — das Bedienfeld verdeckte auf dem Handy aber ein Viertel der kleinen Karte.
+    fixture.componentRef.setInput('showChrome', false);
+    fixture.detectChanges();
+    const chrome = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.map-chrome');
+
+    // Im DOM bleibt es (statischer ViewChild, disableClickPropagation), zu sehen ist es nicht.
+    expect(chrome).withContext('Zubehoer aus dem DOM entfernt statt ausgeblendet').not.toBeNull();
+    expect(chrome!.hidden).toBeTrue();
+    expect(getComputedStyle(chrome!).display).toBe('none');
+  });
+
   /**
    * Leaflet schiebt die Karte selbst, damit ein Popup am Rand ins Bild passt. Meldet man dieses
    * Schieben als neuen Ausschnitt, lädt der Elternteil die Punkte neu — und wirft damit genau das
@@ -453,6 +521,20 @@ describe('TournamentMapComponent', () => {
     expect(markerStyles(component)[0].color).not.toBe(vorher);
   });
 });
+
+/** Die Popup-Optionen, mit denen die Punkte gebunden wurden. */
+function popupOptions(component: TournamentMapComponent): { minWidth?: number; maxWidth?: number }[] {
+  const options: { minWidth?: number; maxWidth?: number }[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (component as any).markerLayer?.eachLayer((l: any) => options.push(l.getPopup().options));
+  return options;
+}
+
+/** Die Klick-Toleranz des Canvas-Renderers, den die Karte bekommen hat. */
+function rendererTolerance(component: TournamentMapComponent): number {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (component as any).map.options.renderer.options.tolerance;
+}
 
 /** Die Marker-Optionen inkl. Anzahl der Turniere auf dem Punkt. */
 function markerOptions(component: TournamentMapComponent): { count?: number }[] {

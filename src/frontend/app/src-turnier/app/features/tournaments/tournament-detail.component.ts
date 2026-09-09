@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Sort } from '@angular/material/sort';
@@ -23,7 +24,7 @@ import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites,
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })

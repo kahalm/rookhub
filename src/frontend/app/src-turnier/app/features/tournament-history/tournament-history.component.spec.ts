@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { TournamentHistoryComponent } from './tournament-history.component';
@@ -420,6 +420,58 @@ describe('TournamentHistoryComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('turnier.history.fetchingResult');
     expect(text).toContain('turnier.history.noSingleResult');
+
+    // Beide Textzellen spannen ueber die vier Zahlenspalten. Vorher (ungueltiges colspan auf
+    // einem span) standen sie in der 3rem-Punktespalte und brachen wortweise um — eine
+    // 78px hohe Zeile mitten in der Tabelle.
+    const cells = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.row .row-num.span-rest'));
+    expect(cells.length).toBe(2);
+    for (const cell of cells) {
+      const style = getComputedStyle(cell);
+      expect(style.gridColumnStart).toBe('3');
+      expect(style.gridColumnEnd).toBe('-1');
+      expect(style.whiteSpace).toBe('nowrap');
+    }
+  });
+
+  /**
+   * Gemeldet auf 360/375px: unter „Kommt noch" war die Zeile breiter als die Karte, „9 Runden"
+   * ragte rechts heraus und die SEITE bekam horizontalen Scroll — die Spaltenminima (6.5rem +
+   * 10rem + 5rem + Abstaende = 360px) passten in keine 329px breite Karte. Der Name darf jetzt
+   * auf 0 schrumpfen (Ellipse), die Rundenspalte nimmt nur ihre Textbreite.
+   */
+  it('passt „Kommt noch" auf einem 390px-Handy in die Karte, ohne seitwaerts ueberzulaufen', async () => {
+    const req = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    // Hochkant-Handy nachstellen (iPhone-Breite), damit die Messung nicht vom Karma-Fenster abhaengt.
+    host.style.display = 'block';
+    host.style.width = '390px';
+    host.style.overflowX = 'hidden';   // wie ein Viewport: was rauslaeuft, wuerde hier scrollen
+    // Echter Text statt des Schluessels, damit die Rundenspalte so breit ist wie in der App.
+    TestBed.inject(TranslateService).setTranslation('en', {
+      turnier: { history: { roundsShort: '{{count}} rounds' } },
+    }, true);
+
+    const future = new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
+    req.flush([history({
+      entries: [played({
+        chessResultsId: '2', name: 'Tiroler Landesmeisterschaft im Schnellschach 2026 (Gruppe A)',
+        endDate: future, rank: null, hasResult: false, rounds: 9,
+      })],
+    })]);
+    fixture.detectChanges();
+
+    const row = host.querySelector('.row.upcoming') as HTMLElement | null;
+    expect(row).withContext('Zeile unter „Kommt noch" gerendert').toBeTruthy();
+    const meta = row!.querySelector('.row-meta') as HTMLElement;
+    expect(meta.textContent?.trim()).toBe('9 rounds');
+    // Die Rundenspalte endet INNERHALB der Zeile (gegen den Ist-Stand: ~40px rechts daneben) …
+    expect(meta.getBoundingClientRect().right).toBeLessThanOrEqual(row!.getBoundingClientRect().right + 1);
+    // … der lange Name wird abgeschnitten statt die Zeile zu weiten …
+    const name = row!.querySelector('.row-name') as HTMLElement;
+    expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
+    // … und die Seite selbst wird nicht breiter.
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
   });
 
   /**

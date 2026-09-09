@@ -53,6 +53,23 @@ describe('TurnierProfileComponent', () => {
   });
 
   /**
+   * Neben der Ueberschrift steht EIN Hilfe-Icon mit beiden Texten (Name + Kennungen), nicht
+   * zwei gleiche ?-Icons nebeneinander: die sind nicht unterscheidbar, und auf dem Handy trifft
+   * man zufaellig eines und sieht nur die halbe Erklaerung. Ohne geladene Uebersetzungen liefert
+   * die Pipe den Schluessel selbst — daran laesst sich pruefen, dass beide Teile drin sind.
+   */
+  it('zeigt Name- und Kennungs-Hilfe in EINEM Hilfe-Icon', () => {
+    setup();
+
+    const hints = fixture.nativeElement.querySelectorAll('app-help-hint');
+    expect(hints.length).toBe(1);
+    const label: string = hints[0].querySelector('button').getAttribute('aria-label');
+    expect(label).toContain('turnier.profile.nameHelp');
+    expect(label).toContain('turnier.profile.identityHelp');
+    expect(label).toContain('\n\n');
+  });
+
+  /**
    * Nur die Felder DIESER Seite gehen mit. Ein vollstaendiges Profil-Objekt zurueckzuschicken
    * hiesse, die Einstellungen aus RookHub (Brett, Offline-Speicher, Zugaenge) mit dem Stand von
    * hier zu ueberschreiben — und die kennt diese Seite nicht.

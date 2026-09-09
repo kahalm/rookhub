@@ -157,9 +157,14 @@ export function pinRadiusFor(base: number, count: number): number {
 /**
  * Schriftgroesse, die INNEN passt — begrenzt sowohl durch die Hoehe des Kopfes als auch durch
  * seine Breite (drei Ziffern brauchen mehr Breite als eine, der Kopf bleibt aber rund).
+ *
+ * <p>Faktor 2,4 und Untergrenze 10: mit 1,7 stand „111" in 9 px und „999+" in 8 px — auf dem
+ * Handy nicht mehr lesbar, obwohl die Zahl der einzige Hinweis auf „hier liegen mehrere" ist.
+ * Fette system-ui-Ziffern sind ~0,55–0,6 em breit; mit 2,4 belegt die Zahl hoechstens ~72 % des
+ * Durchmessers und bleibt im Kopf (13/16/13/11 px fuer 1/2/3/4 Zeichen bei `pinRadiusFor`).</p>
  */
 function labelSize(radius: number, label: string): number {
-  return Math.max(7, Math.round(Math.min(radius * 1.3, (radius * 1.7) / label.length)));
+  return Math.max(10, Math.round(Math.min(radius * 1.3, (radius * 2.4) / label.length)));
 }
 
 /** Nur die Teile des Canvas-Renderers, die hier gebraucht werden (Leaflet-Interna). */

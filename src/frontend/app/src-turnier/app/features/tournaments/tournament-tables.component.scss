@@ -8,6 +8,10 @@
     .fav-icon:hover { color: #ffc107; }
     /* Sichtbarer Fokus für die jetzt tastaturbedienbaren Favoriten-Sterne. */
     .fav-icon:focus-visible { outline: 2px solid #1565c0; outline-offset: 2px; border-radius: 4px; }
+    /* Teams-Tab hat keine Mobil-Karten: nur das 24-px-Icon trug den Klick, die 52-px-Zelle nicht.
+       Jetzt klickt die ganze Zelle (siehe Template), der Hover-Effekt folgt ihr. */
+    .fav-cell { cursor: pointer; }
+    .fav-cell:hover .fav-icon { color: #ffc107; }
 
     .team-link { cursor: pointer; color: #1565c0; text-decoration: underline; }
     .team-link:hover { color: #0d47a1; }
@@ -40,7 +44,9 @@
       font-size: 0.82rem;
       color: color-mix(in srgb, currentColor 60%, transparent);
     }
-    .player-details span:not(:last-child)::after { content: "\\00b7"; margin-left: 0.5rem; }
+    /* CSS-Escape mit EINEM Backslash: "\\00b7" (Erbe aus einem JS-Template-Literal) stand auf dem Handy
+       als Text "\00b7" zwischen Elo, Land und Verein. */
+    .player-details span:not(:last-child)::after { content: "\00b7"; margin-left: 0.5rem; }
 
     .result-cell { white-space: nowrap; }
 
@@ -75,4 +81,11 @@
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
       .player-details { padding-left: 1.5rem; }
       .pairing-team { white-space: normal; }
+      /* Team-Links waren Inline-Text (~18-22 px hoch); Heim- und Gastlink standen mit nur der Ergebniszeile
+         dazwischen uebereinander -> Tipp auf das falsche Team. Padding statt Zeilenabstand: ~34 px Ziel,
+         Karte waechst nur ~28 px, Team-Tabellenzeile bleibt 52 px. */
+      .team-link { display: inline-block; padding: 0.5rem 0; }
+      .pairing-result { padding: 0; }
+      /* In der Spielerkarte ohne Layout-Sprung: das negative Margin frisst das Padding wieder auf. */
+      .player-details .team-link { display: inline-block; padding: 0.35rem 0; margin: -0.35rem 0; }
     }

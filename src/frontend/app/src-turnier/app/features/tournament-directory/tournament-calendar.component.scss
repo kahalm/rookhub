@@ -14,7 +14,8 @@
 
 .cal-today { margin-left: auto; }
 
-.cal-grid.loading { opacity: 0.5; }
+.cal-grid.loading,
+.cal-agenda.loading { opacity: 0.5; }
 
 .cal-head,
 .cal-week {
@@ -104,6 +105,11 @@
 .agenda-entry {
   display: flex;
   flex-direction: column;
+  // Ohne Ortstext war der Knopf nur ~35px hoch (8px Polster + eine Zeile) — unter dem
+  // 44px-Beruehrziel, bei 4px Abstand zum Nachbarn ein Fehltipp auf den falschen Eintrag.
+  // justify-content: center, sonst klebt die einzelne Zeile bei min-height oben am Polster.
+  justify-content: center;
+  min-height: 44px;
   gap: 2px;
   width: 100%;
   text-align: left;
@@ -123,6 +129,14 @@
 .agenda-place {
   font-size: 0.8rem;
   color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+// „+n weitere" ist fuers Raster dimensioniert (0.7rem, 1px Polster) — in der Agenda auf 360px
+// waere das kein Beruehrziel. Hier so gross wie ein Eintrag.
+.agenda-day .cal-more {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.85rem;
 }
 
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }

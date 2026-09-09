@@ -96,6 +96,29 @@ describe('TurnierAdminComponent', () => {
     expect(component.busyId()).toBeNull();
   });
 
+  /**
+   * Ein Benutzername darf 50 Zeichen lang sein und hat keine Leerzeichen — auf 360 px war so ein
+   * Name breiter als die Zeile (386 px gegen 296 px) und schob Karte und Seite horizontal. Der Test
+   * misst genau das: schmaler Host, langer Name, die Zeile darf nicht ueber ihren Platz hinauslaufen.
+   */
+  it('bricht einen langen Benutzernamen um statt die Zeile zu verbreitern (360 px)', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    // Kleines Android nachstellen, damit die Messung nicht vom Karma-Fenster abhaengt.
+    host.style.width = '360px';
+    host.style.overflowX = 'hidden';   // wie ein Viewport: was rauslaeuft, wuerde hier scrollen
+    const name = 'schachfreund'.padEnd(50, 'w');   // 50 Zeichen = MaxLength des Benutzernamens
+    http.expectOne(r => r.url === '/api/admin/users').flush({
+      items: [{ id: 9, username: name, email: 'lang@t.local', isAdmin: false, createdAt: '2026-01-01', groups: [] }],
+      totalCount: 1, page: 1, pageSize: 50,
+    });
+    fixture.detectChanges();
+
+    const li = host.querySelector('.ta-users li') as HTMLElement | null;
+    expect(li).withContext('Kontozeile gerendert').toBeTruthy();
+    expect(li!.textContent).toContain(name);
+    expect(li!.scrollWidth).toBeLessThanOrEqual(li!.clientWidth + 1);
+  });
+
   /** Scheitert der Einstieg, bleibt der Admin angemeldet — kein halber Zustand. */
   it('bleibt bei einem Fehlschlag als Admin angemeldet', () => {
     flushUsers();

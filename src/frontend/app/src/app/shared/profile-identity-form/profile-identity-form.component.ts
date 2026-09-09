@@ -76,11 +76,17 @@ export interface PlayerSearchResult {
       </mat-form-field>
       <button mat-stroked-button type="button" class="pif-search" (click)="searchPlayer()"
               [disabled]="!searchable || searching">
+        <!-- Lupe und Spinner stehen je ALLEIN in ihrem Zweig, der Text ausserhalb: nur einen
+             Block mit genau einem Wurzelelement projiziert MatButton in seinen Icon-Slot (18 px,
+             Aussenabstand). Standen Icon UND Text im selben Zweig, ging der ganze Block in den
+             Text-Slot — 24-px-Lupe ohne Abstand, und der Knopf sprang beim Suchen in der Breite
+             (Compiler-Warnung NG8011). -->
         @if (searching) {
-          <mat-spinner diameter="20" />
+          <mat-spinner matButtonIcon diameter="18" />
         } @else {
-          <mat-icon>search</mat-icon> {{ 'profile.searchPlayer' | translate }}
+          <mat-icon>search</mat-icon>
         }
+        {{ 'profile.searchPlayer' | translate }}
       </button>
     </div>
 
@@ -159,12 +165,25 @@ export interface PlayerSearchResult {
     .pif-names, .pif-ids { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
     .pif-names mat-form-field, .pif-ids mat-form-field { flex: 1 1 12rem; }
     /* Der Knopf steht neben den Feldern und soll auf HOEHE der Eingabe liegen, nicht an deren
-       Oberkante — ein Material-Feld ist 56 px hoch, der Knopf 36 px. */
-    .pif-search { margin-top: 10px; align-self: flex-start; }
+       Oberkante — ein Material-Feld ist 56 px hoch, der Knopf 36 px. Der UNTERE Abstand ist fuer
+       den umgebrochenen Fall (Handy): dort ist der Knopf das letzte Kind der Zeile und hat keinen
+       Hinweis-Bereich unter sich wie die Felder, und das schwebende Label des Folgefelds
+       ("Anzeigename") ragt rund 7 px ueber dessen Oberkante — es lief durch die Unterkante des
+       Knopfs. Auf dem Desktop (eine Zeile, Felder 78 px hoch) aendert er nichts. */
+    .pif-search { margin-top: 10px; margin-bottom: 14px; align-self: flex-start; }
+    /* mat-spinner traegt keine .mat-icon-Klasse, die Icon-Offsets des Outlined-Knopfs (-8/8 px)
+       greifen also nicht — nachgestellt, damit der Knopf beim Suchen nicht in der Breite springt. */
+    .pif-search mat-spinner { margin: 0 8px 0 -8px; }
     /* Die zwei Felder mit Hinweistext tragen subscriptSizing="dynamic": bei fester Groesse ist
        nur EINE Zeile reserviert, und der laengere Hinweis (E-Mail) lief in das Feld darunter. */
     .pif-full { width: 100%; margin-bottom: 1rem; }
-    .pif-results { margin: 4px 0 16px; }
+    /* Bei vielen Namensgleichen (bis 50 je Quelle) schob die Trefferliste Anzeigename, E-Mail,
+       Kennungen und Speichern auf dem Handy um rund drei Bildschirmhoehen nach unten — nach dem
+       Antippen eines Treffers sah man die uebernommenen Kennungen nicht. Deshalb EIN Rollbereich
+       um beide Listen (die Ueberschriften rollen mit); Muster .hh-tooltip in styles.scss. */
+    .pif-results {
+      margin: 4px 0 16px; max-height: min(50vh, 420px); overflow-y: auto; overscroll-behavior: contain;
+    }
     .pif-results h4 { margin: 8px 0 4px; }
 
     .pif-hits { display: flex; flex-direction: column; gap: 4px; }
@@ -179,7 +198,13 @@ export interface PlayerSearchResult {
       font: inherit; text-align: left; cursor: pointer;
     }
     .pif-hit:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .pif-player { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; line-height: 1.5; }
+    /* Der Pfeil ist ein Flex-Kind mit overflow: hidden und darf deshalb bis auf 0 schrumpfen: in
+       Zeilen mit CR- UND FIDE-Kennung war er auf dem Handy nur noch ein 12-px-Strich, in den
+       Nachbarzeilen ganz. Nachgeben soll der Text (min-width: 0), nicht der Pfeil. */
+    .pif-hit mat-icon { flex-shrink: 0; }
+    .pif-player {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; line-height: 1.5; min-width: 0;
+    }
     .pif-name { font-weight: 500; }
     .muted { opacity: 0.7; }
   `],

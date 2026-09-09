@@ -96,6 +96,34 @@ describe('TournamentCalendarComponent', () => {
     expect(component.agenda[0].date).toBe('2026-10-10');
   });
 
+  it('zeigt in der Agenda nur Tage des angezeigten Monats', () => {
+    // Beim Blaettern wechseln Jahr/Monat sofort, `days` erst mit der Antwort — bis dahin
+    // standen die Turniere des alten Monats unter der neuen Ueberschrift.
+    component.days = [day('2026-09-12', 'Alt'), day('2026-09-13', 'Auch alt')];
+    apply({ days: component.days, month: 10 });
+
+    expect(component.agenda.length).toBe(0);
+  });
+
+  it('deckelt die Agenda je Tag und klappt sie mit „+n weitere" auf', () => {
+    const names = Array.from({ length: 8 }, (_, i) => `Turnier ${i + 1}`);
+    component.days = [day('2026-10-10', ...names)];
+    apply({ days: component.days });
+
+    const host: HTMLElement = fixture.nativeElement;
+    expect(host.querySelectorAll('.agenda-day .agenda-entry').length)
+      .toBe(TournamentCalendarComponent.AgendaVisiblePerDay);
+    const more = host.querySelectorAll<HTMLButtonElement>('.agenda-day .cal-more');
+    expect(more.length).toBe(1);
+
+    // Klick im DOM statt expand() direkt: OnPush rendert nur nach einem Ereignis neu.
+    more[0].click();
+    fixture.detectChanges();
+
+    expect(host.querySelectorAll('.agenda-day .agenda-entry').length).toBe(8);
+    expect(host.querySelectorAll('.agenda-day .cal-more').length).toBe(0);
+  });
+
   it('blättert über den Jahreswechsel hinweg', () => {
     component.year = 2026;
     component.month = 12;

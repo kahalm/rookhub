@@ -19,10 +19,17 @@ import { AppUpdateService } from '@rh/core/app-update.service';
     <app-impersonation-banner />
     <trn-navbar />
     <main><router-outlet /></main>
-    <app-footer />
+    <!-- Anders als in RookHub bleibt die Fusszeile auch am Handy stehen: hier ist sie der
+         einzige Weg zu Version, Hilfe und Rueckmeldung — RookHubs Menue traegt diese Wege selbst. -->
+    <app-footer [hideOnMobile]="false" />
   `,
   styles: [`
-    :host { display: flex; flex-direction: column; min-height: 100vh; }
+    /* 100vh ist am Handy HOEHER als der sichtbare Bereich (die Adressleiste zaehlt mit) —
+       selbst die kurze Anmeldeseite liess sich um deren Hoehe scrollen und „wackelte" beim
+       Antippen. svh ist die kleine, stabile Hoehe (dvh aenderte sie beim Ein-/Ausklappen der
+       Leiste waehrend des Scrollens und loeste Relayouts aus); am Schreibtisch gleich 100vh.
+       Die vh-Zeile davor ist der Rueckfall fuer Browser ohne svh. */
+    :host { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
     main { display: block; flex: 1; }
   `],
 })

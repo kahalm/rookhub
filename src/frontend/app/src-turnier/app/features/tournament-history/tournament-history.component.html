@@ -180,12 +180,12 @@
                   } @else if (entry.cardFetched) {
                     <!-- Karte ist da, Ergebnis nicht: chess-results fuehrt fuer diese Zeile keines
                          (kommt bei einzelnen Mannschaftsturnieren vor). Warten hilft nicht. -->
-                    <span class="row-num muted" colspan="4"
+                    <span class="row-num muted span-rest"
                           [matTooltip]="'turnier.history.noSingleResultTooltip' | translate">
                       {{ 'turnier.history.noSingleResult' | translate }}
                     </span>
                   } @else {
-                    <span class="row-num muted" colspan="4">{{ 'turnier.history.fetchingResult' | translate }}</span>
+                    <span class="row-num muted span-rest">{{ 'turnier.history.fetchingResult' | translate }}</span>
                   }
                 </button>
               }

@@ -32,7 +32,10 @@ const PinRadius = 7;
  *    Kriechen, im Canvas bleibt sie fluessig. Eine Cluster-Bibliothek waere eine weitere
  *    Abhaengigkeit fuer dasselbe Ergebnis. Die Pin-FORM (unten spitz, oben rund) kommt deshalb
  *    aus einer eigenen Canvas-Marke, `MapPinMarker` — sie zeigt auf ihren Ort, waehrend ein
- *    Kreis behauptet, der Ort liege in seiner schwer zu treffenden Mitte.
+ *    Kreis behauptet, der Ort liege in seiner schwer zu treffenden Mitte. Auf Touch-Geraeten
+ *    bekommt der Canvas-Renderer 8 px Klick-Toleranz: ein einzelner Pin ist sonst nur ~16 px
+ *    breit und mit dem Finger kaum zu treffen. NUR dort — die Maus ist praezise, und der
+ *    Hover-Hinweis soll nicht 8 px neben dem Pin aufgehen.
  *  - Leaflets Stylesheet liegt in angular.json unter `styles` (global) und NICHT in dieser
  *    Komponente: die View-Encapsulation wuerde es wegkapseln und die Kachel-Positionierung
  *    zerlegen. Es sind ~15 kB — der Preis dafuer, dass die Karte ueberhaupt richtig sitzt.
@@ -57,7 +60,7 @@ const PinRadius = 7;
 
       <!-- Kartenzubehoer, kein Formular: es steht UEBER der Karte und darf ihre Ereignisse nicht
            ausloesen (siehe disableClickPropagation in ngAfterViewInit). -->
-      <div class="map-chrome" #chromeEl>
+      <div class="map-chrome" #chromeEl [hidden]="!showChrome">
         <label class="colour-by">
           <span>{{ 'tournamentDirectory.map.colourBy' | translate }}</span>
           <select [value]="colourBy" (change)="pickColourBy($event)">
@@ -122,7 +125,9 @@ const PinRadius = 7;
       border-radius: 8px;
       background: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-      font-size: 0.72rem;
+      /* 0.75rem = 12 px, dieselbe Stufe wie Leaflets Quellenangabe (leaflet.css): 11,5 px
+         halbtransparent auf Kartenkacheln war auf dem Handy schwer lesbar. */
+      font-size: 0.75rem;
       line-height: 1.35;
     }
 
@@ -139,6 +144,13 @@ const PinRadius = 7;
       font: inherit;
     }
 
+    /* iOS Safari zoomt die ganze Seite auf ~1,4x, sobald ein Formularfeld unter 16 px den Fokus
+       bekommt — und laesst sie so stehen; der Zurueck-Pinch landet dann auf der Karte. Nur fuer
+       Touch: am Desktop bleibt die Legende so kompakt wie bisher. */
+    @media (pointer: coarse) {
+      .colour-by select { font-size: 16px; min-height: 32px; }
+    }
+
     .legend-toggle {
       display: flex;
       align-items: center;
@@ -150,7 +162,13 @@ const PinRadius = 7;
       font: inherit;
       color: inherit;
       cursor: pointer;
-      opacity: 0.85;
+    }
+
+    /* Auf dem Handy ein 36-px-Ziel: mit 16 px Hoehe traf man den Knopf selten beim ersten Tipp,
+       Fehltipps landeten im Select darueber. Der negative Rand unten verrechnet das neue
+       Button-Padding mit dem Chrome-Padding, sonst stuende zugeklappt ein Streifen Leerraum. */
+    @media (max-width: 768px) {
+      .legend-toggle { min-height: 36px; padding: 6px 0; margin-top: 0; margin-bottom: -6px; }
     }
 
     .chevron { display: inline-block; transition: transform 120ms; }
@@ -262,10 +280,16 @@ const PinRadius = 7;
 
     :host ::ng-deep .tm-group-when { font-size: 0.75rem; opacity: 0.75; }
 
+    /* Popupbreites 36-px-Ziel: mit 16 px Hoehe und nur Textbreite landete der Tipp auf dem
+       Handy oft auf dem Turniernamen darunter — Sprung zur Detailseite, Kartenausschnitt weg.
+       text-align, weil ein display:block-Knopf seinen Text zentriert, sobald er breiter ist. */
     :host ::ng-deep .tm-group-back {
       display: block;
-      margin-bottom: 4px;
-      padding: 0;
+      width: 100%;
+      text-align: left;
+      margin-bottom: 0;
+      padding: 8px 0;
+      min-height: 36px;
       border: 0;
       background: none;
       font: inherit;
@@ -309,6 +333,14 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * seinen gespeicherten Anzeigezustand).
    */
   @Input() colourBy: PinColourBy = 'speed';
+  /**
+   * Das Zubehoer (Einfaerben-Auswahl + Legende) ueberhaupt ZEIGEN. Die Detailseite zeigt genau
+   * einen Pin — dort erklaert die Legende nichts und die Auswahl faerbt nichts um, das Bedienfeld
+   * verdeckte auf dem Handy aber ein Viertel der kleinen Karte. Ausgeblendet per [hidden], nicht
+   * per @if: das Element bleibt im DOM, der statische ViewChild und disableClickPropagation
+   * darauf laufen unveraendert.
+   */
+  @Input() showChrome = true;
 
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
   /** Feuert, wenn Kacheln nicht geladen werden koennen — sonst bleibt die Karte stumm schwarz. */
@@ -372,8 +404,12 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   private lastFitted: string | null = null;
 
   ngAfterViewInit(): void {
+    // Touch-Geraet? Dann zaehlt ein Tipp ein paar Pixel neben dem Pin noch als Treffer (siehe
+    // Klassenkommentar). Defensiv: nicht jede Testumgebung kennt matchMedia.
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     this.map = L.map(this.mapEl.nativeElement, {
       preferCanvas: true,
+      renderer: L.canvas({ tolerance: coarse ? 8 : 0 }),
       center: [47.7, 13.4],   // Österreich als Startbild; der erste Filter zieht sofort nach
       zoom: 6,
       zoomControl: true,
@@ -449,6 +485,12 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.groupsByEntry.clear();
 
     let mixed = false;
+    // Das Popup darf nicht breiter sein als die Karte: auf 360 px war es 3 px zu breit, vom
+    // Schliessen-X fehlte ein Drittel. 60 = Leaflets Popup-Rand (44) plus autoPan (2x5) plus
+    // Luft. Ohne Groesse (Karte im noch unsichtbaren mat-tab) gelten die Vorgaben; nach einer
+    // Rotation heilt es sich, weil moveend neue Eintraege bringt und hier neu gebunden wird.
+    const mapWidth = this.map?.getSize().x;
+    const avail = mapWidth ? Math.max(120, mapWidth - 60) : 300;
 
     for (const group of groupByPoint(this.entries)) {
       const count = group.members.length;
@@ -473,8 +515,9 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       // Marker koennen die Sprachdateien noch unterwegs sein.
       marker.bindTooltip(() => this.tooltipHtml(group), { direction: 'top', offset: [0, -above] });
       // Klick = Popup (siehe Klassenkommentar), NICHT der Sprung auf die Detailseite.
-      marker.bindPopup(() => this.buildPopup(group),
-        { offset: [0, -above + 4], minWidth: 220, maxWidth: 300 });
+      marker.bindPopup(() => this.buildPopup(group), {
+        offset: [0, -above + 4], minWidth: Math.min(220, avail), maxWidth: Math.min(300, avail),
+      });
       // Beim geoeffneten Popup stuende der Hover-Hinweis mit demselben Inhalt daneben.
       marker.on('popupopen', () => marker.closeTooltip());
       marker.addTo(this.markerLayer);

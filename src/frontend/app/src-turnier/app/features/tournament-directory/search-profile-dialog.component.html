@@ -29,7 +29,10 @@
     <label for="radius-slider">
       {{ 'tournamentDirectory.profile.radius' | translate: { km: radiusKm } }}
     </label>
-    <mat-slider min="5" max="500" step="5" discrete>
+    <!-- 25-km-Raster statt 5: 99 Stufen auf ~260 px Spur (Dialog auf 360 px) waren ~2,6 px je
+         Stufe, der Finger sprang um +-20 km. 20 Stufen sind ~12 px; Vorgabe 100 liegt auf dem
+         Raster, Altwerte (40, 75, 10) bleiben im Label stehen und rasten erst bei Beruehrung. -->
+    <mat-slider min="25" max="500" step="25" discrete>
       <input matSliderThumb id="radius-slider" [(ngModel)]="radiusKm" />
     </mat-slider>
   </div>

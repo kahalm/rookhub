@@ -110,10 +110,16 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
     .card.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
 
     .rows { display: flex; flex-direction: column; gap: 0.5rem; }
-    .row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.75rem; }
+    /* mat-card ist selbst „display: flex; flex-direction: column" — ohne ausdrueckliches „row"
+       stapelte sich jede Merkzeile: Titel oben (zentriert, Klickflaeche nur textbreit), Icon
+       darunter, Karte doppelt so hoch. */
+    .row { display: flex; flex-direction: row; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.75rem; }
 
     .row-open {
       display: flex; align-items: baseline; gap: 0.75rem; flex: 1 1 auto; flex-wrap: wrap;
+      /* min-width: 0 — sonst schiebt ein unbrechbarer Turniername (Unterstriche, CamelCase) bei
+         360px das Icon aus der Karte und die Seite scrollt seitwaerts. */
+      min-width: 0;
       min-height: 40px; padding: 0.35rem 0; border: 0; background: transparent; color: inherit;
       font: inherit; text-align: left; cursor: pointer;
     }
@@ -121,7 +127,9 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
     .row-open:disabled { cursor: default; }
     .row-open.busy { opacity: 0.6; }
 
-    .row-name { font-weight: 500; }
+    .row-drop { flex: 0 0 auto; }
+
+    .row-name { font-weight: 500; overflow-wrap: anywhere; }
     .row-date { font-size: 0.85rem; white-space: nowrap; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
   `],
@@ -178,6 +186,12 @@ export class TournamentListComponent implements OnInit {
    * Merken zuruecknehmen. Die Zeile verschwindet SOFORT — auf eine Antwort zu warten, bevor sich
    * etwas ruehrt, laesst den Klick verloren wirken; scheitert der Aufruf, kommt sie zurueck und
    * die Meldung sagt es.
+   *
+   * <p><b>Mit Rueckgaengig.</b> Der Knopf ist ein reines Icon am rechten Rand, auf dem Handy ohne
+   * Tooltip — ein Fehltipp waere sonst endgueltig, zurueck ginge es nur ueber den Kalender. Kein
+   * Bestaetigungsdialog (eine Aktion pro Zeile, mobile Konvention = Undo). Rueckgaengig legt das
+   * ALTE Objekt mit der neuen Id zurueck, nicht die Server-Antwort: so bleibt der Termin und die
+   * Zeile landet wieder in ihrem Abschnitt.</p>
    */
   unbookmark(sub: Subscription): void {
     this.removing.set(sub.id);
@@ -185,7 +199,15 @@ export class TournamentListComponent implements OnInit {
     this.subscriptions.set(before.filter(s => s.id !== sub.id));
 
     this.tournaments.unsubscribe(sub.id).subscribe({
-      next: () => this.removing.set(null),
+      next: () => {
+        this.removing.set(null);
+        const ref = this.snackbar.show(this.translate.instant('tournaments.list.unsubscribed'),
+          { action: 'common.undo', duration: 6000 });
+        ref.onAction().subscribe(() => this.tournaments.subscribe(sub.crawlerTournamentId, sub.tournamentName).subscribe({
+          next: created => this.subscriptions.update(list => [...list, { ...sub, id: created.id }]),
+          error: () => this.snackbar.warn(this.translate.instant('tournaments.list.undoFailed')),
+        }));
+      },
       error: () => {
         this.subscriptions.set(before);
         this.removing.set(null);

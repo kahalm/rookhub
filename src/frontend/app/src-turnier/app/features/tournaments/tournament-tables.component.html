@@ -83,7 +83,13 @@
             <div class="player-details">
               @if (p.elo) { <span>{{ p.elo }}</span> }
               @if (p.country) { <span>{{ p.country }}</span> }
-              @if (p.teamName) { <span>{{ p.teamName }}</span> }
+              <!-- Mobil war der Verein reiner Text: die Aufstellung liess sich auf dem Handy nicht oeffnen, jeder Tipp
+                   toggelte stattdessen den Favoriten (Snackbar + Server-Write). stopPropagation, weil die Karte selbst klickt. -->
+              @if (p.teamName && hasTeamPairings) {
+                <span><span class="team-link" (click)="$event.stopPropagation(); showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span></span>
+              } @else if (p.teamName) {
+                <span>{{ p.teamName }}</span>
+              }
               @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
             </div>
           </div>
@@ -105,8 +111,10 @@
         <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort.emit($event)" class="full-width">
           <ng-container matColumnDef="fav">
             <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let t">
-              <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)" (click)="toggleTeamFavorite.emit(t)"
+            <!-- Klick auf der ganzen Zelle (~72x52 px) statt nur auf dem 24-px-Stern: der Teams-Tab hat keine Mobil-Karten.
+                 Tastatur bleibt am Icon (Enter/Space feuern auf einem td keinen click, ein keydown bubbelt keinen click). -->
+            <td mat-cell *matCellDef="let t" class="fav-cell" (click)="toggleTeamFavorite.emit(t)">
+              <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)"
                         role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
                         [attr.aria-pressed]="isTeamFavorite(t)"
                         (keydown.enter)="toggleTeamFavorite.emit(t)" (keydown.space)="$event.preventDefault(); toggleTeamFavorite.emit(t)">

@@ -7,32 +7,45 @@
             <mat-card-title>{{ tournament.name }}</mat-card-title>
             <mat-card-subtitle>{{ subtitle }}</mat-card-subtitle>
           </mat-card-header>
+          <!-- Mobil (<=768px) sind das nackte Icon-Kreise: .btn-label{display:none} nimmt den Text auch aus dem
+               Accessibility-Tree. Tooltip + aria-label tragen die Beschriftung (Muster aus tournament-list); das
+               color="primary"/"warn" war unter dem M3-Theme wirkungslos und ist weg. -->
           <mat-card-actions class="action-bar">
-            <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
+            <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer"
+               [matTooltip]="'tournaments.actions.chessResults' | translate" [attr.aria-label]="'tournaments.actions.chessResults' | translate">
               <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
             </a>
-            <button mat-raised-button (click)="refresh()" [disabled]="refreshing">
+            <button mat-raised-button (click)="refresh()" [disabled]="refreshing"
+                    [matTooltip]="'tournaments.actions.refresh' | translate" [attr.aria-label]="'tournaments.actions.refresh' | translate">
               <mat-icon>refresh</mat-icon><span class="btn-label"> {{ 'tournaments.actions.refresh' | translate }}</span>
             </button>
             @if (subscription) {
-              <button mat-raised-button color="warn" (click)="unsubscribe()" [disabled]="toggling">
+              <button mat-raised-button (click)="unsubscribe()" [disabled]="toggling"
+                      [matTooltip]="'tournaments.actions.unsubscribe' | translate" [attr.aria-label]="'tournaments.actions.unsubscribe' | translate">
                 <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.unsubscribe' | translate }}</span>
               </button>
             } @else {
-              <button mat-raised-button color="primary" (click)="subscribe()" [disabled]="toggling">
+              <button mat-raised-button (click)="subscribe()" [disabled]="toggling"
+                      [matTooltip]="'tournaments.actions.subscribe' | translate" [attr.aria-label]="'tournaments.actions.subscribe' | translate">
                 <mat-icon>notifications</mat-icon><span class="btn-label"> {{ 'tournaments.actions.subscribe' | translate }}</span>
               </button>
             }
             @if (monitoring) {
-              <button mat-raised-button color="primary" (click)="toggleMonitor()" [disabled]="monitorToggling">
-                <mat-icon>visibility</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
+              <!-- visibility_off = Aktion 'Beobachtung beenden' (wie notifications_off am Abo-Knopf): ohne Beschriftung
+                   sahen an und aus mobil identisch aus, die Endzeit steht dort nur noch im Tooltip/aria-label. -->
+              <button mat-raised-button (click)="toggleMonitor()" [disabled]="monitorToggling"
+                      [matTooltip]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }"
+                      [attr.aria-label]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }">
+                <mat-icon>visibility_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
               </button>
             } @else {
-              <button mat-raised-button (click)="toggleMonitor()" [disabled]="monitorToggling">
+              <button mat-raised-button (click)="toggleMonitor()" [disabled]="monitorToggling"
+                      [matTooltip]="'tournaments.actions.monitor' | translate" [attr.aria-label]="'tournaments.actions.monitor' | translate">
                 <mat-icon>visibility</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
               </button>
             }
-            <button mat-raised-button (click)="share()">
+            <button mat-raised-button (click)="share()"
+                    [matTooltip]="'tournaments.actions.share' | translate" [attr.aria-label]="'tournaments.actions.share' | translate">
               <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
             </button>
           </mat-card-actions>

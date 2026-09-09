@@ -1,5 +1,9 @@
     .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
     mat-card { margin-bottom: 1rem; }
+    // Handy (360/375px): unbrechbare Tokens im Turniernamen ('Bezirksblitzmannschaftsmeisterschaft')
+    // oder Maps-URLs im Untertitel liefen ueber Karten- und Bildschirmrand hinaus (mat-card: overflow visible).
+    // 'anywhere' statt 'break-word', weil nur das die min-content-Breite senkt und der Flex-Header so schrumpfen kann.
+    mat-card-title, mat-card-subtitle { overflow-wrap: anywhere; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .empty-hint { padding: 1.5rem; color: color-mix(in srgb, currentColor 47%, transparent); }
 

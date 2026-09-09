@@ -292,4 +292,27 @@ describe('TournamentDirectoryDetailComponent', () => {
 
     expect(warn).toHaveBeenCalled();
   });
+
+  /**
+   * Freitext von chess-results: steht im Ort, Veranstalter oder in der Bedenkzeit ein langes Wort
+   * ohne Leerzeichen (URL, E-Mail, „90min/40+30min+30sec/Zug"), darf es die dd-Spalte nicht
+   * sprengen — vorher wurde die Karte breiter als der Bildschirm und die ganze Seite scrollte quer.
+   */
+  it('lässt ein langes Wort ohne Leerzeichen umbrechen, statt die Seite quer scrollen zu lassen', async () => {
+    await setup('1457129');
+    const host = fixture.nativeElement as HTMLElement;
+    // Kleines Android nachstellen, damit die Messung nicht vom Karma-Fenster abhaengt.
+    host.style.display = 'block';
+    host.style.width = '360px';
+
+    http.expectOne('/api/tournament-directory/1457129')
+      .flush(entry('1457129', { location: 'https://maps.app.goo.gl/z6pZeyGmneMbrUwLA?g_st=ac' }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+
+    const card = host.querySelector<HTMLElement>('.detail-card')!;
+    const dl = host.querySelector<HTMLElement>('.detail-grid')!;
+    expect(dl.textContent).toContain('maps.app.goo.gl');
+    expect(dl.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+  });
 });

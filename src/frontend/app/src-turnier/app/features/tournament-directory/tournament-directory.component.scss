@@ -154,10 +154,22 @@
   .page { padding: 0.75rem 0.5rem; }
   .profile-field,
   .place-field,
-  .radius-field,
   .range-field,
   .search-field,
   .players-field,
   .date-field { width: 100%; min-width: 0; }
-  .filter-toggle { width: 100%; }
+
+  /* Drei statt fuenf Zeilen: vorher standen Ort, Umkreis, Zeitraum und der Filter-Knopf je
+     100 % breit untereinander und das Profil-Menue (⋮) allein in einer fuenften Zeile — auf
+     360x740 begann die erste Turnierkarte damit erst bei ~545 px, die Seite zeigte beim Oeffnen
+     Filter statt Turniere. Der Zeitraum rueckt per order vor den Umkreis (Zeile 2), Umkreis,
+     Filter-Knopf und ⋮ teilen sich Zeile 3. */
+  .radius-field { width: calc(40% - 0.25rem); min-width: 0; order: 1; }
+  .filter-toggle { flex: 1 1 auto; order: 1; }
+  .filter-bar > [mat-icon-button] { order: 1; }
+
+  /* Der Erstnutzer-Hinweis behaelt seinen Text, verliert aber den Knopf: „Neues Suchprofil"
+     liegt ohnehin im ⋮-Menue daneben, und ein zweiter Stroked-Button neben „Filter" kostete
+     auf dem Handy nochmals eine Zeile ueber den Reitern. */
+  .hint > button { display: none; }
 }

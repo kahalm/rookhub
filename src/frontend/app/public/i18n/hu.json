@@ -22,7 +22,8 @@
     "clear": "Törlés",
     "copy": "Másolás",
     "error": "Valami hiba történt.",
-    "send": "Küldés"
+    "send": "Küldés",
+    "undo": "Visszavonás"
   },
   "nav": {
     "discord": "Discord közösség",
@@ -752,7 +753,9 @@
       "past": "Lezárult",
       "noDate": "nincs időpont",
       "unsubscribeFailed": "A megjelölést nem sikerült visszavonni.",
-      "crawlConnectionLost": "Megszakadt a kapcsolat a crawl-feladattal"
+      "crawlConnectionLost": "Megszakadt a kapcsolat a crawl-feladattal",
+      "unsubscribed": "Megjelölés visszavonva",
+      "undoFailed": "A visszavonás nem sikerült — jelöld meg újra a naptárban."
     },
     "detail": {
       "loadTournamentFailed": "Nem sikerült betölteni a versenyt",

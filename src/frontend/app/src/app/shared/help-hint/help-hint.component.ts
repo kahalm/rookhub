@@ -41,6 +41,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       font-size: 18px;
     }
     .hh-btn:hover, .hh-btn:focus-visible { opacity: 1; }
+    /* Touch: 22px sind ohne Hover der EINZIGE Zugang zum Tipp — daneben getippt passiert
+       nichts. Das unsichtbare Pseudo-Element hebt die Trefferflaeche auf 34x34px, ohne Layout,
+       Nachbar-Glyph (gap 0.4rem bleibt frei) oder Tooltip-Anker (Host-Rect) zu veraendern;
+       Maus/Desktop bleibt pixelidentisch. */
+    @media (pointer: coarse) {
+      .hh-btn { position: relative; }
+      .hh-btn::after { content: ''; position: absolute; inset: -6px; }
+    }
   `],
 })
 export class HelpHintComponent {

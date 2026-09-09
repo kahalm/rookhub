@@ -29,7 +29,7 @@ import { SnackbarService } from '../../core/snackbar.service';
             <form (ngSubmit)="onSubmit()" class="auth-form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.forgot.emailLabel' | translate }}</mat-label>
-                <input matInput type="email" [(ngModel)]="email" name="email" required email autofocus>
+                <input matInput type="email" [(ngModel)]="email" name="email" required email autofocus autocomplete="email">
               </mat-form-field>
               <button mat-raised-button color="primary" type="submit" [disabled]="loading || !email">
                 {{ loading ? ('auth.forgot.submitting' | translate) : ('auth.forgot.submit' | translate) }}

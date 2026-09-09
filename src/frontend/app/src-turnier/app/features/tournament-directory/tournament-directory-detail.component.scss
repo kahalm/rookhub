@@ -56,7 +56,11 @@ h2 {
   color: var(--mat-sys-on-surface-variant);
 }
 
-.detail-grid dd { margin: 0; }
+/* Ein langes Wort ohne Leerzeichen (E-Mail, URL, „90min/40+30min+30sec/Zug") sprengte die
+   dd-Spalte: die Karte wurde breiter als der Bildschirm, die ganze Seite scrollte quer.
+   `anywhere` statt `break-word`, weil nur `anywhere` auch die Mindestbreite der Grid-Spalte
+   mitnimmt. */
+.detail-grid dd { margin: 0; overflow-wrap: anywhere; }
 
 .group-link {
   display: inline-block;
@@ -106,4 +110,30 @@ span.group-link { color: inherit; }
 @media (max-width: 600px) {
   .detail-grid { grid-template-columns: 1fr; gap: 2px 0; }
   .detail-grid dd { margin-bottom: 8px; }
+
+  /* Beruehrziele: Gruppen- und Quellen-Links waren nur textzeilenhoch (~19 px) und standen mit
+     2-4 px Abstand untereinander — der Daumen traf leicht die Nachbargruppe. Mit 6 px Polster
+     oben und unten sind sie ~31 px hoch und liegen lueckenlos aneinander; horizontal bleiben
+     12 px. `.sources > *` statt `a`, damit Link und reiner Text dieselbe Hoehe bekommen. */
+  .group-link { padding: 6px 0; margin: 0 12px 0 0; }
+  .sources { gap: 0 12px; }
+  .sources > * { padding: 6px 0; }
+
+  /* Dichte: fuenf verschieden breite Pills untereinander waren eine 240 px hohe Treppe, je Zeile
+     ein Knopf zwischen Angaben und Karte. Volle Zeilen gleicher Breite sind ruhiger und geben dem
+     Daumen die ganze Breite; die Reihenfolge (primaer zuerst, Melden zuletzt) bleibt. Am Desktop
+     bleibt die umbrechende Reihe von oben. */
+  .detail-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Ein langes Label („In privaten Kalender uebertragen", hu noch laenger) bricht in zwei
+     Zeilen um, der M3-Knopf blieb aber fest 40 px hoch — der Text fuellte den Pill randlos und
+     beruehrte oben und unten den Rahmen. */
+  .detail-actions .mat-mdc-button-base {
+    height: auto;
+    min-height: 40px;
+    padding-block: 6px;
+  }
 }
