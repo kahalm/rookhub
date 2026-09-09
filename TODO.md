@@ -150,6 +150,41 @@ Regel: ein Treffer OHNE vergleichbaren Namen kann die Bestaetigung nicht verdien
 entscheidet die Laenge der Ziffernfolge (vier Stellen sind eine Postleitzahl, drei koennen eine
 Hausnummer sein).
 
+## [ ] `cities1000` statt `cities15000` — aber NUR fuer die Laender ohne Postleitzahlen (2026-09-09)
+
+Fuer duenn belegte Laender ist der Hebel nicht die Umschrift (v0.456.3), sondern die Groesse der
+Ortsliste. `GazetteerImportService.ImportCitiesAsync` zieht heute `cities15000`, und das laesst
+genau die Laender leer, fuer die es AUCH keinen Postleitzahl-Datensatz gibt:
+
+| Land | `cities15000` | `cities1000` | Faktor |
+|---|---|---|---|
+| Armenien | 29 | **455** | 16 |
+| Mongolei | 24 | **331** | 14 |
+| Georgien | 17 | **175** | 10 |
+| Kasachstan | 84 | **344** | 4 |
+| Israel | 106 | **433** | 4 |
+| Kirgisistan | 32 | **108** | 3 |
+| Aserbaidschan | 65 | **218** | 3 |
+| Summe | 357 | **2 064** | 5,8 |
+
+Woran das haengt: Kasachstan hat 458 Eintraege im Verzeichnis (33 % verortet), Israel 74, Armenien
+54, Aserbaidschan 138 (22 %), Mongolei 29 (**0 %**). Fuer keines dieser Laender bietet GeoNames
+Postleitzahlen an (geprueft: 404), es bleibt also allein die Ortsliste.
+
+**NICHT global umstellen** (Einwand von Kopie 2, und er ist richtig): eine zehnmal groessere
+Ortsliste bringt vor allem gleichnamige KLEINorte, und die laufen in die Mehrdeutigkeitsregel —
+also in denselben `Ambiguous`-Topf, der heute schon 1 745 Eintraege haelt (Deutschland allein 225,
+„Muenster" gibt es 19-mal). Fuer Deutschland ist `cities1000` die falsche Richtung, fuer
+Kasachstan die richtige.
+
+**Die Auflosung ist ein Filter, kein Umbau**: `ImportCitiesAsync` laedt eine WELTWEITE Datei und
+liest das Land aus Feld 8 jeder Zeile (`ParseCityLines`). Ein Laenderfilter beim Parsen genuegt
+also — `cities1000` fuer die Laender ohne PLZ-Datensatz, `cities15000` fuer den Rest. Dann kostet
+der Parameter nichts. Die Datei ist 10,8 MB statt 3,3 MB, also ein Abruf mehr, kein Dauerpreis.
+
+Vorher messen, nachher gegenmessen: die `Ambiguous`-Quote der betroffenen Laender darf dabei nicht
+steigen. Grundlinie in `docs/turnierquellen.md`.
+
 ## [ ] Katalonien laeuft als eigene Foederation und kennt sein Land nicht (2026-09-09)
 
 `FideCountryCodes.Map` hat bewusst keinen Eintrag fuer `CAT` — und die Regel „nicht raten" ist
