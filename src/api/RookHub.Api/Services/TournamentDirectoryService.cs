@@ -208,7 +208,15 @@ public class TournamentDirectoryService
             .Include(e => e.Sources)
             .Where(e => e.Federation == federation && (e.EndDate == null || e.EndDate >= from))
             .ToListAsync(ct);
-        var byId = existing.ToDictionary(e => e.ChessResultsId, StringComparer.Ordinal);
+        // NUR die mit Nummer: `ChessResultsId` ist seit 0.428.0 nullbar (FIDE-Ereignisse und die
+        // Verbandskalender fuehren keine), und `ToDictionary` wirft bei einem NULL-Schluessel.
+        // Am 2026-09-09 auf Dev gemessen: Sweep LIE (keine solchen Eintraege) 200, Sweep AUT (78)
+        // 500 mit `ArgumentNullException (Parameter 'key')` — der naechtliche Lauf der HAUPTQUELLE
+        // war fuer jede Foederation tot, in der eine Zusatzquelle etwas beigetragen hatte, und das
+        // sind gerade die taeglichen Nachbarlaender. Ein Eintrag ohne Nummer gehoert hier ohnehin
+        // nicht hin: diese Zuordnung laeuft ueber die Nummer, alles andere ueber Termin und Namen.
+        var byId = existing.Where(e => e.ChessResultsId is not null)
+            .ToDictionary(e => e.ChessResultsId!, StringComparer.Ordinal);
 
         // Und die Zeilen NACHLADEN, die zwar geliefert wurden, aber nicht ins Fenster passen.
         // Ohne das gilt ein VERSCHOBENES Turnier als neu: gespeichert mit Ende im Maerz, vom
@@ -226,7 +234,7 @@ public class TournamentDirectoryService
                          .Include(e => e.Sources)
                          .Where(e => strays.Contains(e.ChessResultsId)).ToListAsync(ct))
             {
-                byId[stray.ChessResultsId] = stray;
+                if (stray.ChessResultsId is not null) byId[stray.ChessResultsId] = stray;
             }
         }
 

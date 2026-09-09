@@ -79,6 +79,43 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.NotNull(entry.ChangeHash);
     }
 
+    /// <summary>
+    /// Ein Eintrag DERSELBEN Foederation ohne chess-results-Nummer darf den Sweep nicht umbringen.
+    /// `ChessResultsId` ist seit 0.428.0 nullbar — FIDE-Ereignisse und die Verbandskalender fuehren
+    /// keine Nummer, und die Zuordnung ueber die Nummer baut daraus ein Dictionary.
+    ///
+    /// <para>Am 2026-09-09 auf Dev gemessen: Sweep LIE (keine solchen Eintraege) 200, Sweep AUT (78)
+    /// 500 mit `ArgumentNullException (Parameter 'key')`. Der naechtliche Lauf der HAUPTQUELLE war
+    /// damit fuer jede Foederation tot, in der eine Zusatzquelle etwas beigetragen hatte — also
+    /// gerade fuer die taeglichen Nachbarlaender.</para>
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_AnEntryWithoutANumber_DoesNotBreakTheRun()
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "f4711",           // FIDE-Ereignis: kein chess-results-Eintrag
+            ChessResultsId = null,
+            Name = "European Youth Championship",
+            Federation = "AUT",
+            StartDate = Today.AddDays(20),
+            EndDate = Today.AddDays(30),
+            FirstSeenAt = DateTime.UtcNow,
+            LastSeenAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var service = CreateService($"[{Row("111", "Open Braunau", "2026-12-18", "2026-12-20", "Ranshofen")}]");
+
+        var (result, _) = await service.SweepFederationAsync("AUT", Today);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, result.Added);
+        // Und der nummernlose Eintrag bleibt unangetastet daneben stehen.
+        Assert.Equal(2, await _db.TournamentDirectoryEntries.CountAsync());
+        Assert.NotNull(await _db.TournamentDirectoryEntries.SingleOrDefaultAsync(e => e.PublicId == "f4711"));
+    }
+
     [Fact]
     public async Task SweepFederationAsync_SecondRunWithSameData_ChangesNothingAndNotifiesNobody()
     {
