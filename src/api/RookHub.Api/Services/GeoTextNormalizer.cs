@@ -74,7 +74,7 @@ public static class GeoTextNormalizer
     /// anders aus als die dortige Konvention; das ist unschaedlich, solange BEIDE Seiten dieselbe
     /// Tabelle benutzen, und genau das ist hier der Fall.</para>
     /// </summary>
-    public static string NormalizeTranscribed(string? text)
+    public static string NormalizeTranscribed(string? text, string? iso2 = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return string.Empty;
 
@@ -83,12 +83,32 @@ public static class GeoTextNormalizer
             .Replace("ß", "ss").Replace("æ", "ae").Replace("ø", "oe").Replace("å", "aa")
             .Replace("đ", "dj").Replace("ł", "l");
 
+        var table = TableFor(iso2);
         var sb = new StringBuilder(expanded.Length);
         foreach (var ch in expanded)
-            sb.Append(Transliteration.TryGetValue(ch, out var latin) ? latin : ch.ToString());
+            sb.Append(table.TryGetValue(ch, out var latin) ? latin : ch.ToString());
 
         return Cleanup(sb.ToString());
     }
+
+    /// <summary>
+    /// Welche Umschrift gilt fuer dieses Land?
+    ///
+    /// <para><b>Warum das nicht EINE Tabelle sein kann.</b> Derselbe Buchstabe wird verschieden
+    /// umgeschrieben: <c>и</c> ist im Ukrainischen ein <c>y</c> („Київ" -> <c>kyiv</c>, genau wie
+    /// GeoNames schreibt), im Russischen ein <c>i</c> („Истра" -> <c>istra</c>, ebenfalls wie
+    /// GeoNames). Dasselbe bei <c>г</c>: ukrainisch <c>h</c>, russisch und bulgarisch <c>g</c>.
+    /// Eine Tabelle fuer beide waere fuer eines der Laender falsch — und es haengt daran, ob der
+    /// kyrillische Ortstext den LATEINISCHEN GeoNames-Namen findet. Auf Dev gemessen: die
+    /// russischen Ortszeilen sind zu 100 % lateinisch (1 108 von 1 108), die ukrainischen zu 99 %
+    /// (398 von 400). Mit der falschen Tabelle findet dort kein einziger Text seinen Ort.</para>
+    ///
+    /// <para>Beide Seiten benutzen dieselbe Auswahl — der Lexikon-Eintrag ueber
+    /// <c>GeoPlace.Country</c>, der Suchtext ueber das Land des Turniers. Ohne Land gilt die
+    /// allgemeine Tabelle.</para>
+    /// </summary>
+    private static Dictionary<char, string> TableFor(string? iso2) =>
+        string.Equals(iso2, "UA", StringComparison.OrdinalIgnoreCase) ? UkrainianTable : GeneralTable;
 
     /// <summary>Der gemeinsame Aufraeumteil: Diakritika weg, alles ausser Buchstabe/Ziffer zu Leerzeichen.</summary>
     private static string Cleanup(string lowered)
@@ -111,9 +131,9 @@ public static class GeoTextNormalizer
     /// Armenisch, Hebraeisch) faellt weiterhin weg — dort greift die Ausnahme fuer Treffer OHNE
     /// vergleichbaren Namen in <c>GeocodingService</c>.
     /// </summary>
-    private static readonly Dictionary<char, string> Transliteration = new()
+    private static readonly Dictionary<char, string> UkrainianTable = new()
     {
-        // Kyrillisch (ukrainische Umschrift, siehe Klassenkommentar)
+        // Ukrainische Umschrift: г -> h, и -> y, і -> i (so schreibt auch GeoNames).
         ['а'] = "a", ['б'] = "b", ['в'] = "v", ['г'] = "h", ['ґ'] = "g", ['д'] = "d",
         ['е'] = "e", ['є'] = "ie", ['ж'] = "zh", ['з'] = "z", ['и'] = "y", ['і'] = "i",
         ['ї'] = "i", ['й'] = "i", ['к'] = "k", ['л'] = "l", ['м'] = "m", ['н'] = "n",
@@ -132,6 +152,25 @@ public static class GeoTextNormalizer
         ['ω'] = "o", ['ά'] = "a", ['έ'] = "e", ['ή'] = "i", ['ί'] = "i", ['ό'] = "o",
         ['ύ'] = "y", ['ώ'] = "o", ['ϊ'] = "i", ['ϋ'] = "y", ['ΐ'] = "i", ['ΰ'] = "y",
     };
+
+    /// <summary>
+    /// Die allgemeine Tabelle — russisch, bulgarisch, serbisch, makedonisch und alles Griechische.
+    /// Unterschied zur ukrainischen: <c>г -> g</c> und <c>и -> i</c>.
+    /// </summary>
+    private static readonly Dictionary<char, string> GeneralTable = BuildGeneralTable();
+
+    private static Dictionary<char, string> BuildGeneralTable()
+    {
+        var table = new Dictionary<char, string>(UkrainianTable)
+        {
+            ['г'] = "g",
+            ['и'] = "i",
+            ['й'] = "y",
+            ['є'] = "e",
+            ['ї'] = "yi",
+        };
+        return table;
+    }
 
     /// <summary>
     /// Postleitzahl-Kandidaten aus einem Adresstext. Bewusst grob: welche Ziffernfolge wirklich eine
@@ -183,7 +222,7 @@ public static class GeoTextNormalizer
     /// probiert werden, sonst gewinnt der falsche, groessere Ort.
     /// </summary>
     public static List<string> PlaceCandidates(string? text, int maxWords = 3) =>
-        [.. PlaceCandidatePairs(text, maxWords).Select(p => p.Normalized).Where(n => n.Length > 0)];
+        [.. PlaceCandidatePairs(text, null, maxWords).Select(p => p.Normalized).Where(n => n.Length > 0)];
 
     /// <summary>
     /// Dieselben Kandidaten in BEIDEN Schreibweisen, paarweise. Getrennt zu bilden waere falsch:
@@ -194,10 +233,10 @@ public static class GeoTextNormalizer
     /// die Umschrift etwas hergibt. Beide Formen leer heisst „nichts Vergleichbares".</para>
     /// </summary>
     public static List<(string Normalized, string Transcribed)> PlaceCandidatePairs(
-        string? text, int maxWords = 3)
+        string? text, string? iso2 = null, int maxWords = 3)
     {
         var words = Words(Normalize(text));
-        var transcribedWords = Words(NormalizeTranscribed(text));
+        var transcribedWords = Words(NormalizeTranscribed(text, iso2));
 
         // Die Wortpaare. Die Umschrift aendert keine Wortgrenzen, also passen die Listen im
         // Normalfall Wort fuer Wort zusammen. Zwei Sonderfaelle: eine nichtlateinische Schrift

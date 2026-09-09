@@ -1581,7 +1581,13 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   (2) der Aufraeumteil der Normalisierung verwirft alles ausser `[a-z0-9]`, Kyrillisch fiel damit RESTLOS weg — 29 547
   von 29 571 ukrainischen PLZ-Zeilen trugen einen leeren Namen, und die Bestaetigung des PLZ-Wegs konnte dort nie
   gelingen. **Beim SUCHEN wird NICHT gefaltet** (`ue -> u` machte aus „Quedlinburg" ein `qudlinburg`) — die zweite Form
-  entsteht beim IMPORT. Nach einem Deploy einmal
+  entsteht beim IMPORT. **Die Umschrift haengt am LAND** (`NormalizeTranscribed(text, iso2)`): `и` ist ukrainisch
+  ein `y` („Київ" -> `kyiv`), russisch ein `i` („Истра" -> `istra`), und GeoNames haelt es genauso — mit einer
+  Tabelle fuer beide findet in einem der Laender KEIN Text seinen Ort (Russland: 2 003 Turniere, 7 % verortet, die
+  groesste einzelne Luecke). Beide Seiten waehlen dieselbe Tabelle: der Lexikon-Eintrag ueber `GeoPlace.Country`,
+  der Suchtext ueber das Land des Turniers. Ein Name, von dem nur eine ZAHL bleibt (die russischen PLZ-Zeilen
+  heissen teils „Москва 194", in der ersten Form bleibt `194`), bestaetigt NICHTS — sonst bestaetigte er im Text
+  eine Hausnummer. Nach einem Deploy einmal
   `POST /api/admin/tournament-directory/gazetteer/transcribe` laufen lassen, sonst ist die Spalte fuer den
   Altbestand leer. Ein Treffer ohne vergleichbaren Namen in BEIDEN Formen (Georgisch, Armenisch, Hebraeisch)
   bestaetigt sich ueber die LAENGE der Ziffernfolge; vorher war das stillschweigend ein Nein.

@@ -215,7 +215,7 @@ public class AdminTournamentDirectoryController : BaseApiController
 
             foreach (var row in rows)
             {
-                var transcribed = GeoTextNormalizer.NormalizeTranscribed(row.Name);
+                var transcribed = GeoTextNormalizer.NormalizeTranscribed(row.Name, row.Country);
                 if (transcribed.Length > 200) transcribed = transcribed[..200];
                 if (transcribed == row.NameTranscribed) continue;
                 row.NameTranscribed = transcribed;

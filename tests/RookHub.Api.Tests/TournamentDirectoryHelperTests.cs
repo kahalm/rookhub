@@ -223,25 +223,41 @@ public class GeoTextNormalizerTests
 
     [Theory]
     // Deutsche Umlaute als ASCII-Umschrift, nicht gefaltet.
-    [InlineData("München", "muenchen")]
-    [InlineData("Lübeck", "luebeck")]
-    [InlineData("Zürich", "zuerich")]
-    [InlineData("Gießen", "giessen")]
+    [InlineData("München", null, "muenchen")]
+    [InlineData("Lübeck", null, "luebeck")]
+    [InlineData("Zürich", null, "zuerich")]
+    [InlineData("Gießen", null, "giessen")]
     // Ein Wort ohne Umlaut bleibt, wie es ist — sonst wuerde aus „Quedlinburg" ein „qudlinburg".
-    [InlineData("Quedlinburg", "quedlinburg")]
+    [InlineData("Quedlinburg", null, "quedlinburg")]
     // Nordisch nach dortiger Konvention.
-    [InlineData("Ålesund", "aalesund")]
-    [InlineData("Køge", "koege")]
-    // Kyrillisch: in der ersten Suchform faellt das restlos weg.
-    [InlineData("Київ", "kyiv")]
-    [InlineData("Харків", "kharkiv")]
-    [InlineData("Београд", "beohrad")]
-    // Griechisch.
-    [InlineData("Αθήνα", "athina")]
-    [InlineData("Θεσσαλονίκη", "thessaloniki")]
-    public void NormalizeTranscribed_schreibtDenNamenUm(string input, string expected)
+    [InlineData("Ålesund", null, "aalesund")]
+    [InlineData("Køge", null, "koege")]
+    // Kyrillisch: in der ersten Suchform faellt das restlos weg. Und die Umschrift haengt am LAND —
+    // GeoNames schreibt „Київ" als Kyiv und „Истра" als Istra, dasselbe и also einmal y, einmal i.
+    [InlineData("Київ", "UA", "kyiv")]
+    [InlineData("Харків", "UA", "kharkiv")]
+    [InlineData("Истра", "RU", "istra")]
+    [InlineData("Владивосток", "RU", "vladivostok")]
+    [InlineData("Москва", "RU", "moskva")]
+    [InlineData("Београд", "RS", "beograd")]
+    [InlineData("София", "BG", "sofiia")]
+    // Griechisch — von der Landeswahl unberuehrt.
+    [InlineData("Αθήνα", "GR", "athina")]
+    [InlineData("Θεσσαλονίκη", null, "thessaloniki")]
+    public void NormalizeTranscribed_schreibtDenNamenUm(string input, string? iso2, string expected)
     {
-        Assert.Equal(expected, GeoTextNormalizer.NormalizeTranscribed(input));
+        Assert.Equal(expected, GeoTextNormalizer.NormalizeTranscribed(input, iso2));
+    }
+
+    /// <summary>
+    /// Die Landeswahl ist keine Feinheit: mit der falschen Tabelle findet der kyrillische Text den
+    /// lateinischen GeoNames-Namen NICHT. Genau das entscheidet fuer Russland ueber 2 003 Turniere.
+    /// </summary>
+    [Fact]
+    public void NormalizeTranscribed_ohneLand_trifftDieRussischeSchreibweiseNicht()
+    {
+        Assert.Equal("istra", GeoTextNormalizer.NormalizeTranscribed("Истра", "RU"));
+        Assert.Equal("ystra", GeoTextNormalizer.NormalizeTranscribed("Истра", "UA"));
     }
 
     /// <summary>
@@ -277,7 +293,7 @@ public class GeoTextNormalizerTests
     [Fact]
     public void PlaceCandidatePairs_kyrillisch_liefertNurDieUmschrift()
     {
-        var pairs = GeoTextNormalizer.PlaceCandidatePairs("Київ");
+        var pairs = GeoTextNormalizer.PlaceCandidatePairs("Київ", "UA");
 
         Assert.Equal(("", "kyiv"), Assert.Single(pairs));
     }

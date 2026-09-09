@@ -30,7 +30,7 @@ public class GeocodingServiceTests : IDisposable
         foreach (var p in places)
         {
             p.NameNormalized = GeoTextNormalizer.Normalize(p.Name);
-            p.NameTranscribed = GeoTextNormalizer.NormalizeTranscribed(p.Name);
+            p.NameTranscribed = GeoTextNormalizer.NormalizeTranscribed(p.Name, p.Country);
         }
         _db.GeoPlaces.AddRange(places);
         _db.SaveChanges();
@@ -163,6 +163,70 @@ public class GeocodingServiceTests : IDisposable
         Seed(Postal("GE", "0105", "თბილისი", 41.6938, 44.8015));
 
         var result = await _service.ResolveAsync("რუსთაველის 12, 0105", null, "GEO");
+
+        Assert.NotNull(result);
+        Assert.Equal(GeoSource.PostalCode, result!.Source);
+    }
+
+    /// <summary>
+    /// Russisch und Ukrainisch schreiben denselben Buchstaben anders um: <c>и</c> ist ukrainisch
+    /// ein <c>y</c> („Київ" -> kyiv), russisch ein <c>i</c> („Истра" -> istra) — und GeoNames haelt
+    /// es genauso. Mit einer Tabelle fuer beide findet in einem der Laender kein einziger Text
+    /// seinen Ort. Russland ist mit 2 003 Turnieren die groesste Verortungsluecke.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_RussischerText_findetDenLateinischenLexikonnamen()
+    {
+        Seed(City("RU", "Istra", 55.9142, 36.8697, 33_000),
+             City("RU", "Vladivostok", 43.1155, 131.8855, 600_000));
+
+        Assert.Equal("Istra", (await _service.ResolveAsync("Истра", null, "RUS"))!.PlaceName);
+        Assert.Equal("Vladivostok", (await _service.ResolveAsync("Владивосток", null, "RUS"))!.PlaceName);
+    }
+
+    /// <summary>Und die ukrainische Schreibweise bleibt dabei, wie sie ist.</summary>
+    [Fact]
+    public async Task ResolveAsync_UkrainischerText_bleibtBeiDerUkrainischenUmschrift()
+    {
+        Seed(City("UA", "Kyiv", 50.4547, 30.5238, 2_800_000));
+
+        Assert.Equal("Kyiv", (await _service.ResolveAsync("Київ", null, "UKR"))!.PlaceName);
+    }
+
+    /// <summary>
+    /// Ein Lexikon-Name, von dem nur eine ZAHL uebrig bleibt, darf nichts bestaetigen. Die
+    /// russischen Postleitzahl-Zeilen heissen teils „Москва 194"; in der ersten Suchform faellt
+    /// das Kyrillische weg und es bleibt <c>194</c>. Wuerde das als Ortsname gelten, bestaetigte
+    /// es im Text eine HAUSNUMMER — genau der Fehler, gegen den die Bestaetigung gebaut ist.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_ZahlAlsOrtsname_bestaetigtKeineHausnummer()
+    {
+        // Die Zeile mit dem Zahlen-Namen traegt eine dreistellige „Postleitzahl", die im Text als
+        // Hausnummer steht. Die echte Postleitzahl gehoert zu Istra.
+        Seed(new GeoPlace
+             {
+                 Country = "RU", PostalCode = "194", Name = "194",
+                 Lat = 10.0, Lon = 10.0, Kind = GeoPlaceKind.PostalCode,
+             },
+             Postal("RU", "143500", "Istra", 55.9142, 36.8697));
+
+        var result = await _service.ResolveAsync("ул. Ленина 194, 143500 Истра", null, "RUS");
+
+        Assert.NotNull(result);
+        Assert.Equal("Istra", result!.PlaceName);
+    }
+
+    /// <summary>
+    /// Der Name mit Zahl DAHINTER bestaetigt dagegen weiter: „Москва 194" traegt „moskva", und
+    /// darauf kommt es an.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_NameMitZahl_bestaetigtWeiterhin()
+    {
+        Seed(Postal("RU", "123456", "Москва 194", 55.7558, 37.6173));
+
+        var result = await _service.ResolveAsync("ул. Тверская 8, 123456 Москва", null, "RUS");
 
         Assert.NotNull(result);
         Assert.Equal(GeoSource.PostalCode, result!.Source);

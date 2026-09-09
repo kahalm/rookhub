@@ -143,8 +143,8 @@ public class GeocodingService
         // Ohne diese Bestaetigung gewinnt eine HAUSNUMMER, die zufaellig wie eine Postleitzahl
         // aussieht: „Wienerstrasse 351, 8051 Graz" hat mit 351 eine gueltige PLZ irgendwo sonst.
         var normalizedText = GeoTextNormalizer.Normalize(locationText);
-        var transcribedText = GeoTextNormalizer.NormalizeTranscribed(locationText);
-        var textCandidates = GeoTextNormalizer.PlaceCandidatePairs(locationText);
+        var transcribedText = GeoTextNormalizer.NormalizeTranscribed(locationText, iso2);
+        var textCandidates = GeoTextNormalizer.PlaceCandidatePairs(locationText, iso2);
         var confirmed = matches
             .Where(m => Confirms(normalizedText, transcribedText, textCandidates, m))
             .ToList();
@@ -173,7 +173,7 @@ public class GeocodingService
     {
         // BEIDE Schreibweisen: „Muenchen" im Text findet „München" im Lexikon nur ueber die
         // Umschrift-Spalte, ein kyrillischer Ortstext ausschliesslich darueber.
-        var pairs = GeoTextNormalizer.PlaceCandidatePairs(locationText);
+        var pairs = GeoTextNormalizer.PlaceCandidatePairs(locationText, iso2);
         if (pairs.Count == 0) return null;
 
         var normalized = pairs.Select(p => p.Normalized).Where(n => n.Length > 0).ToList();
@@ -376,7 +376,7 @@ public class GeocodingService
         if (iso2 is null || string.IsNullOrWhiteSpace(state) || state.Trim() == "-") return null;
 
         var normalized = GeoTextNormalizer.Normalize(state);
-        var transcribed = GeoTextNormalizer.NormalizeTranscribed(state);
+        var transcribed = GeoTextNormalizer.NormalizeTranscribed(state, iso2);
         // Ein kyrillischer Regionsname ergibt in der ersten Form NICHTS — dann traegt die zweite.
         if (normalized.Length < 3 && transcribed.Length < 3) return null;
 
@@ -411,25 +411,36 @@ public class GeocodingService
         var name = GeoTextNormalizer.Normalize(hit.Name);
         var transcribedName = hit.NameTranscribed.Length > 0
             ? hit.NameTranscribed
-            : GeoTextNormalizer.NormalizeTranscribed(hit.Name);
+            : GeoTextNormalizer.NormalizeTranscribed(hit.Name, hit.Country);
+
+        // Ein Name OHNE BUCHSTABEN bestaetigt nichts. Die russischen Postleitzahl-Zeilen heissen
+        // teils „Москва 194" — in der ersten Suchform bleibt davon die nackte Zahl `194` uebrig,
+        // weil Kyrillisch dort wegfaellt. Wuerde die als Ortsname gelten, bestaetigte sie im Text
+        // eine HAUSNUMMER, und der Postleitzahl-Weg haette genau den Fehler, gegen den seine
+        // Bestaetigung gebaut ist. (Hinweis der zweiten Instanz beim Einspielen der russischen
+        // Postleitzahlen, 2026-09-09.)
+        var usable = HasLetter(name) ? name : "";
+        var usableTranscribed = HasLetter(transcribedName) ? transcribedName : "";
 
         // Ein Treffer OHNE vergleichbaren Namen kann die Bestaetigung nie verdienen — bis 0.456.0
         // war das stillschweigend ein Nein, und fuer jede Schrift, die die Umschrift nicht abdeckt
         // (Georgisch, Armenisch, Hebraeisch) blieb der Postleitzahl-Weg damit wirkungslos. Dann
         // entscheidet die LAENGE der Ziffernfolge: eine Hausnummer hat selten vier Stellen, eine
         // Postleitzahl fast immer.
-        if (name.Length == 0 && transcribedName.Length == 0)
+        if (usable.Length == 0 && usableTranscribed.Length == 0)
             return (hit.PostalCode?.Length ?? 0) >= 4;
 
-        if (name.Length > 0 && normalizedText.Contains(name)) return true;
-        if (transcribedName.Length > 0 && transcribedText.Contains(transcribedName)) return true;
+        if (usable.Length > 0 && normalizedText.Contains(usable)) return true;
+        if (usableTranscribed.Length > 0 && transcribedText.Contains(usableTranscribed)) return true;
 
         return textCandidates.Any(c =>
-            (c.Normalized.Length >= 4 && name.Length > 0
-                && name.StartsWith(c.Normalized, StringComparison.Ordinal))
-            || (c.Transcribed.Length >= 4 && transcribedName.Length > 0
-                && transcribedName.StartsWith(c.Transcribed, StringComparison.Ordinal)));
+            (c.Normalized.Length >= 4 && usable.Length > 0
+                && usable.StartsWith(c.Normalized, StringComparison.Ordinal))
+            || (c.Transcribed.Length >= 4 && usableTranscribed.Length > 0
+                && usableTranscribed.StartsWith(c.Transcribed, StringComparison.Ordinal)));
     }
+
+    private static bool HasLetter(string value) => value.Any(char.IsAsciiLetter);
 
     /// <summary>Trifft dieser Kandidat den Eintrag — in der einen oder der anderen Schreibweise?</summary>
     private static bool Hits(GeoPlace place, (string Normalized, string Transcribed) candidate) =>
