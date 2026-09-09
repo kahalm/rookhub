@@ -1447,6 +1447,73 @@ geschaetzt; die chess-results-Vergleichszahl kommt je Land aus dem eigenen Crawl
 | Estland | ❓ | — | 2 | von unserer Infrastruktur aus nicht erreichbar — siehe unten, das ist kein Urteil ueber die Quelle |
 | Belarus / Russland | ❌ | — | 0 / 415 | von hier aus nicht erreichbar; bei RUS ausserdem die dichteste chess-results-Abdeckung ueberhaupt |
 
+### Der erste Lauf gegen die echten Seiten (2026-09-09, nach dem Deploy)
+
+Alle bis dahin gebauten Parser liefen gegen ECHTE, aber EINGEFRORENE Ausschnitte. Der erste Abruf
+gegen die heutigen Seiten — je ein Aufruf des Crawler-Endpunkts, aus dem Crawler-Container —
+bestaetigt sie und bringt eine Zahl, die vorher niemand hatte: **die Laufzeit**.
+
+| Quelle | Antwort | Dauer | Turniere | Recherche-Wert |
+|---|---|---|---|---|
+| Norwegen (sjakk) | 200 | 1,6 s | 81 | 81 |
+| Schottland | 200 | 0,4 s | 43 | 44 |
+| Rumaenien (frsah) | 200 | 2,8 s | 31 | 31 |
+| Wales (wcu) | 200 | 0,8 s | 36 | ≥29 |
+| Irland (icu) | 200 | 21 s | 81 | 81 |
+| Niederlande (knsb) | 200 | 20 s | 174 | 177 |
+| Frankreich (ffe) | 200 | 21 s | 168 | — |
+| **England (ecf)** | 200 | **196 s** | 278 | — |
+
+Zwei Dinge stehen damit fest. Erstens halten die Parser gegen den heutigen Stand der Seiten, und
+die Mengen stimmen mit der Recherche ueberein. Zweitens — und das war ein echter Fehler, den erst
+die Messung zeigte — **England braucht laenger als das Zeitlimit, mit dem die API den Crawler
+aufruft** (damals 180 s). Die englische Quelle waere in JEDER Nacht in den Timeout gelaufen, ohne
+je ein Turnier zu liefern, und der Fehlschlag haette wie ein Netzproblem ausgesehen. Die Ursache
+ist kein langsamer Server: die robots.txt des ECF verlangt „Crawl delay: 10", und 278 Turniere sind
+sechs Seiten Termine plus sechs Seiten Spielstaetten — die Wartezeit IST die Laufzeit. Vorgabe
+seither `TournamentDirectoryService.DefaultCrawlerTimeoutSeconds` = 600 s, mit einem Test, der den
+Abstand zur langsamsten gemessenen Quelle festhaelt.
+
+Zur robots.txt des ECF, weil sie zum Muster dieser Reihe gehoert: `User-agent: *` steht auf
+`Allow: /` mit `Content-Signal: search=yes,ai-train=no,use=reference`, gesperrt sind einzelne
+Pfade (keiner davon `/wp-json/`) und, namentlich, die grossen KI-Crawler (ClaudeBot, GPTBot,
+CCBot, Bytespider …). Der Crawler nennt sich `ChessResultsCrawler/1.0 (+RookHub)` und ist keiner
+von ihnen; die Nutzung ist Verweis auf eine Veranstaltung, nicht Training.
+
+### Norwegen: die Verortungsfrage ist gemessen, nicht geschaetzt (2026-09-09)
+
+Offen war, ob sich norwegische Turniere ueberhaupt verorten lassen — der Feed hat **kein
+Adressfeld**, nur Titel und Vereinsname. Gemessen an allen 81 Turnieren des Feeds, gegen das
+Ortslexikon:
+
+| | ueber den Turniernamen | zusaetzlich ueber die Detailseite | zusammen |
+|---|---|---|---|
+| Lexikon wie heute (42 norwegische Orte aus cities15000) | 17 (21 %) | +2 | 19 (23 %) |
+| Lexikon mit den GeoNames-PLZ-Orten (1830 Namen mehr) | 26 (32 %) | +2 | 28 (35 %) |
+
+**Fuer den SPIELORT lohnt sich die Detailseite nicht** — sie bringt gegenueber dem Turniernamen
+**zwei** Turniere. Das Feld „Spillsted" ist nur bei 18 von 81 Seiten ueberhaupt gefuellt, neun
+davon brauchbar (der Rest „Diverse" oder leer), vier davon stehen im Lexikon — und zwei davon
+liefert schon der Name. Die chess-results-Nummer, die eine exakte Zuordnung erlaubt haette, nennt
+genau **eine** der 81 Seiten.
+
+Der Abruf bleibt trotzdem, denn er ist nicht dafuer da: er holt **Veranstalter (52 von 80)** und
+**Bedenkzeit (38 von 80)**, dazu Rundenzahl und System — Felder, die der Feed ueberhaupt nicht
+fuehrt. Der Satz „die Detailseite bringt den Ort" waere also die falsche Begruendung fuer eine
+richtige Sache; wer sie spaeter am Ortsertrag misst, streicht sie zu Unrecht.
+
+**Eine Falle, die dabei fast zugeschnappt waere:** die Detailseite traegt in ihrer FUSSLEISTE die
+Anschrift des Verbands („Bentsebrugata 20, 0476 Oslo") — eine vollstaendige Adresse mit
+Postleitzahl, auf JEDER Seite dieselbe. Wer die Seite als Ganzes nach einer Adresse durchsucht,
+findet sie und pinnt damit alle 81 norwegischen Turniere auf dasselbe Buero in Oslo. Es gibt keinen
+Fehler, keinen Ausfall, nur eine Karte, die ueberzeugend aussieht und falsch ist. Gelesen werden
+darf ausschliesslich das Feld „Spillsted".
+
+**Der Hebel ist die PLZ-Einspielung**, nicht ein weiterer Parser: dieselben neun Turniere, die sie
+zusaetzlich verortet, kosten null Abrufe. Wer die 55 uebrigen will, braucht eine andere Quelle als
+den Namen — „Medlemsmøte", „Dragulf BGP Uke 40" und „Høstferie-lynsjakk NGP" nennen keinen Ort,
+weil ihre Teilnehmer ihn kennen.
+
 ### Vier Lehren, die ueber die einzelnen Laender hinausgehen
 
 **1. „Nicht erreichbar" ist oft eine Aussage ueber UNS, nicht ueber die Quelle.** Drei Hosts der
@@ -1529,4 +1596,25 @@ Netzwerkmitschnitt aus dem Browser, dann ist der Rest Routine.
 
 **Estland und Malta** brauchen einen Abruf ueber eine andere Ausgangs-IP. Solange das nicht
 passiert ist, steht dort ❓ und kein Urteil.
+
+**Nachgemessen am 2026-09-09**, nach einer weiteren VPN-Rotation (Ausgang 37.46.199.54):
+
+| | ueber den Crawler-Container (VPN) | vom Host (ohne VPN) |
+|---|---|---|
+| `maleliit.ee` | DNS 185.7.252.220, TCP 443 laeuft in den Timeout (12 s, kein RST) | **301 in 0,26 s** |
+| Malta | Name loest nicht auf | Name loest **auch hier nicht** auf |
+
+Damit ist Estland genauer eingeordnet als vorher: die Sperre gilt unserer Ausgangs-IP, nicht der
+Quelle — dieselbe Seite antwortet einen Hop weiter sofort. Eine Rotation allein hilft nicht (drei
+Versuche, drei verschiedene Ausgaenge). Der naechste Schritt bleibt derselbe, ist aber kein
+Netzproblem mehr, sondern eine Betriebsentscheidung: entweder ein anderer VPN-Standort fuer diese
+eine Quelle oder gar kein Abruf. Bei **zwei** kuenftigen Turnieren auf chess-results lohnt beides
+kaum — der Vermerk steht hier fuer den Fall, dass Estland spaeter mit anderen Zahlen wiederkommt.
+
+Bei **Malta** ist der Befund ein anderer und schlechter: in den Notizen der Runde steht kein
+Hostname, und die naheliegenden Kandidaten (`maltachess.com`, `chess.org.mt`, `mcf.org.mt`,
+`maltachess.org.mt`, `maltachessfederation.com`, `malta-chess.com`) loesen samt und sonders nicht
+auf. „Nicht erreichbar" war dort also womoeglich nie eine Aussage ueber eine Sperre, sondern ueber
+einen falschen Namen. Wer Malta wieder aufnimmt, faengt bei der Adresse an, nicht beim Netz — und
+traegt sie diesmal hier ein.
 

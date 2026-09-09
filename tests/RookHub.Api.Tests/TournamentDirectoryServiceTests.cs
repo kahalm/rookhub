@@ -1001,4 +1001,31 @@ public class TournamentDirectoryServiceTests : IDisposable
 
         Assert.Equal(1, await CreateService("[]").NotifyNearbyAsync([entry.Id], Today));
     }
+
+    /// <summary>
+    /// Das Zeitlimit des Verzeichnis-Clients muss die LANGSAMSTE Zusatzquelle aushalten, nicht die
+    /// schnellste.
+    ///
+    /// <para>Am 2026-09-09 gegen die echten Quellen gemessen brauchte England <b>196 s</b> fuer
+    /// einen Aufruf — die robots.txt des ECF verlangt zehn Sekunden zwischen den Seiten, und bei
+    /// 278 Turnieren sind das zwoelf Seiten. Die damalige Vorgabe von 180 s lag DARUNTER: die
+    /// englische Quelle waere in jeder Nacht in den Timeout gelaufen, ohne je ein Turnier zu
+    /// liefern, und es haette wie ein Netzproblem ausgesehen.</para>
+    ///
+    /// <para>Der Test haelt nicht den Messwert fest, sondern den Abstand dazu: eine Quelle wird
+    /// langsamer, wenn sie waechst.</para>
+    /// </summary>
+    [Fact]
+    public void DefaultCrawlerTimeout_SurvivesTheSlowestMeasuredSource()
+    {
+        const int slowestMeasuredSeconds = 196;   // England (ECF), gemessen 2026-09-09
+
+        Assert.True(TournamentDirectoryService.DefaultCrawlerTimeoutSeconds >= 2 * slowestMeasuredSeconds,
+            $"Vorgabe {TournamentDirectoryService.DefaultCrawlerTimeoutSeconds} s laesst der langsamsten "
+            + $"gemessenen Quelle ({slowestMeasuredSeconds} s) keine Luft");
+
+        // Und sie muss innerhalb der Grenzen liegen, die Program.cs zulaesst — sonst klemmt die
+        // Konfiguration die eigene Vorgabe ab, und niemand sieht es.
+        Assert.InRange(TournamentDirectoryService.DefaultCrawlerTimeoutSeconds, 30, 900);
+    }
 }

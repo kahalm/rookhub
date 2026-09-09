@@ -380,8 +380,14 @@ try
     // prozessweiten Rate-Limiter des Crawlers und ggf. einer VPN-Rotation (Tunnel-Neustart alle
     // 20 Anfragen). Mit den 30 s des geteilten Clients lief in Dev die neunte Foederation in
     // Folge zuverlaessig in den Timeout. Der Live-Pfad behaelt seine kurze Leine.
-    var directoryTimeout = TimeSpan.FromSeconds(
-        Math.Clamp(builder.Configuration.GetValue("TournamentDirectory:CrawlerTimeoutSeconds", 180), 30, 900));
+    //
+    // Die Vorgabe und ihre Messung stehen bei TournamentDirectoryService.DefaultCrawlerTimeoutSeconds
+    // — sie muss die LANGSAMSTE Zusatzquelle aushalten (England: 196 s, weil dessen robots.txt
+    // zehn Sekunden zwischen den Seiten verlangt), nicht die schnellste.
+    var directoryTimeout = TimeSpan.FromSeconds(Math.Clamp(
+        builder.Configuration.GetValue("TournamentDirectory:CrawlerTimeoutSeconds",
+            TournamentDirectoryService.DefaultCrawlerTimeoutSeconds),
+        30, 900));
     builder.Services.AddHttpClient(TournamentDirectoryService.CrawlerClientName, client =>
     {
         client.BaseAddress = crawlerUri;

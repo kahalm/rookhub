@@ -80,6 +80,33 @@ public class TournamentDirectoryService
     /// </summary>
     public const string CrawlerClientName = "CrawlerDirectory";
 
+    /// <summary>
+    /// Vorgabe fuer das Zeitlimit dieses Clients (<c>TournamentDirectory:CrawlerTimeoutSeconds</c>).
+    ///
+    /// <para><b>Der Wert haengt an einer MESSUNG, nicht an einem Gefuehl.</b> Am 2026-09-09 gegen
+    /// die echten Quellen gemessen, jeweils EIN Aufruf des Crawler-Endpunkts:</para>
+    ///
+    /// <list type="table">
+    ///   <item><term>England (ECF)</term><description><b>196 s</b>, 278 Turniere, 124 kB</description></item>
+    ///   <item><term>Irland (ICU)</term><description>21 s, 81 Turniere</description></item>
+    ///   <item><term>Niederlande (KNSB)</term><description>20 s, 174 Turniere</description></item>
+    ///   <item><term>Frankreich (FFE)</term><description>21 s, 168 Turniere</description></item>
+    ///   <item><term>Norwegen, Schottland, Rumaenien, Wales</term><description>unter 3 s</description></item>
+    /// </list>
+    ///
+    /// <para>England sprengt die frueheren 180 s, und zwar nicht aus Versehen: seine robots.txt
+    /// nennt „Crawl delay: 10", und bei 278 Turnieren sind das sechs Seiten Termine plus sechs
+    /// Seiten Spielstaetten — die Wartezeit IST die Laufzeit. Mit der alten Vorgabe waere die
+    /// englische Quelle in JEDER Nacht in den Timeout gelaufen, ohne je ein Turnier zu liefern,
+    /// und der Fehler haette wie ein Netzproblem ausgesehen.</para>
+    ///
+    /// <para>Die Vorgabe traegt deshalb Luft nach oben (Faktor drei auf den gemessenen
+    /// Hoechstwert): eine Quelle wird langsamer, wenn sie waechst, und ein Zeitlimit, das genau
+    /// auf den Messwert von heute passt, faellt beim naechsten Dutzend Turniere um. Teuer ist ein
+    /// zu GROSSES Limit hier nicht — der Sweep laeuft nachts und nacheinander.</para>
+    /// </summary>
+    public const int DefaultCrawlerTimeoutSeconds = 600;
+
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GeocodingService _geocoding;

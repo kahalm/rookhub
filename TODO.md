@@ -81,9 +81,35 @@ Nachgemessen, was daran haengt: Norwegen 42 Ortsnamen im Lexikon gegen 1831 moeg
 liefert bei 30 von 38 Turnieren eine Postleitzahl mit, Schottland bei 8 von 43, England bei 118
 von 256.
 
+**Am 2026-09-09 fuer Norwegen bis zur Turnierzahl durchgerechnet** (alle 81 Turniere des Feeds
+gegen das Lexikon gehalten): heute verortbar **17 (21 %)**, mit den GeoNames-PLZ-Orten **26
+(32 %)**. Die Einspielung bringt dort also neun Turniere auf die Karte, ohne einen einzigen
+zusaetzlichen Abruf. Details und die Gegenrechnung zur Detailseite in `docs/turnierquellen.md`.
+
 **Der Ausdruck, der Postleitzahlen im Freitext findet, konnte die britischen und irischen bis
 v0.453.0 gar nicht sehen** — er war rein numerisch, „CF31 3NR" und „D02 XY45" waren fuer ihn
 nichts. Das ist behoben; ohne den Import bringt es aber weiterhin nichts.
+
+## [x] Norwegen: wie viele Turniere landen ueberhaupt auf der Karte? (gemessen 2026-09-09)
+
+Die offene Frage war nicht, OB Norwegen angebunden wird (das ist es, samt Detailabruf), sondern ob
+die Verortungsquote reicht. Jetzt steht sie: von 81 Turnieren des Feeds sind **17 (21 %)** heute
+verortbar, **26 (32 %)** nach der PLZ-Einspielung. Die uebrigen 55 nennen schlicht keinen Ort —
+„Medlemsmøte", „Dragulf BGP Uke 40", „Høstferie-lynsjakk NGP". Sie stehen in Liste und Kalender,
+nur nicht auf der Karte, und das ist die richtige Wahl: chess-results kennt fuer NOR **null**
+kuenftige Turniere, ohne diese Quelle gaebe es sie gar nicht.
+
+**Was am Detailabruf NICHT haengt: der Spielort.** Gegengerechnet, weil es naheliegt, ihn dafuer
+zu halten — er bringt gegenueber dem Turniernamen **zwei** zusaetzlich verortete Turniere
+(„Spillsted" ist nur auf 18 von 81 Seiten gefuellt, neun brauchbar, vier im Lexikon, zwei davon
+stehen schon im Namen). Er rechnet sich ueber die ANDEREN Felder: Veranstalter bei 52 von 80,
+Bedenkzeit bei 38 — beides fuehrt der Feed ueberhaupt nicht.
+
+**Die Falle daneben, fuer den Fall, dass jemand den Parser anfasst:** die Fussleiste JEDER
+Detailseite traegt die Anschrift des Verbands („Bentsebrugata 20, 0476 Oslo"), vollstaendig mit
+Postleitzahl. Wer die Seite als Ganzes nach einer Adresse durchsucht statt die Zeile „Spillsted"
+zu lesen, pinnt alle 81 norwegischen Turniere auf dasselbe Buero — ohne Fehler, ohne Ausfall, nur
+mit einer Karte, die ueberzeugend aussieht. `ParseDetail` liest deshalb ueber die BESCHRIFTUNG.
 
 ## [ ] Der niederlaendische Kalender kennt keinen Spielort (2026-09-09)
 
