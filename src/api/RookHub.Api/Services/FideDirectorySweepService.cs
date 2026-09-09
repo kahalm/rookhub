@@ -222,19 +222,34 @@ public class FideDirectorySweepService
             .ToListAsync(ct);
         if (candidates.Count == 0) return null;
 
-        var words = DistinctiveWords(ev.Name);
+        // Die Haeufigkeit wird im LAND des Ereignisses erhoben, nicht global: unter allen
+        // Foederationen zusammen waere ein italienisches Allerweltswort wieder selten.
+        // Kein Land oder zu wenige Namen: dann greift nur die feste Liste.
+        var filler = await ExternalDirectorySource.CorpusFillerAsync(_db, ev.Country, ct);
+        var words = DistinctiveWords(ev.Name, filler);
         var city = GeoTextNormalizer.Normalize(ev.City);
 
         foreach (var candidate in candidates)
         {
-            var shared = words.Intersect(DistinctiveWords(candidate.Name)).Count();
+            var shared = words.Intersect(DistinctiveWords(candidate.Name, filler)).Count();
             var sameCity = city.Length > 0
                            && GeoTextNormalizer.Normalize(candidate.LocationText).Contains(city, StringComparison.Ordinal);
 
             // Zwei unterscheidende Woerter, oder eines plus derselbe Ort. Ein Wort allein reicht
             // nicht — „Open" und „Masters" sind schon weggefiltert, aber „Prague" trifft auch
             // das andere Prager Turnier derselben Woche.
-            if (shared >= 2 || (shared >= 1 && sameCity)) return candidate;
+            if (ExternalDirectorySource.HasOtherNoteOfSameKind(candidate,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.Fide, ev.EventId, ev.City)))
+                continue;
+            // Zwei Woerter reichen nur, solange die Ortsangaben sich nicht WIDERSPRECHEN: der
+            // italienische Fall vom 2026-09-09 (drei fremde Turniere in einem Bozener Eintrag)
+            // haette hier genauso zugeschlagen. Und eine Quelle fuehrt dasselbe Turnier nicht
+            // zweimal - traegt der Kandidat schon einen FIDE-Vermerk mit anderer Kennung,
+            // gehoert dieses Ereignis nicht dorthin (Pruefung oben).
+            if (shared >= 2 && ExternalDirectorySource.PlacesAgree(city, candidate.LocationText))
+                return candidate;
+            if (shared >= 1 && sameCity) return candidate;
         }
         return null;
     }
@@ -243,10 +258,18 @@ public class FideDirectorySweepService
     /// Die unterscheidenden Woerter eines Turniernamens. Was in jedem zweiten Namen steht,
     /// unterscheidet nichts und wuerde beim Zusammenfuehren zu Fehlgriffen fuehren.
     /// </summary>
-    internal static HashSet<string> DistinctiveWords(string? name) =>
+    internal static HashSet<string> DistinctiveWords(string? name) => DistinctiveWords(name, null);
+
+    /// <param name="corpusFiller">
+    /// Zusaetzliche Fuellwoerter, aus der Worthaeufigkeit der Foederation erhoben — die feste Liste
+    /// unten ist englisch und deutsch und laesst „torneo", „scacchi", „turniej", „szach" durch.
+    /// Siehe <see cref="ExternalDirectorySource.CorpusFillerAsync"/>.
+    /// </param>
+    internal static HashSet<string> DistinctiveWords(string? name, IReadOnlySet<string>? corpusFiller) =>
         GeoTextNormalizer.Normalize(name)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(w => w.Length > 2 && !NameFiller.Contains(w))
+            .Where(w => w.Length > 2 && !NameFiller.Contains(w)
+                        && (corpusFiller is null || !corpusFiller.Contains(w)))
             .ToHashSet(StringComparer.Ordinal);
 
     private static readonly HashSet<string> NameFiller = new(StringComparer.Ordinal)

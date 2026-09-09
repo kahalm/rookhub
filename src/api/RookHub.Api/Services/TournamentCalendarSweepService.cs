@@ -180,6 +180,7 @@ public class TournamentCalendarSweepService
         var fed = row.Federation;
 
         var candidates = await _db.TournamentDirectoryEntries
+            .Include(e => e.Sources)
             .Where(e => e.ChessResultsId != null
                         && e.RemovedAt == null
                         && (fed == null || e.Federation == fed)
@@ -187,14 +188,22 @@ public class TournamentCalendarSweepService
             .ToListAsync(ct);
         if (candidates.Count == 0) return null;
 
-        var words = FideDirectorySweepService.DistinctiveWords(row.Name);
+        // Fuellwoerter aus der Worthaeufigkeit der Foederation dazu: die feste Liste ist englisch
+        // und deutsch, dieser Kalender fuehrt aber ganz Europa.
+        var filler = await ExternalDirectorySource.CorpusFillerAsync(_db, fed, ct);
+        var words = FideDirectorySweepService.DistinctiveWords(row.Name, filler);
         if (words.Count == 0) return null;
 
         // Zwei unterscheidende Woerter. Eines allein reicht nicht — „Open" und „Meisterschaft"
         // sind schon weggefiltert, aber ein Ortsname trifft auch das andere Turnier derselben
-        // Woche am selben Ort.
+        // Woche am selben Ort. Diese Quelle nennt keinen Ort, also gibt es hier keine
+        // Ortspruefung; was bleibt, ist die strukturelle Schranke: ein Eintrag, der schon einen
+        // Kalender-Vermerk mit ANDERER Kennung traegt, ist nicht dieses Turnier.
+        var hint = new ExternalDirectorySource.MatchHint(
+            DirectorySourceKind.ChessResultsCalendar, row.CalendarId, null);
         return candidates.FirstOrDefault(c =>
-            words.Intersect(FideDirectorySweepService.DistinctiveWords(c.Name)).Count() >= 2);
+            words.Intersect(FideDirectorySweepService.DistinctiveWords(c.Name, filler)).Count() >= 2
+            && !ExternalDirectorySource.HasOtherNoteOfSameKind(c, hint));
     }
 
     /// <summary>

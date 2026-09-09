@@ -48,6 +48,33 @@ public class KnsbDirectorySweepServiceTests : IDisposable
 
     // ----- Anlegen -----------------------------------------------------------
 
+    /// <summary>
+    /// Eine Zeile mit unlesbarem Termin faellt aus der Verarbeitung, ihre Kennung aber NICHT aus
+    /// der Liefer-Liste. Diese Quelle traegt einen festen Termin im Zeilentyp, deshalb hat sie
+    /// dafuer einen eigenen Rueckweg (<c>KnsbFetch.Unreadable</c>) — mit demselben Zweck wie das
+    /// vorgezogene Eintragen bei den anderen 14 Quellen.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_UnlesbarerTermin_zaehltAlsGeliefert()
+    {
+        var gut = Enumerable.Range(1, 11)
+            .Select(i => Row($"Toernooi {i}", slug: $"toernooi-{i}-2027-07-19"));
+        await CreateService("[" + string.Join(",", gut) + ","
+            + Row("Zomeravondcompetitie", slug: "zomeravond-2027-07-19") + "]").RunAsync();
+        Assert.Equal(12, _db.TournamentDirectoryEntries.Count());
+
+        var kaputt = """
+                     {"slug":"zomeravond-2027-07-19","name":"Zomeravondcompetitie",
+                      "startDate":"19-07-2027","url":null,"speed":null,"online":false}
+                     """;
+        await CreateService("[" + string.Join(",", gut) + "," + kaputt + "]").RunAsync();
+
+        var entry = await _db.TournamentDirectoryEntries
+            .SingleAsync(e => e.Name == "Zomeravondcompetitie");
+        Assert.Equal(0, entry.MissedSweeps);
+        Assert.Null(entry.RemovedAt);
+    }
+
     [Fact]
     public async Task RunAsync_UnknownTournament_IsAdded()
     {

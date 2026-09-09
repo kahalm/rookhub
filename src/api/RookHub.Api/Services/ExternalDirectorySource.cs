@@ -47,8 +47,17 @@ public static class ExternalDirectorySource
     /// <para>Gesucht wird nur unter Eintraegen MIT chess-results-Nummer: die eigenen Eintraege
     /// anderer Zusatzquellen zu treffen waere kein Zugewinn, sondern eine zweite Baustelle.</para>
     /// </summary>
+    /// <summary>
+    /// Was die Quelle ueber DIESE Zeile weiss, soweit es fuer den Abgleich zaehlt: ihre eigene
+    /// Kennung und der Ort. Beides sind Schranken gegen Fehlgriffe, siehe
+    /// <see cref="FindMatchAsync"/>.
+    /// </summary>
+    public readonly record struct MatchHint(
+        DirectorySourceKind Kind, string? ExternalId, string? Place);
+
     public static async Task<TournamentDirectoryEntry?> FindMatchAsync(
-        AppDbContext db, string? federation, DateOnly start, string name, CancellationToken ct)
+        AppDbContext db, string? federation, DateOnly start, string name, MatchHint hint,
+        CancellationToken ct)
     {
         var from = start.AddDays(-MatchDayTolerance);
         var to = start.AddDays(MatchDayTolerance);
@@ -62,12 +71,131 @@ public static class ExternalDirectorySource
             .ToListAsync(ct);
         if (candidates.Count == 0) return null;
 
-        var words = FideDirectorySweepService.DistinctiveWords(name);
+        var filler = await CorpusFillerAsync(db, federation, ct);
+        var words = FideDirectorySweepService.DistinctiveWords(name, filler);
         if (words.Count == 0) return null;
 
-        return candidates.FirstOrDefault(c =>
-            words.Intersect(FideDirectorySweepService.DistinctiveWords(c.Name)).Count() >= 2);
+        var place = GeoTextNormalizer.Normalize(hint.Place);
+        foreach (var candidate in candidates)
+        {
+            if (words.Intersect(FideDirectorySweepService.DistinctiveWords(candidate.Name, filler))
+                    .Count() < 2)
+                continue;
+            if (!PlacesAgree(place, candidate.LocationText)) continue;
+            if (HasOtherNoteOfSameKind(candidate, hint)) continue;
+            return candidate;
+        }
+        return null;
     }
+
+    /// <summary>
+    /// Wie viele Zeichen ein Ortswort mindestens haben muss, um als Ortsbeleg zu zaehlen. Kuerzeres
+    /// ist Beiwerk („via", „nr", „b") und trifft zu leicht.
+    /// </summary>
+    private const int PlaceTokenLength = 4;
+
+    /// <summary>
+    /// Widersprechen sich die Ortsangaben? Nur DAS ist die Frage — nennt eine Seite keinen Ort,
+    /// wird nicht widersprochen, dann entscheidet allein der Namensvergleich.
+    ///
+    /// <para><b>Der Fall, der das erzwungen hat.</b> Am 2026-09-09 standen drei echte italienische
+    /// Turniere (Cormòns, Frascati, Bellante, alle am 20.09.) auf Dev NICHT mehr im Verzeichnis:
+    /// alle drei waren dem „Torneo Sociale Arci Scacchi Bolzano B" vom 21.09. zugeschlagen und ihre
+    /// eigenen Eintraege als „geht darin auf" zurueckgezogen worden. Zwei gemeinsame Woerter
+    /// genuegten — „torneo" und „scacchi" — und ein Vereinsturnier, das ueber fuenf Wochen laeuft,
+    /// liegt im Termin-Fenster von jedem Wochenendturnier des Landes. Ein Ortsvergleich haette
+    /// jeden der drei Griffe sofort verhindert.</para>
+    /// </summary>
+    internal static bool PlacesAgree(string normalizedPlace, string? candidateLocation)
+    {
+        if (normalizedPlace.Length == 0) return true;
+        var other = GeoTextNormalizer.Normalize(candidateLocation);
+        if (other.Length == 0) return true;
+
+        var tokens = normalizedPlace.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= PlaceTokenLength).ToList();
+        var otherTokens = other.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= PlaceTokenLength).ToHashSet(StringComparer.Ordinal);
+        // Ohne verwertbares Ortswort auf einer Seite gibt es nichts zu widersprechen.
+        if (tokens.Count == 0 || otherTokens.Count == 0) return true;
+
+        return tokens.Any(otherTokens.Contains);
+    }
+
+    /// <summary>
+    /// Traegt der Kandidat schon einen Vermerk DERSELBEN Quelle mit einer ANDEREN Kennung? Dann
+    /// gehoert diese Zeile nicht dorthin: eine Quelle fuehrt dasselbe Turnier nicht zweimal.
+    ///
+    /// <para>Rein strukturelle Schranke, ohne Kenntnis der Namen — sie haette den Bolzano-Fall bei
+    /// der zweiten und dritten Zeile ebenfalls gestoppt und begrenzt jeden kuenftigen Fehlgriff
+    /// derselben Art auf EINEN Eintrag statt auf einen Haufen.</para>
+    /// </summary>
+    internal static bool HasOtherNoteOfSameKind(TournamentDirectoryEntry candidate, MatchHint hint)
+    {
+        if (hint.Kind == DirectorySourceKind.Unknown) return false;
+        return candidate.Sources.Any(
+            s => s.Kind == hint.Kind && !string.Equals(s.ExternalId, hint.ExternalId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Ab welchem Anteil der Namen ein Wort als Fuellwort gilt (Prozent).</summary>
+    private const int FillerSharePercent = 8;
+
+    /// <summary>Unter so wenigen Namen wird die Haeufigkeit nicht ausgewertet.</summary>
+    private const int FillerMinCorpus = 40;
+
+    private static readonly TimeSpan FillerLifetime = TimeSpan.FromMinutes(30);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<
+        string, (DateTime Built, HashSet<string> Words)> FillerCache = new();
+
+    /// <summary>
+    /// Die Fuellwoerter EINER Foederation, aus der Haeufigkeit ihrer eigenen Turniernamen.
+    ///
+    /// <para><b>Warum nicht wieder eine Liste.</b> Die feste Liste in
+    /// <c>FideDirectorySweepService.NameFiller</c> ist englisch und deutsch — sie filtert „chess",
+    /// „open", „turnier", „schach". In den 15 Verbandskalendern stehen die Namen aber italienisch,
+    /// polnisch, franzoesisch, tschechisch, ungarisch. Gemessen auf Dev: 105 von 345 italienischen
+    /// Namen enthalten „torneo", 53 „scacchi"; polnisch tragen 315 von 626 Namen „turniej" und 325
+    /// „szach". Solche Woerter unterscheiden nichts, und zwei davon reichten fuer einen Treffer.
+    /// Eine Wortliste je Sprache waere eine Dauerbaustelle; die Haeufigkeit im eigenen Bestand
+    /// stellt sich selbst ein — auch fuer die naechste Quelle in der naechsten Sprache.</para>
+    /// </summary>
+    public static async Task<HashSet<string>> CorpusFillerAsync(
+        AppDbContext db, string? federation, CancellationToken ct)
+    {
+        var key = federation ?? "*";
+        if (FillerCache.TryGetValue(key, out var cached)
+            && DateTime.UtcNow - cached.Built < FillerLifetime)
+            return cached.Words;
+
+        var names = await db.TournamentDirectoryEntries.AsNoTracking()
+            .Where(e => federation == null || e.Federation == federation)
+            .Select(e => e.Name)
+            .ToListAsync(ct);
+
+        var words = BuildFiller(names);
+        FillerCache[key] = (DateTime.UtcNow, words);
+        return words;
+    }
+
+    /// <summary>Fuellwoerter aus einer Namensliste. Ein Wort zaehlt je Name einmal.</summary>
+    internal static HashSet<string> BuildFiller(IReadOnlyCollection<string> names)
+    {
+        if (names.Count < FillerMinCorpus) return [];
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var name in names)
+            foreach (var word in FideDirectorySweepService.DistinctiveWords(name, null))
+                counts[word] = counts.GetValueOrDefault(word) + 1;
+
+        var limit = Math.Max(2, names.Count * FillerSharePercent / 100);
+        return counts.Where(kv => kv.Value >= limit)
+            .Select(kv => kv.Key)
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>Nur fuer Tests: die Haeufigkeitsauswertung neu erheben lassen.</summary>
+    internal static void ResetFillerCache() => FillerCache.Clear();
 
     /// <summary>
     /// Denselben Eintrag ueber die chess-results-NUMMER finden — der exakte Weg, wenn die Quelle
@@ -150,18 +278,50 @@ public static class ExternalDirectorySource
     /// Turnier, entscheidet SIE ueber sein Verschwinden; sie sieht mehr als ein Verbandskalender.</item>
     /// <item><b>Nur Eintraege, deren EINZIGER Herkunftsvermerk diese Quelle ist.</b> Steht ein
     /// Turnier auf zwei Kalendern, ist sein Fehlen auf einem keine Absage.</item>
-    /// <item><b>Bremse gegen halbe Laeufe.</b> Liefert ein Lauf nichts oder weniger als die HAELFTE
-    /// der Kandidaten, wird gar nicht geprueft. Genau dafuer gibt es bei der Turniersuche die
-    /// MaxRows-Bremse: eine systematische Luecke (eine von 25 Regionen faellt aus, eine von 12
-    /// Monatsseiten) faengt die Karenz von zwei Laeufen NICHT ab, sie wiederholt sich jede Nacht.</item>
+    /// <item><b>Bremse gegen halbe Laeufe.</b> Bringt ein Lauf nicht mindestens
+    /// <see cref="MinSeenPercent"/> Prozent der eigenen Kandidaten wieder, wird gar nichts
+    /// geprueft. Genau dafuer gibt es bei der Turniersuche die MaxRows-Bremse: eine systematische
+    /// Luecke (eine von 25 Regionen faellt aus, eine von 12 Monatsseiten) faengt die Karenz von
+    /// zwei Laeufen NICHT ab, sie wiederholt sich jede Nacht.</item>
+    /// <item><b>Nur bis zum HORIZONT des Laufs.</b> Weiter als der spaeteste wiedergesehene Termin
+    /// wird nichts zurueckgezogen — sonst raeumte eine Quelle mit kurzem Vorschau-Fenster alles
+    /// dahinter ab.</item>
+    /// <item><b>Ein Fehlschlag je Karenzfenster</b> (<see cref="MissCooldown"/>), nicht je Lauf.
+    /// Zwei Durchgaenge im Abstand von Minuten sind eine Nacht, nicht zwei.</item>
     /// </list>
     /// </summary>
     /// <param name="deliveredExternalIds">Die Kennungen, die DIESER Lauf geliefert hat.</param>
     /// <returns>Wie viele Eintraege zurueckgezogen wurden.</returns>
+    /// <summary>
+    /// Welcher Anteil der eigenen Kandidaten wiedergesehen werden muss, damit ein Lauf als
+    /// VOLLSTAENDIG gilt (Prozent).
+    ///
+    /// <para><b>Warum so hoch.</b> Die erste Fassung liess einen Lauf gelten, solange er mehr als
+    /// die HAELFTE lieferte — und verglich dabei die Zahl der gelieferten Zeilen mit der Zahl der
+    /// eigenen Kandidaten, also zwei verschiedene Mengen. Gemessen auf Dev: Polen hat 620
+    /// Kandidaten und verliert an einem gewoehnlichen Tag fuenf, das sind 0,8 Prozent. Bis eine
+    /// Halbe-Menge-Bremse anspricht, duerfen 310 Turniere faelschlich verschwinden. Echte Absagen
+    /// sind ein Rinnsal; ein Lauf, der mehr als jeden zehnten Eintrag nicht wiederbringt, ist
+    /// kaputt und kein Beleg.</para>
+    /// </summary>
+    public const int MinSeenPercent = 90;
+
+    /// <summary>
+    /// Wie lange nach einem gezaehlten Fehlschlag kein weiterer gezaehlt wird.
+    ///
+    /// <para>Damit zaehlt <see cref="TournamentDirectoryEntry.MissedSweeps"/> endlich NAECHTE und
+    /// nicht Laeufe. Siehe <see cref="TournamentDirectoryEntry.LastMissAt"/>.</para>
+    /// </summary>
+    public static readonly TimeSpan MissCooldown = TimeSpan.FromHours(20);
+
     public static async Task<int> RetireVanishedAsync(AppDbContext db, DirectorySourceKind kind,
         IReadOnlyCollection<string> deliveredExternalIds, DateTime now, CancellationToken ct = default)
     {
-        if (deliveredExternalIds.Count == 0) return 0;
+        // Ein Vergleich der KENNUNGEN, und die Spalte vergleicht MySQL ohne Ruecksicht auf
+        // Gross- und Kleinschreibung. Ein Ordinal-Vergleich hier machte aus einer wiedergesehenen
+        // Zeile eine verschwundene, sobald eine Quelle die Schreibweise aendert.
+        var delivered = deliveredExternalIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (delivered.Count == 0) return 0;
 
         var today = DateOnly.FromDateTime(now);
         var candidates = await db.TournamentDirectoryEntries
@@ -174,31 +334,52 @@ public static class ExternalDirectorySource
             .ToListAsync(ct);
         if (candidates.Count == 0) return 0;
 
-        // Die Bremse: ein Lauf, der weniger als die Haelfte der Kandidaten liefert, ist
-        // unvollstaendig und kein Beleg fuer Absagen.
-        if (deliveredExternalIds.Count * 2 < candidates.Count) return 0;
+        var seen = candidates.Where(c => delivered.Contains(KeyOf(c, kind))).ToList();
+        if (seen.Count == 0) return 0;
 
-        var delivered = deliveredExternalIds.ToHashSet(StringComparer.Ordinal);
+        // Der HORIZONT: bis zu welchem Termin dieser Lauf ueberhaupt etwas geliefert hat. Eine
+        // Quelle, die nur die naechsten zwei Monate zeigt, sagt ueber den Herbst nichts — ihre
+        // eigenen Eintraege dahinter waeren sonst jede Nacht „verschwunden". Der Horizont stellt
+        // sich selbst ein und braucht keine Angabe je Quelle.
+        var horizon = seen.Max(c => c.EndDate ?? c.StartDate);
+        var relevant = candidates.Where(c => (c.EndDate ?? c.StartDate) <= horizon).ToList();
+
+        // Die Bremse gegen halbe Laeufe — jetzt am Anteil der wiedergesehenen KANDIDATEN gemessen.
+        if (seen.Count * 100 < relevant.Count * MinSeenPercent) return 0;
+
         var retired = 0;
-        foreach (var entry in candidates)
+        foreach (var entry in relevant)
         {
-            var externalId = entry.Sources.First(s => s.Kind == kind).ExternalId;
-            if (delivered.Contains(externalId))
+            if (delivered.Contains(KeyOf(entry, kind)))
             {
-                if (entry.MissedSweeps != 0) { entry.MissedSweeps = 0; entry.UpdatedAt = now; }
+                if (entry.MissedSweeps != 0 || entry.LastMissAt is not null)
+                {
+                    entry.MissedSweeps = 0;
+                    entry.LastMissAt = null;
+                    entry.UpdatedAt = now;
+                }
                 continue;
             }
 
+            // Hoechstens ein Fehlschlag je Karenzfenster. Ohne das zaehlten zwei Durchgaenge
+            // desselben Abends als zwei Naechte.
+            if (entry.LastMissAt is { } last && now - last < MissCooldown) continue;
+
             entry.MissedSweeps++;
+            entry.LastMissAt = now;
             entry.UpdatedAt = now;
             if (entry.MissedSweeps < MissesUntilRetired) continue;
             entry.RemovedAt = now;
             retired++;
         }
 
-        if (retired > 0 || candidates.Any(c => c.UpdatedAt == now)) await db.SaveChangesAsync(ct);
+        if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync(ct);
         return retired;
     }
+
+    /// <summary>Die Kennung, unter der DIESE Quelle den Eintrag fuehrt.</summary>
+    private static string KeyOf(TournamentDirectoryEntry entry, DirectorySourceKind kind) =>
+        entry.Sources.First(s => s.Kind == kind).ExternalId;
 
     /// <summary>Laenge der Spalte <see cref="TournamentDirectorySource.ExternalId"/>.</summary>
     public const int MaxExternalIdLength = 60;

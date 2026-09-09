@@ -61,8 +61,13 @@ public class EcfDirectorySweepService
             foreach (var row in events)
             {
                 ct.ThrowIfCancellationRequested();
-                if (row.Start is not { } start || row.Name.Length == 0 || row.EventId.Length == 0)
-                    continue;
+                if (row.EventId.Length == 0) continue;
+                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
+                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
+                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
+                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
+                delivered.Add(row.EventId);
+                if (row.Start is not { } start || row.Name.Length == 0) continue;
 
                 processed++;
                 var publicId = $"en{row.EventId}";
@@ -80,11 +85,12 @@ public class EcfDirectorySweepService
                 }
 
                 var federation = FederationOf(row.Country);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, federation, start, row.Name, ct);
+                var match = await ExternalDirectorySource.FindMatchAsync(_db, federation, start, row.Name,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.EnglishChessFederation, row.EventId, row.Place), ct);
 
                 if (match is not null)
                 {
-                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -125,7 +131,6 @@ public class EcfDirectorySweepService
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
                 ApplyYouthMark(own, row.YouthOnly);
-                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
 
@@ -234,7 +239,11 @@ public class EcfDirectorySweepService
             .Select(r => new CrawlerEcfEvent(
                 r.EventId!, r.Name!, ParseDate(r.StartDate), ParseDate(r.EndDate), r.Place, r.City,
                 r.Country, r.Lat, r.Lon, r.Url, r.Categories ?? []))
-            .Where(e => e.Start is not null)
+            // KEIN Filter auf den Termin. Eine Zeile ohne lesbaren Termin bleibt in der Liste,
+            // weil die Verschwunden-Erkennung sie sonst nicht als GELIEFERT sieht — die Quelle
+            // fuehrt sie ja. Ausgesiebt wird sie erst in der Schleife, dort steht sie dann schon
+            // in `delivered`. Ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle:
+            // ohne das waeren es reihenweise falsche Absagen nach zwei Naechten.
             .ToList();
     }
 

@@ -98,21 +98,27 @@ public class SjakkDirectorySweepService
             foreach (var row in events)
             {
                 ct.ThrowIfCancellationRequested();
-                if (row.Start is not { } start || row.Name.Length == 0 || row.EventId.Length == 0)
-                    continue;
+                if (row.EventId.Length == 0) continue;
+                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
+                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
+                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
+                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
+                delivered.Add(row.EventId);
+                if (row.Start is not { } start || row.Name.Length == 0) continue;
 
                 processed++;
                 var publicId = PublicIdOf(row.EventId);
                 var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
                 var match = await ExternalDirectorySource.FindMatchAsync(
-                    _db, Federation, start, row.Name, ct);
+                    _db, Federation, start, row.Name,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.NorwegianChessFederation, row.EventId, null), ct);
 
                 // Hat die Turniersuche dieselbe Veranstaltung inzwischen? Dann gehoert ihr der
                 // Eintrag — hier wird nur der Herkunftsvermerk gesetzt. Heute der seltene Fall
                 // (chess-results fuehrt fuer NOR nichts), aber genau dafuer ist er da.
                 if (match is not null)
                 {
-                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.NorwegianChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -163,7 +169,6 @@ public class SjakkDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
-                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.NorwegianChessFederation, row.EventId,
                     hasDetail ? row.Url : null, now, ct);
@@ -311,7 +316,11 @@ public class SjakkDirectorySweepService
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerSjakkEvent(
                 r.EventId!, r.Name!, ParseDate(r.StartDate), ParseDate(r.EndDate), r.Url))
-            .Where(e => e.Start is not null)
+            // KEIN Filter auf den Termin. Eine Zeile ohne lesbaren Termin bleibt in der Liste,
+            // weil die Verschwunden-Erkennung sie sonst nicht als GELIEFERT sieht — die Quelle
+            // fuehrt sie ja. Ausgesiebt wird sie erst in der Schleife, dort steht sie dann schon
+            // in `delivered`. Ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle:
+            // ohne das waeren es reihenweise falsche Absagen nach zwei Naechten.
             .ToList();
     }
 

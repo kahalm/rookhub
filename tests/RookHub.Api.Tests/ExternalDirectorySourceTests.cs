@@ -219,7 +219,10 @@ public class ExternalDirectorySourceTests : IDisposable
 
         using var night2 = Create();
         var found = await ExternalDirectorySource.FindMatchAsync(
-            night2, "AUT", Soon, "Wiener Landesliga A", default);
+            night2, "AUT", Soon, "Wiener Landesliga A",
+            new ExternalDirectorySource.MatchHint(
+                DirectorySourceKind.ItalianChessFederation, "egal", null),
+            default);
 
         Assert.NotNull(found);
         Assert.Single(found!.Sources);

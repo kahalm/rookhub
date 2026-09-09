@@ -62,14 +62,21 @@ public class SchachbundDirectorySweepService
             foreach (var row in events)
             {
                 ct.ThrowIfCancellationRequested();
-                if (row.Start is not { } start || row.Name.Length == 0 || row.EventId.Length == 0)
-                    continue;
+                if (row.EventId.Length == 0) continue;
+                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
+                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
+                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
+                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
+                delivered.Add(PublicIdOf(row.EventId));
+                if (row.Start is not { } start || row.Name.Length == 0) continue;
 
                 processed++;
                 var publicId = PublicIdOf(row.EventId);
                 var federation = FederationOf(row.Region);
                 var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, federation, start, row.Name, ct);
+                var match = await ExternalDirectorySource.FindMatchAsync(_db, federation, start, row.Name,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Place), ct);
 
                 if (match is not null)
                 {
@@ -82,7 +89,6 @@ public class SchachbundDirectorySweepService
                     if (changed && match.Speed == TournamentSpeed.Unknown)
                         match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
 
-                    delivered.Add(PublicIdOf(row.EventId));
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
                     matched++;
@@ -132,7 +138,6 @@ public class SchachbundDirectorySweepService
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
                 ExternalDirectorySource.ApplyClassification(own);
-                delivered.Add(PublicIdOf(row.EventId));
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
                     DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
 
@@ -229,7 +234,11 @@ public class SchachbundDirectorySweepService
             .Select(r => new CrawlerSchachbundEvent(
                 r.EventId!, r.Name!, ParseDate(r.StartDate), ParseDate(r.EndDate), r.Region,
                 r.Place, r.TimeControl, r.Rounds, r.System, r.Url))
-            .Where(e => e.Start is not null)
+            // KEIN Filter auf den Termin. Eine Zeile ohne lesbaren Termin bleibt in der Liste,
+            // weil die Verschwunden-Erkennung sie sonst nicht als GELIEFERT sieht — die Quelle
+            // fuehrt sie ja. Ausgesiebt wird sie erst in der Schleife, dort steht sie dann schon
+            // in `delivered`. Ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle:
+            // ohne das waeren es reihenweise falsche Absagen nach zwei Naechten.
             .ToList();
     }
 

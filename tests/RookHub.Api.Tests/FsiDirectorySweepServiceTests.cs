@@ -60,6 +60,35 @@ public class FsiDirectorySweepServiceTests : IDisposable
         return entry;
     }
 
+    /// <summary>
+    /// Eine Zeile, deren Termin wir nicht lesen koennen, gilt als GELIEFERT — die Quelle fuehrt sie
+    /// ja. Stand das Eintragen erst hinter den Pruefungen, sammelte so eine Zeile Fehlschlaege und
+    /// war nach zwei Naechten abgesagt. Und ein geaendertes Datumsformat trifft nicht eine Zeile,
+    /// sondern alle: genau der systematische Fall, den die Karenz NICHT abfaengt.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_UnlesbarerTermin_zaehltAlsGeliefert()
+    {
+        var gut = Enumerable.Range(1, 11)
+            .Select(i => Row($"Torneo Numero {i} di Prova", eventId: $"3000{i}"));
+        await CreateService($"[{Row("Torneo Senza Data di Prova", eventId: "39999")},"
+                            + string.Join(",", gut) + "]").RunAsync();
+        Assert.Equal(12, _db.TournamentDirectoryEntries.Count());
+
+        // Zweiter Lauf: dieselbe Menge, aber die erste Zeile bringt keinen lesbaren Termin mehr.
+        var kaputt = """
+                     {"eventId":"39999","name":"Torneo Senza Data di Prova","startDate":"31/12/2026",
+                      "endDate":null,"region":"LAZIO","province":"Roma","place":"Roma",
+                      "eventType":"Torneo Elo Italia/FIDE","timeControl":null,"rounds":null,"note":null}
+                     """;
+        await CreateService($"[{kaputt}," + string.Join(",", gut) + "]").RunAsync();
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync(e => e.PublicId == "it39999");
+        Assert.Equal(0, entry.MissedSweeps);
+        Assert.Null(entry.LastMissAt);
+        Assert.Null(entry.RemovedAt);
+    }
+
     [Fact]
     public async Task RunAsync_UnknownTournament_IsAdded()
     {

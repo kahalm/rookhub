@@ -87,17 +87,23 @@ public class ChessArbiterDirectorySweepService
             foreach (var row in events)
             {
                 ct.ThrowIfCancellationRequested();
-                if (row.Start is not { } start || row.Name.Length == 0 || row.EventId.Length == 0)
-                    continue;
+                if (row.EventId.Length == 0) continue;
+                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
+                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
+                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
+                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
+                delivered.Add(row.Key);
+                if (row.Start is not { } start || row.Name.Length == 0) continue;
 
                 processed++;
                 var publicId = $"pl{row.Year}-{row.EventId}";
                 var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, "POL", start, row.Name, ct);
+                var match = await ExternalDirectorySource.FindMatchAsync(_db, "POL", start, row.Name,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.PolishChessFederation, row.Key, row.Place), ct);
 
                 if (match is not null)
                 {
-                    delivered.Add(row.Key);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.PolishChessFederation, row.Key, row.Url, now, ct);
                     matched++;
@@ -171,7 +177,6 @@ public class ChessArbiterDirectorySweepService
 
                 // Die Adresse im Vermerk bleibt der Herkunftsbeleg — sie steht nur da, wenn die
                 // Seite auch etwas hergab (`ChessArbiterDetailVersion` sagt, dass gefragt wurde).
-                delivered.Add(row.Key);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.PolishChessFederation,
                     row.Key, detailRead ? row.Url : null, now, ct);
 
@@ -287,7 +292,11 @@ public class ChessArbiterDirectorySweepService
             .Select(r => new CrawlerChessArbiterEvent(
                 r.Year!, r.EventId!, r.Name!, ParseDate(r.StartDate), r.Place, r.Region,
                 r.SpeedText, r.Url))
-            .Where(e => e.Start is not null)
+            // KEIN Filter auf den Termin. Eine Zeile ohne lesbaren Termin bleibt in der Liste,
+            // weil die Verschwunden-Erkennung sie sonst nicht als GELIEFERT sieht — die Quelle
+            // fuehrt sie ja. Ausgesiebt wird sie erst in der Schleife, dort steht sie dann schon
+            // in `delivered`. Ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle:
+            // ohne das waeren es reihenweise falsche Absagen nach zwei Naechten.
             .ToList();
     }
 

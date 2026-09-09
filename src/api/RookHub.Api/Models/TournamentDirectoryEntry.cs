@@ -167,6 +167,18 @@ public class TournamentDirectoryEntry
     /// </summary>
     public int MissedSweeps { get; set; }
 
+    /// <summary>
+    /// Wann zuletzt ein Fehlschlag gezaehlt wurde. Sperrt den Zaehler fuer einen Tag.
+    ///
+    /// <para><b>Warum das noetig ist.</b> <see cref="MissedSweeps"/> zaehlt LAEUFE, nicht Naechte.
+    /// Gedacht war „zwei Naechte hintereinander nicht geliefert" — tatsaechlich genuegten zwei
+    /// Durchgaenge, und die koennen Minuten auseinanderliegen: der Aufhol-Lauf nach einem Deploy
+    /// (und auf Dev deployen wir mehrmals am Tag), ein Handlauf ueber
+    /// <c>scripts/directory-runs.sh</c>, das bis zu elf Durchgaenge macht. Ein Turnier, das eine
+    /// Seite kurz nicht ausliefert, war damit binnen einer Stunde abgesagt.</para>
+    /// </summary>
+    public DateTime? LastMissAt { get; set; }
+
     /// <summary>Gesetzt, sobald der Eintrag als verschwunden gilt. Bleibt in der Tabelle stehen.</summary>
     public DateTime? RemovedAt { get; set; }
 

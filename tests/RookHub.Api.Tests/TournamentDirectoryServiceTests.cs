@@ -239,6 +239,20 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Null(entry.RemovedAt);
     }
 
+    /// <summary>
+    /// Eine Nacht vergehen lassen. Der Zaehler <c>MissedSweeps</c> zaehlt seit 0.455.0 NAECHTE und
+    /// nicht Laeufe: zwei Durchgaenge im Abstand von Minuten (Aufhol-Lauf nach einem Deploy,
+    /// <c>directory-runs.sh</c>) sind eine Nacht. Der Test muss die Karenz also wirklich
+    /// verstreichen lassen, statt zweimal hintereinander zu sweepen.
+    /// </summary>
+    private async Task NextNightAsync()
+    {
+        foreach (var entry in await _db.TournamentDirectoryEntries.ToListAsync())
+            if (entry.LastMissAt is { } last)
+                entry.LastMissAt = last - ExternalDirectorySource.MissCooldown;
+        await _db.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task SweepFederationAsync_MissingTwice_IsCancelledAndAnnounced()
     {
@@ -247,6 +261,7 @@ public class TournamentDirectoryServiceTests : IDisposable
             .SweepFederationAsync("AUT", Today);
 
         await CreateService("[]").SweepFederationAsync("AUT", Today);
+        await NextNightAsync();
         var (result, _) = await CreateService("[]").SweepFederationAsync("AUT", Today);
 
         Assert.Equal(1, result.Removed);

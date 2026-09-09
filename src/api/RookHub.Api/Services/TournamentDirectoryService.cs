@@ -254,6 +254,7 @@ public class TournamentDirectoryService
 
                 await ApplyAsync(row, entry, now, artMap, ct);
                 entry.MissedSweeps = 0;
+                entry.LastMissAt = null;
                 entry.RemovedAt = null;
                 updated++;
 
@@ -332,7 +333,16 @@ public class TournamentDirectoryService
                      : existing.Where(e => e.RemovedAt == null && e.ChessResultsId is not null
                                            && !seen.Contains(e.ChessResultsId)))
         {
+            // Hoechstens ein Fehlschlag je Karenzfenster: der Zaehler soll NAECHTE messen, nicht
+            // Laeufe. Zwei Durchgaenge koennen Minuten auseinanderliegen — ein Aufhol-Lauf nach
+            // einem Deploy (auf Dev mehrmals am Tag), ein Handlauf ueber directory-runs.sh, das
+            // bis zu elf Durchgaenge macht. Ohne diese Sperre war ein Turnier, das chess-results
+            // kurz nicht auswies, binnen einer Stunde abgesagt — samt Meldung an Abonnenten.
+            if (entry.LastMissAt is { } last
+                && now - last < ExternalDirectorySource.MissCooldown) continue;
+
             entry.MissedSweeps++;
+            entry.LastMissAt = now;
             entry.UpdatedAt = now;
             if (entry.MissedSweeps < MissedSweepsUntilRemoved) continue;
             entry.RemovedAt = now;

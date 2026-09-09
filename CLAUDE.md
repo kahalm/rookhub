@@ -1579,10 +1579,35 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   live passiert (ein schachbund-Turnier stand nach zwei GER-Sweeps auf abgesagt, obwohl es stattfindet).
   Die Zusatzquellen ziehen seit 0.454.1 selbst zurueck (`ExternalDirectorySource.RetireVanishedAsync`) — mit vier
   Schranken: nur kuenftige Eintraege, nur ohne chess-results-Nummer, nur wenn diese Quelle der EINZIGE
-  Herkunftsvermerk ist, und **gar nicht**, wenn ein Lauf nichts oder weniger als die Haelfte der Kandidaten liefert
-  (dieselbe Lehre wie die MaxRows-Bremse: eine systematische Luecke wiederholt sich jede Nacht, die Karenz von zwei
-  Laeufen faengt sie NICHT ab). Der chess-results-ANKUENDIGUNGSkalender zieht bewusst nichts zurueck — nur ~70 % seiner
-  Zeilen tragen eine Kennung, und ohne stabile Kennung ist „fehlt" nicht von „umbenannt" zu unterscheiden.
+  Herkunftsvermerk ist, **nur bis zum HORIZONT des Laufs** (dem spaetesten wiedergesehenen Termin — eine Quelle mit
+  kurzem Vorschau-Fenster raeumt sonst alles dahinter ab), und **gar nicht**, wenn ein Lauf weniger als
+  `MinSeenPercent` = 90 % seiner eigenen Kandidaten wiederbringt (dieselbe Lehre wie die MaxRows-Bremse: eine
+  systematische Luecke wiederholt sich jede Nacht, die Karenz faengt sie NICHT ab). Die 90 % sind seit 0.455.0 am
+  Anteil der wiedergesehenen KANDIDATEN gemessen; die erste Fassung verglich die Zahl gelieferter ZEILEN mit der Zahl
+  der Kandidaten und liess alles ab der Haelfte gelten — bei Polen (620 Kandidaten, ein gewoehnlicher Tag kostet fuenf)
+  waeren das 310 zugelassene Falschabsagen. Der chess-results-ANKUENDIGUNGSkalender zieht bewusst nichts zurueck — nur
+  ~70 % seiner Zeilen tragen eine Kennung, und ohne stabile Kennung ist „fehlt" nicht von „umbenannt" zu unterscheiden.
+- **`MissedSweeps` zaehlt NAECHTE, nicht Laeufe** (seit 0.455.0) – Ein Fehlschlag wird nur gezaehlt, wenn der letzte
+  laenger als `ExternalDirectorySource.MissCooldown` (20 h) zurueckliegt; `TournamentDirectoryEntry.LastMissAt` haelt
+  ihn fest. Gilt fuer BEIDE Besitzer (Turniersuche und Zusatzquellen). Ohne die Sperre genuegten zwei Durchgaenge im
+  Abstand von Minuten: der Aufhol-Lauf nach einem Deploy (auf Dev mehrmals am Tag) und `scripts/directory-runs.sh` mit
+  bis zu elf Durchgaengen haetten abgesagt, was eine Quelle kurz nicht auswies.
+- **Eine Zeile, die wir nicht lesen koennen, gilt als GELIEFERT** (seit 0.455.0) – In allen 15 Quellen steht
+  `delivered.Add(...)` VOR der Pruefung auf Termin und Namen, und die Abruf-Methoden sieben Zeilen ohne lesbaren Termin
+  nicht mehr aus (KNSB traegt einen festen Termin im Zeilentyp und meldet sie ueber `KnsbFetch.Unreadable`). Vorher
+  sammelte eine solche Zeile Fehlschlaege und war nach zwei Naechten abgesagt — und ein geaendertes Datumsformat
+  trifft nicht eine Zeile, sondern alle: genau der systematische Fall, den die Karenz nicht abfaengt.
+- **Zusammenfuehren braucht mehr als zwei gemeinsame Woerter** (seit 0.455.0) – `ExternalDirectorySource.FindMatchAsync`
+  (und der FIDE- sowie der Ankuendigungs-Abgleich) pruefen zusaetzlich: (1) **Fuellwoerter aus der Worthaeufigkeit der
+  Foederation** (`CorpusFillerAsync`, ab 8 % der Namen; die feste `NameFiller`-Liste ist englisch und deutsch und
+  liess „torneo", „scacchi", „turniej", „szach" durch), (2) **die Ortsangaben duerfen sich nicht widersprechen**
+  (`PlacesAgree` — nennt eine Seite keinen Ort, wird nicht widersprochen), (3) **kein zweiter Vermerk derselben
+  Quelle** am selben Eintrag (`HasOtherNoteOfSameKind`). Anlass: am 2026-09-09 waren auf Dev drei echte italienische
+  Turniere (Cormòns, Frascati, Bellante, alle 20.09.) einem „Torneo Sociale Arci Scacchi Bolzano B" vom 21.09.
+  zugeschlagen und als „geht darin auf" zurueckgezogen — sie waren im Verzeichnis nicht mehr zu finden. Ein
+  Vereinsturnier ueber fuenf Wochen liegt im Termin-Fenster von jedem Wochenendturnier des Landes. **Falsches
+  Zusammenfuehren ist der stillste Weg, auf dem ein Turnier verschwindet**, denn der eigene Eintrag traegt danach
+  keinen Herkunftsvermerk mehr und keine Verschwunden-Erkennung sieht ihn.
 - **Ein Herkunftsvermerk WANDERT, er wird nicht doppelt angelegt** (seit 0.453.13) – Der eindeutige Index liegt auf
   (`Kind`, `ExternalId`) und gilt ueber den GANZEN Bestand. `ExternalDirectorySource.NoteSourceAsync` sieht deshalb
   nicht nur die Vermerke des uebergebenen Eintrags, sondern fragt die Tabelle: haengt die Kennung woanders, wird der

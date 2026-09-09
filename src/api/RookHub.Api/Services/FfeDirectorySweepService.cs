@@ -111,13 +111,20 @@ public class FfeDirectorySweepService
             foreach (var row in events)
             {
                 ct.ThrowIfCancellationRequested();
-                if (row.Start is not { } start || row.Name.Length == 0 || row.EventId.Length == 0)
-                    continue;
+                if (row.EventId.Length == 0) continue;
+                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
+                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
+                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
+                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
+                delivered.Add(row.EventId);
+                if (row.Start is not { } start || row.Name.Length == 0) continue;
 
                 processed++;
                 var publicId = $"fr{row.EventId}";
                 var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, "FRA", start, row.Name, ct);
+                var match = await ExternalDirectorySource.FindMatchAsync(_db, "FRA", start, row.Name,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.FrenchChessFederation, row.EventId, LocationOf(row)), ct);
                 await EnsureSourcesLoadedAsync(own, ct);
                 await EnsureSourcesLoadedAsync(match, ct);
 
@@ -126,7 +133,6 @@ public class FfeDirectorySweepService
                     // chess-results kennt das Turnier — bei Frankreich der Ausnahmefall (2 von 40).
                     // Dann bleibt es bei einem Herkunftsvermerk: die Turnierseite zu holen, nur um
                     // Luecken zu fuellen, waere ein Abruf fuer einen Eintrag, der schon steht.
-                    delivered.Add(row.EventId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
                         DirectorySourceKind.FrenchChessFederation, row.EventId, row.Url, now, ct);
                     matched++;
@@ -188,7 +194,6 @@ public class FfeDirectorySweepService
                     await Task.Delay(DetailDelay, ct);
                 }
 
-                delivered.Add(row.EventId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.FrenchChessFederation,
                     row.EventId, hasDetail ? row.Url : null, now, ct);
 
@@ -454,7 +459,11 @@ public class FfeDirectorySweepService
             .Select(r => new CrawlerFfeEvent(
                 r.EventId!, r.Name!, ParseDate(r.StartDate), r.City, r.Department,
                 r.HomologatedBy, r.Url))
-            .Where(e => e.Start is not null)
+            // KEIN Filter auf den Termin. Eine Zeile ohne lesbaren Termin bleibt in der Liste,
+            // weil die Verschwunden-Erkennung sie sonst nicht als GELIEFERT sieht — die Quelle
+            // fuehrt sie ja. Ausgesiebt wird sie erst in der Schleife, dort steht sie dann schon
+            // in `delivered`. Ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle:
+            // ohne das waeren es reihenweise falsche Absagen nach zwei Naechten.
             .ToList();
     }
 

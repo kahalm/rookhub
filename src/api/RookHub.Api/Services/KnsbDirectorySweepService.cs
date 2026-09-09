@@ -73,32 +73,44 @@ public class KnsbDirectorySweepService
     public async Task<ExternalSweepResult> RunAsync(CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
+        var fetch = await FetchAsync(today, ct);
+        var events = fetch.Rows;
+        if (events.Count == 0 && fetch.Unreadable.Count == 0)
+            return new ExternalSweepResult(0, 0, 0, 0, 0);
 
         var now = DateTime.UtcNow;
         int added = 0, speedResolved = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten. Die
+        // unlesbaren Zeilen zaehlen mit: geliefert ist geliefert.
         var delivered = new List<string>();
+        delivered.AddRange(fetch.Unreadable.Select(ShortHash));
 
         try
         {
             foreach (var row in events)
             {
                 ct.ThrowIfCancellationRequested();
-                if (row.Slug.Length == 0 || row.Name.Length == 0) continue;
+                if (row.Slug.Length == 0) continue;
+                var externalId = ShortHash(row.Slug);
+                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
+                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
+                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
+                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
+                delivered.Add(externalId);
+                if (row.Name.Length == 0) continue;
 
                 processed++;
                 var publicId = PublicIdOf(row.Slug);
-                var externalId = ShortHash(row.Slug);
                 var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
 
+                // Ohne Ort: diese Quelle nennt nie einen Spielort.
                 var match = await ExternalDirectorySource.FindMatchAsync(
-                    _db, Federation, row.StartDate, row.Name, ct);
+                    _db, Federation, row.StartDate, row.Name,
+                    new ExternalDirectorySource.MatchHint(
+                        DirectorySourceKind.DutchChessFederation, externalId, null), ct);
 
                 if (match is not null)
                 {
-                    delivered.Add(externalId);
                     await ExternalDirectorySource.NoteSourceAsync(_db, 
                         match, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
                     matched++;
@@ -147,7 +159,6 @@ public class KnsbDirectorySweepService
                     own.Speed = speed;
                 }
 
-                delivered.Add(externalId);
                 await ExternalDirectorySource.NoteSourceAsync(_db, 
                     own, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
 
@@ -196,8 +207,12 @@ public class KnsbDirectorySweepService
 
     // ----- Crawler ----------------------------------------------------------
 
-    private async Task<List<CrawlerKnsbEvent>> FetchAsync(DateOnly from, CancellationToken ct)
+    /// <summary>Die verwertbaren Zeilen — und die Kennungen der unlesbaren.</summary>
+    internal sealed record KnsbFetch(List<CrawlerKnsbEvent> Rows, List<string> Unreadable);
+
+    private async Task<KnsbFetch> FetchAsync(DateOnly from, CancellationToken ct)
     {
+        var unreadable = new List<string>();
         var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
         using var response = await client.GetAsync($"/api/knsb-calendar?from={from:yyyy-MM-dd}", ct);
 
@@ -210,10 +225,19 @@ public class KnsbDirectorySweepService
         foreach (var r in rows)
         {
             if (r.Slug is not { Length: > 0 } || r.Name is not { Length: > 0 }) continue;
-            if (ParseDate(r.StartDate) is not { } start) continue;
+            if (ParseDate(r.StartDate) is not { } start)
+            {
+                // Unlesbarer Termin: die Zeile faellt aus der Verarbeitung, ihre Kennung aber NICHT
+                // aus der Liefer-Liste — die Quelle fuehrt sie ja. Sonst sammelt sie Fehlschlaege
+                // und ist nach zwei Naechten abgesagt, und ein geaendertes Datumsformat trifft
+                // nicht eine Zeile, sondern alle. `CrawlerKnsbEvent` traegt einen festen Termin,
+                // deshalb hier ein eigener Rueckweg statt eines nullbaren Feldes.
+                unreadable.Add(r.Slug);
+                continue;
+            }
             result.Add(new CrawlerKnsbEvent(r.Slug, r.Name, start, r.Url, r.Speed, r.Online));
         }
-        return result;
+        return new KnsbFetch(result, unreadable);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
