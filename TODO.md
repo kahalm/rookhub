@@ -66,7 +66,7 @@ durch eine Vorrangregel, sondern weil die FIDE-Jahresansicht die Detailfelder ni
 dem Nachlauf oben waere zu entscheiden, wer bei Widerspruch gilt (Vorschlag: chess-results fuer
 Termin/Ort, FIDE fuer die Bedenkzeit-Beschreibung — dort ist sie ausgeschrieben).
 
-## [ ] Postleitzahlen fehlen fuer die halbe dritte Runde (2026-09-09)
+## [x] Postleitzahlen fehlen fuer die halbe dritte Runde (2026-09-09, ERLEDIGT am selben Tag)
 
 Im Ortslexikon stehen Postleitzahlen heute nur fuer **AT (19 225), DE (23 297) und SK (5 233)**.
 Fuer GB, IE, FR, NO, RO und SE gibt es **null** — dort traegt allein der Ortsname, und der ist der
@@ -89,6 +89,73 @@ zusaetzlichen Abruf. Details und die Gegenrechnung zur Detailseite in `docs/turn
 **Der Ausdruck, der Postleitzahlen im Freitext findet, konnte die britischen und irischen bis
 v0.453.0 gar nicht sehen** — er war rein numerisch, „CF31 3NR" und „D02 XY45" waren fuer ihn
 nichts. Das ist behoben; ohne den Import bringt es aber weiterhin nichts.
+
+**Erledigt am 2026-09-09 abends.** Fuer **24 Laender** eingespielt (PL, IN, PT, ES, TR, UA, LT,
+AR, RS, HR, LV, FI, EE, BG, BR, LU, BY, MD, CA, AZ, CY, MK, IS, MT); FR, RO, GB, DE, AT, IT, SE,
+CZ, SK, NO, CH, NL, HU, SI standen schon. Danach `geocode-missing` ueber den ganzen Bestand:
+**verortet 57 % -> 66 %**, 774 Turniere zusaetzlich auf der Karte, null Abrufe nach draussen.
+Einzelwerte: Portugal 60->95 %, Malta 7->79 %, Serbien 44->81 %, Kroatien 40->79 %, Argentinien
+45->70 %, Tuerkei 41->57 %, Estland 32->52 %. Vollstaendige Messung in `docs/turnierquellen.md`.
+
+Vier Laender bewegten sich NICHT, und drei davon sind eigene Punkte (siehe unten): Griechenland
+(GeoNames hat fuer `GR` keinen PLZ-Datensatz, 404 - hier hilft nichts), Ukraine (kyrillische
+Ortstexte), Deutschland (Normalisierungs-Fehler), Niederlande (strukturell ohne Spielort,
+bekannt).
+
+## [ ] „Muenchen" findet „Muenchen" nicht — Umschrift-Form fehlt im Lexikon (2026-09-09)
+
+`GeoTextNormalizer.Normalize` faltet `ue`-Umlaute auf den Grundvokal: „Muenchen" -> `munchen`.
+Die **ASCII-Umschrift** „Muenchen" wird dagegen zu `muenchen`, und die beiden treffen sich nie.
+chess-results schreibt diese Form regelmaessig (Quellsysteme ohne Umlaute). Gleiches gilt fuer
+`ae`/`oe`.
+
+Sichtbar geworden bei der PLZ-Messung: Deutschland bleibt bei **47 % verortet**, obwohl 23 297
+Postleitzahlen im Lexikon stehen — unter den unverorteten stehen `Muenchen`, `Kiel`, `Luebeck`.
+
+**Nicht** beim Suchen zusaetzlich `ue -> u` falten: das macht aus „Quedlinburg" `qudlinburg` und
+erfindet Treffer, wo keine sind. Der tragfaehige Weg ist eine ZWEITE normalisierte Schreibweise
+beim Import — jeder Lexikon-Name mit `ae/oe/ue/ss` bekommt zusaetzlich seine Umschrift-Form,
+damit beide Eingaben denselben Eintrag treffen. Braucht eine Migration (zweite Spalte + Index)
+und einen erneuten Gazetteer-Import, aber keinen Netzabruf zu einer Quelle.
+
+## [ ] Ukraine: kyrillische Ortstexte gegen ein lateinisches Lexikon (2026-09-09)
+
+29 596 ukrainische Postleitzahlen eingespielt, **Wirkung null** — die Quote bleibt auf 30 %. Die
+Ortstexte kommen kyrillisch von chess-results („Запоріжжя", „с.Гаївка, Волинська обл."), die
+GeoNames-Namen sind lateinisch. Betroffen sind 125 von 179 Eintraegen.
+
+Der Weg ist nicht mehr Daten, sondern die **Alternativnamen** von GeoNames
+(`alternateNamesV2.zip` traegt je Ort seine Schreibweisen inkl. Kyrillisch) — dieselbe zweite
+Spalte, die auch der Umschrift-Punkt oben braucht. Beide zusammen bauen, nicht getrennt.
+Betrifft ausserdem BLR (4 %) und teilweise BUL (28 %).
+
+## [ ] Katalonien laeuft als eigene Foederation und kennt sein Land nicht (2026-09-09)
+
+`FideCountryCodes.Map` hat bewusst keinen Eintrag fuer `CAT` — und die Regel „nicht raten" ist
+richtig. Katalonien ist aber kein Ratefall: es liegt in Spanien, und der Kommentar in der Datei
+erlaubt mehrere Foederations-Codes auf dasselbe Land ausdruecklich (ENG/SCO/WLS -> GB).
+`["CAT"] = "ES"` oeffnet den 121 katalanischen Eintraegen die 37 886 spanischen Postleitzahlen.
+
+Klein halten: die Quote liegt dort schon bei **80 %** (der Einwohnerzahl-Tiebreak faengt
+katalanische Ortsnamen gut), der Zugewinn ist also begrenzt. Ein Einzeiler mit Test, kein Projekt.
+
+**Nicht** dasselbe fuer `ACC` tun: dieser chess-results-Code ist kein Land. Unter ihm stehen
+Turniere aus Serbien, der Slowakei, Indien, England und Malaysia — 72 Eintraege, die per Bauart
+keinen Landfilter haben duerfen.
+
+## [ ] Entscheidung offen: `geocode-missing?force=true` nach dem PLZ-Import (2026-09-09)
+
+Der Import wirkte nur auf Eintraege OHNE Pin (`force=false`, reiner Zugewinn, 774 Turniere). Von
+den 6 013 verorteten haengen aber **5 221 am Ortsnamen** und nur **466 an einer Postleitzahl** —
+und ein Teil dieser Ortsnamen-Pins entstand, als die PLZ ihres Landes noch fehlten. Ein
+`force=true`-Lauf wuerde sie auf den genaueren Weg heben (Stadtmitte -> Spielstaette).
+
+**Warum das nicht einfach mitgemacht wurde**: `force=true` entfernt dabei auch Pins, die nach der
+heutigen Regel Rateentscheidungen sind. Das ist gewollt, aber in der Wirkung einseitig — ein
+geleerter Pin kommt durch einen erneuten Lauf nicht zurueck. Vor dem Ausfuehren also die Zahl
+schaetzen (wie viele Ortstexte der betroffenen Laender enthalten ueberhaupt eine PLZ?) und dem
+Nutzer die erwartete Bilanz nennen. `GeoSource` `Manual`, `SourceProvided` und `TeamHint` sind in
+jedem Fall unberuehrt.
 
 ## [x] Norwegen: wie viele Turniere landen ueberhaupt auf der Karte? (gemessen 2026-09-09)
 

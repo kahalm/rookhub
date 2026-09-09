@@ -1618,3 +1618,166 @@ auf. „Nicht erreichbar" war dort also womoeglich nie eine Aussage ueber eine S
 einen falschen Namen. Wer Malta wieder aufnimmt, faengt bei der Adresse an, nicht beim Netz — und
 traegt sie diesmal hier ein.
 
+
+## Runde 3 gegengeprueft: der Sweep bestaetigt die Recherche (2026-09-09, abends)
+
+Bis hierher stand in der Tabelle oben eine Spalte „auf chess-results", und sie stammte aus
+Einzelabfragen des Crawlers waehrend der Recherche. Inzwischen sind **alle 28 europaeischen
+Foederationen wirklich gesweept** und liegen im Bestand — dieselbe Zahl ist damit zum ersten Mal
+nachpruefbar statt zugesagt. Gemessen im GLEICHEN Fenster wie die Recherche (Enddatum zwischen
+2026-09-09 und 2027-07-31):
+
+| Land | Recherche sagte | Bestand sagt | Land | Recherche sagte | Bestand sagt |
+|---|---|---|---|---|---|
+| ESP | 180 | **188** | SWE | 23 | **24** |
+| SRB | 117 | **119** | LTU | 22 | **24** |
+| LAT | 73 | **73** | FIN | 17 | **19** |
+| CRO | 70 | **73** | TUR | 12 | **17** |
+| POR | 69 | **69** | MLT | 7 | **8** |
+| GRE | 52 | **55** | ISL | 7 | **7** |
+| UKR | 24 | **28** | MKD/CYP/EST/MNE | 4/3/2/1 | **4/3/2/2** |
+
+Die Abweichung liegt bei keinem Land ueber fuenf Eintraegen und immer in dieselbe Richtung (der
+Bestand ist minimal groesser, weil zwischen Recherche und Sweep zwei Tage lagen). **Damit steht
+kein einziges Urteil der dritten Runde auf einer falschen Zahl** — die Absagen bleiben Absagen.
+
+**Was dabei fast in die Irre fuehrte.** Die Gesamtzahlen im Bestand sind viel groesser als die
+Recherche-Zahlen (ESP 379 statt 188, TUR 371 statt 17), und der erste Reflex war, die Recherche
+sei zu niedrig gemessen. Sie war es nicht: der Sweep liest `[heute − 30 Tage, heute + 18 Monate]`,
+die Recherche las bis Juli 2027. Der Unterschied sind fast ausschliesslich **schon beendete**
+Turniere. Wer Bestandszahlen mit Recherchezahlen vergleicht, muss dasselbe Fenster nehmen, sonst
+vergleicht er Archiv mit Kalender.
+
+### Der brauchbare Massstab ist der VORLAUF, nicht die Menge
+
+Genau aus diesem Missverstaendnis faellt die Zahl heraus, die fuer die Frage „braucht dieses Land
+einen eigenen Kalender?" wirklich zaehlt: **kuenftige Turniere geteilt durch die der letzten 30
+Tage.** Sie sagt, wie weit chess-results in diesem Land ueberhaupt nach vorn sieht. Ein
+Verzeichnis lebt vom Vorlauf; ein Archiv hilft niemandem, der ein Turnier sucht.
+
+| Land | letzte 30 Tage | kuenftig (18 Mon.) | Vorlauf | Kalender angebunden? |
+|---|---|---|---|---|
+| TUR | 354 | 17 | **0,05** | nein |
+| EST | 23 | 2 | 0,09 | nein (unerreichbar) |
+| UKR | 151 | 28 | 0,19 | nein (Kalender tot) |
+| ISL | 22 | 7 | 0,32 | nein |
+| GRE | 102 | 56 | 0,55 | nein |
+| LTU | 44 | 24 | 0,55 | nein |
+| FIN | 26 | 19 | 0,73 | nein |
+| ESP | 191 | 188 | 0,98 | nein |
+| CZE | 177 | 179 | 1,01 | **ja** |
+| GER | 311 | 337 | 1,08 | **ja** |
+| CRO | 58 | 73 | 1,26 | nein |
+| SRB | 84 | 119 | 1,42 | nein |
+| SUI | 75 | 109 | 1,45 | nein (gesperrt) |
+| POR | 47 | 70 | 1,49 | nein |
+| SLO | 55 | 84 | 1,53 | **ja** |
+| LAT | 41 | 73 | 1,78 | nein |
+| HUN | 99 | 204 | 2,06 | **ja** |
+| SVK | 58 | 185 | 3,19 | **ja** |
+| AUT | 74 | 304 | 4,11 | **ja** (Ankuendigungskalender) |
+| ITA | 28 | 350 | **12,50** | **ja** |
+
+Die Rangfolge liest sich von unten nach oben wie die Liste der angebundenen Quellen — Italien,
+Oesterreich, Slowakei, Ungarn, Slowenien stehen oben, und genau dort ist ein Kalender dran. Das
+ist keine Bestaetigung des Vorgehens, sondern die Wirkung: **ein Verbandskalender IST der
+Vorlauf**, weil er Monate vorher gepflegt wird und die Turniersuche sich erst beim
+Swiss-Manager-Upload fuellt. Italien mit 350 kuenftigen gegen 28 vergangenen ist der Beweis in
+einer Zeile.
+
+**Die unangenehme Erkenntnis steht am anderen Ende**: die drei Laender mit dem schlechtesten
+Vorlauf (Tuerkei 0,05, Ukraine 0,19, Griechenland 0,55) sind genau die drei, deren
+Verbandskalender die Recherche als unbrauchbar verworfen hat — tote Seite, Archiv der eigenen
+Meisterschaften, Jahrestabelle ohne Vorlauf. Wo es am meisten fehlt, gibt es nichts zu holen. Das
+ist kein Ergebnis, das man sich wuenscht, aber es ist gemessen.
+
+### Drei Urteile, die auf dieser Grundlage anders ausfallen
+
+**Finnland: ⚠️ → ✅.** Die Begruendung „hohe Ueberschneidung" haelt der Zahl nicht stand: **270
+kuenftige** im Verbandskalender gegen **19** im Bestand. Neunzehn Eintraege koennen sich mit 270
+nicht wesentlich ueberschneiden — das ist die groesste absolute Luecke, die in Europa noch offen
+ist, groesser als die niederlaendische (177 gegen 12), die gebaut wurde. Kosten: Freitext-HTML
+ohne JSON, Adresse ohne PLZ auf 83 % der Detailseiten. Zwei Fallen sind schon notiert und
+brauchen je einen Test — der **Saisonumbruch** (Januar-Termine gehoeren ins Folgejahr) und die
+**Absagen im Fliesstext** („PERUTTU!"), die sonst als laufende Turniere eingelesen werden.
+
+**Schweden: ⚠️ → ✅, mit derselben Einschraenkung wie die Niederlande.** 181 kuenftige gegen 24.
+Der Ausschlussgrund war „0 von 183 mit Ortsfeld" — aber genau das gilt fuer den
+**niederlaendischen** Kalender auch, und der ist angebunden und laeuft: seine Eintraege stehen in
+Liste und Kalender, nicht auf der Karte. Denselben Grund einmal als Ausschluss und einmal als
+hinnehmbare Schwaeche zu werten, ist nicht haltbar. Schweden ist ausserdem die billigere Quelle
+(offene Events-Calendar-API, vier Seiten, `Crawl-delay: 20` ≈ 80 s gegen 45 Minuten
+Detailseiten in den Niederlanden). Zu beachten: 33 der 76 Ausschreibungen sind **Liga-Spieltage**,
+je ein Eintrag pro Runde — dieselbe Falle wie bei den chess-results-Ligen, und der Rundenplan
+loest sie schon.
+
+**Island: ⚠️ → ✅ unter Vorbehalt.** Der Vorbehalt war „robots.txt erlaubt nur den aktuellen
+Monat". Das ist kein Ausschluss, sondern die Beschreibung eines **naechtlichen** Laufs: 54
+Eintraege im laufenden Monat gegen 7 im Bestand, und bei einem Vorlauf von 0,32 ist ein
+rollierender Monat genau das, was dort fehlt. Wer es baut, holt jede Nacht den aktuellen Monat und
+nichts sonst — Navigation bleibt gesperrt.
+
+**Die Tuerkei bleibt ⚠️, aber aus einem anderen Grund als notiert.** „Fast alles schon vorbei" ist
+ein Befund ueber den ZEITPUNKT der Messung, nicht ueber die Quelle: eine Jahrestabelle, im
+September gelesen, ist naturgemaess zu drei Vierteln Vergangenheit. Bei einem Vorlauf von 0,05 —
+dem schlechtesten Europas — ist die Tuerkei der Fall, der eine zweite Messung verdient, sobald die
+Tabelle fuer 2027 steht. Vorher nichts bauen.
+
+**Spanien bleibt ❌ — aber die Absage gilt dem falschen Adressaten.** Der Bundesverband fuehrt nur
+den institutionellen Terminplan, das steht. Der Bestand zeigt aber, dass chess-results Spanien mit
+einem Vorlauf von 0,98 halb blind sieht, und **Katalonien laeuft dort als eigene Foederation**
+(`CAT`, 121 Eintraege). Der spanische Weg sind also die Regionalverbaende, nicht der Dachverband —
+das ist eine eigene Recherche-Runde und keine Bau-Aufgabe.
+
+### Was die Karte wirklich gebremst hat: das Lexikon, nicht die Quellen
+
+Die Verortungsquote der neu gesweepten Laender war durchweg schlecht (Malta 7 %, Kroatien 40 %,
+Serbien 44 %, Tuerkei 41 %). Die Ursache ist keine der Quellen und kein Parser, sondern ein
+**leerer Postleitzahlen-Bestand**: im Lexikon standen PLZ nur fuer 14 Laender. Der Import ist ein
+Aufruf je Land, braucht **kein Netz zur Quelle** und wirkt rueckwirkend auf den ganzen Bestand.
+
+Am 2026-09-09 fuer **24 Laender** eingespielt (GeoNames, CC BY 4.0):
+
+```
+PL 72 915   IN 155 605   PT 206 962   ES 37 886   TR 36 389   UA 29 596
+LT 21 879   AR 20 283   RS  1 155   HR  6 795   LV  6 145   FI  3 594
+EE  5 413   BG  5 332   BR  5 552   LU  4 531   BY  3 139   MD  1 802
+CA  1 670   AZ  1 251   CY  1 133   MK    220   IS    195   MT    141
+```
+
+Wirkung, gemessen mit `POST /api/admin/tournament-directory/geocode-missing` (28 s + 39 s, null
+Abrufe nach draussen): **verortet 57 % → 66 %**, also 774 Turniere zusaetzlich auf der Karte.
+
+| Land | vorher | nachher | | Land | vorher | nachher |
+|---|---|---|---|---|---|---|
+| POR | 60 % | **95 %** | | ARG | 45 % | **70 %** |
+| MLT | 7 % | **79 %** | | TUR | 41 % | **57 %** |
+| SRB | 44 % | **81 %** | | EST | 32 % | **52 %** |
+| CRO | 40 % | **79 %** | | BUL | 18 % | **28 %** |
+
+Vier Laender bewegen sich dabei **nicht**, und jedes aus einem eigenen Grund — die Liste ist
+wichtiger als der Durchschnitt:
+
+- **Griechenland (22 %)**: GeoNames hat fuer `GR` ueberhaupt keinen PLZ-Datensatz (404). Hier
+  hilft kein Import.
+- **Ukraine (30 %)**: 29 596 PLZ eingespielt, **null** Wirkung. Die Ortstexte sind **kyrillisch**
+  („Запоріжжя", „с.Гаївка, Волинська обл."), das Lexikon lateinisch. Das braucht
+  Alternativnamen-Abgleich, nicht mehr Daten.
+- **Niederlande (1 %)**: strukturell ohne Spielort, bekannt und bewusst.
+- **Deutschland (47 %)** trotz 23 297 PLZ: siehe den naechsten Punkt, das ist ein Fehler.
+
+### Ein Normalisierungs-Fehler, den erst diese Messung sichtbar machte
+
+Deutschland bleibt bei 47 %, obwohl das Lexikon vollstaendig ist. Unter den unverorteten
+Eintraegen stehen Ortstexte, die eigentlich trivial sind: `Kiel`, `Lübeck`, `Karlsruhe, GER` —
+und **`Muenchen`**.
+
+`GeoTextNormalizer.Normalize` faltet `ü → u`. „München" wird damit zu `munchen`, die
+ASCII-Umschrift „Muenchen" aber zu `muenchen`. Die beiden treffen sich nie. Genau diese Umschrift
+schreibt chess-results aber regelmaessig, weil sie aus Systemen ohne Umlaute kommt. Dasselbe gilt
+fuer `ae` und `oe`.
+
+Die naheliegende Behebung — beim Suchen zusaetzlich `ue → u` falten — ist **falsch**: sie macht
+aus „Quedlinburg" `qudlinburg`. Der tragfaehige Weg ist, beim IMPORT eine zweite normalisierte
+Schreibweise mitzuschreiben (Namen mit `ä/ö/ü/ß` bekommen zusaetzlich ihre Umschrift-Form), damit
+beide Eingaben denselben Eintrag treffen. Steht in `TODO.md`.
