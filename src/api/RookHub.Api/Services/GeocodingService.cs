@@ -143,8 +143,11 @@ public class GeocodingService
         // Ohne diese Bestaetigung gewinnt eine HAUSNUMMER, die zufaellig wie eine Postleitzahl
         // aussieht: „Wienerstrasse 351, 8051 Graz" hat mit 351 eine gueltige PLZ irgendwo sonst.
         var normalizedText = GeoTextNormalizer.Normalize(locationText);
-        var textCandidates = GeoTextNormalizer.PlaceCandidates(locationText);
-        var confirmed = matches.Where(m => Confirms(normalizedText, textCandidates, m.Name)).ToList();
+        var transcribedText = GeoTextNormalizer.NormalizeTranscribed(locationText);
+        var textCandidates = GeoTextNormalizer.PlaceCandidatePairs(locationText);
+        var confirmed = matches
+            .Where(m => Confirms(normalizedText, transcribedText, textCandidates, m))
+            .ToList();
 
         // Bestaetigte Treffer sind die Spielorte. Ist keiner bestaetigt, bleibt es bei EINEM: der
         // spaetesten Ziffernfolge im Text — in Adressen steht die Hausnummer vor der Postleitzahl.
@@ -168,21 +171,28 @@ public class GeocodingService
 
     private async Task<GeocodeResult?> ResolveByPlaceNameAsync(string? locationText, string? iso2, CancellationToken ct)
     {
-        var candidates = GeoTextNormalizer.PlaceCandidates(locationText);
-        if (candidates.Count == 0) return null;
+        // BEIDE Schreibweisen: „Muenchen" im Text findet „München" im Lexikon nur ueber die
+        // Umschrift-Spalte, ein kyrillischer Ortstext ausschliesslich darueber.
+        var pairs = GeoTextNormalizer.PlaceCandidatePairs(locationText);
+        if (pairs.Count == 0) return null;
 
-        var query = _db.GeoPlaces.AsNoTracking().Where(g => candidates.Contains(g.NameNormalized));
+        var normalized = pairs.Select(p => p.Normalized).Where(n => n.Length > 0).ToList();
+        var transcribed = pairs.Select(p => p.Transcribed).Where(n => n.Length > 0).ToList();
+
+        var query = _db.GeoPlaces.AsNoTracking().Where(
+            g => normalized.Contains(g.NameNormalized) || transcribed.Contains(g.NameTranscribed));
         if (iso2 is not null) query = query.Where(g => g.Country == iso2);
 
         var matches = await query.ToListAsync(ct);
         if (matches.Count == 0) return null;
 
-        // PlaceCandidates liefert die laengsten Wortfolgen zuerst: "bad ischl" muss "ischl"
+        // PlaceCandidatePairs liefert die laengsten Wortfolgen zuerst: "bad ischl" muss "ischl"
         // schlagen, sonst landet der Pin im falschen Ort.
-        var winner = candidates.FirstOrDefault(c => matches.Any(m => m.NameNormalized == c));
-        if (winner is null) return null;
+        var index = pairs.FindIndex(p => matches.Any(m => Hits(m, p)));
+        if (index < 0) return null;
 
-        var group = matches.Where(m => m.NameNormalized == winner).ToList();
+        var winner = pairs[index];
+        var group = matches.Where(m => Hits(m, winner)).ToList();
         return await ChooseAsync(group, locationText, ct);
     }
 
@@ -366,10 +376,13 @@ public class GeocodingService
         if (iso2 is null || string.IsNullOrWhiteSpace(state) || state.Trim() == "-") return null;
 
         var normalized = GeoTextNormalizer.Normalize(state);
-        if (normalized.Length < 3) return null;
+        var transcribed = GeoTextNormalizer.NormalizeTranscribed(state);
+        // Ein kyrillischer Regionsname ergibt in der ersten Form NICHTS — dann traegt die zweite.
+        if (normalized.Length < 3 && transcribed.Length < 3) return null;
 
         var region = await _db.GeoPlaces.AsNoTracking()
-            .Where(g => g.Country == iso2 && g.Kind == GeoPlaceKind.Region && g.NameNormalized == normalized)
+            .Where(g => g.Country == iso2 && g.Kind == GeoPlaceKind.Region
+                        && (g.NameNormalized == normalized || g.NameTranscribed == transcribed))
             .FirstOrDefaultAsync(ct);
 
         return region is null ? null : new GeocodeResult(region.Lat, region.Lon, GeoSource.Region, region.Name);
@@ -388,11 +401,38 @@ public class GeocodingService
     /// <para>Vier Zeichen als Untergrenze, damit „st" oder „bad" nicht auf jeden gleichnamigen
     /// Ort passt.</para>
     /// </summary>
-    private static bool Confirms(string normalizedText, List<string> textCandidates, string placeName)
+    /// <summary>
+    /// Steht der Ortsname des Treffers auch im Text? Geprueft in BEIDEN Schreibweisen — „Muenchen"
+    /// im Text bestaetigt „München" im Lexikon nur ueber die Umschrift.
+    /// </summary>
+    private static bool Confirms(string normalizedText, string transcribedText,
+        List<(string Normalized, string Transcribed)> textCandidates, GeoPlace hit)
     {
-        var name = GeoTextNormalizer.Normalize(placeName);
-        if (name.Length == 0) return false;
-        if (normalizedText.Contains(name)) return true;
-        return textCandidates.Any(c => c.Length >= 4 && name.StartsWith(c, StringComparison.Ordinal));
+        var name = GeoTextNormalizer.Normalize(hit.Name);
+        var transcribedName = hit.NameTranscribed.Length > 0
+            ? hit.NameTranscribed
+            : GeoTextNormalizer.NormalizeTranscribed(hit.Name);
+
+        // Ein Treffer OHNE vergleichbaren Namen kann die Bestaetigung nie verdienen — bis 0.456.0
+        // war das stillschweigend ein Nein, und fuer jede Schrift, die die Umschrift nicht abdeckt
+        // (Georgisch, Armenisch, Hebraeisch) blieb der Postleitzahl-Weg damit wirkungslos. Dann
+        // entscheidet die LAENGE der Ziffernfolge: eine Hausnummer hat selten vier Stellen, eine
+        // Postleitzahl fast immer.
+        if (name.Length == 0 && transcribedName.Length == 0)
+            return (hit.PostalCode?.Length ?? 0) >= 4;
+
+        if (name.Length > 0 && normalizedText.Contains(name)) return true;
+        if (transcribedName.Length > 0 && transcribedText.Contains(transcribedName)) return true;
+
+        return textCandidates.Any(c =>
+            (c.Normalized.Length >= 4 && name.Length > 0
+                && name.StartsWith(c.Normalized, StringComparison.Ordinal))
+            || (c.Transcribed.Length >= 4 && transcribedName.Length > 0
+                && transcribedName.StartsWith(c.Transcribed, StringComparison.Ordinal)));
     }
+
+    /// <summary>Trifft dieser Kandidat den Eintrag — in der einen oder der anderen Schreibweise?</summary>
+    private static bool Hits(GeoPlace place, (string Normalized, string Transcribed) candidate) =>
+        (candidate.Normalized.Length > 0 && place.NameNormalized == candidate.Normalized)
+        || (candidate.Transcribed.Length > 0 && place.NameTranscribed == candidate.Transcribed);
 }

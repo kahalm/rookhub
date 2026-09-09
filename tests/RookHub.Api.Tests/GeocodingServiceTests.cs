@@ -26,7 +26,12 @@ public class GeocodingServiceTests : IDisposable
 
     private void Seed(params GeoPlace[] places)
     {
-        foreach (var p in places) p.NameNormalized = GeoTextNormalizer.Normalize(p.Name);
+        // Beide Schreibweisen, genau wie der Gazetteer-Import sie schreibt.
+        foreach (var p in places)
+        {
+            p.NameNormalized = GeoTextNormalizer.Normalize(p.Name);
+            p.NameTranscribed = GeoTextNormalizer.NormalizeTranscribed(p.Name);
+        }
         _db.GeoPlaces.AddRange(places);
         _db.SaveChanges();
     }
@@ -39,6 +44,131 @@ public class GeocodingServiceTests : IDisposable
 
     private static GeoPlace Region(string country, string name, double lat, double lon) =>
         new() { Country = country, Name = name, Lat = lat, Lon = lon, Kind = GeoPlaceKind.Region };
+
+    // ----- Zweite Schreibweise (Umschrift) ----------------------------------
+
+    /// <summary>
+    /// „Muenchen" im Ortstext gegen „München" im Lexikon. Die erste Suchform faltet den Umlaut zu
+    /// <c>munchen</c>, die ausgeschriebene Form ergibt <c>muenchen</c> — die beiden trafen sich
+    /// nie. Am 2026-09-09 auf Dev: 53 unverortete deutsche Eintraege scheiterten daran.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_AusgeschriebenerUmlautImText_findetDenOrt()
+    {
+        Seed(City("DE", "München", 48.1372, 11.5755, 1_450_000));
+
+        var result = await _service.ResolveAsync("Muenchen", null, "GER");
+
+        Assert.NotNull(result);
+        Assert.Equal("München", result!.PlaceName);
+    }
+
+    /// <summary>Und die Gegenrichtung bleibt selbstverstaendlich erhalten.</summary>
+    [Fact]
+    public async Task ResolveAsync_UmlautImText_findetDenOrtWeiterhin()
+    {
+        Seed(City("DE", "München", 48.1372, 11.5755, 1_450_000));
+
+        var result = await _service.ResolveAsync("München", null, "GER");
+
+        Assert.Equal("München", result!.PlaceName);
+    }
+
+    /// <summary>
+    /// Die Gegenprobe zur Umschrift: beim SUCHEN <c>ue</c> zu <c>u</c> zu falten waere falsch, es
+    /// machte aus „Quedlinburg" ein <c>qudlinburg</c>. Die Umschrift entsteht deshalb beim IMPORT
+    /// und nur dort.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_UeMittenImWort_bleibtUnangetastet()
+    {
+        Seed(City("DE", "Quedlinburg", 51.7889, 11.1372, 24_000));
+
+        Assert.Equal("Quedlinburg", (await _service.ResolveAsync("Quedlinburg", null, "GER"))!.PlaceName);
+        Assert.Null(await _service.ResolveAsync("Qudlinburg", null, "GER"));
+    }
+
+    /// <summary>
+    /// Kyrillischer Ortstext gegen kyrillisches Lexikon. Beide Seiten ergaben in der ersten
+    /// Suchform eine LEERE Zeichenkette, weil der Aufraeumteil alles ausser <c>[a-z0-9]</c>
+    /// verwirft. Auf Dev trugen 29 547 von 29 571 ukrainischen Postleitzahl-Zeilen deshalb einen
+    /// leeren normalisierten Namen.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_KyrillischerOrtstext_findetDieStadt()
+    {
+        Seed(City("UA", "Київ", 50.4547, 30.5238, 2_800_000));
+
+        var result = await _service.ResolveAsync("Київ", null, "UKR");
+
+        Assert.NotNull(result);
+        Assert.Equal("Київ", result!.PlaceName);
+    }
+
+    /// <summary>Und lateinisch geschriebener Text gegen dasselbe kyrillische Lexikon.</summary>
+    [Fact]
+    public async Task ResolveAsync_LateinischerText_findetDieKyrillischeStadt()
+    {
+        Seed(City("UA", "Київ", 50.4547, 30.5238, 2_800_000));
+
+        var result = await _service.ResolveAsync("Kyiv", null, "UKR");
+
+        Assert.Equal("Київ", result!.PlaceName);
+    }
+
+    /// <summary>
+    /// Der haeufigste ukrainische Fall: der Ortstext kommt kyrillisch von chess-results, der
+    /// GeoNames-Ortsname steht LATEINISCH im Lexikon (398 von 400 ukrainischen Ortszeilen). Die
+    /// Umschrift trifft beide, weil GeoNames fuer ukrainische Namen dieselbe Konvention benutzt.
+    /// Betroffen waren 125 von 179 Eintraegen.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_KyrillischerText_findetDenLateinischenLexikonnamen()
+    {
+        Seed(City("UA", "Zaporizhzhia", 47.8388, 35.1396, 710_000));
+
+        var result = await _service.ResolveAsync("Запоріжжя", null, "UKR");
+
+        Assert.NotNull(result);
+        Assert.Equal("Zaporizhzhia", result!.PlaceName);
+    }
+
+    /// <summary>
+    /// Der Fall, der die 29 596 eingespielten ukrainischen Postleitzahlen wirkungslos machte: der
+    /// Postleitzahl-Weg verlangt eine Bestaetigung durch den Ortsnamen, und die konnte bei einem
+    /// leeren Namen NIE gelingen.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_KyrillischeAdresseMitPostleitzahl_wirdBestaetigt()
+    {
+        Seed(Postal("UA", "01001", "Київ", 50.4547, 30.5238),
+             Postal("UA", "331", "Десь", 47.0, 35.0));
+
+        var result = await _service.ResolveAsync("вул. Хрещатик 331, 01001 Київ", null, "UKR");
+
+        Assert.NotNull(result);
+        Assert.Equal(GeoSource.PostalCode, result!.Source);
+        Assert.Equal("Київ", result.PlaceName);
+    }
+
+    /// <summary>
+    /// Eine Schrift, die die Umschrift NICHT abdeckt (hier Georgisch): dann gibt es nichts zu
+    /// vergleichen, und die Bestaetigung kann nicht verdient werden. Statt das stillschweigend als
+    /// Nein zu behandeln, entscheidet die Laenge der Ziffernfolge — eine Hausnummer hat selten vier
+    /// Stellen.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_OhneVergleichbarenNamen_zaehltDieLaengeDerZiffernfolge()
+    {
+        Seed(Postal("GE", "0105", "თბილისი", 41.6938, 44.8015));
+
+        var result = await _service.ResolveAsync("რუსთაველის 12, 0105", null, "GEO");
+
+        Assert.NotNull(result);
+        Assert.Equal(GeoSource.PostalCode, result!.Source);
+    }
+
+    // ----- Postleitzahlen ---------------------------------------------------
 
     [Fact]
     public async Task ResolveAsync_PostalCodeInAddress_Wins()

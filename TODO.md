@@ -102,7 +102,7 @@ Vier Laender bewegten sich NICHT, und drei davon sind eigene Punkte (siehe unten
 Ortstexte), Deutschland (Normalisierungs-Fehler), Niederlande (strukturell ohne Spielort,
 bekannt).
 
-## [ ] „Muenchen" findet „Muenchen" nicht — Umschrift-Form fehlt im Lexikon (2026-09-09)
+## [x] „Muenchen" findet „Muenchen" nicht — Umschrift-Form fehlt im Lexikon (2026-09-09, ERLEDIGT am selben Tag in 0.456.0)
 
 `GeoTextNormalizer.Normalize` faltet `ue`-Umlaute auf den Grundvokal: „Muenchen" -> `munchen`.
 Die **ASCII-Umschrift** „Muenchen" wird dagegen zu `muenchen`, und die beiden treffen sich nie.
@@ -118,7 +118,14 @@ beim Import — jeder Lexikon-Name mit `ae/oe/ue/ss` bekommt zusaetzlich seine U
 damit beide Eingaben denselben Eintrag treffen. Braucht eine Migration (zweite Spalte + Index)
 und einen erneuten Gazetteer-Import, aber keinen Netzabruf zu einer Quelle.
 
-## [ ] Ukraine: kyrillische Ortstexte gegen ein lateinisches Lexikon (2026-09-09)
+**Erledigt in 0.456.0** genau so: zweite Spalte `GeoPlace.NameTranscribed` samt Index und
+Migration, gefuellt beim Import ueber `GeoTextNormalizer.NormalizeTranscribed`, und BEIDE Formen
+werden auf BEIDEN Seiten verglichen (Ortsnamen-Suche, Postleitzahl-Bestaetigung, Regionen). Den
+erneuten Gazetteer-Import braucht es NICHT: `POST /api/admin/tournament-directory/gazetteer/transcribe`
+rechnet die Spalte fuer den vorhandenen Bestand nach, ohne eine einzige Anfrage nach draussen.
+Beim Suchen wird weiterhin NICHT gefaltet — dafuer gibt es einen Test mit „Quedlinburg".
+
+## [x] Ukraine: kyrillische Ortstexte gegen ein lateinisches Lexikon (2026-09-09, ERLEDIGT am selben Tag in 0.456.0)
 
 29 596 ukrainische Postleitzahlen eingespielt, **Wirkung null** — die Quote bleibt auf 30 %. Die
 Ortstexte kommen kyrillisch von chess-results („Запоріжжя", „с.Гаївка, Волинська обл."), die
@@ -128,6 +135,20 @@ Der Weg ist nicht mehr Daten, sondern die **Alternativnamen** von GeoNames
 (`alternateNamesV2.zip` traegt je Ort seine Schreibweisen inkl. Kyrillisch) — dieselbe zweite
 Spalte, die auch der Umschrift-Punkt oben braucht. Beide zusammen bauen, nicht getrennt.
 Betrifft ausserdem BLR (4 %) und teilweise BUL (28 %).
+
+**Erledigt in 0.456.0, und OHNE die Alternativnamen von GeoNames.** Die Diagnose war praeziser als
+gedacht (Messung der zweiten Instanz): der Aufraeumteil der Normalisierung ersetzt alles ausser
+`[a-z0-9]` durch Leerzeichen, Kyrillisch fiel also RESTLOS weg — 29 547 der 29 571 ukrainischen
+Postleitzahl-Zeilen trugen einen LEEREN normalisierten Namen, und weil der Postleitzahl-Weg eine
+Bestaetigung durch den Ortsnamen verlangt, konnte die dort nie gelingen. Eine Umschrift
+Kyrillisch->Latein in derselben zweiten Spalte loest beide Richtungen: kyrillischer Text gegen
+kyrillische PLZ-Zeile (beide Seiten ergeben `kyiv`) UND kyrillischer Text gegen den lateinischen
+GeoNames-Ortsnamen (398 von 400 Ortszeilen) — „Запоріжжя" und „Zaporizhzhia" ergeben beide
+`zaporizhzhia`, weil GeoNames fuer ukrainische Namen dieselbe Konvention benutzt. Griechisch ist
+mit dabei. Was die Tabelle nicht abdeckt (Georgisch, Armenisch, Hebraeisch) hat jetzt eine eigene
+Regel: ein Treffer OHNE vergleichbaren Namen kann die Bestaetigung nicht verdienen, dort
+entscheidet die Laenge der Ziffernfolge (vier Stellen sind eine Postleitzahl, drei koennen eine
+Hausnummer sein).
 
 ## [ ] Katalonien laeuft als eigene Foederation und kennt sein Land nicht (2026-09-09)
 

@@ -180,6 +180,54 @@ public class AdminTournamentDirectoryController : BaseApiController
         return result.Error is null ? Ok(result) : StatusCode(502, result);
     }
 
+    /// <summary>
+    /// Fuellt die zweite Schreibweise (<c>GeoPlace.NameTranscribed</c>) fuer den vorhandenen
+    /// Bestand nach — EINMALIG nach dem Deploy von 0.456.0.
+    ///
+    /// <para>Warum es das ueberhaupt gibt: die Spalte entsteht beim Import, und der laedt die
+    /// Daten bei GeoNames herunter. Der Bestand umfasst 24 Laender und ueber 200 000 Zeilen; sie
+    /// nur wegen einer berechneten Spalte alle neu zu holen, waere eine halbe Stunde
+    /// Fremdverkehr fuer eine Rechnung, die lokal in Sekunden laeuft. Die Schreibweise wird aus
+    /// dem gespeicherten <c>Name</c> berechnet, es geht keine Anfrage nach draussen.</para>
+    ///
+    /// <para>Mehrfach ausfuehrbar: gefuellte Zeilen bleiben unberuehrt.</para>
+    /// </summary>
+    [HttpPost("gazetteer/transcribe")]
+    public async Task<IActionResult> Transcribe(CancellationToken ct)
+    {
+        const int batch = 5000;
+        var written = 0;
+        var lastId = 0;
+
+        // Durchgezaehlt wird ueber die Id, NICHT ueber „Spalte noch leer". Eine Zeile, deren Name
+        // in einer Schrift steht, die die Umschrift nicht abdeckt (Georgisch, Armenisch,
+        // Hebraeisch), bleibt naemlich zu Recht leer — genau das heisst „nichts Vergleichbares",
+        // und eine Schleife ueber die leeren Zeilen kaeme nie zum Ende.
+        while (!ct.IsCancellationRequested)
+        {
+            var rows = await _db.GeoPlaces
+                .Where(g => g.Id > lastId)
+                .OrderBy(g => g.Id)
+                .Take(batch)
+                .ToListAsync(ct);
+            if (rows.Count == 0) break;
+            lastId = rows[^1].Id;
+
+            foreach (var row in rows)
+            {
+                var transcribed = GeoTextNormalizer.NormalizeTranscribed(row.Name);
+                if (transcribed.Length > 200) transcribed = transcribed[..200];
+                if (transcribed == row.NameTranscribed) continue;
+                row.NameTranscribed = transcribed;
+                written++;
+            }
+            await _db.SaveChangesAsync(ct);
+            _db.ChangeTracker.Clear();
+        }
+
+        return Ok(new { written });
+    }
+
     /// <summary>Die Eintraege, die der Gazetteer nicht verorten konnte - Arbeitsliste fuer Korrekturen.</summary>
     [HttpGet("ungeocoded")]
     public async Task<IActionResult> Ungeocoded([FromQuery] int limit = 100, CancellationToken ct = default)

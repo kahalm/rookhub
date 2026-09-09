@@ -463,6 +463,7 @@ gibt es 19-mal).
 | POST | `/api/admin/tournament-directory/sweep` | Sweep fuer 1–20 Foederationen sofort ausfuehren |
 | POST | `/api/admin/tournament-directory/gazetteer/postal/{iso2}` | GeoNames-PLZ eines Landes importieren |
 | POST | `/api/admin/tournament-directory/gazetteer/cities` | GeoNames-Ortsliste (cities15000) importieren |
+| POST | `/api/admin/tournament-directory/gazetteer/transcribe` | **Einmalig nach dem Deploy von 0.456.0**: rechnet die zweite Schreibweise (`GeoPlace.NameTranscribed`) fuer den vorhandenen Bestand nach. Rein lokal, kein Netzabruf; mehrfach ausfuehrbar |
 | GET | `/api/admin/tournament-directory/ungeocoded` | Eintraege ohne Koordinaten (Arbeitsliste) |
 | POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen — **ohne `limit` den GANZEN Bestand**: der Lauf braucht kein Netz (lokales Lexikon, 6598 Eintraege in 14 s), und ein Deckel liefert KEINE zweite Portion (die Auswahl hat keine Fortschrittsmarke, ein zweiter Aufruf sieht wieder dieselben ersten N — am 2026-09-09 live erlebt). **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual`, `SourceProvided` und `TeamHint` bleiben in jedem Fall unberuehrt — der Vereinsnamen-Beleg ist eine Auskunft, die die Namensregel nicht reproduzieren kann |
 | POST | `/api/admin/tournament-directory/backfill-sources` | Herkunftsvermerk fuer den Altbestand nachtragen (jeder bestehende Eintrag stammt aus chess-results). Braucht kein Netz; der Sweep tut es von selbst, aber erst nach einer Rotationswoche |
@@ -1572,6 +1573,18 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Wichtige Konventionen
 
+- **Ein Ortsname steht im Lexikon in ZWEI Schreibweisen** (seit 0.456.0) – `GeoPlace.NameNormalized` faltet
+  Umlaute auf den Grundvokal (`München` -> `munchen`), `GeoPlace.NameTranscribed` haelt die ASCII-UMSCHRIFT
+  (`muenchen`) und schreibt nichtlateinische Schriften um (`Київ` -> `kyiv`, `Αθήνα` -> `athina`). Gesucht wird in
+  BEIDEN Spalten mit BEIDEN Textformen — Ortsnamen-Suche, Postleitzahl-Bestaetigung, Regionen. Zwei Gruende: (1)
+  chess-results schreibt regelmaessig „Muenchen", und das traf `munchen` nie (53 unverortete deutsche Eintraege);
+  (2) der Aufraeumteil der Normalisierung verwirft alles ausser `[a-z0-9]`, Kyrillisch fiel damit RESTLOS weg — 29 547
+  von 29 571 ukrainischen PLZ-Zeilen trugen einen leeren Namen, und die Bestaetigung des PLZ-Wegs konnte dort nie
+  gelingen. **Beim SUCHEN wird NICHT gefaltet** (`ue -> u` machte aus „Quedlinburg" ein `qudlinburg`) — die zweite Form
+  entsteht beim IMPORT. Nach einem Deploy einmal
+  `POST /api/admin/tournament-directory/gazetteer/transcribe` laufen lassen, sonst ist die Spalte fuer den
+  Altbestand leer. Ein Treffer ohne vergleichbaren Namen in BEIDEN Formen (Georgisch, Armenisch, Hebraeisch)
+  bestaetigt sich ueber die LAENGE der Ziffernfolge; vorher war das stillschweigend ein Nein.
 - **Verschwundene Turniere: NUR die Quelle, die ein Turnier fuehrt, darf es zurueckziehen** (seit 0.454.1) –
   Die Turniersuche zaehlt `MissedSweeps` und meldet ab dem zweiten Fehlschlag „abgesagt" (mit Benachrichtigung),
   **beschraenkt auf Eintraege MIT chess-results-Nummer**: die 15 Verbandskalender und der FIDE-Kalender fuehren

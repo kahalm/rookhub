@@ -219,6 +219,69 @@ public class GeoTextNormalizerTests
             GeoTextNormalizer.SlashParts("Vereinstreff St. Veit/Glan"));
         Assert.Empty(GeoTextNormalizer.SlashParts(null));
     }
+    // ----- Zweite Schreibweise ----------------------------------------------
+
+    [Theory]
+    // Deutsche Umlaute als ASCII-Umschrift, nicht gefaltet.
+    [InlineData("München", "muenchen")]
+    [InlineData("Lübeck", "luebeck")]
+    [InlineData("Zürich", "zuerich")]
+    [InlineData("Gießen", "giessen")]
+    // Ein Wort ohne Umlaut bleibt, wie es ist — sonst wuerde aus „Quedlinburg" ein „qudlinburg".
+    [InlineData("Quedlinburg", "quedlinburg")]
+    // Nordisch nach dortiger Konvention.
+    [InlineData("Ålesund", "aalesund")]
+    [InlineData("Køge", "koege")]
+    // Kyrillisch: in der ersten Suchform faellt das restlos weg.
+    [InlineData("Київ", "kyiv")]
+    [InlineData("Харків", "kharkiv")]
+    [InlineData("Београд", "beohrad")]
+    // Griechisch.
+    [InlineData("Αθήνα", "athina")]
+    [InlineData("Θεσσαλονίκη", "thessaloniki")]
+    public void NormalizeTranscribed_schreibtDenNamenUm(string input, string expected)
+    {
+        Assert.Equal(expected, GeoTextNormalizer.NormalizeTranscribed(input));
+    }
+
+    /// <summary>
+    /// Die erste Suchform bleibt, wie sie war — sonst waere jeder bestehende Lexikon-Eintrag
+    /// unauffindbar, bis der Import einmal durchgelaufen ist.
+    /// </summary>
+    [Theory]
+    [InlineData("München", "munchen")]
+    [InlineData("Gießen", "giessen")]
+    [InlineData("Київ", "")]
+    public void Normalize_bleibtUnveraendert(string input, string expected)
+    {
+        Assert.Equal(expected, GeoTextNormalizer.Normalize(input));
+    }
+
+    /// <summary>
+    /// Die Kandidaten muessen PAARWEISE entstehen. Getrennt gebildet verschoeben sich die beiden
+    /// Listen gegeneinander, sobald eine Dopplung wegfaellt, und dann wuerde eine Wortfolge mit der
+    /// Umschrift einer ANDEREN verglichen.
+    /// </summary>
+    [Fact]
+    public void PlaceCandidatePairs_haeltBeideFormenZusammen()
+    {
+        var pairs = GeoTextNormalizer.PlaceCandidatePairs("Bad Münstereifel");
+
+        Assert.Contains(("bad munstereifel", "bad muenstereifel"), pairs);
+        Assert.Contains(("munstereifel", "muenstereifel"), pairs);
+        // Laengste Wortfolge zuerst: „bad ischl" muss „ischl" schlagen.
+        Assert.Equal(("bad munstereifel", "bad muenstereifel"), pairs[0]);
+    }
+
+    /// <summary>Faellt die erste Form ganz weg, traegt die Umschrift allein.</summary>
+    [Fact]
+    public void PlaceCandidatePairs_kyrillisch_liefertNurDieUmschrift()
+    {
+        var pairs = GeoTextNormalizer.PlaceCandidatePairs("Київ");
+
+        Assert.Equal(("", "kyiv"), Assert.Single(pairs));
+    }
+
 }
 
 public class GeoDistanceTests
@@ -586,4 +649,5 @@ public class TournamentDirectorySchedulerTests : IDisposable
         var now = DateTime.UtcNow;
         Assert.True(TournamentDirectoryScheduler.IsStale(now, now, 0));
     }
+
 }

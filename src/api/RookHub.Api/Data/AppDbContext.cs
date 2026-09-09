@@ -409,6 +409,11 @@ public class AppDbContext : DbContext
             e.HasIndex(g => new { g.Country, g.PostalCode });
             e.HasIndex(g => new { g.Country, g.NameNormalized });
             e.HasIndex(g => g.NameNormalized);
+            // Die zweite Schreibweise wird genauso gesucht wie die erste (ue-Umschrift,
+            // Kyrillisch/Griechisch) — ohne Index waere jede Ortsauflösung ein Tabellenscan
+            // ueber ein Lexikon mit sechsstelliger Zeilenzahl.
+            e.HasIndex(g => new { g.Country, g.NameTranscribed });
+            e.HasIndex(g => g.NameTranscribed);
         });
 
         modelBuilder.Entity<Puzzle>(e =>

@@ -31,6 +31,18 @@ public class GeoPlace
     [Required, MaxLength(200)]
     public string NameNormalized { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Dieselbe Suchform, aber als ASCII-UMSCHRIFT: „München" steht hier als <c>muenchen</c>,
+    /// „Київ" als <c>kyiv</c>. Gefuellt beim Import, gesucht wird in BEIDEN Spalten.
+    ///
+    /// <para>Ohne diese Spalte fand „Muenchen" im Text den Ort „München" nie (die erste Spalte
+    /// haelt <c>munchen</c>), und ein kyrillischer Ortsname war in der ersten Spalte LEER, weil
+    /// der Aufraeumteil alles ausser <c>[a-z0-9]</c> verwirft. Siehe
+    /// <see cref="GeoTextNormalizer.NormalizeTranscribed"/>.</para>
+    /// </summary>
+    [MaxLength(200)]
+    public string NameTranscribed { get; set; } = string.Empty;
+
     public double Lat { get; set; }
     public double Lon { get; set; }
 

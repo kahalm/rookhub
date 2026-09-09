@@ -42,13 +42,59 @@ public static class GeoTextNormalizer
     {
         if (string.IsNullOrWhiteSpace(text)) return string.Empty;
 
-        var expanded = text.ToLowerInvariant()
+        return Cleanup(text.ToLowerInvariant()
             .Replace("ä", "a").Replace("ö", "o").Replace("ü", "u")
             .Replace("ß", "ss").Replace("æ", "ae").Replace("ø", "o").Replace("å", "a")
-            .Replace("đ", "d").Replace("ł", "l");
+            .Replace("đ", "d").Replace("ł", "l"));
+    }
 
+    /// <summary>
+    /// Die ZWEITE Schreibweise desselben Namens: Umlaute als ASCII-UMSCHRIFT (ü → ue) und
+    /// nichtlateinische Schriften umgeschrieben (Київ → kyiv, Αθήνα → athina).
+    ///
+    /// <para><b>Warum es zwei braucht.</b> <see cref="Normalize"/> faltet „München" zu
+    /// <c>munchen</c>, die ausgeschriebene Form „Muenchen" aber zu <c>muenchen</c> — die beiden
+    /// treffen sich nie, und chess-results schreibt regelmaessig die zweite. Am 2026-09-09 auf Dev
+    /// gemessen: 53 der 278 unverorteten deutschen Eintraege scheiterten daran (die uebrigen 225
+    /// sind mehrdeutige Staedtenamen, eine andere Frage). Beim SUCHEN zusaetzlich <c>ue → u</c> zu
+    /// falten waere falsch — aus „Quedlinburg" wuerde <c>qudlinburg</c>. Deshalb eine zweite Spalte
+    /// im Lexikon, gefuellt beim Import, und beide Formen auf beiden Seiten.</para>
+    ///
+    /// <para><b>Und warum sie auch die nichtlateinischen Schriften erledigt.</b> Der Aufraeumteil
+    /// ersetzt alles ausser <c>[a-z0-9]</c> durch Leerzeichen — Kyrillisch fiel damit RESTLOS weg:
+    /// „Київ" wurde zu einer leeren Zeichenkette. 29 547 der 29 571 importierten ukrainischen
+    /// Postleitzahl-Zeilen trugen deshalb einen LEEREN normalisierten Namen, und weil der
+    /// Postleitzahl-Weg eine Bestaetigung durch den Ortsnamen verlangt, konnte diese Bestaetigung
+    /// dort NIE gelingen. Die Postleitzahlen waren eingespielt und wirkungslos. Eine Umschrift
+    /// loest beide Richtungen: kyrillischer Text gegen kyrillisches Lexikon (beide Seiten ergeben
+    /// <c>kyiv</c>) und lateinischer Text gegen kyrillisches Lexikon.</para>
+    ///
+    /// <para>Die Tabelle folgt fuer Kyrillisch der ukrainischen Umschrift (г → h, и → y, і → i) —
+    /// die Ukraine ist der Fall, der uns betrifft. Fuer russische Namen faellt sie damit etwas
+    /// anders aus als die dortige Konvention; das ist unschaedlich, solange BEIDE Seiten dieselbe
+    /// Tabelle benutzen, und genau das ist hier der Fall.</para>
+    /// </summary>
+    public static string NormalizeTranscribed(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        var expanded = text.ToLowerInvariant()
+            .Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
+            .Replace("ß", "ss").Replace("æ", "ae").Replace("ø", "oe").Replace("å", "aa")
+            .Replace("đ", "dj").Replace("ł", "l");
+
+        var sb = new StringBuilder(expanded.Length);
+        foreach (var ch in expanded)
+            sb.Append(Transliteration.TryGetValue(ch, out var latin) ? latin : ch.ToString());
+
+        return Cleanup(sb.ToString());
+    }
+
+    /// <summary>Der gemeinsame Aufraeumteil: Diakritika weg, alles ausser Buchstabe/Ziffer zu Leerzeichen.</summary>
+    private static string Cleanup(string lowered)
+    {
         // Restliche Diakritika ueber die Unicode-Zerlegung entfernen (é → e, č → c, ...).
-        var decomposed = expanded.Normalize(NormalizationForm.FormD);
+        var decomposed = lowered.Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(decomposed.Length);
         foreach (var ch in decomposed)
         {
@@ -59,6 +105,33 @@ public static class GeoTextNormalizer
         var collapsed = NonWordPattern.Replace(sb.ToString().Normalize(NormalizationForm.FormC), " ");
         return collapsed.Trim();
     }
+
+    /// <summary>
+    /// Kyrillisch und Griechisch zu Latein, Buchstabe fuer Buchstabe. Was hier fehlt (Georgisch,
+    /// Armenisch, Hebraeisch) faellt weiterhin weg — dort greift die Ausnahme fuer Treffer OHNE
+    /// vergleichbaren Namen in <c>GeocodingService</c>.
+    /// </summary>
+    private static readonly Dictionary<char, string> Transliteration = new()
+    {
+        // Kyrillisch (ukrainische Umschrift, siehe Klassenkommentar)
+        ['а'] = "a", ['б'] = "b", ['в'] = "v", ['г'] = "h", ['ґ'] = "g", ['д'] = "d",
+        ['е'] = "e", ['є'] = "ie", ['ж'] = "zh", ['з'] = "z", ['и'] = "y", ['і'] = "i",
+        ['ї'] = "i", ['й'] = "i", ['к'] = "k", ['л'] = "l", ['м'] = "m", ['н'] = "n",
+        ['о'] = "o", ['п'] = "p", ['р'] = "r", ['с'] = "s", ['т'] = "t", ['у'] = "u",
+        ['ф'] = "f", ['х'] = "kh", ['ц'] = "ts", ['ч'] = "ch", ['ш'] = "sh", ['щ'] = "shch",
+        ['ь'] = "", ['ъ'] = "", ['ю'] = "iu", ['я'] = "ia", ['ы'] = "y", ['э'] = "e",
+        ['ё'] = "e", ['ў'] = "u",
+        // Serbisch, Makedonisch, Bulgarisch
+        ['ђ'] = "dj", ['ј'] = "j", ['љ'] = "lj", ['њ'] = "nj", ['ћ'] = "c", ['џ'] = "dz",
+        ['ѕ'] = "dz", ['ѓ'] = "g", ['ќ'] = "k",
+        // Griechisch
+        ['α'] = "a", ['β'] = "v", ['γ'] = "g", ['δ'] = "d", ['ε'] = "e", ['ζ'] = "z",
+        ['η'] = "i", ['θ'] = "th", ['ι'] = "i", ['κ'] = "k", ['λ'] = "l", ['μ'] = "m",
+        ['ν'] = "n", ['ξ'] = "x", ['ο'] = "o", ['π'] = "p", ['ρ'] = "r", ['σ'] = "s",
+        ['ς'] = "s", ['τ'] = "t", ['υ'] = "y", ['φ'] = "f", ['χ'] = "ch", ['ψ'] = "ps",
+        ['ω'] = "o", ['ά'] = "a", ['έ'] = "e", ['ή'] = "i", ['ί'] = "i", ['ό'] = "o",
+        ['ύ'] = "y", ['ώ'] = "o", ['ϊ'] = "i", ['ϋ'] = "y", ['ΐ'] = "i", ['ΰ'] = "y",
+    };
 
     /// <summary>
     /// Postleitzahl-Kandidaten aus einem Adresstext. Bewusst grob: welche Ziffernfolge wirklich eine
@@ -109,26 +182,57 @@ public static class GeoTextNormalizer
     /// Laenge aus dem normalisierten Text, laengste zuerst. "bad ischl" muss vor "bad" und "ischl"
     /// probiert werden, sonst gewinnt der falsche, groessere Ort.
     /// </summary>
-    public static List<string> PlaceCandidates(string? text, int maxWords = 3)
-    {
-        var normalized = Normalize(text);
-        var words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            // Reine Ziffernfolgen sind PLZ/Hausnummern, keine Ortsnamen.
-            .Where(w => !w.All(char.IsDigit))
-            .ToArray();
+    public static List<string> PlaceCandidates(string? text, int maxWords = 3) =>
+        [.. PlaceCandidatePairs(text, maxWords).Select(p => p.Normalized).Where(n => n.Length > 0)];
 
-        var candidates = new List<string>();
-        for (var length = Math.Min(maxWords, words.Length); length >= 1; length--)
+    /// <summary>
+    /// Dieselben Kandidaten in BEIDEN Schreibweisen, paarweise. Getrennt zu bilden waere falsch:
+    /// die Wortfolgen muessen einander entsprechen, und schon die Dopplungs-Pruefung verschiebt
+    /// sonst die Reihenfolge der beiden Listen gegeneinander.
+    ///
+    /// <para>Ein Paar kann in der ersten Form LEER sein — genau der kyrillische Fall, in dem nur
+    /// die Umschrift etwas hergibt. Beide Formen leer heisst „nichts Vergleichbares".</para>
+    /// </summary>
+    public static List<(string Normalized, string Transcribed)> PlaceCandidatePairs(
+        string? text, int maxWords = 3)
+    {
+        var words = Words(Normalize(text));
+        var transcribedWords = Words(NormalizeTranscribed(text));
+
+        // Die Wortpaare. Die Umschrift aendert keine Wortgrenzen, also passen die Listen im
+        // Normalfall Wort fuer Wort zusammen. Zwei Sonderfaelle: eine nichtlateinische Schrift
+        // faellt in der ERSTEN Form restlos weg (dann traegt nur die Umschrift — genau der
+        // kyrillische Fall), und verschieben sich die Grenzen doch, wird nur die erste Form
+        // benutzt: lieber ein Kandidat weniger als ein falsch zusammengesetzter.
+        List<(string Normalized, string Transcribed)> wordPairs;
+        if (words.Length == transcribedWords.Length)
+            wordPairs = [.. words.Zip(transcribedWords, (n, tr) => (n, tr))];
+        else if (words.Length == 0)
+            wordPairs = [.. transcribedWords.Select(tr => ("", tr))];
+        else
+            wordPairs = [.. words.Select(n => (n, ""))];
+
+        var pairs = new List<(string, string)>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var length = Math.Min(maxWords, wordPairs.Count); length >= 1; length--)
         {
-            for (var start = 0; start + length <= words.Length; start++)
+            for (var start = 0; start + length <= wordPairs.Count; start++)
             {
-                var candidate = string.Join(' ', words.Skip(start).Take(length));
-                if (candidate.Length < 3) continue;
-                if (!candidates.Contains(candidate)) candidates.Add(candidate);
+                var window = wordPairs.Skip(start).Take(length).ToList();
+                var normalized = string.Join(' ', window.Select(w => w.Normalized)).Trim();
+                var transcribed = string.Join(' ', window.Select(w => w.Transcribed)).Trim();
+                if (normalized.Length < 3 && transcribed.Length < 3) continue;
+                if (!seen.Add(normalized + "|" + transcribed)) continue;
+                pairs.Add((normalized, transcribed));
             }
         }
-        return candidates;
+        return pairs;
     }
+
+    private static string[] Words(string normalized) =>
+        [.. normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            // Reine Ziffernfolgen sind PLZ/Hausnummern, keine Ortsnamen.
+            .Where(w => !w.All(char.IsDigit))];
 
     /// <summary>
     /// Trennzeichen, die im Ortstext MEHRERE Spielorte voneinander abgrenzen: Komma,
