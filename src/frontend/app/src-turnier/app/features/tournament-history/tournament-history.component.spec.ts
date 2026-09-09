@@ -475,6 +475,90 @@ describe('TournamentHistoryComponent', () => {
   });
 
   /**
+   * Gemeldet als „horizontaler Overflow" auf der Verlaufsseite (360px): die Zusammenfassung im
+   * Kopf — „19 Turniere gespielt · Turnier 1862 (67 Partien) · Schnell 1829 (9 Partien) · Blitz …"
+   * — war 493px breit in einem 315px-Rahmen. Die Bloecke je Bedenkzeit sind nowrap, und Angular
+   * wirft den Leerraum zwischen den Elementen weg; als Fliesstext gab es keine Umbruchstelle.
+   * Als Flex-Zeile brechen die Bloecke einzeln um.
+   */
+  it('bricht die Zusammenfassung im Kopf um, statt die Karte zu weiten (360px)', async () => {
+    const req = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '360px';
+    host.style.overflowX = 'hidden';
+    // Echte Texte statt Schluessel, damit die Zeile so breit ist wie in der App.
+    TestBed.inject(TranslateService).setTranslation('en', {
+      turnier: { history: {
+        playedCount: '{{count}} tournaments played', countGames: '{{count}} games',
+        speed: { standard: 'Standard', rapid: 'Rapid', blitz: 'Blitz' },
+      } },
+    }, true);
+
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '1', speed: 'standard', performanceRating: 1862, gamesPlayed: 67 }),
+        played({ chessResultsId: '2', speed: 'rapid', performanceRating: 1829, gamesPlayed: 9 }),
+        played({ chessResultsId: '3', speed: 'blitz', performanceRating: 1650, gamesPlayed: 12 }),
+      ],
+    })]);
+    fixture.detectChanges();
+
+    const head = host.querySelector('.player-head') as HTMLElement;
+    const summary = head.querySelector('.summary') as HTMLElement;
+    expect(summary.querySelectorAll('.speed-sum').length).toBe(3);
+    // Der Kopf wird nicht breiter als die Karte (gegen den Ist-Stand: 493 > 315) …
+    expect(head.scrollWidth).toBeLessThanOrEqual(head.clientWidth + 1);
+    expect(summary.getBoundingClientRect().right).toBeLessThanOrEqual(host.getBoundingClientRect().right + 1);
+    // … weil die Bloecke umbrechen: mehr als eine Zeile hoch.
+    const oneLine = parseFloat(getComputedStyle(summary).lineHeight) || 20;
+    expect(summary.getBoundingClientRect().height).toBeGreaterThan(oneLine * 1.5);
+    // Und die Seite selbst bleibt in ihrer Breite.
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
+  });
+
+  /**
+   * Am Handy sind die Ergebniszeilen ZWEIZEILIG (Datum + Name / Punkte · Platz · Performance ·
+   * Aenderung) statt einer quer scrollenden Tabelle. Die scrollte zwar in ihrem Container, aber
+   * ohne Rollbalken und ohne Hinweis — die Zahlen waren am rechten Rand einfach abgeschnitten,
+   * und das sieht aus wie Ueberlauf. Der Bruch haengt an einer Media-Query, und die misst den
+   * VIEWPORT; deshalb wird hier das Karma-iframe selbst schmal gestellt (wie in der Navbar-Spec).
+   */
+  it('zeigt die Ergebniszeilen am Handy zweizeilig, ohne Quer-Scrollen', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) { pending('Karma laeuft nicht im iframe — der Viewport laesst sich nicht verstellen'); return; }
+    const prevWidth = frame.style.width;
+    frame.style.width = '360px';
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    try {
+      expect(window.innerWidth).withContext('Viewport nicht verstellt').toBeLessThanOrEqual(360);
+      const req = await setup();
+      const host = fixture.nativeElement as HTMLElement;
+      host.style.display = 'block';
+      req.flush([history({ entries: [
+        played({ chessResultsId: '1', name: 'Kufsteiner Schach Open 2026', points: 2, gamesPlayed: 5, rank: 12, playerCount: 56 }),
+        played({ chessResultsId: '2', name: 'Grand Prix PlusCity - Blitz', speed: 'blitz', points: 4.5, gamesPlayed: 9 }),
+      ] })]);
+      fixture.detectChanges();
+
+      const scroll = host.querySelector('.rows-scroll') as HTMLElement;
+      const row = host.querySelector('.row:not(.upcoming)') as HTMLElement;
+      expect(row).withContext('Ergebniszeile gerendert').toBeTruthy();
+      // Nichts scrollt quer: Tabelle so breit wie ihr Rahmen (gegen den Ist-Stand: 592 > 315) …
+      expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth + 1);
+      expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(host.getBoundingClientRect().right + 1);
+      // … weil die Zahlen in die ZWEITE Zeile ruecken: Punkte stehen unter dem Datum.
+      const date = row.querySelector('.row-date') as HTMLElement;
+      const pts = row.querySelector('.row-num.pts') as HTMLElement;
+      const change = row.querySelector('.row-num.change') as HTMLElement;
+      expect(pts.getBoundingClientRect().top).toBeGreaterThan(date.getBoundingClientRect().bottom - 1);
+      expect(Math.abs(change.getBoundingClientRect().top - pts.getBoundingClientRect().top)).toBeLessThan(4);
+    } finally {
+      frame.style.width = prevWidth;
+    }
+  });
+
+  /**
    * Ein Klick fuehrt auf das TURNIER, nicht ins Verzeichnis. Vorher ging er auf
    * `/tournaments/calendar/{id}` und landete bei der Mehrheit der Verlaufs-Eintraege auf „steht
    * (noch) nicht im Verzeichnis" — und das heilt nicht: der naechtliche Sweep liest nur 30 Tage

@@ -41,7 +41,21 @@
 }
 
 .player-head h2 { font-size: 1.05rem; margin: 0; }
-.summary { font-size: 0.85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+/* Die Zusammenfassung ist eine FLEX-Zeile, die umbricht — nicht Fliesstext. Die Bloecke je
+   Bedenkzeit sind nowrap (eine Zahl gehoert zu ihrem Namen), und Angular wirft den Leerraum
+   zwischen den Elementen weg: als Fliesstext gab es damit keine einzige Umbruchstelle, die Zeile
+   war am Handy 493 px breit in einem 315-px-Rahmen und lief rechts aus dem Bild („· Schnell 1829
+   (9 Partien)" abgeschnitten). Als Flex-Kinder brechen die Bloecke einzeln um. */
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.5rem;
+  row-gap: 0.1rem;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
 
 h3 {
   font-size: 0.85rem;
@@ -52,9 +66,10 @@ h3 {
   color: color-mix(in srgb, currentColor 60%, transparent);
 }
 
-/* Die Zahlenspalten sind auf einem Handy breiter als der Bildschirm. Eigenes overflow-x, damit
-   nicht die SEITE ueberlaeuft — sonst positionieren sich die CDK-Overlays gegen das verbreiterte
-   Dokument und die Menues landen ausserhalb des Sichtfelds. */
+/* Sicherheitsnetz am Schreibtisch: laeuft die Tabelle doch einmal ueber (sehr schmales Fenster
+   zwischen 769 px und der Tabellenbreite), scrollt sie in sich statt die SEITE zu verbreitern —
+   sonst positionieren sich die CDK-Overlays gegen das verbreiterte Dokument. Am Handy braucht es
+   das nicht mehr: dort sind die Zeilen zweizeilig (siehe den Handy-Block unten). */
 .rows-scroll { overflow-x: auto; }
 
 .rows { display: flex; flex-direction: column; }
@@ -132,6 +147,30 @@ h3 {
 @media (max-width: 768px) {
   .page { padding: 0.75rem 0.5rem; }
 
+  /* ZWEIZEILIG statt quer scrollen. Die sechs Spalten brauchen 37rem; auf einem Handy scrollte
+     die Tabelle deshalb in ihrem Container — ohne Rollbalken und ohne Hinweis, die Zahlen waren
+     am rechten Rand einfach abgeschnitten (gemeldet als „horizontaler Overflow"). Jetzt:
+     Zeile 1 Datum + Name, Zeile 2 Punkte · Platz · Performance · Aenderung. Die Zeile wird damit
+     ~44 px hoch, was zugleich das Beruehrziel ist. Kuenftige Turniere behalten ihr eigenes
+     schmales Raster (Datum, Name, Runden) — dort gibt es keine Zahlenspalten. */
+  .row:not(.upcoming) {
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "date name name name"
+      "pts  rank perf change";
+    row-gap: 0.15rem;
+    column-gap: 0.5rem;
+  }
+  .row:not(.upcoming) .row-date { grid-area: date; }
+  .row:not(.upcoming) .row-name { grid-area: name; }
+  .row:not(.upcoming) .row-num.pts { grid-area: pts; text-align: left; }
+  .row:not(.upcoming) .row-num.rank { grid-area: rank; text-align: left; }
+  .row:not(.upcoming) .row-num.perf { grid-area: perf; }
+  .row:not(.upcoming) .row-num.change { grid-area: change; }
+  /* Die Textzelle („Ergebnis wird geholt …") nimmt die ganze zweite Zeile. */
+  .row:not(.upcoming) .row-num.span-rest { grid-area: auto; grid-column: 1 / -1; grid-row: 2; }
+
   /* Jede Zeile ist ein Knopf; mit ~32px Hoehe trifft der Daumen leicht die Nachbarzeile — und
      der Klick startet u. U. einen minutenlangen Hol-Auftrag. */
   .row { min-height: 44px; }
@@ -172,7 +211,7 @@ h3 {
 .speed-tag.speed-rapid { background: color-mix(in srgb, #3f8cff 16%, transparent); }
 .speed-tag.speed-standard { background: color-mix(in srgb, currentColor 8%, transparent); }
 
-.speed-sum { white-space: nowrap; margin-right: 0.5rem; }
+.speed-sum { white-space: nowrap; }
 
 /* Die Jahres-Ueberschrift traegt ihre eigene Auswertung — auf schmalen Schirmen untereinander. */
 .year-head {
