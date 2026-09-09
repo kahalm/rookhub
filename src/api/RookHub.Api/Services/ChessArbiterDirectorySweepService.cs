@@ -207,7 +207,7 @@ public class ChessArbiterDirectorySweepService
         // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
         // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
         retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.PolishChessFederation, delivered, now, ct);
+            _db, DirectorySourceKind.PolishChessFederation, delivered, now, _log, ct);
 
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }

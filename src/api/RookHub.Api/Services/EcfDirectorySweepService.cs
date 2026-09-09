@@ -151,7 +151,7 @@ public class EcfDirectorySweepService
         // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
         // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
         retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.EnglishChessFederation, delivered, now, ct);
+            _db, DirectorySourceKind.EnglishChessFederation, delivered, now, _log, ct);
 
         return new ExternalSweepResult(events.Count, added, located, matched, retired);
     }

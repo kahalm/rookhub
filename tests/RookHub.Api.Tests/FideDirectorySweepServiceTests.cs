@@ -40,6 +40,97 @@ public class FideDirectorySweepServiceTests : IDisposable
            "city":{{(city is null ? "null" : $"\"{city}\"")}},"country":"{{country}}"}
           """;
 
+    // ----- Verschwundene Ereignisse -----------------------------------------
+
+    /// <summary>
+    /// Auch der FIDE-Kalender zieht zurueck, was er nicht mehr fuehrt (seit 0.455.1). Bis dahin war
+    /// er die einzige Quelle mit stabilen Kennungen, die nie etwas zurueckzog: auf Dev standen 41
+    /// Eintraege, die niemand absagen konnte.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_VerschwundenesEreignis_wirdNachZweiNaechtenZurueckgezogen()
+    {
+        _handler.Years[2026] = "[" + string.Join(",", Zwoelf()) + "]";
+        await CreateService().RunAsync([2026]);
+        Assert.Equal(12, _db.TournamentDirectoryEntries.Count());
+
+        // Das erste Ereignis fehlt ab jetzt.
+        _handler.Years[2026] = "[" + string.Join(",", Zwoelf().Skip(1)) + "]";
+        var erste = await CreateService().RunAsync([2026]);
+        Assert.Equal(0, erste.Retired);
+        Assert.Equal(1, (await Entry("f80001")).MissedSweeps);
+
+        await NextNightAsync();
+        var zweite = await CreateService().RunAsync([2026]);
+
+        Assert.Equal(1, zweite.Retired);
+        Assert.NotNull((await Entry("f80001")).RemovedAt);
+        Assert.Null((await Entry("f80002")).RemovedAt);
+    }
+
+    /// <summary>
+    /// Fuehrt die Turniersuche dasselbe Ereignis, entscheidet SIE — der FIDE-Kalender laesst
+    /// Eintraege mit chess-results-Nummer unangetastet.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_MitChessResultsNummer_bleibtUnangetastet()
+    {
+        _handler.Years[2026] = "[" + string.Join(",", Zwoelf()) + "]";
+        await CreateService().RunAsync([2026]);
+        var eintrag = await Entry("f80001");
+        eintrag.ChessResultsId = "1470450";
+        await _db.SaveChangesAsync();
+
+        _handler.Years[2026] = "[" + string.Join(",", Zwoelf().Skip(1)) + "]";
+        await CreateService().RunAsync([2026]);
+        await NextNightAsync();
+        var result = await CreateService().RunAsync([2026]);
+
+        Assert.Equal(0, result.Retired);
+        Assert.Equal(0, (await Entry("f80001")).MissedSweeps);
+    }
+
+    /// <summary>
+    /// Ein Ereignis ohne lesbaren Termin gilt als GELIEFERT — der Kalender fuehrt es ja. Sonst
+    /// sammelte es Fehlschlaege und waere nach zwei Naechten abgesagt.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_UnlesbarerTermin_zaehltAlsGeliefert()
+    {
+        _handler.Years[2026] = "[" + string.Join(",", Zwoelf()) + "]";
+        await CreateService().RunAsync([2026]);
+
+        _handler.Years[2026] = "[" + string.Join(",", Zwoelf().Skip(1))
+            + "," + Event("80001", "Verschwundenes Ereignis Eins", "kein Datum", "auch nicht") + "]";
+        await CreateService().RunAsync([2026]);
+
+        var entry = await Entry("f80001");
+        Assert.Equal(0, entry.MissedSweeps);
+        Assert.Null(entry.RemovedAt);
+    }
+
+    /// <summary>Zwoelf kuenftige Ereignisse — die Bremse verlangt 90 % wiedergesehene Kandidaten.</summary>
+    private static IEnumerable<string> Zwoelf()
+    {
+        var start = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(40);
+        for (var i = 1; i <= 12; i++)
+            yield return Event($"8000{i}", $"Verschwundenes Ereignis {i}",
+                start.AddDays(i * 2).ToString("yyyy-MM-dd"),
+                start.AddDays(i * 2 + 1).ToString("yyyy-MM-dd"));
+    }
+
+    private Task<TournamentDirectoryEntry> Entry(string publicId) =>
+        _db.TournamentDirectoryEntries.SingleAsync(e => e.PublicId == publicId);
+
+    /// <summary>Eine Nacht vergehen lassen — der Zaehler zaehlt Naechte, nicht Laeufe (0.455.0).</summary>
+    private async Task NextNightAsync()
+    {
+        foreach (var entry in await _db.TournamentDirectoryEntries.ToListAsync())
+            if (entry.LastMissAt is { } last)
+                entry.LastMissAt = last - ExternalDirectorySource.MissCooldown;
+        await _db.SaveChangesAsync();
+    }
+
     // ----- Neue Eintraege ---------------------------------------------------
 
     [Fact]

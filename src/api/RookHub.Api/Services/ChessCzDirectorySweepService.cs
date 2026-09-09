@@ -95,7 +95,7 @@ public class ChessCzDirectorySweepService
         // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz, Bremse
         // gegen halbe Laeufe — siehe RetireVanishedAsync).
         var retired = counts.Retired + await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.CzechChessFederation, counts.Delivered, now, ct);
+            _db, DirectorySourceKind.CzechChessFederation, counts.Delivered, now, _log, ct);
         return new ExternalSweepResult(events.Count, counts.Added, counts.Rounds, counts.Matched,
             retired);
     }

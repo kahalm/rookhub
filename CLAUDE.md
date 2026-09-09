@@ -1587,6 +1587,11 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   der Kandidaten und liess alles ab der Haelfte gelten — bei Polen (620 Kandidaten, ein gewoehnlicher Tag kostet fuenf)
   waeren das 310 zugelassene Falschabsagen. Der chess-results-ANKUENDIGUNGSkalender zieht bewusst nichts zurueck — nur
   ~70 % seiner Zeilen tragen eine Kennung, und ohne stabile Kennung ist „fehlt" nicht von „umbenannt" zu unterscheiden.
+  Der FIDE-Kalender zieht seit 0.455.1 ebenfalls zurueck (seine Kennungen sind stabile Ereignisnummern); dort traegt
+  der Horizont besonders viel, weil ein Durchgang oft nur das laufende Jahr abfragt und ueber das naechste nichts
+  sagen darf. **Spricht die Bremse an, steht das als Warnung im Log** (`RetireVanishedAsync` nimmt dafuer den Logger
+  der Quelle) — ohne den Eintrag ist eine dauerhaft halb liefernde Quelle nicht von einer zu unterscheiden, bei der
+  nichts verschwindet: beide ziehen nie etwas zurueck.
 - **`MissedSweeps` zaehlt NAECHTE, nicht Laeufe** (seit 0.455.0) – Ein Fehlschlag wird nur gezaehlt, wenn der letzte
   laenger als `ExternalDirectorySource.MissCooldown` (20 h) zurueckliegt; `TournamentDirectoryEntry.LastMissAt` haelt
   ihn fest. Gilt fuer BEIDE Besitzer (Turniersuche und Zusatzquellen). Ohne die Sperre genuegten zwei Durchgaenge im

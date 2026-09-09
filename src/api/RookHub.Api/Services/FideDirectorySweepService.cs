@@ -49,7 +49,8 @@ public class FideDirectorySweepService
     /// <summary>Wie viele Tage Abstand ein Zusammenfuehren noch erlaubt. 0 = das Datum muss stimmen.</summary>
     internal int MatchDayTolerance { get; set; } = 1;
 
-    public sealed record FideSweepResult(int Fetched, int Added, int Updated, int MergedIntoExisting, string? Error)
+    public sealed record FideSweepResult(
+        int Fetched, int Added, int Updated, int MergedIntoExisting, int Retired, string? Error)
     {
         public bool Succeeded => Error is null;
     }
@@ -65,20 +66,29 @@ public class FideDirectorySweepService
         var updated = 0;
         var merged = 0;
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten. Bewusst
+        // getrennt von `seen`: das entscheidet, welche Jahresansicht ein Ereignis VERARBEITET
+        // (die frueheste gewinnt), und eine unlesbare Zeile darf die spaetere nicht verdraengen.
+        var delivered = new List<string>();
 
         foreach (var year in years.Distinct().OrderBy(y => y))
         {
             List<CrawlerFideEvent> events;
             try
             {
-                events = await FetchYearAsync(year, ct);
+                var fetch = await FetchYearAsync(year, ct);
+                events = fetch.Rows;
+                delivered.AddRange(fetch.Rows.Select(e => e.EventId));
+                delivered.AddRange(fetch.Unreadable);
             }
             // Ein HttpClient-TIMEOUT kommt als TaskCanceledException, also als
             // OperationCanceledException, obwohl der Aufrufer nichts abgebrochen hat.
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 _log.LogWarning(ex, "FIDE-Kalender {Year} nicht erreichbar", year);
-                return new FideSweepResult(fetched, added, updated, merged, ex.Message);
+                // Ein gescheitertes Jahr heisst: der Lauf ist unvollstaendig. Es wird NICHTS
+                // zurueckgezogen — der Rueckweg unten ist damit uebersprungen.
+                return new FideSweepResult(fetched, added, updated, merged, 0, ex.Message);
             }
 
             foreach (var ev in events)
@@ -96,11 +106,23 @@ public class FideDirectorySweepService
             await _db.SaveChangesAsync(ct);
         }
 
-        _log.LogInformation(
-            "FIDE-Durchgang: {Fetched} Ereignisse, {Added} neu, {Updated} aktualisiert, {Merged} bestehenden zugeordnet",
-            fetched, added, updated, merged);
+        // Was der Kalender nicht mehr fuehrt, wird zurueckgezogen — mit denselben Schranken wie bei
+        // den 15 Verbandskalendern (nur kuenftige Eintraege, nur ohne chess-results-Nummer, nur
+        // wenn dieser Kalender der einzige Herkunftsvermerk ist, nur bis zum Horizont des Laufs,
+        // zwei Naechte Karenz). Die Kennungen des FIDE-Kalenders sind stabile Ereignisnummern,
+        // deshalb ist „fehlt" hier von „umbenannt" zu unterscheiden — anders als beim
+        // chess-results-ANKUENDIGUNGSkalender, der aus genau diesem Grund nichts zurueckzieht.
+        // Der Horizont traegt hier besonders viel: laeuft der Durchgang nur ueber das laufende
+        // Jahr, darf er ueber das naechste nichts sagen.
+        var retired = await ExternalDirectorySource.RetireVanishedAsync(
+            _db, DirectorySourceKind.Fide, delivered, DateTime.UtcNow, _log, ct);
 
-        return new FideSweepResult(fetched, added, updated, merged, null);
+        _log.LogInformation(
+            "FIDE-Durchgang: {Fetched} Ereignisse, {Added} neu, {Updated} aktualisiert, "
+            + "{Merged} bestehenden zugeordnet, {Retired} zurueckgezogen",
+            fetched, added, updated, merged, retired);
+
+        return new FideSweepResult(fetched, added, updated, merged, retired, null);
     }
 
     private enum Outcome { Added, Updated, Merged }
@@ -283,7 +305,10 @@ public class FideDirectorySweepService
 
     // ----- Crawler ----------------------------------------------------------
 
-    private async Task<List<CrawlerFideEvent>> FetchYearAsync(int year, CancellationToken ct)
+    /// <summary>Die verwertbaren Ereignisse — und die Kennungen der unlesbaren.</summary>
+    internal sealed record FideFetch(List<CrawlerFideEvent> Rows, List<string> Unreadable);
+
+    private async Task<FideFetch> FetchYearAsync(int year, CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
         using var response = await client.GetAsync($"/api/fide-calendar?year={year}", ct);
@@ -293,12 +318,20 @@ public class FideDirectorySweepService
             throw new CrawlerRequestException(response.StatusCode, body);
 
         var rows = JsonSerializer.Deserialize<List<FideEventRow>>(body, JsonOptions) ?? [];
-        return rows
+        var parsed = rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerFideEvent(
                 r.EventId!, r.Name!, ParseDate(r.StartDate), ParseDate(r.EndDate), r.City, r.Country))
-            .Where(e => e.Start != default && e.End != default)
             .ToList();
+
+        // Zeilen ohne lesbaren Termin fallen aus der Verarbeitung, ihre Kennungen aber NICHT aus
+        // der Liefer-Liste: der Kalender FUEHRT sie ja. Sonst sammelten sie Fehlschlaege und waeren
+        // nach zwei Naechten abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile,
+        // sondern alle. Dieselbe Regel wie bei den 15 Verbandskalendern; hier braucht es einen
+        // eigenen Rueckweg, weil `CrawlerFideEvent` einen festen Termin traegt.
+        return new FideFetch(
+            [.. parsed.Where(e => e.Start != default && e.End != default)],
+            [.. parsed.Where(e => e.Start == default || e.End == default).Select(e => e.EventId)]);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

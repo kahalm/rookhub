@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
@@ -314,8 +315,14 @@ public static class ExternalDirectorySource
     /// </summary>
     public static readonly TimeSpan MissCooldown = TimeSpan.FromHours(20);
 
+    /// <param name="log">
+    /// Fuer den Fall, dass die Bremse anspricht. Ohne diesen Eintrag ist eine Quelle, die
+    /// dauerhaft halb liefert, NICHT von einer Quelle zu unterscheiden, bei der nichts verschwindet:
+    /// beide ziehen nie etwas zurueck, und beide sagen nichts.
+    /// </param>
     public static async Task<int> RetireVanishedAsync(AppDbContext db, DirectorySourceKind kind,
-        IReadOnlyCollection<string> deliveredExternalIds, DateTime now, CancellationToken ct = default)
+        IReadOnlyCollection<string> deliveredExternalIds, DateTime now,
+        ILogger? log = null, CancellationToken ct = default)
     {
         // Ein Vergleich der KENNUNGEN, und die Spalte vergleicht MySQL ohne Ruecksicht auf
         // Gross- und Kleinschreibung. Ein Ordinal-Vergleich hier machte aus einer wiedergesehenen
@@ -335,7 +342,15 @@ public static class ExternalDirectorySource
         if (candidates.Count == 0) return 0;
 
         var seen = candidates.Where(c => delivered.Contains(KeyOf(c, kind))).ToList();
-        if (seen.Count == 0) return 0;
+        if (seen.Count == 0)
+        {
+            log?.LogWarning(
+                "Verschwunden-Erkennung {Kind} uebersprungen: der Lauf lieferte {Delivered} Kennungen, "
+                + "aber KEINE der {Candidates} eigenen Eintraege — das ist ein kaputter Lauf oder ein "
+                + "Schluesselwechsel der Quelle, keine Massenabsage",
+                kind, delivered.Count, candidates.Count);
+            return 0;
+        }
 
         // Der HORIZONT: bis zu welchem Termin dieser Lauf ueberhaupt etwas geliefert hat. Eine
         // Quelle, die nur die naechsten zwei Monate zeigt, sagt ueber den Herbst nichts — ihre
@@ -345,7 +360,16 @@ public static class ExternalDirectorySource
         var relevant = candidates.Where(c => (c.EndDate ?? c.StartDate) <= horizon).ToList();
 
         // Die Bremse gegen halbe Laeufe — jetzt am Anteil der wiedergesehenen KANDIDATEN gemessen.
-        if (seen.Count * 100 < relevant.Count * MinSeenPercent) return 0;
+        if (seen.Count * 100 < relevant.Count * MinSeenPercent)
+        {
+            log?.LogWarning(
+                "Verschwunden-Erkennung {Kind} uebersprungen: nur {Seen} von {Relevant} eigenen "
+                + "Eintraegen wiedergesehen ({Percent} %, verlangt sind {Required} %) — der Lauf ist "
+                + "unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck",
+                kind, seen.Count, relevant.Count, seen.Count * 100 / Math.Max(1, relevant.Count),
+                MinSeenPercent);
+            return 0;
+        }
 
         var retired = 0;
         foreach (var entry in relevant)

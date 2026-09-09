@@ -156,7 +156,7 @@ public class SzsDirectorySweepService
         // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
         // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
         retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.SlovenianChessFederation, delivered, now, ct);
+            _db, DirectorySourceKind.SlovenianChessFederation, delivered, now, _log, ct);
 
         return new ExternalSweepResult(events.Count, added, updated, matched, retired);
     }
