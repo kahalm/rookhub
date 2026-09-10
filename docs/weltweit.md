@@ -112,12 +112,15 @@ Reihenfolge nach erwartetem Zugewinn, alle vier mit derselben Methodik wie Runde
    Vorbehalt vermerkt; der Vermerk ist der Startpunkt, nicht die Recherche. 17 Eintraege im
    Bestand heisst: praktisch das ganze Land fehlt. US Chess fuehrt den Kalender selbst, und die
    Landesverbaende (State Associations) darunter.
-2. **Australien + Neuseeland** — 3 Eintraege zusammen, noch nie recherchiert. Beide Verbaende
-   fuehren eigene Turnierverwaltungen. Erst pruefen, ob es eine Schnittstelle gibt („The Events
-   Calendar" zuerst probieren, es kostet einen Abruf).
-3. **Kanada** — `chess.ca` ist geprueft: sauberer JSON-Volldump, aber **ohne stabile Kennung**.
-   Das ist derselbe Fall wie Wales (Schluessel aus Termin + Anschrift) und damit geloest, sobald
-   jemand ihn baut.
+2. ~~**Australien + Neuseeland**~~ — **am 2026-09-10 geprueft, beide ❌.** Australiens
+   Events-Calendar-Schnittstelle ist offen und funktioniert, aber der Kalender wurde ~2024
+   aufgegeben (111 Ereignisse ab 2020, **0 ab 2025**); der Weg fuehrt ueber die Landesverbaende.
+   Neuseelands Turnier-Host sperrt mit `User-agent: crawl` / `Disallow: /` genau unseren
+   Crawler-Namen. Einzelheiten in `docs/turnierquellen.md`, Runde 4.
+3. **Kanada — der Bau-Kandidat von Phase 2.** Am 2026-09-10 nachgemessen: die Quelle lebt,
+   **173 Eintraege, 171 kuenftig** gegen unsere 68, ein Abruf plus einer fuer den Hash. Ohne
+   stabile Kennung (`oid` ist die Listenposition), also Schluessel aus Name + Termin + Ort wie
+   bei Wales — samt dessen Lehre zum Kurzschluessel.
 4. **China** — 273 Eintraege, 19 kuenftig, 21 % verortet. Hier haengen Quelle UND Schrift
    zusammen; ohne Pinyin-Umschrift bringt eine neue Quelle Turniere ohne Karte.
 

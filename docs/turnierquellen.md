@@ -2063,3 +2063,91 @@ genuegen, der dritte fand null.
 
 **Stand nach beidem**: 22 458 Turniere, **15 332 verortet (68 %)**. Die Restluecke nach Ursache:
 2 685 ohne jeden Ortstext (unerreichbar), 1 804 mehrdeutig, 2 637 ohne Kandidaten.
+
+## Runde 4: die abwesenden Laender (Phase 2, 2026-09-10)
+
+Auftrag aus `docs/weltweit.md`: die Laender, in denen chess-results praktisch nicht benutzt wird.
+Dort ersetzt ein Kalender nicht einen Teil des Bestands, sondern **alles** — der Norwegen-Fall.
+
+| Land | Urteil | kuenftig in der Quelle | im Bestand | Grund in einem Satz |
+|---|---|---|---|---|
+| **Kanada** | ✅ | **171** | 68 | Quelle lebt, Abruf bestaetigt; blockiert nur an der Kennung |
+| USA | ⚠️ | ~920 Zeilen (Snapshot) | 5 | Serien-Dubletten, eigener Bedenkzeit-Parser, keine oeffentliche Kennung |
+| Australien | ❌ | **0 seit 2025** | 0 | Plugin da und offen — der Kalender wird seit ~2024 nicht gepflegt |
+| Neuseeland | ❌ | — | 0 | `User-agent: crawl` / `Disallow: /` trifft unseren Crawler beim Namen |
+| China | ❓ | — | 19 | `cca.imsa.cn` loest nicht auf; die Adresse ist unbelegt |
+
+### Kanada — nachgemessen, die Recherche haelt
+
+Der zweistufige Abruf funktioniert unveraendert: HTML von `chess.ca/en/events/` holen, daraus
+`/ext/cfc-data.<hash>.js` ziehen (der Hash wechselt bei jedem Build, er darf nie hartkodiert
+werden), dann die statische Datei — 76 kB, `window.ws_cfc_data` mit den Schluesseln
+`newsflashes`, `photobox_home`, `events`. **173 Eintraege, 171 kuenftig.** Felder: `city`, `prov`,
+`start`, `end`, `dates`, `name`, `type`, `url`, `links`, `oid`.
+
+Gegen unsere 68 kanadischen Eintraege sind das rund **100 zusaetzliche Turniere** — der groesste
+Einzelzugewinn, der in Phase 2 zu holen ist, und die billigste Quelle: EIN Abruf plus einer fuer
+den Hash.
+
+Der Ausschlussgrund von Runde 1 bleibt und ist loesbar: `oid` ist nur die Listenposition. Die
+Kennung muss aus Name + Termin + Ort entstehen — dasselbe Muster wie Wales, samt dessen Lehre,
+dass ein solcher Schluessel die 60 Zeichen von `TournamentDirectorySource.ExternalId` reisst und
+deshalb als KURZSCHLUESSEL vermerkt wird (`PublicIdOf`).
+
+Was fehlt: Postleitzahl und Adresse ganz (nur `city` + Provinzkuerzel), Bedenkzeit, Rundenzahl.
+Der PLZ-Weg des Geocoders greift dort also nie, es bleibt der Ortsname — und `CAN` steht mit
+82 % Verortung gut da, das traegt.
+
+### Australien — das Plugin ist da, offen, und leer
+
+`auschess.org.au` faehrt WordPress mit „The Events Calendar", die robots.txt ist der reine
+WP-Standard (`Disallow: /wp-admin/`, kein `Content-Signal`, kein KI-Bot-Block) — beide Fragen also
+„ja", und die REST-Schnittstelle antwortet unserem eigenen User-Agent klaglos. Gemessen:
+
+```
+start_date=2020-01-01  ->  111 Ereignisse
+start_date=2025-01-01  ->    0
+start_date=2026-01-01  ->    0
+```
+
+**Der Kalender wurde etwa 2024 aufgegeben.** Das ist der Faeroeer-Fall in groesserem Format:
+Technik einwandfrei, Inhalt nicht vorhanden. Ein Dienst dafuer waere ein Nachtlauf, der jede Nacht
+null Turniere holt.
+
+Der australische Weg fuehrt damit ueber die **Landesverbaende** (NSWCA, Chess Victoria, CAQ) —
+dieselbe Struktur wie Spanien mit seinen Regionalverbaenden, und dieselbe Empfehlung: eine eigene
+Recherche-Runde, keine Bau-Aufgabe.
+
+### Neuseeland — die Sperre trifft uns beim Namen, und das ist keine Auslegung
+
+Zwei Hosts, zwei robots.txt. `newzealandchess.co.nz` sperrt `/Competition/*` (der Kalender liegt
+unter `/events-1` und waere damit frei). Der Turnier-Host `compete.newzealandchess.co.nz` sieht
+zunaechst freundlich aus — `User-agent: *` mit `Disallow: /wp-admin/` und `Crawl-delay: 10` — und
+sperrt dann namentlich die grossen KI- und SEO-Crawler. Woertlich, am Ende der Datei:
+
+```
+User-agent: crawl
+Disallow: /
+
+User-agent: robot
+Disallow: /
+```
+
+Unser Crawler nennt sich `ChessResultsCrawler/1.0 (+RookHub)`. Das Produkt-Token **enthaelt
+„crawl"**, und robots.txt-Zuordnung ist eine Teilzeichenketten-Frage; der Betreiber meint
+erkennbar „alles, was sich Crawler nennt". Die Sperre gilt also fuer uns.
+
+**Den Namen zu aendern, um an der Sperre vorbeizukommen, ist keine Loesung, sondern deren
+Umgehung** — dieselbe Linie wie bei der Schweiz (Turnstile) und beim Grundsatz, nie eine UA zu
+spoofen. Bleibt: nicht abrufen, oder um Freigabe fragen. Bei einem Bestand von EINEM neuseelaendischen
+Turnier lohnt die Anfrage nicht von selbst; sie lohnt, wenn jemand ohnehin Kontakt hat.
+
+### China — ein ❓ ueber die Adresse, kein ❌ ueber die Quelle
+
+Die Suche nennt `cca.imsa.cn` als Seite des Verbands. Weder `cca.imsa.cn` noch `imsa.cn` loesen
+auf, waehrend `chess.ca` von derselben Maschine sauber auflaest — es ist also kein DNS-Problem
+bei uns. Nach der Malta-Lehre heisst das: die Adresse ist unbelegt, nicht die Quelle tot. Wer
+China aufnimmt, faengt bei der Adresse an und traegt sie hier ein.
+
+Dazu haengt China ohnehin an einer zweiten Frage: von 273 Eintraegen tragen **201 Han-Zeichen** und
+21 % sind verortet. Ohne Pinyin-Umschrift brachte eine neue Quelle Turniere ohne Karte.

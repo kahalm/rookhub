@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.457.4", date: "2026-09-10", changes: [
+    { en: "Checked which countries could be added next, and reported the negative answers too. Canada is worth doing: its calendar lists 171 upcoming tournaments where we hold 68. Australia is not — its federation calendar is technically open and has been unmaintained since 2024, holding nothing at all beyond that year. New Zealand's tournament site asks crawlers like ours not to read it, so we will not.", de: "Geprueft, welche Laender als naechste dazukommen koennten — mit den negativen Antworten. Kanada lohnt sich: sein Kalender fuehrt 171 kommende Turniere, wo wir 68 haben. Australien nicht — dessen Verbandskalender ist technisch offen und wird seit 2024 nicht mehr gepflegt, er enthaelt ab diesem Jahr gar nichts. Neuseelands Turnierseite bittet Crawler wie unseren, sie nicht zu lesen, und daran halten wir uns." },
+  ] },
   { version: "0.457.3", date: "2026-09-10", changes: [
     { en: "Noted for the rollout: the map-filling run has to be started twice. The second pass is not caution, it earns its keep — 583 tournaments were placed on the first run, another 60 on the second, none on the third. Where two places share a name, the decision counts reliably placed tournaments nearby, and those only come into existence on the run before.", de: "Fuer das Ausrollen vermerkt: der Lauf, der die Karte fuellt, muss ZWEIMAL gestartet werden. Der zweite Durchgang ist keine Vorsicht, er bringt etwas — im ersten kamen 583 Turniere auf die Karte, im zweiten weitere 60, im dritten keines. Wo zwei Orte denselben Namen tragen, entscheidet die Zahl verlaesslich verorteter Turniere in der Naehe, und die entstehen erst im Lauf davor." },
   ] },
