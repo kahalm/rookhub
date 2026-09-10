@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.456.8", date: "2026-09-10", changes: [
+    { en: "Documentation only: the note on how the map decides between places of the same name now records why the fix from a moment ago does not yet help large cities, and what the measurement says the next step is.", de: "Nur Dokumentation: der Vermerk darueber, wie die Karte zwischen gleichnamigen Orten entscheidet, haelt jetzt fest, warum die Korrektur von vorhin bei Grossstaedten noch nicht greift und was die Messung als naechsten Schritt nennt." },
+  ] },
   { version: "0.456.7", date: "2026-09-10", changes: [
     { en: "Noted for later, with the measurements to decide it: tournaments in large cities can end up with no map pin at all, because 184 postal districts named Berlin spread over 39 kilometres and the rule that guards against genuinely different places of the same name cannot tell the two apart. Judging by whether the candidates form one connected cluster rather than by how far apart the outermost ones are separates them cleanly, and the threshold turns out to be stable rather than finely tuned.", de: "Fuer spaeter vermerkt, mit den Messungen zur Entscheidung: Turniere in Grossstaedten koennen ganz ohne Kartennadel bleiben, weil 184 Postleitzahlbereiche mit dem Namen Berlin ueber 39 Kilometer streuen und die Regel, die vor echten gleichnamigen Orten schuetzt, die beiden Faelle nicht unterscheiden kann. Danach zu urteilen, ob die Kandidaten EINEN zusammenhaengenden Haufen bilden, statt danach, wie weit die aeussersten auseinanderliegen, trennt sie sauber — und die Schwelle erweist sich als stabil und nicht als feinjustiert." },
   ] },

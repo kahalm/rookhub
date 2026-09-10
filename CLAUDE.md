@@ -1583,6 +1583,15 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   Der Fall ist also weltweit und nicht kyrillisch. Sichtbar wurde er erst durch die Umschrift (0.456.0): vorher
   trugen kyrillische Regionszeilen einen leeren Suchnamen. Der Rueckfall auf die Regionsmitte bleibt (Feld `state`
   ueber `ResolveByRegionAsync`, und Gruppen, die NUR aus Regionen bestehen).
+
+  **Diese Regel allein loest GROSSSTAEDTE nicht** — dort ist die Ursache eine andere: 182 Postleitzahl-Zeilen
+  namens „Berlin" streuen ueber 24 km, also weiter als die 5-km-Schwelle `SameTownKm`, obwohl es EINE Stadt ist.
+  Die Spannweite kann „eine Stadt mit vielen Stadtteilen" nicht von „mehrere gleichnamige Orte" unterscheiden
+  („Muenster": 17 Zeilen ueber 301 km). Der Zusammenhang kann es: nach Single-Linkage gemessen (zweite Instanz,
+  2026-09-10) fallen Berlin, Hamburg, Muenchen, Koeln, Bremen, Dresden und Wien **ab 8 km Lueckenschwelle** in je
+  EINEN Haufen und bleiben das bis 15 km, Muenster dagegen in drei. Die beiden Regeln muessen dabei in dieser
+  Reihenfolge komponieren: erst die Regionszeile heraus, dann haeufen — bei „Витебск" reisst die 78 km entfernte
+  Oblast-Mitte sonst jeden Haufen auf. Steht als TODO, absichtlich noch nicht gebaut.
 - **Ein Ortsname steht im Lexikon in ZWEI Schreibweisen** (seit 0.456.0) – `GeoPlace.NameNormalized` faltet
   Umlaute auf den Grundvokal (`München` -> `munchen`), `GeoPlace.NameTranscribed` haelt die ASCII-UMSCHRIFT
   (`muenchen`) und schreibt nichtlateinische Schriften um (`Київ` -> `kyiv`, `Αθήνα` -> `athina`). Gesucht wird in
