@@ -2720,7 +2720,8 @@
     "filterAll": "Mind",
     "filterAnnotated": "Csak kommentáltak",
     "annotatedBadge": "kommentált",
-    "anonHint": "Bejelentkezés nélkül is játszhatsz. A játszmád ebben a böngészőben marad."
+    "anonHint": "Bejelentkezés nélkül is játszhatsz. A játszmád ebben a böngészőben marad.",
+    "hasComment": "van hozzá megjegyzés — kattints az elolvasásához"
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

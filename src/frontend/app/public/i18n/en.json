@@ -2995,7 +2995,8 @@
     "filterAll": "All",
     "filterAnnotated": "Annotated only",
     "annotatedBadge": "annotated",
-    "anonHint": "You can play without an account. Your run stays with this browser."
+    "anonHint": "You can play without an account. Your run stays with this browser.",
+    "hasComment": "has a comment — click to read it"
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

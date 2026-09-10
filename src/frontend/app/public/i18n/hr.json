@@ -2995,7 +2995,8 @@
     "filterAll": "Sve",
     "filterAnnotated": "Samo komentirane",
     "annotatedBadge": "komentirana",
-    "anonHint": "Možeš igrati bez računa. Tvoj prolaz ostaje na ovom pregledniku."
+    "anonHint": "Možeš igrati bez računa. Tvoj prolaz ostaje na ovom pregledniku.",
+    "hasComment": "ima komentar — klikni za čitanje"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

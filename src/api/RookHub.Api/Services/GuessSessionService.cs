@@ -352,6 +352,34 @@ public class GuessSessionService
         return pawns > 0 ? whiteToMove : !whiteToMove;
     }
 
+    /// <summary>
+    /// Die Zug-Kommentare der Partie, je Halbzug (Schluessel wie <c>GameAnalysisPosition.Ply</c> —
+    /// <see cref="PgnParser.ExtractMoveComments"/> zaehlt genauso). Bei einer Meisterpartie sind das
+    /// die eigentliche Lehre; ohne sie ist eine annotierte Partie hier stumm.
+    ///
+    /// <para><b>Gelesen statt gespeichert.</b> Das Quell-PGN steht ohnehin an der Analyse, und
+    /// eine eigene Spalte je Stellung braeuchte eine Migration UND einen Nachtrag fuer den
+    /// Bestand — fuer Text, der sich nie aendert. Der Aufwand hier ist ein Feld einer Zeile (die
+    /// Partien liegen im einstelligen KB-Bereich) und faellt nur an, wo der Verlauf gebaut wird
+    /// (also nicht in der Uebersicht).</para>
+    ///
+    /// <para>Die eiserne Regel bleibt gewahrt, weil der VERLAUF nur gespielte Zuege enthaelt: der
+    /// Kommentar zum noch zu ratenden Zug wird nie nachgeschlagen.</para>
+    /// </summary>
+    private async Task<Dictionary<int, string>> CommentsAsync(int analysisId, CancellationToken ct)
+    {
+        var pgn = await _db.GameAnalyses.AsNoTracking()
+            .Where(g => g.Id == analysisId)
+            .Select(g => g.Pgn)
+            .FirstOrDefaultAsync(ct);
+        // Ohne geschweifte Klammer gibt es nichts zu holen — dann auch nicht parsen.
+        if (string.IsNullOrEmpty(pgn) || !pgn.Contains('{')) return new Dictionary<int, string>();
+
+        var game = PgnParser.SplitGames(pgn).FirstOrDefault();
+        if (game.MoveText is null) return new Dictionary<int, string>();
+        return PgnParser.ExtractMoveComments(game.MoveText) ?? new Dictionary<int, string>();
+    }
+
     private Task<GuessSession?> LoadAsync(GuessOwner owner, int sessionId, CancellationToken ct) =>
         OwnedBy(owner).Include(s => s.Moves).FirstOrDefaultAsync(s => s.Id == sessionId, ct);
 
@@ -468,6 +496,7 @@ public class GuessSessionService
                     .ToListAsync(ct);
                 if (played.Count > 0)
                 {
+                    var comments = await CommentsAsync(session.GameAnalysisId, ct);
                     dto.StartFen = played[0].Fen;
                     for (var i = 0; i + 1 < played.Count && played[i].Ply < session.CurrentPly; i++)
                         dto.History.Add(new GuessHistoryMoveDto
@@ -478,6 +507,7 @@ public class GuessSessionService
                             San = played[i].GameMoveSan,
                             Uci = played[i].GameMoveUci,
                             Fen = played[i + 1].Fen,
+                            Comment = comments.GetValueOrDefault(played[i].Ply),
                         });
                 }
             }

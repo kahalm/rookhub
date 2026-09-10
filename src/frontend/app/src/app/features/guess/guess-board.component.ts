@@ -29,6 +29,13 @@ function promotionOf(san: string | undefined): string {
  * (siehe `GuessSessionService`). Deshalb setzt das Brett den geratenen Zug auch nicht selbst um:
  * gezeigt wird, was der Server zurückmeldet.</p>
  */
+/** Eine Zeile der Zugliste: Weiss und Schwarz nebeneinander, je mit Index und Kommentar-Marke. */
+interface HistoryRow {
+  no: number;
+  w: string; wIdx: number; wNoted: boolean;
+  b: string | null; bIdx: number; bNoted: boolean;
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-guess-board',
@@ -126,15 +133,23 @@ function promotionOf(san: string | undefined): string {
                       <span class="no">{{ row.no }}.</span>
                       @if (row.wIdx >= 0) {
                         <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
+                                [class.noted]="row.wNoted" [attr.title]="row.wNoted ? noteHint : null"
                                 (click)="browse(row.wIdx)">{{ row.w }}</button>
                       } @else { <span class="mv muted">…</span> }
                       @if (row.b !== null) {
                         <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
+                                [class.noted]="row.bNoted" [attr.title]="row.bNoted ? noteHint : null"
                                 (click)="browse(row.bIdx)">{{ row.b }}</button>
                       } @else { <span></span> }
                     </div>
                   }
                 </div>
+                @if (browsedComment; as note) {
+                  <div class="note">
+                    <span class="note-move">{{ note.move }}</span>
+                    <span>{{ note.text }}</span>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -228,6 +243,13 @@ function promotionOf(san: string | undefined): string {
     .rev-row .pts { text-align: right; font-variant-numeric: tabular-nums; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
+    /* Kommentierte Zuege tragen einen Punkt — Farbe allein traegt die Auskunft nicht. */
+    .mv.noted { font-weight: 600; }
+    .mv.noted::after { content: '\\2022'; margin-left: 2px; color: var(--mdc-theme-primary, #3f51b5); }
+    .note { margin-top: 8px; padding: 8px 10px; border-radius: 6px; line-height: 1.45;
+            border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+            background: color-mix(in srgb, currentColor 5%, transparent); }
+    .note-move { font-weight: 600; margin-right: 6px; }
   `],
 })
 export class GuessBoardComponent implements OnInit, OnDestroy {
@@ -286,19 +308,37 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   get atStart(): boolean { return this.browseIndex === -1; }
 
   /** Der Verlauf als Zeilen „Nr. · Weiss · Schwarz" — je Halbzug der Index fuers Anklicken. */
-  get historyRows(): { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] {
-    const rows: { no: number; w: string; wIdx: number; b: string | null; bIdx: number }[] = [];
+  get historyRows(): HistoryRow[] {
+    const rows: HistoryRow[] = [];
     const history = this.session?.history ?? [];
     for (let i = 0; i < history.length; i++) {
       const m = history[i];
-      if (m.white) rows.push({ no: m.moveNumber, w: m.san, wIdx: i, b: null, bIdx: -1 });
+      const noted = !!m.comment;
+      if (m.white) rows.push({ no: m.moveNumber, w: m.san, wIdx: i, wNoted: noted, b: null, bIdx: -1, bNoted: false });
       else if (rows.length && rows[rows.length - 1].b === null) {
         rows[rows.length - 1].b = m.san;
         rows[rows.length - 1].bIdx = i;
-      } else rows.push({ no: m.moveNumber, w: '…', wIdx: -1, b: m.san, bIdx: i });
+        rows[rows.length - 1].bNoted = noted;
+      } else rows.push({ no: m.moveNumber, w: '…', wIdx: -1, wNoted: false, b: m.san, bIdx: i, bNoted: noted });
     }
     return rows;
   }
+
+  /**
+   * Der Kommentar des gerade angesehenen Zuges. Nur beim Durchblaettern — auf der Aufgabe selbst
+   * (`browseIndex === null`) gibt es keinen: der Kommentar zum zu ratenden Zug waere die Loesung.
+   */
+  get browsedComment(): { move: string; text: string } | null {
+    const i = this.browseIndex;
+    if (i === null || i < 0) return null;
+    const m = this.session?.history[i];
+    if (!m?.comment) return null;
+    const dots = m.white ? '.' : '…';
+    return { move: `${m.moveNumber}${dots}${m.san}`, text: m.comment };
+  }
+
+  /** Titel der markierten Zuege — beim Zeiger darueber und fuer Vorlesegeraete. */
+  get noteHint(): string { return this.translate.instant('guess.hasComment'); }
 
   /**
    * Einen Halbzug vor (+1) oder zurueck (-1). Das ENDE ist der letzte Eintrag des Verlaufs, also die

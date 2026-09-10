@@ -90,6 +90,10 @@ public class GuessHistoryMoveDto
     public string Uci { get; set; } = string.Empty;
     /// <summary>Stellung NACH diesem Zug.</summary>
     public string Fen { get; set; } = string.Empty;
+    /// <summary>Der Kommentar zu DIESEM Zug aus dem Quell-PGN, falls die Partie annotiert ist —
+    /// bei Meisterpartien die eigentliche Lehre. Steht nur an bereits GESPIELTEN Zuegen (der Verlauf
+    /// enthaelt nichts anderes); ein Kommentar am noch zu ratenden Zug waere die Loesung in Prosa.</summary>
+    public string? Comment { get; set; }
 }
 
 public class GuessPositionDto

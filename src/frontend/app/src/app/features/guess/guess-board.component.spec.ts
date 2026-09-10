@@ -171,16 +171,16 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   afterEach(() => http.verify());
 
   /** Laedt und geht auf die Aufgabe — beim Oeffnen steht das Brett jetzt auf der Grundstellung. */
-  function load() {
-    const c = loadAtStart();
+  function load(over: Partial<GuessSession> = {}) {
+    const c = loadAtStart(over);
     c.browse(null);
     return c;
   }
 
-  function loadAtStart() {
+  function loadAtStart(over: Partial<GuessSession> = {}) {
     const fixture = TestBed.createComponent(GuessBoardComponent);
     fixture.detectChanges();
-    http.expectOne('/api/guess-sessions/3').flush(base());
+    http.expectOne('/api/guess-sessions/3').flush(base(over));
     return fixture.componentInstance;
   }
 
@@ -420,5 +420,32 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.historyRows[0].b).toBe('Bxf3');
     expect(c.historyRows[0].wIdx).toBe(0);
     expect(c.historyRows[0].bIdx).toBe(1);
+  });
+
+  /**
+   * Die Kommentare einer Meisterpartie sind der Grund, sie zu spielen — in der Zugliste muessen die
+   * kommentierten Zuege deshalb erkennbar und wieder anklickbar sein.
+   */
+  it('markiert kommentierte Zuege und zeigt den Kommentar beim Anklicken', () => {
+    const c = load({
+      history: [
+        { ...HISTORY[0], comment: 'der Schluesselzug' },
+        { ...HISTORY[1] },
+      ],
+    });
+
+    const rows = c.historyRows;
+    expect(rows[0].wNoted).withContext('4.dxe5 ist kommentiert').toBeTrue();
+    expect(rows[0].bNoted).withContext('4...Bxf3 nicht').toBeFalse();
+
+    // Auf der Aufgabe selbst gibt es nichts zu zeigen — dort waere ein Kommentar die Loesung.
+    c.browse(null);
+    expect(c.browsedComment).toBeNull();
+
+    c.browse(0);
+    expect(c.browsedComment).toEqual({ move: '4.dxe5', text: 'der Schluesselzug' });
+
+    c.browse(1);
+    expect(c.browsedComment).withContext('dieser Zug hat keinen').toBeNull();
   });
 });

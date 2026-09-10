@@ -25,6 +25,8 @@ export interface GuessHistoryMove {
   san: string;
   uci: string;
   fen: string;
+  /** Kommentar aus dem Quell-PGN, falls die Partie annotiert ist. Nur an GESPIELTEN Zügen. */
+  comment?: string | null;
 }
 
 export interface GuessSession {

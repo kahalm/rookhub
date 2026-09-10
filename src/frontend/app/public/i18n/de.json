@@ -2995,7 +2995,8 @@
     "filterAll": "Alle",
     "filterAnnotated": "Nur kommentierte",
     "annotatedBadge": "kommentiert",
-    "anonHint": "Du kannst ohne Konto spielen. Dein Durchlauf bleibt an diesem Browser."
+    "anonHint": "Du kannst ohne Konto spielen. Dein Durchlauf bleibt an diesem Browser.",
+    "hasComment": "hat einen Kommentar — zum Lesen anklicken"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

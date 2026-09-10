@@ -559,4 +559,67 @@ public class GuessSessionServiceTests : IDisposable
 
         Assert.False(dto.GuessWhite);
     }
+
+    // ===== Kommentare der Partie ========================================================
+
+    /// <summary>
+    /// Bei einer Meisterpartie sind die Kommentare die eigentliche Lehre — sie muessen an den
+    /// GESPIELTEN Zuegen haengen. Und nur dort: ein Kommentar am noch zu ratenden Zug waere die
+    /// Loesung in Prosa.
+    /// </summary>
+    [Fact]
+    public async Task History_traegtDieKommentareDerGespieltenZuege()
+    {
+        var user = new AppUser { Username = "k", Email = "k@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+
+        var pgn = "[Event \"T\"]\n\n1. e4 {ein guter Anfang} e5 2. Nf3 {entwickelt und greift an} Nc6 "
+                + "3. Bb5 {die spanische Partie} a6 *";
+        var (header, plies) = GamePlies.Parse(pgn)!.Value;
+        var analysis = new GameAnalysis
+        {
+            UserId = user.Id, Title = "Mit Kommentaren", Pgn = pgn, StartFen = header.StartFen,
+            PlyCount = plies.Count, Status = GameAnalysisStatus.Done,
+        };
+        foreach (var p in plies)
+            analysis.Positions.Add(new GameAnalysisPosition
+            {
+                Ply = p.Index, Fen = p.Fen, GameMoveUci = p.Uci, GameMoveSan = p.San,
+                CandidatesJson = "[{\"uci\":\"" + p.Uci + "\",\"cp\":20}]", Depth = 20,
+            });
+        _db.GameAnalyses.Add(analysis);
+        await _db.SaveChangesAsync();
+
+        // Ab Halbzug 4 raten: 0..3 sind gespielt und stehen im Verlauf.
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, StartPly = 4, GuessWhite = true,
+        });
+
+        var byPly = dto.History.ToDictionary(h => h.Ply, h => h.Comment);
+        Assert.Equal("ein guter Anfang", byPly[0]);          // 1. e4
+        Assert.Null(byPly[1]);                                // 1... e5 ohne Kommentar
+        Assert.Equal("entwickelt und greift an", byPly[2]);   // 2. Nf3
+        Assert.Null(byPly[3]);                                // 2... Nc6
+
+        // Der Kommentar zu 3. Bb5 gehoert zum noch zu ratenden Zug und darf NICHT dabei sein.
+        Assert.DoesNotContain(dto.History, h => h.Comment == "die spanische Partie");
+        Assert.DoesNotContain("spanische", System.Text.Json.JsonSerializer.Serialize(dto));
+    }
+
+    /// <summary>Eine Partie ohne Kommentare kostet nichts und liefert keine.</summary>
+    [Fact]
+    public async Task History_ohneKommentare_bleibtLeer()
+    {
+        var (user, analysis) = await SeedAsync();
+
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, StartPly = 4, GuessWhite = true,
+        });
+
+        Assert.NotEmpty(dto.History);
+        Assert.All(dto.History, h => Assert.Null(h.Comment));
+    }
 }
