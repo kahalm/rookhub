@@ -90,6 +90,18 @@ public class GuessHistoryMoveDto
     public string Uci { get; set; } = string.Empty;
     /// <summary>Stellung NACH diesem Zug.</summary>
     public string Fen { get; set; } = string.Empty;
+    /// <summary>
+    /// Warum dieser Halbzug NICHT abgefragt wurde, obwohl er der geratenen Seite gehoert:
+    /// <c>notScorable</c> = die Engine fuehrt den Partiezug nicht unter ihren Kandidaten, es gibt
+    /// also keinen Bezugspunkt fuer eine Wertung; <c>pending</c> = die Stellung war noch nicht
+    /// gerechnet. <c>null</c> = regulaer abgefragt (oder Zug der Gegenseite).
+    ///
+    /// <para>Ohne diese Auskunft springt das Brett wortlos ueber Zuege hinweg — auf Dev gemeldet:
+    /// „nach Bxe7 spielt er sofort 3 Zuege, warum wird Bd3 nicht abgefragt?". Die Antwort war, dass
+    /// die Engine `cxd5` vorzieht (genau das, was das Buch im Kommentar dazu schreibt).</para>
+    /// </summary>
+    public string? Skipped { get; set; }
+
     /// <summary>Der Kommentar zu DIESEM Zug aus dem Quell-PGN, falls die Partie annotiert ist —
     /// bei Meisterpartien die eigentliche Lehre. Steht nur an bereits GESPIELTEN Zuegen (der Verlauf
     /// enthaelt nichts anderes); ein Kommentar am noch zu ratenden Zug waere die Loesung in Prosa.</summary>

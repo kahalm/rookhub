@@ -27,6 +27,10 @@ export interface GuessHistoryMove {
   fen: string;
   /** Kommentar aus dem Quell-PGN, falls die Partie annotiert ist. Nur an GESPIELTEN Zügen. */
   comment?: string | null;
+  /** Warum dieser Zug NICHT abgefragt wurde: `notScorable` (die Engine führt den Partiezug nicht
+   *  unter ihren Kandidaten — ohne ihn gibt es nichts zu vergleichen) oder `pending` (noch nicht
+   *  gerechnet). `null` = regulär abgefragt bzw. Zug der Gegenseite. */
+  skipped?: 'notScorable' | 'pending' | null;
 }
 
 export interface GuessSession {

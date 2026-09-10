@@ -2998,7 +2998,11 @@
     "filterAnnotated": "Samo komentirane",
     "annotatedBadge": "komentirana",
     "anonHint": "Možeš igrati bez računa. Tvoj prolaz ostaje na ovom pregledniku.",
-    "hasComment": "ima komentar — klikni za čitanje"
+    "hasComment": "ima komentar — klikni za čitanje",
+    "skipped": {
+      "notScorable": "nije pitano: motor ne navodi potez iz partije među najboljima, pa nema mjerila",
+      "pending": "nije pitano: ova pozicija još nije bila izračunata"
+    }
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

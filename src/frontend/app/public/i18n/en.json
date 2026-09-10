@@ -2998,7 +2998,11 @@
     "filterAnnotated": "Annotated only",
     "annotatedBadge": "annotated",
     "anonHint": "You can play without an account. Your run stays with this browser.",
-    "hasComment": "has a comment — click to read it"
+    "hasComment": "has a comment — click to read it",
+    "skipped": {
+      "notScorable": "not asked: the engine does not list the game move among its best, so there is nothing to measure against",
+      "pending": "not asked: this position had not been computed yet"
+    }
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

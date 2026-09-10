@@ -2723,7 +2723,11 @@
     "filterAnnotated": "Csak kommentáltak",
     "annotatedBadge": "kommentált",
     "anonHint": "Bejelentkezés nélkül is játszhatsz. A játszmád ebben a böngészőben marad.",
-    "hasComment": "van hozzá megjegyzés — kattints az elolvasásához"
+    "hasComment": "van hozzá megjegyzés — kattints az elolvasásához",
+    "skipped": {
+      "notScorable": "nem kérdeztük: a motor nem sorolja a játszmalépést a legjobbak közé, így nincs mihez mérni",
+      "pending": "nem kérdeztük: ez az állás még nem volt kiszámítva"
+    }
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

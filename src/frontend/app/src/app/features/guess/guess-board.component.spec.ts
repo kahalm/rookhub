@@ -139,7 +139,14 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     { ply: 6, moveNumber: 4, white: true, san: 'dxe5', uci: 'd4e5', fen: 'nach-dxe5' },
     { ply: 7, moveNumber: 4, white: false, san: 'Bxf3', uci: 'g4f3', fen: FEN8 },
   ];
-  const FEN10 = 'rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 0 6';
+  const FEN9 = 'rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5Q2/PPP2PPP/RNB1KB1R b KQkq - 0 5';   // nach 5.Qxf3
+  const FEN10 = 'rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 0 6';   // nach 5...dxe5
+  /** Der Verlauf, den der Server NACH dem Rateversuch liefert: die eben gespielten Halbzuege
+   *  stehen mit drin — daraus baut das Brett seine Schrittfolge. */
+  const PLAYED: GuessHistoryMove[] = [
+    { ply: 8, moveNumber: 5, white: true, san: 'Qxf3', uci: 'd1f3', fen: FEN9 },
+    { ply: 9, moveNumber: 5, white: false, san: 'dxe5', uci: 'd6e5', fen: FEN10 },
+  ];
   let http: HttpTestingController;
 
   function base(over: Partial<GuessSession> = {}): GuessSession {
@@ -154,6 +161,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   const nextSession = base({
     points: 0, maxPoints: 10, movesPlayed: 1,
     position: { ply: 10, moveNumber: 6, whiteToMove: true, fen: FEN10, lastMoveUci: 'd6e5' },
+    history: [...HISTORY, ...PLAYED],
   });
 
   beforeEach(async () => {
@@ -209,24 +217,26 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     // Bild waere zwei Halbzuege auf einmal, und man saehe nie, was gespielt wurde.
     c.continueGame();
     expect(c.holding).toBeFalse();
-    expect(c.boardFen).withContext('erst der Partiezug Qxf3').not.toBe(FEN10);
+    expect(c.boardFen).withContext('erst der Partiezug Qxf3').toBe(FEN9);
     expect(c.lastMove).toEqual(['d1', 'f3']);
-    expect(c.canGuess).withContext('waehrend der Pause gesperrt').toBeFalse();
+    expect(c.canGuess).withContext('waehrend der Schrittfolge gesperrt').toBeFalse();
 
     tick(1000);
-    expect(c.boardFen).withContext('jetzt die naechste Aufgabe').toBe(FEN10);
-    expect(c.canGuess).toBeTrue();
+    expect(c.boardFen).withContext('dann die Antwort').toBe(FEN10);
+    tick(500);
+    expect(c.canGuess).withContext('jetzt ist wieder der Nutzer dran').toBeTrue();
   }));
 
   it('Partiezug: der eigene Zug steht, die Antwort kommt erst nach der Pause', fakeAsync(() => {
     const c = load();
     guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
     expect(c.holding).toBeFalse();
-    expect(c.boardFen).withContext('noch ohne die Antwort dxe5').not.toBe(FEN10);
+    expect(c.boardFen).withContext('noch ohne die Antwort dxe5').toBe(FEN9);
     expect(c.lastMove).toEqual(['d1', 'f3']);
 
     tick(1000);
     expect(c.boardFen).toBe(FEN10);
+    tick(500);
   }));
 
   it('Passen: erst der Partiezug, dann die Antwort', fakeAsync(() => {
@@ -237,20 +247,23 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
       replySan: 'dxe5', replyUci: 'd6e5', diffCp: null, evalText: null, session: nextSession,
     });
     expect(c.holding).toBeFalse();
-    expect(c.boardFen).withContext('der Partiezug steht zuerst').not.toBe(FEN10);
+    expect(c.boardFen).withContext('der Partiezug steht zuerst').toBe(FEN9);
     expect(c.lastMove).toEqual(['d1', 'f3']);
 
     tick(1000);
     expect(c.boardFen).toBe(FEN10);
+    tick(500);
   }));
 
-  /** Ohne Antwort des Gegners (die Partie endet) waere die Kunstpause eine Pause vor dem Nichts. */
-  it('ohne Antwort geht es ohne Pause weiter', () => {
+  /** Ohne dazugekommene Halbzuege gibt es nichts abzuspielen — dann sofort die naechste Aufgabe. */
+  it('ohne neue Halbzuege geht es ohne Pause weiter', () => {
     const c = load();
     c.skip();
     http.expectOne('/api/guess-sessions/3/guess').flush({
       grade: null, points: 0, playedSan: null, gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
-      replySan: null, replyUci: null, diffCp: null, evalText: null, session: nextSession,
+      replySan: null, replyUci: null, diffCp: null, evalText: null,
+      session: base({ points: 0, maxPoints: 10, movesPlayed: 1, history: HISTORY,
+                      position: { ply: 10, moveNumber: 6, whiteToMove: true, fen: FEN10, lastMoveUci: 'd6e5' } }),
     });
     expect(c.boardFen).toBe(FEN10);
   });
@@ -494,5 +507,43 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     tick(1000);
     expect(c.boardFen).toBe(FEN10);
     expect(c.browsedComment).toEqual({ move: '5…dxe5', text: 'und jetzt steht Schwarz besser' });
+  }));
+
+  /**
+   * Wird eine Stellung uebersprungen (die Engine fuehrt den Partiezug nicht unter ihren
+   * Kandidaten), kommen MEHR als zwei Halbzuege dazu. Frueher sprang das Brett in einem Satz
+   * darueber — gemeldet als „nach Bxe7 spielt er sofort 3 Zuege". Jetzt laeuft jeder einzeln.
+   */
+  it('spielt uebersprungene Zuege einzeln ab und markiert sie', fakeAsync(() => {
+    const FEN11 = 'rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R b KQkq - 1 6';
+    const FEN12 = 'rn1qkb1r/ppp2ppp/5n2/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 2 7';
+    const skippy = base({
+      points: 5, maxPoints: 10, movesPlayed: 1,
+      position: { ply: 12, moveNumber: 7, whiteToMove: true, fen: FEN12, lastMoveUci: 'g8f6' },
+      history: [...HISTORY, ...PLAYED,
+        // 6.Qf3-f4 wurde NICHT abgefragt: nicht wertbar.
+        { ply: 10, moveNumber: 6, white: true, san: 'Qf4', uci: 'f3f4', fen: FEN11,
+          skipped: 'notScorable' },
+        { ply: 11, moveNumber: 6, white: false, san: 'Nf6', uci: 'g8f6', fen: FEN12 }],
+    });
+    const c = load();
+    guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0,
+                                   session: skippy });
+
+    expect(c.boardFen).withContext('1. Schritt: der Partiezug').toBe(FEN9);
+    tick(1000);
+    expect(c.boardFen).withContext('2. Schritt: die Antwort').toBe(FEN10);
+    tick(500);
+    expect(c.boardFen).withContext('3. Schritt: der uebersprungene Zug').toBe(FEN11);
+    tick(500);
+    expect(c.boardFen).withContext('4. Schritt: und die Antwort darauf').toBe(FEN12);
+    tick(500);
+    expect(c.canGuess).withContext('erst jetzt ist der Nutzer dran').toBeTrue();
+
+    // In der Zugliste ist der uebersprungene Zug als solcher erkennbar — samt Begruendung.
+    const row = c.historyRows.find(r => r.w === 'Qf4')!;
+    expect(row.wSkipped).toBe('notScorable');
+    c.browse(c.session!.history.findIndex((h: GuessHistoryMove) => h.ply === 10));
+    expect(c.browsedSkip).withContext('sagt, warum nicht gefragt wurde').toBeTruthy();
   }));
 });

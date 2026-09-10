@@ -2998,7 +2998,11 @@
     "filterAnnotated": "Nur kommentierte",
     "annotatedBadge": "kommentiert",
     "anonHint": "Du kannst ohne Konto spielen. Dein Durchlauf bleibt an diesem Browser.",
-    "hasComment": "hat einen Kommentar — zum Lesen anklicken"
+    "hasComment": "hat einen Kommentar — zum Lesen anklicken",
+    "skipped": {
+      "notScorable": "nicht abgefragt: die Engine führt den Partiezug nicht unter ihren besten — es gibt nichts, woran sich messen ließe",
+      "pending": "nicht abgefragt: diese Stellung war noch nicht gerechnet"
+    }
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

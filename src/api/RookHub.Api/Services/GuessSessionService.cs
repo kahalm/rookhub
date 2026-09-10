@@ -308,6 +308,21 @@ public class GuessSessionService
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Wurde dieser Halbzug uebersprungen, statt abgefragt zu werden — und warum? Betrifft nur die
+    /// GERATENE Seite ab dem Startzug; alles davor und die Gegenseite waren nie eine Aufgabe.
+    ///
+    /// <para><see cref="AdvanceToPlayableAsync"/> ueberspringt eine Stellung, in der der Partiezug
+    /// nicht unter den Kandidaten steht: ohne ihn gibt es keinen Bezugspunkt, und eine 0 dafuer
+    /// waere unfair. Das ist richtig, war aber unsichtbar — das Brett spielte wortlos weiter.</para>
+    /// </summary>
+    private static string? SkipReason(GuessSession session, int ply, bool analyzed, HashSet<int> answered)
+    {
+        if ((ply % 2 == 0) != session.GuessWhite) return null;   // Zug der Gegenseite
+        if (ply < session.StartPly || answered.Contains(ply)) return null;
+        return analyzed ? "notScorable" : "pending";
+    }
+
     /// <summary>Ab dieser Bauerndifferenz gilt eine Stellung als entschieden — darunter sagt sie
     /// nichts darüber, wer die Partie gewonnen hat.</summary>
     private const double DecisivePawns = 1.5;
@@ -492,8 +507,11 @@ public class GuessSessionService
                 var played = await _db.GameAnalysisPositions.AsNoTracking()
                     .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply <= session.CurrentPly)
                     .OrderBy(p => p.Ply)
-                    .Select(p => new { p.Ply, p.Fen, p.GameMoveSan, p.GameMoveUci })
+                    // `Analyzed` statt der Kandidatenliste selbst: die ist LONGTEXT und wuerde hier
+                    // fuer JEDEN gespielten Halbzug mitgelesen, nur um ein Ja/Nein zu bekommen.
+                    .Select(p => new { p.Ply, p.Fen, p.GameMoveSan, p.GameMoveUci, Analyzed = p.CandidatesJson != null })
                     .ToListAsync(ct);
+                var answered = moves.Select(m => m.Ply).ToHashSet();
                 if (played.Count > 0)
                 {
                     var comments = await CommentsAsync(session.GameAnalysisId, ct);
@@ -508,6 +526,7 @@ public class GuessSessionService
                             Uci = played[i].GameMoveUci,
                             Fen = played[i + 1].Fen,
                             Comment = comments.GetValueOrDefault(played[i].Ply),
+                            Skipped = SkipReason(session, played[i].Ply, played[i].Analyzed, answered),
                         });
                 }
             }

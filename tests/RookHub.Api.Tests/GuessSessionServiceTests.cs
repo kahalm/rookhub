@@ -622,4 +622,57 @@ public class GuessSessionServiceTests : IDisposable
         Assert.NotEmpty(dto.History);
         Assert.All(dto.History, h => Assert.Null(h.Comment));
     }
+
+    /// <summary>
+    /// Eine Stellung, in der die Engine den Partiezug NICHT unter ihren Kandidaten fuehrt, wird
+    /// uebersprungen (ohne Bezugspunkt waere eine Wertung geraten) — aber das muss man SEHEN. Sonst
+    /// spielt das Brett wortlos ueber Zuege hinweg; auf Dev gemeldet als „nach Bxe7 spielt er
+    /// sofort 3 Zuege, warum wird Bd3 nicht abgefragt?".
+    /// </summary>
+    [Fact]
+    public async Task History_nenntDenGrundFuerUebersprungeneZuege()
+    {
+        var (user, analysis) = await SeedAsync();
+        // Halbzug 2 (Weiss, Nf3) unwertbar machen: Kandidatenliste ohne den Partiezug.
+        var p2 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 2);
+        p2.CandidatesJson = "[{\"uci\":\"b1c3\",\"cp\":10}]";
+        await _db.SaveChangesAsync();
+
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, StartPly = 0, GuessWhite = true,
+        });
+        // Halbzug 0 raten; danach steht die Sitzung auf 4, weil 2 uebersprungen wurde.
+        await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e4" });
+        var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
+
+        Assert.Equal(4, state!.Position!.Ply);
+        var skipped = state.History.Single(h => h.Ply == 2);
+        Assert.Equal("notScorable", skipped.Skipped);
+        // Der geratene Zug und die Gegenseite tragen KEINEN Grund.
+        Assert.Null(state.History.Single(h => h.Ply == 0).Skipped);
+        Assert.Null(state.History.Single(h => h.Ply == 1).Skipped);
+    }
+
+    /// <summary>Was noch nicht gerechnet ist, wird anders benannt als was nicht wertbar ist —
+    /// das eine wird noch, das andere nie.</summary>
+    [Fact]
+    public async Task History_unterscheidetNochNichtGerechnetVonNichtWertbar()
+    {
+        var (user, analysis) = await SeedAsync();
+        var p2 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 2);
+        p2.CandidatesJson = null;                      // noch nicht gerechnet
+        await _db.SaveChangesAsync();
+
+        var session = new GuessSession
+        {
+            UserId = user.Id, GameAnalysisId = analysis.Id, GuessWhite = true,
+            StartPly = 0, CurrentPly = 4,
+        };
+        _db.GuessSessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
+        Assert.Equal("pending", state!.History.Single(h => h.Ply == 2).Skipped);
+    }
 }
