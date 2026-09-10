@@ -35,8 +35,11 @@ export const routes: Routes = [
   // eingeloggt — Fortschritt und Versuch sind serverseitig [Authorize].
   { path: 'weekly/:weeklyId', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
   // Auftragsseite VOR `analysis` (eigener Pfad; eingeloggt — Aufträge sind serverseitig [Authorize]).
-  { path: 'guess/:id', loadComponent: () => import('./features/guess/guess-board.component').then(m => m.GuessBoardComponent), canActivate: [authGuard, menuGuard('guess')] },
-  { path: 'guess', loadComponent: () => import('./features/guess/guess-list.component').then(m => m.GuessListComponent), canActivate: [authGuard, menuGuard('guess')] },
+  // Ohne authGuard: die Punktepartie laeuft auch ohne Anmeldung (kuratierter Bestand, Fortschritt
+  // an einer anonymen Sitzung am Server) — wie die Puzzles. Das Gate ist allein die
+  // Menue-Sichtbarkeit, die dafuer auf „All" steht (MenuRegistry).
+  { path: 'guess/:id', loadComponent: () => import('./features/guess/guess-board.component').then(m => m.GuessBoardComponent), canActivate: [menuGuard('guess')] },
+  { path: 'guess', loadComponent: () => import('./features/guess/guess-list.component').then(m => m.GuessListComponent), canActivate: [menuGuard('guess')] },
   // Literal vor Parameter: /analysis/games/:id darf nicht als Auftrags-Id verstanden werden.
   { path: 'analysis/games/:id', loadComponent: () => import('./features/analysis/game-analysis-detail.component').then(m => m.GameAnalysisDetailComponent), canActivate: [authGuard] },
   { path: 'analysis/games', loadComponent: () => import('./features/analysis/game-analyses.component').then(m => m.GameAnalysesComponent), canActivate: [authGuard] },

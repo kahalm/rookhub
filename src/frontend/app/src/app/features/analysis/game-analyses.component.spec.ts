@@ -11,7 +11,7 @@ function analysis(over: Partial<GameAnalysis> = {}): GameAnalysis {
   return {
     id: 1, title: 'A – B', white: 'A', black: 'B', result: '1-0', event: null,
     targetDepth: 30, multiPv: 5, engineId: 'eei_x', status: 'running',
-    plyCount: 40, analyzedPlies: 10, lastError: null,
+    plyCount: 40, analyzedPlies: 10, lastError: null, isPublic: false, annotated: false,
     createdAt: '2026-09-05T10:00:00Z', finishedAt: null, ...over,
   };
 }

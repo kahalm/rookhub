@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { getOrCreateAnonSessionId } from '../../core/anon-session';
 import { map } from 'rxjs/operators';
 
 /** „Track solves"-Zähler eines geteilten Puzzles (Erstversuch je Besucher). */
@@ -221,29 +222,17 @@ export class PuzzleService {
     return this.http.get<PuzzleBreakdown>('/api/courses/stats/breakdown');
   }
 
-  /** Zuletzt vergebene Id, wenn der Speicher nicht mitspielt (Privatmodus, gesperrte Site-Daten). */
-  private memorySessionId?: string;
-
+  /**
+   * Die anonyme Sitzungskennung. Sie liegt in `core/anon-session.ts`, weil sie an DREI Stellen
+   * gebraucht wird (Puzzle-Versuche, Endless-Fortschritt, Punktepartie) — und weil die Form dort
+   * gegen das Muster des Servers gebaut ist: die frühere Rückfallebene hier vergab
+   * `s-<zeit>-<zufall>`, und genau das weist `ValidationConstants.SessionIdPattern` (Hex +
+   * Bindestrich, 32–36 Zeichen) ab. Auf dem HTTP-Dev-Stack, wo `crypto.randomUUID` fehlt, lief
+   * damit JEDE anonyme Meldung in ein 400. Der Ersatz nimmt `crypto.getRandomValues` (gibt es auch
+   * im unsicheren Kontext) und liefert 32 Hex-Zeichen.
+   */
   private getOrCreateSessionId(): string {
-    const key = 'rookhub_puzzle_session';
-    // `crypto.randomUUID` ist an einen SICHEREN Kontext gebunden und auf dem HTTP-Dev-Stack
-    // schlicht `undefined`; der Zugriff auf localStorage wirft in Browsern mit gesperrten
-    // Site-Daten. Ungeschützt riss das JEDE anonyme Versuchs-Meldung mitten im Ablauf ab — im
-    // Fehlerfall blieb sogar die Lösungs-Durchsicht aus. Dieselbe Rückfallebene wie im
-    // Endless-Modus und in der Offline-Queue.
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored) return stored;
-      const fresh = this.newSessionId();
-      localStorage.setItem(key, fresh);
-      return fresh;
-    } catch {
-      return this.memorySessionId ??= this.newSessionId();
-    }
-  }
-
-  private newSessionId(): string {
-    return crypto?.randomUUID?.() ?? `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    return getOrCreateAnonSessionId('rookhub_puzzle_session');
   }
 
   /** Anonyme Puzzle-Session-Id (für das Offline-Vormerken anonymer Versuche). */

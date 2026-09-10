@@ -230,7 +230,9 @@
       "dailyTitle": "Dnevna zagonetka",
       "dailyDesc": "Svaki dan jedna zajednička zagonetka za sve — s dnevnom ljestvicom (i na Discordu).",
       "weeklyTitle": "Tjedna objava",
-      "weeklyDesc": "Tjedni niz zagonetaka iz partije s rokom — odigraj ga do kraja, s ljestvicom."
+      "weeklyDesc": "Tjedni niz zagonetaka iz partije s rokom — odigraj ga do kraja, s ljestvicom.",
+      "guessTitle": "Partija na bodove",
+      "guessDesc": "Preuzmi jednu stranu komentirane majstorske partije i pogađaj potez za potezom — bodovi za svaki potez, mjereni prema stvarno odigranom."
     },
     "feedback": "Povratne informacije / Prijavi grešku",
     "updateAvailable": "Dostupna je nova verzija.",
@@ -407,6 +409,11 @@
       "moveDown": "Pomakni dolje",
       "hideAria": "Sakrij pločicu",
       "showAria": "Prikaži pločicu"
+    },
+    "guess": {
+      "title": "Partija na bodove",
+      "subtitle": "Odigraj majstorsku partiju potez za potezom na bodove.",
+      "open": "Igraj"
     }
   },
   "positionInReps": {
@@ -2919,7 +2926,9 @@
       "running": "računa",
       "done": "gotovo",
       "failed": "neuspjelo"
-    }
+    },
+    "overall": "Ukupno: {{done}} od {{total}} pozicija izračunano ({{percent}} %)",
+    "overallOpen": "{{count}} partija još je u redu čekanja"
   },
   "guess": {
     "title": "Bodovna partija",
@@ -2977,7 +2986,15 @@
       "skipped": "Preskočeno"
     },
     "prevMove": "Prethodni potez",
-    "nextMove": "Sljedeći potez"
+    "nextMove": "Sljedeći potez",
+    "curated": "Majstorske partije",
+    "curatedHint": "Igraš stranu pobjednika — u tome je smisao vježbe.",
+    "noCurated": "U zbirci još nema ničega.",
+    "ownGames": "Vlastite analize",
+    "filterAll": "Sve",
+    "filterAnnotated": "Samo komentirane",
+    "annotatedBadge": "komentirana",
+    "anonHint": "Možeš igrati bez računa. Tvoj prolaz ostaje na ovom pregledniku."
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

@@ -1228,6 +1228,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<GuessSession>(e =>
         {
             e.HasIndex(x => new { x.UserId, x.StartedAt });
+            // Der anonyme Besitzer wird genauso abgefragt wie der angemeldete
+            // (GuessSessionService.OwnedBy) und braucht deshalb denselben Index.
+            e.HasIndex(x => new { x.AnonymousSessionId, x.StartedAt });
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             // Restrict statt Cascade: sonst gäbe es zwei Cascade-Pfade auf GuessMoves
             // (User → Session → Move und Analyse → Session → Move) — MySQL lehnt das ab.

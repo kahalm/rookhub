@@ -632,11 +632,12 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
      auf `Pending`, `LastError` leeren) waere die kleine Loesung. Nebenbei: die Erkennung laeuft
      ueber `ex.Message.Contains("engine")` — ein eigener Ausnahmetyp im `AnalysisJobService` waere
      die ehrlichere Fassung.
-  2. **`GET /api/game-analyses/{id}` liefert JEDEN Zug der Partie** (San + Uci je Halbzug), waehrend
-     die Punktepartie penibel darauf achtet, den Partiezug erst NACH dem Raten herauszugeben. Heute
-     harmlos (die Partie ist das eigene hochgeladene PGN), aber sobald Phase 1 den „kuratierten
-     Bestand" bringt, ist die Regel ueber den Nachbar-Endpoint ausgehebelt. Dann muessen die Zuege
-     einer fremden/kuratierten Analyse hinter dem Fortschritt der Sitzung stehen.
+  2. ~~**`GET /api/game-analyses/{id}` liefert JEDEN Zug der Partie**~~ — mit dem kuratierten
+     Bestand (0.459.0) geklaert, ohne den Endpunkt anzufassen: er ist weiterhin auf EIGENE Analysen
+     abgefragt (`g.UserId == userId`), und der neue Bestands-Endpunkt `GET /api/game-analyses/public`
+     liefert bewusst nur Kopfdaten und Fortschritt. Die Zuege einer fremden Partie stehen damit
+     ausschliesslich hinter dem Fortschritt der Sitzung. Zu beachten bleibt es, sobald jemand den
+     Detail-Abruf fuer fremde Analysen oeffnet.
   3. **Ein NICHT gelisteter Zug wird mit „aehnlich" (2 Punkte) gedeckelt** (`GuessScoring`): liegen
      die Top-5 dicht beieinander (ruhige Stellung), ist die Obergrenze „schlechtester gelisteter
      Zug" fast so gut wie der Partiezug — ein klarer Patzer bekommt dann 2 Punkte. Bewusst so
@@ -648,8 +649,27 @@ Eskalationsstufen, wenn trotz Selbstheilung viele Clients einen kaputten SW-/Cac
   5. **`POST /api/game-analyses` nimmt ein PGN beliebiger Groesse** (Spalte ist LONGTEXT; nur die
      Halbzuege sind auf 300 gedeckelt). Der Repertoire-Upload deckelt bei 10 MB — dieselbe Schranke
      waere hier konsequent.
-  6. **`/guess` zeigt je spielbarer Partie einen gefuellten Primaer-Knopf** — die UI-Dichte-Regel
-     (CLAUDE.md) will genau EINEN pro Screen. Bei zehn analysierten Partien sind es zehn.
+  6. ~~**`/guess` zeigt je spielbarer Partie einen gefuellten Primaer-Knopf**~~ — erledigt in
+     0.459.0: die Zeilen tragen jetzt `mat-stroked-button`.
+
+- [ ] **Die Partie-Analyse-Pumpe laesst hintere Partien verhungern.** `PumpAllAsync` geht strikt
+  nach `CreatedAt` und fuellt Partie fuer Partie bis zum Deckel (`MaxOpenJobsPerGame` 12,
+  `MaxOpenJobsPerUser` 50). Stehen 26 Partien in der Warteschlange, bekommen die hinteren also GAR
+  NICHTS, bis die ersten fertig sind — am 2026-09-10 live erlebt: die frisch angelegten
+  Capablanca-Partien standen still, waehrend 16 aeltere alle 50 Plaetze hielten (Meldung des Users:
+  sehe keinen Fortschritt). Behelf war, die alten Partien von Hand zurueckzustellen. Richtig waere
+  ein FAIRER Anteil je offener Partie: `max(1, Deckel / offene Partien)`. Weil ohnehin nur EINE
+  Suche je Engine laeuft, kostet eine kurze Warteschlange je Partie nichts, und alle Partien kommen
+  gleichzeitig voran — also auch alle frueher in den spielbaren Zustand.
+  **Nebenbefund**: ein Auftrag traegt die Engine-Id aus dem Moment seiner Anlage. Wer die
+  Hintergrund-Engine im Profil wechselt, laesst die schon eingereihten Auftraege auf der ALTEN
+  Engine liegen; beide Warteschlangen laufen dann parallel.
+
+- [ ] **Dev: 13 zurueckgestellte Partie-Analysen wieder anschalten.** Am 2026-09-10 auf `Status=3`
+  gesetzt mit `LastError='zurueckgestellt 2026-09-10 (Capablanca-Partien zuerst)'`, damit die zehn
+  Capablanca-Partien Rechenzeit bekommen. Sobald die durch sind:
+  `UPDATE GameAnalyses SET Status=0, LastError=NULL WHERE LastError LIKE 'zurueckgestellt%'`.
+  Ihre Stellungen sind unangetastet (CandidatesJson NULL), die Pumpe reiht sie neu ein.
 
 - [ ] **„Punktepartie" — Meisterpartie Zug für Zug erraten** (Feature-Skizze 2026-09-05):
   Dritter Kurs-Modus neben Solver (Linie mit Lösung) und Kalkulation (Stellung ohne Lösung): eine ganze

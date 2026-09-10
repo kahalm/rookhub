@@ -85,7 +85,9 @@
       "dailyTitle": "Napi feladvány",
       "dailyDesc": "Minden nap egy közös feladvány mindenkinek – napi ranglistával (a Discordon is).",
       "weeklyTitle": "Heti posta",
-      "weeklyDesc": "Heti feladványsorozat egy játszmából, határidővel – végigjátszásra, ranglistával."
+      "weeklyDesc": "Heti feladványsorozat egy játszmából, határidővel – végigjátszásra, ranglistával.",
+      "guessTitle": "Pontjátszma",
+      "guessDesc": "Vedd át egy kommentált mesterjátszma egyik oldalát, és találd ki lépésenként a folytatást — minden lépésre pont, a valóban játszott lépéshez mérve."
     },
     "offlineQueueFull": "Az offline tároló megtelt — az új eredményeket már nem lehet elmenteni a későbbi feltöltéshez.",
     "apkUpdate": {
@@ -259,6 +261,11 @@
       "moveDown": "Le",
       "hideAria": "Csempe elrejtése",
       "showAria": "Csempe megjelenítése"
+    },
+    "guess": {
+      "title": "Pontjátszma",
+      "subtitle": "Játssz végig egy mesterjátszmát lépésenként, pontokért.",
+      "open": "Játék"
     }
   },
   "pgnViewer": {
@@ -2644,7 +2651,9 @@
       "running": "számol",
       "done": "kész",
       "failed": "meghiúsult"
-    }
+    },
+    "overall": "Összesen: {{done}} / {{total}} állás kiszámítva ({{percent}} %)",
+    "overallOpen": "{{count}} játszma vár még a sorban"
   },
   "guess": {
     "title": "Pontjátszma",
@@ -2702,7 +2711,15 @@
       "skipped": "Passzolva"
     },
     "prevMove": "Előző lépés",
-    "nextMove": "Következő lépés"
+    "nextMove": "Következő lépés",
+    "curated": "Mesterjátszmák",
+    "curatedHint": "A győztes oldalát veszed át — ez a gyakorlat lényege.",
+    "noCurated": "A gyűjteményben még nincs semmi.",
+    "ownGames": "Saját elemzések",
+    "filterAll": "Mind",
+    "filterAnnotated": "Csak kommentáltak",
+    "annotatedBadge": "kommentált",
+    "anonHint": "Bejelentkezés nélkül is játszhatsz. A játszmád ebben a böngészőben marad."
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

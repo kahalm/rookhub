@@ -1,9 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.DTOs;
 
 public class CreateGuessSessionRequest
 {
     public int GameAnalysisId { get; set; }
-    /// <summary>Geratene Seite; Vorgabe Weiß.</summary>
+    /// <summary>Geratene Seite. WEGGELASSEN heißt „die des Gewinners" — im kuratierten Bestand ist
+    /// genau das der Sinn der Übung, dort fragt die Auswahl nicht mehr nach der Seite. Wie der
+    /// Server den Gewinner bestimmt (Ergebnis, sonst Bewertung der letzten gerechneten Stellung),
+    /// steht in <c>GuessSessionService.WinnerSideAsync</c>.</summary>
     public bool? GuessWhite { get; set; }
     /// <summary>Erster zu ratender Halbzug; Vorgabe = nach der Eröffnung.</summary>
     public int? StartPly { get; set; }
@@ -15,6 +20,22 @@ public class GuessMoveRequest
     public string? Uci { get; set; }
     /// <summary>Seit der letzten Meldung verbrauchte Sekunden (der Server addiert).</summary>
     public int? AddSeconds { get; set; }
+}
+
+/// <summary>Wie <see cref="CreateGuessSessionRequest"/>, nur ohne Anmeldung: die Sitzungskennung
+/// des Browsers tritt an die Stelle des Kontos. Eigene Klasse statt eines optionalen Feldes am
+/// angemeldeten Request — dort wäre es ein Feld, das nie gesetzt werden darf.</summary>
+public class CreateAnonymousGuessSessionRequest : CreateGuessSessionRequest
+{
+    [Required, MaxLength(36), RegularExpression(ValidationConstants.SessionIdPattern)]
+    public string SessionId { get; set; } = string.Empty;
+}
+
+/// <summary>Rateversuch ohne Anmeldung — siehe <see cref="CreateAnonymousGuessSessionRequest"/>.</summary>
+public class AnonymousGuessMoveRequest : GuessMoveRequest
+{
+    [Required, MaxLength(36), RegularExpression(ValidationConstants.SessionIdPattern)]
+    public string SessionId { get; set; } = string.Empty;
 }
 
 /// <summary>Zustand einer Sitzung — das, was der Client zum Weiterspielen braucht.

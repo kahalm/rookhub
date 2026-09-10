@@ -39,11 +39,15 @@ interface TileDef {
 }
 
 /** Kuratierter Standard (UI-Welle 3): nur der Trainings-Kern ist anfänglich sichtbar —
- *  Puzzles, Wochenpost, angepinnte Kurse, Kurse, Trainingsziele. Alles andere (auch
+ *  Puzzles, Punktepartie, Wochenpost, angepinnte Kurse, Kurse, Trainingsziele. Alles andere (auch
  *  Repertoires/Bestenlisten) ist über „Anpassen" zuschaltbar; wer schon personalisiert
- *  hat, behält seinen gespeicherten Stand. */
+ *  hat, behält seinen gespeicherten Stand.
+ *
+ *  Die Punktepartie steht hier, weil sie seit 0.459.0 OHNE Anmeldung läuft und damit zum Einstieg
+ *  gehört — genau wie die Puzzles. Die Regel „neue Features kommen NICHT in DEFAULT_VISIBLE" gilt
+ *  weiter; sie hat hier eine bewusste Ausnahme bekommen, keine stillschweigende. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'weekly', 'pinnedCourses', 'courses', 'trainingGoals',
+  'puzzles', 'guess', 'weekly', 'pinnedCourses', 'courses', 'trainingGoals',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
@@ -373,6 +377,12 @@ export class DashboardComponent implements OnInit {
       eligible: () => this.menuKeys.has('analysis'),
       subtitle: () => ({ key: 'dashboard.analysis.subtitle' }),
       buttons: [{ labelKey: 'dashboard.analysis.open', link: '/analysis' }],
+    },
+    guess: {
+      id: 'guess', icon: 'sports_esports', titleKey: 'dashboard.guess.title',
+      eligible: () => this.menuKeys.has('guess'),
+      subtitle: () => ({ key: 'dashboard.guess.subtitle' }),
+      buttons: [{ labelKey: 'dashboard.guess.open', link: '/guess' }],
     },
     messages: {
       id: 'messages', icon: 'mail', titleKey: 'dashboard.messages.title',

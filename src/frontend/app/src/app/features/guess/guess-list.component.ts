@@ -12,11 +12,23 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessService, GuessSession } from './guess.service';
 import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.service';
+import { AuthService } from '../../core/auth.service';
 
 /**
- * Punktepartie-Übersicht (`/guess`): welche analysierten Partien lassen sich spielen, und welche
- * eigenen Durchläufe gibt es schon. Gespielt werden kann nur, was die Engine (mindestens teilweise)
- * gerechnet hat — sonst gäbe es nichts zu werten.
+ * Punktepartie-Übersicht (`/guess`): welche Partien lassen sich spielen, und welche Durchläufe gibt
+ * es schon. Gespielt werden kann nur, was die Engine (mindestens teilweise) gerechnet hat — sonst
+ * gäbe es nichts zu werten.
+ *
+ * <b>Zwei Töpfe, und sie verhalten sich verschieden.</b> Der KURATIERTE Bestand
+ * (`GameAnalysis.IsPublic`) steht jedem offen, auch ohne Anmeldung, und dort wird die Seite NICHT
+ * gewählt: man übernimmt die des Gewinners — das ist der Sinn der Übung, und eine Auswahl, in der
+ * man sich selbst die verlorene Seite gibt, wäre nur eine Falle. Die EIGENEN Analysen (nur
+ * angemeldet) behalten die Wahl: dort sind es die eigenen Partien, und da will man auch mal die
+ * eigene Seite sehen.
+ *
+ * Der Filter „alle / nur kommentierte" arbeitet auf dem ausgelieferten `annotated`-Merkmal, also im
+ * Browser — der Bestand ist eine überschaubare Bibliothek, und ein Server-Umlauf je Klick wäre für
+ * ein Häkchen zu viel.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -28,35 +40,44 @@ import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.ser
     <div class="gl-container">
       <div class="header">
         <h1>{{ 'guess.title' | translate }}</h1>
-        <a mat-stroked-button routerLink="/analysis/games">
-          <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
-        </a>
+        @if (loggedIn) {
+          <a mat-stroked-button routerLink="/analysis/games">
+            <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
+          </a>
+        }
       </div>
       <p class="muted intro">{{ 'guess.intro' | translate }}</p>
+      @if (!loggedIn) {
+        <p class="muted small">{{ 'guess.anonHint' | translate }}</p>
+      }
 
       @if (loading) {
         <app-loading-spinner />
       } @else {
         <mat-card class="start-card">
           <mat-card-content>
-            <h2>{{ 'guess.startNew' | translate }}</h2>
-            @if (playable.length === 0) {
-              <p class="muted">{{ 'guess.noGames' | translate }}</p>
-              <a mat-stroked-button routerLink="/analysis/games">{{ 'guess.analyseFirst' | translate }}</a>
-            } @else {
-              <div class="side-pick">
-                <span class="muted small">{{ 'guess.sideLabel' | translate }}</span>
-                <mat-button-toggle-group [(ngModel)]="guessWhite" aria-label="side">
-                  <mat-button-toggle [value]="true">{{ 'guess.white' | translate }}</mat-button-toggle>
-                  <mat-button-toggle [value]="false">{{ 'guess.black' | translate }}</mat-button-toggle>
+            <div class="sec-head">
+              <h2>{{ 'guess.curated' | translate }}</h2>
+              @if (hasAnnotated) {
+                <mat-button-toggle-group [(ngModel)]="annotatedOnly" aria-label="filter" class="small-toggle">
+                  <mat-button-toggle [value]="false">{{ 'guess.filterAll' | translate }}</mat-button-toggle>
+                  <mat-button-toggle [value]="true">{{ 'guess.filterAnnotated' | translate }}</mat-button-toggle>
                 </mat-button-toggle-group>
-              </div>
-              @for (g of playable; track g.id) {
+              }
+            </div>
+            <p class="muted small">{{ 'guess.curatedHint' | translate }}</p>
+            @if (curatedShown.length === 0) {
+              <p class="muted">{{ 'guess.noCurated' | translate }}</p>
+            } @else {
+              @for (g of curatedShown; track g.id) {
                 <div class="game-row">
                   <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
+                  @if (g.annotated) {
+                    <span class="chip">{{ 'guess.annotatedBadge' | translate }}</span>
+                  }
                   <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
                   <span class="spacer"></span>
-                  <button mat-flat-button color="primary" [disabled]="starting" (click)="start(g)">
+                  <button mat-stroked-button [disabled]="starting" (click)="start(g)">
                     <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
                   </button>
                 </div>
@@ -64,6 +85,36 @@ import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.ser
             }
           </mat-card-content>
         </mat-card>
+
+        @if (loggedIn) {
+          <mat-card class="start-card">
+            <mat-card-content>
+              <h2>{{ 'guess.ownGames' | translate }}</h2>
+              @if (playable.length === 0) {
+                <p class="muted">{{ 'guess.noGames' | translate }}</p>
+                <a mat-stroked-button routerLink="/analysis/games">{{ 'guess.analyseFirst' | translate }}</a>
+              } @else {
+                <div class="side-pick">
+                  <span class="muted small">{{ 'guess.sideLabel' | translate }}</span>
+                  <mat-button-toggle-group [(ngModel)]="guessWhite" aria-label="side">
+                    <mat-button-toggle [value]="true">{{ 'guess.white' | translate }}</mat-button-toggle>
+                    <mat-button-toggle [value]="false">{{ 'guess.black' | translate }}</mat-button-toggle>
+                  </mat-button-toggle-group>
+                </div>
+                @for (g of playable; track g.id) {
+                  <div class="game-row">
+                    <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
+                    <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
+                    <span class="spacer"></span>
+                    <button mat-stroked-button [disabled]="starting" (click)="start(g, guessWhite)">
+                      <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
+                    </button>
+                  </div>
+                }
+              }
+            </mat-card-content>
+          </mat-card>
+        }
 
         @if (sessions.length) {
           <h2 class="sec">{{ 'guess.yourRuns' | translate }}</h2>
@@ -96,6 +147,8 @@ import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.ser
     h2.sec { margin: 18px 0 8px; }
     .intro { margin: 4px 0 14px; }
     .start-card { margin-bottom: 8px; }
+    .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .small-toggle { font-size: .8rem; }
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .game-row, .run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
     .game-row + .game-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
@@ -113,36 +166,60 @@ import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.ser
 export class GuessListComponent implements OnInit {
   private guess = inject(GuessService);
   private analyses = inject(GameAnalysisService);
+  private auth = inject(AuthService);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
 
   sessions: GuessSession[] = [];
+  /** Kuratierter Bestand — auch ohne Anmeldung. */
+  curated: GameAnalysis[] = [];
+  /** Eigene Analysen (nur angemeldet). */
   playable: GameAnalysis[] = [];
   loading = true;
   starting = false;
   guessWhite = true;
+  /** Filter des Bestands: nur Partien mit Kommentaren zeigen. */
+  annotatedOnly = false;
+
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
+
+  /** Der Filter wird nur angeboten, wenn es überhaupt etwas zu filtern gibt — ein Umschalter, der
+   *  beide Male dieselbe Liste zeigt, verwirrt mehr als er hilft. */
+  get hasAnnotated(): boolean { return this.curated.some(g => g.annotated); }
+
+  get curatedShown(): GameAnalysis[] {
+    return this.annotatedOnly ? this.curated.filter(g => g.annotated) : this.curated;
+  }
 
   ngOnInit(): void {
-    this.analyses.list().subscribe({
-      next: list => {
-        // Spielbar ist, was mindestens eine gerechnete Stellung hat — auf den Rest wartet man.
-        this.playable = list.filter(a => a.analyzedPlies > 0);
-        this.cdr.markForCheck();
-      },
-      error: () => { /* die Liste bleibt leer; der Hinweis „erst analysieren" greift */ },
+    this.analyses.listPublic().subscribe({
+      next: list => { this.curated = list; this.cdr.markForCheck(); },
+      error: () => { /* bleibt leer; der Hinweis „noch nichts im Bestand" greift */ },
     });
+    if (this.loggedIn) {
+      this.analyses.list().subscribe({
+        next: list => {
+          // Spielbar ist, was mindestens eine gerechnete Stellung hat — auf den Rest wartet man.
+          // Der kuratierte Bestand steht oben schon; hier ginge er sonst doppelt durch.
+          this.playable = list.filter(a => a.analyzedPlies > 0 && !a.isPublic);
+          this.cdr.markForCheck();
+        },
+        error: () => { /* die Liste bleibt leer; der Hinweis „erst analysieren" greift */ },
+      });
+    }
     this.guess.list().subscribe({
       next: rows => { this.sessions = rows; this.loading = false; this.cdr.markForCheck(); },
       error: () => { this.loading = false; this.cdr.markForCheck(); },
     });
   }
 
-  start(game: GameAnalysis): void {
+  /** `side` weglassen = der Server nimmt die Seite des Gewinners (kuratierter Bestand). */
+  start(game: GameAnalysis, side?: boolean): void {
     if (this.starting) return;
     this.starting = true;
-    this.guess.start(game.id, this.guessWhite).subscribe({
+    this.guess.start(game.id, side).subscribe({
       next: s => { this.starting = false; this.router.navigate(['/guess', s.id]); },
       error: err => {
         this.starting = false;

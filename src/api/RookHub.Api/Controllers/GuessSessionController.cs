@@ -19,14 +19,18 @@ public class GuessSessionController : BaseApiController
 
     public GuessSessionController(GuessSessionService service) => _service = service;
 
+    /// <summary>Der angemeldete Besitzer. Ohne Anmeldung fuehrt der Weg ueber
+    /// <see cref="GuessSessionAnonymousController"/> — dort haengt der Rate-Limiter dran.</summary>
+    private GuessOwner Owner => GuessOwner.ForUser(GetUserId());
+
     [HttpGet]
     public async Task<ActionResult<List<GuessSessionDto>>> List(CancellationToken ct)
-        => Ok(await _service.ListAsync(GetUserId(), ct));
+        => Ok(await _service.ListAsync(Owner, ct));
 
     [HttpPost]
     public async Task<ActionResult<GuessSessionDto>> Start([FromBody] CreateGuessSessionRequest req, CancellationToken ct)
     {
-        try { return Ok(await _service.StartAsync(GetUserId(), req, ct)); }
+        try { return Ok(await _service.StartAsync(Owner, req, ct)); }
         catch (KeyNotFoundException) { return NotFound(new { message = "Analysis not found." }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
@@ -34,7 +38,7 @@ public class GuessSessionController : BaseApiController
     [HttpGet("{id:int}")]
     public async Task<ActionResult<GuessSessionDto>> Get(int id, CancellationToken ct)
     {
-        var dto = await _service.GetAsync(GetUserId(), id, ct);
+        var dto = await _service.GetAsync(Owner, id, ct);
         return dto is null ? NotFound(new { message = "Session not found." }) : Ok(dto);
     }
 
@@ -42,7 +46,7 @@ public class GuessSessionController : BaseApiController
     [HttpPost("{id:int}/guess")]
     public async Task<ActionResult<GuessResultDto>> Guess(int id, [FromBody] GuessMoveRequest req, CancellationToken ct)
     {
-        try { return Ok(await _service.GuessAsync(GetUserId(), id, req, ct)); }
+        try { return Ok(await _service.GuessAsync(Owner, id, req, ct)); }
         catch (KeyNotFoundException) { return NotFound(new { message = "Session not found." }); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
@@ -51,13 +55,13 @@ public class GuessSessionController : BaseApiController
     [HttpGet("{id:int}/review")]
     public async Task<ActionResult<List<GuessReviewMoveDto>>> Review(int id, CancellationToken ct)
     {
-        var rows = await _service.ReviewAsync(GetUserId(), id, ct);
+        var rows = await _service.ReviewAsync(Owner, id, ct);
         return rows is null ? NotFound(new { message = "Session not found." }) : Ok(rows);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
-        => await _service.DeleteAsync(GetUserId(), id, ct)
+        => await _service.DeleteAsync(Owner, id, ct)
             ? NoContent()
             : NotFound(new { message = "Session not found." });
 }

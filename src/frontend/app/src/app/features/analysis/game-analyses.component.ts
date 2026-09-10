@@ -43,6 +43,16 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
       </div>
       <p class="muted intro">{{ 'gameAnalysis.intro' | translate }}</p>
 
+      @if (totalPlies > 0) {
+        <div class="overall">
+          <span>{{ 'gameAnalysis.overall' | translate:{ done: analyzedPlies, total: totalPlies, percent: overallPercent } }}</span>
+          <mat-progress-bar mode="determinate" [value]="overallPercent" />
+          @if (openCount > 0) {
+            <span class="muted small">{{ 'gameAnalysis.overallOpen' | translate:{ count: openCount } }}</span>
+          }
+        </div>
+      }
+
       <mat-card class="new-card">
         <mat-card-content>
           <mat-form-field appearance="outline" class="full">
@@ -101,6 +111,8 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
     .ga-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     h1 { margin: 0; font-size: 1.5rem; }
+    .overall { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
+    .overall mat-progress-bar { border-radius: 3px; }
     .intro { margin: 4px 0 14px; }
     .new-card { margin-bottom: 16px; }
     .full { width: 100%; }
@@ -147,6 +159,25 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
 
   hasOpen(): boolean {
     return this.analyses.some(a => a.status === 'pending' || a.status === 'running');
+  }
+
+  /**
+   * Gesamtfortschritt über ALLE Partien. Je Partie steht der eigene Balken schon in der Liste; was
+   * dort fehlte, ist die Antwort auf „wie lange dauert das noch insgesamt" — bei zwei Dutzend
+   * Partien in der Warteschlange scrollt man sonst und rechnet selbst zusammen.
+   */
+  get totalPlies(): number { return this.analyses.reduce((n, a) => n + a.plyCount, 0); }
+
+  get analyzedPlies(): number { return this.analyses.reduce((n, a) => n + a.analyzedPlies, 0); }
+
+  get overallPercent(): number {
+    const total = this.totalPlies;
+    return total > 0 ? Math.round((100 * this.analyzedPlies) / total) : 0;
+  }
+
+  /** Wie viele Partien noch offen sind — die Zahl erklaert einen stehenden Balken. */
+  get openCount(): number {
+    return this.analyses.filter(a => a.status === 'pending' || a.status === 'running').length;
   }
 
   percent(a: GameAnalysis): number {

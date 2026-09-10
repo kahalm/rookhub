@@ -16,13 +16,26 @@ public enum GuessSessionStatus
 /// <para><b>Die Fortsetzung verlässt den Server nicht.</b> Die Sitzung merkt sich, wo sie steht;
 /// ausgeliefert wird immer nur die aktuelle Stellung. Den Partiezug bekommt der Client erst als
 /// Antwort auf seinen Rateversuch — vorher hätte er die Lösung.</para>
+///
+/// <para><b>Auch OHNE Anmeldung läuft der Fortschritt hier</b> und nicht im Browser (seit
+/// 0.459.0): genau dieser Zustand ist es, hinter dem die Züge stehen. Ein Client, der selbst
+/// mitzählt, müsste dem Server sagen, bei welchem Halbzug er steht — und könnte damit jeden Zug
+/// der Partie einzeln abfragen. Deshalb dasselbe Muster wie bei den anonymen Puzzle-Versuchen:
+/// die Zeile gehört entweder einem Konto (<see cref="UserId"/>) oder einer vom Browser vergebenen
+/// Kennung (<see cref="AnonymousSessionId"/>) — genau eines von beiden ist gesetzt.</para>
 /// </summary>
 public class GuessSession
 {
     public int Id { get; set; }
 
-    public int UserId { get; set; }
+    /// <summary><c>null</c> bei einem anonymen Durchlauf (dann trägt
+    /// <see cref="AnonymousSessionId"/> den Besitzer).</summary>
+    public int? UserId { get; set; }
     public AppUser? User { get; set; }
+
+    /// <summary>Vom Browser vergebene Kennung eines anonymen Durchlaufs (UUID-Form, siehe
+    /// <c>ValidationConstants.SessionIdPattern</c>); <c>null</c> bei einem angemeldeten.</summary>
+    [MaxLength(36)] public string? AnonymousSessionId { get; set; }
 
     public int GameAnalysisId { get; set; }
     public GameAnalysis? GameAnalysis { get; set; }

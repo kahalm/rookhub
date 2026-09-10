@@ -74,7 +74,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         var (user, analysis) = await SeedAsync();
 
-        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
@@ -98,12 +98,12 @@ public class GuessSessionServiceTests : IDisposable
     public async Task Guess_exakterPartiezug_gibtPunkteUndSpieltDenGegenzugNach()
     {
         var (user, analysis) = await SeedAsync();
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
 
-        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e4", AddSeconds = 12 });
+        var res = await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e4", AddSeconds = 12 });
 
         Assert.Equal("onlyMove", res.Grade);      // Alternative ist 0.9 schlechter → „einziger Zug"
         Assert.Equal(8, res.Points);
@@ -120,14 +120,14 @@ public class GuessSessionServiceTests : IDisposable
     public async Task Guess_schwaechererZug_gibtAbzug()
     {
         var (user, analysis) = await SeedAsync();
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
         var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 0);
         var alt = BrokerCandidates.FromJson(pos.CandidatesJson).Last().Uci;
 
-        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = alt });
+        var res = await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = alt });
 
         Assert.Equal("muchWorse", res.Grade);
         Assert.Equal(-2, res.Points);
@@ -138,12 +138,12 @@ public class GuessSessionServiceTests : IDisposable
     public async Task Passen_gibtNullPunkteAberKeineStrafe_undZeigtDenPartiezug()
     {
         var (user, analysis) = await SeedAsync();
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
 
-        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = null });
+        var res = await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = null });
 
         Assert.Null(res.Grade);
         Assert.Equal(0, res.Points);
@@ -155,13 +155,13 @@ public class GuessSessionServiceTests : IDisposable
     public async Task UnmoeglicherZug_wirdAbgelehnt_stattGewertet()
     {
         var (user, analysis) = await SeedAsync();
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e5" }));
+            _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e5" }));
         // Kein Zug protokolliert, die Sitzung steht unverändert.
         Assert.Empty(_db.GuessMoves);
     }
@@ -171,7 +171,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         var (user, analysis) = await SeedAsync();
 
-        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = false, StartPly = 0,
         });
@@ -189,13 +189,13 @@ public class GuessSessionServiceTests : IDisposable
         ply2.CandidatesJson = "[]";
         await _db.SaveChangesAsync();
 
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
-        await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e4" });
+        await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e4" });
 
-        var state = await _svc.GetAsync(user.Id, session.Id);
+        var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
         Assert.Equal(4, state!.Position!.Ply);
     }
 
@@ -203,20 +203,20 @@ public class GuessSessionServiceTests : IDisposable
     public async Task AmEndeDerPartie_istDieSitzungFertig()
     {
         var (user, analysis) = await SeedAsync();
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
 
         foreach (var uci in new[] { "e2e4", "g1f3", "f1b5" })
-            await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = uci });
+            await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = uci });
 
-        var state = await _svc.GetAsync(user.Id, session.Id);
+        var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
         Assert.Equal("done", state!.Status);
         Assert.Null(state.Position);
         Assert.Equal(3, state.MovesPlayed);
 
-        var review = await _svc.ReviewAsync(user.Id, session.Id);
+        var review = await _svc.ReviewAsync(GuessOwner.ForUser(user.Id), session.Id);
         Assert.Equal(3, review!.Count);
         Assert.All(review, r => Assert.True(r.White));
         Assert.Equal("e4", review[0].GameSan);
@@ -228,7 +228,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         var (user, analysis) = await SeedAsync(analyzeAll: false);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _svc.StartAsync(user.Id, new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
+            _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
     }
 
     [Fact]
@@ -242,22 +242,22 @@ public class GuessSessionServiceTests : IDisposable
         ply2.CandidatesJson = null;   // rechnet noch
         await _db.SaveChangesAsync();
 
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
-        await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e4" });
+        await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e4" });
 
-        var state = await _svc.GetAsync(user.Id, session.Id);
+        var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
         Assert.Equal(2, state!.Position!.Ply);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "g1f3" }));
+            _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "g1f3" }));
         Assert.Single(_db.GuessMoves);   // der Halbzug ist NICHT verbraucht
 
         // Sobald die Engine nachgezogen hat, geht es normal weiter.
         ply2.CandidatesJson = "[{\"uci\":\"" + ply2.GameMoveUci + "\",\"cp\":30}]";
         await _db.SaveChangesAsync();
-        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = ply2.GameMoveUci });
+        var res = await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = ply2.GameMoveUci });
         Assert.Equal("gameMove", res.Grade);
     }
 
@@ -271,11 +271,11 @@ public class GuessSessionServiceTests : IDisposable
         ply1.CandidatesJson = "[{\"uci\":\"" + ply1.GameMoveUci + "\",\"mate\":3}]";
         await _db.SaveChangesAsync();
 
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
-        var res = await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = "e2e4" });
+        var res = await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e4" });
 
         Assert.Equal("#-3", res.EvalText);
     }
@@ -285,7 +285,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         // Ohne Deckel lief `start++` bei int.MaxValue in den negativen Bereich.
         var (user, analysis) = await SeedAsync();
-        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = int.MaxValue,
         });
@@ -301,26 +301,26 @@ public class GuessSessionServiceTests : IDisposable
         _db.AppUsers.Add(other);
         await _db.SaveChangesAsync();
 
-        var session = await _svc.StartAsync(owner.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(owner.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, StartPly = 0,
         });
 
-        Assert.Null(await _svc.GetAsync(other.Id, session.Id));
-        Assert.Null(await _svc.ReviewAsync(other.Id, session.Id));
-        Assert.False(await _svc.DeleteAsync(other.Id, session.Id));
+        Assert.Null(await _svc.GetAsync(GuessOwner.ForUser(other.Id), session.Id));
+        Assert.Null(await _svc.ReviewAsync(GuessOwner.ForUser(other.Id), session.Id));
+        Assert.False(await _svc.DeleteAsync(GuessOwner.ForUser(other.Id), session.Id));
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            _svc.GuessAsync(other.Id, session.Id, new GuessMoveRequest { Uci = "e2e4" }));
+            _svc.GuessAsync(GuessOwner.ForUser(other.Id), session.Id, new GuessMoveRequest { Uci = "e2e4" }));
         // Auch eine fremde ANALYSE lässt sich nicht bespielen.
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            _svc.StartAsync(other.Id, new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
+            _svc.StartAsync(GuessOwner.ForUser(other.Id), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
     }
 
     [Fact]
     public async Task Vorgabe_ueberspringtDieEroeffnung()
     {
         var (user, analysis) = await SeedAsync();
-        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
         // Ohne StartPly wird die Eröffnung gezeigt statt abgefragt — Raten ab Zug 1 prüft Buchwissen.
         Assert.Equal(GuessSessionService.DefaultSkipPlies, dto.StartPly);
     }
@@ -331,7 +331,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         var (user, analysis) = await SeedAsync();
 
-        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 4,   // ab 3.Bb5
         });
@@ -354,7 +354,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         var (user, analysis) = await SeedAsync();
 
-        var dto = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
@@ -367,13 +367,13 @@ public class GuessSessionServiceTests : IDisposable
     public async Task List_LeavesTheHistoryOut()
     {
         var (user, analysis) = await SeedAsync();
-        await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 4,
         });
 
         // Die Uebersicht braucht die Eroeffnung nicht — sie waere dort je Sitzung ein zweiter Satz Zeilen.
-        var list = await _svc.ListAsync(user.Id);
+        var list = await _svc.ListAsync(GuessOwner.ForUser(user.Id));
         Assert.All(list, s => Assert.Empty(s.History));
     }
 
@@ -383,18 +383,18 @@ public class GuessSessionServiceTests : IDisposable
     public async Task Review_NamesTheBestMoveAndBothEvaluations()
     {
         var (user, analysis) = await SeedAsync();
-        var session = await _svc.StartAsync(user.Id, new CreateGuessSessionRequest
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
         {
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
 
         // Die Seed-Kandidatenliste fuehrt den Partiezug (+30) vor einer schwaecheren Alternative (-80),
         // der Partiezug IST hier also der beste Zug.
-        var first = await _svc.GetAsync(user.Id, session.Id);
+        var first = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
         var pos = await _db.GameAnalysisPositions.FirstAsync(x => x.GameAnalysisId == analysis.Id && x.Ply == 0);
-        await _svc.GuessAsync(user.Id, session.Id, new GuessMoveRequest { Uci = pos.GameMoveUci });
+        await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = pos.GameMoveUci });
 
-        var review = await _svc.ReviewAsync(user.Id, session.Id);
+        var review = await _svc.ReviewAsync(GuessOwner.ForUser(user.Id), session.Id);
         var row = Assert.Single(review!);
         Assert.Equal(pos.GameMoveSan, row.BestSan);          // hier deckungsgleich
         Assert.Equal("+0.30", row.BestEval);
@@ -416,11 +416,147 @@ public class GuessSessionServiceTests : IDisposable
         _db.GuessSessions.Add(session);
         await _db.SaveChangesAsync();
 
-        var review = await _svc.ReviewAsync(user.Id, session.Id);
+        var review = await _svc.ReviewAsync(GuessOwner.ForUser(user.Id), session.Id);
         var row = Assert.Single(review!);
         Assert.Null(row.BestSan);
         Assert.Null(row.BestEval);
         Assert.Null(row.GameEval);
     }
 
+
+    // ===== Ohne Anmeldung + kuratierter Bestand =========================================
+
+    private const string AnonA = "11111111-2222-3333-4444-555555555555";
+    private const string AnonB = "66666666-7777-8888-9999-aaaaaaaaaaaa";
+
+    /// <summary>Eine fremde, NICHT freigegebene Analyse ist ohne Anmeldung unerreichbar — sonst
+    /// wäre der kuratierte Bestand nur eine Empfehlung und jede private Partie mitspielbar.</summary>
+    [Fact]
+    public async Task StartAsync_Anonymous_PrivateAnalysis_Throws()
+    {
+        var (_, analysis) = await SeedAsync();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _svc.StartAsync(GuessOwner.ForAnonymous(AnonA),
+                new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
+    }
+
+    [Fact]
+    public async Task StartAsync_Anonymous_PublicAnalysis_Works()
+    {
+        var (_, analysis) = await SeedAsync();
+        analysis.IsPublic = true;
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.StartAsync(GuessOwner.ForAnonymous(AnonA),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        var row = await _db.GuessSessions.FirstAsync(s => s.Id == dto.Id);
+        Assert.Null(row.UserId);
+        Assert.Equal(AnonA, row.AnonymousSessionId);
+    }
+
+    /// <summary>Zwei Browser sind zwei Besitzer. Ohne diese Trennung liefe die Fortsetzung EINER
+    /// Sitzung an jeden, der die Id errät — die Kennung ist hier die einzige Schranke.</summary>
+    [Fact]
+    public async Task AnonymousSessions_AreIsolated()
+    {
+        var (_, analysis) = await SeedAsync();
+        analysis.IsPublic = true;
+        await _db.SaveChangesAsync();
+
+        var mine = await _svc.StartAsync(GuessOwner.ForAnonymous(AnonA),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.Null(await _svc.GetAsync(GuessOwner.ForAnonymous(AnonB), mine.Id));
+        Assert.Empty(await _svc.ListAsync(GuessOwner.ForAnonymous(AnonB)));
+        Assert.Single(await _svc.ListAsync(GuessOwner.ForAnonymous(AnonA)));
+        Assert.False(await _svc.DeleteAsync(GuessOwner.ForAnonymous(AnonB), mine.Id));
+    }
+
+    /// <summary>Und ein Konto sieht die anonymen Durchläufe nicht (und umgekehrt).</summary>
+    [Fact]
+    public async Task AnonymousSession_IsInvisibleToAccounts()
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.IsPublic = true;
+        await _db.SaveChangesAsync();
+
+        var anon = await _svc.StartAsync(GuessOwner.ForAnonymous(AnonA),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.Null(await _svc.GetAsync(GuessOwner.ForUser(user.Id), anon.Id));
+        Assert.Empty(await _svc.ListAsync(GuessOwner.ForUser(user.Id)));
+    }
+
+    // ===== Seitenwahl: der Gewinner =====================================================
+
+    /// <summary>Ohne Angabe übernimmt der Nutzer die Seite des GEWINNERS — darum geht es im
+    /// kuratierten Bestand, und deshalb fragt die Auswahl dort nicht mehr nach der Seite.</summary>
+    [Theory]
+    [InlineData("1-0", true)]
+    [InlineData("0-1", false)]
+    public async Task StartAsync_WithoutSide_TakesWinnerFromResult(string result, bool expectWhite)
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.Result = result;
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.Equal(expectWhite, dto.GuessWhite);
+    }
+
+    /// <summary>
+    /// Kein Ergebnis in der Kopfzeile — der Normalfall bei den Meisterpartien aus Capablancas
+    /// <i>Chess Fundamentals</i>, die dort nur <c>*</c> stehen haben. Dann entscheidet die
+    /// BEWERTUNG der letzten gerechneten Stellung: Schwarz am Zug (ungerader Halbzug) mit +5 aus
+    /// SEINER Sicht heißt, Schwarz hat gewonnen.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_WithoutSide_NoResult_TakesWinnerFromLastEval()
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.Result = "*";
+        var last = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysis.Id)
+            .OrderByDescending(p => p.Ply).FirstAsync();
+        Assert.True(last.Ply % 2 == 1);                       // Schwarz am Zug
+        last.CandidatesJson = "[{\"uci\":\"" + last.GameMoveUci + "\",\"cp\":500}]";
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.False(dto.GuessWhite);
+    }
+
+    /// <summary>Ausgeglichene Schlussstellung: raten hilft niemandem, es bleibt bei Weiß.</summary>
+    [Fact]
+    public async Task StartAsync_WithoutSide_UndecidedEval_FallsBackToWhite()
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.Result = null;
+        await _db.SaveChangesAsync();   // Kandidaten stehen alle auf +0.30
+
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.True(dto.GuessWhite);
+    }
+
+    /// <summary>Eine ausdrücklich gewählte Seite schlägt die Ableitung.</summary>
+    [Fact]
+    public async Task StartAsync_ExplicitSide_Wins()
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.Result = "1-0";
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.StartAsync(GuessOwner.ForUser(user.Id),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id, GuessWhite = false });
+
+        Assert.False(dto.GuessWhite);
+    }
 }

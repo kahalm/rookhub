@@ -7,6 +7,27 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services;
 
 /// <summary>
+/// Wem ein Durchlauf gehört: einem Konto ODER — ohne Anmeldung — der vom Browser vergebenen
+/// Sitzungskennung (dasselbe Muster wie bei den anonymen Puzzle-Versuchen,
+/// <c>BookPuzzleAttempt.AnonymousSessionId</c>).
+///
+/// <para>Bewusst EIN Typ durch den ganzen Dienst statt eines zweiten, anonymen Pfades: hier hängt
+/// die eiserne Regel dran (die Fortsetzung verlässt den Server nicht), und zwei Umsetzungen davon
+/// laufen irgendwann auseinander. Der Aufrufer entscheidet nur, WER fragt.</para>
+/// </summary>
+public readonly record struct GuessOwner(int? UserId, string? AnonymousSessionId)
+{
+    public static GuessOwner ForUser(int userId) => new(userId, null);
+
+    /// <summary>Anonymer Besitzer. Die Kennung ist ungeprüft Client-Eingabe — sie MUSS vorher gegen
+    /// <see cref="ValidationConstants.SessionIdPattern"/> laufen (Controller), sonst wäre ein kurzer,
+    /// erratbarer Wert der Weg in fremde Durchläufe.</summary>
+    public static GuessOwner ForAnonymous(string sessionId) => new(null, sessionId);
+
+    public bool IsAnonymous => UserId is null;
+}
+
+/// <summary>
 /// Die Punktepartie: Der Nutzer übernimmt eine Seite einer analysierten Partie und rät Zug für Zug.
 /// Gewertet wird gegen den TATSÄCHLICHEN Partiezug (<see cref="GuessScoring"/>), die Engine urteilt
 /// nur über die Alternativen — die Kandidatenlisten stehen fertig in der
@@ -29,10 +50,16 @@ public class GuessSessionService
 
     // ===== Sitzung starten ==================================================
 
-    public async Task<GuessSessionDto> StartAsync(int userId, CreateGuessSessionRequest req, CancellationToken ct = default)
+    public async Task<GuessSessionDto> StartAsync(GuessOwner owner, CreateGuessSessionRequest req, CancellationToken ct = default)
     {
-        var analysis = await _db.GameAnalyses.AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId && g.UserId == userId, ct)
+        // Spielbar ist eine EIGENE Analyse oder eine aus dem kuratierten Bestand
+        // (<c>GameAnalysis.IsPublic</c>) — letztere auch ohne Anmeldung. Zwei Abfragen statt einer
+        // mit `||`: die anonyme darf gar nicht erst nach einem Besitzer fragen.
+        var analysis = await (owner.UserId is { } auid
+                ? _db.GameAnalyses.AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId && (g.UserId == auid || g.IsPublic), ct)
+                : _db.GameAnalyses.AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId && g.IsPublic, ct))
             ?? throw new KeyNotFoundException("Analysis not found.");
 
         var analyzed = await _db.GameAnalysisPositions
@@ -40,7 +67,7 @@ public class GuessSessionService
         if (analyzed == 0)
             throw new InvalidOperationException("Diese Partie ist noch nicht analysiert.");
 
-        var guessWhite = req.GuessWhite ?? true;
+        var guessWhite = req.GuessWhite ?? await WinnerSideAsync(analysis, ct);
         // Auf die Partie eingrenzen, BEVOR ausgerichtet wird: ohne Deckel liefe `start++` bei
         // int.MaxValue in den negativen Bereich (unchecked) und die Sitzung startete mit einem
         // sinnlosen StartPly, gegen den auch der Fortschritt gezaehlt wuerde.
@@ -48,9 +75,12 @@ public class GuessSessionService
         // Auf den ersten Halbzug der geratenen Seite ausrichten (Weiß = gerade Plies).
         if (start % 2 == 0 != guessWhite) start++;
 
+        await TrimSessionsAsync(owner, ct);
+
         var session = new GuessSession
         {
-            UserId = userId,
+            UserId = owner.UserId,
+            AnonymousSessionId = owner.AnonymousSessionId,
             GameAnalysisId = analysis.Id,
             GuessWhite = guessWhite,
             StartPly = start,
@@ -64,17 +94,16 @@ public class GuessSessionService
         return await BuildDtoAsync(session, ct);
     }
 
-    public async Task<GuessSessionDto?> GetAsync(int userId, int sessionId, CancellationToken ct = default)
+    public async Task<GuessSessionDto?> GetAsync(GuessOwner owner, int sessionId, CancellationToken ct = default)
     {
-        var session = await LoadAsync(userId, sessionId, ct);
+        var session = await LoadAsync(owner, sessionId, ct);
         return session is null ? null : await BuildDtoAsync(session, ct);
     }
 
-    public async Task<List<GuessSessionDto>> ListAsync(int userId, CancellationToken ct = default)
+    public async Task<List<GuessSessionDto>> ListAsync(GuessOwner owner, CancellationToken ct = default)
     {
-        var sessions = await _db.GuessSessions
+        var sessions = await OwnedBy(owner)
             .Include(s => s.Moves)
-            .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.StartedAt)
             .Take(100)
             .ToListAsync(ct);
@@ -108,10 +137,10 @@ public class GuessSessionService
     // ===== Raten ============================================================
 
     /// <summary>Einen Zug raten. <paramref name="uci"/> leer = passen (0 Punkte, keine Strafe).</summary>
-    public async Task<GuessResultDto> GuessAsync(int userId, int sessionId, GuessMoveRequest req,
+    public async Task<GuessResultDto> GuessAsync(GuessOwner owner, int sessionId, GuessMoveRequest req,
         CancellationToken ct = default)
     {
-        var session = await LoadAsync(userId, sessionId, ct)
+        var session = await LoadAsync(owner, sessionId, ct)
             ?? throw new KeyNotFoundException("Session not found.");
         if (session.Status == GuessSessionStatus.Done)
             throw new InvalidOperationException("Diese Punktepartie ist bereits beendet.");
@@ -189,9 +218,9 @@ public class GuessSessionService
     }
 
     /// <summary>Rückblick nach dem Ende: jeder Halbzug mit dem, was gespielt und was geraten wurde.</summary>
-    public async Task<List<GuessReviewMoveDto>?> ReviewAsync(int userId, int sessionId, CancellationToken ct = default)
+    public async Task<List<GuessReviewMoveDto>?> ReviewAsync(GuessOwner owner, int sessionId, CancellationToken ct = default)
     {
-        var session = await LoadAsync(userId, sessionId, ct);
+        var session = await LoadAsync(owner, sessionId, ct);
         if (session is null) return null;
 
         var plies = session.Moves.Select(m => m.Ply).ToList();
@@ -239,9 +268,9 @@ public class GuessSessionService
         return rows;
     }
 
-    public async Task<bool> DeleteAsync(int userId, int sessionId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(GuessOwner owner, int sessionId, CancellationToken ct = default)
     {
-        var session = await LoadAsync(userId, sessionId, ct);
+        var session = await LoadAsync(owner, sessionId, ct);
         if (session is null) return false;
         _db.GuessMoves.RemoveRange(session.Moves);
         _db.GuessSessions.Remove(session);
@@ -254,9 +283,85 @@ public class GuessSessionService
     private const int MaxSecondsPerMove = 3600;
     private const int MaxSecondsPerSession = 24 * 3600;
 
-    private Task<GuessSession?> LoadAsync(int userId, int sessionId, CancellationToken ct) =>
-        _db.GuessSessions.Include(s => s.Moves)
-            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, ct);
+    /// <summary>Wie viele Durchläufe ein Besitzer behält. Die Übersicht zeigt ohnehin nur 100;
+    /// entscheidend ist aber, dass <c>POST</c> auch OHNE Anmeldung Zeilen anlegt — ohne Deckel
+    /// wächst die Tabelle mit jedem Aufruf, den der Rate-Limiter durchlässt. Weggeräumt werden nur
+    /// BEENDETE Durchläufe (der laufende ist die Arbeit des Nutzers) und immer der älteste zuerst,
+    /// dieselbe Regel wie <c>AnalysisJobService.MaxJobsPerUser</c>.</summary>
+    public const int MaxSessionsPerOwner = 50;
+
+    private async Task TrimSessionsAsync(GuessOwner owner, CancellationToken ct)
+    {
+        var count = await OwnedBy(owner).CountAsync(ct);
+        if (count < MaxSessionsPerOwner) return;
+
+        var stale = await OwnedBy(owner)
+            .Where(s => s.Status == GuessSessionStatus.Done)
+            .OrderBy(s => s.StartedAt)
+            .Take(count - MaxSessionsPerOwner + 1)
+            .Include(s => s.Moves)
+            .ToListAsync(ct);
+        if (stale.Count == 0) return;   // alles läuft noch → nichts wegräumen
+
+        _db.GuessMoves.RemoveRange(stale.SelectMany(s => s.Moves));
+        _db.GuessSessions.RemoveRange(stale);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Ab dieser Bauerndifferenz gilt eine Stellung als entschieden — darunter sagt sie
+    /// nichts darüber, wer die Partie gewonnen hat.</summary>
+    private const double DecisivePawns = 1.5;
+
+    /// <summary>
+    /// Welche Seite übernimmt der Nutzer, wenn er es NICHT sagt? Die des GEWINNERS. Im kuratierten
+    /// Bestand ist genau das der Sinn der Übung — man rät die Züge des Spielers, der die Partie
+    /// gewonnen hat, und deshalb fragt die Auswahl dort nicht mehr nach der Seite.
+    ///
+    /// <para>Vorrang hat das ERGEBNIS der Partie. Fehlt es, entscheidet die BEWERTUNG der letzten
+    /// gerechneten Stellung: eine aufgegebene Partie steht dort klar auf einer Seite. Das ist keine
+    /// Notlösung für Sonderfälle, sondern der Normalfall bei unseren Meisterpartien — die kommen aus
+    /// einem Buch, das in die Kopfzeile nur <c>*</c> schreibt (Capablancas <i>Chess Fundamentals</i>
+    /// nennt die Ergebnisse nur im Fließtext, und der ist nicht auswertbar).</para>
+    ///
+    /// <para>Sagt auch die Bewertung nichts Deutliches (Remis, oder erst die Eröffnung gerechnet),
+    /// bleibt es bei Weiß — eine Seite muss es sein, und Raten hilft hier niemandem.</para>
+    /// </summary>
+    private async Task<bool> WinnerSideAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        switch (analysis.Result?.Trim())
+        {
+            case "1-0": return true;
+            case "0-1": return false;
+        }
+
+        var last = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
+            .OrderByDescending(p => p.Ply)
+            .Select(p => new { p.Ply, p.CandidatesJson })
+            .FirstOrDefaultAsync(ct);
+        if (last is null) return true;
+
+        var candidates = BrokerCandidates.FromJson(last.CandidatesJson);
+        if (candidates.Count == 0) return true;
+
+        // Die Kandidaten-Bewertung gilt aus Sicht der Seite AM ZUG (BrokerCandidates dreht sie beim
+        // Einlesen entsprechend) — und am Zug ist bei geradem Halbzug Weiß.
+        var pawns = candidates[0].Eval.Pawns;
+        if (Math.Abs(pawns) < DecisivePawns) return true;
+        var whiteToMove = last.Ply % 2 == 0;
+        return pawns > 0 ? whiteToMove : !whiteToMove;
+    }
+
+    private Task<GuessSession?> LoadAsync(GuessOwner owner, int sessionId, CancellationToken ct) =>
+        OwnedBy(owner).Include(s => s.Moves).FirstOrDefaultAsync(s => s.Id == sessionId, ct);
+
+    /// <summary>Die Durchläufe EINES Besitzers. Die Fallunterscheidung steht bewusst in C# und
+    /// nicht als <c>?:</c> in der Abfrage — so wird daraus ein einfaches Gleich statt eines CASE,
+    /// und die Abfrage trifft ihren Index.</summary>
+    private IQueryable<GuessSession> OwnedBy(GuessOwner owner) =>
+        owner.UserId is { } uid
+            ? _db.GuessSessions.Where(s => s.UserId == uid)
+            : _db.GuessSessions.Where(s => s.AnonymousSessionId == owner.AnonymousSessionId);
 
     /// <summary>
     /// Rückt <c>CurrentPly</c> auf den nächsten Halbzug vor, der sich WERTEN lässt: eine Stellung

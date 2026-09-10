@@ -6,6 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { GuessBoardComponent } from './guess-board.component';
 import { GuessHistoryMove, GuessSession } from './guess.service';
+import { AuthService } from '../../core/auth.service';
 
 function session(over: Partial<GuessSession> = {}): GuessSession {
   return {
@@ -27,6 +28,10 @@ describe('GuessBoardComponent', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '3' }) } } },
+        // Diese Suite beschreibt den ANGEMELDETEN Fall: ohne den Stub gilt der Nutzer als
+        // abgemeldet, und der GuessService greift dann zu `…/anonymous` samt Sitzungskennung
+        // (der anonyme Zweig hat eine eigene Suite in guess.service.spec.ts).
+        { provide: AuthService, useValue: { isLoggedIn: true } },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -158,6 +163,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '3' }) } } },
+        { provide: AuthService, useValue: { isLoggedIn: true } },   // angemeldeter Fall, siehe oben
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);

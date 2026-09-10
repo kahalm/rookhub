@@ -94,17 +94,55 @@ public class GameAnalysisService
 
     // ===== Lesen / Löschen ==================================================
 
-    public async Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default)
+    public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default) =>
+        ProjectAsync(_db.GameAnalyses.AsNoTracking().Where(g => g.UserId == userId), ct);
+
+    /// <summary>
+    /// Der kuratierte Bestand: Partien, die JEDER als Punktepartie spielen darf — auch ohne
+    /// Anmeldung. Geliefert werden nur SPIELBARE (mindestens eine gerechnete Stellung); eine Partie,
+    /// die noch gar nichts hat, wäre in der Auswahl ein Knopf, der sofort „wird noch gerechnet"
+    /// sagt. Sortiert nach Titel, nicht nach Anlagedatum: der Bestand ist eine Bibliothek und keine
+    /// Zeitleiste.
+    /// </summary>
+    public async Task<List<GameAnalysisDto>> ListPublicAsync(CancellationToken ct = default)
     {
-        // Nur die Spalten der Liste holen: `Pgn` ist LONGTEXT und wuerde hier fuer JEDE Partie
-        // mitgelesen, obwohl die Uebersicht ihn nie anzeigt.
-        var rows = await _db.GameAnalyses.AsNoTracking()
-            .Where(g => g.UserId == userId)
+        var rows = await ProjectAsync(
+            _db.GameAnalyses.AsNoTracking().Where(g => g.IsPublic && g.Positions.Any(p => p.CandidatesJson != null)),
+            ct);
+        return rows.OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>Kuratierten Bestand ein-/ausschalten — Besitzer der Analyse oder Admin. Bewusst
+    /// beim Besitzer und nicht nur beim Admin: wer die Engine-Zeit gestiftet hat, entscheidet auch,
+    /// ob die Partie öffentlich spielbar ist (dieselbe Teilung wie beim Kalkulations-Schalter des
+    /// Kurses).</summary>
+    public async Task<bool?> SetPublicAsync(int userId, bool isAdmin, int id, bool isPublic,
+        CancellationToken ct = default)
+    {
+        var analysis = await _db.GameAnalyses.FirstOrDefaultAsync(g => g.Id == id, ct);
+        if (analysis is null || (!isAdmin && analysis.UserId != userId)) return null;
+        if (analysis.IsPublic != isPublic)
+        {
+            analysis.IsPublic = isPublic;
+            analysis.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+        return analysis.IsPublic;
+    }
+
+    /// <summary>Die Listen-Abbildung an EINER Stelle (eigene Partien und kuratierter Bestand
+    /// unterscheiden sich nur im Filter). Geholt werden nur die Spalten der Liste: `Pgn` ist
+    /// LONGTEXT und würde sonst für JEDE Partie mitgelesen, obwohl die Übersicht ihn nie anzeigt —
+    /// `Annotated` fragt ihn deshalb IN SQL (LIKE), die Spalte selbst bleibt draußen.</summary>
+    private async Task<List<GameAnalysisDto>> ProjectAsync(IQueryable<GameAnalysis> query, CancellationToken ct)
+    {
+        var rows = await query
             .OrderByDescending(g => g.CreatedAt)
             .Select(g => new
             {
                 g.Id, g.Title, g.White, g.Black, g.Result, g.Event, g.TargetDepth, g.MultiPv,
-                g.EngineId, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt,
+                g.EngineId, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt, g.IsPublic,
+                Annotated = g.Pgn.Contains("{"),
                 Analyzed = g.Positions.Count(p => p.CandidatesJson != null),
             })
             .ToListAsync(ct);
@@ -113,7 +151,8 @@ public class GameAnalysisService
             Id = r.Id, Title = r.Title, White = r.White, Black = r.Black, Result = r.Result,
             Event = r.Event, TargetDepth = r.TargetDepth, MultiPv = r.MultiPv, EngineId = r.EngineId,
             Status = r.Status.ToString().ToLowerInvariant(), PlyCount = r.PlyCount,
-            AnalyzedPlies = r.Analyzed, LastError = r.LastError,
+            AnalyzedPlies = r.Analyzed, LastError = r.LastError, IsPublic = r.IsPublic,
+            Annotated = r.Annotated,
             CreatedAt = r.CreatedAt, FinishedAt = r.FinishedAt,
         }).ToList();
     }

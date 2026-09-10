@@ -22,7 +22,9 @@ public static class MenuRegistry
         new MenuItemDef("favorites", MenuVisibilityLevel.Registered),
         new MenuItemDef("training-goals", MenuVisibilityLevel.Registered),
         new MenuItemDef("analysis", MenuVisibilityLevel.All),
-        new MenuItemDef("guess", MenuVisibilityLevel.Registered),
+        // „All": die Punktepartie laeuft seit 0.459.0 auch ohne Anmeldung (kuratierter Bestand,
+        // Fortschritt an einer anonymen Sitzung) — genau wie die Puzzles.
+        new MenuItemDef("guess", MenuVisibilityLevel.All),
         new MenuItemDef("games", MenuVisibilityLevel.Registered),
         new MenuItemDef("remembered", MenuVisibilityLevel.Registered),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),

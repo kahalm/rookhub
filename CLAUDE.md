@@ -1130,6 +1130,54 @@ rechnet. Stirbt ein Provider, endet der Container mit dessen Code (restart zieht
 Entrypoint ist deshalb bash (`wait -n`); `ENTRYPOINT_DRY_RUN=1` zeigt nur die Aufrufe —
 `engine-provider/test/entrypoint.test.sh` prüft damit den Argument-Aufbau.
 
+### Punktepartie (`/guess`) — eine Meisterpartie Zug fuer Zug erraten
+
+Der Nutzer uebernimmt EINE Seite einer analysierten Partie und raet ab einem bestimmten Halbzug
+jeden Zug; gewertet wird gegen den TATSAECHLICHEN Partiezug (`GuessScoring`), die Engine urteilt nur
+ueber die Alternativen — die Kandidatenlisten stehen fertig in der `GameAnalysis`, hier laeuft keine
+Engine mehr.
+
+**Die eiserne Regel: die Fortsetzung verlaesst den Server nicht.** Ausgeliefert wird immer nur die
+aktuelle Stellung; der Partiezug kommt erst als ANTWORT auf den Rateversuch. Genau deshalb liegt der
+Fortschritt in einer SITZUNG am Server — auch ohne Anmeldung. Ein Client, der selbst mitzaehlt,
+muesste dem Server sagen, bei welchem Halbzug er steht, und koennte damit jeden Zug der Partie
+einzeln abfragen.
+
+**Ohne Anmeldung** (seit 0.459.0) laeuft alles ueber `…/anonymous` mit der Sitzungskennung des
+Browsers (`GuessSession.UserId` ist NULLBAR, daneben `AnonymousSessionId` — dasselbe Muster wie bei
+den anonymen Puzzle-Versuchen). Spielbar ist dort ausschliesslich der **kuratierte Bestand**
+(`GameAnalysis.IsPublic`): an einer fremden privaten Analyse kommt niemand vorbei, weil
+`StartAsync` anonym gar nicht erst nach einem Besitzer fragt. Die Kennung kommt aus
+`core/anon-session.ts` und muss `ValidationConstants.SessionIdPattern` erfuellen (Hex, 32–36) — die
+Mindestlaenge ist die einzige Schranke zwischen zwei anonymen Durchlaeufen.
+
+**Die Seite waehlt man im Bestand NICHT** (`CreateGuessSessionRequest.GuessWhite` weglassen): man
+uebernimmt die des GEWINNERS, das ist der Sinn der Uebung. `GuessSessionService.WinnerSideAsync`
+nimmt dafuer das ERGEBNIS, sonst die BEWERTUNG der letzten gerechneten Stellung (ab 1,5 Bauern
+Unterschied) — und faellt sonst auf Weiss zurueck. Der Umweg ueber die Bewertung ist kein Sonderfall:
+die zehn Meisterpartien aus Capablancas *Chess Fundamentals* tragen in der Kopfzeile nur `*`, weil
+das Buch die Ergebnisse allein im Fliesstext nennt. Bei den EIGENEN Analysen bleibt die Wahl.
+
+**Ein Deckel je Besitzer** (`MaxSessionsPerOwner` = 50, raeumt nur BEENDETE Durchlaeufe weg): `POST`
+legt auch ohne Anmeldung Zeilen an, und ohne Deckel waechst die Tabelle mit allem, was der
+Rate-Limiter durchlaesst.
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/guess-sessions` | Auth | Eigene Durchlaeufe (max. 100, neueste zuerst) |
+| POST | `/api/guess-sessions` | Auth | Starten `{ gameAnalysisId, guessWhite?, startPly? }` — `guessWhite` weglassen = Seite des Gewinners |
+| GET | `/api/guess-sessions/{id}` | Auth | Zustand: Kopf, Punkte, Verlauf bis hierhin, aktuelle Stellung — **ohne** den zu ratenden Zug |
+| POST | `/api/guess-sessions/{id}/guess` | Auth | Raten `{ uci?, addSeconds? }`; leeres `uci` = passen (0 Punkte, keine Strafe). HIER kommt der Partiezug zum ersten Mal mit |
+| GET | `/api/guess-sessions/{id}/review` | Auth | Rueckblick: je Halbzug Partiezug, eigener Zug, Stufe, Engine-Bestzug |
+| DELETE | `/api/guess-sessions/{id}` | Auth | Durchlauf loeschen |
+| GET/POST/DELETE | `/api/guess-sessions/anonymous[/{id}[/guess\|review]]` | **AllowAnonymous** + RL | Dieselben sechs Operationen ohne Konto; Kennung als `?sessionId=` (GET/DELETE) bzw. im Rumpf (POST). Ungueltige Kennung → 400 |
+| GET | `/api/game-analyses/public` | **AllowAnonymous** + RL | Kuratierter Bestand: freigegebene UND spielbare Partien (mind. eine gerechnete Stellung), mit `annotated` fuer den Filter „alle / nur kommentierte". Kopfdaten und Fortschritt, **nicht** die Zugliste |
+| PUT | `/api/game-analyses/{id}/public` | Auth | Partie in den Bestand aufnehmen/herausnehmen `{ isPublic }` — Besitzer der Analyse oder Admin |
+
+`annotated` wird IN SQL ermittelt (`Pgn LIKE '%{%'`): jede geschweifte Klammer in einem PGN ist ein
+Kommentar, und so bleibt das LONGTEXT-Feld ausserhalb der Antwort. Menue-Key `guess`, Stufe **All**;
+die Route traegt entsprechend keinen `authGuard` mehr.
+
 ### Client-Diagnostik (offen)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|

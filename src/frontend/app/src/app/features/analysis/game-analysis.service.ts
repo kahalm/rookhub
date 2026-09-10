@@ -34,6 +34,10 @@ export interface GameAnalysis {
   /** Wie viele Stellungen schon fertig sind — der Fortschritt der Partie. */
   analyzedPlies: number;
   lastError: string | null;
+  /** Kuratierter Bestand: als Punktepartie für jeden spielbar, auch ohne Anmeldung. */
+  isPublic: boolean;
+  /** Trägt das Quell-PGN Kommentare? Grundlage des Filters „alle / nur kommentierte". */
+  annotated: boolean;
   createdAt: string;
   finishedAt: string | null;
   /** Nur im Detail-Abruf gefüllt. */
@@ -59,6 +63,17 @@ export class GameAnalysisService {
 
   list(): Observable<GameAnalysis[]> {
     return this.http.get<GameAnalysis[]>('/api/game-analyses');
+  }
+
+  /** Der kuratierte Bestand — ohne Anmeldung abrufbar; nur SPIELBARE Partien (mindestens eine
+   *  gerechnete Stellung). Liefert Kopfdaten und Fortschritt, nicht die Zugliste. */
+  listPublic(): Observable<GameAnalysis[]> {
+    return this.http.get<GameAnalysis[]>('/api/game-analyses/public');
+  }
+
+  /** Partie in den kuratierten Bestand aufnehmen/herausnehmen (Besitzer oder Admin). */
+  setPublic(id: number, isPublic: boolean): Observable<{ isPublic: boolean }> {
+    return this.http.put<{ isPublic: boolean }>(`/api/game-analyses/${id}/public`, { isPublic });
   }
 
   get(id: number): Observable<GameAnalysis> {

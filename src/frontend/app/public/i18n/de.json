@@ -230,7 +230,9 @@
       "dailyTitle": "Tagespuzzle",
       "dailyDesc": "Jeden Tag ein gemeinsames Puzzle für alle – mit Tagesbestenliste (auch im Discord).",
       "weeklyTitle": "Wochenpost",
-      "weeklyDesc": "Wöchentliche Aufgaben-Serie aus einer Partie mit Termin – zum Durchspielen, mit Bestenliste."
+      "weeklyDesc": "Wöchentliche Aufgaben-Serie aus einer Partie mit Termin – zum Durchspielen, mit Bestenliste.",
+      "guessTitle": "Punktepartie",
+      "guessDesc": "Übernimm eine Seite einer kommentierten Meisterpartie und rate Zug für Zug — Punkte je Zug, gemessen am wirklich gespielten Zug."
     },
     "feedback": "Feedback / Bug melden",
     "updateAvailable": "Eine neue Version ist verfügbar.",
@@ -407,6 +409,11 @@
       "moveDown": "Nach unten",
       "hideAria": "Kachel ausblenden",
       "showAria": "Kachel einblenden"
+    },
+    "guess": {
+      "title": "Punktepartie",
+      "subtitle": "Eine Meisterpartie Zug für Zug auf Punkte spielen.",
+      "open": "Spielen"
     }
   },
   "positionInReps": {
@@ -2919,7 +2926,9 @@
       "running": "rechnet",
       "done": "fertig",
       "failed": "gescheitert"
-    }
+    },
+    "overall": "Insgesamt: {{done}} von {{total}} Stellungen gerechnet ({{percent}} %)",
+    "overallOpen": "{{count}} Partien stehen noch in der Warteschlange"
   },
   "guess": {
     "title": "Punktepartie",
@@ -2977,7 +2986,15 @@
       "skipped": "Gepasst"
     },
     "prevMove": "Vorheriger Zug",
-    "nextMove": "Nächster Zug"
+    "nextMove": "Nächster Zug",
+    "curated": "Meisterpartien",
+    "curatedHint": "Du übernimmst die Seite des Gewinners — darum geht es bei der Übung.",
+    "noCurated": "Im Bestand liegt noch nichts.",
+    "ownGames": "Eigene Analysen",
+    "filterAll": "Alle",
+    "filterAnnotated": "Nur kommentierte",
+    "annotatedBadge": "kommentiert",
+    "anonHint": "Du kannst ohne Konto spielen. Dein Durchlauf bleibt an diesem Browser."
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

@@ -41,6 +41,14 @@ public class EndpointAuthInventoryTests
         "GET /api/courses/by-slug/{slug}/{chapter}",                 // CourseController.ResolvePublicSlugChapter
         "GET /api/courses/{bookId}/public",                          // CourseController.GetPublicCourse
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress
+        // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
+        // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
+        // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am
+        // "anonymous-puzzle"-Rate-Limiter und pruefen die Sitzungskennung.
+        "GET /api/game-analyses/public",                             // GameAnalysisController.ListPublic
+        "GET /api/guess-sessions/anonymous",                         // GuessSessionAnonymousController.List
+        "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
+        "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review
         "GET /api/games/shared/{token}",                             // GamesController.GetShared
         "GET /api/menu",                                             // MenuController.Get
         "GET /api/og/img/{kind}/{id}.png",                           // OgController.Image
@@ -75,6 +83,9 @@ public class EndpointAuthInventoryTests
         "POST /api/ci/gh-webhook",                                   // CiBuildReportController.GithubWebhook
         "POST /api/client-log",                                      // ClientLogController.Post
         "POST /api/endless/sessions/anonymous",                      // EndlessController.RecordAnonymousSession
+        "POST /api/guess-sessions/anonymous",                        // GuessSessionAnonymousController.Start
+        "POST /api/guess-sessions/anonymous/{id:int}/guess",         // GuessSessionAnonymousController.Guess
+        "DELETE /api/guess-sessions/anonymous/{id:int}",             // GuessSessionAnonymousController.Delete
         "POST /api/endless/sessions/bulk/anonymous",                 // EndlessController.BulkImportAnonymousSessions
         "POST /api/extension/chessable/review-lines/anon",           // ExtensionController.ChessableReviewLinesAnon (uid-based, token-less)
         "POST /api/puzzles/random-batch",                            // PuzzleController.GetRandomBatch

@@ -64,11 +64,12 @@ describe('AppComponent lifecycle', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const items = fixture.componentInstance.quickstartItems;
 
-    expect(items.map(i => i.key)).toEqual(['random', 'mate', 'endless', 'daily', 'weekly']);
+    expect(items.map(i => i.key)).toEqual(['random', 'mate', 'endless', 'guess', 'daily', 'weekly']);
     expect(items.map(i => i.link)).toEqual([
       '/puzzles',
       `/courses/${AppComponent.MateCourseBookId}/sequential`,
       '/puzzles/endless',
+      '/guess',
       '/puzzles/daily/today',
       '/weekly',
     ]);

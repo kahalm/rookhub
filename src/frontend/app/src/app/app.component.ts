@@ -217,6 +217,7 @@ export class AppComponent implements OnInit {
     { key: 'random',  icon: '\u{1F3B2}', link: '/puzzles' },
     { key: 'mate',    icon: '\u265B',    link: `/courses/${AppComponent.MateCourseBookId}/sequential` },
     { key: 'endless', icon: '\u267E',    link: '/puzzles/endless' },
+    { key: 'guess',   icon: '\u{1F3AF}', link: '/guess' },
     { key: 'daily',   icon: '\u{1F4C5}', link: '/puzzles/daily/today' },
     { key: 'weekly',  icon: '\u{1F4F0}', link: '/weekly' },
   ];

@@ -30,6 +30,13 @@ public class GameAnalysisDto
     /// <summary>Wie viele Stellungen bereits ihre Kandidatenliste haben (Fortschritt).</summary>
     public int AnalyzedPlies { get; set; }
     public string? LastError { get; set; }
+    /// <summary>Kuratierter Bestand: als Punktepartie fuer jeden spielbar, auch ohne Anmeldung.</summary>
+    public bool IsPublic { get; set; }
+    /// <summary>Traegt das Quell-PGN Kommentare? Grundlage des Filters „alle / nur kommentierte" in
+    /// der Punktepartie-Auswahl. Ermittelt in SQL (<c>Pgn LIKE '%{%'</c>) statt aus einer eigenen
+    /// Spalte: jede geschweifte Klammer in einem PGN IST ein Kommentar, und so bleibt das
+    /// LONGTEXT-Feld ausserhalb der Antwort — geladen wuerde es sonst je Zeile.</summary>
+    public bool Annotated { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
     /// <summary>Nur im Detail-Abruf gefüllt.</summary>
@@ -49,4 +56,10 @@ public class GameAnalysisPositionDto
     public string? EvalText { get; set; }
     public int Depth { get; set; }
     public bool Analyzed { get; set; }
+}
+
+/// <summary>Kuratierten Bestand einer Partie-Analyse schalten (Besitzer/Admin).</summary>
+public class SetGameAnalysisPublicRequest
+{
+    public bool IsPublic { get; set; }
 }

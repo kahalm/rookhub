@@ -109,6 +109,11 @@ describe('PuzzleService', () => {
       const first = service.ensureSessionId();
       expect(first).toBeTruthy();
       expect(service.ensureSessionId()).toBe(first);   // stabil innerhalb der Sitzung
+      // Und sie muss durch das Muster des Servers passen (ValidationConstants.SessionIdPattern:
+      // Hex + Bindestrich, 32-36 Zeichen). Die alte Rueckfallebene vergab `s-<zeit>-<zufall>` und
+      // lief damit auf dem HTTP-Dev-Stack (kein crypto.randomUUID) in ein 400 — jede anonyme
+      // Meldung, lautlos.
+      expect(first).toMatch(/^[a-fA-F0-9-]{32,36}$/);
     } finally {
       (crypto as { randomUUID?: () => string }).randomUUID = realUuid;
     }

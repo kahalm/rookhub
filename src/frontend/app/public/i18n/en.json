@@ -230,7 +230,9 @@
       "dailyTitle": "Daily puzzle",
       "dailyDesc": "One shared puzzle for everyone each day — with a daily leaderboard (also on Discord).",
       "weeklyTitle": "Weekly post",
-      "weeklyDesc": "A weekly series of puzzles from a game, with a date — play it through, with a leaderboard."
+      "weeklyDesc": "A weekly series of puzzles from a game, with a date — play it through, with a leaderboard.",
+      "guessTitle": "Guess the moves",
+      "guessDesc": "Take over one side of an annotated master game and guess move by move — points for every move, measured against what was really played."
     },
     "feedback": "Feedback / Report a bug",
     "updateAvailable": "A new version is available.",
@@ -407,6 +409,11 @@
       "moveDown": "Move down",
       "hideAria": "Hide tile",
       "showAria": "Show tile"
+    },
+    "guess": {
+      "title": "Guess the moves",
+      "subtitle": "Play a master game move by move for points.",
+      "open": "Play"
     }
   },
   "positionInReps": {
@@ -2919,7 +2926,9 @@
       "running": "running",
       "done": "done",
       "failed": "failed"
-    }
+    },
+    "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}} %)",
+    "overallOpen": "{{count}} games still in the queue"
   },
   "guess": {
     "title": "Point game",
@@ -2977,7 +2986,15 @@
       "skipped": "Passed"
     },
     "prevMove": "Previous move",
-    "nextMove": "Next move"
+    "nextMove": "Next move",
+    "curated": "Master games",
+    "curatedHint": "You take the winning side — that is the point of the exercise.",
+    "noCurated": "There is nothing in the collection yet.",
+    "ownGames": "Your own analyses",
+    "filterAll": "All",
+    "filterAnnotated": "Annotated only",
+    "annotatedBadge": "annotated",
+    "anonHint": "You can play without an account. Your run stays with this browser."
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

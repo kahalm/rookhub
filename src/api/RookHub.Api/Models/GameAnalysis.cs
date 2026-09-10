@@ -56,6 +56,22 @@ public class GameAnalysis
     /// <summary>Engine, auf der gerechnet wird (Lichess <c>eei_…</c>); leer = Hintergrund-Engine des Profils.</summary>
     [MaxLength(64)] public string? EngineId { get; set; }
 
+    /// <summary>
+    /// Kuratierter Bestand: diese Partie darf JEDER als Punktepartie spielen — auch ohne Anmeldung.
+    /// Gesetzt vom Besitzer oder einem Admin (<c>PUT /api/game-analyses/{id}/public</c>).
+    ///
+    /// <para>Bewusst ein FLAG an der EINEN Analyse und keine Kopie je Nutzer: die Engine-Arbeit
+    /// (~20 s je Halbzug, bei 80 Halbzügen eine halbe Stunde) fällt damit einmal an statt für jeden
+    /// Besucher erneut. Und bewusst nicht <c>IsPublic</c> am Buch nachgebaut — hier hängt nichts an
+    /// Kapiteln oder Fortschritt, es ist genau diese eine Frage.</para>
+    ///
+    /// <para><b>Die eiserne Regel bleibt:</b> öffentlich heißt spielbar, nicht lesbar. Die Züge
+    /// stehen weiter hinter dem Fortschritt der SITZUNG (<see cref="GuessSession"/>) — auch die
+    /// anonyme läuft deshalb über eine Sitzung am Server und nicht über einen Zustand im Browser.
+    /// <c>GET /api/game-analyses/{id}</c> liefert nach wie vor nur EIGENE Analysen.</para>
+    /// </summary>
+    public bool IsPublic { get; set; }
+
     public GameAnalysisStatus Status { get; set; } = GameAnalysisStatus.Pending;
 
     /// <summary>Anzahl der zu analysierenden Halbzüge (= Zeilen in <see cref="Positions"/>).</summary>

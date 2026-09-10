@@ -303,4 +303,96 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.False(await _svc.DeleteAsync(other.Id, dto.Id));
         Assert.Empty(await _svc.ListAsync(other.Id));
     }
+
+    // ===== Kuratierter Bestand ==========================================================
+
+    /// <summary>Nur der Kopf, ohne Engine — hier geht es um Sichtbarkeit, nicht um Aufträge.</summary>
+    private async Task<GameAnalysis> AddAnalysisAsync(int userId, bool isPublic, bool analyzed,
+        string title = "T", string pgn = "1. e4 e5 *")
+    {
+        var analysis = new GameAnalysis
+        {
+            UserId = userId, Title = title, Pgn = pgn, StartFen = GamePlies.StartFen(),
+            PlyCount = 2, IsPublic = isPublic, Status = GameAnalysisStatus.Done,
+        };
+        analysis.Positions.Add(new GameAnalysisPosition
+        {
+            Ply = 0, Fen = GamePlies.StartFen(), GameMoveUci = "e2e4", GameMoveSan = "e4",
+            CandidatesJson = analyzed ? "[{\"uci\":\"e2e4\",\"cp\":20}]" : null,
+        });
+        _db.GameAnalyses.Add(analysis);
+        await _db.SaveChangesAsync();
+        return analysis;
+    }
+
+    /// <summary>
+    /// Der Bestand zeigt nur, was freigegeben UND spielbar ist. Eine freigegebene Partie ohne eine
+    /// einzige gerechnete Stellung wäre in der Auswahl ein Knopf, der sofort „wird noch gerechnet"
+    /// sagt — die gehört noch nicht hinein.
+    /// </summary>
+    [Fact]
+    public async Task ListPublic_nurFreigegebeneUndSpielbare()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await AddAnalysisAsync(user.Id, isPublic: true, analyzed: true, title: "sichtbar");
+        await AddAnalysisAsync(user.Id, isPublic: true, analyzed: false, title: "noch nichts gerechnet");
+        await AddAnalysisAsync(user.Id, isPublic: false, analyzed: true, title: "privat");
+
+        var list = await _svc.ListPublicAsync();
+
+        var row = Assert.Single(list);
+        Assert.Equal("sichtbar", row.Title);
+        Assert.True(row.IsPublic);
+    }
+
+    /// <summary>Grundlage des Filters „alle / nur kommentierte": eine geschweifte Klammer im PGN
+    /// IST ein Kommentar.</summary>
+    [Fact]
+    public async Task ListPublic_meldetKommentierteAls_annotated()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await AddAnalysisAsync(user.Id, true, true, "mit", "1. e4 {ein guter Zug} e5 *");
+        await AddAnalysisAsync(user.Id, true, true, "ohne", "1. e4 e5 *");
+
+        var list = await _svc.ListPublicAsync();
+
+        Assert.True(list.Single(a => a.Title == "mit").Annotated);
+        Assert.False(list.Single(a => a.Title == "ohne").Annotated);
+    }
+
+    [Fact]
+    public async Task SetPublic_derBesitzerDarf()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var analysis = await AddAnalysisAsync(user.Id, isPublic: false, analyzed: true);
+
+        Assert.True(await _svc.SetPublicAsync(user.Id, isAdmin: false, analysis.Id, true));
+        Assert.True((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+
+        Assert.False(await _svc.SetPublicAsync(user.Id, isAdmin: false, analysis.Id, false));
+        Assert.False((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+    }
+
+    [Fact]
+    public async Task SetPublic_einFremderNicht_einAdminSchon()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var analysis = await AddAnalysisAsync(user.Id, isPublic: false, analyzed: true);
+        var other = new AppUser { Username = "o", Email = "o@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(other);
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await _svc.SetPublicAsync(other.Id, isAdmin: false, analysis.Id, true));
+        Assert.False((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+
+        Assert.True(await _svc.SetPublicAsync(other.Id, isAdmin: true, analysis.Id, true));
+        Assert.True((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+    }
+
+    [Fact]
+    public async Task SetPublic_unbekanteAnalyse_istNull()
+    {
+        var user = await CreateUserWithEngineAsync();
+        Assert.Null(await _svc.SetPublicAsync(user.Id, isAdmin: true, 4711, true));
+    }
 }
