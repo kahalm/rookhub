@@ -64,8 +64,36 @@ public class GazetteerImportService
     }
 
     /// <summary>
-    /// Weltweite Ortsliste (cities15000, ~25k Zeilen). Deckt die Foederationen ab, fuer die kein
-    /// Postleitzahl-Datensatz importiert ist - dort bleibt die Ortsnamen-Suche der einzige Weg.
+    /// Laender, fuer die GeoNames KEINEN Postleitzahl-Datensatz anbietet (am 2026-09-10 geprueft:
+    /// <c>/export/zip/&lt;CC&gt;.zip</c> antwortet dort 404). Dort traegt allein die Ortsliste — und
+    /// <c>cities15000</c> ist dafuer zu grob: Armenien hat darin 29 Orte, die Mongolei 24,
+    /// Georgien 17. Fuer DIESE Laender wird <c>cities1000</c> gelesen, zusammen 7 397 statt 1 693
+    /// Orte (Faktor 4,4): Iran 428 → 1 995, Griechenland 118 → 1 132, Vietnam 313 → 905.
+    ///
+    /// <para><b>Bewusst NICHT weltweit <c>cities1000</c>.</b> Die zehnfach groessere Liste bringt
+    /// vor allem gleichnamige KLEINorte, und die laufen in die Mehrdeutigkeitsregel — also in
+    /// denselben Topf, der schon 2 590 Eintraege ohne Pin haelt. Fuer Deutschland mit seinen 19
+    /// Muenster ist das die falsche Richtung, fuer Kasachstan die richtige.</para>
+    ///
+    /// <para><b>Und bewusst eine feste Liste</b> statt „alle Laender, fuer die keine PLZ-Zeilen in
+    /// der Tabelle stehen": das haenge von der REIHENFOLGE der Importe ab — laeuft der
+    /// Staedte-Import vor dem PLZ-Import, waere die Menge eine andere. Eine stille Abhaengigkeit,
+    /// die beim Lesen niemand sieht.</para>
+    /// </summary>
+    internal static readonly IReadOnlySet<string> DenseCityCountries =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AM", "BA", "EG", "GE", "GR", "IL", "IR", "KG", "KZ", "ME", "MN", "NG", "VN",
+        };
+
+    /// <summary>
+    /// Weltweite Ortsliste. Deckt die Foederationen ab, fuer die kein Postleitzahl-Datensatz
+    /// importiert ist - dort bleibt die Ortsnamen-Suche der einzige Weg. Grundlage ist
+    /// <c>cities15000</c> (~25k Zeilen); fuer die Laender aus <see cref="DenseCityCountries"/>
+    /// wird stattdessen die feinere <c>cities1000</c> genommen.
+    ///
+    /// <para>Scheitert der zweite Abruf, wird der Import NICHT abgebrochen: die grobe Liste ist
+    /// besser als keine, und der Aufruf ist wiederholbar.</para>
     /// </summary>
     public async Task<GazetteerImportResult> ImportCitiesAsync(CancellationToken ct = default)
     {
@@ -82,9 +110,44 @@ public class GazetteerImportService
 
         var places = ParseCityLines(lines, out var skipped);
 
+        try
+        {
+            var denseLines = await DownloadZipEntryLinesAsync(
+                $"{_baseUrl}dump/cities1000.zip", "cities1000.txt", ct);
+            var dense = ParseCityLines(denseLines, out var denseSkipped)
+                .Where(p => DenseCityCountries.Contains(p.Country)).ToList();
+            var before = places.Count;
+            places = MergeDenseCities(places, dense);
+            _log.LogInformation(
+                "Gazetteer: {Dense} feine Orte fuer {Countries} Laender ohne PLZ-Datensatz " +
+                "({Skipped} uebersprungen); Gesamtmenge {Before} -> {After}",
+                dense.Count, DenseCityCountries.Count, denseSkipped, before, places.Count);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or InvalidOperationException)
+        {
+            // Kein Abbruch: die grobe Liste steht schon, und ein erneuter Aufruf holt den Rest nach.
+            _log.LogWarning(ex, "Gazetteer: cities1000 nicht abrufbar, bleibe bei cities15000");
+        }
+
         await ReplaceAsync(places, g => g.Kind == GeoPlaceKind.City, ct);
         _log.LogInformation("Gazetteer: {Count} Staedte importiert ({Skipped} uebersprungen)", places.Count, skipped);
         return new GazetteerImportResult("cities15000", places.Count, skipped);
+    }
+
+    /// <summary>
+    /// Setzt die feine Ortsliste an die Stelle der groben — aber nur fuer die Laender, die in ihr
+    /// vorkommen. <c>cities1000</c> ist eine Obermenge von <c>cities15000</c>; wuerden beide
+    /// zusammengeworfen, staende jeder groessere Ort DOPPELT im Lexikon und die
+    /// Mehrdeutigkeitsregel saehe zwei Kandidaten, wo einer gemeint ist.
+    /// </summary>
+    internal static List<GeoPlace> MergeDenseCities(List<GeoPlace> coarse, List<GeoPlace> dense)
+    {
+        if (dense.Count == 0) return coarse;
+
+        var replaced = dense.Select(p => p.Country).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var merged = coarse.Where(p => !replaced.Contains(p.Country)).ToList();
+        merged.AddRange(dense);
+        return merged;
     }
 
     // -----------------------------------------------------------------------
