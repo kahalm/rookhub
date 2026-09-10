@@ -55,6 +55,22 @@ public class LichessEngineCredential
         BackgroundEngineIds = clean.Count == 0 ? null : string.Join(',', clean);
     }
 
+    /// <summary>
+    /// Diese Hintergrund-Engines stehen auch FREMDEN Partie-Analysen der Punktepartie offen
+    /// („Haus-Engine"). Gesetzt nur von einem Admin (<c>PUT /api/engine/house</c>).
+    ///
+    /// <para><b>Warum es das braucht:</b> Analyseauftraege laufen ueber den Lichess-Token und die
+    /// registrierten External Engines des AUFTRAGGEBERS. Ein normal registrierter Nutzer hat keine —
+    /// sein eingeworfenes PGN prallte an „No background engine configured" ab, und das Einwerfen
+    /// waere ein Angebot fuer die Handvoll Leute, die selbst eine Maschine betreiben.</para>
+    ///
+    /// <para>Ein Flag an der EINEN Zugangsdatenzeile und keine eigene Tabelle: es ist genau diese
+    /// eine Frage, sie haengt an nichts weiter, und sie faellt mit dem Token, dem sie gilt (Cascade).
+    /// Freigegeben sind immer ALLE <see cref="BackgroundEngines"/> dieser Zeile — eine Auswahl davon
+    /// waere eine zweite Liste, die mit der ersten auseinanderlaufen kann.</para>
+    /// </summary>
+    public bool ShareAsHouseEngine { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

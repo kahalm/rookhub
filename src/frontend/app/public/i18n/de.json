@@ -582,7 +582,10 @@
       "backgroundNone": "Keine",
       "backgroundHint": "Die Hintergrund-Engine rechnet deine Analyse-Aufträge, sobald sie frei ist, und pausiert, solange du live mit einer externen Engine analysierst. Sie erscheint nicht im Live-Picker — am besten eine eigene Engine dafür registrieren (ENGINE_COUNT=2 im Provider).",
       "backgroundSaved": "Hintergrund-Engine gespeichert.",
-      "backgroundFailed": "Hintergrund-Engine konnte nicht gespeichert werden."
+      "backgroundFailed": "Hintergrund-Engine konnte nicht gespeichert werden.",
+      "houseLabel": "Meine Hintergrund-Engines auch für eingeworfene Partien freigeben",
+      "houseHint": "Registrierte Nutzer ohne eigene Engine können dann auf der Punktepartie-Seite eigene Partien einwerfen; gerechnet wird auf deiner Maschine, mit fester Tiefe.",
+      "houseSaved": "Freigabe gespeichert"
     },
     "offline": {
       "title": "Offline",
@@ -3009,7 +3012,26 @@
       "acceptBetter": "besseren Zug annehmen",
       "acceptSimilar": "gleich guten Zug annehmen",
       "hint": "Aus, wenn du den wirklich gespielten Zug finden willst — ein guter Zug bringt dann nur einen Hinweis, die Stellung bleibt stehen."
-    }
+    },
+    "upload": {
+      "pgnLabel": "PGN einfügen",
+      "placeholder": "[Event \"...\"]\n1. e4 e5 2. Nf3 ...",
+      "submit": "Partie einwerfen",
+      "hintOwn": "Wirf eine eigene Partie ein — sie wird im Hintergrund analysiert und steht danach hier als Punktepartie. Je nach Länge dauert das einige Minuten bis Stunden.",
+      "hintHouse": "Wirf eine eigene Partie ein — sie wird auf der Engine des Hauses analysiert und steht danach hier als Punktepartie. Je nach Länge und Andrang dauert das einige Minuten bis Stunden.",
+      "noEngine": "Gerade steht keine Engine bereit, die eingeworfene Partien rechnen könnte.",
+      "quota": "{{open}} von {{max}} Partien in der Rechnung",
+      "started": "Die Partie wird gerechnet. Du kannst sie spielen, sobald die erste Stellung fertig ist.",
+      "failed": "Die Partie konnte nicht angenommen werden.",
+      "reason": {
+        "too-many-open": "Du hast schon {{max}} Partien in der Rechnung. Warte, bis eine davon fertig ist.",
+        "no-engine": "Gerade steht keine Engine bereit, die die Partie rechnen könnte.",
+        "invalid-pgn": "In diesem Text steckt keine spielbare Partie."
+      }
+    },
+    "computing": "rechnet",
+    "failedBadge": "gescheitert",
+    "notReady": "Noch keine Stellung gerechnet"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

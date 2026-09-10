@@ -74,6 +74,32 @@ public class GameAnalysisController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Eine Partie auf der PUNKTEPARTIE-Seite einwerfen. Derselbe Weg wie <see cref="Create"/>, nur
+    /// ohne Regler: Tiefe, Linienzahl und Engine bestimmt der Server. Literal-Route, also VOR
+    /// <c>{id:int}</c> — bei POST gibt es dort zwar nichts zu verwechseln, aber die Reihenfolge
+    /// bleibt so, wie die Datei sie sonst haelt.
+    ///
+    /// <para>Antwortet bei einer Absage 400 mit einem <c>reason</c> aus
+    /// <see cref="GuessUploadReason"/>; die Seite formuliert daraus den Satz in der Sprache des
+    /// Nutzers.</para>
+    /// </summary>
+    [HttpPost("guess")]
+    public async Task<ActionResult<GameAnalysisDto>> CreateForGuess([FromBody] CreateGuessGameRequest req,
+        CancellationToken ct)
+    {
+        var result = await _service.CreateForGuessAsync(GetUserId(), req, ct);
+        return result.Analysis is null
+            ? BadRequest(new { reason = result.Reason, message = "Game could not be accepted." })
+            : Ok(result.Analysis);
+    }
+
+    /// <summary>Ob der Nutzer einwerfen darf und wie viele Partien noch frei sind — die Seite fragt
+    /// das, BEVOR jemand ein PGN hineinkopiert.</summary>
+    [HttpGet("guess/status")]
+    public async Task<ActionResult<GuessUploadStatusDto>> GuessUploadStatus(CancellationToken ct)
+        => Ok(await _service.GuessUploadStatusAsync(GetUserId(), ct));
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
         => await _service.DeleteAsync(GetUserId(), id, ct)

@@ -391,7 +391,10 @@
       "backgroundNone": "Nincs",
       "backgroundHint": "A háttérmotor akkor dolgozza fel az elemzési feladataidat, amikor éppen szabad, és szünetel, amíg élőben elemzel külső motorral. Az élő választóban nem jelenik meg — érdemes külön motort regisztrálni hozzá (ENGINE_COUNT=2 a szolgáltatónál).",
       "backgroundSaved": "Háttérmotor elmentve.",
-      "backgroundFailed": "A háttérmotort nem sikerült elmenteni."
+      "backgroundFailed": "A háttérmotort nem sikerült elmenteni.",
+      "houseLabel": "A háttérmotorjaim a mások által hozzáadott játszmákat is számolhassák",
+      "houseHint": "A saját motorral nem rendelkező regisztrált felhasználók így hozzáadhatnak játszmákat a pontozós játszma oldalán; a számítás a te gépeden fut, rögzített mélységgel.",
+      "houseSaved": "Megosztás mentve"
     },
     "changePwd": {
       "title": "Jelszó módosítása",
@@ -2734,7 +2737,26 @@
       "acceptBetter": "jobb lépés elfogadása",
       "acceptSimilar": "ugyanolyan jó lépés elfogadása",
       "hint": "Kapcsold ki, ha a ténylegesen játszott lépést akarod megtalálni — egy jó lépés ilyenkor csak megjegyzést hoz, az állás marad."
-    }
+    },
+    "upload": {
+      "pgnLabel": "PGN beillesztése",
+      "placeholder": "[Event \"...\"]\n1. e4 e5 2. Nf3 ...",
+      "submit": "Játszma hozzáadása",
+      "hintOwn": "Adj hozzá egy saját játszmát — a háttérben elemezzük, és utána itt vár rád pontozós játszmaként. A hosszától függően ez percektől órákig tart.",
+      "hintHouse": "Adj hozzá egy saját játszmát — a ház motorján elemezzük, és utána itt vár rád pontozós játszmaként. A hosszától és a sorban állástól függően ez percektől órákig tart.",
+      "noEngine": "Jelenleg nincs elérhető motor, amely a hozzáadott játszmákat elemezné.",
+      "quota": "{{open}} / {{max}} játszma elemzés alatt",
+      "started": "A játszma elemzése folyik. Amint az első állás elkészült, játszhatsz vele.",
+      "failed": "A játszmát nem sikerült elfogadni.",
+      "reason": {
+        "too-many-open": "Már {{max}} játszmád van elemzés alatt. Várd meg, amíg az egyik elkészül.",
+        "no-engine": "Jelenleg nincs elérhető motor, amely elemezné a játszmát.",
+        "invalid-pgn": "Ebben a szövegben nincs játszható játszma."
+      }
+    },
+    "computing": "elemzés alatt",
+    "failedBadge": "sikertelen",
+    "notReady": "Még egyetlen állás sincs elemezve"
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

@@ -14,6 +14,15 @@ public enum GameAnalysisStatus
     Failed = 3,
 }
 
+/// <summary>Woher die Partie kam — sie entscheidet ueber den Deckel, nicht ueber die Rechnung.</summary>
+public enum GameAnalysisOrigin
+{
+    /// <summary>Von Hand auf der Seite „Partie-Analysen" eingereiht (Tiefe und Linien frei waehlbar).</summary>
+    Manual = 0,
+    /// <summary>Auf der Punktepartie-Seite eingeworfen: feste Tiefe, kein Regler, eigener Deckel.</summary>
+    Guess = 1,
+}
+
 /// <summary>
 /// Eine GANZE Partie, von der Hintergrund-Engine Stellung für Stellung durchgerechnet — die
 /// Vorstufe der Punktepartie (siehe TODO.md) und für sich schon nützlich („diese Partie einmal
@@ -72,6 +81,17 @@ public class GameAnalysis
     /// </summary>
     public bool IsPublic { get; set; }
 
+    /// <summary>
+    /// Wer die Engine stellt, wenn es nicht der Besitzer selbst ist (Haus-Engine, siehe
+    /// <see cref="LichessEngineCredential.ShareAsHouseEngine"/>); <c>null</c> = eigene.
+    /// Wird an jeden <see cref="AnalysisJob"/> dieser Partie durchgereicht — Token und Engine kommen
+    /// dann von DIESEM Konto, waehrend die Partie und ihre Auftraege dem Einwerfer gehoeren.
+    /// </summary>
+    public int? EngineOwnerUserId { get; set; }
+
+    /// <summary>Von Hand eingereiht oder auf der Punktepartie-Seite eingeworfen.</summary>
+    public GameAnalysisOrigin Origin { get; set; } = GameAnalysisOrigin.Manual;
+
     public GameAnalysisStatus Status { get; set; } = GameAnalysisStatus.Pending;
 
     /// <summary>Anzahl der zu analysierenden Halbzüge (= Zeilen in <see cref="Positions"/>).</summary>
@@ -96,6 +116,24 @@ public static class GameAnalysisDefaults
 
     /// <summary>5 = Protokoll-Maximum des Lichess-External-Engine-Protokolls (<c>work.multiPv</c> 1..5).</summary>
     public const int MultiPv = 5;
+
+    /// <summary>
+    /// Tiefe der auf der Punktepartie-Seite eingeworfenen Partien — FEST, und im Formular steht
+    /// kein Regler dafuer.
+    ///
+    /// <para>Zwei Gruende. Erstens rechnet dort meist nicht die eigene Maschine, sondern die
+    /// Haus-Engine: einen Regler anzubieten hiesse, fremde Rechenzeit zur Selbstbedienung zu
+    /// stellen (Tiefe 40 kostet grob das Zehnfache von 30). Zweitens braucht die Punktepartie die
+    /// Tiefe gar nicht: gewertet wird gegen den TATSAECHLICH gespielten Zug, die Engine liefert nur
+    /// die Rangfolge der Alternativen — und die steht bei 20 im Wesentlichen so wie bei 30. Wer die
+    /// Tiefe wirklich braucht, reiht die Partie weiter von Hand ueber „Partie-Analysen" ein.</para>
+    /// </summary>
+    public const int GuessTargetDepth = 20;
+
+    /// <summary>So viele eingeworfene Partien darf ein Nutzer gleichzeitig offen haben. Der Deckel
+    /// gilt NUR fuer <see cref="GameAnalysisOrigin.Guess"/>: von Hand eingereihte Partien laufen wie
+    /// bisher ungezaehlt, denn dort rechnet die eigene Maschine.</summary>
+    public const int MaxOpenGuessGamesPerUser = 5;
 
     /// <summary>Deckel für die Länge einer Partie (Halbzüge) — schützt vor einem PGN-Monster.</summary>
     public const int MaxPlies = 300;

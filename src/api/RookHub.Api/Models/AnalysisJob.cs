@@ -40,6 +40,19 @@ public class AnalysisJob
     [MaxLength(200)]
     public string? Title { get; set; }
 
+    /// <summary>
+    /// Wessen Lichess-Token und Engine-Registrierung der Worker benutzt, wenn es nicht der Besitzer
+    /// des Auftrags ist; <c>null</c> = <see cref="UserId"/>. Gesetzt bei Partien, die ueber die
+    /// Punktepartie eingeworfen wurden und auf der Haus-Engine rechnen.
+    ///
+    /// <para>Bewusst getrennt vom Besitzer, statt den Auftrag einfach dem Haus-Konto zu geben:
+    /// Deckel (<c>MaxOpenJobsPerUser</c>), Trimmer, die Auftragsliste und die Sekundenanzeige
+    /// haengen alle an <see cref="UserId"/>. Liefe der Auftrag unter dem Haus-Konto, teilten sich
+    /// ALLE Einwerfer dessen fuenfzig offene Plaetze — einer koennte damit alle anderen aussperren,
+    /// und in der Auftragsliste des Admins staenden fremde Partien.</para>
+    /// </summary>
+    public int? EngineOwnerUserId { get; set; }
+
     /// <summary>Lichess-Engine-ID (eei_…), auf der der Auftrag rechnet — beim Anlegen die Hintergrund-Engine.</summary>
     [Required, MaxLength(64)]
     public string EngineId { get; set; } = string.Empty;

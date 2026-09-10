@@ -17,8 +17,18 @@ public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxH
 /// <c>BackgroundEngineIds</c> = die im Profil gewählten Hintergrund-Engines (der Live-Picker blendet
 /// sie aus). MEHRERE sind erlaubt: der Worker rechnet je Engine einen Auftrag, also laufen so viele
 /// Auftraege nebeneinander, wie Engines hinterlegt sind.</summary>
+/// <para><c>ShareAsHouseEngine</c> = diese Hintergrund-Engines stehen auch fremden Partien offen, die
+/// jemand auf der Punktepartie-Seite einwirft (nur ein Admin kann das setzen); <c>CanShareHouseEngine</c>
+/// sagt der Karte, ob sie das Haekchen ueberhaupt zeigen soll.</para>
 public record ExternalEnginesResponse(bool HasCredentials, bool TokenInvalid, List<ExternalEngineDto> Engines,
-    IReadOnlyList<string>? BackgroundEngineIds = null);
+    IReadOnlyList<string>? BackgroundEngineIds = null, bool ShareAsHouseEngine = false,
+    bool CanShareHouseEngine = false);
+
+/// <summary>Haus-Engine-Freigabe schalten (nur Admin).</summary>
+public class SetHouseEngineRequest
+{
+    public bool Share { get; set; }
+}
 
 /// <summary>
 /// Analyse-Anfrage des Frontends. Wird serverseitig validiert, auf die Engine-Maxima geklemmt und

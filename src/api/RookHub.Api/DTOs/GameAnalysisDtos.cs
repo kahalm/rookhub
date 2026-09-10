@@ -63,3 +63,39 @@ public class SetGameAnalysisPublicRequest
 {
     public bool IsPublic { get; set; }
 }
+
+/// <summary>Eine auf der PUNKTEPARTIE-Seite eingeworfene Partie. Bewusst NUR PGN und Titel: Tiefe,
+/// Linienzahl und Engine setzt der Server (<c>GameAnalysisDefaults.GuessTargetDepth</c>). Ein Feld,
+/// das der Server ohnehin ueberschreibt, waere ein Versprechen, das die Antwort bricht — und auf
+/// fremder Rechenzeit hat der Einwerfer die Tiefe nicht zu bestimmen.</summary>
+public class CreateGuessGameRequest
+{
+    public string? Pgn { get; set; }
+    public string? Title { get; set; }
+}
+
+/// <summary>Warum ein Einwurf abgelehnt wurde. Ein GRUND und kein Satz: die Seite formuliert ihn in
+/// der Sprache des Nutzers, der Server kennt sie nicht.</summary>
+public static class GuessUploadReason
+{
+    /// <summary>Der Nutzer hat schon <c>MaxOpenGuessGamesPerUser</c> Partien in der Rechnung.</summary>
+    public const string TooManyOpen = "too-many-open";
+    /// <summary>Weder eigene Hintergrund-Engine noch freigegebene Haus-Engine.</summary>
+    public const string NoEngine = "no-engine";
+    /// <summary>Im Text steckt keine spielbare Partie.</summary>
+    public const string InvalidPgn = "invalid-pgn";
+}
+
+/// <summary>Ergebnis eines Einwurfs: entweder die angelegte Analyse oder ein Grund.</summary>
+public record GuessUploadResult(GameAnalysisDto? Analysis, string? Reason);
+
+/// <summary>Ob und wie oft der Nutzer noch einwerfen darf.</summary>
+public class GuessUploadStatusDto
+{
+    /// <summary>Ueberhaupt eine Engine da (eigene oder Haus)? Ohne sie zeigt die Seite das Feld gar nicht erst.</summary>
+    public bool EngineAvailable { get; set; }
+    /// <summary>Rechnet die eigene Maschine? Nur fuer den Hinweistext — die Tiefe bleibt so oder so fest.</summary>
+    public bool OwnEngine { get; set; }
+    public int OpenGames { get; set; }
+    public int MaxGames { get; set; }
+}

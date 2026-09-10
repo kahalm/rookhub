@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -23,7 +24,7 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
   selector: 'app-engine-card',
   standalone: true,
   imports: [
-    MatSelectModule,
+    MatSelectModule, MatCheckboxModule,
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, TranslatePipe,
   ],
@@ -78,6 +79,13 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
             </mat-form-field>
           </div>
           <p class="engine-hint">{{ 'profile.engine.backgroundHint' | translate }}</p>
+          @if (canShareHouseEngine && backgroundEngineIds.length > 0) {
+            <mat-checkbox [(ngModel)]="shareAsHouseEngine" name="shareAsHouseEngine"
+                          (change)="saveHouseEngine()">
+              {{ 'profile.engine.houseLabel' | translate }}
+            </mat-checkbox>
+            <p class="engine-hint">{{ 'profile.engine.houseHint' | translate }}</p>
+          }
         } @else {
           <p class="engine-hint">{{ 'profile.engine.noEngines' | translate }}</p>
         }
@@ -110,6 +118,10 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   engines: ExternalEngineInfo[] = [];
   /** Hintergrund-Engine für Analyseaufträge (null = keine). */
   backgroundEngineIds: string[] = [];
+  /** Haus-Engine: die eigenen Hintergrund-Engines rechnen auch fremde eingeworfene Partien. */
+  shareAsHouseEngine = false;
+  /** Nur ein Admin bekommt das Häkchen überhaupt zu sehen. */
+  canShareHouseEngine = false;
   private listSub?: Subscription;
   private statusSub?: Subscription;
 
@@ -166,6 +178,7 @@ export class EngineCardComponent implements OnInit, OnDestroy {
         this.tokenInvalid = false;
         this.listFailed = false;
         this.backgroundEngineIds = [];
+        this.shareAsHouseEngine = false;
         this.cdr.markForCheck();
       },
       error: () => this.snackbar.warn(this.translate.instant('profile.engine.saveFailed')),
@@ -184,6 +197,27 @@ export class EngineCardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Haus-Engine schalten: die eigenen Hintergrund-Engines rechnen dann auch die Partien, die andere
+   * auf der Punktepartie-Seite einwerfen. Das ist verschenkte Rechenzeit der eigenen Maschine, also
+   * eine bewusste Entscheidung — und nur ein Admin darf sie treffen (der Server prüft es nochmal).
+   */
+  saveHouseEngine(): void {
+    this.externalEngines.setHouseEngine(this.shareAsHouseEngine).subscribe({
+      next: r => {
+        this.shareAsHouseEngine = r.shareAsHouseEngine;
+        this.snackbar.success(this.translate.instant('profile.engine.houseSaved'));
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Zurückdrehen: sonst zeigt das Häkchen einen Zustand, den der Server nicht kennt.
+        this.shareAsHouseEngine = !this.shareAsHouseEngine;
+        this.snackbar.warn(this.translate.instant('profile.engine.backgroundFailed'));
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
   /** @param announceError true, wenn der Abruf einer Nutzer-Aktion folgt (Speichern) — dann darf
    *  ein Fehlschlag NICHT still bleiben, sonst wirkt „gespeichert" wie „geprüft und in Ordnung". */
   private loadEngines(announceError = false): void {
@@ -194,6 +228,8 @@ export class EngineCardComponent implements OnInit, OnDestroy {
         this.tokenInvalid = r.tokenInvalid;
         this.engines = r.engines;
         this.backgroundEngineIds = r.backgroundEngineIds ?? [];
+        this.shareAsHouseEngine = r.shareAsHouseEngine ?? false;
+        this.canShareHouseEngine = r.canShareHouseEngine ?? false;
         this.listFailed = false;
         this.cdr.markForCheck();
       },

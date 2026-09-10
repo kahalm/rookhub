@@ -229,14 +229,17 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 return;
             }
 
-            var token = await svc.TokenAsync(job.UserId, CancellationToken.None);
+            // Token und Engine-Registrierung kommen vom ENGINE-BESITZER: bei einer eingeworfenen
+            // Punktepartie ohne eigene Engine ist das nicht der Auftraggeber, sondern das Haus-Konto.
+            var engineOwnerId = job.EngineOwnerUserId ?? job.UserId;
+            var token = await svc.TokenAsync(engineOwnerId, CancellationToken.None);
             if (token is null)
             {
                 await FailAsync(db, job, "Kein Lichess-Token hinterlegt");
                 return;
             }
             LichessExternalEngine? engine;
-            try { engine = await _lichess.ResolveEngineAsync(job.UserId, token, job.EngineId, ct); }
+            try { engine = await _lichess.ResolveEngineAsync(engineOwnerId, token, job.EngineId, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 // Live hat begonnen / gelöscht / Shutdown — MUSS vor dem Filter darunter stehen, sonst wäre

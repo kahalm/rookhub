@@ -64,16 +64,20 @@ public class AnalysisJobService
     /// (auf Dev erlebt: ein Auftrag rechnete eine halbe Stunde, alle anderen warteten). Die
     /// kuerzeste Schlange gewinnt deshalb, bei Gleichstand die zuerst hinterlegte.</para>
     /// </summary>
-    private async Task<string> PickBackgroundEngineAsync(int userId, CancellationToken ct)
+    private async Task<string> PickBackgroundEngineAsync(int ownerId, CancellationToken ct)
     {
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
         var engines = cred?.BackgroundEngines ?? [];
         if (engines.Count == 0)
             throw new InvalidOperationException("No background engine configured");
         if (engines.Count == 1) return engines[0];
 
+        // Gezaehlt wird nach ENGINE-BESITZER, nicht nach Auftraggeber: auf der Haus-Engine stehen
+        // die Auftraege mehrerer Nutzer in EINER Schlange, und wer die kuerzeste sucht, muss sie
+        // ganz sehen. Nach dem Auftraggeber zu zaehlen hiesse, jeden Neuling auf die Engine zu
+        // schicken, vor der schon dreissig fremde Auftraege stehen.
         var openPerEngine = await _db.AnalysisJobs
-            .Where(j => j.UserId == userId
+            .Where(j => (j.EngineOwnerUserId ?? j.UserId) == ownerId
                 && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed)
             .GroupBy(j => j.EngineId)
             .Select(g => new { EngineId = g.Key, Count = g.Count() })
@@ -86,7 +90,7 @@ public class AnalysisJobService
     }
 
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
-        bool remember = true)
+        bool remember = true, int? engineOwnerUserId = null)
     {
         var fen = (req.Fen ?? string.Empty).Trim();
         if (fen.Length is 0 or > 120 || !IsLegalFen(fen))
@@ -99,10 +103,14 @@ public class AnalysisJobService
         if (title is { Length: > 200 })
             throw new ArgumentException("Title too long");
 
+        // Wessen Engine rechnet: normalerweise die des Auftraggebers, bei einer eingeworfenen
+        // Punktepartie ohne eigene Engine die des Haus-Kontos. Der Auftrag BLEIBT dabei beim
+        // Auftraggeber — nur Token und Engine-Registrierung kommen von woanders.
+        var engineOwner = engineOwnerUserId is int owner && owner != userId ? owner : (int?)null;
         var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
         if (engineId is null)
         {
-            engineId = await PickBackgroundEngineAsync(userId, ct);
+            engineId = await PickBackgroundEngineAsync(engineOwner ?? userId, ct);
         }
         if (engineId.Length > 64)
             throw new ArgumentException("Invalid engine id");
@@ -116,6 +124,7 @@ public class AnalysisJobService
         var job = new AnalysisJob
         {
             UserId = userId, Fen = fen, Title = title, EngineId = engineId,
+            EngineOwnerUserId = engineOwner,
             TargetDepth = req.TargetDepth, MultiPv = req.MultiPv,
             Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
         };

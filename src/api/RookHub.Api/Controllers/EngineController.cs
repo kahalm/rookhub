@@ -118,7 +118,8 @@ public class EngineController : BaseApiController
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         var token = cred is null ? null : _encryption.TryDecrypt(cred.EncryptedToken);
         if (token is null)
-            return Ok(new ExternalEnginesResponse(cred is not null, false, [], cred?.BackgroundEngines ?? []));
+            return Ok(new ExternalEnginesResponse(cred is not null, false, [], cred?.BackgroundEngines ?? [],
+                cred?.ShareAsHouseEngine ?? false, IsAdmin));
 
         try
         {
@@ -126,7 +127,8 @@ public class EngineController : BaseApiController
             var engines = result.Engines
                 .Select(e => new ExternalEngineDto(e.Id, e.Name, e.MaxThreads, e.MaxHash))
                 .ToList();
-            return Ok(new ExternalEnginesResponse(true, result.Unauthorized, engines, cred!.BackgroundEngines));
+            return Ok(new ExternalEnginesResponse(true, result.Unauthorized, engines, cred!.BackgroundEngines,
+                cred.ShareAsHouseEngine, IsAdmin));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -190,6 +192,41 @@ public class EngineController : BaseApiController
         cred.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Ok(new { backgroundEngineIds = cred.BackgroundEngines });
+    }
+
+    /// <summary>
+    /// Die eigenen Hintergrund-Engines auch fremden Partien oeffnen, die jemand auf der
+    /// Punktepartie-Seite einwirft („Haus-Engine"). NUR ein Admin darf das setzen: hier verschenkt
+    /// jemand Rechenzeit seiner Maschine an alle registrierten Nutzer, und diese Entscheidung
+    /// gehoert nicht in die Hand eines beliebigen Kontos.
+    ///
+    /// <para>Freigegeben sind immer ALLE hinterlegten Hintergrund-Engines. Eine Auswahl davon waere
+    /// eine zweite Liste neben der ersten — und zwei Listen, die dasselbe meinen, laufen
+    /// auseinander. Wer weniger teilen will, hinterlegt weniger.</para>
+    /// </summary>
+    [HttpPut("house")]
+    public async Task<IActionResult> SetHouseEngine([FromBody] SetHouseEngineRequest request, CancellationToken ct)
+    {
+        if (!IsAdmin) return Forbid();
+
+        var userId = GetUserId();
+        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        if (cred is null)
+            return BadRequest(new { message = "No Lichess token stored" });
+
+        var share = request?.Share ?? false;
+        // Ohne hinterlegte Hintergrund-Engine gaebe die Freigabe nichts her: die Partien der anderen
+        // landeten in einer Warteschlange, die niemand abarbeitet.
+        if (share && cred.BackgroundEngines.Count == 0)
+            return BadRequest(new { message = "No background engine configured" });
+
+        if (cred.ShareAsHouseEngine != share)
+        {
+            cred.ShareAsHouseEngine = share;
+            cred.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+        return Ok(new { shareAsHouseEngine = cred.ShareAsHouseEngine });
     }
 
     /// <summary>

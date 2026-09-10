@@ -51,6 +51,19 @@ export interface CreateGameAnalysisRequest {
   multiPv?: number;
 }
 
+/** Warum ein Einwurf auf der Punktepartie-Seite abgelehnt wurde (Server-Grund, hier lokalisiert). */
+export type GuessUploadReason = 'too-many-open' | 'no-engine' | 'invalid-pgn';
+
+/** Ob und wie oft auf der Punktepartie-Seite noch eingeworfen werden darf. */
+export interface GuessUploadStatus {
+  /** Ohne Engine (eigene oder Haus) zeigt die Seite das Feld gar nicht erst. */
+  engineAvailable: boolean;
+  /** Nur für den Hinweistext — die Tiefe ist so oder so fest. */
+  ownEngine: boolean;
+  openGames: number;
+  maxGames: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GameAnalysisService {
   private http = inject(HttpClient);
@@ -82,6 +95,16 @@ export class GameAnalysisService {
 
   create(req: CreateGameAnalysisRequest): Observable<GameAnalysis> {
     return this.http.post<GameAnalysis>('/api/game-analyses', req);
+  }
+
+  /** Eine Partie auf der PUNKTEPARTIE-Seite einwerfen. Bewusst ohne Tiefe und Linienzahl: beides
+   *  setzt der Server. Gerechnet wird auf der eigenen Hintergrund-Engine, sonst auf der Haus-Engine. */
+  createForGuess(pgn: string, title?: string): Observable<GameAnalysis> {
+    return this.http.post<GameAnalysis>('/api/game-analyses/guess', { pgn, title });
+  }
+
+  guessUploadStatus(): Observable<GuessUploadStatus> {
+    return this.http.get<GuessUploadStatus>('/api/game-analyses/guess/status');
   }
 
   delete(id: number): Observable<void> {

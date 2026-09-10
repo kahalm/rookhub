@@ -505,6 +505,125 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(2, used.Distinct().Count());
     }
 
+    // ===== Einwurf auf der Punktepartie-Seite =================================
+
+    private async Task<AppUser> CreateUserAsync(string name, bool admin = false)
+    {
+        var user = new AppUser { Username = name, Email = $"{name}@t.com", PasswordHash = "h", IsAdmin = admin };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    private async Task GiveEngineAsync(AppUser user, bool house = false)
+    {
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential
+        {
+            UserId = user.Id, User = user, EncryptedToken = "enc",
+            BackgroundEngineIds = $"eei_{user.Username}", ShareAsHouseEngine = house,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Die Tiefe steht in keinem Formular — und sie ist auch nicht zu erraten: der Einwurf
+    /// nimmt sie gar nicht erst entgegen.</summary>
+    [Fact]
+    public async Task CreateForGuess_rechnetMitFesterTiefe_aufDerEigenenEngine()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+
+        Assert.Null(result.Reason);
+        Assert.NotNull(result.Analysis);
+        Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, result.Analysis!.TargetDepth);
+        Assert.NotEqual(GameAnalysisDefaults.TargetDepth, result.Analysis.TargetDepth);
+
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis.Id);
+        Assert.Equal(GameAnalysisOrigin.Guess, analysis.Origin);
+        // Eigene Maschine: kein fremder Engine-Besitzer am Auftrag.
+        Assert.Null(analysis.EngineOwnerUserId);
+        Assert.All(await _db.AnalysisJobs.ToListAsync(), j => Assert.Null(j.EngineOwnerUserId));
+    }
+
+    /// <summary>Ohne eigene Engine rechnet die Haus-Engine — der Auftrag bleibt aber beim Einwerfer,
+    /// nur Token und Engine kommen vom Haus-Konto.</summary>
+    [Fact]
+    public async Task CreateForGuess_ohneEigeneEngine_nimmtDieHausEngine()
+    {
+        var admin = await CreateUserAsync("admin", admin: true);
+        await GiveEngineAsync(admin, house: true);
+        var user = await CreateUserAsync("u");
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+
+        Assert.Null(result.Reason);
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
+        Assert.Equal(admin.Id, analysis.EngineOwnerUserId);
+
+        var jobs = await _db.AnalysisJobs.ToListAsync();
+        Assert.NotEmpty(jobs);
+        Assert.All(jobs, j =>
+        {
+            Assert.Equal(user.Id, j.UserId);              // Deckel und Liste bleiben beim Einwerfer
+            Assert.Equal(admin.Id, j.EngineOwnerUserId);  // gerechnet wird auf der Haus-Engine
+            Assert.Equal("eei_admin", j.EngineId);
+        });
+    }
+
+    /// <summary>Eine Freigabe von jemandem OHNE Admin-Rechte zaehlt nicht — sonst liefe eine fremde
+    /// Maschine weiter fuer alle, nachdem dem Konto die Rechte entzogen wurden.</summary>
+    [Fact]
+    public async Task CreateForGuess_ohneEngine_sagtWarum()
+    {
+        var notAdmin = await CreateUserAsync("ex-admin");
+        await GiveEngineAsync(notAdmin, house: true);
+        var user = await CreateUserAsync("u");
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+
+        Assert.Equal(GuessUploadReason.NoEngine, result.Reason);
+        Assert.Null(result.Analysis);
+        Assert.Empty(await _db.GameAnalyses.ToListAsync());
+    }
+
+    /// <summary>Der Deckel gilt fuer eingeworfene Partien, nicht fuer von Hand eingereihte.</summary>
+    [Fact]
+    public async Task CreateForGuess_ueberDemDeckel_nimmtNichtsMehrAn()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxOpenGuessGamesPerUser; i++)
+            Assert.Null((await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game })).Reason);
+
+        var refused = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+        Assert.Equal(GuessUploadReason.TooManyOpen, refused.Reason);
+
+        var status = await _svc.GuessUploadStatusAsync(user.Id);
+        Assert.True(status.EngineAvailable);
+        Assert.True(status.OwnEngine);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenGuessGamesPerUser, status.OpenGames);
+
+        // Von Hand geht weiter — dort rechnet die eigene Maschine, und da zaehlt niemand mit.
+        var manual = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        Assert.Equal(GameAnalysisDefaults.TargetDepth, manual.TargetDepth);
+    }
+
+    /// <summary>Ein Text ohne spielbare Partie ist eine Absage mit Grund, keine Ausnahme.</summary>
+    [Fact]
+    public async Task CreateForGuess_ohneSpielbaresPgn_sagtWarum()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = "kein PGN" });
+
+        Assert.Equal(GuessUploadReason.InvalidPgn, result.Reason);
+        Assert.Empty(await _db.GameAnalyses.ToListAsync());
+    }
+
     /// <summary>Die CSV-Zerlegung liegt am Modell — Duplikate und Leerwerte fallen raus.</summary>
     [Fact]
     public void SetBackgroundEngines_raeumtAuf()

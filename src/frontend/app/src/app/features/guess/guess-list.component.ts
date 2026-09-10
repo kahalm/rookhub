@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -6,12 +6,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
+import { Subscription, interval } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessService, GuessSession } from './guess.service';
-import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.service';
+import { GameAnalysis, GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
 import { ViewStateService } from '../../core/view-state.service';
 
@@ -36,7 +40,8 @@ import { ViewStateService } from '../../core/view-state.service';
   selector: 'app-guess-list',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatTooltipModule, MatButtonToggleModule, TranslatePipe, LoadingSpinnerComponent],
+    MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatProgressBarModule,
+    TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="gl-container">
       <div class="header">
@@ -92,7 +97,31 @@ import { ViewStateService } from '../../core/view-state.service';
           <mat-card class="start-card">
             <mat-card-content>
               <h2>{{ 'guess.ownGames' | translate }}</h2>
-              @if (playable.length === 0) {
+
+              @if (uploadStatus; as u) {
+                @if (u.engineAvailable) {
+                  <p class="muted small">
+                    {{ (u.ownEngine ? 'guess.upload.hintOwn' : 'guess.upload.hintHouse') | translate }}
+                  </p>
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>{{ 'guess.upload.pgnLabel' | translate }}</mat-label>
+                    <textarea matInput rows="4" [(ngModel)]="pgn" [disabled]="uploading"
+                              [placeholder]="'guess.upload.placeholder' | translate"></textarea>
+                  </mat-form-field>
+                  <div class="upload-row">
+                    <button mat-flat-button color="primary" [disabled]="uploading || !pgn.trim()" (click)="upload()">
+                      <mat-icon>upload</mat-icon> {{ 'guess.upload.submit' | translate }}
+                    </button>
+                    <span class="muted small">
+                      {{ 'guess.upload.quota' | translate:{ open: u.openGames, max: u.maxGames } }}
+                    </span>
+                  </div>
+                } @else {
+                  <p class="muted small">{{ 'guess.upload.noEngine' | translate }}</p>
+                }
+              }
+
+              @if (ownGames.length === 0) {
                 <p class="muted">{{ 'guess.noGames' | translate }}</p>
                 <a mat-stroked-button routerLink="/analysis/games">{{ 'guess.analyseFirst' | translate }}</a>
               } @else {
@@ -103,15 +132,25 @@ import { ViewStateService } from '../../core/view-state.service';
                     <mat-button-toggle [value]="false">{{ 'guess.black' | translate }}</mat-button-toggle>
                   </mat-button-toggle-group>
                 </div>
-                @for (g of playable; track g.id) {
+                @for (g of ownGames; track g.id) {
                   <div class="game-row">
                     <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
                     <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
+                    @if (g.status === 'failed') {
+                      <span class="chip err">{{ 'guess.failedBadge' | translate }}</span>
+                    } @else if (g.status !== 'done') {
+                      <span class="chip">{{ 'guess.computing' | translate }}</span>
+                    }
                     <span class="spacer"></span>
-                    <button mat-stroked-button [disabled]="starting" (click)="start(g, guessWhite)">
+                    <button mat-stroked-button [disabled]="starting || g.analyzedPlies === 0"
+                            [matTooltip]="g.analyzedPlies === 0 ? ('guess.notReady' | translate) : ''"
+                            (click)="start(g, guessWhite)">
                       <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
                     </button>
                   </div>
+                  @if (g.status === 'pending' || g.status === 'running') {
+                    <mat-progress-bar mode="determinate" [value]="percent(g)" />
+                  }
                 }
               }
             </mat-card-content>
@@ -152,6 +191,10 @@ import { ViewStateService } from '../../core/view-state.service';
     .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
     .small-toggle { font-size: .8rem; }
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .full { width: 100%; }
+    .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chip.err { color: #ef9a9a; }
+    mat-progress-bar { margin: 0 0 8px; border-radius: 3px; }
     .game-row, .run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
     .game-row + .game-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .g-title { font-weight: 600; text-decoration: none; color: inherit; }
@@ -165,7 +208,7 @@ import { ViewStateService } from '../../core/view-state.service';
     .small { font-size: .8rem; }
   `],
 })
-export class GuessListComponent implements OnInit {
+export class GuessListComponent implements OnInit, OnDestroy {
   private guess = inject(GuessService);
   private analyses = inject(GameAnalysisService);
   private auth = inject(AuthService);
@@ -178,11 +221,18 @@ export class GuessListComponent implements OnInit {
   sessions: GuessSession[] = [];
   /** Kuratierter Bestand — auch ohne Anmeldung. */
   curated: GameAnalysis[] = [];
-  /** Eigene Analysen (nur angemeldet). */
-  playable: GameAnalysis[] = [];
+  /** Eigene Analysen (nur angemeldet) — auch die noch rechnenden: wer gerade eine Partie
+   *  eingeworfen hat, will sehen, dass sie da ist und wie weit sie ist. */
+  ownGames: GameAnalysis[] = [];
   loading = true;
   starting = false;
   guessWhite = true;
+  /** Eingeworfenes PGN. */
+  pgn = '';
+  uploading = false;
+  /** Ob ueberhaupt eingeworfen werden darf (und wie oft noch); null = noch nicht geladen. */
+  uploadStatus: GuessUploadStatus | null = null;
+  private poll?: Subscription;
   /**
    * Filter des Bestands: nur Partien mit Kommentaren zeigen.
    *
@@ -211,19 +261,84 @@ export class GuessListComponent implements OnInit {
       error: () => { /* bleibt leer; der Hinweis „noch nichts im Bestand" greift */ },
     });
     if (this.loggedIn) {
-      this.analyses.list().subscribe({
-        next: list => {
-          // Spielbar ist, was mindestens eine gerechnete Stellung hat — auf den Rest wartet man.
-          // Der kuratierte Bestand steht oben schon; hier ginge er sonst doppelt durch.
-          this.playable = list.filter(a => a.analyzedPlies > 0 && !a.isPublic);
-          this.cdr.markForCheck();
-        },
-        error: () => { /* die Liste bleibt leer; der Hinweis „erst analysieren" greift */ },
+      this.loadOwnGames();
+      this.analyses.guessUploadStatus().subscribe({
+        next: u => { this.uploadStatus = u; this.cdr.markForCheck(); },
+        error: () => { /* ohne Antwort bleibt das Feld aus — lieber gar nicht anbieten als ins Leere */ },
       });
     }
     this.guess.list().subscribe({
       next: rows => { this.sessions = rows; this.loading = false; this.cdr.markForCheck(); },
       error: () => { this.loading = false; this.cdr.markForCheck(); },
+    });
+  }
+
+  ngOnDestroy(): void { this.poll?.unsubscribe(); }
+
+  /**
+   * Die eigenen Analysen — anders als der kuratierte Bestand AUCH die noch rechnenden. Frueher
+   * standen hier nur Partien mit mindestens einer gerechneten Stellung; seit man auf dieser Seite
+   * selbst eine einwerfen kann, waere das ein Loch: die eingeworfene Partie verschwaende fuer
+   * Minuten spurlos, und man wuerde sie ein zweites Mal einwerfen.
+   *
+   * <p>Der kuratierte Bestand steht oben schon, hier ginge er sonst doppelt durch.</p>
+   */
+  private loadOwnGames(): void {
+    this.analyses.list().subscribe({
+      next: list => {
+        this.ownGames = list.filter(a => !a.isPublic);
+        this.syncPoll();
+        this.cdr.markForCheck();
+      },
+      error: () => { /* die Liste bleibt leer; der Hinweis „erst analysieren" greift */ },
+    });
+  }
+
+  /** Nachfassen, SOLANGE etwas rechnet — eine fertige Liste erzeugt keinen Verkehr (dasselbe
+   *  Muster wie auf der Auftragsseite). */
+  private syncPoll(): void {
+    const busy = this.ownGames.some(g => g.status === 'pending' || g.status === 'running');
+    if (busy && !this.poll) {
+      this.poll = interval(10000).subscribe(() => this.loadOwnGames());
+    } else if (!busy && this.poll) {
+      this.poll.unsubscribe();
+      this.poll = undefined;
+    }
+  }
+
+  percent(g: GameAnalysis): number {
+    return g.plyCount > 0 ? Math.round((g.analyzedPlies / g.plyCount) * 100) : 0;
+  }
+
+  /**
+   * Eine eigene Partie einwerfen. Ohne Tiefe und ohne Linienzahl — beides setzt der Server
+   * (Tiefe 20). Ein Regler haette hier nichts zu suchen: gerechnet wird meist auf der Engine des
+   * Hauses, und die Punktepartie wertet ohnehin gegen den tatsaechlich gespielten Zug.
+   *
+   * <p>Die Absage kommt als GRUND und nicht als Satz (`too-many-open`/`no-engine`/`invalid-pgn`) —
+   * der Server kennt die Sprache des Nutzers nicht, die Seite schon.</p>
+   */
+  upload(): void {
+    const pgn = this.pgn.trim();
+    if (!pgn || this.uploading) return;
+    this.uploading = true;
+    this.analyses.createForGuess(pgn).subscribe({
+      next: () => {
+        this.uploading = false;
+        this.pgn = '';
+        this.snackbar.success(this.translate.instant('guess.upload.started'));
+        this.loadOwnGames();
+        this.analyses.guessUploadStatus().subscribe(u => { this.uploadStatus = u; this.cdr.markForCheck(); });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.uploading = false;
+        const reason = err?.error?.reason;
+        this.snackbar.warn(reason
+          ? this.translate.instant('guess.upload.reason.' + reason, { max: this.uploadStatus?.maxGames })
+          : this.translate.instant('guess.upload.failed'));
+        this.cdr.markForCheck();
+      },
     });
   }
 

@@ -38,7 +38,8 @@ public class GameAnalysisService
 
     // ===== Anlegen ==========================================================
 
-    public async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default)
+    public async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
+        GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null)
     {
         var depth = req.TargetDepth ?? GameAnalysisDefaults.TargetDepth;
         if (depth is < 1 or > AnalysisJobService.MaxDepth)
@@ -68,6 +69,8 @@ public class GameAnalysisService
             TargetDepth = depth,
             MultiPv = multiPv,
             EngineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim(),
+            EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
+            Origin = origin,
             PlyCount = plies.Count,
             Status = GameAnalysisStatus.Pending,
         };
@@ -83,6 +86,96 @@ public class GameAnalysisService
         // Sofort die erste Fuhre einreihen, damit der Nutzer nicht auf den nächsten Pump-Lauf wartet.
         await PumpOneAsync(analysis.Id, ct);
         return await GetAsync(userId, analysis.Id, ct) ?? ToDto(analysis, 0);
+    }
+
+    // ===== Einwurf auf der Punktepartie-Seite =================================
+
+    /// <summary>
+    /// Eine Partie, die auf der Punktepartie-Seite eingeworfen wurde. Unterschied zum Einreihen von
+    /// Hand: die Tiefe ist FEST (<see cref="GameAnalysisDefaults.GuessTargetDepth"/>) und steht in
+    /// keinem Formular, und wer keine eigene Hintergrund-Engine hinterlegt hat, rechnet auf der
+    /// Haus-Engine.
+    ///
+    /// <para>Beides haengt zusammen: einen Tiefenregler auf fremder Rechenzeit anzubieten hiesse,
+    /// Selbstbedienung an einer Maschine zu erlauben, die jemand anderem gehoert — Tiefe 40 kostet
+    /// grob das Zehnfache von 30. Die Punktepartie braucht die Tiefe ohnehin nicht: gewertet wird
+    /// gegen den tatsaechlich gespielten Zug, die Engine liefert nur die Rangfolge der Alternativen.</para>
+    ///
+    /// <para>Wirft NICHT: die drei Absagen (zu viele offene Partien, keine Engine, unbrauchbares
+    /// PGN) sind erwartete Antworten und keine Ausnahmen — der Aufrufer soll sie dem Nutzer
+    /// erklaeren koennen, und dafuer braucht er einen Grund, keinen Text.</para>
+    /// </summary>
+    public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
+        CancellationToken ct = default)
+    {
+        var open = await OpenGuessGamesAsync(userId, ct);
+        if (open >= GameAnalysisDefaults.MaxOpenGuessGamesPerUser)
+            return new GuessUploadResult(null, GuessUploadReason.TooManyOpen);
+
+        var engineOwner = await ResolveGuessEngineOwnerAsync(userId, ct);
+        if (engineOwner is null)
+            return new GuessUploadResult(null, GuessUploadReason.NoEngine);
+
+        try
+        {
+            var dto = await CreateAsync(userId, new CreateGameAnalysisRequest
+            {
+                Pgn = req.Pgn,
+                Title = req.Title,
+                TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
+                MultiPv = GameAnalysisDefaults.MultiPv,
+            }, ct, GameAnalysisOrigin.Guess, engineOwner.Value);
+            return new GuessUploadResult(dto, null);
+        }
+        catch (ArgumentException)
+        {
+            // Kein spielbares PGN — die einzige Absage, die am eingeworfenen Text liegt.
+            return new GuessUploadResult(null, GuessUploadReason.InvalidPgn);
+        }
+    }
+
+    /// <summary>Wie viele eingeworfene Partien dieses Nutzers noch rechnen. Gescheiterte zaehlen
+    /// NICHT mit: sonst sperrte eine tote Engine den Nutzer dauerhaft aus, obwohl nichts mehr
+    /// laeuft — er soll sie loeschen koennen und weitermachen.</summary>
+    private Task<int> OpenGuessGamesAsync(int userId, CancellationToken ct) =>
+        _db.GameAnalyses.CountAsync(g => g.UserId == userId
+            && g.Origin == GameAnalysisOrigin.Guess
+            && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running), ct);
+
+    /// <summary>
+    /// Wer rechnet: erst die EIGENE Hintergrund-Engine, sonst die Haus-Engine, sonst niemand
+    /// (<c>null</c>). Die eigene hat Vorrang, weil sie dem Nutzer gehoert — wer eine Maschine
+    /// stehen hat, soll sie benutzen und nicht in der Schlange des Hauses stehen.
+    /// </summary>
+    private async Task<int?> ResolveGuessEngineOwnerAsync(int userId, CancellationToken ct)
+    {
+        var own = await _db.LichessEngineCredentials.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        if (own is not null && own.BackgroundEngines.Count > 0) return userId;
+
+        // Haus-Engine: die Freigabe steht an den Zugangsdaten, gelten lassen wir sie aber nur bei
+        // einem Admin — verliert jemand die Rechte, soll seine Maschine nicht weiter fuer fremde
+        // Partien laufen, ohne dass jemand das Haekchen wegnimmt.
+        var house = await _db.LichessEngineCredentials.AsNoTracking()
+            .Where(c => c.ShareAsHouseEngine && c.BackgroundEngineIds != null && c.User!.IsAdmin)
+            .OrderBy(c => c.UserId)
+            .ToListAsync(ct);
+        return house.FirstOrDefault(c => c.BackgroundEngines.Count > 0)?.UserId;
+    }
+
+    /// <summary>Was die Punktepartie-Seite ueber das Einwerfen wissen muss, BEVOR jemand ein PGN
+    /// hineinkopiert: gibt es ueberhaupt eine Engine, und wie viele Partien sind noch frei.</summary>
+    public async Task<GuessUploadStatusDto> GuessUploadStatusAsync(int userId, CancellationToken ct = default)
+    {
+        var owner = await ResolveGuessEngineOwnerAsync(userId, ct);
+        var open = await OpenGuessGamesAsync(userId, ct);
+        return new GuessUploadStatusDto
+        {
+            EngineAvailable = owner is not null,
+            OwnEngine = owner == userId,
+            OpenGames = open,
+            MaxGames = GameAnalysisDefaults.MaxOpenGuessGamesPerUser,
+        };
     }
 
     private static string BuildTitle(GamePlies.GameHeader h)
@@ -387,7 +480,7 @@ public class GameAnalysisService
                     EngineId = analysis.EngineId,
                     // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
                     // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
-                }, ct, remember: false);
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId);
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }

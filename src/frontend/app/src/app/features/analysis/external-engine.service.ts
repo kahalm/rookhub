@@ -19,6 +19,10 @@ export interface ExternalEnginesResponse {
   /** Die hinterlegten Hintergrund-Engines. MEHRERE sind erlaubt: der Server rechnet je Engine
    *  einen Auftrag, es laufen also so viele nebeneinander, wie hier stehen. */
   backgroundEngineIds?: string[] | null;
+  /** Stehen die eigenen Hintergrund-Engines auch fremden eingeworfenen Partien offen? */
+  shareAsHouseEngine?: boolean;
+  /** Darf dieses Konto das ueberhaupt entscheiden (nur Admin)? */
+  canShareHouseEngine?: boolean;
 }
 
 export interface EngineCredentialStatus {
@@ -72,6 +76,12 @@ export class ExternalEngineService {
   }
 
   /** Hintergrund-Engine festlegen (null = entfernen). */
+  /** Haus-Engine: die eigenen Hintergrund-Engines auch fremden Partien oeffnen, die jemand auf der
+   *  Punktepartie-Seite einwirft. Nur ein Admin darf das setzen (der Server prueft es nochmal). */
+  setHouseEngine(share: boolean): Observable<{ shareAsHouseEngine: boolean }> {
+    return this.http.put<{ shareAsHouseEngine: boolean }>('/api/engine/house', { share });
+  }
+
   setBackgroundEngines(engineIds: string[]): Observable<{ backgroundEngineIds: string[] }> {
     return this.http.put<{ backgroundEngineIds: string[] }>('/api/engine/background', { engineIds });
   }

@@ -582,7 +582,10 @@
       "backgroundNone": "Nijedan",
       "backgroundHint": "Pozadinski motor obrađuje tvoje analize kad god je slobodan i pauzira dok analiziraš uživo vanjskim motorom. Ne prikazuje se u izboru za analizu uživo — najbolje je registrirati zaseban motor (ENGINE_COUNT=2 u provideru).",
       "backgroundSaved": "Pozadinski motor spremljen.",
-      "backgroundFailed": "Pozadinski motor nije bilo moguće spremiti."
+      "backgroundFailed": "Pozadinski motor nije bilo moguće spremiti.",
+      "houseLabel": "Dopusti da moji pozadinski motori računaju i partije koje dodaju drugi",
+      "houseHint": "Registrirani korisnici bez vlastitog motora tada mogu dodavati partije na stranici bodovne partije; računaju se na tvojem stroju, s fiksnom dubinom.",
+      "houseSaved": "Dijeljenje spremljeno"
     },
     "offline": {
       "title": "Offline",
@@ -3009,7 +3012,26 @@
       "acceptBetter": "prihvati bolji potez",
       "acceptSimilar": "prihvati jednako dobar potez",
       "hint": "Isključi ako želiš pronaći stvarno odigrani potez — dobar potez tada donosi samo napomenu, pozicija ostaje."
-    }
+    },
+    "upload": {
+      "pgnLabel": "Zalijepi PGN",
+      "placeholder": "[Event \"...\"]\n1. e4 e5 2. Nf3 ...",
+      "submit": "Dodaj partiju",
+      "hintOwn": "Dodaj vlastitu partiju — analizira se u pozadini i zatim te ovdje čeka kao bodovna partija. Ovisno o duljini traje od nekoliko minuta do nekoliko sati.",
+      "hintHouse": "Dodaj vlastitu partiju — analizira se na kućnom motoru i zatim te ovdje čeka kao bodovna partija. Ovisno o duljini i redu čekanja traje od nekoliko minuta do nekoliko sati.",
+      "noEngine": "Trenutačno nema dostupnog motora koji bi obradio dodane partije.",
+      "quota": "{{open}} od {{max}} partija u analizi",
+      "started": "Partija se analizira. Možeš je igrati čim prva pozicija bude gotova.",
+      "failed": "Partija nije prihvaćena.",
+      "reason": {
+        "too-many-open": "Već imaš {{max}} partija u analizi. Pričekaj da jedna završi.",
+        "no-engine": "Trenutačno nema dostupnog motora koji bi analizirao partiju.",
+        "invalid-pgn": "U ovom tekstu nema partije koja se može igrati."
+      }
+    },
+    "computing": "analizira se",
+    "failedBadge": "neuspjelo",
+    "notReady": "Nijedna pozicija još nije analizirana"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

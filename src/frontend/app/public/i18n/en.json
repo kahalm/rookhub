@@ -582,7 +582,10 @@
       "backgroundNone": "None",
       "backgroundHint": "The background engine works through your analysis jobs whenever it is free and pauses while you analyse live with an external engine. It is hidden from the live picker — best register a dedicated engine for it (ENGINE_COUNT=2 in the provider).",
       "backgroundSaved": "Background engine saved.",
-      "backgroundFailed": "Could not save the background engine."
+      "backgroundFailed": "Could not save the background engine.",
+      "houseLabel": "Also let my background engines work on games other people add",
+      "houseHint": "Registered users without an engine of their own can then add games on the points game page; they are computed on your machine, at a fixed depth.",
+      "houseSaved": "Sharing saved"
     },
     "offline": {
       "title": "Offline",
@@ -3009,7 +3012,26 @@
       "acceptBetter": "accept a better move",
       "acceptSimilar": "accept an equally good move",
       "hint": "Switch these off if you want to find the move that was actually played — a good move then only earns a note, and the position stays."
-    }
+    },
+    "upload": {
+      "pgnLabel": "Paste PGN",
+      "placeholder": "[Event \"...\"]\n1. e4 e5 2. Nf3 ...",
+      "submit": "Add game",
+      "hintOwn": "Add a game of your own — it is analysed in the background and then waits here as a points game. Depending on its length that takes minutes to hours.",
+      "hintHouse": "Add a game of your own — it is analysed on the house engine and then waits here as a points game. Depending on its length and the queue that takes minutes to hours.",
+      "noEngine": "No engine is available right now to work through added games.",
+      "quota": "{{open}} of {{max}} games being analysed",
+      "started": "The game is being analysed. You can play it as soon as the first position is done.",
+      "failed": "The game could not be accepted.",
+      "reason": {
+        "too-many-open": "You already have {{max}} games being analysed. Wait until one of them is done.",
+        "no-engine": "No engine is available right now to analyse the game.",
+        "invalid-pgn": "There is no playable game in this text."
+      }
+    },
+    "computing": "analysing",
+    "failedBadge": "failed",
+    "notReady": "No position analysed yet"
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

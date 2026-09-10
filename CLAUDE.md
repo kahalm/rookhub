@@ -1205,6 +1205,41 @@ das Buch die Ergebnisse allein im Fliesstext nennt. Bei den EIGENEN Analysen ble
 legt auch ohne Anmeldung Zeilen an, und ohne Deckel waechst die Tabelle mit allem, was der
 Rate-Limiter durchlaesst.
 
+**Eigene Partien einwerfen** (0.463.0, nur angemeldet): auf der Seite steht ein PGN-Feld, das eine
+`GameAnalysis` mit `Origin = Guess` anlegt — und zwar OHNE Tiefen- und Linien-Regler.
+`GameAnalysisDefaults.GuessTargetDepth` (20) setzt der Server; die Anfrage
+(`CreateGuessGameRequest`) nimmt die Tiefe gar nicht erst entgegen, das Verbergen im Formular ist
+also kein Vorhang vor einem offenen Feld. Zwei Gruende: erstens rechnet meist NICHT die eigene
+Maschine (siehe Haus-Engine), und ein Regler waere Selbstbedienung an fremder Rechenzeit — Tiefe 40
+kostet grob das Zehnfache von 30. Zweitens braucht die Punktepartie die Tiefe nicht: gewertet wird
+gegen den TATSAECHLICH gespielten Zug, die Engine liefert nur die Rangfolge der Alternativen. Wer
+die Tiefe wirklich will, reiht die Partie weiter ueber `/analysis/games` von Hand ein — dort aendert
+sich nichts.
+
+**Die Haus-Engine.** Analyseauftraege laufen ueber Token und External-Engine-Registrierung des
+AUFTRAGGEBERS; ein normal registrierter Nutzer hat keine, sein PGN prallte an „No background engine
+configured" ab. Ein Admin kann seine Hintergrund-Engines deshalb freigeben
+(`LichessEngineCredential.ShareAsHouseEngine`, `PUT /api/engine/house`, Haekchen in der
+Engine-Karte des Profils). `GameAnalysisService.ResolveGuessEngineOwnerAsync` nimmt dann zuerst die
+EIGENE Engine des Einwerfers und faellt sonst auf die Haus-Engine zurueck; die Freigabe gilt nur,
+solange das Konto Admin ist. Der Auftrag BLEIBT dabei beim Einwerfer — nur `EngineOwnerUserId`
+(neu an `GameAnalysis` UND `AnalysisJob`, `null` = Besitzer) sagt dem Worker, wessen Token und
+Engine er benutzt. Den Auftrag stattdessen dem Haus-Konto zu geben waere einfacher gewesen und
+falsch: Deckel (`MaxOpenJobsPerUser` = 50), Trimmer, Auftragsliste und Sekundenanzeige haengen alle
+am Besitzer — alle Einwerfer teilten sich dann fuenfzig Plaetze, einer koennte alle aussperren, und
+in der Auftragsliste des Admins staenden fremde Partien. `PickBackgroundEngineAsync` zaehlt die
+kuerzeste Schlange entsprechend nach ENGINE-BESITZER (`EngineOwnerUserId ?? UserId`).
+
+**Der Deckel des Einwurfs** (`MaxOpenGuessGamesPerUser` = 5) zaehlt NUR `Origin = Guess` und nur
+Partien, die noch rechnen (`Pending`/`Running`) — gescheiterte sperren niemanden aus. Von Hand ueber
+`/analysis/games` eingereihte Partien bleiben ungezaehlt: dort rechnet die eigene Maschine.
+
+Die Liste der eigenen Partien auf der Punktepartie-Seite zeigt seither AUCH die noch rechnenden (mit
+Fortschrittsbalken, „Spielen" bis zur ersten gerechneten Stellung gesperrt) und frischt sich alle
+10 s auf, solange eine offen ist. Vorher standen dort nur Partien mit mindestens einer gerechneten
+Stellung — die gerade eingeworfene waere fuer Minuten spurlos verschwunden und ein zweites Mal
+eingeworfen worden.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/guess-sessions` | Auth | Eigene Durchlaeufe (max. 100, neueste zuerst) |
@@ -1216,6 +1251,9 @@ Rate-Limiter durchlaesst.
 | GET/POST/DELETE | `/api/guess-sessions/anonymous[/{id}[/guess\|review]]` | **AllowAnonymous** + RL | Dieselben sechs Operationen ohne Konto; Kennung als `?sessionId=` (GET/DELETE) bzw. im Rumpf (POST). Ungueltige Kennung → 400 |
 | GET | `/api/game-analyses/public` | **AllowAnonymous** + RL | Kuratierter Bestand: freigegebene UND spielbare Partien (mind. eine gerechnete Stellung), mit `annotated` fuer den Filter „alle / nur kommentierte". Kopfdaten und Fortschritt, **nicht** die Zugliste |
 | PUT | `/api/game-analyses/{id}/public` | Auth | Partie in den Bestand aufnehmen/herausnehmen `{ isPublic }` — Besitzer der Analyse oder Admin |
+| POST | `/api/game-analyses/guess` | Auth | Eigene Partie einwerfen `{ pgn, title? }` — KEINE Tiefe/Linien/Engine im Rumpf (Server setzt Tiefe 20). 400 mit `reason` ∈ `too-many-open` / `no-engine` / `invalid-pgn`; die Seite formuliert den Satz, der Server kennt die Sprache nicht |
+| GET | `/api/game-analyses/guess/status` | Auth | Steht eine Engine bereit (eigene oder Haus) und wie viele der fuenf Plaetze sind frei — gefragt, BEVOR jemand ein PGN hineinkopiert |
+| PUT | `/api/engine/house` | Admin | Eigene Hintergrund-Engines als Haus-Engine freigeben `{ share }` (403 ohne Admin, 400 ohne Token bzw. ohne hinterlegte Hintergrund-Engine) |
 
 `annotated` wird IN SQL ermittelt (`Pgn LIKE '%{%'`): jede geschweifte Klammer in einem PGN ist ein
 Kommentar, und so bleibt das LONGTEXT-Feld ausserhalb der Antwort. Menue-Key `guess`, Stufe **All**;
