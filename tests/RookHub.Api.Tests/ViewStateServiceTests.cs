@@ -121,6 +121,7 @@ public class ViewStateServiceTests : IDisposable
     /// </summary>
     [Theory]
     [InlineData("turnier.directory", true)]
+    [InlineData("guess.list", true)]
     [InlineData("beliebig", false)]
     [InlineData("", false)]
     [InlineData(null, false)]

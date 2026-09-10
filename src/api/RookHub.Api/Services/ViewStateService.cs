@@ -19,7 +19,7 @@ public class ViewStateService
     /// ein freier Speicher je Nutzer — mit ihr ist er ein Feature mit bekannten Nutzern.
     /// </summary>
     public static readonly IReadOnlySet<string> AllowedKeys =
-        new HashSet<string>(StringComparer.Ordinal) { "turnier.directory" };
+        new HashSet<string>(StringComparer.Ordinal) { "turnier.directory", "guess.list" };
 
     /// <summary>
     /// Groesse des Zustands. Die Filterleiste des Turnierkalenders braucht rund 400 Zeichen; 8 KB

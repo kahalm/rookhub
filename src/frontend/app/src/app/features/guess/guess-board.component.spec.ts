@@ -471,8 +471,9 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     const c = load();
     const withNote = {
       ...nextSession,
-      history: [...HISTORY, { ply: 8, moveNumber: 5, white: true, san: 'Qxf3', uci: 'd1f3',
-                              fen: 'nach-Qxf3', comment: 'der entscheidende Zug' }],
+      history: [...HISTORY,
+        { ...PLAYED[0], comment: 'der entscheidende Zug' },
+        PLAYED[1]],
     };
     guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0,
                                    session: withNote });
@@ -483,11 +484,12 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
 
     tick(2000);                                  // keine Zeitschranke raeumt das weg
     expect(c.holding).withContext('immer noch da').toBeTrue();
-    expect(c.boardFen).not.toBe(FEN10);
+    expect(c.boardFen).withContext('der Partiezug steht').toBe(FEN9);
 
     c.continueGame();
     expect(c.holdingNote).toBeFalse();
-    expect(c.boardFen).withContext('jetzt die Antwort').toBe(FEN10);
+    expect(c.boardFen).withContext('jetzt die Antwort — und die ist schon die Aufgabe').toBe(FEN10);
+    expect(c.canGuess).toBeTrue();
   }));
 
   /** Der Kommentar zur ANTWORT des Gegners blockiert nicht — er steht bei der neuen Aufgabe. */
@@ -507,6 +509,10 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     tick(1000);
     expect(c.boardFen).toBe(FEN10);
     expect(c.browsedComment).toEqual({ move: '5…dxe5', text: 'und jetzt steht Schwarz besser' });
+    // Beim LETZTEN Schritt steht die naechste Aufgabe schon auf dem Brett — dort waere „Weiter"
+    // ein Klick, der nichts tut. Der Kommentar bleibt stehen, der Nutzer zieht.
+    expect(c.holdingNote).withContext('kein Halt am letzten Schritt').toBeFalse();
+    expect(c.canGuess).withContext('sofort wieder am Zug').toBeTrue();
   }));
 
   /**

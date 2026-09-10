@@ -608,8 +608,19 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       ? { move: `${step.moveNumber}${step.white ? '.' : '…'}${step.san}`, text: step.comment }
       : null;
 
+    // Der LETZTE Schritt braucht weder Halt noch Wartezeit: seine Stellung IST die naechste
+    // Aufgabe. Ein „Weiter" waere dort ein Klick, der nichts tut, ausser den Nutzer aufzuhalten —
+    // der Kommentar bleibt einfach stehen, und er zieht.
+    if (this.steps.length === 0) {
+      this.stepTarget = null;
+      this.apply(target);
+      this.busy = false;
+      return;
+    }
+
     if (step.comment) {
-      // Beim Kommentar wird gehalten — er ist der Grund, die Partie zu spielen.
+      // Kommentar mitten in der Folge: stehenbleiben, bis „Weiter" kommt. Sonst laeuft die Partie
+      // weiter, waehrend man liest — und der Text ist der Grund, sie zu spielen.
       this.holding = true;
       this.holdingNote = true;
       this.busy = false;

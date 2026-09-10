@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.461.1", date: "2026-09-10", changes: [
+    { en: "A comment on the opponents reply no longer asks you to click Continue. That move already produces the position you are meant to solve, so the comment simply stays on screen and you move. Continue remains where it belongs: on a comment in the middle of a sequence, where the game would otherwise run on while you read.", de: "Ein Kommentar zur Antwort des Gegners verlangt kein Weiter mehr. Dieser Zug erzeugt ja schon die Stellung, die du loesen sollst — der Kommentar bleibt also einfach stehen und du ziehst. Weiter bleibt dort, wo es hingehoert: bei einem Kommentar mitten in der Folge, wo die Partie sonst weiterliefe, waehrend du liest." },
+    { en: "The all/annotated filter in the collection is remembered for your account instead of just this browser, so it is the same on your phone. Without an account it stays with the browser.", de: "Der Filter alle/nur kommentierte in der Sammlung wird jetzt am Konto gemerkt statt nur in diesem Browser — am Handy findest du also dieselbe Einstellung vor. Ohne Konto bleibt er am Browser." },
+  ] },
   { version: "0.461.0", date: "2026-09-10", changes: [
     { en: "A gear on the points game board lets you decide what counts as solved: whether a better move and whether an equally good move end the position. Switch them off and you are looking for the move that was actually played — a good move then only earns the note that the game went another way, the position stays, and you try again. The move that was played is not revealed in that case; it is still what you are looking for.", de: "Ein Zahnrad am Brett der Punktepartie entscheidet, was als geloest gilt: ob ein besserer Zug und ob ein gleich guter Zug die Stellung beenden. Aus heisst, du suchst den wirklich gespielten Zug — ein guter Zug bringt dann nur den Hinweis, dass die Partie anders weiterging, die Stellung bleibt stehen und du versuchst es erneut. Der gespielte Zug wird dabei nicht verraten; er ist ja weiter gesucht." },
   ] },

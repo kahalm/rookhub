@@ -13,6 +13,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { GuessService, GuessSession } from './guess.service';
 import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
+import { ViewStateService } from '../../core/view-state.service';
 
 /**
  * Punktepartie-Übersicht (`/guess`): welche Partien lassen sich spielen, und welche Durchläufe gibt
@@ -59,7 +60,8 @@ import { AuthService } from '../../core/auth.service';
             <div class="sec-head">
               <h2>{{ 'guess.curated' | translate }}</h2>
               @if (hasAnnotated) {
-                <mat-button-toggle-group [(ngModel)]="annotatedOnly" aria-label="filter" class="small-toggle">
+                <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="saveFilter()"
+                                         aria-label="filter" class="small-toggle">
                   <mat-button-toggle [value]="false">{{ 'guess.filterAll' | translate }}</mat-button-toggle>
                   <mat-button-toggle [value]="true">{{ 'guess.filterAnnotated' | translate }}</mat-button-toggle>
                 </mat-button-toggle-group>
@@ -167,6 +169,7 @@ export class GuessListComponent implements OnInit {
   private guess = inject(GuessService);
   private analyses = inject(GameAnalysisService);
   private auth = inject(AuthService);
+  private viewState = inject(ViewStateService);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
@@ -180,7 +183,15 @@ export class GuessListComponent implements OnInit {
   loading = true;
   starting = false;
   guessWhite = true;
-  /** Filter des Bestands: nur Partien mit Kommentaren zeigen. */
+  /**
+   * Filter des Bestands: nur Partien mit Kommentaren zeigen.
+   *
+   * Der Zustand haengt am NUTZER, nicht am Geraet — wer am Rechner „nur kommentierte" eingestellt
+   * hat, will das am Handy auch so vorfinden (`UserViewStates`, derselbe Weg wie die Filterleiste
+   * des Turnierkalenders). Ohne Anmeldung gibt es kein Konto, dort traegt der `localStorage`.
+   */
+  private static readonly ViewKey = 'guess.list';
+  private static readonly LocalKey = 'rookhub_guess_list_filter';
   annotatedOnly = false;
 
   get loggedIn(): boolean { return this.auth.isLoggedIn; }
@@ -194,6 +205,7 @@ export class GuessListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadFilter();
     this.analyses.listPublic().subscribe({
       next: list => { this.curated = list; this.cdr.markForCheck(); },
       error: () => { /* bleibt leer; der Hinweis „noch nichts im Bestand" greift */ },
@@ -213,6 +225,31 @@ export class GuessListComponent implements OnInit {
       next: rows => { this.sessions = rows; this.loading = false; this.cdr.markForCheck(); },
       error: () => { this.loading = false; this.cdr.markForCheck(); },
     });
+  }
+
+  /** Angemeldet vom Server, sonst aus dem Geraetespeicher. Fehler sind still: der Filter ist eine
+   *  Bequemlichkeit, und eine Meldung „dein Filter konnte nicht geladen werden" klickt man weg. */
+  private loadFilter(): void {
+    if (this.loggedIn) {
+      this.viewState.get<{ annotatedOnly?: boolean }>(GuessListComponent.ViewKey).subscribe(v => {
+        if (v) { this.annotatedOnly = !!v.annotatedOnly; this.cdr.markForCheck(); }
+      });
+      return;
+    }
+    try {
+      this.annotatedOnly = localStorage.getItem(GuessListComponent.LocalKey) === '1';
+    } catch { /* Vorgabe behalten */ }
+  }
+
+  /** Vom Umschalter aufgerufen. */
+  saveFilter(): void {
+    if (this.loggedIn) {
+      this.viewState.save(GuessListComponent.ViewKey, { annotatedOnly: this.annotatedOnly }).subscribe();
+      return;
+    }
+    try {
+      localStorage.setItem(GuessListComponent.LocalKey, this.annotatedOnly ? '1' : '0');
+    } catch { /* nicht speicherbar: gilt fuer diesen Aufruf trotzdem */ }
   }
 
   /** `side` weglassen = der Server nimmt die Seite des Gewinners (kuratierter Bestand). */
