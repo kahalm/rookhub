@@ -128,6 +128,44 @@ kappt nach 60 s Stille. Jetzt zählt die Zeit seit der letzten WEITERGEGEBENEN Z
 Sekundenscheiben abgefragt, damit die Schranke auch bei plappernder Engine fällt.
 `test/heartbeat.test.py` prüft beide Lagen (Engine schweigt / Engine plappert score-los).
 
+### Für Analyse-Aufträge: VIELE Engines mit WENIGEN Threads
+
+Stockfish skaliert über Kerne schlecht, und für Analyse-Aufträge zählt ohnehin nicht die Zeit einer
+Suche, sondern der **Durchsatz** — n Stellungen auf feste Tiefe, und die zerfallen in unabhängige
+Teile. Gemessen am 2026-09-10 in einem Container mit 8 Kernen (Stockfish 19, Tiefe 20, 5 Linien,
+8 echte Stellungen aus einer laufenden Warteschlange; gemessen wurde die WANDUHR für dieselbe
+Menge Arbeit, die Engines liefen also wirklich gleichzeitig):
+
+| Aufteilung | Wanduhr | Stellungen/Min | Gewinn |
+|---|---|---|---|
+| 1 Engine × 8 Threads | 66,2 s | 7,2 | 1,00× |
+| 2 × 4 | 43,4 s | 11,1 | 1,53× |
+| **4 × 2** | **22,4 s** | **21,4** | **2,95×** |
+| 8 × 1 | 21,4 s | 22,4 | 3,10× |
+
+Eine EINZELNE Suche wurde von 1 auf 8 Threads nur um den Faktor 1,13 schneller (6,2 s → 5,5 s) —
+bei MultiPV 5 und dieser Tiefe bringen zusätzliche Threads fast nichts. Vier Instanzen holen fast
+den ganzen Gewinn; acht bringen nur noch 5 % mehr und kosten vier weitere Registrierungen samt
+eigener Hashtabelle.
+
+```dotenv
+ENGINE_COUNT=5
+ENGINE_1_NAME=RookHub Server 19
+ENGINE_1_MAX_THREADS=8          # LIVE: dort wartet ein Mensch auf EINE Stellung
+ENGINE_2_NAME=RookHub Server 19 Hintergrund
+ENGINE_2_MAX_THREADS=2
+ENGINE_2_MAX_HASH=1024
+# … 3, 4, 5 genauso
+```
+
+Die **Live**-Engine behält alle Kerne: dort zählt die Zeit bis zum Ergebnis, nicht der Durchsatz.
+Läuft sie, teilt sie sich die Kerne mit den Hintergrund-Engines — die werden dann eben langsamer.
+
+In RookHub müssen die Hintergrund-Engines im Profil ALLE ausgewählt sein (Mehrfachauswahl, seit
+0.460.0): der Server rechnet je Engine genau einen Auftrag, es laufen also so viele nebeneinander,
+wie dort stehen. Live gemessen stieg der Durchsatz einer echten Warteschlange dabei von gut 4 auf
+21 Stellungen je Minute.
+
 ### Zwei Engines: Live + Hintergrund
 
 Ein Stockfish-Prozess rechnet immer nur **eine** Suche; ein neuer Auftrag an dieselbe Engine
