@@ -134,6 +134,15 @@ services:
       # Kurslisten-Refresh); /api/chessable/* antwortet dann 404. Die RepCheck-EXTENSION
       # (/api/extension/*) bleibt davon unberuehrt. Vorgabe an.
       Chessable__Enabled: ${CHESSABLE_ENABLED:-true}
+      # Die beiden naechtlichen CRAWL-Laeufe. Vorgabe an; auf `false` schweigt der Container
+      # nachts vollstaendig, die Admin-Endpunkte bleiben aber bedienbar — gedacht fuer Dev, wo
+      # ein Sweep zur Unzeit die Messung stoert, an der gerade jemand arbeitet.
+      #   TournamentDirectory: 03:00 UTC — chess-results-Sweep, 16 Verbandskalender, FIDE,
+      #                        Rundenplaene, Vereins-Aufloesung. Schaltet AUCH den Aufhol-Lauf
+      #                        nach einem Neustart ab, sonst loeste jedes Deploy einen aus.
+      #   PlayerHistory:      04:30 UTC — die Spielerkarten des Turnierverlaufs.
+      TournamentDirectory__Enabled: ${TOURNAMENT_DIRECTORY_ENABLED:-true}
+      PlayerHistory__Enabled: ${PLAYER_HISTORY_ENABLED:-true}
       # PFLICHT, sobald der Chessable-Import genutzt wird: ein LEERER Wert wäre kein
       # "Feature aus", sondern eine Schein-Verschlüsselung mit dem öffentlich bekannten
       # Fixschlüssel SHA256("") — deshalb bricht der Start hier bewusst ab.

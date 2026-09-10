@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.462.1", date: "2026-09-10", changes: [
+    { en: "The two nightly crawls can now be switched off per installation — the tournament sweep at three in the morning and the player-card run at half past four. Everything an administrator can start by hand keeps working; only the automatic runs go quiet. Live installations are unaffected, the default stays on.", de: "Die beiden naechtlichen Crawl-Laeufe lassen sich jetzt je Installation abschalten — der Turnier-Durchgang um drei Uhr morgens und der Spielerkarten-Lauf um halb fuenf. Alles, was eine Administratorin von Hand startet, funktioniert weiter; nur die automatischen Laeufe schweigen. Fuer den Live-Betrieb aendert sich nichts, die Vorgabe bleibt eingeschaltet." },
+  ] },
   { version: "0.462.0", date: "2026-09-10", changes: [
     { en: "The tournament site is live for everyone, at tournament.oberschmid.homes — the list, a tournament page, the calendar and the directory with its map, with 22583 tournaments from eighteen sources, two thirds of them placed on the map. Same account as RookHub: the entry in the menu takes your login along. Older links with the previous address keep working.", de: "Die Turnierseite ist fuer alle da, unter tournament.oberschmid.homes — Liste, Turnierseite, Kalender und das Verzeichnis mit Karte, mit 22583 Turnieren aus achtzehn Quellen, zwei Drittel davon auf der Karte verortet. Dasselbe Konto wie RookHub: der Eintrag im Menue nimmt die Anmeldung mit. Aeltere Links mit der bisherigen Adresse funktionieren weiter." },
   ] },

@@ -389,6 +389,14 @@ Gefuellt vom naechtlichen Sweep der chess-results-Turniersuche (`TournamentDirec
 03:00 UTC; Nachbarlaender taeglich, uebrige Foederationen rotierend). Rein lesend — hier wird
 nichts gecrawlt.
 
+> **Abschaltbar: `TournamentDirectory:Enabled=false`** (`TOURNAMENT_DIRECTORY_ENABLED=false`,
+> Vorgabe an). Dann laeuft weder der naechtliche Durchgang noch der Aufhol-Lauf nach einem
+> Neustart — die `/api/admin/tournament-directory/...`-Endpunkte bleiben aber vollstaendig
+> bedienbar. Dasselbe fuer die Spielerkarten des Turnierverlaufs ueber
+> `PlayerHistory:Enabled=false` (04:30 UTC). **Auf DEV seit 2026-09-10 beides abgeschaltet**: dort
+> stoert ein Sweep zur Unzeit die Messung, an der gerade jemand arbeitet, und die Laeufe werden
+> ohnehin von Hand angestossen. Prod bleibt unveraendert an.
+
 **Verortung (`GeocodingService`, ueberarbeitet in 0.418.0).** Der Spielort ist Freitext und nennt
 bei Ligen MEHRERE Orte. Die Reihenfolge:
 
