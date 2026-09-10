@@ -70,6 +70,7 @@ public class AppDbContext : DbContext
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+    public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
@@ -1212,6 +1213,28 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedToken).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<LibraryGame>(e =>
+        {
+            // „Kenne ich die Zuege schon?" — die Frage beim Einlesen, 130 000-mal je Sammlung.
+            e.HasIndex(g => g.MovesHash);
+            // Die Arbeitsliste der Vorsortierung: erst der Zustand, dann die Note.
+            e.HasIndex(g => new { g.Status, g.Score });
+            // „Alles von Aagaard" bzw. „alles aus CBM 104" — die zwei Griffe der Durchsicht.
+            e.HasIndex(g => g.Annotator);
+            e.HasIndex(g => g.SourceTitle);
+            // Der erste grobe Filter (Partien einer brauchbaren Laenge mit genug Kommentaren).
+            e.HasIndex(g => new { g.CommentedPlies, g.PlyCount });
+            // Selbstbezug: die Dublette zeigt auf die zuerst eingelesene Fassung. Kein Cascade —
+            // faellt das Original weg, soll die zweite Fassung bleiben und nicht mitgerissen werden.
+            e.HasOne<LibraryGame>()
+             .WithMany()
+             .HasForeignKey(g => g.DuplicateOfId)
+             .OnDelete(DeleteBehavior.Restrict);
+            // Uebernommene Partie: bewusst OHNE Fremdschluessel. Wird die Analyse geloescht, soll
+            // die Bibliothekszeile stehen bleiben — sie ist der Bestand, nicht die Rechnung.
+            e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
         });
 
         modelBuilder.Entity<GameAnalysis>(e =>

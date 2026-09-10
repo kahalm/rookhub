@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Wartungswerkzeug, KEIN Teil der API. Liest eine PGN-Sammlung in den Rohbestand
+    (Tabelle LibraryGames) und fuellt danach Schritt fuer Schritt die Spalten, an denen die
+    Vorsortierung haengt. Laeuft von Hand gegen die Dev-Datenbank; das Docker-Image der API
+    baut nur aus src/api/RookHub.Api und sieht diesen Ordner nie.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RookHub.Tools.LibraryImport</RootNamespace>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/api/RookHub.Api/RookHub.Api.csproj" />
+  </ItemGroup>
+
+</Project>
