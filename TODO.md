@@ -8,6 +8,52 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Stockfish regelmaessig pruefen — DREI Engines, drei Versionen (2026-09-10)
+
+Stand heute laufen drei verschiedene Stockfish-Versionen im Stack, und nur eine davon aktualisiert
+sich beim Bauen von selbst:
+
+| Wo | Woher | Version heute | Aktualisiert sich |
+|---|---|---|---|
+| Analyse-Engine (`engine-provider`) | offizielle Binaerdatei, im Dockerfile gepinnt | **19** (seit 2026-09-10) | nein, `SF_VERSION` + `SF_SHA256` von Hand |
+| Browser-Engine (Analysebrett, Puzzles) | npm-Paket `stockfish` | **18.0.8** | nein, `package.json` von Hand |
+| Tipp-Generator (`RookHub.Api`-Image) | Debian-Paket `stockfish` | **16** (16-1build1, Apr 2024) | nur mit dem Debian-Stand |
+
+Zu pruefen ist also drei Mal, und die Fragen sind verschieden:
+* **Analyse-Engine:** gibt es eine neuere Veroeffentlichung? `gh api repos/official-stockfish/Stockfish/releases --jq '.[0].tag_name'`.
+  Beim Bump BEIDES setzen: `SF_VERSION` und `SF_SHA256` (Pruefsumme des Archivs), sonst schlaegt der Bau fehl.
+* **Browser-Engine:** `npm view stockfish version`. Steht dort eine 19er Fassung, hier nachziehen —
+  Stockfish 19 nennt WebAssembly ausdruecklich als neues Ziel, das Paket lag am 2026-09-10 aber noch
+  auf 18.0.8, und die Veroeffentlichung selbst enthaelt kein wasm-Archiv.
+* **Tipp-Generator:** haengt am Debian-Paket und ist damit drei Hauptversionen zurueck. Entweder so
+  lassen (fuer Tipps reicht es) oder dieselbe offizielle Binaerdatei ins API-Image holen, wie es der
+  `engine-provider` tut. Bewusste Entscheidung, keine Nebenwirkung eines Bumps.
+
+Warum das ueberhaupt auffaellt: nps taugen NICHT als Vergleich zwischen Versionen (ein groesseres Netz
+rechnet langsamer und spielt trotzdem staerker). Der Maszstab ist Elo aus der Veroeffentlichung —
+Stockfish 19 nennt gegen 18 bis zu 44 Elo.
+
+## [ ] Stellungen pruefen, BEVOR sie an die Engine gehen (2026-09-10)
+
+Stockfish 19 prueft Stellungen streng und **beendet den Prozess** bei einer ungueltigen. Nachgestellt
+mit einer koeniglosen Diagramm-Stellung, wie sie in Chessable-Info-Linien vorkommt:
+
+```
+info string CRITICAL ERROR: Command `position fen 8/8/8/4p3/8/8/8/8 w - - 0 1` failed.
+Reason: Unsupported position. Incorrect number of kings.
+```
+
+Danach ist die Engine tot. Der Provider stirbt mit ihr, `restart: unless-stopped` zieht den Container
+neu hoch — die Analyse ist also nicht dauerhaft kaputt, aber EINE krumme Stellung kostet den ganzen
+Engine-Pool einen Neustart, samt aller laufenden Hintergrund-Analysen. Solche Stellungen liegen im
+Bestand: Info-Linien mit illegaler Diagramm-FEN sind der Grund fuer v0.316.3.
+
+Zu tun: vor dem Senden an die Engine (Analyse-Auftraege, Live-Analyse, Tipp-Generator) die Stellung
+gegen dieselbe Regel pruefen, die Stockfish anwendet — genau zwei Koenige, Seite am Zug nicht im
+Schach der Gegenseite — und eine ungueltige Stellung mit klarer Meldung ablehnen, statt sie
+weiterzugeben. `PermissiveSan` im API-Projekt kennt den Fall schon von der anderen Seite (es spielt
+illegale Stellungen bewusst nach), die Pruefung gehoert daneben und nicht hinein.
+
 ## [ ] FIDE-Detailangaben nachtragen — EIN Abruf je Ereignis, alle Felder da (2026-09-07)
 
 Gemeldet als „bei den FIDE-Turnieren bist du noch sehr zaghaft mit den Details". Zu Recht. Am

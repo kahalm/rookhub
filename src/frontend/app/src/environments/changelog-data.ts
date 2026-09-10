@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.458.2", date: "2026-09-10", changes: [
+    { en: "The analysis engine on the server is now Stockfish 19, which its authors measure at up to 44 Elo above the previous version. The engine in your browser stays on the newest published build, 18.0.8, because version 19 has not been released for the browser yet.", de: "Die Analyse-Engine auf dem Server ist jetzt Stockfish 19, das laut seinen Autoren bis zu 44 Elo ueber der bisherigen Fassung liegt. Die Engine im Browser bleibt auf dem neuesten veroeffentlichten Stand, 18.0.8, denn Fassung 19 gibt es fuer den Browser noch nicht." },
+  ] },
   { version: "0.458.1", date: "2026-09-10", changes: [
     { en: "You can import your own games. The courses page has a second button for it, and the PGN you attach may now simply contain games — until now it had to be puzzle material in Chessable style, and anything else was turned away with a note to ask an admin. Comments inside the PGN are kept and appear while you click through, at the move they were written for. The course name is suggested from the file name. As an example, ten fully annotated master games from Capablanca's Chess Fundamentals are now available.", de: "Du kannst eigene Partien importieren. Auf der Kursseite gibt es dafuer einen zweiten Knopf, und das angehaengte PGN darf jetzt einfach Partien enthalten — bisher musste es Puzzle-Material im Chessable-Stil sein, alles andere wurde mit dem Hinweis abgewiesen, man solle einen Admin fragen. Kommentare im PGN bleiben erhalten und erscheinen beim Durchklicken an dem Zug, zu dem sie geschrieben wurden. Der Kursname wird aus dem Dateinamen vorgeschlagen. Als Beispiel liegen zehn vollstaendig kommentierte Meisterpartien aus Capablancas Chess Fundamentals bereit." },
   ] },

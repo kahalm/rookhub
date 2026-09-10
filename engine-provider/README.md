@@ -140,11 +140,20 @@ Limit nicht, deshalb beide Werte zueinander passend setzen.
 
 ## Eigene Engine statt des mitgelieferten Stockfish
 
-Der Container bringt **Stockfish 18** mit — die offizielle Binärdatei (Variante `avx2`, also
-CPUs ab ~2013). Bewusst nicht das Debian-Paket: das ist ein generischer Build ohne AVX2-Nutzung
-und rechnet auf derselben CPU rund ein Drittel langsamer (auf dem Testserver gemessen: 4,98 vs.
-8,39 Mio Knoten/s). Läuft dein Rechner auf einer älteren CPU, im `Dockerfile`
-`SF_VARIANT=x86-64-sse41-popcnt` samt passender `SF_SHA256` setzen.
+Der Container bringt **Stockfish 19** mit — die offizielle Binärdatei. Bewusst nicht das
+Debian-Paket: das ist ein generischer Build ohne AVX2/BMI2-Nutzung und rechnet auf derselben CPU
+rund ein Drittel langsamer (auf dem Testserver gemessen: 4,98 vs. 8,39 Mio Knoten/s).
+
+Seit Stockfish 19 gibt es **keine Varianten-Dateien** mehr: eine universelle Binärdatei erkennt
+die CPU-Merkmale zur Laufzeit selbst (auf dem Testserver meldet sie `x86-64-bmi2`). Eine andere
+Plattform (arm64, riscv64) wählt man über `SF_ASSET` samt passender `SF_SHA256`; den alten
+`SF_VARIANT` gibt es nicht mehr.
+
+⚠️ Stockfish 19 prüft Stellungen streng und **beendet sich bei einer ungültigen** (etwa einer
+königlosen Diagramm-Stellung aus einer Chessable-Info-Linie) mit
+`info string CRITICAL ERROR … Incorrect number of kings`. Der Provider stirbt mit der Engine,
+`restart: unless-stopped` zieht den Container neu hoch — die Analyse ist also nicht dauerhaft
+kaputt, aber eine krumme Stellung kostet den ganzen Pool einen Neustart.
 
 Wer einen anderen Build (oder das UCI-Tunnel-Binary eines Cloud-Anbieters wie Chessify)
 nutzen will, hängt ihn ein:
