@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.458.3", date: "2026-09-10", changes: [
+    { en: "Two engine versions now run side by side on the server, so the stronger one can be compared against the previous one and picked per analysis: Stockfish 18 and Stockfish 19 appear as separate entries on the analysis board.", de: "Auf dem Server laufen jetzt zwei Engine-Fassungen nebeneinander, damit sich die staerkere gegen die bisherige vergleichen und je Analyse auswaehlen laesst: Stockfish 18 und Stockfish 19 erscheinen am Analysebrett als eigene Eintraege." },
+  ] },
   { version: "0.458.2", date: "2026-09-10", changes: [
     { en: "The analysis engine on the server is now Stockfish 19, which its authors measure at up to 44 Elo above the previous version. The engine in your browser stays on the newest published build, 18.0.8, because version 19 has not been released for the browser yet.", de: "Die Analyse-Engine auf dem Server ist jetzt Stockfish 19, das laut seinen Autoren bis zu 44 Elo ueber der bisherigen Fassung liegt. Die Engine im Browser bleibt auf dem neuesten veroeffentlichten Stand, 18.0.8, denn Fassung 19 gibt es fuer den Browser noch nicht." },
   ] },

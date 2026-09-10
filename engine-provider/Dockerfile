@@ -19,6 +19,11 @@ RUN apt-get update \
 # getroffen wurde, trifft die Binärdatei jetzt selbst. `SF_VARIANT` ist deshalb weg, `SF_ASSET`
 # nennt nur noch die Datei der Veröffentlichung (arm64/riscv64 gibt es dort ebenso).
 #
+# Der Entpack-Schritt bleibt bewusst `tar xf` OHNE `z`: bis Stockfish 18 hiessen die Dateien
+# `…-avx2.tar` (unkomprimiert), ab 19 `…-universal.tar.gz`. GNU tar erkennt die Kompression
+# selbst — so baut dieselbe Datei BEIDE Fassungen, und genau das braucht der zweite Container,
+# der absichtlich auf 18 bleibt (siehe compose.yml).
+#
 # Warum 19 statt 18: die Veröffentlichung nennt gegen Stockfish 18 bis zu 44 Elo und dreimal so
 # viele gewonnene wie verlorene Partienpaare, neue Netzarchitektur SFNNv16. Knoten pro Sekunde
 # taugen dafür NICHT als Maßstab — ein größeres Netz rechnet langsamer und spielt trotzdem
@@ -44,7 +49,7 @@ RUN set -eux; \
     else \
       echo "WARNUNG: SF_SHA256 leer — Stockfish-Download wird NICHT geprueft." >&2; \
     fi; \
-    tar xzf /tmp/sf.tar.gz -C /tmp; \
+    tar xf /tmp/sf.tar.gz -C /tmp; \
     mkdir -p /opt/stockfish; \
     binaer="$(find /tmp/stockfish -maxdepth 1 -type f -name 'stockfish-*' ! -name '*.txt' | head -1)"; \
     test -n "${binaer}"; \

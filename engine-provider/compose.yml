@@ -28,3 +28,36 @@ services:
     #
     # Zwei Engines (Live + Hintergrund) aus diesem einen Container: ENGINE_COUNT=2 in der .env,
     # Namen/Hash je Engine per ENGINE_<i>_NAME / ENGINE_<i>_MAX_HASH — siehe README.
+
+  # ZWEI STOCKFISH-FASSUNGEN NEBENEINANDER (zum Vergleichen/Umschalten)
+  # ------------------------------------------------------------------
+  # Ein zweiter Dienst aus DERSELBEN Datei, nur mit anderen Bau-Argumenten. So stehen im
+  # Analysebrett beide Engines zur Auswahl und man schaltet um, ohne etwas neu zu bauen.
+  #
+  # Drei Dinge muessen sich unterscheiden, sonst treten sich die beiden gegenseitig auf die Fuesse:
+  #   1. `image:` — sonst ueberschreibt der zweite Bau das Abbild des ersten;
+  #   2. `container_name:` — sonst laesst Docker den zweiten nicht starten;
+  #   3. **die ENGINE-NAMEN** — der Name IST die Registrierung beim Broker. Zwei Provider mit
+  #      demselben Namen aktualisieren denselben Eintrag, der zweite entfuehrt also die Engine
+  #      des ersten. Deshalb hier `environment:` (schlaegt `env_file:`) mit eigenen Namen.
+  #
+  # Rechenlast: beide Container deckeln je auf `cpus`. Wer sie GLEICHZEITIG rechnen laesst,
+  # belegt die Summe — dafuer sind sie nicht gedacht, sondern zum Umschalten.
+  #
+  # engine-provider-sf18:
+  #   build:
+  #     context: .
+  #     args:
+  #       SF_VERSION: sf_18
+  #       SF_ASSET: stockfish-ubuntu-x86-64-avx2.tar
+  #       SF_SHA256: 536c0c2c0cf06450df0bfb5e876ef0d3119950703a8f143627f990c7b5417964
+  #   image: rookhub-engine-provider:sf18
+  #   container_name: rookhub-engine-provider-sf18
+  #   env_file: .env
+  #   environment:
+  #     ENGINE_COUNT: "1"
+  #     ENGINE_NAME: "RookHub Server 18"
+  #     ENGINE_1_NAME: "RookHub Server 18"
+  #   restart: unless-stopped
+  #   init: true
+  #   cpus: 8
