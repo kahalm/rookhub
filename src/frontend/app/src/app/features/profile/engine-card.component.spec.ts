@@ -43,22 +43,24 @@ describe('EngineCardComponent', () => {
     expect(component.tokenInvalid).toBeFalse();
   });
 
-  it('saves the chosen background engine via PUT /api/engine/background', () => {
+  // MEHRERE Hintergrund-Engines sind der Sinn der Sache: der Server rechnet je Engine EINEN
+  // Auftrag, es laufen also so viele nebeneinander, wie hier ausgewaehlt sind.
+  it('saves the chosen background engines via PUT /api/engine/background', () => {
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
     http.expectOne('/api/engine/external').flush({
-      hasCredentials: true, tokenInvalid: false, backgroundEngineId: null,
+      hasCredentials: true, tokenInvalid: false, backgroundEngineIds: [],
       engines: [{ id: 'eei_a', name: 'Live', maxThreads: 8, maxHash: 512 }, { id: 'eei_b', name: 'Hintergrund', maxThreads: 8, maxHash: 8192 }],
     });
-    expect(component.backgroundEngineId).toBeNull();
+    expect(component.backgroundEngineIds).toEqual([]);
 
-    component.backgroundEngineId = 'eei_b';
+    component.backgroundEngineIds = ['eei_b', 'eei_a'];
     component.saveBackground();
     const req = http.expectOne('/api/engine/background');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ engineId: 'eei_b' });
-    req.flush({ backgroundEngineId: 'eei_b' });
-    expect(component.backgroundEngineId).toBe('eei_b');
+    expect(req.request.body).toEqual({ engineIds: ['eei_b', 'eei_a'] });
+    req.flush({ backgroundEngineIds: ['eei_b', 'eei_a'] });
+    expect(component.backgroundEngineIds).toEqual(['eei_b', 'eei_a']);
   });
 
   it('flags a rejected token instead of showing an empty list', () => {

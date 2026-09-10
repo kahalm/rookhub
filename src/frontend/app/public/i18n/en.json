@@ -2929,7 +2929,9 @@
     },
     "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}} %)",
     "overallOpen": "{{count}} games still in the queue",
-    "overallFailed": "not counted: {{count}} failed"
+    "overallFailed": "not counted: {{count}} failed",
+    "rate": "{{rate}} positions/min",
+    "eta": "about {{eta}} left"
   },
   "guess": {
     "title": "Point game",

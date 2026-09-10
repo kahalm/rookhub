@@ -333,13 +333,24 @@ public class GameAnalysisService
             }
             else if (job.Status == AnalysisJobStatus.Failed)
             {
-                // Der Auftrag gibt auf (z. B. Matt-/Pattstellung ohne Tiefenfortschritt). Nicht ewig
-                // wiederholen — leere Liste, die Partie läuft weiter.
-                pos.CandidatesJson = "[]";
-                pos.AnalyzedAt = DateTime.UtcNow;
-                // Der gescheiterte Auftrag bleibt stehen — seine Fehlermeldung ist die einzige
-                // Erklaerung, warum diese Stellung ohne Bewertung dasteht.
+                // Der Auftrag gibt auf. Das heisst fast immer „die Engine war gerade nicht zu
+                // gebrauchen" und NICHT „diese Stellung geht nicht": eine Stellung der Partie hat
+                // immer einen legalen Zug, Matt oder Patt kann sie nicht sein. Frueher stand hier
+                // sofort die leere Liste — eine tote Engine loeschte damit stillschweigend
+                // Stellungen aus der Partie, die nie wieder gerechnet wurden. Also zaehlen und
+                // erneut einreihen; erst nach MaxPositionAttempts ist endgueltig Schluss, damit
+                // eine wirklich unloesbare Stellung nicht ewig im Kreis laeuft.
+                pos.FailedAttempts++;
                 pos.AnalysisJobId = null;
+                if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts)
+                {
+                    pos.CandidatesJson = "[]";
+                    pos.AnalyzedAt = DateTime.UtcNow;
+                    _logger.LogWarning("GameAnalysis {Id}: Stellung {Ply} nach {Tries} Anlaeufen aufgegeben",
+                        analysis.Id, pos.Ply, pos.FailedAttempts);
+                }
+                // Der gescheiterte Auftrag bleibt stehen — seine Fehlermeldung ist die einzige
+                // Erklaerung, warum es an dieser Stellung hakt.
                 changed = true;
             }
         }

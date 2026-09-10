@@ -71,8 +71,8 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
           <div class="engine-row">
             <mat-form-field appearance="outline" class="bg-field" subscriptSizing="dynamic">
               <mat-label>{{ 'profile.engine.backgroundLabel' | translate }}</mat-label>
-              <mat-select [(ngModel)]="backgroundEngineId" name="backgroundEngine" (selectionChange)="saveBackground()">
-                <mat-option [value]="null">{{ 'profile.engine.backgroundNone' | translate }}</mat-option>
+              <mat-select [(ngModel)]="backgroundEngineIds" name="backgroundEngine" multiple
+                          (selectionChange)="saveBackground()">
                 @for (e of engines; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
               </mat-select>
             </mat-form-field>
@@ -109,7 +109,7 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   listFailed = false;
   engines: ExternalEngineInfo[] = [];
   /** Hintergrund-Engine für Analyseaufträge (null = keine). */
-  backgroundEngineId: string | null = null;
+  backgroundEngineIds: string[] = [];
   private listSub?: Subscription;
   private statusSub?: Subscription;
 
@@ -165,18 +165,21 @@ export class EngineCardComponent implements OnInit, OnDestroy {
         this.enginesLoaded = false;
         this.tokenInvalid = false;
         this.listFailed = false;
-        this.backgroundEngineId = null;
+        this.backgroundEngineIds = [];
         this.cdr.markForCheck();
       },
       error: () => this.snackbar.warn(this.translate.instant('profile.engine.saveFailed')),
     });
   }
 
-  /** Hintergrund-Engine speichern — sie rechnet die Analyse-Aufträge und fehlt dafür im Live-Picker. */
+  /**
+   * Hintergrund-Engines speichern — sie rechnen die Analyse-Aufträge und fehlen dafür im
+   * Live-Picker. Mehrere sind erlaubt und der Sinn der Sache: der Server rechnet je Engine EINEN
+   * Auftrag, es laufen also so viele nebeneinander, wie hier ausgewählt sind.
+   */
   saveBackground(): void {
-    const chosen = this.backgroundEngineId;
-    this.externalEngines.setBackgroundEngine(chosen).subscribe({
-      next: r => { this.backgroundEngineId = r.backgroundEngineId; this.snackbar.success(this.translate.instant('profile.engine.backgroundSaved')); this.cdr.markForCheck(); },
+    this.externalEngines.setBackgroundEngines(this.backgroundEngineIds).subscribe({
+      next: r => { this.backgroundEngineIds = r.backgroundEngineIds ?? []; this.snackbar.success(this.translate.instant('profile.engine.backgroundSaved')); this.cdr.markForCheck(); },
       error: () => { this.snackbar.warn(this.translate.instant('profile.engine.backgroundFailed')); this.cdr.markForCheck(); },
     });
   }
@@ -190,7 +193,7 @@ export class EngineCardComponent implements OnInit, OnDestroy {
         this.enginesLoaded = true;
         this.tokenInvalid = r.tokenInvalid;
         this.engines = r.engines;
-        this.backgroundEngineId = r.backgroundEngineId ?? null;
+        this.backgroundEngineIds = r.backgroundEngineIds ?? [];
         this.listFailed = false;
         this.cdr.markForCheck();
       },

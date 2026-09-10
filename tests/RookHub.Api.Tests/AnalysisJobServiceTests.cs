@@ -41,7 +41,7 @@ public class AnalysisJobServiceTests : IDisposable
         _db.AppUsers.Add(new AppUser { Id = id, Username = $"u{id}", PasswordHash = "x" });
         _db.LichessEngineCredentials.Add(new LichessEngineCredential
         {
-            UserId = id, EncryptedToken = _encryption.Encrypt("lip_tok"), BackgroundEngineId = engine,
+            UserId = id, EncryptedToken = _encryption.Encrypt("lip_tok"), BackgroundEngineIds = engine,
         });
         await _db.SaveChangesAsync();
         return id;

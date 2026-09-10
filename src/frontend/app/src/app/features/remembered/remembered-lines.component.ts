@@ -168,7 +168,7 @@ export class RememberedLinesComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   /** Hintergrund-Engine des Users (für den Dialog: ohne sie nur der Hinweis). null = noch nicht geladen. */
-  private backgroundEngineId: string | null | undefined;
+  private hasBackgroundEngine: boolean | undefined;
 
   constructor(
     private remembered: RememberedService,
@@ -211,12 +211,12 @@ export class RememberedLinesComponent implements OnInit {
 
   /** Hintergrund-Engine einmal ermitteln (für den Dialog: ohne sie nur der Hinweis). */
   private withBackgroundEngine(run: (hasEngine: boolean) => void): void {
-    if (this.backgroundEngineId !== undefined) { run(!!this.backgroundEngineId); return; }
+    if (this.hasBackgroundEngine !== undefined) { run(this.hasBackgroundEngine); return; }
     this.externalEngines.listEngines().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: r => { this.backgroundEngineId = r.backgroundEngineId ?? null; run(!!this.backgroundEngineId); },
+      next: r => { this.hasBackgroundEngine = (r.backgroundEngineIds ?? []).length > 0; run(this.hasBackgroundEngine); },
       // Bei einem Fehlschlag (Lichess kurz weg → 502) NICHT merken: sonst behauptete die Seite den Rest der
       // Sitzung „keine Hintergrund-Engine", obwohl eine eingerichtet ist. Nächster Versuch fragt neu.
-      error: () => { this.backgroundEngineId = undefined; run(false); },
+      error: () => { this.hasBackgroundEngine = undefined; run(false); },
     });
   }
 

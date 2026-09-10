@@ -99,4 +99,28 @@ describe('GameAnalysesComponent', () => {
     expect(c.overallPercent).withContext('nicht 5 %').toBe(50);
     expect(c.failedCount).toBe(1);
   });
+
+  /**
+   * Der Balken bewegt sich bei tausend Stellungen um Bruchteile eines Prozents und sieht aus, als
+   * stuende er. Die Rate beantwortet die eigentliche Frage — aber erst, wenn genug Zeit zwischen
+   * den Proben liegt; aus zwei Abrufen im Sekundenabstand laesst sich nichts hochrechnen.
+   */
+  it('rechnet erst nach genug Zeit eine Rate hoch', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses').flush([
+      analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 10 }),
+    ]);
+    const c = fixture.componentInstance;
+    expect(c.rate).withContext('eine Probe sagt nichts').toBeNull();
+
+    // Zwei Proben, aber nur Sekunden auseinander → immer noch nichts.
+    (c as any).samples = [{ t: 1_000_000, done: 10 }, { t: 1_010_000, done: 11 }];
+    expect(c.rate).toBeNull();
+
+    // Fuenf Minuten, zehn Stellungen → 2,0 je Minute; 90 offen ⇒ 45 min.
+    (c as any).samples = [{ t: 1_000_000, done: 10 }, { t: 1_300_000, done: 20 }];
+    c.analyses = [analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 20 })];
+    expect(c.rate).toEqual({ perMinute: '2.0', eta: '40 min' });
+  });
 });

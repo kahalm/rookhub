@@ -2929,7 +2929,9 @@
     },
     "overall": "Insgesamt: {{done}} von {{total}} Stellungen gerechnet ({{percent}} %)",
     "overallOpen": "{{count}} Partien stehen noch in der Warteschlange",
-    "overallFailed": "nicht mitgezählt: {{count}} gescheitert"
+    "overallFailed": "nicht mitgezählt: {{count}} gescheitert",
+    "rate": "{{rate}} Stellungen/Min",
+    "eta": "noch ca. {{eta}}"
   },
   "guess": {
     "title": "Punktepartie",

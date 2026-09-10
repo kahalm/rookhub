@@ -951,7 +951,7 @@ zugleich die Vorbereitung auf einen späteren RookHub-EIGENEN Broker (Phase 2, g
 | GET | `/api/engine/external` | Registrierte External Engines des Kontos — **ohne `clientSecret`** (`{ hasCredentials, tokenInvalid, engines[] }`). Immer 200: `tokenInvalid` sagt, WARUM die Liste leer ist (Lichess wies den Token ab) |
 | POST | `/api/engine/external/{id}/analyse` | Analyse anfordern → **`application/x-ndjson`-Stream** (durchgereicht). Body = `EngineAnalyseRequest` (`sessionId`, `initialFen`, `moves[]`, `multiPv`, GENAU EINES von `depth`/`movetime`/`nodes`, optional `threads`/`hash`); Threads/Hash werden serverseitig auf die von Lichess gemeldeten Engine-Maxima geklemmt, `variant` ist fest `chess`. Abbruch = Verbindung schließen (wandert über den Broker zum Provider) |
 
-| PUT | `/api/engine/background` | Hintergrund-Engine für Analyseaufträge setzen `{ engineId }` (null/leer = entfernen; muss registriert sein → sonst 404). `GET /api/engine/external` liefert sie als `backgroundEngineId` mit — der Live-Picker blendet sie aus |
+| PUT | `/api/engine/background` | Hintergrund-Engines für Analyseaufträge setzen `{ engineIds: [] }` (leere Liste = entfernen; jede muss registriert sein → sonst 404, höchstens 8). `GET /api/engine/external` liefert sie als `backgroundEngineIds` mit — der Live-Picker blendet sie aus. **MEHRERE sind der Sinn** (0.460.0): der Worker rechnet je ENGINE genau einen Auftrag, es laufen also so viele Aufträge nebeneinander, wie hier stehen. Mit einer einzigen ist die Warteschlange strikt seriell — auf Dev blockierte EIN zäher Auftrag (Tiefe 22, 5 Linien, 31 min) alle 49 wartenden. Ein neuer Auftrag geht auf die Engine mit der KÜRZESTEN Schlange (`AnalysisJobService.PickBackgroundEngineAsync`), nicht reihum: reihum trifft daneben, sobald eine Engine an einer zähen Stellung hängt |
 
 ### Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist"
 `AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
@@ -980,7 +980,16 @@ Tiefe ↓ auf/unter das Erreichte → `Done`; Linien ↓ → gespeicherte `pvs` 
 laufende Suche abbrechen (`IAnalysisJobControl.Interrupt`), zurück in die Queue, Ergebnis bleibt Anzeige.
 Ergebnis = letzte Broker-Zeile als opakes JSON (`ResultJson`), das Frontend mappt es wie den Live-Stream; die
 Bewertung der Hauptvariante steht zusätzlich als `EvalText` in der Zeile, damit Listen die (großen) Roh-Zeilen
-nicht laden müssen. **Grenzen und Terminalzustände (0.383.0, aus dem Review)**: `MultiPv` ist auf **1..5**
+nicht laden müssen. **Eine gescheiterte Stellung ist nicht verloren** (0.460.0): ein gescheiterter Auftrag heißt fast
+immer „die Engine war gerade nicht zu gebrauchen" und nicht „diese Stellung geht nicht" — eine
+Stellung der Partie hat immer einen legalen Zug, Matt oder Patt kann sie gar nicht sein. Früher
+schloss `IngestFinishedAsync` sie sofort mit LEERER Kandidatenliste ab; eine tote Engine löschte
+damit stillschweigend Stellungen aus der Partie, die nie wieder gerechnet wurden (am 2026-09-10 an
+25 Stück passiert, alle von Hand zurückgesetzt). Jetzt zählt `GameAnalysisPosition.FailedAttempts`
+mit und die Stellung wird erneut eingereiht; erst nach `GameAnalysisDefaults.MaxPositionAttempts`
+(3) ist Schluss, damit eine wirklich unlösbare Stellung nicht ewig im Kreis läuft.
+
+**Grenzen und Terminalzustände (0.383.0, aus dem Review)**: `MultiPv` ist auf **1..5**
 gedeckelt — das Protokoll-Maximum von `work.multiPv`, im Worker ein zweites Mal geklemmt (ein größerer Wert
 wird vom Broker abgewiesen und der Auftrag liefe endlos in die Wiederholung). Der Worker bricht **nicht mehr
 selbst** ab, wenn die Hauptvariante die Zieltiefe erreicht: die Engine bekommt `depth` als Limit und beendet den

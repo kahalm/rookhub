@@ -35,6 +35,11 @@ public class GameAnalysisPosition
     /// <summary>Kandidatenliste, siehe Klassenkommentar. <c>null</c> = noch nicht analysiert.</summary>
     public string? CandidatesJson { get; set; }
 
+    /// <summary>Gescheiterte Anlaeufe an dieser Stellung. Solange sie unter
+    /// <see cref="GameAnalysisDefaults.MaxPositionAttempts"/> liegen, wird erneut eingereiht;
+    /// danach gilt die Stellung als unbewertbar (leere Kandidatenliste).</summary>
+    public int FailedAttempts { get; set; }
+
     /// <summary>Erreichte Suchtiefe der übernommenen Zeile.</summary>
     public int Depth { get; set; }
 

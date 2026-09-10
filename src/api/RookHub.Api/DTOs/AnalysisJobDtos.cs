@@ -35,8 +35,10 @@ public record AnalysisJobLiveDto(int Id, int Depth, int Nps, int Seconds);
 
 public class SetBackgroundEngineRequest
 {
-    /// <summary>Engine-ID oder null/leer zum Entfernen.</summary>
-    public string? EngineId { get; set; }
+    /// <summary>Die Engines, auf denen Hintergrund-Auftraege laufen duerfen. Leer/`null` = keine.
+    /// MEHRERE sind erlaubt und der Sinn der Sache: je Engine rechnet der Worker einen Auftrag,
+    /// also laufen so viele nebeneinander, wie hier stehen.</summary>
+    public List<string>? EngineIds { get; set; }
 }
 
 /// <summary>Mehrere Stellungen auf einmal vormerken (Mehrfachauswahl in „Gemerkte Stellungen") — eine Tiefe/Linienzahl für alle.</summary>

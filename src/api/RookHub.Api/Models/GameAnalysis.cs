@@ -104,4 +104,15 @@ public static class GameAnalysisDefaults
     /// <c>AnalysisJobService.MaxOpenJobsPerUser</c> (50), damit daneben noch von Hand eingereiht
     /// werden kann und mehrere Partien nicht gegenseitig verhungern.</summary>
     public const int MaxOpenJobsPerGame = 12;
+
+    /// <summary>
+    /// Wie oft ein Auftrag zu DERSELBEN Stellung scheitern darf, bevor sie endgueltig als
+    /// unbewertbar gilt. Ein Fehlschlag heisst hier fast immer „die Engine war gerade nicht zu
+    /// gebrauchen" und nicht „diese Stellung geht nicht" — eine Stellung der Partie hat immer einen
+    /// legalen Zug, Matt oder Patt kann sie gar nicht sein. Beim ERSTEN Mal aufzugeben hiess: eine
+    /// tote Engine loescht stillschweigend Stellungen aus der Partie (am 2026-09-10 an 25 Stueck
+    /// passiert, alle mussten von Hand zurueckgesetzt werden). Drei Anlaeufe, dann ist Schluss —
+    /// sonst liefe eine wirklich unloesbare Stellung ewig im Kreis.
+    /// </summary>
+    public const int MaxPositionAttempts = 3;
 }

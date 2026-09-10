@@ -44,7 +44,7 @@ describe('AnalysisJobsComponent', () => {
     const { fixture, c, http } = await make();
     http.expectOne('/api/analysis-jobs').flush([job(1, { status: 'running' })]);
     http.expectOne('/api/engine/external').flush({
-      hasCredentials: true, tokenInvalid: false, backgroundEngineId: 'eei_bg',
+      hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['eei_bg'],
       engines: [{ id: 'eei_bg', name: 'Hintergrund', maxThreads: 12, maxHash: 8192 },
                 { id: 'eei_live', name: 'Live', maxThreads: 12, maxHash: 4096 }],
     });

@@ -14,9 +14,11 @@ public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxH
 
 /// <summary>Antwort der Engine-Liste. <c>TokenInvalid</c> = Lichess hat den gespeicherten Token
 /// abgewiesen (401/403) — die UI fordert dann zur Neu-Eingabe auf, statt leer auszusehen.
-/// <c>BackgroundEngineId</c> = im Profil gewählte Hintergrund-Engine (der Live-Picker blendet sie aus).</summary>
+/// <c>BackgroundEngineIds</c> = die im Profil gewählten Hintergrund-Engines (der Live-Picker blendet
+/// sie aus). MEHRERE sind erlaubt: der Worker rechnet je Engine einen Auftrag, also laufen so viele
+/// Auftraege nebeneinander, wie Engines hinterlegt sind.</summary>
 public record ExternalEnginesResponse(bool HasCredentials, bool TokenInvalid, List<ExternalEngineDto> Engines,
-    string? BackgroundEngineId = null);
+    IReadOnlyList<string>? BackgroundEngineIds = null);
 
 /// <summary>
 /// Analyse-Anfrage des Frontends. Wird serverseitig validiert, auf die Engine-Maxima geklemmt und

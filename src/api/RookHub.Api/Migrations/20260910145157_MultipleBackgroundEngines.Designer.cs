@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260910145157_MultipleBackgroundEngines")]
+    partial class MultipleBackgroundEngines
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1821,9 +1824,6 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("EvalText")
                         .HasMaxLength(16)
                         .HasColumnType("varchar(16)");
-
-                    b.Property<int>("FailedAttempts")
-                        .HasColumnType("int");
 
                     b.Property<string>("Fen")
                         .IsRequired()

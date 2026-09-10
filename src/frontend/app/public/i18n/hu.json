@@ -2654,7 +2654,9 @@
     },
     "overall": "Összesen: {{done}} / {{total}} állás kiszámítva ({{percent}} %)",
     "overallOpen": "{{count}} játszma vár még a sorban",
-    "overallFailed": "nincs beszámítva: {{count}} sikertelen"
+    "overallFailed": "nincs beszámítva: {{count}} sikertelen",
+    "rate": "{{rate}} állás/perc",
+    "eta": "még kb. {{eta}}"
   },
   "guess": {
     "title": "Pontjátszma",

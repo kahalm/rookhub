@@ -54,6 +54,37 @@ public class AnalysisJobService
     /// (der Nutzer hat sie von Hand eingereiht, dort will er sie wiederfinden). Maschinell erzeugte
     /// Aufträge — die Partie-Analyse legt je Halbzug einen an — setzen <c>false</c>: eine 80-Halbzug-Partie
     /// spülte sonst 80 Zeilen in die Merkliste und lüde bei JEDEM Auftrag die ganze Liste erneut.</param>
+    /// <summary>
+    /// Auf WELCHER Hintergrund-Engine landet ein neuer Auftrag? Auf der mit den wenigsten offenen
+    /// Auftraegen.
+    ///
+    /// <para>Der Worker rechnet je ENGINE genau einen Auftrag — die Verteilung hier entscheidet
+    /// also, wie viele Auftraege ueberhaupt NEBENEINANDER laufen. Reihum waere schon besser als
+    /// alles auf eine, trifft aber daneben, sobald eine Engine an einer zaehen Stellung haengt
+    /// (auf Dev erlebt: ein Auftrag rechnete eine halbe Stunde, alle anderen warteten). Die
+    /// kuerzeste Schlange gewinnt deshalb, bei Gleichstand die zuerst hinterlegte.</para>
+    /// </summary>
+    private async Task<string> PickBackgroundEngineAsync(int userId, CancellationToken ct)
+    {
+        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        var engines = cred?.BackgroundEngines ?? [];
+        if (engines.Count == 0)
+            throw new InvalidOperationException("No background engine configured");
+        if (engines.Count == 1) return engines[0];
+
+        var openPerEngine = await _db.AnalysisJobs
+            .Where(j => j.UserId == userId
+                && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed)
+            .GroupBy(j => j.EngineId)
+            .Select(g => new { EngineId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.EngineId, x => x.Count, ct);
+
+        return engines
+            .Select((id, order) => (id, order, open: openPerEngine.GetValueOrDefault(id)))
+            .OrderBy(e => e.open).ThenBy(e => e.order)
+            .First().id;
+    }
+
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
         bool remember = true)
     {
@@ -71,10 +102,7 @@ public class AnalysisJobService
         var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
         if (engineId is null)
         {
-            var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-            engineId = cred?.BackgroundEngineId;
-            if (string.IsNullOrEmpty(engineId))
-                throw new InvalidOperationException("No background engine configured");
+            engineId = await PickBackgroundEngineAsync(userId, ct);
         }
         if (engineId.Length > 64)
             throw new ArgumentException("Invalid engine id");
@@ -115,9 +143,7 @@ public class AnalysisJobService
         var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
         if (engineId is null)
         {
-            var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-            engineId = cred?.BackgroundEngineId;
-            if (string.IsNullOrEmpty(engineId)) throw new InvalidOperationException("No background engine configured");
+            engineId = await PickBackgroundEngineAsync(userId, ct);
         }
         if (engineId.Length > 64) throw new ArgumentException("Invalid engine id");
 

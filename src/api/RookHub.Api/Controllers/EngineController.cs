@@ -118,7 +118,7 @@ public class EngineController : BaseApiController
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         var token = cred is null ? null : _encryption.TryDecrypt(cred.EncryptedToken);
         if (token is null)
-            return Ok(new ExternalEnginesResponse(cred is not null, false, [], cred?.BackgroundEngineId));
+            return Ok(new ExternalEnginesResponse(cred is not null, false, [], cred?.BackgroundEngines ?? []));
 
         try
         {
@@ -126,7 +126,7 @@ public class EngineController : BaseApiController
             var engines = result.Engines
                 .Select(e => new ExternalEngineDto(e.Id, e.Name, e.MaxThreads, e.MaxHash))
                 .ToList();
-            return Ok(new ExternalEnginesResponse(true, result.Unauthorized, engines, cred!.BackgroundEngineId));
+            return Ok(new ExternalEnginesResponse(true, result.Unauthorized, engines, cred!.BackgroundEngines));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -135,8 +135,19 @@ public class EngineController : BaseApiController
         }
     }
 
-    /// <summary>Hintergrund-Engine für Analyseaufträge festlegen (null/leer = entfernen). Muss eine der
-    /// registrierten Engines sein — sonst liefe der Worker gegen eine Wand.</summary>
+    /// <summary>Hoechstzahl hinterlegbarer Hintergrund-Engines. Nicht die Welt begrenzen, aber auch
+    /// nicht unbegrenzt: die Liste steht als CSV in einer Spalte, und jede Engine kostet den Worker
+    /// einen eigenen Broker-Stream.</summary>
+    private const int MaxBackgroundEngines = 8;
+
+    /// <summary>
+    /// Hintergrund-Engines fuer Analyseauftraege festlegen (leere Liste = keine). Jede muss eine der
+    /// registrierten Engines sein — sonst liefe der Worker gegen eine Wand.
+    ///
+    /// <para>MEHRERE sind der Sinn: der Worker rechnet je Engine genau einen Auftrag, also laufen so
+    /// viele Auftraege nebeneinander, wie hier stehen. Mit einer einzigen ist die Warteschlange
+    /// strikt seriell, und ein einzelner zaeher Auftrag legt alles still.</para>
+    /// </summary>
     [HttpPut("background")]
     public async Task<IActionResult> SetBackgroundEngine([FromBody] SetBackgroundEngineRequest request, CancellationToken ct)
     {
@@ -144,29 +155,41 @@ public class EngineController : BaseApiController
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         if (cred is null)
             return BadRequest(new { message = "No Lichess token stored" });
-        var engineId = string.IsNullOrWhiteSpace(request?.EngineId) ? null : request!.EngineId!.Trim();
-        if (engineId is { Length: > 64 })
+
+        var ids = (request?.EngineIds ?? [])
+            .Select(i => i?.Trim() ?? string.Empty)
+            .Where(i => i.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (ids.Count > MaxBackgroundEngines)
+            return BadRequest(new { message = $"At most {MaxBackgroundEngines} background engines" });
+        if (ids.Any(i => i.Length > 64))
             return BadRequest(new { message = "Invalid engine id" });
-        if (engineId is not null)
+
+        if (ids.Count > 0)
         {
             var token = _encryption.TryDecrypt(cred.EncryptedToken);
             if (token is null)
                 return BadRequest(new { message = "Stored token unreadable" });
             try
             {
-                if (await _lichess.ResolveEngineAsync(userId, token, engineId, ct) is null)
-                    return NotFound(new { message = "Engine not found" });
+                // JEDE pruefen: eine nicht registrierte Engine in der Liste hiesse, dass ein Teil der
+                // Auftraege still in einer Warteschlange landet, die niemand abarbeitet.
+                foreach (var id in ids)
+                    if (await _lichess.ResolveEngineAsync(userId, token, id, ct) is null)
+                        return NotFound(new { message = "Engine not found" });
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                _logger.LogWarning(ex, "Lichess nicht erreichbar beim Setzen der Hintergrund-Engine (User {UserId})", userId);
+                _logger.LogWarning(ex, "Lichess nicht erreichbar beim Setzen der Hintergrund-Engines (User {UserId})", userId);
                 return StatusCode(502, new { message = "Lichess unreachable" });
             }
         }
-        cred.BackgroundEngineId = engineId;
+
+        cred.SetBackgroundEngines(ids);
         cred.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return Ok(new { backgroundEngineId = engineId });
+        return Ok(new { backgroundEngineIds = cred.BackgroundEngines });
     }
 
     /// <summary>

@@ -376,7 +376,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   externalEnginesList: ExternalEngineInfo[] = [];
   selectedEngineId = 'wasm';
   /** Im Profil gewählte Hintergrund-Engine — gehört den Aufträgen, fehlt deshalb im Live-Picker. */
-  backgroundEngineId: string | null = null;
+  /** Alle als Hintergrund gewaehlten Engines — der Live-Picker blendet sie aus. */
+  backgroundEngineIds: string[] = [];
   /** Per `?engine=` gewünschte Engine (von der Auftragsseite) — gilt einmalig für diesen Aufruf. */
   private requestedEngineId: string | null = null;
   /** Mindestens eine externe Engine registriert (inkl. Hintergrund-Engine) → Aufträge sind möglich. */
@@ -506,9 +507,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         next: r => {
           // Die Hintergrund-Engine gehört den Aufträgen — im Live-Picker (und im Vergleich) taucht sie
           // nicht auf, sonst konkurrierten zwei Suchen um dieselben Kerne.
-          this.backgroundEngineId = r.backgroundEngineId ?? null;
+          this.backgroundEngineIds = r.backgroundEngineIds ?? [];
           this.hasExternalEngines = r.engines.length > 0;
-          this.externalEnginesList = r.engines.filter(e => e.id !== this.backgroundEngineId);
+          this.externalEnginesList = r.engines.filter(e => !this.backgroundEngineIds.includes(e.id));
           // Kam der Aufruf von einem Auftrag („im Analysebrett öffnen"), gilt DESSEN Engine — auch wenn es
           // die Hintergrund-Engine ist, die hier sonst ausgeblendet wird. Der Provider hat die Stellung noch
           // im Hash, die Suche ist damit sofort wieder auf der erreichten Tiefe statt bei null.
@@ -995,7 +996,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (!this.dialog) return;
     const ref = this.dialog.open(AnalysisJobDialogComponent, {
       width: '440px',
-      data: { fen: this.currentFen, depth: this.depthSetting, lines: this.linesCount, hasBackgroundEngine: !!this.backgroundEngineId },
+      data: { fen: this.currentFen, depth: this.depthSetting, lines: this.linesCount, hasBackgroundEngine: this.backgroundEngineIds.length > 0 },
     });
     ref.afterClosed().subscribe(job => {
       if (!job) return;

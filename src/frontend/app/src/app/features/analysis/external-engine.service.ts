@@ -16,7 +16,9 @@ export interface ExternalEnginesResponse {
   tokenInvalid: boolean;
   engines: ExternalEngineInfo[];
   /** Im Profil gewählte Hintergrund-Engine für Analyseaufträge (der Live-Picker blendet sie aus). */
-  backgroundEngineId?: string | null;
+  /** Die hinterlegten Hintergrund-Engines. MEHRERE sind erlaubt: der Server rechnet je Engine
+   *  einen Auftrag, es laufen also so viele nebeneinander, wie hier stehen. */
+  backgroundEngineIds?: string[] | null;
 }
 
 export interface EngineCredentialStatus {
@@ -70,8 +72,8 @@ export class ExternalEngineService {
   }
 
   /** Hintergrund-Engine festlegen (null = entfernen). */
-  setBackgroundEngine(engineId: string | null): Observable<{ backgroundEngineId: string | null }> {
-    return this.http.put<{ backgroundEngineId: string | null }>('/api/engine/background', { engineId });
+  setBackgroundEngines(engineIds: string[]): Observable<{ backgroundEngineIds: string[] }> {
+    return this.http.put<{ backgroundEngineIds: string[] }>('/api/engine/background', { engineIds });
   }
 
   /**

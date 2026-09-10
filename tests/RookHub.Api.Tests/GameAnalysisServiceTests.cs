@@ -50,7 +50,7 @@ public class GameAnalysisServiceTests : IDisposable
         // Ohne hinterlegte Hintergrund-Engine kann nichts eingereiht werden.
         _db.LichessEngineCredentials.Add(new LichessEngineCredential
         {
-            UserId = user.Id, EncryptedToken = "enc", BackgroundEngineId = "eei_test",
+            UserId = user.Id, EncryptedToken = "enc", BackgroundEngineIds = "eei_test",
         });
         await _db.SaveChangesAsync();
         return user;
@@ -171,18 +171,24 @@ public class GameAnalysisServiceTests : IDisposable
     [Fact]
     public async Task Pump_haengtNichtAnEinemGescheitertenAuftrag()
     {
-        // Matt-/Pattstellungen geben nach drei fruchtlosen Läufen auf. Die Partie muss trotzdem
-        // fertig werden — die Stellung bekommt eine leere Liste und wird später übersprungen.
+        // Eine Stellung, an der jeder Anlauf scheitert, darf die Partie nicht aufhalten: nach
+        // MaxPositionAttempts bekommt sie eine leere Liste und wird spaeter uebersprungen. Die
+        // WIEDERHOLUNGEN davor sind der Punkt — ein einzelner Fehlschlag heisst nur, dass die
+        // Engine gerade nicht zu gebrauchen war (siehe GescheiterterAuftrag_reihtDieStellungErneutEin).
         var user = await CreateUserWithEngineAsync();
         var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
 
         var pos = await _db.GameAnalysisPositions
             .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null).OrderBy(p => p.Ply).FirstAsync();
-        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
-        job.Status = AnalysisJobStatus.Failed;
-        await _db.SaveChangesAsync();
 
-        await _svc.PumpOneAsync(dto.Id);
+        for (var i = 0; i < GameAnalysisDefaults.MaxPositionAttempts; i++)
+        {
+            await _db.Entry(pos).ReloadAsync();
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Failed;
+            await _db.SaveChangesAsync();
+            await _svc.PumpOneAsync(dto.Id);
+        }
 
         var again = await _db.GameAnalysisPositions.FirstAsync(p => p.Id == pos.Id);
         Assert.Equal("[]", again.CandidatesJson);
@@ -414,5 +420,101 @@ public class GameAnalysisServiceTests : IDisposable
     {
         var user = await CreateUserWithEngineAsync();
         Assert.Null(await _svc.SetPublicAsync(user.Id, isAdmin: true, 4711, true));
+    }
+
+    // ===== Gescheiterte Stellungen ======================================================
+
+    /// <summary>
+    /// Ein gescheiterter Auftrag heisst „die Engine war gerade nicht zu gebrauchen", nicht „diese
+    /// Stellung geht nicht". Frueher wurde sie sofort mit leerer Kandidatenliste abgeschlossen —
+    /// eine tote Engine loeschte damit Stellungen aus der Partie, die nie wieder gerechnet wurden.
+    /// </summary>
+    [Fact]
+    public async Task GescheiterterAuftrag_reihtDieStellungErneutEin()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+
+        job.Status = AnalysisJobStatus.Failed;
+        job.LastError = "Engine lieferte nichts";
+        await _db.SaveChangesAsync();
+        await _svc.PumpOneAsync(dto.Id);
+
+        await _db.Entry(pos).ReloadAsync();
+        Assert.Equal(1, pos.FailedAttempts);
+        Assert.Null(pos.CandidatesJson);                      // NICHT aufgegeben
+        Assert.NotNull(pos.AnalysisJobId);                    // schon wieder eingereiht
+    }
+
+    /// <summary>Aber nicht ewig: nach MaxPositionAttempts ist Schluss, sonst liefe eine wirklich
+    /// unloesbare Stellung im Kreis.</summary>
+    [Fact]
+    public async Task GescheiterterAuftrag_gibtNachDreiAnlaeufenAuf()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxPositionAttempts; i++)
+        {
+            await _db.Entry(pos).ReloadAsync();
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Failed;
+            await _db.SaveChangesAsync();
+            await _svc.PumpOneAsync(dto.Id);
+        }
+
+        await _db.Entry(pos).ReloadAsync();
+        Assert.Equal(GameAnalysisDefaults.MaxPositionAttempts, pos.FailedAttempts);
+        Assert.Equal("[]", pos.CandidatesJson);
+        Assert.Null(pos.AnalysisJobId);
+    }
+
+    // ===== Mehrere Hintergrund-Engines ==================================================
+
+    /// <summary>
+    /// Der Worker rechnet je ENGINE einen Auftrag — die Verteilung entscheidet also, wie viele
+    /// nebeneinander laufen. Neue Auftraege gehen deshalb auf die Engine mit der kuerzesten
+    /// Schlange, nicht immer auf dieselbe.
+    /// </summary>
+    [Fact]
+    public async Task NeueAuftraege_verteilenSichAufDieHinterlegtenEngines()
+    {
+        var user = new AppUser { Username = "m", Email = "m@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        var cred = new LichessEngineCredential { UserId = user.Id, EncryptedToken = "enc" };
+        cred.SetBackgroundEngines(["eei_a", "eei_b"]);
+        _db.LichessEngineCredentials.Add(cred);
+        await _db.SaveChangesAsync();
+
+        var jobs = new AnalysisJobService(_db, new EncryptionService(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" }).Build()), null);
+
+        var a = await jobs.CreateAsync(user.Id, new CreateAnalysisJobRequest
+        { Fen = GamePlies.StartFen(), TargetDepth = 20, MultiPv = 3 }, remember: false);
+        var b = await jobs.CreateAsync(user.Id, new CreateAnalysisJobRequest
+        { Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", TargetDepth = 20, MultiPv = 3 },
+            remember: false);
+
+        var used = await _db.AnalysisJobs.Where(j => j.Id == a.Id || j.Id == b.Id)
+            .Select(j => j.EngineId).ToListAsync();
+        Assert.Equal(2, used.Distinct().Count());
+    }
+
+    /// <summary>Die CSV-Zerlegung liegt am Modell — Duplikate und Leerwerte fallen raus.</summary>
+    [Fact]
+    public void SetBackgroundEngines_raeumtAuf()
+    {
+        var cred = new LichessEngineCredential();
+        cred.SetBackgroundEngines([" eei_a ", "eei_b", "eei_a", "", "  "]);
+        Assert.Equal(["eei_a", "eei_b"], cred.BackgroundEngines);
+
+        cred.SetBackgroundEngines([]);
+        Assert.Null(cred.BackgroundEngineIds);
+        Assert.Empty(cred.BackgroundEngines);
     }
 }

@@ -48,6 +48,11 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
           <span>{{ 'gameAnalysis.overall' | translate:{ done: analyzedPlies, total: totalPlies, percent: overallPercent } }}</span>
           <mat-progress-bar mode="determinate" [value]="overallPercent" />
           <span class="muted small">
+            @if (rate; as r) {
+              {{ 'gameAnalysis.rate' | translate:{ rate: r.perMinute } }}
+              @if (r.eta) { · {{ 'gameAnalysis.eta' | translate:{ eta: r.eta } }} }
+              @if (openCount > 0) { · }
+            }
             @if (openCount > 0) {
               {{ 'gameAnalysis.overallOpen' | translate:{ count: openCount } }}
             }
@@ -197,6 +202,52 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     return this.analyses.filter(a => a.status === 'pending' || a.status === 'running').length;
   }
 
+  /**
+   * Tempo und Restdauer, hochgerechnet aus den letzten Abrufen.
+   *
+   * Der Balken bewegt sich bei tausend Stellungen um Bruchteile eines Prozents je Stellung und
+   * sieht deshalb aus, als stuende er — die eigentliche Frage („wie lange noch?") beantwortet erst
+   * eine Rate. Gemessen wird zwischen dem AELTESTEN und dem juengsten Abruf im Fenster; ein
+   * einzelner Abruf sagt nichts, deshalb erst ab `MinRateSeconds`.
+   *
+   * Die Proben kommen aus dem 10-s-Poll und decken damit rund zehn Minuten ab. Kuerzer waere zu
+   * zappelig (eine zaehe Stellung dauert Minuten, eine leichte Sekunden), laenger zu traege, wenn
+   * eine zweite Engine dazukommt.
+   */
+  private static readonly RateWindow = 60;      // Proben (10-s-Poll → ~10 min)
+  private static readonly MinRateSeconds = 60;  // darunter ist die Hochrechnung geraten
+  private samples: { t: number; done: number }[] = [];
+
+  get rate(): { perMinute: string; eta: string | null } | null {
+    if (this.samples.length < 2) return null;
+    const first = this.samples[0];
+    const last = this.samples[this.samples.length - 1];
+    const seconds = (last.t - first.t) / 1000;
+    const done = last.done - first.done;
+    if (seconds < GameAnalysesComponent.MinRateSeconds || done <= 0) return null;
+
+    const perMinute = (done * 60) / seconds;
+    const remaining = this.totalPlies - this.analyzedPlies;
+    return {
+      perMinute: perMinute >= 10 ? perMinute.toFixed(0) : perMinute.toFixed(1),
+      eta: remaining > 0 ? this.formatEta(remaining / perMinute) : null,
+    };
+  }
+
+  /** Eine Probe je Abruf; das Fenster wandert mit. */
+  private noteSample(): void {
+    this.samples.push({ t: Date.now(), done: this.analyzedPlies });
+    if (this.samples.length > GameAnalysesComponent.RateWindow) this.samples.shift();
+  }
+
+  /** Restdauer in Minuten als „3 h 20 min" bzw. „12 min" — Sekunden waeren hier Schein-Genauigkeit. */
+  private formatEta(minutes: number): string {
+    const total = Math.max(1, Math.round(minutes));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return h > 0 ? `${h} h ${m} min` : `${m} min`;
+  }
+
   percent(a: GameAnalysis): number {
     return a.plyCount > 0 ? Math.round((100 * a.analyzedPlies) / a.plyCount) : 0;
   }
@@ -204,7 +255,12 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   private load(silent = false): void {
     if (!silent) this.loading = true;
     this.service.list().subscribe({
-      next: list => { this.analyses = list; this.loading = false; this.cdr.markForCheck(); },
+      next: list => {
+        this.analyses = list;
+        this.loading = false;
+        this.noteSample();
+        this.cdr.markForCheck();
+      },
       // Poll-Fehler bleiben still (nächster Durchlauf kommt), der ERSTE Ladefehler nicht.
       error: () => {
         this.loading = false;
