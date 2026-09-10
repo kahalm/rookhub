@@ -1093,13 +1093,28 @@ auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (ei
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
 und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start) sowie `patch_provider.py`
 — EIN Eingriff in den geholten Provider (angewandt NACH der Prüfsummen-Kontrolle, fehlende Textstelle =
-Build-Abbruch statt stiller No-op): ein **Lebenszeichen** (Leerzeile) im Analyse-Stream nach
-`HEARTBEAT_SECONDS` (15) Schweigen. Grund: der Provider reicht nur `info`-Zeilen MIT `score` weiter, und
-zwischen zwei tiefen MultiPV-Iterationen vergehen Minuten — der Broker (bzw. das CDN davor) schloss die
-stumme Verbindung, bei uns sichtbar als `HttpIOException: The response ended prematurely` alle 5–9 min.
-Der Auftrag kam dadurch nie über Tiefe 29 hinaus (jeder Neustart rechnet von Tiefe 1 hoch). Das ist
-dieselbe Klasse Fehler wie der `NdjsonHeartbeatPump` auf der Strecke API→Browser, nur einen Hop weiter
-vorne (Provider→Broker→API). Zwei Fallen, die dort
+Build-Abbruch statt stiller No-op): ein **Lebenszeichen** (Leerzeile) im Analyse-Stream, wenn
+`HEARTBEAT_SECONDS` (15) lang nichts nach OBEN ging. Grund: der Provider reicht nur `info`-Zeilen MIT
+`score` weiter, und zwischen zwei tiefen MultiPV-Iterationen vergehen Minuten — der Broker (bzw. das CDN
+davor) schloss die stumme Verbindung, bei uns sichtbar als `HttpIOException: The response ended
+prematurely` alle 5–9 min. Der Auftrag kam dadurch nie über Tiefe 29 hinaus (jeder Neustart rechnet von
+Tiefe 1 hoch). Das ist dieselbe Klasse Fehler wie der `NdjsonHeartbeatPump` auf der Strecke API→Browser,
+nur einen Hop weiter vorne (Provider→Broker→API).
+
+**Gemessen wird der UPLOAD, nicht die Engine** (0.458.4) — die erste Fassung wartete auf Stille der
+ENGINE (`recv` mit Zeitschranke) und feuerte deshalb NIE: Stockfish schweigt während einer langen
+Iteration gar nicht, es schickt laufend `info depth … currmove …`, und genau die filtert der Provider
+weg. Die Zeitschranke fiel nie, obwohl nach oben minutenlang nichts ging — der Fall, für den das
+Lebenszeichen gebaut war, war der einzige, den es nicht abdeckte. Auf Dev hingen daran **23
+Analyse-Aufträge bei Tiefe 20/22**, alle mit „letzte Datenzeile vor 60,0 s" (der Broker kappt nach 60 s
+Stille, im Provider-Log als `400 uci protocol error: expected bestmove before end of stream`) — und weil
+ein gescheiterter Auftrag die Stellung mit LEERER Kandidatenliste abschliesst (`IngestFinishedAsync`),
+standen 25 Stellungen dauerhaft ohne Bewertung, drei Partien galten als `Done`. Jetzt zählt die Zeit seit
+der letzten WEITERGEGEBENEN Zeile, und `recv` wird in Sekundenscheiben abgefragt, damit die Schranke auch
+bei plappernder Engine fällt; `test/heartbeat.test.py` prüft beide Lagen und hat für den zweiten Fall
+einen Notausgang (ohne den Eingriff kommt dort NIE etwas an — der Test hinge statt zu scheitern).
+
+Zwei Fallen, die dort
 bewusst adressiert sind: der Provider-Token braucht `engine:read` **und `engine:write`** (er
 REGISTRIERT die Engine; RookHub selbst genügt `engine:read`) — ohne Vorabprüfung endete das in einem
 401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt; und die Registrierung

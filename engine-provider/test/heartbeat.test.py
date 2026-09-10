@@ -7,11 +7,16 @@ Aufruf mit einem ORIGINAL-provider.py (wird kopiert + gepatcht, das Original ble
     python3 test/heartbeat.test.py /opt/provider.py
     docker cp rookhub-engine-provider:/opt/provider.py /tmp/p.py && python3 test/heartbeat.test.py /tmp/p.py
 
-Statt Stockfish laeuft ein Stub, der auf `uci`/`isready` antwortet, nach `go` aber SCHWEIGT — genau die
-Lage, in der die Verbindung zum Broker frueher stumm zulief und geschlossen wurde. Erwartet wird, dass
-der Stream in dieser Stille Leerzeilen liefert und danach die echte Zeile mit `score` durchreicht.
+Statt Stockfish laeuft ein Stub. Zwei Lagen, in denen der Upload zum Broker stumm zulaeuft und die
+Verbindung nach 60 s geschlossen wird:
+
+1. **Engine schweigt** nach `go` — der offensichtliche Fall.
+2. **Engine plappert**, aber ohne `score`: waehrend einer langen Iteration schickt Stockfish laufend
+   `info depth … currmove …`, die der Provider wegfiltert. Nach oben geht dabei NICHTS. Ein
+   Lebenszeichen, das nur auf Stille der ENGINE wartet, feuert hier nie — genau daran hingen die
+   Hintergrund-Auftraege reproduzierbar bei Tiefe 20/22.
 """
-import os, shutil, subprocess, sys, tempfile, types
+import os, shutil, subprocess, sys, tempfile, threading, types
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 src = sys.argv[1] if len(sys.argv) > 1 else "/opt/provider.py"
@@ -37,8 +42,16 @@ import provider_patched as provider                                    # noqa: E
 
 # readline() statt `for line in sys.stdin`: die Iteration liest im Block voraus und gaebe die Zeilen
 # erst verzoegert heraus — der Handshake (uci/uciok) haengt dann.
+# `chatter` ist der zweite Testfall: score-LOSE Zeilen im Dauerfeuer, wie Stockfish sie waehrend
+# einer langen Iteration schickt. Der Provider filtert sie weg, der Upload bleibt stumm.
 STUB = r'''
-import sys
+import sys, threading, time
+
+def chatter():
+    while True:
+        print("info depth 20 currmove e2e4 currmovenumber 1", flush=True)
+        time.sleep(0.05)
+
 while True:
     line = sys.stdin.readline()
     if not line: break
@@ -47,20 +60,25 @@ while True:
     elif line == "isready": print("readyok", flush=True)
     elif line == "stop":    print("bestmove e2e4", flush=True)
     elif line == "emit":    print("info depth 30 score cp 12 nodes 5 time 5", flush=True)
-    elif line.startswith("go"): pass                # SCHWEIGEN — das ist der Testfall
+    elif line == "chatter": threading.Thread(target=chatter, daemon=True).start()
+    elif line.startswith("go"): pass                # SCHWEIGEN — das ist der erste Testfall
 '''
 stub = os.path.join(tmp, "stub_engine.py")
 open(stub, "w").write(STUB)
 
-args = types.SimpleNamespace(engine=f"{sys.executable} {stub}", setoption=[])
-engine = provider.Engine(args)
-job = {"id": "t1", "work": {"sessionId": "s1", "threads": 1, "hash": 16, "multiPv": 1,
+JOB = {"id": "t1", "work": {"sessionId": "s1", "threads": 1, "hash": 16, "multiPv": 1,
                             "variant": "chess", "initialFen": "startpos", "moves": [], "depth": 30}}
-
-import threading                                                        # noqa: E402
-started = threading.Event()
 fails = 0
-with engine.analyse(job, started) as stream:
+
+
+def new_engine():
+    args = types.SimpleNamespace(engine=f"{sys.executable} {stub}", setoption=[])
+    return provider.Engine(args)
+
+
+# ===== 1. Engine schweigt ===================================================================
+engine = new_engine()
+with engine.analyse(JOB, threading.Event()) as stream:
     beats = 0
     for chunk in stream:
         if chunk == b"\n":
@@ -80,8 +98,32 @@ with engine.analyse(job, started) as stream:
         print(f"ok   Lebenszeichen bei Schweigen ({beats} Leerzeilen)")
     else:
         print(f"FAIL: kein Lebenszeichen bei Schweigen (nur {beats})"); fails += 1
-
 engine.terminate()
+
+# ===== 2. Engine plappert score-los =========================================================
+engine = new_engine()
+with engine.analyse(JOB, threading.Event()) as stream:
+    engine.send("chatter")
+    # Notausgang: OHNE den Eingriff kommt hier NIE etwas an (die Engine plappert, der Provider
+    # filtert alles weg) — die Schleife blockierte dann fuer immer und der Test haette gehangen
+    # statt zu scheitern. Ein rohes `stop` laesst den Stub `bestmove` schicken, der Generator
+    # endet, und `beats == 0` ist das FAIL. Mit dem Eingriff sind die zwei Lebenszeichen lange
+    # vorher da.
+    threading.Timer(5.0, lambda: engine.send("stop")).start()
+    beats = 0
+    for chunk in stream:
+        if chunk == b"\n":
+            beats += 1
+            if beats >= 2:
+                break
+            continue
+        print(f"FAIL: score-lose Zeile wurde weitergereicht: {chunk.decode()!r}"); fails += 1; break
+    if beats >= 2:
+        print(f"ok   Lebenszeichen trotz plappernder Engine ({beats} Leerzeilen)")
+    else:
+        print(f"FAIL: kein Lebenszeichen bei plappernder Engine (nur {beats})"); fails += 1
+engine.terminate()
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("ALLE TESTS OK" if not fails else f"{fails} FEHLER")
 sys.exit(1 if fails else 0)

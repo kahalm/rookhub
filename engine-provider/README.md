@@ -63,7 +63,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
 | `MAX_HASH` | Hash-Tabelle in MiB (leer = 512) |
 | `KEEP_ALIVE` | Sekunden, die eine Engine ohne Stream-Ende weiterläuft (leer = 300). **Für Hintergrund-Analysen hochsetzen** — siehe Warnung unten |
-| `HEARTBEAT_SECONDS` | Lebenszeichen im Analyse-Stream nach so vielen Sekunden Schweigen (leer = 15, 0 = aus) — siehe unten |
+| `HEARTBEAT_SECONDS` | Lebenszeichen im Analyse-Stream nach so vielen Sekunden **stummem Upload** (leer = 15, 0 = aus) — siehe unten |
 | `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
 | `ENGINE_COUNT` | Mehrere Engines in diesem Container (leer/1 = eine; max. 16) — siehe unten |
@@ -105,9 +105,20 @@ weil jeder Neustart wieder von Tiefe 1 hochrechnen muss und nie über die Zeit z
 hinauskommt (beobachtet: alle 5–9 Minuten ein Abriss, Tiefe blieb bei 29 stehen).
 
 Dieses Image patcht den geholten Provider deshalb an **einer** Stelle (`patch_provider.py`, angewandt
-NACH der Prüfsummen-Kontrolle): schweigt die Engine länger als `HEARTBEAT_SECONDS`, geht eine Leerzeile
-in den Stream. Empfänger ignorieren Leerzeilen; die Verbindung bleibt offen. `HEARTBEAT_SECONDS=0`
+NACH der Prüfsummen-Kontrolle): geht länger als `HEARTBEAT_SECONDS` nichts nach oben, folgt eine
+Leerzeile. Empfänger ignorieren Leerzeilen; die Verbindung bleibt offen. `HEARTBEAT_SECONDS=0`
 schaltet den Eingriff ab.
+
+**Gemessen wird der UPLOAD, nicht die Engine** — und das ist der ganze Punkt. Die erste Fassung wartete
+auf Stille der ENGINE (`recv` mit Zeitschranke). Stockfish schweigt während einer langen Iteration aber
+gar nicht: es schickt laufend `info depth … currmove …`, und genau die filtert der Provider weg (kein
+`score`). Die Zeitschranke fiel deshalb NIE, während nach oben minutenlang nichts ging — der Fall, für
+den das Lebenszeichen gebaut war, war der einzige, den es nicht abdeckte. Sichtbar wurde es erst an den
+Hintergrund-Aufträgen: 23 Aufträge hingen bei Tiefe 20/22, im Log des Brokers `400 uci protocol error:
+expected bestmove before end of stream`, empfängerseitig „letzte Datenzeile vor 60,0 s" — der Broker
+kappt nach 60 s Stille. Jetzt zählt die Zeit seit der letzten WEITERGEGEBENEN Zeile, und `recv` wird in
+Sekundenscheiben abgefragt, damit die Schranke auch bei plappernder Engine fällt.
+`test/heartbeat.test.py` prüft beide Lagen (Engine schweigt / Engine plappert score-los).
 
 ### Zwei Engines: Live + Hintergrund
 
