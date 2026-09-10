@@ -1177,7 +1177,7 @@
       "nameLabel": "Tanfolyam neve",
       "namePlaceholder": "pl. Bástyavégjátékok",
       "attachPgn": "PGN csatolása (opcionális)",
-      "pgnNote": "A csatolt PGN-nek Chessable-stílusú feladvány-PGN-nek kell lennie (FEN-nel és edzésjelölőkkel). Más PGN-ed van? Kérd meg egy adminisztrátort, hogy importálja, vagy kérdezz a",
+      "pgnNote": "A csatolt PGN tartalmazhatja a saját játszmáidat, vagy lehet Chessable-stílusú feladvány-PGN (FEN és tréningjelölők). A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
       "button": "Tanfolyam létrehozása",
       "creating": "Létrehozás…",
       "success": "„{{name}}” létrehozva ({{count}} feladvány)",
@@ -1190,7 +1190,14 @@
     "deleteConfirm": "Törlöd a(z) „{{name}}” tanfolyamot? A haladásod elvész.",
     "deleteFailed": "A tanfolyamot nem sikerült törölni",
     "searchPlaceholder": "Tanfolyamok keresése…",
-    "noMatch": "Egy tanfolyam sem illik erre: „{{query}}”."
+    "noMatch": "Egy tanfolyam sem illik erre: „{{query}}”.",
+    "import": {
+      "title": "Saját játszmák importálása",
+      "hint": "Töltsd be a saját játszmáidat PGN-ben. Utána lépésenként végigkattinthatod őket — a PGN-ben lévő megjegyzések annál a lépésnél jelennek meg, amelyikhez tartoznak.",
+      "attachPgn": "PGN-fájl kiválasztása",
+      "pgnNote": "Bármilyen PGN működik: saját játszmák, letöltött gyűjtemény vagy Chessable-stílusú feladvány-PGN. A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
+      "button": "Játszmák importálása"
+    }
   },
   "weekly": {
     "title": "Heti",

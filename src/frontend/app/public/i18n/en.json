@@ -1195,7 +1195,7 @@
       "nameLabel": "Course name",
       "namePlaceholder": "e.g. Rook endgames",
       "attachPgn": "Attach PGN (optional)",
-      "pgnNote": "An attached PGN has to be a puzzle PGN in Chessable style (with FEN and training markers). Got a different PGN? Ask an admin to import it, or ask in our",
+      "pgnNote": "An attached PGN may contain your own games or a puzzle PGN in Chessable style (FEN plus training markers). Comments in braces are kept and shown while clicking through. Questions?",
       "button": "Create course",
       "creating": "Creating…",
       "success": "“{{name}}” created ({{count}} puzzles)",
@@ -1412,7 +1412,14 @@
     },
     "offlineListHint": "You're offline — showing your downloaded courses (last known state).",
     "startChapterSequential": "Start chapter (in order)",
-    "startChapterRandom": "Start chapter (random)"
+    "startChapterRandom": "Start chapter (random)",
+    "import": {
+      "title": "Import your own games",
+      "hint": "Load a PGN with your own games. You can then click through them move by move — and comments contained in the PGN appear at the move they belong to.",
+      "attachPgn": "Choose PGN file",
+      "pgnNote": "Any PGN works: your own games, a downloaded collection or a puzzle PGN in Chessable style. Comments in braces are kept and shown while clicking through. Questions?",
+      "button": "Import games"
+    }
   },
   "calc": {
     "annotate": "Annotation",

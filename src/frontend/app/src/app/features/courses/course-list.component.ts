@@ -14,7 +14,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames, saveCourseListCache, loadCourseListCache } from '../puzzles/book-offline.util';
 import { downloadBlob } from '../../shared/download.util';
-import { CreateCourseDialogComponent, CreateCourseDialogResult } from './create-course-dialog.component';
+import { CreateCourseDialogComponent, CreateCourseDialogData, CreateCourseDialogResult } from './create-course-dialog.component';
 import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
 import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-dialog.component';
 import { CourseThemesDialogComponent, CourseThemesDialogData } from './course-themes-dialog.component';
@@ -34,10 +34,16 @@ import { CourseCardComponent } from './course-card.component';
     <div class="courses-container">
       <div class="header">
         <h1>{{ 'courses.title' | translate }}</h1>
-        <button mat-raised-button color="primary" [disabled]="creating" (click)="openCreateDialog()">
-          <mat-icon>{{ creating ? 'hourglass_empty' : 'add' }}</mat-icon>
-          {{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}
-        </button>
+        <div class="header-actions">
+          <button mat-stroked-button [disabled]="creating" (click)="openImportDialog()">
+            <mat-icon>upload_file</mat-icon>
+            {{ 'courses.import.button' | translate }}
+          </button>
+          <button mat-raised-button color="primary" [disabled]="creating" (click)="openCreateDialog()">
+            <mat-icon>{{ creating ? 'hourglass_empty' : 'add' }}</mat-icon>
+            {{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}
+          </button>
+        </div>
       </div>
       <p class="intro">{{ 'courses.intro' | translate }}</p>
 
@@ -197,6 +203,7 @@ import { CourseCardComponent } from './course-card.component';
 
   `,
   styles: [`
+    .header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .courses-container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .header h1 { margin: 0; }
@@ -481,10 +488,16 @@ export class CourseListComponent implements OnInit {
   }
 
   /** Öffnet „Neuen Kurs erstellen"; legt nach Bestätigung an — mit angehängtem PGN oder leer. */
-  openCreateDialog(): void {
+  openCreateDialog(): void { this.openDialog('course'); }
+
+  /** Öffnet „Eigene Partien importieren" — derselbe Dialog, aber die PGN-Datei ist Pflicht.
+   *  Eigener Knopf, weil niemand seine Partien unter „Kurs erstellen" sucht. */
+  openImportDialog(): void { this.openDialog('games'); }
+
+  private openDialog(mode: 'course' | 'games'): void {
     if (this.creating) return;
-    const ref = this.dialog.open<CreateCourseDialogComponent, void, CreateCourseDialogResult>(
-      CreateCourseDialogComponent, { width: '440px', maxWidth: '95vw' });
+    const ref = this.dialog.open<CreateCourseDialogComponent, CreateCourseDialogData, CreateCourseDialogResult>(
+      CreateCourseDialogComponent, { width: '440px', maxWidth: '95vw', data: { mode } });
     ref.afterClosed().subscribe(result => {
       if (!result) return;
       this.createCourse(result.name, result.file);

@@ -1195,7 +1195,7 @@
       "nameLabel": "Naziv tečaja",
       "namePlaceholder": "npr. Završnice s topovima",
       "attachPgn": "Priloži PGN (opcionalno)",
-      "pgnNote": "Priloženi PGN mora biti PGN sa zagonetkama u Chessable stilu (s FEN-om i oznakama za trening). Imaš drugačiji PGN? Zamoli administratora za uvoz ili pitaj na našem",
+      "pgnNote": "Priloženi PGN može sadržavati vlastite partije ili biti puzzle-PGN u Chessable stilu (FEN i oznake za trening). Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
       "button": "Stvori tečaj",
       "creating": "Stvara se…",
       "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
@@ -1412,7 +1412,14 @@
     },
     "offlineListHint": "Offline si — prikazani su tvoji preuzeti tečajevi (zadnje poznato stanje).",
     "startChapterSequential": "Pokreni poglavlje (redom)",
-    "startChapterRandom": "Pokreni poglavlje (nasumično)"
+    "startChapterRandom": "Pokreni poglavlje (nasumično)",
+    "import": {
+      "title": "Uvezi vlastite partije",
+      "hint": "Učitaj PGN s vlastitim partijama. Nakon toga možeš ih prolaziti potez po potez — komentari iz PGN-a pojavljuju se kod poteza na koji se odnose.",
+      "attachPgn": "Odaberi PGN datoteku",
+      "pgnNote": "Radi svaki PGN: vlastite partije, preuzeta zbirka ili puzzle-PGN u Chessable stilu. Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
+      "button": "Uvezi partije"
+    }
   },
   "calc": {
     "annotate": "Ocjena",

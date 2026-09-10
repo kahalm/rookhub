@@ -1195,7 +1195,7 @@
       "nameLabel": "Kursname",
       "namePlaceholder": "z. B. Turmendspiele",
       "attachPgn": "PGN anhängen (optional)",
-      "pgnNote": "Ein angehängtes PGN muss ein Puzzle-PGN im Chessable-Stil sein (mit FEN und Trainingsmarkern). Anderes PGN? Wende dich an einen Admin zum Importieren oder frag in unserem",
+      "pgnNote": "Ein angehängtes PGN darf eigene Partien enthalten oder ein Puzzle-PGN im Chessable-Stil sein (FEN plus Trainingsmarker). Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
       "button": "Kurs erstellen",
       "creating": "Wird erstellt…",
       "success": "„{{name}}“ angelegt ({{count}} Puzzles)",
@@ -1412,7 +1412,14 @@
     },
     "offlineListHint": "Du bist offline — angezeigt werden deine heruntergeladenen Kurse (letzter bekannter Stand).",
     "startChapterSequential": "Kapitel starten (der Reihe nach)",
-    "startChapterRandom": "Kapitel starten (zufällig)"
+    "startChapterRandom": "Kapitel starten (zufällig)",
+    "import": {
+      "title": "Eigene Partien importieren",
+      "hint": "Lade ein PGN mit deinen eigenen Partien. Du kannst sie danach Zug für Zug durchklicken — und Kommentare, die im PGN stehen, erscheinen an dem Zug, zu dem sie gehören.",
+      "attachPgn": "PGN-Datei wählen",
+      "pgnNote": "Jedes PGN geht: eigene Partien, eine heruntergeladene Sammlung oder ein Puzzle-PGN im Chessable-Stil. Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
+      "button": "Partien importieren"
+    }
   },
   "calc": {
     "annotate": "Bewertung",
