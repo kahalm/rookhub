@@ -83,6 +83,7 @@ public static class ExternalDirectorySource
                     .Count() < 2)
                 continue;
             if (!PlacesAgree(place, candidate.LocationText)) continue;
+            if (!SpeedsAgree(name, candidate.Name)) continue;
             if (HasOtherNoteOfSameKind(candidate, hint)) continue;
             return candidate;
         }
@@ -122,6 +123,74 @@ public static class ExternalDirectorySource
 
         return tokens.Any(otherTokens.Contains);
     }
+
+    /// <summary>
+    /// Widersprechen sich die BEDENKZEIT-Klassen in den beiden Namen? Nur dann ist es kein
+    /// Treffer — nennt eine Seite keine, entscheidet weiter der Wortvergleich.
+    ///
+    /// <para><b>Der Fall, der das erzwungen hat.</b> In der Nacht zum 2026-09-10 liefen alle DREI
+    /// tschechischen Zeilen des „UCT Chess Festival 09/2026" auf denselben Eintrag — den
+    /// Rapid-Teil — obwohl es Blitz, Rapid und Standard je als eigenen, lebenden
+    /// chess-results-Eintrag gibt (1474369, 1474368, 1474370), am selben Termin und mit
+    /// identischem Namen bis auf das Bedenkzeit-Wort. Der Grund: „blitz", „rapid" und „standard"
+    /// stehen in <c>FideDirectorySweepService.NameFiller</c>, sind also weggefiltert — und damit
+    /// hatte der Abgleich dort ueberhaupt keinen Unterscheider mehr. Der Schaden war mild (ein
+    /// Herkunftsvermerk am falschen Eintrag, kein Turnier verloren), aber bei einem Festival mit
+    /// Open/A/B statt Blitz/Rapid waere es teurer.</para>
+    ///
+    /// <para>Verglichen werden die NAMEN, nicht das Feld <c>Speed</c> des Eintrags: der Vergleich
+    /// bleibt damit symmetrisch (die Quellzeile hat kein solches Feld) und haengt nicht daran, ob
+    /// die Bedenkzeit schon ausgewertet wurde. Ein Wort wie „Blitzturnier" zaehlt mit, deshalb
+    /// wird der Wortanfang geprueft und nicht Gleichheit.</para>
+    /// </summary>
+    internal static bool SpeedsAgree(string? nameA, string? nameB)
+    {
+        var a = SpeedWordOf(nameA);
+        var b = SpeedWordOf(nameB);
+        return a is null || b is null || a == b;
+    }
+
+    /// <summary>
+    /// Die Bedenkzeit-Klasse, die im NAMEN steht — <c>null</c>, wenn keine drinsteht.
+    ///
+    /// <para>Die Reihenfolge der Liste entscheidet: „semilampo" (italienisch fuer Schnellschach)
+    /// endet auf „lampo" (Blitz) und muss deshalb VORHER stehen. Dasselbe bei „bleskovy".</para>
+    /// </summary>
+    internal static TournamentSpeed? SpeedWordOf(string? name)
+    {
+        var words = GeoTextNormalizer.Normalize(name)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var word in words)
+            foreach (var (prefix, speed) in SpeedWords)
+                if (word.StartsWith(prefix, StringComparison.Ordinal))
+                    return speed;
+        return null;
+    }
+
+    /// <summary>
+    /// Bedenkzeit-Woerter in den Sprachen der angebundenen Quellen. Laengere und
+    /// spezifischere zuerst.
+    /// </summary>
+    private static readonly (string Prefix, TournamentSpeed Speed)[] SpeedWords =
+    [
+        // Schnellschach — vor den Blitz-Woertern, weil „semilampo" auf „lampo" endet.
+        ("semilampo", TournamentSpeed.Rapid),
+        ("schnellschach", TournamentSpeed.Rapid),
+        ("schnellturnier", TournamentSpeed.Rapid),
+        ("rapid", TournamentSpeed.Rapid),
+        ("szybk", TournamentSpeed.Rapid),
+        // Blitz
+        ("blitz", TournamentSpeed.Blitz),
+        ("bleskov", TournamentSpeed.Blitz),
+        ("blyskaw", TournamentSpeed.Blitz),
+        ("villam", TournamentSpeed.Blitz),
+        ("lampo", TournamentSpeed.Blitz),
+        // Standard
+        ("standard", TournamentSpeed.Standard),
+        ("klassisch", TournamentSpeed.Standard),
+        ("classical", TournamentSpeed.Standard),
+    ];
 
     /// <summary>
     /// Traegt der Kandidat schon einen Vermerk DERSELBEN Quelle mit einer ANDEREN Kennung? Dann

@@ -269,6 +269,11 @@ public class FideDirectorySweepService
             // haette hier genauso zugeschlagen. Und eine Quelle fuehrt dasselbe Turnier nicht
             // zweimal - traegt der Kandidat schon einen FIDE-Vermerk mit anderer Kennung,
             // gehoert dieses Ereignis nicht dorthin (Pruefung oben).
+            // Widersprechen sich die Bedenkzeit-Klassen in den Namen, ist es kein Treffer — sonst
+            // laufen Blitz-, Rapid- und Standard-Teil eines Festivals in EINEN Eintrag (am
+            // 2026-09-10 an der tschechischen Quelle passiert, siehe SpeedsAgree).
+            if (!ExternalDirectorySource.SpeedsAgree(ev.Name, candidate.Name)) continue;
+
             if (shared >= 2 && ExternalDirectorySource.PlacesAgree(city, candidate.LocationText))
                 return candidate;
             if (shared >= 1 && sameCity) return candidate;

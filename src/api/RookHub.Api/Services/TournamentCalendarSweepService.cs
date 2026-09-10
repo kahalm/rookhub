@@ -203,6 +203,8 @@ public class TournamentCalendarSweepService
             DirectorySourceKind.ChessResultsCalendar, row.CalendarId, null);
         return candidates.FirstOrDefault(c =>
             words.Intersect(FideDirectorySweepService.DistinctiveWords(c.Name, filler)).Count() >= 2
+            // Blitz, Rapid und Standard desselben Festivals sind DREI Turniere, nicht eines.
+            && ExternalDirectorySource.SpeedsAgree(row.Name, c.Name)
             && !ExternalDirectorySource.HasOtherNoteOfSameKind(c, hint));
     }
 

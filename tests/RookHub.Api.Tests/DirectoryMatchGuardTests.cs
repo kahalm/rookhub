@@ -57,6 +57,17 @@ public class DirectoryMatchGuardTests : IDisposable
         return entry;
     }
 
+    private async Task AddFestivalAsync(string chessResultsId, string name)
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = chessResultsId, ChessResultsId = chessResultsId, Name = name,
+            Federation = "ITA", StartDate = Bolzano.AddDays(-1), EndDate = Bolzano.AddDays(-1),
+            LocationText = "Praha", FirstSeenAt = Now, LastSeenAt = Now,
+        });
+        await _db.SaveChangesAsync();
+    }
+
     private Task<TournamentDirectoryEntry?> FindAsync(string name, string? place, string externalId = "21699") =>
         ExternalDirectorySource.FindMatchAsync(_db, "ITA", Bolzano.AddDays(-1), name,
             new ExternalDirectorySource.MatchHint(
@@ -134,6 +145,73 @@ public class DirectoryMatchGuardTests : IDisposable
         await AddBolzanoAsync(noteExternalId: "21699");
 
         Assert.NotNull(await FindAsync(CormonsName, null, externalId: "21699"));
+    }
+
+    // ----- Bedenkzeit als Unterscheider -------------------------------------
+
+    /// <summary>
+    /// Der Fall aus der Nacht zum 2026-09-10: alle DREI tschechischen Zeilen des „UCT Chess
+    /// Festival" liefen auf den Rapid-Eintrag, obwohl es Blitz, Rapid und Standard je als eigenen
+    /// chess-results-Eintrag gibt — gleicher Termin, gleicher Name bis auf das Bedenkzeit-Wort.
+    /// „blitz", „rapid" und „standard" stehen in der Fuellwortliste, der Abgleich hatte dort also
+    /// gar keinen Unterscheider mehr.
+    /// </summary>
+    [Fact]
+    public async Task VerschiedeneBedenkzeit_wirdNichtZusammengefuehrt()
+    {
+        await AddFestivalAsync("1474368", "UCT Chess Festival 09/2026 -Rapid");
+
+        Assert.Null(await FindAsync("UCT Chess Festival 09/2026 -Blitz", "Praha"));
+        Assert.Null(await FindAsync("UCT Chess Festival 09/2026- standard", "Praha"));
+    }
+
+    /// <summary>Und der richtige Teil trifft weiterhin.</summary>
+    [Fact]
+    public async Task GleicheBedenkzeit_wirdWeiterZusammengefuehrt()
+    {
+        await AddFestivalAsync("1474368", "UCT Chess Festival 09/2026 -Rapid");
+
+        var found = await FindAsync("UCT Chess Festival 09/2026 -Rapid", "Praha");
+        Assert.NotNull(found);
+        Assert.Equal("1474368", found!.ChessResultsId);
+    }
+
+    /// <summary>Nennt nur EINE Seite eine Bedenkzeit, entscheidet weiter der Wortvergleich.</summary>
+    [Fact]
+    public async Task NurEineSeiteMitBedenkzeit_bleibtEinTreffer()
+    {
+        await AddFestivalAsync("1474368", "UCT Chess Festival 09/2026");
+
+        Assert.NotNull(await FindAsync("UCT Chess Festival 09/2026 -Rapid", "Praha"));
+    }
+
+    [Theory]
+    [InlineData("24 Stunden Blitzturnier", TournamentSpeed.Blitz)]
+    [InlineData("Offenes Schnellschachturnier", TournamentSpeed.Rapid)]
+    [InlineData("Rapid Open Praha", TournamentSpeed.Rapid)]
+    // Italienisch: „semilampo" ist Schnellschach und endet auf „lampo" (Blitz) — die Reihenfolge
+    // der Liste entscheidet.
+    [InlineData("TORNEO SEMILAMPO SCACCHI Bellante", TournamentSpeed.Rapid)]
+    [InlineData("Torneo lampo di Natale", TournamentSpeed.Blitz)]
+    [InlineData("Turniej szachów szybkich", TournamentSpeed.Rapid)]
+    [InlineData("Turniej błyskawiczny", TournamentSpeed.Blitz)]
+    [InlineData("Bleskový turnaj", TournamentSpeed.Blitz)]
+    [InlineData("Villámsakk Kupa", TournamentSpeed.Blitz)]
+    [InlineData("Standard FIDE Open", TournamentSpeed.Standard)]
+    public void SpeedWordOf_findetDieKlasseImNamen(string name, TournamentSpeed expected)
+    {
+        Assert.Equal(expected, ExternalDirectorySource.SpeedWordOf(name));
+    }
+
+    /// <summary>Kein Bedenkzeit-Wort heisst NULL und nicht „Standard" — sonst gaebe es Vetos,
+    /// wo nichts widerspricht.</summary>
+    [Theory]
+    [InlineData("Pierwszy Krok 2026")]
+    [InlineData("Grand Prix Polonii")]
+    [InlineData("Memoriał Zamenhofa")]
+    public void SpeedWordOf_ohneAngabe_istNull(string name)
+    {
+        Assert.Null(ExternalDirectorySource.SpeedWordOf(name));
     }
 
     [Theory]

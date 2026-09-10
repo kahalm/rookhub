@@ -1645,7 +1645,14 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   Foederation** (`CorpusFillerAsync`, ab 8 % der Namen; die feste `NameFiller`-Liste ist englisch und deutsch und
   liess „torneo", „scacchi", „turniej", „szach" durch), (2) **die Ortsangaben duerfen sich nicht widersprechen**
   (`PlacesAgree` — nennt eine Seite keinen Ort, wird nicht widersprochen), (3) **kein zweiter Vermerk derselben
-  Quelle** am selben Eintrag (`HasOtherNoteOfSameKind`). Anlass: am 2026-09-09 waren auf Dev drei echte italienische
+  Quelle** am selben Eintrag (`HasOtherNoteOfSameKind`), (4) **die BEDENKZEIT-Klassen in den Namen duerfen sich
+  nicht widersprechen** (`SpeedsAgree`; nennt eine Seite keine, entscheidet weiter der Wortvergleich). Punkt 4 kam
+  aus dem ersten echten Lauf: in der Nacht zum 2026-09-10 liefen alle DREI tschechischen Zeilen des „UCT Chess
+  Festival 09/2026" auf den Rapid-Eintrag, obwohl Blitz, Rapid und Standard je einen eigenen
+  chess-results-Eintrag haben (1474369/1474368/1474370, gleicher Termin, gleicher Name bis auf das
+  Bedenkzeit-Wort) — „blitz", „rapid" und „standard" stehen in `NameFiller`, der Abgleich hatte dort also gar
+  keinen Unterscheider. Verglichen werden die NAMEN und nicht `entry.Speed`, damit der Vergleich symmetrisch
+  bleibt (die Quellzeile hat kein solches Feld). Anlass: am 2026-09-09 waren auf Dev drei echte italienische
   Turniere (Cormòns, Frascati, Bellante, alle 20.09.) einem „Torneo Sociale Arci Scacchi Bolzano B" vom 21.09.
   zugeschlagen und als „geht darin auf" zurueckgezogen — sie waren im Verzeichnis nicht mehr zu finden. Ein
   Vereinsturnier ueber fuenf Wochen liegt im Termin-Fenster von jedem Wochenendturnier des Landes. **Falsches

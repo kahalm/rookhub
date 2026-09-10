@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.456.9", date: "2026-09-10", changes: [
+    { en: "Blitz, rapid and standard sections of the same festival stay three tournaments instead of collapsing into one. Their names differ only in that one word, and that word had been filtered out as meaningless, so the matching had nothing left to tell them apart. Where both names state a time control, it now has to agree.", de: "Blitz-, Schnellschach- und Standardteil desselben Festivals bleiben drei Turniere und werden nicht zu einem zusammengefasst. Ihre Namen unterscheiden sich nur in diesem einen Wort, und genau das war als nichtssagend herausgefiltert, sodass dem Abgleich nichts mehr blieb, um sie zu trennen. Wo beide Namen eine Bedenkzeit nennen, muss sie jetzt uebereinstimmen." },
+  ] },
   { version: "0.456.8", date: "2026-09-10", changes: [
     { en: "Documentation only: the note on how the map decides between places of the same name now records why the fix from a moment ago does not yet help large cities, and what the measurement says the next step is.", de: "Nur Dokumentation: der Vermerk darueber, wie die Karte zwischen gleichnamigen Orten entscheidet, haelt jetzt fest, warum die Korrektur von vorhin bei Grossstaedten noch nicht greift und was die Messung als naechsten Schritt nennt." },
   ] },
