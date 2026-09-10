@@ -34,3 +34,6 @@ test-results/
 Thumbs.db
 .DS_Store
 __pycache__/
+
+# Arbeitskopien anderer Claude-Sitzungen (git worktrees) — nie Teil des Repos.
+.claude/worktrees/
