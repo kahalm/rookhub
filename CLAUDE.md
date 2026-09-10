@@ -1573,6 +1573,16 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Wichtige Konventionen
 
+- **Eine gleichnamige REGION entscheidet im Ortsnamen-Weg nicht mit** (seit 0.456.5) – Steht in derselben
+  Namensgruppe auch nur ein Ort, fallen die Regionszeilen (`GeoPlaceKind.Region`) vor der Wahl heraus. Eine Region
+  ist die MITTE eines Gebiets und liegt zwangslaeufig woanders als die Stadt, nach der es benannt ist — die Gruppe
+  streute damit weiter als eine Stadt, die Turnierdichte entschied nicht, und es gab KEINEN Pin. Gemessen am
+  2026-09-10: 63 der 100 weissrussischen Eintraege mit kyrillischem Ortstext standen auf „mehrdeutig" („Витебск":
+  Stadt und PLZ-Zeile auf demselben Punkt, Oblast-Mitte 78 km weg; „Гродно" 90 km), und **639 Regionszeilen teilen
+  ihren Namen mit einem Ort desselben Landes** — Tuerkei 71, Thailand 67, Aserbaidschan 65, Algerien 41, Kenia 35.
+  Der Fall ist also weltweit und nicht kyrillisch. Sichtbar wurde er erst durch die Umschrift (0.456.0): vorher
+  trugen kyrillische Regionszeilen einen leeren Suchnamen. Der Rueckfall auf die Regionsmitte bleibt (Feld `state`
+  ueber `ResolveByRegionAsync`, und Gruppen, die NUR aus Regionen bestehen).
 - **Ein Ortsname steht im Lexikon in ZWEI Schreibweisen** (seit 0.456.0) – `GeoPlace.NameNormalized` faltet
   Umlaute auf den Grundvokal (`München` -> `munchen`), `GeoPlace.NameTranscribed` haelt die ASCII-UMSCHRIFT
   (`muenchen`) und schreibt nichtlateinische Schriften um (`Київ` -> `kyiv`, `Αθήνα` -> `athina`). Gesucht wird in

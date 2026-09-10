@@ -317,6 +317,25 @@ public class GeocodingService
     private async Task<GeocodeResult?> ChooseAsync(
         List<GeoPlace> group, string? sourceText, CancellationToken ct)
     {
+        // Eine REGION ist kein Spielort. Steht in derselben Namensgruppe auch nur EIN Ort, haben
+        // die Regionszeilen hier nichts zu entscheiden — sie sind die Mitte eines Gebiets und
+        // liegen zwangslaeufig woanders als die Stadt, nach der es benannt ist.
+        //
+        // Aufgefallen am 2026-09-10 in Weissrussland: 63 der 100 Eintraege mit kyrillischem
+        // Ortstext standen auf „mehrdeutig", obwohl Stadt und Postleitzahl-Zeile auf denselben
+        // Punkt zeigen. „Витебск" fand drei Zeilen — Postleitzahl und Stadt bei 55,190/30,205 und
+        // die GLEICHNAMIGE Oblast-Mitte 78 km entfernt. Damit war die Streuung groesser als eine
+        // Stadt, die Turnierdichte entschied nicht, und es gab keinen Pin. Bei „Гродно" waren es
+        // 90 km. In Russland, Weissrussland und der Ukraine heissen die Gebiete nach ihrer
+        // Hauptstadt, der Fall ist dort also die Regel und nicht die Ausnahme.
+        //
+        // Sichtbar wurde das erst durch die Umschrift (0.456.0): vorher trugen die kyrillischen
+        // Regionszeilen einen LEEREN Suchnamen und konnten gar nicht gefunden werden. Der
+        // Rueckfall auf die Regionsmitte bleibt erhalten — er laeuft ueber das Feld `state`
+        // (ResolveByRegionAsync) und ueber Gruppen, die NUR aus Regionen bestehen.
+        if (group.Count > 1 && group.Any(g => g.Kind != GeoPlaceKind.Region))
+            group = [.. group.Where(g => g.Kind != GeoPlaceKind.Region)];
+
         var byPopulation = group.OrderByDescending(m => m.Population).ThenBy(m => m.Id).First();
         if (group.Count == 1 || Spread(group) < SameTownKm)
             return new GeocodeResult(byPopulation.Lat, byPopulation.Lon, GeoSource.City, byPopulation.Name)

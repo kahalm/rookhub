@@ -232,6 +232,47 @@ public class GeocodingServiceTests : IDisposable
         Assert.Equal(GeoSource.PostalCode, result!.Source);
     }
 
+    // ----- Regionen im Ortsnamen-Weg ----------------------------------------
+
+    /// <summary>
+    /// Eine gleichnamige REGION darf einen Ortstreffer nicht mehrdeutig machen. In Russland,
+    /// Weissrussland und der Ukraine heisst das Gebiet nach seiner Hauptstadt, der Fall ist dort
+    /// also die Regel: „Витебск" fand Postleitzahl-Zeile und Stadt auf demselben Punkt und die
+    /// Oblast-Mitte 78 km entfernt — damit war die Streuung groesser als eine Stadt und es gab
+    /// KEINEN Pin. Am 2026-09-10 auf Dev: 63 der 100 weissrussischen Eintraege mit kyrillischem
+    /// Ortstext standen deshalb auf „mehrdeutig", und 639 Regionszeilen im Lexikon teilen ihren
+    /// Namen mit einem Ort desselben Landes (Tuerkei 71, Thailand 67, Aserbaidschan 65) — der Fall
+    /// ist also nicht kyrillisch, sondern weltweit.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_GleichnamigeRegion_machtDenOrtNichtMehrdeutig()
+    {
+        Seed(Postal("BY", "210001", "Витебск", 55.190, 30.205),
+             City("BY", "Vitebsk", 55.190, 30.205, 358_927),
+             Region("BY", "Витебск", 55.148, 28.970));
+
+        var result = await _service.ResolveAsync("Витебск", null, "BLR");
+
+        Assert.NotNull(result);
+        Assert.NotEqual(GeoSource.Ambiguous, result!.Source);
+        Assert.Equal(55.190, result.Lat, 3);
+    }
+
+    /// <summary>
+    /// Der Rueckfall auf die Regionsmitte bleibt: besteht die Gruppe NUR aus Regionen, entscheiden
+    /// sie weiterhin. Sonst verloere ein Ortstext, der bloss ein Gebiet nennt, seinen groben Pin.
+    /// </summary>
+    [Fact]
+    public async Task ResolveAsync_NurRegionen_entscheidenWeiterhin()
+    {
+        Seed(Region("AT", "Steiermark", 47.2, 15.0));
+
+        var result = await _service.ResolveAsync("Steiermark", null, "AUT");
+
+        Assert.NotNull(result);
+        Assert.Equal(47.2, result!.Lat, 3);
+    }
+
     // ----- Postleitzahlen ---------------------------------------------------
 
     [Fact]
