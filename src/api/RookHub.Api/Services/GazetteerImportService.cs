@@ -87,6 +87,87 @@ public class GazetteerImportService
         };
 
     /// <summary>
+    /// Ortsnamen, die GeoNames unter dem ENGLISCHEN Exonym fuehrt, waehrend die Turniertexte den
+    /// einheimischen Namen schreiben. Das Lexikon bekommt dafuer eine ZWEITE Zeile mit denselben
+    /// Koordinaten — kein Ersatz, sondern ein zweiter Name fuer denselben Punkt.
+    ///
+    /// <para><b>Warum eine Zeile und keine zweite Spalte.</b> Die Ortssuche vergleicht an manchen
+    /// Stellen nur <see cref="GeoPlace.NameNormalized"/> (die Wortfolgen-Suche und der
+    /// Praefix-Weg), an anderen beide Spalten. Eine zusaetzliche ZEILE wirkt auf allen Wegen.
+    /// Und sie erzeugt keine neue Mehrdeutigkeit: die beiden Zeilen liegen am selben Punkt,
+    /// ihr Abstand ist null.</para>
+    ///
+    /// <para><b>Jedes Paar ist einzeln nachgemessen</b> (2026-09-10): aufgenommen ist nur, was im
+    /// Lexikon unter dem Exonym STEHT und unter dem Endonym FEHLT. Der Rest faellt heraus, und
+    /// zwar zu Recht — wo Postleitzahlen importiert sind, tragen deren Ortsnamen das Endonym
+    /// ohnehin: „Warszawa" 3 741 Zeilen, „Lisboa" 9 167, „Roma" 74, „Muenchen" 75. Rom, Warschau,
+    /// Lissabon, Moskau, Kiew und Sevilla brauchen hier also nichts.</para>
+    ///
+    /// <para><b>Prag ist der lehrreiche Fall</b>: Tschechien HAT 15 507 Postleitzahl-Zeilen, aber
+    /// die Prager heissen „Praha 1" bis „Praha 10" und normalisieren nie auf „praha" — dieselbe
+    /// Form, die auch bei „Москва 194" auffiel. Ohne diese Zeile ist die Stadt ueber ihren
+    /// eigenen Namen unerreichbar.</para>
+    ///
+    /// <para><b>Nicht hier hinein gehoert Muenchen.</b> Es sieht wie derselbe Fall aus, ist aber
+    /// keiner: die Umschrift-Spalte traegt „muenchen" schon auf 75 Zeilen, der Treffer gelingt.
+    /// Die 24 unverorteten Muenchner Turniere scheitern an der Mehrdeutigkeitsregel, weil diese
+    /// 75 Zeilen 21,6 km spannen. Eine 76. Zeile aendert daran nichts.</para>
+    /// </summary>
+    internal static readonly (string Country, string Alias, string Canonical)[] PlaceAliases =
+    [
+        ("BE", "Bruxelles", "Brussels"),
+        ("BE", "Brussel", "Brussels"),
+        ("BE", "Antwerpen", "Antwerp"),
+        ("BE", "Luik", "Liege"),
+        ("CZ", "Praha", "Prague"),
+        ("CZ", "Plzen", "Pilsen"),
+        ("DK", "Koebenhavn", "Copenhagen"),
+        ("DK", "Kobenhavn", "Copenhagen"),
+        ("EG", "Al Qahirah", "Cairo"),
+        ("GR", "Athina", "Athens"),
+        ("GR", "Athinai", "Athens"),
+        ("GR", "Peiraias", "Piraeus"),
+        ("IR", "Shahrood", "Shahrud"),
+        ("NL", "Den Haag", "The Hague"),
+    ];
+
+    /// <summary>
+    /// Haengt je Eintrag aus <see cref="PlaceAliases"/> eine zweite Zeile an denselben Punkt.
+    /// Fehlt der kanonische Ort in der Liste (weil GeoNames ihn umbenannt hat oder er unter der
+    /// Einwohnergrenze liegt), passiert nichts — ein Alias ohne Ziel waere eine Zeile ohne
+    /// Koordinaten und damit schlimmer als keine.
+    /// </summary>
+    internal static List<GeoPlace> AddAliasRows(List<GeoPlace> cities)
+    {
+        var added = new List<GeoPlace>();
+
+        foreach (var (country, aliasName, canonical) in PlaceAliases)
+        {
+            var canonicalNormalized = GeoTextNormalizer.Normalize(canonical);
+            var target = cities.FirstOrDefault(c =>
+                string.Equals(c.Country, country, StringComparison.OrdinalIgnoreCase)
+                && c.NameNormalized == canonicalNormalized);
+            if (target is null) continue;
+
+            added.Add(new GeoPlace
+            {
+                Country = target.Country,
+                PostalCode = null,
+                Name = Truncate(aliasName, 200),
+                NameNormalized = Truncate(GeoTextNormalizer.Normalize(aliasName), 200),
+                NameTranscribed = Truncate(GeoTextNormalizer.NormalizeTranscribed(aliasName, country), 200)!,
+                Lat = target.Lat,
+                Lon = target.Lon,
+                Kind = GeoPlaceKind.City,
+                Population = target.Population,
+            });
+        }
+
+        cities.AddRange(added);
+        return cities;
+    }
+
+    /// <summary>
     /// Weltweite Ortsliste. Deckt die Foederationen ab, fuer die kein Postleitzahl-Datensatz
     /// importiert ist - dort bleibt die Ortsnamen-Suche der einzige Weg. Grundlage ist
     /// <c>cities15000</c> (~25k Zeilen); fuer die Laender aus <see cref="DenseCityCountries"/>
@@ -129,8 +210,12 @@ public class GazetteerImportService
             _log.LogWarning(ex, "Gazetteer: cities1000 nicht abrufbar, bleibe bei cities15000");
         }
 
+        var beforeAliases = places.Count;
+        places = AddAliasRows(places);
         await ReplaceAsync(places, g => g.Kind == GeoPlaceKind.City, ct);
-        _log.LogInformation("Gazetteer: {Count} Staedte importiert ({Skipped} uebersprungen)", places.Count, skipped);
+        _log.LogInformation(
+            "Gazetteer: {Count} Staedte importiert ({Skipped} uebersprungen, {Aliases} Namensvarianten)",
+            places.Count, skipped, places.Count - beforeAliases);
         return new GazetteerImportResult("cities15000", places.Count, skipped);
     }
 
