@@ -32,6 +32,12 @@ Summe: **1072 Halbzuege** in 16 Partien.
 
 Die ratende Seite ist immer die Gewinnerseite — also die, deren Plan man nachvollziehen soll.
 
+## Kommentierte Partien aus gemeinfreien Buechern
+
+`books/` setzt gemeinfreie Lehrbuecher in PGN **mit Zug-Kommentaren** um — Capablancas *Chess
+Fundamentals* (er kommentiert seine eigenen Zuege) und Edward Laskers *Chess Strategy* (ein
+Dritter kommentiert, also beide Seiten). Details und Aufruf: `books/README.md`.
+
 ## Herkunft und Rechtliches
 
 Die Zugfolgen stammen aus den frei angebotenen Spielerdateien von <https://www.pgnmentor.com/files.html>
