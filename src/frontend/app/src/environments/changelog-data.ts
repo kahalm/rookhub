@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.462.0", date: "2026-09-10", changes: [
+    { en: "The tournament site is live for everyone, at tournament.oberschmid.homes — the list, a tournament page, the calendar and the directory with its map, with 22583 tournaments from eighteen sources, two thirds of them placed on the map. Same account as RookHub: the entry in the menu takes your login along. Older links with the previous address keep working.", de: "Die Turnierseite ist fuer alle da, unter tournament.oberschmid.homes — Liste, Turnierseite, Kalender und das Verzeichnis mit Karte, mit 22583 Turnieren aus achtzehn Quellen, zwei Drittel davon auf der Karte verortet. Dasselbe Konto wie RookHub: der Eintrag im Menue nimmt die Anmeldung mit. Aeltere Links mit der bisherigen Adresse funktionieren weiter." },
+  ] },
   { version: "0.461.2", date: "2026-09-10", changes: [
     { en: "Background analysis got about five times faster, by arrangement rather than hardware: the server now runs several engines with few threads each instead of one with many. Measured on the same eight cores, four engines with two threads each finish the same work in a third of the time — a single search barely gets faster with more cores, but the work splits into independent parts. The setup is documented for anyone running their own engine.", de: "Die Hintergrund-Analyse ist rund fuenfmal schneller — nicht durch Hardware, sondern durch Aufteilung: der Server faehrt jetzt mehrere Engines mit wenigen Threads statt einer mit vielen. Auf denselben acht Kernen gemessen schaffen vier Engines mit je zwei Threads dieselbe Arbeit in einem Drittel der Zeit; eine einzelne Suche wird mit mehr Kernen kaum schneller, die Arbeit zerfaellt aber in unabhaengige Teile. Der Aufbau ist fuer alle dokumentiert, die eine eigene Engine betreiben." },
   ] },
