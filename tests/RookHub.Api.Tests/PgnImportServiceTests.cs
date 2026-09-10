@@ -501,6 +501,109 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal(1, startSkip.Invalid);
     }
 
+    // ----- Eroeffnungsrepertoire als Kurs (playFromStartPosition) --------------
+
+    /// <summary>Ein Eroeffnungsrepertoire aus der GRUNDSTELLUNG ohne Trainingsmarker: fuer die
+    /// globalen Puzzle-Buecher bleibt das eine ganze Partie ohne Aufgabe (uebersprungen), fuer den
+    /// EIGENEN Kurs des Nutzers ist es genau sein Repertoire.
+    ///
+    /// <para>Anlass: ein Nutzer hat am 2026-09-05 auf Prod ein 5-MB-Chessable-Repertoire
+    /// („Lifetime Repertoires: Plichta's 1.e4") in einen Kurs umwandeln wollen. Alle 902 Linien
+    /// beginnen in der Grundstellung und keine traegt einen [%tqu]-Marker — die Umwandlung fand
+    /// also null spielbare Linien und antwortete mit 400. Er hat bis heute keinen Kurs.</para></summary>
+    [Fact]
+    public void ParsePgn_WeissesRepertoire_wirdAbZugEinsSpielbar()
+    {
+        // Beide Linien enden mit einem WEISSEN Zug → Weiss-Repertoire → der Nutzer zieht zuerst.
+        var pgn = @"
+[Event ""Plichta 1.e4""]
+[Round ""1.1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 c5 2. Nf3 *
+
+[Event ""Plichta 1.e4""]
+[Round ""1.2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 e6 2. d4 *
+";
+        var ohne = PgnImportService.ParsePgn("t.pgn", pgn);
+        Assert.Empty(ohne.Puzzles);          // globales Buch: unveraendert uebersprungen
+
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Equal(2, mit.Puzzles.Count);
+        Assert.All(mit.Puzzles, p => Assert.False(p.IsInfoOnly));
+        Assert.All(mit.Puzzles, p => Assert.Equal(-1, p.StartPly));   // geloest ab dem ersten Zug
+    }
+
+    /// <summary>Ein SCHWARZ-Repertoire beginnt ebenfalls in der Grundstellung, aber der erste Zug
+    /// gehoert dem Gegner. Erkannt an der Zuglaenge: die Linien enden mit einem schwarzen Zug.</summary>
+    [Fact]
+    public void ParsePgn_SchwarzesRepertoire_startetNachDemErstenZug()
+    {
+        var pgn = @"
+[Event ""Nimzoindisch fuer Schwarz""]
+[Round ""1.1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. d4 Nf6 2. c4 e6 *
+
+[Event ""Nimzoindisch fuer Schwarz""]
+[Round ""1.2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. d4 Nf6 2. Nf3 d5 *
+";
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Equal(2, mit.Puzzles.Count);
+        // StartPly 0 = der erste Zug wird vorgespielt, geloest wird ab dem zweiten.
+        Assert.All(mit.Puzzles, p => Assert.Equal(0, p.StartPly));
+    }
+
+    /// <summary>Gemischte Datei: die MEHRHEIT entscheidet, und zwar fuer alle Linien gemeinsam —
+    /// eine Linie fuer sich sagt nichts darueber, wem das Repertoire gehoert.</summary>
+    [Fact]
+    public void ParsePgn_GemischteZuglaengen_dieMehrheitEntscheidet()
+    {
+        var white = @"
+[Event ""X""]
+[Round ""{0}""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 c5 2. Nf3 *
+";
+        var black = @"
+[Event ""X""]
+[Round ""9""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 c5 *
+";
+        var pgn = string.Format(white, "1") + string.Format(white, "2") + black;
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Equal(3, mit.Puzzles.Count);
+        Assert.All(mit.Puzzles, p => Assert.Equal(-1, p.StartPly));   // 2 von 3 enden weiss
+    }
+
+    /// <summary>Mit Trainingsmarker aendert sich NICHTS: der Marker bestimmt weiter den Start.</summary>
+    [Fact]
+    public void ParsePgn_MitTrainingsmarker_bleibtUnberuehrt()
+    {
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 {[%tqu ""Frage""]} c5 2. Nf3 *
+";
+        var ohne = PgnImportService.ParsePgn("t.pgn", pgn);
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Single(ohne.Puzzles);
+        Assert.Single(mit.Puzzles);
+        Assert.Equal(ohne.Puzzles[0].StartPly, mit.Puzzles[0].StartPly);
+    }
+
     [Fact]
     public void ParsePgn_InfoMarker_SetsIsInfoOnly_AndKeepsComment()
     {

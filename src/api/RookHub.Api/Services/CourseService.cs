@@ -696,7 +696,9 @@ public class CourseService
         // Pro-User-eindeutiger interner Dateiname (NICHT der Anzeigename) → kollisionsfrei mit
         // globalen Büchern und Chessable-Importen (chessable-u{userId}-{bid}.pgn).
         var fileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn";
-        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct);
+        // Eigener Kurs des Nutzers: ein Eroeffnungsrepertoire aus der Grundstellung IST hier
+        // spielbarer Inhalt (siehe PgnImportService.StartPlyForRepertoire).
+        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, playFromStartPosition: true);
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct)
             ?? throw new InvalidOperationException("Import failed.");

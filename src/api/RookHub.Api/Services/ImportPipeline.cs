@@ -118,10 +118,19 @@ namespace RookHub.Api.Services;
 ///   Figuren-Geometrie ohne Legalität) füllt die Züge jetzt auch für illegale FENs; das Frontend spielt
 ///   sie ohne chess.js nach. Betrifft nur <c>IsInfoOnly</c>-Linien (Zählung/Quiz unverändert). Die Züge
 ///   stehen bereits im <c>Book.SourcePgn</c> → rein lokal per „Aktualisieren" aufbereitbar.</item>
+/// <item><b>18</b> (0.457.2): <b>Ein EIGENES Eröffnungsrepertoire wird spielbar.</b> Linien aus der
+///   GRUNDSTELLUNG ohne Trainingsmarker galten als „ganze Partie ohne Aufgabe" und wurden verworfen —
+///   richtig für die globalen Puzzle-Bücher, falsch für den eigenen Kurs eines Nutzers, denn dort sind
+///   genau diese Linien sein Repertoire. Bei eigenen Kursen (hochgeladenes PGN, umgewandeltes
+///   Repertoire; `Book.OwnerUserId != null`) bleiben sie jetzt und bekommen einen gemeinsamen
+///   Trainingsstart aus der Seite, der das Repertoire gehört (`PgnImportService.StartPlyForRepertoire`,
+///   Signal: Zuglänge der Linien). Am echten Fall gemessen: ein 5-MB-Chessable-Repertoire mit 902
+///   Linien ergab 0 spielbare Linien, jetzt 900. Die Züge stehen im `Book.SourcePgn` → per
+///   „Aktualisieren" lokal aufbereitbar.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 17;
+    public const int CurrentVersion = 18;
 }

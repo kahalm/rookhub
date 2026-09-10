@@ -136,7 +136,11 @@ public partial class ImportReprocessService
                 // die Exception bis in den fire-and-forget-Launcher durchschlug. Also je Buch isolieren.
                 try
                 {
-                    var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, CancellationToken.None);
+                    // Dieselbe Regel wie beim Anlegen: bei einem EIGENEN Kurs bleiben die
+                    // Repertoire-Linien aus der Grundstellung spielbar. Ohne das raeumte ein
+                    // Reprocess genau die Linien wieder ab, die die Umwandlung erzeugt hat.
+                    var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn,
+                        CancellationToken.None, playFromStartPosition: book.OwnerUserId != null);
                     result.Reprocessed++;
                     result.UpdatedLines += res.Updated;
                 }

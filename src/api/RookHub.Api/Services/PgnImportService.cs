@@ -65,9 +65,19 @@ public class PgnImportService
     /// ECHTEN Stellung aus dem [FEN]-Header (Züge leer), <c>IsInfoOnly</c>, damit der Text + die richtige
     /// Stellung beim sequenziellen Durcharbeiten/Durchsehen erscheinen (kein Quiz, nicht in Random/Daily).
     /// Default false (z. B. Wochenpost = index-basiert, unverändert).</param>
-    public static ParseResult ParsePgn(string fileName, string pgnText, bool keepCommentOnlyAsInfo = false)
+    /// <param name="playFromStartPosition">Wenn true (EIGENE Kurse des Nutzers: hochgeladenes PGN,
+    /// umgewandeltes Repertoire): Linien aus der GRUNDSTELLUNG ohne Trainingsmarker werden nicht
+    /// verworfen, sondern spielbar — sie sind das Repertoire des Nutzers. Der Trainingsstart ergibt
+    /// sich dann aus der Seite, der das Repertoire gehört (siehe <see cref="StartPlyForRepertoire"/>).
+    /// Default false: fuer die globalen Puzzle-Buecher bleibt eine ganze Partie ohne Aufgabe
+    /// weiterhin kein Puzzle.</param>
+    public static ParseResult ParsePgn(string fileName, string pgnText, bool keepCommentOnlyAsInfo = false,
+        bool playFromStartPosition = false)
     {
         var result = new List<ParsedPuzzle>();
+        // Repertoire-Linien aus der Grundstellung: erst sammeln, denn ihr Trainingsstart haengt an
+        // der MEHRHEIT aller Linien der Datei und nicht an der einzelnen Linie.
+        var fromStart = new List<ParsedPuzzle>();
         var invalid = 0;
         foreach (var (headers, moveText) in PgnParser.SplitGames(pgnText))
         {
@@ -146,8 +156,31 @@ public class PgnImportService
             else
             {
                 // Grundstellung ohne Trainingsmarker = kein definierter Trainingsstart → verwerfen.
-                // AUSNAHME: Info-Linien behalten wir (werden nicht abgefragt, nur durchgeklickt).
-                if (PgnParser.IsStartPosition(fen) && !isInfoOnly) { invalid++; continue; }
+                // AUSNAHMEN: Info-Linien behalten wir (werden nicht abgefragt, nur durchgeklickt),
+                // und beim EIGENEN Kurs ist genau das das Repertoire des Nutzers (siehe
+                // playFromStartPosition) — dort wird die Linie unten mit dem gemeinsamen
+                // Trainingsstart nachgetragen.
+                if (PgnParser.IsStartPosition(fen) && !isInfoOnly)
+                {
+                    if (!playFromStartPosition) { invalid++; continue; }
+                    var w0 = headers.GetValueOrDefault("White", "").Trim();
+                    var b0 = headers.GetValueOrDefault("Black", "").Trim();
+                    fromStart.Add(new ParsedPuzzle(
+                        LineId: PgnParser.Truncate($"{fileName}:{round}", 300),
+                        Round: PgnParser.Truncate(round, 20),
+                        Fen: fen,
+                        Moves: string.Join(' ', uci),
+                        StartPly: -1,   // vorlaeufig; unten gemeinsam gesetzt
+                        Title: string.IsNullOrEmpty(w0) ? null : PgnParser.Truncate(w0, 300),
+                        Chapter: string.IsNullOrEmpty(b0) ? null : PgnParser.Truncate(b0, 200),
+                        Comment: comment,
+                        MoveComments: moveComments,
+                        IsInfoOnly: false,
+                        MoveShapes: moveShapes,
+                        AltMoves: altMoves,
+                        ChessableOid: chessableOid));
+                    continue;
+                }
                 startPly = -1;
             }
 
@@ -169,6 +202,15 @@ public class PgnImportService
                 AltMoves: altMoves,
                 ChessableOid: chessableOid));
         }
+
+        // Die gesammelten Repertoire-Linien bekommen JETZT ihren gemeinsamen Trainingsstart.
+        if (fromStart.Count > 0)
+        {
+            var startPlyForAll = StartPlyForRepertoire(fromStart);
+            foreach (var p in fromStart)
+                result.Add(p with { StartPly = startPlyForAll });
+        }
+
         return new ParseResult(result, invalid);
     }
 
@@ -209,10 +251,12 @@ public class PgnImportService
     /// Merge liefert nur die fehlenden Linien, nicht das ganze Buch; ein vollständiges getGame-SourcePgn
     /// bliebe sonst durch das Teil-PGN ersetzt (nur bei leerem SourcePgn wird es erstmalig gesetzt).
     /// </summary>
-    public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct, bool preserveExistingSourcePgn = false)
+    public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct,
+        bool preserveExistingSourcePgn = false, bool playFromStartPosition = false)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
-        var (parsed, invalid) = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true);
+        var (parsed, invalid) = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true,
+            playFromStartPosition: playFromStartPosition);
         var now = DateTime.UtcNow;
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.FileName == fileName, ct);
@@ -372,4 +416,35 @@ public class PgnImportService
             Invalid = invalid,
         };
     }
+
+    /// <summary>
+    /// Wem gehoert dieses Repertoire — und ab welchem Halbzug wird deshalb geuebt?
+    ///
+    /// <para>Ein Eroeffnungsrepertoire beginnt in der Grundstellung und traegt keinen
+    /// Trainingsmarker. Wer zuerst zieht, entscheidet aber darueber, ob der Nutzer den ERSTEN Zug
+    /// spielt (sein 1.e4) oder den ZWEITEN (seine Antwort auf 1.d4). Beides falsch zu machen heisst:
+    /// der Kurs fragt die Zuege des Gegners ab.</para>
+    ///
+    /// <para><b>Das Signal ist die Laenge der Linien.</b> Eine Repertoire-Linie endet mit dem
+    /// eigenen Zug — man lernt „und dann spiele ich X". Ungerade Zugzahl heisst also Weiss,
+    /// gerade heisst Schwarz. Am echten Fall gemessen (Chessable „Lifetime Repertoires: Plichta's
+    /// 1.e4", 902 Linien): 897 enden mit einem weissen Zug, 3 nicht. Der erste ZUG taugt dagegen
+    /// NICHT als Signal — ein Schwarz-Repertoire gegen 1.d4 beginnt in jeder Linie mit 1.d4.</para>
+    ///
+    /// <para>Entschieden wird fuer die ganze Datei gemeinsam: eine einzelne Linie sagt nichts
+    /// darueber, wem das Repertoire gehoert, und ein Repertoire hat genau einen Besitzer.</para>
+    /// </summary>
+    /// <returns><c>-1</c> = ab dem ersten Zug loesen (Weiss), <c>0</c> = der erste Zug wird
+    /// vorgespielt, geloest wird ab dem zweiten (Schwarz).</returns>
+    internal static int StartPlyForRepertoire(IReadOnlyCollection<ParsedPuzzle> fromStart)
+    {
+        var endsWithWhite = 0;
+        foreach (var p in fromStart)
+        {
+            var plies = p.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            if (plies % 2 == 1) endsWithWhite++;
+        }
+        return endsWithWhite * 2 >= fromStart.Count ? -1 : 0;
+    }
+
 }
