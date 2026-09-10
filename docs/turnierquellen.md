@@ -1959,3 +1959,67 @@ Deutschland mit, ist die Regel zu weit gefasst.
 **Weissrussland bleibt danach offen, aber als andere Frage**: „Гомель" gegen den lateinischen
 Lexikon-Namen `Homyel'` ist die russische gegen die belarussische ORTSNAMENSFORM, kein Buchstabe.
 Das braucht Alternativnamen oder eine Handzuordnung der sechs Gebietshauptstaedte.
+
+
+## Der Gegentest zur Regionsregel (2026-09-10, 05:30 UTC, Dev auf 0.456.9)
+
+Dev von Hand deployed, Umschrift war schon korrekt (`Истра` → `istra` — 0.456.2/3 lagen in dem
+0.456.4, das nachts lief), also **kein Nachlauf nötig und der Test isoliert genau die
+Regionsregel**. Ein `geocode-missing`-Durchgang, 7 943 geprueft, 174 verortet.
+
+| Foederation | vorher | nachher | Erwartung war |
+|---|---|---|---|
+| **BLR** | 63 | **3** | „faellt" ✅ |
+| RUS | 398 | 348 | „faellt deutlich" — nur 13 % |
+| ROU | 89 | 66 | — |
+| SVK | 39 | 24 | — |
+| ARG | 62 | 47 | — |
+| **PER** | 186 | **186** | „faellt deutlich" ❌ |
+| **INA** | 92 | **92** | „faellt deutlich" ❌ |
+| **COL** | 85 | **85** | „faellt deutlich" ❌ |
+| CHI / PHI / BRA / ENG | 87 / 67 / 113 / 106 | unveraendert | — |
+| GER | 248 | 251 | „darf kaum fallen" ✅ |
+
+**Weissrussland ist der Beweis, dass die Regel greift**: 4 % → 38 % (Umschrift) → **94 % verortet**
+(101 von 108). Deutschland blieb stehen, wie vorhergesagt — die Regel kann dort nur ueber Hessen
+und Sachsen greifen. Insgesamt `Ambiguous` 2 754 → 2 590, verortet 14 515 → 14 689.
+
+### Die Erwartung war fuer fuenf Laender falsch, und der Grund ist lehrreich
+
+Peru, Indonesien, Kolumbien, Chile und die Philippinen sollten fallen. Sie haben sich um **null**
+bewegt. Die Vorhersage stammte aus einer Zaehlung — 639 Regionszeilen teilen ihren Namen mit einem
+Ort, davon PE 24 — und daraus wurde geschlossen, DIESE Zeilen verursachten Perus 186 mehrdeutige
+Eintraege. Nachgesehen sieht es anders aus:
+
+```
+'lima' im peruanischen Lexikon
+  16 PLZ-Zeilen    Lat −15,38…−8,43   Lon −78,75…−71,47   ≈ 800 × 800 km
+   1 Stadtzeile     −12,04 / −77,03    (das echte Lima)
+   1 Regionszeile   −11,77 / −76,62    ← die Regel entfernt genau DIESE eine
+```
+
+Die Regionszeile war **eine von achtzehn**. Was streut, sind die Postleitzahl-Zeilen, und das ist
+eine Eigenschaft der peruanischen Daten: dort steht im Ortsfeld ein SIEDLUNGSname, und dieselben
+Namen kommen im ganzen Land vor.
+
+```
+Peru, gleichnamige PLZ-Zeilen:  Santa Rosa 311 · Vista Alegre 242 · Miraflores 184
+                                Nueva Esperanza 179 · Buenos Aires 159
+Deutschland zum Vergleich:      Berlin 182 (alle in Berlin) · Hamburg 101
+```
+
+Wieder derselbe Fehler wie viermal an diesem Tag: **von einer Zahl auf eine Wirkung geschlossen,
+ohne die Gegenseite anzusehen.** Diesmal war die Zahl richtig (Peru HAT 24 solche Regionszeilen)
+und trotzdem nicht die Ursache.
+
+### Was der Befund fuer das Haeufungs-Kriterium bedeutet
+
+Das Kriterium im TODO lautete „EIN zusammenhaengender Haufen = eine Stadt". **Peru zeigt, dass das
+zu streng ist**: die 16 Lima-Zeilen sind 13 auf einem Punkt plus 3 verstreute Doerfer, also vier
+Haufen — die Regel gaebe weiter keinen Pin, obwohl 13 von 16 Zeilen eindeutig auf Lima zeigen.
+Richtig waere **ein DOMINANTER Haufen**, nicht ein einziger. Bei Muenster ([14, 1, 1, 1]) faellt
+die Entscheidung dann auf das westfaelische Muenster, und genau das ist die Stadt mit 300 000
+Einwohnern — der dokumentierte Schaden waren Pins am FALSCHEN Muenster, nicht am richtigen.
+
+Vor dem Bauen also zwei Dinge messen, die noch offen sind: welcher Dominanz-Anteil trennt, und ob
+es Faelle gibt, in denen der groesste Haufen NICHT der gemeinte Ort ist.

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.456.10", date: "2026-09-10", changes: [
+    { en: "Belarusian tournaments are on the map: 94 per cent of them now have a pin, up from 4 per cent this morning. Their place names arrive in Cyrillic, and once those could be read, a second problem surfaced — a region that carries the same name as its capital city was scattering the candidates and the map gave up rather than guess. Russia, Romania, Slovakia and Argentina improve for the same reason.", de: "Weissrussische Turniere stehen auf der Karte: 94 Prozent von ihnen haben jetzt eine Nadel, heute Morgen waren es 4 Prozent. Ihre Ortsnamen kommen kyrillisch, und als die lesbar waren, kam ein zweites Problem zum Vorschein — eine Region, die denselben Namen traegt wie ihre Hauptstadt, streute die Kandidaten so weit, dass die Karte lieber gar keine Nadel setzte als zu raten. Russland, Rumaenien, die Slowakei und Argentinien gewinnen aus demselben Grund." },
+  ] },
   { version: "0.456.9", date: "2026-09-10", changes: [
     { en: "Blitz, rapid and standard sections of the same festival stay three tournaments instead of collapsing into one. Their names differ only in that one word, and that word had been filtered out as meaningless, so the matching had nothing left to tell them apart. Where both names state a time control, it now has to agree.", de: "Blitz-, Schnellschach- und Standardteil desselben Festivals bleiben drei Turniere und werden nicht zu einem zusammengefasst. Ihre Namen unterscheiden sich nur in diesem einen Wort, und genau das war als nichtssagend herausgefiltert, sodass dem Abgleich nichts mehr blieb, um sie zu trennen. Wo beide Namen eine Bedenkzeit nennen, muss sie jetzt uebereinstimmen." },
   ] },

@@ -181,6 +181,13 @@ vitebsk   3    2    2    2    2    2
 muenster 17    4    3    3    3    3
 ```
 
+**Korrigiert am 2026-09-10 nach dem Gegentest**: das Kriterium „EIN Haufen" ist ZU STRENG. Perus
+16 `lima`-PLZ-Zeilen sind 13 auf einem Punkt plus 3 verstreute Doerfer — vier Haufen, also weiter
+kein Pin, obwohl 13 von 16 eindeutig auf Lima zeigen. Gebraucht wird ein **DOMINANTER** Haufen.
+Bei Muenster [14, 1, 1, 1] entscheidet das aufs westfaelische Muenster, und der dokumentierte
+Schaden waren Pins am FALSCHEN Muenster. Offen und vor dem Bauen zu messen: welcher
+Dominanz-Anteil trennt, und ob der groesste Haufen je NICHT der gemeinte Ort ist.
+
 **5 km ist zu eng** — Wien fiel in drei Haufen, obwohl alle Zeilen innerhalb der Stadt liegen
 (duenn belegte Aussenbezirke). **Ab 8 km trennt es sauber und bleibt bis 15 km stabil**: das ist
 eine echte Schwelle und kein angepasster Wert. Muenster bleibt getrennt, weil dort Hunderte
@@ -194,6 +201,30 @@ Vitebsk-Fall in der Tabelle, die dort deshalb noch auf 2 stehen), dann wird geha
 `scratchpad/baseline_ambiguous.txt` und in `docs/turnierquellen.md`; die Mehrdeutigkeitsregel jetzt
 zu aendern macht die Messung nicht mehr auswertbar. Erst messen, wie viel v0.456.5 schon abraeumt,
 dann diesen Punkt neu bewerten.
+
+## [ ] Perus PLZ-Ortsnamen sind Siedlungsnamen und wiederholen sich landesweit (2026-09-10)
+
+Der Gegentest zur Regionsregel hat gezeigt, dass Peru (186 mehrdeutig), Indonesien (92), Kolumbien
+(85), Chile (87) und die Philippinen (67) sich um **null** bewegen — ihre Ursache ist eine andere.
+Im peruanischen PLZ-Datensatz steht im Ortsfeld ein SIEDLUNGSname, und dieselben Namen kommen
+landesweit vor:
+
+```
+Santa Rosa 311 · Vista Alegre 242 · Miraflores 184 · Nueva Esperanza 179 · Buenos Aires 159
+```
+
+Deutschland zum Vergleich: „Berlin" 182 Zeilen, alle in Berlin.
+
+Dazu nennen die peruanischen Ortstexte oft gar keinen Ort, sondern einen Verein oder eine Schule
+(„Club de Ajedrez Barranco Crema", „I.E. Antenor Orrego - Secundaria") — „Barranco" ist ein
+Stadtteil von Lima und trifft damit die Streuzeilen.
+
+Das ist **nicht** mit der Regionsregel und **nicht** allein mit dem Haeufungs-Kriterium zu loesen
+(bei echter Streuung gibt es keinen dominanten Haufen). Denkbare Richtungen, alle ungemessen:
+Stadtzeilen vor PLZ-Zeilen bevorzugen, wenn die PLZ-Zeilen streuen; die Einwohnerzahl auch
+ueber die 5-km-Grenze hinaus zulassen, wenn ein Kandidat um Groessenordnungen groesser ist;
+oder diese Laender bewusst auf `cities15000` beschraenken und ihre PLZ nicht laden. Vor jeder
+Entscheidung messen, wie viele der 517 Eintraege der fuenf Laender daran haengen.
 
 ## [ ] GeoNames fuehrt Grossstaedte unter dem ENGLISCHEN Namen (2026-09-10)
 
