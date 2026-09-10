@@ -150,6 +150,67 @@ Regel: ein Treffer OHNE vergleichbaren Namen kann die Bestaetigung nicht verdien
 entscheidet die Laenge der Ziffernfolge (vier Stellen sind eine Postleitzahl, drei koennen eine
 Hausnummer sein).
 
+## [ ] Mehrdeutigkeit ueber ZUSAMMENHANG entscheiden, nicht ueber Spannweite (2026-09-10)
+
+Der `Ambiguous`-Topf haelt 2 701 Eintraege (RUS 398, GER 248, POL 206, PER 186, ENG 107) und
+zerfaellt in ZWEI Klassen, die die heutige 5-km-Regel nicht unterscheiden kann, weil sie nur die
+maximale Streuung ansieht:
+
+- **eine Stadt mit vielen Postleitzahlbereichen** — 184 Zeilen „Berlin" streuen ueber 39 km. Das
+  ist kein Zweifelsfall, es ist eine Stadt. Deutschlands Spitzenwerte sind genau diese:
+  Muenchen 24, Bremen 24, Berlin 22, Hamburg 14, Mainz 14.
+- **mehrere gleichnamige Orte** — 17 Zeilen „Muenster" ueber 441 km sind wirklich verschiedene
+  Orte, und dort ist „kein Pin" die richtige Antwort. Muenster steht mit 7 dahinter.
+
+**Vorschlag (aus Kopie 2) und Messung dazu (von hier):** nicht die Spannweite ansehen, sondern den
+ZUSAMMENHANG — liegen die Kandidaten in EINEM Haufen, dessen innere Luecken unter einer Schwelle
+bleiben (Single-Linkage), ist es eine Stadt, egal wie gross sie ist. Zahl der Haufen je Schwelle,
+gemessen am Dev-Lexikon:
+
+```
+             5km  8km 10km 12km 15km
+berlin  184    1    1    1    1    1
+hamburg 103    1    1    1    1    1
+muenchen 75    1    1    1    1    1
+koeln    46    1    1    1    1    1
+bremen   36    2    1    1    1    1
+dresden  30    2    1    1    1    1
+wien     80    3    1    1    1    1
+minsk    93    2    2    2    2    2
+vitebsk   3    2    2    2    2    2
+muenster 17    4    3    3    3    3
+```
+
+**5 km ist zu eng** — Wien fiel in drei Haufen, obwohl alle Zeilen innerhalb der Stadt liegen
+(duenn belegte Aussenbezirke). **Ab 8 km trennt es sauber und bleibt bis 15 km stabil**: das ist
+eine echte Schwelle und kein angepasster Wert. Muenster bleibt getrennt, weil dort Hunderte
+Kilometer zwischen den Haufen liegen.
+
+Die Regel setzt AUF v0.456.5 auf, sie ersetzt sie nicht: erst fallen gleichnamige Regionszeilen aus
+der Wahl (sonst reisst die Oblast-Mitte 78 km entfernt jeden Haufen auf — genau der Minsk- und
+Vitebsk-Fall in der Tabelle, die dort deshalb noch auf 2 stehen), dann wird gehaeuft.
+
+**Nicht vor dem Gegentest zu v0.456.5 bauen.** Die Grundlinie fuer den steht in
+`scratchpad/baseline_ambiguous.txt` und in `docs/turnierquellen.md`; die Mehrdeutigkeitsregel jetzt
+zu aendern macht die Messung nicht mehr auswertbar. Erst messen, wie viel v0.456.5 schon abraeumt,
+dann diesen Punkt neu bewerten.
+
+## [ ] GeoNames fuehrt Grossstaedte unter dem ENGLISCHEN Namen (2026-09-10)
+
+`Muenchen` hat im Lexikon **keine Stadtzeile** — GeoNames fuehrt die Stadt als „Munich", und das
+normalisiert zu `munich`. Die deutsche Form steht dort nur in den Alternativnamen, die wir nicht
+importieren. Nachgesehen: „Munich" ja, „Vienna" ja, „Koeln" dagegen deutsch. Es ist also
+uneinheitlich und trifft die Staedte mit gaengigem englischem Exonym (Muenchen, Wien, Prag,
+Nuernberg, Moskau).
+
+**Heute faellt es nicht auf**, weil die Postleitzahl-Zeilen einspringen: 75 Zeilen „… Muenchen",
+80 „… Wien". Wien steht deshalb bei 35 von 36 Turnieren verortet. **Der Puffer fehlt genau den
+Laendern ohne PLZ-Datensatz** — und die stehen schon im `cities1000`-Punkt darunter.
+
+Zwei moegliche Wege, beide klein: die Alternativnamen-Datei fuer eine Handvoll Grossstaedte
+mitimportieren, oder `NameTranscribed` um die gaengigen Exonyme ergaenzen. Vorher messen, wie viele
+Eintraege ueberhaupt daran haengen — bei Wien waren es 1.
+
 ## [ ] `cities1000` statt `cities15000` — aber NUR fuer die Laender ohne Postleitzahlen (2026-09-09)
 
 Fuer duenn belegte Laender ist der Hebel nicht die Umschrift (v0.456.3), sondern die Groesse der
