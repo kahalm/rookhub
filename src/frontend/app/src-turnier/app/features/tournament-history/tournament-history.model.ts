@@ -87,3 +87,34 @@ export interface HistoryFriend {
    */
   hasName: boolean;
 }
+
+/**
+ * Ein VERFOLGTER Spieler: jemand ohne Konto hier, dessen Verlauf man mitliest — das eigene Kind,
+ * ein Vereinskamerad, der Gegner der naechsten Runde.
+ *
+ * <p>Die Turnierdaten dahinter sind auf chess-results oeffentlich; verfolgt wird deshalb eine
+ * SUCHE (Name plus Kennungen), kein Konto. Die Liste gehoert dem Konto, das sie angelegt hat.</p>
+ */
+export interface TrackedPlayer {
+  id: number;
+  displayName: string;
+  /** Traegt der Eintrag eine Kennung? Sonst sind Namensgleiche mit dabei. */
+  exact: boolean;
+  /**
+   * Die Suche dahinter — dieselben Felder, die beim Verfolgen hingingen. Sie kommen zurueck,
+   * damit „nicht mehr verfolgen" ein Rueckgaengig haben kann, ohne den Spieler erneut zu suchen.
+   */
+  lastName: string;
+  firstName: string | null;
+  fideId: string | null;
+  chessResultsId: string | null;
+}
+
+/** Was beim Verfolgen an den Server geht — genau das, was die Spielersuche zurueckgab. */
+export interface TrackPlayerRequest {
+  lastName: string;
+  firstName: string | null;
+  fideId: string | null;
+  chessResultsId: string | null;
+  displayName: string;
+}

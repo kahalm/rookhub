@@ -134,3 +134,60 @@ public class HistoryFriendDto
     /// </summary>
     public bool HasName { get; set; }
 }
+
+/// <summary>
+/// Ein verfolgter Spieler in der Auswahl — jemand ohne Konto, dessen Verlauf ein Nutzer
+/// mitverfolgt (das eigene Kind, ein Vereinskamerad, der naechste Gegner).
+/// </summary>
+public class TrackedPlayerDto
+{
+    public int Id { get; set; }
+    public string DisplayName { get; set; } = "";
+
+    /// <summary>
+    /// Traegt der Eintrag eine FIDE- oder chess-results-Kennung? Ohne sie sucht der Verlauf ueber
+    /// den NAMEN und zeigt damit auch Namensgleiche — dieselbe Einschraenkung wie bei Freunden
+    /// ohne Kennung im Profil.
+    /// </summary>
+    public bool Exact { get; set; }
+
+    /// <summary>
+    /// Die Suche, die dahintersteckt — dieselben Felder, die beim Verfolgen ankamen.
+    ///
+    /// <para>Sie gehen mit, damit „nicht mehr verfolgen" ein RUECKGAENGIG haben kann: der Client
+    /// legt den Eintrag damit unveraendert wieder an, ohne den Spieler ein zweites Mal suchen zu
+    /// lassen. Es sind die Angaben, die dieses Konto selbst geschickt hat, und die Liste sieht
+    /// ohnehin nur, wem sie gehoert.</para>
+    /// </summary>
+    public string LastName { get; set; } = "";
+    public string? FirstName { get; set; }
+    public string? FideId { get; set; }
+    public string? ChessResultsId { get; set; }
+
+    public static TrackedPlayerDto From(Models.TrackedPlayer player) => new()
+    {
+        Id = player.Id,
+        DisplayName = player.DisplayName,
+        Exact = player.FideId is not null || player.ChessResultsId is not null,
+        LastName = player.LastName,
+        FirstName = player.FirstName,
+        FideId = player.FideId,
+        ChessResultsId = player.ChessResultsId,
+    };
+}
+
+/// <summary>
+/// Was beim Verfolgen ankommt: das, was die Spielersuche zurueckgegeben hat. Der Nachname ist
+/// Pflicht — die chess-results-Spielersuche sucht ueber den Namen, es gibt dort keine Suche ueber
+/// eine Nummer.
+/// </summary>
+public class AddTrackedPlayerDto
+{
+    public string LastName { get; set; } = "";
+    public string? FirstName { get; set; }
+    public string? FideId { get; set; }
+    public string? ChessResultsId { get; set; }
+
+    /// <summary>Wie der Reiter heissen soll; leer = „Nachname, Vorname".</summary>
+    public string? DisplayName { get; set; }
+}

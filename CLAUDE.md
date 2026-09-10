@@ -308,10 +308,36 @@ Namensgleiche mit; die Auswahl markiert das (`exact: false`).
 |---------|----------|-------|
 | GET | `/api/tournament-history?userIds=` | Verlauf; ohne Parameter der eigene. Fremde Konten muessen **angenommene Freunde** sein (sonst 403, fuer die ganze Anfrage — ein still uebersprungenes Konto waere eine Luecke ohne Erklaerung); max. 20 je Aufruf. Je Konto `status` (`ok`/`noName`/`sourceUnavailable`), `entries` und `pending` |
 | GET | `/api/tournament-history/friends` | Welche Freunde ueberhaupt einen Verlauf haben (Nachname im Profil), je mit `exact` — traegt das Profil eine Kennung? |
+| GET | `/api/tournament-history/tracked` | Die verfolgten Spieler dieses Kontos (siehe unten) |
+| POST | `/api/tournament-history/tracked` | Einen beliebigen Spieler verfolgen `{ lastName, firstName?, fideId?, chessResultsId?, displayName? }` — das, was `GET /api/profile/player-search` zurueckgab. **Idempotent**: derselbe Spielerschluessel gibt den vorhandenen Eintrag zurueck (kein 409 — die Oberflaeche muesste sonst einen Fehler zeigen, wo nichts fehlt). 400 ohne Nachnamen (min. 2 Zeichen) und ab `MaxTracked` (20) Eintraegen, dann mit `limit` im Rumpf |
+| DELETE | `/api/tournament-history/tracked/{id}` | Nicht mehr verfolgen (404 bei fremdem Eintrag). Der geholte Verlauf BLEIBT — er gehoert dem Spieler, nicht dem Reiter |
+| GET | `/api/tournament-history/tracked/{id}` | Der Verlauf eines verfolgten Spielers (`PlayerHistoryDto` mit `userId: 0`). Eigener Endpunkt statt eines Parameters an `/api/tournament-history`: dort ist die Zahl ein KONTO, hier ein Eintrag der eigenen Liste |
 
 Sichtbarkeit wie bei `/api/friends/{userId}/stats`: die Daten sind auf chess-results oeffentlich,
 die VERKNUEPFUNG von Konto und Spielerkennung ist es nicht (`PublicProfileDto` gibt die
 ChessResultsId bewusst nicht heraus, und dabei bleibt es).
+
+**Verfolgte Spieler: der Verlauf haengt nicht mehr an KONTEN** (`TrackedPlayers`, seit 0.463.0).
+Bis hierher gab es genau zwei Quellen fuer einen Reiter — das eigene Konto und angenommene
+Freunde. Die Leute, deren Ergebnisse man tatsaechlich verfolgt, haben aber meist gar kein Konto
+hier: das eigene Kind, ein Vereinskamerad, der Gegner der naechsten Runde. Sie einzuladen, damit
+man ihre auf chess-results OEFFENTLICH stehenden Turniere sehen kann, ist keine Loesung.
+
+Gespeichert wird eine **SUCHE, kein Personendatensatz**: genau die vier Felder, aus denen
+`IdentityOf` einen Spielerschluessel baut (Nachname, Vorname, FIDE-Nummer, chess-results-Nummer).
+Damit faellt der Verlauf selbst in denselben Zwischenspeicher wie der eines Kontos — wer denselben
+Spieler verfolgt wie jemand anderes, loest keinen zweiten Abruf aus. Angelegt wird aus der
+bestehenden Spielersuche (`GET /api/profile/player-search`, chess-results UND FIDE): die
+Kennung kennt niemand auswendig, und ohne sie zeigt der Verlauf Namensgleiche mit (`exact:
+false`, die Ansicht sagt es).
+
+Zwei Dinge, die dabei nicht kippen duerfen: (1) **Verfolgte laufen im naechtlichen Durchgang MIT**
+(`RefreshAllAsync` nimmt ihre Identitaeten zu denen der Profile) — sonst stuende ihr Verlauf nur
+so weit, wie ihn jemand durch Ansehen gefuellt hat (gedeckelt auf `MaxCardsPerRequest` je Aufruf),
+und bei einem Vielspieler bliebe die Tabelle dauerhaft halb leer. (2) Die Liste ist auf
+`MaxTracked` (20) gedeckelt und wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) — jeder
+Eintrag kostet den Nachtlauf mindestens einen Seitenabruf, eine Liste ohne Deckel waere ein Weg,
+den Crawler mit einem einzigen Konto auszulasten.
 
 **Der Verlauf entsteht im HINTERGRUND** (`PlayerHistoryScheduler`, 04:30 UTC nach dem
 Verzeichnis-Sweep, plus ein Lauf zehn Minuten nach dem Start): `RefreshAllAsync` frischt jede
@@ -1246,6 +1272,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentDirectoryIgnores | „Dieses Turnier will ich nicht sehen" je Nutzer. Gemerkt wird die IDENTITAET (`PublicId`) und nicht die Eintrags-Id (ein Eintrag kann verschwinden und wiederkommen, die Entscheidung soll gelten) — deshalb auch kein FK aufs Turnier, wie bei `TournamentSubscription` | UserId (Cascade), PublicId (≤24), CreatedAt; **UNIQUE (UserId, PublicId)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | PlayerTournamentResults | Zwischenspeicher des Turnierverlaufs: die Teilnahme EINES Spielers an EINEM Turnier samt Ergebnis. Der Schluessel ist der **SPIELER, nicht das Konto** — die Historie ist fuer jeden dieselbe, ein Freund benutzt denselben Speicher. Die Kartenwerte werden genau einmal geholt (ein abgeschlossenes Turnier aendert sich nie wieder) | PlayerKey (≤40, `fide:…`/`cr:…`/`name:…`), ChessResultsId (≤20), Snr, TournamentName (≤500), EndDate?, Rank?/Rounds?/PlayerCount? (aus der Trefferliste), Points? (5,2)/PerformanceRating?/RatingChange? (6,2)/RatingInternational? (aus der Spielerkarte), **GamesPlayed?** (gespielte Partien von der KARTE — nicht die Rundenzahl), **CardVersion** (Fassung des Kartenabrufs; aeltere werden einmal nachgeholt, sonst bekaeme der Bestand ein spaeter ergaenztes Feld nie), CardFetchedAt? (gesetzt AUCH bei leerem Ergebnis — sonst wird dieselbe Seite jedes Mal erneut geholt; bei einem NETZfehler dagegen nicht), UpdatedAt; **UNIQUE (PlayerKey, ChessResultsId)** + Index (PlayerKey, EndDate) |
 | TournamentTimeControls | Die BEDENKZEIT eines Turniers — je TURNIER, nicht je Teilnahme: zwei Konten im selben Open teilen sie sich, und sie kostet einen eigenen Seitenabruf (chess-results fuehrt sie nur in der Turnierdetail-Ansicht, die Spielersuche liefert sie nicht). Gespeichert wird Rohtext UND abgeleitete Klasse, damit eine geaenderte Einordnungsregel ohne neuen Abruf auf den Bestand wirkt | ChessResultsId (PK, ≤20), TimeControlText? (≤300, „90 min + 30 sec / Zug"), Speed (`TournamentSpeed`, via `TournamentSpeedClassifier`), FetchedAt (gesetzt AUCH ohne gefundene Bedenkzeit — sonst wird dieselbe Seite bei jedem Durchgang erneut geholt; ein NETZfehler legt nichts an), **Version** (Fassung des Abrufs; aeltere werden EINMAL nachgeholt, sonst friert ein Parser-Fehler als „nennt keine Bedenkzeit" ein) |
+| TrackedPlayers | Ein Spieler, dessen Verlauf ein Nutzer mitverfolgt, ohne dass dieser Spieler ein KONTO haette (das eigene Kind, ein Vereinskamerad, der naechste Gegner). Gespeichert ist eine SUCHE, kein Personendatensatz — genau die Felder, aus denen `TournamentHistoryService.IdentityOf` den Spielerschluessel baut. Der Verlauf selbst liegt weiter an `PlayerTournamentResult.PlayerKey` und wird geteilt | UserId (Cascade), PlayerKey (≤40, wie `PlayerTournamentResult.PlayerKey` — derselbe Spieler ueber Name und ueber FIDE-Nummer gefunden ist EIN Eintrag), DisplayName (≤200), LastName (≤100), FirstName? (≤100), FideId? (≤20), ChessResultsId? (≤20), CreatedAt; **UNIQUE (UserId, PlayerKey)**. Deckel 20 je Konto (`TournamentHistoryController.MaxTracked`); wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | PlayerHistorySyncs | Wann die Trefferliste EINES Spielers zuletzt geholt wurde (TTL 12 h). Nach einem Fehlschlag bleibt der Zeitstempel ALT, damit der naechste Aufruf es wieder versucht statt zwoelf Stunden zu warten | PlayerKey (PK, ≤40), LastFetchedAt, LastError? (≤500) |
 | UserViewStates | Anzeige-Zustand EINER Seite fuer EINEN Nutzer (heute die Filterleiste des Turnierkalenders). Fuer den Server **OPAK** — nur JSON-Gueltigkeit, Objekt-Form und Groesse werden geprueft; er wird nie abgefragt. `ViewKey` kommt aus `ViewStateService.AllowedKeys`, sonst waere das ein freier Speicher je Nutzer | UserId (Cascade), ViewKey (≤64), Json (**text**, ≤8192 Zeichen — `varchar(8192)` zaehlte in utf8mb4 mit 32 KB gegen das 64-KB-Zeilenlimit), UpdatedAt; **UNIQUE (UserId, ViewKey)**. Wird beim Kontoloeschen mit abgeraeumt (`ProfileService`) |
 | GeoPlaces | GeoNames-Ortslexikon (CC BY 4.0) | Country (ISO2), PostalCode?, Name, NameNormalized, Lat/Lon, Kind (PostalCode/City/Region), Population; Index (Country, PostalCode), (Country, NameNormalized) |
@@ -1407,7 +1434,8 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   getrennt lesbar; 1900 im Blitz ist nicht 1900 im Turnierschach. **`unknown` ist eine eigene
   Gruppe** und faellt nicht heraus: die Bedenkzeit steht auf einer eigenen Seite, die erst der
   naechtliche Durchgang holt — ohne diese Gruppe war die Uebersicht direkt nach dem Deploy leer.
-  **Ein REITER je Konto** (ich zuerst, dann die Freunde) statt einer Auswahlliste; jeder Reiter
+  **Ein REITER je Konto UND je verfolgtem Spieler** (ich zuerst, dann die Freunde, dann die
+  Verfolgten) statt einer Auswahlliste; jeder Reiter
   laedt genau EIN Konto (alle auf einmal hiesse: eine chess-results-Abfrage je Freund, auch fuer
   die, die niemand ansieht), einmal geladene bleiben im Zwischenspeicher. Freunde ohne Namen im
   Profil behalten ihren Reiter — gesperrt und mit Grund, statt kommentarlos zu fehlen. Der EIGENE
@@ -1424,6 +1452,18 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   gespieltes Turnier steht dort NIE. Ist es geholt → `/tournaments/{id}`; ist es das nicht →
   Holen-Auftrag einreihen und nachfragen (`MaxImportPolls` 30 × 4 s ≈ zwei Minuten, danach eine
   Meldung statt endlosen Wartens).
+  **Das „+" verfolgt beliebige Personen** (0.463.0, `track-player-dialog.component.ts`): Vor- und
+  Nachname eingeben, suchen (`GET /api/profile/player-search`), einen Treffer waehlen — er wird
+  zum eigenen Reiter. Drei Dinge dabei: (1) Der Reiter-SCHLUESSEL ist zusammengesetzt (`u:12`
+  fuer ein Konto, `t:3` fuer einen Verfolgt-Eintrag) — die beiden Kennungen kommen aus
+  verschiedenen Toepfen und kollidieren zwangslaeufig; mit der Zahl allein zeigten zwei Reiter auf
+  denselben Zwischenspeicher. Ein alter gemerkter Reiter (`{ userId }` im localStorage) wird
+  weiter gelesen. (2) Der gemerkte Reiter wird erst verworfen, wenn BEIDE Listen (Freunde und
+  Verfolgte) da sind — die Antworten kommen in beliebiger Reihenfolge, und wer nach der ersten
+  urteilt, wirft einen Reiter weg, den die zweite gerade mitbringt. (3) Angelegt wird IM Dialog,
+  nicht beim Aufrufer: scheitert es (Deckel erreicht, Netz weg), bleibt er offen und sagt es —
+  statt dass sich ein Fenster schliesst und danach sichtbar nichts passiert. „Nicht mehr
+  verfolgen" hat ein Rueckgaengig, deshalb traegt `TrackedPlayerDto` die Suchfelder mit.
 - **Geteilte Anzeige-Einstellungen** (`core/shared-preference.ts`): Design-Modus UND **Sprache**
   liegen in einem Cookie auf der gemeinsamen Elterndomaene — zwei Origins teilen den
   `localStorage` nicht, eine Sprachwahl auf der einen Seite liess die andere sonst in Englisch

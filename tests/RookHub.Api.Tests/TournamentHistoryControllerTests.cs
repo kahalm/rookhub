@@ -211,6 +211,199 @@ public class TournamentHistoryControllerTests : IDisposable
             Assert.IsType<OkObjectResult>(result.Result).Value));
     }
 
+    // ----- Verfolgte Spieler ------------------------------------------------
+
+    /// <summary>
+    /// Verfolgt wird, was die Spielersuche zurueckgegeben hat — und der Schluessel ist derselbe
+    /// wie beim Verlauf eines Kontos: die FIDE-Kennung hat Vorrang.
+    /// </summary>
+    [Fact]
+    public async Task Track_StoresThePlayer_WithTheSameKeyAsAnAccount()
+    {
+        var me = await CreateUserAsync("ich");
+
+        var result = await Controller(me).Track(new AddTrackedPlayerDto
+        {
+            LastName = "Oberschmid", FirstName = "Patrik", FideId = "1693034",
+            ChessResultsId = "144749", DisplayName = "Oberschmid, Patrik",
+        });
+
+        var dto = Assert.IsType<TrackedPlayerDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal("Oberschmid, Patrik", dto.DisplayName);
+        Assert.True(dto.Exact);
+
+        var stored = await _db.TrackedPlayers.SingleAsync();
+        Assert.Equal(me, stored.UserId);
+        Assert.Equal("fide:1693034", stored.PlayerKey);
+        Assert.Equal("Oberschmid", stored.LastName);
+    }
+
+    /// <summary>Ohne Anzeigenamen entsteht er aus dem Namen — der Reiter braucht eine Beschriftung.</summary>
+    [Fact]
+    public async Task Track_WithoutDisplayName_FallsBackToTheName()
+    {
+        var me = await CreateUserAsync("ich");
+
+        await Controller(me).Track(new AddTrackedPlayerDto { LastName = "Kasparov", FirstName = "Garry" });
+
+        Assert.Equal("Kasparov, Garry", (await _db.TrackedPlayers.SingleAsync()).DisplayName);
+    }
+
+    /// <summary>
+    /// Ohne Kennung sucht der Verlauf ueber den NAMEN und zeigt Namensgleiche mit — das steht als
+    /// <c>exact: false</c> in der Antwort, damit die Ansicht es sagen kann.
+    /// </summary>
+    [Fact]
+    public async Task Track_WithoutIdentifiers_IsMarkedInexact()
+    {
+        var me = await CreateUserAsync("ich");
+
+        var result = await Controller(me).Track(new AddTrackedPlayerDto { LastName = "Mueller", FirstName = "Hans" });
+
+        var dto = Assert.IsType<TrackedPlayerDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.False(dto.Exact);
+        Assert.Equal("name:mueller-hans", (await _db.TrackedPlayers.SingleAsync()).PlayerKey);
+    }
+
+    /// <summary>
+    /// Denselben Spieler ein zweites Mal: kein Fehler, kein zweiter Reiter — der vorhandene
+    /// Eintrag kommt zurueck. Ein 409 zwaenge die Oberflaeche, einen Fehler zu zeigen, wo nichts
+    /// fehlt.
+    /// </summary>
+    [Fact]
+    public async Task Track_SamePlayerTwice_ReturnsTheExistingEntry()
+    {
+        var me = await CreateUserAsync("ich");
+        var dto = new AddTrackedPlayerDto { LastName = "Carlsen", FirstName = "Magnus", FideId = "1503014" };
+
+        var first = Assert.IsType<TrackedPlayerDto>(
+            Assert.IsType<OkObjectResult>((await Controller(me).Track(dto)).Result).Value);
+        var second = Assert.IsType<TrackedPlayerDto>(
+            Assert.IsType<OkObjectResult>((await Controller(me).Track(dto)).Result).Value);
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Single(await _db.TrackedPlayers.ToListAsync());
+    }
+
+    /// <summary>Ohne Nachnamen gibt es keine Spielersuche — also auch nichts zu verfolgen.</summary>
+    [Fact]
+    public async Task Track_WithoutLastName_IsRejected()
+    {
+        var me = await CreateUserAsync("ich");
+
+        var result = await Controller(me).Track(new AddTrackedPlayerDto { LastName = "K", FirstName = "Magnus" });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(await _db.TrackedPlayers.ToListAsync());
+    }
+
+    /// <summary>
+    /// Jeder verfolgte Spieler kostet den naechtlichen Durchgang mindestens einen Seitenabruf —
+    /// ohne Deckel waere die Liste ein Weg, den Crawler mit einem Konto auszulasten.
+    /// </summary>
+    [Fact]
+    public async Task Track_BeyondTheLimit_IsRejected()
+    {
+        var me = await CreateUserAsync("ich");
+        for (var i = 0; i < 20; i++)
+            _db.TrackedPlayers.Add(new TrackedPlayer
+            {
+                UserId = me, PlayerKey = $"fide:{i}", DisplayName = $"Spieler {i}", LastName = $"Spieler{i}",
+            });
+        await _db.SaveChangesAsync();
+
+        var result = await Controller(me).Track(new AddTrackedPlayerDto { LastName = "Zuviel", FideId = "77" });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(20, await _db.TrackedPlayers.CountAsync());
+    }
+
+    /// <summary>Die Liste gehoert dem Konto, das sie angelegt hat.</summary>
+    [Fact]
+    public async Task Tracked_ListsOnlyOwnPlayers()
+    {
+        var me = await CreateUserAsync("ich");
+        var other = await CreateUserAsync("wer-anders");
+        await Controller(me).Track(new AddTrackedPlayerDto { LastName = "Meiner", FideId = "1" });
+        await Controller(other).Track(new AddTrackedPlayerDto { LastName = "Fremder", FideId = "2" });
+
+        var list = Assert.IsType<List<TrackedPlayerDto>>(
+            Assert.IsType<OkObjectResult>((await Controller(me).Tracked()).Result).Value);
+
+        Assert.Equal("Meiner", Assert.Single(list).DisplayName);
+    }
+
+    /// <summary>
+    /// Der Verlauf eines verfolgten Spielers laeuft ueber denselben Zwischenspeicher wie der
+    /// eines Kontos — der haengt am SPIELER, nicht am Konto.
+    /// </summary>
+    [Fact]
+    public async Task TrackedHistory_ReturnsTheStoredResultsOfThatPlayer()
+    {
+        var me = await CreateUserAsync("ich");
+        var added = Assert.IsType<TrackedPlayerDto>(Assert.IsType<OkObjectResult>(
+            (await Controller(me).Track(new AddTrackedPlayerDto
+            {
+                LastName = "Oberschmid", FirstName = "Patrik", FideId = "1693034",
+            })).Result).Value);
+
+        _db.PlayerTournamentResults.Add(new PlayerTournamentResult
+        {
+            PlayerKey = "fide:1693034", ChessResultsId = "1107064", Snr = 44,
+            TournamentName = "Schach Tirol Open", EndDate = new DateOnly(2025, 8, 30), Rank = 56,
+        });
+        // Frisch geholt: sonst laeuft der Abruf gegen den Stub und die Zeile faellt heraus.
+        _db.PlayerHistorySyncs.Add(new PlayerHistorySync
+        {
+            PlayerKey = "fide:1693034", LastFetchedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await Controller(me).TrackedHistory(added.Id);
+        var history = Assert.IsType<PlayerHistoryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("Oberschmid, Patrik", history.DisplayName);
+        Assert.Equal("1107064", Assert.Single(history.Entries).ChessResultsId);
+        // Kein Konto dahinter — die Ansicht fuehrt den Reiter ueber die Eintrags-Id.
+        Assert.Equal(0, history.UserId);
+    }
+
+    /// <summary>Ein fremder Eintrag ist keiner: weder lesbar noch loeschbar.</summary>
+    [Fact]
+    public async Task TrackedHistory_OfSomeoneElsesEntry_IsNotFound()
+    {
+        var me = await CreateUserAsync("ich");
+        var other = await CreateUserAsync("wer-anders");
+        var theirs = Assert.IsType<TrackedPlayerDto>(Assert.IsType<OkObjectResult>(
+            (await Controller(other).Track(new AddTrackedPlayerDto { LastName = "Fremder", FideId = "2" })).Result).Value);
+
+        Assert.IsType<NotFoundResult>((await Controller(me).TrackedHistory(theirs.Id)).Result);
+        Assert.IsType<NotFoundResult>(await Controller(me).Untrack(theirs.Id));
+        Assert.Single(await _db.TrackedPlayers.ToListAsync());
+    }
+
+    /// <summary>
+    /// Nicht mehr verfolgen entfernt den REITER. Der geholte Verlauf bleibt — er gehoert dem
+    /// Spieler, und ein anderes Konto verfolgt ihn vielleicht weiter.
+    /// </summary>
+    [Fact]
+    public async Task Untrack_RemovesTheEntry_ButKeepsTheFetchedResults()
+    {
+        var me = await CreateUserAsync("ich");
+        var added = Assert.IsType<TrackedPlayerDto>(Assert.IsType<OkObjectResult>(
+            (await Controller(me).Track(new AddTrackedPlayerDto { LastName = "Carlsen", FideId = "1503014" })).Result).Value);
+        _db.PlayerTournamentResults.Add(new PlayerTournamentResult
+        {
+            PlayerKey = "fide:1503014", ChessResultsId = "1", Snr = 1, TournamentName = "Irgendwas",
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.IsType<NoContentResult>(await Controller(me).Untrack(added.Id));
+
+        Assert.Empty(await _db.TrackedPlayers.ToListAsync());
+        Assert.Single(await _db.PlayerTournamentResults.ToListAsync());
+    }
+
     private sealed class StubHandler(string body) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>

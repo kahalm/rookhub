@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -122,6 +123,114 @@ public class TournamentHistoryController : BaseApiController
             .ThenBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList());
     }
+
+    // ----- Verfolgte Spieler ------------------------------------------------
+
+    /// <summary>
+    /// Wie viele Spieler ein Konto verfolgen darf. Jeder kostet im naechtlichen Durchgang
+    /// mindestens einen Seitenabruf fuer seine Trefferliste — eine Liste ohne Deckel waere ein
+    /// Weg, den Crawler mit einem einzigen Konto auszulasten.
+    /// </summary>
+    private const int MaxTracked = 20;
+
+    /// <summary>Die verfolgten Spieler dieses Kontos — die Reiter neben den Freunden.</summary>
+    [HttpGet("tracked")]
+    public async Task<ActionResult<List<TrackedPlayerDto>>> Tracked(CancellationToken ct = default)
+    {
+        var me = GetUserId();
+        var players = await _db.TrackedPlayers.AsNoTracking()
+            .Where(t => t.UserId == me)
+            .ToListAsync(ct);
+
+        return Ok(players
+            .Select(TrackedPlayerDto.From)
+            .OrderBy(t => t.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList());
+    }
+
+    /// <summary>
+    /// Einen Spieler verfolgen. Erwartet wird, was die Spielersuche
+    /// (<c>GET /api/profile/player-search</c>) zurueckgegeben hat.
+    ///
+    /// <para>Ein zweites Verfolgen desselben Spielers ist KEIN Fehler: der Schluessel entscheidet
+    /// (dieselbe Person ueber die FIDE-Nummer und ueber den Namen gefunden ist derselbe
+    /// Eintrag), und der vorhandene Eintrag kommt unveraendert zurueck. Ein 409 zwaenge die
+    /// Oberflaeche, einen Fehler zu zeigen, wo nichts fehlt.</para>
+    /// </summary>
+    [HttpPost("tracked")]
+    public async Task<ActionResult<TrackedPlayerDto>> Track(
+        [FromBody] AddTrackedPlayerDto dto, CancellationToken ct = default)
+    {
+        var me = GetUserId();
+
+        var identity = TournamentHistoryService.IdentityOf(
+            dto.LastName, dto.FirstName, dto.FideId, dto.ChessResultsId);
+        if (identity is null)
+            return BadRequest(new { message = "lastName must be at least 2 characters." });
+
+        var existing = await _db.TrackedPlayers
+            .FirstOrDefaultAsync(t => t.UserId == me && t.PlayerKey == identity.Key, ct);
+        if (existing is not null) return Ok(TrackedPlayerDto.From(existing));
+
+        if (await _db.TrackedPlayers.CountAsync(t => t.UserId == me, ct) >= MaxTracked)
+            return BadRequest(new { message = $"At most {MaxTracked} tracked players.", limit = MaxTracked });
+
+        var name = (dto.DisplayName ?? "").Trim();
+        if (name.Length == 0)
+            name = identity.FirstName is null ? identity.LastName : $"{identity.LastName}, {identity.FirstName}";
+
+        var player = new TrackedPlayer
+        {
+            UserId = me,
+            PlayerKey = identity.Key,
+            DisplayName = Truncate(name, 200),
+            LastName = Truncate(identity.LastName, 100),
+            FirstName = identity.FirstName is null ? null : Truncate(identity.FirstName, 100),
+            FideId = identity.FideId is null ? null : Truncate(identity.FideId, 20),
+            ChessResultsId = identity.IdentNumber is null ? null : Truncate(identity.IdentNumber, 20),
+        };
+        _db.TrackedPlayers.Add(player);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(TrackedPlayerDto.From(player));
+    }
+
+    /// <summary>Nicht mehr verfolgen. Der geholte Verlauf bleibt — er gehoert dem Spieler, nicht dem Reiter.</summary>
+    [HttpDelete("tracked/{id:int}")]
+    public async Task<IActionResult> Untrack(int id, CancellationToken ct = default)
+    {
+        var me = GetUserId();
+        var player = await _db.TrackedPlayers.FirstOrDefaultAsync(t => t.Id == id && t.UserId == me, ct);
+        if (player is null) return NotFound();
+
+        _db.TrackedPlayers.Remove(player);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Der Verlauf eines verfolgten Spielers. Eigener Endpunkt statt eines weiteren Parameters an
+    /// <c>GET /api/tournament-history</c>: dort ist die Kennung ein KONTO, hier ein Eintrag der
+    /// eigenen Liste — dieselbe Zahl haette zwei Bedeutungen.
+    /// </summary>
+    [HttpGet("tracked/{id:int}")]
+    public async Task<ActionResult<PlayerHistoryDto>> TrackedHistory(int id, CancellationToken ct = default)
+    {
+        var me = GetUserId();
+        var player = await _db.TrackedPlayers.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == me, ct);
+        if (player is null) return NotFound();
+
+        var identity = TournamentHistoryService.IdentityOf(
+            player.LastName, player.FirstName, player.FideId, player.ChessResultsId);
+        if (identity is null) return NotFound();
+
+        var history = await _history.GetForIdentityAsync(identity, player.DisplayName, 0, ct);
+        return Ok(PlayerHistoryDto.From(history));
+    }
+
+    private static string Truncate(string value, int max) =>
+        value.Length <= max ? value : value[..max];
 
     private static bool TryParseIds(string? csv, out List<int> ids)
     {

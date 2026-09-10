@@ -2970,7 +2970,7 @@
     },
     "history": {
       "title": "A versenyeim",
-      "help": "Melyik versenyeket játszottad, melyek jönnek még, és a lejátszottakban a pontjaid, a helyezésed és a teljesítmény-értékszámod.\n\nAz adatok a chess-resultsról jönnek, és ott a NÉV alapján megy a keresés — a vezetéknevednek tehát benne kell lennie a profilodban. Egy FIDE-azonosító vagy chess-results-azonosító dönti el, melyik névrokonod vagy te; enélkül más, veled azonos nevű emberek versenyei is idekerülnek.\n\nAz eredményeket versenyről versenyre hozzuk le, és utána megőrizzük. Egy hosszú versenytörténet első megtekintése ezért fokozatosan telik meg.",
+      "help": "Melyik versenyeket játszottad, melyek jönnek még, és a lejátszottakban a pontjaid, a helyezésed és a teljesítmény-értékszámod.\n\nAz adatok a chess-resultsról jönnek, és ott a NÉV alapján megy a keresés — a vezetéknevednek tehát benne kell lennie a profilodban. Egy FIDE-azonosító vagy chess-results-azonosító dönti el, melyik névrokonod vagy te; enélkül más, veled azonos nevű emberek versenyei is idekerülnek.\n\nAz eredményeket versenyről versenyre hozzuk le, és utána megőrizzük. Egy hosszú versenytörténet első megtekintése ezért fokozatosan telik meg.\n\nA plusszal bárkit követhetsz — olyat is, akinek nincs itt fiókja: a gyermekedet, egy klubtársat, a következő ellenfeledet. Saját fület kapnak.",
       "onlyMe": "Csak én",
       "inexact": "azonosító nélkül",
       "pending": "{{count}} eredmény letöltése…",
@@ -3003,7 +3003,20 @@
       "countsTooltip": "Ebben az időbeosztásban lejátszott játszmák.",
       "noFriendsYet": "Vegyél fel ismerősöket a RookHubon, hogy összevethesd velük a versenytörténetedet.",
       "allSpeeds": "Mind",
-      "pointsTooltip": "Pontok a lejátszott játszmákból. A játszmák száma a játékoskártyáról származik, nem a verseny fordulószámából."
+      "pointsTooltip": "Pontok a lejátszott játszmákból. A játszmák száma a játékoskártyáról származik, nem a verseny fordulószámából.",
+      "track": {
+        "add": "Követés",
+        "addError": "A játékost nem sikerült hozzáadni.",
+        "added": "{{name}} követése elindult.",
+        "help": "Kövess bárkit: a gyermekedet, egy klubtársat, a következő ellenfeledet — fiók nélkül is.",
+        "lead": "A keresés a chess-results és a FIDE adataiban fut. A vezetéknév elég; a keresztnév szűkíti a találatokat.",
+        "limitReached": "Legfeljebb {{count}} játékos követhető. Előbb távolíts el egyet.",
+        "remove": "Követés megszüntetése",
+        "removeError": "A játékost nem sikerült eltávolítani.",
+        "removed": "{{name}} követése megszűnt.",
+        "searchError": "A keresés nem sikerült. Kérlek, próbáld újra.",
+        "title": "Játékos követése"
+      }
     }
   },
   "turnierAdmin": {

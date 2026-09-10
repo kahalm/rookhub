@@ -3245,7 +3245,7 @@
     },
     "history": {
       "title": "Meine Turniere",
-      "help": "Welche Turniere du gespielt hast, welche noch kommen, und in den gespielten deine Punkte, deinen Platz und dein Performance-Rating.\n\nDie Daten kommen von chess-results, und dort wird über den NAMEN gesucht — dein Nachname muss also im Profil stehen. Eine FIDE-ID oder chess-results-ID entscheidet, welcher deiner Namensgleichen du bist; ohne sie stehen hier Turniere anderer Menschen mit deinem Namen.\n\nDie Ergebnisse werden Turnier für Turnier geholt und danach behalten. Der erste Blick auf eine lange Historie füllt sich deshalb nach und nach.",
+      "help": "Welche Turniere du gespielt hast, welche noch kommen, und in den gespielten deine Punkte, deinen Platz und dein Performance-Rating.\n\nDie Daten kommen von chess-results, und dort wird über den NAMEN gesucht — dein Nachname muss also im Profil stehen. Eine FIDE-ID oder chess-results-ID entscheidet, welcher deiner Namensgleichen du bist; ohne sie stehen hier Turniere anderer Menschen mit deinem Namen.\n\nDie Ergebnisse werden Turnier für Turnier geholt und danach behalten. Der erste Blick auf eine lange Historie füllt sich deshalb nach und nach.\n\nMit dem Plus verfolgst du beliebige Personen — auch solche ohne Konto hier: dein Kind, einen Vereinskameraden, deinen nächsten Gegner. Sie bekommen einen eigenen Reiter.",
       "onlyMe": "Nur ich",
       "inexact": "ohne Kennung",
       "pending": "hole {{count}} Ergebnisse…",
@@ -3278,7 +3278,20 @@
       "countsTooltip": "Gespielte Partien in dieser Bedenkzeit.",
       "noFriendsYet": "Füge auf RookHub Freunde hinzu, um deinen Verlauf mit ihrem zu vergleichen.",
       "allSpeeds": "Alle",
-      "pointsTooltip": "Punkte aus gespielten Partien. Die Partienzahl kommt von der Spielerkarte, nicht aus der Rundenzahl des Turniers."
+      "pointsTooltip": "Punkte aus gespielten Partien. Die Partienzahl kommt von der Spielerkarte, nicht aus der Rundenzahl des Turniers.",
+      "track": {
+        "add": "Verfolgen",
+        "addError": "Der Spieler konnte nicht hinzugefügt werden.",
+        "added": "{{name}} wird jetzt verfolgt.",
+        "help": "Beliebige Person verfolgen: dein Kind, ein Vereinskamerad, dein nächster Gegner — ganz ohne Konto.",
+        "lead": "Gesucht wird auf chess-results und bei der FIDE. Der Nachname genügt; ein Vorname grenzt ein.",
+        "limitReached": "Mehr als {{count}} Spieler lassen sich nicht verfolgen. Entferne zuerst einen.",
+        "remove": "Nicht mehr verfolgen",
+        "removeError": "Der Spieler konnte nicht entfernt werden.",
+        "removed": "{{name}} wird nicht mehr verfolgt.",
+        "searchError": "Die Suche hat nicht geklappt. Bitte nochmal versuchen.",
+        "title": "Spieler verfolgen"
+      }
     }
   },
   "turnierAdmin": {

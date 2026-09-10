@@ -5,19 +5,21 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription, catchError, of, switchMap, takeWhile, timer } from 'rxjs';
+import { Observable, Subscription, catchError, map, of, switchMap, takeWhile, timer } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
-import { HISTORY_SPEEDS, HistoryFriend, HistorySpeed, PlayerHistory, PlayerHistoryEntry, SpeedSummary } from './tournament-history.model';
+import { HISTORY_SPEEDS, HistoryFriend, HistorySpeed, PlayerHistory, PlayerHistoryEntry, SpeedSummary, TrackedPlayer } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
+import { TrackPlayerDialogComponent } from './track-player-dialog.component';
 
 /**
  * Ab welcher Zahl eine Performance eine Aussage ist. chess-results traegt eine 0 ein, wenn es sie
@@ -26,20 +28,33 @@ import { TournamentHistoryService } from './tournament-history.service';
 const MinPlausiblePerformance = 500;
 
 /**
- * Ein Reiter: ein KONTO. Der eigene steht vorn, danach die Freunde.
+ * Ein Reiter: ein KONTO oder ein verfolgter SPIELER. Der eigene steht vorn, danach die Freunde,
+ * danach die verfolgten.
  *
  * <p>Freunde ohne Namen im Profil bekommen ihren Reiter trotzdem — nur gesperrt: ohne Nachnamen
  * gibt es keine chess-results-Spielersuche und damit keinen Verlauf. Sie ganz wegzulassen war der
  * frühere Zustand und hinterliess eine Auswahl, die ohne Grund leer war.</p>
+ *
+ * <p><b>Der Schluessel ist zusammengesetzt</b> (`u:12` / `t:3`), nicht die blosse Zahl: eine
+ * Konto-Kennung und die Kennung eines Verfolgt-Eintrags kommen aus verschiedenen Toepfen und
+ * kollidieren zwangslaeufig — mit der Zahl allein zeigten zwei Reiter auf denselben Zustand.</p>
  */
 export interface HistoryTab {
-  userId: number;
+  /** Eindeutig ueber beide Arten: `u:<Konto>` bzw. `t:<verfolgter Eintrag>`. */
+  key: string;
+  kind: 'account' | 'tracked';
+  /** Konto-Kennung bzw. Kennung des Verfolgt-Eintrags. */
+  id: number;
   label: string;
   /** Ist etwas zu holen? `false` = kein Nachname im Profil. */
   enabled: boolean;
-  /** Traegt das Profil eine Kennung? Sonst sind Namensgleiche mit dabei. */
+  /** Traegt der Eintrag eine Kennung? Sonst sind Namensgleiche mit dabei. */
   exact: boolean;
 }
+
+/** Der Reiter-Schluessel eines Kontos bzw. eines verfolgten Spielers. */
+export const accountKey = (userId: number): string => `u:${userId}`;
+export const trackedKey = (id: number): string => `t:${id}`;
 
 /**
  * Der Turnierverlauf: gespielte und kommende Turniere, je mit Platz, Punkten und
@@ -60,7 +75,7 @@ export interface HistoryTab {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule,
-    MatIconModule, MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
+    MatDialogModule, MatIconModule, MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent,
   ],
   templateUrl: './tournament-history.component.html',
@@ -74,53 +89,69 @@ export class TournamentHistoryComponent implements OnInit {
   private readonly opener = inject(OpenTournamentService);
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
+  private readonly dialog = inject(MatDialog);
 
   /** Welches Turnier gerade geoeffnet wird — der Dienst fuehrt das, die Ansicht zeigt es nur. */
   readonly opening = this.opener.opening;
 
   /**
-   * Die schon geladenen Verlaeufe, nach Konto. Ein einmal geoeffneter Reiter bleibt damit beim
-   * Zurueckwechseln sofort da — und jeder Reiter kostet einen eigenen Abruf, der sich so nicht
-   * wiederholt.
+   * Die schon geladenen Verlaeufe, nach Reiter-SCHLUESSEL. Ein einmal geoeffneter Reiter bleibt
+   * damit beim Zurueckwechseln sofort da — und jeder Reiter kostet einen eigenen Abruf, der sich
+   * so nicht wiederholt.
    */
-  readonly loaded = signal<Record<number, PlayerHistory>>({});
+  readonly loaded = signal<Record<string, PlayerHistory>>({});
   readonly friends = signal<HistoryFriend[]>([]);
+
+  /** Die verfolgten Spieler — Leute ohne Konto hier, deren Verlauf man mitliest. */
+  readonly tracked = signal<TrackedPlayer[]>([]);
   readonly loading = signal(true);
   readonly failed = signal(false);
 
   /** Welcher Reiter offen ist — `null`, solange die eigene Kennung nicht feststeht. */
-  readonly activeUserId = signal<number | null>(null);
+  readonly activeKey = signal<string | null>(null);
 
   /** Der Verlauf des offenen Reiters. */
   readonly current = computed(() => {
-    const id = this.activeUserId();
-    return id === null ? null : this.loaded()[id] ?? null;
+    const key = this.activeKey();
+    return key === null ? null : this.loaded()[key] ?? null;
   });
 
   /**
-   * Ein Reiter je Konto: ich zuerst, danach die Freunde. Gesperrte (kein Name im Profil) bleiben
-   * sichtbar — mit Grund, statt kommentarlos zu fehlen.
+   * Ein Reiter je Konto und je verfolgtem Spieler: ich zuerst, danach die Freunde, danach die
+   * Verfolgten. Gesperrte (kein Name im Profil) bleiben sichtbar — mit Grund, statt kommentarlos
+   * zu fehlen.
    */
   readonly tabs = computed<HistoryTab[]>(() => {
     const me = this.auth.currentUser;
     const mine: HistoryTab[] = me
-      ? [{ userId: me.userId, label: this.translate.instant('turnier.history.onlyMe'), enabled: true, exact: true }]
+      ? [{
+          key: accountKey(me.userId), kind: 'account', id: me.userId,
+          label: this.translate.instant('turnier.history.onlyMe'), enabled: true, exact: true,
+        }]
       : [];
 
     return [
       ...mine,
       ...this.friends().map(f => ({
-        userId: f.userId, label: f.displayName, enabled: f.hasName, exact: f.exact,
+        key: accountKey(f.userId), kind: 'account' as const, id: f.userId,
+        label: f.displayName, enabled: f.hasName, exact: f.exact,
+      })),
+      ...this.tracked().map(t => ({
+        key: trackedKey(t.id), kind: 'tracked' as const, id: t.id,
+        label: t.displayName, enabled: true, exact: t.exact,
       })),
     ];
   });
 
   /** Der Index des offenen Reiters — was `mat-tab-group` braucht. */
   readonly activeIndex = computed(() => {
-    const id = this.activeUserId();
-    const index = this.tabs().findIndex(t => t.userId === id);
+    const key = this.activeKey();
+    const index = this.tabs().findIndex(t => t.key === key);
     return index < 0 ? 0 : index;
   });
+
+  /** Der offene Reiter — die Ansicht braucht ihn fuer „nicht mehr verfolgen". */
+  readonly activeTab = computed(() => this.tabs().find(t => t.key === this.activeKey()) ?? null);
 
   /**
    * Auf welche Bedenkzeit die Ansicht eingeschraenkt ist. `null` = alle.
@@ -153,42 +184,141 @@ export class TournamentHistoryComponent implements OnInit {
 
   ngOnInit(): void {
     const me = this.auth.currentUser?.userId ?? null;
+    const mineKey = me === null ? null : accountKey(me);
     const remembered = this.restore();
 
     // Der EIGENE Verlauf laedt sofort — er ist der erste Reiter und der haeufige Fall. Auf die
     // Freundesliste zu warten hiesse, die eigene Tabelle hinter einem zweiten Abruf zu verstecken.
-    const start = remembered ?? me;
+    const start = remembered ?? mineKey;
     if (start !== null) this.select(start);
 
     this.history.friends().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: friends => {
         this.friends.set(friends);
-        // Der gemerkte Reiter kann inzwischen weg sein (Freundschaft aufgeloest) — dann zurueck
-        // auf den eigenen, statt auf einen Reiter zu zeigen, den es nicht gibt.
-        if (remembered !== null && remembered !== me && !friends.some(f => f.userId === remembered && f.hasName)) {
-          if (me !== null) this.select(me);
-        }
+        this.fallBackIfGone(remembered, mineKey);
       },
       error: () => {
         // Ohne Freundesliste bleibt der eigene Verlauf — die Reiter fehlen dann eben.
         this.friends.set([]);
-        if (remembered !== null && remembered !== me && me !== null) this.select(me);
+        this.fallBackIfGone(remembered, mineKey);
       },
     });
+
+    this.history.tracked().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: tracked => {
+        this.tracked.set(tracked);
+        this.fallBackIfGone(remembered, mineKey);
+      },
+      error: () => {
+        this.tracked.set([]);
+        this.fallBackIfGone(remembered, mineKey);
+      },
+    });
+  }
+
+  /**
+   * Der gemerkte Reiter kann inzwischen weg sein — Freundschaft aufgeloest, Spieler nicht mehr
+   * verfolgt. Dann zurueck auf den eigenen, statt auf einen Reiter zu zeigen, den es nicht gibt.
+   *
+   * <p>Geprueft wird erst, wenn BEIDE Listen da sind: die Antworten kommen in beliebiger
+   * Reihenfolge, und wer nach der ersten urteilt, wirft einen gemerkten Reiter weg, den die
+   * zweite gerade mitbringt.</p>
+   */
+  private listsSeen = 0;
+
+  private fallBackIfGone(remembered: string | null, mineKey: string | null): void {
+    if (++this.listsSeen < 2) return;
+    if (remembered === null || remembered === mineKey || mineKey === null) return;
+
+    const stillThere = this.tabs().some(t => t.key === remembered && t.enabled);
+    if (!stillThere) this.select(mineKey);
   }
 
   // ----- Reiter -----------------------------------------------------------
 
   onTabChange(index: number): void {
     const tab = this.tabs()[index];
-    if (tab && tab.userId !== this.activeUserId()) this.select(tab.userId);
+    if (tab && tab.key !== this.activeKey()) this.select(tab.key);
   }
 
   /** Reiter oeffnen: gemerkte Fassung sofort zeigen, dann frisch laden. */
-  private select(userId: number): void {
-    this.activeUserId.set(userId);
-    this.store(userId);
-    this.load(userId);
+  private select(key: string): void {
+    this.activeKey.set(key);
+    this.store(key);
+    this.load(key);
+  }
+
+  // ----- Verfolgte Spieler ------------------------------------------------
+
+  /**
+   * „+": einen beliebigen Spieler verfolgen.
+   *
+   * <p>Der Verlauf hing bis hierher an KONTEN — dem eigenen und denen angenommener Freunde. Die
+   * Leute, deren Ergebnisse man wirklich verfolgt, haben aber meist gar kein Konto hier: das
+   * eigene Kind, ein Vereinskamerad, der Gegner der naechsten Runde. Sie einzuladen, damit man
+   * ihre oeffentlich auf chess-results stehenden Turniere sehen kann, ist keine Loesung.</p>
+   */
+  addTracked(): void {
+    this.dialog.open(TrackPlayerDialogComponent, { width: '560px', maxWidth: '96vw' })
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((player?: TrackedPlayer) => {
+        if (!player) return;
+        // Schon verfolgt? Der Server gibt denselben Eintrag zurueck — dann nur hinspringen.
+        this.tracked.update(list =>
+          list.some(t => t.id === player.id) ? list : [...list, player]);
+        this.select(trackedKey(player.id));
+      });
+  }
+
+  /**
+   * Nicht mehr verfolgen — mit Rueckgaengig, weil der Knopf direkt neben dem Namen sitzt und ein
+   * Fehlgriff sonst eine neue Suche kostet. Der geholte Verlauf bleibt ohnehin liegen; entfernt
+   * wird der Reiter.
+   */
+  removeTracked(tab: HistoryTab): void {
+    const player = this.tracked().find(t => t.id === tab.id);
+    if (!player) return;
+
+    this.history.untrack(player.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.tracked.update(list => list.filter(t => t.id !== player.id));
+        this.loaded.update(current => {
+          const next = { ...current };
+          delete next[trackedKey(player.id)];
+          return next;
+        });
+
+        const me = this.auth.currentUser?.userId ?? null;
+        if (me !== null) this.select(accountKey(me));
+
+        this.snackbar
+          .show(this.translate.instant('turnier.history.track.removed', { name: player.displayName }),
+                { action: 'common.undo', duration: 6000 })
+          .onAction()
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(() => this.restoreTracked(player));
+      },
+      error: () => this.snackbar.warn(this.translate.instant('turnier.history.track.removeError')),
+    });
+  }
+
+  /** Rueckgaengig: denselben Spieler noch einmal anlegen — die Kennung macht daraus denselben Reiter. */
+  private restoreTracked(player: TrackedPlayer): void {
+    this.history.track({
+      lastName: player.lastName,
+      firstName: player.firstName,
+      fideId: player.fideId,
+      chessResultsId: player.chessResultsId,
+      displayName: player.displayName,
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: restored => {
+        this.tracked.update(list =>
+          list.some(t => t.id === restored.id) ? list : [...list, restored]);
+        this.select(trackedKey(restored.id));
+      },
+      error: () => this.snackbar.warn(this.translate.instant('turnier.history.track.addError')),
+    });
   }
 
   // ----- Laden ------------------------------------------------------------
@@ -202,23 +332,23 @@ export class TournamentHistoryComponent implements OnInit {
   private generation = 0;
 
   /**
-   * Den Verlauf EINES Kontos laden. Ein Reiter = ein Abruf: „alle Freunde auf einmal" hiesse, fuer
+   * Den Verlauf EINES Reiters laden. Ein Reiter = ein Abruf: „alle Freunde auf einmal" hiesse, fuer
    * jedes Konto eine Trefferliste bei chess-results zu holen, auch fuer die, die niemand ansieht.
    */
-  load(userId: number): void {
+  load(key: string): void {
     // Schon geladen? Dann bleibt die Tabelle stehen und wird nur aufgefrischt — sonst blitzt bei
     // jedem Reiterwechsel ein Ladebalken ueber einer Ansicht auf, die es schon gibt.
-    this.loading.set(this.loaded()[userId] === undefined);
+    this.loading.set(this.loaded()[key] === undefined);
     this.failed.set(false);
     this.pollSubscription?.unsubscribe();
 
     const generation = ++this.generation;
-    this.history.get([userId]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: histories => {
+    this.fetch(key).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: history => {
         if (generation !== this.generation) return;
-        this.remember(histories);
+        this.remember(key, history);
         this.loading.set(false);
-        this.schedulePoll(generation, userId);
+        this.schedulePoll(generation, key);
       },
       error: () => {
         if (generation !== this.generation) return;
@@ -228,14 +358,25 @@ export class TournamentHistoryComponent implements OnInit {
     });
   }
 
-  /** Antworten in den Zwischenspeicher legen — je Konto eine Zeile. */
-  private remember(histories: PlayerHistory[]): void {
-    if (histories.length === 0) return;
-    this.loaded.update(current => {
-      const next = { ...current };
-      for (const history of histories) next[history.userId] = history;
-      return next;
-    });
+  /**
+   * Woher der Verlauf dieses Reiters kommt. Ein KONTO geht ueber die Konten-Abfrage (dieselbe, die
+   * Freunde prueft), ein verfolgter Spieler ueber seinen eigenen Weg — dort ist die Zahl ein
+   * Eintrag der eigenen Liste und kein Konto.
+   */
+  private fetch(key: string): Observable<PlayerHistory | null> {
+    const [kind, raw] = key.split(':');
+    const id = Number(raw);
+    if (!Number.isFinite(id)) return of(null);
+
+    return kind === 't'
+      ? this.history.trackedHistory(id)
+      : this.history.get([id]).pipe(map(histories => histories[0] ?? null));
+  }
+
+  /** Antwort in den Zwischenspeicher legen — je Reiter eine Zeile. */
+  private remember(key: string, history: PlayerHistory | null): void {
+    if (!history) return;
+    this.loaded.update(current => ({ ...current, [key]: history }));
   }
 
   /** Wie lange bis zur naechsten Nachfrage, solange Ergebnisse fehlen. */
@@ -246,7 +387,7 @@ export class TournamentHistoryComponent implements OnInit {
 
   private polls = 0;
 
-  private schedulePoll(generation: number, userId: number): void {
+  private schedulePoll(generation: number, key: string): void {
     if (this.pending() === 0) { this.polls = 0; return; }
     if (this.polls >= TournamentHistoryComponent.MaxPolls) return;
 
@@ -255,13 +396,13 @@ export class TournamentHistoryComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (generation !== this.generation) return;
-        this.history.get([userId])
+        this.fetch(key)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
-            next: histories => {
+            next: history => {
               if (generation !== this.generation) return;
-              this.remember(histories);
-              this.schedulePoll(generation, userId);
+              this.remember(key, history);
+              this.schedulePoll(generation, key);
             },
             error: () => { /* still: der naechste Versuch kommt beim naechsten Laden */ },
           });
@@ -401,25 +542,33 @@ export class TournamentHistoryComponent implements OnInit {
   }
 
   trackById = (_: number, entry: PlayerHistoryEntry) => entry.chessResultsId;
-  trackByTab = (_: number, tab: HistoryTab) => tab.userId;
+  trackByTab = (_: number, tab: HistoryTab) => tab.key;
 
   // ----- Gemerkte Auswahl -------------------------------------------------
 
-  private store(userId: number): void {
+  private store(key: string): void {
     try {
-      localStorage.setItem(TournamentHistoryComponent.ViewKey, JSON.stringify({ userId }));
+      localStorage.setItem(TournamentHistoryComponent.ViewKey, JSON.stringify({ tab: key }));
     } catch {
       // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
       // lassen — dann faengt man eben wieder beim eigenen Reiter an.
     }
   }
 
-  /** Der zuletzt geoeffnete Reiter, oder `null`. */
-  private restore(): number | null {
+  /**
+   * Der zuletzt geoeffnete Reiter, oder `null`.
+   *
+   * <p>Ein alter Eintrag traegt noch `{ userId }` — er wird gelesen und gilt als Konto-Reiter.
+   * Ihn zu verwerfen hiesse, jeden Nutzer nach dem Deploy einmal grundlos auf den eigenen Reiter
+   * zurueckzusetzen.</p>
+   */
+  private restore(): string | null {
     try {
       const raw = localStorage.getItem(TournamentHistoryComponent.ViewKey);
       const stored = raw ? JSON.parse(raw) : null;
-      return stored && typeof stored.userId === 'number' ? stored.userId : null;
+      if (stored && typeof stored.tab === 'string') return stored.tab;
+      if (stored && typeof stored.userId === 'number') return accountKey(stored.userId);
+      return null;
     } catch {
       // unlesbar/kaputt: der eigene Reiter bleibt die Vorgabe
       return null;

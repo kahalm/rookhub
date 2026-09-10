@@ -262,6 +262,9 @@ public class ProfileService
         // ("Ferienhaus Kaernten") — das ist persoenlicher als jedes Turnier-Abo.
         _db.TournamentSearchProfiles.RemoveRange(await _db.TournamentSearchProfiles.Where(p => p.UserId == userId).ToListAsync());
         _db.TournamentDirectoryIgnores.RemoveRange(await _db.TournamentDirectoryIgnores.Where(i => i.UserId == userId).ToListAsync());
+        // Wen jemand verfolgt hat, ist eine Auskunft ueber ihn — und ueber die Verfolgten. Der
+        // geholte Verlauf bleibt (der gehoert dem Spieler, nicht dem Konto), die Liste geht.
+        _db.TrackedPlayers.RemoveRange(await _db.TrackedPlayers.Where(t => t.UserId == userId).ToListAsync());
         _db.UserViewStates.RemoveRange(await _db.UserViewStates.Where(v => v.UserId == userId).ToListAsync());
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
         // API-Tokens (chess.com-Extension u. a.) widerrufen — ein gelöschtes Konto behält keinen Zugang.

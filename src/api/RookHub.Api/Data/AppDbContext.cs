@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<TournamentDirectoryIgnore> TournamentDirectoryIgnores => Set<TournamentDirectoryIgnore>();
     public DbSet<PlayerTournamentResult> PlayerTournamentResults => Set<PlayerTournamentResult>();
     public DbSet<PlayerHistorySync> PlayerHistorySyncs => Set<PlayerHistorySync>();
+    public DbSet<TrackedPlayer> TrackedPlayers => Set<TrackedPlayer>();
     public DbSet<TournamentTimeControl> TournamentTimeControls => Set<TournamentTimeControl>();
     public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
@@ -390,6 +391,17 @@ public class AppDbContext : DbContext
         });
 
         modelBuilder.Entity<PlayerHistorySync>(e => e.HasKey(x => x.PlayerKey));
+
+        modelBuilder.Entity<TrackedPlayer>(e =>
+        {
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Denselben Spieler zweimal zu verfolgen ergaebe zwei Reiter mit derselben Tabelle.
+            e.HasIndex(t => new { t.UserId, t.PlayerKey }).IsUnique();
+        });
 
         // Die Bedenkzeit gehoert dem TURNIER — ein Abruf, den sich alle Konten teilen.
         modelBuilder.Entity<TournamentTimeControl>(e => e.HasKey(x => x.ChessResultsId));

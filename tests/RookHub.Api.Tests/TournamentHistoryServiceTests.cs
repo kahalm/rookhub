@@ -421,6 +421,34 @@ public class TournamentHistoryServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Ein VERFOLGTER Spieler hat kein Profil — der naechtliche Durchgang muss ihn trotzdem
+    /// mitnehmen. Sonst stuende sein Verlauf nur so weit, wie ihn jemand durch Ansehen gefuellt
+    /// hat (gedeckelt auf 25 Karten je Aufruf), und bei einem Vielspieler bliebe die Tabelle
+    /// dauerhaft halb leer.
+    /// </summary>
+    [Fact]
+    public async Task RefreshAllAsync_IncludesTrackedPlayers_WithoutAnAccount()
+    {
+        var user = new AppUser { Username = "verfolger", PasswordHash = "x", Email = "v@example.com" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.TrackedPlayers.Add(new TrackedPlayer
+        {
+            UserId = user.Id, PlayerKey = "fide:1693034", DisplayName = "Oberschmid, Patrik",
+            LastName = "Oberschmid", FirstName = "Patrik", FideId = "1693034",
+        });
+        await _db.SaveChangesAsync();
+        _handler.History = TeamRow;
+        _handler.Card = """{"points":3,"rank":34,"performanceRating":2013,"hasResult":true}""";
+
+        var sweep = await CreateService().RefreshAllAsync(50);
+
+        Assert.Equal(1, sweep.Players);
+        Assert.Equal(1, sweep.Cards);
+        Assert.Equal(2013, (await _db.PlayerTournamentResults.SingleAsync()).PerformanceRating);
+    }
+
+    /// <summary>
     /// Der Deckel gilt fuer den GANZEN Lauf: ein Vielspieler soll die uebrigen Konten nicht
     /// aushungern. Der Rest kommt in der naechsten Nacht.
     /// </summary>

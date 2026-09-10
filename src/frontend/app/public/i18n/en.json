@@ -3245,7 +3245,7 @@
     },
     "history": {
       "title": "My tournaments",
-      "help": "Which tournaments you have played, which are still coming, and in the played ones your score, your place and your performance rating.\n\nThe data comes from chess-results, and it is looked up by NAME — so your last name has to be in your profile. A FIDE ID or chess-results ID decides which of your namesakes is you; without one, tournaments of other people with your name appear here.\n\nResults are fetched one tournament at a time and kept afterwards. The first look at a long history therefore fills up gradually.",
+      "help": "Which tournaments you have played, which are still coming, and in the played ones your score, your place and your performance rating.\n\nThe data comes from chess-results, and it is looked up by NAME — so your last name has to be in your profile. A FIDE ID or chess-results ID decides which of your namesakes is you; without one, tournaments of other people with your name appear here.\n\nResults are fetched one tournament at a time and kept afterwards. The first look at a long history therefore fills up gradually.\n\nWith the plus you can track any player — someone without an account here: your child, a club mate, your next opponent. They get their own tab.",
       "onlyMe": "Only me",
       "inexact": "no identifier",
       "pending": "fetching {{count}} results…",
@@ -3278,7 +3278,20 @@
       "countsTooltip": "Games played in this time control.",
       "noFriendsYet": "Add friends on RookHub to compare your history with theirs.",
       "allSpeeds": "All",
-      "pointsTooltip": "Points from games played. The number of games comes from the player card, not from the tournament round count."
+      "pointsTooltip": "Points from games played. The number of games comes from the player card, not from the tournament round count.",
+      "track": {
+        "add": "Track",
+        "addError": "The player couldn't be added.",
+        "added": "{{name}} is now being tracked.",
+        "help": "Follow any player: your child, a club mate, your next opponent — no account needed.",
+        "lead": "Search on chess-results and FIDE. The last name is enough; a first name narrows it down.",
+        "limitReached": "You can track at most {{count}} players. Remove one first.",
+        "remove": "Stop tracking",
+        "removeError": "The player couldn't be removed.",
+        "removed": "{{name}} is no longer tracked.",
+        "searchError": "The search failed. Please try again.",
+        "title": "Track a player"
+      }
     }
   },
   "turnierAdmin": {

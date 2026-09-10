@@ -3245,7 +3245,7 @@
     },
     "history": {
       "title": "Moji turniri",
-      "help": "Koje si turnire igrao, koji još dolaze, i u odigranima tvoji bodovi, tvoje mjesto i tvoj performance rating.\n\nPodaci dolaze s chess-resultsa, a tamo se traži po IMENU — tvoje prezime mora biti u profilu. FIDE ID ili chess-results ID odlučuje koji si od svojih imenjaka; bez njega ovdje stoje turniri drugih ljudi s tvojim imenom.\n\nRezultati se dohvaćaju turnir po turnir i zatim čuvaju. Prvi pogled na dugu povijest zato se puni postupno.",
+      "help": "Koje si turnire igrao, koji još dolaze, i u odigranima tvoji bodovi, tvoje mjesto i tvoj performance rating.\n\nPodaci dolaze s chess-resultsa, a tamo se traži po IMENU — tvoje prezime mora biti u profilu. FIDE ID ili chess-results ID odlučuje koji si od svojih imenjaka; bez njega ovdje stoje turniri drugih ljudi s tvojim imenom.\n\nRezultati se dohvaćaju turnir po turnir i zatim čuvaju. Prvi pogled na dugu povijest zato se puni postupno.\n\nPlusom pratiš bilo koga — i one bez računa ovdje: svoje dijete, člana kluba, sljedećeg protivnika. Dobivaju vlastitu karticu.",
       "onlyMe": "Samo ja",
       "inexact": "bez identifikatora",
       "pending": "dohvaćam {{count}} rezultata…",
@@ -3278,7 +3278,20 @@
       "countsTooltip": "Odigrane partije u ovoj vremenskoj kontroli.",
       "noFriendsYet": "Dodaj prijatelje na RookHubu da usporediš svoju povijest s njihovom.",
       "allSpeeds": "Sve",
-      "pointsTooltip": "Bodovi iz odigranih partija. Broj partija dolazi s kartona igrača, ne iz broja kola turnira."
+      "pointsTooltip": "Bodovi iz odigranih partija. Broj partija dolazi s kartona igrača, ne iz broja kola turnira.",
+      "track": {
+        "add": "Prati",
+        "addError": "Igrača nije bilo moguće dodati.",
+        "added": "{{name}} se sada prati.",
+        "help": "Prati bilo koga: svoje dijete, člana kluba, sljedećeg protivnika — bez računa.",
+        "lead": "Pretražuje se chess-results i FIDE. Dovoljno je prezime; ime sužava izbor.",
+        "limitReached": "Može se pratiti najviše {{count}} igrača. Prvo ukloni jednoga.",
+        "remove": "Prestani pratiti",
+        "removeError": "Igrača nije bilo moguće ukloniti.",
+        "removed": "{{name}} se više ne prati.",
+        "searchError": "Pretraga nije uspjela. Pokušaj ponovno.",
+        "title": "Prati igrača"
+      }
     }
   },
   "turnierAdmin": {

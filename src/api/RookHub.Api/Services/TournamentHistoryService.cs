@@ -149,17 +149,32 @@ public class TournamentHistoryService
                 continue;
             }
 
-            var status = await RefreshListIfStaleAsync(identity, ct);
-            var results = await _db.PlayerTournamentResults.AsNoTracking()
-                .Where(r => r.PlayerKey == identity.Key)
-                .OrderByDescending(r => r.EndDate)
-                .ToListAsync(ct);
-
-            var pending = QueueMissingCards(identity, results);
-            histories.Add(new PlayerHistory(
-                profile.UserId, name, status, results, pending, await SpeedsForAsync(results, ct)));
+            histories.Add(await GetForIdentityAsync(identity, name, profile.UserId, ct));
         }
         return histories;
+    }
+
+    /// <summary>
+    /// Der Verlauf EINES Spielers, unabhaengig davon, ob dahinter ein Konto steht.
+    ///
+    /// <para>Der Zwischenspeicher haengt am Spielerschluessel, nicht am Konto — ein verfolgter
+    /// Spieler (<see cref="Models.TrackedPlayer"/>) benutzt deshalb denselben Bestand wie ein
+    /// Freund mit denselben Kennungen und loest keinen zweiten Abruf aus.</para>
+    /// </summary>
+    /// <param name="userId">Das Konto, dem der Verlauf zugeordnet wird; <c>0</c> fuer einen
+    /// verfolgten Spieler ohne Konto.</param>
+    public async Task<PlayerHistory> GetForIdentityAsync(
+        PlayerIdentity identity, string displayName, int userId = 0, CancellationToken ct = default)
+    {
+        var status = await RefreshListIfStaleAsync(identity, ct);
+        var results = await _db.PlayerTournamentResults.AsNoTracking()
+            .Where(r => r.PlayerKey == identity.Key)
+            .OrderByDescending(r => r.EndDate)
+            .ToListAsync(ct);
+
+        var pending = QueueMissingCards(identity, results);
+        return new PlayerHistory(
+            userId, displayName, status, results, pending, await SpeedsForAsync(results, ct));
     }
 
     /// <summary>
@@ -197,6 +212,20 @@ public class TournamentHistoryService
         foreach (var profile in profiles)
         {
             var identity = IdentityOf(profile.LastName, profile.FirstName, profile.FideId, profile.ChessResultsId);
+            if (identity is not null) identities.TryAdd(identity.Key, identity);
+        }
+
+        // Verfolgte Spieler laufen MIT. Sie haben kein Profil, also stuende ihr Verlauf sonst nur
+        // so weit, wie ihn jemand durch Ansehen gefuellt hat — und das ist gedeckelt auf
+        // MaxCardsPerRequest je Aufruf. Verfolgt jemand einen Vielspieler, waere die Tabelle
+        // dauerhaft halb leer. Derselbe Schluessel wie bei einem Konto zaehlt nur einmal.
+        var tracked = await _db.TrackedPlayers.AsNoTracking()
+            .Select(t => new { t.PlayerKey, t.LastName, t.FirstName, t.FideId, t.ChessResultsId })
+            .Distinct()
+            .ToListAsync(ct);
+        foreach (var player in tracked)
+        {
+            var identity = IdentityOf(player.LastName, player.FirstName, player.FideId, player.ChessResultsId);
             if (identity is not null) identities.TryAdd(identity.Key, identity);
         }
 

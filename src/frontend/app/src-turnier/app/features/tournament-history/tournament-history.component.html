@@ -6,28 +6,40 @@
     </h1>
   </div>
 
-  <!-- Ein Reiter je Konto: ich zuerst, danach die Freunde. Vorher stand hier eine Auswahlliste,
-       die man erst aufklappen musste, um zu sehen, wen es ueberhaupt gibt. Freunde OHNE Namen im
-       Profil bekommen ihren Reiter trotzdem — gesperrt und mit Grund, statt kommentarlos zu
-       fehlen. -->
-  @if (tabs().length > 1) {
-    <mat-tab-group class="whose-tabs" [selectedIndex]="activeIndex()"
-                   (selectedIndexChange)="onTabChange($event)" mat-stretch-tabs="false">
-      @for (tab of tabs(); track trackByTab($index, tab)) {
-        <mat-tab [disabled]="!tab.enabled">
-          <ng-template mat-tab-label>
-            <span [matTooltip]="tab.enabled
-                    ? (tab.exact ? '' : ('turnier.history.inexact' | translate))
-                    : ('turnier.history.friendWithoutName' | translate)">
-              {{ tab.label }}
-              @if (tab.enabled && !tab.exact) { <mat-icon inline class="warn-icon">help_outline</mat-icon> }
-              @if (!tab.enabled) { <mat-icon inline class="warn-icon">block</mat-icon> }
-            </span>
-          </ng-template>
-        </mat-tab>
-      }
-    </mat-tab-group>
-  }
+  <!-- Ein Reiter je Konto und je verfolgtem Spieler: ich zuerst, danach die Freunde, danach die
+       Verfolgten. Vorher stand hier eine Auswahlliste, die man erst aufklappen musste, um zu
+       sehen, wen es ueberhaupt gibt. Freunde OHNE Namen im Profil bekommen ihren Reiter trotzdem
+       — gesperrt und mit Grund, statt kommentarlos zu fehlen.
+
+       Das „+" steht NEBEN den Reitern und auch dann, wenn es nur einen gibt: wer allein hier ist,
+       braucht es am dringendsten. -->
+  <div class="whose">
+    @if (tabs().length > 1) {
+      <mat-tab-group class="whose-tabs" [selectedIndex]="activeIndex()"
+                     (selectedIndexChange)="onTabChange($event)" mat-stretch-tabs="false">
+        @for (tab of tabs(); track trackByTab($index, tab)) {
+          <mat-tab [disabled]="!tab.enabled">
+            <ng-template mat-tab-label>
+              <span [matTooltip]="tab.enabled
+                      ? (tab.exact ? '' : ('turnier.history.inexact' | translate))
+                      : ('turnier.history.friendWithoutName' | translate)">
+                @if (tab.kind === 'tracked') { <mat-icon inline class="tracked-icon">visibility</mat-icon> }
+                {{ tab.label }}
+                @if (tab.enabled && !tab.exact) { <mat-icon inline class="warn-icon">help_outline</mat-icon> }
+                @if (!tab.enabled) { <mat-icon inline class="warn-icon">block</mat-icon> }
+              </span>
+            </ng-template>
+          </mat-tab>
+        }
+      </mat-tab-group>
+    }
+
+    <button mat-stroked-button type="button" class="track-add" (click)="addTracked()"
+            [matTooltip]="'turnier.history.track.help' | translate">
+      <mat-icon>add</mat-icon>
+      <span class="track-add-label">{{ 'turnier.history.track.add' | translate }}</span>
+    </button>
+  </div>
 
   <div class="filter-bar">
     <!-- Nach BEDENKZEIT einschraenken. Angeboten werden nur die Klassen, in denen dieses Konto
@@ -42,7 +54,7 @@
       </mat-button-toggle-group>
     }
 
-    @if (friends().length === 0) {
+    @if (friends().length === 0 && tracked().length === 0) {
       <span class="hint">{{ 'turnier.history.noFriendsYet' | translate }}</span>
     }
 
@@ -63,6 +75,18 @@
       <mat-card class="player-card">
         <div class="player-head">
           <h2>{{ history.displayName }}</h2>
+
+          <!-- Nur beim verfolgten Spieler: er steht hier, weil jemand ihn hinzugefuegt hat, und
+               der Weg zurueck gehoert an dieselbe Stelle. -->
+          @if (activeTab(); as tab) {
+            @if (tab.kind === 'tracked') {
+              <button mat-icon-button type="button" class="untrack" (click)="removeTracked(tab)"
+                      [matTooltip]="'turnier.history.track.remove' | translate"
+                      [attr.aria-label]="'turnier.history.track.remove' | translate">
+                <mat-icon>person_remove</mat-icon>
+              </button>
+            }
+          }
 
           @if (history.status === 'ok' && summary(history).played > 0) {
             <!-- Statt einer Gesamtpunktzahl (die Blitz zu Turnierschach addierte und nur mit der

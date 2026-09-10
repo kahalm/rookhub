@@ -7,7 +7,14 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { TournamentHistoryComponent } from './tournament-history.component';
-import { HistoryFriend, PlayerHistory, PlayerHistoryEntry } from './tournament-history.model';
+import { HistoryFriend, PlayerHistory, PlayerHistoryEntry, TrackedPlayer } from './tournament-history.model';
+
+function tracked(over: Partial<TrackedPlayer> = {}): TrackedPlayer {
+  return {
+    id: 3, displayName: 'Oberschmid, Patrik', exact: true, lastName: 'Oberschmid',
+    firstName: 'Patrik', fideId: '1693034', chessResultsId: null, ...over,
+  };
+}
 
 function played(over: Partial<PlayerHistoryEntry> = {}): PlayerHistoryEntry {
   return {
@@ -56,7 +63,12 @@ describe('TournamentHistoryComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  async function setup(friends: HistoryFriend[] = []) {
+  /**
+   * Die Seite aufbauen — OHNE eine Annahme darueber, welcher Reiter zuerst laedt. Der gemerkte
+   * Reiter kann ein Konto ODER ein verfolgter Spieler sein, und die beiden gehen an
+   * verschiedene Adressen.
+   */
+  async function mount() {
     await TestBed.configureTestingModule({
       imports: [TournamentHistoryComponent],
       providers: [
@@ -75,10 +87,16 @@ describe('TournamentHistoryComponent', () => {
     component = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+  }
 
-    // Der EIGENE Verlauf laeuft sofort los; die Freundesliste fuellt daneben die Reiter.
+  async function setup(friends: HistoryFriend[] = [], following: TrackedPlayer[] = []) {
+    await mount();
+
+    // Der EIGENE Verlauf laeuft sofort los; Freundesliste und Verfolgt-Liste fuellen daneben
+    // die Reiter.
     const own = http.expectOne(r => r.url === '/api/tournament-history');
     http.expectOne('/api/tournament-history/friends').flush(friends);
+    http.expectOne('/api/tournament-history/tracked').flush(following);
     return own;
   }
 
@@ -100,7 +118,7 @@ describe('TournamentHistoryComponent', () => {
     ]);
     req.flush([history()]);
 
-    expect(component.tabs().map(t => [t.userId, t.enabled])).toEqual([[1, true], [7, true], [8, false]]);
+    expect(component.tabs().map(t => [t.key, t.enabled])).toEqual([['u:1', true], ['u:7', true], ['u:8', false]]);
     expect(component.activeIndex()).toBe(0);
   });
 
@@ -404,7 +422,7 @@ describe('TournamentHistoryComponent', () => {
     req.flush([history()]);
 
     expect(component.friends().length).toBe(2);
-    expect(component.tabs().filter(t => t.enabled).map(t => t.userId)).toEqual([1, 7]);
+    expect(component.tabs().filter(t => t.enabled).map(t => t.id)).toEqual([1, 7]);
   });
 
   /** Ein gesperrter Reiter laedt nichts — dort gibt es nichts zu holen. */
@@ -673,6 +691,135 @@ describe('TournamentHistoryComponent', () => {
     const back = http.expectOne(r => r.url === '/api/tournament-history');
     expect(back.request.params.get('userIds')).toBe('1');
     back.flush([history()]);
-    expect(component.activeUserId()).toBe(1);
+    expect(component.activeKey()).toBe('u:1');
+  });
+
+  // ----- Verfolgte Spieler ------------------------------------------------
+
+  /**
+   * Der Kern des Features: ein verfolgter Spieler steht als eigener Reiter neben den Konten. Sein
+   * Verlauf kommt ueber einen EIGENEN Weg — dort ist die Zahl ein Eintrag der eigenen Liste, im
+   * Konten-Weg waere dieselbe Zahl ein fremdes Konto.
+   */
+  it('stellt verfolgte Spieler als eigene Reiter neben die Konten', async () => {
+    const req = await setup(
+      [{ userId: 7, displayName: 'Freund', exact: true, hasName: true }],
+      [tracked({ id: 3, displayName: 'Oberschmid, Patrik' })]);
+    req.flush([history()]);
+
+    expect(component.tabs().map(t => t.key)).toEqual(['u:1', 'u:7', 't:3']);
+    expect(component.tabs()[2].label).toBe('Oberschmid, Patrik');
+
+    component.onTabChange(2);
+
+    const followed = http.expectOne('/api/tournament-history/tracked/3');
+    followed.flush(history({ userId: 0, displayName: 'Oberschmid, Patrik' }));
+    expect(component.current()?.displayName).toBe('Oberschmid, Patrik');
+    http.verify();
+  });
+
+  /**
+   * Zwei Reiter mit derselben ZAHL — Konto 3 und Verfolgt-Eintrag 3 — duerfen sich nicht
+   * denselben Zwischenspeicher teilen. Genau dafuer ist der Schluessel zusammengesetzt.
+   */
+  it('haelt Konto und verfolgten Spieler mit derselben Nummer auseinander', async () => {
+    const req = await setup(
+      [{ userId: 3, displayName: 'Freund Drei', exact: true, hasName: true }],
+      [tracked({ id: 3, displayName: 'Verfolgt Drei' })]);
+    req.flush([history()]);
+
+    component.onTabChange(1);
+    http.expectOne(r => r.url === '/api/tournament-history')
+      .flush([history({ userId: 3, displayName: 'Freund Drei' })]);
+
+    component.onTabChange(2);
+    http.expectOne('/api/tournament-history/tracked/3')
+      .flush(history({ userId: 0, displayName: 'Verfolgt Drei' }));
+
+    expect(component.current()?.displayName).toBe('Verfolgt Drei');
+    component.onTabChange(1);
+    expect(component.current()?.displayName).toBe('Freund Drei');
+  });
+
+  /**
+   * Das „+" steht auch dann da, wenn es nur den eigenen Reiter gibt — wer allein hier ist,
+   * braucht es am dringendsten (die Reitergruppe selbst erscheint erst ab zwei Reitern).
+   */
+  it('zeigt das Plus auch ohne Freunde und ohne Verfolgte', async () => {
+    const req = await setup();
+    req.flush([history()]);
+    fixture.detectChanges();
+
+    const host: HTMLElement = fixture.nativeElement;
+    expect(host.querySelector('mat-tab-group')).toBeNull();
+    expect(host.querySelector('.track-add')).not.toBeNull();
+  });
+
+  /** „Nicht mehr verfolgen" nimmt den Reiter weg und springt auf den eigenen zurueck. */
+  it('entfernt einen verfolgten Spieler und kehrt zum eigenen Reiter zurueck', async () => {
+    const req = await setup([], [tracked({ id: 3 })]);
+    req.flush([history()]);
+
+    component.onTabChange(1);
+    http.expectOne('/api/tournament-history/tracked/3').flush(history({ userId: 0 }));
+
+    component.removeTracked(component.tabs()[1]);
+    http.expectOne({ method: 'DELETE', url: '/api/tournament-history/tracked/3' }).flush(null);
+
+    expect(component.tracked()).toEqual([]);
+    expect(component.tabs().map(t => t.key)).toEqual(['u:1']);
+    expect(component.activeKey()).toBe('u:1');
+    // Der eigene Reiter wird dabei aufgefrischt.
+    http.expectOne(r => r.url === '/api/tournament-history').flush([history()]);
+    http.verify();
+  });
+
+  /**
+   * Der gemerkte Reiter darf ein VERFOLGTER sein — und er wird erst verworfen, wenn BEIDE Listen
+   * da sind. Nach der ersten zu urteilen warf ihn weg, obwohl die zweite ihn gerade mitbringt.
+   */
+  it('merkt einen verfolgten Reiter über den Seitenwechsel hinweg', async () => {
+    const first = await setup([], [tracked({ id: 3 })]);
+    first.flush([history()]);
+    component.onTabChange(1);
+    http.expectOne('/api/tournament-history/tracked/3').flush(history({ userId: 0 }));
+
+    TestBed.resetTestingModule();
+    await mount();
+
+    // Der gemerkte Reiter laedt SOFORT — ohne auf die Listen zu warten.
+    const again = http.expectOne('/api/tournament-history/tracked/3');
+    // Die Freundesliste trifft zuerst ein und kennt ihn nicht; das darf ihn nicht verwerfen.
+    http.expectOne('/api/tournament-history/friends').flush([]);
+    expect(component.activeKey()).toBe('t:3');
+    http.expectOne('/api/tournament-history/tracked').flush([tracked({ id: 3 })]);
+
+    again.flush(history({ userId: 0 }));
+    expect(component.activeKey()).toBe('t:3');
+  });
+
+  /**
+   * Wird ein verfolgter Spieler anderswo entfernt, zeigt der gemerkte Reiter ins Leere — dann
+   * zurueck auf den eigenen.
+   */
+  it('fällt auf den eigenen Reiter zurück, wenn der gemerkte Verfolgte weg ist', async () => {
+    const first = await setup([], [tracked({ id: 3 })]);
+    first.flush([history()]);
+    component.onTabChange(1);
+    http.expectOne('/api/tournament-history/tracked/3').flush(history({ userId: 0 }));
+
+    TestBed.resetTestingModule();
+    await mount();
+
+    // Der gemerkte Reiter laedt zuerst — beide Listen kennen ihn danach nicht mehr.
+    const again = http.expectOne('/api/tournament-history/tracked/3');
+    http.expectOne('/api/tournament-history/friends').flush([]);
+    http.expectOne('/api/tournament-history/tracked').flush([]);
+    again.flush(history({ userId: 0 }));
+
+    const back = http.expectOne(r => r.url === '/api/tournament-history');
+    expect(back.request.params.get('userIds')).toBe('1');
+    back.flush([history()]);
+    expect(component.activeKey()).toBe('u:1');
   });
 });
