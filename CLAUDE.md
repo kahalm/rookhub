@@ -1093,8 +1093,11 @@ auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (ei
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
 und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start) sowie `patch_provider.py`
 — EIN Eingriff in den geholten Provider (angewandt NACH der Prüfsummen-Kontrolle, fehlende Textstelle =
-Build-Abbruch statt stiller No-op): ein **Lebenszeichen** (Leerzeile) im Analyse-Stream, wenn
-`HEARTBEAT_SECONDS` (15) lang nichts nach OBEN ging. Grund: der Provider reicht nur `info`-Zeilen MIT
+Build-Abbruch statt stiller No-op): ein **Lebenszeichen** im Analyse-Stream, wenn
+`HEARTBEAT_SECONDS` (15) lang nichts nach OBEN ging — als **Wiederholung der letzten
+weitergegebenen `info`-Zeile**, NICHT als Leerzeile: der Broker liest den Upload als UCI und
+verwirft eine Leerzeile (0.458.5, gemessen: 48 gesendet, 0 angekommen, Verbindung trotzdem gekappt;
+mit der wiederholten Zeile 3 gesendet und 28 statt 25 Datenzeilen angekommen). Grund: der Provider reicht nur `info`-Zeilen MIT
 `score` weiter, und zwischen zwei tiefen MultiPV-Iterationen vergehen Minuten — der Broker (bzw. das CDN
 davor) schloss die stumme Verbindung, bei uns sichtbar als `HttpIOException: The response ended
 prematurely` alle 5–9 min. Der Auftrag kam dadurch nie über Tiefe 29 hinaus (jeder Neustart rechnet von

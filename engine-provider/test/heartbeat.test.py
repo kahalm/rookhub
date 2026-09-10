@@ -124,6 +124,25 @@ with engine.analyse(JOB, threading.Event()) as stream:
         print(f"FAIL: kein Lebenszeichen bei plappernder Engine (nur {beats})"); fails += 1
 engine.terminate()
 
+# ===== 3. Lebenszeichen wiederholt die letzte Zeile ==========================================
+# Der Broker liest den Upload als UCI und verwirft eine Leerzeile (nachgemessen: 48 gesendet, 0
+# angekommen, Verbindung trotzdem gekappt). Sobald eine `info`-Zeile weitergegeben wurde, MUSS das
+# Lebenszeichen genau diese Zeile erneut sein — die kommt durch.
+engine = new_engine()
+with engine.analyse(JOB, threading.Event()) as stream:
+    engine.send("emit")                   # eine echte Zeile, danach schweigt der Stub
+    threading.Timer(5.0, lambda: engine.send("stop")).start()
+    seen = []
+    for chunk in stream:
+        seen.append(chunk)
+        if len(seen) >= 2:
+            break
+    if len(seen) >= 2 and b"score" in seen[0] and seen[1] == seen[0]:
+        print("ok   Lebenszeichen wiederholt die letzte Zeile (keine Leerzeile)")
+    else:
+        print(f"FAIL: erwartet dieselbe score-Zeile zweimal, bekam {seen!r}"); fails += 1
+engine.terminate()
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("ALLE TESTS OK" if not fails else f"{fails} FEHLER")
 sys.exit(1 if fails else 0)

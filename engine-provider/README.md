@@ -105,9 +105,17 @@ weil jeder Neustart wieder von Tiefe 1 hochrechnen muss und nie über die Zeit z
 hinauskommt (beobachtet: alle 5–9 Minuten ein Abriss, Tiefe blieb bei 29 stehen).
 
 Dieses Image patcht den geholten Provider deshalb an **einer** Stelle (`patch_provider.py`, angewandt
-NACH der Prüfsummen-Kontrolle): geht länger als `HEARTBEAT_SECONDS` nichts nach oben, folgt eine
-Leerzeile. Empfänger ignorieren Leerzeilen; die Verbindung bleibt offen. `HEARTBEAT_SECONDS=0`
-schaltet den Eingriff ab.
+NACH der Prüfsummen-Kontrolle): geht länger als `HEARTBEAT_SECONDS` nichts nach oben, wird die
+**letzte weitergegebene `info`-Zeile erneut** geschickt. `HEARTBEAT_SECONDS=0` schaltet den Eingriff
+ab.
+
+**Warum die letzte Zeile und keine Leerzeile:** der Broker liest den Upload als UCI und reicht nur
+weiter, was er versteht — eine Leerzeile verwirft er. Am 2026-09-10 gemessen: der Provider schickte
+in einer halben Stunde **48 Leerzeilen, beim Empfänger kamen 0 an**, und die Verbindung wurde
+weiterhin nach 60 s Stille gekappt. Mit der wiederholten Zeile kam der Beweis in der Gegenrichtung:
+3 gesendete Lebenszeichen, und der Auftrag kam mit **28 statt 25 Datenzeilen** an. Der Empfänger
+übernimmt eine Zeile ohnehin nur, wenn sie mindestens so tief ist wie sein Stand
+(`AnalysisJobStream.ShouldPersist`) — dieselbe Zeile zweimal ändert dort also nichts.
 
 **Gemessen wird der UPLOAD, nicht die Engine** — und das ist der ganze Punkt. Die erste Fassung wartete
 auf Stille der ENGINE (`recv` mit Zeitschranke). Stockfish schweigt während einer langen Iteration aber
