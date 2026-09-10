@@ -3002,6 +3002,13 @@
     "skipped": {
       "notScorable": "not asked: the engine does not list the game move among its best, so there is nothing to measure against",
       "pending": "not asked: this position had not been computed yet"
+    },
+    "notTheGameMove": "{{move}} is good — but the game went another way. Keep looking.",
+    "settings": {
+      "title": "What counts as solved",
+      "acceptBetter": "accept a better move",
+      "acceptSimilar": "accept an equally good move",
+      "hint": "Switch these off if you want to find the move that was actually played — a good move then only earns a note, and the position stays."
     }
   },
   "tournamentDirectory": {

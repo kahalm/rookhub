@@ -6,6 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
@@ -13,7 +16,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { GuessHistoryMove, GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
+import { GuessAccept, GuessHistoryMove, GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
 
 /** Umwandlungsfigur aus dem SAN („e8=Q+" → „q"); leer, wenn der Zug keine Umwandlung ist. */
 function promotionOf(san: string | undefined): string {
@@ -41,7 +44,8 @@ interface HistoryRow {
   selector: 'app-guess-board',
   standalone: true,
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent],
+    MatProgressBarModule, MatMenuModule, MatCheckboxModule, FormsModule,
+    TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent],
   template: `
     <div class="gb-container">
       @if (loading) {
@@ -63,7 +67,25 @@ interface HistoryRow {
               }
             </p>
           </div>
-          <a mat-stroked-button routerLink="/guess"><mat-icon>arrow_back</mat-icon> {{ 'guess.back' | translate }}</a>
+          <div class="head-actions">
+            <button mat-icon-button [matMenuTriggerFor]="settings"
+                    [attr.title]="'guess.settings.title' | translate">
+              <mat-icon>settings</mat-icon>
+            </button>
+            <mat-menu #settings="matMenu" class="guess-settings">
+              <div class="set-box" (click)="$event.stopPropagation()">
+                <p class="set-head">{{ 'guess.settings.title' | translate }}</p>
+                <mat-checkbox [(ngModel)]="accept.better" (change)="saveAccept()">
+                  {{ 'guess.settings.acceptBetter' | translate }}
+                </mat-checkbox>
+                <mat-checkbox [(ngModel)]="accept.similar" (change)="saveAccept()">
+                  {{ 'guess.settings.acceptSimilar' | translate }}
+                </mat-checkbox>
+                <p class="set-hint muted small">{{ 'guess.settings.hint' | translate }}</p>
+              </div>
+            </mat-menu>
+            <a mat-stroked-button routerLink="/guess"><mat-icon>arrow_back</mat-icon> {{ 'guess.back' | translate }}</a>
+          </div>
         </div>
 
         <div class="body">
@@ -78,6 +100,11 @@ interface HistoryRow {
                   <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
                 </button>
                 <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
+              </div>
+            }
+            @if (rejected) {
+              <div class="held g-similar">
+                <span class="hg">{{ 'guess.notTheGameMove' | translate:{ move: rejected } }}</span>
               </div>
             }
             <!-- Dein Zug steht auf dem Brett; DARUNTER, was die Partie gespielt hat. -->
@@ -260,6 +287,10 @@ interface HistoryRow {
     .rev-row .pts { text-align: right; font-variant-numeric: tabular-nums; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
+    .head-actions { display: flex; align-items: center; gap: 6px; }
+    .set-box { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 300px; }
+    .set-head { margin: 0; font-weight: 600; }
+    .set-hint { margin: 2px 0 0; line-height: 1.4; }
     /* Kommentierte Zuege tragen einen Punkt — Farbe allein traegt die Auskunft nicht. */
     .mv.noted { font-weight: 600; }
     .mv.noted::after { content: '\\2022'; margin-left: 2px; color: var(--mdc-theme-primary, #3f51b5); }
@@ -462,6 +493,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.loadAccept();
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.service.get(id).subscribe({
       next: s => {
@@ -478,6 +510,23 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void { this.clearReplyTimer(); }
+
+  /** Der Speicher kann gesperrt sein (Privatmodus) — dann gilt eben die Vorgabe. */
+  private loadAccept(): void {
+    try {
+      const raw = localStorage.getItem(GuessBoardComponent.AcceptKey);
+      if (raw) {
+        const v = JSON.parse(raw) as Partial<GuessAccept>;
+        this.accept = { better: v.better !== false, similar: v.similar !== false };
+      }
+    } catch { /* Vorgabe behalten */ }
+  }
+
+  saveAccept(): void {
+    try {
+      localStorage.setItem(GuessBoardComponent.AcceptKey, JSON.stringify(this.accept));
+    } catch { /* nicht speicherbar: gilt fuer diesen Aufruf trotzdem */ }
+  }
 
   /**
    * <b>Automatisch gespielte Zuege laufen EINZELN ueber das Brett.</b>
@@ -498,6 +547,20 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
    */
   private static readonly GameMoveDelayMs = 1000;
   private static readonly StepDelayMs = 500;
+
+  /**
+   * Was als „erledigt" gilt. Wer den PARTIEZUG finden will, laesst einen besseren oder gleich guten
+   * Zug NICHT zaehlen — die Aufgabe bleibt dann stehen. Bei einer Meisterpartie ist genau das der
+   * Sinn: gesucht ist der Plan des Spielers, nicht der der Engine.
+   *
+   * Liegt im localStorage, weil es eine Gewohnheit des Nutzers ist und keine Eigenschaft der
+   * einzelnen Partie — und weil die Punktepartie auch ohne Konto laeuft, wo es kein Profil gibt.
+   */
+  private static readonly AcceptKey = 'rookhub_guess_accept';
+  accept: GuessAccept = { better: true, similar: true };
+
+  /** Der eben abgelehnte Zug (SAN) — solange er dasteht, sucht der Nutzer weiter. */
+  rejected: string | null = null;
 
   /** Der Kommentar zum gerade gezeigten Schritt (nicht zum Durchblaettern). */
   stepNote: { move: string; text: string } | null = null;
@@ -590,6 +653,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     if (!id) return;
     this.busy = true;
     this.stepNote = null;              // der Kommentar des VORIGEN Zuges ist erledigt
+    this.rejected = null;
     const seconds = Math.min(3600, Math.max(0, Math.round((Date.now() - this.since) / 1000)));
     const fenBefore = this.boardFen;
     const lastBefore = this.lastMove;
@@ -608,9 +672,20 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.service.guess(id, uci, seconds).subscribe({
+    this.service.guess(id, uci, seconds, this.accept).subscribe({
       next: res => {
         this.busy = false;
+        if (res.accepted === false) {
+          // Guter Zug, aber gesucht ist der Partiezug: Brett zurueck auf die Aufgabe, nichts
+          // gewertet, nichts weitergerueckt — nur die Auskunft, dass es ein anderer war.
+          this.boardFen = fenBefore;
+          this.lastMove = lastBefore;
+          this.rejected = res.playedSan ?? null;
+          this.session = res.session;
+          this.cdr.markForCheck();
+          return;
+        }
+        this.rejected = null;
         this.last = res;
         const mine = uci ? fenAfterUci(fenBefore, uci) : null;
         if (res.session.status !== 'running') {

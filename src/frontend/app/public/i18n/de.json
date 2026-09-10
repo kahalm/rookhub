@@ -3002,6 +3002,13 @@
     "skipped": {
       "notScorable": "nicht abgefragt: die Engine führt den Partiezug nicht unter ihren besten — es gibt nichts, woran sich messen ließe",
       "pending": "nicht abgefragt: diese Stellung war noch nicht gerechnet"
+    },
+    "notTheGameMove": "{{move}} ist gut — gespielt wurde aber ein anderer Zug. Weitersuchen.",
+    "settings": {
+      "title": "Was als gelöst gilt",
+      "acceptBetter": "besseren Zug annehmen",
+      "acceptSimilar": "gleich guten Zug annehmen",
+      "hint": "Aus, wenn du den wirklich gespielten Zug finden willst — ein guter Zug bringt dann nur einen Hinweis, die Stellung bleibt stehen."
     }
   },
   "tournamentDirectory": {

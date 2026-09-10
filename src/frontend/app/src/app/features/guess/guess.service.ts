@@ -60,7 +60,15 @@ export interface GuessSession {
 }
 
 /** Antwort auf einen Rateversuch — HIER kommt der Partiezug zum ersten Mal mit. */
+/** Was der Nutzer als „erledigt" gelten lässt — siehe `GuessMoveRequest` am Server. */
+export interface GuessAccept {
+  better: boolean;
+  similar: boolean;
+}
+
 export interface GuessResult {
+  /** `false` = guter Zug, aber der Partiezug ist weiter gesucht (die Aufgabe bleibt stehen). */
+  accepted: boolean;
   grade: GuessGrade | null;
   points: number;
   playedSan: string | null;
@@ -145,8 +153,10 @@ export class GuessService {
   }
 
   /** `uci` leer = passen: 0 Punkte, keine Strafe. */
-  guess(id: number, uci: string | null, addSeconds: number): Observable<GuessResult> {
-    return this.http.post<GuessResult>(`${this.base()}/${id}/guess`, this.body({ uci, addSeconds }));
+  guess(id: number, uci: string | null, addSeconds: number, accept?: GuessAccept): Observable<GuessResult> {
+    return this.http.post<GuessResult>(`${this.base()}/${id}/guess`,
+      this.body(accept ? { uci, addSeconds, acceptBetter: accept.better, acceptSimilar: accept.similar }
+                       : { uci, addSeconds }));
   }
 
   review(id: number): Observable<GuessReviewMove[]> {

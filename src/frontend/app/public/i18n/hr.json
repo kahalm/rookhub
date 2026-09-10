@@ -3002,6 +3002,13 @@
     "skipped": {
       "notScorable": "nije pitano: motor ne navodi potez iz partije među najboljima, pa nema mjerila",
       "pending": "nije pitano: ova pozicija još nije bila izračunata"
+    },
+    "notTheGameMove": "{{move}} je dobar — ali u partiji je odigran drugi potez. Traži dalje.",
+    "settings": {
+      "title": "Što se računa kao riješeno",
+      "acceptBetter": "prihvati bolji potez",
+      "acceptSimilar": "prihvati jednako dobar potez",
+      "hint": "Isključi ako želiš pronaći stvarno odigrani potez — dobar potez tada donosi samo napomenu, pozicija ostaje."
     }
   },
   "tournamentDirectory": {

@@ -546,4 +546,28 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     c.browse(c.session!.history.findIndex((h: GuessHistoryMove) => h.ply === 10));
     expect(c.browsedSkip).withContext('sagt, warum nicht gefragt wurde').toBeTruthy();
   }));
+
+  /**
+   * „Ich will den PARTIEZUG finden": ein guter Zug zaehlt dann nicht. Das Brett muss auf die
+   * Aufgabe zurueck, nichts darf weiterruecken, und der Nutzer sieht, dass er weitersuchen soll.
+   */
+  it('nimmt einen abgelehnten Zug zurueck und laesst die Aufgabe stehen', () => {
+    const c = load();
+    c.accept = { better: false, similar: true };
+
+    c.onMove({ from: 'd1', to: 'f3', san: 'Qxf3', fen: 'egal' });
+    const req = http.expectOne('/api/guess-sessions/3/guess');
+    expect(req.request.body.acceptBetter).withContext('Einstellung geht mit').toBeFalse();
+    expect(req.request.body.acceptSimilar).toBeTrue();
+    req.flush({
+      accepted: false, grade: 'clearlyBetter', points: 0, playedSan: 'Qxf3',
+      gameMoveSan: '', gameMoveUci: '', replySan: null, replyUci: null,
+      diffCp: 60, evalText: null, session: base(),
+    });
+
+    expect(c.rejected).withContext('sagt, welcher Zug es war').toBe('Qxf3');
+    expect(c.boardFen).withContext('zurueck auf die Aufgabe').toBe(FEN8);
+    expect(c.canGuess).withContext('gleich nochmal versuchen').toBeTrue();
+    expect(c.last).withContext('keine Wertung angezeigt').toBeNull();
+  });
 });

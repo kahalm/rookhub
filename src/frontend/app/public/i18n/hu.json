@@ -2727,6 +2727,13 @@
     "skipped": {
       "notScorable": "nem kérdeztük: a motor nem sorolja a játszmalépést a legjobbak közé, így nincs mihez mérni",
       "pending": "nem kérdeztük: ez az állás még nem volt kiszámítva"
+    },
+    "notTheGameMove": "{{move}} jó — de a játszmában más lépés következett. Keresd tovább.",
+    "settings": {
+      "title": "Mi számít megoldásnak",
+      "acceptBetter": "jobb lépés elfogadása",
+      "acceptSimilar": "ugyanolyan jó lépés elfogadása",
+      "hint": "Kapcsold ki, ha a ténylegesen játszott lépést akarod megtalálni — egy jó lépés ilyenkor csak megjegyzést hoz, az állás marad."
     }
   },
   "tournamentDirectory": {

@@ -675,4 +675,75 @@ public class GuessSessionServiceTests : IDisposable
         var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
         Assert.Equal("pending", state!.History.Single(h => h.Ply == 2).Skipped);
     }
+
+    // ===== „Ich will den Partiezug finden" ==============================================
+
+    /// <summary>
+    /// Wer einen besseren Zug NICHT als erledigt gelten laesst, bekommt die Auskunft und die
+    /// Aufgabe zurueck — gespeichert wird nichts, und der Partiezug bleibt geheim. Ihn hier
+    /// mitzuschicken hiesse, die Aufgabe zu verraten, die man sich selbst gestellt hat.
+    /// </summary>
+    [Fact]
+    public async Task Guess_abgelehnterZug_bleibtOhneWirkungUndOhneVerrat()
+    {
+        var (user, analysis) = await SeedAsync();
+        var owner = GuessOwner.ForUser(user.Id);
+        // Kandidatenliste so setzen, dass ein anderer Zug DEUTLICH besser ist als der Partiezug.
+        var p0 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 0);
+        p0.CandidatesJson = "[{\"uci\":\"d2d4\",\"cp\":120},{\"uci\":\"e2e4\",\"cp\":10}]";
+        await _db.SaveChangesAsync();
+
+        var session = await _svc.StartAsync(owner, new CreateGuessSessionRequest
+        { GameAnalysisId = analysis.Id, StartPly = 0, GuessWhite = true });
+
+        var res = await _svc.GuessAsync(owner, session.Id,
+            new GuessMoveRequest { Uci = "d2d4", AcceptBetter = false });
+
+        Assert.False(res.Accepted);
+        Assert.Equal("d4", res.PlayedSan);
+        Assert.Empty(res.GameMoveSan);                       // kein Verrat
+        Assert.Empty(res.GameMoveUci);
+        Assert.Null(res.ReplySan);
+        Assert.Equal(0, res.Points);
+        Assert.Equal(0, res.Session.MovesPlayed);            // nichts protokolliert
+        Assert.Equal(0, res.Session.Position!.Ply);          // dieselbe Aufgabe
+
+        Assert.Empty(await _db.GuessMoves.Where(m => m.GuessSessionId == session.Id).ToListAsync());
+    }
+
+    /// <summary>Mit der Vorgabe (annehmen) zaehlt derselbe Zug ganz normal.</summary>
+    [Fact]
+    public async Task Guess_bessererZug_zaehltWennErlaubt()
+    {
+        var (user, analysis) = await SeedAsync();
+        var owner = GuessOwner.ForUser(user.Id);
+        var p0 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 0);
+        p0.CandidatesJson = "[{\"uci\":\"d2d4\",\"cp\":120},{\"uci\":\"e2e4\",\"cp\":10}]";
+        await _db.SaveChangesAsync();
+
+        var session = await _svc.StartAsync(owner, new CreateGuessSessionRequest
+        { GameAnalysisId = analysis.Id, StartPly = 0, GuessWhite = true });
+
+        var res = await _svc.GuessAsync(owner, session.Id, new GuessMoveRequest { Uci = "d2d4" });
+
+        Assert.True(res.Accepted);
+        Assert.Equal("e4", res.GameMoveSan);
+        Assert.Equal(1, res.Session.MovesPlayed);
+    }
+
+    /// <summary>Der PARTIEZUG selbst laesst sich nicht ablehnen — er ist ja das Ziel.</summary>
+    [Fact]
+    public async Task Guess_derPartiezug_wirdNieAbgelehnt()
+    {
+        var (user, analysis) = await SeedAsync();
+        var owner = GuessOwner.ForUser(user.Id);
+        var session = await _svc.StartAsync(owner, new CreateGuessSessionRequest
+        { GameAnalysisId = analysis.Id, StartPly = 0, GuessWhite = true });
+
+        var res = await _svc.GuessAsync(owner, session.Id,
+            new GuessMoveRequest { Uci = "e2e4", AcceptBetter = false, AcceptSimilar = false });
+
+        Assert.True(res.Accepted);
+        Assert.Equal("e4", res.GameMoveSan);
+    }
 }

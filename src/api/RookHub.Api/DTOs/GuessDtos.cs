@@ -20,6 +20,20 @@ public class GuessMoveRequest
     public string? Uci { get; set; }
     /// <summary>Seit der letzten Meldung verbrauchte Sekunden (der Server addiert).</summary>
     public int? AddSeconds { get; set; }
+
+    /// <summary>
+    /// Zaehlt ein Zug, der BESSER ist als der Partiezug, als erledigt? Vorgabe ja.
+    ///
+    /// <para>Wer sagt nein, will den Partiezug finden — ein besserer Zug ist dann kein Ergebnis,
+    /// sondern eine Auskunft („guter Zug, aber gespielt wurde ein anderer"), und die Aufgabe
+    /// bleibt stehen. Bei einer Meisterpartie ist das der eigentliche Sinn: man sucht den Plan des
+    /// Spielers, nicht den der Engine.</para>
+    /// </summary>
+    public bool? AcceptBetter { get; set; }
+
+    /// <summary>Dasselbe fuer einen Zug, der ungefaehr GLEICH gut ist wie der Partiezug
+    /// (<c>similar</c>). Vorgabe ja.</summary>
+    public bool? AcceptSimilar { get; set; }
 }
 
 /// <summary>Wie <see cref="CreateGuessSessionRequest"/>, nur ohne Anmeldung: die Sitzungskennung
@@ -121,6 +135,17 @@ public class GuessPositionDto
 /// <summary>Antwort auf einen Rateversuch: Bewertung + was tatsächlich gespielt wurde.</summary>
 public class GuessResultDto
 {
+    /// <summary>
+    /// Wurde der Zug ANGENOMMEN? <c>false</c> heisst: er war gut (oder sogar besser als der
+    /// Partiezug), aber der Nutzer hat sich vorgenommen, den PARTIEZUG zu finden — die Sitzung
+    /// bleibt deshalb stehen, nichts wird gespeichert, und er darf es noch einmal versuchen.
+    ///
+    /// <para>Dann sind <see cref="GameMoveSan"/> und alles Folgende bewusst LEER: der Partiezug ist
+    /// ja weiter gesucht. Ihn hier mitzuschicken hiesse, die Aufgabe zu verraten, die man sich
+    /// gerade selbst gestellt hat.</para>
+    /// </summary>
+    public bool Accepted { get; set; } = true;
+
     /// <summary>Stufe als camelCase-Name (zugleich i18n-Schlüssel); <c>null</c> = übersprungen
     /// oder Stellung nicht wertbar.</summary>
     public string? Grade { get; set; }

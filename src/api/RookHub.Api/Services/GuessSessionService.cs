@@ -176,6 +176,21 @@ public class GuessSessionService
             }
             // scored == null → Stellung nicht wertbar (Partiezug fehlt in der Liste): kein Grade,
             // keine Punkte, aber auch kein Abzug. Der Zug wird trotzdem protokolliert.
+
+            // „Ich will den PARTIEZUG finden": ein guter oder sogar besserer Zug zaehlt dann nicht
+            // als erledigt. Die Sitzung bleibt stehen, es wird NICHTS gespeichert — und der
+            // Partiezug wandert auch nicht in die Antwort, sonst waere die Aufgabe verraten, die
+            // man sich gerade selbst gestellt hat.
+            if (grade is { } rejected && Rejects(req, rejected))
+                return new GuessResultDto
+                {
+                    Accepted = false,
+                    Grade = CamelCase(rejected.ToString()),
+                    Points = 0,
+                    PlayedSan = playedSan,
+                    DiffCp = diffCp,
+                    Session = await BuildDtoAsync(session, ct),
+                };
         }
 
         var move = new GuessMove
@@ -216,6 +231,18 @@ public class GuessSessionService
             Session = await BuildDtoAsync(session, ct),
         };
     }
+
+    /// <summary>
+    /// Lehnt der Nutzer diese Stufe ab? Betrifft nur Zuege, die NICHT der Partiezug sind und
+    /// mindestens so gut wie er — schlechtere Zuege abzulehnen ergaebe keinen Sinn, die sind ja
+    /// beantwortet, und den Partiezug selbst kann man nicht ablehnen.
+    /// </summary>
+    private static bool Rejects(GuessMoveRequest req, GuessGrade grade) => grade switch
+    {
+        GuessGrade.Better or GuessGrade.ClearlyBetter => req.AcceptBetter == false,
+        GuessGrade.Similar => req.AcceptSimilar == false,
+        _ => false,
+    };
 
     /// <summary>Rückblick nach dem Ende: jeder Halbzug mit dem, was gespielt und was geraten wurde.</summary>
     public async Task<List<GuessReviewMoveDto>?> ReviewAsync(GuessOwner owner, int sessionId, CancellationToken ct = default)
