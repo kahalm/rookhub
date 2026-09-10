@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.459.3", date: "2026-09-10", changes: [
+    { en: "The points game is laid out properly on a wide screen again. The move list and the commentary now sit beside the board instead of below it, where a long game pushed the comment off the bottom of the screen and left the right half of the page empty. The comment appears directly above the list, right where you clicked.", de: "Die Punktepartie ist auf einem breiten Bildschirm wieder vernuenftig aufgebaut. Zugliste und Kommentar stehen jetzt NEBEN dem Brett statt darunter, wo eine lange Partie den Kommentar unten aus dem Bild schob und die rechte Haelfte der Seite leer blieb. Der Kommentar erscheint direkt ueber der Liste, dort wo du geklickt hast." },
+  ] },
   { version: "0.459.2", date: "2026-09-10", changes: [
     { en: "The points game now shows the annotations of the master games. In the move list under the board, every move that carries a comment is marked with a dot; clicking it brings the comment up again together with the position. Until now the annotated games were silent there — the notes existed but never reached the screen. Comments only ever appear on moves already played: one on the move you are about to guess would be the answer in prose.", de: "Die Punktepartie zeigt jetzt die Anmerkungen der Meisterpartien. In der Zugliste unter dem Brett ist jeder Zug mit Kommentar durch einen Punkt markiert; ein Klick holt den Kommentar samt Stellung wieder hervor. Bisher waren die kommentierten Partien dort stumm — die Anmerkungen gab es, sie kamen nur nie auf den Schirm. Kommentare stehen ausschliesslich an bereits gespielten Zuegen: einer am Zug, den du gerade raten sollst, waere die Loesung in Prosa." },
   ] },

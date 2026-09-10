@@ -114,44 +114,6 @@ interface HistoryRow {
             }
 
             <!-- Die Partie bis hierhin (Eröffnung + gelöste Züge): blättern oder direkt anklicken. -->
-            @if (session.history.length) {
-              <div class="opening">
-                <div class="onav">
-                  <button mat-icon-button (click)="browse(-1)" [disabled]="atStart"
-                          [attr.title]="'guess.startPosition' | translate"><mat-icon>first_page</mat-icon></button>
-                  <button mat-icon-button (click)="step(-1)" [disabled]="atStart"
-                          [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
-                  <button mat-icon-button (click)="step(1)" [disabled]="atTask"
-                          [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
-                  <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
-                    {{ 'guess.toTask' | translate }}
-                  </button>
-                </div>
-                <div class="omoves">
-                  @for (row of historyRows; track row.no) {
-                    <div class="orow">
-                      <span class="no">{{ row.no }}.</span>
-                      @if (row.wIdx >= 0) {
-                        <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
-                                [class.noted]="row.wNoted" [attr.title]="row.wNoted ? noteHint : null"
-                                (click)="browse(row.wIdx)">{{ row.w }}</button>
-                      } @else { <span class="mv muted">…</span> }
-                      @if (row.b !== null) {
-                        <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
-                                [class.noted]="row.bNoted" [attr.title]="row.bNoted ? noteHint : null"
-                                (click)="browse(row.bIdx)">{{ row.b }}</button>
-                      } @else { <span></span> }
-                    </div>
-                  }
-                </div>
-                @if (browsedComment; as note) {
-                  <div class="note">
-                    <span class="note-move">{{ note.move }}</span>
-                    <span>{{ note.text }}</span>
-                  </div>
-                }
-              </div>
-            }
           </div>
 
           <div class="side-col">
@@ -189,6 +151,45 @@ interface HistoryRow {
               <mat-progress-bar mode="determinate" [value]="progress"></mat-progress-bar>
               <p class="muted small">{{ 'guess.progress' | translate:{ done: session.movesPlayed, total: session.totalGuesses } }}</p>
             }
+
+            @if (session.history.length) {
+              <div class="opening">
+                <div class="onav">
+                  <button mat-icon-button (click)="browse(-1)" [disabled]="atStart"
+                          [attr.title]="'guess.startPosition' | translate"><mat-icon>first_page</mat-icon></button>
+                  <button mat-icon-button (click)="step(-1)" [disabled]="atStart"
+                          [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
+                  <button mat-icon-button (click)="step(1)" [disabled]="atTask"
+                          [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
+                  <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
+                    {{ 'guess.toTask' | translate }}
+                  </button>
+                </div>
+                @if (browsedComment; as note) {
+                  <div class="note">
+                    <span class="note-move">{{ note.move }}</span>
+                    <span>{{ note.text }}</span>
+                  </div>
+                }
+                <div class="omoves">
+                  @for (row of historyRows; track row.no) {
+                    <div class="orow">
+                      <span class="no">{{ row.no }}.</span>
+                      @if (row.wIdx >= 0) {
+                        <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
+                                [class.noted]="row.wNoted" [attr.title]="row.wNoted ? noteHint : null"
+                                (click)="browse(row.wIdx)">{{ row.w }}</button>
+                      } @else { <span class="mv muted">…</span> }
+                      @if (row.b !== null) {
+                        <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
+                                [class.noted]="row.bNoted" [attr.title]="row.bNoted ? noteHint : null"
+                                (click)="browse(row.bIdx)">{{ row.b }}</button>
+                      } @else { <span></span> }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
           </div>
         </div>
       }
@@ -202,16 +203,21 @@ interface HistoryRow {
     h3 { margin: 0 0 8px; font-size: 1rem; }
     .body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; }
     .board-col { flex: 1 1 320px; max-width: 520px; }
-    .side-col { flex: 1 1 280px; max-width: 440px; display: flex; flex-direction: column; gap: 10px; }
+    /* Breiter als das Brett-Feld: hier stehen die Zugliste UND die Kommentare, und Prosa braucht
+       Zeilenlaenge. Zusammen mit der Brett-Spalte fuellt das den Container, statt rechts ein
+       leeres Drittel zu lassen (auf dem Desktop gemeldet, 2026-09-10). */
+    .side-col { flex: 1 1 320px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
     .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     /* Eröffnung: Navigation oben, darunter die Züge UNTEREINANDER (Nr. · Weiß · Schwarz). */
     .opening { margin-top: 8px; }
     .onav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
     .onav button[mat-stroked-button] { margin-left: 8px; }
-    /* Schmal halten: eine Zugliste, die sich ueber die ganze Brettbreite zieht, liest sich schlecht. */
-    .omoves { margin-top: 4px; max-width: 260px; max-height: 30vh; overflow-y: auto; }
-    .orow { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 4px; align-items: baseline;
+    /* Die Zugliste steht NEBEN dem Brett und darf deshalb so hoch werden wie das Brett. Breit
+       wird sie trotzdem nicht: feste, schmale Spalten halten Weiss und Schwarz beieinander —
+       gedehnt ueber die halbe Seite liest sich eine Zugliste schlecht. */
+    .omoves { margin-top: 4px; max-height: 52vh; overflow-y: auto; }
+    .orow { display: grid; grid-template-columns: 34px 96px 96px; gap: 4px; align-items: baseline;
             padding: 1px 2px; }
     .orow .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem;
                 text-align: right; font-variant-numeric: tabular-nums; }
@@ -246,7 +252,7 @@ interface HistoryRow {
     /* Kommentierte Zuege tragen einen Punkt — Farbe allein traegt die Auskunft nicht. */
     .mv.noted { font-weight: 600; }
     .mv.noted::after { content: '\\2022'; margin-left: 2px; color: var(--mdc-theme-primary, #3f51b5); }
-    .note { margin-top: 8px; padding: 8px 10px; border-radius: 6px; line-height: 1.45;
+    .note { margin: 8px 0 4px; padding: 8px 10px; border-radius: 6px; line-height: 1.45;
             border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
             background: color-mix(in srgb, currentColor 5%, transparent); }
     .note-move { font-weight: 600; margin-right: 6px; }
