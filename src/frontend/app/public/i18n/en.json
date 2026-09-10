@@ -2928,7 +2928,8 @@
       "failed": "failed"
     },
     "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}} %)",
-    "overallOpen": "{{count}} games still in the queue"
+    "overallOpen": "{{count}} games still in the queue",
+    "overallFailed": "not counted: {{count}} failed"
   },
   "guess": {
     "title": "Point game",

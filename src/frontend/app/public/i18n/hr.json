@@ -2928,7 +2928,8 @@
       "failed": "neuspjelo"
     },
     "overall": "Ukupno: {{done}} od {{total}} pozicija izračunano ({{percent}} %)",
-    "overallOpen": "{{count}} partija još je u redu čekanja"
+    "overallOpen": "{{count}} partija još je u redu čekanja",
+    "overallFailed": "nije uračunato: {{count}} neuspjelih"
   },
   "guess": {
     "title": "Bodovna partija",

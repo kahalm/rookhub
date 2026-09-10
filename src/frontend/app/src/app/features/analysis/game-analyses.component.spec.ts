@@ -78,4 +78,25 @@ describe('GameAnalysesComponent', () => {
     expect(fixture.componentInstance.analyses.map(a => a.id)).toEqual([7]);
     expect(fixture.componentInstance.pgn).toBe('');
   });
+
+  /**
+   * Eine gescheiterte (bzw. zurueckgestellte) Analyse kommt nie voran. Zaehlte sie im
+   * Gesamtbalken mit, stuende der still, obwohl die Engine arbeitet — genau so gemeldet
+   * am 2026-09-10. Sichtbar bleibt sie trotzdem: die Zahl steht daneben.
+   */
+  it('der Gesamtfortschritt laesst gescheiterte Partien draussen', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses').flush([
+      analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 50 }),
+      analysis({ id: 2, status: 'failed', plyCount: 900, analyzedPlies: 0 }),
+    ]);
+    fixture.detectChanges();
+
+    const c = fixture.componentInstance;
+    expect(c.totalPlies).withContext('nur die laufende Partie').toBe(100);
+    expect(c.analyzedPlies).toBe(50);
+    expect(c.overallPercent).withContext('nicht 5 %').toBe(50);
+    expect(c.failedCount).toBe(1);
+  });
 });

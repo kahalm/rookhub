@@ -392,7 +392,55 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { /* nichts zu lösen — die Zeit wird je Zug gemeldet */ }
+  ngOnDestroy(): void { this.clearReplyTimer(); }
+
+  /**
+   * Der Partiezug und die ANTWORT des Gegners sind zwei Halbzuege — sie duerfen nicht im selben
+   * Bild erscheinen. Vorher sprang das Brett direkt auf die naechste Aufgabe, also gleich zwei
+   * Zuege weiter: man sah nie, WAS gespielt wurde, nur das Ergebnis. Deshalb liegt die Stellung
+   * nach dem Partiezug hier bereit, wird kurz gezeigt und erst dann kommt die Antwort.
+   */
+  private static readonly ReplyDelayMs = 1000;
+
+  /** Stellung nach EINEM Zug samt dem Zug selbst; `null`, wenn er sich nicht spielen laesst. */
+  private static step(fen: string, uci: string): { fen: string; uci: string } | null {
+    const after = fenAfterUci(fen, uci);
+    return after ? { fen: after, uci } : null;
+  }
+
+  private replyTimer?: ReturnType<typeof setTimeout>;
+  /** Stellung + Zug NACH dem Partiezug, aber VOR der Antwort des Gegners. */
+  private afterGameMove: { fen: string; uci: string } | null = null;
+
+  private clearReplyTimer(): void {
+    if (this.replyTimer !== undefined) {
+      clearTimeout(this.replyTimer);
+      this.replyTimer = undefined;
+    }
+  }
+
+  /**
+   * Den Partiezug zeigen, eine Sekunde stehen lassen, dann auf die naechste Aufgabe (die schon die
+   * Antwort des Gegners enthaelt). Ist nichts vorbereitet — oder gab es gar keine Antwort, weil die
+   * Partie endet — geht es sofort weiter; eine Kunstpause vor dem Nichts hilft niemandem.
+   */
+  private applyAfterReplyPause(next: GuessSession): void {
+    const step = this.afterGameMove;
+    this.afterGameMove = null;
+    if (!step || !this.last?.replySan) { this.apply(next); return; }
+
+    this.boardFen = step.fen;
+    this.lastMove = [step.uci.slice(0, 2), step.uci.slice(2, 4)];
+    this.browseIndex = null;
+    this.busy = true;                       // Brett bleibt gesperrt, solange der Zug steht
+    this.clearReplyTimer();
+    this.replyTimer = setTimeout(() => {
+      this.replyTimer = undefined;
+      this.busy = false;
+      this.apply(next);
+      this.cdr.markForCheck();
+    }, GuessBoardComponent.ReplyDelayMs);
+  }
 
   onMove(m: UserBoardMove): void {
     if (!this.canGuess) return;
@@ -457,9 +505,13 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
           this.browseIndex = null;   // der eigene Zug soll zu sehen sein, nicht die Eroeffnung
           this.boardFen = mine;
           this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
+          // Fuer „Weiter": erst der PARTIEZUG (das ist die Korrektur, die man sehen will), dann
+          // die Antwort. Die Ausgangsstellung gibt es nur hier — `session` zeigt schon weiter.
+          this.afterGameMove = GuessBoardComponent.step(fenBefore, res.gameMoveUci);
         } else {
-          // Partiezug getroffen oder gepasst: sofort auf die naechste Aufgabe.
-          this.apply(res.session);
+          // Partiezug getroffen oder gepasst: erst den Partiezug zeigen, dann die Antwort.
+          this.afterGameMove = GuessBoardComponent.step(fenBefore, res.gameMoveUci);
+          this.applyAfterReplyPause(res.session);
         }
         this.cdr.markForCheck();
       },
@@ -476,12 +528,13 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** „Weiter": die zurueckgehaltene naechste Aufgabe aufs Brett holen. */
+  /** „Weiter": den Partiezug zeigen und dann die zurueckgehaltene naechste Aufgabe holen. */
   continueGame(): void {
+    if (this.replyTimer !== undefined) return;   // laeuft schon
     const s = this.pending;
     this.pending = null;
     this.holding = false;
-    if (s) this.apply(s);          // setzt Brett + Denkzeit-Start; die Lesezeit zaehlt nicht mit
+    if (s) this.applyAfterReplyPause(s);   // setzt Brett + Denkzeit-Start; Lesezeit zaehlt nicht mit
     this.cdr.markForCheck();
   }
 

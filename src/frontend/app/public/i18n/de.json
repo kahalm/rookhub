@@ -2928,7 +2928,8 @@
       "failed": "gescheitert"
     },
     "overall": "Insgesamt: {{done}} von {{total}} Stellungen gerechnet ({{percent}} %)",
-    "overallOpen": "{{count}} Partien stehen noch in der Warteschlange"
+    "overallOpen": "{{count}} Partien stehen noch in der Warteschlange",
+    "overallFailed": "nicht mitgezählt: {{count}} gescheitert"
   },
   "guess": {
     "title": "Punktepartie",

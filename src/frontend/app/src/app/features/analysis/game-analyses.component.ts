@@ -47,9 +47,15 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
         <div class="overall">
           <span>{{ 'gameAnalysis.overall' | translate:{ done: analyzedPlies, total: totalPlies, percent: overallPercent } }}</span>
           <mat-progress-bar mode="determinate" [value]="overallPercent" />
-          @if (openCount > 0) {
-            <span class="muted small">{{ 'gameAnalysis.overallOpen' | translate:{ count: openCount } }}</span>
-          }
+          <span class="muted small">
+            @if (openCount > 0) {
+              {{ 'gameAnalysis.overallOpen' | translate:{ count: openCount } }}
+            }
+            @if (failedCount > 0) {
+              @if (openCount > 0) { · }
+              {{ 'gameAnalysis.overallFailed' | translate:{ count: failedCount } }}
+            }
+          </span>
         </div>
       }
 
@@ -162,13 +168,24 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Gesamtfortschritt über ALLE Partien. Je Partie steht der eigene Balken schon in der Liste; was
-   * dort fehlte, ist die Antwort auf „wie lange dauert das noch insgesamt" — bei zwei Dutzend
-   * Partien in der Warteschlange scrollt man sonst und rechnet selbst zusammen.
+   * Gesamtfortschritt über die Partien, die WIRKLICH in Arbeit sind. Je Partie steht der eigene
+   * Balken schon in der Liste; was dort fehlte, ist die Antwort auf „wie lange dauert das noch
+   * insgesamt" — bei zwei Dutzend Partien in der Warteschlange scrollt man sonst und rechnet selbst
+   * zusammen.
+   *
+   * <b>Gescheiterte bleiben draussen.</b> Sie kommen nie voran; mitgezählt drücken sie den Balken
+   * dauerhaft nach unten und lassen ihn stillstehen, obwohl die Engine arbeitet — genau so gemeldet
+   * am 2026-09-10 („beim progress bewegt sich gar nix"), als 13 zurückgestellte Analysen 800 der
+   * 1900 Halbzüge stellten. Wie viele es sind, sagt die Zeile darunter; verschwiegen wird nichts.
    */
-  get totalPlies(): number { return this.analyses.reduce((n, a) => n + a.plyCount, 0); }
+  private get counted(): GameAnalysis[] { return this.analyses.filter(a => a.status !== 'failed'); }
 
-  get analyzedPlies(): number { return this.analyses.reduce((n, a) => n + a.analyzedPlies, 0); }
+  get totalPlies(): number { return this.counted.reduce((n, a) => n + a.plyCount, 0); }
+
+  get analyzedPlies(): number { return this.counted.reduce((n, a) => n + a.analyzedPlies, 0); }
+
+  /** Gescheiterte/zurückgestellte Partien — sie stehen nicht im Balken. */
+  get failedCount(): number { return this.analyses.filter(a => a.status === 'failed').length; }
 
   get overallPercent(): number {
     const total = this.totalPlies;

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
@@ -193,7 +193,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     });
   }
 
-  it('anderer Zug: bleibt stehen, naechste Aufgabe wartet hinter Weiter', () => {
+  it('anderer Zug: bleibt stehen, naechste Aufgabe wartet hinter Weiter', fakeAsync(() => {
     const c = load();
     guess(c, 'f1', 'c4', 'Bc4', {});
 
@@ -204,20 +204,32 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.boardFen).not.toBe(FEN10);
     expect(c.lastMove).toEqual(['f1', 'c4']);
 
+    // „Weiter" zeigt zuerst den PARTIEZUG — das ist die Korrektur, die man sehen will — und
+    // erst nach der Pause die Antwort des Gegners (= die naechste Aufgabe). Beides im selben
+    // Bild waere zwei Halbzuege auf einmal, und man saehe nie, was gespielt wurde.
     c.continueGame();
     expect(c.holding).toBeFalse();
+    expect(c.boardFen).withContext('erst der Partiezug Qxf3').not.toBe(FEN10);
+    expect(c.lastMove).toEqual(['d1', 'f3']);
+    expect(c.canGuess).withContext('waehrend der Pause gesperrt').toBeFalse();
+
+    tick(1000);
     expect(c.boardFen).withContext('jetzt die naechste Aufgabe').toBe(FEN10);
     expect(c.canGuess).toBeTrue();
-  });
+  }));
 
-  it('Partiezug: rueckt sofort vor, nichts wird gehalten', () => {
+  it('Partiezug: der eigene Zug steht, die Antwort kommt erst nach der Pause', fakeAsync(() => {
     const c = load();
     guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
     expect(c.holding).toBeFalse();
-    expect(c.boardFen).toBe(FEN10);
-  });
+    expect(c.boardFen).withContext('noch ohne die Antwort dxe5').not.toBe(FEN10);
+    expect(c.lastMove).toEqual(['d1', 'f3']);
 
-  it('Passen: rueckt sofort vor', () => {
+    tick(1000);
+    expect(c.boardFen).toBe(FEN10);
+  }));
+
+  it('Passen: erst der Partiezug, dann die Antwort', fakeAsync(() => {
     const c = load();
     c.skip();
     http.expectOne('/api/guess-sessions/3/guess').flush({
@@ -225,6 +237,21 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
       replySan: 'dxe5', replyUci: 'd6e5', diffCp: null, evalText: null, session: nextSession,
     });
     expect(c.holding).toBeFalse();
+    expect(c.boardFen).withContext('der Partiezug steht zuerst').not.toBe(FEN10);
+    expect(c.lastMove).toEqual(['d1', 'f3']);
+
+    tick(1000);
+    expect(c.boardFen).toBe(FEN10);
+  }));
+
+  /** Ohne Antwort des Gegners (die Partie endet) waere die Kunstpause eine Pause vor dem Nichts. */
+  it('ohne Antwort geht es ohne Pause weiter', () => {
+    const c = load();
+    c.skip();
+    http.expectOne('/api/guess-sessions/3/guess').flush({
+      grade: null, points: 0, playedSan: null, gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
+      replySan: null, replyUci: null, diffCp: null, evalText: null, session: nextSession,
+    });
     expect(c.boardFen).toBe(FEN10);
   });
 
@@ -271,7 +298,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.canGuess).toBeTrue();
   });
 
-  it('waehrend des Durchklickens wird kein Zug angenommen', () => {
+  it('waehrend des Durchklickens wird kein Zug angenommen', fakeAsync(() => {
     // Sonst wuerde ein Zug in einer ALTEN Stellung als Rateversuch fuer die aktuelle Aufgabe gewertet.
     const c = load();
     c.browse(0);
@@ -283,9 +310,10 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
 
     c.browse(null);
     guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0 });
+    tick(1000);                                 // erst der Partiezug, dann die Antwort
     expect(c.browsing).withContext('nach dem Zug steht die naechste Aufgabe').toBeFalse();
     expect(c.viewFen).toBe(FEN10);
-  });
+  }));
 
   it('startet bei Zug 1, nicht bei der ersten Aufgabe', () => {
     const c = loadAtStart();
