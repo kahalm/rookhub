@@ -154,7 +154,12 @@ ist keine Auslieferung. Der Weg steht fest und ist nicht der naive:
   Tage hinter dem Rate-Limiter und wuerde die Quellen ohne Not belasten.
 - **Vor dem ersten Start einmalig `scripts/gazetteer-import.sh`**, sonst bleibt die Karte leer.
 - Danach einmal `gazetteer/transcribe` (die Umschrift-Spalte ist nicht im Dump enthalten, wenn
-  der Dump vor 0.456.0 gezogen wurde) und `geocode-missing` ohne `limit`.
+  der Dump vor 0.456.0 gezogen wurde) und **`geocode-missing` ZWEIMAL** ohne `limit`.
+  **Der zweite Durchgang ist nicht Vorsicht, er bringt etwas** (gemessen am 2026-09-10: erster
+  Lauf 583, zweiter 60, dritter 0). Grund ist die Mehrdeutigkeits-Entscheidung ueber die
+  Turnierdichte: sie zaehlt VERLAESSLICH verortete Nachbarn, und die entstehen erst im Lauf davor.
+  Von den 60 des zweiten Durchgangs waren 22 philippinische Kleinstaedte, die im ersten noch
+  unentscheidbar waren. Zwei Durchgaenge genuegen — der dritte fand null.
 - Ein Tag erzeugt Prod-Images UND die Store-Einreichung, und Watchtower macht ihn in der Nacht
   live. Also erst taggen, wenn Phase 1 abgeschlossen ist — sonst geht eine Karte mit einem Drittel
   fehlender Pins raus.

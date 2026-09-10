@@ -2026,3 +2026,40 @@ es Faelle gibt, in denen der groesste Haufen NICHT der gemeinte Ort ist.
 
 **Weltweiter Ausbau**: der Plan dazu steht in `docs/weltweit.md` (Regionen-Vorlauf, Phasen,
 Kapazitaet des Nachtlaufs, Prod-Weg).
+
+
+## Exonyme und die Zwei-Durchgang-Regel (2026-09-10, v0.457.1)
+
+**14 Namenspaare** bekommen eine zweite Lexikon-Zeile an denselben Koordinaten, weil GeoNames die
+Stadt unter dem englischen Exonym fuehrt und die Turniertexte den einheimischen Namen schreiben.
+Aufgenommen wurde nur, was gemessen wirkt: von 49 Kandidaten fielen **35 heraus**, und zwar zu
+Recht — wo Postleitzahlen importiert sind, tragen deren Ortsnamen das Endonym ohnehin (Warszawa
+3 741 Zeilen, Lisboa 9 167, Roma 74, Muenchen 75). Rom, Warschau, Lissabon, Moskau, Kiew und
+Sevilla brauchen nichts.
+
+Vorhersage vor dem Lauf: **+34** (Praha 16, Plzen 10, Athina 5, Shahrood 3). Gemessen:
+**CZE +30, GRE +5, IRI +3** — Griechenland und Iran genau wie vorhergesagt, Tschechien vier mehr.
+Die vier zusaetzlichen standen auf `Ambiguous` und nicht auf `None`: dort gab es Kandidaten, aber
+verstreute; die exakte Alias-Zeile schlaegt sie. Die Erwartung „Ambiguous aendert sich nicht" war
+also zu pessimistisch, und in die harmlose Richtung.
+
+**Prag ist der lehrreiche Fall**: Tschechien HAT 15 507 Postleitzahl-Zeilen, aber die Prager
+heissen „Praha 1" bis „Praha 10" und normalisieren nie auf `praha` — dieselbe Form wie „Москва 194".
+Ohne diese Zeile war die Stadt ueber ihren eigenen Namen unerreichbar.
+
+**Muenchen gehoert ausdruecklich NICHT dazu**, obwohl es wie derselbe Fall aussieht: die
+Umschrift-Spalte traegt `muenchen` schon auf 75 Zeilen, der Treffer gelingt. Die 24 unverorteten
+Muenchner Turniere stehen auf `Ambiguous` — sie scheitern daran, dass diese 75 Zeilen 21,6 km
+spannen. Eine 76. Zeile aendert daran nichts.
+
+### `geocode-missing` braucht ZWEI Durchgaenge
+
+Gemessen in derselben Sitzung: **erster Lauf 583 verortet, zweiter 60, dritter 0.** Der zweite ist
+also keine Vorsicht, sondern Ertrag. Die Ursache ist die Mehrdeutigkeits-Entscheidung ueber die
+Turnierdichte — sie zaehlt VERLAESSLICH verortete Nachbarn, und die entstehen erst im Lauf davor.
+Von den 60 des zweiten Durchgangs waren 22 philippinische Kleinstaedte („Sinacaban", „Tabuk City"),
+die im ersten noch unentscheidbar waren; sie haben mit den Exonymen nichts zu tun. Zwei Durchgaenge
+genuegen, der dritte fand null.
+
+**Stand nach beidem**: 22 458 Turniere, **15 332 verortet (68 %)**. Die Restluecke nach Ursache:
+2 685 ohne jeden Ortstext (unerreichbar), 1 804 mehrdeutig, 2 637 ohne Kandidaten.
