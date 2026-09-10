@@ -331,7 +331,7 @@ public class GameAnalysisServiceTests : IDisposable
     /// sagt — die gehört noch nicht hinein.
     /// </summary>
     [Fact]
-    public async Task ListPublic_nurFreigegebeneUndSpielbare()
+    public async Task ListPublic_nurFreigegebeneUndFertige()
     {
         var user = await CreateUserWithEngineAsync();
         await AddAnalysisAsync(user.Id, isPublic: true, analyzed: true, title: "sichtbar");
@@ -343,6 +343,26 @@ public class GameAnalysisServiceTests : IDisposable
         var row = Assert.Single(list);
         Assert.Equal("sichtbar", row.Title);
         Assert.True(row.IsPublic);
+    }
+
+    /// <summary>
+    /// HALB gerechnet reicht nicht. Anspielen liesse sich so eine Partie zwar, sie ueberspraenge
+    /// dann aber stillschweigend jede Stellung ohne Kandidatenliste — man raet eine Partie mit
+    /// Loechern, ohne dass irgendwo steht, warum.
+    /// </summary>
+    [Fact]
+    public async Task ListPublic_halbGerechneteBleibenDraussen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var halb = await AddAnalysisAsync(user.Id, isPublic: true, analyzed: true, title: "halb fertig");
+        halb.Positions.Add(new GameAnalysisPosition
+        {
+            Ply = 1, Fen = GamePlies.StartFen(), GameMoveUci = "e7e5", GameMoveSan = "e5",
+            CandidatesJson = null,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Empty(await _svc.ListPublicAsync());
     }
 
     /// <summary>Grundlage des Filters „alle / nur kommentierte": eine geschweifte Klammer im PGN

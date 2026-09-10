@@ -99,15 +99,16 @@ public class GameAnalysisService
 
     /// <summary>
     /// Der kuratierte Bestand: Partien, die JEDER als Punktepartie spielen darf — auch ohne
-    /// Anmeldung. Geliefert werden nur SPIELBARE (mindestens eine gerechnete Stellung); eine Partie,
-    /// die noch gar nichts hat, wäre in der Auswahl ein Knopf, der sofort „wird noch gerechnet"
-    /// sagt. Sortiert nach Titel, nicht nach Anlagedatum: der Bestand ist eine Bibliothek und keine
-    /// Zeitleiste.
+    /// Anmeldung. Geliefert werden nur VOLLSTAENDIG gerechnete: eine halb fertige Partie laesst sich
+    /// zwar anspielen, ueberspringt dann aber stillschweigend jede Stellung ohne Kandidatenliste —
+    /// man raet also eine Partie mit Loechern, ohne dass irgendwo steht, warum. Sortiert nach Titel,
+    /// nicht nach Anlagedatum: der Bestand ist eine Bibliothek und keine Zeitleiste.
     /// </summary>
     public async Task<List<GameAnalysisDto>> ListPublicAsync(CancellationToken ct = default)
     {
         var rows = await ProjectAsync(
-            _db.GameAnalyses.AsNoTracking().Where(g => g.IsPublic && g.Positions.Any(p => p.CandidatesJson != null)),
+            _db.GameAnalyses.AsNoTracking()
+                .Where(g => g.IsPublic && g.Positions.Any() && !g.Positions.Any(p => p.CandidatesJson == null)),
             ct);
         return rows.OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase).ToList();
     }

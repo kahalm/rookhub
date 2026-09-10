@@ -448,4 +448,51 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     c.browse(1);
     expect(c.browsedComment).withContext('dieser Zug hat keinen').toBeNull();
   });
+
+  /**
+   * Ein Kommentar am eben gespielten Partiezug ist der Grund, die Partie zu spielen — da darf das
+   * Brett nicht nach einer Sekunde weiterspringen. Es haelt an, zeigt den Text, und erst „Weiter"
+   * spielt die Antwort des Gegners.
+   */
+  it('haelt am kommentierten Partiezug an, statt weiterzuspringen', fakeAsync(() => {
+    const c = load();
+    const withNote = {
+      ...nextSession,
+      history: [...HISTORY, { ply: 8, moveNumber: 5, white: true, san: 'Qxf3', uci: 'd1f3',
+                              fen: 'nach-Qxf3', comment: 'der entscheidende Zug' }],
+    };
+    guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0,
+                                   session: withNote });
+
+    expect(c.holding).withContext('haelt am Kommentar').toBeTrue();
+    expect(c.holdingNote).toBeTrue();
+    expect(c.browsedComment).toEqual({ move: '5.Qxf3', text: 'der entscheidende Zug' });
+
+    tick(2000);                                  // keine Zeitschranke raeumt das weg
+    expect(c.holding).withContext('immer noch da').toBeTrue();
+    expect(c.boardFen).not.toBe(FEN10);
+
+    c.continueGame();
+    expect(c.holdingNote).toBeFalse();
+    expect(c.boardFen).withContext('jetzt die Antwort').toBe(FEN10);
+  }));
+
+  /** Der Kommentar zur ANTWORT des Gegners blockiert nicht — er steht bei der neuen Aufgabe. */
+  it('zeigt den Kommentar zur Antwort bei der naechsten Aufgabe', fakeAsync(() => {
+    const c = load();
+    const withReplyNote = {
+      ...nextSession,
+      history: [...HISTORY,
+        { ply: 8, moveNumber: 5, white: true, san: 'Qxf3', uci: 'd1f3', fen: 'nach-Qxf3' },
+        { ply: 9, moveNumber: 5, white: false, san: 'dxe5', uci: 'd6e5', fen: FEN10,
+          comment: 'und jetzt steht Schwarz besser' }],
+    };
+    guess(c, 'd1', 'f3', 'Qxf3', { grade: 'gameMove', points: 5, playedSan: 'Qxf3', diffCp: 0,
+                                   session: withReplyNote });
+    expect(c.holdingNote).withContext('kein Halt, der Zug selbst ist unkommentiert').toBeFalse();
+
+    tick(1000);
+    expect(c.boardFen).toBe(FEN10);
+    expect(c.browsedComment).toEqual({ move: '5…dxe5', text: 'und jetzt steht Schwarz besser' });
+  }));
 });

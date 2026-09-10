@@ -29,6 +29,9 @@ function promotionOf(san: string | undefined): string {
  * (siehe `GuessSessionService`). Deshalb setzt das Brett den geratenen Zug auch nicht selbst um:
  * gezeigt wird, was der Server zurückmeldet.</p>
  */
+/** Stellung nach einem Zug samt Zug und Halbzug — der Zwischenschritt vor der Antwort. */
+interface StepAfterMove { fen: string; uci: string; ply: number; }
+
 /** Eine Zeile der Zugliste: Weiss und Schwarz nebeneinander, je mit Index und Kommentar-Marke. */
 interface HistoryRow {
   no: number;
@@ -83,9 +86,15 @@ interface HistoryRow {
             <!-- Dein Zug steht auf dem Brett; DARUNTER, was die Partie gespielt hat. -->
             @if (holding && last) {
               <div class="held" [class]="'g-' + (last.grade || 'skipped')">
-                <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: last.gameMoveSan } }}</span>
-                @if (evalDelta) {
-                  <span class="hd">{{ 'guess.evalDelta' | translate:{ delta: evalDelta } }}</span>
+                <!-- Beim Halt WEGEN eines Kommentars steht der Partiezug schon auf dem Brett; ihn
+                     danebenzuschreiben waere doppelt. Dann zaehlt nur noch der Weg zurueck ins Spiel. -->
+                @if (!holdingNote) {
+                  <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: last.gameMoveSan } }}</span>
+                  @if (evalDelta) {
+                    <span class="hd">{{ 'guess.evalDelta' | translate:{ delta: evalDelta } }}</span>
+                  }
+                } @else {
+                  <span class="hg">{{ 'guess.gamePlayed' | translate:{ move: last.gameMoveSan } }}</span>
                 }
                 <button mat-flat-button color="primary" (click)="continueGame()">
                   {{ 'guess.continue' | translate }} <mat-icon>arrow_forward</mat-icon>
@@ -336,7 +345,10 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
    */
   get browsedComment(): { move: string; text: string } | null {
     const i = this.browseIndex;
-    if (i === null || i < 0) return null;
+    // Wer blaettert, will DEN Zug lesen, den er angeklickt hat — sonst gilt der Kommentar aus dem
+    // Spielverlauf (zum eben gespielten Partiezug bzw. zur Antwort des Gegners).
+    if (i === null) return this.stepNote;
+    if (i < 0) return null;
     const m = this.session?.history[i];
     if (!m?.comment) return null;
     const dots = m.white ? '.' : '…';
@@ -448,15 +460,24 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
    */
   private static readonly ReplyDelayMs = 1000;
 
-  /** Stellung nach EINEM Zug samt dem Zug selbst; `null`, wenn er sich nicht spielen laesst. */
-  private static step(fen: string, uci: string): { fen: string; uci: string } | null {
+  /**
+   * Der Kommentar, der gerade zum SPIELVERLAUF gehoert (nicht zum Durchblaettern): entweder der
+   * zum eben gespielten Partiezug — dann wird angehalten, bis „Weiter" kommt — oder der zur
+   * Antwort des Gegners, der zusammen mit der neuen Aufgabe stehen bleibt.
+   */
+  stepNote: { move: string; text: string } | null = null;
+  /** Wird gerade WEGEN eines Kommentars gehalten? Dann spielt „Weiter" die Antwort des Gegners. */
+  holdingNote = false;
+
+  /** Stellung nach EINEM Zug samt Zug und Halbzug-Nummer; `null`, wenn er nicht spielbar ist. */
+  private static step(fen: string, uci: string, ply: number): StepAfterMove | null {
     const after = fenAfterUci(fen, uci);
-    return after ? { fen: after, uci } : null;
+    return after ? { fen: after, uci, ply } : null;
   }
 
   private replyTimer?: ReturnType<typeof setTimeout>;
   /** Stellung + Zug NACH dem Partiezug, aber VOR der Antwort des Gegners. */
-  private afterGameMove: { fen: string; uci: string } | null = null;
+  private afterGameMove: StepAfterMove | null = null;
 
   private clearReplyTimer(): void {
     if (this.replyTimer !== undefined) {
@@ -466,26 +487,58 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Den Partiezug zeigen, eine Sekunde stehen lassen, dann auf die naechste Aufgabe (die schon die
-   * Antwort des Gegners enthaelt). Ist nichts vorbereitet — oder gab es gar keine Antwort, weil die
-   * Partie endet — geht es sofort weiter; eine Kunstpause vor dem Nichts hilft niemandem.
+   * Den Partiezug zeigen und dann die Antwort des Gegners.
+   *
+   * <b>Hat der Partiezug einen Kommentar, wird NICHT weitergesprungen</b>: der Text steht da, das
+   * Brett zeigt genau die Stellung, um die es geht, und weiter geht es erst auf „Weiter". Bei einer
+   * Meisterpartie ist dieser Satz der Grund, sie zu spielen — eine Sekunde spaeter waere er weg,
+   * und wer ihn lesen will, muesste ihn sich aus der Zugliste zurueckholen.
+   *
+   * Ohne Kommentar bleibt es bei der kurzen Pause; ohne Antwort (die Partie endet) geht es sofort
+   * weiter, denn eine Kunstpause vor dem Nichts hilft niemandem.
    */
   private applyAfterReplyPause(next: GuessSession): void {
     const step = this.afterGameMove;
     this.afterGameMove = null;
-    if (!step || !this.last?.replySan) { this.apply(next); return; }
+    if (!step || !this.last?.replySan) { this.applyWithReplyNote(next, step?.ply ?? -1); return; }
 
     this.boardFen = step.fen;
     this.lastMove = [step.uci.slice(0, 2), step.uci.slice(2, 4)];
     this.browseIndex = null;
-    this.busy = true;                       // Brett bleibt gesperrt, solange der Zug steht
+
+    const note = this.commentAt(next, step.ply);
+    if (note) {
+      this.stepNote = note;
+      this.notedPly = step.ply;
+      this.pending = next;
+      this.holding = true;
+      this.holdingNote = true;      // „Weiter" spielt jetzt die ANTWORT, nicht die naechste Aufgabe
+      this.busy = false;
+      return;
+    }
+
+    this.busy = true;               // Brett bleibt gesperrt, solange der Zug allein steht
     this.clearReplyTimer();
     this.replyTimer = setTimeout(() => {
       this.replyTimer = undefined;
       this.busy = false;
-      this.apply(next);
+      this.applyWithReplyNote(next, step.ply);
       this.cdr.markForCheck();
     }, GuessBoardComponent.ReplyDelayMs);
+  }
+
+  /** Auf die naechste Aufgabe — und den Kommentar zur ANTWORT des Gegners dazu stellen
+   *  („…und jetzt steht es so"). Der blockiert nicht: die neue Aufgabe ist ja schon da. */
+  private applyWithReplyNote(next: GuessSession, plyGuessed: number): void {
+    this.apply(next);
+    this.stepNote = plyGuessed >= 0 ? this.commentAt(next, plyGuessed + 1) : null;
+  }
+
+  /** Der Kommentar eines Halbzugs aus dem Verlauf der Sitzung, fertig zum Anzeigen. */
+  private commentAt(s: GuessSession, ply: number): { move: string; text: string } | null {
+    const m = s.history.find(h => h.ply === ply);
+    if (!m?.comment) return null;
+    return { move: `${m.moveNumber}${m.white ? '.' : '…'}${m.san}`, text: m.comment };
   }
 
   onMove(m: UserBoardMove): void {
@@ -505,9 +558,12 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     const id = this.session?.id;
     if (!id) return;
     this.busy = true;
+    this.stepNote = null;              // der Kommentar des VORIGEN Zuges ist erledigt
     const seconds = Math.min(3600, Math.max(0, Math.round((Date.now() - this.since) / 1000)));
     const fenBefore = this.boardFen;
     const lastBefore = this.lastMove;
+    // Der Halbzug, um den es geht — NACH der Antwort zeigt `session` schon die naechste Aufgabe.
+    const plyGuessed = this.session?.position?.ply ?? -1;
 
     // Den eigenen Zug SOFORT uebernehmen, nicht erst mit der Antwort. Sonst passiert Folgendes:
     // `busy` sperrt das Brett, das loest ein `ngOnChanges` mit der ALTEN Stellung aus, und
@@ -553,10 +609,10 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
           this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
           // Fuer „Weiter": erst der PARTIEZUG (das ist die Korrektur, die man sehen will), dann
           // die Antwort. Die Ausgangsstellung gibt es nur hier — `session` zeigt schon weiter.
-          this.afterGameMove = GuessBoardComponent.step(fenBefore, res.gameMoveUci);
+          this.afterGameMove = GuessBoardComponent.step(fenBefore, res.gameMoveUci, plyGuessed);
         } else {
           // Partiezug getroffen oder gepasst: erst den Partiezug zeigen, dann die Antwort.
-          this.afterGameMove = GuessBoardComponent.step(fenBefore, res.gameMoveUci);
+          this.afterGameMove = GuessBoardComponent.step(fenBefore, res.gameMoveUci, plyGuessed);
           this.applyAfterReplyPause(res.session);
         }
         this.cdr.markForCheck();
@@ -574,15 +630,31 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** „Weiter": den Partiezug zeigen und dann die zurueckgehaltene naechste Aufgabe holen. */
+  /**
+   * „Weiter" — zwei Haltegruende, zwei Bedeutungen:
+   * <ul>
+   *   <li>gehalten wegen des EIGENEN (anderen) Zuges → jetzt den Partiezug zeigen;</li>
+   *   <li>gehalten wegen des KOMMENTARS zum Partiezug → jetzt die Antwort des Gegners spielen.</li>
+   * </ul>
+   */
   continueGame(): void {
     if (this.replyTimer !== undefined) return;   // laeuft schon
     const s = this.pending;
     this.pending = null;
     this.holding = false;
-    if (s) this.applyAfterReplyPause(s);   // setzt Brett + Denkzeit-Start; Lesezeit zaehlt nicht mit
+
+    if (this.holdingNote) {
+      this.holdingNote = false;
+      this.stepNote = null;
+      if (s) this.applyWithReplyNote(s, this.notedPly);
+    } else if (s) {
+      this.applyAfterReplyPause(s);   // setzt Brett + Denkzeit-Start; Lesezeit zaehlt nicht mit
+    }
     this.cdr.markForCheck();
   }
+
+  /** Halbzug, an dem der Kommentar-Halt haengt — fuer die Antwort danach. */
+  private notedPly = -1;
 
   private apply(s: GuessSession): void {
     this.session = s;
