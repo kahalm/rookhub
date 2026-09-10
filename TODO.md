@@ -167,9 +167,17 @@ genau die Laender leer, fuer die es AUCH keinen Postleitzahl-Datensatz gibt:
 | Aserbaidschan | 65 | **218** | 3 |
 | Summe | 357 | **2 064** | 5,8 |
 
-Woran das haengt: Kasachstan hat 458 Eintraege im Verzeichnis (33 % verortet), Israel 74, Armenien
-54, Aserbaidschan 138 (22 %), Mongolei 29 (**0 %**). Fuer keines dieser Laender bietet GeoNames
-Postleitzahlen an (geprueft: 404), es bleibt also allein die Ortsliste.
+**Korrigiert am 2026-09-10 nach dem Umschrift-Nachlauf**: Kasachstan war hier als Hauptgrund
+genannt und ist es NICHT — es steht nach dem Nachlauf bei 56 % (kyrillische Ortstexte 79 %), weil
+seine Turniere sich auf Astana, Almaty, Aktau, Atyrau, Shymkent und Semey haeufen und genau die in
+`cities15000` stehen. Die Rechnung „84 Zeilen fuer 20 Millionen Einwohner koennen 140 Turniere
+nicht decken" war ein Fehlschluss von der Menge auf die Wirkung.
+
+Die echten Nutznießer sind kleiner und wenige: **Armenien 13 % (54 Eintraege), Aserbaidschan 22 %
+(138), Israel 31 % (74), Mongolei 7 % (29)**. Aserbaidschanisch wird lateinisch geschrieben — dort
+hilft keine Umschrift, es ist reine Lexikon-Abdeckung. Fuer keines dieser Laender bietet GeoNames
+Postleitzahlen an (geprueft: 404), es bleibt also allein die Ortsliste. **Erst nach dem Gegentest
+zu v0.456.5 entscheiden**, wie viel davon die Regions-Regel schon abgeraeumt hat.
 
 **NICHT global umstellen** (Einwand von Kopie 2, und er ist richtig): eine zehnmal groessere
 Ortsliste bringt vor allem gleichnamige KLEINorte, und die laufen in die Mehrdeutigkeitsregel —

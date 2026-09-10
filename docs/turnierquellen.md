@@ -1856,3 +1856,106 @@ JP CN KE MA DZ PK BD LK EC UY CR GT DO SG HK; für KZ, IR, IL, AM, GE und GR gib
 keinen Datensatz). Verortung damit **58 %** von 22 259 — absolut von 6 201 auf 12 894 Einträge.
 Mexiko 40 → 82 %, Vietnam 39 → 51 %, Indien 99 %. Russland bleibt bei 7 %, bis der
 Umschrift-Nachlauf gefahren ist.
+
+## Der Umschrift-Nachlauf, gemessen (2026-09-10, 00:03–00:12 UTC)
+
+Dev fuhr nach dem Watchtower-Lauf 0.456.4. `gazetteer/transcribe` hat **1 575 295** Lexikon-Zeilen
+umgeschrieben (nicht die geschaetzten 200 000 — die Postleitzahl-Importe hatten den Bestand auf
+1 615 349 Zeilen gebracht), `geocode-missing` danach **1 602** Turniere neu verortet. Verortung
+insgesamt **58 % → 65 %**.
+
+Kyrillische Ortstexte, vorher gegen nachher:
+
+| Foederation | Texte | vorher | nachher |
+|---|---|---|---|
+| **RUS** | 1 760 | 0 (**0 %**) | 1 253 (**71 %**) |
+| KAZ | 140 | 6 (4 %) | 110 (**79 %**) |
+| UKR | 85 | 0 (0 %) | 63 (**74 %**) |
+| BLR | 100 | 0 (0 %) | 37 (37 %) |
+| SRB | 19 | 0 (0 %) | 11 (58 %) |
+| BUL | 54 | 1 (2 %) | 11 (20 %) |
+| MGL | 17 | 0 (0 %) | 2 (12 %) |
+
+Als Foederationsquote: **RUS 7 → 70 %**, UKR 30 → 71 %, KAZ 33 → 56 %, BLR 4 → 38 %,
+BUL 28 → 39 %, SRB 81 → 86 %.
+
+**Bulgarien und Serbien waren der Gegentest und er ist bestanden.** Dort ist das Lexikon schon
+lateinisch (0 leere Namen), es konnte also nur die TEXT-Seite gewesen sein — beide steigen, also
+waehlen beide Seiten dieselbe Umschrift-Tabelle.
+
+### Zwei Fehlschluesse von mir, beide derselbe Fehler
+
+Sie stehen hier, weil beide auf dem Weg zu einer richtigen Zahl gemacht wurden und beide von
+derselben Art sind: **von der Menge auf die Wirkung schliessen, ohne die Verteilung anzusehen.**
+
+**1. „Kasachstan kann kaum steigen, es hat nur 84 Lexikon-Zeilen."** Falsch — 4 % → 79 %. Die
+Verteilung sagt, warum:
+
+```
+Astana 84 · Almaty 78 · Aktau 22 · Atyrau 17 · Shymkent 16 · Semey 14
+```
+
+**Turniere haeufen sich in Grossstaedten**, und genau die stehen in `cities15000`. 84 Zeilen
+reichen fuer 79 %, weil sie die richtigen 84 sind. Fuer die Mongolei (12 %) und Kirgisistan (13 %)
+hielt die Prognose — dort finden Turniere auch ausserhalb der drei groessten Orte statt.
+
+**2. „Weissrussland bleibt unten, also ist `г → h` die Antwort."** Auch falsch, und schlimmer, weil
+es eine VORAB formulierte Hypothese war: bleibt BLR zurueck waehrend RUS steigt, sei die
+belarussische Umschrift die Ursache. Das Ergebnis passte, und deshalb habe ich es als Bestaetigung
+gelesen. Eine Spalte weiter stand die Wahrheit:
+
+```
+BLR unverortet: GeoSource 6 (Ambiguous) 63 · GeoSource 0 (None) 0
+```
+
+**Alle** offenen Eintraege sind mehrdeutig, keiner ohne Kandidat. Die Umschrift hat also
+funktioniert; „Витебск" ergibt `vitebsk` und trifft. Verweigert hat die Mehrdeutigkeitsregel:
+
+```
+Витебск →  Stadt   55.190 / 30.205
+           PLZ     55.190 / 30.205
+           REGION  55.148 / 28.970    ← 78 km entfernt, gleicher Name
+```
+
+Eine gleichnamige Region streut die Kandidatengruppe weiter als eine Stadt, die Turnierdichte
+entscheidet nicht, kein Pin. Bei „Гродно" sind es 90 km. Ein passendes Ergebnis ist kein Beweis
+fuer die vermutete Ursache — und die Spalte, die beide Ursachen unterscheidet, war eine Abfrage
+entfernt.
+
+### Der Befund dahinter ist weltweit und nicht kyrillisch
+
+**639 Regionszeilen im Lexikon teilen ihren Namen mit einem Ort desselben Landes.** Unabhaengig
+nachgezaehlt:
+
+```
+TR 71 · TH 67 · AZ 65 · DZ 41 · KE 35 · MD 30 · MX 29 · BG 27 · PE 24 · GT 21
+```
+
+Und so sehen die Mehrdeutigkeits-Toepfe aus (Grundlinie vor v0.456.5):
+
+```
+RUS 398 · GER 248 · POL 206 · PER 186 · ENG 107 · INA 92 · ROU 92
+CHI  87 · COL  85 · PHI  67 · BRA  65 · BLR  63 · ARG 55 · VIE 55
+```
+
+Peru, Indonesien, Chile, Kolumbien und die Philippinen sind genau die Laender, in denen die Provinz
+nach ihrer Hauptstadt heisst. Dort hatte das Turnierdichte-Kriterium **nie** eine Chance.
+
+**Es ist eine Nebenwirkung der Umschrift selbst**: vorher trugen die kyrillischen Regionszeilen
+einen leeren Suchnamen und waren gar nicht auffindbar — erst 0.456.0 hat sie sichtbar und damit
+schaedlich gemacht. Bei den lateinisch schreibenden Laendern lag der Fall dagegen immer so. Sichtbar
+auch an den Summen: `Ambiguous` waechst von 1 745 auf **2 701**, waehrend `None` von 4 289 auf
+**2 330** faellt.
+
+Behoben in **v0.456.5**: eine Regionszeile faellt aus der Wahl, sobald ein Ort in derselben
+Namensgruppe steht. Der Rueckfall auf die Regionsmitte bleibt — ueber das Feld `state` und ueber
+Gruppen, die nur aus Regionen bestehen.
+
+**Der Gegentest steht noch aus** (Dev fuhr zur Messung 0.456.4). Grundlinie gesichert; nach dem
+naechsten Deploy einen `geocode-missing`-Lauf und dann pruefen: **RUS, PER, INA, COL muessen
+fallen, GER darf es kaum** — dort sind es echte gleichnamige Staedte, die 19 Muenster. Faellt
+Deutschland mit, ist die Regel zu weit gefasst.
+
+**Weissrussland bleibt danach offen, aber als andere Frage**: „Гомель" gegen den lateinischen
+Lexikon-Namen `Homyel'` ist die russische gegen die belarussische ORTSNAMENSFORM, kein Buchstabe.
+Das braucht Alternativnamen oder eine Handzuordnung der sechs Gebietshauptstaedte.
