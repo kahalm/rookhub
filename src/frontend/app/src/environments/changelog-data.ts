@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.456.11", date: "2026-09-10", changes: [
+    { en: "A plan for taking the tournament directory worldwide, written from measurements rather than intentions. The governing finding: in Europe the calendar looks a year ahead, everywhere else it mostly looks backwards — Asia holds 6 554 tournaments of which 959 are still to come. The first step is not more crawling but the third of all tournaments already collected that never reach the map.", de: "Ein Plan, das Turnierverzeichnis weltweit auszubauen, aus Messungen geschrieben statt aus Absichten. Der bestimmende Befund: in Europa blickt der Kalender ein Jahr voraus, überall sonst überwiegend zurück — in Asien stehen 6 554 Turniere, von denen 959 noch bevorstehen. Der erste Schritt ist nicht mehr Crawling, sondern das Drittel aller bereits gesammelten Turniere, das nie auf der Karte ankommt." },
+  ] },
   { version: "0.456.10", date: "2026-09-10", changes: [
     { en: "Belarusian tournaments are on the map: 94 per cent of them now have a pin, up from 4 per cent this morning. Their place names arrive in Cyrillic, and once those could be read, a second problem surfaced — a region that carries the same name as its capital city was scattering the candidates and the map gave up rather than guess. Russia, Romania, Slovakia and Argentina improve for the same reason.", de: "Weissrussische Turniere stehen auf der Karte: 94 Prozent von ihnen haben jetzt eine Nadel, heute Morgen waren es 4 Prozent. Ihre Ortsnamen kommen kyrillisch, und als die lesbar waren, kam ein zweites Problem zum Vorschein — eine Region, die denselben Namen traegt wie ihre Hauptstadt, streute die Kandidaten so weit, dass die Karte lieber gar keine Nadel setzte als zu raten. Russland, Rumaenien, die Slowakei und Argentinien gewinnen aus demselben Grund." },
   ] },

@@ -2023,3 +2023,6 @@ Einwohnern — der dokumentierte Schaden waren Pins am FALSCHEN Muenster, nicht 
 
 Vor dem Bauen also zwei Dinge messen, die noch offen sind: welcher Dominanz-Anteil trennt, und ob
 es Faelle gibt, in denen der groesste Haufen NICHT der gemeinte Ort ist.
+
+**Weltweiter Ausbau**: der Plan dazu steht in `docs/weltweit.md` (Regionen-Vorlauf, Phasen,
+Kapazitaet des Nachtlaufs, Prod-Weg).
