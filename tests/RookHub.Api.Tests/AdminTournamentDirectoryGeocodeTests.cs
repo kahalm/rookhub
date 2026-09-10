@@ -85,6 +85,8 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
                 new TestLogger<FrsahDirectorySweepService>()),
             new WcuDirectorySweepService(_db, factory, geocoding,
                 new TestLogger<WcuDirectorySweepService>()),
+            new CfcDirectorySweepService(_db, factory, geocoding,
+                new TestLogger<CfcDirectorySweepService>()),
             new KnsbDirectorySweepService(_db, factory,
                 new TestLogger<KnsbDirectorySweepService>()));
     }

@@ -177,6 +177,7 @@ try
     builder.Services.AddScoped<ChessScotlandDirectorySweepService>();
     builder.Services.AddScoped<FrsahDirectorySweepService>();
     builder.Services.AddScoped<WcuDirectorySweepService>();
+    builder.Services.AddScoped<CfcDirectorySweepService>();
     builder.Services.AddScoped<KnsbDirectorySweepService>();
     builder.Services.AddScoped<ViewStateService>();
     builder.Services.AddScoped<TournamentHistoryService>();

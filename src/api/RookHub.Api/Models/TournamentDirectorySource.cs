@@ -157,6 +157,12 @@ public enum DirectorySourceKind
     /// Eintraege gegen 12 auf chess-results, aber ohne Rundenzahl und Teilnehmerzahl.
     /// </summary>
     DutchChessFederation = 19,
+
+    /// <summary>
+    /// Der Ankuendigungskalender der Chess Federation of Canada (chess.ca). 171 kuenftige
+    /// Eintraege gegen 68 auf chess-results — Kanada benutzt die Turniersuche kaum als Kalender.
+    /// </summary>
+    CanadianChessFederation = 20,
 }
 
 /// <summary>

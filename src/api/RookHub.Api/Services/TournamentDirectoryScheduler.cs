@@ -376,6 +376,9 @@ public class TournamentDirectoryScheduler : BackgroundService
             await RunSourceAsync(scope, "Wales (WCU)",
                 s => s.GetRequiredService<WcuDirectorySweepService>().RunAsync(ct), ct);
 
+            await RunSourceAsync(scope, "Kanada (CFC)",
+                s => s.GetRequiredService<CfcDirectorySweepService>().RunAsync(ct), ct);
+
             await RunSourceAsync(scope, "Niederlande (KNSB)",
                 s => s.GetRequiredService<KnsbDirectorySweepService>().RunAsync(ct), ct);
 

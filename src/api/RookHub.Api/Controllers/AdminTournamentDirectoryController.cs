@@ -51,6 +51,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         ChessScotlandDirectorySweepService chessScotland,
         FrsahDirectorySweepService frsah,
         WcuDirectorySweepService wcu,
+        CfcDirectorySweepService cfc,
         KnsbDirectorySweepService knsb)
     {
         _db = db;
@@ -76,6 +77,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         _chessScotland = chessScotland;
         _frsah = frsah;
         _wcu = wcu;
+        _cfc = cfc;
         _knsb = knsb;
     }
 
@@ -98,6 +100,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     private readonly ChessScotlandDirectorySweepService _chessScotland;
     private readonly FrsahDirectorySweepService _frsah;
     private readonly WcuDirectorySweepService _wcu;
+    private readonly CfcDirectorySweepService _cfc;
     private readonly KnsbDirectorySweepService _knsb;
 
     /// <summary>
@@ -459,6 +462,25 @@ public class AdminTournamentDirectoryController : BaseApiController
     public async Task<IActionResult> Wcu(CancellationToken ct = default)
     {
         var result = await _wcu.RunAsync(ct);
+        return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
+    }
+
+    /// <summary>
+    /// Den Ankuendigungskalender der Chess Federation of Canada lesen — 171 kuenftige Eintraege
+    /// gegen 68 auf chess-results, in zwei Abrufen (Seite fuer den Dateinamen, dann die Datei).
+    ///
+    /// <para><b>Der Spielort ist eine Stadt ohne Anschrift</b>, es gibt weder Strasse noch
+    /// Postleitzahl — der genaueste Weg des Geocoders faellt hier also aus. Dafuer kommt das
+    /// Provinz-Kuerzel strukturiert mit und traegt den Rueckfall auf die Regionsmitte.</para>
+    ///
+    /// <para>Auslands- und Online-Termine siebt schon der Crawler aus, und zwar ueber die PROVINZ:
+    /// ein FIDE-Turnier in Usbekistan steht dort als Turnierart „OTB" und nur die Provinz „FO"
+    /// verraet es.</para>
+    /// </summary>
+    [HttpPost("cfc")]
+    public async Task<IActionResult> Cfc(CancellationToken ct = default)
+    {
+        var result = await _cfc.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
