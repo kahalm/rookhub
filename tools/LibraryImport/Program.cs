@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using RookHub.Tools.LibraryImport;
@@ -15,6 +16,7 @@ using RookHub.Tools.LibraryImport;
 //   score            Eignungsnote fuer die Punktepartie berechnen
 //   queue            die besten Partien zum Rechnen einreihen
 //   comments         die Kommentare eingereihter Partien nach Sprachen trennen
+//   translate        fehlende Sprachen uebersetzen lassen (Anthropic:ApiKey noetig)
 //   stats            zeigen, was drinsteht
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
@@ -50,6 +52,7 @@ switch (command)
     case "score": return await ScoreAsync();
     case "queue": return await QueueAsync();
     case "comments": return await CommentsAsync();
+    case "translate": return await TranslateAsync();
     case "stats": return await StatsAsync();
     default:
         Console.Error.WriteLine($"Unbekannter Befehl: {command}");
@@ -558,6 +561,58 @@ async Task<int> ProbeAsync(AppDbContext db, int count)
     return 0;
 }
 
+// ===== Uebersetzen ==========================================================
+
+// Die Anmerkungen eingereihter Partien in eine weitere Sprache uebersetzen lassen.
+//
+//   translate --to de [--limit n] [--force] [--game <analyse-id>]
+//
+// Braucht ANTHROPIC__APIKEY (bzw. Anthropic:ApiKey) in der Umgebung — ohne Schluessel passiert
+// nichts. Uebersetzt wird immer aus der QUELLE, nie aus einer Uebersetzung, und die Quelle wird
+// nie ueberschrieben: es entsteht ein eigener Satz mit Herkunft „Machine".
+async Task<int> TranslateAsync()
+{
+    var target = StringArg("--to");
+    if (string.IsNullOrWhiteSpace(target))
+    {
+        Console.Error.WriteLine("Aufruf: translate --to <sprache> [--limit n] [--force] [--game <analyse-id>]");
+        return 1;
+    }
+    var limit = IntArg("--limit") ?? int.MaxValue;
+    var force = args.Contains("--force");
+    var one = IntArg("--game");
+
+    var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+    await using var db = NewDb();
+    var claude = new ClaudeJsonClient(config, NullLogger<ClaudeJsonClient>.Instance);
+    if (!claude.IsConfigured)
+    {
+        Console.Error.WriteLine("Anthropic:ApiKey fehlt — ohne Schluessel wird nicht uebersetzt.");
+        return 1;
+    }
+    var service = new CommentTranslationService(db, claude, NullLogger<CommentTranslationService>.Instance);
+
+    // Partien, die ueberhaupt Anmerkungen haben und die Zielsprache noch NICHT fuehren.
+    var ids = one is int only ? [only] : await db.GameAnalyses.AsNoTracking()
+        .OrderBy(g => g.Id)
+        .Select(g => g.Id)
+        .ToListAsync();
+
+    int done = 0, lines = 0;
+    var started = DateTime.UtcNow;
+    foreach (var id in ids)
+    {
+        if (done >= limit) break;
+        var written = await service.TranslateAsync(id, target!, force);
+        if (written == 0) continue;
+        done++;
+        lines += written;
+        Console.WriteLine($"  #{id,-5} {written,3} Anmerkungen nach {target}");
+    }
+    Console.WriteLine($"Uebersetzt: {done:N0} Partien · {lines:N0} Zeilen · Dauer {DateTime.UtcNow - started:hh\\:mm\\:ss}");
+    return 0;
+}
+
 // ===== Uebersicht ===========================================================
 
 async Task<int> StatsAsync()
@@ -577,6 +632,12 @@ async Task<int> StatsAsync()
     Console.WriteLine($"mit Sprache     : {await db.LibraryGames.CountAsync(g => g.Languages != null):N0}");
     Console.WriteLine($"mit Note        : {await db.LibraryGames.CountAsync(g => g.Score != null):N0}");
     return 0;
+}
+
+string? StringArg(string name)
+{
+    var i = Array.IndexOf(args, name);
+    return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
 }
 
 int? IntArg(string name)

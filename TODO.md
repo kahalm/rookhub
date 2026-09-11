@@ -8,7 +8,21 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [ ] Kommentare mehrsprachig — Sprache umschaltbar, Uebersetzungen getrennt ablegen (2026-09-11)
+## [~] Kommentare mehrsprachig — GEBAUT in 0.472.0/0.472.1, zwei Reste (2026-09-11)
+
+Umgesetzt: Zerlegung (`CommentSplit`), Ablage (`CommentSets`/`CommentTexts`), Umschalten am Brett,
+Uebersetzen ueber `tools/LibraryImport translate`. Offen geblieben sind zwei Dinge, beide bewusst:
+
+* **Kein Knopf in der Oberflaeche fuer „uebersetzen lassen".** Heute ist das ein Wartungsbefehl.
+  Ein Knopf braucht eine Antwort auf „wer darf das, und was kostet es" — jede Uebersetzung ist ein
+  Modellaufruf, und der Bestand hat 94 898 kommentierte Partien.
+* **`Anthropic:ApiKey` steht im RookHub-Stack noch nicht.** Ohne ihn passiert beim Uebersetzen
+  nichts (der Rest laeuft unveraendert). Den Schluessel setzt der Nutzer selbst, wie bei den
+  Web-Push-Schluesseln.
+
+Der urspruengliche Plan mit allen Messungen:
+
+## [x] Plan: Kommentare mehrsprachig (2026-09-11)
 
 Gewuenscht: beim Durchspielen einer Meisterpartie die Sprache der Kommentare umschalten, und
 Partien zusaetzlich uebersetzen lassen. Der Vorschlag des Nutzers — **getrennt in der Datenbank

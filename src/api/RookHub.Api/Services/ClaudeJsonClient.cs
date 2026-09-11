@@ -16,6 +16,16 @@ public interface IClaudeJsonClient
 
     /// <summary>Erzeugt eine JSON-Antwort <c>{hint1,hint2,hint3}</c> (structured output). Null bei Fehler.</summary>
     Task<string?> GenerateHintsJsonAsync(string system, string userPrompt, CancellationToken ct = default);
+
+    /// <summary>
+    /// Uebersetzt die Zug-Anmerkungen einer Partie: hinein geht <c>{items:[{ply,text}]}</c>, heraus
+    /// kommt dasselbe in der Zielsprache. <c>null</c> bei fehlendem Key, Fehler oder Ablehnung.
+    ///
+    /// <para>Eigene Methode und nicht der Tipp-Aufruf mit anderem Prompt: hier gilt ein anderes
+    /// Schema, und vor allem eine andere Groessenordnung — eine dicht kommentierte Partie hat
+    /// mehrere tausend Woerter, die vier Zeilen eines Tipps nicht.</para>
+    /// </summary>
+    Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt, CancellationToken ct = default);
 }
 
 /// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Claude Opus 5, structured output).</summary>
@@ -80,6 +90,61 @@ public class ClaudeJsonClient : IClaudeJsonClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Tipp-Generierung via Claude fehlgeschlagen.");
+            return null;
+        }
+    }
+
+    /// <summary>Deckel fuer eine Uebersetzungs-Fuhre. Die Antwort ist ungefaehr so lang wie die
+    /// Vorlage; der Aufrufer teilt lange Partien ohnehin auf (<c>CommentTranslationService</c>).</summary>
+    private const int TranslateMaxTokens = 16000;
+
+    public async Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt,
+        CancellationToken ct = default)
+    {
+        if (_client == null) return null;
+        try
+        {
+            var schema = new Dictionary<string, JsonElement>
+            {
+                ["type"] = JsonSerializer.SerializeToElement("object"),
+                ["properties"] = JsonSerializer.SerializeToElement(new
+                {
+                    items = new
+                    {
+                        type = "array",
+                        items = new
+                        {
+                            type = "object",
+                            properties = new { ply = new { type = "integer" }, text = new { type = "string" } },
+                            required = new[] { "ply", "text" },
+                            additionalProperties = false,
+                        },
+                    },
+                }),
+                ["required"] = JsonSerializer.SerializeToElement(new[] { "items" }),
+                ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
+            };
+
+            var parameters = new MessageCreateParams
+            {
+                Model = "claude-opus-5",
+                MaxTokens = TranslateMaxTokens,
+                System = system,
+                OutputConfig = new OutputConfig { Format = new JsonOutputFormat { Schema = schema } },
+                Messages = [new() { Role = Role.User, Content = userPrompt }],
+            };
+
+            var response = await _client.Messages.Create(parameters, ct);
+            if (response.StopReason == "refusal")
+            {
+                _logger.LogWarning("Uebersetzung abgelehnt (refusal).");
+                return null;
+            }
+            return response.Content.Select(b => b.Value).OfType<TextBlock>().FirstOrDefault()?.Text;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Uebersetzung via Claude fehlgeschlagen.");
             return null;
         }
     }

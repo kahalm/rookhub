@@ -1444,6 +1444,22 @@ Altbestand ohne Saetze bekommt seine Kommentare weiterhin direkt aus dem PGN.
 Das Brett zeigt die Wahl als Kuerzel neben der Blaetterleiste (nur, wenn es mehr als eine Sprache
 gibt); die Wahl merkt sich das Geraet, und beim ersten Mal gilt die Sprache der Oberflaeche.
 
+**Uebersetzen** (`Services/CommentTranslationService.cs`, `tools/LibraryImport translate --to de`)
+legt einen weiteren Satz an — `Origin = Machine`, dazu `TranslatedFrom` und das Modell. Vier
+Regeln, die dabei nicht kippen duerfen:
+* **Die PARTIE ist die Einheit, nicht der Kommentar.** Uebersetzt wird in moeglichst wenigen
+  Fuhren (`ChunkChars` 8000), weil Figurennamen und Eroeffnungsbegriffe sonst innerhalb derselben
+  Partie wechseln — „Springer" hier, „Pferd" zwei Zuege spaeter.
+* **Die Figurenbuchstaben stehen im Auftrag** (de: K D T L S, fr: R D T F C …). Ohne diese Angabe
+  wird aus den Zuegen Buchstabensalat.
+* **Uebersetzt wird aus der QUELLE**, nie aus einer Uebersetzung, und die Quelle wird nie
+  ueberschrieben — auch `--force` ersetzt nur eine MASCHINELLE Fassung.
+* **Ein Fehlschlag schreibt gar nichts.** Ein halb uebersetzter Satz waere der schlechtere Zustand:
+  er sieht vollstaendig aus.
+
+Braucht `Anthropic:ApiKey` (derselbe Schluessel wie die Puzzle-Tipps). Ohne Schluessel passiert
+nichts — der Rest des Stacks laeuft unveraendert.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/guess-sessions` | Auth | Eigene Durchlaeufe (max. 100, neueste zuerst) |

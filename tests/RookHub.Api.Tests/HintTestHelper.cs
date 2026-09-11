@@ -12,6 +12,9 @@ internal sealed class UnconfiguredClaude : IClaudeJsonClient
     public bool IsConfigured => false;
     public Task<string?> GenerateHintsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
         => Task.FromResult<string?>(null);
+
+    public Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
+        => Task.FromResult<string?>(null);
 }
 
 internal static class HintTestHelper
