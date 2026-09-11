@@ -418,7 +418,9 @@ public class GameAnalysisService
         if (analysis is null || analysis.Status is GameAnalysisStatus.Done or GameAnalysisStatus.Failed) return false;
 
         var changed = await IngestFinishedAsync(analysis, ct);
-        changed |= await EnqueueNextAsync(analysis, ct);
+        // Nachgefuettert wird nur die Partie, die gerade DRAN ist — siehe IsOwnersTurnAsync.
+        if (await IsOwnersTurnAsync(analysis, ct))
+            changed |= await EnqueueNextAsync(analysis, ct);
 
         var analyzed = analysis.Positions.Count(p => p.CandidatesJson != null);
         if (analyzed >= analysis.Positions.Count && analysis.Positions.Count > 0)
@@ -439,6 +441,39 @@ public class GameAnalysisService
             await _db.SaveChangesAsync(ct);
         }
         return changed;
+    }
+
+    /// <summary>
+    /// Ist DIESE Partie gerade dran? Je Nutzer wird immer nur EINE Partie weitergefuettert: die
+    /// aelteste, die noch ungerechnete Stellungen hat.
+    ///
+    /// <para><b>Warum nicht mehrere gleichzeitig.</b> Frueher fuetterte die Pumpe jede unfertige
+    /// Partie bis zum Block-Limit; bei fuenfzig offenen Auftraegen je Nutzer liefen damit vier bis
+    /// fuenf Partien nebeneinander, und alle wurden gleich langsam fertig. Das ist die schlechteste
+    /// aller Aufteilungen: die Engine-Zeit ist dieselbe, aber man wartet auf JEDE Partie das
+    /// Fuenffache, statt nach einem Fuenftel der Zeit die erste spielen zu koennen. Die Punktepartie
+    /// braucht eine FERTIGE Partie — eine halb gerechnete ist nichts wert.</para>
+    ///
+    /// <para>Gemessen wird an den STELLUNGEN und nicht am Status: eine Partie, deren Zeilen alle
+    /// eine Kandidatenliste haben, ist durch, auch wenn ihr Status noch nicht nachgezogen ist.
+    /// Gescheiterte Partien blockieren nicht — die Pumpe fasst sie gar nicht erst an.</para>
+    ///
+    /// <para>Je NUTZER, nicht global: zwei Leute sollen sich nicht gegenseitig ausbremsen. Die
+    /// Engine selbst serialisiert ohnehin, sie rechnet je Engine genau eine Suche.</para>
+    ///
+    /// <para>Laufende Auftraege einer anderen Partie werden NICHT abgebrochen. Sie sind bezahlte
+    /// Rechenzeit; sie laufen aus, und nachgelegt wird nur noch bei der Partie, die dran ist.</para>
+    /// </summary>
+    private async Task<bool> IsOwnersTurnAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        var current = await _db.GameAnalyses
+            .Where(g => g.UserId == analysis.UserId
+                && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
+                && g.Positions.Any(p => p.CandidatesJson == null))
+            .OrderBy(g => g.CreatedAt).ThenBy(g => g.Id)
+            .Select(g => (int?)g.Id)
+            .FirstOrDefaultAsync(ct);
+        return current is null || current == analysis.Id;
     }
 
     /// <summary>Fertige Aufträge in die Stellungen kopieren.</summary>

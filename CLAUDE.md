@@ -1231,6 +1231,16 @@ am Besitzer — alle Einwerfer teilten sich dann fuenfzig Plaetze, einer koennte
 in der Auftragsliste des Admins staenden fremde Partien. `PickBackgroundEngineAsync` zaehlt die
 kuerzeste Schlange entsprechend nach ENGINE-BESITZER (`EngineOwnerUserId ?? UserId`).
 
+**Eine Partie nach der anderen** (0.466.0): die Pumpe fuettert je NUTZER immer nur EINE Partie
+weiter — die aelteste mit ungerechneten Stellungen (`GameAnalysisService.IsOwnersTurnAsync`).
+Vorher fuetterte sie jede unfertige Partie bis zum Block-Limit; bei fuenfzig offenen Auftraegen je
+Nutzer liefen damit vier bis fuenf nebeneinander und alle wurden gleich langsam fertig. Das ist die
+schlechteste Aufteilung: dieselbe Engine-Zeit, aber man wartet auf JEDE Partie das Fuenffache,
+statt nach einem Fuenftel die erste spielen zu koennen — und eine halb gerechnete Partie ist fuer
+die Punktepartie nichts wert. Gemessen wird an den STELLUNGEN, nicht am Status; gescheiterte
+Partien blockieren nicht; laufende Auftraege einer anderen Partie werden nicht abgebrochen, sie
+laufen aus. Je Nutzer und nicht global, damit sich zwei Leute nicht gegenseitig ausbremsen.
+
 **Der Deckel des Einwurfs** (`MaxOpenGuessGamesPerUser` = 5) zaehlt NUR `Origin = Guess` und nur
 Partien, die noch rechnen (`Pending`/`Running`) — gescheiterte sperren niemanden aus. Von Hand ueber
 `/analysis/games` eingereihte Partien bleiben ungezaehlt: dort rechnet die eigene Maschine.

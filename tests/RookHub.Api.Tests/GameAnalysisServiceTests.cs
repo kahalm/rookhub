@@ -505,6 +505,89 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(2, used.Distinct().Count());
     }
 
+    // ===== Eine Partie nach der anderen =======================================
+
+    /// <summary>
+    /// Der Kern der Reihenfolge: die zweite Partie bekommt KEINE Auftraege, solange die erste noch
+    /// ungerechnete Stellungen hat. Frueher liefen vier bis fuenf nebeneinander und alle wurden
+    /// gleich langsam fertig — die Punktepartie braucht aber eine FERTIGE Partie.
+    /// </summary>
+    [Fact]
+    public async Task Pump_fuettertNurDieAeltesteUnfertigePartie()
+    {
+        var user = await CreateUserWithEngineAsync();
+
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(first.Id));
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+
+        // Auch ein Pump-Lauf aendert daran nichts, solange die erste nicht durch ist.
+        await _svc.PumpAllAsync();
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+    }
+
+    /// <summary>Ist die erste durch, rueckt die naechste nach — ohne dass jemand etwas anstoesst.</summary>
+    [Fact]
+    public async Task Pump_naechstePartieRuecktNach_wennDieErsteDurchIst()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        foreach (var pos in await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == first.Id).ToListAsync())
+        {
+            pos.CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+            pos.AnalysisJobId = null;
+            pos.AnalyzedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpAllAsync();
+
+        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(second.Id));
+        Assert.Equal(GameAnalysisStatus.Done,
+            (await _db.GameAnalyses.FirstAsync(g => g.Id == first.Id)).Status);
+    }
+
+    /// <summary>Je NUTZER, nicht global: zwei Leute bremsen sich nicht gegenseitig aus.</summary>
+    [Fact]
+    public async Task Pump_zweiNutzer_laufenNebeneinander()
+    {
+        var one = await CreateUserWithEngineAsync();
+        var two = await CreateUserAsync("zweiter");
+        await GiveEngineAsync(two);
+
+        var a = await _svc.CreateAsync(one.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var b = await _svc.CreateAsync(two.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(a.Id));
+        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(b.Id));
+    }
+
+    /// <summary>Eine gescheiterte Partie blockiert die Schlange nicht — die Pumpe fasst sie gar
+    /// nicht erst an, und die naechste muss trotzdem drankommen.</summary>
+    [Fact]
+    public async Task Pump_gescheitertePartie_blockiertNicht()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var stalled = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var next = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        var failed = await _db.GameAnalyses.FirstAsync(g => g.Id == stalled.Id);
+        failed.Status = GameAnalysisStatus.Failed;
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpAllAsync();
+
+        Assert.True(await OpenJobsAsync(next.Id) > 0);
+    }
+
+    private async Task<int> OpenJobsAsync(int analysisId) =>
+        await _db.GameAnalysisPositions
+            .CountAsync(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null);
+
     // ===== Neu anstossen ======================================================
 
     /// <summary>

@@ -103,6 +103,7 @@ import { ViewStateService } from '../../core/view-state.service';
                   <p class="muted small">
                     {{ (u.ownEngine ? 'guess.upload.hintOwn' : 'guess.upload.hintHouse') | translate }}
                   </p>
+                  <p class="muted small">{{ 'guess.upload.queueHint' | translate }}</p>
                   <p class="muted small">
                     {{ (u.ownEngine ? 'guess.upload.speedUpOwn' : 'guess.upload.speedUpHouse') | translate }}
                     <a [href]="engineGuideUrl" target="_blank" rel="noopener noreferrer">
@@ -144,6 +145,9 @@ import { ViewStateService } from '../../core/view-state.service';
                     <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
                     @if (g.status === 'failed') {
                       <span class="chip err">{{ 'guess.failedBadge' | translate }}</span>
+                    } @else if (g.status === 'pending') {
+                      <!-- Es wird immer nur EINE Partie je Nutzer gerechnet; die anderen warten. -->
+                      <span class="chip">{{ 'guess.waiting' | translate }}</span>
                     } @else if (g.status !== 'done') {
                       <span class="chip">{{ 'guess.computing' | translate }}</span>
                     }

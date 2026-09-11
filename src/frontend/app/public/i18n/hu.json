@@ -2759,11 +2759,13 @@
       },
       "speedUpHouse": "Túl lassú? Kösd be a saját géped motorként, és az fogja számolni a játszmáidat.",
       "speedUpOwn": "Túl lassú? Több motor egyszerre több játszmát számol.",
-      "engineGuide": "Útmutató Dockerhez és Windowshoz"
+      "engineGuide": "Útmutató Dockerhez és Windowshoz",
+      "queueHint": "Mindig egy játszma készül el, mielőtt a következő elindul."
     },
     "computing": "elemzés alatt",
     "failedBadge": "sikertelen",
-    "notReady": "Még egyetlen állás sincs elemezve"
+    "notReady": "Még egyetlen állás sincs elemezve",
+    "waiting": "várakozik"
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

@@ -3034,11 +3034,13 @@
       },
       "speedUpHouse": "Presporo? Priključi vlastito računalo kao motor pa će ono računati tvoje partije.",
       "speedUpOwn": "Presporo? Više motora računa više partija istodobno.",
-      "engineGuide": "Upute za Docker i Windows"
+      "engineGuide": "Upute za Docker i Windows",
+      "queueHint": "Uvijek se jedna partija dovrši prije nego što počne sljedeća."
     },
     "computing": "analizira se",
     "failedBadge": "neuspjelo",
-    "notReady": "Nijedna pozicija još nije analizirana"
+    "notReady": "Nijedna pozicija još nije analizirana",
+    "waiting": "čeka"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

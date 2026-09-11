@@ -3034,11 +3034,13 @@
       },
       "speedUpHouse": "Zu langsam? Schließ deine eigene Maschine als Engine an, dann rechnet sie deine Partien.",
       "speedUpOwn": "Zu langsam? Mehrere Engines rechnen mehrere Partien gleichzeitig.",
-      "engineGuide": "Anleitung für Docker und Windows"
+      "engineGuide": "Anleitung für Docker und Windows",
+      "queueHint": "Es wird immer eine Partie fertig gerechnet, bevor die nächste beginnt."
     },
     "computing": "rechnet",
     "failedBadge": "gescheitert",
-    "notReady": "Noch keine Stellung gerechnet"
+    "notReady": "Noch keine Stellung gerechnet",
+    "waiting": "wartet"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

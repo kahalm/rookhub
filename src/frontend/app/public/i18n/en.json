@@ -3034,11 +3034,13 @@
       },
       "speedUpHouse": "Too slow? Connect your own machine as an engine and it will work through your games.",
       "speedUpOwn": "Too slow? Several engines work through several games at once.",
-      "engineGuide": "Guide for Docker and Windows"
+      "engineGuide": "Guide for Docker and Windows",
+      "queueHint": "One game is always finished before the next one starts."
     },
     "computing": "analysing",
     "failedBadge": "failed",
-    "notReady": "No position analysed yet"
+    "notReady": "No position analysed yet",
+    "waiting": "waiting"
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

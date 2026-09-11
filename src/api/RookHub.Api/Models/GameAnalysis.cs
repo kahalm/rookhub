@@ -138,9 +138,17 @@ public static class GameAnalysisDefaults
     /// <summary>Deckel für die Länge einer Partie (Halbzüge) — schützt vor einem PGN-Monster.</summary>
     public const int MaxPlies = 300;
 
-    /// <summary>So viele Aufträge hält eine Partie gleichzeitig offen. Bewusst deutlich unter
+    /// <summary>
+    /// So viele Auftraege haelt eine Partie gleichzeitig offen. Bewusst deutlich unter
     /// <c>AnalysisJobService.MaxOpenJobsPerUser</c> (50), damit daneben noch von Hand eingereiht
-    /// werden kann und mehrere Partien nicht gegenseitig verhungern.</summary>
+    /// werden kann.
+    ///
+    /// <para>Die Zahl verteilt die Partie ueber die hinterlegten Engines: der Worker rechnet je
+    /// Engine eine Suche, zwoelf offene Auftraege halten also bis zu zwoelf Engines beschaeftigt.
+    /// Dass mehrere PARTIEN nicht gegenseitig verhungern, regelt seit 0.466.0 nicht mehr diese
+    /// Zahl, sondern die Reihenfolge: es wird immer nur EINE Partie je Nutzer weitergefuettert
+    /// (<c>GameAnalysisService.IsOwnersTurnAsync</c>).</para>
+    /// </summary>
     public const int MaxOpenJobsPerGame = 12;
 
     /// <summary>
