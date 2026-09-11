@@ -279,6 +279,77 @@ public class GameAnalysisService
         return dto;
     }
 
+    /// <summary>
+    /// Die Partie noch einmal anstossen: alles, was nicht gerechnet ist, kommt frisch in die
+    /// Warteschlange.
+    ///
+    /// <para><b>Warum das ein eigener Knopf sein muss.</b> Ein Auftrag klebt an DER Engine, die
+    /// beim Anlegen die kuerzeste Schlange hatte — und er wechselt nie wieder. Ist die Engine
+    /// danach aus (ein Rechner, den jemand abends ausmacht), versucht der Auftrag es ewig dort und
+    /// nirgends sonst; der Broker antwortet mit 503, der Auftrag pausiert eine Minute, und das
+    /// wiederholt sich bis in alle Ewigkeit. Am 2026-09-11 hingen so fuenf Partien an ihren letzten
+    /// Halbzuegen fest, waehrend fuenf freie Engines danebenstanden. Der Auftrag wird deshalb
+    /// GELOESCHT und neu angelegt — erst dadurch waehlt <c>PickBackgroundEngineAsync</c> erneut.</para>
+    ///
+    /// <para>Aufgegebene Stellungen kommen ebenfalls zurueck (<c>CandidatesJson = "[]"</c> nach
+    /// <see cref="GameAnalysisDefaults.MaxPositionAttempts"/> Anlaeufen). Sie zaehlen als
+    /// „gerechnet" und sind der Grund, warum eine Partie fertig aussehen kann und in der
+    /// Punktepartie trotzdem Loecher hat. Genau die soll ein Reset schliessen.</para>
+    ///
+    /// <para>Eine pinnte Engine (<see cref="GameAnalysis.EngineId"/>) bleibt, wo sie ist: wer eine
+    /// bestimmte Maschine gewaehlt hat, meint sie auch.</para>
+    /// </summary>
+    /// <returns>Die Partie mit neuem Stand, oder <c>null</c>, wenn es sie nicht (mehr) gibt.</returns>
+    public async Task<GameAnalysisDto?> RestartAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var analysis = await _db.GameAnalyses
+            .Include(g => g.Positions)
+            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, ct);
+        if (analysis is null) return null;
+
+        // Steckengebliebene Auftraege weg — sonst behielte die Stellung ihren alten Auftrag auf der
+        // alten Engine, und der Reset aenderte genau gar nichts.
+        var stuck = analysis.Positions
+            .Where(p => p.CandidatesJson == null && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value)
+            .ToList();
+        foreach (var jobId in stuck)
+        {
+            try { await _jobs.DeleteAsync(userId, jobId, ct); }
+            catch (Exception ex) { _logger.LogDebug(ex, "GameAnalysis {Id}: Auftrag {JobId} liess sich nicht loeschen", id, jobId); }
+        }
+
+        var reopened = 0;
+        foreach (var pos in analysis.Positions)
+        {
+            if (pos.CandidatesJson == "[]")
+            {
+                pos.CandidatesJson = null;
+                pos.AnalyzedAt = null;
+                pos.EvalText = null;
+                pos.Depth = 0;
+            }
+            if (pos.CandidatesJson != null) continue;
+
+            pos.AnalysisJobId = null;
+            pos.FailedAttempts = 0;
+            reopened++;
+        }
+
+        analysis.Status = GameAnalysisStatus.Pending;
+        analysis.LastError = null;
+        analysis.FinishedAt = null;
+        analysis.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("GameAnalysis {Id}: neu angestossen ({Count} Stellungen, {Jobs} Auftraege verworfen)",
+            id, reopened, stuck.Count);
+
+        // Sofort nachfuettern, damit der Knopf etwas tut, das man sieht.
+        await PumpOneAsync(analysis.Id, ct);
+        return await GetAsync(userId, id, ct);
+    }
+
     public async Task<bool> DeleteAsync(int userId, int id, CancellationToken ct = default)
     {
         var analysis = await _db.GameAnalyses

@@ -2659,7 +2659,11 @@
     "overallOpen": "{{count}} játszma vár még a sorban",
     "overallFailed": "nincs beszámítva: {{count}} sikertelen",
     "rate": "{{rate}} állás/perc",
-    "eta": "még kb. {{eta}}"
+    "eta": "még kb. {{eta}}",
+    "restart": "Újraindítás",
+    "restartHint": "Minden még ki nem számolt állás újra sorba kerül, újonnan választott motoron",
+    "restarted": "A játszma elemzése újraindult.",
+    "restartFailed": "A játszmát nem sikerült újraindítani."
   },
   "guess": {
     "title": "Pontjátszma",

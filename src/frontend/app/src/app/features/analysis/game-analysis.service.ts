@@ -107,6 +107,12 @@ export class GameAnalysisService {
     return this.http.get<GuessUploadStatus>('/api/game-analyses/guess/status');
   }
 
+  /** Die Partie noch einmal anstossen: alles Ungerechnete kommt frisch in die Warteschlange, und
+   *  zwar auf einer NEU gewaehlten Engine — ein Auftrag wechselt von sich aus nie die Engine. */
+  restart(id: number): Observable<GameAnalysis> {
+    return this.http.post<GameAnalysis>(`/api/game-analyses/${id}/restart`, {});
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`/api/game-analyses/${id}`);
   }

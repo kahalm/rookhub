@@ -123,4 +123,31 @@ describe('GameAnalysesComponent', () => {
     c.analyses = [analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 20 })];
     expect(c.rate).toEqual({ perMinute: '2.0', eta: '40 min' });
   });
+
+  /** Der Knopf gegen die Sackgasse: ein Auftrag klebt an seiner Engine und wechselt nie von
+   *  selbst. Der Server verwirft die alten Auftraege und legt sie neu an. */
+  it('stoesst eine Partie neu an und uebernimmt den zurueckgemeldeten Stand', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses').flush([analysis({ id: 5, status: 'failed', analyzedPlies: 30 })]);
+
+    fixture.componentInstance.restart(fixture.componentInstance.analyses[0]);
+    const req = http.expectOne(r => r.method === 'POST' && r.url === '/api/game-analyses/5/restart');
+    req.flush(analysis({ id: 5, status: 'pending', analyzedPlies: 30, lastError: null }));
+
+    expect(fixture.componentInstance.analyses[0].status).toBe('pending');
+    expect(fixture.componentInstance.restarting).toBeNull();
+  });
+
+  it('gibt den Knopf nach einem Fehlschlag wieder frei', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses').flush([analysis({ id: 5 })]);
+
+    fixture.componentInstance.restart(fixture.componentInstance.analyses[0]);
+    http.expectOne('/api/game-analyses/5/restart')
+      .flush({ message: 'nope' }, { status: 500, statusText: 'Server Error' });
+
+    expect(fixture.componentInstance.restarting).toBeNull();
+  });
 });

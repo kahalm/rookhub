@@ -2934,7 +2934,11 @@
     "overallOpen": "{{count}} Partien stehen noch in der Warteschlange",
     "overallFailed": "nicht mitgezählt: {{count}} gescheitert",
     "rate": "{{rate}} Stellungen/Min",
-    "eta": "noch ca. {{eta}}"
+    "eta": "noch ca. {{eta}}",
+    "restart": "Neu anstoßen",
+    "restartHint": "Alle noch nicht gerechneten Stellungen erneut einreihen — auf einer neu gewählten Engine",
+    "restarted": "Die Partie wird wieder gerechnet.",
+    "restartFailed": "Die Partie ließ sich nicht neu anstoßen."
   },
   "guess": {
     "title": "Punktepartie",

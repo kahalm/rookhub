@@ -505,6 +505,96 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(2, used.Distinct().Count());
     }
 
+    // ===== Neu anstossen ======================================================
+
+    /// <summary>
+    /// Der Knopf muss den ALTEN Auftrag loswerden. Ein Auftrag klebt an der Engine, die beim
+    /// Anlegen gewaehlt wurde, und wechselt nie wieder — bleibt er stehen, aendert der Reset nichts.
+    /// </summary>
+    [Fact]
+    public async Task Restart_verwirftDenSteckengebliebenenAuftrag_undReihtNeuEin()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var before = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value).ToListAsync();
+        Assert.NotEmpty(before);
+
+        var after = await _svc.RestartAsync(user.Id, dto.Id);
+
+        Assert.NotNull(after);
+        var now = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value).ToListAsync();
+        Assert.NotEmpty(now);                      // wieder eingereiht …
+        Assert.Empty(now.Intersect(before));       // … aber mit NEUEN Auftraegen
+        Assert.Empty(await _db.AnalysisJobs.Where(j => before.Contains(j.Id)).ToListAsync());
+    }
+
+    /// <summary>Aufgegebene Stellungen zaehlen als „gerechnet" und sind der Grund, warum eine Partie
+    /// fertig aussehen kann und in der Punktepartie trotzdem Loecher hat. Genau die soll der Reset
+    /// schliessen.</summary>
+    [Fact]
+    public async Task Restart_holtAufgegebeneStellungenZurueck()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        // Eine Stellung hat die Engine aufgegeben, eine andere ist echt gerechnet.
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+        positions[0].CandidatesJson = "[]";
+        positions[0].AnalysisJobId = null;
+        positions[0].FailedAttempts = GameAnalysisDefaults.MaxPositionAttempts;
+        positions[0].AnalyzedAt = DateTime.UtcNow;
+        positions[1].CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+        positions[1].AnalysisJobId = null;
+        positions[1].AnalyzedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await _svc.RestartAsync(user.Id, dto.Id);
+
+        var reloaded = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+        Assert.Null(reloaded[0].CandidatesJson);            // aufgegeben → zurueck in die Schlange
+        Assert.Equal(0, reloaded[0].FailedAttempts);        // mit frischem Zaehler
+        Assert.NotNull(reloaded[1].CandidatesJson);         // echtes Ergebnis bleibt
+    }
+
+    /// <summary>Eine gescheiterte Partie darf der Knopf wieder in Gang setzen — sonst waere sie
+    /// nur ueber Loeschen und neu Einwerfen zu retten.</summary>
+    [Fact]
+    public async Task Restart_setztDenFehlerZurueck()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id);
+        analysis.Status = GameAnalysisStatus.Failed;
+        analysis.LastError = "Keine Hintergrund-Engine konfiguriert";
+        analysis.FinishedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var after = await _svc.RestartAsync(user.Id, dto.Id);
+
+        Assert.NotNull(after);
+        Assert.NotEqual("failed", after!.Status);
+        Assert.Null(after.LastError);
+        Assert.Null(after.FinishedAt);
+    }
+
+    /// <summary>Fremde Partien gehen niemanden etwas an — auch nicht ueber diesen Knopf.</summary>
+    [Fact]
+    public async Task Restart_fremdePartie_gibtNichts()
+    {
+        var owner = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(owner.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var other = await CreateUserAsync("fremd");
+
+        Assert.Null(await _svc.RestartAsync(other.Id, dto.Id));
+    }
+
     // ===== Einwurf auf der Punktepartie-Seite =================================
 
     private async Task<AppUser> CreateUserAsync(string name, bool admin = false)

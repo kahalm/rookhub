@@ -100,6 +100,18 @@ public class GameAnalysisController : BaseApiController
     public async Task<ActionResult<GuessUploadStatusDto>> GuessUploadStatus(CancellationToken ct)
         => Ok(await _service.GuessUploadStatusAsync(GetUserId(), ct));
 
+    /// <summary>
+    /// Die Partie noch einmal anstossen — alles, was nicht gerechnet ist, kommt frisch in die
+    /// Warteschlange, und zwar auf einer neu gewaehlten Engine. Der Weg aus der Sackgasse
+    /// „Auftrag haengt an einer Engine, die aus ist": ein Auftrag wechselt von sich aus nie.
+    /// </summary>
+    [HttpPost("{id:int}/restart")]
+    public async Task<ActionResult<GameAnalysisDto>> Restart(int id, CancellationToken ct)
+    {
+        var dto = await _service.RestartAsync(GetUserId(), id, ct);
+        return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
         => await _service.DeleteAsync(GetUserId(), id, ct)

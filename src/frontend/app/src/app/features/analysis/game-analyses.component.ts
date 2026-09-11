@@ -101,6 +101,11 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
                 <span class="chip" [class]="'st-' + a.status">{{ 'gameAnalysis.status.' + a.status | translate }}</span>
                 <span class="spacer"></span>
                 <span class="muted small">{{ 'gameAnalysis.depthLines' | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
+                <button mat-icon-button [disabled]="restarting === a.id"
+                        [attr.aria-label]="'gameAnalysis.restart' | translate"
+                        [matTooltip]="'gameAnalysis.restartHint' | translate" (click)="restart(a)">
+                  <mat-icon>refresh</mat-icon>
+                </button>
                 <button mat-icon-button [attr.aria-label]="'common.delete' | translate"
                         [matTooltip]="'common.delete' | translate" (click)="remove(a)">
                   <mat-icon>delete</mat-icon>
@@ -154,6 +159,8 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   analyses: GameAnalysis[] = [];
   loading = true;
   creating = false;
+  /** Id der Partie, die gerade neu angestossen wird (sperrt ihren Knopf). */
+  restarting: number | null = null;
   pgn = '';
   depth = GameAnalysisService.DefaultDepth;
   readonly depthOptions = JOB_DEPTH_OPTIONS;
@@ -286,6 +293,32 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
         this.creating = false;
         // Der Nutzer hat gerade etwas ausgelöst → konkrete Meldung (fehlende Engine, kaputtes PGN).
         this.snackbar.warn(err?.error?.message || this.translate.instant('gameAnalysis.startFailed'));
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /**
+   * Die Partie noch einmal anstossen. Gedacht fuer den Fall, dass die letzten Halbzuege haengen:
+   * ein Auftrag klebt an DER Engine, die beim Anlegen die kuerzeste Schlange hatte, und wechselt
+   * nie wieder — ist die Maschine danach aus, versucht er es ewig dort und nirgends sonst. Der
+   * Server verwirft die alten Auftraege und legt sie neu an; erst dadurch wird die Engine neu
+   * gewaehlt. Aufgegebene Stellungen kommen dabei ebenfalls zurueck.
+   */
+  restart(a: GameAnalysis): void {
+    if (this.restarting) return;
+    this.restarting = a.id;
+    this.service.restart(a.id).subscribe({
+      next: updated => {
+        this.restarting = null;
+        this.analyses = this.analyses.map(x => (x.id === updated.id ? updated : x));
+        this.snackbar.success(this.translate.instant('gameAnalysis.restarted'));
+        // Nachsehen uebernimmt der laufende 10-s-Takt: hasOpen() ist jetzt wieder wahr.
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.restarting = null;
+        this.snackbar.warn(this.translate.instant('gameAnalysis.restartFailed'));
         this.cdr.markForCheck();
       },
     });

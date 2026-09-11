@@ -2934,7 +2934,11 @@
     "overallOpen": "{{count}} games still in the queue",
     "overallFailed": "not counted: {{count}} failed",
     "rate": "{{rate}} positions/min",
-    "eta": "about {{eta}} left"
+    "eta": "about {{eta}} left",
+    "restart": "Start again",
+    "restartHint": "Queue every position that is not analysed yet, on a freshly chosen engine",
+    "restarted": "The game is being analysed again.",
+    "restartFailed": "The game could not be started again."
   },
   "guess": {
     "title": "Point game",
