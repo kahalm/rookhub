@@ -2667,7 +2667,8 @@
     "restart": "Újraindítás",
     "restartHint": "Minden még ki nem számolt állás újra sorba kerül, újonnan választott motoron",
     "restarted": "A játszma elemzése újraindult.",
-    "restartFailed": "A játszmát nem sikerült újraindítani."
+    "restartFailed": "A játszmát nem sikerült újraindítani.",
+    "toGuess": "Pontozós játszma"
   },
   "guess": {
     "title": "Pontjátszma",
@@ -2778,8 +2779,6 @@
       "clear": "Keresés törlése",
       "none": "Erre nincs találat."
     },
-    "playsWhite": "világossal játszol",
-    "playsBlack": "sötéttel játszol",
     "library": {
       "open": "Játszma kérése",
       "title": "Kommentált mesterjátszmák",

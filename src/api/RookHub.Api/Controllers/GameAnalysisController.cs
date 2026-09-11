@@ -62,9 +62,25 @@ public class GameAnalysisController : BaseApiController
         return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
     }
 
+    /// <summary>
+    /// Eine Partie von Hand einreihen. Tiefe, Linienzahl und Engine darf dabei NUR ein Admin
+    /// waehlen — bei allen anderen setzt der Server die Vorgaben.
+    ///
+    /// <para>Das Formular blendet die Felder fuer sie ohnehin aus; hier steht der Riegel, der es
+    /// wahr macht. Ein verborgenes Feld, das der Server trotzdem annimmt, ist ein Vorhang und
+    /// keine Grenze — und dahinter liegt fremde Rechenzeit: Tiefe 40 kostet grob das Zehnfache
+    /// von 30, und gerechnet wird meist auf der Haus-Engine.</para>
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<GameAnalysisDto>> Create([FromBody] CreateGameAnalysisRequest req, CancellationToken ct)
     {
+        if (!IsAdmin && req is not null)
+        {
+            req.TargetDepth = null;
+            req.MultiPv = null;
+            req.EngineId = null;
+        }
+
         try
         {
             return Ok(await _service.CreateAsync(GetUserId(), req, ct));

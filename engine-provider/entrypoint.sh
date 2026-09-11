@@ -41,6 +41,61 @@ fi
 
 ENGINE_NAME="${ENGINE_NAME:-RookHub Engine}"
 
+# ---------------------------------------------------------------------------
+# EINFACHES SCHEMA (bevorzugt): eine LIVE-Engine, n HINTERGRUND-Engines.
+#
+# Die Aufteilung ist immer dieselbe — vorne eine Engine mit vielen Threads, weil dort ein Mensch
+# auf EINE Stellung wartet, dahinter mehrere mit wenigen, weil dort der Durchsatz zaehlt (siehe
+# README: eine Suche wird von 1 auf 8 Threads nur um den Faktor 1,13 schneller, vier Suchen
+# nebeneinander um fast das Dreifache). Sie als ENGINE_1_…, ENGINE_2_… durchzunummerieren hiess,
+# dieselben zwei Werte fuenfmal zu tippen und bei jeder Aenderung fuenfmal nachzuziehen.
+#
+# BACKGROUND_COUNT gesetzt => ENGINE_COUNT = 1 + BACKGROUND_COUNT, und die Namen/Threads/Hashes
+# der einzelnen Engines werden daraus abgeleitet. Ein ausdrueckliches ENGINE_<i>_… schlaegt das
+# weiterhin (das alte Schema bleibt gueltig).
+#
+# NAMENSREGEL: die erste Hintergrund-Engine heisst genau BACKGROUND_NAME, die zweite
+# "BACKGROUND_NAME 2" und so weiter. Das ist kein Schoenheitsentscheid — der Name IST die
+# Identitaet der Lichess-Registrierung. Haette die erste eine " 1" bekommen, waeren alle
+# bestehenden Registrierungen neue Engines mit neuen Kennungen, und die Hintergrund-Auswahl in
+# jedem RookHub-Profil zeigte ins Leere.
+if [ -n "${BACKGROUND_COUNT:-}" ]; then
+    if ! [[ "$BACKGROUND_COUNT" =~ ^[0-9]+$ ]] || [ "$BACKGROUND_COUNT" -gt 15 ]; then
+        echo "FEHLER: BACKGROUND_COUNT muss eine Zahl von 0 bis 15 sein (ist '$BACKGROUND_COUNT')." >&2
+        exit 1
+    fi
+    if [ -n "${ENGINE_COUNT:-}" ] && [ "$ENGINE_COUNT" -ne $((BACKGROUND_COUNT + 1)) ]; then
+        echo "FEHLER: ENGINE_COUNT ($ENGINE_COUNT) und BACKGROUND_COUNT ($BACKGROUND_COUNT) widersprechen sich." >&2
+        echo "        Das einfache Schema rechnet ENGINE_COUNT selbst aus — die Zeile ENGINE_COUNT weglassen." >&2
+        exit 1
+    fi
+    ENGINE_COUNT=$((BACKGROUND_COUNT + 1))
+
+    # Setzt <var> auf <wert>, SOFERN die Variable noch leer ist und der Wert etwas hergibt.
+    # Bewusst if/fi und kein `[ … ] && …`: unter `set -e` beendet ein fehlschlagender Test als
+    # letzter Befehl einer Funktion sie mit Code 1 — und damit den ganzen Container (siehe die
+    # Falle oben im Kopf dieser Datei).
+    default_to() {
+        local var="$1" value="$2"
+        if [ -n "$value" ] && [ -z "${!var:-}" ]; then
+            printf -v "$var" '%s' "$value"
+        fi
+    }
+
+    default_to ENGINE_1_NAME        "${LIVE_NAME:-$ENGINE_NAME}"
+    default_to ENGINE_1_MAX_THREADS "${LIVE_MAX_THREADS:-}"
+    default_to ENGINE_1_MAX_HASH    "${LIVE_MAX_HASH:-}"
+
+    for ((b = 1; b <= BACKGROUND_COUNT; b++)); do
+        idx=$((b + 1))
+        base="${BACKGROUND_NAME:-$ENGINE_NAME Hintergrund}"
+        if [ "$b" -gt 1 ]; then base="$base $b"; fi
+        default_to "ENGINE_${idx}_NAME"        "$base"
+        default_to "ENGINE_${idx}_MAX_THREADS" "${BACKGROUND_MAX_THREADS:-}"
+        default_to "ENGINE_${idx}_MAX_HASH"    "${BACKGROUND_MAX_HASH:-}"
+    done
+fi
+
 ENGINE_COUNT="${ENGINE_COUNT:-1}"
 if ! [[ "$ENGINE_COUNT" =~ ^[0-9]+$ ]] || [ "$ENGINE_COUNT" -lt 1 ] || [ "$ENGINE_COUNT" -gt 16 ]; then
     echo "FEHLER: ENGINE_COUNT muss eine Zahl von 1 bis 16 sein (ist '$ENGINE_COUNT')." >&2

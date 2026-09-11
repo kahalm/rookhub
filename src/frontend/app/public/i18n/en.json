@@ -2942,7 +2942,8 @@
     "restart": "Start again",
     "restartHint": "Queue every position that is not analysed yet, on a freshly chosen engine",
     "restarted": "The game is being analysed again.",
-    "restartFailed": "The game could not be started again."
+    "restartFailed": "The game could not be started again.",
+    "toGuess": "Points game"
   },
   "guess": {
     "title": "Point game",
@@ -3053,8 +3054,6 @@
       "clear": "Clear the search",
       "none": "Nothing matches that."
     },
-    "playsWhite": "you play White",
-    "playsBlack": "you play Black",
     "library": {
       "open": "Request a game",
       "title": "Annotated master games",

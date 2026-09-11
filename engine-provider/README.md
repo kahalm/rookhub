@@ -66,8 +66,11 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `HEARTBEAT_SECONDS` | Lebenszeichen im Analyse-Stream nach so vielen Sekunden **stummem Upload** (leer = 15, 0 = aus) — siehe unten |
 | `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
-| `ENGINE_COUNT` | Mehrere Engines in diesem Container (leer/1 = eine; max. 16) — siehe unten |
-| `ENGINE_<i>_NAME` / `_MAX_THREADS` / `_MAX_HASH` | Einstellungen der i-ten Engine (sonst `ENGINE_NAME <i>`, `MAX_THREADS`, `MAX_HASH`) |
+| `LIVE_NAME` / `LIVE_MAX_THREADS` / `LIVE_MAX_HASH` | Die EINE Live-Engine — siehe unten |
+| `BACKGROUND_NAME` / `BACKGROUND_MAX_THREADS` / `BACKGROUND_MAX_HASH` | Die Hintergrund-Engines, alle gleich |
+| `BACKGROUND_COUNT` | Wie viele Hintergrund-Engines (leer = nur eine einzelne Engine wie früher; max. 15) |
+| `ENGINE_COUNT` | Älteres Schema: Engines von Hand durchnummerieren (max. 16) |
+| `ENGINE_<i>_NAME` / `_MAX_THREADS` / `_MAX_HASH` | Einstellungen der i-ten Engine; schlagen die Werte oben |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
 
@@ -149,14 +152,26 @@ den ganzen Gewinn; acht bringen nur noch 5 % mehr und kosten vier weitere Regist
 eigener Hashtabelle.
 
 ```dotenv
-ENGINE_COUNT=5
-ENGINE_1_NAME=RookHub Server 19
-ENGINE_1_MAX_THREADS=8          # LIVE: dort wartet ein Mensch auf EINE Stellung
-ENGINE_2_NAME=RookHub Server 19 Hintergrund
-ENGINE_2_MAX_THREADS=2
-ENGINE_2_MAX_HASH=1024
-# … 3, 4, 5 genauso
+# Die LIVE-Engine (immer genau eine)
+LIVE_NAME=RookHub Server 19
+LIVE_MAX_THREADS=8              # dort wartet ein Mensch auf EINE Stellung
+LIVE_MAX_HASH=4096
+
+# Die HINTERGRUND-Engines (alle gleich eingestellt)
+BACKGROUND_NAME=RookHub Server 19 Hintergrund
+BACKGROUND_MAX_THREADS=2
+BACKGROUND_MAX_HASH=1024
+
+# Wie viele davon
+BACKGROUND_COUNT=4
 ```
+
+Die Namen entstehen daraus als „…Hintergrund", „…Hintergrund 2", „…Hintergrund 3", …: die ERSTE
+ohne Ziffer. Das ist keine Kosmetik — der Name IST die Identität der Lichess-Registrierung, und
+eine Ziffer an der ersten machte aus jeder bestehenden Engine eine neue mit neuer Kennung.
+
+Das ältere Schema (`ENGINE_COUNT` + `ENGINE_<i>_NAME/_MAX_THREADS/_MAX_HASH`) gilt weiter und
+schlägt diese Werte — gebraucht nur noch für eine Engine, die aus der Reihe fallen soll.
 
 Die **Live**-Engine behält alle Kerne: dort zählt die Zeit bis zum Ergebnis, nicht der Durchsatz.
 Läuft sie, teilt sie sich die Kerne mit den Hintergrund-Engines — die werden dann eben langsamer.

@@ -2942,7 +2942,8 @@
     "restart": "Neu anstoßen",
     "restartHint": "Alle noch nicht gerechneten Stellungen erneut einreihen — auf einer neu gewählten Engine",
     "restarted": "Die Partie wird wieder gerechnet.",
-    "restartFailed": "Die Partie ließ sich nicht neu anstoßen."
+    "restartFailed": "Die Partie ließ sich nicht neu anstoßen.",
+    "toGuess": "Punktepartie"
   },
   "guess": {
     "title": "Punktepartie",
@@ -3053,8 +3054,6 @@
       "clear": "Suche leeren",
       "none": "Dazu findet sich nichts."
     },
-    "playsWhite": "du spielst Weiß",
-    "playsBlack": "du spielst Schwarz",
     "library": {
       "open": "Partie anfordern",
       "title": "Kommentierte Meisterpartien",

@@ -2942,7 +2942,8 @@
     "restart": "Pokreni ponovno",
     "restartHint": "Sve još neizračunate pozicije idu ponovno u red, na novoodabranom motoru",
     "restarted": "Partija se ponovno analizira.",
-    "restartFailed": "Partiju nije bilo moguće ponovno pokrenuti."
+    "restartFailed": "Partiju nije bilo moguće ponovno pokrenuti.",
+    "toGuess": "Bodovna partija"
   },
   "guess": {
     "title": "Bodovna partija",
@@ -3053,8 +3054,6 @@
       "clear": "Očisti pretragu",
       "none": "Za to nema rezultata."
     },
-    "playsWhite": "igraš bijelima",
-    "playsBlack": "igraš crnima",
     "library": {
       "open": "Zatraži partiju",
       "title": "Komentirane majstorske partije",

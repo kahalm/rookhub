@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTabsModule } from '@angular/material/tabs';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -42,19 +43,25 @@ import { ViewStateService } from '../../core/view-state.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatProgressBarModule,
-    MatDialogModule,
+    MatDialogModule, MatTabsModule,
     TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="gl-container">
       <div class="header">
         <h1>{{ 'guess.title' | translate }}</h1>
         @if (loggedIn) {
-          <button mat-flat-button color="primary" (click)="openLibrary()">
-            <mat-icon>library_books</mat-icon> {{ 'guess.library.open' | translate }}
-          </button>
-          <a mat-stroked-button routerLink="/analysis/games">
-            <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
-          </a>
+          <!-- Beide Knoepfe in EINEM Kasten: die Kopfzeile verteilt ihre Kinder ueber die ganze
+               Breite (space-between), einzeln stuenden sie also auseinander statt nebeneinander
+               am Rand. Und beide in derselben Form — der gefuellte Knopf daneben behauptete eine
+               Rangfolge, die es hier nicht gibt. -->
+          <div class="header-actions">
+            <a mat-stroked-button routerLink="/analysis/games">
+              <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
+            </a>
+            <button mat-stroked-button (click)="openLibrary()">
+              <mat-icon>library_books</mat-icon> {{ 'guess.library.open' | translate }}
+            </button>
+          </div>
         }
       </div>
       <p class="muted intro">{{ 'guess.intro' | translate }}</p>
@@ -78,10 +85,11 @@ import { ViewStateService } from '../../core/view-state.service';
           }
         </mat-form-field>
 
+        <mat-tab-group class="lists" [(selectedIndex)]="tab" animationDuration="0ms">
+        <mat-tab [label]="('guess.curated' | translate) + ' (' + curatedShown.length + ')'">
         <mat-card class="start-card">
           <mat-card-content>
             <div class="sec-head">
-              <h2>{{ 'guess.curated' | translate }}</h2>
               @if (hasAnnotated) {
                 <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="saveFilter()"
                                          aria-label="filter" class="small-toggle">
@@ -100,7 +108,7 @@ import { ViewStateService } from '../../core/view-state.service';
                   <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
                   @if (g.guessWhite !== null && g.guessWhite !== undefined) {
                     <span class="side" [class.side-black]="!g.guessWhite">
-                      {{ (g.guessWhite ? 'guess.playsWhite' : 'guess.playsBlack') | translate }}
+                      {{ (g.guessWhite ? 'guess.white' : 'guess.black') | translate }}
                     </span>
                   }
                   @if (g.annotated) {
@@ -115,11 +123,12 @@ import { ViewStateService } from '../../core/view-state.service';
             }
           </mat-card-content>
         </mat-card>
+        </mat-tab>
 
         @if (loggedIn) {
+          <mat-tab [label]="('guess.ownGames' | translate) + ' (' + ownShown.length + ')'">
           <mat-card class="start-card">
             <mat-card-content>
-              <h2>{{ 'guess.ownGames' | translate }}</h2>
 
               @if (uploadStatus; as u) {
                 @if (u.engineAvailable) {
@@ -193,7 +202,9 @@ import { ViewStateService } from '../../core/view-state.service';
               }
             </mat-card-content>
           </mat-card>
+          </mat-tab>
         }
+        </mat-tab-group>
 
         @if (sessions.length) {
           <h2 class="sec">{{ 'guess.yourRuns' | translate }}</h2>
@@ -231,6 +242,10 @@ import { ViewStateService } from '../../core/view-state.service';
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .full { width: 100%; }
     .search { width: 100%; margin-bottom: 12px; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    /* Die Karte sitzt IM Reiter — ohne das doppelte sich der Rahmen mit dem des Reiters. */
+    .lists .start-card { box-shadow: none; background: transparent; margin: 0; }
+    .lists ::ng-deep .mat-mdc-tab-body-content { padding-top: 8px; }
     .search mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     .chip.err { color: #ef9a9a; }
@@ -293,6 +308,9 @@ export class GuessListComponent implements OnInit, OnDestroy {
    * dann aber mit Seiten, nicht nur mit einem Filter.</p>
    */
   query = '';
+
+  /** Welcher Reiter offen ist: 0 = Meisterpartien, 1 = eigene Partien. */
+  tab = 0;
 
   /** Eingeworfenes PGN. */
   pgn = '';

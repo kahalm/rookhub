@@ -15,6 +15,7 @@ import { Subscription, interval } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-analysis.service';
+import { AuthService } from '../../core/auth.service';
 import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
 
 /**
@@ -37,9 +38,14 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
     <div class="ga-container">
       <div class="header">
         <h1>{{ 'gameAnalysis.title' | translate }}</h1>
-        <a mat-stroked-button routerLink="/analysis/jobs">
-          <mat-icon>list</mat-icon> {{ 'gameAnalysis.toJobs' | translate }}
+        <a mat-stroked-button routerLink="/guess">
+          <mat-icon>casino</mat-icon> {{ 'gameAnalysis.toGuess' | translate }}
         </a>
+        @if (isAdmin) {
+          <a mat-stroked-button routerLink="/analysis/jobs">
+            <mat-icon>list</mat-icon> {{ 'gameAnalysis.toJobs' | translate }}
+          </a>
+        }
       </div>
       <p class="muted intro">{{ 'gameAnalysis.intro' | translate }}</p>
 
@@ -72,13 +78,15 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
                       [placeholder]="'gameAnalysis.pgnPlaceholder' | translate"></textarea>
           </mat-form-field>
           <div class="new-row">
-            <mat-form-field appearance="outline" class="depth">
-              <mat-label>{{ 'gameAnalysis.depth' | translate }}</mat-label>
-              <mat-select [(ngModel)]="depth" [disabled]="creating">
-                @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
-              </mat-select>
-            </mat-form-field>
-            <span class="muted small hint">{{ 'gameAnalysis.depthHint' | translate }}</span>
+            @if (isAdmin) {
+              <mat-form-field appearance="outline" class="depth">
+                <mat-label>{{ 'gameAnalysis.depth' | translate }}</mat-label>
+                <mat-select [(ngModel)]="depth" [disabled]="creating">
+                  @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
+              <span class="muted small hint">{{ 'gameAnalysis.depthHint' | translate }}</span>
+            }
             <button mat-flat-button color="primary" [disabled]="creating || !pgn.trim()" (click)="create()">
               <mat-icon>play_arrow</mat-icon> {{ 'gameAnalysis.start' | translate }}
             </button>
@@ -159,6 +167,13 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   analyses: GameAnalysis[] = [];
   loading = true;
   creating = false;
+  /**
+   * Nur Admins waehlen die Tiefe. Fuer alle anderen setzt sie der SERVER — dort rechnet meist
+   * die Haus-Engine, und ein Regler waere Selbstbedienung an fremder Rechenzeit (Tiefe 40 kostet
+   * grob das Zehnfache von 30). Dasselbe gilt seit 0.463.0 schon fuer den Einwurf auf der
+   * Punktepartie-Seite; das Feld hier war die letzte Stelle, an der es noch offenstand.
+   */
+  readonly isAdmin = inject(AuthService).isAdmin;
   /** Id der Partie, die gerade neu angestossen wird (sperrt ihren Knopf). */
   restarting: number | null = null;
   pgn = '';
