@@ -69,38 +69,60 @@ check "Pfad mit Leerzeichen+Apostroph gequotet" \
 check_fail "roher Pfad nicht durchgereicht" grep -qF -- "exec '$tricky'" <<< "$plain"
 rm -rf "$tricky_dir"
 
-# 7) EINFACHES SCHEMA: eine Live-Engine plus n Hintergrund-Engines aus LIVE_*/BACKGROUND_*.
+# 7) EINFACHES SCHEMA: eine Haupt-Engine plus n Hintergrund-Engines aus ENGINE_PRIMARY_*/
+#    ENGINE_BACKGROUND_*.
 #    Der wichtigste Teil ist die NAMENSREGEL — der Name IST die Identitaet der
 #    Lichess-Registrierung. Die erste Hintergrund-Engine heisst OHNE Ziffer, die zweite mit „2".
 #    Bekaeme die erste eine „1", waeren alle bestehenden Registrierungen ploetzlich neue Engines
 #    mit neuen Kennungen, und die Hintergrund-Auswahl in jedem Profil zeigte ins Leere.
 env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
-    ENGINE_NAME="RookHub Server 19" LIVE_MAX_THREADS=8 LIVE_MAX_HASH=4096 \
-    BACKGROUND_COUNT=4 BACKGROUND_NAME="RookHub Server 19 Hintergrund" \
-    BACKGROUND_MAX_THREADS=2 BACKGROUND_MAX_HASH=1024 \
+    ENGINE_PRIMARY_NAME="RookHub Server 19" ENGINE_PRIMARY_MAX_THREADS=8 ENGINE_PRIMARY_MAX_HASH=4096 \
+    ENGINE_BACKGROUND_COUNT=4 ENGINE_BACKGROUND_NAME="RookHub Server 19 Hintergrund" \
+    ENGINE_BACKGROUND_MAX_THREADS=2 ENGINE_BACKGROUND_MAX_HASH=1024 \
     bash ./entrypoint.sh > "$out" 2>&1
 plain=$(tr -d '\\' < "$out")
 check "eine Live plus vier Hintergrund"   test "$(grep -c '^DRY-RUN' "$out")" -eq 5
-check "Live-Engine mit vollen Threads"    grep -q "DRY-RUN 1:.*--name RookHub Server 19 --max-threads 8 --max-hash 4096" <<< "$plain"
+check "Haupt-Engine mit vollen Threads"   grep -q "DRY-RUN 1:.*--name RookHub Server 19 --max-threads 8 --max-hash 4096" <<< "$plain"
 check "erste Hintergrund-Engine OHNE 1"   grep -q "DRY-RUN 2:.*--name RookHub Server 19 Hintergrund --max-threads 2" <<< "$plain"
 check "zweite Hintergrund-Engine mit 2"   grep -q "DRY-RUN 3:.*--name RookHub Server 19 Hintergrund 2 " <<< "$plain"
 check "vierte Hintergrund-Engine mit 4"   grep -q "DRY-RUN 5:.*--name RookHub Server 19 Hintergrund 4 " <<< "$plain"
 check_fail "keine Hintergrund-Engine 1"   grep -q "Hintergrund 1 " <<< "$plain"
 
+# RUECKFALL: die frueheren Namen (LIVE_*/BACKGROUND_*) muessen dasselbe ergeben — eine .env, die
+# beim Umbenennen stillsteht, waere die teuerste Art, Ordnung zu schaffen. Geprueft wird die
+# NAMENSREGEL, weil an ihr die Lichess-Registrierungen haengen.
+env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
+    LIVE_NAME="RookHub Server 19" LIVE_MAX_THREADS=8 LIVE_MAX_HASH=4096 \
+    BACKGROUND_COUNT=4 BACKGROUND_NAME="RookHub Server 19 Hintergrund" \
+    BACKGROUND_MAX_THREADS=2 BACKGROUND_MAX_HASH=1024 \
+    bash ./entrypoint.sh > "$out" 2>&1
+plain=$(tr -d '\\' < "$out")
+check "alte Namen: fuenf Engines"        test "$(grep -c '^DRY-RUN' "$out")" -eq 5
+check "alte Namen: Haupt-Engine"         grep -q "DRY-RUN 1:.*--name RookHub Server 19 --max-threads 8 --max-hash 4096" <<< "$plain"
+check "alte Namen: erste OHNE 1"         grep -q "DRY-RUN 2:.*--name RookHub Server 19 Hintergrund --max-threads 2" <<< "$plain"
+check "alte Namen: vierte mit 4"         grep -q "DRY-RUN 5:.*--name RookHub Server 19 Hintergrund 4 " <<< "$plain"
+
+# Steht beides da, gewinnt der neue Name — sonst haenge eine vergessene alte Zeile die neue aus.
+env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
+    LIVE_NAME="Alt" ENGINE_PRIMARY_NAME="Neu" ENGINE_BACKGROUND_COUNT=1 \
+    bash ./entrypoint.sh > "$out" 2>&1
+plain=$(tr -d '\\' < "$out")
+check "neuer Name schlaegt alten"        grep -q "DRY-RUN 1:.*--name Neu" <<< "$plain"
+
 # Ein ausdrueckliches ENGINE_<i>_… schlaegt das einfache Schema weiterhin — sonst waere das alte
 # Schema mit dem neuen nicht mehr mischbar.
 env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
-    ENGINE_NAME="Server" BACKGROUND_COUNT=2 BACKGROUND_MAX_THREADS=2 ENGINE_3_MAX_THREADS=6 \
+    ENGINE_NAME="Server" ENGINE_BACKGROUND_COUNT=2 ENGINE_BACKGROUND_MAX_THREADS=2 ENGINE_3_MAX_THREADS=6 \
     bash ./entrypoint.sh > "$out" 2>&1
 plain=$(tr -d '\\' < "$out")
 check "ausdruecklicher Wert schlaegt Vorgabe" grep -q "DRY-RUN 3:.*--max-threads 6" <<< "$plain"
 
 # Widersprechen sich beide Zaehlungen, ist das ein Abbruch mit Klartext und kein stiller Vorrang.
 env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
-    ENGINE_COUNT=9 BACKGROUND_COUNT=2 bash ./entrypoint.sh > "$out" 2>&1 || true
+    ENGINE_COUNT=9 ENGINE_BACKGROUND_COUNT=2 bash ./entrypoint.sh > "$out" 2>&1 || true
 check "Widerspruch der Zaehlungen faellt auf" grep -q 'widersprechen sich' "$out"
 
-# Ohne BACKGROUND_COUNT bleibt alles wie bisher (eine Engine, kein neues Verhalten).
+# Ohne ENGINE_BACKGROUND_COUNT bleibt alles wie bisher (eine Engine, kein neues Verhalten).
 env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
     ENGINE_NAME="Einzeln" bash ./entrypoint.sh > "$out" 2>&1
 check "ohne das neue Schema genau eine Engine" test "$(grep -c '^DRY-RUN' "$out")" -eq 1

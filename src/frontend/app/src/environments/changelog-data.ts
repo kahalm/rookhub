@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.471.1", date: "2026-09-11", changes: [
+    { en: "The engine settings in the provider .env are all called ENGINE_ now: ENGINE_PRIMARY_NAME for the one live engine, ENGINE_BACKGROUND_NAME plus ENGINE_BACKGROUND_COUNT for the background ones. Half the engine settings used to carry no common prefix and did not show up when you looked for them. The former names keep working, so an existing .env runs on unchanged.", de: "Die Engine-Einstellungen in der Provider-.env heissen jetzt durchgaengig ENGINE_: ENGINE_PRIMARY_NAME fuer die eine Live-Engine, ENGINE_BACKGROUND_NAME und ENGINE_BACKGROUND_COUNT fuer die Hintergrund-Engines. Die Haelfte der Engine-Einstellungen trug bisher kein gemeinsames Praefix und tauchte beim Suchen danach nicht auf. Die frueheren Namen gelten weiter, eine bestehende .env laeuft also unveraendert." },
+  ] },
   { version: "0.471.0", date: "2026-09-11", changes: [
     { en: "The collection can now be put in the queue in bulk instead of one game at a time: a maintenance command takes the best games of the raw stock and hands them to the engine. Best means the suitability score first, then how many half-moves actually carry a comment — and at most two games per annotator, otherwise twenty games by the same grandmaster about himself would be waiting, which is a selection about one person rather than about the collection.", de: "Der Bestand laesst sich jetzt gesammelt einreihen statt Partie fuer Partie: ein Wartungsbefehl gibt die besten Partien des Rohbestands an die Engine weiter. Am besten heisst zuerst die Eignungsnote, dann wie viele Halbzuege wirklich einen Kommentar tragen — und hoechstens zwei Partien je Kommentator, sonst warteten zwanzig Partien desselben Grossmeisters ueber sich selbst, und das waere eine Auswahl ueber einen Menschen statt ueber den Bestand." },
   ] },

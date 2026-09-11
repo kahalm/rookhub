@@ -41,8 +41,21 @@ fi
 
 ENGINE_NAME="${ENGINE_NAME:-RookHub Engine}"
 
+# RUECKFALL auf die frueheren Namen (LIVE_*/BACKGROUND_*). Gepflegt wird die Schreibweise mit
+# ENGINE_-Praefix: in einer .env steht sonst ein halbes Dutzend Variablen ohne erkennbare
+# Zusammengehoerigkeit, und `env | grep ENGINE_` zeigte die Haelfte der Engine-Einstellungen nicht.
+# Eine bestehende .env laeuft unveraendert weiter — ein Umbenennen, das eine laufende Anlage
+# stilllegt, waere die teuerste Art, Ordnung zu schaffen.
+ENGINE_PRIMARY_NAME="${ENGINE_PRIMARY_NAME:-${LIVE_NAME:-}}"
+ENGINE_PRIMARY_MAX_THREADS="${ENGINE_PRIMARY_MAX_THREADS:-${LIVE_MAX_THREADS:-}}"
+ENGINE_PRIMARY_MAX_HASH="${ENGINE_PRIMARY_MAX_HASH:-${LIVE_MAX_HASH:-}}"
+ENGINE_BACKGROUND_NAME="${ENGINE_BACKGROUND_NAME:-${BACKGROUND_NAME:-}}"
+ENGINE_BACKGROUND_MAX_THREADS="${ENGINE_BACKGROUND_MAX_THREADS:-${BACKGROUND_MAX_THREADS:-}}"
+ENGINE_BACKGROUND_MAX_HASH="${ENGINE_BACKGROUND_MAX_HASH:-${BACKGROUND_MAX_HASH:-}}"
+ENGINE_BACKGROUND_COUNT="${ENGINE_BACKGROUND_COUNT:-${BACKGROUND_COUNT:-}}"
+
 # ---------------------------------------------------------------------------
-# EINFACHES SCHEMA (bevorzugt): eine LIVE-Engine, n HINTERGRUND-Engines.
+# EINFACHES SCHEMA (bevorzugt): eine HAUPT-Engine (live), n HINTERGRUND-Engines.
 #
 # Die Aufteilung ist immer dieselbe — vorne eine Engine mit vielen Threads, weil dort ein Mensch
 # auf EINE Stellung wartet, dahinter mehrere mit wenigen, weil dort der Durchsatz zaehlt (siehe
@@ -50,26 +63,26 @@ ENGINE_NAME="${ENGINE_NAME:-RookHub Engine}"
 # nebeneinander um fast das Dreifache). Sie als ENGINE_1_…, ENGINE_2_… durchzunummerieren hiess,
 # dieselben zwei Werte fuenfmal zu tippen und bei jeder Aenderung fuenfmal nachzuziehen.
 #
-# BACKGROUND_COUNT gesetzt => ENGINE_COUNT = 1 + BACKGROUND_COUNT, und die Namen/Threads/Hashes
-# der einzelnen Engines werden daraus abgeleitet. Ein ausdrueckliches ENGINE_<i>_… schlaegt das
-# weiterhin (das alte Schema bleibt gueltig).
+# ENGINE_BACKGROUND_COUNT gesetzt => ENGINE_COUNT = 1 + ENGINE_BACKGROUND_COUNT, und die
+# Namen/Threads/Hashes der einzelnen Engines werden daraus abgeleitet. Ein ausdrueckliches
+# ENGINE_<i>_… schlaegt das weiterhin (das alte Schema bleibt gueltig).
 #
-# NAMENSREGEL: die erste Hintergrund-Engine heisst genau BACKGROUND_NAME, die zweite
-# "BACKGROUND_NAME 2" und so weiter. Das ist kein Schoenheitsentscheid — der Name IST die
+# NAMENSREGEL: die erste Hintergrund-Engine heisst genau ENGINE_BACKGROUND_NAME, die zweite
+# "ENGINE_BACKGROUND_NAME 2" und so weiter. Das ist kein Schoenheitsentscheid — der Name IST die
 # Identitaet der Lichess-Registrierung. Haette die erste eine " 1" bekommen, waeren alle
 # bestehenden Registrierungen neue Engines mit neuen Kennungen, und die Hintergrund-Auswahl in
 # jedem RookHub-Profil zeigte ins Leere.
-if [ -n "${BACKGROUND_COUNT:-}" ]; then
-    if ! [[ "$BACKGROUND_COUNT" =~ ^[0-9]+$ ]] || [ "$BACKGROUND_COUNT" -gt 15 ]; then
-        echo "FEHLER: BACKGROUND_COUNT muss eine Zahl von 0 bis 15 sein (ist '$BACKGROUND_COUNT')." >&2
+if [ -n "${ENGINE_BACKGROUND_COUNT:-}" ]; then
+    if ! [[ "$ENGINE_BACKGROUND_COUNT" =~ ^[0-9]+$ ]] || [ "$ENGINE_BACKGROUND_COUNT" -gt 15 ]; then
+        echo "FEHLER: ENGINE_BACKGROUND_COUNT muss eine Zahl von 0 bis 15 sein (ist '$ENGINE_BACKGROUND_COUNT')." >&2
         exit 1
     fi
-    if [ -n "${ENGINE_COUNT:-}" ] && [ "$ENGINE_COUNT" -ne $((BACKGROUND_COUNT + 1)) ]; then
-        echo "FEHLER: ENGINE_COUNT ($ENGINE_COUNT) und BACKGROUND_COUNT ($BACKGROUND_COUNT) widersprechen sich." >&2
+    if [ -n "${ENGINE_COUNT:-}" ] && [ "$ENGINE_COUNT" -ne $((ENGINE_BACKGROUND_COUNT + 1)) ]; then
+        echo "FEHLER: ENGINE_COUNT ($ENGINE_COUNT) und ENGINE_BACKGROUND_COUNT ($ENGINE_BACKGROUND_COUNT) widersprechen sich." >&2
         echo "        Das einfache Schema rechnet ENGINE_COUNT selbst aus — die Zeile ENGINE_COUNT weglassen." >&2
         exit 1
     fi
-    ENGINE_COUNT=$((BACKGROUND_COUNT + 1))
+    ENGINE_COUNT=$((ENGINE_BACKGROUND_COUNT + 1))
 
     # Setzt <var> auf <wert>, SOFERN die Variable noch leer ist und der Wert etwas hergibt.
     # Bewusst if/fi und kein `[ … ] && …`: unter `set -e` beendet ein fehlschlagender Test als
@@ -82,17 +95,17 @@ if [ -n "${BACKGROUND_COUNT:-}" ]; then
         fi
     }
 
-    default_to ENGINE_1_NAME        "${LIVE_NAME:-$ENGINE_NAME}"
-    default_to ENGINE_1_MAX_THREADS "${LIVE_MAX_THREADS:-}"
-    default_to ENGINE_1_MAX_HASH    "${LIVE_MAX_HASH:-}"
+    default_to ENGINE_1_NAME        "${ENGINE_PRIMARY_NAME:-$ENGINE_NAME}"
+    default_to ENGINE_1_MAX_THREADS "$ENGINE_PRIMARY_MAX_THREADS"
+    default_to ENGINE_1_MAX_HASH    "$ENGINE_PRIMARY_MAX_HASH"
 
-    for ((b = 1; b <= BACKGROUND_COUNT; b++)); do
+    for ((b = 1; b <= ENGINE_BACKGROUND_COUNT; b++)); do
         idx=$((b + 1))
-        base="${BACKGROUND_NAME:-$ENGINE_NAME Hintergrund}"
+        base="${ENGINE_BACKGROUND_NAME:-$ENGINE_NAME Hintergrund}"
         if [ "$b" -gt 1 ]; then base="$base $b"; fi
         default_to "ENGINE_${idx}_NAME"        "$base"
-        default_to "ENGINE_${idx}_MAX_THREADS" "${BACKGROUND_MAX_THREADS:-}"
-        default_to "ENGINE_${idx}_MAX_HASH"    "${BACKGROUND_MAX_HASH:-}"
+        default_to "ENGINE_${idx}_MAX_THREADS" "$ENGINE_BACKGROUND_MAX_THREADS"
+        default_to "ENGINE_${idx}_MAX_HASH"    "$ENGINE_BACKGROUND_MAX_HASH"
     done
 fi
 
