@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.472.2", date: "2026-09-11", changes: [
+    { en: "Looking up the annotations of a game now asks the database a plain question instead of a conditional one, so it uses the index rather than walking the table. Invisible today with a handful of games, and the wrong shape to leave in place once there are thousands.", de: "Die Anmerkungen einer Partie nachzuschlagen stellt der Datenbank jetzt eine einfache Frage statt einer bedingten, trifft also den Index statt die Tabelle zu durchlaufen. Bei einer Handvoll Partien unsichtbar — und die falsche Form, um sie stehen zu lassen, bis es tausende sind." },
+  ] },
   { version: "0.472.1", date: "2026-09-11", changes: [
     { en: "Annotations can now be translated into another language. A translation is stored as its own set and says what it is, the source is never overwritten, and the piece letters of the target language are part of the instruction — without them the moves would turn into letter salad. A whole game is translated in as few passes as possible, otherwise the piece names change halfway through.", de: "Anmerkungen lassen sich jetzt in eine weitere Sprache uebersetzen. Eine Uebersetzung liegt als eigener Satz da und sagt, was sie ist; die Quelle wird nie ueberschrieben, und die Figurenbuchstaben der Zielsprache stehen im Auftrag — ohne sie wuerde aus den Zuegen Buchstabensalat. Eine Partie wird in moeglichst wenigen Fuhren uebersetzt, sonst wechseln die Figurennamen mittendrin." },
   ] },

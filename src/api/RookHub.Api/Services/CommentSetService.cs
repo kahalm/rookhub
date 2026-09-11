@@ -140,10 +140,12 @@ public class CommentSetService
             .Select(g => g.LibraryGameId)
             .FirstOrDefaultAsync(ct);
 
-        return await _db.CommentSets.AsNoTracking()
-            .Include(s => s.Texts)
-            .Where(s => libraryGameId != null ? s.LibraryGameId == libraryGameId : s.GameAnalysisId == analysisId)
-            .ToListAsync(ct);
+        // Die Fallunterscheidung steht in C# und nicht als `?:` in der Abfrage: so wird daraus ein
+        // einfaches Gleich auf einer indizierten Spalte statt eines CASE ueber die ganze Tabelle.
+        var query = _db.CommentSets.AsNoTracking().Include(s => s.Texts);
+        return libraryGameId is int lib
+            ? await query.Where(s => s.LibraryGameId == lib).ToListAsync(ct)
+            : await query.Where(s => s.GameAnalysisId == analysisId).ToListAsync(ct);
     }
 
     /// <summary>Der Rueckfall auf das PGN — das Verhalten vor den Kommentar-Saetzen.</summary>
