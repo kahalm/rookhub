@@ -214,7 +214,7 @@ public class LibraryGameService
 
     /// <summary>„Aljechin – Bogoljubow, Hastings 1922" — der Titel, unter dem die Partie danach in
     /// der Punktepartie-Liste steht. Ohne Namen bleibt das Turnier, ohne beides der Kommentator.</summary>
-    internal static string TitleOf(LibraryGame game)
+    public static string TitleOf(LibraryGame game)
     {
         var names = string.Join(" – ", new[] { game.White, game.Black }
             .Where(n => !string.IsNullOrWhiteSpace(n)));

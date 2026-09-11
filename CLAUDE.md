@@ -1365,7 +1365,18 @@ eine andere Entscheidung als „ich rechne mir meine Partie durch".
 
 **Befuellt wird mit `tools/LibraryImport`** (Wartungswerkzeug, kein Teil des API-Images; das
 Docker-Image baut nur aus `src/api/RookHub.Api`). Vier Schritte, jeder fuer sich wiederholbar:
-`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats`. Verbindung ueber
+`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats`.
+
+**`queue [anzahl] --user <id>`** ist der Massen-Weg zu dem, was auf der Seite der Knopf „Partie
+anfordern" je Partie tut: die besten Partien des Bestands als `GameAnalysis` mit `Origin = Guess`
+und fester Tiefe einreihen. Die Auswahl trifft `Services/LibraryPicks.cs` — Note, dann
+kommentierte Halbzuege, dann Textmenge, und hoechstens `--per-annotator` (2) Partien je
+Kommentator: an der Spitze stehen tausende Partien mit Note 100, und nach der Zeilennummer
+sortiert bekaeme man den Bestand alphabetisch nach Kommentator. Der Deckel von fuenf offenen
+Partien gilt hier bewusst NICHT (er ist eine Fairness-Regel zwischen Nutzern an der Oberflaeche);
+die Reihenfolge bleibt trotzdem gewahrt, weil die Pumpe je Nutzer immer nur EINE Partie
+weiterfuettert. Angelegt werden nur die Zeilen — die AUFTRAEGE macht die laufende API beim
+naechsten Pump-Durchgang. `--dry-run` zeigt die Auswahl, ohne etwas einzureihen. Verbindung ueber
 `ConnectionStrings__DefaultConnection`. Es startet KEINE API-Instanz, sondern oeffnet nur einen
 DbContext — eine zweite `RookHub.Api` gegen dieselbe Datenbank streitet sich mit dem
 Auftrags-Worker um die Engines.
