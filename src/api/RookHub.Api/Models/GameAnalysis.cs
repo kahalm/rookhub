@@ -93,6 +93,20 @@ public class GameAnalysis
     public GameAnalysisOrigin Origin { get; set; } = GameAnalysisOrigin.Manual;
 
     /// <summary>
+    /// Aus welcher Zeile des Rohbestands diese Analyse angefordert wurde; <c>null</c> = eingeworfen
+    /// oder von Hand eingereiht.
+    ///
+    /// <para>Die Richtung ist Absicht: VIELE Analysen zu EINER Bibliothekspartie. Fordern zwei Leute
+    /// dieselbe Partie an, bekommt jeder seine eigene — der umgekehrte Verweis
+    /// (<see cref="LibraryGame.GameAnalysisId"/>) koennte immer nur einen von beiden halten und
+    /// bleibt der Kuratierungs-Vermerk.</para>
+    ///
+    /// <para>Kein Fremdschluessel: der Rohbestand ist ein Arbeitsvorrat, der auch einmal ganz neu
+    /// eingelesen werden kann. Eine gerechnete Analyse darf daran nicht haengen.</para>
+    /// </summary>
+    public int? LibraryGameId { get; set; }
+
+    /// <summary>
     /// Ab welchem Halbzug das Raten sinnvoll beginnt — einmal ermittelt und gemerkt, weil die
     /// Antwort an der Partie haengt und nicht am Durchlauf (siehe <c>GuessStartPly</c>).
     /// <c>null</c> = noch nicht bestimmt; dann greift die Vorgabe.

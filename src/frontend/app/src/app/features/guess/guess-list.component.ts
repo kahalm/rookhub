@@ -9,6 +9,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -41,12 +42,16 @@ import { ViewStateService } from '../../core/view-state.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatProgressBarModule,
+    MatDialogModule,
     TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="gl-container">
       <div class="header">
         <h1>{{ 'guess.title' | translate }}</h1>
         @if (loggedIn) {
+          <button mat-flat-button color="primary" (click)="openLibrary()">
+            <mat-icon>library_books</mat-icon> {{ 'guess.library.open' | translate }}
+          </button>
           <a mat-stroked-button routerLink="/analysis/games">
             <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
           </a>
@@ -254,6 +259,7 @@ export class GuessListComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private viewState = inject(ViewStateService);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
@@ -483,6 +489,23 @@ export class GuessListComponent implements OnInit, OnDestroy {
         this.snackbar.warn(err?.error?.message || this.translate.instant('guess.startFailed'));
         this.cdr.markForCheck();
       },
+    });
+  }
+
+  /**
+   * Den Rohbestand oeffnen: 130 000 kommentierte Meisterpartien, durchsuchbar, einzeln anforderbar.
+   *
+   * <p>Der Dialog gibt eine Analyse-Id zurueck, wenn die gewaehlte Partie schon spielbar ist —
+   * dann geht es direkt in die Punktepartie. Sonst wurde etwas in die Warteschlange gestellt, und
+   * die eigene Liste muss neu geholt werden, damit die neue Partie dort auftaucht.</p>
+   */
+  openLibrary(): void {
+    import('./library-dialog.component').then(m => {
+      const ref = this.dialog.open(m.LibraryDialogComponent, { maxWidth: '96vw' });
+      ref.afterClosed().subscribe((analysisId?: number) => {
+        if (analysisId) this.start({ id: analysisId } as GameAnalysis);
+        else this.loadOwnGames();
+      });
     });
   }
 

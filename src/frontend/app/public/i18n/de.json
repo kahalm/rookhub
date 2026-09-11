@@ -85,7 +85,9 @@
     "copy": "Kopieren",
     "error": "Da ist etwas schiefgelaufen.",
     "send": "Senden",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "previous": "Zurück",
+    "next": "Weiter"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -3030,7 +3032,8 @@
       "reason": {
         "too-many-open": "Du hast schon {{max}} Partien in der Rechnung. Warte, bis eine davon fertig ist.",
         "no-engine": "Gerade steht keine Engine bereit, die die Partie rechnen könnte.",
-        "invalid-pgn": "In diesem Text steckt keine spielbare Partie."
+        "invalid-pgn": "In diesem Text steckt keine spielbare Partie.",
+        "not-found": "Diese Partie gibt es nicht (mehr)."
       },
       "speedUpHouse": "Zu langsam? Schließ deine eigene Maschine als Engine an, dann rechnet sie deine Partien.",
       "speedUpOwn": "Zu langsam? Mehrere Engines rechnen mehrere Partien gleichzeitig.",
@@ -3049,7 +3052,35 @@
       "none": "Dazu findet sich nichts."
     },
     "playsWhite": "du spielst Weiß",
-    "playsBlack": "du spielst Schwarz"
+    "playsBlack": "du spielst Schwarz",
+    "library": {
+      "open": "Partie anfordern",
+      "title": "Kommentierte Meisterpartien",
+      "intro": "Such dir eine Partie aus und lass sie rechnen. Sie steht danach unter deinen Partien, sobald die Engine durch ist.",
+      "search": "Suchen",
+      "searchHint": "Spieler, Turnier oder Kommentator",
+      "language": "Sprache",
+      "anyLanguage": "egal",
+      "density": "Kommentare",
+      "anyDensity": "egal",
+      "fromPlies": "ab {{plies}} Halbzügen",
+      "found": "{{total}} Partien",
+      "none": "Dazu findet sich nichts.",
+      "empty": "Hier liegt noch keine Sammlung.",
+      "commented": "{{plies}} kommentiert",
+      "request": "Anfordern",
+      "queued": "Die Partie wird gerechnet. Sie steht bei deinen Partien, sobald die erste Stellung fertig ist.",
+      "alreadyThere": "Die Partie war schon gerechnet — du kannst sie sofort spielen.",
+      "requestFailed": "Die Partie konnte nicht angefordert werden.",
+      "loadFailed": "Die Sammlung ließ sich nicht laden.",
+      "page": "Seite {{page}} von {{pages}}",
+      "lang": {
+        "en": "Englisch",
+        "de": "Deutsch",
+        "fr": "Französisch",
+        "es": "Spanisch"
+      }
+    }
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

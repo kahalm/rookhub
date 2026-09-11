@@ -1244,6 +1244,9 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(g => new { g.UserId, g.CreatedAt });
             e.HasIndex(g => g.Status);   // die Pumpe holt sich die unfertigen
+            // „Habe ich diese Bibliothekspartie schon angefordert?" — die Frage stellt die
+            // Bestandssuche fuer JEDE angezeigte Zeile.
+            e.HasIndex(g => new { g.UserId, g.LibraryGameId });
             e.HasOne(g => g.User)
              .WithMany()
              .HasForeignKey(g => g.UserId)

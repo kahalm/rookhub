@@ -1298,6 +1298,7 @@ lesen. Sie werden nach und nach befuellt, und ein noch nicht befuelltes Feld ist
 | `Languages` | CSV von ISO-Kuerzeln (`de`, `en,de`), `und` = nicht bestimmbar. NIE `null` lassen, sobald geprueft — sonst holt der naechste Durchgang dieselben Zeilen wieder |
 | `OpeningLine` | Die ersten 30 Halbzuege normalisiert („e4 e5 Nf3 …"), indiziert. Damit ist der Bestand eine EROEFFNUNGSSTATISTIK: „wie viele Partien spielen dieselben ersten k Zuege" ist eine Praefix-Suche statt einer Volltextsuche ueber 338 MB |
 | `FirstCommentedPly` | Der erste kommentierte Halbzug — zusammen mit `OpeningLine` die Grundlage von `GuessStartPly` |
+| `SearchText` | Spieler, Turnier und Kommentator kleingeschrieben in einer Spalte, mit VOLLTEXT-Index — das Feld, ueber das die Bestandssuche laeuft |
 | `Score` | Eignungsnote 0–100 (`GuessSuitability`), eigene Spalte statt Formel in der Abfrage: die Gewichtung wird sich aendern |
 | `Pgn` | Die Partie selbst (LONGTEXT). Bewusst hier und nicht als Verweis auf Datei und Byte-Position — die Quelldatei ist ein Fund im Ablage-Ordner und keine Zusage |
 
@@ -1321,6 +1322,46 @@ Giri ueber seinen eigenen Sieg gegen Carlsen, Tal–Timman von Kuljasevic. **Bek
 `CommentChars` zaehlt auch ChessBase-Markup im Kommentar mit (`[%cal …]`, `[%csl …]` — 54 841
 Partien enthalten welches). Das sind echte Anmerkungen, nur eben Pfeile statt Prosa; auf die
 Reihenfolge an der Spitze wirkt es sich nicht sichtbar aus.
+
+### Partie anfordern (`/api/library-games`) — der Rohbestand als Nachschlagewerk
+
+Bis 0.469.0 sah nur das Wartungswerkzeug in `LibraryGames`. Damit war die Auswahl aus 130 000
+Partien die Aufgabe genau einer Person mit Datenbankzugang. Der Knopf „Partie anfordern" auf der
+Punktepartie-Seite oeffnet den Bestand: suchen, und einzelne Partien in die Warteschlange stellen.
+
+| Methode | Endpoint | Auth | Zweck |
+|---|---|---|---|
+| GET | `/api/library-games?q=&language=&minCommentedPlies=&page=&pageSize=` | Auth | Eine Seite der Bestandssuche, nach Eignungsnote sortiert; je Zeile `inPool`/`requested`/`gameAnalysisId`. **Ohne die Zuege** |
+| POST | `/api/library-games/{id}/request` | Auth | Diese Partie rechnen lassen — derselbe Weg wie ein eingeworfenes PGN (feste Tiefe 20, Haus-Engine, Deckel 5). Liegt sie schon spielbar da, kommt die vorhandene Analyse zurueck (`alreadyPlayable`), es wird NICHTS doppelt gerechnet. 400 mit `reason` ∈ `not-found`/`too-many-open`/`no-engine`/`invalid-pgn` |
+
+**Gesucht wird ueber einen VOLLTEXT-Index** (`LibraryGame.SearchText` = Spieler, Turnier und
+Kommentator kleingeschrieben in EINER Spalte). Am echten Bestand gemessen (2026-09-11, 130 572
+Zeilen):
+
+| Weg | Dauer |
+|---|---|
+| `LIKE '%Capablanca%'` ueber eine der vier Einzelspalten | 4,5 s |
+| dasselbe ueber eine schmale indizierte Spalte | 0,9 s |
+| … und mit `ORDER BY Score DESC LIMIT 25` | **50 s** (der Optimierer nimmt den Score-Index und sucht sich zeilenweise durch) |
+| Volltext-Index, Seite samt Sortierung | **4 ms** (Zaehlen 63 ms) |
+
+Der Preis ist, dass WORTANFAENGE gesucht werden: „Capa" findet „Capablanca", „blanca" nicht — fuer
+Namen ist das die Suche, die Leute ohnehin tippen. Der Ausdruck wird in
+`LibraryGameService.BooleanTerm` gebaut (jedes Wort Pflicht, das letzte mit Stern); die Operatoren
+der Boolean-Syntax werden WEGGEWORFEN, sonst waere ein Bindestrich in einem Doppelnamen eine Suche,
+die das Gegenteil meint. Woerter unter `MinQueryLength` (3) filtern gar nicht, weil MariaDBs
+Volltext-Index sie nicht aufnimmt. **Der Index steht als SQL in der Migration** — EF kann diese
+Indexart nicht ausdruecken; `Down()` raeumt ihn wieder weg.
+
+**Die Zuordnung ist VIELE Analysen zu EINER Bibliothekspartie** (`GameAnalysis.LibraryGameId`, kein
+Fremdschluessel — der Rohbestand ist ein Arbeitsvorrat, der auch neu eingelesen werden kann): fordern
+zwei Leute dieselbe Partie an, bekommt jeder seine eigene. Der umgekehrte Verweis
+(`LibraryGame.GameAnalysisId`) koennte immer nur einen halten und bleibt der Kuratierungs-Vermerk.
+
+**Die angeforderte Partie ist PRIVAT** (wie ein eingeworfenes PGN); oeffentlich macht sie erst ein
+Admin ueber `PUT /api/game-analyses/{id}/public`. Das ist bewusst so: die Kommentare stammen aus
+einer gekauften Sammlung, und „jeder Nutzer kann etwas in den oeffentlichen Bestand schieben" waere
+eine andere Entscheidung als „ich rechne mir meine Partie durch".
 
 **Befuellt wird mit `tools/LibraryImport`** (Wartungswerkzeug, kein Teil des API-Images; das
 Docker-Image baut nur aus `src/api/RookHub.Api`). Vier Schritte, jeder fuer sich wiederholbar:

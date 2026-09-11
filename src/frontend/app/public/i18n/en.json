@@ -85,7 +85,9 @@
     "copy": "Copy",
     "error": "Something went wrong.",
     "send": "Send",
-    "undo": "Undo"
+    "undo": "Undo",
+    "previous": "Back",
+    "next": "Next"
   },
   "notifications": {
     "title": "Notifications",
@@ -3030,7 +3032,8 @@
       "reason": {
         "too-many-open": "You already have {{max}} games being analysed. Wait until one of them is done.",
         "no-engine": "No engine is available right now to analyse the game.",
-        "invalid-pgn": "There is no playable game in this text."
+        "invalid-pgn": "There is no playable game in this text.",
+        "not-found": "That game does not exist (any more)."
       },
       "speedUpHouse": "Too slow? Connect your own machine as an engine and it will work through your games.",
       "speedUpOwn": "Too slow? Several engines work through several games at once.",
@@ -3049,7 +3052,35 @@
       "none": "Nothing matches that."
     },
     "playsWhite": "you play White",
-    "playsBlack": "you play Black"
+    "playsBlack": "you play Black",
+    "library": {
+      "open": "Request a game",
+      "title": "Annotated master games",
+      "intro": "Pick a game and have it computed. It waits under your games once the engine is through.",
+      "search": "Search",
+      "searchHint": "Player, event or annotator",
+      "language": "Language",
+      "anyLanguage": "any",
+      "density": "Comments",
+      "anyDensity": "any",
+      "fromPlies": "from {{plies}} half-moves",
+      "found": "{{total}} games",
+      "none": "Nothing matches that.",
+      "empty": "There is no collection here yet.",
+      "commented": "{{plies}} commented",
+      "request": "Request",
+      "queued": "The game is being computed. It waits under your games once the first position is done.",
+      "alreadyThere": "That game was already computed — you can play it right away.",
+      "requestFailed": "The game could not be requested.",
+      "loadFailed": "The collection could not be loaded.",
+      "page": "Page {{page}} of {{pages}}",
+      "lang": {
+        "en": "English",
+        "de": "German",
+        "fr": "French",
+        "es": "Spanish"
+      }
+    }
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

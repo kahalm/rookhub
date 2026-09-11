@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.469.0", date: "2026-09-11", changes: [
+    { en: "Request a game on the points game page: the whole collection of annotated master games is now searchable, by player, event or annotator, and you can put single games in the queue to be computed. Until now only someone with database access could pick from it, which made the choice the bottleneck. A game already computed is not computed again — you can play it straight away.", de: "Partie anfordern auf der Punktepartie-Seite: die ganze Sammlung kommentierter Meisterpartien ist jetzt durchsuchbar, nach Spieler, Turnier oder Kommentator, und einzelne Partien lassen sich zum Rechnen einreihen. Bisher konnte nur waehlen, wer Datenbankzugang hatte, und damit war die Auswahl der Flaschenhals. Was schon gerechnet ist, wird nicht noch einmal gerechnet — das spielst du sofort." },
+  ] },
   { version: "0.468.0", date: "2026-09-11", changes: [
     { en: "The points game page has a search field. It filters the collection and your own games at once, across title, players and event, and it ignores the difference between Zurich and Zuerich.", de: "Die Punktepartie-Seite hat ein Suchfeld. Es filtert Bestand und eigene Partien zugleich, ueber Titel, Spieler und Turnier, und es macht keinen Unterschied zwischen Zuerich und Zurich." },
     { en: "Each game in the collection says which colour you will play before you start it. In the collection you do not choose the side, you take the winners — and until now you only found out which one after opening the game.", de: "Jede Partie im Bestand sagt jetzt vor dem Start, welche Farbe du spielst. Im Bestand waehlt man die Seite nicht, man uebernimmt die des Gewinners — und welche das ist, sah man bisher erst in der geoeffneten Partie." },

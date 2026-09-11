@@ -138,6 +138,22 @@ public class LibraryGame
     /// </summary>
     [MaxLength(200)] public string? OpeningLine { get; set; }
 
+    /// <summary>
+    /// Spieler, Turnier und Kommentator in EINER kleingeschriebenen Zeichenkette — das Feld, ueber
+    /// das die Bestandssuche laeuft. Darauf liegt ein VOLLTEXT-Index.
+    ///
+    /// <para><b>Warum nicht einfach ueber die vier Spalten suchen:</b> gemessen am echten Bestand
+    /// (2026-09-11, 130 572 Zeilen) kostete ein <c>LIKE '%Capablanca%'</c> ueber eine einzige dieser
+    /// Spalten 4,5 Sekunden — die Tabelle traegt 338 MB Partietext, und jede Teilzeichenketten-Suche
+    /// liest sie ganz. Ueber eine schmale indizierte Spalte wurde daraus knapp eine Sekunde, mit
+    /// Sortierung nach der Eignungsnote aber fuenfzig (der Optimierer nahm den Score-Index und
+    /// suchte sich zeilenweise durch). Mit dem Volltext-Index sind es 13 ms.</para>
+    ///
+    /// <para>Volltext heisst WORTANFANG, nicht Teilzeichenkette: „Capa" findet „Capablanca",
+    /// „blanca" nicht. Fuer Namen ist das genau die Suche, die Leute tippen.</para>
+    /// </summary>
+    [MaxLength(190)] public string? SearchText { get; set; }
+
     /// <summary>Sprache(n) der Kommentare als CSV von ISO-Kuerzeln („de", „en,de"). Wird erst
     /// spaeter befuellt (Erkennung ueber den Kommentartext), deshalb nullbar.</summary>
     [MaxLength(40)] public string? Languages { get; set; }

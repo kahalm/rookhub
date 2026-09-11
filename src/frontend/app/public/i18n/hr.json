@@ -85,7 +85,9 @@
     "copy": "Kopiraj",
     "error": "Nešto je pošlo po zlu.",
     "send": "Pošalji",
-    "undo": "Poništi"
+    "undo": "Poništi",
+    "previous": "Natrag",
+    "next": "Dalje"
   },
   "notifications": {
     "title": "Obavijesti",
@@ -3030,7 +3032,8 @@
       "reason": {
         "too-many-open": "Već imaš {{max}} partija u analizi. Pričekaj da jedna završi.",
         "no-engine": "Trenutačno nema dostupnog motora koji bi analizirao partiju.",
-        "invalid-pgn": "U ovom tekstu nema partije koja se može igrati."
+        "invalid-pgn": "U ovom tekstu nema partije koja se može igrati.",
+        "not-found": "Ta partija (više) ne postoji."
       },
       "speedUpHouse": "Presporo? Priključi vlastito računalo kao motor pa će ono računati tvoje partije.",
       "speedUpOwn": "Presporo? Više motora računa više partija istodobno.",
@@ -3049,7 +3052,35 @@
       "none": "Za to nema rezultata."
     },
     "playsWhite": "igraš bijelima",
-    "playsBlack": "igraš crnima"
+    "playsBlack": "igraš crnima",
+    "library": {
+      "open": "Zatraži partiju",
+      "title": "Komentirane majstorske partije",
+      "intro": "Odaberi partiju i daj je izračunati. Nakon toga čeka među tvojim partijama.",
+      "search": "Pretraga",
+      "searchHint": "Igrač, turnir ili komentator",
+      "language": "Jezik",
+      "anyLanguage": "svejedno",
+      "density": "Komentari",
+      "anyDensity": "svejedno",
+      "fromPlies": "od {{plies}} polupoteza",
+      "found": "{{total}} partija",
+      "none": "Za to nema rezultata.",
+      "empty": "Ovdje još nema zbirke.",
+      "commented": "{{plies}} komentirano",
+      "request": "Zatraži",
+      "queued": "Partija se računa. Čeka među tvojim partijama čim prva pozicija bude gotova.",
+      "alreadyThere": "Ta je partija već izračunata — možeš je odmah igrati.",
+      "requestFailed": "Partiju nije bilo moguće zatražiti.",
+      "loadFailed": "Zbirku nije bilo moguće učitati.",
+      "page": "Stranica {{page}} od {{pages}}",
+      "lang": {
+        "en": "engleski",
+        "de": "njemački",
+        "fr": "francuski",
+        "es": "španjolski"
+      }
+    }
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

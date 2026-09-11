@@ -39,7 +39,8 @@ public class GameAnalysisService
     // ===== Anlegen ==========================================================
 
     public async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
-        GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null)
+        GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null,
+        int? libraryGameId = null)
     {
         var depth = req.TargetDepth ?? GameAnalysisDefaults.TargetDepth;
         if (depth is < 1 or > AnalysisJobService.MaxDepth)
@@ -71,6 +72,7 @@ public class GameAnalysisService
             EngineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim(),
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,
+            LibraryGameId = libraryGameId,
             PlyCount = plies.Count,
             Status = GameAnalysisStatus.Pending,
         };
@@ -105,8 +107,10 @@ public class GameAnalysisService
     /// PGN) sind erwartete Antworten und keine Ausnahmen — der Aufrufer soll sie dem Nutzer
     /// erklaeren koennen, und dafuer braucht er einen Grund, keinen Text.</para>
     /// </summary>
+    /// <param name="libraryGameId">Aus welcher Zeile des Rohbestands die Partie angefordert wurde;
+    /// <c>null</c> = selbst eingeworfen.</param>
     public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
-        CancellationToken ct = default)
+        CancellationToken ct = default, int? libraryGameId = null)
     {
         var open = await OpenGuessGamesAsync(userId, ct);
         if (open >= GameAnalysisDefaults.MaxOpenGuessGamesPerUser)
@@ -124,7 +128,7 @@ public class GameAnalysisService
                 Title = req.Title,
                 TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
                 MultiPv = GameAnalysisDefaults.MultiPv,
-            }, ct, GameAnalysisOrigin.Guess, engineOwner.Value);
+            }, ct, GameAnalysisOrigin.Guess, engineOwner.Value, libraryGameId);
             return new GuessUploadResult(dto, null);
         }
         catch (ArgumentException)
@@ -351,6 +355,22 @@ public class GameAnalysisService
             WindowMinutes = (int)Math.Round(minutes),
             PerMinute = Math.Round(window.Count / minutes, 2),
         };
+    }
+
+    /// <summary>
+    /// Die Kopfdaten einer Partie, die dieser Nutzer SPIELEN darf — seine eigene oder eine des
+    /// kuratierten Bestands. Ohne die Zugliste.
+    ///
+    /// <para>Gebraucht, wenn jemand eine Partie aus dem Rohbestand anfordert, die schon im Bestand
+    /// liegt: die gehoert dann einem ANDEREN Konto, und <see cref="GetAsync"/> fragt ausdruecklich
+    /// nach dem Besitzer. Ohne diesen Weg haette die Anforderung „geht nicht" geantwortet, obwohl
+    /// die Partie danebenliegt und jeder sie spielen darf.</para>
+    /// </summary>
+    public async Task<GameAnalysisDto?> GetPlayableHeadAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var rows = await ProjectAsync(
+            _db.GameAnalyses.AsNoTracking().Where(g => g.Id == id && (g.UserId == userId || g.IsPublic)), ct);
+        return rows.FirstOrDefault();
     }
 
     public async Task<GameAnalysisDto?> GetAsync(int userId, int id, CancellationToken ct = default)

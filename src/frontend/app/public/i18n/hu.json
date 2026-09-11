@@ -23,7 +23,9 @@
     "copy": "Másolás",
     "error": "Valami hiba történt.",
     "send": "Küldés",
-    "undo": "Visszavonás"
+    "undo": "Visszavonás",
+    "previous": "Vissza",
+    "next": "Tovább"
   },
   "nav": {
     "discord": "Discord közösség",
@@ -2755,7 +2757,8 @@
       "reason": {
         "too-many-open": "Már {{max}} játszmád van elemzés alatt. Várd meg, amíg az egyik elkészül.",
         "no-engine": "Jelenleg nincs elérhető motor, amely elemezné a játszmát.",
-        "invalid-pgn": "Ebben a szövegben nincs játszható játszma."
+        "invalid-pgn": "Ebben a szövegben nincs játszható játszma.",
+        "not-found": "Ez a játszma (már) nem létezik."
       },
       "speedUpHouse": "Túl lassú? Kösd be a saját géped motorként, és az fogja számolni a játszmáidat.",
       "speedUpOwn": "Túl lassú? Több motor egyszerre több játszmát számol.",
@@ -2774,7 +2777,35 @@
       "none": "Erre nincs találat."
     },
     "playsWhite": "világossal játszol",
-    "playsBlack": "sötéttel játszol"
+    "playsBlack": "sötéttel játszol",
+    "library": {
+      "open": "Játszma kérése",
+      "title": "Kommentált mesterjátszmák",
+      "intro": "Válassz egy játszmát és számoltasd ki. Utána a játszmáid között vár.",
+      "search": "Keresés",
+      "searchHint": "Játékos, verseny vagy kommentátor",
+      "language": "Nyelv",
+      "anyLanguage": "mindegy",
+      "density": "Kommentárok",
+      "anyDensity": "mindegy",
+      "fromPlies": "{{plies}} féllépéstől",
+      "found": "{{total}} játszma",
+      "none": "Erre nincs találat.",
+      "empty": "Itt még nincs gyűjtemény.",
+      "commented": "{{plies}} kommentált",
+      "request": "Kérés",
+      "queued": "A játszma számítása folyik. Amint az első állás kész, a játszmáid között vár.",
+      "alreadyThere": "Ez a játszma már kész — azonnal játszhatod.",
+      "requestFailed": "A játszmát nem sikerült kérni.",
+      "loadFailed": "A gyűjteményt nem sikerült betölteni.",
+      "page": "{{page}}. oldal / {{pages}}",
+      "lang": {
+        "en": "angol",
+        "de": "német",
+        "fr": "francia",
+        "es": "spanyol"
+      }
+    }
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

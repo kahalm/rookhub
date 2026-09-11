@@ -64,6 +64,8 @@ public static class LibraryGameReader
             VariationCount = stats.VariationCount,
             FirstCommentedPly = stats.FirstCommentedPly == 0 ? null : stats.FirstCommentedPly,
             OpeningLine = Cut(stats.OpeningLine, 200),
+            SearchText = SearchTextOf(Tag(headers, "White"), Tag(headers, "Black"),
+                Tag(headers, "Event"), Tag(headers, "Annotator")),
 
             Pgn = pgn,
         };
@@ -231,6 +233,18 @@ public static class LibraryGameReader
             if (ch is '!' or '?') continue;
             sb.Append(ch);
         }
+    }
+
+    /// <summary>Spieler, Turnier und Kommentator in EINER kleingeschriebenen Zeichenkette — das
+    /// Feld, ueber das die Bestandssuche laeuft (Volltext-Index, siehe
+    /// <see cref="LibraryGame.SearchText"/>).</summary>
+    public static string? SearchTextOf(string? white, string? black, string? evt, string? annotator)
+    {
+        var text = string.Join(' ', new[] { white, black, evt, annotator }
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Select(part => part!.Trim()))
+            .ToLowerInvariant();
+        return Cut(text, 190);
     }
 
     private static string Sha256(string value)
