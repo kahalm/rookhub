@@ -87,7 +87,9 @@
     "send": "Senden",
     "undo": "Rückgängig",
     "previous": "Zurück",
-    "next": "Weiter"
+    "next": "Weiter",
+    "day": "Tag",
+    "days": "Tage"
   },
   "notifications": {
     "title": "Benachrichtigungen",

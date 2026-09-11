@@ -1221,6 +1221,12 @@ public class AppDbContext : DbContext
             e.HasIndex(g => g.MovesHash);
             // Die Arbeitsliste der Vorsortierung: erst der Zustand, dann die Note.
             e.HasIndex(g => new { g.Status, g.Score });
+            // Die Bestandssuche OHNE Suchbegriff sortiert nach der Note ueber den ganzen Bestand.
+            // Der zusammengesetzte Index oben hilft dabei nicht: sein fuehrendes Feld ist der
+            // Zustand, und „Zustand ist nicht Dublette/aussortiert" ist keine Bereichssuche, die
+            // sortiert herauskommt. Gemessen (130 572 Zeilen): erste Seite 13,6 s ohne diesen
+            // Index, 3 ms mit ihm.
+            e.HasIndex(g => g.Score);
             // „Alles von Aagaard" bzw. „alles aus CBM 104" — die zwei Griffe der Durchsicht.
             e.HasIndex(g => g.Annotator);
             e.HasIndex(g => g.SourceTitle);

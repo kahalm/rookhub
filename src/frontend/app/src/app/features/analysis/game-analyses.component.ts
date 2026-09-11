@@ -228,7 +228,12 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     const t = this.throughput;
     if (!t || t.perMinute <= 0) return null;
     return {
-      perMinute: t.perMinute >= 10 ? t.perMinute.toFixed(0) : t.perMinute.toFixed(1),
+      // Unter einer Stellung je Minute braucht es zwei Nachkommastellen. Mit einer stand dort
+      // „0.0 Stellungen/min" NEBEN einer Restdauer von 155 Stunden — die Zahl war richtig
+      // (0,03/min), die Anzeige machte daraus einen Widerspruch.
+      perMinute: t.perMinute >= 10 ? t.perMinute.toFixed(0)
+        : t.perMinute >= 1 ? t.perMinute.toFixed(1)
+        : t.perMinute.toFixed(2),
       eta: t.etaMinutes ? this.formatEta(t.etaMinutes) : null,
     };
   }
@@ -240,12 +245,20 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Restdauer in Minuten als „3 h 20 min" bzw. „12 min" — Sekunden waeren hier Schein-Genauigkeit. */
+  /**
+   * Restdauer als „12 min", „3 h 20 min" oder — ab zwei Tagen — „6 Tage 12 h".
+   *
+   * <p>Minuten in einer Angabe ueber hundert Stunden sind Schein-Genauigkeit: die Schaetzung
+   * stammt aus einem Mittel der letzten Stunde, sie ist auf Tage genau und nicht auf Minuten.</p>
+   */
   private formatEta(minutes: number): string {
     const total = Math.max(1, Math.round(minutes));
     const h = Math.floor(total / 60);
-    const m = total % 60;
-    return h > 0 ? `${h} h ${m} min` : `${m} min`;
+    if (h >= 48) {
+      const days = Math.floor(h / 24);
+      return `${days} ${this.translate.instant(days === 1 ? 'common.day' : 'common.days')} ${h % 24} h`;
+    }
+    return h > 0 ? `${h} h ${total % 60} min` : `${total} min`;
   }
 
   percent(a: GameAnalysis): number {

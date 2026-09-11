@@ -28,7 +28,7 @@ public class LibraryGameService
         _analyses = analyses;
     }
 
-    public const int DefaultPageSize = 25;
+    public const int DefaultPageSize = 50;
     public const int MaxPageSize = 100;
 
     /// <summary>
@@ -83,10 +83,14 @@ public class LibraryGameService
             rows = rows.Where(g => g.CommentedPlies >= min);
 
         var total = await rows.CountAsync(ct);
+        // Sortiert wird NUR nach Note und Id — beides steht so im Index (InnoDB haengt den
+        // Primaerschluessel an jeden Sekundaerindex), ein Rueckwaertslauf liefert die Reihenfolge
+        // also fertig. Nimmt man die Kommentardichte als zweites Merkmal dazu, steht sie nicht im
+        // Index, und MariaDB sortiert 130 000 Zeilen von Hand: gemessen 13,6 s gegen 3 ms. Die
+        // Dichte steckt ohnehin in der Note.
         var items = await rows
             .OrderByDescending(g => g.Score)
-            .ThenByDescending(g => g.CommentedPlies)
-            .ThenBy(g => g.Id)
+            .ThenByDescending(g => g.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(g => new LibraryGameDto

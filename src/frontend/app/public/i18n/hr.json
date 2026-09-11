@@ -87,7 +87,9 @@
     "send": "Pošalji",
     "undo": "Poništi",
     "previous": "Natrag",
-    "next": "Dalje"
+    "next": "Dalje",
+    "day": "dan",
+    "days": "dana"
   },
   "notifications": {
     "title": "Obavijesti",

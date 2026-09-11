@@ -143,7 +143,8 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   /** Getippt wird gedrosselt — ein Umlauf je Buchstabe wäre bei 130 000 Zeilen das Gegenteil
    *  von schnell. */
   private static readonly SearchDebounceMs = 350;
-  private static readonly PageSize = 25;
+  /** Fuenfzig je Seite: die Trefferliste soll etwas hergeben, ohne dass eine Seite zur Wand wird. */
+  private static readonly PageSize = 50;
 
   readonly typed = new Subject<void>();
   private readonly destroyed = new Subject<void>();

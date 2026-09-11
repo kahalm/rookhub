@@ -46,18 +46,18 @@ describe('LibraryDialogComponent', () => {
   function open(items: LibraryGame[] = [game()], total = items.length) {
     const fixture = TestBed.createComponent(LibraryDialogComponent);
     fixture.detectChanges();
-    http.expectOne(r => r.url === '/api/library-games').flush({ items, total, page: 1, pageSize: 25 });
+    http.expectOne(r => r.url === '/api/library-games').flush({ items, total, page: 1, pageSize: 50 });
     return fixture;
   }
 
   it('sucht am Server und blaettert dort', () => {
-    const fixture = open([game()], 60);
+    const fixture = open([game()], 120);
     expect(fixture.componentInstance.pages).toBe(3);
 
     fixture.componentInstance.reload(2);
     const req = http.expectOne(r => r.url === '/api/library-games');
     expect(req.request.params.get('page')).toBe('2');
-    req.flush({ items: [], total: 60, page: 2, pageSize: 25 });
+    req.flush({ items: [], total: 120, page: 2, pageSize: 50 });
   });
 
   /** Ein Umlauf je Buchstabe waere bei 130 000 Zeilen das Gegenteil von schnell. */
@@ -73,7 +73,7 @@ describe('LibraryDialogComponent', () => {
     tick(400);
     const req = http.expectOne(r => r.url === '/api/library-games');
     expect(req.request.params.get('q')).toBe('Capablanca');
-    req.flush({ items: [], total: 0, page: 1, pageSize: 25 });
+    req.flush({ items: [], total: 0, page: 1, pageSize: 50 });
   }));
 
   it('gibt Sprache und Kommentardichte als Filter mit', () => {
@@ -86,7 +86,7 @@ describe('LibraryDialogComponent', () => {
     const req = http.expectOne(r => r.url === '/api/library-games');
     expect(req.request.params.get('language')).toBe('de');
     expect(req.request.params.get('minCommentedPlies')).toBe('20');
-    req.flush({ items: [], total: 0, page: 1, pageSize: 25 });
+    req.flush({ items: [], total: 0, page: 1, pageSize: 50 });
   });
 
   it('fordert eine Partie an und merkt sich das an der Zeile', () => {

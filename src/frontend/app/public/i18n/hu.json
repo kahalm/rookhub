@@ -25,7 +25,9 @@
     "send": "Küldés",
     "undo": "Visszavonás",
     "previous": "Vissza",
-    "next": "Tovább"
+    "next": "Tovább",
+    "day": "nap",
+    "days": "nap"
   },
   "nav": {
     "discord": "Discord közösség",

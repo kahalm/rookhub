@@ -87,7 +87,9 @@
     "send": "Send",
     "undo": "Undo",
     "previous": "Back",
-    "next": "Next"
+    "next": "Next",
+    "day": "day",
+    "days": "days"
   },
   "notifications": {
     "title": "Notifications",
