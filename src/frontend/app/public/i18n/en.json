@@ -3027,7 +3027,10 @@
         "too-many-open": "You already have {{max}} games being analysed. Wait until one of them is done.",
         "no-engine": "No engine is available right now to analyse the game.",
         "invalid-pgn": "There is no playable game in this text."
-      }
+      },
+      "speedUpHouse": "Too slow? Connect your own machine as an engine and it will work through your games.",
+      "speedUpOwn": "Too slow? Several engines work through several games at once.",
+      "engineGuide": "Guide for Docker and Windows"
     },
     "computing": "analysing",
     "failedBadge": "failed",

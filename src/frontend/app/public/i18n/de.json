@@ -3027,7 +3027,10 @@
         "too-many-open": "Du hast schon {{max}} Partien in der Rechnung. Warte, bis eine davon fertig ist.",
         "no-engine": "Gerade steht keine Engine bereit, die die Partie rechnen könnte.",
         "invalid-pgn": "In diesem Text steckt keine spielbare Partie."
-      }
+      },
+      "speedUpHouse": "Zu langsam? Schließ deine eigene Maschine als Engine an, dann rechnet sie deine Partien.",
+      "speedUpOwn": "Zu langsam? Mehrere Engines rechnen mehrere Partien gleichzeitig.",
+      "engineGuide": "Anleitung für Docker und Windows"
     },
     "computing": "rechnet",
     "failedBadge": "gescheitert",

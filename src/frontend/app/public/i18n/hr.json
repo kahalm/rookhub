@@ -3027,7 +3027,10 @@
         "too-many-open": "Već imaš {{max}} partija u analizi. Pričekaj da jedna završi.",
         "no-engine": "Trenutačno nema dostupnog motora koji bi analizirao partiju.",
         "invalid-pgn": "U ovom tekstu nema partije koja se može igrati."
-      }
+      },
+      "speedUpHouse": "Presporo? Priključi vlastito računalo kao motor pa će ono računati tvoje partije.",
+      "speedUpOwn": "Presporo? Više motora računa više partija istodobno.",
+      "engineGuide": "Upute za Docker i Windows"
     },
     "computing": "analizira se",
     "failedBadge": "neuspjelo",

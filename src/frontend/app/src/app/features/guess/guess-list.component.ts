@@ -103,6 +103,12 @@ import { ViewStateService } from '../../core/view-state.service';
                   <p class="muted small">
                     {{ (u.ownEngine ? 'guess.upload.hintOwn' : 'guess.upload.hintHouse') | translate }}
                   </p>
+                  <p class="muted small">
+                    {{ (u.ownEngine ? 'guess.upload.speedUpOwn' : 'guess.upload.speedUpHouse') | translate }}
+                    <a [href]="engineGuideUrl" target="_blank" rel="noopener noreferrer">
+                      {{ 'guess.upload.engineGuide' | translate }}
+                    </a>
+                  </p>
                   <mat-form-field appearance="outline" class="full">
                     <mat-label>{{ 'guess.upload.pgnLabel' | translate }}</mat-label>
                     <textarea matInput rows="4" [(ngModel)]="pgn" [disabled]="uploading"
@@ -227,6 +233,17 @@ export class GuessListComponent implements OnInit, OnDestroy {
   loading = true;
   starting = false;
   guessWhite = true;
+  /**
+   * Anleitung, die eigene Maschine als Engine anzuschliessen — Docker und Windows, beides im
+   * README des Engine-Providers.
+   *
+   * <p>Bewusst ein Link nach draussen und keine eigene Hilfeseite: die Anleitung gehoert zum
+   * Provider und aendert sich MIT ihm (Variablen, Stockfish-Version, die Windows-Zombie-Falle).
+   * Eine Zweitfassung in der App waere ab dem naechsten Provider-Umbau falsch, und falsch ist
+   * schlimmer als anderswo.</p>
+   */
+  readonly engineGuideUrl = 'https://github.com/kahalm/rookhub/blob/master/engine-provider/README.md';
+
   /** Eingeworfenes PGN. */
   pgn = '';
   uploading = false;

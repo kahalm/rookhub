@@ -2752,7 +2752,10 @@
         "too-many-open": "Már {{max}} játszmád van elemzés alatt. Várd meg, amíg az egyik elkészül.",
         "no-engine": "Jelenleg nincs elérhető motor, amely elemezné a játszmát.",
         "invalid-pgn": "Ebben a szövegben nincs játszható játszma."
-      }
+      },
+      "speedUpHouse": "Túl lassú? Kösd be a saját géped motorként, és az fogja számolni a játszmáidat.",
+      "speedUpOwn": "Túl lassú? Több motor egyszerre több játszmát számol.",
+      "engineGuide": "Útmutató Dockerhez és Windowshoz"
     },
     "computing": "elemzés alatt",
     "failedBadge": "sikertelen",
