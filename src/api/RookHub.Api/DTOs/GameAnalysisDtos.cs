@@ -37,6 +37,12 @@ public class GameAnalysisDto
     /// Spalte: jede geschweifte Klammer in einem PGN IST ein Kommentar, und so bleibt das
     /// LONGTEXT-Feld ausserhalb der Antwort — geladen wuerde es sonst je Zeile.</summary>
     public bool Annotated { get; set; }
+    /// <summary>Welche Seite man in dieser Partie uebernimmt, wenn man es nicht selbst sagt — die
+    /// des GEWINNERS (<see cref="Services.GuessSides"/>). Nur im KURATIERTEN Bestand gefuellt: bei
+    /// eigenen Analysen waehlt man die Seite selbst, und ein Wert dort waere eine Behauptung ueber
+    /// eine Entscheidung, die der Nutzer noch trifft.</summary>
+    public bool? GuessWhite { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
     /// <summary>Nur im Detail-Abruf gefüllt.</summary>

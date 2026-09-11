@@ -85,9 +85,9 @@ public class GuessStartPlyTests : IDisposable
             "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O {hier verlaesst die Partie den Pfad} Be7 " +
             "6. Re1 b5 7. Bb3 d6", 80);
 
-        // Kommentar am 9. Halbzug (O-O) — genau der soll geraten werden, 0-basiert Index 8.
-        // Der Bestands-Hinweis zeigte auf 10.
-        Assert.Equal(8, withComment);
+        // Kommentar am 9. Halbzug (O-O). Der Zug wird noch vorgespielt — damit sein Kommentar
+        // sichtbar ist —, geraten wird der Zug danach: 0-basiert Index 9.
+        Assert.Equal(9, withComment);
     }
 
     /// <summary>Und umgekehrt: die Untergrenze schlaegt einen sehr fruehen Kommentar. Ein Kommentar

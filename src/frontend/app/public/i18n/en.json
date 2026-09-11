@@ -3041,7 +3041,15 @@
     "failedBadge": "failed",
     "notReady": "No position analysed yet",
     "waiting": "waiting",
-    "moves": "{{moves}} moves"
+    "moves": "{{moves}} moves",
+    "search": {
+      "label": "Find a game",
+      "placeholder": "Name, event or title",
+      "clear": "Clear the search",
+      "none": "Nothing matches that."
+    },
+    "playsWhite": "you play White",
+    "playsBlack": "you play Black"
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

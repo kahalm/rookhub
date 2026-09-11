@@ -1203,7 +1203,12 @@ Halbzug, dessen Zugfolge in weniger als `RareBelowGames` (20) Partien des Rohbes
 (`LibraryGame.OpeningLine`, Praefix-Suche auf dem Index, BINAER gesucht: fuenf Abfragen statt
 dreissig); (2) der Kommentator faengt an zu reden (`LibraryGameReader` liefert den ersten
 kommentierten Halbzug gleich mit). Gedeckelt auf `Earliest` (6) bis `Latest` (40) und nie hinter
-das Partieende. **Die Untergrenze ist noetig**: Sammlungen setzen den ersten Kommentar oft an den
+das Partieende. **Die beiden Hinweise werden VERSCHIEDEN umgerechnet** (0.468.0): beim
+Eroeffnungs-Hinweis wird der erste Zug ausserhalb des Buchs GERATEN (minus eins), beim
+Kommentar-Hinweis wird der kommentierte Zug noch VORGESPIELT und der Zug danach geraten. Sonst
+gehoerte der Kommentar zu dem Zug, der gerade gesucht ist, und duerfte nicht gezeigt werden — der
+Hinweis, der den Einstieg bestimmt hat, waere ausgerechnet der einzige unsichtbare. Das Brett zeigt
+ihn beim Aufgehen der Sitzung (`showOpeningNote`). **Die Untergrenze ist noetig**: Sammlungen setzen den ersten Kommentar oft an den
 ERSTEN Zug, und dort steht dann eine Quellenangabe statt einer Erklaerung. Ohne Bestand (frische
 Installation, `MinLibrarySize` 1000) greift der erste Hinweis nicht und die alte Vorgabe traegt
 weiter. Das Ergebnis haengt an der PARTIE und wird in `GameAnalysis.SuggestedStartPly` gemerkt.

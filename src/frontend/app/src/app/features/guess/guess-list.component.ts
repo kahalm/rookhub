@@ -60,6 +60,19 @@ import { ViewStateService } from '../../core/view-state.service';
       @if (loading) {
         <app-loading-spinner />
       } @else {
+        <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+          <mat-label>{{ 'guess.search.label' | translate }}</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="query" name="guessSearch"
+                 [placeholder]="'guess.search.placeholder' | translate">
+          @if (query) {
+            <button matSuffix mat-icon-button (click)="query = ''"
+                    [attr.aria-label]="'guess.search.clear' | translate">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
         <mat-card class="start-card">
           <mat-card-content>
             <div class="sec-head">
@@ -74,12 +87,17 @@ import { ViewStateService } from '../../core/view-state.service';
             </div>
             <p class="muted small">{{ 'guess.curatedHint' | translate }}</p>
             @if (curatedShown.length === 0) {
-              <p class="muted">{{ 'guess.noCurated' | translate }}</p>
+              <p class="muted">{{ (query ? 'guess.search.none' : 'guess.noCurated') | translate }}</p>
             } @else {
               @for (g of curatedShown; track g.id) {
                 <div class="game-row">
                   <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
                   <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
+                  @if (g.guessWhite !== null && g.guessWhite !== undefined) {
+                    <span class="side" [class.side-black]="!g.guessWhite">
+                      {{ (g.guessWhite ? 'guess.playsWhite' : 'guess.playsBlack') | translate }}
+                    </span>
+                  }
                   @if (g.annotated) {
                     <span class="chip">{{ 'guess.annotatedBadge' | translate }}</span>
                   }
@@ -128,9 +146,11 @@ import { ViewStateService } from '../../core/view-state.service';
                 }
               }
 
-              @if (ownGames.length === 0) {
-                <p class="muted">{{ 'guess.noGames' | translate }}</p>
-                <a mat-stroked-button routerLink="/analysis/games">{{ 'guess.analyseFirst' | translate }}</a>
+              @if (ownShown.length === 0) {
+                <p class="muted">{{ (query ? 'guess.search.none' : 'guess.noGames') | translate }}</p>
+                @if (!query) {
+                  <a mat-stroked-button routerLink="/analysis/games">{{ 'guess.analyseFirst' | translate }}</a>
+                }
               } @else {
                 <div class="side-pick">
                   <span class="muted small">{{ 'guess.sideLabel' | translate }}</span>
@@ -139,7 +159,7 @@ import { ViewStateService } from '../../core/view-state.service';
                     <mat-button-toggle [value]="false">{{ 'guess.black' | translate }}</mat-button-toggle>
                   </mat-button-toggle-group>
                 </div>
-                @for (g of ownGames; track g.id) {
+                @for (g of ownShown; track g.id) {
                   <div class="game-row">
                     <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
                     <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
@@ -205,8 +225,15 @@ import { ViewStateService } from '../../core/view-state.service';
     .small-toggle { font-size: .8rem; }
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .full { width: 100%; }
+    .search { width: 100%; margin-bottom: 12px; }
+    .search mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     .chip.err { color: #ef9a9a; }
+    /* Zwei Kanaele, nicht nur Farbe: der Punkt davor ist gefuellt bzw. hohl. */
+    .side { font-size: .72rem; padding: 2px 8px 2px 6px; border-radius: 10px;
+            border: 1px solid color-mix(in srgb, currentColor 35%, transparent); white-space: nowrap; }
+    .side::before { content: '●'; margin-right: 5px; }
+    .side-black::before { content: '○'; }
     mat-progress-bar { margin: 0 0 8px; border-radius: 3px; }
     .game-row, .run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
     .game-row + .game-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
@@ -251,6 +278,16 @@ export class GuessListComponent implements OnInit, OnDestroy {
    */
   readonly engineGuideUrl = 'https://github.com/kahalm/rookhub/blob/master/engine-provider/README.md';
 
+  /**
+   * Freitext-Suche ueber BEIDE Listen — Titel, Namen, Turnier.
+   *
+   * <p>Sie filtert im BROWSER, wie der Kommentar-Filter daneben: der Bestand ist eine ueberschaubare
+   * Bibliothek, die ohnehin schon vollstaendig ausgeliefert ist, und ein Server-Umlauf je getipptem
+   * Buchstaben waere dafuer zu viel. Waechst er auf Tausende, gehoert die Suche auf den Server —
+   * dann aber mit Seiten, nicht nur mit einem Filter.</p>
+   */
+  query = '';
+
   /** Eingeworfenes PGN. */
   pgn = '';
   uploading = false;
@@ -275,7 +312,46 @@ export class GuessListComponent implements OnInit, OnDestroy {
   get hasAnnotated(): boolean { return this.curated.some(g => g.annotated); }
 
   get curatedShown(): GameAnalysis[] {
-    return this.annotatedOnly ? this.curated.filter(g => g.annotated) : this.curated;
+    const pool = this.annotatedOnly ? this.curated.filter(g => g.annotated) : this.curated;
+    return this.filtered(pool);
+  }
+
+  get ownShown(): GameAnalysis[] {
+    return this.filtered(this.ownGames);
+  }
+
+  private filtered(games: GameAnalysis[]): GameAnalysis[] {
+    const needle = GuessListComponent.fold(this.query);
+    if (!needle) return games;
+    return games.filter(g => GuessListComponent.haystack(g).includes(needle));
+  }
+
+  /** Gesucht wird in dem, was auf der Zeile steht, PLUS den Namen und dem Turnier: der Titel einer
+   *  eingeworfenen Partie kann „Partie" heissen, die Spieler stehen trotzdem in den Kopfdaten. */
+  private static haystack(g: GameAnalysis): string {
+    return GuessListComponent.fold([g.title, g.white, g.black, g.event].filter(Boolean).join(' '));
+  }
+
+  /**
+   * Kleinschreibung und Umlaute auf den Grundvokal.
+   *
+   * <p>Ohne das Falten findet „Zurich" das „Zuerich" im Bestand nicht und „Munchen" kein
+   * „München" — die Partien kommen aus verschiedenen Quellen und schreiben dieselben Namen
+   * verschieden.</p>
+   *
+   * <p>Gefaltet werden BEIDE Seiten, und nur deshalb ist das hier unbedenklich: „Quedlinburg" wird
+   * zu „qudlinburg", die Eingabe „Qued" aber genauso zu „qud" — die Teilzeichenkette passt weiter.
+   * Im Ortslexikon des Turnierkalenders steht ausdruecklich das Gegenteil (dort wird beim SUCHEN
+   * nicht gefaltet), weil dort gegen eine VORNORMALISIERTE Spalte gesucht wird und die Faltung
+   * damit einseitig waere.</p>
+   */
+  private static fold(text: string | null | undefined): string {
+    return (text ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')   // Akzente weg (é → e)
+      .replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u').replace(/ss/g, 's')
+      .trim();
   }
 
   ngOnInit(): void {

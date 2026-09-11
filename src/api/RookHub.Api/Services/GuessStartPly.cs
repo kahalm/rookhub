@@ -66,10 +66,15 @@ public class GuessStartPly
         if (stats.PlyCount == 0) return null;
 
         // Beide Hinweise zaehlen 1-basiert („der siebte Halbzug"), `StartPly` ist der 0-BASIERTE
-        // Index des ersten zu ratenden Zuges. Der Zug, an dem das Buch endet bzw. an dem der
-        // Kommentar haengt, soll GERATEN werden — also minus eins, nicht plus eins.
+        // Index des ersten zu ratenden Zuges. Die beiden werden deshalb VERSCHIEDEN umgerechnet:
+        //
+        // • Eroeffnung: der Zug, an dem das Buch endet, ist der erste eigene — also minus eins.
+        // • Kommentar: der KOMMENTIERTE Zug wird noch vorgespielt, geraten wird der danach.
+        //   Sonst gehoerte der Kommentar zu dem Zug, der gerade gesucht ist, und duerfte nicht
+        //   gezeigt werden („die Fortsetzung verlaesst den Server nicht") — der Hinweis, der den
+        //   Einstieg bestimmt hat, waere ausgerechnet der einzige unsichtbare.
         var byOpening = await OpeningExitAsync(stats.OpeningLine, ct) - 1;
-        var byComment = stats.FirstCommentedPly > 0 ? stats.FirstCommentedPly - 1 : (int?)null;
+        var byComment = stats.FirstCommentedPly > 0 ? stats.FirstCommentedPly : (int?)null;
 
         var suggested = Earlier(byOpening, byComment);
         if (suggested is null) return null;

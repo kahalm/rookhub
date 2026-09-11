@@ -2766,7 +2766,15 @@
     "failedBadge": "sikertelen",
     "notReady": "Még egyetlen állás sincs elemezve",
     "waiting": "várakozik",
-    "moves": "{{moves}} lépés"
+    "moves": "{{moves}} lépés",
+    "search": {
+      "label": "Játszma keresése",
+      "placeholder": "Név, verseny vagy cím",
+      "clear": "Keresés törlése",
+      "none": "Erre nincs találat."
+    },
+    "playsWhite": "világossal játszol",
+    "playsBlack": "sötéttel játszol"
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

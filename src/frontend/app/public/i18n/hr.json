@@ -3041,7 +3041,15 @@
     "failedBadge": "neuspjelo",
     "notReady": "Nijedna pozicija još nije analizirana",
     "waiting": "čeka",
-    "moves": "{{moves}} poteza"
+    "moves": "{{moves}} poteza",
+    "search": {
+      "label": "Pronađi partiju",
+      "placeholder": "Ime, turnir ili naslov",
+      "clear": "Očisti pretragu",
+      "none": "Za to nema rezultata."
+    },
+    "playsWhite": "igraš bijelima",
+    "playsBlack": "igraš crnima"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

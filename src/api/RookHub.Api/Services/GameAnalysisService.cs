@@ -203,7 +203,50 @@ public class GameAnalysisService
             _db.GameAnalyses.AsNoTracking()
                 .Where(g => g.IsPublic && g.Positions.Any() && !g.Positions.Any(p => p.CandidatesJson == null)),
             ct);
+        await FillGuessSideAsync(rows, ct);
         return rows.OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Traegt in jede Zeile ein, welche Seite man dort uebernimmt — die des Gewinners.
+    ///
+    /// <para>Die Liste soll das VORHER sagen: im Bestand waehlt man die Seite nicht, und wer erst
+    /// nach dem Start sieht, dass er Schwarz spielt, hat die Partie schon offen.</para>
+    ///
+    /// <para>Bei entschiedenen Partien steht die Antwort im Ergebnis. Die uebrigen brauchen die
+    /// Bewertung der letzten gerechneten Stellung — dafuer genuegt die kurze Zeichenkette
+    /// (<c>EvalText</c>), nicht die Kandidatenliste: die ist LONGTEXT und wuerde hier je Partie
+    /// mitgelesen. Geholt wird sie in EINER Abfrage fuer alle betroffenen Partien; je Partie eine
+    /// waere bei einem wachsenden Bestand genau das N+1-Muster, das Listen langsam macht.</para>
+    /// </summary>
+    private async Task FillGuessSideAsync(List<GameAnalysisDto> rows, CancellationToken ct)
+    {
+        var undecided = rows
+            .Where(r => r.Result?.Trim() is not ("1-0" or "0-1"))
+            .Select(r => r.Id)
+            .ToList();
+
+        var lastByGame = new Dictionary<int, (int Ply, string? EvalText)>();
+        if (undecided.Count > 0)
+        {
+            var analysed = await _db.GameAnalysisPositions.AsNoTracking()
+                .Where(p => undecided.Contains(p.GameAnalysisId) && p.CandidatesJson != null)
+                .Select(p => new { p.GameAnalysisId, p.Ply, p.EvalText })
+                .ToListAsync(ct);
+            foreach (var group in analysed.GroupBy(p => p.GameAnalysisId))
+            {
+                var last = group.OrderByDescending(p => p.Ply).First();
+                lastByGame[group.Key] = (last.Ply, last.EvalText);
+            }
+        }
+
+        foreach (var row in rows)
+        {
+            lastByGame.TryGetValue(row.Id, out var last);
+            row.GuessWhite = GuessSides.WinnerWhite(row.Result,
+                last.Ply == 0 && last.EvalText is null ? null : last.Ply,
+                GuessSides.PawnsFromEvalText(last.EvalText));
+        }
     }
 
     /// <summary>Kuratierten Bestand ein-/ausschalten — Besitzer der Analyse oder Admin. Bewusst

@@ -410,10 +410,6 @@ public class GuessSessionService
         return analyzed ? "notScorable" : "pending";
     }
 
-    /// <summary>Ab dieser Bauerndifferenz gilt eine Stellung als entschieden — darunter sagt sie
-    /// nichts darüber, wer die Partie gewonnen hat.</summary>
-    private const double DecisivePawns = 1.5;
-
     /// <summary>
     /// Welche Seite übernimmt der Nutzer, wenn er es NICHT sagt? Die des GEWINNERS. Im kuratierten
     /// Bestand ist genau das der Sinn der Übung — man rät die Züge des Spielers, der die Partie
@@ -430,11 +426,8 @@ public class GuessSessionService
     /// </summary>
     private async Task<bool> WinnerSideAsync(GameAnalysis analysis, CancellationToken ct)
     {
-        switch (analysis.Result?.Trim())
-        {
-            case "1-0": return true;
-            case "0-1": return false;
-        }
+        if (analysis.Result?.Trim() is "1-0" or "0-1")
+            return GuessSides.WinnerWhite(analysis.Result, null, null);
 
         var last = await _db.GameAnalysisPositions.AsNoTracking()
             .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
@@ -443,15 +436,12 @@ public class GuessSessionService
             .FirstOrDefaultAsync(ct);
         if (last is null) return true;
 
-        var candidates = BrokerCandidates.FromJson(last.CandidatesJson);
-        if (candidates.Count == 0) return true;
-
         // Die Kandidaten-Bewertung gilt aus Sicht der Seite AM ZUG (BrokerCandidates dreht sie beim
-        // Einlesen entsprechend) — und am Zug ist bei geradem Halbzug Weiß.
-        var pawns = candidates[0].Eval.Pawns;
-        if (Math.Abs(pawns) < DecisivePawns) return true;
-        var whiteToMove = last.Ply % 2 == 0;
-        return pawns > 0 ? whiteToMove : !whiteToMove;
+        // Einlesen entsprechend) — die Regel selbst steht in GuessSides, damit die Bestandsliste
+        // dieselbe Antwort gibt wie das Brett.
+        var candidates = BrokerCandidates.FromJson(last.CandidatesJson);
+        return GuessSides.WinnerWhite(analysis.Result, last.Ply,
+            candidates.Count == 0 ? null : candidates[0].Eval.Pawns);
     }
 
     /// <summary>

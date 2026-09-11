@@ -38,6 +38,8 @@ export interface GameAnalysis {
   isPublic: boolean;
   /** Trägt das Quell-PGN Kommentare? Grundlage des Filters „alle / nur kommentierte". */
   annotated: boolean;
+  /** Welche Seite man übernimmt — nur im kuratierten Bestand gefüllt (dort wählt man sie nicht). */
+  guessWhite?: boolean | null;
   createdAt: string;
   finishedAt: string | null;
   /** Nur im Detail-Abruf gefüllt. */

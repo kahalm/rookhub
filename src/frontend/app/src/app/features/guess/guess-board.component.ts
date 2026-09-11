@@ -502,6 +502,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
         // kann; am letzten Eintrag des Verlaufs steht die Aufgabe, ab dort darf geraten werden.
         // Eine fortgesetzte Sitzung startet dagegen dort, wo man aufgehoert hat.
         if (s.history.length && s.movesPlayed === 0) this.browseIndex = -1;
+        this.showOpeningNote(s);
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -769,6 +770,25 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       this.startSteps(s, this.pendingFromPly);
     }
     this.cdr.markForCheck();
+  }
+
+  /**
+   * Der Kommentar zum ZULETZT vorgespielten Zug, sobald die Sitzung aufgeht.
+   *
+   * <p>Ab 0.468.0 bestimmt genau dieser Kommentar haeufig, WO die Partie einsteigt (siehe
+   * <c>GuessStartPly</c>): der Kommentator hielt die Stellung fuer erklaerungsbeduerftig. Ihn dann
+   * nur als Zeichen in der Zugliste zu fuehren, hiesse den Grund fuer den Einstieg zu verstecken —
+   * man sitzt vor der Aufgabe und weiss nicht, warum sie hier anfaengt.</p>
+   *
+   * <p>Gezeigt wird der Kommentar des LETZTEN gespielten Zuges, nie der des gesuchten: die
+   * Fortsetzung verlaesst den Server nicht, und der Verlauf enthaelt nur, was schon auf dem Brett
+   * stand.</p>
+   */
+  private showOpeningNote(s: GuessSession): void {
+    if (this.stepNote || !s.history.length) return;
+    const last = s.history[s.history.length - 1];
+    if (!last.comment) return;
+    this.stepNote = { move: `${last.moveNumber}${last.white ? '.' : '…'}${last.san}`, text: last.comment };
   }
 
   /** Ab welchem Halbzug die Schrittfolge laeuft, wenn nach dem eigenen Zug gehalten wurde. */

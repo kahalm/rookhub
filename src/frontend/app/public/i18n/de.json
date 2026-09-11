@@ -3041,7 +3041,15 @@
     "failedBadge": "gescheitert",
     "notReady": "Noch keine Stellung gerechnet",
     "waiting": "wartet",
-    "moves": "{{moves}} Züge"
+    "moves": "{{moves}} Züge",
+    "search": {
+      "label": "Partie suchen",
+      "placeholder": "Name, Turnier oder Titel",
+      "clear": "Suche leeren",
+      "none": "Dazu findet sich nichts."
+    },
+    "playsWhite": "du spielst Weiß",
+    "playsBlack": "du spielst Schwarz"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",
