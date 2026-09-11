@@ -192,6 +192,13 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     return fixture.componentInstance;
   }
 
+  /** Ein Tastendruck, wie er vom Fenster kommt (das Ziel ist dann der Rumpf der Seite). */
+  function key(c: any, k: string) {
+    const e = new KeyboardEvent('keydown', { key: k });
+    Object.defineProperty(e, 'target', { value: document.body });
+    c.onKey(e);
+  }
+
   function guess(c: any, from: string, to: string, san: string, res: Partial<any>) {
     c.onMove({ from, to, san, fen: 'egal' });
     http.expectOne('/api/guess-sessions/3/guess').flush({
@@ -575,5 +582,43 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.boardFen).withContext('zurueck auf die Aufgabe').toBe(FEN8);
     expect(c.canGuess).withContext('gleich nochmal versuchen').toBeTrue();
     expect(c.last).withContext('keine Wertung angezeigt').toBeNull();
+  });
+
+  /**
+   * Wer eine Partie nachspielt, hat die Hand nicht an der Maus. Die Pfeiltasten muessen dasselbe
+   * tun wie die vier Knoepfe unter dem Brett — und dabei am letzten Eintrag des Verlaufs
+   * anhalten, also an der Aufgabe: alles dahinter liegt gar nicht im Browser.
+   */
+  it('blaettert mit den Pfeiltasten', () => {
+    const c = load();
+    expect(c.browseIndex).withContext('steht auf der Aufgabe').toBeNull();
+
+    key(c, 'ArrowLeft');
+    expect(c.browseIndex).withContext('einen Halbzug zurueck').toBe(0);
+    key(c, 'Home');
+    expect(c.browseIndex).withContext('an den Anfang').toBe(-1);
+    key(c, 'ArrowLeft');
+    expect(c.browseIndex).withContext('vor dem Anfang ist nichts').toBe(-1);
+    key(c, 'End');
+    expect(c.browseIndex).withContext('zurueck zur Aufgabe').toBeNull();
+    key(c, 'ArrowRight');
+    expect(c.browseIndex).withContext('hinter die Aufgabe geht es nicht').toBeNull();
+  });
+
+  /** In einem offenen Menue bewegen die Pfeile die AUSWAHL — sonst blaetterte das Brett mit. */
+  it('laesst die Pfeiltasten im Menue in Ruhe', () => {
+    const c = load();
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const item = document.createElement('button');
+    overlay.appendChild(item);
+    document.body.appendChild(overlay);
+
+    const e = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+    Object.defineProperty(e, 'target', { value: item });
+    c.onKey(e);
+
+    expect(c.browseIndex).withContext('das Menue behaelt die Taste').toBeNull();
+    overlay.remove();
   });
 });

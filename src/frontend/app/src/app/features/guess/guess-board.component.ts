@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -511,6 +511,36 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void { this.clearReplyTimer(); }
+
+  /**
+   * Blaettern mit den Pfeiltasten. Wer eine Partie nachspielt, hat die Hand nicht an der Maus —
+   * und die vier Knoepfe unter dem Brett sind genau die vier Tasten, die dafuer auf jeder Tastatur
+   * liegen (Pos1 = Anfang, Ende = zurueck zur Aufgabe).
+   *
+   * <p>Das VERRAET nichts: das Blaettern endet am letzten Eintrag des Verlaufs, also an der
+   * Aufgabenstellung — die Fortsetzung liegt gar nicht im Browser.</p>
+   *
+   * <p>Zwei Faelle bleiben aussen vor: eine Eingabe (dort gehoeren die Tasten dem Cursor) und ein
+   * offenes Menue/Dialog, wo die Pfeile die Auswahl bewegen. Ohne diese Ausnahme haette das
+   * Einstellungs-Menue ueber dem Brett beim Tastendruck gleichzeitig die Auswahl verschoben und
+   * das Brett umgeblaettert.</p>
+   */
+  @HostListener('window:keydown', ['$event'])
+  onKey(e: KeyboardEvent): void {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('input, textarea, select, [contenteditable="true"], .cdk-overlay-container')) return;
+    if (!this.session?.history.length) return;
+
+    switch (e.key) {
+      case 'ArrowLeft': this.step(-1); break;
+      case 'ArrowRight': this.step(1); break;
+      case 'Home': this.browse(-1); break;
+      case 'End': this.browse(null); break;
+      default: return;
+    }
+    e.preventDefault();
+  }
 
   /** Der Speicher kann gesperrt sein (Privatmodus) — dann gilt eben die Vorgabe. */
   private loadAccept(): void {

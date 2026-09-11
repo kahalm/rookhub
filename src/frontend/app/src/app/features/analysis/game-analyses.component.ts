@@ -38,14 +38,18 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
     <div class="ga-container">
       <div class="header">
         <h1>{{ 'gameAnalysis.title' | translate }}</h1>
-        <a mat-stroked-button routerLink="/guess">
-          <mat-icon>casino</mat-icon> {{ 'gameAnalysis.toGuess' | translate }}
-        </a>
-        @if (isAdmin) {
-          <a mat-stroked-button routerLink="/analysis/jobs">
-            <mat-icon>list</mat-icon> {{ 'gameAnalysis.toJobs' | translate }}
+        <!-- Beide Sprünge in EINER Gruppe am rechten Rand: mit drei Kindern im
+             space-between stand die Punktepartie zwischen Überschrift und Aufträgen. -->
+        <div class="header-actions">
+          <a mat-stroked-button routerLink="/guess">
+            <mat-icon>casino</mat-icon> {{ 'gameAnalysis.toGuess' | translate }}
           </a>
-        }
+          @if (isAdmin) {
+            <a mat-stroked-button routerLink="/analysis/jobs">
+              <mat-icon>list</mat-icon> {{ 'gameAnalysis.toJobs' | translate }}
+            </a>
+          }
+        </div>
       </div>
       <p class="muted intro">{{ 'gameAnalysis.intro' | translate }}</p>
 
@@ -134,6 +138,7 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
   styles: [`
     .ga-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     h1 { margin: 0; font-size: 1.5rem; }
     .overall { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
     .overall mat-progress-bar { border-radius: 3px; }

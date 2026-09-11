@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.471.2", date: "2026-09-11", changes: [
+    { en: "The arrow keys now page through the moves of a points game: left and right one half-move, Home to the starting position, End back to the move you are guessing. Whoever replays a game does not have a hand on the mouse. Paging still stops at the move in question, so it gives nothing away.", de: "Die Pfeiltasten blaettern jetzt durch die Zuege einer Punktepartie: links und rechts einen Halbzug, Pos1 an den Anfang, Ende zurueck zum gesuchten Zug. Wer eine Partie nachspielt, hat die Hand nicht an der Maus. Das Blaettern endet weiterhin am gesuchten Zug und verraet damit nichts." },
+    { en: "On the analyses page both buttons sit together at the right edge instead of the points game standing between the heading and the single jobs.", de: "Auf der Analysen-Seite sitzen beide Knoepfe zusammen am rechten Rand, statt dass die Punktepartie zwischen Ueberschrift und Einzel-Auftraegen steht." },
+  ] },
   { version: "0.471.1", date: "2026-09-11", changes: [
     { en: "The engine settings in the provider .env are all called ENGINE_ now: ENGINE_PRIMARY_NAME for the one live engine, ENGINE_BACKGROUND_NAME plus ENGINE_BACKGROUND_COUNT for the background ones. Half the engine settings used to carry no common prefix and did not show up when you looked for them. The former names keep working, so an existing .env runs on unchanged.", de: "Die Engine-Einstellungen in der Provider-.env heissen jetzt durchgaengig ENGINE_: ENGINE_PRIMARY_NAME fuer die eine Live-Engine, ENGINE_BACKGROUND_NAME und ENGINE_BACKGROUND_COUNT fuer die Hintergrund-Engines. Die Haelfte der Engine-Einstellungen trug bisher kein gemeinsames Praefix und tauchte beim Suchen danach nicht auf. Die frueheren Namen gelten weiter, eine bestehende .env laeuft also unveraendert." },
   ] },
