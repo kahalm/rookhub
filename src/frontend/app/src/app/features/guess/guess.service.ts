@@ -25,8 +25,11 @@ export interface GuessHistoryMove {
   san: string;
   uci: string;
   fen: string;
-  /** Kommentar aus dem Quell-PGN, falls die Partie annotiert ist. Nur an GESPIELTEN Zügen. */
+  /** Kommentar der Partie, falls sie annotiert ist. Nur an GESPIELTEN Zügen. */
   comment?: string | null;
+  /** Gesetzt NUR, wenn dieser Kommentar in einer ANDEREN Sprache vorliegt als der gewählten —
+   *  dann ist die Quelle eingesprungen, und die Anzeige sagt es. */
+  commentLanguage?: string | null;
   /** Warum dieser Zug NICHT abgefragt wurde: `notScorable` (die Engine führt den Partiezug nicht
    *  unter ihren Kandidaten — ohne ihn gibt es nichts zu vergleichen) oder `pending` (noch nicht
    *  gerechnet). `null` = regulär abgefragt bzw. Zug der Gegenseite. */
@@ -52,6 +55,10 @@ export interface GuessSession {
   totalGuesses: number;
   /** Stellung vor dem ersten Zug der Partie (nur wenn es etwas zum Blättern gibt). */
   startFen: string | null;
+  /** In welchen Sprachen die Anmerkungen vorliegen. Leer = nichts umzuschalten. */
+  commentLanguages?: string[];
+  /** Welche davon gerade ausgeliefert wird. */
+  commentLanguage?: string | null;
   /**
    * Die Partie BIS HIERHIN: Eröffnungsvorlauf plus alles seither Gespielte. Der letzte Eintrag
    * erzeugt die Aufgabenstellung — die Liste endet also genau vor der Lösung.
@@ -126,8 +133,22 @@ export class GuessService {
     return this.anonymous ? '/api/guess-sessions/anonymous' : '/api/guess-sessions';
   }
 
-  private params(): { params?: { sessionId: string } } {
-    return this.anonymous ? { params: { sessionId: this.sessionId() } } : {};
+  /**
+   * Die Abfrage-Parameter: ohne Anmeldung die Sitzungskennung, und — sobald eine Sprache gewaehlt
+   * ist — die gewuenschte Kommentar-Sprache. Der Server entscheidet damit, welchen Kommentar-Satz
+   * er ausliefert; faellt sie weg, kommt die Quelle.
+   */
+  private params(lang?: string | null): { params?: Record<string, string> } {
+    const params: Record<string, string> = {};
+    if (this.anonymous) params['sessionId'] = this.sessionId();
+    if (lang) params['lang'] = lang;
+    return Object.keys(params).length ? { params } : {};
+  }
+
+  /** NUR die Sprache — fuer die Schreib-Aufrufe: dort gehoert die Sitzungskennung in den RUMPF
+   *  (der Server liest sie beim POST von dort), nicht ein zweites Mal in die Abfrage. */
+  private langParams(lang?: string | null): { params?: Record<string, string> } {
+    return lang ? { params: { lang } } : {};
   }
 
   private body<T extends object>(payload: T): T & { sessionId?: string } {
@@ -143,20 +164,23 @@ export class GuessService {
    * kuratierten Bestand gewollt, dort fragt die Auswahl nicht nach der Seite (der Server leitet sie
    * aus dem Ergebnis bzw. der Bewertung der letzten gerechneten Stellung ab).
    */
-  start(gameAnalysisId: number, guessWhite?: boolean): Observable<GuessSession> {
+  start(gameAnalysisId: number, guessWhite?: boolean, lang?: string | null): Observable<GuessSession> {
     return this.http.post<GuessSession>(this.base(),
-      this.body(guessWhite === undefined ? { gameAnalysisId } : { gameAnalysisId, guessWhite }));
+      this.body(guessWhite === undefined ? { gameAnalysisId } : { gameAnalysisId, guessWhite }),
+      this.langParams(lang));
   }
 
-  get(id: number): Observable<GuessSession> {
-    return this.http.get<GuessSession>(`${this.base()}/${id}`, this.params());
+  get(id: number, lang?: string | null): Observable<GuessSession> {
+    return this.http.get<GuessSession>(`${this.base()}/${id}`, this.params(lang));
   }
 
   /** `uci` leer = passen: 0 Punkte, keine Strafe. */
-  guess(id: number, uci: string | null, addSeconds: number, accept?: GuessAccept): Observable<GuessResult> {
+  guess(id: number, uci: string | null, addSeconds: number, accept?: GuessAccept,
+        lang?: string | null): Observable<GuessResult> {
     return this.http.post<GuessResult>(`${this.base()}/${id}/guess`,
       this.body(accept ? { uci, addSeconds, acceptBetter: accept.better, acceptSimilar: accept.similar }
-                       : { uci, addSeconds }));
+                       : { uci, addSeconds }),
+      this.langParams(lang));
   }
 
   review(id: number): Observable<GuessReviewMove[]> {

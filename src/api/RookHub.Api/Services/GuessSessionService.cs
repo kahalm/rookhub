@@ -41,11 +41,13 @@ public class GuessSessionService
 {
     private readonly AppDbContext _db;
     private readonly GuessStartPly _startPly;
+    private readonly CommentSetService _comments;
 
-    public GuessSessionService(AppDbContext db, GuessStartPly startPly)
+    public GuessSessionService(AppDbContext db, GuessStartPly startPly, CommentSetService comments)
     {
         _db = db;
         _startPly = startPly;
+        _comments = comments;
     }
 
     /// <summary>Rückfall, wenn sich der Einstieg nicht bestimmen lässt — der Bestand ist leer, das
@@ -56,7 +58,8 @@ public class GuessSessionService
 
     // ===== Sitzung starten ==================================================
 
-    public async Task<GuessSessionDto> StartAsync(GuessOwner owner, CreateGuessSessionRequest req, CancellationToken ct = default)
+    public async Task<GuessSessionDto> StartAsync(GuessOwner owner, CreateGuessSessionRequest req,
+        CancellationToken ct = default, string? language = null)
     {
         // Spielbar ist eine EIGENE Analyse oder eine aus dem kuratierten Bestand
         // (<c>GameAnalysis.IsPublic</c>) — letztere auch ohne Anmeldung. Zwei Abfragen statt einer
@@ -98,13 +101,14 @@ public class GuessSessionService
 
         await AdvanceToPlayableAsync(session, ct);
         await _db.SaveChangesAsync(ct);
-        return await BuildDtoAsync(session, ct);
+        return await BuildDtoAsync(session, ct, language: language);
     }
 
-    public async Task<GuessSessionDto?> GetAsync(GuessOwner owner, int sessionId, CancellationToken ct = default)
+    public async Task<GuessSessionDto?> GetAsync(GuessOwner owner, int sessionId,
+        CancellationToken ct = default, string? language = null)
     {
         var session = await LoadAsync(owner, sessionId, ct);
-        return session is null ? null : await BuildDtoAsync(session, ct);
+        return session is null ? null : await BuildDtoAsync(session, ct, language: language);
     }
 
     public async Task<List<GuessSessionDto>> ListAsync(GuessOwner owner, CancellationToken ct = default)
@@ -145,7 +149,7 @@ public class GuessSessionService
 
     /// <summary>Einen Zug raten. <paramref name="uci"/> leer = passen (0 Punkte, keine Strafe).</summary>
     public async Task<GuessResultDto> GuessAsync(GuessOwner owner, int sessionId, GuessMoveRequest req,
-        CancellationToken ct = default)
+        CancellationToken ct = default, string? language = null)
     {
         var session = await LoadAsync(owner, sessionId, ct)
             ?? throw new KeyNotFoundException("Session not found.");
@@ -197,7 +201,7 @@ public class GuessSessionService
                     Points = 0,
                     PlayedSan = playedSan,
                     DiffCp = diffCp,
-                    Session = await BuildDtoAsync(session, ct),
+                    Session = await BuildDtoAsync(session, ct, language: language),
                 };
         }
 
@@ -236,7 +240,7 @@ public class GuessSessionService
             ReplyUci = reply?.GameMoveUci,
             DiffCp = diffCp,
             EvalText = evalText,
-            Session = await BuildDtoAsync(session, ct),
+            Session = await BuildDtoAsync(session, ct, language: language),
         };
     }
 
@@ -543,7 +547,8 @@ public class GuessSessionService
     /// <param name="head">Vorab geladene Kopfdaten (Listen-Pfad); <c>null</c> = selbst nachschlagen.</param>
     /// <param name="totalGuesses">Vorab gezaehlte Halbzuege (Listen-Pfad); <c>null</c> = selbst zaehlen.</param>
     private async Task<GuessSessionDto> BuildDtoAsync(GuessSession session, CancellationToken ct,
-        bool withPosition = true, AnalysisHead? head = null, int? totalGuesses = null)
+        bool withPosition = true, AnalysisHead? head = null, int? totalGuesses = null,
+        string? language = null)
     {
         var analysis = head ?? await _db.GameAnalyses.AsNoTracking()
             .Where(g => g.Id == session.GameAnalysisId)
@@ -606,7 +611,9 @@ public class GuessSessionService
                 var answered = moves.Select(m => m.Ply).ToHashSet();
                 if (played.Count > 0)
                 {
-                    var comments = await CommentsAsync(session.GameAnalysisId, ct);
+                    var comments = await _comments.ForAnalysisAsync(session.GameAnalysisId, language, ct);
+                    dto.CommentLanguages = comments.Languages.ToList();
+                    dto.CommentLanguage = comments.Language;
                     dto.StartFen = played[0].Fen;
                     for (var i = 0; i + 1 < played.Count && played[i].Ply < session.CurrentPly; i++)
                         dto.History.Add(new GuessHistoryMoveDto
@@ -617,7 +624,10 @@ public class GuessSessionService
                             San = played[i].GameMoveSan,
                             Uci = played[i].GameMoveUci,
                             Fen = played[i + 1].Fen,
-                            Comment = comments.GetValueOrDefault(played[i].Ply),
+                            Comment = comments.ByPly.TryGetValue(played[i].Ply, out var c) ? c.Text : null,
+                            CommentLanguage = comments.ByPly.TryGetValue(played[i].Ply, out var cl)
+                                && !string.Equals(cl.Language, comments.Language, StringComparison.OrdinalIgnoreCase)
+                                    ? cl.Language : null,
                             Skipped = SkipReason(session, played[i].Ply, played[i].Analyzed, answered),
                         });
                 }

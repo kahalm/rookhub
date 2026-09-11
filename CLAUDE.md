@@ -1365,7 +1365,7 @@ eine andere Entscheidung als „ich rechne mir meine Partie durch".
 
 **Befuellt wird mit `tools/LibraryImport`** (Wartungswerkzeug, kein Teil des API-Images; das
 Docker-Image baut nur aus `src/api/RookHub.Api`). Vier Schritte, jeder fuer sich wiederholbar:
-`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats`.
+`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats` und `comments`.
 
 **`queue [anzahl] --user <id>`** ist der Massen-Weg zu dem, was auf der Seite der Knopf „Partie
 anfordern" je Partie tut: die besten Partien des Bestands als `GameAnalysis` mit `Origin = Guess`
@@ -1376,7 +1376,8 @@ sortiert bekaeme man den Bestand alphabetisch nach Kommentator. Der Deckel von f
 Partien gilt hier bewusst NICHT (er ist eine Fairness-Regel zwischen Nutzern an der Oberflaeche);
 die Reihenfolge bleibt trotzdem gewahrt, weil die Pumpe je Nutzer immer nur EINE Partie
 weiterfuettert. Angelegt werden nur die Zeilen — die AUFTRAEGE macht die laufende API beim
-naechsten Pump-Durchgang. `--dry-run` zeigt die Auswahl, ohne etwas einzureihen. Verbindung ueber
+naechsten Pump-Durchgang. `--dry-run` zeigt die Auswahl, ohne etwas einzureihen; `--game <id>` reiht genau EINE benannte
+Bibliothekspartie ein (der Weg fuer „rechne mir diese hier", ohne die Rangfolge). Verbindung ueber
 `ConnectionStrings__DefaultConnection`. Es startet KEINE API-Instanz, sondern oeffnet nur einen
 DbContext — eine zweite `RookHub.Api` gegen dieselbe Datenbank streitet sich mit dem
 Auftrags-Worker um die Engines.
@@ -1386,6 +1387,62 @@ Fortschrittsbalken, „Spielen" bis zur ersten gerechneten Stellung gesperrt) un
 10 s auf, solange eine offen ist. Vorher standen dort nur Partien mit mindestens einer gerechneten
 Stellung — die gerade eingeworfene waere fuer Minuten spurlos verschwunden und ein zweites Mal
 eingeworfen worden.
+
+### Anmerkungen in mehreren Sprachen (`CommentSets`)
+
+Die Sammlungen liefern ihre Anmerkungen oft ZWEISPRACHIG — und das PGN kann das nicht ausdruecken:
+gemessen am 2026-09-11 ueber alle 130 572 Zeilen des Rohbestands traegt **keine einzige** einen
+`[%lang`-Marker. ChessBase haengt die Sprachen beim Export schlicht aneinander, erst der englische
+Absatz, direkt dahinter der deutsche, in EINEM `{}`-Block.
+
+**Abgelegt wird getrennt vom PGN** (`CommentSets` + `CommentTexts`), und das ist keine
+Bequemlichkeit: das PGN ist die QUELLE und traegt Herkunft und Ausgabe einer gekauften Sammlung
+(`SourceTitle`, `SourceVersion`). Wer eine Uebersetzung hineinschreibt, kann Quelle und Zutat nie
+wieder auseinanderhalten, und ein erneutes Einlesen der Datei wuerde sie verwerfen.
+
+**Ein SATZ je Sprache, nicht Zeilen mit Sprachspalte**: die Herkunft (aus der Quelle gelesen?
+maschinell uebersetzt? mit welchem Modell?) gehoert EINMAL je Sprache hin, ein Uebersetzungslauf
+schreibt einen Satz am Stueck, und „Sprache umschalten" ist eine Abfrage statt eines Filters ueber
+Zeilen verschiedener Herkunft. **Der Anker ist die BIBLIOTHEKSZEILE**, wo es eine gibt — fordern
+zwei Leute dieselbe Partie an, entstehen zwei Analysen, und eine Uebersetzung je Analyse waere
+dieselbe Arbeit zweimal bezahlt; eine selbst eingeworfene Partie haengt an der Analyse.
+
+**Getrennt wird satzweise** (`Services/CommentSplit.cs`), mit zwei Signalen: den Funktionswoertern
+je Sprache (laengere Listen als bei `CommentLanguage` — dort wird eine ganze PARTIE eingeordnet,
+hier ein einzelner SATZ) und den **Figurenbuchstaben**, `Be3/Ng4` gegen `Le3/Sg4`. Gezaehlt werden
+nur Buchstaben, die in genau EINER der beiden Sprachen vorkommen (bei `fr/nl` sagt ein `D` nichts,
+ein `C` und ein `P` schon).
+
+Drei Entscheidungen, die dabei tragen:
+* **Ein Block hat nicht zwei Haelften, sondern beliebig viele Abschnitte.** Sobald der Kommentator
+  eine Nebenvariante einschiebt (die beim Einlesen an den Kommentar angehaengt wird), steht dort
+  en-de-en-de. Zugeordnet wird deshalb satzweise mit einem Wechselaufschlag (ein gewoehnliches
+  Viterbi ueber zwei Zustaende). Gemessen an 875 langen Bloecken: **55 % getrennt mit einem
+  einzigen Schnitt, 92 % satzweise.**
+* **Die Satzgrenze ist grosszuegig** (Doppelpunkt zaehlt, der naechste Buchstabe darf klein sein) —
+  aber ein `.` nach einer ZIFFER ist keine: „8. Ng4" ist eine Zugnummer. Ein Zug am Satzende
+  („…well met by Ng4.") wird dagegen erkannt, weil ein Zug auf einem FELD endet.
+  Zu fein zu trennen kostet nichts (die Zuordnung legt Nachbarn derselben Sprache wieder zusammen),
+  ein verpasstes Satzende kettet zwei Sprachen dagegen fuer immer aneinander.
+* **Im Zweifel wird nicht geschnitten.** Reichen die Belege nicht oder widersprechen sie sich,
+  bleibt der Block ganz und zaehlt zur ersten Sprache. Ein halbierter Satz ist schlimmer als ein
+  zweisprachiger Block.
+
+**Gebaut wird beim Einreihen, nicht auf Vorrat** (`CommentSetService.EnsureSourceAsync`, gerufen
+aus `GameAnalysisService.CreateAsync` und aus `tools/LibraryImport queue`): der Rohbestand hat
+94 898 kommentierte Partien, sie alle zu zerlegen waeren Millionen Zeilen fuer Partien, die nie
+jemand spielt. `tools/LibraryImport comments` holt den Altbestand nach; `--probe n` misst die
+Trennquote an echten Partien, ohne etwas zu schreiben.
+
+**Ausgeliefert wird ueber `?lang=`** an den Sitzungs-Endpunkten (`GET /api/guess-sessions/{id}`,
+`POST` beim Starten und beim Raten). Ohne Satz in der gewuenschten Sprache kommt die Quelle; fehlt
+ein EINZELNER Halbzug darin, tritt die Quelle nur fuer diesen ein und die Zeile nennt ihre Sprache
+(`GuessHistoryMoveDto.CommentLanguage`) — eine Luecke waere die schlechtere Antwort. Das
+Sitzungs-DTO fuehrt `CommentLanguages` (was es gibt) und `CommentLanguage` (was gerade kommt). Der
+Altbestand ohne Saetze bekommt seine Kommentare weiterhin direkt aus dem PGN.
+
+Das Brett zeigt die Wahl als Kuerzel neben der Blaetterleiste (nur, wenn es mehr als eine Sprache
+gibt); die Wahl merkt sich das Geraet, und beim ersten Mal gilt die Sprache der Oberflaeche.
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -1501,6 +1558,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ChessableActivities | Append-only Zeit-Log aktiver Chessable-Trainingszeit (von RepCheck-Extension gemeldet) für die Kategorie „Chessable" im Trainingsziele-Tracker | UserId (Cascade), TimeSeconds, MovesTrained, **LinesTrained (abgeschlossene Varianten, seit RepCheck v1.34; 0 bei Altbestand)**, CourseKind?, CourseId?, CourseName? (Modus-Label-Müll wird beim Schreiben verworfen/über die Kurs-ID geheilt), AttemptedAt; Index (UserId, AttemptedAt) |
 | ManualActivities | Manuell (selbst) eingetragene Offline-Trainingsaktivität — speist bestehende Tracker-Kategorien, editier-/löschbar | UserId (Cascade), Date (DateOnly), Kind (Enum OtbGame/OfflinePuzzle/OfflineStudy/Coaching), Amount (Partien bzw. Minuten), Note? (≤200), CreatedAt; Index (UserId, Date) |
 | LibraryGames | **Rohbestand**: eingelesene PGN-Sammlungen, aus denen Punktepartien ausgewaehlt werden — noch nicht gerechnet, noch nicht sortiert (Details im Punktepartie-Kapitel) | SourceFile?/SourceTitle?/SourceRef?/ExternalGameId?, MovesHash? (Index), DuplicateOfId? (self, Restrict), Kopfdaten (White?/Black?/WhiteElo?/BlackElo?/Result?/Event?/Site?/Round?/PlayedOn?/Eco?/StartFen?/PlyCount?), Annotator? (Index), CommentCount?/CommentedPlies?/CommentChars?/NagCount?/VariationCount?, Languages?, Score?, Status, GameAnalysisId? (**kein FK** — die Bibliothekszeile ueberlebt das Loeschen der Analyse), Note?, Pgn (LONGTEXT); Indizes (Status, Score), (CommentedPlies, PlyCount), SourceTitle |
+| CommentSets | EIN Satz Zug-Kommentare in EINER Sprache zu EINER Partie — getrennt vom PGN, damit Quelle und Uebersetzung unterscheidbar bleiben (Details im Punktepartie-Kapitel) | LibraryGameId? (Cascade) ODER GameAnalysisId? (Cascade, genau EINES von beiden), Language (≤8), Origin (Source/Machine/Human), TranslatedFrom? (≤8), Model? (≤60), Status (Draft/Ready), CreatedAt/UpdatedAt; **UNIQUE (LibraryGameId, Language)** + **UNIQUE (GameAnalysisId, Language)** |
+| CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |

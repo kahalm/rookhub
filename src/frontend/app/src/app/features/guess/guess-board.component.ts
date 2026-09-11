@@ -197,6 +197,16 @@ interface HistoryRow {
                   <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
                     {{ 'guess.toTask' | translate }}
                   </button>
+                  <!-- Umschalten nur, wenn es etwas umzuschalten gibt. -->
+                  @if (commentLanguages.length > 1) {
+                    <span class="onav-spacer"></span>
+                    <mat-icon class="lang-icon"
+                              [attr.title]="'guess.commentLanguage' | translate">translate</mat-icon>
+                    @for (l of commentLanguages; track l) {
+                      <button type="button" class="lang" [class.on]="l === session.commentLanguage"
+                              (click)="chooseLanguage(l)">{{ langLabel(l) }}</button>
+                    }
+                  }
                 </div>
                 @if (browsedSkip; as why) {
                   <div class="note skip-note">{{ why }}</div>
@@ -205,6 +215,11 @@ interface HistoryRow {
                   <div class="note">
                     <span class="note-move">{{ note.move }}</span>
                     <span>{{ note.text }}</span>
+                    <!-- Steht der Kommentar nur in einer anderen Sprache da, wird das gesagt statt
+                         eine Luecke zu lassen. -->
+                    @if (note.language) {
+                      <span class="lang-tag">{{ langLabel(note.language) }}</span>
+                    }
                   </div>
                 }
                 <div class="omoves">
@@ -301,6 +316,12 @@ interface HistoryRow {
             border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
             background: color-mix(in srgb, currentColor 5%, transparent); }
     .note-move { font-weight: 600; margin-right: 6px; }
+    .onav-spacer { flex: 1 1 auto; }
+    .lang-icon { font-size: 18px; width: 18px; height: 18px; opacity: .6; }
+    .lang { border: none; background: none; cursor: pointer; font: inherit; font-size: .8rem;
+            padding: 2px 6px; border-radius: 4px; color: inherit; opacity: .6; }
+    .lang.on { opacity: 1; font-weight: 600; background: color-mix(in srgb, currentColor 12%, transparent); }
+    .lang-tag { margin-left: 6px; font-size: .7rem; opacity: .6; text-transform: uppercase; }
   `],
 })
 export class GuessBoardComponent implements OnInit, OnDestroy {
@@ -386,7 +407,39 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
    * Der Kommentar des gerade angesehenen Zuges. Nur beim Durchblaettern — auf der Aufgabe selbst
    * (`browseIndex === null`) gibt es keinen: der Kommentar zum zu ratenden Zug waere die Loesung.
    */
-  get browsedComment(): { move: string; text: string } | null {
+  /** Die Sprachen, in denen die Anmerkungen dieser Partie vorliegen. */
+  get commentLanguages(): string[] { return this.session?.commentLanguages ?? []; }
+
+  /** „DE", „EN" — und fuer eine Partie, deren Sprache sich nicht bestimmen liess, das Wort
+   *  „Original" statt des nichtssagenden Kuerzels „und". */
+  langLabel(code: string): string {
+    return code === 'und' ? this.translate.instant('guess.commentOriginal') : code.toUpperCase();
+  }
+
+  /**
+   * Sprache der Anmerkungen umschalten. Geholt wird die SITZUNG neu — die Kommentare haengen am
+   * Verlauf, und der kommt vom Server; im Browser liegt immer nur die eine gewaehlte Fassung.
+   * Die Wahl merkt sich das Geraet, damit sie nicht bei jeder Partie neu zu treffen ist.
+   */
+  chooseLanguage(code: string): void {
+    if (!this.session || code === this.session.commentLanguage) return;
+    this.language = code;
+    try { localStorage.setItem(GuessBoardComponent.LanguageKey, code); } catch { /* gesperrt */ }
+
+    this.service.get(this.session.id, code).subscribe({
+      next: s => {
+        this.session = s;
+        // Der Hinweis ueber dem Brett gehoert zum zuletzt gespielten Zug und steht jetzt in der
+        // neuen Sprache im Verlauf.
+        this.stepNote = null;
+        this.showOpeningNote(s);
+        this.cdr.markForCheck();
+      },
+      error: () => { /* die alte Fassung bleibt stehen */ },
+    });
+  }
+
+  get browsedComment(): { move: string; text: string; language?: string | null } | null {
     const i = this.browseIndex;
     // Wer blaettert, will DEN Zug lesen, den er angeklickt hat — sonst gilt der Kommentar aus dem
     // Spielverlauf (zum eben gespielten Partiezug bzw. zur Antwort des Gegners).
@@ -395,7 +448,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     const m = this.session?.history[i];
     if (!m?.comment) return null;
     const dots = m.white ? '.' : '…';
-    return { move: `${m.moveNumber}${dots}${m.san}`, text: m.comment };
+    return { move: `${m.moveNumber}${dots}${m.san}`, text: m.comment, language: m.commentLanguage };
   }
 
   /** Titel der markierten Zuege — beim Zeiger darueber und fuer Vorlesegeraete. */
@@ -494,8 +547,9 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadAccept();
+    this.loadLanguage();
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.service.get(id).subscribe({
+    this.service.get(id, this.language).subscribe({
       next: s => {
         this.apply(s);
         // Eine NEUE Sitzung faengt am Anfang der Partie an, damit man sich die Eroeffnung ansehen
@@ -594,7 +648,18 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   rejected: string | null = null;
 
   /** Der Kommentar zum gerade gezeigten Schritt (nicht zum Durchblaettern). */
-  stepNote: { move: string; text: string } | null = null;
+  stepNote: { move: string; text: string; language?: string | null } | null = null;
+
+  /** Die zuletzt gewaehlte Sprache der Anmerkungen — geraetelokal, wie die Brett-Einstellungen. */
+  private language: string | null = null;
+  private static readonly LanguageKey = 'rookhub_guess_comment_lang';
+
+  /** Beim ersten Mal gilt die Sprache der Oberflaeche: wer die Seite auf Deutsch liest, will die
+   *  Anmerkungen auf Deutsch, wenn es sie gibt. Der Speicher kann gesperrt sein (Privatmodus). */
+  private loadLanguage(): void {
+    try { this.language = localStorage.getItem(GuessBoardComponent.LanguageKey); } catch { /* gesperrt */ }
+    this.language ||= this.translate.currentLang() || null;
+  }
   /** Wird gerade wegen eines Kommentars gehalten? Dann spielt „Weiter" den naechsten Schritt. */
   holdingNote = false;
 
@@ -714,7 +779,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.service.guess(id, uci, seconds, this.accept).subscribe({
+    this.service.guess(id, uci, seconds, this.accept, this.language).subscribe({
       next: res => {
         this.busy = false;
         if (res.accepted === false) {

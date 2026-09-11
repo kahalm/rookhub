@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -20,7 +21,8 @@ public class GuessSessionServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _svc = new GuessSessionService(_db, new GuessStartPly(_db));
+        _svc = new GuessSessionService(_db, new GuessStartPly(_db),
+            new CommentSetService(_db, NullLogger<CommentSetService>.Instance));
     }
 
     public void Dispose() => _db.Dispose();

@@ -56,29 +56,30 @@ public class GuessSessionAnonymousController : ControllerBase
 
     [HttpPost]
     public async Task<ActionResult<GuessSessionDto>> Start([FromBody] CreateAnonymousGuessSessionRequest req,
-        CancellationToken ct)
+        CancellationToken ct, [FromQuery] string? lang = null)
     {
         if (!TryOwner(req.SessionId, out var owner)) return BadSessionId();
-        try { return Ok(await _service.StartAsync(owner, req, ct)); }
+        try { return Ok(await _service.StartAsync(owner, req, ct, lang)); }
         catch (KeyNotFoundException) { return NotFound(new { message = "Analysis not found." }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<GuessSessionDto>> Get(int id, [FromQuery] string? sessionId, CancellationToken ct)
+    public async Task<ActionResult<GuessSessionDto>> Get(int id, [FromQuery] string? sessionId,
+        CancellationToken ct, [FromQuery] string? lang = null)
     {
         if (!TryOwner(sessionId, out var owner)) return BadSessionId();
-        var dto = await _service.GetAsync(owner, id, ct);
+        var dto = await _service.GetAsync(owner, id, ct, lang);
         return dto is null ? NotFound(new { message = "Session not found." }) : Ok(dto);
     }
 
     /// <summary>Zug raten. Leeres <c>uci</c> = passen: 0 Punkte, aber keine Strafe.</summary>
     [HttpPost("{id:int}/guess")]
     public async Task<ActionResult<GuessResultDto>> Guess(int id, [FromBody] AnonymousGuessMoveRequest req,
-        CancellationToken ct)
+        CancellationToken ct, [FromQuery] string? lang = null)
     {
         if (!TryOwner(req.SessionId, out var owner)) return BadSessionId();
-        try { return Ok(await _service.GuessAsync(owner, id, req, ct)); }
+        try { return Ok(await _service.GuessAsync(owner, id, req, ct, lang)); }
         catch (KeyNotFoundException) { return NotFound(new { message = "Session not found." }); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }

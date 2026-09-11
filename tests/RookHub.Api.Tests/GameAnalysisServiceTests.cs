@@ -28,7 +28,8 @@ public class GameAnalysisServiceTests : IDisposable
             ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
         }).Build();
         var jobs = new AnalysisJobService(_db, new EncryptionService(config), null);
-        _svc = new GameAnalysisService(_db, jobs, NullLogger<GameAnalysisService>.Instance);
+        var comments = new CommentSetService(_db, NullLogger<CommentSetService>.Instance);
+        _svc = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

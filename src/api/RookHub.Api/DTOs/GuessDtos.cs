@@ -82,6 +82,14 @@ public class GuessSessionDto
     /// <summary>Stellung vor dem ERSTEN Zug der Partie — Anfangspunkt zum Durchblättern.</summary>
     public string? StartFen { get; set; }
 
+    /// <summary>In welchen Sprachen die Anmerkungen dieser Partie vorliegen (ISO-Kuerzel, <c>und</c>
+    /// = nicht bestimmbar). Leer, solange die Partie nur ihr PGN hat — dann gibt es nichts
+    /// umzuschalten.</summary>
+    public List<string> CommentLanguages { get; set; } = [];
+
+    /// <summary>Welche davon gerade ausgeliefert wird.</summary>
+    public string? CommentLanguage { get; set; }
+
     /// <summary>
     /// Die Partie BIS HIERHIN: alle Halbzüge vor der aktuellen Aufgabe (<see cref="StartPly"/>-Vorlauf
     /// plus alles, was seither gespielt wurde). Der LETZTE Eintrag erzeugt die Aufgabenstellung — die
@@ -104,6 +112,10 @@ public class GuessHistoryMoveDto
     public string Uci { get; set; } = string.Empty;
     /// <summary>Stellung NACH diesem Zug.</summary>
     public string Fen { get; set; } = string.Empty;
+
+    /// <summary>Gesetzt NUR, wenn dieser Kommentar in einer ANDEREN Sprache vorliegt als der
+    /// gewaehlten — dann tritt die Quelle ein, und die Anzeige soll es sagen duerfen.</summary>
+    public string? CommentLanguage { get; set; }
     /// <summary>
     /// Warum dieser Halbzug NICHT abgefragt wurde, obwohl er der geratenen Seite gehoert:
     /// <c>notScorable</c> = die Engine fuehrt den Partiezug nicht unter ihren Kandidaten, es gibt

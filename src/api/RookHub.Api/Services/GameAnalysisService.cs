@@ -27,12 +27,15 @@ public class GameAnalysisService
 {
     private readonly AppDbContext _db;
     private readonly AnalysisJobService _jobs;
+    private readonly CommentSetService _comments;
     private readonly ILogger<GameAnalysisService> _logger;
 
-    public GameAnalysisService(AppDbContext db, AnalysisJobService jobs, ILogger<GameAnalysisService> logger)
+    public GameAnalysisService(AppDbContext db, AnalysisJobService jobs, CommentSetService comments,
+        ILogger<GameAnalysisService> logger)
     {
         _db = db;
         _jobs = jobs;
+        _comments = comments;
         _logger = logger;
     }
 
@@ -84,6 +87,12 @@ public class GameAnalysisService
 
         _db.GameAnalyses.Add(analysis);
         await _db.SaveChangesAsync(ct);
+
+        // Die Kommentare in ihre Sprachen zerlegen — hier und nicht auf Vorrat: der Rohbestand hat
+        // 94 898 kommentierte Partien, und gespielt wird nur, was eingereiht wurde. Ein Fehlschlag
+        // darf das Einreihen nicht verhindern, der Rueckfall auf das PGN traegt weiter.
+        try { await _comments.EnsureSourceAsync(analysis.Id, ct); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Kommentar-Saetze fuer {Id} nicht angelegt", analysis.Id); }
 
         // Sofort die erste Fuhre einreihen, damit der Nutzer nicht auf den nächsten Pump-Lauf wartet.
         await PumpOneAsync(analysis.Id, ct);

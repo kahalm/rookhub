@@ -3081,7 +3081,9 @@
         "fr": "francuski",
         "es": "španjolski"
       }
-    }
+    },
+    "commentLanguage": "Jezik komentara",
+    "commentOriginal": "Izvornik"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

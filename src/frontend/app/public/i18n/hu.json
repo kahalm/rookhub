@@ -2806,7 +2806,9 @@
         "fr": "francia",
         "es": "spanyol"
       }
-    }
+    },
+    "commentLanguage": "A jegyzetek nyelve",
+    "commentOriginal": "Eredeti"
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

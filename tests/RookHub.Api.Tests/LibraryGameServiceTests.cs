@@ -28,7 +28,8 @@ public class LibraryGameServiceTests : IDisposable
             ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
         }).Build();
         var jobs = new AnalysisJobService(_db, new EncryptionService(config), null);
-        var analyses = new GameAnalysisService(_db, jobs, NullLogger<GameAnalysisService>.Instance);
+        var comments = new CommentSetService(_db, NullLogger<CommentSetService>.Instance);
+        var analyses = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance);
         _svc = new LibraryGameService(_db, analyses);
     }
 

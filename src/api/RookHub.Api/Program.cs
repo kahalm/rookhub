@@ -250,6 +250,7 @@ try
     builder.Services.AddScoped<GameAnalysisService>();
     builder.Services.AddScoped<LibraryGameService>();
     builder.Services.AddScoped<GuessStartPly>();
+    builder.Services.AddScoped<CommentSetService>();
     builder.Services.AddScoped<GuessSessionService>();
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();

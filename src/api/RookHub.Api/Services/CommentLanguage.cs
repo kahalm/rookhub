@@ -119,6 +119,14 @@ public static class CommentLanguage
         return sb.ToString();
     }
 
+    /// <summary>Die Funktionswoerter einer Sprache (leer, wenn unbekannt). Oeffentlich, weil
+    /// <see cref="CommentSplit"/> dieselben Listen braucht — dort satzweise statt je Partie.</summary>
+    public static string[] MarkersOf(string lang) => Markers.GetValueOrDefault(lang, []);
+
+    /// <summary>Ein Buchstabe auf a-z zurueckgefuehrt — die Faltung der Wortlisten, oeffentlich aus
+    /// demselben Grund wie <see cref="IsMarkerOf"/>.</summary>
+    public static char FoldChar(char c) => Fold(c);
+
     /// <summary>Woerter in Kleinschreibung und ohne Akzente — die Wortlisten stehen ebenfalls ohne,
     /// damit „posición" und „posicion" dasselbe treffen.</summary>
     private static IEnumerable<string> Words(string text)

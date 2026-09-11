@@ -3081,7 +3081,9 @@
         "fr": "Französisch",
         "es": "Spanisch"
       }
-    }
+    },
+    "commentLanguage": "Sprache der Anmerkungen",
+    "commentOriginal": "Original"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

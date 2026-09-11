@@ -42,7 +42,7 @@ describe('GuessBoardComponent', () => {
   function load(over: Partial<GuessSession> = {}) {
     const fixture = TestBed.createComponent(GuessBoardComponent);
     fixture.detectChanges();
-    http.expectOne('/api/guess-sessions/3').flush(session(over));
+    http.expectOne(r => r.url === '/api/guess-sessions/3').flush(session(over));
     return fixture;
   }
 
@@ -58,7 +58,7 @@ describe('GuessBoardComponent', () => {
     const c = fixture.componentInstance;
 
     c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'egal' });
-    const req = http.expectOne('/api/guess-sessions/3/guess');
+    const req = http.expectOne(r => r.url === '/api/guess-sessions/3/guess');
     expect(req.request.body.uci).toBe('g1f3');
     req.flush({
       grade: 'gameMove', points: 5, playedSan: 'Nf3', gameMoveSan: 'Nf3', gameMoveUci: 'g1f3',
@@ -77,13 +77,13 @@ describe('GuessBoardComponent', () => {
     // dort kein legaler Zug, und JEDE Umwandlung waere mit 400 abgeprallt.
     const c = load().componentInstance;
     c.onMove({ from: 'e7', to: 'e8', san: 'e8=Q+', fen: 'egal' });
-    expect(http.expectOne('/api/guess-sessions/3/guess').request.body.uci).toBe('e7e8q');
+    expect(http.expectOne(r => r.url === '/api/guess-sessions/3/guess').request.body.uci).toBe('e7e8q');
   });
 
   it('passen schickt einen leeren Zug (0 Punkte, keine Strafe)', () => {
     const c = load().componentInstance;
     c.skip();
-    const req = http.expectOne('/api/guess-sessions/3/guess');
+    const req = http.expectOne(r => r.url === '/api/guess-sessions/3/guess');
     expect(req.request.body.uci).toBeNull();
     req.flush({
       grade: null, points: 0, playedSan: null, gameMoveSan: 'Nf3', gameMoveUci: 'g1f3',
@@ -98,12 +98,12 @@ describe('GuessBoardComponent', () => {
     const c = fixture.componentInstance;
 
     c.skip();
-    http.expectOne('/api/guess-sessions/3/guess').flush({
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess').flush({
       grade: 'gameMove', points: 5, playedSan: 'Nf3', gameMoveSan: 'Nf3', gameMoveUci: 'g1f3',
       replySan: null, replyUci: null, diffCp: 0, evalText: null,
       session: session({ status: 'done', position: null, points: 5, maxPoints: 10, movesPlayed: 1 }),
     });
-    http.expectOne('/api/guess-sessions/3/review').flush([
+    http.expectOne(r => r.url === '/api/guess-sessions/3/review').flush([
       { ply: 8, moveNumber: 5, white: true, gameSan: 'Nf3', playedSan: 'Nf3', grade: 'gameMove', points: 5,
         diffCp: 0, secondsSpent: 9, bestSan: 'Nf3', bestEval: '+0.30', gameEval: '+0.30' },
     ]);
@@ -115,7 +115,7 @@ describe('GuessBoardComponent', () => {
   it('meldet einen Fehler beim Werten sichtbar', () => {
     const c = load().componentInstance;
     c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'egal' });
-    http.expectOne('/api/guess-sessions/3/guess')
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess')
       .flush({ message: 'Dieser Zug ist in der Stellung nicht möglich.' }, { status: 400, statusText: 'Bad Request' });
 
     // Der Nutzer hat gerade gezogen — kein stiller Fehlschlag, und das Brett bleibt bedienbar.
@@ -175,6 +175,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
+    localStorage.removeItem('rookhub_guess_comment_lang');
   });
   afterEach(() => http.verify());
 
@@ -188,7 +189,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   function loadAtStart(over: Partial<GuessSession> = {}) {
     const fixture = TestBed.createComponent(GuessBoardComponent);
     fixture.detectChanges();
-    http.expectOne('/api/guess-sessions/3').flush(base(over));
+    http.expectOne(r => r.url === '/api/guess-sessions/3').flush(base(over));
     return fixture.componentInstance;
   }
 
@@ -201,7 +202,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
 
   function guess(c: any, from: string, to: string, san: string, res: Partial<any>) {
     c.onMove({ from, to, san, fen: 'egal' });
-    http.expectOne('/api/guess-sessions/3/guess').flush({
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess').flush({
       grade: 'worse', points: 0, playedSan: san, gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
       replySan: 'dxe5', replyUci: 'd6e5', diffCp: -120, evalText: '+1.83',
       session: nextSession, ...res,
@@ -249,7 +250,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   it('Passen: erst der Partiezug, dann die Antwort', fakeAsync(() => {
     const c = load();
     c.skip();
-    http.expectOne('/api/guess-sessions/3/guess').flush({
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess').flush({
       grade: null, points: 0, playedSan: null, gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
       replySan: 'dxe5', replyUci: 'd6e5', diffCp: null, evalText: null, session: nextSession,
     });
@@ -266,7 +267,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
   it('ohne neue Halbzuege geht es ohne Pause weiter', () => {
     const c = load();
     c.skip();
-    http.expectOne('/api/guess-sessions/3/guess').flush({
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess').flush({
       grade: null, points: 0, playedSan: null, gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
       replySan: null, replyUci: null, diffCp: null, evalText: null,
       session: base({ points: 0, maxPoints: 10, movesPlayed: 1, history: HISTORY,
@@ -355,12 +356,12 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     // das Brett zeigte die Stellung VOR dem Schlusszug.
     const c = load();
     c.onMove({ from: 'd1', to: 'f3', san: 'Qxf3', fen: 'egal' });
-    http.expectOne('/api/guess-sessions/3/guess').flush({
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess').flush({
       grade: 'onlyMove', points: 8, playedSan: 'Qxf3', gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
       replySan: null, replyUci: null, diffCp: 0, evalText: null,
       session: base({ status: 'done', position: null, points: 8, maxPoints: 10, movesPlayed: 1 }),
     });
-    http.expectOne('/api/guess-sessions/3/review').flush([]);
+    http.expectOne(r => r.url === '/api/guess-sessions/3/review').flush([]);
 
     expect(c.session!.status).toBe('done');
     expect(c.boardFen).withContext('Dame steht auf f3').toContain('5Q2');
@@ -397,7 +398,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     c.onMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: 'egal' });
     expect(c.boardFen).withContext('Laeufer schon auf c4').toContain('2B1P3');
     expect(c.lastMove).toEqual(['f1', 'c4']);
-    http.expectOne('/api/guess-sessions/3/guess').flush({
+    http.expectOne(r => r.url === '/api/guess-sessions/3/guess').flush({
       grade: 'worse', points: 0, playedSan: 'Bc4', gameMoveSan: 'Qxf3', gameMoveUci: 'd1f3',
       replySan: 'dxe5', replyUci: 'd6e5', diffCp: -120, evalText: '+1.83', session: nextSession,
     });
@@ -463,7 +464,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.browsedComment).toBeNull();
 
     c.browse(0);
-    expect(c.browsedComment).toEqual({ move: '4.dxe5', text: 'der Schluesselzug' });
+    expect(c.browsedComment).toEqual({ move: '4.dxe5', text: 'der Schluesselzug', language: undefined });
 
     c.browse(1);
     expect(c.browsedComment).withContext('dieser Zug hat keinen').toBeNull();
@@ -569,7 +570,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     c.accept = { better: false, similar: true };
 
     c.onMove({ from: 'd1', to: 'f3', san: 'Qxf3', fen: 'egal' });
-    const req = http.expectOne('/api/guess-sessions/3/guess');
+    const req = http.expectOne(r => r.url === '/api/guess-sessions/3/guess');
     expect(req.request.body.acceptBetter).withContext('Einstellung geht mit').toBeFalse();
     expect(req.request.body.acceptSimilar).toBeTrue();
     req.flush({
@@ -620,5 +621,37 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
 
     expect(c.browseIndex).withContext('das Menue behaelt die Taste').toBeNull();
     overlay.remove();
+  });
+
+  /**
+   * Mehrsprachige Anmerkungen: die Umschaltung holt die SITZUNG neu, weil die Kommentare am
+   * Verlauf haengen — im Browser liegt immer nur die eine gewaehlte Fassung, nie beide.
+   */
+  it('schaltet die Sprache der Anmerkungen um', () => {
+    const c = load({ commentLanguages: ['de', 'en'], commentLanguage: 'en' });
+
+    c.chooseLanguage('de');
+
+    const req = http.expectOne(r => r.url === '/api/guess-sessions/3');
+    expect(req.request.params.get('lang')).toBe('de');
+    req.flush(base({ commentLanguages: ['de', 'en'], commentLanguage: 'de' }));
+    expect(c.session!.commentLanguage).toBe("de");
+  });
+
+  /** Dieselbe Sprache noch einmal zu waehlen ist kein Umlauf wert. */
+  it('holt nichts, wenn die Sprache schon steht', () => {
+    const c = load({ commentLanguages: ['de', 'en'], commentLanguage: 'en' });
+
+    c.chooseLanguage('en');
+
+    http.expectNone(r => r.url === '/api/guess-sessions/3');
+  });
+
+  /** „und" heisst „Sprache nicht bestimmbar" — als Beschriftung taugt das Kuerzel nicht. */
+  it('nennt die unbestimmte Sprache Original', () => {
+    const c = load();
+
+    expect(c.langLabel('de')).toBe('DE');
+    expect(c.langLabel('und')).not.toBe('UND');
   });
 });

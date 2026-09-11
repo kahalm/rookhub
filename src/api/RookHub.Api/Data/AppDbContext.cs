@@ -71,6 +71,8 @@ public class AppDbContext : DbContext
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
+    public DbSet<CommentSet> CommentSets => Set<CommentSet>();
+    public DbSet<CommentText> CommentTexts => Set<CommentText>();
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
@@ -1244,6 +1246,35 @@ public class AppDbContext : DbContext
             // Uebernommene Partie: bewusst OHNE Fremdschluessel. Wird die Analyse geloescht, soll
             // die Bibliothekszeile stehen bleiben — sie ist der Bestand, nicht die Rechnung.
             e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+        });
+
+        modelBuilder.Entity<CommentSet>(e =>
+        {
+            e.Property(c => c.Language).HasMaxLength(8).IsRequired();
+            e.Property(c => c.TranslatedFrom).HasMaxLength(8);
+            e.Property(c => c.Model).HasMaxLength(60);
+            // Je Partie und Sprache genau EIN Satz. Zwei Saetze derselben Sprache waeren keine
+            // Auswahl, sondern eine offene Frage — welcher gilt?
+            e.HasIndex(c => new { c.LibraryGameId, c.Language }).IsUnique();
+            e.HasIndex(c => new { c.GameAnalysisId, c.Language }).IsUnique();
+            e.HasOne(c => c.LibraryGame)
+             .WithMany()
+             .HasForeignKey(c => c.LibraryGameId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.GameAnalysis)
+             .WithMany()
+             .HasForeignKey(c => c.GameAnalysisId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CommentText>(e =>
+        {
+            e.Property(c => c.Text).HasColumnType("LONGTEXT").IsRequired();
+            e.HasIndex(c => new { c.CommentSetId, c.Ply }).IsUnique();
+            e.HasOne(c => c.CommentSet)
+             .WithMany(c => c.Texts)
+             .HasForeignKey(c => c.CommentSetId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<GameAnalysis>(e =>

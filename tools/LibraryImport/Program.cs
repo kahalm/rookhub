@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using RookHub.Tools.LibraryImport;
 
@@ -13,6 +14,7 @@ using RookHub.Tools.LibraryImport;
 //   languages        Sprache der Kommentare bestimmen
 //   score            Eignungsnote fuer die Punktepartie berechnen
 //   queue            die besten Partien zum Rechnen einreihen
+//   comments         die Kommentare eingereihter Partien nach Sprachen trennen
 //   stats            zeigen, was drinsteht
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
@@ -47,6 +49,7 @@ switch (command)
     case "languages": return await LanguagesAsync();
     case "score": return await ScoreAsync();
     case "queue": return await QueueAsync();
+    case "comments": return await CommentsAsync();
     case "stats": return await StatsAsync();
     default:
         Console.Error.WriteLine($"Unbekannter Befehl: {command}");
@@ -314,6 +317,7 @@ async Task<int> ScoreAsync()
 // Punktepartie-Seite der Knopf „Partie anfordern" je Partie tut.
 //
 //   queue [anzahl] --user <id> [--per-annotator n] [--depth d] [--dry-run]
+//   queue --game <bibliotheks-id> --user <id>      (genau diese eine Partie)
 //
 // Bewusst OHNE den Deckel von fuenf offenen Partien (GameAnalysisDefaults.MaxOpenGuessGamesPerUser):
 // der ist eine Fairness-Regel zwischen Nutzern an der Oberflaeche, hier fuellt der Betreiber seinen
@@ -339,6 +343,7 @@ async Task<int> QueueAsync()
     }
 
     await using var db = NewDb();
+    var comments = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
 
     // Wer rechnet: erst die EIGENE Hintergrund-Engine des Nutzers, sonst die Haus-Engine eines
     // Admins — dieselbe Reihenfolge wie GameAnalysisService.ResolveGuessEngineOwnerAsync.
@@ -368,7 +373,11 @@ async Task<int> QueueAsync()
 
     // Ein Vielfaches der gesuchten Zahl holen: der Deckel je Kommentator wirft Zeilen weg, und ohne
     // Vorrat kaeme am Ende weniger heraus als verlangt.
-    var pool = await db.LibraryGames.AsNoTracking()
+    // Genau EINE benannte Partie — der Weg fuer „rechne mir diese hier", ohne die Rangfolge.
+    var wanted = IntArg("--game");
+    var pool = wanted is int only
+        ? await db.LibraryGames.AsNoTracking().Where(g => g.Id == only).ToListAsync()
+        : await db.LibraryGames.AsNoTracking()
         .Where(g => g.Score != null && g.Status == LibraryGameStatus.New && g.GameAnalysisId == null)
         .OrderByDescending(g => g.Score)
         .ThenByDescending(g => g.CommentedPlies)
@@ -377,7 +386,9 @@ async Task<int> QueueAsync()
         .Take(Math.Max(count * 20, 200))
         .ToListAsync();
 
-    var picks = LibraryPicks.Best(pool.Where(g => !taken.Contains(g.Id)), count, perAnnotator);
+    var picks = wanted is not null
+        ? pool
+        : LibraryPicks.Best(pool.Where(g => !taken.Contains(g.Id)), count, perAnnotator);
     if (picks.Count == 0)
     {
         Console.WriteLine("Nichts einzureihen — der Bestand ist leer oder alles ist schon angefordert.");
@@ -419,6 +430,9 @@ async Task<int> QueueAsync()
         {
             db.GameAnalyses.Add(analysis);
             await db.SaveChangesAsync();
+            // Die Anmerkungen gleich in ihre Sprachen zerlegen — dasselbe tut die API beim
+            // Einreihen ueber die Oberflaeche (GameAnalysisService.CreateAsync).
+            await comments.EnsureSourceAsync(analysis.Id);
             queued++;
         }
         Console.WriteLine($"  #{(dryRun ? game.Id : analysis.Id),-6} {plies.Count,3} Halbzuege · {game.CommentedPlies,3} kommentiert · {game.Annotator} · {analysis.Title}");
@@ -427,6 +441,120 @@ async Task<int> QueueAsync()
     Console.WriteLine((dryRun ? $"Probelauf: {picks.Count:N0} Partien waeren dran" : $"Eingereiht: {queued:N0} Partien")
         + $" (Tiefe {depth}, {GameAnalysisDefaults.MultiPv} Linien)"
         + (unplayable > 0 ? $" · {unplayable} ohne spielbare Zuege uebersprungen" : ""));
+    return 0;
+}
+
+// ===== Kommentare nach Sprachen trennen =====================================
+
+// Die Anmerkungen einer eingereihten Partie in ihre Sprachen zerlegen und getrennt vom PGN ablegen
+// (Tabellen CommentSets/CommentTexts).
+//
+//   comments [--limit n] [--probe n]
+//
+// Fuer NEUE Partien passiert das von selbst beim Einreihen (GameAnalysisService.CreateAsync); dieser
+// Befehl holt den Altbestand nach. Wiederholbar: was schon Saetze hat, wird uebersprungen.
+async Task<int> CommentsAsync()
+{
+    var limit = IntArg("--limit") ?? int.MaxValue;
+    var probe = IntArg("--probe");
+    await using var db = NewDb();
+    if (probe is int n) return await ProbeAsync(db, n);
+    var service = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
+
+    // Nur Partien, die ueberhaupt jemand spielen kann — der Rohbestand hat 94 898 kommentierte
+    // Partien, und die alle zu zerlegen waeren Millionen Zeilen fuer Partien ohne Analyse.
+    var ids = await db.GameAnalyses.AsNoTracking()
+        .OrderBy(g => g.Id)
+        .Select(g => g.Id)
+        .ToListAsync();
+
+    int done = 0, sets = 0, skipped = 0;
+    foreach (var id in ids)
+    {
+        if (done >= limit) break;
+        var created = await service.EnsureSourceAsync(id);
+        if (created == 0) { skipped++; continue; }
+        done++;
+        sets += created;
+    }
+
+    Console.WriteLine($"Partien zerlegt: {done:N0} ({sets:N0} Saetze) · uebersprungen {skipped:N0}");
+
+    // Was dabei herausgekommen ist — die Zahl der ZWEISPRACHIGEN Partien ist die eigentliche Probe.
+    var perGame = await db.CommentSets.AsNoTracking()
+        .GroupBy(s => new { s.LibraryGameId, s.GameAnalysisId })
+        .Select(g => g.Count())
+        .ToListAsync();
+    var languages = await db.CommentSets.AsNoTracking()
+        .GroupBy(s => s.Language)
+        .Select(g => new { Language = g.Key, Count = g.Count() })
+        .OrderByDescending(x => x.Count)
+        .ToListAsync();
+    Console.WriteLine($"Partien mit Saetzen: {perGame.Count:N0} · davon mehrsprachig {perGame.Count(c => c > 1):N0}");
+    foreach (var l in languages) Console.WriteLine($"  {l.Language,-6} {l.Count,6:N0}");
+    return 0;
+}
+
+// Probelauf am ROHBESTAND: wie oft trennt die Zerlegung einen zweisprachigen Block wirklich?
+// Schreibt NICHTS. Gebraucht, weil die Trennung eine Heuristik ist (das PGN traegt keine
+// Sprachauszeichnung) und ihr Ertrag nur am echten Text zu messen ist.
+async Task<int> ProbeAsync(AppDbContext db, int count)
+{
+    var games = await db.LibraryGames.AsNoTracking()
+        .Where(g => g.Languages != null && g.Languages.Contains(",") && g.CommentedPlies > 5)
+        .OrderByDescending(g => g.Score)
+        .Take(Math.Max(1, count))
+        .Select(g => new { g.Id, g.Languages, g.Pgn })
+        .ToListAsync();
+
+    int blocks = 0, split = 0, shown = 0, missed = 0, longBlocks = 0, longSplit = 0;
+    var perPair = new Dictionary<string, (int Blocks, int Split)>(StringComparer.Ordinal);
+
+    foreach (var g in games)
+    {
+        var languages = (g.Languages ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var moveText = PgnParser.SplitGames(g.Pgn).FirstOrDefault().MoveText;
+        if (moveText is null) continue;
+        var comments = PgnParser.ExtractMoveComments(moveText) ?? new Dictionary<int, string>();
+
+        foreach (var (_, text) in comments)
+        {
+            var parts = CommentSplit.Split(text, languages);
+            blocks++;
+            var two = parts.Count > 1;
+            if (two) split++;
+            var key = g.Languages ?? "?";
+            var cur = perPair.GetValueOrDefault(key);
+            perPair[key] = (cur.Blocks + 1, cur.Split + (two ? 1 : 0));
+
+            // Lange Bloecke sind die interessanten: ein kurzes „!" ist zu Recht einsprachig.
+            if (text.Length > 300)
+            {
+                longBlocks++;
+                if (two) longSplit++;
+                else if (missed < 2)
+                {
+                    missed++;
+                    Console.WriteLine($"--- NICHT getrennt, Partie {g.Id} ({g.Languages}) ---");
+                    Console.WriteLine($"  {text[..Math.Min(400, text.Length)]}");
+                }
+            }
+
+            if (two && shown < 2 && text.Length is > 200 and < 700)
+            {
+                shown++;
+                Console.WriteLine($"--- Partie {g.Id} ({g.Languages}) ---");
+                foreach (var (lang, part) in parts)
+                    Console.WriteLine($"  [{lang}] {part}");
+            }
+        }
+    }
+
+    Console.WriteLine($"Bloecke {blocks:N0} · getrennt {split:N0} ({(blocks == 0 ? 0 : 100.0 * split / blocks):N1} %)");
+    Console.WriteLine($"davon lang (>300 Zeichen) {longBlocks:N0} · getrennt {longSplit:N0} "
+        + $"({(longBlocks == 0 ? 0 : 100.0 * longSplit / longBlocks):N1} %)");
+    foreach (var (pair, v) in perPair.OrderByDescending(x => x.Value.Blocks))
+        Console.WriteLine($"  {pair,-8} {v.Split,6:N0} von {v.Blocks,6:N0}");
     return 0;
 }
 
