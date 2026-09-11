@@ -77,11 +77,18 @@ public static class Figurines
         var letters = Letters.GetValueOrDefault(language ?? "", Letters["en"]);
         var pawn = Pawn.GetValueOrDefault(language ?? "", Pawn["en"]);
         var sb = new StringBuilder(text!.Length);
-        foreach (var c in text)
+        for (var i = 0; i < text.Length; i++)
         {
-            if (c is >= First and < Last) sb.Append(letters[c - First]);
-            else if (c == Last) sb.Append(pawn);
-            else sb.Append(c);
+            var c = text[i];
+            if (c is >= First and < Last) { sb.Append(letters[c - First]); continue; }
+            if (c != Last) { sb.Append(c); continue; }
+
+            // Der Bauer ist ein WORT, und ein Wort braucht Abstand: „…e5" heisst „Bauer e5",
+            // nicht „Bauere5". Bei den Figuren ist es umgekehrt — dort gehoert der Buchstabe
+            // unmittelbar ans Feld („Se5").
+            sb.Append(pawn);
+            var naechstes = i + 1 < text.Length ? text[i + 1] : ' ';
+            if (char.IsLetterOrDigit(naechstes)) sb.Append(' ');
         }
         return sb.ToString();
     }

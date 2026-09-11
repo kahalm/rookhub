@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.473.1", date: "2026-09-11", changes: [
+    { en: "The pawn gets its space back. Where a comment named a square right after the pawn symbol, the resolved text read \"pawne5\" — the pieces take a letter that belongs against the square, but the pawn takes a word, and a word needs the gap.", de: "Der Bauer bekommt seinen Abstand. Wo ein Kommentar direkt hinter dem Bauern-Zeichen ein Feld nannte, stand danach „Bauere5" — die Figuren bekommen einen Buchstaben, der ans Feld gehoert, der Bauer aber ein Wort, und ein Wort braucht die Luecke." },
+  ] },
   { version: "0.473.0", date: "2026-09-11", changes: [
     { en: "Holes in the annotations are closed. In the collection the pieces inside a comment are not letters but characters of the ChessBase figurine font, invisible without it — half the games read like \"I can't win the pawn due to the h7+ trick\", where the author wrote Bh7+. They are now resolved into the letters of the language being read: a knight is N in English and S in German.", de: "Loecher in den Anmerkungen sind zu. Im Bestand stehen die Figuren innerhalb eines Kommentars nicht als Buchstaben, sondern als Zeichen der ChessBase-Figurenschrift, ohne die sie unsichtbar sind — die halbe Sammlung las sich als „I can't win the pawn due to the h7+ trick\", wo der Autor Lh7+ geschrieben hat. Sie werden jetzt in die Buchstaben der gelesenen Sprache aufgeloest: ein Springer heisst englisch N und deutsch S." },
   ] },

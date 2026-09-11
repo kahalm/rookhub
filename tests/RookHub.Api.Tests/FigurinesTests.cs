@@ -54,6 +54,16 @@ public class FigurinesTests
         Assert.Equal("die Bauer-Struktur", Figurines.Apply($"die {Bauer}-Struktur", "de"));
     }
 
+    /// <summary>Ein WORT braucht Abstand zum Feld — „…e5" heisst „Bauer e5" und nicht „Bauere5".
+    /// Bei den Figuren ist es umgekehrt: dort gehoert der Buchstabe unmittelbar ans Feld.</summary>
+    [Fact]
+    public void Apply_bauerVorEinemFeld_bekommtEinLeerzeichen()
+    {
+        Assert.Equal("der Bauer e5 faellt", Figurines.Apply($"der {Bauer}e5 faellt", "de"));
+        Assert.Equal("the pawn e5 falls", Figurines.Apply($"the {Bauer}e5 falls", "en"));
+        Assert.Equal("Se5", Figurines.Apply($"{Springer}e5", "de"));
+    }
+
     /// <summary>„und" heisst „Sprache nicht bestimmbar" — dann gelten die englischen Buchstaben,
     /// die im Quelltext der meisten Partien ohnehin stehen.</summary>
     [Fact]

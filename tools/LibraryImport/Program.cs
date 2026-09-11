@@ -622,11 +622,16 @@ async Task<int> FigurinesAsync(AppDbContext db)
         .Select(t => new { t.Id, t.Text, Sprache = t.CommentSet!.Language })
         .ToListAsync();
 
+    // Der zusammengeschriebene Bauer ist ein Nachlass des ersten Laufs: dort wurde „…e5" zu
+    // „Bauere5" statt „Bauer e5". Wiederholbar heisst hier auch: den eigenen Fehler aufraeumen.
+    var geklebt = new System.Text.RegularExpressions.Regex(
+        @"\b(pawn|Bauer|pion|peón|pedone|peão|pionek|pěšec|gyalog|bonde|pješak)([a-h][1-8])\b");
+
     var geaendert = 0;
     foreach (var zeile in alle)
     {
-        if (!Figurines.Contains(zeile.Text)) continue;
         var neu = Figurines.Apply(zeile.Text, zeile.Sprache);
+        neu = geklebt.Replace(neu, "$1 $2");
         if (neu == zeile.Text) continue;
         var entity = new CommentText { Id = zeile.Id, Text = neu };
         db.CommentTexts.Attach(entity);
