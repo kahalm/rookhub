@@ -366,4 +366,53 @@ public class EngineControllerTests : IDisposable
         Assert.True(engine.MaxThreads >= 1);
         Assert.True(engine.MaxHash >= 1);
     }
+
+    // ---- Hintergrund-Engines ----
+
+    /// <summary>Liste mit <paramref name="count"/> erfundenen, aber vollstaendigen Engines.</summary>
+    private static string EnginesJsonWith(int count) =>
+        "[" + string.Join(",", Enumerable.Range(1, count).Select(i =>
+            $"{{\"id\":\"{BackgroundId(i)}\",\"name\":\"BG {i}\",\"clientSecret\":\"ees_s{i}\"," +
+            "\"userId\":\"kahalm\",\"maxThreads\":2,\"maxHash\":1024,\"variants\":[\"chess\"]}")) + "]";
+
+    /// <summary>Kennungen in der Laenge echter Lichess-Ids (eei_ + 12 Zeichen) — die Spaltenbreite
+    /// haengt daran, ein kurzes Testkuerzel wuerde den Deckel zu gutmuetig pruefen.</summary>
+    private static string BackgroundId(int i) => $"eei_bg{i:00}00000000";
+
+    private static List<string> BackgroundIds(int count) =>
+        [.. Enumerable.Range(1, count).Select(BackgroundId)];
+
+    /// <summary>Sechzehn muessen durchgehen: eine 40-Kern-Maschine meldet eine Live- und zwoelf
+    /// Hintergrund-Engines an, daneben stehen noch die einer zweiten Maschine in der Liste.</summary>
+    [Fact]
+    public async Task SetBackgroundEngine_SixteenEngines_AreStored()
+    {
+        await CreateUserAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        _handler.ListJson = EnginesJsonWith(16);
+
+        var result = await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(16) }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var stored = _db.LichessEngineCredentials.Single();
+        Assert.Equal(16, stored.BackgroundEngines.Count);
+        // Die Spalte fasst 600 Zeichen — der Deckel MUSS darunter bleiben, sonst scheitert erst das
+        // Speichern, und zwar mit einer Meldung, die nichts mit Engines zu tun hat.
+        Assert.True(stored.BackgroundEngineIds!.Length <= 600, $"CSV zu lang: {stored.BackgroundEngineIds.Length}");
+    }
+
+    [Fact]
+    public async Task SetBackgroundEngine_AboveLimit_Returns400()
+    {
+        await CreateUserAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        _handler.ListJson = EnginesJsonWith(17);
+
+        var result = await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(17) }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Null(_db.LichessEngineCredentials.Single().BackgroundEngineIds);
+    }
 }

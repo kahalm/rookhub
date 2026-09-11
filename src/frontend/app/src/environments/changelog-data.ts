@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.475.0", date: "2026-09-11", changes: [
+    { en: "Up to sixteen background engines can now be selected instead of eight. A provider on a 40-core machine registers one live engine and twelve for the queue, and with the old limit half of them stayed unusable as soon as a second machine still had four in the list. Each selected engine works on one job, so the queue now runs sixteen at a time.", de: "Es lassen sich jetzt bis zu sechzehn Hintergrund-Engines auswaehlen statt acht. Ein Provider auf einer 40-Kern-Maschine meldet eine Live-Engine und zwoelf fuer die Warteschlange an — mit dem alten Deckel blieb die Haelfte davon unbenutzbar, sobald eine zweite Maschine noch vier in der Liste hatte. Je ausgewaehlter Engine rechnet ein Auftrag, die Warteschlange laeuft also mit sechzehn nebeneinander." },
+  ] },
   { version: "0.474.0", date: "2026-09-11", changes: [
     { en: "Filter the points game by position. A button on the page opens a board in the starting position with the opening tree beside it: every move with the number of games that play it, click to go in, and the list below shows the games that pass through. A switch decides whether the tree counts only what is already computed, or the whole collection — from there a game can be requested straight out of the filter.", de: "Die Punktepartie laesst sich nach Stellung filtern. Ein Knopf auf der Seite oeffnet ein Brett in der Grundstellung und daneben den Eroeffnungsbaum: je Zug die Zahl der Partien, die ihn spielen, ein Klick geht hinein, und darunter stehen die Partien, die dort hindurchgehen. Ein Umschalter entscheidet, ob der Baum nur das schon Gerechnete zaehlt oder den ganzen Bestand — von dort laesst sich eine Partie direkt aus dem Filter heraus anfordern." },
   ] },

@@ -139,8 +139,16 @@ public class EngineController : BaseApiController
 
     /// <summary>Hoechstzahl hinterlegbarer Hintergrund-Engines. Nicht die Welt begrenzen, aber auch
     /// nicht unbegrenzt: die Liste steht als CSV in einer Spalte, und jede Engine kostet den Worker
-    /// einen eigenen Broker-Stream.</summary>
-    private const int MaxBackgroundEngines = 8;
+    /// einen eigenen Broker-Stream.
+    ///
+    /// <para>Seit 2026-09-11 sechzehn statt acht: ein Provider auf einer 40-Kern-Maschine meldet
+    /// eine Live-Engine und zwoelf Hintergrund-Engines an, und mit acht blieb die Haelfte davon
+    /// unbenutzbar, sobald die vier einer zweiten Maschine noch in der Liste standen. Sechzehn
+    /// passen in die Spalte: <see cref="LichessEngineCredential.BackgroundEngineIds"/> fasst 600
+    /// Zeichen, eine Kennung ist rund 17 lang (<c>eei_</c> + 12 + Komma) — 16 belegen also etwa
+    /// 272. Der Worker rechnet je Engine EINEN Auftrag; der Deckel von vier gleichzeitigen Stroemen
+    /// (<see cref="MaxConcurrentStreamsPerUser"/>) gilt nur dem Live-Proxy, nicht ihm.</para></summary>
+    private const int MaxBackgroundEngines = 16;
 
     /// <summary>
     /// Hintergrund-Engines fuer Analyseauftraege festlegen (leere Liste = keine). Jede muss eine der
