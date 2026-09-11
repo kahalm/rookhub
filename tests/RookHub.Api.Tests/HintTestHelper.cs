@@ -15,6 +15,8 @@ internal sealed class UnconfiguredClaude : IClaudeJsonClient
 
     public Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
         => Task.FromResult<string?>(null);
+
+    public string TranslationModel => "test";
 }
 
 internal static class HintTestHelper

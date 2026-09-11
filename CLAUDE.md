@@ -1458,7 +1458,14 @@ Regeln, die dabei nicht kippen duerfen:
   er sieht vollstaendig aus.
 
 Braucht `Anthropic:ApiKey` (derselbe Schluessel wie die Puzzle-Tipps). Ohne Schluessel passiert
-nichts — der Rest des Stacks laeuft unveraendert.
+nichts — der Rest des Stacks laeuft unveraendert. **Das Modell ist ein eigener Schalter**
+(`Anthropic:TranslationModel`, Vorgabe `claude-sonnet-5`) und nicht dasselbe wie bei den Tipps:
+ein Tipp ist ein Dreizeiler, der jede Sorgfalt wert ist, eine Uebersetzung ist Mengenarbeit —
+rund 8000 Zeichen je Partie, und der Bestand hat 94 898 kommentierte.
+
+**Beides geht auch OHNE Analyse** (`comments --library n`, `translate --library n`): der Text
+haengt nicht an der Engine, und eine angeforderte Partie steht damit sofort in beiden Sprachen da
+statt erst nach einer halben Stunde Rechnen.
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|

@@ -53,16 +53,28 @@ public class CommentTranslationService
     public async Task<int> TranslateAsync(int analysisId, string target, bool force = false,
         CancellationToken ct = default)
     {
+        var libraryGameId = await _db.GameAnalyses.AsNoTracking()
+            .Where(g => g.Id == analysisId).Select(g => g.LibraryGameId).FirstOrDefaultAsync(ct);
+        return await RunAsync(libraryGameId, libraryGameId is null ? analysisId : null, target, force, ct);
+    }
+
+    /// <summary>Dasselbe fuer eine Partie des Rohbestands, die noch keine Analyse hat — der Text
+    /// laesst sich lange vor der Engine aufbereiten.</summary>
+    public Task<int> TranslateLibraryGameAsync(int libraryGameId, string target, bool force = false,
+        CancellationToken ct = default)
+        => RunAsync(libraryGameId, null, target, force, ct);
+
+    private async Task<int> RunAsync(int? libraryGameId, int? analysisId, string target, bool force,
+        CancellationToken ct)
+    {
         if (!_claude.IsConfigured) return 0;
         target = target.Trim().ToLowerInvariant();
         if (target.Length is 0 or > 8) return 0;
 
-        var libraryGameId = await _db.GameAnalyses.AsNoTracking()
-            .Where(g => g.Id == analysisId).Select(g => g.LibraryGameId).FirstOrDefaultAsync(ct);
-        var sets = await _db.CommentSets
-            .Include(s => s.Texts)
-            .Where(s => libraryGameId != null ? s.LibraryGameId == libraryGameId : s.GameAnalysisId == analysisId)
-            .ToListAsync(ct);
+        var query = _db.CommentSets.Include(s => s.Texts);
+        var sets = libraryGameId is int lib
+            ? await query.Where(s => s.LibraryGameId == lib).ToListAsync(ct)
+            : await query.Where(s => s.GameAnalysisId == analysisId).ToListAsync(ct);
         if (sets.Count == 0) return 0;
 
         var existing = sets.FirstOrDefault(s => s.Language == target);
@@ -90,7 +102,8 @@ public class CommentTranslationService
                 SystemPrompt(source.Language, target), UserPrompt(chunk), ct);
             if (json is null)
             {
-                _logger.LogWarning("Uebersetzung der Partie {Id} nach {Lang} abgebrochen.", analysisId, target);
+                _logger.LogWarning("Uebersetzung der Partie {Id} nach {Lang} abgebrochen.",
+                    libraryGameId ?? analysisId, target);
                 return 0;   // lieber gar kein Satz als ein halber
             }
             foreach (var (ply, text) in Parse(json))
@@ -114,13 +127,13 @@ public class CommentTranslationService
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("Partie {Id}: {Count} Anmerkungen nach {Lang} uebersetzt.",
-            analysisId, set.Texts.Count, target);
+            libraryGameId ?? analysisId, set.Texts.Count, target);
         return set.Texts.Count;
     }
 
-    /// <summary>Womit uebersetzt wurde — steht an jeder Zeile, damit ein spaeteres Modell gezielt
-    /// nachbessern kann.</summary>
-    public const string ModelName = "claude-opus-5";
+    /// <summary>Womit uebersetzt wurde — steht an jedem Satz, damit ein spaeteres Modell gezielt
+    /// nachbessern kann. Kommt vom Client, weil nur der weiss, was tatsaechlich gelaufen ist.</summary>
+    public string ModelName => _claude.TranslationModel;
 
     private static IEnumerable<List<CommentText>> Chunks(List<CommentText> texts)
     {

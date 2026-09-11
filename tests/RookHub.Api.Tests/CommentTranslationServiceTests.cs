@@ -33,6 +33,7 @@ public class CommentTranslationServiceTests : IDisposable
     private sealed class FakeClaude : IClaudeJsonClient
     {
         public bool IsConfigured { get; set; } = true;
+        public string TranslationModel => "test-modell";
         public string? Answer { get; set; }
         public List<string> Prompts { get; } = [];
         public string? LastSystem { get; private set; }
@@ -78,7 +79,7 @@ public class CommentTranslationServiceTests : IDisposable
         var set = await _db.CommentSets.Include(s => s.Texts).SingleAsync(s => s.Language == "de");
         Assert.Equal(CommentOrigin.Machine, set.Origin);
         Assert.Equal("en", set.TranslatedFrom);
-        Assert.Equal(CommentTranslationService.ModelName, set.Model);
+        Assert.Equal("test-modell", set.Model);   // was WIRKLICH gelaufen ist, nicht eine Konstante
         Assert.Equal("DE:The rook belongs here.", set.Texts.Single(t => t.Ply == 0).Text);
 
         // Die Quelle steht unveraendert daneben.

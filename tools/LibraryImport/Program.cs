@@ -452,7 +452,7 @@ async Task<int> QueueAsync()
 // Die Anmerkungen einer eingereihten Partie in ihre Sprachen zerlegen und getrennt vom PGN ablegen
 // (Tabellen CommentSets/CommentTexts).
 //
-//   comments [--limit n] [--probe n]
+//   comments [--limit n] [--probe n] [--library n]
 //
 // Fuer NEUE Partien passiert das von selbst beim Einreihen (GameAnalysisService.CreateAsync); dieser
 // Befehl holt den Altbestand nach. Wiederholbar: was schon Saetze hat, wird uebersprungen.
@@ -460,8 +460,10 @@ async Task<int> CommentsAsync()
 {
     var limit = IntArg("--limit") ?? int.MaxValue;
     var probe = IntArg("--probe");
+    var library = IntArg("--library");
     await using var db = NewDb();
     if (probe is int n) return await ProbeAsync(db, n);
+    if (library is int top) return await LibraryCommentsAsync(db, top);
     var service = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
 
     // Nur Partien, die ueberhaupt jemand spielen kann — der Rohbestand hat 94 898 kommentierte
@@ -561,11 +563,52 @@ async Task<int> ProbeAsync(AppDbContext db, int count)
     return 0;
 }
 
+// Die besten Partien des ROHBESTANDS zerlegen, lange bevor jemand sie anfordert: der Text haengt
+// nicht an der Engine, und eine angeforderte Partie ist damit sofort in beiden Sprachen da statt
+// erst nach einer halben Stunde Rechnen.
+async Task<int> LibraryCommentsAsync(AppDbContext db, int top)
+{
+    var service = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
+
+    // Was schon Saetze hat, wird nicht noch einmal gelesen.
+    var known = (await db.CommentSets.AsNoTracking()
+            .Where(s => s.LibraryGameId != null)
+            .Select(s => s.LibraryGameId!.Value)
+            .Distinct()
+            .ToListAsync())
+        .ToHashSet();
+
+    var ids = await db.LibraryGames.AsNoTracking()
+        .Where(g => g.Score != null && g.CommentedPlies > 0 && g.Status == LibraryGameStatus.New)
+        .OrderByDescending(g => g.Score)
+        .ThenByDescending(g => g.CommentedPlies)
+        .ThenByDescending(g => g.CommentChars)
+        .ThenBy(g => g.Id)
+        .Select(g => g.Id)
+        .Take(top + known.Count)
+        .ToListAsync();
+
+    int done = 0, sets = 0;
+    var started = DateTime.UtcNow;
+    foreach (var id in ids)
+    {
+        if (done >= top) break;
+        if (known.Contains(id)) continue;
+        var created = await service.EnsureSourceForLibraryAsync(id);
+        if (created == 0) continue;
+        done++;
+        sets += created;
+        if (done % 100 == 0) Console.WriteLine($"  {done:N0} zerlegt ({Rate(started, done)})");
+    }
+    Console.WriteLine($"Rohbestand zerlegt: {done:N0} Partien · {sets:N0} Saetze · Dauer {DateTime.UtcNow - started:hh\\:mm\\:ss}");
+    return 0;
+}
+
 // ===== Uebersetzen ==========================================================
 
 // Die Anmerkungen eingereihter Partien in eine weitere Sprache uebersetzen lassen.
 //
-//   translate --to de [--limit n] [--force] [--game <analyse-id>]
+//   translate --to de [--limit n] [--force] [--game <analyse-id>] [--library n]
 //
 // Braucht ANTHROPIC__APIKEY (bzw. Anthropic:ApiKey) in der Umgebung — ohne Schluessel passiert
 // nichts. Uebersetzt wird immer aus der QUELLE, nie aus einer Uebersetzung, und die Quelle wird
@@ -592,22 +635,45 @@ async Task<int> TranslateAsync()
     }
     var service = new CommentTranslationService(db, claude, NullLogger<CommentTranslationService>.Instance);
 
-    // Partien, die ueberhaupt Anmerkungen haben und die Zielsprache noch NICHT fuehren.
-    var ids = one is int only ? [only] : await db.GameAnalyses.AsNoTracking()
-        .OrderBy(g => g.Id)
-        .Select(g => g.Id)
-        .ToListAsync();
+    // Der Rohbestand (Saetze ohne Analyse) oder die eingereihten Partien.
+    var library = IntArg("--library");
+    List<int> ids;
+    var fromLibrary = library is not null;
+    if (fromLibrary)
+    {
+        // Nur Partien, die ueberhaupt Saetze haben und die Zielsprache noch nicht fuehren —
+        // sonst laeuft der Durchgang durch zehntausende Zeilen, um nichts zu tun.
+        var have = await db.CommentSets.AsNoTracking()
+            .Where(s => s.Language == target && s.LibraryGameId != null)
+            .Select(s => s.LibraryGameId!.Value).ToListAsync();
+        var known = have.ToHashSet();
+        ids = (await db.CommentSets.AsNoTracking()
+                .Where(s => s.LibraryGameId != null)
+                .Select(s => s.LibraryGameId!.Value)
+                .Distinct()
+                .ToListAsync())
+            .Where(id => !known.Contains(id))
+            .Take(library!.Value)
+            .ToList();
+    }
+    else
+    {
+        ids = one is int only ? [only] : await db.GameAnalyses.AsNoTracking()
+            .OrderBy(g => g.Id).Select(g => g.Id).ToListAsync();
+    }
 
     int done = 0, lines = 0;
     var started = DateTime.UtcNow;
     foreach (var id in ids)
     {
         if (done >= limit) break;
-        var written = await service.TranslateAsync(id, target!, force);
+        var written = fromLibrary
+            ? await service.TranslateLibraryGameAsync(id, target!, force)
+            : await service.TranslateAsync(id, target!, force);
         if (written == 0) continue;
         done++;
         lines += written;
-        Console.WriteLine($"  #{id,-5} {written,3} Anmerkungen nach {target}");
+        Console.WriteLine($"  #{id,-6} {written,3} Anmerkungen nach {target}");
     }
     Console.WriteLine($"Uebersetzt: {done:N0} Partien · {lines:N0} Zeilen · Dauer {DateTime.UtcNow - started:hh\\:mm\\:ss}");
     return 0;

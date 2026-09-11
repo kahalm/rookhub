@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.472.3", date: "2026-09-11", changes: [
+    { en: "Annotations can be split and translated before a game is ever computed — the text does not depend on the engine, so a requested game now stands in both languages straight away instead of after half an hour of calculation. Translation also got its own model setting: a hint is three lines worth every care, a translation is bulk work at some 8000 characters per game.", de: "Anmerkungen lassen sich trennen und uebersetzen, lange bevor eine Partie gerechnet wird — der Text haengt nicht an der Engine, eine angeforderte Partie steht damit sofort in beiden Sprachen da statt erst nach einer halben Stunde Rechnen. Das Uebersetzen hat ausserdem einen eigenen Modell-Schalter bekommen: ein Tipp ist ein Dreizeiler, der jede Sorgfalt wert ist, eine Uebersetzung ist Mengenarbeit mit rund 8000 Zeichen je Partie." },
+  ] },
   { version: "0.472.2", date: "2026-09-11", changes: [
     { en: "Looking up the annotations of a game now asks the database a plain question instead of a conditional one, so it uses the index rather than walking the table. Invisible today with a handful of games, and the wrong shape to leave in place once there are thousands.", de: "Die Anmerkungen einer Partie nachzuschlagen stellt der Datenbank jetzt eine einfache Frage statt einer bedingten, trifft also den Index statt die Tabelle zu durchlaufen. Bei einer Handvoll Partien unsichtbar — und die falsche Form, um sie stehen zu lassen, bis es tausende sind." },
   ] },

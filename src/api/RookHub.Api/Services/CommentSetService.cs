@@ -90,16 +90,34 @@ public class CommentSetService
             .Select(g => new { g.Id, g.Pgn, g.LibraryGameId })
             .FirstOrDefaultAsync(ct);
         if (head is null) return 0;
+        return await BuildAsync(head.LibraryGameId, head.LibraryGameId is null ? analysisId : null,
+            head.Pgn, ct);
+    }
 
-        var exists = head.LibraryGameId is int lib
+    /// <summary>
+    /// Dasselbe fuer eine Partie, die NOCH KEINE Analyse hat: der Text laesst sich lange vor der
+    /// Engine aufbereiten, und eine angeforderte Partie ist damit sofort in beiden Sprachen da,
+    /// statt erst nach einer halben Stunde Rechnen.
+    /// </summary>
+    public async Task<int> EnsureSourceForLibraryAsync(int libraryGameId, CancellationToken ct = default)
+    {
+        var pgn = await _db.LibraryGames.AsNoTracking()
+            .Where(g => g.Id == libraryGameId).Select(g => g.Pgn).FirstOrDefaultAsync(ct);
+        return pgn is null ? 0 : await BuildAsync(libraryGameId, null, pgn, ct);
+    }
+
+    private async Task<int> BuildAsync(int? libraryGameId, int? analysisId, string? pgn,
+        CancellationToken ct)
+    {
+        var exists = libraryGameId is int lib
             ? await _db.CommentSets.AnyAsync(s => s.LibraryGameId == lib, ct)
             : await _db.CommentSets.AnyAsync(s => s.GameAnalysisId == analysisId, ct);
         if (exists) return 0;
 
-        var comments = ExtractComments(head.Pgn);
+        var comments = ExtractComments(pgn);
         if (comments.Count == 0) return 0;
 
-        var languages = await LanguagesOfAsync(head.LibraryGameId, head.Pgn, ct);
+        var languages = await LanguagesOfAsync(libraryGameId, pgn, ct);
         var byLanguage = SplitAll(comments, languages);
         if (byLanguage.Count == 0) return 0;
 
@@ -107,8 +125,8 @@ public class CommentSetService
         {
             var set = new CommentSet
             {
-                LibraryGameId = head.LibraryGameId,
-                GameAnalysisId = head.LibraryGameId is null ? analysisId : null,
+                LibraryGameId = libraryGameId,
+                GameAnalysisId = analysisId,
                 Language = lang,
                 Origin = CommentOrigin.Source,
                 Status = CommentSetStatus.Ready,
@@ -126,7 +144,8 @@ public class CommentSetService
         {
             // Zwei Anforderungen derselben Bibliothekspartie koennen sich ueberholen; der
             // eindeutige Index faengt das ab, und der Verlierer braucht nichts zu tun.
-            _logger.LogDebug(ex, "Kommentar-Saetze fuer Analyse {Id} lagen schon vor.", analysisId);
+            _logger.LogDebug(ex, "Kommentar-Saetze fuer {Owner} lagen schon vor.",
+                libraryGameId is int l ? $"Bibliothekspartie {l}" : $"Analyse {analysisId}");
             return 0;
         }
         return byLanguage.Count;

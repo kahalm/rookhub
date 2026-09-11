@@ -26,6 +26,9 @@ public interface IClaudeJsonClient
     /// mehrere tausend Woerter, die vier Zeilen eines Tipps nicht.</para>
     /// </summary>
     Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt, CancellationToken ct = default);
+
+    /// <summary>Welches Modell die Uebersetzung benutzt — gehoert an den gespeicherten Satz.</summary>
+    string TranslationModel { get; }
 }
 
 /// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Claude Opus 5, structured output).</summary>
@@ -33,10 +36,15 @@ public class ClaudeJsonClient : IClaudeJsonClient
 {
     private readonly Anthropic.AnthropicClient? _client;
     private readonly ILogger<ClaudeJsonClient> _logger;
+    private readonly string _translationModel;
 
     public ClaudeJsonClient(IConfiguration config, ILogger<ClaudeJsonClient> logger)
     {
         _logger = logger;
+        // Uebersetzen ist MENGENarbeit: eine dicht kommentierte Partie sind mehrere tausend Woerter,
+        // und der Bestand hat zehntausende Partien. Ein Tipp ist dagegen ein Dreizeiler, der jede
+        // Sorgfalt wert ist — deshalb hier ein eigenes, kleineres Modell und ein eigener Schalter.
+        _translationModel = config["Anthropic:TranslationModel"] ?? "claude-sonnet-5";
         var key = config["Anthropic:ApiKey"];
         if (!string.IsNullOrWhiteSpace(key))
             _client = new Anthropic.AnthropicClient { ApiKey = key };
@@ -45,6 +53,8 @@ public class ClaudeJsonClient : IClaudeJsonClient
     }
 
     public bool IsConfigured => _client != null;
+
+    public string TranslationModel => _translationModel;
 
     public async Task<string?> GenerateHintsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
     {
@@ -127,7 +137,7 @@ public class ClaudeJsonClient : IClaudeJsonClient
 
             var parameters = new MessageCreateParams
             {
-                Model = "claude-opus-5",
+                Model = _translationModel,
                 MaxTokens = TranslateMaxTokens,
                 System = system,
                 OutputConfig = new OutputConfig { Format = new JsonOutputFormat { Schema = schema } },

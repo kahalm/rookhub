@@ -36,6 +36,8 @@ public class HintGenerationServiceTests : IDisposable
 
         public Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
             => Task.FromResult<string?>(null);
+
+        public string TranslationModel => "test";
     }
 
     private HintGenerationService Build(IClaudeJsonClient claude)
