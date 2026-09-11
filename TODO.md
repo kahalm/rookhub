@@ -102,6 +102,35 @@ Offen und bewusst noch nicht entschieden: ob Nutzer eine Uebersetzung von Hand v
 (`Origin = Human`) — die Ablage kann es, die Oberflaeche dafuer ist eine eigene Aufgabe.
 
 
+## [ ] Die ZWEITE Haelfte der ChessBase-Symbole ist noch nicht aufgeloest (2026-09-11)
+
+Die FIGUREN sind seit 0.473.0 Buchstaben (`Services/Figurines.cs`, U+E024..U+E029, am Text belegt).
+Was bleibt, sind die BEWERTUNGSsymbole — gemessen an 30 000 Kommentarzeilen: **2121 Vorkommen aus
+39 verschiedenen Codepunkten**, die haeufigsten:
+
+| Zeichen | Vorkommen | Ein Fundort |
+|---|---|---|
+| U+E00D | 767 | `12. Bd2 … Bxc4` (zwischen Zug und Fortsetzung) |
+| U+E013 | 144 | `Qa8 …, Giri,A 2779 -` (vor einer Partieangabe) |
+| U+E01E | 105 | `15... d5 … 16. Be2` |
+| U+E02F | 104 | `/… 35... Rh1` |
+| U+E00A | 100 | `12. Bf4 /… retains the pawn` |
+| U+E018 | 63 | `keeping the c… open` (offenbar „c-Linie") |
+
+**Warum sie NICHT geraten werden.** Bei den Figuren liess sich jedes Zeichen an einer Wendung
+festmachen, die nur eine Figur zulaesst („the …h7+ trick" ist das griechische Geschenk). Bei den
+Bewertungen geht das nicht: `±` und `∓` stehen an denselben Stellen und bedeuten das Gegenteil.
+Ein vertauschtes Vorzeichen in einer Meisterpartie ist eine Falschaussage ueber die Stellung —
+schlimmer als die Luecke, die heute dasteht.
+
+Was es braeuchte: die Codepunkt-Tabelle der ChessBase-Symbolschrift, oder eine Partie, deren
+Bewertung aus einer zweiten Quelle bekannt ist, um die Reihenfolge zu eichen. Bis dahin bleiben
+die Zeichen unangetastet — und die Uebersetzungs-Anleitung verbietet ausdruecklich, an solchen
+Stellen ein Wort zu ergaenzen (ein Agent hat am 2026-09-11 „Freibauer" und „Turmendspiel"
+hineingeschrieben; die Uebersetzung wurde verworfen).
+
+
+
 ## [ ] Stockfish regelmaessig pruefen — DREI Engines, drei Versionen (2026-09-10)
 
 Stand heute laufen drei verschiedene Stockfish-Versionen im Stack, und nur eine davon aktualisiert

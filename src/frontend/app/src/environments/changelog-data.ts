@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.473.4", date: "2026-09-11", changes: [
+    { en: "Measured what is still missing from the annotations: 2121 leftover characters of the ChessBase symbol font across 39 codepoints, the evaluation marks. The piece letters could be resolved because each one sat in a phrase that admits only one piece; the evaluations cannot, because plus-over-minus and minus-over-plus stand in the same places and mean the opposite. A wrong sign in a master game would be worse than the gap, so they stay untouched and the gap is written down.", de: "Gemessen, was in den Anmerkungen noch fehlt: 2121 uebrige Zeichen der ChessBase-Symbolschrift aus 39 Codepunkten, die Bewertungszeichen. Die Figurenbuchstaben liessen sich aufloesen, weil jedes an einer Wendung hing, die nur eine Figur zulaesst; die Bewertungen nicht, denn Plus-minus und Minus-plus stehen an denselben Stellen und bedeuten das Gegenteil. Ein falsches Vorzeichen in einer Meisterpartie waere schlimmer als die Luecke — sie bleiben also unangetastet, und die Luecke steht aufgeschrieben." },
+  ] },
   { version: "0.473.3", date: "2026-09-11", changes: [
     { en: "A translation that quietly loses text is now refused instead of stored. Measured on real games: a cheaper model returned between a fifth and half of the source length, cutting sentences off mid-paragraph, while the move lists and the structure stayed correct — nothing else would have caught it, because prose carries no moves.", de: "Eine Uebersetzung, die still Text verliert, wird jetzt abgelehnt statt gespeichert. An echten Partien gemessen: ein sparsameres Modell lieferte zwischen einem Fuenftel und der Haelfte der Quelllaenge und schnitt Saetze mitten im Absatz ab, waehrend Zuglisten und Struktur stimmten — gefangen haette das sonst nichts, denn in der Prosa stehen keine Zuege." },
   ] },
