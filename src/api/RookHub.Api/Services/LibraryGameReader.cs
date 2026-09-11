@@ -62,6 +62,8 @@ public static class LibraryGameReader
             CommentChars = stats.CommentChars,
             NagCount = stats.NagCount,
             VariationCount = stats.VariationCount,
+            FirstCommentedPly = stats.FirstCommentedPly == 0 ? null : stats.FirstCommentedPly,
+            OpeningLine = Cut(stats.OpeningLine, 200),
 
             Pgn = pgn,
         };
@@ -76,8 +78,19 @@ public static class LibraryGameReader
     /// <param name="NagCount">Symbol-Bewertungen (<c>$1</c>, <c>$16</c>, …).</param>
     /// <param name="VariationCount">Geoeffnete Nebenvarianten.</param>
     /// <param name="MovesHash">SHA-256 ueber die normalisierte Zugfolge der Hauptvariante.</param>
+    /// <param name="FirstCommentedPly">Der ERSTE Halbzug der Hauptvariante mit Kommentar (1-basiert,
+    /// 0 = keiner). Das ist der Punkt, an dem der Kommentator die Partie fuer erklaerungsbeduerftig
+    /// hielt — und damit ein Kandidat dafuer, wo eine Punktepartie anfangen sollte.</param>
+    /// <param name="OpeningLine">Die ersten <see cref="OpeningPlies"/> Halbzuege normalisiert, durch
+    /// Leerzeichen getrennt. Damit laesst sich in SQL fragen, wie viele Partien des Bestandes
+    /// dieselbe Eroeffnung spielen (Praefix-Suche auf einer indizierten Spalte).</param>
     public readonly record struct GameStats(int PlyCount, int CommentCount, int CommentedPlies,
-        int CommentChars, int NagCount, int VariationCount, string MovesHash);
+        int CommentChars, int NagCount, int VariationCount, string MovesHash,
+        int FirstCommentedPly, string OpeningLine);
+
+    /// <summary>So viele Halbzuege fasst <see cref="GameStats.OpeningLine"/>. Dreissig sind fuenfzehn
+    /// volle Zuege — laenger ist keine Eroeffnung mehr, und die Spalte bliebe trotzdem indizierbar.</summary>
+    public const int OpeningPlies = 30;
 
     /// <summary>
     /// Der eine Textdurchgang. Zaehlt mit, was die Vorsortierung braucht, und sammelt nebenbei die
@@ -91,13 +104,15 @@ public static class LibraryGameReader
     public static GameStats Analyse(string? moveText)
     {
         if (string.IsNullOrWhiteSpace(moveText))
-            return new GameStats(0, 0, 0, 0, 0, 0, string.Empty);
+            return new GameStats(0, 0, 0, 0, 0, 0, string.Empty, 0, string.Empty);
 
         var s = moveText;
         var depth = 0;
         int plies = 0, comments = 0, commented = 0, chars = 0, nags = 0, variations = 0;
         var lastCommentedPly = -1;
+        var firstCommentedPly = 0;
         var moves = new StringBuilder(s.Length / 4);
+        var opening = new StringBuilder(OpeningPlies * 6);
 
         for (var i = 0; i < s.Length;)
         {
@@ -116,6 +131,7 @@ public static class LibraryGameReader
                 {
                     commented++;
                     lastCommentedPly = plies;
+                    if (firstCommentedPly == 0) firstCommentedPly = plies;
                 }
                 i = close + 1;
                 continue;
@@ -131,6 +147,7 @@ public static class LibraryGameReader
                 {
                     commented++;
                     lastCommentedPly = plies;
+                    if (firstCommentedPly == 0) firstCommentedPly = plies;
                 }
                 i = eol < 0 ? s.Length : eol + 1;
                 continue;
@@ -160,11 +177,17 @@ public static class LibraryGameReader
                 plies++;
                 if (moves.Length > 0) moves.Append(' ');
                 AppendNormalized(moves, token);
+                if (plies <= OpeningPlies)
+                {
+                    if (opening.Length > 0) opening.Append(' ');
+                    AppendNormalized(opening, token);
+                }
             }
         }
 
         var hash = plies == 0 ? string.Empty : Sha256(moves.ToString());
-        return new GameStats(plies, comments, commented, chars, nags, variations, hash);
+        return new GameStats(plies, comments, commented, chars, nags, variations, hash,
+            firstCommentedPly, opening.ToString());
     }
 
     /// <summary>Zugnummern („12.", „12…"), Ergebnisse und Reste sind keine Zuege.</summary>

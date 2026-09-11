@@ -3040,7 +3040,8 @@
     "computing": "rechnet",
     "failedBadge": "gescheitert",
     "notReady": "Noch keine Stellung gerechnet",
-    "waiting": "wartet"
+    "waiting": "wartet",
+    "moves": "{{moves}} Züge"
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",

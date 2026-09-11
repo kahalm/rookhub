@@ -40,12 +40,18 @@ public readonly record struct GuessOwner(int? UserId, string? AnonymousSessionId
 public class GuessSessionService
 {
     private readonly AppDbContext _db;
+    private readonly GuessStartPly _startPly;
 
-    public GuessSessionService(AppDbContext db) => _db = db;
+    public GuessSessionService(AppDbContext db, GuessStartPly startPly)
+    {
+        _db = db;
+        _startPly = startPly;
+    }
 
-    /// <summary>Vorgabe, wie viele Halbzüge Eröffnung gezeigt statt geraten werden. Grober
-    /// Platzhalter, bis die Eröffnungsstatistik angebunden ist (chessgames startet dort, wo eine
-    /// Stellung unter 1000 Datenbankpartien fällt) — Raten ab Zug 1 prüft Buchwissen, nicht Spielstärke.</summary>
+    /// <summary>Rückfall, wenn sich der Einstieg nicht bestimmen lässt — der Bestand ist leer, das
+    /// PGN gibt nichts her. Sonst entscheidet <see cref="GuessStartPly"/>: der frühere von
+    /// „Eröffnung verlässt das Buch" und „Kommentator fängt an zu reden". Raten ab Zug 1 prüft
+    /// Buchwissen, nicht Spielstärke.</summary>
     public const int DefaultSkipPlies = 8;
 
     // ===== Sitzung starten ==================================================
@@ -71,7 +77,8 @@ public class GuessSessionService
         // Auf die Partie eingrenzen, BEVOR ausgerichtet wird: ohne Deckel liefe `start++` bei
         // int.MaxValue in den negativen Bereich (unchecked) und die Sitzung startete mit einem
         // sinnlosen StartPly, gegen den auch der Fortschritt gezaehlt wuerde.
-        var start = Math.Clamp(req.StartPly ?? DefaultSkipPlies, 0, GameAnalysisDefaults.MaxPlies);
+        var start = Math.Clamp(req.StartPly ?? await SuggestedStartAsync(analysis, ct), 0,
+            GameAnalysisDefaults.MaxPlies);
         // Auf den ersten Halbzug der geratenen Seite ausrichten (Weiß = gerade Plies).
         if (start % 2 == 0 != guessWhite) start++;
 
@@ -168,7 +175,8 @@ public class GuessSessionService
                 throw new ArgumentException("Dieser Zug ist in der Stellung nicht möglich.");
 
             var candidates = BrokerCandidates.FromJson(position.CandidatesJson);
-            var scored = GuessScoring.Evaluate(candidates, playedUci, position.GameMoveUci);
+            var scored = GuessScoring.Evaluate(candidates, playedUci, position.GameMoveUci,
+                await GameMoveEvalAsync(session.GameAnalysisId, position.Ply, ct));
             if (scored is GuessScoring.GuessResult r)
             {
                 grade = r.Grade;
@@ -317,6 +325,29 @@ public class GuessSessionService
     /// dieselbe Regel wie <c>AnalysisJobService.MaxJobsPerUser</c>.</summary>
     public const int MaxSessionsPerOwner = 50;
 
+    /// <summary>
+    /// Ab welchem Halbzug diese Partie geraten wird — EINMAL bestimmt und an der Partie gemerkt.
+    ///
+    /// <para>Die Antwort haengt an der PARTIE und nicht am Durchlauf: sie kostet ein paar Abfragen
+    /// gegen den Rohbestand, und sie faellt jedes Mal gleich aus. Gemerkt wird sie deshalb in
+    /// <see cref="GameAnalysis.SuggestedStartPly"/>; ein Durchlauf, der sie schon vorfindet, fragt
+    /// gar nicht erst.</para>
+    ///
+    /// <para>Die Analyse ist hier <c>AsNoTracking</c> geladen (sie wird sonst nur gelesen) — die
+    /// eine Spalte wird deshalb gezielt geschrieben statt ueber den Change-Tracker.</para>
+    /// </summary>
+    private async Task<int> SuggestedStartAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        if (analysis.SuggestedStartPly is { } known) return known;
+
+        var suggested = await _startPly.SuggestAsync(analysis.Pgn, analysis.PlyCount, ct);
+        if (suggested is null) return DefaultSkipPlies;
+
+        await _db.GameAnalyses.Where(g => g.Id == analysis.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(g => g.SuggestedStartPly, suggested.Value), ct);
+        return suggested.Value;
+    }
+
     private async Task TrimSessionsAsync(GuessOwner owner, CancellationToken ct)
     {
         var count = await OwnedBy(owner).CountAsync(ct);
@@ -333,6 +364,35 @@ public class GuessSessionService
         _db.GuessMoves.RemoveRange(stale.SelectMany(s => s.Moves));
         _db.GuessSessions.RemoveRange(stale);
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Die Bewertung des PARTIEZUGES, wenn er nicht unter den Kandidaten steht — abgeleitet aus der
+    /// FOLGESTELLUNG.
+    ///
+    /// <para>Die Kandidatenliste einer Stellung nennt die fuenf besten Zuege. Was der Meister
+    /// gespielt hat, steht nicht immer darunter — und ausgerechnet dann ist es interessant: ein
+    /// Opfer, das die Engine erst zwei Zuege spaeter versteht, ist genau der Zug, den man raten
+    /// moechte. Bis 0.467.0 wurde eine solche Stellung kommentarlos uebersprungen.</para>
+    ///
+    /// <para>Die Auskunft liegt aber schon da: die Stellung NACH dem Partiezug ist selbst gerechnet,
+    /// und ihre beste Bewertung ist die des Gegners. Mit umgekehrtem Vorzeichen ist das die
+    /// Bewertung des gespielten Zuges — dieselbe Rechnung, die jede Engine-Ausgabe macht.</para>
+    ///
+    /// <para><c>null</c>, wenn es keine Folgestellung gibt (letzter Zug der Partie) oder sie noch
+    /// nicht gerechnet ist.</para>
+    /// </summary>
+    private async Task<double?> GameMoveEvalAsync(int analysisId, int ply, CancellationToken ct)
+    {
+        var nextJson = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == analysisId && p.Ply == ply + 1)
+            .Select(p => p.CandidatesJson)
+            .FirstOrDefaultAsync(ct);
+        if (nextJson is null) return null;
+
+        var next = BrokerCandidates.FromJson(nextJson);
+        if (next.Count == 0) return null;
+        return -next.Max(c => c.Eval.Pawns);
     }
 
     /// <summary>
@@ -441,20 +501,35 @@ public class GuessSessionService
     /// </summary>
     private async Task AdvanceToPlayableAsync(GuessSession session, CancellationToken ct)
     {
-        // Nur die Halbzuege der GERATENEN Seite und nur die drei Spalten, die hier gelesen werden —
-        // `Fen`/`EvalText` blieben sonst bei jedem Rateversuch fuer den ganzen Partierest mit dabei.
+        // BEIDE Seiten, nur die drei Spalten, die hier gelesen werden (`Fen`/`EvalText` blieben sonst
+        // bei jedem Rateversuch fuer den ganzen Partierest mit dabei). Die Gegenseite wird gebraucht,
+        // weil die Bewertung eines nicht gelisteten Partiezuges aus der FOLGESTELLUNG kommt.
         var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply >= session.CurrentPly
-                        && (p.Ply % 2 == 0) == session.GuessWhite)
+            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply >= session.CurrentPly)
             .OrderBy(p => p.Ply)
             .Select(p => new { p.Ply, p.CandidatesJson, p.GameMoveUci })
             .ToListAsync(ct);
 
-        foreach (var p in positions)
+        for (var i = 0; i < positions.Count; i++)
         {
-            if (p.CandidatesJson is null) break;                  // noch nicht gerechnet → hier warten
+            var p = positions[i];
+            if ((p.Ply % 2 == 0) != session.GuessWhite) continue;   // Zug der Gegenseite
+            if (p.CandidatesJson is null) break;                    // noch nicht gerechnet → hier warten
+
             var candidates = BrokerCandidates.FromJson(p.CandidatesJson);
+            if (candidates.Count == 0) continue;                    // aufgegebene Stellung: nichts zu werten
             if (candidates.Any(c => string.Equals(c.Uci, p.GameMoveUci, StringComparison.OrdinalIgnoreCase)))
+            {
+                session.CurrentPly = p.Ply;
+                return;
+            }
+
+            // Der Partiezug steht nicht unter den besten fuenf — spielbar ist die Stellung trotzdem,
+            // sobald sich seine Bewertung aus der Folgestellung ableiten laesst.
+            var next = i + 1 < positions.Count ? positions[i + 1] : null;
+            if (next is null || next.Ply != p.Ply + 1) continue;     // letzter Zug der Partie
+            if (next.CandidatesJson is null) break;                 // Folgestellung fehlt → warten
+            if (BrokerCandidates.FromJson(next.CandidatesJson).Count > 0)
             {
                 session.CurrentPly = p.Ply;
                 return;

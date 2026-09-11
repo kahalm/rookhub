@@ -3040,7 +3040,8 @@
     "computing": "analysing",
     "failedBadge": "failed",
     "notReady": "No position analysed yet",
-    "waiting": "waiting"
+    "waiting": "waiting",
+    "moves": "{{moves}} moves"
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

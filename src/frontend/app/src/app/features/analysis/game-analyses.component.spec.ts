@@ -30,7 +30,17 @@ describe('GameAnalysesComponent', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  /** Das Tempo holt die Seite bei JEDEM Abruf mit; fuer die meisten Tests ist es Beiwerk. */
+  function drainThroughput(perMinute = 0, etaMinutes: number | null = null) {
+    http.match('/api/game-analyses/throughput').forEach(r => r.flush({
+      perMinute, analyzedInWindow: 0, windowMinutes: 0, remaining: 0, etaMinutes,
+    }));
+  }
+
+  afterEach(() => {
+    drainThroughput();
+    http.verify();
+  });
 
   it('zeigt den Fortschritt je Partie in Prozent', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
@@ -105,25 +115,6 @@ describe('GameAnalysesComponent', () => {
    * stuende er. Die Rate beantwortet die eigentliche Frage — aber erst, wenn genug Zeit zwischen
    * den Proben liegt; aus zwei Abrufen im Sekundenabstand laesst sich nichts hochrechnen.
    */
-  it('rechnet erst nach genug Zeit eine Rate hoch', () => {
-    const fixture = TestBed.createComponent(GameAnalysesComponent);
-    fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([
-      analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 10 }),
-    ]);
-    const c = fixture.componentInstance;
-    expect(c.rate).withContext('eine Probe sagt nichts').toBeNull();
-
-    // Zwei Proben, aber nur Sekunden auseinander → immer noch nichts.
-    (c as any).samples = [{ t: 1_000_000, done: 10 }, { t: 1_010_000, done: 11 }];
-    expect(c.rate).toBeNull();
-
-    // Fuenf Minuten, zehn Stellungen → 2,0 je Minute; 90 offen ⇒ 45 min.
-    (c as any).samples = [{ t: 1_000_000, done: 10 }, { t: 1_300_000, done: 20 }];
-    c.analyses = [analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 20 })];
-    expect(c.rate).toEqual({ perMinute: '2.0', eta: '40 min' });
-  });
-
   /** Der Knopf gegen die Sackgasse: ein Auftrag klebt an seiner Engine und wechselt nie von
    *  selbst. Der Server verwirft die alten Auftraege und legt sie neu an. */
   it('stoesst eine Partie neu an und uebernimmt den zurueckgemeldeten Stand', () => {
@@ -149,5 +140,25 @@ describe('GameAnalysesComponent', () => {
       .flush({ message: 'nope' }, { status: 500, statusText: 'Server Error' });
 
     expect(fixture.componentInstance.restarting).toBeNull();
+  });
+
+  /** Das Tempo kommt aus der HISTORIE: es steht mit dem ersten Abruf da, statt erst nach einer
+   *  Minute offener Seite — und ueberlebt damit einen geschlossenen Reiter. */
+  it('zeigt das Tempo sofort, ohne eigene Proben', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses').flush([analysis({ analyzedPlies: 10, plyCount: 40 })]);
+    drainThroughput(2.5, 90);
+
+    expect(fixture.componentInstance.rate).toEqual({ perMinute: '2.5', eta: '1 h 30 min' });
+  });
+
+  it('zeigt kein Tempo, wenn der Server keines kennt', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses').flush([analysis()]);
+    drainThroughput(0);
+
+    expect(fixture.componentInstance.rate).toBeNull();
   });
 });

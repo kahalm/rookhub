@@ -64,6 +64,18 @@ export interface GuessUploadStatus {
   maxGames: number;
 }
 
+/** Tempo und Restdauer, vom Server aus den Zeitstempeln der gerechneten Stellungen gerechnet. */
+export interface AnalysisThroughput {
+  /** Stellungen je Minute; 0 = im Fenster ist nichts passiert. */
+  perMinute: number;
+  analyzedInWindow: number;
+  /** Tatsächlich gemessene Spanne in Minuten (nicht die Fenster-Vorgabe). */
+  windowMinutes: number;
+  remaining: number;
+  /** Hochgerechnete Restdauer in Minuten; null ohne Tempo oder ohne Rest. */
+  etaMinutes: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GameAnalysisService {
   private http = inject(HttpClient);
@@ -105,6 +117,11 @@ export class GameAnalysisService {
 
   guessUploadStatus(): Observable<GuessUploadStatus> {
     return this.http.get<GuessUploadStatus>('/api/game-analyses/guess/status');
+  }
+
+  /** Tempo und Restdauer aus der HISTORIE — steht sofort da, auch wenn der Reiter zu war. */
+  throughput(): Observable<AnalysisThroughput> {
+    return this.http.get<AnalysisThroughput>('/api/game-analyses/throughput');
   }
 
   /** Die Partie noch einmal anstossen: alles Ungerechnete kommt frisch in die Warteschlange, und

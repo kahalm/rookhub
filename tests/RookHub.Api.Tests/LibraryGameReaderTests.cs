@@ -40,6 +40,40 @@ public class LibraryGameReaderTests
         Assert.Equal(0, stats.CommentedPlies);
     }
 
+    /// <summary>Der erste kommentierte Halbzug ist einer der beiden Hinweise darauf, wo eine
+    /// Punktepartie sinnvoll anfaengt — er muss stimmen.</summary>
+    [Fact]
+    public void Analyse_merktSichDenErstenKommentiertenHalbzug()
+    {
+        var stats = LibraryGameReader.Analyse("1. e4 e5 2. Nf3 {jetzt wird es interessant} Nc6 3. Bb5 {und hier} a6");
+
+        Assert.Equal(3, stats.FirstCommentedPly);
+        Assert.Equal(2, stats.CommentedPlies);
+    }
+
+    /// <summary>Der kuerzeste Fall aus dem echten Bestand: ein Zug, ein Kommentar.</summary>
+    [Fact]
+    public void Analyse_einZugEinKommentar()
+    {
+        var stats = LibraryGameReader.Analyse("1. d4 {Forfait des Noirs} 1-0");
+
+        Assert.Equal(1, stats.PlyCount);
+        Assert.Equal(1, stats.CommentedPlies);
+        Assert.Equal(1, stats.FirstCommentedPly);
+        Assert.Equal("d4", stats.OpeningLine);
+    }
+
+    /// <summary>Kommentare VOR dem ersten Zug zaehlen nicht — sie gehoeren zu keinem Halbzug.</summary>
+    [Fact]
+    public void Analyse_kommentarVorDemErstenZug_zaehltNicht()
+    {
+        var stats = LibraryGameReader.Analyse("{Quellenangabe} 1. e4 e5 2. Nf3");
+
+        Assert.Equal(0, stats.FirstCommentedPly);
+        Assert.Equal(0, stats.CommentedPlies);
+        Assert.Equal(1, stats.CommentCount);
+    }
+
     [Fact]
     public void Analyse_zaehltSymbolbewertungen()
     {

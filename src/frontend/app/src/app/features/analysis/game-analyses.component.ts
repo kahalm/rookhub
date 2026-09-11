@@ -14,7 +14,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
-import { GameAnalysis, GameAnalysisService } from './game-analysis.service';
+import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-analysis.service';
 import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
 
 /**
@@ -210,41 +210,34 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Tempo und Restdauer, hochgerechnet aus den letzten Abrufen.
+   * Tempo und Restdauer — gerechnet vom SERVER, aus den Zeitstempeln der fertigen Stellungen.
    *
    * Der Balken bewegt sich bei tausend Stellungen um Bruchteile eines Prozents je Stellung und
-   * sieht deshalb aus, als stuende er — die eigentliche Frage („wie lange noch?") beantwortet erst
-   * eine Rate. Gemessen wird zwischen dem AELTESTEN und dem juengsten Abruf im Fenster; ein
-   * einzelner Abruf sagt nichts, deshalb erst ab `MinRateSeconds`.
+   * sieht deshalb aus, als stuende er; die eigentliche Frage („wie lange noch?") beantwortet erst
+   * eine Rate.
    *
-   * Die Proben kommen aus dem 10-s-Poll und decken damit rund zehn Minuten ab. Kuerzer waere zu
-   * zappelig (eine zaehe Stellung dauert Minuten, eine leichte Sekunden), laenger zu traege, wenn
-   * eine zweite Engine dazukommt.
+   * <p>Frueher zaehlte der Browser selbst mit: eine Probe je Abruf, mindestens eine Minute offene
+   * Seite, bevor ueberhaupt etwas dastand — und beim naechsten Seitenaufruf fing er wieder bei null
+   * an. Wer abends eine Partie einwirft und morgens nachsieht, bekam also genau dann nichts zu
+   * sehen, wenn er es wissen wollte. Die Stellungen tragen ihren Zeitstempel ohnehin; der Server
+   * liest ihn und die Antwort steht mit dem ersten Abruf da.</p>
    */
-  private static readonly RateWindow = 60;      // Proben (10-s-Poll → ~10 min)
-  private static readonly MinRateSeconds = 60;  // darunter ist die Hochrechnung geraten
-  private samples: { t: number; done: number }[] = [];
+  throughput: AnalysisThroughput | null = null;
 
   get rate(): { perMinute: string; eta: string | null } | null {
-    if (this.samples.length < 2) return null;
-    const first = this.samples[0];
-    const last = this.samples[this.samples.length - 1];
-    const seconds = (last.t - first.t) / 1000;
-    const done = last.done - first.done;
-    if (seconds < GameAnalysesComponent.MinRateSeconds || done <= 0) return null;
-
-    const perMinute = (done * 60) / seconds;
-    const remaining = this.totalPlies - this.analyzedPlies;
+    const t = this.throughput;
+    if (!t || t.perMinute <= 0) return null;
     return {
-      perMinute: perMinute >= 10 ? perMinute.toFixed(0) : perMinute.toFixed(1),
-      eta: remaining > 0 ? this.formatEta(remaining / perMinute) : null,
+      perMinute: t.perMinute >= 10 ? t.perMinute.toFixed(0) : t.perMinute.toFixed(1),
+      eta: t.etaMinutes ? this.formatEta(t.etaMinutes) : null,
     };
   }
 
-  /** Eine Probe je Abruf; das Fenster wandert mit. */
-  private noteSample(): void {
-    this.samples.push({ t: Date.now(), done: this.analyzedPlies });
-    if (this.samples.length > GameAnalysesComponent.RateWindow) this.samples.shift();
+  private loadThroughput(): void {
+    this.service.throughput().subscribe({
+      next: t => { this.throughput = t; this.cdr.markForCheck(); },
+      error: () => { /* Anzeige-Beiwerk: bleibt beim letzten Stand, statt eine Meldung zu werfen */ },
+    });
   }
 
   /** Restdauer in Minuten als „3 h 20 min" bzw. „12 min" — Sekunden waeren hier Schein-Genauigkeit. */
@@ -265,7 +258,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       next: list => {
         this.analyses = list;
         this.loading = false;
-        this.noteSample();
+        this.loadThroughput();
         this.cdr.markForCheck();
       },
       // Poll-Fehler bleiben still (nächster Durchlauf kommt), der ERSTE Ladefehler nicht.

@@ -251,6 +251,65 @@ public class GameAnalysisService
         }).ToList();
     }
 
+    /// <summary>Fenster, ueber das das Tempo gemittelt wird. Eine Stunde glaettet den Unterschied
+    /// zwischen einer zaehen Stellung (Minuten) und einer leichten (Sekunden), ohne eine Aenderung
+    /// am Aufbau (zweite Engine dazu) einen halben Tag lang zu verschlucken.</summary>
+    private const int ThroughputWindowMinutes = 60;
+
+    /// <summary>Ist im Fenster nichts passiert, wird einmal weiter zurueckgesehen — sonst stuende
+    /// nach einer Nacht Pause „kein Tempo", obwohl die Zahl von gestern die beste Schaetzung ist.</summary>
+    private const int ThroughputFallbackMinutes = 24 * 60;
+
+    /// <summary>
+    /// Tempo und Restdauer aus den Zeitstempeln der gerechneten Stellungen.
+    ///
+    /// <para>Gemessen wird ueber die tatsaechliche Spanne und nicht ueber die Fensterlaenge: laeuft
+    /// die Analyse erst seit zehn Minuten, waere „durch sechzig" ein Sechstel der Wahrheit. Umgekehrt
+    /// wird die Spanne nie kuerzer als eine Minute angesetzt, sonst macht eine einzige Stellung in
+    /// den letzten Sekunden aus dem Tempo eine Fantasiezahl.</para>
+    /// </summary>
+    public async Task<AnalysisThroughputDto> ThroughputAsync(int userId, CancellationToken ct = default)
+    {
+        var remaining = await _db.GameAnalysisPositions
+            .CountAsync(p => p.CandidatesJson == null
+                && p.GameAnalysis!.UserId == userId
+                && (p.GameAnalysis.Status == GameAnalysisStatus.Pending
+                    || p.GameAnalysis.Status == GameAnalysisStatus.Running), ct);
+
+        var now = DateTime.UtcNow;
+        var result = await MeasureAsync(userId, now.AddMinutes(-ThroughputWindowMinutes), now, ct);
+        if (result.AnalyzedInWindow == 0)
+            result = await MeasureAsync(userId, now.AddMinutes(-ThroughputFallbackMinutes), now, ct);
+
+        result.Remaining = remaining;
+        result.EtaMinutes = result.PerMinute > 0 && remaining > 0
+            ? (int)Math.Max(1, Math.Round(remaining / result.PerMinute))
+            : null;
+        return result;
+    }
+
+    private async Task<AnalysisThroughputDto> MeasureAsync(int userId, DateTime since, DateTime now,
+        CancellationToken ct)
+    {
+        var window = await _db.GameAnalysisPositions
+            .Where(p => p.AnalyzedAt != null && p.AnalyzedAt >= since && p.GameAnalysis!.UserId == userId)
+            .GroupBy(p => 1)
+            .Select(g => new { Count = g.Count(), First = g.Min(p => p.AnalyzedAt) })
+            .FirstOrDefaultAsync(ct);
+
+        if (window is null || window.Count == 0 || window.First is null)
+            return new AnalysisThroughputDto { WindowMinutes = 0 };
+
+        // Ab dem ersten Zeitstempel im Fenster, nicht ab dessen Anfang.
+        var minutes = Math.Max(1.0, (now - window.First.Value).TotalMinutes);
+        return new AnalysisThroughputDto
+        {
+            AnalyzedInWindow = window.Count,
+            WindowMinutes = (int)Math.Round(minutes),
+            PerMinute = Math.Round(window.Count / minutes, 2),
+        };
+    }
+
     public async Task<GameAnalysisDto?> GetAsync(int userId, int id, CancellationToken ct = default)
     {
         var analysis = await _db.GameAnalyses.AsNoTracking()

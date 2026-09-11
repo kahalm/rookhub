@@ -248,6 +248,7 @@ try
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddScoped<AnalysisJobService>();
     builder.Services.AddScoped<GameAnalysisService>();
+    builder.Services.AddScoped<GuessStartPly>();
     builder.Services.AddScoped<GuessSessionService>();
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();

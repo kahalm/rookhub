@@ -79,10 +79,10 @@ import { ViewStateService } from '../../core/view-state.service';
               @for (g of curatedShown; track g.id) {
                 <div class="game-row">
                   <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
+                  <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
                   @if (g.annotated) {
                     <span class="chip">{{ 'guess.annotatedBadge' | translate }}</span>
                   }
-                  <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
                   <span class="spacer"></span>
                   <button mat-stroked-button [disabled]="starting" (click)="start(g)">
                     <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
@@ -142,7 +142,10 @@ import { ViewStateService } from '../../core/view-state.service';
                 @for (g of ownGames; track g.id) {
                   <div class="game-row">
                     <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
-                    <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
+                    <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
+                    @if (g.status !== 'done' && g.status !== 'failed') {
+                      <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
+                    }
                     @if (g.status === 'failed') {
                       <span class="chip err">{{ 'guess.failedBadge' | translate }}</span>
                     } @else if (g.status === 'pending') {
@@ -325,6 +328,11 @@ export class GuessListComponent implements OnInit, OnDestroy {
       this.poll.unsubscribe();
       this.poll = undefined;
     }
+  }
+
+  /** Zuege statt Halbzuege — „42 Zuege" ist die Zahl, die ein Schachspieler erwartet. */
+  moveCount(g: GameAnalysis): number {
+    return Math.ceil(g.plyCount / 2);
   }
 
   percent(g: GameAnalysis): number {

@@ -122,6 +122,22 @@ public class LibraryGame
     /// fuer die Punktepartie ist eine erklaerte Partie mehr wert als eine durchgerechnete.</summary>
     public int? VariationCount { get; set; }
 
+    /// <summary>Der ERSTE kommentierte Halbzug der Hauptvariante (1-basiert); <c>null</c> = keiner.
+    /// Der Punkt, an dem der Kommentator die Partie fuer erklaerungsbeduerftig hielt — einer der
+    /// beiden Hinweise darauf, wo eine Punktepartie sinnvoll anfaengt.</summary>
+    public int? FirstCommentedPly { get; set; }
+
+    /// <summary>
+    /// Die ersten <see cref="LibraryGameReader.OpeningPlies"/> Halbzuege normalisiert und durch
+    /// Leerzeichen getrennt („e4 e5 Nf3 Nc6 …").
+    ///
+    /// <para>Damit wird der Bestand zur Eroeffnungsstatistik: „wie viele dieser 130 000 Partien
+    /// spielen dieselben ersten k Zuege" ist eine Praefix-Suche auf einer indizierten Spalte
+    /// (<c>LIKE 'e4 e5 Nf3%'</c>) und keine Volltextsuche ueber 338 MB. Der erste Halbzug, an dem
+    /// diese Zahl klein wird, ist der Zug, an dem die Partie das Buch verlaesst.</para>
+    /// </summary>
+    [MaxLength(200)] public string? OpeningLine { get; set; }
+
     /// <summary>Sprache(n) der Kommentare als CSV von ISO-Kuerzeln („de", „en,de"). Wird erst
     /// spaeter befuellt (Erkennung ueber den Kommentartext), deshalb nullbar.</summary>
     [MaxLength(40)] public string? Languages { get; set; }

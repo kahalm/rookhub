@@ -1224,6 +1224,9 @@ public class AppDbContext : DbContext
             // „Alles von Aagaard" bzw. „alles aus CBM 104" — die zwei Griffe der Durchsicht.
             e.HasIndex(g => g.Annotator);
             e.HasIndex(g => g.SourceTitle);
+            // „Wie viele Partien spielen dieselben ersten k Zuege?" — eine Praefix-Suche (LIKE 'e4 e5%'),
+            // und die nutzt den Index, solange der Platzhalter hinten steht.
+            e.HasIndex(g => g.OpeningLine);
             // Der erste grobe Filter (Partien einer brauchbaren Laenge mit genug Kommentaren).
             e.HasIndex(g => new { g.CommentedPlies, g.PlyCount });
             // Selbstbezug: die Dublette zeigt auf die zuerst eingelesene Fassung. Kein Cascade —

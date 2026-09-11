@@ -84,24 +84,39 @@ public static class GuessScoring
     /// Der Partiezug MUSS enthalten sein — sonst ist die Stellung nicht wertbar (siehe Rückgabe).</param>
     /// <returns><c>null</c>, wenn der Partiezug nicht in der Liste steht: dann fehlt der Bezugspunkt,
     /// und raten zu lassen wäre unfair. Solche Stellungen werden übersprungen, nicht mit 0 gewertet.</returns>
-    public static GuessResult? Evaluate(IReadOnlyList<Candidate> candidates, string playedUci, string gameUci)
+    /// <param name="gameEvalPawns">Bewertung des PARTIEZUGES, falls er nicht unter den Kandidaten
+    /// steht — aus Sicht der Seite am Zug. Der Aufrufer leitet sie aus der FOLGESTELLUNG ab
+    /// (deren beste Bewertung mit umgekehrtem Vorzeichen). Ohne sie bleibt eine solche Stellung
+    /// unwertbar; frueher wurde sie deshalb kommentarlos uebersprungen — und das traf ausgerechnet
+    /// die interessanten Zuege: ein Opfer, das die Engine nicht unter ihre besten fuenf nimmt, ist
+    /// genau der Zug, den man raten moechte.</param>
+    public static GuessResult? Evaluate(IReadOnlyList<Candidate> candidates, string playedUci, string gameUci,
+        double? gameEvalPawns = null)
     {
         if (candidates is null || candidates.Count == 0) return null;
         if (string.IsNullOrWhiteSpace(playedUci) || string.IsNullOrWhiteSpace(gameUci)) return null;
 
         var game = Find(candidates, gameUci);
-        if (game is null) return null;
-        var gamePawns = game.Value.Eval.Pawns;
+        double gamePawns;
+        if (game is not null) gamePawns = game.Value.Eval.Pawns;
+        else if (gameEvalPawns is double known) gamePawns = known;
+        else return null;
 
         var played = Find(candidates, playedUci);
-        bool listed = played is not null;
+        // Der PARTIEZUG gilt als bekannt, auch wenn er nicht in der Liste steht: seine Bewertung
+        // kommt dann aus der Folgestellung (siehe gameEvalPawns). Ohne diese Ausnahme fiele
+        // ausgerechnet der gesuchte Zug unter den Deckel fuer ungelistete Zuege und braechte statt
+        // der vollen Wertung ein „gleichwertig".
+        bool listed = played is not null || IsSameMove(playedUci, gameUci);
 
         // Steht der geratene Zug NICHT in der Liste, kennen wir seine Bewertung nicht — wir wissen
         // nur: er ist höchstens so gut wie der schlechteste gelistete Zug (sonst stünde er drin).
         // Diese Obergrenze wird gewertet, und die Stufe wird bei „ähnlich" gedeckelt: ein sechster
         // Zug kann in einer ruhigen Stellung durchaus brauchbar sein, aber „besser als der
         // Partiezug" ist er sicher nicht.
-        var playedPawns = listed ? played!.Value.Eval.Pawns : candidates.Min(c => c.Eval.Pawns);
+        var playedPawns = played is not null ? played.Value.Eval.Pawns
+            : IsSameMove(playedUci, gameUci) ? gamePawns
+            : candidates.Min(c => c.Eval.Pawns);
 
         var diff = playedPawns - gamePawns;   // > 0 = besser als der Partiezug
 

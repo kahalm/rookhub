@@ -1195,6 +1195,30 @@ den anonymen Puzzle-Versuchen). Spielbar ist dort ausschliesslich der **kuratier
 `core/anon-session.ts` und muss `ValidationConstants.SessionIdPattern` erfuellen (Hex, 32–36) — die
 Mindestlaenge ist die einzige Schranke zwischen zwei anonymen Durchlaeufen.
 
+**Der erste relevante Zug** (0.467.0, `GuessStartPly`): wo das Raten anfaengt, war bis dahin eine
+KONSTANTE (`DefaultSkipPlies` = 8, im Code als „grober Platzhalter" vermerkt) — bei einem scharfen
+Gambit mitten im Gefecht, bei einer geschlossenen Eroeffnung noch reines Buchwissen. Jetzt
+entscheidet der FRUEHERE von zwei Hinweisen: (1) die Eroeffnung verlaesst das Buch — der erste
+Halbzug, dessen Zugfolge in weniger als `RareBelowGames` (20) Partien des Rohbestands vorkommt
+(`LibraryGame.OpeningLine`, Praefix-Suche auf dem Index, BINAER gesucht: fuenf Abfragen statt
+dreissig); (2) der Kommentator faengt an zu reden (`LibraryGameReader` liefert den ersten
+kommentierten Halbzug gleich mit). Gedeckelt auf `Earliest` (6) bis `Latest` (40) und nie hinter
+das Partieende. **Die Untergrenze ist noetig**: Sammlungen setzen den ersten Kommentar oft an den
+ERSTEN Zug, und dort steht dann eine Quellenangabe statt einer Erklaerung. Ohne Bestand (frische
+Installation, `MinLibrarySize` 1000) greift der erste Hinweis nicht und die alte Vorgabe traegt
+weiter. Das Ergebnis haengt an der PARTIE und wird in `GameAnalysis.SuggestedStartPly` gemerkt.
+
+**Ein Partiezug, den die Engine nicht unter ihren besten fuehrt, wird jetzt GESPIELT** (0.467.0).
+Vorher uebersprang `AdvanceToPlayableAsync` die Stellung wortlos — und das traf ausgerechnet die
+interessanten Zuege: ein Opfer, das die Engine erst zwei Zuege spaeter versteht, ist genau der Zug,
+den man raten moechte. Die Bewertung liegt laengst da: die Stellung NACH dem Partiezug ist selbst
+gerechnet, und ihre beste Bewertung ist die des GEGNERS — mit umgekehrtem Vorzeichen die des
+gespielten Zuges (`GuessSessionService.GameMoveEvalAsync`, durchgereicht als
+`GuessScoring.Evaluate(..., gameEvalPawns)`). Uebersprungen wird nur noch, was sich so auch nicht
+bewerten laesst: der letzte Zug der Partie (keine Folgestellung) und eine aufgegebene Folgestellung.
+Der Deckel „ungelistete Zuege sind hoechstens gleichwertig" gilt dabei NICHT fuer den Partiezug
+selbst — sonst braechte ausgerechnet der gesuchte Zug statt der vollen Wertung ein „gleichwertig".
+
 **Die Seite waehlt man im Bestand NICHT** (`CreateGuessSessionRequest.GuessWhite` weglassen): man
 uebernimmt die des GEWINNERS, das ist der Sinn der Uebung. `GuessSessionService.WinnerSideAsync`
 nimmt dafuer das ERGEBNIS, sonst die BEWERTUNG der letzten gerechneten Stellung (ab 1,5 Bauern
@@ -1267,6 +1291,8 @@ lesen. Sie werden nach und nach befuellt, und ein noch nicht befuelltes Feld ist
 | `CommentCount` / `CommentedPlies` / `CommentChars` | Wie viele Kommentare, wie viele HALBZUEGE einen tragen, wie viel Text. Die mittlere Zahl entscheidet: die Punktepartie haelt an kommentierten Zuegen an, drei lange Absaetze am Schluss machen sie stumm |
 | `NagCount` / `VariationCount` | Symbol-Bewertungen und Nebenvarianten — Zeichen ernsthafter Arbeit, aber der Spielende sieht sie nie |
 | `Languages` | CSV von ISO-Kuerzeln (`de`, `en,de`), `und` = nicht bestimmbar. NIE `null` lassen, sobald geprueft — sonst holt der naechste Durchgang dieselben Zeilen wieder |
+| `OpeningLine` | Die ersten 30 Halbzuege normalisiert („e4 e5 Nf3 …"), indiziert. Damit ist der Bestand eine EROEFFNUNGSSTATISTIK: „wie viele Partien spielen dieselben ersten k Zuege" ist eine Praefix-Suche statt einer Volltextsuche ueber 338 MB |
+| `FirstCommentedPly` | Der erste kommentierte Halbzug — zusammen mit `OpeningLine` die Grundlage von `GuessStartPly` |
 | `Score` | Eignungsnote 0–100 (`GuessSuitability`), eigene Spalte statt Formel in der Abfrage: die Gewichtung wird sich aendern |
 | `Pgn` | Die Partie selbst (LONGTEXT). Bewusst hier und nicht als Verweis auf Datei und Byte-Position — die Quelldatei ist ein Fund im Ablage-Ordner und keine Zusage |
 
@@ -1293,7 +1319,7 @@ Reihenfolge an der Spitze wirkt es sich nicht sichtbar aus.
 
 **Befuellt wird mit `tools/LibraryImport`** (Wartungswerkzeug, kein Teil des API-Images; das
 Docker-Image baut nur aus `src/api/RookHub.Api`). Vier Schritte, jeder fuer sich wiederholbar:
-`import <datei>` · `dedupe` · `languages` · `score`, dazu `stats`. Verbindung ueber
+`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats`. Verbindung ueber
 `ConnectionStrings__DefaultConnection`. Es startet KEINE API-Instanz, sondern oeffnet nur einen
 DbContext — eine zweite `RookHub.Api` gegen dieselbe Datenbank streitet sich mit dem
 Auftrags-Worker um die Engines.
@@ -1316,6 +1342,7 @@ eingeworfen worden.
 | GET | `/api/game-analyses/public` | **AllowAnonymous** + RL | Kuratierter Bestand: freigegebene UND spielbare Partien (mind. eine gerechnete Stellung), mit `annotated` fuer den Filter „alle / nur kommentierte". Kopfdaten und Fortschritt, **nicht** die Zugliste |
 | PUT | `/api/game-analyses/{id}/public` | Auth | Partie in den Bestand aufnehmen/herausnehmen `{ isPublic }` — Besitzer der Analyse oder Admin |
 | POST | `/api/game-analyses/guess` | Auth | Eigene Partie einwerfen `{ pgn, title? }` — KEINE Tiefe/Linien/Engine im Rumpf (Server setzt Tiefe 20). 400 mit `reason` ∈ `too-many-open` / `no-engine` / `invalid-pgn`; die Seite formuliert den Satz, der Server kennt die Sprache nicht |
+| GET | `/api/game-analyses/throughput` | Auth | Tempo und Restdauer der eigenen Analysen AUS DER HISTORIE (`GameAnalysisPosition.AnalyzedAt`): Stellungen je Minute, gemessene Spanne, Rest, hochgerechnete Restdauer. Vorher zaehlte der Browser selbst mit — eine Minute offene Seite, bevor ueberhaupt etwas dastand, und beim naechsten Aufruf wieder bei null. Fenster eine Stunde, sonst 24 h; gemessen ab dem ERSTEN Zeitstempel im Fenster, nicht ueber die Fensterlaenge. Literal-Route vor `{id:int}` |
 | GET | `/api/game-analyses/guess/status` | Auth | Steht eine Engine bereit (eigene oder Haus) und wie viele der fuenf Plaetze sind frei — gefragt, BEVOR jemand ein PGN hineinkopiert |
 | PUT | `/api/engine/house` | Admin | Eigene Hintergrund-Engines als Haus-Engine freigeben `{ share }` (403 ohne Admin, 400 ohne Token bzw. ohne hinterlegte Hintergrund-Engine) |
 

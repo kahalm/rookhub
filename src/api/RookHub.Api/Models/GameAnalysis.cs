@@ -92,6 +92,13 @@ public class GameAnalysis
     /// <summary>Von Hand eingereiht oder auf der Punktepartie-Seite eingeworfen.</summary>
     public GameAnalysisOrigin Origin { get; set; } = GameAnalysisOrigin.Manual;
 
+    /// <summary>
+    /// Ab welchem Halbzug das Raten sinnvoll beginnt — einmal ermittelt und gemerkt, weil die
+    /// Antwort an der Partie haengt und nicht am Durchlauf (siehe <c>GuessStartPly</c>).
+    /// <c>null</c> = noch nicht bestimmt; dann greift die Vorgabe.
+    /// </summary>
+    public int? SuggestedStartPly { get; set; }
+
     public GameAnalysisStatus Status { get; set; } = GameAnalysisStatus.Pending;
 
     /// <summary>Anzahl der zu analysierenden Halbzüge (= Zeilen in <see cref="Positions"/>).</summary>

@@ -3040,7 +3040,8 @@
     "computing": "analizira se",
     "failedBadge": "neuspjelo",
     "notReady": "Nijedna pozicija još nije analizirana",
-    "waiting": "čeka"
+    "waiting": "čeka",
+    "moves": "{{moves}} poteza"
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

@@ -505,6 +505,79 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(2, used.Distinct().Count());
     }
 
+    // ===== Tempo aus der Historie =============================================
+
+    /// <summary>
+    /// Der Kern: das Tempo kommt aus den ZEITSTEMPELN und nicht aus Proben im Browser. Es steht
+    /// deshalb beim ersten Abruf da — auch wenn der Reiter die ganze Nacht zu war.
+    /// </summary>
+    [Fact]
+    public async Task Throughput_rechnetAusDenZeitstempeln()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        // Zehn Stellungen in den letzten zehn Minuten fertig geworden.
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).Take(10).ToListAsync();
+        var start = DateTime.UtcNow.AddMinutes(-10);
+        for (var i = 0; i < positions.Count; i++)
+        {
+            positions[i].CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+            positions[i].AnalysisJobId = null;
+            positions[i].AnalyzedAt = start.AddMinutes(i);
+        }
+        await _db.SaveChangesAsync();
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(10, t.AnalyzedInWindow);
+        // Gemessen ab dem ERSTEN Zeitstempel (vor 10 min), nicht ueber die Fensterlaenge von 60.
+        Assert.InRange(t.WindowMinutes, 9, 11);
+        Assert.InRange(t.PerMinute, 0.8, 1.2);
+        Assert.Equal(4, t.Remaining);              // 14 Halbzuege minus 10 fertige
+        Assert.InRange(t.EtaMinutes!.Value, 3, 5);
+    }
+
+    /// <summary>Nach einer Nacht Pause sieht der Server weiter zurueck, statt „kein Tempo" zu
+    /// melden — die Zahl von gestern ist die beste Schaetzung, die es gibt.</summary>
+    [Fact]
+    public async Task Throughput_sichtWeiterZurueck_wennImFensterNichtsPassierteIst()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).Take(6).ToListAsync();
+        var start = DateTime.UtcNow.AddHours(-8);
+        for (var i = 0; i < positions.Count; i++)
+        {
+            positions[i].CandidatesJson = "[]";
+            positions[i].AnalysisJobId = null;
+            positions[i].AnalyzedAt = start.AddMinutes(i * 10);
+        }
+        await _db.SaveChangesAsync();
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(6, t.AnalyzedInWindow);
+        Assert.True(t.PerMinute > 0);
+    }
+
+    /// <summary>Ohne eine einzige gerechnete Stellung gibt es kein Tempo — und keine erfundene Zahl.</summary>
+    [Fact]
+    public async Task Throughput_ohneGerechneteStellungen_bleibtLeer()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(0, t.PerMinute);
+        Assert.Null(t.EtaMinutes);
+        Assert.Equal(14, t.Remaining);
+    }
+
     // ===== Eine Partie nach der anderen =======================================
 
     /// <summary>

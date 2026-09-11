@@ -20,7 +20,7 @@ public class GuessSessionServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _svc = new GuessSessionService(_db);
+        _svc = new GuessSessionService(_db, new GuessStartPly(_db));
     }
 
     public void Dispose() => _db.Dispose();
@@ -633,9 +633,13 @@ public class GuessSessionServiceTests : IDisposable
     public async Task History_nenntDenGrundFuerUebersprungeneZuege()
     {
         var (user, analysis) = await SeedAsync();
-        // Halbzug 2 (Weiss, Nf3) unwertbar machen: Kandidatenliste ohne den Partiezug.
+        // Halbzug 2 (Weiss, Nf3) unwertbar machen: Kandidatenliste ohne den Partiezug — UND die
+        // Folgestellung aufgegeben, sonst liesse sich die Bewertung des Partiezuges von dort
+        // ableiten und die Stellung waere spielbar (siehe der Test darunter).
         var p2 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 2);
         p2.CandidatesJson = "[{\"uci\":\"b1c3\",\"cp\":10}]";
+        var p3 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 3);
+        p3.CandidatesJson = "[]";
         await _db.SaveChangesAsync();
 
         var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
@@ -652,6 +656,39 @@ public class GuessSessionServiceTests : IDisposable
         // Der geratene Zug und die Gegenseite tragen KEINEN Grund.
         Assert.Null(state.History.Single(h => h.Ply == 0).Skipped);
         Assert.Null(state.History.Single(h => h.Ply == 1).Skipped);
+    }
+
+    /// <summary>
+    /// Steht der Partiezug nicht unter den besten fuenf, wird die Stellung TROTZDEM gespielt: seine
+    /// Bewertung steht in der Folgestellung (beste Bewertung des Gegners, Vorzeichen gedreht).
+    ///
+    /// <para>Frueher wurde sie kommentarlos uebersprungen — und das traf ausgerechnet die
+    /// interessanten Zuege: ein Opfer, das die Engine nicht unter ihre besten nimmt, ist genau der
+    /// Zug, den man raten moechte.</para>
+    /// </summary>
+    [Fact]
+    public async Task Guess_partiezugNichtUnterDenBesten_wirdTrotzdemGewertet()
+    {
+        var (user, analysis) = await SeedAsync();
+        var p2 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 2);
+        p2.CandidatesJson = "[{\"uci\":\"b1c3\",\"cp\":10}]";        // ohne den Partiezug (g1f3)
+        var p3 = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == analysis.Id && p.Ply == 3);
+        p3.CandidatesJson = "[{\"uci\":\"b8c6\",\"cp\":-30}]";       // Gegner steht 0,3 schlechter
+        await _db.SaveChangesAsync();
+
+        var session = await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest
+        {
+            GameAnalysisId = analysis.Id, StartPly = 2, GuessWhite = true,
+        });
+
+        Assert.Equal(2, session.Position!.Ply);   // NICHT uebersprungen
+
+        // Der Partiezug selbst: er ist der gesuchte, also volle Wertung statt gar keiner.
+        var result = await _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id,
+            new GuessMoveRequest { Uci = "g1f3" });
+
+        Assert.NotNull(result.Grade);
+        Assert.Contains(result.Grade, new[] { "gameMove", "onlyMove" });
     }
 
     /// <summary>Was noch nicht gerechnet ist, wird anders benannt als was nicht wertbar ist —

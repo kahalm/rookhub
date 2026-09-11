@@ -99,3 +99,28 @@ public class GuessUploadStatusDto
     public int OpenGames { get; set; }
     public int MaxGames { get; set; }
 }
+
+/// <summary>
+/// Tempo und Restdauer der eigenen Analysen, AUS DER HISTORIE gerechnet.
+///
+/// <para>Vorher zaehlte der Browser selbst mit: er nahm bei jedem Abruf eine Probe und brauchte
+/// eine Minute offener Seite, bevor er ueberhaupt etwas sagen konnte — und beim naechsten
+/// Seitenaufruf fing er wieder bei null an. Die Stellungen tragen aber ihren Zeitstempel
+/// (<c>GameAnalysisPosition.AnalyzedAt</c>); daraus steht die Antwort sofort da, auch wenn der
+/// Reiter die ganze Nacht zu war.</para>
+/// </summary>
+public class AnalysisThroughputDto
+{
+    /// <summary>Gerechnete Stellungen je Minute; 0 = im Fenster ist nichts passiert.</summary>
+    public double PerMinute { get; set; }
+    /// <summary>Wie viele Stellungen im Fenster fertig wurden.</summary>
+    public int AnalyzedInWindow { get; set; }
+    /// <summary>Laenge des Fensters in Minuten — nicht die Vorgabe, sondern die tatsaechlich
+    /// gemessene Spanne: faengt die Arbeit vor zehn Minuten an, waere Teilen durch sechzig
+    /// eine Rate, die nur ein Sechstel der Wahrheit zeigt.</summary>
+    public int WindowMinutes { get; set; }
+    /// <summary>Noch offene Stellungen ueber alle unfertigen Partien.</summary>
+    public int Remaining { get; set; }
+    /// <summary>Hochgerechnete Restdauer in Minuten; <c>null</c> ohne Tempo oder ohne Rest.</summary>
+    public int? EtaMinutes { get; set; }
+}

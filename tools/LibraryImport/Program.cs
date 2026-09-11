@@ -9,6 +9,7 @@ using RookHub.Tools.LibraryImport;
 //
 //   import <datei>   Partien einlesen (Kopfdaten, Kommentar-Merkmale, Zug-Hash)
 //   dedupe           gleiche Zugfolgen zusammenfassen (DuplicateOfId, Status)
+//   openings         Eroeffnungszeile + ersten kommentierten Halbzug nachtragen
 //   languages        Sprache der Kommentare bestimmen
 //   score            Eignungsnote fuer die Punktepartie berechnen
 //   stats            zeigen, was drinsteht
@@ -41,6 +42,7 @@ switch (command)
 {
     case "import": return await ImportAsync();
     case "dedupe": return await DedupeAsync();
+    case "openings": return await OpeningsAsync();
     case "languages": return await LanguagesAsync();
     case "score": return await ScoreAsync();
     case "stats": return await StatsAsync();
@@ -178,6 +180,45 @@ async Task<int> DedupeAsync()
     return 0;
 }
 
+// ===== 2b. Eroeffnungszeile + erster Kommentar ==============================
+
+async Task<int> OpeningsAsync()
+{
+    // Nachtrag fuer den Altbestand: beide Spalten fallen beim Einlesen ohnehin an, es gab sie nur
+    // noch nicht. Gerechnet wird aus dem gespeicherten PGN — die Quelldatei wird nicht gebraucht.
+    var done = 0;
+    var lastId = 0;
+    while (true)
+    {
+        await using var db = NewDb();
+        var rows = await db.LibraryGames
+            .Where(g => g.Id > lastId && g.OpeningLine == null)
+            .OrderBy(g => g.Id)
+            .Take(2000)
+            .Select(g => new { g.Id, g.Pgn })
+            .ToListAsync();
+        if (rows.Count == 0) break;
+        lastId = rows[^1].Id;
+
+        foreach (var row in rows)
+        {
+            var stats = LibraryGameReader.Analyse(GuessStartPly.MoveTextOf(row.Pgn));
+            if (stats.OpeningLine.Length == 0) continue;
+            var opening = stats.OpeningLine.Length > 200 ? stats.OpeningLine[..200] : stats.OpeningLine;
+            var firstComment = stats.FirstCommentedPly == 0 ? (int?)null : stats.FirstCommentedPly;
+            await db.LibraryGames.Where(g => g.Id == row.Id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(g => g.OpeningLine, opening)
+                    .SetProperty(g => g.FirstCommentedPly, firstComment));
+        }
+
+        done += rows.Count;
+        if (done % 20000 == 0) Console.WriteLine($"  {done:N0} nachgetragen");
+    }
+    Console.WriteLine($"Eroeffnungszeile nachgetragen fuer {done:N0} Partien.");
+    return 0;
+}
+
 // ===== 3. Sprache ===========================================================
 
 async Task<int> LanguagesAsync()
@@ -279,6 +320,8 @@ async Task<int> StatsAsync()
         Console.WriteLine($"  {g.Status,-12} {g.Count,8:N0}");
 
     Console.WriteLine($"mit Kommentaren : {await db.LibraryGames.CountAsync(g => g.CommentedPlies > 0):N0}");
+    Console.WriteLine($"mit Eroeffnung  : {await db.LibraryGames.CountAsync(g => g.OpeningLine != null):N0}");
+    Console.WriteLine($"mit 1. Kommentar: {await db.LibraryGames.CountAsync(g => g.FirstCommentedPly != null):N0}");
     Console.WriteLine($"mit Sprache     : {await db.LibraryGames.CountAsync(g => g.Languages != null):N0}");
     Console.WriteLine($"mit Note        : {await db.LibraryGames.CountAsync(g => g.Score != null):N0}");
     return 0;

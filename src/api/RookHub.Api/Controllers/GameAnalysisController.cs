@@ -49,6 +49,12 @@ public class GameAnalysisController : BaseApiController
             : Ok(new { isPublic = result.Value });
     }
 
+    /// <summary>Tempo und Restdauer der eigenen Analysen, aus den Zeitstempeln der gerechneten
+    /// Stellungen. Literal-Route VOR <c>{id:int}</c>.</summary>
+    [HttpGet("throughput")]
+    public async Task<ActionResult<AnalysisThroughputDto>> Throughput(CancellationToken ct)
+        => Ok(await _service.ThroughputAsync(GetUserId(), ct));
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<GameAnalysisDto>> Get(int id, CancellationToken ct)
     {
