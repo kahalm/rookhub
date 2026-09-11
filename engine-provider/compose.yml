@@ -26,8 +26,11 @@ services:
     # .env sollte dazu passen — der Provider selbst kennt dieses Limit nicht):
     # cpus: 4
     #
-    # Zwei Engines (Live + Hintergrund) aus diesem einen Container: ENGINE_COUNT=2 in der .env,
-    # Namen/Hash je Engine per ENGINE_<i>_NAME / ENGINE_<i>_MAX_HASH — siehe README.
+    # Mehrere Engines aus diesem einen Container: in der .env eine LIVE-Engine und n
+    # HINTERGRUND-Engines beschreiben (LIVE_NAME/LIVE_MAX_THREADS, BACKGROUND_NAME/
+    # BACKGROUND_MAX_THREADS, BACKGROUND_COUNT) — siehe README. Die Aufteilung ist gemessen:
+    # eine Suche wird von 1 auf 8 Threads nur um den Faktor 1,13 schneller, vier Suchen
+    # nebeneinander um fast das Dreifache.
 
   # ZWEI STOCKFISH-FASSUNGEN NEBENEINANDER (zum Vergleichen/Umschalten)
   # ------------------------------------------------------------------
