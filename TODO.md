@@ -8,6 +8,86 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Kommentare mehrsprachig — Sprache umschaltbar, Uebersetzungen getrennt ablegen (2026-09-11)
+
+Gewuenscht: beim Durchspielen einer Meisterpartie die Sprache der Kommentare umschalten, und
+Partien zusaetzlich uebersetzen lassen. Der Vorschlag des Nutzers — **getrennt in der Datenbank
+ablegen, statt PGN zu schreiben** — ist richtig, und zwar aus mehr als Bequemlichkeit: das PGN ist
+die QUELLE (Herkunft: gekaufte Sammlung, `SourceTitle`/`SourceVersion` stehen drin). Wer eine
+Uebersetzung hineinschreibt, kann Quelle und Zutat nie wieder auseinanderhalten, und ein erneutes
+Einlesen der Datei wuerde sie verwerfen.
+
+**Was im Bestand wirklich drinsteht (gemessen 2026-09-11 an allen 130 572 Zeilen):**
+
+| Befund | Zahl |
+|---|---|
+| Partien mit `[%lang`-Marker | **0** |
+| Partien mit irgendeinem `[%`-Marker | 55 618 (`cal` 41 430, `evp` 3 904) |
+| vom Sprachtest als zweisprachig erkannt | 1 509 (`en,de` 1 292 · `de,en` 217), dazu `fr,nl` 95, `fr,hu` 38 |
+
+Das ist die entscheidende Nachricht: **ChessBase haengt die Sprachen im PGN-Export einfach
+aneinander**, ohne Trennzeichen. Ein Kommentar sieht so aus (CBM 212, Van Foreest):
+
+> `{The day before both Arjun and myself had lost our games. ... Am Tag zuvor hatten sowohl Arjun
+> als auch ich unsere Partien verloren. ...}`
+
+Die Grenze muss also GEFUNDEN werden. Zwei Signale, beide im Bestand vorhanden:
+1. **Satzweise Spracherkennung** — `Services/CommentLanguage.cs` kann das schon, nur bisher je
+   Partie statt je Satz.
+2. **Die Figurenbuchstaben**, und die sind das schaerfere Signal: die englische Haelfte schreibt
+   `8.Be3` und `8...Ng4`, die deutsche `8.Le3` und `8...Sg4`. Der Wechsel des Buchstabensatzes
+   INNERHALB eines Kommentars ist eine harte Grenze.
+
+Regel dazu: **im Zweifel NICHT schneiden.** Ein halbierter Satz ist schlimmer als ein zweisprachiger
+Block — der Block bleibt dann ganz und zaehlt zur Hauptsprache der Partie.
+
+### Ablage (Vorschlag)
+
+```
+CommentSets                  EIN Satz Kommentare in EINER Sprache zu EINER Partie
+  Id
+  LibraryGameId?             geteilt ueber alle Analysen derselben Bibliothekspartie, ODER
+  GameAnalysisId?            eine selbst eingeworfene Partie (genau EINES von beiden)
+  Language                   'en' | 'de' | …
+  Origin                     Source | Machine | Human
+  TranslatedFrom?  Model?    Vorlage und Womit — damit ein spaeterer Lauf nachbessern kann
+  Status                     Draft | Ready
+  UNIQUE (LibraryGameId, Language) bzw. (GameAnalysisId, Language)
+
+CommentTexts                 die Zeilen darin
+  CommentSetId (Cascade), Ply (wie GameAnalysisPosition.Ply, -1 = Einleitung), Text
+  UNIQUE (CommentSetId, Ply)
+```
+
+Warum ein SATZ und nicht bloss Zeilen mit Sprachspalte: die Herkunft (Quelle? Maschine? welches
+Modell?) gehoert EINMAL je Sprache hin und nicht an jede Zeile, ein Uebersetzungslauf schreibt
+einen Satz am Stueck, und „Sprache umschalten" ist dann eine Abfrage statt eines Filters ueber
+Zeilen unterschiedlicher Herkunft.
+
+**Warum die Bibliothekszeile der Anker ist**, wo es eine gibt: fordern zwei Leute dieselbe Partie
+an, entstehen zwei Analysen — eine Uebersetzung je Analyse waere dieselbe Arbeit zweimal bezahlt.
+Eigene eingeworfene Partien haben keine Bibliothekszeile und haengen deshalb an der Analyse.
+
+### Schritte
+
+1. **`tools/LibraryImport comments`** — liest die PGNs, zerlegt je Halbzug, trennt zweisprachige
+   Bloecke und schreibt `Origin = Source`. Wiederholbar, ruehrt das PGN nicht an.
+2. **Ausliefern** — `GuessSessionService.CommentsAsync` sucht zuerst einen Satz in der gewuenschten
+   Sprache und faellt sonst auf das PGN zurueck (heutiges Verhalten, also kein Bruch fuer den
+   Altbestand). Das Sitzungs-DTO nennt die verfuegbaren Sprachen.
+3. **Umschalten** — Sprach-Chip ueber dem Kommentar; Vorgabe ist die Oberflaechensprache, wenn es
+   sie gibt, sonst die Hauptsprache der Partie. Die Wahl merkt sich das Geraet.
+4. **Uebersetzen** — Hintergrund-Auftrag je Partie ueber den schon vorhandenen `Anthropic:ApiKey`
+   (derselbe Weg wie die Puzzle-Tipps). EIN Aufruf je Partie mit allen Halbzuegen, nicht einer je
+   Kommentar: nur so bleiben Figurennamen und Eroeffnungsbegriffe innerhalb einer Partie gleich.
+   Ergebnis `Origin = Machine` und im Brett als maschinell gekennzeichnet — eine Uebersetzung, die
+   sich als die Anmerkung des Grossmeisters ausgibt, ist eine Falschaussage ueber die Quelle.
+5. **Die Liste** kann mitsagen, welche Sprachen es gibt (`LibraryGame.Languages` steht schon da).
+
+Offen und bewusst noch nicht entschieden: ob Nutzer eine Uebersetzung von Hand verbessern duerfen
+(`Origin = Human`) — die Ablage kann es, die Oberflaeche dafuer ist eine eigene Aufgabe.
+
+
 ## [ ] Stockfish regelmaessig pruefen — DREI Engines, drei Versionen (2026-09-10)
 
 Stand heute laufen drei verschiedene Stockfish-Versionen im Stack, und nur eine davon aktualisiert

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.471.3", date: "2026-09-11", changes: [
+    { en: "Groundwork for annotations in more than one language: measured that not a single game of the 130000 in the collection carries a language marker — ChessBase simply appends the languages to each other in a PGN export. The plan for splitting them and for storing translations separately from the source is written down.", de: "Vorarbeit fuer Anmerkungen in mehr als einer Sprache: gemessen, dass keine einzige der 130000 Partien des Bestands einen Sprach-Marker traegt — ChessBase haengt die Sprachen im PGN-Export schlicht aneinander. Der Plan zum Trennen und zum Ablegen von Uebersetzungen getrennt von der Quelle steht." },
+  ] },
   { version: "0.471.2", date: "2026-09-11", changes: [
     { en: "The arrow keys now page through the moves of a points game: left and right one half-move, Home to the starting position, End back to the move you are guessing. Whoever replays a game does not have a hand on the mouse. Paging still stops at the move in question, so it gives nothing away.", de: "Die Pfeiltasten blaettern jetzt durch die Zuege einer Punktepartie: links und rechts einen Halbzug, Pos1 an den Anfang, Ende zurueck zum gesuchten Zug. Wer eine Partie nachspielt, hat die Hand nicht an der Maus. Das Blaettern endet weiterhin am gesuchten Zug und verraet damit nichts." },
     { en: "On the analyses page both buttons sit together at the right edge instead of the points game standing between the heading and the single jobs.", de: "Auf der Analysen-Seite sitzen beide Knoepfe zusammen am rechten Rand, statt dass die Punktepartie zwischen Ueberschrift und Einzel-Auftraegen steht." },
