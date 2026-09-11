@@ -46,6 +46,7 @@ public class EndpointAuthInventoryTests
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am
         // "anonymous-puzzle"-Rate-Limiter und pruefen die Sitzungskennung.
         "GET /api/game-analyses/public",                             // GameAnalysisController.ListPublic
+        "GET /api/guess-tree",                                       // GuessTreeController.Branch
         "GET /api/guess-sessions/anonymous",                         // GuessSessionAnonymousController.List
         "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
         "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review

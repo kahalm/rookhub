@@ -61,6 +61,9 @@ import { ViewStateService } from '../../core/view-state.service';
             <button mat-stroked-button (click)="openLibrary()">
               <mat-icon>library_books</mat-icon> {{ 'guess.library.open' | translate }}
             </button>
+            <button mat-stroked-button (click)="openPositionFilter()">
+              <mat-icon>account_tree</mat-icon> {{ 'guess.tree.open' | translate }}
+            </button>
           </div>
         }
       </div>
@@ -520,6 +523,20 @@ export class GuessListComponent implements OnInit, OnDestroy {
   openLibrary(): void {
     import('./library-dialog.component').then(m => {
       const ref = this.dialog.open(m.LibraryDialogComponent, { maxWidth: '96vw' });
+      ref.afterClosed().subscribe((analysisId?: number) => {
+        if (analysisId) this.start({ id: analysisId } as GameAnalysis);
+        else this.loadOwnGames();
+      });
+    });
+  }
+
+  /**
+   * „Nach Stellung filtern": Brett plus Eroeffnungsbaum. Die Namenssuche daneben beantwortet „ich
+   * weiss, wie die Partie heisst" — diese Frage ist die andere, die man vor dem Ueben stellt.
+   */
+  openPositionFilter(): void {
+    import('./position-filter-dialog.component').then(m => {
+      const ref = this.dialog.open(m.PositionFilterDialogComponent, { maxWidth: '96vw' });
       ref.afterClosed().subscribe((analysisId?: number) => {
         if (analysisId) this.start({ id: analysisId } as GameAnalysis);
         else this.loadOwnGames();

@@ -3083,7 +3083,18 @@
       }
     },
     "commentLanguage": "Language of the annotations",
-    "commentOriginal": "Original"
+    "commentOriginal": "Original",
+    "tree": {
+      "open": "Filter by position",
+      "title": "Filter by position",
+      "startPosition": "Starting position",
+      "onlyPlayable": "computed only",
+      "all": "all games",
+      "total": "{{total}} games reach this position",
+      "noMoves": "No continuation recorded here.",
+      "nonePlayable": "No computed game reaches this position yet.",
+      "moveFailed": "That move does not work in this position."
+    }
   },
   "tournamentDirectory": {
     "title": "Tournament calendar",

@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -76,6 +77,7 @@ public class GameAnalysisService
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,
             LibraryGameId = libraryGameId,
+            OpeningLine = OpeningLineOf(plies),
             PlyCount = plies.Count,
             Status = GameAnalysisStatus.Pending,
         };
@@ -97,6 +99,25 @@ public class GameAnalysisService
         // Sofort die erste Fuhre einreihen, damit der Nutzer nicht auf den nächsten Pump-Lauf wartet.
         await PumpOneAsync(analysis.Id, ct);
         return await GetAsync(userId, analysis.Id, ct) ?? ToDto(analysis, 0);
+    }
+
+    /// <summary>
+    /// Die ersten Halbzuege als normalisierte Zeile („e4 e5 Nf3 Nc6") — dieselbe Form wie
+    /// <see cref="LibraryGame.OpeningLine"/>, damit der Stellungsfilter beide Quellen gleich
+    /// behandeln kann. Bewertungszeichen und Schach-Zeichen fallen weg: „Nf3+" und „Nf3" sind
+    /// derselbe Zug, und ein Baum, der sie trennt, hat zwei Aeste fuer eine Stellung.
+    /// </summary>
+    internal static string OpeningLineOf(IReadOnlyList<GamePlies.Ply> plies)
+    {
+        var sb = new StringBuilder(LibraryGameReader.OpeningPlies * 6);
+        foreach (var p in plies.Take(LibraryGameReader.OpeningPlies))
+        {
+            if (sb.Length > 0) sb.Append(' ');
+            foreach (var c in p.San)
+                if (c is not ('+' or '#' or '!' or '?')) sb.Append(c);
+        }
+        var line = sb.ToString();
+        return line.Length > 200 ? line[..200] : line;
     }
 
     // ===== Einwurf auf der Punktepartie-Seite =================================
@@ -210,12 +231,23 @@ public class GameAnalysisService
     /// man raet also eine Partie mit Loechern, ohne dass irgendwo steht, warum. Sortiert nach Titel,
     /// nicht nach Anlagedatum: der Bestand ist eine Bibliothek und keine Zeitleiste.
     /// </summary>
-    public async Task<List<GameAnalysisDto>> ListPublicAsync(CancellationToken ct = default)
+    /// <param name="line">Eroeffnungszeile als Filter („e4 e5 Nf3"); leer = alles. Der
+    /// Stellungsfilter der Punktepartie-Seite reicht sie durch — gesucht wird ueber ein PRAEFIX,
+    /// und das trifft den Index auf <see cref="GameAnalysis.OpeningLine"/>.</param>
+    public async Task<List<GameAnalysisDto>> ListPublicAsync(CancellationToken ct = default,
+        string? line = null)
     {
-        var rows = await ProjectAsync(
-            _db.GameAnalyses.AsNoTracking()
-                .Where(g => g.IsPublic && g.Positions.Any() && !g.Positions.Any(p => p.CandidatesJson == null)),
-            ct);
+        var query = _db.GameAnalyses.AsNoTracking()
+            .Where(g => g.IsPublic && g.Positions.Any() && !g.Positions.Any(p => p.CandidatesJson == null));
+
+        var prefix = GuessOpeningTree.Normalize(line);
+        if (prefix.Length > 0)
+        {
+            var muster = prefix + "%";
+            query = query.Where(g => g.OpeningLine != null && EF.Functions.Like(g.OpeningLine, muster));
+        }
+
+        var rows = await ProjectAsync(query, ct);
         await FillGuessSideAsync(rows, ct);
         return rows.OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase).ToList();
     }

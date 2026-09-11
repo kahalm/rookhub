@@ -2808,7 +2808,18 @@
       }
     },
     "commentLanguage": "A jegyzetek nyelve",
-    "commentOriginal": "Eredeti"
+    "commentOriginal": "Eredeti",
+    "tree": {
+      "open": "Szűrés állás szerint",
+      "title": "Szűrés állás szerint",
+      "startPosition": "Alapállás",
+      "onlyPlayable": "csak a kiszámoltak",
+      "all": "minden játszma",
+      "total": "{{total}} játszma jut el ebbe az állásba",
+      "noMoves": "Itt nincs rögzített folytatás.",
+      "nonePlayable": "Még egyetlen kiszámolt játszma sem jut el ebbe az állásba.",
+      "moveFailed": "Ez a lépés ebben az állásban nem lehetséges."
+    }
   },
   "tournamentDirectory": {
     "title": "Versenynaptár",

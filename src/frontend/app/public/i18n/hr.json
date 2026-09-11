@@ -3083,7 +3083,18 @@
       }
     },
     "commentLanguage": "Jezik komentara",
-    "commentOriginal": "Izvornik"
+    "commentOriginal": "Izvornik",
+    "tree": {
+      "open": "Filtriraj po poziciji",
+      "title": "Filtriraj po poziciji",
+      "startPosition": "Početna pozicija",
+      "onlyPlayable": "samo izračunate",
+      "all": "sve partije",
+      "total": "{{total}} partija dolazi do ove pozicije",
+      "noMoves": "Ovdje nema zabilježenog nastavka.",
+      "nonePlayable": "Nijedna izračunata partija još ne dolazi do ove pozicije.",
+      "moveFailed": "Taj potez nije moguć u ovoj poziciji."
+    }
   },
   "tournamentDirectory": {
     "title": "Kalendar turnira",

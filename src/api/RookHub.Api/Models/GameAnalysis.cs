@@ -113,6 +113,17 @@ public class GameAnalysis
     /// </summary>
     public int? SuggestedStartPly { get; set; }
 
+    /// <summary>
+    /// Die ersten Halbzuege normalisiert („e4 e5 Nf3 Nc6"), wie <see cref="LibraryGame.OpeningLine"/>
+    /// — die Grundlage des Stellungsfilters auf der Punktepartie-Seite: „welche Partien spielen
+    /// dieselben ersten k Zuege" ist damit eine Praefix-Suche auf einem Index.
+    ///
+    /// <para>Eigene Spalte und nicht bei Bedarf aus <see cref="GameAnalysisPosition.GameMoveSan"/>
+    /// gerechnet: der Baum fragt bei JEDEM Klick, und ein Selbst-Verbund ueber zehn Halbzuege
+    /// waere zehn Verbuende ueber Zehntausende Zeilen.</para>
+    /// </summary>
+    public string? OpeningLine { get; set; }
+
     public GameAnalysisStatus Status { get; set; } = GameAnalysisStatus.Pending;
 
     /// <summary>Anzahl der zu analysierenden Halbzüge (= Zeilen in <see cref="Positions"/>).</summary>

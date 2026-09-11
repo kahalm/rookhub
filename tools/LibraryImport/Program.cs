@@ -16,6 +16,7 @@ using RookHub.Tools.LibraryImport;
 //   score            Eignungsnote fuer die Punktepartie berechnen
 //   queue            die besten Partien zum Rechnen einreihen
 //   comments         die Kommentare eingereihter Partien nach Sprachen trennen
+//   analysis-openings  Eroeffnungszeile der eingereihten Partien nachtragen
 //   translate        fehlende Sprachen uebersetzen lassen (Anthropic:ApiKey noetig)
 //   stats            zeigen, was drinsteht
 //
@@ -52,6 +53,7 @@ switch (command)
     case "score": return await ScoreAsync();
     case "queue": return await QueueAsync();
     case "comments": return await CommentsAsync();
+    case "analysis-openings": return await AnalysisOpeningsAsync();
     case "translate": return await TranslateAsync();
     case "stats": return await StatsAsync();
     default:
@@ -641,6 +643,48 @@ async Task<int> FigurinesAsync(AppDbContext db)
     }
     await db.SaveChangesAsync();
     Console.WriteLine($"Figurenzeichen aufgeloest in {geaendert:N0} von {alle.Count:N0} Zeilen.");
+    return 0;
+}
+
+// Die Eroeffnungszeile der eingereihten Partien nachtragen — die Grundlage des Stellungsfilters.
+//
+//   analysis-openings
+//
+// Neue Partien bekommen sie beim Anlegen (GameAnalysisService.CreateAsync). Gerechnet wird sie
+// hier aus den STELLUNGSZEILEN und nicht aus dem PGN: dort steht der Zug schon geprueft und
+// normalisiert da, und ein zweiter Parser waere eine zweite Gelegenheit, anders zu zaehlen.
+async Task<int> AnalysisOpeningsAsync()
+{
+    await using var db = NewDb();
+    var ids = await db.GameAnalyses.AsNoTracking()
+        .Where(g => g.OpeningLine == null)
+        .OrderBy(g => g.Id)
+        .Select(g => g.Id)
+        .ToListAsync();
+
+    var getan = 0;
+    foreach (var id in ids)
+    {
+        var sans = await db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == id)
+            .OrderBy(p => p.Ply)
+            .Take(30)
+            .Select(p => p.GameMoveSan)
+            .ToListAsync();
+        if (sans.Count == 0) continue;
+
+        var zeile = string.Join(' ', sans.Select(s => new string(
+            s.Where(c => c is not ('+' or '#' or '!' or '?')).ToArray())));
+        if (zeile.Length > 200) zeile = zeile[..200];
+
+        var eintrag = new GameAnalysis { Id = id, OpeningLine = zeile };
+        db.GameAnalyses.Attach(eintrag);
+        db.Entry(eintrag).Property(g => g.OpeningLine).IsModified = true;
+        getan++;
+        if (getan % 200 == 0) { await db.SaveChangesAsync(); db.ChangeTracker.Clear(); }
+    }
+    await db.SaveChangesAsync();
+    Console.WriteLine($"Eroeffnungszeile nachgetragen fuer {getan:N0} von {ids.Count:N0} Partien.");
     return 0;
 }
 

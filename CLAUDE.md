@@ -1388,6 +1388,40 @@ Fortschrittsbalken, „Spielen" bis zur ersten gerechneten Stellung gesperrt) un
 Stellung — die gerade eingeworfene waere fuer Minuten spurlos verschwunden und ein zweites Mal
 eingeworfen worden.
 
+### Stellungsfilter (`/api/guess-tree`) — der Eroeffnungsbaum der Punktepartie
+
+Die Bestandssuche daneben beantwortet „ich weiss, wie die Partie heisst". Die andere Frage, die
+man vor dem Ueben stellt, ist „was gibt es zu MEINER Eroeffnung?" — und das ist keine Textsuche.
+Der Knopf „Nach Stellung filtern" oeffnet ein Brett in der Grundstellung und daneben den Baum:
+je Zug, wie viele Partien ihn spielen; ein Klick geht hinein, die Liste darunter zeigt die Partien
+zu dieser Stellung.
+
+**Zwei Quellen, EIN Baum** (`onlyPlayable`): die freigegebenen `GameAnalysis`-Partien (sofort
+spielbar) oder der ganze Rohbestand (`LibraryGame`, 130 000 Partien — von dort wird angefordert).
+Der Umschalter ist der Punkt: ohne ihn fuehrt der Baum entweder in eine fast leere Auswahl oder
+auf Partien, die man nicht spielen kann.
+
+**Beide Seiten fuehren dieselbe normalisierte Zeile** (`OpeningLine`, die ersten 30 Halbzuege,
+„e4 e5 Nf3"), und deshalb ist es ein Baum mit zwei Zaehlungen und nicht zwei Baeume. Bewertungs-
+und Schachzeichen fallen beim Normalisieren weg: „Nf3+" und „Nf3" sind derselbe Zug, und ein Baum,
+der sie trennt, hat zwei Aeste fuer eine Stellung. `GameAnalysis.OpeningLine` ist seit 0.474.0
+eine eigene indizierte Spalte — der Baum fragt bei JEDEM Klick, und aus den Stellungszeilen
+gerechnet waere das ein Selbst-Verbund ueber zehn Halbzuege. Nachgetragen wird sie mit
+`tools/LibraryImport analysis-openings` (aus den Stellungszeilen, nicht aus dem PGN: dort steht
+der Zug schon geprueft da).
+
+| Methode | Endpoint | Auth | Zweck |
+|---|---|---|---|
+| GET | `/api/guess-tree?line=&onlyPlayable=` | **AllowAnonymous** + RL | Die Fortsetzungen nach `line` mit Partienzahl, haeufigste zuerst (hoechstens `MaxMoves` = 40), dazu `total` |
+
+Die beiden Listen nehmen denselben Filter entgegen: `GET /api/game-analyses/public?line=` und
+`GET /api/library-games?line=`. Gesucht wird ueber ein PRAEFIX (`LIKE 'e4 e5 Nf3%'`) — der
+Platzhalter steht hinten, also trifft es den Index.
+
+**Das Brett fuehrt der Dialog selbst mit** (chess.js): der Baum liefert nur Zugnamen. Ein Zug, den
+die Stellung nicht hergibt — eine Partie mit abweichender Ausgangsstellung kann so einen liefern —
+verschiebt die Linie deshalb nicht, sondern sagt es.
+
 ### Anmerkungen in mehreren Sprachen (`CommentSets`)
 
 Die Sammlungen liefern ihre Anmerkungen oft ZWEISPRACHIG — und das PGN kann das nicht ausdruecken:

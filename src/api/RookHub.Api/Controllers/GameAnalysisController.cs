@@ -33,8 +33,9 @@ public class GameAnalysisController : BaseApiController
     [HttpGet("public")]
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
-    public async Task<ActionResult<List<GameAnalysisDto>>> ListPublic(CancellationToken ct)
-        => Ok(await _service.ListPublicAsync(ct));
+    public async Task<ActionResult<List<GameAnalysisDto>>> ListPublic(CancellationToken ct,
+        [FromQuery] string? line = null)
+        => Ok(await _service.ListPublicAsync(ct, line));
 
     /// <summary>Partie in den kuratierten Bestand aufnehmen bzw. herausnehmen — Besitzer der
     /// Analyse oder Admin. Aendert NICHTS an der Analyse selbst, nur daran, wer sie spielen

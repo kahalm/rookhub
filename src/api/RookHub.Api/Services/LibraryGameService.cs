@@ -44,14 +44,25 @@ public class LibraryGameService
     /// <param name="query">Freitext ueber Spieler, Turnier und Kommentator.</param>
     /// <param name="language">ISO-Kuerzel; trifft auch die gemischten Angaben („en,de").</param>
     /// <param name="minCommentedPlies">Mindestzahl kommentierter Halbzuege.</param>
+    /// <param name="line">Eroeffnungszeile als Filter („e4 e5 Nf3"); leer = alles. Der
+    /// Stellungsfilter der Punktepartie-Seite reicht sie durch — eine Praefix-Suche auf dem
+    /// Index von <see cref="LibraryGame.OpeningLine"/>.</param>
     public async Task<LibraryGamePageDto> SearchAsync(int userId, string? query, string? language,
-        int? minCommentedPlies, int page, int pageSize, CancellationToken ct = default)
+        int? minCommentedPlies, int page, int pageSize, CancellationToken ct = default,
+        string? line = null)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize <= 0 ? DefaultPageSize : pageSize, 1, MaxPageSize);
 
         var rows = _db.LibraryGames.AsNoTracking()
             .Where(g => g.Status != LibraryGameStatus.Duplicate && g.Status != LibraryGameStatus.Rejected);
+
+        var prefix = GuessOpeningTree.Normalize(line);
+        if (prefix.Length > 0)
+        {
+            var muster = prefix + "%";
+            rows = rows.Where(g => g.OpeningLine != null && EF.Functions.Like(g.OpeningLine, muster));
+        }
 
         var term = BooleanTerm(query);
         if (term is not null)

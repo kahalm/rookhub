@@ -3083,7 +3083,18 @@
       }
     },
     "commentLanguage": "Sprache der Anmerkungen",
-    "commentOriginal": "Original"
+    "commentOriginal": "Original",
+    "tree": {
+      "open": "Nach Stellung filtern",
+      "title": "Nach Stellung filtern",
+      "startPosition": "Grundstellung",
+      "onlyPlayable": "nur gerechnete",
+      "all": "alle Partien",
+      "total": "{{total}} Partien erreichen diese Stellung",
+      "noMoves": "Hier ist keine Fortsetzung verzeichnet.",
+      "nonePlayable": "Noch keine gerechnete Partie erreicht diese Stellung.",
+      "moveFailed": "Dieser Zug geht in dieser Stellung nicht."
+    }
   },
   "tournamentDirectory": {
     "title": "Turnierkalender",
