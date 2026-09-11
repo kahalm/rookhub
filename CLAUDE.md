@@ -1468,6 +1468,12 @@ Regeln, die dabei nicht kippen duerfen:
   ueberschrieben — auch `--force` ersetzt nur eine MASCHINELLE Fassung.
 * **Ein Fehlschlag schreibt gar nichts.** Ein halb uebersetzter Satz waere der schlechtere Zustand:
   er sieht vollstaendig aus.
+* **Die LAENGE wird geprueft** (`MinLengthShare` = 0,7). Deutsch ist eher laenger als Englisch;
+  liegt das Ergebnis deutlich darunter, fehlt Text. Am 2026-09-11 an echten Partien erlebt: ein
+  sparsameres Modell lieferte 18 bis 53 % der Quelllaenge — Saetze mitten im Absatz abgeschnitten,
+  waehrend Struktur und Zuege stimmten. Keine der uebrigen Pruefungen schlug an, weil in der Prosa
+  keine Zuege stehen. Die Grenze liegt bei 70 % und nicht hoeher, weil manche Quell-Saetze selbst
+  zweisprachig sind und die Uebersetzung die doppelte Haelfte zu Recht wegwirft (gemessen 53 %).
 
 Braucht `Anthropic:ApiKey` (derselbe Schluessel wie die Puzzle-Tipps). Ohne Schluessel passiert
 nichts — der Rest des Stacks laeuft unveraendert. **Das Modell ist ein eigener Schalter**

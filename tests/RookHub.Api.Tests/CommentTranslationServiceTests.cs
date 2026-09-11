@@ -116,13 +116,15 @@ public class CommentTranslationServiceTests : IDisposable
     {
         var id = await GameAsync("The rook belongs here.");
         await _svc.TranslateAsync(id, "de");
-        _claude.Answer = """{"items":[{"ply":0,"text":"Besser."}]}""";
+        // Lang genug, um an der Laengenpruefung vorbeizukommen — eine Uebersetzung, die auf ein
+        // Wort zusammenschrumpft, ist genau der Fall, den sie abfaengt.
+        _claude.Answer = """{"items":[{"ply":0,"text":"Der Turm gehoert hierher, und zwar sofort."}]}""";
 
         var written = await _svc.TranslateAsync(id, "de", force: true);
 
         Assert.Equal(1, written);
         var set = await _db.CommentSets.Include(s => s.Texts).SingleAsync(s => s.Language == "de");
-        Assert.Equal("Besser.", set.Texts.Single().Text);
+        Assert.Equal("Der Turm gehoert hierher, und zwar sofort.", set.Texts.Single().Text);
     }
 
     /// <summary>Eine QUELLE wird auch mit force nicht ersetzt: sie liesse sich nicht
@@ -145,6 +147,22 @@ public class CommentTranslationServiceTests : IDisposable
     {
         var id = await GameAsync("The rook belongs here.");
         _claude.Answer = "kein JSON";
+
+        Assert.Equal(0, await _svc.TranslateAsync(id, "de"));
+        Assert.Empty(await _db.CommentSets.Where(s => s.Language == "de").ToListAsync());
+    }
+
+    /// <summary>
+    /// Der teuerste Fehlschlag ist der stille: am 2026-09-11 lieferte ein sparsameres Modell 18
+    /// bis 53 Prozent der Quelllaenge — Saetze mitten im Absatz abgeschnitten. Struktur und Zuege
+    /// stimmten dabei, es fehlte nur Prosa, und genau die ist die Lehre der Partie.
+    /// </summary>
+    [Fact]
+    public async Task Translate_zuKurzeAntwort_wirdVerworfen()
+    {
+        var lang = string.Join(" ", Enumerable.Repeat("Der Turm gehoert auf die offene Linie.", 20));
+        var id = await GameAsync(lang);
+        _claude.Answer = """{"items":[{"ply":0,"text":"Der Turm gehoert dorthin."}]}""";
 
         Assert.Equal(0, await _svc.TranslateAsync(id, "de"));
         Assert.Empty(await _db.CommentSets.Where(s => s.Language == "de").ToListAsync());

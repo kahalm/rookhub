@@ -23,6 +23,10 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class CommentTranslationService
 {
+    /// <summary>So viel von der Quelllaenge muss eine Uebersetzung mindestens haben. Deutsch ist
+    /// eher laenger als Englisch — liegt das Ergebnis deutlich darunter, fehlt Text.</summary>
+    public const double MinLengthShare = 0.7;
+
     /// <summary>So viele Zeichen gehen hoechstens in EINE Fuhre. Grosszuegig, weil die Einheitlichkeit
     /// der Begriffe an der gemeinsamen Fuhre haengt; die Antwort ist etwa so lang wie die Vorlage.</summary>
     public const int ChunkChars = 8000;
@@ -110,6 +114,25 @@ public class CommentTranslationService
                 translated[ply] = text;
         }
         if (translated.Count == 0) return 0;
+
+        // DIE LAENGE PRUEFEN, bevor irgendetwas gespeichert wird. Am 2026-09-11 an echten Partien
+        // erlebt: ein sparsameres Modell lieferte 18 bis 53 Prozent der Quelllaenge — Saetze mitten
+        // im Absatz abgeschnitten, und zwar lautlos. Struktur und Zuege stimmten dabei, es fehlte
+        // nur Prosa, und genau die ist die Lehre der Partie.
+        //
+        // Die Grenze liegt bei 70 Prozent und nicht hoeher, weil manche Quell-Saetze selbst noch
+        // zweisprachig sind: dort wirft die Uebersetzung die doppelte Haelfte zu Recht weg
+        // (gemessen 53 bis 55 Prozent). Lieber ein paar Faelle von Hand nachsehen als stumme
+        // Luecken im Bestand.
+        var quellLaenge = source.Texts.Sum(t => t.Text.Length);
+        var zielLaenge = translated.Values.Sum(t => t.Length);
+        if (quellLaenge > 0 && zielLaenge < quellLaenge * MinLengthShare)
+        {
+            _logger.LogWarning(
+                "Uebersetzung der Partie {Id} nach {Lang} verworfen: {Anteil} % der Quelllaenge — es fehlt Text.",
+                libraryGameId ?? analysisId, target, zielLaenge * 100 / quellLaenge);
+            return 0;
+        }
 
         var set = new CommentSet
         {

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.473.3", date: "2026-09-11", changes: [
+    { en: "A translation that quietly loses text is now refused instead of stored. Measured on real games: a cheaper model returned between a fifth and half of the source length, cutting sentences off mid-paragraph, while the move lists and the structure stayed correct — nothing else would have caught it, because prose carries no moves.", de: "Eine Uebersetzung, die still Text verliert, wird jetzt abgelehnt statt gespeichert. An echten Partien gemessen: ein sparsameres Modell lieferte zwischen einem Fuenftel und der Haelfte der Quelllaenge und schnitt Saetze mitten im Absatz ab, waehrend Zuglisten und Struktur stimmten — gefangen haette das sonst nichts, denn in der Prosa stehen keine Zuege." },
+  ] },
   { version: "0.473.2", date: "2026-09-11", changes: [
     { en: "The pawn gets its space back. Where a comment named a square right after the pawn symbol, the resolved text read „pawne5“ — the pieces take a letter that belongs against the square, but the pawn takes a word, and a word needs the gap.", de: "Der Bauer bekommt seinen Abstand. Wo ein Kommentar direkt hinter dem Bauern-Zeichen ein Feld nannte, stand danach „Bauere5“ — die Figuren bekommen einen Buchstaben, der ans Feld gehoert, der Bauer aber ein Wort, und ein Wort braucht die Luecke." },
   ] },
