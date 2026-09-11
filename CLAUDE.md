@@ -1407,6 +1407,18 @@ Zeilen verschiedener Herkunft. **Der Anker ist die BIBLIOTHEKSZEILE**, wo es ein
 zwei Leute dieselbe Partie an, entstehen zwei Analysen, und eine Uebersetzung je Analyse waere
 dieselbe Arbeit zweimal bezahlt; eine selbst eingeworfene Partie haengt an der Analyse.
 
+**Die FIGURENZEICHEN werden aufgeloest** (`Services/Figurines.cs`). Im PGN stehen die Figuren
+INNERHALB der Kommentare nicht als Buchstaben, sondern als Codepunkte der ChessBase-Figurenschrift
+(U+E024 bis U+E029, privater Unicode-Bereich). Ohne diese Schrift sind sie unsichtbar, und der
+Kommentar liest sich als „I can't win the pawn due to the h7+ trick" — gemeint ist `Bh7+`. Am
+Bestand gemessen (2026-09-11): **45 von 101** Partien einer Stichprobe tragen solche Zeichen, und
+der Nachtrag hat 737 von 6091 gespeicherten Zeilen angefasst. Die Zuordnung ist am Text BELEGT
+(Koenig „I would prefer …b1", Dame „...…a5", Turm „…dg1!?", Laeufer „…h7+ trick", Springer
+„...…c6", Bauer „Black's … structure") und haengt an der SPRACHE des Satzes: derselbe Springer
+heisst englisch N und deutsch S. Aufgeloest wird deshalb beim Ablegen, wo die Sprache feststeht;
+`comments --figurines` holt den vorhandenen Bestand nach. Der Bauer bekommt als einziger ein WORT
+statt eines Buchstabens — in der Notation traegt er keinen.
+
 **Getrennt wird satzweise** (`Services/CommentSplit.cs`), mit zwei Signalen: den Funktionswoertern
 je Sprache (laengere Listen als bei `CommentLanguage` — dort wird eine ganze PARTIE eingeordnet,
 hier ein einzelner SATZ) und den **Figurenbuchstaben**, `Be3/Ng4` gegen `Le3/Sg4`. Gezaehlt werden

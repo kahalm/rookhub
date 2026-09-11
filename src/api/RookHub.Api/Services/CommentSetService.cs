@@ -131,8 +131,11 @@ public class CommentSetService
                 Origin = CommentOrigin.Source,
                 Status = CommentSetStatus.Ready,
             };
+            // Jetzt steht die Sprache fest — also werden hier die Figurenzeichen aufgeloest:
+            // ein Springer heisst englisch N und deutsch S, und ohne die ChessBase-Schrift ist das
+            // Zeichen fuer jeden Leser ein Loch mitten im Satz.
             foreach (var (ply, text) in texts.OrderBy(t => t.Key))
-                set.Texts.Add(new CommentText { Ply = ply, Text = text });
+                set.Texts.Add(new CommentText { Ply = ply, Text = Figurines.Apply(text, lang) });
             _db.CommentSets.Add(set);
         }
 

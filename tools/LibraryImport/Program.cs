@@ -452,7 +452,7 @@ async Task<int> QueueAsync()
 // Die Anmerkungen einer eingereihten Partie in ihre Sprachen zerlegen und getrennt vom PGN ablegen
 // (Tabellen CommentSets/CommentTexts).
 //
-//   comments [--limit n] [--probe n] [--library n]
+//   comments [--limit n] [--probe n] [--library n] [--figurines]
 //
 // Fuer NEUE Partien passiert das von selbst beim Einreihen (GameAnalysisService.CreateAsync); dieser
 // Befehl holt den Altbestand nach. Wiederholbar: was schon Saetze hat, wird uebersprungen.
@@ -463,6 +463,7 @@ async Task<int> CommentsAsync()
     var library = IntArg("--library");
     await using var db = NewDb();
     if (probe is int n) return await ProbeAsync(db, n);
+    if (args.Contains("--figurines")) return await FigurinesAsync(db);
     if (library is int top) return await LibraryCommentsAsync(db, top);
     var service = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
 
@@ -604,11 +605,45 @@ async Task<int> LibraryCommentsAsync(AppDbContext db, int top)
     return 0;
 }
 
+// Die ChessBase-Figurenzeichen im VORHANDENEN Bestand in Buchstaben aufloesen.
+//
+//   comments --figurines
+//
+// Neu angelegte Saetze machen das von selbst (CommentSetService). Dieser Befehl holt nach, was
+// vorher schon drinsteht — und das ist viel: die Zeichen stehen im privaten Unicode-Bereich und
+// sind ohne die ChessBase-Schrift unsichtbar, „I can't win the pawn due to the h7+ trick" ist in
+// Wahrheit „…due to the Bh7+ trick".
+async Task<int> FigurinesAsync(AppDbContext db)
+{
+    // Gesucht wird in C# und nicht in SQL: „enthaelt eines von sechs Zeichen" laesst sich mit
+    // MariaDBs Standard-Sortierung nicht verlaesslich fragen (Privatzeichen vergleichen sich dort
+    // nicht so, wie man denkt), und die Tabelle ist klein genug, sie einmal durchzusehen.
+    var alle = await db.CommentTexts
+        .Select(t => new { t.Id, t.Text, Sprache = t.CommentSet!.Language })
+        .ToListAsync();
+
+    var geaendert = 0;
+    foreach (var zeile in alle)
+    {
+        if (!Figurines.Contains(zeile.Text)) continue;
+        var neu = Figurines.Apply(zeile.Text, zeile.Sprache);
+        if (neu == zeile.Text) continue;
+        var entity = new CommentText { Id = zeile.Id, Text = neu };
+        db.CommentTexts.Attach(entity);
+        db.Entry(entity).Property(t => t.Text).IsModified = true;
+        geaendert++;
+        if (geaendert % 500 == 0) { await db.SaveChangesAsync(); db.ChangeTracker.Clear(); }
+    }
+    await db.SaveChangesAsync();
+    Console.WriteLine($"Figurenzeichen aufgeloest in {geaendert:N0} von {alle.Count:N0} Zeilen.");
+    return 0;
+}
+
 // ===== Uebersetzen ==========================================================
 
 // Die Anmerkungen eingereihter Partien in eine weitere Sprache uebersetzen lassen.
 //
-//   translate --to de [--limit n] [--force] [--game <analyse-id>] [--library n]
+//   translate --to de [--limit n] [--force] [--game <analyse-id>] [--library n] [--shard i/n]
 //
 // Braucht ANTHROPIC__APIKEY (bzw. Anthropic:ApiKey) in der Umgebung — ohne Schluessel passiert
 // nichts. Uebersetzt wird immer aus der QUELLE, nie aus einer Uebersetzung, und die Quelle wird
@@ -624,6 +659,25 @@ async Task<int> TranslateAsync()
     var limit = IntArg("--limit") ?? int.MaxValue;
     var force = args.Contains("--force");
     var one = IntArg("--game");
+
+    // Aufteilung fuer parallele Laeufe: „--shard 0/4" nimmt jede vierte Partie. Sequenziell
+    // kostet eine Partie rund eine halbe Minute — bei tausend Partien sind das siebeneinhalb
+    // Stunden, bei vier Laeufen nebeneinander zwei. Ohne die Aufteilung greifen zwei Laeufe
+    // dieselben Partien: einer von beiden bezahlt dann ein Ergebnis, das der eindeutige Index
+    // wegwirft.
+    int shardIndex = 0, shardCount = 1;
+    var shard = StringArg("--shard");
+    if (shard is not null)
+    {
+        var parts = shard.Split('/');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out shardIndex)
+            || !int.TryParse(parts[1], out shardCount)
+            || shardCount < 1 || shardIndex < 0 || shardIndex >= shardCount)
+        {
+            Console.Error.WriteLine($"--shard erwartet „i/n\" mit 0 <= i < n (ist „{shard}\").");
+            return 1;
+        }
+    }
 
     var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
     await using var db = NewDb();
@@ -667,6 +721,7 @@ async Task<int> TranslateAsync()
     foreach (var id in ids)
     {
         if (done >= limit) break;
+        if (shardCount > 1 && id % shardCount != shardIndex) continue;
         var written = fromLibrary
             ? await service.TranslateLibraryGameAsync(id, target!, force)
             : await service.TranslateAsync(id, target!, force);
