@@ -35,6 +35,14 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class GuessOpeningTree
 {
+    /// <summary>Die Zustaende, die der Baum NICHT zaehlt — als Zahlenliste fuer das rohe SQL.
+    /// Dieselbe Regel wie in <see cref="LibraryGameService"/>: eine Dublette und eine aussortierte
+    /// Partie sind nicht anzufordern, alles andere schon. Die beiden MUESSEN uebereinstimmen, sonst
+    /// nennt der Baum eine andere Zahl als die Liste darunter — genau das war am 2026-09-12 auf
+    /// Prod zu sehen (130 028 gegen 130 544).</summary>
+    private static readonly string Ausgemustert =
+        $"{(int)Models.LibraryGameStatus.Rejected}, {(int)Models.LibraryGameStatus.Duplicate}";
+
     /// <summary>So tief reicht die gespeicherte Zeile — dahinter endet der Baum.</summary>
     public const int MaxDepth = LibraryGameReader.OpeningPlies;
 
@@ -97,7 +105,8 @@ public class GuessOpeningTree
             return await q.CountAsync(ct);
         }
         var r = _db.LibraryGames.AsNoTracking()
-            .Where(g => g.OpeningLine != null && g.Status == Models.LibraryGameStatus.New);
+            .Where(g => g.OpeningLine != null && g.Status != Models.LibraryGameStatus.Rejected
+                                 && g.Status != Models.LibraryGameStatus.Duplicate);
         if (prefix.Length > 0)
             r = r.Where(g => g.OpeningLine == prefix || EF.Functions.Like(g.OpeningLine!, mitTrenner));
         return await r.CountAsync(ct);
@@ -114,7 +123,7 @@ public class GuessOpeningTree
     {
         var tabelle = onlyPlayable
             ? "FROM `GameAnalyses` WHERE `IsPublic` = 1 AND `OpeningLine` IS NOT NULL"
-            : "FROM `LibraryGames` WHERE `Status` = 0 AND `OpeningLine` IS NOT NULL";
+            : $"FROM `LibraryGames` WHERE `Status` NOT IN ({Ausgemustert}) AND `OpeningLine` IS NOT NULL";
         var filter = prefix.Length == 0 ? " AND `OpeningLine` <> ''" : " AND `OpeningLine` LIKE {0}";
         var sql = $"SELECT SUBSTRING_INDEX(SUBSTRING(`OpeningLine`, {ab + 1}), ' ', 1) AS `San`, "
                 + $"COUNT(*) AS `Games` {tabelle}{filter} GROUP BY `San` "
@@ -165,7 +174,8 @@ public class GuessOpeningTree
         }
 
         var roh = _db.LibraryGames.AsNoTracking()
-            .Where(g => g.OpeningLine != null && g.Status == Models.LibraryGameStatus.New);
+            .Where(g => g.OpeningLine != null && g.Status != Models.LibraryGameStatus.Rejected
+                                 && g.Status != Models.LibraryGameStatus.Duplicate);
         if (prefix.Length > 0) roh = roh.Where(g => EF.Functions.Like(g.OpeningLine!, muster));
         return await roh.Select(g => g.OpeningLine!).ToListAsync(ct);
     }

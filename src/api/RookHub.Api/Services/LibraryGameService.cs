@@ -57,11 +57,22 @@ public class LibraryGameService
         var rows = _db.LibraryGames.AsNoTracking()
             .Where(g => g.Status != LibraryGameStatus.Duplicate && g.Status != LibraryGameStatus.Rejected);
 
-        var prefix = GuessOpeningTree.Normalize(line);
-        if (prefix.Length > 0)
+        // Die Stellungssuche schickt `line` IMMER mit, auch leer (= Grundstellung); die Namenssuche
+        // schickt es gar nicht. An diesem Unterschied haengt, wer mitgezaehlt wird: eine Partie ohne
+        // Eroeffnungszeile (eigene Ausgangsstellung) erreicht keine Stellung des Baums und darf in
+        // seiner Liste nicht auftauchen — in der Namenssuche schon. Ohne die Unterscheidung nannte
+        // der Baum 130 028 Partien und die Liste darunter 130 544 (die 516 ohne Zeile).
+        if (line is not null)
         {
-            var muster = prefix + "%";
-            rows = rows.Where(g => g.OpeningLine != null && EF.Functions.Like(g.OpeningLine, muster));
+            rows = rows.Where(g => g.OpeningLine != null);
+            var prefix = GuessOpeningTree.Normalize(line);
+            if (prefix.Length > 0)
+            {
+                // Wie im Baum: die Partie, die GENAU hier endet, erreicht die Stellung auch.
+                var mitTrenner = prefix + " %";
+                rows = rows.Where(g => g.OpeningLine == prefix
+                                    || EF.Functions.Like(g.OpeningLine!, mitTrenner));
+            }
         }
 
         var term = BooleanTerm(query);

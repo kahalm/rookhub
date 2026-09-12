@@ -1517,6 +1517,15 @@ Partieliste darunter nennt die Anzahl und blaettert (25 je Seite); auf schmalen 
 das Brett 42 % der Breite statt aller — mit 300 px Brett blieben auf einem 400-px-Geraet genau zwei
 Zuege sichtbar.
 
+**Baum und Liste muessen DIESELBE Menge zaehlen** (0.475.7). Die Stellungssuche schickt `line`
+IMMER mit, auch leer (= Grundstellung); die Namenssuche schickt es gar nicht. An diesem
+Unterschied haengt, wer mitgezaehlt wird: eine Partie ohne `OpeningLine` (eigene
+Ausgangsstellung) erreicht keine Stellung des Baums und darf in seiner Liste nicht auftauchen —
+in der Namenssuche schon, denn dort ist sie zu finden und anzufordern. Und die Statusregel ist
+in `GuessOpeningTree` dieselbe wie in `LibraryGameService` (weder `Rejected` noch `Duplicate`).
+Ohne beides stand auf Prod „130 028 Partien erreichen diese Stellung“ ueber einer Liste mit
+der Ueberschrift „Partien (130 544)“ — die 516 Partien ohne Zeile.
+
 Die beiden Listen nehmen denselben Filter entgegen: `GET /api/game-analyses/public?line=` und
 `GET /api/library-games?line=`. Gesucht wird ueber ein PRAEFIX (`LIKE 'e4 e5 Nf3%'`) — der
 Platzhalter steht hinten, also trifft es den Index.

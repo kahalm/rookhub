@@ -336,4 +336,42 @@ public class LibraryGameServiceTests : IDisposable
         { Annotator = "Aagaard,Jacob", Pgn = "x" }));
         Assert.Equal("Partie", LibraryGameService.TitleOf(new LibraryGame { Pgn = "x" }));
     }
+
+    /// <summary>
+    /// Baum und Partieliste muessen DIESELBE Zahl nennen. Auf Prod stand am 2026-09-12
+    /// „130 028 Partien erreichen diese Stellung" ueber einer Liste mit der Ueberschrift
+    /// „Partien (130 544)": die Liste zaehlte in der Grundstellung auch die 516 Partien ohne
+    /// Eroeffnungszeile mit, die gar keine Stellung des Baums erreichen.
+    /// </summary>
+    [Fact]
+    public async Task Search_mitStellung_zaehltDieselbeMengeWieDerBaum()
+    {
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "e4 e5" });
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "d4 d5" });
+        // Eigene Ausgangsstellung: keine Eroeffnungszeile, also in keinem Ast und in keiner Liste.
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = null });
+        // Dublette: von beiden ausgeschlossen.
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "e4 e5", Status = LibraryGameStatus.Duplicate });
+        await _db.SaveChangesAsync();
+
+        var ast = await new GuessOpeningTree(_db).BranchAsync(null, onlyPlayable: false);
+        var liste = await _svc.SearchAsync(0, null, null, null, 1, 50, line: "");
+
+        Assert.Equal(2, ast.Total);
+        Assert.Equal(ast.Total, liste.Total);
+    }
+
+    /// <summary>Die NAMENSSUCHE schickt kein <c>line</c> und zaehlt deshalb weiter alles, was
+    /// anzufordern ist — auch eine Partie mit eigener Ausgangsstellung.</summary>
+    [Fact]
+    public async Task Search_ohneStellung_zaehltAuchPartienOhneEroeffnungszeile()
+    {
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "e4 e5" });
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = null });
+        await _db.SaveChangesAsync();
+
+        var liste = await _svc.SearchAsync(0, null, null, null, 1, 50);
+
+        Assert.Equal(2, liste.Total);
+    }
 }
