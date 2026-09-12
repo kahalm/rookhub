@@ -1036,6 +1036,19 @@ Stream-ENDE und terminiert jede Suche, die laenger als `--keep-alive` (Vorgabe 3
 5 Linien jede Iteration. Der Auftrag kam nie tiefer und galt nach drei Runden als gescheitert; Abhilfe beidseitig:
 `KEEP_ALIVE` im Provider hoch (siehe `engine-provider/README.md`) UND diese Laufzeit-Unterscheidung hier. Bleibt die erste Datenzeile binnen
 `AnalysisJobs:FirstLineTimeoutSeconds` (300) aus, wird pausiert statt den Slot des Users unbegrenzt zu halten.
+**Ein 503/504 des Brokers wechselt die ENGINE, statt zu warten** (0.475.6). Diese Antwort heisst
+beim Broker: fuer diese Engine ist gerade kein Provider verbunden — eine Aussage ueber die Engine
+und nicht ueber den Auftrag. Vorher stellte `BackoffAsync` den Auftrag zwei Minuten zurueck und
+klopfte dann an dieselbe Tuer; am 2026-09-12 auf Prod pendelten damit 24 von 32 Auftraegen gegen
+die zwoelf Engines der zweiten Maschine (309 solcher Antworten in 25 Minuten Log), waehrend die
+vier der ersten die ganze Arbeit trugen. Gewechselt wird REIHUM (`NextEngineAfter`, dieselbe Regel
+wie beim Stillstand) mit `AnalysisJobs:EngineSwitchBackoffSeconds` (5..600, Vorgabe 15) statt der
+120 s. Die kurze Frist ist unbedenklich, weil der Worker je ENGINE nur einen Auftrag rechnet: es
+sind hoechstens so viele Versuche gleichzeitig unterwegs wie Engines hinterlegt sind, nicht so
+viele wie Auftraege offen sind — bei einem Totalausfall des Brokers also rund ein Abruf je
+Sekunde. Steht die Engine nicht in der Hintergrund-Liste (von Hand gewaehlt), bleibt sie und es
+gilt weiter der lange Backoff.
+
 **Eine WIEDERHOLTE Bewertungszeile ist ein Lebenszeichen, kein Fortschritt** (0.475.1). Das
 Lebenszeichen des Providers ist die erneut gesendete letzte `info`-Zeile (siehe `patch_provider.py`) —
 fuer den Worker war sie damit von echter Arbeit nicht zu unterscheiden. Der Waechter der ersten Zeile

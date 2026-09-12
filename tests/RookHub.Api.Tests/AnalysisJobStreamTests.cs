@@ -137,4 +137,20 @@ public class AnalysisJobStreamTests
         var engines = list.Split(',');
         Assert.Equal(expected, AnalysisJobWorker.NextEngineAfter(engines, current));
     }
+
+    /// <summary>
+    /// Ein 503/504 des Brokers heisst: fuer DIESE Engine ist kein Provider verbunden. Gewechselt
+    /// wird deshalb REIHUM auf die naechste hinterlegte — dieselbe Regel wie beim Stillstand, und
+    /// aus demselben Grund: die kuerzeste Schlange gewaenne ausgerechnet die unerreichbare, sie hat
+    /// ja nichts zu tun. Am 2026-09-12 auf Prod pendelten so 24 von 32 Auftraegen im
+    /// Zwei-Minuten-Takt gegen zwoelf unerreichbare Engines, waehrend vier erreichbare allein
+    /// weiterrechneten.
+    /// </summary>
+    [Theory]
+    [InlineData("a", "a,b,c,d", "b")]
+    [InlineData("d", "a,b,c,d", "a")]
+    [InlineData("a", "a", null)]
+    [InlineData("fremd", "a,b,c,d", null)]
+    public void NextEngineAfter_traegtAuchDenEngineWechselNachEinem503(string current, string list, string? expected)
+        => Assert.Equal(expected, AnalysisJobWorker.NextEngineAfter(list.Split(','), current));
 }

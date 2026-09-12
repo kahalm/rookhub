@@ -139,6 +139,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// 434 wartende Partien und elf freie Engines still.</para>
     /// <para>Konfiguration: <c>AnalysisJobs:StallTimeoutSeconds</c> (300..86400, Vorgabe 1800).</para></summary>
     private readonly TimeSpan _stallTimeout;
+    /// <summary>Wartezeit, nachdem ein Auftrag wegen eines 503/504 auf eine ANDERE Engine
+    /// umgehaengt wurde. Kurz, weil die neue Engine sofort laufen kann — und trotzdem
+    /// unbedenklich: der Worker rechnet je Engine nur einen Auftrag, es sind also hoechstens so
+    /// viele Versuche gleichzeitig unterwegs wie Engines hinterlegt sind, nicht so viele wie
+    /// Auftraege offen sind. Faellt der Broker ganz aus, pendeln die Auftraege damit im Takt
+    /// dieser Frist statt im Zwei-Minuten-Takt — bei sechzehn Engines rund ein Abruf je Sekunde.
+    /// <para>Konfiguration: <c>AnalysisJobs:EngineSwitchBackoffSeconds</c> (5..600, Vorgabe 15).</para></summary>
+    private readonly TimeSpan _engineSwitchBackoff;
     /// <summary>Ab dieser Laufzeit gilt „kein Tiefenfortschritt" NICHT mehr als Fehlversuch: eine echte Sackgasse
     /// (Matt/Patt, abgelehnte Arbeit) endet in Sekunden, ein langer Lauf ohne neue Zeile ist eine gekappte
     /// Verbindung — dafür darf der Auftrag nicht als gescheitert gelten.</summary>
@@ -158,6 +166,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         _persistInterval = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:PersistIntervalSeconds") ?? 5, 1, 60));
         _firstLineTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FirstLineTimeoutSeconds") ?? 300, 30, 3600));
         _stallTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:StallTimeoutSeconds") ?? 1800, 300, 86400));
+        _engineSwitchBackoff = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:EngineSwitchBackoffSeconds") ?? 15, 5, 600));
         _fruitlessMinRuntime = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FruitlessMinRuntimeSeconds") ?? 60, 5, 3600));
         _tracker.LiveStarted += PauseEngine;
     }
@@ -329,7 +338,24 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             {
                 if (!upstream.IsSuccessStatusCode)
                 {
-                    await BackoffAsync(db, job, $"Broker antwortete {(int)upstream.StatusCode}", TimeSpan.FromSeconds(120));
+                    var code = (int)upstream.StatusCode;
+                    // 503/504 heisst beim Broker: fuer DIESE Engine ist gerade kein Provider
+                    // verbunden. Das ist eine Aussage ueber die ENGINE und nicht ueber den Auftrag,
+                    // also umhaengen statt zwei Minuten dieselbe Tuer anzuklopfen. Am 2026-09-12 auf
+                    // Prod gemessen: 309 solcher Antworten in 25 Minuten, und 24 von 32 Auftraegen
+                    // pendelten dabei im Zwei-Minuten-Takt gegen die zwoelf Engines der zweiten
+                    // Maschine, waehrend die vier der ersten allein weiterrechneten.
+                    var alt = job.EngineId;
+                    if (code is 503 or 504
+                        && await SwitchEngineAsync(db, job, engineOwnerId, CancellationToken.None))
+                    {
+                        await PauseAsync(db, job, $"Broker antwortete {code} — andere Engine", _engineSwitchBackoff);
+                        _logger.LogInformation(
+                            "AnalysisJob {JobId}: Broker antwortete {Code} fuer {Old} — weiter auf {New}",
+                            job.Id, code, alt, job.EngineId);
+                        return;
+                    }
+                    await BackoffAsync(db, job, $"Broker antwortete {code}", TimeSpan.FromSeconds(120));
                     return;
                 }
                 var runStart = DateTime.UtcNow;
