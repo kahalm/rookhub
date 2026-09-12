@@ -171,17 +171,23 @@ public static class GameAnalysisDefaults
     public const int MaxPlies = 300;
 
     /// <summary>
-    /// So viele Auftraege haelt eine Partie gleichzeitig offen. Bewusst deutlich unter
-    /// <c>AnalysisJobService.MaxOpenJobsPerUser</c> (50), damit daneben noch von Hand eingereiht
-    /// werden kann.
+    /// So viele Auftraege haelt eine Partie gleichzeitig offen. Diese Zahl und nicht die Zahl der
+    /// hinterlegten Engines entscheidet, wie viele Engines ueberhaupt rechnen: der Worker nimmt je
+    /// Engine eine Suche, mehr Engines als offene Auftraege stehen still.
     ///
-    /// <para>Die Zahl verteilt die Partie ueber die hinterlegten Engines: der Worker rechnet je
-    /// Engine eine Suche, zwoelf offene Auftraege halten also bis zu zwoelf Engines beschaeftigt.
-    /// Dass mehrere PARTIEN nicht gegenseitig verhungern, regelt seit 0.466.0 nicht mehr diese
-    /// Zahl, sondern die Reihenfolge: es wird immer nur EINE Partie je Nutzer weitergefuettert
+    /// <para>Am 2026-09-12 auf Prod nachgemessen: sechzehn Hintergrund-Engines hinterlegt, zwoelf
+    /// offene Auftraege auf zwoelf verschiedenen Engines — vier Engines taten nichts, und zwar
+    /// dauerhaft. Seither 32. Der Ueberhang ueber die Zahl der Engines ist Absicht: laeuft eine
+    /// Suche aus, nimmt die Engine sofort den naechsten Auftrag, statt bis zu einen Pump-Durchgang
+    /// (20 s) zu warten.</para>
+    ///
+    /// <para>Bleibt unter <c>AnalysisJobService.MaxOpenJobsPerUser</c> (50), damit daneben noch von
+    /// Hand eingereiht werden kann — jetzt mit 18 statt 38 freien Plaetzen. Dass mehrere PARTIEN
+    /// nicht gegenseitig verhungern, regelt seit 0.466.0 nicht diese Zahl, sondern die Reihenfolge:
+    /// es wird immer nur EINE Partie je Nutzer weitergefuettert
     /// (<c>GameAnalysisService.IsOwnersTurnAsync</c>).</para>
     /// </summary>
-    public const int MaxOpenJobsPerGame = 12;
+    public const int MaxOpenJobsPerGame = 32;
 
     /// <summary>
     /// Wie oft ein Auftrag zu DERSELBEN Stellung scheitern darf, bevor sie endgueltig als

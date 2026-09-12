@@ -1292,6 +1292,14 @@ die Punktepartie nichts wert. Gemessen wird an den STELLUNGEN, nicht am Status; 
 Partien blockieren nicht; laufende Auftraege einer anderen Partie werden nicht abgebrochen, sie
 laufen aus. Je Nutzer und nicht global, damit sich zwei Leute nicht gegenseitig ausbremsen.
 
+**Wie viele Engines wirklich rechnen, entscheidet `MaxOpenJobsPerGame`** (32 seit 0.475.4, vorher 12) —
+nicht die Zahl der hinterlegten Hintergrund-Engines. Der Worker nimmt je Engine EINE Suche; jede Engine
+ueber die Zahl der offenen Auftraege hinaus steht still. Am 2026-09-12 auf Prod nachgemessen: sechzehn
+Engines hinterlegt, zwoelf Auftraege auf zwoelf Engines, vier dauerhaft untaetig. Der Ueberhang ueber die
+Engine-Zahl ist Absicht: laeuft eine Suche aus, nimmt die Engine sofort den naechsten Auftrag statt bis zu
+einen Pump-Durchgang (20 s) zu warten. Der Deckel bleibt unter `MaxOpenJobsPerUser` (50), damit daneben
+von Hand eingereiht werden kann — jetzt mit 18 statt 38 freien Plaetzen.
+
 **Der Deckel des Einwurfs** (`MaxOpenGuessGamesPerUser` = 5) zaehlt NUR `Origin = Guess` und nur
 Partien, die noch rechnen (`Pending`/`Running`) — gescheiterte sperren niemanden aus. Von Hand ueber
 `/analysis/games` eingereihte Partien bleiben ungezaehlt: dort rechnet die eigene Maschine.

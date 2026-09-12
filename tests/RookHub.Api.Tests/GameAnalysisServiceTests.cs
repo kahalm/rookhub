@@ -43,6 +43,19 @@ public class GameAnalysisServiceTests : IDisposable
 1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5 1-0
 """;
 
+    /// <summary>Dieselbe Partie, aber laenger als ein Auftragsblock (40 Halbzuege statt 14) — nur
+    /// damit sieht man, dass NICHT alles auf einmal eingereiht wird.</summary>
+    private const string LongGame = """
+[Event "Testpartie"]
+[White "Anderssen"]
+[Black "Kieseritzky"]
+[Result "1-0"]
+
+1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5
+8. Nh4 Qg5 9. Nf5 c6 10. g4 Nf6 11. Rg1 cxb5 12. h4 Qg6 13. h5 Qg5 14. Qf3 Ng8
+15. Bxf4 Qf6 16. Nc3 Bc5 17. Nd5 Qxb2 18. Bd6 Bxg1 19. e5 Qxa1+ 20. Ke2 Na6 1-0
+""";
+
     private async Task<AppUser> CreateUserWithEngineAsync()
     {
         var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
@@ -57,22 +70,27 @@ public class GameAnalysisServiceTests : IDisposable
         return user;
     }
 
+    /// <summary>Wie viele Auftraege eine Partie dieser Laenge offen haelt — der Block, oder die
+    /// Partie, wenn sie kuerzer ist. Seit der Block 32 fasst, ist die 14-Halbzug-Testpartie
+    /// kuerzer als er.</summary>
+    private static int BlockFor(int plies) => Math.Min(GameAnalysisDefaults.MaxOpenJobsPerGame, plies);
+
     [Fact]
     public async Task Create_zerlegtDiePartie_undReihtNurEinenBlockEin()
     {
         var user = await CreateUserWithEngineAsync();
 
-        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = LongGame });
 
-        Assert.Equal(14, dto.PlyCount);                       // 7 Züge × 2
+        Assert.Equal(40, dto.PlyCount);                       // 20 Züge × 2, laenger als ein Block
         Assert.Equal("Anderssen – Kieseritzky", dto.Title);
         Assert.Equal(GameAnalysisDefaults.TargetDepth, dto.TargetDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, dto.MultiPv);
 
         var positions = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync();
-        Assert.Equal(14, positions.Count);
+        Assert.Equal(40, positions.Count);
 
-        // NICHT alle 14 auf einmal: offene Aufträge sind je Nutzer gedeckelt, also blockweise.
+        // NICHT alle 40 auf einmal: offene Aufträge sind je Nutzer gedeckelt, also blockweise.
         var enqueued = positions.Count(p => p.AnalysisJobId != null);
         Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, enqueued);
         // Und zwar in Zugreihenfolge — man will die Partie von vorn ansehen können.
@@ -594,7 +612,7 @@ public class GameAnalysisServiceTests : IDisposable
         var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
         var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
 
-        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(first.Id));
         Assert.Equal(0, await OpenJobsAsync(second.Id));
 
         // Auch ein Pump-Lauf aendert daran nichts, solange die erste nicht durch ist.
@@ -620,7 +638,7 @@ public class GameAnalysisServiceTests : IDisposable
 
         await _svc.PumpAllAsync();
 
-        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(second.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(second.Id));
         Assert.Equal(GameAnalysisStatus.Done,
             (await _db.GameAnalyses.FirstAsync(g => g.Id == first.Id)).Status);
     }
@@ -636,8 +654,8 @@ public class GameAnalysisServiceTests : IDisposable
         var a = await _svc.CreateAsync(one.Id, new CreateGameAnalysisRequest { Pgn = Game });
         var b = await _svc.CreateAsync(two.Id, new CreateGameAnalysisRequest { Pgn = Game });
 
-        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(a.Id));
-        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, await OpenJobsAsync(b.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(a.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(b.Id));
     }
 
     /// <summary>Eine gescheiterte Partie blockiert die Schlange nicht — die Pumpe fasst sie gar
