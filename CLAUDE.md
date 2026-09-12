@@ -1517,14 +1517,18 @@ Partieliste darunter nennt die Anzahl und blaettert (25 je Seite); auf schmalen 
 das Brett 42 % der Breite statt aller — mit 300 px Brett blieben auf einem 400-px-Geraet genau zwei
 Zuege sichtbar.
 
-**Baum und Liste muessen DIESELBE Menge zaehlen** (0.475.7). Die Stellungssuche schickt `line`
-IMMER mit, auch leer (= Grundstellung); die Namenssuche schickt es gar nicht. An diesem
-Unterschied haengt, wer mitgezaehlt wird: eine Partie ohne `OpeningLine` (eigene
+**Baum und Liste muessen DIESELBE Menge zaehlen** (0.475.7/.8). Der Stellungsfilter schickt
+`byPosition=true` mit, die Namenssuche nicht. An diesem Schalter haengt, wer mitgezaehlt wird: eine Partie ohne `OpeningLine` (eigene
 Ausgangsstellung) erreicht keine Stellung des Baums und darf in seiner Liste nicht auftauchen —
 in der Namenssuche schon, denn dort ist sie zu finden und anzufordern. Und die Statusregel ist
 in `GuessOpeningTree` dieselbe wie in `LibraryGameService` (weder `Rejected` noch `Duplicate`).
 Ohne beides stand auf Prod „130 028 Partien erreichen diese Stellung“ ueber einer Liste mit
 der Ueberschrift „Partien (130 544)“ — die 516 Partien ohne Zeile.
+
+Bewusst ein eigener Schalter und nicht die Frage, ob `line` null ist: die Modellbindung von
+ASP.NET macht aus einem leeren `?line=` ein `null`, und die Grundstellung ist genau dieser Fall.
+Der erste Anlauf (0.475.7) unterschied daran und wirkte deshalb ueberall AUSSER an der Wurzel —
+auf Prod nachgemessen: in der Spanischen stimmten die Zahlen, in der Grundstellung nicht.
 
 Die beiden Listen nehmen denselben Filter entgegen: `GET /api/game-analyses/public?line=` und
 `GET /api/library-games?line=`. Gesucht wird ueber ein PRAEFIX (`LIKE 'e4 e5 Nf3%'`) — der

@@ -355,7 +355,7 @@ public class LibraryGameServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var ast = await new GuessOpeningTree(_db).BranchAsync(null, onlyPlayable: false);
-        var liste = await _svc.SearchAsync(0, null, null, null, 1, 50, line: "");
+        var liste = await _svc.SearchAsync(0, null, null, null, 1, 50, line: "", byPosition: true);
 
         Assert.Equal(2, ast.Total);
         Assert.Equal(ast.Total, liste.Total);
@@ -373,5 +373,26 @@ public class LibraryGameServiceTests : IDisposable
         var liste = await _svc.SearchAsync(0, null, null, null, 1, 50);
 
         Assert.Equal(2, liste.Total);
+    }
+
+    /// <summary>
+    /// Der Schalter und nicht das leere <c>line</c> entscheidet. Die Modellbindung von ASP.NET macht
+    /// aus einem leeren <c>?line=</c> ein <c>null</c> — die Grundstellung waere also von der
+    /// Namenssuche nicht zu unterscheiden. Genau daran blieben die beiden Zahlen am 2026-09-12 auf
+    /// Prod an der Wurzel verschieden, obwohl sie eine Ebene tiefer schon uebereinstimmten.
+    /// </summary>
+    [Fact]
+    public async Task Search_grundstellung_zaehltAuchMitNullLineNurPartienMitEroeffnungszeile()
+    {
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "e4 e5" });
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = null });
+        await _db.SaveChangesAsync();
+
+        // So kommt die Grundstellung beim Dienst an: line == null, aber byPosition == true.
+        var gefiltert = await _svc.SearchAsync(0, null, null, null, 1, 50, line: null, byPosition: true);
+        var namenssuche = await _svc.SearchAsync(0, null, null, null, 1, 50);
+
+        Assert.Equal(1, gefiltert.Total);
+        Assert.Equal(2, namenssuche.Total);
     }
 }

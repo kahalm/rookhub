@@ -47,9 +47,18 @@ public class LibraryGameService
     /// <param name="line">Eroeffnungszeile als Filter („e4 e5 Nf3"); leer = alles. Der
     /// Stellungsfilter der Punktepartie-Seite reicht sie durch — eine Praefix-Suche auf dem
     /// Index von <see cref="LibraryGame.OpeningLine"/>.</param>
+    /// <param name="byPosition">Die Anfrage kommt aus dem STELLUNGSFILTER. Dann zaehlen nur Partien
+    /// mit Eroeffnungszeile mit: eine Partie mit eigener Ausgangsstellung erreicht keine Stellung des
+    /// Baums und darf in seiner Liste nicht auftauchen. Die Namenssuche setzt den Schalter nicht und
+    /// findet sie weiter.
+    /// <para>Bewusst ein eigener Schalter und nicht die Frage, ob <paramref name="line"/> null ist:
+    /// die Modellbindung von ASP.NET macht aus einem leeren <c>?line=</c> ein <c>null</c>, und die
+    /// Grundstellung ist genau dieser Fall — am 2026-09-12 auf Prod nachgemessen, dort blieben die
+    /// beiden Zahlen an der Wurzel deshalb verschieden (130 028 gegen 130 544), waehrend sie eine
+    /// Ebene tiefer uebereinstimmten.</para></param>
     public async Task<LibraryGamePageDto> SearchAsync(int userId, string? query, string? language,
         int? minCommentedPlies, int page, int pageSize, CancellationToken ct = default,
-        string? line = null)
+        string? line = null, bool byPosition = false)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize <= 0 ? DefaultPageSize : pageSize, 1, MaxPageSize);
@@ -57,12 +66,11 @@ public class LibraryGameService
         var rows = _db.LibraryGames.AsNoTracking()
             .Where(g => g.Status != LibraryGameStatus.Duplicate && g.Status != LibraryGameStatus.Rejected);
 
-        // Die Stellungssuche schickt `line` IMMER mit, auch leer (= Grundstellung); die Namenssuche
-        // schickt es gar nicht. An diesem Unterschied haengt, wer mitgezaehlt wird: eine Partie ohne
-        // Eroeffnungszeile (eigene Ausgangsstellung) erreicht keine Stellung des Baums und darf in
-        // seiner Liste nicht auftauchen — in der Namenssuche schon. Ohne die Unterscheidung nannte
-        // der Baum 130 028 Partien und die Liste darunter 130 544 (die 516 ohne Zeile).
-        if (line is not null)
+        // Der Stellungsfilter sagt es AUSDRUECKLICH (`byPosition`), weil ein leeres `?line=` in der
+        // Modellbindung zu null wird und die Grundstellung damit nicht von der Namenssuche zu
+        // unterscheiden waere. Wer ueber eine Stellung sucht, zaehlt nur Partien mit
+        // Eroeffnungszeile: eine mit eigener Ausgangsstellung erreicht keine Stellung des Baums.
+        if (byPosition)
         {
             rows = rows.Where(g => g.OpeningLine != null);
             var prefix = GuessOpeningTree.Normalize(line);

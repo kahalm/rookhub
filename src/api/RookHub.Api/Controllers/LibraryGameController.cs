@@ -39,8 +39,10 @@ public class LibraryGameController : BaseApiController
     [HttpGet]
     public async Task<ActionResult<LibraryGamePageDto>> Search([FromQuery] string? q, [FromQuery] string? language,
         [FromQuery] int? minCommentedPlies, [FromQuery] int page = 1,
-        [FromQuery] int pageSize = LibraryGameService.DefaultPageSize, CancellationToken ct = default, [FromQuery] string? line = null)
-        => Ok(await _service.SearchAsync(GetUserIdOrNull() ?? 0, q, language, minCommentedPlies, page, pageSize, ct, line));
+        [FromQuery] int pageSize = LibraryGameService.DefaultPageSize, CancellationToken ct = default,
+        [FromQuery] string? line = null, [FromQuery] bool byPosition = false)
+        => Ok(await _service.SearchAsync(GetUserIdOrNull() ?? 0, q, language, minCommentedPlies,
+                                         page, pageSize, ct, line, byPosition));
 
     /// <summary>
     /// Diese Partie rechnen lassen. Antwortet mit der Analyse — der neuen oder, wenn sie schon

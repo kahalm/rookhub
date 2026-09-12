@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.475.8", date: "2026-09-12", changes: [
+    { en: "The matching numbers now hold in the starting position too. The previous attempt told the two apart by whether a position was given at all, and an empty one arrives at the server as none, which is exactly the starting position. The position filter now says so explicitly.", de: "Die gleichen Zahlen gelten jetzt auch in der Grundstellung. Der vorige Anlauf unterschied die beiden Faelle daran, ob ueberhaupt eine Stellung mitkam, und eine leere kommt beim Server als keine an — das ist genau die Grundstellung. Der Stellungsfilter sagt es jetzt ausdruecklich." },
+  ] },
   { version: "0.475.7", date: "2026-09-12", changes: [
     { en: "The opening tree and the game list below it now state the same number. In the starting position the tree said 130 028 games while the list was headed 130 544: the list also counted the 516 games that start from their own position and therefore reach no position in the tree at all. The name search still counts them, because there they can be found and requested.", de: "Der Eroeffnungsbaum und die Partieliste darunter nennen jetzt dieselbe Zahl. In der Grundstellung sagte der Baum 130 028 Partien, waehrend ueber der Liste 130 544 stand: die Liste zaehlte auch die 516 Partien mit, die aus einer eigenen Ausgangsstellung beginnen und damit gar keine Stellung des Baums erreichen. Die Namenssuche zaehlt sie weiter mit, denn dort sind sie zu finden und anzufordern." },
   ] },

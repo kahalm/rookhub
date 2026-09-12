@@ -36,9 +36,15 @@ export class OpeningTreeService {
     return this.http.get<GameAnalysis[]>('/api/game-analyses/public', { params: { line } });
   }
 
-  /** Der Rohbestand zu dieser Stellung — die Zeilen tragen „anfordern" bzw. „spielen". */
+  /**
+   * Der Rohbestand zu dieser Stellung — die Zeilen tragen „anfordern" bzw. „spielen".
+   *
+   * <p><c>byPosition</c> sagt dem Server, dass es um eine STELLUNG geht: dann zählt er nur
+   * Partien mit Eröffnungszeile, wie der Baum. Ein leeres <c>line</c> allein genügt dafür nicht,
+   * das wird serverseitig zu <c>null</c> und wäre von der Namenssuche nicht zu unterscheiden.</p>
+   */
   library(line: string, page: number, pageSize: number): Observable<LibraryGamePage> {
     return this.http.get<LibraryGamePage>('/api/library-games',
-      { params: { line, page, pageSize } });
+      { params: { line, page, pageSize, byPosition: true } });
   }
 }

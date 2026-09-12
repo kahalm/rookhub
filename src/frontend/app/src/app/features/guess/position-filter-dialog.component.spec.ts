@@ -203,4 +203,17 @@ describe('PositionFilterDialogComponent', () => {
     expect(text).toContain('guess.library.requestNeedsLogin');
     expect(text).not.toContain('guess.library.request\u0000');   // der Knopf selbst fehlt
   });
+
+  /** Ein leeres `line` wird serverseitig zu null — der Dialog muss die Stellungssicht deshalb
+   *  ausdrücklich mitschicken, sonst zählt die Liste mehr Partien als der Baum darüber. */
+  it('sagt dem Server, dass es um eine Stellung geht', () => {
+    const c = open();
+    c.onlyPlayable = false;
+    c.scopeChanged();
+    http.expectOne(r => r.url === '/api/guess-tree').flush({ line: '', onlyPlayable: false, total: 2, moves: [] });
+
+    const liste = http.expectOne(r => r.url === '/api/library-games');
+    expect(liste.request.params.get('byPosition')).toBe('true');
+    liste.flush({ items: [], total: 2, page: 1, pageSize: 25 });
+  });
 });
