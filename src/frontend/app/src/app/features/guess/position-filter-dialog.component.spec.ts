@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MatDialogRef } from '@angular/material/dialog';
 import { provideTranslateService } from '@ngx-translate/core';
+import { provideRouter } from '@angular/router';
 import { PositionFilterDialogComponent } from './position-filter-dialog.component';
 
 /**
@@ -21,7 +22,7 @@ describe('PositionFilterDialogComponent', () => {
       imports: [PositionFilterDialogComponent],
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
-        provideTranslateService({ fallbackLang: 'en' }),
+        provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
         { provide: MatDialogRef, useValue: { close: (v?: number) => { closed = v; } } },
       ],
     });
@@ -179,5 +180,27 @@ describe('PositionFilterDialogComponent', () => {
 
     expect(c.page).toBe(1);
     http.expectNone(r => r.url === '/api/library-games');
+  });
+
+  /** Suchen darf jeder; anfordern nicht. Ohne Konto steht an der Stelle des Knopfes der Grund. */
+  it('bietet ohne Anmeldung kein Anfordern an', () => {
+    const fixture = TestBed.createComponent(PositionFilterDialogComponent);
+    const c = fixture.componentInstance;
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/guess-tree')
+      .flush({ line: '', onlyPlayable: true, total: 0, moves: [] });
+    http.expectOne(r => r.url === '/api/game-analyses/public').flush([]);
+
+    c.onlyPlayable = false;
+    c.scopeChanged();
+    http.expectOne(r => r.url === '/api/guess-tree').flush({ line: '', onlyPlayable: false, total: 1, moves: [] });
+    http.expectOne(r => r.url === '/api/library-games')
+      .flush({ items: [{ id: 5, white: 'A', black: 'B' }], total: 1, page: 1, pageSize: 25 });
+    fixture.detectChanges();
+
+    expect(c.loggedIn).toBeFalse();   // kein Token im localStorage der Testumgebung
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('guess.library.requestNeedsLogin');
+    expect(text).not.toContain('guess.library.request\u0000');   // der Knopf selbst fehlt
   });
 });

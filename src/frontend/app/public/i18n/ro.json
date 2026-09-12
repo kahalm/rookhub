@@ -1105,7 +1105,11 @@
   },
   "guess": {
     "tree": {
-      "games": "Games ({{count}})"
+      "games": "Games ({{count}})",
+      "anonHint": "You can browse without an account. Requesting a game to be computed needs a sign-in, because it uses someone's engine time."
+    },
+    "library": {
+      "requestNeedsLogin": "Sign in to request"
     }
   }
 }

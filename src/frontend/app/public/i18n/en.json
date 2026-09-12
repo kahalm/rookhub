@@ -3080,7 +3080,8 @@
         "de": "German",
         "fr": "French",
         "es": "Spanish"
-      }
+      },
+      "requestNeedsLogin": "Sign in to request"
     },
     "commentLanguage": "Language of the annotations",
     "commentOriginal": "Original",
@@ -3094,7 +3095,8 @@
       "noMoves": "No continuation recorded here.",
       "nonePlayable": "No computed game reaches this position yet.",
       "moveFailed": "That move does not work in this position.",
-      "games": "Games ({{count}})"
+      "games": "Games ({{count}})",
+      "anonHint": "You can browse without an account. Requesting a game to be computed needs a sign-in, because it uses someone's engine time."
     }
   },
   "tournamentDirectory": {

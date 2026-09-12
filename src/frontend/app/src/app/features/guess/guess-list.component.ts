@@ -49,23 +49,26 @@ import { ViewStateService } from '../../core/view-state.service';
     <div class="gl-container">
       <div class="header">
         <h1>{{ 'guess.title' | translate }}</h1>
-        @if (loggedIn) {
-          <!-- Beide Knoepfe in EINEM Kasten: die Kopfzeile verteilt ihre Kinder ueber die ganze
-               Breite (space-between), einzeln stuenden sie also auseinander statt nebeneinander
-               am Rand. Und beide in derselben Form — der gefuellte Knopf daneben behauptete eine
-               Rangfolge, die es hier nicht gibt. -->
-          <div class="header-actions">
+        <!-- Alle Knoepfe in EINEM Kasten: die Kopfzeile verteilt ihre Kinder ueber die ganze
+             Breite (space-between), einzeln stuenden sie also auseinander statt nebeneinander
+             am Rand. Und alle in derselben Form — ein gefuellter Knopf daneben behauptete eine
+             Rangfolge, die es hier nicht gibt.
+             Der STELLUNGSFILTER steht auch ohne Anmeldung da: er ist eine Suche, und der Baum
+             wie die Listen dahinter sind anonym abfragbar. Nur das Anfordern einer Partie
+             braucht ein Konto, und das sagt der Dialog an der Stelle, wo der Knopf waere. -->
+        <div class="header-actions">
+          @if (loggedIn) {
             <a mat-stroked-button routerLink="/analysis/games">
               <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
             </a>
             <button mat-stroked-button (click)="openLibrary()">
               <mat-icon>library_books</mat-icon> {{ 'guess.library.open' | translate }}
             </button>
-            <button mat-stroked-button (click)="openPositionFilter()">
-              <mat-icon>account_tree</mat-icon> {{ 'guess.tree.open' | translate }}
-            </button>
-          </div>
-        }
+          }
+          <button mat-stroked-button (click)="openPositionFilter()">
+            <mat-icon>account_tree</mat-icon> {{ 'guess.tree.open' | translate }}
+          </button>
+        </div>
       </div>
       <p class="muted intro">{{ 'guess.intro' | translate }}</p>
       @if (!loggedIn) {
@@ -525,7 +528,7 @@ export class GuessListComponent implements OnInit, OnDestroy {
       const ref = this.dialog.open(m.LibraryDialogComponent, { maxWidth: '96vw' });
       ref.afterClosed().subscribe((analysisId?: number) => {
         if (analysisId) this.start({ id: analysisId } as GameAnalysis);
-        else this.loadOwnGames();
+        else if (this.loggedIn) this.loadOwnGames();   // ohne Konto gibt es keine eigenen Partien
       });
     });
   }

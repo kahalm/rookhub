@@ -1361,8 +1361,15 @@ Punktepartie-Seite oeffnet den Bestand: suchen, und einzelne Partien in die Wart
 
 | Methode | Endpoint | Auth | Zweck |
 |---|---|---|---|
-| GET | `/api/library-games?q=&language=&minCommentedPlies=&page=&pageSize=` | Auth | Eine Seite der Bestandssuche, nach Eignungsnote sortiert; je Zeile `inPool`/`requested`/`gameAnalysisId`. **Ohne die Zuege** |
+| GET | `/api/library-games?q=&language=&minCommentedPlies=&page=&pageSize=&line=` | **AllowAnonymous** + RL | Eine Seite der Bestandssuche, nach Eignungsnote sortiert; je Zeile `inPool`/`requested`/`gameAnalysisId`. **Ohne die Zuege** |
 | POST | `/api/library-games/{id}/request` | Auth | Diese Partie rechnen lassen — derselbe Weg wie ein eingeworfenes PGN (feste Tiefe 20, Haus-Engine, Deckel 5). Liegt sie schon spielbar da, kommt die vorhandene Analyse zurueck (`alreadyPlayable`), es wird NICHTS doppelt gerechnet. 400 mit `reason` ∈ `not-found`/`too-many-open`/`no-engine`/`invalid-pgn` |
+
+**Suchen darf jeder, anfordern nur angemeldet** (0.475.5). Die Suche liefert Kopfdaten — Spieler,
+Turnier, Jahr, Kommentator, Kommentardichte — und ausdruecklich KEINE Zuege und keine Anmerkungen;
+das ist derselbe Zuschnitt, den `/api/guess-tree` ohnehin anonym ausliefert, und ohne ihn fuehrte der
+Stellungsfilter einen Besucher ohne Konto in eine leere Liste. `MarkKnownAsync` bekommt anonym die
+UserId 0: die gibt es nicht, also bleibt „schon angefordert“ ueberall falsch und nur „liegt im Bestand“ traegt. Das ANFORDERN bleibt angemeldet — es verbraucht Rechenzeit,
+die jemandem gehoert — und der Dialog sagt den Grund an der Stelle, wo der Knopf waere.
 
 **Gesucht wird ueber einen VOLLTEXT-Index** (`LibraryGame.SearchText` = Spieler, Turnier und
 Kommentator kleingeschrieben in EINER Spalte). Am echten Bestand gemessen (2026-09-11, 130 572

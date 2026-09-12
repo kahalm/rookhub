@@ -123,6 +123,9 @@ public class LibraryGameService
     /// Anforderung. In EINER Abfrage fuer die ganze Seite: je Zeile eine waere bei fuenfundzwanzig
     /// Treffern fuenfundzwanzig Umlaeufe.
     /// </summary>
+    /// <remarks>Anonym wird <c>0</c> uebergeben: eine UserId 0 gibt es nicht, also bleibt
+    /// <c>Requested</c> ueberall falsch und nur <c>InPool</c> traegt — genau richtig fuer einen
+    /// Besucher ohne Konto.</remarks>
     private async Task MarkKnownAsync(int userId, List<LibraryGameDto> items, CancellationToken ct)
     {
         if (items.Count == 0) return;

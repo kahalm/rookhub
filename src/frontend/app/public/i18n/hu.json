@@ -2805,7 +2805,8 @@
         "de": "német",
         "fr": "francia",
         "es": "spanyol"
-      }
+      },
+      "requestNeedsLogin": "Jelentkezz be a kéréshez"
     },
     "commentLanguage": "A jegyzetek nyelve",
     "commentOriginal": "Eredeti",
@@ -2819,7 +2820,8 @@
       "noMoves": "Itt nincs rögzített folytatás.",
       "nonePlayable": "Még egyetlen kiszámolt játszma sem jut el ebbe az állásba.",
       "moveFailed": "Ez a lépés ebben az állásban nem lehetséges.",
-      "games": "Játszmák ({{count}})"
+      "games": "Játszmák ({{count}})",
+      "anonHint": "Kereséshez nem kell fiók. Egy játszma kiszámításához be kell jelentkezni, mert valakinek a gépidejét használja."
     }
   },
   "tournamentDirectory": {

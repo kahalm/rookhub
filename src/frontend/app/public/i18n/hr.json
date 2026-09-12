@@ -3080,7 +3080,8 @@
         "de": "njemački",
         "fr": "francuski",
         "es": "španjolski"
-      }
+      },
+      "requestNeedsLogin": "Prijavi se za zahtjev"
     },
     "commentLanguage": "Jezik komentara",
     "commentOriginal": "Izvornik",
@@ -3094,7 +3095,8 @@
       "noMoves": "Ovdje nema zabilježenog nastavka.",
       "nonePlayable": "Nijedna izračunata partija još ne dolazi do ove pozicije.",
       "moveFailed": "Taj potez nije moguć u ovoj poziciji.",
-      "games": "Partije ({{count}})"
+      "games": "Partije ({{count}})",
+      "anonHint": "Pretraživanje ide i bez računa. Za izračun partije potrebna je prijava jer troši nečije strojno vrijeme."
     }
   },
   "tournamentDirectory": {

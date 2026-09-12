@@ -3080,7 +3080,8 @@
         "de": "Deutsch",
         "fr": "Französisch",
         "es": "Spanisch"
-      }
+      },
+      "requestNeedsLogin": "Zum Anfordern anmelden"
     },
     "commentLanguage": "Sprache der Anmerkungen",
     "commentOriginal": "Original",
@@ -3094,7 +3095,8 @@
       "noMoves": "Hier ist keine Fortsetzung verzeichnet.",
       "nonePlayable": "Noch keine gerechnete Partie erreicht diese Stellung.",
       "moveFailed": "Dieser Zug geht in dieser Stellung nicht.",
-      "games": "Partien ({{count}})"
+      "games": "Partien ({{count}})",
+      "anonHint": "Suchen geht ohne Konto. Eine Partie rechnen zu lassen braucht eine Anmeldung — es verbraucht Rechenzeit, die jemandem gehört."
     }
   },
   "tournamentDirectory": {

@@ -47,6 +47,10 @@ public class EndpointAuthInventoryTests
         // "anonymous-puzzle"-Rate-Limiter und pruefen die Sitzungskennung.
         "GET /api/game-analyses/public",                             // GameAnalysisController.ListPublic
         "GET /api/guess-tree",                                       // GuessTreeController.Branch
+        // Der Stellungsfilter braucht neben dem Baum auch die LISTE des Rohbestands (0.475.5) —
+        // Kopfdaten ohne Zuege und ohne Anmerkungen, derselbe Zuschnitt wie der Baum. Das
+        // ANFORDERN einer Partie bleibt angemeldet (POST .../request traegt kein AllowAnonymous).
+        "GET /api/library-games",                                    // LibraryGameController.Search
         "GET /api/guess-sessions/anonymous",                         // GuessSessionAnonymousController.List
         "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
         "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review

@@ -6,11 +6,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { AuthService } from '../../core/auth.service';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { LibraryGame, LibraryService } from './library.service';
 import { OpeningMove, OpeningTreeService } from './opening-tree.service';
@@ -33,7 +35,7 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
   selector: 'app-position-filter-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatButtonToggleModule,
-    MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent],
+    MatIconModule, MatProgressBarModule, RouterLink, TranslatePipe, ChessBoardComponent],
   template: `
     <h2 mat-dialog-title>{{ 'guess.tree.title' | translate }}</h2>
     <!-- Ein duenner Balken statt zweier Spinner: bis 0.475.2 setzte jeder Klick beide Listen auf
@@ -49,6 +51,10 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
         <mat-button-toggle [value]="true">{{ 'guess.tree.onlyPlayable' | translate }}</mat-button-toggle>
         <mat-button-toggle [value]="false">{{ 'guess.tree.all' | translate }}</mat-button-toggle>
       </mat-button-toggle-group>
+
+      @if (!loggedIn) {
+        <p class="muted small hint">{{ 'guess.tree.anonHint' | translate }}</p>
+      }
 
       <div class="top">
         <div class="board">
@@ -116,12 +122,19 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
                 <button mat-stroked-button (click)="choose(g.gameAnalysisId!)">
                   <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
                 </button>
-              } @else {
+              } @else if (loggedIn) {
                 <!-- Bewusst UMRANDET und nicht gefuellt: fuenfzig gefuellte Knoepfe untereinander
                      behaupten fuenfzig Hauptaktionen (UI-Dichte-Regel, CLAUDE.md). -->
                 <button mat-stroked-button [disabled]="busy === g.id" (click)="request(g)">
                   <mat-icon>hourglass_top</mat-icon> {{ 'guess.library.request' | translate }}
                 </button>
+              } @else {
+                <!-- Suchen darf jeder, rechnen lassen nicht: das verbraucht Rechenzeit, die
+                     jemandem gehoert. An der Stelle des Knopfes steht deshalb der Grund. -->
+                <a mat-button routerLink="/login" [queryParams]="{ returnUrl: '/guess' }"
+                   (click)="ref.close()">
+                  <mat-icon>lock_open</mat-icon> {{ 'guess.library.requestNeedsLogin' | translate }}
+                </a>
               }
             </div>
           }
@@ -168,6 +181,7 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
     .ghead { display: flex; align-items: center; gap: 4px; margin: 4px 0 2px; flex-wrap: wrap; }
     .ghead .pg { white-space: nowrap; }
     .ghead h3 { margin: 0; font-size: .95rem; font-weight: 600; }
+    .hint { margin: 0 0 8px; }
     .row { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
     .row + .row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .who { min-width: 0; }
@@ -191,7 +205,8 @@ export class PositionFilterDialogComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
-  private ref = inject(MatDialogRef<PositionFilterDialogComponent>);
+  readonly ref = inject(MatDialogRef<PositionFilterDialogComponent>);
+  private auth = inject(AuthService);
   readonly prefs = inject(PreferencesService);
 
   /** So viele Partien je Seite unter dem Baum. Der Rest ist ueber das Blaettern erreichbar —
@@ -215,6 +230,9 @@ export class PositionFilterDialogComponent implements OnInit {
   loadingTree = true;
   loadingGames = true;
   busy: number | null = null;
+
+  /** Ohne Konto: suchen ja, anfordern nein — der Dialog sagt es an beiden Stellen. */
+  readonly loggedIn = this.auth.isLoggedIn;
 
   get lineText(): string { return this.plies.join(' '); }
   /** Der Balken oben laeuft, solange irgendetwas nachlaedt — die Listen bleiben derweil stehen. */
