@@ -82,4 +82,59 @@ public class AnalysisJobStreamTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             AnalysisJobStream.ConsumeAsync(pipe.Reader.AsStream(), (_, _) => Task.CompletedTask, cts.Token));
     }
+
+    [Fact]
+    public void Tally_CountsRepeatedDataLineAsHeartbeat()
+    {
+        // Der Provider wiederholt seine letzte info-Zeile, wenn nach oben nichts mehr geht
+        // (engine-provider/patch_provider.py). Zeichengleich = Lebenszeichen, nicht Fortschritt:
+        // eine rechnende Engine kann sich nicht wiederholen, time und nodes wandern immer mit.
+        var t0 = new DateTime(2026, 9, 12, 1, 51, 0, DateTimeKind.Utc);
+        var line = "{\"time\":27,\"depth\":11,\"nodes\":24006,\"pvs\":[]}";
+        var tally = new StreamTally();
+        tally.Note(line, t0);
+        tally.Note(line, t0.AddSeconds(15));
+        tally.Note(line, t0.AddSeconds(30));
+
+        Assert.Equal(1, tally.DataLines);
+        Assert.Equal(2, tally.Heartbeats);
+        // Die Luecke zaehlt ab der EINEN echten Zeile — genau daran haengt der Stillstands-Waechter.
+        Assert.Equal(30, tally.DataGapSeconds(t0.AddSeconds(30)));
+        Assert.Equal(0, tally.AnyGapSeconds(t0.AddSeconds(30)));
+    }
+
+    [Fact]
+    public void Tally_CountsChangedDataLineAsProgress()
+    {
+        var t0 = new DateTime(2026, 9, 12, 1, 51, 0, DateTimeKind.Utc);
+        var tally = new StreamTally();
+        tally.Note("{\"time\":27,\"depth\":11,\"nodes\":24006,\"pvs\":[]}", t0);
+        tally.Note("{\"time\":92,\"depth\":12,\"nodes\":81233,\"pvs\":[]}", t0.AddSeconds(15));
+
+        Assert.Equal(2, tally.DataLines);
+        Assert.Equal(0, tally.Heartbeats);
+    }
+
+    [Fact]
+    public void IsRepeat_OnlyForIdenticalPredecessor()
+    {
+        Assert.False(StreamTally.IsRepeat("a", null));
+        Assert.False(StreamTally.IsRepeat("a", "b"));
+        Assert.True(StreamTally.IsRepeat("a", "a"));
+    }
+
+    [Theory]
+    // Reihum, damit der Auftrag der haengenden Engine nicht sofort wieder in die Arme laeuft:
+    // sie hat gerade nichts zu tun und gewaenne jeden Vergleich der Schlangenlaenge.
+    [InlineData("b", "a,b,c", "c")]
+    [InlineData("c", "a,b,c", "a")]
+    // Nur eine hinterlegt: es gibt nichts zu wechseln.
+    [InlineData("a", "a", null)]
+    // Von Hand gewaehlte Engine (steht nicht in der Hintergrund-Liste): bleibt die Entscheidung des Nutzers.
+    [InlineData("x", "a,b,c", null)]
+    public void NextEngineAfter_RotatesWithinTheConfiguredList(string current, string list, string? expected)
+    {
+        var engines = list.Split(',');
+        Assert.Equal(expected, AnalysisJobWorker.NextEngineAfter(engines, current));
+    }
 }

@@ -74,11 +74,26 @@ public sealed class StreamTally
     public DateTime? LastDataUtc { get; private set; }
     public DateTime? LastAnyUtc { get; private set; }
 
+    private string? _lastData;
+
+    /// <summary>Eine Datenzeile, die ZEICHENGLEICH ihre Vorgaengerin wiederholt, ist KEIN Fortschritt,
+    /// sondern das Lebenszeichen des Providers (er sendet die letzte weitergegebene <c>info</c>-Zeile
+    /// erneut, wenn nach oben laenger nichts ging — siehe <c>engine-provider/patch_provider.py</c>).
+    /// Eine rechnende Engine kann sich nicht wiederholen: <c>time</c> und <c>nodes</c> wandern mit
+    /// jeder Zeile. Das zu unterscheiden ist die Grundlage des Stillstands-Waechters — ohne sie sieht
+    /// eine haengende Engine genauso aus wie eine, die gerade an einer tiefen Iteration rechnet.</summary>
+    public static bool IsRepeat(string? line, string? previous) => previous is not null && line == previous;
+
     public void Note(string line, DateTime nowUtc)
     {
         LastAnyUtc = nowUtc;
         if (string.IsNullOrWhiteSpace(line)) { Heartbeats++; return; }
-        if (AnalysisJobStream.DepthOf(line) is not null) { DataLines++; LastDataUtc = nowUtc; return; }
+        if (AnalysisJobStream.DepthOf(line) is not null)
+        {
+            if (IsRepeat(line, _lastData)) { Heartbeats++; return; }   // Wiederholung = Lebenszeichen
+            _lastData = line;
+            DataLines++; LastDataUtc = nowUtc; return;
+        }
         OtherLines++;
     }
 
@@ -114,6 +129,16 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// <summary>Ohne erste Datenzeile binnen dieser Frist gilt der Provider als nicht rechnend — sonst hinge der
     /// Auftrag unbegrenzt in „läuft" (der HttpClient hat bewusst kein Timeout) und blockierte den Slot des Users.</summary>
     private readonly TimeSpan _firstLineTimeout;
+    /// <summary>Frist fuer jede WEITERE Datenzeile, nachdem die erste da war. Der Wert muss ueber der
+    /// laengsten ehrlichen Iteration liegen (Tiefe 40+ mit fuenf Linien dauert Minuten), deshalb sehr
+    /// grosszuegig — er faengt nicht die langsame, sondern die HAENGENDE Engine.
+    /// <para>Am 2026-09-12 auf Prod gebraucht: ein Auftrag stand vier Stunden auf „laeuft" bei Tiefe 11,
+    /// waehrend der Provider unveraendert dieselbe <c>info</c>-Zeile wiederholte (time 27 ms, nodes 24006,
+    /// Tempo auf die Stelle genau eingefroren). Der Waechter der ersten Zeile war da laengst entschaerft,
+    /// einen zweiten gab es nicht — und weil die Pumpe je Nutzer nur EINE Partie fuettert, standen darueber
+    /// 434 wartende Partien und elf freie Engines still.</para>
+    /// <para>Konfiguration: <c>AnalysisJobs:StallTimeoutSeconds</c> (300..86400, Vorgabe 1800).</para></summary>
+    private readonly TimeSpan _stallTimeout;
     /// <summary>Ab dieser Laufzeit gilt „kein Tiefenfortschritt" NICHT mehr als Fehlversuch: eine echte Sackgasse
     /// (Matt/Patt, abgelehnte Arbeit) endet in Sekunden, ein langer Lauf ohne neue Zeile ist eine gekappte
     /// Verbindung — dafür darf der Auftrag nicht als gescheitert gelten.</summary>
@@ -132,6 +157,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         _idleGrace = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:IdleGraceSeconds") ?? 20, 0, 600));
         _persistInterval = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:PersistIntervalSeconds") ?? 5, 1, 60));
         _firstLineTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FirstLineTimeoutSeconds") ?? 300, 30, 3600));
+        _stallTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:StallTimeoutSeconds") ?? 1800, 300, 86400));
         _fruitlessMinRuntime = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FruitlessMinRuntimeSeconds") ?? 60, 5, 3600));
         _tracker.LiveStarted += PauseEngine;
     }
@@ -314,18 +340,25 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 string? pendingLine = null; var pendingDepth = job.ReachedDepth;
                 var currentDepth = 0; var currentNps = 0;
                 var gotData = false;
+                string? lastLine = null;
                 var tally = new StreamTally();
-                // Wächter NUR für die erste Zeile: danach dürfen zwischen zwei Iterationen Stunden liegen
-                // (Tiefe 40+ mit mehreren Linien), aber ein stummer Provider soll den Slot nicht ewig halten.
-                using var firstLine = new CancellationTokenSource(_firstLineTimeout);
-                using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(ct, firstLine.Token);
+                // Wächter gegen STILLSTAND. Bis zur ersten Datenzeile gilt die kurze Frist (ein Provider,
+                // der gar nicht rechnet, soll den Slot nicht halten); danach die lange, und sie wird bei
+                // jeder FRISCHEN Zeile neu gestellt. Eine zeichengleich wiederholte Zeile stellt sie NICHT
+                // neu — das ist das Lebenszeichen des Providers, nicht die Engine. Früher wurde der Wächter
+                // nach der ersten Zeile für immer entschärft; eine Engine, die danach hängen blieb, hielt
+                // ihren Auftrag und (über die Ein-Partie-Pumpe) die ganze Warteschlange unbegrenzt fest.
+                using var silence = new CancellationTokenSource(_firstLineTimeout);
+                using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(ct, silence.Token);
                 var streamCt = streamCts.Token;
                 try
                 {
                     await using var stream = await upstream.Content.ReadAsStreamAsync(streamCt);
                     await AnalysisJobStream.ConsumeAsync(stream, async (line, depth) =>
                     {
-                        if (!gotData) { gotData = true; firstLine.CancelAfter(Timeout.Infinite); }   // Wächter entschärfen
+                        // Nur eine FRISCHE Zeile stellt den Wächter neu — die Wiederholung ist ein Lebenszeichen.
+                        if (!StreamTally.IsRepeat(line, lastLine)) { gotData = true; silence.CancelAfter(_stallTimeout); }
+                        lastLine = line;
                         // Laufender Stand IMMER mitschreiben — auch wenn die Zeile flacher ist als das Ergebnis.
                         // Nach einer Fortsetzung rechnet die Engine erst wieder von Tiefe 1 hoch; ohne das stünde
                         // die Anzeige minutenlang still (keine Tiefe, kein Tempo, nicht einmal die Zeit lief mit).
@@ -349,10 +382,34 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         // 2..K blieben eine Iteration flacher (jede pv hat ihre eigene Tiefe).
                     }, streamCt, tally);
                 }
-                catch (OperationCanceledException) when (firstLine.IsCancellationRequested && !ct.IsCancellationRequested)
+                catch (OperationCanceledException) when (silence.IsCancellationRequested && !ct.IsCancellationRequested)
                 {
-                    await PauseAsync(db, job, "Engine lieferte keine Daten", TimeSpan.FromMinutes(5));
-                    _logger.LogWarning("AnalysisJob {JobId}: keine Datenzeile binnen {Timeout} — pausiert", job.Id, _firstLineTimeout);
+                    if (!gotData)
+                    {
+                        await PauseAsync(db, job, "Engine lieferte keine Daten", TimeSpan.FromMinutes(5));
+                        _logger.LogWarning("AnalysisJob {JobId}: keine Datenzeile binnen {Timeout} — pausiert",
+                            job.Id, _firstLineTimeout);
+                        return;
+                    }
+                    // Die Engine HAT gerechnet und ist dann stehen geblieben. Das ist eine Aussage über die
+                    // ENGINE, nicht über die Stellung — die kürzeste Schlange wählte ausgerechnet sie erneut
+                    // (sie hat ja nichts zu tun), deshalb wird hier auf die nächste hinterlegte umgehängt.
+                    var stalled = job.EngineId;
+                    var moved = await SwitchEngineAsync(db, job, engineOwnerId, CancellationToken.None);
+                    // Der Zähler ist nötig, damit ein durchweg unbrauchbarer Auftrag nicht ewig im Kreis
+                    // läuft; er wird bei jedem Lauf MIT Tiefenfortschritt wieder auf 0 gesetzt, eine bloß
+                    // langsame tiefe Suche kann also nicht daran scheitern.
+                    job.FruitlessAttempts++;
+                    _logger.LogWarning(
+                        "AnalysisJob {JobId}: Stillstand — seit {Timeout} keine neue Datenzeile, nur Wiederholungen "
+                        + "({DataLines} Datenzeilen, {Heartbeats} Lebenszeichen, Tiefe {Depth}/{Target}); "
+                        + "Engine {Stalled} → {Next}",
+                        job.Id, _stallTimeout, tally.DataLines, tally.Heartbeats, currentDepth, job.TargetDepth,
+                        stalled, moved ? job.EngineId : "(keine andere hinterlegt)");
+                    if (job.FruitlessAttempts >= AnalysisJob.MaxFruitlessAttempts)
+                        await FailAsync(db, job, $"Engine blieb in {job.FruitlessAttempts} Läufen stehen");
+                    else
+                        await PauseAsync(db, job, $"Engine blieb bei Tiefe {currentDepth} stehen", TimeSpan.FromSeconds(60));
                     return;
                 }
                 catch (OperationCanceledException) { /* Pause (Live), Löschung oder Shutdown */ }
@@ -486,6 +543,32 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         job.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(CancellationToken.None);
         return elapsed > TimeSpan.Zero ? elapsed - TimeSpan.FromSeconds(whole) : TimeSpan.Zero;
+    }
+
+    /// <summary>Den Auftrag auf die NAECHSTE hinterlegte Hintergrund-Engine umhaengen, nachdem die
+    /// bisherige stehen geblieben ist. Gibt zurueck, ob gewechselt wurde (gespeichert wird erst vom
+    /// aufrufenden Pause/Fail).
+    /// <para>Bewusst REIHUM und nicht ueber die kuerzeste Schlange: eine haengende Engine hat gerade gar
+    /// nichts zu tun und gewaenne jeden Schlangenvergleich — der Auftrag liefe ihr sofort wieder in die
+    /// Arme. Bewusst nur, wenn die aktuelle Engine ueberhaupt in der Liste steht: eine von Hand
+    /// festgelegte Engine ist eine Entscheidung des Nutzers und bleibt.</para></summary>
+    private static async Task<bool> SwitchEngineAsync(AppDbContext db, AnalysisJob job, int engineOwnerId, CancellationToken ct)
+    {
+        var cred = await db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == engineOwnerId, ct);
+        if (NextEngineAfter(cred?.BackgroundEngines ?? [], job.EngineId) is not { } next) return false;
+        job.EngineId = next;
+        return true;
+    }
+
+    /// <summary>Die naechste Engine REIHUM nach <paramref name="current"/>; <c>null</c>, wenn es keinen
+    /// Wechsel gibt — weil nur eine hinterlegt ist oder weil die aktuelle gar nicht in der Liste steht
+    /// (dann hat der Nutzer sie von Hand gewaehlt, und das bleibt seine Entscheidung).</summary>
+    internal static string? NextEngineAfter(IReadOnlyList<string> engines, string current)
+    {
+        if (engines.Count < 2) return null;
+        for (var i = 0; i < engines.Count; i++)
+            if (engines[i] == current) return engines[(i + 1) % engines.Count];
+        return null;
     }
 
     private static async Task PauseAsync(AppDbContext db, AnalysisJob job, string? error, TimeSpan? backoff = null)

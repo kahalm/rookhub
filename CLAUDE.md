@@ -1036,6 +1036,28 @@ Stream-ENDE und terminiert jede Suche, die laenger als `--keep-alive` (Vorgabe 3
 5 Linien jede Iteration. Der Auftrag kam nie tiefer und galt nach drei Runden als gescheitert; Abhilfe beidseitig:
 `KEEP_ALIVE` im Provider hoch (siehe `engine-provider/README.md`) UND diese Laufzeit-Unterscheidung hier. Bleibt die erste Datenzeile binnen
 `AnalysisJobs:FirstLineTimeoutSeconds` (300) aus, wird pausiert statt den Slot des Users unbegrenzt zu halten.
+**Eine WIEDERHOLTE Bewertungszeile ist ein Lebenszeichen, kein Fortschritt** (0.475.1). Das
+Lebenszeichen des Providers ist die erneut gesendete letzte `info`-Zeile (siehe `patch_provider.py`) —
+fuer den Worker war sie damit von echter Arbeit nicht zu unterscheiden. Der Waechter der ersten Zeile
+war nach ihr entschaerft, einen zweiten gab es nicht: eine Engine, die NACH der ersten Zeile stehen
+blieb, hielt ihren Auftrag unbegrenzt auf `Running`. Am 2026-09-12 auf Prod: Auftrag 14240 stand VIER
+STUNDEN auf Tiefe 11, die wiederholte Zeile bis auf das Byte dieselbe (`time` 27 ms, `nodes` 24006,
+Tempo eingefroren auf 889 111 Knoten/s), Rechenzeit lief weiter mit. Weil die Pumpe je Nutzer nur EINE
+Partie fuettert (`IsOwnersTurnAsync`), standen dahinter 434 Partien und elf freie Engines — seit 01:51
+keine einzige gerechnete Stellung.
+
+`StreamTally` zaehlt eine zeichengleiche Wiederholung deshalb als Lebenszeichen (eine rechnende Engine
+KANN sich nicht wiederholen, `time` und `nodes` wandern mit jeder Zeile), und der Waechter laeuft
+weiter: er wird bei jeder FRISCHEN Zeile neu gestellt, mit `AnalysisJobs:StallTimeoutSeconds`
+(300..86400, Vorgabe 1800). Die Frist ist bewusst weit — sie faengt nicht die langsame, sondern die
+haengende Engine; eine tiefe Iteration mit fuenf Linien darf Minuten dauern. Faellt sie, wandert der
+Auftrag REIHUM auf die naechste hinterlegte Hintergrund-Engine (`AnalysisJobWorker.NextEngineAfter`):
+ueber die kuerzeste Schlange gewaenne ausgerechnet die haengende, sie hat ja gerade nichts zu tun. Eine
+Engine, die NICHT in der Hintergrund-Liste steht, wurde von Hand gewaehlt und bleibt. Ein Stillstand
+zaehlt als Fehlversuch — anders als ein abgerissener Stream ist er eine Aussage ueber die Engine; der
+Zaehler faellt bei jedem Lauf mit Tiefenfortschritt auf 0 zurueck, eine bloss langsame tiefe Suche kann
+also nicht daran scheitern.
+
 Unerwartete Ausnahmen setzen den Auftrag in einem EIGENEN Scope auf `Paused` zurueck (sonst stuende er bis zum
 naechsten API-Start auf `Running` und wuerde nie wieder aufgegriffen). `TryCancel` faengt `ObjectDisposedException`
 — zwischen Dictionary-Griff und `Cancel()` kann der Lauf selbst geendet haben, und der Wurf lief bis in den
