@@ -73,6 +73,10 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   private resizeObserver?: ResizeObserver;
   private initAttempts = 0;
   private rafId?: number;
+  /** Nachmess-Anlaeufe waehrend einer Dialog-Einblendung (siehe fitToHost). */
+  private settleTimers: number[] = [];
+  /** Zuletzt gesetzte Kantenlaenge — verhindert unnoetiges Neuzeichnen (siehe fitToHost). */
+  private appliedWidth = 0;
   private destroyed = false;
 
   ngAfterViewInit(): void {
@@ -119,24 +123,50 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
 
     this.resizeObserver = new ResizeObserver(() => this.fitToHost());
     this.resizeObserver.observe(el.parentElement || el);
-    // EINE Nachmessung nach dem Layout. Der ResizeObserver meldet nur Aenderungen des WRAPPERS —
-    // steht der schon auf seiner Endbreite, waehrend der Dialog darum herum noch waechst, bleibt
-    // das Brett auf der beim Aufbau gemessenen Groesse stehen. Im Stellungsfilter sass es dadurch
-    // mit 256 px in einem 320-px-Kasten: der Vollbild-Knopf 64 px neben dem Brett, darunter
-    // dieselbe Luecke. Zwei Bilder spaeter nachzumessen kostet nichts und trifft den Fall.
-    this.rafId = requestAnimationFrame(() =>
-      this.rafId = requestAnimationFrame(() => this.fitToHost()));
+    // Nachmessen, bis die Groesse steht. Grund ist eine Falle, die JEDES Brett in einem DIALOG
+    // trifft: Material faehrt den Dialog mit `transform: scale()` auf, und Chessground misst mit
+    // `getBoundingClientRect()` — das liefert die SKALIERTE Groesse. Ein 300-px-Kasten misst
+    // waehrend der Einblendung 240, und diese 240 schreibt Chessground als feste Pixelzahl in sein
+    // inneres Element. Danach meldet der ResizeObserver nichts mehr: die Layout-Groesse des
+    // Wrappers hat sich nie geaendert, nur seine Darstellung. Ergebnis war ein Brett, das
+    // sechzig Pixel kleiner blieb als sein Kasten — Vollbild-Knopf daneben, Luecke darunter.
+    // Drei Anlaeufe decken die Einblendung ab; jeder ist ein Vergleich und tut nichts, wenn es
+    // passt.
+    this.rafId = requestAnimationFrame(() => this.fitToHost());
+    this.settleTimers = [200, 500].map(ms => window.setTimeout(() => this.fitToHost(), ms));
   }
 
-  /** Die Brettgroesse an den Wrapper angleichen und neu zeichnen (Chessground rechnet in Pixeln). */
+  /**
+   * Die Brettgroesse an den Wrapper angleichen und neu zeichnen (Chessground rechnet in Pixeln).
+   *
+   * <p>Gemessen werden muss das INNERE Element (`cg-container`), nicht unser aeusseres: Chessground
+   * setzt seine Groesse EINMAL beim Aufbau als feste Pixelzahl, und keine spaetere Zeichnung
+   * aendert sie. Unser Kasten wuchs also mit, das gezeichnete Brett nicht — im Stellungsfilter
+   * gemessen: aussen 300 × 300, `cg-container` 240 × 240. Sichtbar war das als Vollbild-Knopf
+   * sechzig Pixel neben dem Brett und einer gleich grossen Luecke darunter. Der frueher hier
+   * stehende Vergleich gegen `el.clientWidth` sah nur den aeusseren Kasten und fand deshalb
+   * nichts zu tun.</p>
+   */
   private fitToHost(): void {
     const el = this.boardEl?.nativeElement;
     if (!el || this.destroyed) return;
     const hostEl = el.parentElement as HTMLElement;
     const w = hostEl?.clientWidth || el.clientWidth;
-    if (w > 0 && w !== el.clientWidth) {
-      el.style.width = `${w}px`;
-      el.style.height = `${w}px`;
+    if (w <= 0) return;
+    const container = el.querySelector('cg-container') as HTMLElement | null;
+    const ist = container?.clientWidth || el.clientWidth;
+    // Chessground rastet auf ein Vielfaches von acht (acht Linien, ganze Felder): in einem
+    // 300-px-Kasten steht es auf 296, und das ist RICHTIG. Nur diese Rasterung zu dulden haelt
+    // das Nachmessen ruhig — ohne die Schranke rechnete jeder Anlauf 296 gegen 300 und zeichnete
+    // das Brett endlos neu; ohne sie ganz wegzulassen bliebe ein wirklich verrutschtes Brett
+    // (die 240 aus der Einblendung) fuer immer stehen.
+    if (w === this.appliedWidth && Math.abs(ist - w) <= 8) return;
+    this.appliedWidth = w;
+    el.style.width = `${w}px`;
+    el.style.height = `${w}px`;
+    if (container) {
+      container.style.width = `${w}px`;
+      container.style.height = `${w}px`;
     }
     this.ground?.redrawAll();
   }
@@ -193,6 +223,8 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   ngOnDestroy(): void {
     this.destroyed = true;
     if (this.rafId !== undefined) cancelAnimationFrame(this.rafId);
+    this.settleTimers.forEach(t => clearTimeout(t));
+    this.settleTimers = [];
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }

@@ -42,6 +42,14 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
     <mat-progress-bar mode="indeterminate" [class.hidden]="!busyAny()" />
 
     <mat-dialog-content class="pf">
+      <!-- Der Umschalter steht ueber der ganzen Breite, nicht in der Zugspalte: neben einem Brett
+           passen seine zwei Schalter auf einem 400-px-Geraet nicht daneben, und sie koennen nicht
+           schrumpfen — gemessen ragte er 42 px ueber den Dialogrand hinaus. -->
+      <mat-button-toggle-group [(ngModel)]="onlyPlayable" (change)="scopeChanged()" class="scope">
+        <mat-button-toggle [value]="true">{{ 'guess.tree.onlyPlayable' | translate }}</mat-button-toggle>
+        <mat-button-toggle [value]="false">{{ 'guess.tree.all' | translate }}</mat-button-toggle>
+      </mat-button-toggle-group>
+
       <div class="top">
         <div class="board">
           <app-chess-board [fen]="fen" [lastMove]="lastMove"
@@ -56,11 +64,6 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
         </div>
 
         <div class="moves">
-          <mat-button-toggle-group [(ngModel)]="onlyPlayable" (change)="scopeChanged()" class="scope">
-            <mat-button-toggle [value]="true">{{ 'guess.tree.onlyPlayable' | translate }}</mat-button-toggle>
-            <mat-button-toggle [value]="false">{{ 'guess.tree.all' | translate }}</mat-button-toggle>
-          </mat-button-toggle-group>
-
           <div class="fade" [class.busy]="loadingTree">
             <p class="muted small">{{ 'guess.tree.total' | translate:{ total } }}</p>
             @if (!moves.length && !loadingTree) {
@@ -87,7 +90,7 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
             <span class="spacer"></span>
             <button mat-icon-button [disabled]="page <= 1 || loadingGames" (click)="turn(-1)"
                     [attr.title]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
-            <span class="muted small">{{ 'guess.library.page' | translate:{ page, pages } }}</span>
+            <span class="muted small pg">{{ 'guess.library.page' | translate:{ page, pages } }}</span>
             <button mat-icon-button [disabled]="page >= pages || loadingGames" (click)="turn(1)"
                     [attr.title]="'common.next' | translate"><mat-icon>chevron_right</mat-icon></button>
           }
@@ -145,7 +148,7 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
     .moves { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
     /* Nur so breit wie seine zwei Schalter — ueber die volle Breite sah der Umschalter aus wie
        ein Eingabefeld mit einem leeren dritten Feld dahinter. */
-    .scope { margin-bottom: 8px; align-self: flex-start; }
+    .scope { margin-bottom: 10px; }
     .mlist { display: flex; flex-direction: column; gap: 2px; max-height: 46vh; overflow-y: auto; }
     .mv { display: flex; align-items: center; gap: 8px; border: none; background: none; cursor: pointer;
           font: inherit; color: inherit; padding: 4px 6px; border-radius: 4px; text-align: left; }
@@ -159,7 +162,11 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
     /* Nachladen ohne Umbau: der alte Stand bleibt stehen, wird nur blasser und unklickbar. */
     .fade { transition: opacity .15s ease; }
     .fade.busy { opacity: .45; pointer-events: none; }
-    .ghead { display: flex; align-items: center; gap: 4px; margin: 4px 0 2px; }
+    /* Umbrechen duerfen: Ueberschrift, Zaehler und Blaetterknoepfe passen auf einem 400-px-Geraet
+       nicht in eine Zeile — ohne den Umbruch schob die Kopfzeile den ganzen Dialoginhalt
+       43 px ueber den Rand (gemessen: scrollWidth 427 gegen clientWidth 384). */
+    .ghead { display: flex; align-items: center; gap: 4px; margin: 4px 0 2px; flex-wrap: wrap; }
+    .ghead .pg { white-space: nowrap; }
     .ghead h3 { margin: 0; font-size: .95rem; font-weight: 600; }
     .row { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
     .row + .row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }

@@ -1469,6 +1469,17 @@ nur mit „dieser Zug geht nicht" antworten. Solche Partien fallen aus dem Baum 
 Namenssuche erreichbar; `openings` und `analysis-openings` RAEUMEN die Zeilen des Altbestands
 entsprechend weg, bevor sie nachtragen.
 
+**Ein Brett in einem DIALOG misst sich zu klein** (0.475.3, gilt app-weit). Material blendet einen
+Dialog mit `transform: scale()` ein, und Chessground misst mit `getBoundingClientRect()` — das
+liefert die SKALIERTE Groesse. Ein 300-px-Kasten misst waehrend der Einblendung 240, und diese 240
+schreibt Chessground als feste Pixelzahl in sein inneres `cg-container`. Danach korrigiert es
+nichts mehr: der ResizeObserver sieht die LAYOUT-Groesse des Wrappers, und die hat sich nie
+geaendert. Sichtbar war das als Vollbild-Knopf sechzig Pixel neben dem Brett und einer gleich
+grossen Luecke darunter. `ChessBoardComponent.fitToHost` misst deshalb nach (rAF, 200 ms, 500 ms),
+vergleicht gegen das INNERE Element und duldet dabei Chessgrounds Rasterung auf ein Vielfaches von
+acht (in einem 300-px-Kasten steht es richtigerweise auf 296) — ohne diese Schranke zeichnete jeder
+Anlauf das Brett neu.
+
 **Der Dialog laedt ohne Umbau nach** (`position-filter-dialog.component.ts`): der vorige Stand
 bleibt stehen und wird nur abgeblendet, oben laeuft ein duenner Balken. Vorher setzte jeder Klick
 beide Listen auf einen Spinner — der Dialog fiel auf halbe Hoehe zusammen und das Brett sprang
