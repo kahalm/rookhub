@@ -14,7 +14,9 @@
     "ok": "OK",
     "remove": "Odebrat",
     "whiteToMove": "Bílý na tahu",
-    "blackToMove": "Černý na tahu"
+    "blackToMove": "Černý na tahu",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Discord komunita",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

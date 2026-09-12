@@ -1235,6 +1235,11 @@ public class AppDbContext : DbContext
             // „Wie viele Partien spielen dieselben ersten k Zuege?" — eine Praefix-Suche (LIKE 'e4 e5%'),
             // und die nutzt den Index, solange der Platzhalter hinten steht.
             e.HasIndex(g => g.OpeningLine);
+            // Derselbe Praefix, aber ZAEHLEND (GuessOpeningTree) — und dort muss der Index die
+            // Abfrage ABDECKEN. Mit dem Praefix allein waehlt MariaDB bei „e4 %" (die halbe Tabelle)
+            // den vollen Tabellenscan, und der laeuft ueber die LONGTEXT-Spalte mit den PGNs:
+            // gemessen 22,4 s gegen 0,25 s. Status gehoert deshalb VOR die Zeile.
+            e.HasIndex(g => new { g.Status, g.OpeningLine });
             // Der erste grobe Filter (Partien einer brauchbaren Laenge mit genug Kommentaren).
             e.HasIndex(g => new { g.CommentedPlies, g.PlyCount });
             // Selbstbezug: die Dublette zeigt auf die zuerst eingelesene Fassung. Kein Cascade —
@@ -1288,6 +1293,8 @@ public class AppDbContext : DbContext
             // Index, solange der Platzhalter hinten steht.
             e.Property(g => g.OpeningLine).HasMaxLength(200);
             e.HasIndex(g => g.OpeningLine);
+            // Abdeckend fuer die ZAEHLUNG des Baums — dieselbe Ueberlegung wie bei LibraryGames.
+            e.HasIndex(g => new { g.IsPublic, g.OpeningLine });
             e.HasOne(g => g.User)
              .WithMany()
              .HasForeignKey(g => g.UserId)

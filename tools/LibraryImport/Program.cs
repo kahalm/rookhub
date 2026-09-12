@@ -54,6 +54,7 @@ switch (command)
     case "queue": return await QueueAsync();
     case "comments": return await CommentsAsync();
     case "analysis-openings": return await AnalysisOpeningsAsync();
+    case "tree": return await TreeAsync();
     case "translate": return await TranslateAsync();
     case "stats": return await StatsAsync();
     default:
@@ -192,17 +193,63 @@ async Task<int> DedupeAsync()
 
 // ===== 2b. Eroeffnungszeile + erster Kommentar ==============================
 
+// Das BRETTFELD der Grundstellung — verglichen wird ohne die Zaehler dahinter, die je nach
+// Exporteur abweichen. Als Praefix-Vergleich, damit EF ihn in SQL uebersetzt.
+// ===== Eroeffnungsbaum nachsehen ============================================
+
+//   tree [zeile] [--all]
+//
+// Zeigt, was `GET /api/guess-tree` zu dieser Stellung liefert — gegen die ECHTE Datenbank.
+// Gebraucht, weil die Zaehlung auf MariaDBs SUBSTRING_INDEX baut: die InMemory-Datenbank der
+// Tests kennt es nicht und nimmt dort den clientseitigen Weg, eine kaputte SQL-Fassung faellt
+// also in keinem Test auf (siehe CLAUDE.md zur InMemory-Luecke).
+async Task<int> TreeAsync()
+{
+    var zeile = string.Join(' ', args.Skip(1).Where(a => !a.StartsWith("--")));
+    var nurGerechnete = !args.Contains("--all");
+
+    await using var db = NewDb();
+    var uhr = System.Diagnostics.Stopwatch.StartNew();
+    var ast = await new GuessOpeningTree(db).BranchAsync(zeile, nurGerechnete);
+    uhr.Stop();
+
+    Console.WriteLine($"Stellung [{(ast.Line.Length == 0 ? "Grundstellung" : ast.Line)}] "
+                    + $"({(nurGerechnete ? "nur gerechnete" : "alle Partien")}): "
+                    + $"{ast.Total:N0} Partien, {uhr.ElapsedMilliseconds} ms");
+    foreach (var m in ast.Moves.Take(12))
+        Console.WriteLine($"  {m.San,-8}{m.Games,10:N0}");
+    if (ast.Moves.Sum(m => (long)m.Games) > ast.Total)
+        Console.WriteLine("WARNUNG: die Zuege summieren sich hoeher als die Gesamtzahl.");
+    return 0;
+}
+
+const string GrundstellungBrett = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+
 async Task<int> OpeningsAsync()
 {
     // Nachtrag fuer den Altbestand: beide Spalten fallen beim Einlesen ohnehin an, es gab sie nur
     // noch nicht. Gerechnet wird aus dem gespeicherten PGN — die Quelldatei wird nicht gebraucht.
+    // ZUERST raeumen: eine Eroeffnungszeile beschreibt einen Weg AUS DER GRUNDSTELLUNG. Partien mit
+    // eigener Ausgangsstellung (Vorgabepartie, Chess960, Studie) trugen trotzdem eine, und ihr
+    // erster Zug stand damit als Fortsetzung an der WURZEL des Baums — auf Prod ein „Kc6", das es
+    // dort nicht gibt. Der Nachtrag unten fuellt nur noch echte Grundstellungs-Partien.
+    await using (var raeumen = NewDb())
+    {
+        var weg = await raeumen.LibraryGames
+            .Where(g => g.OpeningLine != null && g.StartFen != null
+                     && !g.StartFen.StartsWith(GrundstellungBrett))
+            .ExecuteUpdateAsync(s => s.SetProperty(g => g.OpeningLine, (string?)null));
+        if (weg > 0) Console.WriteLine($"{weg:N0} Eroeffnungszeilen von Partien mit eigener Ausgangsstellung entfernt.");
+    }
+
     var done = 0;
     var lastId = 0;
     while (true)
     {
         await using var db = NewDb();
         var rows = await db.LibraryGames
-            .Where(g => g.Id > lastId && g.OpeningLine == null)
+            .Where(g => g.Id > lastId && g.OpeningLine == null
+                     && (g.StartFen == null || g.StartFen.StartsWith(GrundstellungBrett)))
             .OrderBy(g => g.Id)
             .Take(2000)
             .Select(g => new { g.Id, g.Pgn })
@@ -656,8 +703,14 @@ async Task<int> FigurinesAsync(AppDbContext db)
 async Task<int> AnalysisOpeningsAsync()
 {
     await using var db = NewDb();
+    // Wie bei `openings`: erst die Zeilen der Partien mit eigener Ausgangsstellung raeumen.
+    var weg = await db.GameAnalyses
+        .Where(g => g.OpeningLine != null && !g.StartFen.StartsWith(GrundstellungBrett))
+        .ExecuteUpdateAsync(s => s.SetProperty(g => g.OpeningLine, (string?)null));
+    if (weg > 0) Console.WriteLine($"{weg:N0} Eroeffnungszeilen von Partien mit eigener Ausgangsstellung entfernt.");
+
     var ids = await db.GameAnalyses.AsNoTracking()
-        .Where(g => g.OpeningLine == null)
+        .Where(g => g.OpeningLine == null && g.StartFen.StartsWith(GrundstellungBrett))
         .OrderBy(g => g.Id)
         .Select(g => g.Id)
         .ToListAsync();

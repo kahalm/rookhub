@@ -18,10 +18,20 @@ namespace RookHub.Api.Services;
 /// Partie anfordern. Beide fuehren dieselbe normalisierte Zeile (<c>OpeningLine</c>), deshalb ist
 /// es EIN Baum mit zwei Zaehlungen und nicht zwei Baeume.</para>
 ///
-/// <para><b>Gezaehlt wird mit einer Praefix-Suche</b> (<c>LIKE 'e4 e5 Nf3%'</c>) auf dem Index —
-/// der Platzhalter steht hinten, also trifft sie ihn. Die Fortsetzung selbst schneidet die
-/// Datenbank aus der Zeile (<c>SUBSTRING_INDEX</c>): bei 130 000 Partien waere es nicht tragbar,
-/// die Zeilen zum Zaehlen erst alle zu holen.</para>
+/// <para><b>Gezaehlt wird in der Datenbank, nicht im Speicher</b> — mit einer Praefix-Suche
+/// (<c>LIKE 'e4 e5 Nf3%'</c>) auf dem Index und <c>GROUP BY</c> ueber die naechste Zugsilbe, die
+/// <c>SUBSTRING_INDEX</c> aus der Zeile schneidet. Die erste Fassung holte stattdessen bis zu
+/// 20 000 Zeilen und zaehlte sie clientseitig; dieser Deckel galt auf JEDER Ebene und nicht nur in
+/// der Grundstellung, und er war keine Stichprobe, sondern die ersten 20 000 Zeilen nach Id, also
+/// nach Importreihenfolge. Am echten Bestand (2026-09-12, 130 572 Partien) log damit alles bis zur
+/// Tiefe, ab der die Treffermenge unter den Deckel faellt: die Grundstellung meldete 20 000 statt
+/// 130 572 Partien, und die 9761 Partien, die dort bei <c>e4</c> standen, wurden nach dem Klick auf
+/// <c>e4</c> wieder zu 20 000. Eine Zahl, die sich unter der Hand aendert, ist schlimmer als keine.</para>
+///
+/// <para>Bezahlt wird das mit einem INDEX, der die Abfrage abdeckt (<c>Status, OpeningLine</c> bzw.
+/// <c>IsPublic, OpeningLine</c>). Ohne ihn waehlt MariaDB bei einem Praefix, der die halbe Tabelle
+/// trifft, den vollen Tabellenscan — und der laeuft ueber die LONGTEXT-Spalte mit den PGNs.
+/// Gemessen auf Dev: Grundstellung 15,8 s ohne, 0,13 s mit; nach <c>1.e4</c> 22,4 s gegen 0,25 s.</para>
 /// </summary>
 public class GuessOpeningTree
 {
@@ -50,21 +60,16 @@ public class GuessOpeningTree
         if (prefix.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= MaxDepth)
             return dto;   // tiefer reicht die gespeicherte Zeile nicht
 
-        var lines = await LinesAsync(prefix, onlyPlayable, ct);
-        dto.Total = lines.Count;
+        dto.Total = await TotalAsync(prefix, onlyPlayable, ct);
+        if (dto.Total == 0) return dto;
 
-        // Der naechste Halbzug ist das erste Wort NACH dem Praefix.
+        // Der naechste Halbzug ist das erste Wort NACH dem Praefix. In SQL ist das ein
+        // SUBSTRING_INDEX ab Position `ab + 1` (dort zaehlt ab 1), clientseitig ein Span.
         var ab = prefix.Length == 0 ? 0 : prefix.Length + 1;
-        var zaehlung = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var l in lines)
-        {
-            if (l.Length <= ab) continue;
-            var rest = l.AsSpan(ab);
-            var ende = rest.IndexOf(' ');
-            var san = (ende < 0 ? rest : rest[..ende]).ToString();
-            if (san.Length == 0) continue;
-            zaehlung[san] = zaehlung.GetValueOrDefault(san) + 1;
-        }
+
+        var zaehlung = _db.Database.IsRelational()
+            ? await CountBySqlAsync(prefix, onlyPlayable, ab, ct)
+            : CountInMemory(await LinesAsync(prefix, onlyPlayable, ct), ab);
 
         dto.Moves = zaehlung
             .OrderByDescending(kv => kv.Value)
@@ -75,18 +80,81 @@ public class GuessOpeningTree
         return dto;
     }
 
+    /// <summary>Wie viele Partien erreichen diese Stellung? Eine gezaehlte Zeile, kein Ausschnitt —
+    /// der Index traegt sie (gemessen 0,14 s ueber 130 572 Partien).</summary>
+    private async Task<int> TotalAsync(string prefix, bool onlyPlayable, CancellationToken ct)
+    {
+        // Die Partie, die GENAU hier endet, erreicht die Stellung auch. Ohne den ersten Vergleich
+        // meldete die Wurzel bei `e4` 60 498 Partien und die Ebene danach 60 497 — wieder eine Zahl,
+        // die sich beim Klicken aendert. Die ZAEHLUNG der Fortsetzungen unten laesst sie dagegen zu
+        // Recht weg: eine Partie ohne naechsten Zug traegt zu keinem Ast bei.
+        var mitTrenner = prefix + " %";
+        if (onlyPlayable)
+        {
+            var q = _db.GameAnalyses.AsNoTracking().Where(g => g.IsPublic && g.OpeningLine != null);
+            if (prefix.Length > 0)
+                q = q.Where(g => g.OpeningLine == prefix || EF.Functions.Like(g.OpeningLine!, mitTrenner));
+            return await q.CountAsync(ct);
+        }
+        var r = _db.LibraryGames.AsNoTracking()
+            .Where(g => g.OpeningLine != null && g.Status == Models.LibraryGameStatus.New);
+        if (prefix.Length > 0)
+            r = r.Where(g => g.OpeningLine == prefix || EF.Functions.Like(g.OpeningLine!, mitTrenner));
+        return await r.CountAsync(ct);
+    }
+
+    /// <summary>Eine Zeile je Fortsetzung, gezaehlt von der Datenbank.
+    /// <para>Bewusst rohes SQL und nicht LINQ: die Zerlegung der Zeile haengt an
+    /// <c>SUBSTRING_INDEX</c>, das kein Anbieter einheitlich uebersetzt — und die InMemory-Datenbank
+    /// der Tests kennt es gar nicht (siehe CLAUDE.md zur InMemory-Luecke). Der Praefix geht als
+    /// PARAMETER hinein, die einzige Zahl im Text (<paramref name="ab"/>) ist eine gerechnete
+    /// Laenge.</para></summary>
+    private async Task<Dictionary<string, int>> CountBySqlAsync(string prefix, bool onlyPlayable,
+        int ab, CancellationToken ct)
+    {
+        var tabelle = onlyPlayable
+            ? "FROM `GameAnalyses` WHERE `IsPublic` = 1 AND `OpeningLine` IS NOT NULL"
+            : "FROM `LibraryGames` WHERE `Status` = 0 AND `OpeningLine` IS NOT NULL";
+        var filter = prefix.Length == 0 ? " AND `OpeningLine` <> ''" : " AND `OpeningLine` LIKE {0}";
+        var sql = $"SELECT SUBSTRING_INDEX(SUBSTRING(`OpeningLine`, {ab + 1}), ' ', 1) AS `San`, "
+                + $"COUNT(*) AS `Games` {tabelle}{filter} GROUP BY `San` "
+                + $"ORDER BY `Games` DESC, `San` ASC LIMIT {MaxMoves}";
+
+        var rows = prefix.Length == 0
+            ? _db.Database.SqlQueryRaw<OpeningTally>(sql)
+            : _db.Database.SqlQueryRaw<OpeningTally>(sql, prefix + " %");
+        return (await rows.ToListAsync(ct))
+            .Where(r => !string.IsNullOrEmpty(r.San))
+            .ToDictionary(r => r.San, r => r.Games, StringComparer.Ordinal);
+    }
+
+    /// <summary>Dasselbe ohne Datenbank-Funktionen — der Weg der Tests (InMemory).</summary>
+    private static Dictionary<string, int> CountInMemory(List<string> lines, int ab)
+    {
+        var zaehlung = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var l in lines)
+        {
+            if (l.Length <= ab) continue;
+            var rest = l.AsSpan(ab);
+            var ende = rest.IndexOf(' ');
+            var san = (ende < 0 ? rest : rest[..ende]).ToString();
+            if (san.Length == 0) continue;
+            zaehlung[san] = zaehlung.GetValueOrDefault(san) + 1;
+        }
+        return zaehlung;
+    }
+
+    /// <summary>Eine Zeile des <c>GROUP BY</c>. Die Namen muessen den Spalten-Aliassen im SQL
+    /// entsprechen — <c>SqlQueryRaw</c> bildet ueber den Namen ab.</summary>
+    private sealed record OpeningTally(string San, int Games);
+
     /// <summary>
-    /// Die Eroeffnungszeilen, die mit <paramref name="prefix"/> beginnen.
-    ///
-    /// <para>Bewusst die ZEILEN und nicht eine fertige Zaehlung aus der Datenbank: der Rohbestand
-    /// ist zwar gross, aber ab dem zweiten Halbzug ist die Treffermenge klein, und eine Abfrage,
-    /// die auf MariaDBs <c>SUBSTRING_INDEX</c> baut, liefe im Test gegen die InMemory-Datenbank
-    /// gar nicht. Der teure Fall — die Grundstellung ueber 130 000 Partien — wird durch
-    /// <see cref="RootLimit"/> gedeckelt: dort zaehlt ohnehin nur, welche ersten Zuege es gibt.</para>
+    /// Die Eroeffnungszeilen, die mit <paramref name="prefix"/> beginnen — nur noch fuer den
+    /// InMemory-Weg der Tests. Gegen MariaDB zaehlt <see cref="CountBySqlAsync"/>.
     /// </summary>
     private async Task<List<string>> LinesAsync(string prefix, bool onlyPlayable, CancellationToken ct)
     {
-        var muster = prefix.Length == 0 ? "%" : prefix + " %";
+        var muster = prefix + " %";
 
         if (onlyPlayable)
         {
@@ -99,12 +167,8 @@ public class GuessOpeningTree
         var roh = _db.LibraryGames.AsNoTracking()
             .Where(g => g.OpeningLine != null && g.Status == Models.LibraryGameStatus.New);
         if (prefix.Length > 0) roh = roh.Where(g => EF.Functions.Like(g.OpeningLine!, muster));
-        return await roh.Select(g => g.OpeningLine!).Take(RootLimit).ToListAsync(ct);
+        return await roh.Select(g => g.OpeningLine!).ToListAsync(ct);
     }
-
-    /// <summary>Deckel fuer den Rohbestand. In der Grundstellung stehen dort 130 000 Zeilen, und
-    /// fuer die Frage „welche ersten Zuege gibt es" genuegt ein Ausschnitt.</summary>
-    public const int RootLimit = 20000;
 
     /// <summary>
     /// Die Zeile auf die gespeicherte Form bringen: einfache Leerzeichen, und ohne die Zeichen,

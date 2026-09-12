@@ -14,7 +14,9 @@
     "ok": "تأیید",
     "remove": "حذف",
     "whiteToMove": "نوبت سفید",
-    "blackToMove": "نوبت سیاه"
+    "blackToMove": "نوبت سیاه",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "انجمن دیسکورد",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

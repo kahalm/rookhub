@@ -110,4 +110,74 @@ describe('PositionFilterDialogComponent', () => {
 
     expect(closed).toBe(7);
   });
+
+  /** Bis 0.475.2 ersetzte jeder Klick beide Listen durch einen Spinner — der Dialog fiel auf halbe
+   *  Höhe zusammen und das Brett sprang in der Größe, bei jedem Zug. Der alte Stand bleibt jetzt
+   *  stehen, bis die Antwort da ist. */
+  it('lässt den alten Baum stehen, solange nachgeladen wird', () => {
+    const c = open();
+
+    c.play({ san: 'e4', games: 2 });
+
+    expect(c.busyAny()).toBeTrue();
+    expect(c.moves.length).toBe(2);   // noch der alte Stand, nicht geleert
+
+    http.expectOne(r => r.url === '/api/guess-tree')
+      .flush({ line: 'e4', onlyPlayable: true, total: 2, moves: [{ san: 'e5', games: 2 }] });
+    http.expectOne(r => r.url === '/api/game-analyses/public').flush([]);
+
+    expect(c.busyAny()).toBeFalse();
+    expect(c.moves[0].san).toBe('e5');
+  });
+
+  /** Wer schnell klickt, hat zwei Abfragen unterwegs. Die ältere darf die neuere nicht
+   *  überschreiben, sonst zeigt der Baum die Fortsetzungen einer Stellung, die nicht auf dem
+   *  Brett steht. */
+  it('verwirft eine Antwort, die nicht zur angesehenen Stellung gehört', () => {
+    const c = open();
+
+    c.play({ san: 'e4', games: 2 });
+    http.expectOne(r => r.url === '/api/guess-tree')
+      .flush({ line: 'd4', onlyPlayable: true, total: 99, moves: [{ san: 'd5', games: 99 }] });
+    http.expectOne(r => r.url === '/api/game-analyses/public').flush([]);
+
+    expect(c.total).toBe(3);          // der Stand der Grundstellung, nicht die fremde Antwort
+    expect(c.moves[0].san).toBe('e4');
+  });
+
+  /** Der Rohbestand hat zu einer flachen Stellung Zehntausende Partien. Ohne Blättern sah man
+   *  fünfzig davon und erfuhr nirgends, dass es mehr gibt. */
+  it('blättert im Rohbestand, ohne den Baum erneut zu holen', () => {
+    const c = open();
+    c.onlyPlayable = false;
+    c.scopeChanged();
+    http.expectOne(r => r.url === '/api/guess-tree')
+      .flush({ line: '', onlyPlayable: false, total: 130572, moves: [] });
+    http.expectOne(r => r.url === '/api/library-games')
+      .flush({ items: [], total: 130572, page: 1, pageSize: 25 });
+
+    expect(c.pages).toBeGreaterThan(1);
+    expect(c.gameCount).toBe(130572);
+
+    c.turn(1);
+
+    const seite = http.expectOne(r => r.url === '/api/library-games');
+    expect(seite.request.params.get('page')).toBe('2');
+    seite.flush({ items: [], total: 130572, page: 2, pageSize: 25 });
+    http.expectNone(r => r.url === '/api/guess-tree');   // der Baum bleibt, die Stellung ist dieselbe
+  });
+
+  it('blättert nicht über die letzte Seite hinaus', () => {
+    const c = open();
+    c.onlyPlayable = false;
+    c.scopeChanged();
+    http.expectOne(r => r.url === '/api/guess-tree').flush({ line: '', onlyPlayable: false, total: 3, moves: [] });
+    http.expectOne(r => r.url === '/api/library-games').flush({ items: [], total: 3, page: 1, pageSize: 25 });
+
+    c.turn(-1);
+    c.turn(1);
+
+    expect(c.page).toBe(1);
+    http.expectNone(r => r.url === '/api/library-games');
+  });
 });

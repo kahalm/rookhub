@@ -14,7 +14,9 @@
     "ok": "Aceptar",
     "remove": "Quitar",
     "whiteToMove": "Juegan las blancas",
-    "blackToMove": "Juegan las negras"
+    "blackToMove": "Juegan las negras",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Comunidad de Discord",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

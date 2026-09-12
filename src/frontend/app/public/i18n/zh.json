@@ -14,7 +14,9 @@
     "ok": "确定",
     "remove": "移除",
     "whiteToMove": "白方走棋",
-    "blackToMove": "黑方走棋"
+    "blackToMove": "黑方走棋",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Discord 社区",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

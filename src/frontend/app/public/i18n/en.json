@@ -3093,7 +3093,8 @@
       "total": "{{total}} games reach this position",
       "noMoves": "No continuation recorded here.",
       "nonePlayable": "No computed game reaches this position yet.",
-      "moveFailed": "That move does not work in this position."
+      "moveFailed": "That move does not work in this position.",
+      "games": "Games ({{count}})"
     }
   },
   "tournamentDirectory": {

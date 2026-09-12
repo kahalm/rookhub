@@ -14,7 +14,9 @@
     "ok": "OK",
     "remove": "削除",
     "whiteToMove": "白の手番",
-    "blackToMove": "黒の手番"
+    "blackToMove": "黒の手番",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Discordコミュニティ",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

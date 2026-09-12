@@ -117,16 +117,28 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       drawable: { enabled: true, visible: true },
     });
 
-    this.resizeObserver = new ResizeObserver(() => {
-      const hostEl = el.parentElement as HTMLElement;
-      const w = hostEl?.clientWidth || el.clientWidth;
-      if (w > 0 && w !== el.clientWidth) {
-        el.style.width = `${w}px`;
-        el.style.height = `${w}px`;
-      }
-      this.ground?.redrawAll();
-    });
+    this.resizeObserver = new ResizeObserver(() => this.fitToHost());
     this.resizeObserver.observe(el.parentElement || el);
+    // EINE Nachmessung nach dem Layout. Der ResizeObserver meldet nur Aenderungen des WRAPPERS —
+    // steht der schon auf seiner Endbreite, waehrend der Dialog darum herum noch waechst, bleibt
+    // das Brett auf der beim Aufbau gemessenen Groesse stehen. Im Stellungsfilter sass es dadurch
+    // mit 256 px in einem 320-px-Kasten: der Vollbild-Knopf 64 px neben dem Brett, darunter
+    // dieselbe Luecke. Zwei Bilder spaeter nachzumessen kostet nichts und trifft den Fall.
+    this.rafId = requestAnimationFrame(() =>
+      this.rafId = requestAnimationFrame(() => this.fitToHost()));
+  }
+
+  /** Die Brettgroesse an den Wrapper angleichen und neu zeichnen (Chessground rechnet in Pixeln). */
+  private fitToHost(): void {
+    const el = this.boardEl?.nativeElement;
+    if (!el || this.destroyed) return;
+    const hostEl = el.parentElement as HTMLElement;
+    const w = hostEl?.clientWidth || el.clientWidth;
+    if (w > 0 && w !== el.clientWidth) {
+      el.style.width = `${w}px`;
+      el.style.height = `${w}px`;
+    }
+    this.ground?.redrawAll();
   }
 
   ngOnChanges(changes: SimpleChanges): void {

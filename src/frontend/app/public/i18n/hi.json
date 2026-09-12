@@ -14,7 +14,9 @@
     "ok": "ठीक है",
     "remove": "हटाएं",
     "whiteToMove": "सफेद की चाल",
-    "blackToMove": "काली की चाल"
+    "blackToMove": "काली की चाल",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Discord समुदाय",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

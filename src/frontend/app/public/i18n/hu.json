@@ -2818,7 +2818,8 @@
       "total": "{{total}} játszma jut el ebbe az állásba",
       "noMoves": "Itt nincs rögzített folytatás.",
       "nonePlayable": "Még egyetlen kiszámolt játszma sem jut el ebbe az állásba.",
-      "moveFailed": "Ez a lépés ebben az állásban nem lehetséges."
+      "moveFailed": "Ez a lépés ebben az állásban nem lehetséges.",
+      "games": "Játszmák ({{count}})"
     }
   },
   "tournamentDirectory": {

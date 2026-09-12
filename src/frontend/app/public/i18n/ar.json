@@ -14,7 +14,9 @@
     "ok": "موافق",
     "remove": "إزالة",
     "whiteToMove": "دور الأبيض",
-    "blackToMove": "دور الأسود"
+    "blackToMove": "دور الأسود",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "مجتمع Discord",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

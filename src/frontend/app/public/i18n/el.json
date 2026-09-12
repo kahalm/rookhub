@@ -14,7 +14,9 @@
     "ok": "OK",
     "remove": "Αφαίρεση",
     "whiteToMove": "Παίζει ο λευκός",
-    "blackToMove": "Παίζει ο μαύρος"
+    "blackToMove": "Παίζει ο μαύρος",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Κοινότητα Discord",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

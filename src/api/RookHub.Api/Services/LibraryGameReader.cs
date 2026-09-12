@@ -63,7 +63,12 @@ public static class LibraryGameReader
             NagCount = stats.NagCount,
             VariationCount = stats.VariationCount,
             FirstCommentedPly = stats.FirstCommentedPly == 0 ? null : stats.FirstCommentedPly,
-            OpeningLine = Cut(stats.OpeningLine, 200),
+            // Eine Eroeffnungszeile beschreibt einen Weg AUS DER GRUNDSTELLUNG. Faengt die Partie
+            // woanders an (Vorgabepartie, Chess960, Studie), ist ihr erster Zug kein Zug, den es in
+            // der Grundstellung gibt — im Eroeffnungsbaum stand deshalb ein „Kc6" an der Wurzel, und
+            // ein Klick darauf konnte nur mit „geht nicht" antworten. Ohne Zeile faellt die Partie
+            // aus dem Baum, ueber die Namenssuche bleibt sie erreichbar.
+            OpeningLine = StartsFromInitialPosition(Tag(headers, "FEN")) ? Cut(stats.OpeningLine, 200) : null,
             SearchText = SearchTextOf(Tag(headers, "White"), Tag(headers, "Black"),
                 Tag(headers, "Event"), Tag(headers, "Annotator")),
 
@@ -93,6 +98,12 @@ public static class LibraryGameReader
     /// <summary>So viele Halbzuege fasst <see cref="GameStats.OpeningLine"/>. Dreissig sind fuenfzehn
     /// volle Zuege — laenger ist keine Eroeffnung mehr, und die Spalte bliebe trotzdem indizierbar.</summary>
     public const int OpeningPlies = 30;
+
+    /// <summary>Faengt die Partie in der Grundstellung an? Fehlender FEN-Kopf heisst ja (der
+    /// Normalfall), sonst entscheidet die Brettstellung ohne Zaehler. Nur solche Partien bekommen
+    /// eine <c>OpeningLine</c> — sie ist der Weg AUS DER GRUNDSTELLUNG und sonst sinnlos.</summary>
+    public static bool StartsFromInitialPosition(string? startFen)
+        => string.IsNullOrWhiteSpace(startFen) || PgnParser.IsStartPosition(startFen);
 
     /// <summary>
     /// Der eine Textdurchgang. Zaehlt mit, was die Vorsortierung braucht, und sammelt nebenbei die

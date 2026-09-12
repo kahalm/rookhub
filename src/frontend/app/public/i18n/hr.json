@@ -3093,7 +3093,8 @@
       "total": "{{total}} partija dolazi do ove pozicije",
       "noMoves": "Ovdje nema zabilježenog nastavka.",
       "nonePlayable": "Nijedna izračunata partija još ne dolazi do ove pozicije.",
-      "moveFailed": "Taj potez nije moguć u ovoj poziciji."
+      "moveFailed": "Taj potez nije moguć u ovoj poziciji.",
+      "games": "Partije ({{count}})"
     }
   },
   "tournamentDirectory": {

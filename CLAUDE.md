@@ -1436,6 +1436,48 @@ der Zug schon geprueft da).
 |---|---|---|---|
 | GET | `/api/guess-tree?line=&onlyPlayable=` | **AllowAnonymous** + RL | Die Fortsetzungen nach `line` mit Partienzahl, haeufigste zuerst (hoechstens `MaxMoves` = 40), dazu `total` |
 
+**Gezaehlt wird in der DATENBANK, und die Zahlen sind exakt** (0.475.2). Die erste Fassung holte
+bis zu 20 000 Zeilen und zaehlte sie clientseitig. Der Deckel galt auf JEDER Ebene — nicht nur in
+der Grundstellung, wie der Kommentar dort behauptete — und er war keine Stichprobe, sondern die
+ersten 20 000 Zeilen nach Id, also nach Importreihenfolge. Am echten Bestand log damit alles bis zu
+der Tiefe, ab der die Treffermenge unter den Deckel faellt: die Grundstellung meldete 20 000 statt
+130 572 Partien, und die 9761 Partien, die dort bei `e4` standen, wurden nach dem Klick auf `e4`
+wieder zu 20 000. Eine Zahl, die sich unter der Hand aendert, ist schlimmer als keine.
+
+Jetzt zaehlt ein `GROUP BY` ueber `SUBSTRING_INDEX(SUBSTRING(OpeningLine, n), ' ', 1)`, die
+Gesamtzahl ein `COUNT(*)`. Bewusst rohes SQL (`SqlQueryRaw`): `SUBSTRING_INDEX` uebersetzt kein
+Anbieter einheitlich, und die InMemory-Datenbank der Tests kennt es nicht — dort laeuft der
+clientseitige Weg weiter (`IsRelational()`-Weiche wie bei `LibraryGameService`). Der Praefix geht
+als PARAMETER hinein.
+
+**Dafuer braucht es einen ABDECKENDEN Index** (`IX_LibraryGames_Status_OpeningLine`,
+`IX_GameAnalyses_IsPublic_OpeningLine`, Migration `OpeningTreeIndexes`). Mit dem Praefix-Index
+allein waehlt MariaDB bei `LIKE 'e4 %'` — das ist die halbe Tabelle — den vollen Tabellenscan, und
+der laeuft ueber die LONGTEXT-Spalte mit den PGNs. Gemessen auf Dev (130 572 Partien):
+
+| Abfrage | ohne den Index | mit |
+|---|---|---|
+| Grundstellung | 15,8 s | 0,13 s |
+| nach `1.e4` | 22,4 s | 0,25 s |
+
+**Eine `OpeningLine` bekommt nur, wer in der GRUNDSTELLUNG anfaengt** (`LibraryGameReader.StartsFromInitialPosition`,
+angewandt in `LibraryGameReader` und `GameAnalysisService.CreateAsync`). Eine Eroeffnungszeile
+beschreibt einen Weg aus der Grundstellung; bei einer Vorgabepartie, einer Studie oder Chess960
+stand der erste Zug der Partie damit als Fortsetzung an der WURZEL des Baums, wo es ihn gar nicht
+gibt. Auf Prod war das ein `Kc6` (Partie 462, Stiller–Welz, Potsdam 1995) — ein Klick darauf konnte
+nur mit „dieser Zug geht nicht" antworten. Solche Partien fallen aus dem Baum und bleiben ueber die
+Namenssuche erreichbar; `openings` und `analysis-openings` RAEUMEN die Zeilen des Altbestands
+entsprechend weg, bevor sie nachtragen.
+
+**Der Dialog laedt ohne Umbau nach** (`position-filter-dialog.component.ts`): der vorige Stand
+bleibt stehen und wird nur abgeblendet, oben laeuft ein duenner Balken. Vorher setzte jeder Klick
+beide Listen auf einen Spinner — der Dialog fiel auf halbe Hoehe zusammen und das Brett sprang
+dabei in der Groesse, bei JEDEM Zug. Eine Antwort, deren `line`/`onlyPlayable` nicht mehr zum
+angesehenen Stand passt, wird verworfen (wer schnell klickt, hat zwei Abfragen unterwegs). Die
+Partieliste darunter nennt die Anzahl und blaettert (25 je Seite); auf schmalen Geraeten bekommt
+das Brett 42 % der Breite statt aller — mit 300 px Brett blieben auf einem 400-px-Geraet genau zwei
+Zuege sichtbar.
+
 Die beiden Listen nehmen denselben Filter entgegen: `GET /api/game-analyses/public?line=` und
 `GET /api/library-games?line=`. Gesucht wird ueber ein PRAEFIX (`LIKE 'e4 e5 Nf3%'`) — der
 Platzhalter steht hinten, also trifft es den Index.

@@ -14,7 +14,9 @@
     "ok": "OK",
     "remove": "Rimuovi",
     "whiteToMove": "Muove il Bianco",
-    "blackToMove": "Muove il Nero"
+    "blackToMove": "Muove il Nero",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Comunità Discord",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

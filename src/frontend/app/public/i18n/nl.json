@@ -14,7 +14,9 @@
     "ok": "OK",
     "remove": "Verwijderen",
     "whiteToMove": "Wit aan zet",
-    "blackToMove": "Zwart aan zet"
+    "blackToMove": "Zwart aan zet",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Discord-community",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

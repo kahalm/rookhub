@@ -77,7 +77,11 @@ public class GameAnalysisService
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,
             LibraryGameId = libraryGameId,
-            OpeningLine = OpeningLineOf(plies),
+            // Nur aus der Grundstellung — sonst stuende der erste Zug der Partie als Fortsetzung
+            // an der Wurzel des Eroeffnungsbaums, wo es ihn gar nicht gibt (siehe LibraryGameReader).
+            OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen)
+                ? OpeningLineOf(plies)
+                : null,
             PlyCount = plies.Count,
             Status = GameAnalysisStatus.Pending,
         };

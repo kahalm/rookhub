@@ -14,7 +14,9 @@
     "ok": "OK",
     "remove": "Remover",
     "whiteToMove": "Vez das brancas",
-    "blackToMove": "Vez das pretas"
+    "blackToMove": "Vez das pretas",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "discord": "Comunidade no Discord",
@@ -1100,5 +1102,10 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}"
+  },
+  "guess": {
+    "tree": {
+      "games": "Games ({{count}})"
+    }
   }
 }

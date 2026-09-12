@@ -137,4 +137,31 @@ public class GuessOpeningTreeTests : IDisposable
 
         Assert.Equal(GuessOpeningTree.MaxDepth, teile.Length);
     }
+
+    /// <summary>
+    /// Eine Eroeffnungszeile beschreibt einen Weg AUS DER GRUNDSTELLUNG. Faengt die Partie
+    /// woanders an, hat sie keine — sonst stand ihr erster Zug als Fortsetzung an der WURZEL des
+    /// Baums. Auf Prod war das ein „Kc6" (Partie 462, Stiller–Welz, Potsdam 1995), und ein Klick
+    /// darauf konnte nur mit „dieser Zug geht nicht" antworten.
+    /// </summary>
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", true)]
+    [InlineData("8/8/2k5/8/8/2K5/8/8 w - - 0 1", false)]
+    public void StartsFromInitialPosition_nurAusDerGrundstellung(string? fen, bool erwartet)
+        => Assert.Equal(erwartet, LibraryGameReader.StartsFromInitialPosition(fen));
+
+    /// <summary>Die Gesamtzahl ist GEZAEHLT, nicht gedeckelt. Bis 0.475.2 holte der Baum bis zu
+    /// 20 000 Zeilen und zaehlte sie im Speicher — der Deckel galt auf jeder Ebene, und die
+    /// Grundstellung meldete deshalb 20 000 statt 130 572 Partien.</summary>
+    [Fact]
+    public async Task Branch_zaehltAlleZeilen_ohneDeckel()
+    {
+        for (var i = 0; i < 40; i++) await LibraryAsync(i % 2 == 0 ? "e4 e5" : "d4 d5");
+
+        var ast = await _tree.BranchAsync(null, onlyPlayable: false);
+
+        Assert.Equal(40, ast.Total);
+        Assert.Equal(40, ast.Moves.Sum(m => m.Games));
+    }
 }

@@ -3093,7 +3093,8 @@
       "total": "{{total}} Partien erreichen diese Stellung",
       "noMoves": "Hier ist keine Fortsetzung verzeichnet.",
       "nonePlayable": "Noch keine gerechnete Partie erreicht diese Stellung.",
-      "moveFailed": "Dieser Zug geht in dieser Stellung nicht."
+      "moveFailed": "Dieser Zug geht in dieser Stellung nicht.",
+      "games": "Partien ({{count}})"
     }
   },
   "tournamentDirectory": {
