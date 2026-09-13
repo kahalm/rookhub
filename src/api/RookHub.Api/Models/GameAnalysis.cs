@@ -171,24 +171,35 @@ public static class GameAnalysisDefaults
     public const int MaxPlies = 300;
 
     /// <summary>
-    /// So viele Auftraege haelt eine Partie gleichzeitig offen. Diese Zahl und nicht die Zahl der
-    /// hinterlegten Engines entscheidet, wie viele Engines ueberhaupt rechnen: der Worker nimmt je
-    /// Engine eine Suche, mehr Engines als offene Auftraege stehen still.
+    /// So viele Auftraege haelt eine Partie gleichzeitig offen.
     ///
-    /// <para>Am 2026-09-13 auf Prod gemessen, und das Ergebnis war das Gegenteil der Erwartung:
-    /// die Engine-Liste von sechzehn auf fuenf zu kuerzen hob den Durchsatz von 834–957 auf 1596
-    /// Stellungen je Stunde. Mit sechzehn Engines standen dieselben 32 Auftraege zwei je Engine
-    /// tief; eine fertige Engine lief leer, bis die Pumpe nachlegte, und ein Auftrag, der einen
-    /// 503 bekam, sprang reihum weiter statt kurz zu warten. Mit fuenf Engines lagen sechs bis
-    /// sieben Auftraege je Engine und keine lief leer.</para>
+    /// <para><b>Am 2026-09-13 auf Prod ausgemessen</b>, drei Fenster zu je zwanzig Minuten, und das
+    /// Ergebnis widerlegt die naheliegende Annahme (mehr Engines und tiefere Schlangen seien
+    /// besser):</para>
     ///
-    /// <para>96 ist genau diese Tiefe bei sechzehn Engines (16 × 6). Der Ueberhang ueber die
-    /// Engine-Zahl ist der Punkt: laeuft eine Suche aus, nimmt die Engine sofort den naechsten
-    /// Auftrag, statt bis zu einen Pump-Durchgang (20 s) zu warten. Zusammen mit
-    /// <c>AnalysisJobService.MaxOpenJobsPerUser</c> (150) — der Deckel muss mitwachsen, sonst
-    /// bindet er und nicht diese Zahl.</para>
+    /// <list type="table">
+    /// <item><term>16 Engines, Block 32</term><description>957 Stellungen je Stunde</description></item>
+    /// <item><term>5 Engines, Block 32</term><description><b>1596</b> — die Bestkonfiguration</description></item>
+    /// <item><term>5 Engines, Block 96</term><description>1104</description></item>
+    /// <item><term>16 Engines, Block 96</term><description>786</description></item>
+    /// </list>
+    ///
+    /// <para>Die letzte Zeile hat dieselbe Schlangentiefe wie die zweite (sechs Auftraege je
+    /// Engine) und liefert die Haelfte — nicht die Tiefe entscheidet also, sondern die ZAHL der
+    /// Engines, und zwar gegenlaeufig. Belegt ist davon der Anteil, der auf die 503-Wechsel geht:
+    /// im 16-Engine-Fenster 156 Wechsel gegen null in beiden 5-Engine-Fenstern, und jeder legt
+    /// einen Auftrag <c>EngineSwitchBackoffSeconds</c> (15 s) schlafen. Warum ein GROESSERER Block
+    /// bei gleicher Engine-Zahl schadet, ist offen.</para>
+    ///
+    /// <para>Vorbehalt zur Messung: jedes Fenster umfasst sechs bis sieben verschiedene Partien,
+    /// und Partien unterscheiden sich darin, wie schnell ihre Stellungen rechnen. Die REIHENFOLGE
+    /// ist ueber alle vier Punkte konsistent, die Zahlen sind es nicht auf zehn Prozent.</para>
+    ///
+    /// <para>Wer hier dreht, misst bitte nach — und nicht nur eine Richtung: diese Zahl, die Laenge
+    /// der Engine-Liste im Profil und <c>AnalysisJobService.MaxOpenJobsPerUser</c> (150, muss ueber
+    /// dieser Zahl bleiben) wirken zusammen.</para>
     /// </summary>
-    public const int MaxOpenJobsPerGame = 96;
+    public const int MaxOpenJobsPerGame = 32;
 
     /// <summary>
     /// Wie oft ein Auftrag zu DERSELBEN Stellung scheitern darf, bevor sie endgueltig als

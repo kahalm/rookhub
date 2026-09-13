@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.475.10", date: "2026-09-13", changes: [
+    { en: "Measured on the live system which analysis setup is actually fastest, and the result contradicts the obvious assumption. Fewer engines with shorter queues win: five engines with 32 jobs per game reach 1596 positions per hour, sixteen engines with the same queue depth only 786. A game keeps 32 jobs open again, back to the best measured setting.", de: "Live ausgemessen, welche Analyse-Einstellung wirklich die schnellste ist, und das Ergebnis widerlegt die naheliegende Annahme. Weniger Engines mit kuerzeren Schlangen gewinnen: fuenf Engines mit 32 Auftraegen je Partie schaffen 1596 Stellungen je Stunde, sechzehn Engines bei gleicher Schlangentiefe nur 786. Eine Partie haelt wieder 32 Auftraege offen, zurueck auf den gemessenen Bestwert." },
+  ] },
   { version: "0.475.9", date: "2026-09-13", changes: [
     { en: "A game now keeps 96 analysis jobs open instead of 32, and the per-account ceiling rose from 50 to 150 so it no longer binds first. Measured on the live system: shortening the engine list from sixteen to five raised throughput from around 900 to 1596 positions per hour, because the same jobs then stood six deep per engine instead of two and no engine ran dry. 96 is that same depth at sixteen engines.", de: "Eine Partie haelt jetzt 96 Analyseauftraege offen statt 32, und der Deckel je Konto stieg von 50 auf 150, damit nicht er zuerst bindet. Live gemessen: die Engine-Liste von sechzehn auf fuenf zu kuerzen hob den Durchsatz von rund 900 auf 1596 Stellungen je Stunde, weil dieselben Auftraege dann sechs statt zwei tief je Engine standen und keine Engine leer lief. 96 ist genau diese Tiefe bei sechzehn Engines." },
   ] },

@@ -1305,13 +1305,26 @@ die Punktepartie nichts wert. Gemessen wird an den STELLUNGEN, nicht am Status; 
 Partien blockieren nicht; laufende Auftraege einer anderen Partie werden nicht abgebrochen, sie
 laufen aus. Je Nutzer und nicht global, damit sich zwei Leute nicht gegenseitig ausbremsen.
 
-**Nicht die Zahl der Engines entscheidet den Durchsatz, sondern die SCHLANGENTIEFE je Engine.**
-Am 2026-09-13 auf Prod gemessen, und das Ergebnis war das Gegenteil der Erwartung: die Engine-Liste
-von sechzehn auf fuenf zu KUERZEN hob den Durchsatz von 834–957 auf 1596 Stellungen je Stunde. Mit
-sechzehn Engines standen dieselben 32 Auftraege zwei je Engine tief, eine fertige Engine lief leer,
-bis die Pumpe nachlegte (bis zu 20 s), und ein Auftrag mit einem 503 sprang reihum weiter statt kurz
-zu warten — 571 Engine-Wechsel je halbe Stunde. Mit fuenf Engines lagen sechs bis sieben Auftraege
-je Engine und keine lief leer.
+**Welche Einstellung wirklich schneller ist, wurde am 2026-09-13 auf Prod AUSGEMESSEN** — drei
+Fenster zu je zwanzig Minuten, und das Ergebnis widerlegt die naheliegende Annahme:
+
+| Engines | Block | Tiefe je Engine | Stellungen je Stunde |
+|---|---|---|---|
+| 16 | 32 | 2 | 957 |
+| **5** | **32** | **6–7** | **1596** |
+| 5 | 96 | 19 | 1104 |
+| 16 | 96 | 6 | 786 |
+
+Die letzte Zeile hat dieselbe Schlangentiefe wie die zweite und liefert die HAELFTE — nicht die
+Tiefe entscheidet also, sondern die ZAHL der Engines, und zwar gegenlaeufig. Belegt ist davon der
+Anteil, der auf die 503-Wechsel geht: im 16-Engine-Fenster 156 Wechsel gegen null in beiden
+5-Engine-Fenstern, und jeder legt einen Auftrag `EngineSwitchBackoffSeconds` (15 s) schlafen.
+Warum ein GROESSERER Block bei gleicher Engine-Zahl schadet, ist offen. Vorbehalt: jedes Fenster
+umfasst sechs bis sieben verschiedene Partien, und die rechnen unterschiedlich schnell — die
+Reihenfolge ist konsistent, die Zahlen sind es nicht auf zehn Prozent.
+
+**Wer hier dreht, misst nach.** Diese drei wirken zusammen und nicht einzeln:
+`MaxOpenJobsPerGame`, die Laenge der Engine-Liste im Profil und `MaxOpenJobsPerUser`.
 
 **Der 503 des Brokers ist KEINE Ausfallmeldung** — er heisst „fuer diese Engine ist gerade kein
 Provider frei“ und trifft auch Engines, die nachweislich rechnen (am selben Tag direkt
