@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.475.11", date: "2026-09-13", changes: [
+    { en: "The nightly end-to-end test run had never once passed since it was set up on 4 September: the database container died on its first start. The database setup script was marked executable, and the MariaDB image then runs such a script as a separate process instead of reading it in, so the helper it relies on was missing. The script is no longer executable, and a test keeps it that way.", de: "Der naechtliche Ende-zu-Ende-Testlauf war seit seiner Einrichtung am 4. September kein einziges Mal gruen: der Datenbank-Container starb beim ersten Start. Das Einrichtungsskript der Datenbank war als ausfuehrbar markiert, und das MariaDB-Image fuehrt ein solches Skript dann als eigenen Prozess aus, statt es einzulesen — die Hilfsfunktion, auf die es sich stuetzt, fehlte damit. Das Skript ist nicht mehr ausfuehrbar, und ein Test haelt das fest." },
+  ] },
   { version: "0.475.10", date: "2026-09-13", changes: [
     { en: "Measured on the live system which analysis setup is actually fastest, and the result contradicts the obvious assumption. Fewer engines with shorter queues win: five engines with 32 jobs per game reach 1596 positions per hour, sixteen engines with the same queue depth only 786. A game keeps 32 jobs open again, back to the best measured setting.", de: "Live ausgemessen, welche Analyse-Einstellung wirklich die schnellste ist, und das Ergebnis widerlegt die naheliegende Annahme. Weniger Engines mit kuerzeren Schlangen gewinnen: fuenf Engines mit 32 Auftraegen je Partie schaffen 1596 Stellungen je Stunde, sechzehn Engines bei gleicher Schlangentiefe nur 786. Eine Partie haelt wieder 32 Auftraege offen, zurueck auf den gemessenen Bestwert." },
   ] },

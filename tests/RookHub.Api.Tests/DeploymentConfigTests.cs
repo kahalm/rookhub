@@ -174,6 +174,34 @@ public class DeploymentConfigTests
             + string.Join(", ", floating));
     }
 
+    /// <summary>
+    /// <c>init-db.sh</c> darf NICHT ausfuehrbar sein. Das offizielle MariaDB-Image FUEHRT eine
+    /// ausfuehrbare <c>.sh</c> in <c>docker-entrypoint-initdb.d</c> als eigenen Prozess AUS und
+    /// liest nur eine nicht ausfuehrbare per <c>.</c> ein — und nur eingelesen kennt das Skript die
+    /// Hilfsfunktion <c>docker_process_sql</c> des Entrypoints. Ausfuehrbar stirbt der Container
+    /// beim ersten Start mit „docker_process_sql: command not found" (Exit 127).
+    ///
+    /// <para>So geschehen: 4be56d1b (2026-09-04) setzte den Modus auf 755 und legte im selben Commit
+    /// den naechtlichen E2E-Lauf an — der ist darum an keinem einzigen Tag gruen gewesen. Dev und
+    /// Prod traf es nur deshalb nicht, weil ihre Volumes laengst initialisiert sind; ein frisches
+    /// Volume waere genauso gescheitert.</para>
+    ///
+    /// <para>Auf Windows ohne Aussage (dort gibt es keinen Unix-Modus); die CI laeuft auf Linux und
+    /// checkt den Modus aus dem Git-Index aus.</para>
+    /// </summary>
+    [Fact]
+    public void InitDbScript_IsSourcedNotExecuted()
+    {
+        var script = ReadRepoFile("init-db.sh");
+        Assert.Contains("docker_process_sql", script);   // der Grund, warum es eingelesen werden muss
+
+        if (OperatingSystem.IsWindows()) return;
+        var mode = File.GetUnixFileMode(Path.Combine(RepoRoot(), "init-db.sh"));
+        const UnixFileMode execute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+        Assert.True((mode & execute) == 0,
+            $"init-db.sh ist ausfuehrbar ({mode}) — MariaDB fuehrt es dann aus statt es einzulesen, und docker_process_sql fehlt.");
+    }
+
     [Fact]
     public void OperationsScripts_AreShipped()
     {
