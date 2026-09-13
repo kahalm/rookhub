@@ -286,6 +286,25 @@ public class PgnImportService
             : await _db.BookPuzzles.Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
                 .Select(bp => bp.LineId).ToHashSetAsync(ct);
 
+        // Alt-Linien ohne Chessable-oid (Import vor piratechess v1.29.0): kommt dieselbe Linie — gleiche LineId UND
+        // gleiche Züge — mit oid herein, bekommt die vorhandene sie nachgetragen. Sonst erkennt das Fortschritts-
+        // Overlay sie nie als importiert, und jedes „Kurs holen" holt sie erneut. Beim Upgrade übernimmt der
+        // In-place-Pfad die oid ohnehin. Eine oid, die im Buch schon vorkommt (z. B. an einem Review-Füller),
+        // wird NICHT ein zweites Mal vergeben.
+        var oidlessByLineId = new Dictionary<string, BookPuzzle>();
+        var bookOids = new HashSet<string>(StringComparer.Ordinal);
+        if (!upgrade)
+        {
+            foreach (var bp in await _db.BookPuzzles
+                    .Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName) && bp.ChessableOid == null)
+                    .ToListAsync(ct))
+                oidlessByLineId.TryAdd(bp.LineId, bp);
+            bookOids.UnionWith(await _db.BookPuzzles
+                .Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName) && bp.ChessableOid != null)
+                .Select(bp => bp.ChessableOid!)
+                .ToListAsync(ct));
+        }
+
         // „getGame gewinnt" — über die CHESSABLE-OID, NICHT die LineId. getReview belegt eine Lücke mit
         // LineId={file}:{oid} (Round=oid), das echte getGame liefert aber Round="Kapitel.Index" und die
         // oid separat im [ChessableOid]-Header (LineId={file}:002.001). Die LineIds passen also NICHT —
@@ -360,6 +379,14 @@ public class PgnImportService
                     bp.AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves);
                     bp.IsInfoOnly = p.IsInfoOnly;
                     if (!string.IsNullOrEmpty(p.ChessableOid)) bp.ChessableOid = p.ChessableOid;
+                    updated++;
+                }
+                else if (!upgrade && !string.IsNullOrEmpty(p.ChessableOid) && !bookOids.Contains(p.ChessableOid)
+                         && oidlessByLineId.Remove(p.LineId, out var ohneOid)
+                         && ohneOid.Moves == p.Moves && ohneOid.StartPly == p.StartPly)
+                {
+                    ohneOid.ChessableOid = p.ChessableOid;   // nur die oid — Inhalt und Fortschritt bleiben
+                    bookOids.Add(p.ChessableOid);
                     updated++;
                 }
                 else { skipped++; }

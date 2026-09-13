@@ -291,6 +291,76 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);
     }
 
+    /// <summary>Linie im heutigen piratechess-Format: [ChessableOid] + Leerzeichen-Zeile vor den Zügen.</summary>
+    private static string OidRepLine(string white, string oid, string moves) =>
+        $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n                        \n{moves}\n";
+
+    private async Task<string> RepContentAsync(int? repId)
+        => (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == repId!.Value)).PgnContent;
+
+    [Fact]
+    public async Task AppendLive_OldLineWithoutOid_GetsTheOidBackfilled_InsteadOfADuplicate()
+    {
+        // Regression (Kurs 207313): Alt-Import ohne [ChessableOid], Header und Züge durch eine echte Leerzeile
+        // getrennt. Die neu geholte Linie trennt sie durch eine Leerzeichen-Zeile → die Signatur enthielt die
+        // Header, die Linie galt als neu und wurde als Dublette angehängt; die oid kam nie an.
+        _db.AppUsers.Add(new AppUser { Id = 31, Username = "u31", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(31, "60001",
+            RepLine("A", "1. e4 {[%cal Ge2e4]} e5 *") + "\n" + RepLine("B", "1. d4 d5 *"), "C", "repertoire");
+
+        var (imp, repId, _) = await _svc.AppendLiveAsync(31, "60001", OidRepLine("A", "777", "1. e4 {[%cal Ge2e4]} e5 *"), "C", "repertoire");
+
+        Assert.Equal(0, imp);
+        var content = await RepContentAsync(repId);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);
+        Assert.Equal(new[] { "777" }, (await _svc.GetImportedOidsAsync(31, "60001")).Oids);
+        // Der Header sitzt im Block von Linie A (die Trainings-Zuordnung findet deren Züge darüber) …
+        Assert.Equal(new[] { "e4", "e5" }, ChessableTrainedLineService.MainlineSansForOid(content, "777"));
+        // … und Linie B ist unverändert.
+        Assert.Contains("[White \"B\"]\n[Black \"T\"]\n[Result \"*\"]\n\n1. d4 d5 *", content);
+    }
+
+    [Fact]
+    public async Task AppendLive_SameMovesUnderAnotherOid_StaysAnOwnLine()
+    {
+        // Chessable wiederholt Linien (z. B. Quick-Starter-Kapitel) — eigene oid, eigener Fortschritt.
+        _db.AppUsers.Add(new AppUser { Id = 32, Username = "u32", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(32, "60002", OidRepLine("A", "801", "1. e4 e5 *"), "C", "repertoire");
+
+        var (imp, _, _) = await _svc.AppendLiveAsync(32, "60002", OidRepLine("QSG A", "802", "1. e4 e5 *"), "C", "repertoire");
+
+        Assert.Equal(1, imp);
+        Assert.Equal(new[] { "801", "802" }, (await _svc.GetImportedOidsAsync(32, "60002")).Oids.OrderBy(o => o));
+    }
+
+    [Fact]
+    public async Task AppendLive_KnownOid_IsNotAppendedAgain_EvenUnderOtherHeaders()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 33, Username = "u33", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(33, "60003", OidRepLine("A", "901", "1. e4 e5 *"), "C", "repertoire");
+
+        var (imp, repId, _) = await _svc.AppendLiveAsync(33, "60003", OidRepLine("A umbenannt", "901", "1. e4 e5 *"), "C", "repertoire");
+
+        Assert.Equal(0, imp);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(await RepContentAsync(repId), @"\[Event "));
+    }
+
+    [Fact]
+    public async Task AppendLive_LineWithoutOid_DedupsAgainstTheNewFormat()
+    {
+        // Alt-Client ohne oids: gleicher Zugtext wie eine Bestands-Linie im neuen Format → Dublette.
+        _db.AppUsers.Add(new AppUser { Id = 34, Username = "u34", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(34, "60004", OidRepLine("A", "1001", "1. c4 e5 *"), "C", "repertoire");
+
+        var (imp, _, _) = await _svc.AppendLiveAsync(34, "60004", RepLine("A", "1. c4 e5 *"), "C", "repertoire");
+
+        Assert.Equal(0, imp);
+    }
+
     [Fact]
     public async Task AppendLive_FileSizeCountsBytesNotCharacters()
     {

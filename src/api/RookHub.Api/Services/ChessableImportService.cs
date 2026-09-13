@@ -809,41 +809,116 @@ public class ChessableImportService : ICourseReimporter
             return (CountPgnGames(pgn), rep.Id, target);
         }
 
-        // Nur die noch nicht vorhandenen Linien anhängen (Dedup per Zugtext gegen den Bestand + innerhalb
-        // dieses Batches) → erneutes Durchklicken derselben Linie erzeugt keine Dublette.
+        // Nur die noch nicht vorhandenen Linien anhängen → erneutes Durchklicken derselben Linie erzeugt keine
+        // Dublette. Je eingehender Linie, in dieser Reihenfolge:
+        //  1. Ihre oid steht schon in der Datei → dieselbe Chessable-Linie, nichts zu tun.
+        //  2. Gleicher Zugtext wie eine Bestands-Linie OHNE oid (Import vor piratechess v1.29.0) → deren oid
+        //     NACHTRAGEN statt anzuhängen. Ohne oid erkennt das Fortschritts-Overlay die Linie nie als importiert,
+        //     und jedes „Kurs holen" hält sie für neu.
+        //  3. Ohne eigene oid: gleicher Zugtext → Dublette.
+        //  4. Sonst anhängen — auch bei gleichem Zugtext unter ANDERER oid: Chessable wiederholt Linien (z. B. im
+        //     Quick-Starter-Kapitel), das sind eigene Linien mit eigenem Fortschritt.
+        // Verglichen werden die EXAKTEN Zugtexte, keine Teilzeichenketten: `existing.Contains(moves)` ließ früher
+        // eine kürzere Linie, die Präfix einer längeren ist, still verschwinden — und war quadratisch in der
+        // PGN-Größe, im Request-Pfad des Live-Appends.
         var existing = file.PgnContent ?? string.Empty;
+        var existingBlocks = SplitPgnGames(existing).ToList();
+        var knownOids = new HashSet<string>(StringComparer.Ordinal);
+        var seenMoves = new HashSet<string>(StringComparer.Ordinal);
+        var oidlessByMoves = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < existingBlocks.Count; i++)
+        {
+            var blockOid = OidOf(existingBlocks[i]);
+            if (blockOid != null) knownOids.Add(blockOid);
+            var blockMoves = MovetextOf(existingBlocks[i]);
+            if (blockMoves.Length == 0) continue;
+            seenMoves.Add(blockMoves);
+            if (blockOid == null) oidlessByMoves.TryAdd(blockMoves, i);
+        }
 
-        // Dedup über die EXAKTEN Zugtexte des Bestands. Vorher stand hier
-        // `existing.Contains(moves)` — eine Teilzeichenketten-Suche über das gesamte PGN, mit zwei
-        // Folgen: (1) Eine neue, KÜRZERE Linie, die Präfix einer bereits gespeicherten längeren ist,
-        // galt als Dublette und verschwand stillschweigend. (2) `existing += …` je angehängter Linie
-        // kopierte den ganzen Text erneut — zusammen mit der Suche quadratisch in der PGN-Größe,
-        // und das im Request-Pfad des Live-Appends beim Durchklicken.
-        var seen = SplitPgnGames(existing)
-            .Select(MovetextOf)
-            .Where(m => m.Length > 0)
-            .ToHashSet(StringComparer.Ordinal);
-        var sb = new StringBuilder(existing.TrimEnd());
+        var backfill = new Dictionary<int, string>();   // Bestands-Block (Index) → nachzutragende oid
+        var appended = new StringBuilder();
         var added = 0;
         foreach (var game in SplitPgnGames(pgn))
         {
             var moves = MovetextOf(game);
             if (moves.Length == 0) continue;
-            if (!seen.Add(moves)) continue;   // schon im Bestand ODER schon in diesem Batch
-            sb.Append("\n\n\n").Append(game.Trim());
+            var oid = OidOf(game);
+            if (oid != null)
+            {
+                if (knownOids.Contains(oid)) continue;
+                if (oidlessByMoves.Remove(moves, out var blockIndex))
+                {
+                    backfill[blockIndex] = oid;
+                    knownOids.Add(oid);
+                    continue;
+                }
+                knownOids.Add(oid);
+            }
+            else if (seenMoves.Contains(moves)) continue;
+            seenMoves.Add(moves);
+            appended.Append("\n\n\n").Append(game.Trim());
             added++;
         }
-        if (added > 0)
+        if (added > 0 || backfill.Count > 0)
         {
-            file.PgnContent = sb.ToString() + "\n";
+            var content = backfill.Count > 0 ? InsertChessableOids(existing, backfill) : existing;
+            file.PgnContent = content.TrimEnd() + appended + "\n";
             // Bytes, nicht Zeichen: das PGN trägt Kommentare in de/hr, ein Zeichenzähler wies die
             // Datei damit kleiner aus, als sie auf der Platte ist.
             file.FileSize = Encoding.UTF8.GetByteCount(file.PgnContent);
             rep.UpdatedAt = DateTime.UtcNow;
-            rep.ImportVersion = ImportPipeline.CurrentVersion;
+            if (added > 0) rep.ImportVersion = ImportPipeline.CurrentVersion;
             await _db.SaveChangesAsync(ct);
         }
         return (added, rep.Id, target);
+    }
+
+    /// <summary>Chessable-oid eines PGN-Blocks (<c>[ChessableOid "…"]</c>), <c>null</c> ohne.</summary>
+    private static string? OidOf(string block)
+    {
+        var m = ChessableOidRegex.Match(block);
+        return m.Success ? m.Groups[1].Value : null;
+    }
+
+    /// <summary>
+    /// Trägt je Block (Index wie <see cref="SplitPgnGames"/>) den Header <c>[ChessableOid "…"]</c> hinter dessen
+    /// letztem Header ein — in place, der übrige Text bleibt Zeichen für Zeichen erhalten. Blöcke ohne Header
+    /// bleiben unangetastet.
+    /// </summary>
+    internal static string InsertChessableOids(string pgn, IReadOnlyDictionary<int, string> oidByBlock)
+    {
+        var first = pgn.IndexOf("[Event ", StringComparison.Ordinal);
+        if (first < 0 || oidByBlock.Count == 0) return pgn;
+        // Dieselben Schnittstellen wie SplitPgnGames: jedes „[Event " ab dem ersten beginnt einen Block.
+        var starts = System.Text.RegularExpressions.Regex.Matches(pgn[first..], @"\[Event ")
+            .Select(m => first + m.Index).ToList();
+        var sb = new StringBuilder(pgn);
+        foreach (var (blockIndex, oid) in oidByBlock.OrderByDescending(kv => kv.Key))   // von hinten: Positionen bleiben gültig
+        {
+            if (blockIndex < 0 || blockIndex >= starts.Count) continue;
+            var end = blockIndex + 1 < starts.Count ? starts[blockIndex + 1] : pgn.Length;
+            var at = HeaderEnd(pgn, starts[blockIndex], end);
+            if (at >= 0) sb.Insert(at, $"\n[ChessableOid \"{oid}\"]");
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Position direkt hinter dem letzten Header eines Blocks (vor dessen Zeilenumbruch), -1 ohne Header.</summary>
+    private static int HeaderEnd(string pgn, int start, int end)
+    {
+        var at = -1;
+        for (var pos = start; pos < end;)
+        {
+            var nl = pgn.IndexOf('\n', pos, end - pos);
+            var lineEnd = nl < 0 ? end : nl;
+            var line = pgn.AsSpan(pos, lineEnd - pos).Trim();
+            if (line.Length == 0 || line[0] != '[') break;
+            at = lineEnd > pos && pgn[lineEnd - 1] == '\r' ? lineEnd - 1 : lineEnd;
+            if (nl < 0) break;
+            pos = nl + 1;
+        }
+        return at;
     }
 
     /// <summary>Zerlegt ein Mehr-Partien-PGN in einzelne [Event]-Blöcke.</summary>
@@ -856,13 +931,25 @@ public class ChessableImportService : ICourseReimporter
             if (!string.IsNullOrWhiteSpace(part)) yield return part.Trim();
     }
 
-    /// <summary>Zugtext eines PGN-Blocks (alles nach der Leerzeile hinter den Headern), whitespace-normiert
-    /// — als Dedup-Signatur einer Linie (Züge sind je Kurslinie praktisch eindeutig).</summary>
+    /// <summary>
+    /// Zugtext eines PGN-Blocks — alles hinter den führenden Header- und Leerzeilen, whitespace-normiert — als
+    /// Dedup-Signatur einer Linie (Züge sind je Kurslinie praktisch eindeutig). Früher „alles nach der ersten
+    /// Leerzeile": piratechess trennt Header und Züge seit dem <c>[ChessableOid]</c>-Header aber durch eine Zeile
+    /// aus LEERZEICHEN. Dann gab es kein <c>\n\n</c>, die Signatur enthielt die Header, und eine neu geholte Linie
+    /// glich ihrem alten Gegenstück nie — in einem echten Kurs 0 von 175 (header-frei: 175 von 175).
+    /// </summary>
     private static string MovetextOf(string block)
     {
-        var i = block.IndexOf("\n\n", StringComparison.Ordinal);
-        var mt = i < 0 ? block : block[(i + 2)..];
-        return System.Text.RegularExpressions.Regex.Replace(mt, @"\s+", " ").Trim();
+        var pos = 0;
+        while (pos < block.Length)
+        {
+            var nl = block.IndexOf('\n', pos);
+            var lineEnd = nl < 0 ? block.Length : nl;
+            var line = block.AsSpan(pos, lineEnd - pos).Trim();
+            if (line.Length > 0 && line[0] != '[') break;
+            pos = nl < 0 ? block.Length : nl + 1;
+        }
+        return System.Text.RegularExpressions.Regex.Replace(block[pos..], @"\s+", " ").Trim();
     }
 
     private static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();

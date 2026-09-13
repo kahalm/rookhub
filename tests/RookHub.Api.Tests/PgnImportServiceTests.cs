@@ -238,6 +238,48 @@ public class PgnImportServiceTests : IDisposable
         Assert.True(res2.Skipped > 0);
     }
 
+    private static string BookLine(string round, string? oid, string moves) =>
+        "\n[Event \"X\"]\n[Round \"" + round + "\"]\n[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n"
+        + (oid is null ? "" : "[ChessableOid \"" + oid + "\"]\n") + "\n" + moves + " *\n";
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_BackfillsAMissingOid_WhenTheLineMatches()
+    {
+        // Alt-Import ohne oid; dieselbe Linie (LineId + Züge) kommt mit oid herein → oid nachtragen, keine neue Linie.
+        await _service.ImportFileAsync("oid.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        var id = (await _db.BookPuzzles.SingleAsync(bp => bp.BookFileName == "oid.pgn")).Id;
+
+        var res = await _service.ImportFileAsync("oid.pgn", BookLine("1", "4711", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, res.Updated);
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "oid.pgn");
+        Assert.Equal(id, bp.Id);                 // dieselbe Zeile → Fortschritt bleibt
+        Assert.Equal("4711", bp.ChessableOid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_NoBackfill_WhenTheMovesDiffer()
+    {
+        await _service.ImportFileAsync("oid2.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("oid2.pgn", BookLine("1", "4712", "2. Nf3 Nf6 3. Nc3 Bb4"), CancellationToken.None);
+
+        Assert.Equal(0, res.Updated);
+        Assert.Null((await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "oid2.pgn")).ChessableOid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_NoBackfill_WhenTheOidAlreadyExistsInTheBook()
+    {
+        await _service.ImportFileAsync("oid3.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "4713", "2. d4 exd4 3. Qxd4 Nc6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("oid3.pgn", BookLine("1", "4713", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Updated);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "oid3.pgn" && b.ChessableOid == "4713"));
+    }
+
     [Fact]
     public void ParsePgn_NoComments_LeavesMoveCommentsNull()
     {
