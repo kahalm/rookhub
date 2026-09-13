@@ -1305,7 +1305,22 @@ die Punktepartie nichts wert. Gemessen wird an den STELLUNGEN, nicht am Status; 
 Partien blockieren nicht; laufende Auftraege einer anderen Partie werden nicht abgebrochen, sie
 laufen aus. Je Nutzer und nicht global, damit sich zwei Leute nicht gegenseitig ausbremsen.
 
-**Wie viele Engines wirklich rechnen, entscheidet `MaxOpenJobsPerGame`** (32 seit 0.475.4, vorher 12) —
+**Nicht die Zahl der Engines entscheidet den Durchsatz, sondern die SCHLANGENTIEFE je Engine.**
+Am 2026-09-13 auf Prod gemessen, und das Ergebnis war das Gegenteil der Erwartung: die Engine-Liste
+von sechzehn auf fuenf zu KUERZEN hob den Durchsatz von 834–957 auf 1596 Stellungen je Stunde. Mit
+sechzehn Engines standen dieselben 32 Auftraege zwei je Engine tief, eine fertige Engine lief leer,
+bis die Pumpe nachlegte (bis zu 20 s), und ein Auftrag mit einem 503 sprang reihum weiter statt kurz
+zu warten — 571 Engine-Wechsel je halbe Stunde. Mit fuenf Engines lagen sechs bis sieben Auftraege
+je Engine und keine lief leer.
+
+**Der 503 des Brokers ist KEINE Ausfallmeldung** — er heisst „fuer diese Engine ist gerade kein
+Provider frei“ und trifft auch Engines, die nachweislich rechnen (am selben Tag direkt
+angesprochen: alle antworten 200). Aus einer Haeufung auf einer Maschine auf deren Ausfall zu
+schliessen war falsch: beim Reihum-Wechsel landet ein pendelnder Auftrag zwoelf von sechzehn Malen
+dort, sie klopft also dreimal so oft an.
+
+**Wie viele Engines wirklich rechnen, entscheidet `MaxOpenJobsPerGame`** (96 seit 0.475.9, davor 32,
+davor 12) —
 nicht die Zahl der hinterlegten Hintergrund-Engines. Der Worker nimmt je Engine EINE Suche; jede Engine
 ueber die Zahl der offenen Auftraege hinaus steht still. Am 2026-09-12 auf Prod nachgemessen: sechzehn
 Engines hinterlegt, zwoelf Auftraege auf zwoelf Engines, vier dauerhaft untaetig. Der Ueberhang ueber die

@@ -175,19 +175,20 @@ public static class GameAnalysisDefaults
     /// hinterlegten Engines entscheidet, wie viele Engines ueberhaupt rechnen: der Worker nimmt je
     /// Engine eine Suche, mehr Engines als offene Auftraege stehen still.
     ///
-    /// <para>Am 2026-09-12 auf Prod nachgemessen: sechzehn Hintergrund-Engines hinterlegt, zwoelf
-    /// offene Auftraege auf zwoelf verschiedenen Engines — vier Engines taten nichts, und zwar
-    /// dauerhaft. Seither 32. Der Ueberhang ueber die Zahl der Engines ist Absicht: laeuft eine
-    /// Suche aus, nimmt die Engine sofort den naechsten Auftrag, statt bis zu einen Pump-Durchgang
-    /// (20 s) zu warten.</para>
+    /// <para>Am 2026-09-13 auf Prod gemessen, und das Ergebnis war das Gegenteil der Erwartung:
+    /// die Engine-Liste von sechzehn auf fuenf zu kuerzen hob den Durchsatz von 834–957 auf 1596
+    /// Stellungen je Stunde. Mit sechzehn Engines standen dieselben 32 Auftraege zwei je Engine
+    /// tief; eine fertige Engine lief leer, bis die Pumpe nachlegte, und ein Auftrag, der einen
+    /// 503 bekam, sprang reihum weiter statt kurz zu warten. Mit fuenf Engines lagen sechs bis
+    /// sieben Auftraege je Engine und keine lief leer.</para>
     ///
-    /// <para>Bleibt unter <c>AnalysisJobService.MaxOpenJobsPerUser</c> (50), damit daneben noch von
-    /// Hand eingereiht werden kann — jetzt mit 18 statt 38 freien Plaetzen. Dass mehrere PARTIEN
-    /// nicht gegenseitig verhungern, regelt seit 0.466.0 nicht diese Zahl, sondern die Reihenfolge:
-    /// es wird immer nur EINE Partie je Nutzer weitergefuettert
-    /// (<c>GameAnalysisService.IsOwnersTurnAsync</c>).</para>
+    /// <para>96 ist genau diese Tiefe bei sechzehn Engines (16 × 6). Der Ueberhang ueber die
+    /// Engine-Zahl ist der Punkt: laeuft eine Suche aus, nimmt die Engine sofort den naechsten
+    /// Auftrag, statt bis zu einen Pump-Durchgang (20 s) zu warten. Zusammen mit
+    /// <c>AnalysisJobService.MaxOpenJobsPerUser</c> (150) — der Deckel muss mitwachsen, sonst
+    /// bindet er und nicht diese Zahl.</para>
     /// </summary>
-    public const int MaxOpenJobsPerGame = 32;
+    public const int MaxOpenJobsPerGame = 96;
 
     /// <summary>
     /// Wie oft ein Auftrag zu DERSELBEN Stellung scheitern darf, bevor sie endgueltig als

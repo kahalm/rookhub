@@ -27,8 +27,12 @@ public class AnalysisJobService
     /// 1..5 (der Broker weist mehr beim Deserialisieren ab) — derselbe Deckel wie im Live-Pfad
     /// (<c>EngineController.BuildWork</c>). Ein höherer Wert würde jeden Lauf in die Wiederholung schicken.</summary>
     public const int MaxMultiPv = 5;
-    /// <summary>Offene Aufträge je User (Queued/Paused/Running) — gegen Endlos-Listen.</summary>
-    public const int MaxOpenJobsPerUser = 50;
+    /// <summary>Offene Aufträge je User (Queued/Paused/Running) — gegen Endlos-Listen.
+    /// <para>150 seit 0.475.9: der Deckel muss ueber
+    /// <see cref="Models.GameAnalysisDefaults.MaxOpenJobsPerGame"/> (96) liegen, sonst bindet ER und die
+    /// Blockgroesse der Partie waere wirkungslos. Die 54 Plaetze Abstand bleiben fuer von Hand
+    /// eingereihte Stellungen.</para></summary>
+    public const int MaxOpenJobsPerUser = 150;
 
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;

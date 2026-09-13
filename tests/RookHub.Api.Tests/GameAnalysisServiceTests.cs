@@ -43,17 +43,24 @@ public class GameAnalysisServiceTests : IDisposable
 1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5 1-0
 """;
 
-    /// <summary>Dieselbe Partie, aber laenger als ein Auftragsblock (40 Halbzuege statt 14) — nur
-    /// damit sieht man, dass NICHT alles auf einmal eingereiht wird.</summary>
+    /// <summary>Dieselbe Partie, aber laenger als ein Auftragsblock (110 Halbzuege) — nur damit
+    /// sieht man, dass NICHT alles auf einmal eingereiht wird. Nach dem Eroeffnungsteil folgt eine
+    /// erzeugte, aber durchweg legale Zugfolge ohne Schlagzug und ohne Schach: an dieser Partie
+    /// zaehlt allein die LAENGE, und sie muss ueber <c>MaxOpenJobsPerGame</c> liegen.</summary>
     private const string LongGame = """
 [Event "Testpartie"]
 [White "Anderssen"]
 [Black "Kieseritzky"]
-[Result "1-0"]
+[Result "1/2-1/2"]
 
-1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5
-8. Nh4 Qg5 9. Nf5 c6 10. g4 Nf6 11. Rg1 cxb5 12. h4 Qg6 13. h5 Qg5 14. Qf3 Ng8
-15. Bxf4 Qf6 16. Nc3 Bc5 17. Nd5 Qxb2 18. Bd6 Bxg1 19. e5 Qxa1+ 20. Ke2 Na6 1-0
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O
+9. h3 Nb8 10. d4 Nbd7 11. Bg5 Rb8 12. Na3 c5 13. Be3 Qe8 14. g4 Ra8 15. Qd3 Qd8
+16. Rec1 Bb7 17. Nh2 Qe8 18. Re1 Bd5 19. Bc1 Ra7 20. Qd2 h6 21. Qe2 Kh7 22. Nf3 Kg8
+23. Nd2 Bc4 24. Rd1 Nh7 25. Bc2 Bd8 26. Qf3 Ba5 27. Nab1 f6 28. Qd3 Qf7 29. d5 Qg6
+30. Na3 b4 31. Rb1 Rb8 32. Qe3 Ng5 33. Ba4 Rd8 34. Kg2 Rf8 35. Nb3 Kh7 36. Rd4 Rfa8
+37. Nc2 Bd8 38. Kh1 Qe8 39. f3 Rc7 40. Nba1 g6 41. Qg1 Raa7 42. Na3 h5 43. Bb3 Bd3
+44. c4 Kh8 45. Bd1 Nf7 46. Qf1 Ra8 47. Bg5 Raa7 48. h4 Rc6 49. Kg1 Rcc7 50. Be3 Qg8
+51. Qe1 Rcb7 52. Bc1 f5 53. Qe2 Qh7 54. Ba4 Nf8 55. Bc6 Ra8 1/2-1/2
 """;
 
     private async Task<AppUser> CreateUserWithEngineAsync()
@@ -82,15 +89,15 @@ public class GameAnalysisServiceTests : IDisposable
 
         var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = LongGame });
 
-        Assert.Equal(40, dto.PlyCount);                       // 20 Züge × 2, laenger als ein Block
+        Assert.Equal(110, dto.PlyCount);                      // laenger als ein Auftragsblock
         Assert.Equal("Anderssen – Kieseritzky", dto.Title);
         Assert.Equal(GameAnalysisDefaults.TargetDepth, dto.TargetDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, dto.MultiPv);
 
         var positions = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync();
-        Assert.Equal(40, positions.Count);
+        Assert.Equal(110, positions.Count);
 
-        // NICHT alle 40 auf einmal: offene Aufträge sind je Nutzer gedeckelt, also blockweise.
+        // NICHT alle 110 auf einmal: offene Aufträge sind je Nutzer gedeckelt, also blockweise.
         var enqueued = positions.Count(p => p.AnalysisJobId != null);
         Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, enqueued);
         // Und zwar in Zugreihenfolge — man will die Partie von vorn ansehen können.

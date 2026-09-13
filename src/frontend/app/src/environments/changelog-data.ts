@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.475.9", date: "2026-09-13", changes: [
+    { en: "A game now keeps 96 analysis jobs open instead of 32, and the per-account ceiling rose from 50 to 150 so it no longer binds first. Measured on the live system: shortening the engine list from sixteen to five raised throughput from around 900 to 1596 positions per hour, because the same jobs then stood six deep per engine instead of two and no engine ran dry. 96 is that same depth at sixteen engines.", de: "Eine Partie haelt jetzt 96 Analyseauftraege offen statt 32, und der Deckel je Konto stieg von 50 auf 150, damit nicht er zuerst bindet. Live gemessen: die Engine-Liste von sechzehn auf fuenf zu kuerzen hob den Durchsatz von rund 900 auf 1596 Stellungen je Stunde, weil dieselben Auftraege dann sechs statt zwei tief je Engine standen und keine Engine leer lief. 96 ist genau diese Tiefe bei sechzehn Engines." },
+  ] },
   { version: "0.475.8", date: "2026-09-12", changes: [
     { en: "The matching numbers now hold in the starting position too. The previous attempt told the two apart by whether a position was given at all, and an empty one arrives at the server as none, which is exactly the starting position. The position filter now says so explicitly.", de: "Die gleichen Zahlen gelten jetzt auch in der Grundstellung. Der vorige Anlauf unterschied die beiden Faelle daran, ob ueberhaupt eine Stellung mitkam, und eine leere kommt beim Server als keine an — das ist genau die Grundstellung. Der Stellungsfilter sagt es jetzt ausdruecklich." },
   ] },
