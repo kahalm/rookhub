@@ -411,7 +411,7 @@ public class RepertoireService
         if (file == null || !await RepertoireAccess.CanReadAsync(_db, repertoireId, userId))
             throw new KeyNotFoundException("File not found.");
 
-        return (file.FileName, file.PgnContent);
+        return (file.FileName, RepertoirePgnCleanup.WithoutHidden(file.PgnContent));
     }
 
     public async Task DeleteFileAsync(int repertoireId, int fileId, int userId)
@@ -438,7 +438,9 @@ public class RepertoireService
         if (rep.UserId != userId && !await CanAccessAsync(repertoireId, userId))
             throw new KeyNotFoundException("Repertoire not found.");
 
-        return string.Join("\n\n", rep.Files.Select(f => f.PgnContent));
+        // Ausgeblendete Altlasten (RepertoirePgnCleanup) nie ausliefern — gleich gefiltert wie RepertoireLineSource,
+        // damit gameIndex zwischen Server und Client dieselbe Linie meint.
+        return string.Join("\n\n", rep.Files.Select(f => RepertoirePgnCleanup.WithoutHidden(f.PgnContent)));
     }
 
     /// <summary>

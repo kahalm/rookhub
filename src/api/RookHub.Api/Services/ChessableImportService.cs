@@ -833,7 +833,9 @@ public class ChessableImportService : ICourseReimporter
             var blockMoves = MovetextOf(existingBlocks[i]);
             if (blockMoves.Length == 0) continue;
             seenMoves.Add(blockMoves);
-            if (blockOid == null) oidlessByMoves.TryAdd(blockMoves, i);
+            // Ausgeblendete Kopien bekommen keine oid nachgetragen — ihr Zugtext bleibt aber „gesehen", damit
+            // derselbe Inhalt nicht erneut angehängt wird.
+            if (blockOid == null && !RepertoirePgnCleanup.IsHiddenGame(existingBlocks[i])) oidlessByMoves.TryAdd(blockMoves, i);
         }
 
         var backfill = new Dictionary<int, string>();   // Bestands-Block (Index) → nachzutragende oid
@@ -870,6 +872,22 @@ public class ChessableImportService : ICourseReimporter
             rep.UpdatedAt = DateTime.UtcNow;
             if (added > 0) rep.ImportVersion = ImportPipeline.CurrentVersion;
             await _db.SaveChangesAsync(ct);
+        }
+        // Altlasten gleich mit bereinigen (nie löschen, nur ausblenden) — neu hinzugekommene Linien können eine alte
+        // Kopie erst erkennbar machen, und Dateien mit veraltetem Regelstand kommen so ohne Neustart dran.
+        if (added > 0 || backfill.Count > 0 || file.CleanupVersion < RepertoirePgnCleanup.CurrentVersion)
+        {
+            var cleanup = await RepertoireCleanupService.CleanupFileAsync(file, _proxy, _logger, apply: true, ct);
+            if (cleanup != null)
+            {
+                if (cleanup.Count > 0)
+                {
+                    rep.UpdatedAt = DateTime.UtcNow;
+                    _logger.LogInformation("Repertoire-Bereinigung beim Live-Append: {Count} Änderungen in Datei {FileId} (bid {Bid})",
+                        cleanup.Count, file.Id, bid);
+                }
+                await _db.SaveChangesAsync(ct);
+            }
         }
         return (added, rep.Id, target);
     }
@@ -938,19 +956,7 @@ public class ChessableImportService : ICourseReimporter
     /// aus LEERZEICHEN. Dann gab es kein <c>\n\n</c>, die Signatur enthielt die Header, und eine neu geholte Linie
     /// glich ihrem alten Gegenstück nie — in einem echten Kurs 0 von 175 (header-frei: 175 von 175).
     /// </summary>
-    private static string MovetextOf(string block)
-    {
-        var pos = 0;
-        while (pos < block.Length)
-        {
-            var nl = block.IndexOf('\n', pos);
-            var lineEnd = nl < 0 ? block.Length : nl;
-            var line = block.AsSpan(pos, lineEnd - pos).Trim();
-            if (line.Length > 0 && line[0] != '[') break;
-            pos = nl < 0 ? block.Length : nl + 1;
-        }
-        return System.Text.RegularExpressions.Regex.Replace(block[pos..], @"\s+", " ").Trim();
-    }
+    private static string MovetextOf(string block) => RepertoirePgnCleanup.MovetextOf(block);
 
     private static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();
 

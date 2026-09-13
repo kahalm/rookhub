@@ -95,6 +95,23 @@ public class ChessableProxyServiceTests
     }
 
     [Fact]
+    public async Task GetCachedLinePgns_SendsOnlyOids_AndMapsTheParsedGamesByOid()
+    {
+        var pgn = "[Event \"x\"]\n[ChessableOid \"11\"]\n\n1. e4 *\n\n[Event \"x\"]\n[ChessableOid \"12\"]\n\n1. d4 *\n";
+        var handler = new CapturingHandler(System.Text.Json.JsonSerializer.Serialize(new
+        { bid = "1", name = "x", mode = "None", chapterCount = 1, lineCount = 2, pgn }));
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
+
+        var truth = await proxy.GetCachedLinePgnsAsync(new[] { "11", "12", "kaputt" });
+
+        Assert.Equal("/api/chessable/direct/course/parse", handler.Path);
+        Assert.Contains("\"lines\":[null,null]", handler.Body);      // keine Inhalte → piratechess schreibt nichts in den Cache
+        Assert.Contains("\"lineOids\":[\"11\",\"12\"]", handler.Body);
+        Assert.Contains("1. e4", truth["11"]);
+        Assert.Contains("1. d4", truth["12"]);
+    }
+
+    [Fact]
     public async Task GetCachedLineOids_PostsToLinesCached_AndReturnsTheAnswer()
     {
         var handler = new CapturingHandler("{\"oids\":[\"11\"]}");

@@ -38,5 +38,11 @@ public class RepertoireFile
     /// veraltet gilt und das alte Verhalten greift; falsche Kennungen entstehen nicht.
     /// </summary>
     public int? ChessableOidsPgnLength { get; set; }
+    /// <summary>
+    /// Regelstand der Altlasten-Bereinigung (<see cref="Services.RepertoirePgnCleanup.CurrentVersion"/>), den diese
+    /// Datei zuletzt durchlaufen hat; 0 = noch nie. Der Start-Job prüft nur Dateien darunter — sonst läse jeder
+    /// Neustart alle Chessable-PGNs (Prod: ~250 MB).
+    /// </summary>
+    public int CleanupVersion { get; set; }
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 }

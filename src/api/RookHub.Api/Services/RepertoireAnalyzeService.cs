@@ -100,7 +100,7 @@ public class RepertoireAnalyzeService
             .Select(f => f.PgnContent)
             .ToListAsync();
 
-        var positions = BuildPositionSet(pgnTexts);
+        var positions = BuildPositionSet(pgnTexts.Select(RepertoirePgnCleanup.WithoutHidden).ToList());   // ohne ausgeblendete Altlasten
         var entry = new CachedPositionSet(positions, pgnTexts.Count);
 
         _cache.Set(key, entry, new MemoryCacheEntryOptions

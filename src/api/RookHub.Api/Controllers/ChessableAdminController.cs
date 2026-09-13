@@ -47,6 +47,16 @@ public class ChessableAdminController : BaseApiController
         _logger = logger;
     }
 
+    /// <summary>
+    /// ADMIN: Altlasten in Chessable-Repertoires bereinigen (<see cref="RepertoirePgnCleanup"/>) — nie löschen, nur
+    /// ausblenden. Standard ist ein reiner BERICHT über alle Chessable-Repertoire-Dateien (<c>dryRun=true</c>); mit
+    /// <c>dryRun=false</c> wie der Start-Job anwenden (nur Dateien mit veraltetem Regelstand).
+    /// </summary>
+    [HttpPost("admin/repertoire-cleanup")]
+    public async Task<ActionResult<RepertoireCleanupService.Report>> RepertoireCleanup(
+        [FromServices] RepertoireCleanupService cleanup, [FromQuery] bool dryRun = true, CancellationToken ct = default)
+        => Ok(await cleanup.CleanupAllAsync(apply: !dryRun, ct));
+
     /// <summary>ADMIN: Alle Importe ALLER User (Verlauf, neueste zuerst) inkl. Besitzer-Username.
     /// Laufende/pausierte bekommen ihre globale Warteschlangen-Position.</summary>
     [HttpGet("admin/imports")]

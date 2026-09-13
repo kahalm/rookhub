@@ -212,6 +212,7 @@ try
     builder.Services.AddScoped<PuzzleService>();
     builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<ChessableImportService>();
+    builder.Services.AddScoped<RepertoireCleanupService>();
     builder.Services.AddSingleton<ChessableIngestSessionStore>();
     builder.Services.AddScoped<ChessableImportQueueService>();
     builder.Services.AddScoped<ChessableBearerBreaker>();
@@ -332,6 +333,7 @@ try
     // Traegt Basisname/Gruppenschluessel im Altbestand nach (einmalig, idempotent) — ohne das
     // bleibt die Gruppen-Zusammenfassung bis zum naechsten Sweep unsichtbar.
     builder.Services.AddHostedService<TournamentGroupingBackfillService>();
+    builder.Services.AddHostedService<RepertoireCleanupBackfillService>();
 
     // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
     builder.Services.AddHttpClient<GithubActionsService>(client =>

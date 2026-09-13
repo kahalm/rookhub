@@ -90,6 +90,32 @@ public class ChessableProxyService
         return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
     }
 
+    /// <summary>
+    /// „Wahrheit" je oid für die Repertoire-Bereinigung: das PGN, das piratechess aus dem geteilten Linien-Cache für
+    /// genau diese Linie erzeugt (Repertoire-Modus "None"). Geht über den fetch-freien Parse — ohne mitgeschickte Inhalte
+    /// schreibt der nichts in den Cache. Nicht gecachte oids fehlen im Ergebnis. Verbindungsfehler WERFEN, damit der
+    /// Aufrufer es später erneut versucht, statt „nicht gecacht" anzunehmen.
+    /// </summary>
+    public async Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, CancellationToken ct = default)
+    {
+        var list = oids
+            .Where(o => int.TryParse(o, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (list.Count == 0) return result;
+        var entries = string.Join(",", list.Select(o => "{\"id\":" + o + ",\"name\":\"x\"}"));
+        var chapter = new ChessableIngestChapter("{\"list\":{\"name\":\"x\",\"title\":\"x\",\"data\":[" + entries + "]}}",
+            list.Select(_ => (string)null!).ToList(), list);
+        var parsed = await ParseCourseAsync("1", "None", new[] { chapter }, ct: ct);
+        foreach (var block in System.Text.RegularExpressions.Regex.Split(parsed.Pgn ?? string.Empty, @"(?=\[Event )"))
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(block, "\\[ChessableOid \"([^\"]+)\"\\]");
+            if (m.Success) result[m.Groups[1].Value] = block.Trim();
+        }
+        return result;
+    }
+
     /// <summary>Startet den tiefen Kurs-Abruf asynchron und liefert die JobId für das Polling.</summary>
     public async Task<ChessableCourseStartDto> StartCourseFetchAsync(string bearer, string bid, string mode, CancellationToken ct = default)
     {

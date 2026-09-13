@@ -362,6 +362,32 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AppendLive_CleansUpLegacyCopies_AndServesThePgnWithoutThem()
+    {
+        // Altbestand mit einer Kopie des alten Fehlers; der nächste Live-Append bereinigt die Datei gleich mit.
+        _db.AppUsers.Add(new AppUser { Id = 35, Username = "u35", PasswordHash = "x" });
+        var legacy = RepLine("2", "1. e4 e5 *") + "\n" + OidRepLine("2", "501", "1. e4 e5 *");
+        _db.Repertoires.Add(new Repertoire { Id = 350, UserId = 35, Name = "Alt", ChessableCourseId = "60005" });
+        _db.RepertoireFiles.Add(new RepertoireFile { Id = 351, RepertoireId = 350, FileName = "chessable-60005.pgn", PgnContent = legacy });
+        await _db.SaveChangesAsync();
+
+        var (imp, repId, _) = await _svc.AppendLiveAsync(35, "60005", OidRepLine("Neu", "502", "1. d4 d5 *"), "C", "repertoire");
+
+        Assert.Equal(1, imp);
+        var content = await RepContentAsync(repId);
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);   // nichts gelöscht
+        Assert.Contains("[RookHubHidden ", content);
+        var served = await _repertoires.GetCombinedPgnAsync(350, 35);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(served, @"\[Event ").Count);
+        Assert.Equal(new[] { "501", "502" }, (await _svc.GetImportedOidsAsync(35, "60005")).Oids.OrderBy(o => o));
+        Assert.Equal(RepertoirePgnCleanup.CurrentVersion, (await _db.RepertoireFiles.FindAsync(351))!.CleanupVersion);
+
+        // Dieselbe Linie ohne oid (Alt-Client) wird nicht wieder angehängt — auch nicht über die ausgeblendete Kopie.
+        var (imp2, _, _) = await _svc.AppendLiveAsync(35, "60005", RepLine("2", "1. e4 e5 *"), "C", "repertoire");
+        Assert.Equal(0, imp2);
+    }
+
+    [Fact]
     public async Task AppendLive_FileSizeCountsBytesNotCharacters()
     {
         // Das PGN traegt Kommentare in de/hr - ein Zeichenzaehler weist die Datei kleiner aus,

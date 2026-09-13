@@ -105,7 +105,7 @@ public class RepertoireLineSource
             foreach (var pgn in rep.Pgns)
             {
                 List<ParsedGame> games;
-                try { games = ParseGames(pgn); }
+                try { games = ParseGames(RepertoirePgnCleanup.WithoutHidden(pgn)); }   // ausgeblendete Altlasten nie mitzählen
                 catch { continue; } // kaputte Datei nicht alles kippen lassen
                 foreach (var game in games)
                 {
