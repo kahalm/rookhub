@@ -175,6 +175,47 @@ public class DeploymentConfigTests
     }
 
     /// <summary>
+    /// Der Healthcheck des api-Dienstes muss ein Werkzeug aufrufen, das das API-Image wirklich
+    /// installiert. Das Image baut auf <c>aspnet</c> (Debian) und bringt per <c>apt-get install</c>
+    /// nur <c>curl</c> mit — ein <c>wget</c>-Healthcheck scheitert dort bei JEDEM Versuch, der
+    /// Container gilt nie als gesund, und alles, was per <c>service_healthy</c> auf ihn wartet,
+    /// startet nicht.
+    ///
+    /// <para>So geschehen im E2E-Stack: sein Healthcheck rief <c>wget</c> auf, Dev und Prod laengst
+    /// <c>curl</c>. Sichtbar wurde es erst, nachdem der Datenbank-Fehler davor behoben war
+    /// („dependency failed to start: container e2e-api is unhealthy"). Die <c>wget</c>-Healthchecks
+    /// der Frontend- und Crawler-Dienste sind davon nicht betroffen — deren Alpine-Images haben es.</para>
+    /// </summary>
+    [Theory]
+    [InlineData("compose.vpn.yml")]
+    [InlineData("compose.dev.yml")]
+    [InlineData("compose.dev.vpn.yml")]
+    [InlineData("compose.e2e.yml")]
+    [InlineData("compose.yml.example")]
+    [InlineData("compose.vpn.example")]
+    public void ApiHealthcheck_UsesAToolTheImageInstalls(string file)
+    {
+        var api = ServiceBlock(ReadRepoFile(file), "api");
+        var werkzeug = Regex.Match(api, "\"CMD-SHELL\",\\s*\"(\\S+)");
+        Assert.True(werkzeug.Success, $"{file}: kein CMD-SHELL-Healthcheck im api-Dienst gefunden");
+
+        var dockerfile = ReadRepoFile("src/api/RookHub.Api/Dockerfile");
+        var tool = werkzeug.Groups[1].Value;
+        Assert.True(Regex.IsMatch(dockerfile, $@"apt-get install[^&]*\b{Regex.Escape(tool)}\b"),
+            $"{file}: der api-Healthcheck ruft '{tool}' auf, das API-Image installiert es aber nicht.");
+    }
+
+    /// <summary>Auch der E2E-Stack reicht einen Verschluesselungsschluessel durch. Ohne ihn werfen
+    /// Analyse-Pumpe und Auftrags-Worker bei jedem Durchlauf „Encryption:Key not configured" — die
+    /// API bleibt gesund, aber das Log, in dem man einen echten E2E-Fehler suchen muss, ist voll davon.</summary>
+    [Fact]
+    public void E2eCompose_PassesAnEncryptionKey()
+    {
+        Assert.Contains("Encryption__Key: ${ENCRYPTION_KEY:?", ReadRepoFile("compose.e2e.yml"));
+        Assert.Matches(@"(?m)^ENCRYPTION_KEY=\S+", ReadRepoFile(".env.e2e"));
+    }
+
+    /// <summary>
     /// <c>init-db.sh</c> darf NICHT ausfuehrbar sein. Das offizielle MariaDB-Image FUEHRT eine
     /// ausfuehrbare <c>.sh</c> in <c>docker-entrypoint-initdb.d</c> als eigenen Prozess AUS und
     /// liest nur eine nicht ausfuehrbare per <c>.</c> ein — und nur eingelesen kennt das Skript die

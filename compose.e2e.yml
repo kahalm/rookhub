@@ -48,13 +48,17 @@ services:
       Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
+      # Ohne Schluessel werfen die Hintergrunddienste (Analyse-Pumpe, Auftrags-Worker) bei JEDEM
+      # Durchlauf „Encryption:Key not configured" — die API bleibt zwar gesund, das Log ist aber
+      # unlesbar. Dev und Prod verlangen den Schluessel mit demselben Startschutz.
+      Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein}
       Crawler__BaseUrl: http://localhost:9999
       Crawler__ApiKey: dummy
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: Development
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 20
