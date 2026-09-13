@@ -6,6 +6,7 @@
 # und raeumt alles auf. Exit-Code = Playwright Exit-Code.
 #
 # Usage:  bash scripts/e2e.sh
+#         API_PORT=15099 FRONTEND_PORT=18099 bash scripts/e2e.sh   (Ports belegt)
 ###############################################################################
 set -euo pipefail
 
@@ -14,7 +15,15 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/compose.e2e.yml"
 ENV_FILE="$PROJECT_ROOT/.env.e2e"
 PROJECT_NAME="rookhub-e2e"
-FRONTEND_URL="http://localhost:8086"
+# Ports wie compose: Shell-Variable vor .env.e2e. Playwright (baseURL), global-setup und die
+# Auth-Fixture (API) bekommen dieselben Werte — ein ueberschriebener Port wirkt damit ueberall.
+env_port() { grep -E "^$1=" "$ENV_FILE" | cut -d= -f2; }
+FRONTEND_PORT="${FRONTEND_PORT:-$(env_port FRONTEND_PORT)}"
+API_PORT="${API_PORT:-$(env_port API_PORT)}"
+export FRONTEND_PORT API_PORT
+FRONTEND_URL="http://localhost:${FRONTEND_PORT}"
+export E2E_BASE_URL="${E2E_BASE_URL:-$FRONTEND_URL}"
+export E2E_API_URL="${E2E_API_URL:-http://localhost:${API_PORT}}"
 WAIT_TIMEOUT=180  # seconds
 
 # ── Cleanup function (always runs on EXIT) ────────────────────────────────

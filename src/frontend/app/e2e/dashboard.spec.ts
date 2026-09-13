@@ -24,14 +24,15 @@ test.describe('Dashboard', () => {
     await expect(page.locator('h1')).toContainText(`Welcome, ${username}`, { timeout: 10_000 });
   });
 
-  test('shows dashboard cards (Repertoires, Tournaments, Friends, Puzzles)', async ({ page }) => {
+  test('shows the default training tiles (Puzzles, Guess the moves, Training Goals)', async ({ page }) => {
     await loginPage(page);
-    await expect(page.locator('mat-card').first()).toBeVisible({ timeout: 10_000 });
 
-    const pageText = await page.locator('body').textContent();
-    expect(pageText).toMatch(/Repertoires/i);
-    expect(pageText).toMatch(/Friends/i);
-    expect(pageText).toMatch(/Puzzles/i);
+    // Kuratierter Standard (DEFAULT_VISIBLE im DashboardComponent): sichtbar ist nur der
+    // Trainings-Kern; Repertoires, Freunde und Bestenlisten schaltet man ueber „Anpassen" zu.
+    const titles = page.locator('mat-card-title');
+    await expect(titles.filter({ hasText: /^Puzzles$/ })).toBeVisible({ timeout: 10_000 });
+    await expect(titles.filter({ hasText: /^Guess the moves$/ })).toBeVisible();
+    await expect(titles.filter({ hasText: /^Training Goals$/ })).toBeVisible();
   });
 
   test('navigation to /puzzles works', async ({ page }) => {
@@ -42,11 +43,11 @@ test.describe('Dashboard', () => {
     await expect(page).toHaveURL(/\/puzzles/);
   });
 
-  test('navigation to /friends works', async ({ page }) => {
+  test('navigation to /training-goals works', async ({ page }) => {
     await loginPage(page);
 
-    await page.getByRole('button', { name: /Manage Friends/i }).click();
-    await page.waitForURL('**/friends', { timeout: 10_000 });
-    await expect(page).toHaveURL(/\/friends/);
+    await page.getByRole('button', { name: /Open goals/i }).click();
+    await page.waitForURL('**/training-goals', { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/training-goals/);
   });
 });

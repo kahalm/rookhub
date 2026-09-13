@@ -7,7 +7,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 
 describe('PuzzleStatusCardComponent', () => {
-  it('creates (template AOT-compiles + DI resolves)', async () => {
+  async function setup() {
     await TestBed.configureTestingModule({
       imports: [PuzzleStatusCardComponent],
       providers: [
@@ -18,7 +18,24 @@ describe('PuzzleStatusCardComponent', () => {
         provideTranslateService({ fallbackLang: 'en' }),
       ],
     }).compileComponents();
-    const fixture = TestBed.createComponent(PuzzleStatusCardComponent);
+    return TestBed.createComponent(PuzzleStatusCardComponent);
+  }
+
+  it('creates (template AOT-compiles + DI resolves)', async () => {
+    const fixture = await setup();
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  it('exposes the solver state as data-state for the E2E specs', async () => {
+    const fixture = await setup();
+    const card = () => fixture.nativeElement.querySelector('.psc-card') as HTMLElement;
+
+    fixture.componentRef.setInput('state', 'AWAITING_USER_MOVE');
+    fixture.detectChanges();
+    expect(card().getAttribute('data-state')).toBe('AWAITING_USER_MOVE');
+
+    fixture.componentRef.setInput('state', 'SOLVED');
+    fixture.detectChanges();
+    expect(card().getAttribute('data-state')).toBe('SOLVED');
   });
 });

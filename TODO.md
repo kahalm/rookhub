@@ -8,6 +8,20 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Puzzle mit ungueltiger Zugfolge friert den Solver still ein (2026-09-13)
+
+Gefunden im E2E-Lauf: sechs der zehn Seed-Puzzles (`e2e/fixtures/test-puzzles.csv`) trugen Zuege,
+die zu ihrer FEN nicht passen — der Admin-CSV-Import (`POST /api/admin/puzzles/import`) hat sie
+ohne Widerspruch angenommen, und `GET /api/puzzles/random` lieferte eines davon aus (in 0.475.13
+ersetzt). Der Solver spielt den Setup-Zug in einem `setTimeout` (`BasePuzzleSolver.setupSolver`);
+chess.js wirft dort `Invalid move`, und die Karte bleibt fuer immer auf „Watch the opponent's
+move…" — keine Fehlermeldung, kein Weiter-Knopf. Echte Lichess-Puzzles sind geprueft, aber jeder
+Import-Weg ohne Pruefung kann so etwas einschleusen. Zwei Stellen:
+
+* **Import**: Zugfolge gegen die FEN nachspielen und ungueltige Zeilen verwerfen (mit Zaehler in
+  der Antwort).
+* **Solver**: den Wurf im Setup-Zug fangen und in den `ERROR`-Zustand gehen, statt haengen zu bleiben.
+
 ## [~] Kommentare mehrsprachig — GEBAUT in 0.472.0/0.472.1, zwei Reste (2026-09-11)
 
 Umgesetzt: Zerlegung (`CommentSplit`), Ablage (`CommentSets`/`CommentTexts`), Umschalten am Brett,

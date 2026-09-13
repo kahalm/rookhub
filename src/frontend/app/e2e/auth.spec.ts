@@ -75,9 +75,9 @@ test.describe('Auth', () => {
     await authedPage.goto('/dashboard');
     await authedPage.waitForURL('**/dashboard', { timeout: 10_000 });
 
-    // Open user menu (account_circle button)
-    const userMenuBtn = authedPage.locator('button').filter({ has: authedPage.locator('mat-icon:text("account_circle")') });
-    await userMenuBtn.click();
+    // Navbar: EIN Menue-Knopf, das Konto ist ein Untermenue darin (Menue → Konto → Abmelden)
+    await authedPage.getByRole('button', { name: 'Menu', exact: true }).click();
+    await authedPage.getByRole('menuitem', { name: /account|konto/i }).click();
 
     // Click logout
     await authedPage.getByRole('menuitem', { name: /logout|abmelden/i }).click();

@@ -68,7 +68,9 @@ const CK = {
     MatCardModule, TranslatePipe, PuzzleYourTurnComponent, ReviewNavComponent,
   ],
   template: `
-    <mat-card class="psc-card">
+    <!-- data-state: fester Halt fuer die E2E-Specs — der sichtbare Statustext haengt an Modus
+         und Visualisierungsstufe (im Wartezustand steht er gar nicht in der Karte). -->
+    <mat-card class="psc-card" [attr.data-state]="state">
       <mat-card-content>
         @if (fullGameReview) {
           <div class="psc-center">

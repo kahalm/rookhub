@@ -516,6 +516,8 @@ try
 
     // M-11: Rate limiting for auth endpoints
     // S-6: Global rate limiting for all endpoints
+    // Faktor auf ALLE Deckel unten; setzt nur der E2E-Stack (siehe RateLimitScale).
+    var permitScale = RookHub.Api.Services.RateLimitScale.FromConfig(builder.Configuration);
     builder.Services.AddRateLimiter(options =>
     {
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
@@ -523,7 +525,7 @@ try
                 partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 100,
+                    PermitLimit = 100 * permitScale,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
@@ -540,8 +542,8 @@ try
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 });
-        options.AddPolicy("auth", ctx => PerIpFixedWindow(ctx, 10));
-        options.AddPolicy("anonymous-puzzle", ctx => PerIpFixedWindow(ctx, 30));
+        options.AddPolicy("auth", ctx => PerIpFixedWindow(ctx, 10 * permitScale));
+        options.AddPolicy("anonymous-puzzle", ctx => PerIpFixedWindow(ctx, 30 * permitScale));
         // Community-Review-Flags (flag-hints): jeder eingeloggte User darf setzen/aufheben — aber
         // gedrosselt PRO USER, damit niemand per Id-Iteration den Admin-Review-Bestand des ganzen
         // Katalogs umflaggt (der globale 100/min-IP-Limiter erlaubte ~6000 Flags/h).
@@ -551,7 +553,7 @@ try
                     ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 10,
+                    PermitLimit = 10 * permitScale,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
@@ -565,14 +567,14 @@ try
                     ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 30,
+                    PermitLimit = 30 * permitScale,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
         // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.
-        options.AddPolicy("anonymous-tournament", ctx => PerIpFixedWindow(ctx, 60));
+        options.AddPolicy("anonymous-tournament", ctx => PerIpFixedWindow(ctx, 60 * permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 

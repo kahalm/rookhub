@@ -231,6 +231,37 @@ public class DeploymentConfigTests
     /// checkt den Modus aus dem Git-Index aus.</para>
     /// </summary>
     [Fact]
+    public void OgPreviewLocation_FallsBackToTheSpaOnRateLimit()
+    {
+        // Die Link-Vorschau-Location reicht Seitenaufrufe (/puzzles, /g/, /t/) an den OG-Renderer
+        // der API. Antwortet der mit einem Fehler, muss nginx die normale SPA ausliefern — sonst steht
+        // der Nutzer vor einer weissen Seite. 429 (Limiter der API je IP) war der fehlende Fall: im
+        // E2E-Lauf bekam ein Test statt der App die Absage als Dokument.
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles\)\(/\|\$\) \{(?<body>.*?)\n    \}",
+            RegexOptions.Singleline);
+        Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
+        var body = og.Groups["body"].Value;
+
+        Assert.Contains("proxy_intercept_errors on;", body);
+        var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");
+        Assert.True(errorPage.Success, "error_page -> @og_fallback fehlt");
+        var codes = errorPage.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var code in new[] { "429", "500", "502", "503", "504" })
+            Assert.Contains(code, codes);
+    }
+
+    [Fact]
+    public void RateLimitScale_IsRaisedOnlyInTheE2eStack()
+    {
+        // Der Faktor lockert JEDEN Deckel des Rate-Limiters. Im E2E-Stack noetig (eine Adresse
+        // faehrt die ganze Suite), in jeder anderen Umgebung ein offenes Scheunentor.
+        Assert.Contains("RateLimiting__PermitScale", ReadRepoFile("compose.e2e.yml"));
+        foreach (var file in new[] { "compose.yml.example", "compose.vpn.example", "compose.vpn.yml", "compose.dev.yml", "compose.dev.vpn.yml" })
+            Assert.DoesNotContain("PermitScale", ReadRepoFile(file));
+    }
+
+    [Fact]
     public void InitDbScript_IsSourcedNotExecuted()
     {
         var script = ReadRepoFile("init-db.sh");

@@ -57,6 +57,10 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: Development
+      # Die ganze Suite faehrt von EINER Adresse — mit dem normalen Deckel (100 Anfragen je Minute
+      # je IP) lehnte die API mitten im Lauf ab, und welcher Test daran scheiterte, war Zufall.
+      # Nur hier gesetzt; DeploymentConfigTests haelt die uebrigen Compose-Dateien davon frei.
+      RateLimiting__PermitScale: "20"
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
       interval: 5s

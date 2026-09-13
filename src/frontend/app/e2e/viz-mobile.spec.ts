@@ -1,4 +1,5 @@
 import { test as base, expect, Page, Locator } from '@playwright/test';
+import { expectState, seedSolveMode, statusCard } from './fixtures/solver';
 
 const test = base;
 
@@ -17,6 +18,48 @@ async function mockPuzzleApi(page: Page, puzzle: object) {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(puzzle) }));
   await page.route('**/api/puzzles/*/attempt**', r => r.fulfill({ status: 401 }));
   await page.route('**/api/puzzles/stats**', r => r.fulfill({ status: 401 }));
+}
+
+/**
+ * Visualisierungsstufe vorbelegen. Die gemerkte Spielweise muss dazu passen, sonst ueberstimmt
+ * sie die Stufe (SolveModeService.levelFor): „easy" ist immer Stufe 0, „training" mindestens 1.
+ */
+async function useVisualization(page: Page, level: number) {
+  await seedSolveMode(page, level > 0 ? 'training' : 'easy');
+  await page.addInitScript((lvl: number) => {
+    localStorage.setItem('rookhub_visualization', String(lvl));
+  }, level);
+}
+
+async function useStockfishDepth(page: Page, depth: number) {
+  await page.addInitScript((d: number) => {
+    localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: d }));
+  }, depth);
+}
+
+/** Die Leiste unter dem Brett (Am-Zug, Countdown, Auge). Sie steht ZWEIMAL im DOM — die Kopie
+ *  in der Info-Spalte ist nur im App-Vollbild sichtbar. */
+function hintBar(page: Page): Locator {
+  return page.locator('.board-hint-slot--board .board-hint');
+}
+
+/** ⋮-Menue → Einstellungen; liefert die Auswahl der Visualisierungsstufe im Dialog. */
+async function openVisualizationSetting(page: Page): Promise<Locator> {
+  await page.locator('app-puzzle-action-bar').getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Settings/ }).click();
+  const select = page.locator('mat-dialog-container .psd-row')
+    .filter({ hasText: 'Visualization' })
+    .filter({ has: page.locator('mat-select') })
+    .locator('mat-select');
+  await expect(select).toBeVisible();
+  return select;
+}
+
+async function chooseVisualization(page: Page, select: Locator, levelName: string) {
+  await select.click();
+  await page.getByRole('option', { name: levelName, exact: true }).click();
+  await page.locator('mat-dialog-container').getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.locator('mat-dialog-container')).toHaveCount(0);
 }
 
 function squareCenter(boardWidth: number, square: string, orientation: 'white' | 'black' = 'white') {
@@ -45,143 +88,125 @@ async function makeMove(page: Page, board: Locator, from: string, to: string, or
 test.describe('Visualization Mobile', () => {
   test.use({ viewport: MOBILE_VIEWPORT });
 
-  test('viz slider changes level and persists in localStorage', async ({ page }) => {
+  test('settings dialog changes the visualization level and persists it', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
+    await seedSolveMode(page, 'training');
     await page.goto('/puzzles');
 
-    const board = page.locator('cg-board');
-    await expect(board).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('cg-board')).toBeVisible({ timeout: 15_000 });
+    await expectState(page, 'AWAITING_USER_MOVE');
 
-    // Open settings gear
-    await page.locator('.settings-gear').click();
+    // Ohne gespeicherte Stufe gilt die Vorgabe 1 (Blindfold)
+    const select = await openVisualizationSetting(page);
+    await expect(select).toContainText('Blindfold');
 
-    // Slider should be visible
-    const slider = page.locator('.viz-slider input[type="range"]');
-    await expect(slider).toBeVisible({ timeout: 5_000 });
+    await chooseVisualization(page, select, 'Checker');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('rookhub_visualization'))).toBe('2');
+    // Der Wechsel startet das Puzzle neu — mit Stufe 2 laeuft der Countdown zum Verdecken
+    await expect(hintBar(page).locator('.board-hint-countdown')).toContainText('Pieces disappear in', { timeout: 5_000 });
 
-    // Default level should be 1 (from preferences default)
-    await expect(slider).toHaveValue('1');
-
-    // Change to level 0 (Normal)
-    await slider.fill('0');
-    await expect(page.locator('.viz-level-desc')).toContainText('Normal');
-
-    // Change to level 2 (Checker)
-    await slider.fill('2');
-    await expect(page.locator('.viz-level-desc')).toContainText('Checker');
-
-    // Verify localStorage persisted
-    const vizValue = await page.evaluate(() => localStorage.getItem('rookhub_visualization'));
-    expect(vizValue).toBe('2');
+    // Stufe 0 zieht die gemerkte Spielweise auf „easy" mit, sonst widersprechen sich beide
+    await chooseVisualization(page, await openVisualizationSetting(page), 'Normal');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('rookhub_visualization'))).toBe('0');
+    await expect.poll(() => page.evaluate(() =>
+      JSON.parse(localStorage.getItem('rookhub_solve_modes') || '{}').puzzles?.mode)).toBe('easy');
   });
 
-  test('viz-card appears directly below board on mobile (not in info-section)', async ({ page }) => {
+  test('hint bar and status card stack below the board on mobile', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
-    // Set visualization level to 1 (Blindfold)
-    await page.addInitScript(() => {
-      localStorage.setItem('rookhub_visualization', '1');
-    });
+    await useVisualization(page, 1);
     await page.goto('/puzzles');
 
     const board = page.locator('cg-board');
     await expect(board).toBeVisible({ timeout: 15_000 });
-    // Wait for puzzle to start (AWAITING_USER_MOVE)
-    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+    await expectState(page, 'AWAITING_USER_MOVE');
 
-    // viz-card is in info-section (first child), which on mobile stacks below the board
-    const vizCard = page.locator('.info-section .viz-card');
-    await expect(vizCard).toBeVisible({ timeout: 5_000 });
+    const bar = hintBar(page);
+    await expect(bar).toBeVisible({ timeout: 5_000 });
+    // Stufe 1 (Blindspiel): das Auge deckt die Figuren kurz auf
+    await expect(bar.locator('.board-hint-show')).toBeVisible();
 
-    // On mobile (single column), viz-card should be below the board
+    // Einspaltig: Leiste und Statuskarte liegen unter dem Brett
     const boardBox = await board.boundingBox();
-    const vizCardBox = await vizCard.boundingBox();
+    const barBox = await bar.boundingBox();
+    const cardBox = await statusCard(page).boundingBox();
     expect(boardBox).toBeTruthy();
-    expect(vizCardBox).toBeTruthy();
-    expect(vizCardBox!.y).toBeGreaterThan(boardBox!.y + boardBox!.height - 5);
+    expect(barBox).toBeTruthy();
+    expect(cardBox).toBeTruthy();
+    const boardBottom = boardBox!.y + boardBox!.height - 5;
+    expect(barBox!.y).toBeGreaterThan(boardBottom);
+    expect(cardBox!.y).toBeGreaterThan(boardBottom);
   });
 
   test('level 2 countdown + viz-hidden class + show button', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
-    await page.addInitScript(() => {
-      localStorage.setItem('rookhub_visualization', '2');
-    });
+    await useVisualization(page, 2);
     await page.goto('/puzzles');
 
     const board = page.locator('cg-board');
     await expect(board).toBeVisible({ timeout: 15_000 });
-    // Wait for AWAITING_USER_MOVE (beginSolving triggers countdown)
-    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+    // AWAITING_USER_MOVE startet den Countdown (beginSolving)
+    await expectState(page, 'AWAITING_USER_MOVE');
 
-    // Countdown should be visible
-    const countdown = page.locator('.viz-countdown');
+    const countdown = hintBar(page).locator('.board-hint-countdown');
     await expect(countdown).toBeVisible({ timeout: 3_000 });
-    await expect(countdown).toContainText('Figuren verschwinden in');
+    await expect(countdown).toContainText('Pieces disappear in');
 
-    // Wait for countdown to finish (3s + buffer)
+    // Countdown (3 s) laeuft ab → Figuren verdeckt
     await expect(countdown).not.toBeVisible({ timeout: 6_000 });
-
-    // board-section should have viz-hidden class
-    const boardSection = page.locator('.board-section');
-    await expect(boardSection).toHaveClass(/viz-hidden/, { timeout: 2_000 });
+    await expect(page.locator('.board-section')).toHaveClass(/viz-hidden/, { timeout: 2_000 });
 
     // Show button should appear
-    const showBtn = page.locator('.viz-show-btn');
-    await expect(showBtn).toBeVisible({ timeout: 2_000 });
+    await expect(hintBar(page).locator('.board-hint-show')).toBeVisible({ timeout: 2_000 });
   });
 
   test('level 4 invisible: pieces hidden after countdown', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
-    await page.addInitScript(() => {
-      localStorage.setItem('rookhub_visualization', '4');
-    });
+    await useVisualization(page, 4);
     await page.goto('/puzzles');
 
     const board = page.locator('cg-board');
     await expect(board).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+    await expectState(page, 'AWAITING_USER_MOVE');
 
-    // Wait for countdown to finish (3s + buffer)
-    await expect(page.locator('.viz-countdown')).not.toBeVisible({ timeout: 6_000 });
+    // Erst auf das Verdecken warten — „Countdown nicht sichtbar" gilt auch, bevor er ueberhaupt kam
+    await expect(page.locator('.board-section')).toHaveClass(/viz-hidden/, { timeout: 8_000 });
 
-    // viz-hide-css style element should exist with opacity: 0
-    const vizCss = await page.evaluate(() => {
-      const el = document.getElementById('viz-hide-css');
-      return el ? el.textContent : null;
-    });
+    const vizCss = await page.evaluate(() => document.getElementById('viz-hide-css')?.textContent ?? null);
     expect(vizCss).toContain('opacity: 0');
 
-    // viz-card should show level description
-    await expect(page.locator('.viz-hint')).toContainText('Invisible');
+    // Die Figuren stehen noch auf dem Brett, sind aber unsichtbar
+    const opacity = await page.evaluate(() => {
+      const piece = document.querySelector('.board-section cg-board piece');
+      return piece ? getComputedStyle(piece).opacity : null;
+    });
+    expect(opacity).toBe('0');
   });
 
   test('pieces restored after puzzle solved', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
-    await page.addInitScript(() => {
-      localStorage.setItem('rookhub_visualization', '2');
-      localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: 1 }));
-    });
+    await useVisualization(page, 2);
+    await useStockfishDepth(page, 1);
     await page.goto('/puzzles');
 
     const board = page.locator('cg-board');
     await expect(board).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+    await expectState(page, 'AWAITING_USER_MOVE');
 
     // Wait for countdown to finish so pieces are hidden
-    await expect(page.locator('.viz-countdown')).not.toBeVisible({ timeout: 6_000 });
-    await expect(page.locator('.board-section')).toHaveClass(/viz-hidden/, { timeout: 2_000 });
+    await expect(page.locator('.board-section')).toHaveClass(/viz-hidden/, { timeout: 8_000 });
 
     // Solve the puzzle: correct move Qd1→h5 (visualization mode = click squares)
     await makeMove(page, board, 'd1', 'h5');
 
-    // Puzzle solved
-    await expect(page.locator('.status-text')).toContainText('Correct', { timeout: 10_000 });
+    await expectState(page, 'SOLVED');
+    await expect(statusCard(page)).toContainText('Correct');
 
     // viz-hidden should be gone (pieces restored)
     await expect(page.locator('.board-section')).not.toHaveClass(/viz-hidden/, { timeout: 3_000 });
 
     // viz-hide-css should be removed
-    const vizCssGone = await page.evaluate(() => !document.getElementById('viz-hide-css'));
-    expect(vizCssGone).toBe(true);
+    await expect.poll(() => page.evaluate(() => !document.getElementById('viz-hide-css'))).toBe(true);
   });
 
   test('viz mode: illegal 2nd click becomes new origin (selection not lost)', async ({ page }) => {
@@ -189,15 +214,13 @@ test.describe('Visualization Mobile', () => {
     // zurück → der naechste Klick startete ohne sichtbares Feedback wieder als orig.
     // Mit Fix wird der illegale 2. Klick selbst zum neuen Ausgangsfeld.
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
-    await page.addInitScript(() => {
-      localStorage.setItem('rookhub_visualization', '1');
-      localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: 1 }));
-    });
+    await useVisualization(page, 1);
+    await useStockfishDepth(page, 1);
     await page.goto('/puzzles');
 
     const board = page.locator('cg-board');
     await expect(board).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+    await expectState(page, 'AWAITING_USER_MOVE');
 
     // Click chain d1 → a3 (illegal) → h5 (illegal von a3) → d1 (illegal von h5) → h5 (legal von d1).
     // Ohne Fix: nach jedem illegalen 2.-Klick verschwindet die Auswahl, die Sequenz löst nichts aus.
@@ -212,24 +235,22 @@ test.describe('Visualization Mobile', () => {
     await page.waitForTimeout(100);
     await clickSquare(page, board, 'h5');
 
-    await expect(page.locator('.status-text')).toContainText('Correct', { timeout: 10_000 });
+    await expectState(page, 'SOLVED');
   });
 
   test('level 0 disables visualization entirely', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
-    await page.addInitScript(() => {
-      localStorage.setItem('rookhub_visualization', '0');
-    });
+    await useVisualization(page, 0);
     await page.goto('/puzzles');
 
     const board = page.locator('cg-board');
     await expect(board).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+    await expectState(page, 'AWAITING_USER_MOVE');
 
-    // No viz-card should be shown (level 0 = normal mode)
-    await expect(page.locator('.viz-card')).not.toBeVisible();
-
-    // No viz-hidden class on board-section
+    // Stufe 0 = normales Brett: Am-Zug-Anzeige statt Zugtext, kein Auge, nichts verdeckt
+    await expect(hintBar(page).locator('.board-hint-tomove')).toContainText('White to move');
+    await expect(hintBar(page).locator('.board-hint-show')).toHaveCount(0);
     await expect(page.locator('.board-section')).not.toHaveClass(/viz-hidden/);
+    expect(await page.evaluate(() => !document.getElementById('viz-hide-css'))).toBe(true);
   });
 });

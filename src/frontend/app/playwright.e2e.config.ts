@@ -1,6 +1,8 @@
 /**
  * Playwright config for the isolated E2E test stack (compose.e2e.yml).
- * Ports: Frontend 8086, API 5002 — no collision with dev stack.
+ * Default ports come from .env.e2e (frontend 8086, API 5002). scripts/e2e.sh passes
+ * overridden ports on as E2E_BASE_URL / E2E_API_URL, e.g. on a host where the dev or prod
+ * stack already holds them:  API_PORT=15099 FRONTEND_PORT=18099 bash scripts/e2e.sh
  */
 import { defineConfig } from '@playwright/test';
 
@@ -15,7 +17,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: 'http://localhost:8086',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:8086',
     headless: true,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

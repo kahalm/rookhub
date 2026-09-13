@@ -1,9 +1,15 @@
 import { test as base, expect } from '@playwright/test';
+import { seedSolveMode, statusCard } from './fixtures/solver';
 
 // Puzzles are public (no auth needed)
 const test = base;
 
 test.describe('Puzzles', () => {
+  // Ohne gemerkte Spielweise legt sich beim ersten Einstieg ein modaler Dialog uebers Brett.
+  test.beforeEach(async ({ page }) => {
+    await seedSolveMode(page, 'easy');
+  });
+
   test('puzzle page loads without auth', async ({ page }) => {
     await page.goto('/puzzles');
     // Should not redirect to /login
@@ -26,13 +32,16 @@ test.describe('Puzzles', () => {
     await expect(page.locator('body')).toContainText('Endless Puzzle Mode');
   });
 
-  test('puzzle shows eval and reset buttons after loading', async ({ page }) => {
+  test('puzzle shows eval and give-up buttons after loading', async ({ page }) => {
     await page.goto('/puzzles');
 
-    // Board and status card should be visible
     const board = page.locator('app-puzzle-board, cg-board, .cg-wrap').first();
     await expect(board).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.status-card')).toBeVisible({ timeout: 5_000 });
+
+    // Reset und Mouseslip kommen erst nach dem ersten Zug dazu.
+    const card = statusCard(page);
+    await expect(card.getByRole('button', { name: /Show Eval/ })).toBeVisible({ timeout: 15_000 });
+    await expect(card.getByRole('button', { name: /Give Up/ })).toBeVisible();
   });
 
   test('endless mode starts after clicking start button', async ({ page }) => {
