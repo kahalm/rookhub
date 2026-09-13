@@ -74,4 +74,47 @@ public class ChessableProxyServiceTests
         Assert.Equal(2, result.LineCount);
         Assert.Contains("e4", result.Pgn);
     }
+
+    [Fact]
+    public async Task ParseCourse_ForwardsLineOids_CourseJson_AndComplete()
+    {
+        var handler = new CapturingHandler(
+            "{\"bid\":\"424242\",\"name\":\"C\",\"mode\":\"FirstKeyMove\",\"chapterCount\":1,\"lineCount\":1,\"pgn\":\"1. e4 *\"}");
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
+
+        var chapters = new List<RookHub.Api.DTOs.ChessableIngestChapter>
+        {
+            new("{\"list\":{}}", new List<string> { null! }, new List<string> { "11" })
+        };
+        await proxy.ParseCourseAsync("424242", "FirstKeyMove", chapters, courseJson: "{\"course\":{}}", complete: true);
+
+        Assert.Contains("\"lineOids\":[\"11\"]", handler.Body);
+        Assert.Contains("\"lines\":[null]", handler.Body);   // null = Inhalt kommt aus dem geteilten Cache
+        Assert.Contains("\"complete\":true", handler.Body);
+        Assert.Contains("courseJson", handler.Body);
+    }
+
+    [Fact]
+    public async Task GetCachedLineOids_PostsToLinesCached_AndReturnsTheAnswer()
+    {
+        var handler = new CapturingHandler("{\"oids\":[\"11\"]}");
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
+
+        var cached = await proxy.GetCachedLineOidsAsync(new[] { "11", "12" });
+
+        Assert.Equal("/api/chessable/direct/lines/cached", handler.Path);
+        Assert.Contains("\"oids\":[\"11\",\"12\"]", handler.Body);
+        Assert.Equal(new[] { "11" }, cached);
+    }
+
+    [Fact]
+    public async Task GetCachedLineOids_ProxyDown_ReturnsEmpty_ButLogsWarning()
+    {
+        var log = new CapturingLogger<ChessableProxyService>();
+        var proxy = new ChessableProxyService(
+            new HttpClient(new ThrowingHandler()) { BaseAddress = new Uri("http://pc:8080") }, log);
+
+        Assert.Empty(await proxy.GetCachedLineOidsAsync(new[] { "11" }));
+        Assert.Contains(log.Events, e => e.Message.Contains("Linien-Cache"));
+    }
 }

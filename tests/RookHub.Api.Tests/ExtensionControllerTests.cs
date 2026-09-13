@@ -354,6 +354,56 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ChessableIngestChunk_LineOidsCountMismatch_ReturnsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        var chapter = new ChessableIngestChapter("{\"list\":{\"data\":[]}}", new List<string> { "{\"game\":{}}" }, new List<string> { "1", "2" });
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-oids", "424242", "book", "Course", chapter, false), default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task ChessableIngestLive_LineWithoutContentAndWithoutOids_ReturnsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        var chapter = new ChessableIngestChapter("{\"list\":{\"data\":[]}}", new List<string> { null! });
+        var res = await _controller.ChessableIngestLive(
+            new ChessableLiveIngestRequest("424242", "repertoire", "Course", new List<ChessableIngestChapter> { chapter }), default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Theory]
+    [InlineData("12a")]
+    [InlineData("0")]
+    [InlineData("")]
+    public async Task ChessableCachedLines_InvalidOid_ReturnsBadRequest(string oid)
+    {
+        SetUser(7, scope: "extension");
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11", oid }), default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task ChessableCachedLines_TooManyOids_ReturnsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        var oids = Enumerable.Range(1, 10001).Select(i => i.ToString()).ToList();
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(oids), default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task ChessableCachedLines_PiratechessUnreachable_ReturnsEmptyList()
+    {
+        // Weich: ohne Cache-Auskunft holt die Extension eben alle Linien selbst — kein Fehler für den Nutzer.
+        SetUser(7, scope: "extension");
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11" }), default);
+        var dto = Assert.IsType<ChessableCachedLinesDto>(Assert.IsType<OkObjectResult>(res).Value);
+        Assert.Empty(dto.Oids);
+    }
+
+    [Fact]
     public async Task ChessableIngestChunk_InvalidBid_ReturnsBadRequest()
     {
         SetUser(7, scope: "extension");

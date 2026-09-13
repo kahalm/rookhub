@@ -61,14 +61,42 @@ public class ExtensionController : BaseApiController
 
     private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
 
+    /// <summary>Obergrenze einer Linien-Cache-Abfrage (dieselbe wie bei piratechess).</summary>
+    private const int MaxCachedLineLookup = 10000;
+
+    private static bool IsValidOid(string? oid)
+        => int.TryParse(oid, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
+
+    /// <summary>Form der <c>LineOids</c> prüfen — dieselben Regeln wie piratechess, aber hier mit klarer Meldung
+    /// statt eines durchgereichten 400. <c>null</c> = in Ordnung.</summary>
+    private static string? ValidateLineOids(IEnumerable<ChessableIngestChapter> chapters)
+    {
+        foreach (var ch in chapters)
+        {
+            var lines = ch.Lines ?? new List<string>();
+            if (ch.LineOids is null)
+            {
+                if (lines.Any(string.IsNullOrEmpty))
+                    return "A line without content needs lineOids (it is filled from the shared cache).";
+                continue;
+            }
+            if (ch.LineOids.Count != lines.Count)
+                return "lineOids must have exactly one entry per line.";
+            if (!ch.LineOids.All(IsValidOid))
+                return "Invalid oid in lineOids.";
+        }
+        return null;
+    }
+
     private async Task<IActionResult> ParseAndImportAsync(
-        int userId, string bid, string target, string? courseName, List<ChessableIngestChapter> chapters, CancellationToken ct)
+        int userId, string bid, string target, string? courseName, List<ChessableIngestChapter> chapters, CancellationToken ct,
+        string? courseJson = null, bool complete = false)
     {
         var mode = target == "book" ? "FirstKeyMove" : "None";
         ChessableCourseDataDto parsed;
         try
         {
-            parsed = await _chessableProxy.ParseCourseAsync(bid, mode, chapters, ct);
+            parsed = await _chessableProxy.ParseCourseAsync(bid, mode, chapters, courseJson, complete, ct);
         }
         catch (ChessableProxyException ex)
         {
@@ -225,6 +253,8 @@ public class ExtensionController : BaseApiController
         var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
         if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
             return BadRequest(new { message = "No captured lines." });
+        if (ValidateLineOids(chapters) is { } shapeError)
+            return BadRequest(new { message = shapeError });
 
         var target = dto.Target == "book" ? "book" : "repertoire";
         return await ParseAndImportAsync(GetUserId(), dto.Bid, target, dto.CourseName, chapters, ct);
@@ -342,6 +372,25 @@ public class ExtensionController : BaseApiController
     }
 
     /// <summary>
+    /// Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
+    /// überspringt beim „Kurs holen" für diese Linien den Chessable-Abruf und schickt beim Import nur die oid —
+    /// den Inhalt setzt piratechess ein. Nur die Existenz, nie der Inhalt. piratechess nicht erreichbar →
+    /// leere Liste (die Extension holt dann eben alle Linien selbst).
+    /// </summary>
+    [HttpPost("chessable/cached-lines")]
+    public async Task<IActionResult> ChessableCachedLines([FromBody] ChessableCachedLinesRequest dto, CancellationToken ct)
+    {
+        var oids = dto?.Oids ?? new List<string>();
+        if (oids.Count > MaxCachedLineLookup)
+            return BadRequest(new { message = $"At most {MaxCachedLineLookup} oids per request." });
+        if (!oids.All(IsValidOid))
+            return BadRequest(new { message = "Invalid oid." });
+        var distinct = oids.Distinct().ToList();
+        var cached = await _chessableProxy.GetCachedLineOidsAsync(distinct, ct);
+        return Ok(new ChessableCachedLinesDto(distinct.Where(cached.Contains).ToList()));
+    }
+
+    /// <summary>
     /// Kapitelweiser Browser-Import: die Extension streamt einen großen Kurs Kapitel für Kapitel (bounded
     /// pro Request) statt in einem einzigen (potenziell riesigen) Ingest-Body. Der Server sammelt die rohen
     /// Kapitel je <c>SessionId</c> (<see cref="ChessableIngestSessionStore"/>) und parst/importiert erst
@@ -363,6 +412,11 @@ public class ExtensionController : BaseApiController
         ChessableIngestSessionStore.Session? session = null;
         if (dto.Chapter is { } chapter && (chapter.Lines?.Count ?? 0) > 0)
         {
+            if (ValidateLineOids(new[] { chapter }) is { } shapeError)
+            {
+                _ingestSessions.Discard(userId, dto.SessionId);
+                return BadRequest(new { message = shapeError });
+            }
             var (s, error) = _ingestSessions.AddChapter(userId, dto.SessionId, dto.Bid, target, dto.CourseName, chapter);
             if (error != null)
             {
@@ -383,7 +437,8 @@ public class ExtensionController : BaseApiController
         if (taken == null || taken.Chapters.Count == 0)
             return BadRequest(new { message = "No captured lines in session." });
 
-        return await ParseAndImportAsync(userId, taken.Bid, taken.Target, taken.CourseName, taken.Chapters, ct);
+        return await ParseAndImportAsync(userId, taken.Bid, taken.Target, taken.CourseName, taken.Chapters, ct,
+            dto.CourseJson, dto.Complete);
     }
 
     /// <summary>
@@ -403,6 +458,8 @@ public class ExtensionController : BaseApiController
         var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
         if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
             return BadRequest(new { message = "No lines." });
+        if (ValidateLineOids(chapters) is { } shapeError)
+            return BadRequest(new { message = shapeError });
 
         var target = dto.Target == "book" ? "book" : "repertoire";
         var mode = target == "book" ? "FirstKeyMove" : "None";
@@ -410,7 +467,7 @@ public class ExtensionController : BaseApiController
         ChessableCourseDataDto parsed;
         try
         {
-            parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, mode, chapters, ct);
+            parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, mode, chapters, ct: ct);
         }
         catch (ChessableProxyException ex)
         {

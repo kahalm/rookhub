@@ -53,7 +53,11 @@ public record ChessableCourseDataDto(string Bid, string Name, string Mode, int C
 /// sie an den fetch-freien piratechess-Parser durch und importiert das PGN als Repertoire (<c>Target</c>
 /// "repertoire", Default) bzw. Buch/Kurs ("book"). Kein serverseitiger Chessable-Abruf/VPN.</summary>
 public record ChessableIngestRequest(string Bid, string? Target, string? CourseName, List<ChessableIngestChapter>? Chapters);
-public record ChessableIngestChapter(string? ChapterJson, List<string>? Lines);
+/// <remarks><c>LineOids</c> (seit RepCheck 1.57.0) trägt je Linie ihre Chessable-oid, parallel zu <c>Lines</c>:
+/// piratechess ordnet die Linien dann über die oid statt über ihre Position zu (vorher landete ein Teil der Linien
+/// eines Kapitels unter fremder oid). Eine Linie darf dann <c>null</c> sein — ihr Inhalt kommt aus dem geteilten
+/// Linien-Cache (siehe <see cref="ChessableCachedLinesRequest"/>). Ohne <c>LineOids</c> positionsbasiert wie bisher.</remarks>
+public record ChessableIngestChapter(string? ChapterJson, List<string>? Lines, List<string>? LineOids = null);
 
 /// <summary>Ergebnis eines Browser-Imports (analog zum Server-Import, aber synchron).</summary>
 public record ChessableIngestResultDto(
@@ -63,9 +67,17 @@ public record ChessableIngestResultDto(
 /// Kapitel für Kapitel (bounded pro Request); der Server sammelt sie je <c>SessionId</c> und importiert
 /// erst beim Chunk mit <c>Final=true</c> den GANZEN Kurs (korrekte Kapitel-/Round-Reihenfolge).
 /// <c>Bid</c>/<c>Target</c>/<c>CourseName</c> werden vom ersten Chunk übernommen. <c>SessionId</c> ist
-/// eine clientseitige GUID; Sessions sind pro (User, SessionId) isoliert.</summary>
+/// eine clientseitige GUID; Sessions sind pro (User, SessionId) isoliert.
+/// <c>CourseJson</c> (echte getCourse-Antwort) + <c>Complete</c> kommen mit dem FINALEN Chunk, wenn die Extension
+/// den Kurs vollständig geholt hat — piratechess legt ihn dann als Ganzes im geteilten Kurs-Cache ab.</summary>
 public record ChessableIngestChunkRequest(
-    string SessionId, string Bid, string? Target, string? CourseName, ChessableIngestChapter? Chapter, bool Final);
+    string SessionId, string Bid, string? Target, string? CourseName, ChessableIngestChapter? Chapter, bool Final,
+    string? CourseJson = null, bool Complete = false);
+
+/// <summary>Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
+/// überspringt dafür den Chessable-Abruf. Antwort: die gecachte Teilmenge — nur die Existenz, nie der Inhalt.</summary>
+public record ChessableCachedLinesRequest(List<string>? Oids);
+public record ChessableCachedLinesDto(List<string> Oids);
 
 /// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>
 public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines);

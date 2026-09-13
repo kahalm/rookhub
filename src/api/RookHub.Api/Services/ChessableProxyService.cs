@@ -71,14 +71,19 @@ public class ChessableProxyService
     /// Bearer/VPN). Für den Browser-Import („Über meinen Browser holen"). <paramref name="mode"/> wie bei
     /// <see cref="FetchCourseAsync"/> ("None"=Repertoire, "FirstKeyMove"=Buch).
     /// </summary>
+    /// <param name="courseJson">Echte getCourse-Antwort — nur zusammen mit <paramref name="complete"/> relevant.</param>
+    /// <param name="complete">Die Extension hat den Kurs vollständig geholt → piratechess darf ihn als Ganzes cachen.</param>
     public async Task<ChessableCourseDataDto> ParseCourseAsync(
-        string bid, string mode, IEnumerable<ChessableIngestChapter> chapters, CancellationToken ct = default)
+        string bid, string mode, IEnumerable<ChessableIngestChapter> chapters,
+        string? courseJson = null, bool complete = false, CancellationToken ct = default)
     {
         var payload = new
         {
             Bid = bid,
             Mode = mode,
-            Chapters = chapters.Select(c => new { c.ChapterJson, c.Lines }).ToList()
+            Chapters = chapters.Select(c => new { c.ChapterJson, c.Lines, c.LineOids }).ToList(),
+            CourseJson = courseJson,
+            Complete = complete,
         };
         var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/course/parse", payload, ct);
         await EnsureSuccessOrThrowAsync(response, ct);
@@ -135,6 +140,32 @@ public class ChessableProxyService
             return false;
         }
     }
+
+    /// <summary>Welche der oids liegen im geteilten Linien-Cache von piratechess (nur Existenz). Weich wie der
+    /// Kurs-Cache-Check: Fehler/unerreichbar → leere Menge (dann holt die Extension alle Linien selbst), aber
+    /// SICHTBAR geloggt.</summary>
+    public async Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default)
+    {
+        if (oids.Count == 0) return new HashSet<string>();
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/lines/cached", new { Oids = oids }, ct);
+            response.EnsureSuccessStatusCode();
+            var dto = await response.Content.ReadFromJsonAsync<CachedLinesDto>(JsonOpts, ct);
+            return new HashSet<string>(dto?.Oids ?? new List<string>());
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Chessable-Proxy: Linien-Cache-Abfrage für {Count} oids fehlgeschlagen — alle Linien werden geholt.", oids.Count);
+            return new HashSet<string>();
+        }
+    }
+
+    private sealed record CachedLinesDto(List<string>? Oids);
 
     /// <summary>Alle gecachten Kurs-Bids auf einmal (für die Kurslisten-Anreicherung mit „gecacht"-Flag).
     /// Fehler/unerreichbar → leeres Set (dann eben keine Flags, kein harter Fehler).</summary>
