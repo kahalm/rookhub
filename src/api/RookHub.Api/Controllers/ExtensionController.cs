@@ -241,7 +241,8 @@ public class ExtensionController : BaseApiController
     /// passiv) und schickt sie hier je Kapitel. RookHub lässt sie vom fetch-freien piratechess-Parser in
     /// PGN wandeln und importiert das Ergebnis als Repertoire bzw. Buch/Kurs — ganz ohne serverseitigen
     /// Chessable-Abruf/VPN (der Browser passiert Cloudflare als echte Session). <c>Target</c> "repertoire"
-    /// (Default) oder "book". Bei erneutem Senden desselben Kurses idempotent.
+    /// (Default) oder "book". Bei erneutem Senden desselben Kurses idempotent; in ein vorhandenes Repertoire wird
+    /// nur angehängt, nie ersetzt (ein Mitschnitt trägt meist nur einzelne Kapitel).
     /// </summary>
     [HttpPost("chessable/ingest")]
     [RequestSizeLimit(64_000_000)]

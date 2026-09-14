@@ -129,21 +129,63 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ImportPgnDirect_Repertoire_ReSend_ReplacesInPlace_NoDuplicate()
+    public async Task ImportPgnDirect_Repertoire_ReSend_SameRepertoire_NoDuplicate()
     {
         _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
         await _db.SaveChangesAsync();
 
-        var first = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 *", "My Course", "repertoire", 2);
+        var pgn = RepLineOid("A", "1. e4 e5 2. Nf3 *", "100");
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", pgn, "My Course", "repertoire", 1);
         var repId = first.ResultId;
+        var before = (await _db.RepertoireFiles.SingleAsync(f => f.RepertoireId == repId)).PgnContent;
 
-        // Erneutes „Über meinen Browser holen" desselben Kurses → dasselbe Repertoire in-place ersetzt.
-        var second = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 2. Nf3 Nc6 *", "My Course", "repertoire", 3);
+        // Erneutes „Über meinen Browser holen" desselben Kurses → dasselbe Repertoire, nichts doppelt.
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", pgn, "My Course", "repertoire", 1);
 
         Assert.Equal(repId, second.ResultId);                       // dieselbe Id (Fortschritt bleibt)
-        Assert.Equal(repId, second.TargetRepertoireId);             // in-place-Pfad genutzt
+        Assert.Equal(repId, second.TargetRepertoireId);
+        Assert.Equal(0, second.Imported);
+        Assert.Equal(1, second.Skipped);
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));  // kein Duplikat
-        Assert.Equal(1, await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == repId));
+        var file = await _db.RepertoireFiles.SingleAsync(f => f.RepertoireId == repId);
+        Assert.Equal(before, file.PgnContent);
+    }
+
+    /// <summary>
+    /// Regression (Prod, Repertoire 232 am 2026-08-12): „Mitschnitt importieren" schickt nur die gerade
+    /// mitgeschnittenen Linien. Bei einem schon vorhandenen Repertoire ersetzte der Browser-Import die ganze
+    /// Datei — dreimal hintereinander stand das Repertoire auf EINER Linie, alle übrigen Partien waren gelöscht.
+    /// Ein Browser-Import in ein vorhandenes Repertoire hängt jetzt an und löscht nie etwas, auch keine
+    /// ausgeblendeten Altlasten.
+    /// </summary>
+    [Fact]
+    public async Task ImportPgnDirect_Repertoire_PartialCaptureIntoExisting_AppendsAndKeepsEveryGame()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var hidden = "[Event \"Ch1\"]\n[White \"Kopie\"]\n[Black \"T\"]\n[Result \"*\"]\n[RookHubHidden \"Kopie von Partie 1\"]\n\n1. g3 d5 2. Bg2 *\n";
+        var full = RepLineOid("A", "1. e4 e5 2. Nf3 *", "100") + "\n"
+                 + RepLineOid("B", "1. d4 d5 2. c4 *", "101") + "\n"
+                 + RepLineOid("C", "1. c4 e5 2. Nc3 *", "102") + "\n"
+                 + hidden;
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", full, "My Course", "repertoire", 3);
+        var repId = first.ResultId;
+
+        // Mitschnitt: eine bekannte Linie (101) und eine neue (103).
+        var capture = RepLineOid("B", "1. d4 d5 2. c4 *", "101") + "\n" + RepLineOid("D", "1. Nf3 d5 2. g3 *", "103");
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", capture, "My Course", "repertoire", 2);
+
+        Assert.Equal(ChessableImportStatus.Completed, second.Status);
+        Assert.Equal(repId, second.ResultId);
+        Assert.Equal(1, second.Imported);
+        Assert.Equal(1, second.Skipped);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        var content = (await _db.RepertoireFiles.SingleAsync(f => f.RepertoireId == repId)).PgnContent;
+        foreach (var oid in new[] { "100", "101", "102", "103" })
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(content, $"\\[ChessableOid \"{oid}\"\\]"));
+        Assert.Contains("[RookHubHidden \"Kopie von Partie 1\"]", content);   // Altlast bleibt, ausgeblendet
+        Assert.Contains("1. g3 d5 2. Bg2", content);
     }
 
     // Buch-Puzzle-PGN mit Chessable-oid-Header (wie piratechess es ab v1.29.0 liefert).

@@ -647,8 +647,8 @@ public class ChessableImportService : ICourseReimporter
             StartedAt = DateTime.UtcNow,
         };
 
-        // Idempotenz Repertoire: erneutes „Über meinen Browser holen" desselben Kurses ersetzt das
-        // vorhandene Repertoire IN-PLACE (Id/Fortschritt bleiben) statt ein Duplikat anzulegen. Match wie
+        // Idempotenz Repertoire: erneutes „Über meinen Browser holen" desselben Kurses landet im VORHANDENEN
+        // Repertoire (Id/Fortschritt bleiben) statt ein Duplikat anzulegen — und hängt dort nur an. Match wie
         // bei BumpSiblingRepertoiresAsync über ChessableCourseId ODER den stabilen Dateinamen (das PGN des
         // Parsers trägt kein [Site]-Tag → ChessableCourseId wird beim Neuanlegen unten explizit gesetzt).
         if (target == "repertoire")
@@ -673,10 +673,23 @@ public class ChessableImportService : ICourseReimporter
 
         try
         {
-            if (target == "repertoire")
-                await ImportAsRepertoireAsync(import, pgn, name, ct);
-            else
+            if (target == "book")
                 await ImportAsBookAsync(import, pgn, name, ct);
+            else if (import.TargetRepertoireId is not null)
+            {
+                // Vorhandenes Repertoire: ANHÄNGEN, nie ersetzen. Der Browser liefert oft nur einen Teil des Kurses
+                // („Mitschnitt importieren" = die gerade durchgeklickten Kapitel), und das Ersetzen löschte alle übrigen
+                // Partien — auf Prod stand Repertoire 232 am 2026-08-12 dreimal hintereinander auf EINER Linie. Derselbe
+                // Weg wie der Live-Append: bekannte oids übersprungen, oid-lose Bestandslinien nachgetragen, Bereinigung
+                // inline. Ersetzt wird nur noch beim serverseitigen Neuabruf (RunAsync), der immer den ganzen Kurs liefert.
+                var (added, repId, _) = await AppendLiveAsync(userId, bid, pgn, name, target, ct);
+                import.ResultId = repId;
+                import.Imported = added;
+                import.Skipped = Math.Max(0, lineCount - added);
+                import.Invalid = 0;
+            }
+            else
+                await ImportAsRepertoireAsync(import, pgn, name, ct);
 
             // Kurs-Zuordnung (bid) explizit setzen, falls neu angelegt und noch leer (das Parser-PGN trägt
             // kein [Site]-Tag) → macht künftige Browser-Importe desselben Kurses idempotent (in-place).
