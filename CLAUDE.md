@@ -259,12 +259,15 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 > `/api/chessable/*` mit **404**, und die Import-Lanes sowie der naechtliche Kurslisten-Refresh
 > laufen gar nicht erst an. Der Weg ueber die **RepCheck-Extension** (`/api/extension/*`) bleibt
 > UNBERUEHRT — genau darum geht es: **auf PROD seit 2026-09-09 abgeschaltet**, alle sollen vorerst
-> die Extension benutzen. Der Menue-Eintrag `chessable` steht dort ohnehin schon auf `Admin`, die
-> Seite ist also auch ohne den Schalter nicht erreichbar; der Schalter schliesst die Endpunkte und
-> den Nachtlauf. **Die Seite `/chessable` selbst zeigt seit 0.478.0 nur noch den Hinweis auf die
-> Extension** (Links in beide Stores + kurze Begruendung) — kein Bearer-Formular, kein Bookmarklet,
-> keine Importliste, keine API-Aufrufe. Der Admin-Tab „Kurse von Usern holen" und das
-> Dashboard-Widget bleiben unveraendert.
+> die Extension benutzen. Der Schalter schliesst die Endpunkte und den Nachtlauf. **Die Seite
+> `/chessable` selbst zeigt seit 0.478.0 nur noch den Hinweis auf die Extension** (Links in beide
+> Stores + kurze Begruendung) — kein Bearer-Formular, kein Bookmarklet, keine Importliste, keine
+> API-Aufrufe. **Der Menue-Eintrag `chessable` steht auf PROD seit 2026-09-14 auf `Registered`**
+> (Zeile in `MenuItemSettings`, entspricht der Vorgabe aus `MenuRegistry`; vorher `Admin`, umgestellt
+> erst NACH dem Deploy von 0.478.0): jeder angemeldete Nutzer landet dort auf dem Hinweis. Wer den
+> alten Import-Bildschirm zurueckholt, stellt den Eintrag VORHER wieder auf `Admin` — sonst sehen
+> alle Nutzer ein Formular, dessen Endpunkte auf Prod 404 liefern. Der Admin-Tab „Kurse von Usern
+> holen" und das Dashboard-Widget bleiben unveraendert.
 
 RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `EncryptionService` → `ChessableCredentials.EncryptedBearer`). Alle Chessable-HTTP-Calls (curl-impersonate gegen Cloudflare) liegen im piratechess-Stack; `ChessableProxyService` reicht den Bearer pro Request an `POST /api/chessable/direct/*` durch und authentifiziert sich mit dem `X-Service-Key`-Header (`Chessable:ServiceKey` ↔ piratechess `Service:ApiKey`). Netzwerk: externes Docker-Netz `chessable-bridge` (von piratechess_docker bereitgestellt). **Admin-Download „im Namen eines Users"**: `ChessableImport.BearerUserId` (nullable) entkoppelt Bearer-Quelle von Besitzer — der Service lädt den Bearer von `BearerUserId ?? UserId`. Admin-Import setzt `UserId`=Admin (Repertoire + Notification beim Admin), `BearerUserId`=Ziel-User; piratechess ist stateless, der gespeicherte Bearer des Ziel-Users genügt.
 

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.478.2", date: "2026-09-14", changes: [
+    { en: "Documentation only: the developer notes now record that the Chessable menu entry is visible to every signed-in user on the live site, so everyone who opens it sees the hint about the RepCheck extension, and that it has to be restricted to admins again before the old import screen could ever come back.", de: "Nur Dokumentation: Die Entwicklernotizen halten jetzt fest, dass der Chessable-Menüpunkt auf der Live-Seite für alle angemeldeten Nutzer sichtbar ist — wer ihn öffnet, sieht den Hinweis auf die RepCheck-Erweiterung — und dass er wieder auf Admins beschränkt werden muss, bevor der alte Import-Bildschirm je zurückkäme." },
+  ] },
   { version: "0.478.1", date: "2026-09-14", changes: [
     { en: "Importing captured Chessable lines through the RepCheck extension could fail with error 413 for courses with long annotated lines. The web server in front of RookHub let requests through only up to 15 MB, while RookHub itself accepts up to 64 MB for these imports, so larger captures were turned away before they arrived. Browser imports from the extension now have their own limit of 64 MB.", de: "Das Importieren mitgeschnittener Chessable-Linien über die RepCheck-Erweiterung konnte bei Kursen mit langen kommentierten Linien mit Fehler 413 scheitern. Der Webserver vor RookHub ließ Anfragen nur bis 15 MB durch, obwohl RookHub für diese Importe bis 64 MB annimmt, und wies größere Mitschnitte ab, bevor sie ankamen. Browser-Importe aus der Erweiterung haben jetzt ein eigenes Limit von 64 MB." },
   ] },
