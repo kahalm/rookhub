@@ -14,7 +14,7 @@ import { timer, Subscription } from 'rxjs';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget, ChessableCourseInfo } from '../../chessable/chessable.service';
-import { CHESSABLE_LINES_PER_MIN } from '../../chessable/chessable.component';
+import { CHESSABLE_LINES_PER_MIN } from '../../chessable/chessable-progress.util';
 
 /**
  * Admin-Tab „Kurse von Usern holen": lädt im Namen eines Users (mit dessen Bearer) dessen

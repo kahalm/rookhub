@@ -1075,26 +1075,9 @@
     }
   },
   "chessable": {
-    "title": "Connect Chessable",
-    "intro": "Store your Chessable bearer once — RookHub uses it to fetch your courses through the piratechess API. The token is encrypted at rest and never shown in clear text.",
-    "bearerLabel": "Bearer token",
-    "save": "Save",
-    "saving": "Saving…",
-    "saved": "Token saved.",
-    "delete": "Delete token",
-    "deleted": "Token deleted.",
-    "test": "Test connection",
     "testing": "Testing…",
-    "loadingCourses": "Loading courses…",
-    "noToken": "No token stored yet.",
-    "currentToken": "Stored: {{masked}}",
     "testOk": "Connection ok. {{count}} courses for UID {{uid}}.",
-    "coursesTitle": "Your Chessable courses",
-    "noCourses": "No courses found.",
-    "error": "Error: {{message}}",
-    "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
-    "etaRemaining": "~{{min}} min left",
-    "importDuration": "Queue {{queue}} · Fetch {{fetch}}"
+    "etaRemaining": "~{{min}} min left"
   },
   "notifications": {
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",

@@ -1,8 +1,10 @@
 import { TranslateService } from '@ngx-translate/core';
 import { ChessableImport } from './chessable.service';
 import {
+  CHESSABLE_LINES_PER_MIN,
   effectiveTotalLines,
   estimateRemainingMinutes,
+  formatDuration,
   chessableStatusLabel,
   chessableQueueLabel,
   compareImportsByQueue,
@@ -75,5 +77,31 @@ describe('effectiveTotalLines / estimateRemainingMinutes (re-tested via util)', 
   it('prefers the exact total and computes ETA at 40 lines/min', () => {
     expect(effectiveTotalLines(82, 7, 36, 1000)).toBe(1000);
     expect(estimateRemainingMinutes(82, 7, 36, 1000)).toBe(23);
+  });
+
+  it('extrapolates total lines linearly when the exact total is not yet known', () => {
+    // 100 Zeilen in 2 von 10 Kapiteln → ~500 gesamt.
+    expect(effectiveTotalLines(100, 2, 10)).toBe(500);
+    expect(estimateRemainingMinutes(100, 2, 10)).toBe(Math.ceil(400 / CHESSABLE_LINES_PER_MIN));
+  });
+
+  it('returns 0 when neither exact nor estimable, or when already done', () => {
+    expect(effectiveTotalLines(0, 1, 10)).toBe(0);
+    expect(effectiveTotalLines(50, 2, 0)).toBe(0);
+    expect(estimateRemainingMinutes(100, 10, 10)).toBe(0);
+  });
+});
+
+describe('formatDuration', () => {
+  it('formats ms compactly as h/min/s', () => {
+    expect(formatDuration(0)).toBe('0 s');
+    expect(formatDuration(45_000)).toBe('45 s');
+    expect(formatDuration(90_000)).toBe('1 min');
+    expect(formatDuration(3_661_000)).toBe('1 h 1 min');
+  });
+
+  it('returns a dash for invalid/negative input', () => {
+    expect(formatDuration(-5)).toBe('—');
+    expect(formatDuration(NaN)).toBe('—');
   });
 });
