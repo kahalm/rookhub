@@ -1,20 +1,27 @@
 import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpRequest, HttpResponse } from '@angular/common/http';
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { connectivityInterceptor } from './connectivity.interceptor';
-import { ConnectivityService } from './connectivity.service';
+import { ConnectivityService, SHOW_DELAY_MS } from './connectivity.service';
 
 describe('connectivityInterceptor', () => {
   let connectivity: ConnectivityService;
+  let httpMock: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()]
     });
     connectivity = TestBed.inject(ConnectivityService);
+    httpMock = TestBed.inject(HttpTestingController);
   });
+
+  /** Der Banner erscheint erst, wenn auch die Gegenprobe (/api/menu) des Service scheitert. */
+  function failProbe(): void {
+    httpMock.expectOne('/api/menu').error(new ProgressEvent('error'));
+  }
 
   function run(req: HttpRequest<unknown>, next: HttpHandlerFn): void {
     TestBed.runInInjectionContext(() =>
@@ -26,9 +33,11 @@ describe('connectivityInterceptor', () => {
 
   it('marks the API unreachable on a status-0 error for /api requests (after the debounce)', fakeAsync(() => {
     run(new HttpRequest('GET', '/api/menu'), failNext);
-    tick(2500);   // Banner ist entprellt — erst nach der Karenzzeit sichtbar
+    failProbe();
+    tick(SHOW_DELAY_MS);   // Banner ist entprellt — erst nach der Karenzzeit sichtbar
     expect(connectivity.problem()).toBe('unreachable');
-    connectivity.reportApiSuccess();   // Recheck-Intervall stoppen (fakeAsync-Timer-Hygiene)
+    connectivity.reportApiSuccess();   // Ausblenden + Recheck-Intervall stoppen (fakeAsync-Timer-Hygiene)
+    flush();
   }));
 
   // PWA/TWA-Fall: mit aktivem ngsw kommt Status 0 NIE an — der SW synthetisiert bei
@@ -36,9 +45,11 @@ describe('connectivityInterceptor', () => {
   // Trigger bliebe das Verbindungs-Banner in der installierten App für immer stumm.
   it('marks the API unreachable on a service-worker-synthesized 504 for /api requests', fakeAsync(() => {
     run(new HttpRequest('GET', '/api/menu'), () => throwError(() => new HttpErrorResponse({ status: 504 })));
-    tick(2500);
+    failProbe();
+    tick(SHOW_DELAY_MS);
     expect(connectivity.problem()).toBe('unreachable');
     connectivity.reportApiSuccess();
+    flush();
   }));
 
   it('clears the unreachable state on the next successful /api response', () => {

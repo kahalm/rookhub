@@ -57,6 +57,21 @@ describe('retryInterceptor', () => {
     expect(succeeded).toBeTrue();
   }));
 
+  it('does NOT retry while the device is offline (the fallback must not wait for backoffs)', fakeAsync(() => {
+    const { next, getCalls } = makeNext([504, 200]);
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+    let errored = false;
+    try {
+      retryInterceptor(new HttpRequest('GET', '/api/x') as any, next)
+        .subscribe({ next: () => {}, error: () => (errored = true) });
+      tick(4000);
+    } finally {
+      delete (navigator as any).onLine;
+    }
+    expect(getCalls()).toBe(1);
+    expect(errored).toBeTrue();
+  }));
+
   it('does NOT retry a non-idempotent POST on 503 (no duplicate side effect)', fakeAsync(() => {
     const { next, getCalls } = makeNext([503, 200]);
     const req = new HttpRequest('POST', '/api/x', {});

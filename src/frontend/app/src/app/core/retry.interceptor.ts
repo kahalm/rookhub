@@ -19,8 +19,12 @@ export const retryInterceptor: HttpInterceptorFn = (req, next) => {
       const idempotent = req.method === 'GET' || req.method === 'HEAD';
       // Bisherige Versuchszahl steckt im X-Retry-Header (0 = Erstversuch).
       const attempt = Number(req.headers.get('X-Retry') ?? '0');
+      // Gerät offline: jede Wiederholung scheitert genauso, und die Backoffs (500 ms + 1 s + 2 s)
+      // halten nur die Offline-Ansicht auf — Kurs- und Repertoireliste standen so 7–8 s auf dem
+      // Spinner, bevor sie auf die heruntergeladenen Inhalte zurückfielen (2026-09-15 gemessen).
+      const deviceOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
 
-      if (retryable && idempotent && attempt < MAX_RETRIES) {
+      if (retryable && idempotent && !deviceOffline && attempt < MAX_RETRIES) {
         // Exponential-Backoff: 500 ms · 2^attempt → 500 ms, 1 s, 2 s.
         const delay = BASE_DELAY_MS * Math.pow(2, attempt);
         const retryReq = req.clone({ setHeaders: { 'X-Retry': String(attempt + 1) } });

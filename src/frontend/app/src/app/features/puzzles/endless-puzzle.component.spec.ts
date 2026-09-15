@@ -1,3 +1,4 @@
+import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
 import { ThemePreset } from './puzzle-theme-presets';
@@ -405,6 +406,32 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     c.chainIndex = 1;                // hinter dem Kettenende
     withOffline(() => c['loadCurrent']());
     expect(c.state).toBe('WON');
+    c.ngOnDestroy();
+  });
+
+  // Gerät gilt als online, der Server antwortet aber nicht (Funkloch, VPN, Server weg): früher
+  // brach der Start mit „keine neuen Puzzles" ab, obwohl die Kette vorab geladen im Speicher lag.
+  it('Server nicht erreichbar beim Start → Lauf startet aus der vorab geladenen Kette', () => {
+    const c = makeComponent();
+    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c['puzzleService'].getRandomBatch = jasmine.createSpy('getRandomBatch')
+      .and.returnValue(throwError(() => new Error('server down')));
+    c.startGame();
+    expect(c['chain'].length).toBe(3);
+    expect(c.puzzle.id).toBe(100);
+    expect(c.state).not.toBe('CONFIG');
+    expect(c['snackbar'].info).not.toHaveBeenCalledWith('endless.loadFailed', jasmine.anything());
+    c.ngOnDestroy();
+  });
+
+  it('Server nicht erreichbar beim Start und KEINE vorab geladene Kette → ehrlicher Abbruch', () => {
+    const c = makeComponent();
+    c['offlinePool'] = [];
+    c['puzzleService'].getRandomBatch = jasmine.createSpy('getRandomBatch')
+      .and.returnValue(throwError(() => new Error('server down')));
+    c.startGame();
+    expect(c.state).toBe('CONFIG');
+    expect(c['snackbar'].info).toHaveBeenCalledWith('endless.loadFailed', jasmine.anything());
     c.ngOnDestroy();
   });
 

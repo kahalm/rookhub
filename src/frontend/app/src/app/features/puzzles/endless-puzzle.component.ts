@@ -787,18 +787,29 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.state = 'LOADING';
       this.chain = [];
       this.generateChainBlock(0, () => this.loadCurrent());
-    } else if (this.offlinePool.length > 0) {
-      // Offline-Start: vorab geladene Kette nutzen.
-      this.chain = this.offlinePool;
-      this.storage.saveOfflinePool(this.chain);
-      this.storage.saveChainSeed(this.seed);
-      this.persistRun();
-      this.loadCurrent();
-    } else {
+    } else if (!this.startFromOfflinePool()) {
       this.stopSessionTimer();
       this.snackbar.info(this.translate.instant('endless.offlineNoCache'), { action: 'common.ok', duration: 5000 });
       this.state = 'CONFIG';
     }
+  }
+
+  /**
+   * Lauf aus der vorab geladenen Kette starten; `false`, wenn keine vorliegt.
+   *
+   * <p>Zwei Wege führen hierher: das Gerät ist offline, ODER es gilt als online, aber der Server
+   * antwortet nicht (Funkloch, VPN, Server weg). Den zweiten gab es früher nicht — `navigator.onLine`
+   * blieb `true`, die Kette scheiterte, und der Lauf brach mit „keine neuen Puzzles" ab, obwohl die
+   * Kette fertig im Speicher lag (2026-09-15 mit abgeschaltetem Server nachgestellt).</p>
+   */
+  private startFromOfflinePool(): boolean {
+    if (this.offlinePool.length === 0) return false;
+    this.chain = this.offlinePool;
+    this.storage.saveOfflinePool(this.chain);
+    this.storage.saveChainSeed(this.seed);
+    this.persistRun();
+    this.loadCurrent();
+    return true;
   }
 
   /**
@@ -858,6 +869,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.chainFailures++;
         const canContinue = this.chainIndex < this.chain.length;
         if (canContinue) { if (then) then(); return; }   // vorhandene Kette weiterspielen
+        // Lauf-START ohne Antwort vom Server: die vorab geladene Kette nehmen, falls es sie gibt.
+        if (startIndex === 0 && this.chain.length === 0 && this.startFromOfflinePool()) return;
         if (!navigator.onLine) { this.winRun(); return; } // wirklich offline: Lauf als Sieg beenden
         // Kein Nachschub und online → ehrlich abbrechen statt endlos zu drehen.
         this.snackbar.info(this.translate.instant('endless.loadFailed'), { action: 'common.ok', duration: 4000 });

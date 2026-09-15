@@ -1,7 +1,7 @@
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ConnectivityService } from './connectivity.service';
+import { ConnectivityService, MIN_VISIBLE_MS, SHOW_DELAY_MS } from './connectivity.service';
 
 describe('ConnectivityService', () => {
   let service: ConnectivityService;
@@ -16,30 +16,63 @@ describe('ConnectivityService', () => {
   });
 
   afterEach(() => {
-    // Debounce-/Recheck-Timer der Tests sind je Test via tick() abgelaufen oder abgebrochen;
+    // Debounce-/Recheck-Timer der Tests sind je Test via tick()/flush() abgelaufen oder abgebrochen;
     // offene Requests dürfen keine bleiben.
     window.dispatchEvent(new Event('online'));
     httpMock.verify();
   });
 
-  /** Die sofortige Gegenprobe (Ping auf /api/menu) eines reportApiFailure scheitern lassen. */
+  /** Die Gegenprobe (Ping auf /api/menu) eines reportApiFailure scheitern lassen. */
   function failProbe(): void {
     httpMock.expectOne('/api/menu').error(new ProgressEvent('error'));
+  }
+
+  /** Den Zustand bis zum sichtbaren Banner treiben (Frist abgelaufen + Gegenprobe gescheitert). */
+  function showUnreachable(): void {
+    service.reportApiFailure();
+    failProbe();
+    tick(SHOW_DELAY_MS);
+    expect(service.problem()).toBe('unreachable');
   }
 
   it('starts without a problem', () => {
     expect(service.problem()).toBeNull();
   });
 
-  it('shows unreachable only after the debounce delay, recovery hides immediately', fakeAsync(() => {
+  it('shows unreachable only after the delay and hides after the minimum visible time', fakeAsync(() => {
     service.reportApiFailure();
     failProbe();
-    expect(service.problem()).toBeNull();       // entprellt — noch kein Banner
-    tick(2500);
+    expect(service.problem()).toBeNull();        // entprellt — noch kein Banner
+    tick(SHOW_DELAY_MS - 1);
+    expect(service.problem()).toBeNull();
+    tick(1);
     expect(service.problem()).toBe('unreachable');
     service.reportApiSuccess();
-    expect(service.problem()).toBeNull();       // Erholung sofort
-    tick(30000);                                 // gestoppter Recheck darf nicht mehr pingen
+    expect(service.problem()).toBe('unreachable');   // steht mindestens MIN_VISIBLE_MS
+    tick(MIN_VISIBLE_MS);
+    expect(service.problem()).toBeNull();
+    tick(30000);                                  // gestoppter Recheck darf nicht mehr pingen
+  }));
+
+  it('a probe slower than the delay does NOT flash the banner when it succeeds', fakeAsync(() => {
+    service.reportApiFailure();
+    const probe = httpMock.expectOne('/api/menu');   // Gegenprobe noch unterwegs …
+    tick(SHOW_DELAY_MS + 3000);
+    expect(service.problem()).toBeNull();            // … die Frist allein zeigt nichts
+    probe.flush([]);
+    service.reportApiSuccess();                      // Interceptor meldet den späten Erfolg
+    tick(MIN_VISIBLE_MS);
+    expect(service.problem()).toBeNull();
+  }));
+
+  it('a probe that fails after the delay shows the banner at that moment', fakeAsync(() => {
+    service.reportApiFailure();
+    tick(SHOW_DELAY_MS + 2000);
+    expect(service.problem()).toBeNull();
+    failProbe();
+    expect(service.problem()).toBe('unreachable');
+    service.reportApiSuccess();
+    flush();
   }));
 
   it('a transient blip (success within the delay) never shows the banner nor logs recovery', fakeAsync(() => {
@@ -48,9 +81,21 @@ describe('ConnectivityService', () => {
     service.reportApiFailure();
     httpMock.expectOne('/api/menu').flush([]);   // Gegenprobe gelingt …
     service.reportApiSuccess();                   // … Interceptor meldet den Erfolg
-    tick(2500);
+    tick(SHOW_DELAY_MS);
     expect(service.problem()).toBeNull();
     expect(events.length).toBe(0);
+  }));
+
+  it('a new failure while the hide is scheduled keeps the banner up', fakeAsync(() => {
+    showUnreachable();
+    service.reportApiSuccess();
+    tick(MIN_VISIBLE_MS / 2);
+    service.reportApiFailure();                   // wieder weg, bevor der Banner verschwand
+    tick(MIN_VISIBLE_MS);
+    expect(service.problem()).toBe('unreachable');
+    service.reportApiSuccess();
+    flush();
+    expect(service.problem()).toBeNull();
   }));
 
   it('repeated failures while pending do not stack timers or probes', fakeAsync(() => {
@@ -59,18 +104,18 @@ describe('ConnectivityService', () => {
     service.reportApiFailure();
     failProbe();                                  // nur EINE Gegenprobe
     httpMock.expectNone('/api/menu');
-    tick(2500);
+    tick(SHOW_DELAY_MS);
     expect(service.problem()).toBe('unreachable');
     service.reportApiSuccess();
+    flush();
   }));
 
   it('reports the outage duration via the recovery hook once the banner was shown', fakeAsync(() => {
     const events: string[] = [];
     service.reportRecovery = (kind, detail) => events.push(`${kind}:${detail}`);
-    service.reportApiFailure();
-    failProbe();
-    tick(2500);
+    showUnreachable();
     service.reportApiSuccess();
+    tick(MIN_VISIBLE_MS);
     expect(events.length).toBe(1);
     expect(events[0]).toMatch(/^connectivity_restored:api unreachable for \d+s$/);
   }));
@@ -82,20 +127,30 @@ describe('ConnectivityService', () => {
     expect(events.length).toBe(0);
   });
 
-  it('the offline banner is debounced too; going online hides it immediately', fakeAsync(() => {
+  it('the offline banner is debounced too and stays for the minimum visible time', fakeAsync(() => {
     window.dispatchEvent(new Event('offline'));
+    tick(SHOW_DELAY_MS - 1);
     expect(service.problem()).toBeNull();        // entprellt
-    tick(2500);
+    tick(1);
     expect(service.problem()).toBe('offline');
+    window.dispatchEvent(new Event('online'));
+    expect(service.problem()).toBe('offline');   // nicht sofort weg
+    tick(MIN_VISIBLE_MS);
+    expect(service.problem()).toBeNull();
+  }));
+
+  it('the offline banner disappears at once after it was visible long enough', fakeAsync(() => {
+    window.dispatchEvent(new Event('offline'));
+    tick(SHOW_DELAY_MS + MIN_VISIBLE_MS);
     window.dispatchEvent(new Event('online'));
     expect(service.problem()).toBeNull();
   }));
 
   it('a short offline blip does not show the banner', fakeAsync(() => {
     window.dispatchEvent(new Event('offline'));
-    tick(1000);
-    window.dispatchEvent(new Event('online'));   // Blip vorbei, bevor der Timer feuert
-    tick(2500);
+    tick(SHOW_DELAY_MS - 1000);
+    window.dispatchEvent(new Event('online'));   // Blip vorbei, bevor die Frist abläuft
+    tick(SHOW_DELAY_MS);
     expect(service.problem()).toBeNull();
   }));
 
@@ -107,12 +162,11 @@ describe('ConnectivityService', () => {
   });
 
   it('checkNow swallows ping errors (state stays unreachable)', fakeAsync(() => {
-    service.reportApiFailure();
-    failProbe();
-    tick(2500);
+    showUnreachable();
     service.checkNow();
     httpMock.expectOne('/api/menu').error(new ProgressEvent('error'));
     expect(service.problem()).toBe('unreachable');
     service.reportApiSuccess();
+    flush();
   }));
 });
