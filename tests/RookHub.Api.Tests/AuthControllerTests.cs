@@ -246,11 +246,13 @@ public class AuthControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task SharedSession_WithoutACookieIsSimply401()
+    public async Task SharedSession_WithoutACookieIsSimplyNoContent()
     {
+        // Kein 401: jeder App-Start ohne Anmeldung fragt hier, und ein 401 zaehlt fuer die
+        // Ueberwachung als abgelehnter Anmeldeversuch.
         var result = await _controller.SharedSession(CancellationToken.None);
 
-        Assert.IsType<UnauthorizedObjectResult>(result.Result);
+        Assert.IsType<NoContentResult>(result.Result);
         // Und es wird auch nichts geloescht, was gar nicht da war.
         Assert.Null(SetCookieHeader("rh_session"));
     }
@@ -264,7 +266,7 @@ public class AuthControllerTests : IDisposable
 
         var result = await _controller.SharedSession(CancellationToken.None);
 
-        Assert.IsType<UnauthorizedObjectResult>(result.Result);
+        Assert.IsType<NoContentResult>(result.Result);
         var cookie = SetCookieHeader("rh_session");
         Assert.NotNull(cookie);
         Assert.Contains("expires=", cookie, StringComparison.OrdinalIgnoreCase);

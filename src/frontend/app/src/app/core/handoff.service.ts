@@ -86,13 +86,15 @@ export class HandoffService {
   /**
    * Ohne Code: besteht auf der Schwesterseite schon eine Anmeldung? Nachweis ist das Cookie auf
    * der gemeinsamen Elterndomaene — es ist <c>HttpOnly</c>, hier also nicht lesbar; nur der Server
-   * kann sagen, ob es taugt. 401 ist der Normalfall (nicht angemeldet, oder es gibt gar keine
-   * gemeinsame Domaene) und bleibt deshalb still.
+   * kann sagen, ob es taugt. „Keine" ist der Normalfall (nicht angemeldet, oder es gibt gar keine
+   * gemeinsame Domaene) und bleibt deshalb still: der Server antwortet dann 204 ohne Rumpf, eine
+   * aeltere API noch mit 401 — beides endet hier in `false`.
    */
   async adoptSharedSession(): Promise<boolean> {
     if (this.auth.isLoggedIn) return false;
     try {
-      const res = await firstValueFrom(this.http.post<AuthResponse>('/api/auth/session', {}));
+      const res = await firstValueFrom(this.http.post<AuthResponse | null>('/api/auth/session', {}));
+      if (!res) return false;
       this.auth.adoptSession(res);
       this.leaveLoginMask();
       return true;

@@ -92,9 +92,15 @@ public class AuthController : BaseApiController
     /// <summary>
     /// Holt sich die Anmeldung, die auf der Schwesterseite schon besteht — Nachweis ist das Cookie
     /// auf der gemeinsamen Elterndomaene. Offen, weil der Aufrufer hier ja noch nicht angemeldet
-    /// IST. 401 heisst schlicht „keine geteilte Anmeldung", ohne Unterscheidung: kein Cookie,
+    /// IST. 204 heisst schlicht „keine geteilte Anmeldung", ohne Unterscheidung: kein Cookie,
     /// abgelaufen, Konto geloescht oder die Funktion gar nicht eingerichtet.
     /// </summary>
+    /// <remarks>
+    /// Bewusst 204 und kein 401: JEDER App-Start ohne Anmeldung fragt hier, das Nein ist also der
+    /// Normalfall und keine abgelehnte Anmeldung. Als 401 zaehlte die Ueberwachung jeden anonymen
+    /// Besucher als fehlgeschlagenen Auth-Versuch (log-watcher `auth_bruteforce`, HIGH am 2026-09-15
+    /// durch 25 frische Browser-Sitzungen eines Tests; auf Prod kamen 56 von 57 Auth-401 von hier).
+    /// </remarks>
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpPost("session")]
@@ -107,7 +113,7 @@ public class AuthController : BaseApiController
             // Ein Cookie, das nicht (mehr) taugt, gehoert weg — sonst fragt jede Seite bei jedem
             // Start erneut danach und bekommt bis in 30 Tagen dieselbe Absage.
             if (cookie != null) DeleteSharedSessionCookie();
-            return Unauthorized(new { message = "No shared session." });
+            return NoContent();
         }
         await WriteSharedSessionAsync(res, ct);
         return Ok(res);

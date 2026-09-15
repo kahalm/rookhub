@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.478.6", date: "2026-09-15", changes: [
+    { en: "Opening RookHub or the tournament site without being signed in no longer counts as a rejected sign-in. On every start both sites ask whether you are already signed in on the other one; the answer “no” now comes back empty instead of as a rejection. Nothing changes for you, but the log monitoring had counted every visitor without an account as a failed sign-in attempt and raised a false brute-force alarm.", de: "Wer RookHub oder die Turnierseite ohne Anmeldung öffnet, gilt nicht mehr als abgelehnter Anmeldeversuch. Beide Seiten fragen beim Start, ob auf der anderen schon eine Anmeldung besteht; die Antwort „nein“ kommt jetzt leer zurück statt als Ablehnung. Für dich ändert sich nichts, aber die Log-Überwachung hatte jeden Besucher ohne Konto als fehlgeschlagenen Anmeldeversuch gezählt und einen falschen Brute-Force-Alarm ausgelöst." },
+  ] },
   { version: "0.478.5", date: "2026-09-15", changes: [
     { en: "Tests only: the end-to-end tests for offline mode now cover both situations, a device without a connection and a server that does not answer while the device still counts as online. They check puzzles, Endless, a downloaded course in the course list and in play, and a downloaded repertoire in the list and in training, and one test downloads a real repertoire through the page before the server goes away.", de: "Nur Tests: Die Ende-zu-Ende-Tests für den Offline-Modus decken jetzt beide Lagen ab, ein Gerät ohne Verbindung und einen Server, der nicht antwortet, während das Gerät noch als online gilt. Geprüft werden Puzzles, Endless, ein heruntergeladener Kurs in der Kursliste und beim Spielen sowie ein heruntergeladenes Repertoire in der Liste und im Training; ein Test lädt dabei ein echtes Repertoire über die Seite herunter, bevor der Server wegfällt." },
   ] },

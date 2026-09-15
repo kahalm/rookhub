@@ -108,7 +108,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | POST | `/api/auth/login` | Login, gibt JWT zurück (gültig 30 Tage, mit `rememberMe` 90) |
 | POST | `/api/auth/forgot-password` | „Passwort vergessen" `{ email }` — schickt (falls die Adresse zu einem aktiven Konto gehört) einen einmaligen Reset-Link (TTL 1 h) per Mail. Antwortet IMMER 200 (keine User-Enumeration). Versand via `PasswordResetService` + `IEmailSender` (SMTP/MailKit); ohne `Email:SmtpHost` wird die Mail nur geloggt. Link-Basis = `App:BaseUrl` |
 | POST | `/api/auth/reset-password` | Neues Passwort setzen `{ token, newPassword }` — 204 bei Erfolg, 400 bei ungültigem/abgelaufenem/verbrauchtem Token. Token ist einmalig (`UsedAt`) |
-| POST | `/api/auth/session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`). 401 = keine, ohne Unterscheidung; ein untaugliches Cookie wird dabei gelöscht |
+| POST | `/api/auth/session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
 | POST | `/api/auth/session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
 
 ### Profil (auth)
@@ -2277,10 +2277,13 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **401 ist nicht gleich Rauswurf** (seit 0.453.6) – Der Client (`authInterceptor`) beendet die Sitzung NUR, wenn der
   Server das Token ausdrücklich ablehnt: `WWW-Authenticate: Bearer error="invalid_token"` (abgelaufen, falsch signiert,
   Security-Stamp rotiert, Konto gelöscht). Ein 401 aus einem Controller — falsches aktuelles Passwort bei
-  `change-password`/`DELETE profile/account`, falsches Passwort beim Login, „keine geteilte Anmeldung" — trägt den
+  `change-password`/`DELETE profile/account`, falsches Passwort beim Login — trägt den
   Header nicht und darf den Nutzer nicht ausloggen (2026-09-09: ein Tippfehler beim Passwortwechsel warf den Nutzer
   raus, vier Fehlversuche später hielt er die App für vergesslich). Wer einen neuen 401-Grund einbaut, entscheidet
-  damit über den Header. Serverseitig loggt `Services/JwtTokenGate.cs` JEDE Token-Ablehnung mit Grund und Pfad
+  damit über den Header — und vorher, ob es überhaupt ein 401 ist: ein ERWARTETES Nein, das schon ein anonymer Besuch
+  auslöst, wird mit 204 beantwortet (`POST /api/auth/session` seit 0.478.6, vorher 401). Die Log-Überwachung zählt
+  jeden 401 unter `/api/auth` je IP als abgelehnten Anmeldeversuch; 25 frische Browser-Sitzungen reichten für einen
+  Brute-Force-HIGH. Serverseitig loggt `Services/JwtTokenGate.cs` JEDE Token-Ablehnung mit Grund und Pfad
   (Logger `RookHub.Api.JwtAuth`; Kibana: `message:JwtAuth*`) — vorher war ein abgelehntes Token in den Logs unsichtbar.
   Ein Datenbankfehler WÄHREND der Prüfung lässt den Request durch (Warnung) statt 401 zu antworten: ein
   Server-Schluckauf darf keine Sitzung kosten. Die Anmeldemaske selbst schickt Angemeldete weg (`guestGuard` auf

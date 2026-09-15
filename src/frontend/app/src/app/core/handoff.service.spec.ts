@@ -54,7 +54,19 @@ describe('HandoffService', () => {
     http.verify();
   });
 
-  it('bleibt still, wenn es keine geteilte Anmeldung gibt', async () => {
+  it('bleibt still, wenn es keine geteilte Anmeldung gibt (204 ohne Rumpf)', async () => {
+    const done = svc.consumeIncoming();
+    http.expectOne('/api/auth/session')
+      .flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(await done).toBeFalse();
+    expect(auth.currentUser).toBeNull();
+    // adoptSession darf mit dem leeren Rumpf gar nicht erst laufen — sonst stuende "null" im Speicher.
+    expect(localStorage.getItem('rookhub_user')).toBeNull();
+    http.verify();
+  });
+
+  it('bleibt auch beim 401 einer aelteren API still', async () => {
     const done = svc.consumeIncoming();
     http.expectOne('/api/auth/session')
       .flush('keine', { status: 401, statusText: 'Unauthorized' });
