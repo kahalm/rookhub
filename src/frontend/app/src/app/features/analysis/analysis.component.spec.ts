@@ -787,3 +787,72 @@ describe('AnalysisComponent Suchtimer', () => {
     c.ngOnDestroy();
   });
 });
+
+// Bewertungsleiste: Jede neue Suche beginnt mit einem Zwischenstand OHNE Linien. Früher sprang die
+// Leiste darauf bei jedem Zug auf 0.00 und erst mit der ersten Zeile (externe Engine: Sekunden
+// später) wieder zurück — sichtbar unruhig. Sie hält jetzt den letzten Wert, bis die neue Suche
+// etwas Belastbares liefert.
+describe('AnalysisComponent eval bar holds its value between searches', () => {
+  const line = (depth: number, score: number, scoreType: 'cp' | 'mate' = 'cp') =>
+    ({ multipv: 1, depth, scoreType, score, evalText: `ev${score}@${depth}`, pvUci: ['e2e4'] });
+
+  it('keeps the previous eval while the next position has no engine line yet', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5' });
+    c.ngOnInit();
+    c.prev();
+    (c as any).onEngineUpdate(c.currentFen, 20, [line(20, 80)]);
+    const held = c.whiteHeight;
+    expect(held).toBeGreaterThan(50);
+
+    c.next();                                            // Zug → neue Suche
+    c.running = true;
+    (c as any).onEngineUpdate(c.currentFen, 0, []);      // gestartet, noch keine Zeile
+    expect(c.whiteHeight).toBe(held);
+    expect(c.evalText).toBe('ev80@20');
+    c.ngOnDestroy();
+  });
+
+  it('ignores shallow evals of a running search and takes over once it is deep enough', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    (c as any).onEngineUpdate(c.currentFen, 20, [line(20, 30)]);
+    c.running = true;
+
+    (c as any).onEngineUpdate(c.currentFen, 3, [line(3, -250)]);   // Tiefe 3: Ausreißer
+    expect(c.evalText).toBe('ev30@20');
+
+    (c as any).onEngineUpdate(c.currentFen, 10, [line(10, 45)]);   // Schwelle erreicht
+    expect(c.evalText).toBe('ev45@10');
+    c.ngOnDestroy();
+  });
+
+  it('shows a mate immediately, even at low depth', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.running = true;
+    (c as any).onEngineUpdate(c.currentFen, 4, [line(4, 2, 'mate')]);
+    expect(c.whiteHeight).toBe(100);
+    c.ngOnDestroy();
+  });
+
+  it('takes a shallow result once the search has ended', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.running = false;                                   // Suche beendet/gestoppt
+    (c as any).onEngineUpdate(c.currentFen, 6, [line(6, -60)]);
+    expect(c.evalText).toBe('ev-60@6');
+    c.ngOnDestroy();
+  });
+
+  it('the settle depth stays below every selectable depth (a full search always reaches it)', () => {
+    // Liegt die Schwelle über dem kleinsten Tiefenwert, übernähme die Leiste bei laufender Suche
+    // nie etwas — sie erführe den Wert erst, wenn die Suche endet.
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.running = true;
+    const minDepth = Math.min(...DEPTH_OPTIONS);
+    (c as any).onEngineUpdate(c.currentFen, minDepth, [line(minDepth, 120)]);
+    expect(c.evalText).toBe(`ev120@${minDepth}`);
+    c.ngOnDestroy();
+  });
+});

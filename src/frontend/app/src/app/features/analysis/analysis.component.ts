@@ -45,6 +45,11 @@ const COMPARE_ENGINE_KEY = 'rookhub_analysis_compare_engine';
 // sonst wählt man 50 und bekommt stillschweigend weniger (Test hält das fest).
 export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
 const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
+/** Ab dieser Tiefe übernimmt die Bewertungsleiste den Wert einer neuen Suche. Darunter schwanken
+ *  die Zahlen stark (Tiefe 1–5 liegt gern eine Figur daneben) — die Leiste bliebe sonst bei jedem
+ *  Zug unruhig. Muss unter dem kleinsten DEPTH_OPTIONS-Wert liegen, sonst erreicht eine
+ *  vollständige Suche die Schwelle nie (endet sie vorher, gilt ihr letzter Wert trotzdem). */
+const EVAL_SETTLE_DEPTH = 10;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -733,7 +738,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       const u = l.pvUci[0];
       return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: ARROW_BRUSHES[i] || 'blue' } as DrawShape : null;
     }).filter((s): s is DrawShape => !!s);
-    this.updateEval(lines[0] ?? null);
+    // Bewertungsleiste HALTEN, bis die neue Suche etwas Belastbares liefert. Jede Suche beginnt mit
+    // einem Zwischenstand ohne Linien; früher sprang die Leiste darauf auf 0.00 und erst Sekunden
+    // später (externe Engine: Netzweg + Anlauf) auf den echten Wert — bei jedem Zug ein Ausschlag
+    // zur Mitte und zurück. Die Bewertung ist aus Weiß-Sicht, der Wert der Vorstellung liegt also
+    // meist nah am neuen. Übernommen wird ab EVAL_SETTLE_DEPTH, bei Matt sofort (ein gefundenes
+    // Matt ist auch flach verlässlich) und sobald die Suche endet, egal wie tief sie kam.
+    // Engine aus / Partie-Ende setzen die Leiste weiterhin direkt über refresh() → updateEval(null).
+    const best = lines[0];
+    if (best && (best.depth >= EVAL_SETTLE_DEPTH || best.scoreType === 'mate' || !this.running)) {
+      this.updateEval(best);
+    }
   }
 
   /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
