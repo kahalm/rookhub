@@ -183,6 +183,39 @@ public class ChessableLineTrainedResultDto
     public int RepertoireLinesSkipped { get; set; }
 }
 
+/// <summary>RepCheck meldet eine unerwartete Chessable-Antwort beim „Kurs holen“ (RepCheck ≥ 1.60.0 hat den Abruf
+/// deswegen gestoppt). Siehe <see cref="RookHub.Api.Services.ChessableResponseAlertService"/>.</summary>
+public class ChessableUnexpectedResponseInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.MaxLength(300)]
+    public string? CourseName { get; set; }
+    /// <summary>getCourse, getList oder getGame.</summary>
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string Endpoint { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string? Lid { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string? Oid { get; set; }
+    /// <summary>HTTP-Status der Antwort (200, wenn sie ankam, aber nicht passte).</summary>
+    public int? Status { get; set; }
+    /// <summary>http, json, error oder shape (checkChessableResponse in RepCheck).</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(10)]
+    public string? Reason { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(300)]
+    public string? Message { get; set; }
+    /// <summary>Anfang der Antwort — RepCheck entfernt vorher E-Mail- und IP-Adressen.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(2000)]
+    public string? Snippet { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string? ExtensionVersion { get; set; }
+}
+
+/// <summary>Banned = sah nach einer Sperre aus; AdminNotified = die Admins haben dazu eine Nachricht (jetzt oder
+/// innerhalb der Sperrfrist schon vorher).</summary>
+public record ChessableUnexpectedResponseResultDto(bool Banned, bool AdminNotified);
+
 /// <summary>Batch „schwierige Züge": je Linie (oid) die von der Extension geernteten Felder.
 /// Quellen ergänzen sich: getList → NHard, getGame → ProblemMoves (thisUser) + LastReviewed;
 /// fehlende Felder lassen den gespeicherten Wert unangetastet.</summary>

@@ -391,6 +391,28 @@ public class ExtensionController : BaseApiController
         return Ok(new ChessableCachedLinesDto(distinct.Where(cached.Contains).ToList()));
     }
 
+    private static readonly HashSet<string> UnexpectedResponseEndpoints =
+        new(StringComparer.Ordinal) { "getCourse", "getList", "getGame" };
+
+    /// <summary>
+    /// RepCheck hat beim „Kurs holen“ eine unerwartete Chessable-Antwort bekommen und den Abruf gestoppt. Die Antwort
+    /// wird zum Durchsehen protokolliert; sieht sie nach einer Sperre aus, geht eine Admin-Nachricht im Namen des
+    /// Nutzers raus (<see cref="ChessableResponseAlertService"/>). Der Dienst kommt per <c>[FromServices]</c>, damit
+    /// der ohnehin lange Konstruktor nicht wächst.
+    /// </summary>
+    [HttpPost("chessable/unexpected-response")]
+    public async Task<IActionResult> ChessableUnexpectedResponse([FromBody] ChessableUnexpectedResponseInputDto dto,
+        [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)
+    {
+        if (dto is null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid bid." });
+        if (!UnexpectedResponseEndpoints.Contains(dto.Endpoint ?? ""))
+            return BadRequest(new { message = "Unknown endpoint." });
+        if ((dto.Lid != null && !IsValidOid(dto.Lid)) || (dto.Oid != null && !IsValidOid(dto.Oid)))
+            return BadRequest(new { message = "Invalid lid/oid." });
+        return Ok(await alerts.ReportAsync(GetUserId(), dto, ct));
+    }
+
     /// <summary>
     /// Kapitelweiser Browser-Import: die Extension streamt einen großen Kurs Kapitel für Kapitel (bounded
     /// pro Request) statt in einem einzigen (potenziell riesigen) Ingest-Body. Der Server sammelt die rohen

@@ -220,6 +220,7 @@ try
     builder.Services.AddScoped<ChessableCourseRefreshService>();
     builder.Services.AddScoped<ChessableTrainedLineService>();
     builder.Services.AddScoped<ChessableProblemMoveService>();
+    builder.Services.AddScoped<ChessableResponseAlertService>();
     builder.Services.AddScoped<ChessableReviewLineService>();
     builder.Services.AddScoped<ChessableSessionMoveService>();
     builder.Services.AddScoped<FlashcardMarkService>();

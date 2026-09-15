@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.478.8", date: "2026-09-15", changes: [
+    { en: "When the RepCheck extension receives an unexpected response from Chessable while fetching a course, it now stops and reports the response to RookHub, where it is logged for review. If the response looks like a block (for example “User is banned or deleted”), the admins also get a message in that user’s thread — at most one per user per day.", de: "Bekommt die RepCheck-Erweiterung beim Holen eines Kurses eine unerwartete Antwort von Chessable, stoppt sie jetzt und meldet die Antwort an RookHub, wo sie zum Durchsehen protokolliert wird. Sieht die Antwort nach einer Sperre aus (etwa „User is banned or deleted“), bekommen die Admins zusätzlich eine Nachricht im Thread dieses Nutzers — höchstens eine je Nutzer pro Tag." },
+  ] },
   { version: "0.478.7", date: "2026-09-15", changes: [
     { en: "Fetching a Chessable course through the RepCheck extension now also reports how many lines that were already in the repertoire received their Chessable ID. The result used to count only newly appended lines, so a fetch that linked hundreds of existing lines read as “0 new lines appended”.", de: "Beim Holen eines Chessable-Kurses über die RepCheck-Erweiterung wird jetzt auch gemeldet, wie viele schon vorhandene Linien ihre Chessable-ID bekommen haben. Bisher zählte die Rückmeldung nur neu angehängte Linien, und ein Abruf, der Hunderte vorhandene Linien verknüpfte, las sich wie „0 neue Linien angehängt“." },
   ] },

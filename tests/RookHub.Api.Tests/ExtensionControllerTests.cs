@@ -517,4 +517,62 @@ public class ExtensionControllerTests : IDisposable
         Assert.IsType<BadRequestObjectResult>(res);
         Assert.Empty(_db.AnonymousChessableReviewLines);
     }
+
+    // ---- Unerwartete Chessable-Antwort (RepCheck ≥ 1.60.0 stoppt „Kurs holen") ----
+
+    private ChessableResponseAlertService Alerts() => new(_db,
+        new AdminMessageService(_db, new NotificationService(_db)), NullLogger<ChessableResponseAlertService>.Instance);
+
+    [Theory]
+    [InlineData("abc", "getGame", "1")]
+    [InlineData("104929", "saveProgressAndReturnNewProgressInfo", "1")]
+    [InlineData("104929", "getGame", "-5")]
+    public async Task ChessableUnexpectedResponse_InvalidInput_BadRequest(string bid, string endpoint, string oid)
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, "extension");
+
+        var res = await _controller.ChessableUnexpectedResponse(new ChessableUnexpectedResponseInputDto
+        {
+            Bid = bid, Endpoint = endpoint, Oid = oid, Message = "User is banned or deleted",
+        }, Alerts(), default);
+
+        Assert.IsType<BadRequestObjectResult>(res);
+        Assert.Empty(_db.AdminMessages);
+    }
+
+    [Fact]
+    public async Task ChessableUnexpectedResponse_BanMessage_CreatesAdminMessageForTheCaller()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, "extension");
+
+        var res = await _controller.ChessableUnexpectedResponse(new ChessableUnexpectedResponseInputDto
+        {
+            Bid = "104929", Endpoint = "getGame", Oid = "17672584", Status = 200, Reason = "error",
+            Message = "User is banned or deleted", ExtensionVersion = "1.60.0",
+        }, Alerts(), default);
+
+        var ok = Assert.IsType<OkObjectResult>(res);
+        var dto = Assert.IsType<ChessableUnexpectedResponseResultDto>(ok.Value);
+        Assert.True(dto.Banned);
+        Assert.True(dto.AdminNotified);
+        Assert.Equal(user.Id, Assert.Single(_db.AdminMessages).UserId);
+    }
+
+    [Fact]
+    public async Task ChessableUnexpectedResponse_OtherResponse_OnlyLogged()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, "extension");
+
+        var res = await _controller.ChessableUnexpectedResponse(new ChessableUnexpectedResponseInputDto
+        {
+            Bid = "207313", Endpoint = "getList", Lid = "42", Status = 200, Reason = "shape", Snippet = "{}",
+        }, Alerts(), default);
+
+        var dto = Assert.IsType<ChessableUnexpectedResponseResultDto>(Assert.IsType<OkObjectResult>(res).Value);
+        Assert.False(dto.Banned);
+        Assert.Empty(_db.AdminMessages);
+    }
 }
