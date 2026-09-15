@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
@@ -88,6 +90,10 @@ public class ChessScotlandDirectorySweepService
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
         // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
         var delivered = new List<string>();
+        // Altbestand: bis 2026-09-15 trug jeder Vermerk dieser Quelle den ROHEN Slug. Umstellen,
+        // BEVOR ein Vermerk gesucht wird — sonst legte der Lauf je Turnier einen zweiten an, und
+        // HasOtherNoteOfSameKind blockierte danach jede Zuordnung zu chess-results.
+        await MigrateLegacyNotesAsync(ct);
 
         try
         {
@@ -99,7 +105,7 @@ public class ChessScotlandDirectorySweepService
                 // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
                 // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
                 // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.Slug);
+                delivered.Add(PublicIdOf(row.Slug));
                 if (row.Start is not { } start || row.Name.Length == 0) continue;
 
                 processed++;
@@ -109,14 +115,14 @@ public class ChessScotlandDirectorySweepService
                 // Detailseite. Dann entscheidet allein der Namensvergleich.
                 var match = await ExternalDirectorySource.FindMatchAsync(_db, Federation, start, row.Name,
                     new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.ScottishChessFederation, row.Slug, null), ct);
+                        DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug), null), ct);
 
                 // Hat die Turniersuche dieselbe Veranstaltung inzwischen? Dann gehoert ihr der
                 // Eintrag — hier wird nur der Herkunftsvermerk gesetzt.
                 if (match is not null)
                 {
                     await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.ScottishChessFederation, row.Slug, row.Url, now, ct);
+                        DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug), row.Url, now, ct);
                     matched++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
@@ -172,7 +178,7 @@ public class ChessScotlandDirectorySweepService
                 }
 
                 await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.ScottishChessFederation, row.Slug,
+                    DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug),
                     hasDetail ? row.Url : null, now, ct);
 
                 if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
@@ -199,9 +205,14 @@ public class ChessScotlandDirectorySweepService
     /// Ob die Detailseite dieses Turniers schon gelesen wurde — erkennbar an der Adresse im
     /// Herkunftsvermerk. Ein Vermerk OHNE Adresse heisst „aus der Liste, Detailseite fehlt noch".
     /// </summary>
-    internal static bool HasDetail(TournamentDirectoryEntry entry, string slug) =>
-        entry.Sources.Any(s => s.Kind == DirectorySourceKind.ScottishChessFederation
-                               && s.ExternalId == slug && s.Url is { Length: > 0 });
+    internal static bool HasDetail(TournamentDirectoryEntry entry, string slug)
+    {
+        // Verglichen wird der KURZSCHLUESSEL — das ist seit 2026-09-15 die Kennung im Vermerk.
+        var key = PublicIdOf(slug);
+        return entry.Sources.Any(s => s.Kind == DirectorySourceKind.ScottishChessFederation
+                                      && string.Equals(s.ExternalId, key, StringComparison.OrdinalIgnoreCase)
+                                      && s.Url is { Length: > 0 });
+    }
 
     /// <summary>
     /// Die Detailseite holen und ihren Spielort eintragen. Gibt zurueck, ob sie lesbar war — ein
@@ -273,10 +284,56 @@ public class ChessScotlandDirectorySweepService
     }
 
     /// <summary>
-    /// Diese Quelle hat keine Nummer — der Slug ist eine echte, aber teils lange Kennung (bis 54
-    /// Zeichen gemessen). <see cref="TournamentDirectoryEntry.PublicId"/> fasst nur 24 Zeichen,
-    /// darum ein Hash-Kurzwert wie bei sjakk.no; der lesbare Slug bleibt vollstaendig im
-    /// Herkunftsvermerk (<see cref="TournamentDirectorySource.ExternalId"/>, 60 Zeichen).
+    /// Stellt die Herkunftsvermerke dieser Quelle vom ROHEN Slug auf den Kurzschluessel um
+    /// (<see cref="PublicIdOf"/>). Einmalige Altlast, aber bewusst im Lauf selbst und nicht als
+    /// Migration: der Kurzschluessel ist ein SHA-256 in C#, und eine SQL-Nachbildung ueber
+    /// <c>SHA2()</c> muesste Byte fuer Byte dasselbe ergeben — faende sie auch nur einen Slug
+    /// anders, waere dessen Vermerk fuer immer unerreichbar. Hier rechnet dieselbe Funktion wie
+    /// ueberall sonst. Wiederholbar: bereits umgestellte Vermerke erkennt
+    /// <see cref="IsShortKey"/> und laesst sie stehen.
+    ///
+    /// <para>Gemessen vor der Umstellung: Dev 43, Prod 44 Vermerke, alle mit rohem Slug.</para>
+    /// </summary>
+    internal async Task<int> MigrateLegacyNotesAsync(CancellationToken ct)
+    {
+        var notes = await _db.TournamentDirectorySources
+            .Where(s => s.Kind == DirectorySourceKind.ScottishChessFederation)
+            .ToListAsync(ct);
+
+        var moved = 0;
+        foreach (var note in notes)
+        {
+            if (IsShortKey(note.ExternalId)) continue;
+            note.ExternalId = PublicIdOf(note.ExternalId);
+            moved++;
+        }
+
+        if (moved > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log.LogInformation(
+                "Chess Scotland: {Count} Herkunftsvermerke vom rohen Slug auf den Kurzschluessel umgestellt",
+                moved);
+        }
+        return moved;
+    }
+
+    /// <summary>Ob eine Kennung schon der Kurzschluessel ist — ein echter Slug sieht nie so aus.</summary>
+    internal static bool IsShortKey(string externalId) => ShortKeyPattern.IsMatch(externalId);
+
+    private static readonly Regex ShortKeyPattern = new("^sc[0-9a-f]{12}$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Diese Quelle hat keine Nummer — der Slug ist eine echte, aber teils lange Kennung. Er ist
+    /// der Kurzwert fuer <see cref="TournamentDirectoryEntry.PublicId"/> (24 Zeichen) UND die
+    /// Kennung im Herkunftsvermerk (<see cref="TournamentDirectorySource.ExternalId"/>, 60 Zeichen).
+    ///
+    /// <para><b>Frueher stand im Vermerk der rohe Slug</b>, mit der Begruendung „bis 54 Zeichen
+    /// gemessen". Am 2026-09-10 kam der erste mit 71 — und weil
+    /// <see cref="ExternalDirectorySource.NoteSourceAsync"/> eine zu lange Kennung bewusst mit einer
+    /// Ausnahme ablehnt statt sie abzuschneiden, brach von da an JEDE NACHT die ganze Quelle ab.
+    /// Eine gemessene Hoechstlaenge ist keine Zusage der Quelle; der Kurzschluessel ist immer 14
+    /// Zeichen lang.</para>
     /// </summary>
     internal static string PublicIdOf(string slug)
     {

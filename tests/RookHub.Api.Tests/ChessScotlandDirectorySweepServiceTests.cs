@@ -294,7 +294,9 @@ public class ChessScotlandDirectorySweepServiceTests : IDisposable
 
         var source = Assert.Single(_db.TournamentDirectorySources.ToList());
         Assert.Equal(DirectorySourceKind.ScottishChessFederation, source.Kind);
-        Assert.Equal("ayr-congress-2026", source.ExternalId);
+        // Seit 2026-09-15 der Kurzschluessel, nicht mehr der rohe Slug: ein Slug mit 71 Zeichen
+        // sprengte die 60-Zeichen-Spalte und brach die ganze Quelle ab.
+        Assert.Equal(ChessScotlandDirectorySweepService.PublicIdOf("ayr-congress-2026"), source.ExternalId);
         Assert.Equal("https://www.chessscotland.com/calendar/ayr-congress-2026", source.Url);
     }
 
@@ -321,6 +323,78 @@ public class ChessScotlandDirectorySweepServiceTests : IDisposable
     }
 
     /// <summary>Zwei Routen, ein Handler: die Liste und die Detailseite.</summary>
+    /// <summary>
+    /// Vom 2026-09-10 bis 2026-09-15 brach die GANZE Quelle jede Nacht ab: ein Slug mit 71 Zeichen,
+    /// die Vermerk-Spalte haelt 60, und die gemeinsame Vermerk-Logik lehnt eine zu lange Kennung
+    /// bewusst ab statt sie abzuschneiden. Vermerkt wird deshalb der Kurzschluessel.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_SlugLongerThanTheColumn_DoesNotAbortTheSource()
+    {
+        const string slug = "the-scottish-chess-association-annual-congress-and-open-rapidplay-2027";
+        Assert.True(slug.Length > ExternalDirectorySource.MaxExternalIdLength, slug.Length.ToString());
+
+        await CreateService($"[{Row("Scottish Annual Congress", slug: slug)}]", Detail(null)).RunAsync();
+
+        var note = Assert.Single(_db.TournamentDirectorySources.ToList());
+        Assert.Equal(ChessScotlandDirectorySweepService.PublicIdOf(slug), note.ExternalId);
+        Assert.True(note.ExternalId.Length <= ExternalDirectorySource.MaxExternalIdLength);
+    }
+
+    /// <summary>
+    /// Der Altbestand trug den ROHEN Slug (Dev 43, Prod 44 Vermerke). Er muss UMGESTELLT werden —
+    /// ein zweiter Vermerk derselben Quelle am selben Eintrag waere eine Dublette.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_LegacyNoteWithTheRawSlug_IsRekeyedInsteadOfDoubled()
+    {
+        await CreateService($"[{Row("Ayr Congress 2026")}]", Detail(null)).RunAsync();
+        _db.TournamentDirectorySources.Single().ExternalId = "ayr-congress-2026";
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("Ayr Congress 2026")}]", Detail(null)).RunAsync();
+
+        var note = Assert.Single(_db.TournamentDirectorySources.ToList());
+        Assert.Equal(ChessScotlandDirectorySweepService.PublicIdOf("ayr-congress-2026"), note.ExternalId);
+    }
+
+    /// <summary>
+    /// Die gefaehrlichere Haelfte der Altlast: ein Turnier, das VOR der Umstellung schon einem
+    /// chess-results-Eintrag zugeordnet war, traegt dort den rohen Vermerk. Ohne Umstellung saehe
+    /// HasOtherNoteOfSameKind einen „anderen" Vermerk derselben Quelle, verweigerte die Zuordnung —
+    /// und die Quelle legte das Turnier ein zweites Mal als eigenen Eintrag an.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_AlreadyMatchedWithALegacyNote_StaysMatched()
+    {
+        var cr = new TournamentDirectoryEntry
+        {
+            PublicId = "1400001", ChessResultsId = "1400001", Federation = "SCO",
+            Name = "Ayr Congress 2026", StartDate = Soon, EndDate = Soon, FirstSeenAt = DateTime.UtcNow,
+        };
+        cr.Sources.Add(new TournamentDirectorySource
+        {
+            Kind = DirectorySourceKind.ScottishChessFederation, ExternalId = "ayr-congress-2026",
+            FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+        });
+        _db.TournamentDirectoryEntries.Add(cr);
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService($"[{Row("Ayr Congress 2026")}]", Detail(null)).RunAsync();
+
+        Assert.Equal(0, result.Added);
+        Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        var note = Assert.Single(_db.TournamentDirectorySources.ToList());
+        Assert.Equal(ChessScotlandDirectorySweepService.PublicIdOf("ayr-congress-2026"), note.ExternalId);
+    }
+
+    [Theory]
+    [InlineData("sc0123456789ab", true)]
+    [InlineData("ayr-congress-2026", false)]
+    [InlineData("scottish-championship", false)]
+    public void IsShortKey_TellsTheHashFromARealSlug(string externalId, bool expected) =>
+        Assert.Equal(expected, ChessScotlandDirectorySweepService.IsShortKey(externalId));
+
     private sealed class RouteHandler : HttpMessageHandler
     {
         private readonly string _list;
