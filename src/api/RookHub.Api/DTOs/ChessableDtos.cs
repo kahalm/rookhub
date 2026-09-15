@@ -94,8 +94,9 @@ public record ChessableProgressDto(bool Book, bool Repertoire, List<string> Oids
 /// getGame). Kein Import-Datensatz/keine Benachrichtigung je Aufruf; serverseitig zugtext-dedupliziert.</summary>
 public record ChessableLiveIngestRequest(string Bid, string? Target, string? CourseName, List<ChessableIngestChapter>? Chapters);
 
-/// <summary>Ergebnis eines Live-Append: tatsächlich NEU hinzugefügte Linien + Ziel-Id.</summary>
-public record ChessableLiveIngestResultDto(int Imported, int? ResultId, string Target, int LineCount);
+/// <summary>Ergebnis eines Live-Append: tatsächlich NEU hinzugefügte Linien + Ziel-Id; <c>Linked</c> = vorhandene
+/// Linien, die ihre Chessable-oid nachgetragen bekamen (RepCheck nennt sie in der Abschlussmeldung).</summary>
+public record ChessableLiveIngestResultDto(int Imported, int? ResultId, string Target, int LineCount, int Linked = 0);
 
 /// <summary>Antwort von piratechess /direct/course/start (async).</summary>
 public record ChessableCourseStartDto(string JobId);

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.478.7", date: "2026-09-15", changes: [
+    { en: "Fetching a Chessable course through the RepCheck extension now also reports how many lines that were already in the repertoire received their Chessable ID. The result used to count only newly appended lines, so a fetch that linked hundreds of existing lines read as “0 new lines appended”.", de: "Beim Holen eines Chessable-Kurses über die RepCheck-Erweiterung wird jetzt auch gemeldet, wie viele schon vorhandene Linien ihre Chessable-ID bekommen haben. Bisher zählte die Rückmeldung nur neu angehängte Linien, und ein Abruf, der Hunderte vorhandene Linien verknüpfte, las sich wie „0 neue Linien angehängt“." },
+  ] },
   { version: "0.478.6", date: "2026-09-15", changes: [
     { en: "Opening RookHub or the tournament site without being signed in no longer counts as a rejected sign-in. On every start both sites ask whether you are already signed in on the other one; the answer “no” now comes back empty instead of as a rejection. Nothing changes for you, but the log monitoring had counted every visitor without an account as a failed sign-in attempt and raised a false brute-force alarm.", de: "Wer RookHub oder die Turnierseite ohne Anmeldung öffnet, gilt nicht mehr als abgelehnter Anmeldeversuch. Beide Seiten fragen beim Start, ob auf der anderen schon eine Anmeldung besteht; die Antwort „nein“ kommt jetzt leer zurück statt als Ablehnung. Für dich ändert sich nichts, aber die Log-Überwachung hatte jeden Besucher ohne Konto als fehlgeschlagenen Anmeldeversuch gezählt und einen falschen Brute-Force-Alarm ausgelöst." },
   ] },

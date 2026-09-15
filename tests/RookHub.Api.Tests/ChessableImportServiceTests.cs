@@ -351,9 +351,11 @@ public class ChessableImportServiceTests : IDisposable
         await _svc.AppendLiveAsync(31, "60001",
             RepLine("A", "1. e4 {[%cal Ge2e4]} e5 *") + "\n" + RepLine("B", "1. d4 d5 *"), "C", "repertoire");
 
-        var (imp, repId, _) = await _svc.AppendLiveAsync(31, "60001", OidRepLine("A", "777", "1. e4 {[%cal Ge2e4]} e5 *"), "C", "repertoire");
+        var live = await _svc.AppendLiveAsync(31, "60001", OidRepLine("A", "777", "1. e4 {[%cal Ge2e4]} e5 *"), "C", "repertoire");
+        var (imp, repId, _) = live;
 
         Assert.Equal(0, imp);
+        Assert.Equal(1, live.Linked);   // die Abschlussmeldung soll die verknüpfte Linie nennen
         var content = await RepContentAsync(repId);
         Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);
         Assert.Equal(new[] { "777" }, (await _svc.GetImportedOidsAsync(31, "60001")).Oids);

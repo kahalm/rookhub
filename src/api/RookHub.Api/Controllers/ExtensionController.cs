@@ -481,7 +481,7 @@ public class ExtensionController : BaseApiController
             return Ok(new ChessableLiveIngestResultDto(0, null, target, 0));
 
         var name = !string.IsNullOrWhiteSpace(dto.CourseName) ? dto.CourseName! : parsed.Name;
-        var (imported, resultId, t) = await _chessableImport.AppendLiveAsync(GetUserId(), dto.Bid, parsed.Pgn, name, target, ct);
-        return Ok(new ChessableLiveIngestResultDto(imported, resultId, t, parsed.LineCount));
+        var live = await _chessableImport.AppendLiveAsync(GetUserId(), dto.Bid, parsed.Pgn, name, target, ct);
+        return Ok(new ChessableLiveIngestResultDto(live.Imported, live.ResultId, live.Target, parsed.LineCount, live.Linked));
     }
 }

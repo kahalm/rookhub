@@ -740,9 +740,10 @@ public class ChessableImportService : ICourseReimporter
     /// LineId). Repertoire: bestehendes chessable-{bid}-Repertoire finden (bzw. bei der ERSTEN Linie
     /// anlegen) und die neuen Linien an die PGN-Datei anhängen — dedupliziert per Zugtext, sodass erneutes
     /// Durchklicken derselben Linie (auch sitzungsübergreifend) keine Dubletten erzeugt. Liefert die Zahl der
-    /// tatsächlich NEU hinzugefügten Linien + die Ziel-Id.
+    /// tatsächlich NEU hinzugefügten Linien + die Ziel-Id, dazu wie viele vorhandene Linien ihre oid nachgetragen
+    /// bekamen (<see cref="LiveAppendResult.Linked"/>).
     /// </summary>
-    public Task<(int imported, int? resultId, string target)> AppendLiveAsync(
+    public Task<LiveAppendResult> AppendLiveAsync(
         int userId, string bid, string pgn, string courseName, string target, CancellationToken ct = default)
     {
         // FALLE: der Live-Append ist ein Read-Modify-Write auf demselben PgnContent (lesen → anhängen →
@@ -770,7 +771,22 @@ public class ChessableImportService : ICourseReimporter
         finally { gate.Release(); }
     }
 
-    private async Task<(int imported, int? resultId, string target)> AppendLiveCoreAsync(
+    /// <summary>
+    /// Ergebnis eines Live-Append. <c>Linked</c> zählt vorhandene Linien, die ihre Chessable-oid nachgetragen bekamen —
+    /// ohne diese Zahl las sich ein „Kurs holen", das hunderte Alt-Linien verknüpfte, als „0 neue Linien angehängt"
+    /// (Kurs 207313, 2026-09-15). Zerlegt sich weiterhin in (imported, resultId, target).
+    /// </summary>
+    public readonly record struct LiveAppendResult(int Imported, int? ResultId, string Target, int Linked)
+    {
+        public void Deconstruct(out int imported, out int? resultId, out string target)
+        {
+            imported = Imported;
+            resultId = ResultId;
+            target = Target;
+        }
+    }
+
+    private async Task<LiveAppendResult> AppendLiveCoreAsync(
         int userId, string bid, string pgn, string courseName, string target, CancellationToken ct)
     {
         target = target == "book" ? "book" : "repertoire";
@@ -789,7 +805,7 @@ public class ChessableImportService : ICourseReimporter
                 book.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync(ct);
             }
-            return (res.Imported, res.BookId, target);
+            return new LiveAppendResult(res.Imported, res.BookId, target, 0);
         }
 
         var repFile = $"chessable-{bid}.pgn";
@@ -811,7 +827,7 @@ public class ChessableImportService : ICourseReimporter
             await _repertoires.UploadFileAsync(created.Id, userId, repFile, ms);
             var r2 = await _db.Repertoires.FirstAsync(r => r.Id == created.Id, ct);
             if (string.IsNullOrEmpty(r2.ChessableCourseId)) { r2.ChessableCourseId = bid; await _db.SaveChangesAsync(ct); }
-            return (CountPgnGames(pgn), created.Id, target);
+            return new LiveAppendResult(CountPgnGames(pgn), created.Id, target, 0);
         }
 
         var file = rep.Files.FirstOrDefault(f => f.FileName == repFile) ?? rep.Files.FirstOrDefault();
@@ -819,7 +835,7 @@ public class ChessableImportService : ICourseReimporter
         {
             using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
             await _repertoires.UploadFileAsync(rep.Id, userId, repFile, ms);
-            return (CountPgnGames(pgn), rep.Id, target);
+            return new LiveAppendResult(CountPgnGames(pgn), rep.Id, target, 0);
         }
 
         // Nur die noch nicht vorhandenen Linien anhängen → erneutes Durchklicken derselben Linie erzeugt keine
@@ -902,7 +918,7 @@ public class ChessableImportService : ICourseReimporter
                 await _db.SaveChangesAsync(ct);
             }
         }
-        return (added, rep.Id, target);
+        return new LiveAppendResult(added, rep.Id, target, backfill.Count);
     }
 
     /// <summary>Chessable-oid eines PGN-Blocks (<c>[ChessableOid "…"]</c>), <c>null</c> ohne.</summary>
