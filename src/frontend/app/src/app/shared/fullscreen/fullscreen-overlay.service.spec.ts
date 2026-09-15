@@ -1,4 +1,30 @@
-import { FullscreenOverlayService } from './fullscreen-overlay.service';
+import { Injector } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { createOverlayRef } from '@angular/cdk/overlay';
+import { FullscreenOverlayService, provideFullscreenSafeOverlays } from './fullscreen-overlay.service';
+
+/**
+ * Das Umhängen des Containers taugt nur für KLASSISCHE Overlays: ein offenes Popover schließt der
+ * Browser beim Umhängen still. Die Kontrolle ohne Provider zeigt, dass der Test tatsächlich beißt.
+ */
+describe('provideFullscreenSafeOverlays', () => {
+  function hostPopoverAttr(): string | null {
+    const ref = createOverlayRef(TestBed.inject(Injector));
+    const attr = ref.hostElement.getAttribute('popover');
+    ref.dispose();
+    return attr;
+  }
+
+  it('ohne den Provider öffnet die CDK Overlays als Popover (Kontrolle)', () => {
+    TestBed.configureTestingModule({});
+    expect(hostPopoverAttr()).toBe('manual');
+  });
+
+  it('mit dem Provider sind Overlays klassisch — ohne Popover-Attribut', () => {
+    TestBed.configureTestingModule({ providers: [provideFullscreenSafeOverlays()] });
+    expect(hostPopoverAttr()).toBeNull();
+  });
+});
 
 describe('FullscreenOverlayService', () => {
   let container: HTMLElement;

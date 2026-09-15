@@ -50,6 +50,20 @@ export function isFullscreen(el: Element | null | undefined): boolean {
   return !!el && fullscreenElement() === el;
 }
 
+/**
+ * Ist ein EINZELNES Element im Vollbild (Brett-Vollbild) — und nicht die ganze Seite?
+ *
+ * <p>Beide Vollbild-Arten laufen über dieselbe API: das App-Vollbild schickt `<html>` hinein, das
+ * Brett-Vollbild die Hülle um das Brett. `document.fullscreenElement` allein unterscheidet sie
+ * also nicht — und genau daran hängt Verhalten: im App-Vollbild ist die ganze Oberfläche sichtbar
+ * (Kommentare, „Weiter"-Knöpfe, Overlays am `<body>`), im Brett-Vollbild nur der Teilbaum des
+ * Bretts. Wer nur `!!document.fullscreenElement` fragt, behandelt das App-Vollbild wie das
+ * Brett-Vollbild (so sprang der Buch-Solver im App-Vollbild trotz Abschlusstext weiter).</p>
+ */
+export function isElementFullscreen(el: Element | null = fullscreenElement()): boolean {
+  return el instanceof HTMLElement && el !== document.documentElement && el !== document.body;
+}
+
 export async function requestFullscreen(el: HTMLElement): Promise<void> {
   const target = el as FullscreenCapableElement;
   // Ein abgelehnter Vollbild-Wunsch (fehlende Nutzer-Interaktion, Berechtigungs-Policy) ist kein

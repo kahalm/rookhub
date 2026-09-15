@@ -17,6 +17,7 @@ import { connectivityInterceptor } from './core/connectivity.interceptor';
 import { retryInterceptor } from './core/retry.interceptor';
 import { visitorInterceptor } from './core/visitor.interceptor';
 import { resolveStartupLocale } from './core/locale.service';
+import { provideFullscreenSafeOverlays } from './shared/fullscreen/fullscreen-overlay.service';
 
 // Locale-Daten für die übersetzten Sprachen registrieren (en ist eingebaut), damit
 // DatePipe/DecimalPipe/PercentPipe entsprechend der gewählten Sprache formatieren
@@ -34,6 +35,9 @@ export const appConfig: ApplicationConfig = {
     // connectivity zuerst (äußerster) — sieht Erfolge/finale Fehler NACH den Retries.
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, visitorInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
+    // Dialoge/Menüs/Snackbars NICHT als Popover in der obersten Browser-Ebene — dort verschwanden
+    // sie beim Wechsel der Vollbild-Arten (Begründung und Messung am Provider).
+    provideFullscreenSafeOverlays(),
     // i18n (ngx-translate): JSON aus public/i18n/*.json, Fallback Englisch.
     provideTranslateService({
       fallbackLang: 'en',

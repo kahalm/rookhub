@@ -1,5 +1,5 @@
 import {
-  exitFullscreen, fullscreenElement, fullscreenSupported, isFullscreen, onFullscreenChange,
+  exitFullscreen, fullscreenElement, fullscreenSupported, isElementFullscreen, isFullscreen, onFullscreenChange,
   requestFullscreen, toggleFullscreen,
 } from './fullscreen.util';
 
@@ -44,6 +44,22 @@ describe('fullscreen.util', () => {
     expect(isFullscreen(element)).toBeTrue();
     expect(isFullscreen(document.createElement('div'))).toBeFalse();
     expect(isFullscreen(null)).toBeFalse();
+  });
+
+  it('unterscheidet das Brett-Vollbild vom App-Vollbild', () => {
+    expect(isElementFullscreen()).toBeFalse();               // gar kein Vollbild
+
+    current = element;                                       // Brett-Hülle im Vollbild
+    expect(isElementFullscreen()).toBeTrue();
+
+    current = document.documentElement;                      // App-Vollbild: <html>
+    expect(isElementFullscreen()).toBeFalse();
+
+    current = document.body;
+    expect(isElementFullscreen()).toBeFalse();
+
+    expect(isElementFullscreen(element)).toBeTrue();         // explizit übergeben
+    expect(isElementFullscreen(null)).toBeFalse();
   });
 
   it('schaltet hin und zurück', async () => {

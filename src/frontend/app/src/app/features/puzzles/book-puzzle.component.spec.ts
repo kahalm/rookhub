@@ -923,6 +923,28 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
     (c as any).finalizeSolve();
     expect(countdown).toHaveBeenCalled();
   });
+
+  /** Beide Vollbild-Arten setzen `document.fullscreenElement` — nur das Brett-Vollbild versteckt den Text. */
+  function finalizeWithTrailingCommentIn(fsElement: Element | null): jasmine.Spy {
+    const c = makeComponent();
+    const countdown = spyOn(c as any, 'startSolvedCountdown');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordTrack');
+    spyOnProperty(document, 'fullscreenElement', 'get').and.returnValue(fsElement);
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', moveComments: { '0': 'Abschlusstext' } };
+    (c as any).finalizeSolve();
+    return countdown;
+  }
+
+  it('finalizeSolve bleibt im APP-Vollbild bei Abschlusstext stehen (Text und „Weiter" sind sichtbar)', () => {
+    expect(finalizeWithTrailingCommentIn(document.documentElement)).not.toHaveBeenCalled();
+  });
+
+  it('finalizeSolve springt im BRETT-Vollbild trotz Abschlusstext weiter (dort gibt es kein „Weiter")', () => {
+    expect(finalizeWithTrailingCommentIn(document.createElement('div'))).toHaveBeenCalled();
+  });
 });
 
 /**

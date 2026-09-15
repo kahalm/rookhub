@@ -41,6 +41,7 @@ import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
+import { isElementFullscreen } from '../../shared/fullscreen/fullscreen.util';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, isBookCacheComplete, markBookCacheComplete, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
 import { loadDailyElapsed, saveDailyElapsed, clearDailyElapsed } from './daily-elapsed.util';
@@ -534,8 +535,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.recordTrack(true);   // „Track solves": Erstversuch gelöst
     // Im BRETT-Vollbild gibt es die „Weiter"-Knöpfe (im Panel unter dem Brett) nicht — dort würde der
     // Spieler bei den „stehen bleiben"-Fällen (alternative Lösung / Abschlusstext) festhängen. Deshalb
-    // im Vollbild IMMER auto-weiterspringen; außerhalb bleibt das bewusste Stehenbleiben erhalten.
-    const inBoardFullscreen = !!document.fullscreenElement;
+    // im Brett-Vollbild IMMER auto-weiterspringen; außerhalb bleibt das bewusste Stehenbleiben erhalten.
+    // NUR das Brett-Vollbild zählt: im App-Vollbild (`<html>` im Vollbild) sind Abschlusstext und
+    // „Weiter" sichtbar — `!!document.fullscreenElement` sprang dort trotz Abschlusstext weiter.
+    const inBoardFullscreen = isElementFullscreen();
     // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
     // der Spieler entscheidet selbst (Weiter / Originallösung zeigen). Im Vollbild dennoch weiter.
     if (this.solveAlternative && !inBoardFullscreen) return;

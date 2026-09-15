@@ -1,6 +1,29 @@
-import { Injectable, OnDestroy } from '@angular/core';
-import { OverlayContainer } from '@angular/cdk/overlay';
-import { fullscreenElement, onFullscreenChange } from './fullscreen.util';
+import { EnvironmentProviders, Injectable, OnDestroy, makeEnvironmentProviders } from '@angular/core';
+import { OVERLAY_DEFAULT_CONFIG, OverlayContainer } from '@angular/cdk/overlay';
+import { fullscreenElement, isElementFullscreen, onFullscreenChange } from './fullscreen.util';
+
+/**
+ * CDK-Overlays OHNE Popover-API — die Voraussetzung dafür, dass Dialoge, Menüs und Snackbars in
+ * BEIDEN Vollbild-Arten sichtbar bleiben (app-weit in `app.config.ts`).
+ *
+ * <p>Die CDK öffnet jedes Overlay seit ihrer Popover-Umstellung als `popover="manual"` in der
+ * obersten Ebene (top layer) des Browsers. Zwei Dinge vertragen sich damit nicht, beide 2026-09-15
+ * in Chromium UND Firefox nachgestellt (Playwright, Minimalseite):</p>
+ * <ol>
+ *   <li><b>Umhängen schließt.</b> Dieser Dienst hängt den Overlay-Container beim Brett-Vollbild ins
+ *       Vollbild-Element und danach zurück. Ein OFFENES Popover, das im DOM umgehängt wird, schließt
+ *       der Browser still: es bleibt im DOM, ist aber unsichtbar, und die CDK weiß davon nichts. Ein
+ *       Dialog, der beim Wechsel offen war (etwa die Nachfrage bei langer Lösezeit), verschwand
+ *       spurlos — und blockierte als modaler Dialog trotzdem weiter.</li>
+ *   <li><b>Die Reihenfolge der obersten Ebene zählt.</b> Ein Overlay, das schon offen ist, BEVOR
+ *       `&lt;html&gt;` ins App-Vollbild geht, liegt in Chromium danach UNTER der Seite.</li>
+ * </ol>
+ * <p>Ein klassisches Overlay (`position: fixed`, z-index 1000 im Container) ist in allen gemessenen
+ * Reihenfolgen oben — auch umgehängt ins Brett-Vollbild. Genau dafür ist dieser Dienst gebaut.</p>
+ */
+export function provideFullscreenSafeOverlays(): EnvironmentProviders {
+  return makeEnvironmentProviders([{ provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: false } }]);
+}
 
 /**
  * Hängt den CDK-Overlay-Container während des Vollbilds IN das Vollbild-Element um.
@@ -36,9 +59,7 @@ export class FullscreenOverlayService implements OnDestroy {
    * ohnehin Teil des gerenderten Teilbaums (App-Vollbild).
    */
   sync(fsElement: Element | null): void {
-    const usable = fsElement instanceof HTMLElement
-      && fsElement !== document.documentElement
-      && fsElement !== document.body;
+    const usable = isElementFullscreen(fsElement);
     // Ohne Vollbild und ohne früheren Umzug nichts anfassen: `getContainerElement()` LEGT den
     // Container (samt CDK-Styles) sonst überhaupt erst an — unnötig beim App-Start, und beim
     // Teardown greift es auf einen bereits zerstörten Injector zu (NG0205).
