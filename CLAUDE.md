@@ -1043,7 +1043,9 @@ Ein LANGER Lauf ohne Fortschritt zaehlt bewusst NICHT: das ist eine gekappte Ver
 **Live aufgetreten**: der Wachhund des offiziellen Providers setzt seinen „zuletzt benutzt"-Stempel erst am
 Stream-ENDE und terminiert jede Suche, die laenger als `--keep-alive` (Vorgabe 300 s) dauert — ab Tiefe 29 mit
 5 Linien jede Iteration. Der Auftrag kam nie tiefer und galt nach drei Runden als gescheitert; Abhilfe beidseitig:
-`KEEP_ALIVE` im Provider hoch (siehe `engine-provider/README.md`) UND diese Laufzeit-Unterscheidung hier. Bleibt die erste Datenzeile binnen
+`KEEP_ALIVE` im Provider hoch (siehe `engine-provider/README.md`) UND diese Laufzeit-Unterscheidung hier. (Das betraf den bis
+0.478.10 gepinnten Provider; der heutige erneuert den Stempel waehrend der Suche — die Unterscheidung bleibt fuer fremde
+Provider.) Bleibt die erste Datenzeile binnen
 `AnalysisJobs:FirstLineTimeoutSeconds` (300) aus, wird pausiert statt den Slot des Users unbegrenzt zu halten.
 **Ein 503/504 des Brokers wechselt die ENGINE, statt zu warten** (0.475.6). Diese Antwort heisst
 beim Broker: fuer diese Engine ist gerade kein Provider verbunden — eine Aussage ueber die Engine
@@ -1059,7 +1061,7 @@ Sekunde. Steht die Engine nicht in der Hintergrund-Liste (von Hand gewaehlt), bl
 gilt weiter der lange Backoff.
 
 **Eine WIEDERHOLTE Bewertungszeile ist ein Lebenszeichen, kein Fortschritt** (0.475.1). Das
-Lebenszeichen des Providers ist die erneut gesendete letzte `info`-Zeile (siehe `patch_provider.py`) —
+Lebenszeichen des RookHub-Providers bis 0.478.10 war die erneut gesendete letzte `info`-Zeile —
 fuer den Worker war sie damit von echter Arbeit nicht zu unterscheiden. Der Waechter der ersten Zeile
 war nach ihr entschaerft, einen zweiten gab es nicht: eine Engine, die NACH der ersten Zeile stehen
 blieb, hielt ihren Auftrag unbegrenzt auf `Running`. Am 2026-09-12 auf Prod: Auftrag 14240 stand VIER
@@ -1079,6 +1081,11 @@ Engine, die NICHT in der Hintergrund-Liste steht, wurde von Hand gewaehlt und bl
 zaehlt als Fehlversuch — anders als ein abgerissener Stream ist er eine Aussage ueber die Engine; der
 Zaehler faellt bei jedem Lauf mit Tiefenfortschritt auf 0 zurueck, eine bloss langsame tiefe Suche kann
 also nicht daran scheitern.
+
+**Seit 0.478.11 kommt das Lebenszeichen als EIGENE Zeile** (`{"keepalive":true}`, vom offiziellen
+Provider alle 15 s geschickt, vom Broker durchgereicht). `StreamTally.IsKeepalive` zaehlt es als
+Lebenszeichen; es traegt keine Tiefe und stellt den Waechter deshalb nicht neu. Die
+Wiederholungs-Regel bleibt stehen: auf fremden Rechnern laeuft der alte Provider weiter.
 
 Unerwartete Ausnahmen setzen den Auftrag in einem EIGENEN Scope auf `Paused` zurueck (sonst stuende er bis zum
 naechsten API-Start auf `Running` und wuerde nie wieder aufgegriffen). `TryCancel` faengt `ObjectDisposedException`
@@ -1166,7 +1173,9 @@ während Provider und Broker fehlerfrei rechneten. Im NPM-Zugriffslog erkennbar 
 (`Services/NdjsonHeartbeatPump.cs`): schweigt der Broker 20 s, geht eine Leerzeile raus. Grund: bei
 MultiPV 5 liegen ab Tiefe ~27 Minuten zwischen zwei Zeilen, und NPM (Default `proxy_read_timeout`
 60 s) kappte den Stream, den der Browser dann als „fertig" wertete (Prod-Log: Streams mit exakt ~61 s,
-Anzeige bleibt bei Tiefe 27 stehen). Der Client-Parser ignoriert Leerzeilen. Reißt ein Stream trotzdem
+Anzeige bleibt bei Tiefe 27 stehen). Der Client-Parser ignoriert Leerzeilen und Steuerzeilen ohne `pvs`
+(das `{"keepalive":true}` des Providers — durchgelassen stünde die Anzeige alle 15 s bei Tiefe 0 ohne
+Linien). Reißt ein Stream trotzdem
 vor der Zieltiefe ab (Fehler ODER ≥ 5 s Funkstille vor dem Ende — ein Ende direkt nach der letzten
 Zeile ist die Engine selbst, z. B. einzüge Stellungen), setzt `AnalysisEngineService.startRemoteStream`
 bis zu dreimal ab der erreichten Tiefe fort (flache Wiederholungszeilen aus der warmen Hashtabelle werden
@@ -1179,31 +1188,30 @@ Die Karte zeigt zusätzlich „rechnet seit m:ss an Tiefe N" ab 5 s ohne neue Ze
 Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Provider — beim Bauen
 auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (eindeutige Herkunft,
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
-und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start) sowie `patch_provider.py`
-— EIN Eingriff in den geholten Provider (angewandt NACH der Prüfsummen-Kontrolle, fehlende Textstelle =
-Build-Abbruch statt stiller No-op): ein **Lebenszeichen** im Analyse-Stream, wenn
-`HEARTBEAT_SECONDS` (15) lang nichts nach OBEN ging — als **Wiederholung der letzten
-weitergegebenen `info`-Zeile**, NICHT als Leerzeile: der Broker liest den Upload als UCI und
-verwirft eine Leerzeile (0.458.5, gemessen: 48 gesendet, 0 angekommen, Verbindung trotzdem gekappt;
-mit der wiederholten Zeile 3 gesendet und 28 statt 25 Datenzeilen angekommen). Grund: der Provider reicht nur `info`-Zeilen MIT
-`score` weiter, und zwischen zwei tiefen MultiPV-Iterationen vergehen Minuten — der Broker (bzw. das CDN
-davor) schloss die stumme Verbindung, bei uns sichtbar als `HttpIOException: The response ended
-prematurely` alle 5–9 min. Der Auftrag kam dadurch nie über Tiefe 29 hinaus (jeder Neustart rechnet von
-Tiefe 1 hoch). Das ist dieselbe Klasse Fehler wie der `NdjsonHeartbeatPump` auf der Strecke API→Browser,
-nur einen Hop weiter vorne (Provider→Broker→API).
+und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). **In den Provider selbst greift
+das Image seit 0.478.11 nicht mehr ein**: der gepinnte Stand (`d0eeb242`, 2026-09-06) erfüllt die zwei Regeln
+des Brokers, an denen RookHub hängt, und `test/provider.test.py` prüft sie gegen einen nachgebauten Broker.
 
-**Gemessen wird der UPLOAD, nicht die Engine** (0.458.4) — die erste Fassung wartete auf Stille der
-ENGINE (`recv` mit Zeitschranke) und feuerte deshalb NIE: Stockfish schweigt während einer langen
-Iteration gar nicht, es schickt laufend `info depth … currmove …`, und genau die filtert der Provider
-weg. Die Zeitschranke fiel nie, obwohl nach oben minutenlang nichts ging — der Fall, für den das
-Lebenszeichen gebaut war, war der einzige, den es nicht abdeckte. Auf Dev hingen daran **23
-Analyse-Aufträge bei Tiefe 20/22**, alle mit „letzte Datenzeile vor 60,0 s" (der Broker kappt nach 60 s
-Stille, im Provider-Log als `400 uci protocol error: expected bestmove before end of stream`) — und weil
-ein gescheiterter Auftrag die Stellung mit LEERER Kandidatenliste abschliesst (`IngestFinishedAsync`),
-standen 25 Stellungen dauerhaft ohne Bewertung, drei Partien galten als `Done`. Jetzt zählt die Zeit seit
-der letzten WEITERGEGEBENEN Zeile, und `recv` wird in Sekundenscheiben abgefragt, damit die Schranke auch
-bei plappernder Engine fällt; `test/heartbeat.test.py` prüft beide Lagen und hat für den zweiten Fall
-einen Notausgang (ohne den Eingriff kommt dort NIE etwas an — der Test hinge statt zu scheitern).
+1. **Jede Suche endet mit `bestmove`.** Der Broker verlangt das seit lila-engine `0e1223b` (2026-09-06) und
+   antwortet sonst `400 uci protocol error: expected bestmove before end of stream`. Der vorher gepinnte
+   Provider (`a6ef15a8`) schickte nie eins, bekam die 400 bei JEDER Suche, schlief danach 5 s und holte erst
+   dann den nächsten Auftrag. Gemeldet als „es dauert relativ lang, bis die Cloud-Engine anspringt": ein Zug
+   eine Sekunde nach einer beendeten Suche wartete 4,1 s auf die erste Zeile (gegen den echten Broker
+   gemessen, 2026-09-15). Die 400 stand schon vorher im Provider-Log, galt aber als Folge gekappter
+   Verbindungen — so blieb die Verzögerung neun Tage unbemerkt.
+2. **Lebenszeichen alle 15 s** (`{"keepalive":true}`). Der Provider reicht nur `info`-Zeilen MIT `score`
+   weiter, zwischen zwei tiefen MultiPV-Iterationen vergehen Minuten, und der Broker kappt nach 60 s Stille —
+   bei uns sichtbar als `HttpIOException: The response ended prematurely`; Aufträge kamen nie über Tiefe 29
+   hinaus, 23 hingen auf Dev bei Tiefe 20/22. Bis 0.478.10 lieferte das ein eigener Eingriff
+   (`patch_provider.py`: Wiederholung der letzten `info`-Zeile — eine Leerzeile verwirft der Broker). Dieselbe
+   Klasse Fehler wie der `NdjsonHeartbeatPump` auf der Strecke API→Browser, nur einen Hop weiter vorne. Das
+   Keepalive kommt beim Empfänger als eigene ndjson-Zeile an: der Worker zählt es als Lebenszeichen
+   (`StreamTally.IsKeepalive`), der Browser verwirft es im Parser (`ExternalEngineService.analyse`).
+
+**Wer den Pin anhebt, lässt `test/provider.test.py` laufen** (die CI tut es): die Regeln des Brokers ändern
+sich, ohne dass ein laufender Provider davon erfährt. Gegen den alten Stand scheitert der Test mit genau den
+gemeldeten vier bis fünf Sekunden. **Reihenfolge beim Ausrollen**: erst das Frontend mit dem Parser-Filter,
+dann den Provider — ein älteres Frontend reicht jedes Keepalive als leeres Ergebnis an die Anzeige weiter.
 
 Zwei Fallen, die dort
 bewusst adressiert sind: der Provider-Token braucht `engine:read` **und `engine:write`** (er

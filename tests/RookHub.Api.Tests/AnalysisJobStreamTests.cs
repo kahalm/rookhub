@@ -12,6 +12,7 @@ public class AnalysisJobStreamTests
         Assert.Null(AnalysisJobStream.DepthOf(""));
         Assert.Null(AnalysisJobStream.DepthOf("   "));          // Heartbeat-Leerzeile des Proxys
         Assert.Null(AnalysisJobStream.DepthOf("{\"pvs\":[]}"));   // ohne depth
+        Assert.Null(AnalysisJobStream.DepthOf("{\"keepalive\":true}"));   // Lebenszeichen des Providers
         Assert.Null(AnalysisJobStream.DepthOf("{kaputt"));
         Assert.Null(AnalysisJobStream.DepthOf("[1,2]"));
     }
@@ -86,8 +87,8 @@ public class AnalysisJobStreamTests
     [Fact]
     public void Tally_CountsRepeatedDataLineAsHeartbeat()
     {
-        // Der Provider wiederholt seine letzte info-Zeile, wenn nach oben nichts mehr geht
-        // (engine-provider/patch_provider.py). Zeichengleich = Lebenszeichen, nicht Fortschritt:
+        // Der RookHub-Provider bis 0.478.10 wiederholte seine letzte info-Zeile, wenn nach oben nichts
+        // mehr ging (auf fremden Rechnern laeuft er weiter). Zeichengleich = Lebenszeichen, nicht Fortschritt:
         // eine rechnende Engine kann sich nicht wiederholen, time und nodes wandern immer mit.
         var t0 = new DateTime(2026, 9, 12, 1, 51, 0, DateTimeKind.Utc);
         var line = "{\"time\":27,\"depth\":11,\"nodes\":24006,\"pvs\":[]}";
@@ -101,6 +102,38 @@ public class AnalysisJobStreamTests
         // Die Luecke zaehlt ab der EINEN echten Zeile — genau daran haengt der Stillstands-Waechter.
         Assert.Equal(30, tally.DataGapSeconds(t0.AddSeconds(30)));
         Assert.Equal(0, tally.AnyGapSeconds(t0.AddSeconds(30)));
+    }
+
+    [Fact]
+    public void Tally_CountsProviderKeepaliveAsHeartbeat_NotAsData()
+    {
+        // Der offizielle Provider schickt seit d0eeb242 alle 15 s {"keepalive":true}; der Broker reicht
+        // es als eigene Zeile durch. Die Leitung ist damit NICHT stumm (AnyGap klein), die Engine hat
+        // aber nichts Neues geliefert (DataGap waechst) — genau daran haengt der Stillstands-Waechter.
+        var t0 = new DateTime(2026, 9, 15, 12, 0, 0, DateTimeKind.Utc);
+        var tally = new StreamTally();
+        tally.Note("{\"time\":27,\"depth\":11,\"nodes\":24006,\"pvs\":[]}", t0);
+        tally.Note("{\"keepalive\":true}", t0.AddSeconds(15));
+        tally.Note(" {\"keepalive\":true}", t0.AddSeconds(30));
+
+        Assert.Equal(1, tally.DataLines);
+        Assert.Equal(2, tally.Heartbeats);
+        Assert.Equal(0, tally.OtherLines);
+        Assert.Equal(30, tally.DataGapSeconds(t0.AddSeconds(30)));
+        Assert.Equal(0, tally.AnyGapSeconds(t0.AddSeconds(30)));
+    }
+
+    [Fact]
+    public async Task ConsumeAsync_DoesNotDeliverKeepaliveAsLine()
+    {
+        var ndjson = "{\"depth\":20,\"pvs\":[]}\n{\"keepalive\":true}\n{\"keepalive\":true}\n{\"depth\":21,\"pvs\":[]}\n";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(ndjson));
+        var seen = new List<int>();
+        var tally = new StreamTally();
+        await AnalysisJobStream.ConsumeAsync(stream, (_, d) => { seen.Add(d); return Task.CompletedTask; },
+                                             CancellationToken.None, tally);
+        Assert.Equal([20, 21], seen);
+        Assert.Equal(2, tally.Heartbeats);
     }
 
     [Fact]

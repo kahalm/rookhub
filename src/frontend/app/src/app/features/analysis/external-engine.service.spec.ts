@@ -76,6 +76,24 @@ describe('ExternalEngineService', () => {
     expect(completed).toBeTrue();
   });
 
+  it('drops broker control lines like {"keepalive":true} instead of emitting them as results', () => {
+    // Der offizielle Provider schickt während einer langen Suche alle 15 s ein Lebenszeichen, das der
+    // Broker als eigene ndjson-Zeile durchreicht. Ohne pvs ist es kein Ergebnis — käme es durch,
+    // stünde die Anzeige mitten in einer tiefen Suche plötzlich bei Tiefe 0 ohne Linien.
+    const seen: EngineAnalyseLine[] = [];
+    let completed = false;
+    svc.analyse('eei_a', WORK).subscribe({ next: l => seen.push(l), complete: () => completed = true });
+    const req = http.expectOne('/api/engine/external/eei_a/analyse');
+    const l1 = '{"time":10,"depth":27,"nodes":100,"pvs":[{"depth":27,"cp":20,"moves":["e2e4"]}]}';
+    const last = '{"time":90,"depth":28,"nodes":900,"pvs":[{"depth":28,"cp":22,"moves":["e2e4"]}],"bestmove":"e2e4"}';
+
+    req.event({ type: HttpEventType.DownloadProgress, loaded: 1, partialText: l1 + '\n{"keepalive":true}\n' } as never);
+    expect(seen.length).toBe(1);
+    req.flush(l1 + '\n{"keepalive":true}\n{"keepalive":true}\n' + last + '\n');
+    expect(seen.map(l => l.depth)).toEqual([27, 28]);
+    expect(completed).toBeTrue();
+  });
+
   it('ignores a half-received line until it is complete', () => {
     const seen: EngineAnalyseLine[] = [];
     svc.analyse('eei_a', WORK).subscribe(l => seen.push(l));

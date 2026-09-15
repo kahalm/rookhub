@@ -62,25 +62,27 @@ RUN set -eux; \
 # Alles in EINEM RUN: das 109-MB-Archiv soll keine eigene Image-Schicht hinterlassen.
 # Copying.txt + AUTHORS bleiben liegen — Stockfish ist GPL-3.0, der Lizenztext gehört dazu.
 
-RUN pip install --no-cache-dir "requests==2.32.5"
+# aiohttp: der Provider ist seit d0eeb242 asynchron (vorher `requests` in Threads). Die CI liest
+# die Fassung aus dieser Zeile — Anfuehrungszeichen und Form beibehalten.
+RUN pip install --no-cache-dir "aiohttp==3.14.3"
 
 # Der OFFIZIELLE Lichess-Provider (lichess-org/external-engine, GPL-3.0 wie RookHub selbst).
 # Bewusst zur Bauzeit geholt statt ins Repo kopiert: so ist die Herkunft eindeutig und ein
 # Update ist ein Zeilenwechsel. Auf einen Commit GEPINNT (Tags/Branches könnten sich unter
 # uns ändern) und per Prüfsumme verifiziert — ein manipuliertes Skript bekäme sonst den
 # Lichess-Token zu sehen.
-ARG PROVIDER_SHA=a6ef15a8e395eb609535857aabf18837ea7696cf
-ARG PROVIDER_SHA256=2396a90368b2fa8ea7b33796788af7bc99047e13e9e4bb3dfb49ce213c04ac0b
+#
+# KEIN Eingriff mehr in den geholten Provider (bis 0.478.10 patchte patch_provider.py ein
+# Lebenszeichen hinein). Seit d0eeb242 (2026-09-06) schickt er es selbst — alle 15 s
+# `{"keepalive":true}` — und beendet jeden Upload mit `bestmove`. Das zweite verlangt der Broker
+# seit demselben Tag (lila-engine 0e1223b): der frueher gepinnte Stand bekam bei JEDER Suche eine
+# 400, schlief danach 5 s und holte erst dann den naechsten Auftrag — ein Zug kurz nach einer
+# beendeten Suche wartete so rund vier Sekunden auf die Engine. test/provider.test.py prueft beides.
+ARG PROVIDER_SHA=d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad
+ARG PROVIDER_SHA256=aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1
 RUN curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/${PROVIDER_SHA}/example-provider.py" \
       -o /opt/provider.py \
  && echo "${PROVIDER_SHA256}  /opt/provider.py" | sha256sum -c -
-
-# EIN Eingriff in den geholten Provider: ein Lebenszeichen im Analyse-Stream, sonst schliesst der
-# Broker die zwischen zwei tiefen MultiPV-Iterationen minutenlang stumme Verbindung (Begruendung
-# im Skript). Absichtlich NACH der Pruefsumme: gepatcht wird nur der verifizierte Originaltext,
-# und aendert der sich, bricht der Build ab statt still ungepatcht durchzulaufen.
-COPY patch_provider.py /opt/
-RUN python3 /opt/patch_provider.py /opt/provider.py
 
 COPY entrypoint.sh preflight.py /opt/
 RUN chmod +x /opt/entrypoint.sh

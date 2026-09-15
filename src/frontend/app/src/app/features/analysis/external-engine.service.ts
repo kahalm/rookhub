@@ -101,7 +101,12 @@ export class ExternalEngineService {
         for (const raw of text.slice(parsedUpTo, end).split('\n')) {
           const line = raw.trim();
           if (!line) continue;
-          try { subscriber.next(JSON.parse(line) as EngineAnalyseLine); } catch { /* halbe/kaputte Zeile ignorieren */ }
+          let parsed: unknown;
+          try { parsed = JSON.parse(line); } catch { continue; /* halbe/kaputte Zeile ignorieren */ }
+          // Steuerzeilen des Brokers tragen keine Bewertung: der offizielle Provider schickt seit
+          // d0eeb242 alle 15 s `{"keepalive":true}`, und der Broker reicht es als eigene Zeile durch.
+          // Als Ergebnis weitergegeben, leerte jede davon während einer tiefen Suche die Linien.
+          if (Array.isArray((parsed as Partial<EngineAnalyseLine> | null)?.pvs)) subscriber.next(parsed as EngineAnalyseLine);
         }
         parsedUpTo = end;
       };

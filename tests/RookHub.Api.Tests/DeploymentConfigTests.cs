@@ -130,11 +130,13 @@ public class DeploymentConfigTests
         Assert.Contains("dotnet-version: '10.0.x'", text);
         // Ohne diesen Schritt liefe im Image-Gate kein einziger Frontend-Spec.
         Assert.Contains("ng test", text);
-        // Die drei engine-provider-Tests liefen zuvor in KEINEM Workflow — ein Bump von
-        // PROVIDER_SHA oder ein Umbau von patch_provider.py/entrypoint.sh war damit ungeprüft.
+        // Die engine-provider-Tests liefen zuvor in KEINEM Workflow — ein Bump von PROVIDER_SHA oder
+        // ein Umbau von entrypoint.sh war damit ungeprüft. provider.test.py hält den Vertrag mit dem
+        // Broker fest (bestmove am Suchende, Lebenszeichen): genau daran hing der Pin bis 0.478.10.
         Assert.Contains("test/entrypoint.test.sh", text);
         Assert.Contains("test/supervisor.test.sh", text);
-        Assert.Contains("test/heartbeat.test.py", text);
+        Assert.Contains("test/provider.test.py", text);
+        Assert.DoesNotContain("heartbeat.test.py", text);
     }
 
     [Fact]

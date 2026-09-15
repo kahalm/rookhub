@@ -62,8 +62,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `ENGINE_NAME` | Anzeigename in der RookHub-Auswahl |
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
 | `MAX_HASH` | Hash-Tabelle in MiB (leer = 512) |
-| `KEEP_ALIVE` | Sekunden, die eine Engine ohne Stream-Ende weiterläuft (leer = 300). **Für Hintergrund-Analysen hochsetzen** — siehe Warnung unten |
-| `HEARTBEAT_SECONDS` | Lebenszeichen im Analyse-Stream nach so vielen Sekunden **stummem Upload** (leer = 15, 0 = aus) — siehe unten |
+| `KEEP_ALIVE` | Sekunden, die ein unbenutzter Stockfish-Prozess im Speicher bleibt (leer = 300). Für Hintergrund-Analysen hochsetzen — siehe unten |
 | `ENGINE_PATH` | Andere UCI-Binärdatei statt des mitgelieferten Stockfish 18 |
 | `LOG_LEVEL` | `debug` hilft bei der Fehlersuche |
 | `ENGINE_PRIMARY_NAME` / `ENGINE_PRIMARY_MAX_THREADS` / `ENGINE_PRIMARY_MAX_HASH` | Die EINE Haupt-Engine für die Live-Analyse — siehe unten |
@@ -79,57 +78,48 @@ docker compose up -d     # übernimmt die geänderte .env
 docker compose down      # Provider stoppen (Engine verschwindet dann aus der RookHub-Auswahl)
 ```
 
-### ⚠️ `KEEP_ALIVE` und lange Suchen
+### `KEEP_ALIVE`
 
-Der offizielle Provider setzt seinen „zuletzt benutzt"-Zeitstempel **erst am ENDE** eines Streams
-(`provider.py`: `self.last_used = time.monotonic()` nach dem Yield), sein Wachhund vergleicht aber
-laufend dagegen und terminiert die Engine, sobald `idle_time() > keep_alive`. Eine Suche, die **länger
-als `KEEP_ALIVE` dauert, wird deshalb mitten im Rechnen abgeschossen** — im Log als
-`Terminating idle engine` und einem `EOFError` aus `recv()`.
-
-Für die Live-Analyse fällt das nie auf (Sekunden bis Minuten). Für Hintergrund-Aufträge ist es fatal:
-ab Tiefe ~29 mit 5 Linien braucht **eine einzige Iteration** mehr als die 300 s Vorgabe, der Auftrag
-kommt also nie tiefer und sieht wie ein Fehlschlag aus. Deshalb bei Analyse-Aufträgen hochsetzen:
+Ein Stockfish-Prozess, der länger als `KEEP_ALIVE` Sekunden keine Suche hatte, wird beendet und beim
+nächsten Auftrag neu gestartet. Für Hintergrund-Aufträge lohnt ein hoher Wert:
 
 ```dotenv
 KEEP_ALIVE=86400      # 24 h
 ```
 
-Der Preis ist gering: der Stockfish-Prozess bleibt länger im RAM — was hier sogar erwünscht ist, weil
-die warme Hashtabelle ein Fortsetzen nach einer Pause fast kostenlos macht.
+Der Prozess bleibt dann länger im RAM — was hier erwünscht ist, weil die warme Hashtabelle ein
+Fortsetzen nach einer Pause fast kostenlos macht.
 
-### Lebenszeichen im Analyse-Stream (`HEARTBEAT_SECONDS`)
+Bis 0.478.10 stand hier eine Warnung: der damals gepinnte Provider erneuerte seinen „zuletzt
+benutzt"-Stempel erst am ENDE einer Suche, und sein Wachhund schoss jede Suche ab, die länger als
+`KEEP_ALIVE` lief (ab Tiefe ~29 mit 5 Linien schon eine einzige Iteration). Der heutige Stand erneuert
+den Stempel während der Suche und beendet nur Prozesse, die wirklich untätig sind.
 
-Der Provider schickt nur `info`-Zeilen **mit `score`** an den Broker. Im MultiPV-Modus liegen zwischen
-zwei fertigen Iterationen bei grosser Tiefe Minuten — der Upload schweigt so lange komplett, und der
-Broker (bzw. das CDN davor) schliesst die stumme Verbindung. Beim Empfänger sieht das aus wie ein
-vorzeitig beendeter Stream; ein Hintergrund-Auftrag verhungert dann reproduzierbar kurz vor dem Ziel,
-weil jeder Neustart wieder von Tiefe 1 hochrechnen muss und nie über die Zeit zwischen zwei Abbrüchen
-hinauskommt (beobachtet: alle 5–9 Minuten ein Abriss, Tiefe blieb bei 29 stehen).
+### Provider-Stand: Suchende und Lebenszeichen
 
-Dieses Image patcht den geholten Provider deshalb an **einer** Stelle (`patch_provider.py`, angewandt
-NACH der Prüfsummen-Kontrolle): geht länger als `HEARTBEAT_SECONDS` nichts nach oben, wird die
-**letzte weitergegebene `info`-Zeile erneut** geschickt. `HEARTBEAT_SECONDS=0` schaltet den Eingriff
-ab.
+Der gepinnte Provider (`PROVIDER_SHA` im `Dockerfile`, Stand `d0eeb242` vom 2026-09-06) erfüllt zwei
+Regeln des Brokers, an denen RookHub hängt. Dieses Image greift deshalb nicht mehr in ihn ein.
 
-**Warum die letzte Zeile und keine Leerzeile:** der Broker liest den Upload als UCI und reicht nur
-weiter, was er versteht — eine Leerzeile verwirft er. Am 2026-09-10 gemessen: der Provider schickte
-in einer halben Stunde **48 Leerzeilen, beim Empfänger kamen 0 an**, und die Verbindung wurde
-weiterhin nach 60 s Stille gekappt. Mit der wiederholten Zeile kam der Beweis in der Gegenrichtung:
-3 gesendete Lebenszeichen, und der Auftrag kam mit **28 statt 25 Datenzeilen** an. Der Empfänger
-übernimmt eine Zeile ohnehin nur, wenn sie mindestens so tief ist wie sein Stand
-(`AnalysisJobStream.ShouldPersist`) — dieselbe Zeile zweimal ändert dort also nichts.
+**Jede Suche endet mit `bestmove`.** Der Broker verlangt das seit 2026-09-06 (lila-engine `0e1223b`)
+und weist einen Upload ohne mit `400 uci protocol error: expected bestmove before end of stream` ab.
+Der bis 0.478.10 gepinnte Stand (`a6ef15a8`) schickte nie ein `bestmove`, bekam die 400 also bei
+JEDER Suche, schlief danach 5 s und holte erst dann den nächsten Auftrag. Am Brett hieß das: **ein Zug
+kurz nach einer beendeten Suche wartete rund vier Sekunden**, bis die Engine anlief.
 
-**Gemessen wird der UPLOAD, nicht die Engine** — und das ist der ganze Punkt. Die erste Fassung wartete
-auf Stille der ENGINE (`recv` mit Zeitschranke). Stockfish schweigt während einer langen Iteration aber
-gar nicht: es schickt laufend `info depth … currmove …`, und genau die filtert der Provider weg (kein
-`score`). Die Zeitschranke fiel deshalb NIE, während nach oben minutenlang nichts ging — der Fall, für
-den das Lebenszeichen gebaut war, war der einzige, den es nicht abdeckte. Sichtbar wurde es erst an den
-Hintergrund-Aufträgen: 23 Aufträge hingen bei Tiefe 20/22, im Log des Brokers `400 uci protocol error:
-expected bestmove before end of stream`, empfängerseitig „letzte Datenzeile vor 60,0 s" — der Broker
-kappt nach 60 s Stille. Jetzt zählt die Zeit seit der letzten WEITERGEGEBENEN Zeile, und `recv` wird in
-Sekundenscheiben abgefragt, damit die Schranke auch bei plappernder Engine fällt.
-`test/heartbeat.test.py` prüft beide Lagen (Engine schweigt / Engine plappert score-los).
+**Lebenszeichen alle 15 s** (`{"keepalive":true}`, vom Broker an den Empfänger durchgereicht). Der
+Provider gibt nur `info`-Zeilen **mit `score`** weiter; zwischen zwei tiefen MultiPV-Iterationen
+vergehen Minuten, und der Broker schließt eine Verbindung nach 60 s Stille. Ohne Lebenszeichen kam ein
+Hintergrund-Auftrag nie über die Tiefe hinaus, die zwischen zwei Abrissen erreichbar ist (beobachtet:
+Tiefe 20/22 bei 23 Aufträgen, Tiefe 29 bei tiefen Aufträgen). Bis 0.478.10 hat dieses Image dafür einen
+eigenen Eingriff in den Provider gepatcht (`patch_provider.py`, eine Wiederholung der letzten
+`info`-Zeile); der heutige Stand macht es selbst. Die Variable `HEARTBEAT_SECONDS` ist damit
+wirkungslos und kann aus einer bestehenden `.env` gestrichen werden.
+
+`python3 test/provider.test.py <provider.py>` prüft beides gegen einen nachgebauten Broker — dazu,
+dass score-lose Zeilen beim Provider bleiben und dass auch ein Zug WÄHREND einer Suche sofort startet.
+Gegen den alten Stand schlägt der Test mit genau den vier bis fünf Sekunden Wartezeit fehl. **Beim
+Aktualisieren des Pins** läuft er in der CI mit: die Regeln des Brokers ändern sich, ohne dass ein
+bereits laufender Provider davon erfährt.
 
 ### Für Analyse-Aufträge: VIELE Engines mit WENIGEN Threads
 
@@ -253,8 +243,8 @@ Alles, was UCI spricht, funktioniert — der Provider startet es einfach als Unt
 Es geht auch direkt, wenn Python 3 und eine Engine vorhanden sind:
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install requests
-curl -O https://raw.githubusercontent.com/lichess-org/external-engine/a6ef15a8e395eb609535857aabf18837ea7696cf/example-provider.py
+python3 -m venv .venv && .venv/bin/pip install aiohttp
+curl -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
 LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
   --engine /usr/games/stockfish --name "RookHub Heim-Engine" --max-threads 6
 ```
@@ -277,7 +267,7 @@ gebraucht. Auf einem Einzelrechner ist der direkte Weg der einfachere.
 „Add python.exe to PATH" ankreuzen. Dann in der PowerShell:
 
 ```powershell
-pip install requests
+pip install aiohttp
 ```
 
 (Das `externally-managed-environment` aus dem Abschnitt oben betrifft nur Linux/macOS.)
@@ -299,7 +289,7 @@ Engine über die Kommandozeile, ein Pfad wie `C:\Program Files\…` würde dort 
 
 ```powershell
 cd C:\stockfish
-curl.exe -O https://raw.githubusercontent.com/lichess-org/external-engine/a6ef15a8e395eb609535857aabf18837ea7696cf/example-provider.py
+curl.exe -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
 ```
 
 **4. Starten:**
@@ -391,9 +381,9 @@ standardmäßig nach 72 Stunden, egal wie die Aufgabe selbst konfiguriert ist.
 > Get-Process stockfish-windows-x86-64-* -ErrorAction SilentlyContinue | Stop-Process -Force
 > ```
 
-**Der Zombie-Leak:** `example-provider.py` startet die Engine unter Windows über
-`subprocess.Popen(engine_command, shell=True, …)` und beendet sie bei Idle-Timeout per
-`process.terminate()`. Unter Windows tötet das nur die Shell-Hülle (`cmd.exe`), die Stockfish
+**Der Zombie-Leak:** `example-provider.py` startet die Engine über eine Shell
+(`asyncio.create_subprocess_shell`, bis 0.478.10 `subprocess.Popen(…, shell=True)`) und beendet sie
+bei Idle-Timeout per `process.terminate()`. Unter Windows tötet das nur die Shell-Hülle (`cmd.exe`), die Stockfish
 gestartet hat — der eigentliche Engine-Prozess bleibt als Waise zurück (0 % CPU, aber dauerhaft
 belegter Arbeitsspeicher). Das passiert bei **jedem** Timeout, unabhängig vom `KEEP_ALIVE`-Wert;
 ein höherer Wert (z. B. `3600` statt der Default-`300`) verlangsamt nur, wie oft das Leck
@@ -445,6 +435,8 @@ Zeilenwechsel im `Dockerfile`. Ergänzt haben wir nur `entrypoint.sh` (baut den 
 prüft den Argument-Aufbau im Trockenlauf, `bash test/supervisor.test.sh` den echten Fehlerpfad bei
 mehreren Engines: stirbt einer, muss der Container mit DESSEN Code enden — sonst greift
 `restart: unless-stopped` nicht) und `preflight.py` (prüft den Token vorab, damit ein fehlender Scope als
-Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace).
+Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace). Den Provider selbst prüft
+`python3 test/provider.test.py <provider.py>` gegen einen nachgebauten Broker (siehe „Provider-Stand"
+oben).
 
 Serverseitig ist die Gegenstelle in `rookhub/CLAUDE.md` unter „Externe Engine" beschrieben.
