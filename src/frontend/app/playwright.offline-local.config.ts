@@ -6,6 +6,8 @@
  *   E2E_OFFLINE_BASE=http://127.0.0.1:18099 npx playwright test --config=playwright.offline-local.config.ts
  * Im normalen E2E-Stack-Lauf (scripts/e2e.sh) läuft offline.spec.ts stattdessen über die
  * regulären Configs (no-auth-Projekt) gegen das Prod-Frontend-Image.
+ * Ohne API-Stack wird der Test „online heruntergeladenes Repertoire" übersprungen — er legt ein
+ * echtes Repertoire an und lädt es über die Oberfläche herunter.
  */
 import { defineConfig } from '@playwright/test';
 
