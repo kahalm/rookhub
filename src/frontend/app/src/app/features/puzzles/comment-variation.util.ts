@@ -17,6 +17,11 @@ import { tryLoadFen } from './puzzle-move.util';
  *                                sonst spielte der Parser c5 mit Weiß und a5 danach mit Schwarz),
  * und lösen JEDEN Zweig eigenständig auf.
  *
+ * VORWÄRTS-SPRUNG: Bricht die Auflösung genau an einem nummerierten Zug ab, der ÜBER die erwartete
+ * Fortsetzung hinausspringt („… nach 2.Sf3 … 4.c3 Sc6" — dazwischen fehlen Züge), wird der Rest als
+ * eigener Zweig aufgelöst, und zwar NUR an der Hauptlinien-Stellung seiner Zugnummer (kein Raten
+ * anderer Stellungen). So bleiben absichtlich zusammenhängende Folgen mit Nummernlücke unverändert.
+ *
  * NOTATION: Neben englischem SAN (KQRBN) werden deutsche Figurenbuchstaben (D/T/L/S → Q/R/B/N, inkl.
  * Umwandlung =D usw.) erkannt (übersetzte Kurse). Da D/T/L/S weder englische Figuren- noch Feldbuchstaben
  * sind, ist die Zuordnung eindeutig; ein versehentlich erkanntes Wort spielt ohnehin nicht legal → Text.
@@ -37,8 +42,9 @@ export interface CommentSegment {
 /** Ein Zug-Schritt der aufgelösten Variante (Stellung nach dem Zug + Feldmarkierung). */
 export interface VariationStep { san: string; fen: string; from: string; to: string; }
 
-/** Ein Zweig: SAN-Folge + optionale absolute Ply des ERSTEN Zugs (aus seiner Zugnummer). */
-export interface CommentBranch { sans: string[]; startPly?: number; }
+/** Ein Zweig: SAN-Folge + optionale absolute Ply des ERSTEN Zugs (aus seiner Zugnummer).
+ *  `plies` = absolute Ply je Zug, soweit er eine Zugnummer trägt (parallel zu `sans`). */
+export interface CommentBranch { sans: string[]; startPly?: number; plies?: (number | undefined)[]; }
 
 // Deutsche → englische Figurenbuchstaben (für übersetzte Kurse). K bleibt K.
 const DE_PIECE: Record<string, string> = { D: 'Q', T: 'R', L: 'B', S: 'N' };
@@ -92,6 +98,7 @@ export function branches(text: string): CommentBranch[] {
   const toks = scanTokens(text);
   const out: CommentBranch[] = [];
   let cur: string[] = [];
+  let curPlies: (number | undefined)[] = [];
   let curStartPly: number | undefined;
   let lastPly = -Infinity;
   let prevEnd = 0;
@@ -105,8 +112,9 @@ export function branches(text: string): CommentBranch[] {
       else if (gap.includes(',') && t.ply === undefined) boundary = true;    // Komma + numerloser Zug = Aufzählung
     }
     if (boundary) {
-      out.push({ sans: cur, startPly: curStartPly });
+      out.push({ sans: cur, startPly: curStartPly, plies: curPlies });
       cur = [];
+      curPlies = [];
       curStartPly = undefined;
       lastPly = -Infinity;
     }
@@ -115,9 +123,10 @@ export function branches(text: string): CommentBranch[] {
       if (!cur.length) curStartPly = t.ply;
     }
     cur.push(t.san);
+    curPlies.push(t.ply);
     prevEnd = t.end;
   }
-  if (cur.length) out.push({ sans: cur, startPly: curStartPly });
+  if (cur.length) out.push({ sans: cur, startPly: curStartPly, plies: curPlies });
   return out;
 }
 
@@ -196,6 +205,43 @@ export function resolveVariation(startFen: string, ucis: string[], sans: string[
   return best;
 }
 
+/** Ply, die der Zug an Position `k` als FORTSETZUNG der Züge davor hätte (ab dem ersten nummerierten
+ *  Zug bekannt, numerlose Züge zählen mit); `undefined`, solange keiner nummeriert war. */
+function continuationPly(plies: (number | undefined)[], k: number): number | undefined {
+  let next: number | undefined;
+  for (let i = 0; i < k; i++) {
+    const p = plies[i];
+    if (p !== undefined) next = p + 1;
+    else if (next !== undefined) next++;
+  }
+  return next;
+}
+
+/** Spielt die Folge NUR an der Hauptlinien-Stellung ihrer Zugnummer; liegt die außerhalb → leer. */
+function resolveAtAnchor(startFen: string, ucis: string[], sans: string[], startPly: number): VariationStep[] {
+  const bases = mainlineFens(startFen, ucis);
+  const anchor = startPly - baseStartPly(startFen);
+  return anchor >= 0 && anchor < bases.length ? playPrefix(bases[anchor], sans) : [];
+}
+
+/** Löst einen Zweig auf (siehe Datei-Kopf, „VORWÄRTS-SPRUNG"): ein aufgelöster Schritt je Zug oder null. */
+function resolveBranch(startFen: string, ucis: string[], b: CommentBranch): (VariationStep | null)[] {
+  const steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
+  const out: (VariationStep | null)[] = b.sans.map((_s, k) => (k < steps.length ? steps[k] : null));
+  const plies = b.plies ?? [];
+  let k = steps.length;
+  while (k < b.sans.length) {
+    const ply = plies[k];
+    const expected = continuationPly(plies, k);
+    if (ply === undefined || expected === undefined || ply <= expected) { k++; continue; }
+    const rest = resolveAtAnchor(startFen, ucis, b.sans.slice(k), ply);
+    if (!rest.length) { k++; continue; }
+    rest.forEach((step, j) => { out[k + j] = step; });
+    k += rest.length;
+  }
+  return out;
+}
+
 /**
  * Zerlegt einen Kommentar in Segmente (Text + klickbare Züge). Jeder Zweig wird eigenständig gegen die
  * Puzzle-Hauptlinie (`startFen`/`ucis`) aufgelöst; ein Zug ist NUR klickbar, wenn er Teil des legalen
@@ -204,10 +250,7 @@ export function resolveVariation(startFen: string, ucis: string[], sans: string[
 export function buildCommentSegments(text: string, startFen: string, ucis: string[]): CommentSegment[] {
   // Pro Token in Original-Reihenfolge den aufgelösten Schritt (oder null) bestimmen.
   const perToken: (VariationStep | null)[] = [];
-  for (const b of branches(text)) {
-    const steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
-    for (let k = 0; k < b.sans.length; k++) perToken.push(k < steps.length ? steps[k] : null);
-  }
+  for (const b of branches(text)) perToken.push(...resolveBranch(startFen, ucis, b));
 
   const segments: CommentSegment[] = [];
   const re = new RegExp(TOKEN_RE.source, 'g');

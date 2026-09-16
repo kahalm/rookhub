@@ -127,10 +127,17 @@ namespace RookHub.Api.Services;
 ///   Signal: Zuglänge der Linien). Am echten Fall gemessen: ein 5-MB-Chessable-Repertoire mit 902
 ///   Linien ergab 0 spielbare Linien, jetzt 900. Die Züge stehen im `Book.SourcePgn` → per
 ///   „Aktualisieren" lokal aufbereitbar.</item>
+/// <item><c>19</c> — Varianten ohne eigenen Zug-Kommentar gingen verloren: nur eine Variante, die direkt
+///   auf einen Kommentar folgte, wurde in den Kommentar gefaltet. Chessable schreibt Alternativen aber oft
+///   direkt hinter den Zug („3. e5 (3.Nc3 Nf6 …) (3.exd5 exd5 …)"), bzw. hinter einen reinen Pfeil-Kommentar.
+///   Jetzt faltet der Kurs-Import JEDE Hauptlinien-Variante in PGN-Reihenfolge in den Kommentar ihres Zugs
+///   (<c>PgnParser.ExtractMoveComments(foldAllVariations: true)</c>); das Frontend macht die Züge dort über
+///   ihre Zugnummer klickbar. Die Varianten stehen im <c>Book.SourcePgn</c> → per „Aktualisieren" lokal
+///   aufbereitbar.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 18;
+    public const int CurrentVersion = 19;
 }

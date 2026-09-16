@@ -142,7 +142,12 @@ public static partial class PgnParser
     /// passen. <c>[%…]</c>-Annotationen werden entfernt, Whitespace normalisiert, leere Kommentare
     /// verworfen, mehrere Kommentare am selben Zug mit Leerzeichen verbunden. <c>null</c> = keine.
     /// </summary>
-    public static Dictionary<int, string>? ExtractMoveComments(string moveText)
+    /// <param name="foldAllVariations">Kurs-/Buch-Import: JEDE Hauptlinien-Variante in den Kommentar ihres
+    /// Zugs falten, nicht nur eine, die direkt auf einen Kommentar folgt. Ohne das gingen Varianten verloren,
+    /// deren Zug selbst keinen Kommentar hat (Chessable: „3. e5 (3.Nc3 …) (3.exd5 …)"). Die Züge bleiben mit
+    /// ihren Zugnummern im Text stehen; das Frontend macht sie klickbar und verankert sie über die Nummer an
+    /// der passenden Hauptlinien-Stellung. Aus für Meisterpartien (Rate-/Kommentar-Sessions).</param>
+    public static Dictionary<int, string>? ExtractMoveComments(string moveText, bool foldAllVariations = false)
     {
         var map = new Dictionary<int, string>();
         int depth = 0;       // Variantentiefe
@@ -197,6 +202,25 @@ public static partial class PgnParser
                 if (rendered.Length > 0 && map.TryGetValue(lastCommentKey, out var prev))
                     map[lastCommentKey] = Truncate($"{prev} {rendered}", MaxCommentLength);
                 i = end + 1; // ganze Variante konsumiert; commentTrailing bleibt (Folge-Varianten falten mit)
+            }
+            else if (c == '(' && depth == 0 && foldAllVariations)
+            {
+                // Variante OHNE vorausgehenden Kommentar: gehört zum zuletzt gezählten Zug (sie ist eine
+                // Alternative zu ihm). Danach verhält sie sich wie ein Kommentar — weitere Varianten und ein
+                // direkt folgender Kommentar hängen sich in PGN-Reihenfolge an denselben Schlüssel.
+                Flush();
+                int end = MatchParen(moveText, i);
+                var rendered = RenderVariation(moveText.Substring(i + 1, end - (i + 1)));
+                if (rendered.Length > 0)
+                {
+                    int key = sanCount - 1;
+                    map[key] = map.TryGetValue(key, out var prev)
+                        ? Truncate($"{prev} {rendered}", MaxCommentLength)
+                        : Truncate(rendered, MaxCommentLength);
+                    commentTrailing = true;
+                    lastCommentKey = key;
+                }
+                i = end + 1;
             }
             else if (c == '(') { Flush(); depth++; i++; }
             else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }

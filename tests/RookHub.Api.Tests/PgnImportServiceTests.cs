@@ -97,7 +97,7 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void ParsePgn_CollectsPerMoveComments_KeyedByHalfMoveIndex_IgnoringVariations()
+    public void ParsePgn_CollectsPerMoveComments_KeyedByHalfMoveIndex_FoldingVariationsIntoTheirMove()
     {
         var pgn = @"
 [Event ""X""]
@@ -113,10 +113,52 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal("Intro.", mc[-1]);              // vor dem ersten Zug
         Assert.Equal("Develops the knight.", mc[0]);  // nach Nf3 (Halbzug 0)
         Assert.Equal("The pin.", mc[2]);              // nach Bb5 (Halbzug 2)
-        Assert.False(mc.ContainsKey(1));              // Nc6 hat keinen Kommentar
         Assert.False(mc.ContainsKey(3));              // a6 hat keinen Kommentar
-        // Varianten-Kommentar (Philidor) wird NICHT mitgezählt.
-        Assert.DoesNotContain(mc.Values, v => v.Contains("Philidor"));
+        // Seit Pipeline 19: die Variante hinter Nc6 ist eine Alternative zu IHM und landet samt Zugnummer
+        // und Kommentar unter seinem Halbzug (das Frontend macht „2... d6" dort klickbar).
+        Assert.Equal("2... d6 Philidor — Nebenvariante.", mc[1]);
+    }
+
+    [Fact]
+    public void ParsePgn_FoldsEveryVariationIntoItsMove_RealChessableLine()
+    {
+        // Echte Chessable-Linie (Kurs 128648, oid 20733162, gekürzt): die Alternativen zu 3.e5 stehen
+        // direkt hinter dem Zug, die zu 4.b4 hinter einem reinen Pfeil-Kommentar. Bis Pipeline 18 gingen
+        // alle vier Varianten verloren; bei 3.e5 blieb nur der verwaiste Rest „2.d3 d5 3.Nf3 analysiert.".
+        var pgn = """
+            [Event "Lifetime Repertoires: Martinovićs Französisch"]
+            [Round "004.002"]
+            [FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+
+            1. e4 {[%tqu "En","find the move","","","e7e6","",10]} e6 2. Nf3 {Dieser Zug hat fast keine eigenständige Bedeutung.} d5 3. e5 (3.Nc3 Nf6 4.e5 Nfd7 5.d4 {werden wir in einem späteren Kapitel der Steinitz Variante sehen.}) (3.exd5 exd5 4.d4 {geht über in die Abtauschvariante.}) (3.d3 {ist hier in der Zugfolge }) {2.d3 d5 3.Nf3 analysiert.} c5 4. b4 {[%cal Bb4c5][%csl Rc5]} ({Dieses Gambit ist die einzige unabhängige Variante.} 4.c3 {ist ein viel besserer Zug:} 4...Nc6 5.d4 {würde zur Vorstoßvariante überleiten.}) cxb4 5. a3 *
+            """;
+
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+
+        Assert.Equal("e2e4 e7e6 g1f3 d7d5 e4e5 c7c5 b2b4 c5b4 a2a3", p.Moves);
+        Assert.Equal(0, p.StartPly);
+        var mc = p.MoveComments!;
+        Assert.Equal("Dieser Zug hat fast keine eigenständige Bedeutung.", mc[2]);
+        Assert.Equal("3.Nc3 Nf6 4.e5 Nfd7 5.d4 werden wir in einem späteren Kapitel der Steinitz Variante sehen. "
+            + "3.exd5 exd5 4.d4 geht über in die Abtauschvariante. "
+            + "3.d3 ist hier in der Zugfolge 2.d3 d5 3.Nf3 analysiert.", mc[4]);
+        Assert.Equal("Dieses Gambit ist die einzige unabhängige Variante. 4.c3 ist ein viel besserer Zug: "
+            + "4...Nc6 5.d4 würde zur Vorstoßvariante überleiten.", mc[6]);
+        Assert.False(mc.ContainsKey(5));
+        Assert.Equal(2, p.MoveShapes![6].Count);   // Pfeil + Feld von 4.b4 bleiben beim Zug
+    }
+
+    [Fact]
+    public void ExtractMoveComments_WithoutFoldAll_KeepsOldBehaviourForMasterGames()
+    {
+        // Rate-/Kommentar-Sessions (Meisterpartien) rufen ohne foldAllVariations auf: dort bleibt es dabei,
+        // dass nur eine Variante direkt nach einem Kommentar gefaltet wird.
+        const string moveText = "1. e4 e6 2. Nf3 d5 3. e5 (3.Nc3 Nf6) {Rest.} c5 4. b4 {[%cal Bb4c5]} (4.c3 Nc6) cxb4 *";
+
+        var mc = PgnParser.ExtractMoveComments(moveText)!;
+
+        Assert.Equal("Rest.", mc[4]);
+        Assert.False(mc.ContainsKey(6));
     }
 
     [Fact]

@@ -109,3 +109,73 @@ describe('comment-variation.util', () => {
     expect(resolveVariation(fen, [], ['Rxa7', 'bxa7'])).toEqual([]);
   });
 });
+
+describe('comment-variation.util — echte Chessable-Linie (Kurs 128648, oid 20733162)', () => {
+  // Hauptlinie + Kommentare, wie der RookHub-Import sie ab Pipeline 19 speichert. Die Soll-Stellungen
+  // sind Chessables EIGENE data-fen je klickbarem Variantenzug (aus der Kursseite mitgeschnitten).
+  const MAIN = ('e2e4 e7e6 g1f3 d7d5 e4e5 c7c5 b2b4 c5b4 a2a3 b4a3 c1a3 f8a3 b1a3 g8e7 a3b5 e8g8 b5a7 c8d7')
+    .split(' ');
+  // chess.js und Chessable setzen das En-passant-Feld unterschiedlich; verglichen wird ohne es.
+  const noEp = (fen: string | undefined) => { const f = (fen ?? '').split(' '); f[3] = '-'; return f.join(' '); };
+  const moves = (text: string) => buildCommentSegments(text, START, MAIN).filter(s => s.move);
+
+  it('Varianten zu 3.e5: alle Züge klickbar, Stellungen wie auf Chessable', () => {
+    const text = '3.Nc3 Nf6 4.e5 Nfd7 5.d4 werden wir in einem späteren Kapitel der Steinitz Variante sehen. '
+      + '3.exd5 exd5 4.d4 geht über in die Abtauschvariante, mit der wir uns später beschäftigen werden. '
+      + '3.d3 ist hier in der Zugfolge 2.d3 d5 3.Nf3 analysiert.';
+    const m = moves(text);
+    expect(m.map(s => s.move)).toEqual(
+      ['3.Nc3', 'Nf6', '4.e5', 'Nfd7', '5.d4', '3.exd5', 'exd5', '4.d4', '3.d3', '2.d3', 'd5', '3.Nf3']);
+    expect(m.map(s => noEp(s.fen))).toEqual([
+      'rnbqkbnr/ppp2ppp/4p3/3p4/4P3/2N2N2/PPPP1PPP/R1BQKB1R b KQkq - 1 3',
+      'rnbqkb1r/ppp2ppp/4pn2/3p4/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 2 4',
+      'rnbqkb1r/ppp2ppp/4pn2/3pP3/8/2N2N2/PPPP1PPP/R1BQKB1R b KQkq - 0 4',
+      'rnbqkb1r/pppn1ppp/4p3/3pP3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 1 5',
+      'rnbqkb1r/pppn1ppp/4p3/3pP3/3P4/2N2N2/PPP2PPP/R1BQKB1R b KQkq - 0 5',
+      'rnbqkbnr/ppp2ppp/4p3/3P4/8/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 3',
+      'rnbqkbnr/ppp2ppp/8/3p4/8/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4',
+      'rnbqkbnr/ppp2ppp/8/3p4/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq - 0 4',
+      'rnbqkbnr/ppp2ppp/4p3/3p4/4P3/3P1N2/PPP2PPP/RNBQKB1R b KQkq - 0 3',
+      'rnbqkbnr/pppp1ppp/4p3/8/4P3/3P4/PPP2PPP/RNBQKBNR b KQkq - 0 2',
+      'rnbqkbnr/ppp2ppp/4p3/3p4/4P3/3P4/PPP2PPP/RNBQKBNR w KQkq - 0 3',
+      'rnbqkbnr/ppp2ppp/4p3/3p4/4P3/3P1N2/PPP2PPP/RNBQKB1R b KQkq - 1 3',
+    ]);
+  });
+
+  it('Variante zu 4.b4: nach dem Verweis „2.Sf3" wird „4.c3 … 5.d4" an Zug 4 aufgelöst', () => {
+    const text = 'Dieses Gambit ist die einzige unabhängige Variante, die nach 2.Sf3 entstehen kann. '
+      + '4.c3 ist ein viel besserer Zug, aber führt auch nur zu einer Transposition: '
+      + '4...Nc6 5.d4 würde zur Vorstoßvariante überleiten, die wir uns später in eigenen Kapiteln anschauen werden.';
+    const m = moves(text);
+    expect(m.map(s => s.move)).toEqual(['2.Sf3', '4.c3', '4...Nc6', '5.d4']);
+    expect(m.map(s => noEp(s.fen))).toEqual([
+      'rnbqkbnr/pppp1ppp/4p3/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',   // Hauptzug 2.Nf3 (deutsch „Sf3")
+      'rnbqkbnr/pp3ppp/4p3/2ppP3/8/2P2N2/PP1P1PPP/RNBQKB1R b KQkq - 0 4',
+      'r1bqkbnr/pp3ppp/2n1p3/2ppP3/8/2P2N2/PP1P1PPP/RNBQKB1R w KQkq - 1 5',
+      'r1bqkbnr/pp3ppp/2n1p3/2ppP3/3P4/2P2N2/PP3PPP/RNBQKB1R b KQkq - 0 5',
+    ]);
+  });
+
+  it('Einleitung: „2.d4" ist wie auf Chessable klickbar', () => {
+    const m = moves('Es gibt sicher nichts weniger kritisches als wenn unser Gegner nicht ausnutzt, dass er 2.d4 spielen kann.');
+    expect(m.map(s => s.move)).toEqual(['2.d4']);
+    expect(noEp(m[0].fen)).toBe(noEp('rnbqkbnr/pppp1ppp/4p3/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2'));
+  });
+
+  it('die Zweigbildung selbst bleibt unverändert (Folge mit Nummernlücke ist EIN Zweig)', () => {
+    expect(splitBranches('nach 2.Sf3 kann 4.c3 4...Sc6 5.d4')).toEqual([['Sf3', 'c3', 'Sc6', 'd4']]);
+  });
+
+  it('Vorwärts-Sprung außerhalb der Hauptlinie wird nicht geraten', () => {
+    // Hauptlinie nur 1.e4 e5: „9.Lb5" hat keine Stellung → bleibt Text, auch wenn Lb5 anderswo ginge.
+    const segs = buildCommentSegments('erst 2.Sf3 und später 9.Lb5', START, ['e2e4', 'e7e5']);
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual(['2.Sf3']);
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe('erst 2.Sf3 und später 9.Lb5');
+  });
+
+  it('Vorwärts-Sprung, dessen Rest an seiner Stellung illegal ist, bleibt Text', () => {
+    // „4.Dh5" ist nach 3...c5 kein legaler Zug (Läufer/Bauern im Weg) → kein Chip.
+    const m = moves('nach 2.Sf3 wäre 4.Dh5 Unsinn');
+    expect(m.map(s => s.move)).toEqual(['2.Sf3']);
+  });
+});

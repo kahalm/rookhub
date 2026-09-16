@@ -92,7 +92,9 @@ public class PgnImportService
             if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
 
             var comment = PgnParser.ExtractFirstComment(moveText);
-            var moveComments = PgnParser.ExtractMoveComments(moveText);
+            // foldAllVariations: jede Variante landet (mit Zugnummern) im Kommentar ihres Zugs → das
+            // Frontend macht die Züge dort klickbar. Sonst gingen Varianten ohne eigenen Zug-Kommentar verloren.
+            var moveComments = PgnParser.ExtractMoveComments(moveText, foldAllVariations: true);
             var moveShapes = PgnParser.ExtractMoveShapes(moveText);
             // Von Chessable geduldete Alternativzüge (softFail → [%alt]) je Halbzug als UCI. Anknüpfpunkt
             // ist die Stellung VOR dem jeweiligen Hauptzug (siehe ExtractAltMoves). Nur für die echte
