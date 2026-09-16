@@ -23,6 +23,8 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { RepertoireTrainingService } from './repertoire-training.service';
 import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, cachedRepertoires } from './repertoire-offline.util';
+import { downloadBlob } from '../../shared/download.util';
+import { stripInternalMarkers } from '../../shared/pgn-export.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -392,14 +394,12 @@ export class RepertoireListComponent implements OnInit {
   }
 
   downloadPgn(rep: Repertoire): void {
-    this.repertoireService.downloadPgn(rep.id).subscribe({
-      next: blob => {
+    // Derselbe Endpunkt beliefert Viewer und Trainer (die brauchen [%alt]) — die internen Marker werden
+    // deshalb erst hier, beim Speichern, entfernt.
+    this.repertoireService.getPgnText(rep.id).subscribe({
+      next: pgn => {
         const safe = (rep.name || 'repertoire').replace(/[^A-Za-z0-9]+/g, '_');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${safe}.pgn`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        downloadBlob(new Blob([stripInternalMarkers(pgn)], { type: 'application/x-chess-pgn' }), `${safe}.pgn`);
       },
       error: () => this.snackbar.info(this.translate.instant('common.downloadFailed'))
     });

@@ -231,3 +231,34 @@ describe('RepertoireListComponent Karten-Aktionen (⋮-Menü)', () => {
     expect(labels[0]).toContain('common.downloadPgn');
   });
 });
+
+/**
+ * PGN-Download: derselbe Endpunkt beliefert Viewer und Trainer (die brauchen [%alt]). Beim Speichern werden
+ * die internen Marker entfernt — ChessBase zeigte „[%alt c5 e5 …]" sonst als Kommentartext.
+ */
+describe('RepertoireListComponent PGN-Download', () => {
+  it('entfernt [%alt] vor dem Speichern und benennt die Datei nach dem Repertoire', async () => {
+    let saved: Blob | undefined;
+    spyOn(URL, 'createObjectURL').and.callFake((b: Blob | MediaSource) => { saved = b as Blob; return 'blob:test'; });
+    spyOn(URL, 'revokeObjectURL');
+    const click = spyOn(HTMLAnchorElement.prototype, 'click');
+    const repertoireService = {
+      getPgnText: () => of('[Event "R"]\n\n1. e4 e6 {[%cal Gd7d5][%alt c5 e5]Französisch} 2. d4 *\n'),
+    } as any;
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any,
+      { info: () => undefined } as any, { instant: (k: string) => k } as any);
+
+    comp.downloadPgn({ id: 3, name: 'Französisch Rep' } as any);
+
+    expect((click.calls.mostRecent().object as HTMLAnchorElement).download).toBe('Franz_sisch_Rep.pgn');
+    expect(await saved!.text()).toBe('[Event "R"]\n\n1. e4 e6 {[%cal Gd7d5]Französisch} 2. d4 *\n');
+  });
+
+  it('meldet einen fehlgeschlagenen Download', () => {
+    const shown: string[] = [];
+    const comp = new RepertoireListComponent({ getPgnText: () => throwError(() => new Error('x')) } as any,
+      {} as any, {} as any, { info: (m: string) => shown.push(m) } as any, { instant: (k: string) => k } as any);
+    comp.downloadPgn({ id: 3, name: 'R' } as any);
+    expect(shown).toEqual(['common.downloadFailed']);
+  });
+});

@@ -22,6 +22,7 @@ import { CalcMembersDialogComponent } from './calc-members-dialog.component';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
+import { pgnFileName } from '../../shared/pgn-export.util';
 
 /**
  * Kurs-Detailseite (`/courses/:bookId`): Metadaten, eigener Fortschritt und — neu — die
@@ -433,12 +434,4 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   private fail(key: string): void {
     this.snackbar.warn(this.translate.instant(key));
   }
-}
-
-/** Dateiname „Kurs_Zusatz.pgn" wie im Backend: nur Buchstaben/Ziffern, alles andere als ein „_". */
-export function pgnFileName(courseName: string | null | undefined, suffix: string): string {
-  const clean = (s: string | null | undefined) =>
-    (s ?? '').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 80).replace(/_+$/, '');
-  const name = [clean(courseName), clean(suffix)].filter(p => p.length > 0).join('_');
-  return `${name || 'course'}.pgn`;
 }

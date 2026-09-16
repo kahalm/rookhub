@@ -161,6 +161,25 @@ public class PgnImportServiceTests : IDisposable
         Assert.False(mc.ContainsKey(6));
     }
 
+    [Theory]
+    [InlineData("e6 {[%cal Gd7d5][%alt c5 e5 c6 d6]Bereits nach diesem Zug} 2. Nf3",
+                "e6 {[%cal Gd7d5]Bereits nach diesem Zug} 2. Nf3")]
+    [InlineData("e6 {[%cal Gd7d5] [%alt c5 e5]Bereits} 2. Nf3", "e6 {[%cal Gd7d5] Bereits} 2. Nf3")]
+    [InlineData("cxb4 {[%alt b6]Es gibt auch gute Alternativen} 5. a3", "cxb4 {Es gibt auch gute Alternativen} 5. a3")]
+    [InlineData("e5 {[%alt d5]} 2. Nf3", "e5 2. Nf3")]                                  // leer gewordener Kommentar fällt weg
+    [InlineData("{[%info]} 1. -- {Text} *", " 1. -- {Text} *")]
+    [InlineData("1. e4 {[%tqu \"En\",\"x\",\"\",\"\",\"e7e6\",\"\",10]} e6 {[%csl Rc5]}",
+                "1. e4 {[%tqu \"En\",\"x\",\"\",\"\",\"e7e6\",\"\",10]} e6 {[%csl Rc5]}")]  // bekannte Marker bleiben
+    public void StripInternalMarkers_RemovesAltAndInfo_KeepsEverythingElse(string input, string expected)
+        => Assert.Equal(expected, PgnParser.StripInternalMarkers(input));
+
+    [Fact]
+    public void StripInternalMarkers_KeepsHeadersAndLineBreaks()
+    {
+        var pgn = "[Event \"X\"]\n[Round \"1\"]\n\n1. e4 e6 {[%alt c5]Französisch}\n2. d4 *\n";
+        Assert.Equal("[Event \"X\"]\n[Round \"1\"]\n\n1. e4 e6 {Französisch}\n2. d4 *\n", PgnParser.StripInternalMarkers(pgn));
+    }
+
     [Fact]
     public void SplitGameBlocks_ReturnsRawTextPerGame_WithVariationsAndLineBreaks()
     {

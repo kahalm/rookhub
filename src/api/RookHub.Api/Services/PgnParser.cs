@@ -32,6 +32,12 @@ public static partial class PgnParser
     private static partial Regex PromotionRegex();
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
+    [GeneratedRegex(@"\[%(?:alt|info)\b[^\]]*\]", RegexOptions.IgnoreCase)]   // RookHub-interne Marker
+    private static partial Regex InternalMarkerRegex();
+    [GeneratedRegex(@"\{\s*\}")]
+    private static partial Regex EmptyCommentRegex();
+    [GeneratedRegex(@"[ \t]{2,}")]
+    private static partial Regex SpaceRunRegex();
 
     private static readonly string[] ResultTokens = { "1-0", "0-1", "1/2-1/2", "1/2", "*" };
 
@@ -45,6 +51,23 @@ public static partial class PgnParser
 
     /// <summary>Kürzt einen String auf <paramref name="max"/> Zeichen (Sanity-/Spalten-Schranke).</summary>
     public static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
+
+    // ---- PGN-Download: interne Marker entfernen ----------------------------
+    /// <summary>
+    /// Entfernt die RookHub-internen Kommentar-Marker <c>[%alt …]</c> (von Chessable geduldete Züge) und
+    /// <c>[%info]</c> (Info-Linie) aus einem PGN, das heruntergeladen wird: ChessBase und andere Programme
+    /// kennen sie nicht und zeigen sie als Text, Chessable selbst blendet die geduldeten Züge ebenfalls aus.
+    /// Dadurch leer gewordene Kommentare fallen weg; <c>[%cal]</c>/<c>[%csl]</c>/<c>[%tqu]</c> bleiben.
+    /// <para>NUR für Downloads — Pfade, die das PGN wieder einlesen (Repertoire-Trainer, „Kurs → Repertoire"),
+    /// brauchen <c>[%alt]</c>.</para>
+    /// </summary>
+    public static string StripInternalMarkers(string pgn)
+    {
+        if (string.IsNullOrEmpty(pgn)) return pgn;
+        var s = InternalMarkerRegex().Replace(pgn, "");
+        s = EmptyCommentRegex().Replace(s, "");
+        return SpaceRunRegex().Replace(s, " ");
+    }
 
     // ---- Spiel-Splitting (Header-Block + Movetext) ------------------------
     /// <summary>Zerlegt einen PGN-Text in (Header-Dictionary, Movetext)-Paare je Spiel.</summary>

@@ -119,7 +119,7 @@ public class CourseController : BaseApiController
         try
         {
             var (pgn, fileName) = await _service.GetBookPgnAsync(GetUserId(), bookId, IsAdmin);
-            return File(System.Text.Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn", fileName);
+            return PgnDownload(pgn, fileName);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
@@ -131,7 +131,7 @@ public class CourseController : BaseApiController
         try
         {
             var (pgn, fileName) = await _service.GetChapterPgnAsync(GetUserId(), bookId, chapter, IsAdmin);
-            return File(System.Text.Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn", fileName);
+            return PgnDownload(pgn, fileName);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
@@ -143,10 +143,15 @@ public class CourseController : BaseApiController
         try
         {
             var (pgn, fileName) = await _service.GetLinePgnAsync(GetUserId(), bookId, lineId, IsAdmin);
-            return File(System.Text.Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn", fileName);
+            return PgnDownload(pgn, fileName);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
+
+    /// <summary>PGN als Datei ausliefern — ohne die internen Marker <c>[%alt]</c>/<c>[%info]</c>
+    /// (siehe <see cref="PgnParser.StripInternalMarkers"/>).</summary>
+    private FileContentResult PgnDownload(string pgn, string fileName)
+        => File(System.Text.Encoding.UTF8.GetBytes(PgnParser.StripInternalMarkers(pgn)), "application/x-chess-pgn", fileName);
 
     /// <summary>„Kurs → Repertoire umwandeln": legt aus dem Kurs-PGN ein neues Repertoire des Users an
     /// (Original-Kurs bleibt). Antwort = das neue Repertoire.</summary>

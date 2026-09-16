@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
-import { CourseDetailComponent, pgnFileName } from './course-detail.component';
+import { CourseDetailComponent } from './course-detail.component';
 import { CourseDetail, CourseLine, CourseManageChapter } from './course.service';
 
 function chapter(over: Partial<CourseManageChapter> = {}): CourseManageChapter {
@@ -375,12 +375,5 @@ describe('CourseDetailComponent — PGN je Kapitel/Linie', () => {
     component.downloadLinePgn(line());
 
     expect(warnings).toEqual(['courses.downloadFailed', 'courses.downloadFailed']);
-  });
-
-  it('pgnFileName entspricht der Backend-Regel', () => {
-    expect(pgnFileName('Lifetime Repertoires: Martinovićs Französisch', '1) Weiß spielt ohne 2.d4'))
-      .toBe('Lifetime_Repertoires_Martinovićs_Französisch_1_Weiß_spielt_ohne_2_d4.pgn');
-    expect(pgnFileName(null, '')).toBe('course.pgn');
-    expect(pgnFileName('K', 'x'.repeat(100))).toBe(`K_${'x'.repeat(80)}.pgn`);
   });
 });

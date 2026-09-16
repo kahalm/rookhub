@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.479.1", date: "2026-09-16", changes: [
+    { en: "Downloaded PGN files no longer contain the marker for moves Chessable also accepts (“[%alt c5 e5 …]”). ChessBase and other programs showed it as plain text in the comment, and Chessable does not show those moves either. This applies to courses, chapters, lines and whole repertoires; the repertoire trainer still accepts those moves as before.", de: "Heruntergeladene PGN-Dateien enthalten den Marker für die von Chessable zusätzlich akzeptierten Züge („[%alt c5 e5 …]“) nicht mehr. ChessBase und andere Programme zeigten ihn als Text im Kommentar, und auch Chessable blendet diese Züge nicht ein. Das gilt für Kurse, Kapitel, Linien und ganze Repertoires; der Repertoire-Trainer akzeptiert die Züge weiterhin." },
+  ] },
   { version: "0.479.0", date: "2026-09-16", changes: [
     { en: "Courses: a single chapter or a single line can now be downloaded as PGN — from the chapter menu and with the download button next to each line on the course page. The file contains the lines exactly as they were imported, with variations and comments; lines without a stored source are rebuilt from the saved moves. Calculation courses are left out, because the moves would give away the solutions.", de: "Kurse: Ein einzelnes Kapitel oder eine einzelne Linie lässt sich jetzt als PGN herunterladen — über das Kapitelmenü und über den Download-Knopf neben jeder Linie auf der Kursseite. Die Datei enthält die Linien genau so, wie sie importiert wurden, mit Varianten und Kommentaren; Linien ohne gespeicherte Quelle werden aus den gespeicherten Zügen aufgebaut. Kalkulationskurse bleiben außen vor, weil die Züge die Lösungen verraten würden." },
   ] },

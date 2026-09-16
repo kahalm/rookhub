@@ -929,4 +929,33 @@ public class CourseControllerTests : IDisposable
         Assert.Empty(_db.Books);
     }
 
+    [Fact]
+    public async Task PgnDownloads_DropInternalMarkers_ButConversionKeepsThem()
+    {
+        const string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        var source = "[Event \"K\"]\n[Round \"001.001\"]\n[Black \"Kap\"]\n[FEN \"" + fen + "\"]\n\n"
+                   + "1. e4 e6 {[%cal Gd7d5][%alt c5 e5]Französisch} 2. d4 {[%alt Nf3]} d5 *\n";
+        var book = new Book { FileName = "k.pgn", DisplayName = "K", OwnerUserId = UserId, SourcePgn = source,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var line = new BookPuzzle { LineId = "k.pgn:001.001", BookId = book.Id, BookFileName = "k.pgn",
+            Round = "001.001", Chapter = "Kap", Fen = fen, Moves = "e2e4 e7e6 d2d4 d7d5" };
+        _db.BookPuzzles.Add(line);
+        await _db.SaveChangesAsync();
+
+        string Text(IActionResult r) => System.Text.Encoding.UTF8.GetString(Assert.IsType<FileContentResult>(r).FileContents);
+        var course = Text(await _controller.DownloadPgn(book.Id));
+        var chapter = Text(await _controller.DownloadChapterPgn(book.Id, "Kap"));
+        var single = Text(await _controller.DownloadLinePgn(book.Id, line.Id));
+
+        foreach (var pgn in new[] { course, chapter, single })
+        {
+            Assert.DoesNotContain("[%alt", pgn);
+            Assert.Contains("e6 {[%cal Gd7d5]Französisch} 2. d4 d5 *", pgn);
+        }
+        // „Kurs → Repertoire" liest das PGN wieder ein und braucht die geduldeten Züge weiterhin.
+        var (raw, _) = await TestServices.Course(_db).GetBookPgnAsync(UserId, book.Id, isAdmin: true);
+        Assert.Contains("[%alt c5 e5]", raw);
+    }
 }
