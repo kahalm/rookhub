@@ -93,6 +93,21 @@ describe('comment-variation.util', () => {
     expect(a5.from).toBe('a4');   // Weißzug a4–a5 (NICHT der schwarze a7-Bauer)
   });
 
+  it('Feldangaben („auf d6", „on d6", „e5-Feld") sind keine Züge', () => {
+    const main = ['e2e4', 'e7e5'];
+    const chips = (t: string) => buildCommentSegments(t, START, main).filter(s => s.move).map(s => s.move);
+    for (const t of ['Der Springer auf d6 stört nicht.', 'The knight on d6 is strong.', 'Das e5-Feld ist schwach.',
+      'the d6 square', 'Der d6-Bauer bleibt rückständig.', 'Über d5 kommt der Springer auf f4.']) {
+      expect(chips(t)).withContext(t).toEqual([]);
+      expect(buildCommentSegments(t, START, main).map(s => s.move ?? s.text).join('')).withContext(t).toBe(t);
+    }
+    expect(extractSanTokens('Springer auf d6, danach d5')).toEqual(['d5']);
+    // Züge bleiben Züge: ohne Präposition, mit Zugnummer, und nach „nach" (= „nach dem Zug").
+    expect(chips('Schwarz spielt d6.')).toEqual(['d6']);
+    expect(chips('Auf 2.d4 folgt exd4.')).toEqual(['2.d4', 'exd4']);
+    expect(chips('nach d4 steht Weiß gut')).toEqual(['d4']);
+  });
+
   it('Komma vor nummeriertem Zug ist Fortsetzung, kein Zweig-Bruch', () => {
     expect(splitBranches('40.b5 a3, 41.b6 a2')).toEqual([['b5', 'a3', 'b6', 'a2']]);
   });
@@ -160,6 +175,11 @@ describe('comment-variation.util — echte Chessable-Linie (Kurs 128648, oid 207
     const m = moves('Es gibt sicher nichts weniger kritisches als wenn unser Gegner nicht ausnutzt, dass er 2.d4 spielen kann.');
     expect(m.map(s => s.move)).toEqual(['2.d4']);
     expect(noEp(m[0].fen)).toBe(noEp('rnbqkbnr/pppp1ppp/4p3/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2'));
+  });
+
+  it('„Springer auf d6" ist eine Feldangabe, kein klickbarer Zug', () => {
+    const t = 'Wir haben keine Angst vor dem Springer auf d6, denn wir werden mit unserem typischen ...f7-f6-Hebel immer das Zentrum sprengen können.';
+    expect(moves(t)).toEqual([]);
   });
 
   it('die Zweigbildung selbst bleibt unverändert (Folge mit Nummernlücke ist EIN Zweig)', () => {

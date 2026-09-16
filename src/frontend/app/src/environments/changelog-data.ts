@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.481.1", date: "2026-09-16", changes: [
+    { en: "Comments in courses and repertoires: a square mentioned in the text (“the knight on d6”, “the e5 square”, “the d6 pawn”) is no longer offered as a clickable move.", de: "Kommentare in Kursen und Repertoires: Ein im Text genanntes Feld („der Springer auf d6“, „das e5-Feld“, „der d6-Bauer“) wird nicht mehr als klickbarer Zug angeboten." },
+  ] },
   { version: "0.481.0", date: "2026-09-16", changes: [
     { en: "Repertoires: in the line view, moves inside comments can now be clicked and show their position on the board, just like in courses — for example “2.d4” in a chapter introduction. Variations from Chessable are no longer dropped there: they appear in the comment of their move and can be clicked as well.", de: "Repertoires: In der Linienansicht lassen sich Züge in Kommentaren jetzt anklicken und zeigen ihre Stellung auf dem Brett, wie in den Kursen — etwa „2.d4“ in einer Kapiteleinleitung. Varianten aus Chessable gehen dort nicht mehr verloren: Sie stehen im Kommentar ihres Zugs und sind ebenfalls anklickbar." },
     { en: "Move lists (repertoire lines, shared games and lines) now show the comment before the first move, and both comments when white and black each have one — the one after black's move used to be hidden. Games with two comments in a row were skipped without notice and are read again.", de: "Zuglisten (Repertoire-Linien, geteilte Partien und Linien) zeigen jetzt den Kommentar vor dem ersten Zug und beide Kommentare, wenn Weiß und Schwarz je einen haben — der nach dem schwarzen Zug blieb bisher verborgen. Partien mit zwei aufeinanderfolgenden Kommentaren wurden stillschweigend übersprungen und werden wieder gelesen." },

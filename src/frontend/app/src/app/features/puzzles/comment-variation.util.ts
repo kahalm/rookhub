@@ -69,12 +69,27 @@ function normalizeSan(san: string): string {
 
 interface Tok { san: string; ply?: number; start: number; end: number; }
 
-/** Scannt die Token samt Position + implizierter (absoluter) Ply aus Zugnummer + Farbe. */
+// Ein nacktes Feld („d6") ist in Prosa oft eine ORTSANGABE, kein Bauernzug: „keine Angst vor dem Springer
+// auf d6", „the knight on d6", „das e5-Feld". Solche Token zählen nicht als Zug. Bewusst eng: nur ohne
+// Zugnummer, und nur direkt nach einer Präposition bzw. direkt vor „Feld"/„square"/„Bauer"/„pawn".
+// „nach" fehlt absichtlich — „nach d4" heißt meist „nach dem Zug d4".
+const BARE_SQUARE = /^[a-h][1-8]$/;
+const SQUARE_BEFORE = /(?:^|[^\p{L}])(?:auf|von|vom|über|ueber|zum|zur|feld|felder|on|onto|square|squares|from|via|to)\s+$/iu;
+const SQUARE_AFTER = /^(?:\s|-)(?:feld|felder|felds|square|squares|bauer|bauern|pawn|pawns)(?![\p{L}])/iu;
+
+function isSquareMention(text: string, san: string, hasNumber: boolean, start: number, end: number): boolean {
+  if (hasNumber || !BARE_SQUARE.test(san)) return false;
+  return SQUARE_BEFORE.test(text.slice(Math.max(0, start - 20), start)) || SQUARE_AFTER.test(text.slice(end, end + 12));
+}
+
+/** Scannt die Token samt Position + implizierter (absoluter) Ply aus Zugnummer + Farbe.
+ *  Feldangaben (siehe {@link isSquareMention}) fehlen — sie bleiben Text und trennen keine Zweige. */
 function scanTokens(text: string): Tok[] {
   const re = new RegExp(TOKEN_RE.source, 'g');
   const out: Tok[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
+    if (isSquareMention(text, m[3], !!m[1], m.index, m.index + m[0].length)) continue;
     const num = m[1] ? parseInt(m[1], 10) : undefined;
     const isBlack = !!m[2];
     // 0-basierte Ply: Weiß N → 2N-2, Schwarz N → 2N-1.
@@ -253,18 +268,16 @@ export function buildCommentSegments(text: string, startFen: string, ucis: strin
   for (const b of branches(text)) perToken.push(...resolveBranch(startFen, ucis, b));
 
   const segments: CommentSegment[] = [];
-  const re = new RegExp(TOKEN_RE.source, 'g');
   let last = 0;
-  let tokenIdx = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) segments.push({ text: text.slice(last, m.index) });
+  // Dieselbe Tokenfolge wie in branches() — sonst verrutscht die Zuordnung Token ↔ Schritt.
+  scanTokens(text).forEach((t, tokenIdx) => {
+    if (t.start > last) segments.push({ text: text.slice(last, t.start) });
+    const raw = text.slice(t.start, t.end);
     const step = tokenIdx < perToken.length ? perToken[tokenIdx] : null;
-    if (step) segments.push({ move: m[0].trim(), fen: step.fen, from: step.from, to: step.to });
-    else segments.push({ text: m[0] });   // nicht spielbar → als Text belassen
-    last = m.index + m[0].length;
-    tokenIdx++;
-  }
+    if (step) segments.push({ move: raw.trim(), fen: step.fen, from: step.from, to: step.to });
+    else segments.push({ text: raw });   // nicht spielbar → als Text belassen
+    last = t.end;
+  });
   if (last < text.length) segments.push({ text: text.slice(last) });
   return segments;
 }
