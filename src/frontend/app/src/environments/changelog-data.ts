@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.480.0", date: "2026-09-16", changes: [
+    { en: "Repertoires: a single line can now be downloaded as PGN — in the line view, from the ⋮ menu of the line. The file contains the line as it was imported, including its variations and comments.", de: "Repertoires: Eine einzelne Linie lässt sich jetzt als PGN herunterladen — in der Linienansicht über das ⋮-Menü der Linie. Die Datei enthält die Linie so, wie sie importiert wurde, samt Varianten und Kommentaren." },
+  ] },
   { version: "0.479.1", date: "2026-09-16", changes: [
     { en: "Downloaded PGN files no longer contain the marker for moves Chessable also accepts (“[%alt c5 e5 …]”). ChessBase and other programs showed it as plain text in the comment, and Chessable does not show those moves either. This applies to courses, chapters, lines and whole repertoires; the repertoire trainer still accepts those moves as before.", de: "Heruntergeladene PGN-Dateien enthalten den Marker für die von Chessable zusätzlich akzeptierten Züge („[%alt c5 e5 …]“) nicht mehr. ChessBase und andere Programme zeigten ihn als Text im Kommentar, und auch Chessable blendet diese Züge nicht ein. Das gilt für Kurse, Kapitel, Linien und ganze Repertoires; der Repertoire-Trainer akzeptiert die Züge weiterhin." },
   ] },

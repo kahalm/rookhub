@@ -1,4 +1,4 @@
-import { parsePgnText, ParsedGame, START_FEN } from './pgn-parser';
+import { parsePgnText, parsePgnTextWithSource, ParsedGame, START_FEN } from './pgn-parser';
 
 const SINGLE_GAME = `[Event "Test"]
 [White "Kasparov"]
@@ -168,5 +168,20 @@ describe('parsePgnText input limits', () => {
     const huge = '[Event "X"]\n\n{' + 'a'.repeat(200_001) + '} 1. e4 *';
     const games = parsePgnText(huge);
     expect(games.length).toBe(0);
+  });
+});
+
+describe('parsePgnTextWithSource', () => {
+  it('liefert den Originaltext je Spiel — auch hinter einem übersprungenen Spiel passt der Index', () => {
+    const pgn = '[Event "A"]\n[Result "*"]\n\n1. e4 (1. d4 {Damen}) e5 {[%alt c5]gut} *\n\n'
+      + '[Event "Kaputt"]\n[Result "*"]\n\n1. Kz9 *\n\n'
+      + '[Event "B"]\n[Result "*"]\n\n1. c4 *\n';
+
+    const parsed = parsePgnTextWithSource(pgn);
+
+    expect(parsed.map(p => p.game.headers['Event'])).toEqual(['A', 'B']);
+    expect(parsed[0].raw).toBe('[Event "A"]\n[Result "*"]\n\n1. e4 (1. d4 {Damen}) e5 {[%alt c5]gut} *');
+    expect(parsed[1].raw).toBe('[Event "B"]\n[Result "*"]\n\n1. c4 *');
+    expect(parsePgnText(pgn).length).toBe(2);             // alte Funktion unverändert
   });
 });

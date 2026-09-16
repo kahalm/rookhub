@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Move } from 'chess.js';
-import { ParsedGame, START_FEN, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, START_FEN, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { sideOfLastMove, TrainColor } from './repertoire-color.util';
 
@@ -25,6 +25,8 @@ export interface RepertoireLine {
 @Injectable()
 export class RepertoireViewerService {
   games: ParsedGame[] = [];
+  /** Originaltext je Spiel, parallel zu {@link games} — Varianten/Kommentare/Marker unverändert (Linien-Download). */
+  rawGames: string[] = [];
   lines: RepertoireLine[] = [];
   selectedLineIndex = -1;
   currentMoveIndex = -1;
@@ -58,7 +60,9 @@ export class RepertoireViewerService {
   }
 
   loadPgn(pgnText: string): void {
-    this.games = parsePgnText(pgnText);
+    const parsed = parsePgnTextWithSource(pgnText);
+    this.games = parsed.map(p => p.game);
+    this.rawGames = parsed.map(p => p.raw);
     this.lines = this.games.map((game, i) => this.buildLine(game, i));
     this.selectedLineIndex = -1;
     this.currentMoveIndex = -1;

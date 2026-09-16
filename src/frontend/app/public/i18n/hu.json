@@ -699,7 +699,8 @@
       "notFound": "Ez a megosztott változat nem létezik (vagy törölték).",
       "defaultTitle": "Repertoár-változat",
       "error": "A megosztási linket nem sikerült létrehozni."
-    }
+    },
+    "downloadLine": "Változat letöltése PGN-ként"
   },
   "tournaments": {
     "actions": {

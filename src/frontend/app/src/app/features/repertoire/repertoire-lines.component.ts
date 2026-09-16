@@ -149,6 +149,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                               [attr.aria-label]="'repertoire.lines.sr.lineActions' | translate"><mat-icon>more_vert</mat-icon></button>
                       <mat-menu #lineMenu="matMenu">
                         <button mat-menu-item (click)="shareLine.emit(line)"><mat-icon>share</mat-icon>{{ 'repertoire.shareLine.action' | translate }}</button>
+                        <button mat-menu-item (click)="downloadLine.emit(line)"><mat-icon>download</mat-icon>{{ 'repertoire.downloadLine' | translate }}</button>
                         <a mat-menu-item [routerLink]="['/repertoires', repertoireId, 'train']" [queryParams]="{ mode: 'learn', line: line.lineKey }"><mat-icon>school</mat-icon>{{ 'repertoire.lines.sr.learn' | translate }}</a>
                         <button mat-menu-item (click)="promote([line.lineKey])"><mat-icon>playlist_add</mat-icon>{{ 'repertoire.lines.sr.addToPool' | translate }}</button>
                         <button mat-menu-item (click)="makeDue([line.lineKey])"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeDue' | translate }}</button>
@@ -263,6 +264,7 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   @Output() moveClicked = new EventEmitter<number>();
   /** „Diese Linie als öffentlichen Link teilen" — der Container baut das PGN + ruft die API. */
   @Output() shareLine = new EventEmitter<RepertoireLine>();
+  @Output() downloadLine = new EventEmitter<RepertoireLine>();
 
   busy = false;
   private states = signal<Map<string, LineStateDto>>(new Map());

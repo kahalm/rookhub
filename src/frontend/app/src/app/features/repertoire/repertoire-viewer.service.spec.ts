@@ -24,6 +24,14 @@ describe('RepertoireViewerService', () => {
   });
 
   describe('loadPgn', () => {
+    it('merkt sich den Originaltext je Spiel parallel zu games', () => {
+      service.loadPgn(SAMPLE_PGN);
+      expect(service.rawGames.length).toBe(service.games.length);
+      expect(service.rawGames[1]).toContain('[Event "French"]');
+      expect(service.rawGames[1]).toContain('1. e4 e6 2. d4 d5 0-1');
+      expect(service.rawGames[1]).not.toContain('Sicilian');
+    });
+
     it('should parse games and build lines', () => {
       service.loadPgn(SAMPLE_PGN);
       expect(service.games.length).toBe(2);

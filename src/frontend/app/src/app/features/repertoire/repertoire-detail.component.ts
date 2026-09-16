@@ -22,6 +22,8 @@ import { ShareLineDialogComponent } from './share-line-dialog.component';
 import { MoveTreeService } from './move-tree.service';
 import { findPositionInGames, formatSansWithNumbers } from './position-filter.util';
 import { RepertoireDetail } from '../../core/models';
+import { downloadBlob } from '../../shared/download.util';
+import { pgnFileName, stripInternalMarkers } from '../../shared/pgn-export.util';
 
 type ViewMode = 'lines' | 'tree' | 'edit';
 
@@ -136,7 +138,8 @@ type ViewMode = 'lines' | 'tree' | 'edit';
                   (lineSelected)="onLineSelected($event)"
                   (lineDeselected)="viewerService.deselectLine()"
                   (moveClicked)="viewerService.goToMove($event)"
-                  (shareLine)="onShareLine($event)" />
+                  (shareLine)="onShareLine($event)"
+                  (downloadLine)="onDownloadLine($event)" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
@@ -317,6 +320,18 @@ export class RepertoireDetailComponent implements OnInit {
       },
       error: () => this.snackbar.info(this.translate.instant('repertoire.shareLine.error')),
     });
+  }
+
+  /** Lädt eine einzelne Linie als PGN herunter: bevorzugt ihr Originaltext aus dem Repertoire (mit Varianten
+   *  und Kommentaren), sonst aus der geparsten Linie gebaut — jeweils ohne die internen Marker [%alt]/[%info]. */
+  onDownloadLine(line: RepertoireLine): void {
+    const game = this.viewerService.games[line.gameIndex];
+    if (!game) return;
+    const title = line.opening || line.chapter || `${line.white} vs ${line.black}`;
+    const raw = this.viewerService.rawGames[line.gameIndex];
+    const pgn = stripInternalMarkers(raw ? raw.trimEnd() + '\n' : parsedGameToPgn(game, { title }));
+    const suffix = [line.chapter, line.white].filter(s => s && s !== '?').join(' ') || title;
+    downloadBlob(new Blob([pgn], { type: 'application/x-chess-pgn' }), pgnFileName(this.repertoire?.name, suffix));
   }
 
   ngOnInit(): void {

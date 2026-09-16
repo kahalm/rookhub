@@ -921,7 +921,8 @@
       "notFound": "Diese geteilte Linie existiert nicht (mehr).",
       "defaultTitle": "Repertoire-Linie",
       "error": "Teilen-Link konnte nicht erstellt werden."
-    }
+    },
+    "downloadLine": "Linie als PGN herunterladen"
   },
   "tournaments": {
     "actions": {

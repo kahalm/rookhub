@@ -921,7 +921,8 @@
       "notFound": "Ova podijeljena linija ne postoji (više).",
       "defaultTitle": "Linija repertoara",
       "error": "Poveznicu za dijeljenje nije bilo moguće stvoriti."
-    }
+    },
+    "downloadLine": "Preuzmi varijantu kao PGN"
   },
   "tournaments": {
     "actions": {

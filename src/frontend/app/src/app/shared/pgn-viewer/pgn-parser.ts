@@ -102,11 +102,23 @@ const MAX_GAMES = 500;
 const MAX_GAME_CHARS = 200_000;    // pathologisch grosse Einzelpartie ueberspringen
 
 export function parsePgnText(pgnText: string): ParsedGame[] {
+  return parsePgnTextWithSource(pgnText).map(p => p.game);
+}
+
+/** Ein geparstes Spiel + sein unveränderter Originaltext (mit Varianten, Kommentaren und Markern). */
+export interface ParsedGameWithSource { game: ParsedGame; raw: string; }
+
+/**
+ * Wie {@link parsePgnText}, liefert zu jedem Spiel aber auch dessen Originaltext. Übersprungene
+ * (leere/zu große/unlesbare) Spiele fehlen in BEIDEN — Index `i` gehört also immer zusammen, auch
+ * wenn ein Spiel mittendrin nicht gelesen werden konnte.
+ */
+export function parsePgnTextWithSource(pgnText: string): ParsedGameWithSource[] {
   if (pgnText.length > MAX_PGN_CHARS) {
     pgnText = pgnText.slice(0, MAX_PGN_CHARS);
   }
   const rawGames = pgnText.split(/\n\n(?=\[Event )/).slice(0, MAX_GAMES);
-  const parsed: ParsedGame[] = [];
+  const parsed: ParsedGameWithSource[] = [];
 
   for (const raw of rawGames) {
     const trimmed = raw.trim();
@@ -153,7 +165,7 @@ export function parsePgnText(pgnText: string): ParsedGame[] {
         fens.push(move.after);
       }
 
-      parsed.push({ headers: gameHeaders, moves, fens, comments });
+      parsed.push({ game: { headers: gameHeaders, moves, fens, comments }, raw: trimmed });
     } catch (err) {
       // Unparsebares Spiel ueberspringen, aber fuer Diagnose sichtbar machen
       // statt es voellig stumm zu verwerfen.
