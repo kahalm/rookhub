@@ -1,6 +1,6 @@
 import { of, throwError } from 'rxjs';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
-import { RepertoireLine } from './repertoire-viewer.service';
+import { RepertoireLine, RepertoireViewerService } from './repertoire-viewer.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -139,5 +139,46 @@ describe('RepertoireLinesComponent trained color per chapter', () => {
     c.setChapterColor(group, 'w');
     expect(c.chapterColor(group)).toBe('w');
     expect(JSON.parse(localStorage.getItem('rookhub_rep_train_chaptercolor_7')!)['Caro']).toBe('w');
+  });
+});
+
+const REAL_LINE = '[Event "Lifetime Repertoires: Martinovićs Französisch"]\n[Round "004.002"]\n'
+  + '[White "1A | 2.Sf3 | Weiß spielt 6.Lxa3"]\n[Black "1) Weiß spielt ohne 2.d4"]\n'
+  + '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n[Result "*"]\n\n'
+  + '{Liebe Schachfreunde. Es gibt nichts weniger kritisches als wenn unser Gegner nicht ausnutzt, dass er \n2.d4\n'
+  + 'spielen kann.} 1. e4 {[%tqu "En","find the move","","","e7e6","",10]} e6 {[%cal Gd7d5][%alt c5 e5]Bereits '
+  + 'nach diesem Zug.} 2. Nf3 {Dieser Zug hat fast keine eigenständige Bedeutung.} d5 3. e5 (3.Nc3 Nf6 4.e5 Nfd7 5.d4 '
+  + '{werden wir später sehen.}) (3.exd5 exd5 4.d4 {geht über in die Abtauschvariante.}) (3.d3 {ist hier in der '
+  + 'Zugfolge }) {2.d3 d5 3.Nf3 analysiert.} c5 4. b4 {[%cal Bb4c5][%csl Rc5]} ({Dieses Gambit nach 2.Sf3.} 4.c3 '
+  + '{ist besser:} 4...Nc6 5.d4 {würde überleiten.}) cxb4 {[%alt b6]Es gibt auch gute Alternativen.} 5. a3 *\n';
+
+describe('RepertoireLinesComponent klickbare Kommentar-Züge', () => {
+  it('echte Chessable-Linie: Einleitung und eingefaltete Varianten werden anklickbar', () => {
+    const viewer = new RepertoireViewerService();
+    viewer.loadPgn(REAL_LINE);
+    viewer.selectLine(0);
+    const c = makeComponent();
+    c.lines = viewer.lines;
+    c.selectedIndex = 0;
+    c.moves = viewer.currentMoves;
+    c.comments = viewer.currentComments;
+    c.ngOnChanges({ moves: {} as any });
+
+    const chips = (i: number) => (c.commentSegments[i] ?? []).filter(s => s.move).map(s => s.move);
+    expect(chips(-1)).toEqual(['2.d4']);
+    expect(chips(4)).toEqual(['3.Nc3', 'Nf6', '4.e5', 'Nfd7', '5.d4', '3.exd5', 'exd5', '4.d4', '3.d3', '2.d3', 'd5', '3.Nf3']);
+    expect(chips(6)).toEqual(['2.Sf3', '4.c3', '4...Nc6', '5.d4']);
+    // „2.d4" aus der Einleitung zeigt die Stellung nach 1.e4 e6 2.d4 (wie auf Chessable)
+    const d4 = c.commentSegments[-1].find(s => s.move === '2.d4')!;
+    expect(d4.fen!.split(' ').slice(0, 2).join(' ')).toBe('rnbqkbnr/pppp1ppp/4p3/8/3PP3/8/PPP2PPP/RNBQKBNR b');
+  });
+
+  it('ohne gewählte Linie gibt es keine Stücke', () => {
+    const c = makeComponent();
+    c.lines = [];
+    c.selectedIndex = -1;
+    c.comments = { 0: '2.d4' };
+    c.ngOnChanges({ comments: {} as any });
+    expect(c.commentSegments).toEqual({});
   });
 });

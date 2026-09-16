@@ -67,3 +67,51 @@ describe('RepertoireDetailComponent Linien-Download', () => {
     expect(pgn).not.toContain('[%alt');
   });
 });
+
+describe('RepertoireDetailComponent Kommentar-Vorschau', () => {
+  const PGN = '[Event "Rep"]\n[Result "*"]\n\n1. e4 e6 2. Nf3 d5 *\n';
+
+  async function make() {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+    comp.mode = 'lines';
+    comp.viewerService.loadPgn(PGN);
+    comp.viewerService.selectLine(0);
+    comp.viewerService.goToMove(1);
+    return comp;
+  }
+
+  it('zeigt die Stellung des angeklickten Zugs auf dem Brett', async () => {
+    const comp = await make();
+    comp.onCommentMovePreview({ fen: 'PREVIEW-FEN', from: 'd2', to: 'd4' });
+    comp.ngDoCheck();
+    expect(comp.boardFen).toBe('PREVIEW-FEN');
+    expect(comp.boardLastMove).toEqual(['d2', 'd4']);
+
+    comp.exitCommentPreview();
+    expect(comp.boardFen).toBe(comp.viewerService.currentFen);
+  });
+
+  it('beendet die Vorschau, sobald sich die Stellung ändert', async () => {
+    const comp = await make();
+    comp.onCommentMovePreview({ fen: 'PREVIEW-FEN', from: 'd2', to: 'd4' });
+
+    comp.viewerService.goForward();
+    comp.ngDoCheck();
+
+    expect(comp.commentPreview).toBeNull();
+    expect(comp.boardFen).toBe(comp.viewerService.currentFen);
+  });
+
+  it('ignoriert Stücke ohne Stellung', async () => {
+    const comp = await make();
+    comp.onCommentMovePreview({ fen: undefined });
+    expect(comp.commentPreview).toBeNull();
+  });
+});

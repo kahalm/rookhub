@@ -56,6 +56,47 @@ function stripVariations(pgn: string): string {
 /**
  * Remove NAG symbols (e.g. $1, $14) and Unicode evaluation glyphs (⩲ ± etc.)
  */
+/**
+ * Faltet jede Hauptlinien-Variante `( … )` als Text-Kommentar `{ … }` an ihre Stelle: Züge (mit ihren
+ * Nummern) und Kommentartext bleiben lesbar, Klammern, `[%…]`-Marker und NAGs fallen weg; verschachtelte
+ * Varianten werden mit eingeflacht. `extractComments` hängt den Text danach an den Zug, hinter dem die
+ * Variante stand — dort macht die Repertoire-Linienansicht ihre Züge klickbar. Gleiche Regel wie
+ * `PgnParser.ExtractMoveComments(foldAllVariations: true)` im Backend (Kurs-Import).
+ */
+export function foldVariationsIntoComments(moveText: string): string {
+  // ChessBase-Label-Muster wie in stripVariations behandeln.
+  const s = moveText.replace(/\(\s*\{[^}]*\}\s*\)/g, '(');
+  let out = '';
+  let inComment = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inComment) { out += c; if (c === '}') inComment = false; continue; }
+    if (c === '{') { inComment = true; out += c; continue; }
+    if (c === ')') continue;                      // verirrte schließende Klammer
+    if (c !== '(') { out += c; continue; }
+    // Passende schließende Klammer suchen; Klammern in Kommentaren zählen nicht.
+    let depth = 0;
+    let j = i;
+    let cmt = false;
+    for (; j < s.length; j++) {
+      const d = s[j];
+      if (cmt) { if (d === '}') cmt = false; continue; }
+      if (d === '{') cmt = true;
+      else if (d === '(') depth++;
+      else if (d === ')' && --depth === 0) break;
+    }
+    const text = s.slice(i + 1, j)
+      .replace(/\[%[^\]]*\]/g, '')
+      .replace(/\$\d+/g, '')
+      .replace(/[{}()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (text) out += ` {${text}} `;
+    i = j;
+  }
+  return out;
+}
+
 function stripNags(moveText: string): string {
   return moveText
     .replace(/\$\d+/g, '')
@@ -101,8 +142,14 @@ const MAX_PGN_CHARS = 2_000_000;   // ~2 MB pro Viewer-Session
 const MAX_GAMES = 500;
 const MAX_GAME_CHARS = 200_000;    // pathologisch grosse Einzelpartie ueberspringen
 
-export function parsePgnText(pgnText: string): ParsedGame[] {
-  return parsePgnTextWithSource(pgnText).map(p => p.game);
+export interface ParsePgnOptions {
+  /** Varianten nicht verwerfen, sondern als Text in den Kommentar ihres Zugs falten (siehe
+   *  {@link foldVariationsIntoComments}). Nur für Ansichten, die Kommentar-Züge klickbar machen. */
+  foldVariations?: boolean;
+}
+
+export function parsePgnText(pgnText: string, opts?: ParsePgnOptions): ParsedGame[] {
+  return parsePgnTextWithSource(pgnText, opts).map(p => p.game);
 }
 
 /** Ein geparstes Spiel + sein unveränderter Originaltext (mit Varianten, Kommentaren und Markern). */
@@ -113,7 +160,7 @@ export interface ParsedGameWithSource { game: ParsedGame; raw: string; }
  * (leere/zu große/unlesbare) Spiele fehlen in BEIDEN — Index `i` gehört also immer zusammen, auch
  * wenn ein Spiel mittendrin nicht gelesen werden konnte.
  */
-export function parsePgnTextWithSource(pgnText: string): ParsedGameWithSource[] {
+export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions): ParsedGameWithSource[] {
   if (pgnText.length > MAX_PGN_CHARS) {
     pgnText = pgnText.slice(0, MAX_PGN_CHARS);
   }
@@ -142,9 +189,14 @@ export function parsePgnTextWithSource(pgnText: string): ParsedGameWithSource[] 
         moveText = trimmed.substring(lastHeaderEnd);
       }
 
-      // Clean move text: strip variations and NAGs
+      // Clean move text: strip (or fold) variations and NAGs
+      if (opts?.foldVariations) moveText = foldVariationsIntoComments(moveText);
       moveText = stripVariations(moveText);
       moveText = stripNags(moveText);
+      // Direkt aufeinanderfolgende Kommentare zu EINEM zusammenfassen: chess.js lehnt „{a} {b}" ab und das
+      // ganze Spiel fiele weg. Sie entstehen beim Einfalten und stehen auch so in manchen Quellen
+      // („{[%cal …]} {Text}"); extractComments hätte sie ohnehin mit Leerzeichen verbunden.
+      moveText = moveText.replace(/\}\s*\{/g, ' ');
 
       // Extract comments before feeding to chess.js (which strips them)
       const comments = extractComments(moveText);

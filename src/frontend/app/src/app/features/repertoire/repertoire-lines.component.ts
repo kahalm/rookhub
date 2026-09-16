@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnInit, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnInit, SimpleChanges, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
@@ -9,7 +9,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 import { Move } from 'chess.js';
-import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
+import { MoveListComponent, MoveListCommentSegment } from '../../shared/pgn-viewer/move-list.component';
+import { buildCommentSegments } from '../puzzles/comment-variation.util';
 import { RepertoireLine } from './repertoire-viewer.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
 import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from './repertoire-color.util';
@@ -47,7 +48,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
             [moves]="moves"
             [currentMoveIndex]="currentMoveIndex"
             [comments]="comments"
-            (moveClicked)="moveClicked.emit($event)" />
+            [commentSegments]="commentSegments"
+            (moveClicked)="moveClicked.emit($event)"
+            (commentMoveClicked)="commentMovePreview.emit($event)" />
         </div>
       </div>
     } @else {
@@ -265,6 +268,10 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   /** „Diese Linie als öffentlichen Link teilen" — der Container baut das PGN + ruft die API. */
   @Output() shareLine = new EventEmitter<RepertoireLine>();
   @Output() downloadLine = new EventEmitter<RepertoireLine>();
+  /** Ein Zug in einem Kommentar (auch einer eingefalteten Variante) wurde angeklickt → Brett-Vorschau. */
+  @Output() commentMovePreview = new EventEmitter<MoveListCommentSegment>();
+  /** Kommentare der gewählten Linie in Stücken mit anklickbaren Zügen (verankert über ihre Zugnummer). */
+  commentSegments: { [moveIndex: number]: MoveListCommentSegment[] } = {};
 
   busy = false;
   private states = signal<Map<string, LineStateDto>>(new Map());
@@ -280,8 +287,23 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
     if (this.repertoireId != null) this.colorOverrides.set(readChapterColorOverrides(this.repertoireId));
   }
 
-  ngOnChanges(): void {
+  ngOnChanges(changes: SimpleChanges): void {
     this.ensureMarksLoaded();
+    if (changes['moves'] || changes['comments'] || changes['selectedIndex'] || changes['lines']) {
+      this.rebuildCommentSegments();
+    }
+  }
+
+  private rebuildCommentSegments(): void {
+    const line = this.lines?.[this.selectedIndex];
+    const map: { [moveIndex: number]: MoveListCommentSegment[] } = {};
+    if (line) {
+      const ucis = this.moves.map(m => m.from + m.to + (m.promotion ?? ''));
+      for (const [key, text] of Object.entries(this.comments ?? {})) {
+        if (text) map[Number(key)] = buildCommentSegments(text, line.startFen, ucis);
+      }
+    }
+    this.commentSegments = map;
   }
 
   private loadStates(): void {

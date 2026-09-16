@@ -4,13 +4,30 @@ import {
 import { CommonModule } from '@angular/common';
 import { Move } from 'chess.js';
 
+/** Ein Stück Kommentartext; mit `move` ein anklickbarer Zug, dessen Stellung `fen` ist. */
+export interface MoveListCommentSegment { text?: string; move?: string; fen?: string; from?: string; to?: string; }
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-move-list',
   standalone: true,
   imports: [CommonModule],
   template: `
+    <ng-template #commentTpl let-idx>
+      @for (seg of segmentsFor(idx); track $index) {
+        @if (seg.move) {
+          <button type="button" class="cmt-move" (click)="commentMoveClicked.emit(seg)">{{ seg.move }}</button>
+        } @else {
+          <span>{{ seg.text }}</span>
+        }
+      }
+    </ng-template>
     <div class="move-list" #moveListEl>
+      @if (comments[-1]) {
+        <div class="comment-row comment-intro">
+          <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: -1 }"></ng-container>
+        </div>
+      }
       @for (pair of movePairs; track $index) {
         <div class="move-row" [class.row-active]="isRowActive(pair)">
           <span class="move-number">{{ pair.number }}.</span>
@@ -27,10 +44,9 @@ import { Move } from 'chess.js';
             <span class="move-empty"></span>
           }
         </div>
-        @if ((pair.whiteIndex >= 0 && comments[pair.whiteIndex]) ||
-             (pair.blackIndex !== undefined && comments[pair.blackIndex!])) {
+        @if (commentIndex(pair) !== null) {
           <div class="comment-row">
-            {{ comments[pair.whiteIndex] || comments[pair.blackIndex!] }}
+            <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: commentIndex(pair) }"></ng-container>
           </div>
         }
       }
@@ -68,6 +84,15 @@ import { Move } from 'chess.js';
     .move:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
     .move.active { background: #1976d2; color: white; }
     .move-empty { display: block; }
+    .comment-intro { padding-left: 6px; }
+    .cmt-move {
+      font: inherit; font-style: normal; font-weight: 600; cursor: pointer;
+      color: var(--mat-sys-primary, #1565c0);
+      background: color-mix(in srgb, currentColor 10%, transparent);
+      border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+      border-radius: 4px; padding: 0 4px; margin: 0 1px; white-space: nowrap;
+    }
+    .cmt-move:hover { background: color-mix(in srgb, currentColor 22%, transparent); }
     .comment-row {
       padding: 2px 6px 6px 38px;
       color: color-mix(in srgb, currentColor 60%, transparent);
@@ -82,14 +107,18 @@ export class MoveListComponent implements OnChanges {
   @Input() moves: Move[] = [];
   @Input() currentMoveIndex = -1;
   @Input() comments: { [moveIndex: number]: string } = {};
+  /** Optional: Kommentare in Stücken mit anklickbaren Zügen (Schlüssel wie `comments`). Ohne → reiner Text. */
+  @Input() commentSegments: { [moveIndex: number]: MoveListCommentSegment[] } | null = null;
   @Output() moveClicked = new EventEmitter<number>();
+  /** Ein anklickbarer Zug in einem Kommentar wurde gewählt (Vorschau seiner Stellung). */
+  @Output() commentMoveClicked = new EventEmitter<MoveListCommentSegment>();
 
   @ViewChild('moveListEl') moveListEl!: ElementRef<HTMLElement>;
 
   movePairs: { number: number; white?: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['moves']) {
+    if (changes['moves'] || changes['comments']) {
       this.buildPairs();
     }
     if (changes['currentMoveIndex']) {
@@ -100,6 +129,18 @@ export class MoveListComponent implements OnChanges {
   isRowActive(pair: { whiteIndex: number; blackIndex?: number }): boolean {
     return pair.whiteIndex === this.currentMoveIndex ||
       (pair.blackIndex !== undefined && pair.blackIndex === this.currentMoveIndex);
+  }
+
+  /** Index des Kommentars, der unter dieser Zeile steht (Weiß vor Schwarz); `null` = keiner. Eine Zeile
+   *  trägt höchstens EINEN Kommentar — hat Weiß einen, steht Schwarz in einer eigenen Zeile darunter. */
+  commentIndex(pair: { whiteIndex: number; blackIndex?: number; white?: string }): number | null {
+    if (pair.white !== undefined && this.comments[pair.whiteIndex]) return pair.whiteIndex;
+    if (pair.blackIndex !== undefined && this.comments[pair.blackIndex]) return pair.blackIndex;
+    return null;
+  }
+
+  segmentsFor(index: number): MoveListCommentSegment[] {
+    return this.commentSegments?.[index] ?? [{ text: this.comments[index] }];
   }
 
   private buildPairs(): void {
@@ -113,7 +154,8 @@ export class MoveListComponent implements OnChanges {
         i += 1;
       } else {
         const black = this.moves[i + 1];
-        const hasBlack = !!black && black.color === 'b';
+        // Kommentar hinter dem weißen Zug → Schwarz bekommt eine eigene Zeile, sonst ginge einer verloren.
+        const hasBlack = !!black && black.color === 'b' && !this.comments[i];
         this.movePairs.push({
           number: num,
           white: m.san,

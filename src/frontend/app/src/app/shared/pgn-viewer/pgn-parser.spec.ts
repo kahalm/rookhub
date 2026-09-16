@@ -1,4 +1,4 @@
-import { parsePgnText, parsePgnTextWithSource, ParsedGame, START_FEN } from './pgn-parser';
+import { foldVariationsIntoComments, parsePgnText, parsePgnTextWithSource, ParsedGame, START_FEN } from './pgn-parser';
 
 const SINGLE_GAME = `[Event "Test"]
 [White "Kasparov"]
@@ -183,5 +183,46 @@ describe('parsePgnTextWithSource', () => {
     expect(parsed[0].raw).toBe('[Event "A"]\n[Result "*"]\n\n1. e4 (1. d4 {Damen}) e5 {[%alt c5]gut} *');
     expect(parsed[1].raw).toBe('[Event "B"]\n[Result "*"]\n\n1. c4 *');
     expect(parsePgnText(pgn).length).toBe(2);             // alte Funktion unverändert
+  });
+});
+
+const REAL_LINE = '[Event "Lifetime Repertoires: Martinovićs Französisch"]\n[Round "004.002"]\n'
+  + '[White "1A | 2.Sf3 | Weiß spielt 6.Lxa3"]\n[Black "1) Weiß spielt ohne 2.d4"]\n'
+  + '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n[Result "*"]\n\n'
+  + '{Liebe Schachfreunde. Es gibt nichts weniger kritisches als wenn unser Gegner nicht ausnutzt, dass er \n2.d4\n'
+  + 'spielen kann.} 1. e4 {[%tqu "En","find the move","","","e7e6","",10]} e6 {[%cal Gd7d5][%alt c5 e5]Bereits '
+  + 'nach diesem Zug.} 2. Nf3 {Dieser Zug hat fast keine eigenständige Bedeutung.} d5 3. e5 (3.Nc3 Nf6 4.e5 Nfd7 5.d4 '
+  + '{werden wir später sehen.}) (3.exd5 exd5 4.d4 {geht über in die Abtauschvariante.}) (3.d3 {ist hier in der '
+  + 'Zugfolge }) {2.d3 d5 3.Nf3 analysiert.} c5 4. b4 {[%cal Bb4c5][%csl Rc5]} ({Dieses Gambit nach 2.Sf3.} 4.c3 '
+  + '{ist besser:} 4...Nc6 5.d4 {würde überleiten.}) cxb4 {[%alt b6]Es gibt auch gute Alternativen.} 5. a3 *\n';
+
+describe('Varianten als Kommentartext (foldVariations)', () => {
+  it('foldVariationsIntoComments: Varianten werden zu Text-Kommentaren, Marker und Klammern fallen weg', () => {
+    expect(foldVariationsIntoComments('1. e4 (1. d4 {Damen} $1 (1. c4)) e5 {[%alt c5]gut} *'))
+      .toBe('1. e4  {1. d4 Damen 1. c4}  e5 {[%alt c5]gut} *');
+    expect(foldVariationsIntoComments('1. e4 {Klammer (im) Kommentar} e5 *')).toBe('1. e4 {Klammer (im) Kommentar} e5 *');
+    expect(foldVariationsIntoComments('1. e4 ( $1 ) e5 *')).toBe('1. e4  e5 *');   // leere Variante fällt weg
+  });
+
+  it('echte Chessable-Linie: Varianten hängen am Zug, Züge bleiben, alle Hauptzüge gelesen', () => {
+    const [game] = parsePgnText(REAL_LINE, { foldVariations: true });
+    expect(game.moves.map(m => m.san)).toEqual(['e4', 'e6', 'Nf3', 'd5', 'e5', 'c5', 'b4', 'cxb4', 'a3']);
+    expect(game.comments[4]).toBe('3.Nc3 Nf6 4.e5 Nfd7 5.d4 werden wir später sehen. 3.exd5 exd5 4.d4 geht über in die '
+      + 'Abtauschvariante. 3.d3 ist hier in der Zugfolge 2.d3 d5 3.Nf3 analysiert.');
+    expect(game.comments[6]).toBe('Dieses Gambit nach 2.Sf3. 4.c3 ist besser: 4...Nc6 5.d4 würde überleiten.');
+    expect(game.comments[7]).toBe('Es gibt auch gute Alternativen.');
+  });
+
+  it('aufeinanderfolgende Kommentare verwerfen das Spiel nicht mehr (auch ohne Einfalten)', () => {
+    const [game] = parsePgnText('[Event "x"]\n[Result "*"]\n\n{Intro} {mehr} 1. e4 {[%cal Ge2e4]} {Text} e5 *\n');
+    expect(game.moves.map(m => m.san)).toEqual(['e4', 'e5']);
+    expect(game.comments[-1]).toBe('Intro mehr');
+    expect(game.comments[0]).toBe('Text');
+  });
+
+  it('ohne die Option bleibt es beim Verwerfen der Varianten', () => {
+    const [game] = parsePgnText(REAL_LINE);
+    expect(game.comments[4]).toBe('2.d3 d5 3.Nf3 analysiert.');
+    expect(game.comments[6]).toBeUndefined();
   });
 });

@@ -60,7 +60,8 @@ export class RepertoireViewerService {
   }
 
   loadPgn(pgnText: string): void {
-    const parsed = parsePgnTextWithSource(pgnText);
+    // Varianten als Kommentartext behalten: die Linienansicht macht ihre Züge klickbar.
+    const parsed = parsePgnTextWithSource(pgnText, { foldVariations: true });
     this.games = parsed.map(p => p.game);
     this.rawGames = parsed.map(p => p.raw);
     this.lines = this.games.map((game, i) => this.buildLine(game, i));

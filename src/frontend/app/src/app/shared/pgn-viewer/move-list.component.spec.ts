@@ -32,3 +32,47 @@ describe('MoveListComponent numbering', () => {
     expect(component.movePairs[1]).toEqual(jasmine.objectContaining({ number: 2, white: 'Nf3' }));
   });
 });
+
+describe('MoveListComponent Kommentare', () => {
+  const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+  function render(comments: { [i: number]: string }, segments: any = null) {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    const chess = new Chess(START_FEN);
+    ['e4', 'e6', 'Nf3', 'd5'].forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('comments', comments);
+    fixture.componentRef.setInput('commentSegments', segments);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const rowText = (r: Element) => r.classList.contains('move-row')
+      ? Array.from(r.children).map(c => c.textContent!.trim()).filter(t => t).join(' ')
+      : r.textContent!.replace(/\s+/g, ' ').trim();
+    return { fixture, el, rows: () => Array.from(el.querySelectorAll('.move-row, .comment-row')).map(rowText) };
+  }
+
+  it('zeigt die Einleitung vor dem ersten Zug', () => {
+    const { rows } = render({ [-1]: 'Willkommen' });
+    expect(rows()[0]).toBe('Willkommen');
+  });
+
+  it('zeigt beide Kommentare eines Zugpaars — Schwarz rückt in eine eigene Zeile', () => {
+    const { rows } = render({ 0: 'Weiß', 1: 'Schwarz' });
+    expect(rows()).toEqual(['1. e4', 'Weiß', '1. e6', 'Schwarz', '2. Nf3 d5']);
+  });
+
+  it('macht Züge anklickbar, wenn Stücke übergeben werden, und meldet den Klick', () => {
+    const seg = { move: '2.d4', fen: 'x', from: 'd2', to: 'd4' };
+    const { fixture, el } = render({ [-1]: 'dass er 2.d4 spielt' },
+      { [-1]: [{ text: 'dass er ' }, seg, { text: ' spielt' }] });
+    const clicked: unknown[] = [];
+    fixture.componentInstance.commentMoveClicked.subscribe(s => clicked.push(s));
+
+    const chip = el.querySelector('.comment-row .cmt-move') as HTMLButtonElement;
+    expect(chip.textContent!.trim()).toBe('2.d4');
+    chip.click();
+
+    expect(clicked).toEqual([seg]);
+  });
+});

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
@@ -124,6 +124,14 @@ type ViewMode = 'lines' | 'tree' | 'edit';
                     <mat-icon>skip_next</mat-icon>
                   </button>
                 </div>
+                @if (commentPreview) {
+                  <div class="cmt-variation-bar">
+                    <span>{{ 'book.variation.previewing' | translate }}</span>
+                    <button mat-stroked-button type="button" (click)="exitCommentPreview()">
+                      <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
+                    </button>
+                  </div>
+                }
               }
             </div>
             <div class="side-panel">
@@ -139,7 +147,8 @@ type ViewMode = 'lines' | 'tree' | 'edit';
                   (lineDeselected)="viewerService.deselectLine()"
                   (moveClicked)="viewerService.goToMove($event)"
                   (shareLine)="onShareLine($event)"
-                  (downloadLine)="onDownloadLine($event)" />
+                  (downloadLine)="onDownloadLine($event)"
+                  (commentMovePreview)="onCommentMovePreview($event)" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
@@ -186,6 +195,10 @@ type ViewMode = 'lines' | 'tree' | 'edit';
       width: 400px;
     }
     .nav-buttons { display: flex; gap: 4px; }
+    .cmt-variation-bar {
+      display: flex; align-items: center; gap: 8px; margin-top: 6px;
+      font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
+    }
     .filter-bar { display: flex; align-items: center; gap: 4px; width: 100%; max-width: 400px; min-height: 40px; }
     .filter-moves { flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -216,7 +229,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
     }
   `]
 })
-export class RepertoireDetailComponent implements OnInit {
+export class RepertoireDetailComponent implements OnInit, DoCheck {
   repertoire: RepertoireDetail | null = null;
   loading = true;
   mode: ViewMode = 'lines';
@@ -237,13 +250,37 @@ export class RepertoireDetailComponent implements OnInit {
     return this.mode === 'lines' && this.viewerService.selectedLineIndex < 0;
   }
 
+  /** Brett-Vorschau eines angeklickten Kommentar-Zugs; gilt nur für die Linie + Stellung, in der geklickt wurde. */
+  commentPreview: { fen: string; lastMove: [string, string]; line: number; move: number } | null = null;
+
+  onCommentMovePreview(seg: { fen?: string; from?: string; to?: string }): void {
+    if (!seg.fen || !seg.from || !seg.to) return;
+    this.commentPreview = {
+      fen: seg.fen, lastMove: [seg.from, seg.to],
+      line: this.viewerService.selectedLineIndex, move: this.viewerService.currentMoveIndex,
+    };
+  }
+
+  exitCommentPreview(): void { this.commentPreview = null; }
+
+  /** Jeder Stellungs- oder Linienwechsel beendet die Vorschau (auch über Pfeiltasten/Zugliste). */
+  ngDoCheck(): void {
+    const p = this.commentPreview;
+    if (p && (this.mode !== 'lines' || p.line !== this.viewerService.selectedLineIndex
+      || p.move !== this.viewerService.currentMoveIndex)) {
+      this.commentPreview = null;
+    }
+  }
+
   get boardFen(): string {
+    if (this.commentPreview) return this.commentPreview.fen;
     if (this.mode !== 'lines') return this.treeService.currentFen;
     if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.currentFen;
     return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].fen : START_FEN;
   }
 
   get boardLastMove(): [string, string] | undefined {
+    if (this.commentPreview) return this.commentPreview.lastMove;
     if (this.mode !== 'lines') return this.treeService.lastMove;
     if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.lastMove;
     return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].lastMove : undefined;
