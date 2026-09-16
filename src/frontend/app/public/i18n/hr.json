@@ -1304,7 +1304,9 @@
       "startChapter": "Pokreni poglavlje",
       "tags": "Oznake",
       "title": "Tečaj",
-      "chapterPoints": "{{score}} bod."
+      "chapterPoints": "{{score}} bod.",
+      "downloadChapterPgn": "Preuzmi poglavlje kao PGN",
+      "downloadLinePgn": "Preuzmi varijantu kao PGN"
     },
     "sequential": "Slijedno",
     "random": "Nasumično",

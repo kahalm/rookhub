@@ -314,6 +314,91 @@ public class CourseService
         return (CoursePgnExporter.ToPgn(book.DisplayName, puzzles), fileName);
     }
 
+    /// <summary>PGN EINES Kapitels (<paramref name="chapter"/> leer = „ohne Kapitel") in Lesereihenfolge.
+    /// Jede Linie kommt wie beim Kurs-Download bevorzugt unverändert aus dem Roh-PGN (Varianten + Kommentare
+    /// bleiben erhalten); nur Linien ohne Gegenstück dort werden rekonstruiert. Kein Zugriff, leeres
+    /// Kapitel oder KALKULATIONSBUCH (die Züge wären die Lösung, wie bei <see cref="GetAllPuzzlesAsync"/>)
+    /// → <see cref="KeyNotFoundException"/>.</summary>
+    public async Task<(string Pgn, string FileName)> GetChapterPgnAsync(int userId, int bookId, string? chapter, bool isAdmin)
+    {
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
+            throw new KeyNotFoundException("Book not found.");
+        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        var wanted = NormalizeChapter(chapter?.Trim());
+        var puzzles = (await _db.BookPuzzles
+                .Where(bp => bp.BookId == bookId)
+                .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+                .ToListAsync())
+            .Where(bp => NormalizeChapter(bp.Chapter?.Trim()) == wanted)
+            .ToList();
+        if (puzzles.Count == 0) throw new KeyNotFoundException("Chapter not found.");
+        var fileName = PgnFileName(book.DisplayName, wanted ?? "no_chapter");
+        return (BuildLinesPgn(book, puzzles), fileName);
+    }
+
+    /// <summary>PGN EINER Linie (<paramref name="lineId"/> = <see cref="BookPuzzle.Id"/>), bevorzugt
+    /// unverändert aus dem Roh-PGN. Kein Zugriff, Linie gehört nicht zum Buch oder Kalkulationsbuch
+    /// → <see cref="KeyNotFoundException"/>.</summary>
+    public async Task<(string Pgn, string FileName)> GetLinePgnAsync(int userId, int bookId, int lineId, bool isAdmin)
+    {
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
+            throw new KeyNotFoundException("Book not found.");
+        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == lineId && bp.BookId == bookId)
+            ?? throw new KeyNotFoundException("Line not found.");
+        var fileName = PgnFileName(book.DisplayName, $"{puzzle.Round} {puzzle.Title}");
+        return (BuildLinesPgn(book, [puzzle]), fileName);
+    }
+
+    /// <summary>
+    /// Setzt das PGN der übergebenen Linien zusammen. Gegenstück im Roh-PGN ist das Spiel mit derselben
+    /// <c>Round</c> — genau daraus hat der Import die <see cref="BookPuzzle.LineId"/> gebildet (bei doppelter
+    /// Round zählt wie dort das erste Spiel). Linien ohne Gegenstück (Altbestand ohne Quelle, von Hand
+    /// eingefügte Stellungen, aus getReview ergänzte Lücken) werden aus der gespeicherten Linie rekonstruiert.
+    /// </summary>
+    internal static string BuildLinesPgn(Book book, IReadOnlyList<BookPuzzle> puzzles)
+    {
+        var rawByRound = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(book.SourcePgn))
+        {
+            foreach (var (headers, raw) in PgnParser.SplitGameBlocks(book.SourcePgn))
+            {
+                var round = PgnParser.Truncate(headers.GetValueOrDefault("Round", "").Trim(), 20);
+                if (round.Length > 0) rawByRound.TryAdd(round, raw);
+            }
+        }
+
+        var bookName = book.DisplayName ?? "course";
+        var games = new List<string>();
+        foreach (var p in puzzles)
+        {
+            if (rawByRound.TryGetValue(p.Round, out var raw))
+            {
+                games.Add(raw);
+                continue;
+            }
+            var rebuilt = CoursePgnExporter.ToPgn(bookName, [p]).Trim();
+            if (rebuilt.Length > 0) games.Add(rebuilt);
+        }
+        return string.Join("\n\n", games) + "\n";
+    }
+
+    /// <summary>Dateiname „Kurs_Zusatz.pgn": nur Buchstaben/Ziffern, alles andere als ein „_".</summary>
+    private static string PgnFileName(string? courseName, string suffix)
+    {
+        static string Clean(string? s)
+        {
+            var chars = (s ?? "").Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray();
+            var joined = System.Text.RegularExpressions.Regex.Replace(new string(chars), "_+", "_").Trim('_');
+            return joined.Length > 80 ? joined[..80].TrimEnd('_') : joined;
+        }
+        var parts = new[] { Clean(courseName), Clean(suffix) }.Where(x => x.Length > 0);
+        var name = string.Join("_", parts);
+        return $"{(name.Length == 0 ? "course" : name)}.pgn";
+    }
+
     /// <summary>„Kurs → Repertoire umwandeln" (Verschieben): legt aus dem Kurs-PGN (inkl. Varianten/
     /// Kommentaren, wenn <see cref="Book.SourcePgn"/> vorhanden) ein neues Repertoire des Users an und
     /// ENTFERNT den Original-Kurs, sofern es ein persönlicher (eigener) Kurs ist

@@ -17,6 +17,28 @@ describe('CourseService', () => {
 
   afterEach(() => http.verify());
 
+  it('lädt ein Kapitel als PGN (leerer Name = „ohne Kapitel")', () => {
+    svc.downloadChapterPgn(7, 'Kapitel 1').subscribe();
+    const req = http.expectOne(r => r.url === '/api/courses/7/chapter-pgn');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('chapter')).toBe('Kapitel 1');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['x']));
+
+    svc.downloadChapterPgn(7, null).subscribe();
+    const req2 = http.expectOne(r => r.url === '/api/courses/7/chapter-pgn');
+    expect(req2.request.params.get('chapter')).toBe('');
+    req2.flush(new Blob(['x']));
+  });
+
+  it('lädt eine Linie als PGN', () => {
+    svc.downloadLinePgn(7, 16867).subscribe();
+    const req = http.expectOne('/api/courses/7/lines/16867/pgn');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['x']));
+  });
+
   it('lists courses', () => {
     svc.getCourses().subscribe(res => expect(res.length).toBe(1));
     const req = http.expectOne('/api/courses');

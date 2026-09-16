@@ -124,6 +124,30 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Lädt EIN Kapitel als PGN herunter (<c>chapter</c> leer = „ohne Kapitel").</summary>
+    [HttpGet("{bookId:int}/chapter-pgn")]
+    public async Task<IActionResult> DownloadChapterPgn(int bookId, [FromQuery] string? chapter)
+    {
+        try
+        {
+            var (pgn, fileName) = await _service.GetChapterPgnAsync(GetUserId(), bookId, chapter, IsAdmin);
+            return File(System.Text.Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn", fileName);
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Lädt EINE Linie als PGN herunter.</summary>
+    [HttpGet("{bookId:int}/lines/{lineId:int}/pgn")]
+    public async Task<IActionResult> DownloadLinePgn(int bookId, int lineId)
+    {
+        try
+        {
+            var (pgn, fileName) = await _service.GetLinePgnAsync(GetUserId(), bookId, lineId, IsAdmin);
+            return File(System.Text.Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn", fileName);
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     /// <summary>„Kurs → Repertoire umwandeln": legt aus dem Kurs-PGN ein neues Repertoire des Users an
     /// (Original-Kurs bleibt). Antwort = das neue Repertoire.</summary>
     [HttpPost("{bookId}/convert-to-repertoire")]

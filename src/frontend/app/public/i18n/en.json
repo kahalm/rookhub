@@ -1304,7 +1304,9 @@
       "startChapter": "Start chapter",
       "tags": "Tags",
       "title": "Course",
-      "chapterPoints": "{{score}} pts"
+      "chapterPoints": "{{score}} pts",
+      "downloadChapterPgn": "Download chapter as PGN",
+      "downloadLinePgn": "Download line as PGN"
     },
     "sequential": "Sequential",
     "random": "Random",

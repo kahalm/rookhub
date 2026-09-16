@@ -1067,7 +1067,9 @@
       "resetCourse": "A teljes tanfolyam visszaállítása",
       "resetCourseConfirm": "Visszaállítod a haladásodat az egész „{{name}}” tanfolyamnál?",
       "resetCourseFailed": "A tanfolyamot nem sikerült visszaállítani.",
-      "sharedBy": "Megosztotta: {{name}}"
+      "sharedBy": "Megosztotta: {{name}}",
+      "downloadChapterPgn": "Fejezet letöltése PGN-ként",
+      "downloadLinePgn": "Változat letöltése PGN-ként"
     },
     "pinTooltip": "Rögzítés az irányítópultra",
     "unpinTooltip": "Levétel az irányítópultról",

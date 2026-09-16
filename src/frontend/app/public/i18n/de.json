@@ -1304,7 +1304,9 @@
       "startChapter": "Kapitel starten",
       "tags": "Schlagwörter",
       "title": "Kurs",
-      "chapterPoints": "{{score}} Pkt"
+      "chapterPoints": "{{score}} Pkt",
+      "downloadChapterPgn": "Kapitel als PGN herunterladen",
+      "downloadLinePgn": "Linie als PGN herunterladen"
     },
     "sequential": "Sequenziell",
     "random": "Zufällig",

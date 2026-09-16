@@ -162,6 +162,21 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void SplitGameBlocks_ReturnsRawTextPerGame_WithVariationsAndLineBreaks()
+    {
+        var pgn = "[Event \"A\"]\n[Round \"1\"]\n\n1. e4 (1. d4 {Damen}) e5\n{zweite\nZeile} *\n\n\n"
+                + "[Event \"B\"]\n[Round \"2\"]\n\n1. c4 *\n";
+
+        var blocks = PgnParser.SplitGameBlocks(pgn).ToList();
+
+        Assert.Equal(PgnParser.SplitGames(pgn).Count(), blocks.Count);
+        Assert.Equal(2, blocks.Count);
+        Assert.Equal("1", blocks[0].Headers["Round"]);
+        Assert.Equal("[Event \"A\"]\n[Round \"1\"]\n\n1. e4 (1. d4 {Damen}) e5\n{zweite\nZeile} *", blocks[0].Raw);
+        Assert.Equal("[Event \"B\"]\n[Round \"2\"]\n\n1. c4 *", blocks[1].Raw);
+    }
+
+    [Fact]
     public void ParsePgn_FoldsContinuationVariationIntoTrailingComment()
     {
         // Chessable-Stil: der Hauptlinien-Kommentar endet mit einem Verweis auf eine Fortsetzung,

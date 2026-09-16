@@ -412,7 +412,33 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     }));
   }
 
+  downloadChapterPgn(chapter: CourseManageChapter): void {
+    if (!this.detail) return;
+    const name = pgnFileName(this.detail.displayName, chapter.name ?? 'no_chapter');
+    this.subs.add(this.courses.downloadChapterPgn(this.bookId, chapter.name).subscribe({
+      next: blob => downloadBlob(blob, name),
+      error: () => this.fail('courses.downloadFailed'),
+    }));
+  }
+
+  downloadLinePgn(line: CourseLine): void {
+    if (!this.detail) return;
+    const name = pgnFileName(this.detail.displayName, `${line.round} ${line.title ?? ''}`);
+    this.subs.add(this.courses.downloadLinePgn(this.bookId, line.id).subscribe({
+      next: blob => downloadBlob(blob, name),
+      error: () => this.fail('courses.downloadFailed'),
+    }));
+  }
+
   private fail(key: string): void {
     this.snackbar.warn(this.translate.instant(key));
   }
+}
+
+/** Dateiname „Kurs_Zusatz.pgn" wie im Backend: nur Buchstaben/Ziffern, alles andere als ein „_". */
+export function pgnFileName(courseName: string | null | undefined, suffix: string): string {
+  const clean = (s: string | null | undefined) =>
+    (s ?? '').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 80).replace(/_+$/, '');
+  const name = [clean(courseName), clean(suffix)].filter(p => p.length > 0).join('_');
+  return `${name || 'course'}.pgn`;
 }

@@ -381,6 +381,17 @@ export class CourseService {
     return this.http.get(`/api/courses/${bookId}/pgn`, { responseType: 'blob' });
   }
 
+  /** Lädt EIN Kapitel als PGN (`chapter` null = „ohne Kapitel"); Varianten und Kommentare bleiben erhalten. */
+  downloadChapterPgn(bookId: number, chapter: string | null): Observable<Blob> {
+    const params = new HttpParams().set('chapter', chapter ?? '');
+    return this.http.get(`/api/courses/${bookId}/chapter-pgn`, { params, responseType: 'blob' });
+  }
+
+  /** Lädt EINE Linie als PGN. */
+  downloadLinePgn(bookId: number, lineId: number): Observable<Blob> {
+    return this.http.get(`/api/courses/${bookId}/lines/${lineId}/pgn`, { responseType: 'blob' });
+  }
+
   /** Hat der eingeloggte User Zugriff auf mindestens einen Kurs? (Menü-Sichtbarkeit) */
   checkAccess(): Observable<{ hasAccess: boolean }> {
     return this.http.get<{ hasAccess: boolean }>('/api/courses/access');

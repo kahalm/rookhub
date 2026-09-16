@@ -235,6 +235,12 @@
                             <span>{{ 'courses.flashcards.chapterMenu' | translate }}</span>
                           </button>
                         }
+                        @if (!d.isCalculation) {
+                          <button mat-menu-item (click)="downloadChapterPgn(ch)" [disabled]="ch.lineCount === 0">
+                            <mat-icon>download</mat-icon>
+                            <span>{{ 'courses.detail.downloadChapterPgn' | translate }}</span>
+                          </button>
+                        }
                         <button mat-menu-item (click)="resetChapter(ch)">
                           <mat-icon>restart_alt</mat-icon>
                           <span>{{ 'courses.detail.resetChapter' | translate }}</span>
@@ -274,6 +280,13 @@
                                 }
                               </td>
                               <td class="row-actions">
+                                @if (!d.isCalculation) {
+                                  <button mat-icon-button (click)="downloadLinePgn(line)"
+                                          [matTooltip]="'courses.detail.downloadLinePgn' | translate"
+                                          [attr.aria-label]="'courses.detail.downloadLinePgn' | translate">
+                                    <mat-icon>download</mat-icon>
+                                  </button>
+                                }
                                 @if (d.isCalculation) {
                                   <a mat-icon-button [routerLink]="['/courses', bookId, 'calc']"
                                      [queryParams]="{ pos: line.id }"

@@ -49,9 +49,20 @@ public static partial class PgnParser
     // ---- Spiel-Splitting (Header-Block + Movetext) ------------------------
     /// <summary>Zerlegt einen PGN-Text in (Header-Dictionary, Movetext)-Paare je Spiel.</summary>
     public static IEnumerable<(Dictionary<string, string> Headers, string MoveText)> SplitGames(string pgnText)
+        => SplitGamesCore(pgnText).Select(g => (g.Headers, g.MoveText));
+
+    /// <summary>Wie <see cref="SplitGames"/>, liefert aber zusätzlich den ROHTEXT jedes Spiels (Header-Block
+    /// + Movetext mit den Original-Zeilenumbrüchen, führende/abschließende Leerzeilen entfernt). Dient dem
+    /// Export einzelner Kapitel/Linien aus dem gespeicherten Roh-PGN: dieselben Spielgrenzen wie beim
+    /// Import, der Inhalt aber unverändert (Varianten, Kommentare, Marker bleiben erhalten).</summary>
+    public static IEnumerable<(Dictionary<string, string> Headers, string Raw)> SplitGameBlocks(string pgnText)
+        => SplitGamesCore(pgnText).Select(g => (g.Headers, g.Raw));
+
+    private static IEnumerable<(Dictionary<string, string> Headers, string MoveText, string Raw)> SplitGamesCore(string pgnText)
     {
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var moves = new StringBuilder();
+        var raw = new StringBuilder();
         bool inMoves = false;
         bool hasContent = false;
         // Offene {…}-Kommentar-Klammertiefe über Zeilenumbrüche hinweg: eine umbruch-bedingte
@@ -62,6 +73,7 @@ public static partial class PgnParser
         foreach (var rawLine in pgnText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
             var m = openComments == 0 ? HeaderLineRegex().Match(rawLine) : Match.Empty;
+            bool keepRaw = true;
             if (m.Success)
             {
                 // Neuer Header nach Movetext ⇒ vorheriges Spiel abschließen. Ebenso bei einem
@@ -70,9 +82,10 @@ public static partial class PgnParser
                 // nächste Spiel hineingemischt.
                 if (inMoves || (hasContent && headers.ContainsKey(m.Groups[1].Value)))
                 {
-                    yield return (headers, moves.ToString());
+                    yield return (headers, moves.ToString(), raw.ToString().Trim());
                     headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     moves = new StringBuilder();
+                    raw = new StringBuilder();
                     inMoves = false;
                     hasContent = false;
                 }
@@ -83,7 +96,7 @@ public static partial class PgnParser
             {
                 // Tag-artige Zeile AUSSERHALB eines Kommentars, die nicht das Header-Muster trifft —
                 // ignorieren ([%…]-Annotationen stehen laut Spez nur INNERHALB von {…}-Kommentaren).
-                continue;
+                keepRaw = false;
             }
             else if (!string.IsNullOrWhiteSpace(rawLine))
             {
@@ -98,9 +111,10 @@ public static partial class PgnParser
                     else if (ch == '}' && openComments > 0) openComments--;
                 }
             }
+            if (keepRaw) raw.Append(rawLine).Append('\n');
         }
         if (hasContent)
-            yield return (headers, moves.ToString());
+            yield return (headers, moves.ToString(), raw.ToString().Trim());
     }
 
     // ---- erster (nicht-leerer) Mainline-Kommentar -------------------------

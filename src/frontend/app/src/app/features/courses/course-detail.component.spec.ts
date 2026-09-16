@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
-import { CourseDetailComponent } from './course-detail.component';
+import { CourseDetailComponent, pgnFileName } from './course-detail.component';
 import { CourseDetail, CourseLine, CourseManageChapter } from './course.service';
 
 function chapter(over: Partial<CourseManageChapter> = {}): CourseManageChapter {
@@ -329,5 +329,58 @@ describe('CourseDetailComponent Kalkulations-Modus', () => {
     expect(warnings).toContain('courses.detail.calcToggleFailed');
     expect(calls.filter(c => c === 'getDetail').length).toBe(before + 1);
     expect(component.busy).toBeFalse();
+  });
+});
+
+describe('CourseDetailComponent — PGN je Kapitel/Linie', () => {
+  it('lädt das Kapitel mit seinem Namen und benennt die Datei danach', () => {
+    const asked: unknown[][] = [];
+    const click = spyOn(HTMLAnchorElement.prototype, 'click');
+    const { component } = make({
+      downloadChapterPgn: (...a: unknown[]) => { asked.push(a); return of(new Blob(['pgn'])); },
+    });
+    component.ngOnInit();
+
+    component.downloadChapterPgn(chapter({ name: 'Kapitel 1' }));
+    component.downloadChapterPgn(chapter({ name: null }));
+
+    expect(asked).toEqual([[58, 'Kapitel 1'], [58, null]]);
+    const names = click.calls.all().map(c => (c.object as HTMLAnchorElement).download);
+    expect(names).toEqual(['TestNoel_Kapitel_1.pgn', 'TestNoel_no_chapter.pgn']);
+  });
+
+  it('lädt eine Linie über ihre Id', () => {
+    const asked: unknown[][] = [];
+    const click = spyOn(HTMLAnchorElement.prototype, 'click');
+    const { component } = make({
+      downloadLinePgn: (...a: unknown[]) => { asked.push(a); return of(new Blob(['pgn'])); },
+    });
+    component.ngOnInit();
+
+    component.downloadLinePgn(line({ id: 16867, round: '004.002', title: '1A | 2.Sf3 | Weiß spielt 6.Lxa3' }));
+
+    expect(asked).toEqual([[58, 16867]]);
+    expect((click.calls.mostRecent().object as HTMLAnchorElement).download)
+      .toBe('TestNoel_004_002_1A_2_Sf3_Weiß_spielt_6_Lxa3.pgn');
+  });
+
+  it('meldet einen fehlgeschlagenen Download', () => {
+    const { component, warnings } = make({
+      downloadChapterPgn: () => throwError(() => new Error('nope')),
+      downloadLinePgn: () => throwError(() => new Error('nope')),
+    });
+    component.ngOnInit();
+
+    component.downloadChapterPgn(chapter());
+    component.downloadLinePgn(line());
+
+    expect(warnings).toEqual(['courses.downloadFailed', 'courses.downloadFailed']);
+  });
+
+  it('pgnFileName entspricht der Backend-Regel', () => {
+    expect(pgnFileName('Lifetime Repertoires: Martinovićs Französisch', '1) Weiß spielt ohne 2.d4'))
+      .toBe('Lifetime_Repertoires_Martinovićs_Französisch_1_Weiß_spielt_ohne_2_d4.pgn');
+    expect(pgnFileName(null, '')).toBe('course.pgn');
+    expect(pgnFileName('K', 'x'.repeat(100))).toBe(`K_${'x'.repeat(80)}.pgn`);
   });
 });
