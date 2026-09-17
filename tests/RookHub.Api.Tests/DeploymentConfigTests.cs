@@ -254,6 +254,57 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void ScannerPaths_Get404_WhileAppFilesAndApiStayUntouched()
+    {
+        // 2026-09-17: ein .env-Scan (313 Anfragen) bekam fuer 291 Pfade 200 und die Startseite, weil
+        // der SPA-Fallback jeden unbekannten Pfad so beantwortet. Preisgegeben war nichts, fuer den
+        // Scanner war trotzdem jeder davon ein Treffer. Die Regeln muessen solche Pfade treffen und
+        // duerfen KEINE Datei des Bundles und keine App-Route erwischen.
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var rules = Regex.Matches(nginx, @"location (?<op>~\*?) (?<re>\S+) \{\s*return 404;\s*\}")
+            .Select(m => new Regex(m.Groups["re"].Value,
+                m.Groups["op"].Value == "~*" ? RegexOptions.IgnoreCase : RegexOptions.None))
+            .ToList();
+        Assert.NotEmpty(rules);
+        bool Blocked(string path) => rules.Any(r => r.IsMatch(path));
+
+        foreach (var probe in new[]
+        {
+            "/.env", "/.git/config", "/data/.env", "/backend/.env.local", "/.env.production",
+            "/env.old", "/env.production", "/config.env", "/config.php.bak", "/wp-config.php",
+            "/wp-config.txt", "/docker-compose.yml", "/config.py", "/setup.php", "/src/PHPInfo.php",
+            "/db/dump.sql", "/backup.tar.gz", "/wp-admin/install.php", "/phpmyadmin/", "/web.config",
+        })
+            Assert.True(Blocked(probe), $"Scanner-Pfad nicht abgefangen: {probe}");
+
+        foreach (var legit in new[]
+        {
+            "/", "/index.html", "/main-AB12CD34.js", "/chunk-XYZ12345.js", "/styles-QWERTY12.css",
+            "/ngsw.json", "/ngsw-worker.js", "/manifest.webmanifest", "/favicon.ico", "/i18n/de.json",
+            "/assets/stockfish/stockfish.wasm", "/fonts/inter-abc123.woff2", "/media/board-abc123.png",
+            "/courses/12", "/courses/12/calc", "/meinkurs/1.e4", "/tournaments/pl2026-123",
+            "/g/Ab3dEf9h", "/t/1474416", "/puzzles/book/77", "/analysis", "/tiles/5/17/11.png",
+        })
+            Assert.False(Blocked(legit), $"App-Pfad wuerde faelschlich 404: {legit}");
+
+        // Die Punkt-Regel traefe auch /.well-known/assetlinks.json — die Datei steht deshalb als
+        // exakte Location in der Konfiguration, und exakte Treffer gewinnen vor jeder Regex.
+        Assert.Contains("location = /.well-known/assetlinks.json {", nginx);
+
+        // Bei Regex-Locations gewinnt der ERSTE Treffer: die Regeln stehen vor der OG-Weiche. Die
+        // /api/-Locations tragen ^~, sonst fingen die Regeln /api/.env ab, bevor die API es loggt.
+        var firstRule = nginx.IndexOf("return 404;", StringComparison.Ordinal);
+        Assert.True(firstRule > 0 && firstRule < nginx.IndexOf("location ~ ^/(g|t|puzzles)", StringComparison.Ordinal),
+            "Scanner-Regeln muessen vor der OG-Location stehen");
+        Assert.True(firstRule < nginx.IndexOf("location / {", StringComparison.Ordinal));
+        foreach (var api in new[] { "/api/", "/api/engine/", "/api/extension/chessable/" })
+        {
+            Assert.Contains($"location ^~ {api} {{", nginx);
+            Assert.DoesNotContain($"location {api} {{", nginx);
+        }
+    }
+
+    [Fact]
     public void ExtensionChessableLocation_AllowsTheApiRequestSizeLimits()
     {
         // Gemeldet 2026-09-14: „Mitschnitt importieren" bekam 413, obwohl die API bis 64 MB annimmt — die
@@ -261,8 +312,8 @@ public class DeploymentConfigTests
         // der API an. Das Limit der Extension-Location muss über JEDEM [RequestSizeLimit] liegen, das der
         // ExtensionController für seine chessable/-Routen setzt.
         var nginx = ReadRepoFile("src/frontend/nginx.conf");
-        var loc = Regex.Match(nginx, @"location /api/extension/chessable/ \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
-        Assert.True(loc.Success, "location /api/extension/chessable/ fehlt in nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/extension/chessable/ \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/extension/chessable/ fehlt in nginx.conf");
         var size = Regex.Match(loc.Groups["body"].Value, @"client_max_body_size (?<n>\d+)(?<unit>[kKmMgG]?);");
         Assert.True(size.Success, "client_max_body_size fehlt in der Extension-Location");
         var unit = size.Groups["unit"].Value.ToLowerInvariant() switch

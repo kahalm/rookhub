@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.481.2", date: "2026-09-17", changes: [
+    { en: "Requests for configuration, backup and script files such as .env, wp-config.php or docker-compose.yml now get “not found” instead of the start page. Nothing was ever exposed, but automated scanners counted every such answer as a hit. The app itself, its files and the API are unaffected.", de: "Anfragen nach Konfigurations-, Sicherungs- und Skriptdateien wie .env, wp-config.php oder docker-compose.yml bekommen jetzt „nicht gefunden“ statt der Startseite. Preisgegeben wurde dabei nie etwas, aber automatische Scanner werteten jede solche Antwort als Treffer. Die App selbst, ihre Dateien und die Schnittstelle sind davon nicht betroffen." },
+  ] },
   { version: "0.481.1", date: "2026-09-16", changes: [
     { en: "Comments in courses and repertoires: a square mentioned in the text (“the knight on d6”, “the e5 square”, “the d6 pawn”) is no longer offered as a clickable move.", de: "Kommentare in Kursen und Repertoires: Ein im Text genanntes Feld („der Springer auf d6“, „das e5-Feld“, „der d6-Bauer“) wird nicht mehr als klickbarer Zug angeboten." },
   ] },

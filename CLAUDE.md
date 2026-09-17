@@ -1855,7 +1855,7 @@ src/
   frontend/
     app/                    Angular-Workspace mit ZWEI Projekten (siehe src/frontend/CLAUDE.md):
                             src/ = RookHub, src-turnier/ = Turnierseite (Alias @rh/* teilt den Code)
-    nginx.conf              Proxy /api/ → api:8080, OSM-Kachel-Cache, OG-Weiche, SPA-Fallback
+    nginx.conf              Proxy /api/ → api:8080, OSM-Kachel-Cache, OG-Weiche, Scanner-404, SPA-Fallback
                             (dieselbe Datei in BEIDEN Images)
     Dockerfile              Multi-stage Node Build + nginx; `--build-arg APP_PROJECT=turnier`
                             baut daraus das Turnier-Image
@@ -2334,5 +2334,6 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - PGN-Upload-Limit: 10 MB pro Datei (in `RepertoireService`)
 - Alle Controller holen UserId via `User.FindFirstValue(ClaimTypes.NameIdentifier)`
 - Friendship-Status ist eine State Machine: Pending → Accepted/Declined; nur der Addressee kann Accept/Decline ausführen
+- **Scanner-Pfade bekommen 404, nicht die Startseite** (seit 0.481.2) – Der SPA-Fallback (`try_files … /index.html`) beantwortet JEDEN unbekannten Pfad mit 200. Ein .env-Scan am 2026-09-17 bekam so für 291 von 313 Pfaden „200“ — preisgegeben wurde nichts, aber für einen Scanner ist das ein Treffer. Die Regex-Locations in `src/frontend/nginx.conf` (Punkt-Pfade, `env.*`, Konfig-/Backup-/Skript-/Archiv-Endungen, `wp-`/`phpmyadmin`/`cgi-bin`/`vendor/`) antworten deshalb mit 404. Zwei Dinge dürfen dabei nicht kippen: (1) **alle `/api/`-Locations tragen `^~`** — sonst fängt die Punkt-Regel `/api/.env` ab, bevor die API es loggt, und der log-watcher (`suspicious_requests`) wird für API-Scans blind; (2) die Regeln stehen VOR der OG-Weiche (bei Regex-Locations gewinnt der erste Treffer), und `/.well-known/assetlinks.json` bleibt eine EXAKTE Location. `.json`/`.js` stehen bewusst nicht in der Liste — das sind echte Bundle-Dateien. `DeploymentConfigTests.ScannerPaths_Get404_WhileAppFilesAndApiStayUntouched` prüft die Muster gegen Scanner-Pfade UND gegen Dateien/Routen der App — wer eine Endung ergänzt, ergänzt dort beide Listen. Die IP-Sperre bekannter Scanner-Netze liegt NICHT hier, sondern im Nginx Proxy Manager (`/data/nginx/custom/http_top.conf`).
 - Stockfish-WASM **NICHT** über Service-Worker cachen außer in eigener assetGroup `engine` (installMode prefetch) — der Glue muss bei `instantiateStreaming`-Fehler auf `instantiate(arrayBuffer)` zurückfallen, sonst hängt die Analyse
 - HMAC-Webhooks zum Bot: gleiches Secret-Pattern (`SchachBot:WebhookSecret` für Tagespuzzle/Wochenpost, `SchachBot:StatsSecret` für Bot-Stats-Pull) — `ComputeHmacHex` aus `SchachBotWebhookService` wiederverwenden
