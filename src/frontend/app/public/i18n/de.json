@@ -1436,6 +1436,24 @@
       "attachPgn": "PGN-Datei wählen",
       "pgnNote": "Jedes PGN geht: eigene Partien, eine heruntergeladene Sammlung oder ein Puzzle-PGN im Chessable-Stil. Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
       "button": "Partien importieren"
+    },
+    "worksheet": {
+      "print": "Drucken / als PDF speichern",
+      "hint": "Sechs Stellungen je Seite, mit Platz für die Lösung. Im Druckdialog als Ziel „Als PDF speichern“ wählen.",
+      "count": "{{n}} Stellungen",
+      "empty": "In dieser Auswahl wird keine Stellung abgefragt.",
+      "error": "Der Kurs konnte nicht geladen werden.",
+      "whiteToMove": "Weiß am Zug",
+      "blackToMove": "Schwarz am Zug",
+      "footer": "Lösungen in RookHub",
+      "scopeCourse": "Ganzer Kurs",
+      "scopeChapter": "Kapitel: {{chapter}}",
+      "scopeNoChapter": "Ohne Kapitel",
+      "scopeMarked": "Markierte Linien",
+      "scopeSelection": "Ausgewählte Linien",
+      "chapterMenu": "Aufgabenblatt (PDF)",
+      "courseMenu": "Aufgabenblatt, ganzer Kurs (PDF)",
+      "markedMenu": "Aufgabenblatt, markierte Linien (PDF)"
     }
   },
   "calc": {

@@ -1436,6 +1436,24 @@
       "attachPgn": "Odaberi PGN datoteku",
       "pgnNote": "Radi svaki PGN: vlastite partije, preuzeta zbirka ili puzzle-PGN u Chessable stilu. Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
       "button": "Uvezi partije"
+    },
+    "worksheet": {
+      "print": "Ispis / spremi kao PDF",
+      "hint": "Šest pozicija po stranici, s prostorom za rješenje. U dijalogu za ispis odaberi „Spremi kao PDF“.",
+      "count": "{{n}} pozicija",
+      "empty": "U ovom izboru nema pozicija koje se ispituju.",
+      "error": "Tečaj se nije mogao učitati.",
+      "whiteToMove": "Bijeli na potezu",
+      "blackToMove": "Crni na potezu",
+      "footer": "Rješenja u RookHubu",
+      "scopeCourse": "Cijeli tečaj",
+      "scopeChapter": "Poglavlje: {{chapter}}",
+      "scopeNoChapter": "Bez poglavlja",
+      "scopeMarked": "Označene linije",
+      "scopeSelection": "Odabrane linije",
+      "chapterMenu": "Radni list (PDF)",
+      "courseMenu": "Radni list, cijeli tečaj (PDF)",
+      "markedMenu": "Radni list, označene linije (PDF)"
     }
   },
   "calc": {

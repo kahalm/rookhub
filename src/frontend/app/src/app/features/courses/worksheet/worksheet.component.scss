@@ -1,0 +1,68 @@
+/* Aufgabenblatt: am Schirm eine Vorschau der A4-Seiten, im Druck genau diese Seiten.
+   Die Maße sind in mm gehalten, damit Vorschau und Ausdruck dasselbe Raster haben. */
+.ws-page { max-width: 210mm; margin: 0 auto; padding: 1rem; }
+
+.ws-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ws-spacer { flex: 1 1 auto; }
+.ws-count { color: var(--mat-sys-on-surface-variant, #777); font-size: 0.9rem; }
+.ws-hint { color: var(--mat-sys-on-surface-variant, #777); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.ws-empty { color: var(--mat-sys-on-surface-variant, #888); }
+
+/* Ein Blatt = A4-Breite minus Druckränder (210mm − 2 × 12mm). Weiß + schwarze Schrift, damit die
+   Vorschau im dunklen Design nicht anders aussieht als der Ausdruck. */
+.ws-sheet {
+  width: 186mm;
+  max-width: 100%;
+  margin: 0 auto 1.5rem;
+  padding: 6mm;
+  background: #fff;
+  color: #000;
+  border: 1px solid var(--mat-sys-outline-variant, #ddd);
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-head, .ws-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 9pt; }
+.ws-head { border-bottom: 1px solid #999; padding-bottom: 2mm; margin-bottom: 3mm; }
+.ws-title { font-weight: 600; overflow-wrap: anywhere; }
+.ws-scope { color: #444; text-align: right; overflow-wrap: anywhere; }
+.ws-foot { border-top: 1px solid #999; padding-top: 2mm; margin-top: auto; color: #444; }
+
+/* 2 Spalten × 3 Zeilen = 6 Aufgaben je Seite. */
+.ws-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 82mm); gap: 4mm; }
+.ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.ws-task-head { display: flex; justify-content: space-between; align-items: baseline; width: 100%; font-size: 9pt; margin-bottom: 1mm; }
+.ws-no { font-weight: 700; }
+.ws-turn { color: #444; }
+.ws-board { width: 58mm; }
+
+/* Platz für die Lösung — zwei Schreiblinien unter jedem Diagramm. */
+.ws-lines { width: 100%; margin-top: 3mm; display: flex; flex-direction: column; gap: 4mm; }
+.ws-lines span { display: block; height: 0; border-bottom: 1px solid #bbb; }
+
+@media (max-width: 700px) {
+  /* Am Handy nur Vorschau: ein Blatt passt nicht in die Breite, also skaliert der Inhalt mit. */
+  .ws-sheet { width: 100%; padding: 4mm; }
+  .ws-grid { grid-template-rows: repeat(3, auto); }
+  .ws-board { width: 100%; max-width: 58mm; }
+}
+
+@media print {
+  /* Gedruckt wird NUR das Blatt; Bedienleiste und Hinweis bleiben am Schirm. */
+  .ws-toolbar, .ws-hint { display: none; }
+  .ws-page { max-width: none; padding: 0; }
+  .ws-sheet {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .ws-sheet:last-child { break-after: auto; page-break-after: auto; }
+  /* Feste Zeilenhöhe: A4 (297mm) − Ränder − Kopf/Fuß ⇒ drei Reihen à 82mm. */
+  .ws-grid { grid-template-rows: repeat(3, 82mm); }
+  .ws-board { width: 58mm; }
+}
+
+@page { size: A4 portrait; margin: 12mm; }

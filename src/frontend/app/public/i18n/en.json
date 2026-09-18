@@ -1436,6 +1436,24 @@
       "attachPgn": "Choose PGN file",
       "pgnNote": "Any PGN works: your own games, a downloaded collection or a puzzle PGN in Chessable style. Comments in braces are kept and shown while clicking through. Questions?",
       "button": "Import games"
+    },
+    "worksheet": {
+      "print": "Print / save as PDF",
+      "hint": "Six positions per page, with room to write the solution. Print it and choose “Save as PDF” as the destination.",
+      "count": "{{n}} positions",
+      "empty": "No trained positions in this selection.",
+      "error": "The course could not be loaded.",
+      "whiteToMove": "White to move",
+      "blackToMove": "Black to move",
+      "footer": "Solutions in RookHub",
+      "scopeCourse": "Whole course",
+      "scopeChapter": "Chapter: {{chapter}}",
+      "scopeNoChapter": "Without chapter",
+      "scopeMarked": "Marked lines",
+      "scopeSelection": "Selected lines",
+      "chapterMenu": "Worksheet (PDF)",
+      "courseMenu": "Worksheet, whole course (PDF)",
+      "markedMenu": "Worksheet, marked lines (PDF)"
     }
   },
   "calc": {

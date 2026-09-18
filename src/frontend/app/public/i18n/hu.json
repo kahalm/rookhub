@@ -1214,6 +1214,24 @@
       "attachPgn": "PGN-fájl kiválasztása",
       "pgnNote": "Bármilyen PGN működik: saját játszmák, letöltött gyűjtemény vagy Chessable-stílusú feladvány-PGN. A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
       "button": "Játszmák importálása"
+    },
+    "worksheet": {
+      "print": "Nyomtatás / mentés PDF-be",
+      "hint": "Oldalanként hat állás, hellyel a megoldásnak. A nyomtatási párbeszédben válaszd a „Mentés PDF-ként” lehetőséget.",
+      "count": "{{n}} állás",
+      "empty": "Ebben a válogatásban nincs kérdezett állás.",
+      "error": "A tanfolyamot nem sikerült betölteni.",
+      "whiteToMove": "Világos lép",
+      "blackToMove": "Sötét lép",
+      "footer": "Megoldások a RookHubban",
+      "scopeCourse": "Teljes tanfolyam",
+      "scopeChapter": "Fejezet: {{chapter}}",
+      "scopeNoChapter": "Fejezet nélkül",
+      "scopeMarked": "Megjelölt változatok",
+      "scopeSelection": "Kiválasztott változatok",
+      "chapterMenu": "Feladatlap (PDF)",
+      "courseMenu": "Feladatlap, teljes tanfolyam (PDF)",
+      "markedMenu": "Feladatlap, megjelölt változatok (PDF)"
     }
   },
   "weekly": {

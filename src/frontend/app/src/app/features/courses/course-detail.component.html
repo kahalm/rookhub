@@ -129,6 +129,22 @@
                 <mat-icon>style</mat-icon>
                 <span>{{ 'courses.flashcards.markedMenu' | translate }}</span>
               </button>
+              <!-- Aufgabenblatt zum Ausdrucken: die gefragten Stellungen, 6 je Seite, Platz für die
+                   Lösung. Kalkulationsbücher bleiben außen vor (dort ist JEDE Linie eine Stellung
+                   ohne Lösung — dafür gibt es den Kalkulations-Modus). -->
+              <button mat-menu-item
+                      [routerLink]="['/courses', bookId, 'worksheet']"
+                      [queryParams]="{ print: 1 }"
+                      [disabled]="d.totalLines === 0">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <span>{{ 'courses.worksheet.courseMenu' | translate }}</span>
+              </button>
+              <button mat-menu-item
+                      [routerLink]="['/courses', bookId, 'worksheet']"
+                      [queryParams]="{ marked: 1, print: 1 }">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <span>{{ 'courses.worksheet.markedMenu' | translate }}</span>
+              </button>
             }
             <button mat-menu-item (click)="resetCourse()" [disabled]="busy">
               <mat-icon>restart_alt</mat-icon>
@@ -233,6 +249,13 @@
                                   [queryParams]="{ chapter: ch.name ?? '' }">
                             <mat-icon>style</mat-icon>
                             <span>{{ 'courses.flashcards.chapterMenu' | translate }}</span>
+                          </button>
+                          <button mat-menu-item
+                                  [routerLink]="['/courses', bookId, 'worksheet']"
+                                  [queryParams]="{ chapter: ch.name ?? '', print: 1 }"
+                                  [disabled]="ch.quizCount === 0">
+                            <mat-icon>picture_as_pdf</mat-icon>
+                            <span>{{ 'courses.worksheet.chapterMenu' | translate }}</span>
                           </button>
                         }
                         @if (!d.isCalculation) {
