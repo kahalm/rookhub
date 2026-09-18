@@ -96,6 +96,43 @@ function scanTokens(text: string): Tok[] {
     const ply = num !== undefined ? (num * 2 - (isBlack ? 1 : 2)) : undefined;
     out.push({ san: m[3], ply, start: m.index, end: m.index + m[0].length });
   }
+  return dropMentionedMoves(text, out);
+}
+
+/**
+ * Wirft Züge OHNE Zugnummer weg, die eine SPÄTERE Zugnummer widerlegt — sie sind im Text erwähnt,
+ * nicht gespielt. Beispiel (gemeldet 2026-09-18): „70…c6 Preventing Rd5+ runs into mate! 71.Rc3+ Kb5
+ * …". Nach 70…c6 wäre `Rd5+` der Halbzug 140 — den beansprucht aber `71.Rc3+` selbst. Beide können
+ * nicht derselbe Zug sein, also ist `Rd5+` eine Erwähnung. Ohne diese Regel hängte der Parser `Rd5+`
+ * an die Variante, danach war Schwarz am Zug, `71.Rc3+` wurde illegal — die eigentliche Mattführung
+ * blieb unklickbar und die Vorschau endete im falschen Zug.
+ *
+ * <p>Bewusst eng: Es entscheidet die NUMMERIERUNG, nicht die umgebende Prosa. Ein „besser war Sc3"
+ * ohne widersprechende Nummer bleibt also klickbar, ebenso jede nummerierte Folge. Nach einem
+ * Alternativ-Signal („oder", „/") zählt die Nummerierung nicht weiter — dort beginnt ein eigener
+ * Zweig, dessen erster Zug keine Fortsetzung ist.</p>
+ */
+function dropMentionedMoves(text: string, toks: Tok[]): Tok[] {
+  const out: Tok[] = [];
+  let nextPly: number | undefined;    // Ply, die der nächste Fortsetzungszug hätte
+  let lastNumbered: number | undefined;
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    const gap = i > 0 ? text.slice(toks[i - 1].end, t.start) : '';
+    if (i > 0 && ALT_WORD.test(gap)) { nextPly = undefined; lastNumbered = undefined; }   // neuer Zweig
+
+    if (t.ply === undefined && nextPly !== undefined) {
+      const later = toks.slice(i + 1).find(n => n.ply !== undefined);
+      // Beweiskräftig ist die spätere Nummer nur, wenn sie überhaupt eine FORTSETZUNG sein kann:
+      // springt sie hinter die letzte Nummer zurück, beginnt dort ein eigener Zweig („… 43.h4 a4.
+      // Weiß gewinnt nach 40.b5") und sagt nichts über diesen Zug. Beansprucht sie dagegen die Ply,
+      // die dieser numerlose Zug hätte, können nicht beide derselbe Halbzug sein → Erwähnung.
+      if (later && later.ply! >= lastNumbered! && later.ply! <= nextPly) continue;
+    }
+    out.push(t);
+    if (t.ply !== undefined) { lastNumbered = t.ply; nextPly = t.ply + 1; }
+    else if (nextPly !== undefined) nextPly++;
+  }
   return out;
 }
 

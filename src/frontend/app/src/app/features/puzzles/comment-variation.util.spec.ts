@@ -199,3 +199,34 @@ describe('comment-variation.util — echte Chessable-Linie (Kurs 128648, oid 207
     expect(m.map(s => s.move)).toEqual(['2.Sf3']);
   });
 });
+
+describe('comment-variation.util — in Prosa ERWÄHNTER Zug (Kurs 421, oid 73000259)', () => {
+  // Echte Linie „Mapuranga vs. Dehtiarov" samt Kommentar, wie importiert. Nach 70…c6 waere „Rd5+"
+  // der Halbzug 140 — den beansprucht „71.Rc3+" selbst, also ist Rd5+ nur erwaehnt („Preventing
+  // Rd5+ runs into mate!"). Frueher haengte der Parser Rd5+ an die Variante; danach war Schwarz am
+  // Zug, 71.Rc3+ wurde illegal, und die Mattfuehrung blieb unklickbar (gemeldet 2026-09-18).
+  const FEN = '8/2p5/5Kp1/2k4p/5R1n/2R2P1r/8/8 b - - 0 68';
+  const MAIN = 'c5d5 c3d3 d5c5 f6e6 h3h1 d3d5 c5c6 f4c4 c6b6 e6d7'.split(' ');
+  const TEXT = '70...c6 Preventing Rd5+ runs into mate! 71.Rc3+ Kb5 72.Rb3+ Kc5 73.Rbb4!! '
+    + 'Do your puzzles and you can find incredible mating patterns!';
+
+  it('setzt die Variante bei 71.Rc3+ fort und laesst die Erwaehnung Text', () => {
+    const segs = buildCommentSegments(TEXT, FEN, MAIN);
+    expect(segs.filter(s => s.move).map(s => s.move))
+      .toEqual(['70...c6', '71.Rc3+', 'Kb5', '72.Rb3+', 'Kc5', '73.Rbb4']);
+    // Rd5+ bleibt im Fliesstext stehen (nicht klickbar), der Wortlaut aendert sich nicht.
+    expect(segs.filter(s => s.text).map(s => s.text).join('')).toContain('Preventing Rd5+ runs into mate!');
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('die Vorschau endet in der Mattstellung nach 73.Rbb4', () => {
+    const last = buildCommentSegments(TEXT, FEN, MAIN).filter(s => s.move).at(-1);
+    expect(last?.fen?.split(' ')[0]).toBe('8/8/2p1K1p1/2k4p/1R3R1n/5P1r/8/8');
+  });
+
+  it('ohne widersprechende Zugnummer bleibt ein numerloser Zug klickbar', () => {
+    // „besser war Rd5+" ohne folgende Nummer: nichts widerlegt ihn → weiterhin ein Chip.
+    const segs = buildCommentSegments('70...c6 besser war Rd5+', FEN, MAIN);
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual(['70...c6', 'Rd5+']);
+  });
+});
