@@ -230,3 +230,31 @@ describe('comment-variation.util — in Prosa ERWÄHNTER Zug (Kurs 421, oid 7300
     expect(segs.filter(s => s.move).map(s => s.move)).toEqual(['70...c6', 'Rd5+']);
   });
 });
+
+describe('comment-variation.util — lange Prosa-Variante (Kurs 421, oid 73000260)', () => {
+  // Echte Linie „Alhassadi vs. Shirov": Der Kommentar zum Partiezug 36.g4 zeigt die Alternative
+  // 36.Nxe5+ samt kompletter Widerlegung. Mittendrin steht „Mistake. g4 was best." — das nackte g4
+  // ist der PARTIEzug (eine Erwaehnung), keine Fortsetzung; frueher hing es an der Variante und
+  // riss sie nach dem ersten Zug ab. Alle 15 Zuege der Variante sind ab dem Anker legal.
+  const FEN = '1n4k1/p3bB2/7p/2p1p1p1/2N5/2P3P1/PP1N1P2/6K1 b - - 0 35';
+  const MAIN = 'g8f7 g3g4 b8d7 g1g2 d7f6 g2f3 f7e6 d2e4 f6d5 e4g3 d5f4 f3e4'.split(' ');
+  const TEXT = "Making the e7 bishop miserable and preventing Black's counterplay. 36.Nxe5+? Mistake. g4 was best. "
+    + '36...Ke6 37.Nec4 h5!! Black creates a far away passer and this way enough counterplay is created. '
+    + '38.Kg2 Nd7 39.Kf3 Nf6 40.Ne3 Bd6 41.Kg2 Be7 42.a3 Nd5 43.Nec4 White didn\'t even try further as the '
+    + 'progression is much harder having the h pawn ready to promote once you leave. Another heads up for a +2600 player!';
+
+  it('macht die ganze Widerlegung klickbar, das erwaehnte g4 bleibt Text', () => {
+    const segs = buildCommentSegments(TEXT, FEN, MAIN);
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual([
+      '36.Nxe5+', '36...Ke6', '37.Nec4', 'h5', '38.Kg2', 'Nd7', '39.Kf3', 'Nf6',
+      '40.Ne3', 'Bd6', '41.Kg2', 'Be7', '42.a3', 'Nd5', '43.Nec4',
+    ]);
+    expect(segs.filter(s => s.text).map(s => s.text).join('')).toContain('Mistake. g4 was best.');
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('die Vorschau des letzten Zuges steht in der Endstellung der Variante', () => {
+    const last = buildCommentSegments(TEXT, FEN, MAIN).filter(s => s.move).at(-1);
+    expect(last?.fen?.split(' ')[0]).toBe('8/p3b3/4k3/2pn2pp/2N5/P1P3P1/1P1N1PK1/8');
+  });
+});

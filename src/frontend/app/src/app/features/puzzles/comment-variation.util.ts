@@ -75,7 +75,11 @@ interface Tok { san: string; ply?: number; start: number; end: number; }
 // „nach" fehlt absichtlich — „nach d4" heißt meist „nach dem Zug d4".
 const BARE_SQUARE = /^[a-h][1-8]$/;
 const SQUARE_BEFORE = /(?:^|[^\p{L}])(?:auf|von|vom|über|ueber|zum|zur|feld|felder|on|onto|square|squares|from|via|to)\s+$/iu;
-const SQUARE_AFTER = /^(?:\s|-)(?:feld|felder|felds|square|squares|bauer|bauern|pawn|pawns)(?![\p{L}])/iu;
+// Nach dem Feld folgt oft die FIGUR darauf („the e7 bishop", „der e7-Läufer") — auch das ist eine
+// Ortsangabe. Ohne die Figurennamen las der Parser „the e7 bishop" als Bauernzug e7; der stand dann
+// als erster, unspielbarer Zug der Variante davor und riss sie mit (gemeldet 2026-09-18).
+const SQUARE_AFTER =
+  /^(?:\s|-)(?:feld|felder|felds|square|squares|bauer|bauern|pawn|pawns|bishop|bishops|knight|knights|rook|rooks|queen|queens|king|kings|l[äa]ufer|springer|turm|t[üu]rme|dame|k[öo]nig)(?![\p{L}])/iu;
 
 function isSquareMention(text: string, san: string, hasNumber: boolean, start: number, end: number): boolean {
   if (hasNumber || !BARE_SQUARE.test(san)) return false;
@@ -285,7 +289,11 @@ function resolveBranch(startFen: string, ucis: string[], b: CommentBranch): (Var
   while (k < b.sans.length) {
     const ply = plies[k];
     const expected = continuationPly(plies, k);
-    if (ply === undefined || expected === undefined || ply <= expected) { k++; continue; }
+    // `expected === undefined` heißt: vor diesem Zug stand noch KEINE Zugnummer — dann gibt es auch
+    // keine Erwartung, die er verletzen könnte, und seine eigene Nummer ist die einzige Auskunft.
+    // Ohne diesen Fall riss ein unspielbarer numerloser Token am Anfang („the e7 bishop") die ganze
+    // Variante mit, obwohl der Rest ab seiner Zugnummer sauber aufgeht (gemeldet 2026-09-18).
+    if (ply === undefined || (expected !== undefined && ply <= expected)) { k++; continue; }
     const rest = resolveAtAnchor(startFen, ucis, b.sans.slice(k), ply);
     if (!rest.length) { k++; continue; }
     rest.forEach((step, j) => { out[k + j] = step; });
