@@ -28,8 +28,13 @@
 .ws-scope { color: #444; text-align: right; overflow-wrap: anywhere; }
 .ws-foot { border-top: 1px solid #999; padding-top: 2mm; margin-top: auto; color: #444; }
 
-/* 2 Spalten × 3 Zeilen = 6 Aufgaben je Seite. */
-.ws-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 82mm); gap: 4mm; }
+/* 2 Spalten × 3 Zeilen = 6 Aufgaben je Seite; dazwischen eine durchgehende Trennlinie wie auf
+   klassischen Diagramm-Ausdrucken (ein Rahmen je Aufgabe ergäbe drei kurze Striche mit Lücken). */
+.ws-grid {
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 82mm); gap: 4mm;
+  background: linear-gradient(to right,
+    transparent calc(50% - 0.3pt), #bbb calc(50% - 0.3pt), #bbb calc(50% + 0.3pt), transparent calc(50% + 0.3pt));
+}
 .ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .ws-task-head { display: flex; justify-content: space-between; align-items: baseline; width: 100%; font-size: 9pt; margin-bottom: 1mm; }
 .ws-no { font-weight: 700; }

@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CourseService } from '../course.service';
-import { PreferencesService } from '../../../core/preferences.service';
 import { BookPuzzleDto } from '../../puzzles/puzzle.service';
 import { buildFlashcard } from '../flashcards/flashcard.util';
 import { FlashcardBoardComponent } from '../flashcards/flashcard-board.component';
@@ -75,16 +74,20 @@ export class WorksheetComponent implements OnInit {
   chapterName: string | null = null;
   sheets: WorksheetTask[][] = [];
   taskCount = 0;
-  pieceSet = 'cburnett';
   readonly today = new Date();
+
+  /**
+   * Figurensatz des Ausdrucks: `merida` — kräftige Umrisse, satt gefüllte schwarze Figuren, also
+   * der Satz, der dem klassischen Diagramm-Ausdruck (ChessBase & Co.) am nächsten kommt. Bewusst
+   * UNABHÄNGIG vom Bildschirm-Satz des Profils: am Schirm entscheidet Geschmack, auf Papier
+   * entscheidet, was bei 58 mm Kantenlänge in Graustufen noch lesbar bleibt.
+   */
+  readonly pieceSet = 'merida';
 
   constructor(
     private route: ActivatedRoute,
     private courses: CourseService,
-    prefs: PreferencesService,
-  ) {
-    this.pieceSet = prefs.pieceSet || 'cburnett';
-  }
+  ) {}
 
   ngOnInit(): void {
     const q = this.route.snapshot.queryParamMap;

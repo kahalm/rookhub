@@ -13,7 +13,7 @@ import { DrawShape } from 'chessground/draw';
   selector: 'app-flashcard-board',
   standalone: true,
   template: `
-    <svg [attr.viewBox]="'0 0 8 8'" xmlns="http://www.w3.org/2000/svg">
+    <svg [attr.viewBox]="viewBox" xmlns="http://www.w3.org/2000/svg">
       @for (sq of squares; track sq.x + '-' + sq.y) {
         <rect [attr.x]="sq.x" [attr.y]="sq.y" width="1" height="1" [attr.fill]="sq.light ? '#f0d9b5' : '#b58863'" />
       }
@@ -29,6 +29,15 @@ import { DrawShape } from 'chessground/draw';
               [attr.stroke]="a.color" stroke-width="0.16" opacity="0.85" stroke-linecap="round" />
         <polygon [attr.points]="a.head" [attr.fill]="a.color" opacity="0.85" />
       }
+      @if (coordinates) {
+        @for (f of fileLabels; track f.text) {
+          <text [attr.x]="f.x" y="8.32" font-size="0.32" text-anchor="middle" fill="#3a352c">{{ f.text }}</text>
+        }
+        @for (r of rankLabels; track r.text) {
+          <text x="-0.22" [attr.y]="r.y" font-size="0.32" text-anchor="middle"
+                dominant-baseline="central" fill="#3a352c">{{ r.text }}</text>
+        }
+      }
     </svg>
   `,
   styles: [`
@@ -41,6 +50,14 @@ export class FlashcardBoardComponent implements OnChanges {
   @Input() orientation: 'white' | 'black' = 'white';
   @Input() shapes: DrawShape[] = [];
   @Input() pieceSet = 'cburnett';
+  /** Linien- und Reihenbezeichner am Brettrand (Aufgabenblatt: auf Papier gibt es kein Hovern). */
+  @Input() coordinates = false;
+
+  /** Mit Bezeichnern braucht die Zeichenfläche links und unten Luft — sonst schneidet sie ab. */
+  get viewBox(): string { return this.coordinates ? '-0.45 0 8.45 8.5' : '0 0 8 8'; }
+
+  fileLabels: { x: number; text: string }[] = [];
+  rankLabels: { y: number; text: string }[] = [];
 
   squares: { x: number; y: number; light: boolean }[] = [];
   pieces: { x: number; y: number; href: string }[] = [];
@@ -70,6 +87,14 @@ export class FlashcardBoardComponent implements OnChanges {
         this.pieces.push({ x, y, href: `/piece/${this.pieceSet}/${code}.svg` });
         file++;
       }
+    }
+
+    // Bezeichner folgen der Ausrichtung: von Schwarz aus steht a rechts und 1 oben.
+    this.fileLabels = [];
+    this.rankLabels = [];
+    for (let i = 0; i < 8; i++) {
+      this.fileLabels.push({ x: i + 0.5, text: String.fromCharCode(97 + (this.orientation === 'white' ? i : 7 - i)) });
+      this.rankLabels.push({ y: i + 0.5, text: String(this.orientation === 'white' ? 8 - i : i + 1) });
     }
 
     this.arrows = [];

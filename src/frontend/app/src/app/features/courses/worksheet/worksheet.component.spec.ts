@@ -7,7 +7,6 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { WorksheetComponent, isQuizLine, toSheets, WorksheetTask } from './worksheet.component';
 import { CourseService } from '../course.service';
-import { PreferencesService } from '../../../core/preferences.service';
 import { BookPuzzleDto } from '../../puzzles/puzzle.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -33,7 +32,6 @@ function make(puzzles: BookPuzzleDto[], query: Record<string, string> = {}, mark
         getFlashcardMarks: () => of({ lineIds: marks }),
         getCourses: () => of([{ bookId: 58, displayName: 'Chess Olympiad 2026' }]),
       } },
-      { provide: PreferencesService, useValue: { pieceSet: 'cburnett' } },
       { provide: ActivatedRoute, useValue: { snapshot: {
         paramMap: { get: (k: string) => k === 'bookId' ? '58' : null, has: (k: string) => k === 'bookId' },
         queryParamMap: { get: (k: string) => k in query ? query[k] : null, has: (k: string) => k in query },
@@ -80,6 +78,17 @@ describe('WorksheetComponent', () => {
     // Kopf- und Fußzeile auf JEDER Seite (nicht nur auf der ersten).
     expect(el.querySelectorAll('.ws-head').length).toBe(2);
     expect(el.querySelectorAll('.ws-foot').length).toBe(2);
+  });
+
+  it('druckt mit dem Druck-Figurensatz und mit Koordinaten am Brett', () => {
+    // merida kommt dem klassischen Diagramm-Ausdruck am nächsten und haengt bewusst NICHT am
+    // Bildschirm-Satz des Profils; die Bezeichner braucht man auf Papier (kein Hovern).
+    const el: HTMLElement = make([puzzle(1)]).nativeElement;
+    const hrefs = Array.from(el.querySelectorAll('app-flashcard-board image')).map(i => i.getAttribute('href'));
+    expect(hrefs.length).toBeGreaterThan(0);
+    expect(hrefs.every(h => (h ?? '').startsWith('/piece/merida/'))).toBeTrue();
+    // 8 Linien + 8 Reihen je Brett.
+    expect(el.querySelectorAll('app-flashcard-board text').length).toBe(16);
   });
 
   it('lässt Info-Seiten weg', () => {

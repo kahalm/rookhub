@@ -38,7 +38,8 @@
                   {{ (t.whiteToMove ? 'courses.worksheet.whiteToMove' : 'courses.worksheet.blackToMove') | translate }}
                 </span>
               </div>
-              <app-flashcard-board class="ws-board" [fen]="t.fen" [orientation]="t.orientation" [pieceSet]="pieceSet" />
+              <app-flashcard-board class="ws-board" [fen]="t.fen" [orientation]="t.orientation"
+                                   [pieceSet]="pieceSet" [coordinates]="true" />
               <!-- Platz für die Lösung: zwei Schreiblinien, bewusst ohne Vorgabe. -->
               <div class="ws-lines"><span></span><span></span></div>
             </div>
