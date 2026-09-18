@@ -272,6 +272,19 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 
 RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `EncryptionService` → `ChessableCredentials.EncryptedBearer`). Alle Chessable-HTTP-Calls (curl-impersonate gegen Cloudflare) liegen im piratechess-Stack; `ChessableProxyService` reicht den Bearer pro Request an `POST /api/chessable/direct/*` durch und authentifiziert sich mit dem `X-Service-Key`-Header (`Chessable:ServiceKey` ↔ piratechess `Service:ApiKey`). Netzwerk: externes Docker-Netz `chessable-bridge` (von piratechess_docker bereitgestellt). **Admin-Download „im Namen eines Users"**: `ChessableImport.BearerUserId` (nullable) entkoppelt Bearer-Quelle von Besitzer — der Service lädt den Bearer von `BearerUserId ?? UserId`. Admin-Import setzt `UserId`=Admin (Repertoire + Notification beim Admin), `BearerUserId`=Ziel-User; piratechess ist stateless, der gespeicherte Bearer des Ziel-Users genügt.
 
+**Wem gehoert der erste Zug einer Linie? (`[ChessableColor]`, 0.482.0)** Chessables Partie-Kurse
+stellen die Aufgabe oft als „der Gegner hat gerade 10…Sd4 gespielt, widerlege das" — der erste Zug
+der Linie gehoert dann dem GEGNER und wird vorgespielt. Im REPERTOIRE-Modus („None") schreibt
+piratechess aber bewusst keinen `[%tqu]`-Marker, und ohne den galt beim Umwandeln in einen Kurs jede
+Linie als „ab der FEN loesen" (`StartPly = -1`) — im Kurs stand die falsche Seite am Zug (gemeldet
+2026-09-18). piratechess gibt die Solverfarbe deshalb ab v1.0.46 in JEDEM Modus als Header mit, und
+`PgnImportService.StartPlyFromSolverColor` leitet daraus den Trainingsstart ab. Fuer FRUEHER geholte
+Repertoires holt `CourseService` die Farbe beim Umwandeln aus dem geteilten Linien-Cache
+(`GetCachedLinePgnsAsync` im Modus `FirstKeyMove`, siehe `ChessableTrainingStart`); ist piratechess
+nicht erreichbar, bleibt es beim bisherigen Verhalten. `CoursePgnExporter` schreibt `[ChessableOid]`
+und den `[%tqu]`-Marker mit, damit Kurs → Repertoire → Kurs die Extension-Verknuepfung UND den
+Trainingsstart behaelt.
+
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/chessable/credentials` | Status + maskierter Bearer (`{ hasCredentials, maskedBearer }`) |

@@ -14,6 +14,7 @@ public class CoursePgnExporterTests
         {
             Fen = StartFen,
             Moves = "e2e4 e7e5 g1f3 b8c6",
+            StartPly = -1,      // ab moves[0] loesen ⇒ kein [%tqu] im Export
             Round = "1.1",
             Title = "White",
             Chapter = "Black"
@@ -57,6 +58,7 @@ public class CoursePgnExporterTests
         {
             Fen = StartFen,
             Moves = "e2e4 e7e5 g1f3",
+            StartPly = -1,      // ab moves[0] loesen ⇒ kein [%tqu] im Export
             // -1 = Einleitung, 0 = nach 1. e4, 2 = nach 2. Nf3
             MoveComments = "{\"-1\":\"Italienisch\",\"0\":\"Königsbauer\",\"2\":\"entwickelt\"}"
         };
@@ -80,5 +82,34 @@ public class CoursePgnExporterTests
         var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4", MoveComments = "{\"0\":\"a } b\"}" };
         var pgn = CoursePgnExporter.ToPgn("Book", new[] { p });
         Assert.Contains("1. e4 {a ) b}", pgn); // '}' ersetzt, Kommentar bleibt valide
+    }
+
+    [Fact]
+    public void ToPgn_KeepsChessableOid()
+    {
+        // Die oid ist die Verknüpfung zur Extension: sie muss die Umwandlung Kurs → Repertoire überleben.
+        var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4", ChessableOid = "73000253" };
+        Assert.Contains("[ChessableOid \"73000253\"]", CoursePgnExporter.ToPgn("Book", new[] { p }));
+    }
+
+    [Fact]
+    public void ToPgn_WritesTrainingMarker_SoStartPlySurvivesAReimport()
+    {
+        // StartPly 1 ⇒ zwei Halbzüge vorgespielt, gelöst ab moves[2] (Nf3). Der Marker gehört hinter
+        // den letzten vorgespielten Zug; ein erneuter Import muss wieder StartPly 1 ergeben.
+        var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4 e7e5 g1f3 b8c6", Round = "1", StartPly = 1 };
+        var pgn = CoursePgnExporter.ToPgn("Book", new[] { p });
+
+        Assert.Contains("1. e4 e5 {[%tqu", pgn);
+        var reimported = Assert.Single(PgnImportService.ParsePgn("b.pgn", pgn).Puzzles);
+        Assert.Equal(1, reimported.StartPly);
+        Assert.Equal("e2e4 e7e5 g1f3 b8c6", reimported.Moves);
+    }
+
+    [Fact]
+    public void ToPgn_SolveFromFirstMove_WritesNoMarker()
+    {
+        var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4 e7e5", StartPly = -1 };
+        Assert.DoesNotContain("[%tqu", CoursePgnExporter.ToPgn("Book", new[] { p }));
     }
 }

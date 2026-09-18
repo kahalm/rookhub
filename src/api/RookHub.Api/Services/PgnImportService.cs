@@ -87,6 +87,9 @@ public class PgnImportService
             // importierte Linie ↔ Chessable-Linie für die Fortschritts-Overlays. null wenn nicht vorhanden.
             var oidHdr = headers.GetValueOrDefault("ChessableOid", "").Trim();
             var chessableOid = string.IsNullOrEmpty(oidHdr) ? null : PgnParser.Truncate(oidHdr, 32);
+            // Solverfarbe der Chessable-Linie ([ChessableColor], piratechess ab v1.0.46). Sie trägt den
+            // Trainingsstart in PGNs OHNE [%tqu] (Repertoire-Modus) — siehe StartPlyFromSolverColor.
+            var solverColor = headers.GetValueOrDefault("ChessableColor", "").Trim();
             // Skip-Regeln wie import_books.py
             if (string.IsNullOrEmpty(fen) || fen == "?") { invalid++; continue; }
             if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
@@ -183,7 +186,7 @@ public class PgnImportService
                         ChessableOid: chessableOid));
                     continue;
                 }
-                startPly = -1;
+                startPly = StartPlyFromSolverColor(fen, solverColor, uci.Count);
             }
 
             var white = headers.GetValueOrDefault("White", "").Trim();
@@ -474,6 +477,34 @@ public class PgnImportService
             if (plies % 2 == 1) endsWithWhite++;
         }
         return endsWithWhite * 2 >= fromStart.Count ? -1 : 0;
+    }
+
+    /// <summary>
+    /// Trainingsstart einer Chessable-Linie OHNE <c>[%tqu]</c>, abgeleitet aus der Solverfarbe
+    /// (Header <c>[ChessableColor]</c>, von piratechess auch im Repertoire-Modus mitgegeben).
+    /// <para>Chessables Partie-Kurse stellen die Aufgabe oft als „der Gegner hat gerade X gespielt,
+    /// widerlege das": der erste Zug der Linie gehoert dann dem GEGNER und wird vorgespielt. Ohne diese
+    /// Angabe galt jede solche Linie als „ab der FEN loesen" (StartPly -1), und im Kurs stand die
+    /// falsche Seite am Zug — gemeldet am 2026-09-18 an einer Olympiade-Partie, wo RookHub 10...Nd4 vom
+    /// Nutzer verlangte, waehrend Chessable den Zug vorspielt und nach 11.Bg5 fragt.</para>
+    /// </summary>
+    /// <param name="fen">Ausgangsstellung der Linie.</param>
+    /// <param name="solverColor">„white"/„black" aus dem Header; leer/unbekannt ⇒ bisheriges Verhalten.</param>
+    /// <param name="moveCount">Halbzuege der Hauptlinie. Bei nur EINEM Zug bliebe nach dem Vorspielen
+    /// nichts zu loesen — dann bleibt es bei <c>-1</c>.</param>
+    /// <returns><c>-1</c> = ab moves[0] loesen, <c>0</c> = moves[0] vorspielen, loesen ab moves[1].</returns>
+    internal static int StartPlyFromSolverColor(string fen, string? solverColor, int moveCount)
+    {
+        if (string.IsNullOrWhiteSpace(solverColor) || moveCount < 2) return -1;
+        bool solverIsWhite;
+        if (solverColor.Equals("white", StringComparison.OrdinalIgnoreCase)) solverIsWhite = true;
+        else if (solverColor.Equals("black", StringComparison.OrdinalIgnoreCase)) solverIsWhite = false;
+        else return -1;   // unbekannter Wert: nichts raten
+
+        // Zugfarbe der FEN steht im zweiten Feld ("w"/"b"); fehlt es, gilt Weiss am Zug.
+        var parts = fen.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var whiteToMove = parts.Length < 2 || !parts[1].Equals("b", StringComparison.OrdinalIgnoreCase);
+        return whiteToMove == solverIsWhite ? -1 : 0;
     }
 
 }

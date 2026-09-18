@@ -92,11 +92,15 @@ public class ChessableProxyService
 
     /// <summary>
     /// „Wahrheit" je oid für die Repertoire-Bereinigung: das PGN, das piratechess aus dem geteilten Linien-Cache für
-    /// genau diese Linie erzeugt (Repertoire-Modus "None"). Geht über den fetch-freien Parse — ohne mitgeschickte Inhalte
+    /// genau diese Linie erzeugt (Vorgabe: Repertoire-Modus "None", siehe <paramref name="mode"/>). Geht über den fetch-freien Parse — ohne mitgeschickte Inhalte
     /// schreibt der nichts in den Cache. Nicht gecachte oids fehlen im Ergebnis. Verbindungsfehler WERFEN, damit der
     /// Aufrufer es später erneut versucht, statt „nicht gecacht" anzunehmen.
     /// </summary>
-    public async Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, CancellationToken ct = default)
+    /// <param name="mode">Trainings-Modus des erzeugten PGN: <c>"None"</c> (Repertoire-Stil, ohne
+    /// Marker) ist die Vorgabe; <c>"FirstKeyMove"</c> setzt ein <c>[%tqu]</c> am ersten Schlüsselzug der
+    /// Solverfarbe — daran liest <see cref="ChessableTrainingStart"/> die Farbe einer Linie ab.</param>
+    public async Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids,
+        string mode = "None", CancellationToken ct = default)
     {
         var list = oids
             .Where(o => int.TryParse(o, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0)
@@ -107,7 +111,7 @@ public class ChessableProxyService
         var entries = string.Join(",", list.Select(o => "{\"id\":" + o + ",\"name\":\"x\"}"));
         var chapter = new ChessableIngestChapter("{\"list\":{\"name\":\"x\",\"title\":\"x\",\"data\":[" + entries + "]}}",
             list.Select(_ => (string)null!).ToList(), list);
-        var parsed = await ParseCourseAsync("1", "None", new[] { chapter }, ct: ct);
+        var parsed = await ParseCourseAsync("1", mode, new[] { chapter }, ct: ct);
         foreach (var block in System.Text.RegularExpressions.Regex.Split(parsed.Pgn ?? string.Empty, @"(?=\[Event )"))
         {
             var m = System.Text.RegularExpressions.Regex.Match(block, "\\[ChessableOid \"([^\"]+)\"\\]");

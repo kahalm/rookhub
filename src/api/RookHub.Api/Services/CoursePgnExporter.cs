@@ -52,8 +52,14 @@ public static class CoursePgnExporter
             if (!string.IsNullOrWhiteSpace(p.Chapter)) sb.Append($"[Black \"{Escape(p.Chapter!)}\"]\n");
             if (!string.IsNullOrWhiteSpace(p.Round)) sb.Append($"[Round \"{Escape(p.Round)}\"]\n");
             sb.Append($"[FEN \"{p.Fen}\"]\n");
-            sb.Append("[SetUp \"1\"]\n\n");
-            sb.Append(MoveText(p.Fen, sans, comments, p.Comment)).Append(" *");
+            sb.Append("[SetUp \"1\"]\n");
+            // Chessable-Verknüpfung erhalten: die oid ist der Schlüssel, über den die Extension eine
+            // trainierte Linie ihrem RookHub-Gegenstück zuordnet (POST …/chessable/line-trained).
+            // Ohne diesen Header verlor ein aus dem Kurs erzeugtes Repertoire die Verbindung.
+            if (!string.IsNullOrWhiteSpace(p.ChessableOid))
+                sb.Append($"[ChessableOid \"{Escape(p.ChessableOid!)}\"]\n");
+            sb.Append('\n');
+            sb.Append(MoveText(p.Fen, sans, comments, p.Comment, p.StartPly, p.Moves)).Append(" *");
             return sb.ToString();
         }
         catch
@@ -79,8 +85,15 @@ public static class CoursePgnExporter
         return map;
     }
 
-    private static string MoveText(string fen, List<string> sans, Dictionary<int, string> comments, string? lineComment)
+    /// <param name="startPly">Trainingsstart der Linie (Index des letzten VORGESPIELTEN Halbzugs,
+    /// <c>-1</c> = ab dem ersten Zug lösen). Ab 0 wird ein <c>[%tqu]</c>-Marker gesetzt, damit ein aus
+    /// diesem PGN neu importierter Kurs wieder denselben Trainingsstart bekommt — ohne ihn gilt jede
+    /// Linie als „ab der FEN lösen", und bei Chessable-Partien stünde die falsche Seite am Zug.</param>
+    /// <param name="movesUci">Die UCI-Hauptlinie (für die uci-Angabe im Marker).</param>
+    private static string MoveText(string fen, List<string> sans, Dictionary<int, string> comments,
+        string? lineComment, int startPly = -1, string? movesUci = null)
     {
+        var ucis = (movesUci ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var parts = fen.Split(' ');
         bool white = parts.Length < 2 || parts[1] != "b";
         int no = parts.Length >= 6 && int.TryParse(parts[5], out var fm) && fm > 0 ? fm : 1;
@@ -94,8 +107,15 @@ public static class CoursePgnExporter
         for (int i = 0; i < sans.Count; i++)
         {
             var san = sans[i];
+            // Trainingsstart: der Marker gehört hinter den letzten VORGESPIELTEN Zug, also unmittelbar
+            // vor den ersten Zug des Lösers — genau so zählt ihn PgnParser.FindTquMoveIndex zurück.
+            var markerHere = startPly >= 0 && i == startPly + 1;
+            if (markerHere)
+                sb.Append($"{{[%tqu \"En\",\"find the move\",\"\",\"\",\"{(i < ucis.Length ? ucis[i] : "")}\",\"\",10]}} ");
             if (white) sb.Append($"{no}. {san} ");
-            else { sb.Append(first ? $"{no}... {san} " : $"{san} "); no++; }
+            // Nach einem Kommentar braucht ein Schwarz-Zug die Zugnummer mit „…", sonst kann ein
+            // strenger PGN-Leser ihn nicht einordnen (gleiche Regel wie in piratechess).
+            else { sb.Append(first || markerHere ? $"{no}... {san} " : $"{san} "); no++; }
             if (comments.TryGetValue(i, out var cm) && !string.IsNullOrWhiteSpace(cm))
                 sb.Append($"{{{CleanComment(cm)}}} ");
             white = !white;

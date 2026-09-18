@@ -50,6 +50,7 @@ public class CourseLinePgnExportTests : IDisposable
         {
             LineId = $"kurs-x.pgn:{round}", BookId = book.Id, BookFileName = book.FileName,
             Round = round, Chapter = chapter, Title = $"Linie {round}", Fen = StartFen, Moves = moves,
+            StartPly = -1,      // ab moves[0] loesen ⇒ kein [%tqu] im Export
         });
         // bewusst nicht in Lesereihenfolge angelegt
         Line("001.002", "Kapitel A", "d2d4 d7d5");

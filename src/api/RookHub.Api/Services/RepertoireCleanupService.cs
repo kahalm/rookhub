@@ -41,7 +41,7 @@ public class RepertoireCleanupService
         {
             try
             {
-                truth = await proxy.GetCachedLinePgnsAsync(ambiguous, ct);
+                truth = await proxy.GetCachedLinePgnsAsync(ambiguous, ct: ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested
                                        && ex is ChessableProxyException or HttpRequestException or TaskCanceledException)

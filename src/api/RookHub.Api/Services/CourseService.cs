@@ -21,12 +21,16 @@ public class CourseService
     private readonly RepertoireService _repertoire;
     private readonly FriendService _friends;
     private readonly NotificationService _notifications;
+    /// <summary>Nur fürs Nachtragen des Chessable-Trainingsstarts beim Umwandeln; null = nicht verfügbar.</summary>
+    private readonly ChessableProxyService? _chessableProxy;
 
     // Alle Abhängigkeiten verpflichtend. Früher waren friends/notifications optional und wurden
     // sonst hier selbst gebaut — bequem für Tests, aber der Dienst verdrahtete damit an der DI
     // vorbei, kein Test konnte einen Doppelgänger einschleusen, und die Abhängigkeit war von
     // außen unsichtbar. Tests bauen jetzt über TestServices.Course(db).
-    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService friends, NotificationService notifications)
+    // chessableProxy optional (Default null), damit bestehende Test-Konstruktionen unverändert
+    // kompilieren; ohne ihn entfällt nur das Nachtragen des Chessable-Trainingsstarts.
+    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null)
     {
         _db = db;
         _logger = logger;
@@ -35,6 +39,7 @@ public class CourseService
         _repertoire = repertoire;
         _notifications = notifications;
         _friends = friends;
+        _chessableProxy = chessableProxy;
     }
 
     private static string NormalizeMode(string? mode) =>
@@ -781,6 +786,10 @@ public class CourseService
         // Pro-User-eindeutiger interner Dateiname (NICHT der Anzeigename) → kollisionsfrei mit
         // globalen Büchern und Chessable-Importen (chessable-u{userId}-{bid}.pgn).
         var fileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn";
+        // Chessable-Linien ohne Trainingsmarker: fehlenden Trainingsstart nachtragen, BEVOR importiert
+        // wird (ein Repertoire-PGN trägt keinen — sonst stünde im Kurs die falsche Seite am Zug).
+        pgn = await WithChessableTrainingStartsAsync(pgn, ct);
+
         // Eigener Kurs des Nutzers: ein Eroeffnungsrepertoire aus der Grundstellung IST hier
         // spielbarer Inhalt (siehe PgnImportService.StartPlyForRepertoire).
         var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, playFromStartPosition: true);
@@ -870,6 +879,45 @@ public class CourseService
 
     /// <summary>Die Merkmale, die ein Buch zum persönlichen Kurs EINES Users machen — an beiden
     /// Entstehungswegen (PGN-Upload und leerer Kurs) identisch.</summary>
+    /// <summary>
+    /// Trägt den fehlenden Trainingsstart Chessable-stämmiger Linien nach (siehe
+    /// <see cref="ChessableTrainingStart"/>): für Linien MIT <c>[ChessableOid]</c>, aber ohne
+    /// <c>[%tqu]</c> und ohne <c>[ChessableColor]</c> wird die Solverfarbe aus dem geteilten
+    /// piratechess-Linien-Cache geholt und als Header eingetragen.
+    /// <para>Ein gewöhnliches Nutzer-PGN hat keine oids und löst deshalb keinen Abruf aus. Ist
+    /// piratechess nicht erreichbar oder kennt es die Linien nicht, bleibt das PGN unverändert und der
+    /// Kurs entsteht wie bisher — die Umwandlung darf daran nicht scheitern.</para>
+    /// </summary>
+    private async Task<string> WithChessableTrainingStartsAsync(string pgn, CancellationToken ct)
+    {
+        if (_chessableProxy is null) return pgn;
+        var oids = ChessableTrainingStart.OidsWithoutStart(pgn);
+        if (oids.Count == 0) return pgn;
+
+        try
+        {
+            var cached = await _chessableProxy.GetCachedLinePgnsAsync(oids, ChessableTrainingStart.MarkerMode, ct);
+            var colors = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var (oid, block) in cached)
+            {
+                var color = ChessableTrainingStart.SolverColorOf(block);
+                if (color is not null) colors[oid] = color;
+            }
+            if (colors.Count == 0) return pgn;
+            _logger.LogInformation(
+                "Kurs aus PGN: Trainingsstart für {Found} von {Asked} Chessable-Linien aus dem Linien-Cache ergänzt.",
+                colors.Count, oids.Count);
+            return ChessableTrainingStart.InsertColors(pgn, colors);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex,
+                "Kurs aus PGN: Trainingsstart für {Count} Chessable-Linien nicht abrufbar — Linien behalten den bisherigen Start.",
+                oids.Count);
+            return pgn;
+        }
+    }
+
     private static void ApplyPersonalCourseMetadata(Book book, int userId, string name, DateTime nowUtc)
     {
         book.OwnerUserId = userId;

@@ -604,6 +604,55 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParsePgn_NoTqu_SolverColorIsOpponentOfFen_PrePlaysFirstMove()
+    {
+        // Chessable-Partie-Kurs: „der Gegner hat gerade 10...Nd4 gespielt, widerlege das".
+        // FEN = Schwarz am Zug, Solverfarbe Weiss ⇒ Nd4 wird vorgespielt (StartPly 0), gefragt ist Bg5.
+        var pgn = @"
+[Event ""Chess Olympiad 2026""]
+[Round ""003.003""]
+[FEN ""r1bqk2r/1ppp1ppp/p1n3n1/3Np2Q/2B1P3/3P4/PPP2PP1/R1B1K2R b KQkq - 0 10""]
+[ChessableColor ""white""]
+
+10... Nd4 11. Bg5 f6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.Equal(0, p.StartPly);
+        Assert.StartsWith("c6d4 c1g5", p.Moves);
+    }
+
+    [Fact]
+    public void ParsePgn_NoTqu_SolverColorMatchesFen_SolvesFromMove0()
+    {
+        // Dieselbe Linie, aber der Trainierende hat Schwarz ⇒ er zieht sofort (unveraendertes Verhalten).
+        var pgn = @"
+[Event ""Chess Olympiad 2026""]
+[Round ""003.003""]
+[FEN ""r1bqk2r/1ppp1ppp/p1n3n1/3Np2Q/2B1P3/3P4/PPP2PP1/R1B1K2R b KQkq - 0 10""]
+[ChessableColor ""black""]
+
+10... Nd4 11. Bg5 f6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.Equal(-1, p.StartPly);
+    }
+
+    [Theory]
+    // Solverfarbe = Zugfarbe der FEN ⇒ sofort loesen.
+    [InlineData("8/8/8/8/8/8/8/K6k w - - 0 1", "white", 2, -1)]
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "black", 2, -1)]
+    // Gegenfarbe ⇒ ersten Zug vorspielen.
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "white", 2, 0)]
+    [InlineData("8/8/8/8/8/8/8/K6k w - - 0 1", "black", 2, 0)]
+    // Ohne/mit unbekanntem Header bleibt es beim bisherigen Verhalten.
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "", 2, -1)]
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "grau", 2, -1)]
+    // Ein einziger Halbzug: vorgespielt bliebe nichts zu loesen.
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "white", 1, -1)]
+    public void StartPlyFromSolverColor_Cases(string fen, string color, int moveCount, int expected)
+        => Assert.Equal(expected, PgnImportService.StartPlyFromSolverColor(fen, color, moveCount));
+
+    [Fact]
     public void ParsePgn_StartFenWithoutMarker_Skipped()
     {
         // Grundstellung ohne Trainingsmarker = ganze Partie ohne Puzzle → übersprungen.

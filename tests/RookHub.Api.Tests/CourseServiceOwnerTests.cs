@@ -175,6 +175,7 @@ public class CourseServiceOwnerTests : IDisposable
             BookFileName = book.FileName,
             Fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
             Moves = "e2e4 e7e5",
+            StartPly = -1,      // ab moves[0] loesen ⇒ kein [%tqu] im Export
             MoveComments = "{\"0\":\"Bester Zug\"}"
         });
         await _db.SaveChangesAsync();

@@ -952,7 +952,7 @@ public class ChessableImportService : ICourseReimporter
     }
 
     /// <summary>Position direkt hinter dem letzten Header eines Blocks (vor dessen Zeilenumbruch), -1 ohne Header.</summary>
-    private static int HeaderEnd(string pgn, int start, int end)
+    internal static int HeaderEnd(string pgn, int start, int end)
     {
         var at = -1;
         for (var pos = start; pos < end;)
