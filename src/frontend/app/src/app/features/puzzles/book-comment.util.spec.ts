@@ -59,6 +59,17 @@ describe('book-comment.util', () => {
       expect(buildCommentLines({ ...base, moveIndex: 4 })).toEqual(['Guter erster Zug', 'Springer raus']);
     });
 
+    it('zeigt den Text der Aufgabenstellung nur EINMAL, wenn er auch am vorgespielten Zug hängt', () => {
+      // Chessable-Partie-Linie: der Kommentar des vorgespielten Zuges IST die Aufgabenstellung, und
+      // der Import legt ihn zusätzlich als Linien-Kommentar ab — angezeigt stand er doppelt da.
+      const frage = 'Wie bestrafte er den Großmeister hier?';
+      const doppelt: CommentLinesState = {
+        ...base, startPly: 0, puzzleComment: frage, moveComments: { '0': frage, '2': 'Danach ist es vorbei' },
+      };
+      expect(buildCommentLines({ ...doppelt, moveIndex: 1 })).toEqual([frage]);
+      expect(buildCommentLines({ ...doppelt, moveIndex: 3 })).toEqual([frage, 'Danach ist es vorbei']);
+    });
+
     it('lässt die Einleitung bei Aufbauzügen (startPly ≥ 0) einen Halbzug länger stehen', () => {
       // startPly 2 → erster Löserzug ist Ply 3; moveIndex startet dort. Intro (nur Ply -1) verschwände
       // sonst sofort, weil der Stapel-Zweig erst ab Ply 0 sucht → hier ohne Zug-Kommentare leer.

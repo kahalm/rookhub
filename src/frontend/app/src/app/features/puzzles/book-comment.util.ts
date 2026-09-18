@@ -75,12 +75,18 @@ export function buildCommentLines(s: CommentLinesState): string[] {
     // Einleitung sonst genau dann verschwände, wenn der Aufbauzug fertig ist — zu kurz zum Lesen.
     // Solange der Spieler seinen ERSTEN Lösungszug noch nicht gemacht hat, bleibt sie oben stehen.
     const firstUserPly = s.startPly < 0 ? 0 : s.startPly + 1;
-    if (s.puzzleComment && s.moveIndex <= firstUserPly) lines.push(s.puzzleComment);
+    // Denselben Text nicht zweimal untereinander: bei Chessable-Linien mit vorgespieltem Zug
+    // (`startPly >= 0`) IST die Einleitung der Kommentar genau dieses Zuges — Linien-Kommentar und
+    // `moveComments[startPly]` tragen dann denselben Satz, und die Aufgabenstellung stand doppelt da
+    // (gemeldet 2026-09-18). Gleiche Nachbarn werden deshalb zusammengefasst.
+    const push = (c: string | null) => {
+      if (!c) return;
+      if (lines.length > 0 && lines[lines.length - 1].trim() === c.trim()) return;
+      lines.push(c);
+    };
+    if (s.puzzleComment && s.moveIndex <= firstUserPly) push(s.puzzleComment);
     // `moveIndex` ist bereits ABSOLUT → der zuletzt gespielte Halbzug ist `moveIndex - 1`.
-    for (let ply = start; ply <= s.moveIndex - 1; ply++) {
-      const c = commentForPlyPlayed(s.moveComments, ply);
-      if (c) lines.push(c);
-    }
+    for (let ply = start; ply <= s.moveIndex - 1; ply++) push(commentForPlyPlayed(s.moveComments, ply));
     return lines;
   }
   return (s.onSolutionPath && s.puzzleComment) ? [s.puzzleComment] : [];
