@@ -258,7 +258,9 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = shapeError });
 
         var target = dto.Target == "book" ? "book" : "repertoire";
-        return await ParseAndImportAsync(GetUserId(), dto.Bid, target, dto.CourseName, chapters, ct);
+        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
+        var courseName = ChessableLineJson.ResolveCourseName(dto.CourseName, chapters.SelectMany(c => c.Lines ?? new List<string>()));
+        return await ParseAndImportAsync(GetUserId(), dto.Bid, target, courseName, chapters, ct);
     }
 
     /// <summary>
@@ -431,7 +433,21 @@ public class ExtensionController : BaseApiController
         var userId = GetUserId();
         var target = dto.Target == "book" ? "book" : "repertoire";
 
-        var (session, storeError) = _ingestSessions.GetOrCreate(userId, dto.SessionId, dto.Bid, target, dto.CourseName);
+        // Abbruch aus dem Browser (Chessable-Sperre, Nutzer stoppt): Sitzung schliessen und den Datensatz
+        // mit der Bilanz des Erreichten als abgebrochen markieren — statt bis zum Ablauf der Sitzung
+        // (30 min) auf „laeuft" zu stehen. Die Linien selbst sind laengst importiert und bleiben.
+        if (dto.Aborted)
+        {
+            var dropped = _ingestSessions.Discard(userId, dto.SessionId);
+            if (dropped?.ImportId is int abortedId)
+                await _chessableImport.FailBrowserImportAsync(abortedId,
+                    $"Im Browser abgebrochen — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
+            return Ok(new ChessableIngestChunkAck(true, dropped?.ChaptersDone ?? 0, dropped?.LinesSeen ?? 0, dropped?.Imported ?? 0));
+        }
+
+        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
+        var courseName = ChessableLineJson.ResolveCourseName(dto.CourseName, dto.Chapter?.Lines);
+        var (session, storeError) = _ingestSessions.GetOrCreate(userId, dto.SessionId, dto.Bid, target, courseName);
         if (session is null)
         {
             // Abgelehnte Chunks waren bisher nur als nackter 400 im Zugriffslog zu sehen — der Grund stand
@@ -446,7 +462,10 @@ public class ExtensionController : BaseApiController
         {
             if (ValidateLineOids(new[] { chapter }) is { } shapeError)
             {
-                _ingestSessions.Discard(userId, dto.SessionId);
+                var dropped = _ingestSessions.Discard(userId, dto.SessionId);
+                if (dropped?.ImportId is int brokenId)
+                    await _chessableImport.FailBrowserImportAsync(brokenId,
+                        $"Ungültiger Chunk ({shapeError}) — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
                 return BadRequest(new { message = shapeError });
             }
 
@@ -468,13 +487,14 @@ public class ExtensionController : BaseApiController
                 if (session.ImportId is null)
                 {
                     var (import, inflight) = await _chessableImport.StartBrowserImportAsync(
-                        userId, dto.Bid, dto.CourseName ?? parsed.Name, target, ct);
+                        userId, dto.Bid, courseName ?? parsed.Name, target, ct);
                     _ingestSessions.AttachImport(session, import.Id, inflight);
                 }
 
-                // Kapitelnummern hinter den bisherigen fortschreiben — sonst überschriebe Chunk 2 die
+                // Kapitelnummern nahtlos hinter den bisherigen fortschreiben — sonst überschriebe Chunk 2 die
                 // Linien von Chunk 1 (LineId = Datei:Round). Siehe ChessableRoundOffset.
-                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, session.ChapterOffset);
+                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!,
+                    ChessableRoundOffset.NextOffset(session.ChapterOffset, parsed.Pgn));
                 var res = await _chessableImport.AppendBrowserChunkAsync(
                     session.ImportId!.Value, shifted, parsed.LineCount, ct);
                 _ingestSessions.NoteChapter(session, ChessableRoundOffset.MaxChapter(shifted),
@@ -534,7 +554,8 @@ public class ExtensionController : BaseApiController
         if (string.IsNullOrWhiteSpace(parsed.Pgn))
             return Ok(new ChessableLiveIngestResultDto(0, null, target, 0));
 
-        var name = !string.IsNullOrWhiteSpace(dto.CourseName) ? dto.CourseName! : parsed.Name;
+        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
+        var name = ChessableLineJson.ResolveCourseName(dto.CourseName, chapters.SelectMany(c => c.Lines ?? new List<string>()), parsed.Name) ?? parsed.Name;
         var live = await _chessableImport.AppendLiveAsync(GetUserId(), dto.Bid, parsed.Pgn, name, target, ct);
         return Ok(new ChessableLiveIngestResultDto(live.Imported, live.ResultId, live.Target, parsed.LineCount, live.Linked));
     }

@@ -89,7 +89,15 @@ public class ChessableImportWatchdogService : BackgroundService
 
         var reclaimed = await ReclaimOrphanedInflightAsync(db, ct);
 
-        if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0 || reclaimed > 0;
+        // Browser-Import-Sitzungen ohne Chunk seit 30 min: Import-Datensatz mit dem Erreichten schließen.
+        // Muss VOR dem Verwaist-Check liegen bzw. dessen Karenz unterlaufen — sonst stünde der Import
+        // erst auf „läuft ohne Treiber" und würde neu eingereiht.
+        var closed = 0;
+        if (scope.ServiceProvider.GetService<ChessableIngestSessionStore>() is { } sessions)
+            closed = await CloseExpiredBrowserSessionsAsync(sessions,
+                scope.ServiceProvider.GetRequiredService<ChessableImportService>(), ct);
+
+        if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0 || reclaimed > 0 || closed > 0;
 
         var queued = await db.ChessableImports.CountAsync(
             i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued && i.FullyCached != true, ct);
@@ -141,6 +149,26 @@ public class ChessableImportWatchdogService : BackgroundService
     /// Job (Registrierungs-Fenster) nicht fälschlich zurückgeholt wird. <see cref="ChessableImport.Attempts"/>
     /// bleibt stehen → der Job zählt weiter gegen <see cref="ChessableImportService.MaxAttempts"/> statt
     /// endlos zu kreisen. Setzt EINE API-Instanz voraus (Treiberliste ist prozesslokal).</summary>
+    /// <summary>
+    /// Schließt die Import-Datensätze abgelaufener Browser-Import-Sitzungen (kein Chunk seit der TTL des
+    /// <see cref="ChessableIngestSessionStore"/>): Status „fehlgeschlagen" mit der Bilanz des Erreichten. Die
+    /// Linien selbst sind längst importiert — nur der Datensatz sagte weiter „läuft". Liefert die Anzahl.
+    /// </summary>
+    internal static async Task<int> CloseExpiredBrowserSessionsAsync(
+        ChessableIngestSessionStore sessions, ChessableImportService imports, CancellationToken ct = default)
+    {
+        var closed = 0;
+        foreach (var s in sessions.TakeExpired())
+        {
+            if (s.ImportId is not int importId) continue;
+            await imports.FailBrowserImportAsync(importId,
+                $"Browser-Abruf ohne Abschluss (kein Kapitel seit {sessions.Ttl.TotalMinutes:0} min) — "
+                + $"{s.ChaptersDone} Kapitel, {s.Imported} Linien übernommen.", ct);
+            closed++;
+        }
+        return closed;
+    }
+
     internal async Task<int> ReclaimOrphanedInflightAsync(AppDbContext db, CancellationToken ct = default)
     {
         var inflight = await db.ChessableImports

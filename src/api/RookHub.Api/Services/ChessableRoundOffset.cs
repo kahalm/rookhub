@@ -31,6 +31,33 @@ public static class ChessableRoundOffset
     }
 
     /// <summary>
+    /// Versatz, damit der nächste Chunk NAHTLOS hinter der letzten Kapitelnummer weiterzählt. piratechess
+    /// beginnt jeden Einzel-Aufruf bei derselben Nummer (im Bestand 002); ein Versatz um das bisherige
+    /// Maximum ergäbe 002, 004, 006 … — kollisionsfrei, aber mit Lücken (so am 2026-09-19 im ersten
+    /// Live-Import gesehen). Relativ zur KLEINSTEN Nummer des Chunks wird daraus 002, 003, 004 ….
+    /// <c>0</c>, wenn es noch keine vorherige Nummer gibt oder der Chunk keine trägt.
+    /// </summary>
+    public static int NextOffset(int previousMaxChapter, string? chunkPgn)
+    {
+        if (previousMaxChapter <= 0) return 0;
+        var min = MinChapter(chunkPgn);
+        return min <= 0 ? 0 : Math.Max(0, previousMaxChapter - (min - 1));
+    }
+
+    /// <summary>Kleinste Kapitelnummer im PGN, <c>0</c> ohne Treffer.</summary>
+    public static int MinChapter(string? pgn)
+    {
+        var min = 0;
+        if (string.IsNullOrEmpty(pgn)) return min;
+        foreach (Match m in RoundRegex.Matches(pgn))
+        {
+            var chapter = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+            if (min == 0 || chapter < min) min = chapter;
+        }
+        return min;
+    }
+
+    /// <summary>
     /// Höchste Kapitelnummer im PGN, <c>0</c> ohne Treffer. Der nächste Chunk setzt darauf auf — bewusst
     /// aus dem ERGEBNIS gelesen und nicht mitgezählt: welche Nummer piratechess vergibt (der Bestand
     /// beginnt je nach Kurs bei 001 oder 002), ist dessen Sache und darf sich ändern.

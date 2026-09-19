@@ -1211,6 +1211,18 @@ public class ChessableImportService : ICourseReimporter
 
         var res = await AppendLiveAsync(import.UserId, import.Bid, pgn, import.CourseName, import.Target, ct);
 
+        // Der Live-Append setzt den Anzeigenamen eines Buchs nur, wenn er LEER ist — er ist fuer vorhandene
+        // Buecher gedacht, deren Namen der Nutzer gepflegt haben kann. PgnImportService legt ein neues Buch aber
+        // schon mit dem Dateinamen als Anzeigename an (chessable-u5-55720), und genau so hiess das Buch nach dem
+        // ersten laufenden Import (2026-09-19). Ein Buch, das noch seinen Dateinamen traegt, bekommt hier den
+        // Kursnamen; ein vom Nutzer umbenanntes bleibt unangetastet.
+        if (import.Target == "book" && res.ResultId is int bookId)
+        {
+            var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId, ct);
+            if (book is not null && IsFileNameDerived(book.DisplayName, book.FileName))
+                book.DisplayName = import.CourseName;
+        }
+
         import.Imported += res.Imported;
         import.Skipped += Math.Max(0, linesInChunk - res.Imported);
         import.LineCount += linesInChunk;
@@ -1259,6 +1271,17 @@ public class ChessableImportService : ICourseReimporter
             },
             import.Target == "book" ? "/courses" : "/repertoires");
         return import;
+    }
+
+    /// <summary>Traegt ein Buch noch den automatisch aus dem Dateinamen abgeleiteten Anzeigenamen
+    /// (leer, der Dateiname selbst oder ohne Endung)? Dann darf der Kursname ihn ersetzen.</summary>
+    internal static bool IsFileNameDerived(string? displayName, string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName)) return true;
+        var file = fileName ?? string.Empty;
+        return displayName == file
+            || displayName == Path.GetFileNameWithoutExtension(file)
+            || displayName == PgnImportService.CleanDisplayName(file);
     }
 
     /// <summary>Bricht den Import-Datensatz einer Sitzung ab. Das bereits Importierte BLEIBT — es liegt

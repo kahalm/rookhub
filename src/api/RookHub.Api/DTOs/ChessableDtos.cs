@@ -64,15 +64,17 @@ public record ChessableIngestResultDto(
     int ImportId, string Target, int? ResultId, string CourseName, int Imported, int Skipped, int Invalid, int LineCount);
 
 /// <summary>Ein Kapitel-Chunk des kapitelweisen Browser-Imports. Die Extension streamt einen großen Kurs
-/// Kapitel für Kapitel (bounded pro Request); der Server sammelt sie je <c>SessionId</c> und importiert
-/// erst beim Chunk mit <c>Final=true</c> den GANZEN Kurs (korrekte Kapitel-/Round-Reihenfolge).
+/// Kapitel für Kapitel (bounded pro Request); der Server parst und importiert JEDEN Chunk sofort (seit 0.484.0,
+/// Kapitelnummern werden fortgeschrieben) und schließt die Sitzung beim Chunk mit <c>Final=true</c> ab.
 /// <c>Bid</c>/<c>Target</c>/<c>CourseName</c> werden vom ersten Chunk übernommen. <c>SessionId</c> ist
 /// eine clientseitige GUID; Sessions sind pro (User, SessionId) isoliert.
 /// <c>CourseJson</c> (echte getCourse-Antwort) + <c>Complete</c> kommen mit dem FINALEN Chunk, wenn die Extension
-/// den Kurs vollständig geholt hat — piratechess legt ihn dann als Ganzes im geteilten Kurs-Cache ab.</summary>
+/// den Kurs vollständig geholt hat. <c>Aborted=true</c> (mit <c>Final=true</c>, ohne Kapitel) meldet einen
+/// Abbruch im Browser: die Sitzung wird geschlossen und der Import-Datensatz mit dem bis dahin Übernommenen als
+/// abgebrochen markiert — statt bis zum Ablauf der Sitzung auf „läuft" zu stehen.</summary>
 public record ChessableIngestChunkRequest(
     string SessionId, string Bid, string? Target, string? CourseName, ChessableIngestChapter? Chapter, bool Final,
-    string? CourseJson = null, bool Complete = false);
+    string? CourseJson = null, bool Complete = false, bool Aborted = false);
 
 /// <summary>Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
 /// überspringt dafür den Chessable-Abruf. Antwort: die gecachte Teilmenge — nur die Existenz, nie der Inhalt.</summary>

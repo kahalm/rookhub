@@ -67,4 +67,41 @@ public class ChessableRoundOffsetTests
         Assert.Contains("[Round \"004.001\"]", second);
         Assert.NotEqual(ChessableRoundOffset.MaxChapter(first), ChessableRoundOffset.MaxChapter(second));
     }
+
+    [Fact]
+    public void NextOffset_ContinuesSeamlessly_WhenEveryChunkStartsAtTheSameNumber()
+    {
+        // piratechess beginnt jeden Einzel-Chunk bei 002. Versatz um das Maximum ergab 002, 004, 006 …
+        // (Live-Import 2026-09-19); relativ zur kleinsten Nummer wird daraus 002, 003, 004.
+        const string chunk = "[Round \"002.001\"]\n\n1. e4 *\n\n[Round \"002.002\"]\n\n1. d4 *\n";
+        var first = ChessableRoundOffset.Shift(chunk, ChessableRoundOffset.NextOffset(0, chunk));
+        var max1 = ChessableRoundOffset.MaxChapter(first);
+        var second = ChessableRoundOffset.Shift(chunk, ChessableRoundOffset.NextOffset(max1, chunk));
+        var max2 = ChessableRoundOffset.MaxChapter(second);
+        var third = ChessableRoundOffset.Shift(chunk, ChessableRoundOffset.NextOffset(max2, chunk));
+
+        Assert.Contains("[Round \"002.001\"]", first);
+        Assert.Contains("[Round \"003.001\"]", second);
+        Assert.Contains("[Round \"003.002\"]", second);
+        Assert.Contains("[Round \"004.001\"]", third);
+    }
+
+    [Fact]
+    public void NextOffset_KeepsChapterSpacing_InsideAMultiChapterChunk()
+    {
+        // Ein Chunk mit den Kapiteln 002 und 003 landet hinter Kapitel 5 als 006 und 007.
+        const string chunk = "[Round \"002.001\"]\n\n1. e4 *\n\n[Round \"003.001\"]\n\n1. d4 *\n";
+        var shifted = ChessableRoundOffset.Shift(chunk, ChessableRoundOffset.NextOffset(5, chunk));
+        Assert.Contains("[Round \"006.001\"]", shifted);
+        Assert.Contains("[Round \"007.001\"]", shifted);
+    }
+
+    [Fact]
+    public void NextOffset_IsZero_WithoutPreviousOrWithoutRounds()
+    {
+        Assert.Equal(0, ChessableRoundOffset.NextOffset(0, "[Round \"002.001\"]"));
+        Assert.Equal(0, ChessableRoundOffset.NextOffset(7, "[Event \"C\"]\n\n1. e4 *"));
+        Assert.Equal(0, ChessableRoundOffset.MinChapter(null));
+        Assert.Equal(2, ChessableRoundOffset.MinChapter("[Round \"005.001\"]\n[Round \"002.003\"]"));
+    }
 }

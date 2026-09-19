@@ -255,6 +255,25 @@ Drei Dinge, die dabei nicht kippen duerfen:
 Ein abgelehnter Chunk wird ausserdem mit Grund geloggt: der 400er stand vorher nur als nackter
 Statuscode im Zugriffslog, die Begruendung ausschliesslich im Quelltext.
 
+**Eine Sitzung, die ihr Ende nie erreicht, wird geschlossen (0.484.1).** Drei Wege: (1) die Extension
+schickt beim Stopp einen finalen Chunk mit `aborted: true` → der Import-Eintrag geht auf `Failed` mit
+Zaehlern („Im Browser abgebrochen — n Kapitel, m Linien uebernommen"), die importierten Kapitel bleiben;
+(2) ein Kapitel, das der Parser ablehnt (Form-Fehler), schliesst den Eintrag ebenso; (3) der Watchdog
+raeumt Sitzungen ohne Kapitel seit `ChessableIngestSessionStore.Ttl` (30 min) ab
+(`CloseExpiredBrowserSessionsAsync`) — Tab geschlossen, Anmeldung abgelaufen. Vorher stand der Eintrag
+fuer immer auf `Running` und hielt die Inflight-Marke.
+
+**Kapitelnummern relativ zur KLEINSTEN Nummer des Chunks fortschreiben** (`ChessableRoundOffset.NextOffset`):
+piratechess beginnt jeden Einzel-Chunk bei 002, der Versatz um das Maximum ergab 002, 004, 006 … (Live-Import
+2026-09-19, bid 55720); jetzt 002, 003, 004.
+
+**Der Kursname kommt aus den LINIEN** (`ChessableLineJson.ResolveCourseName`, alle drei Ingest-Wege): Chessable
+schreibt ihn in jede getGame-Antwort (`game.name`; `game.title` ist der Linientitel), die Extension liest
+ihn bei Kursen ausserhalb des Kontos vom Seitentext, und die Kurskachel klebt Titel und Fortschrittsbadges
+zusammen („Short & Sweet0%Priority0/15variations✓ 0/15", Repertoire 265). Reihenfolge: Linie > Extension >
+piratechess (erstes Kapitel). Der Anhaenge-Weg setzt ausserdem `Book.DisplayName` nach, wenn er noch vom
+Dateinamen stammt (`chessable-u5-55720`, `IsFileNameDerived`).
+
 ### Gespeicherte Partien (auth + öffentlicher Teilen-Link)
 Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess.com/lichess gespeicherten Partien. Nachspielen (PGN-Viewer-Dialog), „In Analyse öffnen" (PGN via Router-State an `/analysis`), Löschen, und Teilen über einen eindeutigen öffentlichen Link `/g/{shareToken}` (kein Login). Logik in `SavedGameService`; Menü-Key `games` (Default `Registered`).
 

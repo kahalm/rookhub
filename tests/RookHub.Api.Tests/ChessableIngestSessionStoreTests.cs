@@ -130,4 +130,42 @@ public class ChessableIngestSessionStoreTests
         store.Discard(7, "sess1");
         Assert.False(ChessableImportService.IsDrivenLocally(4712));
     }
+
+    [Fact]
+    public void TakeExpired_ReturnsStaleSessions_AndReleasesTheirInflightMark()
+    {
+        var store = new ChessableIngestSessionStore { Ttl = TimeSpan.Zero };
+        var (s, _) = store.GetOrCreate(7, "sess1", "424242", "book", "C");
+        store.AttachImport(s!, 4713, ChessableImportService.TrackInflight(4713));
+        store.NoteChapter(s!, 2, 10, 10, 55);
+
+        var expired = store.TakeExpired();
+
+        var only = Assert.Single(expired);
+        Assert.Equal(4713, only.ImportId);
+        Assert.Equal(10, only.Imported);
+        Assert.False(ChessableImportService.IsDrivenLocally(4713));
+        Assert.Equal(0, store.Count);
+        Assert.Empty(store.TakeExpired());   // idempotent
+    }
+
+    [Fact]
+    public void TakeExpired_LeavesFreshSessionsAlone()
+    {
+        var store = new ChessableIngestSessionStore();
+        store.GetOrCreate(7, "fresh", "424242", "book", "C");
+        Assert.Empty(store.TakeExpired());
+        Assert.Equal(1, store.Count);
+    }
+
+    [Fact]
+    public void Discard_ReturnsTheSession_SoItsImportCanBeClosed()
+    {
+        var store = new ChessableIngestSessionStore();
+        var (s, _) = store.GetOrCreate(7, "sess1", "424242", "book", "C");
+        store.AttachImport(s!, 4714, ChessableImportService.TrackInflight(4714));
+        var dropped = store.Discard(7, "sess1");
+        Assert.Same(s, dropped);
+        Assert.Null(store.Discard(7, "sess1"));
+    }
 }

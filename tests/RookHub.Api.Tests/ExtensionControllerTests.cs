@@ -23,6 +23,8 @@ public class ExtensionControllerTests : IDisposable
     private readonly RepertoireService _service;
     private readonly ExtensionController _controller;
     private readonly ParseStub _parse;
+    private readonly ChessableIngestSessionStore _ingestSessions = new();
+    private readonly ChessableImportService _chessableImport;
 
     /// <summary>Steht fuer piratechess: beantwortet NUR den Parse-Endpunkt (mit einer Kurs-Linie je
     /// Aufruf) — jeder andere Aufruf bleibt unerreichbar, wie ohne Stub.</summary>
@@ -68,13 +70,13 @@ public class ExtensionControllerTests : IDisposable
         var savedGameService = new SavedGameService(_db);
         var bgQueue = new NoOpBackgroundTaskQueue();
         var rateLimiterConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
-        var chessableImport = new ChessableImportService(_db, encryption, chessableProxy, _service,
+        var chessableImport = _chessableImport = new ChessableImportService(_db, encryption, chessableProxy, _service,
             new PgnImportService(_db), bgQueue, new NotificationService(_db),
             new ChessableBearerBreaker(_db, bgQueue, NullLogger<ChessableBearerBreaker>.Instance),
             new ChessableRateLimiter(_db, rateLimiterConfig), NullLogger<ChessableImportService>.Instance);
         _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService,
             savedGameService, new SharedLineService(_db), chessableProxy, chessableImport,
-            new ChessableIngestSessionStore(),
+            _ingestSessions,
             new ChessableTrainedLineService(_db, new RepertoireTrainingService(_db)),
             new ChessableProblemMoveService(_db),
             new ChessableReviewLineService(_db, new PgnImportService(_db)),
@@ -361,6 +363,35 @@ public class ExtensionControllerTests : IDisposable
         => new("{\"list\":{\"name\":\"Ch\",\"data\":[]}}", lines.ToList());
 
     [Fact]
+    public async Task ChessableIngestChunk_TakesTheCourseNameFromTheLines_NotFromThePageText()
+    {
+        SetUser(7, scope: "extension");
+        // Der Seitentext der Kurskachel (Titel + Fortschrittsbadges in EINEM Link, Repertoire 265 am 2026-09-19).
+        const string garbage = "Short & Sweet0%Priority0/15variations✓ 0/15";
+        const string line = "{\"game\":{\"bid\":163418,\"name\":\"Short & Sweet: Caro-Kann\",\"title\":\"Line 1\"}}";
+
+        var r1 = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-name", "163418", "book", garbage, Chapter(line), false), default);
+        Assert.IsType<OkObjectResult>(r1);
+
+        var import = await _db.ChessableImports.SingleAsync();
+        Assert.Equal("Short & Sweet: Caro-Kann", import.CourseName);
+        Assert.Equal("Short & Sweet: Caro-Kann", (await _db.Books.SingleAsync()).DisplayName);
+    }
+
+    [Fact]
+    public async Task ChessableIngestLive_TakesTheCourseNameFromTheLines()
+    {
+        SetUser(7, scope: "extension");
+        const string line = "{\"game\":{\"bid\":163418,\"name\":\"Short & Sweet: Caro-Kann\"}}";
+        var res = await _controller.ChessableIngestLive(
+            new ChessableLiveIngestRequest("163418", "repertoire", "Short & Sweet0%Priority0/15variations✓ 0/15",
+                new List<ChessableIngestChapter> { Chapter(line) }), default);
+        Assert.IsType<OkObjectResult>(res);
+        Assert.Equal("Short & Sweet: Caro-Kann", (await _db.Repertoires.SingleAsync()).Name);
+    }
+
+    [Fact]
     public async Task ChessableIngestChunk_ImportsEveryChunkImmediately_WithoutOverwritingTheOneBefore()
     {
         SetUser(7, scope: "extension");
@@ -373,6 +404,8 @@ public class ExtensionControllerTests : IDisposable
         Assert.Equal(1, ack1.Imported);
         // Schon VOR dem letzten Chunk steht die Linie in der Datenbank — das ist der Punkt des Umbaus.
         Assert.Equal(1, await _db.BookPuzzles.CountAsync());
+        // Das neue Buch heisst wie der Kurs, nicht wie seine Datei (so hiess es nach dem ersten Live-Import).
+        Assert.Equal("Course", (await _db.Books.SingleAsync()).DisplayName);
 
         var r2 = await _controller.ChessableIngestChunk(
             new ChessableIngestChunkRequest("sess-1", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
@@ -402,6 +435,62 @@ public class ExtensionControllerTests : IDisposable
         Assert.NotNull(import.ResultId);
         // Genau EINE Benachrichtigung je Sitzung, nicht eine je Chunk.
         Assert.Equal(1, await _db.Notifications.CountAsync(n => n.UserId == 7));
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_NumbersChaptersSeamlessly()
+    {
+        SetUser(7, scope: "extension");
+        for (var i = 0; i < 3; i++)
+            await _controller.ChessableIngestChunk(
+                new ChessableIngestChunkRequest("sess-n", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        // Der Parser liefert jedem Chunk „002.001"; im Buch stehen sie als 002, 003, 004 — nicht 002, 004, 006.
+        var rounds = await _db.BookPuzzles.OrderBy(p => p.Round).Select(p => p.Round).ToListAsync();
+        Assert.Equal(new[] { "002.001", "003.001", "004.001" }, rounds);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_Aborted_ClosesTheImportWithWhatWasFetched()
+    {
+        SetUser(7, scope: "extension");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-a", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-a", "424242", "book", "Course", null, true, Aborted: true), default);
+        var ack = Assert.IsType<ChessableIngestChunkAck>(Assert.IsType<OkObjectResult>(res).Value);
+        Assert.True(ack.Done);
+        Assert.Equal(1, ack.Imported);
+
+        var import = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Failed, import.Status);
+        Assert.Contains("1 Linien übernommen", import.Error);
+        // Die Inflight-Marke ist prozessweit und nach Import-Id verschluesselt — parallele Testklassen mit
+        // eigener InMemory-DB teilen sich Id 1. Deshalb hier ueber den Store pruefen (Sitzung samt Marke weg).
+        Assert.Equal(0, _ingestSessions.Count);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync());   // das Geholte bleibt
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_ExpiredSession_IsClosedByTheWatchdog()
+    {
+        SetUser(7, scope: "extension");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-x", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+        var import = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Running, import.Status);
+        Assert.Equal(1, _ingestSessions.Count);
+
+        // Browser zu — kein Chunk mehr. Nach der TTL schliesst der Watchdog den Datensatz.
+        _ingestSessions.Ttl = TimeSpan.Zero;
+        var closed = await ChessableImportWatchdogService.CloseExpiredBrowserSessionsAsync(_ingestSessions, _chessableImport);
+
+        Assert.Equal(1, closed);
+        await _db.Entry(import).ReloadAsync();
+        Assert.Equal(ChessableImportStatus.Failed, import.Status);
+        Assert.Contains("ohne Abschluss", import.Error);
+        Assert.Equal(0, _ingestSessions.Count);
     }
 
     [Fact]
