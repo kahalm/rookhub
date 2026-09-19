@@ -8,6 +8,20 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+
+## [ ] Kurs-Cache bei piratechess wird beim laufenden Browser-Import nicht mehr geschrieben (2026-09-19)
+
+Seit 0.484.0 wird jeder Chunk EINZELN geparst. Der finale Chunk traegt weiterhin `courseJson` +
+`complete: true`, enthaelt aber nur noch seine eigenen Kapitel — piratechess sieht eine andere
+Kapitelzahl als im Kurs-JSON und legt den Kurs folglich NICHT als Ganzes im Cache ab. Der
+LINIEN-Cache (der wertvolle Teil, er spart die Chessable-Abrufe) fuellt sich unveraendert bei jedem
+Chunk.
+
+Wenn der Kurs-Cache wieder gebraucht wird: kleiner Endpunkt bei piratechess
+(`course/cache-complete` mit bid + courseJson), den der finale Chunk ruft, sobald alle Linien der
+Kursstruktur im Linien-Cache liegen. Bewusst nicht mitgebaut — der Fall trat bisher ohnehin nur bei
+Importen auf, die ganz durchliefen.
+
 ## [ ] Puzzle mit ungueltiger Zugfolge friert den Solver still ein (2026-09-13)
 
 Gefunden im E2E-Lauf: sechs der zehn Seed-Puzzles (`e2e/fixtures/test-puzzles.csv`) trugen Zuege,

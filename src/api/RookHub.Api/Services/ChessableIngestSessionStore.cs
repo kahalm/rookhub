@@ -1,40 +1,58 @@
 using System.Collections.Concurrent;
-using RookHub.Api.DTOs;
 
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// In-Memory-Puffer für den KAPITELWEISEN Browser-Import (RepCheck): die Extension streamt einen
-/// Chessable-Kurs Kapitel für Kapitel (bounded pro Request), der Server sammelt die rohen Kapitel hier
-/// und parst/importiert sie erst beim letzten Chunk als GANZEN Kurs (→ korrekte Round-Reihenfolge über
-/// Kapitel hinweg, ohne den piratechess-Parser anzufassen). Singleton, prozessweit; Sessions sind pro
-/// (User, sessionId) isoliert und laufen nach <see cref="Ttl"/> ohne Aktivität ab (Leak-Schutz, wenn der
-/// Browser mitten im Crawl schließt). Analog zu piratechess' CourseFetchJobStore, nur ohne DB.
+/// Zustand einer LAUFENDEN Browser-Import-Sitzung (RepCheck): die Extension streamt einen Chessable-Kurs
+/// Kapitel für Kapitel, und jeder Chunk wird SOFORT geparst und angehängt. Hier steht nur, was der nächste
+/// Chunk dafür wissen muss — Ziel, Import-Datensatz, Kapitel-Versatz und Zähler. Singleton, prozessweit;
+/// Sitzungen sind je (User, sessionId) isoliert und laufen nach <see cref="Ttl"/> ohne Aktivität ab.
+///
+/// <para><b>Warum nicht mehr puffern:</b> Bis v0.483.1 sammelte der Server die rohen Kapitel im
+/// Arbeitsspeicher und importierte erst beim letzten Chunk den ganzen Kurs. Das hatte zwei Kanten, die
+/// am 2026-09-19 einen Nutzer trafen: ein Deckel von 128 MB je Sitzung, und ein Verwerfen des GESAMTEN
+/// Puffers, sobald er fiel. „Lifetime Repertoires: King's Indian Defense - Part 2" hat 1881 Linien à
+/// gemessen 455 KB Rohdaten — 835 MB. Nach rund 288 Linien war Schluss, mit einer Fehlermeldung nach
+/// 30–60 Minuten Crawlen und ohne eine einzige importierte Linie. Laufend importiert gibt es keinen
+/// Deckel mehr, und was geholt wurde, bleibt auch nach einem Abbruch.</para>
 /// </summary>
-public class ChessableIngestSessionStore
+public class ChessableIngestSessionStore : IDisposable
 {
     public sealed class Session
     {
         public int UserId { get; init; }
-        public string Bid { get; set; } = string.Empty;
-        public string Target { get; set; } = "repertoire";
+        public string Bid { get; init; } = string.Empty;
+        public string Target { get; init; } = "repertoire";
         public string? CourseName { get; set; }
-        public List<ChessableIngestChapter> Chapters { get; } = new();
-        public long Bytes { get; set; }
+
+        /// <summary>Der EINE Import-Datensatz dieser Sitzung (erst mit dem ersten Kapitel angelegt).</summary>
+        public int? ImportId { get; set; }
+        /// <summary>Ziel-Id (Buch bzw. Repertoire), sobald der erste Chunk importiert ist.</summary>
+        public int? ResultId { get; set; }
+
+        /// <summary>Höchste bisher vergebene Kapitelnummer — der nächste Chunk setzt dahinter auf
+        /// (siehe <see cref="ChessableRoundOffset"/>).</summary>
+        public int ChapterOffset { get; set; }
+        public int ChaptersDone { get; set; }
+        public int LinesSeen { get; set; }
+        public int Imported { get; set; }
+
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>Hält den Import über die REQUEST-Grenze hinweg als „lokal getrieben" markiert. Ohne das
+        /// hielte der Watchdog ihn nach <c>OrphanGrace</c> (10 min) für verwaist und reihte ihn neu ein —
+        /// zwischen zwei Chunks liegen aber durchaus 13 Minuten, und die Fast-Lane würde dann einen echten
+        /// Chessable-Abruf starten, während der Browser noch streamt.</summary>
+        internal IDisposable? Inflight { get; set; }
     }
 
-    // Deckel je Session (großzügig, aber gegen Endlos-Wachstum/OOM). Ein einzelner Kurs bleibt darunter.
-    private const int MaxChapters = 2000;
-    private const long MaxBytes = 128L * 1024 * 1024;
+    /// <summary>Kapitel je Sitzung — nur noch als Reißleine gegen einen Client, der endlos streamt.</summary>
+    private const int MaxChapters = 5000;
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(30);
 
-    // Der Pro-Session-Deckel allein schützt NICHT: die Session-Id kommt vom Client, also konnte ein
-    // einzelner authentifizierter Client beliebig viele Sessions öffnen (je bis 128 MB, TTL 30 min) und
-    // damit den Heap füllen. Zusätzlich daher ein Deckel für die Anzahl offener Sessions je User und ein
-    // prozessweites Byte-Budget; beide intern überschreibbar für Tests.
+    /// <summary>Gleichzeitige Sitzungen je Nutzer: die sessionId kommt vom Client, also könnte ein einzelner
+    /// Client sonst beliebig viele offene Importe erzeugen.</summary>
     internal int MaxSessionsPerUser = 3;
-    internal long MaxTotalBytes = 512L * 1024 * 1024;
     /// <summary>Längen-Obergrenze der (client-vergebenen) Session-Id — sie ist Teil des Dictionary-Keys.</summary>
     public const int MaxSessionIdLength = 64;
 
@@ -42,28 +60,25 @@ public class ChessableIngestSessionStore
 
     private static string Key(int userId, string sessionId) => userId + ":" + sessionId;
 
-    /// <summary>Aktuell gepufferte Bytes über alle Sessions (Diagnose/Tests).</summary>
-    internal long TotalBytes => _sessions.Values.Sum(s => s.Bytes);
+    /// <summary>Offene Sitzungen (Diagnose/Tests).</summary>
+    internal int Count => _sessions.Count;
 
-    /// <summary>Fügt ein Kapitel an die (lazily angelegte) Session an. bid/target/courseName kommen vom
-    /// ERSTEN Chunk und bleiben fix. Liefert die aktualisierte Session oder eine Fehlermeldung
-    /// (Deckel überschritten). Räumt nebenbei abgelaufene Sessions ab.</summary>
-    public (Session? session, string? error) AddChapter(
-        int userId, string sessionId, string bid, string target, string? courseName, ChessableIngestChapter chapter)
+    /// <summary>
+    /// Sitzung holen oder anlegen. bid/target/courseName kommen vom ERSTEN Chunk und bleiben fix.
+    /// Liefert <c>error</c> statt einer Sitzung, wenn die Id unbrauchbar ist oder der Nutzer schon zu viele
+    /// offene Sitzungen hat. Räumt nebenbei abgelaufene Sitzungen ab.
+    /// </summary>
+    public (Session? session, string? error) GetOrCreate(
+        int userId, string sessionId, string bid, string target, string? courseName)
     {
         PurgeExpired();
         if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > MaxSessionIdLength)
             return (null, "Invalid sessionId.");
 
         var key = Key(userId, sessionId);
-        // Deckel VOR dem Anlegen prüfen (nur für NEUE Sessions; eine laufende darf weiterlaufen).
-        if (!_sessions.ContainsKey(key))
-        {
-            if (_sessions.Count(kv => kv.Value.UserId == userId) >= MaxSessionsPerUser)
-                return (null, "Too many concurrent import sessions — finish or abort one first.");
-            if (TotalBytes >= MaxTotalBytes)
-                return (null, "Server is busy with other imports — please retry shortly.");
-        }
+        if (!_sessions.ContainsKey(key)
+            && _sessions.Count(kv => kv.Value.UserId == userId) >= MaxSessionsPerUser)
+            return (null, "Too many concurrent import sessions — finish or abort one first.");
 
         var s = _sessions.GetOrAdd(key, _ => new Session
         {
@@ -72,31 +87,50 @@ public class ChessableIngestSessionStore
             Target = target == "book" ? "book" : "repertoire",
             CourseName = courseName,
         });
+        if (s.ChaptersDone >= MaxChapters) return (null, "Too many chapters in one import session.");
+        s.UpdatedAt = DateTime.UtcNow;
+        return (s, null);
+    }
 
+    /// <summary>Verbindet die Sitzung mit ihrem Import-Datensatz und übernimmt dessen Inflight-Marke
+    /// (sie wird beim Abschluss/Verwerfen/Ablauf freigegeben).</summary>
+    public void AttachImport(Session s, int importId, IDisposable inflight)
+    {
         lock (s)
         {
-            var size = (long)(chapter.ChapterJson?.Length ?? 0)
-                + (chapter.Lines?.Sum(l => (long)(l?.Length ?? 0)) ?? 0);
-            if (s.Chapters.Count >= MaxChapters)
-                return (null, "Too many chapters in one import session.");
-            if (s.Bytes + size > MaxBytes)
-                return (null, "Import session exceeds size limit.");
-            if (TotalBytes + size > MaxTotalBytes)
-                return (null, "Server-side import buffer is full — please retry shortly.");
-
-            s.Chapters.Add(chapter);
-            s.Bytes += size;
-            s.UpdatedAt = DateTime.UtcNow;
-            return (s, null);
+            s.ImportId = importId;
+            s.Inflight?.Dispose();
+            s.Inflight = inflight;
         }
     }
 
-    /// <summary>Entnimmt (und entfernt) die Session zum Abschluss. null, wenn unbekannt/abgelaufen.</summary>
-    public Session? Take(int userId, string sessionId)
-        => _sessions.TryRemove(Key(userId, sessionId), out var s) ? s : null;
+    /// <summary>Vermerkt einen importierten Chunk (Kapitel-Versatz + Zähler).</summary>
+    public void NoteChapter(Session s, int chapterOffset, int linesSeen, int imported, int? resultId)
+    {
+        lock (s)
+        {
+            s.ChapterOffset = Math.Max(s.ChapterOffset, chapterOffset);
+            s.ChaptersDone++;
+            s.LinesSeen += linesSeen;
+            s.Imported += imported;
+            if (resultId is not null) s.ResultId = resultId;
+            s.UpdatedAt = DateTime.UtcNow;
+        }
+    }
 
-    /// <summary>Verwirft eine Session ohne Import (Abbruch/Fehler).</summary>
-    public void Discard(int userId, string sessionId) => _sessions.TryRemove(Key(userId, sessionId), out _);
+    /// <summary>Entnimmt (und entfernt) die Sitzung zum Abschluss. null, wenn unbekannt/abgelaufen.</summary>
+    public Session? Take(int userId, string sessionId) => Remove(Key(userId, sessionId));
+
+    /// <summary>Verwirft eine Sitzung (Abbruch/Fehler). Das bereits Importierte bleibt — es liegt in der DB.</summary>
+    public void Discard(int userId, string sessionId) => Remove(Key(userId, sessionId));
+
+    private Session? Remove(string key)
+    {
+        if (!_sessions.TryRemove(key, out var s)) return null;
+        s.Inflight?.Dispose();
+        s.Inflight = null;
+        return s;
+    }
 
     private void PurgeExpired()
     {
@@ -104,6 +138,13 @@ public class ChessableIngestSessionStore
         var cutoff = DateTime.UtcNow - Ttl;
         foreach (var kv in _sessions)
             if (kv.Value.UpdatedAt < cutoff)
-                _sessions.TryRemove(kv.Key, out _);
+                Remove(kv.Key);
+    }
+
+    /// <summary>Gibt die Inflight-Marken aller offenen Sitzungen frei (Shutdown).</summary>
+    public void Dispose()
+    {
+        foreach (var kv in _sessions) Remove(kv.Key);
+        GC.SuppressFinalize(this);
     }
 }

@@ -227,6 +227,34 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 | GET | `/api/extension/remembered-lines?take=200` | Gemerkte Stellungen des Users (neueste zuerst) |
 | POST | `/api/extension/games` | Speichert die aktuell auf chess.com/lichess angeschaute Partie (Button „Partie speichern") `{ source, moves[], externalId?, white?, black?, result?, sourceUrl?, playedAt? }` → `SavedGames`. Server baut das PGN aus der SAN-Zugliste + Headern und vergibt ein `ShareToken`. Dedup über (UserId, Source, ExternalId). Sichtbar im Bereich „Partien" (`/api/games`) |
 
+
+**Der Browser-Import laeuft LAUFEND, nicht gepuffert (0.484.0).** Die Extension streamt einen Kurs
+kapitelweise an `POST /api/extension/chessable/ingest/chunk`; jeder Chunk wird SOFORT geparst und
+angehaengt (derselbe Weg wie der Live-Append: dedupliziert, je (User, bid) serialisiert). Der
+`ChessableIngestSessionStore` haelt nur noch Zaehler, Ziel und den Kapitel-Versatz.
+
+Vorher sammelte er die ROHEN Kapitel im Arbeitsspeicher und importierte erst beim letzten Chunk —
+mit einem Deckel von 128 MB je Sitzung, bei dessen Erreichen der GANZE Puffer verworfen wurde.
+Gemeldet am 2026-09-19 an „Lifetime Repertoires: King's Indian Defense - Part 2": 1881 Linien, im
+Cache gemessene 455 KB Rohdaten je Linie, zusammen 835 MB. Nach rund 288 Linien kam
+`400 Import session exceeds size limit`, nach 30–60 Minuten Crawlen und ohne eine einzige
+importierte Linie — viermal hintereinander. Jetzt gibt es keinen Deckel mehr, und was geholt ist,
+bleibt auch nach einem Abbruch.
+
+Drei Dinge, die dabei nicht kippen duerfen:
+* **Kapitelnummern fortschreiben** (`ChessableRoundOffset`): piratechess zaehlt die Kapitel je
+  Parse-Aufruf von vorn, und die LineId eines Kurs-Puzzles ist `Datei:Round` — ohne Versatz
+  ueberschriebe Chunk 2 die Linien von Chunk 1.
+* **Inflight-Marke an der SITZUNG, nicht am Request**: zwischen zwei Chunks liegen Minuten (live
+  gemessen bis 13), der Watchdog haelt einen Import aber nach `OrphanGrace` (10 min) ohne lokalen
+  Treiber fuer verwaist und reiht ihn neu ein — die Fast-Lane starte dann einen echten
+  Chessable-Abruf, waehrend der Browser noch streamt.
+* **EIN Import-Datensatz je Sitzung**: angelegt beim ersten Kapitel, abgeschlossen beim finalen
+  Chunk (Status, Kurs-Zuordnung, Benachrichtigung) — sonst gaebe es eine Benachrichtigung je Kapitel.
+
+Ein abgelehnter Chunk wird ausserdem mit Grund geloggt: der 400er stand vorher nur als nackter
+Statuscode im Zugriffslog, die Begruendung ausschliesslich im Quelltext.
+
 ### Gespeicherte Partien (auth + öffentlicher Teilen-Link)
 Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess.com/lichess gespeicherten Partien. Nachspielen (PGN-Viewer-Dialog), „In Analyse öffnen" (PGN via Router-State an `/analysis`), Löschen, und Teilen über einen eindeutigen öffentlichen Link `/g/{shareToken}` (kein Login). Logik in `SavedGameService`; Menü-Key `games` (Default `Registered`).
 

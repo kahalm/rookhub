@@ -22,6 +22,31 @@ public class ExtensionControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly RepertoireService _service;
     private readonly ExtensionController _controller;
+    private readonly ParseStub _parse;
+
+    /// <summary>Steht fuer piratechess: beantwortet NUR den Parse-Endpunkt (mit einer Kurs-Linie je
+    /// Aufruf) — jeder andere Aufruf bleibt unerreichbar, wie ohne Stub.</summary>
+    private sealed class ParseStub : HttpMessageHandler
+    {
+        public int Calls;
+        /// <summary>Chessable-Stil-PGN: FEN + [%tqu]. piratechess zaehlt die Kapitel je Aufruf von vorn,
+        /// liefert also IMMER "002.001" — der Versatz im Server muss daraus verschiedene Runden machen.</summary>
+        private const string Pgn = "[Event \"Test Book\"]\n[Round \"002.001\"]\n[White \"Line\"]\n[Result \"*\"]\n"
+            + "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n"
+            + "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *\n";
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (request.RequestUri?.AbsolutePath != "/api/chessable/direct/course/parse")
+                throw new HttpRequestException("Connection refused");
+            Calls++;
+            var json = System.Text.Json.JsonSerializer.Serialize(new { pgn = Pgn, name = "Course", lineCount = 1 });
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
+            });
+        }
+    }
 
     public ExtensionControllerTests()
     {
@@ -36,7 +61,8 @@ public class ExtensionControllerTests : IDisposable
         var encryption = new EncryptionService(new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" })
             .Build());
-        var chessableProxy = new ChessableProxyService(new HttpClient { BaseAddress = new Uri("http://pc:8080") });
+        _parse = new ParseStub();
+        var chessableProxy = new ChessableProxyService(new HttpClient(_parse) { BaseAddress = new Uri("http://pc:8080") });
         var rememberedService = new RememberedPositionService(_db, encryption, chessableProxy,
             NullLogger<RememberedPositionService>.Instance);
         var savedGameService = new SavedGameService(_db);
@@ -335,7 +361,7 @@ public class ExtensionControllerTests : IDisposable
         => new("{\"list\":{\"name\":\"Ch\",\"data\":[]}}", lines.ToList());
 
     [Fact]
-    public async Task ChessableIngestChunk_NonFinal_AccumulatesAndAcks()
+    public async Task ChessableIngestChunk_ImportsEveryChunkImmediately_WithoutOverwritingTheOneBefore()
     {
         SetUser(7, scope: "extension");
 
@@ -344,13 +370,47 @@ public class ExtensionControllerTests : IDisposable
         var ack1 = Assert.IsType<ChessableIngestChunkAck>(Assert.IsType<OkObjectResult>(r1).Value);
         Assert.False(ack1.Done);
         Assert.Equal(1, ack1.Chapters);
-        Assert.Equal(2, ack1.Lines);
+        Assert.Equal(1, ack1.Imported);
+        // Schon VOR dem letzten Chunk steht die Linie in der Datenbank — das ist der Punkt des Umbaus.
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync());
 
         var r2 = await _controller.ChessableIngestChunk(
             new ChessableIngestChunkRequest("sess-1", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
         var ack2 = Assert.IsType<ChessableIngestChunkAck>(Assert.IsType<OkObjectResult>(r2).Value);
         Assert.Equal(2, ack2.Chapters);
-        Assert.Equal(3, ack2.Lines);
+        Assert.Equal(2, ack2.Imported);
+        // Beide Chunks kamen mit derselben Kapitelnummer vom Parser; ohne Versatz waere es EINE Linie.
+        Assert.Equal(2, await _db.BookPuzzles.CountAsync());
+        Assert.Equal(2, _parse.Calls);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_Final_ClosesTheImport()
+    {
+        SetUser(7, scope: "extension");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-2", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-2", "424242", "book", "Course", Chapter("{\"game\":{}}"), true), default);
+        var dto = Assert.IsType<ChessableIngestResultDto>(Assert.IsType<OkObjectResult>(res).Value);
+        Assert.Equal(2, dto.Imported);
+
+        var import = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Completed, import.Status);
+        Assert.Equal(2, import.ChaptersDone);
+        Assert.NotNull(import.ResultId);
+        // Genau EINE Benachrichtigung je Sitzung, nicht eine je Chunk.
+        Assert.Equal(1, await _db.Notifications.CountAsync(n => n.UserId == 7));
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_FinalWithoutAnyChapter_IsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-3", "424242", "book", "Course", null, true), default);
+        Assert.IsType<BadRequestObjectResult>(res);
     }
 
     [Fact]

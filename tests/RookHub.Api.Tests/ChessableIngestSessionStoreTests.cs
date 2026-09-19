@@ -1,128 +1,133 @@
-using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
-/// <summary>Der In-Memory-Puffer des kapitelweisen Browser-Imports: Akkumulation über Chunks,
-/// Entnahme beim Abschluss, Isolation je (User, SessionId).</summary>
+/// <summary>
+/// Zustand einer laufenden Browser-Import-Sitzung: Zähler über Chunks hinweg, Kapitel-Versatz,
+/// Isolation je (User, SessionId), Deckel für gleichzeitige Sitzungen — und die Inflight-Marke, die
+/// den Import über die Request-Grenze hinweg als „lokal getrieben" hält.
+/// <para>Bis v0.483.1 puffert der Store die rohen Kapitel im Speicher (128 MB je Sitzung). Genau das
+/// ist weg: ein 1881-Linien-Kurs à 455 KB je Linie sprengte den Deckel nach ~288 Linien, und mit ihm
+/// wurde der GANZE Puffer verworfen.</para>
+/// </summary>
 public class ChessableIngestSessionStoreTests
 {
-    private static ChessableIngestChapter Ch(params string[] lines)
-        => new("{\"list\":{\"name\":\"Ch\",\"data\":[]}}", lines.ToList());
-
     [Fact]
-    public void AddChapter_AccumulatesChaptersAndLines()
+    public void GetOrCreate_FirstChunkFixesBidTargetName_LaterChunksReuseSession()
     {
         var store = new ChessableIngestSessionStore();
-        var (s1, e1) = store.AddChapter(7, "sess1", "424242", "book", "My Course", Ch("{\"game\":{}}", "{\"game\":{}}"));
+        var (s1, e1) = store.GetOrCreate(7, "sess1", "424242", "book", "My Course");
         Assert.Null(e1);
-        Assert.Equal(1, s1!.Chapters.Count);
+        Assert.Equal("424242", s1!.Bid);
+        Assert.Equal("book", s1.Target);
+        Assert.Equal("My Course", s1.CourseName);
 
-        var (s2, e2) = store.AddChapter(7, "sess1", "424242", "book", "My Course", Ch("{\"game\":{}}"));
+        var (s2, e2) = store.GetOrCreate(7, "sess1", "999999", "repertoire", "Anderer Name");
         Assert.Null(e2);
-        Assert.Equal(2, s2!.Chapters.Count);
-        Assert.Equal(3, s2.Chapters.Sum(c => c.Lines!.Count));
-        Assert.Equal("424242", s2.Bid);
+        Assert.Same(s1, s2);
+        Assert.Equal("424242", s2!.Bid);      // vom ersten Chunk, nicht überschrieben
         Assert.Equal("book", s2.Target);
-        Assert.Equal("My Course", s2.CourseName);
     }
 
     [Fact]
-    public void FirstChunkFixesBidTargetName_LaterChunksDoNotOverride()
+    public void NoteChapter_CountsChaptersLinesImported_AndKeepsHighestChapterNumber()
     {
         var store = new ChessableIngestSessionStore();
-        store.AddChapter(7, "s", "111", "book", "First", Ch("{\"game\":{}}"));
-        // spätere Chunks mit abweichenden Metadaten dürfen die Session nicht umbiegen
-        var (s, _) = store.AddChapter(7, "s", "999", "repertoire", "Other", Ch("{\"game\":{}}"));
-        Assert.Equal("111", s!.Bid);
-        Assert.Equal("book", s.Target);
-        Assert.Equal("First", s.CourseName);
+        var (s, _) = store.GetOrCreate(7, "sess1", "424242", "book", "C");
+
+        store.NoteChapter(s!, chapterOffset: 3, linesSeen: 12, imported: 12, resultId: 55);
+        store.NoteChapter(s!, chapterOffset: 5, linesSeen: 8, imported: 3, resultId: 55);
+        // Ein Chunk ohne neue Kapitelnummer darf den Versatz NICHT zurückdrehen.
+        store.NoteChapter(s!, chapterOffset: 0, linesSeen: 1, imported: 0, resultId: null);
+
+        Assert.Equal(3, s!.ChaptersDone);
+        Assert.Equal(21, s.LinesSeen);
+        Assert.Equal(15, s.Imported);
+        Assert.Equal(5, s.ChapterOffset);
+        Assert.Equal(55, s.ResultId);
     }
 
     [Fact]
     public void Take_RemovesSession_SecondTakeIsNull()
     {
         var store = new ChessableIngestSessionStore();
-        store.AddChapter(7, "s", "1", "repertoire", null, Ch("{\"game\":{}}"));
-        var taken = store.Take(7, "s");
-        Assert.NotNull(taken);
-        Assert.Single(taken!.Chapters);
-        Assert.Null(store.Take(7, "s"));   // schon entnommen
+        store.GetOrCreate(7, "sess1", "424242", "book", "C");
+        Assert.NotNull(store.Take(7, "sess1"));
+        Assert.Null(store.Take(7, "sess1"));
     }
 
     [Fact]
     public void Sessions_AreIsolatedPerUser()
     {
         var store = new ChessableIngestSessionStore();
-        store.AddChapter(7, "same", "1", "book", null, Ch("{\"game\":{}}"));
-        store.AddChapter(8, "same", "2", "book", null, Ch("{\"game\":{}}"));
-        var u7 = store.Take(7, "same");
-        var u8 = store.Take(8, "same");
-        Assert.Equal("1", u7!.Bid);
-        Assert.Equal("2", u8!.Bid);
+        var (a, _) = store.GetOrCreate(7, "same-id", "111111", "book", "A");
+        var (b, _) = store.GetOrCreate(8, "same-id", "222222", "repertoire", "B");
+        Assert.NotSame(a, b);
+        Assert.Equal("111111", a!.Bid);
+        Assert.Equal("222222", b!.Bid);
+
+        store.Take(7, "same-id");
+        Assert.NotNull(store.Take(8, "same-id"));   // fremde Sitzung bleibt unberührt
     }
 
     [Fact]
-    public void Discard_DropsSessionWithoutImport()
-    {
-        var store = new ChessableIngestSessionStore();
-        store.AddChapter(7, "s", "1", "book", null, Ch("{\"game\":{}}"));
-        store.Discard(7, "s");
-        Assert.Null(store.Take(7, "s"));
-    }
-
-    // ---- Deckel gegen Speicher-Erschöpfung ------------------------------------------------------
-    // Der Pro-Session-Deckel allein reichte nicht: die SessionId kommt vom Client, ein einzelner
-    // authentifizierter Client konnte also beliebig viele Sessions (je bis 128 MB, TTL 30 min) öffnen.
-
-    [Fact]
-    public void AddChapter_TooManySessionsPerUser_IsRejected()
+    public void TooManySessionsPerUser_IsRejected_AndSlotIsFreeAfterTake()
     {
         var store = new ChessableIngestSessionStore { MaxSessionsPerUser = 2 };
-        Assert.Null(store.AddChapter(7, "a", "1", "book", null, Ch("{\"game\":{}}")).error);
-        Assert.Null(store.AddChapter(7, "b", "1", "book", null, Ch("{\"game\":{}}")).error);
+        Assert.Null(store.GetOrCreate(7, "s1", "1", "book", null).error);
+        Assert.Null(store.GetOrCreate(7, "s2", "1", "book", null).error);
 
-        var (session, error) = store.AddChapter(7, "c", "1", "book", null, Ch("{\"game\":{}}"));
-        Assert.Null(session);
-        Assert.NotNull(error);
+        var (blocked, error) = store.GetOrCreate(7, "s3", "1", "book", null);
+        Assert.Null(blocked);
+        Assert.Contains("Too many", error);
 
-        // Bestehende Sessions dürfen weiterlaufen …
-        Assert.Null(store.AddChapter(7, "a", "1", "book", null, Ch("{\"game\":{}}")).error);
-        // … und ein anderer User ist nicht betroffen (Deckel ist pro User).
-        Assert.Null(store.AddChapter(8, "c", "1", "book", null, Ch("{\"game\":{}}")).error);
+        store.Take(7, "s1");
+        Assert.Null(store.GetOrCreate(7, "s3", "1", "book", null).error);
     }
 
-    [Fact]
-    public void AddChapter_AfterTake_SlotIsFreeAgain()
-    {
-        var store = new ChessableIngestSessionStore { MaxSessionsPerUser = 1 };
-        store.AddChapter(7, "a", "1", "book", null, Ch("{\"game\":{}}"));
-        Assert.NotNull(store.AddChapter(7, "b", "1", "book", null, Ch("{\"game\":{}}")).error);
-
-        store.Take(7, "a");
-        Assert.Null(store.AddChapter(7, "b", "1", "book", null, Ch("{\"game\":{}}")).error);
-    }
-
-    [Fact]
-    public void AddChapter_GlobalByteBudgetExceeded_IsRejected()
-    {
-        var store = new ChessableIngestSessionStore { MaxTotalBytes = 200 };
-        var big = Ch(new string('x', 150));
-        Assert.Null(store.AddChapter(7, "a", "1", "book", null, big).error);
-
-        // Zweiter Chunk würde das prozessweite Budget reißen (auch für einen anderen User).
-        var (session, error) = store.AddChapter(8, "b", "1", "book", null, big);
-        Assert.Null(session);
-        Assert.NotNull(error);
-    }
-
-    [Fact]
-    public void AddChapter_InvalidSessionId_IsRejected()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void InvalidSessionId_IsRejected(string id)
     {
         var store = new ChessableIngestSessionStore();
-        // Die SessionId ist Teil des Dictionary-Keys → Länge begrenzen, Leerwerte ablehnen.
-        Assert.NotNull(store.AddChapter(7, "", "1", "book", null, Ch("{\"game\":{}}")).error);
-        Assert.NotNull(store.AddChapter(7, new string('s', ChessableIngestSessionStore.MaxSessionIdLength + 1),
-            "1", "book", null, Ch("{\"game\":{}}")).error);
+        var (s, error) = store.GetOrCreate(7, id, "424242", "book", "C");
+        Assert.Null(s);
+        Assert.Equal("Invalid sessionId.", error);
+    }
+
+    [Fact]
+    public void OverlongSessionId_IsRejected()
+    {
+        var store = new ChessableIngestSessionStore();
+        var (s, error) = store.GetOrCreate(7, new string('x', ChessableIngestSessionStore.MaxSessionIdLength + 1),
+            "424242", "book", "C");
+        Assert.Null(s);
+        Assert.Equal("Invalid sessionId.", error);
+    }
+
+    [Fact]
+    public void Inflight_HeldAcrossChunks_ReleasedOnTake()
+    {
+        // Zwischen zwei Chunks liegen Minuten; ohne diese Marke hielte der Watchdog den Import nach
+        // seiner Karenz für verwaist und reihte ihn neu ein — mitten im laufenden Browser-Import.
+        var store = new ChessableIngestSessionStore();
+        var (s, _) = store.GetOrCreate(7, "sess1", "424242", "book", "C");
+        store.AttachImport(s!, 4711, ChessableImportService.TrackInflight(4711));
+
+        Assert.True(ChessableImportService.IsDrivenLocally(4711));
+        store.Take(7, "sess1");
+        Assert.False(ChessableImportService.IsDrivenLocally(4711));
+    }
+
+    [Fact]
+    public void Discard_ReleasesInflightToo()
+    {
+        var store = new ChessableIngestSessionStore();
+        var (s, _) = store.GetOrCreate(7, "sess1", "424242", "book", "C");
+        store.AttachImport(s!, 4712, ChessableImportService.TrackInflight(4712));
+
+        store.Discard(7, "sess1");
+        Assert.False(ChessableImportService.IsDrivenLocally(4712));
     }
 }

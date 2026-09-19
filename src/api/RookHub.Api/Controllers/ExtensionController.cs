@@ -431,8 +431,17 @@ public class ExtensionController : BaseApiController
         var userId = GetUserId();
         var target = dto.Target == "book" ? "book" : "repertoire";
 
-        // Kapitel anhängen (ein finaler Chunk darf leer sein, wenn das letzte Kapitel schon zuvor kam).
-        ChessableIngestSessionStore.Session? session = null;
+        var (session, storeError) = _ingestSessions.GetOrCreate(userId, dto.SessionId, dto.Bid, target, dto.CourseName);
+        if (session is null)
+        {
+            // Abgelehnte Chunks waren bisher nur als nackter 400 im Zugriffslog zu sehen — der Grund stand
+            // ausschliesslich im Quelltext (am 2026-09-19 die halbe Fehlersuche gekostet).
+            _logger.LogWarning("Browser-Import abgelehnt (User {UserId}, bid {Bid}): {Reason}", userId, dto.Bid, storeError);
+            return BadRequest(new { message = storeError });
+        }
+
+        // Kapitel SOFORT parsen und anhängen (ein finaler Chunk darf leer sein, wenn das letzte Kapitel
+        // schon zuvor kam). Nichts wird zwischengelagert: was geholt ist, steht danach in der Datenbank.
         if (dto.Chapter is { } chapter && (chapter.Lines?.Count ?? 0) > 0)
         {
             if (ValidateLineOids(new[] { chapter }) is { } shapeError)
@@ -440,28 +449,51 @@ public class ExtensionController : BaseApiController
                 _ingestSessions.Discard(userId, dto.SessionId);
                 return BadRequest(new { message = shapeError });
             }
-            var (s, error) = _ingestSessions.AddChapter(userId, dto.SessionId, dto.Bid, target, dto.CourseName, chapter);
-            if (error != null)
+
+            ChessableCourseDataDto parsed;
+            try
             {
-                _ingestSessions.Discard(userId, dto.SessionId);
-                return BadRequest(new { message = error });
+                parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, target == "book" ? "FirstKeyMove" : "None",
+                    new[] { chapter }, dto.CourseJson, dto.Complete, ct);
             }
-            session = s;
+            catch (ChessableProxyException ex)
+            {
+                _logger.LogWarning(ex, "Browser-Import: Parser-Fehler (User {UserId}, bid {Bid})", userId, dto.Bid);
+                var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
+                return StatusCode(code, new { message = ex.Message });
+            }
+
+            if (!string.IsNullOrWhiteSpace(parsed.Pgn))
+            {
+                if (session.ImportId is null)
+                {
+                    var (import, inflight) = await _chessableImport.StartBrowserImportAsync(
+                        userId, dto.Bid, dto.CourseName ?? parsed.Name, target, ct);
+                    _ingestSessions.AttachImport(session, import.Id, inflight);
+                }
+
+                // Kapitelnummern hinter den bisherigen fortschreiben — sonst überschriebe Chunk 2 die
+                // Linien von Chunk 1 (LineId = Datei:Round). Siehe ChessableRoundOffset.
+                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, session.ChapterOffset);
+                var res = await _chessableImport.AppendBrowserChunkAsync(
+                    session.ImportId!.Value, shifted, parsed.LineCount, ct);
+                _ingestSessions.NoteChapter(session, ChessableRoundOffset.MaxChapter(shifted),
+                    parsed.LineCount, res.Imported, res.ResultId);
+            }
         }
 
         if (!dto.Final)
-        {
-            var lines = session?.Chapters.Sum(c => c.Lines?.Count ?? 0) ?? 0;
-            return Ok(new ChessableIngestChunkAck(false, session?.Chapters.Count ?? 0, lines));
-        }
+            return Ok(new ChessableIngestChunkAck(false, session.ChaptersDone, session.LinesSeen, session.Imported));
 
-        // Final: gesamte Session entnehmen und als ganzen Kurs parsen + importieren.
+        // Final: Sitzung schliessen. Das Importierte steht laengst in der Datenbank.
         var taken = _ingestSessions.Take(userId, dto.SessionId);
-        if (taken == null || taken.Chapters.Count == 0)
+        if (taken?.ImportId is not int importId)
             return BadRequest(new { message = "No captured lines in session." });
 
-        return await ParseAndImportAsync(userId, taken.Bid, taken.Target, taken.CourseName, taken.Chapters, ct,
-            dto.CourseJson, dto.Complete);
+        var done = await _chessableImport.FinishBrowserImportAsync(importId, ct);
+        if (done is null) return BadRequest(new { message = "Import record vanished." });
+        return Ok(new ChessableIngestResultDto(done.Id, done.Target, done.ResultId, done.CourseName,
+            done.Imported, done.Skipped, done.Invalid, taken.LinesSeen));
     }
 
     /// <summary>

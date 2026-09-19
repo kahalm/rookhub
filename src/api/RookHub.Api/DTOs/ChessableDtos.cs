@@ -80,7 +80,10 @@ public record ChessableCachedLinesRequest(List<string>? Oids);
 public record ChessableCachedLinesDto(List<string> Oids);
 
 /// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>
-public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines);
+/// <summary><c>Imported</c> = bereits in dieser Sitzung angelegte Linien. Seit dem laufenden Import
+/// wächst die Zahl mit jedem Chunk, statt erst am Ende zu erscheinen — die Extension kann den
+/// tatsächlichen Stand auf RookHub anzeigen.</summary>
+public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines, int Imported = 0);
 
 /// <summary>Import-Fortschritt eines Chessable-Kurses für die RepCheck-Overlays: welche Chessable-oids
 /// der User bereits importiert hat (als Buch und/oder Repertoire). Die Extension matcht diese oids gegen

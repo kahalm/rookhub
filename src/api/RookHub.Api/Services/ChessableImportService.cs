@@ -1167,6 +1167,108 @@ public class ChessableImportService : ICourseReimporter
             await ReplaceRepertoireFileAsync(repId, import.UserId, fileName, pgn, ct);
     }
 
+    // ===== Laufender Browser-Import (Kapitel für Kapitel) =====
+    // Der Browser streamt einen Kurs in Chunks; jeder wird SOFORT geparst und angehängt, statt bis zum
+    // Schluss im Speicher zu liegen (siehe ChessableIngestSessionStore). Drei Schritte, damit die
+    // Sitzung trotzdem EINEN Import-Datensatz und EINE Benachrichtigung ergibt.
+
+    /// <summary>
+    /// Schritt 1: Import-Datensatz der Sitzung anlegen. Der zurückgegebene Token hält ihn als „lokal
+    /// getrieben" markiert — er gehört in die Sitzung, nicht in den Request, sonst hält der Watchdog den
+    /// Import zwischen zwei Chunks für verwaist und reiht ihn neu ein.
+    /// </summary>
+    public async Task<(ChessableImport Import, IDisposable Inflight)> StartBrowserImportAsync(
+        int userId, string bid, string? courseName, string target, CancellationToken ct = default)
+    {
+        target = target == "book" ? "book" : "repertoire";
+        var import = new ChessableImport
+        {
+            UserId = userId,
+            Bid = bid,
+            CourseName = Trunc(string.IsNullOrWhiteSpace(courseName) ? $"Chessable {bid}" : courseName!, 200),
+            Target = target,
+            Status = ChessableImportStatus.Running,
+            Phase = ChessableImportPhase.Importing,
+            FullyCached = true,   // Browser liefert die Daten → kein Chessable-Abruf
+            CreatedAt = DateTime.UtcNow,
+            StartedAt = DateTime.UtcNow,
+        };
+        _db.ChessableImports.Add(import);
+        await _db.SaveChangesAsync(ct);
+        return (import, TrackInflight(import.Id));
+    }
+
+    /// <summary>
+    /// Schritt 2: einen Kapitel-Chunk anhängen. Geht denselben Weg wie der Live-Append (dedupliziert,
+    /// je (User, bid) serialisiert) und schreibt die Zähler des Import-Datensatzes fort, damit die
+    /// Warteschlangen-Anzeige mitwächst.
+    /// </summary>
+    public async Task<LiveAppendResult> AppendBrowserChunkAsync(
+        int importId, string pgn, int linesInChunk, CancellationToken ct = default)
+    {
+        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct)
+            ?? throw new InvalidOperationException($"Chessable import {importId} not found.");
+
+        var res = await AppendLiveAsync(import.UserId, import.Bid, pgn, import.CourseName, import.Target, ct);
+
+        import.Imported += res.Imported;
+        import.Skipped += Math.Max(0, linesInChunk - res.Imported);
+        import.LineCount += linesInChunk;
+        import.LinesDone = import.LineCount;
+        import.ChaptersDone += 1;
+        import.ChaptersTotal = Math.Max(import.ChaptersTotal, import.ChaptersDone);
+        if (res.ResultId is not null) import.ResultId = res.ResultId;
+        await _db.SaveChangesAsync(ct);
+        return res;
+    }
+
+    /// <summary>
+    /// Schritt 3: Sitzung abschließen — Status, Kurs-Zuordnung, Log, Benachrichtigung. <c>null</c>, wenn
+    /// der Datensatz nicht (mehr) existiert.
+    /// </summary>
+    public async Task<ChessableImport?> FinishBrowserImportAsync(int importId, CancellationToken ct = default)
+    {
+        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
+        if (import is null) return null;
+
+        // Kurs-Zuordnung (bid) nachtragen: das Parser-PGN trägt kein [Site]-Tag, und ohne sie fände ein
+        // späterer Browser-Import das Repertoire nicht wieder und legte ein zweites an.
+        if (import.Target == "repertoire" && import.ResultId is int repId)
+        {
+            var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repId, ct);
+            if (rep is not null && string.IsNullOrEmpty(rep.ChessableCourseId)) rep.ChessableCourseId = import.Bid;
+        }
+
+        import.Status = ChessableImportStatus.Completed;
+        import.Phase = ChessableImportPhase.Done;
+        import.CompletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        using (LogContext.PushProperty("LogTags", "import,chessable,browser"))
+            _logger.LogInformation(
+                "Browser-Import {Id} fertig (laufend): {Target} '{Name}' (bid {Bid}), Kapitel={Chapters}, imported={Imported}",
+                import.Id, import.Target, import.CourseName, import.Bid, import.ChaptersDone, import.Imported);
+
+        await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
+            new Dictionary<string, string>
+            {
+                ["courseName"] = import.CourseName,
+                ["target"] = import.Target,
+                ["queueTime"] = "0s",
+                ["fetchTime"] = "0s",
+            },
+            import.Target == "book" ? "/courses" : "/repertoires");
+        return import;
+    }
+
+    /// <summary>Bricht den Import-Datensatz einer Sitzung ab. Das bereits Importierte BLEIBT — es liegt
+    /// in der Datenbank und ist genau der Gewinn des laufenden Imports.</summary>
+    public async Task FailBrowserImportAsync(int importId, string message, CancellationToken ct = default)
+    {
+        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
+        if (import is not null) await FailAsync(import, message);
+    }
+
     private async Task ImportAsBookAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
         // Pro-User-eindeutiger Dateiname; PgnImportService dedupliziert per LineId → von Natur aus
