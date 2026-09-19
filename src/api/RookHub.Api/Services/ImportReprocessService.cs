@@ -45,6 +45,14 @@ public partial class ImportReprocessService
     private readonly PgnImportService _pgnImport;
     private readonly ICourseReimporter _chessableImport;
     private readonly ILogger<ImportReprocessService> _logger;
+    /// <summary>Läuft der RookHub-EIGENE Chessable-Weg (<c>Chessable:Enabled</c>)? Ist er aus (PROD seit
+    /// 2026-09-09), kann NICHTS neu von Chessable geholt werden — ein Re-Fetch-Auftrag bliebe für immer
+    /// liegen, weil die Lanes gar nicht laufen. Dann gilt für ein veraltetes Buch: lokal aus der
+    /// gespeicherten Quelle aufbereiten, wenn es eine hat (bringt genau das, was das Banner verspricht —
+    /// die Zug-Kommentare; nur die <c>[ChessableOid]</c> fehlen weiter), sonst als „braucht Re-Import"
+    /// ausweisen statt als aktualisierbar. Vorher stand dort dauerhaft „1 Kurs kann aktualisiert werden",
+    /// und jeder Klick meldete nur „übersprungen" (gemeldet 2026-09-20).</summary>
+    private readonly bool _chessableEnabled;
 
     /// <summary>Wie lange ein nicht-cachebarer (truncated) Kurs nach einem erfolglosen Re-Fetch im
     /// automatischen Massen-Reprocess übersprungen wird, bevor er erneut versucht wird. Ein solcher
@@ -56,8 +64,10 @@ public partial class ImportReprocessService
         AppDbContext db,
         PgnImportService pgnImport,
         ICourseReimporter chessableImport,
-        ILogger<ImportReprocessService> logger)
+        ILogger<ImportReprocessService> logger,
+        IConfiguration? configuration = null)
     {
+        _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
         _db = db;
         _pgnImport = pgnImport;
         _chessableImport = chessableImport;
@@ -79,7 +89,7 @@ public partial class ImportReprocessService
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
             .Select(b => new
             {
-                HasSource = b.SourcePgn != null,
+                HasSource = b.SourcePgn != null && b.SourcePgn != "",
                 // „Modern": Quelle enthält bereits ALLES, was die aktuelle Pipeline aus dem Quell-PGN zieht —
                 // maßgeblich der jüngste Marker [ChessableOid] (piratechess ≥ v1.0.39). Nur dann reicht ein
                 // lokaler Re-Parse (SQL-LIKE, lädt das große PGN NICHT). Eine ältere Quelle mit zwar [%alt]/
@@ -93,14 +103,17 @@ public partial class ImportReprocessService
         // Re-Fetch nur noch für Chessable-Kurse, deren gespeicherte Quelle die Marker NOCH NICHT enthält
         // (alte Abrufe). Chessable-Kurse mit „moderner" Quelle + alle Nicht-Chessable mit Quelle werden
         // LOKAL aus dem gespeicherten PGN aufbereitet (kein Netz, umgeht Crash/Dedup/Bearer).
+        // EINE Regel für Anzeige und Ausführung (ActionFor) — laufen sie auseinander, verspricht das
+        // Banner eine Aktion, die der Lauf dann überspringt, und es bleibt für immer stehen.
+        var actions = stale.Select(b => ActionFor(b.HasSource, b.SourceModern, b.Tags, b.FileName)).ToList();
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
             Total = total,
             Stale = stale.Count,
-            Refetchable = stale.Count(b => CanRefetch(b.Tags, b.FileName) && !b.SourceModern),
-            ReprocessableLocally = stale.Count(b => b.HasSource && (!CanRefetch(b.Tags, b.FileName) || b.SourceModern)),
-            NeedsReimport = stale.Count(b => !b.HasSource && !CanRefetch(b.Tags, b.FileName)),
+            Refetchable = actions.Count(a => a == StaleAction.Refetch),
+            ReprocessableLocally = actions.Count(a => a == StaleAction.Local),
+            NeedsReimport = actions.Count(a => a == StaleAction.Manual),
         };
     }
 
@@ -117,15 +130,17 @@ public partial class ImportReprocessService
         var refetch = new List<RefetchCandidate>();
         foreach (var book in stale)
         {
-            if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid)
-                && !SourceHasModernMarkers(book.SourcePgn))
+            var action = ActionFor(!string.IsNullOrEmpty(book.SourcePgn), SourceHasModernMarkers(book.SourcePgn),
+                book.Tags, book.FileName);
+            if (action == StaleAction.Refetch)
             {
                 // Chessable OHNE moderne Quelle: vollständiger Re-Fetch (die [ChessableOid] steht nicht im
                 // alten gecachten PGN → ein lokales Reprocess könnte sie nie setzen).
                 if (localOnly) continue; // Netz-Re-Fetch bewusst auslassen
+                TryParseBid(book.FileName, out var bid);   // ActionFor hat die bid bereits geprüft
                 refetch.Add(new RefetchCandidate(book.OwnerUserId ?? userId, bid, "book", book.DisplayName, null));
             }
-            else if (!string.IsNullOrEmpty(book.SourcePgn))
+            else if (action == StaleAction.Local)
             {
                 // Lokal verlustfrei + in-place aus dem gespeicherten PGN (ImportFileAsync erkennt das
                 // veraltete Buch). Gilt für Nicht-Chessable UND Chessable mit „moderner" Quelle
@@ -139,7 +154,7 @@ public partial class ImportReprocessService
                     // Dieselbe Regel wie beim Anlegen: bei einem EIGENEN Kurs bleiben die
                     // Repertoire-Linien aus der Grundstellung spielbar. Ohne das raeumte ein
                     // Reprocess genau die Linien wieder ab, die die Umwandlung erzeugt hat.
-                    var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn,
+                    var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn!,
                         CancellationToken.None, playFromStartPosition: book.OwnerUserId != null);
                     result.Reprocessed++;
                     result.UpdatedLines += res.Updated;
@@ -185,6 +200,13 @@ public partial class ImportReprocessService
     private async Task EnqueueRefetchesAsync(IReadOnlyList<RefetchCandidate> candidates, bool isAdmin, ReprocessResultDto result, IReadOnlySet<string>? knownCachedBids = null)
     {
         if (candidates.Count == 0) return;
+        if (!_chessableEnabled)
+        {
+            // Sicherheitsnetz: ohne die eigenen Lanes würde ein angelegter Auftrag nie abgearbeitet — er
+            // stünde als „läuft" in der Liste und blockierte über die Dedup-Regel jeden späteren Versuch.
+            result.Skipped += candidates.Count;
+            return;
+        }
 
         // Cache-Status ALLER Kandidaten EINMAL en bloc (1 piratechess-Aufruf) statt je Kurs ein teurer
         // Einzel-Check, der den ganzen Cache-Blob lädt+entpackt. Der Aufrufer kann die Menge bereits
@@ -236,7 +258,9 @@ public partial class ImportReprocessService
         // NICHT enthält. Ist es „modern" (bereits enthalten) bzw. Nicht-Chessable → reiner Versions-Mark.
         // Hinweis: „Aktualisieren" löst inzwischen JEDEN stale-Fall auf (Bearer-Re-Fetch, Cache-Re-Fetch
         // ohne Bearer, oder Versions-Mark), sodass das Banner danach immer leer wird.
-        var refetchable = stale.Count(r => ResolveRepertoireBid(r) != null && !RepertoireSourceModern(r));
+        var refetchable = _chessableEnabled
+            ? stale.Count(r => ResolveRepertoireBid(r) != null && !RepertoireSourceModern(r))
+            : 0;   // eigener Chessable-Weg aus → nichts holbar; der Lauf setzt sie unten auf die aktuelle Version
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
@@ -266,7 +290,7 @@ public partial class ImportReprocessService
         // Ein gecachter Kurs ist AUCH ohne Bearer holbar (piratechess liefert ihn aus dem Rohdaten-Cache) —
         // aber nur im Admin-Reprocess (trustOwnership; sonst wäre es ein Eigentums-Bypass, [[0.203.9]]).
         // Cache-Status daher NUR abrufen, wenn es überhaupt einen bearer-losen Chessable-Kandidaten gibt.
-        var needCache = !localOnly && isAdmin && stale.Any(r =>
+        var needCache = !localOnly && _chessableEnabled && isAdmin && stale.Any(r =>
             ResolveRepertoireBid(r) is { } b && !RepertoireSourceModern(r) && !bearerUsers.Contains(r.UserId));
         var cachedBids = needCache
             ? await _chessableImport.GetCachedBidsAsync(CancellationToken.None)
@@ -274,7 +298,7 @@ public partial class ImportReprocessService
         foreach (var r in stale)
         {
             var bid = ResolveRepertoireBid(r);
-            if (bid != null && !RepertoireSourceModern(r))
+            if (bid != null && !RepertoireSourceModern(r) && _chessableEnabled)
             {
                 // Chessable-Repertoire OHNE moderne Quelle = Re-Fetch-Kandidat.
                 if (localOnly) continue; // „Aus Cache"-Modus: Netz-Re-Fetch bewusst auslassen (bleibt stale)
@@ -310,6 +334,22 @@ public partial class ImportReprocessService
     /// Chessable-Import erkennbar ist UND sich die bid aus dem Dateinamen lösen lässt — sonst bleibt
     /// nur lokales Reprocess (mit Quelle) bzw. manueller Re-Import. Muss zur Verzweigung in
     /// <see cref="ReprocessCoursesAsync"/> passen, damit Status-Zählung und Ausführung übereinstimmen.</summary>
+    /// <summary>Was mit einem veralteten Buch geschehen kann. EINE Regel für Status-Zählung und Lauf.</summary>
+    private enum StaleAction
+    {
+        /// <summary>Frisch von Chessable holen (nur mit eigenem Chessable-Weg).</summary>
+        Refetch,
+        /// <summary>Aus dem gespeicherten Quell-PGN neu aufbereiten — kein Netz.</summary>
+        Local,
+        /// <summary>Weder noch: nur ein manueller Re-Import (heute: über die RepCheck-Erweiterung) hilft.</summary>
+        Manual,
+    }
+
+    private StaleAction ActionFor(bool hasSource, bool sourceModern, string? tags, string fileName)
+        => _chessableEnabled && CanRefetch(tags, fileName) && !sourceModern ? StaleAction.Refetch
+            : hasSource ? StaleAction.Local
+            : StaleAction.Manual;
+
     private static bool CanRefetch(string? tags, string fileName) =>
         IsChessable(tags, fileName) && TryParseBid(fileName, out _);
 

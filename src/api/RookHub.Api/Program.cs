@@ -300,13 +300,16 @@ try
     // naechtliche Kurslisten-Refresh, und `/api/chessable/*` antwortet 404. Der Weg ueber die
     // RepCheck-EXTENSION (`/api/extension/*`) ist davon UNBERUEHRT — genau darum geht es beim
     // Abschalten: alle sollen vorerst die Extension benutzen (Entscheidung 2026-09-09).
+    // Der Watchdog laeuft IMMER: neben dem Lane-Sicherheitsnetz (bounded-DropOldest-Ticketverlust /
+    // fehlende Nachreihung nach Abschluss) erledigt er die Pflichten des EXTENSION-Wegs — abgelaufene
+    // Browser-Sitzungen und verwaiste Browser-Importe schliessen. Genau die fielen aus, solange er hinter
+    // `Chessable:Enabled` stand: auf PROD (Flag seit 2026-09-09 aus) blieb jeder abgebrochene Browser-Import
+    // fuer immer auf „laeuft". Was zu den eigenen Lanes gehoert, schaltet er selbst ab (LanesEnabled).
+    builder.Services.AddHostedService<ChessableImportWatchdogService>();
     if (chessableEnabled)
     {
         // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
         builder.Services.AddHostedService<ChessableImportResumeService>();
-        // Download-Lane-Sicherheitsnetz: stößt wartende (nicht-gecachte) Importe an, falls der
-        // Queue-Antrieb steht (bounded-DropOldest-Ticketverlust / fehlende Nachreihung nach Abschluss).
-        builder.Services.AddHostedService<ChessableImportWatchdogService>();
         // Schnelle Lane: treibt voll-gecachte Importe sofort + seriell, parallel zur Download-Lane.
         builder.Services.AddHostedService<ChessableImportFastLaneService>();
     }

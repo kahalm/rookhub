@@ -45,10 +45,26 @@ public class ChessableImportWatchdogService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChessableImportWatchdogService> _logger;
 
-    public ChessableImportWatchdogService(IServiceScopeFactory scopeFactory, ILogger<ChessableImportWatchdogService> logger)
+    /// <summary>
+    /// Laufen die RookHub-EIGENEN Chessable-Lanes (<c>Chessable:Enabled</c>)? Auf PROD stehen sie seit
+    /// 2026-09-09 auf <c>false</c> — alle sollen die RepCheck-Erweiterung benutzen. Der EXTENSION-Weg ist
+    /// davon ausdrücklich UNBERÜHRT, und genau deshalb läuft dieser Dienst jetzt auch dann: seine
+    /// Browser-Pflichten (Sitzungen schließen, verwaiste Browser-Importe beenden) gehören zum
+    /// Extension-Weg. Ist der eigene Weg AUS, wird nichts angetrieben, was ohnehin niemand abarbeitet —
+    /// und ein verwaister Import wird BEENDET statt zurückgestellt: zurückgestellt stünde er für immer
+    /// auf „läuft" und blockierte über die Dedup-Regel in <c>EnqueueReimportAsync</c> jeden neuen Import
+    /// desselben Kurses (2026-09-20 auf Prod: „1 Kurs kann aktualisiert werden" ließ sich nicht abräumen).
+    /// </summary>
+    internal bool LanesEnabled { get; init; } = true;
+
+    public ChessableImportWatchdogService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<ChessableImportWatchdogService> logger,
+        IConfiguration? configuration = null)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        LanesEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -81,21 +97,25 @@ public class ChessableImportWatchdogService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var resumedCount = await ResumeExpiredRateLimitedAsync(db, ct);
+        var imports = scope.ServiceProvider.GetRequiredService<ChessableImportService>();
+
+        // Browser-Import-Sitzungen ohne Chunk seit 30 min: Import-Datensatz mit dem Erreichten schließen.
+        // Steht VOR dem Verwaist-Check: ein so geschlossener Import ist danach terminal und taucht dort
+        // gar nicht erst als „läuft ohne Treiber" auf.
+        var closed = 0;
+        if (scope.ServiceProvider.GetService<ChessableIngestSessionStore>() is { } sessions)
+            closed = await CloseExpiredBrowserSessionsAsync(sessions, imports, ct);
+
+        var resumedCount = LanesEnabled ? await ResumeExpiredRateLimitedAsync(db, ct) : 0;
         if (resumedCount > 0)
             _logger.LogInformation(
                 "Chessable-Import-Watchdog: {Count} wegen Tageslimit pausierte Importe nach 24h automatisch freigegeben",
                 resumedCount);
 
-        var reclaimed = await ReclaimOrphanedInflightAsync(db, ct);
+        var reclaimed = await ReclaimOrphanedInflightAsync(db, imports, ct);
 
-        // Browser-Import-Sitzungen ohne Chunk seit 30 min: Import-Datensatz mit dem Erreichten schließen.
-        // Muss VOR dem Verwaist-Check liegen bzw. dessen Karenz unterlaufen — sonst stünde der Import
-        // erst auf „läuft ohne Treiber" und würde neu eingereiht.
-        var closed = 0;
-        if (scope.ServiceProvider.GetService<ChessableIngestSessionStore>() is { } sessions)
-            closed = await CloseExpiredBrowserSessionsAsync(sessions,
-                scope.ServiceProvider.GetRequiredService<ChessableImportService>(), ct);
+        // Ohne die eigenen Lanes gibt es keinen Drain, den man anstoßen könnte.
+        if (!LanesEnabled) return resumedCount > 0 || reclaimed > 0 || closed > 0;
 
         if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0 || reclaimed > 0 || closed > 0;
 
@@ -169,7 +189,7 @@ public class ChessableImportWatchdogService : BackgroundService
         return closed;
     }
 
-    internal async Task<int> ReclaimOrphanedInflightAsync(AppDbContext db, CancellationToken ct = default)
+    internal async Task<int> ReclaimOrphanedInflightAsync(AppDbContext db, ChessableImportService? imports = null, CancellationToken ct = default)
     {
         var inflight = await db.ChessableImports
             .Where(i => i.Status == ChessableImportStatus.Running && InflightPhases.Contains(i.Phase))
@@ -192,6 +212,26 @@ public class ChessableImportWatchdogService : BackgroundService
                 continue;
             }
             if (now - since < OrphanGrace) continue;
+
+            if (!LanesEnabled)
+            {
+                // Eigener Chessable-Weg aus: ein zurückgestellter Import würde NIE wieder aufgegriffen.
+                // Hier kann es sich nur um einen Browser-Import handeln, dessen Sitzung dieser Prozess nicht
+                // mehr kennt (API-Neustart, Tab zu) — die Linien sind längst importiert, nur der Datensatz
+                // sagte weiter „läuft" und blockierte jeden neuen Import desselben Kurses.
+                _logger.LogWarning(
+                    "Chessable-Import-Watchdog: Import {Id} (bid {Bid}) steht seit {Minutes:0} min in Phase {Phase} "
+                    + "ohne Treiber, und der eigene Chessable-Weg ist abgeschaltet — Datensatz wird geschlossen",
+                    import.Id, import.Bid, (now - since).TotalMinutes, import.Phase);
+                if (imports is not null)
+                    await imports.FailBrowserImportAsync(import.Id,
+                        "Browser-Abruf ohne Abschluss — die Sitzung ist nicht mehr bekannt (Neustart oder geschlossener Tab).", ct);
+                else
+                    import.Phase = ChessableImportPhase.Queued;
+                _orphanSince.Remove(import.Id);
+                reclaimed++;
+                continue;
+            }
 
             _logger.LogWarning(
                 "Chessable-Import-Watchdog: Import {Id} (bid {Bid}) steht seit {Minutes:0} min in Phase {Phase}, "

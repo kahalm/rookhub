@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -68,14 +69,32 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         Assert.False(await ChessableImportWatchdogService.IsDrainStalledAsync(_db));
     }
 
-    private ChessableImportWatchdogService Watchdog()
+    private ChessableImportWatchdogService Watchdog(bool lanesEnabled = true)
     {
         var services = new ServiceCollection();
         services.AddSingleton(_db);
         var provider = services.BuildServiceProvider();
         return new ChessableImportWatchdogService(
             provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<ChessableImportWatchdogService>.Instance);
+            NullLogger<ChessableImportWatchdogService>.Instance,
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Chessable:Enabled"] = lanesEnabled ? "true" : "false" })
+                .Build());
+    }
+
+    /// <summary>Echter Import-Dienst (für den Weg, der einen Datensatz wirklich schließt).</summary>
+    private ChessableImportService Imports()
+    {
+        var encryption = new EncryptionService(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" })
+            .Build());
+        var proxy = new ChessableProxyService(new HttpClient { BaseAddress = new Uri("http://pc:8080") });
+        var bgQueue = new NoOpBackgroundTaskQueue();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        return new ChessableImportService(_db, encryption, proxy, TestServices.Repertoire(_db),
+            new PgnImportService(_db), bgQueue, new NotificationService(_db),
+            new ChessableBearerBreaker(_db, bgQueue, NullLogger<ChessableBearerBreaker>.Instance),
+            new ChessableRateLimiter(_db, config), NullLogger<ChessableImportService>.Instance);
     }
 
     [Fact]
@@ -158,10 +177,10 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         wd.OrphanGrace = TimeSpan.Zero;
 
         // Erste Sichtung: nur beobachten (Schutz gegen das Registrierungs-Fenster frisch geclaimter Jobs).
-        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
+        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
         Assert.Equal(phase, (await _db.ChessableImports.FindAsync(zombie.Id))!.Phase);
 
-        Assert.Equal(1, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
+        Assert.Equal(1, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
         await _db.Entry(zombie).ReloadAsync();
         Assert.Equal(ChessableImportPhase.Queued, zombie.Phase);
         Assert.Equal(2, zombie.Attempts);   // zählt weiter gegen MaxAttempts
@@ -182,15 +201,15 @@ public class ChessableImportWatchdogServiceTests : IDisposable
 
         using (ChessableImportService.TrackInflight(driven.Id))
         {
-            Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
-            Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
+            Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
+            Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
             await _db.Entry(driven).ReloadAsync();
             Assert.Equal(ChessableImportPhase.Fetching, driven.Phase);
         }
 
         // Treiber weg → ab jetzt gilt derselbe Job als verwaist (wieder zwei Sichtungen).
-        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
-        Assert.Equal(1, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
+        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
+        Assert.Equal(1, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
         await _db.Entry(driven).ReloadAsync();
         Assert.Equal(ChessableImportPhase.Queued, driven.Phase);
     }
@@ -202,7 +221,58 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         var wd = Watchdog();
         wd.OrphanGrace = TimeSpan.Zero;
 
-        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
-        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, CancellationToken.None));
+        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
+        Assert.Equal(0, await wd.ReclaimOrphanedInflightAsync(_db, ct: CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task OrphanedInflight_WithOwnChessablePathOff_IsClosed_InsteadOfQueuedForever()
+    {
+        // PROD-Fall seit 2026-09-09 (Chessable:Enabled=false): ein Browser-Import, dessen Sitzung der
+        // Prozess nicht mehr kennt (API-Neustart, Tab zu). Zurück in die Warteschlange hieße hier „für
+        // immer auf läuft" — es gibt keine Lane, die ihn je aufnimmt, und die Dedup-Regel in
+        // EnqueueReimportAsync blockiert damit jeden neuen Import desselben Kurses.
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = 5, Bid = "91808", CourseName = "Lifetime Repertoires", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
+            FullyCached = true, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var watchdog = Watchdog(lanesEnabled: false);
+        watchdog.OrphanGrace = TimeSpan.Zero;   // erste Sichtung merken, zweite entscheidet
+        var imports = Imports();
+
+        Assert.Equal(0, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));   // nur Sichtung
+        Assert.Equal(1, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));
+
+        var closed = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Failed, closed.Status);
+        Assert.Contains("ohne Abschluss", closed.Error);
+        Assert.NotNull(closed.CompletedAt);
+    }
+
+    [Fact]
+    public async Task OrphanedInflight_WithOwnChessablePathOn_GoesBackToTheQueue()
+    {
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = 5, Bid = "91808", CourseName = "c", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var watchdog = Watchdog(lanesEnabled: true);
+        watchdog.OrphanGrace = TimeSpan.Zero;
+
+        await watchdog.ReclaimOrphanedInflightAsync(_db);
+        Assert.Equal(1, await watchdog.ReclaimOrphanedInflightAsync(_db));
+
+        var job = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Running, job.Status);
+        Assert.Equal(ChessableImportPhase.Queued, job.Phase);
     }
 }

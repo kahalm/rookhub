@@ -267,6 +267,24 @@ fuer immer auf `Running` und hielt die Inflight-Marke.
 piratechess beginnt jeden Einzel-Chunk bei 002, der Versatz um das Maximum ergab 002, 004, 006 … (Live-Import
 2026-09-19, bid 55720); jetzt 002, 003, 004.
 
+**Der Watchdog laeuft AUCH mit `Chessable:Enabled=false` (0.484.3).** Er stand bis dahin hinter dem
+Schalter — auf PROD (Flag seit 2026-09-09 aus) lief also weder das Schliessen abgelaufener
+Browser-Sitzungen noch das Aufraeumen verwaister Browser-Importe, und ein abgebrochener Import blieb
+fuer immer auf `Running`. Das ist nicht nur Kosmetik: die Dedup-Regel in `EnqueueReimportAsync`
+verweigert jeden weiteren Import desselben (User, bid), solange einer laeuft. `LanesEnabled` (aus dem
+Schalter) trennt die Pflichten: die eigenen Lanes werden nur mit dem Schalter angetrieben, die
+Browser-Pflichten immer — und ein verwaister Import wird ohne Lanes BEENDET statt zurueckgestellt
+(zurueckgestellt nimmt ihn dort nie jemand auf).
+
+**Der Reprocess-Status sagt ohne eigenen Chessable-Weg die Wahrheit (0.484.3).** `ActionFor` ist die
+EINE Regel fuer Anzeige und Lauf (Refetch / Local / Manual). Ohne den eigenen Weg gibt es kein
+Refetch: ein veraltetes Buch mit gespeicherter Quelle wird LOKAL aufbereitet (das bringt die
+Zug-Kommentare, nur die `[ChessableOid]` fehlen weiter), eines ohne Quelle zaehlt als „braucht
+Re-Import". Vorher zaehlte der Status es als aktualisierbar, der Lauf sprang es an und meldete
+„uebersprungen" — das Banner „1 Kurs kann aktualisiert werden" stand dauerhaft (gemeldet 2026-09-20,
+Prod-Log: `0 lokal, 0 eingereiht, 6 uebersprungen`). `EnqueueRefetchesAsync` legt ohne den Schalter
+ausserdem gar keinen Auftrag mehr an — er wuerde nie abgearbeitet und blockierte den Kurs.
+
 **Der Kursname kommt aus den LINIEN** (`ChessableLineJson.ResolveCourseName`, alle drei Ingest-Wege): Chessable
 schreibt ihn in jede getGame-Antwort (`game.name`; `game.title` ist der Linientitel), die Extension liest
 ihn bei Kursen ausserhalb des Kontos vom Seitentext, und die Kurskachel klebt Titel und Fortschrittsbadges
