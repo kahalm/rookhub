@@ -59,8 +59,8 @@
   gap: 1rem;
   grid-template-columns: 1fr;
 
-  @media (min-width: 900px) { grid-template-columns: minmax(300px, 1fr) minmax(360px, 1fr); }
-  @media (min-width: 1200px) { grid-template-columns: minmax(320px, 1fr) minmax(480px, 1.1fr); }
+  @media (min-width: 900px) { grid-template-columns: minmax(300px, 1fr) minmax(340px, 520px); }
+  @media (min-width: 1400px) { grid-template-columns: minmax(320px, 1fr) minmax(420px, 600px); }
 }
 
 /* Beim Blättern durch viele Teile soll das Brett stehen bleiben. */
@@ -106,7 +106,19 @@
 .editor {
   .wide { width: 100%; }
 
-  app-chess-board { display: block; margin-bottom: 0.5rem; }
+  /* Das Brett ist QUADRATISCH: jede Breite ist auch eine Höhe. Ohne die Schranke gegen die
+     Fensterhöhe füllte es auf einem breiten Bildschirm die halbe Seite und schob Zugfeld und
+     Speichern-Knopf unter den Rand — man musste an einem riesigen Brett vorbeiscrollen, um den
+     eingetippten Zug zu sehen. 56vh lässt darunter Platz für Eingabe und Knöpfe. */
+  app-chess-board,
+  app-position-setup {
+    display: block;
+    width: 100%;
+    max-width: min(100%, 56vh);
+    margin-inline: auto;
+  }
+
+  app-chess-board { margin-bottom: 0.5rem; }
 }
 
 .editor-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }

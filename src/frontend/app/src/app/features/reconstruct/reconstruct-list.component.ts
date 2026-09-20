@@ -85,7 +85,11 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
     h1 { margin: 0 0 0.25rem; }
     .muted { opacity: 0.75; }
     .empty { margin-top: 1rem; }
-    .new-card { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem 1rem; margin: 1rem 0; flex-wrap: wrap; }
+    /* flex-direction MUSS hier stehen: mat-card ist selbst ein Flexbox in SPALTEN-Richtung, und
+       ohne diese Zeile wirkte \`flex: 1 1 260px\` unten auf die HOEHE — das Titelfeld stand als
+       212 x 260 px grosser Kasten da statt als Textzeile. */
+    .new-card { display: flex; flex-direction: row; gap: 0.75rem; align-items: center;
+                padding: 0.75rem 1rem; margin: 1rem 0; flex-wrap: wrap; }
     .grow { flex: 1 1 260px; margin-bottom: -1.25em; }
     .grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
     .item { padding: 0.75rem 1rem; }
