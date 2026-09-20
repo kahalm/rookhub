@@ -451,6 +451,38 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ChessableIngestChunk_SameChapterKey_StaysOneChapter_WithoutOverwriting()
+    {
+        // Ein Kapitel, das zu gross fuer EINEN Request ist, kommt in mehreren Teilen mit demselben
+        // chapterKey an (Kapitel 30 eines Lifetime-Repertoires riss am 2026-09-20 die 48 MB).
+        SetUser(7, scope: "extension");
+        for (var i = 0; i < 3; i++)
+            await _controller.ChessableIngestChunk(
+                new ChessableIngestChunkRequest("sess-k", "424242", "book", "Course", Chapter("{\"game\":{}}"), false,
+                    ChapterKey: "lid-30"), default);
+
+        // Alle drei Teile bleiben Kapitel 002 und zaehlen die Linien weiter — sonst haette Teil 2
+        // die Linie von Teil 1 ueberschrieben (LineId = Datei:Round).
+        var rounds = await _db.BookPuzzles.OrderBy(p => p.Round).Select(p => p.Round).ToListAsync();
+        Assert.Equal(new[] { "002.001", "002.002", "002.003" }, rounds);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_NewChapterKey_OpensTheNextChapter()
+    {
+        SetUser(7, scope: "extension");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-k2", "424242", "book", "Course", Chapter("{\"game\":{}}"), false,
+                ChapterKey: "lid-1"), default);
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-k2", "424242", "book", "Course", Chapter("{\"game\":{}}"), false,
+                ChapterKey: "lid-2"), default);
+
+        var rounds = await _db.BookPuzzles.OrderBy(p => p.Round).Select(p => p.Round).ToListAsync();
+        Assert.Equal(new[] { "002.001", "003.001" }, rounds);
+    }
+
+    [Fact]
     public async Task ChessableIngestChunk_Aborted_ClosesTheImportWithWhatWasFetched()
     {
         SetUser(7, scope: "extension");

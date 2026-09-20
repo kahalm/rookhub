@@ -34,6 +34,16 @@ public class ChessableIngestSessionStore : IDisposable
         /// (siehe <see cref="ChessableRoundOffset"/>).</summary>
         public int ChapterOffset { get; set; }
         public int ChaptersDone { get; set; }
+
+        /// <summary>Kapitel-Kennung (lid) des zuletzt verarbeiteten Chunks. Kommt derselbe Schlüssel erneut,
+        /// ist es ein FORTSETZUNGS-Teil eines zu großen Kapitels (siehe <see cref="ChessableRoundOffset"/>) —
+        /// dann bleibt die Kapitelnummer und nur die Liniennummer wandert weiter.</summary>
+        public string? LastChapterKey { get; set; }
+        /// <summary>Kapitelnummer, unter der die Teile dieses Kapitels laufen.</summary>
+        public int CurrentChapter { get; set; }
+        /// <summary>Höchste bisher vergebene LINIENnummer im aktuellen Kapitel — der nächste Teil
+        /// desselben Kapitels setzt dahinter auf.</summary>
+        public int MaxLineInChapter { get; set; }
         public int LinesSeen { get; set; }
         public int Imported { get; set; }
 
@@ -106,13 +116,29 @@ public class ChessableIngestSessionStore : IDisposable
         }
     }
 
-    /// <summary>Vermerkt einen importierten Chunk (Kapitel-Versatz + Zähler).</summary>
-    public void NoteChapter(Session s, int chapterOffset, int linesSeen, int imported, int? resultId)
+    /// <summary>
+    /// Vermerkt einen importierten Chunk (Kapitel-Versatz + Zähler).
+    /// <paramref name="chapterKey"/>/<paramref name="continuesChapter"/> halten ein über mehrere Chunks
+    /// verteiltes Kapitel zusammen: eine Fortsetzung zählt NICHT als weiteres Kapitel und schiebt
+    /// stattdessen den Linien-Versatz weiter.
+    /// </summary>
+    public void NoteChapter(Session s, int chapterOffset, int linesSeen, int imported, int? resultId,
+        string? chapterKey = null, bool continuesChapter = false, int maxLineInChapter = 0)
     {
         lock (s)
         {
             s.ChapterOffset = Math.Max(s.ChapterOffset, chapterOffset);
-            s.ChaptersDone++;
+            if (continuesChapter)
+            {
+                s.MaxLineInChapter = Math.Max(s.MaxLineInChapter, maxLineInChapter);
+            }
+            else
+            {
+                s.ChaptersDone++;
+                s.CurrentChapter = chapterOffset;
+                s.LastChapterKey = chapterKey;
+                s.MaxLineInChapter = maxLineInChapter;
+            }
             s.LinesSeen += linesSeen;
             s.Imported += imported;
             if (resultId is not null) s.ResultId = resultId;

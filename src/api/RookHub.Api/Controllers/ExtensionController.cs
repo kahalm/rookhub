@@ -493,12 +493,24 @@ public class ExtensionController : BaseApiController
 
                 // Kapitelnummern nahtlos hinter den bisherigen fortschreiben — sonst überschriebe Chunk 2 die
                 // Linien von Chunk 1 (LineId = Datei:Round). Siehe ChessableRoundOffset.
-                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!,
-                    ChessableRoundOffset.NextOffset(session.ChapterOffset, parsed.Pgn));
+                //
+                // Ein Kapitel, dessen Linien zusammen über dem Body-Limit liegen, kommt in MEHREREN Chunks mit
+                // demselben ChapterKey an (RepCheck ≥ 1.61.0). Eine solche Fortsetzung bleibt in derselben
+                // Kapitelnummer und setzt nur die Liniennummer fort: der Parser wirft die Einträge ohne Inhalt
+                // aus list.data und begänne sonst wieder bei .002 — also genau auf den Linien von Teil 1.
+                var continues = dto.ChapterKey is { Length: > 0 }
+                    && string.Equals(dto.ChapterKey, session.LastChapterKey, StringComparison.Ordinal)
+                    && session.CurrentChapter > 0;
+                var chapterShift = continues
+                    ? ChessableRoundOffset.SameChapterOffset(session.CurrentChapter, parsed.Pgn)
+                    : ChessableRoundOffset.NextOffset(session.ChapterOffset, parsed.Pgn);
+                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, chapterShift,
+                    continues ? ChessableRoundOffset.NextLineOffset(session.MaxLineInChapter, parsed.Pgn) : 0);
                 var res = await _chessableImport.AppendBrowserChunkAsync(
                     session.ImportId!.Value, shifted, parsed.LineCount, ct);
                 _ingestSessions.NoteChapter(session, ChessableRoundOffset.MaxChapter(shifted),
-                    parsed.LineCount, res.Imported, res.ResultId);
+                    parsed.LineCount, res.Imported, res.ResultId,
+                    dto.ChapterKey, continues, ChessableRoundOffset.MaxLine(shifted));
             }
         }
 

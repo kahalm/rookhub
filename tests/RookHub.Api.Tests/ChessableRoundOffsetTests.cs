@@ -104,4 +104,56 @@ public class ChessableRoundOffsetTests
         Assert.Equal(0, ChessableRoundOffset.MinChapter(null));
         Assert.Equal(2, ChessableRoundOffset.MinChapter("[Round \"005.001\"]\n[Round \"002.003\"]"));
     }
+
+    // ---- Ein Kapitel, das auf mehrere Chunks verteilt ankommt (zu gross fuer EINEN Request) ----
+
+    [Fact]
+    public void Shift_WithLineOffset_MovesLineNumbersToo()
+    {
+        var shifted = ChessableRoundOffset.Shift(Pgn, 0, 40);
+        Assert.Contains("[Round \"002.041\"]", shifted);
+        Assert.Contains("[Round \"003.052\"]", shifted);
+    }
+
+    [Fact]
+    public void SameChapterOffset_KeepsTheChunkInTheCurrentChapter()
+    {
+        // Teil 2 kommt wieder als „002…" an und soll unter Kapitel 7 weiterlaufen.
+        var offset = ChessableRoundOffset.SameChapterOffset(7, Pgn);
+        Assert.Equal(7, ChessableRoundOffset.MinChapter(ChessableRoundOffset.Shift(Pgn, offset)));
+    }
+
+    [Fact]
+    public void SameChapterOffset_WithoutCurrentChapter_IsNoOp()
+        => Assert.Equal(0, ChessableRoundOffset.SameChapterOffset(0, Pgn));
+
+    [Theory]
+    // Egal, ob piratechess die erste Linie als 001 oder 002 nummeriert — der Versatz wird RELATIV
+    // gerechnet, damit zwei Teile eines Kapitels sich nie ueberlappen.
+    [InlineData("001", "002")]
+    [InlineData("002", "003")]
+    public void NextLineOffset_LetsTheFollowingPartContinueWithoutCollision(string erste, string zweite)
+    {
+        var teil = $"[Round \"002.{erste}\"]\n[Round \"002.{zweite}\"]\n";
+
+        var offset = ChessableRoundOffset.NextLineOffset(ChessableRoundOffset.MaxLine(teil), teil);
+        var shifted2 = ChessableRoundOffset.Shift(teil, 0, offset);
+
+        // Teil 2 setzt lueckenlos hinter Teil 1 auf ...
+        Assert.Equal(ChessableRoundOffset.MaxLine(teil) + 1, ChessableRoundOffset.MinLine(shifted2));
+        // ... und keine Nummer aus Teil 1 taucht erneut auf → nichts wird ueberschrieben.
+        Assert.DoesNotContain($"[Round \"002.{erste}\"]", shifted2);
+        Assert.DoesNotContain($"[Round \"002.{zweite}\"]", shifted2);
+    }
+
+    [Fact]
+    public void NextLineOffset_WithoutPreviousLine_IsNoOp()
+        => Assert.Equal(0, ChessableRoundOffset.NextLineOffset(0, Pgn));
+
+    [Fact]
+    public void MaxLine_ReadsTheHighestLineNumber()
+    {
+        Assert.Equal(12, ChessableRoundOffset.MaxLine(Pgn));
+        Assert.Equal(0, ChessableRoundOffset.MaxLine(""));
+    }
 }

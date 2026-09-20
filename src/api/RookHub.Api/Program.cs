@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -634,13 +635,25 @@ try
     {
         error.Run(async context =>
         {
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            // Kestrel wirft für einen zu großen/kaputten Body eine BadHttpRequestException und trägt den
+            // passenden Status (413 bzw. 400) selbst mit. Den durchreichen statt pauschal 500: ein zu großer
+            // Chunk des Browser-Imports kam beim Nutzer sonst als nacktes „HTTP 500" an und sah nach einem
+            // Serverfehler aus (am 2026-09-20 die halbe Fehlersuche gekostet).
+            var ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+            var (status, title) = ex is BadHttpRequestException bad
+                ? (bad.StatusCode, bad.StatusCode == StatusCodes.Status413PayloadTooLarge
+                    ? "Request body too large."
+                    : "Malformed request.")
+                : (StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+
+            context.Response.StatusCode = status;
             context.Response.ContentType = "application/problem+json";
             await context.Response.WriteAsJsonAsync(new
             {
                 type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
-                title = "An unexpected error occurred.",
-                status = 500
+                title,
+                status,
+                message = title
             });
         });
     });
