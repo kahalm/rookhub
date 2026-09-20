@@ -3481,6 +3481,10 @@
       "noPrevious": "Ez az első rész — előtte nincs semmi.",
       "targetNotAPosition": "A keresésnek ÁLLÁS kell célként; egy hézag utáni lépéssornak magának sincs ismert kiindulóállása.",
       "invalidPosition": "A két állás egyike nem olvasható."
-    }
+    },
+    "enterPosition": "Állás megadása",
+    "afterPositionHint": "Az átvétel után lépésekkel folytatod ettől az állástól — vagy ott újra az „Állás megadása“ gombbal ugorhatsz a következőre.",
+    "markCertain": "Megjelölés biztosként",
+    "markUnsure": "Megjelölés bizonytalanként"
   }
 }

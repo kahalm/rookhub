@@ -3481,6 +3481,10 @@
       "noPrevious": "Das ist das erste Teil — davor liegt nichts.",
       "targetNotAPosition": "Die Suche braucht eine STELLUNG als Ziel; eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung.",
       "invalidPosition": "Eine der beiden Stellungen lässt sich nicht lesen."
-    }
+    },
+    "enterPosition": "Stellung eingeben",
+    "afterPositionHint": "Nach dem Übernehmen geht es mit Zügen ab dieser Stellung weiter — oder dort gleich wieder „Stellung eingeben“, um zur nächsten zu springen.",
+    "markCertain": "Als sicher markieren",
+    "markUnsure": "Als unsicher markieren"
   }
 }

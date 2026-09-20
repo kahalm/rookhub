@@ -97,7 +97,13 @@ export class ReconstructDetailComponent implements OnInit {
   private load(): void {
     this.loading.set(true);
     this.service.get(this.id).subscribe({
-      next: data => { this.apply(data); this.loading.set(false); },
+      next: data => {
+        this.apply(data);
+        this.loading.set(false);
+        // Eine leere Rekonstruktion hat genau einen sinnvollen nächsten Schritt: die ersten Züge.
+        // Dafür erst einen Knopf suchen zu müssen ist ein Umweg ohne Entscheidung.
+        if (data.parts.length === 0) this.startNew(PartKind.Moves);
+      },
       error: () => { this.loading.set(false); this.snackbar.warn(this.translate.instant('reconstruct.loadFailed')); },
     });
   }
@@ -199,7 +205,12 @@ export class ReconstructDetailComponent implements OnInit {
     this.setMoves(this.editMoves);
   }
 
-  savePart(): void {
+  /**
+   * Speichert das Teil im Editor. Mit <paramref name="then"/> geht es DIREKT mit dem nächsten Teil
+   * weiter, statt den Editor zu schließen — so, wie man sich erinnert: Züge, bis es nicht mehr
+   * weitergeht, dann die nächste Stellung, dann wieder Züge.
+   */
+  savePart(then: PartKind | null = null): void {
     if (this.busy()) return;
     const kind = this.editKind();
     const input: PartInput = {
@@ -219,7 +230,12 @@ export class ReconstructDetailComponent implements OnInit {
 
     this.busy.set(true);
     call.subscribe({
-      next: data => { this.busy.set(false); this.apply(data); this.editingId.set(null); },
+      next: data => {
+        this.busy.set(false);
+        this.apply(data);
+        if (then === null) this.editingId.set(null);
+        else this.startNew(then);   // hängt am jetzt LETZTEN Teil, also am gerade gespeicherten
+      },
       error: err => {
         this.busy.set(false);
         const reason = err?.error?.reason;
@@ -255,10 +271,45 @@ export class ReconstructDetailComponent implements OnInit {
     });
   }
 
-  /** Stellung aus dem Editor übernehmen (Knopf „Übernehmen" im Stellungs-Editor). */
+  /**
+   * Vom Zug-Editor zur Stellung wechseln („hier komme ich mit Zügen nicht weiter"). Getipptes wird
+   * vorher gespeichert; ein leerer Editor wechselt nur die Art und legt nichts an.
+   */
+  toPosition(): void {
+    if (this.busy()) return;
+    if (this.editMovesTokens().length > 0) this.savePart(PartKind.Position);
+    else this.startNew(PartKind.Position);
+  }
+
+  /**
+   * Stellung aus dem Editor übernehmen (Knopf „Übernehmen" im Stellungs-Editor) — und gleich mit
+   * Zügen ab dieser Stellung weitermachen. Wer stattdessen die NÄCHSTE Stellung festhalten will,
+   * klickt dort „Stellung eingeben"; der leere Zug-Editor legt dabei nichts an.
+   */
   onPositionApplied(fen: string): void {
     this.editFen = fen;
-    this.savePart();
+    this.savePart(this.editingId() === 0 ? PartKind.Moves : null);
+  }
+
+  /**
+   * „Sicher"-Haken eines gespeicherten Teils umlegen, ohne den Editor zu öffnen — beim Aufzeichnen
+   * fällt einem oft erst später ein, dass man sich bei etwas doch nicht sicher ist.
+   */
+  toggleCertain(part: ReconstructionPart): void {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.service.updatePart(this.id, part.id, {
+      kind: part.kind,
+      moves: part.kind === PartKind.Moves ? part.moves ?? '' : null,
+      fen: part.kind === PartKind.Position ? part.fen ?? '' : null,
+      fromPly: part.fromPly ?? null,
+      continuesPrevious: part.continuesPrevious,
+      certain: !part.certain,
+      note: part.note ?? null,
+    }).subscribe({
+      next: data => { this.busy.set(false); this.apply(data); },
+      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+    });
   }
 
   // ----- Lücke schließen -----

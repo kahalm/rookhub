@@ -1910,6 +1910,15 @@ unsichere Stellung der erste Kandidat für einen zweiten Blick ist, wenn die Lü
 aufgeht. Im Request ist das Feld NULLBAR: ein Client, der die Frage nicht kennt, darf nicht für den
 Nutzer „unsicher" behaupten (und die Migration trägt für den Bestand `true` nach).
 
+**Aufgezeichnet wird im FLUSS** (`reconstruct-detail.component.ts`): eine leere Rekonstruktion
+öffnet gleich den Zug-Editor, „Stellung eingeben" speichert das Getippte und führt in den
+Stellungs-Editor, und eine übernommene Stellung öffnet wieder den Zug-Editor (mit Anschluss an sie).
+Ein LEERER Zug-Editor wechselt dabei nur die Art und legt nichts an — das ist der Weg „direkt zur
+nächsten Stellung". So entsteht Züge → Stellung → Züge → Stellung, ohne nach jedem Teil zurück ins
+Menü zu gehen. Der Sicher-Haken lässt sich an jedem gespeicherten Teil mit einem Klick umlegen
+(`toggleCertain`), weil einem beim Aufschreiben erst später auffällt, dass ein früheres Bruchstück
+wackelt.
+
 Menü-Key `reconstruct` (Stufe `Registered`), Frontend `/reconstruct` (Liste) und
 `/reconstruct/:id` (Arbeitsplatz: Teile links, Brett rechts). Die Züge werden im Browser
 mitgespielt (chess.js), damit man beim Tippen und Klicken sofort sieht, wo man steht — die

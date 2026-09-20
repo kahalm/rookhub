@@ -100,6 +100,12 @@
                   {{ 'reconstruct.unsure' | translate }}
                 </span>
               }
+              <button mat-icon-button class="certain-toggle" [class.unsure]="!part.certain"
+                      [disabled]="busy()" (click)="toggleCertain(part)"
+                      [matTooltip]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate"
+                      [attr.aria-label]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate">
+                <mat-icon>{{ part.certain ? 'check_circle' : 'help' }}</mat-icon>
+              </button>
               <span class="chip" [class.ok]="state(part) === 'ok'"
                     [class.warn]="state(part) === 'floating'"
                     [class.bad]="state(part) === 'broken' || state(part) === 'mismatch'">
@@ -216,6 +222,9 @@
           @if (editKind() === Kind.Position) {
             <app-position-setup [initialFen]="editFen"
                                 (apply)="onPositionApplied($event)" (cancel)="cancelEdit()"></app-position-setup>
+            @if (editingId() === 0) {
+              <p class="muted small">{{ 'reconstruct.afterPositionHint' | translate }}</p>
+            }
             <mat-form-field appearance="outline" class="wide">
               <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>
               <input matInput [(ngModel)]="editNote" maxlength="500">
@@ -241,6 +250,13 @@
               <button mat-flat-button color="primary" [disabled]="busy()" (click)="savePart()">
                 {{ 'common.save' | translate }}
               </button>
+              @if (editingId() === 0) {
+                <!-- „Hier komme ich mit Zügen nicht weiter": speichert das Getippte und macht mit
+                     der nächsten erinnerten Stellung weiter (leerer Editor wechselt nur die Art). -->
+                <button mat-stroked-button [disabled]="busy()" (click)="toPosition()">
+                  <mat-icon>grid_on</mat-icon> {{ 'reconstruct.enterPosition' | translate }}
+                </button>
+              }
               <button mat-button (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
               <button mat-button [disabled]="!editMoves.trim()" (click)="undoMove()">
                 <mat-icon>undo</mat-icon> {{ 'reconstruct.undoMove' | translate }}

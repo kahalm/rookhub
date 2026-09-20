@@ -3481,6 +3481,10 @@
       "noPrevious": "This is the first part — there is nothing before it.",
       "targetNotAPosition": "The search needs a POSITION as its target; a move sequence after a gap has no known starting position of its own.",
       "invalidPosition": "One of the two positions cannot be read."
-    }
+    },
+    "enterPosition": "Enter a position",
+    "afterPositionHint": "Once you apply it, you carry on with moves from that position — or press „Enter a position“ there again to jump straight to the next one.",
+    "markCertain": "Mark as sure",
+    "markUnsure": "Mark as unsure"
   }
 }

@@ -135,6 +135,63 @@ describe('ReconstructDetailComponent', () => {
     expect(c.editBoardFen()).not.toBe(START);
   });
 
+  it('öffnet bei einer leeren Rekonstruktion gleich den Zug-Editor', () => {
+    const c = open([]);
+
+    expect(c.editingId()).toBe(0);
+    expect(c.editKind()).toBe(PartKind.Moves);
+  });
+
+  it('speichert die Züge und macht direkt mit einer Stellung weiter', () => {
+    // Der Fluss beim Erinnern: Züge, bis es nicht mehr weitergeht, dann die nächste Stellung.
+    const c = open([]);
+    c.onMovesInput('e4 e5');
+    c.toPosition();
+
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts', method: 'POST' });
+    expect(req.request.body.moves).toBe('e4 e5');
+    req.flush(data([part({ id: 9, moves: 'e4 e5' })]));
+
+    expect(c.editingId()).toBe(0);                  // der Editor bleibt offen …
+    expect(c.editKind()).toBe(PartKind.Position);   // … jetzt für die Stellung
+  });
+
+  it('der leere Zug-Editor wechselt zur Stellung, ohne ein Teil anzulegen', () => {
+    const c = open([part({ id: 1 })]);
+    c.startNew(PartKind.Moves);
+    c.toPosition();
+
+    http.expectNone({ method: 'POST' });
+    expect(c.editKind()).toBe(PartKind.Position);
+    expect(c.editContinues).toBeFalse();            // nach einer Zugfolge liegt eine Lücke
+  });
+
+  it('nach einer übernommenen Stellung geht es mit Zügen ab ihr weiter', () => {
+    const c = open([]);
+    c.startNew(PartKind.Position);
+    c.onPositionApplied(MIDDLE);
+
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts', method: 'POST' });
+    expect(req.request.body.fen).toBe(MIDDLE);
+    req.flush(data([part({ id: 8, kind: PartKind.Position, fen: MIDDLE, endFen: MIDDLE, moves: null })]));
+
+    expect(c.editKind()).toBe(PartKind.Moves);
+    expect(c.editContinues).toBeTrue();             // Züge nach einer Stellung schließen an sie an
+  });
+
+  it('legt den Sicher-Haken eines Teils ohne den Editor um', () => {
+    const saved = part({ id: 6, moves: 'e4 e5', note: 'Notiz' });
+    const c = open([saved]);
+    c.toggleCertain(saved);
+
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts/6', method: 'PUT' });
+    expect(req.request.body).toEqual({
+      kind: PartKind.Moves, moves: 'e4 e5', fen: null, fromPly: null,
+      continuesPrevious: false, certain: false, note: 'Notiz',
+    });
+    req.flush(data([]));
+  });
+
   it('sperrt das Brett, solange ein Zug der Eingabe nicht spielbar ist', () => {
     // Sonst landete jeder am Brett gespielte Zug hinter dem unmöglichen Zug im Text und käme nie
     // auf dem Brett an — gemeldet als „ich kann nur einen Zug machen".

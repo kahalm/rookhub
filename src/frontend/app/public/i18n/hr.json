@@ -3481,6 +3481,10 @@
       "noPrevious": "Ovo je prvi dio — prije njega nema ničega.",
       "targetNotAPosition": "Pretrazi treba POLOŽAJ kao cilj; niz poteza nakon praznine ni sam nema poznat početni položaj.",
       "invalidPosition": "Jedan od dva položaja nije čitljiv."
-    }
+    },
+    "enterPosition": "Unesi položaj",
+    "afterPositionHint": "Nakon preuzimanja nastavljaš potezima od tog položaja — ili ondje opet pritisni „Unesi položaj“ i skoči na sljedeći.",
+    "markCertain": "Označi kao sigurno",
+    "markUnsure": "Označi kao nesigurno"
   }
 }

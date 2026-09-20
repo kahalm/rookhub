@@ -85,6 +85,11 @@
 
   .part-no { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 1.5rem; }
   .spacer { flex: 1 1 auto; }
+
+  /* Sicher/unsicher ist eine Aussage über den Inhalt — der Umschalter steht deshalb VOR den
+     Bearbeiten-Knöpfen, nicht bei Löschen und Verschieben. */
+  .certain-toggle { opacity: 0.55; }
+  .certain-toggle.unsure { opacity: 1; color: #e65100; }
 }
 
 .part-body {
