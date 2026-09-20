@@ -90,24 +90,24 @@
         }
 
         @for (part of visibleParts(); track part.id; let i = $index) {
-          @if (i > 0 && !part.continuesPrevious && !part.generated) {
+          @if (gapTargetAt(i); as gapTarget) {
             <!-- Eine Lücke ist etwas ZWISCHEN zwei Teilen — hier steht sie und hier wird gesucht. -->
             <div class="gap-row">
               <mat-icon class="gap-icon">more_horiz</mat-icon>
               <span class="muted">{{ 'reconstruct.gap.here' | translate }}</span>
-              @if (canCloseGap(part, i)) {
-                <button mat-stroked-button [disabled]="gapSearching() || busy()" (click)="closeGap(part)">
+              @if (gapTarget.kind === Kind.Position) {
+                <button mat-stroked-button [disabled]="gapSearching() || busy()" (click)="closeGap(gapTarget)">
                   <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
                 </button>
                 @for (choice of gapPlyChoices; track choice) {
                   <button mat-button class="depth-btn" [class.chosen]="gapPlies === choice"
-                          [disabled]="gapSearching() || busy()" (click)="gapPlies = choice; closeGap(part)"
+                          [disabled]="gapSearching() || busy()" (click)="gapPlies = choice; closeGap(gapTarget)"
                           [matTooltip]="'reconstruct.gap.depth' | translate">
                     {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
                   </button>
                 }
-                @if (hasProposalsBefore(part)) {
-                  <button mat-button [disabled]="busy()" (click)="discardProposals(part)">
+                @if (hasProposalsBefore(gapTarget)) {
+                  <button mat-button [disabled]="busy()" (click)="discardProposals(gapTarget)">
                     <mat-icon>close</mat-icon> {{ 'reconstruct.gap.discard' | translate }}
                   </button>
                 }
@@ -115,9 +115,9 @@
                 <span class="muted small">{{ 'reconstruct.gap.needPosition' | translate }}</span>
               }
             </div>
-            @if (gapSearching() && gapFor() === part.id) {
+            @if (gapSearching() && gapFor() === gapTarget.id) {
               <p class="muted small gap-note">{{ 'reconstruct.gap.searching' | translate }}</p>
-            } @else if (gapFor() === part.id && gapMessageKey(); as key) {
+            } @else if (gapFor() === gapTarget.id && gapMessageKey(); as key) {
               <p class="muted small gap-note">{{ key | translate:{ count: gapResult()!.maxPlies } }}</p>
             }
           }
@@ -182,7 +182,7 @@
             <div class="part-body">
               <code>{{ summary(part) }}</code>
               @if (part.kind === Kind.Moves) {
-                <span class="muted">{{ 'reconstruct.plyCount' | translate:{ count: part.plyCount } }}</span>
+                <span class="muted">{{ 'reconstruct.plyCount' | translate:{ count: plyCountOf(part) } }}</span>
               }
               @if (part.note) { <div class="muted note">{{ part.note }}</div> }
             </div>
@@ -200,12 +200,31 @@
             <p class="muted small">{{ 'reconstruct.continuesHint' | translate }}</p>
           }
 
-          <mat-checkbox [(ngModel)]="editCertain" [matTooltip]="'reconstruct.certainHint' | translate">
-            {{ 'reconstruct.certainLabel' | translate }}
-          </mat-checkbox>
+          @if (!editingGenerated()) {
+            <mat-checkbox [(ngModel)]="editCertain" [matTooltip]="'reconstruct.certainHint' | translate">
+              {{ 'reconstruct.certainLabel' | translate }}
+            </mat-checkbox>
+          }
 
-          @if (editKind() === Kind.Moves && !editAnchored()) {
+          @if (editKind() === Kind.Moves && !editAnchored() && !editingGenerated()) {
             <p class="muted small">{{ 'reconstruct.unanchoredHint' | translate }}</p>
+          }
+
+          <!-- Ein VORSCHLAG wird nicht gespeichert, sondern bestätigt, korrigiert oder verworfen —
+               und das steht ÜBER dem Brett, weil genau darum geht es hier. -->
+          @if (editingGenerated()) {
+            <div class="proposal-actions">
+              <p class="muted small">{{ 'reconstruct.gap.walkHint' | translate }}</p>
+              <button mat-flat-button color="primary" [disabled]="busy()" (click)="acceptWaypoint()">
+                <mat-icon>check</mat-icon> {{ 'reconstruct.gap.positionFits' | translate }}
+              </button>
+              <button mat-stroked-button [disabled]="busy()" (click)="correctWaypoint()">
+                <mat-icon>edit</mat-icon> {{ 'reconstruct.gap.positionCorrect' | translate }}
+              </button>
+              <button mat-stroked-button [disabled]="busy()" (click)="acceptProposal()">
+                <mat-icon>done_all</mat-icon> {{ 'reconstruct.gap.acceptLine' | translate }}
+              </button>
+            </div>
           }
 
           @if (editKind() === Kind.Position) {
@@ -219,7 +238,7 @@
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
           } @else {
-            <div class="side-row">
+            <div class="side-row" [hidden]="editingGenerated()">
               <span class="muted">{{ 'reconstruct.sideToMove' | translate }}</span>
               <mat-button-toggle-group [value]="sideBlack() ? 'b' : 'w'" hideSingleSelectionIndicator="true"
                                        (change)="setSideBlack($event.value === 'b')">
@@ -277,22 +296,6 @@
               <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
-            <!-- Ein VORSCHLAG wird nicht gespeichert, sondern bestätigt, korrigiert oder verworfen. -->
-            @if (editingGenerated()) {
-              <div class="proposal-actions">
-                <p class="muted small">{{ 'reconstruct.gap.walkHint' | translate }}</p>
-                <button mat-flat-button color="primary" [disabled]="busy()" (click)="acceptWaypoint()">
-                  <mat-icon>check</mat-icon> {{ 'reconstruct.gap.positionFits' | translate }}
-                </button>
-                <button mat-stroked-button [disabled]="busy()" (click)="correctWaypoint()">
-                  <mat-icon>edit</mat-icon> {{ 'reconstruct.gap.positionCorrect' | translate }}
-                </button>
-                <button mat-stroked-button [disabled]="busy()" (click)="acceptProposal()">
-                  <mat-icon>done_all</mat-icon> {{ 'reconstruct.gap.acceptLine' | translate }}
-                </button>
-              </div>
-            }
-
             <div class="editor-actions">
               <button mat-flat-button color="primary" [disabled]="busy() || editingGenerated()" (click)="savePart()">
                 {{ 'common.save' | translate }}

@@ -292,11 +292,14 @@ export class ReconstructDetailComponent implements OnInit {
     this.editContinues = part.continuesPrevious;
     this.editCertain = part.certain;
     this.editFen = part.fen || START_FEN;
-    this.editAnchored.set(part.kind !== PartKind.Moves || !!part.startFen);
     // ZUERST die Ausgangsstellung, DANN die Züge: `setMoves` prüft gegen `editStartFen`, und mit der
     // Stellung des zuvor bearbeiteten Teils meldete es Züge als unmöglich, die hier stimmen.
     // Ohne Anker gibt es keine Stellung davor — dann sagt der gespeicherte Haken, wer am Zug war.
-    this.editStartFen.set(part.startFen || withSideToMove(START_FEN, part.blackToMove));
+    // Ein VORSCHLAG hat keinen Ketten-Eintrag (er zählt nicht zur Partie), hängt aber sehr wohl an
+    // der letzten aufgezeichneten Stellung — ohne sie zeigte das Brett die Grundstellung.
+    const anchor = part.generated ? this.recordedEndBefore(part) : part.startFen;
+    this.editAnchored.set(part.kind !== PartKind.Moves || !!anchor);
+    this.editStartFen.set(anchor || withSideToMove(START_FEN, part.blackToMove));
     this.editPly.set(null);
     this.editMoves = part.moves ?? '';
     this.setMoves(this.editMoves);
@@ -586,7 +589,8 @@ export class ReconstructDetailComponent implements OnInit {
    */
   gapMessageKey(): string | null {
     const result = this.gapResult();
-    if (!result || result.solutions.length > 0) return null;
+    // Kein Grund = es hat geklappt; die Wege stehen dann als Vorschläge in der Liste.
+    if (!result || result.reason == null || result.solutions.length > 0) return null;
     switch (result.reason) {
       case 'unreachable': return 'reconstruct.gap.unreachable';
       case 'too-far': return 'reconstruct.gap.tooFar';
@@ -641,6 +645,34 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Wird gerade ein VORSCHLAG angesehen? Dann gibt es „stimmt" / „korrigieren" / „übernehmen". */
   editingGenerated(): boolean { return !!this.editingPart()?.generated; }
+
+  /**
+   * Zu welchem Teil gehört die Lücke VOR der Zeile <paramref name="index"/> — oder null, wenn dort
+   * keine ist? Die Zeile steht vor dem ERSTEN Eintrag der Lücke, und das ist bei vorhandenen
+   * Vorschlägen der erste Vorschlag: sie liegen ja IN der Lücke, nicht davor.
+   */
+  gapTargetAt(index: number): ReconstructionPart | null {
+    const parts = this.visibleParts();
+    const part = parts[index];
+    if (!part || index === 0) return null;
+    if (parts[index - 1]?.generated) return null;          // mitten in den Vorschlägen derselben Lücke
+    if (part.generated) return this.targetAfter(part);     // erster Vorschlag → die Lücke gehört dem Teil danach
+    return part.continuesPrevious ? null : part;
+  }
+
+  /** Die Stellung, an der ein Vorschlag hängt: das Ende des letzten AUFGEZEICHNETEN Teils davor. */
+  private recordedEndBefore(part: ReconstructionPart): string | null {
+    const parts = this.data()?.parts ?? [];
+    for (let i = parts.findIndex(p => p.id === part.id) - 1; i >= 0; i--)
+      if (!parts[i].generated) return parts[i].endFen ?? null;
+    return null;
+  }
+
+  /** Halbzüge eines Teils — bei Vorschlägen rechnet sie der Server nicht mit (sie zählen nicht zur Partie). */
+  plyCountOf(part: ReconstructionPart): number {
+    if (!part.generated) return part.plyCount;
+    return (part.moves ?? '').split(/\s+/).filter(t => t).length;
+  }
 
   /** Stehen vor diesem Teil Vorschläge? (Dann gibt es an der Lücke ein „Verwerfen".) */
   hasProposalsBefore(part: ReconstructionPart): boolean {
