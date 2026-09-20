@@ -357,6 +357,51 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportFileAsync_SameOidUnderANewRound_IsTheSameLine_NotADuplicate()
+    {
+        // Die oid ist die Identitaet, die Rundennummer nur ein Etikett: wird ein Kapitel umsortiert oder
+        // eine Luecke davor gefuellt, kommt dieselbe Linie unter einer anderen Nummer herein. Vorher legte
+        // der LineId-Abgleich dafuer eine ZWEITE Zeile an — und der Fortschritt haette an der alten gehangen.
+        await _service.ImportFileAsync("move.pgn", BookLine("1", "5001", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        var id = (await _db.BookPuzzles.SingleAsync(bp => bp.BookFileName == "move.pgn")).Id;
+
+        var res = await _service.ImportFileAsync("move.pgn", BookLine("7", "5001", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, res.Updated);
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "move.pgn");
+        Assert.Equal(id, bp.Id);          // dieselbe Zeile → Fortschritt bleibt
+        Assert.Equal("7", bp.Round);      // Etikett nachgezogen
+        Assert.Equal("move.pgn:7", bp.LineId);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameOid_ContradictingMoves_LeavesTheLineAlone()
+    {
+        // Ein verrutschter oid-Header darf keine fremde Linie umetikettieren.
+        await _service.ImportFileAsync("clash.pgn", BookLine("1", "5002", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("clash.pgn", BookLine("9", "5002", "2. d4 exd4 3. Qxd4 Nc6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Updated);
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "clash.pgn");
+        Assert.Equal("1", bp.Round);      // unveraendert
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameOidTwiceInOneBatch_IsImportedOnce()
+    {
+        // Luecken-Fueller und echtes getGame derselben Linie koennen im selben Stapel liegen — unter
+        // verschiedenen Nummern. Ueber die oid ist das EIN Eintrag.
+        var res = await _service.ImportFileAsync("batch.pgn",
+            BookLine("1", "5003", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "5003", "2. Nf3 Nc6 3. Bb5 a6"),
+            CancellationToken.None);
+
+        Assert.Equal(1, res.Imported);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "batch.pgn"));
+    }
+
+    [Fact]
     public void ParsePgn_NoComments_LeavesMoveCommentsNull()
     {
         var pgn = @"

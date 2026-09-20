@@ -310,19 +310,32 @@ public class PgnImportService
                 .ToListAsync(ct));
         }
 
-        // „getGame gewinnt" — über die CHESSABLE-OID, NICHT die LineId. getReview belegt eine Lücke mit
-        // LineId={file}:{oid} (Round=oid), das echte getGame liefert aber Round="Kapitel.Index" und die
-        // oid separat im [ChessableOid]-Header (LineId={file}:002.001). Die LineIds passen also NICHT —
-        // ein LineId-Abgleich ließe getGame eine ZWEITE Linie anlegen (Duplikat). Deshalb den
-        // Review-Lücken-Füller über seine oid auflösen und beim echten Import ersetzen/entfernen.
-        // IMMER aufbauen (auch beim Upgrade/Reprozess eines veralteten Buchs) — sonst legt ein
-        // getGame-Import eines stale Buchs eine ZWEITE Linie neben einen bestehenden Review-Füller.
-        var reviewByOid = new Dictionary<string, BookPuzzle>();
-        foreach (var bp in await _db.BookPuzzles
-                .Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName)
-                    && bp.Source == "review" && bp.ChessableOid != null)
-                .ToListAsync(ct))
-            reviewByOid[bp.ChessableOid!] = bp;   // duplikat-tolerant (letzter gewinnt), kein ToDictionary-Wurf
+        // ===== Identität einer Chessable-Linie: die oid. =====
+        // Nicht ihre Position im Kurs. Dieselbe Linie kann unter einer anderen Nummer ankommen — ein Kapitel
+        // wird umsortiert, eine Lücke davor gefüllt, ein Kapitel kommt in Teilen. Die Nummer (Round, und die
+        // daraus gebaute LineId) ist deshalb nur ein ETIKETT; wer eine Linie IST, sagt allein die oid.
+        //
+        // Vorher liefen hier drei Abgleiche nebeneinander (LineId, Review-Füller je oid, oid-Nachtrag), die
+        // sich gegenseitig absichern mussten: getReview belegt eine Lücke mit LineId={file}:{oid}, das echte
+        // getGame liefert Round="Kapitel.Index" — die LineIds passen also NICHT, und ein reiner LineId-
+        // Abgleich legte ein Duplikat an. Mit der oid als Schlüssel ist das EIN Fall statt drei.
+        //
+        // Geladen wird nur, was dieser Stapel überhaupt mitbringt (oids in Blöcken), damit ein Re-Import
+        // eines großen Kurses nicht das ganze Buch als getrackte Entities in den Speicher zieht.
+        var batchOids = parsed
+            .Where(p => !string.IsNullOrEmpty(p.ChessableOid))
+            .Select(p => p.ChessableOid!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var byOid = new Dictionary<string, BookPuzzle>(StringComparer.Ordinal);
+        foreach (var block in batchOids.Chunk(500))
+        {
+            foreach (var bp in await _db.BookPuzzles
+                    .Where(bp => (bp.BookId == book.Id || bp.BookFileName == fileName)
+                        && bp.ChessableOid != null && block.Contains(bp.ChessableOid))
+                    .ToListAsync(ct))
+                byOid[bp.ChessableOid!] = bp;   // duplikat-tolerant (letzter gewinnt), kein ToDictionary-Wurf
+        }
 
         var toAdd = new List<BookPuzzle>();
         var skipped = 0;
@@ -331,37 +344,60 @@ public class PgnImportService
 
         foreach (var p in parsed)
         {
-            if (!seen.Add(p.LineId)) { skipped++; continue; }      // Duplikat im selben Batch
+            // Duplikat im selben Stapel — über die oid, wo es eine gibt (dieselbe Linie kann im Stapel
+            // unter zwei Nummern auftauchen, etwa Lücken-Füller + echtes getGame).
+            if (!seen.Add(string.IsNullOrEmpty(p.ChessableOid) ? p.LineId : "oid:" + p.ChessableOid))
+            { skipped++; continue; }
 
-            // „getGame gewinnt" (oid-basiert): gibt es zu dieser Chessable-oid einen Review-Lücken-Füller,
-            // ERSETZT ihn dieser echte Import. Der Füller hat i. d. R. eine ANDERE LineId (Round=oid) als
-            // die getGame-Linie (Round="Kapitel.Index" + oid im Header) — deshalb über die oid, nicht die
-            // LineId auflösen. Die vorhandene Zeile wird dabei WIEDERVERWENDET (LineId + Inhalt von getGame
-            // übernehmen, Source löschen), NICHT gelöscht+neu angelegt: ein Füller ist eine vollwertige,
-            // lösbare Linie, auf die schon Fortschritt zeigen kann (CoursePuzzleResult/CourseAttempt/
-            // CalculationTree = Restrict-FKs → ein Delete würde in MariaDB werfen und Fortschritt verlieren).
-            // Inhaltlich sind getGame und getReview für die Linie ohnehin deckungsgleich, der Fortschritt
-            // gilt also weiter.
-            if (!string.IsNullOrEmpty(p.ChessableOid) && reviewByOid.Remove(p.ChessableOid, out var stale)
-                && (stale.LineId == p.LineId || !existingLineIds.Contains(p.LineId)))
+            // ===== Abgleich über die oid: dieselbe Linie, egal unter welcher Nummer sie früher lag. =====
+            // Die vorhandene Zeile wird WIEDERVERWENDET, nie gelöscht+neu angelegt: auf ihr kann schon
+            // Fortschritt liegen (CoursePuzzleResult/CourseAttempt/CalculationTree = Restrict-FKs → ein
+            // Delete würde in MariaDB werfen und den Fortschritt verlieren).
+            if (!string.IsNullOrEmpty(p.ChessableOid) && byOid.TryGetValue(p.ChessableOid, out var sameLine))
             {
-                existingLineIds.Remove(stale.LineId);
-                stale.LineId = p.LineId;      // getGame-LineId übernehmen (Round=Kapitel.Index)
-                stale.Round = p.Round;
-                stale.Fen = p.Fen;
-                stale.Moves = p.Moves;
-                stale.StartPly = p.StartPly;
-                stale.Title = p.Title;
-                stale.Chapter = ChapterForBook(book.Kind, p.Chapter);
-                stale.Comment = p.Comment;
-                stale.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
-                stale.MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes);
-                stale.AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves);
-                stale.IsInfoOnly = p.IsInfoOnly;
-                stale.ChessableOid = p.ChessableOid;
-                stale.Source = null;          // ab jetzt vollwertig (getGame)
-                existingLineIds.Add(p.LineId);
-                updated++;
+                // Ein getReview-Lücken-Füller wird vom echten getGame abgelöst („getGame gewinnt"):
+                // inhaltlich sind beide für die Linie deckungsgleich, der Fortschritt gilt also weiter.
+                var warFüller = sameLine.Source is not null;
+                if (upgrade || warFüller)
+                {
+                    sameLine.Fen = p.Fen;
+                    sameLine.Moves = p.Moves;
+                    sameLine.StartPly = p.StartPly;
+                    sameLine.Comment = p.Comment;
+                    sameLine.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
+                    sameLine.MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes);
+                    sameLine.AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves);
+                    sameLine.IsInfoOnly = p.IsInfoOnly;
+                    sameLine.Source = null;   // ab jetzt vollwertig (getGame)
+                    updated++;
+                }
+                else if (sameLine.Moves != p.Moves)
+                {
+                    // Die oid sagt „dieselbe Linie", die Züge sagen etwas anderes. Das ist ein Widerspruch
+                    // (ein verrutschter oid-Header hat das 2026-09 schon einmal getan) — dann lieber nichts
+                    // anfassen, als eine fremde Linie umzuetikettieren. Inhalt ändert ohnehin nur ein Upgrade.
+                    skipped++;
+                    continue;
+                }
+                else if (sameLine.Round != p.Round)
+                {
+                    updated++;                // nur die Position hat sich verschoben
+                }
+                else { skipped++; }
+
+                // Etiketten immer nachziehen — sie beschreiben die Position, nicht die Identität.
+                sameLine.Round = p.Round;
+                sameLine.Title = p.Title;
+                sameLine.Chapter = ChapterForBook(book.Kind, p.Chapter);
+                // LineId ist global eindeutig: nur übernehmen, wenn sie frei ist. Sonst behält die Linie
+                // ihr altes Etikett — bei einer Umsortierung tauschen sonst zwei Linien ihre LineId und
+                // der eindeutige Index schlägt beim Speichern zu.
+                if (sameLine.LineId != p.LineId && !existingLineIds.Contains(p.LineId))
+                {
+                    existingLineIds.Remove(sameLine.LineId);
+                    sameLine.LineId = p.LineId;
+                    existingLineIds.Add(p.LineId);
+                }
                 continue;
             }
 
