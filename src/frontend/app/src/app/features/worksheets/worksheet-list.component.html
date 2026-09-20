@@ -62,7 +62,13 @@
         @for (sheet of named; track sheet.id) {
           <mat-card class="wl-sheet">
             <div class="wl-meta">
-              <span class="wl-name">{{ sheet.name }}</span>
+              <span class="wl-name">
+                {{ sheet.name }}
+                @if (sheet.shareToken) {
+                  <mat-icon class="wl-shared" [matTooltip]="'worksheets.share.toggle' | translate"
+                            [attr.aria-label]="'worksheets.share.toggle' | translate">qr_code_2</mat-icon>
+                }
+              </span>
               <span class="wl-sub">
                 {{ 'worksheets.count' | translate: { n: sheet.itemCount } }}
                 · {{ 'worksheets.perPage.short' | translate: { n: sheet.perPage } }}

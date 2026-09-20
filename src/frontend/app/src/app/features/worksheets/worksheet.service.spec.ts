@@ -15,7 +15,7 @@ describe('WorksheetService', () => {
   let actionRef: { onAction: () => any };
 
   const summary = (over: Partial<any> = {}) => ({
-    id: 1, name: '', isClipboard: true, perPage: 6, itemCount: 0,
+    id: 1, name: '', isClipboard: true, perPage: 6, itemCount: 0, shareToken: null,
     createdAt: '', updatedAt: '', ...over,
   });
 
@@ -89,6 +89,31 @@ describe('WorksheetService', () => {
       .flush({ worksheetId: 3, name: 'Mittwoch', isClipboard: false, added: 0, skipped: 0, total: 240, full: true });
 
     expect(snackbar.show).toHaveBeenCalledWith('worksheets.send.full', jasmine.anything());
+  });
+
+  it('Teilen gibt das Token des öffentlichen Links zurück', () => {
+    let token: string | null = null;
+    svc.share(4).subscribe(t => token = t);
+    const req = http.expectOne('/api/worksheets/4/share');
+    expect(req.request.method).toBe('POST');
+    req.flush({ shareToken: 'Ux7f2K' });
+    expect(token).toBe('Ux7f2K' as any);
+  });
+
+  it('das geteilte Blatt wird ohne Anmeldung über das Token geholt', () => {
+    svc.getShared('Ux7f2K').subscribe();
+    http.expectOne('/api/worksheets/shared/Ux7f2K').flush({ name: 'Mittwoch', items: [] });
+  });
+
+  it('die Adresse im QR-Code zeigt auf diese Installation', () => {
+    expect(svc.shareUrl('Ux7f2K')).toBe(`${window.location.origin}/w/Ux7f2K`);
+  });
+
+  it('Teilen beenden löscht den Link', () => {
+    svc.unshare(4).subscribe();
+    const req = http.expectOne('/api/worksheets/4/share');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
   });
 
   it('Umsortieren schickt die IDs in Wunsch-Reihenfolge', () => {

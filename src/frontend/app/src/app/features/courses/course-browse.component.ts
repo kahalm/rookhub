@@ -403,11 +403,17 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
    * man drucken will.
    */
   sendPositionToWorksheet(target: number | null): void {
-    const fen = this.variationPreview ? this.variationPreview.fen : this.boardFen;
+    const preview = this.variationPreview;
+    const fen = preview ? preview.fen : this.boardFen;
     if (!fen || !this.selected) return;
     this.worksheets.sendAndNotify(target, [{
       fen,
-      orientation: this.orientation,
+      // Ausrichtung = wer HIER am Zug ist (nicht die Sicht der Linie): auf dem Blatt und hinter
+      // dem geteilten Link löst diese Seite die Aufgabe.
+      orientation: this.turnColor,
+      // Lösung = der Rest der Linie ab dieser Stelle. In einer Varianten-Vorschau gibt es keine
+      // (die Züge stehen nur im Kommentar) — dann bleibt die Aufgabe eine zum Rechnen.
+      solutionMoves: preview ? '' : this.uciMoves.slice(this.plyIndex).join(' '),
       source: 'Book',
       sourceId: this.selected.id,
       bookId: this.bookId,

@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { isQuizLine, itemsFromLines, taskItemFromPuzzle } from './worksheet-items.util';
+import { isQuizLine, itemsFromLines, solutionFrom, taskItemFromPuzzle } from './worksheet-items.util';
 
 /** Kurs-Linie wie sie das Backend liefert (nur die Felder, die fürs Blatt zählen). */
 const line = (over: Partial<any> = {}): any => ({
@@ -37,6 +37,11 @@ describe('worksheet-items.util', () => {
       expect(item.bookId).toBe(42);
     });
 
+    it('nimmt die Lösung mit — das geteilte Blatt soll lösbar sein, nicht nur ansehbar', () => {
+      const [item] = itemsFromLines(42, [line()]);
+      expect(item.solutionMoves).toBe('e7e5 g1f3');
+    });
+
     it('lässt Überschrift und Begleittext leer — ein Linientitel verriete die Aufgabe', () => {
       const [item] = itemsFromLines(42, [line({ title: 'Matt in 3' })]);
       expect(item.heading).toBeUndefined();
@@ -50,6 +55,19 @@ describe('worksheet-items.util', () => {
         line({ id: 3 }),
       ]);
       expect(items.map(i => i.sourceId)).toEqual([3]);
+    });
+  });
+
+  describe('solutionFrom', () => {
+    it('lässt das Vorspiel weg — die Lösung beginnt bei der Aufgabenstellung', () => {
+      expect(solutionFrom('e2e4 e7e5 g1f3', 0)).toBe('e7e5 g1f3');
+      expect(solutionFrom('e2e4 e7e5 g1f3', -1)).toBe('e2e4 e7e5 g1f3');
+      expect(solutionFrom('e2e4 e7e5 g1f3 b8c6', 2)).toBe('b8c6');
+    });
+
+    it('ohne Züge bleibt sie leer (Stellung nur zum Rechnen)', () => {
+      expect(solutionFrom('', 0)).toBe('');
+      expect(solutionFrom(null, 0)).toBe('');
     });
   });
 

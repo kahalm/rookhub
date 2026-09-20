@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.Models;
 
 /// <summary>
@@ -25,6 +27,18 @@ public class Worksheet
 
     /// <summary>Diagramme je A4-Seite: 6 (knapp, wie das alte Blatt), 4 oder 2 (Platz für Begleittexte).</summary>
     public int PerPage { get; set; } = 6;
+
+    /// <summary>
+    /// Token des öffentlichen Links (<c>/w/{token}</c>) — <c>null</c> = nicht geteilt. Wer den Link
+    /// hat, darf das Blatt OHNE Anmeldung durchspielen; auf dem Ausdruck steht er als QR-Code.
+    /// Teilen aus- und wieder einschalten erzeugt ein NEUES Token (alte Ausdrucke laufen ins Leere —
+    /// genau dafür ist das Abschalten da).
+    /// </summary>
+    [MaxLength(32)]
+    public string? ShareToken { get; set; }
+
+    /// <summary>Wann der Link erzeugt wurde (<c>null</c> = nie/nicht mehr geteilt).</summary>
+    public DateTime? SharedAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -70,6 +84,15 @@ public class WorksheetItem
 
     /// <summary>Begleittext unter dem Diagramm (vom Nutzer gesetzt; leer = keiner).</summary>
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Die LÖSUNG ab dieser Stellung als UCI-Halbzüge (<c>e2e4 e7e5 …</c>, Gegnerzüge eingeschlossen);
+    /// leer = keine bekannt (von Hand eingefügte FEN). Sie wird beim Senden aus der Quelllinie
+    /// mitgeschrieben, damit das geteilte Blatt LÖSBAR ist statt nur ansehbar — und damit es das
+    /// bleibt, wenn der Kurs sich ändert.
+    /// </summary>
+    [MaxLength(1000)]
+    public string SolutionMoves { get; set; } = string.Empty;
 
     public WorksheetItemSource Source { get; set; } = WorksheetItemSource.Manual;
 

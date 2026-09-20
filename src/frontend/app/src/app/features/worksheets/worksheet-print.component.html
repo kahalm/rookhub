@@ -14,6 +14,15 @@
     </button>
   </div>
   <p class="ws-hint">{{ 'worksheets.printHint' | translate: { n: perPage } }}</p>
+  <!-- Nur am Schirm: ohne Link kein QR-Code auf dem Papier. -->
+  @if (!loading && !error && !shareUrl && !isClipboard) {
+    <p class="ws-hint ws-share-hint">
+      {{ 'worksheets.share.noSheetLink' | translate }}
+      <button mat-stroked-button (click)="enableShare()" [disabled]="sharing">
+        <mat-icon>qr_code_2</mat-icon>{{ 'worksheets.share.toggle' | translate }}
+      </button>
+    </p>
+  }
 
   @if (loading) {
     <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
@@ -53,8 +62,17 @@
         </div>
 
         <footer class="ws-foot">
-          <span>{{ 'worksheets.footer' | translate }}</span>
-          <span>{{ today | date:'shortDate' }} · {{ $index + 1 }}/{{ sheets.length }}</span>
+          <!-- QR auf JEDER Seite: ein einzelnes Blatt auf dem Tisch soll allein funktionieren. -->
+          @if (shareUrl) {
+            <app-qr-code class="ws-qr" [data]="shareUrl" [width]="120" />
+            <span class="ws-foot-link">
+              <span class="ws-foot-label">{{ 'worksheets.share.scanHint' | translate }}</span>
+              <span class="ws-foot-url">{{ shareUrl }}</span>
+            </span>
+          } @else {
+            <span>{{ 'worksheets.footer' | translate }}</span>
+          }
+          <span class="ws-foot-meta">{{ today | date:'shortDate' }} · {{ $index + 1 }}/{{ sheets.length }}</span>
         </footer>
       </section>
     }

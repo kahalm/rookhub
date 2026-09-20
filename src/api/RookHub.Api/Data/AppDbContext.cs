@@ -205,9 +205,13 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.Property(w => w.Name).HasMaxLength(120);
+            e.Property(w => w.ShareToken).HasMaxLength(32);
 
             // Übersicht: Zwischenablage zuerst, dann nach letzter Änderung.
             e.HasIndex(w => new { w.UserId, w.IsClipboard });
+            // Einstieg des öffentlichen Links (/w/{token}); NULL = nicht geteilt (MariaDB lässt
+            // beliebig viele NULLs im Unique-Index zu).
+            e.HasIndex(w => w.ShareToken).IsUnique();
         });
 
         modelBuilder.Entity<WorksheetItem>(e =>
@@ -221,6 +225,7 @@ public class AppDbContext : DbContext
             e.Property(i => i.Orientation).HasMaxLength(5);
             e.Property(i => i.Heading).HasMaxLength(200);
             e.Property(i => i.Text).HasMaxLength(2000);
+            e.Property(i => i.SolutionMoves).HasMaxLength(1000);
 
             // Reihenfolge auf dem Blatt (Lesen + Umsortieren gehen immer über sie).
             e.HasIndex(i => new { i.WorksheetId, i.SortOrder });

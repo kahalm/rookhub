@@ -18,7 +18,9 @@
 .wl-list { display: flex; flex-direction: column; gap: 8px; }
 .wl-sheet { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
 .wl-meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
-.wl-name { font-weight: 600; overflow-wrap: anywhere; }
+.wl-name { font-weight: 600; overflow-wrap: anywhere; display: flex; align-items: center; gap: 6px; }
+/* Geteilte Blätter tragen den QR-Hinweis — man sieht auf einen Blick, was draußen ist. */
+.wl-shared { font-size: 18px; width: 18px; height: 18px; opacity: 0.65; }
 .wl-sub { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
 .wl-actions { display: flex; flex-shrink: 0; align-items: center; }
 .wl-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }

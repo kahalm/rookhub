@@ -9,11 +9,11 @@ import { Worksheet, WorksheetService } from './worksheet.service';
 
 const item = (id: number) => ({
   id, sortOrder: id, fen: `8/8/8/8/8/8/8/8 w - - 0 ${id}`, orientation: 'white' as const,
-  heading: '', text: '', source: 'Book' as const, sourceId: id, bookId: 1,
+  heading: '', text: '', solutionMoves: '', source: 'Book' as const, sourceId: id, bookId: 1,
 });
 
 const sheet = (over: Partial<Worksheet> = {}): Worksheet => ({
-  id: 4, name: 'Mittwoch', isClipboard: false, perPage: 6, itemCount: 3,
+  id: 4, name: 'Mittwoch', isClipboard: false, perPage: 6, itemCount: 3, shareToken: null,
   createdAt: '', updatedAt: '', items: [item(1), item(2), item(3)], ...over,
 });
 
@@ -33,6 +33,9 @@ describe('WorksheetDetailComponent', () => {
       remove: jasmine.createSpy('remove').and.returnValue(of(undefined)),
       addItems: jasmine.createSpy('addItems').and.returnValue(of({ added: 1 })),
       saveClipboardAs: jasmine.createSpy('saveClipboardAs').and.returnValue(of({ ...loaded, id: 9 })),
+      share: jasmine.createSpy('share').and.returnValue(of('Ux7f2K')),
+      unshare: jasmine.createSpy('unshare').and.returnValue(of(undefined)),
+      shareUrl: (token: string) => `https://rookhub.test/w/${token}`,
     };
     router = { navigate: jasmine.createSpy('navigate') };
     TestBed.resetTestingModule();   // mehrere Blätter je Test (Zwischenablage vs. benanntes Blatt)
@@ -122,6 +125,35 @@ describe('WorksheetDetailComponent', () => {
     c.saveAsSheet();
     expect(worksheets.saveClipboardAs).toHaveBeenCalledWith('Mittwochstraining', 2);
     expect(router.navigate).toHaveBeenCalledWith(['/worksheets', 9]);
+  });
+
+  it('Teilen einschalten holt das Token und baut die Adresse für den QR-Code', () => {
+    const c = make();
+    c.toggleShare(true);
+    expect(worksheets.share).toHaveBeenCalledWith(4);
+    expect(c.sheet!.shareToken).toBe('Ux7f2K');
+    expect(c.shareUrl).toBe('https://rookhub.test/w/Ux7f2K');
+  });
+
+  it('Teilen beenden fragt nach — und ein Nein lässt den Link stehen', () => {
+    const c = make(sheet({ shareToken: 'Ux7f2K' }));
+    spyOn(window, 'confirm').and.returnValue(false);
+
+    c.toggleShare(false);
+
+    expect(worksheets.unshare).not.toHaveBeenCalled();
+    expect(c.sheet!.shareToken).toBe('Ux7f2K');
+  });
+
+  it('bestätigtes Beenden nimmt den Link weg', () => {
+    const c = make(sheet({ shareToken: 'Ux7f2K' }));
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    c.toggleShare(false);
+
+    expect(worksheets.unshare).toHaveBeenCalledWith(4);
+    expect(c.sheet!.shareToken).toBeNull();
+    expect(c.shareUrl).toBe('');
   });
 
   it('eine Stellung von Hand kommt als FEN mit passender Ausrichtung', () => {

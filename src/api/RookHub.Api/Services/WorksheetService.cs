@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -61,6 +63,7 @@ public class WorksheetService
                 IsClipboard = w.IsClipboard,
                 PerPage = w.PerPage,
                 ItemCount = w.Items.Count,
+                ShareToken = w.ShareToken,
                 CreatedAt = w.CreatedAt,
                 UpdatedAt = w.UpdatedAt,
             })
@@ -225,6 +228,7 @@ public class WorksheetService
                 Orientation = orientation,
                 Heading = Clean(dto.Heading, 200),
                 Text = Clean(dto.Text, 2000),
+                SolutionMoves = CleanUciMoves(dto.SolutionMoves),
                 Source = dto.Source,
                 SourceId = dto.SourceId,
                 BookId = dto.BookId,
@@ -287,6 +291,83 @@ public class WorksheetService
         return ToDto(sheet);
     }
 
+    // ===== Teilen =====
+
+    /// <summary>
+    /// Öffentlichen Link einschalten (idempotent: ein vorhandener bleibt, damit gedruckte QR-Codes
+    /// gültig bleiben). Die Zwischenablage teilt man nicht — sie ist Arbeitsfläche, ihr Inhalt
+    /// wechselt ständig; ein Link darauf zeigte morgen etwas anderes.
+    /// </summary>
+    public async Task<string?> ShareAsync(int userId, int id)
+    {
+        var sheet = await _db.Worksheets.FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId);
+        if (sheet == null || sheet.IsClipboard) return null;
+
+        if (string.IsNullOrEmpty(sheet.ShareToken))
+        {
+            sheet.ShareToken = await NewUniqueTokenAsync();
+            sheet.SharedAt = DateTime.UtcNow;
+            sheet.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+        return sheet.ShareToken;
+    }
+
+    /// <summary>Link abschalten. Ein späteres Teilen erzeugt ein NEUES Token — gedruckte QR-Codes
+    /// laufen danach ins Leere, und genau dafür ist das Abschalten da.</summary>
+    public async Task<bool> UnshareAsync(int userId, int id)
+    {
+        var sheet = await _db.Worksheets.FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId);
+        if (sheet == null) return false;
+
+        sheet.ShareToken = null;
+        sheet.SharedAt = null;
+        sheet.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>Das geteilte Blatt hinter dem Link (ohne Anmeldung); <c>null</c> bei unbekanntem Token.</summary>
+    public async Task<SharedWorksheetDto?> GetSharedAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+
+        var sheet = await _db.Worksheets
+            .Include(w => w.Items)
+            .FirstOrDefaultAsync(w => w.ShareToken == token);
+        if (sheet == null) return null;
+
+        return new SharedWorksheetDto
+        {
+            Name = sheet.Name,
+            Items = sheet.Items.OrderBy(i => i.SortOrder).ThenBy(i => i.Id).Select(i => new SharedWorksheetItemDto
+            {
+                Fen = i.Fen,
+                Orientation = i.Orientation,
+                Heading = i.Heading,
+                Text = i.Text,
+                SolutionMoves = i.SolutionMoves,
+            }).ToList(),
+        };
+    }
+
+    private async Task<string> NewUniqueTokenAsync()
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var token = NewToken();
+            if (!await _db.Worksheets.AnyAsync(w => w.ShareToken == token)) return token;
+        }
+        return NewToken();   // extrem unwahrscheinlicher Kollisions-Fallback
+    }
+
+    /// <summary>URL-sicheres Zufallstoken (~22 Zeichen aus 16 Bytes) — wie beim Partie-/Linien-Link.</summary>
+    private static string NewToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(16);
+        return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+
     // ===== intern =====
 
     private Task<Worksheet?> LoadAsync(int userId, int id)
@@ -311,6 +392,28 @@ public class WorksheetService
         var cleaned = (name ?? string.Empty).Trim();
         return cleaned.Length > 120 ? cleaned[..120] : cleaned;
     }
+
+    /// <summary>
+    /// Lösungszüge säubern: nur echte UCI-Halbzüge (<c>e2e4</c>, <c>e7e8q</c>) bleiben stehen. Der
+    /// Client schickt sie, also wird hier geprüft statt vertraut — was hier landet, geht später
+    /// ohne Anmeldung über den geteilten Link wieder hinaus.
+    /// </summary>
+    public static string CleanUciMoves(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var moves = value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(m => UciMove.IsMatch(m))
+            .ToList();
+
+        var joined = string.Join(' ', moves);
+        if (joined.Length <= 1000) return joined;
+
+        // Deckel der Spalte: lieber die Lösung hinten kappen als den Satz abschneiden.
+        while (moves.Count > 0 && string.Join(' ', moves).Length > 1000) moves.RemoveAt(moves.Count - 1);
+        return string.Join(' ', moves);
+    }
+
+    private static readonly Regex UciMove = new("^[a-h][1-8][a-h][1-8][qrbnQRBN]?$", RegexOptions.Compiled);
 
     private static string Clean(string? value, int max)
     {
@@ -339,6 +442,7 @@ public class WorksheetService
         IsClipboard = sheet.IsClipboard,
         PerPage = sheet.PerPage,
         ItemCount = sheet.Items.Count,
+        ShareToken = sheet.ShareToken,
         CreatedAt = sheet.CreatedAt,
         UpdatedAt = sheet.UpdatedAt,
         Items = sheet.Items.OrderBy(i => i.SortOrder).ThenBy(i => i.Id).Select(ToDto).ToList(),
@@ -352,6 +456,7 @@ public class WorksheetService
         Orientation = item.Orientation,
         Heading = item.Heading,
         Text = item.Text,
+        SolutionMoves = item.SolutionMoves,
         Source = item.Source.ToString(),
         SourceId = item.SourceId,
         BookId = item.BookId,

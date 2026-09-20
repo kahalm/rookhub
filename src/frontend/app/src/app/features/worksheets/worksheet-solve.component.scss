@@ -1,0 +1,25 @@
+/* Geteiltes Aufgabenblatt am Handy neben dem Papier: eine Spalte, Brett so groß wie möglich. */
+.wsv-page { max-width: 640px; margin: 0 auto; padding: 12px; }
+.wsv-center { display: flex; justify-content: center; padding: 40px; }
+
+.wsv-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.wsv-sheet { font-weight: 600; overflow-wrap: anywhere; }
+.wsv-counter { margin-left: auto; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; }
+
+.wsv-task { margin-top: 10px; padding: 12px; }
+.wsv-heading { margin: 0 0 2px; font-size: 1.05rem; overflow-wrap: anywhere; }
+.wsv-turn { margin: 0 0 8px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+.wsv-board { max-width: 480px; margin: 0 auto; }
+.wsv-text { margin: 10px 0 0; font-size: 0.95rem; line-height: 1.4; overflow-wrap: anywhere; }
+
+.wsv-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+.wsv-status.wsv-ok { color: #2e7d32; }
+.wsv-status.wsv-bad { color: var(--mat-sys-error, #b3261e); }
+
+.wsv-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.wsv-spacer { flex: 1 1 auto; }
+
+.wsv-empty, .wsv-done { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px; text-align: center; }
+.wsv-empty mat-icon, .wsv-done mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.6; }
+.wsv-done h1 { margin: 0; font-size: 1.2rem; overflow-wrap: anywhere; }
+.wsv-score { margin: 0; font-size: 1.05rem; }

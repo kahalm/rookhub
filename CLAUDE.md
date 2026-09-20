@@ -977,9 +977,24 @@ Karte nie auseinanderlaufen. Gedruckt wird ohne Lösung und ohne Linientitel (de
 | PUT | `/api/worksheets/{id:int}/items/{itemId:int}` | Überschrift/Begleittext/Ausrichtung `{ heading?, text?, orientation? }` (nur gesetzte Felder wirken) |
 | DELETE | `/api/worksheets/{id:int}/items/{itemId:int}` | Eine Aufgabe vom Blatt nehmen |
 | PUT | `/api/worksheets/{id:int}/order` | Reihenfolge `{ itemIds[] }` — unbekannte IDs werden ignoriert, nicht genannte Aufgaben hängen sich hinten an (eine halbe Liste vom Client darf keine Stellung verschwinden lassen) |
+| POST | `/api/worksheets/{id:int}/share` | Öffentlichen Link einschalten (**idempotent** — ein vorhandenes Token bleibt, sonst wären gedruckte QR-Codes tot) → `{ shareToken }`. Die Zwischenablage lässt sich NICHT teilen (404): ihr Inhalt wechselt ständig |
+| DELETE | `/api/worksheets/{id:int}/share` | Link abschalten = Widerruf; ein erneutes Teilen erzeugt ein **neues** Token, gedruckte QR-Codes laufen danach ins Leere |
+| GET | `/api/worksheets/shared/{token}` | **`[AllowAnonymous]`** — das geteilte Blatt hinter dem Link: Name + Aufgaben (FEN, Ausrichtung, Überschrift, Begleittext, **Lösung**), keine Besitzer-Daten |
+
+**Teilen + durchspielen**: ein Blatt kann einen öffentlichen Link bekommen (`/w/{token}`, ohne Anmeldung
+— wie `/g/` und `/l/`), der auf dem Ausdruck in der **Fußzeile jeder Seite als QR-Code** steht (ein
+einzelnes Blatt auf dem Tisch soll allein funktionieren). Hinter dem Link wird das Blatt GELÖST: dafür
+wandert beim Senden die Lösung der Quelllinie als `WorksheetItem.SolutionMoves` (UCI ab der
+Aufgabenstellung, Gegnerzüge eingeschlossen) mit; auf dem Papier steht sie nie. Aufgaben ohne Lösung
+(FEN von Hand, Stellung aus einer Kommentar-Variante) bleiben dort ein **Rechenbrett** — Züge frei,
+nichts wird bewertet. Die Prüf-Logik steht als eigene Klasse `WorksheetTask` in
+`worksheet-solve.component.ts` (ohne Angular/HTTP, damit die Regel einzeln testbar bleibt). **Achtung**:
+wer den Link hat, sieht damit auch die Lösungen des Kurses — das ist die bewusste Entscheidung des
+Teilenden, und Abschalten ist der Widerruf.
 
 Frontend: `/worksheets` (Übersicht), `/worksheets/:id` (Bearbeiten: ziehen, Überschrift/Begleittext,
-FEN von Hand), `/worksheets/:id/print?print=1` (Druckansicht, öffnet den Druckdialog). Gesendet wird über
+FEN von Hand, Teilen-Schalter mit Link + QR), `/worksheets/:id/print?print=1` (Druckansicht, öffnet den
+Druckdialog), `/w/:token` (öffentliche Löseseite). Gesendet wird über
 `<app-send-to-worksheet>` (Menüzeile mit Ziel-Untermenü bzw. `[asButton]` in Werkzeugleisten) — eingebaut im
 Kurs-⋮, im Kapitel-⋮, in der Steuerleiste des Durchsehens und im ⋮ der Puzzle-Aktionszeile (neben
 „♥ Letztes Puzzle"). Die PDF macht der Browser; gezeichnet wird mit `FlashcardBoardComponent` als
@@ -2038,8 +2053,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |
 | CourseFlashcardMarks | PERSISTENTE Flashcard-Markierung einzelner Kurs-Linien je User (Checkbox im Durchsehen; `?marked=1`-Bereich der Flashcards-Seite) | UserId (Cascade) + BookId (denormalisiert, Cascade) + BookPuzzleId (**Restrict** — wie CoursePuzzleResult), CreatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId). Linien-Löschpfade (`CourseAuthoringService.RemoveLinesAsync`, `BookAdminService.DeleteBook`) räumen explizit ab |
 | RepertoireFlashcardMarks | PERSISTENTE Flashcard-Markierung von Repertoire-Linien je User — Besitzer UND Freigabe-Empfänger haben eigene Sätze | UserId (Cascade) + RepertoireId (Cascade) + LineKey (≤120, Frontend-Linien-Hash wie SR), CreatedAt; **UNIQUE (UserId, RepertoireId, LineKey)** |
-| Worksheets | Ein AUFGABENBLATT (Stellungssammlung zum Ausdrucken). Genau EINES je Nutzer mit `IsClipboard` = die Zwischenablage (Sammelkorb; nicht löschbar, nur leerbar) | UserId (Cascade), Name (≤120, leer bei der Ablage), IsClipboard, PerPage (2/4/6), CreatedAt, UpdatedAt; Index (UserId, IsClipboard) |
-| WorksheetItems | Eine Aufgabe auf dem Blatt. Die Stellung ist AUSGESCHRIEBEN — Neuimport/Löschen der Quelle ändert ein fertiges Blatt nicht | WorksheetId (Cascade), SortOrder, Fen (≤120), Orientation (≤5, white/black), Heading (≤200), Text (≤2000), Source (Manual/Standard/Book) + SourceId? + BookId? (**kein FK**, nur Herkunftsvermerk), CreatedAt; Index (WorksheetId, SortOrder) |
+| Worksheets | Ein AUFGABENBLATT (Stellungssammlung zum Ausdrucken). Genau EINES je Nutzer mit `IsClipboard` = die Zwischenablage (Sammelkorb; nicht löschbar, nur leerbar) | UserId (Cascade), Name (≤120, leer bei der Ablage), IsClipboard, PerPage (2/4/6), **ShareToken? (≤32, UNIQUE — `/w/{token}`, NULL = nicht geteilt; MariaDB lässt beliebig viele NULLs zu) + SharedAt?**, CreatedAt, UpdatedAt; Index (UserId, IsClipboard) |
+| WorksheetItems | Eine Aufgabe auf dem Blatt. Die Stellung ist AUSGESCHRIEBEN — Neuimport/Löschen der Quelle ändert ein fertiges Blatt nicht | WorksheetId (Cascade), SortOrder, Fen (≤120), Orientation (≤5, white/black), Heading (≤200), Text (≤2000), **SolutionMoves (≤1000, UCI ab der Aufgabenstellung; leer = nur zum Rechnen — nur für den geteilten Link, nie im Druck; `WorksheetService.CleanUciMoves` filtert, was der Client schickt)**, Source (Manual/Standard/Book) + SourceId? + BookId? (**kein FK**, nur Herkunftsvermerk), CreatedAt; Index (WorksheetId, SortOrder) |
 
 Cascade Deletes: AppUser → Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults, CourseAttempts, UserTrainingGoals, PlayTimeDailies, PlayTimeSyncs, WeeklyPostAttempts, SavedGames, ManualActivities, GameReconstructions (→ GameReconstructionParts); Repertoire → Files, RepertoireShares (RepertoireShare.Owner/Recipient Restrict); Group → UserGroups, BookGroupAccesses, GroupTrainingGoals; Book → BookPuzzles, CourseProgresses, CoursePuzzleResults, CourseAttempts, BookGroupAccesses, CourseShares, CourseLinks, CalculationTrees (CoursePuzzleResult.BookPuzzle + CourseAttempt.BookPuzzle + CalculationTree.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden; CourseShare.Owner/Recipient ebenfalls Restrict; CourseLink.LinkedBookId ohne FK → DeleteBook räumt beide Richtungen explizit ab); WeeklyPost → WeeklyPostAttempts; AppUser → AdminMessages + MessageThreads (über UserId, der Nicht-Admin-Teilnehmer; MessageThread.ClaimedByAdminId hat bewusst keinen FK). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-/Ziel-Vorlagen-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.

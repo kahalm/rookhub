@@ -2519,6 +2519,34 @@
       "option": "{{n}}",
       "short": "{{n}} oldalanként"
     },
+    "share": {
+      "toggle": "Lap megosztása (link + QR-kód)",
+      "hint": "Aki megnyitja a linket, bejelentkezés nélkül végigjátszhatja a lapot a táblán — a nyomtatványon minden oldal láblécében QR-kódként szerepel.",
+      "off": "Nincs megosztva — így a nyomtatványra nem kerül QR-kód.",
+      "copy": "Link másolása",
+      "copied": "Link másolva.",
+      "stopConfirm": "Befejezed a megosztást? A mostani link érvénytelen lesz — a kinyomtatott QR-kódok ezután sehová sem vezetnek, egy újabb megosztás pedig másik linket hoz létre.",
+      "solutionWarning": "A link mögött a megoldások is ott vannak — bárki látja őket, aki megkapja.",
+      "scanHint": "Játszd végig a táblán:",
+      "noSheetLink": "Ez a lap nincs megosztva — a nyomtatvány nem kap QR-kódot."
+    },
+    "solve": {
+      "notFound": "Ez a link (már) nem létezik.",
+      "counter": "{{i}}. feladat a(z) {{n}}-ből",
+      "score": "{{total}} feladatból {{solved}} sikerült elsőre",
+      "again": "Elölről",
+      "correct": "Helyes!",
+      "wrong": "Ez nem a megoldás.",
+      "shown": "A megoldás lejátszva.",
+      "freeBoard": "Számoláshoz: a lépések szabadok, semmi sem ellenőrződik.",
+      "yourMove": "Te lépsz.",
+      "retry": "Újra",
+      "reset": "Állás visszaállítása",
+      "showSolution": "Megoldás mutatása",
+      "next": "Tovább",
+      "finish": "Kész",
+      "prev": "Vissza"
+    },
     "list": {
       "hint": "Előbb gyűjts, aztán rendezz, aztán nyomtass: minden a vágólapra kerül, amit feladatlapra küldesz. Ott kidobálsz, átrendezel és címeket írsz hozzá — majd néven mented az egészet.",
       "mine": "Feladatlapjaim",

@@ -40,3 +40,17 @@
   .wd-board { width: 88px; }
   .wd-item-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
 }
+
+/* Teilen-Karte: QR links, Link + Hinweise rechts; am Handy untereinander. */
+.wd-share { margin: 1rem 0; }
+.wd-share-head { margin-bottom: 0.5rem; }
+.wd-share-body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.wd-qr { flex: 0 0 auto; background: #fff; padding: 6px; border-radius: 4px; }
+.wd-share-lines { flex: 1 1 260px; min-width: 0; }
+.wd-share-row { display: flex; align-items: center; gap: 6px; }
+.wd-share-url {
+  flex: 1 1 auto; min-width: 0; padding: 0.45rem; border-radius: 4px; font-size: 0.85rem;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  background: var(--mat-sys-surface-container, #f5f5f5); color: inherit;
+}
+.wd-warn { margin-top: 0.4rem; }

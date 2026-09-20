@@ -26,7 +26,18 @@
 .ws-head { border-bottom: 1px solid #999; padding-bottom: 2mm; margin-bottom: 3mm; }
 .ws-title { font-weight: 600; overflow-wrap: anywhere; }
 .ws-scope { color: #444; text-align: right; overflow-wrap: anywhere; }
-.ws-foot { border-top: 1px solid #999; padding-top: 2mm; margin-top: auto; color: #444; }
+.ws-foot {
+  border-top: 1px solid #999; padding-top: 2mm; margin-top: auto; color: #444;
+  align-items: center; gap: 3mm;
+}
+/* QR-Code zum ganzen Blatt — klein genug für die Fußzeile, groß genug zum Scannen (~15 mm). */
+.ws-qr { width: 15mm; flex: 0 0 auto; }
+.ws-qr ::ng-deep canvas { width: 15mm !important; height: 15mm !important; display: block; }
+.ws-foot-link { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.ws-foot-label { font-weight: 600; }
+.ws-foot-url { font-size: 7.5pt; overflow-wrap: anywhere; color: #555; }
+.ws-foot-meta { white-space: nowrap; }
+.ws-share-hint { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 
 .ws-grid { display: grid; gap: 4mm; }
 /* Zwei Spalten bekommen die durchgehende Trennlinie klassischer Diagramm-Ausdrucke (ein Rahmen je
@@ -74,8 +85,8 @@
 }
 
 @media print {
-  /* Gedruckt wird NUR das Blatt; Bedienleiste und Hinweis bleiben am Schirm. */
-  .ws-toolbar, .ws-hint { display: none; }
+  /* Gedruckt wird NUR das Blatt; Bedienleiste und Hinweise bleiben am Schirm. */
+  .ws-toolbar, .ws-hint, .ws-share-hint { display: none; }
   .ws-page { max-width: none; padding: 0; }
   .ws-sheet {
     width: auto;

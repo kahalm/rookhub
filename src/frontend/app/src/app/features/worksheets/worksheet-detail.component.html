@@ -83,6 +83,40 @@
       </mat-card>
     }
 
+    <!-- Teilen: EIN Link fürs ganze Blatt, auf dem Ausdruck als QR-Code. Die Zwischenablage
+         bleibt außen vor — ihr Inhalt wechselt, ein Link darauf zeigte morgen etwas anderes. -->
+    @if (!sheet.isClipboard) {
+      <mat-card class="wd-share">
+        <mat-card-content>
+          <div class="wd-share-head">
+            <mat-slide-toggle [checked]="!!sheet.shareToken" (change)="toggleShare($event.checked)"
+                              [disabled]="busy">
+              {{ 'worksheets.share.toggle' | translate }}
+            </mat-slide-toggle>
+          </div>
+          @if (sheet.shareToken) {
+            <div class="wd-share-body">
+              <app-qr-code class="wd-qr" [data]="shareUrl" [width]="132" />
+              <div class="wd-share-lines">
+                <p class="wd-hint">{{ 'worksheets.share.hint' | translate }}</p>
+                <div class="wd-share-row">
+                  <input class="wd-share-url" [value]="shareUrl" readonly />
+                  <button mat-icon-button (click)="copyShareUrl()"
+                          [matTooltip]="'worksheets.share.copy' | translate"
+                          [attr.aria-label]="'worksheets.share.copy' | translate">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </div>
+                <p class="wd-hint wd-warn">{{ 'worksheets.share.solutionWarning' | translate }}</p>
+              </div>
+            </div>
+          } @else {
+            <p class="wd-hint">{{ 'worksheets.share.off' | translate }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
     @if (sheet.items.length === 0) {
       <mat-card class="wd-empty">
         <mat-icon>assignment</mat-icon>

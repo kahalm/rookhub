@@ -71,6 +71,9 @@ public class EndpointAuthInventoryTests
         "GET /api/tournaments/{id}/teams/{snr}",                     // TournamentProxyController.GetTeamDetail
         "GET /api/tournaments/{id}/teams",                           // TournamentProxyController.GetTeams
         "GET /api/tournaments/{id}",                                 // TournamentProxyController.GetById
+        // Das TOKEN ist der Nachweis (wie beim Partie-/Linien-Link): Es steht als QR-Code auf dem
+        // gedruckten Aufgabenblatt und soll ohne Konto loesbar sein — genau dafuer teilt man es.
+        "GET /api/worksheets/shared/{token}",                        // WorksheetController.Shared
         "GET /api/weekly-posts/{id}/puzzles",                        // WeeklyPostController.GetPuzzles
         "GET /api/weekly-posts/{id}/results",                        // WeeklyPostController.GetResults
         "GET /api/weekly-posts/{id}",                                // WeeklyPostController.GetById

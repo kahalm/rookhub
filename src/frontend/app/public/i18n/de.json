@@ -2279,6 +2279,34 @@
       "option": "{{n}}",
       "short": "{{n}} je Seite"
     },
+    "share": {
+      "toggle": "Blatt teilen (Link + QR-Code)",
+      "hint": "Wer den Link öffnet, kann das Blatt ohne Anmeldung am Brett durchspielen — auf dem Ausdruck steht er in der Fußzeile jeder Seite als QR-Code.",
+      "off": "Nicht geteilt — auf dem Ausdruck steht dann kein QR-Code.",
+      "copy": "Link kopieren",
+      "copied": "Link kopiert.",
+      "stopConfirm": "Teilen beenden? Der bisherige Link wird ungültig — gedruckte QR-Codes laufen danach ins Leere, und ein erneutes Teilen erzeugt einen anderen Link.",
+      "solutionWarning": "Hinter dem Link stehen auch die Lösungen der Aufgaben — jeder, der ihn bekommt, kann sie sehen.",
+      "scanHint": "Am Brett nachspielen:",
+      "noSheetLink": "Dieses Blatt ist nicht geteilt — der Ausdruck bekommt keinen QR-Code."
+    },
+    "solve": {
+      "notFound": "Diesen Link gibt es nicht (mehr).",
+      "counter": "Aufgabe {{i}} von {{n}}",
+      "score": "{{solved}} von {{total}} auf Anhieb gelöst",
+      "again": "Nochmal von vorn",
+      "correct": "Richtig!",
+      "wrong": "Das ist nicht die Lösung.",
+      "shown": "Lösung vorgespielt.",
+      "freeBoard": "Zum Rechnen: Die Züge sind frei, geprüft wird nichts.",
+      "yourMove": "Du bist am Zug.",
+      "retry": "Nochmal versuchen",
+      "reset": "Stellung zurücksetzen",
+      "showSolution": "Lösung zeigen",
+      "next": "Weiter",
+      "finish": "Fertig",
+      "prev": "Zurück"
+    },
     "list": {
       "hint": "Erst sammeln, dann ordnen, dann drucken: In der Zwischenablage landet alles, was du an ein Aufgabenblatt schickst. Dort wirfst du raus, sortierst um und schreibst Überschriften dazu — und sicherst das Ganze unter einem Namen.",
       "mine": "Meine Aufgabenblätter",

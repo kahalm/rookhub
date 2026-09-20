@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
+import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
 
 /** Eine Aufgabe auf dem Papier: Stellung, Nummer und die Worte des Erstellers — nie die Lösung. */
@@ -56,7 +57,7 @@ export function solutionLines(perPage: number): number[] {
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    TranslatePipe, FlashcardBoardComponent,
+    TranslatePipe, FlashcardBoardComponent, QrCodeComponent,
   ],
   templateUrl: './worksheet-print.component.html',
   styleUrls: ['./worksheet-print.component.scss'],
@@ -71,6 +72,11 @@ export class WorksheetPrintComponent implements OnInit {
   taskCount = 0;
   readonly today = new Date();
 
+  /** Adresse hinter dem QR-Code in der Fußzeile; leer, solange das Blatt nicht geteilt ist. */
+  shareUrl = '';
+  /** Läuft gerade „Teilen einschalten" (nur am Schirm, der Knopf wird nicht gedruckt). */
+  sharing = false;
+
   /**
    * Figurensatz des Ausdrucks: `merida` — kräftige Umrisse, satt gefüllte schwarze Figuren, also
    * der Satz, der dem klassischen Diagramm-Ausdruck (ChessBase & Co.) am nächsten kommt. Bewusst
@@ -78,6 +84,9 @@ export class WorksheetPrintComponent implements OnInit {
    * entscheidet, was bei 58 mm Kantenlänge in Graustufen noch lesbar bleibt.
    */
   readonly pieceSet = 'merida';
+
+  /** Die Zwischenablage lässt sich nicht teilen — dort gibt es keinen QR-Code, nur den Hinweis. */
+  isClipboard = false;
 
   private route = inject(ActivatedRoute);
   private worksheets = inject(WorksheetService);
@@ -99,6 +108,8 @@ export class WorksheetPrintComponent implements OnInit {
   private finish(sheet: Worksheet, autoPrint: boolean): void {
     this.sheetName = sheet.isClipboard ? this.translate.instant('worksheets.clipboard') : sheet.name;
     this.perPage = sheet.perPage;
+    this.isClipboard = sheet.isClipboard;
+    this.shareUrl = sheet.shareToken ? this.worksheets.shareUrl(sheet.shareToken) : '';
     const tasks = sheet.items.map((item, index) => this.toTask(item, index + 1));
     this.sheets = toSheets(tasks, this.perPage);
     this.taskCount = tasks.length;
@@ -117,6 +128,23 @@ export class WorksheetPrintComponent implements OnInit {
       heading: item.heading,
       text: item.text,
     };
+  }
+
+  /**
+   * „Teilen einschalten" direkt aus der Druckansicht: Wer hier steht, will drucken — und ein Blatt
+   * ohne Link trägt keinen QR-Code. Der Knopf steht nur am Schirm (im Druck ausgeblendet).
+   */
+  enableShare(): void {
+    if (this.sharing || this.isClipboard) return;
+    this.sharing = true;
+    this.worksheets.share(this.id).subscribe({
+      next: token => {
+        this.sharing = false;
+        this.shareUrl = token ? this.worksheets.shareUrl(token) : '';
+        this.cdr.markForCheck();
+      },
+      error: () => { this.sharing = false; this.cdr.markForCheck(); },
+    });
   }
 
   print(): void {

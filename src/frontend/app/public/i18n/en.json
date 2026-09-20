@@ -2279,6 +2279,34 @@
       "option": "{{n}}",
       "short": "{{n}} per page"
     },
+    "share": {
+      "toggle": "Share this sheet (link + QR code)",
+      "hint": "Whoever opens the link can play the sheet through at the board without signing in — on the print-out it sits in the footer of every page as a QR code.",
+      "off": "Not shared — then the print-out carries no QR code.",
+      "copy": "Copy link",
+      "copied": "Link copied.",
+      "stopConfirm": "Stop sharing? The current link stops working — printed QR codes lead nowhere afterwards, and sharing again creates a different link.",
+      "solutionWarning": "The link also carries the solutions — anyone who gets it can see them.",
+      "scanHint": "Play it through at the board:",
+      "noSheetLink": "This sheet is not shared — the print-out gets no QR code."
+    },
+    "solve": {
+      "notFound": "This link does not exist (any more).",
+      "counter": "Task {{i}} of {{n}}",
+      "score": "{{solved}} of {{total}} solved first try",
+      "again": "Start over",
+      "correct": "Correct!",
+      "wrong": "That is not the solution.",
+      "shown": "Solution played out.",
+      "freeBoard": "For calculating: moves are free, nothing is checked.",
+      "yourMove": "Your move.",
+      "retry": "Try again",
+      "reset": "Reset the position",
+      "showSolution": "Show the solution",
+      "next": "Next",
+      "finish": "Done",
+      "prev": "Back"
+    },
     "list": {
       "hint": "Collect first, then arrange, then print: everything you send to a worksheet lands in the clipboard. There you throw things out, reorder them and add headings — and save the lot under a name.",
       "mine": "My worksheets",

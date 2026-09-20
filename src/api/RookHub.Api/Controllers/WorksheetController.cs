@@ -92,6 +92,29 @@ public class WorksheetController : BaseApiController
     public async Task<IActionResult> DeleteItem(int id, int itemId)
         => await _worksheets.DeleteItemAsync(GetUserId(), id, itemId) ? NoContent() : NotFound();
 
+    /// <summary>Öffentlichen Link einschalten (idempotent) → `{ shareToken }`. Die Zwischenablage
+    /// lässt sich nicht teilen (404) — sie ist Arbeitsfläche, ihr Inhalt wechselt ständig.</summary>
+    [HttpPost("{id:int}/share")]
+    public async Task<ActionResult<WorksheetShareDto>> Share(int id)
+    {
+        var token = await _worksheets.ShareAsync(GetUserId(), id);
+        return token == null ? NotFound() : Ok(new WorksheetShareDto { ShareToken = token });
+    }
+
+    /// <summary>Öffentlichen Link abschalten (ein späteres Teilen erzeugt ein neues Token).</summary>
+    [HttpDelete("{id:int}/share")]
+    public async Task<IActionResult> Unshare(int id)
+        => await _worksheets.UnshareAsync(GetUserId(), id) ? NoContent() : NotFound();
+
+    /// <summary>Das geteilte Blatt hinter dem Link — OHNE Anmeldung (QR-Code auf dem Ausdruck).</summary>
+    [HttpGet("shared/{token}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<SharedWorksheetDto>> Shared(string token)
+    {
+        var sheet = await _worksheets.GetSharedAsync(token);
+        return sheet == null ? NotFound() : Ok(sheet);
+    }
+
     /// <summary>Reihenfolge setzen (Item-IDs in Wunsch-Abfolge).</summary>
     [HttpPut("{id:int}/order")]
     public async Task<ActionResult<WorksheetDto>> Reorder(int id, [FromBody] ReorderWorksheetDto dto)

@@ -254,6 +254,105 @@ public class WorksheetServiceTests : IDisposable
         Assert.Equal(2, updated.PerPage);
     }
 
+    // ===== Teilen =====
+
+    [Fact]
+    public async Task Sharing_creates_a_link_and_keeps_it_on_a_second_call()
+    {
+        // Ein zweites „Teilen" darf kein neues Token geben — sonst wären gedruckte QR-Codes tot.
+        var user = await CreateUserAsync();
+        await _service.AddItemsAsync(user.Id, null, Items(Fen1));
+        var sheet = await _service.SaveClipboardAsAsync(user.Id, "Mittwoch", null);
+
+        var first = await _service.ShareAsync(user.Id, sheet!.Id);
+        var second = await _service.ShareAsync(user.Id, sheet.Id);
+
+        Assert.False(string.IsNullOrWhiteSpace(first));
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public async Task The_clipboard_cannot_be_shared_it_is_a_workbench()
+    {
+        var user = await CreateUserAsync();
+        var clip = await _service.GetClipboardAsync(user.Id);
+
+        Assert.Null(await _service.ShareAsync(user.Id, clip.Id));
+    }
+
+    [Fact]
+    public async Task Stopping_the_sharing_kills_the_old_link_for_good()
+    {
+        var user = await CreateUserAsync();
+        await _service.AddItemsAsync(user.Id, null, Items(Fen1));
+        var sheet = await _service.SaveClipboardAsAsync(user.Id, "Mittwoch", null);
+        var token = await _service.ShareAsync(user.Id, sheet!.Id);
+
+        Assert.True(await _service.UnshareAsync(user.Id, sheet.Id));
+
+        Assert.Null(await _service.GetSharedAsync(token!));
+        var again = await _service.ShareAsync(user.Id, sheet.Id);
+        Assert.NotEqual(token, again);   // neues Teilen = neuer Link
+    }
+
+    [Fact]
+    public async Task The_shared_sheet_carries_the_positions_with_their_solutions()
+    {
+        var user = await CreateUserAsync();
+        await _service.AddItemsAsync(user.Id, null, new List<NewWorksheetItemDto>
+        {
+            new() { Fen = Fen1, Orientation = "black", Heading = "Grundreihe", Text = "Wie geht es weiter?", SolutionMoves = "e1e2 d8d1" },
+            new() { Fen = Fen2 },
+        });
+        var sheet = await _service.SaveClipboardAsAsync(user.Id, "Mittwoch", null);
+        var token = await _service.ShareAsync(user.Id, sheet!.Id);
+
+        var shared = await _service.GetSharedAsync(token!);
+
+        Assert.Equal("Mittwoch", shared!.Name);
+        Assert.Equal(2, shared.Items.Count);
+        Assert.Equal("Grundreihe", shared.Items[0].Heading);
+        Assert.Equal("e1e2 d8d1", shared.Items[0].SolutionMoves);
+        Assert.Equal(string.Empty, shared.Items[1].SolutionMoves);   // ohne Lösung = nur zum Rechnen
+    }
+
+    [Fact]
+    public async Task An_unknown_token_is_simply_not_found()
+        => Assert.Null(await _service.GetSharedAsync("gibtsnicht"));
+
+    [Fact]
+    public async Task A_foreign_sheet_cannot_be_shared_or_unshared()
+    {
+        var owner = await CreateUserAsync("owner2");
+        var stranger = await CreateUserAsync("stranger2");
+        await _service.AddItemsAsync(owner.Id, null, Items(Fen1));
+        var sheet = await _service.SaveClipboardAsAsync(owner.Id, "Meins", null);
+
+        Assert.Null(await _service.ShareAsync(stranger.Id, sheet!.Id));
+        Assert.False(await _service.UnshareAsync(stranger.Id, sheet.Id));
+    }
+
+    [Theory]
+    [InlineData("e2e4 e7e5", "e2e4 e7e5")]
+    [InlineData("e7e8q", "e7e8q")]
+    [InlineData("  e2e4   e7e5  ", "e2e4 e7e5")]
+    [InlineData("e2e4 <script> e7e5", "e2e4 e7e5")]
+    [InlineData("z9z9", "")]
+    [InlineData(null, "")]
+    public void Only_real_uci_halfmoves_survive_as_a_solution(string? raw, string expected)
+        => Assert.Equal(expected, WorksheetService.CleanUciMoves(raw));
+
+    [Fact]
+    public void An_absurdly_long_solution_is_cut_to_fit_the_column()
+    {
+        var long_ = string.Join(' ', Enumerable.Repeat("e2e4", 400));   // 1999 Zeichen
+
+        var cleaned = WorksheetService.CleanUciMoves(long_);
+
+        Assert.True(cleaned.Length <= 1000);
+        Assert.StartsWith("e2e4 e2e4", cleaned);
+    }
+
     [Theory]
     [InlineData(2, 2)]
     [InlineData(4, 4)]

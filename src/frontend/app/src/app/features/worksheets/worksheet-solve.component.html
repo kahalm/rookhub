@@ -1,0 +1,88 @@
+<div class="wsv-page">
+  @if (loading) {
+    <div class="wsv-center"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (notFound || !sheet) {
+    <mat-card class="wsv-empty">
+      <mat-icon>link_off</mat-icon>
+      <p>{{ 'worksheets.solve.notFound' | translate }}</p>
+    </mat-card>
+  } @else if (total === 0) {
+    <mat-card class="wsv-empty">
+      <mat-icon>assignment</mat-icon>
+      <p>{{ 'worksheets.detail.empty' | translate }}</p>
+    </mat-card>
+  } @else if (done) {
+    <!-- Schlussbild: was auf Anhieb saß. Kein Konto, kein Server — nur diese Sitzung. -->
+    <mat-card class="wsv-done">
+      <mat-icon>flag</mat-icon>
+      <h1>{{ sheet.name }}</h1>
+      <p class="wsv-score">{{ 'worksheets.solve.score' | translate: { solved: solvedCount, total: total } }}</p>
+      <button mat-flat-button color="primary" (click)="restart()">
+        <mat-icon>replay</mat-icon>{{ 'worksheets.solve.again' | translate }}
+      </button>
+    </mat-card>
+  } @else if (task; as t) {
+    <div class="wsv-head">
+      <span class="wsv-sheet">{{ sheet.name }}</span>
+      <span class="wsv-counter">{{ 'worksheets.solve.counter' | translate: { i: current + 1, n: total } }}</span>
+    </div>
+    <mat-progress-bar mode="determinate" [value]="progress"></mat-progress-bar>
+
+    <mat-card class="wsv-task">
+      @if (t.item.heading) { <h2 class="wsv-heading">{{ t.item.heading }}</h2> }
+      <p class="wsv-turn">
+        {{ (t.item.orientation === 'white' ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
+      </p>
+
+      <div class="wsv-board">
+        <app-puzzle-board
+          [fen]="t.fen"
+          [orientation]="t.orientation"
+          [turnColor]="t.turnColor"
+          [dests]="t.dests"
+          [boardTheme]="boardTheme"
+          [pieceSet]="pieceSet"
+          (moveMade)="onMove($event)" />
+      </div>
+
+      @if (t.item.text) { <p class="wsv-text">{{ t.item.text }}</p> }
+
+      <div class="wsv-status" [class.wsv-ok]="t.state === 'solved'" [class.wsv-bad]="t.state === 'wrong'">
+        @switch (t.state) {
+          @case ('solved') { <mat-icon>check_circle</mat-icon><span>{{ 'worksheets.solve.correct' | translate }}</span> }
+          @case ('wrong') { <mat-icon>cancel</mat-icon><span>{{ 'worksheets.solve.wrong' | translate }}</span> }
+          @case ('given-up') { <mat-icon>visibility</mat-icon><span>{{ 'worksheets.solve.shown' | translate }}</span> }
+          @case ('free') { <mat-icon>calculate</mat-icon><span>{{ 'worksheets.solve.freeBoard' | translate }}</span> }
+          @default { <mat-icon>touch_app</mat-icon><span>{{ 'worksheets.solve.yourMove' | translate }}</span> }
+        }
+      </div>
+
+      <div class="wsv-actions">
+        <button mat-icon-button (click)="prev()" [disabled]="current === 0"
+                [attr.aria-label]="'worksheets.solve.prev' | translate">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        @if (t.state === 'wrong') {
+          <button mat-stroked-button (click)="retry()">
+            <mat-icon>refresh</mat-icon>{{ 'worksheets.solve.retry' | translate }}
+          </button>
+        }
+        @if (t.state === 'free' || t.state === 'given-up') {
+          <button mat-stroked-button (click)="resetBoard()">
+            <mat-icon>restart_alt</mat-icon>{{ 'worksheets.solve.reset' | translate }}
+          </button>
+        }
+        @if (t.solution.length > 0 && !t.finished) {
+          <button mat-stroked-button (click)="giveUp()">
+            <mat-icon>visibility</mat-icon>{{ 'worksheets.solve.showSolution' | translate }}
+          </button>
+        }
+        <span class="wsv-spacer"></span>
+        <button mat-flat-button color="primary" (click)="next()">
+          {{ (atEnd ? 'worksheets.solve.finish' : 'worksheets.solve.next') | translate }}
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </mat-card>
+  }
+</div>

@@ -2279,6 +2279,34 @@
       "option": "{{n}}",
       "short": "{{n}} po stranici"
     },
+    "share": {
+      "toggle": "Podijeli list (poveznica + QR kod)",
+      "hint": "Tko otvori poveznicu, može list proći za pločom bez prijave — na ispisu stoji u podnožju svake stranice kao QR kod.",
+      "off": "Nije podijeljeno — tada ispis nema QR koda.",
+      "copy": "Kopiraj poveznicu",
+      "copied": "Poveznica kopirana.",
+      "stopConfirm": "Prekinuti dijeljenje? Dosadašnja poveznica prestaje vrijediti — ispisani QR kodovi nakon toga ne vode nikamo, a novo dijeljenje stvara drugu poveznicu.",
+      "solutionWarning": "Iza poveznice stoje i rješenja zadataka — vidi ih svatko tko je dobije.",
+      "scanHint": "Prođi za pločom:",
+      "noSheetLink": "Ovaj list nije podijeljen — ispis neće dobiti QR kod."
+    },
+    "solve": {
+      "notFound": "Ova poveznica (više) ne postoji.",
+      "counter": "Zadatak {{i}} od {{n}}",
+      "score": "{{solved}} od {{total}} riješeno iz prve",
+      "again": "Ispočetka",
+      "correct": "Točno!",
+      "wrong": "To nije rješenje.",
+      "shown": "Rješenje je odigrano.",
+      "freeBoard": "Za računanje: potezi su slobodni, ništa se ne provjerava.",
+      "yourMove": "Ti si na potezu.",
+      "retry": "Pokušaj ponovno",
+      "reset": "Vrati poziciju",
+      "showSolution": "Pokaži rješenje",
+      "next": "Dalje",
+      "finish": "Gotovo",
+      "prev": "Natrag"
+    },
     "list": {
       "hint": "Prvo skupi, pa posloži, pa ispiši: sve što pošalješ na radni list završava u međuspremniku. Ondje izbacuješ, presaguješ redoslijed i dopisuješ naslove — i sve to spremiš pod imenom.",
       "mine": "Moji radni listovi",

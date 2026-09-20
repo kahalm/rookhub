@@ -16,6 +16,10 @@ export function isQuizLine(p: BookPuzzleDto): boolean {
  * eingespielt) — dieselbe Rechnung wie bei den Karteikarten, damit Blatt und Karte nie
  * auseinanderlaufen. Überschrift und Begleittext bleiben leer: der Linientitel („Matt in 3")
  * verriete die Aufgabe, die Worte schreibt der Ersteller selbst dazu.
+ *
+ * <p>Die LÖSUNG (die Züge ab der Aufgabenstellung) wandert mit — nicht fürs Papier, sondern für
+ * den geteilten Link: dort wird das Blatt durchgespielt, und ohne Lösung bliebe es ein Bilderbogen.
+ * Auf dem Ausdruck steht sie nie.</p>
  */
 export function itemsFromLines(bookId: number, puzzles: BookPuzzleDto[]): NewWorksheetItem[] {
   const items: NewWorksheetItem[] = [];
@@ -26,6 +30,7 @@ export function itemsFromLines(bookId: number, puzzles: BookPuzzleDto[]): NewWor
     items.push({
       fen: card.frontFen,
       orientation: card.orientation,
+      solutionMoves: solutionFrom(p.moves, typeof p.startPly === 'number' ? p.startPly : 0),
       source: 'Book',
       sourceId: p.id,
       bookId,
@@ -58,8 +63,19 @@ export function taskItemFromPuzzle(
   return {
     fen: chess.fen(),
     orientation: info.orientation,
+    solutionMoves: solutionFrom(info.moves, startPly),
     source,
     sourceId: ids.sourceId ?? null,
     bookId: ids.bookId ?? null,
   };
+}
+
+/**
+ * Die Züge NACH dem Vorspiel — also die Lösung ab der Aufgabenstellung, Gegnerantworten
+ * eingeschlossen (der Solver hinter dem geteilten Link spielt sie selbst). `startPly` folgt dem
+ * Solver: −1 = kein Vorspiel, 0 = `moves[0]` ist Vorspiel.
+ */
+export function solutionFrom(moves: string | null | undefined, startPly: number): string {
+  const list = (moves || '').split(' ').filter(m => m.length >= 4);
+  return list.slice(Math.max(startPly + 1, 0)).join(' ');
 }

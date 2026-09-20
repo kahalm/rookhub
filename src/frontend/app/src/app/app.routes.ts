@@ -73,6 +73,8 @@ export const routes: Routes = [
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
+  // Geteiltes Aufgabenblatt: OHNE Anmeldung durchspielbar — das ist der Sinn des QR-Codes auf dem Ausdruck.
+  { path: 'w/:token', loadComponent: () => import('./features/worksheets/worksheet-solve.component').then(m => m.WorksheetSolveComponent) },
   { path: 'help', loadComponent: () => import('./features/help/help.component').then(m => m.HelpComponent), canActivate: [menuGuard('help')] },
   { path: 'install', loadComponent: () => import('./features/install/install.component').then(m => m.InstallComponent), canActivate: [menuGuard('install')] },
   { path: 'privacy', loadComponent: () => import('./features/legal/privacy.component').then(m => m.PrivacyComponent) },

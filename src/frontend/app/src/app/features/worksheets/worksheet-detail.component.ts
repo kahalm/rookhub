@@ -11,10 +11,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
+import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
 
 /**
@@ -35,7 +37,8 @@ import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service'
   imports: [
     CommonModule, FormsModule, RouterLink, DragDropModule, MatButtonModule, MatButtonToggleModule,
     MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule,
-    MatProgressSpinnerModule, MatTooltipModule, TranslatePipe, FlashcardBoardComponent,
+    MatProgressSpinnerModule, MatSlideToggleModule, MatTooltipModule, TranslatePipe,
+    FlashcardBoardComponent, QrCodeComponent,
   ],
   templateUrl: './worksheet-detail.component.html',
   styleUrls: ['./worksheet-detail.component.scss'],
@@ -223,6 +226,53 @@ export class WorksheetDetailComponent implements OnInit {
   /** Zurück in den Kurs, aus dem die Stellung stammt (Herkunftsvermerk der Aufgabe). */
   openSource(item: WorksheetItem): void {
     if (item.bookId) this.router.navigate(['/courses', item.bookId]);
+  }
+
+  // ===== Teilen =====
+
+  /** Die Adresse hinter dem QR-Code; leer, solange das Blatt nicht geteilt ist. */
+  get shareUrl(): string {
+    return this.sheet?.shareToken ? this.worksheets.shareUrl(this.sheet.shareToken) : '';
+  }
+
+  /**
+   * Teilen ein-/ausschalten. Ein einmal erzeugter Link bleibt beim erneuten Einschalten NICHT
+   * erhalten — Abschalten ist der Widerruf, und ein gedruckter QR-Code soll danach ins Leere
+   * laufen. Deshalb fragt das Abschalten nach.
+   */
+  toggleShare(share: boolean): void {
+    if (!this.sheet || this.busy) return;
+    if (share) {
+      this.busy = true;
+      this.worksheets.share(this.sheet.id).subscribe({
+        next: token => {
+          this.busy = false;
+          if (this.sheet) this.sheet.shareToken = token;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.busy = false; this.failed(); },
+      });
+      return;
+    }
+
+    if (!confirm(this.translate.instant('worksheets.share.stopConfirm'))) { this.cdr.markForCheck(); return; }
+    this.busy = true;
+    this.worksheets.unshare(this.sheet.id).subscribe({
+      next: () => {
+        this.busy = false;
+        if (this.sheet) this.sheet.shareToken = null;
+        this.cdr.markForCheck();
+      },
+      error: () => { this.busy = false; this.failed(); },
+    });
+  }
+
+  copyShareUrl(): void {
+    const url = this.shareUrl;
+    if (!url) return;
+    navigator.clipboard?.writeText(url)
+      .then(() => this.snackbar.copy(this.translate.instant('worksheets.share.copied')))
+      .catch(() => { /* ohne Zwischenablage-Recht bleibt der Link zum Markieren im Feld stehen */ });
   }
 
   private failed(): void {

@@ -11,6 +11,8 @@ public class WorksheetSummaryDto
     public bool IsClipboard { get; set; }
     public int PerPage { get; set; }
     public int ItemCount { get; set; }
+    /// <summary>Token des öffentlichen Links (<c>/w/{token}</c>); <c>null</c> = nicht geteilt.</summary>
+    public string? ShareToken { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -30,6 +32,8 @@ public class WorksheetItemDto
     public string Orientation { get; set; } = "white";
     public string Heading { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
+    /// <summary>Lösung ab dieser Stellung (UCI-Halbzüge); leer = keine bekannt.</summary>
+    public string SolutionMoves { get; set; } = string.Empty;
     public string Source { get; set; } = nameof(WorksheetItemSource.Manual);
     public int? SourceId { get; set; }
     public int? BookId { get; set; }
@@ -45,6 +49,9 @@ public class NewWorksheetItemDto
     public string? Heading { get; set; }
     [MaxLength(2000)]
     public string? Text { get; set; }
+    /// <summary>Lösung ab dieser Stellung als UCI-Halbzüge (mit Gegnerzügen); leer = keine.</summary>
+    [MaxLength(1000)]
+    public string? SolutionMoves { get; set; }
     public WorksheetItemSource Source { get; set; } = WorksheetItemSource.Manual;
     public int? SourceId { get; set; }
     public int? BookId { get; set; }
@@ -103,4 +110,28 @@ public class UpdateWorksheetItemDto
 public class ReorderWorksheetDto
 {
     public List<int> ItemIds { get; set; } = new();
+}
+
+/// <summary>Ein geteiltes Aufgabenblatt, wie es OHNE Anmeldung hinter dem Link steht.</summary>
+public class SharedWorksheetDto
+{
+    public string Name { get; set; } = string.Empty;
+    public List<SharedWorksheetItemDto> Items { get; set; } = new();
+}
+
+/// <summary>Eine Aufgabe des geteilten Blatts — Stellung, Worte, Lösung; keine Besitzer-Daten.</summary>
+public class SharedWorksheetItemDto
+{
+    public string Fen { get; set; } = string.Empty;
+    public string Orientation { get; set; } = "white";
+    public string Heading { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    /// <summary>Lösung ab der Stellung (UCI); leer = die Aufgabe ist nur zum Rechnen.</summary>
+    public string SolutionMoves { get; set; } = string.Empty;
+}
+
+/// <summary>Antwort auf „Teilen einschalten": das Token des öffentlichen Links.</summary>
+public class WorksheetShareDto
+{
+    public string? ShareToken { get; set; }
 }

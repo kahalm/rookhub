@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, of, tap } from 'rxjs';
+import { map, Observable, of, tap } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -13,6 +13,8 @@ export interface WorksheetSummary {
   /** Diagramme je A4-Seite (2/4/6). */
   perPage: number;
   itemCount: number;
+  /** Token des öffentlichen Links (`/w/{token}`); `null` = nicht geteilt. */
+  shareToken: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +27,8 @@ export interface WorksheetItem {
   orientation: 'white' | 'black';
   heading: string;
   text: string;
+  /** Lösung ab dieser Stellung (UCI-Halbzüge); leer = nur zum Rechnen. */
+  solutionMoves: string;
   source: 'Manual' | 'Standard' | 'Book';
   sourceId: number | null;
   bookId: number | null;
@@ -40,9 +44,24 @@ export interface NewWorksheetItem {
   orientation: 'white' | 'black';
   heading?: string;
   text?: string;
+  solutionMoves?: string;
   source?: 'Manual' | 'Standard' | 'Book';
   sourceId?: number | null;
   bookId?: number | null;
+}
+
+/** Ein geteiltes Aufgabenblatt, wie es OHNE Anmeldung hinter dem Link steht. */
+export interface SharedWorksheet {
+  name: string;
+  items: SharedWorksheetItem[];
+}
+
+export interface SharedWorksheetItem {
+  fen: string;
+  orientation: 'white' | 'black';
+  heading: string;
+  text: string;
+  solutionMoves: string;
 }
 
 /** Antwort des Sendens — sagt, wohin es ging und was ankam. */
@@ -130,6 +149,27 @@ export class WorksheetService {
 
   removeItem(id: number, itemId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}/items/${itemId}`).pipe(tap(() => this.invalidateTargets()));
+  }
+
+  /** Öffentlichen Link einschalten (idempotent) — gibt das Token zurück. */
+  share(id: number): Observable<string | null> {
+    return this.http.post<{ shareToken: string | null }>(`${this.apiUrl}/${id}/share`, {})
+      .pipe(map(r => r.shareToken), tap(() => this.invalidateTargets()));
+  }
+
+  /** Öffentlichen Link abschalten (ein späteres Teilen erzeugt ein NEUES Token). */
+  unshare(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}/share`).pipe(tap(() => this.invalidateTargets()));
+  }
+
+  /** Das geteilte Blatt hinter dem Link — ohne Anmeldung abrufbar. */
+  getShared(token: string): Observable<SharedWorksheet> {
+    return this.http.get<SharedWorksheet>(`${this.apiUrl}/shared/${encodeURIComponent(token)}`);
+  }
+
+  /** Die Adresse, die auf dem Ausdruck als QR-Code steht. */
+  shareUrl(token: string): string {
+    return `${window.location.origin}/w/${token}`;
   }
 
   /** Reihenfolge setzen (Item-IDs in Wunsch-Abfolge). */
