@@ -3521,7 +3521,12 @@
       "targetNotAPosition": "Die Suche braucht eine STELLUNG als Ziel; eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung.",
       "invalidPosition": "Eine der beiden Stellungen lässt sich nicht lesen.",
       "here": "Lücke",
-      "needPosition": "Halt die Stellung nach der Lücke fest, dann lassen sich die Züge dazwischen suchen."
+      "needPosition": "Halt die Stellung nach der Lücke fest, dann lassen sich die Züge dazwischen suchen.",
+      "discard": "Vorschläge verwerfen",
+      "walkHint": "Mit ← → durch die Linie gehen und dort anhalten, wo du die Stellung wiedererkennst.",
+      "positionFits": "Diese Stellung stimmt",
+      "positionCorrect": "Diese Stellung korrigieren",
+      "acceptLine": "Ganze Linie übernehmen"
     },
     "enterPosition": "Stellung eingeben",
     "afterPositionHint": "Nach dem Übernehmen geht es mit Zügen ab dieser Stellung weiter — oder dort gleich wieder „Stellung eingeben“, um zur nächsten zu springen.",
@@ -3536,6 +3541,9 @@
     "plyFirst": "An den Anfang",
     "plyLast": "Ans Ende",
     "continueHere": "Ab hier weiterspielen",
-    "arrowHint": "Pfeiltasten ← → blättern durch die Züge. Steht der Cursor im Zugfeld, klick vorher aufs Brett."
+    "arrowHint": "Pfeiltasten ← → blättern durch die Züge. Steht der Cursor im Zugfeld, klick vorher aufs Brett.",
+    "generated": "generiert",
+    "generatedHint": "Vorschlag der Lückensuche — gehört erst zur Partie, wenn du ihn bestätigst.",
+    "showGenerated": "Vorschläge anzeigen ({{count}})"
   }
 }

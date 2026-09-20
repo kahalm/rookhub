@@ -26,6 +26,11 @@
           <mat-icon>content_copy</mat-icon> {{ 'reconstruct.copyPrefix' | translate }}
         </button>
       }
+      @if (generatedCount() > 0) {
+        <mat-checkbox [(ngModel)]="showGenerated">
+          {{ 'reconstruct.showGenerated' | translate:{ count: generatedCount() } }}
+        </mat-checkbox>
+      }
     </div>
 
     @if (showHead) {
@@ -84,115 +89,92 @@
           <p class="muted">{{ 'reconstruct.noParts' | translate }}</p>
         }
 
-        @for (part of data()!.parts; track part.id; let i = $index) {
-          @if (i > 0 && !part.continuesPrevious) {
+        @for (part of visibleParts(); track part.id; let i = $index) {
+          @if (i > 0 && !part.continuesPrevious && !part.generated) {
+            <!-- Eine Lücke ist etwas ZWISCHEN zwei Teilen — hier steht sie und hier wird gesucht. -->
             <div class="gap-row">
               <mat-icon class="gap-icon">more_horiz</mat-icon>
               <span class="muted">{{ 'reconstruct.gap.here' | translate }}</span>
               @if (canCloseGap(part, i)) {
-                @if (gapFor() !== part.id) {
-                  <button mat-stroked-button [disabled]="gapSearching()" (click)="closeGap(part)">
-                    <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
+                <button mat-stroked-button [disabled]="gapSearching() || busy()" (click)="closeGap(part)">
+                  <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
+                </button>
+                @for (choice of gapPlyChoices; track choice) {
+                  <button mat-button class="depth-btn" [class.chosen]="gapPlies === choice"
+                          [disabled]="gapSearching() || busy()" (click)="gapPlies = choice; closeGap(part)"
+                          [matTooltip]="'reconstruct.gap.depth' | translate">
+                    {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
+                  </button>
+                }
+                @if (hasProposalsBefore(part)) {
+                  <button mat-button [disabled]="busy()" (click)="discardProposals(part)">
+                    <mat-icon>close</mat-icon> {{ 'reconstruct.gap.discard' | translate }}
                   </button>
                 }
               } @else {
                 <span class="muted small">{{ 'reconstruct.gap.needPosition' | translate }}</span>
               }
             </div>
-            @if (gapFor() === part.id) {
-              <div class="gap">
-                <div class="gap-panel">
-                  <div class="gap-head">
-                    <strong>{{ 'reconstruct.gap.title' | translate }}</strong>
-                    <span class="spacer"></span>
-                    <button mat-icon-button (click)="hideGap()"
-                            [matTooltip]="'common.close' | translate"
-                            [attr.aria-label]="'common.close' | translate">
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  </div>
-
-                  <div class="gap-depth">
-                    <span class="muted">{{ 'reconstruct.gap.depth' | translate }}</span>
-                    @for (choice of gapPlyChoices; track choice) {
-                      <button mat-button [class.chosen]="gapPlies === choice"
-                              [disabled]="gapSearching()"
-                              (click)="gapPlies = choice; closeGap(part)">
-                        {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
-                      </button>
-                    }
-                  </div>
-
-                  @if (gapSearching()) {
-                    <p class="muted">{{ 'reconstruct.gap.searching' | translate }}</p>
-                  } @else if (gapResult(); as result) {
-                    @if (result.solutions.length > 0) {
-                      <p class="muted">{{ 'reconstruct.gap.found' | translate:{ count: result.solutions.length } }}</p>
-                      @for (solution of result.solutions; track solution.san) {
-                        <div class="gap-line">
-                          <code>{{ solution.san }}</code>
-                          <span class="spacer"></span>
-                          <button mat-flat-button color="primary" [disabled]="busy()" (click)="applyGap(solution)">
-                            {{ 'reconstruct.gap.apply' | translate }}
-                          </button>
-                        </div>
-                      }
-                      @if (result.solutions.length > 1) {
-                        <p class="muted small">{{ 'reconstruct.gap.severalHint' | translate }}</p>
-                      }
-                    } @else {
-                      <p class="muted">{{ gapMessageKey()! | translate:{ count: result.maxPlies } }}</p>
-                    }
-                  }
-                </div>
-              </div>
+            @if (gapSearching() && gapFor() === part.id) {
+              <p class="muted small gap-note">{{ 'reconstruct.gap.searching' | translate }}</p>
+            } @else if (gapFor() === part.id && gapMessageKey(); as key) {
+              <p class="muted small gap-note">{{ key | translate:{ count: gapResult()!.maxPlies } }}</p>
             }
           }
-          <mat-card class="part" [class.selected]="editingId() === part.id">
+
+          <!-- Die Teile sind direkt anklickbar: Bearbeiten ist immer an, kein Stift nötig. -->
+          <mat-card class="part" [class.selected]="editingId() === part.id" [class.proposal]="part.generated"
+                    (click)="edit(part)">
             <div class="part-head">
-              <mat-icon>{{ part.kind === Kind.Position ? 'grid_on' : 'timeline' }}</mat-icon>
+              <mat-icon>{{ part.generated ? 'auto_awesome' : (part.kind === Kind.Position ? 'grid_on' : 'timeline') }}</mat-icon>
               <span class="part-no">{{ i + 1 }}</span>
+              @if (part.generated) {
+                <span class="chip gen" [matTooltip]="'reconstruct.generatedHint' | translate">
+                  {{ 'reconstruct.generated' | translate }}
+                </span>
+              }
               @if (part.startPly !== null && part.startPly !== undefined) {
                 <span class="chip">{{ 'reconstruct.atMove' | translate:{ move: moveNo(part.startPly) } }}</span>
               }
-              @if (part.continuesPrevious) {
+              @if (part.continuesPrevious && !part.generated) {
                 <mat-icon class="link-icon" [matTooltip]="'reconstruct.continues' | translate">link</mat-icon>
               }
-              @if (!part.certain) {
-                <span class="chip warn" [matTooltip]="'reconstruct.unsureHint' | translate">
-                  {{ 'reconstruct.unsure' | translate }}
+              @if (!part.generated) {
+                <span class="chip" [class.ok]="state(part) === 'ok'"
+                      [class.warn]="state(part) === 'floating'"
+                      [class.bad]="state(part) === 'broken' || state(part) === 'mismatch'">
+                  {{ 'reconstruct.state.' + state(part) | translate }}
                 </span>
-              }
-              <button mat-icon-button class="certain-toggle" [class.unsure]="!part.certain"
-                      [disabled]="busy()" (click)="toggleCertain(part)"
-                      [matTooltip]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate"
-                      [attr.aria-label]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate">
-                <mat-icon>{{ part.certain ? 'check_circle' : 'help' }}</mat-icon>
-              </button>
-              <span class="chip" [class.ok]="state(part) === 'ok'"
-                    [class.warn]="state(part) === 'floating'"
-                    [class.bad]="state(part) === 'broken' || state(part) === 'mismatch'">
-                {{ 'reconstruct.state.' + state(part) | translate }}
-              </span>
-              @if (part.firstBadMove) {
-                <span class="chip bad">{{ 'reconstruct.badMove' | translate:{ move: part.firstBadMove } }}</span>
+                @if (part.firstBadMove) {
+                  <span class="chip bad">{{ 'reconstruct.badMove' | translate:{ move: part.firstBadMove } }}</span>
+                }
+                @if (!part.certain) {
+                  <span class="chip warn" [matTooltip]="'reconstruct.unsureHint' | translate">
+                    {{ 'reconstruct.unsure' | translate }}
+                  </span>
+                }
               }
               <span class="spacer"></span>
-              <button mat-icon-button [disabled]="busy() || i === 0" (click)="move(part, -1)"
-                      [matTooltip]="'reconstruct.moveUp' | translate"
-                      [attr.aria-label]="'reconstruct.moveUp' | translate">
-                <mat-icon>arrow_upward</mat-icon>
-              </button>
-              <button mat-icon-button [disabled]="busy() || i === data()!.parts.length - 1" (click)="move(part, 1)"
-                      [matTooltip]="'reconstruct.moveDown' | translate"
-                      [attr.aria-label]="'reconstruct.moveDown' | translate">
-                <mat-icon>arrow_downward</mat-icon>
-              </button>
-              <button mat-icon-button [disabled]="busy()" (click)="edit(part)"
-                      [matTooltip]="'common.edit' | translate" [attr.aria-label]="'common.edit' | translate">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button [disabled]="busy()" (click)="removePart(part)"
+              @if (!part.generated) {
+                <button mat-icon-button class="certain-toggle" [class.unsure]="!part.certain"
+                        [disabled]="busy()" (click)="toggleCertain(part); $event.stopPropagation()"
+                        [matTooltip]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate"
+                        [attr.aria-label]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate">
+                  <mat-icon>{{ part.certain ? 'check_circle' : 'help' }}</mat-icon>
+                </button>
+                <button mat-icon-button [disabled]="busy() || i === 0" (click)="move(part, -1); $event.stopPropagation()"
+                        [matTooltip]="'reconstruct.moveUp' | translate"
+                        [attr.aria-label]="'reconstruct.moveUp' | translate">
+                  <mat-icon>arrow_upward</mat-icon>
+                </button>
+                <button mat-icon-button [disabled]="busy() || i === visibleParts().length - 1"
+                        (click)="move(part, 1); $event.stopPropagation()"
+                        [matTooltip]="'reconstruct.moveDown' | translate"
+                        [attr.aria-label]="'reconstruct.moveDown' | translate">
+                  <mat-icon>arrow_downward</mat-icon>
+                </button>
+              }
+              <button mat-icon-button [disabled]="busy()" (click)="removePart(part); $event.stopPropagation()"
                       [matTooltip]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
@@ -204,7 +186,6 @@
               }
               @if (part.note) { <div class="muted note">{{ part.note }}</div> }
             </div>
-
           </mat-card>
         }
       </section>
@@ -296,8 +277,24 @@
               <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
+            <!-- Ein VORSCHLAG wird nicht gespeichert, sondern bestätigt, korrigiert oder verworfen. -->
+            @if (editingGenerated()) {
+              <div class="proposal-actions">
+                <p class="muted small">{{ 'reconstruct.gap.walkHint' | translate }}</p>
+                <button mat-flat-button color="primary" [disabled]="busy()" (click)="acceptWaypoint()">
+                  <mat-icon>check</mat-icon> {{ 'reconstruct.gap.positionFits' | translate }}
+                </button>
+                <button mat-stroked-button [disabled]="busy()" (click)="correctWaypoint()">
+                  <mat-icon>edit</mat-icon> {{ 'reconstruct.gap.positionCorrect' | translate }}
+                </button>
+                <button mat-stroked-button [disabled]="busy()" (click)="acceptProposal()">
+                  <mat-icon>done_all</mat-icon> {{ 'reconstruct.gap.acceptLine' | translate }}
+                </button>
+              </div>
+            }
+
             <div class="editor-actions">
-              <button mat-flat-button color="primary" [disabled]="busy()" (click)="savePart()">
+              <button mat-flat-button color="primary" [disabled]="busy() || editingGenerated()" (click)="savePart()">
                 {{ 'common.save' | translate }}
               </button>
               @if (editingId() === 0) {

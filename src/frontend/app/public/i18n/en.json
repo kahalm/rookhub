@@ -3521,7 +3521,12 @@
       "targetNotAPosition": "The search needs a POSITION as its target; a move sequence after a gap has no known starting position of its own.",
       "invalidPosition": "One of the two positions cannot be read.",
       "here": "Gap",
-      "needPosition": "Record the position after the gap, then the moves in between can be searched for."
+      "needPosition": "Record the position after the gap, then the moves in between can be searched for.",
+      "discard": "Discard proposals",
+      "walkHint": "Step through the line with ← → and stop where you recognise the position.",
+      "positionFits": "This position is right",
+      "positionCorrect": "Correct this position",
+      "acceptLine": "Take the whole line"
     },
     "enterPosition": "Enter a position",
     "afterPositionHint": "Once you apply it, you carry on with moves from that position — or press „Enter a position“ there again to jump straight to the next one.",
@@ -3536,6 +3541,9 @@
     "plyFirst": "To the start",
     "plyLast": "To the end",
     "continueHere": "Carry on from here",
-    "arrowHint": "Arrow keys ← → step through the moves. If your cursor is in the move field, click the board first."
+    "arrowHint": "Arrow keys ← → step through the moves. If your cursor is in the move field, click the board first.",
+    "generated": "generated",
+    "generatedHint": "Proposed by the gap search — not part of the game until you confirm it.",
+    "showGenerated": "Show proposals ({{count}})"
   }
 }

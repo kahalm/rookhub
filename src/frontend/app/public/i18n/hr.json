@@ -3521,7 +3521,12 @@
       "targetNotAPosition": "Pretrazi treba POLOŽAJ kao cilj; niz poteza nakon praznine ni sam nema poznat početni položaj.",
       "invalidPosition": "Jedan od dva položaja nije čitljiv.",
       "here": "Praznina",
-      "needPosition": "Zabilježi položaj nakon praznine i poteze između može se potražiti."
+      "needPosition": "Zabilježi položaj nakon praznine i poteze između može se potražiti.",
+      "discard": "Odbaci prijedloge",
+      "walkHint": "Prolazi kroz niz s ← → i stani ondje gdje prepoznaš položaj.",
+      "positionFits": "Ovaj položaj je točan",
+      "positionCorrect": "Ispravi ovaj položaj",
+      "acceptLine": "Preuzmi cijeli niz"
     },
     "enterPosition": "Unesi položaj",
     "afterPositionHint": "Nakon preuzimanja nastavljaš potezima od tog položaja — ili ondje opet pritisni „Unesi položaj“ i skoči na sljedeći.",
@@ -3536,6 +3541,9 @@
     "plyFirst": "Na početak",
     "plyLast": "Na kraj",
     "continueHere": "Nastavi odavde",
-    "arrowHint": "Strelice ← → listaju kroz poteze. Ako je pokazivač u polju s potezima, prvo klikni na ploču."
+    "arrowHint": "Strelice ← → listaju kroz poteze. Ako je pokazivač u polju s potezima, prvo klikni na ploču.",
+    "generated": "generirano",
+    "generatedHint": "Prijedlog pretrage praznine — dio partije postaje tek kad ga potvrdiš.",
+    "showGenerated": "Prikaži prijedloge ({{count}})"
   }
 }

@@ -373,6 +373,108 @@ public class GameReconstructionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ProposeGap_PutsTheFoundWaysIntoTheList_WithoutClosingTheGap()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+
+        var proposal = await _service.ProposeGapAsync(1, id, target, null);
+
+        Assert.Equal(1, proposal!.Inserted);
+        var detail = proposal.Detail!;
+        Assert.Equal(3, detail.Parts.Count);
+        Assert.True(detail.Parts[1].Generated);
+        Assert.Equal("Nc6 Bb5", detail.Parts[1].Moves);
+        // Ein Vorschlag ist keine Aufzeichnung: die Lücke bleibt offen, die Partie wächst nicht.
+        Assert.Equal(1, detail.Gaps);
+        Assert.Equal(3, detail.KnownPlies);
+        Assert.False(detail.Parts[2].ContinuesPrevious);
+    }
+
+    [Fact]
+    public async Task ProposeGap_ReplacesTheEarlierProposals_AndTheGapSearchStillStartsAtTheRecordedPart()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+
+        await _service.ProposeGapAsync(1, id, target, null);
+        var again = await _service.ProposeGapAsync(1, id, target, null);
+
+        // Nicht angesammelt — und die zweite Suche hat NICHT ab dem Vorschlag gerechnet.
+        Assert.Equal(1, again!.Inserted);
+        Assert.Equal(3, again.Detail!.Parts.Count);
+        Assert.Null(again.Reason);
+    }
+
+    [Fact]
+    public async Task DiscardProposals_LeavesTheRecordedPartsAlone()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+        await _service.ProposeGapAsync(1, id, target, null);
+
+        var detail = await _service.DiscardProposalsAsync(1, id, target);
+
+        Assert.Equal(2, detail!.Parts.Count);
+        Assert.DoesNotContain(detail.Parts, p => p.Generated);
+    }
+
+    [Fact]
+    public async Task Waypoint_SplitsTheGap_AndDropsTheProposals()
+    {
+        // „Diese Stellung stimmt": die Stellung aus dem Vorschlag wird ein eigenes Teil, und die
+        // Lücke zerfällt in zwei kleinere — die Vorschläge beantworten dann eine alte Frage.
+        const string afterFour = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3";
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+        await _service.ProposeGapAsync(1, id, target, null);
+
+        var detail = await _service.AddWaypointAsync(1, id, target, afterFour, certain: true);
+
+        Assert.Equal(3, detail!.Parts.Count);
+        Assert.DoesNotContain(detail.Parts, p => p.Generated);
+        Assert.Equal(afterFour, detail.Parts[1].Fen);
+        Assert.True(detail.Parts[1].Certain);
+        Assert.Equal(2, detail.Gaps);   // vorher eine, jetzt zwei kleinere
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddWaypointAsync(1, id, target, "kaputt", true));
+    }
+
+    [Fact]
+    public async Task EditingAProposal_MakesItTheHumansOwn()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+        var proposalId = (await _service.ProposeGapAsync(1, id, target, null))!.Detail!.Parts[1].Id;
+
+        var detail = await _service.UpdatePartAsync(1, id, proposalId, MovesPart("Nc6 Bb5", continues: true));
+
+        Assert.False(detail!.Parts[1].Generated);
+        // Jetzt zählt die Zugfolge zur Partie. Die Lücke rutscht dabei HINTER sie: dass die
+        // Stellung danach anschließt, sagt nur der Mensch (bzw. „ganze Linie übernehmen").
+        Assert.Equal(5, detail.KnownPlies);
+        Assert.Equal(1, detail.Gaps);
+    }
+
+    [Fact]
+    public async Task AddPart_CanInsertBeforeAnotherPart()
+    {
+        var id = await CreateAsync();
+        var first = (await _service.AddPartAsync(1, id, MovesPart("e4 e5")))!.Parts[0].Id;
+
+        var detail = await _service.AddPartAsync(1, id,
+            new ReconstructionPartRequest { Kind = ReconstructionPartKind.Position, Fen = AfterFivePlies, InsertBeforePartId = first });
+
+        Assert.Equal(ReconstructionPartKind.Position, detail!.Parts[0].Kind);
+        Assert.Equal(first, detail.Parts[1].Id);
+        Assert.Equal(new[] { 0, 1 }, detail.Parts.Select(p => p.Ordinal).ToArray());
+    }
+
+    [Fact]
     public async Task Gap_IsInvisibleForOtherAccounts()
     {
         var id = await CreateAsync();

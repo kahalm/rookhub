@@ -104,6 +104,16 @@ public class GameReconstructionPart
     /// </summary>
     public bool BlackToMove { get; set; }
 
+    /// <summary>
+    /// VORSCHLAG statt Erinnerung: von der Lückensuche erzeugt, noch von niemandem bestätigt.
+    ///
+    /// <para>Solche Teile stehen in der Liste (man will sie ja durchsehen), zählen aber NICHT zur
+    /// Partie: <see cref="ReconstructionChain"/> überspringt sie, die Lücke bleibt also offen, bis
+    /// ein Mensch etwas davon übernimmt. Ohne diese Trennung stünde eine geratene Zugfolge in den
+    /// „gesicherten Halbzügen", und genau das soll die Rekonstruktion nicht behaupten.</para>
+    /// </summary>
+    public bool Generated { get; set; }
+
     /// <summary>Bekannter Halbzug, an dem dieses Teil beginnt (0 = Grundstellung); null = unbekannt.</summary>
     public int? FromPly { get; set; }
 

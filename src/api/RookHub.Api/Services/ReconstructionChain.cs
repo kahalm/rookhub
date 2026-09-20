@@ -91,7 +91,9 @@ public static class ReconstructionChain
     /// <summary>Wertet die Teile in ihrer Reihenfolge aus.</summary>
     public static Result Analyze(IEnumerable<GameReconstructionPart> parts)
     {
-        var ordered = parts.OrderBy(p => p.Ordinal).ToList();
+        // Vorschläge der Lückensuche sind KEINE Aufzeichnung: sie stehen in der Liste, aber die
+        // Partie kennt sie nicht — die Lücke bleibt offen, bis ein Mensch etwas übernimmt.
+        var ordered = parts.Where(p => !p.Generated).OrderBy(p => p.Ordinal).ToList();
         var chains = new List<PartChain>(ordered.Count);
 
         ChessBoard? board = null;          // Stellung nach dem zuletzt ausgewerteten Teil

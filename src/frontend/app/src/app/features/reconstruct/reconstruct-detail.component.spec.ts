@@ -17,7 +17,7 @@ const MIDDLE = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 
 function part(over: Partial<ReconstructionPart>): ReconstructionPart {
   return {
     id: 1, ordinal: 0, kind: PartKind.Moves, moves: 'e4 e5', fen: null, fromPly: null,
-    continuesPrevious: false, certain: true, blackToMove: false, note: null, anchored: true, valid: true, startFen: START,
+    continuesPrevious: false, certain: true, blackToMove: false, generated: false, note: null, anchored: true, valid: true, startFen: START,
     endFen: START, plyCount: 2, startPly: 0, firstBadMove: null, mismatch: false, ...over,
   };
 }
@@ -223,23 +223,64 @@ describe('ReconstructDetailComponent', () => {
     expect(c.canCloseGap({ ...position, kind: PartKind.Moves }, 1)).toBeFalse();    // kein Ziel
   });
 
-  it('holt die Wege durch die Lücke und setzt den gewählten ein', () => {
+  it('setzt die gefundenen Wege als VORSCHLÄGE in die Liste und öffnet den ersten', () => {
     const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
     const c = open([part({ id: 1 }), position]);
+    const proposal = part({ id: 9, ordinal: 1, moves: 'Nc6 Bb5', generated: true, continuesPrevious: true,
+                            certain: false, startFen: null, endFen: null });
+    const withProposal = data([part({ id: 1 }), proposal, { ...position, ordinal: 2 }]);
 
     c.closeGap(position);
-    http.expectOne({ url: '/api/reconstructions/5/parts/2/gap', method: 'POST' })
-      .flush({ partId: 2, maxPlies: 4, nodes: 120, budgetExhausted: false, reason: null,
-               solutions: [{ san: 'Nc6 Bb5', plies: 2 }] });
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/propose', method: 'POST' });
+    expect(req.request.body).toEqual({ maxPlies: 4 });
+    req.flush({ partId: 2, maxPlies: 4, nodes: 120, budgetExhausted: false, reason: null,
+                inserted: 1, detail: withProposal });
 
-    expect(c.gapResult()!.solutions.length).toBe(1);
-    expect(c.gapMessageKey()).toBeNull();
+    expect(c.data()!.parts.length).toBe(3);
+    expect(c.editingId()).toBe(9);          // gleich zum Durchsehen geöffnet
+    expect(c.editingGenerated()).toBeTrue();
+    expect(c.generatedCount()).toBe(1);
+  });
 
-    c.applyGap(c.gapResult()!.solutions[0]);
-    const applied = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/apply', method: 'POST' });
-    expect(applied.request.body).toEqual({ moves: 'Nc6 Bb5' });
-    applied.flush(data([]));
-    expect(c.gapFor()).toBeNull();
+  it('bestätigt eine Stellung aus dem Vorschlag als eigenes Teil', () => {
+    const position = part({ id: 2, ordinal: 2, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const proposal = part({ id: 9, ordinal: 1, moves: 'Nc6 Bb5', generated: true, continuesPrevious: true,
+                            certain: false, startFen: START, endFen: null });
+    const c = open([part({ id: 1 }), proposal, position]);
+
+    c.edit(proposal);
+    c.goPly('start');
+    c.goPly(1);                              // eine Stellung MITTEN im Vorschlag
+    const fen = c.editBoardFen();
+    c.acceptWaypoint();
+
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/waypoint', method: 'POST' });
+    expect(req.request.body).toEqual({ fen, certain: true });
+    req.flush(data([]));
+  });
+
+  it('übernimmt auf Wunsch die ganze vorgeschlagene Linie', () => {
+    const position = part({ id: 2, ordinal: 2, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const proposal = part({ id: 9, ordinal: 1, moves: 'Nc6 Bb5', generated: true, continuesPrevious: true,
+                            certain: false });
+    const c = open([part({ id: 1 }), proposal, position]);
+
+    c.edit(proposal);
+    c.acceptProposal();
+
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/apply', method: 'POST' });
+    expect(req.request.body).toEqual({ moves: 'Nc6 Bb5' });
+    req.flush(data([]));
+  });
+
+  it('blendet die Vorschläge aus, ohne sie zu löschen', () => {
+    const proposal = part({ id: 9, ordinal: 1, moves: 'Nc6 Bb5', generated: true });
+    const c = open([part({ id: 1 }), proposal]);
+
+    expect(c.visibleParts().length).toBe(2);
+    c.showGenerated = false;
+    expect(c.visibleParts().length).toBe(1);
+    expect(c.generatedCount()).toBe(1);
   });
 
   it('sagt beim leeren Ergebnis, WARUM es keinen Weg gibt', () => {
@@ -247,11 +288,27 @@ describe('ReconstructDetailComponent', () => {
     const c = open([part({ id: 1 }), position]);
 
     c.closeGap(position);
-    http.expectOne({ url: '/api/reconstructions/5/parts/2/gap', method: 'POST' })
-      .flush({ partId: 2, maxPlies: 4, nodes: 9, budgetExhausted: false, reason: 'unreachable', solutions: [] });
+    http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/propose', method: 'POST' })
+      .flush({ partId: 2, maxPlies: 4, nodes: 9, budgetExhausted: false, reason: 'unreachable',
+               inserted: 0, detail: data([part({ id: 1 }), position]) });
 
     // „gibt es nicht" und „nicht gefunden" sind verschiedene Auskünfte und haben eigene Texte.
     expect(c.gapMessageKey()).toBe('reconstruct.gap.unreachable');
+  });
+
+  it('springt am Ende einer Linie zum nächsten Teil und am Anfang zum vorigen', () => {
+    const first = part({ id: 1, ordinal: 0, moves: 'e4 e5' });
+    const second = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const c = open([first, second]);
+
+    c.edit(first);
+    c.goPly('end');
+    c.goPly(1);                              // am Ende → nächstes Teil
+    expect(c.editingId()).toBe(2);
+
+    c.goPly(-1);                             // am Anfang → zurück ins vorige, dort ans Ende
+    expect(c.editingId()).toBe(1);
+    expect(c.atEnd()).toBeTrue();
   });
 
   it('blättert mit den Pfeiltasten durch die eingetippten Züge', () => {

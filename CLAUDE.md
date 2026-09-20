@@ -1898,6 +1898,9 @@ Deckel: `MaxPerUser` 50, `MaxParts` 200, Zugtext 4000 Zeichen.
 | PUT | `/api/reconstructions/{id}/parts/{partId}` | Teil ändern (gleicher Rumpf) |
 | DELETE | `/api/reconstructions/{id}/parts/{partId}` | Teil löschen (Reihenfolge wird geschlossen) |
 | PUT | `/api/reconstructions/{id}/parts/order` | Reihenfolge setzen `{ partIds: [] }` — fehlende Ids bleiben hinten, damit eine unvollständige Liste nichts verschwinden lässt (Literal-Route VOR `{partId}`) |
+| POST | `/api/reconstructions/{id}/parts/{partId}/gap/propose` | **Lücke schließen**: sucht die Wege und setzt sie als VORSCHLÄGE (`Generated`) vor das Teil `{ maxPlies? }` → `{ reason, nodes, budgetExhausted, inserted, detail }`. Ersetzt die Vorschläge derselben Lücke |
+| POST | `/api/reconstructions/{id}/parts/{partId}/gap/discard` | Vorschläge dieser Lücke verwerfen (idempotent) |
+| POST | `/api/reconstructions/{id}/parts/{partId}/gap/waypoint` | Eine Stellung aus einem Vorschlag übernehmen `{ fen, certain? }` — sie kommt als eigenes Teil davor, die Vorschläge fallen weg, die Lücke zerfällt in zwei |
 | POST | `/api/reconstructions/{id}/parts/{partId}/gap` | **Lücke schließen**: sucht die Züge von der Stellung am Ende des vorigen Teils bis zu diesem Teil `{ maxPlies? }` → `{ fromFen, toFen, maxPlies, nodes, budgetExhausted, reason, solutions[] }`. IMMER 200 — „es gibt keinen Weg" ist eine Auskunft, kein Fehler des Aufrufers |
 | POST | `/api/reconstructions/{id}/parts/{partId}/gap/apply` | Einen gefundenen Weg übernehmen `{ moves }` — die Züge kommen als eigenes Teil VOR `partId`, beide schließen danach nahtlos an. 400 `reason` ∈ `does-not-fit`/`no-gap`/`no-previous`/`no-anchor`/`no-moves`/`target-not-a-position` |
 
@@ -1925,6 +1928,18 @@ Vier Regeln, die dabei nicht kippen dürfen:
   Zielstellung): die Züge kommen aus einer Antwort, aber ankommen tut ein Request. Passt es nicht,
   entsteht gar kein Teil. Das eingesetzte Teil trägt `Certain = false` — mehrere Wege enden in
   derselben Stellung, welcher gespielt wurde, weiß nur der Mensch.
+
+**Gefundene Wege stehen als VORSCHLÄGE in der Liste** (`GameReconstructionPart.Generated`, seit
+0.493.0): „Lücke schließen" sucht und setzt die Wege dorthin, wo die Lücke ist —
+`POST …/parts/{partId}/gap/propose` (ersetzt die Vorschläge derselben Lücke),
+`…/gap/discard` wirft sie weg, `…/gap/waypoint` macht eine Stellung DARAUS zu einem eigenen Teil
+(„die stimmt" bzw. ihre korrigierte Fassung) und teilt die Lücke damit in zwei kleinere.
+`ReconstructionChain.Analyze` ÜBERSPRINGT Vorschläge: sie stehen in der Liste, aber die Lücke bleibt
+offen und die „gesicherten Halbzüge" wachsen nicht — sonst behauptete die Rekonstruktion etwas,
+das nur geraten ist. Ein Teil, das ein Mensch bearbeitet, verliert die Marke (`UpdatePartAsync`);
+`AddPartAsync` kann mit `InsertBeforePartId` an beliebiger Stelle einsetzen. Die Oberfläche blendet
+Vorschläge auf Wunsch aus, öffnet den ersten gleich zum Durchklicken und bietet dort „Stellung
+stimmt" / „Stellung korrigieren" / „ganze Linie übernehmen".
 
 **Sicher oder unsicher** (`GameReconstructionPart.Certain`, Vorgabe `true`): je Bruchstück ein
 Haken. Wer etwas aufschreibt, meint es zunächst — die Auskunft, auf die es ankommt, ist das

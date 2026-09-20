@@ -35,6 +35,8 @@ public class ReconstructionPartDto
     public bool Certain { get; set; }
     /// <summary>Zugfolge ohne Anschluss: beginnt sie mit einem Zug von Schwarz?</summary>
     public bool BlackToMove { get; set; }
+    /// <summary>Von der Lückensuche erzeugt und noch nicht bestätigt — zählt nicht zur Partie.</summary>
+    public bool Generated { get; set; }
     public string? Note { get; set; }
 
     /// <summary>Ist bekannt, welche Stellung vor diesem Teil steht?</summary>
@@ -111,6 +113,9 @@ public class ReconstructionPartRequest
     /// <summary>Beginnt die Zugfolge mit einem Zug von Schwarz? (Nur ohne Anschluss; Vorgabe nein.)</summary>
     public bool? BlackToMove { get; set; }
 
+    /// <summary>Vor welches Teil soll das neue gesetzt werden? Ohne Angabe hinten anhängen.</summary>
+    public int? InsertBeforePartId { get; set; }
+
     [MaxLength(500)]
     public string? Note { get; set; }
 }
@@ -164,4 +169,29 @@ public class ReconstructionGapApplyRequest
     [Required]
     [MaxLength(4000)]
     public string Moves { get; set; } = string.Empty;
+}
+
+/// <summary>Ergebnis eines Vorschlags-Laufs: die Suche samt der Rekonstruktion mit den eingesetzten Vorschlägen.</summary>
+public class ReconstructionGapProposalDto
+{
+    public int PartId { get; set; }
+    public int MaxPlies { get; set; }
+    public int Nodes { get; set; }
+    public bool BudgetExhausted { get; set; }
+    public string? Reason { get; set; }
+    /// <summary>Wie viele Vorschläge in die Liste gesetzt wurden.</summary>
+    public int Inserted { get; set; }
+    /// <summary>Die Rekonstruktion danach — die Liste hat sich geändert.</summary>
+    public ReconstructionDetailDto? Detail { get; set; }
+}
+
+/// <summary>Eine Stellung AUS EINEM VORSCHLAG als eigenes Teil übernehmen („die stimmt").</summary>
+public class ReconstructionWaypointRequest
+{
+    [Required]
+    [MaxLength(120)]
+    public string Fen { get; set; } = string.Empty;
+
+    /// <summary>Bin ich mir sicher? Vorgabe ja — man bestätigt sie ja gerade.</summary>
+    public bool? Certain { get; set; }
 }

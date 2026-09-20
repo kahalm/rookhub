@@ -17,7 +17,7 @@ import { PositionSetupComponent, START_FEN } from '../analysis/position-setup.co
 import { SnackbarService } from '../../core/snackbar.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { GapResult, GapSolution, PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
+import { GapResult, PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
 
 /**
  * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
@@ -89,6 +89,10 @@ export class ReconstructDetailComponent implements OnInit {
   /** Suchtiefe in HALBZÜGEN — die Auswahl steht im Formular, weil der Baum mit jedem Halbzug wächst. */
   gapPlies = 4;
   readonly gapPlyChoices = [2, 4, 6];
+  /** Vorschläge der Suche mit anzeigen? (Sie stehen in der Liste, zählen aber nicht zur Partie.) */
+  showGenerated = true;
+  /** Gesetzt, solange der Stellungs-Editor eine Stellung AUS einem Vorschlag bestätigt/korrigiert. */
+  readonly waypointFor = signal<number | null>(null);
 
   /** Der Kasten um das Brett — er bekommt den Fokus, damit die Pfeiltasten sofort blättern. */
   @ViewChild('boardWrap') boardWrap?: ElementRef<HTMLElement>;
@@ -131,13 +135,34 @@ export class ReconstructDetailComponent implements OnInit {
   /** Steht das Brett am Ende der Eingabe? Nur dort darf gespielt werden. */
   atEnd(): boolean { return this.plyShown() >= this.plyTotal(); }
 
-  /** Blättern: `delta` Halbzüge vor oder zurück; `null` → ans Ende. */
+  /**
+   * Blättern: `delta` Halbzüge vor oder zurück; `null` → ans Ende.
+   *
+   * <p>Am ENDE eines Teils geht es mit dem nächsten weiter, am Anfang mit dem vorigen (dort ans
+   * Ende) — die Liste links ist eine Folge, und beim Durchsehen will man nicht an jeder Grenze
+   * zur Maus greifen. Ein noch nicht gespeichertes Teil bleibt stehen: ein Tastendruck darf keine
+   * Eingabe verwerfen.</p>
+   */
   goPly(delta: number | 'start' | 'end'): void {
     const total = this.plyTotal();
     if (delta === 'end') { this.editPly.set(null); return; }
     if (delta === 'start') { this.editPly.set(0); return; }
+    if (delta > 0 && this.atEnd()) { this.jumpPart(1); return; }
+    if (delta < 0 && this.plyShown() === 0) { this.jumpPart(-1); return; }
     const next = Math.max(0, Math.min(this.plyShown() + delta, total));
     this.editPly.set(next >= total ? null : next);
+  }
+
+  /** Zum nächsten/vorigen Teil der Liste springen (Vorschläge zählen mit, wenn sie sichtbar sind). */
+  private jumpPart(dir: 1 | -1): void {
+    const id = this.editingId();
+    if (!id) return;
+    const parts = this.visibleParts();
+    const index = parts.findIndex(p => p.id === id);
+    const next = index < 0 ? undefined : parts[index + dir];
+    if (!next) return;
+    this.edit(next);
+    this.editPly.set(dir === 1 ? 0 : null);
   }
 
   /**
@@ -157,7 +182,7 @@ export class ReconstructDetailComponent implements OnInit {
   onKeyDown(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-    if (this.editingId() === null || this.editKind() !== PartKind.Moves) return;
+    if (this.editingId() === null) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); this.goPly(-1); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); this.goPly(1); }
     else if (e.key === 'Home') { e.preventDefault(); this.goPly('start'); }
@@ -234,7 +259,10 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Neues Teil anlegen: Zugfolge hängt an der letzten bekannten Stellung, Stellung am Editor. */
   startNew(kind: PartKind): void {
-    const parts = this.data()?.parts ?? [];
+    this.waypointFor.set(null);
+    // Angehängt wird an das letzte AUFGEZEICHNETE Teil; ein Vorschlag ist keine Stellung, an der
+    // man weiterschreibt.
+    const parts = (this.data()?.parts ?? []).filter(p => !p.generated);
     const last = parts.length ? parts[parts.length - 1] : null;
     this.editingId.set(0);
     this.editKind.set(kind);
@@ -256,6 +284,7 @@ export class ReconstructDetailComponent implements OnInit {
   }
 
   edit(part: ReconstructionPart): void {
+    this.waypointFor.set(null);
     this.editingId.set(part.id);
     this.editKind.set(part.kind);
     this.editNote = part.note ?? '';
@@ -274,7 +303,7 @@ export class ReconstructDetailComponent implements OnInit {
     if (part.kind === PartKind.Moves) this.focusBoard();
   }
 
-  cancelEdit(): void { this.editingId.set(null); }
+  cancelEdit(): void { this.editingId.set(null); this.waypointFor.set(null); }
 
   /**
    * Den Brett-Kasten fokussieren. Die Pfeiltasten dürfen dem TEXTFELD nicht weggenommen werden —
@@ -406,6 +435,8 @@ export class ReconstructDetailComponent implements OnInit {
    */
   onPositionApplied(fen: string): void {
     this.editFen = fen;
+    const waypoint = this.waypointFor();
+    if (waypoint !== null) { this.saveWaypoint(waypoint, fen, this.editCertain); return; }
     this.savePart(this.editingId() === 0 ? PartKind.Moves : null);
   }
 
@@ -442,13 +473,30 @@ export class ReconstructDetailComponent implements OnInit {
     return index > 0 && !part.continuesPrevious && part.kind === PartKind.Position;
   }
 
+  /**
+   * „Lücke schließen": sucht die Wege und setzt sie als VORSCHLÄGE in die Liste — dort lassen sie
+   * sich durchklicken. Übernommen wird nichts von selbst; die Lücke bleibt offen, bis ein Mensch
+   * eine Stellung bestätigt oder eine ganze Linie übernimmt.
+   */
   closeGap(part: ReconstructionPart): void {
     if (this.gapSearching()) return;
     this.gapFor.set(part.id);
     this.gapResult.set(null);
     this.gapSearching.set(true);
-    this.service.solveGap(this.id, part.id, this.gapPlies).subscribe({
-      next: result => { this.gapSearching.set(false); this.gapResult.set(result); },
+    this.service.proposeGap(this.id, part.id, this.gapPlies).subscribe({
+      next: result => {
+        this.gapSearching.set(false);
+        this.gapResult.set({
+          partId: result.partId, maxPlies: result.maxPlies, nodes: result.nodes,
+          budgetExhausted: result.budgetExhausted, reason: result.reason, solutions: [],
+        });
+        this.apply(result.detail);
+        if (result.inserted > 0) {
+          this.showGenerated = true;
+          const first = result.detail.parts.find(p => p.generated);
+          if (first) this.edit(first);   // gleich ansehen können, darum geht es
+        }
+      },
       error: () => {
         this.gapSearching.set(false);
         this.gapFor.set(null);
@@ -457,17 +505,47 @@ export class ReconstructDetailComponent implements OnInit {
     });
   }
 
-  hideGap(): void { this.gapFor.set(null); this.gapResult.set(null); }
-
-  /** Einen gefundenen Weg übernehmen — er wird als eigenes Teil vor die Stellung gesetzt. */
-  applyGap(solution: GapSolution): void {
-    const partId = this.gapFor();
-    if (partId === null || this.busy()) return;
+  /** Alle Vorschläge dieser Lücke verwerfen. */
+  discardProposals(part: ReconstructionPart): void {
+    if (this.busy()) return;
     this.busy.set(true);
-    this.service.applyGap(this.id, partId, solution.san).subscribe({
+    this.service.discardProposals(this.id, part.id).subscribe({
+      next: data => { this.busy.set(false); this.apply(data); this.editingId.set(null); this.hideGap(); },
+      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+    });
+  }
+
+  /** „Diese Stellung stimmt": die gerade gezeigte Stellung des Vorschlags wird ein eigenes Teil. */
+  acceptWaypoint(): void {
+    const proposal = this.editingPart();
+    const target = proposal ? this.targetAfter(proposal) : null;
+    if (!proposal || !target || this.busy()) return;
+    // Bestätigt heißt SICHER — der Vorschlag selbst ist unsicher, der Mensch sagt hier das Gegenteil.
+    this.saveWaypoint(target.id, this.editBoardFen(), true);
+  }
+
+  /** „Diese Stellung korrigieren": dieselbe Stellung im Stellungs-Editor öffnen. */
+  correctWaypoint(): void {
+    const proposal = this.editingPart();
+    const target = proposal ? this.targetAfter(proposal) : null;
+    if (!proposal || !target) return;
+    this.waypointFor.set(target.id);
+    this.editKind.set(PartKind.Position);
+    this.editFen = this.editBoardFen();
+    this.editCertain = true;
+  }
+
+  /** Die ganze vorgeschlagene Linie übernehmen — damit ist die Lücke zu. */
+  acceptProposal(): void {
+    const proposal = this.editingPart();
+    const target = proposal ? this.targetAfter(proposal) : null;
+    if (!proposal || !target || this.busy()) return;
+    this.busy.set(true);
+    this.service.applyGap(this.id, target.id, proposal.moves ?? '').subscribe({
       next: data => {
         this.busy.set(false);
         this.apply(data);
+        this.editingId.set(null);
         this.hideGap();
         this.snackbar.info(this.translate.instant('reconstruct.gap.applied'));
       },
@@ -479,6 +557,27 @@ export class ReconstructDetailComponent implements OnInit {
       },
     });
   }
+
+  private saveWaypoint(targetId: number, fen: string, certain: boolean): void {
+    this.busy.set(true);
+    this.service.addWaypoint(this.id, targetId, fen, certain).subscribe({
+      next: data => {
+        this.busy.set(false);
+        this.apply(data);
+        this.waypointFor.set(null);
+        this.editingId.set(null);
+        this.hideGap();
+      },
+      error: err => {
+        this.busy.set(false);
+        const reason = err?.error?.reason;
+        this.snackbar.warn(this.translate.instant(
+          reason === 'invalid-fen' ? 'reconstruct.invalidFen' : 'reconstruct.saveFailed'));
+      },
+    });
+  }
+
+  hideGap(): void { this.gapFor.set(null); this.gapResult.set(null); }
 
   /**
    * Der Satz zum leeren Ergebnis. „Nicht gefunden" und „gibt es nicht" sind verschiedene Aussagen,
@@ -519,10 +618,40 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Gibt es überhaupt ein Teil davor, an das man anschließen könnte? */
   hasPrevious(): boolean {
-    const parts = this.data()?.parts ?? [];
+    const parts = (this.data()?.parts ?? []).filter(p => !p.generated);
     const editingId = this.editingId();
     if (editingId === 0) return parts.length > 0;
     return parts.findIndex(p => p.id === editingId) > 0;
+  }
+
+  /** Die Teile, wie sie links stehen — Vorschläge lassen sich ausblenden. */
+  visibleParts(): ReconstructionPart[] {
+    const parts = this.data()?.parts ?? [];
+    return this.showGenerated ? parts : parts.filter(p => !p.generated);
+  }
+
+  /** Wie viele Vorschläge liegen gerade in der Liste? (Für den Schalter oben.) */
+  generatedCount(): number { return (this.data()?.parts ?? []).filter(p => p.generated).length; }
+
+  /** Das gerade bearbeitete Teil (null bei einem neuen). */
+  editingPart(): ReconstructionPart | null {
+    const id = this.editingId();
+    return id ? (this.data()?.parts.find(p => p.id === id) ?? null) : null;
+  }
+
+  /** Wird gerade ein VORSCHLAG angesehen? Dann gibt es „stimmt" / „korrigieren" / „übernehmen". */
+  editingGenerated(): boolean { return !!this.editingPart()?.generated; }
+
+  /** Stehen vor diesem Teil Vorschläge? (Dann gibt es an der Lücke ein „Verwerfen".) */
+  hasProposalsBefore(part: ReconstructionPart): boolean {
+    const parts = this.data()?.parts ?? [];
+    const index = parts.findIndex(p => p.id === part.id);
+    return index > 0 && parts[index - 1].generated;
+  }
+
+  /** Das aufgezeichnete Teil NACH diesem Vorschlag — darauf beziehen sich Übernehmen und Verwerfen. */
+  targetAfter(part: ReconstructionPart): ReconstructionPart | null {
+    return (this.data()?.parts ?? []).find(p => p.ordinal > part.ordinal && !p.generated) ?? null;
   }
 
   /** Kurzfassung eines Teils für die Liste. */

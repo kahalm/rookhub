@@ -101,6 +101,43 @@ public class GameReconstructionController : BaseApiController
     }
 
     /// <summary>
+    /// „Lücke schließen": sucht die Wege und SETZT sie als Vorschläge in die Liste (vor
+    /// <paramref name="partId"/>). Vorschläge zählen nicht zur Partie — sie sind zum Durchsehen da.
+    /// Antwort enthält die ganze Rekonstruktion samt Vorschlägen und den Grund, falls nichts kam.
+    /// </summary>
+    [HttpPost("{id:int}/parts/{partId:int}/gap/propose")]
+    public async Task<ActionResult<ReconstructionGapProposalDto>> ProposeGap(int id, int partId, [FromBody] ReconstructionGapRequest? req, CancellationToken ct)
+    {
+        var dto = await _service.ProposeGapAsync(GetUserId(), id, partId, req?.MaxPlies, ct);
+        return dto == null ? NotFound() : Ok(dto);
+    }
+
+    /// <summary>Die Vorschläge vor diesem Teil verwerfen (idempotent).</summary>
+    [HttpPost("{id:int}/parts/{partId:int}/gap/discard")]
+    public async Task<ActionResult<ReconstructionDetailDto>> DiscardProposals(int id, int partId, CancellationToken ct)
+    {
+        var dto = await _service.DiscardProposalsAsync(GetUserId(), id, partId, ct);
+        return dto == null ? NotFound() : Ok(dto);
+    }
+
+    /// <summary>
+    /// Eine Stellung aus einem Vorschlag übernehmen („die stimmt") bzw. ihre korrigierte Fassung:
+    /// sie kommt als eigenes Teil vor <paramref name="partId"/> und teilt die Lücke in zwei.
+    /// 400 mit <c>reason: invalid-fen</c>/<c>too-many-parts</c>.
+    /// </summary>
+    [HttpPost("{id:int}/parts/{partId:int}/gap/waypoint")]
+    public async Task<ActionResult<ReconstructionDetailDto>> AddWaypoint(int id, int partId, [FromBody] ReconstructionWaypointRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var dto = await _service.AddWaypointAsync(GetUserId(), id, partId, req?.Fen, req?.Certain ?? true, ct);
+            return dto == null ? NotFound() : Ok(dto);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { reason = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { reason = ex.Message }); }
+    }
+
+    /// <summary>
     /// Einen gefundenen Weg übernehmen: die Züge werden als eigenes Teil VOR <paramref name="partId"/>
     /// eingesetzt, beide schließen danach nahtlos an. 400 mit <c>reason</c> ∈ <c>does-not-fit</c>/
     /// <c>no-gap</c>/<c>no-previous</c>/<c>no-anchor</c>/<c>no-moves</c>/<c>target-not-a-position</c>.

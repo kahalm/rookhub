@@ -73,8 +73,30 @@
 .part {
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.5rem;
+  cursor: pointer;   /* Bearbeiten ist immer an — ein Klick auf das Teil öffnet es */
 
   &.selected { outline: 2px solid color-mix(in srgb, currentColor 35%, transparent); }
+
+  /* Ein Vorschlag ist sichtbar etwas anderes als eine Aufzeichnung. */
+  &.proposal {
+    border: 1px dashed color-mix(in srgb, currentColor 35%, transparent);
+    background: color-mix(in srgb, currentColor 5%, transparent);
+    opacity: 0.92;
+  }
+}
+
+.chip.gen { background: color-mix(in srgb, #5c6bc0 32%, transparent); }
+
+.gap-note { margin: -0.2rem 0 0.5rem 1rem; }
+
+.proposal-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+
+  p { margin: 0; flex: 1 1 100%; }
 }
 
 .part-head {
@@ -177,6 +199,7 @@
   .gap-head { display: flex; align-items: center; gap: 0.4rem; }
   .gap-depth { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
   .gap-depth .chosen { font-weight: 700; text-decoration: underline; }
+
   .spacer { flex: 1 1 auto; }
 
   .gap-line {
@@ -191,3 +214,6 @@
   p { margin: 0.25rem 0; }
   .small { font-size: 0.85rem; }
 }
+
+.depth-btn { min-width: 0; padding: 0 0.5rem; }
+.depth-btn.chosen { font-weight: 700; text-decoration: underline; }

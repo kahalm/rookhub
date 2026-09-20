@@ -19,6 +19,8 @@ export interface ReconstructionPart {
   certain: boolean;
   /** Zugfolge ohne Anschluss: beginnt sie mit einem Zug von Schwarz? */
   blackToMove: boolean;
+  /** Von der Lückensuche erzeugt und noch unbestätigt — steht in der Liste, zählt nicht zur Partie. */
+  generated: boolean;
   note?: string | null;
   /** Ist bekannt, welche Stellung VOR diesem Teil steht? */
   anchored: boolean;
@@ -76,6 +78,8 @@ export interface PartInput {
   certain?: boolean;
   blackToMove?: boolean;
   note?: string | null;
+  /** Vor welches Teil einsetzen? Ohne Angabe hinten anhängen. */
+  insertBeforePartId?: number | null;
 }
 
 /** Ein gefundener Weg durch eine Lücke (Zugfolge in SAN). */
@@ -97,6 +101,17 @@ export interface GapResult {
   budgetExhausted: boolean;
   reason?: string | null;
   solutions: GapSolution[];
+}
+
+/** Ergebnis eines Vorschlags-Laufs: die Suche plus die Rekonstruktion mit den eingesetzten Vorschlägen. */
+export interface GapProposal {
+  partId: number;
+  maxPlies: number;
+  nodes: number;
+  budgetExhausted: boolean;
+  reason?: string | null;
+  inserted: number;
+  detail: Reconstruction;
 }
 
 /**
@@ -148,6 +163,21 @@ export class ReconstructService {
   /** Sucht die Züge, die die Lücke VOR diesem Teil schließen. Antwortet auch ohne Treffer mit 200. */
   solveGap(id: number, partId: number, maxPlies?: number): Observable<GapResult> {
     return this.http.post<GapResult>(`${this.base}/${id}/parts/${partId}/gap`, { maxPlies: maxPlies ?? null });
+  }
+
+  /** Sucht die Wege und setzt sie als VORSCHLÄGE in die Liste (vor diesem Teil). */
+  proposeGap(id: number, partId: number, maxPlies?: number): Observable<GapProposal> {
+    return this.http.post<GapProposal>(`${this.base}/${id}/parts/${partId}/gap/propose`, { maxPlies: maxPlies ?? null });
+  }
+
+  /** Verwirft die Vorschläge vor diesem Teil. */
+  discardProposals(id: number, partId: number): Observable<Reconstruction> {
+    return this.http.post<Reconstruction>(`${this.base}/${id}/parts/${partId}/gap/discard`, {});
+  }
+
+  /** Eine Stellung aus einem Vorschlag (oder ihre korrigierte Fassung) als eigenes Teil übernehmen. */
+  addWaypoint(id: number, partId: number, fen: string, certain = true): Observable<Reconstruction> {
+    return this.http.post<Reconstruction>(`${this.base}/${id}/parts/${partId}/gap/waypoint`, { fen, certain });
   }
 
   /** Setzt einen gefundenen Weg als eigenes Teil VOR das Teil — beide hängen danach aneinander. */

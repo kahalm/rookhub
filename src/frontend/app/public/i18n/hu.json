@@ -3521,7 +3521,12 @@
       "targetNotAPosition": "A keresésnek ÁLLÁS kell célként; egy hézag utáni lépéssornak magának sincs ismert kiindulóállása.",
       "invalidPosition": "A két állás egyike nem olvasható.",
       "here": "Hézag",
-      "needPosition": "Rögzítsd a hézag utáni állást, és a köztes lépések kereshetővé válnak."
+      "needPosition": "Rögzítsd a hézag utáni állást, és a köztes lépések kereshetővé válnak.",
+      "discard": "Javaslatok elvetése",
+      "walkHint": "Lépkedj végig a soron a ← → gombokkal, és állj meg ott, ahol felismered az állást.",
+      "positionFits": "Ez az állás stimmel",
+      "positionCorrect": "Állás javítása",
+      "acceptLine": "Teljes sor átvétele"
     },
     "enterPosition": "Állás megadása",
     "afterPositionHint": "Az átvétel után lépésekkel folytatod ettől az állástól — vagy ott újra az „Állás megadása“ gombbal ugorhatsz a következőre.",
@@ -3536,6 +3541,9 @@
     "plyFirst": "Az elejére",
     "plyLast": "A végére",
     "continueHere": "Folytatás innen",
-    "arrowHint": "A ← → nyilakkal lépkedhetsz a lépések között. Ha a kurzor a lépésmezőben van, előbb kattints a táblára."
+    "arrowHint": "A ← → nyilakkal lépkedhetsz a lépések között. Ha a kurzor a lépésmezőben van, előbb kattints a táblára.",
+    "generated": "generált",
+    "generatedHint": "A hézagkereső javaslata — csak akkor lesz a parti része, ha megerősíted.",
+    "showGenerated": "Javaslatok mutatása ({{count}})"
   }
 }

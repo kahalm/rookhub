@@ -79,14 +79,20 @@ public class GameReconstructionService
         if (row == null) return null;
         if (row.Parts.Count >= MaxParts) throw new InvalidOperationException("too-many-parts");
 
+        var before = req.InsertBeforePartId is int beforeId
+            ? row.Parts.FirstOrDefault(p => p.Id == beforeId)
+            : null;
         var part = new GameReconstructionPart
         {
             GameReconstructionId = row.Id,
-            Ordinal = row.Parts.Count == 0 ? 0 : row.Parts.Max(p => p.Ordinal) + 1,
+            Ordinal = before?.Ordinal ?? (row.Parts.Count == 0 ? 0 : row.Parts.Max(p => p.Ordinal) + 1),
         };
         ApplyPart(part, req);
+        if (before != null)
+            foreach (var later in row.Parts.Where(p => p.Ordinal >= before.Ordinal)) later.Ordinal++;
         row.Parts.Add(part);
         _db.GameReconstructionParts.Add(part);
+        Renumber(row);
         await SaveTouchedAsync(row, ct);
         return ToDetail(row);
     }
@@ -97,6 +103,9 @@ public class GameReconstructionService
         var part = row?.Parts.FirstOrDefault(p => p.Id == partId);
         if (row == null || part == null) return null;
         ApplyPart(part, req);
+        // Was ein Mensch angefasst hat, ist kein Vorschlag mehr — auch dann nicht, wenn er nur
+        // eine Kleinigkeit geändert hat. („dann passe ich sie an und die generierte Linie ist weg")
+        part.Generated = false;
         part.UpdatedAt = DateTime.UtcNow;
         await SaveTouchedAsync(row, ct);
         return ToDetail(row);
@@ -146,7 +155,9 @@ public class GameReconstructionService
     {
         var row = await LoadAsync(userId, id, ct);
         if (row == null) return null;
-        var ordered = row.Parts.OrderBy(p => p.Ordinal).ToList();
+        // Vorschläge stehen zwar in der Liste, sind aber keine Aufzeichnung — das Teil DAVOR ist
+        // immer das letzte aufgezeichnete, sonst suchte die zweite Suche ab einem Vorschlag.
+        var ordered = Recorded(row);
         var index = ordered.FindIndex(p => p.Id == partId);
         if (index < 0) return null;
 
@@ -186,10 +197,10 @@ public class GameReconstructionService
     {
         var row = await LoadAsync(userId, id, ct);
         if (row == null) return null;
-        var ordered = row.Parts.OrderBy(p => p.Ordinal).ToList();
+        var ordered = Recorded(row);
         var index = ordered.FindIndex(p => p.Id == partId);
         if (index < 0) return null;
-        if (row.Parts.Count >= MaxParts) throw new InvalidOperationException("too-many-parts");
+        if (ordered.Count >= MaxParts) throw new InvalidOperationException("too-many-parts");
 
         var part = ordered[index];
         if (index == 0) throw new ArgumentException("no-previous");
@@ -213,6 +224,7 @@ public class GameReconstructionService
         }
         if (!GapSolver.Matches(board.ToFen(), part.Fen!)) throw new ArgumentException("does-not-fit");
 
+        RemoveProposalsBefore(row, part);
         var bridge = new GameReconstructionPart
         {
             GameReconstructionId = row.Id,
@@ -224,7 +236,7 @@ public class GameReconstructionService
             // Das eingesetzte Teil gilt deshalb als unsicher, bis der Mensch es bestätigt.
             Certain = false,
         };
-        foreach (var later in ordered.Skip(index)) later.Ordinal++;
+        foreach (var later in row.Parts.Where(p => p.Ordinal >= part.Ordinal)) later.Ordinal++;
         part.ContinuesPrevious = true;   // die Lücke ist zu — ab jetzt hängt das Teil an den Zügen
         part.UpdatedAt = DateTime.UtcNow;
         row.Parts.Add(bridge);
@@ -232,6 +244,115 @@ public class GameReconstructionService
         Renumber(row);
         await SaveTouchedAsync(row, ct);
         return ToDetail(row);
+    }
+
+    /// <summary>
+    /// Sucht die Wege durch die Lücke und SETZT sie als Vorschläge in die Liste (vor
+    /// <paramref name="partId"/>). Vorschläge zählen nicht zur Partie — die Lücke bleibt offen,
+    /// bis ein Mensch etwas übernimmt; sie sind zum Durchsehen da.
+    /// </summary>
+    public async Task<ReconstructionGapProposalDto?> ProposeGapAsync(int userId, int id, int partId, int? maxPlies, CancellationToken ct = default)
+    {
+        var search = await SolveGapAsync(userId, id, partId, maxPlies, ct);
+        if (search == null) return null;
+
+        var row = (await LoadAsync(userId, id, ct))!;
+        var target = row.Parts.First(p => p.Id == partId);
+        RemoveProposalsBefore(row, target);
+
+        var inserted = 0;
+        foreach (var solution in search.Solutions)
+        {
+            if (row.Parts.Count >= MaxParts) break;
+            var proposal = new GameReconstructionPart
+            {
+                GameReconstructionId = row.Id,
+                Ordinal = target.Ordinal,
+                Kind = ReconstructionPartKind.Moves,
+                Moves = Cut(solution.San, 4000),
+                ContinuesPrevious = true,   // er hängt an der Stellung davor — das ist der Sinn der Suche
+                Certain = false,
+                Generated = true,
+            };
+            foreach (var later in row.Parts.Where(p => p.Ordinal >= target.Ordinal)) later.Ordinal++;
+            row.Parts.Add(proposal);
+            _db.GameReconstructionParts.Add(proposal);
+            inserted++;
+        }
+        Renumber(row);
+        if (inserted > 0) await SaveTouchedAsync(row, ct);
+
+        return new ReconstructionGapProposalDto
+        {
+            PartId = partId, MaxPlies = search.MaxPlies, Nodes = search.Nodes,
+            BudgetExhausted = search.BudgetExhausted, Reason = search.Reason,
+            Inserted = inserted, Detail = ToDetail(row),
+        };
+    }
+
+    /// <summary>Verwirft die Vorschläge VOR diesem Teil (sie sind nur ein Angebot).</summary>
+    public async Task<ReconstructionDetailDto?> DiscardProposalsAsync(int userId, int id, int partId, CancellationToken ct = default)
+    {
+        var row = await LoadAsync(userId, id, ct);
+        var target = row?.Parts.FirstOrDefault(p => p.Id == partId);
+        if (row == null || target == null) return null;
+        if (RemoveProposalsBefore(row, target) > 0)
+        {
+            Renumber(row);
+            await SaveTouchedAsync(row, ct);
+        }
+        return ToDetail(row);
+    }
+
+    /// <summary>
+    /// Eine Stellung AUS einem Vorschlag als eigenes Teil übernehmen („die stimmt") bzw. die
+    /// korrigierte Fassung davon. Sie kommt vor <paramref name="partId"/> in die Liste und teilt
+    /// die Lücke damit in zwei kleinere — die übrigen Vorschläge dieser Lücke fallen weg, denn sie
+    /// beantworten eine Frage, die so nicht mehr gestellt ist.
+    /// </summary>
+    public async Task<ReconstructionDetailDto?> AddWaypointAsync(int userId, int id, int partId, string? fen, bool certain, CancellationToken ct = default)
+    {
+        var row = await LoadAsync(userId, id, ct);
+        var target = row?.Parts.FirstOrDefault(p => p.Id == partId);
+        if (row == null || target == null) return null;
+        var clean = (fen ?? string.Empty).Trim();
+        if (!ReconstructionChain.IsLoadableFen(clean)) throw new ArgumentException("invalid-fen");
+        if (row.Parts.Count(p => !p.Generated) >= MaxParts) throw new InvalidOperationException("too-many-parts");
+
+        RemoveProposalsBefore(row, target);
+        var waypoint = new GameReconstructionPart
+        {
+            GameReconstructionId = row.Id,
+            Ordinal = target.Ordinal,
+            Kind = ReconstructionPartKind.Position,
+            Fen = clean,
+            Certain = certain,
+        };
+        foreach (var later in row.Parts.Where(p => p.Ordinal >= target.Ordinal)) later.Ordinal++;
+        row.Parts.Add(waypoint);
+        _db.GameReconstructionParts.Add(waypoint);
+        Renumber(row);
+        await SaveTouchedAsync(row, ct);
+        return ToDetail(row);
+    }
+
+    /// <summary>Die AUFGEZEICHNETEN Teile in ihrer Reihenfolge (ohne die Vorschläge der Suche).</summary>
+    private static List<GameReconstructionPart> Recorded(GameReconstruction row)
+        => row.Parts.Where(p => !p.Generated).OrderBy(p => p.Ordinal).ToList();
+
+    /// <summary>Entfernt die unmittelbar vor <paramref name="target"/> stehenden Vorschläge.</summary>
+    private int RemoveProposalsBefore(GameReconstruction row, GameReconstructionPart target)
+    {
+        var ordered = row.Parts.OrderBy(p => p.Ordinal).ToList();
+        var index = ordered.IndexOf(target);
+        var removed = 0;
+        for (var i = index - 1; i >= 0 && ordered[i].Generated; i--)
+        {
+            row.Parts.Remove(ordered[i]);
+            _db.GameReconstructionParts.Remove(ordered[i]);
+            removed++;
+        }
+        return removed;
     }
 
     // ----- intern -----
@@ -325,7 +446,8 @@ public class GameReconstructionService
             {
                 Id = part.Id, Ordinal = part.Ordinal, Kind = part.Kind, Moves = part.Moves, Fen = part.Fen,
                 FromPly = part.FromPly, ContinuesPrevious = part.ContinuesPrevious,
-                Certain = part.Certain, BlackToMove = part.BlackToMove, Note = part.Note,
+                Certain = part.Certain, BlackToMove = part.BlackToMove,
+                Generated = part.Generated, Note = part.Note,
                 Anchored = c?.Anchored ?? false, Valid = c?.Valid ?? false,
                 StartFen = c?.StartFen, EndFen = c?.EndFen, PlyCount = c?.PlyCount ?? 0,
                 StartPly = c?.StartPly, FirstBadMove = c?.FirstBadMove, Mismatch = c?.Mismatch ?? false,
