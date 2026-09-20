@@ -1,0 +1,182 @@
+<div class="page">
+  @if (loading()) {
+    <p class="muted">{{ 'common.loading' | translate }}</p>
+  } @else if (!data()) {
+    <p class="muted">{{ 'reconstruct.notFound' | translate }}</p>
+    <a mat-button routerLink="/reconstruct"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
+  } @else {
+    <div class="head">
+      <a mat-button routerLink="/reconstruct"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
+      <h1>{{ data()!.title }}</h1>
+      <button mat-icon-button (click)="showHead = !showHead"
+              [matTooltip]="'reconstruct.editHead' | translate"
+              [attr.aria-label]="'reconstruct.editHead' | translate">
+        <mat-icon>{{ showHead ? 'expand_less' : 'edit_note' }}</mat-icon>
+      </button>
+    </div>
+
+    <div class="chips">
+      <span class="chip">{{ 'reconstruct.partsCount' | translate:{ count: data()!.partCount } }}</span>
+      <span class="chip ok">{{ 'reconstruct.knownPlies' | translate:{ count: data()!.knownPlies } }}</span>
+      @if (data()!.gaps > 0) {
+        <span class="chip warn">{{ 'reconstruct.gaps' | translate:{ count: data()!.gaps } }}</span>
+      }
+      @if (data()!.prefixSan) {
+        <button mat-button (click)="copyPrefix()">
+          <mat-icon>content_copy</mat-icon> {{ 'reconstruct.copyPrefix' | translate }}
+        </button>
+      }
+    </div>
+
+    @if (showHead) {
+      <mat-card class="head-form">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'reconstruct.newTitle' | translate }}</mat-label>
+          <input matInput [(ngModel)]="head.title" maxlength="200">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'reconstruct.white' | translate }}</mat-label>
+          <input matInput [(ngModel)]="head.white" maxlength="120">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'reconstruct.black' | translate }}</mat-label>
+          <input matInput [(ngModel)]="head.black" maxlength="120">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'reconstruct.event' | translate }}</mat-label>
+          <input matInput [(ngModel)]="head.event" maxlength="200">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'reconstruct.playedOn' | translate }}</mat-label>
+          <input matInput type="date" [(ngModel)]="head.playedOn">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'reconstruct.result' | translate }}</mat-label>
+          <input matInput [(ngModel)]="head.result" placeholder="1-0" maxlength="12">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="wide">
+          <mat-label>{{ 'reconstruct.note' | translate }}</mat-label>
+          <textarea matInput rows="2" [(ngModel)]="head.note" maxlength="2000"></textarea>
+        </mat-form-field>
+        <div class="form-actions">
+          <button mat-flat-button color="primary" [disabled]="busy()" (click)="saveHead()">
+            {{ 'common.save' | translate }}
+          </button>
+        </div>
+      </mat-card>
+    }
+
+    <div class="columns">
+      <!-- Die Teile in ihrer Reihenfolge: das ist die Partie, so weit sie bekannt ist. -->
+      <section class="parts">
+        <div class="add-row">
+          <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Moves)">
+            <mat-icon>timeline</mat-icon> {{ 'reconstruct.addMoves' | translate }}
+          </button>
+          <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Position)">
+            <mat-icon>grid_on</mat-icon> {{ 'reconstruct.addPosition' | translate }}
+          </button>
+        </div>
+
+        @if (data()!.parts.length === 0) {
+          <p class="muted">{{ 'reconstruct.noParts' | translate }}</p>
+        }
+
+        @for (part of data()!.parts; track part.id; let i = $index) {
+          <mat-card class="part" [class.selected]="editingId() === part.id">
+            <div class="part-head">
+              <mat-icon>{{ part.kind === Kind.Position ? 'grid_on' : 'timeline' }}</mat-icon>
+              <span class="part-no">{{ i + 1 }}</span>
+              @if (part.startPly !== null && part.startPly !== undefined) {
+                <span class="chip">{{ 'reconstruct.atMove' | translate:{ move: moveNo(part.startPly) } }}</span>
+              }
+              @if (part.continuesPrevious) {
+                <mat-icon class="link-icon" [matTooltip]="'reconstruct.continues' | translate">link</mat-icon>
+              }
+              <span class="chip" [class.ok]="state(part) === 'ok'"
+                    [class.warn]="state(part) === 'floating'"
+                    [class.bad]="state(part) === 'broken' || state(part) === 'mismatch'">
+                {{ 'reconstruct.state.' + state(part) | translate }}
+              </span>
+              @if (part.firstBadMove) {
+                <span class="chip bad">{{ 'reconstruct.badMove' | translate:{ move: part.firstBadMove } }}</span>
+              }
+              <span class="spacer"></span>
+              <button mat-icon-button [disabled]="busy() || i === 0" (click)="move(part, -1)"
+                      [matTooltip]="'reconstruct.moveUp' | translate"
+                      [attr.aria-label]="'reconstruct.moveUp' | translate">
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+              <button mat-icon-button [disabled]="busy() || i === data()!.parts.length - 1" (click)="move(part, 1)"
+                      [matTooltip]="'reconstruct.moveDown' | translate"
+                      [attr.aria-label]="'reconstruct.moveDown' | translate">
+                <mat-icon>arrow_downward</mat-icon>
+              </button>
+              <button mat-icon-button [disabled]="busy()" (click)="edit(part)"
+                      [matTooltip]="'common.edit' | translate" [attr.aria-label]="'common.edit' | translate">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button [disabled]="busy()" (click)="removePart(part)"
+                      [matTooltip]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            <div class="part-body">
+              <code>{{ summary(part) }}</code>
+              @if (part.kind === Kind.Moves) {
+                <span class="muted">{{ 'reconstruct.plyCount' | translate:{ count: part.plyCount } }}</span>
+              }
+              @if (part.note) { <div class="muted note">{{ part.note }}</div> }
+            </div>
+          </mat-card>
+        }
+      </section>
+
+      <!-- Der Editor: Zugfolge am Brett eintippen bzw. eine Stellung aufbauen. -->
+      <section class="editor">
+        @if (editingId() === null) {
+          <p class="muted">{{ 'reconstruct.editorHint' | translate }}</p>
+        } @else {
+          @if (hasPrevious()) {
+            <mat-checkbox [(ngModel)]="editContinues">{{ 'reconstruct.continuesLabel' | translate }}</mat-checkbox>
+            <p class="muted small">{{ 'reconstruct.continuesHint' | translate }}</p>
+          }
+
+          @if (editKind() === Kind.Position) {
+            <app-position-setup [initialFen]="editFen"
+                                (apply)="onPositionApplied($event)" (cancel)="cancelEdit()"></app-position-setup>
+            <mat-form-field appearance="outline" class="wide">
+              <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>
+              <input matInput [(ngModel)]="editNote" maxlength="500">
+            </mat-form-field>
+          } @else {
+            <app-chess-board [fen]="editBoardFen()" [playable]="true" (userMove)="onBoardMove($event)"
+                             [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
+            <mat-form-field appearance="outline" class="wide">
+              <mat-label>{{ 'reconstruct.movesLabel' | translate }}</mat-label>
+              <textarea matInput rows="3" [ngModel]="editMoves" (ngModelChange)="onMovesInput($event)"
+                        [placeholder]="'reconstruct.movesPlaceholder' | translate"></textarea>
+              <mat-hint>{{ 'reconstruct.movesHint' | translate }}</mat-hint>
+            </mat-form-field>
+            @if (editBadMove()) {
+              <p class="bad-hint">{{ 'reconstruct.badMove' | translate:{ move: editBadMove() } }}</p>
+            }
+            <mat-form-field appearance="outline" class="wide">
+              <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>
+              <input matInput [(ngModel)]="editNote" maxlength="500">
+            </mat-form-field>
+            <div class="editor-actions">
+              <button mat-flat-button color="primary" [disabled]="busy()" (click)="savePart()">
+                {{ 'common.save' | translate }}
+              </button>
+              <button mat-button (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
+              <button mat-button [disabled]="!editMoves.trim()" (click)="undoMove()">
+                <mat-icon>undo</mat-icon> {{ 'reconstruct.undoMove' | translate }}
+              </button>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</div>

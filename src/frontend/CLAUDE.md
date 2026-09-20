@@ -125,6 +125,8 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/tournaments/:id` | TournamentDetailComponent | ja |
 | `/weekly` | WeeklyListComponent | `adminGuard` (vorerst nur Admin; Lese-API bleibt offen) |
 | `/analysis/jobs` | AnalysisJobsComponent (Hintergrund-Analyseaufträge: Liste + gespeicherte Linien + Tiefe/Linien anpassen; steht VOR `/analysis`) | `authGuard` |
+| `/reconstruct` | ReconstructListComponent („Partie rekonstruieren": Liste anlegen/öffnen/löschen) | `authGuard` + `menuGuard('reconstruct')` |
+| `/reconstruct/:id` | ReconstructDetailComponent (Arbeitsplatz: Teile links, Brett rechts; Zugfolgen werden lokal mit chess.js mitgespielt, geprüft wird serverseitig) | `authGuard` + `menuGuard('reconstruct')` |
 | `/analysis` | AnalysisComponent | nein (öffentlich; Stockfish-MultiPV-Analyse — lokal per WASM, eingeloggt wahlweise über eine externe Engine des eigenen Lichess-Kontos, siehe „Externe Engine" im Haupt-CLAUDE.md) |
 | `/install` | InstallComponent | nein (öffentlich; APK-Download + PWA-Install, plattformabhängig via `PwaInstallService`) |
 | `/stats` | StatsComponent | ja (Puzzle-Elo-Kurve + Stats; `GET /api/puzzles/elo-history`) |

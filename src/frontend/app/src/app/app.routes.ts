@@ -46,6 +46,8 @@ export const routes: Routes = [
   { path: 'analysis/jobs', loadComponent: () => import('./features/analysis/analysis-jobs.component').then(m => m.AnalysisJobsComponent), canActivate: [authGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },
+  { path: 'reconstruct', loadComponent: () => import('./features/reconstruct/reconstruct-list.component').then(m => m.ReconstructListComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
+  { path: 'reconstruct/:id', loadComponent: () => import('./features/reconstruct/reconstruct-detail.component').then(m => m.ReconstructDetailComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'remembered', loadComponent: () => import('./features/remembered/remembered-lines.component').then(m => m.RememberedLinesComponent), canActivate: [authGuard, menuGuard('remembered')] },
   { path: 'stats', loadComponent: () => import('./features/stats/stats.component').then(m => m.StatsComponent), canActivate: [authGuard, menuGuard('stats')] },
   { path: 'leaderboards', loadComponent: () => import('./features/leaderboards/leaderboards.component').then(m => m.LeaderboardsComponent), canActivate: [authGuard, menuGuard('leaderboards')] },

@@ -9,6 +9,23 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Partie rekonstruieren: die Luecken schliessen (2026-09-20)
+
+Gebaut ist in 0.485.0 das AUFZEICHNEN: Teile (Zugfolgen + Stellungen) in ihrer Reihenfolge, mit
+Pruefung dessen, was verankert ist (`Services/ReconstructionChain.cs`). Was fehlt, ist der zweite
+Schritt — aus zwei bekannten Stellungen (oder Stellung + folgender Zugfolge) die Zuege DAZWISCHEN
+suchen. Bausteine, die es dafuer schon gibt:
+
+* die Engine-Anbindung (`AnalysisJobService`, Lichess-Broker) — sie kann Stellungen bewerten, aber
+  nicht „finde einen Weg von A nach B"; die Suche selbst muesste eigener Code sein (Tiefensuche
+  ueber legale Zuege mit Ziel-FEN, gedeckelt auf wenige Halbzuege — der Suchraum waechst brutal).
+* `LibraryGames`/`GameAnalysis.OpeningLine` — bei Meisterpartien koennte eine Stellungssuche den
+  Rest der Partie liefern, statt zu rechnen.
+
+Offene Entwurfsfragen, bevor jemand anfaengt: Wie viele Halbzuege soll eine Suche hoechstens
+ueberbruecken (3? 6?), und was zeigt die Oberflaeche bei MEHREREN moeglichen Wegen — eine Liste zum
+Auswaehlen ist ehrlicher als ein geratener Vorschlag.
+
 ## [ ] Kurs-Cache bei piratechess wird beim laufenden Browser-Import nicht mehr geschrieben (2026-09-19)
 
 Seit 0.484.0 wird jeder Chunk EINZELN geparst. Der finale Chunk traegt weiterhin `courseJson` +

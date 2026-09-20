@@ -268,6 +268,7 @@ try
     builder.Services.AddScoped<TrainingGoalService>();
     builder.Services.AddScoped<RememberedPositionService>();
     builder.Services.AddScoped<SavedGameService>();
+    builder.Services.AddScoped<GameReconstructionService>();
     builder.Services.AddScoped<SharedLineService>();
     builder.Services.AddScoped<WeeklyPostService>();
     builder.Services.AddScoped<LeaderboardService>();

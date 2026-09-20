@@ -1,0 +1,91 @@
+.page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 1rem; }
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  h1 { margin: 0; font-size: 1.4rem; flex: 1 1 auto; }
+}
+
+.muted { opacity: 0.75; }
+
+.chips {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+}
+
+.chip {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+
+  &.ok { background: color-mix(in srgb, #2e7d32 28%, transparent); }
+  &.warn { background: color-mix(in srgb, #e65100 30%, transparent); }
+  &.bad { background: color-mix(in srgb, #c62828 30%, transparent); }
+}
+
+.head-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+
+  .wide { grid-column: 1 / -1; }
+  .form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+}
+
+/* Zwei Spalten ab Tablet: links die Teile (die Partie), rechts der Editor mit Brett.
+   Darunter einspaltig — das Brett braucht die ganze Breite. */
+.columns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 900px) { grid-template-columns: minmax(320px, 1fr) minmax(320px, 420px); }
+}
+
+.add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+
+.part {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+
+  &.selected { outline: 2px solid color-mix(in srgb, currentColor 35%, transparent); }
+}
+
+.part-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+
+  .part-no { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 1.5rem; }
+  .spacer { flex: 1 1 auto; }
+}
+
+.part-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
+
+  /* Eine lange Zugfolge oder FEN darf die Seite nicht breiter machen. */
+  code { overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
+  .note { font-size: 0.9rem; }
+}
+
+.editor {
+  .wide { width: 100%; }
+
+  app-chess-board { display: block; margin-bottom: 0.5rem; }
+}
+
+.editor-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+.bad-hint { color: #ef5350; margin: 0 0 0.5rem; }

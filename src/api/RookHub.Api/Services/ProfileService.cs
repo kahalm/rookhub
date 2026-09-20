@@ -284,6 +284,16 @@ public class ProfileService
         // Öffentlich abrufbare Inhalte mit Klarnamen/Fremddaten: geteilte Partien (/g/{token}) und
         // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.
         _db.SavedGames.RemoveRange(await _db.SavedGames.Where(g => g.UserId == userId).ToListAsync());
+        // „Partie rekonstruieren": erst die Teile, dann die Kopfzeilen — die Löschung anonymisiert
+        // nur die Nutzerzeile, es feuert also kein Cascade-FK (und InMemory cascadet ohnehin nicht).
+        var reconstructionIds = await _db.GameReconstructions.Where(r => r.UserId == userId).Select(r => r.Id).ToListAsync();
+        if (reconstructionIds.Count > 0)
+        {
+            _db.GameReconstructionParts.RemoveRange(
+                await _db.GameReconstructionParts.Where(p => reconstructionIds.Contains(p.GameReconstructionId)).ToListAsync());
+            _db.GameReconstructions.RemoveRange(
+                await _db.GameReconstructions.Where(r => r.UserId == userId).ToListAsync());
+        }
         _db.SharedLines.RemoveRange(await _db.SharedLines.Where(l => l.OwnerUserId == userId).ToListAsync());
         // Auf chessable.com gemerkte Stellungen (Kursname/Quell-URL) — persönlich, keine Statistik.
         _db.RememberedPositions.RemoveRange(await _db.RememberedPositions.Where(r => r.UserId == userId).ToListAsync());

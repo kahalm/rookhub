@@ -98,6 +98,9 @@ public class AppDbContext : DbContext
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
     public DbSet<SharedLine> SharedLines => Set<SharedLine>();
+    public DbSet<GameReconstruction> GameReconstructions => Set<GameReconstruction>();
+    public DbSet<GameReconstructionPart> GameReconstructionParts => Set<GameReconstructionPart>();
+
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
     public DbSet<RepertoireSrSettings> RepertoireSrSettings => Set<RepertoireSrSettings>();
     public DbSet<RepertoireShare> RepertoireShares => Set<RepertoireShare>();
@@ -1063,6 +1066,35 @@ public class AppDbContext : DbContext
             // nicht doppelt gespeichert werden, auch nicht bei parallelem Doppel-Klick. MySQL behandelt
             // NULL-ExternalId als verschieden → mehrere Saves OHNE externe Id (manuell) bleiben erlaubt.
             e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId }).IsUnique();
+        });
+
+        modelBuilder.Entity<GameReconstruction>(e =>
+        {
+            e.HasOne(r => r.User)
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(r => r.Title).HasMaxLength(200);
+            e.Property(r => r.White).HasMaxLength(120);
+            e.Property(r => r.Black).HasMaxLength(120);
+            e.Property(r => r.Event).HasMaxLength(200);
+            e.Property(r => r.Result).HasMaxLength(12);
+            e.Property(r => r.Note).HasMaxLength(2000);
+            // Liste je Nutzer, zuletzt geaendert zuerst.
+            e.HasIndex(r => new { r.UserId, r.UpdatedAt });
+        });
+
+        modelBuilder.Entity<GameReconstructionPart>(e =>
+        {
+            e.HasOne(p => p.Reconstruction)
+             .WithMany(r => r.Parts)
+             .HasForeignKey(p => p.GameReconstructionId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(p => p.Moves).HasMaxLength(4000);
+            e.Property(p => p.Fen).HasMaxLength(120);
+            e.Property(p => p.Note).HasMaxLength(500);
+            // Die Teile werden IMMER in ihrer Reihenfolge gelesen.
+            e.HasIndex(p => new { p.GameReconstructionId, p.Ordinal });
         });
 
         modelBuilder.Entity<SharedLine>(e =>

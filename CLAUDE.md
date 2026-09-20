@@ -1791,6 +1791,59 @@ statt erst nach einer halben Stunde Rechnen.
 Kommentar, und so bleibt das LONGTEXT-Feld ausserhalb der Antwort. Menue-Key `guess`, Stufe **All**;
 die Route traegt entsprechend keinen `authGuard` mehr.
 
+### Partie rekonstruieren (auth)
+
+Eine am Brett gespielte Partie aus Bruchstücken wieder zusammensetzen. Der Ausgangspunkt ist die
+Erinnerung: die ersten Züge weiß man meist vollständig, danach nur noch einzelne Stellungen und
+kurze Zugfolgen. Aufgezeichnet wird deshalb eine GEORDNETE Liste von Teilen
+(`GameReconstructionPart`) — Zugfolge (SAN) oder Stellung (FEN) —, nicht eine fertige Partie.
+
+**Ein PGN kann das nicht.** Eine Stellung ohne den Weg dorthin lässt sich darin nicht ausdrücken,
+und genau diese Teile sind hier die Eingabe. Erst wenn die Lücken geschlossen sind, entsteht eine
+Partie; die SUCHE danach ist ein späterer Schritt, aufgezeichnet wird zuerst.
+
+**Die Grundannahme ist LÜCKE, nicht Anschluss** (`GameReconstructionPart.ContinuesPrevious`,
+Vorgabe `false`): Bruchstücke stammen von verschiedenen Stellen der Partie — hingen sie aneinander,
+wären sie EIN Teil. Nur das erste Teil hängt automatisch an der Grundstellung. Die Oberfläche setzt
+den Haken beim Anlegen genau dann vor, wenn das neue Zug-Teil auf eine STELLUNG folgt („in dieser
+Stellung ging es so weiter") — nach einer Zugfolge nicht.
+
+**Geprüft wird serverseitig** (`Services/ReconstructionChain.cs`, reine Funktion über Gera.Chess,
+ohne DB und Engine): je Teil `Anchored` (ist die Stellung davor bekannt?), `Valid`, `StartFen`,
+`EndFen`, `PlyCount`, `StartPly` und der erste nicht spielbare Zug. Zwei Regeln hängen daran:
+
+* **Ein Bruchstück ohne Anschluss ist NICHT falsch.** Ohne die Stellung davor lässt sich eine
+  Zugfolge weder bestätigen noch widerlegen — und diese Stellung ist ja das Gesuchte. Solche Teile
+  tragen `Anchored = false` und sonst keinen Vorwurf.
+* **Ein behaupteter Anschluss, der nicht passt, wird gemeldet** (`Mismatch`): sagt ein Stellungs-Teil
+  „direkt danach", stimmt aber nicht mit der Stellung nach dem vorigen Teil überein, ist das ein
+  Widerspruch in den Erinnerungen — genau die Auskunft, die beim Rekonstruieren weiterhilft.
+
+`StartPly` gibt es nur, solange die Kette lückenlos an der Grundstellung hängt: eine Zugnummer nach
+einer Lücke wäre geraten. `KnownPlies`/`PrefixSan` sind derselbe Gedanke für die ganze Partie — was
+schon sicher steht.
+
+Jede schreibende Operation antwortet mit der GANZEN Rekonstruktion: ein eingefügtes Teil ändert
+Gültigkeit und Nummern aller folgenden, ein DTO nur des geänderten Teils wäre danach mehrfach falsch.
+Deckel: `MaxPerUser` 50, `MaxParts` 200, Zugtext 4000 Zeichen.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/reconstructions` | Eigene Rekonstruktionen (zuletzt geänderte zuerst) mit Teilezahl, gesicherten Halbzügen und Lücken |
+| POST | `/api/reconstructions` | Anlegen `{ title, white?, black?, event?, playedOn?, result?, note? }`; 400 `reason: too-many` am Deckel |
+| GET | `/api/reconstructions/{id}` | Detail: alle Teile samt Auswertung + `prefixSan` |
+| PUT | `/api/reconstructions/{id}` | Kopfdaten ändern |
+| DELETE | `/api/reconstructions/{id}` | Löschen (mit allen Teilen) |
+| POST | `/api/reconstructions/{id}/parts` | Teil anhängen `{ kind (0 = Züge, 1 = Stellung), moves?, fen?, fromPly?, continuesPrevious?, note? }`; 400 `reason` ∈ `no-moves`/`invalid-fen`/`too-many-parts` |
+| PUT | `/api/reconstructions/{id}/parts/{partId}` | Teil ändern (gleicher Rumpf) |
+| DELETE | `/api/reconstructions/{id}/parts/{partId}` | Teil löschen (Reihenfolge wird geschlossen) |
+| PUT | `/api/reconstructions/{id}/parts/order` | Reihenfolge setzen `{ partIds: [] }` — fehlende Ids bleiben hinten, damit eine unvollständige Liste nichts verschwinden lässt (Literal-Route VOR `{partId}`) |
+
+Menü-Key `reconstruct` (Stufe `Registered`), Frontend `/reconstruct` (Liste) und
+`/reconstruct/:id` (Arbeitsplatz: Teile links, Brett rechts). Die Züge werden im Browser
+mitgespielt (chess.js), damit man beim Tippen und Klicken sofort sieht, wo man steht — die
+verbindliche Auskunft kommt trotzdem vom Server.
+
 ### Client-Diagnostik (offen)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -1889,6 +1942,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
+| GameReconstructions | Eine Partie, die aus Bruchstücken zusammengesetzt wird („Partie rekonstruieren") — Kopfdaten; die Teile hängen daran | UserId (Cascade), Title (≤200), White?/Black? (≤120), Event? (≤200), PlayedOn? (DateOnly), Result? (≤12), Note? (≤2000), CreatedAt, UpdatedAt; Index (UserId, UpdatedAt). Deckel 50 je Konto |
+| GameReconstructionParts | EIN Bruchstück: Zugfolge ODER Stellung. `Ordinal` ist die Reihenfolge in der Partie; **`ContinuesPrevious` (Vorgabe false) sagt, ob es NAHTLOS an das vorige anschließt** — ohne das liegt dazwischen eine Lücke, und genau das ist der Normalfall | GameReconstructionId (Cascade), Ordinal, Kind (Moves/Position), Moves? (≤4000, SAN ohne Zugnummern), Fen? (≤120), FromPly? (Erinnerungs-Hinweis, keine Verankerung), Note? (≤500), CreatedAt, UpdatedAt; Index (GameReconstructionId, Ordinal). Deckel 200 je Rekonstruktion |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |
 | PlayTimeSyncs | Sync-Cursor externe Spielzeit | UserId + Platform (unique, Cascade), LastGameTimestamp (ms), LastSyncedAt, LastError |
 | UserApiTokens | Personal-Access-Tokens für Maschinen-Clients (chess.com-Extension) | UserId (Cascade), Name, TokenHash (SHA-256, UNIQUE), Prefix (12 char), Scope ("extension"), CreatedAt, LastUsedAt, ExpiresAt (nullable); Index (UserId, Name) |
@@ -1904,7 +1959,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CourseFlashcardMarks | PERSISTENTE Flashcard-Markierung einzelner Kurs-Linien je User (Checkbox im Durchsehen; `?marked=1`-Bereich der Flashcards-Seite) | UserId (Cascade) + BookId (denormalisiert, Cascade) + BookPuzzleId (**Restrict** — wie CoursePuzzleResult), CreatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId). Linien-Löschpfade (`CourseAuthoringService.RemoveLinesAsync`, `BookAdminService.DeleteBook`) räumen explizit ab |
 | RepertoireFlashcardMarks | PERSISTENTE Flashcard-Markierung von Repertoire-Linien je User — Besitzer UND Freigabe-Empfänger haben eigene Sätze | UserId (Cascade) + RepertoireId (Cascade) + LineKey (≤120, Frontend-Linien-Hash wie SR), CreatedAt; **UNIQUE (UserId, RepertoireId, LineKey)** |
 
-Cascade Deletes: AppUser → Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults, CourseAttempts, UserTrainingGoals, PlayTimeDailies, PlayTimeSyncs, WeeklyPostAttempts, SavedGames, ManualActivities; Repertoire → Files, RepertoireShares (RepertoireShare.Owner/Recipient Restrict); Group → UserGroups, BookGroupAccesses, GroupTrainingGoals; Book → BookPuzzles, CourseProgresses, CoursePuzzleResults, CourseAttempts, BookGroupAccesses, CourseShares, CourseLinks, CalculationTrees (CoursePuzzleResult.BookPuzzle + CourseAttempt.BookPuzzle + CalculationTree.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden; CourseShare.Owner/Recipient ebenfalls Restrict; CourseLink.LinkedBookId ohne FK → DeleteBook räumt beide Richtungen explizit ab); WeeklyPost → WeeklyPostAttempts; AppUser → AdminMessages + MessageThreads (über UserId, der Nicht-Admin-Teilnehmer; MessageThread.ClaimedByAdminId hat bewusst keinen FK). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-/Ziel-Vorlagen-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
+Cascade Deletes: AppUser → Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults, CourseAttempts, UserTrainingGoals, PlayTimeDailies, PlayTimeSyncs, WeeklyPostAttempts, SavedGames, ManualActivities, GameReconstructions (→ GameReconstructionParts); Repertoire → Files, RepertoireShares (RepertoireShare.Owner/Recipient Restrict); Group → UserGroups, BookGroupAccesses, GroupTrainingGoals; Book → BookPuzzles, CourseProgresses, CoursePuzzleResults, CourseAttempts, BookGroupAccesses, CourseShares, CourseLinks, CalculationTrees (CoursePuzzleResult.BookPuzzle + CourseAttempt.BookPuzzle + CalculationTree.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden; CourseShare.Owner/Recipient ebenfalls Restrict; CourseLink.LinkedBookId ohne FK → DeleteBook räumt beide Richtungen explizit ab); WeeklyPost → WeeklyPostAttempts; AppUser → AdminMessages + MessageThreads (über UserId, der Nicht-Admin-Teilnehmer; MessageThread.ClaimedByAdminId hat bewusst keinen FK). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-/Ziel-Vorlagen-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 
 ## Projektstruktur

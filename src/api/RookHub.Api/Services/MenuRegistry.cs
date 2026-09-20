@@ -26,6 +26,7 @@ public static class MenuRegistry
         // Fortschritt an einer anonymen Sitzung) — genau wie die Puzzles.
         new MenuItemDef("guess", MenuVisibilityLevel.All),
         new MenuItemDef("games", MenuVisibilityLevel.Registered),
+        new MenuItemDef("reconstruct", MenuVisibilityLevel.Registered),
         new MenuItemDef("remembered", MenuVisibilityLevel.Registered),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),
