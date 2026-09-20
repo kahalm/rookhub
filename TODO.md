@@ -9,22 +9,21 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [ ] Partie rekonstruieren: die Luecken schliessen (2026-09-20)
+## [~] Partie rekonstruieren: die Luecken schliessen (2026-09-20, Hauptteil in 0.487.0)
 
-Gebaut ist in 0.485.0 das AUFZEICHNEN: Teile (Zugfolgen + Stellungen) in ihrer Reihenfolge, mit
-Pruefung dessen, was verankert ist (`Services/ReconstructionChain.cs`). Was fehlt, ist der zweite
-Schritt — aus zwei bekannten Stellungen (oder Stellung + folgender Zugfolge) die Zuege DAZWISCHEN
-suchen. Bausteine, die es dafuer schon gibt:
+Gebaut: `Services/GapSolver.cs` sucht die Halbzuege zwischen zwei bekannten Stellungen (iterative
+Vertiefung, zulaessige untere Schranke, Knoten-Budget; hoechstens sechs Halbzuege), die Oberflaeche
+zeigt ALLE gefundenen Wege zur Auswahl statt einen zu raten, und ein uebernommener Weg wird als
+unsicher markiert. Die beiden offenen Entwurfsfragen sind damit beantwortet: sechs Halbzuege als
+Deckel, und eine Liste.
 
-* die Engine-Anbindung (`AnalysisJobService`, Lichess-Broker) — sie kann Stellungen bewerten, aber
-  nicht „finde einen Weg von A nach B"; die Suche selbst muesste eigener Code sein (Tiefensuche
-  ueber legale Zuege mit Ziel-FEN, gedeckelt auf wenige Halbzuege — der Suchraum waechst brutal).
-* `LibraryGames`/`GameAnalysis.OpeningLine` — bei Meisterpartien koennte eine Stellungssuche den
-  Rest der Partie liefern, statt zu rechnen.
+Bewusst NICHT gebaut, weil noch kein Bedarf gemeldet ist:
 
-Offene Entwurfsfragen, bevor jemand anfaengt: Wie viele Halbzuege soll eine Suche hoechstens
-ueberbruecken (3? 6?), und was zeigt die Oberflaeche bei MEHREREN moeglichen Wegen — eine Liste zum
-Auswaehlen ist ehrlicher als ein geratener Vorschlag.
+* **Aus dem Bestand statt gerechnet**: `LibraryGames`/`GameAnalysis.OpeningLine` koennten bei einer
+  Meisterpartie den Rest der Partie liefern, statt jeden Halbzug zu suchen. Lohnt erst, wenn jemand
+  fremde Partien rekonstruiert — der Anlass ist die EIGENE Partie vom Turnier.
+* **Laengere Luecken**: ueber sechs Halbzuege hilft keine Vertiefung mehr, dort braeuchte es eine
+  Suche von BEIDEN Seiten (Treffen in der Mitte) und einen Hintergrund-Auftrag statt eines Requests.
 
 ## [ ] Kurs-Cache bei piratechess wird beim laufenden Browser-Import nicht mehr geschrieben (2026-09-19)
 

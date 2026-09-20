@@ -3452,6 +3452,35 @@
       "floating": "noch nicht prüfbar",
       "broken": "geht nicht",
       "mismatch": "passt nicht"
+    },
+    "certainLabel": "Da bin ich mir sicher",
+    "certainHint": "Haken drin für das, woran du dich klar erinnerst; raus, wo du rätst — ein unsicheres Teil ist die erste Stelle, an der man nachsieht, wenn eine Lücke nicht aufgeht.",
+    "unsure": "unsicher",
+    "unsureHint": "Dieses Teil hast du als unsicher markiert.",
+    "unanchoredHint": "Die Stellung vor diesem Bruchstück ist unbekannt, das Brett beginnt deshalb in der Grundstellung. Halt eine Stellung davor fest, dann lassen sich die Züge am Brett spielen.",
+    "boardLocked": "Solange ein Zug nicht möglich ist, kann das Brett die Folge nicht weiterspielen — bring zuerst den Zugtext in Ordnung.",
+    "gap": {
+      "close": "Lücke schließen",
+      "title": "Welche Züge führten hierher?",
+      "depth": "Suchen bis",
+      "plies": "{{count}} Halbzüge",
+      "searching": "Suche läuft…",
+      "found": "{{count}} Weg(e) gefunden",
+      "apply": "Übernehmen",
+      "applied": "Die Lücke ist geschlossen — die eingesetzten Züge sind als unsicher markiert.",
+      "severalHint": "Mehrere Zugfolgen enden in dieser Stellung — nimm die, die gespielt wurde.",
+      "doesNotFit": "Diese Züge führen nicht zu dieser Stellung.",
+      "failed": "Die Suche ließ sich nicht ausführen.",
+      "none": "Kein Weg mit bis zu {{count}} Halbzügen — dazwischen liegen wohl mehr Züge.",
+      "budget": "Die Suche hat abgebrochen, bevor sie fertig war. Es kann trotzdem einen Weg geben: kürzer suchen oder eine Stellung dazwischen festhalten.",
+      "unreachable": "Von der Stellung davor führt kein Weg hierher — Figuren können nicht dazukommen.",
+      "tooFar": "Die beiden Stellungen liegen weiter auseinander als {{count}} Halbzüge; so weit kann die Suche nicht schauen.",
+      "samePosition": "Beide Stellungen sind dieselbe — es gibt keine Lücke.",
+      "noAnchor": "Die Stellung vor der Lücke ist unbekannt. Schließ zuerst die Lücke davor.",
+      "noGap": "Dieses Teil schließt schon an das vorige an.",
+      "noPrevious": "Das ist das erste Teil — davor liegt nichts.",
+      "targetNotAPosition": "Die Suche braucht eine STELLUNG als Ziel; eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung.",
+      "invalidPosition": "Eine der beiden Stellungen lässt sich nicht lesen."
     }
   }
 }

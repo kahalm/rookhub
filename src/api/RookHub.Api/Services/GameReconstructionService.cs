@@ -135,6 +135,105 @@ public class GameReconstructionService
         return ToDetail(row);
     }
 
+    /// <summary>
+    /// Sucht die Züge, die die Lücke VOR dem Teil <paramref name="partId"/> schließen.
+    ///
+    /// <para>Gesucht wird von der Stellung am Ende des vorigen Teils zur Stellung dieses Teils —
+    /// beides muss also bekannt sein. Das Ziel ist deshalb immer ein STELLUNGS-Teil: eine Zugfolge
+    /// nach einer Lücke hat selbst keine bekannte Ausgangsstellung, und genau die wäre das Ziel.</para>
+    /// </summary>
+    public async Task<ReconstructionGapResultDto?> SolveGapAsync(int userId, int id, int partId, int? maxPlies, CancellationToken ct = default)
+    {
+        var row = await LoadAsync(userId, id, ct);
+        if (row == null) return null;
+        var ordered = row.Parts.OrderBy(p => p.Ordinal).ToList();
+        var index = ordered.FindIndex(p => p.Id == partId);
+        if (index < 0) return null;
+
+        var plies = Math.Clamp(maxPlies ?? GapSolver.DefaultMaxPlies, 1, GapSolver.MaxSearchPlies);
+        var dto = new ReconstructionGapResultDto { PartId = partId, MaxPlies = plies };
+
+        var part = ordered[index];
+        if (index == 0) { dto.Reason = "no-previous"; return dto; }
+        if (part.ContinuesPrevious) { dto.Reason = "no-gap"; return dto; }
+        if (part.Kind != ReconstructionPartKind.Position) { dto.Reason = "target-not-a-position"; return dto; }
+
+        var chain = ReconstructionChain.Analyze(row.Parts);
+        var previous = chain.Parts.FirstOrDefault(c => c.PartId == ordered[index - 1].Id);
+        dto.FromFen = previous?.EndFen;
+        dto.ToFen = part.Fen;
+        if (dto.FromFen == null) { dto.Reason = "no-anchor"; return dto; }
+
+        var result = GapSolver.Solve(dto.FromFen, dto.ToFen, plies);
+        dto.Nodes = result.Nodes;
+        dto.BudgetExhausted = result.BudgetExhausted;
+        dto.Reason = result.Reason;
+        dto.Solutions = result.Solutions
+            .Select(x => new ReconstructionGapSolutionDto { San = x.San, Plies = x.Plies })
+            .ToList();
+        return dto;
+    }
+
+    /// <summary>
+    /// Übernimmt einen Weg durch die Lücke: die Züge kommen als eigenes Teil VOR
+    /// <paramref name="partId"/>, und beide Teile schließen danach nahtlos an.
+    ///
+    /// <para>Nachgeprüft wird hier NOCH EINMAL (spielbar ab der Stellung davor, endet auf der
+    /// Zielstellung) — die Züge kommen aus einer Antwort, aber ankommen tut ein Request. Passt es
+    /// nicht, entsteht gar kein Teil: eine halb eingefügte Kette wäre schlimmer als keine.</para>
+    /// </summary>
+    public async Task<ReconstructionDetailDto?> ApplyGapAsync(int userId, int id, int partId, string? moves, CancellationToken ct = default)
+    {
+        var row = await LoadAsync(userId, id, ct);
+        if (row == null) return null;
+        var ordered = row.Parts.OrderBy(p => p.Ordinal).ToList();
+        var index = ordered.FindIndex(p => p.Id == partId);
+        if (index < 0) return null;
+        if (row.Parts.Count >= MaxParts) throw new InvalidOperationException("too-many-parts");
+
+        var part = ordered[index];
+        if (index == 0) throw new ArgumentException("no-previous");
+        if (part.ContinuesPrevious) throw new ArgumentException("no-gap");
+        if (part.Kind != ReconstructionPartKind.Position) throw new ArgumentException("target-not-a-position");
+
+        var sans = ReconstructionChain.SplitMoves(moves);
+        if (sans.Count == 0) throw new ArgumentException("no-moves");
+
+        var chain = ReconstructionChain.Analyze(row.Parts);
+        var fromFen = chain.Parts.FirstOrDefault(c => c.PartId == ordered[index - 1].Id)?.EndFen;
+        if (fromFen == null) throw new ArgumentException("no-anchor");
+        if (!ReconstructionChain.IsLoadableFen(part.Fen)) throw new ArgumentException("invalid-fen");
+
+        var board = Chess.ChessBoard.LoadFromFen(fromFen);
+        foreach (var san in sans)
+        {
+            var ok = false;
+            try { ok = board.Move(san); } catch { ok = false; }
+            if (!ok) throw new ArgumentException("does-not-fit");
+        }
+        if (!GapSolver.Matches(board.ToFen(), part.Fen!)) throw new ArgumentException("does-not-fit");
+
+        var bridge = new GameReconstructionPart
+        {
+            GameReconstructionId = row.Id,
+            Ordinal = part.Ordinal,
+            Kind = ReconstructionPartKind.Moves,
+            Moves = Cut(string.Join(' ', sans), 4000),
+            ContinuesPrevious = true,
+            // Die Züge sind GEFUNDEN, nicht erinnert: meist führen mehrere Wege in dieselbe Stellung.
+            // Das eingesetzte Teil gilt deshalb als unsicher, bis der Mensch es bestätigt.
+            Certain = false,
+        };
+        foreach (var later in ordered.Skip(index)) later.Ordinal++;
+        part.ContinuesPrevious = true;   // die Lücke ist zu — ab jetzt hängt das Teil an den Zügen
+        part.UpdatedAt = DateTime.UtcNow;
+        row.Parts.Add(bridge);
+        _db.GameReconstructionParts.Add(bridge);
+        Renumber(row);
+        await SaveTouchedAsync(row, ct);
+        return ToDetail(row);
+    }
+
     // ----- intern -----
 
     private Task<GameReconstruction?> LoadAsync(int userId, int id, CancellationToken ct) =>
@@ -160,6 +259,7 @@ public class GameReconstructionService
         part.Kind = req.Kind;
         part.FromPly = req.FromPly is >= 0 and <= 600 ? req.FromPly : null;
         part.ContinuesPrevious = req.ContinuesPrevious;
+        part.Certain = req.Certain ?? true;
         part.Note = Clean(req.Note, 500);
 
         if (req.Kind == ReconstructionPartKind.Position)
@@ -221,7 +321,8 @@ public class GameReconstructionService
             dto.Parts.Add(new ReconstructionPartDto
             {
                 Id = part.Id, Ordinal = part.Ordinal, Kind = part.Kind, Moves = part.Moves, Fen = part.Fen,
-                FromPly = part.FromPly, ContinuesPrevious = part.ContinuesPrevious, Note = part.Note,
+                FromPly = part.FromPly, ContinuesPrevious = part.ContinuesPrevious,
+                Certain = part.Certain, Note = part.Note,
                 Anchored = c?.Anchored ?? false, Valid = c?.Valid ?? false,
                 StartFen = c?.StartFen, EndFen = c?.EndFen, PlyCount = c?.PlyCount ?? 0,
                 StartPly = c?.StartPly, FirstBadMove = c?.FirstBadMove, Mismatch = c?.Mismatch ?? false,

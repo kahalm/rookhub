@@ -225,6 +225,131 @@ public class GameReconstructionServiceTests : IDisposable
         Assert.Equal("too-many", ex.Message);
     }
 
+    // ----- Lücke schließen -----
+
+    /// <summary>Stellung nach 1.e4 e5 2.Nf3 Nc6 3.Bb5 — zwei Halbzüge hinter „e4 e5 Nf3".</summary>
+    private const string AfterFivePlies = "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3";
+
+    private static ReconstructionPartRequest PositionPart(string fen, bool continues = false) =>
+        new() { Kind = ReconstructionPartKind.Position, Fen = fen, ContinuesPrevious = continues };
+
+    [Fact]
+    public async Task SolveGap_FindsTheMovesBetweenTheLastKnownPositionAndTheRememberedOne()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var dto = await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies));
+        var target = dto!.Parts[1].Id;
+
+        var gap = await _service.SolveGapAsync(1, id, target, null);
+
+        Assert.NotNull(gap);
+        Assert.Null(gap!.Reason);
+        Assert.Equal("Nc6 Bb5", Assert.Single(gap.Solutions).San);
+        Assert.Equal(2, gap.Solutions[0].Plies);
+        Assert.Equal(AfterFivePlies, gap.ToFen);
+    }
+
+    [Fact]
+    public async Task SolveGap_SaysWhyThereIsNothingToSearch()
+    {
+        var id = await CreateAsync();
+        var first = (await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3")))!.Parts[0].Id;
+        var joined = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies, continues: true)))!.Parts[1].Id;
+        var movesAfterGap = (await _service.AddPartAsync(1, id, MovesPart("Rxf7 Kxf7")))!.Parts[2].Id;
+
+        Assert.Equal("no-previous", (await _service.SolveGapAsync(1, id, first, null))!.Reason);
+        Assert.Equal("no-gap", (await _service.SolveGapAsync(1, id, joined, null))!.Reason);
+        // Eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung — sie kann kein Ziel sein.
+        Assert.Equal("target-not-a-position", (await _service.SolveGapAsync(1, id, movesAfterGap, null))!.Reason);
+    }
+
+    [Fact]
+    public async Task SolveGap_SaysNoAnchor_WhenTheStateBeforeTheGapIsUnknown()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5"));
+        await _service.AddPartAsync(1, id, MovesPart("Rxf7 Kxf7"));    // Bruchstück ohne Anker
+        var dto = await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies));
+
+        var gap = await _service.SolveGapAsync(1, id, dto!.Parts[2].Id, null);
+
+        Assert.Equal("no-anchor", gap!.Reason);
+        Assert.Null(gap.FromFen);
+    }
+
+    [Fact]
+    public async Task ApplyGap_PutsTheMovesInFrontOfThePart_AndClosesTheChain()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+
+        var dto = await _service.ApplyGapAsync(1, id, target, "Nc6 Bb5");
+
+        Assert.Equal(3, dto!.Parts.Count);
+        Assert.Equal("Nc6 Bb5", dto.Parts[1].Moves);
+        Assert.True(dto.Parts[1].ContinuesPrevious);
+        Assert.True(dto.Parts[2].ContinuesPrevious);   // die Stellung hängt jetzt an den Zügen
+        Assert.Equal(target, dto.Parts[2].Id);
+        Assert.Equal(0, dto.Gaps);
+        Assert.Equal(5, dto.KnownPlies);
+        Assert.Equal("e4 e5 Nf3 Nc6 Bb5", dto.PrefixSan);
+    }
+
+    [Fact]
+    public async Task ApplyGap_RefusesMovesThatEndSomewhereElse()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+
+        // Spielbar, aber die Stellung danach ist eine andere — es entsteht KEIN Teil.
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.ApplyGapAsync(1, id, target, "Nc6 Bc4"));
+        Assert.Equal("does-not-fit", ex.Message);
+        Assert.Equal(2, (await _service.GetAsync(1, id))!.Parts.Count);
+    }
+
+    [Fact]
+    public async Task Parts_AreCertainUnlessSomebodySaysOtherwise()
+    {
+        var id = await CreateAsync();
+
+        // Ein Client, der die Frage nicht kennt, darf nicht „unsicher" für den Nutzer behaupten.
+        var dto = await _service.AddPartAsync(1, id, MovesPart("e4 e5"));
+        Assert.True(dto!.Parts[0].Certain);
+
+        var partId = dto.Parts[0].Id;
+        var unsure = await _service.UpdatePartAsync(1, id, partId,
+            new ReconstructionPartRequest { Kind = ReconstructionPartKind.Moves, Moves = "e4 e5", Certain = false });
+        Assert.False(unsure!.Parts[0].Certain);
+    }
+
+    [Fact]
+    public async Task ApplyGap_MarksTheInsertedMovesAsUnsure()
+    {
+        // Die Züge sind GEFUNDEN, nicht erinnert — oft führen mehrere Wege in dieselbe Stellung.
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+
+        var dto = await _service.ApplyGapAsync(1, id, target, "Nc6 Bb5");
+
+        Assert.False(dto!.Parts[1].Certain);
+        Assert.True(dto.Parts[0].Certain);
+    }
+
+    [Fact]
+    public async Task Gap_IsInvisibleForOtherAccounts()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+
+        Assert.Null(await _service.SolveGapAsync(2, id, target, null));
+        Assert.Null(await _service.ApplyGapAsync(2, id, target, "Nc6 Bb5"));
+    }
+
     [Fact]
     public async Task List_ShowsPartCountKnownPliesAndGaps()
     {

@@ -3452,6 +3452,35 @@
       "floating": "még nem ellenőrizhető",
       "broken": "nem megy",
       "mismatch": "nem illik"
+    },
+    "certainLabel": "Ebben biztos vagyok",
+    "certainHint": "Hagyd bepipálva azt, amire tisztán emlékszel, és vedd ki ott, ahol tippelsz — ha egy hézag nem jön ki, először a bizonytalan részt érdemes megnézni.",
+    "unsure": "bizonytalan",
+    "unsureHint": "Ezt a részt bizonytalannak jelölted.",
+    "unanchoredHint": "A töredék előtti állás ismeretlen, ezért a tábla a kezdőállásból indul. Rögzíts elé egy állást, és a lépéseket a táblán is lejátszhatod.",
+    "boardLocked": "Amíg egy lépés nem játszható, a tábla nem tudja folytatni a sort — előbb javítsd ki a lépésszöveget.",
+    "gap": {
+      "close": "Hézag kitöltése",
+      "title": "Mely lépések vezettek ide?",
+      "depth": "Keresés eddig:",
+      "plies": "{{count}} féllépés",
+      "searching": "Keresés…",
+      "found": "{{count}} út található",
+      "apply": "Átvétel",
+      "applied": "A hézag bezárult — a beszúrt lépések bizonytalanként vannak megjelölve.",
+      "severalHint": "Több lépéssorrend is ebbe az állásba vezet — azt válaszd, amelyik elhangzott a partiban.",
+      "doesNotFit": "Ezek a lépések nem ehhez az álláshoz vezetnek.",
+      "failed": "A keresést nem sikerült lefuttatni.",
+      "none": "Legfeljebb {{count}} féllépéssel nincs út — valószínűleg több lépés van közte.",
+      "budget": "A keresés a befejezés előtt megállt. Út még létezhet: keress rövidebb szakaszt, vagy rögzíts közé egy állást.",
+      "unreachable": "Az előtte lévő állásból nem vezet ide út — bábuk nem keletkezhetnek a semmiből.",
+      "tooFar": "A két állás távolabb van egymástól, mint {{count}} féllépés, így a keresés nem éri el.",
+      "samePosition": "A két állás ugyanaz — nincs hézag.",
+      "noAnchor": "A hézag előtti állás ismeretlen. Előbb az azelőtti hézagot töltsd ki.",
+      "noGap": "Ez a rész már az előzőhöz kapcsolódik.",
+      "noPrevious": "Ez az első rész — előtte nincs semmi.",
+      "targetNotAPosition": "A keresésnek ÁLLÁS kell célként; egy hézag utáni lépéssornak magának sincs ismert kiindulóállása.",
+      "invalidPosition": "A két állás egyike nem olvasható."
     }
   }
 }

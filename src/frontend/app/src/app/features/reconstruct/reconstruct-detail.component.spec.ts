@@ -15,7 +15,7 @@ const MIDDLE = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 
 function part(over: Partial<ReconstructionPart>): ReconstructionPart {
   return {
     id: 1, ordinal: 0, kind: PartKind.Moves, moves: 'e4 e5', fen: null, fromPly: null,
-    continuesPrevious: false, note: null, anchored: true, valid: true, startFen: START,
+    continuesPrevious: false, certain: true, note: null, anchored: true, valid: true, startFen: START,
     endFen: START, plyCount: 2, startPly: 0, firstBadMove: null, mismatch: false, ...over,
   };
 }
@@ -57,6 +57,24 @@ describe('ReconstructDetailComponent', () => {
 
     expect(c.editBoardFen()).toContain('5N2');          // Springer steht auf f3
     expect(c.editBoardFen()).toContain(' b ');          // Schwarz ist am Zug
+    expect(c.editBadMove()).toBeNull();
+  });
+
+  it('nimmt beim BEARBEITEN eines gespeicherten Teils weiter Züge am Brett an', () => {
+    // Gemeldet: nach dem Speichern und erneutem Öffnen ließ sich nur noch EIN Zug setzen.
+    const afterTwo = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+    const saved = part({ moves: 'e4 e5', startFen: START, endFen: afterTwo });
+    const c = open([saved]);
+
+    c.edit(saved);
+    const before = c.editBoardFen();
+    c.onBoardMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: '' });
+    const afterFirst = c.editBoardFen();
+    c.onBoardMove({ from: 'b8', to: 'c6', san: 'Nc6', fen: '' });
+
+    expect(c.editMoves).toBe('e4 e5 Nf3 Nc6');
+    expect(afterFirst).not.toBe(before);
+    expect(c.editBoardFen()).not.toBe(afterFirst);
     expect(c.editBadMove()).toBeNull();
   });
 
@@ -102,7 +120,7 @@ describe('ReconstructDetailComponent', () => {
     const req = http.expectOne({ url: '/api/reconstructions/5/parts', method: 'POST' });
     expect(req.request.body).toEqual({
       kind: PartKind.Moves, moves: 'Bc5', fen: null, fromPly: null,
-      continuesPrevious: true, note: 'danach Turmtausch',
+      continuesPrevious: true, certain: true, note: 'danach Turmtausch',
     });
     req.flush(data([]));
     expect(c.editingId()).toBeNull();
@@ -115,6 +133,62 @@ describe('ReconstructDetailComponent', () => {
     expect(c.editMoves).toBe('Bc5');
     expect(c.editContinues).toBeTrue();
     expect(c.editBoardFen()).not.toBe(START);
+  });
+
+  it('sperrt das Brett, solange ein Zug der Eingabe nicht spielbar ist', () => {
+    // Sonst landete jeder am Brett gespielte Zug hinter dem unmöglichen Zug im Text und käme nie
+    // auf dem Brett an — gemeldet als „ich kann nur einen Zug machen".
+    const c = open([]);
+    c.startNew(PartKind.Moves);
+    expect(c.boardPlayable()).toBeTrue();
+
+    c.onMovesInput('e4 Qh9');
+    expect(c.boardPlayable()).toBeFalse();
+
+    c.onMovesInput('e4 e5');
+    expect(c.boardPlayable()).toBeTrue();
+  });
+
+  it('sucht die Lücke nur vor einer STELLUNG, die nicht schon anschließt', () => {
+    const moves = part({ id: 1, kind: PartKind.Moves });
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const c = open([moves, position]);
+
+    expect(c.canCloseGap(moves, 0)).toBeFalse();                                   // erstes Teil
+    expect(c.canCloseGap(position, 1)).toBeTrue();
+    expect(c.canCloseGap({ ...position, continuesPrevious: true }, 1)).toBeFalse(); // keine Lücke
+    expect(c.canCloseGap({ ...position, kind: PartKind.Moves }, 1)).toBeFalse();    // kein Ziel
+  });
+
+  it('holt die Wege durch die Lücke und setzt den gewählten ein', () => {
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const c = open([part({ id: 1 }), position]);
+
+    c.closeGap(position);
+    http.expectOne({ url: '/api/reconstructions/5/parts/2/gap', method: 'POST' })
+      .flush({ partId: 2, maxPlies: 4, nodes: 120, budgetExhausted: false, reason: null,
+               solutions: [{ san: 'Nc6 Bb5', plies: 2 }] });
+
+    expect(c.gapResult()!.solutions.length).toBe(1);
+    expect(c.gapMessageKey()).toBeNull();
+
+    c.applyGap(c.gapResult()!.solutions[0]);
+    const applied = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/apply', method: 'POST' });
+    expect(applied.request.body).toEqual({ moves: 'Nc6 Bb5' });
+    applied.flush(data([]));
+    expect(c.gapFor()).toBeNull();
+  });
+
+  it('sagt beim leeren Ergebnis, WARUM es keinen Weg gibt', () => {
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const c = open([part({ id: 1 }), position]);
+
+    c.closeGap(position);
+    http.expectOne({ url: '/api/reconstructions/5/parts/2/gap', method: 'POST' })
+      .flush({ partId: 2, maxPlies: 4, nodes: 9, budgetExhausted: false, reason: 'unreachable', solutions: [] });
+
+    // „gibt es nicht" und „nicht gefunden" sind verschiedene Auskünfte und haben eigene Texte.
+    expect(c.gapMessageKey()).toBe('reconstruct.gap.unreachable');
   });
 
   it('benennt den Zustand eines Teils für die Anzeige', () => {

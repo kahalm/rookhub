@@ -88,4 +88,32 @@ public class GameReconstructionController : BaseApiController
         return dto == null ? NotFound() : Ok(dto);
     }
 
+    /// <summary>
+    /// „Lücke schließen": sucht die Züge, die von der Stellung am Ende des vorigen Teils zu diesem
+    /// Teil führen. Immer 200 — dass es keinen Weg gibt (bzw. das Budget nicht reichte), ist eine
+    /// AUSKUNFT im <c>reason</c> und kein Fehler des Aufrufers.
+    /// </summary>
+    [HttpPost("{id:int}/parts/{partId:int}/gap")]
+    public async Task<ActionResult<ReconstructionGapResultDto>> SolveGap(int id, int partId, [FromBody] ReconstructionGapRequest? req, CancellationToken ct)
+    {
+        var dto = await _service.SolveGapAsync(GetUserId(), id, partId, req?.MaxPlies, ct);
+        return dto == null ? NotFound() : Ok(dto);
+    }
+
+    /// <summary>
+    /// Einen gefundenen Weg übernehmen: die Züge werden als eigenes Teil VOR <paramref name="partId"/>
+    /// eingesetzt, beide schließen danach nahtlos an. 400 mit <c>reason</c> ∈ <c>does-not-fit</c>/
+    /// <c>no-gap</c>/<c>no-previous</c>/<c>no-anchor</c>/<c>no-moves</c>/<c>target-not-a-position</c>.
+    /// </summary>
+    [HttpPost("{id:int}/parts/{partId:int}/gap/apply")]
+    public async Task<ActionResult<ReconstructionDetailDto>> ApplyGap(int id, int partId, [FromBody] ReconstructionGapApplyRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var dto = await _service.ApplyGapAsync(GetUserId(), id, partId, req?.Moves, ct);
+            return dto == null ? NotFound() : Ok(dto);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { reason = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { reason = ex.Message }); }
+    }
 }

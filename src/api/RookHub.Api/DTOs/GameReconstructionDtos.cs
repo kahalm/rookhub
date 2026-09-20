@@ -31,6 +31,8 @@ public class ReconstructionPartDto
     public string? Fen { get; set; }
     public int? FromPly { get; set; }
     public bool ContinuesPrevious { get; set; }
+    /// <summary>Bin ich mir bei diesem Teil sicher? (Vorgabe ja; „nein" ist die Auskunft.)</summary>
+    public bool Certain { get; set; }
     public string? Note { get; set; }
 
     /// <summary>Ist bekannt, welche Stellung vor diesem Teil steht?</summary>
@@ -100,6 +102,10 @@ public class ReconstructionPartRequest
     /// <summary>Schließt das Teil nahtlos an das vorige an? (Vorgabe: nein — Lücke.)</summary>
     public bool ContinuesPrevious { get; set; }
 
+    /// <summary>Bin ich mir sicher? Fehlt das Feld, bleibt es bei „ja" — ein Client, der die Frage
+    /// nicht kennt, darf nicht für den Nutzer „unsicher" behaupten.</summary>
+    public bool? Certain { get; set; }
+
     [MaxLength(500)]
     public string? Note { get; set; }
 }
@@ -109,4 +115,48 @@ public class ReconstructionOrderRequest
 {
     [Required]
     public List<int> PartIds { get; set; } = new();
+}
+
+/// <summary>Wie weit darf die Suche nach den fehlenden Zügen gehen?</summary>
+public class ReconstructionGapRequest
+{
+    /// <summary>Halbzüge; ohne Angabe <see cref="Services.GapSolver.DefaultMaxPlies"/>, gedeckelt auf
+    /// <see cref="Services.GapSolver.MaxSearchPlies"/> (der Baum wächst exponentiell).</summary>
+    [Range(1, Services.GapSolver.MaxSearchPlies)]
+    public int? MaxPlies { get; set; }
+}
+
+/// <summary>Ein gefundener Weg durch die Lücke.</summary>
+public class ReconstructionGapSolutionDto
+{
+    public string San { get; set; } = string.Empty;
+    public int Plies { get; set; }
+}
+
+/// <summary>Das Ergebnis der Lückensuche zu EINEM Teil.</summary>
+public class ReconstructionGapResultDto
+{
+    /// <summary>Das Teil, VOR dem die Lücke liegt.</summary>
+    public int PartId { get; set; }
+    /// <summary>Stellung am Ende des vorigen Teils (null, wenn sie unbekannt ist).</summary>
+    public string? FromFen { get; set; }
+    /// <summary>Die gesuchte Stellung — die des Teils.</summary>
+    public string? ToFen { get; set; }
+    public int MaxPlies { get; set; }
+    /// <summary>Besuchte Stellungen — sagt, wie teuer die Antwort war.</summary>
+    public int Nodes { get; set; }
+    /// <summary>Die Suche brach am Budget ab: „nicht gefunden" ist dann NICHT „gibt es nicht".</summary>
+    public bool BudgetExhausted { get; set; }
+    /// <summary>Warum die Liste leer ist (<c>no-previous</c>/<c>no-gap</c>/<c>target-not-a-position</c>/
+    /// <c>no-anchor</c> bzw. die Gründe des <see cref="Services.GapSolver"/>).</summary>
+    public string? Reason { get; set; }
+    public List<ReconstructionGapSolutionDto> Solutions { get; set; } = new();
+}
+
+/// <summary>Einen gefundenen Weg übernehmen: die Züge werden VOR das Teil gesetzt.</summary>
+public class ReconstructionGapApplyRequest
+{
+    [Required]
+    [MaxLength(4000)]
+    public string Moves { get; set; } = string.Empty;
 }

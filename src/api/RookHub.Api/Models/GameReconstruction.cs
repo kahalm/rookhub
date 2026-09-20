@@ -84,6 +84,14 @@ public class GameReconstructionPart
     /// </summary>
     public bool ContinuesPrevious { get; set; }
 
+    /// <summary>
+    /// Bin ich mir bei diesem Bruchstück SICHER? Vorgabe <c>true</c> — wer etwas aufschreibt, meint
+    /// es zunächst; die Auskunft, auf die es ankommt, ist das Gegenteil („hier bin ich mir nicht
+    /// sicher"). Eine unsichere Stellung ist ein Kandidat für einen zweiten Blick, wenn die Lücke
+    /// daneben nicht aufgeht — und genau deshalb steht sie am TEIL und nicht in einer Notiz.
+    /// </summary>
+    public bool Certain { get; set; } = true;
+
     /// <summary>Bekannter Halbzug, an dem dieses Teil beginnt (0 = Grundstellung); null = unbekannt.</summary>
     public int? FromPly { get; set; }
 

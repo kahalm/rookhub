@@ -3452,6 +3452,35 @@
       "floating": "not checkable yet",
       "broken": "does not work",
       "mismatch": "does not fit"
+    },
+    "certainLabel": "I am sure about this",
+    "certainHint": "Keep it ticked for what you clearly remember; untick it where you are guessing — an unsure part is the first place to look when a gap does not add up.",
+    "unsure": "unsure",
+    "unsureHint": "You marked this part as uncertain.",
+    "unanchoredHint": "The position before this fragment is unknown, so the board starts from the initial position. Record a position before it to play the moves on the board.",
+    "boardLocked": "As long as one move cannot be played, the board cannot continue the line — fix the move text first.",
+    "gap": {
+      "close": "Close the gap",
+      "title": "Which moves led here?",
+      "depth": "Search up to",
+      "plies": "{{count}} half-moves",
+      "searching": "Searching…",
+      "found": "{{count}} way(s) found",
+      "apply": "Use this",
+      "applied": "The gap is closed — the inserted moves are marked as unsure.",
+      "severalHint": "Several move orders end in this position — take the one that was played.",
+      "doesNotFit": "These moves do not lead to that position.",
+      "failed": "The search could not be run.",
+      "none": "No way found with up to {{count}} half-moves — there are probably more moves in between.",
+      "budget": "The search stopped before it was finished. There may still be a way: search a shorter stretch, or record a position in between.",
+      "unreachable": "No way leads from the position before to this one — pieces cannot appear out of nowhere.",
+      "tooFar": "The two positions are further apart than {{count}} half-moves, so the search cannot cover it.",
+      "samePosition": "Both positions are the same — there is no gap.",
+      "noAnchor": "The position before the gap is unknown. Close the earlier gap first.",
+      "noGap": "This part already continues the one before it.",
+      "noPrevious": "This is the first part — there is nothing before it.",
+      "targetNotAPosition": "The search needs a POSITION as its target; a move sequence after a gap has no known starting position of its own.",
+      "invalidPosition": "One of the two positions cannot be read."
     }
   }
 }

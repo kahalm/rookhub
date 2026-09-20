@@ -15,6 +15,8 @@ export interface ReconstructionPart {
   fromPly?: number | null;
   /** Schließt dieses Teil nahtlos an das vorige an? (Vorgabe: nein — dazwischen liegt eine Lücke.) */
   continuesPrevious: boolean;
+  /** Bin ich mir bei diesem Bruchstück sicher? (Vorgabe ja — „nein" ist die Auskunft.) */
+  certain: boolean;
   note?: string | null;
   /** Ist bekannt, welche Stellung VOR diesem Teil steht? */
   anchored: boolean;
@@ -69,7 +71,29 @@ export interface PartInput {
   fen?: string | null;
   fromPly?: number | null;
   continuesPrevious?: boolean;
+  certain?: boolean;
   note?: string | null;
+}
+
+/** Ein gefundener Weg durch eine Lücke (Zugfolge in SAN). */
+export interface GapSolution {
+  san: string;
+  plies: number;
+}
+
+/**
+ * Das Ergebnis der Lückensuche zu EINEM Teil. `reason` sagt, warum die Liste leer ist —
+ * `budgetExhausted` unterscheidet dabei „nicht gefunden" von „gibt es nicht".
+ */
+export interface GapResult {
+  partId: number;
+  fromFen?: string | null;
+  toFen?: string | null;
+  maxPlies: number;
+  nodes: number;
+  budgetExhausted: boolean;
+  reason?: string | null;
+  solutions: GapSolution[];
 }
 
 /**
@@ -116,5 +140,15 @@ export class ReconstructService {
 
   reorder(id: number, partIds: number[]): Observable<Reconstruction> {
     return this.http.put<Reconstruction>(`${this.base}/${id}/parts/order`, { partIds });
+  }
+
+  /** Sucht die Züge, die die Lücke VOR diesem Teil schließen. Antwortet auch ohne Treffer mit 200. */
+  solveGap(id: number, partId: number, maxPlies?: number): Observable<GapResult> {
+    return this.http.post<GapResult>(`${this.base}/${id}/parts/${partId}/gap`, { maxPlies: maxPlies ?? null });
+  }
+
+  /** Setzt einen gefundenen Weg als eigenes Teil VOR das Teil — beide hängen danach aneinander. */
+  applyGap(id: number, partId: number, moves: string): Observable<Reconstruction> {
+    return this.http.post<Reconstruction>(`${this.base}/${id}/parts/${partId}/gap/apply`, { moves });
   }
 }

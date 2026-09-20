@@ -3452,6 +3452,35 @@
       "floating": "još nije provjerljivo",
       "broken": "ne ide",
       "mismatch": "ne odgovara"
+    },
+    "certainLabel": "U ovo sam siguran",
+    "certainHint": "Ostavi kvačicu ondje gdje se jasno sjećaš, a makni je ondje gdje nagađaš — nesiguran dio prvo treba provjeriti kad praznina ne štima.",
+    "unsure": "nesigurno",
+    "unsureHint": "Ovaj si dio označio kao nesiguran.",
+    "unanchoredHint": "Položaj prije ovog ulomka nije poznat, pa ploča kreće od početnog položaja. Zabilježi položaj prije njega i poteze možeš igrati na ploči.",
+    "boardLocked": "Dok jedan potez nije moguć, ploča ne može nastaviti niz — najprije ispravi tekst poteza.",
+    "gap": {
+      "close": "Zatvori prazninu",
+      "title": "Koji su potezi doveli ovamo?",
+      "depth": "Traži do",
+      "plies": "{{count}} polupoteza",
+      "searching": "Tražim…",
+      "found": "Pronađeno putova: {{count}}",
+      "apply": "Preuzmi",
+      "applied": "Praznina je zatvorena — umetnuti potezi označeni su kao nesigurni.",
+      "severalHint": "Više redoslijeda poteza završava u ovom položaju — uzmi onaj koji je odigran.",
+      "doesNotFit": "Ovi potezi ne vode do tog položaja.",
+      "failed": "Pretraga se nije mogla pokrenuti.",
+      "none": "Nema puta s najviše {{count}} polupoteza — između je vjerojatno više poteza.",
+      "budget": "Pretraga je stala prije kraja. Put ipak može postojati: traži kraći odsječak ili zabilježi položaj između.",
+      "unreachable": "Iz položaja prije ovoga nema puta ovamo — figure ne mogu nastati niotkuda.",
+      "tooFar": "Ta su dva položaja udaljenija od {{count}} polupoteza, pa pretraga dotle ne seže.",
+      "samePosition": "Oba su položaja ista — nema praznine.",
+      "noAnchor": "Položaj prije praznine nije poznat. Najprije zatvori raniju prazninu.",
+      "noGap": "Ovaj se dio već nastavlja na prethodni.",
+      "noPrevious": "Ovo je prvi dio — prije njega nema ničega.",
+      "targetNotAPosition": "Pretrazi treba POLOŽAJ kao cilj; niz poteza nakon praznine ni sam nema poznat početni položaj.",
+      "invalidPosition": "Jedan od dva položaja nije čitljiv."
     }
   }
 }

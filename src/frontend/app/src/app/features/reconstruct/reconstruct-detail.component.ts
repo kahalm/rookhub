@@ -15,7 +15,7 @@ import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/ches
 import { PositionSetupComponent, START_FEN } from '../analysis/position-setup.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
+import { GapResult, GapSolution, PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
 
 /**
  * Der Arbeitsplatz für EINE zu rekonstruierende Partie: Bruchstücke aufzeichnen, ordnen, ergänzen.
@@ -60,9 +60,19 @@ export class ReconstructDetailComponent implements OnInit {
   editFromPly: number | null = null;
   /** „Schließt direkt an das vorige Teil an" — ohne den Haken liegt dazwischen eine Lücke. */
   editContinues = false;
+  /** „Da bin ich mir sicher" — der Haken ist gesetzt, solange nichts anderes gesagt wird. */
+  editCertain = true;
   /** Kopfdaten-Formular (eingeklappt, bis jemand es aufmacht). */
   showHead = false;
   head = { title: '', white: '', black: '', event: '', playedOn: '', result: '', note: '' };
+
+  /** Lückensuche: für welches Teil läuft/lief sie, was kam heraus, wie weit darf sie suchen. */
+  readonly gapFor = signal<number | null>(null);
+  readonly gapResult = signal<GapResult | null>(null);
+  readonly gapSearching = signal(false);
+  /** Suchtiefe in HALBZÜGEN — die Auswahl steht im Formular, weil der Baum mit jedem Halbzug wächst. */
+  gapPlies = 4;
+  readonly gapPlyChoices = [2, 4, 6];
 
   private id = 0;
 
@@ -71,6 +81,8 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Die Stellung, ab der die gerade bearbeitete Zugfolge läuft (Grundstellung, wenn unbekannt). */
   readonly editStartFen = signal<string>(START_FEN);
+  /** Ist die Stellung vor der bearbeiteten Zugfolge überhaupt bekannt? */
+  readonly editAnchored = signal(true);
 
   /** Stellung nach den bereits eingetippten Zügen — das Brett zeigt sie und spielt darauf weiter. */
   readonly editBoardFen = computed(() => this.replay(this.editStartFen(), this.editMovesTokens()).fen);
@@ -129,23 +141,31 @@ export class ReconstructDetailComponent implements OnInit {
     this.setMoves('');
     this.editNote = '';
     this.editFromPly = null;
+    this.editCertain = true;
     // Nach einer STELLUNG ist die Fortsetzung der Normalfall („in dieser Stellung ging es so weiter"),
     // nach einer Zugfolge das Bruchstück von anderswo — hingen sie aneinander, wären sie ein Teil.
     this.editContinues = !!last && last.kind === PartKind.Position && kind === PartKind.Moves;
     this.editFen = last?.endFen || START_FEN;
     this.editStartFen.set(kind === PartKind.Moves ? (last?.endFen || START_FEN) : START_FEN);
+    // Ein neues Teil hängt an der letzten bekannten Stellung — ist keine da, beginnt das Brett in
+    // der Grundstellung, und die Züge stehen dann für eine Stelle, die nicht die gemeinte ist.
+    this.editAnchored.set(kind !== PartKind.Moves || !!last?.endFen || parts.length === 0);
   }
 
   edit(part: ReconstructionPart): void {
     this.editingId.set(part.id);
     this.editKind.set(part.kind);
-    this.editMoves = part.moves ?? '';
-    this.setMoves(this.editMoves);
     this.editNote = part.note ?? '';
     this.editFromPly = part.fromPly ?? null;
     this.editContinues = part.continuesPrevious;
+    this.editCertain = part.certain;
     this.editFen = part.fen || START_FEN;
+    this.editAnchored.set(part.kind !== PartKind.Moves || !!part.startFen);
+    // ZUERST die Ausgangsstellung, DANN die Züge: `setMoves` prüft gegen `editStartFen`, und mit der
+    // Stellung des zuvor bearbeiteten Teils meldete es Züge als unmöglich, die hier stimmen.
     this.editStartFen.set(part.startFen || START_FEN);
+    this.editMoves = part.moves ?? '';
+    this.setMoves(this.editMoves);
   }
 
   cancelEdit(): void { this.editingId.set(null); }
@@ -155,6 +175,14 @@ export class ReconstructDetailComponent implements OnInit {
     this.editMoves = value;
     this.setMoves(value);
   }
+
+  /**
+   * Darf am Brett gespielt werden? Nur, solange die eingetippte Zugfolge WIRKLICH bis zum Ende
+   * spielbar ist. Sonst zeigt das Brett die Stellung vor dem ersten unmöglichen Zug, jeder weitere
+   * Zug landete aber hinter diesem Zug im Text und käme nie auf dem Brett an — gemeldet als
+   * „ich kann nur einen Zug machen und nicht mehrere".
+   */
+  boardPlayable(): boolean { return this.editBadMove() === null; }
 
   /** Ein Zug auf dem Brett: hinten an die Zugfolge anhängen. */
   onBoardMove(move: UserBoardMove): void {
@@ -180,6 +208,7 @@ export class ReconstructDetailComponent implements OnInit {
       fen: kind === PartKind.Position ? this.editFen : null,
       fromPly: this.editFromPly ?? null,
       continuesPrevious: this.editContinues,
+      certain: this.editCertain,
       note: this.editNote.trim() || null,
     };
     const editingId = this.editingId();
@@ -230,6 +259,78 @@ export class ReconstructDetailComponent implements OnInit {
   onPositionApplied(fen: string): void {
     this.editFen = fen;
     this.savePart();
+  }
+
+  // ----- Lücke schließen -----
+
+  /**
+   * Lässt sich vor diesem Teil überhaupt suchen? Nur wenn eine Lücke davor liegt UND das Teil eine
+   * STELLUNG ist: eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung, und
+   * genau die wäre das Ziel der Suche.
+   */
+  canCloseGap(part: ReconstructionPart, index: number): boolean {
+    return index > 0 && !part.continuesPrevious && part.kind === PartKind.Position;
+  }
+
+  closeGap(part: ReconstructionPart): void {
+    if (this.gapSearching()) return;
+    this.gapFor.set(part.id);
+    this.gapResult.set(null);
+    this.gapSearching.set(true);
+    this.service.solveGap(this.id, part.id, this.gapPlies).subscribe({
+      next: result => { this.gapSearching.set(false); this.gapResult.set(result); },
+      error: () => {
+        this.gapSearching.set(false);
+        this.gapFor.set(null);
+        this.snackbar.warn(this.translate.instant('reconstruct.gap.failed'));
+      },
+    });
+  }
+
+  hideGap(): void { this.gapFor.set(null); this.gapResult.set(null); }
+
+  /** Einen gefundenen Weg übernehmen — er wird als eigenes Teil vor die Stellung gesetzt. */
+  applyGap(solution: GapSolution): void {
+    const partId = this.gapFor();
+    if (partId === null || this.busy()) return;
+    this.busy.set(true);
+    this.service.applyGap(this.id, partId, solution.san).subscribe({
+      next: data => {
+        this.busy.set(false);
+        this.apply(data);
+        this.hideGap();
+        this.snackbar.info(this.translate.instant('reconstruct.gap.applied'));
+      },
+      error: err => {
+        this.busy.set(false);
+        const reason = err?.error?.reason;
+        this.snackbar.warn(this.translate.instant(
+          reason === 'does-not-fit' ? 'reconstruct.gap.doesNotFit' : 'reconstruct.saveFailed'));
+      },
+    });
+  }
+
+  /**
+   * Der Satz zum leeren Ergebnis. „Nicht gefunden" und „gibt es nicht" sind verschiedene Aussagen,
+   * und die Antwort trennt sie — deshalb hat jeder Grund einen eigenen Text statt eines
+   * gemeinsamen „keine Lösung".
+   */
+  gapMessageKey(): string | null {
+    const result = this.gapResult();
+    if (!result || result.solutions.length > 0) return null;
+    switch (result.reason) {
+      case 'unreachable': return 'reconstruct.gap.unreachable';
+      case 'too-far': return 'reconstruct.gap.tooFar';
+      case 'same-position': return 'reconstruct.gap.samePosition';
+      case 'budget': return 'reconstruct.gap.budget';
+      case 'no-anchor': return 'reconstruct.gap.noAnchor';
+      case 'no-gap': return 'reconstruct.gap.noGap';
+      case 'no-previous': return 'reconstruct.gap.noPrevious';
+      case 'target-not-a-position': return 'reconstruct.gap.targetNotAPosition';
+      case 'invalid-from':
+      case 'invalid-to': return 'reconstruct.gap.invalidPosition';
+      default: return 'reconstruct.gap.none';
+    }
   }
 
   copyPrefix(): void {

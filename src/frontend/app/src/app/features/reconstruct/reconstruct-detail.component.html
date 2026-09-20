@@ -30,7 +30,8 @@
 
     @if (showHead) {
       <mat-card class="head-form">
-        <mat-form-field appearance="outline">
+        <h2 class="form-head">{{ 'reconstruct.editHead' | translate }}</h2>
+        <mat-form-field appearance="outline" class="wide">
           <mat-label>{{ 'reconstruct.newTitle' | translate }}</mat-label>
           <input matInput [(ngModel)]="head.title" maxlength="200">
         </mat-form-field>
@@ -59,6 +60,7 @@
           <textarea matInput rows="2" [(ngModel)]="head.note" maxlength="2000"></textarea>
         </mat-form-field>
         <div class="form-actions">
+          <button mat-button (click)="showHead = false">{{ 'common.cancel' | translate }}</button>
           <button mat-flat-button color="primary" [disabled]="busy()" (click)="saveHead()">
             {{ 'common.save' | translate }}
           </button>
@@ -92,6 +94,11 @@
               }
               @if (part.continuesPrevious) {
                 <mat-icon class="link-icon" [matTooltip]="'reconstruct.continues' | translate">link</mat-icon>
+              }
+              @if (!part.certain) {
+                <span class="chip warn" [matTooltip]="'reconstruct.unsureHint' | translate">
+                  {{ 'reconstruct.unsure' | translate }}
+                </span>
               }
               <span class="chip" [class.ok]="state(part) === 'ok'"
                     [class.warn]="state(part) === 'floating'"
@@ -128,6 +135,62 @@
               }
               @if (part.note) { <div class="muted note">{{ part.note }}</div> }
             </div>
+
+            <!-- Lücke davor: die Züge dorthin suchen lassen. -->
+            @if (canCloseGap(part, i)) {
+              <div class="gap">
+                @if (gapFor() !== part.id) {
+                  <button mat-stroked-button [disabled]="gapSearching()" (click)="closeGap(part)">
+                    <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
+                  </button>
+                } @else {
+                  <div class="gap-panel">
+                    <div class="gap-head">
+                      <strong>{{ 'reconstruct.gap.title' | translate }}</strong>
+                      <span class="spacer"></span>
+                      <button mat-icon-button (click)="hideGap()"
+                              [matTooltip]="'common.close' | translate"
+                              [attr.aria-label]="'common.close' | translate">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+
+                    <div class="gap-depth">
+                      <span class="muted">{{ 'reconstruct.gap.depth' | translate }}</span>
+                      @for (choice of gapPlyChoices; track choice) {
+                        <button mat-button [class.chosen]="gapPlies === choice"
+                                [disabled]="gapSearching()"
+                                (click)="gapPlies = choice; closeGap(part)">
+                          {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
+                        </button>
+                      }
+                    </div>
+
+                    @if (gapSearching()) {
+                      <p class="muted">{{ 'reconstruct.gap.searching' | translate }}</p>
+                    } @else if (gapResult(); as result) {
+                      @if (result.solutions.length > 0) {
+                        <p class="muted">{{ 'reconstruct.gap.found' | translate:{ count: result.solutions.length } }}</p>
+                        @for (solution of result.solutions; track solution.san) {
+                          <div class="gap-line">
+                            <code>{{ solution.san }}</code>
+                            <span class="spacer"></span>
+                            <button mat-flat-button color="primary" [disabled]="busy()" (click)="applyGap(solution)">
+                              {{ 'reconstruct.gap.apply' | translate }}
+                            </button>
+                          </div>
+                        }
+                        @if (result.solutions.length > 1) {
+                          <p class="muted small">{{ 'reconstruct.gap.severalHint' | translate }}</p>
+                        }
+                      } @else {
+                        <p class="muted">{{ gapMessageKey()! | translate:{ count: result.maxPlies } }}</p>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+            }
           </mat-card>
         }
       </section>
@@ -142,6 +205,14 @@
             <p class="muted small">{{ 'reconstruct.continuesHint' | translate }}</p>
           }
 
+          <mat-checkbox [(ngModel)]="editCertain" [matTooltip]="'reconstruct.certainHint' | translate">
+            {{ 'reconstruct.certainLabel' | translate }}
+          </mat-checkbox>
+
+          @if (editKind() === Kind.Moves && !editAnchored()) {
+            <p class="muted small">{{ 'reconstruct.unanchoredHint' | translate }}</p>
+          }
+
           @if (editKind() === Kind.Position) {
             <app-position-setup [initialFen]="editFen"
                                 (apply)="onPositionApplied($event)" (cancel)="cancelEdit()"></app-position-setup>
@@ -150,7 +221,7 @@
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
           } @else {
-            <app-chess-board [fen]="editBoardFen()" [playable]="true" (userMove)="onBoardMove($event)"
+            <app-chess-board [fen]="editBoardFen()" [playable]="boardPlayable()" (userMove)="onBoardMove($event)"
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
             <mat-form-field appearance="outline" class="wide">
               <mat-label>{{ 'reconstruct.movesLabel' | translate }}</mat-label>
@@ -160,6 +231,7 @@
             </mat-form-field>
             @if (editBadMove()) {
               <p class="bad-hint">{{ 'reconstruct.badMove' | translate:{ move: editBadMove() } }}</p>
+              <p class="muted small">{{ 'reconstruct.boardLocked' | translate }}</p>
             }
             <mat-form-field appearance="outline" class="wide">
               <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>

@@ -29,25 +29,43 @@
   &.bad { background: color-mix(in srgb, #c62828 30%, transparent); }
 }
 
+/* Die Angaben zur Partie. Feste DREI Spalten statt „auto-fit": mit auto-fit standen auf einem
+   breiten Bildschirm Titel, Weiß, Schwarz, Turnier, Datum und Ergebnis in EINER Reihe, jedes Feld
+   200 px schmal — der Titel, das mit Abstand längste Feld, war das schmalste. Titel und Notiz
+   bekommen deshalb die ganze Breite, die kurzen Felder teilen sich die Reihen darunter. */
 .head-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr;
   gap: 0 0.75rem;
   padding: 1rem;
   margin-bottom: 1rem;
 
+  @media (min-width: 700px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .form-head { grid-column: 1 / -1; margin: 0 0 0.75rem; font-size: 1.05rem; font-weight: 600; }
   .wide { grid-column: 1 / -1; }
-  .form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+  .form-actions { grid-column: 1 / -1; display: flex; gap: 0.5rem; justify-content: flex-end; }
 }
 
 /* Zwei Spalten ab Tablet: links die Teile (die Partie), rechts der Editor mit Brett.
-   Darunter einspaltig — das Brett braucht die ganze Breite. */
+   Darunter einspaltig — das Brett braucht die ganze Breite.
+
+   Am PC bekommt der Editor die GRÖSSERE Hälfte: dort wird gearbeitet (Figuren ziehen, Züge am
+   Brett spielen), während links Zugfolgen und FENs stehen, die ohnehin umbrechen. Mit dem
+   früheren Deckel von 420 px blieb das Brett auf einem 1240 px breiten Fenster briefmarkengroß
+   und rechts daneben stand Luft. */
 .columns {
   display: grid;
   gap: 1rem;
   grid-template-columns: 1fr;
 
-  @media (min-width: 900px) { grid-template-columns: minmax(320px, 1fr) minmax(320px, 420px); }
+  @media (min-width: 900px) { grid-template-columns: minmax(300px, 1fr) minmax(360px, 1fr); }
+  @media (min-width: 1200px) { grid-template-columns: minmax(320px, 1fr) minmax(480px, 1.1fr); }
+}
+
+/* Beim Blättern durch viele Teile soll das Brett stehen bleiben. */
+@media (min-width: 900px) {
+  .editor { position: sticky; top: 1rem; align-self: start; }
 }
 
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
@@ -89,3 +107,31 @@
 .editor-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
 .bad-hint { color: #ef5350; margin: 0 0 0.5rem; }
+
+/* „Lücke schließen": die Suche sitzt AM Teil, vor dem die Lücke liegt — dort, wo man sie sieht. */
+.gap {
+  margin-top: 0.5rem;
+
+  .gap-panel {
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem;
+    background: color-mix(in srgb, currentColor 7%, transparent);
+  }
+
+  .gap-head { display: flex; align-items: center; gap: 0.4rem; }
+  .gap-depth { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
+  .gap-depth .chosen { font-weight: 700; text-decoration: underline; }
+  .spacer { flex: 1 1 auto; }
+
+  .gap-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+
+    code { word-break: break-word; }
+  }
+
+  p { margin: 0.25rem 0; }
+  .small { font-size: 0.85rem; }
+}

@@ -44,6 +44,20 @@ describe('ReconstructService', () => {
     req.flush({});
   });
 
+  it('fragt die Lückensuche am TEIL, vor dem die Lücke liegt', () => {
+    service.solveGap(7, 42, 4).subscribe();
+    const req = http.expectOne({ url: '/api/reconstructions/7/parts/42/gap', method: 'POST' });
+    expect(req.request.body).toEqual({ maxPlies: 4 });
+    req.flush({ partId: 42, maxPlies: 4, nodes: 0, budgetExhausted: false, solutions: [] });
+  });
+
+  it('übernimmt einen gefundenen Weg mit den Zügen im Rumpf', () => {
+    service.applyGap(7, 42, 'Nc6 Bb5').subscribe();
+    const req = http.expectOne({ url: '/api/reconstructions/7/parts/42/gap/apply', method: 'POST' });
+    expect(req.request.body).toEqual({ moves: 'Nc6 Bb5' });
+    req.flush({});
+  });
+
   it('löscht ein einzelnes Teil, nicht die Rekonstruktion', () => {
     service.removePart(7, 42).subscribe();
     http.expectOne({ url: '/api/reconstructions/7/parts/42', method: 'DELETE' }).flush({});
