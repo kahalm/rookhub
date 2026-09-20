@@ -2,8 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-/** Art eines Bruchstücks — dieselben Zahlen wie <c>ReconstructionPartKind</c> im Server. */
-export enum PartKind { Moves = 0, Position = 1 }
+/**
+ * Art eines Bruchstücks.
+ *
+ * <p><b>Die Werte sind ZEICHENKETTEN, keine Zahlen.</b> Die API serialisiert Enums per
+ * `JsonStringEnumConverter` als Namen (`"kind": "Position"`); mit dem früheren Zahlen-Enum war
+ * `part.kind === PartKind.Position` IMMER falsch — jede Stellung galt als Zugfolge, und damit gab
+ * es an keiner Lücke einen Knopf „Lücke schließen" (gemeldet 2026-09-20). Beim SENDEN akzeptiert
+ * die API beide Formen.</p>
+ */
+export enum PartKind { Moves = 'Moves', Position = 'Position' }
 
 /** Ein Bruchstück samt Auswertung der Kette (der Server rechnet sie bei jedem Lesen neu). */
 export interface ReconstructionPart {

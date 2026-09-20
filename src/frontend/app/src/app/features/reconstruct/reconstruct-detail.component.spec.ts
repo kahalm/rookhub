@@ -29,6 +29,19 @@ function data(parts: ReconstructionPart[]): Reconstruction {
   };
 }
 
+/**
+ * Der Wortlaut, den die API WIRKLICH schickt. Die Enum-Werte kommen als Namen
+ * (`JsonStringEnumConverter`) — mit einem Zahlen-Enum im Client war jede Stellung eine Zugfolge,
+ * und an keiner Lücke stand ein Knopf. Deshalb steht hier die rohe Zeichenkette, nicht `PartKind`.
+ */
+describe('ReconstructDetailComponent Drahtformat', () => {
+  it('erkennt eine Stellung an dem, was der Server sendet', () => {
+    const wire = JSON.parse('{"kind":"Position"}') as { kind: PartKind };
+    expect(wire.kind).toBe(PartKind.Position);
+    expect(JSON.parse('{"kind":"Moves"}').kind).toBe(PartKind.Moves);
+  });
+});
+
 describe('ReconstructDetailComponent', () => {
   let http: HttpTestingController;
   /** Antwort der Rückfrage — der Dialog selbst gehört nicht in jeden Test. */
@@ -210,6 +223,14 @@ describe('ReconstructDetailComponent', () => {
 
     c.onMovesInput('e4 e5');
     expect(c.boardPlayable()).toBeTrue();
+  });
+
+  it('bietet die Lückensuche an einer Stellung an, wie der Server sie schickt', () => {
+    // Genau der Fall, der in 0.487–0.493 nie funktioniert hat: „Position" statt 1.
+    const rawPosition = { ...part({ id: 2, ordinal: 1, moves: null, fen: MIDDLE }), kind: 'Position' as PartKind };
+    const c = open([part({ id: 1 }), rawPosition]);
+
+    expect(c.canCloseGap(c.data()!.parts[1], 1)).toBeTrue();
   });
 
   it('sucht die Lücke nur vor einer STELLUNG, die nicht schon anschließt', () => {
