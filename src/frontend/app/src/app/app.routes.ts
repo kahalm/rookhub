@@ -73,6 +73,9 @@ export const routes: Routes = [
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
+  // Geteilte Rekonstruktion: die ganze Partie samt ihrer Lücken, ohne Anmeldung — man verschickt
+  // den Link ja gerade, um jemanden auf die offenen Stellen schauen zu lassen.
+  { path: 'r/:token', loadComponent: () => import('./features/reconstruct/shared-reconstruction.component').then(m => m.SharedReconstructionComponent) },
   // Geteiltes Aufgabenblatt: OHNE Anmeldung durchspielbar — das ist der Sinn des QR-Codes auf dem Ausdruck.
   { path: 'w/:token', loadComponent: () => import('./features/worksheets/worksheet-solve.component').then(m => m.WorksheetSolveComponent) },
   { path: 'help', loadComponent: () => import('./features/help/help.component').then(m => m.HelpComponent), canActivate: [menuGuard('help')] },

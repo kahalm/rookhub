@@ -30,6 +30,31 @@ public class GameReconstructionController : BaseApiController
         return dto == null ? NotFound() : Ok(dto);
     }
 
+    /// <summary>
+    /// Die ganze Partie hinter einem Teilen-Link — ohne Anmeldung, wie bei <c>/g/{token}</c>.
+    /// Steht VOR <c>{id:int}</c>, kollidiert damit aber ohnehin nicht (Token ist keine Zahl).
+    /// </summary>
+    [HttpGet("shared/{token}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<SharedReconstructionDto>> Shared(string token, CancellationToken ct)
+    {
+        var dto = await _service.GetSharedAsync(token, ct);
+        return dto == null ? NotFound() : Ok(dto);
+    }
+
+    /// <summary>Öffentlichen Link einschalten (idempotent) → <c>{ shareToken }</c>.</summary>
+    [HttpPost("{id:int}/share")]
+    public async Task<ActionResult<ReconstructionShareDto>> Share(int id, CancellationToken ct)
+    {
+        var token = await _service.ShareAsync(GetUserId(), id, ct);
+        return token == null ? NotFound() : Ok(new ReconstructionShareDto { ShareToken = token });
+    }
+
+    /// <summary>Link abschalten — ein späteres Teilen erzeugt ein anderes Token.</summary>
+    [HttpDelete("{id:int}/share")]
+    public async Task<IActionResult> Unshare(int id, CancellationToken ct)
+        => await _service.UnshareAsync(GetUserId(), id, ct) ? NoContent() : NotFound();
+
     /// <summary>Neue (leere) Rekonstruktion. 400 mit <c>reason: too-many</c> am Deckel.</summary>
     [HttpPost]
     public async Task<ActionResult<ReconstructionDetailDto>> Create([FromBody] ReconstructionHeadRequest req, CancellationToken ct)

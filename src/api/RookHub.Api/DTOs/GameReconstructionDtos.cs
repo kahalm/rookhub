@@ -61,6 +61,67 @@ public class ReconstructionDetailDto : ReconstructionListItemDto
     public List<ReconstructionPartDto> Parts { get; set; } = new();
     /// <summary>Die bereits gesicherten Züge ab der Grundstellung als SAN-Folge.</summary>
     public string PrefixSan { get; set; } = string.Empty;
+    /// <summary>Token des öffentlichen Links (<c>/r/{token}</c>); <c>null</c> = nicht geteilt.</summary>
+    public string? ShareToken { get; set; }
+}
+
+/// <summary>Antwort des Teilens: das Token, aus dem die Oberfläche die Adresse baut.</summary>
+public class ReconstructionShareDto
+{
+    public string ShareToken { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Die GANZE Partie hinter dem öffentlichen Link — Kopfdaten und alle aufgezeichneten Teile in
+/// ihrer Reihenfolge, Lücken inbegriffen.
+///
+/// <para>Bewusst kein PGN: eine Rekonstruktion besteht aus Bruchstücken, und eine Stellung ohne
+/// den Weg dorthin lässt sich in einem PGN nicht ausdrücken. Der Betrachter bekommt deshalb
+/// dieselben Teile wie der Besitzer und sieht die Lücken als das, was sie sind.</para>
+///
+/// <para>Ohne Ids und ohne die <see cref="ReconstructionPartDto.Generated"/>-Vorschläge der
+/// Lückensuche: Vorschläge sind Arbeitsstand des Besitzers und gehören nicht zur Partie.</para>
+/// </summary>
+public class SharedReconstructionDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string? White { get; set; }
+    public string? Black { get; set; }
+    public string? Event { get; set; }
+    public DateOnly? PlayedOn { get; set; }
+    public string? Result { get; set; }
+    public string? Note { get; set; }
+    /// <summary>Halbzüge, die ab der Grundstellung lückenlos stehen.</summary>
+    public int KnownPlies { get; set; }
+    /// <summary>Stellen, an denen die Partie abreißt.</summary>
+    public int Gaps { get; set; }
+    /// <summary>Die gesicherten Züge ab der Grundstellung als SAN-Folge.</summary>
+    public string PrefixSan { get; set; } = string.Empty;
+    public DateTime UpdatedAt { get; set; }
+    public List<SharedReconstructionPartDto> Parts { get; set; } = new();
+}
+
+/// <summary>Ein aufgezeichnetes Teil, wie es der öffentliche Link zeigt (ohne Ids und Vorwürfe).</summary>
+public class SharedReconstructionPartDto
+{
+    public ReconstructionPartKind Kind { get; set; }
+    public string? Moves { get; set; }
+    public string? Fen { get; set; }
+    /// <summary>Schließt das Teil nahtlos an das vorige an? Sonst liegt davor eine Lücke.</summary>
+    public bool ContinuesPrevious { get; set; }
+    /// <summary>War sich der Besitzer hier sicher? „Nein" ist die Auskunft, die zählt.</summary>
+    public bool Certain { get; set; }
+    /// <summary>Zugfolge ohne Anschluss: beginnt sie mit einem Zug von Schwarz? (Sonst stünde das
+    /// Brett beim Betrachter auf Weiß am Zug und die Züge wären dort nicht spielbar.)</summary>
+    public bool BlackToMove { get; set; }
+    public string? Note { get; set; }
+    /// <summary>Stellung vor dem Teil (null, wenn die Stellung davor unbekannt ist).</summary>
+    public string? StartFen { get; set; }
+    /// <summary>Stellung nach dem Teil (bei einer Stellung: sie selbst).</summary>
+    public string? EndFen { get; set; }
+    public int PlyCount { get; set; }
+    /// <summary>Halbzug-Nummer des Teils, solange die Kette ab der Grundstellung durchgeht.</summary>
+    public int? StartPly { get; set; }
 }
 
 /// <summary>Kopfdaten anlegen/ändern. Nur <see cref="Title"/> ist Pflicht.</summary>

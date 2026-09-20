@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 /**
  * Art eines Bruchstücks.
@@ -63,6 +64,42 @@ export interface Reconstruction extends ReconstructionListItem {
   parts: ReconstructionPart[];
   /** Die bereits gesicherten Züge ab der Grundstellung. */
   prefixSan: string;
+  /** Token des öffentlichen Links (`/r/{token}`); leer/null = nicht geteilt. */
+  shareToken?: string | null;
+}
+
+/**
+ * Ein Teil, wie es der öffentliche Link zeigt: ohne Id, ohne Vorschläge, ohne die Vorwürfe der
+ * Prüfung — der Betrachter soll die Partie sehen, nicht den Arbeitsstand des Besitzers.
+ */
+export interface SharedReconstructionPart {
+  kind: PartKind;
+  moves?: string | null;
+  fen?: string | null;
+  continuesPrevious: boolean;
+  certain: boolean;
+  blackToMove: boolean;
+  note?: string | null;
+  startFen?: string | null;
+  endFen?: string | null;
+  plyCount: number;
+  startPly?: number | null;
+}
+
+/** Die ganze geteilte Partie hinter `/r/{token}` — Kopfdaten und alle Teile, Lücken inbegriffen. */
+export interface SharedReconstruction {
+  title: string;
+  white?: string | null;
+  black?: string | null;
+  event?: string | null;
+  playedOn?: string | null;
+  result?: string | null;
+  note?: string | null;
+  knownPlies: number;
+  gaps: number;
+  prefixSan: string;
+  updatedAt: string;
+  parts: SharedReconstructionPart[];
 }
 
 /** Kopfdaten (Titel ist Pflicht). */
@@ -194,5 +231,28 @@ export class ReconstructService {
   /** Setzt einen gefundenen Weg als eigenes Teil VOR das Teil — beide hängen danach aneinander. */
   applyGap(id: number, partId: number, moves: string): Observable<Reconstruction> {
     return this.http.post<Reconstruction>(`${this.base}/${id}/parts/${partId}/gap/apply`, { moves });
+  }
+
+  // ----- Teilen -----
+
+  /** Schaltet den öffentlichen Link ein (ein vorhandener bleibt) und liefert sein Token. */
+  share(id: number): Observable<string> {
+    return this.http.post<{ shareToken: string }>(`${this.base}/${id}/share`, {})
+      .pipe(map(r => r.shareToken));
+  }
+
+  /** Schaltet den Link ab. Ein späteres Teilen erzeugt ein ANDERES Token. */
+  unshare(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}/share`);
+  }
+
+  /** Die geteilte Partie hinter einem Token (ohne Anmeldung). */
+  getShared(token: string): Observable<SharedReconstruction> {
+    return this.http.get<SharedReconstruction>(`${this.base}/shared/${encodeURIComponent(token)}`);
+  }
+
+  /** Die Adresse, die man weitergibt. */
+  shareUrl(token: string): string {
+    return `${window.location.origin}/r/${token}`;
   }
 }

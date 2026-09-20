@@ -3475,6 +3475,22 @@
     "movesHint": "Upiši ih ili odigraj na ploči — brojevi poteza smiju ostati.",
     "undoMove": "Poništi zadnji potez",
     "partNote": "Bilješka uz ovaj dio",
+    "share": {
+      "action": "Podijeli cijelu partiju",
+      "hint": "Stvara poveznicu na ovu partiju — sa svime što već stoji i s prazninama koje su još otvorene. Tko je otvori, ne treba račun.",
+      "copyAgain": "Ponovno kopiraj poveznicu",
+      "copied": "Poveznica za dijeljenje je kopirana.",
+      "failed": "Dijeljenje nije uspjelo.",
+      "stop": "Prekini dijeljenje",
+      "stopConfirm": "Prekinuti dijeljenje? Dosadašnja poveznica prestaje vrijediti — ponovno dijeljenje stvara drugu.",
+      "stopped": "Više nije podijeljeno."
+    },
+    "shared": {
+      "notFound": "Ova podijeljena partija (više) ne postoji.",
+      "intro": "Partija složena po sjećanju: potezi, pojedine pozicije i praznine između njih. Klikni za listanje ili koristi tipke ← →.",
+      "position": "Zapamćena pozicija",
+      "nothing": "Za ovu partiju još ništa nije zabilježeno."
+    },
     "copyPrefix": "Kopiraj sigurne poteze",
     "copied": "Kopirano.",
     "copyFailed": "Kopiranje nije uspjelo.",

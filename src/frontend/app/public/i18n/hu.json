@@ -3475,6 +3475,22 @@
     "movesHint": "Írd be, vagy játszd le a táblán — a lépésszámok maradhatnak.",
     "undoMove": "Utolsó lépés visszavonása",
     "partNote": "Megjegyzés ehhez a részhez",
+    "share": {
+      "action": "Teljes játszma megosztása",
+      "hint": "Linket hoz létre erre a játszmára — mindazzal, ami már megvan, és a még nyitott hézagokkal együtt. Aki megnyitja, annak nem kell fiók.",
+      "copyAgain": "Link másolása még egyszer",
+      "copied": "Megosztási link másolva.",
+      "failed": "A megosztás nem sikerült.",
+      "stop": "Megosztás befejezése",
+      "stopConfirm": "Befejezed a megosztást? A mostani link érvénytelen lesz — egy újabb megosztás másik linket hoz létre.",
+      "stopped": "Már nincs megosztva."
+    },
+    "shared": {
+      "notFound": "Ez a megosztott játszma (már) nem létezik.",
+      "intro": "Emlékezetből összerakott játszma: lépések, egyes állások és a köztük lévő hézagok. Kattints a lapozáshoz, vagy használd a ← → billentyűket.",
+      "position": "Felidézett állás",
+      "nothing": "Ehhez a játszmához még nincs semmi rögzítve."
+    },
     "copyPrefix": "Biztos lépések másolása",
     "copied": "Másolva.",
     "copyFailed": "A másolás nem sikerült.",

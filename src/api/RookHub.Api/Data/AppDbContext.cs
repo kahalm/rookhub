@@ -1121,8 +1121,12 @@ public class AppDbContext : DbContext
             e.Property(r => r.Event).HasMaxLength(200);
             e.Property(r => r.Result).HasMaxLength(12);
             e.Property(r => r.Note).HasMaxLength(2000);
+            e.Property(r => r.ShareToken).HasMaxLength(32);
             // Liste je Nutzer, zuletzt geaendert zuerst.
             e.HasIndex(r => new { r.UserId, r.UpdatedAt });
+            // Einstieg des oeffentlichen Links (/r/{token}); NULL = nicht geteilt (MariaDB laesst
+            // beliebig viele NULLs im Unique-Index zu).
+            e.HasIndex(r => r.ShareToken).IsUnique();
         });
 
         modelBuilder.Entity<GameReconstructionPart>(e =>

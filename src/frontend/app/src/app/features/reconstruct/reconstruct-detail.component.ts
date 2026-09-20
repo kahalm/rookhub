@@ -618,6 +618,70 @@ export class ReconstructDetailComponent implements OnInit {
     }
   }
 
+  // ----- Teilen -----
+
+  /**
+   * „Ganze Partie teilen": schaltet den öffentlichen Link ein und legt ihn in die Zwischenablage.
+   *
+   * <p>Geteilt wird die REKONSTRUKTION, nicht eine Kopie davon — wer den Link öffnet, sieht den
+   * Stand von jetzt, samt der Lücken, die noch offen sind. Genau darum geht es beim Weitergeben:
+   * „so weit habe ich die Partie, erkennst du den Rest wieder?". Ein schon vergebenes Token bleibt
+   * dasselbe, damit ein bereits verschickter Link gültig bleibt.</p>
+   */
+  shareGame(): void {
+    const data = this.data();
+    if (!data || this.busy()) return;
+    if (data.shareToken) { this.copyShareUrl(data.shareToken); return; }
+
+    this.busy.set(true);
+    this.service.share(this.id).subscribe({
+      next: token => {
+        this.busy.set(false);
+        this.data.set({ ...data, shareToken: token });
+        this.copyShareUrl(token);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.snackbar.warn(this.translate.instant('reconstruct.share.failed'));
+      },
+    });
+  }
+
+  /** Den Link abschalten — er läuft danach ins Leere, deshalb wird gefragt. */
+  stopSharing(): void {
+    const data = this.data();
+    if (!data?.shareToken || this.busy()) return;
+    this.confirm.ask('reconstruct.share.stopConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.busy.set(true);
+      this.service.unshare(this.id).subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.data.set({ ...data, shareToken: null });
+          this.snackbar.quick(this.translate.instant('reconstruct.share.stopped'));
+        },
+        error: () => {
+          this.busy.set(false);
+          this.snackbar.warn(this.translate.instant('reconstruct.share.failed'));
+        },
+      });
+    });
+  }
+
+  /** Die Adresse hinter dem Link; leer, solange nicht geteilt ist. */
+  shareUrl(): string {
+    const token = this.data()?.shareToken;
+    return token ? this.service.shareUrl(token) : '';
+  }
+
+  private copyShareUrl(token: string): void {
+    const url = this.service.shareUrl(token);
+    navigator.clipboard?.writeText(url).then(
+      () => this.snackbar.copy(this.translate.instant('reconstruct.share.copied')),
+      () => this.snackbar.warn(this.translate.instant('reconstruct.copyFailed')),
+    );
+  }
+
   copyPrefix(): void {
     const san = this.data()?.prefixSan ?? '';
     if (!san) return;

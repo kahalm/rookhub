@@ -58,6 +58,23 @@ describe('ReconstructService', () => {
     req.flush({});
   });
 
+  it('teilt die ganze Partie und liest das Token aus der Antwort', () => {
+    let token = '';
+    service.share(7).subscribe(t => token = t);
+    const req = http.expectOne({ url: '/api/reconstructions/7/share', method: 'POST' });
+    req.flush({ shareToken: 'tok123' });
+    expect(token).toBe('tok123');
+    expect(service.shareUrl('tok123')).toBe(`${window.location.origin}/r/tok123`);
+
+    service.unshare(7).subscribe();
+    http.expectOne({ url: '/api/reconstructions/7/share', method: 'DELETE' }).flush(null);
+  });
+
+  it('holt die geteilte Partie über das Token — und kodiert es', () => {
+    service.getShared('a b/c').subscribe();
+    http.expectOne({ url: '/api/reconstructions/shared/a%20b%2Fc', method: 'GET' }).flush({});
+  });
+
   it('löscht ein einzelnes Teil, nicht die Rekonstruktion', () => {
     service.removePart(7, 42).subscribe();
     http.expectOne({ url: '/api/reconstructions/7/parts/42', method: 'DELETE' }).flush({});

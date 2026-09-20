@@ -26,6 +26,18 @@
           <mat-icon>content_copy</mat-icon> {{ 'reconstruct.copyPrefix' | translate }}
         </button>
       }
+      <!-- Die ganze Partie weitergeben: ein Link auf DIESE Rekonstruktion, Lücken inbegriffen. -->
+      <button mat-button [disabled]="busy()" (click)="shareGame()"
+              [matTooltip]="(data()!.shareToken ? 'reconstruct.share.copyAgain' : 'reconstruct.share.hint') | translate">
+        <mat-icon>share</mat-icon> {{ 'reconstruct.share.action' | translate }}
+      </button>
+      @if (data()!.shareToken) {
+        <button mat-icon-button [disabled]="busy()" (click)="stopSharing()"
+                [matTooltip]="'reconstruct.share.stop' | translate"
+                [attr.aria-label]="'reconstruct.share.stop' | translate">
+          <mat-icon>link_off</mat-icon>
+        </button>
+      }
       @if (generatedCount() > 0) {
         <mat-checkbox [(ngModel)]="showGenerated">
           {{ 'reconstruct.showGenerated' | translate:{ count: generatedCount() } }}

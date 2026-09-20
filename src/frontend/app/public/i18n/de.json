@@ -3475,6 +3475,22 @@
     "movesHint": "Eintippen oder am Brett spielen — Zugnummern dürfen drinstehen.",
     "undoMove": "Letzten Zug zurück",
     "partNote": "Notiz zu diesem Teil",
+    "share": {
+      "action": "Ganze Partie teilen",
+      "hint": "Erzeugt einen Link auf diese Partie — mit allem, was schon steht, und den Lücken, die noch offen sind. Wer ihn öffnet, braucht kein Konto.",
+      "copyAgain": "Link noch einmal kopieren",
+      "copied": "Teilen-Link kopiert.",
+      "failed": "Teilen ging nicht.",
+      "stop": "Teilen beenden",
+      "stopConfirm": "Teilen beenden? Der bisherige Link wird ungültig — ein erneutes Teilen erzeugt einen anderen.",
+      "stopped": "Nicht mehr geteilt."
+    },
+    "shared": {
+      "notFound": "Diese geteilte Partie gibt es (nicht mehr).",
+      "intro": "Eine aus der Erinnerung zusammengetragene Partie: Züge, einzelne Stellungen und die Lücken dazwischen. Zum Blättern anklicken oder ← → drücken.",
+      "position": "Erinnerte Stellung",
+      "nothing": "Zu dieser Partie ist noch nichts aufgezeichnet."
+    },
     "copyPrefix": "Gesicherte Züge kopieren",
     "copied": "Kopiert.",
     "copyFailed": "Kopieren ging nicht.",

@@ -45,6 +45,19 @@ public class GameReconstruction
     /// <summary>Freitext zur ganzen Partie (Erinnerungen, offene Fragen).</summary>
     public string? Note { get; set; }
 
+    /// <summary>
+    /// Token des öffentlichen Teilen-Links (<c>/r/{token}</c>); <c>null</c> = nicht geteilt.
+    ///
+    /// <para>Es hängt an der Rekonstruktion selbst und nicht an einer Kopie: wer den Link
+    /// weitergibt, zeigt den STAND — eine Rekonstruktion wächst weiter, und ein Link auf eine
+    /// Momentaufnahme zeigte morgen etwas, das der Besitzer längst korrigiert hat. Abschalten
+    /// wirft das Token weg; ein erneutes Teilen erzeugt ein neues (der alte Link läuft ins Leere).</para>
+    /// </summary>
+    public string? ShareToken { get; set; }
+
+    /// <summary>Wann der Link erzeugt wurde (<c>null</c> = nie/nicht mehr geteilt).</summary>
+    public DateTime? SharedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

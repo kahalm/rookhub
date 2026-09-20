@@ -497,4 +497,82 @@ public class GameReconstructionServiceTests : IDisposable
         Assert.Equal(3, item.KnownPlies);
         Assert.Equal(1, item.Gaps);
     }
+
+    // ----- Ganze Partie teilen -----
+
+    [Fact]
+    public async Task Share_GivesALinkAndKeepsIt()
+    {
+        var id = await CreateAsync();
+
+        var token = await _service.ShareAsync(1, id);
+        var again = await _service.ShareAsync(1, id);
+
+        Assert.False(string.IsNullOrWhiteSpace(token));
+        // Ein zweites Teilen darf einen schon verschickten Link nicht ungueltig machen.
+        Assert.Equal(token, again);
+        Assert.Equal(token, (await _service.GetAsync(1, id))!.ShareToken);
+    }
+
+    [Fact]
+    public async Task Shared_ShowsTheWholeGameWithItsGaps()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies));
+        var token = await _service.ShareAsync(1, id);
+
+        var shared = await _service.GetSharedAsync(token);
+
+        Assert.NotNull(shared);
+        Assert.Equal("Vereinsmeisterschaft, Runde 3", shared!.Title);
+        Assert.Equal(2, shared.Parts.Count);
+        Assert.Equal("e4 e5 Nf3", shared.Parts[0].Moves);
+        Assert.Equal(0, shared.Parts[0].StartPly);
+        // Die Luecke ist Teil der Auskunft: wer den Link bekommt, soll sehen, wo die Partie abreisst.
+        Assert.False(shared.Parts[1].ContinuesPrevious);
+        Assert.Equal(1, shared.Gaps);
+        Assert.Equal(3, shared.KnownPlies);
+    }
+
+    [Fact]
+    public async Task Shared_LeavesTheProposalsOut()
+    {
+        var id = await CreateAsync();
+        await _service.AddPartAsync(1, id, MovesPart("e4 e5 Nf3"));
+        var target = (await _service.AddPartAsync(1, id, PositionPart(AfterFivePlies)))!.Parts[1].Id;
+        var proposal = await _service.ProposeGapAsync(1, id, target, 2);
+        Assert.True(proposal!.Inserted > 0);
+        var token = await _service.ShareAsync(1, id);
+
+        var shared = await _service.GetSharedAsync(token);
+
+        // Vorschlaege der Luckensuche sind Arbeitsstand des Besitzers, nicht die Partie.
+        Assert.Equal(2, shared!.Parts.Count);
+        Assert.Equal(1, shared.Gaps);
+    }
+
+    [Fact]
+    public async Task Unshare_MakesTheLinkGoNowhere_AndASecondShareIsADifferentOne()
+    {
+        var id = await CreateAsync();
+        var first = await _service.ShareAsync(1, id);
+
+        Assert.True(await _service.UnshareAsync(1, id));
+
+        Assert.Null(await _service.GetSharedAsync(first));
+        Assert.Null((await _service.GetAsync(1, id))!.ShareToken);
+        Assert.NotEqual(first, await _service.ShareAsync(1, id));
+    }
+
+    [Fact]
+    public async Task Share_IsInvisibleForOtherAccounts()
+    {
+        var id = await CreateAsync();
+
+        Assert.Null(await _service.ShareAsync(2, id));
+        Assert.False(await _service.UnshareAsync(2, id));
+        Assert.Null(await _service.GetSharedAsync("gibt-es-nicht"));
+        Assert.Null(await _service.GetSharedAsync(""));
+    }
 }

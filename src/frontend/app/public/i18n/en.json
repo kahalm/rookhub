@@ -3475,6 +3475,22 @@
     "movesHint": "Type them or play them on the board — move numbers are fine.",
     "undoMove": "Undo last move",
     "partNote": "Note on this part",
+    "share": {
+      "action": "Share whole game",
+      "hint": "Creates a link to this game — everything that already stands, and the gaps that are still open. Whoever opens it needs no account.",
+      "copyAgain": "Copy the link again",
+      "copied": "Share link copied.",
+      "failed": "Sharing did not work.",
+      "stop": "Stop sharing",
+      "stopConfirm": "Stop sharing? The current link stops working — sharing again creates a different one.",
+      "stopped": "No longer shared."
+    },
+    "shared": {
+      "notFound": "This shared game does not exist (any more).",
+      "intro": "A game pieced together from memory: moves, single positions and the gaps in between. Click to step through, or use the arrow keys.",
+      "position": "Remembered position",
+      "nothing": "Nothing has been recorded for this game yet."
+    },
     "copyPrefix": "Copy secured moves",
     "copied": "Copied.",
     "copyFailed": "Could not copy.",

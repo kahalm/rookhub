@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -415,6 +416,97 @@ public class GameReconstructionService
         await _db.SaveChangesAsync(ct);
     }
 
+    // ===== Teilen =====
+
+    /// <summary>
+    /// Den öffentlichen Link einschalten (idempotent: ein vorhandenes Token bleibt, damit ein
+    /// schon verschickter Link gültig bleibt). <c>null</c>, wenn es die Rekonstruktion nicht gibt.
+    /// </summary>
+    public async Task<string?> ShareAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var row = await _db.GameReconstructions.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId, ct);
+        if (row == null) return null;
+
+        if (string.IsNullOrEmpty(row.ShareToken))
+        {
+            row.ShareToken = await NewUniqueTokenAsync(ct);
+            row.SharedAt = DateTime.UtcNow;
+            row.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+        return row.ShareToken;
+    }
+
+    /// <summary>Den Link abschalten. Ein späteres Teilen erzeugt ein NEUES Token — der alte Link
+    /// läuft danach ins Leere, und genau dafür ist das Abschalten da.</summary>
+    public async Task<bool> UnshareAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var row = await _db.GameReconstructions.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId, ct);
+        if (row == null) return false;
+
+        row.ShareToken = null;
+        row.SharedAt = null;
+        row.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    /// <summary>
+    /// Die geteilte Partie hinter dem Link (ohne Anmeldung); <c>null</c> bei unbekanntem Token.
+    ///
+    /// <para>Gezeigt wird der aktuelle Stand mit allen aufgezeichneten Teilen — die Vorschläge der
+    /// Lückensuche bleiben draußen: sie sind Arbeitsstand des Besitzers, nicht die Partie.</para>
+    /// </summary>
+    public async Task<SharedReconstructionDto?> GetSharedAsync(string? token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+
+        var row = await _db.GameReconstructions
+            .Include(r => r.Parts)
+            .FirstOrDefaultAsync(r => r.ShareToken == token, ct);
+        if (row == null) return null;
+
+        var chain = ReconstructionChain.Analyze(row.Parts);
+        var byId = chain.Parts.ToDictionary(c => c.PartId);
+        var dto = new SharedReconstructionDto
+        {
+            Title = row.Title, White = row.White, Black = row.Black, Event = row.Event,
+            PlayedOn = row.PlayedOn, Result = row.Result, Note = row.Note,
+            KnownPlies = chain.KnownPlies, Gaps = chain.Gaps, PrefixSan = chain.PrefixSan,
+            UpdatedAt = row.UpdatedAt,
+        };
+        foreach (var part in row.Parts.Where(p => !p.Generated).OrderBy(p => p.Ordinal))
+        {
+            byId.TryGetValue(part.Id, out var c);
+            dto.Parts.Add(new SharedReconstructionPartDto
+            {
+                Kind = part.Kind, Moves = part.Moves, Fen = part.Fen,
+                ContinuesPrevious = part.ContinuesPrevious, Certain = part.Certain,
+                BlackToMove = part.BlackToMove, Note = part.Note,
+                StartFen = c?.StartFen, EndFen = c?.EndFen,
+                PlyCount = c?.PlyCount ?? 0, StartPly = c?.StartPly,
+            });
+        }
+        return dto;
+    }
+
+    private async Task<string> NewUniqueTokenAsync(CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var token = NewToken();
+            if (!await _db.GameReconstructions.AnyAsync(r => r.ShareToken == token, ct)) return token;
+        }
+        return NewToken();   // extrem unwahrscheinlicher Kollisions-Fallback
+    }
+
+    /// <summary>URL-sicheres Zufallstoken (~22 Zeichen aus 16 Bytes) — wie beim Partie-/Blatt-Link.</summary>
+    private static string NewToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(16);
+        return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+
     private static ReconstructionListItemDto ToListItem(GameReconstruction row, ReconstructionChain.Result chain) => new()
     {
         Id = row.Id,
@@ -439,7 +531,7 @@ public class GameReconstructionService
             Id = row.Id, Title = row.Title, White = row.White, Black = row.Black, Event = row.Event,
             PlayedOn = row.PlayedOn, Result = row.Result, Note = row.Note,
             PartCount = row.Parts.Count, KnownPlies = chain.KnownPlies, Gaps = chain.Gaps,
-            UpdatedAt = row.UpdatedAt, PrefixSan = chain.PrefixSan,
+            UpdatedAt = row.UpdatedAt, PrefixSan = chain.PrefixSan, ShareToken = row.ShareToken,
         };
         foreach (var part in row.Parts.OrderBy(p => p.Ordinal))
         {

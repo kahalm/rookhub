@@ -22,10 +22,10 @@ function part(over: Partial<ReconstructionPart>): ReconstructionPart {
   };
 }
 
-function data(parts: ReconstructionPart[]): Reconstruction {
+function data(parts: ReconstructionPart[], over: Partial<Reconstruction> = {}): Reconstruction {
   return {
     id: 5, title: 'Runde 3', partCount: parts.length, knownPlies: 2, gaps: 0,
-    updatedAt: '2026-09-20T10:00:00Z', parts, prefixSan: 'e4 e5',
+    updatedAt: '2026-09-20T10:00:00Z', parts, prefixSan: 'e4 e5', ...over,
   };
 }
 
@@ -46,11 +46,13 @@ describe('ReconstructDetailComponent', () => {
   let http: HttpTestingController;
   /** Antwort der Rückfrage — der Dialog selbst gehört nicht in jeden Test. */
   let confirmAnswer = true;
+  /** Zwischenablage als Attrappe: im Testbrowser gibt es dafür keine Berechtigung. */
+  let clipboard: { writeText: jasmine.Spy };
 
-  function open(parts: ReconstructionPart[]): ReconstructDetailComponent {
+  function open(parts: ReconstructionPart[], over: Partial<Reconstruction> = {}): ReconstructDetailComponent {
     const fixture = TestBed.createComponent(ReconstructDetailComponent);
     fixture.detectChanges();
-    http.expectOne('/api/reconstructions/5').flush(data(parts));
+    http.expectOne('/api/reconstructions/5').flush(data(parts, over));
     fixture.detectChanges();
     return fixture.componentInstance;
   }
@@ -67,7 +69,11 @@ describe('ReconstructDetailComponent', () => {
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     confirmAnswer = true;
+    clipboard = { writeText: jasmine.createSpy('writeText').and.returnValue(Promise.resolve()) };
+    Object.defineProperty(navigator, 'clipboard', { value: clipboard, configurable: true });
   });
+
+  afterEach(() => { delete (navigator as unknown as Record<string, unknown>)['clipboard']; });
 
   it('spielt die eingetippten Züge lokal mit und zeigt die Stellung danach', () => {
     const c = open([]);
@@ -428,6 +434,36 @@ describe('ReconstructDetailComponent', () => {
     expect(c.state(part({ anchored: false, valid: false }))).toBe('floating');
     expect(c.state(part({ anchored: true, valid: false }))).toBe('broken');
     expect(c.state(part({ anchored: true, valid: false, mismatch: true }))).toBe('mismatch');
+  });
+
+  it('teilt die ganze Partie: Link holen, merken, beim zweiten Mal nur kopieren', () => {
+    const c = open([]);
+
+    c.shareGame();
+    http.expectOne({ url: '/api/reconstructions/5/share', method: 'POST' }).flush({ shareToken: 'tok123' });
+
+    expect(c.data()!.shareToken).toBe('tok123');
+    expect(c.shareUrl()).toBe(`${window.location.origin}/r/tok123`);
+    expect(clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/r/tok123`);
+
+    // Der zweite Klick kopiert nur — ein schon verschickter Link darf nicht ungültig werden.
+    c.shareGame();
+    http.expectNone({ method: 'POST' });
+    expect(clipboard.writeText).toHaveBeenCalledTimes(2);
+  });
+
+  it('beendet das Teilen erst nach der Rückfrage', () => {
+    confirmAnswer = false;
+    const c = open([], { shareToken: 'tok123' });
+
+    c.stopSharing();
+    http.expectNone({ method: 'DELETE' });
+
+    confirmAnswer = true;
+    c.stopSharing();
+    http.expectOne({ url: '/api/reconstructions/5/share', method: 'DELETE' }).flush(null);
+    expect(c.data()!.shareToken).toBeNull();
+    expect(c.shareUrl()).toBe('');
   });
 
   it('rechnet Halbzüge in Zugnummern um', () => {
