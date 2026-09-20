@@ -149,4 +149,23 @@ describe('applySrReview / applyPromote / hoursOfLevel', () => {
     expect(fresh.level).toBe(0);
     expect(fresh.reps).toBe(0);
   });
+
+  // ===== Spiegel-Pin: SR-Intervall-Vorgaben ===================================================
+  // Dieselben neun Stufen stehen ein zweites Mal im Backend (RepertoireTrainingService.DefaultLevels).
+  // Der Offline-Trainer bewertet mit DIESER Liste; laufen die beiden auseinander, plant dieselbe Linie
+  // offline auf einen anderen Termin als online — ohne dass es auffiele. Beide Seiten pruefen literale
+  // Werte (wie beim LineKey-Spiegel); wer hier etwas aendert, aendert RepertoireTrainingServiceTests mit.
+  it('DEFAULT_SR_LEVELS matches the backend mirror', () => {
+    expect(DEFAULT_SR_LEVELS).toEqual([
+      { value: 4, unit: 'h' }, { value: 10, unit: 'h' }, { value: 24, unit: 'h' },
+      { value: 2.5, unit: 'd' }, { value: 1, unit: 'w' }, { value: 2.5, unit: 'w' },
+      { value: 1.5, unit: 'mo' }, { value: 3, unit: 'mo' }, { value: 6, unit: 'mo' },
+    ]);
+  });
+
+  // Die Stufe waehlt ueber den INDEX (Stufe 1 = Index 0) — haelt die konkreten Abstaende fest.
+  it('the first default level is four hours, the last six months', () => {
+    expect(hoursOfLevel(DEFAULT_SR_LEVELS[0])).toBe(4);
+    expect(hoursOfLevel(DEFAULT_SR_LEVELS[DEFAULT_SR_LEVELS.length - 1])).toBe(6 * 24 * 30);
+  });
 });

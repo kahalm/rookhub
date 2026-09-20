@@ -7,6 +7,27 @@ using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
+/// <summary>
+/// Wem gehört ein Endless-Fortschritt: einem KONTO oder einer anonymen Browser-Sitzung. Beide Fälle
+/// beantworten dieselben vier Fragen (Stand lesen, Stand speichern, Lauf aufzeichnen, Läufe am Stück
+/// einspielen) — vorher stand jede davon ZWEIMAL da und unterschied sich nur im Prädikat. Zwei
+/// Unterschiede waren dabei schon eingeschlichen: die anonyme Abfrage sortierte nach <c>Id</c> (Rest
+/// aus der Zeit vor dem eindeutigen Index auf <c>AnonymousSessionId</c>) und ließ den Archiv-Filter aus.
+///
+/// <para>Gegenstück zu <see cref="GuessOwner"/>, wo dieselbe Frage bereits so beantwortet ist.</para>
+/// </summary>
+public readonly record struct EndlessOwner(int? UserId, string? AnonymousSessionId)
+{
+    public static EndlessOwner ForUser(int userId) => new(userId, null);
+
+    /// <summary>Anonymer Besitzer. Die Kennung ist ungeprüfte Client-Eingabe — sie MUSS vorher gegen
+    /// <see cref="ValidationConstants.SessionIdPattern"/> laufen (Controller), sonst wäre ein kurzer,
+    /// erratbarer Wert der Weg in fremde Fortschritte.</summary>
+    public static EndlessOwner ForAnonymous(string sessionId) => new(null, sessionId);
+
+    public bool IsAnonymous => UserId is null;
+}
+
 public class EndlessProgressService
 {
     private readonly AppDbContext _db;
@@ -21,15 +42,37 @@ public class EndlessProgressService
         _logger = logger;
     }
 
-    // --- Authenticated Progress ---
+    // --- Fortschritt (Konto ODER anonyme Sitzung) ---
+    //
+    // EIN Rumpf je Frage; die acht alten Namen darunter sind Ein-Zeilen-Adapter, damit die Aufrufer
+    // (Controller, Tests) unveraendert bleiben. Das Praedikat MUSS ueber die Art verzweigen: ein
+    // `p.UserId == owner.UserId` traefe bei einem anonymen Besitzer `p.UserId == null` — also JEDE
+    // anonyme Zeile statt genau einer.
 
-    public async Task<EndlessSyncResponseDto> GetSyncDataAsync(int userId)
+    private static System.Linq.Expressions.Expression<Func<EndlessProgress, bool>> ProgressOf(EndlessOwner owner)
     {
-        var progress = await _db.EndlessProgresses
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var uid = owner.UserId;
+        var sid = owner.AnonymousSessionId;
+        return owner.IsAnonymous ? p => p.AnonymousSessionId == sid : p => p.UserId == uid;
+    }
 
+    private static System.Linq.Expressions.Expression<Func<EndlessSession, bool>> SessionsOf(EndlessOwner owner)
+    {
+        var uid = owner.UserId;
+        var sid = owner.AnonymousSessionId;
+        return owner.IsAnonymous ? s => s.AnonymousSessionId == sid : s => s.UserId == uid;
+    }
+
+    public async Task<EndlessSyncResponseDto> GetSyncDataAsync(EndlessOwner owner)
+    {
+        var progress = await _db.EndlessProgresses.FirstOrDefaultAsync(ProgressOf(owner));
+
+        // Der Archiv-Filter galt bisher nur fuer Konten. Er gilt jetzt fuer beide und ist fuer eine
+        // anonyme Sitzung folgenlos: archivieren kann nur ein Konto (ArchiveSessionsAsync ist auf
+        // s.UserId eingeschraenkt), eine anonyme Zeile traegt IsArchived also nie.
         var sessions = await _db.EndlessSessions
-            .Where(s => s.UserId == userId && !s.IsArchived)
+            .Where(SessionsOf(owner))
+            .Where(s => !s.IsArchived)
             .OrderByDescending(s => s.Timestamp)
             .Take(MaxSessions)
             .Select(s => MapSessionDto(s))
@@ -42,15 +85,16 @@ public class EndlessProgressService
         };
     }
 
-    public async Task<EndlessProgressDto> SaveProgressAsync(int userId, SaveEndlessProgressDto dto)
+    public async Task<EndlessProgressDto> SaveProgressAsync(EndlessOwner owner, SaveEndlessProgressDto dto)
     {
-        var progress = await _db.EndlessProgresses
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var progress = await _db.EndlessProgresses.FirstOrDefaultAsync(ProgressOf(owner));
 
         var isNew = progress == null;
         if (isNew)
         {
-            progress = new EndlessProgress { UserId = userId };
+            progress = owner.IsAnonymous
+                ? new EndlessProgress { AnonymousSessionId = owner.AnonymousSessionId }
+                : new EndlessProgress { UserId = owner.UserId };
             _db.EndlessProgresses.Add(progress);
         }
 
@@ -61,68 +105,11 @@ public class EndlessProgressService
         }
         catch (DbUpdateException ex) when (isNew && AuthService.IsUniqueViolation(ex))
         {
-            // Race: ein paralleler Request hat die Zeile zwischen Read und Insert
-            // angelegt (Unique-Index auf UserId). Statt 500/Lost-Update die nun
-            // vorhandene Zeile laden und das Update darauf anwenden.
+            // Race: ein paralleler Request hat die Zeile zwischen Read und Insert angelegt (eindeutiger
+            // Index auf UserId bzw. AnonymousSessionId). Statt 500/Lost-Update die nun vorhandene Zeile
+            // laden und das Update darauf anwenden.
             _db.ChangeTracker.Clear();
-            progress = await _db.EndlessProgresses.FirstAsync(p => p.UserId == userId);
-            ApplyProgressDto(progress, dto);
-            await _db.SaveChangesAsync();
-        }
-        return MapProgressDto(progress!);
-    }
-
-    // --- Anonymous Progress ---
-
-    public async Task<EndlessSyncResponseDto> GetAnonymousSyncDataAsync(string sessionId)
-    {
-        var progress = await _db.EndlessProgresses
-            .Where(p => p.AnonymousSessionId == sessionId)
-            .OrderBy(p => p.Id)
-            .FirstOrDefaultAsync();
-
-        var sessions = await _db.EndlessSessions
-            .Where(s => s.AnonymousSessionId == sessionId)
-            .OrderByDescending(s => s.Timestamp)
-            .Take(MaxSessions)
-            .Select(s => MapSessionDto(s))
-            .ToListAsync();
-
-        return new EndlessSyncResponseDto
-        {
-            Progress = progress != null ? MapProgressDto(progress) : null,
-            Sessions = sessions
-        };
-    }
-
-    public async Task<EndlessProgressDto> SaveAnonymousProgressAsync(string sessionId, SaveEndlessProgressDto dto)
-    {
-        var progress = await _db.EndlessProgresses
-            .Where(p => p.AnonymousSessionId == sessionId)
-            .OrderBy(p => p.Id)
-            .FirstOrDefaultAsync();
-
-        var isNew = progress == null;
-        if (isNew)
-        {
-            progress = new EndlessProgress { AnonymousSessionId = sessionId };
-            _db.EndlessProgresses.Add(progress);
-        }
-
-        ApplyProgressDto(progress!, dto);
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (isNew && AuthService.IsUniqueViolation(ex))
-        {
-            // Race auf dem AnonymousSessionId-Insert: nun vorhandene Zeile laden
-            // und das Update darauf anwenden (statt 500/Lost-Update).
-            _db.ChangeTracker.Clear();
-            progress = await _db.EndlessProgresses
-                .Where(p => p.AnonymousSessionId == sessionId)
-                .OrderBy(p => p.Id)
-                .FirstAsync();
+            progress = await _db.EndlessProgresses.FirstAsync(ProgressOf(owner));
             ApplyProgressDto(progress, dto);
             await _db.SaveChangesAsync();
         }
@@ -151,36 +138,67 @@ public class EndlessProgressService
         PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
     };
 
-    public async Task<EndlessSessionDto> RecordSessionAsync(int userId, RecordEndlessSessionDto dto)
+    public async Task<EndlessSessionDto> RecordSessionAsync(EndlessOwner owner, RecordEndlessSessionDto dto)
     {
-        var session = BuildSession(dto, userId, null);
+        var session = BuildSession(dto, owner.UserId, owner.AnonymousSessionId);
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
 
-        LogSessionPuzzles(userId, dto.Puzzles);
+        LogSessionPuzzles(owner.UserId, dto.Puzzles);
         // Strukturierter Event fuer Kibana: Runs/Tag, Ø/Max geloeste Puzzles, Max-Rating,
         // Leaderboard (Cardinality/Terms auf fields.UserId). Analog zum PuzzleAttempt-Log.
-        _logger.LogInformation(
-            "EndlessSessionCompleted: User {UserId} solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
-            userId, dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
+        if (owner.IsAnonymous)
+            _logger.LogInformation(
+                "EndlessSessionCompleted: Anonymous solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
+                dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
+        else
+            _logger.LogInformation(
+                "EndlessSessionCompleted: User {UserId} solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
+                owner.UserId, dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
 
-        return MapSessionDto(session);   // eingeloggte Sessions werden nicht getrimmt (unbegrenzt)
-    }
-
-    public async Task<EndlessSessionDto> RecordAnonymousSessionAsync(string sessionId, RecordEndlessSessionDto dto)
-    {
-        var session = BuildSession(dto, null, sessionId);
-        _db.EndlessSessions.Add(session);
-        await _db.SaveChangesAsync();
-
-        LogSessionPuzzles(null, dto.Puzzles);
-        _logger.LogInformation(
-            "EndlessSessionCompleted: Anonymous solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
-            dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
-
-        await TrimAnonymousSessionsAsync(sessionId);
+        await TrimIfAnonymousAsync(owner);
         return MapSessionDto(session);
     }
+
+    public async Task<int> BulkImportSessionsAsync(EndlessOwner owner, List<RecordEndlessSessionDto> dtos)
+    {
+        var count = 0;
+        foreach (var dto in dtos)
+        {
+            _db.EndlessSessions.Add(BuildSession(dto, owner.UserId, owner.AnonymousSessionId));
+            count++;
+        }
+        await _db.SaveChangesAsync();
+        await TrimIfAnonymousAsync(owner);
+        return count;
+    }
+
+    /// <summary>Nur anonyme Laeufe werden gedeckelt — die eines Kontos bleiben unbegrenzt.</summary>
+    private Task TrimIfAnonymousAsync(EndlessOwner owner)
+        => owner.IsAnonymous ? TrimAnonymousSessionsAsync(owner.AnonymousSessionId!) : Task.CompletedTask;
+
+    // --- Adapter auf die beiden Besitzer-Arten (ein Ausdruck, kein zweiter Weg) ---
+
+    public Task<EndlessSyncResponseDto> GetSyncDataAsync(int userId)
+        => GetSyncDataAsync(EndlessOwner.ForUser(userId));
+
+    public Task<EndlessSyncResponseDto> GetAnonymousSyncDataAsync(string sessionId)
+        => GetSyncDataAsync(EndlessOwner.ForAnonymous(sessionId));
+
+    public Task<EndlessProgressDto> SaveProgressAsync(int userId, SaveEndlessProgressDto dto)
+        => SaveProgressAsync(EndlessOwner.ForUser(userId), dto);
+
+    public Task<EndlessProgressDto> SaveAnonymousProgressAsync(string sessionId, SaveEndlessProgressDto dto)
+        => SaveProgressAsync(EndlessOwner.ForAnonymous(sessionId), dto);
+
+    public Task<EndlessSessionDto> RecordAnonymousSessionAsync(string sessionId, RecordEndlessSessionDto dto)
+        => RecordSessionAsync(EndlessOwner.ForAnonymous(sessionId), dto);
+
+    public Task<int> BulkImportAnonymousSessionsAsync(string sessionId, List<RecordEndlessSessionDto> dtos)
+        => BulkImportSessionsAsync(EndlessOwner.ForAnonymous(sessionId), dtos);
+
+    public Task<EndlessSessionDto> RecordSessionAsync(int userId, RecordEndlessSessionDto dto)
+        => RecordSessionAsync(EndlessOwner.ForUser(userId), dto);
 
     /// <summary>
     /// Loggt jedes Puzzle einer Endless-Session mit Start- und Lösungszeit (für ES/Kibana).
@@ -212,30 +230,8 @@ public class EndlessProgressService
 
     // --- Bulk Import ---
 
-    public async Task<int> BulkImportSessionsAsync(int userId, List<RecordEndlessSessionDto> dtos)
-    {
-        var count = 0;
-        foreach (var dto in dtos)
-        {
-            _db.EndlessSessions.Add(BuildSession(dto, userId, null));
-            count++;
-        }
-        await _db.SaveChangesAsync();
-        return count;   // eingeloggte Sessions werden nicht getrimmt (unbegrenzt)
-    }
-
-    public async Task<int> BulkImportAnonymousSessionsAsync(string sessionId, List<RecordEndlessSessionDto> dtos)
-    {
-        var count = 0;
-        foreach (var dto in dtos)
-        {
-            _db.EndlessSessions.Add(BuildSession(dto, null, sessionId));
-            count++;
-        }
-        await _db.SaveChangesAsync();
-        await TrimAnonymousSessionsAsync(sessionId);
-        return count;
-    }
+    public Task<int> BulkImportSessionsAsync(int userId, List<RecordEndlessSessionDto> dtos)
+        => BulkImportSessionsAsync(EndlessOwner.ForUser(userId), dtos);
 
     // --- Claim (anonymous → user) ---
 

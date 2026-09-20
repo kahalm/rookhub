@@ -633,4 +633,80 @@ public class EndlessProgressServiceTests : IDisposable
         var syncData = await _service.GetSyncDataAsync(userId);
         Assert.Single(syncData.Sessions);
     }
+
+    // ===== EIN Rumpf fuer Konto und anonyme Sitzung (EndlessOwner) ==============================
+    // Vorher stand jede der vier Fragen zweimal da. Beim Zusammenlegen ist die scharfe Kante das
+    // PRAEDIKAT: ein `p.UserId == owner.UserId` traefe bei einem anonymen Besitzer `p.UserId == null`
+    // — also JEDE anonyme Zeile statt genau einer. Diese Tests nageln die Trennung fest.
+
+    [Fact]
+    public async Task AnonymousOwner_DoesNotSeeAnotherAnonymousSessionsProgress()
+    {
+        await _service.SaveAnonymousProgressAsync("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", MakeProgressDto(highscore: 11));
+        await _service.SaveAnonymousProgressAsync("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", MakeProgressDto(highscore: 22));
+
+        var a = await _service.GetAnonymousSyncDataAsync("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        var b = await _service.GetAnonymousSyncDataAsync("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+
+        Assert.Equal(11, a.Progress!.Highscore);
+        Assert.Equal(22, b.Progress!.Highscore);
+    }
+
+    [Fact]
+    public async Task AnonymousAndUserProgress_StayApart()
+    {
+        var userId = await CreateUserAsync();
+        await _service.SaveProgressAsync(userId, MakeProgressDto(highscore: 100));
+        await _service.SaveAnonymousProgressAsync("cccccccccccccccccccccccccccccccc", MakeProgressDto(highscore: 7));
+
+        var vomKonto = await _service.GetSyncDataAsync(userId);
+        var anonym = await _service.GetAnonymousSyncDataAsync("cccccccccccccccccccccccccccccccc");
+
+        Assert.Equal(100, vomKonto.Progress!.Highscore);
+        Assert.Equal(7, anonym.Progress!.Highscore);
+    }
+
+    [Fact]
+    public async Task AnonymousOwner_WithoutOwnProgress_GetsNothing_NotSomeoneElses()
+    {
+        await _service.SaveAnonymousProgressAsync("dddddddddddddddddddddddddddddddd", MakeProgressDto(highscore: 5));
+        var userId = await CreateUserAsync();
+        await _service.SaveProgressAsync(userId, MakeProgressDto(highscore: 9));
+
+        var leer = await _service.GetAnonymousSyncDataAsync("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+
+        Assert.Null(leer.Progress);
+        Assert.Empty(leer.Sessions);
+    }
+
+    [Fact]
+    public async Task ArchivedSessions_AreHiddenForBothOwnerKinds()
+    {
+        // Der Archiv-Filter galt frueher NUR fuer Konten. Archivieren kann zwar ohnehin nur ein Konto,
+        // aber die Regel gilt jetzt fuer beide Arten — und das soll so bleiben.
+        var userId = await CreateUserAsync();
+        await _service.RecordSessionAsync(userId, MakeSessionDto());
+        await _service.RecordAnonymousSessionAsync("ffffffffffffffffffffffffffffffff", MakeSessionDto());
+
+        foreach (var s in await _db.EndlessSessions.ToListAsync()) s.IsArchived = true;
+        await _db.SaveChangesAsync();
+
+        Assert.Empty((await _service.GetSyncDataAsync(userId)).Sessions);
+        Assert.Empty((await _service.GetAnonymousSyncDataAsync("ffffffffffffffffffffffffffffffff")).Sessions);
+    }
+
+    [Fact]
+    public async Task OwnerAdapters_HitTheSameBody()
+    {
+        // Die acht alten Namen sind Ein-Zeilen-Adapter — sie muessen dasselbe liefern wie der
+        // Owner-Aufruf, sonst waere der zweite Weg zurueck.
+        var userId = await CreateUserAsync();
+        await _service.SaveProgressAsync(EndlessOwner.ForUser(userId), MakeProgressDto(highscore: 42));
+
+        var ueberAdapter = await _service.GetSyncDataAsync(userId);
+        var ueberOwner = await _service.GetSyncDataAsync(EndlessOwner.ForUser(userId));
+
+        Assert.Equal(42, ueberAdapter.Progress!.Highscore);
+        Assert.Equal(ueberAdapter.Progress!.Highscore, ueberOwner.Progress!.Highscore);
+    }
 }

@@ -277,4 +277,36 @@ public class RepertoireTrainingServiceTests : IDisposable
         Assert.Equal(2, deleted);
         Assert.Empty((await _service.GetLineStatesAsync(user, repId))!);
     }
+
+    // ===== Spiegel-Pin: SR-Intervall-Vorgaben =====================================================
+    // Dieselben neun Stufen stehen ein zweites Mal im Frontend (features/repertoire/repertoire-sr.util.ts,
+    // DEFAULT_SR_LEVELS) — der Offline-Trainer bewertet damit ohne Server. Laufen die beiden auseinander,
+    // plant eine offline bewertete Linie auf einen anderen Termin als dieselbe Linie online, und es faellt
+    // niemandem auf. Der LineKey-Spiegel ist genauso festgenagelt (ChessableTrainedLineServiceTests):
+    // BEIDE Seiten pruefen literale Werte, nicht die jeweils andere Implementierung.
+    // Wer hier etwas aendert, aendert repertoire-sr.util.spec.ts mit.
+    [Fact]
+    public void DefaultLevels_MatchTheFrontendMirror()
+    {
+        var erwartet = new (double Value, string Unit)[]
+        {
+            (4, "h"), (10, "h"), (24, "h"),
+            (2.5, "d"), (1, "w"), (2.5, "w"),
+            (1.5, "mo"), (3, "mo"), (6, "mo"),
+        };
+
+        Assert.Equal(erwartet.Length, RepertoireTrainingService.DefaultLevels.Count);
+        Assert.Equal(erwartet, RepertoireTrainingService.DefaultLevels.Select(l => (l.Value, l.Unit)).ToArray());
+    }
+
+    // Die Stufe bestimmt den Termin ueber den INDEX (Stufe 1 = Index 0) — zusammen mit dem Pin oben
+    // haelt das die konkreten Abstaende fest, nicht nur die Liste.
+    [Fact]
+    public void DefaultLevels_FirstLevelIsFourHours_LastIsSixMonths()
+    {
+        var erste = RepertoireTrainingService.DefaultLevels[0];
+        var letzte = RepertoireTrainingService.DefaultLevels[^1];
+        Assert.Equal((4, "h"), (erste.Value, erste.Unit));
+        Assert.Equal((6, "mo"), (letzte.Value, letzte.Unit));
+    }
 }
