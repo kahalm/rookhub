@@ -20,25 +20,21 @@ namespace RookHub.Api.IntegrationTests;
 /// dass jemand daran denken muss.
 /// </summary>
 [Collection(ApiFactoryCollection.Name)]
-public class QueryTranslationTests : IAsyncLifetime
+public class QueryTranslationTests(QueryTranslationFixture fixture)
+    : IAsyncLifetime, IClassFixture<QueryTranslationFixture>
 {
-    private MariaDbSchema _schema = null!;
-    private ApiFactory _factory = null!;
     private IServiceScope _scope = null!;
 
     public async Task InitializeAsync()
     {
-        _schema = await MariaDbSchema.CreateAsync("q");
-        await using (var db = _schema.NewContext()) await db.Database.MigrateAsync();
-        _factory = new ApiFactory(_schema.ConnectionString);
-        _scope = _factory.Services.CreateScope();
+        await fixture.ResetAsync();
+        _scope = fixture.Factory.Services.CreateScope();
     }
 
-    public async Task DisposeAsync()
+    public Task DisposeAsync()
     {
         _scope?.Dispose();
-        _factory?.Dispose();
-        if (_schema is not null) await _schema.DisposeAsync();
+        return Task.CompletedTask;
     }
 
     private T Get<T>() where T : notnull => _scope.ServiceProvider.GetRequiredService<T>();

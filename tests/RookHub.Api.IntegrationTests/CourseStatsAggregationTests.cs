@@ -18,25 +18,21 @@ namespace RookHub.Api.IntegrationTests;
 /// Unterabfrage mitwandert, zeigt sich nur gegen eine echte Datenbank.</para>
 /// </summary>
 [Collection(ApiFactoryCollection.Name)]
-public class CourseStatsAggregationTests : IAsyncLifetime
+public class CourseStatsAggregationTests(CourseStatsFixture fixture)
+    : IAsyncLifetime, IClassFixture<CourseStatsFixture>
 {
-    private MariaDbSchema _schema = null!;
-    private ApiFactory _factory = null!;
     private IServiceScope _scope = null!;
 
     public async Task InitializeAsync()
     {
-        _schema = await MariaDbSchema.CreateAsync("stats");
-        await using (var m = _schema.NewContext()) await m.Database.MigrateAsync();
-        _factory = new ApiFactory(_schema.ConnectionString);
-        _scope = _factory.Services.CreateScope();
+        await fixture.ResetAsync();
+        _scope = fixture.Factory.Services.CreateScope();
     }
 
-    public async Task DisposeAsync()
+    public Task DisposeAsync()
     {
         _scope?.Dispose();
-        _factory?.Dispose();
-        if (_schema is not null) await _schema.DisposeAsync();
+        return Task.CompletedTask;
     }
 
     private AppDbContext Db => _scope.ServiceProvider.GetRequiredService<AppDbContext>();

@@ -33,18 +33,17 @@ public sealed class CommandCounter : DbCommandInterceptor
 /// uebersetzbar ist (InMemory wuerde auch eine untranslatable Fassung gruen melden) und dass
 /// jeder Zugriffsweg weiter genau so entscheidet wie zuvor.
 /// </summary>
-public class CourseAccessTests : IAsyncLifetime
+public class CourseAccessTests(CourseAccessFixture fixture)
+    : IAsyncLifetime, IClassFixture<CourseAccessFixture>
 {
-    private MariaDbSchema _schema = null!;
     private readonly CommandCounter _counter = new();
     private AppDbContext _db = null!;
 
     public async Task InitializeAsync()
     {
-        _schema = await MariaDbSchema.CreateAsync("acc");
-        await using (var m = _schema.NewContext()) await m.Database.MigrateAsync();
+        await fixture.ResetAsync();
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(_schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)))
+            .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)))
             .AddInterceptors(_counter)
             .Options;
         _db = new AppDbContext(options);
@@ -53,7 +52,6 @@ public class CourseAccessTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (_db is not null) await _db.DisposeAsync();
-        if (_schema is not null) await _schema.DisposeAsync();
     }
 
     private async Task<int> UserAsync(string name)

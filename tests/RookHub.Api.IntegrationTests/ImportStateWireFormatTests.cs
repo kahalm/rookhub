@@ -11,14 +11,17 @@ namespace RookHub.Api.IntegrationTests;
 /// bestehende Zeilen nach einem Deploy nicht mehr lesbar, und das Frontend (das
 /// `imp.status === 'completed'` woertlich vergleicht) faende nichts mehr.
 /// </summary>
-public class ImportStateWireFormatTests
+public class ImportStateWireFormatTests(ImportStateFixture fixture)
+    : IAsyncLifetime, IClassFixture<ImportStateFixture>
 {
+    public Task InitializeAsync() => fixture.ResetAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
+
     [MySqlFact]
     public async Task JederZustandLandetAlsDieAlteZeichenketteInDerSpalte()
     {
-        await using var schema = await MariaDbSchema.CreateAsync("wire");
+        var schema = fixture.Schema;
         await using var db = schema.NewContext();
-        await db.Database.MigrateAsync();
 
         var user = new AppUser { Username = "w", Email = "w@t.local", PasswordHash = "x" };
         db.AppUsers.Add(user);
@@ -64,9 +67,8 @@ public class ImportStateWireFormatTests
     {
         // Ein Fremdwert in der Spalte soll LAUT scheitern statt stumm auf einen gueltigen
         // Zustand gemappt zu werden — ein so verschluckter Job liefe als Geisterjob weiter mit.
-        await using var schema = await MariaDbSchema.CreateAsync("bad");
+        var schema = fixture.Schema;
         await using var db = schema.NewContext();
-        await db.Database.MigrateAsync();
         var user = new AppUser { Username = "b", Email = "b@t.local", PasswordHash = "x" };
         db.AppUsers.Add(user);
         await db.SaveChangesAsync();   // erst speichern, sonst ist user.Id noch 0 (Fremdschluessel)

@@ -2406,6 +2406,7 @@ dotnet test
 - **Controller-Tests** instanziieren den Controller direkt; `BaseApiController.GetUserId()` wird via `ControllerContext` mit `ClaimsPrincipal` + `ClaimTypes.NameIdentifier` gemockt
 - **Helper-Methode** `CreateUserAsync()` pro Testklasse für Test-Daten
 - **InMemory cascaded nicht** — Admin-Delete-Pfade räumen abhängige Daten explizit ab; Tests entsprechend prüfen
+- **Integrationstests: Aufbau je KLASSE, nicht je Test** (seit 0.496.1) — xUnit legt je Testmethode eine neue Instanz der Testklasse an. Stand `MariaDbSchema.CreateAsync` + `MigrateAsync` + `new ApiFactory` direkt in deren `InitializeAsync`, lief das je TEST: gemessen 21 vollständige Durchläufe aller 139 Migrationen und 13 Anwendungsstarts für 22 Tests, von denen 18 zwischen 14 ms und 945 ms dauern. Der Aufbau gehört deshalb in eine `MariaDbClassFixture` (`IClassFixture<…>`); je Test ruft die Klasse nur `fixture.ResetAsync()` (leert jede Tabelle, Fremdschlüssel währenddessen aus) und holt sich einen frischen DI-Scope. **Die Isolation bleibt** — jeder Test beginnt auf einer leeren Datenbank —, aber die AUTO_INCREMENT-Zähler laufen über die Tests hinweg weiter: ein Test, der sich auf „die erste Id ist 1" verlässt, fällt damit sofort auf. Eine neue Testklasse braucht eine eigene Fixture-Unterklasse (`IClassFixture<T>` unterscheidet nach TYP); wer die Anwendung hochfährt, gehört zusätzlich in `ApiFactoryCollection`. Lokal gemessen: 9:45 → 1:54
 
 ## EF Core Migrations
 
