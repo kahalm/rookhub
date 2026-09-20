@@ -31,6 +31,7 @@ export function itemsFromLines(bookId: number, puzzles: BookPuzzleDto[]): NewWor
       fen: card.frontFen,
       orientation: card.orientation,
       solutionMoves: solutionFrom(p.moves, typeof p.startPly === 'number' ? p.startPly : 0),
+      sourceThemes: p.tags ?? '',
       source: 'Book',
       sourceId: p.id,
       bookId,
@@ -45,7 +46,7 @@ export function itemsFromLines(bookId: number, puzzles: BookPuzzleDto[]): NewWor
  * Gegnerzug `moves[0]`). Gibt `null` zurück, wenn sich die Stellung nicht aufbauen lässt.
  */
 export function taskItemFromPuzzle(
-  info: { fen: string; moves: string; orientation: 'white' | 'black'; startPly?: number },
+  info: { fen: string; moves: string; orientation: 'white' | 'black'; startPly?: number; themes?: string },
   source: 'Standard' | 'Book',
   ids: { sourceId?: number | null; bookId?: number | null } = {},
 ): NewWorksheetItem | null {
@@ -64,6 +65,7 @@ export function taskItemFromPuzzle(
     fen: chess.fen(),
     orientation: info.orientation,
     solutionMoves: solutionFrom(info.moves, startPly),
+    sourceThemes: info.themes ?? '',
     source,
     sourceId: ids.sourceId ?? null,
     bookId: ids.bookId ?? null,

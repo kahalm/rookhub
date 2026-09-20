@@ -414,6 +414,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
       // Lösung = der Rest der Linie ab dieser Stelle. In einer Varianten-Vorschau gibt es keine
       // (die Züge stehen nur im Kommentar) — dann bleibt die Aufgabe eine zum Rechnen.
       solutionMoves: preview ? '' : this.uciMoves.slice(this.plyIndex).join(' '),
+      sourceThemes: this.selected.tags ?? '',
       source: 'Book',
       sourceId: this.selected.id,
       bookId: this.bookId,

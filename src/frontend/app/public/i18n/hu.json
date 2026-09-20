@@ -2520,6 +2520,16 @@
       "option": "{{n}}",
       "short": "{{n}} oldalanként"
     },
+    "themes": {
+      "label": "A lap témái",
+      "none": "Még nincsenek témák — ezek alapján találod meg később a lapot.",
+      "suggested": "A(z) {{n}} feladat alapján javasolva:",
+      "own": "Saját téma",
+      "add": "Hozzáadás",
+      "remove": "Téma eltávolítása",
+      "all": "Mind",
+      "noMatch": "Nincs feladatlap „{{theme}}“ témával."
+    },
     "share": {
       "toggle": "Lap megosztása (link + QR-kód)",
       "hint": "Aki megnyitja a linket, bejelentkezés nélkül végigjátszhatja a lapot a táblán — a nyomtatványon minden oldal láblécében QR-kódként szerepel.",

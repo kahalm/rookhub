@@ -52,6 +52,8 @@ export class WorksheetDetailComponent implements OnInit {
 
   /** Entwürfe der Bedienleiste: neuer Name (Zwischenablage sichern / umbenennen) und FEN-Eingabe. */
   saveName = '';
+  /** Eingabe für ein eigenes Thema (was nicht aus den Aufgaben kommt). */
+  newTheme = '';
   renaming = false;
   renameDraft = '';
   newFen = '';
@@ -226,6 +228,53 @@ export class WorksheetDetailComponent implements OnInit {
   /** Zurück in den Kurs, aus dem die Stellung stammt (Herkunftsvermerk der Aufgabe). */
   openSource(item: WorksheetItem): void {
     if (item.bookId) this.router.navigate(['/courses', item.bookId]);
+  }
+
+  // ===== Themen =====
+
+  get themes(): string[] { return this.sheet?.themes ?? []; }
+
+  /**
+   * Themen-Vorschläge aus den AUFGABEN des Blatts, häufigste zuerst: Wer zwölf Stellungen aus
+   * einem Kurs schickt, soll nicht abtippen müssen, wovon sie handeln. Schon gesetzte Themen
+   * fallen raus.
+   */
+  get themeSuggestions(): { theme: string; count: number }[] {
+    const counts = new Map<string, number>();
+    for (const item of this.sheet?.items ?? []) {
+      for (const raw of (item.sourceThemes || '').split(' ')) {
+        const theme = raw.trim();
+        if (!theme) continue;
+        counts.set(theme, (counts.get(theme) ?? 0) + 1);
+      }
+    }
+    for (const set of this.themes) counts.delete(set);
+    return [...counts.entries()]
+      .map(([theme, count]) => ({ theme, count }))
+      .sort((a, b) => b.count - a.count || a.theme.localeCompare(b.theme))
+      .slice(0, 12);
+  }
+
+  addTheme(theme: string): void {
+    const cleaned = (theme || '').replace(',', ' ').trim();
+    if (!this.sheet || !cleaned) return;
+    if (this.themes.some(t => t.toLowerCase() === cleaned.toLowerCase())) { this.newTheme = ''; return; }
+    this.saveThemes([...this.themes, cleaned]);
+    this.newTheme = '';
+  }
+
+  removeTheme(theme: string): void {
+    this.saveThemes(this.themes.filter(t => t !== theme));
+  }
+
+  private saveThemes(themes: string[]): void {
+    if (!this.sheet) return;
+    const before = this.sheet.themes;
+    this.sheet.themes = themes;   // optimistisch
+    this.worksheets.update(this.sheet.id, { themes }).subscribe({
+      next: sheet => { if (this.sheet) this.sheet.themes = sheet.themes; this.cdr.markForCheck(); },
+      error: () => { if (this.sheet) this.sheet.themes = before; this.failed(); },
+    });
   }
 
   // ===== Teilen =====

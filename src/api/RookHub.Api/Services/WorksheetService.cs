@@ -52,22 +52,31 @@ public class WorksheetService
     /// <summary>Übersicht: Zwischenablage zuerst, danach die benannten Blätter (zuletzt geändert zuerst).</summary>
     public async Task<List<WorksheetSummaryDto>> ListAsync(int userId)
     {
-        var rows = await _db.Worksheets
+        // Themen kommen als CSV aus der Spalte und werden ERST NACH dem Laden zerlegt — `ParseThemes`
+        // ist C# und ließe sich nicht in SQL übersetzen.
+        var raw = await _db.Worksheets
             .Where(w => w.UserId == userId)
             .OrderByDescending(w => w.IsClipboard)
             .ThenByDescending(w => w.UpdatedAt)
-            .Select(w => new WorksheetSummaryDto
+            .Select(w => new
             {
-                Id = w.Id,
-                Name = w.Name,
-                IsClipboard = w.IsClipboard,
-                PerPage = w.PerPage,
+                w.Id, w.Name, w.IsClipboard, w.PerPage, w.Themes, w.ShareToken, w.CreatedAt, w.UpdatedAt,
                 ItemCount = w.Items.Count,
-                ShareToken = w.ShareToken,
-                CreatedAt = w.CreatedAt,
-                UpdatedAt = w.UpdatedAt,
             })
             .ToListAsync();
+
+        var rows = raw.Select(w => new WorksheetSummaryDto
+        {
+            Id = w.Id,
+            Name = w.Name,
+            IsClipboard = w.IsClipboard,
+            PerPage = w.PerPage,
+            ItemCount = w.ItemCount,
+            Themes = ParseThemes(w.Themes),
+            ShareToken = w.ShareToken,
+            CreatedAt = w.CreatedAt,
+            UpdatedAt = w.UpdatedAt,
+        }).ToList();
 
         // Ohne Zwischenablage wirkt die Übersicht leer, obwohl es sie immer gibt → anlegen und voranstellen.
         if (!rows.Any(r => r.IsClipboard))
@@ -148,6 +157,7 @@ public class WorksheetService
 
         if (dto.Name != null && !sheet.IsClipboard) sheet.Name = CleanName(dto.Name);
         if (dto.PerPage.HasValue) sheet.PerPage = NormalizePerPage(dto.PerPage);
+        if (dto.Themes != null) sheet.Themes = string.Join(',', NormalizeThemes(dto.Themes));
         sheet.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return ToDto(sheet);
@@ -229,6 +239,7 @@ public class WorksheetService
                 Heading = Clean(dto.Heading, 200),
                 Text = Clean(dto.Text, 2000),
                 SolutionMoves = CleanUciMoves(dto.SolutionMoves),
+                SourceThemes = CleanSourceThemes(dto.SourceThemes),
                 Source = dto.Source,
                 SourceId = dto.SourceId,
                 BookId = dto.BookId,
@@ -415,6 +426,44 @@ public class WorksheetService
 
     private static readonly Regex UciMove = new("^[a-h][1-8][a-h][1-8][qrbnQRBN]?$", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Themen säubern: getrimmt, ohne Kommas (die trennen die Spalte), höchstens 40 Zeichen je
+    /// Thema und 12 Themen je Blatt, dedupliziert OHNE Rücksicht auf Groß-/Kleinschreibung (die
+    /// erste Schreibweise gewinnt — „Gabel" und „gabel" sind dasselbe Fach).
+    /// </summary>
+    public static List<string> NormalizeThemes(IEnumerable<string>? themes)
+    {
+        var result = new List<string>();
+        foreach (var raw in themes ?? Enumerable.Empty<string>())
+        {
+            var theme = (raw ?? string.Empty).Replace(',', ' ').Trim();
+            if (theme.Length == 0) continue;
+            if (theme.Length > 40) theme = theme[..40].Trim();
+            if (result.Any(t => string.Equals(t, theme, StringComparison.OrdinalIgnoreCase))) continue;
+            result.Add(theme);
+            if (result.Count >= 12) break;
+        }
+        return result;
+    }
+
+    /// <summary>Themen-CSV → Liste (leer bleibt leer; anders als beim Kurs gibt es keinen Default).</summary>
+    public static List<string> ParseThemes(string? csv)
+        => string.IsNullOrWhiteSpace(csv)
+            ? new List<string>()
+            : NormalizeThemes(csv.Split(',', StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>Quellthemen des Puzzles (leerzeichengetrennt) auf die Spaltenbreite bringen.</summary>
+    private static string CleanSourceThemes(string? value)
+    {
+        var cleaned = string.Join(' ', (value ?? string.Empty)
+            .Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        if (cleaned.Length <= 200) return cleaned;
+
+        // Auf der Spaltenbreite kappen, aber am Wortende — ein halbes Thema schlägt niemand vor.
+        var cut = cleaned.LastIndexOf(' ', 199);
+        return cut > 0 ? cleaned[..cut] : cleaned[..200];
+    }
+
     private static string Clean(string? value, int max)
     {
         var cleaned = (value ?? string.Empty).Trim();
@@ -442,6 +491,7 @@ public class WorksheetService
         IsClipboard = sheet.IsClipboard,
         PerPage = sheet.PerPage,
         ItemCount = sheet.Items.Count,
+        Themes = ParseThemes(sheet.Themes),
         ShareToken = sheet.ShareToken,
         CreatedAt = sheet.CreatedAt,
         UpdatedAt = sheet.UpdatedAt,
@@ -457,6 +507,7 @@ public class WorksheetService
         Heading = item.Heading,
         Text = item.Text,
         SolutionMoves = item.SolutionMoves,
+        SourceThemes = item.SourceThemes,
         Source = item.Source.ToString(),
         SourceId = item.SourceId,
         BookId = item.BookId,

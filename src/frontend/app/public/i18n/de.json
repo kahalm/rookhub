@@ -2280,6 +2280,16 @@
       "option": "{{n}}",
       "short": "{{n}} je Seite"
     },
+    "themes": {
+      "label": "Themen dieses Blatts",
+      "none": "Noch keine Themen — danach findest du das Blatt später wieder.",
+      "suggested": "Vorgeschlagen aus den {{n}} Aufgaben:",
+      "own": "Eigenes Thema",
+      "add": "Hinzufügen",
+      "remove": "Thema entfernen",
+      "all": "Alle",
+      "noMatch": "Kein Aufgabenblatt mit dem Thema „{{theme}}“."
+    },
     "share": {
       "toggle": "Blatt teilen (Link + QR-Code)",
       "hint": "Wer den Link öffnet, kann das Blatt ohne Anmeldung am Brett durchspielen — auf dem Ausdruck steht er in der Fußzeile jeder Seite als QR-Code.",

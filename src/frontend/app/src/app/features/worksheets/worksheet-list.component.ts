@@ -44,6 +44,9 @@ export class WorksheetListComponent implements OnInit {
   /** Name für „Zwischenablage als Aufgabenblatt speichern" bzw. für ein neues leeres Blatt. */
   newName = '';
 
+  /** Aktives Themen-Filter; `null` = alle Blätter. */
+  themeFilter: string | null = null;
+
   private worksheets = inject(WorksheetService);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
@@ -51,7 +54,30 @@ export class WorksheetListComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   get clipboard(): WorksheetSummary | undefined { return this.sheets.find(s => s.isClipboard); }
-  get named(): WorksheetSummary[] { return this.sheets.filter(s => !s.isClipboard); }
+
+  /** Die benannten Blätter, ggf. auf ein Thema eingedampft. */
+  get named(): WorksheetSummary[] {
+    const sheets = this.sheets.filter(s => !s.isClipboard);
+    if (!this.themeFilter) return sheets;
+    return sheets.filter(s => s.themes.some(t => t.toLowerCase() === this.themeFilter!.toLowerCase()));
+  }
+
+  /** Alle vergebenen Themen (häufigste zuerst) — die Filterzeile über der Liste. */
+  get allThemes(): string[] {
+    const counts = new Map<string, number>();
+    for (const sheet of this.sheets) {
+      if (sheet.isClipboard) continue;
+      for (const theme of sheet.themes) counts.set(theme, (counts.get(theme) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([theme]) => theme);
+  }
+
+  /** Ein zweiter Klick auf dasselbe Thema hebt den Filter wieder auf. */
+  toggleThemeFilter(theme: string): void {
+    this.themeFilter = this.themeFilter === theme ? null : theme;
+  }
 
   ngOnInit(): void { this.load(); }
 

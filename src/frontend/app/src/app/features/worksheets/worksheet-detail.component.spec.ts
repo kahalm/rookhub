@@ -7,13 +7,13 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { WorksheetDetailComponent } from './worksheet-detail.component';
 import { Worksheet, WorksheetService } from './worksheet.service';
 
-const item = (id: number) => ({
+const item = (id: number, sourceThemes = '') => ({
   id, sortOrder: id, fen: `8/8/8/8/8/8/8/8 w - - 0 ${id}`, orientation: 'white' as const,
-  heading: '', text: '', solutionMoves: '', source: 'Book' as const, sourceId: id, bookId: 1,
+  heading: '', text: '', solutionMoves: '', sourceThemes, source: 'Book' as const, sourceId: id, bookId: 1,
 });
 
 const sheet = (over: Partial<Worksheet> = {}): Worksheet => ({
-  id: 4, name: 'Mittwoch', isClipboard: false, perPage: 6, itemCount: 3, shareToken: null,
+  id: 4, name: 'Mittwoch', isClipboard: false, perPage: 6, itemCount: 3, shareToken: null, themes: [],
   createdAt: '', updatedAt: '', items: [item(1), item(2), item(3)], ...over,
 });
 
@@ -28,7 +28,8 @@ describe('WorksheetDetailComponent', () => {
         of({ ...loaded, items: ids.map(i => item(i)) })),
       updateItem: jasmine.createSpy('updateItem').and.returnValue(of(item(1))),
       removeItem: jasmine.createSpy('removeItem').and.returnValue(of(undefined)),
-      update: jasmine.createSpy('update').and.returnValue(of(loaded)),
+      update: jasmine.createSpy('update').and.callFake((_id: number, patch: any) =>
+        of({ ...loaded, ...patch, themes: patch.themes ?? loaded.themes })),
       clear: jasmine.createSpy('clear').and.returnValue(of({ ...loaded, items: [] })),
       remove: jasmine.createSpy('remove').and.returnValue(of(undefined)),
       addItems: jasmine.createSpy('addItems').and.returnValue(of({ added: 1 })),
@@ -125,6 +126,48 @@ describe('WorksheetDetailComponent', () => {
     c.saveAsSheet();
     expect(worksheets.saveClipboardAs).toHaveBeenCalledWith('Mittwochstraining', 2);
     expect(router.navigate).toHaveBeenCalledWith(['/worksheets', 9]);
+  });
+
+  it('schlägt die Themen der Aufgaben vor, häufigste zuerst', () => {
+    const c = make(sheet({
+      items: [item(1, 'fork backRankMate'), item(2, 'fork'), item(3, 'pin')],
+    }));
+
+    expect(c.themeSuggestions.map(s => s.theme)).toEqual(['fork', 'backRankMate', 'pin']);
+    expect(c.themeSuggestions[0].count).toBe(2);
+  });
+
+  it('ein bereits gesetztes Thema wird nicht nochmal vorgeschlagen', () => {
+    const c = make(sheet({ themes: ['fork'], items: [item(1, 'fork pin')] }));
+
+    expect(c.themeSuggestions.map(s => s.theme)).toEqual(['pin']);
+  });
+
+  it('ein Thema hinzufügen schreibt die Liste weg und leert das Eingabefeld', () => {
+    const c = make();
+    c.newTheme = '  Turmendspiel  ';
+
+    c.addTheme(c.newTheme);
+
+    expect(worksheets.update).toHaveBeenCalledWith(4, { themes: ['Turmendspiel'] });
+    expect(c.newTheme).toBe('');
+  });
+
+  it('dasselbe Thema in anderer Schreibweise kommt nicht zweimal aufs Blatt', () => {
+    const c = make(sheet({ themes: ['Gabel'] }));
+
+    c.addTheme('gabel');
+
+    expect(worksheets.update).not.toHaveBeenCalled();
+    expect(c.themes).toEqual(['Gabel']);
+  });
+
+  it('ein Thema entfernen schickt die verbleibende Liste', () => {
+    const c = make(sheet({ themes: ['fork', 'pin'] }));
+
+    c.removeTheme('fork');
+
+    expect(worksheets.update).toHaveBeenCalledWith(4, { themes: ['pin'] });
   });
 
   it('Teilen einschalten holt das Token und baut die Adresse für den QR-Code', () => {

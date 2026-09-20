@@ -254,6 +254,82 @@ public class WorksheetServiceTests : IDisposable
         Assert.Equal(2, updated.PerPage);
     }
 
+    // ===== Themen =====
+
+    [Fact]
+    public async Task Themes_are_set_on_the_sheet_and_come_back_in_the_list()
+    {
+        var user = await CreateUserAsync();
+        var sheet = await _service.CreateAsync(user.Id, "Mittwoch", null);
+
+        var updated = await _service.UpdateAsync(user.Id, sheet.Id, new UpdateWorksheetDto
+        {
+            Themes = new List<string> { "rookEndgame", "Turmendspiel" },
+        });
+
+        Assert.Equal(new[] { "rookEndgame", "Turmendspiel" }, updated!.Themes);
+        var listed = (await _service.ListAsync(user.Id)).First(w => !w.IsClipboard);
+        Assert.Equal(new[] { "rookEndgame", "Turmendspiel" }, listed.Themes);
+    }
+
+    [Fact]
+    public async Task Themes_untouched_when_the_update_does_not_mention_them()
+    {
+        var user = await CreateUserAsync();
+        var sheet = await _service.CreateAsync(user.Id, "Mittwoch", null);
+        await _service.UpdateAsync(user.Id, sheet.Id, new UpdateWorksheetDto { Themes = new List<string> { "fork" } });
+
+        var renamed = await _service.UpdateAsync(user.Id, sheet.Id, new UpdateWorksheetDto { Name = "Donnerstag" });
+
+        Assert.Equal(new[] { "fork" }, renamed!.Themes);
+        Assert.Equal("Donnerstag", renamed.Name);
+    }
+
+    [Fact]
+    public async Task An_empty_theme_list_clears_them()
+    {
+        var user = await CreateUserAsync();
+        var sheet = await _service.CreateAsync(user.Id, "Mittwoch", null);
+        await _service.UpdateAsync(user.Id, sheet.Id, new UpdateWorksheetDto { Themes = new List<string> { "fork" } });
+
+        var cleared = await _service.UpdateAsync(user.Id, sheet.Id, new UpdateWorksheetDto { Themes = new List<string>() });
+
+        Assert.Empty(cleared!.Themes);
+    }
+
+    [Fact]
+    public async Task The_source_themes_of_a_sent_position_ride_along_for_the_suggestions()
+    {
+        var user = await CreateUserAsync();
+
+        await _service.AddItemsAsync(user.Id, null, new List<NewWorksheetItemDto>
+        {
+            new() { Fen = Fen1, SourceThemes = "backRankMate fork" },
+        });
+
+        var clip = await _service.GetClipboardAsync(user.Id);
+        Assert.Equal("backRankMate fork", clip.Items[0].SourceThemes);
+    }
+
+    [Fact]
+    public void Themes_are_trimmed_deduplicated_and_capped()
+    {
+        var normalized = WorksheetService.NormalizeThemes(new[]
+        {
+            "  fork  ", "FORK", "", "rook,endgame", new string('x', 60),
+        });
+
+        Assert.Equal("fork", normalized[0]);                       // getrimmt
+        Assert.Equal(3, normalized.Count);                          // „FORK" ist dasselbe Fach
+        Assert.Equal("rook endgame", normalized[1]);                // Komma trennt die Spalte → Leerzeichen
+        Assert.Equal(40, normalized[2].Length);                     // auf Spaltenbreite gekappt
+    }
+
+    [Fact]
+    public void At_most_twelve_themes_fit_on_a_sheet()
+        => Assert.Equal(12, WorksheetService.NormalizeThemes(
+            Enumerable.Range(0, 20).Select(i => $"thema{i}")).Count);
+
     // ===== Teilen =====
 
     [Fact]

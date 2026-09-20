@@ -206,6 +206,7 @@ public class AppDbContext : DbContext
 
             e.Property(w => w.Name).HasMaxLength(120);
             e.Property(w => w.ShareToken).HasMaxLength(32);
+            e.Property(w => w.Themes).HasMaxLength(300);
 
             // Übersicht: Zwischenablage zuerst, dann nach letzter Änderung.
             e.HasIndex(w => new { w.UserId, w.IsClipboard });
@@ -226,6 +227,7 @@ public class AppDbContext : DbContext
             e.Property(i => i.Heading).HasMaxLength(200);
             e.Property(i => i.Text).HasMaxLength(2000);
             e.Property(i => i.SolutionMoves).HasMaxLength(1000);
+            e.Property(i => i.SourceThemes).HasMaxLength(200);
 
             // Reihenfolge auf dem Blatt (Lesen + Umsortieren gehen immer über sie).
             e.HasIndex(i => new { i.WorksheetId, i.SortOrder });

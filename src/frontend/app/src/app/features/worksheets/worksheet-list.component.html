@@ -52,10 +52,22 @@
 
     <div class="wl-section-title">{{ 'worksheets.list.mine' | translate }}</div>
 
+    <!-- Themen-Filter: ohne ihn ist die Liste nach einem Jahr nur noch eine Liste. -->
+    @if (allThemes.length > 0) {
+      <div class="wl-filter">
+        <button type="button" class="wl-chip" [class.wl-chip--on]="themeFilter === null"
+                (click)="themeFilter = null">{{ 'worksheets.themes.all' | translate }}</button>
+        @for (t of allThemes; track t) {
+          <button type="button" class="wl-chip" [class.wl-chip--on]="themeFilter === t"
+                  (click)="toggleThemeFilter(t)">{{ t }}</button>
+        }
+      </div>
+    }
+
     @if (named.length === 0) {
       <mat-card class="wl-empty">
         <mat-icon>assignment</mat-icon>
-        <p>{{ 'worksheets.list.empty' | translate }}</p>
+        <p>{{ (themeFilter ? 'worksheets.themes.noMatch' : 'worksheets.list.empty') | translate: { theme: themeFilter } }}</p>
       </mat-card>
     } @else {
       <div class="wl-list">
@@ -74,6 +86,11 @@
                 · {{ 'worksheets.perPage.short' | translate: { n: sheet.perPage } }}
                 · {{ sheet.updatedAt | date:'mediumDate' }}
               </span>
+              @if (sheet.themes.length > 0) {
+                <span class="wl-themes">
+                  @for (t of sheet.themes; track t) { <span class="wl-theme">#{{ t }}</span> }
+                </span>
+              }
             </div>
             <div class="wl-actions">
               <a mat-icon-button [routerLink]="['/worksheets', sheet.id]"

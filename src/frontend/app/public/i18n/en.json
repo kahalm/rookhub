@@ -2280,6 +2280,16 @@
       "option": "{{n}}",
       "short": "{{n}} per page"
     },
+    "themes": {
+      "label": "Themes of this sheet",
+      "none": "No themes yet — they are how you find this sheet again later.",
+      "suggested": "Suggested from the {{n}} tasks:",
+      "own": "Own theme",
+      "add": "Add",
+      "remove": "Remove theme",
+      "all": "All",
+      "noMatch": "No worksheet with the theme „{{theme}}“."
+    },
     "share": {
       "toggle": "Share this sheet (link + QR code)",
       "hint": "Whoever opens the link can play the sheet through at the board without signing in — on the print-out it sits in the footer of every page as a QR code.",

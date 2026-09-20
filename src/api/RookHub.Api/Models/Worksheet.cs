@@ -29,6 +29,15 @@ public class Worksheet
     public int PerPage { get; set; } = 6;
 
     /// <summary>
+    /// Themen des Blatts als CSV (<c>backRankMate,fork,Turmendspiel</c>) — wonach man ein altes
+    /// Blatt wiederfindet. Vorgeschlagen werden die Themen der enthaltenen Aufgaben
+    /// (<see cref="WorksheetItem.SourceThemes"/>), eigene Wörter sind erlaubt: ein Trainer sortiert
+    /// nach „U12 Mittwoch", nicht nur nach Lichess-Schlagworten.
+    /// </summary>
+    [MaxLength(300)]
+    public string Themes { get; set; } = string.Empty;
+
+    /// <summary>
     /// Token des öffentlichen Links (<c>/w/{token}</c>) — <c>null</c> = nicht geteilt. Wer den Link
     /// hat, darf das Blatt OHNE Anmeldung durchspielen; auf dem Ausdruck steht er als QR-Code.
     /// Teilen aus- und wieder einschalten erzeugt ein NEUES Token (alte Ausdrucke laufen ins Leere —
@@ -98,6 +107,14 @@ public class WorksheetItem
 
     /// <summary>ID in der zur <see cref="Source"/> passenden Tabelle; <c>null</c> bei Handeingabe.</summary>
     public int? SourceId { get; set; }
+
+    /// <summary>
+    /// Themen des Quell-Puzzles beim Senden (leerzeichengetrennt, wie <c>Puzzles.Themes</c>/
+    /// <c>BookPuzzles.Tags</c>). NICHT vom Nutzer gepflegt und nirgends angezeigt — daraus schlägt
+    /// der Editor die Themen des BLATTS vor („Gabel (3), Grundreihenmatt (5)").
+    /// </summary>
+    [MaxLength(200)]
+    public string SourceThemes { get; set; } = string.Empty;
 
     /// <summary>Kurs/Buch der Herkunft (nur bei <see cref="WorksheetItemSource.Book"/>) — für den Rücksprung.</summary>
     public int? BookId { get; set; }

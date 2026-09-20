@@ -274,6 +274,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private lastSolvedOrientation: 'white' | 'black' = 'white';
   /** Vorspiel-Halbzug der letzten Linie — ohne ihn liefe die Aufgaben-Stellung fürs Blatt falsch. */
   private lastSolvedStartPly = 0;
+  /** Themen der letzten Linie — Vorschlagsquelle für die Themen eines Aufgabenblatts. */
+  private lastSolvedThemes = '';
   /** „Geliebtes Puzzle"-Zustand (Herz). In Wochenpost-Modus deaktiviert (keine echte Id). */
   readonly favoriteTracker: FavoriteTracker;
 
@@ -365,6 +367,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       {
         fen: this.lastSolvedFen, moves: this.lastSolvedMoves,
         orientation: this.lastSolvedOrientation, startPly: this.lastSolvedStartPly,
+        themes: this.lastSolvedThemes,
       },
       'Book', { sourceId: this.lastSolvedPuzzleId, bookId: this.courseBookId },
     );
@@ -534,9 +537,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.lastSolvedMoves = this.puzzle.moves ?? '';
       this.lastSolvedOrientation = this.orientation;
       this.lastSolvedStartPly = this.startPly;
+      this.lastSolvedThemes = this.puzzle.tags ?? '';
       saveLastSolved('book', {
         id: this.puzzle.id, fen: this.puzzle.fen,
         moves: this.puzzle.moves ?? '', orientation: this.orientation, startPly: this.startPly,
+        themes: this.puzzle.tags ?? '',
       });
     }
     this.favoriteTracker.refresh();
@@ -695,6 +700,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.lastSolvedMoves = restored.moves;
       this.lastSolvedOrientation = restored.orientation;
       this.lastSolvedStartPly = restored.startPly ?? 0;
+      this.lastSolvedThemes = restored.themes ?? '';
       this.favoriteTracker.refresh();
     }
 

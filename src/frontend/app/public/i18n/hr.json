@@ -2280,6 +2280,16 @@
       "option": "{{n}}",
       "short": "{{n}} po stranici"
     },
+    "themes": {
+      "label": "Teme ovog lista",
+      "none": "Još nema tema — po njima ćeš list kasnije opet naći.",
+      "suggested": "Predloženo iz {{n}} zadataka:",
+      "own": "Vlastita tema",
+      "add": "Dodaj",
+      "remove": "Ukloni temu",
+      "all": "Sve",
+      "noMatch": "Nema radnog lista s temom „{{theme}}“."
+    },
     "share": {
       "toggle": "Podijeli list (poveznica + QR kod)",
       "hint": "Tko otvori poveznicu, može list proći za pločom bez prijave — na ispisu stoji u podnožju svake stranice kao QR kod.",

@@ -15,7 +15,7 @@ describe('WorksheetService', () => {
   let actionRef: { onAction: () => any };
 
   const summary = (over: Partial<any> = {}) => ({
-    id: 1, name: '', isClipboard: true, perPage: 6, itemCount: 0, shareToken: null,
+    id: 1, name: '', isClipboard: true, perPage: 6, itemCount: 0, themes: [], shareToken: null,
     createdAt: '', updatedAt: '', ...over,
   });
 

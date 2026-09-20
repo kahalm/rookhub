@@ -83,6 +83,50 @@
       </mat-card>
     }
 
+    <!-- Themen: wonach man dieses Blatt in einem Jahr wiederfindet. Vorschläge kommen aus den
+         Aufgaben selbst, eigene Wörter sind erlaubt. -->
+    <mat-card class="wd-themes">
+      <mat-card-content>
+        <div class="wd-theme-label">{{ 'worksheets.themes.label' | translate }}</div>
+        @if (themes.length > 0) {
+          <div class="wd-chips">
+            @for (t of themes; track t) {
+              <span class="wd-chip wd-chip--set">
+                {{ t }}
+                <button type="button" class="wd-chip-x" (click)="removeTheme(t)"
+                        [attr.aria-label]="'worksheets.themes.remove' | translate">×</button>
+              </span>
+            }
+          </div>
+        } @else {
+          <p class="wd-hint">{{ 'worksheets.themes.none' | translate }}</p>
+        }
+
+        @if (themeSuggestions.length > 0) {
+          <div class="wd-theme-label wd-theme-label--sub">
+            {{ 'worksheets.themes.suggested' | translate: { n: sheet.items.length } }}
+          </div>
+          <div class="wd-chips">
+            @for (s of themeSuggestions; track s.theme) {
+              <button type="button" class="wd-chip wd-chip--add" (click)="addTheme(s.theme)">
+                + {{ s.theme }} <span class="wd-chip-count">{{ s.count }}</span>
+              </button>
+            }
+          </div>
+        }
+
+        <div class="wd-save-row wd-theme-add">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'worksheets.themes.own' | translate }}</mat-label>
+            <input matInput [(ngModel)]="newTheme" maxlength="40" (keyup.enter)="addTheme(newTheme)" />
+          </mat-form-field>
+          <button mat-stroked-button (click)="addTheme(newTheme)" [disabled]="!newTheme.trim()">
+            <mat-icon>add</mat-icon>{{ 'worksheets.themes.add' | translate }}
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
     <!-- Teilen: EIN Link fürs ganze Blatt, auf dem Ausdruck als QR-Code. Die Zwischenablage
          bleibt außen vor — ihr Inhalt wechselt, ein Link darauf zeigte morgen etwas anderes. -->
     @if (!sheet.isClipboard) {

@@ -328,6 +328,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
+  /** Themen des letzten Puzzles — Vorschlagsquelle für die Themen eines Aufgabenblatts. */
+  private lastSolvedThemes = '';
   /** „Geliebtes Puzzle"-Zustand (Herz) für aktuelles + zuletzt gelöstes Puzzle. */
   readonly favoriteTracker: FavoriteTracker;
 
@@ -442,6 +444,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.lastSolvedFen = restored.fen;
       this.lastSolvedMoves = restored.moves;
       this.lastSolvedOrientation = restored.orientation;
+      this.lastSolvedThemes = restored.themes ?? '';
       this.favoriteTracker.refresh();
     }
 
@@ -1190,9 +1193,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.lastSolvedFen = this.puzzle.fen;
       this.lastSolvedMoves = this.puzzle.moves;
       this.lastSolvedOrientation = this.orientation;
+      this.lastSolvedThemes = this.puzzle.themes ?? '';
       saveLastSolved('endless', {
         id: this.puzzle.id, fen: this.puzzle.fen,
         moves: this.puzzle.moves, orientation: this.orientation,
+        themes: this.puzzle.themes ?? '',
       });
     }
     this.favoriteTracker.refresh();
@@ -1298,7 +1303,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
     if (!this.lastSolvedFen) return;
     const item = taskItemFromPuzzle(
-      { fen: this.lastSolvedFen, moves: this.lastSolvedMoves, orientation: this.lastSolvedOrientation },
+      {
+        fen: this.lastSolvedFen, moves: this.lastSolvedMoves,
+        orientation: this.lastSolvedOrientation, themes: this.lastSolvedThemes,
+      },
       'Standard', { sourceId: this.lastSolvedPuzzleId },
     );
     this.worksheets.sendAndNotify(target, item ? [item] : []);

@@ -30,3 +30,14 @@
   .wl-sheet { flex-direction: column; align-items: stretch; }
   .wl-actions { justify-content: flex-end; }
 }
+
+/* Themen: Filterzeile über der Liste, kleine Marken am Blatt. */
+.wl-filter { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+.wl-chip {
+  border-radius: 12px; padding: 3px 11px; font-size: 0.85rem; cursor: pointer; font-family: inherit;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent); background: transparent; color: inherit;
+}
+.wl-chip:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.wl-chip--on { background: color-mix(in srgb, currentColor 16%, transparent); font-weight: 600; }
+.wl-themes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 2px; }
+.wl-theme { font-size: 0.78rem; color: color-mix(in srgb, currentColor 60%, transparent); }

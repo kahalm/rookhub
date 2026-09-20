@@ -118,6 +118,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
+  /** Themen des letzten Puzzles — Vorschlagsquelle für die Themen eines Aufgabenblatts. */
+  private lastSolvedThemes = '';
   /** „Geliebtes Puzzle"-Zustand (Herz) für aktuelles + zuletzt gelöstes Puzzle. */
   readonly favoriteTracker: FavoriteTracker;
   /** True wenn der User aufgegeben hat. Brett wird zurueckgesetzt damit er die Loesung
@@ -238,9 +240,11 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.lastSolvedMoves = this.puzzle?.moves ?? '';
     this.lastSolvedOrientation = this.orientation;
     if (this.puzzle) {
+      this.lastSolvedThemes = this.puzzle.themes ?? '';
       saveLastSolved('standard', {
         id: this.puzzle.id, fen: this.puzzle.fen,
         moves: this.puzzle.moves ?? '', orientation: this.orientation,
+        themes: this.puzzle.themes ?? '',
       });
     }
     this.favoriteTracker.refresh();
@@ -332,6 +336,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       this.lastSolvedFen = restored.fen;
       this.lastSolvedMoves = restored.moves;
       this.lastSolvedOrientation = restored.orientation;
+      this.lastSolvedThemes = restored.themes ?? '';
       this.favoriteTracker.refresh();
     }
 
@@ -645,7 +650,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   sendLastToWorksheet(target: number | null): void {
     if (!this.lastSolvedFen) return;
     const item = taskItemFromPuzzle(
-      { fen: this.lastSolvedFen, moves: this.lastSolvedMoves, orientation: this.lastSolvedOrientation },
+      {
+        fen: this.lastSolvedFen, moves: this.lastSolvedMoves,
+        orientation: this.lastSolvedOrientation, themes: this.lastSolvedThemes,
+      },
       'Standard', { sourceId: this.lastSolvedPuzzleId },
     );
     this.worksheets.sendAndNotify(target, item ? [item] : []);

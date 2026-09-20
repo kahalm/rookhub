@@ -42,6 +42,11 @@ describe('worksheet-items.util', () => {
       expect(item.solutionMoves).toBe('e7e5 g1f3');
     });
 
+    it('nimmt die Themen der Linie mit — daraus schlägt der Editor die Themen des Blatts vor', () => {
+      const [item] = itemsFromLines(42, [line({ tags: 'fork backRankMate' })]);
+      expect(item.sourceThemes).toBe('fork backRankMate');
+    });
+
     it('lässt Überschrift und Begleittext leer — ein Linientitel verriete die Aufgabe', () => {
       const [item] = itemsFromLines(42, [line({ title: 'Matt in 3' })]);
       expect(item.heading).toBeUndefined();

@@ -13,6 +13,8 @@ export interface WorksheetSummary {
   /** Diagramme je A4-Seite (2/4/6). */
   perPage: number;
   itemCount: number;
+  /** Themen des Blatts (Filter der Übersicht). */
+  themes: string[];
   /** Token des öffentlichen Links (`/w/{token}`); `null` = nicht geteilt. */
   shareToken: string | null;
   createdAt: string;
@@ -29,6 +31,8 @@ export interface WorksheetItem {
   text: string;
   /** Lösung ab dieser Stellung (UCI-Halbzüge); leer = nur zum Rechnen. */
   solutionMoves: string;
+  /** Themen des Quell-Puzzles — woraus der Editor die Themen des Blatts vorschlägt. */
+  sourceThemes: string;
   source: 'Manual' | 'Standard' | 'Book';
   sourceId: number | null;
   bookId: number | null;
@@ -45,6 +49,7 @@ export interface NewWorksheetItem {
   heading?: string;
   text?: string;
   solutionMoves?: string;
+  sourceThemes?: string;
   source?: 'Manual' | 'Standard' | 'Book';
   sourceId?: number | null;
   bookId?: number | null;
@@ -124,7 +129,7 @@ export class WorksheetService {
       .pipe(tap(() => this.invalidateTargets()));
   }
 
-  update(id: number, patch: { name?: string; perPage?: number }): Observable<Worksheet> {
+  update(id: number, patch: { name?: string; perPage?: number; themes?: string[] }): Observable<Worksheet> {
     return this.http.put<Worksheet>(`${this.apiUrl}/${id}`, patch).pipe(tap(() => this.invalidateTargets()));
   }
 

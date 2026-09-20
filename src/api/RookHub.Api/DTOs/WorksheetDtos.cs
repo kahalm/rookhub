@@ -11,6 +11,8 @@ public class WorksheetSummaryDto
     public bool IsClipboard { get; set; }
     public int PerPage { get; set; }
     public int ItemCount { get; set; }
+    /// <summary>Themen des Blatts (Filter der Übersicht); leer = keine.</summary>
+    public List<string> Themes { get; set; } = new();
     /// <summary>Token des öffentlichen Links (<c>/w/{token}</c>); <c>null</c> = nicht geteilt.</summary>
     public string? ShareToken { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -34,6 +36,8 @@ public class WorksheetItemDto
     public string Text { get; set; } = string.Empty;
     /// <summary>Lösung ab dieser Stellung (UCI-Halbzüge); leer = keine bekannt.</summary>
     public string SolutionMoves { get; set; } = string.Empty;
+    /// <summary>Themen des Quell-Puzzles (leerzeichengetrennt) — Vorschlagsquelle für die Blatt-Themen.</summary>
+    public string SourceThemes { get; set; } = string.Empty;
     public string Source { get; set; } = nameof(WorksheetItemSource.Manual);
     public int? SourceId { get; set; }
     public int? BookId { get; set; }
@@ -52,6 +56,9 @@ public class NewWorksheetItemDto
     /// <summary>Lösung ab dieser Stellung als UCI-Halbzüge (mit Gegnerzügen); leer = keine.</summary>
     [MaxLength(1000)]
     public string? SolutionMoves { get; set; }
+    /// <summary>Themen des Quell-Puzzles (leerzeichengetrennt) — nur als Vorschlagsquelle.</summary>
+    [MaxLength(200)]
+    public string? SourceThemes { get; set; }
     public WorksheetItemSource Source { get; set; } = WorksheetItemSource.Manual;
     public int? SourceId { get; set; }
     public int? BookId { get; set; }
@@ -94,6 +101,8 @@ public class UpdateWorksheetDto
     [MaxLength(120)]
     public string? Name { get; set; }
     public int? PerPage { get; set; }
+    /// <summary>Themen des Blatts; <c>null</c> lässt sie unberührt, leere Liste löscht sie.</summary>
+    public List<string>? Themes { get; set; }
 }
 
 /// <summary>Überschrift/Begleittext/Ausrichtung einer Aufgabe ändern (nur gesetzte Felder wirken).</summary>
