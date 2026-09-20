@@ -401,6 +401,72 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "batch.pgn"));
     }
 
+    // ===== Kollisionssichere LineId (Vorarbeit „eine Import-Schiene") =========================
+    // Die LineId ist global eindeutig; ein Duplikat laesst SaveChanges auf MariaDB werfen und riss
+    // damit den GANZEN Import ab. Sobald ein Import nur die NEUEN Linien schickt, nummeriert
+    // piratechess nur die gesendeten — Nummern-Kollisionen werden dann der Normalfall.
+
+    [Fact]
+    public void FreeLineId_UsesTheGivenRound_WhenItIsFree()
+    {
+        var vergeben = new HashSet<string>(StringComparer.Ordinal);
+        var (id, round) = PgnImportService.FreeLineId("b.pgn", "002.001", vergeben);
+        Assert.Equal("b.pgn:002.001", id);
+        Assert.Equal("002.001", round);
+        Assert.Contains("b.pgn:002.001", vergeben);   // ist jetzt belegt
+    }
+
+    [Fact]
+    public void FreeLineId_MovesUpInsideTheChapter_KeepingTheDigitWidth()
+    {
+        var vergeben = new HashSet<string>(StringComparer.Ordinal) { "b.pgn:002.001", "b.pgn:002.002" };
+        var (id, round) = PgnImportService.FreeLineId("b.pgn", "002.001", vergeben);
+        // Kapitel bleibt 002, die Linie rueckt auf den naechsten freien Platz — und bleibt dreistellig,
+        // sonst wechselte die Schreibweise mitten im Kapitel.
+        Assert.Equal("002.003", round);
+        Assert.Equal("b.pgn:002.003", id);
+    }
+
+    [Fact]
+    public void FreeLineId_WithoutATrailingNumber_AppendsInstead()
+    {
+        // Altbestand („1" ohne Kapitel) faengt die Zahl-Regel noch; ein getReview-Fueller traegt die
+        // oid als Runde, auch das ist eine Zahl. Bleibt der Fall ohne jede Ziffer am Ende.
+        var vergeben = new HashSet<string>(StringComparer.Ordinal) { "b.pgn:intro" };
+        var (id, round) = PgnImportService.FreeLineId("b.pgn", "intro", vergeben);
+        Assert.Equal("intro-2", round);
+        Assert.Equal("b.pgn:intro-2", id);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_TwoLinesWithTheSameRound_BothLand()
+    {
+        // Zwei verschiedene oids koennen nicht dieselbe Linie sein. Vorher liefen beide in dieselbe
+        // LineId und der Import brach am eindeutigen Index ab.
+        var res = await _service.ImportFileAsync("clash2.pgn",
+            BookLine("1", "6001", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("1", "6002", "2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None);
+
+        Assert.Equal(2, res.Imported);
+        var rounds = await _db.BookPuzzles.Where(b => b.BookFileName == "clash2.pgn")
+            .OrderBy(b => b.Round).Select(b => b.Round).ToListAsync();
+        Assert.Equal(new[] { "1", "2" }, rounds);
+        var ids = await _db.BookPuzzles.Where(b => b.BookFileName == "clash2.pgn")
+            .Select(b => b.LineId).ToListAsync();
+        Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameRoundWithoutOid_IsStillSkipped()
+    {
+        // Ohne oid bleibt es beim idempotenten Resume — eine zweite Zeile waere hier eine Dublette.
+        await _service.ImportFileAsync("clash3.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        var res = await _service.ImportFileAsync("clash3.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "clash3.pgn"));
+    }
+
     [Fact]
     public void ParsePgn_NoComments_LeavesMoveCommentsNull()
     {

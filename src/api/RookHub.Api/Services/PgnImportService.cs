@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -256,6 +257,59 @@ public class PgnImportService
     /// Merge liefert nur die fehlenden Linien, nicht das ganze Buch; ein vollständiges getGame-SourcePgn
     /// bliebe sonst durch das Teil-PGN ersetzt (nur bei leerem SourcePgn wird es erstmalig gesetzt).
     /// </summary>
+    /// <summary>Zahl am ENDE einer Rundennummer („002.<b>001</b>", „<b>7</b>") — daran rückt eine Linie vor.</summary>
+    private static readonly Regex TrailingNumber = new(@"^(.*?)(\d+)$", RegexOptions.Compiled);
+
+    /// <summary>Reißleine gegen eine Endlosschleife, falls ein ganzes Kapitel dicht belegt ist.</summary>
+    private const int MaxLineIdProbes = 1000;
+
+    /// <summary>
+    /// Freie <see cref="BookPuzzle.LineId"/> für eine NEU anzulegende Linie. Die Id ist GLOBAL
+    /// eindeutig (Index in <c>AppDbContext</c>); ein Duplikat lässt <c>SaveChanges</c> auf MariaDB
+    /// werfen und riss damit den ganzen Import ab.
+    ///
+    /// <para><b>Heute kann das nicht passieren</b> — ein Buch kommt vollständig und in Reihenfolge,
+    /// die Rundennummern sind also von sich aus eindeutig. Es ist die Vorarbeit für „eine
+    /// Import-Schiene": sobald ein Import nur die NEUEN Linien schickt (Buch wie Repertoire),
+    /// nummeriert piratechess nur noch die gesendeten — und dann kann die Nummer einer neuen Linie
+    /// auf eine bestehende treffen. <see cref="CourseAuthoringService"/> hat dieselbe Schranke längst.</para>
+    ///
+    /// <para>Ausgewichen wird INNERHALB des Kapitels (002.005 → 002.006), damit die Linie dort
+    /// bleibt, wo sie hingehört. Trägt die Runde keine Zahl am Ende (Altbestand „1", ein
+    /// getReview-Füller mit der oid), wird angehängt (…-2, …-3).</para>
+    /// </summary>
+    /// <param name="vergeben">Bereits benutzte LineIds; die gewählte wird aufgenommen.</param>
+    internal static (string LineId, string Round) FreeLineId(string fileName, string round, HashSet<string> vergeben)
+    {
+        string Bauen(string r) => PgnParser.Truncate($"{fileName}:{r}", 300);
+
+        var id = Bauen(round);
+        if (vergeben.Add(id)) return (id, round);
+
+        var m = TrailingNumber.Match(round ?? string.Empty);
+        for (var i = 1; i <= MaxLineIdProbes; i++)
+        {
+            string kandidat;
+            if (m.Success)
+            {
+                var zahl = long.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) + i;
+                // Stellenzahl beibehalten, sonst wechselte die Schreibweise mitten im Kapitel
+                // (die Lesereihenfolge sortiert nach Round.Length, dann Round).
+                kandidat = m.Groups[1].Value
+                    + zahl.ToString(new string('0', m.Groups[2].Value.Length), CultureInfo.InvariantCulture);
+            }
+            else kandidat = $"{round}-{i + 1}";
+
+            // Round ist auf 20 Zeichen begrenzt — lieber laut scheitern als still abschneiden.
+            if (kandidat.Length > 20) break;
+
+            id = Bauen(kandidat);
+            if (vergeben.Add(id)) return (id, kandidat);
+        }
+        throw new InvalidOperationException(
+            $"Keine freie LineId für {fileName}:{round} gefunden ({MaxLineIdProbes} Versuche).");
+    }
+
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct,
         bool preserveExistingSourcePgn = false, bool playFromStartPosition = false)
     {
@@ -338,6 +392,10 @@ public class PgnImportService
         }
 
         var toAdd = new List<BookPuzzle>();
+        // In DIESEM Durchlauf vergebene LineIds — daran wird eine zweite Linie mit derselben
+        // Positionsnummer erkannt (s. unten). Getrennt von existingLineIds, weil dort auch der
+        // Bestand drinsteht und die Unterscheidung genau darauf beruht.
+        var inDiesemImport = new HashSet<string>(StringComparer.Ordinal);
         var skipped = 0;
         var updated = 0;
         var seen = new HashSet<string>();
@@ -401,6 +459,7 @@ public class PgnImportService
                 continue;
             }
 
+            var alsNeueLinie = false;
             if (existingLineIds.Contains(p.LineId))
             {
                 // In-place aktualisieren, wenn das Buch veraltet ist (Neu-Aufbereitung); sonst
@@ -430,15 +489,33 @@ public class PgnImportService
                     bookOids.Add(p.ChessableOid);
                     updated++;
                 }
+                else if (inDiesemImport.Contains(p.LineId))
+                {
+                    // Die Nummer wurde in DIESEM Import gerade erst vergeben, und zwar an eine Linie
+                    // mit anderer oid — zwei verschiedene oids können nicht dieselbe Linie sein. Also
+                    // eine echte zweite Linie, die nur zufällig auf derselben Nummer sitzt; sie
+                    // bekommt unten einen freien Platz. Ohne das liefen BEIDE in denselben Index und
+                    // der ganze Import brach am SaveChanges ab.
+                    //
+                    // Bewusst NICHT auf eine Kollision mit dem BESTAND ausgeweitet: dort ist „gleiche
+                    // Nummer, andere Züge" bei einem vollständigen Re-Import dieselbe Linie mit
+                    // geändertem Inhalt und bei einem Teil-Import eine andere — unterscheiden kann der
+                    // Server das erst, wenn der Client den Teil-Import als solchen meldet.
+                    alsNeueLinie = true;
+                }
                 else { skipped++; }
-                continue;
+                if (!alsNeueLinie) continue;
             }
+            // Die Rundennummer eines Teil-Imports kann auf eine bestehende Linie treffen → freien
+            // Platz im Kapitel suchen, statt den Import am eindeutigen Index scheitern zu lassen.
+            var (neueLineId, neueRound) = FreeLineId(fileName, p.Round, existingLineIds);
+            inDiesemImport.Add(neueLineId);
             toAdd.Add(new BookPuzzle
             {
-                LineId = p.LineId,
+                LineId = neueLineId,
                 BookFileName = PgnParser.Truncate(fileName, 200),
                 BookId = book.Id,
-                Round = p.Round,
+                Round = neueRound,
                 Fen = p.Fen,
                 Moves = p.Moves,
                 StartPly = p.StartPly,
