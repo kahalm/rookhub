@@ -3511,7 +3511,7 @@
       "doesNotFit": "Ezek a lépések nem ehhez az álláshoz vezetnek.",
       "failed": "A keresést nem sikerült lefuttatni.",
       "none": "Legfeljebb {{count}} féllépéssel nincs út — valószínűleg több lépés van közte.",
-      "budget": "A keresés a befejezés előtt megállt. Út még létezhet: keress rövidebb szakaszt, vagy rögzíts közé egy állást.",
+      "budget": "A keresés {{depth}} féllépés után feladta. Út még létezhet: rögzíts közé egy állást, és keresd meg a két rövidebb hézagot.",
       "unreachable": "Az előtte lévő állásból nem vezet ide út — bábuk nem keletkezhetnek a semmiből.",
       "tooFar": "A két állás távolabb van egymástól, mint {{count}} féllépés, így a keresés nem éri el.",
       "samePosition": "A két állás ugyanaz — nincs hézag.",

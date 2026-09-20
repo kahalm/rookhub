@@ -108,7 +108,7 @@ public class GapSolverTests
     [Fact]
     public void Solve_BudgetExhausted_IsNotTheSameAsNoSolution()
     {
-        var result = GapSolver.Solve(Start, AfterFourPlies, maxPlies: 4, nodeBudget: 40);
+        var result = GapSolver.Solve(Start, AfterFourPlies, maxPlies: 4, nodeBudget: 1);
 
         Assert.Empty(result.Solutions);
         Assert.True(result.BudgetExhausted);
@@ -121,6 +121,7 @@ public class GapSolverTests
         var result = GapSolver.Solve(Start, AfterFourPlies, maxPlies: 4, nodeBudget: 500);
 
         Assert.True(result.Nodes <= 500 + 1, $"{result.Nodes} Knoten");
+        Assert.True(result.DeepestSearched > 0);
     }
 
     [Fact]
@@ -154,6 +155,58 @@ public class GapSolverTests
                 Assert.True(board.Move(san), $"„{san}“ aus „{solution.San}“ ist nicht spielbar");
             Assert.True(GapSolver.Matches(board.ToFen(), AfterFourPlies), $"„{solution.San}“ endet woanders");
         }
+    }
+
+    [Theory]
+    [InlineData("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")]
+    [InlineData("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4")]
+    [InlineData("2rr4/1p3pkp/p4np1/3p4/3Nn3/2P1N3/PP3PPP/R3R1K1 b - - 0 1")]
+    public void MinPlies_NeverAsksForMoreMovesThanWereActuallyPlayed(string start)
+    {
+        // Die Schranke MUSS zulässig sein: sagt sie mehr, als eine Partie wirklich gebraucht hat,
+        // verwirft die Suche echte Lösungen — und zwar lautlos. Deshalb wird sie hier an zufälligen
+        // Zugfolgen gegengeprüft (fester Startwert, damit ein Fehlschlag wiederholbar ist).
+        var random = new Random(20260920);
+        for (var round = 0; round < 60; round++)
+        {
+            var board = Chess.ChessBoard.LoadFromFen(start);
+            var plies = 1 + random.Next(12);
+            var played = 0;
+            for (var i = 0; i < plies; i++)
+            {
+                var moves = board.Moves(generateSan: false, allowAmbiguousCastle: false);
+                if (moves.Length == 0) break;
+                board.Move(moves[random.Next(moves.Length)]);
+                played++;
+            }
+            if (played == 0) continue;
+
+            var bound = GapSolver.MinPlies(start, board.ToFen());
+            Assert.True(bound <= played,
+                $"Schranke {bound} > tatsächlich gespielte {played} Halbzüge ({board.ToFen()})");
+            Assert.Equal(played % 2, bound % 2);
+        }
+    }
+
+    [Fact]
+    public void MinPlies_SeesHowFarAMiddlegamePositionReallyIs()
+    {
+        // Der Fall aus der Praxis: die Eröffnung endet nach 17 Halbzügen, die erinnerte Stellung
+        // liegt weit später. Die frühere Schranke („veränderte Felder ÷ 4") sagte 6 — die Suche
+        // durchkämmte also sechs Halbzüge Baum, um dann „nichts gefunden" zu melden.
+        var board = new Chess.ChessBoard();
+        foreach (var san in "e4 c5 Nf3 e6 d4 d5 exd5 exd5 Bb5+ Bd7 Bxd7+ Nxd7 dxc5 Nxc5 O-O Be7 Nc3".Split(' '))
+            board.Move(san);
+
+        var bound = GapSolver.MinPlies(board.ToFen(), "2rr4/1p3pkp/p4np1/3p4/3Nn3/2P1N3/PP3PPP/R3R1K1 b - - 0 1");
+
+        Assert.True(bound >= 8, $"Schranke nur {bound}");
+        // Mit der alten Schranke (6) lief die Suche los und kämmte sechs Halbzüge Baum durch, um
+        // dann „nichts gefunden" zu melden. Jetzt sagt sie sofort, dass es weiter ist als erlaubt.
+        var result = GapSolver.Solve(board.ToFen(),
+            "2rr4/1p3pkp/p4np1/3p4/3Nn3/2P1N3/PP3PPP/R3R1K1 b - - 0 1", maxPlies: 6);
+        Assert.Equal("too-far", result.Reason);
+        Assert.Equal(0, result.Nodes);
     }
 
     [Fact]

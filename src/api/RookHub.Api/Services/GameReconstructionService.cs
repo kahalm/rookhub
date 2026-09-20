@@ -178,6 +178,7 @@ public class GameReconstructionService
         var result = GapSolver.Solve(dto.FromFen, dto.ToFen, plies);
         dto.Nodes = result.Nodes;
         dto.BudgetExhausted = result.BudgetExhausted;
+        dto.DeepestSearched = result.DeepestSearched;
         dto.Reason = result.Reason;
         dto.Solutions = result.Solutions
             .Select(x => new ReconstructionGapSolutionDto { San = x.San, Plies = x.Plies })
@@ -285,7 +286,8 @@ public class GameReconstructionService
         return new ReconstructionGapProposalDto
         {
             PartId = partId, MaxPlies = search.MaxPlies, Nodes = search.Nodes,
-            BudgetExhausted = search.BudgetExhausted, Reason = search.Reason,
+            BudgetExhausted = search.BudgetExhausted, DeepestSearched = search.DeepestSearched,
+            Reason = search.Reason,
             Inserted = inserted, Detail = ToDetail(row),
         };
     }

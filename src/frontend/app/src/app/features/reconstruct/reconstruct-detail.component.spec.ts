@@ -86,6 +86,11 @@ describe('ReconstructDetailComponent', () => {
     const c = open([saved]);
 
     c.edit(saved);
+    // Ein angeklicktes Teil zeigt seinen ANFANG — gespielt wird am Ende.
+    expect(c.plyShown()).toBe(0);
+    expect(c.boardPlayable()).toBeFalse();
+
+    c.goPly('end');
     const before = c.editBoardFen();
     c.onBoardMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: '' });
     const afterFirst = c.editBoardFen();
@@ -270,8 +275,9 @@ describe('ReconstructDetailComponent', () => {
     const c = open([part({ id: 1 }), proposal, position]);
 
     c.edit(proposal);
-    c.goPly('start');
-    c.goPly(1);                              // eine Stellung MITTEN im Vorschlag
+    expect(c.canAcceptWaypoint()).toBeFalse();   // am Anfang steht die Stellung davor
+    c.goPly(1);                                  // eine Stellung MITTEN im Vorschlag
+    expect(c.canAcceptWaypoint()).toBeTrue();
     const fen = c.editBoardFen();
     c.acceptWaypoint();
 
@@ -323,6 +329,7 @@ describe('ReconstructDetailComponent', () => {
     const c = open([first, second]);
 
     c.edit(first);
+    expect(c.plyShown()).toBe(0);            // Klick zeigt den Anfang
     c.goPly('end');
     c.goPly(1);                              // am Ende → nächstes Teil
     expect(c.editingId()).toBe(2);

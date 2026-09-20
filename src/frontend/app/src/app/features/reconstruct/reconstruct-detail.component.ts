@@ -88,7 +88,8 @@ export class ReconstructDetailComponent implements OnInit {
   readonly gapSearching = signal(false);
   /** Suchtiefe in HALBZÜGEN — die Auswahl steht im Formular, weil der Baum mit jedem Halbzug wächst. */
   gapPlies = 4;
-  readonly gapPlyChoices = [2, 4, 6];
+  /** Wählbare Suchtiefen in Halbzügen — bis 12; wie weit sie wirklich kommt, sagt die Antwort. */
+  readonly gapPlyChoices = [2, 4, 6, 8, 10, 12];
   /** Vorschläge der Suche mit anzeigen? (Sie stehen in der Liste, zählen aber nicht zur Partie.) */
   showGenerated = true;
   /** Gesetzt, solange der Stellungs-Editor eine Stellung AUS einem Vorschlag bestätigt/korrigiert. */
@@ -300,7 +301,9 @@ export class ReconstructDetailComponent implements OnInit {
     const anchor = part.generated ? this.recordedEndBefore(part) : part.startFen;
     this.editAnchored.set(part.kind !== PartKind.Moves || !!anchor);
     this.editStartFen.set(anchor || withSideToMove(START_FEN, part.blackToMove));
-    this.editPly.set(null);
+    // Das Brett steht am ANFANG des Teils, nicht am Ende: man klickt es an, um zu sehen, wo es
+    // losgeht, und blättert dann mit den Pfeiltasten durch.
+    this.editPly.set(0);
     this.editMoves = part.moves ?? '';
     this.setMoves(this.editMoves);
     if (part.kind === PartKind.Moves) this.focusBoard();
@@ -491,7 +494,8 @@ export class ReconstructDetailComponent implements OnInit {
         this.gapSearching.set(false);
         this.gapResult.set({
           partId: result.partId, maxPlies: result.maxPlies, nodes: result.nodes,
-          budgetExhausted: result.budgetExhausted, reason: result.reason, solutions: [],
+          budgetExhausted: result.budgetExhausted, deepestSearched: result.deepestSearched,
+          reason: result.reason, solutions: [],
         });
         this.apply(result.detail);
         if (result.inserted > 0) {
@@ -516,6 +520,14 @@ export class ReconstructDetailComponent implements OnInit {
       next: data => { this.busy.set(false); this.apply(data); this.editingId.set(null); this.hideGap(); },
       error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
     });
+  }
+
+  /**
+   * Lässt sich die gezeigte Stellung als Wegpunkt übernehmen? Nur MITTEN im Vorschlag: der Anfang
+   * ist die Stellung davor und das Ende die Zielstellung — beide stehen schon in der Liste.
+   */
+  canAcceptWaypoint(): boolean {
+    return this.editingGenerated() && this.plyShown() > 0 && !this.atEnd();
   }
 
   /** „Diese Stellung stimmt": die gerade gezeigte Stellung des Vorschlags wird ein eigenes Teil. */

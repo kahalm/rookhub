@@ -157,6 +157,8 @@ public class ReconstructionGapResultDto
     public int Nodes { get; set; }
     /// <summary>Die Suche brach am Budget ab: „nicht gefunden" ist dann NICHT „gibt es nicht".</summary>
     public bool BudgetExhausted { get; set; }
+    /// <summary>Bis zu wie vielen Halbzügen wurde wirklich gesucht? („So weit kam ich.")</summary>
+    public int DeepestSearched { get; set; }
     /// <summary>Warum die Liste leer ist (<c>no-previous</c>/<c>no-gap</c>/<c>target-not-a-position</c>/
     /// <c>no-anchor</c> bzw. die Gründe des <see cref="Services.GapSolver"/>).</summary>
     public string? Reason { get; set; }
@@ -181,6 +183,8 @@ public class ReconstructionGapProposalDto
     public string? Reason { get; set; }
     /// <summary>Wie viele Vorschläge in die Liste gesetzt wurden.</summary>
     public int Inserted { get; set; }
+    /// <summary>Bis zu wie vielen Halbzügen wurde wirklich gesucht?</summary>
+    public int DeepestSearched { get; set; }
     /// <summary>Die Rekonstruktion danach — die Liste hat sich geändert.</summary>
     public ReconstructionDetailDto? Detail { get; set; }
 }

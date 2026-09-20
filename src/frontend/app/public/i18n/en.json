@@ -3511,7 +3511,7 @@
       "doesNotFit": "These moves do not lead to that position.",
       "failed": "The search could not be run.",
       "none": "No way found with up to {{count}} half-moves — there are probably more moves in between.",
-      "budget": "The search stopped before it was finished. There may still be a way: search a shorter stretch, or record a position in between.",
+      "budget": "The search gave up after {{depth}} half-moves. There may still be a way: record a position in between and search the two shorter gaps.",
       "unreachable": "No way leads from the position before to this one — pieces cannot appear out of nowhere.",
       "tooFar": "The two positions are further apart than {{count}} half-moves, so the search cannot cover it.",
       "samePosition": "Both positions are the same — there is no gap.",

@@ -1906,12 +1906,26 @@ Deckel: `MaxPerUser` 50, `MaxParts` 200, Zugtext 4000 Zeichen.
 
 **Die Lücke schließen ist eine SUCHE, kein Raten** (`Services/GapSolver.cs`). Gesucht wird das
 klassische Beweispartie-Problem: welche Halbzüge führen von der Stellung am Ende des vorigen Teils
-zu der erinnerten Stellung? Der Baum wächst mit ~30 Zügen je Halbzug, deshalb drei Dinge:
+zu der erinnerten Stellung? Der Baum wächst mit ~30 Zügen je Halbzug, deshalb vier Dinge:
 iterative Vertiefung (die KÜRZESTE Erklärung zuerst — ist eine Tiefe fündig, hört die Suche auf),
-eine zulässige untere Schranke (`MinPlies`: geschlagene Figuren kann nur die andere Seite
-wegnehmen, jede Umwandlung kostet einen eigenen Zug, ein Halbzug ändert höchstens vier Felder, und
-die PARITÄT steht fest — dieselbe Seite am Zug heißt eine gerade Zahl) und ein Gedächtnis für
-ausgeschöpfte Sackgassen. `MaxSearchPlies` = 6, Vorgabe 4, Knoten-Budget 300 000.
+eine zulässige untere Schranke (`MinPlies`), Zugsortierung (`Ordered`: zuerst die Züge, die eine
+Figur auf ihr Zielfeld stellen) und ein Gedächtnis für ausgeschöpfte Sackgassen.
+`MaxSearchPlies` = 12, Vorgabe 4, Knoten-Budget 3 Mio., Zeitbudget 12 s (beide meldet die Antwort
+als `budgetExhausted` samt `deepestSearched` — „so weit kam ich" ist eine andere Aussage als
+„es gibt keinen Weg").
+
+**Die Schranke ist die halbe Miete** (`MinPlies`): je Seite das MAXIMUM aus Schlagfällen
+(verschwundene Figuren der Gegenseite), Umwandlungen und **Verschiebung** — für jede Figur der
+ZIELstellung die billigste passende Ausgangsfigur (Springer per Distanztabelle, Läufer 1 oder 2,
+Turm/Dame 1 oder 2, König Chebyshev, Bauern nur vorwärts, seitwärts nur per Schlag, Doppelschritt
+aus der Grundreihe als EIN Zug, Umwandlung über den Bauernmarsch), dazu die feste Parität. Die
+Rochade bewegt zwei Figuren in einem Zug und wird deshalb mit bis zu 3 abgezogen. Vorher stand
+dort „veränderte Felder ÷ 4" — bei einer Stellung acht Halbzüge später sagte das „mindestens
+zwei", also praktisch nichts, und die Suche erstickte ab sechs Halbzügen im Budget. **Wer hier
+etwas ändert, prüft die ZULÄSSIGKEIT**: `MinPlies_NeverAsksForMoreMovesThanWereActuallyPlayed`
+spielt zufällige Zugfolgen und besteht darauf, dass die Schranke nie mehr verlangt, als gespielt
+wurde — eine zu große Schranke verwirft echte Lösungen lautlos (so gefunden: der Doppelschritt des
+Bauern zählte als zwei Züge).
 
 Vier Regeln, die dabei nicht kippen dürfen:
 

@@ -3511,7 +3511,7 @@
       "doesNotFit": "Diese Züge führen nicht zu dieser Stellung.",
       "failed": "Die Suche ließ sich nicht ausführen.",
       "none": "Kein Weg mit bis zu {{count}} Halbzügen — dazwischen liegen wohl mehr Züge.",
-      "budget": "Die Suche hat abgebrochen, bevor sie fertig war. Es kann trotzdem einen Weg geben: kürzer suchen oder eine Stellung dazwischen festhalten.",
+      "budget": "Die Suche hat nach {{depth}} Halbzügen aufgegeben. Es kann trotzdem einen Weg geben: Halt eine Stellung dazwischen fest und such die zwei kürzeren Lücken ab.",
       "unreachable": "Von der Stellung davor führt kein Weg hierher — Figuren können nicht dazukommen.",
       "tooFar": "Die beiden Stellungen liegen weiter auseinander als {{count}} Halbzüge; so weit kann die Suche nicht schauen.",
       "samePosition": "Beide Stellungen sind dieselbe — es gibt keine Lücke.",

@@ -1,5 +1,5 @@
 import {
-  Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+  Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy, OnChanges, SimpleChanges} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -133,7 +133,7 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
     .ps-actions { display: flex; gap: 8px; }
   `]
 })
-export class PositionSetupComponent implements OnInit, OnDestroy {
+export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
   /** Startstellung des Editors (volle FEN; Zugrecht wird übernommen). */
   @Input() initialFen = START_FEN;
   @Input() orientation: Color = 'white';
@@ -149,6 +149,21 @@ export class PositionSetupComponent implements OnInit, OnDestroy {
   brush: Brush = null;
   side: 'w' | 'b' = 'w';
   error = '';
+
+  /**
+   * Eine NEUE Ausgangsstellung übernehmen, wenn der Aufrufer sie wechselt.
+   *
+   * <p>Ohne das las die Komponente `initialFen` nur beim Aufbau: wer in der Rekonstruktion zwischen
+   * zwei Stellungs-Teilen hin und her klickte, sah immer dasselbe Brett (gemeldet 2026-09-20) —
+   * Angular behält die Instanz, weil sich nur die Eingabe ändert, nicht der Zweig der Vorlage.</p>
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.ground || !changes['initialFen'] || changes['initialFen'].firstChange) return;
+    const parts = this.initialFen.trim().split(/\s+/);
+    this.side = parts[1] === 'b' ? 'b' : 'w';
+    this.error = '';
+    this.ground.set({ fen: this.initialFen });
+  }
 
   ngOnInit(): void {
     const parts = this.initialFen.trim().split(/\s+/);

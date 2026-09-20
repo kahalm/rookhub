@@ -107,6 +107,8 @@ export interface GapResult {
   maxPlies: number;
   nodes: number;
   budgetExhausted: boolean;
+  /** Bis zu wie vielen Halbzügen wurde wirklich gesucht? */
+  deepestSearched?: number;
   reason?: string | null;
   solutions: GapSolution[];
 }
@@ -117,6 +119,7 @@ export interface GapProposal {
   maxPlies: number;
   nodes: number;
   budgetExhausted: boolean;
+  deepestSearched?: number;
   reason?: string | null;
   inserted: number;
   detail: Reconstruction;

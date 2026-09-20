@@ -118,7 +118,9 @@
             @if (gapSearching() && gapFor() === gapTarget.id) {
               <p class="muted small gap-note">{{ 'reconstruct.gap.searching' | translate }}</p>
             } @else if (gapFor() === gapTarget.id && gapMessageKey(); as key) {
-              <p class="muted small gap-note">{{ key | translate:{ count: gapResult()!.maxPlies } }}</p>
+              <p class="muted small gap-note">
+                {{ key | translate:{ count: gapResult()!.maxPlies, depth: gapResult()!.deepestSearched } }}
+              </p>
             }
           }
 
@@ -215,10 +217,11 @@
           @if (editingGenerated()) {
             <div class="proposal-actions">
               <p class="muted small">{{ 'reconstruct.gap.walkHint' | translate }}</p>
-              <button mat-flat-button color="primary" [disabled]="busy()" (click)="acceptWaypoint()">
+              <button mat-flat-button color="primary" [disabled]="busy() || !canAcceptWaypoint()"
+                      (click)="acceptWaypoint()">
                 <mat-icon>check</mat-icon> {{ 'reconstruct.gap.positionFits' | translate }}
               </button>
-              <button mat-stroked-button [disabled]="busy()" (click)="correctWaypoint()">
+              <button mat-stroked-button [disabled]="busy() || !canAcceptWaypoint()" (click)="correctWaypoint()">
                 <mat-icon>edit</mat-icon> {{ 'reconstruct.gap.positionCorrect' | translate }}
               </button>
               <button mat-stroked-button [disabled]="busy()" (click)="acceptProposal()">

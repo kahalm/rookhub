@@ -3511,7 +3511,7 @@
       "doesNotFit": "Ovi potezi ne vode do tog položaja.",
       "failed": "Pretraga se nije mogla pokrenuti.",
       "none": "Nema puta s najviše {{count}} polupoteza — između je vjerojatno više poteza.",
-      "budget": "Pretraga je stala prije kraja. Put ipak može postojati: traži kraći odsječak ili zabilježi položaj između.",
+      "budget": "Pretraga je odustala nakon {{depth}} polupoteza. Put ipak može postojati: zabilježi položaj između i pretraži dvije kraće praznine.",
       "unreachable": "Iz položaja prije ovoga nema puta ovamo — figure ne mogu nastati niotkuda.",
       "tooFar": "Ta su dva položaja udaljenija od {{count}} polupoteza, pa pretraga dotle ne seže.",
       "samePosition": "Oba su položaja ista — nema praznine.",
