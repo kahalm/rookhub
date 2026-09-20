@@ -24,8 +24,12 @@ public class RepertoireService
 
     // friends/notifications verpflichtend (siehe CourseService). positionLookup bleibt optional:
     // der ist ECHT optional — der Dienst ruft ihn mit ?. auf und kommt ohne ihn aus.
-    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService friends, NotificationService notifications, RepertoirePositionLookupService? positionLookup = null)
+    /// <summary>Läuft der RookHub-EIGENE Chessable-Weg? (siehe <see cref="StaleContentRule"/>)</summary>
+    private readonly bool _chessableEnabled;
+
+    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService friends, NotificationService notifications, RepertoirePositionLookupService? positionLookup = null, IConfiguration? configuration = null)
     {
+        _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
         _db = db;
         _analyzeCache = analyzeCache;
         _positionLookup = positionLookup;
@@ -108,7 +112,39 @@ public class RepertoireService
             })
             .ToListAsync();
 
-        return owned.Concat(shared).ToList();
+        var all = owned.Concat(shared).ToList();
+        await MarkNeedsReimportAsync(all);
+        return all;
+    }
+
+    /// <summary>
+    /// (!)-Markierung: welche dieser Repertoires sind veraltet UND hier nicht aufbereitbar (Chessable-
+    /// Repertoire ohne die modernen Marker, während der eigene Chessable-Weg aus ist)? Eigene Abfrage,
+    /// auf die VERALTETEN eingeschränkt — das LIKE läuft sonst über die PGN-Dateien jedes Repertoires.
+    /// Dieselbe Regel wie der Aktualisieren-Lauf (<see cref="StaleContentRule"/>).
+    /// </summary>
+    private async Task MarkNeedsReimportAsync(List<RepertoireDto> items)
+    {
+        if (items.Count == 0) return;
+        var ids = items.Select(i => i.Id).ToList();
+        var stale = await _db.Repertoires
+            .Where(r => ids.Contains(r.Id) && r.ImportVersion < ImportPipeline.CurrentVersion)
+            .Select(r => new
+            {
+                r.Id,
+                // Chessable-Herkunft: die hinterlegte Kurs-Id ODER ein Dateiname aus dem Chessable-Import.
+                IsChessable = r.ChessableCourseId != null && r.ChessableCourseId != ""
+                    || r.Files.Any(f => f.FileName.StartsWith("chessable-")),
+                SourceModern = r.Files.Any(f => f.PgnContent.Contains(StaleContentRule.ModernMarker)),
+            })
+            .ToListAsync();
+        var flagged = stale
+            .Where(r => StaleContentRule.ActionForRepertoire(r.IsChessable, r.SourceModern, _chessableEnabled)
+                == StaleAction.Manual)
+            .Select(r => r.Id)
+            .ToHashSet();
+        if (flagged.Count == 0) return;
+        foreach (var item in items) item.NeedsReimport = flagged.Contains(item.Id);
     }
 
     public async Task<RepertoireDetailDto> GetByIdAsync(int id, int userId)

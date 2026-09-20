@@ -258,16 +258,20 @@ public partial class ImportReprocessService
         // NICHT enthält. Ist es „modern" (bereits enthalten) bzw. Nicht-Chessable → reiner Versions-Mark.
         // Hinweis: „Aktualisieren" löst inzwischen JEDEN stale-Fall auf (Bearer-Re-Fetch, Cache-Re-Fetch
         // ohne Bearer, oder Versions-Mark), sodass das Banner danach immer leer wird.
-        var refetchable = _chessableEnabled
-            ? stale.Count(r => ResolveRepertoireBid(r) != null && !RepertoireSourceModern(r))
-            : 0;   // eigener Chessable-Weg aus → nichts holbar; der Lauf setzt sie unten auf die aktuelle Version
+        // Dieselbe Dreiteilung wie bei den Kursen (StaleContentRule) — „Manual" ist der Showstopper, der
+        // in der LISTE als (!) am Repertoire steht statt als anonyme Zahl im Banner.
+        var actions = stale
+            .Select(r => StaleContentRule.ActionForRepertoire(
+                ResolveRepertoireBid(r) != null, RepertoireSourceModern(r), _chessableEnabled))
+            .ToList();
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
             Total = total,
             Stale = stale.Count,
-            ReprocessableLocally = stale.Count - refetchable,
-            Refetchable = refetchable,
+            ReprocessableLocally = actions.Count(a => a == StaleAction.Local),
+            Refetchable = actions.Count(a => a == StaleAction.Refetch),
+            NeedsReimport = actions.Count(a => a == StaleAction.Manual),
         };
     }
 
@@ -298,7 +302,15 @@ public partial class ImportReprocessService
         foreach (var r in stale)
         {
             var bid = ResolveRepertoireBid(r);
-            if (bid != null && !RepertoireSourceModern(r) && _chessableEnabled)
+            if (bid != null && !RepertoireSourceModern(r) && !_chessableEnabled)
+            {
+                // Ohne den eigenen Chessable-Weg ist dieses Repertoire NICHT holbar. Es trotzdem auf die
+                // aktuelle Version zu setzen wäre eine Lüge: die [%alt]-Varianten fehlen weiter. Es bleibt
+                // veraltet und trägt in der Liste ein (!) mit dem Hinweis auf die Erweiterung.
+                result.Skipped++;
+                continue;
+            }
+            if (bid != null && !RepertoireSourceModern(r))
             {
                 // Chessable-Repertoire OHNE moderne Quelle = Re-Fetch-Kandidat.
                 if (localOnly) continue; // „Aus Cache"-Modus: Netz-Re-Fetch bewusst auslassen (bleibt stale)
@@ -334,24 +346,11 @@ public partial class ImportReprocessService
     /// Chessable-Import erkennbar ist UND sich die bid aus dem Dateinamen lösen lässt — sonst bleibt
     /// nur lokales Reprocess (mit Quelle) bzw. manueller Re-Import. Muss zur Verzweigung in
     /// <see cref="ReprocessCoursesAsync"/> passen, damit Status-Zählung und Ausführung übereinstimmen.</summary>
-    /// <summary>Was mit einem veralteten Buch geschehen kann. EINE Regel für Status-Zählung und Lauf.</summary>
-    private enum StaleAction
-    {
-        /// <summary>Frisch von Chessable holen (nur mit eigenem Chessable-Weg).</summary>
-        Refetch,
-        /// <summary>Aus dem gespeicherten Quell-PGN neu aufbereiten — kein Netz.</summary>
-        Local,
-        /// <summary>Weder noch: nur ein manueller Re-Import (heute: über die RepCheck-Erweiterung) hilft.</summary>
-        Manual,
-    }
-
     private StaleAction ActionFor(bool hasSource, bool sourceModern, string? tags, string fileName)
-        => _chessableEnabled && CanRefetch(tags, fileName) && !sourceModern ? StaleAction.Refetch
-            : hasSource ? StaleAction.Local
-            : StaleAction.Manual;
+        => StaleContentRule.ActionForBook(hasSource, sourceModern, tags, fileName, _chessableEnabled);
 
     private static bool CanRefetch(string? tags, string fileName) =>
-        IsChessable(tags, fileName) && TryParseBid(fileName, out _);
+        StaleContentRule.CanRefetch(tags, fileName);
 
     /// <summary>Enthält die gespeicherte Quelle bereits ALLES, was die aktuelle Pipeline aus dem Quell-PGN
     /// zieht? Maßgeblich ist der jüngste quell-abhängige Marker <c>[ChessableOid]</c> (piratechess ≥ v1.0.39,
@@ -359,8 +358,7 @@ public partial class ImportReprocessService
     /// Re-Fetch nötig. Eine ältere Quelle mit zwar <c>[%alt]</c>/<c>[%info]</c>, aber OHNE <c>[ChessableOid]</c>
     /// ist NICHT modern und MUSS re-gefetcht werden (lokaler Re-Parse könnte die oids nie ergänzen). Ein PGN
     /// mit oids trägt implizit auch [%alt]/[%info], da dieselbe piratechess-Version alle Marker schreibt.</summary>
-    private static bool SourceHasModernMarkers(string? pgn) =>
-        pgn != null && pgn.Contains("[ChessableOid", StringComparison.Ordinal);
+    private static bool SourceHasModernMarkers(string? pgn) => StaleContentRule.HasModernMarkers(pgn);
 
     /// <summary>Wie <see cref="SourceHasModernMarkers"/>, aber für ein Repertoire (Quelle = seine
     /// gespeicherten PGN-Dateien). Trifft es zu, reicht ein reiner Versions-Mark statt Re-Fetch —
@@ -369,19 +367,11 @@ public partial class ImportReprocessService
         r.Files.Any(f => SourceHasModernMarkers(f.PgnContent));
 
     private static bool IsChessable(string? tags, string fileName) =>
-        (tags ?? string.Empty).Contains("chessable", StringComparison.OrdinalIgnoreCase)
-        || fileName.StartsWith("chessable-", StringComparison.OrdinalIgnoreCase);
-
-    [GeneratedRegex(@"^chessable-u\d+-(.+)\.pgn$", RegexOptions.IgnoreCase)]
-    private static partial Regex ChessableBidRegex();
+        StaleContentRule.IsChessable(tags, fileName);
 
     /// <summary>Holt die Chessable-bid aus dem konventionellen Buch-Dateinamen <c>chessable-u{uid}-{bid}.pgn</c>.</summary>
-    private static bool TryParseBid(string fileName, out string bid)
-    {
-        var m = ChessableBidRegex().Match(fileName);
-        bid = m.Success ? m.Groups[1].Value : string.Empty;
-        return m.Success;
-    }
+    private static bool TryParseBid(string fileName, out string bid) =>
+        StaleContentRule.TryParseBid(fileName, out bid);
 
     [GeneratedRegex(@"^chessable-(\d+)\.pgn$", RegexOptions.IgnoreCase)]
     private static partial Regex RepertoireBidRegex();

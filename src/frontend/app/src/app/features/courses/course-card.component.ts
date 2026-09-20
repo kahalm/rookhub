@@ -30,8 +30,16 @@ import { formatScore, maxPoints } from './calc/calc-review.util';
   template: `
       <mat-card class="course-card">
         <mat-card-content>
+          <div class="title-row">
           <a class="card-title" [routerLink]="['/courses', course.bookId]"
              [matTooltip]="'courses.detail.openTooltip' | translate">{{ course.displayName }}</a>
+          @if (course.needsReimport) {
+            <!-- Showstopper am KURS statt als anonyme Zahl im Banner: nur hier ist zu sehen, WELCHER
+                 Kurs gemeint ist (gemeldet 2026-09-20). -->
+            <mat-icon class="stale-badge" [matTooltip]="'reprocess.itemNeedsReimport.courses' | translate"
+                      [attr.aria-label]="'reprocess.itemNeedsReimport.courses' | translate">error_outline</mat-icon>
+          }
+          </div>
           @if (course.isShared && course.sharedByUsername) {
             <div class="shared-badge">
               <mat-icon>group</mat-icon>{{ 'courses.share.sharedBy' | translate:{ name: course.sharedByUsername } }}
@@ -261,6 +269,12 @@ import { formatScore, maxPoints } from './calc/calc-review.util';
       display: block; color: inherit; text-decoration: none; cursor: pointer;
     }
     .card-title:hover { text-decoration: underline; }
+    .title-row { display: flex; align-items: flex-start; gap: 4px; }
+    .title-row .card-title { flex: 1 1 auto; min-width: 0; }
+    /* (!) am Eintrag: klein und warnfarben, aber nicht schreiend — es ist ein Hinweis, kein Fehler. */
+    .stale-badge {
+      flex: 0 0 auto; color: #ef6c00; font-size: 18px; width: 18px; height: 18px; cursor: help;
+    }
     .card-meta {
       display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
       font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);

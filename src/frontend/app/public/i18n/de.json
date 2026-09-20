@@ -2760,6 +2760,10 @@
       "courses": "{{count}} manuell hochgeladene(r) Kurs(e) können nicht automatisch aktualisiert werden — PGN neu importieren, um die neueste Aufbereitung zu erhalten.",
       "repertoires": "{{count}} Repertoire(s) brauchen einen manuellen Re-Import zur Aktualisierung."
     },
+    "itemNeedsReimport": {
+      "courses": "Dieser Kurs stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol ihn über die RepCheck-Erweiterung neu, dann ist er auf dem aktuellen Stand.",
+      "repertoires": "Dieses Repertoire stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol es über die RepCheck-Erweiterung neu, dann ist es auf dem aktuellen Stand."
+    },
     "update": "Aktualisieren ({{count}})",
     "updateTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu holen (gecachte gehen sofort, ohne Download).",
     "working": "Wird aktualisiert…",

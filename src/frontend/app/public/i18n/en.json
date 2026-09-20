@@ -2760,6 +2760,10 @@
       "courses": "{{count}} manually uploaded course(s) can't be updated automatically — re-import the PGN to get the latest processing.",
       "repertoires": "{{count}} repertoire(s) need a manual re-import to be updated."
     },
+    "itemNeedsReimport": {
+      "courses": "This course comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date.",
+      "repertoires": "This repertoire comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date."
+    },
     "update": "Update ({{count}})",
     "updateTip": "Reprocess items with a stored source and re-download Chessable items (cached ones update instantly, no download).",
     "working": "Updating…",

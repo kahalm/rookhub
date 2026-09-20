@@ -127,6 +127,9 @@ export interface Repertoire {
   fileCount: number;
   /** Soll dieses Repertoire von der Browser-Extension/dem Userscript genutzt werden? */
   useForExtension: boolean;
+  /** Showstopper: veraltete Aufbereitung, die sich hier NICHT automatisch beheben lässt — die Karte
+   *  zeigt dafür ein (!). Hilft nur: das Repertoire über die RepCheck-Erweiterung neu holen. */
+  needsReimport?: boolean;
   createdAt: string;
   updatedAt: string;
   chessableCourseId: string | null;

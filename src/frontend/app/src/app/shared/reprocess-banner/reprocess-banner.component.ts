@@ -25,16 +25,11 @@ interface ReprocessStatus {
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],
   template: `
-    @if (status && (actionableCount > 0 || showReimportNote)) {
+    @if (status && actionableCount > 0) {
       <div class="reprocess-banner">
         <mat-icon class="rb-icon">auto_fix_high</mat-icon>
         <span class="rb-text">
-          @if (actionableCount > 0) {
-            {{ ('reprocess.available.' + section) | translate: { count: actionableCount } }}
-          }
-          @if (showReimportNote) {
-            <span class="rb-note">{{ ('reprocess.needsReimport.' + section) | translate: { count: status.needsReimport } }}</span>
-          }
+          {{ ('reprocess.available.' + section) | translate: { count: actionableCount } }}
         </span>
         @if (allCount > 0) {
           <!-- EIN Aktualisieren-Knopf: bereitet lokal aus der gespeicherten Quelle auf und holt
@@ -46,13 +41,6 @@ interface ReprocessStatus {
             } @else {
               <mat-icon>refresh</mat-icon> {{ 'reprocess.update' | translate: { count: allCount } }}
             }
-          </button>
-        }
-        @if (showReimportNote) {
-          <!-- Hinweis bestätigen/wegklicken: bleibt versteckt, bis neue manuelle Kurse hinzukommen. -->
-          <button mat-icon-button class="rb-dismiss" (click)="dismissReimport()"
-                  [attr.aria-label]="'reprocess.dismiss' | translate" [matTooltip]="'reprocess.dismiss' | translate">
-            <mat-icon>close</mat-icon>
           </button>
         }
       </div>
@@ -67,9 +55,7 @@ interface ReprocessStatus {
     }
     .rb-icon { flex: 0 0 auto; color: #ef6c00; }
     .rb-text { flex: 1 1 220px; }
-    .rb-note { display: block; margin-top: 4px; opacity: 0.85; font-size: 0.85em; }
     .rb-spin { display: inline-block; vertical-align: middle; margin-right: 6px; }
-    .rb-dismiss { flex: 0 0 auto; margin-left: auto; color: #ef6c00; }
   `]
 })
 export class ReprocessBannerComponent implements OnInit {
@@ -81,43 +67,17 @@ export class ReprocessBannerComponent implements OnInit {
   status: ReprocessStatus | null = null;
   /** Läuft gerade eine Aktualisierung? (sperrt den Knopf). */
   working = false;
-  /** Zuletzt bestätigter Re-Import-Hinweis (Anzahl bei der Bestätigung) — aus localStorage. */
-  private reimportDismissedAt = 0;
 
   /** Aktualisierbare Datensätze: lokal aufbereitbare + per Chessable-Re-Fetch holbare. */
   get allCount(): number {
     return this.status ? this.status.reprocessableLocally + this.status.refetchable : 0;
   }
-  /** Irgendetwas aktualisierbar? (steuert das Banner zusammen mit dem Re-Import-Hinweis). */
+  /** Irgendetwas aktualisierbar? (steuert das Banner). */
   get actionableCount(): number { return this.allCount; }
-
-  /** Re-Import-Hinweis nur zeigen, solange es mehr manuelle Kurse sind als zuletzt bestätigt
-   *  (einmal weggeklickt bleibt er weg, bis NEUE hinzukommen). */
-  get showReimportNote(): boolean {
-    return !!this.status && this.status.needsReimport > this.reimportDismissedAt;
-  }
-
-  private get dismissKey(): string { return `rookhub_reprocess_reimport_dismissed_${this.section}`; }
 
   constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 
-  ngOnInit(): void {
-    // try/catch wie beim Schreibweg zwei Methoden weiter unten: in Browsern mit gesperrten
-    // Site-Daten wirft schon der ZUGRIFF auf localStorage — und zwar hier in ngOnInit, also mitten
-    // in der Change Detection der Elternseite. Die Kursliste rendert dann nicht, obwohl ihre Daten
-    // längst geladen sind (dieselbe Fehlerklasse wie der Template-Getter-Fund in 0.317.2).
-    let raw = 0;
-    try { raw = Number(localStorage.getItem(this.dismissKey)); } catch { raw = 0; }
-    this.reimportDismissedAt = Number.isFinite(raw) && raw > 0 ? raw : 0;
-    this.refresh();
-  }
-
-  /** „Verstanden": den Re-Import-Hinweis für die aktuelle Anzahl ausblenden (persistiert). */
-  dismissReimport(): void {
-    if (!this.status) return;
-    this.reimportDismissedAt = this.status.needsReimport;
-    try { localStorage.setItem(this.dismissKey, String(this.reimportDismissedAt)); } catch { /* ignore */ }
-  }
+  ngOnInit(): void { this.refresh(); }
 
   private refresh(): void {
     this.http.get<ReprocessStatus>(`/api/${this.section}/reprocess/status`).subscribe({

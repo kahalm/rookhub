@@ -2760,6 +2760,10 @@
       "courses": "{{count}} ručno učitan(ih) tečaj(eva) ne može se automatski ažurirati — ponovno uvezi PGN za najnoviju obradu.",
       "repertoires": "{{count}} repertoar(a) treba ručni ponovni uvoz za ažuriranje."
     },
+    "itemNeedsReimport": {
+      "courses": "Ovaj tečaj potječe iz starije obrade i ovdje se ne može ažurirati. Dohvati ga ponovno pomoću proširenja RepCheck kako bi bio aktualan.",
+      "repertoires": "Ovaj repertoar potječe iz starije obrade i ovdje se ne može ažurirati. Dohvati ga ponovno pomoću proširenja RepCheck kako bi bio aktualan."
+    },
     "update": "Ažuriraj ({{count}})",
     "updateTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (predmemorirane idu odmah, bez preuzimanja).",
     "working": "Ažuriranje…",

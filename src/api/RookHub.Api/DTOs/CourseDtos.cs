@@ -17,6 +17,15 @@ public class CourseListItemDto
     public string? LastMode { get; set; }
 
     /// <summary>
+    /// SHOWSTOPPER: dieser Kurs ist veraltet (<c>ImportVersion &lt; ImportPipeline.CurrentVersion</c>) und
+    /// lässt sich hier NICHT automatisch aufbereiten — weder aus einer gespeicherten Quelle noch per
+    /// Chessable-Re-Fetch (siehe <see cref="StaleContentRule"/>). Die Liste zeigt dafür ein (!) am Kurs;
+    /// es hilft nur ein neuer Abruf über die RepCheck-Erweiterung. Vorher stand das nur als anonyme Zahl
+    /// im Banner („N Kurse brauchen einen Re-Import") — man sah nie, WELCHER Kurs gemeint war.
+    /// </summary>
+    public bool NeedsReimport { get; set; }
+
+    /// <summary>
     /// Zeitpunkt der letzten Verwendung dieses Kurses durch den User (= <see cref="Models.CourseProgress.UpdatedAt"/>,
     /// upserted bei jedem Versuch/Reset). <c>null</c> = noch nie angefangen. Die Übersicht sortiert angefangene
     /// Kurse nach diesem Wert absteigend nach vorn.

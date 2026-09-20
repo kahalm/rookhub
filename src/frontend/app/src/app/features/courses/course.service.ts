@@ -19,6 +19,9 @@ export interface CourseListItem {
   lastMode: string | null;
   /** ISO-Zeitstempel der letzten Verwendung (CourseProgress.UpdatedAt); null = noch nie angefangen. */
   lastActivityAt: string | null;
+  /** Showstopper: veraltete Aufbereitung, die sich hier NICHT automatisch beheben lässt — die Karte
+   *  zeigt dafür ein (!). Hilft nur: den Kurs über die RepCheck-Erweiterung neu holen. */
+  needsReimport?: boolean;
   /** true = eigener (selbst importierter) Chessable-Kurs; false = über eine Gruppe freigegebener öffentlicher Kurs. */
   isOwned: boolean;
   /** true = vom Nutzer fürs Dashboard angepinnt (persönlich). */

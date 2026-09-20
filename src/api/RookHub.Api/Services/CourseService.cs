@@ -30,8 +30,13 @@ public class CourseService
     // außen unsichtbar. Tests bauen jetzt über TestServices.Course(db).
     // chessableProxy optional (Default null), damit bestehende Test-Konstruktionen unverändert
     // kompilieren; ohne ihn entfällt nur das Nachtragen des Chessable-Trainingsstarts.
-    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null)
+    /// <summary>Läuft der RookHub-EIGENE Chessable-Weg? Entscheidet mit, ob ein veralteter Kurs noch
+    /// holbar ist oder ein Showstopper (siehe <see cref="StaleContentRule"/>).</summary>
+    private readonly bool _chessableEnabled;
+
+    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null, IConfiguration? configuration = null)
     {
+        _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
         _db = db;
         _logger = logger;
         _pgnImport = pgnImport;
@@ -458,6 +463,24 @@ public class CourseService
         // ohne den Filter aggregierte jeder Aufruf der Kursliste die KOMPLETTE BookPuzzles-Tabelle,
         // auch wenn der User nur eine Handvoll Bücher sieht (skaliert mit der Buchzahl, nicht der Userzahl).
         var bookIds = books.Select(b => b.Id).ToList();
+
+        // (!)-Markierung: welche dieser Kurse sind veraltet UND hier nicht aufbereitbar? Eine eigene,
+        // auf die VERALTETEN eingeschränkte Abfrage — das LIKE läuft damit nicht über das (große)
+        // SourcePgn jedes sichtbaren Buchs. Dieselbe Regel wie der Aktualisieren-Lauf (StaleContentRule),
+        // sonst markiert die Liste etwas, das der Knopf längst erledigen würde.
+        var needsReimportBookIds = (await _db.Books
+            .Where(b => bookIds.Contains(b.Id) && b.ImportVersion < ImportPipeline.CurrentVersion)
+            .Select(b => new
+            {
+                b.Id, b.Tags, b.FileName,
+                HasSource = b.SourcePgn != null && b.SourcePgn != "",
+                SourceModern = b.SourcePgn != null && b.SourcePgn.Contains(StaleContentRule.ModernMarker),
+            })
+            .ToListAsync())
+            .Where(b => StaleContentRule.ActionForBook(b.HasSource, b.SourceModern, b.Tags, b.FileName, _chessableEnabled)
+                == StaleAction.Manual)
+            .Select(b => b.Id)
+            .ToHashSet();
         var puzzleCountByBook = await _db.BookPuzzles
             .Where(bp => bp.BookId != null && bookIds.Contains(bp.BookId.Value) && !bp.IsInfoOnly)
             .GroupBy(bp => bp.BookId!.Value)
@@ -558,6 +581,7 @@ public class CourseService
                 ProgressPercent = Percent(solved, puzzleCount),
                 LastMode = progress?.LastMode,
                 LastActivityAt = progress?.UpdatedAt,
+                NeedsReimport = needsReimportBookIds.Contains(b.Id),
                 IsOwned = b.OwnerUserId == userId,
                 IsPinned = pinnedBookIds.Contains(b.Id),
                 IsShared = sharedByBook.ContainsKey(b.Id),

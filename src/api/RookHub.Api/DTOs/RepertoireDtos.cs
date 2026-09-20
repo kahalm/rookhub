@@ -14,6 +14,11 @@ public class RepertoireDto
     public DateTime UpdatedAt { get; set; }
     public int FileCount { get; set; }
     public bool UseForExtension { get; set; }
+
+    /// <summary>SHOWSTOPPER wie bei <see cref="CourseListItemDto.NeedsReimport"/>: veraltet und hier nicht
+    /// aufbereitbar (Chessable-Repertoire ohne moderne Marker, während der eigene Chessable-Weg aus ist).
+    /// Die Liste zeigt ein (!) — ein neuer Abruf über die RepCheck-Erweiterung bringt es auf Stand.</summary>
+    public bool NeedsReimport { get; set; }
     public string? ChessableCourseId { get; set; }
 
     /// <summary><c>true</c> = dieses Repertoire wurde von einem anderen Nutzer mit mir geteilt

@@ -25,6 +25,38 @@ describe('CourseCardComponent', () => {
 });
 
 /**
+ * (!) am Kurs: ein veralteter Kurs, den der „Aktualisieren"-Knopf NICHT beheben kann, muss AM KURS
+ * sichtbar sein — im Banner stand nur eine anonyme Zahl, man sah nie, welcher Kurs gemeint ist.
+ */
+describe('CourseCardComponent Showstopper-Markierung', () => {
+  async function render(needsReimport: boolean): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    fixture.componentInstance.course = {
+      bookId: 1, displayName: 'Kurs', puzzleCount: 10, solvedCount: 0, progressPercent: 0,
+      needsReimport,
+    } as never;
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('zeigt das (!) nur bei einem Kurs, der sich hier nicht aktualisieren lässt', async () => {
+    expect((await render(true)).querySelector('.stale-badge')).not.toBeNull();
+    TestBed.resetTestingModule();
+    expect((await render(false)).querySelector('.stale-badge')).toBeNull();
+  });
+});
+
+/**
  * Kapitel-Primäraktion: der Play-Knopf startet im zuletzt genutzten Kursmodus
  * (die Alternativen liegen im ⋮-Menü der Zeile).
  */

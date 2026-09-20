@@ -136,6 +136,11 @@ import { stripInternalMarkers } from '../../shared/pgn-export.util';
               <mat-icon class="ext-badge"
                         [matTooltip]="'repertoire.list.extensionBadge' | translate">extension</mat-icon>
             }
+            @if (rep.needsReimport) {
+              <!-- Showstopper am REPERTOIRE statt als anonyme Zahl im Banner. -->
+              <mat-icon class="stale-badge" [matTooltip]="'reprocess.itemNeedsReimport.repertoires' | translate"
+                        [attr.aria-label]="'reprocess.itemNeedsReimport.repertoires' | translate">error_outline</mat-icon>
+            }
           </mat-card-title>
           <mat-card-subtitle>
             {{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}
@@ -226,6 +231,8 @@ import { stripInternalMarkers } from '../../shared/pgn-export.util';
     /* Kleiner „RepCheck ok"-Marker im Karten-Titel, in Primärfarbe. */
     .ext-badge { color: var(--mat-sys-primary, #3f51b5); font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; opacity: 0.9; }
     .shared-badge-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: middle; opacity: 0.7; }
+    /* (!) am Eintrag: klein und warnfarben, aber nicht schreiend — es ist ein Hinweis, kein Fehler. */
+    .stale-badge { color: #ef6c00; font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; cursor: help; }
   `]
 })
 export class RepertoireListComponent implements OnInit {

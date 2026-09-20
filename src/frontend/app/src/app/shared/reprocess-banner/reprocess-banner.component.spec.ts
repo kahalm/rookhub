@@ -46,23 +46,18 @@ describe('ReprocessBannerComponent', () => {
     expect(c.allCount).toBe(0);
   });
 
-  it('Re-Import-Hinweis: wegklickbar + bleibt verborgen, bis die Zahl steigt', () => {
-    localStorage.removeItem('rookhub_reprocess_reimport_dismissed_courses');
-    const c = createComponent();
-    c.status = { currentVersion: 2, total: 50, stale: 12, reprocessableLocally: 0, refetchable: 0, needsReimport: 12 };
-    expect(c.showReimportNote).toBeTrue();          // anfangs sichtbar
+  it('kein Banner, wenn es nur nicht-aktualisierbare Einträge gibt (die tragen ihr eigenes (!))', () => {
+    // Genau der gemeldete Zustand (2026-09-20): das Banner versprach eine Aktualisierung, die der Lauf
+    // dann überspringen musste. Solche Einträge stehen jetzt als (!) an der Karte, nicht mehr hier.
+    const fixture = TestBed.createComponent(ReprocessBannerComponent);
+    fixture.componentInstance.section = 'courses';
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/courses/reprocess/status')
+      .flush({ currentVersion: 2, total: 50, stale: 12, reprocessableLocally: 0, refetchable: 0, needsReimport: 12 });
+    fixture.detectChanges();
 
-    c.dismissReimport();
-    expect(c.showReimportNote).toBeFalse();          // weggeklickt → weg
-    expect(localStorage.getItem('rookhub_reprocess_reimport_dismissed_courses')).toBe('12');
-
-    c.status = { ...c.status, needsReimport: 12 };    // unverändert → bleibt verborgen
-    expect(c.showReimportNote).toBeFalse();
-    c.status = { ...c.status, needsReimport: 8 };     // weniger → bleibt verborgen
-    expect(c.showReimportNote).toBeFalse();
-    c.status = { ...c.status, needsReimport: 15 };    // NEUE manuelle Kurse → wieder sichtbar
-    expect(c.showReimportNote).toBeTrue();
-    localStorage.removeItem('rookhub_reprocess_reimport_dismissed_courses');
+    expect(fixture.componentInstance.actionableCount).toBe(0);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.reprocess-banner')).toBeNull();
   });
 
   it('run() postet ohne localOnly und lädt den Status verzögert neu (Hintergrundlauf)', fakeAsync(() => {

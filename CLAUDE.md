@@ -276,6 +276,17 @@ Schalter) trennt die Pflichten: die eigenen Lanes werden nur mit dem Schalter an
 Browser-Pflichten immer — und ein verwaister Import wird ohne Lanes BEENDET statt zurueckgestellt
 (zurueckgestellt nimmt ihn dort nie jemand auf).
 
+**Ein Showstopper steht AM EINTRAG, nicht als Zahl im Banner (0.484.4).** `StaleContentRule` ist die
+EINE Regel (`Refetch` / `Local` / `Manual`) fuer den Reprocess-Status, den Reprocess-Lauf UND die
+Listen. `Manual` heisst: weder aus der gespeicherten Quelle aufbereitbar noch holbar — solche Eintraege
+tragen `NeedsReimport` im `CourseListItemDto`/`RepertoireDto` und in der Liste ein (!) mit dem Hinweis
+auf die RepCheck-Erweiterung. Das Banner zeigt nur noch, was der Knopf wirklich kann (`reprocessableLocally
++ refetchable`); der frühere wegklickbare Hinweis „N brauchen einen Re-Import" ist weg — er nannte nie,
+WELCHER Eintrag gemeint war. Die Listen-Abfrage ist dabei auf die VERALTETEN Eintraege eingeschraenkt,
+damit das `LIKE` nicht ueber das `SourcePgn` jedes sichtbaren Buchs bzw. jede PGN-Datei laeuft.
+Ein Chessable-REPERTOIRE, das nicht holbar ist, wird ausserdem nicht mehr stillschweigend auf die
+aktuelle Version gesetzt — das verdeckte die fehlenden `[%alt]`-Varianten.
+
 **Der Reprocess-Status sagt ohne eigenen Chessable-Weg die Wahrheit (0.484.3).** `ActionFor` ist die
 EINE Regel fuer Anzeige und Lauf (Refetch / Local / Manual). Ohne den eigenen Weg gibt es kein
 Refetch: ein veraltetes Buch mit gespeicherter Quelle wird LOKAL aufbereitet (das bringt die

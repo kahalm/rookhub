@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -39,15 +40,23 @@ internal static class TestServices
     /// </summary>
     public static RepertoireService Repertoire(
         AppDbContext db, IMemoryCache? cache = null, RepertoirePositionLookupService? positionLookup = null,
-        RepertoireAnalyzeService? analyze = null)
+        RepertoireAnalyzeService? analyze = null, IConfiguration? configuration = null)
     {
         var notifications = Notifications(db);
-        return new RepertoireService(db, analyze ?? Analyze(db, cache), Friends(db, notifications), notifications, positionLookup);
+        return new RepertoireService(db, analyze ?? Analyze(db, cache), Friends(db, notifications), notifications, positionLookup, configuration);
     }
+
+    /// <summary>Konfiguration mit gesetztem <c>Chessable:Enabled</c> — entscheidet, ob ein veralteter
+    /// Eintrag noch holbar ist oder ein Showstopper (siehe <see cref="StaleContentRule"/>).</summary>
+    public static IConfiguration ChessableSwitch(bool enabled) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Chessable:Enabled"] = enabled ? "true" : "false" })
+            .Build();
 
     public static CourseService Course(
         AppDbContext db, ILogger<CourseService>? logger = null,
-        BookAdminService? bookAdmin = null, RepertoireService? repertoire = null)
+        BookAdminService? bookAdmin = null, RepertoireService? repertoire = null,
+        IConfiguration? configuration = null)
     {
         var notifications = Notifications(db);
         return new CourseService(
@@ -57,7 +66,9 @@ internal static class TestServices
             bookAdmin ?? new BookAdminService(db),
             repertoire ?? Repertoire(db),
             Friends(db, notifications),
-            notifications);
+            notifications,
+            chessableProxy: null,
+            configuration: configuration);
     }
 
     public static ProfileService Profile(
