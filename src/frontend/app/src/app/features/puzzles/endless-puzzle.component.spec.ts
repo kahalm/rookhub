@@ -97,8 +97,9 @@ function makeComponent(params: Record<string, string> = {}, solveMode: any = mak
   // Echter Ketten-Service über DIESELBE puzzleService-Instanz → getRandomBatch-Spy + spätere
   // Neuzuweisungen (c.puzzleService.getRandomBatch = …) wirken durch den Service hindurch.
   const chainService = new EndlessChainService(puzzleService);
+  const worksheets: any = { sendAndNotify: jasmine.createSpy('sendAndNotify') };
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites, chainService, solveMode
+    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites, chainService, solveMode, worksheets
   );
 }
 

@@ -13,6 +13,9 @@ export interface LastSolvedInfo {
   fen: string;
   moves: string;
   orientation: 'white' | 'black';
+  /** Letzter Vorspiel-Halbzug (Kurs-Linien); fehlt = klassisch, `moves[0]` ist Vorspiel. Wird
+   *  gebraucht, um die AUFGABEN-Stellung zurückzurechnen („letztes Puzzle aufs Aufgabenblatt"). */
+  startPly?: number;
 }
 
 const KEY_PREFIX = 'rookhub_last_solved_';
@@ -29,7 +32,9 @@ export function loadLastSolved(scope: LastSolvedScope): LastSolvedInfo | null {
     if (p && typeof p.id === 'number' && typeof p.fen === 'string'
         && typeof p.moves === 'string'
         && (p.orientation === 'white' || p.orientation === 'black')) {
-      return { id: p.id, fen: p.fen, moves: p.moves, orientation: p.orientation };
+      const info: LastSolvedInfo = { id: p.id, fen: p.fen, moves: p.moves, orientation: p.orientation };
+      if (typeof p.startPly === 'number') info.startPly = p.startPly;
+      return info;
     }
     return null;
   } catch { return null; }

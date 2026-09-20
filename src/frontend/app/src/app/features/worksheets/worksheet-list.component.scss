@@ -1,0 +1,30 @@
+.wl-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+.wl-head h1 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.wl-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
+.wl-center { display: flex; justify-content: center; padding: 40px; }
+
+.wl-clip { margin-bottom: 1.5rem; }
+.wl-clip-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wl-clip-title { font-weight: 600; }
+.wl-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; }
+.wl-spacer { flex: 1 1 auto; }
+.wl-clip-empty { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; margin: 0.5rem 0 0; }
+
+/* Namensfeld + die beiden Wege daraus: sichern (mit Inhalt) oder leeres Blatt anlegen. */
+.wl-save { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 0.75rem; }
+.wl-save mat-form-field { flex: 1 1 220px; }
+
+.wl-section-title { margin: 1.5rem 0 0.5rem; font-weight: 600; }
+.wl-list { display: flex; flex-direction: column; gap: 8px; }
+.wl-sheet { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
+.wl-meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.wl-name { font-weight: 600; overflow-wrap: anywhere; }
+.wl-sub { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
+.wl-actions { display: flex; flex-shrink: 0; align-items: center; }
+.wl-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+.wl-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+
+@media (max-width: 600px) {
+  .wl-sheet { flex-direction: column; align-items: stretch; }
+  .wl-actions { justify-content: flex-end; }
+}

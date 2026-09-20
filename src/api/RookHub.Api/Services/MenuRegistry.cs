@@ -20,6 +20,7 @@ public static class MenuRegistry
         new MenuItemDef("friends", MenuVisibilityLevel.Registered),
         new MenuItemDef("puzzles", MenuVisibilityLevel.All),
         new MenuItemDef("favorites", MenuVisibilityLevel.Registered),
+        new MenuItemDef("worksheets", MenuVisibilityLevel.Registered),
         new MenuItemDef("training-goals", MenuVisibilityLevel.Registered),
         new MenuItemDef("analysis", MenuVisibilityLevel.All),
         // „All": die Punktepartie laeuft seit 0.459.0 auch ohne Anmeldung (kuratierter Bestand,

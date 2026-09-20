@@ -1,0 +1,42 @@
+.wd-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+.wd-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.wd-title { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.wd-rename { flex: 1 1 200px; }
+.wd-spacer { flex: 1 1 auto; }
+.wd-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; }
+.wd-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; margin: 0 0 0.5rem; }
+.wd-center { display: flex; justify-content: center; padding: 40px; }
+.wd-danger { color: var(--mat-sys-error, #b3261e); }
+/* Drucken ohne Aufgaben ergibt ein leeres Blatt — der Link bleibt, wirkt aber ausgegraut. */
+.wd-disabled { pointer-events: none; opacity: 0.5; }
+
+.wd-density { display: flex; align-items: center; gap: 0.75rem; margin: 1rem 0; flex-wrap: wrap; }
+.wd-density-label { font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+
+.wd-save, .wd-add { margin: 1rem 0; }
+.wd-save-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wd-save-row mat-form-field { flex: 1 1 240px; }
+
+.wd-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+.wd-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+
+.wd-list { display: flex; flex-direction: column; gap: 8px; }
+.wd-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; }
+.wd-grip { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: grab; color: color-mix(in srgb, currentColor 55%, transparent); }
+.wd-no { font-weight: 700; font-size: 0.9rem; }
+.wd-board { width: 112px; flex: 0 0 auto; }
+.wd-fields { display: flex; flex-direction: column; gap: 8px; flex: 1 1 260px; min-width: 0; }
+.wd-turn { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+.wd-item-actions { display: flex; flex-direction: column; flex: 0 0 auto; }
+
+/* Während des Ziehens: die Karte hebt ab, die Lücke bleibt sichtbar. */
+.cdk-drag-preview { box-shadow: 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14); }
+.cdk-drag-placeholder { opacity: 0.4; }
+.cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
+
+@media (max-width: 700px) {
+  .wd-item { flex-wrap: wrap; }
+  .wd-board { width: 88px; }
+  .wd-item-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
+}

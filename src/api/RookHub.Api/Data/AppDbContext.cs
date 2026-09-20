@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<PuzzleChallenge> PuzzleChallenges => Set<PuzzleChallenge>();
     public DbSet<FavoritePuzzle> FavoritePuzzles => Set<FavoritePuzzle>();
+    public DbSet<Worksheet> Worksheets => Set<Worksheet>();
+    public DbSet<WorksheetItem> WorksheetItems => Set<WorksheetItem>();
     public DbSet<RevengeNotification> RevengeNotifications => Set<RevengeNotification>();
     public DbSet<Repertoire> Repertoires => Set<Repertoire>();
     public DbSet<RepertoireFile> RepertoireFiles => Set<RepertoireFile>();
@@ -193,6 +195,38 @@ public class AppDbContext : DbContext
             e.HasIndex(f => new { f.UserId, f.Source, f.PuzzleId }).IsUnique();
             // Auflistung „neueste zuerst".
             e.HasIndex(f => new { f.UserId, f.CreatedAt });
+        });
+
+        modelBuilder.Entity<Worksheet>(e =>
+        {
+            e.HasOne(w => w.User)
+             .WithMany()
+             .HasForeignKey(w => w.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(w => w.Name).HasMaxLength(120);
+
+            // Übersicht: Zwischenablage zuerst, dann nach letzter Änderung.
+            e.HasIndex(w => new { w.UserId, w.IsClipboard });
+        });
+
+        modelBuilder.Entity<WorksheetItem>(e =>
+        {
+            e.HasOne(i => i.Worksheet)
+             .WithMany(w => w.Items)
+             .HasForeignKey(i => i.WorksheetId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(i => i.Fen).HasMaxLength(120);
+            e.Property(i => i.Orientation).HasMaxLength(5);
+            e.Property(i => i.Heading).HasMaxLength(200);
+            e.Property(i => i.Text).HasMaxLength(2000);
+
+            // Reihenfolge auf dem Blatt (Lesen + Umsortieren gehen immer über sie).
+            e.HasIndex(i => new { i.WorksheetId, i.SortOrder });
+
+            // SourceId ist polymorph (Puzzles ODER BookPuzzles, je nach Source) → bewusst KEIN FK:
+            // ein gelöschtes/neu importiertes Puzzle darf ein fertiges Blatt nicht anfassen.
         });
 
         modelBuilder.Entity<RevengeNotification>(e =>

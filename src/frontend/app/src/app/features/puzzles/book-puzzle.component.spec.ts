@@ -61,10 +61,11 @@ function makeComponent(): any {
   const longSolve: any = { resolve: (s: number) => of(s) };
   const favorites: any = { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) };
   const solveMode: any = makeSolveModeStub(prefs);
+  const worksheets: any = { sendAndNotify: jasmine.createSpy('sendAndNotify') };
   return new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, dialog, courseService, weeklyService,
     router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites,
-    solveMode
+    solveMode, worksheets
   );
 }
 

@@ -34,9 +34,10 @@ describe('CourseBrowseComponent', () => {
     const auth: any = { isLoggedIn: opts.loggedIn ?? true };
     const favorites: any = opts.favService ?? { list: () => of(opts.favorites ?? []), add: () => of(true), remove: () => of(false) };
     const dialog: any = opts.dialog ?? { open: () => {} };
+    const worksheets: any = { sendAndNotify: jasmine.createSpy('sendAndNotify') };
     const comp = new CourseBrowseComponent(
       route, {} as any, courseService, prefs, { info: () => {} } as any, { instant: (k: string) => k } as any,
-      auth, favorites, dialog,
+      auth, favorites, dialog, worksheets,
     );
     comp.ngOnInit();
     return comp;

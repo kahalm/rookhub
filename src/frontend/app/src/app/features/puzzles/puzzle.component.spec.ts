@@ -50,7 +50,8 @@ function makeComponent(params: Record<string, string> = {}, solveMode: any = mak
   puzzleService.getStats = () => ({ subscribe: () => {} });
   puzzleService.getAnonymousStats = () => ({ subscribe: () => {} });
   puzzleService.getRatingRange = () => ({ subscribe: () => {} });
-  const c: any = new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, revengeService, translate, http, longSolve, favorites, solveMode);
+  const worksheets: any = { sendAndNotify: jasmine.createSpy('sendAndNotify') };
+  const c: any = new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, revengeService, translate, http, longSolve, favorites, solveMode, worksheets);
   c.solveModeStub = solveMode;
   return c;
 }

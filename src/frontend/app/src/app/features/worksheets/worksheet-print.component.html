@@ -1,0 +1,62 @@
+<div class="ws-page">
+  <div class="ws-toolbar">
+    <a mat-stroked-button [routerLink]="['/worksheets', id]">
+      <mat-icon>arrow_back</mat-icon>
+      {{ 'common.back' | translate }}
+    </a>
+    <span class="ws-spacer"></span>
+    @if (!loading && !error) {
+      <span class="ws-count">{{ 'worksheets.count' | translate: { n: taskCount } }}</span>
+    }
+    <button mat-flat-button color="primary" (click)="print()" [disabled]="taskCount === 0">
+      <mat-icon>print</mat-icon>
+      {{ 'worksheets.print' | translate }}
+    </button>
+  </div>
+  <p class="ws-hint">{{ 'worksheets.printHint' | translate: { n: perPage } }}</p>
+
+  @if (loading) {
+    <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
+  } @else if (error) {
+    <p class="ws-empty">{{ 'worksheets.list.error' | translate }}</p>
+  } @else if (taskCount === 0) {
+    <p class="ws-empty">{{ 'worksheets.detail.empty' | translate }}</p>
+  } @else {
+    @for (sheet of sheets; track $index) {
+      <section class="ws-sheet">
+        <header class="ws-head">
+          <span class="ws-title">{{ sheetName }}</span>
+          <!-- Rechts oben der Name des Lösenden: ein Blatt, das eingesammelt wird, braucht ihn. -->
+          <span class="ws-scope">{{ 'worksheets.nameLine' | translate }}</span>
+        </header>
+
+        <div class="ws-grid" [class.ws-grid--6]="perPage === 6" [class.ws-grid--4]="perPage === 4"
+             [class.ws-grid--2]="perPage === 2">
+          @for (t of sheet; track t.no) {
+            <div class="ws-task">
+              <div class="ws-task-head">
+                <span class="ws-no">{{ t.no }}</span>
+                @if (t.heading) { <span class="ws-heading">{{ t.heading }}</span> }
+                <span class="ws-turn">
+                  {{ (t.whiteToMove ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
+                </span>
+              </div>
+              <app-flashcard-board class="ws-board" [fen]="t.fen" [orientation]="t.orientation"
+                                   [pieceSet]="pieceSet" [coordinates]="true" />
+              @if (t.text) { <p class="ws-text">{{ t.text }}</p> }
+              <!-- Platz für die Lösung: Schreiblinien, bewusst ohne Vorgabe. -->
+              <div class="ws-lines">
+                @for (l of lines; track l) { <span></span> }
+              </div>
+            </div>
+          }
+        </div>
+
+        <footer class="ws-foot">
+          <span>{{ 'worksheets.footer' | translate }}</span>
+          <span>{{ today | date:'shortDate' }} · {{ $index + 1 }}/{{ sheets.length }}</span>
+        </footer>
+      </section>
+    }
+  }
+</div>

@@ -32,6 +32,8 @@ import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
+import { WorksheetService } from '../worksheets/worksheet.service';
+import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -352,7 +354,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
     private chainService: EndlessChainService,
-    private solveMode: SolveModeService
+    private solveMode: SolveModeService,
+    private worksheets: WorksheetService
   ) {
     super(stockfish);
     this.favoriteTracker = new FavoriteTracker(
@@ -1285,6 +1288,20 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         from: '/puzzles/endless?resume=1',   // Rückkehr setzt den laufenden Run fort (siehe ngOnInit)
       },
     });
+  }
+
+  /**
+   * Das zuletzt gelöste Puzzle aufs AUFGABENBLATT — dieselbe Auswahl wie „♥ letztes Puzzle".
+   * Geschickt wird die AUFGABEN-Stellung (der Gegnerzug ist eingespielt), nicht die rohe FEN.
+   */
+  sendLastToWorksheet(target: number | null): void {
+    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
+    if (!this.lastSolvedFen) return;
+    const item = taskItemFromPuzzle(
+      { fen: this.lastSolvedFen, moves: this.lastSolvedMoves, orientation: this.lastSolvedOrientation },
+      'Standard', { sourceId: this.lastSolvedPuzzleId },
+    );
+    this.worksheets.sendAndNotify(target, item ? [item] : []);
   }
 
   /** Zuletzt gelöstes Puzzle im Analysemodus öffnen (auch nach dem Auto-Advance verfügbar). */

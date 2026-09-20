@@ -28,28 +28,49 @@
 .ws-scope { color: #444; text-align: right; overflow-wrap: anywhere; }
 .ws-foot { border-top: 1px solid #999; padding-top: 2mm; margin-top: auto; color: #444; }
 
-/* 2 Spalten × 3 Zeilen = 6 Aufgaben je Seite; dazwischen eine durchgehende Trennlinie wie auf
-   klassischen Diagramm-Ausdrucken (ein Rahmen je Aufgabe ergäbe drei kurze Striche mit Lücken). */
-.ws-grid {
-  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 82mm); gap: 4mm;
+.ws-grid { display: grid; gap: 4mm; }
+/* Zwei Spalten bekommen die durchgehende Trennlinie klassischer Diagramm-Ausdrucke (ein Rahmen je
+   Aufgabe ergäbe drei kurze Striche mit Lücken). */
+.ws-grid--6, .ws-grid--4 {
+  grid-template-columns: 1fr 1fr;
   background: linear-gradient(to right,
     transparent calc(50% - 0.3pt), #bbb calc(50% - 0.3pt), #bbb calc(50% + 0.3pt), transparent calc(50% + 0.3pt));
 }
-.ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-.ws-task-head { display: flex; justify-content: space-between; align-items: baseline; width: 100%; font-size: 9pt; margin-bottom: 1mm; }
-.ws-no { font-weight: 700; }
-.ws-turn { color: #444; }
-.ws-board { width: 58mm; }
+/* A4 (297mm) − Ränder − Kopf/Fuß ⇒ 3 × 82mm bzw. 2 × 124mm. */
+.ws-grid--6 { grid-template-rows: repeat(3, 82mm); }
+.ws-grid--4 { grid-template-rows: repeat(2, 124mm); }
+/* Zwei je Seite: eine Spalte, großes Brett, breiter Begleittext — dafür eine Trennlinie quer. */
+.ws-grid--2 { grid-template-columns: 1fr; grid-template-rows: repeat(2, 124mm); }
+.ws-grid--2 .ws-task + .ws-task { border-top: 0.6pt solid #bbb; padding-top: 3mm; }
 
-/* Platz für die Lösung — zwei Schreiblinien unter jedem Diagramm. */
+.ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.ws-task-head { display: flex; justify-content: space-between; align-items: baseline; gap: 2mm; width: 100%; font-size: 9pt; margin-bottom: 1mm; }
+.ws-no { font-weight: 700; }
+/* Überschrift zwischen Nummer und Zugangabe: darf umbrechen, aber die Zeile nicht sprengen. */
+.ws-heading { font-weight: 600; flex: 1 1 auto; text-align: center; overflow-wrap: anywhere; }
+.ws-turn { color: #444; white-space: nowrap; }
+.ws-board { width: 58mm; }
+.ws-grid--4 .ws-board { width: 66mm; }
+.ws-grid--2 .ws-board { width: 76mm; }
+
+/* Begleittext unter dem Diagramm; bei sechs Diagrammen je Seite bleibt nur Platz für zwei Zeilen. */
+.ws-text {
+  width: 100%; margin: 1.5mm 0 0; font-size: 8.5pt; line-height: 1.35; color: #222;
+  overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6;
+}
+.ws-grid--6 .ws-text { -webkit-line-clamp: 2; }
+.ws-grid--4 .ws-text { -webkit-line-clamp: 4; font-size: 9pt; }
+.ws-grid--2 .ws-text { -webkit-line-clamp: 6; font-size: 10pt; }
+
+/* Platz für die Lösung — Schreiblinien unter jeder Aufgabe. */
 .ws-lines { width: 100%; margin-top: 3mm; display: flex; flex-direction: column; gap: 4mm; }
 .ws-lines span { display: block; height: 0; border-bottom: 1px solid #bbb; }
 
 @media (max-width: 700px) {
   /* Am Handy nur Vorschau: ein Blatt passt nicht in die Breite, also skaliert der Inhalt mit. */
   .ws-sheet { width: 100%; padding: 4mm; }
-  .ws-grid { grid-template-rows: repeat(3, auto); }
-  .ws-board { width: 100%; max-width: 58mm; }
+  .ws-grid--6, .ws-grid--4, .ws-grid--2 { grid-template-rows: auto; }
+  .ws-board, .ws-grid--4 .ws-board, .ws-grid--2 .ws-board { width: 100%; max-width: 58mm; }
 }
 
 @media print {
@@ -65,9 +86,12 @@
     page-break-after: always;
   }
   .ws-sheet:last-child { break-after: auto; page-break-after: auto; }
-  /* Feste Zeilenhöhe: A4 (297mm) − Ränder − Kopf/Fuß ⇒ drei Reihen à 82mm. */
-  .ws-grid { grid-template-rows: repeat(3, 82mm); }
+  .ws-grid--6 { grid-template-rows: repeat(3, 82mm); }
+  .ws-grid--4 { grid-template-rows: repeat(2, 124mm); }
+  .ws-grid--2 { grid-template-rows: repeat(2, 124mm); }
   .ws-board { width: 58mm; }
+  .ws-grid--4 .ws-board { width: 66mm; }
+  .ws-grid--2 .ws-board { width: 76mm; }
 }
 
 @page { size: A4 portrait; margin: 12mm; }

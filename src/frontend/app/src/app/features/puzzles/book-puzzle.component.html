@@ -504,7 +504,9 @@
               (shareClicked)="sharePuzzle()"
               (settingsClicked)="openSettingsDialog()"
               (reviewLastClicked)="reviewLastPuzzle()"
-              (loveLastClicked)="favoriteTracker.toggleLast()">
+              (loveLastClicked)="favoriteTracker.toggleLast()"
+              [canWorksheetLast]="isLoggedIn"
+              (worksheetLastPicked)="sendLastToWorksheet($event)">
               @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
                 <button mat-stroked-button (click)="enterReview()">
                   <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}

@@ -1,0 +1,94 @@
+<div class="wl-page">
+  <div class="wl-head">
+    <h1><mat-icon>assignment</mat-icon> {{ 'worksheets.title' | translate }}</h1>
+    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}</p>
+  </div>
+
+  @if (loading) {
+    <div class="wl-center"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (error) {
+    <p class="wl-hint">{{ 'worksheets.list.error' | translate }}</p>
+  } @else {
+    <!-- Zwischenablage: der Sammelkorb. Steht immer oben, auch leer — sonst sucht man sie. -->
+    @if (clipboard; as clip) {
+      <mat-card class="wl-clip">
+        <mat-card-content>
+          <div class="wl-clip-head">
+            <mat-icon>content_paste</mat-icon>
+            <span class="wl-clip-title">{{ 'worksheets.clipboard' | translate }}</span>
+            <span class="wl-count">{{ 'worksheets.count' | translate: { n: clip.itemCount } }}</span>
+            <span class="wl-spacer"></span>
+            <a mat-stroked-button [routerLink]="['/worksheets', clip.id]">
+              <mat-icon>edit</mat-icon>{{ 'worksheets.list.open' | translate }}
+            </a>
+            <button mat-icon-button (click)="clearClipboard()" [disabled]="clip.itemCount === 0"
+                    [matTooltip]="'worksheets.list.clear' | translate"
+                    [attr.aria-label]="'worksheets.list.clear' | translate">
+              <mat-icon>delete_sweep</mat-icon>
+            </button>
+          </div>
+
+          @if (clip.itemCount === 0) {
+            <p class="wl-clip-empty">{{ 'worksheets.clipboardEmpty' | translate }}</p>
+          }
+
+          <div class="wl-save">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'worksheets.list.nameLabel' | translate }}</mat-label>
+              <input matInput [(ngModel)]="newName" maxlength="120"
+                     (keyup.enter)="clip.itemCount > 0 ? saveClipboard() : createEmpty()" />
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="saveClipboard()"
+                    [disabled]="busy || !newName.trim() || clip.itemCount === 0">
+              <mat-icon>save</mat-icon>{{ 'worksheets.list.saveClipboard' | translate }}
+            </button>
+            <button mat-stroked-button (click)="createEmpty()" [disabled]="busy || !newName.trim()">
+              <mat-icon>add</mat-icon>{{ 'worksheets.list.createEmpty' | translate }}
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <div class="wl-section-title">{{ 'worksheets.list.mine' | translate }}</div>
+
+    @if (named.length === 0) {
+      <mat-card class="wl-empty">
+        <mat-icon>assignment</mat-icon>
+        <p>{{ 'worksheets.list.empty' | translate }}</p>
+      </mat-card>
+    } @else {
+      <div class="wl-list">
+        @for (sheet of named; track sheet.id) {
+          <mat-card class="wl-sheet">
+            <div class="wl-meta">
+              <span class="wl-name">{{ sheet.name }}</span>
+              <span class="wl-sub">
+                {{ 'worksheets.count' | translate: { n: sheet.itemCount } }}
+                · {{ 'worksheets.perPage.short' | translate: { n: sheet.perPage } }}
+                · {{ sheet.updatedAt | date:'mediumDate' }}
+              </span>
+            </div>
+            <div class="wl-actions">
+              <a mat-icon-button [routerLink]="['/worksheets', sheet.id]"
+                 [matTooltip]="'worksheets.list.open' | translate"
+                 [attr.aria-label]="'worksheets.list.open' | translate">
+                <mat-icon>edit</mat-icon>
+              </a>
+              <a mat-icon-button [routerLink]="['/worksheets', sheet.id, 'print']" [queryParams]="{ print: 1 }"
+                 [matTooltip]="'worksheets.print' | translate"
+                 [attr.aria-label]="'worksheets.print' | translate">
+                <mat-icon>picture_as_pdf</mat-icon>
+              </a>
+              <button mat-icon-button color="warn" (click)="remove(sheet)"
+                      [matTooltip]="'worksheets.list.delete' | translate"
+                      [attr.aria-label]="'worksheets.list.delete' | translate">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+</div>

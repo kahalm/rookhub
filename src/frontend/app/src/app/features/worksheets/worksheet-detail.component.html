@@ -1,0 +1,167 @@
+<div class="wd-page">
+  <div class="wd-toolbar">
+    <a mat-icon-button routerLink="/worksheets" [attr.aria-label]="'common.back' | translate">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+
+    @if (renaming) {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wd-rename">
+        <input matInput [(ngModel)]="renameDraft" maxlength="120"
+               (keyup.enter)="applyRename()" (keyup.escape)="renaming = false" />
+      </mat-form-field>
+      <button mat-icon-button (click)="applyRename()" [attr.aria-label]="'common.save' | translate">
+        <mat-icon>check</mat-icon>
+      </button>
+    } @else {
+      <h1 class="wd-title">
+        @if (sheet?.isClipboard) { <mat-icon>content_paste</mat-icon> }
+        {{ title }}
+      </h1>
+    }
+
+    <span class="wd-spacer"></span>
+
+    @if (sheet) {
+      <span class="wd-count">{{ 'worksheets.count' | translate: { n: sheet.items.length } }}</span>
+      <a mat-flat-button color="primary" [routerLink]="['/worksheets', sheet.id, 'print']"
+         [queryParams]="{ print: 1 }" [class.wd-disabled]="sheet.items.length === 0">
+        <mat-icon>picture_as_pdf</mat-icon>{{ 'worksheets.print' | translate }}
+      </a>
+      <button mat-icon-button [matMenuTriggerFor]="sheetMenu"
+              [attr.aria-label]="'worksheets.detail.more' | translate">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #sheetMenu="matMenu">
+        @if (!sheet.isClipboard) {
+          <button mat-menu-item (click)="startRename()">
+            <mat-icon>edit</mat-icon><span>{{ 'worksheets.detail.rename' | translate }}</span>
+          </button>
+        }
+        <button mat-menu-item (click)="clearSheet()" [disabled]="sheet.items.length === 0">
+          <mat-icon>delete_sweep</mat-icon><span>{{ 'worksheets.list.clear' | translate }}</span>
+        </button>
+        @if (!sheet.isClipboard) {
+          <button mat-menu-item class="wd-danger" (click)="deleteSheet()">
+            <mat-icon>delete</mat-icon><span>{{ 'worksheets.list.delete' | translate }}</span>
+          </button>
+        }
+      </mat-menu>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="wd-center"><mat-spinner diameter="40"></mat-spinner></div>
+  } @else if (error || !sheet) {
+    <p class="wd-hint">{{ 'worksheets.list.error' | translate }}</p>
+  } @else {
+    <!-- Dichte des Ausdrucks: bestimmt, wie viel Platz jede Aufgabe für ihren Begleittext hat. -->
+    <div class="wd-density">
+      <span class="wd-density-label">{{ 'worksheets.perPage.label' | translate }}</span>
+      <mat-button-toggle-group [value]="sheet.perPage" (change)="setPerPage($event.value)" hideSingleSelectionIndicator>
+        @for (n of perPageChoices; track n) {
+          <mat-button-toggle [value]="n">{{ 'worksheets.perPage.option' | translate: { n: n } }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+    </div>
+
+    @if (sheet.isClipboard) {
+      <!-- Aus dem Sammelkorb wird hier ein Blatt, das man wiederfindet. -->
+      <mat-card class="wd-save">
+        <mat-card-content>
+          <p class="wd-hint">{{ 'worksheets.detail.saveHint' | translate }}</p>
+          <div class="wd-save-row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'worksheets.list.nameLabel' | translate }}</mat-label>
+              <input matInput [(ngModel)]="saveName" maxlength="120" (keyup.enter)="saveAsSheet()" />
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="saveAsSheet()"
+                    [disabled]="busy || !saveName.trim() || sheet.items.length === 0">
+              <mat-icon>save</mat-icon>{{ 'worksheets.list.saveClipboard' | translate }}
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @if (sheet.items.length === 0) {
+      <mat-card class="wd-empty">
+        <mat-icon>assignment</mat-icon>
+        <p>{{ 'worksheets.detail.empty' | translate }}</p>
+      </mat-card>
+    } @else {
+      <div class="wd-list" cdkDropList (cdkDropListDropped)="drop($event)">
+        @for (item of sheet.items; track item.id; let i = $index) {
+          <mat-card class="wd-item" cdkDrag>
+            <div class="wd-grip" cdkDragHandle
+                 [matTooltip]="'worksheets.detail.dragTooltip' | translate">
+              <mat-icon>drag_indicator</mat-icon>
+              <span class="wd-no">{{ i + 1 }}</span>
+            </div>
+
+            <app-flashcard-board class="wd-board" [fen]="item.fen" [orientation]="item.orientation"
+                                 [pieceSet]="pieceSet" [coordinates]="true" />
+
+            <div class="wd-fields">
+              <span class="wd-turn">
+                {{ (whiteToMove(item) ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
+              </span>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'worksheets.detail.heading' | translate }}</mat-label>
+                <input matInput [(ngModel)]="item.heading" maxlength="200" (blur)="saveItem(item)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'worksheets.detail.text' | translate }}</mat-label>
+                <textarea matInput rows="3" maxlength="2000" [(ngModel)]="item.text" (blur)="saveItem(item)"></textarea>
+              </mat-form-field>
+            </div>
+
+            <div class="wd-item-actions">
+              <button mat-icon-button (click)="move(i, -1)" [disabled]="i === 0"
+                      [matTooltip]="'worksheets.detail.moveUp' | translate"
+                      [attr.aria-label]="'worksheets.detail.moveUp' | translate">
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+              <button mat-icon-button (click)="move(i, 1)" [disabled]="i === sheet.items.length - 1"
+                      [matTooltip]="'worksheets.detail.moveDown' | translate"
+                      [attr.aria-label]="'worksheets.detail.moveDown' | translate">
+                <mat-icon>arrow_downward</mat-icon>
+              </button>
+              <button mat-icon-button (click)="flip(item)"
+                      [matTooltip]="'worksheets.detail.flip' | translate"
+                      [attr.aria-label]="'worksheets.detail.flip' | translate">
+                <mat-icon>swap_vert</mat-icon>
+              </button>
+              @if (item.bookId) {
+                <button mat-icon-button (click)="openSource(item)"
+                        [matTooltip]="'worksheets.detail.openSource' | translate"
+                        [attr.aria-label]="'worksheets.detail.openSource' | translate">
+                  <mat-icon>menu_book</mat-icon>
+                </button>
+              }
+              <button mat-icon-button color="warn" (click)="removeItem(item)"
+                      [matTooltip]="'worksheets.detail.removeItem' | translate"
+                      [attr.aria-label]="'worksheets.detail.removeItem' | translate">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </mat-card>
+        }
+      </div>
+    }
+
+    <!-- Stellung von Hand: eine FEN aus der Analyse, einem Buch, einer Datenbank. -->
+    <mat-card class="wd-add">
+      <mat-card-content>
+        <div class="wd-save-row">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'worksheets.detail.fenLabel' | translate }}</mat-label>
+            <input matInput [(ngModel)]="newFen" maxlength="120" (keyup.enter)="addFen()" />
+          </mat-form-field>
+          <button mat-stroked-button (click)="addFen()" [disabled]="busy || !newFen.trim()">
+            <mat-icon>add</mat-icon>{{ 'worksheets.detail.addFen' | translate }}
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

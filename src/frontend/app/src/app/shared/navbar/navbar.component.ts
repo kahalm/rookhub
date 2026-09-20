@@ -126,6 +126,7 @@ import {
           @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
           @if (can('guess')) { <button mat-menu-item routerLink="/guess">{{ 'nav.guess' | translate }}</button> }
           @if (can('favorites')) { <button mat-menu-item routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
+          @if (can('worksheets')) { <button mat-menu-item routerLink="/worksheets">{{ 'nav.worksheets' | translate }}</button> }
         </mat-menu>
         <mat-menu #libraryMenu="matMenu">
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
@@ -290,7 +291,7 @@ export class NavbarComponent implements OnInit {
   get anyTraining(): boolean {
     return this.can('puzzles') || this.can('weekly') || this.can('training-goals')
       || this.can('repertoires') || this.can('guess') || this.can('favorites')
-      || (this.showCourses && this.can('courses'));
+      || this.can('worksheets') || (this.showCourses && this.can('courses'));
   }
   get anyLibrary(): boolean {
     return this.can('analysis') || this.can('games') || this.can('reconstruct') || this.can('remembered')

@@ -6,6 +6,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
+import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
 
 /**
  * DIE eine Aktionszeile unter der Status-Card — für alle drei Puzzle-Modi (Standard/Endless/
@@ -22,7 +23,7 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule,
-    TranslatePipe, PuzzleTagsComponent,
+    TranslatePipe, PuzzleTagsComponent, SendToWorksheetComponent,
   ],
   template: `
     <div class="pab-row">
@@ -57,6 +58,11 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
             <mat-icon>{{ lastLoved ? 'favorite' : 'favorite_border' }}</mat-icon>
             <span>{{ 'favorites.loveLast' | translate }}</span>
           </button>
+        }
+        @if (hasLast && canWorksheetLast) {
+          <!-- Neben dem Herz: dasselbe Puzzle aufs Aufgabenblatt (Zwischenablage o. benanntes Blatt). -->
+          <app-send-to-worksheet labelKey="worksheets.send.lastPuzzle"
+                                 (pick)="worksheetLastPicked.emit($event)" />
         }
         @if (showEndless) {
           <button mat-menu-item (click)="endlessClicked.emit()">
@@ -115,6 +121,8 @@ export class PuzzleActionBarComponent {
   /** Darf der User das letzte Puzzle lieben (eingeloggt, Modus erlaubt Favoriten)? */
   @Input() canLoveLast = false;
   @Input() lastLoved = false;
+  /** Darf das letzte Puzzle aufs Aufgabenblatt (eingeloggt — Blätter liegen am Server)? */
+  @Input() canWorksheetLast = false;
   /** ⋮-Eintrag „Endlos-Modus" (nur Standard-Puzzle). */
   @Input() showEndless = false;
   @Input() shareLabelKey = 'puzzles.actions.share';
@@ -130,5 +138,7 @@ export class PuzzleActionBarComponent {
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() reviewLastClicked = new EventEmitter<void>();
   @Output() loveLastClicked = new EventEmitter<void>();
+  /** Ziel des Aufgabenblatts: `null` = Zwischenablage, sonst die Blatt-ID. */
+  @Output() worksheetLastPicked = new EventEmitter<number | null>();
   @Output() endlessClicked = new EventEmitter<void>();
 }

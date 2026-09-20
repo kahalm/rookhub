@@ -30,6 +30,8 @@ import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
+import { WorksheetService } from '../worksheets/worksheet.service';
+import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { Key } from 'chessground/types';
@@ -148,7 +150,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private http: HttpClient,
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
-    private solveMode: SolveModeService
+    private solveMode: SolveModeService,
+    private worksheets: WorksheetService
   ) {
     super(stockfish);
     this.favoriteTracker = new FavoriteTracker(
@@ -633,6 +636,20 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (e.key === 'ArrowRight') this.reviewNext();
   }
 
+
+  /**
+   * Das zuletzt gelöste Puzzle aufs AUFGABENBLATT — dieselbe Auswahl wie „♥ letztes Puzzle",
+   * nur fürs Papier. Geschickt wird die AUFGABEN-Stellung (der Gegnerzug ist eingespielt),
+   * nicht die rohe Puzzle-FEN: gedruckt wird die Frage, nicht der Moment davor.
+   */
+  sendLastToWorksheet(target: number | null): void {
+    if (!this.lastSolvedFen) return;
+    const item = taskItemFromPuzzle(
+      { fen: this.lastSolvedFen, moves: this.lastSolvedMoves, orientation: this.lastSolvedOrientation },
+      'Standard', { sourceId: this.lastSolvedPuzzleId },
+    );
+    this.worksheets.sendAndNotify(target, item ? [item] : []);
+  }
 
   reviewLastPuzzle(): void {
     // Direkt in den Analysemodus mit dem zuletzt gelösten Puzzle (Stellung + Zugfolge).

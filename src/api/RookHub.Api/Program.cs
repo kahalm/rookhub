@@ -194,6 +194,7 @@ try
     builder.Services.AddScoped<FriendService>();
     builder.Services.AddScoped<ChallengeService>();
     builder.Services.AddScoped<FavoriteService>();
+    builder.Services.AddScoped<WorksheetService>();
     builder.Services.AddScoped<RevengeNotificationService>();
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();

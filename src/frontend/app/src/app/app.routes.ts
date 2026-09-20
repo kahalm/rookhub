@@ -28,6 +28,11 @@ export const routes: Routes = [
   { path: 'puzzles/:id', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent) },
   { path: 'puzzles', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent), canActivate: [menuGuard('puzzles')] },
   { path: 'favorites', loadComponent: () => import('./features/favorites/favorites.component').then(m => m.FavoritesComponent), canActivate: [authGuard, menuGuard('favorites')] },
+  // Aufgabenblätter: Übersicht (Zwischenablage + benannte Blätter), ein Blatt bearbeiten, drucken.
+  // Die Druckansicht steht VOR `:id`-Varianten mit eigenem Segment — eigene Route, eigener Bauplan.
+  { path: 'worksheets', loadComponent: () => import('./features/worksheets/worksheet-list.component').then(m => m.WorksheetListComponent), canActivate: [authGuard, menuGuard('worksheets')] },
+  { path: 'worksheets/:id/print', loadComponent: () => import('./features/worksheets/worksheet-print.component').then(m => m.WorksheetPrintComponent), canActivate: [authGuard, menuGuard('worksheets')] },
+  { path: 'worksheets/:id', loadComponent: () => import('./features/worksheets/worksheet-detail.component').then(m => m.WorksheetDetailComponent), canActivate: [authGuard, menuGuard('worksheets')] },
   { path: 'weekly', loadComponent: () => import('./features/weekly/weekly-list.component').then(m => m.WeeklyListComponent), canActivate: [authGuard, menuGuard('weekly')] },
   // Direkter Link auf EINE Wochenpost: bewusst ohne Guards. Der Server liefert Post, Puzzles
   // und Bestenliste ohnehin anonym aus (AllowAnonymous im WeeklyPostController); der Guard war
@@ -61,9 +66,6 @@ export const routes: Routes = [
   { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-detail.component').then(m => m.CourseDetailComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   // MUSS vor der :mode-Route stehen, sonst landet „calc" im Buch-Puzzle-Solver.
   { path: 'courses/:bookId/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
-  // Aufgabenblatt zum Ausdrucken (6 Stellungen je A4-Seite) — MUSS wie die Flashcards vor der
-  // `:mode`-Route stehen, sonst liest der Router „worksheet" als Modus.
-  { path: 'courses/:bookId/worksheet', loadComponent: () => import('./features/courses/worksheet/worksheet.component').then(m => m.WorksheetComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   { path: 'courses/:bookId/calc', loadComponent: () => import('./features/courses/calc/calculation.component').then(m => m.CalculationComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },

@@ -948,6 +948,43 @@ sollen nicht im „Aktualisieren"-Banner hängen).
 | POST | `/api/courses/{bookId:int}/chapters/delete` | Besitzer/Admin | Ganzes Kapitel = alle seine Linien löschen `{ chapter }` |
 | POST | `/api/courses/{bookId:int}/chapters/reset` | Auth | **Einzel-Kapitel-Reset des EIGENEN Fortschritts** `{ chapter }` — leert CoursePuzzleResults/CourseAttempts/CourseInfoViews dieses Kapitels. Buchweites `CourseProgress.ResetAt` bleibt (ist buchweit), eigene `CalculationTrees` bleiben ebenfalls (Nutzerarbeit) |
 
+### Aufgabenblätter (auth) — Stellungen sammeln, ordnen, drucken
+
+Ein **Aufgabenblatt** ist eine benannte, sortierte Sammlung von Stellungen, die man ausdruckt (6/4/2
+Diagramme je A4-Seite, Platz für die Lösung). Jeder Nutzer hat genau EIN Blatt mit `IsClipboard` — die
+**Zwischenablage**: dort landet standardmäßig alles, was man „an ein Aufgabenblatt schickt" (ganzer Kurs,
+Kapitel, markierte Linien, eine einzelne Stellung aus dem Durchsehen, das zuletzt gelöste Puzzle). Aus der
+Ablage wird per Namen ein festes Blatt — die Stellungen WANDERN mit, die Ablage ist danach wieder leer.
+
+Die Stellung wird beim Senden **ausgeschrieben** (FEN + Ausrichtung), nicht verlinkt: ein Neuimport des
+Kurses ändert ein fertiges Blatt nicht mehr. `Source`/`SourceId`/`BookId` sind reiner Herkunftsvermerk
+(kein FK). Gerechnet wird die AUFGABEN-Stellung im Frontend (`features/worksheets/worksheet-items.util.ts`
+über `buildFlashcard`/`taskItemFromPuzzle`) — dieselbe Rechnung wie bei den Karteikarten, damit Blatt und
+Karte nie auseinanderlaufen. Gedruckt wird ohne Lösung und ohne Linientitel (der verriete die Aufgabe);
+Überschrift und Begleittext schreibt der Ersteller je Aufgabe selbst dazu.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/worksheets` | Übersicht: Zwischenablage zuerst, dann die benannten Blätter (zuletzt geändert zuerst), je mit `itemCount` |
+| GET | `/api/worksheets/clipboard` | Zwischenablage samt Stellungen (wird beim ersten Zugriff angelegt) |
+| GET | `/api/worksheets/{id:int}` | Ein Blatt samt Stellungen (fremdes Blatt → 404) |
+| POST | `/api/worksheets` | Leeres benanntes Blatt `{ name, perPage? }` |
+| POST | `/api/worksheets/clipboard/save` | Ablage unter Namen sichern `{ name, perPage? }` — Stellungen wandern mit, Ablage bleibt leer zurück; leere Ablage → 400 |
+| PUT | `/api/worksheets/{id:int}` | Umbenennen / Dichte `{ name?, perPage? }` (die Zwischenablage behält ihren leeren Namen) |
+| DELETE | `/api/worksheets/{id:int}` | Blatt löschen; die **Zwischenablage wird nur geleert** |
+| DELETE | `/api/worksheets/{id:int}/items` | Alle Stellungen entfernen, Blatt bleibt |
+| POST | `/api/worksheets/items` | „An Aufgabenblatt senden" `{ worksheetId?, items[] }` — `worksheetId` leer/0 = Zwischenablage. Antwort `{ worksheetId, name, isClipboard, added, skipped, total, full }`. Schon vorhandene Stellungen (gleiche FEN + Ausrichtung) werden übersprungen, unbrauchbare FENs ebenso; Deckel `WorksheetService.MaxItemsPerSheet` = 240 → `full` |
+| PUT | `/api/worksheets/{id:int}/items/{itemId:int}` | Überschrift/Begleittext/Ausrichtung `{ heading?, text?, orientation? }` (nur gesetzte Felder wirken) |
+| DELETE | `/api/worksheets/{id:int}/items/{itemId:int}` | Eine Aufgabe vom Blatt nehmen |
+| PUT | `/api/worksheets/{id:int}/order` | Reihenfolge `{ itemIds[] }` — unbekannte IDs werden ignoriert, nicht genannte Aufgaben hängen sich hinten an (eine halbe Liste vom Client darf keine Stellung verschwinden lassen) |
+
+Frontend: `/worksheets` (Übersicht), `/worksheets/:id` (Bearbeiten: ziehen, Überschrift/Begleittext,
+FEN von Hand), `/worksheets/:id/print?print=1` (Druckansicht, öffnet den Druckdialog). Gesendet wird über
+`<app-send-to-worksheet>` (Menüzeile mit Ziel-Untermenü bzw. `[asButton]` in Werkzeugleisten) — eingebaut im
+Kurs-⋮, im Kapitel-⋮, in der Steuerleiste des Durchsehens und im ⋮ der Puzzle-Aktionszeile (neben
+„♥ Letztes Puzzle"). Die PDF macht der Browser; gezeichnet wird mit `FlashcardBoardComponent` als
+Inline-SVG (chessground-Figuren sind CSS-Hintergründe und werden nicht gedruckt).
+
 ### Kalkulations-Modus (auth) — Stellungen ohne Lösung
 Ein Buch mit `Book.IsCalculation` (Schalter auf der KURS-Detailseite, Besitzer/Admin — `PUT
 /api/courses/{bookId}/calculation`; **nicht** im Admin-Bücher-Tab) ist ein **Kalkulationsbuch**: seine Linien
@@ -1958,6 +1995,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |
 | CourseFlashcardMarks | PERSISTENTE Flashcard-Markierung einzelner Kurs-Linien je User (Checkbox im Durchsehen; `?marked=1`-Bereich der Flashcards-Seite) | UserId (Cascade) + BookId (denormalisiert, Cascade) + BookPuzzleId (**Restrict** — wie CoursePuzzleResult), CreatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId). Linien-Löschpfade (`CourseAuthoringService.RemoveLinesAsync`, `BookAdminService.DeleteBook`) räumen explizit ab |
 | RepertoireFlashcardMarks | PERSISTENTE Flashcard-Markierung von Repertoire-Linien je User — Besitzer UND Freigabe-Empfänger haben eigene Sätze | UserId (Cascade) + RepertoireId (Cascade) + LineKey (≤120, Frontend-Linien-Hash wie SR), CreatedAt; **UNIQUE (UserId, RepertoireId, LineKey)** |
+| Worksheets | Ein AUFGABENBLATT (Stellungssammlung zum Ausdrucken). Genau EINES je Nutzer mit `IsClipboard` = die Zwischenablage (Sammelkorb; nicht löschbar, nur leerbar) | UserId (Cascade), Name (≤120, leer bei der Ablage), IsClipboard, PerPage (2/4/6), CreatedAt, UpdatedAt; Index (UserId, IsClipboard) |
+| WorksheetItems | Eine Aufgabe auf dem Blatt. Die Stellung ist AUSGESCHRIEBEN — Neuimport/Löschen der Quelle ändert ein fertiges Blatt nicht | WorksheetId (Cascade), SortOrder, Fen (≤120), Orientation (≤5, white/black), Heading (≤200), Text (≤2000), Source (Manual/Standard/Book) + SourceId? + BookId? (**kein FK**, nur Herkunftsvermerk), CreatedAt; Index (WorksheetId, SortOrder) |
 
 Cascade Deletes: AppUser → Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults, CourseAttempts, UserTrainingGoals, PlayTimeDailies, PlayTimeSyncs, WeeklyPostAttempts, SavedGames, ManualActivities, GameReconstructions (→ GameReconstructionParts); Repertoire → Files, RepertoireShares (RepertoireShare.Owner/Recipient Restrict); Group → UserGroups, BookGroupAccesses, GroupTrainingGoals; Book → BookPuzzles, CourseProgresses, CoursePuzzleResults, CourseAttempts, BookGroupAccesses, CourseShares, CourseLinks, CalculationTrees (CoursePuzzleResult.BookPuzzle + CourseAttempt.BookPuzzle + CalculationTree.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden; CourseShare.Owner/Recipient ebenfalls Restrict; CourseLink.LinkedBookId ohne FK → DeleteBook räumt beide Richtungen explizit ab); WeeklyPost → WeeklyPostAttempts; AppUser → AdminMessages + MessageThreads (über UserId, der Nicht-Admin-Teilnehmer; MessageThread.ClaimedByAdminId hat bewusst keinen FK). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-/Ziel-Vorlagen-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.

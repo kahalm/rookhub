@@ -266,6 +266,9 @@ public class ProfileService
         // geholte Verlauf bleibt (der gehoert dem Spieler, nicht dem Konto), die Liste geht.
         _db.TrackedPlayers.RemoveRange(await _db.TrackedPlayers.Where(t => t.UserId == userId).ToListAsync());
         _db.UserViewStates.RemoveRange(await _db.UserViewStates.Where(v => v.UserId == userId).ToListAsync());
+        // Aufgabenblätter: Überschriften und Begleittexte sind FREITEXT des Nutzers (und oft
+        // über seine Schüler geschrieben) — die gehen mit; die Aufgaben cascaden am Blatt.
+        _db.Worksheets.RemoveRange(await _db.Worksheets.Where(w => w.UserId == userId).ToListAsync());
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
         // API-Tokens (chess.com-Extension u. a.) widerrufen — ein gelöschtes Konto behält keinen Zugang.
         _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == userId).ToListAsync());

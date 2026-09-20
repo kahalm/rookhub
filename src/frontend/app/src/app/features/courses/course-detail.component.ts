@@ -21,6 +21,9 @@ import { CalcEditionDialogComponent, CalcEditionDialogResult } from './calc-edit
 import { CalcMembersDialogComponent } from './calc-members-dialog.component';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
+import { WorksheetService } from '../worksheets/worksheet.service';
+import { itemsFromLines } from '../worksheets/worksheet-items.util';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
 
@@ -40,7 +43,7 @@ import { pgnFileName } from '../../shared/pgn-export.util';
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule,
     MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatTooltipModule, MatDialogModule, TranslatePipe,
+    MatTooltipModule, MatDialogModule, TranslatePipe, SendToWorksheetComponent,
   ],
   templateUrl: './course-detail.component.html',
   styleUrls: ['./course-detail.component.scss'],
@@ -82,6 +85,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private worksheets: WorksheetService,
   ) {}
 
   ngOnInit(): void {
@@ -428,6 +432,40 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     this.subs.add(this.courses.downloadLinePgn(this.bookId, line.id).subscribe({
       next: blob => downloadBlob(blob, name),
       error: () => this.fail('courses.downloadFailed'),
+    }));
+  }
+
+  // ===== Aufgabenblatt =====
+  // „An Aufgabenblatt senden" schickt die STELLUNGEN, nicht die Auswahl: was hier einmal
+  // hinübergeht, bleibt so, wie es war — auch wenn der Kurs später neu importiert wird.
+
+  /** Ganzer Kurs → Blatt (`target` null = Zwischenablage). */
+  sendCourseToWorksheet(target: number | null): void {
+    this.sendLines(target, () => true);
+  }
+
+  /** Ein Kapitel → Blatt. */
+  sendChapterToWorksheet(chapter: CourseManageChapter, target: number | null): void {
+    const wanted = chapter.name?.trim() || '';
+    this.sendLines(target, p => (p.chapter?.trim() || '') === wanted);
+  }
+
+  /** Die als Karteikarte markierten Linien → Blatt (dieselbe Auswahl wie „markierte Karten"). */
+  sendMarkedToWorksheet(target: number | null): void {
+    this.subs.add(this.courses.getFlashcardMarks(this.bookId).subscribe({
+      next: marks => {
+        const ids = new Set(marks.lineIds);
+        this.sendLines(target, p => ids.has(p.id));
+      },
+      error: () => this.fail('worksheets.send.error'),
+    }));
+  }
+
+  /** Gemeinsamer Weg: Linien des Kurses holen, filtern, als Stellungen schicken. */
+  private sendLines(target: number | null, keep: (p: { id: number; chapter?: string | null }) => boolean): void {
+    this.subs.add(this.courses.getBookPuzzles(this.bookId).subscribe({
+      next: puzzles => this.worksheets.sendAndNotify(target, itemsFromLines(this.bookId, puzzles.filter(keep))),
+      error: () => this.fail('worksheets.send.error'),
     }));
   }
 

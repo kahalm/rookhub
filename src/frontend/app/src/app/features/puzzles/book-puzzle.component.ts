@@ -49,6 +49,8 @@ import { loadSolveElapsed, saveSolveElapsed, clearSolveElapsed } from './solve-e
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
+import { WorksheetService } from '../worksheets/worksheet.service';
+import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyMode, WeeklyService } from '../weekly/weekly.service';
 import { WeeklyModeDialogComponent } from '../weekly/weekly-mode-dialog.component';
@@ -270,6 +272,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
+  /** Vorspiel-Halbzug der letzten Linie — ohne ihn liefe die Aufgaben-Stellung fürs Blatt falsch. */
+  private lastSolvedStartPly = 0;
   /** „Geliebtes Puzzle"-Zustand (Herz). In Wochenpost-Modus deaktiviert (keine echte Id). */
   readonly favoriteTracker: FavoriteTracker;
 
@@ -310,7 +314,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private challengeService: ChallengeService,
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
-    private solveMode: SolveModeService
+    private solveMode: SolveModeService,
+    private worksheets: WorksheetService
   ) {
     super(stockfish);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
@@ -346,6 +351,24 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       width: '400px',
       maxWidth: '95vw',
     });
+  }
+
+  /**
+   * Die zuletzt gelöste Linie aufs AUFGABENBLATT — dieselbe Auswahl wie „♥ letztes Puzzle".
+   * Geschickt wird die AUFGABEN-Stellung: Vorspielzüge bis `startPly` sind eingespielt, sonst
+   * stünde auf dem Blatt die Stellung vor dem Vorspiel und die Frage wäre eine andere.
+   */
+  sendLastToWorksheet(target: number | null): void {
+    this.stopCountdown();
+    if (!this.lastSolvedFen) return;
+    const item = taskItemFromPuzzle(
+      {
+        fen: this.lastSolvedFen, moves: this.lastSolvedMoves,
+        orientation: this.lastSolvedOrientation, startPly: this.lastSolvedStartPly,
+      },
+      'Book', { sourceId: this.lastSolvedPuzzleId, bookId: this.courseBookId },
+    );
+    this.worksheets.sendAndNotify(target, item ? [item] : []);
   }
 
   /** Zuletzt gelöstes Puzzle im Analysemodus öffnen (auch nach dem Auto-Advance verfügbar). */
@@ -510,9 +533,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.lastSolvedFen = this.puzzle.fen;
       this.lastSolvedMoves = this.puzzle.moves ?? '';
       this.lastSolvedOrientation = this.orientation;
+      this.lastSolvedStartPly = this.startPly;
       saveLastSolved('book', {
         id: this.puzzle.id, fen: this.puzzle.fen,
-        moves: this.puzzle.moves ?? '', orientation: this.orientation,
+        moves: this.puzzle.moves ?? '', orientation: this.orientation, startPly: this.startPly,
       });
     }
     this.favoriteTracker.refresh();
@@ -670,6 +694,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.lastSolvedFen = restored.fen;
       this.lastSolvedMoves = restored.moves;
       this.lastSolvedOrientation = restored.orientation;
+      this.lastSolvedStartPly = restored.startPly ?? 0;
       this.favoriteTracker.refresh();
     }
 

@@ -19,6 +19,8 @@ import { replayIllegalFen } from '../puzzles/illegal-board.util';
 import { buildCommentSegments, CommentSegment } from '../puzzles/comment-variation.util';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
+import { WorksheetService } from '../worksheets/worksheet.service';
 import { AuthService } from '../../core/auth.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { SharePuzzleDialogComponent } from '../puzzles/share-puzzle-dialog.component';
@@ -46,6 +48,7 @@ interface ChapterGroup {
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
+    SendToWorksheetComponent,
   ],
   template: `
     <div class="browse-container">
@@ -162,6 +165,9 @@ interface ChapterGroup {
                         [matTooltip]="(autoplay ? 'courses.browse.pause' : 'courses.browse.play') | translate">
                   <mat-icon>{{ autoplay ? 'pause' : 'play_arrow' }}</mat-icon>
                 </button>
+                <!-- Genau DIESE Stellung aufs Aufgabenblatt — auch mitten in der Linie. -->
+                <app-send-to-worksheet [asButton]="true" labelKey="worksheets.send.position"
+                                       (pick)="sendPositionToWorksheet($event)" />
               </div>
 
               @if (sanMoves.length) {
@@ -348,6 +354,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private favorites: FavoritesService,
     private dialog: MatDialog,
+    private worksheets: WorksheetService,
   ) {}
 
   get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
@@ -389,6 +396,24 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   }
 
   /** Lädt den Pro-Linien-Bearbeitungsstatus (✓/✗) + die favorisierten Buch-Linien des Users. */
+  /**
+   * Die Stellung, die gerade auf dem Brett steht (beliebiger Halbzug der Linie, auch eine
+   * angeklickte Kommentar-Variante), aufs Aufgabenblatt schicken. Bewusst der Brett-Stand und
+   * nicht die Aufgaben-Stellung der Linie: hier blättert man durch und findet das Diagramm, das
+   * man drucken will.
+   */
+  sendPositionToWorksheet(target: number | null): void {
+    const fen = this.variationPreview ? this.variationPreview.fen : this.boardFen;
+    if (!fen || !this.selected) return;
+    this.worksheets.sendAndNotify(target, [{
+      fen,
+      orientation: this.orientation,
+      source: 'Book',
+      sourceId: this.selected.id,
+      bookId: this.bookId,
+    }]);
+  }
+
   private loadStatus(): void {
     this.courseService.getLineStatus(this.bookId).subscribe({
       next: s => { this.solvedIds = new Set(s.solvedIds); this.failedIds = new Set(s.failedIds); },

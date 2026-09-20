@@ -193,6 +193,8 @@
               (settingsClicked)="openSettingsDialog()"
               (reviewLastClicked)="reviewLastPuzzle()"
               (loveLastClicked)="favoriteTracker.toggleLast()"
+              [canWorksheetLast]="isLoggedIn"
+              (worksheetLastPicked)="sendLastToWorksheet($event)"
               (endlessClicked)="goEndless()">
               @if (isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
                 <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />

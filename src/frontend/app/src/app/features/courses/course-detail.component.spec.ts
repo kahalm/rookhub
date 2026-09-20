@@ -73,6 +73,7 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     dialog as never,
     { warn: (m: string) => warnings.push(m), quick: () => undefined } as never,
     { instant: (k: string) => k } as never,
+    { sendAndNotify: (target: number | null, items: unknown[]) => calls.push(`worksheet:${target}:${items.length}`) } as never,
   );
   return { component, calls, warnings };
 }
