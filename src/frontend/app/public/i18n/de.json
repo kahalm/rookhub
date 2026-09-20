@@ -3525,6 +3525,7 @@
     "plyNext": "Einen Zug vor (Pfeil rechts)",
     "plyFirst": "An den Anfang",
     "plyLast": "Ans Ende",
-    "continueHere": "Ab hier weiterspielen"
+    "continueHere": "Ab hier weiterspielen",
+    "arrowHint": "Pfeiltasten ← → blättern durch die Züge. Steht der Cursor im Zugfeld, klick vorher aufs Brett."
   }
 }

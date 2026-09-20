@@ -3525,6 +3525,7 @@
     "plyNext": "One move forward (arrow right)",
     "plyFirst": "To the start",
     "plyLast": "To the end",
-    "continueHere": "Carry on from here"
+    "continueHere": "Carry on from here",
+    "arrowHint": "Arrow keys ← → step through the moves. If your cursor is in the move field, click the board first."
   }
 }

@@ -3525,6 +3525,7 @@
     "plyNext": "Egy lépés előre (jobbra nyíl)",
     "plyFirst": "Az elejére",
     "plyLast": "A végére",
-    "continueHere": "Folytatás innen"
+    "continueHere": "Folytatás innen",
+    "arrowHint": "A ← → nyilakkal lépkedhetsz a lépések között. Ha a kurzor a lépésmezőben van, előbb kattints a táblára."
   }
 }

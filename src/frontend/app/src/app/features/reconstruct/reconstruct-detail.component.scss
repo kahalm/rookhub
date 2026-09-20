@@ -125,6 +125,15 @@
 
 .side-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
 
+/* Fokussierbar, damit die Pfeiltasten hier ankommen und nicht im Zug-Textfeld landen. */
+.board-wrap {
+  outline: none;
+
+  &:focus-visible { outline: 2px solid color-mix(in srgb, currentColor 45%, transparent); outline-offset: 3px; border-radius: 6px; }
+}
+
+.arrow-hint { max-width: min(100%, 56vh); margin: -0.2rem auto 0.5rem; }
+
 /* Die Blätterleiste gehört unter das Brett, in Brettbreite — am Handy gibt es keine Pfeiltasten. */
 .ply-nav {
   display: flex;

@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import { Component, OnInit, HostListener, ViewChild, ElementRef, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -89,6 +89,9 @@ export class ReconstructDetailComponent implements OnInit {
   /** Suchtiefe in HALBZÜGEN — die Auswahl steht im Formular, weil der Baum mit jedem Halbzug wächst. */
   gapPlies = 4;
   readonly gapPlyChoices = [2, 4, 6];
+
+  /** Der Kasten um das Brett — er bekommt den Fokus, damit die Pfeiltasten sofort blättern. */
+  @ViewChild('boardWrap') boardWrap?: ElementRef<HTMLElement>;
 
   private id = 0;
 
@@ -246,6 +249,7 @@ export class ReconstructDetailComponent implements OnInit {
     this.editFen = last?.endFen || START_FEN;
     this.editStartFen.set(kind === PartKind.Moves ? (last?.endFen || START_FEN) : START_FEN);
     this.editPly.set(null);
+    if (kind === PartKind.Moves) this.focusBoard();
     // Ein neues Teil hängt an der letzten bekannten Stellung — ist keine da, beginnt das Brett in
     // der Grundstellung, und die Züge stehen dann für eine Stelle, die nicht die gemeinte ist.
     this.editAnchored.set(kind !== PartKind.Moves || !!last?.endFen || parts.length === 0);
@@ -267,9 +271,20 @@ export class ReconstructDetailComponent implements OnInit {
     this.editPly.set(null);
     this.editMoves = part.moves ?? '';
     this.setMoves(this.editMoves);
+    if (part.kind === PartKind.Moves) this.focusBoard();
   }
 
   cancelEdit(): void { this.editingId.set(null); }
+
+  /**
+   * Den Brett-Kasten fokussieren. Die Pfeiltasten dürfen dem TEXTFELD nicht weggenommen werden —
+   * dort bewegen sie den Schreibcursor. Also bekommt das Brett den Fokus, sobald der Editor
+   * aufgeht; danach blättern die Pfeiltasten. Wer ins Zugfeld klickt, tippt dort weiter, und ein
+   * Klick aufs Brett holt das Blättern zurück.
+   */
+  private focusBoard(): void {
+    setTimeout(() => this.boardWrap?.nativeElement?.focus({ preventScroll: true }), 0);
+  }
 
   /** Der Zugtext hat sich geändert (Tippen oder Einfügen) — Brett und Fehlerhinweis nachziehen. */
   onMovesInput(value: string): void {

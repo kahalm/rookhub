@@ -247,8 +247,10 @@
               </mat-button-toggle-group>
             </div>
 
-            <app-chess-board [fen]="editBoardFen()" [playable]="boardPlayable()" (userMove)="onBoardMove($event)"
-                             [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
+            <div #boardWrap class="board-wrap" tabindex="0">
+              <app-chess-board [fen]="editBoardFen()" [playable]="boardPlayable()" (userMove)="onBoardMove($event)"
+                               [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
+            </div>
 
             <!-- Blättern durch die eingetippten Züge (am PC auch mit den Pfeiltasten). -->
             <div class="ply-nav">
@@ -279,6 +281,7 @@
                 </button>
               }
             </div>
+            <p class="muted small arrow-hint">{{ 'reconstruct.arrowHint' | translate }}</p>
             <mat-form-field appearance="outline" class="wide">
               <mat-label>{{ 'reconstruct.movesLabel' | translate }}</mat-label>
               <textarea matInput rows="3" [ngModel]="editMoves" (ngModelChange)="onMovesInput($event)"

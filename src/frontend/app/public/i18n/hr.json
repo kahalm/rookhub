@@ -3525,6 +3525,7 @@
     "plyNext": "Jedan potez naprijed (strelica desno)",
     "plyFirst": "Na početak",
     "plyLast": "Na kraj",
-    "continueHere": "Nastavi odavde"
+    "continueHere": "Nastavi odavde",
+    "arrowHint": "Strelice ← → listaju kroz poteze. Ako je pokazivač u polju s potezima, prvo klikni na ploču."
   }
 }
