@@ -1988,9 +1988,10 @@
       "etaIn": "gotovo za ~{{time}}",
       "etaSoon": "samo što nije…",
       "etaUnknown": "u tijeku…",
-      "etaTooltip": "Procijenjeni završetak — prosječno trajanje zadnjih izvođenja minus već proteklo vrijeme.",
+      "etaTooltip": "Procijenjeni završetak — tipično trajanje uspješnih izvođenja OVOG workflowa (gornja četvrtina), minus već proteklo vrijeme.",
       "watchStart": "Pomno prati: provjeravaj ovaj repozitorij svakih 10 s jednu minutu (ili dok tekuća akcija ne završi)",
-      "watchStop": "Prekini praćenje (natrag na provjeru svakih 20 sekundi)"
+      "watchStop": "Prekini praćenje (natrag na provjeru svakih 20 sekundi)",
+      "etaOverdue": "traje dulje nego inače"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",

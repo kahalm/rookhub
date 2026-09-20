@@ -27,7 +27,10 @@ public record CiRunDto(
 /// <param name="RunningRef">Ref des laufenden Images (Branch bei :dev, Tag bei :prod) — zusammen mit
 /// <paramref name="RunningSha"/> markiert die UI genau den einen bauenden Run.</param>
 public record CiRepoDto(string Repo, string? Error, List<CiRunDto> Runs,
-    string? RunningSha = null, string? RunningRef = null);
+    string? RunningSha = null, string? RunningRef = null,
+    /// <summary>Typische Laufzeit JE WORKFLOW-NAMEN in Sekunden — Grundlage der Restzeit-Schätzung
+    /// in der Oberfläche. Aus mehr Läufen gerechnet als die angezeigten fünf.</summary>
+    Dictionary<string, int>? TypicalSeconds = null);
 
 /// <summary>Gesamtübersicht über alle beteiligten Repos. <see cref="Configured"/>=false, wenn kein
 /// GitHub-Token hinterlegt ist (dann bleibt <see cref="Repos"/> leer und die UI zeigt einen Hinweis).</summary>

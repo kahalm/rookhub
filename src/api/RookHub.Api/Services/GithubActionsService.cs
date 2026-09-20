@@ -255,6 +255,42 @@ public class GithubActionsService
     private static bool MatchesWorkflowFilter(string? workflowName, string? filter) =>
         string.IsNullOrEmpty(filter) || (workflowName?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
 
+    /// <summary>
+    /// Typische Laufzeit JE WORKFLOW-NAMEN in Sekunden (leere Namen und Läufe ohne Dauer fallen weg).
+    ///
+    /// <para>Gerechnet wird nur über ERFOLGREICHE, abgeschlossene Läufe und je Workflow getrennt:
+    /// in derselben Liste stehen der Test-Lauf und der Image-Bau, und ein Mittel über beide schätzt
+    /// für den Image-Bau systematisch zu kurz (gemeldet 2026-09-20). Ein abgebrochener oder
+    /// gescheiterter Lauf endet oft nach Sekunden und zöge das Ergebnis zusätzlich nach unten.</para>
+    ///
+    /// <para>Genommen wird das OBERE Viertel (p75) statt des Mittels: die Pfadfilter machen manche
+    /// Läufe fast leer, und eine Restzeit, die regelmäßig zu kurz ist, ist keine Auskunft. Bei zwei
+    /// Werten ist das der längere — bewusst, denn zu lang geschätzt kostet nur Geduld.</para>
+    /// </summary>
+    internal static Dictionary<string, int> TypicalDurations(
+        IEnumerable<(string Name, string? Status, string? Conclusion, DateTime CreatedAt, DateTime UpdatedAt)> runs)
+    {
+        var typical = new Dictionary<string, int>(StringComparer.Ordinal);
+        var byName = runs
+            .Where(r => !string.IsNullOrWhiteSpace(r.Name)
+                && string.Equals(r.Status, "completed", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(r.Conclusion, "success", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(r => r.Name, StringComparer.Ordinal);
+
+        foreach (var group in byName)
+        {
+            var seconds = group
+                .Select(r => (int)Math.Round((r.UpdatedAt - r.CreatedAt).TotalSeconds))
+                .Where(d => d > 0)
+                .OrderBy(d => d)
+                .ToList();
+            if (seconds.Count == 0) continue;
+            var index = (int)Math.Ceiling(0.75 * (seconds.Count - 1));
+            typical[group.Key] = seconds[index];
+        }
+        return typical;
+    }
+
     private static CiRunDto MapRun(RunItem r, Dictionary<string, string> tagBySha)
     {
         var branch = r.HeadBranch ?? "";
@@ -369,12 +405,14 @@ public class GithubActionsService
             var tagBySha = await GetTagsByShaAsync(owner, repo, token, ct);
 
             var filter = WorkflowFilterFor(repo);
-            var runs = (payload?.WorkflowRuns ?? new List<RunItem>())
+            var matching = (payload?.WorkflowRuns ?? new List<RunItem>())
                 .Where(r => MatchesWorkflowFilter(r.Name, filter))
-                .Take(5)
-                .Select(r => MapRun(r, tagBySha))
                 .ToList();
-            return new CiRepoDto(repo, null, runs);
+            var runs = matching.Take(5).Select(r => MapRun(r, tagBySha)).ToList();
+            // Die Schätzung rechnet über ALLE geladenen Läufe, nicht nur die fünf angezeigten.
+            var typical = TypicalDurations(matching.Select(r =>
+                (r.Name ?? string.Empty, r.Status, r.Conclusion, r.CreatedAt, r.UpdatedAt)));
+            return new CiRepoDto(repo, null, runs, TypicalSeconds: typical);
         }
         catch (Exception ex)
         {

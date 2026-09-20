@@ -1988,9 +1988,10 @@
       "etaIn": "fertig in ~{{time}}",
       "etaSoon": "gleich fertig…",
       "etaUnknown": "läuft…",
-      "etaTooltip": "Geschätztes Ende — mittlere Laufzeit der letzten Läufe minus bereits verstrichene Zeit.",
+      "etaTooltip": "Geschätztes Ende — typische Laufzeit erfolgreicher Läufe DIESES Workflows (oberes Viertel), minus der bereits verstrichenen Zeit.",
       "watchStart": "Genau beobachten: dieses Repo eine Minute lang alle 10 s prüfen (bzw. bis die laufende Aktion fertig ist)",
-      "watchStop": "Beobachtung beenden (zurück zur 20-Sekunden-Prüfung)"
+      "watchStop": "Beobachtung beenden (zurück zur 20-Sekunden-Prüfung)",
+      "etaOverdue": "dauert länger als üblich"
     },
     "users": {
       "searchLabel": "User suchen",

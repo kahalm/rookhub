@@ -16,6 +16,8 @@ export interface CiRun {
 }
 export interface CiRepo {
   repo: string; error: string | null; runs: CiRun[];
+  /** Typische Laufzeit je Workflow-Namen in Sekunden (Server rechnet sie über mehr als die 5 Zeilen). */
+  typicalSeconds?: Record<string, number> | null;
   /** SHA/Ref des in DIESEM Stack laufenden Images (vom Server abgefragt). Für rookhub null → Browser liefert es selbst. */
   runningSha?: string | null; runningRef?: string | null;
 }
@@ -46,6 +48,8 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
             <span class="ci-eta-repo">{{ b.repo }}</span>
             @if (b.remaining == null) {
               {{ 'admin.ci.etaUnknown' | translate }}
+            } @else if (b.overdue) {
+              {{ 'admin.ci.etaOverdue' | translate }}
             } @else if (b.remaining <= 0) {
               {{ 'admin.ci.etaSoon' | translate }}
             } @else {
@@ -173,8 +177,8 @@ export class AdminGithubActionsComponent implements OnInit {
 
   /** „Jetzt" in ms, im 1-s-Takt aktualisiert → treibt den Live-Countdown der ETA. */
   private nowMs = Date.now();
-  /** Aktuell laufende CI-Builds mit geschätzter Restzeit (Mittel der letzten abgeschlossenen Läufe). */
-  running: { repo: string; remaining: number | null }[] = [];
+  /** Laufende CI-Builds mit geschätzter Restzeit (typische Dauer DIESES Workflows, siehe `expectedSec`). */
+  running: { repo: string; remaining: number | null; overdue: boolean }[] = [];
 
   /** Normaler Voll-Abruf-Takt (alle Repos). Kurz, weil rookhub die Läufe jetzt per GitHub-Webhook
    *  gepusht bekommt (Start/Ende live) und die GitHub-API selbst nur selten [Server-Cache] anfragt —
@@ -220,20 +224,31 @@ export class AdminGithubActionsComponent implements OnInit {
     });
   }
 
-  /** Mittlere Laufzeit der ABGESCHLOSSENEN Läufe eines Repos (aus den letzten 5), in Sekunden;
-   *  null wenn es keinen abgeschlossenen Referenzlauf gibt. */
-  private avgDurationSec(repo: CiRepo): number | null {
+  /**
+   * Erwartete Laufzeit für DIESEN Lauf in Sekunden; null, wenn es keinen Vergleich gibt.
+   *
+   * <p>Zuerst die serverseitige Zahl zum WORKFLOW des Laufs (p75 über alle geladenen erfolgreichen
+   * Läufe dieses Workflows). Das Mittel über die letzten fünf Läufe eines Repos schätzte
+   * systematisch zu kurz: dort stehen Test-Lauf und Image-Bau nebeneinander, dazu die wegen der
+   * Pfadfilter fast leeren Läufe. Der alte Weg bleibt als Rückfall für Repos, deren Antwort die
+   * Zahl (noch) nicht mitbringt.</p>
+   */
+  expectedSec(repo: CiRepo, run: CiRun): number | null {
+    const typical = repo.typicalSeconds?.[run.name];
+    if (typical && typical > 0) return typical;
+
     const durs = repo.runs
-      .filter(r => r.status === 'completed')
+      .filter(r => r.status === 'completed' && r.conclusion === 'success' && r.name === run.name)
       .map(r => (Date.parse(r.updatedAt) - Date.parse(r.createdAt)) / 1000)
-      .filter(d => !isNaN(d) && d > 0);
+      .filter(d => !isNaN(d) && d > 0)
+      .sort((a, b) => a - b);
     if (!durs.length) return null;
-    return Math.round(durs.reduce((a, b) => a + b, 0) / durs.length);
+    return Math.round(durs[Math.ceil(0.75 * (durs.length - 1))]);
   }
 
   /** Aktualisiert (a) die ETA laufender Builds und (b) den je Stack deployten Build. */
   private recomputeEta(): void {
-    const eta: { repo: string; remaining: number | null }[] = [];
+    const eta: { repo: string; remaining: number | null; overdue: boolean }[] = [];
     for (const repo of this.overview?.repos ?? []) {
       // laufender Build → Restzeit-Schätzung
       const run = repo.runs.find(r => r.status !== 'completed');
@@ -241,8 +256,14 @@ export class AdminGithubActionsComponent implements OnInit {
         const started = Date.parse(run.createdAt);
         if (!isNaN(started)) {
           const elapsed = Math.max(0, Math.round((this.nowMs - started) / 1000));
-          const avg = this.avgDurationSec(repo);
-          eta.push({ repo: repo.repo, remaining: avg == null ? null : avg - elapsed });
+          const expected = this.expectedSec(repo, run);
+          eta.push({
+            repo: repo.repo,
+            remaining: expected == null ? null : expected - elapsed,
+            // „gleich fertig" darf nicht ewig stehen: ab einem Fünftel über der Erwartung ist der
+            // Lauf nicht knapp dran, sondern länger unterwegs als üblich.
+            overdue: expected != null && elapsed > expected * 1.2,
+          });
         }
       }
     }

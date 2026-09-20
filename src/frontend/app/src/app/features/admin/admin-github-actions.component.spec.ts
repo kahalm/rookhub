@@ -79,3 +79,105 @@ describe('AdminGithubActionsComponent.isRunningBuild', () => {
     expect(comp.isRunningBuild(makeRun({ headSha: 'crawlersha', ref: 'master' }), stack(null, null))).toBe(false);
   });
 });
+
+/**
+ * Die Restzeit-Schätzung. Gemeldet am 2026-09-20: sie fiel zu kurz aus — in derselben Liste stehen
+ * der kurze Test-Lauf und der lange Image-Bau, und ein Mittel über beide schätzt für den Bau zu
+ * knapp.
+ */
+describe('AdminGithubActionsComponent ETA', () => {
+  let comp: AdminGithubActionsComponent;
+  let httpMock: HttpTestingController;
+  const t0 = Date.parse('2026-09-20T10:00:00Z');
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AdminGithubActionsComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
+    });
+    comp = TestBed.createComponent(AdminGithubActionsComponent).componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  function done(name: string, seconds: number, over: Partial<CiRun> = {}): CiRun {
+    return makeRun({
+      name, status: 'completed', conclusion: 'success',
+      createdAt: new Date(t0).toISOString(),
+      updatedAt: new Date(t0 + seconds * 1000).toISOString(),
+      ...over,
+    });
+  }
+
+  /** Läuft seit `elapsed` Sekunden. */
+  function running(name: string, elapsed: number): CiRun {
+    return makeRun({ name, status: 'in_progress', conclusion: null,
+      createdAt: new Date(t0 - elapsed * 1000).toISOString() });
+  }
+
+  function compute(repo: CiRepo): void {
+    comp.overview = { configured: true, repos: [repo], fetchedAt: '' };
+    (comp as unknown as { nowMs: number }).nowMs = t0;
+    (comp as unknown as { recomputeEta(): void }).recomputeEta();
+  }
+
+  it('rechnet mit dem WORKFLOW des laufenden Laufs, nicht über alle Läufe gemittelt', () => {
+    const repo: CiRepo = { repo: 'rookhub', error: null, runs: [
+      running('Build & Push Docker Images', 60),
+      done('Build & Push Docker Images', 600),
+      done('tests', 120),
+      done('tests', 100),
+    ] };
+
+    compute(repo);
+
+    // Das alte Mittel über alle vier (~273 s) hätte 213 s Restzeit gemeldet; richtig sind ~540 s.
+    expect(comp.running[0].remaining).toBe(540);
+    expect(comp.running[0].overdue).toBeFalse();
+  });
+
+  it('nimmt die Zahl des Servers zum Workflow, wenn sie mitkommt', () => {
+    const repo: CiRepo = {
+      repo: 'rookhub', error: null,
+      typicalSeconds: { 'Build & Push Docker Images': 900 },
+      runs: [running('Build & Push Docker Images', 300), done('Build & Push Docker Images', 400)],
+    };
+
+    compute(repo);
+
+    expect(comp.running[0].remaining).toBe(600);
+  });
+
+  it('lässt gescheiterte Läufe aus der Schätzung heraus', () => {
+    // Ein abgebrochener Lauf endet oft nach Sekunden und zöge die Schätzung nach unten.
+    const repo: CiRepo = { repo: 'rookhub', error: null, runs: [
+      running('tests', 30),
+      done('tests', 5, { conclusion: 'cancelled' }),
+      done('tests', 240),
+    ] };
+
+    compute(repo);
+
+    expect(comp.running[0].remaining).toBe(210);
+  });
+
+  it('sagt „dauert länger als üblich", statt ewig „gleich fertig" zu zeigen', () => {
+    const repo: CiRepo = { repo: 'rookhub', error: null, runs: [
+      running('tests', 400),
+      done('tests', 200),
+    ] };
+
+    compute(repo);
+
+    expect(comp.running[0].overdue).toBeTrue();
+  });
+
+  it('ohne vergleichbaren Lauf gibt es keine Schätzung', () => {
+    const repo: CiRepo = { repo: 'rookhub', error: null, runs: [running('tests', 30), done('andere', 300)] };
+
+    compute(repo);
+
+    expect(comp.running[0].remaining).toBeNull();
+  });
+});

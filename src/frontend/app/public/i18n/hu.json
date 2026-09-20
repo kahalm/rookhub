@@ -1749,9 +1749,10 @@
       "etaIn": "kész kb. {{time}} múlva",
       "etaSoon": "mindjárt kész…",
       "etaUnknown": "fut…",
-      "etaTooltip": "Becsült befejezés — a legutóbbi futások átlagos időtartama mínusz az eddig eltelt idő.",
+      "etaTooltip": "Becsült befejezés — ENNEK a munkafolyamatnak a sikeres futásaiból vett jellemző időtartam (felső negyed), mínusz az eddig eltelt idő.",
       "watchStart": "Pontos figyelés: ennek a repónak az ellenőrzése egy percen át 10 másodpercenként (illetve amíg a futó művelet be nem fejeződik)",
-      "watchStop": "Figyelés befejezése (vissza a 20 másodperces ellenőrzésre)"
+      "watchStop": "Figyelés befejezése (vissza a 20 másodperces ellenőrzésre)",
+      "etaOverdue": "a szokásosnál tovább tart"
     },
     "puzzles": {
       "title": "Feladványok",

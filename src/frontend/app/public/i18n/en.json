@@ -1988,9 +1988,10 @@
       "etaIn": "done in ~{{time}}",
       "etaSoon": "finishing…",
       "etaUnknown": "running…",
-      "etaTooltip": "Estimated completion — the average duration of the recent runs minus the time already elapsed.",
+      "etaTooltip": "Estimated completion — the typical duration of successful runs of THIS workflow (upper quarter), minus the time already elapsed.",
       "watchStart": "Watch closely: check this repo every 10s for a minute (or until the running action finishes)",
-      "watchStop": "Stop watching (back to the 20-second check)"
+      "watchStop": "Stop watching (back to the 20-second check)",
+      "etaOverdue": "taking longer than usual"
     },
     "users": {
       "searchLabel": "Search users",

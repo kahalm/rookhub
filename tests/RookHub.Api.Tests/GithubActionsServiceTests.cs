@@ -305,6 +305,61 @@ public class GithubActionsServiceTests
     private static HttpResponseMessage Json(string body)
         => new(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
 
+    // ----- Restzeit-Schätzung -----
+
+    private static (string, string?, string?, DateTime, DateTime) Run(string name, int seconds,
+        string status = "completed", string? conclusion = "success")
+    {
+        var start = new DateTime(2026, 9, 20, 10, 0, 0, DateTimeKind.Utc);
+        return (name, status, conclusion, start, start.AddSeconds(seconds));
+    }
+
+    [Fact]
+    public void TypicalDurations_AreCountedPerWorkflow_NotOverAllRunsTogether()
+    {
+        // In derselben Liste stehen der kurze Test-Lauf und der lange Image-Bau. Ein Mittel über
+        // beide schätzte für den Bau systematisch zu kurz (gemeldet 2026-09-20).
+        var typical = GithubActionsService.TypicalDurations(new[]
+        {
+            Run("Build & Push Docker Images", 600),
+            Run("Build & Push Docker Images", 660),
+            Run("tests", 120),
+            Run("tests", 100),
+        });
+
+        Assert.Equal(660, typical["Build & Push Docker Images"]);
+        Assert.Equal(120, typical["tests"]);
+    }
+
+    [Fact]
+    public void TypicalDurations_IgnoreRunsThatSayNothingAboutTheDuration()
+    {
+        // Abgebrochen/gescheitert endet oft nach Sekunden, laufende haben noch gar keine Dauer.
+        var typical = GithubActionsService.TypicalDurations(new[]
+        {
+            Run("tests", 240),
+            Run("tests", 5, conclusion: "cancelled"),
+            Run("tests", 3, conclusion: "failure"),
+            Run("tests", 9000, status: "in_progress", conclusion: null),
+            Run("", 300),
+        });
+
+        Assert.Equal(240, Assert.Single(typical).Value);
+        Assert.False(typical.ContainsKey(string.Empty));
+    }
+
+    [Fact]
+    public void TypicalDurations_TakeTheUpperQuarter_SoTheEstimateIsNotRegularlyTooShort()
+    {
+        // Vier Läufe: 100, 200, 300, 400 → p75 = 400 (Index ceil(0.75 * 3) = 3).
+        var typical = GithubActionsService.TypicalDurations(new[]
+        {
+            Run("tests", 300), Run("tests", 100), Run("tests", 400), Run("tests", 200),
+        });
+
+        Assert.Equal(400, typical["tests"]);
+    }
+
     private sealed class StubHttpClientFactory : IHttpClientFactory
     {
         private readonly HttpMessageHandler _handler;
