@@ -2440,15 +2440,19 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   geerbt), der reparierende Push berührt nur Frontend-Pfade, und damit hat `build-api` zwei Versionen
   lang nicht gebaut — master grün, Code gepusht, und auf Dev läuft trotzdem der Stand von vorgestern
   (2026-09-09, Dev hing auf 0.452.1). Der Handstart auf master schiebt `:dev`, nicht `:latest`.
-  **Cache-Vorlauf** (seit 0.493.3): der `prebuild`-Job in `docker.yml` baut die drei Images schon parallel
-  zu den Tests — ohne Push (`outputs: type=cacheonly`), nur um den Buildx-Schichten-Cache zu füllen, aus dem
-  die echten Build-Jobs danach per `cache-from: type=gha,scope=<image>` schöpfen. Vorher gab es GAR KEINEN
-  Docker-Cache: `build-api` baute 1:34 lang von null, und zwar vollständig NACH dem Test-Gate (Lauf
-  35502561832: 5:04 gesamt). Drei Regeln hängen an `CiWorkflowTests`: der Vorlauf pusht NIE (sonst läge ein
-  Image in ghcr, bevor ein Test lief — das Gate wäre lautlos ausgehebelt), er wartet NICHT auf `tests`
-  (sonst wäre er wirkungslos), und jedes Image-Job braucht sein `cache-from` samt Buildx (ohne Buildx
-  importiert der klassische docker-Treiber gar nichts, still). `continue-on-error: true`, weil ein
-  Beschleuniger nie einen Lauf rot färben darf. Im Blick behalten: der Actions-Cache fasst 10 GB pro Repo.
+  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier` in `docker.yml` bauen die
+  Images schon parallel zu den Tests und pushen sie unter einem Hilfs-Tag `ci-<run_id>`. Die Jobs hinter
+  dem Gate bauen GAR NICHT mehr — sie haengen per `docker buildx imagetools create` nur die echten Tags
+  (`:dev`/`:latest`/Semver) an dasselbe Image, eine Registry-Operation von Sekunden. Der Zwischenschritt
+  ueber einen Schichten-Cache (v0.493.3) war gemessen wirkungslos: der Export der .NET-SDK-Stage nach
+  `type=gha,mode=max` kostete mehr als der Build (Vorlauf 4:00 fuer einen 1:44-Build), der Cache war
+  1:12 nach dem Start von `build-api` fertig, und der Lauf blieb bei 4:43 statt 5:04.
+  Vier Regeln haengen an `CiWorkflowTests`: der Vorbau pusht NUR `ci-*` (niemals `:dev`/`:latest`/Semver —
+  sonst zeigten die Tags, die Watchtower und der Deploy lesen, auf ungetesteten Code), er wartet NICHT auf
+  `tests`, er laeuft bei Tag UND Handstart mit (sonst faellt der Build-Job mangels `needs` aus → kein
+  `:latest`, kein Release, obwohl alles gruen ist), und hinter dem Gate steht `imagetools create` statt
+  `build-push-action`. Ein uebriggebliebener `ci-*`-Tag ist ein Lauf mit roten Tests; Wegraeumen ist
+  Kosmetik und gehoert in einen eigenen zeitgesteuerten Workflow, nicht hierher.
 - **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 
 ## Versionierung

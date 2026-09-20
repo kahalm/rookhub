@@ -184,7 +184,7 @@ public class CiWorkflowTests
         var text = ReadRepoFile(Docker);
         var block = Regex.Match(text, $@"(?ms)^  {Regex.Escape(job)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
 
-        Assert.Contains("needs: [changes, tests]", block);
+        Assert.Matches(@"needs: \[changes, tests[,\]]", block);
         Assert.Contains("needs.tests.result != 'failure'", block);
         Assert.Contains("needs.tests.result != 'cancelled'", block);
     }
@@ -220,62 +220,85 @@ public class CiWorkflowTests
     }
 
     /// <summary>
-    /// Der Cache-Vorlauf (`prebuild`) darf NIE pushen. Er laeuft absichtlich VOR dem Test-Gate,
-    /// parallel zu den Tests — er existiert nur, damit die Schichten schon im Cache liegen, wenn
-    /// das Gate aufgeht (`build-api` baute vorher 1:34 lang komplett ohne Cache, und zwar
-    /// vollstaendig NACH den Tests). Genau deshalb ist ein Push von dort der teuerste denkbare
-    /// Fehler: ein Image laege in ghcr, bevor ein einziger Test gelaufen ist — das Gate waere
-    /// ausgehebelt, ohne dass irgendetwas rot wuerde.
-    /// </summary>
-    [Fact]
-    public void ThePrebuildJob_NeverPushes()
-    {
-        var block = PrebuildJob();
-
-        Assert.Contains("outputs: type=cacheonly", block);
-        Assert.DoesNotContain("push: true", block);
-        Assert.DoesNotContain("docker/login-action", block);
-    }
-
-    /// <summary>
-    /// Und er darf umgekehrt auch NICHT auf das Gate warten — dann waere er wertlos: er liefe
-    /// hinter den Tests und damit auf demselben kritischen Pfad wie der echte Build. Ein
-    /// <c>continue-on-error</c> gehoert dazu, weil ein Beschleuniger niemals einen Lauf rot
-    /// faerben soll; faellt er aus, baut der echte Build eben wieder von vorn.
-    /// </summary>
-    [Fact]
-    public void ThePrebuildJob_DoesNotWaitForTheTestGate()
-    {
-        var block = PrebuildJob();
-
-        Assert.Contains("needs: changes", block);
-        Assert.DoesNotContain("needs: [changes, tests]", block);
-        Assert.Contains("continue-on-error: true", block);
-    }
-
-    /// <summary>
-    /// Jedes Image, das unten gebaut wird, braucht oben einen Vorlauf — sonst ist der Cache fuer
-    /// genau dieses Image kalt und der Job faellt still auf die alte, langsame Bauweise zurueck.
+    /// Der Vorbau darf NUR den Hilfs-Tag pushen. Er laeuft absichtlich VOR dem Test-Gate — wuerde
+    /// er `:dev`, `:latest` oder einen Semver-Tag setzen, waere das Gate lautlos ausgehebelt: der
+    /// Deploy und Watchtower lesen genau diese Tags, und sie zeigten dann auf ein Image, das kein
+    /// Test gesehen hat. Der `ci-*`-Tag dagegen wird von niemandem konsumiert.
     /// </summary>
     [Theory]
     [InlineData("api")]
     [InlineData("frontend")]
     [InlineData("turnier")]
-    public void EveryImageJob_HasAWarmCache(string image)
+    public void EveryPrebuildJob_OnlyPushesTheStagingTag(string image)
     {
-        var text = ReadRepoFile(Docker);
-        var block = Regex.Match(text, $@"(?ms)^  build-{Regex.Escape(image)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+        var block = Job($"prebuild-{image}");
 
-        Assert.Contains($"cache-from: type=gha,scope={image}", block);
-        Assert.Contains("docker/setup-buildx-action", block);   // ohne Buildx importiert nichts
-        Assert.Contains($"image: {image}", PrebuildJob());
+        Assert.Contains($"rookhub-{image}:ci-${{{{ github.run_id }}}}", block);
+        Assert.DoesNotContain("value=dev", block);
+        Assert.DoesNotContain("value=latest", block);
+        Assert.DoesNotContain("type=semver", block);
     }
 
-    /// <summary>Der <c>prebuild:</c>-Job aus docker.yml.</summary>
-    private static string PrebuildJob()
+    /// <summary>
+    /// Und er darf NICHT auf das Gate warten — sonst laege er auf demselben kritischen Pfad wie
+    /// der Build frueher und waere wertlos. Genau das war der Sinn des Umbaus.
+    /// </summary>
+    [Theory]
+    [InlineData("api")]
+    [InlineData("frontend")]
+    [InlineData("turnier")]
+    public void EveryPrebuildJob_DoesNotWaitForTheTestGate(string image)
     {
-        var block = Regex.Match(ReadRepoFile(Docker), @"(?ms)^  prebuild:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
-        Assert.NotEmpty(block);
+        var block = Job($"prebuild-{image}");
+
+        Assert.Contains("needs: changes\n", block);
+        Assert.DoesNotContain("needs: [changes, tests", block);
+    }
+
+    /// <summary>
+    /// Der teuerste Fehler dieser Konstruktion: ein Vorbau, den die Pfadfilter bei einem TAG-Lauf
+    /// auslassen. Dann faellt der zugehoerige Build-Job mangels `needs` aus — und es gibt kein
+    /// `:latest`, also kein Release, obwohl alles gruen ist. Der Build-Job unten laesst Tag und
+    /// Handstart durch (eigener Test); der Vorbau MUSS dieselben zwei Faelle durchlassen.
+    /// </summary>
+    [Theory]
+    [InlineData("api")]
+    [InlineData("frontend")]
+    [InlineData("turnier")]
+    public void EveryPrebuildJob_AlsoRunsOnATagAndOnAManualRun(string image)
+    {
+        var block = Job($"prebuild-{image}");
+
+        Assert.Contains("startsWith(github.ref, 'refs/tags/v')", block);
+        Assert.Contains("github.event_name == 'workflow_dispatch'", block);
+        Assert.Contains("needs.changes.outputs", block);
+    }
+
+    /// <summary>
+    /// Hinter dem Gate wird NICHT mehr gebaut, sondern nur umgehaengt: `imagetools create` haengt
+    /// die echten Tags an das Image, das der Vorbau schon gepusht hat. Ein wieder eingebautes
+    /// `build-push-action` waere kein Fehler, den man sieht — es waere einfach wieder langsam
+    /// (`build-api` lag bei 1:44 auf dem kritischen Pfad), deshalb steht es hier als Test.
+    /// </summary>
+    [Theory]
+    [InlineData("api")]
+    [InlineData("frontend")]
+    [InlineData("turnier")]
+    public void EveryImageJob_OnlyRetagsThePrebuiltImage(string image)
+    {
+        var block = Job($"build-{image}");
+
+        Assert.Contains("docker buildx imagetools create", block);
+        Assert.Contains($"rookhub-{image}:ci-${{{{ github.run_id }}}}", block);
+        Assert.Contains($"prebuild-{image}", block);        // ohne das Warten waere der Tag noch nicht da
+        Assert.DoesNotContain("build-push-action", block);
+    }
+
+    /// <summary>Ein Job-Block aus docker.yml, von seiner Zeile bis zum naechsten Job.</summary>
+    private static string Job(string name)
+    {
+        var block = Regex.Match(ReadRepoFile(Docker), $@"(?ms)^  {Regex.Escape(name)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+        Assert.True(block.Length > 0, $"docker.yml kennt keinen Job '{name}'");
         return block;
     }
 
