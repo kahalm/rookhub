@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ReconstructService, ReconstructionListItem } from './reconstruct.service';
 
 /**
@@ -105,6 +106,7 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
 export class ReconstructListComponent implements OnInit {
   private service = inject(ReconstructService);
   private snackbar = inject(SnackbarService);
+  private confirm = inject(ConfirmService);
   private translate = inject(TranslateService);
   private router = inject(Router);
 
@@ -146,11 +148,14 @@ export class ReconstructListComponent implements OnInit {
   }
 
   remove(item: ReconstructionListItem): void {
-    if (!confirm(this.translate.instant('reconstruct.deleteConfirm', { title: item.title }))) return;
-    this.busy.set(true);
-    this.service.remove(item.id).subscribe({
-      next: () => { this.busy.set(false); this.items.set(this.items().filter(i => i.id !== item.id)); },
-      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+    // Material-Dialog statt window.confirm: die native Rückfrage liegt im Vollbild hinter der Seite.
+    this.confirm.ask('reconstruct.deleteConfirm', { title: item.title }).subscribe(ok => {
+      if (!ok) return;
+      this.busy.set(true);
+      this.service.remove(item.id).subscribe({
+        next: () => { this.busy.set(false); this.items.set(this.items().filter(i => i.id !== item.id)); },
+        error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+      });
     });
   }
 }

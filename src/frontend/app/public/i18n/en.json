@@ -3508,11 +3508,22 @@
       "noGap": "This part already continues the one before it.",
       "noPrevious": "This is the first part — there is nothing before it.",
       "targetNotAPosition": "The search needs a POSITION as its target; a move sequence after a gap has no known starting position of its own.",
-      "invalidPosition": "One of the two positions cannot be read."
+      "invalidPosition": "One of the two positions cannot be read.",
+      "here": "Gap",
+      "needPosition": "Record the position after the gap, then the moves in between can be searched for."
     },
     "enterPosition": "Enter a position",
     "afterPositionHint": "Once you apply it, you carry on with moves from that position — or press „Enter a position“ there again to jump straight to the next one.",
     "markCertain": "Mark as sure",
-    "markUnsure": "Mark as unsure"
+    "markUnsure": "Mark as unsure",
+    "sideToMove": "To move:",
+    "sideWhite": "White",
+    "sideBlack": "Black",
+    "plyPosition": "Move {{shown}} of {{total}}",
+    "plyPrev": "One move back (arrow left)",
+    "plyNext": "One move forward (arrow right)",
+    "plyFirst": "To the start",
+    "plyLast": "To the end",
+    "continueHere": "Carry on from here"
   }
 }

@@ -33,6 +33,8 @@ public class ReconstructionPartDto
     public bool ContinuesPrevious { get; set; }
     /// <summary>Bin ich mir bei diesem Teil sicher? (Vorgabe ja; „nein" ist die Auskunft.)</summary>
     public bool Certain { get; set; }
+    /// <summary>Zugfolge ohne Anschluss: beginnt sie mit einem Zug von Schwarz?</summary>
+    public bool BlackToMove { get; set; }
     public string? Note { get; set; }
 
     /// <summary>Ist bekannt, welche Stellung vor diesem Teil steht?</summary>
@@ -105,6 +107,9 @@ public class ReconstructionPartRequest
     /// <summary>Bin ich mir sicher? Fehlt das Feld, bleibt es bei „ja" — ein Client, der die Frage
     /// nicht kennt, darf nicht für den Nutzer „unsicher" behaupten.</summary>
     public bool? Certain { get; set; }
+
+    /// <summary>Beginnt die Zugfolge mit einem Zug von Schwarz? (Nur ohne Anschluss; Vorgabe nein.)</summary>
+    public bool? BlackToMove { get; set; }
 
     [MaxLength(500)]
     public string? Note { get; set; }

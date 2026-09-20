@@ -134,13 +134,14 @@ public static class ReconstructionChain
             // ----- Zugfolge -----
             var moves = SplitMoves(part.Moves);
 
-            if (first)
+            if (first && !part.BlackToMove)
             {
                 board = new ChessBoard();     // die ersten Züge einer Partie: ab der Grundstellung
                 fromStart = true;
                 plyFromStart = 0;
             }
-            else if (!continues)
+            else if (!continues)   // auch das erste Teil, wenn es mit einem schwarzen Zug beginnt:
+                                   // eine Partie fängt so nicht an, also ist es ein Bruchstück
             {
                 // Bruchstück mitten aus der Partie: ohne Stellung davor ist es nicht prüfbar.
                 chains.Add(new PartChain(part.Id, false, false, null, null, moves.Count, null, null));

@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ReconstructDetailComponent } from './reconstruct-detail.component';
 import { PartKind, Reconstruction, ReconstructionPart } from './reconstruct.service';
 
@@ -15,7 +17,7 @@ const MIDDLE = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 
 function part(over: Partial<ReconstructionPart>): ReconstructionPart {
   return {
     id: 1, ordinal: 0, kind: PartKind.Moves, moves: 'e4 e5', fen: null, fromPly: null,
-    continuesPrevious: false, certain: true, note: null, anchored: true, valid: true, startFen: START,
+    continuesPrevious: false, certain: true, blackToMove: false, note: null, anchored: true, valid: true, startFen: START,
     endFen: START, plyCount: 2, startPly: 0, firstBadMove: null, mismatch: false, ...over,
   };
 }
@@ -29,6 +31,8 @@ function data(parts: ReconstructionPart[]): Reconstruction {
 
 describe('ReconstructDetailComponent', () => {
   let http: HttpTestingController;
+  /** Antwort der Rückfrage — der Dialog selbst gehört nicht in jeden Test. */
+  let confirmAnswer = true;
 
   function open(parts: ReconstructionPart[]): ReconstructDetailComponent {
     const fixture = TestBed.createComponent(ReconstructDetailComponent);
@@ -45,9 +49,11 @@ describe('ReconstructDetailComponent', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '5' } } } },
+        { provide: ConfirmService, useValue: { ask: () => of(confirmAnswer) } },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
+    confirmAnswer = true;
   });
 
   it('spielt die eingetippten Züge lokal mit und zeigt die Stellung danach', () => {
@@ -120,7 +126,7 @@ describe('ReconstructDetailComponent', () => {
     const req = http.expectOne({ url: '/api/reconstructions/5/parts', method: 'POST' });
     expect(req.request.body).toEqual({
       kind: PartKind.Moves, moves: 'Bc5', fen: null, fromPly: null,
-      continuesPrevious: true, certain: true, note: 'danach Turmtausch',
+      continuesPrevious: true, certain: true, blackToMove: false, note: 'danach Turmtausch',
     });
     req.flush(data([]));
     expect(c.editingId()).toBeNull();
@@ -187,7 +193,7 @@ describe('ReconstructDetailComponent', () => {
     const req = http.expectOne({ url: '/api/reconstructions/5/parts/6', method: 'PUT' });
     expect(req.request.body).toEqual({
       kind: PartKind.Moves, moves: 'e4 e5', fen: null, fromPly: null,
-      continuesPrevious: false, certain: false, note: 'Notiz',
+      continuesPrevious: false, certain: false, blackToMove: false, note: 'Notiz',
     });
     req.flush(data([]));
   });
@@ -246,6 +252,89 @@ describe('ReconstructDetailComponent', () => {
 
     // „gibt es nicht" und „nicht gefunden" sind verschiedene Auskünfte und haben eigene Texte.
     expect(c.gapMessageKey()).toBe('reconstruct.gap.unreachable');
+  });
+
+  it('blättert mit den Pfeiltasten durch die eingetippten Züge', () => {
+    const c = open([]);
+    c.onMovesInput('e4 e5 Nf3');
+    expect(c.plyTotal()).toBe(3);
+    expect(c.atEnd()).toBeTrue();
+
+    c.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    expect(c.plyShown()).toBe(2);
+    expect(c.editBoardFen()).not.toContain('5N2');     // der Springer steht noch auf g1
+    expect(c.atEnd()).toBeFalse();
+    expect(c.boardPlayable()).toBeFalse();             // hier wird geschaut, nicht gespielt
+
+    c.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(c.plyShown()).toBe(3);
+    expect(c.atEnd()).toBeTrue();
+    expect(c.boardPlayable()).toBeTrue();
+  });
+
+  it('lässt die Pfeiltasten in Textfeldern in Ruhe', () => {
+    const c = open([]);
+    c.onMovesInput('e4 e5');
+    const input = document.createElement('textarea');
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+    Object.defineProperty(event, 'target', { value: input });
+
+    c.onKeyDown(event);
+
+    expect(c.plyShown()).toBe(2);   // der Cursor im Textfeld gehört dem Textfeld
+  });
+
+  it('schneidet mit „ab hier weiterspielen" den Rest der Zugfolge ab', () => {
+    const c = open([]);
+    c.onMovesInput('e4 e5 Nf3');
+    c.goPly('start');
+    c.goPly(1);
+    c.truncateHere();
+
+    expect(c.editMoves).toBe('e4');
+    expect(c.atEnd()).toBeTrue();
+  });
+
+  it('stellt die Seite am Zug um und löst das Teil dabei vom vorigen', () => {
+    // „Und dann schlug ER auf f7": ohne diese Umstellung ließe sich ein Bruchstück, das mit einem
+    // schwarzen Zug beginnt, am Brett gar nicht eingeben.
+    // MIDDLE ist die Stellung nach 3.Lc4, es steht also Schwarz am Zug.
+    const c = open([part({ id: 1, kind: PartKind.Position, fen: MIDDLE, moves: null, endFen: MIDDLE })]);
+    c.startNew(PartKind.Moves);
+    expect(c.editContinues).toBeTrue();
+    expect(c.sideBlack()).toBeTrue();
+
+    c.setSideBlack(false);
+
+    expect(c.sideBlack()).toBeFalse();
+    expect(c.editContinues).toBeFalse();   // die Stellung davor sagt etwas anderes
+    c.onMovesInput('d3');                  // ein weißer Zug, der vorher nicht möglich wäre
+    expect(c.editBadMove()).toBeNull();
+  });
+
+  it('schickt beim Speichern mit, wer am Zug ist', () => {
+    const c = open([]);
+    c.startNew(PartKind.Moves);
+    c.setSideBlack(true);
+    c.onMovesInput('e5');
+    c.savePart();
+
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts', method: 'POST' });
+    expect(req.request.body.blackToMove).toBeTrue();
+    req.flush(data([]));
+  });
+
+  it('löscht ein Teil erst nach der Rückfrage', () => {
+    const saved = part({ id: 7 });
+    confirmAnswer = false;
+    const c = open([saved]);
+
+    c.removePart(saved);
+    http.expectNone({ method: 'DELETE' });
+
+    confirmAnswer = true;
+    c.removePart(saved);
+    http.expectOne({ url: '/api/reconstructions/5/parts/7', method: 'DELETE' }).flush(data([]));
   });
 
   it('benennt den Zustand eines Teils für die Anzeige', () => {

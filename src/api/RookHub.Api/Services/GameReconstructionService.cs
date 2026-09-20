@@ -260,6 +260,9 @@ public class GameReconstructionService
         part.FromPly = req.FromPly is >= 0 and <= 600 ? req.FromPly : null;
         part.ContinuesPrevious = req.ContinuesPrevious;
         part.Certain = req.Certain ?? true;
+        // Bei einer Stellung steht die Seite am Zug in der FEN — zwei Quellen für dieselbe Aussage
+        // wären eine, die irgendwann widerspricht.
+        part.BlackToMove = req.Kind == ReconstructionPartKind.Moves && (req.BlackToMove ?? false);
         part.Note = Clean(req.Note, 500);
 
         if (req.Kind == ReconstructionPartKind.Position)
@@ -322,7 +325,7 @@ public class GameReconstructionService
             {
                 Id = part.Id, Ordinal = part.Ordinal, Kind = part.Kind, Moves = part.Moves, Fen = part.Fen,
                 FromPly = part.FromPly, ContinuesPrevious = part.ContinuesPrevious,
-                Certain = part.Certain, Note = part.Note,
+                Certain = part.Certain, BlackToMove = part.BlackToMove, Note = part.Note,
                 Anchored = c?.Anchored ?? false, Valid = c?.Valid ?? false,
                 StartFen = c?.StartFen, EndFen = c?.EndFen, PlyCount = c?.PlyCount ?? 0,
                 StartPly = c?.StartPly, FirstBadMove = c?.FirstBadMove, Mismatch = c?.Mismatch ?? false,

@@ -85,6 +85,69 @@
         }
 
         @for (part of data()!.parts; track part.id; let i = $index) {
+          @if (i > 0 && !part.continuesPrevious) {
+            <div class="gap-row">
+              <mat-icon class="gap-icon">more_horiz</mat-icon>
+              <span class="muted">{{ 'reconstruct.gap.here' | translate }}</span>
+              @if (canCloseGap(part, i)) {
+                @if (gapFor() !== part.id) {
+                  <button mat-stroked-button [disabled]="gapSearching()" (click)="closeGap(part)">
+                    <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
+                  </button>
+                }
+              } @else {
+                <span class="muted small">{{ 'reconstruct.gap.needPosition' | translate }}</span>
+              }
+            </div>
+            @if (gapFor() === part.id) {
+              <div class="gap">
+                <div class="gap-panel">
+                  <div class="gap-head">
+                    <strong>{{ 'reconstruct.gap.title' | translate }}</strong>
+                    <span class="spacer"></span>
+                    <button mat-icon-button (click)="hideGap()"
+                            [matTooltip]="'common.close' | translate"
+                            [attr.aria-label]="'common.close' | translate">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+
+                  <div class="gap-depth">
+                    <span class="muted">{{ 'reconstruct.gap.depth' | translate }}</span>
+                    @for (choice of gapPlyChoices; track choice) {
+                      <button mat-button [class.chosen]="gapPlies === choice"
+                              [disabled]="gapSearching()"
+                              (click)="gapPlies = choice; closeGap(part)">
+                        {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
+                      </button>
+                    }
+                  </div>
+
+                  @if (gapSearching()) {
+                    <p class="muted">{{ 'reconstruct.gap.searching' | translate }}</p>
+                  } @else if (gapResult(); as result) {
+                    @if (result.solutions.length > 0) {
+                      <p class="muted">{{ 'reconstruct.gap.found' | translate:{ count: result.solutions.length } }}</p>
+                      @for (solution of result.solutions; track solution.san) {
+                        <div class="gap-line">
+                          <code>{{ solution.san }}</code>
+                          <span class="spacer"></span>
+                          <button mat-flat-button color="primary" [disabled]="busy()" (click)="applyGap(solution)">
+                            {{ 'reconstruct.gap.apply' | translate }}
+                          </button>
+                        </div>
+                      }
+                      @if (result.solutions.length > 1) {
+                        <p class="muted small">{{ 'reconstruct.gap.severalHint' | translate }}</p>
+                      }
+                    } @else {
+                      <p class="muted">{{ gapMessageKey()! | translate:{ count: result.maxPlies } }}</p>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          }
           <mat-card class="part" [class.selected]="editingId() === part.id">
             <div class="part-head">
               <mat-icon>{{ part.kind === Kind.Position ? 'grid_on' : 'timeline' }}</mat-icon>
@@ -142,61 +205,6 @@
               @if (part.note) { <div class="muted note">{{ part.note }}</div> }
             </div>
 
-            <!-- Lücke davor: die Züge dorthin suchen lassen. -->
-            @if (canCloseGap(part, i)) {
-              <div class="gap">
-                @if (gapFor() !== part.id) {
-                  <button mat-stroked-button [disabled]="gapSearching()" (click)="closeGap(part)">
-                    <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
-                  </button>
-                } @else {
-                  <div class="gap-panel">
-                    <div class="gap-head">
-                      <strong>{{ 'reconstruct.gap.title' | translate }}</strong>
-                      <span class="spacer"></span>
-                      <button mat-icon-button (click)="hideGap()"
-                              [matTooltip]="'common.close' | translate"
-                              [attr.aria-label]="'common.close' | translate">
-                        <mat-icon>close</mat-icon>
-                      </button>
-                    </div>
-
-                    <div class="gap-depth">
-                      <span class="muted">{{ 'reconstruct.gap.depth' | translate }}</span>
-                      @for (choice of gapPlyChoices; track choice) {
-                        <button mat-button [class.chosen]="gapPlies === choice"
-                                [disabled]="gapSearching()"
-                                (click)="gapPlies = choice; closeGap(part)">
-                          {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
-                        </button>
-                      }
-                    </div>
-
-                    @if (gapSearching()) {
-                      <p class="muted">{{ 'reconstruct.gap.searching' | translate }}</p>
-                    } @else if (gapResult(); as result) {
-                      @if (result.solutions.length > 0) {
-                        <p class="muted">{{ 'reconstruct.gap.found' | translate:{ count: result.solutions.length } }}</p>
-                        @for (solution of result.solutions; track solution.san) {
-                          <div class="gap-line">
-                            <code>{{ solution.san }}</code>
-                            <span class="spacer"></span>
-                            <button mat-flat-button color="primary" [disabled]="busy()" (click)="applyGap(solution)">
-                              {{ 'reconstruct.gap.apply' | translate }}
-                            </button>
-                          </div>
-                        }
-                        @if (result.solutions.length > 1) {
-                          <p class="muted small">{{ 'reconstruct.gap.severalHint' | translate }}</p>
-                        }
-                      } @else {
-                        <p class="muted">{{ gapMessageKey()! | translate:{ count: result.maxPlies } }}</p>
-                      }
-                    }
-                  </div>
-                }
-              </div>
-            }
           </mat-card>
         }
       </section>
@@ -230,8 +238,47 @@
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
           } @else {
+            <div class="side-row">
+              <span class="muted">{{ 'reconstruct.sideToMove' | translate }}</span>
+              <mat-button-toggle-group [value]="sideBlack() ? 'b' : 'w'" hideSingleSelectionIndicator="true"
+                                       (change)="setSideBlack($event.value === 'b')">
+                <mat-button-toggle value="w">{{ 'reconstruct.sideWhite' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="b">{{ 'reconstruct.sideBlack' | translate }}</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+
             <app-chess-board [fen]="editBoardFen()" [playable]="boardPlayable()" (userMove)="onBoardMove($event)"
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
+
+            <!-- Blättern durch die eingetippten Züge (am PC auch mit den Pfeiltasten). -->
+            <div class="ply-nav">
+              <button mat-icon-button [disabled]="plyShown() === 0" (click)="goPly('start')"
+                      [matTooltip]="'reconstruct.plyFirst' | translate"
+                      [attr.aria-label]="'reconstruct.plyFirst' | translate">
+                <mat-icon>first_page</mat-icon>
+              </button>
+              <button mat-icon-button [disabled]="plyShown() === 0" (click)="goPly(-1)"
+                      [matTooltip]="'reconstruct.plyPrev' | translate"
+                      [attr.aria-label]="'reconstruct.plyPrev' | translate">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="muted ply-count">{{ 'reconstruct.plyPosition' | translate:{ shown: plyShown(), total: plyTotal() } }}</span>
+              <button mat-icon-button [disabled]="atEnd()" (click)="goPly(1)"
+                      [matTooltip]="'reconstruct.plyNext' | translate"
+                      [attr.aria-label]="'reconstruct.plyNext' | translate">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+              <button mat-icon-button [disabled]="atEnd()" (click)="goPly('end')"
+                      [matTooltip]="'reconstruct.plyLast' | translate"
+                      [attr.aria-label]="'reconstruct.plyLast' | translate">
+                <mat-icon>last_page</mat-icon>
+              </button>
+              @if (!atEnd()) {
+                <button mat-stroked-button (click)="truncateHere()">
+                  <mat-icon>content_cut</mat-icon> {{ 'reconstruct.continueHere' | translate }}
+                </button>
+              }
+            </div>
             <mat-form-field appearance="outline" class="wide">
               <mat-label>{{ 'reconstruct.movesLabel' | translate }}</mat-label>
               <textarea matInput rows="3" [ngModel]="editMoves" (ngModelChange)="onMovesInput($event)"

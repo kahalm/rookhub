@@ -17,6 +17,8 @@ export interface ReconstructionPart {
   continuesPrevious: boolean;
   /** Bin ich mir bei diesem Bruchstück sicher? (Vorgabe ja — „nein" ist die Auskunft.) */
   certain: boolean;
+  /** Zugfolge ohne Anschluss: beginnt sie mit einem Zug von Schwarz? */
+  blackToMove: boolean;
   note?: string | null;
   /** Ist bekannt, welche Stellung VOR diesem Teil steht? */
   anchored: boolean;
@@ -72,6 +74,7 @@ export interface PartInput {
   fromPly?: number | null;
   continuesPrevious?: boolean;
   certain?: boolean;
+  blackToMove?: boolean;
   note?: string | null;
 }
 

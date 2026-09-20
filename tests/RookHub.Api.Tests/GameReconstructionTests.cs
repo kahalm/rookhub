@@ -42,6 +42,24 @@ public class ReconstructionChainTests
     }
 
     [Fact]
+    public void Analyze_FirstMovesStartingWithBlack_AreAFragment_NotTheOpening()
+    {
+        // „Und dann schlug er auf f7" als erstes Aufgezeichnetes: eine Partie fängt nicht mit einem
+        // schwarzen Zug an, das Teil hängt also an keiner bekannten Stellung — und ist damit auch
+        // nicht falsch, nur ungeprüft.
+        var part = Moves(0, "Rxf7 Kxf7");
+        part.BlackToMove = true;
+
+        var result = ReconstructionChain.Analyze(new[] { part });
+
+        var chain = Assert.Single(result.Parts);
+        Assert.False(chain.Anchored);
+        Assert.Null(chain.FirstBadMove);
+        Assert.Equal(0, result.KnownPlies);
+        Assert.Equal(string.Empty, result.PrefixSan);
+    }
+
+    [Fact]
     public void Analyze_IllegalMoveIsReportedAndStopsTheChain()
     {
         var result = ReconstructionChain.Analyze(new[] { Moves(0, "e4 e5 Qh9") });
@@ -323,6 +341,21 @@ public class GameReconstructionServiceTests : IDisposable
         var unsure = await _service.UpdatePartAsync(1, id, partId,
             new ReconstructionPartRequest { Kind = ReconstructionPartKind.Moves, Moves = "e4 e5", Certain = false });
         Assert.False(unsure!.Parts[0].Certain);
+    }
+
+    [Fact]
+    public async Task Parts_RememberWhoIsToMove_ButOnlyForMoves()
+    {
+        var id = await CreateAsync();
+
+        var fragment = await _service.AddPartAsync(1, id,
+            new ReconstructionPartRequest { Kind = ReconstructionPartKind.Moves, Moves = "Rxf7 Kxf7", BlackToMove = true });
+        Assert.True(fragment!.Parts[0].BlackToMove);
+
+        // Bei einer Stellung steht die Seite in der FEN — ein zweites Feld daneben widerspräche ihr irgendwann.
+        var position = await _service.AddPartAsync(1, id,
+            new ReconstructionPartRequest { Kind = ReconstructionPartKind.Position, Fen = AfterFivePlies, BlackToMove = true });
+        Assert.False(position!.Parts[1].BlackToMove);
     }
 
     [Fact]

@@ -123,11 +123,41 @@
 
 .editor-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
+.side-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
+
+/* Die Blätterleiste gehört unter das Brett, in Brettbreite — am Handy gibt es keine Pfeiltasten. */
+.ply-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-wrap: wrap;
+  max-width: min(100%, 56vh);
+  margin: 0 auto 0.5rem;
+
+  .ply-count { font-variant-numeric: tabular-nums; margin: 0 0.35rem; }
+}
+
 .bad-hint { color: #ef5350; margin: 0 0 0.5rem; }
 
-/* „Lücke schließen": die Suche sitzt AM Teil, vor dem die Lücke liegt — dort, wo man sie sieht. */
+/* Eine Lücke ist etwas ZWISCHEN zwei Teilen — deshalb steht sie auch dort und nicht in einer
+   Karte. Vorher war sie nirgends zu sehen: man musste wissen, dass der Knopf an der Stellung
+   DANACH hängt. */
+.gap-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.15rem 0 0.4rem 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 3px dashed color-mix(in srgb, #e65100 60%, transparent);
+
+  .gap-icon { opacity: 0.6; }
+  .small { font-size: 0.85rem; }
+}
+
+/* „Lücke schließen": die Suche sitzt an der Lücke, dort, wo man sie sieht. */
 .gap {
-  margin-top: 0.5rem;
+  margin: 0 0 0.6rem 0.5rem;
 
   .gap-panel {
     border-radius: 8px;

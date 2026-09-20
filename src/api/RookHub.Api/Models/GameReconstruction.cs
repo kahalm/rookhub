@@ -92,6 +92,18 @@ public class GameReconstructionPart
     /// </summary>
     public bool Certain { get; set; } = true;
 
+    /// <summary>
+    /// Nur bei <see cref="ReconstructionPartKind.Moves"/> OHNE Anschluss: beginnt das Bruchstück mit
+    /// einem Zug von SCHWARZ? Bei einer Stellung steht die Seite in der FEN, und bei einem Teil, das
+    /// an das vorige anschließt, in der Stellung davor — dort wird dieses Feld nicht gelesen.
+    ///
+    /// <para>Ohne die Angabe ließe sich „und dann schlug er auf f7" gar nicht aufzeichnen: das Brett
+    /// im Editor stünde auf Weiß am Zug, und der erinnerte Zug wäre nicht spielbar. Beim ERSTEN Teil
+    /// heißt der Haken außerdem, dass es NICHT die Eröffnung ist — eine Partie fängt nicht mit einem
+    /// schwarzen Zug an; das Bruchstück hängt dann an keiner bekannten Stellung.</para>
+    /// </summary>
+    public bool BlackToMove { get; set; }
+
     /// <summary>Bekannter Halbzug, an dem dieses Teil beginnt (0 = Grundstellung); null = unbekannt.</summary>
     public int? FromPly { get; set; }
 

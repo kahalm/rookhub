@@ -3508,11 +3508,22 @@
       "noGap": "Ovaj se dio već nastavlja na prethodni.",
       "noPrevious": "Ovo je prvi dio — prije njega nema ničega.",
       "targetNotAPosition": "Pretrazi treba POLOŽAJ kao cilj; niz poteza nakon praznine ni sam nema poznat početni položaj.",
-      "invalidPosition": "Jedan od dva položaja nije čitljiv."
+      "invalidPosition": "Jedan od dva položaja nije čitljiv.",
+      "here": "Praznina",
+      "needPosition": "Zabilježi položaj nakon praznine i poteze između može se potražiti."
     },
     "enterPosition": "Unesi položaj",
     "afterPositionHint": "Nakon preuzimanja nastavljaš potezima od tog položaja — ili ondje opet pritisni „Unesi položaj“ i skoči na sljedeći.",
     "markCertain": "Označi kao sigurno",
-    "markUnsure": "Označi kao nesigurno"
+    "markUnsure": "Označi kao nesigurno",
+    "sideToMove": "Na potezu:",
+    "sideWhite": "Bijeli",
+    "sideBlack": "Crni",
+    "plyPosition": "Potez {{shown}} od {{total}}",
+    "plyPrev": "Jedan potez natrag (strelica lijevo)",
+    "plyNext": "Jedan potez naprijed (strelica desno)",
+    "plyFirst": "Na početak",
+    "plyLast": "Na kraj",
+    "continueHere": "Nastavi odavde"
   }
 }

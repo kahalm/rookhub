@@ -3508,11 +3508,22 @@
       "noGap": "Ez a rész már az előzőhöz kapcsolódik.",
       "noPrevious": "Ez az első rész — előtte nincs semmi.",
       "targetNotAPosition": "A keresésnek ÁLLÁS kell célként; egy hézag utáni lépéssornak magának sincs ismert kiindulóállása.",
-      "invalidPosition": "A két állás egyike nem olvasható."
+      "invalidPosition": "A két állás egyike nem olvasható.",
+      "here": "Hézag",
+      "needPosition": "Rögzítsd a hézag utáni állást, és a köztes lépések kereshetővé válnak."
     },
     "enterPosition": "Állás megadása",
     "afterPositionHint": "Az átvétel után lépésekkel folytatod ettől az állástól — vagy ott újra az „Állás megadása“ gombbal ugorhatsz a következőre.",
     "markCertain": "Megjelölés biztosként",
-    "markUnsure": "Megjelölés bizonytalanként"
+    "markUnsure": "Megjelölés bizonytalanként",
+    "sideToMove": "Lépésen:",
+    "sideWhite": "Világos",
+    "sideBlack": "Sötét",
+    "plyPosition": "{{shown}}. lépés a(z) {{total}}-ból",
+    "plyPrev": "Egy lépés vissza (balra nyíl)",
+    "plyNext": "Egy lépés előre (jobbra nyíl)",
+    "plyFirst": "Az elejére",
+    "plyLast": "A végére",
+    "continueHere": "Folytatás innen"
   }
 }

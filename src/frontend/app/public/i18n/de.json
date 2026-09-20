@@ -3508,11 +3508,22 @@
       "noGap": "Dieses Teil schließt schon an das vorige an.",
       "noPrevious": "Das ist das erste Teil — davor liegt nichts.",
       "targetNotAPosition": "Die Suche braucht eine STELLUNG als Ziel; eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung.",
-      "invalidPosition": "Eine der beiden Stellungen lässt sich nicht lesen."
+      "invalidPosition": "Eine der beiden Stellungen lässt sich nicht lesen.",
+      "here": "Lücke",
+      "needPosition": "Halt die Stellung nach der Lücke fest, dann lassen sich die Züge dazwischen suchen."
     },
     "enterPosition": "Stellung eingeben",
     "afterPositionHint": "Nach dem Übernehmen geht es mit Zügen ab dieser Stellung weiter — oder dort gleich wieder „Stellung eingeben“, um zur nächsten zu springen.",
     "markCertain": "Als sicher markieren",
-    "markUnsure": "Als unsicher markieren"
+    "markUnsure": "Als unsicher markieren",
+    "sideToMove": "Am Zug:",
+    "sideWhite": "Weiß",
+    "sideBlack": "Schwarz",
+    "plyPosition": "Zug {{shown}} von {{total}}",
+    "plyPrev": "Einen Zug zurück (Pfeil links)",
+    "plyNext": "Einen Zug vor (Pfeil rechts)",
+    "plyFirst": "An den Anfang",
+    "plyLast": "Ans Ende",
+    "continueHere": "Ab hier weiterspielen"
   }
 }

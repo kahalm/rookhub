@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -9,13 +9,27 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { PositionSetupComponent, START_FEN } from '../analysis/position-setup.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GapResult, GapSolution, PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
+
+/**
+ * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
+ * DAVOR, und der gehört nach dem Wechsel der anderen Seite.
+ */
+export function withSideToMove(fen: string, black: boolean): string {
+  const f = fen.trim().split(/\s+/);
+  if (f.length < 4) return fen;
+  f[1] = black ? 'b' : 'w';
+  f[3] = '-';
+  return f.join(' ');
+}
 
 /**
  * Der Arbeitsplatz für EINE zu rekonstruierende Partie: Bruchstücke aufzeichnen, ordnen, ergänzen.
@@ -35,7 +49,8 @@ import { GapResult, GapSolution, PartKind, PartInput, Reconstruction, Reconstruc
   selector: 'app-reconstruct-detail',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, TranslatePipe, ChessBoardComponent, PositionSetupComponent],
+    MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule,
+    TranslatePipe, ChessBoardComponent, PositionSetupComponent],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',
 })
@@ -45,6 +60,7 @@ export class ReconstructDetailComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private prefs = inject(PreferencesService);
+  private confirm = inject(ConfirmService);
 
   readonly Kind = PartKind;
   readonly data = signal<Reconstruction | null>(null);
@@ -84,10 +100,86 @@ export class ReconstructDetailComponent implements OnInit {
   /** Ist die Stellung vor der bearbeiteten Zugfolge überhaupt bekannt? */
   readonly editAnchored = signal(true);
 
-  /** Stellung nach den bereits eingetippten Zügen — das Brett zeigt sie und spielt darauf weiter. */
-  readonly editBoardFen = computed(() => this.replay(this.editStartFen(), this.editMovesTokens()).fen);
+  /**
+   * Wie viele Halbzüge der Eingabe das Brett zeigt — `null` heißt „alle" (der Normalfall beim
+   * Eintippen). Mit den Pfeiltasten bzw. den Knöpfen blättert man hier durch die Zugfolge.
+   */
+  readonly editPly = signal<number | null>(null);
+
+  /** Stellung nach den gezeigten Zügen — das Brett zeigt sie und spielt darauf weiter. */
+  readonly editBoardFen = computed(() =>
+    this.replay(this.editStartFen(), this.shownTokens()).fen);
   readonly editBadMove = signal<string | null>(null);
   private readonly movesSignal = signal('');
+
+  /** Die Züge bis zum Blätter-Stand (alle, solange nicht geblättert wird). */
+  private shownTokens(): string[] {
+    const tokens = this.editMovesTokens();
+    const ply = this.editPly();
+    return ply === null ? tokens : tokens.slice(0, Math.max(0, Math.min(ply, tokens.length)));
+  }
+
+  /** Zahl der eingetippten Halbzüge. */
+  plyTotal(): number { return this.editMovesTokens().length; }
+
+  /** Der angezeigte Halbzug (0 = Ausgangsstellung). */
+  plyShown(): number { const ply = this.editPly(); return ply === null ? this.plyTotal() : Math.min(ply, this.plyTotal()); }
+
+  /** Steht das Brett am Ende der Eingabe? Nur dort darf gespielt werden. */
+  atEnd(): boolean { return this.plyShown() >= this.plyTotal(); }
+
+  /** Blättern: `delta` Halbzüge vor oder zurück; `null` → ans Ende. */
+  goPly(delta: number | 'start' | 'end'): void {
+    const total = this.plyTotal();
+    if (delta === 'end') { this.editPly.set(null); return; }
+    if (delta === 'start') { this.editPly.set(0); return; }
+    const next = Math.max(0, Math.min(this.plyShown() + delta, total));
+    this.editPly.set(next >= total ? null : next);
+  }
+
+  /**
+   * „Ab hier weiterspielen": schneidet die Züge nach dem angezeigten Halbzug ab. Bewusst ein
+   * eigener Knopf statt eines stillen Abschneidens beim nächsten Brettzug — sonst löschte ein
+   * versehentliches Ziehen auf dem Brett den Rest einer langen Zugfolge.
+   */
+  truncateHere(): void {
+    const ply = this.plyShown();
+    this.editMoves = this.editMovesTokens().slice(0, ply).join(' ');
+    this.setMoves(this.editMoves);
+    this.editPly.set(null);
+  }
+
+  /** Pfeiltasten am PC: blättern, solange der Fokus nicht in einem Textfeld steht. */
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(e: KeyboardEvent): void {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+    if (this.editingId() === null || this.editKind() !== PartKind.Moves) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); this.goPly(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); this.goPly(1); }
+    else if (e.key === 'Home') { e.preventDefault(); this.goPly('start'); }
+    else if (e.key === 'End') { e.preventDefault(); this.goPly('end'); }
+  }
+
+  // ----- Wer ist am Zug -----
+
+  /** Steht in der Ausgangsstellung des Editors Schwarz am Zug? */
+  sideBlack(): boolean { return this.editStartFen().split(' ')[1] === 'b'; }
+
+  /**
+   * Die Seite am Zug umstellen — jederzeit, auch mitten im Aufzeichnen („und dann schlug ER auf f7").
+   *
+   * <p>Hängt das Teil an der Stellung davor, steht die Seite dort fest; wer sie hier ändert, sagt
+   * damit, dass das Bruchstück NICHT daran anschließt. Genau das passiert dann auch, statt eine
+   * Angabe stehen zu lassen, die der Kette widerspricht.</p>
+   */
+  setSideBlack(black: boolean): void {
+    if (this.sideBlack() === black) return;
+    if (this.editContinues) this.editContinues = false;
+    this.editAnchored.set(false);
+    this.editStartFen.set(withSideToMove(this.editStartFen(), black));
+    this.setMoves(this.editMoves);
+  }
 
   ngOnInit(): void {
     this.id = Number(this.route.snapshot.paramMap.get('id')) || 0;
@@ -153,6 +245,7 @@ export class ReconstructDetailComponent implements OnInit {
     this.editContinues = !!last && last.kind === PartKind.Position && kind === PartKind.Moves;
     this.editFen = last?.endFen || START_FEN;
     this.editStartFen.set(kind === PartKind.Moves ? (last?.endFen || START_FEN) : START_FEN);
+    this.editPly.set(null);
     // Ein neues Teil hängt an der letzten bekannten Stellung — ist keine da, beginnt das Brett in
     // der Grundstellung, und die Züge stehen dann für eine Stelle, die nicht die gemeinte ist.
     this.editAnchored.set(kind !== PartKind.Moves || !!last?.endFen || parts.length === 0);
@@ -169,7 +262,9 @@ export class ReconstructDetailComponent implements OnInit {
     this.editAnchored.set(part.kind !== PartKind.Moves || !!part.startFen);
     // ZUERST die Ausgangsstellung, DANN die Züge: `setMoves` prüft gegen `editStartFen`, und mit der
     // Stellung des zuvor bearbeiteten Teils meldete es Züge als unmöglich, die hier stimmen.
-    this.editStartFen.set(part.startFen || START_FEN);
+    // Ohne Anker gibt es keine Stellung davor — dann sagt der gespeicherte Haken, wer am Zug war.
+    this.editStartFen.set(part.startFen || withSideToMove(START_FEN, part.blackToMove));
+    this.editPly.set(null);
     this.editMoves = part.moves ?? '';
     this.setMoves(this.editMoves);
   }
@@ -188,11 +283,11 @@ export class ReconstructDetailComponent implements OnInit {
    * Zug landete aber hinter diesem Zug im Text und käme nie auf dem Brett an — gemeldet als
    * „ich kann nur einen Zug machen und nicht mehrere".
    */
-  boardPlayable(): boolean { return this.editBadMove() === null; }
+  boardPlayable(): boolean { return this.editBadMove() === null && this.atEnd(); }
 
-  /** Ein Zug auf dem Brett: hinten an die Zugfolge anhängen. */
+  /** Ein Zug auf dem Brett: hinten an die Zugfolge anhängen (gespielt wird nur am Ende, s. o.). */
   onBoardMove(move: UserBoardMove): void {
-    if (this.editKind() !== PartKind.Moves) return;
+    if (this.editKind() !== PartKind.Moves || !this.atEnd()) return;
     this.editMoves = `${this.editMoves.trim()} ${move.san}`.trim();
     this.setMoves(this.editMoves);
   }
@@ -220,6 +315,9 @@ export class ReconstructDetailComponent implements OnInit {
       fromPly: this.editFromPly ?? null,
       continuesPrevious: this.editContinues,
       certain: this.editCertain,
+      // Nur wenn das Teil NICHT anschließt, ist die Seite eine eigene Aussage — sonst steht sie in
+      // der Stellung davor, und zwei Quellen für dieselbe Angabe widersprechen sich irgendwann.
+      blackToMove: kind === PartKind.Moves && !this.editContinues && this.sideBlack(),
       note: this.editNote.trim() || null,
     };
     const editingId = this.editingId();
@@ -249,11 +347,16 @@ export class ReconstructDetailComponent implements OnInit {
   }
 
   removePart(part: ReconstructionPart): void {
-    if (this.busy() || !confirm(this.translate.instant('reconstruct.deletePartConfirm'))) return;
-    this.busy.set(true);
-    this.service.removePart(this.id, part.id).subscribe({
-      next: data => { this.busy.set(false); this.apply(data); if (this.editingId() === part.id) this.editingId.set(null); },
-      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+    if (this.busy()) return;
+    // Bewusst KEIN window.confirm: im Vollbild rendert der Browser nur den Teilbaum des
+    // Vollbild-Elements, und die native Rückfrage lag dahinter — unsichtbar, aber blockierend.
+    this.confirm.ask('reconstruct.deletePartConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.busy.set(true);
+      this.service.removePart(this.id, part.id).subscribe({
+        next: data => { this.busy.set(false); this.apply(data); if (this.editingId() === part.id) this.editingId.set(null); },
+        error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+      });
     });
   }
 
@@ -305,6 +408,7 @@ export class ReconstructDetailComponent implements OnInit {
       fromPly: part.fromPly ?? null,
       continuesPrevious: part.continuesPrevious,
       certain: !part.certain,
+      blackToMove: part.blackToMove,
       note: part.note ?? null,
     }).subscribe({
       next: data => { this.busy.set(false); this.apply(data); },
