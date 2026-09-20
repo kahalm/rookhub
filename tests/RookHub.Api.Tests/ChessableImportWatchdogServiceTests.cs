@@ -233,9 +233,12 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         // immer auf läuft" — es gibt keine Lane, die ihn je aufnimmt, und die Dedup-Regel in
         // EnqueueReimportAsync blockiert damit jeden neuen Import desselben Kurses.
         _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        // Feste, hohe Id wie oben: die Treiber-Liste (ChessableImportService._localInflight) ist
+        // prozessweit statisch — mit einer Auto-Id (1) galt dieser Import als lokal getrieben, sobald
+        // eine parallel laufende Testklasse zufaellig denselben Schluessel fuehrte (CI 2026-09-20).
         _db.ChessableImports.Add(new ChessableImport
         {
-            UserId = 5, Bid = "91808", CourseName = "Lifetime Repertoires", Target = "book",
+            Id = 990003, UserId = 5, Bid = "91808", CourseName = "Lifetime Repertoires", Target = "book",
             Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
             FullyCached = true, CreatedAt = DateTime.UtcNow,
         });
@@ -259,7 +262,7 @@ public class ChessableImportWatchdogServiceTests : IDisposable
     {
         _db.ChessableImports.Add(new ChessableImport
         {
-            UserId = 5, Bid = "91808", CourseName = "c", Target = "book",
+            Id = 990004, UserId = 5, Bid = "91808", CourseName = "c", Target = "book",
             Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
             CreatedAt = DateTime.UtcNow,
         });

@@ -3273,6 +3273,10 @@
       "courses": "{{count}} kézzel feltöltött tanfolyam nem frissíthető automatikusan — importáld újra a PGN-t a legújabb feldolgozáshoz.",
       "repertoires": "{{count}} repertoár kézi újraimportálást igényel a frissítéshez."
     },
+    "itemNeedsReimport": {
+      "courses": "Ez a tanfolyam régebbi feldolgozásból származik, és itt nem frissíthető. Töltsd le újra a RepCheck bővítménnyel, hogy naprakész legyen.",
+      "repertoires": "Ez a repertoár régebbi feldolgozásból származik, és itt nem frissíthető. Töltsd le újra a RepCheck bővítménnyel, hogy naprakész legyen."
+    },
     "update": "Frissítés ({{count}})",
     "updateTip": "A tárolt forrással rendelkező elemek újrafeldolgozása és a Chessable-elemek újbóli letöltése (a gyorsítótárazottak azonnal frissülnek, letöltés nélkül).",
     "working": "Frissítés folyamatban…",
