@@ -220,6 +220,66 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// Der Cache-Vorlauf (`prebuild`) darf NIE pushen. Er laeuft absichtlich VOR dem Test-Gate,
+    /// parallel zu den Tests — er existiert nur, damit die Schichten schon im Cache liegen, wenn
+    /// das Gate aufgeht (`build-api` baute vorher 1:34 lang komplett ohne Cache, und zwar
+    /// vollstaendig NACH den Tests). Genau deshalb ist ein Push von dort der teuerste denkbare
+    /// Fehler: ein Image laege in ghcr, bevor ein einziger Test gelaufen ist — das Gate waere
+    /// ausgehebelt, ohne dass irgendetwas rot wuerde.
+    /// </summary>
+    [Fact]
+    public void ThePrebuildJob_NeverPushes()
+    {
+        var block = PrebuildJob();
+
+        Assert.Contains("outputs: type=cacheonly", block);
+        Assert.DoesNotContain("push: true", block);
+        Assert.DoesNotContain("docker/login-action", block);
+    }
+
+    /// <summary>
+    /// Und er darf umgekehrt auch NICHT auf das Gate warten — dann waere er wertlos: er liefe
+    /// hinter den Tests und damit auf demselben kritischen Pfad wie der echte Build. Ein
+    /// <c>continue-on-error</c> gehoert dazu, weil ein Beschleuniger niemals einen Lauf rot
+    /// faerben soll; faellt er aus, baut der echte Build eben wieder von vorn.
+    /// </summary>
+    [Fact]
+    public void ThePrebuildJob_DoesNotWaitForTheTestGate()
+    {
+        var block = PrebuildJob();
+
+        Assert.Contains("needs: changes", block);
+        Assert.DoesNotContain("needs: [changes, tests]", block);
+        Assert.Contains("continue-on-error: true", block);
+    }
+
+    /// <summary>
+    /// Jedes Image, das unten gebaut wird, braucht oben einen Vorlauf — sonst ist der Cache fuer
+    /// genau dieses Image kalt und der Job faellt still auf die alte, langsame Bauweise zurueck.
+    /// </summary>
+    [Theory]
+    [InlineData("api")]
+    [InlineData("frontend")]
+    [InlineData("turnier")]
+    public void EveryImageJob_HasAWarmCache(string image)
+    {
+        var text = ReadRepoFile(Docker);
+        var block = Regex.Match(text, $@"(?ms)^  build-{Regex.Escape(image)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+
+        Assert.Contains($"cache-from: type=gha,scope={image}", block);
+        Assert.Contains("docker/setup-buildx-action", block);   // ohne Buildx importiert nichts
+        Assert.Contains($"image: {image}", PrebuildJob());
+    }
+
+    /// <summary>Der <c>prebuild:</c>-Job aus docker.yml.</summary>
+    private static string PrebuildJob()
+    {
+        var block = Regex.Match(ReadRepoFile(Docker), @"(?ms)^  prebuild:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+        Assert.NotEmpty(block);
+        return block;
+    }
+
+    /// <summary>
     /// Beim Handstart bleibt der Filter-Schritt AUS. dorny/paths-filter braucht einen
     /// Vorgaenger-Stand; bei `workflow_dispatch` haelt es master gegen master und setzt jeden
     /// Filter auf `false`. Liefe der Schritt, entschiede also ausgerechnet beim Handstart ein

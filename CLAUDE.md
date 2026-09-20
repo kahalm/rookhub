@@ -2426,6 +2426,15 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   geerbt), der reparierende Push berührt nur Frontend-Pfade, und damit hat `build-api` zwei Versionen
   lang nicht gebaut — master grün, Code gepusht, und auf Dev läuft trotzdem der Stand von vorgestern
   (2026-09-09, Dev hing auf 0.452.1). Der Handstart auf master schiebt `:dev`, nicht `:latest`.
+  **Cache-Vorlauf** (seit 0.493.3): der `prebuild`-Job in `docker.yml` baut die drei Images schon parallel
+  zu den Tests — ohne Push (`outputs: type=cacheonly`), nur um den Buildx-Schichten-Cache zu füllen, aus dem
+  die echten Build-Jobs danach per `cache-from: type=gha,scope=<image>` schöpfen. Vorher gab es GAR KEINEN
+  Docker-Cache: `build-api` baute 1:34 lang von null, und zwar vollständig NACH dem Test-Gate (Lauf
+  35502561832: 5:04 gesamt). Drei Regeln hängen an `CiWorkflowTests`: der Vorlauf pusht NIE (sonst läge ein
+  Image in ghcr, bevor ein Test lief — das Gate wäre lautlos ausgehebelt), er wartet NICHT auf `tests`
+  (sonst wäre er wirkungslos), und jedes Image-Job braucht sein `cache-from` samt Buildx (ohne Buildx
+  importiert der klassische docker-Treiber gar nichts, still). `continue-on-error: true`, weil ein
+  Beschleuniger nie einen Lauf rot färben darf. Im Blick behalten: der Actions-Cache fasst 10 GB pro Repo.
 - **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 
 ## Versionierung

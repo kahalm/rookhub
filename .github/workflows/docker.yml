@@ -53,6 +53,79 @@ jobs:
       contents: read
       pull-requests: read
 
+  # Cache-Vorlauf: baut dieselben drei Images wie unten, aber OHNE Push — und vor allem OHNE auf
+  # `tests` zu warten. Der Zweck ist allein der Schichten-Cache: geht das Gate auf, findet der echte
+  # Build unten alles fertig vor und muss im Wesentlichen nur noch hochladen.
+  #
+  # Warum das noetig war (gemessen am Lauf 35502561832, 2026-09-20, 5:04 gesamt): es gab bis dahin
+  # GAR KEINEN Docker-Cache — jeder Lauf zog die Basis-Images neu, machte `dotnet restore` neu und
+  # installierte stockfish neu. `build-api` brauchte dafuer 1:34, und diese 1:34 lagen vollstaendig
+  # auf dem kritischen Pfad, weil sie erst NACH dem Test-Gate begannen.
+  #
+  # Das Gate selbst bleibt unangetastet: gepusht wird weiterhin NUR unten, nach gruenen Tests. Hier
+  # entsteht nichts, was irgendwer konsumieren koennte — `outputs: type=cacheonly` heisst, das Image
+  # wird gebaut und weggeworfen, zurueck bleibt ausschliesslich der Cache.
+  #
+  # Der Preis sind doppelte Runner-Minuten. rookhub ist oeffentlich, die sind kostenlos.
+  prebuild:
+    needs: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Reiner Beschleuniger, NIEMALS ein Gate: zickt der Cache-Dienst oder faellt ein Vorlauf aus
+    # anderem Grund um, soll der LAUF nicht rot werden. Der echte Build unten baut dann eben wieder
+    # von vorn — also genau so, wie es vor diesem Job immer war.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Der Filter-Output steht AUSGESCHRIEBEN in der Matrix (`needs.changes.outputs.api`), nicht
+          # als `outputs[matrix.image]`. Beides funktioniert — aber `CiWorkflowTests` liest die
+          # abgefragten Filternamen per Regex aus der Datei und kennt nur die ausgeschriebene Form.
+          # Ein dynamischer Index waere fuer den Test unsichtbar, und ein umbenannter Filter machte
+          # den Vorlauf still wirkungslos: genau die Sorte Fehler, gegen die der Test da ist.
+          - image: api
+            context: src/api/RookHub.Api
+            build-args: ''
+            wanted: ${{ needs.changes.outputs.api }}
+          - image: frontend
+            context: src/frontend
+            build-args: APP_PROJECT=app
+            wanted: ${{ needs.changes.outputs.frontend }}
+          - image: turnier
+            context: src/frontend
+            build-args: APP_PROJECT=turnier
+            wanted: ${{ needs.changes.outputs.turnier }}
+    # Dieselbe Bedingung wie beim zugehoerigen Build-Job unten, nur einmal hingeschrieben statt
+    # dreimal: fuer ein Image, das dieser Push ohnehin nicht baut, soll auch kein Cache entstehen.
+    env:
+      WANTED: >-
+        ${{ github.event_name == 'workflow_dispatch'
+            || startsWith(github.ref, 'refs/tags/v')
+            || matrix.wanted == 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+        if: env.WANTED == 'true'
+      - uses: docker/setup-buildx-action@v3
+        if: env.WANTED == 'true'
+      - uses: docker/build-push-action@v7
+        if: env.WANTED == 'true'
+        with:
+          context: ${{ matrix.context }}
+          build-args: ${{ matrix.build-args }}
+          # Kein Push, kein `load` — nur der Cache soll ueberleben.
+          outputs: type=cacheonly
+          # `scope` MUSS je Image gesetzt sein, sonst ueberschreiben sich die drei gegenseitig:
+          # die Vorgabe ist der Branch-Name, und der ist fuer alle drei derselbe.
+          # `mode=max` ist Pflicht, nicht Kuer — der teure Teil steckt in der BUILD-Stage
+          # (`dotnet restore` bzw. `npm ci` + `ng build`), und die exportiert `mode=min` nicht mit.
+          # Im Blick behalten: der Actions-Cache fasst 10 GB pro Repo und wirft dann die aeltesten
+          # Eintraege weg. Wird es eng, ist Registry-Cache in ghcr die Alternative
+          # (`type=registry,ref=ghcr.io/kahalm/rookhub-api:buildcache`).
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
   build-api:
     needs: [changes, tests]
     if: >-
@@ -66,6 +139,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+      # Ohne Buildx laeuft der Build im klassischen docker-Treiber, und DER kann keinen Cache
+      # importieren — `cache-from` waere still wirkungslos.
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -84,6 +160,11 @@ jobs:
         with:
           context: src/api/RookHub.Api
           push: true
+          # Liegt schon da, wenn `prebuild` parallel zu den Tests durchgelaufen ist — dann bleibt
+          # hier fast nur noch der Upload nach ghcr. Fehlt der Cache (Vorlauf uebersprungen,
+          # fehlgeschlagen oder aus dem 10-GB-Kontingent verdraengt), baut der Schritt einfach von
+          # vorn; der Lauf wird dadurch nur langsamer, nie falsch.
+          cache-from: type=gha,scope=api
           tags: ${{ steps.meta.outputs.tags }}
 
   build-frontend:
@@ -99,6 +180,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+      # Ohne Buildx laeuft der Build im klassischen docker-Treiber, und DER kann keinen Cache
+      # importieren — `cache-from` waere still wirkungslos.
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -120,6 +204,11 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             GIT_REF=${{ github.ref_name }}
+          # Liegt schon da, wenn `prebuild` parallel zu den Tests durchgelaufen ist — dann bleibt
+          # hier fast nur noch der Upload nach ghcr. Fehlt der Cache (Vorlauf uebersprungen,
+          # fehlgeschlagen oder aus dem 10-GB-Kontingent verdraengt), baut der Schritt einfach von
+          # vorn; der Lauf wird dadurch nur langsamer, nie falsch.
+          cache-from: type=gha,scope=frontend
           tags: ${{ steps.meta.outputs.tags }}
 
   # Turnierseite (turnier.oberschmid.homes): dasselbe Frontend-Verzeichnis, dasselbe Dockerfile —
@@ -138,6 +227,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+      # Ohne Buildx laeuft der Build im klassischen docker-Treiber, und DER kann keinen Cache
+      # importieren — `cache-from` waere still wirkungslos.
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -160,4 +252,9 @@ jobs:
             APP_PROJECT=turnier
             GIT_SHA=${{ github.sha }}
             GIT_REF=${{ github.ref_name }}
+          # Liegt schon da, wenn `prebuild` parallel zu den Tests durchgelaufen ist — dann bleibt
+          # hier fast nur noch der Upload nach ghcr. Fehlt der Cache (Vorlauf uebersprungen,
+          # fehlgeschlagen oder aus dem 10-GB-Kontingent verdraengt), baut der Schritt einfach von
+          # vorn; der Lauf wird dadurch nur langsamer, nie falsch.
+          cache-from: type=gha,scope=turnier
           tags: ${{ steps.meta.outputs.tags }}

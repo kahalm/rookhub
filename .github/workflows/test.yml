@@ -70,11 +70,17 @@ jobs:
           MARIADB_ROOT_PASSWORD: test
         ports:
           - 3306:3306
+        # Der erste Health-Check laeuft erst NACH einem vollen Intervall — mit 10 s stand der Job
+        # also zehn Sekunden vor einer laengst bereiten Datenbank. 5 s halbiert das; die Toleranz
+        # insgesamt bleibt gleich (5 s x 20 = 100 s wie vorher 10 s x 10), und `health-start-period`
+        # sorgt dafuer, dass die unvermeidlichen Fehlschlaege waehrend des Hochfahrens nicht auf
+        # die Versuche angerechnet werden. Gemessen: „Initialize containers" 24 s (2026-09-20).
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=10s
+          --health-interval=5s
           --health-timeout=5s
-          --health-retries=10
+          --health-retries=20
+          --health-start-period=5s
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
