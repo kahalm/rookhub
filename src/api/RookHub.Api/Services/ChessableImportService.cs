@@ -744,7 +744,8 @@ public class ChessableImportService : ICourseReimporter
     /// bekamen (<see cref="LiveAppendResult.Linked"/>).
     /// </summary>
     public Task<LiveAppendResult> AppendLiveAsync(
-        int userId, string bid, string pgn, string courseName, string target, CancellationToken ct = default)
+        int userId, string bid, string pgn, string courseName, string target, CancellationToken ct = default,
+        bool partial = false)
     {
         // FALLE: der Live-Append ist ein Read-Modify-Write auf demselben PgnContent (lesen → anhängen →
         // zurückschreiben) OHNE Concurrency-Token. Klickt der Nutzer schnell durch oder feuert ein
@@ -752,7 +753,7 @@ public class ChessableImportService : ICourseReimporter
         // überschreibt die Linie des ersten — sie verschwindet still. Ebenso fänden zwei parallele
         // ERSTE Linien beide kein Repertoire und legten zwei chessable-{bid}-Repertoires an. Darum je
         // (User, bid) serialisieren.
-        return WithAppendLockAsync($"{userId}:{bid}", () => AppendLiveCoreAsync(userId, bid, pgn, courseName, target, ct), ct);
+        return WithAppendLockAsync($"{userId}:{bid}", () => AppendLiveCoreAsync(userId, bid, pgn, courseName, target, partial, ct), ct);
     }
 
     /// <summary>Prozessweite Schlösser je (User, bid) für <see cref="AppendLiveAsync"/>. Bewusst nicht
@@ -787,7 +788,7 @@ public class ChessableImportService : ICourseReimporter
     }
 
     private async Task<LiveAppendResult> AppendLiveCoreAsync(
-        int userId, string bid, string pgn, string courseName, string target, CancellationToken ct)
+        int userId, string bid, string pgn, string courseName, string target, bool partial, CancellationToken ct)
     {
         target = target == "book" ? "book" : "repertoire";
         var name = Trunc(string.IsNullOrWhiteSpace(courseName) ? $"Chessable {bid}" : courseName, 200);
@@ -795,7 +796,8 @@ public class ChessableImportService : ICourseReimporter
         if (target == "book")
         {
             var fileName = $"chessable-u{userId}-{bid}.pgn";
-            var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct);
+            // `partial` schützt das SourcePgn selbst (s. ImportFileAsync) — hier nur durchreichen.
+            var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, partial: partial);
             var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
             if (book is not null)
             {
@@ -1204,12 +1206,12 @@ public class ChessableImportService : ICourseReimporter
     /// Warteschlangen-Anzeige mitwächst.
     /// </summary>
     public async Task<LiveAppendResult> AppendBrowserChunkAsync(
-        int importId, string pgn, int linesInChunk, CancellationToken ct = default)
+        int importId, string pgn, int linesInChunk, bool partial = false, CancellationToken ct = default)
     {
         var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct)
             ?? throw new InvalidOperationException($"Chessable import {importId} not found.");
 
-        var res = await AppendLiveAsync(import.UserId, import.Bid, pgn, import.CourseName, import.Target, ct);
+        var res = await AppendLiveAsync(import.UserId, import.Bid, pgn, import.CourseName, import.Target, ct, partial);
 
         // Der Live-Append setzt den Anzeigenamen eines Buchs nur, wenn er LEER ist — er ist fuer vorhandene
         // Buecher gedacht, deren Namen der Nutzer gepflegt haben kann. PgnImportService legt ein neues Buch aber

@@ -467,6 +467,58 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "clash3.pgn"));
     }
 
+    // ===== Teil-Import (partial) — „eine Import-Schiene" ======================================
+    // Schickt der Browser nur die NEUEN Linien, nummeriert piratechess nur die gesendeten. Eine
+    // Kollision der Positionsnummer mit dem Bestand sagt dann NICHTS ueber die Identitaet — die oid
+    // tut das. Ohne das Signal muss dieselbe Kollision umgekehrt gedeutet werden.
+
+    [Fact]
+    public async Task ImportFileAsync_Partial_NewOidOnATakenRound_BecomesItsOwnLine()
+    {
+        await _service.ImportFileAsync("part.pgn", BookLine("1", "7001", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("part.pgn", BookLine("1", "7002", "2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None, partial: true);
+
+        Assert.Equal(1, res.Imported);
+        var zeilen = await _db.BookPuzzles.Where(b => b.BookFileName == "part.pgn")
+            .OrderBy(b => b.Round).Select(b => new { b.Round, b.ChessableOid }).ToListAsync();
+        Assert.Equal(2, zeilen.Count);
+        Assert.Equal("1", zeilen[0].Round);
+        Assert.Equal("7001", zeilen[0].ChessableOid);   // Bestand unangetastet
+        Assert.Equal("2", zeilen[1].Round);             // neue Linie auf dem naechsten freien Platz
+        Assert.Equal("7002", zeilen[1].ChessableOid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_WithoutPartial_TheSameCollisionIsStillSkipped()
+    {
+        // Gegenprobe zum Test darueber: ohne das Signal ist dieselbe Nummer dieselbe Linie mit
+        // geaendertem Inhalt — dann darf KEINE zweite Zeile entstehen.
+        await _service.ImportFileAsync("full.pgn", BookLine("1", "7003", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("full.pgn", BookLine("1", "7004", "2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "full.pgn"));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_Partial_DoesNotReplaceAFullSourcePgn()
+    {
+        // An Book.SourcePgn haengt die lokale Neu-Aufbereitung. Ein Bruchstueck darf den vollen
+        // Stand nicht ersetzen.
+        var voll = BookLine("1", "7005", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "7006", "2. d4 exd4 3. Qxd4 Nc6");
+        await _service.ImportFileAsync("src.pgn", voll, CancellationToken.None);
+        var vorher = (await _db.Books.SingleAsync(b => b.FileName == "src.pgn")).SourcePgn;
+
+        await _service.ImportFileAsync("src.pgn", BookLine("3", "7007", "2. Nc3 Nf6 3. f4 d5"),
+            CancellationToken.None, partial: true);
+
+        Assert.Equal(vorher, (await _db.Books.SingleAsync(b => b.FileName == "src.pgn")).SourcePgn);
+    }
+
     [Fact]
     public void ParsePgn_NoComments_LeavesMoveCommentsNull()
     {

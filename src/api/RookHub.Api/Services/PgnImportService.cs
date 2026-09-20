@@ -310,8 +310,13 @@ public class PgnImportService
             $"Keine freie LineId für {fileName}:{round} gefunden ({MaxLineIdProbes} Versuche).");
     }
 
+    /// <param name="partial">Der Stapel enthält NUR die neuen Linien, nicht den ganzen Kurs (Teil-Import
+    /// aus dem Browser). Ändert genau eine Entscheidung: trifft eine neue Linie mit eigener, im Buch
+    /// unbekannter oid auf eine schon vergebene Positionsnummer, ist sie eine ANDERE Linie und bekommt
+    /// einen freien Platz — bei einem vollständigen Re-Import wäre dieselbe Nummer dagegen dieselbe
+    /// Linie mit geändertem Inhalt, und dann darf nichts angelegt werden.</param>
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct,
-        bool preserveExistingSourcePgn = false, bool playFromStartPosition = false)
+        bool preserveExistingSourcePgn = false, bool playFromStartPosition = false, bool partial = false)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
         var (parsed, invalid) = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true,
@@ -489,6 +494,13 @@ public class PgnImportService
                     bookOids.Add(p.ChessableOid);
                     updated++;
                 }
+                else if (partial && !string.IsNullOrEmpty(p.ChessableOid) && !bookOids.Contains(p.ChessableOid))
+                {
+                    // Teil-Import: hier nummeriert piratechess nur die GESENDETEN Linien, eine Kollision
+                    // mit dem Bestand sagt also nichts über die Identität. Die oid tut das — und die ist
+                    // im Buch unbekannt, also eine neue Linie.
+                    alsNeueLinie = true;
+                }
                 else if (inDiesemImport.Contains(p.LineId))
                 {
                     // Die Nummer wurde in DIESEM Import gerade erst vergeben, und zwar an eine Linie
@@ -535,7 +547,10 @@ public class PgnImportService
         // Roh-PGN als Reprocessing-Quelle merken + Pipeline-Version hochsetzen. Beim getReview-Merge
         // (preserveExistingSourcePgn) NICHT das vorhandene (ggf. vollständige getGame-)SourcePgn mit dem
         // Teil-PGN der Lücken überschreiben — nur ein noch leeres SourcePgn erstmalig setzen.
-        if (!preserveExistingSourcePgn || string.IsNullOrEmpty(book.SourcePgn))
+        // Ein TEIL-Import trägt per Definition nicht den ganzen Kurs — er darf ein vollständiges
+        // SourcePgn also nie ersetzen. Das hängt an `partial` selbst und nicht am Aufrufer: sonst
+        // müsste jede Aufrufstelle daran denken, und genau das läuft irgendwann auseinander.
+        if ((!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.SourcePgn))
             book.SourcePgn = pgnText;
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;

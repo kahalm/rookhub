@@ -507,7 +507,7 @@ public class ExtensionController : BaseApiController
                 var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, chapterShift,
                     continues ? ChessableRoundOffset.NextLineOffset(session.MaxLineInChapter, parsed.Pgn) : 0);
                 var res = await _chessableImport.AppendBrowserChunkAsync(
-                    session.ImportId!.Value, shifted, parsed.LineCount, ct);
+                    session.ImportId!.Value, shifted, parsed.LineCount, dto.Partial, ct);
                 _ingestSessions.NoteChapter(session, ChessableRoundOffset.MaxChapter(shifted),
                     parsed.LineCount, res.Imported, res.ResultId,
                     dto.ChapterKey, continues, ChessableRoundOffset.MaxLine(shifted));

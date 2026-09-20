@@ -72,12 +72,16 @@ public record ChessableIngestResultDto(
 /// den Kurs vollständig geholt hat. <c>Aborted=true</c> (mit <c>Final=true</c>, ohne Kapitel) meldet einen
 /// Abbruch im Browser: die Sitzung wird geschlossen und der Import-Datensatz mit dem bis dahin Übernommenen als
 /// abgebrochen markiert — statt bis zum Ablauf der Sitzung auf „läuft" zu stehen.</summary>
-/// <summary><c>ChapterKey</c> (die Chessable-lid) hält ein Kapitel zusammen, das zu groß für EINEN Request ist
+/// <summary><c>Partial</c> sagt: dieser Lauf schickt NUR die neuen Linien, nicht den ganzen Kurs (die
+/// Extension überspringt, was schon auf RookHub liegt). Daran hängt, wie eine Kollision der
+/// Positionsnummer gedeutet wird — siehe <c>PgnImportService.ImportFileAsync</c>.
+/// <c>ChapterKey</c> (die Chessable-lid) hält ein Kapitel zusammen, das zu groß für EINEN Request ist
 /// und darum in mehreren Chunks ankommt: gleicher Schlüssel wie beim Vorgänger = Fortsetzung, keine neue
 /// Kapitelnummer. Alt-Clients schicken das Feld nicht → jeder Chunk ist wie bisher ein eigenes Kapitel.</summary>
 public record ChessableIngestChunkRequest(
     string SessionId, string Bid, string? Target, string? CourseName, ChessableIngestChapter? Chapter, bool Final,
-    string? CourseJson = null, bool Complete = false, bool Aborted = false, string? ChapterKey = null);
+    string? CourseJson = null, bool Complete = false, bool Aborted = false, string? ChapterKey = null,
+    bool Partial = false);
 
 /// <summary>Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
 /// überspringt dafür den Chessable-Abruf. Antwort: die gecachte Teilmenge — nur die Existenz, nie der Inhalt.</summary>
