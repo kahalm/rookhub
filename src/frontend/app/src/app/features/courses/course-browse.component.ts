@@ -25,8 +25,12 @@ import { AuthService } from '../../core/auth.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { SharePuzzleDialogComponent } from '../puzzles/share-puzzle-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { groupByChapter } from '../../shared/lines/chapter-groups.util';
+import { MarkSet } from '../../shared/lines/mark-set';
 
-/** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). */
+/** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). Die Gruppierung selbst
+ *  liegt in `shared/lines/chapter-groups.util` — sie teilt sich diese Ansicht mit der
+ *  Repertoire-Linienliste. */
 interface ChapterGroup {
   name: string | null;
   lines: BookPuzzleDto[];
@@ -428,7 +432,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     });
     // Persistente Flashcard-Markierungen des Users in diesem Kurs.
     this.courseService.getFlashcardMarks(this.bookId).subscribe({
-      next: m => { this.marked = new Set(m.lineIds); },
+      next: m => this.marked.replace(m.lineIds),
       error: () => {},
     });
     if (this.isLoggedIn) {
@@ -480,15 +484,8 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
 
   /** Gruppiert die Linien nach Kapitel in Vorkommens-Reihenfolge (Server liefert bereits nach Round sortiert). */
   private groupByChapter(lines: BookPuzzleDto[]): ChapterGroup[] {
-    const groups: ChapterGroup[] = [];
-    const byName = new Map<string | null, ChapterGroup>();
-    for (const line of lines) {
-      const name = line.chapter || null;
-      let g = byName.get(name);
-      if (!g) { g = { name, lines: [] }; byName.set(name, g); groups.push(g); }
-      g.lines.push(line);
-    }
-    return groups;
+    return groupByChapter(lines, line => line.chapter || null)
+      .map(g => ({ name: g.key, lines: g.lines }));
   }
 
   /** 1-basierte laufende Nummer der Linie in der aktuellen (gefilterten) Liste. */
@@ -537,16 +534,12 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   }
 
   /** PERSISTENT als Flashcard markierte Linien (Server-Zustand, beim Laden geholt). */
-  marked = new Set<number>();
+  marked = new MarkSet<number>();
 
-  /** Markierung umschalten — optimistisch, bei Fehler zurückrollen. */
+  /** Markierung umschalten — optimistisch, bei Fehler zurückrollen (siehe `MarkSet`). */
   toggleMark(line: { id: number }, event: Event): void {
     event.stopPropagation();
-    const next = !this.marked.has(line.id);
-    if (next) this.marked.add(line.id); else this.marked.delete(line.id);
-    this.courseService.setFlashcardMark(this.bookId, line.id, next).subscribe({
-      error: () => { if (next) this.marked.delete(line.id); else this.marked.add(line.id); },
-    });
+    this.marked.toggle(line.id, (id, next) => this.courseService.setFlashcardMark(this.bookId, id, next));
   }
 
   /** Eigener Bereich „nur markierte Flashcards" dieses Kurses. */

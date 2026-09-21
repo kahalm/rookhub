@@ -14,8 +14,11 @@ import { buildCommentSegments } from '../puzzles/comment-variation.util';
 import { RepertoireLine } from './repertoire-viewer.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
 import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from './repertoire-color.util';
+import { groupByChapter } from '../../shared/lines/chapter-groups.util';
+import { MarkSet } from '../../shared/lines/mark-set';
 
-/** Ein Chapter-Bucket mit seinen Linien. Reihenfolge = erstes Auftreten im PGN. */
+/** Ein Chapter-Bucket mit seinen Linien. Reihenfolge = erstes Auftreten im PGN (die Gruppierung
+ *  selbst liegt in `shared/lines/chapter-groups.util`, geteilt mit der Kurs-Durchsicht). */
 interface ChapterGroup {
   chapter: string;
   lines: RepertoireLine[];
@@ -233,17 +236,15 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   @Input() selectedIndex = -1;
 
   /** PERSISTENT als Flashcard markierte Linien (Linien-Schlüssel, Server-Zustand). */
-  marked = new Set<string>();
+  marked = new MarkSet<string>();
   private marksLoadedFor: number | null = null;
 
+  /** Markierung umschalten — optimistisch, bei Fehler zurückrollen (siehe `MarkSet`). */
   toggleMark(line: RepertoireLine, event: Event): void {
     event.stopPropagation();
-    if (this.repertoireId == null) return;
-    const next = !this.marked.has(line.lineKey);
-    if (next) this.marked.add(line.lineKey); else this.marked.delete(line.lineKey);
-    this.training.setFlashcardMark(this.repertoireId, line.lineKey, next).subscribe({
-      error: () => { if (next) this.marked.delete(line.lineKey); else this.marked.add(line.lineKey); },
-    });
+    const id = this.repertoireId;
+    if (id == null) return;
+    this.marked.toggle(line.lineKey, (key, next) => this.training.setFlashcardMark(id, key, next));
   }
 
   /** Markierungen laden, sobald die Repertoire-Id da ist (Input kann nach ngOnInit eintreffen). */
@@ -251,7 +252,7 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
     if (this.repertoireId == null || this.marksLoadedFor === this.repertoireId) return;
     this.marksLoadedFor = this.repertoireId;
     this.training.getFlashcardMarks(this.repertoireId).subscribe({
-      next: m => { this.marked = new Set(m.lineKeys); },
+      next: m => this.marked.replace(m.lineKeys),
       error: () => {},
     });
   }
@@ -316,14 +317,8 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
 
   readonly chapterGroups = computed<ChapterGroup[]>(() => {
     const collapsed = this.collapsed();
-    const map = new Map<string, RepertoireLine[]>();
-    for (const line of this.lines) {
-      const key = line.chapter || '';
-      let bucket = map.get(key);
-      if (!bucket) { bucket = []; map.set(key, bucket); }
-      bucket.push(line);
-    }
-    return [...map.entries()].map(([chapter, lines]) => ({ chapter, lines, expanded: !collapsed.has(chapter) }));
+    return groupByChapter(this.lines, line => line.chapter || '')
+      .map(g => ({ chapter: g.key, lines: g.lines, expanded: !collapsed.has(g.key) }));
   });
 
   toggleChapter(chapter: string): void {

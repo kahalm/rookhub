@@ -172,7 +172,19 @@ app/src/app/
       navbar.component.ts   Material Toolbar, Navigation, User-Menu mit Logout
     loading-spinner/
       loading-spinner.component.ts  Zentrierter MatSpinner
+    lines/
+      chapter-groups.util.ts  groupByChapter: nach Kapitel gruppieren in Vorkommens-Reihenfolge
+      mark-set.ts             MarkSet: Flashcard-Markierungen, optimistisch + Rollback
 ```
+
+- **`shared/lines/`** (seit 0.499.2): was sich die beiden LINIEN-LISTEN teilen — die Kurs-Durchsicht
+  (`features/courses/course-browse.component.ts`) und die Repertoire-Linienliste
+  (`features/repertoire/repertoire-lines.component.ts`). `groupByChapter(items, keyOf)` gruppiert in
+  der Reihenfolge des ERSTEN Auftretens (= Lesereihenfolge; der Kapitel-SCHLÜSSEL ist generisch,
+  weil „ohne Kapitel" im Kurs `null` und im Repertoire `''` heißt), `MarkSet<K>` hält die
+  Flashcard-Markierungen und schaltet eine um: sofort in der Liste, Rollback bei Serverfehler. Die
+  Klasse verhält sich nach außen wie ein `Set` (`has`/`size`/iterierbar), damit die Vorlagen
+  unverändert `marked.has(…)`/`marked.size` benutzen.
 
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
