@@ -137,8 +137,6 @@ public class ChessableTrainedLineService
 
     private static readonly Regex CommentRegex = new(@"\{[^}]*\}", RegexOptions.Compiled);
     private static readonly Regex NagRegex = new(@"\$\d+", RegexOptions.Compiled);
-    private static readonly Regex MoveNumberRegex = new(@"^\d+\.+$", RegexOptions.Compiled);
-    private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
 
     /// <summary>Mainline-SANs des Spiels mit Header <c>[ChessableOid "oid"]</c> — Varianten in
     /// Klammern werden übersprungen (die SR-Linie ist die Hauptlinie des Spiels), Kommentare/NAGs/
@@ -227,8 +225,6 @@ public class ChessableTrainedLineService
         return sans;
     }
 
-    private static readonly Regex FenHeaderRegex =
-        new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     // Lange algebraische Notation: [Figur]<von><-|x><nach>[=P]  („e2e4", „Nf3xe5", „Kh8-g8")
     private static readonly Regex LongAlgRegex =
         new(@"^([KQRBN]?)([a-h][1-8])[-x]?([a-h][1-8])=?([QRBN])?$", RegexOptions.Compiled);
@@ -292,21 +288,19 @@ public class ChessableTrainedLineService
         return string.Equals(candidate, uci, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Start-FEN eines PGN-Abschnitts (<c>[FEN "…"]</c>), sonst <c>null</c> = Grundstellung.</summary>
-    internal static string? StartFenOf(string section)
-    {
-        var m = FenHeaderRegex.Match(section ?? string.Empty);
-        var fen = m.Success ? m.Groups[1].Value.Trim() : null;
-        return string.IsNullOrWhiteSpace(fen) ? null : fen;
-    }
+    /// <summary>Start-FEN eines PGN-Abschnitts — dieselbe Frage wie überall,
+    /// deshalb <see cref="PgnMoveTree.StartFenOf"/>.</summary>
+    internal static string? StartFenOf(string section) => PgnMoveTree.StartFenOf(section);
 
     private static bool IsMoveToken(string token)
     {
-        if (MoveNumberRegex.IsMatch(token) || ResultTokens.Contains(token)) return false;
+        if (PgnMoveTree.IsMoveNumber(token) || PgnMoveTree.IsResultToken(token)) return false;
         // Ein Punkt kommt in echter SAN nie vor: das filtert die Annotation „e.p." (die sonst
         // wegen des führenden 'e' als Zug durchginge und die Liste verlängert) ebenso wie
         // angeklebte Zugnummern („3.Nc3"). Letztere trennen piratechess-PGNs ohnehin mit
         // Leerzeichen ab; chess.js liefert im Frontend in beiden Fällen keinen Extra-Zug.
+        // GENAU diese Regel hält die Klassifikation hier und nicht in PgnMoveTree: dort würde sie
+        // „e.p." zusätzlich aussieben und damit das Ergebnis der Repertoire-Dienste ändern.
         if (token.Contains('.')) return false;
         var c = token[0];
         return (c >= 'a' && c <= 'h') || c is 'K' or 'Q' or 'R' or 'B' or 'N' or 'O';

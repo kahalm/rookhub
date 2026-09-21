@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Chess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -7,8 +6,9 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// EINE Quelle für „alle lesbaren Repertoire-Linien eines Users, geparst" — inklusive PGN-Parser
-/// (mit Varianten und <c>[FEN]</c>-Header) und User-Cache.
+/// EINE Quelle für „alle lesbaren Repertoire-Linien eines Users, geparst" — Zugriffsregeln,
+/// Brett-Walk und User-Cache. Der Parser selbst liegt seit 0.499.6 in <see cref="PgnMoveTree"/>
+/// (er stand hier und in <see cref="RepertoireAnalyzeService"/> als wörtliche Kopie).
 ///
 /// Vorher lag das als privates Innenleben in <see cref="RepertoirePositionLookupService"/>. Mit der
 /// Ähnlichkeitssuche (<see cref="RepertoireSimilarityService"/>) gäbe es sonst einen ZWEITEN Parser
@@ -41,9 +41,6 @@ public class RepertoireLineSource
 
     /// <summary>Geparste Linien eines Users verwerfen (nach PGN-Upload/-Delete/-Update/Freigabe).</summary>
     public void Invalidate(int userId) => _cache.Remove(GamesCacheKey(userId));
-
-    /// <summary>Ein Zug im PGN samt der VOR ihm abzweigenden Varianten.</summary>
-    public sealed record PgnMove(string San, List<List<PgnMove>> Variations);
 
     /// <summary>
     /// Eine Fortsetzung AN einer Stellung: der Zug, mit dem das Repertoire dort tatsächlich
@@ -241,135 +238,17 @@ public class RepertoireLineSource
         }
     }
 
-    // ─── PGN Parser (header-aware, mit Varianten) ─────────────────────────
-    // Eigenständig gehalten (statt RepertoireAnalyzeService-Interna offenzulegen); deckt dieselben
-    // Fälle ab wie der Client-Parser `parsePgnText`, plus [White]/[Black]/[FEN]-Header pro Partie.
+    // ─── PGN → Linien ─────────────────────────────────────────
 
+    /// <summary>Eine Partie in der Lesart dieses Dienstes: Kapitel = <c>[Black]</c>,
+    /// Linienname = <c>[White]</c> (so schreibt piratechess die Chessable-Kurse).</summary>
     private sealed record ParsedGame(string Chapter, string LineName, string? StartFen, List<PgnMove> Moves);
 
-    private static readonly Regex CommentRegex = new(@"\{[^}]*\}", RegexOptions.Compiled);
-    private static readonly Regex LineCommentRegex = new(@";[^\n]*", RegexOptions.Compiled);
-    private static readonly Regex NagRegex = new(@"\$\d+", RegexOptions.Compiled);
-    private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly Regex MoveNumberRegex = new(@"^\d+\.+$", RegexOptions.Compiled);
-    /// <summary>Zugnummern samt Punkten IM Text (auch direkt am Zug: „1.e4", „12...Nf6").</summary>
-    private static readonly Regex InlineMoveNumberRegex = new(@"\d+\.{1,3}", RegexOptions.Compiled);
-    private static readonly Regex EventHeaderSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
-    private static readonly Regex WhiteHeaderRegex = new(@"^\[White\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    private static readonly Regex BlackHeaderRegex = new(@"^\[Black\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    // Chessable-Importe (via piratechess) tragen je Linie die Startstellung der Variante im
-    // [FEN]-Header — ohne den beginnt der Walk in der Grundstellung, der erste Zug ist dort
-    // illegal und die ganze Linie fehlt still im Index (bzw. indiziert falsche Stellungen).
-    private static readonly Regex FenHeaderRegex = new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
-
+    /// <summary>Alle Abschnitte des PGN — auch die ZUG-LOSEN (könnten Kapitel-Intros sein). Sie
+    /// tragen keine Positionen bei und würden nie matchen; wir nehmen sie nur mit, damit der
+    /// <c>gameIndex</c> mit dem Client-Parser übereinstimmt.</summary>
     private static List<ParsedGame> ParseGames(string text)
-    {
-        var games = new List<ParsedGame>();
-        if (string.IsNullOrWhiteSpace(text)) return games;
-        foreach (var section in EventHeaderSplit.Split(text))
-        {
-            if (string.IsNullOrWhiteSpace(section)) continue;
-            var movetext = ExtractMovetext(section);
-            var moves = movetext.Length == 0 ? new List<PgnMove>() : ParseMoveTokens(Tokenize(movetext), 0).Moves;
-            var white = WhiteHeaderRegex.Match(section);
-            var black = BlackHeaderRegex.Match(section);
-            var fen = FenHeaderRegex.Match(section);
-            var lineName = white.Success ? white.Groups[1].Value.Trim() : "";
-            var chapter = black.Success ? black.Groups[1].Value.Trim() : "";
-            var startFen = fen.Success ? fen.Groups[1].Value.Trim() : null;
-            // Auch zug-lose Partien behalten (könnten Kapitel-Intros sein) — sie tragen aber keine
-            // Positionen bei und würden nie matchen; wir nehmen sie nur mit, damit gameIndex mit dem
-            // Client-Parser übereinstimmt.
-            games.Add(new ParsedGame(chapter, lineName, string.IsNullOrWhiteSpace(startFen) ? null : startFen, moves));
-        }
-        return games;
-    }
-
-    private static string ExtractMovetext(string section)
-    {
-        var lines = section.Split('\n');
-        var sb = new System.Text.StringBuilder();
-        bool pastHeaders = false;
-        foreach (var raw in lines)
-        {
-            var line = raw.Trim();
-            if (line.StartsWith('[') && line.EndsWith(']') && !pastHeaders) continue;
-            if (line.Length == 0 && !pastHeaders) { pastHeaders = true; continue; }
-            if (pastHeaders || !line.StartsWith('['))
-            {
-                sb.Append(line).Append(' ');
-                pastHeaders = true;
-            }
-        }
-        return sb.ToString().Trim();
-    }
-
-    private static List<string> Tokenize(string movetext)
-    {
-        movetext = CommentRegex.Replace(movetext, " ");
-        movetext = LineCommentRegex.Replace(movetext, " ");
-        movetext = NagRegex.Replace(movetext, " ");
-        // Zugnummern ERSETZEN, nicht nur als eigenes Token erkennen: ChessBase, Fritz und SCID
-        // exportieren „1.e4" OHNE Leerzeichen. Ein solches Token fiel durch `IsMoveToken` (beginnt
-        // mit einer Ziffer) und wurde STILL verworfen — damit fehlten ALLE Weißzüge der Datei, das
-        // Nachspielen brach am ersten Halbzug ab und Stellungssuche, Baummodus und die
-        // Abweichungs-Analyse fanden nichts, während derselbe Inhalt im Trainer einwandfrei lief
-        // (der Client-Parser und der Kurs-Import machen genau diese Ersetzung schon).
-        movetext = InlineMoveNumberRegex.Replace(movetext, " ");
-        movetext = WhitespaceRegex.Replace(movetext, " ").Trim();
-
-        var tokens = new List<string>();
-        int i = 0;
-        while (i < movetext.Length)
-        {
-            char c = movetext[i];
-            if (c == '(') { tokens.Add("("); i++; }
-            else if (c == ')') { tokens.Add(")"); i++; }
-            else if (c == ' ') { i++; }
-            else
-            {
-                int j = i;
-                while (j < movetext.Length && movetext[j] != ' ' && movetext[j] != '(' && movetext[j] != ')') j++;
-                tokens.Add(movetext.Substring(i, j - i));
-                i = j;
-            }
-        }
-        return tokens;
-    }
-
-    private static (List<PgnMove> Moves, int EndPos) ParseMoveTokens(List<string> tokens, int pos)
-    {
-        var moves = new List<PgnMove>();
-        while (pos < tokens.Count)
-        {
-            var token = tokens[pos];
-            if (token == ")") return (moves, pos);
-            if (token == "(")
-            {
-                pos++;
-                var (varMoves, endPos) = ParseMoveTokens(tokens, pos);
-                pos = endPos + 1;
-                if (moves.Count > 0) moves[^1].Variations.Add(varMoves);
-                continue;
-            }
-            if (IsMoveToken(token))
-            {
-                var clean = token.TrimEnd('!', '?', '+', '#');
-                if (clean.Length > 0)
-                    moves.Add(new PgnMove(clean, new List<List<PgnMove>>()));
-            }
-            pos++;
-        }
-        return (moves, pos);
-    }
-
-    private static bool IsMoveToken(string token)
-    {
-        if (string.IsNullOrEmpty(token) || token == "(" || token == ")") return false;
-        if (MoveNumberRegex.IsMatch(token)) return false;
-        if (ResultTokens.Contains(token)) return false;
-        char c = token[0];
-        return (c >= 'a' && c <= 'h') || c == 'K' || c == 'Q' || c == 'R' || c == 'B' || c == 'N' || c == 'O';
-    }
+        => PgnMoveTree.ParseSections(text)
+            .Select(s => new ParsedGame(s.Black ?? "", s.White ?? "", s.StartFen, s.Moves))
+            .ToList();
 }
