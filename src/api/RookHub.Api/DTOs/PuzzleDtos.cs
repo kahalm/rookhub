@@ -69,19 +69,33 @@ public class RecordPuzzleAttemptDto
     // "training"). Ein zweites Feld wäre widerspruchsfähig (Stufe 0 + "training").
 }
 
-public class PuzzleStatsDto
+/// <summary>
+/// Die Kennzahlen, die JEDE Versuchs-Statistik trägt — gemeinsame Basis von
+/// <see cref="PuzzleStatsDto"/> (Standard-Puzzles) und <see cref="CourseStatsDto"/> (Kurs-Linien).
+/// Gerechnet werden sie in <see cref="Services.AttemptStats"/>.
+/// <para>Die Feldnamen sind der HTTP-Vertrag und bleiben damit unverändert; die Reihenfolge im
+/// JSON ist keiner (sie verschiebt sich durch die Vererbung).</para>
+/// </summary>
+public class AttemptStatsDto
 {
     public int TotalAttempts { get; set; }
     public int Solved { get; set; }
     public double Accuracy { get; set; }
     public int CurrentStreak { get; set; }
     public int BestStreak { get; set; }
+    /// <summary>Versuche im Modus „training" (Brett eingefroren bzw. Visualisierungsstufe &gt; 0;
+    /// Altbestand ohne Modus zählt hier).</summary>
+    public int TrainingCount { get; set; }
+    /// <summary>Versuche im Modus „easy" (Figuren normal ziehbar, Visualisierungsstufe 0).</summary>
+    public int EasyCount { get; set; }
+}
+
+/// <summary>Versuchs-Statistik der Standard-Puzzles — die gemeinsamen Kennzahlen plus das Elo,
+/// das es NUR hier gibt (Kurs-Puzzles haben keins).</summary>
+public class PuzzleStatsDto : AttemptStatsDto
+{
     public int PuzzleElo { get; set; } = 1500;
     public Dictionary<int, int>? PuzzleEloPerLevel { get; set; }
-    /// <summary>Versuche im Modus „training" — abgeleitet: Visualisierungsstufe &gt; 0.</summary>
-    public int TrainingCount { get; set; }
-    /// <summary>Versuche im Modus „easy" — abgeleitet: Visualisierungsstufe 0 (Drag &amp; Drop).</summary>
-    public int EasyCount { get; set; }
 }
 
 public class AnonymousAttemptDto

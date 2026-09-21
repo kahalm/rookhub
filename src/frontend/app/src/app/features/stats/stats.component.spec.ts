@@ -64,4 +64,45 @@ describe('StatsComponent', () => {
     const container = host.querySelector('.stats-container') as HTMLElement;
     expect(container.scrollWidth).toBeLessThanOrEqual(container.clientWidth + 1);
   });
+
+  it('zeigt in BEIDEN Modi die Zahlen der jeweils gewaehlten Statistik (`current`)', async () => {
+    // Die fuenf Kacheln lasen bis 0.499.5 fuenf einzelne Getter, jeder mit derselben
+    // Modus-Weiche. Jetzt ist es EIN `current` — der Test haelt fest, dass das Umschalten
+    // wirklich die andere Quelle zeigt und nicht etwa beide Modi dieselben Zahlen bekommen.
+    await TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(StatsComponent);
+    const c = fixture.componentInstance;
+    fixture.detectChanges();
+    (c as unknown as { loading: boolean }).loading = false;
+
+    c.stats = {
+      totalAttempts: 40, solved: 30, accuracy: 75, currentStreak: 3, bestStreak: 9, puzzleElo: 1620,
+    };
+    c.courseStats = {
+      totalAttempts: 7, solved: 5, accuracy: 71.4, currentStreak: 1, bestStreak: 2,
+    };
+
+    c.mode = 'standard';
+    fixture.detectChanges();
+    expect(c.current).toBe(c.stats);
+    let values = Array.from(fixture.nativeElement.querySelectorAll('.cards .stat .val')).map(e => (e as HTMLElement).textContent!.trim());
+    // Im Standard-Modus steht die Elo-Kachel VOR den fuenf gemeinsamen.
+    expect(values).toEqual(['1620', '30', '40', '75%', '3', '9']);
+
+    c.mode = 'course';
+    fixture.detectChanges();
+    expect(c.current).toBe(c.courseStats);
+    values = Array.from(fixture.nativeElement.querySelectorAll('.cards .stat .val')).map(e => (e as HTMLElement).textContent!.trim());
+    expect(values).toEqual(['5', '7', '71.4%', '1', '2']);   // keine Elo-Kachel
+  });
 });

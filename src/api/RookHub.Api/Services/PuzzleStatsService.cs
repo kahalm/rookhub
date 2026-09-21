@@ -173,41 +173,27 @@ public class PuzzleStatsService
             };
 
         var solved = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.Solved);
-        var accuracy = (double)solved / totalAttempts * 100;
         // Spielweise wird ABGELEITET, nicht gespeichert: Visualisierungsstufe 0 = Figuren ziehbar
         // („easy"), jede höhere Stufe ist Blind-/Trainingsspiel. Der Vergleich steht bewusst direkt
         // im Count (SQL-übersetzbar) statt in einem C#-Helfer.
         var easyCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == 0);
         var (trainingCount, easy) = SolveMode.Split(totalAttempts, easyCount);
 
-        // Calculate streaks from most recent 1000 attempts
+        // Serien aus den letzten 1000 Versuchen (neuester zuerst — die Reihenfolge ist Teil des
+        // Vertrags von AttemptStats.Streaks).
         var recentResults = await _db.PuzzleAttempts
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.AttemptedAt)
             .Take(1000)
             .Select(a => a.Solved)
             .ToListAsync();
-
-        var currentStreak = 0;
-        foreach (var s in recentResults)
-        {
-            if (s) currentStreak++;
-            else break;
-        }
-
-        var bestStreak = 0;
-        var streak = 0;
-        foreach (var s in recentResults)
-        {
-            if (s) { streak++; bestStreak = Math.Max(bestStreak, streak); }
-            else streak = 0;
-        }
+        var (currentStreak, bestStreak) = AttemptStats.Streaks(recentResults);
 
         return new PuzzleStatsDto
         {
             TotalAttempts = totalAttempts,
             Solved = solved,
-            Accuracy = Math.Round(accuracy, 1),
+            Accuracy = AttemptStats.Accuracy(solved, totalAttempts),
             CurrentStreak = currentStreak,
             BestStreak = bestStreak,
             PuzzleElo = user != null ? PuzzleElo.GetEloForLevel(user, level) : PuzzleElo.GetDefaultElo(level),
@@ -297,30 +283,25 @@ public class PuzzleStatsService
             join t in _db.Tags on pt.TagId equals t.Id
             group a by t.Name into g
             select new ThemeStatDto { Theme = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
-            .ToListAsync())
-            .OrderByDescending(t => t.Attempts).ThenBy(t => t.Theme)
-            .Take(20).ToList();
+            .ToListAsync());
+        themes = AttemptStats.TopThemes(themes);
 
         // Rating-Bänder (200er-Schritte): GROUP BY (Rating DIV 200) server-seitig.
-        var ratingBands = (await _db.PuzzleAttempts
+        var ratingBands = AttemptStats.RatingBands((await _db.PuzzleAttempts
             .Where(a => a.UserId == userId)
             .GroupBy(a => a.Puzzle.Rating / 200)
             .Select(g => new { Bucket = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
             .ToListAsync())
-            .OrderBy(b => b.Bucket)
-            .Select(b => new RatingBandStatDto { From = b.Bucket * 200, To = b.Bucket * 200 + 199, Attempts = b.Attempts, Solved = b.Solved })
-            .ToList();
+            .Select(b => (b.Bucket, b.Attempts, b.Solved)));
 
         // Aktivität pro Tag (letzte 365 Tage): GROUP BY CAST(AttemptedAt AS date) server-seitig.
-        var since = DateTime.UtcNow.Date.AddDays(-364);
-        var activity = (await _db.PuzzleAttempts
+        var since = AttemptStats.ActivityWindowStart(DateTime.UtcNow);
+        var activity = AttemptStats.Activity((await _db.PuzzleAttempts
             .Where(a => a.UserId == userId && a.AttemptedAt >= since)
             .GroupBy(a => a.AttemptedAt.Date)
             .Select(g => new { Day = g.Key, Count = g.Count() })
             .ToListAsync())
-            .OrderBy(x => x.Day)
-            .Select(x => new ActivityDayDto { Date = x.Day.ToString("yyyy-MM-dd"), Count = x.Count })
-            .ToList();
+            .Select(x => (x.Day, x.Count)));
 
         return new PuzzleBreakdownDto { Themes = themes, RatingBands = ratingBands, Activity = activity };
     }

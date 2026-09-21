@@ -29,12 +29,20 @@ export interface PuzzleRatingRange {
   max: number;
 }
 
-export interface PuzzleStatsDto {
+/**
+ * Die Kennzahlen, die JEDE Versuchs-Statistik traegt — gemeinsame Basis von `PuzzleStatsDto`
+ * (Standard-Puzzles) und `CourseStatsDto` (Kurs-Linien). Spiegel des serverseitigen
+ * `AttemptStatsDto`; der Unterschied zwischen den beiden ist AUSSCHLIESSLICH das Elo.
+ */
+export interface AttemptStatsDto {
   totalAttempts: number;
   solved: number;
   accuracy: number;
   currentStreak: number;
   bestStreak: number;
+}
+
+export interface PuzzleStatsDto extends AttemptStatsDto {
   puzzleElo: number;
   puzzleEloPerLevel?: Record<number, number>;
 }
@@ -110,14 +118,8 @@ export interface BookInfoDto {
   puzzleCount: number;
 }
 
-/** Kurs-Puzzle-Statistik (wie PuzzleStatsDto, aber ohne Elo — Kurs-Puzzles haben kein User-Elo). */
-export interface CourseStatsDto {
-  totalAttempts: number;
-  solved: number;
-  accuracy: number;
-  currentStreak: number;
-  bestStreak: number;
-}
+/** Kurs-Puzzle-Statistik: dieselben Kennzahlen, nur ohne Elo — Kurs-Puzzles haben keins. */
+export interface CourseStatsDto extends AttemptStatsDto {}
 
 /** Eine Zeile der Kurs-Versuchs-History (wie PuzzleAttemptDto, ohne Elo). */
 export interface CourseAttemptDto {

@@ -245,20 +245,12 @@ public class CourseProgressDto
 }
 
 /// <summary>
-/// Aggregierte Kurs-Puzzle-Statistik des Users (Pendant zu <see cref="PuzzleStatsDto"/> für Standard-Puzzles,
-/// aber ohne Elo — Buch-/Kurs-Puzzles haben kein User-Elo). Quelle: <see cref="Models.CourseAttempt"/>.
+/// Aggregierte Kurs-Puzzle-Statistik des Users: dieselben Kennzahlen wie bei den Standard-Puzzles
+/// (<see cref="AttemptStatsDto"/>), nur OHNE Elo — Buch-/Kurs-Puzzles haben keins, und genau
+/// darin unterscheiden sich die beiden. Quelle: <see cref="Models.CourseAttempt"/>.
 /// </summary>
-public class CourseStatsDto
+public class CourseStatsDto : AttemptStatsDto
 {
-    public int TotalAttempts { get; set; }
-    public int Solved { get; set; }
-    public double Accuracy { get; set; }
-    public int CurrentStreak { get; set; }
-    public int BestStreak { get; set; }
-    /// <summary>Versuche im Modus „training" (Brett eingefroren; Altbestand ohne Modus zählt hier).</summary>
-    public int TrainingCount { get; set; }
-    /// <summary>Versuche im Modus „easy" (Figuren normal ziehbar).</summary>
-    public int EasyCount { get; set; }
 }
 
 /// <summary>

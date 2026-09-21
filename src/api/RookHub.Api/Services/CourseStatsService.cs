@@ -10,6 +10,8 @@ namespace RookHub.Api.Services;
 /// aber auf <c>CourseAttempt</c> statt <c>PuzzleAttempt</c> und ohne Elo — Kurs-Puzzles haben kein
 /// User-Elo). Aus <see cref="CourseService"/> ausgegliedert; rein lesend auf <see cref="AppDbContext"/>
 /// und unabhängig von der Kurs-Fortschritts-/Nächstes-Puzzle-Logik.
+/// <para>Die EF-Abfragen sind eigen (andere Tabellen/Joins), die RECHNUNG danach nicht: Serien,
+/// Trefferquote, Bänder, Aktivität und Themen-Top-20 kommen aus <see cref="AttemptStats"/>.</para>
 /// </summary>
 public class CourseStatsService
 {
@@ -26,7 +28,6 @@ public class CourseStatsService
             return new CourseStatsDto();
 
         var solved = await _db.CourseAttempts.CountAsync(a => a.UserId == userId && a.Solved);
-        var accuracy = (double)solved / totalAttempts * 100;
         // Spielweise: nur ausdrücklich als „easy" markierte Versuche zählen, alles andere (inkl.
         // Altbestand ohne Modus) ist „training" — gleiche Regel wie bei Wochenpost/Standard-Puzzles.
         var easyCount = await _db.CourseAttempts.CountAsync(a => a.UserId == userId && a.Mode == SolveMode.Easy);
@@ -38,27 +39,13 @@ public class CourseStatsService
             .Take(1000)
             .Select(a => a.Solved)
             .ToListAsync();
-
-        var currentStreak = 0;
-        foreach (var s in recentResults)
-        {
-            if (s) currentStreak++;
-            else break;
-        }
-
-        var bestStreak = 0;
-        var streak = 0;
-        foreach (var s in recentResults)
-        {
-            if (s) { streak++; bestStreak = Math.Max(bestStreak, streak); }
-            else streak = 0;
-        }
+        var (currentStreak, bestStreak) = AttemptStats.Streaks(recentResults);
 
         return new CourseStatsDto
         {
             TotalAttempts = totalAttempts,
             Solved = solved,
-            Accuracy = Math.Round(accuracy, 1),
+            Accuracy = AttemptStats.Accuracy(solved, totalAttempts),
             CurrentStreak = currentStreak,
             BestStreak = bestStreak,
             TrainingCount = trainingCount,
@@ -116,31 +103,25 @@ public class CourseStatsService
                 themeAgg[theme] = (att + 1, sol + (r.Solved ? 1 : 0));
             }
         }
-        var themes = themeAgg
-            .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
-            .OrderByDescending(t => t.Attempts).ThenBy(t => t.Theme)
-            .Take(20).ToList();
+        var themes = AttemptStats.TopThemes(themeAgg
+            .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved }));
 
         // Rating-Bänder (200er-Schritte) — server-seitig, nur Versuche mit gesetztem BookRating.
-        var ratingBands = (await _db.CourseAttempts
+        var ratingBands = AttemptStats.RatingBands((await _db.CourseAttempts
             .Where(a => a.UserId == userId && a.BookPuzzle!.BookRating != null)
             .GroupBy(a => a.BookPuzzle!.BookRating!.Value / 200)
             .Select(g => new { Bucket = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
             .ToListAsync())
-            .OrderBy(b => b.Bucket)
-            .Select(b => new RatingBandStatDto { From = b.Bucket * 200, To = b.Bucket * 200 + 199, Attempts = b.Attempts, Solved = b.Solved })
-            .ToList();
+            .Select(b => (b.Bucket, b.Attempts, b.Solved)));
 
         // Aktivität pro Tag (letzte 365 Tage) — server-seitig via GROUP BY CAST(AttemptedAt AS date).
-        var since = DateTime.UtcNow.Date.AddDays(-364);
-        var activity = (await _db.CourseAttempts
+        var since = AttemptStats.ActivityWindowStart(DateTime.UtcNow);
+        var activity = AttemptStats.Activity((await _db.CourseAttempts
             .Where(a => a.UserId == userId && a.AttemptedAt >= since)
             .GroupBy(a => a.AttemptedAt.Date)
             .Select(g => new { Day = g.Key, Count = g.Count() })
             .ToListAsync())
-            .OrderBy(x => x.Day)
-            .Select(x => new ActivityDayDto { Date = x.Day.ToString("yyyy-MM-dd"), Count = x.Count })
-            .ToList();
+            .Select(x => (x.Day, x.Count)));
 
         return new PuzzleBreakdownDto { Themes = themes, RatingBands = ratingBands, Activity = activity };
     }

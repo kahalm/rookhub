@@ -11,7 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { PuzzleService, PuzzleStatsDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay, PuzzleBreakdown, CourseStatsDto } from '../puzzles/puzzle.service';
+import { PuzzleService, PuzzleStatsDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay, PuzzleBreakdown, CourseStatsDto, AttemptStatsDto } from '../puzzles/puzzle.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
@@ -178,14 +178,14 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           @if (mode === 'standard') {
             <mat-card class="stat"><div class="val">{{ stats?.puzzleElo ?? '–' }}</div><div class="lbl">{{ 'stats.currentElo' | translate }}</div></mat-card>
           }
-          <mat-card class="stat"><div class="val">{{ vSolved }}</div><div class="lbl">{{ 'stats.totalSolved' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ vAttempts }}</div><div class="lbl">{{ 'stats.attempts' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ vAccuracy }}%</div><div class="lbl">{{ 'stats.accuracy' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ vCurrentStreak }}</div><div class="lbl">{{ 'stats.currentStreak' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ vBestStreak }}</div><div class="lbl">{{ 'stats.bestStreak' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ current?.solved ?? 0 }}</div><div class="lbl">{{ 'stats.totalSolved' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ current?.totalAttempts ?? 0 }}</div><div class="lbl">{{ 'stats.attempts' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ current?.accuracy ?? 0 }}%</div><div class="lbl">{{ 'stats.accuracy' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ current?.currentStreak ?? 0 }}</div><div class="lbl">{{ 'stats.currentStreak' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ current?.bestStreak ?? 0 }}</div><div class="lbl">{{ 'stats.bestStreak' | translate }}</div></mat-card>
         </div>
 
-        @if (mode === 'course' && vAttempts === 0) {
+        @if (mode === 'course' && (current?.totalAttempts ?? 0) === 0) {
           <mat-card><mat-card-content><p class="muted">{{ 'stats.courseEmpty' | translate }}</p></mat-card-content></mat-card>
         }
 
@@ -454,12 +454,16 @@ export class StatsComponent implements OnInit {
     this.level = prefs.visualization;
   }
 
-  // Vereinheitlichte Kachel-Werte je Modus.
-  get vSolved(): number { return this.mode === 'course' ? (this.courseStats?.solved ?? 0) : (this.stats?.solved ?? 0); }
-  get vAttempts(): number { return this.mode === 'course' ? (this.courseStats?.totalAttempts ?? 0) : (this.stats?.totalAttempts ?? 0); }
-  get vAccuracy(): number { return this.mode === 'course' ? (this.courseStats?.accuracy ?? 0) : (this.stats?.accuracy ?? 0); }
-  get vCurrentStreak(): number { return this.mode === 'course' ? (this.courseStats?.currentStreak ?? 0) : (this.stats?.currentStreak ?? 0); }
-  get vBestStreak(): number { return this.mode === 'course' ? (this.courseStats?.bestStreak ?? 0) : (this.stats?.bestStreak ?? 0); }
+  /**
+   * Die Statistik des GERADE gewaehlten Modus. Die fuenf Kacheln zeigen genau die Kennzahlen, die
+   * beide Modi gemeinsam haben (`AttemptStatsDto`) — vorher stand die Modus-Weiche fuenfmal
+   * nebeneinander, einmal je Kachel, und eine sechste Kennzahl haette eine sechste gebraucht.
+   * Das Elo bleibt draussen: es gibt es nur im Standard-Modus, und genau dafuer steht die
+   * eigene Kachel hinter `mode === 'standard'`.
+   */
+  get current(): AttemptStatsDto | null {
+    return this.mode === 'course' ? this.courseStats : this.stats;
+  }
 
   ngOnInit(): void { this.load(); }
 
