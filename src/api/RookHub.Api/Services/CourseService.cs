@@ -1101,12 +1101,12 @@ public class CourseService
         if (puzzleChapter == null)
             throw new KeyNotFoundException("Puzzle does not belong to this book.");
 
-        var solvedAt = DateTime.UtcNow;
-        var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
-        var startedAt = solvedAt.AddSeconds(-timeSeconds);
+        // Zeit/Tipps/Spielweise/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording).
+        // dto.SolveMode ist die SPIELWEISE, NICHT dto.Mode (= sequential/random).
+        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.SolveMode);
         _logger.LogInformation(
             "CoursePuzzleAttempt: User {UserId} {Result} course-puzzle {PuzzleId} in book {BookId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
-            userId, dto.Solved ? "solved" : "failed", dto.BookPuzzleId, bookId, startedAt, solvedAt, timeSeconds);
+            userId, core.Solved ? "solved" : "failed", dto.BookPuzzleId, bookId, core.StartedAt, core.AttemptedAt, core.TimeSeconds);
 
         // JEDEN Versuch (gelöst/fehlgeschlagen/Wiederholung) ins append-only Zeit-Log schreiben —
         // Grundlage für die akkumulierte Kurs-/Studienzeit im Trainingsziele-Tracker. Eigenes
@@ -1116,13 +1116,11 @@ public class CourseService
             UserId = userId,
             BookId = bookId,
             BookPuzzleId = dto.BookPuzzleId,
-            Solved = dto.Solved,
-            TimeSeconds = timeSeconds,
-            AttemptedAt = solvedAt,
-            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
-            // Spielweise je Versuch (dto.SolveMode, NICHT dto.Mode = sequential/random);
-            // unbekannt/fehlend → "training" (Altbestand-Verhalten).
-            Mode = SolveMode.Normalize(dto.SolveMode),
+            Solved = core.Solved,
+            TimeSeconds = core.TimeSeconds,
+            AttemptedAt = core.AttemptedAt,
+            HintsUsed = core.HintsUsed,
+            Mode = core.Mode,
         });
         await _db.SaveChangesAsync();
 
@@ -1139,8 +1137,8 @@ public class CourseService
                     UserId = userId,
                     BookId = bookId,
                     BookPuzzleId = dto.BookPuzzleId,
-                    SolvedAt = solvedAt,
-                    TimeSeconds = timeSeconds,
+                    SolvedAt = core.AttemptedAt,
+                    TimeSeconds = core.TimeSeconds,
                 });
                 // Race: paralleles Aufzeichnen desselben Puzzles → Unique (UserId, BookPuzzleId). Idempotent.
                 // Ein ANDERER Fehler darf hier nicht geschluckt werden — sonst geht der Solve still verloren.

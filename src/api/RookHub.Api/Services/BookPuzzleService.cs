@@ -137,26 +137,24 @@ public class BookPuzzleService
         if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
             throw new KeyNotFoundException("Book puzzle not found.");
 
-        var solvedAt = DateTime.UtcNow;
-        var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
-        var startedAt = solvedAt.AddSeconds(-timeSeconds);
+        // Zeit/Tipps/Spielweise/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording).
+        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.Mode);
 
         _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
         {
             BookPuzzleId = id,
             UserId = userId,
-            Solved = dto.Solved,
-            TimeSeconds = timeSeconds,
-            AttemptedAt = solvedAt,
-            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
-            // Spielweise je Versuch; unbekannt/fehlend → "training" (Altbestand-Verhalten).
-            Mode = SolveMode.Normalize(dto.Mode),
+            Solved = core.Solved,
+            TimeSeconds = core.TimeSeconds,
+            AttemptedAt = core.AttemptedAt,
+            HintsUsed = core.HintsUsed,
+            Mode = core.Mode,
         });
         await _db.SaveChangesAsync();
 
         _logger.LogInformation(
             "BookPuzzleAttempt: User {UserId} {Result} book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
-            userId, dto.Solved ? "solved" : "failed", id, startedAt, solvedAt, timeSeconds);
+            userId, core.Solved ? "solved" : "failed", id, core.StartedAt, core.AttemptedAt, core.TimeSeconds);
 
         await NotifySchachBotAsync(id);
     }
@@ -177,16 +175,15 @@ public class BookPuzzleService
                 a => a.BookPuzzleId == id && a.AnonymousSessionId == dto.SessionId && a.Solved);
             if (!exists)
             {
-                var solvedAt = DateTime.UtcNow;
-                var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
+                var core = AttemptRecording.From(true, dto.TimeSeconds, 0, dto.Mode);
                 _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
                 {
                     BookPuzzleId = id,
                     AnonymousSessionId = dto.SessionId,
-                    Solved = true,
-                    TimeSeconds = timeSeconds,
-                    AttemptedAt = solvedAt,
-                    Mode = SolveMode.Normalize(dto.Mode),
+                    Solved = core.Solved,
+                    TimeSeconds = core.TimeSeconds,
+                    AttemptedAt = core.AttemptedAt,
+                    Mode = core.Mode,
                 });
                 try
                 {
@@ -201,7 +198,7 @@ public class BookPuzzleService
                 }
                 _logger.LogInformation(
                     "BookPuzzleAttempt: Anonymous solved book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
-                    id, solvedAt.AddSeconds(-timeSeconds), solvedAt, timeSeconds);
+                    id, core.StartedAt, core.AttemptedAt, core.TimeSeconds);
                 await NotifySchachBotAsync(id);
             }
         }
@@ -220,13 +217,15 @@ public class BookPuzzleService
             .AnyAsync(a => a.BookPuzzleId == id && a.IdentityKey == identityKey);
         if (!exists)
         {
+            // Kein Zeit-/Modus-Feld an dieser Zeile — nur Tipp-Stufe und Zeitstempel kommen aus dem Helfer.
+            var core = AttemptRecording.From(solved, 0, hintsUsed, null);
             _db.SharedPuzzleAttempts.Add(new SharedPuzzleAttempt
             {
                 BookPuzzleId = id,
                 IdentityKey = identityKey,
-                Solved = solved,
-                HintsUsed = Math.Clamp(hintsUsed, 0, 3),
-                CreatedAt = DateTime.UtcNow,
+                Solved = core.Solved,
+                HintsUsed = core.HintsUsed,
+                CreatedAt = core.AttemptedAt,
             });
             try { await _db.SaveChangesAsync(); }
             catch (DbUpdateException)

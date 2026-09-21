@@ -427,19 +427,27 @@ public class PuzzleService
             change = 0;
         }
 
+        // Zeit/Tipps/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording). Die
+        // Spielweise wird hier NICHT gespeichert (sie ergibt sich aus VisualizationLevel, siehe
+        // MapAttemptToDto) — sie steht trotzdem richtig im Kern statt als falscher Vorgabewert.
+        var core = AttemptRecording.From(
+            dto.Solved, dto.TimeSpentSeconds, dto.HintsUsed,
+            vizLevel > 0 ? SolveMode.Training : SolveMode.Easy);
+
         var attempt = new PuzzleAttempt
         {
             UserId = userId,
             PuzzleId = puzzleId,
-            Solved = dto.Solved,
-            TimeSpentSeconds = dto.TimeSpentSeconds,
+            Solved = core.Solved,
+            TimeSpentSeconds = core.TimeSeconds,
+            AttemptedAt = core.AttemptedAt,
             MoveLog = dto.MoveLog,
             EloAfter = newRating,
             EloChange = change,
             VisualizationLevel = vizLevel,
             EvalShown = dto.EvalShown,
             VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100),
-            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3)
+            HintsUsed = core.HintsUsed
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -448,11 +456,9 @@ public class PuzzleService
         // Tabellenwachstum begrenzen: älteste Versuche entfernen wenn Limit überschritten.
         await TrimUserPuzzleAttemptsAsync(userId, puzzleId, vizLevel);
 
-        var solvedAt = attempt.AttemptedAt;
-        var startedAt = solvedAt.AddSeconds(-Math.Clamp(dto.TimeSpentSeconds, 0, 86400));
         _logger.LogInformation(
             "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0}) EvalShown={EvalShown} VizShowCount={VizShowCount}",
-            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change, dto.EvalShown, dto.VizShowCount);
+            userId, core.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, core.StartedAt, core.AttemptedAt, core.TimeSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change, dto.EvalShown, dto.VizShowCount);
 
         return MapAttemptToDto(attempt, puzzle);
     }
@@ -507,18 +513,24 @@ public class PuzzleService
             ?? throw new KeyNotFoundException("Puzzle not found.");
 
         var vizLevel = Math.Clamp(dto.VisualizationLevel, 0, 4);
+        // Dieselbe Normalisierung wie im eingeloggten Pfad (siehe AttemptRecording).
+        var core = AttemptRecording.From(
+            dto.Solved, dto.TimeSpentSeconds, dto.HintsUsed,
+            vizLevel > 0 ? SolveMode.Training : SolveMode.Easy);
+
         var attempt = new PuzzleAttempt
         {
             UserId = null,
             AnonymousSessionId = sessionId,
             PuzzleId = puzzleId,
-            Solved = dto.Solved,
-            TimeSpentSeconds = dto.TimeSpentSeconds,
+            Solved = core.Solved,
+            TimeSpentSeconds = core.TimeSeconds,
+            AttemptedAt = core.AttemptedAt,
             MoveLog = dto.MoveLog,
             VisualizationLevel = vizLevel,
             EvalShown = dto.EvalShown,
             VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100),
-            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3)
+            HintsUsed = core.HintsUsed
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -526,11 +538,9 @@ public class PuzzleService
 
         await TrimAnonymousAttemptsAsync(sessionId);
 
-        var solvedAt = attempt.AttemptedAt;
-        var startedAt = solvedAt.AddSeconds(-Math.Clamp(dto.TimeSpentSeconds, 0, 86400));
         _logger.LogInformation(
             "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
-            dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
+            core.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, core.StartedAt, core.AttemptedAt, core.TimeSeconds, dto.ScreenWidth, dto.ScreenHeight);
 
         // Gleicher Mapper wie die eingeloggten Pfade (EloAfter/EloChange sind beim anonymen
         // Versuch ohnehin nie gesetzt → null) — sonst fehlt jedes künftig ergänzte DTO-Feld

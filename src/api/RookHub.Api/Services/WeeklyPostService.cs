@@ -189,7 +189,9 @@ public class WeeklyPostService
         if (dto.PuzzleIndex < 0 || dto.PuzzleIndex >= total)
             throw new KeyNotFoundException("Puzzle index out of range.");
 
-        var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
+        // Zeit/Tipps/Spielweise: eine Normalisierung für alle Recorder (siehe AttemptRecording).
+        // Die [Range]-Attribute am DTO bleiben der Vertrag zum Client — der Helfer ist hier ein No-op.
+        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.Mode);
 
         var already = await _db.WeeklyPostAttempts
             .AnyAsync(a => a.WeeklyPostId == weeklyPostId && a.UserId == userId && a.PuzzleIndex == dto.PuzzleIndex);
@@ -200,21 +202,21 @@ public class WeeklyPostService
             // UserName/UserId reichert die Request-Middleware via LogContext an. Muster wie CoursePuzzleAttempt.
             _logger.LogInformation(
                 "WeeklyPostAttempt: User {UserId} {Result} weekly-post {WeeklyPostId} puzzle {PuzzleIndex} in {TimeSeconds}s",
-                userId, dto.Solved ? "solved" : "failed", weeklyPostId, dto.PuzzleIndex, timeSeconds);
+                userId, core.Solved ? "solved" : "failed", weeklyPostId, dto.PuzzleIndex, core.TimeSeconds);
 
             _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt
             {
                 WeeklyPostId = weeklyPostId,
                 UserId = userId,
                 PuzzleIndex = dto.PuzzleIndex,
-                Solved = dto.Solved,
-                TimeSeconds = timeSeconds,
-                HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
+                Solved = core.Solved,
+                TimeSeconds = core.TimeSeconds,
+                HintsUsed = core.HintsUsed,
                 WrongAttempts = Math.Clamp(dto.WrongAttempts, 0, 10000),
                 Mouseslips = Math.Clamp(dto.Mouseslips, 0, 1000),
                 // Modus nur beim ERSTEN Versuch je (Post, User, Index); unbekannt/fehlend → "training".
-                Mode = WeeklyPostAttempt.NormalizeMode(dto.Mode),
-                AttemptedAt = DateTime.UtcNow,
+                Mode = core.Mode,
+                AttemptedAt = core.AttemptedAt,
             });
             try
             {
