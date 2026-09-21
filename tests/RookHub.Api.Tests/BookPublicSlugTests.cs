@@ -27,7 +27,6 @@ public class BookPublicSlugTests : IDisposable
         var notifications = new NotificationService(_db);
         _course = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db),
             _admin,
-            TestServices.Repertoire(_db),
             new FriendService(_db, notifications), notifications);
     }
 

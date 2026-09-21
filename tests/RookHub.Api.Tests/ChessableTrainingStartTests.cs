@@ -122,7 +122,7 @@ public class ChessableTrainingStartTests
         var notifications = new NotificationService(db);
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
         return new CourseService(db, NullLogger<CourseService>.Instance, new PgnImportService(db),
-            new BookAdminService(db), TestServices.Repertoire(db),
+            new BookAdminService(db),
             new FriendService(db, notifications), notifications, proxy);
     }
 

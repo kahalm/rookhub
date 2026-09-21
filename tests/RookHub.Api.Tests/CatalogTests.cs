@@ -27,7 +27,7 @@ public class CatalogTests : IDisposable
         var reps = new RepertoireService(_db, new RepertoireAnalyzeService(_db, new MemoryCache(new MemoryCacheOptions())),
             new FriendService(_db, notifications), notifications);
         var courses = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db),
-            new BookAdminService(_db), reps, new FriendService(_db, notifications), notifications);
+            new BookAdminService(_db), new FriendService(_db, notifications), notifications);
         _svc = new CatalogService(_db, courses, reps, notifications);
     }
 

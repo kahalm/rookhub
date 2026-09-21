@@ -26,8 +26,8 @@ public class RepertoireControllerTests : IDisposable
         _db = new AppDbContext(options);
         var cache = new MemoryCache(new MemoryCacheOptions());
         _service = TestServices.Repertoire(_db, cache);
-        var courseService = TestServices.Course(_db, repertoire: _service);
-        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db), courseService, new SharedLineService(_db), new RepertoirePositionLookupService(new RepertoireLineSource(_db, cache), cache), new FlashcardMarkService(_db), new RepertoireSimilarityService(new RepertoireLineSource(_db, cache)));
+        var conversion = TestServices.Conversion(_db, repertoire: _service);
+        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db), new SharedLineService(_db), new RepertoirePositionLookupService(new RepertoireLineSource(_db, cache), cache), new FlashcardMarkService(_db), new RepertoireSimilarityService(new RepertoireLineSource(_db, cache)), conversion);
     }
 
     public void Dispose() => _db.Dispose();

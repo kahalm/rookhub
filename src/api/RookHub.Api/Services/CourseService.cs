@@ -18,7 +18,6 @@ public class CourseService
     private readonly ILogger<CourseService> _logger;
     private readonly PgnImportService _pgnImport;
     private readonly BookAdminService _bookAdmin;
-    private readonly RepertoireService _repertoire;
     private readonly FriendService _friends;
     private readonly NotificationService _notifications;
     /// <summary>Nur fürs Nachtragen des Chessable-Trainingsstarts beim Umwandeln; null = nicht verfügbar.</summary>
@@ -30,18 +29,20 @@ public class CourseService
     // außen unsichtbar. Tests bauen jetzt über TestServices.Course(db).
     // chessableProxy optional (Default null), damit bestehende Test-Konstruktionen unverändert
     // kompilieren; ohne ihn entfällt nur das Nachtragen des Chessable-Trainingsstarts.
+    // KEINE Abhängigkeit auf RepertoireService: seit das Umwandeln im
+    // CourseRepertoireConversionService liegt, braucht dieser Dienst nur noch das STATISCHE
+    // RepertoireService.LooksLikePgn — und eine Instanz weniger heisst eine Zyklus-Gefahr weniger.
     /// <summary>Läuft der RookHub-EIGENE Chessable-Weg? Entscheidet mit, ob ein veralteter Kurs noch
     /// holbar ist oder ein Showstopper (siehe <see cref="StaleContentRule"/>).</summary>
     private readonly bool _chessableEnabled;
 
-    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, RepertoireService repertoire, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null, IConfiguration? configuration = null)
+    public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null, IConfiguration? configuration = null)
     {
         _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
         _db = db;
         _logger = logger;
         _pgnImport = pgnImport;
         _bookAdmin = bookAdmin;
-        _repertoire = repertoire;
         _notifications = notifications;
         _friends = friends;
         _chessableProxy = chessableProxy;
@@ -409,21 +410,8 @@ public class CourseService
         return $"{(name.Length == 0 ? "course" : name)}.pgn";
     }
 
-    /// <summary>„Kurs → Repertoire umwandeln" (Verschieben): legt aus dem Kurs-PGN (inkl. Varianten/
-    /// Kommentaren, wenn <see cref="Book.SourcePgn"/> vorhanden) ein neues Repertoire des Users an und
-    /// ENTFERNT den Original-Kurs, sofern es ein persönlicher (eigener) Kurs ist
-    /// (<c>Book.OwnerUserId == userId</c>). Geteilte Gruppen-/Admin-Bücher werden NICHT gelöscht (gehören
-    /// dem User nicht) — dann bleibt der Kurs bestehen. Zugriff wird geprüft (kein Zugriff → 404).</summary>
-    public async Task<RepertoireDto> ConvertToRepertoireAsync(int userId, int bookId, bool isAdmin)
-    {
-        var (pgn, fileName) = await GetBookPgnAsync(userId, bookId, isAdmin); // prüft Zugriff
-        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
-        var repo = await _repertoire.CreateFromPgnAsync(userId, book.DisplayName ?? "Kurs", fileName, pgn);
-        // Verschieben statt Kopieren: eigenen Kurs nach erfolgreicher Umwandlung entfernen.
-        if (book.OwnerUserId == userId)
-            await _bookAdmin.DeleteBookAsync(bookId);
-        return repo;
-    }
+    // „Kurs → Repertoire umwandeln" liegt seit v0.499.4 im CourseRepertoireConversionService —
+    // zusammen mit der Gegenrichtung, die vorher im RepertoireController ausgeschrieben stand.
 
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle).</summary>
     public async Task<List<CourseListItemDto>> GetCoursesAsync(int userId, bool isAdmin)

@@ -15,20 +15,21 @@ public class RepertoireController : BaseApiController
     private readonly IReprocessLauncher _reprocessLauncher;
     private readonly RepertoireTrainingService _training;
     private readonly FlashcardMarkService _flashcards;
-    private readonly CourseService _courseService;
     private readonly SharedLineService _sharedLines;
     private readonly RepertoirePositionLookupService _positionLookup;
     private readonly RepertoireSimilarityService _similarity;
+    /// <summary>Kurs ⇄ Repertoire — beide Richtungen, siehe <see cref="CourseRepertoireConversionService"/>.</summary>
+    private readonly CourseRepertoireConversionService _conversion;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup, FlashcardMarkService flashcards, RepertoireSimilarityService similarity)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup, FlashcardMarkService flashcards, RepertoireSimilarityService similarity, CourseRepertoireConversionService conversion)
     {
+        _conversion = conversion;
         _similarity = similarity;
         _repertoireService = repertoireService;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
         _training = training;
         _flashcards = flashcards;
-        _courseService = courseService;
         _sharedLines = sharedLines;
         _positionLookup = positionLookup;
     }
@@ -353,26 +354,11 @@ public class RepertoireController : BaseApiController
     [HttpPost("{id}/convert-to-course")]
     public async Task<IActionResult> ConvertToCourse(int id)
     {
-        try
-        {
-            var userId = GetUserId();
-            // Umwandeln VERSCHIEBT (löscht das Original) → nur der Besitzer, nicht ein Freigabe-Empfänger.
-            if (!await _repertoireService.IsOwnerAsync(id, userId))
-                return NotFound(new { message = "Repertoire not found." });
-            var detail = await _repertoireService.GetByIdAsync(id, userId);
-            var pgn = await _repertoireService.GetCombinedPgnAsync(id, userId);
-            // Ein LEERES Repertoire (angelegt, aber nie eine PGN importiert) ist ein anderer Fall als
-            // „PGN vorhanden, aber ohne Puzzle-Linien". Ohne eigenen Code landen beide in derselben
-            // 400-Meldung des Frontends („keine Puzzle-Linien"), die dem Nutzer das falsche Problem
-            // nennt und den eigentlichen nächsten Schritt (PGN hochladen / Kurs über die Extension
-            // holen) verschweigt. Siehe TODO.md, Fund aus den Prod-Logs vom 2026-09-05.
-            if (string.IsNullOrWhiteSpace(pgn))
-                return BadRequest(new { message = "Repertoire is empty - import a PGN first.", code = "repertoire_empty" });
-            var course = await _courseService.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name);
-            // Verschieben statt Kopieren: das Original-Repertoire nach erfolgreicher Umwandlung entfernen.
-            await _repertoireService.DeleteAsync(id, userId);
-            return Ok(course);
-        }
+        try { return Ok(await _conversion.ConvertRepertoireToCourseAsync(GetUserId(), id)); }
+        // VOR dem allgemeinen 400-Zweig: nur dieser Fall trägt ein `code`-Feld (der Leer-Fall ist
+        // für den Nutzer ein anderer als „PGN ohne Puzzle-Linien"), und die übrigen 400er sollen
+        // ihre Antwortform behalten.
+        catch (CourseConversionException ex) { return BadRequest(new { message = ex.Message, code = ex.Code }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }

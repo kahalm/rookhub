@@ -230,6 +230,9 @@ try
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<DailyLeaderboardService>();
     builder.Services.AddScoped<CourseService>();
+    // Kurs ⇄ Repertoire (beide Richtungen). Haengt an BEIDEN Diensten — deshalb ein eigener:
+    // RepertoireService darf CourseService nicht bekommen (CourseService kennt Repertoire-Code schon).
+    builder.Services.AddScoped<CourseRepertoireConversionService>();
     builder.Services.AddScoped<CourseStatsService>();
     builder.Services.AddScoped<CalculationService>();
     builder.Services.AddScoped<CalcEditionService>();

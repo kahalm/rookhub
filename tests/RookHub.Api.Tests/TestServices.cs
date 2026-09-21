@@ -55,8 +55,7 @@ internal static class TestServices
 
     public static CourseService Course(
         AppDbContext db, ILogger<CourseService>? logger = null,
-        BookAdminService? bookAdmin = null, RepertoireService? repertoire = null,
-        IConfiguration? configuration = null)
+        BookAdminService? bookAdmin = null, IConfiguration? configuration = null)
     {
         var notifications = Notifications(db);
         return new CourseService(
@@ -64,11 +63,22 @@ internal static class TestServices
             logger ?? NullLogger<CourseService>.Instance,
             new PgnImportService(db),
             bookAdmin ?? new BookAdminService(db),
-            repertoire ?? Repertoire(db),
             Friends(db, notifications),
             notifications,
             chessableProxy: null,
             configuration: configuration);
+    }
+
+    /// <summary>Kurs ⇄ Repertoire (beide Richtungen). Haengt bewusst an BEIDEN Diensten — im
+    /// Container ist er der einzige Ort, an dem sie sich begegnen (RepertoireService darf
+    /// CourseService nicht bekommen, sonst Zyklus).</summary>
+    public static CourseRepertoireConversionService Conversion(
+        AppDbContext db, CourseService? courses = null, RepertoireService? repertoire = null,
+        BookAdminService? bookAdmin = null)
+    {
+        var admin = bookAdmin ?? new BookAdminService(db);
+        return new CourseRepertoireConversionService(
+            db, courses ?? Course(db, bookAdmin: admin), repertoire ?? Repertoire(db), admin);
     }
 
     public static ProfileService Profile(

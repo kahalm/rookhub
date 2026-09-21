@@ -24,7 +24,6 @@ public class CourseSharingTests : IDisposable
         var notifications = new NotificationService(_db);
         _svc = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db),
             new BookAdminService(_db),
-            TestServices.Repertoire(_db),
             new FriendService(_db, notifications), notifications);
     }
 

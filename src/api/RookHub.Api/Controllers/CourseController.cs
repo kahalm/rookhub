@@ -24,10 +24,14 @@ public class CourseController : BaseApiController
     private readonly IReprocessLauncher _reprocessLauncher;
     private readonly CourseAuthoringService _authoring;
     private readonly FlashcardMarkService _flashcards;
+    /// <summary>Kurs ⇄ Repertoire — beide Richtungen, siehe <see cref="CourseRepertoireConversionService"/>.</summary>
+    private readonly CourseRepertoireConversionService _conversion;
 
     public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess,
-        IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring, FlashcardMarkService flashcards)
+        IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring, FlashcardMarkService flashcards,
+        CourseRepertoireConversionService conversion)
     {
+        _conversion = conversion;
         _service = service;
         _stats = stats;
         _reprocess = reprocess;
@@ -158,7 +162,7 @@ public class CourseController : BaseApiController
     [HttpPost("{bookId}/convert-to-repertoire")]
     public async Task<IActionResult> ConvertToRepertoire(int bookId)
     {
-        try { return Ok(await _service.ConvertToRepertoireAsync(GetUserId(), bookId, IsAdmin)); }
+        try { return Ok(await _conversion.ConvertCourseToRepertoireAsync(GetUserId(), bookId, IsAdmin)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
