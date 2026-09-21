@@ -44,22 +44,29 @@ public static class CoursePgnExporter
             }
 
             var comments = ParseMoveComments(p.MoveComments);
+            // Ohne eigenen Einleitungs-Kommentar tritt der allgemeine Linien-Kommentar an seine
+            // Stelle — der Writer liest beides unter dem Schlüssel -1.
+            if (!comments.ContainsKey(-1) && !string.IsNullOrWhiteSpace(p.Comment))
+                comments[-1] = p.Comment!;
 
             var sb = new StringBuilder();
-            sb.Append($"[Event \"{Escape(bookName)}\"]\n");
-            sb.Append("[Site \"RookHub\"]\n");
-            if (!string.IsNullOrWhiteSpace(p.Title)) sb.Append($"[White \"{Escape(p.Title!)}\"]\n");
-            if (!string.IsNullOrWhiteSpace(p.Chapter)) sb.Append($"[Black \"{Escape(p.Chapter!)}\"]\n");
-            if (!string.IsNullOrWhiteSpace(p.Round)) sb.Append($"[Round \"{Escape(p.Round)}\"]\n");
-            sb.Append($"[FEN \"{p.Fen}\"]\n");
-            sb.Append("[SetUp \"1\"]\n");
+            sb.Append(PgnWriter.Tag("Event", bookName));
+            sb.Append(PgnWriter.Tag("Site", "RookHub"));
+            if (!string.IsNullOrWhiteSpace(p.Title)) sb.Append(PgnWriter.Tag("White", p.Title));
+            if (!string.IsNullOrWhiteSpace(p.Chapter)) sb.Append(PgnWriter.Tag("Black", p.Chapter));
+            if (!string.IsNullOrWhiteSpace(p.Round)) sb.Append(PgnWriter.Tag("Round", p.Round));
+            sb.Append(PgnWriter.Tag("FEN", p.Fen));
+            sb.Append(PgnWriter.Tag("SetUp", "1"));
             // Chessable-Verknüpfung erhalten: die oid ist der Schlüssel, über den die Extension eine
             // trainierte Linie ihrem RookHub-Gegenstück zuordnet (POST …/chessable/line-trained).
             // Ohne diesen Header verlor ein aus dem Kurs erzeugtes Repertoire die Verbindung.
             if (!string.IsNullOrWhiteSpace(p.ChessableOid))
-                sb.Append($"[ChessableOid \"{Escape(p.ChessableOid!)}\"]\n");
+                sb.Append(PgnWriter.Tag("ChessableOid", p.ChessableOid));
             sb.Append('\n');
-            sb.Append(MoveText(p.Fen, sans, comments, p.Comment, p.StartPly, p.Moves)).Append(" *");
+            // Das Ergebnis hängt DIESER Aufrufer an, mit einem Leerzeichen davor — auch an eine
+            // zug- und kommentarlose Info-Linie, deren Zugtext sonst leer wäre (Bestand: " *").
+            sb.Append(PgnWriter.MoveText(sans, p.Fen, comments, result: null, before: TrainingMarkers(sans, p.StartPly, p.Moves)))
+              .Append(" *");
             return sb.ToString();
         }
         catch
@@ -85,48 +92,24 @@ public static class CoursePgnExporter
         return map;
     }
 
-    /// <param name="startPly">Trainingsstart der Linie (Index des letzten VORGESPIELTEN Halbzugs,
-    /// <c>-1</c> = ab dem ersten Zug lösen). Ab 0 wird ein <c>[%tqu]</c>-Marker gesetzt, damit ein aus
-    /// diesem PGN neu importierter Kurs wieder denselben Trainingsstart bekommt — ohne ihn gilt jede
-    /// Linie als „ab der FEN lösen", und bei Chessable-Partien stünde die falsche Seite am Zug.</param>
+    /// <summary>
+    /// Der <c>[%tqu]</c>-Marker als „Text vor dem Halbzug" für <see cref="PgnWriter.MoveText"/>.
+    /// <para>Er gehört hinter den letzten VORGESPIELTEN Zug, also unmittelbar vor den ersten Zug
+    /// des Lösers — genau so zählt ihn <see cref="PgnParser.FindTquMoveIndex"/> zurück. Ohne ihn
+    /// gilt beim nächsten Import jede Linie als „ab der FEN lösen", und bei Chessable-Partien
+    /// stünde die falsche Seite am Zug.</para>
+    /// </summary>
+    /// <param name="startPly">Index des letzten vorgespielten Halbzugs; <c>-1</c> = ab dem ersten
+    /// Zug lösen, dann gibt es keinen Marker.</param>
     /// <param name="movesUci">Die UCI-Hauptlinie (für die uci-Angabe im Marker).</param>
-    private static string MoveText(string fen, List<string> sans, Dictionary<int, string> comments,
-        string? lineComment, int startPly = -1, string? movesUci = null)
+    private static Dictionary<int, string>? TrainingMarkers(List<string> sans, int startPly, string? movesUci)
     {
+        var at = startPly + 1;
+        if (startPly < 0 || at >= sans.Count) return null;
         var ucis = (movesUci ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var parts = fen.Split(' ');
-        bool white = parts.Length < 2 || parts[1] != "b";
-        int no = parts.Length >= 6 && int.TryParse(parts[5], out var fm) && fm > 0 ? fm : 1;
-        var sb = new StringBuilder();
-        bool first = true;
-
-        // Einleitungskommentar (Ply -1), sonst der allgemeine Linien-Kommentar als Vorspann.
-        var intro = comments.TryGetValue(-1, out var c0) ? c0 : lineComment;
-        if (!string.IsNullOrWhiteSpace(intro)) sb.Append($"{{{CleanComment(intro)}}} ");
-
-        for (int i = 0; i < sans.Count; i++)
-        {
-            var san = sans[i];
-            // Trainingsstart: der Marker gehört hinter den letzten VORGESPIELTEN Zug, also unmittelbar
-            // vor den ersten Zug des Lösers — genau so zählt ihn PgnParser.FindTquMoveIndex zurück.
-            var markerHere = startPly >= 0 && i == startPly + 1;
-            if (markerHere)
-                sb.Append($"{{[%tqu \"En\",\"find the move\",\"\",\"\",\"{(i < ucis.Length ? ucis[i] : "")}\",\"\",10]}} ");
-            if (white) sb.Append($"{no}. {san} ");
-            // Nach einem Kommentar braucht ein Schwarz-Zug die Zugnummer mit „…", sonst kann ein
-            // strenger PGN-Leser ihn nicht einordnen (gleiche Regel wie in piratechess).
-            else { sb.Append(first || markerHere ? $"{no}... {san} " : $"{san} "); no++; }
-            if (comments.TryGetValue(i, out var cm) && !string.IsNullOrWhiteSpace(cm))
-                sb.Append($"{{{CleanComment(cm)}}} ");
-            white = !white;
-            first = false;
-        }
-        return sb.ToString().TrimEnd();
+        var uci = at < ucis.Length ? ucis[at] : "";
+        return new Dictionary<int, string> { [at] = $"{{[%tqu \"En\",\"find the move\",\"\",\"\",\"{uci}\",\"\",10]}}" };
     }
-
-    /// <summary>Macht Text PGN-kommentartauglich: schließende Klammer ersetzen, Whitespace glätten.</summary>
-    private static string CleanComment(string s)
-        => string.Join(' ', s.Replace('}', ')').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     private static string ToUci(Move m)
     {
@@ -136,6 +119,4 @@ public static class CoursePgnExporter
             u += char.ToLowerInvariant(ss[1]);
         return u;
     }
-
-    private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

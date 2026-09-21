@@ -227,13 +227,7 @@ public class SavedGameService
         if (IsPlausibleElo(dto.WhiteElo)) sb.Append("[WhiteElo \"").Append(dto.WhiteElo).Append("\"]\n");
         if (IsPlausibleElo(dto.BlackElo)) sb.Append("[BlackElo \"").Append(dto.BlackElo).Append("\"]\n");
         sb.Append('\n');
-
-        for (int i = 0; i < moves.Count; i++)
-        {
-            if (i % 2 == 0) sb.Append(i / 2 + 1).Append(". ");
-            sb.Append(moves[i]).Append(' ');
-        }
-        sb.Append(result);
+        sb.Append(PgnWriter.MoveText(moves, result: result));
         return sb.ToString();
     }
 
@@ -269,7 +263,10 @@ public class SavedGameService
         return null;
     }
 
-    /// <summary>Header-Wert säubern: leere → "?", Anführungszeichen/Zeilenumbrüche entfernen.</summary>
+    /// <summary>Header-Wert säubern: leere → "?", Anführungszeichen/Zeilenumbrüche entfernen.
+    /// <para>Bewusst NICHT <see cref="PgnWriter.Escape"/>: hier wird das Anführungszeichen durch ein
+    /// Apostroph ERSETZT, nicht maskiert — eine andere Entscheidung, und die gespeicherten Partien
+    /// tragen sie bereits.</para></summary>
     private static string Header(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return "?";

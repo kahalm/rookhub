@@ -115,15 +115,14 @@ public class SharedLineService
     private static string BuildLinePgn(List<string> sans, string? title)
     {
         var evt = string.IsNullOrWhiteSpace(title) ? "Repertoire line" : title!.Trim();
-        evt = evt.Replace("\\", "\\\\").Replace("\"", "\\\"");
         var sb = new StringBuilder();
-        sb.Append("[Event \"").Append(evt).Append("\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n");
-        for (var i = 0; i < sans.Count; i++)
-        {
-            if (i % 2 == 0) sb.Append(i / 2 + 1).Append(". ");
-            sb.Append(sans[i]).Append(' ');
-        }
-        sb.Append("*\n");
+        sb.Append(PgnWriter.Tag("Event", evt))
+          .Append(PgnWriter.Tag("White", "?"))
+          .Append(PgnWriter.Tag("Black", "?"))
+          .Append(PgnWriter.Tag("Result", "*"))
+          .Append('\n')
+          .Append(PgnWriter.MoveText(sans))
+          .Append('\n');
         return sb.ToString();
     }
 

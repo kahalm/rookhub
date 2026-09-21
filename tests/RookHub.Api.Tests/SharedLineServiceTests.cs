@@ -153,4 +153,22 @@ public class SharedLineServiceTests : IDisposable
         Assert.Equal(res.ShareToken, again!.ShareToken);
         Assert.Single(_db.SharedLines);
     }
+
+    /// <summary>Golden: die freistehende Linie wird SERVERSEITIG gebaut und steht danach hinter
+    /// einem öffentlichen Link — der Test hält sie deshalb zeichengenau fest (die übrigen Tests
+    /// prüfen nur Teilzeichenketten). Enthalten: der escapte Titel im Event-Header, die Zugnummern
+    /// ab der Grundstellung, das Ergebnis mit genau einem Leerzeichen davor und der abschliessende
+    /// Zeilenumbruch.</summary>
+    [Fact]
+    public async Task Standalone_Golden_PgnIsBuiltCharacterForCharacter()
+    {
+        var user = await AddUserAsync("golden");
+
+        var res = await _svc.CreateStandaloneAsync(user, new List<string> { "e4", "c5", "Nf3", "d6" }, "Si\"ci\\lian");
+        var dto = await _svc.GetByTokenAsync(res!.ShareToken);
+
+        Assert.Equal(
+            "[Event \"Si\\\"ci\\\\lian\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 *\n",
+            dto!.Pgn);
+    }
 }

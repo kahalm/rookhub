@@ -112,4 +112,63 @@ public class CoursePgnExporterTests
         var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4 e7e5", StartPly = -1 };
         Assert.DoesNotContain("[%tqu", CoursePgnExporter.ToPgn("Book", new[] { p }));
     }
+
+    // ── Golden ─────────────────────────────────────────────────────────
+    // Die Tests oben prüfen TEILE der Ausgabe (Contains). Das genügt nicht, um einen Umbau des
+    // Schreibers abzusichern: ein verschobenes Leerzeichen, eine fehlende Zeile oder ein anderer
+    // Abschluss fällt dort nicht auf. Die zwei Golden-Tests halten die Ausgabe ZEICHENGENAU fest.
+
+    /// <summary>Ein Kurs-Spiel in voller Breite: escapte Header (Anführungszeichen UND Backslash),
+    /// Einleitung, Kommentare hinter Halbzügen, Trainingsmarker vor dem ersten zu lösenden Zug.</summary>
+    [Fact]
+    public void ToPgn_Golden_FullGame()
+    {
+        var p = new BookPuzzle
+        {
+            Fen = StartFen,
+            Moves = "e2e4 e7e5 g1f3 b8c6",
+            StartPly = 1,
+            Round = "2.3",
+            Title = "Ti\"tel",
+            Chapter = "Kap\\itel",
+            ChessableOid = "7300",
+            MoveComments = "{\"-1\":\"Einleitung\",\"0\":\"nach e4\",\"3\":\"nach Nc6\"}",
+        };
+
+        Assert.Equal(
+            "[Event \"My \\\"Book\\\" \\\\ Two\"]\n" +
+            "[Site \"RookHub\"]\n" +
+            "[White \"Ti\\\"tel\"]\n" +
+            "[Black \"Kap\\\\itel\"]\n" +
+            "[Round \"2.3\"]\n" +
+            "[FEN \"" + StartFen + "\"]\n" +
+            "[SetUp \"1\"]\n" +
+            "[ChessableOid \"7300\"]\n" +
+            "\n" +
+            "{Einleitung} 1. e4 {nach e4} e5 {[%tqu \"En\",\"find the move\",\"\",\"\",\"g1f3\",\"\",10]} 2. Nf3 Nc6 {nach Nc6} *\n",
+            CoursePgnExporter.ToPgn("My \"Book\" \\ Two", new[] { p }));
+    }
+
+    /// <summary>Zwei Ränder, die in Bestand stehen: die Nummerierung ab einer FEN mit Schwarz am
+    /// Zug (<c>4... Bc5 5. c3</c>) — und eine Linie GANZ OHNE Züge, deren Zugtext nur aus dem
+    /// Ergebnis besteht und dabei sein führendes Leerzeichen behält.</summary>
+    [Fact]
+    public void ToPgn_Golden_BlackToMoveAndMovelessLines()
+    {
+        const string blackFen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 5 4";
+
+        Assert.Equal(
+            "[Event \"B\"]\n[Site \"RookHub\"]\n[FEN \"" + blackFen + "\"]\n[SetUp \"1\"]\n\n4... Bc5 5. c3 *\n",
+            CoursePgnExporter.ToPgn("B", new[] { new BookPuzzle { Fen = blackFen, Moves = "f8c5 c2c3", StartPly = -1 } }));
+
+        Assert.Equal(
+            "[Event \"B\"]\n[Site \"RookHub\"]\n[FEN \"" + StartFen + "\"]\n[SetUp \"1\"]\n\n{nur Info} *\n" +
+            "\n" +
+            "[Event \"B\"]\n[Site \"RookHub\"]\n[FEN \"" + StartFen + "\"]\n[SetUp \"1\"]\n\n *\n",
+            CoursePgnExporter.ToPgn("B", new[]
+            {
+                new BookPuzzle { Fen = StartFen, Moves = "", Comment = "nur Info" },
+                new BookPuzzle { Fen = StartFen, Moves = "" },
+            }));
+    }
 }

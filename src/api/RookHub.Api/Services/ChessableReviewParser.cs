@@ -402,10 +402,12 @@ public static partial class ChessableReviewParser
     private static bool ReadBool(JsonElement obj, string name)
         => obj.ValueKind == JsonValueKind.Object && obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.True;
 
-    /// <summary>Header-Wert PGN-sicher machen (Anführungszeichen/Backslash escapen, Zeilenumbrüche raus).</summary>
+    /// <summary>Header-Wert PGN-sicher machen: escapen wie überall
+    /// (<see cref="PgnWriter.Escape"/>), und zusätzlich die Zeilenumbrüche raus — die Werte kommen
+    /// hier aus fremdem JSON und können welche enthalten, was eine Tag-Zeile zerrisse.</summary>
     private static string EscapeHeader(string? value)
     {
         if (string.IsNullOrEmpty(value)) return "";
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", " ").Replace("\n", " ");
+        return PgnWriter.Escape(value).Replace("\r", " ").Replace("\n", " ");
     }
 }
