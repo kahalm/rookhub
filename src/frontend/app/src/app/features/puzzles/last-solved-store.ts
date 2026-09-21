@@ -1,3 +1,5 @@
+import { readJson, removeKey, sessionStore, writeJson } from '../../core/local-json-store';
+
 /**
  * Persistiert das zuletzt gelöste Puzzle je Modus (standard / book / endless) in `sessionStorage`,
  * damit der „Letztes analysieren" / „♥ Letztes Puzzle" / „Letztes teilen"-Zustand ein
@@ -23,26 +25,24 @@ export interface LastSolvedInfo {
 const KEY_PREFIX = 'rookhub_last_solved_';
 
 export function saveLastSolved(scope: LastSolvedScope, info: LastSolvedInfo): void {
-  try { sessionStorage.setItem(KEY_PREFIX + scope, JSON.stringify(info)); } catch { /* ignore */ }
+  writeJson(sessionStore(), KEY_PREFIX + scope, info);
 }
 
 export function loadLastSolved(scope: LastSolvedScope): LastSolvedInfo | null {
-  try {
-    const raw = sessionStorage.getItem(KEY_PREFIX + scope);
-    if (!raw) return null;
-    const p = JSON.parse(raw);
-    if (p && typeof p.id === 'number' && typeof p.fen === 'string'
-        && typeof p.moves === 'string'
-        && (p.orientation === 'white' || p.orientation === 'black')) {
-      const info: LastSolvedInfo = { id: p.id, fen: p.fen, moves: p.moves, orientation: p.orientation };
-      if (typeof p.startPly === 'number') info.startPly = p.startPly;
-      if (typeof p.themes === 'string') info.themes = p.themes;
-      return info;
-    }
-    return null;
-  } catch { return null; }
+  // Die Form wird hier geprüft und nicht im Speicher-Helfer: was eine gültige Puzzle-Notiz ist,
+  // weiß nur dieses Fach (ein Eintrag aus einer älteren App-Fassung kann Felder vermissen).
+  const p = readJson<Partial<LastSolvedInfo>>(sessionStore(), KEY_PREFIX + scope);
+  if (p && typeof p.id === 'number' && typeof p.fen === 'string'
+      && typeof p.moves === 'string'
+      && (p.orientation === 'white' || p.orientation === 'black')) {
+    const info: LastSolvedInfo = { id: p.id, fen: p.fen, moves: p.moves, orientation: p.orientation };
+    if (typeof p.startPly === 'number') info.startPly = p.startPly;
+    if (typeof p.themes === 'string') info.themes = p.themes;
+    return info;
+  }
+  return null;
 }
 
 export function clearLastSolved(scope: LastSolvedScope): void {
-  try { sessionStorage.removeItem(KEY_PREFIX + scope); } catch { /* ignore */ }
+  removeKey(sessionStore(), KEY_PREFIX + scope);
 }

@@ -1,3 +1,5 @@
+import { BoundedMapStore } from '../../core/local-json-store';
+
 /**
  * Merkt die bereits verbrachte (aktive) Lösezeit eines Puzzles je Schlüssel im localStorage,
  * damit ein Refresh/Wiederbesuch mitten im Lösen NICHT wieder bei 0 zählt, sondern kumuliert
@@ -14,37 +16,28 @@ const MAX_ENTRIES = 30;
 
 interface ElapsedEntry { s: number; at: number; }
 
-function loadMap(): Record<string, ElapsedEntry> {
-  try { return JSON.parse(localStorage.getItem(SOLVE_ELAPSED_KEY) || '{}') || {}; } catch { return {}; }
-}
+/** Verdrängt wird nach SCHREIBZEITPUNKT (`at`) — die Schlüssel sind hier beliebige Zeichenketten
+ *  (`course:<id>`) und sagen über das Alter nichts aus. */
+const store = new BoundedMapStore<ElapsedEntry>(
+  SOLVE_ELAPSED_KEY, MAX_ENTRIES,
+  entries => Object.keys(entries).sort((a, b) => (entries[a]?.at || 0) - (entries[b]?.at || 0)));
 
 /** Bisher verbrachte Sekunden am Puzzle des Schlüssels (0 = nichts gemerkt). */
 export function loadSolveElapsed(key: string): number {
   if (!key) return 0;
-  const v = Math.floor(Number(loadMap()[key]?.s));
+  const v = Math.floor(Number(store.get(key)?.s));
   return Number.isFinite(v) && v > 0 ? v : 0;
 }
 
-/** Zwischenstand fortschreiben (überschreibt; die ältesten Einträge werden weggeräumt). */
+/** Zwischenstand fortschreiben (überschreibt; die ältesten Einträge werden weggeräumt).
+ *  Quota/Privatmodus → Zwischenstand eben nicht gemerkt. */
 export function saveSolveElapsed(key: string, seconds: number): void {
   if (!key || !(seconds > 0)) return;
-  try {
-    const map = loadMap();
-    map[key] = { s: Math.floor(seconds), at: Date.now() };
-    // Auf die jüngsten MAX_ENTRIES begrenzen (nach Schreibzeitpunkt; älteste zuerst raus).
-    const keys = Object.keys(map).sort((a, b) => (map[a].at || 0) - (map[b].at || 0));
-    while (keys.length > MAX_ENTRIES) { delete map[keys.shift()!]; }
-    localStorage.setItem(SOLVE_ELAPSED_KEY, JSON.stringify(map));
-  } catch { /* Quota/Privatmodus → Zwischenstand eben nicht gemerkt */ }
+  store.set(key, { s: Math.floor(seconds), at: Date.now() });
 }
 
 /** Eintrag löschen — sobald der Versuch erfasst ist, wird nicht mehr kumuliert. */
 export function clearSolveElapsed(key: string): void {
   if (!key) return;
-  try {
-    const map = loadMap();
-    if (!(key in map)) return;
-    delete map[key];
-    localStorage.setItem(SOLVE_ELAPSED_KEY, JSON.stringify(map));
-  } catch { /* ignore */ }
+  store.remove(key);
 }

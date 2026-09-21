@@ -1,4 +1,5 @@
 import { CalcGrade, CalcReview, CalcReviewPatch, applyReviewPatch, emptyReview, normalizeGrade } from './calc-review.util';
+import { localStore, readJson, readRaw, removeKey, writeJson, writeRaw } from '../../../core/local-json-store';
 
 /**
  * Geräte-lokaler Speicher des Kalkulations-Modus für NICHT ANGEMELDETE Nutzer.
@@ -9,10 +10,10 @@ import { CalcGrade, CalcReview, CalcReviewPatch, applyReviewPatch, emptyReview, 
  * gar nicht geöffnet werden (keine nullable UserId, keine anonyme Sitzungs-Id, keine neue
  * Schreib-Angriffsfläche). Serverseitige Persistenz bleibt angemeldeten Nutzern vorbehalten.
  *
- * Gleiches Muster wie die übrigen Offline-Speicher (`core/offline.service.ts`,
- * `features/puzzles/book-offline.util.ts`): ein localStorage-Schlüssel je Buch, alles in
- * try/catch — ein voller oder gesperrter Speicher (Privatmodus, Quota) darf NIE werfen, sondern
- * kostet höchstens die Persistenz.
+ * Gleiches Muster wie die übrigen Offline-Speicher: ein localStorage-Schlüssel je Buch, und der
+ * Zugriff läuft über `core/local-json-store.ts` — ein voller oder gesperrter Speicher
+ * (Privatmodus, Quota) darf NIE werfen, sondern kostet höchstens die Persistenz. Hier bleibt das
+ * Fachliche: Form-Prüfung, Deckel und Verdrängung.
  */
 
 /** localStorage-Präfix; ein Schlüssel je Buch (`…_<bookId>`). */
@@ -82,10 +83,7 @@ function sanitize(raw: unknown): CalcLocalEntries {
 
 /** Alle lokal gespeicherten Stellungen eines Buchs (leer, wenn nichts/kaputt/gesperrt). */
 export function readCalcLocal(bookId: number): CalcLocalEntries {
-  try {
-    const raw = localStorage.getItem(storageKey(bookId));
-    return raw ? sanitize(JSON.parse(raw)) : {};
-  } catch { return {}; }
+  return sanitize(readJson<CalcLocalStore>(localStore(), storageKey(bookId)));
 }
 
 /** Stand EINER Stellung; `null`, wenn es lokal nichts dazu gibt. */
@@ -140,11 +138,8 @@ function persist(bookId: number, entries: CalcLocalEntries, keepId: string): boo
 }
 
 function write(bookId: number, entries: CalcLocalEntries): boolean {
-  try {
-    const store: CalcLocalStore = { v: 1, entries };
-    localStorage.setItem(storageKey(bookId), JSON.stringify(store));
-    return true;
-  } catch { return false; }
+  const store: CalcLocalStore = { v: 1, entries };
+  return writeJson(localStore(), storageKey(bookId), store);
 }
 
 /** Auf `max` Einträge eindampfen; die gerade bearbeitete Stellung bleibt immer erhalten. */
@@ -227,7 +222,7 @@ export function writeCalcLocalReview(bookId: number, bookPuzzleId: number, patch
 
 /** Alles Lokale dieses Buchs vergessen. */
 export function clearCalcLocal(bookId: number): void {
-  try { localStorage.removeItem(storageKey(bookId)); } catch { /* gesperrt → egal */ }
+  removeKey(localStore(), storageKey(bookId));
 }
 
 // ===== Weggeklickte Hinweise =================================================
@@ -248,14 +243,13 @@ function noticeKey(bookId: number): string {
 
 /** Wurde der Hinweis für diesen Kurs schon weggeklickt? (Gesperrter Speicher ⇒ „nein".) */
 export function readCalcNoticeDismissed(bookId: number): boolean {
-  try { return localStorage.getItem(noticeKey(bookId)) === '1'; } catch { return false; }
+  return readRaw(localStore(), noticeKey(bookId)) === '1';
 }
 
 /** Merker setzen/löschen. Wie überall hier: ein gesperrter/voller Speicher darf NICHT werfen —
  *  der Hinweis kommt dann eben beim nächsten Aufruf wieder, das ist der harmlose Ausgang. */
 export function writeCalcNoticeDismissed(bookId: number, dismissed = true): void {
-  try {
-    if (dismissed) localStorage.setItem(noticeKey(bookId), '1');
-    else localStorage.removeItem(noticeKey(bookId));
-  } catch { /* voll/gesperrt → Hinweis bleibt sichtbar */ }
+  // Voll/gesperrt → Hinweis bleibt sichtbar.
+  if (dismissed) writeRaw(localStore(), noticeKey(bookId), '1');
+  else removeKey(localStore(), noticeKey(bookId));
 }

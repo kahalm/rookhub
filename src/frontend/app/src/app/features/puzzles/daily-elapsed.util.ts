@@ -1,3 +1,5 @@
+import { BoundedMapStore } from '../../core/local-json-store';
+
 /**
  * Merkt die bereits verbrachte (aktive) Lösezeit des Tagespuzzles je UTC-Datum im localStorage,
  * damit ein Wiederbesuch des Links NICHT wieder bei 0 zählt, sondern kumuliert weiterläuft.
@@ -9,37 +11,26 @@ const DAILY_ELAPSED_KEY = 'rookhub_daily_elapsed';
 /** Wie viele Datums-Einträge vorgehalten werden (jüngste gewinnen — wie der Daily-Offline-Cache). */
 const MAX_ENTRIES = 14;
 
-function loadMap(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem(DAILY_ELAPSED_KEY) || '{}') || {}; } catch { return {}; }
-}
+/** Datums-Schlüssel (`yyyyMMdd`): lexikografisch sortiert = chronologisch, also die
+ *  Vorgabe-Verdrängung des {@link BoundedMapStore}. */
+const store = new BoundedMapStore<number>(DAILY_ELAPSED_KEY, MAX_ENTRIES);
 
 /** Bisher verbrachte Sekunden am Tagespuzzle des Datums (0 = nichts gemerkt). */
 export function loadDailyElapsed(date: string): number {
   if (!date) return 0;
-  const v = Math.floor(Number(loadMap()[date]));
+  const v = Math.floor(Number(store.get(date)));
   return Number.isFinite(v) && v > 0 ? v : 0;
 }
 
-/** Zwischenstand fortschreiben (überschreibt; ältere Datums-Einträge werden weggeräumt). */
+/** Zwischenstand fortschreiben (überschreibt; ältere Datums-Einträge werden weggeräumt).
+ *  Quota/Privatmodus → Zwischenstand eben nicht gemerkt. */
 export function saveDailyElapsed(date: string, seconds: number): void {
   if (!date || !(seconds > 0)) return;
-  try {
-    const map = loadMap();
-    map[date] = Math.floor(seconds);
-    // Auf die jüngsten MAX_ENTRIES Datumsschlüssel begrenzen (lexikografisch = chronologisch bei yyyyMMdd).
-    const keys = Object.keys(map).sort();
-    while (keys.length > MAX_ENTRIES) { delete map[keys.shift()!]; }
-    localStorage.setItem(DAILY_ELAPSED_KEY, JSON.stringify(map));
-  } catch { /* Quota/Privatmodus → Zwischenstand eben nicht gemerkt */ }
+  store.set(date, Math.floor(seconds));
 }
 
 /** Eintrag löschen — sobald ein Versuch erfasst wurde, wird nicht mehr kumuliert. */
 export function clearDailyElapsed(date: string): void {
   if (!date) return;
-  try {
-    const map = loadMap();
-    if (!(date in map)) return;
-    delete map[date];
-    localStorage.setItem(DAILY_ELAPSED_KEY, JSON.stringify(map));
-  } catch { /* ignore */ }
+  store.remove(date);
 }

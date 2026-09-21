@@ -1,9 +1,14 @@
 import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, DAILY_CACHE_KEY, COURSES_CACHE_KEY } from '../../core/offline.service';
+import { BoundedMapStore, hasKey, keysWithPrefix, localStore, readJson, readRaw, removeKey, writeJson, writeRaw }
+  from '../../core/local-json-store';
 import { BookPuzzleDto } from './puzzle.service';
 
 /**
  * Offline-Cache ganzer Bücher (alle Puzzles eines Buchs) im localStorage, gekeyt per
  * Buch-Dateiname (stabil über Kurs-Liste UND Standalone-Buch-Puzzle hinweg).
+ *
+ * Die localStorage-Mechanik (lesen/schreiben/löschen/Präfix-Suche, alles fehlertolerant) liegt in
+ * `core/local-json-store.ts`; hier steht nur noch das Fachliche.
  */
 function bookKey(fileName: string): string {
   return BOOK_OFFLINE_PREFIX + encodeURIComponent(fileName);
@@ -11,10 +16,10 @@ function bookKey(fileName: string): string {
 
 /** bookId→fileName-Index laden/speichern (der Kursmodus kennt nur die bookId). */
 function loadIdMap(): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem(BOOK_ID_MAP_KEY) || '{}') || {}; } catch { return {}; }
+  return readJson<Record<string, string>>(localStore(), BOOK_ID_MAP_KEY) ?? {};
 }
 function saveIdMap(m: Record<string, string>): void {
-  try { localStorage.setItem(BOOK_ID_MAP_KEY, JSON.stringify(m)); } catch { /* ignore */ }
+  writeJson(localStore(), BOOK_ID_MAP_KEY, m);
 }
 
 /**
@@ -25,8 +30,8 @@ function saveIdMap(m: Record<string, string>): void {
  */
 export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], bookId?: number): boolean {
   if (!fileName) return false;
-  try { localStorage.setItem(bookKey(fileName), JSON.stringify(puzzles ?? [])); }
-  catch { return false; /* Quota → gar nicht erst in den Index aufnehmen */ }
+  // Quota → gar nicht erst in den Index aufnehmen.
+  if (!writeJson(localStore(), bookKey(fileName), puzzles ?? [])) return false;
   if (bookId != null) {
     const m = loadIdMap();
     m[String(bookId)] = fileName;
@@ -43,24 +48,19 @@ export function getBookOfflineByBookId(bookId: number): BookPuzzleDto[] | null {
 
 export function getBookOffline(fileName: string): BookPuzzleDto[] | null {
   if (!fileName) return null;
-  try {
-    const raw = localStorage.getItem(bookKey(fileName));
-    return raw ? (JSON.parse(raw) as BookPuzzleDto[]) : null;
-  } catch { return null; }
+  return readJson<BookPuzzleDto[]>(localStore(), bookKey(fileName));
 }
 
 export function hasBookOffline(fileName: string): boolean {
-  try { return localStorage.getItem(bookKey(fileName)) != null; } catch { return false; }
+  return hasKey(localStore(), bookKey(fileName));
 }
 
 export function removeBookOffline(fileName: string): void {
-  try { localStorage.removeItem(bookKey(fileName)); } catch { /* ignore */ }
-  try {
-    const m = loadIdMap();
-    let changed = false;
-    for (const k of Object.keys(m)) if (m[k] === fileName) { delete m[k]; changed = true; }
-    if (changed) saveIdMap(m);
-  } catch { /* ignore */ }
+  removeKey(localStore(), bookKey(fileName));
+  const m = loadIdMap();
+  let changed = false;
+  for (const k of Object.keys(m)) if (m[k] === fileName) { delete m[k]; changed = true; }
+  if (changed) saveIdMap(m);
 }
 
 /**
@@ -79,59 +79,49 @@ const COURSE_LOCAL_SOLVED_PREFIX = 'rookhub_course_local_solved_';
 const BOOK_COMPLETE_PREFIX = 'rookhub_book_complete_';
 
 export function markBookCacheComplete(bookId: number, complete: boolean): void {
-  try {
-    if (complete) localStorage.setItem(BOOK_COMPLETE_PREFIX + bookId, '1');
-    else localStorage.removeItem(BOOK_COMPLETE_PREFIX + bookId);
-  } catch { /* Quota/Privatmodus — dann gilt der Cache als unvollständig (siehe unten) */ }
+  // Quota/Privatmodus → dann gilt der Cache als unvollständig (siehe unten).
+  if (complete) writeRaw(localStore(), BOOK_COMPLETE_PREFIX + bookId, '1');
+  else removeKey(localStore(), BOOK_COMPLETE_PREFIX + bookId);
 }
 
 /** Gilt der lokale Cache als vollständig? Bei gesperrtem Speicher bewusst `false`: dann wird die
  *  Seiten-Kette erneut fortgesetzt, was höchstens Netz kostet — im Gegensatz zu still fehlenden
  *  Linien. */
 export function isBookCacheComplete(bookId: number): boolean {
-  try { return localStorage.getItem(BOOK_COMPLETE_PREFIX + bookId) === '1'; } catch { return false; }
+  return readRaw(localStore(), BOOK_COMPLETE_PREFIX + bookId) === '1';
 }
 
 export function loadCourseLocalSolved(bookId: number): number[] {
-  try {
-    const raw = localStorage.getItem(COURSE_LOCAL_SOLVED_PREFIX + bookId);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr.filter((x): x is number => typeof x === 'number') : [];
-  } catch { return []; }
+  const arr = readJson<unknown>(localStore(), COURSE_LOCAL_SOLVED_PREFIX + bookId);
+  return Array.isArray(arr) ? arr.filter((x): x is number => typeof x === 'number') : [];
 }
 
 export function saveCourseLocalSolved(bookId: number, ids: Iterable<number>): void {
-  try { localStorage.setItem(COURSE_LOCAL_SOLVED_PREFIX + bookId, JSON.stringify([...ids])); }
-  catch { /* Quota/Privatmodus → Fortschritt eben nicht persistiert */ }
+  // Quota/Privatmodus → Fortschritt eben nicht persistiert.
+  writeJson(localStore(), COURSE_LOCAL_SOLVED_PREFIX + bookId, [...ids]);
 }
 
 export function clearCourseLocalSolved(bookId: number): void {
-  try { localStorage.removeItem(COURSE_LOCAL_SOLVED_PREFIX + bookId); } catch { /* ignore */ }
+  removeKey(localStore(), COURSE_LOCAL_SOLVED_PREFIX + bookId);
 }
 
 /** Wie viele Tagespuzzles offline vorgehalten werden (jüngste gewinnen). */
 const DAILY_CACHE_MAX = 14;
 
+/** Die Datums-Schlüssel sind `yyyyMMdd` — lexikografisch sortiert heißt chronologisch, die
+ *  Vorgabe-Verdrängung des {@link BoundedMapStore} passt also genau. */
+const dailyCache = new BoundedMapStore<BookPuzzleDto>(DAILY_CACHE_KEY, DAILY_CACHE_MAX);
+
 /** Tagespuzzle eines UTC-Datums offline vorhalten (online-Abruf cacht automatisch). */
 export function saveDailyOffline(date: string, puzzle: BookPuzzleDto): void {
   if (!date || !puzzle) return;
-  try {
-    const map: Record<string, BookPuzzleDto> = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || '{}') || {};
-    map[date] = puzzle;
-    // Auf die jüngsten DAILY_CACHE_MAX Datumsschlüssel begrenzen (lexikografisch = chronologisch bei yyyyMMdd).
-    const keys = Object.keys(map).sort();
-    while (keys.length > DAILY_CACHE_MAX) { delete map[keys.shift()!]; }
-    localStorage.setItem(DAILY_CACHE_KEY, JSON.stringify(map));
-  } catch { /* Quota/ignore */ }
+  dailyCache.set(date, puzzle);
 }
 
 /** Offline gecachtes Tagespuzzle eines Datums (oder null). */
 export function getDailyOffline(date: string): BookPuzzleDto | null {
   if (!date) return null;
-  try {
-    const map = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || '{}') || {};
-    return map[date] ?? null;
-  } catch { return null; }
+  return dailyCache.get(date) ?? null;
 }
 
 /**
@@ -139,40 +129,32 @@ export function getDailyOffline(date: string): BookPuzzleDto | null {
  * Bewusst untypisiert (Snapshot der Server-Antwort); der Aufrufer kennt das CourseListItem-Shape.
  */
 export function saveCourseListCache<T>(list: T[]): void {
-  try { localStorage.setItem(COURSES_CACHE_KEY, JSON.stringify(list ?? [])); } catch { /* Quota */ }
+  writeJson(localStore(), COURSES_CACHE_KEY, list ?? []);
 }
 
 export function loadCourseListCache<T>(): T[] {
-  try {
-    const arr = JSON.parse(localStorage.getItem(COURSES_CACHE_KEY) || '[]');
-    return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
+  const arr = readJson<unknown>(localStore(), COURSES_CACHE_KEY);
+  return Array.isArray(arr) ? (arr as T[]) : [];
 }
 
-/** Sucht ein Puzzle nach Id über ALLE offline gespeicherten Bücher (für Offline-Direktaufruf). */
+/** Sucht ein Puzzle nach Id über ALLE offline gespeicherten Bücher (für Offline-Direktaufruf).
+ *  Ein kaputter Eintrag wird übersprungen, nicht zum Abbruch der Suche (wie in
+ *  `cachedRepertoires`). */
 export function findCachedBookPuzzle(id: number): BookPuzzleDto | null {
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k || !k.startsWith(BOOK_OFFLINE_PREFIX)) continue;
-      const arr = JSON.parse(localStorage.getItem(k) || '[]') as BookPuzzleDto[];
-      const hit = arr.find(p => p.id === id);
-      if (hit) return hit;
-    }
-  } catch { /* ignore */ }
+  for (const k of keysWithPrefix(localStore(), BOOK_OFFLINE_PREFIX)) {
+    const arr = readJson<BookPuzzleDto[]>(localStore(), k);
+    const hit = Array.isArray(arr) ? arr.find(p => p.id === id) : undefined;
+    if (hit) return hit;
+  }
   return null;
 }
 
 /** Dateinamen aller offline gespeicherten Bücher (für „bereits gespeichert"-Anzeige). */
 export function cachedBookFileNames(): string[] {
   const out: string[] = [];
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(BOOK_OFFLINE_PREFIX)) {
-        try { out.push(decodeURIComponent(k.slice(BOOK_OFFLINE_PREFIX.length))); } catch { /* ignore */ }
-      }
-    }
-  } catch { /* ignore */ }
+  for (const k of keysWithPrefix(localStore(), BOOK_OFFLINE_PREFIX)) {
+    try { out.push(decodeURIComponent(k.slice(BOOK_OFFLINE_PREFIX.length))); }
+    catch { /* kaputte Prozent-Kodierung → überspringen */ }
+  }
   return out;
 }
