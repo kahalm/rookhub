@@ -470,3 +470,58 @@ describe('BasePuzzleSolver Lösezeit-Timer', () => {
   }));
 });
 
+
+describe('BasePuzzleSolver auf dem gemeinsamen Kern (shared/chess/line-solver)', () => {
+  /** Schwarz am Zug (Setup-Zug Kg6-g7), danach löst WEISS mit der Umwandlung e7e8. */
+  const PROMO = '8/4P3/6k1/8/8/8/8/4K3 b - - 0 1';
+  const rejecting = () => ({ getBestMove: () => Promise.reject('x') } as unknown as StockfishService);
+
+  it('Umwandlung OHNE gewählte Figur zählt als der erwartete Umwandlungszug (Präfix-Regel)', fakeAsync(() => {
+    const solver = new TestSolver(rejecting());
+    solver.setup(PROMO, 'g6g7 e7e8q');
+    tick(600);
+
+    // Der Nutzer zieht nur e7→e8; die Figur nennt er nicht — die Lösung setzt sie.
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e8' as Key });
+    tick(600);
+
+    expect(solver.state).toBe('SOLVED');
+    expect(solver.fen.startsWith('4Q3/')).toBeTrue();   // Dame, nicht chess.js' erster Treffer (Springer)
+    expect(solver.wrongMoveCount).toBe(0);
+    discardPeriodicTasks();
+  }));
+
+  it('eine ANDERE Umwandlungsfigur als erwartet bleibt ein Fehlzug', fakeAsync(() => {
+    const solver = new TestSolver(rejecting());
+    solver.setup(PROMO, 'g6g7 e7e8q');
+    tick(600);
+
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e8' as Key, promotion: 'r' });
+    tick(600);
+
+    expect(solver.state).not.toBe('SOLVED');
+    expect(solver.wrongMoveCount).toBe(1);
+    expect(solver.fen.startsWith('4R3/')).toBeTrue();   // der Fehlzug selbst steht auf dem Brett
+    discardPeriodicTasks();
+  }));
+
+  it('die Präfix-Regel gilt auch für eine geduldete Alternative ([%alt])', fakeAsync(() => {
+    const solver = new TestSolver(rejecting());
+    solver.setup(PROMO, 'g6g7 e1e2');        // erwartet ist der Königszug …
+    tick(600);
+    solver.setAlts({ 1: ['e7e8q'] });        // … geduldet ist die Umwandlung
+
+    const before = solver.fen;
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e8' as Key });   // wieder ohne Figur
+
+    expect(solver.altNoticeCount).toBe(1);
+    expect(solver.state).toBe('THINKING');   // kurz zeigen …
+    expect(solver.fen).toBe(before);         // … `chess` bleibt unangetastet
+    expect(solver.wrongMoveCount).toBe(0);
+
+    tick(1500);                              // Hold abgelaufen → Hauptzug wird weiter verlangt
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    expect(solver.moveIdx).toBe(1);
+    discardPeriodicTasks();
+  }));
+});

@@ -6,6 +6,7 @@ import { applyVisualizationHide, clearVisualizationHide, ThemeMode } from './boa
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { formatPuzzleTime } from './puzzle-format.util';
 import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
+import { ExpectedMove, judgeMove } from '../../shared/chess/line-solver';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
@@ -403,13 +404,21 @@ export abstract class BasePuzzleSolver {
       const expectedUci = this.solutionMoves[this.moveIndex];
       const userUci = event.orig + event.dest + (event.promotion || '');
       const thinkMs = Date.now() - this.moveStartTime;
+      // Das Urteil kommt aus dem gemeinsamen Kern (shared/chess/line-solver): Feldvergleich UND
+      // [%alt]-Alternativen in EINEM Schritt, ohne den Zug anzuwenden — angewendet wird hier
+      // weiterhin der ERWARTETE Zug (seine Umwandlungsfigur gehört der Lösung, nicht dem Dialog).
+      // `illegal`/`not-your-turn` landen im selben Zweig wie `wrong`: dort fängt playFreeMove sie
+      // ab, wie eh und je. Über die Bretter kommt das Brett-Component ohnehin nur mit legalen
+      // Zügen herein.
+      const verdict = judgeMove(this.chess, { uci: expectedUci }, this.altsAt(this.moveIndex),
+                                event.orig, event.dest, event.promotion);
 
-      if (userUci === expectedUci.substring(0, userUci.length)) {
+      if (verdict === 'correct') {
         this.moveLog.push({ i: this.moveIndex, uci: expectedUci, exp: expectedUci, ms: thinkMs, ok: true });
         this.playMove(expectedUci);
         this.moveIndex++;
         this.advanceAfterCorrectMove();
-      } else if (this.matchesAlternative(userUci)) {
+      } else if (verdict === 'alternative') {
         // Von Chessable geduldeter Alternativzug (softFail → [%alt]): kein Fehler. Kurz zeigen,
         // als Alternative würdigen, dann zurücknehmen und weiter auf den Hauptzug warten.
         this.handleAlternativeMove(event, userUci);
@@ -435,10 +444,11 @@ export abstract class BasePuzzleSolver {
     this.opponentRespond();
   }
 
-  /** Ist `userUci` an der aktuell erwarteten Stelle ein von Chessable geduldeter Alternativzug? */
-  protected matchesAlternative(userUci: string): boolean {
-    const alts = this.altMovesByPly[this.moveIndex];
-    return !!alts && alts.some(a => userUci === a.substring(0, userUci.length));
+  /** Die geduldeten Alternativen eines Halbzugs in der Form des Kerns ({@link ExpectedMove}).
+   *  `altMovesByPly` hält sie als UCI — das bleibt so, der Import liefert nichts anderes. */
+  protected altsAt(ply: number): ExpectedMove[] {
+    const alts = this.altMovesByPly[ply];
+    return alts ? alts.map(uci => ({ uci })) : [];
   }
 
   /**

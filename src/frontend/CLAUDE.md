@@ -210,11 +210,17 @@ app/src/app/
   ist ausdrücklich LESBAR) oder als reine Funktionen auf einer FREMDEN chess.js-Instanz.
 - **Wer ihn benutzt, wer noch nicht**: `features/worksheets/worksheet-solve.component.ts`
   (`WorksheetTask` ist seither eine dünne Hülle um `LineSolver` — sie urteilt bewusst OHNE die
-  Umwandlungsfigur des Dialogs, weil auf dem Blatt die Lösung die Figur setzt). **Noch NICHT
-  darauf:** `features/puzzles/base-puzzle-solver.ts` und der Repertoire-Trainer
-  (`features/repertoire/repertoire-trainer.component.ts`) — Letzterer vergleicht weiter
-  normalisierte SAN (`normSan`); ihn umzustellen ändert Verhalten (Feld- statt Textvergleich) und
-  ist ein eigener Lauf. Der Kalkulations-Modus ist **kein Löser** und bleibt außen vor.
+  Umwandlungsfigur des Dialogs, weil auf dem Blatt die Lösung die Figur setzt) und
+  `features/puzzles/base-puzzle-solver.ts` (seit 0.499.9: `onMoveMade` holt sein Urteil von
+  `judgeMove` auf `this.chess` — die reinen FUNKTIONEN, nicht die Klasse, weil `reviewGoToCore`
+  `this.chess` neu ZUWEIST und ein zweites Brett daneben die Quelle fürs Auseinanderlaufen wäre).
+  **Bewusst NICHT im Kern und weiterhin in Base**: moveLog samt `thinkMs`, `wrongMoveCount`,
+  Off-Path-Zählung und -Warnung, der `ALT_HOLD_MS`-Timer des Alternativzugs, die Timer von
+  `advanceAfterCorrectMove`, die Stockfish-Antwort (`opponentRespond`), `handleGameOver`,
+  `mouseslip`, viz/Tipps/Eval. **Noch NICHT darauf:** der Repertoire-Trainer
+  (`features/repertoire/repertoire-trainer.component.ts`) — er vergleicht weiter normalisierte SAN
+  (`normSan`); ihn umzustellen ÄNDERT Verhalten (Feld- statt Textvergleich) und ist ein eigener
+  Lauf. Der Kalkulations-Modus ist **kein Löser** und bleibt außen vor.
 
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
