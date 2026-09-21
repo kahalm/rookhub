@@ -187,4 +187,24 @@ public class LibraryGameReaderTests
     [Fact]
     public void From_ohneZuege_gibtNichts()
         => Assert.Null(LibraryGameReader.From("x", Headers, "*", null));
+
+    // ===== Der Hash darf sich NICHT bewegen ====================================================
+    // `AppendNormalized` speist zwei Dinge: die Eroeffnungszeile UND die Zugliste, aus der der
+    // MovesHash entsteht (Dubletten-Erkennung des Imports). Seit 0.499.12 raeumt die Zeile
+    // zusaetzlich die Schachzeichen weg — der Hash aber NICHT, sonst gilt jede schon importierte
+    // Partie als neu und ein Re-Import legt sie doppelt an. Der literale Wert haelt das fest:
+    // faellt dieser Test um, hat jemand die Normalisierung fuer beide Wege geaendert.
+    [Fact]
+    public void MovesHash_BleibtVonDerEroeffnungszeilen_NormalisierungUnberuehrt()
+    {
+        var stats = LibraryGameReader.Analyse(
+            "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Bg5 e6 7. f4 Be7 8. Qf3 Qc7 " +
+            "9. O-O-O Nbd7 10. Bb5+! axb5 11. Ndxb5 Qb8 12. e5 dxe5 *");
+
+        // Der Hash laeuft weiterhin ueber die Zugliste MIT „Bb5+" — unabhaengig nachgerechnet.
+        Assert.Equal("90b3deb35ebd76850f0f5a32a4198d751d66083271a3d152c6c4b6cfcc1f2de8", stats.MovesHash);
+        // Die Zeile daneben zeigt den Unterschied: sie traegt das Schachzeichen NICHT mehr.
+        Assert.Contains("Bb5 axb5", stats.OpeningLine);
+        Assert.DoesNotContain('+', stats.OpeningLine);
+    }
 }

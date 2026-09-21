@@ -193,7 +193,7 @@ public static class LibraryGameReader
                 if (plies <= OpeningPlies)
                 {
                     if (opening.Length > 0) opening.Append(' ');
-                    AppendNormalized(opening, token);
+                    AppendOpeningSan(opening, token);
                 }
             }
         }
@@ -231,7 +231,32 @@ public static class LibraryGameReader
     /// Dublette, obwohl die Zuege dieselben sind. Schach und Matt (<c>+</c>, <c>#</c>) bleiben
     /// stehen: die stehen nicht zur Debatte, die folgen aus der Stellung.</para>
     /// </summary>
-    private static void AppendNormalized(StringBuilder sb, ReadOnlySpan<char> token)
+    /// <summary>
+    /// Ein Zug-Token so anhaengen, wie es in einer <c>OpeningLine</c> steht: ohne Zugnummer, ohne
+    /// Bewertungs- UND ohne Schachzeichen.
+    ///
+    /// <para><b>Diese eine Funktion benutzen BEIDE Erzeuger der Zeile</b> — der Textdurchgang hier
+    /// (Bibliothek) und der Brettweg in <see cref="GameAnalysisService.OpeningLineOf"/> (eigene
+    /// Analysen). Der Eroeffnungsbaum der Punktepartie sucht per Praefix ueber beide Spalten und
+    /// normalisiert die Anfrage seinerseits ohne <c>+</c>/<c>#</c>
+    /// (<see cref="GuessOpeningTree.Normalize"/>); eine Seite, die sie BEHAELT, ist damit ab dem
+    /// ersten Schachgebot unauffindbar. Genau das war bis 0.499.12 der Fall: 36 213 von 130 055
+    /// Bibliothekspartien trugen ein <c>+</c> in der Zeile, der Ast endete dort mit „keine
+    /// Partien", obwohl die Partien da waren.</para>
+    /// </summary>
+    public static void AppendOpeningSan(StringBuilder sb, ReadOnlySpan<char> token)
+        => AppendNormalized(sb, token, stripChecks: true);
+
+    /// <summary>
+    /// Zug-Token ohne Zugnummer und ohne Bewertungszeichen anhaengen.
+    ///
+    /// <para><b>Ohne <paramref name="stripChecks"/> darf sich hier NICHTS aendern.</b> Diese Form
+    /// speist auch die Zugliste, aus der <see cref="GameStats.MovesHash"/> entsteht — die
+    /// Dubletten-Erkennung des Imports. Faellt dort ein Zeichen weg, hat jede bereits importierte
+    /// Partie einen anderen Hash: Dubletten gelten als neu, und ein Re-Import legt sie ein zweites
+    /// Mal an. Ein Test haelt den Hash deshalb auf einem literalen Wert fest.</para>
+    /// </summary>
+    private static void AppendNormalized(StringBuilder sb, ReadOnlySpan<char> token, bool stripChecks = false)
     {
         var from = 0;
         // „12.e4" / „12...Sf6" — alles bis zum letzten Punkt gehoert zur Zugnummer.
@@ -242,6 +267,7 @@ public static class LibraryGameReader
         {
             var ch = token[i];
             if (ch is '!' or '?') continue;
+            if (stripChecks && ch is '+' or '#') continue;
             sb.Append(ch);
         }
     }

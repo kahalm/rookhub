@@ -117,8 +117,11 @@ public class GameAnalysisService
         foreach (var p in plies.Take(LibraryGameReader.OpeningPlies))
         {
             if (sb.Length > 0) sb.Append(' ');
-            foreach (var c in p.San)
-                if (c is not ('+' or '#' or '!' or '?')) sb.Append(c);
+            // DIESELBE Funktion wie der Textweg der Bibliothek (LibraryGameReader.AppendOpeningSan):
+            // die beiden Spalten werden vom selben Praefix durchsucht, ihre Form darf nicht an zwei
+            // Stellen entstehen. Bis 0.499.12 stand hier eine zweite Fassung — sie entfernte die
+            // Schachzeichen, die der Textweg behielt.
+            LibraryGameReader.AppendOpeningSan(sb, p.San);
         }
         var line = sb.ToString();
         return line.Length > 200 ? line[..200] : line;
