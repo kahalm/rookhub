@@ -247,25 +247,8 @@ function guessColor(moves: Map<string, RepMove[]>, rootFen: string): 'w' | 'b' {
   return sideToMove(rootFen) === 'w' ? 'b' : 'w';
 }
 
-/** Eine Trainingskarte: Stellung (du am Zug) + erwarteter Hauptzug + akzeptierte Alternativen. */
-export interface RepCard {
-  cardKey: string;     // normFen vor dem Zug
-  fenBefore: string;   // normFen (= cardKey)
-  expected: string;    // Haupt-SAN (normalisiert)
-  accepted: string[];  // weitere akzeptierte (geduldete) SANs (normalisiert)
-}
-
-/** Erzeugt aus dem Graph die Karten für die gegebene Trainingsfarbe. */
-export function cardsForColor(graph: RepertoireGraph, color: 'w' | 'b'): RepCard[] {
-  const cards: RepCard[] = [];
-  for (const [fen, list] of graph.moves) {
-    if (sideToMove(fen) !== color || list.length === 0) continue;
-    const main = list[0];
-    // Akzeptiert: [%alt] des Hauptzugs + weitere an dieser Stellung gelistete eigene Züge.
-    const accepted = new Set<string>(main.alts);
-    for (let k = 1; k < list.length; k++) accepted.add(list[k].san);
-    accepted.delete(main.san);
-    cards.push({ cardKey: fen, fenBefore: fen, expected: main.san, accepted: [...accepted] });
-  }
-  return cards;
-}
+// `RepCard`/`cardsForColor` standen bis 0.499.11 hier: eine Karte JE STELLUNG, aus der Zeit, als
+// die Wiederholungs-Einheit die Stellung war. Seit v0.245 ist sie die ganze LINIE — der Trainer
+// liest seither `graph.moves`/`alts` direkt, und die Karten rief nur noch der Test auf. Er baut
+// sie sich jetzt selbst (`repertoire-tree.util.spec.ts`); dort stehen sie als das, was sie
+// geblieben sind: eine Lesehilfe für den Graph, keine Sache der Anwendung.

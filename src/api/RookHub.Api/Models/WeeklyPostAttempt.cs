@@ -44,17 +44,17 @@ public class WeeklyPostAttempt
     [Required, MaxLength(10)]
     public string Mode { get; set; } = SolveMode.Training;
 
-    // Die drei folgenden Member sind nur noch Durchreichen auf <see cref="SolveMode"/> — die eine
-    // Wahrheit für alle Solver-Bereiche. Namen bleiben erhalten (Service/Tests benutzen sie).
+    // Die beiden folgenden Konstanten sind nur noch Durchreichen auf <see cref="SolveMode"/> — die
+    // eine Wahrheit für alle Solver-Bereiche. Die Namen bleiben, weil der Spalten-Default im
+    // <see cref="Data.AppDbContext"/> und die Auswertungen im Dienst sie benutzen.
+    // (Ein drittes Mitglied `NormalizeMode` gab es bis 0.499.11; seit die Recorder über
+    // `AttemptRecording` gehen, rief es niemand mehr auf — `SolveMode.Normalize` ist die Stelle.)
 
     /// <summary>Modus „Training": Brett eingefroren, Figuren nicht ziehbar (Default/Altbestand).</summary>
     public const string ModeTraining = SolveMode.Training;
 
     /// <summary>Modus „Einfach": Figuren normal ziehbar.</summary>
     public const string ModeEasy = SolveMode.Easy;
-
-    /// <summary>Normalisiert einen vom Client gelieferten Modus — fehlt er oder ist er unbekannt, gilt „training".</summary>
-    public static string NormalizeMode(string? mode) => SolveMode.Normalize(mode);
 
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

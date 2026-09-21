@@ -1,4 +1,26 @@
-import { buildRepertoireGraph, cardsForColor, normFen, normSan, sideToMove } from './repertoire-tree.util';
+import { buildRepertoireGraph, normFen, normSan, RepertoireGraph, sideToMove } from './repertoire-tree.util';
+
+/**
+ * Eine Lesehilfe für den Graph: je Stellung, in der `color` am Zug ist, der Hauptzug und die an
+ * dieser Stelle geduldeten Züge. Sie stand bis 0.499.11 als `cardsForColor` in der Anwendung —
+ * gebraucht hat sie dort niemand mehr (der Trainer liest `graph.moves`/`alts` direkt), die Tests
+ * des Graph-Baus prüfen ihr Ergebnis aber bequem darüber. Deshalb ist sie hierher gewandert,
+ * statt mit ihr die Abdeckung zu löschen.
+ */
+interface RepCard { fenBefore: string; expected: string; accepted: string[]; }
+
+function cardsForColor(graph: RepertoireGraph, color: 'w' | 'b'): RepCard[] {
+  const cards: RepCard[] = [];
+  for (const [fen, list] of graph.moves) {
+    if (sideToMove(fen) !== color || list.length === 0) continue;
+    const main = list[0];
+    const accepted = new Set<string>(main.alts);
+    for (let k = 1; k < list.length; k++) accepted.add(list[k].san);
+    accepted.delete(main.san);
+    cards.push({ fenBefore: fen, expected: main.san, accepted: [...accepted] });
+  }
+  return cards;
+}
 
 const START = '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n\n';
 

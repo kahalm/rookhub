@@ -747,7 +747,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.phase = 'FEEDBACK';
 
     if (this.outcome === 'wrong') {
-      this.kickOffEvalCompare(fenAfterPlayer, cardKey, expectedMove.san);
+      this.kickOffEvalCompare(fenAfterPlayer, expectedMove.san);
       try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
     } else {
       this.scheduleAdvance(ADVANCE_MS[this.outcome]);
@@ -975,7 +975,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (this.wrongRevertTimer !== null) { clearTimeout(this.wrongRevertTimer); this.wrongRevertTimer = null; }
   }
 
-  private kickOffEvalCompare(fenAfterPlayer: string, cardKey: string, expectedSan: string): void {
+  private kickOffEvalCompare(fenAfterPlayer: string, expectedSan: string): void {
     const epoch = ++this.evalEpoch;
     this.evalLoading = true;
     this.evalDeltaPawns = null;

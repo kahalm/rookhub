@@ -111,12 +111,9 @@ public static class CoursePgnExporter
         return new Dictionary<int, string> { [at] = $"{{[%tqu \"En\",\"find the move\",\"\",\"\",\"{uci}\",\"\",10]}}" };
     }
 
-    private static string ToUci(Move m)
-    {
-        var u = m.OriginalPosition.ToString() + m.NewPosition.ToString();
-        var ss = m.Parameter?.ShortStr;
-        if (!string.IsNullOrEmpty(ss) && ss.StartsWith('=') && ss.Length >= 2)
-            u += char.ToLowerInvariant(ss[1]);
-        return u;
-    }
+    /// <summary>Zug → UCI in der Schreibweise, die im ganzen Server gilt
+    /// (<see cref="PgnParser.ToUci"/>) — sie ist genau dafür öffentlich. Eine eigene Fassung wäre
+    /// die erste Stelle, an der die beiden auseinanderlaufen, und sie steckt im EXPORT: ein PGN mit
+    /// anders geschriebener Rochade/Umwandlung liest der eigene Import falsch wieder ein.</summary>
+    private static string ToUci(Move m) => PgnParser.ToUci(m);
 }

@@ -47,13 +47,12 @@ public class SolveModeTests : IDisposable
         => Assert.Equal(expected, SolveMode.Normalize(input));
 
     [Fact]
-    public void WeeklyPostAttempt_ConstantsAndNormalize_DelegateToSolveMode()
+    public void WeeklyPostAttempt_Constants_DelegateToSolveMode()
     {
         // Die öffentlichen Namen der Wochenpost bleiben erhalten, zeigen aber auf SolveMode.
+        // (Das frühere `NormalizeMode` ist seit 0.499.11 weg — es rief niemand mehr auf.)
         Assert.Equal(SolveMode.Training, WeeklyPostAttempt.ModeTraining);
         Assert.Equal(SolveMode.Easy, WeeklyPostAttempt.ModeEasy);
-        Assert.Equal(SolveMode.Easy, WeeklyPostAttempt.NormalizeMode("easy"));
-        Assert.Equal(SolveMode.Training, WeeklyPostAttempt.NormalizeMode("was auch immer"));
     }
 
     [Theory]

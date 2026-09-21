@@ -48,7 +48,12 @@ public class CourseService
         _chessableProxy = chessableProxy;
     }
 
-    private static string NormalizeMode(string? mode) =>
+    /// <summary>Die REIHENFOLGE, in der ein Kurs seine Linien ausgibt („sequential"/„random").
+    /// <para>Hieß bis 0.499.11 <c>NormalizeMode</c> — direkt neben <see cref="SolveMode.Normalize"/>,
+    /// das die SPIELWEISE („training"/„easy") normalisiert. In <see cref="RecordResultAsync"/> stehen
+    /// beide Bedeutungen nebeneinander (<c>dto.Mode</c> gegen <c>dto.SolveMode</c>); zwei fast gleiche
+    /// Namen für zwei verschiedene Dinge sind dort eine Falle und keine Kürze.</para></summary>
+    private static string NormalizeOrderMode(string? mode) =>
         (mode ?? string.Empty).Trim().ToLowerInvariant() == "random" ? "random" : "sequential";
 
     private static int Percent(int solved, int total) =>
@@ -958,7 +963,7 @@ public class CourseService
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
 
-        mode = NormalizeMode(mode);
+        mode = NormalizeOrderMode(mode);
         await UpsertProgressAsync(userId, bookId, mode);
         // Race: zwei (fast) gleichzeitige .../next-Aufrufe legen den CourseProgress parallel an
         // (Unique (UserId, BookId)). Der LastMode-Upsert ist nur Nebeneffekt → Konflikt verwerfen.
@@ -1209,14 +1214,14 @@ public class CourseService
             {
                 UserId = userId,
                 BookId = bookId,
-                LastMode = mode == null ? null : NormalizeMode(mode),
+                LastMode = mode == null ? null : NormalizeOrderMode(mode),
                 CreatedAt = now,
                 UpdatedAt = now,
             });
         }
         else
         {
-            if (mode != null) progress.LastMode = NormalizeMode(mode);
+            if (mode != null) progress.LastMode = NormalizeOrderMode(mode);
             progress.UpdatedAt = now;
         }
     }
