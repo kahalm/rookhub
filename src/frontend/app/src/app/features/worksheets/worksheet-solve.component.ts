@@ -11,36 +11,41 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PreferencesService } from '../../core/preferences.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { applyUci, calcDests, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { LineSolver } from '../../shared/chess/line-solver';
 import { SharedWorksheet, SharedWorksheetItem, WorksheetService } from './worksheet.service';
 
 /** Was gerade an der aktuellen Aufgabe passiert. */
 export type SolveState = 'solving' | 'wrong' | 'solved' | 'given-up' | 'free';
 
 /**
- * Prüft einen Zug gegen die Lösung einer Aufgabe und spielt die Gegnerantwort. Ohne Angular und
- * ohne HTTP — damit die Regel („richtig heißt: derselbe Zug wie in der Lösung") einzeln prüfbar
- * bleibt statt nur über die Komponente.
+ * Eine Aufgabe des Blatts: Zustand, Aufgeben, Zurücksetzen, Rechenbrett. Was „richtig gezogen"
+ * heißt, steht NICHT hier, sondern im gemeinsamen {@link LineSolver} (`shared/chess/line-solver.ts`)
+ * — dieselbe Regel, nach der die Puzzles urteilen.
+ *
+ * <p>Geurteilt wird bewusst OHNE die Umwandlungsfigur aus dem Dialog: auf dem Blatt entscheiden
+ * Start und Ziel, und was auf dem Brett landet, setzt die Lösung. Genau das ist die Sonderregel,
+ * die hier früher ausgeschrieben stand (`expected.length === 5 && expected.startsWith(orig + dest)`).</p>
  */
 export class WorksheetTask {
-  readonly chess: Chess;
-  /** Halbzug-Index in {@link solution}, der als Nächstes vom Lösenden erwartet wird. */
-  index = 0;
+  private readonly solver: LineSolver;
   state: SolveState;
   readonly solution: string[];
 
   constructor(public readonly item: SharedWorksheetItem) {
     this.solution = (item.solutionMoves || '').split(' ').filter(m => m.length >= 4);
-    this.chess = tryLoadFen(item.fen) ?? new Chess();
+    this.solver = new LineSolver({ fen: item.fen, line: this.solution.map(uci => ({ uci })) });
     // Ohne Lösung ist die Aufgabe eine zum RECHNEN: das Brett bleibt frei, nichts wird geprüft.
     this.state = this.solution.length === 0 ? 'free' : 'solving';
   }
 
-  get fen(): string { return this.chess.fen(); }
+  get chess(): Chess { return this.solver.chess; }
+  /** Halbzug-Index in {@link solution}, der als Nächstes vom Lösenden erwartet wird. */
+  get index(): number { return this.solver.ply; }
+  get fen(): string { return this.solver.chess.fen(); }
   get orientation(): 'white' | 'black' { return this.item.orientation; }
-  get turnColor(): 'white' | 'black' { return this.chess.turn() === 'w' ? 'white' : 'black'; }
+  get turnColor(): 'white' | 'black' { return this.solver.turn === 'w' ? 'white' : 'black'; }
   get finished(): boolean { return this.state === 'solved' || this.state === 'given-up'; }
-  get dests(): Map<Key, Key[]> { return this.finished ? new Map() : calcDests(this.chess); }
+  get dests(): Map<Key, Key[]> { return this.finished ? new Map() : this.solver.dests(); }
 
   /**
    * Zug des Lösenden. Richtig = derselbe Zug wie in der Lösung; dann folgt die Gegnerantwort
@@ -48,52 +53,29 @@ export class WorksheetTask {
    * gezogen), und die Aufgabe steht weiter offen.
    */
   play(orig: string, dest: string, promotion?: string): boolean {
-    if (this.state === 'free') { this.freeMove(orig, dest, promotion); return true; }
+    if (this.state === 'free') { this.solver.playFree(orig, dest, promotion); return true; }
     if (this.finished) return false;
 
-    const expected = this.solution[this.index];
-    const played = orig + dest + (promotion ?? '');
-    const correct = expected === played
-      // Umwandlung: der Lösende wählt die Figur über den Dialog, die Lösung nennt sie im UCI —
-      // stimmen Start und Ziel, entscheidet die Lösung, was auf dem Brett landet.
-      || (expected.length === 5 && expected.startsWith(orig + dest));
-    if (!correct) { this.state = 'wrong'; return false; }
+    if (this.solver.judge(orig, dest) !== 'correct') { this.state = 'wrong'; return false; }
 
-    applyUci(this.chess, expected);
-    this.index++;
-    this.replyIfAny();
-    if (this.index >= this.solution.length) this.state = 'solved';
-    else this.state = 'solving';
+    this.solver.playExpected();
+    this.solver.opponentReply();   // der Antwortzug gehört nicht zur Aufgabe
+    this.state = this.solver.done ? 'solved' : 'solving';
     return true;
   }
 
   /** Aufgeben: die restliche Lösung wird vorgespielt (wie im Solver nach „Aufgeben"). */
   giveUp(): void {
     if (this.finished || this.state === 'free') return;
-    while (this.index < this.solution.length) {
-      try { applyUci(this.chess, this.solution[this.index]); } catch { break; }
-      this.index++;
-    }
+    while (!this.solver.done && this.solver.playExpected() !== null) { /* Rest vorspielen */ }
     this.state = 'given-up';
   }
 
   /** Zurück auf die Ausgangsstellung (Rechenbrett oder nach einem Fehlversuch). */
   reset(): void {
-    const start = tryLoadFen(this.item.fen);
-    if (!start) return;
-    this.chess.load(start.fen());
-    this.index = 0;
+    if (!this.solver.startFenAccepted) return;   // unbrauchbare FEN: das Ersatzbrett bleibt stehen
+    this.solver.reset();
     this.state = this.solution.length === 0 ? 'free' : 'solving';
-  }
-
-  /** Antwortzug des Gegners (jeder zweite Halbzug der Lösung) — er gehört nicht zur Aufgabe. */
-  private replyIfAny(): void {
-    if (this.index >= this.solution.length) return;
-    try { applyUci(this.chess, this.solution[this.index]); this.index++; } catch { /* kaputte Lösung */ }
-  }
-
-  private freeMove(orig: string, dest: string, promotion?: string): void {
-    try { this.chess.move({ from: orig, to: dest, promotion: promotion || 'q' }); } catch { /* illegal */ }
   }
 }
 

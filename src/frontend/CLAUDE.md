@@ -175,6 +175,9 @@ app/src/app/
     lines/
       chapter-groups.util.ts  groupByChapter: nach Kapitel gruppieren in Vorkommens-Reihenfolge
       mark-set.ts             MarkSet: Flashcard-Markierungen, optimistisch + Rollback
+    chess/
+      line-solver.ts          LineSolver + resolveExpectedUci/sameMove/judgeMove: „ist das der
+                              erwartete Zug?" — EINE Regel fuer alle Loeser
 ```
 
 - **`shared/lines/`** (seit 0.499.2): was sich die beiden LINIEN-LISTEN teilen — die Kurs-Durchsicht
@@ -185,6 +188,33 @@ app/src/app/
   Flashcard-Markierungen und schaltet eine um: sofort in der Liste, Rollback bei Serverfehler. Die
   Klasse verhält sich nach außen wie ein `Set` (`has`/`size`/iterierbar), damit die Vorlagen
   unverändert `marked.has(…)`/`marked.size` benutzen.
+
+- **`shared/chess/line-solver.ts`** (seit 0.499.8): der gemeinsame Kern der Löser — die Antwort auf
+  „ist das der erwartete Zug?". Er legt die Semantik fest, und zwar auf **FELDER**: ein erwarteter
+  Zug steht als `{ uci }` ODER `{ san }` da, wird über `resolveExpectedUci` auf der AKTUELLEN
+  Stellung zu von/nach/Umwandlung aufgelöst (SAN per `chess.move(san)` auf einer KOPIE), und danach
+  ist die SAN nur noch Anzeige — `Nbd2` = `Nb1d2` = `b1d2`, `0-0` = `O-O`, Suffixe `+#!?` zählen
+  nicht. Verglichen wird mit `sameMove` nach der Präfix-Regel der Puzzles: **fehlt im Nutzerzug die
+  Umwandlungsfigur, passt jede; steht eine ANDERE als erwartet, ist es falsch.** `judgeMove` urteilt
+  über einen Nutzerzug OHNE ihn anzuwenden (`correct`/`alternative`/`wrong`/`illegal`/`not-your-turn`);
+  angewendet wird getrennt. Zwei Fälle sind bewusst entschieden und mit Vektoren festgenagelt:
+  **mehrdeutige SAN** (`Nd2`, wenn zwei Springer dorthin können) löst sich zu `null` auf statt zu
+  einer Vermutung — für `judgeMove` heißt das, dass dann KEIN Zug `correct` sein kann, und wer das
+  unterscheiden muss, fragt `resolveExpectedUci`/`expectedUci()` vorher; **lang-algebraische**
+  Schreibweise braucht keine eigene Vorreinigung, weil chess.js sie in seiner (nicht-strikten)
+  Vorgabe schon annimmt (an 1.4.0 nachgemessen, samt `0-0` und `e8Q`).
+  Der Kern ist **synchron, ohne Timer, ohne Engine, ohne Angular** — Phasen, Verzögerungen, viz,
+  Tipps und Eval bleiben bei den Aufrufern. Benutzbar auf zwei Arten: als Klasse `LineSolver`
+  (eigenes Brett + Halbzug-Zählstand: `ply`/`expected`/`done`/`userToMove`/`expectedUci()`/`judge()`/
+  `playExpected()`/`playFree()`/`opponentReply()`/`undo(n)`/`dests()`/`lastMove()`/`reset()`; `chess`
+  ist ausdrücklich LESBAR) oder als reine Funktionen auf einer FREMDEN chess.js-Instanz.
+- **Wer ihn benutzt, wer noch nicht**: `features/worksheets/worksheet-solve.component.ts`
+  (`WorksheetTask` ist seither eine dünne Hülle um `LineSolver` — sie urteilt bewusst OHNE die
+  Umwandlungsfigur des Dialogs, weil auf dem Blatt die Lösung die Figur setzt). **Noch NICHT
+  darauf:** `features/puzzles/base-puzzle-solver.ts` und der Repertoire-Trainer
+  (`features/repertoire/repertoire-trainer.component.ts`) — Letzterer vergleicht weiter
+  normalisierte SAN (`normSan`); ihn umzustellen ändert Verhalten (Feld- statt Textvergleich) und
+  ist ein eigener Lauf. Der Kalkulations-Modus ist **kein Löser** und bleibt außen vor.
 
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
