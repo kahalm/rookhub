@@ -163,14 +163,39 @@ export interface RepertoireFile {
 
 // ── Puzzle Stats ────────────────────────────────────────────────────────
 
-export interface PuzzleStatsDto {
+/**
+ * Die Kennzahlen, die JEDE Versuchs-Statistik traegt — gemeinsame Basis von `PuzzleStatsDto`
+ * (Standard-Puzzles) und `CourseStatsDto` (Kurs-Linien) und Spiegel des serverseitigen
+ * `AttemptStatsDto`. Der Unterschied zwischen den beiden ist AUSSCHLIESSLICH das Elo.
+ */
+export interface AttemptStatsDto {
   totalAttempts: number;
   solved: number;
   accuracy: number;
   currentStreak: number;
   bestStreak: number;
-  puzzleElo: number;
+  /** Versuche im Modus „training" (Brett eingefroren bzw. Visualisierungsstufe > 0). */
+  trainingCount?: number;
+  /** Versuche im Modus „easy" (Figuren normal ziehbar). */
+  easyCount?: number;
 }
+
+/**
+ * Die Antwort von `/api/puzzles/stats`.
+ *
+ * Sie steht HIER und nicht im Puzzle-Dienst, weil zwei Schichten sie lesen: die Puzzle-Seiten
+ * (`features/puzzles/puzzle.service.ts` reicht sie weiter) und das Dashboard
+ * (`core/dashboard.service.ts`). Bis 0.499.13 gab es dafuer ZWEI Deklarationen desselben
+ * Drahtformats — eine hier mit sechs Feldern, eine im Dienst mit der gemeinsamen Basis. Der
+ * Weg musste dieser sein und nicht der umgekehrte: `core/` importiert nicht aus `features/`.
+ */
+export interface PuzzleStatsDto extends AttemptStatsDto {
+  puzzleElo: number;
+  puzzleEloPerLevel?: Record<number, number>;
+}
+
+/** Kurs-Puzzle-Statistik: dieselben Kennzahlen, nur ohne Elo — Kurs-Puzzles haben keins. */
+export type CourseStatsDto = AttemptStatsDto;
 
 // ── Tournament Favorites ────────────────────────────────────────────────
 

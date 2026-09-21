@@ -2,6 +2,7 @@ import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from './snackbar.service';
+import { localStore, readJson, removeKey, writeJson } from './local-json-store';
 
 /** Ein aufgeschobener (offline fehlgeschlagener) schreibender Request. */
 interface PendingRequest {
@@ -87,8 +88,7 @@ export class OfflineQueueService {
    *  keinen DI-Zyklus zu erzeugen). null = nicht eingeloggt / unlesbar. */
   private currentUserId(): number | null {
     try {
-      const raw = localStorage.getItem('rookhub_user');
-      const id = raw ? JSON.parse(raw)?.userId : null;
+      const id = readJson<{ userId?: unknown }>(localStore(), 'rookhub_user')?.userId;
       return typeof id === 'number' ? id : null;
     } catch { return null; }
   }
@@ -129,7 +129,7 @@ export class OfflineQueueService {
 
   /** Alle vorgemerkten Requests verwerfen. */
   clear(): void {
-    try { localStorage.removeItem(OFFLINE_QUEUE_KEY); } catch { /* ignore */ }
+    removeKey(localStore(), OFFLINE_QUEUE_KEY);
   }
 
   /** Vorgemerkte Requests der Reihe nach erneut senden. Nur Einträge des aktuell eingeloggten
@@ -187,18 +187,16 @@ export class OfflineQueueService {
   }
 
   private read(): PendingRequest[] {
-    try {
-      const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch { return []; }
+    const arr = readJson<PendingRequest[]>(localStore(), OFFLINE_QUEUE_KEY);
+    return Array.isArray(arr) ? arr : [];
   }
 
   /** Queue schreiben; `false` = nichts geschrieben (Quota/Privatmodus) — der Aufrufer entscheidet,
    *  ob das ein stiller Zustand (remove nach Erfolg) oder ein meldepflichtiger Verlust (enqueue) ist. */
   private write(q: PendingRequest[]): boolean {
-    try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); return true; }
-    catch { return false; /* Quota */ }
+    // `writeJson` meldet den Fehlschlag, statt ihn zu schlucken — genau die Unterscheidung, die
+    // der Aufrufer hier braucht (stilles `remove` gegen meldepflichtigen Verlust beim Vormerken).
+    return writeJson(localStore(), OFFLINE_QUEUE_KEY, q);
   }
 
   private remove(id: string): void {

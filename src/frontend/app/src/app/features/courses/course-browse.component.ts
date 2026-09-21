@@ -346,7 +346,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   /** Bearbeitungsstatus je Linie (✓ gelöst / ✗ versucht-aber-nicht-gelöst) + favorisierte Linien. */
   private solvedIds = new Set<number>();
   private failedIds = new Set<number>();
-  private favoriteIds = new Set<number>();
+  private favoriteIds = new MarkSet<number>();
 
   constructor(
     private route: ActivatedRoute,
@@ -437,7 +437,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     });
     if (this.isLoggedIn) {
       this.favorites.list(500).subscribe({
-        next: favs => { this.favoriteIds = new Set(favs.filter(f => f.source === 'Book').map(f => f.puzzleId)); },
+        next: favs => this.favoriteIds.replace(favs.filter(f => f.source === 'Book').map(f => f.puzzleId)),
         error: () => {},
       });
     }
@@ -508,13 +508,12 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   toggleFavorite(line: BookPuzzleDto, ev: Event): void {
     ev.stopPropagation();
     if (!this.isLoggedIn) return;
-    const id = line.id;
-    const target = !this.favoriteIds.has(id);
-    if (target) this.favoriteIds.add(id); else this.favoriteIds.delete(id);
-    const op = target ? this.favorites.add('book', id) : this.favorites.remove('book', id);
-    op.subscribe({
-      error: () => { if (target) this.favoriteIds.delete(id); else this.favoriteIds.add(id); },
-    });
+    // Optimistisch umschalten, bei Serverfehler zurueckrollen — dieselbe Mechanik wie bei den
+    // Flashcard-Markierungen, deshalb derselbe Helfer (`MarkSet`). Der Favoriten-Tracker der
+    // Loeser (`features/puzzles/favorite-tracker.ts`) bleibt bewusst eigen: er fuehrt ZWEI Ids
+    // und uebernimmt die Server-Antwort als Wahrheit.
+    this.favoriteIds.toggle(line.id, (id, next) =>
+      next ? this.favorites.add('book', id) : this.favorites.remove('book', id));
   }
 
   /** Teilen-Dialog für eine Linie (Deep-Link auf das einzelne Buch-Puzzle + „An Freund schicken"). */

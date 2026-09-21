@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { allKeys, localStore, readJson, readRaw, removeKey, writeJson } from './local-json-store';
 
 /** localStorage-Keys der Offline-Caches. */
 export const ENDLESS_POOL_KEY = 'rookhub_endless_offline_pool';
@@ -32,17 +33,12 @@ export class OfflineService {
   private settings: OfflineSettings = this.load();
 
   private load(): OfflineSettings {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) {
-        const s = JSON.parse(raw);
-        return {
-          puzzleCount: this.clampInt(s.puzzleCount, DEFAULTS.puzzleCount),
-          endlessRuns: this.clampInt(s.endlessRuns, DEFAULTS.endlessRuns),
-        };
-      }
-    } catch { /* ignore */ }
-    return { ...DEFAULTS };
+    const s = readJson<Partial<OfflineSettings>>(localStore(), SETTINGS_KEY);
+    if (!s) return { ...DEFAULTS };
+    return {
+      puzzleCount: this.clampInt(s.puzzleCount, DEFAULTS.puzzleCount),
+      endlessRuns: this.clampInt(s.endlessRuns, DEFAULTS.endlessRuns),
+    };
   }
 
   private clampInt(v: any, fallback: number): number {
@@ -57,19 +53,16 @@ export class OfflineService {
   setEndlessRuns(n: number): void { this.settings.endlessRuns = this.clampInt(n, DEFAULTS.endlessRuns); this.persist(); }
 
   private persist(): void {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* ignore */ }
+    // Quota/Privatmodus: dann bleibt es bei den Werten dieser Sitzung — mehr kostet es nicht.
+    writeJson(localStore(), SETTINGS_KEY, this.settings);
   }
 
   /** Alle localStorage-Keys, die zu Offline-Caches gehören (Größenanzeige + „Cache leeren"). */
   private cacheKeys(): string[] {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY || k === COURSES_CACHE_KEY
-        || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX)) keys.push(k);
-    }
-    return keys;
+    return allKeys(localStore()).filter(k =>
+      k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY
+      || k === COURSES_CACHE_KEY
+      || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX));
   }
 
   /** Geräte-lokale Nutzer-SPUREN, die beim Abmelden verschwinden müssen — mehr als die Caches oben.
@@ -94,11 +87,8 @@ export class OfflineService {
   /** Keys, die beim Abmelden gelöscht werden: Offline-Caches UND die lokalen Nutzer-Spuren. */
   private logoutKeys(): string[] {
     const keys = new Set(this.cacheKeys());
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
+    for (const k of allKeys(localStore()))
       if (OfflineService.LocalTracePrefixes.some(p => k.startsWith(p))) keys.add(k);
-    }
     return [...keys];
   }
 
@@ -106,7 +96,7 @@ export class OfflineService {
   cacheSizeBytes(): number {
     let chars = 0;
     for (const k of this.cacheKeys()) {
-      const v = localStorage.getItem(k);
+      const v = readRaw(localStore(), k);
       if (v) chars += v.length + k.length;
     }
     return chars * 2;
@@ -124,18 +114,14 @@ export class OfflineService {
 
   /** Leert alle Offline-Caches (Einstellungen bleiben erhalten). */
   clearAll(): void {
-    for (const k of this.cacheKeys()) {
-      try { localStorage.removeItem(k); } catch { /* ignore */ }
-    }
+    for (const k of this.cacheKeys()) removeKey(localStore(), k);
   }
 
   /** Beim ABMELDEN aufräumen: Caches PLUS die lokalen Nutzer-Spuren (siehe <c>logoutKeys</c>).
    *  Getrennt von <see cref="clearAll"/>, weil „Cache leeren" im Profil nur den Platz freigeben
    *  soll — nicht den laufenden Endless-Lauf oder die Kalkulations-Notizen des ANGEMELDETEN Nutzers. */
   clearOnLogout(): void {
-    for (const k of this.logoutKeys()) {
-      try { localStorage.removeItem(k); } catch { /* ignore */ }
-    }
+    for (const k of this.logoutKeys()) removeKey(localStore(), k);
   }
 
   /** Menschlich lesbare Größe. */

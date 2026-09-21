@@ -70,17 +70,24 @@ export function removeKey(storage: Storage | null | undefined, key: string): voi
   try { storage.removeItem(key); } catch { /* gesperrt → egal */ }
 }
 
-/** Alle Schlüssel mit diesem Präfix (leer, wenn der Speicher nicht mitspielt). */
-export function keysWithPrefix(storage: Storage | null | undefined, prefix: string): string[] {
+/** ALLE Schlüssel des Speichers (leer, wenn er nicht mitspielt) — für Aufrufer, die nach mehr
+ *  als einem Präfix suchen, etwa beim Aufräumen der Offline-Ablagen. */
+export function allKeys(storage: Storage | null | undefined): string[] {
   const out: string[] = [];
-  if (!storage || !prefix) return out;
+  if (!storage) return out;
   try {
     for (let i = 0; i < storage.length; i++) {
       const k = storage.key(i);
-      if (k && k.startsWith(prefix)) out.push(k);
+      if (k) out.push(k);
     }
   } catch { /* gesperrt → nichts gefunden */ }
   return out;
+}
+
+/** Alle Schlüssel mit diesem Präfix (leer, wenn der Speicher nicht mitspielt). */
+export function keysWithPrefix(storage: Storage | null | undefined, prefix: string): string[] {
+  if (!prefix) return [];
+  return allKeys(storage).filter(k => k.startsWith(prefix));
 }
 
 /**

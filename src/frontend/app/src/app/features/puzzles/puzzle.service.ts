@@ -29,23 +29,11 @@ export interface PuzzleRatingRange {
   max: number;
 }
 
-/**
- * Die Kennzahlen, die JEDE Versuchs-Statistik traegt — gemeinsame Basis von `PuzzleStatsDto`
- * (Standard-Puzzles) und `CourseStatsDto` (Kurs-Linien). Spiegel des serverseitigen
- * `AttemptStatsDto`; der Unterschied zwischen den beiden ist AUSSCHLIESSLICH das Elo.
- */
-export interface AttemptStatsDto {
-  totalAttempts: number;
-  solved: number;
-  accuracy: number;
-  currentStreak: number;
-  bestStreak: number;
-}
-
-export interface PuzzleStatsDto extends AttemptStatsDto {
-  puzzleElo: number;
-  puzzleEloPerLevel?: Record<number, number>;
-}
+// Die Statistik-Typen wohnen in `core/models.ts` — das Dashboard liest dieselbe Antwort ueber
+// `core/dashboard.service.ts`, und `core/` darf nicht aus `features/` importieren. Hier stehen sie
+// nur als Weiterleitung, damit die Aufrufer dieses Dienstes ihren Import behalten.
+import { AttemptStatsDto, CourseStatsDto, PuzzleStatsDto } from '../../core/models';
+export type { AttemptStatsDto, CourseStatsDto, PuzzleStatsDto };
 
 export interface PuzzleAttemptDto {
   id: number;
@@ -118,8 +106,7 @@ export interface BookInfoDto {
   puzzleCount: number;
 }
 
-/** Kurs-Puzzle-Statistik: dieselben Kennzahlen, nur ohne Elo — Kurs-Puzzles haben keins. */
-export interface CourseStatsDto extends AttemptStatsDto {}
+
 
 /** Eine Zeile der Kurs-Versuchs-History (wie PuzzleAttemptDto, ohne Elo). */
 export interface CourseAttemptDto {
