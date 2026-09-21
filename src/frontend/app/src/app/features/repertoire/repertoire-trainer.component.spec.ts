@@ -4,6 +4,7 @@ import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { LineStateDto } from './repertoire-training.service';
 import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
+import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
 /** Minimal-PGN mit zwei einfachen Linien für den Line-basierten Trainer. */
 const PGN = [
@@ -551,5 +552,228 @@ describe('RepertoireTrainerComponent offline', () => {
     const st = cached.states.find((s: any) => s.lineKey === KEY_A);
     expect(st.level).toBe(2);
     expect(new Date(st.dueAt).getTime()).toBeGreaterThan(Date.now());
+  }));
+});
+
+/**
+ * Der Trainer urteilt seit 0.499.10 über den gemeinsamen Kern `shared/chess/line-solver`
+ * (`judgeMove`/`resolveExpectedUci`) — verglichen werden FELDER, nicht mehr normalisierter
+ * Zug-TEXT.
+ *
+ * <p><b>Gemessen, nicht angenommen</b>: `parsePgnText` liefert die Linie als chess.js-`Move`-Objekte
+ * (`chess.loadPgn` → `history({verbose:true})`), deren `san` IMMER die kanonische Schreibweise von
+ * chess.js ist — ein `Nbd2` im PGN kommt als `Nd2` an, ein `e2e4` als `e4`. Ein Test, der nur ein
+ * PGN hineingibt, prüft deshalb den PARSER und nicht den Vergleich. Die Tests hier schreiben die
+ * SAN der Linie darum bewusst auf eine NICHT kanonische Form um: genau so sähe sie aus, wenn die
+ * Linie einmal nicht über ein Brett kanonisiert ankommt — und genau daran hing bisher „richtig".</p>
+ */
+describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
+  afterEach(() => {
+    localStorage.removeItem('rookhub_rep_train_color_1');
+    localStorage.removeItem('rookhub_rep_train_chaptercolor_1');
+  });
+
+  /** Linien-Schlüssel eines einzeiligen Test-PGN — aus demselben Weg wie im Trainer (`lineKeyOf`). */
+  const keyOf = (pgn: string) => lineKeyFromSans(parsePgnText(pgn)[0].moves.map(m => m.san));
+
+  /** Schreibt die SAN eines Halbzugs der laufenden Linie um (siehe Kommentar oben). */
+  const writeSan = (c: RepertoireTrainerComponent, ply: number, san: string) => {
+    (c as any).queue[(c as any).qIndex].moves[ply].san = san;
+  };
+
+  const game = (white: string, moves: string, fen?: string) => [
+    '[Event "Rep"]', `[White "${white}"]`, '[Black "Chapter A"]',
+    ...(fen ? [`[FEN "${fen}"]`] : []), '', moves, '',
+  ].join('\n');
+
+  const CASTLING_FEN = 'r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1';
+  const PROMO_FEN = '4k3/P7/8/8/8/8/8/4K3 w - - 0 1';
+  /** Weiß am Zug, NUR der b1-Springer kommt nach d2 — chess.js schreibt dort `Nd2`. */
+  const ONE_KNIGHT_FEN = 'rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 3';
+  /** Weiß am Zug, BEIDE Springer (b1 und f3) kommen nach d2 — `Nd2` ist dort mehrdeutig. */
+  const TWO_KNIGHTS_FEN = 'rnbqkbnr/ppp1pppp/8/3p4/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 3';
+
+  const open = (pgn: string) => make('w', null, pgn, [state(keyOf(pgn), PAST())]);
+
+  it('ein UNTERSCHEIDER in der Linie (Nbd2 statt Nd2) zählt als richtig — dieselben Felder', () => {
+    // Nur der b1-Springer kommt nach d2, chess.js schreibt also `Nd2`; die Linie trägt `Nbd2`, wie
+    // es ein Chessable-PGN notiert. Früher: `normSan('Nbd2') !== 'Nd2'` → Fehlzug.
+    const c = open(game('Nbd2', '3. Nd2 Nf6 *', ONE_KNIGHT_FEN));
+    writeSan(c, 0, 'Nbd2');
+    c.onMove({ orig: 'b1' as any, dest: 'd2' as any });
+    expect(c.outcome).toBe('correct');
+  });
+
+  it('LANG-ALGEBRAISCH in der Linie (e2e4) zählt als richtig', () => {
+    const c = open(game('lang', '1. e4 e5 2. Nf3 Nc6 *'));
+    writeSan(c, 0, 'e2e4');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');
+  });
+
+  it('ein Unterscheider mitten in der Linie (Nbd2 statt Nd2) zählt als richtig', fakeAsync(() => {
+    const pgn = game('Nbd2', '1. d4 d5 2. Nd2 Nf6 *');
+    const c = open(pgn);
+    writeSan(c, 2, 'Nbd2');                       // Halbzug 2 = der weiße Springerzug
+    c.onMove({ orig: 'd2' as any, dest: 'd4' as any });
+    tick(3000); tick(400);                        // Feedback + Gegnerzug d5
+    expect(c.phase).toBe('PLAYING');
+    c.onMove({ orig: 'b1' as any, dest: 'd2' as any });
+    expect(c.outcome).toBe('correct');
+    tick(3000); tick(400);
+  }));
+
+  it('ein wirklich ANDERER Zug bleibt falsch — der Feldvergleich ist milder, nicht blind', () => {
+    const c = open(game('lang', '1. e4 e5 2. Nf3 Nc6 *'));
+    writeSan(c, 0, 'e2e4');
+    c.onMove({ orig: 'a2' as any, dest: 'a3' as any });
+    expect(c.outcome).toBe('wrong');
+  });
+
+  it('Regression: 0-0 in der Linie bleibt der Rochadezug', () => {
+    const c = open(game('Rochade', '1. O-O O-O *', CASTLING_FEN));
+    writeSan(c, 0, '0-0');
+    c.onMove({ orig: 'e1' as any, dest: 'g1' as any });
+    expect(c.outcome).toBe('correct');
+  });
+
+  it('Regression: c8Q-Schreibweise in der Linie bleibt der Umwandlungszug', () => {
+    const c = open(game('Umwandlung', '1. a8=Q Kd7 *', PROMO_FEN));
+    writeSan(c, 0, 'a8Q');
+    c.onMove({ orig: 'a7' as any, dest: 'a8' as any, promotion: 'q' });
+    expect(c.outcome).toBe('correct');
+  });
+
+  it('Umwandlung OHNE gewählte Figur: es zählt, und die Figur der LINIE landet auf dem Brett', () => {
+    // Die eine wirklich sichtbare Verhaltensänderung. Vorher wurde der Nutzerzug mit Dame-Vorgabe
+    // gespielt und gegen `a8=R` als FALSCH verglichen; jetzt passt ein Zug ohne genannte Figur auf
+    // jede Umwandlung (Regel des Kerns) — und aufs Brett kommt der Turm der Linie, nicht die Dame.
+    const c = open(game('Unterverwandlung', '1. a8=R Kd7 *', PROMO_FEN));
+    c.onMove({ orig: 'a7' as any, dest: 'a8' as any });
+    expect(c.outcome).toBe('correct');
+    expect(c.fen.split('/')[0]).toBe('R3k3');
+  });
+
+  it('eine ANDERE genannte Umwandlungsfigur bleibt ein Fehlzug', () => {
+    const c = open(game('Unterverwandlung', '1. a8=R Kd7 *', PROMO_FEN));
+    c.onMove({ orig: 'a7' as any, dest: 'a8' as any, promotion: 'q' });
+    expect(c.outcome).toBe('wrong');
+  });
+
+  it('eine geduldete Alternative bleibt geduldet — und der Hauptzug wird weiter verlangt', fakeAsync(() => {
+    const c = make('w', null, PGN_ALT, [state(KEY_A, PAST())]);
+    const startFen = c.fen;
+    c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // [%alt d4]
+    expect(c.outcome).toBe('tolerated');
+    tick(1500);                                           // zurücknehmen → dieselbe Stellung
+    expect(c.fen).toBe(startFen);
+    expect(c.phase).toBe('PLAYING');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // erst der Hauptzug führt weiter
+    expect(c.outcome).toBe('correct');
+    tick(3000); tick(400);
+  }));
+
+  it('der HAUPTZUG ist keine Alternative, auch wenn [%alt] ihn mitnennt', () => {
+    // Früher siebte `accepted.delete(expectedSan)` ihn aus der Menge; jetzt steckt die Regel im
+    // Kern: `judgeMove` prüft den erwarteten Zug ZUERST und antwortet `correct`.
+    const pgn = [
+      '[Event "Rep"]', '[White "1.e4"]', '[Black "Chapter A"]', '',
+      '1. e4 {[%alt e4 d4]} e5 2. Nf3 Nc6 *', '',
+    ].join('\n');
+    const c = make('w', null, pgn, [state(KEY_A, PAST())]);
+    expect((c as any).altsAt((c as any).fen.split(' ').slice(0, 4).join(' ')).length).toBe(2);
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');                    // NICHT 'tolerated'
+  });
+
+  it('„Lösung zeigen" spielt auch einen nicht kanonisch notierten Zug aufs Brett', () => {
+    const c = open(game('lang', '1. e4 e5 2. Nf3 Nc6 *'));
+    writeSan(c, 0, 'e2e4');
+    const startFen = c.fen;
+    c.onMove({ orig: 'a2' as any, dest: 'a3' as any });   // falsch → FEEDBACK
+    c.showSolution();
+    expect(c.fen).not.toBe(startFen);
+    expect(c.lastMove).toEqual(['e2', 'e4'] as any);
+  });
+
+  it('MEHRDEUTIGE SAN in der Linie: kein Zug gilt als richtig, die Linie bleibt heil', () => {
+    // Der Kern löst `Nd2` bei zwei erreichbaren Springern zu `null` auf — geraten wird nicht.
+    // Für den Trainer heißt das: wie ein nicht auflösbarer Zug behandeln. Kein „richtig",
+    // „Lösung zeigen" enthüllt nur den TEXT (nichts wird gespielt), und der Trainer läuft weiter.
+    const c = open(game('mehrdeutig', '3. Nbd2 Nf6 *', TWO_KNIGHTS_FEN));
+    writeSan(c, 0, 'Nd2');
+    const startFen = c.fen;
+    c.onMove({ orig: 'b1' as any, dest: 'd2' as any });
+    expect(c.outcome).toBe('wrong');
+    expect(c.phase).toBe('FEEDBACK');
+    expect(c.fen).toBe(startFen);
+    c.showSolution();
+    expect(c.wrongRevealed).toBeTrue();
+    expect(c.expectedDisplay).toBe('Nd2');
+    expect(c.fen).toBe(startFen);                         // nichts geraten, nichts gespielt
+    expect(() => c.continueAfterWrong()).not.toThrow();
+  });
+
+  it('Lern-Modus akzeptiert NUR den erwarteten Zug, keine Alternative', fakeAsync(() => {
+    const route: any = {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: (k: string) => k === 'mode' ? 'learn' : null },
+      },
+    };
+    const training: any = {
+      getPgn: () => of(PGN_ALT),
+      getLineStates: () => of([]),                        // nichts im Pool → lernbar
+      reviewLine: () => of(state(KEY_A, FUTURE())),
+      promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
+    };
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w' }));
+    const c = new RepertoireTrainerComponent(
+      route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any,
+    );
+    c.ngOnInit();
+    expect(c.phase).toBe('LEARN_SHOW');
+    tick(1000);
+    expect(c.phase).toBe('PLAYING');
+    c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // die im Abfragen-Modus GEDULDETE Alternative
+    expect(c.phase).toBe('LEARN_SHOW');                   // → im Lernen nicht akzeptiert, nochmal vorzeigen
+    expect((c as any).currentPly).toBe(0);
+    tick(1000);
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // nur der erwartete Zug führt weiter
+    expect((c as any).currentPly).toBe(1);
+    tick(400); tick(800);
+  }));
+
+  it('Lern-Modus: ein nicht kanonisch notierter erwarteter Zug zählt ebenfalls', fakeAsync(() => {
+    const route: any = {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: (k: string) => k === 'mode' ? 'learn' : null },
+      },
+    };
+    const training: any = {
+      getPgn: () => of(PGN),
+      getLineStates: () => of([]),
+      reviewLine: () => of(state(KEY_A, FUTURE())),
+      promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
+    };
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));
+    const c = new RepertoireTrainerComponent(
+      route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any,
+    );
+    c.ngOnInit();
+    (c as any).learnPass = 1;                             // Wiederholungs-Durchlauf: kein Vorzeigen
+    (c as any).startCurrentLine();
+    expect(c.phase).toBe('PLAYING');
+    (c as any).queue[(c as any).qIndex].moves[0].san = 'e2e4';
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect((c as any).currentPly).toBe(1);                // akzeptiert, kein erneutes Vorzeigen
+    tick(400); tick(800);
   }));
 });

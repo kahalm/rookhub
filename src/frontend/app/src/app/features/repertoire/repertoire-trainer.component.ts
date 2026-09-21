@@ -14,11 +14,11 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { calcDests } from '../puzzles/puzzle-move.util';
+import { applyUci, calcDests, tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto, LineReviewRequest, SrLevel } from './repertoire-training.service';
-import { buildRepertoireGraph, normSan, normFen, RepertoireGraph } from './repertoire-tree.util';
+import { buildRepertoireGraph, normFen, RepertoireGraph } from './repertoire-tree.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
@@ -28,6 +28,7 @@ import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOffline
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
+import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 
 type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW' | 'COMMENT';
 type Outcome = 'correct' | 'tolerated' | 'wrong';
@@ -49,9 +50,16 @@ const LEARN_REPEATS = 3;
 /**
  * Line-basiertes Repertoire-Training: eine ganze PGN-Linie wird vom Startzug an durchgespielt,
  * Gegnerzüge automatisch, an jedem eigenen Zug pausiert der Trainer und wertet den User-Zug gegen
- * die Linie (SAN + [%alt]-tolerierte Alternativen). Nach dem letzten Zug: nächste Linie. Ein
- * `?chapter=Name`-Query beschränkt die Sitzung auf ein Kapitel (Black-Header). SM-2-Reviews werden
- * je Position (normFen als Card-Key) weiterhin ans Backend gesendet.
+ * die Linie (erwarteter Zug + [%alt]-tolerierte Alternativen). Nach dem letzten Zug: nächste Linie.
+ * Ein `?chapter=Name`-Query beschränkt die Sitzung auf ein Kapitel (Black-Header). SM-2-Reviews
+ * werden je Position (normFen als Card-Key) weiterhin ans Backend gesendet.
+ *
+ * <p><b>Das Urteil „ist das der erwartete Zug?" kommt aus shared/chess/line-solver</b> — denselben
+ * reinen Funktionen wie im Puzzle-Löser, nicht der Klasse `LineSolver`: dieser Trainer führt sein
+ * Brett (`this.chess`) selbst und WEIST es neu zu (jede Linie, `showSolution`, der Offline-Pfad).
+ * Verglichen werden damit FELDER statt Zug-TEXT; `normSan` braucht es hier nicht mehr. Bei der
+ * ANZEIGE (`expectedDisplay`, `movesInLine`, `currentMovePrettyLabel`) und beim Eval-Vergleich
+ * bleibt es bei der SAN — dort ist sie Text für Menschen, kein Urteil.</p>
  */
 @Component({
   selector: 'app-repertoire-trainer',
@@ -641,6 +649,29 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return Math.abs(this.evalDeltaPawns).toFixed(2).replace(/\.?0+$/, '');
   }
 
+  /** Die geduldeten Alternativen ([%alt]) DIESER Stellung in der Form des gemeinsamen Kerns.
+   *
+   *  <p>Sie stehen im Repertoire-Graph als SAN und werden dort schon über das Brett kanonisiert;
+   *  aufgelöst wird trotzdem hier erneut — gegen die Stellung, in der der Zug fallen soll.</p>
+   *
+   *  <p>Der Hauptzug wird bewusst NICHT ausgesiebt: die alte Zeile `accepted.delete(expectedSan)`
+   *  steckt im Kern. {@link judgeMove} prüft den ERWARTETEN Zug zuerst und antwortet dann
+   *  `correct` — als `alternative` kann er gar nicht mehr herauskommen.</p> */
+  private altsAt(cardKey: string): ExpectedMove[] {
+    const list = this.graph?.moves.get(cardKey);
+    if (!list) return [];
+    const out: ExpectedMove[] = [];
+    const seen = new Set<string>();
+    for (const m of list) {
+      for (const a of m.alts) {
+        if (seen.has(a)) continue;
+        seen.add(a);
+        out.push({ san: a });
+      }
+    }
+    return out;
+  }
+
   onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
     const line = this.queue[this.qIndex];
     if (!line || this.currentPly >= line.moves.length) return;
@@ -652,33 +683,33 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       this.evalLoading = false; this.evalDeltaPawns = null; this.evalMateNote = null; this.evalEpoch++;
     }
 
+    // Geurteilt wird gegen GENAU diese Stellung — `this.fen`, nicht `this.chess`: im Wiederhol-Fall
+    // nach einem Fehlzug ist `this.fen` bereits auf die Ausgangsstellung des Halbzugs zurückgesetzt.
     this.startFen = this.fen;
-    let userSan = '';
-    let fenAfterPlayer = '';
-    try {
-      const c = new Chess(this.fen);
-      const mv = c.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' });
-      userSan = normSan(mv.san);
-      fenAfterPlayer = c.fen();
-      this.lastMove = [ev.orig, ev.dest];
-    } catch { return; }
+    const board = tryLoadFen(this.fen);
+    if (!board) return;
 
     const expectedMove = line.moves[this.currentPly];
-    const expectedSan = normSan(expectedMove.san);
+    const expected: ExpectedMove = { san: expectedMove.san };
     const cardKey = normFen(this.fen);
-    // Tolerierte Alternativen kommen aus dem Repertoire-Graph ([%alt]-Kommentare).
-    const graphList = this.graph?.moves.get(cardKey);
-    const accepted = new Set<string>();
-    if (graphList) {
-      for (const m of graphList) {
-        for (const a of m.alts) accepted.add(normSan(a));
-      }
-    }
-    accepted.delete(expectedSan);
+
+    // EIN Urteil aus dem gemeinsamen Kern (shared/chess/line-solver): erwarteter Zug UND geduldete
+    // Alternativen in einem Schritt, verglichen werden FELDER statt Zug-TEXT. `illegal` und
+    // `not-your-turn` gehen dorthin, wo früher der catch-Zweig hinführte: kein Feedback, nichts
+    // passiert (über das Brett-Component kommen ohnehin nur legale Züge herein).
+    const verdict = judgeMove(board, expected, this.altsAt(cardKey), ev.orig, ev.dest, ev.promotion);
+    if (verdict === 'illegal' || verdict === 'not-your-turn') return;
+    const expectedUci = resolveExpectedUci(board, expected);
+
+    // Den Nutzerzug auf der KOPIE anwenden: seine Folgestellung braucht der Eval-Vergleich, und ein
+    // geduldeter Zug bleibt kurz auf dem Brett stehen.
+    if (!tryFreeMove(board, ev.orig, ev.dest, ev.promotion)) return;
+    const fenAfterPlayer = board.fen();
+    this.lastMove = [ev.orig, ev.dest];
 
     // SR wird PRO LINIE bewertet (finishLine); hier nur Feedback + Merken, ob die Linie schon
     // einen Fehler hatte. Geduldete Züge zählen neutral.
-    if (userSan === expectedSan) {
+    if (verdict === 'correct') {
       this.outcome = 'correct'; this.correct++;
       // Ein an dieser Stellung offener Fehler, den der User NICHT als Mausrutscher deklariert hat,
       // zählt jetzt (er macht ohne „Mausrutscher" weiter). Streak wird durch den echten Fehler
@@ -688,12 +719,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.currentStreak = 0;
       }
       this.bumpStreak();
-      // Korrekten Zug in der maßgeblichen Partie nachführen, damit advanceToUserMove die
-      // Gegnerzüge aus der richtigen Stellung spielt (sonst hängt eine Linie mit mehreren
-      // eigenen Zügen).
-      try { this.chess.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' }); } catch {}
+      // Nachgeführt wird der ERWARTETE Zug, nicht der rohe Nutzerzug: nennt der Nutzer bei einer
+      // Umwandlung keine Figur, gehört die der LINIE aufs Brett (dieselbe Regel wie im
+      // Puzzle-Löser). Die Felder sind ohnehin dieselben — sonst wäre das Urteil nicht `correct`.
+      // Ohne das Nachführen hängt eine Linie mit mehreren eigenen Zügen (advanceToUserMove spielt
+      // die Gegnerzüge aus `this.chess`).
+      if (expectedUci) { try { applyUci(this.chess, expectedUci); } catch { /* Brett steht woanders */ } }
       this.fen = this.chess.fen();
-    } else if (accepted.has(userSan)) {
+    } else if (verdict === 'alternative') {
       this.outcome = 'tolerated';
       if (this.pendingWrong) {
         this.lineHadWrong = true; this.wrong++; this.pendingWrong = false;
@@ -757,18 +790,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.pendingWrong = false;
     const line = this.queue[this.qIndex];
     const expected = line?.moves[this.currentPly];
-    if (expected) {
+    const board = expected ? tryLoadFen(this.startFen) : null;
+    // Der erwartete Zug wird über das BRETT auf Felder aufgelöst (gemeinsamer Kern) statt als Text
+    // gespielt. `null` = in dieser Stellung nicht auflösbar (mehrdeutige SAN, kaputte Linie) — dann
+    // bleibt es beim Text-Reveal, genau wie vorher.
+    const uci = board && expected ? resolveExpectedUci(board, { san: expected.san }) : null;
+    if (uci) {
       try {
-        const c = new Chess(this.startFen);
-        const mv = c.move(expected.san);
-        if (mv) {
-          this.chess.load(this.startFen);
-          this.chess.move(expected.san);
-          this.fen = this.chess.fen();
-          this.lastMove = [mv.from as Key, mv.to as Key];
-          this.dests = new Map();
-        }
-      } catch { /* SAN nicht spielbar → nur Text-Reveal */ }
+        this.chess.load(this.startFen);
+        const mv = applyUci(this.chess, uci);
+        this.fen = this.chess.fen();
+        this.lastMove = [mv.from as Key, mv.to as Key];
+        this.dests = new Map();
+      } catch { /* Stellung nicht ladbar → nur Text-Reveal */ }
     }
     this.cdr.markForCheck();
   }
@@ -892,24 +926,25 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (this.learnTimer !== null) { clearTimeout(this.learnTimer); this.learnTimer = null; }
   }
 
-  /** Learn-Zug: nur der gezeigte (erwartete) Zug führt weiter; falsch → Zug erneut zeigen. */
+  /** Learn-Zug: nur der gezeigte (erwartete) Zug führt weiter; falsch → Zug erneut zeigen.
+   *
+   *  <p>Der Lern-Modus duldet ausdrücklich KEINE Alternativen — der Kern bekommt deshalb eine leere
+   *  Alternativen-Liste, während der Abfragen-Modus {@link altsAt} mitgibt.</p> */
   private onLearnMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
     const line = this.queue[this.qIndex];
     if (!line || this.phase !== 'PLAYING' || this.currentPly >= line.moves.length) return;
-    let userSan = '';
-    try {
-      const c = new Chess(this.startFen);
-      userSan = normSan(c.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' }).san);
-    } catch { return; }
-    if (userSan === normSan(line.moves[this.currentPly].san)) {
-      try { this.chess.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' }); } catch {}
-      this.fen = this.chess.fen();
-      this.lastMove = [ev.orig, ev.dest];
-      this.currentPly++;
-      this.advanceToUserMove();
-    } else {
-      this.enterLearnShow();   // nicht der Zug → nochmal vormachen
-    }
+    const board = tryLoadFen(this.startFen);
+    if (!board) return;
+    const expected: ExpectedMove = { san: line.moves[this.currentPly].san };
+    const verdict = judgeMove(board, expected, [], ev.orig, ev.dest, ev.promotion);
+    if (verdict === 'illegal' || verdict === 'not-your-turn') return;
+    if (verdict !== 'correct') { this.enterLearnShow(); return; }   // nicht der Zug → nochmal vormachen
+    const uci = resolveExpectedUci(board, expected);
+    if (uci) { try { applyUci(this.chess, uci); } catch { /* Brett steht woanders */ } }
+    this.fen = this.chess.fen();
+    this.lastMove = [ev.orig, ev.dest];
+    this.currentPly++;
+    this.advanceToUserMove();
   }
 
   /** Geduldeten Zug zurücknehmen und die aktuelle Stellung erneut spielbar machen. */
