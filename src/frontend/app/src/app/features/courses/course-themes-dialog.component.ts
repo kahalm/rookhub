@@ -13,8 +13,16 @@ export interface CourseThemesDialogData {
   themes: string[];
 }
 
-/** Alle wählbaren Buch-Themen-Keys (= Backend-`ChessableTheme`-Keys). */
-const ALL_THEMES = ['tactics', 'endgame', 'opening', 'middlegame', 'other'] as const;
+/**
+ * Alle wählbaren Buch-Themen-Keys (= Backend-`ChessableTheme`-Keys, kleingeschrieben).
+ *
+ * SPIEGEL von `BookThemeTags.ValidKeys` (Backend) — die REIHENFOLGE ist hier die Anzeige-Reihenfolge
+ * des Dialogs und darf abweichen, die MENGE nicht: ein Key, den der Server nicht kennt, wäre eine
+ * Checkbox, deren Haken beim Speichern still verfällt. Exportiert, damit beide Seiten je einen Test
+ * mit literalen Werten dagegenhalten (`course-themes-dialog.component.spec.ts` ↔
+ * `BookThemeTagsTests.ValidKeys_MatchTheFrontendMirror`).
+ */
+export const ALL_THEMES = ['tactics', 'endgame', 'opening', 'middlegame', 'other'] as const;
 
 /**
  * Multi-Select-Dialog für die Themen-Tags eines Kurs-Buchs (Admin/Besitzer). Gibt beim Speichern
