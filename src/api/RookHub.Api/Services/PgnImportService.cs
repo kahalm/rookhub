@@ -84,6 +84,12 @@ public class PgnImportService
         {
             var fen = headers.GetValueOrDefault("FEN", "").Trim();
             var round = headers.GetValueOrDefault("Round", "").Trim();
+            // Info-Linie aus einem RookHub-Download: dort fällt [%info] weg, stattdessen steht
+            // „Info | " vor dem White-Header (PgnParser.ForDownload). Präfix abnehmen → der Titel ist
+            // wieder der ursprüngliche, die Linie bleibt Info-Linie.
+            var infoByHeader = headers.TryGetValue("White", out var whiteHdr)
+                && whiteHdr.TrimStart().StartsWith(PgnParser.InfoLinePrefix, StringComparison.Ordinal);
+            if (infoByHeader) headers["White"] = whiteHdr!.TrimStart()[PgnParser.InfoLinePrefix.Length..];
             // Chessable-oid (von piratechess als [ChessableOid] mitgegeben) → eindeutige Zuordnung
             // importierte Linie ↔ Chessable-Linie für die Fortschritts-Overlays. null wenn nicht vorhanden.
             var oidHdr = headers.GetValueOrDefault("ChessableOid", "").Trim();
@@ -106,7 +112,7 @@ public class PgnImportService
             var altMoves = PgnParser.ExtractAltMoves(fen, moveText);
             // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
             // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren.
-            var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
+            var isInfoOnly = infoByHeader || moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
             var uci = PgnParser.TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0)
             {

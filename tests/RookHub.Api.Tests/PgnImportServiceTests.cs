@@ -655,6 +655,39 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParsePgn_InfoPrefixInWhite_MarksInfoLine_AndRestoresTitle()
+    {
+        // Rundreise: Kurs mit Info-Linie → Download (ForDownload: „Info | " statt [%info]) → wieder importiert.
+        var original = @"
+[Event ""B""]
+[Round ""1.1""]
+[White ""Idee""]
+[Black ""Kapitel 1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{[%info] Worum es geht.} 1. e4 e5 *
+
+[Event ""B""]
+[Round ""1.2""]
+[White ""Linie""]
+[Black ""Kapitel 1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. d4 {[%tqu ""En"","""","""","""",""d7d5"","""",10]} d5 *
+";
+        var downloaded = PgnParser.ForDownload(original);
+        Assert.Contains("[White \"Info | Idee\"]", downloaded);
+
+        var before = PgnImportService.ParsePgn("b.pgn", original, keepCommentOnlyAsInfo: true).Puzzles;
+        var after = PgnImportService.ParsePgn("b.pgn", downloaded, keepCommentOnlyAsInfo: true).Puzzles;
+        Assert.Equal(2, after.Count);
+        Assert.True(after[0].IsInfoOnly);
+        Assert.Equal(before[0].Title, after[0].Title);   // Präfix wieder abgenommen
+        Assert.False(after[1].IsInfoOnly);
+        Assert.Equal(before[1].Title, after[1].Title);
+    }
+
+    [Fact]
     public void ParsePgn_HandlesCastling()
     {
         var pgn = @"
