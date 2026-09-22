@@ -97,6 +97,30 @@ public class RepertoireController : BaseApiController
         }
     }
 
+    // ===== Lochfinder + Linien-Häufigkeiten (Lichess-Explorer) =====
+
+    /// <summary>Welche häufigen Gegnerzüge fehlen im Repertoire, und wie oft erreicht man jede Linie?
+    /// Antwortet nach höchstens ~20 s Abfragezeit mit dem bisherigen Stand (<c>complete = false</c>) — der Client
+    /// fragt dann erneut, das schon Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger.
+    /// Der Dienst kommt per <c>[FromServices]</c>, damit der Konstruktor (und seine Tests) unberührt bleibt.</summary>
+    [HttpPost("{id:int}/explorer-analysis")]
+    public async Task<ActionResult<ExplorerAnalysisResultDto>> ExplorerAnalysis(
+        int id, [FromBody] ExplorerAnalysisRequestDto dto, [FromServices] RepertoireExplorerService explorer, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await explorer.AnalyzeAsync(GetUserId(), id, dto, ct));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     // ===== Repertoire-Trainer (Spaced Repetition, 9-Stufen-Leiter) =====
     // Brett-/Baumlogik + Linien-Schlüssel liegen im Frontend; hier nur der Linien-SR-Zustand
     // (Stufe/Fälligkeit) + die Intervall-Konfiguration (global + pro-Repertoire-Override).

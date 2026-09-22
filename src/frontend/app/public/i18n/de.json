@@ -45,7 +45,16 @@
     "repeatLine": "Nochmal",
     "nextLine": "Nächste Linie",
     "offlineBadge": "Offline",
-    "offlineHint": "Training aus der Offline-Kopie — Ergebnisse werden auf diesem Gerät gespeichert und automatisch synchronisiert, sobald du wieder online bist."
+    "offlineHint": "Training aus der Offline-Kopie — Ergebnisse werden auf diesem Gerät gespeichert und automatisch synchronisiert, sobald du wieder online bist.",
+    "freqOrder": "Häufigste Linien zuerst",
+    "freqOrderOn": "Häufigste Linien zuerst: an (Reihenfolge nach Lichess-Explorer)",
+    "freqOrderOff": "Häufigste Linien zuerst: aus",
+    "freqLoading": "Häufigkeiten werden aus dem Lichess-Explorer geladen …",
+    "freqSkip": "Überspringen",
+    "freqToken": "Für „Häufigste zuerst“ fehlt ein Lichess-Token im Profil – die Reihenfolge bleibt wie gewohnt.",
+    "freqFailed": "Die Häufigkeiten konnten nicht geladen werden – die Reihenfolge bleibt wie gewohnt.",
+    "freqIncomplete": "Die Häufigkeiten sind noch unvollständig – Linien ohne Wert kommen zuletzt.",
+    "freqLineTip": "Wie oft du diese Linie in echten Partien erreichst (Lichess-Explorer, Auswahl wie im Lochfinder)"
   },
   "srConfig": {
     "title": "Übungszyklen",
@@ -826,7 +835,8 @@
       "noDescription": "Keine Beschreibung",
       "modeLines": "Linien",
       "modeTree": "Baum",
-      "modeEdit": "Bearbeiten"
+      "modeEdit": "Bearbeiten",
+      "modeHoles": "Lochfinder"
     },
     "dialog": {
       "title": "Neues Repertoire",
@@ -926,7 +936,46 @@
       "defaultTitle": "Repertoire-Linie",
       "error": "Teilen-Link konnte nicht erstellt werden."
     },
-    "downloadLine": "Linie als PGN herunterladen"
+    "downloadLine": "Linie als PGN herunterladen",
+    "holes": {
+      "color": "Farbe",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "asWhite": "Kapitel mit Weiß",
+      "asBlack": "Kapitel mit Schwarz",
+      "database": "Datenbank",
+      "masters": "Meister",
+      "help": "Der Lochfinder geht dein Repertoire durch und fragt in jeder Stellung, in der dein Gegner am Zug ist und du eine Antwort vorbereitet hast, beim Lichess-Explorer nach, was dort gespielt wird.\n\nEin Loch ist ein Gegnerzug, der mindestens so oft gespielt wird wie der Grenzwert und zu einer Stellung führt, die nirgends in deinem Repertoire vorkommt – auch nicht über eine andere Zugfolge.\n\nSortiert wird danach, wie oft du das Loch in echten Partien erreichst. Das Ende einer Linie ist kein Loch.",
+      "ratings": "Elo",
+      "speeds": "Tempo",
+      "speed": {
+        "ultraBullet": "UltraBullet",
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Schnellschach",
+        "classical": "Klassisch",
+        "correspondence": "Fernschach"
+      },
+      "threshold": "Grenzwert",
+      "thresholdHelp": "Ab welchem Anteil der Partien in einer Stellung ein fehlender Gegnerzug als Loch zählt. 1 % findet auch Nebenvarianten, 5 % nur die Hauptzüge. Erlaubt sind 0,1 bis 50 %.",
+      "cancel": "Abbrechen",
+      "search": "Löcher suchen",
+      "progress": "{{done}} Stellungen ausgewertet, {{open}} offen",
+      "rateLimited": "Lichess bremst gerade – es geht in {{seconds}} s weiter.",
+      "tokenMissing": "Für den Lichess-Explorer braucht es einen Lichess-Token. Hinterlege ihn im Profil unter „Externe Engine (Lichess)“.",
+      "tokenInvalid": "Lichess hat den hinterlegten Token abgelehnt.",
+      "toProfile": "Zum Profil",
+      "fetchFailed": "Der Lichess-Explorer ist gerade nicht erreichbar. Versuch es später noch einmal.",
+      "incomplete": "Noch nicht alle Stellungen ausgewertet. „Löcher suchen“ macht dort weiter, wo es aufgehört hat.",
+      "count": "{{count}} Löcher",
+      "none": "Keine Löcher über dem Grenzwert gefunden.",
+      "shareTip": "Anteil dieses Zugs an allen Partien in der Stellung",
+      "frequencyTip": "Wie oft du mit deinem Repertoire in diese Stellung kommst und der Gegner dann diesen Zug spielt",
+      "frequency": "≈ {{value}} deiner Partien",
+      "startPosition": "Ausgangsstellung",
+      "games": "{{count}} Partien",
+      "intro": "Wähle Datenbank, Elo und Tempo deiner Gegner und starte die Suche. Lichess erlaubt nur etwa 15 Abfragen pro Minute – beim ersten Mal dauert es bei einem großen Repertoire deshalb eine Weile; schon abgefragte Stellungen merkt sich RookHub, und eine abgebrochene Suche macht beim nächsten Mal dort weiter."
+    }
   },
   "tournaments": {
     "actions": {

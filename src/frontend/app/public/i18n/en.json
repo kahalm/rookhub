@@ -45,7 +45,16 @@
     "repeatLine": "Again",
     "nextLine": "Next line",
     "offlineBadge": "Offline",
-    "offlineHint": "Training from the offline copy — results are stored on this device and sync automatically once you're back online."
+    "offlineHint": "Training from the offline copy — results are stored on this device and sync automatically once you're back online.",
+    "freqOrder": "Most frequent lines first",
+    "freqOrderOn": "Most frequent lines first: on (order from the Lichess explorer)",
+    "freqOrderOff": "Most frequent lines first: off",
+    "freqLoading": "Loading frequencies from the Lichess explorer …",
+    "freqSkip": "Skip",
+    "freqToken": "“Most frequent first” needs a Lichess token in your profile – the usual order is used.",
+    "freqFailed": "The frequencies could not be loaded – the usual order is used.",
+    "freqIncomplete": "The frequencies are still incomplete – lines without a value come last.",
+    "freqLineTip": "How often you reach this line in real games (Lichess explorer, same selection as in the hole finder)"
   },
   "srConfig": {
     "title": "Practice cycles",
@@ -826,7 +835,8 @@
       "noDescription": "No description",
       "modeLines": "Lines",
       "modeTree": "Tree",
-      "modeEdit": "Edit"
+      "modeEdit": "Edit",
+      "modeHoles": "Hole finder"
     },
     "dialog": {
       "title": "New Repertoire",
@@ -926,7 +936,46 @@
       "defaultTitle": "Repertoire line",
       "error": "Could not create the share link."
     },
-    "downloadLine": "Download line as PGN"
+    "downloadLine": "Download line as PGN",
+    "holes": {
+      "color": "Colour",
+      "white": "White",
+      "black": "Black",
+      "asWhite": "Chapters as White",
+      "asBlack": "Chapters as Black",
+      "database": "Database",
+      "masters": "Masters",
+      "help": "The hole finder walks through your repertoire and, in every position where your opponent is to move and you have prepared a reply, asks the Lichess explorer what is played there.\n\nA hole is an opponent move that is played at least as often as the threshold and leads to a position that appears nowhere in your repertoire – not even via another move order.\n\nHoles are sorted by how often you reach them in real games. The end of a line is not a hole.",
+      "ratings": "Rating",
+      "speeds": "Speed",
+      "speed": {
+        "ultraBullet": "UltraBullet",
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid",
+        "classical": "Classical",
+        "correspondence": "Correspondence"
+      },
+      "threshold": "Threshold",
+      "thresholdHelp": "The share of games in a position from which a missing opponent move counts as a hole. 1 % also finds sidelines, 5 % only the main moves. Allowed: 0.1 to 50 %.",
+      "cancel": "Cancel",
+      "search": "Find holes",
+      "progress": "{{done}} positions analysed, {{open}} pending",
+      "rateLimited": "Lichess is slowing us down – continuing in {{seconds}} s.",
+      "tokenMissing": "The Lichess explorer needs a Lichess token. Add one in your profile under “External engine (Lichess)”.",
+      "tokenInvalid": "Lichess rejected the stored token.",
+      "toProfile": "Go to profile",
+      "fetchFailed": "The Lichess explorer is not reachable right now. Please try again later.",
+      "incomplete": "Not all positions have been analysed yet. “Find holes” continues where it stopped.",
+      "count": "{{count}} holes",
+      "none": "No holes above the threshold.",
+      "shareTip": "Share of this move among all games in the position",
+      "frequencyTip": "How often your repertoire takes you to this position and the opponent then plays this move",
+      "frequency": "≈ {{value}} of your games",
+      "startPosition": "Starting position",
+      "games": "{{count}} games",
+      "intro": "Choose the database, rating and speed of your opponents and start the search. Lichess allows only about 15 lookups per minute, so the first run over a large repertoire takes a while; RookHub remembers positions it has already looked up, and a stopped search picks up where it left off."
+    }
   },
   "tournaments": {
     "actions": {

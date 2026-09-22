@@ -166,6 +166,9 @@ services:
       Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY muss gesetzt sein (verschlüsselt den gespeicherten Chessable-Bearer)}
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      # Optional: Lichess-Token fuer den Lochfinder (Eroeffnungs-Explorer, beliebiger Token ohne Scope).
+      # Leer -> es gilt der Engine-Token, den ein Nutzer im Profil hinterlegt hat.
+      LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}
       # Optional: GitHub-PAT (actions:read) für den Admin-Tab „CI / Actions". Leer -> Tab zeigt Hinweis.
       GitHub__Token: ${GITHUB_TOKEN:-}
       # Optional: VAPID-Schlüssel für Web-Push-Benachrichtigungen. Alle drei leer -> Push deaktiviert

@@ -81,6 +81,8 @@ public class DeploymentConfigTests
         Assert.Contains("WebPush__PublicKey:", text);
         Assert.Contains("GitHub__Token:", text);
         Assert.Contains("Kibana__Url:", text);
+        // Lochfinder: leer = Nutzer-Token aus dem Profil; ohne die Zeile gäbe es nie einen Server-Token.
+        Assert.Contains("LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}", text);
         // Der Log-Sink darf den API-Start nicht blockieren (ES rot ⇒ App startet trotzdem).
         // Nur im api-Block geprüft: Kibana braucht ein gesundes Elasticsearch zu Recht. Die
         // Beispiel-Stacks bringen gar kein ES mit (externe URL) — dort gibt es nichts zu prüfen.

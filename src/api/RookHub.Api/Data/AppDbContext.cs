@@ -71,6 +71,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
+    public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
     public DbSet<CommentSet> CommentSets => Set<CommentSet>();
@@ -1292,6 +1293,14 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedToken).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<LichessExplorerCacheEntry>(e =>
+        {
+            // Nachschlagen immer über den Schlüssel; der Unique-Index fängt zwei Läufe ab, die
+            // dieselbe Stellung gleichzeitig abrufen (DbIdempotency).
+            e.HasIndex(c => c.CacheKey).IsUnique();
+            e.Property(c => c.Json).HasColumnType("TEXT");
         });
 
         modelBuilder.Entity<LibraryGame>(e =>

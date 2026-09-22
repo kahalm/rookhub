@@ -186,6 +186,9 @@ services:
       SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      # Optional: Lichess-Token fuer den Lochfinder (Eroeffnungs-Explorer, beliebiger Token ohne Scope).
+      # Leer -> es gilt der Engine-Token, den ein Nutzer im Profil hinterlegt hat.
+      LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}
       # Admin-Tab „CI / Actions": GitHub-PAT (actions:read) + Push-Modell. Leer -> Tab/Meldungen aus;
       # die CI-Endpoints antworten ohne Secret mit 401 (fail-closed).
       GitHub__Token: ${GITHUB_TOKEN:-}

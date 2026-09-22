@@ -9,7 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -20,7 +20,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto, LineReviewRequest, SrLevel } from './repertoire-training.service';
 import { buildRepertoireGraph, normFen, RepertoireGraph } from './repertoire-tree.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
-import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, TrainColor } from './repertoire-color.util';
+import { chapterColorsOf, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { isInfoLineGame } from './repertoire-info-line.util';
@@ -30,6 +30,19 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
+import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent, readExplorerSettings } from './repertoire-explorer.service';
+import { normalizeFen } from './position-filter.util';
+
+/** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
+const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
+
+function readFreqOrder(): boolean {
+  try { return localStorage.getItem(FREQ_ORDER_KEY) === '1'; } catch { return false; }
+}
+
+function saveFreqOrder(on: boolean): void {
+  try { localStorage.setItem(FREQ_ORDER_KEY, on ? '1' : '0'); } catch { /* nur diese Sitzung */ }
+}
 
 type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW' | 'COMMENT';
 type Outcome = 'correct' | 'tolerated' | 'wrong';
@@ -152,6 +165,18 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Effektive SR-Intervalle aus der Offline-Kopie (nur fürs lokale Fälligkeits-Rechnen). */
   private srLevels: SrLevel[] | null = null;
 
+  /** Modus „Häufigste zuerst": Linien, die man in echten Partien öfter erreicht, kommen zuerst
+   *  (Lichess-Explorer, gerechnet am Server wie der Lochfinder). Aus = bisherige Reihenfolge. */
+  freqOrder = readFreqOrder();
+  /** Endstellung einer Linie (erste drei FEN-Felder) → wie oft man sie erreicht; null = nicht geladen. */
+  private lineFreq: Map<string, number> | null = null;
+  /** Laufender Abruf der Häufigkeiten (Fortschritt für die LOADING-Ansicht). */
+  freqLoading: ExplorerAnalysisResult | null = null;
+  freqRunning = false;
+  /** Hinweis unter der Leiste, wenn die Häufigkeiten fehlen oder unvollständig sind (i18n-Key). */
+  freqNotice: string | null = null;
+  private freqSub: Subscription | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private training: RepertoireTrainingService,
@@ -161,6 +186,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private stockfish: StockfishService,
     private dialog: MatDialog,
     private offlineQueue: OfflineQueueService,
+    private explorer: RepertoireExplorerService,
   ) {}
 
   ngOnInit(): void {
@@ -204,17 +230,86 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
     // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
     // Farben mischt.
-    const auto = autoChapterColors(this.allLines.map(l => ({
-      chapter: (l.headers['Black'] || '').trim(),
-      side: sideOfLastMove(l.fens[0], l.moves.length),
-      rootSide: rootSideOf(l.fens[0]),
-    })));
-    this.chapterColors = resolveChapterColors(this.repertoireId, auto);
+    this.chapterColors = chapterColorsOf(this.repertoireId, this.allLines);
     this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
+    if (this.freqOrder && !this.offlineSession) this.loadFrequencies();
+    else this.buildQueue();
+  }
+
+  ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); this.clearLearn(); this.freqSub?.unsubscribe(); }
+
+  /** „Häufigste zuerst" an/aus. Baut die Sitzung neu auf (wie ein Moduswechsel). */
+  toggleFreqOrder(): void {
+    if (this.offlineSession) return;
+    this.freqOrder = !this.freqOrder;
+    saveFreqOrder(this.freqOrder);
+    if (this.freqOrder && !this.lineFreq) this.loadFrequencies();
+    else { this.freqNotice = null; this.buildQueue(); }
+  }
+
+  /** Häufigkeiten holen — Runde um Runde, bis alles ausgewertet ist; dann die Sitzung aufbauen. */
+  private loadFrequencies(): void {
+    this.freqSub?.unsubscribe();
+    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
+    this.phase = 'LOADING';
+    this.freqRunning = true;
+    this.freqLoading = null;
+    this.freqNotice = null;
+    const s = readExplorerSettings();
+    this.freqSub = this.explorer.run(this.repertoireId, {
+      color: null,
+      chapterColors: Object.fromEntries(this.chapterColors),
+      database: s.database,
+      ratings: s.ratings,
+      speeds: s.speeds,
+      thresholdPercent: s.thresholdPercent,
+      includeHoles: false,
+      includeLineFrequencies: true,
+    }).subscribe({
+      next: r => { this.freqLoading = r; this.cdr.markForCheck(); },
+      error: () => { this.freqNotice = 'repertoireTrainer.freqFailed'; this.finishFrequencies(); },
+      complete: () => this.finishFrequencies(),
+    });
+  }
+
+  /** Abruf beendet ODER übersprungen: mit dem, was da ist, weiter. */
+  finishFrequencies(): void {
+    this.freqSub?.unsubscribe();
+    this.freqSub = null;
+    this.freqRunning = false;
+    const r = this.freqLoading;
+    this.lineFreq = new Map(Object.entries(r?.lineFrequencies ?? {}));
+    if (!this.freqNotice && r) {
+      if (r.tokenMissing || r.tokenInvalid) this.freqNotice = 'repertoireTrainer.freqToken';
+      else if (r.fetchFailed) this.freqNotice = 'repertoireTrainer.freqFailed';
+      else if (!r.complete) this.freqNotice = 'repertoireTrainer.freqIncomplete';
+    }
     this.buildQueue();
   }
 
-  ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); this.clearLearn(); }
+  /** Wie oft man diese Linie erreicht (0…1), -1 = unbekannt. */
+  private freqOf(line: ParsedGame): number {
+    const end = line.fens[line.fens.length - 1];
+    if (!end || !this.lineFreq) return -1;
+    return this.lineFreq.get(normalizeFen(end)) ?? -1;
+  }
+
+  /** Bei „Häufigste zuerst" absteigend nach Häufigkeit; unbekannte hinten, sonst Reihenfolge wie gehabt
+   *  (die Sortierung ist stabil — gleich häufige bleiben gemischt bzw. in PGN-Reihenfolge). */
+  private byFrequency(lines: ParsedGame[]): ParsedGame[] {
+    if (!this.freqOrder || !this.lineFreq) return lines;
+    return [...lines].sort((a, b) => this.freqOf(b) - this.freqOf(a));
+  }
+
+  /** Häufigkeit der aktuellen Linie für die Anzeige, `null` = aus/unbekannt. */
+  get currentLineFrequency(): number | null {
+    if (!this.freqOrder || !this.lineFreq) return null;
+    const line = this.queue[this.qIndex];
+    const f = line ? this.freqOf(line) : -1;
+    return f >= 0 ? f : null;
+  }
+
+  formatFrequency(f: number): string { return formatPercent(f); }
 
   /** Effektive Trainingsfarbe einer Linie (aus ihrem Kapitel). */
   private colorOf(line: ParsedGame): TrainColor {
@@ -256,8 +351,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (this.singleLineKey) filtered = filtered.filter(l => this.lineKeyOf(l) === this.singleLineKey);
     const usable = filtered.filter(l => this.hasUserMove(l));
     this.queue = this.mode === 'learn'
-      ? usable.filter(l => this.isLearnable(l))                 // Reihenfolge = PGN-Reihenfolge
-      : shuffle(usable.filter(l => this.isDue(l, now)));
+      ? this.byFrequency(usable.filter(l => this.isLearnable(l)))   // sonst PGN-Reihenfolge
+      : this.byFrequency(shuffle(usable.filter(l => this.isDue(l, now))));
     this.qIndex = 0;
     this.learnPass = 0;
     this.correct = 0;

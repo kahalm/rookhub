@@ -208,6 +208,59 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 | POST | `/api/repertoires/reprocess` | Markiert veraltete eigene Repertoires auf die aktuelle Pipeline-Version (heute No-op für abgeleitete Daten) |
 | GET | `/api/repertoires/{id:int}/flashcards` | PERSISTENT als Flashcard markierte Linien `{ lineKeys }` — Besitzer UND Freigabe-Empfänger, jeweils EIGENER Satz (404 ohne Lese-Zugriff) |
 | POST/DELETE | `/api/repertoires/{id:int}/flashcards/{lineKey}` | Flashcard-Markierung einer Linie setzen/entfernen (idempotent) → `{ marked }`; LineKey = Frontend-Linien-Hash (`repertoire-line-key.util.ts`, wie SR — Re-Import mit geänderter Zugfolge lässt Markierungen ins Leere laufen, gewollt). Frontend: Checkboxen der Linienliste + „(n)"-Knopf → `/repertoires/:id/flashcards?marked=1` |
+| POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
+
+### Lochfinder + „Häufigste zuerst" (Lichess-Explorer, 0.502.0)
+
+Zwei Fragen, eine Rechnung (`Services/RepertoireReach.cs`, Modell aus Opening Fenix, GPLv3):
+**Wie oft landet man in welcher Repertoire-Stellung?** Die Wurzel hat Wahrscheinlichkeit 1; ist der
+NUTZER am Zug, teilt sie sich gleichmäßig auf seine Repertoire-Züge auf, ist der GEGNER am Zug, nach
+den Explorer-Häufigkeiten. Knoten sind Stellungen, Zugumstellungen summieren sich. Daraus fallen
+(1) die **Löcher** — ein Gegnerzug mit Anteil ≥ Schwelle, dessen Zielstellung NIRGENDS im Repertoire
+steht (auch nicht über eine andere Zugfolge), sortiert nach `P(Stellung) × Anteil` — und (2) die
+**Linien-Häufigkeit** für den Trainer-Modus „Häufigste zuerst" (P der tiefsten bekannten Stellung
+der Hauptvariante, Schlüssel = Endstellung).
+
+Regeln, die dabei nicht kippen dürfen:
+* **Nur Gegner-Stellungen MIT Repertoire-Antwort werden abgefragt.** Das Ende einer Linie ist kein
+  Loch — sonst wäre jede Chessable-Linie (endet mit dem eigenen Zug) ein Nest aus Löchern.
+* **Stellungs-Schlüssel = die ersten DREI FEN-Felder** (ohne en passant), dieselbe Regel wie
+  `RepertoirePositionLookupService.NormalizeKey` ↔ `normalizeFen` in `position-filter.util.ts`: die
+  Linien-Häufigkeiten ordnet der CLIENT über diesen Schlüssel zu, und chess.js setzt das ep-Feld
+  anders als Gera.Chess.
+* **Die Farbe je Kapitel rechnet der Client** (`chapterColorsOf` in `repertoire-color.util.ts`,
+  dieselbe Funktion wie im Trainer) und schickt sie mit. Eine zweite Heuristik am Server würde
+  auseinanderlaufen — und die eigenen Festlegungen liegen ohnehin nur im Browser.
+* **Abbruchgrenzen**: `MinReach` (0,02 %) — seltenere Stellungen werden nicht mehr abgefragt;
+  `MinGames` (10) — darunter keine Löcher und keine Weitergabe. Repertoire-Gegnerzüge, die der
+  Explorer gar nicht kennt, bekommen „eine halbe Partie", damit ihre Linien noch geordnet werden.
+* **Zeitbudget statt Hintergrundauftrag** (`RepertoireExplorerService.Budget`, 20 s): der Endpunkt
+  antwortet mit dem bisherigen Stand, der Client (`RepertoireExplorerService.run`) fragt Runde um
+  Runde nach und hört auf, wenn alles da ist, ein Token fehlt/abgelehnt wird, der Explorer wiederholt
+  nicht antwortet oder eine Runde OHNE Drossel keinen Fortschritt bringt.
+* **EINE Leitung zum Explorer** (`LichessExplorerGate`, Singleton): Anfragen nacheinander UND aus
+  einem eigenen Kontingent — 15 sofort, danach eine je 4 s (`LichessExplorer__Burst`,
+  `LichessExplorer__RefillMs`). Gegen den echten Explorer gemessen (mit Token): dicht hintereinander
+  429 nach 21 Anfragen, mit 0,5 s Abstand nach 27, mit 1 s Abstand nach 33 — das passt zu einem Eimer
+  von gut 20, der mit ~0,3/s nachläuft. Ein fester Abstand hilft deshalb nicht; auf Dauer sind es
+  rund 15 Stellungen je Minute. Nach einem 429 eine Minute Ruhe für ALLE Läufe (die Antwort nennt
+  `retryAfterSeconds`), der Eimer ist danach LEER. Die erste Abfrage einer Runde geht immer raus —
+  sonst könnte eine Runde ohne Fortschritt enden, und der Client hielte den Lauf für festgefahren.
+* **Token**: seit 2025 verlangt der Explorer eine Anmeldung (ohne: 401). Zuerst gilt
+  `LichessExplorer:Token` (Compose `LICHESS_EXPLORER_TOKEN`, beliebiger Token ohne Scope), sonst der
+  Engine-Token, den der Nutzer im Profil hinterlegt hat.
+* **Speicher** `LichessExplorerCacheEntries`: je Auswahl (Datenbank + Elo + Tempo) und Stellung,
+  90 Tage, für ALLE Nutzer — die ersten Züge sind in jedem Repertoire dieselben.
+
+Frontend: vierter Modus der Repertoire-Detailseite (`repertoire-holes.component.ts`, Lupe;
+`?mode=holes`), Brett zeigt die Stellung NACH dem fehlenden Zug. Trainer: Trend-Knopf in der Leiste
+(`freqOrder`, localStorage `rookhub_rep_train_freq_order`), die Explorer-Auswahl teilt er sich mit dem
+Lochfinder (`rookhub_explorer_settings`). Offline ist der Knopf ausgeblendet.
+
+**Geplant (Absprache mit der Parallel-Sitzung, 2026-09-22)**: ein LOKALER Explorer
+(`lila-openingexplorer` als Container `rookhub-explorer:9002`, gleiche Endpunkte, kein Token, keine
+Drossel). Die Naht ist `LichessExplorerClient.FetchAsync`; dazu kommen `LichessExplorer:LocalUrl` und
+eine Quelle `online|local` in der Auswahl (lokal ohne Gate/Speicher, parallel).
 
 ### Extension API (auth, CORS für chess.com)
 | Methode | Endpoint | Zweck |
@@ -2109,6 +2162,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | MenuItemSettings | Admin-Override der Menü-Sichtbarkeit | ItemKey (PK, string), Level (Enum All/Registered/Groups/Admin); fehlt eine Zeile → Default aus `MenuRegistry` |
 | MenuItemGroupAccesses | Welche Gruppe sieht einen gruppen-gegateten Menüeintrag | Composite PK (ItemKey, GroupId), Cascade von MenuItemSetting + Group, Index GroupId |
 | ChessableCredentials | Per-User Chessable-Bearer (1:1) | UserId (unique, Cascade), EncryptedBearer (TEXT, AES via `EncryptionService`), **ChessableUid? (≤32; beim erfolgreichen `POST /api/chessable/test` aus der Chessable-Antwort BEWIESEN gesetzt — nicht aus dem ungeprüften JWT; verknüpft den User mit seiner Chessable-Identität fürs Claimen anonymer getReview-Linien)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Wird vom `ChessableProxyService` an piratechess durchgereicht |
+| LichessExplorerCacheEntries | Zwischengespeicherte Lichess-Explorer-Antworten des Lochfinders — geteilt über alle Nutzer | CacheKey (≤255, **UNIQUE**; `{Auswahl}\|{Stellung}` mit Auswahl `lichess\|<Elo>\|<Tempo>\|` bzw. `masters\|` und Stellung = erste drei FEN-Felder), Json (TEXT, kompakt: Gesamtzahl + Züge mit uci/san/Partien/Eröffnung), FetchedAt (älter als 90 Tage → wird neu geholt und überschrieben) |
 | LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
 | AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess eei_…), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |

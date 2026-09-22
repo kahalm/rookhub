@@ -86,3 +86,27 @@ export function resolveChapterColors(repId: number, auto: Map<string, TrainColor
   for (const k of Object.keys(ovr)) out.set(k, ovr[k]);
   return out;
 }
+
+/** Eine Linie, soweit die Farberkennung sie braucht (passt auf `ParsedGame`). */
+export interface ChapterColorLine {
+  headers: Record<string, string>;
+  fens: string[];
+  moves: unknown[];
+}
+
+/**
+ * Effektive Trainingsfarbe je Kapitel für eine Linienliste: Auto-Erkennung + eigene Festlegungen.
+ * EINE Rechnung für Trainer und Lochfinder — sonst sähe der Lochfinder ein Kapitel als Weiß, das
+ * der Trainer als Schwarz abfragt.
+ */
+export function chapterColorsOf(repId: number, lines: ChapterColorLine[]): Map<string, TrainColor> {
+  const auto = autoChapterColors(lines.map(l => {
+    const start = l.fens[0] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    return {
+      chapter: (l.headers['Black'] || '').trim(),
+      side: sideOfLastMove(start, l.moves.length),
+      rootSide: rootSideOf(start),
+    };
+  }));
+  return resolveChapterColors(repId, auto);
+}

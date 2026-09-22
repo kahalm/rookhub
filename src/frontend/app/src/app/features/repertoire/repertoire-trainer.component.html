@@ -18,6 +18,13 @@
       <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
     </mat-button-toggle-group>
     @if (!offlineSession) {
+      <!-- „Häufigste zuerst" braucht den Server (Lichess-Explorer) → offline ausgeblendet. -->
+      <button mat-icon-button (click)="toggleFreqOrder()" [class.freq-on]="freqOrder"
+              [attr.aria-pressed]="freqOrder"
+              [matTooltip]="(freqOrder ? 'repertoireTrainer.freqOrderOn' : 'repertoireTrainer.freqOrderOff') | translate"
+              [attr.aria-label]="'repertoireTrainer.freqOrder' | translate">
+        <mat-icon>trending_up</mat-icon>
+      </button>
       <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet. -->
       <button mat-icon-button (click)="openConfig()"
               [matTooltip]="'srConfig.title' | translate"
@@ -32,8 +39,25 @@
     }
   </div>
 
+  @if (freqOrder && freqNotice && !freqRunning) {
+    <p class="freq-notice">{{ freqNotice | translate }}</p>
+  }
+
   <ng-container [ngSwitch]="phase">
-    <div *ngSwitchCase="'LOADING'" class="center">{{ 'common.loading' | translate }}</div>
+    <div *ngSwitchCase="'LOADING'" class="center">
+      @if (freqRunning) {
+        <p>{{ 'repertoireTrainer.freqLoading' | translate }}</p>
+        @if (freqLoading; as f) {
+          <p class="freq-progress">{{ 'repertoire.holes.progress' | translate: { done: f.positionsAnalyzed, open: f.positionsPending } }}</p>
+          @if (f.rateLimited) {
+            <p class="freq-progress">{{ 'repertoire.holes.rateLimited' | translate: { seconds: f.retryAfterSeconds ?? 60 } }}</p>
+          }
+        }
+        <button mat-stroked-button (click)="finishFrequencies()">{{ 'repertoireTrainer.freqSkip' | translate }}</button>
+      } @else {
+        {{ 'common.loading' | translate }}
+      }
+    </div>
 
     <mat-card *ngSwitchCase="'EMPTY'" class="msg">
       @if (mode === 'learn') {
@@ -95,6 +119,11 @@
         <mat-progress-bar mode="determinate" [value]="progressPct"></mat-progress-bar>
         <div class="counts">
           <span>{{ 'repertoireTrainer.lineProgress' | translate: { done: qIndex + 1, total: queue.length } }}</span>
+          @if (currentLineFrequency !== null) {
+            <span class="freq" [matTooltip]="'repertoireTrainer.freqLineTip' | translate">
+              <mat-icon>trending_up</mat-icon>{{ formatFrequency(currentLineFrequency!) }}
+            </span>
+          }
           <span class="ok">✓ {{ correct }}</span>
           <span class="bad">✗ {{ wrong }}</span>
           @if (currentStreak >= 2) {

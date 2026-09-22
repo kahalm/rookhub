@@ -45,7 +45,16 @@
     "repeatLine": "Ponovno",
     "nextLine": "Sljedeća linija",
     "offlineBadge": "Offline",
-    "offlineHint": "Trening iz offline kopije — rezultati se spremaju na ovom uređaju i automatski sinkroniziraju kad ponovno budeš na mreži."
+    "offlineHint": "Trening iz offline kopije — rezultati se spremaju na ovom uređaju i automatski sinkroniziraju kad ponovno budeš na mreži.",
+    "freqOrder": "Najčešće varijante prve",
+    "freqOrderOn": "Najčešće varijante prve: uključeno (redoslijed prema Lichess exploreru)",
+    "freqOrderOff": "Najčešće varijante prve: isključeno",
+    "freqLoading": "Učitavanje učestalosti iz Lichess explorera …",
+    "freqSkip": "Preskoči",
+    "freqToken": "Za „Najčešće prve“ nedostaje Lichess token u profilu – koristi se uobičajeni redoslijed.",
+    "freqFailed": "Učestalosti se nisu mogle učitati – koristi se uobičajeni redoslijed.",
+    "freqIncomplete": "Učestalosti još nisu potpune – varijante bez vrijednosti dolaze zadnje.",
+    "freqLineTip": "Koliko često dosegneš ovu varijantu u stvarnim partijama (Lichess explorer, isti odabir kao kod traženja rupa)"
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",
@@ -826,7 +835,8 @@
       "noDescription": "Nema opisa",
       "modeLines": "Linije",
       "modeTree": "Stablo",
-      "modeEdit": "Uredi"
+      "modeEdit": "Uredi",
+      "modeHoles": "Traženje rupa"
     },
     "dialog": {
       "title": "Novi repertoar",
@@ -926,7 +936,46 @@
       "defaultTitle": "Linija repertoara",
       "error": "Poveznicu za dijeljenje nije bilo moguće stvoriti."
     },
-    "downloadLine": "Preuzmi varijantu kao PGN"
+    "downloadLine": "Preuzmi varijantu kao PGN",
+    "holes": {
+      "color": "Boja",
+      "white": "Bijeli",
+      "black": "Crni",
+      "asWhite": "Poglavlja s bijelima",
+      "asBlack": "Poglavlja s crnima",
+      "database": "Baza",
+      "masters": "Majstori",
+      "help": "Traženje rupa prolazi kroz tvoj repertoar i u svakoj poziciji u kojoj je protivnik na potezu, a ti imaš pripremljen odgovor, pita Lichess explorer što se tamo igra.\n\nRupa je protivnikov potez koji se igra barem onoliko često koliko iznosi granica i vodi u poziciju koje nigdje nema u tvom repertoaru – ni preko drugog redoslijeda poteza.\n\nRupe su poredane po tome koliko ih često dosegneš u stvarnim partijama. Kraj varijante nije rupa.",
+      "ratings": "Rejting",
+      "speeds": "Tempo",
+      "speed": {
+        "ultraBullet": "UltraBullet",
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Brzopotezno",
+        "classical": "Klasično",
+        "correspondence": "Dopisno"
+      },
+      "threshold": "Granica",
+      "thresholdHelp": "Od kojeg udjela partija u poziciji se protivnikov potez koji nedostaje računa kao rupa. 1 % pronalazi i sporedne varijante, 5 % samo glavne poteze. Dopušteno je od 0,1 do 50 %.",
+      "cancel": "Odustani",
+      "search": "Traži rupe",
+      "progress": "Analizirano pozicija: {{done}}, preostalo: {{open}}",
+      "rateLimited": "Lichess nas trenutačno usporava – nastavljamo za {{seconds}} s.",
+      "tokenMissing": "Za Lichess explorer potreban je Lichess token. Dodaj ga u profilu pod „Vanjski motor (Lichess)“.",
+      "tokenInvalid": "Lichess je odbio spremljeni token.",
+      "toProfile": "Na profil",
+      "fetchFailed": "Lichess explorer trenutačno nije dostupan. Pokušaj ponovno kasnije.",
+      "incomplete": "Još nisu analizirane sve pozicije. „Traži rupe“ nastavlja tamo gdje je stalo.",
+      "count": "Rupa: {{count}}",
+      "none": "Nema rupa iznad granice.",
+      "shareTip": "Udio ovog poteza u svim partijama u poziciji",
+      "frequencyTip": "Koliko te često tvoj repertoar dovede u ovu poziciju, a protivnik tada odigra ovaj potez",
+      "frequency": "≈ {{value}} tvojih partija",
+      "startPosition": "Početna pozicija",
+      "games": "Partija: {{count}}",
+      "intro": "Odaberi bazu, rejting i tempo svojih protivnika i pokreni traženje. Lichess dopušta samo oko 15 upita u minuti, pa prvi put kod velikog repertoara potraje; pozicije koje su već provjerene RookHub pamti, a prekinuto traženje sljedeći put nastavlja tamo gdje je stalo."
+    }
   },
   "tournaments": {
     "actions": {

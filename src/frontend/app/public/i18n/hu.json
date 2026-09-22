@@ -598,7 +598,8 @@
       "noDescription": "Nincs leírás",
       "modeLines": "Vonalak",
       "modeTree": "Fa",
-      "modeEdit": "Szerkesztés"
+      "modeEdit": "Szerkesztés",
+      "modeHoles": "Lyukkereső"
     },
     "dialog": {
       "title": "Új repertoár",
@@ -704,7 +705,46 @@
       "defaultTitle": "Repertoár-változat",
       "error": "A megosztási linket nem sikerült létrehozni."
     },
-    "downloadLine": "Változat letöltése PGN-ként"
+    "downloadLine": "Változat letöltése PGN-ként",
+    "holes": {
+      "color": "Szín",
+      "white": "Világos",
+      "black": "Sötét",
+      "asWhite": "Fejezetek világossal",
+      "asBlack": "Fejezetek sötéttel",
+      "database": "Adatbázis",
+      "masters": "Mesterek",
+      "help": "A lyukkereső végigmegy a repertoárodon, és minden olyan állásban, ahol az ellenfeled lép és neked van előkészített válaszod, megkérdezi a Lichess explorert, mit játszanak ott.\n\nLyuk az az ellenféllépés, amelyet legalább a küszöbértéknyi gyakorisággal játszanak, és olyan állásba vezet, amely sehol sem szerepel a repertoárodban – más lépéssorrenden keresztül sem.\n\nA lyukak aszerint vannak rendezve, milyen gyakran jutsz el hozzájuk valódi játszmákban. Egy változat vége nem lyuk.",
+      "ratings": "Élő-pont",
+      "speeds": "Tempó",
+      "speed": {
+        "ultraBullet": "UltraBullet",
+        "bullet": "Bullet",
+        "blitz": "Villám",
+        "rapid": "Rapid",
+        "classical": "Klasszikus",
+        "correspondence": "Levelezési"
+      },
+      "threshold": "Küszöbérték",
+      "thresholdHelp": "Egy állás játszmáinak mekkora hányadától számít lyuknak egy hiányzó ellenféllépés. 1 % a mellékváltozatokat is megtalálja, 5 % csak a főlépéseket. Megengedett: 0,1–50 %.",
+      "cancel": "Mégse",
+      "search": "Lyukak keresése",
+      "progress": "{{done}} állás kiértékelve, {{open}} hátra van",
+      "rateLimited": "A Lichess éppen lassít minket – {{seconds}} mp múlva folytatjuk.",
+      "tokenMissing": "A Lichess explorerhez Lichess-token kell. Add meg a profilodban a „Külső motor (Lichess)” résznél.",
+      "tokenInvalid": "A Lichess elutasította a tárolt tokent.",
+      "toProfile": "Profilhoz",
+      "fetchFailed": "A Lichess explorer most nem érhető el. Próbáld újra később.",
+      "incomplete": "Még nincs minden állás kiértékelve. A „Lyukak keresése” ott folytatja, ahol abbahagyta.",
+      "count": "{{count}} lyuk",
+      "none": "Nincs lyuk a küszöbérték felett.",
+      "shareTip": "A lépés aránya az állás összes játszmájában",
+      "frequencyTip": "Milyen gyakran visz a repertoárod ebbe az állásba, és az ellenfél ekkor ezt a lépést játssza",
+      "frequency": "≈ {{value}} a játszmáidból",
+      "startPosition": "Kiinduló állás",
+      "games": "{{count}} játszma",
+      "intro": "Válaszd ki az ellenfeleid adatbázisát, Élő-pontszámát és tempóját, majd indítsd a keresést. A Lichess percenként csak kb. 15 lekérdezést enged, ezért nagy repertoárnál az első alkalom eltart egy ideig; a már lekérdezett állásokat a RookHub megjegyzi, a megszakított keresés pedig legközelebb ott folytatja, ahol abbahagyta."
+    }
   },
   "tournaments": {
     "actions": {
@@ -2221,7 +2261,16 @@
     "repeatLine": "Mégegyszer",
     "nextLine": "Következő változat",
     "offlineBadge": "Offline",
-    "offlineHint": "Gyakorlás az offline másolatból — az eredmények ezen az eszközön tárolódnak, és automatikusan szinkronizálódnak, amint újra online vagy."
+    "offlineHint": "Gyakorlás az offline másolatból — az eredmények ezen az eszközön tárolódnak, és automatikusan szinkronizálódnak, amint újra online vagy.",
+    "freqOrder": "Leggyakoribb változatok előre",
+    "freqOrderOn": "Leggyakoribb változatok előre: be (sorrend a Lichess explorer alapján)",
+    "freqOrderOff": "Leggyakoribb változatok előre: ki",
+    "freqLoading": "Gyakoriságok betöltése a Lichess explorerből …",
+    "freqSkip": "Kihagyás",
+    "freqToken": "A „Leggyakoribb előre” módhoz Lichess-token kell a profilban – a szokásos sorrend marad.",
+    "freqFailed": "A gyakoriságokat nem sikerült betölteni – a szokásos sorrend marad.",
+    "freqIncomplete": "A gyakoriságok még hiányosak – az érték nélküli változatok kerülnek a végére.",
+    "freqLineTip": "Milyen gyakran jutsz el ehhez a változathoz valódi játszmákban (Lichess explorer, ugyanaz a beállítás, mint a lyukkeresőnél)"
   },
   "srConfig": {
     "title": "Gyakorlási ciklusok",

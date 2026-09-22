@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -63,6 +64,51 @@ public class RepertoireControllerTests : IDisposable
         _db.Repertoires.Add(rep);
         await _db.SaveChangesAsync();
         return rep;
+    }
+
+    // ---- Lochfinder ----
+
+    private RepertoireExplorerService Explorer()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" })
+            .Build();
+        var gate = new LichessExplorerGate(refillInterval: TimeSpan.Zero);
+        var client = new LichessExplorerClient(new HttpClient(), gate,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LichessExplorerClient>.Instance);
+        return new RepertoireExplorerService(_db, _service, client, gate, new EncryptionService(config), config,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RepertoireExplorerService>.Instance);
+    }
+
+    [Fact]
+    public async Task ExplorerAnalysis_ForeignRepertoire_IsNotFound()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var rep = await CreateRepertoireAsync(owner.Id);
+        SetUser(other.Id);
+
+        var result = await _controller.ExplorerAnalysis(rep.Id, new ExplorerAnalysisRequestDto
+        {
+            Ratings = new() { 1800 }, Speeds = new() { "blitz" },
+        }, Explorer(), CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task ExplorerAnalysis_InvalidSelection_IsBadRequest()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await _controller.ExplorerAnalysis(rep.Id, new ExplorerAnalysisRequestDto
+        {
+            Ratings = new() { 1750 }, Speeds = new() { "blitz" },
+        }, Explorer(), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     // ---- GetAll ----

@@ -203,6 +203,19 @@ try
     builder.Services.AddScoped<RepertoireLineSource>();
     builder.Services.AddScoped<RepertoirePositionLookupService>();
     builder.Services.AddScoped<RepertoireSimilarityService>();
+    // Lochfinder: EINE Explorer-Leitung für den ganzen Prozess (Lichess will Anfragen nacheinander
+    // und nach 429 eine Minute Ruhe), Antworten 90 Tage in LichessExplorerCacheEntries.
+    // Kontingent der Explorer-Leitung, einstellbar ohne neues Image (LichessExplorer__Burst,
+    // LichessExplorer__RefillMs); Vorgaben und Messung siehe LichessExplorerGate.
+    builder.Services.AddSingleton(sp =>
+    {
+        var cfg = sp.GetRequiredService<IConfiguration>();
+        var refillMs = cfg.GetValue<int?>("LichessExplorer:RefillMs");
+        return new LichessExplorerGate(
+            burst: cfg.GetValue<int?>("LichessExplorer:Burst"),
+            refillInterval: refillMs is >= 0 ? TimeSpan.FromMilliseconds(refillMs.Value) : null);
+    });
+    builder.Services.AddScoped<RepertoireExplorerService>();
     builder.Services.AddScoped<PlayerSearchService>();
     // Turnierverzeichnis: Sweep, Umkreis-Aufloesung und der (nur per Admin ausgeloeste) Import
     // des GeoNames-Ortslexikons.
@@ -428,6 +441,13 @@ try
     builder.Services.AddHttpClient<LichessEngineService>(client =>
     {
         client.Timeout = Timeout.InfiniteTimeSpan;
+    });
+
+    builder.Services.AddHttpClient<LichessExplorerClient>(client =>
+    {
+        client.BaseAddress = new Uri(LichessExplorerClient.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(15);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub.oberschmid.homes)");
     });
 
     // FIDE search HttpClient

@@ -16,6 +16,9 @@ import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
+import { HoleBoardView, RepertoireHolesComponent } from './repertoire-holes.component';
+import { isInfoLineGame } from './repertoire-info-line.util';
+import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
@@ -25,7 +28,7 @@ import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
 
-type ViewMode = 'lines' | 'tree' | 'edit';
+type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -34,7 +37,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
   imports: [
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
     MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ChessBoardComponent,
-    RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent,
+    RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent, RepertoireHolesComponent,
   ],
   // Komponenten-bezogen (nicht providedIn:'root') — jede Instanz hat ihren eigenen
   // Viewer-/Tree-Zustand; per DI statt `new` für Testbarkeit.
@@ -58,6 +61,9 @@ type ViewMode = 'lines' | 'tree' | 'edit';
             </mat-button-toggle>
             <mat-button-toggle value="tree" [attr.aria-label]="'repertoire.detail.modeTree' | translate" [attr.title]="'repertoire.detail.modeTree' | translate">
               <mat-icon>account_tree</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle value="holes" [attr.aria-label]="'repertoire.detail.modeHoles' | translate" [attr.title]="'repertoire.detail.modeHoles' | translate">
+              <mat-icon>travel_explore</mat-icon>
             </mat-button-toggle>
             @if (repertoire.isOwner !== false) {
               <mat-button-toggle value="edit" [attr.aria-label]="'repertoire.detail.modeEdit' | translate" [attr.title]="'repertoire.detail.modeEdit' | translate">
@@ -149,6 +155,11 @@ type ViewMode = 'lines' | 'tree' | 'edit';
                   (shareLine)="onShareLine($event)"
                   (downloadLine)="onDownloadLine($event)"
                   (commentMovePreview)="onCommentMovePreview($event)" />
+              } @else if (mode === 'holes') {
+                <app-repertoire-holes
+                  [repertoireId]="id"
+                  [games]="trainableGames"
+                  (holeSelected)="holeView = $event" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
@@ -274,6 +285,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   get boardFen(): string {
     if (this.commentPreview) return this.commentPreview.fen;
+    if (this.mode === 'holes') return this.holeView?.fen ?? START_FEN;
     if (this.mode !== 'lines') return this.treeService.currentFen;
     if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.currentFen;
     return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].fen : START_FEN;
@@ -281,10 +293,17 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   get boardLastMove(): [string, string] | undefined {
     if (this.commentPreview) return this.commentPreview.lastMove;
+    if (this.mode === 'holes') return this.holeView?.lastMove;
     if (this.mode !== 'lines') return this.treeService.lastMove;
     if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.lastMove;
     return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].lastMove : undefined;
   }
+
+  /** Lochfinder: die angewählte Stellung (nach dem fehlenden Gegnerzug), sonst Grundstellung. */
+  holeView: HoleBoardView | null = null;
+
+  /** Linien ohne Info-Linien — für die Farbe je Kapitel im Lochfinder (dieselbe Auswahl wie im Trainer). */
+  trainableGames: ParsedGame[] = [];
 
   /** Rechts angezeigte Linien: bei aktivem Filter nur die Treffer, sonst alle. */
   get visibleLines(): RepertoireLine[] {
@@ -374,7 +393,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;
     const modeParam = this.route.snapshot.queryParamMap.get('mode');
-    if (modeParam === 'tree' || modeParam === 'edit') {
+    if (modeParam === 'tree' || modeParam === 'holes' || modeParam === 'edit') {
       this.mode = modeParam;
     }
     // Deep-Link „Ansehen" aus der Stellungssuche: ?line=<lineKey>&ply=<n> → nach dem Laden auf genau
@@ -442,6 +461,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
       next: (pgn) => {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);
+        this.trainableGames = this.viewerService.games.filter((_, i) => !isInfoLineGame(this.viewerService.rawGames[i]));
         this.applyFocusLine();
         this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand
       },
