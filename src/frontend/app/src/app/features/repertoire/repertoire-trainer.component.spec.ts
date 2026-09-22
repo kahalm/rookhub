@@ -122,6 +122,24 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect((c as any).queue[0].headers.Black).toBe('Chapter B');
   });
 
+  it('info lines ([%info] or „Info | " in White) are neither quizzed nor learned nor promoted', () => {
+    const info = [
+      '[Event "Rep"]', '[White "Idee"]', '[Black "Chapter A"]', '', '{[%info]} 1. c4 e5 2. Nc3 Nf6 *', '',
+      '[Event "Rep"]', '[White "Info | Plan"]', '[Black "Chapter B"]', '', '1. Nf3 d5 2. g3 Nf6 *', '',
+    ].join('\n');
+    const keyInfo1 = lineKeyFromSans(['c4', 'e5', 'Nc3', 'Nf6']);
+    const keyInfo2 = lineKeyFromSans(['Nf3', 'd5', 'g3', 'Nf6']);
+    const pgn = PGN + '\n' + info;
+    const quiz = make('w', null, pgn, [state(KEY_A, PAST()), state(KEY_B, PAST()), state(keyInfo1, PAST()), state(keyInfo2, PAST())]);
+    expect(quiz.queue.length).toBe(2);   // nur die beiden echten Linien, obwohl die Info-Linien fällig im Pool liegen
+
+    const c = make('w', null, pgn, []);
+    const spy = jasmine.createSpy('promote').and.returnValue(of({ affected: 2 }));
+    (c as any).training.promote = spy;
+    c.promoteAllToPool();
+    expect(spy.calls.mostRecent().args[1]).toEqual([KEY_A, KEY_B]);
+  });
+
   it('auto-detects the trained color per chapter in a color-mixed repertoire (no override)', () => {
     // „White rep": Linie endet auf Weiß-Zug (Nf3) → Weiß trainiert. „Black rep": endet auf Schwarz
     // (d5) → Schwarz trainiert. Ohne globalen Toggle wird jede Linie aus ihrer eigenen Seite gespielt.

@@ -850,6 +850,8 @@
     },
     "lines": {
       "allLines": "All Lines",
+      "info": "Info",
+      "infoTooltip": "Info line: explanation to click through, not quizzed by the trainer",
       "empty": "No lines found in this repertoire.",
       "noChapter": "(No chapter)",
       "toggleChapter": "Expand / collapse chapter",

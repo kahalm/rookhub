@@ -22,7 +22,8 @@ import { buildRepertoireGraph, normFen, RepertoireGraph } from './repertoire-tre
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
-import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
+import { isInfoLineGame } from './repertoire-info-line.util';
 import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
 import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineStates } from './repertoire-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -197,7 +198,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Session aus PGN + SR-Zuständen aufbauen (frisch vom Server oder aus der Offline-Kopie). */
   private initSession(pgn: string, states: LineStateDto[]): void {
     this.graph = buildRepertoireGraph(pgn);
-    this.allLines = parsePgnText(pgn);
+    // Info-Linien (Erklärungen, siehe isInfoLineGame) werden nicht abgefragt — weder im Quiz noch im
+    // Lern-Modus, und „Alle in den Pool" nimmt sie nicht auf. Ansehen kann man sie in der Linienliste.
+    this.allLines = parsePgnTextWithSource(pgn).filter(p => !isInfoLineGame(p.raw)).map(p => p.game);
     // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
     // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
     // Farben mischt.

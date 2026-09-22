@@ -850,6 +850,8 @@
     },
     "lines": {
       "allLines": "Sve linije",
+      "info": "Info",
+      "infoTooltip": "Info linija: objašnjenje za pregled, trener je ne ispituje",
       "empty": "U ovom repertoaru nema pronađenih linija.",
       "noChapter": "(Bez poglavlja)",
       "toggleChapter": "Otvori / zatvori poglavlje",

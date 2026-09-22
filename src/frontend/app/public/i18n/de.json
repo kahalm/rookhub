@@ -850,6 +850,8 @@
     },
     "lines": {
       "allLines": "Alle Linien",
+      "info": "Info",
+      "infoTooltip": "Info-Linie: Erklärung zum Durchklicken, der Trainer fragt sie nicht ab",
       "empty": "Keine Linien in diesem Repertoire gefunden.",
       "noChapter": "(Ohne Kapitel)",
       "toggleChapter": "Kapitel auf-/zuklappen",

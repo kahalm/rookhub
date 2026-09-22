@@ -143,8 +143,12 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                          (keydown.space)="$event.preventDefault(); lineSelected.emit(line.gameIndex)">
                       <div class="line-players">
                         <span>{{ line.white }} vs {{ line.black }}</span>
-                        <span class="sr-badge" [ngClass]="status(line)"
-                              [matTooltip]="badgeTooltip(line) | translate">{{ badge(line) }}</span>
+                        @if (line.isInfo) {
+                          <span class="sr-badge info" [matTooltip]="'repertoire.lines.infoTooltip' | translate">{{ 'repertoire.lines.info' | translate }}</span>
+                        } @else {
+                          <span class="sr-badge" [ngClass]="status(line)"
+                                [matTooltip]="badgeTooltip(line) | translate">{{ badge(line) }}</span>
+                        }
                       </div>
                       @if (line.opening) { <div class="line-opening">{{ line.opening }}</div> }
                       <div class="line-summary">{{ line.summary }}</div>
@@ -156,13 +160,15 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                       <mat-menu #lineMenu="matMenu">
                         <button mat-menu-item (click)="shareLine.emit(line)"><mat-icon>share</mat-icon>{{ 'repertoire.shareLine.action' | translate }}</button>
                         <button mat-menu-item (click)="downloadLine.emit(line)"><mat-icon>download</mat-icon>{{ 'repertoire.downloadLine' | translate }}</button>
-                        <a mat-menu-item [routerLink]="['/repertoires', repertoireId, 'train']" [queryParams]="{ mode: 'learn', line: line.lineKey }"><mat-icon>school</mat-icon>{{ 'repertoire.lines.sr.learn' | translate }}</a>
-                        <button mat-menu-item (click)="promote([line.lineKey])"><mat-icon>playlist_add</mat-icon>{{ 'repertoire.lines.sr.addToPool' | translate }}</button>
-                        <button mat-menu-item (click)="makeDue([line.lineKey])"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeDue' | translate }}</button>
-                        @if (status(line) === 'paused') {
-                          <button mat-menu-item (click)="setPaused([line.lineKey], false)"><mat-icon>play_circle</mat-icon>{{ 'repertoire.lines.sr.resume' | translate }}</button>
-                        } @else {
-                          <button mat-menu-item (click)="setPaused([line.lineKey], true)"><mat-icon>pause_circle</mat-icon>{{ 'repertoire.lines.sr.pause' | translate }}</button>
+                        @if (!line.isInfo) {
+                          <a mat-menu-item [routerLink]="['/repertoires', repertoireId, 'train']" [queryParams]="{ mode: 'learn', line: line.lineKey }"><mat-icon>school</mat-icon>{{ 'repertoire.lines.sr.learn' | translate }}</a>
+                          <button mat-menu-item (click)="promote([line.lineKey])"><mat-icon>playlist_add</mat-icon>{{ 'repertoire.lines.sr.addToPool' | translate }}</button>
+                          <button mat-menu-item (click)="makeDue([line.lineKey])"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeDue' | translate }}</button>
+                          @if (status(line) === 'paused') {
+                            <button mat-menu-item (click)="setPaused([line.lineKey], false)"><mat-icon>play_circle</mat-icon>{{ 'repertoire.lines.sr.resume' | translate }}</button>
+                          } @else {
+                            <button mat-menu-item (click)="setPaused([line.lineKey], true)"><mat-icon>pause_circle</mat-icon>{{ 'repertoire.lines.sr.pause' | translate }}</button>
+                          }
                         }
                       </mat-menu>
                     }
@@ -217,6 +223,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .sr-badge.due { background: rgba(46,125,50,.18); color: #2e7d32; }
     .sr-badge.scheduled { background: rgba(21,101,192,.15); color: #1565c0; }
     .sr-badge.paused { background: rgba(255,160,0,.18); color: #e65100; }
+    .sr-badge.info { background: rgba(97,97,97,.15); color: #616161; }
     .move-view { display: flex; flex-direction: column; height: 100%; }
     .back-btn { align-self: flex-start; margin: 4px; }
     .line-header { display: flex; justify-content: space-between; padding: 4px 16px 8px;
@@ -370,8 +377,9 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
     return 'repertoire.lines.sr.status.' + this.status(line);
   }
 
-  allKeys(): string[] { return this.lines.map(l => l.lineKey); }
-  chapterKeys(group: ChapterGroup): string[] { return group.lines.map(l => l.lineKey); }
+  // Info-Linien bleiben aus allen SR-Aktionen draußen (der Trainer fragt sie nicht ab).
+  allKeys(): string[] { return this.lines.filter(l => !l.isInfo).map(l => l.lineKey); }
+  chapterKeys(group: ChapterGroup): string[] { return group.lines.filter(l => !l.isInfo).map(l => l.lineKey); }
 
   promote(keys: string[]): void {
     if (this.repertoireId == null || !keys.length) return;

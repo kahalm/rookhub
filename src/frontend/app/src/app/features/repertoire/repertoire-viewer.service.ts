@@ -3,6 +3,7 @@ import { Move } from 'chess.js';
 import { ParsedGame, START_FEN, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { sideOfLastMove, TrainColor } from './repertoire-color.util';
+import { isInfoLineGame } from './repertoire-info-line.util';
 
 export interface RepertoireLine {
   gameIndex: number;
@@ -16,6 +17,8 @@ export interface RepertoireLine {
   chapter: string;
   /** Stabiler SR-Schlüssel (identisch zum Trainer) — für Pool-/Fälligkeits-Anzeige + Aktionen. */
   lineKey: string;
+  /** Info-Linie (siehe {@link isInfoLineGame}): nur durchklicken, nicht trainieren. */
+  isInfo?: boolean;
   /** Start-FEN der Linie (für die Trainingsfarb-Erkennung). */
   startFen: string;
   /** Seite des letzten Halbzugs — Signal für die automatische Trainingsfarbe je Kapitel. */
@@ -64,7 +67,7 @@ export class RepertoireViewerService {
     const parsed = parsePgnTextWithSource(pgnText, { foldVariations: true });
     this.games = parsed.map(p => p.game);
     this.rawGames = parsed.map(p => p.raw);
-    this.lines = this.games.map((game, i) => this.buildLine(game, i));
+    this.lines = this.games.map((game, i) => this.buildLine(game, i, isInfoLineGame(this.rawGames[i])));
     this.selectedLineIndex = -1;
     this.currentMoveIndex = -1;
   }
@@ -112,7 +115,7 @@ export class RepertoireViewerService {
     }
   }
 
-  private buildLine(game: ParsedGame, index: number): RepertoireLine {
+  private buildLine(game: ParsedGame, index: number, isInfo: boolean): RepertoireLine {
     const moves = game.moves;
     const summaryMoves: string[] = [];
     for (let i = 0; i < Math.min(moves.length, 8); i++) {
@@ -131,6 +134,7 @@ export class RepertoireViewerService {
       moveCount: Math.ceil(moves.length / 2),
       chapter: (game.headers['Black'] || '').trim(),
       lineKey: lineKeyFromSans(moves.map(m => m.san)),
+      isInfo,
       startFen: game.fens[0],
       lastMoveSide: sideOfLastMove(game.fens[0], moves.length),
     };

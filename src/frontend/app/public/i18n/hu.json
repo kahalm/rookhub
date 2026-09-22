@@ -622,6 +622,8 @@
     },
     "lines": {
       "allLines": "Összes vonal",
+      "info": "Info",
+      "infoTooltip": "Info vonal: magyarázat átkattintáshoz, az edző nem kérdezi ki",
       "empty": "Nincs vonal ebben a repertoárban.",
       "noChapter": "(Fejezet nélkül)",
       "toggleChapter": "Fejezet ki-/becsukása",
