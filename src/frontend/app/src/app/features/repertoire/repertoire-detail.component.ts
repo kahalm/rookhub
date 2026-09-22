@@ -23,7 +23,7 @@ import { MoveTreeService } from './move-tree.service';
 import { findPositionInGames, formatSansWithNumbers } from './position-filter.util';
 import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
-import { pgnFileName, stripInternalMarkers } from '../../shared/pgn-export.util';
+import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
 
 type ViewMode = 'lines' | 'tree' | 'edit';
 
@@ -366,7 +366,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     if (!game) return;
     const title = line.opening || line.chapter || `${line.white} vs ${line.black}`;
     const raw = this.viewerService.rawGames[line.gameIndex];
-    const pgn = stripInternalMarkers(raw ? raw.trimEnd() + '\n' : parsedGameToPgn(game, { title }));
+    const pgn = repertoireDownloadPgn(raw ? raw.trimEnd() + '\n' : parsedGameToPgn(game, { title }));
     const suffix = [line.chapter, line.white].filter(s => s && s !== '?').join(' ') || title;
     downloadBlob(new Blob([pgn], { type: 'application/x-chess-pgn' }), pgnFileName(this.repertoire?.name, suffix));
   }

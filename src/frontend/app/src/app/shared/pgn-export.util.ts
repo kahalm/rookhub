@@ -17,6 +17,25 @@ export function stripInternalMarkers(pgn: string): string {
     .replace(/[ \t]{2,}/g, ' ');
 }
 
+const INFO_PREFIX = 'Info | ';
+
+/**
+ * Repertoire-Download: wie {@link stripInternalMarkers}, aber eine Info-Linie (Partie mit `[%info]` im
+ * Zugtext) behält ihre Kennung — der `White`-Header bekommt „Info | " vorangestellt, denn der Marker selbst
+ * fällt beim Entfernen weg und ChessBase & Co. zeigen die Linie sonst wie jede andere.
+ */
+export function repertoireDownloadPgn(pgn: string): string {
+  if (!pgn) return pgn;
+  // Eine Partie = Header-Block (Zeilen `[Tag "…"]`) + Zugtext bis zum nächsten Header-Block.
+  const game = /((?:^[ \t]*\[[A-Za-z0-9_]+[ \t]+"[^\n]*\][ \t]*\r?(?:\n|$))+)([\s\S]*?)(?=^[ \t]*\[[A-Za-z0-9_]+[ \t]+"|(?![\s\S]))/gm;
+  const marked = pgn.replace(game, (_all, headers: string, moves: string) => {
+    if (!/\[%info\b/i.test(moves)) return headers + moves;
+    return headers.replace(/^([ \t]*\[White[ \t]+")([^\n]*)("\][ \t]*)$/m, (m, open: string, name: string, close: string) =>
+      name.startsWith(INFO_PREFIX) ? m : `${open}${INFO_PREFIX}${name}${close}`) + moves;
+  });
+  return stripInternalMarkers(marked);
+}
+
 /** Dateiname „Name_Zusatz.pgn" wie im Backend: nur Buchstaben/Ziffern, alles andere als ein „_". */
 export function pgnFileName(name: string | null | undefined, suffix: string): string {
   const clean = (s: string | null | undefined) =>

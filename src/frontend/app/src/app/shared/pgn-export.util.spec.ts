@@ -1,4 +1,4 @@
-import { pgnFileName, stripInternalMarkers } from './pgn-export.util';
+import { pgnFileName, repertoireDownloadPgn, stripInternalMarkers } from './pgn-export.util';
 
 describe('pgn-export.util', () => {
   it('stripInternalMarkers entfernt [%alt]/[%info], behält die übrigen Marker', () => {
@@ -15,6 +15,24 @@ describe('pgn-export.util', () => {
   it('stripInternalMarkers lässt Header und Zeilenumbrüche stehen', () => {
     expect(stripInternalMarkers('[Event "X"]\n[Round "1"]\n\n1. e4 e6 {[%alt c5]Französisch}\n2. d4 *\n'))
       .toBe('[Event "X"]\n[Round "1"]\n\n1. e4 e6 {Französisch}\n2. d4 *\n');
+  });
+
+  it('repertoireDownloadPgn stellt Info-Linien im White-Header „Info | " voran und entfernt die Marker', () => {
+    const pgn = [
+      '[Event "Rep"]', '[White "Kapitel 1"]', '[Black "?"]', '', '{[%info]} 1. -- {Erklärung} *', '',
+      '[Event "Rep"]', '[White "Kapitel 2"]', '', '1. e4 e6 {[%alt c5]Französisch} 2. d4 *', '',
+      '[Event "Rep"]', '[White "Kapitel 3"]', '', '1. d4 {[%info]Idee} d5 *', '',
+    ].join('\n');
+    expect(repertoireDownloadPgn(pgn)).toBe([
+      '[Event "Rep"]', '[White "Info | Kapitel 1"]', '[Black "?"]', '', ' 1. -- {Erklärung} *', '',
+      '[Event "Rep"]', '[White "Kapitel 2"]', '', '1. e4 e6 {Französisch} 2. d4 *', '',
+      '[Event "Rep"]', '[White "Info | Kapitel 3"]', '', '1. d4 {Idee} d5 *', '',
+    ].join('\n'));
+  });
+
+  it('repertoireDownloadPgn präfixt nicht doppelt und lässt Windows-Zeilenenden stehen', () => {
+    expect(repertoireDownloadPgn('[White "Info | A"]\n\n{[%info]} 1. e4 *\n')).toBe('[White "Info | A"]\n\n 1. e4 *\n');
+    expect(repertoireDownloadPgn('[White "A"]\r\n\r\n{[%info]} 1. e4 *\r\n')).toBe('[White "Info | A"]\r\n\r\n 1. e4 *\r\n');
   });
 
   it('pgnFileName entspricht der Backend-Regel', () => {

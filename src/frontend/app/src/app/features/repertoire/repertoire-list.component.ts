@@ -24,7 +24,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
 import { RepertoireTrainingService } from './repertoire-training.service';
 import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, cachedRepertoires } from './repertoire-offline.util';
 import { downloadBlob } from '../../shared/download.util';
-import { stripInternalMarkers } from '../../shared/pgn-export.util';
+import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -406,7 +406,7 @@ export class RepertoireListComponent implements OnInit {
     this.repertoireService.getPgnText(rep.id).subscribe({
       next: pgn => {
         const safe = (rep.name || 'repertoire').replace(/[^A-Za-z0-9]+/g, '_');
-        downloadBlob(new Blob([stripInternalMarkers(pgn)], { type: 'application/x-chess-pgn' }), `${safe}.pgn`);
+        downloadBlob(new Blob([repertoireDownloadPgn(pgn)], { type: 'application/x-chess-pgn' }), `${safe}.pgn`);
       },
       error: () => this.snackbar.info(this.translate.instant('common.downloadFailed'))
     });
