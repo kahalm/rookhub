@@ -318,16 +318,28 @@ public class CourseService
         var safe = new string((book.DisplayName ?? "course").Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
         var fileName = $"{(string.IsNullOrWhiteSpace(safe) ? "course" : safe)}.pgn";
 
-        // Roh-PGN vorhanden → verbatim ausliefern (Varianten + Kommentare bleiben erhalten).
-        if (!string.IsNullOrWhiteSpace(book.SourcePgn))
-            return (book.SourcePgn, fileName);
-
-        // Fallback (Altbestand ohne Quelle): aus den BookPuzzles rekonstruieren (Round-Lesereihenfolge).
         var puzzles = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
             .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
             .ToListAsync();
-        return (CoursePgnExporter.ToPgn(book.DisplayName, puzzles), fileName);
+
+        // Fallback (Altbestand ohne Quelle): aus den BookPuzzles rekonstruieren (Round-Lesereihenfolge).
+        if (string.IsNullOrWhiteSpace(book.SourcePgn))
+            return (CoursePgnExporter.ToPgn(book.DisplayName, puzzles), fileName);
+
+        // Roh-PGN vorhanden → verbatim ausliefern (Varianten + Kommentare bleiben erhalten). Linien OHNE
+        // Gegenstück darin (von Hand hinzugefügte Stellungen, CourseAuthoringService.AddLinesAsync) werden
+        // rekonstruiert angehängt — sonst gingen sie beim Download und bei „Kurs → Repertoire" verloren,
+        // samt ihrer Info-Kennung. Zuordnung über Round wie in BuildLinesPgn.
+        var rawRounds = PgnParser.SplitGameBlocks(book.SourcePgn)
+            .Select(g => PgnParser.Truncate(g.Headers.GetValueOrDefault("Round", "").Trim(), 20))
+            .Where(r => r.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+        var missing = puzzles.Where(p => !rawRounds.Contains(p.Round)).ToList();
+        if (missing.Count == 0)
+            return (book.SourcePgn, fileName);
+        var appended = CoursePgnExporter.ToPgn(book.DisplayName, missing).Trim();
+        return (appended.Length == 0 ? book.SourcePgn : book.SourcePgn.TrimEnd() + "\n\n" + appended + "\n", fileName);
     }
 
     /// <summary>PGN EINES Kapitels (<paramref name="chapter"/> leer = „ohne Kapitel") in Lesereihenfolge.

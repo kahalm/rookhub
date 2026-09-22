@@ -184,4 +184,112 @@ public class CourseConversionTests : IDisposable
         Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));
         Assert.False(await _db.Books.AnyAsync(b => b.OwnerUserId == 2));
     }
+
+    // ===== Info-Linien überleben die Rundreise Kurs → Repertoire → Kurs =====================
+
+    // Eine Quiz-Linie + eine Info-Linie MIT Zügen ([%info]) + ein zugloses Kapitel-Intro.
+    private const string CourseWithInfoPgn = @"
+[Event ""Info Book""]
+[Round ""1.1""]
+[White ""Intro""]
+[Black ""Kapitel 1""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{[%info]} 1. -- {Worum es in diesem Kapitel geht.} *
+
+[Event ""Info Book""]
+[Round ""1.2""]
+[White ""Idee""]
+[Black ""Kapitel 1""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{[%info] Der Plan.} 1. e4 e5 2. Nf3 Nc6 *
+
+[Event ""Info Book""]
+[Round ""1.3""]
+[White ""Aufgabe""]
+[Black ""Kapitel 1""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""Finde den Zug""] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *
+";
+
+    private async Task<Dictionary<string, bool>> InfoFlagsByTitle(int bookId)
+        => await _db.BookPuzzles.Where(bp => bp.BookId == bookId)
+            .ToDictionaryAsync(bp => bp.Title ?? bp.Round, bp => bp.IsInfoOnly);
+
+    private async Task<Dictionary<string, bool>> RoundTrip(int bookId)
+    {
+        var rep = await _conversion.ConvertCourseToRepertoireAsync(userId: 1, bookId: bookId, isAdmin: false);
+        var back = await _conversion.ConvertRepertoireToCourseAsync(userId: 1, repertoireId: rep.Id);
+        return await InfoFlagsByTitle(back.BookId);
+    }
+
+    [Fact]
+    public async Task RoundTrip_ImportedCourse_KeepsInfoLines()
+    {
+        var course = await _courses.UploadPersonalCourseAsync(userId: 1, "info.pgn", CourseWithInfoPgn, "Info Book");
+        var before = await InfoFlagsByTitle(course.BookId);
+        Assert.True(before["Idee"]);
+        Assert.False(before["Aufgabe"]);
+
+        var after = await RoundTrip(course.BookId);
+
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public async Task RoundTrip_CourseWithoutSourcePgn_KeepsInfoLines()
+    {
+        // Altbestand ohne Roh-PGN: der Export baut die Linien aus den gespeicherten BookPuzzles nach.
+        var course = await _courses.UploadPersonalCourseAsync(userId: 1, "info.pgn", CourseWithInfoPgn, "Info Book");
+        var book = await _db.Books.FirstAsync(b => b.Id == course.BookId);
+        book.SourcePgn = null;
+        await _db.SaveChangesAsync();
+        var before = await InfoFlagsByTitle(course.BookId);
+
+        var after = await RoundTrip(course.BookId);
+
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public async Task RoundTrip_RepertoireDownloadedWithInfoPrefix_KeepsInfoLines()
+    {
+        // Repertoire aus einem RookHub-Download (Marker weg, „Info | " im White-Header) → Kurs.
+        var downloaded = PgnParser.ForDownload(CourseWithInfoPgn);
+        var rep = await _repertoires.CreateFromPgnAsync(userId: 1, name: "DL", fileName: "dl.pgn", pgn: downloaded);
+
+        var course = await _conversion.ConvertRepertoireToCourseAsync(userId: 1, repertoireId: rep.Id);
+        var flags = await InfoFlagsByTitle(course.BookId);
+
+        Assert.True(flags["Idee"]);
+        Assert.False(flags["Aufgabe"]);
+    }
+
+    [Fact]
+    public async Task RoundTrip_HandAddedInfoPosition_InCourseWithSourcePgn_Survives()
+    {
+        // „Stellungen hinzufügen" (CourseAuthoringService.AddLinesAsync) legt Info-Linien OHNE Eintrag
+        // im Roh-PGN an. Der Kurs-Export lieferte bisher nur das Roh-PGN → die Stellung ging beim
+        // Umwandeln verloren.
+        var course = await _courses.UploadPersonalCourseAsync(userId: 1, "info.pgn", CourseWithInfoPgn, "Info Book");
+        var book = await _db.Books.FirstAsync(b => b.Id == course.BookId);
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = $"{book.FileName}:2.1", BookFileName = book.FileName, BookId = book.Id, Round = "2.1",
+            Title = "Stellung", Chapter = "Kapitel 2",
+            Fen = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+            Moves = string.Empty, StartPly = -1, Comment = "Merken.", IsInfoOnly = true,
+        });
+        await _db.SaveChangesAsync();
+        var before = await InfoFlagsByTitle(course.BookId);
+
+        var after = await RoundTrip(course.BookId);
+
+        Assert.Equal(before, after);
+    }
 }
