@@ -149,30 +149,47 @@ public static class RepertoireReach
     /// fragt je Gegner-Stellung die Explorer-Daten ab und sammelt Löcher und Linien-Häufigkeiten.
     /// <paramref name="stats"/> liefert <c>null</c>, wenn die Daten (noch) nicht da sind — die
     /// Stellung zählt dann als offen, und alles darunter bleibt unbekannt.
+    /// <para><paramref name="prefetchLayer"/> (optional) bekommt VOR jeder Tiefenschicht die Stellungen,
+    /// die darin abgefragt werden — erst dann stehen ihre Wahrscheinlichkeiten fest. Eine schnelle
+    /// Quelle holt sie dort auf einmal (parallel); was sie auslässt, fragt <paramref name="stats"/>
+    /// einzeln nach.</para>
     /// </summary>
     public static async Task<Result> EvaluateAsync(
-        Graph g, Func<Node, Task<ExplorerPositionStats?>> stats, double threshold, CancellationToken ct = default)
+        Graph g, Func<Node, Task<ExplorerPositionStats?>> stats, double threshold, CancellationToken ct = default,
+        Func<IReadOnlyList<Node>, Task>? prefetchLayer = null)
     {
         var result = new Result();
         var order = LayerByDepth(g);
 
-        foreach (var node in order)
+        for (int i = 0; i < order.Count;)
+        {
+            var end = i;
+            while (end < order.Count && order[end].Depth == order[i].Depth) end++;
+            if (prefetchLayer is not null)
+            {
+                var wanted = order.Skip(i).Take(end - i).Where(NeedsStats).ToList();
+                if (wanted.Count > 0) await prefetchLayer(wanted);
+            }
+            for (; i < end; i++) await VisitAsync(order[i]);
+        }
+
+        async Task VisitAsync(Node node)
         {
             ct.ThrowIfCancellationRequested();
-            if (!node.Known || node.Children.Count == 0) continue;
+            if (!node.Known || node.Children.Count == 0) return;
 
             if (node.UserToMove)
             {
                 var part = node.P / node.Children.Count;
                 foreach (var (_, child) in node.Children) Add(child, part);
-                continue;
+                return;
             }
 
-            if (node.P < MinReach) continue;
+            if (node.P < MinReach) return;
             var st = await stats(node);
-            if (st is null) { result.Pending++; continue; }
+            if (st is null) { result.Pending++; return; }
             result.Analyzed++;
-            if (st.Total < MinGames) continue;
+            if (st.Total < MinGames) return;
 
             var reached = new HashSet<Node>();
             ChessBoard? board = null;
@@ -230,6 +247,9 @@ public static class RepertoireReach
         sans.Reverse();
         return (cur.Key == StandardStartKey ? null : cur.Fen, sans);
     }
+
+    /// <summary>Braucht diese Stellung Explorer-Daten? Gegner am Zug, Repertoire-Antwort, oft genug erreicht.</summary>
+    private static bool NeedsStats(Node n) => n.Known && !n.UserToMove && n.Children.Count > 0 && n.P >= MinReach;
 
     private static void Add(Node child, double p)
     {

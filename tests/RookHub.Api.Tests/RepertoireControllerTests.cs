@@ -76,7 +76,10 @@ public class RepertoireControllerTests : IDisposable
         var gate = new LichessExplorerGate(refillInterval: TimeSpan.Zero);
         var client = new LichessExplorerClient(new HttpClient(), gate,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<LichessExplorerClient>.Instance);
-        return new RepertoireExplorerService(_db, _service, client, gate, new EncryptionService(config), config,
+        var local = new LocalExplorerClient(new HttpClient(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LocalExplorerClient>.Instance);
+        return new RepertoireExplorerService(_db, _service, client, local, new MemoryCache(new MemoryCacheOptions()), gate,
+            new EncryptionService(config), config,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<RepertoireExplorerService>.Instance);
     }
 

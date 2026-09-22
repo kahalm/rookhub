@@ -11,6 +11,10 @@ public class ExplorerAnalysisRequestDto
     /// Trainer aus (Auto-Erkennung + eigene Festlegung). Fehlendes Kapitel = Weiß, wie im Trainer.</summary>
     public Dictionary<string, string>? ChapterColors { get; set; }
 
+    /// <summary><c>"online"</c> (Standard, explorer.lichess.ovh) oder <c>"local"</c> (eigener Explorer im
+    /// Stack, nur wenn <c>LichessExplorer:LocalUrl</c> gesetzt ist).</summary>
+    public string? Source { get; set; }
+
     /// <summary><c>"lichess"</c> (Standard) oder <c>"masters"</c>.</summary>
     public string? Database { get; set; }
 
@@ -78,4 +82,14 @@ public class RepertoireHoleDto
     public double Frequency { get; set; }
     public string? Opening { get; set; }
     public string? Eco { get; set; }
+}
+
+/// <summary>Welche Explorer-Quellen dieser Server anbietet (<c>GET /api/repertoires/explorer/sources</c>).</summary>
+public class ExplorerSourcesDto
+{
+    public bool Online { get; set; } = true;
+    public bool Local { get; set; }
+    /// <summary>Elo-Stufen und Bedenkzeiten, für die der lokale Bestand Partien hat.</summary>
+    public List<int> LocalRatings { get; set; } = new();
+    public List<string> LocalSpeeds { get; set; } = new();
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { EMPTY, Observable, expand, switchMap, timer } from 'rxjs';
+import { EMPTY, Observable, catchError, expand, map, of, shareReplay, switchMap, timer } from 'rxjs';
 import { Chess } from 'chess.js';
 import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { startNumbering } from './repertoire-move-format.util';
@@ -15,6 +15,20 @@ import { TrainColor } from './repertoire-color.util';
 
 export type ExplorerDatabase = 'lichess' | 'masters';
 
+/** Woher die Zahlen kommen: explorer.lichess.ovh oder der eigene Explorer im Stack. */
+export type ExplorerSource = 'online' | 'local';
+
+/** Welche Quellen der Server anbietet (`GET /api/repertoires/explorer/sources`). */
+export interface ExplorerSources {
+  online: boolean;
+  local: boolean;
+  /** Elo-Stufen/Bedenkzeiten, für die der LOKALE Bestand Partien hat. */
+  localRatings: number[];
+  localSpeeds: string[];
+}
+
+const NO_LOCAL: ExplorerSources = { online: true, local: false, localRatings: [], localSpeeds: [] };
+
 /** Die Elo-Stufen des Lichess-Explorers (Spiegel von `ExplorerQuery.AllowedRatings`). */
 export const EXPLORER_RATINGS: readonly number[] = [0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500];
 
@@ -22,6 +36,7 @@ export const EXPLORER_RATINGS: readonly number[] = [0, 1000, 1200, 1400, 1600, 1
 export const EXPLORER_SPEEDS: readonly string[] = ['ultraBullet', 'bullet', 'blitz', 'rapid', 'classical', 'correspondence'];
 
 export interface ExplorerSettings {
+  source: ExplorerSource;
   database: ExplorerDatabase;
   ratings: number[];
   speeds: string[];
@@ -30,6 +45,7 @@ export interface ExplorerSettings {
 }
 
 export const DEFAULT_EXPLORER_SETTINGS: ExplorerSettings = {
+  source: 'online',
   database: 'lichess',
   ratings: [1600, 1800, 2000],
   speeds: ['blitz', 'rapid', 'classical'],
@@ -44,6 +60,7 @@ export interface ExplorerAnalysisRequest {
   color: TrainColor | null;
   /** Trainingsfarbe je Kapitel (`[Black]`-Header) — wie im Trainer. */
   chapterColors: Record<string, TrainColor>;
+  source: ExplorerSource;
   database: ExplorerDatabase;
   ratings: number[];
   speeds: string[];
@@ -96,6 +113,7 @@ export function readExplorerSettings(): ExplorerSettings {
     const speeds = Array.isArray(s.speeds) ? s.speeds.filter(x => EXPLORER_SPEEDS.includes(x)) : [];
     const t = Number(s.thresholdPercent);
     return {
+      source: s.source === 'local' ? 'local' : 'online',
       database: s.database === 'masters' ? 'masters' : 'lichess',
       ratings: ratings.length ? ratings : [...DEFAULT_EXPLORER_SETTINGS.ratings],
       speeds: speeds.length ? speeds : [...DEFAULT_EXPLORER_SETTINGS.speeds],
@@ -141,6 +159,21 @@ export function formatPath(startFen: string | null, sans: string[]): string {
   return parts.join(' ');
 }
 
+/**
+ * Auswahl an die LOKALE Quelle anpassen: dort gibt es nur Elo ab 1600 und kein (Ultra-)Bullet — eine
+ * Stufe darunter liefert korrekt 0 Partien und damit stillschweigend keine Löcher. Bleibt nichts
+ * übrig, gilt die Vorgabe innerhalb der lokalen Grenzen.
+ */
+export function fitToLocal(s: ExplorerSettings, src: ExplorerSources): ExplorerSettings {
+  const ratings = s.ratings.filter(r => src.localRatings.includes(r));
+  const speeds = s.speeds.filter(x => src.localSpeeds.includes(x));
+  return {
+    ...s,
+    ratings: ratings.length ? ratings : DEFAULT_EXPLORER_SETTINGS.ratings.filter(r => src.localRatings.includes(r)),
+    speeds: speeds.length ? speeds : DEFAULT_EXPLORER_SETTINGS.speeds.filter(x => src.localSpeeds.includes(x)),
+  };
+}
+
 /** Anteil 0…1 als Prozent — mit so vielen Stellen, dass auch kleine Werte lesbar bleiben. */
 export function formatPercent(x: number): string {
   const p = x * 100;
@@ -172,7 +205,25 @@ export class RepertoireExplorerService {
   /** Sicherheitsdeckel der Schleife — ein Lauf über einen riesigen Kurs braucht einige Dutzend Runden. */
   static readonly MaxRounds = 300;
 
+  private sources$: Observable<ExplorerSources> | null = null;
+
   constructor(private http: HttpClient) {}
+
+  /** Angebotene Quellen (einmal je Sitzung gefragt; Fehler = nur online). */
+  sources(): Observable<ExplorerSources> {
+    this.sources$ ??= this.http.get<ExplorerSources>('/api/repertoires/explorer/sources').pipe(
+      catchError(() => of(NO_LOCAL)),
+      shareReplay(1),
+    );
+    return this.sources$;
+  }
+
+  /** Die gemerkte Auswahl, passend zu dem, was der Server anbietet (lokal weg → online). */
+  effectiveSettings(): Observable<ExplorerSettings> {
+    const s = readExplorerSettings();
+    if (s.source !== 'local') return of(s);
+    return this.sources().pipe(map(src => src.local ? fitToLocal(s, src) : { ...s, source: 'online' as const }));
+  }
 
   analyze(repertoireId: number, req: ExplorerAnalysisRequest): Observable<ExplorerAnalysisResult> {
     return this.http.post<ExplorerAnalysisResult>(`/api/repertoires/${repertoireId}/explorer-analysis`, req);

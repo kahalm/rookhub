@@ -183,6 +183,27 @@ public class RepertoireReachTests
     }
 
     [Fact]
+    public async Task PrefetchLayer_GetsEachLayersQueries_BeforeTheyAreAsked()
+    {
+        var g = Graph('b', "[Event \"x\"]\n\n1. e4 c5 2. Nf3 d6 *", "[Event \"y\"]\n\n1. d4 d5 2. c4 e6 *");
+        var ex = new Explorer();
+        ex.Data[KeyAfter()] = Stats(("e4", 50), ("d4", 50));
+        ex.Data[KeyAfter("e4", "c5")] = Stats(("Nf3", 100));
+        ex.Data[KeyAfter("d4", "d5")] = Stats(("c4", 100));
+        var layers = new List<List<string>>();
+
+        await RepertoireReach.EvaluateAsync(g, ex.Get, 0.01, default, nodes =>
+        {
+            layers.Add(nodes.Select(n => n.Key).ToList());
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(2, layers.Count);
+        Assert.Equal(new[] { KeyAfter() }, layers[0]);
+        Assert.Equal(new[] { KeyAfter("d4", "d5"), KeyAfter("e4", "c5") }.OrderBy(k => k), layers[1].OrderBy(k => k));
+    }
+
+    [Fact]
     public void Key_DropsEnPassantAndCounters_LikeTheClient()
     {
         // Spiegel von normalizeFen (position-filter.util.ts): Brett, Zugrecht, Rochade.

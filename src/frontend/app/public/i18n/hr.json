@@ -974,7 +974,11 @@
       "frequency": "≈ {{value}} tvojih partija",
       "startPosition": "Početna pozicija",
       "games": "Partija: {{count}}",
-      "intro": "Odaberi bazu, rejting i tempo svojih protivnika i pokreni traženje. Lichess dopušta samo oko 15 upita u minuti, pa prvi put kod velikog repertoara potraje; pozicije koje su već provjerene RookHub pamti, a prekinuto traženje sljedeći put nastavlja tamo gdje je stalo."
+      "intro": "Odaberi bazu, rejting i tempo svojih protivnika i pokreni traženje. Lichess dopušta samo oko 15 upita u minuti, pa prvi put kod velikog repertoara potraje; pozicije koje su već provjerene RookHub pamti, a prekinuto traženje sljedeći put nastavlja tamo gdje je stalo.",
+      "source": "Izvor",
+      "sourceOnline": "Lichess.org",
+      "sourceLocal": "Lokalno",
+      "localHint": "Lokalni explorer na RookHub poslužitelju: bez tokena, bez čekanja. Lichess partije tek od rejtinga 1600 i bez bulleta, majstori iz baze Lumbra (partije za pločom od 2200). Lichess podaci još rastu mjesec po mjesec – udjeli su pouzdani, brojevi partija manji nego na lichess.org."
     }
   },
   "tournaments": {

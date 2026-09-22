@@ -9,20 +9,12 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [ ] Lochfinder: LOKALER Explorer als zweite Quelle (2026-09-22, nach 0.502.0)
+## [x] Lochfinder: LOKALER Explorer als zweite Quelle (2026-09-22, ERLEDIGT in 0.503.0)
 
-Der Lochfinder und „Häufigste zuerst" fragen heute `explorer.lichess.ovh` (Token-Pflicht, Drossel:
-gemessen ein Eimer von gut 20 Anfragen mit ~0,3/s Nachlauf — auf Dauer ~15 Stellungen je Minute, ein
-großer Chessable-Kurs braucht beim ersten Lauf eine halbe Stunde und mehr). Die Parallel-Sitzung baut
-einen lokalen `lila-openingexplorer` (`http://rookhub-explorer:9002/`, gleiche Endpunkte und
-Antworten, kein Token, keine Drossel; lokal nur Lichess-Partien ab Elo-Schnitt 1600 ohne
-(Ultra-)Bullet, Meister = Lumbra-OTB). Sobald er Daten liefert:
-- `LichessExplorer:LocalUrl` (leer = Option unsichtbar), Quelle `online|local` in Anfrage und
-  Auswahl, `CachePrefix` mit Quelle.
-- Lokal: kein Gate, kein Token, KEIN Eintrag in `LichessExplorerCacheEntries` (monatlich wachsende
-  Daten), parallel (8 gleichzeitig).
-- Oberfläche: bei „lokal" nur Elo 1600–2500 und blitz/rapid/classical/correspondence wählbar.
-- Naht ist `LichessExplorerClient.FetchAsync`.
+Quelle `online|local`, `LichessExplorer:LocalUrl`, lokal ohne Token/Leitung/DB-Speicher und
+parallel je Tiefenschicht — Details in CLAUDE.md („Lochfinder"). Offen bleibt nur, auf Prod und Dev
+`LICHESS_EXPLORER_LOCAL_URL=http://rookhub-explorer:9002/` in die Stack-.env und den api-Block zu
+tragen (Deploy-Sache, nicht im Repo).
 
 ## [~] Partie rekonstruieren: die Luecken schliessen (2026-09-20, Hauptteil in 0.487.0)
 

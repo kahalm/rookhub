@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -21,6 +23,11 @@ namespace RookHub.Api.Services;
 /// <para><b>Token:</b> der Explorer verlangt seit 2025 eine Anmeldung. Zuerst gilt der Server-Token
 /// (<c>LichessExplorer:Token</c>), sonst der Lichess-Token, den der Nutzer für die externe Engine
 /// hinterlegt hat — der Explorer nimmt jeden gültigen Token, ohne besonderen Scope.</para>
+///
+/// <para><b>Zwei Quellen:</b> <c>online</c> (explorer.lichess.ovh — Token, Drossel, Datenbank-Speicher)
+/// und <c>local</c> (<see cref="LocalExplorerClient"/> — nichts davon; die Stellungen einer
+/// Tiefenschicht gehen gleichzeitig raus, <see cref="LocalParallelism"/>, und liegen nur kurz im
+/// Arbeitsspeicher, damit die nächste Runde sie nicht erneut holt).</para>
 /// </summary>
 public class RepertoireExplorerService
 {
@@ -31,10 +38,15 @@ public class RepertoireExplorerService
     /// <summary>So viele Verbindungsfehler in einem Aufruf, dann wird dort aufgehört.</summary>
     private const int MaxFailures = 3;
     private const int CacheChunk = 500;
+    /// <summary>So viele gleichzeitige Anfragen an den lokalen Explorer.</summary>
+    public const int LocalParallelism = 8;
+    private static readonly TimeSpan LocalMemoryTtl = TimeSpan.FromHours(1);
 
     private readonly AppDbContext _db;
     private readonly RepertoireService _repertoires;
     private readonly LichessExplorerClient _client;
+    private readonly LocalExplorerClient _local;
+    private readonly IMemoryCache _memory;
     private readonly LichessExplorerGate _gate;
     private readonly EncryptionService _encryption;
     private readonly IConfiguration _config;
@@ -47,13 +59,15 @@ public class RepertoireExplorerService
     public TimeSpan Budget { get; set; } = TimeSpan.FromSeconds(20);
 
     public RepertoireExplorerService(
-        AppDbContext db, RepertoireService repertoires, LichessExplorerClient client, LichessExplorerGate gate,
-        EncryptionService encryption, IConfiguration config, ILogger<RepertoireExplorerService> logger,
-        TimeProvider? time = null)
+        AppDbContext db, RepertoireService repertoires, LichessExplorerClient client, LocalExplorerClient local,
+        IMemoryCache memory, LichessExplorerGate gate, EncryptionService encryption, IConfiguration config,
+        ILogger<RepertoireExplorerService> logger, TimeProvider? time = null)
     {
         _db = db;
         _repertoires = repertoires;
         _client = client;
+        _local = local;
+        _memory = memory;
         _gate = gate;
         _encryption = encryption;
         _config = config;
@@ -67,6 +81,14 @@ public class RepertoireExplorerService
         int userId, int repertoireId, ExplorerAnalysisRequestDto req, CancellationToken ct)
     {
         var query = ExplorerQuery.Create(req.Database, req.Ratings, req.Speeds);
+        var useLocal = req.Source switch
+        {
+            null or "" or "online" => false,
+            "local" => true,
+            _ => throw new ArgumentException("Quelle muss \"online\" oder \"local\" sein."),
+        };
+        if (useLocal && !_local.IsConfigured)
+            throw new ArgumentException("Der lokale Explorer ist auf diesem Server nicht eingerichtet.");
         if (double.IsNaN(req.ThresholdPercent) || req.ThresholdPercent < 0.1 || req.ThresholdPercent > 50)
             throw new ArgumentException("Die Schwelle muss zwischen 0,1 und 50 % liegen.");
         char? onlyColor = req.Color switch
@@ -87,11 +109,17 @@ public class RepertoireExplorerService
             .Select(grp => RepertoireReach.Build(grp, grp.Key))
             .ToList();
 
-        var cached = await LoadCacheAsync(query,
-            graphs.SelectMany(g => g.OpponentBranches).Select(n => n.Key).Distinct(), ct);
-
         var dto = new ExplorerAnalysisResultDto();
         var clock = Stopwatch.StartNew();
+        var threshold = req.ThresholdPercent / 100.0;
+        if (useLocal)
+        {
+            await EvaluateLocalAsync(graphs, query, threshold, req, dto, clock, ct);
+            return dto;
+        }
+
+        var cached = await LoadCacheAsync(query,
+            graphs.SelectMany(g => g.OpponentBranches).Select(n => n.Key).Distinct(), ct);
         string? token = null;
         var tokenResolved = false;
         var stop = false;
@@ -126,12 +154,74 @@ public class RepertoireExplorerService
             }
         }
 
+        await CollectAsync(graphs, Stats, null, threshold, req, dto, ct);
+        if (dto.RateLimited && _gate.BlockedFor is { } left) dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
+        return dto;
+    }
+
+    /// <summary>Welche Quellen es gibt — die Oberfläche zeigt „lokal" nur, wenn eingerichtet.</summary>
+    public ExplorerSourcesDto Sources() => new()
+    {
+        Online = true,
+        Local = _local.IsConfigured,
+        LocalRatings = LocalExplorerClient.LocalRatings.ToList(),
+        LocalSpeeds = LocalExplorerClient.LocalSpeeds.ToList(),
+    };
+
+    /// <summary>Lokale Quelle: je Tiefenschicht alle benötigten Stellungen gleichzeitig holen.</summary>
+    private async Task EvaluateLocalAsync(
+        List<RepertoireReach.Graph> graphs, ExplorerQuery query, double threshold, ExplorerAnalysisRequestDto req,
+        ExplorerAnalysisResultDto dto, Stopwatch clock, CancellationToken ct)
+    {
+        var fetched = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
+        var failures = 0;
+        string MemoryKey(string nodeKey) => "explorer:local:" + query.CachePrefix + nodeKey;
+
+        async Task Prefetch(IReadOnlyList<RepertoireReach.Node> nodes)
+        {
+            var missing = nodes.Where(n => !fetched.ContainsKey(n.Key)).ToList();
+            foreach (var n in missing.ToList())
+                if (_memory.TryGetValue<ExplorerPositionStats>(MemoryKey(n.Key), out var hit) && hit is not null)
+                {
+                    fetched[n.Key] = hit;
+                    missing.Remove(n);
+                }
+            if (missing.Count == 0 || clock.Elapsed >= Budget || dto.FetchFailed) return;
+
+            await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalParallelism, CancellationToken = ct },
+                async (n, token) =>
+                {
+                    var stats = await _local.FetchAsync(n.Fen, query, token);
+                    if (stats is null) { Interlocked.Increment(ref failures); return; }
+                    fetched[n.Key] = stats;
+                    _memory.Set(MemoryKey(n.Key), stats, LocalMemoryTtl);
+                });
+            if (failures >= MaxFailures && fetched.IsEmpty) dto.FetchFailed = true;
+        }
+
+        async Task<ExplorerPositionStats?> Stats(RepertoireReach.Node node)
+        {
+            if (fetched.TryGetValue(node.Key, out var hit)) return hit;
+            // Nachzügler einer Schicht (Zugumstellung innerhalb derselben Tiefe): einzeln holen.
+            await Prefetch(new[] { node });
+            return fetched.TryGetValue(node.Key, out hit) ? hit : null;
+        }
+
+        await CollectAsync(graphs, Stats, Prefetch, threshold, req, dto, ct);
+        if (!dto.Complete && failures > 0) dto.FetchFailed = true;
+    }
+
+    /// <summary>Rechnet alle Farb-Graphen durch und trägt Löcher, Zähler und Häufigkeiten ein.</summary>
+    private static async Task CollectAsync(
+        List<RepertoireReach.Graph> graphs, Func<RepertoireReach.Node, Task<ExplorerPositionStats?>> stats,
+        Func<IReadOnlyList<RepertoireReach.Node>, Task>? prefetch, double threshold,
+        ExplorerAnalysisRequestDto req, ExplorerAnalysisResultDto dto, CancellationToken ct)
+    {
         var holes = new List<RepertoireHoleDto>();
         var frequencies = new Dictionary<string, double>(StringComparer.Ordinal);
-        var threshold = req.ThresholdPercent / 100.0;
         foreach (var graph in graphs)
         {
-            var r = await RepertoireReach.EvaluateAsync(graph, Stats, threshold, ct);
+            var r = await RepertoireReach.EvaluateAsync(graph, stats, threshold, ct, prefetch);
             dto.PositionsAnalyzed += r.Analyzed;
             dto.PositionsPending += r.Pending;
             if (req.IncludeHoles)
@@ -141,10 +231,8 @@ public class RepertoireExplorerService
         }
 
         dto.Complete = dto.PositionsPending == 0;
-        if (dto.RateLimited && _gate.BlockedFor is { } left) dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
         dto.Holes = holes.OrderByDescending(h => h.Frequency).ThenByDescending(h => h.Share).Take(MaxHoles).ToList();
         if (req.IncludeLineFrequencies) dto.LineFrequencies = frequencies;
-        return dto;
     }
 
     private static RepertoireHoleDto ToDto(RepertoireReach.Hole h, char color)

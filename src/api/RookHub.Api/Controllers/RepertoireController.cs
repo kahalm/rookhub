@@ -99,6 +99,11 @@ public class RepertoireController : BaseApiController
 
     // ===== Lochfinder + Linien-Häufigkeiten (Lichess-Explorer) =====
 
+    /// <summary>Welche Explorer-Quellen es gibt (online immer, lokal nur mit <c>LichessExplorer:LocalUrl</c>).</summary>
+    [HttpGet("explorer/sources")]
+    public ActionResult<ExplorerSourcesDto> ExplorerSources([FromServices] RepertoireExplorerService explorer) =>
+        Ok(explorer.Sources());
+
     /// <summary>Welche häufigen Gegnerzüge fehlen im Repertoire, und wie oft erreicht man jede Linie?
     /// Antwortet nach höchstens ~20 s Abfragezeit mit dem bisherigen Stand (<c>complete = false</c>) — der Client
     /// fragt dann erneut, das schon Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger.

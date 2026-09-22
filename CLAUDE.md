@@ -208,7 +208,8 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 | POST | `/api/repertoires/reprocess` | Markiert veraltete eigene Repertoires auf die aktuelle Pipeline-Version (heute No-op für abgeleitete Daten) |
 | GET | `/api/repertoires/{id:int}/flashcards` | PERSISTENT als Flashcard markierte Linien `{ lineKeys }` — Besitzer UND Freigabe-Empfänger, jeweils EIGENER Satz (404 ohne Lese-Zugriff) |
 | POST/DELETE | `/api/repertoires/{id:int}/flashcards/{lineKey}` | Flashcard-Markierung einer Linie setzen/entfernen (idempotent) → `{ marked }`; LineKey = Frontend-Linien-Hash (`repertoire-line-key.util.ts`, wie SR — Re-Import mit geänderter Zugfolge lässt Markierungen ins Leere laufen, gewollt). Frontend: Checkboxen der Linienliste + „(n)"-Knopf → `/repertoires/:id/flashcards?marked=1` |
-| POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
+| GET | `/api/repertoires/explorer/sources` | Welche Explorer-Quellen es gibt `{ online, local, localRatings[], localSpeeds[] }` — `local` nur mit `LichessExplorer:LocalUrl` (0.503.0) |
+| POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
 
 ### Lochfinder + „Häufigste zuerst" (Lichess-Explorer, 0.502.0)
 
@@ -257,10 +258,19 @@ Frontend: vierter Modus der Repertoire-Detailseite (`repertoire-holes.component.
 (`freqOrder`, localStorage `rookhub_rep_train_freq_order`), die Explorer-Auswahl teilt er sich mit dem
 Lochfinder (`rookhub_explorer_settings`). Offline ist der Knopf ausgeblendet.
 
-**Geplant (Absprache mit der Parallel-Sitzung, 2026-09-22)**: ein LOKALER Explorer
-(`lila-openingexplorer` als Container `rookhub-explorer:9002`, gleiche Endpunkte, kein Token, keine
-Drossel). Die Naht ist `LichessExplorerClient.FetchAsync`; dazu kommen `LichessExplorer:LocalUrl` und
-eine Quelle `online|local` in der Auswahl (lokal ohne Gate/Speicher, parallel).
+**Zweite Quelle: der LOKALE Explorer** (0.503.0, `LocalExplorerClient`): `lila-openingexplorer` als
+Container im Stack (`rookhub-explorer:9002`, von der Parallel-Sitzung aufgebaut), dieselben
+Endpunkte und Antworten wie explorer.lichess.ovh (`BuildUrl`/`Parse` sind geteilt). Eingeschaltet
+über `LichessExplorer:LocalUrl` (Compose `LICHESS_EXPLORER_LOCAL_URL`); leer = die Quelle gibt es
+nicht, und eine Anfrage mit `source: "local"` ist ein 400. Lokal gilt: kein Token, keine Leitung,
+KEIN Datenbank-Speicher (die Daten wachsen dort monatlich), nur eine Stunde im Arbeitsspeicher; die
+Stellungen einer Tiefenschicht gehen gleichzeitig raus (`RepertoireReach.EvaluateAsync` mit
+`prefetchLayer`, `LocalParallelism` = 8). Gemessen am Test-Repertoire: 26 Stellungen Meister kalt in
+8 s, Lichess 2 s — online waren es 44 s. **Datenstand lokal**: Lichess-Partien erst ab Elo-Schnitt
+1600 und ohne (Ultra-)Bullet (darunter kommen korrekt 0 Partien — die Oberfläche blendet diese
+Stufen aus, `fitToLocal`), Meister = Lumbra-GigaBase (Brettpartien ab 2200). Die Wahl der Quelle
+teilen sich Lochfinder und Trainer (`rookhub_explorer_settings.source`); ist sie „lokal", der Server
+hat aber keinen, fällt sie still auf online zurück (`effectiveSettings`).
 
 ### Extension API (auth, CORS für chess.com)
 | Methode | Endpoint | Zweck |

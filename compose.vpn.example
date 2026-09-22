@@ -189,6 +189,9 @@ services:
       # Optional: Lichess-Token fuer den Lochfinder (Eroeffnungs-Explorer, beliebiger Token ohne Scope).
       # Leer -> es gilt der Engine-Token, den ein Nutzer im Profil hinterlegt hat.
       LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}
+      # Optional: lokaler Eroeffnungs-Explorer (lila-openingexplorer im Stack), z. B.
+      # http://rookhub-explorer:9002/ — leer = nur die Online-Quelle (explorer.lichess.ovh).
+      LichessExplorer__LocalUrl: ${LICHESS_EXPLORER_LOCAL_URL:-}
       # Admin-Tab „CI / Actions": GitHub-PAT (actions:read) + Push-Modell. Leer -> Tab/Meldungen aus;
       # die CI-Endpoints antworten ohne Secret mit 401 (fail-closed).
       GitHub__Token: ${GITHUB_TOKEN:-}

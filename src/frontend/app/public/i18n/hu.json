@@ -743,7 +743,11 @@
       "frequency": "≈ {{value}} a játszmáidból",
       "startPosition": "Kiinduló állás",
       "games": "{{count}} játszma",
-      "intro": "Válaszd ki az ellenfeleid adatbázisát, Élő-pontszámát és tempóját, majd indítsd a keresést. A Lichess percenként csak kb. 15 lekérdezést enged, ezért nagy repertoárnál az első alkalom eltart egy ideig; a már lekérdezett állásokat a RookHub megjegyzi, a megszakított keresés pedig legközelebb ott folytatja, ahol abbahagyta."
+      "intro": "Válaszd ki az ellenfeleid adatbázisát, Élő-pontszámát és tempóját, majd indítsd a keresést. A Lichess percenként csak kb. 15 lekérdezést enged, ezért nagy repertoárnál az első alkalom eltart egy ideig; a már lekérdezett állásokat a RookHub megjegyzi, a megszakított keresés pedig legközelebb ott folytatja, ahol abbahagyta.",
+      "source": "Forrás",
+      "sourceOnline": "Lichess.org",
+      "sourceLocal": "Helyi",
+      "localHint": "Helyi explorer a RookHub szerveren: token és várakozás nélkül. Lichess-játszmák csak 1600-as Élő-ponttól és bullet nélkül, mesterek a Lumbra-adatbázisból (tábla melletti játszmák 2200-tól). A Lichess-adatok még hónapról hónapra bővülnek – az arányok megbízhatók, a játszmák száma kisebb, mint a lichess.org-on."
     }
   },
   "tournaments": {

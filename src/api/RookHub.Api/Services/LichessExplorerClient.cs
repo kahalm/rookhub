@@ -190,11 +190,7 @@ public class LichessExplorerClient
     {
         if (_gate.BlockedFor is not null) return (ExplorerFetchStatus.RateLimited, null);
 
-        var url = query.Database == ExplorerQuery.Masters
-            ? $"masters?fen={Uri.EscapeDataString(fen)}&moves={MaxMoves}&topGames=0"
-            : $"lichess?variant=standard&fen={Uri.EscapeDataString(fen)}"
-              + $"&ratings={string.Join(',', query.Ratings)}&speeds={string.Join(',', query.Speeds)}"
-              + $"&moves={MaxMoves}&topGames=0&recentGames=0";
+        var url = BuildUrl(fen, query);
 
         await _gate.WaitAsync(ct);
         try
@@ -236,6 +232,14 @@ public class LichessExplorerClient
         }
     }
 
+    /// <summary>Relativer Pfad samt Abfrage — gilt für den Lichess-Explorer UND den lokalen
+    /// (<see cref="LocalExplorerClient"/>, dieselbe Software mit denselben Endpunkten).</summary>
+    internal static string BuildUrl(string fen, ExplorerQuery query) => query.Database == ExplorerQuery.Masters
+        ? $"masters?fen={Uri.EscapeDataString(fen)}&moves={MaxMoves}&topGames=0"
+        : $"lichess?variant=standard&fen={Uri.EscapeDataString(fen)}"
+          + $"&ratings={string.Join(',', query.Ratings)}&speeds={string.Join(',', query.Speeds)}"
+          + $"&moves={MaxMoves}&topGames=0&recentGames=0";
+
     /// <summary>Explorer-Antwort → kompakte Form. Gesamtzahl = Weiß + Remis + Schwarz der Stellung.</summary>
     internal static ExplorerPositionStats? Parse(JsonDocument doc)
     {
@@ -268,5 +272,60 @@ public class LichessExplorerClient
         foreach (var key in new[] { "white", "draws", "black" })
             if (e.TryGetProperty(key, out var v) && v.TryGetInt64(out var x)) n += x;
         return n;
+    }
+}
+
+/// <summary>
+/// Der LOKALE Eröffnungs-Explorer (<c>lila-openingexplorer</c> im eigenen Stack, Adresse aus
+/// <c>LichessExplorer:LocalUrl</c>): dieselben Endpunkte und Antworten wie
+/// <c>explorer.lichess.ovh</c>, aber ohne Token, ohne Drossel und mit wenigen Millisekunden je Stellung.
+/// Deshalb auch keine Leitung (<see cref="LichessExplorerGate"/>) und kein Datenbank-Speicher — die
+/// Daten wachsen dort jeden Monat, und die Abfrage ist billiger als ein Speicher-Eintrag.
+///
+/// <para>Datenstand dort (Absprache mit der Stack-Sitzung, 2026-09-22): Lichess-Partien erst ab
+/// Elo-Schnitt 1600 und ohne (Ultra-)Bullet — eine Auswahl darunter liefert korrekt 0 Partien —,
+/// Meister = Lumbra-GigaBase (OTB, Elo-Schnitt ab 2200).</para>
+/// </summary>
+public class LocalExplorerClient
+{
+    public const string ConfigKey = "LichessExplorer:LocalUrl";
+
+    /// <summary>Die Elo-Stufen, für die der lokale Bestand Partien hat.</summary>
+    public static readonly IReadOnlyList<int> LocalRatings = new[] { 1600, 1800, 2000, 2200, 2500 };
+
+    /// <summary>Die Bedenkzeiten, für die der lokale Bestand Partien hat.</summary>
+    public static readonly IReadOnlyList<string> LocalSpeeds = new[] { "blitz", "rapid", "classical", "correspondence" };
+
+    private readonly HttpClient _http;
+    private readonly ILogger<LocalExplorerClient> _logger;
+
+    public LocalExplorerClient(HttpClient http, ILogger<LocalExplorerClient> logger)
+    {
+        _http = http;
+        _logger = logger;
+    }
+
+    /// <summary>Ist eine Adresse eingerichtet? Ohne sie gibt es die Quelle „lokal" nicht.</summary>
+    public bool IsConfigured => _http.BaseAddress is not null;
+
+    public async Task<ExplorerPositionStats?> FetchAsync(string fen, ExplorerQuery query, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(LichessExplorerClient.BuildUrl(fen, query), ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Lokaler Explorer: HTTP {Status} für {Fen}", (int)response.StatusCode, fen);
+                return null;
+            }
+            await using var body = await response.Content.ReadAsStreamAsync(ct);
+            return LichessExplorerClient.Parse(await JsonDocument.ParseAsync(body, cancellationToken: ct));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException
+                                       || (ex is TaskCanceledException && !ct.IsCancellationRequested))
+        {
+            _logger.LogWarning(ex, "Lokaler Explorer nicht erreichbar für {Fen}", fen);
+            return null;
+        }
     }
 }

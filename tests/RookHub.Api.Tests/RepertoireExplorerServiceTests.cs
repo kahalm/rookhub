@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
@@ -26,6 +27,9 @@ public class RepertoireExplorerServiceTests : IDisposable
 
     private readonly AppDbContext _db;
     private readonly StubHandler _handler = new();
+    /// <summary>Der lokale Explorer — eigene Leitung, eigene Antworten.</summary>
+    private readonly StubHandler _localHandler = new();
+    private bool _localConfigured = true;
     private readonly ManualTime _time = new(new DateTimeOffset(2026, 9, 22, 12, 0, 0, TimeSpan.Zero));
     private readonly LichessExplorerGate _gate;
     private readonly EncryptionService _encryption;
@@ -39,7 +43,13 @@ public class RepertoireExplorerServiceTests : IDisposable
         _encryption = new EncryptionService(new ConfigurationBuilder().AddInMemoryCollection(_settings).Build());
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        _memory.Dispose();
+    }
+
+    private readonly MemoryCache _memory = new(new MemoryCacheOptions());
 
     private RepertoireExplorerService Service()
     {
@@ -47,7 +57,10 @@ public class RepertoireExplorerServiceTests : IDisposable
         var client = new LichessExplorerClient(
             new HttpClient(_handler) { BaseAddress = new Uri(LichessExplorerClient.BaseUrl) },
             _gate, NullLogger<LichessExplorerClient>.Instance);
-        return new RepertoireExplorerService(_db, TestServices.Repertoire(_db), client, _gate, _encryption,
+        var localHttp = new HttpClient(_localHandler);
+        if (_localConfigured) localHttp.BaseAddress = new Uri("http://rookhub-explorer:9002/");
+        var local = new LocalExplorerClient(localHttp, NullLogger<LocalExplorerClient>.Instance);
+        return new RepertoireExplorerService(_db, TestServices.Repertoire(_db), client, local, _memory, _gate, _encryption,
             config, NullLogger<RepertoireExplorerService>.Instance, _time);
     }
 
@@ -310,6 +323,104 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.True(clock.ElapsedMilliseconds < 1000);
     }
 
+    // ---- Lokale Quelle ----
+
+    private const string BlackLines = "[Event \"x\"]\n[White \"Linie\"]\n[Black \"Sizilianisch\"]\n\n1. e4 c5 2. Nf3 d6 *\n\n"
+        + "[Event \"y\"]\n[White \"Linie 2\"]\n[Black \"Sizilianisch\"]\n\n1. d4 d5 2. c4 e6 *";
+
+    private static ExplorerAnalysisRequestDto LocalRequest()
+    {
+        var r = Request();
+        r.Source = "local";
+        return r;
+    }
+
+    [Fact]
+    public async Task LocalSource_NeedsNoToken_TouchesNeitherLichessNorTheDatabase()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4, userToken: null);
+        _localHandler.Respond(StartKey, StartJson);
+
+        var result = await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        Assert.True(result.Complete);
+        Assert.False(result.TokenMissing);
+        Assert.Equal(new[] { "d4", "c4" }, result.Holes.Select(h => h.San));
+        var url = Assert.Single(_localHandler.Urls);
+        Assert.StartsWith("http://rookhub-explorer:9002/lichess?", url);
+        Assert.Null(_localHandler.LastAuth);
+        Assert.Empty(_handler.Urls);
+        Assert.Empty(_db.LichessExplorerCacheEntries);
+    }
+
+    [Fact]
+    public async Task LocalSource_SecondRun_ComesFromMemory()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        _localHandler.Respond(StartKey, StartJson);
+        await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        var again = await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        Assert.Single(_localHandler.Urls);
+        Assert.Equal(2, again.Holes.Count);
+    }
+
+    [Fact]
+    public async Task LocalSource_FetchesAWholeLayerAtOnce()
+    {
+        // Schwarz: die Grundstellung (Schicht 0), dann 1.e4 c5 und 1.d4 d5 in derselben Schicht 2.
+        var (userId, repId) = await SeedAsync(BlackLines);
+        _localHandler.Respond(StartKey, """{"white":50,"draws":0,"black":50,"moves":[{"uci":"e2e4","san":"e4","white":25,"draws":0,"black":25},{"uci":"d2d4","san":"d4","white":25,"draws":0,"black":25}]}""");
+
+        var result = await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        Assert.True(result.Complete);
+        Assert.Equal(3, result.PositionsAnalyzed);
+        Assert.Equal(3, _localHandler.Urls.Count);
+    }
+
+    [Fact]
+    public async Task LocalSource_NotConfigured_IsRejected()
+    {
+        _localConfigured = false;
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None));
+        Assert.False(Service().Sources().Local);
+    }
+
+    [Fact]
+    public async Task LocalSource_Unreachable_ReportsFetchFailed()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        _localHandler.Status = HttpStatusCode.BadGateway;
+
+        var result = await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        Assert.True(result.FetchFailed);
+        Assert.False(result.Complete);
+    }
+
+    [Fact]
+    public void Sources_NameTheLocalLimits()
+    {
+        var sources = Service().Sources();
+        Assert.True(sources.Online);
+        Assert.True(sources.Local);
+        Assert.Equal(new[] { 1600, 1800, 2000, 2200, 2500 }, sources.LocalRatings);
+        Assert.DoesNotContain("bullet", sources.LocalSpeeds);
+    }
+
+    [Fact]
+    public async Task UnknownSource_IsRejected()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        var req = Request();
+        req.Source = "chessbase";
+        await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
+    }
+
     [Fact]
     public void Query_ValidatesAndOrders()
     {
@@ -343,7 +454,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var url = Uri.UnescapeDataString(request.RequestUri!.ToString());
-            Urls.Add(url);
+            lock (Urls) Urls.Add(url);   // der lokale Weg fragt parallel
             LastAuth = request.Headers.Authorization?.ToString();
             if (Status != HttpStatusCode.OK) return Task.FromResult(new HttpResponseMessage(Status));
 

@@ -449,6 +449,15 @@ try
         client.Timeout = TimeSpan.FromSeconds(15);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub.oberschmid.homes)");
     });
+    // Lokaler Explorer (lila-openingexplorer im Stack): ohne Adresse bleibt BaseAddress leer, und die
+    // Quelle „lokal" gibt es nicht (LocalExplorerClient.IsConfigured).
+    builder.Services.AddHttpClient<LocalExplorerClient>(client =>
+    {
+        var localUrl = builder.Configuration[LocalExplorerClient.ConfigKey];
+        if (!string.IsNullOrWhiteSpace(localUrl))
+            client.BaseAddress = new Uri(localUrl.Trim().TrimEnd('/') + "/");
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
 
     // FIDE search HttpClient
     builder.Services.AddHttpClient("FideSearch", client =>

@@ -974,7 +974,11 @@
       "frequency": "≈ {{value}} of your games",
       "startPosition": "Starting position",
       "games": "{{count}} games",
-      "intro": "Choose the database, rating and speed of your opponents and start the search. Lichess allows only about 15 lookups per minute, so the first run over a large repertoire takes a while; RookHub remembers positions it has already looked up, and a stopped search picks up where it left off."
+      "intro": "Choose the database, rating and speed of your opponents and start the search. Lichess allows only about 15 lookups per minute, so the first run over a large repertoire takes a while; RookHub remembers positions it has already looked up, and a stopped search picks up where it left off.",
+      "source": "Source",
+      "sourceOnline": "Lichess.org",
+      "sourceLocal": "Local",
+      "localHint": "Local explorer on the RookHub server: no token, no waiting. Lichess games only from rating 1600 and without bullet, masters from the Lumbra database (over-the-board games from 2200). The Lichess data is still growing month by month – the shares are meaningful, the game counts smaller than on lichess.org."
     }
   },
   "tournaments": {

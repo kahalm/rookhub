@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -13,9 +13,9 @@ import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { TrainColor, chapterColorsOf } from './repertoire-color.util';
 import {
-  EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerAnalysisResult, ExplorerSettings, MAX_THRESHOLD_PERCENT,
+  EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerAnalysisResult, ExplorerSettings, ExplorerSource, ExplorerSources, MAX_THRESHOLD_PERCENT,
   MIN_THRESHOLD_PERCENT, RepertoireExplorerService, RepertoireHole, clampThreshold, formatPath, holeMoveLabel,
-  formatPercent, positionAfterHole, readExplorerSettings, saveExplorerSettings,
+  fitToLocal, formatPercent, positionAfterHole, readExplorerSettings, saveExplorerSettings,
 } from './repertoire-explorer.service';
 
 /** Was das Brett zeigen soll, wenn ein Loch angewählt ist: die Stellung NACH dem fehlenden Zug. */
@@ -43,6 +43,18 @@ export interface HoleBoardView {
   template: `
     <div class="holes">
       <div class="settings">
+        @if (sources()?.local) {
+          <div class="row">
+            <mat-button-toggle-group [value]="settings().source" (change)="setSource($event.value)" hideSingleSelectionIndicator="true"
+                                     [attr.aria-label]="'repertoire.holes.source' | translate">
+              <mat-button-toggle value="online">{{ 'repertoire.holes.sourceOnline' | translate }}</mat-button-toggle>
+              <mat-button-toggle value="local">{{ 'repertoire.holes.sourceLocal' | translate }}</mat-button-toggle>
+            </mat-button-toggle-group>
+            @if (settings().source === 'local') {
+              <app-help-hint icon="info_outline" [text]="'repertoire.holes.localHint' | translate" />
+            }
+          </div>
+        }
         <div class="row">
           @if (colorsPresent().length > 1) {
             <mat-button-toggle-group [value]="color()" (change)="setColor($event.value)" hideSingleSelectionIndicator="true"
@@ -64,14 +76,14 @@ export interface HoleBoardView {
         @if (settings().database === 'lichess') {
           <div class="row chips" [attr.aria-label]="'repertoire.holes.ratings' | translate">
             <span class="row-label">{{ 'repertoire.holes.ratings' | translate }}</span>
-            @for (r of ratings; track r) {
+            @for (r of ratings(); track r) {
               <button type="button" class="chip" [class.on]="settings().ratings.includes(r)" (click)="toggleRating(r)"
                       [attr.aria-pressed]="settings().ratings.includes(r)">{{ ratingLabel(r) }}</button>
             }
           </div>
           <div class="row chips" [attr.aria-label]="'repertoire.holes.speeds' | translate">
             <span class="row-label">{{ 'repertoire.holes.speeds' | translate }}</span>
-            @for (s of speeds; track s) {
+            @for (s of speeds(); track s) {
               <button type="button" class="chip" [class.on]="settings().speeds.includes(s)" (click)="toggleSpeed(s)"
                       [attr.aria-pressed]="settings().speeds.includes(s)">{{ 'repertoire.holes.speed.' + s | translate }}</button>
             }
@@ -188,18 +200,28 @@ export interface HoleBoardView {
     .hole-meta { font-size: 11px; color: color-mix(in srgb, currentColor 60%, transparent); }
   `],
 })
-export class RepertoireHolesComponent implements OnChanges, OnDestroy {
+export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) repertoireId!: number;
   /** Linien des Repertoires ohne Info-Linien — daraus die Farbe je Kapitel (wie im Trainer). */
   @Input() games: ParsedGame[] = [];
   @Output() holeSelected = new EventEmitter<HoleBoardView | null>();
 
-  readonly ratings = EXPLORER_RATINGS;
-  readonly speeds = EXPLORER_SPEEDS;
   readonly minThreshold = MIN_THRESHOLD_PERCENT;
   readonly maxThreshold = MAX_THRESHOLD_PERCENT;
 
   readonly settings = signal<ExplorerSettings>(readExplorerSettings());
+  /** Angebotene Quellen; null = noch nicht bekannt (dann gibt es keinen Umschalter). */
+  readonly sources = signal<ExplorerSources | null>(null);
+
+  /** Wählbare Elo-Stufen/Bedenkzeiten — lokal nur, wofür es dort Partien gibt. */
+  readonly ratings = computed(() => {
+    const src = this.sources();
+    return this.settings().source === 'local' && src ? src.localRatings : EXPLORER_RATINGS;
+  });
+  readonly speeds = computed(() => {
+    const src = this.sources();
+    return this.settings().source === 'local' && src ? src.localSpeeds : EXPLORER_SPEEDS;
+  });
   readonly color = signal<TrainColor>('b');
   readonly colorsPresent = signal<TrainColor[]>([]);
   readonly running = signal(false);
@@ -235,7 +257,25 @@ export class RepertoireHolesComponent implements OnChanges, OnDestroy {
     else if (present.length === 2 && !this.result()) this.color.set(count.b > count.w ? 'b' : 'w');
   }
 
+  ngOnInit(): void {
+    this.explorer.sources().subscribe(src => {
+      this.sources.set(src);
+      // Gemerkt „lokal", aber hier nicht eingerichtet (anderes Gerät/andere Umgebung) → online.
+      if (this.settings().source === 'local') {
+        if (src.local) this.update(fitToLocal(this.settings(), src));
+        else this.update({ source: 'online' });
+      }
+    });
+  }
+
   ngOnDestroy(): void { this.cancel(); }
+
+  setSource(source: ExplorerSource): void {
+    const src = this.sources();
+    if (source === this.settings().source) return;
+    this.update(source === 'local' && src ? fitToLocal({ ...this.settings(), source }, src) : { source });
+    this.clearResult();
+  }
 
   setColor(c: TrainColor): void {
     if (c === this.color()) return;
@@ -273,6 +313,7 @@ export class RepertoireHolesComponent implements OnChanges, OnDestroy {
     this.sub = this.explorer.run(this.repertoireId, {
       color: this.color(),
       chapterColors: Object.fromEntries(this.chapterColors),
+      source: s.source,
       database: s.database,
       ratings: s.ratings,
       speeds: s.speeds,

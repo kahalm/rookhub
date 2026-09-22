@@ -6,7 +6,7 @@ import { LineStateDto } from './repertoire-training.service';
 import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
 import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 import { Chess } from 'chess.js';
-import { ExplorerAnalysisResult } from './repertoire-explorer.service';
+import { DEFAULT_EXPLORER_SETTINGS, ExplorerAnalysisResult } from './repertoire-explorer.service';
 
 /** Minimal-PGN mit zwei einfachen Linien für den Line-basierten Trainer. */
 const PGN = [
@@ -46,7 +46,12 @@ function state(lineKey: string, dueAtMs: number, extra: Partial<LineStateDto> = 
 }
 
 /** Explorer ohne Wirkung — „Häufigste zuerst" ist in den übrigen Tests aus. */
-const NO_EXPLORER: any = { run: () => EMPTY };
+const NO_EXPLORER: any = { run: () => EMPTY, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) };
+
+/** Explorer-Stub mit gegebener `run`-Antwort und der Vorgabe-Auswahl. */
+function explorerWith(run: any): any {
+  return { run, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) };
+}
 
 const PAST = () => Date.now() - 3_600_000;
 const FUTURE = () => Date.now() + 3_600_000;
@@ -836,33 +841,36 @@ describe('RepertoireTrainerComponent „Häufigste zuerst"', () => {
 
   it('asks the explorer for line frequencies of all chapters and puts the most frequent line first', () => {
     localStorage.setItem('rookhub_rep_train_freq_order', '1');
-    const explorer = { run: jasmine.createSpy('run').and.returnValue(of(result())) };
+    const run = jasmine.createSpy('run').and.returnValue(of(result()));
+    const explorer = explorerWith(run);
 
     const c = make('w', null, PGN, undefined, undefined, true, undefined, explorer);
 
-    const req = explorer.run.calls.mostRecent().args[1];
+    const req = run.calls.mostRecent().args[1];
     expect(req.color).toBeNull();
     expect(req.includeLineFrequencies).toBeTrue();
     expect(req.includeHoles).toBeFalse();
     expect(req.chapterColors).toEqual({ 'Chapter A': 'w', 'Chapter B': 'w' });
+    expect(req.source).toBe('online');
     expect(c.queue.map(l => l.headers['White'])).toEqual(['1.d4 d5', '1.e4 e5']);
     expect(c.currentLineFrequency).toBeCloseTo(0.4, 6);
     expect(c.freqNotice).toBeNull();
   });
 
   it('is off by default: no explorer call, no frequency shown', () => {
-    const explorer = { run: jasmine.createSpy('run').and.returnValue(of(result())) };
+    const run = jasmine.createSpy('run').and.returnValue(of(result()));
+    const explorer = explorerWith(run);
 
     const c = make('w', null, PGN, undefined, undefined, true, undefined, explorer);
 
-    expect(explorer.run).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
     expect(c.currentLineFrequency).toBeNull();
     expect(c.queue.length).toBe(2);
   });
 
   it('without a token the session still starts, in the usual order, and says why', () => {
     localStorage.setItem('rookhub_rep_train_freq_order', '1');
-    const explorer = { run: () => of(result({ complete: false, tokenMissing: true, lineFrequencies: {} })) };
+    const explorer = explorerWith(() => of(result({ complete: false, tokenMissing: true, lineFrequencies: {} })));
 
     const c = make('w', null, PGN, undefined, undefined, true, undefined, explorer);
 
@@ -872,13 +880,14 @@ describe('RepertoireTrainerComponent „Häufigste zuerst"', () => {
   });
 
   it('toggling remembers the choice and rebuilds the queue in frequency order', () => {
-    const explorer = { run: jasmine.createSpy('run').and.returnValue(of(result())) };
+    const run = jasmine.createSpy('run').and.returnValue(of(result()));
+    const explorer = explorerWith(run);
     const c = make('w', null, PGN, undefined, undefined, true, undefined, explorer);
 
     c.toggleFreqOrder();
 
     expect(localStorage.getItem('rookhub_rep_train_freq_order')).toBe('1');
-    expect(explorer.run).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledTimes(1);
     expect(c.queue[0].headers['White']).toBe('1.d4 d5');
 
     c.toggleFreqOrder();

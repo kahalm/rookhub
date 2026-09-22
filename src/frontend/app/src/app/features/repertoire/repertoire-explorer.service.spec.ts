@@ -2,8 +2,8 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
-  DEFAULT_EXPLORER_SETTINGS, ExplorerAnalysisRequest, ExplorerAnalysisResult, RepertoireExplorerService, RepertoireHole,
-  clampThreshold, formatPath, holeMoveLabel, nextRoundDelayMs, positionAfterHole, readExplorerSettings,
+  DEFAULT_EXPLORER_SETTINGS, ExplorerAnalysisRequest, ExplorerAnalysisResult, ExplorerSources, RepertoireExplorerService,
+  RepertoireHole, clampThreshold, fitToLocal, formatPath, holeMoveLabel, nextRoundDelayMs, positionAfterHole, readExplorerSettings,
   saveExplorerSettings,
 } from './repertoire-explorer.service';
 
@@ -15,7 +15,7 @@ function result(extra: Partial<ExplorerAnalysisResult> = {}): ExplorerAnalysisRe
 }
 
 const REQ: ExplorerAnalysisRequest = {
-  color: 'b', chapterColors: { Sizilianisch: 'b' }, database: 'lichess', ratings: [1800], speeds: ['blitz'],
+  color: 'b', chapterColors: { Sizilianisch: 'b' }, source: 'online', database: 'lichess', ratings: [1800], speeds: ['blitz'],
   thresholdPercent: 1, includeHoles: true, includeLineFrequencies: false,
 };
 
@@ -58,8 +58,8 @@ describe('repertoire-explorer helpers', () => {
 
   it('settings: defaults, round trip, junk falls back', () => {
     expect(readExplorerSettings()).toEqual(DEFAULT_EXPLORER_SETTINGS);
-    saveExplorerSettings({ database: 'masters', ratings: [2200], speeds: ['rapid'], thresholdPercent: 2.5 });
-    expect(readExplorerSettings()).toEqual({ database: 'masters', ratings: [2200], speeds: ['rapid'], thresholdPercent: 2.5 });
+    saveExplorerSettings({ source: 'local', database: 'masters', ratings: [2200], speeds: ['rapid'], thresholdPercent: 2.5 });
+    expect(readExplorerSettings()).toEqual({ source: 'local', database: 'masters', ratings: [2200], speeds: ['rapid'], thresholdPercent: 2.5 });
 
     localStorage.setItem('rookhub_explorer_settings', JSON.stringify({ ratings: [1700], speeds: ['hyper'], thresholdPercent: 999 }));
     const s = readExplorerSettings();
@@ -69,6 +69,16 @@ describe('repertoire-explorer helpers', () => {
 
     localStorage.setItem('rookhub_explorer_settings', '{kaputt');
     expect(readExplorerSettings()).toEqual(DEFAULT_EXPLORER_SETTINGS);
+  });
+
+  it('fitToLocal drops what the local explorer has no games for, and falls back to its defaults', () => {
+    const src: ExplorerSources = { online: true, local: true, localRatings: [1600, 1800, 2000, 2200, 2500], localSpeeds: ['blitz', 'rapid', 'classical', 'correspondence'] };
+    const kept = fitToLocal({ ...DEFAULT_EXPLORER_SETTINGS, ratings: [1400, 2200], speeds: ['bullet', 'rapid'] }, src);
+    expect(kept.ratings).toEqual([2200]);
+    expect(kept.speeds).toEqual(['rapid']);
+    const fallback = fitToLocal({ ...DEFAULT_EXPLORER_SETTINGS, ratings: [1000], speeds: ['bullet'] }, src);
+    expect(fallback.ratings).toEqual([1600, 1800, 2000]);
+    expect(fallback.speeds).toEqual(['blitz', 'rapid', 'classical']);
   });
 
   it('clampThreshold keeps 0.1 … 50 with one decimal', () => {
@@ -107,6 +117,19 @@ describe('RepertoireExplorerService.run', () => {
     expect(seen.map(r => r.positionsAnalyzed)).toEqual([10, 15]);
     expect(done).toBeTrue();
   }));
+
+  it('effectiveSettings: a remembered local source becomes online when the server has none', () => {
+    saveExplorerSettings({ ...DEFAULT_EXPLORER_SETTINGS, source: 'local' });
+    let seen: string | undefined;
+    service.effectiveSettings().subscribe(s => seen = s.source);
+    http.expectOne('/api/repertoires/explorer/sources').flush({ online: true, local: false, localRatings: [], localSpeeds: [] });
+    expect(seen).toBe('online');
+
+    // Nur einmal je Sitzung gefragt.
+    service.effectiveSettings().subscribe(s => seen = s.source);
+    http.expectNone('/api/repertoires/explorer/sources');
+    localStorage.removeItem('rookhub_explorer_settings');
+  });
 
   it('waits out a rate limit before the next round', fakeAsync(() => {
     service.run(7, REQ).subscribe();

@@ -974,7 +974,11 @@
       "frequency": "≈ {{value}} deiner Partien",
       "startPosition": "Ausgangsstellung",
       "games": "{{count}} Partien",
-      "intro": "Wähle Datenbank, Elo und Tempo deiner Gegner und starte die Suche. Lichess erlaubt nur etwa 15 Abfragen pro Minute – beim ersten Mal dauert es bei einem großen Repertoire deshalb eine Weile; schon abgefragte Stellungen merkt sich RookHub, und eine abgebrochene Suche macht beim nächsten Mal dort weiter."
+      "intro": "Wähle Datenbank, Elo und Tempo deiner Gegner und starte die Suche. Lichess erlaubt nur etwa 15 Abfragen pro Minute – beim ersten Mal dauert es bei einem großen Repertoire deshalb eine Weile; schon abgefragte Stellungen merkt sich RookHub, und eine abgebrochene Suche macht beim nächsten Mal dort weiter.",
+      "source": "Quelle",
+      "sourceOnline": "Lichess.org",
+      "sourceLocal": "Lokal",
+      "localHint": "Lokaler Explorer auf dem RookHub-Server: kein Token, keine Wartezeit. Lichess-Partien erst ab Elo 1600 und ohne Bullet, Meister aus der Lumbra-Datenbank (Brettpartien ab Elo 2200). Die Lichess-Daten wachsen noch Monat für Monat – die Anteile sind aussagekräftig, die Partienzahlen kleiner als auf lichess.org."
     }
   },
   "tournaments": {

@@ -9,7 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, forkJoin } from 'rxjs';
+import { Subscription, forkJoin, switchMap } from 'rxjs';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -30,7 +30,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
-import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent, readExplorerSettings } from './repertoire-explorer.service';
+import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { normalizeFen } from './position-filter.util';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
@@ -255,17 +255,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.freqRunning = true;
     this.freqLoading = null;
     this.freqNotice = null;
-    const s = readExplorerSettings();
-    this.freqSub = this.explorer.run(this.repertoireId, {
-      color: null,
-      chapterColors: Object.fromEntries(this.chapterColors),
-      database: s.database,
-      ratings: s.ratings,
-      speeds: s.speeds,
-      thresholdPercent: s.thresholdPercent,
-      includeHoles: false,
-      includeLineFrequencies: true,
-    }).subscribe({
+    this.freqSub = this.explorer.effectiveSettings().pipe(
+      switchMap(s => this.explorer.run(this.repertoireId, {
+        color: null,
+        chapterColors: Object.fromEntries(this.chapterColors),
+        source: s.source,
+        database: s.database,
+        ratings: s.ratings,
+        speeds: s.speeds,
+        thresholdPercent: s.thresholdPercent,
+        includeHoles: false,
+        includeLineFrequencies: true,
+      })),
+    ).subscribe({
       next: r => { this.freqLoading = r; this.cdr.markForCheck(); },
       error: () => { this.freqNotice = 'repertoireTrainer.freqFailed'; this.finishFrequencies(); },
       complete: () => this.finishFrequencies(),

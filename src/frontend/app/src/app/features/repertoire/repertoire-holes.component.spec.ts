@@ -4,7 +4,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { RepertoireHolesComponent, HoleBoardView } from './repertoire-holes.component';
-import { ExplorerAnalysisResult, RepertoireExplorerService, RepertoireHole } from './repertoire-explorer.service';
+import { ExplorerAnalysisResult, ExplorerSources, RepertoireExplorerService, RepertoireHole } from './repertoire-explorer.service';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
 const PGN_BLACK = [
@@ -29,16 +29,23 @@ function result(extra: Partial<ExplorerAnalysisResult> = {}): ExplorerAnalysisRe
 
 function games(pgn: string): ParsedGame[] { return parsePgnText(pgn); }
 
+const ONLINE_ONLY: ExplorerSources = { online: true, local: false, localRatings: [], localSpeeds: [] };
+const WITH_LOCAL: ExplorerSources = {
+  online: true, local: true, localRatings: [1600, 1800, 2000, 2200, 2500], localSpeeds: ['blitz', 'rapid', 'classical', 'correspondence'],
+};
+
 describe('RepertoireHolesComponent', () => {
   afterEach(() => {
     localStorage.removeItem('rookhub_explorer_settings');
     localStorage.removeItem('rookhub_rep_train_chaptercolor_5');
   });
 
-  function make(pgn: string, explorer: any): RepertoireHolesComponent {
+  function make(pgn: string, explorer: any, sources: ExplorerSources = ONLINE_ONLY): RepertoireHolesComponent {
+    explorer.sources ??= () => of(sources);
     const c = new RepertoireHolesComponent(explorer);
     c.repertoireId = 5;
     c.games = games(pgn);
+    c.ngOnInit();
     c.ngOnChanges();
     return c;
   }
@@ -115,12 +122,37 @@ describe('RepertoireHolesComponent', () => {
     expect(c.result()!.fetchFailed).toBeTrue();
   });
 
+  it('offers the local source only when the server has one', () => {
+    expect(make(PGN_BLACK, { run: () => of(result()) }).sources()!.local).toBeFalse();
+    expect(make(PGN_BLACK, { run: () => of(result()) }, WITH_LOCAL).sources()!.local).toBeTrue();
+  });
+
+  it('switching to local keeps only ratings and speeds the local explorer has, and asks it', () => {
+    const run = jasmine.createSpy('run').and.returnValue(of(result()));
+    localStorage.setItem('rookhub_explorer_settings', JSON.stringify({ ratings: [1200, 1800], speeds: ['bullet', 'blitz'] }));
+    const c = make(PGN_BLACK, { run }, WITH_LOCAL);
+
+    c.setSource('local');
+
+    expect(c.settings().ratings).toEqual([1800]);
+    expect(c.settings().speeds).toEqual(['blitz']);
+    expect(c.ratings()).toEqual([1600, 1800, 2000, 2200, 2500]);
+    c.start();
+    expect(run.calls.mostRecent().args[1].source).toBe('local');
+  });
+
+  it('a remembered local source falls back to online where there is none', () => {
+    localStorage.setItem('rookhub_explorer_settings', JSON.stringify({ source: 'local' }));
+    const c = make(PGN_BLACK, { run: () => of(result()) });
+    expect(c.settings().source).toBe('online');
+  });
+
   it('renders the hole list', async () => {
     await TestBed.configureTestingModule({
       imports: [RepertoireHolesComponent],
       providers: [
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: RepertoireExplorerService, useValue: { run: () => of(result()) } },
+        { provide: RepertoireExplorerService, useValue: { run: () => of(result()), sources: () => of(WITH_LOCAL) } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(RepertoireHolesComponent);
@@ -135,5 +167,7 @@ describe('RepertoireHolesComponent', () => {
     expect(items.length).toBe(1);
     expect(items[0].textContent).toContain('2. Nc3');
     expect(items[0].textContent).toContain('B23 Sicilian Defense: Closed');
+    // Mit lokaler Quelle steht der Umschalter über der Auswahl.
+    expect(fixture.nativeElement.querySelectorAll('mat-button-toggle-group').length).toBe(2);
   });
 });
