@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.500.1", date: "2026-09-22", changes: [
+    { en: "The „Info | “ in front of the White header now also appears when you download a course (whole course, a chapter or a single line) and when you download a single uploaded file on a repertoire's edit page. That file used to come out with the internal markers still in it; it is now cleaned the same way as every other download. Older courses that are rebuilt from their stored lines (no original PGN) now write the info marker too, so a course turned into a repertoire keeps its info lines as info lines.", de: "Das „Info | “ vor dem Weiß-Header kommt jetzt auch beim Herunterladen eines Kurses (ganzer Kurs, ein Kapitel oder eine einzelne Linie) und beim Herunterladen einer einzelnen hochgeladenen Datei auf der Bearbeiten-Seite eines Repertoires. Diese Datei kam bisher noch mit den internen Markierungen heraus; jetzt wird sie genauso bereinigt wie jeder andere Download. Ältere Kurse, die aus ihren gespeicherten Linien neu aufgebaut werden (kein Original-PGN), schreiben die Info-Markierung jetzt ebenfalls mit — ein in ein Repertoire umgewandelter Kurs behält seine Info-Linien also als Info-Linien." },
+  ] },
   { version: "0.500.0", date: "2026-09-22", changes: [
     { en: "Downloading a repertoire (the whole repertoire or a single line) now keeps its info lines recognisable: their White header starts with „Info | “. Until now the download removed the internal info marker, so ChessBase & Co. showed an explanatory line just like any line you are meant to play.", de: "Beim Herunterladen eines Repertoires (ganzes Repertoire oder einzelne Linie) bleiben Info-Linien jetzt erkennbar: Ihr Weiß-Header beginnt mit „Info | “. Bisher entfernte der Download die interne Info-Markierung, und ChessBase & Co. zeigten eine Erklär-Linie wie jede Linie, die man spielen soll." },
   ] },

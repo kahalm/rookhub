@@ -36,6 +36,13 @@ public static partial class PgnParser
     private static partial Regex InternalMarkerRegex();
     [GeneratedRegex(@"\{\s*\}")]
     private static partial Regex EmptyCommentRegex();
+    // Eine Partie = Header-Block (Zeilen [Tag "…"]) + Zugtext bis zum nächsten Header-Block.
+    [GeneratedRegex(@"((?:^[ \t]*\[[A-Za-z0-9_]+[ \t]+""[^\n]*\][ \t]*\r?(?:\n|$))+)([\s\S]*?)(?=^[ \t]*\[[A-Za-z0-9_]+[ \t]+""|(?![\s\S]))", RegexOptions.Multiline)]
+    private static partial Regex GameBlockRegex();
+    [GeneratedRegex(@"^([ \t]*\[White[ \t]+"")([^\n]*?)(""\][ \t]*\r?)$", RegexOptions.Multiline)]
+    private static partial Regex WhiteHeaderRegex();
+    [GeneratedRegex(@"\[%info\b", RegexOptions.IgnoreCase)]
+    private static partial Regex InfoMarkerRegex();
     [GeneratedRegex(@"[ \t]{2,}")]
     private static partial Regex SpaceRunRegex();
 
@@ -67,6 +74,30 @@ public static partial class PgnParser
         var s = InternalMarkerRegex().Replace(pgn, "");
         s = EmptyCommentRegex().Replace(s, "");
         return SpaceRunRegex().Replace(s, " ");
+    }
+
+    /// <summary>Präfix im <c>White</c>-Header einer Info-Linie im Download.</summary>
+    public const string InfoLinePrefix = "Info | ";
+
+    /// <summary>
+    /// PGN für einen Download (Kurs, Repertoire-Datei): wie <see cref="StripInternalMarkers"/>, aber eine
+    /// Info-Linie (Partie mit <c>[%info]</c> im Zugtext) behält ihre Kennung — ihr <c>White</c>-Header bekommt
+    /// <see cref="InfoLinePrefix"/> vorangestellt (nicht doppelt), denn der Marker selbst fällt beim Entfernen
+    /// weg. Gleiche Regel wie <c>repertoireDownloadPgn</c> im Frontend.
+    /// </summary>
+    public static string ForDownload(string pgn)
+    {
+        if (string.IsNullOrEmpty(pgn)) return pgn;
+        var marked = GameBlockRegex().Replace(pgn, g =>
+        {
+            var headers = g.Groups[1].Value;
+            var moves = g.Groups[2].Value;
+            if (!InfoMarkerRegex().IsMatch(moves)) return g.Value;
+            return WhiteHeaderRegex().Replace(headers, h => h.Groups[2].Value.StartsWith(InfoLinePrefix, StringComparison.Ordinal)
+                ? h.Value
+                : h.Groups[1].Value + InfoLinePrefix + h.Groups[2].Value + h.Groups[3].Value, 1) + moves;
+        });
+        return StripInternalMarkers(marked);
     }
 
     // ---- Spiel-Splitting (Header-Block + Movetext) ------------------------

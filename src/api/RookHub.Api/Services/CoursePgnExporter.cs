@@ -65,6 +65,9 @@ public static class CoursePgnExporter
             sb.Append('\n');
             // Das Ergebnis hängt DIESER Aufrufer an, mit einem Leerzeichen davor — auch an eine
             // zug- und kommentarlose Info-Linie, deren Zugtext sonst leer wäre (Bestand: " *").
+            // Info-Linie: derselbe [%info]-Vorspann wie im Roh-PGN — der Import erkennt sie daran wieder
+            // („Kurs → Repertoire"), der Download macht daraus „Info | " im White-Header.
+            if (p.IsInfoOnly) sb.Append("{[%info]} ");
             sb.Append(PgnWriter.MoveText(sans, p.Fen, comments, result: null, before: TrainingMarkers(sans, p.StartPly, p.Moves)))
               .Append(" *");
             return sb.ToString();

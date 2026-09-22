@@ -181,6 +181,25 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ForDownload_PrefixesWhiteOfInfoLines_AndStripsMarkers()
+    {
+        var pgn = "[Event \"R\"]\n[White \"Kapitel 1\"]\n[Black \"?\"]\n\n{[%info]} 1. -- {Erklärung} *\n\n"
+                + "[Event \"R\"]\n[White \"Kapitel 2\"]\n\n1. e4 e6 {[%alt c5]Französisch} 2. d4 *\n\n"
+                + "[Event \"R\"]\n[White \"Kapitel 3\"]\n\n1. d4 {[%info]Idee} d5 *\n";
+        Assert.Equal(
+            "[Event \"R\"]\n[White \"Info | Kapitel 1\"]\n[Black \"?\"]\n\n 1. -- {Erklärung} *\n\n"
+            + "[Event \"R\"]\n[White \"Kapitel 2\"]\n\n1. e4 e6 {Französisch} 2. d4 *\n\n"
+            + "[Event \"R\"]\n[White \"Info | Kapitel 3\"]\n\n1. d4 {Idee} d5 *\n",
+            PgnParser.ForDownload(pgn));
+    }
+
+    [Theory]
+    [InlineData("[White \"Info | A\"]\n\n{[%info]} 1. e4 *\n", "[White \"Info | A\"]\n\n 1. e4 *\n")]           // nicht doppelt
+    [InlineData("[White \"A\"]\r\n\r\n{[%info]} 1. e4 *\r\n", "[White \"Info | A\"]\r\n\r\n 1. e4 *\r\n")] // CRLF
+    public void ForDownload_EdgeCases(string input, string expected)
+        => Assert.Equal(expected, PgnParser.ForDownload(input));
+
+    [Fact]
     public void SplitGameBlocks_ReturnsRawTextPerGame_WithVariationsAndLineBreaks()
     {
         var pgn = "[Event \"A\"]\n[Round \"1\"]\n\n1. e4 (1. d4 {Damen}) e5\n{zweite\nZeile} *\n\n\n"

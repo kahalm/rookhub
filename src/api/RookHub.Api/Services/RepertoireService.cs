@@ -447,7 +447,8 @@ public class RepertoireService
         if (file == null || !await RepertoireAccess.CanReadAsync(_db, repertoireId, userId))
             throw new KeyNotFoundException("File not found.");
 
-        return (file.FileName, RepertoirePgnCleanup.WithoutHidden(file.PgnContent));
+        // Download: interne Marker raus, Info-Linien mit „Info | " im White-Header (wie der Gesamt-Download).
+        return (file.FileName, PgnParser.ForDownload(RepertoirePgnCleanup.WithoutHidden(file.PgnContent)));
     }
 
     public async Task DeleteFileAsync(int repertoireId, int fileId, int userId)

@@ -152,10 +152,10 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
-    /// <summary>PGN als Datei ausliefern — ohne die internen Marker <c>[%alt]</c>/<c>[%info]</c>
-    /// (siehe <see cref="PgnParser.StripInternalMarkers"/>).</summary>
+    /// <summary>PGN als Datei ausliefern — ohne die internen Marker <c>[%alt]</c>/<c>[%info]</c>, Info-Linien
+    /// mit „Info | " im White-Header (siehe <see cref="PgnParser.ForDownload"/>).</summary>
     private FileContentResult PgnDownload(string pgn, string fileName)
-        => File(System.Text.Encoding.UTF8.GetBytes(PgnParser.StripInternalMarkers(pgn)), "application/x-chess-pgn", fileName);
+        => File(System.Text.Encoding.UTF8.GetBytes(PgnParser.ForDownload(pgn)), "application/x-chess-pgn", fileName);
 
     /// <summary>„Kurs → Repertoire umwandeln": legt aus dem Kurs-PGN ein neues Repertoire des Users an
     /// (Original-Kurs bleibt). Antwort = das neue Repertoire.</summary>

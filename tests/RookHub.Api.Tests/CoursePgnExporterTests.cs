@@ -29,6 +29,22 @@ public class CoursePgnExporterTests
     }
 
     [Fact]
+    public void ToPgn_InfoLine_KeepsInfoMarker_AndDownloadPrefixesWhite()
+    {
+        var info = new BookPuzzle { Fen = StartFen, Moves = "e2e4", StartPly = -1, Title = "Idee", IsInfoOnly = true };
+        var line = new BookPuzzle { Fen = StartFen, Moves = "d2d4", StartPly = -1, Title = "Linie" };
+
+        var pgn = CoursePgnExporter.ToPgn("B", new[] { info, line });
+
+        Assert.Contains("{[%info]} 1. e4 *", pgn);   // der Import erkennt die Info-Linie daran wieder
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(pgn, @"\[%info\]"));
+        var download = PgnParser.ForDownload(pgn);
+        Assert.Contains("[White \"Info | Idee\"]", download);
+        Assert.Contains("[White \"Linie\"]", download);
+        Assert.DoesNotContain("[%info]", download);
+    }
+
+    [Fact]
     public void ToPgn_BlackToMove_NumbersWithEllipsis()
     {
         var p = new BookPuzzle
