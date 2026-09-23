@@ -4,10 +4,12 @@ using System.Text.RegularExpressions;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Erneuert den ZUGTEXT der Linien eines gespeicherten Chessable-Kurses (<c>BookSource.SourcePgn</c>) aus dem
-/// geteilten piratechess-Linien-Cache — Grundlage von <see cref="StaleAction.Cache"/>. Reine Textarbeit, ohne
-/// DB und Netz: den Cache fragt <see cref="ImportReprocessService"/>, den Import macht
-/// <see cref="PgnImportService.ImportFileAsync"/>.
+/// Erneuert den ZUGTEXT der Linien eines gespeicherten Chessable-PGN aus dem geteilten piratechess-Linien-Cache —
+/// Grundlage von <see cref="StaleAction.Cache"/>, für Kurse (<c>BookSource.SourcePgn</c>) UND Repertoires
+/// (<c>RepertoireFile.PgnContent</c>, je Datei). EINE Textfunktion für beide, damit ein Kurs und ein Repertoire aus
+/// demselben Chessable-Kurs nach dem „Aktualisieren" denselben Zugtext tragen. Reine Textarbeit, ohne DB und Netz:
+/// den Cache fragt <see cref="ImportReprocessService"/>; danach bereitet ein Kurs über
+/// <see cref="PgnImportService.ImportFileAsync"/> auf, ein Repertoire wird nur geschrieben (der Trainer wertet live aus).
 ///
 /// <para><b>Warum nur der Zugtext:</b> die Header tragen die Identität der Linie IM KURS. <c>Round</c> kommt aus
 /// dem Import (Kapitel-Versatz beim Chunk-Import) und ergibt die LineId, an der Fortschritt und Statistik
@@ -19,6 +21,14 @@ namespace RookHub.Api.Services;
 /// den Trainingsmarker <c>[%tqu</c> (falscher Modus), steht die Linie auf einer anderen Stellung oder hängt
 /// dieselbe oid an mehreren Partien (Altlast des positionsbasierten Parsers bis RookHub 0.476).</para>
 ///
+/// <para><b>Ausgeblendete Partien bleiben, wie sie sind</b> (<c>[RookHubHidden]</c>, gesetzt von
+/// <see cref="RepertoirePgnCleanup"/> — in Kursen gibt es den Header nicht). Niemand sieht sie, ein frischer Zugtext
+/// änderte daran nichts, und die Begründung im Header bezieht sich auf den ALTEN Text. Sie zählen weder als zweite
+/// Partie einer oid (wie <see cref="RepertoirePgnCleanup.AmbiguousOids"/>) noch werden ihre oids im Cache
+/// nachgefragt. Eine Partie, der die Bereinigung die oid genommen hat (<c>[RookHubRemovedOid]</c>), trägt keinen
+/// <c>[ChessableOid]</c> mehr und bleibt damit ohnehin unberührt — nur Partien MIT oid bekommen einen frischen Block,
+/// also kann die entfernte oid auch nicht über „fehlende Header ergänzen" zurückkommen.</para>
+///
 /// <para>Geschnitten wird an jedem <c>[Event </c> am Zeilenanfang — wie
 /// <see cref="ChessableImportService.InsertChessableOids"/> und <see cref="ChessableTrainingStart.InsertColors"/>,
 /// nur ohne Schnitt mitten in einem Kommentar (dort stünde der alte Zugtext halb im einen, halb im nächsten
@@ -28,13 +38,15 @@ namespace RookHub.Api.Services;
 /// </summary>
 public static class CachedSourceRebuild
 {
-    /// <summary>Ergebnis eines Laufs. <see cref="Total"/> zählt die Partien MIT oid; jede davon landet in
-    /// genau einem der vier übrigen Zähler.</summary>
+    /// <summary>Ergebnis eines Laufs. <see cref="Total"/> zählt die Partien MIT oid (auch ausgeblendete); jede
+    /// davon landet in genau einem der fünf übrigen Zähler.</summary>
     /// <param name="Replaced">Zugtext aus dem Cache übernommen (auch wenn er gleich geblieben ist).</param>
     /// <param name="Missing">oid nicht im Cache — Partie unverändert.</param>
     /// <param name="ModeMismatch"><c>[%tqu</c> nur auf einer Seite — Partie unverändert.</param>
-    /// <param name="Conflicts">andere Startstellung oder oid an mehreren Partien — Partie unverändert.</param>
-    public sealed record Result(string Pgn, int Total, int Replaced, int Missing, int ModeMismatch, int Conflicts);
+    /// <param name="Conflicts">andere Startstellung oder oid an mehreren sichtbaren Partien — Partie unverändert.</param>
+    /// <param name="Hidden">ausgeblendet (<c>[RookHubHidden]</c>, nur in Repertoires) — Partie unverändert, auch
+    /// wenn ihre oid im Cache liegt.</param>
+    public sealed record Result(string Pgn, int Total, int Replaced, int Missing, int ModeMismatch, int Conflicts, int Hidden);
 
     /// <summary>Trainingsmarker, den piratechess im Modus <c>FirstKeyMove</c> setzt.</summary>
     private const string TrainingMarker = "[%tqu";
@@ -45,45 +57,53 @@ public static class CachedSourceRebuild
     private static readonly HashSet<string> FakeChapterHeaders =
         new(StringComparer.OrdinalIgnoreCase) { "Event", "Round", "White", "Black" };
 
+    /// <summary>Zeilenanfang des Ausblend-Headers, wie <see cref="RepertoirePgnCleanup.IsHiddenGame"/> ihn prüft.</summary>
+    private const string HiddenHeader = "[" + RepertoirePgnCleanup.HiddenTag + " ";
+
     private static readonly Regex EventStart = new(@"(?<=(?:^|\n)[ \t]*)\[Event ", RegexOptions.Compiled);
     private static readonly Regex HeaderLine = new(@"^\[\s*([A-Za-z][A-Za-z0-9_]*)\s+""(.*)""\s*\]$", RegexOptions.Compiled);
 
     /// <summary>
-    /// Modus, in dem der Linien-Cache die Linien dieses Kurses erzeugen muss: trägt das gespeicherte PGN
-    /// irgendwo <c>[%tqu</c>, war es ein Buch-/Kursabruf (<c>FirstKeyMove</c>); sonst Repertoire-Format
-    /// (<c>None</c>) — etwa ein aus einem Repertoire umgewandelter Kurs. Der darf keine Marker bekommen, sonst
-    /// änderte sich sein Trainingsstart.
+    /// Modus, in dem der Linien-Cache die Linien dieses Kurses bzw. dieser Repertoire-Datei erzeugen muss: trägt
+    /// das gespeicherte PGN irgendwo <c>[%tqu</c>, war es ein Buch-/Kursabruf (<c>FirstKeyMove</c>); sonst
+    /// Repertoire-Format (<c>None</c>) — ein Chessable-Repertoire oder ein aus einem Repertoire umgewandelter Kurs.
+    /// Der darf keine Marker bekommen, sonst änderte sich sein Trainingsstart. Umgekehrt trägt ein aus einem Kurs
+    /// umgewandeltes Repertoire die Marker (<see cref="CoursePgnExporter"/> schreibt sie mit) — deshalb gilt der
+    /// Modus je DATEI, nicht je Repertoire.
     /// </summary>
     public static string ModeFor(string? sourcePgn) =>
         sourcePgn != null && sourcePgn.Contains(TrainingMarker, StringComparison.OrdinalIgnoreCase)
             ? ChessableTrainingStart.MarkerMode
             : "None";
 
-    /// <summary>Die oids aus den Headern der Partien, jede einmal, in Reihenfolge des Kurses. Eine oid, die nur
-    /// im Kommentartext steht, zählt nicht.</summary>
+    /// <summary>Die oids aus den Headern der Partien, jede einmal, in Reihenfolge des Kurses — genau die, nach denen
+    /// der Cache gefragt wird. Eine oid, die nur im Kommentartext steht, zählt nicht; eine ausgeblendete Partie auch
+    /// nicht: ihr Zugtext wird nie ersetzt, und piratechess lädt für jede gefragte oid ~455 KB Rohdaten.</summary>
     public static IReadOnlyList<string> OidsOf(string? sourcePgn)
     {
         var result = new List<string>();
         if (string.IsNullOrEmpty(sourcePgn)) return result;
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var block in Blocks(sourcePgn))
-            if (block.Oid != null && seen.Add(block.Oid)) result.Add(block.Oid);
+            if (block.Oid != null && !block.Hidden && seen.Add(block.Oid)) result.Add(block.Oid);
         return result;
     }
 
     /// <summary>
-    /// Ersetzt je Partie mit <c>[ChessableOid]</c> den Zugtext durch den aus <paramref name="freshByOid"/>
+    /// Ersetzt je sichtbarer Partie mit <c>[ChessableOid]</c> den Zugtext durch den aus <paramref name="freshByOid"/>
     /// (oid → PGN der Linie, wie <see cref="ChessableProxyService.GetCachedLinePgnsAsync"/> es liefert). Wird
     /// nichts übernommen, kommt dieselbe Instanz von <paramref name="sourcePgn"/> zurück.
     /// </summary>
     public static Result Rebuild(string sourcePgn, IReadOnlyDictionary<string, string> freshByOid)
     {
         var blocks = Blocks(sourcePgn);
-        var oidCount = blocks.Where(b => b.Oid != null)
+        // Nur SICHTBARE Partien zählen als Träger einer oid — eine ausgeblendete Kopie ist keine zweite Linie, und
+        // zählte sie mit, bliebe die sichtbare für immer als „Konflikt" auf dem alten Text.
+        var oidCount = blocks.Where(b => b.Oid != null && !b.Hidden)
             .GroupBy(b => b.Oid!, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
 
-        int total = 0, replaced = 0, missing = 0, modeMismatch = 0, conflicts = 0;
+        int total = 0, replaced = 0, missing = 0, modeMismatch = 0, conflicts = 0, hidden = 0;
         var sb = new StringBuilder(sourcePgn.Length + 256);
         sb.Append(sourcePgn, 0, blocks.Count > 0 ? blocks[0].Start : sourcePgn.Length);
 
@@ -91,7 +111,12 @@ public static class CachedSourceRebuild
         {
             var old = blocks[i];
             string? replacement = null;
-            if (old.Oid != null)
+            if (old.Oid != null && old.Hidden)
+            {
+                total++;
+                hidden++;
+            }
+            else if (old.Oid != null)
             {
                 total++;
                 var freshPgn = freshByOid.TryGetValue(old.Oid, out var text) ? text.Trim() : string.Empty;
@@ -115,7 +140,7 @@ public static class CachedSourceRebuild
             sb.Append(replacement ?? sourcePgn.Substring(old.Start, old.End - old.Start));
         }
 
-        return new Result(replaced > 0 ? sb.ToString() : sourcePgn, total, replaced, missing, modeMismatch, conflicts);
+        return new Result(replaced > 0 ? sb.ToString() : sourcePgn, total, replaced, missing, modeMismatch, conflicts, hidden);
     }
 
     /// <summary>Neuer Text eines Blocks: seine Header unverändert (+ fehlende aus dem Cache), sein Leerraum
@@ -163,9 +188,10 @@ public static class CachedSourceRebuild
     }
 
     /// <summary>Eine Partie als Positionen im Gesamttext. <c>HeaderEnd</c> liegt hinter dem letzten
-    /// Header (vor dessen Zeilenumbruch); der Zugtext ist <c>[MovesStart, MovesEnd)</c> ohne Rand-Leerraum.</summary>
+    /// Header (vor dessen Zeilenumbruch); der Zugtext ist <c>[MovesStart, MovesEnd)</c> ohne Rand-Leerraum.
+    /// <c>Hidden</c>: trägt den Ausblend-Header — dieselbe Regel wie <see cref="RepertoirePgnCleanup.IsHiddenGame"/>.</summary>
     private sealed record Block(int Start, int End, int HeaderEnd, int MovesStart, int MovesEnd,
-        IReadOnlyList<(string Key, string Value, string Line)> Headers, string? Oid)
+        IReadOnlyList<(string Key, string Value, string Line)> Headers, string? Oid, bool Hidden)
     {
         public string? Header(string key)
         {
@@ -191,9 +217,11 @@ public static class CachedSourceRebuild
             // Header-Zeilen getrimmt: piratechess rückt die Zeilen hinter dem oid-Header um 24 Leerzeichen ein.
             var headers = new List<(string, string, string)>();
             string? oid = null;
+            var hidden = false;
             foreach (var raw in pgn.Substring(start, headerEnd - start).Split('\n'))
             {
                 var line = raw.Trim();
+                if (line.StartsWith(HiddenHeader, StringComparison.Ordinal)) hidden = true;
                 var m = HeaderLine.Match(line);
                 if (!m.Success) continue;
                 headers.Add((m.Groups[1].Value, m.Groups[2].Value, line));
@@ -206,7 +234,7 @@ public static class CachedSourceRebuild
             var movesEnd = end;
             while (movesEnd > movesStart && char.IsWhiteSpace(pgn[movesEnd - 1])) movesEnd--;
 
-            blocks.Add(new Block(start, end, headerEnd, movesStart, movesEnd, headers, oid));
+            blocks.Add(new Block(start, end, headerEnd, movesStart, movesEnd, headers, oid, hidden));
         }
         return blocks;
     }

@@ -20,9 +20,9 @@ public class ReprocessStatusDto
     /// schließt <see cref="FromCache"/> ein.</summary>
     public int ReprocessableLocally { get; set; }
 
-    /// <summary>Davon Chessable-Kurse, deren Zugtexte vorher aus dem geteilten piratechess-Linien-Cache neu
-    /// erzeugt werden (Quelle trägt <c>[ChessableOid]</c>). Nur zur Auskunft (Admin) — schon in
-    /// <see cref="ReprocessableLocally"/> enthalten, das Banner rechnet unverändert.</summary>
+    /// <summary>Davon Chessable-Kurse bzw. -Repertoires, deren Zugtexte vorher aus dem geteilten
+    /// piratechess-Linien-Cache neu erzeugt werden (Quelle trägt <c>[ChessableOid]</c>). Nur zur Auskunft (Admin) —
+    /// schon in <see cref="ReprocessableLocally"/> enthalten, das Banner rechnet unverändert.</summary>
     public int FromCache { get; set; }
 
     /// <summary>Veraltet, keine lokale Quelle, aber per Chessable-Re-Fetch nachladbar (Hintergrund-Job).</summary>
@@ -35,21 +35,22 @@ public class ReprocessStatusDto
 /// <summary>Ergebnis eines Reprocess-Laufs.</summary>
 public class ReprocessResultDto
 {
-    /// <summary>Ohne Chessable-Abruf neu aufbereitete Datensätze (aus gespeicherter Quelle, bei Kursen auch
-    /// über den Linien-Cache — siehe <see cref="RebuiltFromCache"/>).</summary>
+    /// <summary>Ohne Chessable-Abruf neu aufbereitete Datensätze (aus gespeicherter Quelle bzw. Versions-Mark,
+    /// auch über den Linien-Cache — siehe <see cref="RebuiltFromCache"/>).</summary>
     public int Reprocessed { get; set; }
 
     /// <summary>Dabei in-place aktualisierte Einzel-Linien (nur Kurse).</summary>
     public int UpdatedLines { get; set; }
 
-    /// <summary>Davon Kurse, deren Zugtexte vorher aus dem geteilten piratechess-Linien-Cache erneuert wurden
-    /// (in <see cref="Reprocessed"/> enthalten).</summary>
+    /// <summary>Davon Kurse bzw. Repertoires, deren Zugtexte aus dem geteilten piratechess-Linien-Cache erneuert
+    /// wurden (in <see cref="Reprocessed"/> enthalten).</summary>
     public int RebuiltFromCache { get; set; }
 
-    /// <summary>Linien, deren Zugtext dabei aus dem Linien-Cache übernommen wurde (über alle Kurse).</summary>
+    /// <summary>Linien, deren Zugtext dabei aus dem Linien-Cache übernommen wurde (über alle Kurse bzw.
+    /// Repertoire-Dateien).</summary>
     public int CacheLinesReplaced { get; set; }
 
-    /// <summary>Als Hintergrund-Job zum Re-Fetch eingereihte Datensätze (nur Kurse, Chessable).</summary>
+    /// <summary>Als Hintergrund-Job zum Re-Fetch eingereihte Datensätze (Chessable ohne oids).</summary>
     public int Enqueued { get; set; }
 
     /// <summary>Veraltete Datensätze, die weder lokal noch per Re-Fetch behandelt werden konnten

@@ -245,15 +245,17 @@ public class RepertoireController : BaseApiController
     }
 
     /// <summary>Status der Aufbereitungs-Versionierung der eigenen Repertoires (Basis für den
-    /// „Repertoires aktualisieren (N)"-Knopf). Heute meist 0, da Repertoires live ausgewertet werden.</summary>
+    /// „Repertoires aktualisieren (N)"-Knopf); <c>fromCache</c> = Chessable-Repertoires mit oids, deren Zugtexte
+    /// aus dem Linien-Cache kommen. Ohne PGN-Text gerechnet (Projektion + SQL-LIKE).</summary>
     [HttpGet("reprocess/status")]
     public async Task<ActionResult<ReprocessStatusDto>> ReprocessStatus(CancellationToken ct)
         => Ok(await _reprocess.GetRepertoireStatusAsync(GetUserId(), IsAdmin, ct));
 
     /// <summary>Bereitet veraltete eigene Repertoires auf. <paramref name="localOnly"/>=true („Aus Cache")
-    /// nur lokal aufbereitbare (Nicht-Chessable, Versions-Mark); false („Alle") holt zusätzlich
-    /// Chessable-Repertoires frisch. Läuft im HINTERGRUND → antwortet sofort 202 (kein Request-Timeout
-    /// bei vielen Chessable-Re-Fetches); Fortschritt über das Status-Banner / die Import-Anzeige.</summary>
+    /// alles ohne Chessable-Abruf: Versions-Mark und Chessable-Repertoires mit oids aus dem Linien-Cache; false
+    /// („Alle") holt zusätzlich Chessable-Repertoires ohne oids frisch. Läuft im HINTERGRUND → antwortet sofort
+    /// 202 (kein Request-Timeout bei vielen Chessable-Re-Fetches); Fortschritt über das Status-Banner / die
+    /// Import-Anzeige.</summary>
     [HttpPost("reprocess")]
     public IActionResult Reprocess([FromQuery] bool localOnly)
     {

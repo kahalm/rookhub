@@ -246,6 +246,52 @@ public class ReprocessWithoutChessableTests : IDisposable
     }
 
     [Fact]
+    public async Task RepertoireReprocess_WithChessableOff_StillRebuildsFromTheLineCache()
+    {
+        // Gegenstück zu Reprocess_WithChessableOff_StillRebuildsFromTheLineCache (Kurse): derselbe Schalter,
+        // dieselbe Regel — ein Chessable-Repertoire mit oids bekommt seine Zugtexte aus dem Linien-Cache.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var rep = new Repertoire
+        {
+            UserId = 5, Name = "King's Indian", ChessableCourseId = "91808",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files =
+            {
+                new RepertoireFile
+                {
+                    FileName = "chessable-91808.pgn",
+                    PgnContent = $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+                        + "2. Nf3 (2. Nc3 {old side line}) Nc6 3. Bb5 a6 *\n",
+                },
+            },
+        };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        var lines = new StubCachedLineSource();
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+            + "2. Nf3 {2. Nc3 is the side line} Nc6 3. Bb5 a6 *";
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        var before = await svc.GetRepertoireStatusAsync(5);
+        Assert.Equal(1, before.FromCache);
+        Assert.Equal(1, before.ReprocessableLocally + before.Refetchable);
+        Assert.Equal(0, before.NeedsReimport);
+        // Und die Liste trägt kein (!) — der Knopf kann es ja.
+        var list = await TestServices.Repertoire(_db, configuration: TestServices.ChessableSwitch(false)).GetAllAsync(5);
+        Assert.False(list.Single(r => r.Id == rep.Id).NeedsReimport);
+
+        var res = await svc.ReprocessRepertoiresAsync(5);
+        Assert.Equal(1, res.RebuiltFromCache);
+        Assert.Equal(1, res.Reprocessed);
+        Assert.Contains("{2. Nc3 is the side line}",
+            (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id)).PgnContent);
+
+        var after = await svc.GetRepertoireStatusAsync(5);
+        Assert.Equal(0, after.Stale);   // Anzeige = Ausführung: das Banner ist danach leer
+    }
+
+    [Fact]
     public async Task RepertoireReprocess_WithChessableOff_LeavesTheStuckOneStale_SoTheMarkerStays()
     {
         _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });

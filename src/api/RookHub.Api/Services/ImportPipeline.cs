@@ -140,7 +140,10 @@ namespace RookHub.Api.Services;
 ///   in piratechess. Deshalb werden Chessable-Kurse mit <c>[ChessableOid]</c> jetzt aus dem geteilten
 ///   Linien-Cache neu erzeugt (<see cref="StaleAction.Cache"/>: Zugtext je oid, Header bleiben), alle anderen
 ///   lokal. Ohne diesen Bump wäre kein Kurs veraltet und der Cache-Weg liefe nie. Künftige Änderungen an der
-///   PGN-Erzeugung in piratechess kommen auf demselben Weg in bestehende Kurse: Bump genügt.</item>
+///   PGN-Erzeugung in piratechess kommen auf demselben Weg in bestehende Kurse: Bump genügt. Seit 0.510.0 umfasst
+///   derselbe Bump die REPERTOIRES: ein Chessable-Repertoire, dessen Dateien <c>[ChessableOid]</c> tragen, bekommt
+///   seine Zugtexte ebenfalls aus dem Linien-Cache (je Datei, ausgeblendete Partien bleiben) statt nur den
+///   Versions-Mark — kein eigener Bump, weil 20 bei Einführung des Repertoire-Wegs noch nirgends ausgerollt war.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline

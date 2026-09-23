@@ -9,8 +9,9 @@ public enum StaleAction
     /// <summary>Frisch von Chessable holen — nur mit dem RookHub-EIGENEN Chessable-Weg.</summary>
     Refetch,
     /// <summary>Den Zugtext jeder Linie aus dem geteilten piratechess-Linien-Cache neu erzeugen (je oid,
-    /// mit der AKTUELLEN piratechess-Logik), dann lokal aufbereiten — nur Kurse. Kein Chessable-Kontakt,
-    /// kein Bearer, unabhängig von <c>Chessable:Enabled</c>; erledigt der „Aktualisieren"-Knopf.</summary>
+    /// mit der AKTUELLEN piratechess-Logik), dann lokal aufbereiten (Kurs) bzw. auf die aktuelle Version setzen
+    /// (Repertoire). Kein Chessable-Kontakt, kein Bearer, unabhängig von <c>Chessable:Enabled</c>; erledigt der
+    /// „Aktualisieren"-Knopf.</summary>
     Cache,
     /// <summary>Aus der hier gespeicherten Quelle neu aufbereiten bzw. (Repertoire) auf die aktuelle
     /// Version setzen. Kein Netz, erledigt der „Aktualisieren"-Knopf.</summary>
@@ -32,8 +33,9 @@ public static partial class StaleContentRule
 {
     /// <summary>Jüngster quell-abhängiger Marker (piratechess ≥ v1.0.39, Grundlage der
     /// Fortschritts-Overlays). Steht er in der gespeicherten Quelle, kennt jede Linie ihre oid — dann kommt
-    /// ein Chessable-Kurs aus dem Linien-Cache wieder auf den Stand der aktuellen piratechess-Logik, ein
-    /// anderer Kurs per lokalem Re-Parse. Fehlt er, braucht ein Chessable-Kurs einen echten Abruf.</summary>
+    /// ein Chessable-Kurs oder -Repertoire aus dem Linien-Cache wieder auf den Stand der aktuellen
+    /// piratechess-Logik, ein anderer Kurs per lokalem Re-Parse. Fehlt er, braucht Chessable-Inhalt einen
+    /// echten Abruf.</summary>
     public const string ModernMarker = "[ChessableOid";
 
     public static bool HasModernMarkers(string? pgn) =>
@@ -85,11 +87,32 @@ public static partial class StaleContentRule
             : hasSource ? StaleAction.Local
             : StaleAction.Manual;
 
-    /// <summary>Repertoire: es gibt keine getrennte Quelle — das PGN IST die Quelle. Lokal heißt hier
-    /// „nur auf die aktuelle Version setzen" (abgeleitete Daten wertet der Trainer live aus). Einen
-    /// <see cref="StaleAction.Cache"/>-Fall gibt es hier (noch) nicht — siehe TODO.md.</summary>
+    /// <summary>
+    /// Was mit einem veralteten REPERTOIRE geschieht — die erste zutreffende Zeile gewinnt. Es gibt keine getrennte
+    /// Quelle: die gespeicherten PGN-Dateien SIND die Quelle, und der Trainer wertet sie live aus — „aufbereiten"
+    /// heißt hier nie Import, sondern höchstens einen neuen Text schreiben und die Version setzen.
+    /// <list type="table">
+    /// <listheader><term>Fall</term><description>Bedingung → was der Lauf tut</description></listheader>
+    /// <item><term><see cref="StaleAction.Local"/></term><description>kein Chessable-Repertoire (weder Kurs-Id noch
+    ///   Dateiname <c>chessable-…</c>) → nur auf die aktuelle Version setzen (Versions-Mark), auch mit oids.</description></item>
+    /// <item><term><see cref="StaleAction.Cache"/></term><description>Chessable-Repertoire, eine Datei trägt
+    ///   <c>[ChessableOid]</c> → je Datei die Zugtexte aus dem Linien-Cache (<see cref="CachedSourceRebuild"/>,
+    ///   ausgeblendete Partien bleiben), dann der Versions-Mark.</description></item>
+    /// <item><term><see cref="StaleAction.Refetch"/></term><description>Chessable-Repertoire OHNE oids, eigener
+    ///   Chessable-Weg an → Re-Fetch-Auftrag (holbar mit Bearer bzw. als Admin aus dem Kurs-Cache; sonst
+    ///   Versions-Mark, siehe <see cref="ImportReprocessService.ReprocessRepertoiresAsync"/>).</description></item>
+    /// <item><term><see cref="StaleAction.Manual"/></term><description>Chessable-Repertoire OHNE oids, eigener Weg
+    ///   aus → bleibt veraltet, (!) in der Liste; nur ein neuer Import über die Erweiterung hilft.</description></item>
+    /// </list>
+    /// Dieselbe Entscheidung wie <see cref="ActionForBook"/> (Kurse und Repertoires aus demselben Chessable-Kurs
+    /// sollen sich gleich verhalten): ein Chessable-Repertoire MIT oids geht IMMER über den Cache und nie mehr über
+    /// den Versions-Mark — der setzte es auf die aktuelle Version, ohne dass Änderungen an der PGN-Erzeugung in
+    /// piratechess hineinkämen, und danach wäre es für den Cache-Weg verbrannt. Den Cache-Weg sperrt
+    /// <paramref name="chessableEnabled"/> nicht.
+    /// </summary>
     public static StaleAction ActionForRepertoire(bool isChessable, bool sourceModern, bool chessableEnabled)
-        => !isChessable || sourceModern ? StaleAction.Local
+        => !isChessable ? StaleAction.Local
+            : sourceModern ? StaleAction.Cache
             : chessableEnabled ? StaleAction.Refetch
             : StaleAction.Manual;
 }

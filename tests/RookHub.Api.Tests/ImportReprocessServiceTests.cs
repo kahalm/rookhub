@@ -53,10 +53,12 @@ public class ImportReprocessServiceTests : IDisposable
 
     private const string ModernFen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
 
-    /// <summary>Eine Chessable-Linie, wie sie im gespeicherten Kurs steht (piratechess-Format mit oid).</summary>
-    private static string ChessableLine(string round, string oid, string moves) =>
+    /// <summary>Eine Chessable-Linie, wie sie im gespeicherten Kurs bzw. Repertoire steht (piratechess-Format mit
+    /// oid). <paramref name="extraHeaders"/> steht hinter dem oid-Header — dort hängt die Repertoire-Bereinigung
+    /// ihre Header an (<c>[RookHubHidden]</c>, <c>[RookHubRemovedOid]</c>).</summary>
+    private static string ChessableLine(string round, string oid, string moves, string extraHeaders = "") =>
         $"\n[Event \"Kapitel 1\"]\n[Round \"{round}\"]\n[White \"Linie {oid}\"]\n[Black \"Kapitel 1\"]\n"
-        + $"[FEN \"{ModernFen}\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n\n{moves}\n\n";
+        + $"[FEN \"{ModernFen}\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n{extraHeaders}\n{moves}\n\n";
 
     /// <summary>Dieselbe Linie, wie der Linien-Cache sie liefert: Fake-Kapitel „x", Zählung ab 001.001.</summary>
     private static string CacheLine(string oid, string moves) =>
@@ -639,6 +641,20 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.True(await _db.Repertoires.AllAsync(r => r.ImportVersion == ImportPipeline.CurrentVersion));
     }
 
+    private async Task<AppUser> UserAsync()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    private async Task AddFileAsync(int repertoireId, string fileName, string pgn)
+    {
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = repertoireId, FileName = fileName, PgnContent = pgn, FileSize = 1 });
+        await _db.SaveChangesAsync();
+    }
+
     private async Task<Repertoire> SeedRepertoireAsync(int userId, int version, string? fileName, string? courseId = null, string pgn = "x")
     {
         var rep = new Repertoire { UserId = userId, Name = "Rep", ImportVersion = version, ChessableCourseId = courseId };
@@ -669,20 +685,212 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ReprocessRepertoires_ChessableWithModernSource_MarksLocally_NoRefetch()
+    public async Task ReprocessRepertoires_ChessableWithModernSource_RebuildsFromCache_NoRefetch()
     {
-        var user = new AppUser { Username = "u", PasswordHash = "h" };
-        _db.AppUsers.Add(user);
-        await _db.SaveChangesAsync();
-        // Chessable-Repertoire, dessen gespeichertes PGN bereits [%alt] enthält → kein Re-Fetch, nur Versions-Mark.
+        // Bis 0.509.0 hieß dieser Test „…_MarksLocally_NoRefetch": ein Chessable-Repertoire mit [ChessableOid]
+        // bekam nur den Versions-Mark — Fixes an der PGN-Erzeugung in piratechess kamen nie hinein. Jetzt wie bei
+        // Kursen: Zugtext je oid aus dem geteilten Linien-Cache, Header bleiben, dann der Versions-Mark.
+        var user = await UserAsync();
         var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);
         var stub = new StubCourseReimporter();
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
 
-        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id);
+        var result = await ReprocessTestHelper.Build(_db, stub, lines).ReprocessRepertoiresAsync(user.Id);
 
         Assert.Empty(stub.Calls);                     // kein Re-Fetch
         Assert.Equal(1, result.Reprocessed);
-        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(1, result.CacheLinesReplaced);
+        Assert.Equal("None", Assert.Single(lines.PgnCalls).Mode);   // Repertoire-Format: ohne Trainingsmarker
+        var file = await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id);
+        Assert.Contains("Develops from the cache.", file.PgnContent);
+        // Die EIGENEN Header bleiben, die des Fake-Kapitels der Cache-Antwort kommen nicht hinein.
+        Assert.Contains("[Event \"X\"]", file.PgnContent);
+        Assert.Contains("[Round \"1\"]", file.PgnContent);
+        Assert.DoesNotContain("[Event \"x\"]", file.PgnContent);
+        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(file.PgnContent), file.FileSize);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.AsNoTracking().SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task GetRepertoireStatus_ChessableWithOids_CountsAsFromCache_NotRefetch_EvenWithChessableOn()
+    {
+        // Anzeige = Ausführung: der Status zählt den Cache-Weg gesondert (FromCache) und für das Banner wie
+        // „lokal" — ein Klick, kein Download. Ein Repertoire mit oids, das KEIN Chessable-Repertoire ist
+        // (von Hand hochgeladenes piratechess-PGN), bleibt beim Versions-Mark.
+        var user = await UserAsync();
+        await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);          // Cache (Dateiname)
+        await SeedRepertoireAsync(user.Id, 0, "kurs.pgn", courseId: "4242", pgn: ModernPgn);     // Cache (Kurs-Id)
+        await SeedRepertoireAsync(user.Id, 0, "upload-with-oids.pgn", pgn: ModernPgn);          // lokal
+        await SeedRepertoireAsync(user.Id, 0, "chessable-777.pgn", pgn: AltNoOidPgn);           // Re-Fetch
+
+        var status = await ReprocessTestHelper.Build(_db).GetRepertoireStatusAsync(user.Id);
+
+        Assert.Equal(4, status.Stale);
+        Assert.Equal(2, status.FromCache);
+        Assert.Equal(3, status.ReprocessableLocally);  // Local + Cache
+        Assert.Equal(1, status.Refetchable);           // nur das ohne oids
+        Assert.Equal(0, status.NeedsReimport);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_TwoFiles_ModeFollowsEachFile_OneExistenceCheck()
+    {
+        // Ein aus einem Kurs umgewandeltes Repertoire trägt die Trainingsmarker ([%tqu], CoursePgnExporter schreibt
+        // sie mit) — der Modus hängt deshalb an der DATEI, nicht am Repertoire. Dateien mit verschiedenem Modus
+        // brauchen getrennte Abfragen; die Existenzprüfung läuft einmal fürs ganze Repertoire.
+        var user = await UserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-4242.pgn", courseId: "4242",
+            pgn: ChessableLine("001.001", "31", "2. Nf3 {Old repertoire.} Nc6 3. Bb5 a6 *"));
+        await AddFileAsync(rep.Id, "aus-dem-kurs.pgn",
+            ChessableLine("001.001", "32", "2. Nf3 {[%tqu \"En\",\"find it\"] Old course.} Nc6 3. Bb5 a6 *"));
+        await AddFileAsync(rep.Id, "eigene-notizen.pgn", SamplePgn);   // ohne oids: wird gar nicht angefasst
+        var lines = new StubCachedLineSource();
+        lines.Lines["31"] = CacheLine("31", "2. Nf3 {New repertoire.} Nc6 3. Bb5 a6 *");
+        lines.Lines["32"] = CacheLine("32", "2. Nf3 {[%tqu \"En\",\"find it\"] New course.} Nc6 3. Bb5 a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, lines.OidCalls);
+        Assert.Equal(2, lines.PgnCalls.Count);
+        Assert.Equal("None", lines.PgnCalls.Single(c => c.Oids.Contains("31")).Mode);
+        Assert.Equal("FirstKeyMove", lines.PgnCalls.Single(c => c.Oids.Contains("32")).Mode);
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(2, result.CacheLinesReplaced);
+        var files = await _db.RepertoireFiles.AsNoTracking().Where(f => f.RepertoireId == rep.Id).ToDictionaryAsync(f => f.FileName);
+        Assert.Contains("New repertoire.", files["chessable-4242.pgn"].PgnContent);
+        Assert.Contains("New course.", files["aus-dem-kurs.pgn"].PgnContent);
+        Assert.Equal(SamplePgn, files["eigene-notizen.pgn"].PgnContent);
+        Assert.All(files.Values.Where(f => f.FileName != "eigene-notizen.pgn"),
+            f => Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(f.PgnContent), f.FileSize));
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.AsNoTracking().SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_CacheKnowsNoLine_StaysStale_Skipped_TextUnchanged()
+    {
+        // Wie bei Kursen: ein Versions-Mark ohne geänderten Text verbrennte das Repertoire für den Cache-Weg.
+        var user = await UserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);
+        var lines = new StubCachedLineSource();
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(0, result.Reprocessed);
+        Assert.Equal(0, result.RebuiltFromCache);
+        Assert.Equal(0, result.Failed);
+        Assert.Empty(lines.PgnCalls);                  // ohne gecachte Linie auch keine teure PGN-Abfrage
+        Assert.Equal(ModernPgn, (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id)).PgnContent);
+        Assert.Equal(0, (await _db.Repertoires.AsNoTracking().SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_CacheThrowsInSecondPortion_TextUnchanged_Failed_StaysStale()
+    {
+        var count = ImportReprocessService.CacheRebuildBatchSize + 1;
+        var lines = new StubCachedLineSource { ThrowOnPgnCall = 2 };
+        var pgn = new System.Text.StringBuilder();
+        for (var i = 1; i <= count; i++)
+        {
+            var oid = (2000 + i).ToString();
+            pgn.Append(ChessableLine($"001.{i:000}", oid, "2. Nf3 {Old.} Nc6 3. Bb5 a6 *"));
+            lines.Lines[oid] = CacheLine(oid, "2. Nf3 {New.} Nc6 3. Bb5 a6 *");
+        }
+        var user = await UserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: pgn.ToString());
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(2, lines.PgnCalls.Count);
+        Assert.Equal(ImportReprocessService.CacheRebuildBatchSize, lines.PgnCalls[0].Oids.Count);
+        Assert.Single(lines.PgnCalls[1].Oids);
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(0, result.Skipped);
+        Assert.Equal(0, result.Reprocessed);
+        Assert.Equal(pgn.ToString(), (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id)).PgnContent);
+        Assert.Equal(0, (await _db.Repertoires.AsNoTracking().SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_RepertoireWrittenWhileAskingTheCache_WritesNothing_StaysStale()
+    {
+        // Ein Live-Append der Extension (oder ein Upload, die Bereinigung) schreibt während der Abfragen und setzt
+        // dabei Repertoire.UpdatedAt. Der umgeschriebene Text kennte dessen Linien nicht — also nichts schreiben.
+        var user = await UserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
+        lines.OnPgnCall = () =>
+        {
+            var r = _db.Repertoires.Single(x => x.Id == rep.Id);
+            r.UpdatedAt = r.UpdatedAt.AddSeconds(1);   // so schreibt jeder Schreiber des Repertoire-PGN mit
+            _db.SaveChanges();
+        };
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(0, result.RebuiltFromCache);
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(ModernPgn, (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id)).PgnContent);
+        Assert.Equal(0, (await _db.Repertoires.AsNoTracking().SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_HiddenGameStaysUntouched_VisibleOnesReplaced()
+    {
+        // Die Bereinigung blendet Altlasten über [RookHubHidden] aus, statt sie zu löschen. Eine ausgeblendete Partie
+        // wird nie ersetzt — und gar nicht erst im Cache nachgefragt.
+        var hidden = ChessableLine("001.002", "42", "2. Nf3 {Hidden copy.} Nc6 3. Bb5 a6 *",
+            extraHeaders: "[RookHubHidden \"Kopie von Partie 1\"]\n");
+        var user = await UserAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn",
+            pgn: ChessableLine("001.001", "41", "2. Nf3 {Old.} Nc6 3. Bb5 a6 *") + hidden);
+        var lines = new StubCachedLineSource();
+        lines.Lines["41"] = CacheLine("41", "2. Nf3 {New.} Nc6 3. Bb5 a6 *");
+        lines.Lines["42"] = CacheLine("42", "2. Nf3 {New hidden.} Nc6 3. Bb5 a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, result.CacheLinesReplaced);
+        Assert.DoesNotContain("42", lines.PgnCalls.SelectMany(c => c.Oids));
+        var text = (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id)).PgnContent;
+        Assert.Contains("{New.}", text);
+        Assert.EndsWith(hidden, text);
+        Assert.DoesNotContain("New hidden.", text);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_LocalOnly_IncludesTheCachePath_NonChessableStaysVersionMark()
+    {
+        // „Aus Cache" heißt „ohne Chessable-Abruf" — der Linien-Cache gehört dazu, nur der Re-Fetch bleibt aus.
+        // Ein Nicht-Chessable-Repertoire bekommt weiter nur den Versions-Mark, auch wenn es oids trägt.
+        var user = await UserAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential { UserId = user.Id, EncryptedBearer = "x" });
+        await _db.SaveChangesAsync();
+        var modern = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);
+        var upload = await SeedRepertoireAsync(user.Id, 0, "upload-with-oids.pgn", pgn: ModernPgn);
+        var old = await SeedRepertoireAsync(user.Id, 0, "chessable-777.pgn", pgn: AltNoOidPgn);
+        var stub = new StubCourseReimporter { ReturnId = 42 };
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, stub, lines).ReprocessRepertoiresAsync(user.Id, localOnly: true);
+
+        Assert.Equal(2, result.Reprocessed);           // Cache + Versions-Mark
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(0, result.Enqueued);
+        Assert.Empty(stub.Calls);
+        Assert.Single(lines.PgnCalls);                 // nur das Chessable-Repertoire fragt den Cache
+        Assert.Contains("Develops from the cache.",
+            (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == modern.Id)).PgnContent);
+        Assert.Equal(ModernPgn, (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == upload.Id)).PgnContent);
+        var versions = await _db.Repertoires.AsNoTracking().ToDictionaryAsync(r => r.Id, r => r.ImportVersion);
+        Assert.Equal(ImportPipeline.CurrentVersion, versions[modern.Id]);
+        Assert.Equal(ImportPipeline.CurrentVersion, versions[upload.Id]);
+        Assert.Equal(0, versions[old.Id]);            // Re-Fetch-Fall, bei „Aus Cache" ausgelassen
     }
 
     [Fact]

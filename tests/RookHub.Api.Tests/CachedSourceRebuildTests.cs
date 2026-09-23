@@ -250,6 +250,79 @@ public class CachedSourceRebuildTests
         Assert.Equal(once, twice);
     }
 
+    // ── Repertoire-Altlasten (RepertoirePgnCleanup): kommen in Kursen nie vor, in Repertoire-Dateien schon ──
+
+    private const string Hidden = "[RookHubHidden \"Kopie von Partie 1\"]\n";
+
+    [Fact]
+    public void Rebuild_AusgeblendeterBlock_BleibtUnveraendert_ZaehltAlsAusgeblendet()
+    {
+        // Eine ausgeblendete Partie sieht niemand; ein frischer Zugtext änderte daran nichts, und die
+        // Ausblend-Begründung bezieht sich auf den ALTEN Text. Also nie ersetzen — auch wenn die oid im Cache liegt.
+        var hidden = StoredBlock("002.003", "Line B", "102", "1. d4 {Old B.} d5 *", extraHeaders: Hidden);
+        var stored = StoredBlock("002.002", "Line A", "101", "1. e4 {Old A.} e5 *") + hidden;
+        var fresh = Fresh(
+            ("101", CacheBlock("101", "1. e4 {New A.} e5 *")),
+            ("102", CacheBlock("102", "1. d4 {New B.} d5 *")));
+
+        var r = CachedSourceRebuild.Rebuild(stored, fresh);
+
+        Assert.Equal(StoredBlock("002.002", "Line A", "101", "1. e4 {New A.} e5 *") + hidden, r.Pgn);
+        Assert.Equal(2, r.Total);
+        Assert.Equal(1, r.Replaced);
+        Assert.Equal(1, r.Hidden);
+        // „Jede Partie mit oid landet in genau einem Zähler" gilt weiter.
+        Assert.Equal(r.Total, r.Replaced + r.Missing + r.ModeMismatch + r.Conflicts + r.Hidden);
+    }
+
+    [Fact]
+    public void Rebuild_AusgeblendeteKopieMitDerselbenOid_MachtDieSichtbareNichtZumKonflikt()
+    {
+        // Wie AmbiguousOids in der Bereinigung: eine oid an einer ausgeblendeten Kopie ist keine zweite Linie.
+        // Zählte sie mit, bliebe die sichtbare Partie als „Konflikt" für immer auf dem alten Text.
+        var hidden = StoredBlock("002.003", "Line A", "101", "1. e4 {Copy.} e5 *", extraHeaders: Hidden);
+        var stored = StoredBlock("002.002", "Line A", "101", "1. e4 {Old.} e5 *") + hidden;
+
+        var r = CachedSourceRebuild.Rebuild(stored, Fresh(("101", CacheBlock("101", "1. e4 {New.} e5 *"))));
+
+        Assert.Equal(StoredBlock("002.002", "Line A", "101", "1. e4 {New.} e5 *") + hidden, r.Pgn);
+        Assert.Equal(1, r.Replaced);
+        Assert.Equal(1, r.Hidden);
+        Assert.Equal(0, r.Conflicts);
+    }
+
+    [Fact]
+    public void Rebuild_BlockMitEntfernterOid_BleibtUnveraendert_UndBekommtSieNichtZurueck()
+    {
+        // Die Bereinigung hat dieser Partie die oid genommen ([RookHubRemovedOid]) — sichtbar mit eigenem Inhalt
+        // oder als ausgeblendete Kopie. Ohne [ChessableOid] bekommt sie keinen frischen Block, also auch keine
+        // ergänzten Header: die entfernte oid darf nicht über „fehlende Header aus dem Cache" zurückkommen.
+        var removed = StoredBlock("002.003", "Line B", null, "1. d4 {Unique.} d5 *",
+            extraHeaders: "[RookHubRemovedOid \"101\"]\n");
+        var removedAndHidden = StoredBlock("002.004", "Line A", null, "1. e4 {Old.} e5 *",
+            extraHeaders: "[RookHubRemovedOid \"101\"]\n" + Hidden);
+        var stored = StoredBlock("002.002", "Line A", "101", "1. e4 {Old.} e5 *") + removed + removedAndHidden;
+
+        var r = CachedSourceRebuild.Rebuild(stored, Fresh(("101", CacheBlock("101", "1. e4 {New.} e5 *", color: "white"))));
+
+        Assert.Equal(StoredBlock("002.002", "Line A", "101", "1. e4 {New.} e5 *", extraHeaders: "[ChessableColor \"white\"]\n")
+                     + removed + removedAndHidden, r.Pgn);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(r.Pgn, @"\[ChessableOid ""101""\]"));
+        Assert.Equal(1, r.Total);   // nur die Partie, die die oid noch trägt
+        Assert.Equal(1, r.Replaced);
+        Assert.Equal(0, r.Hidden);  // ohne oid nicht gezählt — auch die ausgeblendete
+    }
+
+    [Fact]
+    public void OidsOf_UeberspringtAusgeblendetePartien()
+    {
+        // Ihr Zugtext wird nie ersetzt — sie im Cache nachzufragen kostete piratechess je oid ~455 KB Rohdaten.
+        var stored = StoredBlock("002.002", "Line A", "101", "1. e4 e5 *")
+                   + StoredBlock("002.003", "Line B", "102", "1. d4 d5 *", extraHeaders: Hidden);
+
+        Assert.Equal(new[] { "101" }, CachedSourceRebuild.OidsOf(stored));
+    }
+
     [Fact]
     public void OidsOf_NurAusDenHeadern_JedeEinmal_InReihenfolge()
     {

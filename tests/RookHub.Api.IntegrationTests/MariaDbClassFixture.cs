@@ -117,3 +117,4 @@ public sealed class ImportStateFixture() : MariaDbClassFixture("wire", withApp: 
 public sealed class CourseStatsFixture() : MariaDbClassFixture("stats", withApp: true);
 public sealed class QueryTranslationFixture() : MariaDbClassFixture("q", withApp: true);
 public sealed class BookSourceSplitFixture() : MariaDbClassFixture("bsrc", withApp: true);
+public sealed class RepertoireReprocessFixture() : MariaDbClassFixture("rrep", withApp: false);
