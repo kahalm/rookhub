@@ -23,6 +23,8 @@ export interface SavedGameDetail extends SavedGame {
   pgn: string;
   whiteElo?: number | null;
   blackElo?: number | null;
+  /** "white"/"black", wenn der Besitzer einer Seite zuordenbar ist — initiale Brett-Orientierung. */
+  ownerSide?: 'white' | 'black' | null;
 }
 
 /** Öffentliche Sicht auf eine geteilte Partie (ohne Besitzer-Daten). */

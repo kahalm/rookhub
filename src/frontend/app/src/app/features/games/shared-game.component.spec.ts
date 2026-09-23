@@ -10,7 +10,10 @@ import { AuthService } from '../../core/auth.service';
 import { SharedGameComponent } from './shared-game.component';
 
 describe('SharedGameComponent', () => {
-  async function setup(loggedIn = false) {
+  async function setup(loggedIn = false, own = false) {
+    const snapshot = own
+      ? { paramMap: convertToParamMap({ id: '4' }), data: { mode: 'own' } }
+      : { paramMap: convertToParamMap({ token: 'tok' }), data: {} };
     await TestBed.configureTestingModule({
       imports: [SharedGameComponent],
       providers: [
@@ -20,7 +23,7 @@ describe('SharedGameComponent', () => {
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'tok' }) } } },
+        { provide: ActivatedRoute, useValue: { snapshot } },
       ],
     }).compileComponents();
     return { fixture: TestBed.createComponent(SharedGameComponent), http: TestBed.inject(HttpTestingController) };
@@ -180,5 +183,38 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
+  });
+  // ----- Eigene Partie als Seite (/games/:id, seit 0.513.0 — vorher ein Dialog) -----
+
+  it('own mode: loads the game by id, uses the own analyze/evals urls, offers back and share', async () => {
+    const { fixture, http } = await setup(true, true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush({
+      id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', shareToken: 'tok4', moveCount: 2,
+      pgn: '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1', createdAt: '2026-07-16T00:00:00Z', ownerSide: 'black',
+    });
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();   // erst jetzt entsteht die Kurven-Komponente und fragt die Bewertungen ab
+    http.expectOne('/api/games/4/evals').flush({ status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.flipped).toBeTrue();
+    expect(el.querySelector('a.back')?.getAttribute('href')).toBe('/games');
+    expect(el.querySelector('button.share')).not.toBeNull();
+    expect(el.querySelector('.header .analyze')).not.toBeNull();
+
+    (el.querySelector('button.analyze') as HTMLButtonElement).click();
+    http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 9 }, reused: false });
+    http.expectOne('/api/games/4/evals').flush({ status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
+  });
+
+  it('own mode: a missing game shows the load error, not the „shared link" text', async () => {
+    const { fixture, http } = await setup(true, true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush('nope', { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.notFound).toBeTrue();
+    expect(fixture.componentInstance.notFoundKey).toBe('games.loadError');
   });
 });

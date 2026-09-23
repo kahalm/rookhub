@@ -169,7 +169,13 @@ public class SavedGameService
     {
         var g = await _db.SavedGames.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
-        return g == null ? null : MapDetail(g);
+        if (g == null) return null;
+        var dto = MapDetail(g);
+        // Die eigene Partie-Seite (/games/{id}) startet aus der Sicht des Besitzers — dieselbe Regel wie
+        // beim Teilen-Link, damit die beiden Seiten nicht verschieden herum aufgehen.
+        var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
+        dto.OwnerSide = DetermineOwnerSide(g, profile);
+        return dto;
     }
 
     /// <summary>Löscht eine eigene Partie; false wenn nicht gefunden / fremd.</summary>

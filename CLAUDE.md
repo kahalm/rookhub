@@ -448,7 +448,7 @@ piratechess (erstes Kapitel). Der Anhaenge-Weg setzt ausserdem `Book.DisplayName
 Dateinamen stammt (`chessable-u5-55720`, `IsFileNameDerived`).
 
 ### Gespeicherte Partien (auth + öffentlicher Teilen-Link)
-Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess.com/lichess gespeicherten Partien. Nachspielen (PGN-Viewer-Dialog), „In Analyse öffnen" (PGN via Router-State an `/analysis`), Löschen, und Teilen über einen eindeutigen öffentlichen Link `/g/{shareToken}` (kein Login). Logik in `SavedGameService`; Menü-Key `games` (Default `Registered`).
+Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess.com/lichess gespeicherten Partien. Nachspielen als eigene SEITE `/games/{id}` (seit 0.513.0 dieselbe Komponente wie der Teilen-Link `/g/{token}`, `data.mode = 'own'`; vorher ein PGN-Viewer-Dialog — der Nutzer wollte eine Seite), „In Analyse öffnen" (PGN via Router-State an `/analysis`), Löschen, und Teilen über einen eindeutigen öffentlichen Link `/g/{shareToken}` (kein Login). Logik in `SavedGameService`; Menü-Key `games` (Default `Registered`).
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|

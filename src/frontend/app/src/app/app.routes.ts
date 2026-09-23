@@ -51,6 +51,8 @@ export const routes: Routes = [
   { path: 'analysis/jobs', loadComponent: () => import('./features/analysis/analysis-jobs.component').then(m => m.AnalysisJobsComponent), canActivate: [authGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },
+  // Eigene Partie als SEITE (statt Dialog, gemeldet 2026-09-23): dieselbe Komponente wie der Teilen-Link, im Modus „own".
+  { path: 'games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard, menuGuard('games')], data: { mode: 'own' } },
   { path: 'reconstruct', loadComponent: () => import('./features/reconstruct/reconstruct-list.component').then(m => m.ReconstructListComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'reconstruct/:id', loadComponent: () => import('./features/reconstruct/reconstruct-detail.component').then(m => m.ReconstructDetailComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'remembered', loadComponent: () => import('./features/remembered/remembered-lines.component').then(m => m.RememberedLinesComponent), canActivate: [authGuard, menuGuard('remembered')] },

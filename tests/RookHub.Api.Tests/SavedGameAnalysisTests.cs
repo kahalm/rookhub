@@ -56,6 +56,32 @@ public class SavedGameAnalysisTests : IDisposable
             Result = "1-0", ExternalId = externalId,
         });
 
+    // ----- Eigene Partie als Seite (/games/{id}, 0.513.0): das Brett startet aus Sicht des Besitzers -----
+
+    [Fact]
+    public async Task Get_setztOwnerSide_ausDemPlattformNamenDesProfils_wieBeimTeilenLink()
+    {
+        var user = await UserAsync("bert");
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = "Bert" });
+        await _db.SaveChangesAsync();
+        var saved = await SaveAsync(user.Id);   // Weiß Anna, Schwarz Bert, Quelle lichess
+
+        var detail = await _svc.GetAsync(user.Id, saved.Id);
+
+        Assert.Equal("black", detail!.OwnerSide);
+    }
+
+    [Fact]
+    public async Task Get_ohneProfilName_keineOwnerSide()
+    {
+        var user = await UserAsync("anna");
+        var saved = await SaveAsync(user.Id);
+
+        var detail = await _svc.GetAsync(user.Id, saved.Id);
+
+        Assert.Null(detail!.OwnerSide);
+    }
+
     private async Task<SavedGame> RowAsync(int id)
     {
         _db.ChangeTracker.Clear();

@@ -1,19 +1,16 @@
 import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { ProfileService } from '../../core/profile.service';
+import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { GamesService, SavedGame } from './games.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
-import { PgnViewerComponent, PgnViewerData } from '../../shared/pgn-viewer/pgn-viewer.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
@@ -21,8 +18,8 @@ import { SnackbarService } from '../../core/snackbar.service';
   selector: 'app-games-list',
   standalone: true,
   imports: [
-    CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatDialogModule, TranslatePipe,
+    CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    MatProgressSpinnerModule, TranslatePipe,
   ],
   template: `
     <div class="games-page">
@@ -45,7 +42,8 @@ import { SnackbarService } from '../../core/snackbar.service';
               <div class="info">
                 <mat-icon class="src" [matTooltip]="g.source">{{ sourceIcon(g.source) }}</mat-icon>
                 <div class="players">
-                  <span class="vs"><strong>{{ g.white || '?' }}</strong> – <strong>{{ g.black || '?' }}</strong></span>
+                  <!-- Der Name führt auf die Partie-SEITE (/games/:id) — kein Dialog mehr (gemeldet 2026-09-23). -->
+                  <a class="vs" [routerLink]="['/games', g.id]"><strong>{{ g.white || '?' }}</strong> – <strong>{{ g.black || '?' }}</strong></a>
                   <span class="meta">
                     @if (g.result && g.result !== '*') { <span class="result">{{ g.result }}</span> }
                     <span>{{ g.moveCount }} {{ 'games.moves' | translate }}</span>
@@ -54,13 +52,13 @@ import { SnackbarService } from '../../core/snackbar.service';
                 </div>
               </div>
               <div class="actions">
-                <button mat-icon-button (click)="replay(g)" [matTooltip]="'games.replay' | translate" [attr.aria-label]="'games.replay' | translate">
+                <a mat-icon-button [routerLink]="['/games', g.id]" [matTooltip]="'games.replay' | translate" [attr.aria-label]="'games.replay' | translate">
                   <mat-icon>play_arrow</mat-icon>
-                </button>
+                </a>
                 <button mat-icon-button (click)="openInAnalysis(g)" [matTooltip]="'games.openInAnalysis' | translate" [attr.aria-label]="'games.openInAnalysis' | translate">
                   <mat-icon>biotech</mat-icon>
                 </button>
-                <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach im Nachspiel-Dialog. -->
+                <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach auf der Partie-Seite. -->
                 <button mat-icon-button class="analyze" (click)="analyze(g)"
                         [disabled]="analyzingId === g.id || uploadStatus?.engineAvailable === false"
                         [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyze') | translate"
@@ -97,7 +95,8 @@ import { SnackbarService } from '../../core/snackbar.service';
     .info { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .src { flex-shrink: 0; opacity: 0.7; }
     .players { display: flex; flex-direction: column; min-width: 0; }
-    .vs { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vs { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; text-decoration: none; }
+    .vs:hover { text-decoration: underline; }
     .meta { display: flex; gap: 10px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
     .actions { display: flex; flex-shrink: 0; }
@@ -116,15 +115,12 @@ export class GamesListComponent implements OnInit {
   uploadStatus: GuessUploadStatus | null = null;
   private destroyRef = inject(DestroyRef);
   private analyzeGame = inject(AnalyzeGameService);
-  private usernames: { chess?: string; lichess?: string } = {};
 
   constructor(
     private service: GamesService,
-    private dialog: MatDialog,
     private router: Router,
     private snackbar: SnackbarService,
     private translate: TranslateService,
-    private profileService: ProfileService,
   ) {}
 
   ngOnInit(): void {
@@ -132,8 +128,6 @@ export class GamesListComponent implements OnInit {
       next: list => { this.games = list; this.loading = false; },
       error: () => { this.loading = false; },
     });
-    this.profileService.getProfile<{ chessComUsername?: string; lichessUsername?: string }>()
-      .subscribe({ next: p => this.usernames = { chess: p.chessComUsername?.toLowerCase(), lichess: p.lichessUsername?.toLowerCase() } });
     this.analyzeGame.status().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(u => this.uploadStatus = u);
   }
 
@@ -147,35 +141,8 @@ export class GamesListComponent implements OnInit {
       .subscribe(() => this.analyzingId = null);
   }
 
-  private isFlipped(g: SavedGame): boolean {
-    const myName = g.source === 'lichess' ? this.usernames.lichess : this.usernames.chess;
-    if (!myName || !g.black) return false;
-    return g.black.toLowerCase() === myName;
-  }
-
   sourceIcon(source: string): string {
     return source === 'lichess' ? 'public' : 'sports_esports';
-  }
-
-  /** PGN nachladen und im wiederverwendbaren PGN-Viewer-Dialog durchspielen. */
-  replay(g: SavedGame): void {
-    this.service.get(g.id).subscribe({
-      next: detail => {
-        // Keine feste Breite: der Dialog umschließt Brett + Zugliste, das Brett richtet sich nach dem Fenster
-        // (siehe PgnViewerComponent). Mit 90vw/900px blieb am PC ein 400-px-Brett in einer 900-px-Kiste.
-        // Mit Kurve und Knopf: im Dialog wird die Partie nachgespielt UND ausgewertet.
-        const data: PgnViewerData = {
-          pgn: detail.pgn, flipped: this.isFlipped(g),
-          evalsUrl: this.service.evalsUrl(g.id), analyzeUrl: this.service.analyzeUrl(g.id),
-        };
-        this.dialog.open(PgnViewerComponent, {
-          data,
-          maxWidth: '96vw',
-          panelClass: 'pgn-viewer-dialog',
-        });
-      },
-      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
-    });
   }
 
   /** PGN nachladen und in der Analyse-Seite öffnen (Übergabe via Router-State). */

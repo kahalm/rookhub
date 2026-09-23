@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -21,15 +21,19 @@ import { GameEvalsStatus } from './game-review.util';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 /**
- * Öffentliche Nachspiel-Seite einer geteilten Partie (Route <c>/g/:token</c>, kein Login nötig).
- * Reused den PgnViewerService + chess-board/move-list aus dem PGN-Viewer, aber inline statt im Dialog.
+ * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
+ * - <c>/g/:token</c>: die geteilte Partie, öffentlich, kein Login nötig (Route ohne <c>data.mode</c>);
+ * - <c>/games/:id</c> (<c>data.mode = 'own'</c>): die eigene gespeicherte Partie aus <c>/games</c>. Bis 0.512.0
+ *   öffnete die Liste dafür den PGN-Viewer-DIALOG; der Nutzer wollte eine Seite (2026-09-23) — und die gab es
+ *   für den Teilen-Link längst, samt Kurve und Analysieren-Knopf. Eigenes dazu: Zurück-Pfeil, Teilen-Link.
+ * Reused den PgnViewerService + chess-board/move-list aus dem PGN-Viewer.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-shared-game',
   standalone: true,
   imports: [
-    CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
+    CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
   ],
   providers: [PgnViewerService],
@@ -40,11 +44,16 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
       } @else if (notFound) {
         <mat-card class="empty">
           <mat-icon>link_off</mat-icon>
-          <p>{{ 'games.shared.notFound' | translate }}</p>
+          <p>{{ notFoundKey | translate }}</p>
         </mat-card>
       } @else if (game) {
         <mat-card class="viewer">
           <div class="header">
+            @if (own) {
+              <a mat-icon-button routerLink="/games" class="back" [matTooltip]="'common.back' | translate" [attr.aria-label]="'common.back' | translate">
+                <mat-icon>arrow_back</mat-icon>
+              </a>
+            }
             <div class="header-main">
               <span class="players">
                 <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo">({{ game.whiteElo }})</span> }
@@ -75,6 +84,11 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                 <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
                   <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
                 </a>
+              }
+              @if (own && shareToken) {
+                <button mat-stroked-button class="share" (click)="share()">
+                  <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
+                </button>
               }
             </div>
           </div>
@@ -185,6 +199,12 @@ export class SharedGameComponent implements OnInit {
   loading = true;
   notFound = false;
   flipped = false;
+  /** Eigene Partie (`/games/:id`) statt Teilen-Link — entscheidet Datenquelle, Adressen und Kopfzeile. */
+  own = false;
+  /** Teilen-Token der eigenen Partie (für „Teilen-Link kopieren"). */
+  shareToken: string | null = null;
+
+  get notFoundKey(): string { return this.own ? 'games.loadError' : 'games.shared.notFound'; }
   /** `GET …/evals` dieser Partie — anonym die Kurve des Teilenden, angemeldet ersatzweise die eigene. */
   evalsUrl: string | null = null;
   private analyzeUrl = '';
@@ -218,22 +238,45 @@ export class SharedGameComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.own = this.route.snapshot.data?.['mode'] === 'own';
+    if (this.own) {
+      const id = Number(this.route.snapshot.paramMap.get('id'));
+      this.evalsUrl = this.games.evalsUrl(id);
+      this.analyzeUrl = this.games.analyzeUrl(id);
+      this.games.get(id).subscribe({
+        next: g => { this.shareToken = g.shareToken; this.show(g); },
+        error: () => { this.notFound = true; this.loading = false; },
+      });
+      return;
+    }
     const token = this.route.snapshot.paramMap.get('token') || '';
     this.evalsUrl = this.games.sharedEvalsUrl(token);
     this.analyzeUrl = this.games.sharedAnalyzeUrl(token);
     this.games.getShared(token).subscribe({
-      next: g => {
-        this.game = g;
-        // Aus der Sicht des Teilenden: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
-        this.flipped = g.ownerSide === 'black';
-        this.service.loadPgn(g.pgn);
-        this.loading = false;
-        if (this.auth.isLoggedIn) {
-          this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));
-        }
-      },
+      next: g => this.show(g),
       error: () => { this.notFound = true; this.loading = false; },
     });
+  }
+
+  private show(g: SharedGame): void {
+    this.game = g;
+    // Aus der Sicht des Besitzers: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
+    this.flipped = g.ownerSide === 'black';
+    this.service.loadPgn(g.pgn);
+    this.loading = false;
+    if (this.auth.isLoggedIn) {
+      this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));
+    }
+  }
+
+  /** Teilen-Link der eigenen Partie in die Zwischenablage — wie in der Liste. */
+  share(): void {
+    if (!this.shareToken) return;
+    const url = this.games.shareUrl(this.shareToken);
+    navigator.clipboard?.writeText(url).then(
+      () => this.snackbar.copy(this.translate.instant('games.shareCopied')),
+      () => this.snackbar.warn(url),
+    );
   }
 
   /** Die Partie rechnen lassen (siehe {@link AnalyzeGameService}). Die Seite ist ohne Anmeldung

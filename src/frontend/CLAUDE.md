@@ -127,6 +127,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/weekly` | WeeklyListComponent | `adminGuard` (vorerst nur Admin; Lese-API bleibt offen) |
 | `/analysis/jobs` | AnalysisJobsComponent (Hintergrund-Analyseaufträge: Liste + gespeicherte Linien + Tiefe/Linien anpassen; steht VOR `/analysis`) | `authGuard` |
 | `/reconstruct` | ReconstructListComponent („Partie rekonstruieren": Liste anlegen/öffnen/löschen) | `authGuard` + `menuGuard('reconstruct')` |
+| `/games/:id` | SharedGameComponent im Modus `own` (`data.mode`): eigene gespeicherte Partie als Seite — Brett, Zugliste, Bewertungskurve, Analysieren, Teilen-Link; seit 0.513.0 statt des PGN-Viewer-Dialogs | `authGuard` + `menuGuard('games')` |
 | `/reconstruct/:id` | ReconstructDetailComponent (Arbeitsplatz: Teile links, Brett rechts; Zugfolgen werden lokal mit chess.js mitgespielt, geprüft wird serverseitig) | `authGuard` + `menuGuard('reconstruct')` |
 | `/analysis` | AnalysisComponent | nein (öffentlich; Stockfish-MultiPV-Analyse — lokal per WASM, eingeloggt wahlweise über eine externe Engine des eigenen Lichess-Kontos, siehe „Externe Engine" im Haupt-CLAUDE.md) |
 | `/install` | InstallComponent | nein (öffentlich; APK-Download + PWA-Install, plattformabhängig via `PwaInstallService`) |
@@ -242,7 +243,7 @@ app/src/app/
 
 ## Partie-Rückblick: Bewertungskurve, Genauigkeit, Zug-Klassen (0.512.0)
 
-Unter dem Brett der geteilten Partie (`/g/:token`) und im Nachspiel-Dialog (`/games` → Nachspielen) —
+Unter dem Brett der geteilten Partie (`/g/:token`) und der eigenen Partie-Seite (`/games/:id`, seit 0.513.0 statt des Nachspiel-Dialogs; der Dialog `PgnViewerComponent` kann es weiterhin) —
 Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/evals`,
 `…/shared/{token}/evals`, alles in WEISS-Sicht; siehe „Gespeicherte Partien" im Haupt-CLAUDE.md).
 

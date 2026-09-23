@@ -65,6 +65,11 @@ public class SavedGameDetailDto : SavedGameDto
 
     /// <summary>Elo/Rating des Schwarzspielers (aus dem PGN-Header <c>BlackElo</c> gelesen).</summary>
     public int? BlackElo { get; set; }
+
+    /// <summary>„white"/„black", wenn der Besitzer einer Seite zuordenbar ist (Plattform-Username im
+    /// Profil) — die Partie-Seite dreht das Brett dann aus seiner Sicht. Dieselbe Regel wie
+    /// <see cref="SharedGameDto.OwnerSide"/>.</summary>
+    public string? OwnerSide { get; set; }
 }
 
 /// <summary>Öffentliche Sicht auf eine geteilte Partie (<c>GET /api/games/shared/{token}</c>).

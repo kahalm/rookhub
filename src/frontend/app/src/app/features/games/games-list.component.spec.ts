@@ -4,7 +4,6 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { MatDialog } from '@angular/material/dialog';
 import { GamesListComponent } from './games-list.component';
 
 describe('GamesListComponent', () => {
@@ -37,7 +36,6 @@ describe('GamesListComponent', () => {
     fixture.detectChanges(); // ngOnInit: Liste, Profil, Status
     http.expectOne(req => req.method === 'GET' && req.url.startsWith('/api/games') && !req.url.startsWith('/api/games/'))
       .flush([{ id: 4, source: 'lichess', white: 'a', black: 'b', result: '1-0', moveCount: 3, shareToken: 't', createdAt: '2026-07-16T00:00:00Z' }]);
-    http.expectOne('/api/profile').flush({});
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
     fixture.detectChanges();
 
@@ -50,23 +48,16 @@ describe('GamesListComponent', () => {
     expect(fixture.componentInstance.analyzingId).toBeNull();
   });
 
-  it('replay: the dialog gets the graph and the analyse button of THIS game', async () => {
+  it('opens a game as a page: name and play button link to /games/:id (no dialog since 0.513.0)', async () => {
     const { fixture, http } = await setup();
-    // Die Instanz der KOMPONENTE: MatDialogModule in den Standalone-Imports kann einen eigenen MatDialog
-    // mitbringen, TestBed.inject läge dann daneben.
-    const dialog = (fixture.componentInstance as unknown as { dialog: MatDialog }).dialog;
-    const open = spyOn(dialog, 'open').and.returnValue({} as never);
     fixture.detectChanges();
     http.expectOne(req => req.method === 'GET' && req.url.startsWith('/api/games') && !req.url.startsWith('/api/games/'))
       .flush([{ id: 4, source: 'lichess', white: 'a', black: 'b', result: '1-0', moveCount: 3, shareToken: 't', createdAt: '2026-07-16T00:00:00Z' }]);
-    http.expectOne('/api/profile').flush({});
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
 
-    fixture.componentInstance.replay({ id: 4, source: 'lichess', shareToken: 't', moveCount: 3, createdAt: '' });
-    http.expectOne('/api/games/4').flush({ id: 4, pgn: '1. e4 c5 *' });
-
-    const data = open.calls.mostRecent().args[1]!.data as { evalsUrl: string; analyzeUrl: string };
-    expect(data.evalsUrl).toBe('/api/games/4/evals');
-    expect(data.analyzeUrl).toBe('/api/games/4/analyze');
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a[href="/games/4"]')) as HTMLAnchorElement[];
+    expect(links.length).toBe(2);   // Spielernamen + Abspiel-Knopf
+    http.expectNone('/api/games/4');
   });
 });
