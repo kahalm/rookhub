@@ -276,4 +276,57 @@ public class BookSourceTests : IDisposable
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => new PgnImportService(Fresh()).ReprocessFromStoredSourceAsync(id + 999, false, CancellationToken.None));
     }
+
+    // ===== Pflicht-Source beim Anlegen (AppDbContext) =====
+
+    [Fact]
+    public void Add_BuchOhneSource_WirftSofort()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => Fresh().Books.Add(new Book { FileName = "ohne.pgn", DisplayName = "Ohne" }));
+        Assert.Contains("ohne Source", ex.Message);
+    }
+
+    [Fact]
+    public async Task SaveChanges_NachAbgefangenemFehler_SchreibtDasBuchNicht_BisSourceGesetztIst()
+    {
+        var db = Fresh();
+        var book = new Book { FileName = "spaet.pgn", DisplayName = "Spät" };
+        Assert.Throws<InvalidOperationException>(() => db.Books.Add(book));
+
+        // Das Buch bleibt Added im Tracker — das nächste SaveChanges darf es trotzdem NICHT schreiben.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+        Assert.Throws<InvalidOperationException>(() => db.SaveChanges());
+        Assert.False(await Fresh().Books.AnyAsync());
+
+        // Nachgereicht → wird normal gespeichert.
+        book.Source = new BookSource { SourcePgn = "1. e4 *" };
+        await db.SaveChangesAsync();
+        Assert.Equal("1. e4 *", (await Fresh().BookSources.SingleAsync()).SourcePgn);
+    }
+
+    [Fact]
+    public async Task NeuesBuchUeberNavigation_OhneSource_WirftBeimSpeichern()
+    {
+        var seed = Fresh();
+        seed.BookPuzzles.Add(new BookPuzzle { LineId = "x:1", BookFileName = "x", Round = "1", Fen = "f", Moves = "e2e4" });
+        await seed.SaveChangesAsync();
+
+        // Ein getracktes Puzzle bekommt ein NEUES Buch angehängt — das entdeckt erst DetectChanges im SaveChanges.
+        var db = Fresh();
+        var puzzle = await db.BookPuzzles.SingleAsync();
+        puzzle.Book = new Book { FileName = "graph.pgn", DisplayName = "Graph" };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+        Assert.False(await Fresh().Books.AnyAsync());
+    }
+
+    [Fact]
+    public void Attach_BestehendesBuchOhneSource_IstErlaubt()
+    {
+        // Nur NEUE Bücher brauchen die Source — ein angehängtes/geladenes Buch hat sie ohne Include nie.
+        var db = Fresh();
+        db.Books.Attach(new Book { Id = 42, FileName = "da.pgn", DisplayName = "Da" });
+        Assert.Single(db.ChangeTracker.Entries<Book>());
+    }
 }

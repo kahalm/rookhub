@@ -99,9 +99,14 @@ public class Book
     /// <summary>
     /// Roh-PGN dieses Buchs (<see cref="BookSource.SourcePgn"/>) — per Tabellensplitting in derselben
     /// Zeile gespeichert, aber NICHT Teil von <see cref="Book"/>, damit kein <c>.Include(bp =&gt; bp.Book)</c>
-    /// mehr den (mehrere MB großen) Text mitlädt. Pflicht-Navigation: beim Anlegen IMMER
-    /// <c>Source = new BookSource { … }</c> setzen. Beim Laden nur mit <c>.Include(b =&gt; b.Source)</c>
-    /// gefüllt — sonst <c>null</c>; darum nur dort inkludieren, wo der Text wirklich gebraucht wird.
+    /// mehr den (mehrere MB großen) Text mitlädt. Beim Anlegen IMMER <c>Source = new BookSource { … }</c>
+    /// setzen (<c>AppDbContext</c> wirft sonst). Beim Laden gefüllt mit <c>.Include(b =&gt; b.Source)</c> —
+    /// ohne Include <c>null</c>, solange die BookSource nicht ohnehin im selben Kontext getrackt ist (Fixup);
+    /// darum nur dort inkludieren, wo der Text wirklich gebraucht wird. Regeln und Fallen: siehe
+    /// <see cref="BookSource"/>.
+    /// <para><b>NIEMALS</b> <c>= new()</c> als Initialisierer: jedes ohne Include geladene Buch bekäme eine
+    /// ungetrackte leere Source, die DetectChanges als Added aufnimmt — relational ein
+    /// <c>UPDATE Books SET SourcePgn = NULL</c>, also Datenverlust beim nächsten SaveChanges.</para>
     /// </summary>
     public BookSource Source { get; set; } = null!;
 

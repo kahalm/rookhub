@@ -7,10 +7,32 @@ namespace RookHub.Api.Models;
 /// Download, zum Neu-Aufbereiten und beim Import gebraucht. Als Property von <see cref="Book"/> lud
 /// es JEDES <c>.Include(bp =&gt; bp.Book)</c> mit — bei <c>GET /api/courses/{id}/puzzles</c> in jeder
 /// Puzzle-Zeile (6 MB × 1.881 Linien = 11 GB aus der DB für EINEN Request).
-/// <para>Regeln: nie über <see cref="Book"/> mitladen; <c>.Include(b =&gt; b.Source)</c> bzw.
-/// <c>_db.BookSources</c> nur dort, wo der Text wirklich gebraucht wird — niemals in Listen-Queries.
-/// Beim Anlegen eines Buchs MUSS <see cref="Book.Source"/> gesetzt werden (Pflicht-Navigation;
-/// SaveChanges gegen MariaDB wirft sonst).</para>
+/// <para><b>Regeln</b></para>
+/// <list type="bullet">
+/// <item>Nie über <see cref="Book"/> mitladen; <c>.Include(b =&gt; b.Source)</c> bzw. <c>_db.BookSources</c> nur
+/// dort, wo der Text wirklich gebraucht wird — niemals in Listen-Queries (<c>BookSourceIncludeGuardTests</c>
+/// hält die erlaubten Stellen fest).</item>
+/// <item>Beim Anlegen eines Buchs IMMER <see cref="Book.Source"/> setzen. EF selbst verlangt das NICHT:
+/// relational fiele eine fehlende Source nicht auf (INSERT ohne die Spalte → <c>SourcePgn = NULL</c>), unter
+/// InMemory fehlte die BookSource-Zeile (Include liefert dann <c>null</c> → NullReferenceException bei
+/// <c>book.Source.SourcePgn</c>; der Lösch-Stub in <c>BookAdminService.DeleteBookAsync</c> wirft
+/// <c>DbUpdateConcurrencyException</c>). Deshalb erzwingt es <c>AppDbContext</c> (InvalidOperationException).</item>
+/// <item>Ohne Include ist <see cref="Book.Source"/> <c>null</c> — solange die BookSource nicht ohnehin im
+/// selben Kontext getrackt ist (dann setzt der Fixup sie). Mit Include ist sie relational IMMER eine Instanz
+/// (Pflicht-Navigation, auch bei <c>SourcePgn = NULL</c>); unter InMemory nur, wenn die Zeile existiert.</item>
+/// <item>Schreiben nur über eine GELADENE Source (<c>.Include(b =&gt; b.Source)</c>).</item>
+/// <item>Löschen: das BUCH löschen — die Source geht mit der Zeile (relational ein DELETE, auch ohne geladene
+/// Source; unter InMemory hängt <c>BookAdminService.DeleteBookAsync</c> dafür einen Stub an).</item>
+/// </list>
+/// <para><b>Fallen — alle drei schreiben still <c>UPDATE Books SET SourcePgn = …</c> statt zu löschen/anzulegen:</b></para>
+/// <list type="bullet">
+/// <item><c>public BookSource Source { get; set; } = new();</c> an <see cref="Book"/> — der naheliegende
+/// „Fix" für null ist Datenverlust: jedes ohne Include geladene Buch bekäme eine leere Source, die
+/// DetectChanges als Added aufnimmt → <c>SourcePgn = NULL</c> beim nächsten SaveChanges.</item>
+/// <item><c>book.Source = new BookSource { … }</c> an ein geladenes Buch hängen — ersetzt den Text.</item>
+/// <item><c>_db.BookSources.Remove(src)</c> und <c>book.Source = null</c> sind KEIN Delete, sondern ein
+/// Blanking (<c>SourcePgn = NULL</c>, gegen MariaDB geprüft). Beides nie tun.</item>
+/// </list>
 /// </summary>
 public class BookSource
 {
