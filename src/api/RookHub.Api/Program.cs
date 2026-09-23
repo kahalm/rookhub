@@ -456,7 +456,9 @@ try
         var localUrl = builder.Configuration[LocalExplorerClient.ConfigKey];
         if (!string.IsNullOrWhiteSpace(localUrl))
             client.BaseAddress = new Uri(localUrl.Trim().TrimEnd('/') + "/");
-        client.Timeout = TimeSpan.FromSeconds(10);
+        // Großzügig: während eines Imports kompaktiert der Explorer auf der Platte (Spitzen um 11 s).
+        // Die Runde selbst begrenzt RepertoireExplorerService (Budget + LocalLayerFloor).
+        client.Timeout = TimeSpan.FromSeconds(30);
     });
 
     // FIDE search HttpClient

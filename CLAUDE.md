@@ -265,7 +265,13 @@ Endpunkte und Antworten wie explorer.lichess.ovh (`BuildUrl`/`Parse` sind geteil
 nicht, und eine Anfrage mit `source: "local"` ist ein 400. Lokal gilt: kein Token, keine Leitung,
 KEIN Datenbank-Speicher (die Daten wachsen dort monatlich), nur eine Stunde im Arbeitsspeicher; die
 Stellungen einer Tiefenschicht gehen gleichzeitig raus (`RepertoireReach.EvaluateAsync` mit
-`prefetchLayer`, `LocalParallelism` = 8). Gemessen am Test-Repertoire: 26 Stellungen Meister kalt in
+`prefetchLayer`, `LocalParallelism` = 8). **Ein Ausreißer ist kein Ausfall** (0.503.1): während eines
+Imports kompaktiert der Explorer auf der HDD (gemessen Median 88 ms, p99 5,9 s, Spitze 11 s — nachts
+22–06 Uhr, dann importiert die Stack-Sitzung). Deshalb: 30 s Timeout je Abfrage, eine gescheiterte
+oder zu langsame Stellung bleibt OFFEN (je Aufruf nur EIN Versuch, die nächste Runde fragt erneut),
+`fetchFailed` erst, wenn in einem Aufruf GAR KEINE Antwort kam, und eine Schicht wird am Budget
+abgeschnitten (mindestens `LocalLayerFloor` = 5 s), damit die Runde vor dem 60-s-Schnitt des
+Reverse-Proxys antwortet. Gemessen am Test-Repertoire: 26 Stellungen Meister kalt in
 8 s, Lichess 2 s — online waren es 44 s. **Datenstand lokal**: Lichess-Partien erst ab Elo-Schnitt
 1600 und ohne (Ultra-)Bullet (darunter kommen korrekt 0 Partien — die Oberfläche blendet diese
 Stufen aus, `fitToLocal`), Meister = Lumbra-GigaBase (Brettpartien ab 2200). Die Wahl der Quelle

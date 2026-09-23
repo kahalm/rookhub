@@ -42,6 +42,10 @@ public class RepertoireExplorerService
     public const int LocalParallelism = 8;
     private static readonly TimeSpan LocalMemoryTtl = TimeSpan.FromHours(1);
 
+    /// <summary>So lange darf eine Schicht der lokalen Quelle mindestens laufen, auch wenn das Budget
+    /// fast aufgebraucht ist — sonst käme die letzte Schicht einer Runde nie zu einer Antwort.</summary>
+    public TimeSpan LocalLayerFloor { get; set; } = TimeSpan.FromSeconds(5);
+
     private readonly AppDbContext _db;
     private readonly RepertoireService _repertoires;
     private readonly LichessExplorerClient _client;
@@ -168,35 +172,59 @@ public class RepertoireExplorerService
         LocalSpeeds = LocalExplorerClient.LocalSpeeds.ToList(),
     };
 
-    /// <summary>Lokale Quelle: je Tiefenschicht alle benötigten Stellungen gleichzeitig holen.</summary>
+    /// <summary>
+    /// Lokale Quelle: je Tiefenschicht alle benötigten Stellungen gleichzeitig holen.
+    /// <para><b>Ein Ausreißer ist kein Ausfall.</b> Während eines Imports kompaktiert der lokale
+    /// Explorer auf der Platte (gemessen: Median 88 ms, p99 5,9 s, Spitze 11 s). Eine gescheiterte oder
+    /// zu langsame Stellung bleibt deshalb nur OFFEN — die nächste Runde fragt sie erneut — und
+    /// <c>FetchFailed</c> heißt erst: in diesem Aufruf kam gar keine Antwort. Eine Schicht darf die
+    /// Runde außerdem höchstens bis zum Budget ziehen (mindestens <see cref="LocalLayerFloor"/>), damit
+    /// die Antwort vor dem 60-s-Schnitt des Reverse-Proxys ankommt.</para>
+    /// </summary>
     private async Task EvaluateLocalAsync(
         List<RepertoireReach.Graph> graphs, ExplorerQuery query, double threshold, ExplorerAnalysisRequestDto req,
         ExplorerAnalysisResultDto dto, Stopwatch clock, CancellationToken ct)
     {
         var fetched = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
+        // Je Aufruf höchstens EIN Versuch je Stellung — ein Ausreißer wartet auf die nächste Runde,
+        // statt als Nachzügler gleich noch einmal angefragt zu werden.
+        var attempted = new ConcurrentDictionary<string, bool>(StringComparer.Ordinal);
         var failures = 0;
+        var answered = 0;
         string MemoryKey(string nodeKey) => "explorer:local:" + query.CachePrefix + nodeKey;
 
         async Task Prefetch(IReadOnlyList<RepertoireReach.Node> nodes)
         {
-            var missing = nodes.Where(n => !fetched.ContainsKey(n.Key)).ToList();
+            var missing = nodes.Where(n => !fetched.ContainsKey(n.Key) && !attempted.ContainsKey(n.Key)).ToList();
             foreach (var n in missing.ToList())
                 if (_memory.TryGetValue<ExplorerPositionStats>(MemoryKey(n.Key), out var hit) && hit is not null)
                 {
                     fetched[n.Key] = hit;
                     missing.Remove(n);
                 }
-            if (missing.Count == 0 || clock.Elapsed >= Budget || dto.FetchFailed) return;
+            // Antwortet der Explorer gar nicht, nicht jede weitere Schicht dagegen laufen lassen.
+            if (missing.Count == 0 || clock.Elapsed >= Budget || (failures >= MaxFailures && answered == 0)) return;
 
-            await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalParallelism, CancellationToken = ct },
-                async (n, token) =>
-                {
-                    var stats = await _local.FetchAsync(n.Fen, query, token);
-                    if (stats is null) { Interlocked.Increment(ref failures); return; }
-                    fetched[n.Key] = stats;
-                    _memory.Set(MemoryKey(n.Key), stats, LocalMemoryTtl);
-                });
-            if (failures >= MaxFailures && fetched.IsEmpty) dto.FetchFailed = true;
+            var left = Budget - clock.Elapsed;
+            using var layer = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            layer.CancelAfter(left > LocalLayerFloor ? left : LocalLayerFloor);
+            try
+            {
+                await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalParallelism, CancellationToken = layer.Token },
+                    async (n, token) =>
+                    {
+                        attempted[n.Key] = true;
+                        var stats = await _local.FetchAsync(n.Fen, query, token);
+                        if (stats is null) { Interlocked.Increment(ref failures); return; }
+                        Interlocked.Increment(ref answered);
+                        fetched[n.Key] = stats;
+                        _memory.Set(MemoryKey(n.Key), stats, LocalMemoryTtl);
+                    });
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Zeit der Schicht um: was fehlt, bleibt offen und kommt in der nächsten Runde dran.
+            }
         }
 
         async Task<ExplorerPositionStats?> Stats(RepertoireReach.Node node)
@@ -208,7 +236,7 @@ public class RepertoireExplorerService
         }
 
         await CollectAsync(graphs, Stats, Prefetch, threshold, req, dto, ct);
-        if (!dto.Complete && failures > 0) dto.FetchFailed = true;
+        if (failures > 0 && answered == 0) dto.FetchFailed = true;
     }
 
     /// <summary>Rechnet alle Farb-Graphen durch und trägt Löcher, Zähler und Häufigkeiten ein.</summary>

@@ -402,6 +402,50 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.False(result.Complete);
     }
 
+    private const string AfterE4C5 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq";
+    private const string AfterD4D5 = "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq";
+    private const string BothFirstMoves = """{"white":50,"draws":0,"black":50,"moves":[{"uci":"e2e4","san":"e4","white":25,"draws":0,"black":25},{"uci":"d2d4","san":"d4","white":25,"draws":0,"black":25}]}""";
+
+    [Fact]
+    public async Task LocalSource_OneOutlier_StaysPending_AndTheRunGoesOn()
+    {
+        // Während eines Imports antwortet der lokale Explorer vereinzelt nicht — das ist kein Ausfall.
+        var (userId, repId) = await SeedAsync(BlackLines);
+        _localHandler.Respond(StartKey, BothFirstMoves);
+        _localHandler.FailKeys.Add(AfterD4D5);
+
+        var result = await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        Assert.False(result.FetchFailed);
+        Assert.False(result.Complete);
+        Assert.Equal(1, result.PositionsPending);
+        Assert.Equal(2, result.PositionsAnalyzed);
+
+        // Nächste Runde: wieder da → fertig, die schon geholten kommen aus dem Arbeitsspeicher.
+        _localHandler.FailKeys.Clear();
+        var again = await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+        Assert.True(again.Complete);
+        Assert.Equal(4, _localHandler.Urls.Count);
+    }
+
+    [Fact]
+    public async Task LocalSource_SlowPosition_IsCutAtTheLayerLimit_AndLeftPending()
+    {
+        var (userId, repId) = await SeedAsync(BlackLines);
+        _localHandler.Respond(StartKey, BothFirstMoves);
+        _localHandler.SlowKeys[AfterE4C5] = TimeSpan.FromSeconds(20);
+        var service = Service();
+        service.Budget = TimeSpan.FromMilliseconds(100);
+        service.LocalLayerFloor = TimeSpan.FromMilliseconds(300);
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var result = await service.AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"Runde dauerte {clock.Elapsed}");
+        Assert.False(result.FetchFailed);
+        Assert.Equal(1, result.PositionsPending);
+    }
+
     [Fact]
     public void Sources_NameTheLocalLimits()
     {
@@ -451,19 +495,26 @@ public class RepertoireExplorerServiceTests : IDisposable
 
         public void Respond(string positionKey, string json) => _byKey[positionKey] = json;
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        /// <summary>Stellungen, die mit 502 antworten.</summary>
+        public readonly HashSet<string> FailKeys = new();
+        /// <summary>Stellungen, die so lange brauchen (bricht mit dem Token ab).</summary>
+        public readonly Dictionary<string, TimeSpan> SlowKeys = new();
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var url = Uri.UnescapeDataString(request.RequestUri!.ToString());
             lock (Urls) Urls.Add(url);   // der lokale Weg fragt parallel
             LastAuth = request.Headers.Authorization?.ToString();
-            if (Status != HttpStatusCode.OK) return Task.FromResult(new HttpResponseMessage(Status));
+            if (Status != HttpStatusCode.OK) return new HttpResponseMessage(Status);
 
-            var fen = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["fen"] ?? "";
-            var json = _byKey.TryGetValue(RepertoireReach.Key(fen), out var j) ? j : """{"white":0,"draws":0,"black":0,"moves":[]}""";
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            var key = RepertoireReach.Key(System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["fen"] ?? "");
+            if (FailKeys.Contains(key)) return new HttpResponseMessage(HttpStatusCode.BadGateway);
+            if (SlowKeys.TryGetValue(key, out var delay)) await Task.Delay(delay, ct);
+            var json = _byKey.TryGetValue(key, out var j) ? j : """{"white":0,"draws":0,"black":0,"moves":[]}""";
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json"),
-            });
+            };
         }
     }
 }
