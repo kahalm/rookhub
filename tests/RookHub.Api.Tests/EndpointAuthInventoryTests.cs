@@ -55,6 +55,9 @@ public class EndpointAuthInventoryTests
         "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
         "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review
         "GET /api/games/shared/{token}",                             // GamesController.GetShared
+        // Die Bewertungskurve unter der geteilten Partie — anonym NUR die vom Besitzer verknuepfte
+        // Analyse (der Teilende hat die Partie samt Kurve geteilt); ANLEGEN bleibt angemeldet.
+        "GET /api/games/shared/{token}/evals",                       // GamesController.SharedEvals
         "GET /api/reconstructions/shared/{token}",                   // GameReconstructionController.Shared (Teilen-Link /r/{token})
         "GET /api/menu",                                             // MenuController.Get
         "GET /api/og/img/{kind}/{id}.png",                           // OgController.Image

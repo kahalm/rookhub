@@ -22,7 +22,7 @@ public class GamesControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new SavedGameService(_db);
+        _service = TestServices.SavedGames(_db);
         _controller = new GamesController(_service);
     }
 
@@ -299,6 +299,62 @@ public class GamesControllerTests : IDisposable
         Assert.Contains("Nc6", second.Pgn);       // NICHT gekürzt
         Assert.Equal(2006, second.WhiteElo);      // Elo bleibt
         Assert.Equal("1-0", second.Result);
+    }
+
+    // ===== „Partie analysieren" + Bewertungskurve ============================
+
+    /// <summary>Öffentlicher Aufruf ohne Anmeldung: der Controller liest die UserId trotzdem (falls ein
+    /// Token mitkommt) — ohne Claims darf das nicht werfen.</summary>
+    private void SetAnonymous()
+        => _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+    [Fact]
+    public async Task Analyze_Absage_400MitGrund_wieBeimEinwurf()
+    {
+        var user = await CreateUserAsync();   // ohne Engine
+        var seeded = await SeedGameAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await _controller.Analyze(seeded.Id, CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var reason = bad.Value!.GetType().GetProperty("reason")!.GetValue(bad.Value);
+        Assert.Equal(GuessUploadReason.NoEngine, reason);
+    }
+
+    [Fact]
+    public async Task Analyze_fremdePartie_404()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var seeded = await SeedGameAsync(owner.Id);
+        SetUser(other.Id);
+
+        Assert.IsType<NotFoundResult>((await _controller.Analyze(seeded.Id, CancellationToken.None)).Result);
+        Assert.IsType<NotFoundResult>((await _controller.AnalyzeShared("gibt-es-nicht", CancellationToken.None)).Result);
+    }
+
+    [Fact]
+    public async Task SharedEvals_anonym_ohneAnalyse_none()
+    {
+        var owner = await CreateUserAsync("owner");
+        var seeded = await SeedGameAsync(owner.Id);
+        SetAnonymous();
+
+        var ok = Assert.IsType<OkObjectResult>((await _controller.SharedEvals(seeded.ShareToken, CancellationToken.None)).Result);
+        Assert.Equal("none", ((GameEvalsDto)ok.Value!).Status);
+        Assert.IsType<NotFoundResult>((await _controller.SharedEvals("gibt-es-nicht", CancellationToken.None)).Result);
+    }
+
+    [Fact]
+    public async Task Evals_fremdePartie_404()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var seeded = await SeedGameAsync(owner.Id);
+        SetUser(other.Id);
+
+        Assert.IsType<NotFoundResult>((await _controller.Evals(seeded.Id, CancellationToken.None)).Result);
     }
 
     [Fact]

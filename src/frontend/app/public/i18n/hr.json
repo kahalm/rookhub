@@ -2439,13 +2439,32 @@
     "shareCopied": "Poveznica za dijeljenje kopirana u međuspremnik",
     "openOriginal": "Otvori izvornu partiju",
     "analyze": "Analiziraj partiju",
-    "analyzeHint": "Partija se analizira u pozadini — nakon toga čeka na stranici partije na bodove, gdje je pogađaš potez po potez.",
+    "analyzeHint": "Neka se partija analizira u pozadini — nakon toga ispod ploče stoji graf procjene s preciznošću i ocjenama poteza.",
     "analyzeLogin": "Za analizu se prijavi.",
     "loadError": "Partiju nije moguće učitati.",
     "deleteConfirm": "Izbrisati ovu spremljenu partiju?",
     "deleteError": "Partiju nije moguće izbrisati.",
     "shared": {
       "notFound": "Ova dijeljena partija ne postoji ili je uklonjena."
+    },
+    "review": {
+      "title": "Pregled partije",
+      "accuracy": "Preciznost",
+      "pending": "Analiza u tijeku — {{done}} od {{total}} pozicija",
+      "started": "Partija se analizira. Graf procjene pojavljuje se ispod ploče i popunjava se kako pozicije budu gotove.",
+      "reused": "Ova partija je već analizirana (ili se upravo analizira) — ništa nije ponovno stavljeno u red.",
+      "running": "Analiza je još u tijeku.",
+      "failed": "Analiza je prekinuta — možeš je ponovno pokrenuti.",
+      "white": "Bijeli",
+      "black": "Crni",
+      "class": {
+        "best": "Najbolji potez",
+        "excellent": "Izvrsno",
+        "good": "Dobro",
+        "inaccuracy": "Netočnost",
+        "mistake": "Pogreška",
+        "blunder": "Gruba pogreška"
+      }
     }
   },
   "analysis": {

@@ -2439,13 +2439,32 @@
     "shareCopied": "Share link copied to clipboard",
     "openOriginal": "Open original game",
     "analyze": "Analyse game",
-    "analyzeHint": "Have the game analysed in the background — afterwards it waits on the points game page, where you guess it move by move.",
+    "analyzeHint": "Have the game analysed in the background — the evaluation graph with accuracy and move classes then appears below the board.",
     "analyzeLogin": "Sign in to have this game analysed.",
     "loadError": "Could not load the game.",
     "deleteConfirm": "Delete this saved game?",
     "deleteError": "Could not delete the game.",
     "shared": {
       "notFound": "This shared game does not exist or was removed."
+    },
+    "review": {
+      "title": "Game review",
+      "accuracy": "Accuracy",
+      "pending": "Analysis running — {{done}} of {{total}} positions",
+      "started": "The game is being analysed. The evaluation graph appears below the board and fills in as the positions are done.",
+      "reused": "This game is already analysed (or being analysed) — nothing was queued again.",
+      "running": "The analysis is still running.",
+      "failed": "The analysis was aborted — you can start it again.",
+      "white": "White",
+      "black": "Black",
+      "class": {
+        "best": "Best",
+        "excellent": "Excellent",
+        "good": "Good",
+        "inaccuracy": "Inaccuracy",
+        "mistake": "Mistake",
+        "blunder": "Blunder"
+      }
     }
   },
   "analysis": {

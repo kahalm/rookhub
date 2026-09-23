@@ -21,6 +21,14 @@ public enum GameAnalysisOrigin
     Manual = 0,
     /// <summary>Auf der Punktepartie-Seite eingeworfen: feste Tiefe, kein Regler, eigener Deckel.</summary>
     Guess = 1,
+    /// <summary>
+    /// Ueber „Partie analysieren" an einer GESPEICHERTEN Partie angestossen (<c>/games</c>, <c>/g/…</c>).
+    /// Derselbe Weg wie <see cref="Guess"/> — Haus-Engine, feste Tiefe, fuenf Linien, derselbe Deckel —,
+    /// nur anders etikettiert: die Analyse gehoert zur Partie (<see cref="SavedGame.GameAnalysisId"/>)
+    /// und dient deren Bewertungskurve. In der Liste „Eigene Analysen" (Punktepartie-Seite und
+    /// Partie-Analysen) erscheint sie deshalb NICHT; wer sie sucht, findet sie an der Partie.
+    /// </summary>
+    SavedGame = 2,
 }
 
 /// <summary>
@@ -163,8 +171,10 @@ public static class GameAnalysisDefaults
     public const int GuessTargetDepth = 20;
 
     /// <summary>So viele eingeworfene Partien darf ein Nutzer gleichzeitig offen haben. Der Deckel
-    /// gilt NUR fuer <see cref="GameAnalysisOrigin.Guess"/>: von Hand eingereihte Partien laufen wie
-    /// bisher ungezaehlt, denn dort rechnet die eigene Maschine.</summary>
+    /// zaehlt <see cref="GameAnalysisOrigin.Guess"/> UND <see cref="GameAnalysisOrigin.SavedGame"/>
+    /// zusammen — beide rechnen auf fremder Rechenzeit, und getrennte Deckel hiessen doppelt so viele
+    /// Plaetze fuer jeden, der beide Wege kennt. Von Hand eingereihte Partien laufen wie bisher
+    /// ungezaehlt, denn dort rechnet die eigene Maschine.</summary>
     public const int MaxOpenGuessGamesPerUser = 5;
 
     /// <summary>Deckel für die Länge einer Partie (Halbzüge) — schützt vor einem PGN-Monster.</summary>

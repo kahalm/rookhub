@@ -12,11 +12,22 @@ namespace RookHub.Api.Services;
 /// Speichert/liest vom User auf chess.com/lichess gespeicherte Partien (RepCheck „Partie speichern").
 /// Aus der SAN-Zugliste + Metadaten wird serverseitig ein PGN gebaut. Jede Partie bekommt ein
 /// eindeutiges ShareToken für den öffentlichen Teilen-Link.
+///
+/// <para>Dazu „Partie analysieren" und die Bewertungskurve: die Partie wird ueber denselben Einwurf
+/// wie auf der Punktepartie-Seite gerechnet (<see cref="GameAnalysisService.CreateForGuessAsync"/>,
+/// Ursprung <see cref="GameAnalysisOrigin.SavedGame"/>), und <see cref="SavedGame.GameAnalysisId"/>
+/// merkt sich, welche Analyse zur Partie gehoert.</para>
 /// </summary>
 public class SavedGameService
 {
     private readonly AppDbContext _db;
-    public SavedGameService(AppDbContext db) => _db = db;
+    private readonly GameAnalysisService _analyses;
+
+    public SavedGameService(AppDbContext db, GameAnalysisService analyses)
+    {
+        _db = db;
+        _analyses = analyses;
+    }
 
     private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
         { "chess.com", "lichess" };
@@ -193,6 +204,166 @@ public class SavedGameService
             WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
             BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
             OwnerSide = DetermineOwnerSide(g, profile),
+        };
+    }
+
+    // ── Analyse + Bewertungskurve ─────────────────────────────────────
+
+    /// <summary>„Partie analysieren" an einer EIGENEN Partie; <c>null</c>, wenn es sie nicht gibt oder
+    /// sie jemand anderem gehoert.</summary>
+    public async Task<GameAnalyzeResultDto?> AnalyzeAsync(int userId, int savedGameId, CancellationToken ct = default)
+    {
+        var game = await _db.SavedGames.FirstOrDefaultAsync(g => g.Id == savedGameId && g.UserId == userId, ct);
+        return game is null ? null : await AnalyzeCoreAsync(userId, game, ct);
+    }
+
+    /// <summary>„Partie analysieren" auf der geteilten Partie (<c>/g/{token}</c>) — das darf JEDER
+    /// Angemeldete, genau dafuer steht der Knopf dort; <c>null</c> bei unbekanntem Token.</summary>
+    public async Task<GameAnalyzeResultDto?> AnalyzeSharedAsync(int userId, string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        var game = await _db.SavedGames.FirstOrDefaultAsync(g => g.ShareToken == token, ct);
+        return game is null ? null : await AnalyzeCoreAsync(userId, game, ct);
+    }
+
+    /// <summary>
+    /// Mehrfach klicken = einmal rechnen. Die Reihenfolge ist Absicht:
+    /// <list type="number">
+    /// <item>Die VERKNUEPFTE Analyse, solange sie nicht gescheitert ist — gleich, wer klickt. Ein Gast
+    /// bekommt damit die Rechnung des Besitzers zurueck, statt dieselben Stellungen ein zweites Mal
+    /// durch die Engine zu schicken; die Kurve steht ja schon auf der Seite.</item>
+    /// <item>Eine EIGENE Analyse des Aufrufers mit demselben PGN (etwa ueber die Punktepartie-Seite
+    /// eingeworfen) — exakter Textvergleich, die Seiten schicken genau diesen Text. Ist er der
+    /// Besitzer, wird sie verknuepft.</item>
+    /// <item>Erst dann neu einwerfen.</item>
+    /// </list>
+    /// <para>Verknuepft wird NUR beim Besitzer: die oeffentliche Kurve ist die des Teilenden — er hat
+    /// die Partie geteilt, nicht der Gast. Der Gast findet seine Analyse trotzdem, solange er
+    /// angemeldet ist (<see cref="GetSharedEvalsAsync"/> faellt auf die eigene zurueck).</para>
+    /// <para>Zwei Klicks binnen Millisekunden fangen diese Schritte nicht (beide sehen noch nichts);
+    /// die sperrt der Knopf, solange sein Aufruf laeuft.</para>
+    /// </summary>
+    private async Task<GameAnalyzeResultDto> AnalyzeCoreAsync(int userId, SavedGame game, CancellationToken ct)
+    {
+        var isOwner = game.UserId == userId;
+
+        if (game.GameAnalysisId is int linkedId)
+        {
+            var linked = await _analyses.GetHeadUncheckedAsync(linkedId, ct);
+            // Eine gescheiterte ist kein Ergebnis: wer erneut klickt, will neu rechnen.
+            if (linked is not null && linked.Status != "failed")
+                return new GameAnalyzeResultDto { Analysis = linked, Reused = true };
+        }
+
+        var ownId = await _db.GameAnalyses.AsNoTracking()
+            .Where(a => a.UserId == userId && a.Status != GameAnalysisStatus.Failed && a.Pgn == game.Pgn)
+            .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
+            .Select(a => (int?)a.Id)
+            .FirstOrDefaultAsync(ct);
+        if (ownId is int id)
+        {
+            if (isOwner && game.GameAnalysisId != id)
+            {
+                game.GameAnalysisId = id;
+                await _db.SaveChangesAsync(ct);
+            }
+            return new GameAnalyzeResultDto { Analysis = await _analyses.GetHeadUncheckedAsync(id, ct), Reused = true };
+        }
+
+        var created = await _analyses.CreateForGuessAsync(userId,
+            new CreateGuessGameRequest { Pgn = game.Pgn, Title = AnalysisTitleOf(game) },
+            ct, origin: GameAnalysisOrigin.SavedGame);
+        if (created.Analysis is null) return new GameAnalyzeResultDto { Reason = created.Reason };
+
+        if (isOwner)
+        {
+            game.GameAnalysisId = created.Analysis.Id;
+            await _db.SaveChangesAsync(ct);
+        }
+        // Die Stellungen braucht die Antwort nicht — die Seite holt sich gleich die Bewertungen.
+        created.Analysis.Positions = null;
+        return new GameAnalyzeResultDto { Analysis = created.Analysis };
+    }
+
+    /// <summary>„Weiß – Schwarz" wie der Titel, den die Seiten frueher selbst mitschickten; ohne beide
+    /// Namen keiner (dann baut die Analyse ihn aus den PGN-Kopfdaten).</summary>
+    private static string? AnalysisTitleOf(SavedGame g)
+        => string.IsNullOrWhiteSpace(g.White) || string.IsNullOrWhiteSpace(g.Black)
+            ? null
+            : $"{g.White.Trim()} – {g.Black.Trim()}";
+
+    /// <summary>Bewertungen einer EIGENEN Partie; <c>null</c>, wenn es sie nicht gibt oder sie fremd ist.</summary>
+    public async Task<GameEvalsDto?> GetEvalsAsync(int userId, int savedGameId, CancellationToken ct = default)
+    {
+        var head = await _db.SavedGames.AsNoTracking()
+            .Where(g => g.Id == savedGameId && g.UserId == userId)
+            .Select(g => new { g.Id, g.GameAnalysisId })
+            .FirstOrDefaultAsync(ct);
+        return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, userId, ct);
+    }
+
+    /// <summary>Bewertungen der geteilten Partie; <c>null</c> bei unbekanntem Token.
+    /// <paramref name="callerUserId"/> = <c>null</c> (anonym): NUR die verknuepfte Analyse.</summary>
+    public async Task<GameEvalsDto?> GetSharedEvalsAsync(string token, int? callerUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        var head = await _db.SavedGames.AsNoTracking()
+            .Where(g => g.ShareToken == token)
+            .Select(g => new { g.Id, g.GameAnalysisId })
+            .FirstOrDefaultAsync(ct);
+        return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, callerUserId, ct);
+    }
+
+    private sealed record AnalysisHead(int Id, GameAnalysisStatus Status, int PlyCount, int TargetDepth);
+
+    /// <summary>
+    /// Welche Analyse: (a) die verknuepfte, solange es sie noch gibt — der Verweis hat keinen
+    /// Fremdschluessel und kann ins Leere zeigen; (b) sonst, NUR mit Aufrufer, dessen eigene mit
+    /// demselben PGN (die neueste nicht gescheiterte). Anonym gibt es (b) nicht: dort zeigt die Seite
+    /// die Kurve des Teilenden oder keine.
+    ///
+    /// <para>Weder die Partie noch die Analyse bringen dabei ihr PGN mit (beide LONGTEXT; die Seite
+    /// fragt waehrend der Rechnung alle zehn Sekunden). Der Textvergleich fuer (b) laeuft als
+    /// Unterabfrage in SQL.</para>
+    /// </summary>
+    private async Task<GameEvalsDto> EvalsAsync(int savedGameId, int? linkedId, int? callerUserId, CancellationToken ct)
+    {
+        AnalysisHead? analysis = null;
+        if (linkedId is int id)
+            analysis = await _db.GameAnalyses.AsNoTracking()
+                .Where(a => a.Id == id)
+                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth))
+                .FirstOrDefaultAsync(ct);
+        if (analysis is null && callerUserId is int caller)
+        {
+            var pgn = _db.SavedGames.Where(g => g.Id == savedGameId).Select(g => g.Pgn);
+            analysis = await _db.GameAnalyses.AsNoTracking()
+                .Where(a => a.UserId == caller && a.Status != GameAnalysisStatus.Failed && pgn.Contains(a.Pgn))
+                .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
+                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth))
+                .FirstOrDefaultAsync(ct);
+        }
+        if (analysis is null) return new GameEvalsDto();
+
+        var rows = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
+            .OrderBy(p => p.Ply)
+            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth })
+            .ToListAsync(ct);
+        var plies = rows
+            .Select(r => GameEvals.PlyOf(r.Ply, r.Fen, r.GameMoveUci, r.CandidatesJson, r.Depth))
+            .OfType<GameEvalPlyDto>()
+            .ToList();
+
+        return new GameEvalsDto
+        {
+            Status = analysis.Status.ToString().ToLowerInvariant(),
+            Analyzed = rows.Count,
+            Total = analysis.PlyCount,
+            TargetDepth = analysis.TargetDepth,
+            AnalysisId = analysis.Id,
+            Plies = plies,
+            Final = GameEvals.FinalOf(plies.LastOrDefault(), analysis.PlyCount),
         };
     }
 

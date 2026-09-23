@@ -93,3 +93,75 @@ public class SharedGameDto
     /// Spielernamen stehen ohnehin im DTO.</summary>
     public string? OwnerSide { get; set; }
 }
+
+/// <summary>Antwort auf „Partie analysieren" (<c>POST /api/games/{id}/analyze</c> bzw.
+/// <c>…/shared/{token}/analyze</c>): entweder die Analyse — neu angelegt oder wiederverwendet — oder
+/// der Grund der Absage (<see cref="GuessUploadReason"/>, dieselben Gruende wie beim Einwurf auf der
+/// Punktepartie-Seite).</summary>
+public class GameAnalyzeResultDto
+{
+    /// <summary>Kopfdaten der Analyse, ohne Stellungen; <c>null</c> bei einer Absage.</summary>
+    public GameAnalysisDto? Analysis { get; set; }
+    public string? Reason { get; set; }
+    /// <summary>Es wurde NICHTS neu eingereiht — die Partie war schon (oder wird gerade) gerechnet.
+    /// Die Seite sagt das, statt „Analyse gestartet" zu melden.</summary>
+    public bool Reused { get; set; }
+}
+
+/// <summary>
+/// Die Bewertungen einer gespeicherten Partie fuer Kurve, Genauigkeit und Zug-Klassen
+/// (<c>GET /api/games/{id}/evals</c>, <c>GET /api/games/shared/{token}/evals</c>).
+///
+/// <para><b>Alle Bewertungen aus WEISS-Sicht</b> — anders als die Kandidatenlisten der Analyse, die aus
+/// Sicht der Seite am Zug stehen (so braucht sie die Punktepartie). Die Kurve zeichnet EINE Linie ueber
+/// die ganze Partie; mit dem Vorzeichen der Seite am Zug sprang sie nach jedem Halbzug ueber die
+/// Mittellinie. Umgerechnet wird einmal hier und nicht in jedem Leser.</para>
+/// </summary>
+public class GameEvalsDto
+{
+    /// <summary><c>none</c> (keine Analyse) · <c>pending</c> · <c>running</c> · <c>done</c> · <c>failed</c>.</summary>
+    public string Status { get; set; } = "none";
+    /// <summary>Gerechnete Stellungen (aufgegebene eingeschlossen) — der Fortschritt.</summary>
+    public int Analyzed { get; set; }
+    /// <summary>Halbzuege der Partie (= Zeilen der Analyse).</summary>
+    public int Total { get; set; }
+    public int TargetDepth { get; set; }
+    public int? AnalysisId { get; set; }
+    /// <summary>Nur GERECHNETE Stellungen, nach Halbzug sortiert. Offene und aufgegebene fehlen — der
+    /// Client laesst dort eine Luecke, statt zu interpolieren.</summary>
+    public List<GameEvalPlyDto> Plies { get; set; } = new();
+    /// <summary>Bewertung NACH dem letzten Zug (fuer sie gibt es keine eigene Zeile): der gespielte
+    /// Kandidat der letzten Zeile; <c>null</c>, solange die nicht gerechnet ist oder der Partiezug
+    /// nicht unter den Kandidaten steht.</summary>
+    public GameEvalScoreDto? Final { get; set; }
+}
+
+/// <summary>Eine gerechnete Stellung — die VOR dem Halbzug <see cref="Ply"/> —, Weiß-Sicht.</summary>
+public class GameEvalPlyDto
+{
+    /// <summary>0-basiert wie <c>GameAnalysisPosition.Ply</c>: 0 = vor dem ersten Zug.</summary>
+    public int Ply { get; set; }
+    /// <summary>Bewertung der Stellung (= bester Kandidat). Genau eines von Cp/Mate.</summary>
+    public int? Cp { get; set; }
+    public int? Mate { get; set; }
+    public int Depth { get; set; }
+    public string? BestUci { get; set; }
+    /// <summary>Der in der Partie gespielte Zug (Standard-UCI) — damit der Client „bester Zug"
+    /// erkennt, ohne die Zugliste selbst in UCI umzurechnen. Kein Geheimnis: er steht im PGN.</summary>
+    public string PlayedUci { get; set; } = string.Empty;
+    /// <summary>Bewertung des gespielten Zuges aus derselben Suche; <c>null</c>, wenn er nicht unter
+    /// den Kandidaten steht.</summary>
+    public int? PlayedCp { get; set; }
+    public int? PlayedMate { get; set; }
+    /// <summary>Zweitbester Kandidat — heute ungenutzt, Grundlage fuer „Great"/„Brilliant" in einem
+    /// spaeteren Schritt (nur ein Zug haelt die Stellung).</summary>
+    public int? SecondCp { get; set; }
+    public int? SecondMate { get; set; }
+}
+
+/// <summary>Eine einzelne Bewertung (Weiß-Sicht), genau eines von <see cref="Cp"/>/<see cref="Mate"/>.</summary>
+public class GameEvalScoreDto
+{
+    public int? Cp { get; set; }
+    public int? Mate { get; set; }
+}

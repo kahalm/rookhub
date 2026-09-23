@@ -49,5 +49,17 @@ public class SavedGame
     /// </summary>
     public int? MoveCount { get; set; }
 
+    /// <summary>
+    /// Die Partie-Analyse, aus der die Bewertungskurve dieser Partie kommt — gesetzt, sobald der
+    /// BESITZER „Partie analysieren" drueckt (auch wenn dabei eine vorhandene Analyse wiederverwendet
+    /// wird). Ein Gast, der die geteilte Partie rechnen laesst, bekommt seine eigene Analyse, aendert
+    /// hier aber nichts: die oeffentliche Kurve ist die des Teilenden.
+    ///
+    /// <para>Kein Fremdschluessel: die Analyse laesst sich auf „Partie-Analysen" loeschen, und das soll
+    /// weder scheitern noch die Partie mitnehmen. Der Verweis faellt dann ins Leere — jeder Leser prueft,
+    /// ob es die Analyse noch gibt (dasselbe Muster wie <see cref="LibraryGame.GameAnalysisId"/>).</para>
+    /// </summary>
+    public int? GameAnalysisId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

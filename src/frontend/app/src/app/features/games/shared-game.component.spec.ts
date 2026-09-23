@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { HttpTestingController } from '@angular/common/http/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { SharedGameComponent } from './shared-game.component';
 
@@ -20,6 +20,7 @@ describe('SharedGameComponent', () => {
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'tok' }) } } },
       ],
     }).compileComponents();
     return { fixture: TestBed.createComponent(SharedGameComponent), http: TestBed.inject(HttpTestingController) };
@@ -96,27 +97,79 @@ describe('SharedGameComponent', () => {
 
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
 
-    http.expectNone(req => req.url.startsWith('/api/game-analyses'));
+    http.expectNone(req => req.url.startsWith('/api/game-analyses') || req.url.endsWith('/analyze'));
     expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: router.url } });
   });
 
-  it('analyze when logged in: posts the PGN to the guess upload and goes to the points-game page', async () => {
+  const noEvals = { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null };
+  const runningEvals = {
+    status: 'running', analyzed: 1, total: 2, targetDepth: 20,
+    plies: [{ ply: 0, cp: 30, depth: 20, bestUci: 'e2e4', playedUci: 'e2e4', playedCp: 30 }], final: null,
+  };
+
+  // Seit 0.512.0: der Server kennt das PGN selbst (Token), und man BLEIBT auf der Seite — die Kurve
+  // erscheint hier. Vorher ging das PGN an den Punktepartie-Einwurf und der Nutzer auf /guess, wo eine
+  // solche Analyse gar nicht mehr steht.
+  it('analyze when logged in: posts to the shared analyze endpoint, stays on the page and reloads the graph', async () => {
     const { fixture, http } = await setup(true);
     const router = TestBed.inject(Router);
     const navigate = spyOn(router, 'navigate').and.resolveTo(true);
     fixture.detectChanges();
-    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
     // Angemeldet fragt die Seite vorab, ob eine Engine da ist (wie die Punktepartie-Seite).
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok/evals').flush(noEvals);
     fixture.detectChanges();
 
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
 
-    const post = http.expectOne({ method: 'POST', url: '/api/game-analyses/guess' });
-    expect(post.request.body.pgn).toBe(sharedGame('white').pgn);
-    expect(post.request.body.title).toBe('a – b');
-    post.flush({ id: 7 });
-    expect(navigate).toHaveBeenCalledWith(['/guess']);
+    const post = http.expectOne({ method: 'POST', url: '/api/games/shared/tok/analyze' });
+    expect(post.request.body).toEqual({});
+    post.flush({ analysis: { id: 7 }, reused: false });
+    expect(navigate).not.toHaveBeenCalled();
+    http.expectOne('/api/games/shared/tok/evals').flush(runningEvals);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-game-review .review')).not.toBeNull();
+  });
+
+  it('a second click while the first call runs sends nothing', async () => {
+    const { fixture, http } = await setup(true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok/evals').flush(noEvals);
+    fixture.detectChanges();
+
+    fixture.componentInstance.analyze();
+    fixture.componentInstance.analyze();
+
+    expect(http.match({ method: 'POST', url: '/api/games/shared/tok/analyze' }).length).toBe(1);
+  });
+
+  it('shows the graph without login when the sharer analysed the game — and hides the button once it is done', async () => {
+    const { fixture, http } = await setup(false);
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok/evals').flush({ ...runningEvals, status: 'done' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-game-review app-eval-graph')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('button.analyze')).toBeNull();
+  });
+
+  it('while the analysis runs, the button is disabled instead of queueing a second one', async () => {
+    const { fixture, http } = await setup(true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok/evals').flush(runningEvals);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
   });
 
   it('analyze without an engine: the button is disabled instead of failing on click', async () => {

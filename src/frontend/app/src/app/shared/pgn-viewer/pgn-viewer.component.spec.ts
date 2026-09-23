@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -48,6 +48,67 @@ describe('PgnViewerComponent', () => {
       const section = el.querySelector('.board-section') as HTMLElement;
       expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(section.getBoundingClientRect().width));
       expect(moves.getBoundingClientRect().top).toBeGreaterThanOrEqual(board.getBoundingClientRect().bottom);
+    }
+  });
+
+  // ----- Bewertungskurve + „Partie analysieren" (eigene Partie aus /games, seit 0.512.0) -----
+
+  const pgn = '[White "a"]\n[Black "b"]\n\n1. e4 e5 2. Nf3 Nc6 *';
+  const running = {
+    status: 'running', analyzed: 1, total: 4, targetDepth: 20,
+    plies: [{ ply: 0, cp: 30, depth: 20, bestUci: 'e2e4', playedUci: 'e2e4', playedCp: 30 }], final: null,
+  };
+
+  it('without analyzeUrl/evalsUrl: no button, no graph, no requests', async () => {
+    const fixture = await setup({ pgn });
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectNone(() => true);
+    expect(fixture.nativeElement.querySelector('button.analyze')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-game-review')).toBeNull();
+  });
+
+  it('analyzeUrl: the header offers „Analyse game", the click posts there and the graph under the board reloads', async () => {
+    const fixture = await setup({ pgn, evalsUrl: '/api/games/4/evals', analyzeUrl: '/api/games/4/analyze' });
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/games/4/evals').flush({ status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector('.viewer-header button.analyze') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+    http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 3 }, reused: false });
+    http.expectOne('/api/games/4/evals').flush(running);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.board-section app-game-review app-eval-graph')).not.toBeNull();
+    // Läuft die Analyse, ist der Knopf gesperrt (gleiche Regel wie auf /g/).
+    expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
+  });
+
+  it('without an engine the button is disabled instead of failing on click', async () => {
+    const fixture = await setup({ pgn, analyzeUrl: '/api/games/4/analyze' });
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/game-analyses/guess/status')
+      .flush({ engineAvailable: false, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
+  });
+
+  it('with a graph the board makes room for it, so the column still fits the 90-vh dialog', async () => {
+    const fixture = await setup({ pgn, evalsUrl: '/api/games/4/evals' });
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/games/4/evals').flush(running);
+    fixture.detectChanges();
+
+    const body = fixture.nativeElement.querySelector('.viewer-body') as HTMLElement;
+    expect(body.classList).toContain('with-review');
+    if (window.innerWidth > 768) {
+      const board = fixture.nativeElement.querySelector('.board-wrap') as HTMLElement;
+      const expected = Math.min(720, Math.max(300, Math.min(window.innerHeight - 520, window.innerWidth - 480)));
+      expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(expected));
     }
   });
 });

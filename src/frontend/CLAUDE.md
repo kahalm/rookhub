@@ -240,6 +240,37 @@ app/src/app/
   kein „falsch" mehr. Tests, die das trennen, schreiben die SAN der Linie deshalb absichtlich auf
   eine nicht kanonische Form um — ein Test, der nur ein PGN hineingibt, prüft den PARSER.
 
+## Partie-Rückblick: Bewertungskurve, Genauigkeit, Zug-Klassen (0.512.0)
+
+Unter dem Brett der geteilten Partie (`/g/:token`) und im Nachspiel-Dialog (`/games` → Nachspielen) —
+Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/evals`,
+`…/shared/{token}/evals`, alles in WEISS-Sicht; siehe „Gespeicherte Partien" im Haupt-CLAUDE.md).
+
+- `features/games/game-review.util.ts` — reine Funktionen, Vektoren-Spec mit literalen Zahlen:
+  - `winPercent`: `50 + 50 · (2 / (1 + e^(−0,00368208 · cp)) − 1)` (Lichess, lila `WinPercent`);
+    Matt = 100/0 (Lichess nimmt ±1000 cp ≈ 97,5 % — hier bewusst der Rand), `mate 0` über die FEN.
+  - `moveAccuracy`: `103,1668 · e^(−0,04354 · (vorher − nachher)) − 3,1669`, auf 0..100, kein Verlust = 100
+    (Lichess, https://lichess.org/page/accuracy). Aus Sicht des ZIEHENDEN (Schwarz: 100 − Weiß).
+  - `volatilityWeights` + `sideAccuracy`: Fenster `clamp(⌊Halbzüge/10⌋, 2, 8)`, die ersten (Breite − 2)
+    Züge mit dem ersten Fenster, Gewicht = Standardabweichung (Grundgesamtheit) der Gewinnchance auf 0,5..12;
+    Ergebnis = Mittel aus gewichtetem und harmonischem Mittel (lila `AccuracyPercent.gameAccuracy`).
+    Lücken fallen aus ihrem Fenster, statt als 0 % zu zählen.
+  - `classify`: chess.com-Bänder („How are moves classified?") in Prozentpunkten — best (Engine-Zug oder
+    kein Verlust), ≤ 2 excellent, ≤ 5 good, ≤ 10 inaccuracy, ≤ 20 mistake, sonst blunder; Grenze gehört zur
+    BESSEREN Klasse. Prozentpunkte statt 0,02 usw., weil Gleitkomma die Grenzwerte sonst verschiebt.
+    Brilliant/Great/Miss/Book: späterer Schritt (`second*` liegt schon im DTO).
+  - `reviewGame(evals, fens)`: die Seite am Zug kommt aus der FEN, nie aus der Parität. Bewertbar ist ein
+    Zug nur mit gerechneter Stellung davor; „danach" = nächste Stellung (tiefer), sonst der gespielte Kandidat.
+- `shared/pgn-viewer/eval-graph.component.ts` — reines SVG, KEINE `clipPath`/`url(#…)` (mit `<base href>`
+  finden Firefox/Safari die Verweise nicht), Flächen als eigene Polygone; feste Figurenfarben statt
+  `currentColor` (sonst kehrt sich Weiß/Schwarz im Dunkelmodus um); Punkte als HTML (Kreise in einer
+  verzerrten SVG wären Ellipsen). Klick → Halbzug-Index wie `currentMoveIndex` (−1 = Start).
+- `features/games/game-review.component.ts` — lädt, fragt alle 10 s nach, SOLANGE `pending`/`running`
+  (nicht bei `none`/`done`/`failed`, nicht nach dem Schließen), zeigt bei `none` nichts; `statusChange` sagt
+  der Seite, wann „Partie analysieren" gesperrt (läuft) oder ausgeblendet (fertig) wird, `reload()` nach dem
+  Einwurf. Die Seiten halten Knopf-Zustand und Status in SIGNALEN (Angular 22 zeichnet sonst nach der
+  HTTP-Antwort nicht neu). Im Dialog macht das Brett der Kurve Platz (`.with-review`, 90-vh-Dialog).
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

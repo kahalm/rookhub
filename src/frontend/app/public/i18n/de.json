@@ -2439,13 +2439,32 @@
     "shareCopied": "Teilen-Link in die Zwischenablage kopiert",
     "openOriginal": "Originalpartie öffnen",
     "analyze": "Partie analysieren",
-    "analyzeHint": "Partie im Hintergrund rechnen lassen — danach steht sie auf der Punktepartie-Seite, wo du sie Zug für Zug errätst.",
+    "analyzeHint": "Partie im Hintergrund rechnen lassen — danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen.",
     "analyzeLogin": "Zum Analysieren bitte anmelden.",
     "loadError": "Partie konnte nicht geladen werden.",
     "deleteConfirm": "Diese gespeicherte Partie löschen?",
     "deleteError": "Partie konnte nicht gelöscht werden.",
     "shared": {
       "notFound": "Diese geteilte Partie existiert nicht oder wurde entfernt."
+    },
+    "review": {
+      "title": "Auswertung",
+      "accuracy": "Genauigkeit",
+      "pending": "Analyse läuft — {{done}} von {{total}} Stellungen",
+      "started": "Die Partie wird gerechnet. Die Bewertungskurve erscheint unter dem Brett und füllt sich, sobald die Stellungen fertig sind.",
+      "reused": "Diese Partie ist schon gerechnet (oder wird gerade gerechnet) — es wurde nichts erneut eingereiht.",
+      "running": "Die Analyse läuft noch.",
+      "failed": "Die Analyse wurde abgebrochen — du kannst sie neu starten.",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "class": {
+        "best": "Bester Zug",
+        "excellent": "Exzellent",
+        "good": "Gut",
+        "inaccuracy": "Ungenauigkeit",
+        "mistake": "Fehler",
+        "blunder": "Grober Fehler"
+      }
     }
   },
   "analysis": {

@@ -2693,13 +2693,32 @@
     "shareCopied": "A megosztási link a vágólapra másolva",
     "openOriginal": "Eredeti játszma megnyitása",
     "analyze": "Játszma elemzése",
-    "analyzeHint": "A játszma a háttérben kerül elemzésre — utána a pontjátszma oldalon vár, ahol lépésről lépésre kitalálod.",
+    "analyzeHint": "A játszma elemzése a háttérben — utána a tábla alatt megjelenik az értékelési görbe pontossággal és lépésosztályokkal.",
     "analyzeLogin": "Az elemzéshez jelentkezz be.",
     "loadError": "A játszmát nem sikerült betölteni.",
     "deleteConfirm": "Törlöd ezt a mentett játszmát?",
     "deleteError": "A játszmát nem sikerült törölni.",
     "shared": {
       "notFound": "Ez a megosztott játszma nem létezik, vagy eltávolították."
+    },
+    "review": {
+      "title": "Játszmaértékelés",
+      "accuracy": "Pontosság",
+      "pending": "Elemzés folyamatban — {{done}} / {{total}} állás",
+      "started": "A játszma elemzése folyik. Az értékelési görbe a tábla alatt jelenik meg, és az állások elkészültével telik meg.",
+      "reused": "Ez a játszma már elemezve van (vagy éppen elemzés alatt áll) — semmi sem került újra a sorba.",
+      "running": "Az elemzés még folyamatban van.",
+      "failed": "Az elemzés megszakadt — újra elindíthatod.",
+      "white": "Világos",
+      "black": "Sötét",
+      "class": {
+        "best": "Legjobb lépés",
+        "excellent": "Kiváló",
+        "good": "Jó",
+        "inaccuracy": "Pontatlanság",
+        "mistake": "Hiba",
+        "blunder": "Durva hiba"
+      }
     }
   },
   "analysisJobs": {

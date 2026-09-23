@@ -454,8 +454,35 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 |---------|----------|------|-------|
 | GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN) |
 | GET | `/api/games/shared/{token}` | AllowAnonymous | Öffentliche Sicht einer geteilten Partie inkl. PGN (ohne Besitzer-Daten). Literal-Route VOR `{id}` |
+| GET | `/api/games/shared/{token}/evals` | AllowAnonymous | Bewertungen der geteilten Partie für Kurve/Genauigkeit/Zug-Klassen (`GameEvalsDto`). Anonym NUR die vom Besitzer verknüpfte Analyse; angemeldet ersatzweise die EIGENE mit gleichem PGN. Globaler IP-Limiter wie `GET shared/{token}` |
+| POST | `/api/games/shared/{token}/analyze` | Auth | „Partie analysieren" auf der geteilten Partie — jeder Angemeldete. Antwort `GameAnalyzeResultDto { analysis, reason?, reused }`, Absage 400 `{ reason, message }` wie `POST /api/game-analyses/guess` |
 | GET | `/api/games/{id}` | Auth | Detail einer eigenen Partie inkl. PGN (Nachspielen/Analysieren) |
+| GET | `/api/games/{id}/evals` | Auth | Bewertungen einer eigenen Partie (Nachspiel-Dialog) |
+| POST | `/api/games/{id}/analyze` | Auth | „Partie analysieren" an einer eigenen Partie (Liste + Nachspiel-Dialog) |
 | DELETE | `/api/games/{id}` | Auth | Eigene Partie löschen |
+
+**Bewertungskurve aus der EIGENEN Analyse (0.512.0).** „Partie analysieren" (`/g/…`, Liste, Nachspiel-Dialog)
+wirft die Partie über denselben Weg wie die Punktepartie-Seite ein (`GameAnalysisService.CreateForGuessAsync`:
+Haus-Engine, Tiefe 20, fünf Linien, gemeinsamer Deckel), aber mit eigenem Ursprung
+**`GameAnalysisOrigin.SavedGame`** — die Analyse gehört zur Partie und steht NICHT in „Eigene Analysen"
+(`GameAnalysisService.ListAsync` lässt sie weg, für `/guess` UND `/analysis/games`). Regeln in `SavedGameService`:
+* **Verknüpfung** `SavedGame.GameAnalysisId` (kein FK — die Analyse darf gelöscht werden; jeder Leser prüft,
+  ob es sie noch gibt, und antwortet sonst `none`). Gesetzt NUR, wenn der BESITZER klickt; ein Gast bekommt
+  seine eigene Analyse, die öffentliche Kurve bleibt die des Teilenden.
+* **Mehrfach klicken = einmal rechnen** (`AnalyzeCoreAsync`): (1) die verknüpfte, solange nicht `Failed` —
+  gleich, wer klickt; (2) sonst eine eigene des Aufrufers mit EXAKT gleichem `Pgn` (auch eine über `/guess`
+  eingeworfene), neueste nicht gescheiterte, beim Besitzer verknüpft; (3) erst dann anlegen. Zwei Klicks binnen
+  Millisekunden fängt der Client (Knopf gesperrt, solange der Aufruf läuft).
+* **Perspektive**: die Kandidatenlisten stehen aus Sicht der Seite am Zug; `GameEvalsDto` liefert ALLES aus
+  WEISS-Sicht (`Services/GameEvals.cs`, gedreht mit derselben FEN-Regel wie beim Einlesen). `cp/mate` = bester
+  Kandidat, `played*` = Kandidat des Partiezugs (fehlt er unter den fünf → `null`), `second*` = zweiter (heute
+  ungenutzt, für „Great" später). `final` = gespielter Kandidat der LETZTEN Zeile (für die Endstellung gibt es
+  keine Zeile). Nicht gerechnete und aufgegebene (`[]`) Zeilen fehlen in `plies` — der Client lässt dort eine Lücke.
+* Weder die Partie noch die Analyse bringen beim Nachfragen ihr PGN mit: der Rückfall (b) vergleicht per
+  Unterabfrage in SQL (`QueryTranslationTests.GespeichertePartie_…` prüft die Übersetzung gegen MariaDB).
+* Frontend: `features/games/game-review.util.ts` (Formeln), `game-review.component.ts` (lädt, fragt alle 10 s
+  nach, solange `pending`/`running`), `shared/pgn-viewer/eval-graph.component.ts` (SVG-Kurve). Siehe
+  `src/frontend/CLAUDE.md`.
 
 Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh_…`). Bei ApiToken muss `scope=extension` sein (sonst 403). Policy-Scheme im Auth-Stack routet das Bearer-Format automatisch zum passenden Handler.
 
@@ -1653,9 +1680,11 @@ Engine-Zahl ist Absicht: laeuft eine Suche aus, nimmt die Engine sofort den naec
 einen Pump-Durchgang (20 s) zu warten. Der Deckel bleibt unter `MaxOpenJobsPerUser` (50), damit daneben
 von Hand eingereiht werden kann — jetzt mit 18 statt 38 freien Plaetzen.
 
-**Der Deckel des Einwurfs** (`MaxOpenGuessGamesPerUser` = 5) zaehlt NUR `Origin = Guess` und nur
-Partien, die noch rechnen (`Pending`/`Running`) — gescheiterte sperren niemanden aus. Von Hand ueber
-`/analysis/games` eingereihte Partien bleiben ungezaehlt: dort rechnet die eigene Maschine.
+**Der Deckel des Einwurfs** (`MaxOpenGuessGamesPerUser` = 5) zaehlt `Origin = Guess` UND (seit 0.512.0)
+`Origin = SavedGame` zusammen — beide rechnen auf fremder Rechenzeit, getrennte Deckel waeren doppelt so viele
+Plaetze — und nur Partien, die noch rechnen (`Pending`/`Running`); gescheiterte sperren niemanden aus. Von Hand
+ueber `/analysis/games` eingereihte Partien bleiben ungezaehlt: dort rechnet die eigene Maschine. Die Pumpe
+(„eine Partie nach der anderen") ist je Nutzer und unterscheidet die Urspruenge nicht.
 
 ### Rohbestand (`LibraryGames`) — der Vorrat, aus dem die Punktepartie ausgewaehlt wird
 
@@ -2243,7 +2272,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CommentSets | EIN Satz Zug-Kommentare in EINER Sprache zu EINER Partie — getrennt vom PGN, damit Quelle und Uebersetzung unterscheidbar bleiben (Details im Punktepartie-Kapitel) | LibraryGameId? (Cascade) ODER GameAnalysisId? (Cascade, genau EINES von beiden), Language (≤8), Origin (Source/Machine/Human), TranslatedFrom? (≤8), Model? (≤60), Status (Draft/Ready), CreatedAt/UpdatedAt; **UNIQUE (LibraryGameId, Language)** + **UNIQUE (GameAnalysisId, Language)** |
 | CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
-| SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
+| SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), **GameAnalysisId? (kein FK — die Analyse der Bewertungskurve; nur vom BESITZER gesetzt, kann ins Leere zeigen)**, CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
 | GameReconstructions | Eine Partie, die aus Bruchstücken zusammengesetzt wird („Partie rekonstruieren") — Kopfdaten; die Teile hängen daran | UserId (Cascade), Title (≤200), White?/Black? (≤120), Event? (≤200), PlayedOn? (DateOnly), Result? (≤12), Note? (≤2000), **ShareToken? (≤32, UNIQUE — öffentlicher Link `/r/{token}`, NULL = nicht geteilt) + SharedAt?**, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt). Deckel 50 je Konto |
 | GameReconstructionParts | EIN Bruchstück: Zugfolge ODER Stellung. **`BlackToMove`** gilt nur für eine Zugfolge OHNE Anschluss (sonst sagt es die Stellung davor bzw. die FEN); beim ersten Teil heißt es „das ist nicht die Eröffnung". `Ordinal` ist die Reihenfolge in der Partie; **`ContinuesPrevious` (Vorgabe false) sagt, ob es NAHTLOS an das vorige anschließt** — ohne das liegt dazwischen eine Lücke, und genau das ist der Normalfall | GameReconstructionId (Cascade), Ordinal, Kind (Moves/Position), Moves? (≤4000, SAN ohne Zugnummern), Fen? (≤120), **Certain (Vorgabe true — „hier bin ich mir nicht sicher" ist die Auskunft; ein per Lückensuche eingesetztes Teil steht auf false)**, FromPly? (Erinnerungs-Hinweis, keine Verankerung), Note? (≤500), CreatedAt, UpdatedAt; Index (GameReconstructionId, Ordinal). Deckel 200 je Rekonstruktion |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |

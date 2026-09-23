@@ -883,6 +883,69 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(GameAnalysisDefaults.TargetDepth, manual.TargetDepth);
     }
 
+    /// <summary>Der Weg ueber die gespeicherte Partie ist DERSELBE Einwurf (feste Tiefe, fuenf Linien,
+    /// Haus-Engine), nur anders etikettiert — das Etikett entscheidet, in welcher Liste er erscheint.</summary>
+    [Fact]
+    public async Task CreateForGuess_mitUrsprungGespeichertePartie_rechnetGleich_etikettiertAnders()
+    {
+        var admin = await CreateUserAsync("admin", admin: true);
+        await GiveEngineAsync(admin, house: true);
+        var user = await CreateUserAsync("u");
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
+        Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
+        Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, analysis.TargetDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.MultiPv);
+        Assert.Equal(admin.Id, analysis.EngineOwnerUserId);
+    }
+
+    /// <summary>Beide rechnen auf fremder Rechenzeit — der Deckel zaehlt sie ZUSAMMEN. Sonst kaeme
+    /// man ueber die Partienliste an ihm vorbei.</summary>
+    [Fact]
+    public async Task Deckel_zaehltEingeworfeneUNDPartienAusDerPartienliste()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxOpenGuessGamesPerUser - 1; i++)
+            Assert.Null((await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game })).Reason);
+        Assert.Null((await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame)).Reason);
+
+        var refused = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+        Assert.Equal(GuessUploadReason.TooManyOpen, refused.Reason);
+        var refusedToo = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+        Assert.Equal(GuessUploadReason.TooManyOpen, refusedToo.Reason);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenGuessGamesPerUser, (await _svc.GuessUploadStatusAsync(user.Id)).OpenGames);
+    }
+
+    /// <summary>„Eigene Analysen" (Punktepartie-Seite UND Partie-Analysen) zeigt die ueber eine
+    /// gespeicherte Partie angestossene nicht — die gehoert zur Partie. Von Hand eingereihte und
+    /// eingeworfene bleiben, wie sie waren.</summary>
+    [Fact]
+    public async Task List_laesstAnalysenAusDerPartienlisteWeg()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+        var manual = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var guess = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+        var saved = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+
+        var ids = (await _svc.ListAsync(user.Id)).Select(a => a.Id).ToList();
+
+        Assert.Contains(manual.Id, ids);
+        Assert.Contains(guess.Analysis!.Id, ids);
+        Assert.DoesNotContain(saved.Analysis!.Id, ids);
+        // Ueber die Id bleibt sie fuer den Besitzer lesbar — die Partie-Seite braucht das nicht, aber
+        // ein Verbergen in der Liste ist keine Sperre.
+        Assert.NotNull(await _svc.GetAsync(user.Id, saved.Analysis.Id));
+    }
+
     /// <summary>Ein Text ohne spielbare Partie ist eine Absage mit Grund, keine Ausnahme.</summary>
     [Fact]
     public async Task CreateForGuess_ohneSpielbaresPgn_sagtWarum()

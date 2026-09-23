@@ -146,8 +146,12 @@ public class GameAnalysisService
     /// </summary>
     /// <param name="libraryGameId">Aus welcher Zeile des Rohbestands die Partie angefordert wurde;
     /// <c>null</c> = selbst eingeworfen.</param>
+    /// <param name="origin">Nur das Etikett: <see cref="GameAnalysisOrigin.SavedGame"/> fuer
+    /// „Partie analysieren" an einer gespeicherten Partie. Gerechnet wird genauso, gedeckelt wird
+    /// gemeinsam — das Etikett entscheidet allein, in welcher Liste die Analyse erscheint.</param>
     public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
-        CancellationToken ct = default, int? libraryGameId = null)
+        CancellationToken ct = default, int? libraryGameId = null,
+        GameAnalysisOrigin origin = GameAnalysisOrigin.Guess)
     {
         var open = await OpenGuessGamesAsync(userId, ct);
         if (open >= GameAnalysisDefaults.MaxOpenGuessGamesPerUser)
@@ -165,7 +169,7 @@ public class GameAnalysisService
                 Title = req.Title,
                 TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
                 MultiPv = GameAnalysisDefaults.MultiPv,
-            }, ct, GameAnalysisOrigin.Guess, engineOwner.Value, libraryGameId);
+            }, ct, origin, engineOwner.Value, libraryGameId);
             return new GuessUploadResult(dto, null);
         }
         catch (ArgumentException)
@@ -175,12 +179,14 @@ public class GameAnalysisService
         }
     }
 
-    /// <summary>Wie viele eingeworfene Partien dieses Nutzers noch rechnen. Gescheiterte zaehlen
-    /// NICHT mit: sonst sperrte eine tote Engine den Nutzer dauerhaft aus, obwohl nichts mehr
+    /// <summary>Wie viele eingeworfene Partien dieses Nutzers noch rechnen — die von der
+    /// Punktepartie-Seite UND die aus den gespeicherten Partien: beide laufen auf fremder Rechenzeit,
+    /// und mit getrennten Deckeln kaeme man ueber den zweiten Weg am ersten vorbei. Gescheiterte
+    /// zaehlen NICHT mit: sonst sperrte eine tote Engine den Nutzer dauerhaft aus, obwohl nichts mehr
     /// laeuft — er soll sie loeschen koennen und weitermachen.</summary>
     private Task<int> OpenGuessGamesAsync(int userId, CancellationToken ct) =>
         _db.GameAnalyses.CountAsync(g => g.UserId == userId
-            && g.Origin == GameAnalysisOrigin.Guess
+            && (g.Origin == GameAnalysisOrigin.Guess || g.Origin == GameAnalysisOrigin.SavedGame)
             && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running), ct);
 
     /// <summary>
@@ -228,8 +234,25 @@ public class GameAnalysisService
 
     // ===== Lesen / Löschen ==================================================
 
+    /// <summary>
+    /// „Eigene Analysen" — dieselbe Liste auf der Punktepartie-Seite und auf „Partie-Analysen".
+    /// Ohne die ueber eine gespeicherte Partie angestossenen (<see cref="GameAnalysisOrigin.SavedGame"/>):
+    /// die gehoeren zur Partie und erscheinen dort als Bewertungskurve. In der Liste stuenden sie als
+    /// Punktepartie, die niemand eingeworfen hat — wer auf „Partie analysieren" drueckt, will die Kurve
+    /// sehen und nicht die eigene Rateliste fuellen.
+    /// </summary>
     public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default) =>
-        ProjectAsync(_db.GameAnalyses.AsNoTracking().Where(g => g.UserId == userId), ct);
+        ProjectAsync(_db.GameAnalyses.AsNoTracking()
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.SavedGame), ct);
+
+    /// <summary>
+    /// Kopfdaten EINER Analyse ohne Stellungen — und OHNE Besitzer-Pruefung. Nur fuer Aufrufer, die
+    /// den Zugriff selbst geprueft haben: <see cref="SavedGameService"/> reicht so die an einer
+    /// geteilten Partie verknuepfte Analyse ihres Besitzers weiter, wenn ein Gast „Partie analysieren"
+    /// drueckt (er bekommt die vorhandene statt einer zweiten Rechnung).
+    /// </summary>
+    public async Task<GameAnalysisDto?> GetHeadUncheckedAsync(int id, CancellationToken ct = default)
+        => (await ProjectAsync(_db.GameAnalyses.AsNoTracking().Where(g => g.Id == id), ct)).FirstOrDefault();
 
     /// <summary>
     /// Der kuratierte Bestand: Partien, die JEDER als Punktepartie spielen darf — auch ohne

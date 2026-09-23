@@ -120,6 +120,46 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(3, (await Db.SavedGames.FirstAsync()).MoveCount);   // nachgetragen
     }
 
+    /// <summary>
+    /// Die Bewertungskurve der gespeicherten Partie vergleicht PGN-Texte (LONGTEXT) — beim
+    /// Wiederverwenden als Parameter, beim Rueckfall auf die eigene Analyse als UNTERABFRAGE
+    /// (<c>a.Pgn IN (SELECT Pgn FROM SavedGames …)</c>), damit das PGN bei jedem Nachfragen der Seite
+    /// nicht zur API und zurueck wandert. Beides muss MariaDB uebersetzen koennen.
+    /// </summary>
+    [MySqlFact]
+    public async Task GespeichertePartie_WiederverwendungUndKurve_UebersetzenDenPgnVergleich()
+    {
+        var userId = await SeedUserAsync("evals");
+        var svc = Get<SavedGameService>();
+        var game = await svc.SaveAsync(userId, new RookHub.Api.DTOs.SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b", ExternalId = "it-evals",
+        });
+        var analysis = new GameAnalysis
+        {
+            UserId = userId, Pgn = game.Pgn, StartFen = "startpos", PlyCount = 2,
+            Status = GameAnalysisStatus.Running, Origin = GameAnalysisOrigin.Guess,
+        };
+        analysis.Positions.Add(new GameAnalysisPosition
+        {
+            Ply = 0, Fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            GameMoveUci = "e2e4", GameMoveSan = "e4", CandidatesJson = """[{"uci":"e2e4","cp":30}]""",
+        });
+        Db.GameAnalyses.Add(analysis);
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        // Rueckfall (Unterabfrage): nicht verknuepft, aber eigene Analyse mit gleichem PGN.
+        var evals = await svc.GetSharedEvalsAsync(game.ShareToken, userId);
+        Assert.Equal(analysis.Id, evals!.AnalysisId);
+        Assert.Equal(30, Assert.Single(evals.Plies).Cp);
+
+        // Wiederverwenden (Parameter-Vergleich) — ohne Engine, weil nichts neu eingereiht wird.
+        var result = await svc.AnalyzeAsync(userId, game.Id);
+        Assert.True(result!.Reused);
+        Assert.Equal(analysis.Id, result.Analysis!.Id);
+    }
+
     [MySqlFact]
     public async Task Kursstatistik_UebersetztInklusiveKapitelNormalisierung()
     {

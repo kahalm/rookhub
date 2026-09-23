@@ -13,7 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { GamesService, SavedGame } from './games.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
-import { PgnViewerComponent } from '../../shared/pgn-viewer/pgn-viewer.component';
+import { PgnViewerComponent, PgnViewerData } from '../../shared/pgn-viewer/pgn-viewer.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
@@ -60,7 +60,7 @@ import { SnackbarService } from '../../core/snackbar.service';
                 <button mat-icon-button (click)="openInAnalysis(g)" [matTooltip]="'games.openInAnalysis' | translate" [attr.aria-label]="'games.openInAnalysis' | translate">
                   <mat-icon>biotech</mat-icon>
                 </button>
-                <!-- Punktepartie: derselbe Einwurf wie auf der geteilten Partie und der Punktepartie-Seite. -->
+                <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach im Nachspiel-Dialog. -->
                 <button mat-icon-button class="analyze" (click)="analyze(g)"
                         [disabled]="analyzingId === g.id || uploadStatus?.engineAvailable === false"
                         [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyze') | translate"
@@ -137,15 +137,14 @@ export class GamesListComponent implements OnInit {
     this.analyzeGame.status().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(u => this.uploadStatus = u);
   }
 
-  /** PGN nachladen (die Liste trägt keins) und als Punktepartie rechnen lassen — siehe {@link AnalyzeGameService}. */
+  /** Die Partie rechnen lassen — siehe {@link AnalyzeGameService}. Das PGN braucht es dafür nicht mehr,
+   *  der Server hat es; er rechnet auch nur, wenn es noch keine brauchbare Analyse gibt. Die Kurve steht
+   *  danach im Nachspiel-Dialog, man bleibt hier. */
   analyze(g: SavedGame): void {
     if (this.analyzingId !== null) return;
     this.analyzingId = g.id;
-    this.service.get(g.id).subscribe({
-      next: detail => this.analyzeGame.submit(detail.pgn, AnalyzeGameService.titleOf(g.white, g.black), this.uploadStatus)
-        .subscribe(() => this.analyzingId = null),
-      error: () => { this.analyzingId = null; this.snackbar.warn(this.translate.instant('games.loadError')); },
-    });
+    this.analyzeGame.submit(this.service.analyzeUrl(g.id), this.uploadStatus)
+      .subscribe(() => this.analyzingId = null);
   }
 
   private isFlipped(g: SavedGame): boolean {
@@ -164,8 +163,13 @@ export class GamesListComponent implements OnInit {
       next: detail => {
         // Keine feste Breite: der Dialog umschließt Brett + Zugliste, das Brett richtet sich nach dem Fenster
         // (siehe PgnViewerComponent). Mit 90vw/900px blieb am PC ein 400-px-Brett in einer 900-px-Kiste.
+        // Mit Kurve und Knopf: im Dialog wird die Partie nachgespielt UND ausgewertet.
+        const data: PgnViewerData = {
+          pgn: detail.pgn, flipped: this.isFlipped(g),
+          evalsUrl: this.service.evalsUrl(g.id), analyzeUrl: this.service.analyzeUrl(g.id),
+        };
         this.dialog.open(PgnViewerComponent, {
-          data: { pgn: detail.pgn, flipped: this.isFlipped(g) },
+          data,
           maxWidth: '96vw',
           panelClass: 'pgn-viewer-dialog',
         });

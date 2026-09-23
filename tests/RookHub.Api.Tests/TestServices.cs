@@ -84,4 +84,23 @@ internal static class TestServices
     public static ProfileService Profile(
         AppDbContext db, IBackgroundTaskQueue queue, ILogger<ProfileService>? logger = null)
         => new(db, queue, logger ?? NullLogger<ProfileService>.Instance, new BookAdminService(db));
+
+    /// <summary>Partie-Analysen mit der ECHTEN Auftrags-Schicht auf derselben Test-Datenbank — der
+    /// Einwurf soll im Test genau den Deckel, die Engine-Wahl und das Einreihen durchlaufen, die er in
+    /// Prod durchlaeuft. Ohne hinterlegte Engine sagt er „no-engine", mehr braucht ein Test, der ihn
+    /// nicht benutzt, nicht.</summary>
+    public static GameAnalysisService GameAnalyses(AppDbContext db)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
+        }).Build();
+        return new GameAnalysisService(db, new AnalysisJobService(db, new EncryptionService(config)),
+            new CommentSetService(db, NullLogger<CommentSetService>.Instance),
+            NullLogger<GameAnalysisService>.Instance);
+    }
+
+    /// <summary><paramref name="analyses"/> nur setzen, wenn der Test DIESELBE Instanz selbst haelt.</summary>
+    public static SavedGameService SavedGames(AppDbContext db, GameAnalysisService? analyses = null)
+        => new(db, analyses ?? GameAnalyses(db));
 }

@@ -67,7 +67,7 @@ public class ExtensionControllerTests : IDisposable
         var chessableProxy = new ChessableProxyService(new HttpClient(_parse) { BaseAddress = new Uri("http://pc:8080") });
         var rememberedService = new RememberedPositionService(_db, encryption, chessableProxy,
             NullLogger<RememberedPositionService>.Instance);
-        var savedGameService = new SavedGameService(_db);
+        var savedGameService = TestServices.SavedGames(_db);
         var bgQueue = new NoOpBackgroundTaskQueue();
         var rateLimiterConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
         var chessableImport = _chessableImport = new ChessableImportService(_db, encryption, chessableProxy, _service,

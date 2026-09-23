@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,8 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
+import { GameReviewComponent } from './game-review.component';
+import { GameEvalsStatus } from './game-review.util';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 /**
@@ -28,7 +30,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
   standalone: true,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
-    TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent,
+    TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -58,14 +60,17 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
             <!-- Am PC in die Kopfzeile: als eigene Zeile unter Brett und Zugliste war der Knopf so breit wie
                  die Karte und stand mitten im Leeren. Auf dem Handy fällt die Kopfzeile in eine Spalte. -->
             <div class="header-actions">
-              <!-- Derselbe Weg wie „Partie einwerfen" auf der Punktepartie-Seite: die Partie wird im Hintergrund
-                   gerechnet und steht danach dort als Punktepartie. Ohne Anmeldung führt der Klick zur Anmeldung
-                   und wieder hierher zurück — der Knopf bleibt sichtbar, damit man weiß, dass es den Weg gibt. -->
-              <button mat-flat-button color="primary" class="analyze" (click)="analyze()"
-                      [disabled]="analyzing || uploadStatus?.engineAvailable === false"
-                      [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyzeHint') | translate">
-                <mat-icon>{{ analyzing ? 'hourglass_top' : 'insights' }}</mat-icon> {{ 'games.analyze' | translate }}
-              </button>
+              <!-- Die Partie wird im Hintergrund gerechnet (Haus-Engine, feste Tiefe), die Bewertungskurve erscheint
+                   darauf unter dem Brett. Ohne Anmeldung führt der Klick zur Anmeldung und wieder hierher zurück —
+                   der Knopf bleibt sichtbar, damit man weiß, dass es den Weg gibt. Ist die Kurve fertig, entfällt
+                   er; solange sie rechnet, ist er gesperrt und sagt es. -->
+              @if (reviewStatus() !== 'done') {
+                <button mat-flat-button color="primary" class="analyze" (click)="analyze()"
+                        [disabled]="analyzing() || analysisRunning() || uploadStatus()?.engineAvailable === false"
+                        [matTooltip]="analyzeTooltip() | translate">
+                  <mat-icon>{{ analyzing() ? 'hourglass_top' : 'insights' }}</mat-icon> {{ 'games.analyze' | translate }}
+                </button>
+              }
               @if (game.sourceUrl) {
                 <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
                   <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
@@ -88,6 +93,12 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                 <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
                 <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
               </div>
+              @if (service.currentGame; as g) {
+                <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens"
+                                 [currentIndex]="service.currentMoveIndex"
+                                 (moveClicked)="service.goToMove($event)"
+                                 (statusChange)="reviewStatus.set($event)" />
+              }
               <app-position-repertoires class="pr-slot" [fen]="service.currentFen" />
             </div>
             <div class="moves-section">
@@ -137,7 +148,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
-    .pr-slot { display: block; width: 100%; }
+    .pr-slot, .review-slot { display: block; width: 100%; }
     /* Die Zugliste ist so hoch wie das Brett und scrollt in sich; eine feste Breite, damit die zwei Zugspalten
        nebeneinander stehen statt — bei einer Spalte, die den Rest der Karte füllt — mit einer Handbreit Luft
        dazwischen. */
@@ -174,11 +185,30 @@ export class SharedGameComponent implements OnInit {
   loading = true;
   notFound = false;
   flipped = false;
-  /** Läuft gerade der Einwurf als Punktepartie? (sperrt den Knopf gegen Doppelklick). */
-  analyzing = false;
+  /** `GET …/evals` dieser Partie — anonym die Kurve des Teilenden, angemeldet ersatzweise die eigene. */
+  evalsUrl: string | null = null;
+  private analyzeUrl = '';
+  // Signale statt Felder: sie ändern sich in HTTP-Antworten und in der Ausgabe der Kind-Komponente,
+  // und nur ein gelesenes Signal markiert die Ansicht zuverlässig zum Neuzeichnen (Angular 22).
+  /** Läuft gerade der Aufruf „Partie analysieren"? Sperrt den Knopf gegen Doppelklick — zwei Klicks
+   *  binnen Millisekunden sähe auch der Server noch nicht als dieselbe Analyse. */
+  readonly analyzing = signal(false);
   /** Ob eine Engine da ist und wie viele Partien noch frei sind — nur angemeldet abgefragt (der
    *  Endpunkt braucht ein Konto); ohne Antwort bleibt der Knopf benutzbar und der Server entscheidet. */
-  uploadStatus: GuessUploadStatus | null = null;
+  readonly uploadStatus = signal<GuessUploadStatus | null>(null);
+  /** Stand der Kurve unter dem Brett (`none` = noch keine Analyse → Knopf anbieten). */
+  readonly reviewStatus = signal<GameEvalsStatus>('none');
+  private readonly review = viewChild(GameReviewComponent);
+
+  analysisRunning(): boolean {
+    const s = this.reviewStatus();
+    return s === 'pending' || s === 'running';
+  }
+
+  analyzeTooltip(): string {
+    if (this.analysisRunning()) return 'games.review.running';
+    return this.uploadStatus()?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyzeHint';
+  }
 
   constructor(
     public service: PgnViewerService,
@@ -189,6 +219,8 @@ export class SharedGameComponent implements OnInit {
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('token') || '';
+    this.evalsUrl = this.games.sharedEvalsUrl(token);
+    this.analyzeUrl = this.games.sharedAnalyzeUrl(token);
     this.games.getShared(token).subscribe({
       next: g => {
         this.game = g;
@@ -197,25 +229,28 @@ export class SharedGameComponent implements OnInit {
         this.service.loadPgn(g.pgn);
         this.loading = false;
         if (this.auth.isLoggedIn) {
-          this.analyzeGame.status().subscribe(u => this.uploadStatus = u);
+          this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));
         }
       },
       error: () => { this.notFound = true; this.loading = false; },
     });
   }
 
-  /** Die Partie als Punktepartie rechnen lassen (siehe {@link AnalyzeGameService}). Die Seite ist ohne
-   *  Anmeldung erreichbar, der Einwurf nicht: ohne Konto geht es zur Anmeldung und danach wieder hierher. */
+  /** Die Partie rechnen lassen (siehe {@link AnalyzeGameService}). Die Seite ist ohne Anmeldung
+   *  erreichbar, der Einwurf nicht: ohne Konto geht es zur Anmeldung und danach wieder hierher. Danach
+   *  bleibt man HIER — die Kurve lädt neu und fragt nach, bis die Partie durch ist. */
   analyze(): void {
-    if (!this.game || this.analyzing) return;
+    if (!this.game || this.analyzing()) return;
     if (!this.auth.isLoggedIn) {
       this.snackbar.info(this.translate.instant('games.analyzeLogin'));
       this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       return;
     }
-    this.analyzing = true;
-    this.analyzeGame.submit(this.game.pgn, AnalyzeGameService.titleOf(this.game.white, this.game.black), this.uploadStatus)
-      .subscribe(() => this.analyzing = false);
+    this.analyzing.set(true);
+    this.analyzeGame.submit(this.analyzeUrl, this.uploadStatus()).subscribe(ok => {
+      this.analyzing.set(false);
+      if (ok) this.review()?.reload();
+    });
   }
 
   @HostListener('window:keydown', ['$event'])
