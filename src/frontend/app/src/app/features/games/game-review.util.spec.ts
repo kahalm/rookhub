@@ -1,7 +1,8 @@
 import {
-  GameEvals, classify, formatEval, moveAccuracy, reviewGame, sideAccuracy, volatilityWeights, whiteToMove,
-  windowSizeFor, winPercent,
+  GameEvalPly, GameEvals, MOVE_CLASSES, classify, formatEval, moveAccuracy, reviewGame, sideAccuracy,
+  volatilityWeights, whiteToMove, windowSizeFor, winPercent,
 } from './game-review.util';
+import { sacrificedPiece } from './move-tactics.util';
 
 // Alle erwarteten Zahlen sind LITERALE (unabhängig nachgerechnet), keine Aufrufe derselben Formel —
 // ein Test, der die Formel ein zweites Mal ausrechnet, wandert mit jedem Fehler mit.
@@ -156,7 +157,9 @@ describe('game-review.util', () => {
       expect(r.moves[3]!.winBefore).toBeCloseTo(46.3246, 3);   // 100 − 53,6754
       expect(r.moves[3]!.winAfter).toBeCloseTo(24.8874, 3);    // 100 − 75,1126
       expect(r.moves[3]!.accuracy).toBeCloseTo(37.4009, 3);
-      expect(r.black.counts).toEqual({ best: 0, excellent: 1, good: 0, inaccuracy: 0, mistake: 0, blunder: 1 });
+      expect(r.black.counts).toEqual({
+        brilliant: 0, great: 0, best: 0, excellent: 1, good: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 1,
+      });
       expect(r.white.counts.best).toBe(2);
     });
 
@@ -202,6 +205,284 @@ describe('game-review.util', () => {
       expect(r.moves.every(m => m === null)).toBeTrue();
       expect(r.series.every(s => s === null)).toBeTrue();
       expect(r.white.accuracy).toBeNull();
+    });
+  });
+
+  describe('Sonderklassen Miss / Brilliant / Great (Bedingungen chess.com, Zahlen freechess)', () => {
+    // 1.e4 c5 2.Sf3 d6 — dieselbe Partie wie oben, jetzt mit den Halbzügen als UCI.
+    const SICILIAN = [
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+      'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2',
+      'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+      'rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3',
+    ];
+    const UCIS = ['e2e4', 'c7c5', 'g1f3', 'd7d6'];
+    // 6…0-0 7.Lxh7+ (Griechisches Geschenk, Zugfolge in move-tactics.util.spec.ts).
+    const GREEK = [
+      'rnbqk2r/pppnbppp/4p3/3pP3/3P4/2NB1N2/PPP2PPP/R1BQK2R b KQkq - 4 6',
+      'rnbq1rk1/pppnbppp/4p3/3pP3/3P4/2NB1N2/PPP2PPP/R1BQK2R w KQ - 5 7',
+      'rnbq1rk1/pppnbppB/4p3/3pP3/3P4/2N2N2/PPP2PPP/R1BQK2R b KQ - 0 7',
+    ];
+    // 5…Lxh2+ mit Schwarz am Zug.
+    const GREEK_BLACK = [
+      'rnbqk2r/ppp2ppp/3bpn2/3p4/3P4/3BP3/PPP1NPPP/RNBQ1RK1 b kq - 3 5',
+      'rnbqk2r/ppp2ppp/4pn2/3p4/3P4/3BP3/PPP1NPPb/RNBQ1RK1 w kq - 0 6',
+    ];
+
+    const ply = (p: number, score: { cp?: number; mate?: number }, bestUci: string, playedUci: string,
+                 second: { secondCp?: number; secondMate?: number } = {}): GameEvalPly =>
+      ({ ply: p, depth: 20, ...score, bestUci, playedUci, ...second });
+    const game = (plies: GameEvalPly[], final: { cp?: number; mate?: number }): GameEvals =>
+      ({ status: 'done', analyzed: plies.length, total: plies.length, targetDepth: 20, plies, final });
+
+    it('Reihenfolge der Anzeige', () => {
+      expect(MOVE_CLASSES).toEqual(
+        ['brilliant', 'great', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder']);
+    });
+
+    describe('Miss', () => {
+      const missGame = (afterCp: number, beforeCp = 300, blackCp = 25) => game([
+        ply(0, { cp: 30 }, 'e2e4', 'e2e4'),
+        ply(1, { cp: blackCp }, 'e7e5', 'c7c5'),
+        ply(2, { cp: beforeCp }, 'd2d4', 'g1f3'),
+        ply(3, { cp: afterCp }, 'b8c6', 'd7d6'),
+      ], { cp: afterCp });
+
+      it('ersetzt Blunder: Weiß bestraft den groben Fehler von Schwarz nicht (vorher 75,11 % ≥ 70, danach 53,68 % ≤ 60)', () => {
+        // Schwarz 1…c5: 47,70 → 24,89 % (grober Fehler). Weiß 2.Sf3: 75,11 → 53,68 %.
+        const r = reviewGame(missGame(40), SICILIAN, UCIS);
+        expect(r.moves.map(m => m?.cls)).toEqual(['best', 'blunder', 'miss', 'best']);
+        expect(r.moves[2]!.winBefore).toBeCloseTo(75.1126, 3);
+        expect(r.moves[2]!.winAfter).toBeCloseTo(53.6754, 3);
+        expect(r.moves[2]!.accuracy).toBeCloseTo(37.4009, 3);   // ein Etikett, keine andere Zahl
+        expect(r.white.counts).toEqual({
+          brilliant: 0, great: 0, best: 1, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, miss: 1, blunder: 0,
+        });
+      });
+
+      it('ersetzt auch einen Fehler: danach 59,10 % (Verlust 16,01 = mistake)', () => {
+        expect(reviewGame(missGame(100), SICILIAN, UCIS).moves[2]!.cls).toBe('miss');
+      });
+
+      it('kein Miss, solange die Gewinnchance danach über 60 % bleibt (60,52 %)', () => {
+        expect(reviewGame(missGame(116), SICILIAN, UCIS).moves[2]!.cls).toBe('mistake');
+      });
+
+      it('kein Miss, wenn danach weniger als 40 % bleiben (39,13 %) — das ist ein grober Fehler, kein Verpassen', () => {
+        const r = reviewGame(missGame(-120), SICILIAN, UCIS);
+        expect(r.moves[2]!.winAfter).toBeCloseTo(39.1301, 3);
+        expect(r.moves[2]!.cls).toBe('blunder');
+        expect(reviewGame(missGame(-100), SICILIAN, UCIS).moves[2]!.cls).toBe('miss');   // 40,90 % ≥ 40
+      });
+
+      it('kein Miss, wenn der Bestzug keine 70 % gebracht hätte (67,62 %)', () => {
+        const r = reviewGame(missGame(40, 200), SICILIAN, UCIS);
+        expect(r.moves[1]!.cls).toBe('mistake');   // der Gegner hat trotzdem einen Fehler gemacht
+        expect(r.moves[2]!.cls).toBe('mistake');
+      });
+
+      it('kein Miss ohne Fehler des Gegners davor', () => {
+        const r = reviewGame(missGame(40, 300, 300), SICILIAN, UCIS);   // Weiß stand schon vorher auf +3,00
+        expect(r.moves[1]!.cls).toBe('best');
+        expect(r.moves[2]!.cls).toBe('blunder');
+      });
+
+      it('eine Lücke davor: ohne bewerteten Zug des Gegners kein Miss', () => {
+        const e = missGame(40);
+        e.plies = e.plies.filter(p => p.ply !== 1);
+        const r = reviewGame(e, SICILIAN, UCIS);
+        expect(r.moves[1]).toBeNull();
+        expect(r.moves[2]!.cls).toBe('blunder');
+      });
+
+      it('Schwarz am Zug: lässt den groben Fehler von Weiß liegen (Vorzeichen!)', () => {
+        const r = reviewGame(game([
+          ply(0, { cp: 30 }, 'd2d4', 'e2e4'),      // Weiß: 52,76 → 24,89 %, grober Fehler
+          ply(1, { cp: -300 }, 'e7e5', 'c7c5'),    // Schwarz: 75,11 → 53,68 %
+          ply(2, { cp: -40 }, 'g1f3', 'g1f3'),
+          ply(3, { cp: -40 }, 'd7d6', 'd7d6'),
+        ], { cp: -40 }), SICILIAN, UCIS);
+        expect(r.moves.map(m => m?.cls)).toEqual(['blunder', 'miss', 'best', 'best']);
+        expect(r.moves[1]!.winBefore).toBeCloseTo(75.1126, 3);
+        expect(r.moves[1]!.winAfter).toBeCloseTo(53.6754, 3);
+        expect(r.black.counts.miss).toBe(1);
+      });
+    });
+
+    describe('Brilliant', () => {
+      const greek = (score: { cp?: number; mate?: number }, final: { cp?: number; mate?: number },
+                     second: { secondCp?: number; secondMate?: number } = {}, bestUci = 'd3h7') =>
+        reviewGame(game([ply(0, score, bestUci, 'd3h7', second)], final), GREEK.slice(1), ['d3h7']);
+
+      it('Lxh7+ opfert den Läufer, ist der Bestzug, der Zweitbeste liegt bei +0,50 → brilliant, mit geopferter Figur', () => {
+        const r = greek({ cp: 150 }, { cp: 150 }, { secondCp: 50 });
+        expect(r.moves[0]!.cls).toBe('brilliant');
+        expect(r.moves[0]!.sacrifice).toEqual({ square: 'h7', piece: 'b' });
+        expect(r.moves[0]!.accuracy).toBe(100);
+        expect(r.white.counts.brilliant).toBe(1);
+        expect(r.white.counts.best).toBe(0);
+      });
+
+      it('ohnehin gewonnen: Zweitbester +7,00 → best (Grenze), +6,99 → brilliant', () => {
+        expect(greek({ cp: 900 }, { cp: 900 }, { secondCp: 700 }).moves[0]!.cls).toBe('best');
+        expect(greek({ cp: 900 }, { cp: 900 }, { secondCp: 699 }).moves[0]!.cls).toBe('brilliant');
+      });
+
+      it('ohnehin gewonnen: der Zweitbeste setzt selbst matt → best', () => {
+        expect(greek({ mate: 3 }, { mate: 2 }, { secondMate: 5 }).moves[0]!.cls).toBe('best');
+      });
+
+      it('ohne zweiten Kandidaten gilt der Zug nicht als ohnehin gewonnen → brilliant', () => {
+        expect(greek({ cp: 150 }, { cp: 150 }).moves[0]!.cls).toBe('brilliant');
+      });
+
+      it('danach schlechter als −1,00 → best; genau −1,00 → brilliant', () => {
+        expect(greek({ cp: -80 }, { cp: -101 }, { secondCp: -300 }).moves[0]!.cls).toBe('best');
+        expect(greek({ cp: -80 }, { cp: -100 }, { secondCp: -300 }).moves[0]!.cls).toBe('brilliant');
+      });
+
+      it('fast der beste Zug (excellent, Verlust 0,86) kann brillant sein, ein nur guter (Verlust 4,36) nicht', () => {
+        expect(greek({ cp: 150 }, { cp: 140 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('brilliant');
+        expect(greek({ cp: 150 }, { cp: 100 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('good');
+      });
+
+      it('eine Umwandlung ist nie brillant — auch wenn die neue Dame hängt', () => {
+        const fens = ['r7/4P2k/8/8/8/8/8/6K1 w - - 0 1', 'r3Q3/7k/8/8/8/8/8/6K1 b - - 0 1'];
+        expect(sacrificedPiece(fens[0], fens[1], 'e7e8q')).toEqual({ square: 'e8', piece: 'q' });   // Opfer läge vor
+        const r = reviewGame(game([ply(0, { cp: 0 }, 'e7e8q', 'e7e8q', { secondCp: -500 })], { cp: 0 }), fens, ['e7e8q']);
+        expect(r.moves[0]!.cls).toBe('best');
+      });
+
+      it('wer vorher im Schach stand, zieht nicht brillant — auch wenn die Figur danach hängt', () => {
+        // Lb4+ — Weiß stellt Sc3 dazwischen, der Bauer d4 schlägt ihn.
+        const fens = ['4k3/8/8/8/1b1p4/8/8/1N2K3 w - - 0 1', '4k3/8/8/8/1b1p4/2N5/8/4K3 b - - 1 1'];
+        expect(sacrificedPiece(fens[0], fens[1], 'b1c3')).toEqual({ square: 'c3', piece: 'n' });   // Opfer läge vor
+        const r = reviewGame(game([ply(0, { cp: 0 }, 'b1c3', 'b1c3', { secondCp: -900 })], { cp: 0 }), fens, ['b1c3']);
+        expect(r.moves[0]!.cls).toBe('best');
+      });
+
+      it('Schwarz am Zug: 5…Lxh2+ — die Weiß-Bewertungen werden für Schwarz gedreht', () => {
+        const black = (after: number, secondCp: number) =>
+          reviewGame(game([ply(0, { cp: -150 }, 'd6h2', 'd6h2', { secondCp })], { cp: after }), GREEK_BLACK, ['d6h2']);
+        const r = black(-150, -50);                             // Schwarz +1,50, Zweitbester +0,50
+        expect(r.moves[0]!.cls).toBe('brilliant');
+        expect(r.moves[0]!.sacrifice).toEqual({ square: 'h2', piece: 'b' });
+        expect(r.black.counts.brilliant).toBe(1);
+        expect(black(-150, -700).moves[0]!.cls).toBe('best');   // Zweitbester Schwarz +7,00: ohnehin gewonnen
+        expect(black(101, -50).moves[0]!.cls).toBe('best');     // danach Schwarz −1,01
+        expect(black(100, -50).moves[0]!.cls).toBe('brilliant');   // danach Schwarz −1,00
+      });
+    });
+
+    describe('Great', () => {
+      const greatGame = (second: { secondCp?: number; secondMate?: number }, blackCp = 25,
+                         best: { cp?: number; mate?: number } = { cp: 300 }, after: { cp?: number; mate?: number } = { cp: 280 }) => game([
+        ply(0, { cp: 30 }, 'e2e4', 'e2e4'),
+        ply(1, { cp: blackCp }, 'e7e5', 'c7c5'),
+        ply(2, best, 'g1f3', 'g1f3', second),
+        ply(3, after, 'd7d6', 'd7d6'),
+      ], after);
+
+      it('einziger guter Zug nach dem groben Fehler des Gegners: Abstand 1,50 (Grenze), danach 73,71 % → great', () => {
+        const r = reviewGame(greatGame({ secondCp: 150 }), SICILIAN, UCIS);
+        expect(r.moves.map(m => m?.cls)).toEqual(['best', 'blunder', 'great', 'best']);
+        expect(r.moves[2]!.gapPawns).toBe(1.5);
+        expect(r.moves[2]!.accuracy).toBeCloseTo(93.8910, 3);   // 75,11 → 73,71 %: dieselbe Zahl wie als „best"
+        expect(r.white.counts.great).toBe(1);
+        expect(r.white.counts.best).toBe(1);
+      });
+
+      it('Abstand 1,49 → best', () => {
+        const r = reviewGame(greatGame({ secondCp: 151 }), SICILIAN, UCIS);
+        expect(r.moves[2]!.cls).toBe('best');
+        expect(r.moves[2]!.gapPawns).toBe(1.49);
+      });
+
+      it('ohne Fehler des Gegners davor → best', () => {
+        const r = reviewGame(greatGame({ secondCp: 100 }, 300), SICILIAN, UCIS);
+        expect(r.moves[1]!.cls).toBe('best');
+        expect(r.moves[2]!.cls).toBe('best');
+      });
+
+      it('danach unter 45 % → best (40,90 %)', () => {
+        const r = reviewGame(game([
+          ply(0, { cp: -600 }, 'e2e4', 'e2e4'),
+          ply(1, { cp: -600 }, 'e7e5', 'c7c5'),                        // Schwarz: 90,11 → 59,10 %, grober Fehler
+          ply(2, { cp: -100 }, 'g1f3', 'g1f3', { secondCp: -300 }),    // Abstand 2,00, aber danach nur 40,90 %
+          ply(3, { cp: -100 }, 'd7d6', 'd7d6'),
+        ], { cp: -100 }), SICILIAN, UCIS);
+        expect(r.moves[1]!.cls).toBe('blunder');
+        expect(r.moves[2]!.cls).toBe('best');
+      });
+
+      it('Matt gegen Nicht-Matt ist ein großer Abstand → great', () => {
+        const r = reviewGame(greatGame({ secondCp: 500 }, 25, { mate: 3 }, { mate: 2 }), SICILIAN, UCIS);
+        expect(r.moves[2]!.cls).toBe('great');
+        expect(r.moves[2]!.gapPawns).toBe(992);   // (1000 − 3) − 5
+      });
+
+      it('beide Matt: der Zweitbeste setzt selbst matt, also war es nicht der einzige gute Zug → best (auch #2 gegen #4)', () => {
+        expect(reviewGame(greatGame({ secondMate: 3 }, 25, { mate: 2 }, { mate: 1 }), SICILIAN, UCIS).moves[2]!.cls)
+          .toBe('best');
+        const r = reviewGame(greatGame({ secondMate: 4 }, 25, { mate: 2 }, { mate: 1 }), SICILIAN, UCIS);
+        expect(r.moves[2]!.cls).toBe('best');
+        expect(r.moves[2]!.gapPawns).toBe(2);   // der Abstand wird trotzdem ausgewiesen
+      });
+
+      it('der Zweitbeste gewinnt ohnehin (+7,00): kein Great — dieselbe Grenze wie bei Brilliant; +6,99 → great', () => {
+        expect(reviewGame(greatGame({ secondCp: 700 }, 25, { cp: 900 }, { cp: 850 }), SICILIAN, UCIS).moves[2]!.cls)
+          .toBe('best');
+        expect(reviewGame(greatGame({ secondCp: 699 }, 25, { cp: 900 }, { cp: 850 }), SICILIAN, UCIS).moves[2]!.cls)
+          .toBe('great');
+      });
+
+      it('der erste Zug der Partie hat keinen vorigen Zug → kein Great', () => {
+        const r = reviewGame(game([
+          ply(0, { cp: 30 }, 'e2e4', 'e2e4', { secondCp: -200 }),
+          ply(1, { cp: 30 }, 'c7c5', 'c7c5'),
+        ], { cp: 30 }), SICILIAN, UCIS);
+        expect(r.moves[0]!.cls).toBe('best');
+        expect(r.moves[0]!.gapPawns).toBe(2.3);
+      });
+
+      it('Schwarz am Zug: einziger guter Zug nach dem groben Fehler von Weiß (Vorzeichen!)', () => {
+        const r = reviewGame(game([
+          ply(0, { cp: 30 }, 'e2e4', 'e2e4'),
+          ply(1, { cp: 25 }, 'c7c5', 'c7c5'),
+          ply(2, { cp: 35 }, 'd2d4', 'g1f3'),                          // Weiß: 53,22 → 28,49 %, grober Fehler
+          ply(3, { cp: -250 }, 'd7d6', 'd7d6', { secondCp: -50 }),     // Schwarz: +2,50 gegen +0,50
+        ], { cp: -250 }), SICILIAN, UCIS);
+        expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'blunder', 'great']);
+        expect(r.moves[3]!.gapPawns).toBe(2);
+        expect(r.black.counts.great).toBe(1);
+      });
+
+      it('hängt danach eine eigene Figur, ist es kein Great — mit Zweitbestem unter +7 wird es brilliant (Brilliant geht vor)', () => {
+        const greekGame = (secondCp: number) => reviewGame(game([
+          ply(0, { cp: 30 }, 'c7c5', 'e8g8'),                          // Schwarz rochiert in den Angriff: 47,24 → 1,19 %
+          ply(1, { cp: 1200 }, 'd3h7', 'd3h7', { secondCp }),
+        ], { cp: 1200 }), GREEK, ['e8g8', 'd3h7']);
+        const winning = greekGame(800);                                // Abstand 4,00, aber ohnehin gewonnen
+        expect(winning.moves[0]!.cls).toBe('blunder');
+        expect(winning.moves[1]!.cls).toBe('best');
+        expect(greekGame(300).moves[1]!.cls).toBe('brilliant');
+      });
+    });
+
+    it('ohne UCIs keine Sonderklassen — Miss, Great und Brilliant bleiben bei ihrer Grundklasse', () => {
+      const miss = game([
+        ply(0, { cp: 30 }, 'e2e4', 'e2e4'), ply(1, { cp: 25 }, 'e7e5', 'c7c5'),
+        ply(2, { cp: 300 }, 'd2d4', 'g1f3'), ply(3, { cp: 40 }, 'b8c6', 'd7d6'),
+      ], { cp: 40 });
+      expect(reviewGame(miss, SICILIAN).moves.map(m => m?.cls)).toEqual(['best', 'blunder', 'blunder', 'best']);
+      const great = game([
+        ply(0, { cp: 30 }, 'e2e4', 'e2e4'), ply(1, { cp: 25 }, 'e7e5', 'c7c5'),
+        ply(2, { cp: 300 }, 'g1f3', 'g1f3', { secondCp: 100 }), ply(3, { cp: 280 }, 'd7d6', 'd7d6'),
+      ], { cp: 280 });
+      expect(reviewGame(great, SICILIAN).moves[2]!.cls).toBe('best');
+      const brilliant = game([ply(0, { cp: 150 }, 'd3h7', 'd3h7', { secondCp: 50 })], { cp: 150 });
+      expect(reviewGame(brilliant, GREEK.slice(1)).moves[0]!.cls).toBe('best');
     });
   });
 

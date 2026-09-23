@@ -48,7 +48,9 @@ describe('EvalGraphComponent', () => {
   });
 
   it('Fehler und grobe Fehler als Punkt auf der Stellung NACH dem Zug', () => {
-    const { el } = setup([50, 60, 20, 25], { marks: [{ ply: 1, kind: 'blunder' }, { ply: 2, kind: 'mistake' }] });
+    const { el } = setup([50, 60, 20, 25], {
+      marks: [{ ply: 1, kind: 'blunder', color: '#ca3431' }, { ply: 2, kind: 'mistake', color: '#e58f2a' }],
+    });
     const blunder = el.querySelector('.dot.blunder') as HTMLElement;
     expect(blunder).not.toBeNull();
     expect(parseFloat(blunder.style.left)).toBeCloseTo(66.667, 2);   // Stellung 2 von 3
@@ -57,8 +59,22 @@ describe('EvalGraphComponent', () => {
   });
 
   it('kein Punkt auf einer Lücke', () => {
-    const { el } = setup([50, 60, null], { marks: [{ ply: 1, kind: 'blunder' }] });
+    const { el } = setup([50, 60, null], { marks: [{ ply: 1, kind: 'blunder', color: '#ca3431' }] });
     expect(el.querySelector('.dot.blunder')).toBeNull();
+  });
+
+  it('Brilliant, Great und Miss bekommen ihren Punkt — in der Farbe, die der Aufrufer mitgibt', () => {
+    const { el } = setup([50, 60, 40, 55, 45], {
+      marks: [
+        { ply: 0, kind: 'brilliant', color: '#26c2a3' },
+        { ply: 1, kind: 'great', color: '#5b8fd6' },
+        { ply: 2, kind: 'miss', color: '#ee6b55' },
+      ],
+    });
+    expect((el.querySelector('.dot.brilliant') as HTMLElement).style.backgroundColor).toBe('rgb(38, 194, 163)');
+    expect((el.querySelector('.dot.great') as HTMLElement).style.backgroundColor).toBe('rgb(91, 143, 214)');
+    expect((el.querySelector('.dot.miss') as HTMLElement).style.backgroundColor).toBe('rgb(238, 107, 85)');
+    expect(parseFloat((el.querySelector('.dot.great') as HTMLElement).style.left)).toBe(50);   // Stellung 2 von 4
   });
 
   it('Marke am aktuellen Zug (−1 = Startstellung ganz links)', () => {

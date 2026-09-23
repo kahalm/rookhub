@@ -127,7 +127,7 @@ export interface PgnViewerData {
             </button>
           </div>
           @if (data.evalsUrl && service.currentGame; as game) {
-            <app-game-review class="review-slot" [evalsUrl]="data.evalsUrl" [fens]="game.fens"
+            <app-game-review class="review-slot" [evalsUrl]="data.evalsUrl" [fens]="game.fens" [moves]="game.moves"
                              [currentIndex]="service.currentMoveIndex"
                              (moveClicked)="service.goToMove($event)"
                              (statusChange)="reviewStatus.set($event)" />

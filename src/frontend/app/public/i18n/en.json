@@ -2458,13 +2458,26 @@
       "white": "White",
       "black": "Black",
       "class": {
+        "brilliant": "Brilliant",
+        "great": "Great move",
         "best": "Best",
         "excellent": "Excellent",
         "good": "Good",
         "inaccuracy": "Inaccuracy",
         "mistake": "Mistake",
+        "miss": "Miss",
         "blunder": "Blunder"
-      }
+      },
+      "piece": {
+        "n": "knight",
+        "b": "bishop",
+        "r": "rook",
+        "q": "queen"
+      },
+      "sacrifice": "Sacrifice: {{piece}} on {{square}}",
+      "greatGap": "The only good move — the next best is {{gap}} pawns worse",
+      "greatOnly": "The only good move",
+      "missHint": "Missed the chance to punish the opponent's mistake"
     }
   },
   "analysis": {

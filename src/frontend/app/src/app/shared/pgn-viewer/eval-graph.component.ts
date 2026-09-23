@@ -1,9 +1,15 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, output } from '@angular/core';
 
-/** Ein markierter Zug: der Punkt sitzt auf der Stellung NACH dem Zug `ply` (0-basiert). */
+/**
+ * Ein markierter Zug: der Punkt sitzt auf der Stellung NACH dem Zug `ply` (0-basiert). Die Farbe bringt
+ * der Aufrufer mit — die Kurve kennt keine Zug-Klassen, und so bleibt die Farbtabelle an EINER Stelle
+ * (`MOVE_CLASS_COLORS`), aus der auch die Zählertabelle malt.
+ */
 export interface EvalGraphMark {
   ply: number;
-  kind: 'mistake' | 'blunder';
+  /** Wird CSS-Klasse des Punkts (`dot <kind>`) — Haken für Tests und Styling, keine Farbe. */
+  kind: string;
+  color: string;
 }
 
 /** Breite des Koordinatensystems — die SVG wird per `preserveAspectRatio="none"` auf die Spalte
@@ -51,7 +57,7 @@ interface Pt { x: number; y: number; }
       </svg>
       <!-- Punkte als HTML: in einer verzerrten SVG (preserveAspectRatio="none") würden Kreise zu Ellipsen. -->
       @for (d of dots(); track d.ply) {
-        <span [class]="'dot ' + d.kind" [style.left.%]="d.left" [style.top.%]="d.top"></span>
+        <span [class]="'dot ' + d.kind" [style.background]="d.color" [style.left.%]="d.left" [style.top.%]="d.top"></span>
       }
       @for (p of lonePoints(); track $index) {
         <span class="dot lone" [style.left.%]="p.left" [style.top.%]="p.top"></span>
@@ -76,8 +82,6 @@ interface Pt { x: number; y: number; }
       transform: translate(-50%, -50%); pointer-events: none;
       box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55);
     }
-    .dot.mistake { background: #ff9800; }
-    .dot.blunder { background: #e53935; }
     .dot.lone { width: 4px; height: 4px; background: #9e9e9e; box-shadow: none; }
   `],
 })
@@ -86,7 +90,7 @@ export class EvalGraphComponent {
 
   /** Gewinnchance Weiß je Stellung (0..100), `null` = nicht gerechnet; Länge = Züge + 1. */
   series = input<(number | null)[]>([]);
-  /** Fehler und grobe Fehler — als Punkt auf der Stellung nach dem Zug. */
+  /** Auffällige Züge (Brilliant, Great, Miss, Fehler, grobe Fehler) — als Punkt auf der Stellung nach dem Zug. */
   marks = input<EvalGraphMark[]>([]);
   /** Aktueller Zug wie `PgnViewerService.currentMoveIndex` (−1 = Startstellung). */
   currentIndex = input<number>(-1);
@@ -144,7 +148,10 @@ export class EvalGraphComponent {
     const series = this.series();
     return this.marks()
       .filter(m => series[m.ply + 1] != null)
-      .map(m => ({ ply: m.ply, kind: m.kind, left: (this.x(m.ply + 1) / W) * 100, top: 100 - (series[m.ply + 1] as number) }));
+      .map(m => ({
+        ply: m.ply, kind: m.kind, color: m.color,
+        left: (this.x(m.ply + 1) / W) * 100, top: 100 - (series[m.ply + 1] as number),
+      }));
   });
 
   readonly cursorX = computed(() => {

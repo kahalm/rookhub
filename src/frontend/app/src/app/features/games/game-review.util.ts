@@ -1,3 +1,5 @@
+import { Sacrifice, inCheck, isPromotion, sacrificedPiece } from './move-tactics.util';
+
 /**
  * Partie-Rückblick aus RookHubs EIGENER Analyse: Gewinnchance je Stellung (Kurve), Genauigkeit je
  * Seite und Zug-Klassen — reine Funktionen, ohne Angular, einzeln mit Zahlen testbar.
@@ -7,7 +9,11 @@
  * - Gewinnchance und Genauigkeit: Lichess, https://lichess.org/page/accuracy (Konstanten aus lila
  *   `WinPercent.scala`/`AccuracyPercent.scala`).
  * - Klassen-Bänder: chess.com-Hilfe „How are moves classified?" — Verlust in Erwartungspunkten
- *   (0,00 / 0,02 / 0,05 / 0,10 / 0,20). Brilliant/Great/Miss/Book kommen in einem späteren Schritt.
+ *   (0,00 / 0,02 / 0,05 / 0,10 / 0,20).
+ * - Brilliant/Great/Miss: die BEDINGUNGEN aus derselben chess.com-Hilfe, die ZAHLEN für Brilliant/Great aus
+ *   WintrCat/freechess (`src/lib/analysis.ts`, `board.ts`) — chess.com legt die Schwellen nicht offen, und
+ *   Miss gibt es bei freechess nicht. Siehe `specialClass`.
+ *   Book gibt es nicht: der Client hat kein Eröffnungsbuch.
  *
  * ALLE Bewertungen, die hereinkommen, stehen aus WEISS-Sicht (der Server dreht sie, siehe
  * `GameEvals.PlyOf`). Umgerechnet auf den Ziehenden wird erst hier, und zwar über die Seite am Zug
@@ -29,7 +35,7 @@ export interface GameEvalPly extends EvalScore {
   playedUci: string;
   playedCp?: number | null;
   playedMate?: number | null;
-  /** Zweitbester Kandidat — heute ungenutzt (Grundlage für „Great" in einem späteren Schritt). */
+  /** Zweitbester Kandidat derselben Suche — für „Great" (Abstand) und „Brilliant" (ohnehin gewonnen?). */
   secondCp?: number | null;
   secondMate?: number | null;
 }
@@ -49,10 +55,42 @@ export interface GameEvals {
   final?: EvalScore | null;
 }
 
-export type MoveClass = 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+export type MoveClass =
+  'brilliant' | 'great' | 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'miss' | 'blunder';
 
-/** Reihenfolge der Anzeige (Zähler, Legende). */
-export const MOVE_CLASSES: readonly MoveClass[] = ['best', 'excellent', 'good', 'inaccuracy', 'mistake', 'blunder'];
+/** Reihenfolge der Anzeige (Zähler, Legende) — Miss steht vor Blunder, weil es einen ersetzen kann. */
+export const MOVE_CLASSES: readonly MoveClass[] =
+  ['brilliant', 'great', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder'];
+
+/**
+ * Farbe je Klasse, chess.com-nah — die EINE Tabelle für Zähler, Abzeichen und die Punkte in der Kurve.
+ * Excellent ist ein Stück heller als Best: bei chess.com sind beide gleich, in der Zählertabelle stünden
+ * dann zwei gleiche grüne Kästchen nebeneinander.
+ */
+export const MOVE_CLASS_COLORS: Readonly<Record<MoveClass, string>> = {
+  brilliant: '#26c2a3', great: '#5b8fd6', best: '#96bc4b', excellent: '#a6c666', good: '#96af8b',
+  inaccuracy: '#f7c631', mistake: '#e58f2a', miss: '#ee6b55', blunder: '#ca3431',
+};
+
+/** Miss: die Gewinnchance, die der Bestzug gebracht hätte, lag mindestens hier … */
+export const MISS_BEST_WIN = 70;
+/** … und die nach dem gespielten Zug höchstens hier. Beide Zahlen sind gesetzt, nicht übernommen: chess.com
+ *  nennt keine, und freechess kennt die Klasse Miss nicht. */
+export const MISS_AFTER_WIN = 60;
+/** … aber mindestens hier: wer von +5 auf −5 fällt, hat nicht „verpasst", sondern gepatzt — die Nachricht
+ *  „Katastrophe" darf das Etikett nicht verdecken. */
+export const MISS_MIN_AFTER_WIN = 40;
+/** Brilliant: ab dieser Bewertung des Zweitbesten war die Stellung ohnehin gewonnen — kein Opfer nötig. */
+export const BRILLIANT_WINNING_ANYWAY_PAWNS = 7;
+/** Brilliant: schlechter als das darf die Stellung nach dem Opfer nicht stehen. */
+export const BRILLIANT_MIN_AFTER_PAWNS = -1;
+/** Great: so weit muss der Bestzug vor dem zweitbesten Kandidaten liegen („der einzige gute Zug"). */
+export const GREAT_MIN_GAP_PAWNS = 1.5;
+/** Great: so viel Gewinnchance muss danach bleiben — der einzige Zug, der bloß langsamer verliert, ist kein starker. */
+export const GREAT_MIN_AFTER_WIN = 45;
+
+/** Matt in n als Vergleichszahl wie `GuessScoring.Pawns` am Server: ±(1000 − n) Bauern. */
+const MATE_BASE_PAWNS = 1000;
 
 /** Lichess-Konstante der Gewinnchance (lila `WinPercent`, PR #11148). */
 const WIN_MULTIPLIER = -0.00368208;
@@ -169,6 +207,10 @@ export interface ReviewedMove {
   winAfter: number;
   evalBefore: EvalScore;
   evalAfter: EvalScore;
+  /** Nur bei Brilliant: die geopferte Figur — das Abzeichen nennt sie. */
+  sacrifice?: Sacrifice;
+  /** Abstand Bestzug − zweitbester Kandidat in Bauern, Sicht des Ziehenden; nur mit zweitem Kandidaten. */
+  gapPawns?: number;
 }
 
 export interface SideSummary {
@@ -186,7 +228,9 @@ export interface GameReview {
 }
 
 function emptyCounts(): Record<MoveClass, number> {
-  return { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+  return {
+    brilliant: 0, great: 0, best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 0,
+  };
 }
 
 function playedScore(row: GameEvalPly): EvalScore | null {
@@ -206,8 +250,12 @@ function scoreOf(s: EvalScore | null | undefined): EvalScore | null {
  * beste Zug war) UND es eine Bewertung danach gibt. „Danach" ist bevorzugt die NÄCHSTE Stellung —
  * sie ist selbst gerechnet und damit tiefer als der Kandidat derselben Suche; fehlt sie, trägt die
  * Bewertung des gespielten Kandidaten.
+ *
+ * `ucis` (je Halbzug `von + nach + Umwandlung`) schaltet die Sonderklassen Brilliant/Great/Miss ein —
+ * das Opfer steckt in der STELLUNG, und welche Figur wohin zog, sagt nur der Zug. Fehlt er (für die
+ * ganze Partie oder einen Halbzug), bleibt es bei der Grundklasse, genau wie vor 0.514.0.
  */
-export function reviewGame(evals: GameEvals | null | undefined, fens: string[]): GameReview {
+export function reviewGame(evals: GameEvals | null | undefined, fens: string[], ucis?: readonly string[]): GameReview {
   const n = Math.max(0, fens.length - 1);
   const rows = new Map<number, GameEvalPly>();
   for (const p of evals?.plies ?? []) if (p.ply >= 0 && p.ply < n) rows.set(p.ply, p);
@@ -218,22 +266,35 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[]):
   const series = evalAt.map((s, j) => winPercent(s, whiteToMove(fens[j])));
 
   const moves: (ReviewedMove | null)[] = [];
+  // Grundklasse je Halbzug: Miss und Great fragen, ob der GEGNER einen Fehler gemacht hat — das ist seine
+  // Grundklasse, nicht sein Etikett (ein Miss war auch ein Fehler, den man bestrafen kann).
+  const base: (MoveClass | null)[] = [];
   for (let i = 0; i < n; i++) {
     const row = rows.get(i);
     const before = row ? evalAt[i] : null;
     const after = evalAt[i + 1] ?? (row ? playedScore(row) : null);
     const wb = series[i];
     const wa = after ? winPercent(after, whiteToMove(fens[i + 1])) : null;
-    if (!row || !before || wb == null || !after || wa == null) { moves.push(null); continue; }
+    if (!row || !before || wb == null || !after || wa == null) { moves.push(null); base.push(null); continue; }
 
     const white = whiteToMove(fens[i]);
     const mb = white ? wb : 100 - wb;
     const ma = white ? wa : 100 - wa;
     const best = !!row.bestUci && row.bestUci.toLowerCase() === (row.playedUci ?? '').toLowerCase();
-    moves.push({
-      ply: i, white, cls: classify(mb, ma, best), accuracy: moveAccuracy(mb, ma),
+    const cls = classify(mb, ma, best);
+    base.push(cls);
+    const move: ReviewedMove = {
+      ply: i, white, cls, accuracy: moveAccuracy(mb, ma),
       winBefore: mb, winAfter: ma, evalBefore: before, evalAfter: after,
-    });
+    };
+    const uci = ucis?.[i];
+    if (uci) {
+      Object.assign(move, specialClass({
+        base: cls, prevBase: i > 0 ? base[i - 1] : null, white, winBefore: mb, winAfter: ma,
+        row, before, after, fenBefore: fens[i], fenAfter: fens[i + 1], uci,
+      }));
+    }
+    moves.push(move);
   }
 
   const weights = volatilityWeights(series);
@@ -249,6 +310,98 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[]):
   };
 
   return { series, moves, white: summary(true), black: summary(false) };
+}
+
+interface SpecialInput {
+  base: MoveClass;
+  /** Grundklasse des vorigen Halbzugs (des Gegners); `null` = erster Zug oder nicht bewertbar. */
+  prevBase: MoveClass | null;
+  white: boolean;
+  winBefore: number;
+  winAfter: number;
+  row: GameEvalPly;
+  before: EvalScore;
+  after: EvalScore;
+  fenBefore: string;
+  fenAfter: string;
+  uci: string;
+}
+
+/**
+ * Die drei Sonderklassen — ETIKETTEN über der Grundklasse; Genauigkeit und Gewinnchance bleiben, wie sie
+ * sind. Reihenfolge und Schwellen (Konstanten oben):
+ *
+ * 1. **Miss** ersetzt Inaccuracy/Mistake/Blunder, wenn der Gegner davor einen Fehler oder groben Fehler
+ *    gemacht hat, der Bestzug ≥ 70 % gebracht hätte und nach dem gespielten 40..60 % bleiben: nicht der
+ *    Verlust ist die Nachricht, sondern die verpasste Strafe. Unter 40 % bleibt es der Fehler, der es ist.
+ * 2. **Brilliant** ersetzt Best/Excellent (chess.com: „best or nearly best"), wenn dabei eine Figur
+ *    GEOPFERT wird (`sacrificedPiece`), die Stellung nicht ohnehin gewonnen war (Zweitbester < +7 und kein
+ *    Matt), sie danach nicht schlecht steht (≥ −1) und der Zug weder eine Umwandlung noch eine Antwort auf
+ *    Schach ist (dort sind Opfer erzwungen, nicht gefunden).
+ * 3. **Great** ersetzt Best, wenn er nicht schon brillant ist: der Gegner hat davor gepatzt, der Bestzug
+ *    liegt ≥ 1,5 Bauern vor dem Zweitbesten (der EINZIGE Zug, der die Chance nutzt), der Zweitbeste gewinnt
+ *    nicht ohnehin (dieselbe Grenze wie bei Brilliant — #2 gegen #4 ist kein „einziger guter Zug"), danach
+ *    bleiben ≥ 45 %, und es hängt nichts — ein Zug mit Opfer ist Brilliants Sache.
+ *
+ * Fehlt eine Zutat (zweiter Kandidat, bewerteter Vorzug, lesbare Stellung), entfällt die Sonderklasse.
+ */
+function specialClass(m: SpecialInput): { cls: MoveClass; sacrifice?: Sacrifice; gapPawns?: number } {
+  const opponentErred = m.prevBase === 'mistake' || m.prevBase === 'blunder';
+  // Alles in CENTIPAWNS und ganzzahlig verglichen: „Abstand ≥ 1,5" als Differenz zweier Kommazahlen
+  // landet in Gleitkomma knapp daneben (dieselbe Falle wie bei CLASS_LIMITS).
+  const second = scoreOf({ cp: m.row.secondCp, mate: m.row.secondMate });
+  const bestCp = moverCp(m.before, m.white, m.white);
+  const secondCp = second ? moverCp(second, m.white, m.white) : null;
+  const gapCp = bestCp != null && secondCp != null ? bestCp - secondCp : null;
+  const out: { cls: MoveClass; sacrifice?: Sacrifice; gapPawns?: number } =
+    gapCp != null ? { cls: m.base, gapPawns: gapCp / 100 } : { cls: m.base };
+
+  if ((m.base === 'inaccuracy' || m.base === 'mistake' || m.base === 'blunder') && opponentErred
+      && m.winBefore >= MISS_BEST_WIN && m.winAfter <= MISS_AFTER_WIN && m.winAfter >= MISS_MIN_AFTER_WIN) {
+    return { ...out, cls: 'miss' };
+  }
+  if (m.base !== 'best' && m.base !== 'excellent') return out;
+
+  // Das Opfer kostet zwei Brett-Ladungen und wird höchstens einmal gesucht — und nur, wenn es noch zählt.
+  let sacrifice: Sacrifice | null | undefined;
+  const sacrificed = () => sacrifice !== undefined
+    ? sacrifice : (sacrifice = sacrificedPiece(m.fenBefore, m.fenAfter, m.uci));
+
+  // Fehlt der Zweitbeste, war es der einzige Kandidat — dann war nichts „ohnehin" gewonnen.
+  const winningAnyway = second != null && secondCp != null
+    && ((second.mate != null && secondCp > 0) || secondCp >= BRILLIANT_WINNING_ANYWAY_PAWNS * 100);
+  const afterCp = moverCp(m.after, m.white, whiteToMove(m.fenAfter));
+  if (!isPromotion(m.uci) && !winningAnyway && afterCp != null && afterCp >= BRILLIANT_MIN_AFTER_PAWNS * 100
+      && !inCheck(m.fenBefore)) {
+    const s = sacrificed();
+    if (s) return { ...out, cls: 'brilliant', sacrifice: s };
+  }
+
+  if (m.base === 'best' && gapCp != null && gapCp >= GREAT_MIN_GAP_PAWNS * 100 && opponentErred
+      && !winningAnyway && m.winAfter >= GREAT_MIN_AFTER_WIN && !sacrificed()) {
+    return { ...out, cls: 'great' };
+  }
+  return out;
+}
+
+/**
+ * Bewertung in Centipawns aus Sicht des Ziehenden. Matt in n = ±(1000 − n) Bauern wie
+ * `GuessScoring.Pawns` — damit ist „Matt gegen kein Matt" ein riesiger Abstand und „#2 gegen #4" einer
+ * von zwei Bauern. `mate 0` heißt: die Seite am Zug IST matt, dafür braucht es `whiteToMoveHere`.
+ */
+function moverCp(score: EvalScore, moverWhite: boolean, whiteToMoveHere: boolean): number | null {
+  let white: number;
+  if (score.mate != null) {
+    const n = Math.min(Math.abs(score.mate), 999);
+    const mateCp = (MATE_BASE_PAWNS - n) * 100;
+    white = score.mate > 0 ? mateCp : score.mate < 0 ? -mateCp : whiteToMoveHere ? -mateCp : mateCp;
+  } else if (score.cp != null) {
+    white = score.cp;
+  } else {
+    return null;
+  }
+  // `0 - x` statt `-x`: sonst stünde bei Schwarz und 0,00 eine −0 im Ergebnis.
+  return moverWhite ? white : 0 - white;
 }
 
 /** Anzeige einer Bewertung aus Weiß-Sicht — dieselbe Form wie auf dem Analysebrett („+0.34", „#3"). */

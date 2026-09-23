@@ -5,6 +5,8 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { By } from '@angular/platform-browser';
+import { GameReviewComponent } from '../../features/games/game-review.component';
 import { PgnViewerComponent } from './pgn-viewer.component';
 
 describe('PgnViewerComponent', () => {
@@ -86,6 +88,15 @@ describe('PgnViewerComponent', () => {
     expect(fixture.nativeElement.querySelector('.board-section app-game-review app-eval-graph')).not.toBeNull();
     // Läuft die Analyse, ist der Knopf gesperrt (gleiche Regel wie auf /g/).
     expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
+  });
+
+  it('hands the moves to the review as UCI — the basis for Brilliant, Great and Miss', async () => {
+    const fixture = await setup({ pgn, evalsUrl: '/api/games/4/evals' });
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/games/4/evals').flush(running);
+    fixture.detectChanges();
+    const review = fixture.debugElement.query(By.directive(GameReviewComponent)).componentInstance as GameReviewComponent;
+    expect(review.ucis()).toEqual(['e2e4', 'e7e5', 'g1f3', 'b8c6']);
   });
 
   it('without an engine the button is disabled instead of failing on click', async () => {

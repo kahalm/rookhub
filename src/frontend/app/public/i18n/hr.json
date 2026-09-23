@@ -2458,13 +2458,26 @@
       "white": "Bijeli",
       "black": "Crni",
       "class": {
+        "brilliant": "Briljantno",
+        "great": "Sjajan potez",
         "best": "Najbolji potez",
         "excellent": "Izvrsno",
         "good": "Dobro",
         "inaccuracy": "Netočnost",
         "mistake": "Pogreška",
+        "miss": "Propušteno",
         "blunder": "Gruba pogreška"
-      }
+      },
+      "piece": {
+        "n": "skakač",
+        "b": "lovac",
+        "r": "top",
+        "q": "dama"
+      },
+      "sacrifice": "Žrtva: {{piece}} na {{square}}",
+      "greatGap": "Jedini dobar potez — sljedeći najbolji lošiji je za {{gap}} pješaka",
+      "greatOnly": "Jedini dobar potez",
+      "missHint": "Propuštena prilika da se kazni protivnikova pogreška"
     }
   },
   "analysis": {

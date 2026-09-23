@@ -2458,13 +2458,26 @@
       "white": "Weiß",
       "black": "Schwarz",
       "class": {
+        "brilliant": "Brillant",
+        "great": "Starker Zug",
         "best": "Bester Zug",
         "excellent": "Exzellent",
         "good": "Gut",
         "inaccuracy": "Ungenauigkeit",
         "mistake": "Fehler",
+        "miss": "Verpasst",
         "blunder": "Grober Fehler"
-      }
+      },
+      "piece": {
+        "n": "Springer",
+        "b": "Läufer",
+        "r": "Turm",
+        "q": "Dame"
+      },
+      "sacrifice": "Opfer: {{piece}} auf {{square}}",
+      "greatGap": "Der einzige gute Zug — der nächstbeste ist {{gap}} Bauern schlechter",
+      "greatOnly": "Der einzige gute Zug",
+      "missHint": "Den Fehler des Gegners nicht bestraft"
     }
   },
   "analysis": {

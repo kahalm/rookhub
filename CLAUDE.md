@@ -475,8 +475,8 @@ Haus-Engine, Tiefe 20, fünf Linien, gemeinsamer Deckel), aber mit eigenem Urspr
   Millisekunden fängt der Client (Knopf gesperrt, solange der Aufruf läuft).
 * **Perspektive**: die Kandidatenlisten stehen aus Sicht der Seite am Zug; `GameEvalsDto` liefert ALLES aus
   WEISS-Sicht (`Services/GameEvals.cs`, gedreht mit derselben FEN-Regel wie beim Einlesen). `cp/mate` = bester
-  Kandidat, `played*` = Kandidat des Partiezugs (fehlt er unter den fünf → `null`), `second*` = zweiter (heute
-  ungenutzt, für „Great" später). `final` = gespielter Kandidat der LETZTEN Zeile (für die Endstellung gibt es
+  Kandidat, `played*` = Kandidat des Partiezugs (fehlt er unter den fünf → `null`), `second*` = zweiter (seit
+  0.514.0 im Client für Great/Brilliant, siehe `src/frontend/CLAUDE.md`). `final` = gespielter Kandidat der LETZTEN Zeile (für die Endstellung gibt es
   keine Zeile). Nicht gerechnete und aufgegebene (`[]`) Zeilen fehlen in `plies` — der Client lässt dort eine Lücke.
 * Weder die Partie noch die Analyse bringen beim Nachfragen ihr PGN mit: der Rückfall (b) vergleicht per
   Unterabfrage in SQL (`QueryTranslationTests.GespeichertePartie_…` prüft die Übersetzung gegen MariaDB).

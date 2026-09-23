@@ -7,6 +7,8 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { By } from '@angular/platform-browser';
+import { GameReviewComponent } from './game-review.component';
 import { SharedGameComponent } from './shared-game.component';
 
 describe('SharedGameComponent', () => {
@@ -161,6 +163,17 @@ describe('SharedGameComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-game-review app-eval-graph')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('button.analyze')).toBeNull();
+  });
+
+  it('hands the moves to the review as UCI — the basis for Brilliant, Great and Miss', async () => {
+    const { fixture, http } = await setup(false);
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok/evals').flush({ ...runningEvals, status: 'done' });
+    fixture.detectChanges();
+    const review = fixture.debugElement.query(By.directive(GameReviewComponent)).componentInstance as GameReviewComponent;
+    expect(review.ucis()).toEqual(['e2e4', 'c7c5']);
   });
 
   it('while the analysis runs, the button is disabled instead of queueing a second one', async () => {

@@ -1,25 +1,39 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked,
+  ChangeDetectionStrategy, Component, DestroyRef, LOCALE_ID, computed, effect, inject, input, output, signal,
+  untracked,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, formatNumber } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
 import { GamesService } from './games.service';
 import {
-  EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MoveClass, formatEval, reviewGame,
+  EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
+  reviewGame,
 } from './game-review.util';
+import { uciOf } from './move-tactics.util';
 
-/** Zeichen je Klasse — dieselben Symbole wie in der Schachnotation, wo es sie gibt. */
+/**
+ * Zeichen je Klasse — dieselben Symbole wie in der Schachnotation, wo es sie gibt. „!" gehört seit den
+ * Sonderklassen dem Great (so auch bei chess.com); Excellent trägt deshalb den Daumen wie dort.
+ */
 const SYMBOLS: Record<MoveClass, string> = {
-  best: '★', excellent: '!', good: '✓', inaccuracy: '?!', mistake: '?', blunder: '??',
+  brilliant: '!!', great: '!', best: '★', excellent: '👍', good: '✓', inaccuracy: '?!', mistake: '?', miss: '✗',
+  blunder: '??',
 };
+
+/** Diese Klassen bekommen einen Punkt in der Kurve — die Züge, bei denen man hinsehen will. */
+const MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>(['brilliant', 'great', 'miss', 'mistake', 'blunder']);
+
+/** Ab diesem Abstand ist er keine Zahl in Bauern mehr, sondern ein Matt auf der einen Seite. */
+const MATE_GAP_PAWNS = 100;
 
 /**
  * Rückblick unter dem Brett: Bewertungskurve, Genauigkeit je Seite, Zug-Klassen und die Klasse des
  * AKTUELLEN Zugs — alles aus RookHubs eigener Partie-Analyse (`GET …/evals`), gerechnet in
- * `game-review.util.ts`.
+ * `game-review.util.ts`. Brilliant/Great/Miss brauchen zusätzlich die Züge (`moves`), weil das Opfer
+ * in der Stellung steckt; die Seiten reichen `game.moves` des PGN-Viewers herein.
  *
  * Solange die Analyse läuft, fragt die Komponente alle zehn Sekunden nach und zeigt die Kurve, soweit
  * sie steht; bei `done`/`failed`/`none` ruht sie. Ohne Analyse (`none`) zeigt sie NICHTS — die Seiten
@@ -46,9 +60,13 @@ const SYMBOLS: Record<MoveClass, string> = {
         <app-eval-graph [series]="review().series" [marks]="marks()" [currentIndex]="currentIndex()"
                         (moveClicked)="moveClicked.emit($event)" />
         @if (current(); as m) {
+          @let tip = hint(m);
           <div [class]="'current ' + m.cls">
-            <span class="badge">{{ symbol(m.cls) }} {{ ('games.review.class.' + m.cls) | translate }}</span>
+            <span class="badge" [style.background]="color(m.cls)">{{ symbol(m.cls) }} {{ ('games.review.class.' + m.cls) | translate }}</span>
             <span class="evals">{{ fmt(m.evalBefore) }} → {{ fmt(m.evalAfter) }}</span>
+            <!-- Als Text, nicht als Tooltip: am Handy gibt es kein Hover, und WARUM ein Zug brillant war, ist
+                 die Auskunft, für die man hinsieht. -->
+            @if (tip) { <span class="why">{{ tip }}</span> }
           </div>
         }
         <div class="table-wrap">
@@ -58,7 +76,8 @@ const SYMBOLS: Record<MoveClass, string> = {
                 <th></th>
                 <th class="acc-h">{{ 'games.review.accuracy' | translate }}</th>
                 @for (c of classes; track c) {
-                  <th><span [class]="'sym ' + c" [matTooltip]="('games.review.class.' + c) | translate"
+                  <th><span [class]="'sym ' + c" [style.background]="color(c)"
+                            [matTooltip]="('games.review.class.' + c) | translate"
                             [attr.aria-label]="('games.review.class.' + c) | translate">{{ symbol(c) }}</span></th>
                 }
               </tr>
@@ -88,12 +107,17 @@ const SYMBOLS: Record<MoveClass, string> = {
     .title { font-weight: 600; font-size: 0.9rem; }
     .progress { font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress.failed { color: #e53935; }
-    .current { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
-    .current .badge { padding: 1px 8px; border-radius: 10px; color: #fff; font-weight: 600; white-space: nowrap; }
+    .current { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.85rem; }
+    .current .why { color: color-mix(in srgb, currentColor 70%, transparent); }
+    /* Die chess.com-Farben sind hell (Gelb, Hellgrün) — ein Schatten hält die weiße Schrift darauf lesbar. */
+    .current .badge {
+      padding: 1px 8px; border-radius: 10px; color: #fff; font-weight: 600; white-space: nowrap;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+    }
     .current .evals { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 75%, transparent); }
     /* Eigenes overflow-x: auf einem schmalen Handy darf die Tabelle nicht die ganze Seite verbreitern. */
     .table-wrap { overflow-x: auto; }
-    .summary { border-collapse: collapse; font-size: 0.8rem; min-width: 280px; width: 100%; }
+    .summary { border-collapse: collapse; font-size: 0.8rem; min-width: 340px; width: 100%; }
     .summary th, .summary td { padding: 2px 4px; text-align: center; white-space: nowrap; }
     .summary tbody th { text-align: left; font-weight: 500; }
     .summary .acc-h, .summary .acc { text-align: right; font-variant-numeric: tabular-nums; }
@@ -103,17 +127,14 @@ const SYMBOLS: Record<MoveClass, string> = {
     .sym {
       display: inline-block; min-width: 20px; padding: 0 3px; border-radius: 9px; box-sizing: border-box;
       color: #fff; font-weight: 700; font-size: 0.75rem; line-height: 18px; cursor: default;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
     }
-    .sym.best, .current.best .badge { background: #5d9c37; }
-    .sym.excellent, .current.excellent .badge { background: #7fa650; }
-    .sym.good, .current.good .badge { background: #7b9a78; }
-    .sym.inaccuracy, .current.inaccuracy .badge { background: #d9a520; }
-    .sym.mistake, .current.mistake .badge { background: #ef8a2c; }
-    .sym.blunder, .current.blunder .badge { background: #e53935; }
   `],
 })
 export class GameReviewComponent {
   private games = inject(GamesService);
+  private translate = inject(TranslateService);
+  private locale = inject(LOCALE_ID);
 
   /** `GET …/evals` der Partie; `null` = keine Kurve (die Komponente bleibt unsichtbar). */
   evalsUrl = input<string | null>(null);
@@ -121,6 +142,11 @@ export class GameReviewComponent {
   fens = input<string[]>([]);
   /** Aktueller Zug (`currentMoveIndex`, −1 = Startstellung). */
   currentIndex = input<number>(-1);
+  /**
+   * Die Partiezüge (chess.js-`Move` des PGN-Viewers, `game.moves`). Ohne sie gibt es kein Brilliant, Great
+   * oder Miss — ob eine Figur geopfert wurde, steht in der Stellung, nicht in den Bewertungen.
+   */
+  moves = input<readonly { from: string; to: string; promotion?: string | null }[]>([]);
 
   /** Klick in die Kurve — Halbzug-Index wie `currentMoveIndex`. */
   moveClicked = output<number>();
@@ -134,14 +160,15 @@ export class GameReviewComponent {
   readonly status = computed<GameEvalsStatus>(() => this.evals()?.status ?? 'none');
   readonly running = computed(() => this.status() === 'pending' || this.status() === 'running');
   readonly progress = computed(() => ({ done: this.evals()?.analyzed ?? 0, total: this.evals()?.total ?? 0 }));
-  readonly review = computed(() => reviewGame(this.evals(), this.fens()));
+  readonly ucis = computed(() => this.moves().map(uciOf));
+  readonly review = computed(() => reviewGame(this.evals(), this.fens(), this.ucis()));
   readonly rows = computed(() => [
     { key: 'white', summary: this.review().white },
     { key: 'black', summary: this.review().black },
   ]);
   readonly marks = computed<EvalGraphMark[]>(() => this.review().moves
-    .filter(m => m?.cls === 'mistake' || m?.cls === 'blunder')
-    .map(m => ({ ply: m!.ply, kind: m!.cls as 'mistake' | 'blunder' })));
+    .filter((m): m is ReviewedMove => !!m && MARKED.has(m.cls))
+    .map(m => ({ ply: m.ply, kind: m.cls, color: MOVE_CLASS_COLORS[m.cls] })));
   readonly current = computed(() => {
     const i = this.currentIndex();
     return i >= 0 ? this.review().moves[i] ?? null : null;
@@ -179,6 +206,29 @@ export class GameReviewComponent {
   }
 
   symbol(c: MoveClass): string { return SYMBOLS[c]; }
+  color(c: MoveClass): string { return MOVE_CLASS_COLORS[c]; }
+
+  /**
+   * Erklärung neben dem Abzeichen — bei den Sonderklassen sagt das Etikett allein nicht, WARUM: welche Figur
+   * geopfert wurde, wie weit der Zweitbeste zurücklag, was verpasst wurde. Leer = keine Zeile.
+   * `instant` statt Pipe, weil der Figurenname selbst übersetzt in den Satz muss; die Vorlage ruft die
+   * Methode bei jedem Sprachwechsel neu auf (die Pipes daneben lösen die Prüfung aus).
+   */
+  hint(m: ReviewedMove): string {
+    if (m.cls === 'brilliant' && m.sacrifice) {
+      return this.translate.instant('games.review.sacrifice', {
+        piece: this.translate.instant('games.review.piece.' + m.sacrifice.piece), square: m.sacrifice.square,
+      });
+    }
+    if (m.cls === 'great') {
+      // Mit einem Matt im Spiel ist der Abstand keine Zahl in Bauern — „992 Bauern" läse sich wie ein Fehler.
+      return m.gapPawns != null && m.gapPawns < MATE_GAP_PAWNS && m.evalBefore.mate == null
+        ? this.translate.instant('games.review.greatGap', { gap: formatNumber(m.gapPawns, this.locale, '1.1-1') })
+        : this.translate.instant('games.review.greatOnly');
+    }
+    if (m.cls === 'miss') return this.translate.instant('games.review.missHint');
+    return '';
+  }
   fmt(score: EvalScore): string { return formatEval(score); }
 
   private apply(evals: GameEvals | null): void {

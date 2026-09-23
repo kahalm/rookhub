@@ -108,7 +108,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                 <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
               </div>
               @if (service.currentGame; as g) {
-                <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens"
+                <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
                                  [currentIndex]="service.currentMoveIndex"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)" />

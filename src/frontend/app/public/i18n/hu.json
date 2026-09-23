@@ -2712,13 +2712,26 @@
       "white": "Világos",
       "black": "Sötét",
       "class": {
+        "brilliant": "Briliáns",
+        "great": "Nagyszerű lépés",
         "best": "Legjobb lépés",
         "excellent": "Kiváló",
         "good": "Jó",
         "inaccuracy": "Pontatlanság",
         "mistake": "Hiba",
+        "miss": "Kihagyott esély",
         "blunder": "Durva hiba"
-      }
+      },
+      "piece": {
+        "n": "huszár",
+        "b": "futó",
+        "r": "bástya",
+        "q": "vezér"
+      },
+      "sacrifice": "Áldozat: {{piece}} ({{square}})",
+      "greatGap": "Az egyetlen jó lépés — a következő legjobb {{gap}} gyaloggal rosszabb",
+      "greatOnly": "Az egyetlen jó lépés",
+      "missHint": "Kimaradt az ellenfél hibájának megbüntetése"
     }
   },
   "analysisJobs": {
