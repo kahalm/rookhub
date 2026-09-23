@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import { extractSanTokens, resolveVariation, buildCommentSegments, splitBranches } from './comment-variation.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -256,5 +257,71 @@ describe('comment-variation.util — lange Prosa-Variante (Kurs 421, oid 7300026
   it('die Vorschau des letzten Zuges steht in der Endstellung der Variante', () => {
     const last = buildCommentSegments(TEXT, FEN, MAIN).filter(s => s.move).at(-1);
     expect(last?.fen?.split(' ')[0]).toBe('8/p3b3/4k3/2pn2pp/2N5/P1P3P1/1P1N1PK1/8');
+  });
+});
+
+describe('comment-variation.util — mehrdeutiger Zug (Kurs Lifetime Repertoires KID Part 2, gemeldet 2026-09-23)', () => {
+  // ----- Mehrdeutige Züge (gemeldet 2026-09-23) -----
+  //
+  // Kurs „Lifetime Repertoires: King's Indian Defense - Part 2", Linie „Fianchetto Variation: 7.d5 e6
+  // 8.O-O with 9.Ng5 #6": nach 15…Sc6 stehen Springer auf c3 UND c5, beide können nach e4. Der
+  // Kommentar zu 16.Dxd6 sagt „16.Ne4 is a better try …" — ohne Angabe, welcher. An Zug 16 war der Zug
+  // damit nicht spielbar, und der Resolver suchte weiter, bis er eine Stellung fand, in der „Ne4" geht:
+  // 1.d4 Sf6 2.c4 — Schwarz' Springer von f6. Ein Klick zeigte also Zug 2 statt Zug 16.
+
+  /** Die Hauptlinie der gemeldeten Linie bis 16.Dxd6 als UCI. */
+  function kidLine(): string[] {
+    const c = new Chess();
+    const sans = 'd4 Nf6 c4 g6 g3 Bg7 Bg2 O-O Nc3 d6 Nf3 c5 d5 e6 O-O Re8 Ng5 exd5 Bxd5 Nxd5 Qxd5 Re7 '
+      + 'Nge4 Be6 Qd3 h6 Nxc5 Bh3 Rd1 Nc6 Qxd6';
+    return sans.split(' ').map(san => {
+      const m = c.move(san);
+      return m.from + m.to + (m.promotion ?? '');
+    });
+  }
+
+  it('springt mit einem nummerierten Zug NIE an eine andere Stelle der Partie', () => {
+    const segs = buildCommentSegments(
+      '16.Ne4 is a better try, although we have full compensation after Bf5.', START, kidLine());
+
+    // Mehrdeutig, und der Rest („Bf5" geht nach beiden) entscheidet nicht → kein Klick, statt zu raten.
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual([]);
+    // Vor allem: keine Vorschau aus der Eröffnung (1.d4 Sf6 2.c4 Se4).
+    expect(segs.some(s => s.fen?.startsWith('rnbqkb1r/pppppppp/8/8/2PPn3'))).toBeFalse();
+  });
+
+  it('löst einen mehrdeutigen Zug auf, wenn die Folge es entscheidet', () => {
+    // Nach 16.S3e4 steht der Springer auf c5 noch und kann 17.Sxb7 spielen; nach 16.S5e4 nicht mehr.
+    const segs = buildCommentSegments('16.Ne4 Bf5 17.Nxb7', START, kidLine());
+
+    const moves = segs.filter(s => s.move);
+    expect(moves.map(s => s.move)).toEqual(['16.Ne4', 'Bf5', '17.Nxb7']);
+    expect(moves[0].from).toBe('c3');
+    expect(moves[0].to).toBe('e4');
+    expect(moves[2].from).toBe('c5');
+  });
+
+  it('eine eindeutig geschriebene Fassung desselben Zugs geht wie immer', () => {
+    const segs = buildCommentSegments('16.N3e4 is a better try.', START, kidLine());
+
+    expect(segs.find(s => s.move)?.from).toBe('c3');
+  });
+
+  it('liest numerlose Züge nach einer Zugnummer als Alternativen DIESES Zuges', () => {
+    // Alle drei sind Züge von Weiß anstelle von 16.Dxd6 — nicht irgendwo in der Partie.
+    const moves = buildCommentSegments('16.Rd2, Bf4 or Bg5', START, kidLine()).filter(s => s.move);
+
+    expect(moves.map(s => [s.move, s.from, s.to])).toEqual([
+      ['16.Rd2', 'd1', 'd2'], ['Bf4', 'c1', 'f4'], ['Bg5', 'c1', 'g5'],
+    ]);
+  });
+
+  it('liest einen numerlosen Zug hinter einer Zugnummer als Fortsetzung, wenn nur das passt', () => {
+    // „after Bf5" gehört hinter 16.Td2 (Schwarz am Zug), nicht zu 10…Lf5 in der Eröffnung.
+    const moves = buildCommentSegments('16.Rd2 is fine, after Bf5 17.e4', START, kidLine()).filter(s => s.move);
+
+    expect(moves.map(s => [s.move, s.from, s.to])).toEqual([
+      ['16.Rd2', 'd1', 'd2'], ['Bf5', 'h3', 'f5'], ['17.e4', 'e2', 'e4'],
+    ]);
   });
 });

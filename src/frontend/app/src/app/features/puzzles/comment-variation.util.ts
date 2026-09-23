@@ -7,8 +7,12 @@ import { tryLoadFen } from './puzzle-move.util';
  * Kommentar-Varianten (z. B. „… weil 2.fxe6 … 2…Kc7 erlaubt.") nutzen eine EIGENE Zug-Nummerierung
  * und lassen Züge aus — die Basis-Stellung lässt sich also NICHT frei aus dem Text ableiten. Wir
  * verankern jeden Zweig an der zu seiner Zugnummer passenden Hauptlinien-Stellung (Start-FEN + nach
- * jedem Zug); ohne Nummer suchen wir die früheste Stellung, aus der die Folge legal ist (= die aktuelle
- * Stellung bei Einleitungs-Kommentaren). Nur so validierte Züge werden klickbar; alles andere bleibt Text.
+ * jedem Zug) — und NUR dort: geht er dort nicht, bleibt er Text, statt in einer anderen Stellung der
+ * Partie zu landen. Ein Zweig ohne Nummer hinter einem nummerierten ist Alternative oder Fortsetzung
+ * DIESES Zweigs ({@link BranchContext}); erst ohne jede Nummer im Kommentar suchen wir die früheste
+ * Stellung, aus der die Folge legal ist (= die aktuelle Stellung bei Einleitungs-Kommentaren). Ein
+ * mehrdeutiger Zug („Ne4" mit zwei Springern) gilt nur, wenn die Folge danach die Figur festlegt
+ * ({@link playOn}). Nur so validierte Züge werden klickbar; alles andere bleibt Text.
  *
  * ZWEIGE: Ein Kommentar kann mehrere unabhängige Linien enthalten (Chessable-Autoren schreiben sie als
  * Prosa). Wir trennen an
@@ -224,15 +228,60 @@ function baseStartPly(startFen: string): number {
  *  Leer bei einer von chess.js abgelehnten `baseFen` (illegales Diagramm) — nichts ist dann klickbar. */
 function playPrefix(baseFen: string, sans: string[]): VariationStep[] {
   const c = tryLoadFen(baseFen);
-  if (!c) return [];
-  const steps: VariationStep[] = [];
-  for (const san of sans) {
+  return c ? playOn(c, sans, 0) : [];
+}
+
+/**
+ * Spielt `sans[i..]` ab der Stellung von `c` (ohne `c` zu verändern).
+ *
+ * <p><b>Mehrdeutige Züge</b> („Ne4", wenn zwei Springer dorthin können) lehnt chess.js ab — zu Recht,
+ * die Notation sagt nicht, welcher. Autoren schreiben das in Prosa trotzdem, und Chessable reicht es
+ * so weiter (gemeldet 2026-09-23: nach 15…Sc6 stehen Springer auf c3 und c5). Statt zu raten, wird
+ * jede passende Fortsetzung durchgespielt: entscheidet der REST der Folge (nur nach einem der beiden
+ * Züge geht der nächste Zug), ist die Frage beantwortet; tut er es nicht, endet der Präfix hier und
+ * der Zug bleibt Text. Ein falscher Springer auf dem Vorschau-Brett wäre schlimmer als gar keiner.</p>
+ */
+function playOn(c: Chess, sans: string[], i: number): VariationStep[] {
+  if (i >= sans.length) return [];
+  const san = sans[i];
+  const candidates = candidatesFor(c, normalizeSan(san));
+
+  let best: VariationStep[] | null = null;
+  let tied = false;
+  for (const cand of candidates) {
+    const next = tryLoadFen(c.fen());
+    if (!next) continue;
     let mv;
-    try { mv = c.move(normalizeSan(san)); } catch { break; }
-    if (!mv) break;
-    steps.push({ san, fen: c.fen(), from: mv.from, to: mv.to });
+    try { mv = next.move(cand); } catch { continue; }
+    if (!mv) continue;
+    const steps = [{ san, fen: next.fen(), from: mv.from, to: mv.to }, ...playOn(next, sans, i + 1)];
+    if (!best || steps.length > best.length) { best = steps; tied = false; }
+    else if (steps.length === best.length) tied = true;
   }
-  return steps;
+  return best && !tied ? best : [];
+}
+
+/** SAN-Zeichen, die für die Zuordnung nichts sagen (Schach, Matt, Bewertung). */
+const SAN_DECORATION = /[+#!?]+$/;
+
+/**
+ * Welche Züge meint `san` in dieser Stellung? Eindeutig geschrieben → genau einer (der Weg über
+ * chess.js selbst). Mehrdeutig („Ne4" mit zwei Springern) → alle, auf die Figur, Zielfeld, Umwandlung
+ * und die geschriebene Linie/Reihe passen. Illegal → keiner.
+ */
+function candidatesFor(c: Chess, san: string): (string | { from: string; to: string; promotion?: string })[] {
+  const probe = tryLoadFen(c.fen());
+  if (probe) {
+    try { if (probe.move(san)) return [san]; } catch { /* mehrdeutig oder illegal — unten genauer */ }
+  }
+  const m = /^([KQRBN])([a-h])?([1-8])?x?([a-h][1-8])(?:=([QRBN]))?$/.exec(san.replace(SAN_DECORATION, ''));
+  if (!m) return [];
+  const [, piece, file, rank, to, promotion] = m;
+  return c.moves({ verbose: true })
+    .filter(mv => mv.piece === piece.toLowerCase() && mv.to === to
+      && (!file || mv.from[0] === file) && (!rank || mv.from[1] === rank)
+      && (promotion ? mv.promotion === promotion.toLowerCase() : !mv.promotion))
+    .map(mv => ({ from: mv.from, to: mv.to, promotion: mv.promotion }));
 }
 
 /**
@@ -245,12 +294,22 @@ function playPrefix(baseFen: string, sans: string[]): VariationStep[] {
 export function resolveVariation(startFen: string, ucis: string[], sans: string[], startPly?: number): VariationStep[] {
   if (!sans.length) return [];
   const bases = mainlineFens(startFen, ucis);
+  const firstPly = baseStartPly(startFen);
   const order: number[] = [];
   if (startPly !== undefined) {
-    const anchor = startPly - baseStartPly(startFen);
-    if (anchor >= 0 && anchor < bases.length) order.push(anchor);
+    const anchor = startPly - firstPly;
+    // Passt die Zugnummer zur Linie, ist SIE die Antwort — und keine andere Stellung. Vorher war sie
+    // nur Vorrang bei Gleichstand: ging der Zug dort nicht (mehrdeutig, Tippfehler), suchte der
+    // Resolver weiter und fand „16.Ne4" in 1.d4 Sf6 2.c4 Se4 wieder — die Vorschau zeigte Zug 2
+    // statt Zug 16 (gemeldet 2026-09-23). Text ist die ehrlichere Antwort als ein falsches Brett.
+    if (anchor >= 0 && anchor < bases.length) return playPrefix(bases[anchor], sans);
   }
-  for (let i = 0; i < bases.length; i++) if (!order.includes(i)) order.push(i);
+  for (let i = 0; i < bases.length; i++) {
+    // Außerhalb der Linie (Kommentar zählt anders als die Start-FEN) bleibt die Suche — aber nur in
+    // Stellungen, in denen die Seite am Zug ist, die die Nummer nennt: „16." ist ein Zug von Weiß.
+    if (startPly !== undefined && (firstPly + i) % 2 !== startPly % 2) continue;
+    order.push(i);
+  }
 
   let best: VariationStep[] = [];
   for (const i of order) {
@@ -280,9 +339,29 @@ function resolveAtAnchor(startFen: string, ucis: string[], sans: string[], start
   return anchor >= 0 && anchor < bases.length ? playPrefix(bases[anchor], sans) : [];
 }
 
+/**
+ * Wo ein Zweig OHNE Zugnummer stehen kann, wenn vor ihm im selben Kommentar schon ein nummerierter
+ * stand: als ALTERNATIVE zu dessen erstem Zug („16.Ne4, Nd5 oder Lf4") oder als FORTSETZUNG hinter
+ * dessen letztem („16.Nd5 ist besser, nach Lf5 17.Sxe7 …"). Sonst nirgends — vorher suchte der
+ * Resolver die ganze Partie ab und fand „after Bf5" hinter „16.Ne4" bei 10…Lf5 (gemeldet 2026-09-23).
+ * `contFen` fehlt, wenn der Zweig davor nicht bis zum Ende aufging: dann ist unbekannt, wo er endet.
+ */
+interface BranchContext { altFen: string; contFen?: string; }
+
 /** Löst einen Zweig auf (siehe Datei-Kopf, „VORWÄRTS-SPRUNG"): ein aufgelöster Schritt je Zug oder null. */
-function resolveBranch(startFen: string, ucis: string[], b: CommentBranch): (VariationStep | null)[] {
-  const steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
+function resolveBranch(
+  startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext,
+): { out: (VariationStep | null)[]; ctx?: BranchContext } {
+  let steps: VariationStep[];
+  let usedFen: string | undefined;
+  if (b.startPly === undefined && ctx) {
+    const alt = playPrefix(ctx.altFen, b.sans);
+    const cont = ctx.contFen ? playPrefix(ctx.contFen, b.sans) : [];
+    // Gleichstand → Alternative: dafür trennt das Komma überhaupt („c5, a5, Kd4" = Aufzählung).
+    [steps, usedFen] = cont.length > alt.length ? [cont, ctx.contFen] : [alt, ctx.altFen];
+  } else {
+    steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
+  }
   const out: (VariationStep | null)[] = b.sans.map((_s, k) => (k < steps.length ? steps[k] : null));
   const plies = b.plies ?? [];
   let k = steps.length;
@@ -299,7 +378,24 @@ function resolveBranch(startFen: string, ucis: string[], b: CommentBranch): (Var
     rest.forEach((step, j) => { out[k + j] = step; });
     k += rest.length;
   }
-  return out;
+  return { out, ctx: nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen) };
+}
+
+/** Der Rahmen für den NÄCHSTEN Zweig (siehe {@link BranchContext}). */
+function nextContext(
+  startFen: string, ucis: string[], b: CommentBranch, out: (VariationStep | null)[], inheritedAlt?: string,
+): BranchContext | undefined {
+  let altFen = inheritedAlt;
+  if (b.startPly !== undefined) {
+    // Nur eine Zugnummer INNERHALB der Linie gibt einen Ort; liegt sie außerhalb, weiß niemand, wo der
+    // Zweig stand — dann bleibt es für den nächsten bei der alten Suche.
+    const bases = mainlineFens(startFen, ucis);
+    const anchor = b.startPly - baseStartPly(startFen);
+    altFen = anchor >= 0 && anchor < bases.length ? bases[anchor] : undefined;
+  }
+  if (!altFen) return undefined;
+  const last = out[out.length - 1];
+  return { altFen, contFen: last?.fen };
 }
 
 /**
@@ -310,7 +406,12 @@ function resolveBranch(startFen: string, ucis: string[], b: CommentBranch): (Var
 export function buildCommentSegments(text: string, startFen: string, ucis: string[]): CommentSegment[] {
   // Pro Token in Original-Reihenfolge den aufgelösten Schritt (oder null) bestimmen.
   const perToken: (VariationStep | null)[] = [];
-  for (const b of branches(text)) perToken.push(...resolveBranch(startFen, ucis, b));
+  let ctx: BranchContext | undefined;
+  for (const b of branches(text)) {
+    const r = resolveBranch(startFen, ucis, b, ctx);
+    perToken.push(...r.out);
+    ctx = r.ctx;
+  }
 
   const segments: CommentSegment[] = [];
   let last = 0;
