@@ -46,7 +46,10 @@ module.exports = function (config) {
       // gestartet (sonst startet Chrome gar nicht). Schadet lokal nicht.
       ChromeHeadlessNoSandbox: {
         base: 'ChromeHeadless',
-        flags: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+        // --window-size: Layout-Specs messen gegen den Viewport (Media-Queries, vh/vw). Ohne feste
+        // Größe war der CI-Browser schmaler als 768 px und lief in die Handy-Regeln, lokal nicht —
+        // derselbe Spec grün hier, rot dort (2026-09-23, shared-game.component.spec).
+        flags: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--window-size=1400,900'],
       },
     },
     restartOnFileChange: true,

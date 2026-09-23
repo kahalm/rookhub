@@ -50,7 +50,10 @@ describe('SharedGameComponent', () => {
   // Gemeldet 2026-09-23: am PC stand ein 400-px-Brett auf einer 900-px-Karte, die Zugliste füllte den Rest mit
   // einer Handbreit Luft zwischen den Spalten, „Partie im Original öffnen" lag als kartenbreite Zeile darunter.
   // Jetzt wächst das Brett mit dem Fenster, die Zugliste hat eine feste Breite neben ihm, und der Knopf steht
-  // in der Kopfzeile. Der Karma-Browser ist breit genug für die Desktop-Regeln (> 768 px).
+  // in der Kopfzeile. Welche Regeln gelten, entscheidet der VIEWPORT des Karma-Browsers (Media-Query bei
+  // 768 px): der Launcher stellt 1400 × 900 ein (karma.conf.js); ohne die Angabe war der CI-Browser schmaler
+  // und dieser Spec dort rot — deshalb prüft er in beiden Fällen das jeweils richtige Layout, statt eines
+  // davon vorauszusetzen.
   it('uses the desktop space: board grows past 400px, move list keeps a fixed width beside it, link sits in the header', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();
@@ -61,12 +64,20 @@ describe('SharedGameComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     const board = el.querySelector('.board-wrap') as HTMLElement;
     const moves = el.querySelector('.moves-section') as HTMLElement;
-    // Brett = clamp(360, min(100vh − 300, 100vw − 440), 640) — hängt am Fenster, nicht mehr fest 400 px.
-    const expected = Math.min(640, Math.max(360, Math.min(window.innerHeight - 300, window.innerWidth - 440)));
-    expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(expected));
-    expect(Math.round(moves.getBoundingClientRect().width)).toBe(300);
-    // Zugliste NEBEN dem Brett (gleiche Oberkante), nicht darunter.
-    expect(Math.abs(moves.getBoundingClientRect().top - board.getBoundingClientRect().top)).toBeLessThan(2);
     expect(el.querySelector('.header .original')).not.toBeNull();
+
+    if (window.innerWidth > 768) {
+      // Brett = clamp(360, min(100vh − 300, 100vw − 440), 640) — hängt am Fenster, nicht mehr fest 400 px.
+      const expected = Math.min(640, Math.max(360, Math.min(window.innerHeight - 300, window.innerWidth - 440)));
+      expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(expected));
+      expect(Math.round(moves.getBoundingClientRect().width)).toBe(300);
+      // Zugliste NEBEN dem Brett (gleiche Oberkante), nicht darunter.
+      expect(Math.abs(moves.getBoundingClientRect().top - board.getBoundingClientRect().top)).toBeLessThan(2);
+    } else {
+      // Handy-Regeln: Brett volle Breite, Zugliste darunter.
+      const section = el.querySelector('.board-section') as HTMLElement;
+      expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(section.getBoundingClientRect().width));
+      expect(moves.getBoundingClientRect().top).toBeGreaterThanOrEqual(board.getBoundingClientRect().bottom);
+    }
   });
 });

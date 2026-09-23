@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.509.2", date: "2026-09-23", changes: [
+    { en: "Test run only: the layout check of the shared game page (0.509.1) assumed a wide browser window and failed in the build pipeline, whose headless browser was narrower than the phone breakpoint. The test browser now has a fixed window size, and the check verifies the phone layout when the window is narrow. No change to the app itself.", de: "Nur Testlauf: die Layout-Prüfung der geteilten Partie (0.509.1) setzte ein breites Browserfenster voraus und schlug in der Build-Pipeline fehl, deren Browser schmaler als die Handy-Grenze war. Der Test-Browser hat jetzt eine feste Fenstergröße, und die Prüfung kontrolliert bei schmalem Fenster das Handy-Layout. An der App ändert sich nichts." },
+  ] },
   { version: "0.509.1", date: "2026-09-23", changes: [
     { en: "Shared game page (/g/…) on a desktop screen: the board now grows with the window (up to 640 px) instead of staying at 400 px, the move list keeps a fixed width right beside it so the two move columns sit together instead of spreading across the card, the card wraps its content and sits centred, and „Open original game“ moved into the header next to the players. Phones are unchanged.", de: "Geteilte Partie (/g/…) am PC: das Brett wächst jetzt mit dem Fenster (bis 640 px), statt bei 400 px zu bleiben, die Zugliste hat eine feste Breite direkt daneben, sodass die beiden Zugspalten beieinander stehen statt über die ganze Karte verteilt, die Karte umschließt ihren Inhalt und steht mittig, und „Partie im Original öffnen“ ist in die Kopfzeile neben die Spieler gewandert. Am Handy bleibt alles wie bisher." },
   ] },
