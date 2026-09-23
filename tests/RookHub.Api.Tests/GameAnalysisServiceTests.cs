@@ -886,7 +886,7 @@ public class GameAnalysisServiceTests : IDisposable
     /// <summary>Der Weg ueber die gespeicherte Partie ist DERSELBE Einwurf (feste Tiefe, fuenf Linien,
     /// Haus-Engine), nur anders etikettiert — das Etikett entscheidet, in welcher Liste er erscheint.</summary>
     [Fact]
-    public async Task CreateForGuess_mitUrsprungGespeichertePartie_rechnetGleich_etikettiertAnders()
+    public async Task CreateForGuess_mitUrsprungGespeichertePartie_rechnetTiefer_aufDerselbenHausEngine()
     {
         var admin = await CreateUserAsync("admin", admin: true);
         await GiveEngineAsync(admin, house: true);
@@ -897,7 +897,10 @@ public class GameAnalysisServiceTests : IDisposable
 
         var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
         Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
-        Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, analysis.TargetDepth);
+        // Die Bewertung ist hier das Ergebnis: Tiefe 30 wie beim Einreihen von Hand, nicht die 20 der
+        // Punktepartie — Haus-Engine und Deckel bleiben dieselben.
+        Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.TargetDepth);
+        Assert.NotEqual(GameAnalysisDefaults.GuessTargetDepth, analysis.TargetDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.MultiPv);
         Assert.Equal(admin.Id, analysis.EngineOwnerUserId);
     }

@@ -170,6 +170,16 @@ public static class GameAnalysisDefaults
     /// </summary>
     public const int GuessTargetDepth = 20;
 
+    /// <summary>
+    /// Tiefe fuer „Partie analysieren" an einer GESPEICHERTEN Partie (<see cref="GameAnalysisOrigin.SavedGame"/>).
+    /// Anders als bei der Punktepartie ist hier die BEWERTUNG das Ergebnis: Kurve, Genauigkeit und
+    /// Zug-Klassen haengen an den Zahlen, und ein Opfer, das die Engine erst zwei Zuege spaeter
+    /// versteht, steht bei 20 noch als Fehler in der Kurve. Deshalb 30 — dieselbe Tiefe wie beim
+    /// Einreihen von Hand (<see cref="TargetDepth"/>), gewuenscht am 2026-09-23. Der Deckel
+    /// (<see cref="MaxOpenGuessGamesPerUser"/>) bleibt gemeinsam.
+    /// </summary>
+    public const int SavedGameTargetDepth = 30;
+
     /// <summary>So viele eingeworfene Partien darf ein Nutzer gleichzeitig offen haben. Der Deckel
     /// zaehlt <see cref="GameAnalysisOrigin.Guess"/> UND <see cref="GameAnalysisOrigin.SavedGame"/>
     /// zusammen — beide rechnen auf fremder Rechenzeit, und getrennte Deckel hiessen doppelt so viele
