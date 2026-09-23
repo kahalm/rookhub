@@ -6,9 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import { TreeChild, Breadcrumb } from './move-tree.service';
-import { StoredFrequencies } from './repertoire-frequency.util';
-import { normalizeFen } from './position-filter.util';
-import { formatPercent } from './repertoire-explorer.service';
+import { ExplorerPosition, formatPercent } from './repertoire-explorer.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -27,19 +25,17 @@ import { formatPercent } from './repertoire-explorer.service';
         }
       </div>
 
-      <div class="freq-bar">@if (frequenciesLoading) { <mat-progress-bar mode="indeterminate" /> }</div>
-      @if (frequencyNote) {
-        <div class="freq-source note">{{ frequencyNote | translate }}</div>
-      }
-      @if (frequencies) {
-        <div class="freq-source">
-          {{ 'repertoire.tree.freqFrom' | translate: { date: savedAtLabel } }}
-          · {{ (frequencies.source === 'local' ? 'repertoire.holes.sourceLocal' : 'repertoire.holes.sourceOnline') | translate }}
-          · {{ frequencies.database === 'masters' ? ('repertoire.holes.masters' | translate) : 'Lichess' }}
-          @if (!frequencies.complete) { · {{ 'repertoire.tree.freqIncomplete' | translate }} }
+      <div class="pop-bar">@if (popularityLoading) { <mat-progress-bar mode="indeterminate" /> }</div>
+      @if (popularityNote) {
+        <div class="pop-source note">{{ popularityNote | translate }}</div>
+      } @else if (popularity) {
+        <div class="pop-source">
+          @if (popularity.total > 0) {
+            {{ 'repertoire.tree.popFrom' | translate: { source: sourceLabel | translate, db: databaseLabel | translate, count: compact(popularity.total) } }}
+          } @else {
+            {{ 'repertoire.tree.popNone' | translate }}
+          }
         </div>
-      } @else if (!frequenciesLoading && !frequencyNote) {
-        <div class="freq-source">{{ 'repertoire.tree.freqHint' | translate }}</div>
       }
 
       @if (breadcrumbs.length > 0) {
@@ -53,8 +49,8 @@ import { formatPercent } from './repertoire-explorer.service';
           <div class="child-item" role="button" tabindex="0" (click)="nodeSelected.emit(child.san)"
                (keydown.enter)="nodeSelected.emit(child.san)" (keydown.space)="$event.preventDefault(); nodeSelected.emit(child.san)">
             <span class="child-san">{{ child.san }}</span>
-            @if (frequencyOf(child); as f) {
-              <span class="child-freq" [matTooltip]="'repertoire.tree.freqTip' | translate">≈ {{ f }}</span>
+            @if (shareOf(child); as share) {
+              <span class="child-pop" [matTooltip]="'repertoire.tree.popTip' | translate">{{ share }}</span>
             }
             <span class="child-count">{{ (child.count === 1 ? 'repertoire.tree.lineCount' : 'repertoire.tree.lineCountPlural') | translate: { count: child.count } }}</span>
           </div>
@@ -102,12 +98,12 @@ import { formatPercent } from './repertoire-explorer.service';
       font-weight: 600;
       font-size: 15px;
     }
-    .child-freq { margin-left: auto; margin-right: 12px; font-size: 13px; font-variant-numeric: tabular-nums;
+    .child-pop { margin-left: auto; margin-right: 12px; font-size: 13px; font-variant-numeric: tabular-nums;
       color: var(--mat-sys-primary, #3f51b5); }
-    .freq-bar { height: 3px; }
-    .freq-source.note { color: var(--mat-sys-error, #b00020); }
-    .freq-source { padding: 4px 12px; font-size: 11px; color: color-mix(in srgb, currentColor 55%, transparent);
+    .pop-bar { height: 3px; }
+    .pop-source { padding: 4px 12px; font-size: 11px; color: color-mix(in srgb, currentColor 55%, transparent);
       border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+    .pop-source.note { color: var(--mat-sys-error, #b00020); }
     .child-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 13px; }
     .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
@@ -115,26 +111,40 @@ import { formatPercent } from './repertoire-explorer.service';
 export class RepertoireTreeComponent {
   @Input() children: TreeChild[] = [];
   @Input() breadcrumbs: Breadcrumb[] = [];
-  /** Häufigkeiten aus der letzten Lochsuche; null = noch keine. */
-  @Input() frequencies: StoredFrequencies | null = null;
-  /** Werden gerade Prozente nachgeholt (Durchklicken)? */
-  @Input() frequenciesLoading = false;
-  /** i18n-Key eines Hinweises zum Nachholen (Token fehlt, Lichess bremst, …). */
-  @Input() frequencyNote: string | null = null;
+  /** Zugstatistik der aktuellen Stellung (Explorer); null = keine. */
+  @Input() popularity: ExplorerPosition | null = null;
+  @Input() popularityLoading = false;
+  /** i18n-Key eines Hinweises (Token fehlt, Lichess bremst, Fehler). */
+  @Input() popularityNote: string | null = null;
 
   @Output() nodeSelected = new EventEmitter<string>();
   @Output() goUp = new EventEmitter<void>();
   @Output() goToRoot = new EventEmitter<void>();
   @Output() goToDepth = new EventEmitter<number>();
 
-  /** „12,3 %" für die Stellung NACH diesem Zug — null, wenn die Suche sie nicht kennt. */
-  frequencyOf(child: TreeChild): string | null {
-    const p = this.frequencies?.positions[normalizeFen(child.node.fen)];
-    return p === undefined ? null : formatPercent(p);
+  /** Wie oft dieser Zug in der aktuellen Stellung gespielt wird — „—", wenn der Explorer ihn nicht
+   *  führt (kaum gespielt), null ohne Statistik. */
+  shareOf(child: TreeChild): string | null {
+    const p = this.popularity;
+    if (!p || p.total <= 0) return null;
+    const move = p.moves.find(m => canonSan(m.san) === canonSan(child.san));
+    return move ? formatPercent(move.games / p.total) : '—';
   }
 
-  get savedAtLabel(): string {
-    const d = this.frequencies ? new Date(this.frequencies.savedAt) : null;
-    return d && !isNaN(d.getTime()) ? d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '';
+  get sourceLabel(): string {
+    return this.popularity?.source === 'local' ? 'repertoire.holes.sourceLocal' : 'repertoire.holes.sourceOnline';
   }
+
+  get databaseLabel(): string {
+    return this.popularity?.database === 'masters' ? 'repertoire.holes.masters' : 'repertoire.tree.lichess';
+  }
+
+  compact(n: number): string {
+    return n.toLocaleString(undefined, n >= 10_000 ? { notation: 'compact', maximumFractionDigits: 1 } : {});
+  }
+}
+
+/** SAN ohne Schach-/Matt-/Bewertungszeichen, Rochade mit „O". */
+function canonSan(san: string): string {
+  return san.trim().replace(/[+#!?]+$/, '').replace(/0-0-0/, 'O-O-O').replace(/0-0/, 'O-O');
 }

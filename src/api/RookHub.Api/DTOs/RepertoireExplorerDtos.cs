@@ -31,18 +31,6 @@ public class ExplorerAnalysisRequestDto
     public bool IncludeHoles { get; set; } = true;
 
     public bool IncludeLineFrequencies { get; set; }
-
-    /// <summary>Häufigkeit JEDER Repertoire-Stellung mitliefern (für den Repertoire-Baum).</summary>
-    public bool IncludePositionFrequencies { get; set; }
-
-    /// <summary>Nichts abfragen, nur mit dem rechnen, was schon im Speicher liegt — der Nachschlag
-    /// nach einer Lochsuche, der sofort antworten soll.</summary>
-    public bool CachedOnly { get; set; }
-
-    /// <summary>Nur diese Stellungen (FEN; es zählen die ersten drei Felder) interessieren — gerechnet
-    /// und abgefragt wird dann nur, was zu ihrer Häufigkeit beiträgt (Baum beim Durchklicken).
-    /// Höchstens 200.</summary>
-    public List<string>? Targets { get; set; }
 }
 
 public class ExplorerAnalysisResultDto
@@ -70,10 +58,6 @@ public class ExplorerAnalysisResultDto
     /// <summary>Endstellung einer Linie (die ersten drei FEN-Felder) → wie oft man sie erreicht (0…1).
     /// Nur mit <see cref="ExplorerAnalysisRequestDto.IncludeLineFrequencies"/>.</summary>
     public Dictionary<string, double>? LineFrequencies { get; set; }
-
-    /// <summary>Stellung (erste drei FEN-Felder) → wie oft man sie erreicht (0…1), für JEDE Stellung
-    /// mit bekannter Häufigkeit. Nur mit <see cref="ExplorerAnalysisRequestDto.IncludePositionFrequencies"/>.</summary>
-    public Dictionary<string, double>? PositionFrequencies { get; set; }
 }
 
 public class RepertoireHoleDto

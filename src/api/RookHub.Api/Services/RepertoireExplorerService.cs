@@ -96,7 +96,6 @@ public class RepertoireExplorerService
             _ => throw new ArgumentException("Farbe muss \"w\" oder \"b\" sein."),
         };
 
-        if (req.Targets is { Count: > 200 }) throw new ArgumentException("Höchstens 200 Stellungen auf einmal.");
         var pgn = await _repertoires.GetCombinedPgnAsync(repertoireId, userId);
         var colors = req.ChapterColors ?? new Dictionary<string, string>();
         var graphs = PgnMoveTree.ParseSections(pgn)
@@ -107,22 +106,17 @@ public class RepertoireExplorerService
             .Select(grp => RepertoireReach.Build(grp, grp.Key))
             .ToList();
 
-        // Ausschnitt (Baum beim Durchklicken): je Graph nur die Vorfahren der gesuchten Stellungen.
-        var scopes = req.Targets is null ? null : graphs.ToDictionary(
-            g => g, g => (ISet<RepertoireReach.Node>)RepertoireReach.AncestorsOf(g, req.Targets.Select(RepertoireReach.Key)));
-        bool InScope(RepertoireReach.Node n) => scopes is null || scopes.Values.Any(set => set.Contains(n));
-
         var dto = new ExplorerAnalysisResultDto();
         var clock = Stopwatch.StartNew();
         var threshold = req.ThresholdPercent / 100.0;
         if (useLocal)
         {
-            await EvaluateLocalAsync(graphs, query, threshold, req, dto, clock, scopes, ct);
+            await EvaluateLocalAsync(graphs, query, threshold, req, dto, clock, ct);
             return dto;
         }
 
         var cached = await LoadCacheAsync(query,
-            graphs.SelectMany(g => g.OpponentBranches).Where(n => InScope(n)).Select(n => n.Key).Distinct(), ct);
+            graphs.SelectMany(g => g.OpponentBranches).Select(n => n.Key).Distinct(), ct);
         string? token = null;
         var tokenResolved = false;
         var stop = false;
@@ -131,7 +125,7 @@ public class RepertoireExplorerService
         async Task<ExplorerPositionStats?> Stats(RepertoireReach.Node node)
         {
             if (cached.TryGetValue(node.Key, out var hit)) return hit;
-            if (stop || req.CachedOnly || clock.Elapsed >= Budget) return null;
+            if (stop || clock.Elapsed >= Budget) return null;
             if (_gate.BlockedFor is not null) { dto.RateLimited = true; stop = true; return null; }
             if (!tokenResolved)
             {
@@ -157,7 +151,7 @@ public class RepertoireExplorerService
             }
         }
 
-        await CollectAsync(graphs, Stats, null, threshold, req, dto, scopes, ct);
+        await CollectAsync(graphs, Stats, null, threshold, req, dto, ct);
         if (dto.RateLimited && _gate.BlockedFor is { } left) dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
         return dto;
     }
@@ -335,8 +329,7 @@ public class RepertoireExplorerService
     /// </summary>
     private async Task EvaluateLocalAsync(
         List<RepertoireReach.Graph> graphs, ExplorerQuery query, double threshold, ExplorerAnalysisRequestDto req,
-        ExplorerAnalysisResultDto dto, Stopwatch clock, Dictionary<RepertoireReach.Graph, ISet<RepertoireReach.Node>>? scopes,
-        CancellationToken ct)
+        ExplorerAnalysisResultDto dto, Stopwatch clock, CancellationToken ct)
     {
         var fetched = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
         // Je Aufruf höchstens EIN Versuch je Stellung — ein Ausreißer wartet auf die nächste Runde,
@@ -356,7 +349,7 @@ public class RepertoireExplorerService
                     missing.Remove(n);
                 }
             // Antwortet der Explorer gar nicht, nicht jede weitere Schicht dagegen laufen lassen.
-            if (missing.Count == 0 || req.CachedOnly || clock.Elapsed >= Budget || (failures >= MaxFailures && answered == 0)) return;
+            if (missing.Count == 0 || clock.Elapsed >= Budget || (failures >= MaxFailures && answered == 0)) return;
 
             var left = Budget - clock.Elapsed;
             using var layer = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -388,7 +381,7 @@ public class RepertoireExplorerService
             return fetched.TryGetValue(node.Key, out hit) ? hit : null;
         }
 
-        await CollectAsync(graphs, Stats, Prefetch, threshold, req, dto, scopes, ct);
+        await CollectAsync(graphs, Stats, Prefetch, threshold, req, dto, ct);
         if (failures > 0 && answered == 0) dto.FetchFailed = true;
     }
 
@@ -396,34 +389,24 @@ public class RepertoireExplorerService
     private static async Task CollectAsync(
         List<RepertoireReach.Graph> graphs, Func<RepertoireReach.Node, Task<ExplorerPositionStats?>> stats,
         Func<IReadOnlyList<RepertoireReach.Node>, Task>? prefetch, double threshold,
-        ExplorerAnalysisRequestDto req, ExplorerAnalysisResultDto dto,
-        Dictionary<RepertoireReach.Graph, ISet<RepertoireReach.Node>>? scopes, CancellationToken ct)
+        ExplorerAnalysisRequestDto req, ExplorerAnalysisResultDto dto, CancellationToken ct)
     {
         var holes = new List<RepertoireHoleDto>();
         var frequencies = new Dictionary<string, double>(StringComparer.Ordinal);
-        var positions = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (var graph in graphs)
         {
-            var r = await RepertoireReach.EvaluateAsync(graph, stats, threshold, ct, prefetch, scopes?[graph]);
+            var r = await RepertoireReach.EvaluateAsync(graph, stats, threshold, ct, prefetch);
             dto.PositionsAnalyzed += r.Analyzed;
             dto.PositionsPending += r.Pending;
             if (req.IncludeHoles)
                 holes.AddRange(r.Holes.Select(h => ToDto(h, graph.Color)));
-            // Eine Stellung kann in Kapiteln BEIDER Farben stehen — es gilt der größere Wert.
-            MergeMax(frequencies, r.LineFrequencies);
-            if (req.IncludePositionFrequencies) MergeMax(positions, r.PositionFrequencies);
+            foreach (var (key, p) in r.LineFrequencies)
+                if (!frequencies.TryGetValue(key, out var have) || p > have) frequencies[key] = p;
         }
 
         dto.Complete = dto.PositionsPending == 0;
         dto.Holes = holes.OrderByDescending(h => h.Frequency).ThenByDescending(h => h.Share).Take(MaxHoles).ToList();
         if (req.IncludeLineFrequencies) dto.LineFrequencies = frequencies;
-        if (req.IncludePositionFrequencies) dto.PositionFrequencies = positions;
-    }
-
-    private static void MergeMax(Dictionary<string, double> into, Dictionary<string, double> from)
-    {
-        foreach (var (key, p) in from)
-            if (!into.TryGetValue(key, out var have) || p > have) into[key] = p;
     }
 
     private static RepertoireHoleDto ToDto(RepertoireReach.Hole h, char color)

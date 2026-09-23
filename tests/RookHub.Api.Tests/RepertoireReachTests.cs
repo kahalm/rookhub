@@ -204,45 +204,6 @@ public class RepertoireReachTests
     }
 
     [Fact]
-    public async Task PositionFrequencies_CoverEveryKnownPosition_NotOnlyLineEnds()
-    {
-        var g = Graph('b', "[Event \"x\"]\n\n1. e4 c5 2. Nf3 d6 *");
-        var ex = new Explorer();
-        ex.Data[KeyAfter()] = Stats(("e4", 50), ("d4", 50));
-        ex.Data[KeyAfter("e4", "c5")] = Stats(("Nf3", 80), ("Nc3", 20));
-
-        var r = await RepertoireReach.EvaluateAsync(g, ex.Get, 0.01);
-
-        Assert.Equal(1.0, r.PositionFrequencies[KeyAfter()], 6);
-        Assert.Equal(0.5, r.PositionFrequencies[KeyAfter("e4")], 6);
-        Assert.Equal(0.5, r.PositionFrequencies[KeyAfter("e4", "c5")], 6);   // eigener Zug: bleibt 0,5
-        Assert.Equal(0.4, r.PositionFrequencies[KeyAfter("e4", "c5", "Nf3")], 6);
-        Assert.Equal(0.4, r.PositionFrequencies[KeyAfter("e4", "c5", "Nf3", "d6")], 6);
-    }
-
-    [Fact]
-    public async Task OnlyFor_AsksJustTheAncestorsOfTheWantedPositions_IncludingTranspositions()
-    {
-        // Gesucht: die Stellung nach 1.d4 Nf6 2.c4 — erreichbar über 1.d4 UND über 1.c4 Nf6 2.d4.
-        var g = Graph('b',
-            "[Event \"a\"]\n\n1. d4 Nf6 2. c4 e6 *",
-            "[Event \"b\"]\n\n1. c4 Nf6 2. d4 e6 *",
-            "[Event \"c\"]\n\n1. e4 c5 2. Nf3 d6 *");
-        var ex = new Explorer();
-        ex.Data[KeyAfter()] = Stats(("d4", 40), ("c4", 40), ("e4", 20));
-        ex.Data[KeyAfter("d4", "Nf6")] = Stats(("c4", 100));
-        ex.Data[KeyAfter("c4", "Nf6")] = Stats(("d4", 100));
-        var target = KeyAfter("d4", "Nf6", "c4");
-
-        var scope = RepertoireReach.AncestorsOf(g, new[] { target, "gibt es nicht" });
-        var r = await RepertoireReach.EvaluateAsync(g, ex.Get, 0.01, default, null, scope);
-
-        Assert.Equal(0.8, r.PositionFrequencies[target], 6);   // 0,4 über 1.d4 + 0,4 über 1.c4
-        Assert.DoesNotContain(KeyAfter("e4", "c5"), ex.Asked);  // der Sizilianer trägt nichts bei
-        Assert.Equal(0, r.Pending);
-    }
-
-    [Fact]
     public void Key_DropsEnPassantAndCounters_LikeTheClient()
     {
         // Spiegel von normalizeFen (position-filter.util.ts): Brett, Zugrecht, Rochade.

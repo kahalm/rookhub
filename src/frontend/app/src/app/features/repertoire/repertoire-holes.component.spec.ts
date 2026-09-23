@@ -38,12 +38,10 @@ describe('RepertoireHolesComponent', () => {
   afterEach(() => {
     localStorage.removeItem('rookhub_explorer_settings');
     localStorage.removeItem('rookhub_rep_train_chaptercolor_5');
-    localStorage.removeItem('rookhub_rep_freq_5');
   });
 
   function make(pgn: string, explorer: any, sources: ExplorerSources = ONLINE_ONLY): RepertoireHolesComponent {
     explorer.sources ??= () => of(sources);
-    explorer.analyze ??= () => of(result({ holes: [], positionFrequencies: { 'k': 0.5 } }));
     const c = new RepertoireHolesComponent(explorer);
     c.repertoireId = 5;
     c.games = games(pgn);
@@ -169,30 +167,12 @@ describe('RepertoireHolesComponent', () => {
     expect(req.database).toBe('masters');
   });
 
-  it('after a finished search it fetches the frequency of every position — all chapters, from memory only — and keeps it', () => {
-    const analyze = jasmine.createSpy('analyze').and.returnValue(of(result({ holes: [], positionFrequencies: { a: 0.25 } })));
-    const c = make(PGN_BLACK, { run: () => of(result()), analyze });
-    const got: any[] = [];
-    c.frequencies.subscribe(f => got.push(f));
-
-    c.start();
-
-    const req = analyze.calls.mostRecent().args[1];
-    expect(req.color).toBeNull();
-    expect(req.cachedOnly).toBeTrue();
-    expect(req.includePositionFrequencies).toBeTrue();
-    expect(req.includeHoles).toBeFalse();
-    expect(got[0].positions).toEqual({ a: 0.25 });
-    expect(JSON.parse(localStorage.getItem('rookhub_rep_freq_5')!).positions).toEqual({ a: 0.25 });
-    localStorage.removeItem('rookhub_rep_freq_5');
-  });
-
   it('renders the hole list', async () => {
     await TestBed.configureTestingModule({
       imports: [RepertoireHolesComponent],
       providers: [
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: RepertoireExplorerService, useValue: { run: () => of(result()), sources: () => of(WITH_LOCAL), analyze: () => of(result()) } },
+        { provide: RepertoireExplorerService, useValue: { run: () => of(result()), sources: () => of(WITH_LOCAL) } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(RepertoireHolesComponent);

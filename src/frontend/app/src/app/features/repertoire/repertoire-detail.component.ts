@@ -12,16 +12,15 @@ import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
-import { ParsedGame, START_FEN } from '../../shared/pgn-viewer/pgn-parser';
+import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
 import { HoleBoardView, RepertoireHolesComponent } from './repertoire-holes.component';
 import { isInfoLineGame } from './repertoire-info-line.util';
-import { StoredFrequencies, mergeFrequencies, readRepertoireFrequencies, sameSelection, saveRepertoireFrequencies } from './repertoire-frequency.util';
-import { RepertoireExplorerService } from './repertoire-explorer.service';
-import { chapterColorsOf } from './repertoire-color.util';
-import { EMPTY, map, switchMap } from 'rxjs';
+import { ExplorerPosition, ExplorerSettings, RepertoireExplorerService } from './repertoire-explorer.service';
+import { Subscription, switchMap } from 'rxjs';
+import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
@@ -162,19 +161,18 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                 <app-repertoire-holes
                   [repertoireId]="id"
                   [games]="trainableGames"
-                  (holeSelected)="holeView = $event"
-                  (frequencies)="treeFrequencies.set($event)" />
+                  (holeSelected)="holeView = $event" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
                   [breadcrumbs]="treeService.breadcrumbs"
-                  [frequencies]="treeFrequencies()"
-                  [frequenciesLoading]="treeFreqLoading()"
-                  [frequencyNote]="treeFreqNote()"
-                  (nodeSelected)="treeService.selectChild($event); ensureTreeFrequencies()"
-                  (goUp)="treeService.goUp(); ensureTreeFrequencies()"
-                  (goToRoot)="treeService.goToRoot(); ensureTreeFrequencies()"
-                  (goToDepth)="treeService.goToDepth($event); ensureTreeFrequencies()" />
+                  [popularity]="treePopularity()"
+                  [popularityLoading]="treePopLoading()"
+                  [popularityNote]="treePopNote()"
+                  (nodeSelected)="treeService.selectChild($event); loadTreePopularity()"
+                  (goUp)="treeService.goUp(); loadTreePopularity()"
+                  (goToRoot)="treeService.goToRoot(); loadTreePopularity()"
+                  (goToDepth)="treeService.goToDepth($event); loadTreePopularity()" />
               }
             </div>
           </div>
@@ -309,14 +307,14 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   /** Lochfinder: die angewählte Stellung (nach dem fehlenden Gegnerzug), sonst Grundstellung. */
   holeView: HoleBoardView | null = null;
 
-  /** Häufigkeiten für den Baum — aus der letzten Lochsuche oder beim Durchklicken geholt, je Repertoire
-   *  auf dem Gerät gemerkt. Signale: die Antworten kommen über HttpClient (fetch). */
-  readonly treeFrequencies = signal<StoredFrequencies | null>(null);
-  readonly treeFreqLoading = signal(false);
-  /** i18n-Key eines Hinweises (Token fehlt, Lichess bremst, …); null = keiner. */
-  readonly treeFreqNote = signal<string | null>(null);
-  /** Schon gefragte Stellungen dieser Sitzung (je Auswahl) — nicht bei jedem Klick erneut. */
-  private readonly treeFreqAsked = new Set<string>();
+  /** Baum: Zugstatistik der aktuellen Stellung (wie oft wird welcher Zug dort gespielt) — dieselbe Quelle
+   *  und Auswahl wie im Lochfinder und im Explorer des Analysebretts. Signale: HttpClient (fetch). */
+  readonly treePopularity = signal<ExplorerPosition | null>(null);
+  readonly treePopLoading = signal(false);
+  /** i18n-Key eines Hinweises (Token fehlt, Lichess bremst, Fehler); null = keiner. */
+  readonly treePopNote = signal<string | null>(null);
+  private readonly treePopCache = new Map<string, ExplorerPosition>();
+  private treePopSub: Subscription | null = null;
 
   /** Linien ohne Info-Linien — für die Farbe je Kapitel im Lochfinder (dieselbe Auswahl wie im Trainer). */
   trainableGames: ParsedGame[] = [];
@@ -381,54 +379,37 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   ) {}
 
   /**
-   * Baum: fehlen für die angezeigten Züge die Prozente, sie jetzt holen — der Server rechnet dafür nur
-   * die Stellungen auf den Wegen dorthin (`targets`), nicht das ganze Repertoire. Auswahl wie im
-   * Lochfinder; stammen die gemerkten Zahlen aus einer anderen Auswahl, beginnt ein neuer Satz.
+   * Baum: die Beliebtheit der Züge in der aktuellen Stellung holen — für eigene wie gegnerische Züge
+   * dieselbe Frage „wie oft wird dieser Zug hier gespielt?". Je Stellung und Auswahl einmal; eine
+   * späte Antwort für eine schon verlassene Stellung wird verworfen.
    */
-  ensureTreeFrequencies(): void {
-    if (this.mode !== 'tree' || !this.id) return;
-    const children = this.treeService.children;
-    if (!children.length) return;
-    this.explorer.effectiveSettings().pipe(
+  loadTreePopularity(): void {
+    if (this.mode !== 'tree') return;
+    this.treePopSub?.unsubscribe();
+    const fen = this.treeService.currentFen;
+    this.treePopSub = this.explorer.effectiveSettings().pipe(
       switchMap(s => {
-        const stored = this.treeFrequencies();
-        const selection = `${s.source}|${s.database}|${s.ratings.join(',')}|${s.speeds.join(',')}`;
-        const missing = children.filter(c => {
-          const key = normalizeFen(c.node.fen);
-          const known = stored && sameSelection(stored, s) && key in stored.positions;
-          return !known && !this.treeFreqAsked.has(selection + '|' + key);
-        });
-        if (!missing.length) return EMPTY;
-        missing.forEach(c => this.treeFreqAsked.add(selection + '|' + normalizeFen(c.node.fen)));
-        this.treeFreqLoading.set(true);
-        return this.explorer.analyze(this.id, {
-          color: null,
-          chapterColors: Object.fromEntries(chapterColorsOf(this.id, this.trainableGames)),
-          source: s.source, database: s.database, ratings: s.ratings, speeds: s.speeds,
-          thresholdPercent: s.thresholdPercent,
-          includeHoles: false, includeLineFrequencies: false, includePositionFrequencies: true,
-          targets: missing.map(c => c.node.fen),
-        }).pipe(map(r => {
-          // Gebremst oder abgebrochen: beim nächsten Klick dürfen diese Stellungen wieder gefragt werden.
-          if (!r.complete) missing.forEach(c => this.treeFreqAsked.delete(selection + '|' + normalizeFen(c.node.fen)));
-          return { r, s };
-        }));
+        const key = `${normalizeFen(fen)}|${selectionKey(s)}`;
+        const hit = this.treePopCache.get(key);
+        if (hit) return [{ r: hit, key }];
+        this.treePopLoading.set(true);
+        return this.explorer.position(fen, s).pipe(switchMap(r => [{ r, key }]));
       }),
     ).subscribe({
-      next: ({ r, s }) => {
-        this.treeFreqLoading.set(false);
-        this.treeFreqNote.set(r.tokenMissing ? 'repertoire.tree.freqToken'
-          : r.tokenInvalid ? 'repertoire.holes.tokenInvalid'
-          : r.rateLimited ? 'repertoire.tree.freqRateLimited'
-          : r.fetchFailed ? 'repertoire.tree.freqFailed'
+      next: ({ r, key }) => {
+        this.treePopLoading.set(false);
+        if (r.status === 'ok') this.treePopCache.set(key, r);
+        this.treePopNote.set(r.status === 'tokenMissing' ? 'repertoire.tree.popToken'
+          : r.status === 'tokenInvalid' ? 'repertoire.holes.tokenInvalid'
+          : r.status === 'rateLimited' ? 'repertoire.tree.popRateLimited'
+          : r.status === 'failed' ? 'repertoire.tree.popFailed'
           : null);
-        const merged = mergeFrequencies(this.treeFrequencies(), s, r.positionFrequencies ?? {});
-        saveRepertoireFrequencies(this.id, merged);
-        this.treeFrequencies.set(merged);
+        this.treePopularity.set(r.status === 'ok' ? r : null);
       },
       error: () => {
-        this.treeFreqLoading.set(false);
-        this.treeFreqNote.set('repertoire.tree.freqFailed');
+        this.treePopLoading.set(false);
+        this.treePopNote.set('repertoire.tree.popFailed');
+        this.treePopularity.set(null);
       },
     });
   }
@@ -462,7 +443,6 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;
-    this.treeFrequencies.set(readRepertoireFrequencies(this.id));
     const modeParam = this.route.snapshot.queryParamMap.get('mode');
     if (modeParam === 'tree' || modeParam === 'holes' || modeParam === 'edit') {
       this.mode = modeParam;
@@ -478,7 +458,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   setMode(mode: ViewMode): void {
     this.mode = mode;
-    if (mode === 'tree') this.ensureTreeFrequencies();
+    if (mode === 'tree') this.loadTreePopularity();
     this.router.navigate([], {
       queryParams: { mode },
       queryParamsHandling: 'merge',
@@ -534,7 +514,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);
         this.trainableGames = this.viewerService.games.filter((_, i) => !isInfoLineGame(this.viewerService.rawGames[i]));
-        this.ensureTreeFrequencies();   // direkt im Baum geöffnet (?mode=tree)
+        this.loadTreePopularity();   // direkt im Baum geöffnet (?mode=tree)
         this.applyFocusLine();
         this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand
       },
@@ -559,4 +539,11 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     this.viewerService.selectLine(index);
     if (ply != null && ply > 0) this.viewerService.goToMove(ply - 1);
   }
+}
+
+/** Auswahl als Schlüssel — Meister haben keine Elo-/Tempo-Filter. */
+function selectionKey(s: ExplorerSettings): string {
+  return s.database === 'masters'
+    ? `${s.source}|masters`
+    : `${s.source}|lichess|${s.ratings.join(',')}|${s.speeds.join(',')}`;
 }

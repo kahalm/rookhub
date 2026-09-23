@@ -900,13 +900,13 @@
       "lineCount": "{{count}} Linie",
       "lineCountPlural": "{{count}} Linien",
       "empty": "Ende der Linie — keine weiteren Züge.",
-      "freqFrom": "Häufigkeit, Stand {{date}}",
-      "freqIncomplete": "unvollständig",
-      "freqHint": "Die Häufigkeiten der Züge werden beim Durchklicken geholt.",
-      "freqTip": "Wie oft du diese Stellung mit deinem Repertoire in echten Partien erreichst",
-      "freqToken": "Für die Häufigkeiten von lichess.org fehlt ein Lichess-Token (Profil) – oder im Lochfinder die Quelle „Lokal“ wählen.",
-      "freqRateLimited": "Lichess bremst gerade – beim nächsten Klick geht es weiter.",
-      "freqFailed": "Die Häufigkeiten konnten gerade nicht geholt werden."
+      "popFrom": "Beliebtheit: {{source}} · {{db}} · {{count}} Partien",
+      "popNone": "Zu dieser Stellung gibt es keine Partien.",
+      "popTip": "Wie oft dieser Zug in dieser Stellung gespielt wird",
+      "popToken": "Für lichess.org fehlt ein Lichess-Token (Profil) – oder im Lochfinder die Quelle „Lokal“ wählen.",
+      "popRateLimited": "Lichess bremst gerade – beim nächsten Klick geht es weiter.",
+      "popFailed": "Die Beliebtheit der Züge konnte gerade nicht geholt werden.",
+      "lichess": "Lichess"
     },
     "edit": {
       "uploadHint": "PGN-Dateien hierher ziehen oder zum Hochladen klicken",

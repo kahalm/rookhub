@@ -6,8 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { RepertoireDetailComponent } from './repertoire-detail.component';
 import { RepertoireExplorerService } from './repertoire-explorer.service';
-import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 
 describe('RepertoireDetailComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -119,76 +118,73 @@ describe('RepertoireDetailComponent Kommentar-Vorschau', () => {
   });
 });
 
-describe('RepertoireDetailComponent Baum-Häufigkeiten beim Durchklicken', () => {
-  const PGN = '[Event "a"]\n[Black "Sizilianisch"]\n\n1. e4 c5 2. Nf3 d6 *\n\n[Event "b"]\n[Black "Sizilianisch"]\n\n1. d4 d5 *\n';
-  const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq';
-  const AFTER_D4 = 'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq';
+describe('RepertoireDetailComponent Beliebtheit im Baum', () => {
+  const PGN = '[Event "a"]\n\n1. e4 c5 2. Nf3 d6 *\n\n[Event "b"]\n\n1. d4 d5 *\n';
   const SETTINGS = { source: 'local', database: 'masters', ratings: [1800], speeds: ['blitz'], thresholdPercent: 1 };
+  const STATS = (total: number) => ({ status: 'ok', retryAfterSeconds: null, source: 'local', database: 'masters',
+    total, white: 0, draws: 0, black: 0, opening: null, eco: null, moves: [] });
 
-  function result(extra: any = {}) {
-    return {
-      complete: true, positionsAnalyzed: 1, positionsPending: 0, rateLimited: false, retryAfterSeconds: null,
-      tokenMissing: false, tokenInvalid: false, fetchFailed: false, holes: [], lineFrequencies: null,
-      positionFrequencies: { [AFTER_E4]: 0.6, [AFTER_D4]: 0.4 }, ...extra,
-    };
-  }
-
-  afterEach(() => localStorage.removeItem('rookhub_rep_freq_7'));
-
-  async function make(analyze: jasmine.Spy) {
+  async function make(position: jasmine.Spy) {
     await TestBed.configureTestingModule({
       imports: [RepertoireDetailComponent],
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: RepertoireExplorerService, useValue: { effectiveSettings: () => of(SETTINGS), analyze } },
+        { provide: RepertoireExplorerService, useValue: { effectiveSettings: () => of(SETTINGS), position } },
       ],
     }).compileComponents();
     const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
-    comp.id = 7;
     comp.mode = 'tree';
     comp.treeService.buildTree(PGN);
-    comp.trainableGames = parsePgnText(PGN);
     return comp;
   }
 
-  it('fetches the missing percentages for exactly the moves on screen, and keeps them', async () => {
-    const analyze = jasmine.createSpy('analyze').and.returnValue(of(result()));
-    const comp = await make(analyze);
+  it('asks for the statistics of the tree position on screen, with the hole finder selection', async () => {
+    const position = jasmine.createSpy('position').and.returnValue(of(STATS(100)));
+    const comp = await make(position);
 
-    comp.ensureTreeFrequencies();
+    comp.loadTreePopularity();
+    expect(position.calls.mostRecent().args[0]).toBe(comp.treeService.currentFen);
+    expect(position.calls.mostRecent().args[1]).toEqual(SETTINGS);
+    expect(comp.treePopularity()!.total).toBe(100);
 
-    const req = analyze.calls.mostRecent().args[1];
-    expect(analyze.calls.mostRecent().args[0]).toBe(7);
-    expect(req.targets.length).toBe(2);
-    expect(req.includePositionFrequencies).toBeTrue();
-    expect(req.includeHoles).toBeFalse();
-    expect(req.color).toBeNull();
-    expect(req.source).toBe('local');
-    expect(comp.treeFrequencies()!.positions[AFTER_E4]).toBe(0.6);
-    expect(JSON.parse(localStorage.getItem('rookhub_rep_freq_7')!).positions[AFTER_D4]).toBe(0.4);
+    comp.treeService.selectChild('e4');
+    comp.loadTreePopularity();
+    expect(position.calls.mostRecent().args[0]).toContain('4P3');
 
-    // Schon bekannt → kein zweiter Abruf.
-    comp.ensureTreeFrequencies();
-    expect(analyze).toHaveBeenCalledTimes(1);
+    // Zurück zur Grundstellung: aus dem Speicher.
+    comp.treeService.goToRoot();
+    comp.loadTreePopularity();
+    expect(position).toHaveBeenCalledTimes(2);
+    expect(comp.treePopularity()!.total).toBe(100);
   });
 
-  it('asks again on the next click when Lichess slowed it down', async () => {
-    const analyze = jasmine.createSpy('analyze').and.returnValue(of(result({ complete: false, rateLimited: true, positionFrequencies: {} })));
-    const comp = await make(analyze);
+  it('a late answer for a position already left is dropped', async () => {
+    const slow = new Subject<any>();
+    const position = jasmine.createSpy('position').and.returnValues(slow, of(STATS(7)));
+    const comp = await make(position);
 
-    comp.ensureTreeFrequencies();
-    expect(comp.treeFreqNote()).toBe('repertoire.tree.freqRateLimited');
-    comp.ensureTreeFrequencies();
+    comp.loadTreePopularity();
+    comp.treeService.selectChild('d4');
+    comp.loadTreePopularity();
+    slow.next(STATS(999));
 
-    expect(analyze).toHaveBeenCalledTimes(2);
+    expect(comp.treePopularity()!.total).toBe(7);
   });
 
-  it('outside the tree it does nothing', async () => {
-    const analyze = jasmine.createSpy('analyze').and.returnValue(of(result()));
-    const comp = await make(analyze);
+  it('a missing token or a rate limit becomes a note', async () => {
+    const position = jasmine.createSpy('position').and.returnValue(of({ ...STATS(0), status: 'tokenMissing' }));
+    const comp = await make(position);
+    comp.loadTreePopularity();
+    expect(comp.treePopNote()).toBe('repertoire.tree.popToken');
+    expect(comp.treePopularity()).toBeNull();
+  });
+
+  it('outside the tree it asks nothing', async () => {
+    const position = jasmine.createSpy('position').and.returnValue(of(STATS(1)));
+    const comp = await make(position);
     comp.mode = 'lines';
-    comp.ensureTreeFrequencies();
-    expect(analyze).not.toHaveBeenCalled();
+    comp.loadTreePopularity();
+    expect(position).not.toHaveBeenCalled();
   });
 });
