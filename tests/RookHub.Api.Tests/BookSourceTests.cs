@@ -209,24 +209,71 @@ public class BookSourceTests : IDisposable
     }
 
     [Fact]
-    public async Task ReprocessCourses_FrischerKontext_LaedtDenTextJeBuch()
+    public async Task ReprocessCourses_BereitetAuf_UndHaeltNachDemLaufNichtsGetrackt()
     {
         var id = await SeedBookAsync(ReprocessPgn, importVersion: 0, fileName: "manual-loc.pgn");
-        var db = Fresh();
-        db.BookPuzzles.Add(new BookPuzzle
+        var seed = Fresh();
+        seed.BookPuzzles.Add(new BookPuzzle
         {
             LineId = "manual-loc.pgn:1", BookFileName = "manual-loc.pgn", BookId = id, Round = "1",
             Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
             Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1,
         });
-        await db.SaveChangesAsync();
+        await seed.SaveChangesAsync();
 
-        var result = await ReprocessTestHelper.Build(Fresh()).ReprocessCoursesAsync(userId: 1, isAdmin: false);
+        // EIN Kontext für den ganzen Lauf — wie im ReprocessLauncher-Scope.
+        var db = Fresh();
+        var result = await ReprocessTestHelper.Build(db).ReprocessCoursesAsync(userId: 1, isAdmin: false);
 
         Assert.Equal(1, result.Reprocessed);
         Assert.Equal(0, result.Failed);
+        // Je Buch ChangeTracker.Clear: weder Buch noch Roh-PGN noch Linien bleiben bis zum Laufende hängen.
+        Assert.Empty(db.ChangeTracker.Entries());
         var check = Fresh();
         Assert.Equal(ImportPipeline.CurrentVersion, (await check.Books.SingleAsync(b => b.Id == id)).ImportVersion);
         Assert.Contains("Develops.", (await check.BookPuzzles.SingleAsync()).MoveComments);
+        Assert.Equal(ReprocessPgn, (await check.BookSources.SingleAsync(s => s.Id == id)).SourcePgn);
+    }
+
+    [Fact]
+    public async Task ReprocessFromStoredSource_WeistDenTextNichtNeuZu_EineInstanz()
+    {
+        var id = await SeedBookAsync(ReprocessPgn, importVersion: 0, fileName: "manual-loc.pgn");
+
+        var db = Fresh();
+        var res = await new PgnImportService(db).ReprocessFromStoredSourceAsync(id, playFromStartPosition: false, CancellationToken.None);
+
+        Assert.True(res.Imported > 0);
+        // Geladen und NICHT neu zugewiesen: Snapshot und aktueller Wert sind dieselbe Instanz. Vorher hing
+        // neben der Include-Kopie eine zweite (Projektions-)Kopie des bis zu 6 MB großen Texts.
+        var entry = db.ChangeTracker.Entries<BookSource>().Single();
+        Assert.Same(entry.Property(s => s.SourcePgn).OriginalValue, entry.Property(s => s.SourcePgn).CurrentValue);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await Fresh().Books.SingleAsync(b => b.Id == id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ImportFile_GleicherText_WirdNichtNeuZugewiesen()
+    {
+        var pgn = "[Event \"X\"]\n[Round \"1\"]\n[FEN \"" + StartFen + "\"]\n\n1. e4 e5 2. Nf3 *\n";
+        await new PgnImportService(Fresh()).ImportFileAsync("gleich.pgn", pgn, CancellationToken.None);
+
+        var db = Fresh();
+        var gleicherTextNeueInstanz = new string(pgn.AsSpan());
+        await new PgnImportService(db).ImportFileAsync("gleich.pgn", gleicherTextNeueInstanz, CancellationToken.None);
+
+        var entry = db.ChangeTracker.Entries<BookSource>().Single();
+        Assert.Same(entry.Property(s => s.SourcePgn).OriginalValue, entry.Property(s => s.SourcePgn).CurrentValue);
+        Assert.NotSame(gleicherTextNeueInstanz, entry.Property(s => s.SourcePgn).CurrentValue);
+    }
+
+    [Fact]
+    public async Task ReprocessFromStoredSource_OhneText_Wirft()
+    {
+        var id = await SeedBookAsync(null);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new PgnImportService(Fresh()).ReprocessFromStoredSourceAsync(id, false, CancellationToken.None));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => new PgnImportService(Fresh()).ReprocessFromStoredSourceAsync(id + 999, false, CancellationToken.None));
     }
 }

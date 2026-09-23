@@ -123,8 +123,10 @@ public partial class ImportReprocessService
     public async Task<ReprocessResultDto> ReprocessCoursesAsync(int userId, bool isAdmin, bool localOnly = false, CancellationToken ct = default)
     {
         // Nur Metadaten + die SQL-seitig ermittelten Quell-Flags (wie GetCourseStatusAsync) — NICHT das
-        // Roh-PGN. Das holt der lokale Zweig unten je Buch einzeln; vorher hingen die Texte ALLER veralteten
-        // Bücher (je bis zu mehrere MB) gleichzeitig im Speicher.
+        // Roh-PGN, und nichts davon getrackt. Den Text lädt der lokale Zweig unten je Buch genau EINMAL
+        // (PgnImportService.ReprocessFromStoredSourceAsync) und gibt ihn nach dem Buch wieder frei
+        // (ChangeTracker.Clear). Vorher hingen die Texte ALLER veralteten Bücher (je bis zu mehrere MB)
+        // gleichzeitig im Speicher und blieben bis zum Ende des Laufs getrackt.
         var stale = await ManageableBooks(userId, isAdmin)
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
             .Select(b => new
@@ -150,7 +152,7 @@ public partial class ImportReprocessService
             }
             else if (action == StaleAction.Local)
             {
-                // Lokal verlustfrei + in-place aus dem gespeicherten PGN (ImportFileAsync erkennt das
+                // Lokal verlustfrei + in-place aus dem gespeicherten PGN (der Import-Kern erkennt das
                 // veraltete Buch). Gilt für Nicht-Chessable UND Chessable mit „moderner" Quelle
                 // ([ChessableOid] bereits vorhanden) → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
                 // FALLE: EIN kaputtes Buch (korruptes SourcePgn, Parser-Sonderfall, DbUpdateException)
@@ -162,12 +164,8 @@ public partial class ImportReprocessService
                     // Dieselbe Regel wie beim Anlegen: bei einem EIGENEN Kurs bleiben die
                     // Repertoire-Linien aus der Grundstellung spielbar. Ohne das raeumte ein
                     // Reprocess genau die Linien wieder ab, die die Umwandlung erzeugt hat.
-                    var sourcePgn = await _db.BookSources
-                        .Where(s => s.Id == book.Id)
-                        .Select(s => s.SourcePgn)
-                        .FirstAsync(CancellationToken.None);
-                    var res = await _pgnImport.ImportFileAsync(book.FileName, sourcePgn!,
-                        CancellationToken.None, playFromStartPosition: book.OwnerUserId != null);
+                    var res = await _pgnImport.ReprocessFromStoredSourceAsync(book.Id,
+                        playFromStartPosition: book.OwnerUserId != null, CancellationToken.None);
                     result.Reprocessed++;
                     result.UpdatedLines += res.Updated;
                 }
@@ -180,6 +178,15 @@ public partial class ImportReprocessService
                     _logger.LogWarning(ex,
                         "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht neu aufbereitet werden — bleibt veraltet",
                         book.FileName, book.Id);
+                }
+                finally
+                {
+                    // Der Lauf hat EINEN DbContext (ReprocessLauncher-Scope). Ohne das blieben Buch, Roh-PGN
+                    // (bis 6 MB) und alle Linien jedes Buchs bis zum Ende getrackt — und nach einem
+                    // gescheiterten SaveChanges risse der kaputte Tracker-Zustand das NÄCHSTE Buch mit.
+                    // Unbedenklich: `stale` ist eine Projektion, nach dem Buch braucht niemand mehr etwas
+                    // aus dem Tracker.
+                    _db.ChangeTracker.Clear();
                 }
             }
             else

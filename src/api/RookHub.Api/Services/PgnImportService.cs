@@ -249,20 +249,6 @@ public class PgnImportService
     private static string? ChapterForBook(BookKind kind, string? chapter)
         => kind == BookKind.Puzzle ? StripChapterSpoiler(chapter) : chapter;
 
-    /// <summary>
-    /// Parst eine Datei und legt Book + BookPuzzles an. Neue Linien (per LineId) werden hinzugefügt,
-    /// bereits vorhandene normalerweise übersprungen (idempotenter (Re-)Import / Resume).
-    /// <para>AUSNAHME — Neu-Aufbereitung: Ist das Buch <b>veraltet</b> (<c>Book.ImportVersion &lt;
-    /// <see cref="ImportPipeline.CurrentVersion"/></c>), werden bestehende Linien <b>in-place
-    /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
-    /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
-    /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
-    /// Normalerweise wird das Roh-PGN als <c>Book.Source.SourcePgn</c> gespeichert und die Pipeline-Version
-    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist. <paramref name="preserveExistingSourcePgn"/>
-    /// = true (getReview-Lücken-Merge) überschreibt ein bereits vorhandenes <c>SourcePgn</c> NICHT — der
-    /// Merge liefert nur die fehlenden Linien, nicht das ganze Buch; ein vollständiges getGame-SourcePgn
-    /// bliebe sonst durch das Teil-PGN ersetzt (nur bei leerem SourcePgn wird es erstmalig gesetzt).
-    /// </summary>
     /// <summary>Zahl am ENDE einer Rundennummer („002.<b>001</b>", „<b>7</b>") — daran rückt eine Linie vor.</summary>
     private static readonly Regex TrailingNumber = new(@"^(.*?)(\d+)$", RegexOptions.Compiled);
 
@@ -316,6 +302,22 @@ public class PgnImportService
             $"Keine freie LineId für {fileName}:{round} gefunden ({MaxLineIdProbes} Versuche).");
     }
 
+    /// <summary>
+    /// Parst eine Datei und legt Book + BookPuzzles an. Neue Linien (per LineId) werden hinzugefügt,
+    /// bereits vorhandene normalerweise übersprungen (idempotenter (Re-)Import / Resume).
+    /// <para>AUSNAHME — Neu-Aufbereitung: Ist das Buch <b>veraltet</b> (<c>Book.ImportVersion &lt;
+    /// <see cref="ImportPipeline.CurrentVersion"/></c>), werden bestehende Linien <b>in-place
+    /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
+    /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
+    /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
+    /// Normalerweise wird das Roh-PGN als <c>Book.Source.SourcePgn</c> gespeichert und die Pipeline-Version
+    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist. <paramref name="preserveExistingSourcePgn"/>
+    /// = true (getReview-Lücken-Merge) überschreibt ein bereits vorhandenes <c>SourcePgn</c> NICHT — der
+    /// Merge liefert nur die fehlenden Linien, nicht das ganze Buch; ein vollständiges getGame-SourcePgn
+    /// bliebe sonst durch das Teil-PGN ersetzt (nur bei leerem SourcePgn wird es erstmalig gesetzt).
+    /// <para>Die eigentliche Arbeit macht <see cref="ImportIntoBookAsync"/> — denselben Kern nutzt die
+    /// Neu-Aufbereitung aus dem gespeicherten PGN (<see cref="ReprocessFromStoredSourceAsync"/>).</para>
+    /// </summary>
     /// <param name="partial">Der Stapel enthält NUR die neuen Linien, nicht den ganzen Kurs (Teil-Import
     /// aus dem Browser). Ändert genau eine Entscheidung: trifft eine neue Linie mit eigener, im Buch
     /// unbekannter oid auf eine schon vergebene Positionsnummer, ist sie eine ANDERE Linie und bekommt
@@ -325,11 +327,11 @@ public class PgnImportService
         bool preserveExistingSourcePgn = false, bool playFromStartPosition = false, bool partial = false)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
-        var (parsed, invalid) = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true,
+        var parse = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true,
             playFromStartPosition: playFromStartPosition);
         var now = DateTime.UtcNow;
 
-        // Mit Source: das Roh-PGN wird unten gelesen (preserve/partial) und neu geschrieben.
+        // Mit Source: der Kern liest das Roh-PGN (preserve/partial) und schreibt es ggf. neu.
         var book = await _db.Books.Include(b => b.Source).FirstOrDefaultAsync(b => b.FileName == fileName, ct);
         if (book == null)
         {
@@ -344,6 +346,42 @@ public class PgnImportService
             _db.Books.Add(book);
             await _db.SaveChangesAsync(ct); // Id materialisieren
         }
+
+        return await ImportIntoBookAsync(book, fileName, pgnText, parse, now, preserveExistingSourcePgn, partial, ct);
+    }
+
+    /// <summary>
+    /// Neu-Aufbereitung eines Buchs aus seinem GESPEICHERTEN Roh-PGN (lokaler Zweig von „Aktualisieren",
+    /// <see cref="ImportReprocessService.ReprocessCoursesAsync"/>). Lädt Buch + <see cref="BookSource"/>
+    /// genau EINMAL und reicht eben diesen Text in denselben Kern wie <see cref="ImportFileAsync"/>.
+    /// <para>Vorher holte der Reprocess den Text per Projektion und <see cref="ImportFileAsync"/> ihn per
+    /// Include ein zweites Mal — und setzte die Projektions-Kopie auf die getrackte Source: bis zu 2 × 6 MB
+    /// je Buch, getrackt bis zum Ende des Laufs. Der Text wird hier nicht neu zugewiesen (unverändert).</para>
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">Buch gibt es nicht.</exception>
+    /// <exception cref="InvalidOperationException">Buch hat kein gespeichertes Roh-PGN.</exception>
+    public async Task<BookImportItemDto> ReprocessFromStoredSourceAsync(int bookId, bool playFromStartPosition, CancellationToken ct)
+    {
+        var book = await _db.Books.Include(b => b.Source).FirstOrDefaultAsync(b => b.Id == bookId, ct)
+            ?? throw new KeyNotFoundException($"Book {bookId} not found.");
+        var pgnText = book.Source.SourcePgn;
+        if (string.IsNullOrEmpty(pgnText))
+            throw new InvalidOperationException($"Book {bookId} has no stored source PGN.");
+
+        var parse = ParsePgn(book.FileName, pgnText, keepCommentOnlyAsInfo: true,
+            playFromStartPosition: playFromStartPosition);
+        return await ImportIntoBookAsync(book, book.FileName, pgnText, parse, DateTime.UtcNow,
+            preserveExistingSourcePgn: false, partial: false, ct);
+    }
+
+    /// <summary>Gemeinsamer Import-Kern von <see cref="ImportFileAsync"/> und
+    /// <see cref="ReprocessFromStoredSourceAsync"/>: gleicht die geparsten Linien mit dem Bestand des Buchs ab
+    /// (anlegen / in-place aktualisieren / überspringen), merkt das Roh-PGN und setzt die Pipeline-Version.</summary>
+    /// <param name="book">Getrackt und MIT geladener <see cref="Book.Source"/>.</param>
+    private async Task<BookImportItemDto> ImportIntoBookAsync(Book book, string fileName, string pgnText,
+        ParseResult parse, DateTime now, bool preserveExistingSourcePgn, bool partial, CancellationToken ct)
+    {
+        var (parsed, invalid) = parse;
 
         // Veraltetes Buch ⇒ bestehende Linien aktualisieren statt überspringen (Neu-Aufbereitung).
         var upgrade = book.ImportVersion < ImportPipeline.CurrentVersion;
@@ -558,7 +596,10 @@ public class PgnImportService
         // Ein TEIL-Import trägt per Definition nicht den ganzen Kurs — er darf ein vollständiges
         // SourcePgn also nie ersetzen. Das hängt an `partial` selbst und nicht am Aufrufer: sonst
         // müsste jede Aufrufstelle daran denken, und genau das läuft irgendwann auseinander.
-        if ((!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn))
+        // Nur zuweisen, wenn sich der Text UNTERSCHEIDET: beim Reprocess ist es derselbe (kein UPDATE der
+        // LONGTEXT-Spalte, keine zweite Instanz neben dem Snapshot).
+        if (((!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn))
+            && !string.Equals(book.Source.SourcePgn, pgnText, StringComparison.Ordinal))
             book.Source.SourcePgn = pgnText;
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;
