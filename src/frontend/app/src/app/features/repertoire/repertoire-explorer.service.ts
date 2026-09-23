@@ -70,6 +70,10 @@ export interface ExplorerAnalysisRequest {
   thresholdPercent: number;
   includeHoles: boolean;
   includeLineFrequencies: boolean;
+  /** Häufigkeit JEDER Repertoire-Stellung (für den Baum). */
+  includePositionFrequencies?: boolean;
+  /** Nichts abfragen, nur mit dem Gespeicherten rechnen (Nachschlag nach einer Lochsuche). */
+  cachedOnly?: boolean;
 }
 
 export interface RepertoireHole {
@@ -102,6 +106,8 @@ export interface ExplorerAnalysisResult {
   holes: RepertoireHole[];
   /** Endstellung einer Linie (erste drei FEN-Felder) → Häufigkeit 0…1. */
   lineFrequencies: Record<string, number> | null;
+  /** Jede Stellung (erste drei FEN-Felder) → Häufigkeit 0…1 — nur auf Wunsch. */
+  positionFrequencies?: Record<string, number> | null;
 }
 
 /** Ein Zug im Eröffnungs-Explorer des Analysebretts (`GET /api/explorer/position`). */

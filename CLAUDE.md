@@ -212,7 +212,7 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 | GET | `/api/explorer/games?fen=&source=&database=&ratings=&speeds=` | Eine Handvoll Partien (≤ 5), die die Stellung erreicht haben (0.505.0): Meister = die bestbewerteten, Lichess = bestbewertete + jüngste, ohne Doppelte `{ status, retryAfterSeconds?, games[{ id, white, whiteRating?, black, blackRating?, winner?, date?, speed?, url? }] }`. Der Client fragt die Stellung NACH einem Zug = die Partien mit diesem Zug. Nur Arbeitsspeicher (1 h), kein DB-Speicher. `url` fehlt bei LOKALEN Meisterpartien (Lumbra — die Kennung gibt es auf lichess.org nicht) |
 | GET | `/api/explorer/sources` | Wie `/api/repertoires/explorer/sources` (Quellen für den Explorer) |
 | GET | `/api/repertoires/explorer/sources` | Welche Explorer-Quellen es gibt `{ online, local, localRatings[], localSpeeds[] }` — `local` nur mit `LichessExplorer:LocalUrl` (0.503.0) |
-| POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
+| POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0; `includePositionFrequencies` + `cachedOnly`, 0.506.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
 
 ### Lochfinder + „Häufigste zuerst" (Lichess-Explorer, 0.502.0)
 
@@ -268,6 +268,15 @@ lokalen Explorer für immer auf online). Dafür tragen die
 Explorer-Daten seit 0.504.0 auch Weiß/Remis/Schwarz und das Durchschnitts-Elo je Zug
 (`ExplorerMoveStat`, JSON `w`/`d`/`b`/`r`); ein Speicher-Eintrag von vorher (`HasResults == false`)
 genügt dem Lochfinder weiter, der Explorer holt ihn neu und überschreibt ihn.
+
+**Häufigkeiten im Repertoire-Baum** (0.506.0): nach JEDER vollständig durchgelaufenen Lochsuche
+holt der Lochfinder einmal `includePositionFrequencies` + `cachedOnly` (nichts abfragen, nur aus dem
+Speicher rechnen — antwortet sofort) für ALLE Kapitel (`color: null`) und merkt sich das Ergebnis je
+Repertoire auf dem Gerät (`repertoire-frequency.util.ts`, `rookhub_rep_freq_{id}`, gekürzt auf die
+4000 häufigsten Stellungen, auf vier Stellen gerundet). Der Baum (`repertoire-tree.component.ts`)
+zeigt hinter jedem Zug die Häufigkeit der Stellung NACH dem Zug (Schlüssel `normalizeFen`, drei
+FEN-Felder) und darüber, aus welcher Suche sie stammt. Kapitel der ANDEREN Farbe haben nur, was eine
+frühere Suche dort schon geholt hat (`cachedOnly`).
 
 Frontend: vierter Modus der Repertoire-Detailseite (`repertoire-holes.component.ts`, Lupe;
 `?mode=holes`), Brett zeigt die Stellung NACH dem fehlenden Zug. Trainer: Trend-Knopf in der Leiste

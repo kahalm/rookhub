@@ -899,7 +899,11 @@
       "start": "Početak",
       "lineCount": "{{count}} linija",
       "lineCountPlural": "{{count}} linija",
-      "empty": "Kraj linije — nema daljnjih poteza."
+      "empty": "Kraj linije — nema daljnjih poteza.",
+      "freqFrom": "Učestalost iz traženja rupa od {{date}}",
+      "freqIncomplete": "nepotpuno",
+      "freqHint": "Nakon traženja rupa ovdje uz svaki potez piše koliko često dosegneš poziciju u stvarnim partijama.",
+      "freqTip": "Koliko te često tvoj repertoar dovede u ovu poziciju u stvarnim partijama"
     },
     "edit": {
       "uploadHint": "Povuci PGN datoteke ovdje ili klikni za prijenos",

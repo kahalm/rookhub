@@ -125,7 +125,7 @@ public class RepertoireExplorerService
         async Task<ExplorerPositionStats?> Stats(RepertoireReach.Node node)
         {
             if (cached.TryGetValue(node.Key, out var hit)) return hit;
-            if (stop || clock.Elapsed >= Budget) return null;
+            if (stop || req.CachedOnly || clock.Elapsed >= Budget) return null;
             if (_gate.BlockedFor is not null) { dto.RateLimited = true; stop = true; return null; }
             if (!tokenResolved)
             {
@@ -349,7 +349,7 @@ public class RepertoireExplorerService
                     missing.Remove(n);
                 }
             // Antwortet der Explorer gar nicht, nicht jede weitere Schicht dagegen laufen lassen.
-            if (missing.Count == 0 || clock.Elapsed >= Budget || (failures >= MaxFailures && answered == 0)) return;
+            if (missing.Count == 0 || req.CachedOnly || clock.Elapsed >= Budget || (failures >= MaxFailures && answered == 0)) return;
 
             var left = Budget - clock.Elapsed;
             using var layer = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -393,6 +393,7 @@ public class RepertoireExplorerService
     {
         var holes = new List<RepertoireHoleDto>();
         var frequencies = new Dictionary<string, double>(StringComparer.Ordinal);
+        var positions = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (var graph in graphs)
         {
             var r = await RepertoireReach.EvaluateAsync(graph, stats, threshold, ct, prefetch);
@@ -400,13 +401,21 @@ public class RepertoireExplorerService
             dto.PositionsPending += r.Pending;
             if (req.IncludeHoles)
                 holes.AddRange(r.Holes.Select(h => ToDto(h, graph.Color)));
-            foreach (var (key, p) in r.LineFrequencies)
-                if (!frequencies.TryGetValue(key, out var have) || p > have) frequencies[key] = p;
+            // Eine Stellung kann in Kapiteln BEIDER Farben stehen — es gilt der größere Wert.
+            MergeMax(frequencies, r.LineFrequencies);
+            if (req.IncludePositionFrequencies) MergeMax(positions, r.PositionFrequencies);
         }
 
         dto.Complete = dto.PositionsPending == 0;
         dto.Holes = holes.OrderByDescending(h => h.Frequency).ThenByDescending(h => h.Share).Take(MaxHoles).ToList();
         if (req.IncludeLineFrequencies) dto.LineFrequencies = frequencies;
+        if (req.IncludePositionFrequencies) dto.PositionFrequencies = positions;
+    }
+
+    private static void MergeMax(Dictionary<string, double> into, Dictionary<string, double> from)
+    {
+        foreach (var (key, p) in from)
+            if (!into.TryGetValue(key, out var have) || p > have) into[key] = p;
     }
 
     private static RepertoireHoleDto ToDto(RepertoireReach.Hole h, char color)

@@ -2,14 +2,18 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from 
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { TreeChild, Breadcrumb } from './move-tree.service';
+import { StoredFrequencies } from './repertoire-frequency.util';
+import { normalizeFen } from './position-filter.util';
+import { formatPercent } from './repertoire-explorer.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-tree',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, TranslatePipe],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, TranslatePipe],
   template: `
     <div class="tree-container">
       <div class="breadcrumbs">
@@ -22,6 +26,17 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
         }
       </div>
 
+      @if (frequencies) {
+        <div class="freq-source">
+          {{ 'repertoire.tree.freqFrom' | translate: { date: savedAtLabel } }}
+          · {{ (frequencies.source === 'local' ? 'repertoire.holes.sourceLocal' : 'repertoire.holes.sourceOnline') | translate }}
+          · {{ frequencies.database === 'masters' ? ('repertoire.holes.masters' | translate) : 'Lichess' }}
+          @if (!frequencies.complete) { · {{ 'repertoire.tree.freqIncomplete' | translate }} }
+        </div>
+      } @else {
+        <div class="freq-source">{{ 'repertoire.tree.freqHint' | translate }}</div>
+      }
+
       @if (breadcrumbs.length > 0) {
         <button mat-button (click)="goUp.emit()" class="back-btn">
           <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
@@ -33,6 +48,9 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
           <div class="child-item" role="button" tabindex="0" (click)="nodeSelected.emit(child.san)"
                (keydown.enter)="nodeSelected.emit(child.san)" (keydown.space)="$event.preventDefault(); nodeSelected.emit(child.san)">
             <span class="child-san">{{ child.san }}</span>
+            @if (frequencyOf(child); as f) {
+              <span class="child-freq" [matTooltip]="'repertoire.tree.freqTip' | translate">≈ {{ f }}</span>
+            }
             <span class="child-count">{{ (child.count === 1 ? 'repertoire.tree.lineCount' : 'repertoire.tree.lineCountPlural') | translate: { count: child.count } }}</span>
           </div>
         } @empty {
@@ -79,6 +97,10 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
       font-weight: 600;
       font-size: 15px;
     }
+    .child-freq { margin-left: auto; margin-right: 12px; font-size: 13px; font-variant-numeric: tabular-nums;
+      color: var(--mat-sys-primary, #3f51b5); }
+    .freq-source { padding: 4px 12px; font-size: 11px; color: color-mix(in srgb, currentColor 55%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
     .child-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 13px; }
     .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
@@ -86,9 +108,22 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
 export class RepertoireTreeComponent {
   @Input() children: TreeChild[] = [];
   @Input() breadcrumbs: Breadcrumb[] = [];
+  /** Häufigkeiten aus der letzten Lochsuche; null = noch keine. */
+  @Input() frequencies: StoredFrequencies | null = null;
 
   @Output() nodeSelected = new EventEmitter<string>();
   @Output() goUp = new EventEmitter<void>();
   @Output() goToRoot = new EventEmitter<void>();
   @Output() goToDepth = new EventEmitter<number>();
+
+  /** „12,3 %" für die Stellung NACH diesem Zug — null, wenn die Suche sie nicht kennt. */
+  frequencyOf(child: TreeChild): string | null {
+    const p = this.frequencies?.positions[normalizeFen(child.node.fen)];
+    return p === undefined ? null : formatPercent(p);
+  }
+
+  get savedAtLabel(): string {
+    const d = this.frequencies ? new Date(this.frequencies.savedAt) : null;
+    return d && !isNaN(d.getTime()) ? d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '';
+  }
 }

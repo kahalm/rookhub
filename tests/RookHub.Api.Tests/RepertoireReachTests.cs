@@ -204,6 +204,23 @@ public class RepertoireReachTests
     }
 
     [Fact]
+    public async Task PositionFrequencies_CoverEveryKnownPosition_NotOnlyLineEnds()
+    {
+        var g = Graph('b', "[Event \"x\"]\n\n1. e4 c5 2. Nf3 d6 *");
+        var ex = new Explorer();
+        ex.Data[KeyAfter()] = Stats(("e4", 50), ("d4", 50));
+        ex.Data[KeyAfter("e4", "c5")] = Stats(("Nf3", 80), ("Nc3", 20));
+
+        var r = await RepertoireReach.EvaluateAsync(g, ex.Get, 0.01);
+
+        Assert.Equal(1.0, r.PositionFrequencies[KeyAfter()], 6);
+        Assert.Equal(0.5, r.PositionFrequencies[KeyAfter("e4")], 6);
+        Assert.Equal(0.5, r.PositionFrequencies[KeyAfter("e4", "c5")], 6);   // eigener Zug: bleibt 0,5
+        Assert.Equal(0.4, r.PositionFrequencies[KeyAfter("e4", "c5", "Nf3")], 6);
+        Assert.Equal(0.4, r.PositionFrequencies[KeyAfter("e4", "c5", "Nf3", "d6")], 6);
+    }
+
+    [Fact]
     public void Key_DropsEnPassantAndCounters_LikeTheClient()
     {
         // Spiegel von normalizeFen (position-filter.util.ts): Brett, Zugrecht, Rochade.

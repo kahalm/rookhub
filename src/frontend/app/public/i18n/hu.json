@@ -662,7 +662,11 @@
       "start": "Kezdet",
       "lineCount": "{{count}} vonal",
       "lineCountPlural": "{{count}} vonal",
-      "empty": "A vonal vége – nincs további lépés."
+      "empty": "A vonal vége – nincs további lépés.",
+      "freqFrom": "Gyakoriság a {{date}} lyukkereséséből",
+      "freqIncomplete": "hiányos",
+      "freqHint": "Lyukkeresés után itt minden lépés mellett látod, milyen gyakran jutsz el az álláshoz valódi játszmákban.",
+      "freqTip": "Milyen gyakran visz a repertoárod ebbe az állásba valódi játszmákban"
     },
     "edit": {
       "uploadHint": "Húzd ide a PGN fájlokat, vagy kattints a feltöltéshez",

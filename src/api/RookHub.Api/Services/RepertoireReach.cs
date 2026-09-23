@@ -81,6 +81,8 @@ public static class RepertoireReach
         public List<Hole> Holes { get; } = new();
         /// <summary>Endstellung (Schlüssel) je Linie → Häufigkeit der tiefsten bekannten Stellung.</summary>
         public Dictionary<string, double> LineFrequencies { get; } = new(StringComparer.Ordinal);
+        /// <summary>JEDE Repertoire-Stellung mit bekannter Häufigkeit (Schlüssel → 0…1) — für den Baum.</summary>
+        public Dictionary<string, double> PositionFrequencies { get; } = new(StringComparer.Ordinal);
         public int Analyzed { get; set; }
         public int Pending { get; set; }
     }
@@ -221,6 +223,9 @@ public static class RepertoireReach
             foreach (var (_, child) in node.Children)
                 if (!reached.Contains(child)) Add(child, node.P * UnlistedGames / st.Total);
         }
+
+        foreach (var n in g.Nodes.Values)
+            if (n.Known && n.P > 0) result.PositionFrequencies[n.Key] = n.P;
 
         foreach (var line in g.Mainlines)
         {

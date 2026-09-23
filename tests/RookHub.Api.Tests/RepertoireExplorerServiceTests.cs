@@ -583,6 +583,60 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.False(ExplorerPositionStats.FromJson("""{"t":1,"m":[]}""")!.HasResults);
     }
 
+    // ---- Häufigkeit jeder Stellung (Repertoire-Baum) ----
+
+    [Fact]
+    public async Task PositionFrequencies_OnRequest_CoverTheWholeRepertoire()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        _handler.Respond(StartKey, StartJson);
+        var req = Request();
+        req.IncludePositionFrequencies = true;
+
+        var r = await Service().AnalyzeAsync(userId, repId, req, CancellationToken.None);
+
+        Assert.Equal(1.0, r.PositionFrequencies![StartKey], 6);
+        Assert.Equal(0.6, r.PositionFrequencies["rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq"], 6);
+        Assert.Null((await Service().AnalyzeAsync(userId, repId, Request(), CancellationToken.None)).PositionFrequencies);
+    }
+
+    [Fact]
+    public async Task CachedOnly_AsksNobody_AndSaysWhatIsMissing()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        var online = Request();
+        online.CachedOnly = true;
+        var local = LocalRequest();
+        local.CachedOnly = true;
+
+        var r1 = await Service().AnalyzeAsync(userId, repId, online, CancellationToken.None);
+        var r2 = await Service().AnalyzeAsync(userId, repId, local, CancellationToken.None);
+
+        Assert.Empty(_handler.Urls);
+        Assert.Empty(_localHandler.Urls);
+        Assert.Equal(1, r1.PositionsPending);
+        Assert.Equal(1, r2.PositionsPending);
+        Assert.False(r2.FetchFailed);   // nicht gefragt ist nicht gescheitert
+    }
+
+    [Fact]
+    public async Task CachedOnly_AfterAHoleSearch_HasEverything()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        _localHandler.Respond(StartKey, StartJson);
+        await Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
+        var req = LocalRequest();
+        req.CachedOnly = true;
+        req.IncludeHoles = false;
+        req.IncludePositionFrequencies = true;
+
+        var r = await Service().AnalyzeAsync(userId, repId, req, CancellationToken.None);
+
+        Assert.True(r.Complete);
+        Assert.Single(_localHandler.Urls);
+        Assert.NotEmpty(r.PositionFrequencies!);
+    }
+
     // ---- Partien einer Stellung ----
 
     private const string GamesJson = """

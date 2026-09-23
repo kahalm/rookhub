@@ -899,7 +899,11 @@
       "start": "Start",
       "lineCount": "{{count}} Linie",
       "lineCountPlural": "{{count}} Linien",
-      "empty": "Ende der Linie — keine weiteren Züge."
+      "empty": "Ende der Linie — keine weiteren Züge.",
+      "freqFrom": "Häufigkeit aus der Lochsuche vom {{date}}",
+      "freqIncomplete": "unvollständig",
+      "freqHint": "Nach einer Lochsuche steht hier hinter jedem Zug, wie oft du die Stellung in echten Partien erreichst.",
+      "freqTip": "Wie oft du diese Stellung mit deinem Repertoire in echten Partien erreichst"
     },
     "edit": {
       "uploadHint": "PGN-Dateien hierher ziehen oder zum Hochladen klicken",

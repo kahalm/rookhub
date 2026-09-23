@@ -899,7 +899,11 @@
       "start": "Start",
       "lineCount": "{{count}} line",
       "lineCountPlural": "{{count}} lines",
-      "empty": "End of line — no further moves."
+      "empty": "End of line — no further moves.",
+      "freqFrom": "Frequency from the hole search of {{date}}",
+      "freqIncomplete": "incomplete",
+      "freqHint": "After a hole search, each move here shows how often you reach the position in real games.",
+      "freqTip": "How often your repertoire takes you to this position in real games"
     },
     "edit": {
       "uploadHint": "Drag & drop PGN files here or click to upload",

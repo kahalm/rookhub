@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { TrainColor, chapterColorsOf } from './repertoire-color.util';
+import { StoredFrequencies, saveRepertoireFrequencies } from './repertoire-frequency.util';
 import {
   EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerAnalysisResult, ExplorerSettings, ExplorerSource, ExplorerSources, MAX_THRESHOLD_PERCENT,
   MIN_THRESHOLD_PERCENT, RepertoireExplorerService, RepertoireHole, clampThreshold, formatPath, holeMoveLabel,
@@ -205,6 +206,8 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
   /** Linien des Repertoires ohne Info-Linien — daraus die Farbe je Kapitel (wie im Trainer). */
   @Input() games: ParsedGame[] = [];
   @Output() holeSelected = new EventEmitter<HoleBoardView | null>();
+  /** Nach jeder vollständig durchgelaufenen Suche: die Häufigkeit jeder Repertoire-Stellung (für den Baum). */
+  @Output() frequencies = new EventEmitter<StoredFrequencies>();
 
   readonly minThreshold = MIN_THRESHOLD_PERCENT;
   readonly maxThreshold = MAX_THRESHOLD_PERCENT;
@@ -327,7 +330,38 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
         this.running.set(false);
         this.result.update(r => ({ ...(r ?? EMPTY_RESULT), fetchFailed: true }));
       },
-      complete: () => this.running.set(false),
+      complete: () => {
+        this.running.set(false);
+        this.loadFrequencies();
+      },
+    });
+  }
+
+  /**
+   * Nachschlag nach der Suche: die Häufigkeit JEDER Stellung — für ALLE Kapitel (der Baum zeigt beide
+   * Farben) und nur aus dem Speicher, also sofort und ohne neue Explorer-Abfragen. Kapitel der
+   * anderen Farbe haben nur, was eine frühere Suche dort schon geholt hat.
+   */
+  private loadFrequencies(): void {
+    const s = this.settings();
+    this.explorer.analyze(this.repertoireId, {
+      color: null,
+      chapterColors: Object.fromEntries(this.chapterColors),
+      source: s.source, database: s.database, ratings: s.ratings, speeds: s.speeds,
+      thresholdPercent: s.thresholdPercent,
+      includeHoles: false, includeLineFrequencies: false, includePositionFrequencies: true, cachedOnly: true,
+    }).subscribe({
+      next: r => {
+        const f: StoredFrequencies = {
+          savedAt: new Date().toISOString(),
+          source: s.source, database: s.database, ratings: s.ratings, speeds: s.speeds,
+          complete: r.complete,
+          positions: r.positionFrequencies ?? {},
+        };
+        saveRepertoireFrequencies(this.repertoireId, f);
+        this.frequencies.emit(f);
+      },
+      error: () => { /* die Löcher stehen, nur die Baum-Zahlen fehlen — kein Grund für eine Meldung */ },
     });
   }
 

@@ -18,6 +18,7 @@ import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
 import { HoleBoardView, RepertoireHolesComponent } from './repertoire-holes.component';
 import { isInfoLineGame } from './repertoire-info-line.util';
+import { StoredFrequencies, readRepertoireFrequencies } from './repertoire-frequency.util';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
@@ -159,11 +160,13 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                 <app-repertoire-holes
                   [repertoireId]="id"
                   [games]="trainableGames"
-                  (holeSelected)="holeView = $event" />
+                  (holeSelected)="holeView = $event"
+                  (frequencies)="treeFrequencies = $event" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
                   [breadcrumbs]="treeService.breadcrumbs"
+                  [frequencies]="treeFrequencies"
                   (nodeSelected)="treeService.selectChild($event)"
                   (goUp)="treeService.goUp()"
                   (goToRoot)="treeService.goToRoot()"
@@ -302,6 +305,9 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   /** Lochfinder: die angewählte Stellung (nach dem fehlenden Gegnerzug), sonst Grundstellung. */
   holeView: HoleBoardView | null = null;
 
+  /** Häufigkeiten aus der letzten Lochsuche (je Repertoire auf dem Gerät gemerkt) — für den Baum. */
+  treeFrequencies: StoredFrequencies | null = null;
+
   /** Linien ohne Info-Linien — für die Farbe je Kapitel im Lochfinder (dieselbe Auswahl wie im Trainer). */
   trainableGames: ParsedGame[] = [];
 
@@ -392,6 +398,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;
+    this.treeFrequencies = readRepertoireFrequencies(this.id);
     const modeParam = this.route.snapshot.queryParamMap.get('mode');
     if (modeParam === 'tree' || modeParam === 'holes' || modeParam === 'edit') {
       this.mode = modeParam;
