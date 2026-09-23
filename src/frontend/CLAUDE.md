@@ -328,6 +328,10 @@ scrollt (`overflow-y: auto|scroll` UND Überhang; `html`/`body` zählen nie) und
 NICHTS: das Brett darf sich beim Navigieren nie bewegen, das ist die Regel. Spec: langer Seiteninhalt, ein
 60-px-Kasten, `scrollIntoView` darf nicht aufgerufen werden und `window.scrollY` bleibt 0.
 
+**Tippzonen am Brettrand** (`.board-tap` in shared-game, pgn-viewer, shared-line, analysis): EINE globale Regel in
+`styles.scss` — `user-select: none` + `touch-action: manipulation` (0.514.3). Ohne sie markierte ein schnelles
+Doppeltippen Text, und Safari zoomte. Bewusst nur auf den Zonen, nicht seitenweit: Namen und Züge bleiben kopierbar.
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

@@ -92,6 +92,24 @@ describe('SharedGameComponent', () => {
 
   // ----- „Partie analysieren" = derselbe Einwurf wie auf der Punktepartie-Seite -----
 
+  // Gemeldet 2026-09-23: schnelles Doppeltippen auf den Brettrand markierte Text (und Safari zoomte). Die
+  // Tippzonen sind nackte divs; die Regel dafür steht EINMAL in styles.scss (vier Komponenten teilen sie) —
+  // Karma lädt das globale Stylesheet, also ist sie hier am gerenderten Element prüfbar.
+  it('tap zones beside the board are excluded from text selection and double-tap zoom', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+
+    const zones = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.board-tap')) as HTMLElement[];
+    expect(zones.length).toBe(2);
+    for (const z of zones) {
+      const cs = getComputedStyle(z);
+      expect(cs.userSelect).toBe('none');
+      expect(cs.touchAction).toBe('manipulation');
+    }
+  });
+
   it('analyze without login: no request, goes to the login page and comes back here afterwards', async () => {
     const { fixture, http } = await setup(false);
     const router = TestBed.inject(Router);
