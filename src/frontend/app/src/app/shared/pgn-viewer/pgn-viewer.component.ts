@@ -157,19 +157,23 @@ export interface PgnViewerData {
       overflow: hidden;
       padding: 16px;
       gap: 16px;
+      /* Das Brett wächst mit dem Fenster (gemeldet 2026-09-23: im Dialog blieb es am PC bei 400 px, zwei Drittel
+         des Bildschirms leer) — so hoch, dass Kopfzeile, Steuerleiste und Repertoire-Knopf im 90-vh-Dialog Platz
+         haben, so breit, dass die Zugliste daneben passt, nie über 720 px und nie unter 360 px. Der Dialog selbst
+         hat keine feste Breite mehr (games-list öffnet ihn mit maxWidth 96vw), er umschließt den Inhalt. */
+      --board-size: clamp(360px, min(calc(100vh - 280px), calc(100vw - 480px)), 720px);
     }
-    /* Board-Maße wie der Repertoire-Linien-Look (repertoire-detail): fixe
-       400px-Spalte, sonst kollabiert sie in der Flex-Zeile auf Nav-Breite. */
+    /* Feste Breite, sonst kollabiert die Spalte in der Flex-Zeile auf Nav-Breite. */
     .board-section {
-      width: 400px;
+      width: var(--board-size);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
     }
-    .board-wrap { position: relative; width: 400px; }
-    .board-wrap app-chess-board { display: block; width: 400px; }
+    .board-wrap { position: relative; width: var(--board-size); }
+    .board-wrap app-chess-board { display: block; width: var(--board-size); }
     .board-tap {
       display: none;
       position: absolute;
@@ -182,12 +186,15 @@ export interface PgnViewerData {
     .board-tap-next { right: 0; }
     .nav-buttons { display: flex; gap: 4px; }
     .pr-slot { display: block; width: 100%; }
+    /* Feste Breite statt „der Rest des Dialogs": mit einer Spalte, die alles Übrige füllt, standen die zwei
+       Zugspalten mit einer Handbreit Luft auseinander. */
     .moves-section {
-      flex: 1;
+      width: 320px;
+      flex-shrink: 0;
+      box-sizing: border-box;
       overflow: hidden;
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
       border-radius: 4px;
-      min-width: 180px;
     }
 
     @media (max-width: 768px) {

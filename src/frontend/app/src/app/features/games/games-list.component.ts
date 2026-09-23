@@ -162,10 +162,11 @@ export class GamesListComponent implements OnInit {
   replay(g: SavedGame): void {
     this.service.get(g.id).subscribe({
       next: detail => {
+        // Keine feste Breite: der Dialog umschließt Brett + Zugliste, das Brett richtet sich nach dem Fenster
+        // (siehe PgnViewerComponent). Mit 90vw/900px blieb am PC ein 400-px-Brett in einer 900-px-Kiste.
         this.dialog.open(PgnViewerComponent, {
           data: { pgn: detail.pgn, flipped: this.isFlipped(g) },
-          width: '90vw',
-          maxWidth: '900px',
+          maxWidth: '96vw',
           panelClass: 'pgn-viewer-dialog',
         });
       },
