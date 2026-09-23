@@ -306,7 +306,7 @@ public class CourseService
         stored != null && string.Equals(stored.Trim(), wanted, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Exportiert ein (zugängliches) Buch als PGN. Liefert PGN-Text + Dateiname.
-    /// <para>Bevorzugt das gespeicherte Roh-PGN (<see cref="Book.SourcePgn"/>) — es enthält die
+    /// <para>Bevorzugt das gespeicherte Roh-PGN (<see cref="BookSource.SourcePgn"/>) — es enthält die
     /// vollständige Originalstruktur inkl. <b>Varianten und Kommentaren</b>. Nur für Altbestand ohne
     /// Quelle (JSON-Import / vor der SourcePgn-Pipeline) wird ersatzweise aus den gespeicherten
     /// <see cref="BookPuzzle"/> rekonstruiert (Hauptlinie + Zug-Kommentare, aber ohne Varianten —
@@ -314,7 +314,9 @@ public class CourseService
     public async Task<(string Pgn, string FileName)> GetBookPgnAsync(int userId, int bookId, bool isAdmin)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
-        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        // Roh-PGN wird hier gebraucht → Source explizit mitladen (Tabellensplitting, siehe BookSource).
+        var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == bookId);
+        var sourcePgn = book.Source.SourcePgn;
         var safe = new string((book.DisplayName ?? "course").Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
         var fileName = $"{(string.IsNullOrWhiteSpace(safe) ? "course" : safe)}.pgn";
 
@@ -324,22 +326,22 @@ public class CourseService
             .ToListAsync();
 
         // Fallback (Altbestand ohne Quelle): aus den BookPuzzles rekonstruieren (Round-Lesereihenfolge).
-        if (string.IsNullOrWhiteSpace(book.SourcePgn))
+        if (string.IsNullOrWhiteSpace(sourcePgn))
             return (CoursePgnExporter.ToPgn(book.DisplayName, puzzles), fileName);
 
         // Roh-PGN vorhanden → verbatim ausliefern (Varianten + Kommentare bleiben erhalten). Linien OHNE
         // Gegenstück darin (von Hand hinzugefügte Stellungen, CourseAuthoringService.AddLinesAsync) werden
         // rekonstruiert angehängt — sonst gingen sie beim Download und bei „Kurs → Repertoire" verloren,
         // samt ihrer Info-Kennung. Zuordnung über Round wie in BuildLinesPgn.
-        var rawRounds = PgnParser.SplitGameBlocks(book.SourcePgn)
+        var rawRounds = PgnParser.SplitGameBlocks(sourcePgn)
             .Select(g => PgnParser.Truncate(g.Headers.GetValueOrDefault("Round", "").Trim(), 20))
             .Where(r => r.Length > 0)
             .ToHashSet(StringComparer.Ordinal);
         var missing = puzzles.Where(p => !rawRounds.Contains(p.Round)).ToList();
         if (missing.Count == 0)
-            return (book.SourcePgn, fileName);
+            return (sourcePgn, fileName);
         var appended = CoursePgnExporter.ToPgn(book.DisplayName, missing).Trim();
-        return (appended.Length == 0 ? book.SourcePgn : book.SourcePgn.TrimEnd() + "\n\n" + appended + "\n", fileName);
+        return (appended.Length == 0 ? sourcePgn : sourcePgn.TrimEnd() + "\n\n" + appended + "\n", fileName);
     }
 
     /// <summary>PGN EINES Kapitels (<paramref name="chapter"/> leer = „ohne Kapitel") in Lesereihenfolge.
@@ -352,7 +354,7 @@ public class CourseService
         await EnsureAccessAsync(userId, bookId, isAdmin);
         if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
             throw new KeyNotFoundException("Book not found.");
-        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == bookId);   // BuildLinesPgn liest das Roh-PGN
         var wanted = NormalizeChapter(chapter?.Trim());
         var puzzles = (await _db.BookPuzzles
                 .Where(bp => bp.BookId == bookId)
@@ -373,7 +375,7 @@ public class CourseService
         await EnsureAccessAsync(userId, bookId, isAdmin);
         if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
             throw new KeyNotFoundException("Book not found.");
-        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == bookId);   // BuildLinesPgn liest das Roh-PGN
         var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == lineId && bp.BookId == bookId)
             ?? throw new KeyNotFoundException("Line not found.");
         var fileName = PgnFileName(book.DisplayName, $"{puzzle.Round} {puzzle.Title}");
@@ -385,13 +387,15 @@ public class CourseService
     /// <c>Round</c> — genau daraus hat der Import die <see cref="BookPuzzle.LineId"/> gebildet (bei doppelter
     /// Round zählt wie dort das erste Spiel). Linien ohne Gegenstück (Altbestand ohne Quelle, von Hand
     /// eingefügte Stellungen, aus getReview ergänzte Lücken) werden aus der gespeicherten Linie rekonstruiert.
+    /// <para>Erwartet das Buch MIT geladenem <see cref="Book.Source"/> (<c>.Include(b =&gt; b.Source)</c>).</para>
     /// </summary>
     internal static string BuildLinesPgn(Book book, IReadOnlyList<BookPuzzle> puzzles)
     {
         var rawByRound = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (!string.IsNullOrWhiteSpace(book.SourcePgn))
+        var sourcePgn = book.Source.SourcePgn;
+        if (!string.IsNullOrWhiteSpace(sourcePgn))
         {
-            foreach (var (headers, raw) in PgnParser.SplitGameBlocks(book.SourcePgn))
+            foreach (var (headers, raw) in PgnParser.SplitGameBlocks(sourcePgn))
             {
                 var round = PgnParser.Truncate(headers.GetValueOrDefault("Round", "").Trim(), 20);
                 if (round.Length > 0) rawByRound.TryAdd(round, raw);
@@ -478,8 +482,8 @@ public class CourseService
             .Select(b => new
             {
                 b.Id, b.Tags, b.FileName,
-                HasSource = b.SourcePgn != null && b.SourcePgn != "",
-                SourceModern = b.SourcePgn != null && b.SourcePgn.Contains(StaleContentRule.ModernMarker),
+                HasSource = b.Source.SourcePgn != null && b.Source.SourcePgn != "",
+                SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains(StaleContentRule.ModernMarker),
             })
             .ToListAsync())
             .Where(b => StaleContentRule.ActionForBook(b.HasSource, b.SourceModern, b.Tags, b.FileName, _chessableEnabled)
@@ -883,6 +887,7 @@ public class CourseService
             FileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn",
             ImportVersion = ImportPipeline.CurrentVersion,
             CreatedAt = now,
+            Source = new BookSource(),   // Pflicht-Navigation (Tabellensplitting): kein Quell-PGN
         };
         ApplyPersonalCourseMetadata(book, userId, name, now);
         _db.Books.Add(book);

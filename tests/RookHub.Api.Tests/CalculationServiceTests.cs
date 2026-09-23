@@ -40,6 +40,7 @@ public class CalculationServiceTests : IDisposable
         {
             FileName = $"calc-{Guid.NewGuid():N}.pgn", DisplayName = "Kalkulation", OwnerUserId = ownerUserId,
             IsCalculation = isCalculation, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

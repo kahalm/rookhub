@@ -556,6 +556,7 @@ public class BookPuzzleControllerTests : IDisposable
             Tags = tags,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

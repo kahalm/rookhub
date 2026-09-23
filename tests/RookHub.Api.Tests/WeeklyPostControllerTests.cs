@@ -651,7 +651,7 @@ public class WeeklyPostControllerTests : IDisposable
     /// <summary>Seedet ein Buch mit zwei Kapiteln (je Puzzle Fen+Moves) + optionaler Info-Linie und gibt die Book-Id zurück.</summary>
     private async Task<int> SeedBookWithChaptersAsync()
     {
-        var book = new Book { FileName = "book.pgn", DisplayName = "Mein Buch" };
+        var book = new Book { FileName = "book.pgn", DisplayName = "Mein Buch", Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -700,7 +700,7 @@ public class WeeklyPostControllerTests : IDisposable
         // sobald ein Buch UNGEPADDETE Runden trägt („9", „10"), stellte die Textsortierung „10" vor
         // „9". Die gespiegelte Reihenfolge wich damit von der Kurs-Reihenfolge ab, und weil der
         // Wochenpost-Fortschritt am INDEX hängt, zeigten „gespielt"-Marken auf andere Puzzles.
-        var book = new Book { FileName = "flat.pgn", DisplayName = "Flach" };
+        var book = new Book { FileName = "flat.pgn", DisplayName = "Flach", Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         foreach (var round in new[] { "9", "10", "2" })

@@ -39,6 +39,7 @@ public class CoursePublicAccessTests : IDisposable
             IsPublic = isPublic,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

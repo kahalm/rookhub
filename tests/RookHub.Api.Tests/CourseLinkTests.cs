@@ -26,7 +26,7 @@ public class CourseLinkTests : IDisposable
 
     private async Task<Book> SeedBookAsync(int ownerUserId, string name)
     {
-        var book = new Book { FileName = $"u{ownerUserId}-{Guid.NewGuid():N}.pgn", DisplayName = name, OwnerUserId = ownerUserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = $"u{ownerUserId}-{Guid.NewGuid():N}.pgn", DisplayName = name, OwnerUserId = ownerUserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         return book;

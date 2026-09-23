@@ -211,7 +211,7 @@ public class SolveModeTests : IDisposable
 
     private async Task<(Book book, BookPuzzle p1, BookPuzzle p2, BookPuzzle p3)> SeedCourseAsync(int ownerUserId)
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "B", OwnerUserId = ownerUserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "B", OwnerUserId = ownerUserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var puzzles = new List<BookPuzzle>();

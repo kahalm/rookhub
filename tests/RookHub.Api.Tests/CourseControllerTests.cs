@@ -75,7 +75,7 @@ public class CourseControllerTests : IDisposable
     /// <summary>Buch mit n Puzzles; gibt die aufsteigend nach Id sortierten Puzzle-Ids zurück.</summary>
     private async Task<(Book book, List<int> puzzleIds)> SeedBookAsync(string name, int puzzleCount)
     {
-        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -258,7 +258,7 @@ public class CourseControllerTests : IDisposable
     /// <summary>Buch mit gemischten Quiz-/Info-Linien (info[i]=true ⇒ IsInfoOnly). Ids aufsteigend.</summary>
     private async Task<(Book book, List<int> puzzleIds)> SeedMixedBookAsync(string name, params bool[] info)
     {
-        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var ids = new List<int>();
@@ -676,7 +676,7 @@ public class CourseControllerTests : IDisposable
     /// <summary>Buch, dessen Puzzles (in Reihenfolge) die gegebenen Kapitelnamen tragen. Gibt Buch + Ids zurück.</summary>
     private async Task<(Book book, List<int> puzzleIds)> SeedBookWithChaptersAsync(string name, params string?[] chapters)
     {
-        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -935,7 +935,7 @@ public class CourseControllerTests : IDisposable
         const string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         var source = "[Event \"K\"]\n[Round \"001.001\"]\n[Black \"Kap\"]\n[FEN \"" + fen + "\"]\n\n"
                    + "1. e4 e6 {[%cal Gd7d5][%alt c5 e5]Französisch} 2. d4 {[%alt Nf3]} d5 *\n";
-        var book = new Book { FileName = "k.pgn", DisplayName = "K", OwnerUserId = UserId, SourcePgn = source,
+        var book = new Book { FileName = "k.pgn", DisplayName = "K", OwnerUserId = UserId, Source = new BookSource { SourcePgn = source },
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

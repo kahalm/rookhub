@@ -271,8 +271,8 @@ public class PgnImportServiceTests : IDisposable
 2. Nf3 Nc6 3. Bb5 a6 *
 ";
         var res = await _service.ImportFileAsync("v.pgn", pgn, CancellationToken.None);
-        var book = await _db.Books.SingleAsync();
-        Assert.Equal(pgn, book.SourcePgn);
+        var book = await _db.Books.Include(b => b.Source).SingleAsync();
+        Assert.Equal(pgn, book.Source.SourcePgn);
         Assert.Equal(ImportPipeline.CurrentVersion, book.ImportVersion);
         Assert.True(res.Imported > 0);
         Assert.Equal(0, res.Updated);
@@ -283,7 +283,7 @@ public class PgnImportServiceTests : IDisposable
     {
         const string lineId = "stale.pgn:1";
         // Altbestand simulieren: Buch + Linie OHNE MoveComments, Version 0 (veraltet).
-        var book = new RookHub.Api.Models.Book { FileName = "stale.pgn", DisplayName = "Stale", ImportVersion = 0, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new RookHub.Api.Models.Book { FileName = "stale.pgn", DisplayName = "Stale", ImportVersion = 0, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new RookHub.Api.Models.BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var old = new RookHub.Api.Models.BookPuzzle
@@ -526,16 +526,16 @@ public class PgnImportServiceTests : IDisposable
     [Fact]
     public async Task ImportFileAsync_Partial_DoesNotReplaceAFullSourcePgn()
     {
-        // An Book.SourcePgn haengt die lokale Neu-Aufbereitung. Ein Bruchstueck darf den vollen
+        // An Book.Source.SourcePgn haengt die lokale Neu-Aufbereitung. Ein Bruchstueck darf den vollen
         // Stand nicht ersetzen.
         var voll = BookLine("1", "7005", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "7006", "2. d4 exd4 3. Qxd4 Nc6");
         await _service.ImportFileAsync("src.pgn", voll, CancellationToken.None);
-        var vorher = (await _db.Books.SingleAsync(b => b.FileName == "src.pgn")).SourcePgn;
+        var vorher = (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "src.pgn")).Source.SourcePgn;
 
         await _service.ImportFileAsync("src.pgn", BookLine("3", "7007", "2. Nc3 Nf6 3. f4 d5"),
             CancellationToken.None, partial: true);
 
-        Assert.Equal(vorher, (await _db.Books.SingleAsync(b => b.FileName == "src.pgn")).SourcePgn);
+        Assert.Equal(vorher, (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "src.pgn")).Source.SourcePgn);
     }
 
     [Fact]
@@ -1241,7 +1241,7 @@ public class PgnImportServiceTests : IDisposable
     public async Task ImportFileAsync_StudyBook_KeepsChapterName()
     {
         // Buch vorab als Study anlegen → Kapitelname bleibt erhalten.
-        _db.Books.Add(new Book { FileName = "study.pgn", DisplayName = "Study", Kind = BookKind.Study });
+        _db.Books.Add(new Book { FileName = "study.pgn", DisplayName = "Study", Kind = BookKind.Study, Source = new BookSource() });
         await _db.SaveChangesAsync();
 
         var pgn = @"

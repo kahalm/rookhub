@@ -97,12 +97,13 @@ public class Book
     public string? PublicSlug { get; set; }
 
     /// <summary>
-    /// Roh-PGN, aus dem dieses Buch importiert wurde (LONGTEXT, nullable). Quelle fürs
-    /// verlustfreie Neu-Aufbereiten (Reprocessing), wenn die Import-Pipeline weiterentwickelt
-    /// wurde — z. B. um nachträglich Pro-Zug-Kommentare zu extrahieren. <c>null</c> bei
-    /// Altbestand (vor Pipeline-Version 1) und bei reinen JSON-Bulk-Importen (kein PGN).
+    /// Roh-PGN dieses Buchs (<see cref="BookSource.SourcePgn"/>) — per Tabellensplitting in derselben
+    /// Zeile gespeichert, aber NICHT Teil von <see cref="Book"/>, damit kein <c>.Include(bp =&gt; bp.Book)</c>
+    /// mehr den (mehrere MB großen) Text mitlädt. Pflicht-Navigation: beim Anlegen IMMER
+    /// <c>Source = new BookSource { … }</c> setzen. Beim Laden nur mit <c>.Include(b =&gt; b.Source)</c>
+    /// gefüllt — sonst <c>null</c>; darum nur dort inkludieren, wo der Text wirklich gebraucht wird.
     /// </summary>
-    public string? SourcePgn { get; set; }
+    public BookSource Source { get; set; } = null!;
 
     /// <summary>
     /// Version der Import-Pipeline (<see cref="Services.ImportPipeline"/>), mit der die Puzzles

@@ -43,7 +43,7 @@ public class CatalogTests : IDisposable
     private async Task<int> SeedCourseAsync(string name = "Course A")
     {
         var b = new Book { FileName = $"b-{Guid.NewGuid():N}.pgn", DisplayName = name, OwnerUserId = Owner,
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(b); await _db.SaveChangesAsync(); return b.Id;
     }
 

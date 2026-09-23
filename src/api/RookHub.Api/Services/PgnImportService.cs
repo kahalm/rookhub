@@ -257,7 +257,7 @@ public class PgnImportService
     /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
     /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
     /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
-    /// Normalerweise wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
+    /// Normalerweise wird das Roh-PGN als <c>Book.Source.SourcePgn</c> gespeichert und die Pipeline-Version
     /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist. <paramref name="preserveExistingSourcePgn"/>
     /// = true (getReview-Lücken-Merge) überschreibt ein bereits vorhandenes <c>SourcePgn</c> NICHT — der
     /// Merge liefert nur die fehlenden Linien, nicht das ganze Buch; ein vollständiges getGame-SourcePgn
@@ -329,7 +329,8 @@ public class PgnImportService
             playFromStartPosition: playFromStartPosition);
         var now = DateTime.UtcNow;
 
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.FileName == fileName, ct);
+        // Mit Source: das Roh-PGN wird unten gelesen (preserve/partial) und neu geschrieben.
+        var book = await _db.Books.Include(b => b.Source).FirstOrDefaultAsync(b => b.FileName == fileName, ct);
         if (book == null)
         {
             book = new Book
@@ -338,6 +339,7 @@ public class PgnImportService
                 DisplayName = PgnParser.Truncate(CleanDisplayName(fileName), 200),
                 CreatedAt = now,
                 UpdatedAt = now,
+                Source = new BookSource(),
             };
             _db.Books.Add(book);
             await _db.SaveChangesAsync(ct); // Id materialisieren
@@ -556,8 +558,8 @@ public class PgnImportService
         // Ein TEIL-Import trägt per Definition nicht den ganzen Kurs — er darf ein vollständiges
         // SourcePgn also nie ersetzen. Das hängt an `partial` selbst und nicht am Aufrufer: sonst
         // müsste jede Aufrufstelle daran denken, und genau das läuft irgendwann auseinander.
-        if ((!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.SourcePgn))
-            book.SourcePgn = pgnText;
+        if ((!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn))
+            book.Source.SourcePgn = pgnText;
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);

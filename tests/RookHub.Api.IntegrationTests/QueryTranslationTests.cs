@@ -124,7 +124,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     public async Task Kursstatistik_UebersetztInklusiveKapitelNormalisierung()
     {
         var userId = await SeedUserAsync("kurs");
-        var book = new Book { FileName = "it-course.pgn", DisplayName = "IT", OwnerUserId = userId };
+        var book = new Book { FileName = "it-course.pgn", DisplayName = "IT", OwnerUserId = userId, Source = new BookSource() };
         Db.Books.Add(book);
         await Db.SaveChangesAsync();
         // Leer / nur Leerzeichen / NULL muessen als EIN Kapitel zaehlen — die Normalisierung

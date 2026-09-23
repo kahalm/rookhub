@@ -58,6 +58,7 @@ public class PublicCalculationAccessTests : IDisposable
             ForBlind = forBlind,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

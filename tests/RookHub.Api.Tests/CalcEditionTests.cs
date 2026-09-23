@@ -31,7 +31,7 @@ public class CalcEditionTests : IDisposable
         _db.AppUsers.Add(new AppUser { Id = OwnerId, Username = "owner", PasswordHash = "x" });
         _db.AppUsers.Add(new AppUser { Id = ViewerId, Username = "viewer", PasswordHash = "x" });
         _db.AppUsers.Add(new AppUser { Id = TesterId, Username = "tester", PasswordHash = "x" });
-        var book = new Book { FileName = "noel.pgn", DisplayName = "Noel", IsCalculation = true, IsPublic = true, OwnerUserId = OwnerId };
+        var book = new Book { FileName = "noel.pgn", DisplayName = "Noel", IsCalculation = true, IsPublic = true, OwnerUserId = OwnerId, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         void Pos(string chapter, string round) => _db.BookPuzzles.Add(new BookPuzzle
@@ -368,7 +368,7 @@ public class CalcEditionTests : IDisposable
 
     private async Task<int> SeedSeriesBookAsync(bool isPublic, int ownerUserId = 999)
     {
-        var book = new Book { FileName = $"serie-{Guid.NewGuid():N}.pgn", DisplayName = "Serie", IsPublic = isPublic, OwnerUserId = ownerUserId };
+        var book = new Book { FileName = $"serie-{Guid.NewGuid():N}.pgn", DisplayName = "Serie", IsPublic = isPublic, OwnerUserId = ownerUserId, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         _db.CalcEditions.Add(new CalcEdition

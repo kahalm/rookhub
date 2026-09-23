@@ -42,7 +42,7 @@ public class CourseServiceLineStatusTests : IDisposable
     [Fact]
     public async Task GetLineStatus_SeparatesSolvedFromAttemptedFailed()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "B", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "B", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -69,7 +69,7 @@ public class CourseServiceLineStatusTests : IDisposable
     public async Task GetLineStatus_ThrowsWhenNoAccess()
     {
         // Buch eines anderen Users, keine Freigabe → kein Zugriff.
-        var book = new Book { FileName = "o.pgn", DisplayName = "O", OwnerUserId = 999, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "o.pgn", DisplayName = "O", OwnerUserId = 999, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 

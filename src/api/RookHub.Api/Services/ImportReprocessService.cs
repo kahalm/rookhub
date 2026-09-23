@@ -31,7 +31,7 @@ public interface ICourseReimporter
 /// wurde (<see cref="ImportPipeline"/>). Datensätze mit <c>ImportVersion &lt; CurrentVersion</c> gelten
 /// als veraltet; der Reprocess-Knopf je Sektion ruft diesen Service.
 ///
-/// <para><b>Kurse/Bücher:</b> bevorzugt lokal aus dem gespeicherten Roh-PGN (<c>Book.SourcePgn</c>)
+/// <para><b>Kurse/Bücher:</b> bevorzugt lokal aus dem gespeicherten Roh-PGN (<c>BookSource.SourcePgn</c>)
 /// — verlustfrei und in-place (Match per LineId, Fortschritt/Statistik bleiben erhalten). Fehlt die
 /// Quelle (Altbestand), wird für Chessable-Kurse ein Re-Fetch-Hintergrund-Job eingereiht
 /// (<see cref="ChessableImportService.EnqueueReimportAsync"/>). Sonst: nur per manuellem Re-Import.</para>
@@ -89,13 +89,13 @@ public partial class ImportReprocessService
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
             .Select(b => new
             {
-                HasSource = b.SourcePgn != null && b.SourcePgn != "",
+                HasSource = b.Source.SourcePgn != null && b.Source.SourcePgn != "",
                 // „Modern": Quelle enthält bereits ALLES, was die aktuelle Pipeline aus dem Quell-PGN zieht —
                 // maßgeblich der jüngste Marker [ChessableOid] (piratechess ≥ v1.0.39). Nur dann reicht ein
                 // lokaler Re-Parse (SQL-LIKE, lädt das große PGN NICHT). Eine ältere Quelle mit zwar [%alt]/
                 // [%info], aber OHNE [ChessableOid] ist NICHT modern → braucht einen Chessable-Re-Fetch, damit
                 // die oids (Grundlage der Fortschritts-Overlays) reinkommen.
-                SourceModern = b.SourcePgn != null && b.SourcePgn.Contains("[ChessableOid"),
+                SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains("[ChessableOid"),
                 b.Tags, b.FileName,
             })
             .ToListAsync(ct);
@@ -122,16 +122,24 @@ public partial class ImportReprocessService
     /// ohne Quelle als Re-Fetch-Job einreihen („Alle").</param>
     public async Task<ReprocessResultDto> ReprocessCoursesAsync(int userId, bool isAdmin, bool localOnly = false, CancellationToken ct = default)
     {
+        // Nur Metadaten + die SQL-seitig ermittelten Quell-Flags (wie GetCourseStatusAsync) — NICHT das
+        // Roh-PGN. Das holt der lokale Zweig unten je Buch einzeln; vorher hingen die Texte ALLER veralteten
+        // Bücher (je bis zu mehrere MB) gleichzeitig im Speicher.
         var stale = await ManageableBooks(userId, isAdmin)
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
+            .Select(b => new
+            {
+                b.Id, b.FileName, b.DisplayName, b.Tags, b.OwnerUserId,
+                HasSource = b.Source.SourcePgn != null && b.Source.SourcePgn != "",
+                SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains(StaleContentRule.ModernMarker),
+            })
             .ToListAsync(ct);
 
         var result = new ReprocessResultDto();
         var refetch = new List<RefetchCandidate>();
         foreach (var book in stale)
         {
-            var action = ActionFor(!string.IsNullOrEmpty(book.SourcePgn), SourceHasModernMarkers(book.SourcePgn),
-                book.Tags, book.FileName);
+            var action = ActionFor(book.HasSource, book.SourceModern, book.Tags, book.FileName);
             if (action == StaleAction.Refetch)
             {
                 // Chessable OHNE moderne Quelle: vollständiger Re-Fetch (die [ChessableOid] steht nicht im
@@ -154,7 +162,11 @@ public partial class ImportReprocessService
                     // Dieselbe Regel wie beim Anlegen: bei einem EIGENEN Kurs bleiben die
                     // Repertoire-Linien aus der Grundstellung spielbar. Ohne das raeumte ein
                     // Reprocess genau die Linien wieder ab, die die Umwandlung erzeugt hat.
-                    var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn!,
+                    var sourcePgn = await _db.BookSources
+                        .Where(s => s.Id == book.Id)
+                        .Select(s => s.SourcePgn)
+                        .FirstAsync(CancellationToken.None);
+                    var res = await _pgnImport.ImportFileAsync(book.FileName, sourcePgn!,
                         CancellationToken.None, playFromStartPosition: book.OwnerUserId != null);
                     result.Reprocessed++;
                     result.UpdatedLines += res.Updated;

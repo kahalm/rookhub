@@ -44,6 +44,7 @@ public class CourseAuthoringServiceTests : IDisposable
         {
             FileName = $"b-{Guid.NewGuid():N}.pgn", DisplayName = "Kurs", OwnerUserId = ownerUserId,
             IsCalculation = isCalculation, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

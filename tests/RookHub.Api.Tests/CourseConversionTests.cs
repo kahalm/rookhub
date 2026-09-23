@@ -49,7 +49,7 @@ public class CourseConversionTests : IDisposable
         var book = new Book
         {
             FileName = "chessable-u1-x.pgn", DisplayName = "My Course", OwnerUserId = 1,
-            SourcePgn = PlainPgn, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource { SourcePgn = PlainPgn }, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -70,7 +70,7 @@ public class CourseConversionTests : IDisposable
     public async Task ConvertCourseToRepertoire_SharedCourse_KeepsOriginal()
     {
         // Geteiltes Gruppen-Buch (kein OwnerUserId), für User 1 über eine Gruppe freigegeben.
-        var book = new Book { FileName = "group.pgn", DisplayName = "Group Course", OwnerUserId = null, SourcePgn = PlainPgn, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "group.pgn", DisplayName = "Group Course", OwnerUserId = null, Source = new BookSource { SourcePgn = PlainPgn }, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         _db.Books.Add(book);
         _db.UserGroups.Add(new UserGroup { UserId = 1, GroupId = 7 });
         await _db.SaveChangesAsync();
@@ -87,7 +87,7 @@ public class CourseConversionTests : IDisposable
     [Fact]
     public async Task ConvertCourseToRepertoire_NoAccess_Throws()
     {
-        var book = new Book { FileName = "chessable-u1-y.pgn", DisplayName = "Foreign", OwnerUserId = 1, SourcePgn = PlainPgn };
+        var book = new Book { FileName = "chessable-u1-y.pgn", DisplayName = "Foreign", OwnerUserId = 1, Source = new BookSource { SourcePgn = PlainPgn } };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -246,8 +246,8 @@ public class CourseConversionTests : IDisposable
     {
         // Altbestand ohne Roh-PGN: der Export baut die Linien aus den gespeicherten BookPuzzles nach.
         var course = await _courses.UploadPersonalCourseAsync(userId: 1, "info.pgn", CourseWithInfoPgn, "Info Book");
-        var book = await _db.Books.FirstAsync(b => b.Id == course.BookId);
-        book.SourcePgn = null;
+        var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == course.BookId);
+        book.Source.SourcePgn = null;
         await _db.SaveChangesAsync();
         var before = await InfoFlagsByTitle(course.BookId);
 

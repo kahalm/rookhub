@@ -29,7 +29,7 @@ public class WebhookQueueSeparationTests : IDisposable
     [Fact]
     public async Task RecordAttempt_EnqueuesWebhookOnWebhookQueue()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "b", ForDaily = true };
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", ForDaily = true, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var puzzle = new BookPuzzle { BookId = book.Id, BookFileName = book.FileName, LineId = "L1", Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", Moves = "e7e5" };

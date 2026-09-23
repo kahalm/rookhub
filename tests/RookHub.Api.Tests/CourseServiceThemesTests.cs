@@ -29,6 +29,7 @@ public class CourseServiceThemesTests : IDisposable
         {
             FileName = $"b-{Guid.NewGuid():N}.pgn", DisplayName = "Course", OwnerUserId = ownerUserId,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

@@ -49,6 +49,7 @@ public class CalculationCourseListTests : IDisposable
         {
             FileName = $"b-{Guid.NewGuid():N}.pgn", DisplayName = "Buch", OwnerUserId = ownerUserId,
             IsCalculation = isCalculation, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

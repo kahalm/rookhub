@@ -52,7 +52,7 @@ public class CourseServiceReadingOrderTests : IDisposable
     /// (kleinstes Round) zuletzt (höchste Id) — genau die Re-Fetch-Situation.</summary>
     private async Task<(Book book, BookPuzzle intro, BookPuzzle q3, BookPuzzle q4)> SeedReorderedBookAsync()
     {
-        var book = new Book { FileName = "tac.pgn", DisplayName = "Tactics", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "tac.pgn", DisplayName = "Tactics", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -102,7 +102,7 @@ public class CourseServiceReadingOrderTests : IDisposable
     [Fact]
     public async Task Chapters_OrderedByRound_AcrossChapters()
     {
-        var book = new Book { FileName = "c.pgn", DisplayName = "C", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "c.pgn", DisplayName = "C", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -125,7 +125,7 @@ public class CourseServiceReadingOrderTests : IDisposable
     [Fact]
     public async Task ChapterIndex_SkipsInfoOnlyChapters_MatchesGetChapters()
     {
-        var book = new Book { FileName = "ix.pgn", DisplayName = "IX", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "ix.pgn", DisplayName = "IX", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -152,7 +152,7 @@ public class CourseServiceReadingOrderTests : IDisposable
     [Fact]
     public async Task GetChapters_ReportsInfoCount_PerChapter_WithoutInflatingPuzzleCount()
     {
-        var book = new Book { FileName = "ic.pgn", DisplayName = "IC", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "ic.pgn", DisplayName = "IC", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 

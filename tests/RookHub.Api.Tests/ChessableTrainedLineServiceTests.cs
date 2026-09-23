@@ -266,7 +266,7 @@ public class ChessableTrainedLineServiceTests : IDisposable
     {
         var file = $"chessable-u{userId}-{bid}.pgn";
         var book = new Book { FileName = file, DisplayName = "Kurs", OwnerUserId = userId,
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var bp = new BookPuzzle

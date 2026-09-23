@@ -386,7 +386,7 @@ public class AdminControllerTests : IDisposable
     [Fact]
     public async Task GetBooks_ReturnsBooksWithCounts()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         _db.BookPuzzles.AddRange(
@@ -405,7 +405,7 @@ public class AdminControllerTests : IDisposable
     [Fact]
     public async Task UpdateBook_TogglesFlags()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
@@ -431,7 +431,7 @@ public class AdminControllerTests : IDisposable
     [Fact]
     public async Task UpdateBook_SetsKind()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         Assert.Equal(BookKind.Puzzle, book.Kind); // Default
@@ -467,7 +467,7 @@ public class AdminControllerTests : IDisposable
     [Fact]
     public async Task DeleteBook_RemovesBookAndPuzzles()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         _db.BookPuzzles.Add(new BookPuzzle { LineId = "b.pgn:1", BookFileName = "b.pgn", BookId = book.Id, Round = "1", Fen = "f", Moves = "e2e4" });

@@ -36,7 +36,8 @@ public class DailyPuzzleTests : IDisposable
             DisplayName = name,
             ForDaily = true,
             ForRandom = false,
-            ForBlind = false
+            ForBlind = false,
+            Source = new BookSource()
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -183,7 +184,8 @@ public class DailyPuzzleTests : IDisposable
         {
             FileName = "no-daily.pgn",
             DisplayName = "No Daily",
-            ForDaily = false
+            ForDaily = false,
+            Source = new BookSource()
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -199,7 +201,7 @@ public class DailyPuzzleTests : IDisposable
         var dailyBook = await CreateDailyBookAsync("only-daily");
         var dailyPuzzle = await AddPuzzleAsync(dailyBook, "d.pgn:1");
 
-        var randomBook = new Book { FileName = "rand.pgn", DisplayName = "Rand", ForDaily = false, ForRandom = true };
+        var randomBook = new Book { FileName = "rand.pgn", DisplayName = "Rand", ForDaily = false, ForRandom = true, Source = new BookSource() };
         _db.Books.Add(randomBook);
         await _db.SaveChangesAsync();
         await AddPuzzleAsync(randomBook, "r.pgn:1");
@@ -256,7 +258,7 @@ public class DailyPuzzleTests : IDisposable
     [Fact]
     public async Task GetDaily_Endpoint_NoDailyPool_Returns404()
     {
-        var book = new Book { FileName = "x.pgn", DisplayName = "X", ForDaily = false };
+        var book = new Book { FileName = "x.pgn", DisplayName = "X", ForDaily = false, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         await AddPuzzleAsync(book, "x.pgn:1");
@@ -344,7 +346,7 @@ public class DailyPuzzleTests : IDisposable
     [Fact]
     public async Task RegenerateDailyAsync_ExcludesRetiredFromRandomPool()
     {
-        var book = new Book { FileName = "rand.pgn", DisplayName = "Rand", ForDaily = true, ForRandom = true };
+        var book = new Book { FileName = "rand.pgn", DisplayName = "Rand", ForDaily = true, ForRandom = true, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         await AddPuzzleAsync(book, "r.pgn:1");

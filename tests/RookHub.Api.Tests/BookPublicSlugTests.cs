@@ -42,6 +42,7 @@ public class BookPublicSlugTests : IDisposable
             PublicSlug = slug,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

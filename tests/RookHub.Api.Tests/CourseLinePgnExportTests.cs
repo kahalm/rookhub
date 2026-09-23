@@ -40,7 +40,7 @@ public class CourseLinePgnExportTests : IDisposable
             FileName = "kurs-x.pgn",
             DisplayName = "Kurs X",
             OwnerUserId = 1,
-            SourcePgn = withSource ? GameA1 + "\n\n" + GameA2 + "\n\n" + GameB1 + "\n" : null,
+            Source = new BookSource { SourcePgn = withSource ? GameA1 + "\n\n" + GameA2 + "\n\n" + GameB1 + "\n" : null },
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -130,7 +130,7 @@ public class CourseLinePgnExportTests : IDisposable
     {
         var book = await SeedAsync();
         var other = new Book { FileName = "other.pgn", DisplayName = "Other", OwnerUserId = 1,
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(other);
         await _db.SaveChangesAsync();
 

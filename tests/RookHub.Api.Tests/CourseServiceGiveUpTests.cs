@@ -47,7 +47,7 @@ public class CourseServiceGiveUpTests : IDisposable
 
     private async Task<(Book book, BookPuzzle p1, BookPuzzle p2)> SeedAsync()
     {
-        var book = new Book { FileName = "b.pgn", DisplayName = "B", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var book = new Book { FileName = "b.pgn", DisplayName = "B", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var p1 = await AddPuzzleAsync(book, "p1", "001");

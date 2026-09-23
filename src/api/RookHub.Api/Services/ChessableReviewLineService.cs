@@ -337,7 +337,7 @@ public class ChessableReviewLineService
             .ToHashSet();
 
         // preserveExistingSourcePgn: der Merge liefert NUR die Lücken-Linien; ein bereits von getGame
-        // gesetztes (vollständiges) Book.SourcePgn darf davon NICHT überschrieben werden (sonst wäre die
+        // gesetztes (vollständiges) Book.Source.SourcePgn darf davon NICHT überschrieben werden (sonst wäre die
         // Reprocessing-Quelle nur noch das Teil-PGN). Nur ein leeres SourcePgn wird erstmalig gesetzt.
         var res = await _pgnImport.ImportFileAsync(fileName, combined, ct, preserveExistingSourcePgn: true);
 

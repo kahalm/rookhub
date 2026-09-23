@@ -193,6 +193,12 @@ public class BookAdminService
         _db.SharedPuzzleAttempts.RemoveRange(_db.SharedPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
+        // Roh-PGN (BookSource, Tabellensplitting) mit entfernen, OHNE den (mehrere MB großen) Text zu
+        // laden: ist die Source nicht schon getrackt, einen Stub anhängen — der Fixup setzt book.Source,
+        // Remove kaskadiert darauf. In MariaDB ist es dieselbe Zeile (bleibt EIN DELETE, auch ohne Stub);
+        // InMemory kaskadiert aber nicht und behielte sonst eine verwaiste BookSource.
+        if (book.Source == null)
+            _db.BookSources.Attach(new BookSource { Id = book.Id });
         _db.Books.Remove(book);
         await _db.SaveChangesAsync();
     }

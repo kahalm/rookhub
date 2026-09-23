@@ -58,7 +58,7 @@ public class ReprocessWithoutChessableTests : IDisposable
             Tags = "chessable",
             OwnerUserId = 5,
             ImportVersion = ImportPipeline.CurrentVersion - 1,
-            SourcePgn = sourcePgn,
+            Source = new BookSource { SourcePgn = sourcePgn },
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -141,7 +141,7 @@ public class ReprocessWithoutChessableTests : IDisposable
         var book = new Book
         {
             FileName = fileName, DisplayName = fileName, Tags = tags, OwnerUserId = 5,
-            ImportVersion = importVersion, SourcePgn = sourcePgn,
+            ImportVersion = importVersion, Source = new BookSource { SourcePgn = sourcePgn },
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

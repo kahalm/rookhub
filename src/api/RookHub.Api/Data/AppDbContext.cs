@@ -42,6 +42,8 @@ public class AppDbContext : DbContext
     public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
     public DbSet<SharedPuzzleAttempt> SharedPuzzleAttempts => Set<SharedPuzzleAttempt>();
     public DbSet<Book> Books => Set<Book>();
+    /// <summary>Roh-PGN der Bücher — Tabellensplitting auf <c>Books</c> (siehe <see cref="BookSource"/>).</summary>
+    public DbSet<BookSource> BookSources => Set<BookSource>();
     public DbSet<CatalogGrant> CatalogGrants => Set<CatalogGrant>();
     public DbSet<CatalogRequest> CatalogRequests => Set<CatalogRequest>();
     public DbSet<Group> Groups => Set<Group>();
@@ -531,6 +533,21 @@ public class AppDbContext : DbContext
             // Öffentlicher Kurz-Alias eindeutig (mehrere NULLs erlaubt: MySQL wertet NULL im
             // Unique-Index nicht als gleich → Bücher ohne Alias kollidieren nicht).
             e.HasIndex(b => b.PublicSlug).IsUnique();
+
+            // Roh-PGN per TABELLENSPLITTING: BookSource liegt in derselben Zeile (Spalte SourcePgn),
+            // ist aber eine eigene Entität — ein Include(bp => bp.Book) lädt den Text damit nicht mehr
+            // mit (vorher 11 GB aus der DB für EINEN Kurs-Puzzle-Request). Kein Schemaeingriff.
+            // Pflicht-Navigation: EF erzeugt beim Include IMMER eine Instanz (auch bei SourcePgn NULL)
+            // und verlangt beim Anlegen eines Buchs eine BookSource.
+            e.HasOne(b => b.Source)
+             .WithOne(s => s.Book)
+             .HasForeignKey<BookSource>(s => s.Id);
+            e.Navigation(b => b.Source).IsRequired();
+        });
+
+        modelBuilder.Entity<BookSource>(e =>
+        {
+            e.ToTable("Books");
         });
 
         modelBuilder.Entity<Group>(e =>

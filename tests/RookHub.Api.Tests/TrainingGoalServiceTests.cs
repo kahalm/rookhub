@@ -53,7 +53,7 @@ public class TrainingGoalServiceTests : IDisposable
 
     private async Task<Book> CreateBookAsync(BookKind kind, int id = 1)
     {
-        var b = new Book { Id = id, FileName = $"b{id}.pgn", DisplayName = $"Book {id}", Kind = kind, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var b = new Book { Id = id, FileName = $"b{id}.pgn", DisplayName = $"Book {id}", Kind = kind, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(b);
         await _db.SaveChangesAsync();
         return b;

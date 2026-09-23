@@ -276,7 +276,7 @@ public class ChessableImportServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var fileName = "chessable-u7-424242.pgn";
-        var book = new Book { FileName = fileName, DisplayName = "Course", OwnerUserId = 7 };
+        var book = new Book { FileName = fileName, DisplayName = "Course", OwnerUserId = 7, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         // Eine aus getReview vorbelegte Lücken-Füller-Linie (Source="review") und eine vollwertige

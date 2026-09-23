@@ -723,6 +723,7 @@ public class BookPuzzleService
                     ImportVersion = ImportPipeline.CurrentVersion,
                     CreatedAt = now,
                     UpdatedAt = now,
+                    Source = new BookSource(),   // Pflicht-Navigation (Tabellensplitting), Text bleibt null
                 };
                 _db.Books.Add(book);
                 await _db.SaveChangesAsync();

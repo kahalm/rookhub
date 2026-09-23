@@ -36,7 +36,7 @@ public class FlashcardMarkServiceTests : IDisposable
     private async Task<(Book Book, BookPuzzle Line)> SeedBookAsync(int ownerId)
     {
         var book = new Book { FileName = $"b-{Guid.NewGuid():N}.pgn", DisplayName = "Kurs",
-            OwnerUserId = ownerId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            OwnerUserId = ownerId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
         var bp = new BookPuzzle { LineId = $"{book.FileName}:1", BookFileName = book.FileName,

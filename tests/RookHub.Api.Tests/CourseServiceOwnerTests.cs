@@ -33,7 +33,8 @@ public class CourseServiceOwnerTests : IDisposable
             DisplayName = "My Chessable Course",
             OwnerUserId = ownerUserId,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource()
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -90,7 +91,8 @@ public class CourseServiceOwnerTests : IDisposable
             DisplayName = "Group Course",
             OwnerUserId = null,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource()
         };
         _db.Books.Add(book);
         _db.UserGroups.Add(new UserGroup { UserId = memberUserId, GroupId = groupId });
@@ -154,7 +156,7 @@ public class CourseServiceOwnerTests : IDisposable
         var book = await SeedPersonalBookAsync(ownerUserId: 1);
         // Roh-PGN mit Variante (Klammer) + Kommentar — muss unverändert durchgereicht werden.
         var raw = "[Event \"X\"]\n\n1. e4 e5 (1... c5 {Sizilianisch}) 2. Nf3 {Hauptlinie} *\n";
-        book.SourcePgn = raw;
+        book.Source.SourcePgn = raw;
         await _db.SaveChangesAsync();
 
         var (pgn, fileName) = await _svc.GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
@@ -388,7 +390,8 @@ public class CourseServiceOwnerTests : IDisposable
         var book = new Book
         {
             FileName = "everyone.pgn", DisplayName = "Everyone Course", OwnerUserId = null,
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource()
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

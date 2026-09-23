@@ -42,7 +42,7 @@ public class CourseStatsAggregationTests(CourseStatsFixture fixture)
         var user = new AppUser { Username = "s", Email = "s@t.local", PasswordHash = "x" };
         Db.AppUsers.Add(user);
         await Db.SaveChangesAsync();
-        var book = new Book { FileName = "stats.pgn", DisplayName = "S", OwnerUserId = user.Id };
+        var book = new Book { FileName = "stats.pgn", DisplayName = "S", OwnerUserId = user.Id, Source = new BookSource() };
         Db.Books.Add(book);
         await Db.SaveChangesAsync();
         var ids = new List<int>();

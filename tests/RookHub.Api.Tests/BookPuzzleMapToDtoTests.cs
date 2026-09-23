@@ -17,7 +17,7 @@ public class BookPuzzleMapToDtoTests
     [Fact]
     public void MapToDto_UsesBookDisplayNameAsTitle()
     {
-        var book = new Book { Id = 7, FileName = "chessable-u5-x.pgn", DisplayName = "Mein Lieblingskurs" };
+        var book = new Book { Id = 7, FileName = "chessable-u5-x.pgn", DisplayName = "Mein Lieblingskurs", Source = new BookSource() };
         var dto = BookPuzzleService.MapToDto(MakePuzzle(book));
         Assert.Equal("Mein Lieblingskurs", dto.BookTitle);
     }
@@ -25,7 +25,7 @@ public class BookPuzzleMapToDtoTests
     [Fact]
     public void MapToDto_EmptyDisplayName_YieldsNullTitle()
     {
-        var book = new Book { Id = 7, FileName = "chessable-u5-x.pgn", DisplayName = "" };
+        var book = new Book { Id = 7, FileName = "chessable-u5-x.pgn", DisplayName = "", Source = new BookSource() };
         var dto = BookPuzzleService.MapToDto(MakePuzzle(book));
         Assert.Null(dto.BookTitle);
     }

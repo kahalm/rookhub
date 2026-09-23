@@ -13,7 +13,7 @@ namespace RookHub.Api.Services;
 /// <para>Versionshistorie:</para>
 /// <list type="bullet">
 /// <item><c>1</c> — Pro-Zug-Kommentare der Hauptlinie (<c>BookPuzzle.MoveComments</c>) +
-///   Speichern des Roh-PGN je Buch (<c>Book.SourcePgn</c>), damit Bücher offline neu aufbereitet
+///   Speichern des Roh-PGN je Buch (<c>Book.Source.SourcePgn</c>), damit Bücher offline neu aufbereitet
 ///   werden können. Alles davor importierte gilt als Version 0 = veraltet.</item>
 /// <item><c>2</c> — Kapitel-Spoiler-Entschärfung für <see cref="Models.BookKind.Puzzle"/>-Bücher:
 ///   beim Import wird der motivverratende Teil nach „Chapter N:"/„Kapitel N:" aus
@@ -24,7 +24,7 @@ namespace RookHub.Api.Services;
 ///   als „geduldet" statt „falsch"). Diese Daten stehen NICHT im lokal gespeicherten PGN, sie kommen
 ///   nur aus einem frischen Chessable-Abruf → für Chessable-Repertoires ist der Reprocess ein
 ///   Re-Fetch (in-place ins bestehende Repertoire, Trainings-Fortschritt bleibt). Nicht-Chessable-
-///   bzw. lokal aus <c>Book.SourcePgn</c> aufbereitbare Datensätze ändern sich an dieser Version
+///   bzw. lokal aus <c>Book.Source.SourcePgn</c> aufbereitbare Datensätze ändern sich an dieser Version
 ///   inhaltlich nicht (reiner Versions-Mark bzw. idempotenter Re-Import).</item>
 /// <item><c>4</c> — Chessable-Info-/Erklärlinien (<c>IsInfo=1</c>) werden vom piratechess-Export jetzt
 ///   mit <c>[%info]</c> markiert; der Import setzt daraus <c>BookPuzzle.IsInfoOnly</c>. Solche Linien
@@ -34,31 +34,31 @@ namespace RookHub.Api.Services;
 /// <item><c>5</c> — Zug-lose Erklär-/Intro-Seiten (Kommentar, keine Züge) werden beim Buch-/Kurs-Import
 ///   nicht mehr verworfen, sondern als Info-Linie behalten (synthetischer Fake-Zug e4 ab Grundstellung,
 ///   <c>IsInfoOnly</c>) → erscheinen beim sequenziellen Durcharbeiten als Durchklick-Text. Diese Seiten
-///   stehen bereits im gespeicherten <c>Book.SourcePgn</c> (Kommentar-only-Spiel) → der Reprocess ist
+///   stehen bereits im gespeicherten <c>Book.Source.SourcePgn</c> (Kommentar-only-Spiel) → der Reprocess ist
 ///   hier ein reiner LOKALER Re-Import aus der Quelle, KEIN Chessable-Re-Fetch nötig.</item>
 /// <item><c>6</c> — Kommentar-Kappung von 5000 auf 100.000 Zeichen angehoben (<c>BookPuzzle.Comment</c>
 ///   jetzt LONGTEXT statt varchar(5000)): lange Chessable-Erklär-/Intro-Texte (z. B. „Introduction …
 ///   #2" in „100 Tactical Patterns") wurden bei 5000 Zeichen abgeschnitten. Der volle Text steht im
-///   gespeicherten <c>Book.SourcePgn</c> → lokal aufbereitbare Bücher brauchen nur einen LOKALEN
+///   gespeicherten <c>Book.Source.SourcePgn</c> → lokal aufbereitbare Bücher brauchen nur einen LOKALEN
 ///   Re-Import; Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
 /// <item><c>7</c> — Chessable-Kapitel-Einleitungen als NULL-Zug (<c>{[%info]} 1. -- {Text}</c>) wurden
 ///   fälschlich verworfen: der NULL-Zug <c>--</c> ergibt keine UCI-Züge, und die Info-Behalten-Logik
 ///   verlangte einen nicht-leeren ERSTEN Kommentar — hier ist der erste Kommentar aber nur der leere
 ///   <c>[%info]</c>-Marker, der Erklärtext folgt erst im Zug-Kommentar. Jetzt werden <c>[%info]</c>-
 ///   Linien auch bei NULL-Zug als Info-Linie behalten (Text = erster NICHT-leerer Kommentar). Diese
-///   Linien stehen bereits im gespeicherten <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher
+///   Linien stehen bereits im gespeicherten <c>Book.Source.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher
 ///   laufen (wie bisher) über einen Re-Fetch.</item>
 /// <item><c>8</c> — Pro-Zug-Board-Annotationen (Chessable <c>[%cal]</c>-Pfeile / <c>[%csl]</c>-Feld-
 ///   Markierungen) werden beim Import je Halbzug extrahiert und in <c>BookPuzzle.MoveShapes</c> (JSON)
 ///   gespeichert, statt beim Kommentar-Cleanup verworfen zu werden → das Frontend zeichnet sie im
-///   Review aufs Brett. Die Annotationen stehen bereits im <c>Book.SourcePgn</c> → lokal aufbereitbar;
+///   Review aufs Brett. Die Annotationen stehen bereits im <c>Book.Source.SourcePgn</c> → lokal aufbereitbar;
 ///   Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
 /// <item><c>9</c> — Fortsetzungs-Varianten in Zug-Kommentaren werden nicht mehr verworfen: endet ein
 ///   Hauptlinien-Kommentar (Chessable-Stil) mit einem Verweis auf eine Fortsetzung („…the continuation
 ///   would have been", „better was …") und folgt ihm direkt eine Varianten-Klammer <c>(…)</c>, so wird
 ///   deren Inhalt (Züge + Zug-Kommentare) kompakt in den Kommentar gefaltet, statt ihn mitten im Satz
 ///   enden zu lassen (<c>PgnParser.ExtractMoveComments</c>). Der Varianten-Text steht bereits im
-///   <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
+///   <c>Book.Source.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
 ///   Re-Fetch.</item>
 /// <item><c>10</c> — Von Chessable geduldete Alternativzüge (softFail → <c>[%alt …]</c>) werden beim
 ///   Import je Halbzug nach <c>BookPuzzle.AltMoves</c> (JSON <c>{ply:[uci]}</c>) extrahiert (SAN→UCI aus
@@ -66,12 +66,12 @@ namespace RookHub.Api.Services;
 ///   Solver erkennt einen solchen Zug jetzt als gleichwertige Alternative (zeigt „auch eine Alternative",
 ///   nimmt ihn zurück, wartet weiter auf den Hauptzug) statt ihn als Fehler zu werten — analog zum
 ///   Repertoire-Trainer, der <c>[%alt]</c> aus dem PGN-Baum bereits akzeptiert. Die Marker stehen bereits
-///   im <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
+///   im <c>Book.Source.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
 ///   Re-Fetch.</item>
 /// <item><c>11</c> — Info-/Erklärlinien behalten jetzt die ECHTE Stellung aus dem <c>[FEN]</c>-Header
 ///   (Züge leer) statt einer synthetischen Grundstellung + Fake-Zug <c>e2e4</c>. Chessable-„Introduction"-
 ///   /„Evaluate …"-Seiten (z. B. <c>⏲Exercise #N - Introduction</c>) zeigten sonst die Grundstellung
-///   statt der besprochenen Position. Die richtige FEN steht bereits im <c>Book.SourcePgn</c> → rein
+///   statt der besprochenen Position. Die richtige FEN steht bereits im <c>Book.Source.SourcePgn</c> → rein
 ///   lokal aufbereitbar (kein Chessable-Re-Fetch nötig).</item>
 /// <item><c>12</c> — Spiel-Splitting robuster (<c>PgnParser.SplitGames</c>): (a) umbruch-bedingte
 ///   Kommentar-Fortsetzungszeilen, die mit <c>[</c> beginnen (<c>[%cal …]</c>/<c>[%tqu …]</c> am
@@ -80,7 +80,7 @@ namespace RookHub.Api.Services;
 ///   Kommentare, ohne Fehler). Jetzt zählt eine Klammertiefe über Zeilen hinweg: Inhalt offener
 ///   <c>{…}</c>-Kommentare bleibt erhalten, auch header-artige Zeilen darin splitten kein Spiel mehr.
 ///   (b) Header-only-Spiele (Header ohne Movetext) mischten ihre Header (z. B. die FEN) still in das
-///   NÄCHSTE Spiel; sie werden jetzt separat geflusht. Der Quelltext steht im <c>Book.SourcePgn</c>
+///   NÄCHSTE Spiel; sie werden jetzt separat geflusht. Der Quelltext steht im <c>Book.Source.SourcePgn</c>
 ///   → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
 /// <item><b>13:</b> Chessable-<c>oid</c> je Linie wird beim Import gespeichert (<c>BookPuzzle.ChessableOid</c>,
 ///   aus dem PGN-Header <c>[ChessableOid]</c>, den piratechess seit v1.29.0 mitgibt) — Grundlage für die
@@ -108,7 +108,7 @@ namespace RookHub.Api.Services;
 ///   lösbaren Puzzle wurde still eine statische Info-Seite (leere <c>Moves</c>, <c>StartPly=-1</c>,
 ///   <c>IsInfoOnly=1</c> — Board-Pfeile/Kommentare blieben, weil die per Token-Zählung, nicht per
 ///   Nachspielen extrahiert werden). Jetzt wird die Umwandlung vor dem Nachspielen auf <c>=&lt;GROSS&gt;</c>
-///   normalisiert. Betrifft v. a. Endspiel-/Taktik-Bücher; die Züge stehen bereits im <c>Book.SourcePgn</c>
+///   normalisiert. Betrifft v. a. Endspiel-/Taktik-Bücher; die Züge stehen bereits im <c>Book.Source.SourcePgn</c>
 ///   → rein lokal per „Aktualisieren" aufbereitbar (kein Chessable-Re-Fetch nötig).</item>
 /// <item><b>17:</b> Info-/Muster-Linien mit ILLEGALER Diagramm-FEN (Chessable-„📝"-Seiten, z. B. ganz
 ///   ohne König) bekommen jetzt ihre Demonstrations-Züge als <c>Moves</c> (UCI). Bisher lehnte
@@ -117,7 +117,7 @@ namespace RookHub.Api.Services;
 ///   Chessable durchklicken kann. Ein permissiver SAN→UCI-Parser (<see cref="PermissiveSan"/>, reine
 ///   Figuren-Geometrie ohne Legalität) füllt die Züge jetzt auch für illegale FENs; das Frontend spielt
 ///   sie ohne chess.js nach. Betrifft nur <c>IsInfoOnly</c>-Linien (Zählung/Quiz unverändert). Die Züge
-///   stehen bereits im <c>Book.SourcePgn</c> → rein lokal per „Aktualisieren" aufbereitbar.</item>
+///   stehen bereits im <c>Book.Source.SourcePgn</c> → rein lokal per „Aktualisieren" aufbereitbar.</item>
 /// <item><b>18</b> (0.457.2): <b>Ein EIGENES Eröffnungsrepertoire wird spielbar.</b> Linien aus der
 ///   GRUNDSTELLUNG ohne Trainingsmarker galten als „ganze Partie ohne Aufgabe" und wurden verworfen —
 ///   richtig für die globalen Puzzle-Bücher, falsch für den eigenen Kurs eines Nutzers, denn dort sind
@@ -125,14 +125,14 @@ namespace RookHub.Api.Services;
 ///   Repertoire; `Book.OwnerUserId != null`) bleiben sie jetzt und bekommen einen gemeinsamen
 ///   Trainingsstart aus der Seite, der das Repertoire gehört (`PgnImportService.StartPlyForRepertoire`,
 ///   Signal: Zuglänge der Linien). Am echten Fall gemessen: ein 5-MB-Chessable-Repertoire mit 902
-///   Linien ergab 0 spielbare Linien, jetzt 900. Die Züge stehen im `Book.SourcePgn` → per
+///   Linien ergab 0 spielbare Linien, jetzt 900. Die Züge stehen im `Book.Source.SourcePgn` → per
 ///   „Aktualisieren" lokal aufbereitbar.</item>
 /// <item><c>19</c> — Varianten ohne eigenen Zug-Kommentar gingen verloren: nur eine Variante, die direkt
 ///   auf einen Kommentar folgte, wurde in den Kommentar gefaltet. Chessable schreibt Alternativen aber oft
 ///   direkt hinter den Zug („3. e5 (3.Nc3 Nf6 …) (3.exd5 exd5 …)"), bzw. hinter einen reinen Pfeil-Kommentar.
 ///   Jetzt faltet der Kurs-Import JEDE Hauptlinien-Variante in PGN-Reihenfolge in den Kommentar ihres Zugs
 ///   (<c>PgnParser.ExtractMoveComments(foldAllVariations: true)</c>); das Frontend macht die Züge dort über
-///   ihre Zugnummer klickbar. Die Varianten stehen im <c>Book.SourcePgn</c> → per „Aktualisieren" lokal
+///   ihre Zugnummer klickbar. Die Varianten stehen im <c>Book.Source.SourcePgn</c> → per „Aktualisieren" lokal
 ///   aufbereitbar.</item>
 /// </list>
 /// </summary>

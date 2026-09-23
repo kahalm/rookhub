@@ -62,7 +62,7 @@ public class CourseAccessTests(CourseAccessFixture fixture)
 
     private async Task<int> BookAsync(string file, bool isPublic = false, int? owner = null)
     {
-        var b = new Book { FileName = file, DisplayName = file, IsPublic = isPublic, OwnerUserId = owner };
+        var b = new Book { FileName = file, DisplayName = file, IsPublic = isPublic, OwnerUserId = owner, Source = new BookSource() };
         _db.Books.Add(b); await _db.SaveChangesAsync(); return b.Id;
     }
 

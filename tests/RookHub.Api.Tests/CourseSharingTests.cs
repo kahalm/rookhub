@@ -51,7 +51,8 @@ public class CourseSharingTests : IDisposable
             DisplayName = "My Course",
             OwnerUserId = ownerUserId,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            Source = new BookSource()
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();

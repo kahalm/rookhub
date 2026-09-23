@@ -56,7 +56,7 @@ public class ImportReprocessServiceTests : IDisposable
         var book = new Book
         {
             FileName = fileName, DisplayName = fileName, OwnerUserId = owner,
-            ImportVersion = version, SourcePgn = sourcePgn, Tags = tags,
+            ImportVersion = version, Source = new BookSource { SourcePgn = sourcePgn }, Tags = tags,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
         };
         _db.Books.Add(book);

@@ -12,7 +12,7 @@ namespace RookHub.Api.Services;
 /// <c>{…}</c> hinter den jeweiligen Halbzug eingebettet (Schlüssel <c>-1</c> = Einleitung).
 /// Puzzles, die sich nicht spielen lassen, werden übersprungen (Export bleibt robust).
 /// <para>Hinweis: Dieser Rekonstruktions-Export kennt KEINE Varianten (sie liegen nicht in der DB).
-/// Solange das Buch ein <see cref="Book.SourcePgn"/> hat, wird ohnehin dieses Roh-PGN ausgeliefert;
+/// Solange das Buch ein <see cref="BookSource.SourcePgn"/> hat, wird ohnehin dieses Roh-PGN ausgeliefert;
 /// dieser Exporter greift nur beim quellenlosen Altbestand.</para>
 /// </summary>
 public static class CoursePgnExporter

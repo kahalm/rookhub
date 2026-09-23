@@ -37,7 +37,7 @@ public class CourseRepertoireConversionService
     }
 
     /// <summary>„Kurs → Repertoire umwandeln" (Verschieben): legt aus dem Kurs-PGN (inkl. Varianten/
-    /// Kommentaren, wenn <see cref="Models.Book.SourcePgn"/> vorhanden) ein neues Repertoire des Users an und
+    /// Kommentaren, wenn <see cref="Models.BookSource.SourcePgn"/> vorhanden) ein neues Repertoire des Users an und
     /// ENTFERNT den Original-Kurs, sofern es ein persönlicher (eigener) Kurs ist
     /// (<c>Book.OwnerUserId == userId</c>). Geteilte Gruppen-/Admin-Bücher werden NICHT gelöscht (gehören
     /// dem User nicht) — dann bleibt der Kurs bestehen. Zugriff wird geprüft (kein Zugriff → 404).</summary>

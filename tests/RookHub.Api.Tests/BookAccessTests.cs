@@ -38,6 +38,7 @@ public class BookAccessTests : IDisposable
             IsPublic = isPublic,
             ForRandom = forRandom,
             ForDaily = forDaily,
+            Source = new BookSource(),
         };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
