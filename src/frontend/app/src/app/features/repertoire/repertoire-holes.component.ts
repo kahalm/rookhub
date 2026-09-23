@@ -260,10 +260,11 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit(): void {
     this.explorer.sources().subscribe(src => {
       this.sources.set(src);
-      // Gemerkt „lokal", aber hier nicht eingerichtet (anderes Gerät/andere Umgebung) → online.
+      // „Lokal" (gemerkt oder Vorgabe), aber hier nicht eingerichtet → online. NICHT speichern: auf
+      // einem Server MIT lokalem Explorer soll wieder die eigentliche Wahl gelten.
       if (this.settings().source === 'local') {
-        if (src.local) this.update(fitToLocal(this.settings(), src));
-        else this.update({ source: 'online' });
+        if (src.local) this.settings.set(fitToLocal(this.settings(), src));
+        else this.settings.set({ ...this.settings(), source: 'online' });
       }
     });
   }

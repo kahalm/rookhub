@@ -44,9 +44,12 @@ export interface ExplorerSettings {
   thresholdPercent: number;
 }
 
+/** Vorgabe: der LOKALE Explorer mit den Meisterpartien (0.504.1) — ohne Token, ohne Drossel, und
+ *  Meisterpartien sind die Referenz für Eröffnungen. Hat der Server keinen lokalen Explorer, gilt
+ *  online (`effectiveSettings`/Komponenten), ohne dass dieser Rückfall gespeichert wird. */
 export const DEFAULT_EXPLORER_SETTINGS: ExplorerSettings = {
-  source: 'online',
-  database: 'lichess',
+  source: 'local',
+  database: 'masters',
   ratings: [1600, 1800, 2000],
   speeds: ['blitz', 'rapid', 'classical'],
   thresholdPercent: 1,
@@ -144,8 +147,9 @@ export function readExplorerSettings(): ExplorerSettings {
     const speeds = Array.isArray(s.speeds) ? s.speeds.filter(x => EXPLORER_SPEEDS.includes(x)) : [];
     const t = Number(s.thresholdPercent);
     return {
-      source: s.source === 'local' ? 'local' : 'online',
-      database: s.database === 'masters' ? 'masters' : 'lichess',
+      // Fehlt das Feld (gespeichert vor 0.503.0), gilt die Vorgabe — nicht stillschweigend online.
+      source: s.source === 'online' || s.source === 'local' ? s.source : DEFAULT_EXPLORER_SETTINGS.source,
+      database: s.database === 'lichess' || s.database === 'masters' ? s.database : DEFAULT_EXPLORER_SETTINGS.database,
       ratings: ratings.length ? ratings : [...DEFAULT_EXPLORER_SETTINGS.ratings],
       speeds: speeds.length ? speeds : [...DEFAULT_EXPLORER_SETTINGS.speeds],
       thresholdPercent: Number.isFinite(t) ? clampThreshold(t) : DEFAULT_EXPLORER_SETTINGS.thresholdPercent,

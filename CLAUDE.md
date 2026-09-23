@@ -260,7 +260,10 @@ unter der Zugliste, nur angemeldet. Fragt `GET /api/explorer/position` erst 250 
 Stellungswechsel (Durchklicken einer Partie mit den Pfeiltasten kostet online sonst Kontingent),
 merkt sich Antworten je Stellung + Auswahl im Speicher der Seite, verwirft eine späte Antwort für
 eine schon verlassene Stellung und fragt zugeklappt gar nicht (`rookhub_analysis_explorer_open`).
-Die Auswahl ist DIESELBE wie im Lochfinder (`rookhub_explorer_settings`). Dafür tragen die
+Die Auswahl ist DIESELBE wie im Lochfinder (`rookhub_explorer_settings`). **Vorgabe seit 0.504.1:
+lokal + Meister** (`DEFAULT_EXPLORER_SETTINGS`); ohne lokalen Explorer gilt online, und dieser
+Rückfall wird NICHT gespeichert (sonst bliebe ein Gerät nach einem Besuch auf einem Server ohne
+lokalen Explorer für immer auf online). Dafür tragen die
 Explorer-Daten seit 0.504.0 auch Weiß/Remis/Schwarz und das Durchschnitts-Elo je Zug
 (`ExplorerMoveStat`, JSON `w`/`d`/`b`/`r`); ein Speicher-Eintrag von vorher (`HasResults == false`)
 genügt dem Lochfinder weiter, der Explorer holt ihn neu und überschreibt ihn.

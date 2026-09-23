@@ -134,13 +134,25 @@ describe('OpeningExplorerComponent', () => {
     expect(fixture.componentInstance.result()!.status).toBe('ok');
   }));
 
-  it('switching to masters sends no rating or speed and asks again', fakeAsync(() => {
+  it('by default it asks for master games — online here, because this server has no local explorer', fakeAsync(() => {
     setup();
     setFen(START); tick(300);
-    fixture.componentInstance.setDatabase('masters');
+    const s = positionSpy.calls.mostRecent().args[1];
+    expect(s.database).toBe('masters');
+    expect(s.source).toBe('online');
+    // Der Rückfall wird nicht gespeichert.
+    expect(localStorage.getItem('rookhub_explorer_settings')).toBeNull();
+  }));
+
+  it('switching to Lichess asks again with rating and speed', fakeAsync(() => {
+    setup();
+    setFen(START); tick(300);
+    fixture.componentInstance.setDatabase('lichess');
     tick(300);
 
     expect(positionSpy).toHaveBeenCalledTimes(2);
-    expect(positionSpy.calls.mostRecent().args[1].database).toBe('masters');
+    const s = positionSpy.calls.mostRecent().args[1];
+    expect(s.database).toBe('lichess');
+    expect(s.ratings.length).toBeGreaterThan(0);
   }));
 });

@@ -58,6 +58,12 @@ describe('repertoire-explorer helpers', () => {
 
   it('settings: defaults, round trip, junk falls back', () => {
     expect(readExplorerSettings()).toEqual(DEFAULT_EXPLORER_SETTINGS);
+    expect(DEFAULT_EXPLORER_SETTINGS.source).toBe('local');
+    expect(DEFAULT_EXPLORER_SETTINGS.database).toBe('masters');
+    // Gespeichert vor der Quellen-Wahl (ohne Feld): Vorgabe, nicht stillschweigend online.
+    localStorage.setItem('rookhub_explorer_settings', JSON.stringify({ database: 'lichess', ratings: [2000], speeds: ['rapid'] }));
+    expect(readExplorerSettings().source).toBe('local');
+    expect(readExplorerSettings().database).toBe('lichess');
     saveExplorerSettings({ source: 'local', database: 'masters', ratings: [2200], speeds: ['rapid'], thresholdPercent: 2.5 });
     expect(readExplorerSettings()).toEqual({ source: 'local', database: 'masters', ratings: [2200], speeds: ['rapid'], thresholdPercent: 2.5 });
 

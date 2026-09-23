@@ -851,7 +851,8 @@ describe('RepertoireTrainerComponent „Häufigste zuerst"', () => {
     expect(req.includeLineFrequencies).toBeTrue();
     expect(req.includeHoles).toBeFalse();
     expect(req.chapterColors).toEqual({ 'Chapter A': 'w', 'Chapter B': 'w' });
-    expect(req.source).toBe('online');
+    expect(req.source).toBe('local');       // Vorgabe: lokaler Explorer, Meisterpartien
+    expect(req.database).toBe('masters');
     expect(c.queue.map(l => l.headers['White'])).toEqual(['1.d4 d5', '1.e4 e5']);
     expect(c.currentLineFrequency).toBeCloseTo(0.4, 6);
     expect(c.freqNotice).toBeNull();

@@ -95,6 +95,7 @@ describe('RepertoireHolesComponent', () => {
 
   it('cannot start without a rating or a speed for the Lichess database', () => {
     const c = make(PGN_BLACK, { run: () => of(result()) });
+    c.setDatabase('lichess');
     for (const r of [...c.settings().ratings]) c.toggleRating(r);
     expect(c.canStart()).toBeFalse();
     c.setDatabase('masters');
@@ -141,10 +142,29 @@ describe('RepertoireHolesComponent', () => {
     expect(run.calls.mostRecent().args[1].source).toBe('local');
   });
 
-  it('a remembered local source falls back to online where there is none', () => {
+  it('a remembered local source falls back to online where there is none — without saving that', () => {
     localStorage.setItem('rookhub_explorer_settings', JSON.stringify({ source: 'local' }));
     const c = make(PGN_BLACK, { run: () => of(result()) });
     expect(c.settings().source).toBe('online');
+    expect(JSON.parse(localStorage.getItem('rookhub_explorer_settings')!).source).toBe('local');
+  });
+
+  it('by default it asks the local explorer for master games', () => {
+    const run = jasmine.createSpy('run').and.returnValue(of(result()));
+    const c = make(PGN_BLACK, { run }, WITH_LOCAL);
+    c.start();
+    const req = run.calls.mostRecent().args[1];
+    expect(req.source).toBe('local');
+    expect(req.database).toBe('masters');
+  });
+
+  it('without a local explorer the default becomes online masters', () => {
+    const run = jasmine.createSpy('run').and.returnValue(of(result()));
+    const c = make(PGN_BLACK, { run });
+    c.start();
+    const req = run.calls.mostRecent().args[1];
+    expect(req.source).toBe('online');
+    expect(req.database).toBe('masters');
   });
 
   it('renders the hole list', async () => {
