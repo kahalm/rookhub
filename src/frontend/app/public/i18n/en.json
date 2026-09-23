@@ -2495,7 +2495,9 @@
       "move": "Move",
       "games": "Games",
       "results": "White / Draw / Black",
-      "total": "{{count}} games"
+      "total": "{{count}} games",
+      "gamesInfo": "Games with this move",
+      "gamesNone": "No games are listed for this move."
     }
   },
   "stats": {

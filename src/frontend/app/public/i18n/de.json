@@ -2495,7 +2495,9 @@
       "move": "Zug",
       "games": "Partien",
       "results": "Weiß / Remis / Schwarz",
-      "total": "{{count}} Partien"
+      "total": "{{count}} Partien",
+      "gamesInfo": "Partien mit diesem Zug",
+      "gamesNone": "Zu diesem Zug sind keine Partien hinterlegt."
     }
   },
   "stats": {

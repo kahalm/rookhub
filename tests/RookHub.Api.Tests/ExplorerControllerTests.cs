@@ -73,6 +73,16 @@ public class ExplorerControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Games_BadSelection_Is400_AndNoToken_IsOkWithStatus()
+    {
+        const string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        Assert.IsType<BadRequestObjectResult>((await Controller().Games(fen, null, "lichess", "1750", "blitz", CancellationToken.None)).Result);
+        var dto = Assert.IsType<ExplorerGamesResultDto>(Assert.IsType<OkObjectResult>(
+            (await Controller().Games(fen, null, "masters", null, null, CancellationToken.None)).Result).Value);
+        Assert.Equal("tokenMissing", dto.Status);
+    }
+
+    [Fact]
     public void Sources_WithoutLocal()
     {
         var dto = Assert.IsType<ExplorerSourcesDto>(Assert.IsType<OkObjectResult>(Controller().Sources().Result).Value);

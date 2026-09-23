@@ -8,8 +8,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Observable, Subject, Subscription, debounceTime, of, switchMap, tap, timer, catchError, map } from 'rxjs';
+import { Chess } from 'chess.js';
 import {
-  EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerPosition, ExplorerPositionMove, ExplorerSettings, ExplorerSource,
+  EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerGame, ExplorerGames, ExplorerPosition, ExplorerPositionMove, ExplorerSettings, ExplorerSource,
   ExplorerSources, RepertoireExplorerService, fitToLocal, formatPercent, readExplorerSettings, saveExplorerSettings,
 } from '../repertoire/repertoire-explorer.service';
 
@@ -124,6 +125,7 @@ function readOpen(): boolean {
                     <th>{{ 'analysis.explorer.move' | translate }}</th>
                     <th class="num">{{ 'analysis.explorer.games' | translate }}</th>
                     <th class="wdl-head">{{ 'analysis.explorer.results' | translate }}</th>
+                    <th class="info-head"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,7 +143,56 @@ function readOpen(): boolean {
                           <span class="b" [style.width.%]="row.b * 100">{{ row.b >= 0.14 ? pct(row.b) : '' }}</span>
                         </div>
                       </td>
+                      <td class="info">
+                        <button mat-icon-button type="button" class="info-btn" [class.on]="expanded() === row.move.uci"
+                                (click)="$event.stopPropagation(); toggleGames(row.move)"
+                                [matTooltip]="'analysis.explorer.gamesInfo' | translate"
+                                [attr.aria-label]="'analysis.explorer.gamesInfo' | translate"
+                                [attr.aria-expanded]="expanded() === row.move.uci">
+                          <mat-icon>info_outline</mat-icon>
+                        </button>
+                      </td>
                     </tr>
+                    @if (expanded() === row.move.uci) {
+                      <tr class="games-row">
+                        <td colspan="4">
+                          @if (gamesLoading()) {
+                            <mat-progress-bar mode="indeterminate" />
+                          } @else if (games(); as gs) {
+                            @switch (gs.status) {
+                              @case ('ok') {
+                                @if (gs.games.length === 0) {
+                                  <span class="note">{{ 'analysis.explorer.gamesNone' | translate }}</span>
+                                } @else {
+                                  <ul class="games">
+                                    @for (g of gs.games; track g.id) {
+                                      <li>
+                                        <span class="res">{{ gameResult(g) }}</span>
+                                        @if (g.url) {
+                                          <a [href]="g.url" target="_blank" rel="noopener">{{ players(g) }}</a>
+                                        } @else {
+                                          <span>{{ players(g) }}</span>
+                                        }
+                                        <span class="date">{{ g.date }}@if (g.speed) { · {{ 'repertoire.holes.speed.' + g.speed | translate }} }</span>
+                                      </li>
+                                    }
+                                  </ul>
+                                }
+                              }
+                              @case ('rateLimited') {
+                                <span class="note">{{ 'repertoire.holes.rateLimited' | translate: { seconds: gs.retryAfterSeconds ?? 60 } }}</span>
+                              }
+                              @case ('tokenMissing') {
+                                <span class="note">{{ 'repertoire.holes.tokenMissing' | translate }}</span>
+                              }
+                              @default {
+                                <span class="note">{{ 'analysis.explorer.failed' | translate }}</span>
+                              }
+                            }
+                          }
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
@@ -185,6 +236,16 @@ function readOpen(): boolean {
     .wdl .w { background: #f2f2f2; color: #222; }
     .wdl .d { background: #9e9e9e; color: #111; }
     .wdl .b { background: #303030; color: #eee; }
+    .info-head, .info { width: 1%; padding: 0; }
+    .info-btn { width: 28px; height: 28px; padding: 2px; --mdc-icon-button-state-layer-size: 28px; }
+    .info-btn mat-icon { font-size: 18px; width: 18px; height: 18px; color: color-mix(in srgb, currentColor 55%, transparent); }
+    .info-btn.on mat-icon { color: var(--mat-sys-primary, #3f51b5); }
+    tr.games-row { cursor: default; }
+    tr.games-row:hover { background: none; }
+    ul.games { list-style: none; margin: 0; padding: 2px 0 4px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+    ul.games li { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+    .res { font-family: 'Roboto Mono', monospace; min-width: 2.6em; }
+    .date { color: color-mix(in srgb, currentColor 55%, transparent); }
     .foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 12px;
       color: color-mix(in srgb, currentColor 60%, transparent); }
   `],
@@ -200,6 +261,10 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
   readonly sources = signal<ExplorerSources | null>(null);
   readonly loading = signal(false);
   readonly result = signal<ExplorerPosition | null>(null);
+  /** Aufgeklappte Zeile (Partien zum Zug), als UCI des Zugs; null = keine. */
+  readonly expanded = signal<string | null>(null);
+  readonly games = signal<ExplorerGames | null>(null);
+  readonly gamesLoading = signal(false);
 
   readonly ratings = computed(() => {
     const src = this.sources();
@@ -227,6 +292,8 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
 
   private readonly requests = new Subject<void>();
   private readonly cache = new Map<string, ExplorerPosition>();
+  private readonly gamesCache = new Map<string, ExplorerGames>();
+  private gamesSub: Subscription | null = null;
   private sub: Subscription | null = null;
   private retry: Subscription | null = null;
   private ready = false;
@@ -254,11 +321,63 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  ngOnChanges(): void { if (this.ready) this.request(); }
+  ngOnChanges(): void {
+    this.closeGames();   // andere Stellung → die aufgeklappten Partien gehören nicht mehr dazu
+    if (this.ready) this.request();
+  }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
     this.retry?.unsubscribe();
+    this.gamesSub?.unsubscribe();
+  }
+
+  /** (i) einer Zeile: die Partien mit diesem Zug auf- bzw. zuklappen. Gefragt wird die Stellung NACH
+   *  dem Zug — das sind genau die Partien, in denen er gespielt wurde (Zugumstellungen eingeschlossen). */
+  toggleGames(move: ExplorerPositionMove): void {
+    if (this.expanded() === move.uci) { this.closeGames(); return; }
+    this.closeGames();
+    const after = this.fenAfter(move);
+    if (!after) return;
+    this.expanded.set(move.uci);
+    const key = `${after.split(' ').slice(0, 3).join(' ')}|${this.settingsKey()}`;
+    const hit = this.gamesCache.get(key);
+    if (hit) { this.games.set(hit); return; }
+    this.gamesLoading.set(true);
+    this.gamesSub = this.explorer.games(after, this.settings()).pipe(
+      catchError(() => of<ExplorerGames>({ status: 'failed', retryAfterSeconds: null, games: [] })),
+    ).subscribe(g => {
+      if (g.status === 'ok') this.gamesCache.set(key, g);
+      this.gamesLoading.set(false);
+      this.games.set(g);
+    });
+  }
+
+  /** „Caruana, Fabiano (2818) – Carlsen, Magnus (2882)". */
+  players(g: ExplorerGame): string {
+    const one = (name: string, rating: number | null) => rating ? `${name} (${rating})` : name;
+    return `${one(g.white, g.whiteRating)} – ${one(g.black, g.blackRating)}`;
+  }
+
+  gameResult(g: ExplorerGame): string {
+    return g.winner === 'white' ? '1-0' : g.winner === 'black' ? '0-1' : '½-½';
+  }
+
+  private closeGames(): void {
+    this.gamesSub?.unsubscribe();
+    this.gamesSub = null;
+    this.expanded.set(null);
+    this.games.set(null);
+    this.gamesLoading.set(false);
+  }
+
+  private fenAfter(move: ExplorerPositionMove): string | null {
+    try {
+      const chess = new Chess(this.fen);
+      return chess.move(move.san) ? chess.fen() : null;
+    } catch {
+      return null;
+    }
   }
 
   toggleOpen(): void {
@@ -312,6 +431,7 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
     const next = { ...this.settings(), ...patch };
     this.settings.set(next);
     saveExplorerSettings(next);
+    this.closeGames();
     this.request();
   }
 
@@ -354,11 +474,14 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private cacheKey(): string {
+    return `${this.fen.split(' ').slice(0, 3).join(' ')}|${this.settingsKey()}`;
+  }
+
+  private settingsKey(): string {
     const s = this.settings();
-    const pos = this.fen.split(' ').slice(0, 3).join(' ');
     return s.database === 'masters'
-      ? `${pos}|${s.source}|masters`
-      : `${pos}|${s.source}|lichess|${s.ratings.join(',')}|${s.speeds.join(',')}`;
+      ? `${s.source}|masters`
+      : `${s.source}|lichess|${s.ratings.join(',')}|${s.speeds.join(',')}`;
   }
 }
 

@@ -127,3 +127,30 @@ public class ExplorerPositionMoveDto
     public string? Opening { get; set; }
     public string? Eco { get; set; }
 }
+
+/// <summary>Antwort von <c>GET /api/explorer/games</c>: eine Handvoll Partien, die die Stellung
+/// erreicht haben (die bestbewerteten, bei Lichess dazu die jüngsten).</summary>
+public class ExplorerGamesResultDto
+{
+    /// <summary>Wie bei <see cref="ExplorerPositionResultDto.Status"/>.</summary>
+    public string Status { get; set; } = "ok";
+    public int? RetryAfterSeconds { get; set; }
+    public List<ExplorerGameDto> Games { get; set; } = new();
+}
+
+public class ExplorerGameDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string White { get; set; } = string.Empty;
+    public int? WhiteRating { get; set; }
+    public string Black { get; set; } = string.Empty;
+    public int? BlackRating { get; set; }
+    /// <summary><c>white</c>, <c>black</c> oder <c>null</c> = Remis.</summary>
+    public string? Winner { get; set; }
+    /// <summary><c>yyyy-MM</c>, wo bekannt, sonst das Jahr.</summary>
+    public string? Date { get; set; }
+    public string? Speed { get; set; }
+    /// <summary>Link auf lichess.org — fehlt bei den lokalen Meisterpartien (Lumbra-Datenbank, dort
+    /// gibt es die Partie unter dieser Kennung nicht).</summary>
+    public string? Url { get; set; }
+}

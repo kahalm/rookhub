@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.505.0", date: "2026-09-23", changes: [
+    { en: "Opening explorer on the analysis board: an (i) at the end of every move row folds out a handful of games in which that move was played – players with ratings, result and date; for Lichess the best-rated and the most recent ones. Games that exist on lichess.org are linked there (not the local master games, which come from the Lumbra database). Clicking the (i) does not play the move; clicking the row still does.", de: "Eröffnungs-Explorer auf dem Analysebrett: ein (i) am Ende jeder Zugzeile klappt eine Handvoll Partien auf, in denen dieser Zug gespielt wurde – Spieler mit Wertungszahl, Ergebnis und Datum; bei Lichess die bestbewerteten und die jüngsten. Partien, die es auf lichess.org gibt, sind dorthin verlinkt (nicht die lokalen Meisterpartien, die aus der Lumbra-Datenbank stammen). Ein Klick auf das (i) spielt den Zug nicht; ein Klick auf die Zeile weiterhin schon." },
+  ] },
   { version: "0.504.1", date: "2026-09-23", changes: [
     { en: "Hole finder, opening explorer on the analysis board and „most frequent lines first“ now start with the local explorer and master games. No token, no waiting, and master games are the reference for openings. Where the server has no local explorer, master games from lichess.org are used instead – without storing that fallback. A selection you have already made yourself stays as it is.", de: "Lochfinder, Eröffnungs-Explorer auf dem Analysebrett und „Häufigste Linien zuerst“ starten jetzt mit dem lokalen Explorer und den Meisterpartien. Kein Token, kein Warten, und Meisterpartien sind die Referenz für Eröffnungen. Hat der Server keinen lokalen Explorer, gelten die Meisterpartien von lichess.org – ohne dass dieser Rückfall gespeichert wird. Eine schon selbst getroffene Auswahl bleibt, wie sie ist." },
   ] },

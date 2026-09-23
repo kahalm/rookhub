@@ -241,6 +241,67 @@ public class RepertoireExplorerService
         return dto;
     }
 
+    /// <summary>So lange bleiben die Partien einer Stellung im Arbeitsspeicher — beide Quellen.</summary>
+    private static readonly TimeSpan GamesMemoryTtl = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Eine Handvoll Partien, die diese Stellung erreicht haben (<c>GET /api/explorer/games</c>) —
+    /// der Client fragt die Stellung NACH einem Zug, das sind die Partien mit diesem Zug
+    /// (Zugumstellungen eingeschlossen). Nur im Arbeitsspeicher (eine Stunde), nicht in der Datenbank:
+    /// man sieht sie sich gezielt an, und die Liste der jüngsten Partien veraltet ohnehin.
+    /// </summary>
+    public async Task<ExplorerGamesResultDto> GamesAsync(
+        int userId, string? fen, string? source, ExplorerQuery query, CancellationToken ct)
+    {
+        fen = (fen ?? "").Trim();
+        if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new ArgumentException("Keine gültige FEN.");
+        var useLocal = UseLocal(source);
+        var dto = new ExplorerGamesResultDto();
+        var memoryKey = $"explorer:games:{(useLocal ? "local" : "online")}:{query.CachePrefix}{RepertoireReach.Key(fen)}";
+
+        if (!_memory.TryGetValue<List<ExplorerGame>>(memoryKey, out var games) || games is null)
+        {
+            if (useLocal)
+            {
+                games = await _local.FetchGamesAsync(fen, query, ct);
+                if (games is null) { dto.Status = "failed"; return dto; }
+            }
+            else
+            {
+                if (_gate.BlockedFor is { } blocked) return RateLimited(dto, blocked);
+                var token = await ResolveTokenAsync(userId, ct);
+                if (token is null) { dto.Status = "tokenMissing"; return dto; }
+                var (status, fetched) = await _client.FetchGamesAsync(fen, query, token, ct);
+                switch (status)
+                {
+                    case ExplorerFetchStatus.Ok: games = fetched!; break;
+                    case ExplorerFetchStatus.RateLimited:
+                        return RateLimited(dto, _gate.BlockedFor ?? LichessExplorerGate.RateLimitPause);
+                    case ExplorerFetchStatus.Unauthorized: dto.Status = "tokenInvalid"; return dto;
+                    default: dto.Status = "failed"; return dto;
+                }
+            }
+            _memory.Set(memoryKey, games, GamesMemoryTtl);
+        }
+
+        // Lokale Meisterpartien stammen aus der Lumbra-Datenbank — ihre Kennung gibt es auf lichess.org nicht.
+        var linkable = !(useLocal && query.Database == ExplorerQuery.Masters);
+        dto.Games = games.Select(g => new ExplorerGameDto
+        {
+            Id = g.Id, White = g.White, WhiteRating = g.WhiteRating, Black = g.Black, BlackRating = g.BlackRating,
+            Winner = g.Winner, Date = g.Month ?? g.Year?.ToString(), Speed = g.Speed,
+            Url = linkable ? "https://lichess.org/" + Uri.EscapeDataString(g.Id) : null,
+        }).ToList();
+        return dto;
+    }
+
+    private static ExplorerGamesResultDto RateLimited(ExplorerGamesResultDto dto, TimeSpan left)
+    {
+        dto.Status = "rateLimited";
+        dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
+        return dto;
+    }
+
     private static ExplorerPositionResultDto RateLimited(ExplorerPositionResultDto dto, TimeSpan left)
     {
         dto.Status = "rateLimited";

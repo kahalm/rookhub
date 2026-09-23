@@ -4,7 +4,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { OpeningExplorerComponent } from './opening-explorer.component';
-import { ExplorerPosition, ExplorerSources, RepertoireExplorerService } from '../repertoire/repertoire-explorer.service';
+import { ExplorerGames, ExplorerPosition, ExplorerSources, RepertoireExplorerService } from '../repertoire/repertoire-explorer.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
@@ -27,19 +27,29 @@ function position(extra: Partial<ExplorerPosition> = {}): ExplorerPosition {
 describe('OpeningExplorerComponent', () => {
   let fixture: ComponentFixture<OpeningExplorerComponent>;
   let positionSpy: jasmine.Spy;
+  let gamesSpy: jasmine.Spy;
 
   afterEach(() => {
     localStorage.removeItem('rookhub_analysis_explorer_open');
     localStorage.removeItem('rookhub_explorer_settings');
   });
 
-  function setup(answer: (fen: string) => any = () => of(position())): void {
+  const GAMES: ExplorerGames = {
+    status: 'ok', retryAfterSeconds: null,
+    games: [
+      { id: 'g1', white: 'Caruana, Fabiano', whiteRating: 2818, black: 'Carlsen, Magnus', blackRating: 2882, winner: 'white', date: '2019-08', speed: null, url: 'https://lichess.org/g1' },
+      { id: 'g2', white: 'Ding, Liren', whiteRating: null, black: 'Nepo', blackRating: 2790, winner: null, date: '2021', speed: null, url: null },
+    ],
+  };
+
+  function setup(answer: (fen: string) => any = () => of(position()), games: () => any = () => of(GAMES)): void {
     positionSpy = jasmine.createSpy('position').and.callFake((fen: string) => answer(fen));
+    gamesSpy = jasmine.createSpy('games').and.callFake(games);
     TestBed.configureTestingModule({
       imports: [OpeningExplorerComponent],
       providers: [
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: RepertoireExplorerService, useValue: { sources: () => of(ONLINE_ONLY), position: positionSpy } },
+        { provide: RepertoireExplorerService, useValue: { sources: () => of(ONLINE_ONLY), position: positionSpy, games: gamesSpy } },
       ],
     });
     fixture = TestBed.createComponent(OpeningExplorerComponent);
@@ -154,5 +164,52 @@ describe('OpeningExplorerComponent', () => {
     const s = positionSpy.calls.mostRecent().args[1];
     expect(s.database).toBe('lichess');
     expect(s.ratings.length).toBeGreaterThan(0);
+  }));
+
+  it('(i) shows the games that played the move — asked for the position AFTER it', fakeAsync(() => {
+    setup();
+    setFen(START); tick(300); fixture.detectChanges();
+
+    fixture.nativeElement.querySelectorAll('.info-btn')[0].click();   // e4
+    fixture.detectChanges();
+
+    expect(gamesSpy.calls.mostRecent().args[0]).toBe('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1');
+    const items = fixture.nativeElement.querySelectorAll('ul.games li');
+    expect(items.length).toBe(2);
+    expect(items[0].textContent).toContain('1-0');
+    expect(items[0].textContent).toContain('Caruana, Fabiano (2818) – Carlsen, Magnus (2882)');
+    expect(items[0].querySelector('a').getAttribute('href')).toBe('https://lichess.org/g1');
+    expect(items[1].textContent).toContain('½-½');
+    expect(items[1].textContent).toContain('Ding, Liren – Nepo (2790)');
+    expect(items[1].querySelector('a')).toBeNull();   // lokale Meisterpartie: kein Link
+  }));
+
+  it('(i) does not play the move, toggles closed, and a second look comes from memory', fakeAsync(() => {
+    setup();
+    const played: string[] = [];
+    fixture.componentInstance.playMove.subscribe(s => played.push(s));
+    setFen(START); tick(300); fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const e4 = c.rows()[0].move;
+
+    c.toggleGames(e4);
+    expect(c.expanded()).toBe('e2e4');
+    c.toggleGames(e4);
+    expect(c.expanded()).toBeNull();
+    c.toggleGames(e4);
+
+    expect(gamesSpy).toHaveBeenCalledTimes(1);
+    expect(played).toEqual([]);
+  }));
+
+  it('another position folds the games away', fakeAsync(() => {
+    setup();
+    setFen(START); tick(300); fixture.detectChanges();
+    fixture.componentInstance.toggleGames(fixture.componentInstance.rows()[1].move);
+    expect(fixture.componentInstance.expanded()).toBe('d2d4');
+
+    setFen(AFTER_E4); tick(300);
+
+    expect(fixture.componentInstance.expanded()).toBeNull();
   }));
 });

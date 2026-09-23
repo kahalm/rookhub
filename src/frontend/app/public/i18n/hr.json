@@ -2495,7 +2495,9 @@
       "move": "Potez",
       "games": "Partije",
       "results": "Bijeli / Remi / Crni",
-      "total": "Partija: {{count}}"
+      "total": "Partija: {{count}}",
+      "gamesInfo": "Partije s ovim potezom",
+      "gamesNone": "Za ovaj potez nema zapisanih partija."
     }
   },
   "stats": {

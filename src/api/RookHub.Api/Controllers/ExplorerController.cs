@@ -37,6 +37,23 @@ public class ExplorerController : BaseApiController
         }
     }
 
+    /// <summary>Eine Handvoll Partien, die die Stellung erreicht haben (Parameter wie oben).</summary>
+    [HttpGet("games")]
+    public async Task<ActionResult<ExplorerGamesResultDto>> Games(
+        [FromQuery] string? fen, [FromQuery] string? source, [FromQuery] string? database,
+        [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct)
+    {
+        try
+        {
+            var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
+            return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>Welche Quellen es gibt (dieselbe Antwort wie am Repertoire-Endpunkt).</summary>
     [HttpGet("sources")]
     public ActionResult<ExplorerSourcesDto> Sources() => Ok(_explorer.Sources());

@@ -135,6 +135,27 @@ export interface ExplorerPosition {
   moves: ExplorerPositionMove[];
 }
 
+/** Eine Partie, die eine Stellung erreicht hat (`GET /api/explorer/games`). */
+export interface ExplorerGame {
+  id: string;
+  white: string;
+  whiteRating: number | null;
+  black: string;
+  blackRating: number | null;
+  /** 'white' | 'black' | null (Remis). */
+  winner: string | null;
+  date: string | null;
+  speed: string | null;
+  /** Link auf lichess.org — fehlt bei den lokalen Meisterpartien. */
+  url: string | null;
+}
+
+export interface ExplorerGames {
+  status: ExplorerPositionStatus;
+  retryAfterSeconds: number | null;
+  games: ExplorerGame[];
+}
+
 const SETTINGS_KEY = 'rookhub_explorer_settings';
 
 /** Gemerkte Auswahl (je Gerät). Unbrauchbares fällt auf die Vorgabe zurück. */
@@ -266,12 +287,21 @@ export class RepertoireExplorerService {
 
   /** Zugstatistik einer Stellung — Elo/Tempo gehen nur bei der Lichess-Datenbank mit. */
   position(fen: string, s: ExplorerSettings): Observable<ExplorerPosition> {
+    return this.http.get<ExplorerPosition>('/api/explorer/position', { params: this.params(fen, s) });
+  }
+
+  private params(fen: string, s: ExplorerSettings): Record<string, string> {
     const params: Record<string, string> = { fen, source: s.source, database: s.database };
     if (s.database === 'lichess') {
       params['ratings'] = s.ratings.join(',');
       params['speeds'] = s.speeds.join(',');
     }
-    return this.http.get<ExplorerPosition>('/api/explorer/position', { params });
+    return params;
+  }
+
+  /** Eine Handvoll Partien, die diese Stellung erreicht haben — gleiche Parameter wie {@link position}. */
+  games(fen: string, s: ExplorerSettings): Observable<ExplorerGames> {
+    return this.http.get<ExplorerGames>('/api/explorer/games', { params: this.params(fen, s) });
   }
 
   /** Fragt Runde um Runde, bis {@link nextRoundDelayMs} aufhört; jede Antwort kommt heraus (Fortschritt). */

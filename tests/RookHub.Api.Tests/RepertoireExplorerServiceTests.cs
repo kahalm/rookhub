@@ -583,6 +583,88 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.False(ExplorerPositionStats.FromJson("""{"t":1,"m":[]}""")!.HasResults);
     }
 
+    // ---- Partien einer Stellung ----
+
+    private const string GamesJson = """
+        {"white":10,"draws":0,"black":0,"moves":[],
+         "topGames":[
+           {"uci":"b8c6","id":"top1","winner":"white","white":{"name":"Caruana, Fabiano","rating":2818},"black":{"name":"Carlsen, Magnus","rating":2882},"year":2019,"month":"2019-08"},
+           {"uci":"b8c6","id":"top2","winner":null,"white":{"name":"Ding, Liren","rating":2805},"black":{"name":"Nepo","rating":2790},"year":2021}],
+         "recentGames":[
+           {"uci":"d7d6","id":"top1","winner":"white","white":{"name":"Caruana, Fabiano","rating":2818},"black":{"name":"Carlsen, Magnus","rating":2882},"year":2019,"month":"2019-08"},
+           {"uci":"d7d6","id":"r1","winner":"black","speed":"blitz","white":{"name":"a","rating":1900},"black":{"name":"b","rating":1950},"year":2026,"month":"2026-08"},
+           {"uci":"d7d6","id":"r2","winner":"black","white":{"name":"c"},"black":{"name":"d"},"year":2026,"month":"2026-08"},
+           {"uci":"d7d6","id":"r3","winner":"black","white":{"name":"e"},"black":{"name":"f"},"year":2026,"month":"2026-08"},
+           {"uci":"d7d6","id":"r4","winner":"black","white":{"name":"g"},"black":{"name":"h"},"year":2026,"month":"2026-08"}]}
+        """;
+
+    [Fact]
+    public async Task Games_Online_TopFirst_NoDuplicates_AHandfulWithLinks()
+    {
+        var userId = await UserAsync();
+        _handler.Respond(StartKey, GamesJson);
+
+        var r = await Service().GamesAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+
+        Assert.Equal("ok", r.Status);
+        Assert.Equal(new[] { "top1", "top2", "r1", "r2", "r3" }, r.Games.Select(g => g.Id));
+        var first = r.Games[0];
+        Assert.Equal(("Caruana, Fabiano", 2818, "Carlsen, Magnus", 2882, "white", "2019-08"),
+            (first.White, first.WhiteRating!.Value, first.Black, first.BlackRating!.Value, first.Winner!, first.Date!));
+        Assert.Null(r.Games[1].Winner);
+        Assert.Equal("2021", r.Games[1].Date);
+        Assert.Equal("https://lichess.org/top1", first.Url);
+        var url = Assert.Single(_handler.Urls);
+        Assert.Contains("topGames=3", url);
+        Assert.Contains("recentGames=5", url);
+        Assert.Contains("moves=0", url);
+
+        // Zweiter Blick: aus dem Arbeitsspeicher.
+        await Service().GamesAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+        Assert.Single(_handler.Urls);
+    }
+
+    [Fact]
+    public async Task Games_LocalMasters_HaveNoLichessLink()
+    {
+        var userId = await UserAsync(token: null);
+        _localHandler.Respond(StartKey, GamesJson);
+
+        var r = await Service().GamesAsync(userId, StartFen, "local", ExplorerQuery.Create("masters", null, null), CancellationToken.None);
+
+        Assert.Equal("ok", r.Status);
+        Assert.All(r.Games, g => Assert.Null(g.Url));
+        Assert.Contains("masters?", Assert.Single(_localHandler.Urls));
+        Assert.Contains("topGames=5", _localHandler.Urls[0]);
+    }
+
+    [Fact]
+    public async Task Games_LocalLichess_KeepTheLink_TheyAreRealLichessGames()
+    {
+        var userId = await UserAsync(token: null);
+        _localHandler.Respond(StartKey, GamesJson);
+
+        var r = await Service().GamesAsync(userId, StartFen, "local", Blitz, CancellationToken.None);
+
+        Assert.Equal("https://lichess.org/r1", r.Games.Single(g => g.Id == "r1").Url);
+    }
+
+    [Fact]
+    public async Task Games_Online_WithoutToken_SaysSo()
+    {
+        var userId = await UserAsync(token: null);
+        var r = await Service().GamesAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+        Assert.Equal("tokenMissing", r.Status);
+        Assert.Empty(_handler.Urls);
+    }
+
+    [Fact]
+    public async Task Games_RejectsWhatIsNoFen()
+    {
+        var userId = await UserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => Service().GamesAsync(userId, "e4", null, Blitz, CancellationToken.None));
+    }
+
     [Fact]
     public void Query_ValidatesAndOrders()
     {

@@ -90,6 +90,12 @@ public sealed record ExplorerPositionStats(
     }
 }
 
+/// <summary>Eine Partie aus dem Explorer: wer gegen wen, mit welcher Wertungszahl, wie es ausging.
+/// <see cref="Winner"/> ist <c>white</c>/<c>black</c> oder <c>null</c> (Remis).</summary>
+public sealed record ExplorerGame(
+    string Id, string White, int? WhiteRating, string Black, int? BlackRating,
+    string? Winner, string? Month, int? Year, string? Speed);
+
 public enum ExplorerFetchStatus { Ok, RateLimited, Unauthorized, Failed }
 
 /// <summary>
@@ -201,12 +207,20 @@ public class LichessExplorerClient
         _logger = logger;
     }
 
-    public async Task<(ExplorerFetchStatus Status, ExplorerPositionStats? Stats)> FetchAsync(
-        string fen, ExplorerQuery query, string token, CancellationToken ct)
+    public Task<(ExplorerFetchStatus Status, ExplorerPositionStats? Stats)> FetchAsync(
+        string fen, ExplorerQuery query, string token, CancellationToken ct) =>
+        GetAsync(BuildUrl(fen, query), fen, Parse, token, ct);
+
+    /// <summary>Partien, die diese Stellung erreicht haben (für den Explorer auf dem Analysebrett).</summary>
+    public Task<(ExplorerFetchStatus Status, List<ExplorerGame>? Games)> FetchGamesAsync(
+        string fen, ExplorerQuery query, string token, CancellationToken ct) =>
+        GetAsync(BuildGamesUrl(fen, query), fen, ParseGames, token, ct);
+
+    /// <summary>EIN Abruf durch die Leitung — Drossel, Token und Fehlerbilder für alle Abfragen gleich.</summary>
+    private async Task<(ExplorerFetchStatus Status, T? Value)> GetAsync<T>(
+        string url, string fen, Func<JsonDocument, T?> parse, string token, CancellationToken ct) where T : class
     {
         if (_gate.BlockedFor is not null) return (ExplorerFetchStatus.RateLimited, null);
-
-        var url = BuildUrl(fen, query);
 
         await _gate.WaitAsync(ct);
         try
@@ -233,8 +247,8 @@ public class LichessExplorerClient
             }
 
             await using var body = await response.Content.ReadAsStreamAsync(ct);
-            var stats = Parse(await JsonDocument.ParseAsync(body, cancellationToken: ct));
-            return stats is null ? (ExplorerFetchStatus.Failed, null) : (ExplorerFetchStatus.Ok, stats);
+            var value = parse(await JsonDocument.ParseAsync(body, cancellationToken: ct));
+            return value is null ? (ExplorerFetchStatus.Failed, null) : (ExplorerFetchStatus.Ok, value);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException
                                        || (ex is TaskCanceledException && !ct.IsCancellationRequested))
@@ -255,6 +269,52 @@ public class LichessExplorerClient
         : $"lichess?variant=standard&fen={Uri.EscapeDataString(fen)}"
           + $"&ratings={string.Join(',', query.Ratings)}&speeds={string.Join(',', query.Speeds)}"
           + $"&moves={MaxMoves}&topGames=0&recentGames=0";
+
+    /// <summary>Höchstens so viele Partien je Stellung — „eine Handvoll" für die Anzeige.</summary>
+    public const int MaxGames = 5;
+
+    /// <summary>Partien einer Stellung: Meister = die bestbewerteten, Lichess = die bestbewerteten und
+    /// die jüngsten (bei mittleren Elo-Stufen führt der Explorer gar keine „top"-Partien).</summary>
+    internal static string BuildGamesUrl(string fen, ExplorerQuery query) => query.Database == ExplorerQuery.Masters
+        ? $"masters?fen={Uri.EscapeDataString(fen)}&moves=0&topGames={MaxGames}"
+        : $"lichess?variant=standard&fen={Uri.EscapeDataString(fen)}"
+          + $"&ratings={string.Join(',', query.Ratings)}&speeds={string.Join(',', query.Speeds)}"
+          + $"&moves=0&topGames=3&recentGames={MaxGames}";
+
+    /// <summary>Die Partien einer Explorer-Antwort: erst die bestbewerteten, dann die jüngsten, ohne
+    /// Doppelte, höchstens <see cref="MaxGames"/>.</summary>
+    internal static List<ExplorerGame>? ParseGames(JsonDocument doc)
+    {
+        var root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object) return null;
+        var games = new List<ExplorerGame>();
+        foreach (var list in new[] { "topGames", "recentGames" })
+        {
+            if (!root.TryGetProperty(list, out var arr) || arr.ValueKind != JsonValueKind.Array) continue;
+            foreach (var g in arr.EnumerateArray())
+            {
+                var id = g.TryGetProperty("id", out var i) ? i.GetString() : null;
+                if (string.IsNullOrEmpty(id) || games.Any(x => x.Id == id)) continue;
+                var (white, whiteRating) = PlayerOf(g, "white");
+                var (black, blackRating) = PlayerOf(g, "black");
+                games.Add(new ExplorerGame(id, white, whiteRating, black, blackRating,
+                    g.TryGetProperty("winner", out var w) && w.ValueKind == JsonValueKind.String ? w.GetString() : null,
+                    g.TryGetProperty("month", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() : null,
+                    g.TryGetProperty("year", out var y) && y.TryGetInt32(out var yv) ? yv : null,
+                    g.TryGetProperty("speed", out var sp) && sp.ValueKind == JsonValueKind.String ? sp.GetString() : null));
+                if (games.Count >= MaxGames) return games;
+            }
+        }
+        return games;
+    }
+
+    private static (string Name, int? Rating) PlayerOf(JsonElement game, string side)
+    {
+        if (!game.TryGetProperty(side, out var p) || p.ValueKind != JsonValueKind.Object) return ("?", null);
+        var name = p.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
+        int? rating = p.TryGetProperty("rating", out var r) && r.TryGetInt32(out var rv) ? rv : null;
+        return (string.IsNullOrWhiteSpace(name) ? "?" : name, rating);
+    }
 
     /// <summary>Explorer-Antwort → kompakte Form. Gesamtzahl = Weiß + Remis + Schwarz der Stellung.</summary>
     internal static ExplorerPositionStats? Parse(JsonDocument doc)
@@ -333,18 +393,24 @@ public class LocalExplorerClient
     /// <summary>Ist eine Adresse eingerichtet? Ohne sie gibt es die Quelle „lokal" nicht.</summary>
     public bool IsConfigured => _http.BaseAddress is not null;
 
-    public async Task<ExplorerPositionStats?> FetchAsync(string fen, ExplorerQuery query, CancellationToken ct)
+    public Task<ExplorerPositionStats?> FetchAsync(string fen, ExplorerQuery query, CancellationToken ct) =>
+        GetAsync(LichessExplorerClient.BuildUrl(fen, query), fen, LichessExplorerClient.Parse, ct);
+
+    public Task<List<ExplorerGame>?> FetchGamesAsync(string fen, ExplorerQuery query, CancellationToken ct) =>
+        GetAsync(LichessExplorerClient.BuildGamesUrl(fen, query), fen, LichessExplorerClient.ParseGames, ct);
+
+    private async Task<T?> GetAsync<T>(string url, string fen, Func<JsonDocument, T?> parse, CancellationToken ct) where T : class
     {
         try
         {
-            using var response = await _http.GetAsync(LichessExplorerClient.BuildUrl(fen, query), ct);
+            using var response = await _http.GetAsync(url, ct);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Lokaler Explorer: HTTP {Status} für {Fen}", (int)response.StatusCode, fen);
                 return null;
             }
             await using var body = await response.Content.ReadAsStreamAsync(ct);
-            return LichessExplorerClient.Parse(await JsonDocument.ParseAsync(body, cancellationToken: ct));
+            return parse(await JsonDocument.ParseAsync(body, cancellationToken: ct));
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException
                                        || (ex is TaskCanceledException && !ct.IsCancellationRequested))

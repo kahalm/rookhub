@@ -1976,7 +1976,9 @@
       "move": "Lépés",
       "games": "Játszmák",
       "results": "Világos / Döntetlen / Sötét",
-      "total": "{{count}} játszma"
+      "total": "{{count}} játszma",
+      "gamesInfo": "Játszmák ezzel a lépéssel",
+      "gamesNone": "Ehhez a lépéshez nincs rögzített játszma."
     }
   },
   "stats": {
