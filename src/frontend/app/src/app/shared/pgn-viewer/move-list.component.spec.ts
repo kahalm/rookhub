@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Chess } from 'chess.js';
 import { MoveListComponent } from './move-list.component';
 
@@ -75,4 +75,73 @@ describe('MoveListComponent Kommentare', () => {
 
     expect(clicked).toEqual([seg]);
   });
+});
+
+describe('MoveListComponent: aktiver Zug scrollt nur die Zugliste, nie die Seite', () => {
+  const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  // 40 Halbzüge — genug Zeilen, dass ein 60-px-Kasten überläuft.
+  const SANS = ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6', 'O-O', 'Be7', 'Re1', 'b5', 'Bb3', 'd6', 'c3', 'O-O',
+    'h3', 'Nb8', 'd4', 'Nbd7', 'Nbd2', 'Bb7', 'Bc2', 'Re8', 'Nf1', 'Bf8', 'Ng3', 'g6', 'a4', 'c5', 'd5', 'c4', 'Bg5', 'h6',
+    'Be3', 'Nc5', 'Qd2', 'h5', 'Bg5', 'Be7'];
+  let wrapper: HTMLElement;
+  let filler: HTMLElement;
+  let scrolled: Element[];
+
+  function render(wrapperStyle: string) {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    // Die Seite ist lang und die Zugliste steht weit unten — so wie am Handy unter dem Brett.
+    filler = document.createElement('div');
+    filler.style.height = '3000px';
+    wrapper = document.createElement('div');
+    wrapper.setAttribute('style', wrapperStyle);
+    wrapper.appendChild(fixture.nativeElement);
+    document.body.appendChild(filler);
+    document.body.appendChild(wrapper);
+    const chess = new Chess(START_FEN);
+    SANS.forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('currentMoveIndex', -1);
+    fixture.detectChanges();
+    tick();   // der Scroll-Timer des Startzustands (kein aktiver Zug) läuft ab, bevor gezählt wird
+    return fixture;
+  }
+
+  beforeEach(() => {
+    window.scrollTo(0, 0);
+    scrolled = [];
+    // Der Ersatz scrollt wirklich (ohne „smooth"), damit ein zweiter Aufruf nichts mehr zu tun hätte.
+    spyOn(Element.prototype, 'scrollTo').and.callFake(function (this: Element, opts?: ScrollToOptions | number) {
+      scrolled.push(this);
+      if (typeof opts === 'object' && opts?.top != null) this.scrollTop = opts.top;
+    });
+    spyOn(Element.prototype, 'scrollIntoView');
+  });
+
+  afterEach(() => { wrapper?.remove(); filler?.remove(); });
+
+  it('scrollt den umgebenden Kasten zum aktiven Zug — ohne scrollIntoView, die Seite bleibt stehen', fakeAsync(() => {
+    const fixture = render('height: 60px; overflow-y: auto');
+    fixture.componentRef.setInput('currentMoveIndex', SANS.length - 1);
+    fixture.detectChanges();
+    tick();
+
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(scrolled.length).toBe(1);
+    expect(wrapper.contains(scrolled[0])).toBeTrue();
+    expect(scrolled[0]).not.toBe(document.documentElement);
+    expect((scrolled[0] as HTMLElement).scrollTop).toBeGreaterThan(0);
+    expect(window.scrollY).toBe(0);
+  }));
+
+  it('ohne scrollbaren Kasten (nur die Seite könnte scrollen) passiert gar nichts', fakeAsync(() => {
+    const fixture = render('');
+    fixture.componentRef.setInput('currentMoveIndex', SANS.length - 1);
+    fixture.detectChanges();
+    tick();
+
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(scrolled.length).toBe(0);
+    expect(window.scrollY).toBe(0);
+  }));
 });

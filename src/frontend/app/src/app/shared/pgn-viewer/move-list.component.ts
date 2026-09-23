@@ -178,10 +178,35 @@ export class MoveListComponent implements OnChanges {
     setTimeout(() => {
       const el = this.moveListEl?.nativeElement;
       if (!el) return;
-      const active = el.querySelector('.move.active') as HTMLElement;
-      if (active) {
-        active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+      const active = el.querySelector('.move.active') as HTMLElement | null;
+      if (active) scrollIntoContainer(active);
     });
   }
+}
+
+/**
+ * Bringt `el` in den sichtbaren Bereich seines NÄCHSTEN scrollbaren Vorfahren — und nur dort.
+ *
+ * Vorher stand hier `scrollIntoView({ block: 'nearest' })`, und das scrollt JEDEN scrollbaren
+ * Vorfahren mit, das Dokument eingeschlossen. Am Handy steht die Zugliste unter dem Brett, der
+ * aktive Zug liegt beim Blättern oft unterhalb des Bildschirmrands — also schob jeder Zug die ganze
+ * Seite und damit das Brett nach oben (gemeldet 2026-09-23). Gibt es keinen scrollbaren Vorfahren
+ * außer der Seite, passiert NICHTS: das Brett darf sich beim Navigieren nie bewegen.
+ */
+export function scrollIntoContainer(el: HTMLElement): void {
+  const container = scrollParentOf(el);
+  if (!container) return;
+  const c = container.getBoundingClientRect();
+  const a = el.getBoundingClientRect();
+  const delta = a.top < c.top ? a.top - c.top : a.bottom > c.bottom ? a.bottom - c.bottom : 0;
+  if (delta !== 0) container.scrollTo({ top: container.scrollTop + delta, behavior: 'smooth' });
+}
+
+/** Der nächste Vorfahre, der wirklich scrollt (overflow auto/scroll UND Überhang) — nie `html`/`body`. */
+function scrollParentOf(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+    const overflowY = getComputedStyle(p).overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;
 }

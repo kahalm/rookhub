@@ -316,6 +316,18 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   Sonderklassen. Das Abzeichen des aktuellen Zugs erklärt Brilliant (geopferte Figur + Feld), Great (Abstand
   zum Zweitbesten; mit Matt im Spiel ohne Zahl) und Miss per Tooltip. „!" gehört Great, Excellent trägt 👍.
 
+## Zugliste: der aktive Zug scrollt NUR seinen Kasten, nie die Seite (0.514.1)
+
+`MoveListComponent.scrollToActive` benutzte `scrollIntoView({ block: 'nearest' })` — und das scrollt JEDEN
+scrollbaren Vorfahren mit, das Dokument eingeschlossen. Am Handy steht die Zugliste unter dem Brett
+(`.moves-section` mit `max-height: 40vh`), der aktive Zug liegt beim Blättern oft unter dem Bildschirmrand, und
+jeder Zug schob die ganze Seite samt Brett nach oben (gemeldet 2026-09-23: „das Brett wandert immer weiter nach
+oben"). `scrollIntoContainer(el)` (in `move-list.component.ts`) sucht den NÄCHSTEN Vorfahren, der wirklich
+scrollt (`overflow-y: auto|scroll` UND Überhang; `html`/`body` zählen nie) und setzt nur dessen `scrollTop` —
+`.move-list` selbst, wo es eine feste Höhe hat, sonst `.moves-section`. Gibt es keinen solchen Kasten, passiert
+NICHTS: das Brett darf sich beim Navigieren nie bewegen, das ist die Regel. Spec: langer Seiteninhalt, ein
+60-px-Kasten, `scrollIntoView` darf nicht aufgerufen werden und `window.scrollY` bleibt 0.
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |
