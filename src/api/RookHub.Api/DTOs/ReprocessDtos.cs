@@ -16,8 +16,14 @@ public class ReprocessStatusDto
     /// <summary>Davon veraltet (ImportVersion &lt; CurrentVersion) — Summe der drei Kategorien unten.</summary>
     public int Stale { get; set; }
 
-    /// <summary>Veraltet + lokal sofort aufbereitbar (gespeicherte Quelle vorhanden).</summary>
+    /// <summary>Veraltet + ohne Chessable-Abruf sofort aufbereitbar (gespeicherte Quelle vorhanden) —
+    /// schließt <see cref="FromCache"/> ein.</summary>
     public int ReprocessableLocally { get; set; }
+
+    /// <summary>Davon Chessable-Kurse, deren Zugtexte vorher aus dem geteilten piratechess-Linien-Cache neu
+    /// erzeugt werden (Quelle trägt <c>[ChessableOid]</c>). Nur zur Auskunft (Admin) — schon in
+    /// <see cref="ReprocessableLocally"/> enthalten, das Banner rechnet unverändert.</summary>
+    public int FromCache { get; set; }
 
     /// <summary>Veraltet, keine lokale Quelle, aber per Chessable-Re-Fetch nachladbar (Hintergrund-Job).</summary>
     public int Refetchable { get; set; }
@@ -29,17 +35,25 @@ public class ReprocessStatusDto
 /// <summary>Ergebnis eines Reprocess-Laufs.</summary>
 public class ReprocessResultDto
 {
-    /// <summary>Lokal (aus gespeicherter Quelle) neu aufbereitete Datensätze.</summary>
+    /// <summary>Ohne Chessable-Abruf neu aufbereitete Datensätze (aus gespeicherter Quelle, bei Kursen auch
+    /// über den Linien-Cache — siehe <see cref="RebuiltFromCache"/>).</summary>
     public int Reprocessed { get; set; }
 
     /// <summary>Dabei in-place aktualisierte Einzel-Linien (nur Kurse).</summary>
     public int UpdatedLines { get; set; }
 
+    /// <summary>Davon Kurse, deren Zugtexte vorher aus dem geteilten piratechess-Linien-Cache erneuert wurden
+    /// (in <see cref="Reprocessed"/> enthalten).</summary>
+    public int RebuiltFromCache { get; set; }
+
+    /// <summary>Linien, deren Zugtext dabei aus dem Linien-Cache übernommen wurde (über alle Kurse).</summary>
+    public int CacheLinesReplaced { get; set; }
+
     /// <summary>Als Hintergrund-Job zum Re-Fetch eingereihte Datensätze (nur Kurse, Chessable).</summary>
     public int Enqueued { get; set; }
 
     /// <summary>Veraltete Datensätze, die weder lokal noch per Re-Fetch behandelt werden konnten
-    /// (keine Quelle, Re-Fetch-Backoff, Dedup) — ein reguläres „nichts zu tun".</summary>
+    /// (keine Quelle, Re-Fetch-Backoff, Dedup, keine Linie im Linien-Cache) — ein reguläres „nichts zu tun".</summary>
     public int Skipped { get; set; }
 
     /// <summary>Datensätze, deren Aufbereitung mit einem FEHLER abgebrochen ist (kaputtes Quell-PGN,

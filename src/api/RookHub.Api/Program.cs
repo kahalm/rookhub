@@ -279,6 +279,9 @@ try
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
+    // Linien-Cache für den Cache-Weg von „Aktualisieren" (StaleAction.Cache). Bewusst NICHT hinter
+    // `Chessable:Enabled`: der piratechess-Proxy ist immer registriert, die Extension-Wege brauchen ihn auch.
+    builder.Services.AddTransient<ICachedLineSource>(sp => sp.GetRequiredService<ChessableProxyService>());
     builder.Services.AddScoped<ImportReprocessService>();
     // Stößt Massen-Reprocess im Hintergrund an (eigener Scope) → Endpoint antwortet sofort statt in
     // den ~60-s-Request-Timeout zu laufen. Singleton, da es nur die ScopeFactory kapselt.

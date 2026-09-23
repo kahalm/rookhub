@@ -9,6 +9,23 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Chessable-REPERTOIRES aus dem Linien-Cache neu erzeugen (2026-09-23)
+
+Kurse bekommen Aenderungen an der PGN-Erzeugung in piratechess seit 0.509.0 ueber den Cache-Weg
+(`StaleAction.Cache`, `CachedSourceRebuild`): Zugtext je oid aus dem geteilten Linien-Cache, Header bleiben.
+Repertoires NICHT: `RepertoireFile.PgnContent` haelt das piratechess-PGN genauso verbatim, aber
+`ActionForRepertoire` kennt nur Local/Refetch/Manual, und ein Chessable-Repertoire mit `[ChessableOid]` wird
+beim „Aktualisieren" nur auf die aktuelle Version gesetzt — der mehrdeutige Zug aus piratechess v1.0.47
+(`(16.Ne4 {…})`) bleibt dort als Variante stehen, und der Trainer spielt den Baum live daraus.
+
+Eigener Schritt mit eigenen Regeln, bewusst nicht mit den Kursen gebaut:
+- `[RookHubHidden]` und `[RookHubRemovedOid]` (`RepertoirePgnCleanup`) muessen ueberleben — die Header bleiben
+  bei `CachedSourceRebuild` ohnehin stehen, aber eine ausgeblendete Partie sollte gar nicht erst ersetzt werden,
+  und eine per `RookHubRemovedOid` entfernte oid darf nicht ueber einen ergaenzten Header zurueckkommen.
+- Modus immer `None` (Repertoire-Format); mehrere Dateien je Repertoire; kein Import-Kern danach, nur der
+  Text + Versions-Mark.
+- Anzeige = Ausfuehrung: `ActionForRepertoire` bekommt denselben Cache-Fall, Status und Lauf nutzen ihn beide.
+
 ## [ ] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23)
 
 `PgnImportService.ImportFileAsync` laedt das Buch IMMER mit `.Include(b => b.Source)` — auch bei

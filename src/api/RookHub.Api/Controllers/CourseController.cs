@@ -47,7 +47,8 @@ public class CourseController : BaseApiController
         => Ok(await _reprocess.GetCourseStatusAsync(GetUserId(), IsAdmin, ct));
 
     /// <summary>Bereitet veraltete, verwaltbare Kurse neu auf. <paramref name="localOnly"/>=true
-    /// („Aus Cache") nur lokal aus gespeichertem PGN; false („Alle") reiht zusätzlich Chessable-Altbestand
+    /// („Aus Cache") ohne Chessable-Abruf: aus gespeichertem PGN, Chessable-Kurse mit oids mit frischen
+    /// Zugtexten aus dem Linien-Cache; false („Alle") reiht zusätzlich Chessable-Altbestand
     /// ohne Quelle als Re-Fetch-Hintergrund-Job ein. Läuft im HINTERGRUND (kann bei vielen Kursen
     /// über das Request-Timeout hinaus dauern) → antwortet sofort 202; der Fortschritt erscheint über
     /// das Reprocess-Status-Banner bzw. die Chessable-Import-Anzeige.</summary>

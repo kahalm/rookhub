@@ -134,10 +134,17 @@ namespace RookHub.Api.Services;
 ///   (<c>PgnParser.ExtractMoveComments(foldAllVariations: true)</c>); das Frontend macht die Züge dort über
 ///   ihre Zugnummer klickbar. Die Varianten stehen im <c>Book.Source.SourcePgn</c> → per „Aktualisieren" lokal
 ///   aufbereitbar.</item>
+/// <item><c>20</c> (0.509.0) — piratechess v1.0.47 schreibt mehrdeutige Züge in Autoren-Varianten als
+///   Kommentar statt als Zug („(16.Ne4 {…})" mit zwei Springern, die nach e4 können, war für keinen PGN-Leser
+///   spielbar). Der neue Zugtext steht NICHT im gespeicherten <c>Book.Source.SourcePgn</c> — er entsteht erst
+///   in piratechess. Deshalb werden Chessable-Kurse mit <c>[ChessableOid]</c> jetzt aus dem geteilten
+///   Linien-Cache neu erzeugt (<see cref="StaleAction.Cache"/>: Zugtext je oid, Header bleiben), alle anderen
+///   lokal. Ohne diesen Bump wäre kein Kurs veraltet und der Cache-Weg liefe nie. Künftige Änderungen an der
+///   PGN-Erzeugung in piratechess kommen auf demselben Weg in bestehende Kurse: Bump genügt.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 19;
+    public const int CurrentVersion = 20;
 }

@@ -39,13 +39,13 @@ public class ReprocessWithoutChessableTests : IDisposable
         }
     }
 
-    private ImportReprocessService Service(StubReimporter stub, bool chessableEnabled)
+    private ImportReprocessService Service(StubReimporter stub, bool chessableEnabled, ICachedLineSource? cachedLines = null)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Chessable:Enabled"] = chessableEnabled ? "true" : "false" })
             .Build();
         return new ImportReprocessService(_db, new PgnImportService(_db), stub,
-            NullLogger<ImportReprocessService>.Instance, config);
+            NullLogger<ImportReprocessService>.Instance, config, cachedLines);
     }
 
     /// <summary>Chessable-Buch, veraltet, Quelle OHNE [ChessableOid] — der klassische Re-Fetch-Fall.</summary>
@@ -133,6 +133,35 @@ public class ReprocessWithoutChessableTests : IDisposable
         var after = await svc.GetCourseStatusAsync(5, isAdmin: true);
         Assert.Equal(0, after.ReprocessableLocally + after.Refetchable);   // Banner ist danach leer
         Assert.Equal(0, after.Stale);
+    }
+
+    [Fact]
+    public async Task Reprocess_WithChessableOff_StillRebuildsFromTheLineCache()
+    {
+        // Der Schalter schließt die eigenen Lanes und /api/chessable/*, NICHT den piratechess-Proxy: den
+        // brauchen die Extension-Wege ohnehin. Genau dafür ist der Cache-Weg da — PROD steht seit
+        // 2026-09-09 auf „aus", und die Fixes aus piratechess ≥ v1.0.47 kämen sonst nie in bestehende Kurse.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        var book = await AddStaleChessableBookAsync(
+            $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+            + "2. Nf3 (2. Nc3 {old side line}) Nc6 3. Bb5 a6 *\n");
+        var lines = new StubCachedLineSource();
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+            + "2. Nf3 {2. Nc3 is the side line} Nc6 3. Bb5 a6 *";
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        var before = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, before.FromCache);
+        Assert.Equal(1, before.ReprocessableLocally + before.Refetchable);
+
+        var res = await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, res.RebuiltFromCache);
+        Assert.Equal(1, res.Reprocessed);
+        Assert.Contains("{2. Nc3 is the side line}",
+            (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn);
+
+        var after = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(0, after.Stale);   // Anzeige = Ausführung: das Banner ist danach leer
     }
 
     /// <summary>Kurs anlegen, den die Liste zeigt (Besitzer = User 5).</summary>

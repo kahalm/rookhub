@@ -51,6 +51,18 @@ public class ImportReprocessServiceTests : IDisposable
 2. Nf3 {[%alt g1e2] Develops.} Nc6 3. Bb5 {The pin.} a6 *
 ";
 
+    private const string ModernFen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+
+    /// <summary>Eine Chessable-Linie, wie sie im gespeicherten Kurs steht (piratechess-Format mit oid).</summary>
+    private static string ChessableLine(string round, string oid, string moves) =>
+        $"\n[Event \"Kapitel 1\"]\n[Round \"{round}\"]\n[White \"Linie {oid}\"]\n[Black \"Kapitel 1\"]\n"
+        + $"[FEN \"{ModernFen}\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n\n{moves}\n\n";
+
+    /// <summary>Dieselbe Linie, wie der Linien-Cache sie liefert: Fake-Kapitel „x", Zählung ab 001.001.</summary>
+    private static string CacheLine(string oid, string moves) =>
+        $"[Event \"x\"]\n[Round \"001.001\"]\n[White \"x\"]\n[Black \"x\"]\n[FEN \"{ModernFen}\"]\n"
+        + $"[Result \"*\"]\n[ChessableOid \"{oid}\"]\n\n{moves}";
+
     private async Task<Book> SeedBookAsync(string fileName, int version, string? sourcePgn, string? tags, int? owner = UserId)
     {
         var book = new Book
@@ -85,16 +97,35 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCourseStatus_ChessableWithModernSource_CountsAsLocalNotRefetch()
+    public async Task GetCourseStatus_ChessableWithModernSource_CountsAsFromCache_NotRefetch()
     {
-        // Chessable-Buch, dessen gespeicherte Quelle bereits [%alt]/[%info] enthält → lokal aufbereitbar.
+        // Chessable-Buch, dessen gespeicherte Quelle schon [ChessableOid] trägt → wird aus dem geteilten
+        // Linien-Cache neu erzeugt (StaleAction.Cache), nicht mehr nur lokal umgeparst — und auch mit dem
+        // eigenen Chessable-Weg (Vorgabe: an) NICHT re-gefetcht.
         await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
 
         var status = await ReprocessTestHelper.Build(_db).GetCourseStatusAsync(UserId, isAdmin: false);
 
         Assert.Equal(1, status.Stale);
+        Assert.Equal(1, status.FromCache);
+        // Für das Banner ist es dasselbe wie „lokal": ein Klick, kein Download.
         Assert.Equal(1, status.ReprocessableLocally);
         Assert.Equal(0, status.Refetchable);          // kein Re-Fetch, obwohl Chessable
+        Assert.Equal(0, status.NeedsReimport);
+    }
+
+    [Fact]
+    public async Task GetCourseStatus_OnlyChessableCoursesWithOidsCountAsFromCache()
+    {
+        await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");   // Cache
+        await SeedBookAsync("upload-with-oids.pgn", 0, ModernPgn, null);            // oids, aber kein Chessable-Kurs → lokal
+        await SeedBookAsync("manual-loc.pgn", 0, SamplePgn, null);                  // lokal
+
+        var status = await ReprocessTestHelper.Build(_db).GetCourseStatusAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, status.FromCache);
+        Assert.Equal(3, status.ReprocessableLocally);  // Local + Cache
+        Assert.Equal(3, status.Stale);
     }
 
     [Fact]
@@ -112,16 +143,167 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ReprocessCourses_ChessableWithModernSource_ReprocessesLocally_NoRefetch()
+    public async Task ReprocessCourses_ChessableWithModernSource_RebuildsFromCache_InPlace_NoRefetch()
     {
         var book = await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
+        var puzzle = new BookPuzzle
+        {
+            LineId = "chessable-u7-modern.pgn:1", BookFileName = book.FileName, BookId = book.Id, Round = "1",
+            Fen = ModernFen, Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1, MoveComments = null, ChessableOid = "10",
+        };
+        _db.BookPuzzles.Add(puzzle);
+        await _db.SaveChangesAsync();
+        var puzzleId = puzzle.Id;
         var stub = new StubCourseReimporter();
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
 
-        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessCoursesAsync(UserId, isAdmin: false);
+        var result = await ReprocessTestHelper.Build(_db, stub, lines).ReprocessCoursesAsync(UserId, isAdmin: false);
 
         Assert.Empty(stub.Calls);                     // kein Chessable-Re-Fetch
-        Assert.Equal(1, result.Reprocessed);          // lokal aus dem gespeicherten PGN
-        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.Id == book.Id)).ImportVersion);
+        Assert.Equal(1, result.Reprocessed);
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(1, result.CacheLinesReplaced);
+        Assert.Equal(1, result.UpdatedLines);
+        // Die Quelle trägt den neuen Zugtext — und ihre EIGENEN Header (Event/Round), nicht die der Cache-Antwort.
+        var source = (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn!;
+        Assert.Contains("Develops from the cache.", source);
+        Assert.Contains("[Event \"X\"]", source);
+        Assert.Contains("[Round \"1\"]", source);
+        Assert.DoesNotContain("[Event \"x\"]", source);
+        // In-place: dieselbe Puzzle-Id (Fortschritt hängt daran), Zug-Kommentare aus dem neuen Text.
+        var refreshed = await _db.BookPuzzles.AsNoTracking().SingleAsync(p => p.BookId == book.Id);
+        Assert.Equal(puzzleId, refreshed.Id);
+        Assert.Contains("Develops from the cache.", refreshed.MoveComments);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_CacheKnowsNoLine_BookStaysStale_Skipped_SourceUnchanged()
+    {
+        // Leerer Cache (oder ein Server ohne ihn): würde das Buch trotzdem hochgesetzt, wäre es für den
+        // Cache-Weg verbrannt, ohne dass sich etwas geändert hat.
+        var book = await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
+        var lines = new StubCachedLineSource();
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(0, result.Reprocessed);
+        Assert.Equal(0, result.RebuiltFromCache);
+        Assert.Equal(0, result.Failed);
+        Assert.Empty(lines.PgnCalls);                  // ohne gecachte Linie auch keine teure PGN-Abfrage
+        Assert.Equal(ModernPgn, (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn);
+        Assert.Equal(0, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_NoLineTakenFromCache_BecauseOfModeMismatch_StaysStale()
+    {
+        // Die Linie liegt im Cache, passt aber nicht (Marker nur auf einer Seite) → nichts übernommen →
+        // wie „nicht gecacht": das Buch bleibt veraltet, statt ohne Änderung als erneuert zu gelten.
+        var book = await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%tqu \"En\",\"find it\"] Develops.} Nc6 3. Bb5 a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(0, result.RebuiltFromCache);
+        Assert.Equal(0, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_SomeLinesNotCached_RebuildsTheRest_AndBumpsVersion()
+    {
+        // Eine einzelne fehlende Linie darf den Kurs nicht für immer im Banner halten; sie behält ihren Text.
+        var pgn = ChessableLine("001.001", "21", "2. Nf3 {Old one.} Nc6 3. Bb5 a6 *")
+                + ChessableLine("001.002", "22", "2. Nf3 {Old two.} Nc6 3. Bb5 a6 *");
+        var book = await SeedBookAsync("chessable-u7-5.pgn", 0, pgn, "chessable");
+        var lines = new StubCachedLineSource();
+        lines.Lines["21"] = CacheLine("21", "2. Nf3 {New one.} Nc6 3. Bb5 a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(1, result.CacheLinesReplaced);
+        var source = (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn!;
+        Assert.Contains("New one.", source);
+        Assert.Contains("Old two.", source);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+        Assert.Equal(2, await _db.BookPuzzles.CountAsync(p => p.BookId == book.Id));
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_CacheThrowsInSecondPortion_SourceUnchanged_Failed_StaysStale()
+    {
+        // Mehr Linien als eine Portion → zwei Abfragen. Wirft die zweite (piratechess weg), wird NICHTS
+        // geschrieben: kein halb erneuerter Kurs mit hochgesetzter Version, der nächste Klick versucht es neu.
+        var count = ImportReprocessService.CacheRebuildBatchSize + 1;
+        var lines = new StubCachedLineSource { ThrowOnPgnCall = 2 };
+        var pgn = new System.Text.StringBuilder();
+        for (var i = 1; i <= count; i++)
+        {
+            var oid = (1000 + i).ToString();
+            pgn.Append(ChessableLine($"001.{i:000}", oid, "2. Nf3 {Old.} Nc6 3. Bb5 a6 *"));
+            lines.Lines[oid] = CacheLine(oid, "2. Nf3 {New.} Nc6 3. Bb5 a6 *");
+        }
+        var book = await SeedBookAsync("chessable-u7-6.pgn", 0, pgn.ToString(), "chessable");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(2, lines.PgnCalls.Count);
+        Assert.Equal(ImportReprocessService.CacheRebuildBatchSize, lines.PgnCalls[0].Oids.Count);
+        Assert.Single(lines.PgnCalls[1].Oids);
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(0, result.Skipped);
+        Assert.Equal(0, result.Reprocessed);
+        Assert.Equal(pgn.ToString(), (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn);
+        Assert.Equal(0, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_BookWrittenWhileAskingTheCache_WritesNothing_StaysStale()
+    {
+        // Ein großer Kurs braucht Dutzende Cache-Abfragen. Hängt in der Zeit ein Browser-Import Linien an
+        // dasselbe Buch, fehlen sie im umgeschriebenen Text — der Lauf überschriebe sie. Also nichts schreiben;
+        // beim nächsten „Aktualisieren" kommt das Buch mit dem neuen Stand dran.
+        var book = await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
+        lines.OnPgnCall = () =>
+        {
+            var b = _db.Books.Single(x => x.Id == book.Id);
+            b.UpdatedAt = b.UpdatedAt.AddSeconds(1);   // so schreibt ImportIntoBookAsync jeden Import mit
+            _db.SaveChanges();
+        };
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(0, result.RebuiltFromCache);
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(ModernPgn, (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn);
+        Assert.Equal(0, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_CacheMode_FollowsTheTrainingMarkersOfTheStoredCourse()
+    {
+        // Buch-Kurs (mit [%tqu]) fragt den Modus mit Marker, ein aus einem Repertoire umgewandelter Kurs
+        // (ohne Marker) den ohne — sonst bekäme er Marker und damit einen anderen Trainingsstart.
+        await SeedBookAsync("chessable-u7-71.pgn", 0,
+            ChessableLine("001.001", "71", "2. Nf3 {[%tqu \"En\",\"find it\"] Develops.} Nc6 3. Bb5 a6 *"), "chessable");
+        await SeedBookAsync("chessable-u7-72.pgn", 0,
+            ChessableLine("001.001", "72", "2. Nf3 {Develops.} Nc6 3. Bb5 a6 *"), "chessable");
+        var lines = new StubCachedLineSource();
+        lines.Lines["71"] = CacheLine("71", "2. Nf3 {[%tqu \"En\",\"find it\"] Develops.} Nc6 3. Bb5 a6 *");
+        lines.Lines["72"] = CacheLine("72", "2. Nf3 {Develops.} Nc6 3. Bb5 a6 *");
+
+        await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal("FirstKeyMove", lines.PgnCalls.Single(c => c.Oids.Contains("71")).Mode);
+        Assert.Equal("None", lines.PgnCalls.Single(c => c.Oids.Contains("72")).Mode);
     }
 
     [Fact]
@@ -342,9 +524,10 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ReprocessCourses_LocalOnly_ReprocessesCachedSource_SkipsChessableRefetch()
+    public async Task ReprocessCourses_LocalOnly_ReprocessesStoredSourceAndRebuildsFromCache_SkipsChessableRefetch()
     {
-        // Lokal aufbereitbares (nicht-Chessable) Buch mit Quelle + Chessable-Altbestand (bräuchte Re-Fetch).
+        // „Aus Cache" heißt: ohne Chessable-Netzabruf. Der Linien-Cache ist genau das — er gehört dazu; nur der
+        // Re-Fetch bleibt ausgelassen. Drei Bücher: lokal aufbereitbar, Chessable mit oids, Chessable-Altbestand.
         var local = await SeedBookAsync("manual-loc.pgn", 0, SamplePgn, null);
         _db.BookPuzzles.Add(new BookPuzzle
         {
@@ -352,15 +535,20 @@ public class ImportReprocessServiceTests : IDisposable
             Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
             Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1,
         });
+        var modern = await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
         await SeedBookAsync("chessable-u7-abc123.pgn", 0, null, "chessable");
         await _db.SaveChangesAsync();
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
 
         var stub = new StubCourseReimporter { ReturnId = 42 };
-        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessCoursesAsync(UserId, isAdmin: false, localOnly: true);
+        var result = await ReprocessTestHelper.Build(_db, stub, lines).ReprocessCoursesAsync(UserId, isAdmin: false, localOnly: true);
 
-        Assert.Equal(1, result.Reprocessed);            // lokales Buch aufbereitet
+        Assert.Equal(2, result.Reprocessed);            // lokales Buch + Chessable aus dem Cache
+        Assert.Equal(1, result.RebuiltFromCache);
         Assert.Equal(0, result.Enqueued);               // KEIN Chessable-Re-Fetch
         Assert.Empty(stub.Calls);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == modern.Id)).ImportVersion);
         // Das Chessable-Altbuch bleibt veraltet (per „Alle" später nachholbar).
         Assert.Equal(0, (await _db.Books.SingleAsync(b => b.FileName == "chessable-u7-abc123.pgn")).ImportVersion);
     }

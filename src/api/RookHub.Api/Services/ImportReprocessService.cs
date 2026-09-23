@@ -27,14 +27,33 @@ public interface ICourseReimporter
 }
 
 /// <summary>
+/// Schmale Abstraktion über den geteilten piratechess-Linien-Cache (implementiert von
+/// <see cref="ChessableProxyService"/>) — macht den Cache-Weg des <see cref="ImportReprocessService"/> testbar
+/// wie <see cref="ICourseReimporter"/> den Re-Fetch-Weg.
+/// </summary>
+public interface ICachedLineSource
+{
+    /// <summary>Welche der oids liegen im Cache (nur Existenz, billig). Weich: Fehler → leere Menge.</summary>
+    Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default);
+
+    /// <summary>PGN je gecachter oid, mit der AKTUELLEN piratechess-Logik erzeugt. Nicht gecachte oids fehlen;
+    /// ein Verbindungsfehler WIRFT.</summary>
+    Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, string mode = "None", CancellationToken ct = default);
+}
+
+/// <summary>
 /// Neu-Aufbereitung („Reprocessing") veralteter Datensätze, wenn die Import-Pipeline weiterentwickelt
 /// wurde (<see cref="ImportPipeline"/>). Datensätze mit <c>ImportVersion &lt; CurrentVersion</c> gelten
 /// als veraltet; der Reprocess-Knopf je Sektion ruft diesen Service.
 ///
 /// <para><b>Kurse/Bücher:</b> bevorzugt lokal aus dem gespeicherten Roh-PGN (<c>BookSource.SourcePgn</c>)
-/// — verlustfrei und in-place (Match per LineId, Fortschritt/Statistik bleiben erhalten). Fehlt die
-/// Quelle (Altbestand), wird für Chessable-Kurse ein Re-Fetch-Hintergrund-Job eingereiht
-/// (<see cref="ChessableImportService.EnqueueReimportAsync"/>). Sonst: nur per manuellem Re-Import.</para>
+/// — verlustfrei und in-place (Match per LineId, Fortschritt/Statistik bleiben erhalten). Ein Chessable-Kurs,
+/// dessen Quelle schon <c>[ChessableOid]</c> trägt, bekommt vorher die Zugtexte seiner Linien frisch aus dem
+/// geteilten piratechess-Linien-Cache (<see cref="StaleAction.Cache"/>, <see cref="CachedSourceRebuild"/>) —
+/// so kommen Änderungen an der PGN-Erzeugung in piratechess in bestehende Kurse, ohne Chessable-Kontakt.
+/// Fehlt die Quelle (Altbestand), wird für Chessable-Kurse ein Re-Fetch-Hintergrund-Job eingereiht
+/// (<see cref="ChessableImportService.EnqueueReimportAsync"/>). Sonst: nur per manuellem Re-Import.
+/// Welcher Fall gilt, entscheidet <see cref="StaleContentRule.ActionForBook"/> — für Status UND Lauf.</para>
 ///
 /// <para><b>Repertoires:</b> speichern ihr Roh-PGN selbst und werten live aus — heute gibt es keine
 /// abgeleiteten Daten zu erneuern; der Lauf markiert sie nur auf die aktuelle Version (zukunftssicher).</para>
@@ -44,6 +63,9 @@ public partial class ImportReprocessService
     private readonly AppDbContext _db;
     private readonly PgnImportService _pgnImport;
     private readonly ICourseReimporter _chessableImport;
+    /// <summary>Der geteilte Linien-Cache (Cache-Weg). null nur in Tests, die ihn nicht brauchen — dann
+    /// bleibt ein Cache-Kurs veraltet wie bei einem nicht erreichbaren piratechess.</summary>
+    private readonly ICachedLineSource? _cachedLines;
     private readonly ILogger<ImportReprocessService> _logger;
     /// <summary>Läuft der RookHub-EIGENE Chessable-Weg (<c>Chessable:Enabled</c>)? Ist er aus (PROD seit
     /// 2026-09-09), kann NICHTS neu von Chessable geholt werden — ein Re-Fetch-Auftrag bliebe für immer
@@ -60,17 +82,25 @@ public partial class ImportReprocessService
     /// Chessable geholt (Hunderte Line-Fetches → Block-Risiko). Ein gezielter Admin-Re-Import umgeht das.</summary>
     private static readonly TimeSpan IncompleteRefetchBackoff = TimeSpan.FromHours(24);
 
+    /// <summary>oids je Abfrage an den Linien-Cache. piratechess lädt dafür je oid das rohe getGame-JSON —
+    /// gemessen ~455 KB je Linie im gemeldeten Kurs (1.881 Linien = 835 MB in EINER Abfrage). 100 Linien
+    /// sind ~45 MB: groß genug, dass ein Kurs in ein paar Dutzend Aufrufen durch ist, klein genug für den
+    /// Speicher von piratechess und den Proxy-Timeout.</summary>
+    public const int CacheRebuildBatchSize = 100;
+
     public ImportReprocessService(
         AppDbContext db,
         PgnImportService pgnImport,
         ICourseReimporter chessableImport,
         ILogger<ImportReprocessService> logger,
-        IConfiguration? configuration = null)
+        IConfiguration? configuration = null,
+        ICachedLineSource? cachedLines = null)
     {
         _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
         _db = db;
         _pgnImport = pgnImport;
         _chessableImport = chessableImport;
+        _cachedLines = cachedLines;
         _logger = logger;
     }
 
@@ -101,8 +131,8 @@ public partial class ImportReprocessService
             .ToListAsync(ct);
 
         // Re-Fetch nur noch für Chessable-Kurse, deren gespeicherte Quelle die Marker NOCH NICHT enthält
-        // (alte Abrufe). Chessable-Kurse mit „moderner" Quelle + alle Nicht-Chessable mit Quelle werden
-        // LOKAL aus dem gespeicherten PGN aufbereitet (kein Netz, umgeht Crash/Dedup/Bearer).
+        // (alte Abrufe). Chessable-Kurse mit „moderner" Quelle kommen aus dem Linien-Cache, alle
+        // Nicht-Chessable mit Quelle LOKAL aus dem gespeicherten PGN (beides ohne Chessable-Kontakt).
         // EINE Regel für Anzeige und Ausführung (ActionFor) — laufen sie auseinander, verspricht das
         // Banner eine Aktion, die der Lauf dann überspringt, und es bleibt für immer stehen.
         var actions = stale.Select(b => ActionFor(b.HasSource, b.SourceModern, b.Tags, b.FileName)).ToList();
@@ -112,21 +142,26 @@ public partial class ImportReprocessService
             Total = total,
             Stale = stale.Count,
             Refetchable = actions.Count(a => a == StaleAction.Refetch),
-            ReprocessableLocally = actions.Count(a => a == StaleAction.Local),
+            // Cache zählt mit: für den Nutzer ist es dasselbe — ein Klick, kein Download. Das Banner rechnet
+            // reprocessableLocally + refetchable und bleibt damit unverändert.
+            ReprocessableLocally = actions.Count(a => a is StaleAction.Local or StaleAction.Cache),
+            FromCache = actions.Count(a => a == StaleAction.Cache),
             NeedsReimport = actions.Count(a => a == StaleAction.Manual),
         };
     }
 
     /// <param name="localOnly">true = nur aus dem serverseitig gespeicherten Quell-PGN aufbereiten
-    /// („Aus Cache"), KEIN Chessable-Re-Fetch übers Netz. false = zusätzlich Chessable-Altbestand
-    /// ohne Quelle als Re-Fetch-Job einreihen („Alle").</param>
+    /// („Aus Cache"), KEIN Chessable-Re-Fetch übers Netz. Der Linien-Cache-Weg (<see cref="StaleAction.Cache"/>)
+    /// gehört dazu — „Aus Cache" meint „ohne Chessable-Abruf", und genau das ist er. false = zusätzlich
+    /// Chessable-Altbestand ohne Quelle als Re-Fetch-Job einreihen („Alle").</param>
     public async Task<ReprocessResultDto> ReprocessCoursesAsync(int userId, bool isAdmin, bool localOnly = false, CancellationToken ct = default)
     {
         // Nur Metadaten + die SQL-seitig ermittelten Quell-Flags (wie GetCourseStatusAsync) — NICHT das
         // Roh-PGN, und nichts davon getrackt. Den Text lädt der lokale Zweig unten je Buch genau EINMAL
-        // (PgnImportService.ReprocessFromStoredSourceAsync) und gibt ihn nach dem Buch wieder frei
-        // (ChangeTracker.Clear). Vorher hingen die Texte ALLER veralteten Bücher (je bis zu mehrere MB)
-        // gleichzeitig im Speicher und blieben bis zum Ende des Laufs getrackt.
+        // (PgnImportService.ReprocessFromStoredSourceAsync), der Cache-Zweig zweimal (ungetrackt zum Umschreiben,
+        // dann im Import), und beide geben ihn nach dem Buch wieder frei (ChangeTracker.Clear). Vorher hingen
+        // die Texte ALLER veralteten Bücher (je bis zu mehrere MB) gleichzeitig im Speicher und blieben bis
+        // zum Ende des Laufs getrackt.
         var stale = await ManageableBooks(userId, isAdmin)
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
             .Select(b => new
@@ -153,8 +188,9 @@ public partial class ImportReprocessService
             else if (action == StaleAction.Local)
             {
                 // Lokal verlustfrei + in-place aus dem gespeicherten PGN (der Import-Kern erkennt das
-                // veraltete Buch). Gilt für Nicht-Chessable UND Chessable mit „moderner" Quelle
-                // ([ChessableOid] bereits vorhanden) → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
+                // veraltete Buch). Gilt für Nicht-Chessable-Kurse und — ohne eigenen Chessable-Weg — für
+                // Chessable-Altbestand ohne oids → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
+                // (Chessable MIT oids geht über den Cache-Zweig unten.)
                 // FALLE: EIN kaputtes Buch (korruptes SourcePgn, Parser-Sonderfall, DbUpdateException)
                 // riss ohne dieses try/catch den GANZEN Batch mit — alle nachfolgenden Bücher blieben
                 // veraltet und die gesammelten Re-Fetch-Kandidaten (unten) wurden nie eingereiht, weil
@@ -189,6 +225,42 @@ public partial class ImportReprocessService
                     _db.ChangeTracker.Clear();
                 }
             }
+            else if (action == StaleAction.Cache)
+            {
+                // Chessable mit oids: Zugtexte aus dem geteilten Linien-Cache (aktuelle piratechess-Logik),
+                // dann dieselbe In-place-Aufbereitung wie lokal. Läuft auch bei localOnly (kein Chessable-
+                // Kontakt) und auch mit Chessable:Enabled=false. Je Buch isoliert wie der lokale Zweig.
+                try
+                {
+                    var rebuilt = await RebuildFromCacheAsync(book.Id, playFromStartPosition: book.OwnerUserId != null);
+                    if (rebuilt is { } r)
+                    {
+                        result.Reprocessed++;
+                        result.RebuiltFromCache++;
+                        result.CacheLinesReplaced += r.Replaced;
+                        result.UpdatedLines += r.Updated;
+                    }
+                    else
+                    {
+                        // Nichts aus dem Cache übernommen (leer, anderer Server, piratechess weg): das Buch bleibt
+                        // veraltet und wird beim nächsten „Aktualisieren" erneut versucht.
+                        result.Skipped++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Portion geworfen (piratechess nicht erreichbar) oder Import gescheitert: NICHTS wurde
+                    // geschrieben, das Buch behält seine Version — wie ein Fehler im lokalen Zweig.
+                    result.Failed++;
+                    _logger.LogWarning(ex,
+                        "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht aus dem Linien-Cache erneuert werden — bleibt veraltet",
+                        book.FileName, book.Id);
+                }
+                finally
+                {
+                    _db.ChangeTracker.Clear();   // wie im lokalen Zweig: nach dem Buch nichts mehr im Tracker
+                }
+            }
             else
             {
                 result.Skipped++; // keine Quelle, kein Re-Fetch → nur manueller Re-Import
@@ -199,9 +271,82 @@ public partial class ImportReprocessService
         await EnqueueRefetchesAsync(refetch, isAdmin, result);
 
         _logger.LogInformation(
-            "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} lokal ({UpdatedLines} Linien), {Enqueued} eingereiht, {Skipped} übersprungen, {Failed} fehlgeschlagen",
-            userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.Enqueued, result.Skipped, result.Failed);
+            "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} aufbereitet ({UpdatedLines} Linien), davon {RebuiltFromCache} aus dem Linien-Cache ({CacheLinesReplaced} Linien ersetzt), {Enqueued} eingereiht, {Skipped} übersprungen, {Failed} fehlgeschlagen",
+            userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.RebuiltFromCache, result.CacheLinesReplaced,
+            result.Enqueued, result.Skipped, result.Failed);
         return result;
+    }
+
+    /// <summary>
+    /// Cache-Weg für EIN Buch (<see cref="StaleAction.Cache"/>): Zugtexte aller Linien aus dem geteilten
+    /// piratechess-Linien-Cache, Header aus dem gespeicherten PGN, dann In-place-Aufbereitung über
+    /// <see cref="PgnImportService.ImportFileAsync"/> (lädt das Buch selbst, schreibt den Text nur, wenn er sich
+    /// unterscheidet, setzt <c>ImportVersion</c>).
+    /// <para>Erst prüfen, dann schreiben: gibt es keine einzige gecachte Linie, wird nichts geholt; wirft eine
+    /// Portion, wird nichts geschrieben — kein halb erneuerter Kurs mit hochgesetzter Version.</para>
+    /// </summary>
+    /// <returns>null = nichts aus dem Cache übernommen, das Buch bleibt veraltet.</returns>
+    private async Task<(int Replaced, int Updated)?> RebuildFromCacheAsync(int bookId, bool playFromStartPosition)
+    {
+        if (_cachedLines is null) return null;
+
+        // Den Text genau dieses Buchs — er wird umgeschrieben (erlaubte Include-Stelle, BookSourceIncludeGuardTests).
+        // AsNoTracking: ImportFileAsync lädt das Buch getrackt ein zweites Mal; so hängt nur EINE Instanz im Tracker.
+        // Alle Aufrufe mit CancellationToken.None: der Lauf ist fire-and-forget (ReprocessLauncher), Wegnavigieren
+        // darf ihn nicht mitten im Buch abbrechen.
+        var book = await _db.Books.AsNoTracking().Include(b => b.Source)
+            .FirstOrDefaultAsync(b => b.Id == bookId, CancellationToken.None)
+            ?? throw new KeyNotFoundException($"Book {bookId} not found.");
+        var source = book.Source?.SourcePgn;
+        if (string.IsNullOrEmpty(source)) return null;
+
+        var oids = CachedSourceRebuild.OidsOf(source);
+        if (oids.Count == 0) return null;
+
+        // Ein billiger Existenz-Aufruf vorab: ein Server ohne (diesen) Cache soll nicht Dutzende teure
+        // PGN-Abfragen absetzen, um am Ende nichts zu haben. Weich — piratechess weg liefert hier „nichts".
+        var cached = await _cachedLines.GetCachedLineOidsAsync(oids, CancellationToken.None);
+        var wanted = oids.Where(cached.Contains).ToList();
+        if (wanted.Count == 0)
+        {
+            _logger.LogInformation(
+                "Course-Reprocess: Buch {FileName} (Id {BookId}) — keine der {Total} Linien im Linien-Cache, bleibt veraltet",
+                book.FileName, bookId, oids.Count);
+            return null;
+        }
+
+        var mode = CachedSourceRebuild.ModeFor(source);
+        var fresh = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var portion in wanted.Chunk(CacheRebuildBatchSize))
+            foreach (var (oid, pgn) in await _cachedLines.GetCachedLinePgnsAsync(portion, mode, CancellationToken.None))
+                fresh[oid] = pgn;
+
+        var rebuilt = CachedSourceRebuild.Rebuild(source, fresh);
+        _logger.LogInformation(
+            "Course-Reprocess: Buch {FileName} (Id {BookId}, Modus {Mode}) — {Replaced} von {Total} Linien aus dem Cache, {Missing} nicht gecacht, {ModeMismatch} Modus-Konflikt, {Conflicts} Konflikt",
+            book.FileName, bookId, mode, rebuilt.Replaced, rebuilt.Total, rebuilt.Missing, rebuilt.ModeMismatch, rebuilt.Conflicts);
+        // Keine Linie übernommen (etwa alle im falschen Modus): nicht als erneuert ausgeben — sonst stünde das
+        // Buch auf der aktuellen Version, ohne dass sich etwas geändert hat, und käme nie wieder dran.
+        if (rebuilt.Replaced == 0) return null;
+
+        // Ein großer Kurs braucht Dutzende Cache-Abfragen, also Minuten. Hat in der Zeit ein anderer Weg das
+        // Buch geschrieben (ein Browser-Import hängt Linien an), fehlten dessen Linien im umgeschriebenen Text,
+        // und ImportFileAsync überschriebe ihn damit. Der einzige Schreiber des Texts (ImportIntoBookAsync) setzt
+        // dabei UpdatedAt — steht es anders als beim Laden, lieber nichts schreiben: das Buch bleibt veraltet
+        // und kommt beim nächsten „Aktualisieren" mit dem neuen Stand dran.
+        var updatedAt = await _db.Books.Where(b => b.Id == bookId).Select(b => (DateTime?)b.UpdatedAt)
+            .FirstOrDefaultAsync(CancellationToken.None);
+        if (updatedAt != book.UpdatedAt)
+        {
+            _logger.LogInformation(
+                "Course-Reprocess: Buch {FileName} (Id {BookId}) wurde während der Cache-Abfragen geändert — nichts geschrieben, bleibt veraltet",
+                book.FileName, bookId);
+            return null;
+        }
+
+        var res = await _pgnImport.ImportFileAsync(book.FileName, rebuilt.Pgn, CancellationToken.None,
+            playFromStartPosition: playFromStartPosition);
+        return (rebuilt.Replaced, res.Updated);
     }
 
     /// <summary>Kandidat für einen Chessable-Re-Fetch — Kurs ODER Repertoire.</summary>

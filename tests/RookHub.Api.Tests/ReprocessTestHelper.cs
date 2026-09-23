@@ -30,12 +30,45 @@ public class StubCourseReimporter : ICourseReimporter
     }
 }
 
+/// <summary>
+/// Stub-<see cref="ICachedLineSource"/> für Tests: der geteilte piratechess-Linien-Cache als Wörterbuch
+/// (oid → PGN der Linie, wie <c>GetCachedLinePgnsAsync</c> es liefert). Zeichnet jede Abfrage samt Modus auf
+/// und kann eine bestimmte Abfrage werfen lassen (piratechess nicht erreichbar).
+/// </summary>
+public class StubCachedLineSource : ICachedLineSource
+{
+    public Dictionary<string, string> Lines { get; } = new(StringComparer.Ordinal);
+    public List<(IReadOnlyList<string> Oids, string Mode)> PgnCalls { get; } = new();
+    public int OidCalls { get; private set; }
+    /// <summary>1-basierte Nummer der PGN-Abfrage, die wirft (null = keine).</summary>
+    public int? ThrowOnPgnCall { get; set; }
+    /// <summary>Läuft während jeder PGN-Abfrage — steht für einen anderen Weg, der in der Zwischenzeit schreibt.</summary>
+    public Action? OnPgnCall { get; set; }
+
+    public Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default)
+    {
+        OidCalls++;
+        return Task.FromResult(oids.Where(Lines.ContainsKey).ToHashSet(StringComparer.Ordinal));
+    }
+
+    public Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, string mode = "None", CancellationToken ct = default)
+    {
+        var list = oids.ToList();
+        PgnCalls.Add((list, mode));
+        OnPgnCall?.Invoke();
+        if (ThrowOnPgnCall == PgnCalls.Count)
+            throw new ChessableProxyException(System.Net.HttpStatusCode.BadGateway, "piratechess nicht erreichbar");
+        return Task.FromResult(list.Where(Lines.ContainsKey).ToDictionary(o => o, o => Lines[o], StringComparer.Ordinal));
+    }
+}
+
 /// <summary>Baut einen <see cref="ImportReprocessService"/> für Tests (NullLogger, Stub-Reimporter).</summary>
 public static class ReprocessTestHelper
 {
-    public static ImportReprocessService Build(AppDbContext db, ICourseReimporter? reimporter = null)
+    public static ImportReprocessService Build(AppDbContext db, ICourseReimporter? reimporter = null,
+        ICachedLineSource? cachedLines = null)
         => new(db, new PgnImportService(db), reimporter ?? new StubCourseReimporter(),
-               NullLogger<ImportReprocessService>.Instance);
+               NullLogger<ImportReprocessService>.Instance, cachedLines: cachedLines);
 }
 
 /// <summary>Test-Doppel für <see cref="IReprocessLauncher"/>: merkt sich die aufgerufenen Läufe,

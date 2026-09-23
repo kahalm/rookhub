@@ -56,6 +56,22 @@ internal sealed class NoRefetch : ICourseReimporter
     public Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default) => Task.FromResult(new HashSet<string>());
 }
 
+/// <summary>Linien-Cache-Stub: kennt nur die Linie mit oid 10 aus <c>ModernPgn</c> und liefert sie mit
+/// DEMSELBEN Zugtext zurück (nur mit den Headern des Fake-Kapitels) — der Cache-Weg läuft also durch, der
+/// Text bleibt aber gleich.</summary>
+internal sealed class SameLineCache : ICachedLineSource
+{
+    public const string Line = "[Event \"x\"]\n[Round \"001.001\"]\n"
+        + "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n[ChessableOid \"10\"]\n\n"
+        + "2. Nf3 {[%alt g1e2] Develops.} Nc6 3. Bb5 {The pin.} a6 *";
+
+    public Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default)
+        => Task.FromResult(oids.Where(o => o == "10").ToHashSet());
+
+    public Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, string mode = "None", CancellationToken ct = default)
+        => Task.FromResult(oids.Where(o => o == "10").ToDictionary(o => o, _ => Line));
+}
+
 /// <summary>
 /// Das Roh-PGN liegt seit 0.508.3 per TABELLENSPLITTING in <see cref="BookSource"/> — dieselbe Zeile
 /// in <c>Books</c>, aber eine eigene Entität, damit <c>.Include(bp =&gt; bp.Book)</c> es nicht mehr
@@ -241,7 +257,8 @@ public class BookSourceSplitTests(BookSourceSplitFixture fixture)
     };
 
     private ImportReprocessService Reprocess(AppDbContext db) =>
-        new(db, new PgnImportService(db), new NoRefetch(), NullLogger<ImportReprocessService>.Instance);
+        new(db, new PgnImportService(db), new NoRefetch(), NullLogger<ImportReprocessService>.Instance,
+            cachedLines: new SameLineCache());
 
     [MySqlFact]
     public async Task GetCourseStatus_ProjiziertDieQuellFlagsInSql()
@@ -254,7 +271,8 @@ public class BookSourceSplitTests(BookSourceSplitFixture fixture)
 
         Assert.Equal(6, status.Total);
         Assert.Equal(5, status.Stale);
-        Assert.Equal(2, status.ReprocessableLocally);   // plain + Chessable modern
+        Assert.Equal(2, status.ReprocessableLocally);   // plain + Chessable modern (Cache-Weg zählt mit)
+        Assert.Equal(1, status.FromCache);              // Chessable modern
         Assert.Equal(1, status.Refetchable);            // Chessable ohne [ChessableOid]
         Assert.Equal(2, status.NeedsReimport);          // NULL + leer
         // Die Flags laufen als SQL (LIKE), der Text selbst wird nicht übertragen.
@@ -272,15 +290,17 @@ public class BookSourceSplitTests(BookSourceSplitFixture fixture)
         var db = Fresh(recorder);
         var result = await Reprocess(db).ReprocessCoursesAsync(uid, isAdmin: false, localOnly: true);
 
-        Assert.Equal(2, result.Reprocessed);   // plain + Chessable modern
+        Assert.Equal(2, result.Reprocessed);   // plain (lokal) + Chessable modern (Linien-Cache)
+        Assert.Equal(1, result.RebuiltFromCache);
         Assert.Equal(2, result.Skipped);       // NULL + leer
         Assert.Equal(0, result.Failed);
         Assert.Equal(0, result.Enqueued);      // localOnly: Chessable ohne oid bleibt liegen
 
-        // Je lokal aufbereitetem Buch GENAU ein Ladevorgang des Texts (das Include im Import-Kern) —
-        // vorher zwei (Projektion + Include). Die Flag-Abfrage mit LIKE lädt ihn nicht.
+        // Lokal aufbereitet: GENAU ein Ladevorgang des Texts (das Include im Import-Kern) — vorher zwei
+        // (Projektion + Include). Cache-Weg: zwei (ungetrackt zum Umschreiben, dann im Import-Kern). Die
+        // Flag-Abfrage mit LIKE lädt ihn nicht.
         var loads = recorder.Commands.Where(c => c.Contains("SourcePgn") && !c.Contains("LIKE")).ToList();
-        Assert.Equal(2, loads.Count);
+        Assert.Equal(3, loads.Count);
         Assert.All(loads, c => Assert.StartsWith("SELECT", c.TrimStart()));
         // Der Text ist unverändert — also auch kein UPDATE der LONGTEXT-Spalte.
         Assert.DoesNotContain(recorder.Commands, c => c.Contains("`SourcePgn` = @"));
@@ -314,7 +334,7 @@ public class BookSourceSplitTests(BookSourceSplitFixture fixture)
         Assert.True(needs[ids["leer"]]);
         Assert.False(needs[ids["plain"]]);       // lokal aufbereitbar
         Assert.False(needs[ids["cb-alt"]]);      // Re-Fetch (bzw. ohne Chessable-Weg: lokal)
-        Assert.False(needs[ids["cb-modern"]]);   // lokal
+        Assert.False(needs[ids["cb-modern"]]);   // aus dem Linien-Cache
         Assert.False(needs[ids["aktuell"]]);     // nicht veraltet — auch ohne Quelle kein (!)
     }
 }

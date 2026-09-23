@@ -24,7 +24,7 @@ public class ChessableProxyException : Exception
 /// durch (stateless aus piratechess-Sicht). Authentifiziert sich mit dem
 /// <c>X-Service-Key</c>-Header (siehe <c>Chessable:ServiceKey</c>).
 /// </summary>
-public class ChessableProxyService
+public class ChessableProxyService : ICachedLineSource
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<ChessableProxyService> _logger;

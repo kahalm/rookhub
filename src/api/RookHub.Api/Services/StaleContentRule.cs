@@ -8,6 +8,10 @@ public enum StaleAction
 {
     /// <summary>Frisch von Chessable holen — nur mit dem RookHub-EIGENEN Chessable-Weg.</summary>
     Refetch,
+    /// <summary>Den Zugtext jeder Linie aus dem geteilten piratechess-Linien-Cache neu erzeugen (je oid,
+    /// mit der AKTUELLEN piratechess-Logik), dann lokal aufbereiten — nur Kurse. Kein Chessable-Kontakt,
+    /// kein Bearer, unabhängig von <c>Chessable:Enabled</c>; erledigt der „Aktualisieren"-Knopf.</summary>
+    Cache,
     /// <summary>Aus der hier gespeicherten Quelle neu aufbereiten bzw. (Repertoire) auf die aktuelle
     /// Version setzen. Kein Netz, erledigt der „Aktualisieren"-Knopf.</summary>
     Local,
@@ -27,8 +31,9 @@ public enum StaleAction
 public static partial class StaleContentRule
 {
     /// <summary>Jüngster quell-abhängiger Marker (piratechess ≥ v1.0.39, Grundlage der
-    /// Fortschritts-Overlays). Steht er in der gespeicherten Quelle, holt ein lokaler Re-Parse alles;
-    /// fehlt er, braucht es einen echten Abruf.</summary>
+    /// Fortschritts-Overlays). Steht er in der gespeicherten Quelle, kennt jede Linie ihre oid — dann kommt
+    /// ein Chessable-Kurs aus dem Linien-Cache wieder auf den Stand der aktuellen piratechess-Logik, ein
+    /// anderer Kurs per lokalem Re-Parse. Fehlt er, braucht ein Chessable-Kurs einen echten Abruf.</summary>
     public const string ModernMarker = "[ChessableOid";
 
     public static bool HasModernMarkers(string? pgn) =>
@@ -53,15 +58,36 @@ public static partial class StaleContentRule
     public static bool CanRefetch(string? tags, string fileName) =>
         IsChessable(tags, fileName) && TryParseBid(fileName, out _);
 
+    /// <summary>
+    /// Was mit einem veralteten KURS geschieht — die erste zutreffende Zeile gewinnt:
+    /// <list type="table">
+    /// <listheader><term>Fall</term><description>Bedingung → was der Lauf tut</description></listheader>
+    /// <item><term><see cref="StaleAction.Refetch"/></term><description>eigener Chessable-Weg an, bid aus dem
+    ///   Dateinamen lösbar, Quelle OHNE <c>[ChessableOid]</c> → Re-Fetch-Auftrag (nur so kommen die oids).</description></item>
+    /// <item><term><see cref="StaleAction.Cache"/></term><description>Quelle MIT <c>[ChessableOid]</c> und ein
+    ///   Chessable-Kurs → Zugtexte je oid aus dem Linien-Cache, dann lokal aufbereiten.</description></item>
+    /// <item><term><see cref="StaleAction.Local"/></term><description>Quelle vorhanden (hochgeladenes PGN,
+    ///   umgewandeltes Repertoire ohne oids, Chessable ohne eigenen Weg und ohne oids) → lokal aus der Quelle.</description></item>
+    /// <item><term><see cref="StaleAction.Manual"/></term><description>keine Quelle → (!) in der Liste,
+    ///   nur ein neuer Import hilft.</description></item>
+    /// </list>
+    /// Ein Chessable-Kurs mit oids geht bewusst IMMER über den Cache und nie mehr über <see cref="StaleAction.Local"/>:
+    /// der lokale Weg war dort nur der Ersatz, solange es den Cache-Weg nicht gab. Ein lokaler Re-Parse brächte
+    /// Änderungen an der PGN-Erzeugung in piratechess nie in den Kurs, setzte ihn aber auf die aktuelle
+    /// Version — damit wäre er für den Cache-Weg verbrannt. Fällt piratechess aus, bleibt das Buch veraltet.
+    /// </summary>
     /// <param name="chessableEnabled">Läuft der RookHub-EIGENE Chessable-Weg (<c>Chessable:Enabled</c>)?
-    /// Ist er aus, wird KEIN Auftrag je abgearbeitet — dann gibt es kein <see cref="StaleAction.Refetch"/>.</param>
+    /// Ist er aus, wird KEIN Auftrag je abgearbeitet — dann gibt es kein <see cref="StaleAction.Refetch"/>.
+    /// Den Cache-Weg sperrt der Schalter NICHT: der piratechess-Proxy läuft für die Extension-Wege ohnehin.</param>
     public static StaleAction ActionForBook(bool hasSource, bool sourceModern, string? tags, string fileName, bool chessableEnabled)
         => chessableEnabled && CanRefetch(tags, fileName) && !sourceModern ? StaleAction.Refetch
+            : sourceModern && IsChessable(tags, fileName) ? StaleAction.Cache
             : hasSource ? StaleAction.Local
             : StaleAction.Manual;
 
     /// <summary>Repertoire: es gibt keine getrennte Quelle — das PGN IST die Quelle. Lokal heißt hier
-    /// „nur auf die aktuelle Version setzen" (abgeleitete Daten wertet der Trainer live aus).</summary>
+    /// „nur auf die aktuelle Version setzen" (abgeleitete Daten wertet der Trainer live aus). Einen
+    /// <see cref="StaleAction.Cache"/>-Fall gibt es hier (noch) nicht — siehe TODO.md.</summary>
     public static StaleAction ActionForRepertoire(bool isChessable, bool sourceModern, bool chessableEnabled)
         => !isChessable || sourceModern ? StaleAction.Local
             : chessableEnabled ? StaleAction.Refetch
