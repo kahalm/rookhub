@@ -9,6 +9,21 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23)
+
+`PgnImportService.ImportFileAsync` laedt das Buch IMMER mit `.Include(b => b.Source)` — auch bei
+`partial`/`preserveExistingSourcePgn`, wo vom gespeicherten Text nur `string.IsNullOrEmpty` gebraucht
+wird (ein vorhandener Text wird dort nie ersetzt). Der Live-Append des Browser-Imports
+(`ChessableImportService.AppendLiveCoreAsync`, `partial: true`) laeuft JE LINIE bzw. je Kapitel-Chunk
+durch diesen Weg und zieht damit jedes Mal das komplette `SourcePgn` (bis zu 6 MB) aus der DB, nur um
+festzustellen, dass es nicht leer ist. Kein Rueckschritt durch das Tabellensplitting (0.508.3) — vorher
+kam der Text ueber `Book` genauso mit —, aber jetzt sichtbar.
+
+Vorschlag: die Leer-Pruefung per SQL (`_db.BookSources.Where(s => s.Id == id).Select(s => s.SourcePgn != null
+&& s.SourcePgn != "")`), `.Include(b => b.Source)` nur, wenn tatsaechlich ueberschrieben wird; beim
+erstmaligen Setzen reicht dann ein Stub (`Attach(new BookSource { Id })` + Zuweisung → UPDATE der einen
+Spalte). Die Allowlist in `BookSourceIncludeGuardTests` entsprechend anpassen.
+
 ## [x] Lochfinder: LOKALER Explorer als zweite Quelle (2026-09-22, ERLEDIGT in 0.503.0)
 
 Quelle `online|local`, `LichessExplorer:LocalUrl`, lokal ohne Token/Leitung/DB-Speicher und
