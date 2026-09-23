@@ -38,16 +38,25 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
       } @else if (game) {
         <mat-card class="viewer">
           <div class="header">
-            <span class="players">
-              <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo">({{ game.whiteElo }})</span> }
-              –
-              <strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo">({{ game.blackElo }})</span> }
-            </span>
-            <span class="meta">
-              @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
-              <span>{{ game.source }}</span>
-              <span class="date">{{ (game.playedAt || game.createdAt) | date:'mediumDate' }}</span>
-            </span>
+            <div class="header-main">
+              <span class="players">
+                <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo">({{ game.whiteElo }})</span> }
+                –
+                <strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo">({{ game.blackElo }})</span> }
+              </span>
+              <span class="meta">
+                @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
+                <span>{{ game.source }}</span>
+                <span class="date">{{ (game.playedAt || game.createdAt) | date:'mediumDate' }}</span>
+              </span>
+            </div>
+            <!-- Am PC in die Kopfzeile: als eigene Zeile unter Brett und Zugliste war der Knopf so breit wie
+                 die Karte und stand mitten im Leeren. Auf dem Handy fällt die Kopfzeile in eine Spalte. -->
+            @if (game.sourceUrl) {
+              <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
+                <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
+              </a>
+            }
           </div>
           <div class="body">
             <div class="board-section">
@@ -72,30 +81,35 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
               }
             </div>
           </div>
-          @if (game.sourceUrl) {
-            <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
-              <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
-            </a>
-          }
         </mat-card>
       }
     </div>
   `,
   styles: [`
-    .shared-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .shared-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
-    .viewer { padding: 16px; }
-    .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    /* Die Karte umschließt ihren Inhalt (Brett + Zugliste) und steht mittig, statt sich auf die Seitenbreite zu
+       dehnen und rechts von der Zugliste leer zu bleiben. Das Brett wächst mit dem Fenster: so hoch, dass
+       Kopfzeile und Steuerleiste noch Platz haben, und so breit, dass die Zugliste daneben passt — aber nie
+       über 640 px (darüber wird es ein Poster) und nie unter 360 px (gemeldet 2026-09-23: 400 px auf einem
+       2250 px breiten Bildschirm, zwei Drittel der Seite leer). */
+    .viewer {
+      --board-size: clamp(360px, min(calc(100vh - 300px), calc(100vw - 440px)), 640px);
+      width: fit-content; max-width: 100%; margin: 0 auto; padding: 16px 20px 20px; box-sizing: border-box;
+    }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 12px; }
+    .header-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .players { font-size: 1.05rem; }
     .players .elo { font-weight: 400; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
-    .body { display: flex; gap: 16px; align-items: flex-start; }
-    /* Board-Maße wie der Repertoire-Linien-Look (fixe 400px-Spalte). */
-    .board-section { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
-    .board-wrap { position: relative; width: 400px; }
-    .board-wrap app-chess-board { display: block; width: 400px; }
+    .original { flex: 0 0 auto; white-space: nowrap; }
+    .body { display: flex; gap: 20px; align-items: flex-start; }
+    .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .board-wrap { position: relative; width: var(--board-size); }
+    .board-wrap app-chess-board { display: block; width: var(--board-size); }
     .board-tap {
       display: none;
       position: absolute;
@@ -108,12 +122,18 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
     .pr-slot { display: block; width: 100%; }
-    .moves-section { flex: 1; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; min-width: 180px; overflow: auto; max-height: 60vh; }
-    .original { margin-top: 12px; }
+    /* Die Zugliste ist so hoch wie das Brett und scrollt in sich; eine feste Breite, damit die zwei Zugspalten
+       nebeneinander stehen statt — bei einer Spalte, die den Rest der Karte füllt — mit einer Handbreit Luft
+       dazwischen. */
+    .moves-section {
+      width: 300px; height: var(--board-size); flex-shrink: 0; box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; overflow: auto;
+    }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }
-      .viewer { padding: 0; border-radius: 0; }
-      .header { padding: 12px 16px; }
+      .viewer { width: auto; padding: 0; border-radius: 0; }
+      .header { flex-direction: column; align-items: stretch; padding: 12px 16px; }
+      .original { align-self: stretch; }
       .body { flex-direction: column; align-items: stretch; }
       .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
@@ -121,10 +141,9 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
       .board-tap { display: block; }
       .nav { justify-content: center; padding: 4px 0; }
       .moves-section {
-        width: 100%; max-height: 40vh;
+        width: 100%; height: auto; max-height: 40vh;
         border-left: none; border-right: none; border-radius: 0; border-bottom: none;
       }
-      a.original { display: block; padding: 8px 16px 16px; }
     }
   `]
 })
