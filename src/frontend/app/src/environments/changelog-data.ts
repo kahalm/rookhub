@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.510.1", date: "2026-09-23", changes: [
+    { en: "Saved games (/games): every game now has „Analyse game“ next to replay and analysis board — the same background analysis as on the shared game page and the points game page (0.510.0); afterwards you land on the points game page, where the game appears with its progress. Without an available engine the button is disabled and says why.", de: "Gespeicherte Partien (/games): jede Partie hat jetzt „Partie analysieren“ neben Nachspielen und Analysebrett — dieselbe Hintergrund-Analyse wie auf der geteilten Partie und der Punktepartie-Seite (0.510.0); danach landest du auf der Punktepartie-Seite, wo die Partie mit Fortschritt erscheint. Ohne verfügbare Engine ist der Knopf gesperrt und sagt, warum." },
+  ] },
   { version: "0.510.0", date: "2026-09-23", changes: [
     { en: "Shared game page (/g/…): new „Analyse game“ button in the header. It hands the game to the same background analysis as „Add game“ on the points game page (depth and engine are set by the server) and then takes you there, where the game appears with its progress and can be guessed move by move once the first position is done. Without an account the click leads to the sign-in and back here afterwards; without an available engine the button is disabled and says why.", de: "Geteilte Partie (/g/…): neuer Knopf „Partie analysieren“ in der Kopfzeile. Er gibt die Partie in dieselbe Hintergrund-Analyse wie „Partie einwerfen“ auf der Punktepartie-Seite (Tiefe und Engine setzt der Server) und führt danach dorthin, wo die Partie mit Fortschritt erscheint und sich Zug für Zug erraten lässt, sobald die erste Stellung fertig ist. Ohne Konto führt der Klick zur Anmeldung und danach wieder hierher; ohne verfügbare Engine ist der Knopf gesperrt und sagt, warum." },
   ] },

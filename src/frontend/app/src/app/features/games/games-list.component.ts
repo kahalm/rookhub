@@ -11,6 +11,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { GamesService, SavedGame } from './games.service';
+import { AnalyzeGameService } from './analyze-game.service';
+import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { PgnViewerComponent } from '../../shared/pgn-viewer/pgn-viewer.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -58,6 +60,13 @@ import { SnackbarService } from '../../core/snackbar.service';
                 <button mat-icon-button (click)="openInAnalysis(g)" [matTooltip]="'games.openInAnalysis' | translate" [attr.aria-label]="'games.openInAnalysis' | translate">
                   <mat-icon>biotech</mat-icon>
                 </button>
+                <!-- Punktepartie: derselbe Einwurf wie auf der geteilten Partie und der Punktepartie-Seite. -->
+                <button mat-icon-button class="analyze" (click)="analyze(g)"
+                        [disabled]="analyzingId === g.id || uploadStatus?.engineAvailable === false"
+                        [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyze') | translate"
+                        [attr.aria-label]="'games.analyze' | translate">
+                  <mat-icon>{{ analyzingId === g.id ? 'hourglass_top' : 'insights' }}</mat-icon>
+                </button>
                 <button mat-icon-button (click)="share(g)" [matTooltip]="'games.share' | translate" [attr.aria-label]="'games.share' | translate">
                   <mat-icon>share</mat-icon>
                 </button>
@@ -101,7 +110,12 @@ import { SnackbarService } from '../../core/snackbar.service';
 export class GamesListComponent implements OnInit {
   games: SavedGame[] = [];
   loading = true;
+  /** Welche Partie gerade als Punktepartie eingeworfen wird (sperrt nur ihren Knopf). */
+  analyzingId: number | null = null;
+  /** Engine da / Plätze frei? `null` = Auskunft fehlt, der Server entscheidet beim Einwurf. */
+  uploadStatus: GuessUploadStatus | null = null;
   private destroyRef = inject(DestroyRef);
+  private analyzeGame = inject(AnalyzeGameService);
   private usernames: { chess?: string; lichess?: string } = {};
 
   constructor(
@@ -120,6 +134,18 @@ export class GamesListComponent implements OnInit {
     });
     this.profileService.getProfile<{ chessComUsername?: string; lichessUsername?: string }>()
       .subscribe({ next: p => this.usernames = { chess: p.chessComUsername?.toLowerCase(), lichess: p.lichessUsername?.toLowerCase() } });
+    this.analyzeGame.status().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(u => this.uploadStatus = u);
+  }
+
+  /** PGN nachladen (die Liste trägt keins) und als Punktepartie rechnen lassen — siehe {@link AnalyzeGameService}. */
+  analyze(g: SavedGame): void {
+    if (this.analyzingId !== null) return;
+    this.analyzingId = g.id;
+    this.service.get(g.id).subscribe({
+      next: detail => this.analyzeGame.submit(detail.pgn, AnalyzeGameService.titleOf(g.white, g.black), this.uploadStatus)
+        .subscribe(() => this.analyzingId = null),
+      error: () => { this.analyzingId = null; this.snackbar.warn(this.translate.instant('games.loadError')); },
+    });
   }
 
   private isFlipped(g: SavedGame): boolean {

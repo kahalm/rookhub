@@ -13,7 +13,8 @@ import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
+import { GuessUploadStatus } from '../analysis/game-analysis.service';
+import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
@@ -167,7 +168,7 @@ export class SharedGameComponent implements OnInit {
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
-  private analyses = inject(GameAnalysisService);
+  private analyzeGame = inject(AnalyzeGameService);
 
   game: SharedGame | null = null;
   loading = true;
@@ -196,16 +197,15 @@ export class SharedGameComponent implements OnInit {
         this.service.loadPgn(g.pgn);
         this.loading = false;
         if (this.auth.isLoggedIn) {
-          this.analyses.guessUploadStatus().subscribe({ next: u => this.uploadStatus = u, error: () => {} });
+          this.analyzeGame.status().subscribe(u => this.uploadStatus = u);
         }
       },
       error: () => { this.notFound = true; this.loading = false; },
     });
   }
 
-  /** Die Partie als Punktepartie rechnen lassen — derselbe Einwurf wie auf der Punktepartie-Seite
-   *  (`POST /api/game-analyses/guess`: Tiefe und Engine setzt der Server). Danach geht es dorthin, wo
-   *  die Partie mit Fortschritt erscheint. Die Absage-Gründe formuliert dieselbe i18n-Tabelle. */
+  /** Die Partie als Punktepartie rechnen lassen (siehe {@link AnalyzeGameService}). Die Seite ist ohne
+   *  Anmeldung erreichbar, der Einwurf nicht: ohne Konto geht es zur Anmeldung und danach wieder hierher. */
   analyze(): void {
     if (!this.game || this.analyzing) return;
     if (!this.auth.isLoggedIn) {
@@ -213,22 +213,9 @@ export class SharedGameComponent implements OnInit {
       this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       return;
     }
-    const title = this.game.white && this.game.black ? `${this.game.white} – ${this.game.black}` : undefined;
     this.analyzing = true;
-    this.analyses.createForGuess(this.game.pgn, title).subscribe({
-      next: () => {
-        this.analyzing = false;
-        this.snackbar.success(this.translate.instant('guess.upload.started'));
-        this.router.navigate(['/guess']);
-      },
-      error: err => {
-        this.analyzing = false;
-        const reason = err?.error?.reason;
-        this.snackbar.warn(reason
-          ? this.translate.instant('guess.upload.reason.' + reason, { max: this.uploadStatus?.maxGames })
-          : this.translate.instant('guess.upload.failed'));
-      },
-    });
+    this.analyzeGame.submit(this.game.pgn, AnalyzeGameService.titleOf(this.game.white, this.game.black), this.uploadStatus)
+      .subscribe(() => this.analyzing = false);
   }
 
   @HostListener('window:keydown', ['$event'])
