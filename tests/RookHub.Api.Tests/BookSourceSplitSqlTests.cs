@@ -6,7 +6,7 @@ using RookHub.Api.Services;
 namespace RookHub.Api.Tests;
 
 /// <summary>
-/// Rückfallschutz für das Tabellensplitting <see cref="Book"/> / <see cref="BookSource"/> (0.508.2).
+/// Rückfallschutz für das Tabellensplitting <see cref="Book"/> / <see cref="BookSource"/> (0.508.3).
 ///
 /// <para><b>Der Vorfall:</b> die Prod-API lief auf 23 GB RAM. <c>Books.SourcePgn</c> (LONGTEXT, das
 /// komplette Roh-PGN; Ø ~480 KB, bis 6 MB) hing an <see cref="Book"/> und kam deshalb mit JEDEM
