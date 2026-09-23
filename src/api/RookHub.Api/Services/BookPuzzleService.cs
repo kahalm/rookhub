@@ -39,9 +39,7 @@ public class BookPuzzleService
     /// OG-Vorschau/Teilen einer Stellung brauchen FEN + Metadaten, nur eben nicht die Lösung.</para></summary>
     public async Task<BookPuzzleDto?> GetByIdAsync(int id)
     {
-        var puzzle = await _db.BookPuzzles
-            .Include(bp => bp.Book)
-            .FirstOrDefaultAsync(bp => bp.Id == id);
+        var puzzle = await PuzzleWithBook(_db, id).FirstOrDefaultAsync();
         if (puzzle == null) return null;
         var dto = MapToDto(puzzle);
         if (puzzle.Book?.IsCalculation == true)
@@ -53,6 +51,12 @@ public class BookPuzzleService
         }
         return dto;
     }
+
+    /// <summary>Ein Puzzle MIT Buch-Metadaten (für <see cref="MapToDto"/>) — ohne das Roh-PGN des Buchs
+    /// (<see cref="BookSource"/>, Tabellensplitting). Eigene Methode, damit <c>BookSourceSplitSqlTests</c>
+    /// genau diese Abfrage gegen das generierte SQL prüft.</summary>
+    internal static IQueryable<BookPuzzle> PuzzleWithBook(AppDbContext db, int id) =>
+        db.BookPuzzles.Include(bp => bp.Book).Where(bp => bp.Id == id);
 
     /// <summary>Nächstes Puzzle im selben Buch in Lesereihenfolge (Round = Chessable-Zeilennummer,
     /// dann Id; NICHT die DB-Id, da re-gefetchte Linien höhere Ids haben); am Ende wieder das erste.

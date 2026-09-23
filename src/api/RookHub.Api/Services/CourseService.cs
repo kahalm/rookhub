@@ -202,13 +202,21 @@ public class CourseService
         await EnsureAccessAsync(userId, bookId, isAdmin);
         if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
             throw new KeyNotFoundException("Book not found.");
-        var puzzles = await _db.BookPuzzles
-            .Include(bp => bp.Book)
-            .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
-            .ToListAsync();
+        var puzzles = await PuzzlesWithBookInReadingOrder(_db, bookId).ToListAsync();
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
+
+    /// <summary>Alle Linien eines Buchs in Lesereihenfolge (Round-Länge → Round → Id), je Zeile MIT den
+    /// Buch-Metadaten, die <see cref="BookPuzzleService.MapToDto"/> braucht. Gemeinsame Abfrage von
+    /// <see cref="GetAllPuzzlesAsync"/> und <see cref="GetPublicCoursePuzzlesAsync"/>.
+    /// <para>Das Roh-PGN des Buchs ist hier bewusst NICHT dabei (liegt in <see cref="BookSource"/>): als
+    /// es noch an <see cref="Book"/> hing, zog dieses Include es in JEDE Puzzle-Zeile — 6 MB × 1.881 Linien
+    /// = 11 GB aus der DB für einen Request. <c>BookSourceSplitSqlTests</c> prüft das generierte SQL.</para></summary>
+    internal static IOrderedQueryable<BookPuzzle> PuzzlesWithBookInReadingOrder(AppDbContext db, int bookId) =>
+        db.BookPuzzles
+            .Include(bp => bp.Book)
+            .Where(bp => bp.BookId == bookId)
+            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
 
     /// <summary>Puzzles eines ÖFFENTLICHEN Kurses — ohne Login (kein User/Zugriffs-Kontext).
     /// Basis dafür, dass ein anonymer Besucher einen als <see cref="Book.IsPublic"/> markierten Kurs über
@@ -228,10 +236,7 @@ public class CourseService
     {
         if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic && !b.IsCalculation))
             throw new KeyNotFoundException("Book not found.");
-        IQueryable<BookPuzzle> query = _db.BookPuzzles
-            .Include(bp => bp.Book)
-            .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
+        IQueryable<BookPuzzle> query = PuzzlesWithBookInReadingOrder(_db, bookId);
         if (skip is int s && s > 0) query = query.Skip(s);
         if (take is int t && t > 0) query = query.Take(t);
         var puzzles = await query.ToListAsync();
