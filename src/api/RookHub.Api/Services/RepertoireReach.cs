@@ -158,7 +158,7 @@ public static class RepertoireReach
     /// </summary>
     public static async Task<Result> EvaluateAsync(
         Graph g, Func<Node, Task<ExplorerPositionStats?>> stats, double threshold, CancellationToken ct = default,
-        Func<IReadOnlyList<Node>, Task>? prefetchLayer = null)
+        Func<IReadOnlyList<Node>, Task>? prefetchLayer = null, ISet<Node>? onlyFor = null)
     {
         var result = new Result();
         var order = LayerByDepth(g);
@@ -169,7 +169,7 @@ public static class RepertoireReach
             while (end < order.Count && order[end].Depth == order[i].Depth) end++;
             if (prefetchLayer is not null)
             {
-                var wanted = order.Skip(i).Take(end - i).Where(NeedsStats).ToList();
+                var wanted = order.Skip(i).Take(end - i).Where(n => NeedsStats(n) && (onlyFor is null || onlyFor.Contains(n))).ToList();
                 if (wanted.Count > 0) await prefetchLayer(wanted);
             }
             for (; i < end; i++) await VisitAsync(order[i]);
@@ -188,6 +188,9 @@ public static class RepertoireReach
             }
 
             if (node.P < MinReach) return;
+            // Nur ein Ausschnitt gefragt (Baum beim Durchklicken): Gegner-Stellungen außerhalb davon
+            // weder abfragen noch als offen zählen — sie tragen zu den gesuchten Stellungen nichts bei.
+            if (onlyFor is not null && !onlyFor.Contains(node)) return;
             var st = await stats(node);
             if (st is null) { result.Pending++; return; }
             result.Analyzed++;
@@ -236,6 +239,31 @@ public static class RepertoireReach
                 result.LineFrequencies[key] = deepest.P;
         }
         return result;
+    }
+
+    /// <summary>
+    /// Die gesuchten Stellungen samt ALLER Stellungen, von denen aus man sie erreicht (auch über
+    /// Zugumstellungen) — nur deren Explorer-Daten braucht es für ihre Häufigkeit. Schlüssel, die im
+    /// Graphen nicht vorkommen, fallen weg.
+    /// </summary>
+    public static HashSet<Node> AncestorsOf(Graph g, IEnumerable<string> keys)
+    {
+        var parents = new Dictionary<Node, List<Node>>();
+        foreach (var n in g.Nodes.Values)
+            foreach (var (_, child) in n.Children)
+            {
+                if (!parents.TryGetValue(child, out var list)) parents[child] = list = new List<Node>();
+                list.Add(n);
+            }
+        var seen = new HashSet<Node>();
+        var queue = new Queue<Node>();
+        foreach (var key in keys)
+            if (g.Nodes.TryGetValue(key, out var n) && seen.Add(n)) queue.Enqueue(n);
+        while (queue.Count > 0)
+            if (parents.TryGetValue(queue.Dequeue(), out var ps))
+                foreach (var p in ps)
+                    if (seen.Add(p)) queue.Enqueue(p);
+        return seen;
     }
 
     /// <summary>Die Zugfolge von der Wurzel bis zu dieser Stellung (kürzester Weg), dazu die

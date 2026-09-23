@@ -96,6 +96,7 @@ public class RepertoireExplorerService
             _ => throw new ArgumentException("Farbe muss \"w\" oder \"b\" sein."),
         };
 
+        if (req.Targets is { Count: > 200 }) throw new ArgumentException("Höchstens 200 Stellungen auf einmal.");
         var pgn = await _repertoires.GetCombinedPgnAsync(repertoireId, userId);
         var colors = req.ChapterColors ?? new Dictionary<string, string>();
         var graphs = PgnMoveTree.ParseSections(pgn)
@@ -106,17 +107,22 @@ public class RepertoireExplorerService
             .Select(grp => RepertoireReach.Build(grp, grp.Key))
             .ToList();
 
+        // Ausschnitt (Baum beim Durchklicken): je Graph nur die Vorfahren der gesuchten Stellungen.
+        var scopes = req.Targets is null ? null : graphs.ToDictionary(
+            g => g, g => (ISet<RepertoireReach.Node>)RepertoireReach.AncestorsOf(g, req.Targets.Select(RepertoireReach.Key)));
+        bool InScope(RepertoireReach.Node n) => scopes is null || scopes.Values.Any(set => set.Contains(n));
+
         var dto = new ExplorerAnalysisResultDto();
         var clock = Stopwatch.StartNew();
         var threshold = req.ThresholdPercent / 100.0;
         if (useLocal)
         {
-            await EvaluateLocalAsync(graphs, query, threshold, req, dto, clock, ct);
+            await EvaluateLocalAsync(graphs, query, threshold, req, dto, clock, scopes, ct);
             return dto;
         }
 
         var cached = await LoadCacheAsync(query,
-            graphs.SelectMany(g => g.OpponentBranches).Select(n => n.Key).Distinct(), ct);
+            graphs.SelectMany(g => g.OpponentBranches).Where(n => InScope(n)).Select(n => n.Key).Distinct(), ct);
         string? token = null;
         var tokenResolved = false;
         var stop = false;
@@ -151,7 +157,7 @@ public class RepertoireExplorerService
             }
         }
 
-        await CollectAsync(graphs, Stats, null, threshold, req, dto, ct);
+        await CollectAsync(graphs, Stats, null, threshold, req, dto, scopes, ct);
         if (dto.RateLimited && _gate.BlockedFor is { } left) dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
         return dto;
     }
@@ -329,7 +335,8 @@ public class RepertoireExplorerService
     /// </summary>
     private async Task EvaluateLocalAsync(
         List<RepertoireReach.Graph> graphs, ExplorerQuery query, double threshold, ExplorerAnalysisRequestDto req,
-        ExplorerAnalysisResultDto dto, Stopwatch clock, CancellationToken ct)
+        ExplorerAnalysisResultDto dto, Stopwatch clock, Dictionary<RepertoireReach.Graph, ISet<RepertoireReach.Node>>? scopes,
+        CancellationToken ct)
     {
         var fetched = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
         // Je Aufruf höchstens EIN Versuch je Stellung — ein Ausreißer wartet auf die nächste Runde,
@@ -381,7 +388,7 @@ public class RepertoireExplorerService
             return fetched.TryGetValue(node.Key, out hit) ? hit : null;
         }
 
-        await CollectAsync(graphs, Stats, Prefetch, threshold, req, dto, ct);
+        await CollectAsync(graphs, Stats, Prefetch, threshold, req, dto, scopes, ct);
         if (failures > 0 && answered == 0) dto.FetchFailed = true;
     }
 
@@ -389,14 +396,15 @@ public class RepertoireExplorerService
     private static async Task CollectAsync(
         List<RepertoireReach.Graph> graphs, Func<RepertoireReach.Node, Task<ExplorerPositionStats?>> stats,
         Func<IReadOnlyList<RepertoireReach.Node>, Task>? prefetch, double threshold,
-        ExplorerAnalysisRequestDto req, ExplorerAnalysisResultDto dto, CancellationToken ct)
+        ExplorerAnalysisRequestDto req, ExplorerAnalysisResultDto dto,
+        Dictionary<RepertoireReach.Graph, ISet<RepertoireReach.Node>>? scopes, CancellationToken ct)
     {
         var holes = new List<RepertoireHoleDto>();
         var frequencies = new Dictionary<string, double>(StringComparer.Ordinal);
         var positions = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (var graph in graphs)
         {
-            var r = await RepertoireReach.EvaluateAsync(graph, stats, threshold, ct, prefetch);
+            var r = await RepertoireReach.EvaluateAsync(graph, stats, threshold, ct, prefetch, scopes?[graph]);
             dto.PositionsAnalyzed += r.Analyzed;
             dto.PositionsPending += r.Pending;
             if (req.IncludeHoles)

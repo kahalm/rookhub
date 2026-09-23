@@ -663,10 +663,13 @@
       "lineCount": "{{count}} vonal",
       "lineCountPlural": "{{count}} vonal",
       "empty": "A vonal vége – nincs további lépés.",
-      "freqFrom": "Gyakoriság a {{date}} lyukkereséséből",
+      "freqFrom": "Gyakoriság, állapot: {{date}}",
       "freqIncomplete": "hiányos",
-      "freqHint": "Lyukkeresés után itt minden lépés mellett látod, milyen gyakran jutsz el az álláshoz valódi játszmákban.",
-      "freqTip": "Milyen gyakran visz a repertoárod ebbe az állásba valódi játszmákban"
+      "freqHint": "A lépések gyakoriságát kattintgatás közben tölti be.",
+      "freqTip": "Milyen gyakran visz a repertoárod ebbe az állásba valódi játszmákban",
+      "freqToken": "A lichess.org gyakoriságaihoz Lichess-token kell (profil) – vagy válaszd a lyukkeresőben a „Helyi” forrást.",
+      "freqRateLimited": "A Lichess éppen lassít – a következő kattintással folytatódik.",
+      "freqFailed": "A gyakoriságokat most nem sikerült betölteni."
     },
     "edit": {
       "uploadHint": "Húzd ide a PGN fájlokat, vagy kattints a feltöltéshez",

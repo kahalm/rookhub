@@ -900,10 +900,13 @@
       "lineCount": "{{count}} line",
       "lineCountPlural": "{{count}} lines",
       "empty": "End of line — no further moves.",
-      "freqFrom": "Frequency from the hole search of {{date}}",
+      "freqFrom": "Frequency as of {{date}}",
       "freqIncomplete": "incomplete",
-      "freqHint": "After a hole search, each move here shows how often you reach the position in real games.",
-      "freqTip": "How often your repertoire takes you to this position in real games"
+      "freqHint": "The frequencies of the moves are fetched as you click through.",
+      "freqTip": "How often your repertoire takes you to this position in real games",
+      "freqToken": "The lichess.org frequencies need a Lichess token (profile) – or choose the source „Local“ in the hole finder.",
+      "freqRateLimited": "Lichess is slowing us down – the next click carries on.",
+      "freqFailed": "The frequencies could not be fetched just now."
     },
     "edit": {
       "uploadHint": "Drag & drop PGN files here or click to upload",

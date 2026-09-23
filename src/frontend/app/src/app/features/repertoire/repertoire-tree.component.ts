@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import { TreeChild, Breadcrumb } from './move-tree.service';
 import { StoredFrequencies } from './repertoire-frequency.util';
@@ -13,7 +14,7 @@ import { formatPercent } from './repertoire-explorer.service';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-tree',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, TranslatePipe],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, MatProgressBarModule, TranslatePipe],
   template: `
     <div class="tree-container">
       <div class="breadcrumbs">
@@ -26,6 +27,10 @@ import { formatPercent } from './repertoire-explorer.service';
         }
       </div>
 
+      <div class="freq-bar">@if (frequenciesLoading) { <mat-progress-bar mode="indeterminate" /> }</div>
+      @if (frequencyNote) {
+        <div class="freq-source note">{{ frequencyNote | translate }}</div>
+      }
       @if (frequencies) {
         <div class="freq-source">
           {{ 'repertoire.tree.freqFrom' | translate: { date: savedAtLabel } }}
@@ -33,7 +38,7 @@ import { formatPercent } from './repertoire-explorer.service';
           · {{ frequencies.database === 'masters' ? ('repertoire.holes.masters' | translate) : 'Lichess' }}
           @if (!frequencies.complete) { · {{ 'repertoire.tree.freqIncomplete' | translate }} }
         </div>
-      } @else {
+      } @else if (!frequenciesLoading && !frequencyNote) {
         <div class="freq-source">{{ 'repertoire.tree.freqHint' | translate }}</div>
       }
 
@@ -99,6 +104,8 @@ import { formatPercent } from './repertoire-explorer.service';
     }
     .child-freq { margin-left: auto; margin-right: 12px; font-size: 13px; font-variant-numeric: tabular-nums;
       color: var(--mat-sys-primary, #3f51b5); }
+    .freq-bar { height: 3px; }
+    .freq-source.note { color: var(--mat-sys-error, #b00020); }
     .freq-source { padding: 4px 12px; font-size: 11px; color: color-mix(in srgb, currentColor 55%, transparent);
       border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
     .child-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 13px; }
@@ -110,6 +117,10 @@ export class RepertoireTreeComponent {
   @Input() breadcrumbs: Breadcrumb[] = [];
   /** Häufigkeiten aus der letzten Lochsuche; null = noch keine. */
   @Input() frequencies: StoredFrequencies | null = null;
+  /** Werden gerade Prozente nachgeholt (Durchklicken)? */
+  @Input() frequenciesLoading = false;
+  /** i18n-Key eines Hinweises zum Nachholen (Token fehlt, Lichess bremst, …). */
+  @Input() frequencyNote: string | null = null;
 
   @Output() nodeSelected = new EventEmitter<string>();
   @Output() goUp = new EventEmitter<void>();

@@ -1,4 +1,4 @@
-import { Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
@@ -12,19 +12,21 @@ import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
-import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
 import { HoleBoardView, RepertoireHolesComponent } from './repertoire-holes.component';
 import { isInfoLineGame } from './repertoire-info-line.util';
-import { StoredFrequencies, readRepertoireFrequencies } from './repertoire-frequency.util';
-import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
+import { StoredFrequencies, mergeFrequencies, readRepertoireFrequencies, sameSelection, saveRepertoireFrequencies } from './repertoire-frequency.util';
+import { RepertoireExplorerService } from './repertoire-explorer.service';
+import { chapterColorsOf } from './repertoire-color.util';
+import { EMPTY, map, switchMap } from 'rxjs';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
 import { MoveTreeService } from './move-tree.service';
-import { findPositionInGames, formatSansWithNumbers } from './position-filter.util';
+import { findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
 import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
@@ -161,16 +163,18 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                   [repertoireId]="id"
                   [games]="trainableGames"
                   (holeSelected)="holeView = $event"
-                  (frequencies)="treeFrequencies = $event" />
+                  (frequencies)="treeFrequencies.set($event)" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
                   [breadcrumbs]="treeService.breadcrumbs"
-                  [frequencies]="treeFrequencies"
-                  (nodeSelected)="treeService.selectChild($event)"
-                  (goUp)="treeService.goUp()"
-                  (goToRoot)="treeService.goToRoot()"
-                  (goToDepth)="treeService.goToDepth($event)" />
+                  [frequencies]="treeFrequencies()"
+                  [frequenciesLoading]="treeFreqLoading()"
+                  [frequencyNote]="treeFreqNote()"
+                  (nodeSelected)="treeService.selectChild($event); ensureTreeFrequencies()"
+                  (goUp)="treeService.goUp(); ensureTreeFrequencies()"
+                  (goToRoot)="treeService.goToRoot(); ensureTreeFrequencies()"
+                  (goToDepth)="treeService.goToDepth($event); ensureTreeFrequencies()" />
               }
             </div>
           </div>
@@ -305,8 +309,14 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   /** Lochfinder: die angewählte Stellung (nach dem fehlenden Gegnerzug), sonst Grundstellung. */
   holeView: HoleBoardView | null = null;
 
-  /** Häufigkeiten aus der letzten Lochsuche (je Repertoire auf dem Gerät gemerkt) — für den Baum. */
-  treeFrequencies: StoredFrequencies | null = null;
+  /** Häufigkeiten für den Baum — aus der letzten Lochsuche oder beim Durchklicken geholt, je Repertoire
+   *  auf dem Gerät gemerkt. Signale: die Antworten kommen über HttpClient (fetch). */
+  readonly treeFrequencies = signal<StoredFrequencies | null>(null);
+  readonly treeFreqLoading = signal(false);
+  /** i18n-Key eines Hinweises (Token fehlt, Lichess bremst, …); null = keiner. */
+  readonly treeFreqNote = signal<string | null>(null);
+  /** Schon gefragte Stellungen dieser Sitzung (je Auswahl) — nicht bei jedem Klick erneut. */
+  private readonly treeFreqAsked = new Set<string>();
 
   /** Linien ohne Info-Linien — für die Farbe je Kapitel im Lochfinder (dieselbe Auswahl wie im Trainer). */
   trainableGames: ParsedGame[] = [];
@@ -367,7 +377,61 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     private dialog: MatDialog,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private explorer: RepertoireExplorerService,
   ) {}
+
+  /**
+   * Baum: fehlen für die angezeigten Züge die Prozente, sie jetzt holen — der Server rechnet dafür nur
+   * die Stellungen auf den Wegen dorthin (`targets`), nicht das ganze Repertoire. Auswahl wie im
+   * Lochfinder; stammen die gemerkten Zahlen aus einer anderen Auswahl, beginnt ein neuer Satz.
+   */
+  ensureTreeFrequencies(): void {
+    if (this.mode !== 'tree' || !this.id) return;
+    const children = this.treeService.children;
+    if (!children.length) return;
+    this.explorer.effectiveSettings().pipe(
+      switchMap(s => {
+        const stored = this.treeFrequencies();
+        const selection = `${s.source}|${s.database}|${s.ratings.join(',')}|${s.speeds.join(',')}`;
+        const missing = children.filter(c => {
+          const key = normalizeFen(c.node.fen);
+          const known = stored && sameSelection(stored, s) && key in stored.positions;
+          return !known && !this.treeFreqAsked.has(selection + '|' + key);
+        });
+        if (!missing.length) return EMPTY;
+        missing.forEach(c => this.treeFreqAsked.add(selection + '|' + normalizeFen(c.node.fen)));
+        this.treeFreqLoading.set(true);
+        return this.explorer.analyze(this.id, {
+          color: null,
+          chapterColors: Object.fromEntries(chapterColorsOf(this.id, this.trainableGames)),
+          source: s.source, database: s.database, ratings: s.ratings, speeds: s.speeds,
+          thresholdPercent: s.thresholdPercent,
+          includeHoles: false, includeLineFrequencies: false, includePositionFrequencies: true,
+          targets: missing.map(c => c.node.fen),
+        }).pipe(map(r => {
+          // Gebremst oder abgebrochen: beim nächsten Klick dürfen diese Stellungen wieder gefragt werden.
+          if (!r.complete) missing.forEach(c => this.treeFreqAsked.delete(selection + '|' + normalizeFen(c.node.fen)));
+          return { r, s };
+        }));
+      }),
+    ).subscribe({
+      next: ({ r, s }) => {
+        this.treeFreqLoading.set(false);
+        this.treeFreqNote.set(r.tokenMissing ? 'repertoire.tree.freqToken'
+          : r.tokenInvalid ? 'repertoire.holes.tokenInvalid'
+          : r.rateLimited ? 'repertoire.tree.freqRateLimited'
+          : r.fetchFailed ? 'repertoire.tree.freqFailed'
+          : null);
+        const merged = mergeFrequencies(this.treeFrequencies(), s, r.positionFrequencies ?? {});
+        saveRepertoireFrequencies(this.id, merged);
+        this.treeFrequencies.set(merged);
+      },
+      error: () => {
+        this.treeFreqLoading.set(false);
+        this.treeFreqNote.set('repertoire.tree.freqFailed');
+      },
+    });
+  }
 
   /** Teilt eine einzelne Linie als öffentlichen Nur-Ansehen-Link: PGN bauen → API → Link-Dialog. */
   onShareLine(line: RepertoireLine): void {
@@ -398,7 +462,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;
-    this.treeFrequencies = readRepertoireFrequencies(this.id);
+    this.treeFrequencies.set(readRepertoireFrequencies(this.id));
     const modeParam = this.route.snapshot.queryParamMap.get('mode');
     if (modeParam === 'tree' || modeParam === 'holes' || modeParam === 'edit') {
       this.mode = modeParam;
@@ -414,6 +478,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   setMode(mode: ViewMode): void {
     this.mode = mode;
+    if (mode === 'tree') this.ensureTreeFrequencies();
     this.router.navigate([], {
       queryParams: { mode },
       queryParamsHandling: 'merge',
@@ -469,6 +534,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);
         this.trainableGames = this.viewerService.games.filter((_, i) => !isInfoLineGame(this.viewerService.rawGames[i]));
+        this.ensureTreeFrequencies();   // direkt im Baum geöffnet (?mode=tree)
         this.applyFocusLine();
         this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand
       },

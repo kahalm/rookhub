@@ -1,4 +1,5 @@
-import { MAX_STORED_POSITIONS, StoredFrequencies, readRepertoireFrequencies, saveRepertoireFrequencies } from './repertoire-frequency.util';
+import { MAX_STORED_POSITIONS, StoredFrequencies, mergeFrequencies, readRepertoireFrequencies, sameSelection, saveRepertoireFrequencies } from './repertoire-frequency.util';
+import { DEFAULT_EXPLORER_SETTINGS } from './repertoire-explorer.service';
 
 function freq(positions: Record<string, number>): StoredFrequencies {
   return { savedAt: '2026-09-23T10:00:00Z', source: 'local', database: 'masters', ratings: [], speeds: [], complete: true, positions };
@@ -29,5 +30,24 @@ describe('repertoire-frequency.util', () => {
     expect(readRepertoireFrequencies(9)).toBeNull();
     localStorage.setItem('rookhub_rep_freq_9', '{"savedAt":1}');
     expect(readRepertoireFrequencies(9)).toBeNull();
+  });
+
+  it('merges into the same selection, starts over for another one', () => {
+    const local = { ...DEFAULT_EXPLORER_SETTINGS, source: 'local' as const, database: 'masters' as const };
+    const base = freq({ a: 0.5 });
+    expect(sameSelection(base, local)).toBeTrue();
+    expect(mergeFrequencies(base, local, { b: 0.1 }).positions).toEqual({ a: 0.5, b: 0.1 });
+
+    const online = { ...local, source: 'online' as const };
+    expect(sameSelection(base, online)).toBeFalse();
+    const fresh = mergeFrequencies(base, online, { b: 0.1 });
+    expect(fresh.positions).toEqual({ b: 0.1 });
+    expect(fresh.source).toBe('online');
+
+    // Lichess: Elo und Tempo gehören zur Auswahl, bei Meistern nicht.
+    const lichess = { ...local, database: 'lichess' as const, ratings: [1800], speeds: ['blitz'] };
+    const lichessSet = mergeFrequencies(null, lichess, {});
+    expect(sameSelection(lichessSet, { ...lichess, ratings: [2000] })).toBeFalse();
+    expect(sameSelection(base, { ...local, ratings: [2500] })).toBeTrue();
   });
 });

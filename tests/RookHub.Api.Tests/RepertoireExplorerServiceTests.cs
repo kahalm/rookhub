@@ -637,6 +637,34 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.NotEmpty(r.PositionFrequencies!);
     }
 
+    [Fact]
+    public async Task Targets_FetchOnlyWhatTheirFrequencyNeeds()
+    {
+        var (userId, repId) = await SeedAsync(BlackLines);   // 1.e4 c5 2.Nf3 d6 und 1.d4 d5 2.c4 e6
+        _localHandler.Respond(StartKey, BothFirstMoves);
+        _localHandler.Respond(AfterE4C5, """{"white":10,"draws":0,"black":10,"moves":[{"uci":"g1f3","san":"Nf3","white":10,"draws":0,"black":10}]}""");
+        var req = LocalRequest();
+        req.IncludeHoles = false;
+        req.IncludePositionFrequencies = true;
+        req.Targets = new() { "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2" };   // nach 2.Nf3
+
+        var r = await Service().AnalyzeAsync(userId, repId, req, CancellationToken.None);
+
+        Assert.True(r.Complete);
+        Assert.Equal(0.5, r.PositionFrequencies!["rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq"], 6);
+        Assert.Equal(2, _localHandler.Urls.Count);   // Grundstellung + nach 1.e4 c5, NICHT nach 1.d4 d5
+        Assert.DoesNotContain(_localHandler.Urls, u => u.Contains("3p4/3P4"));
+    }
+
+    [Fact]
+    public async Task Targets_TooMany_AreRejected()
+    {
+        var (userId, repId) = await SeedAsync(BlackVsE4);
+        var req = Request();
+        req.Targets = Enumerable.Repeat(StartFen, 201).ToList();
+        await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
+    }
+
     // ---- Partien einer Stellung ----
 
     private const string GamesJson = """

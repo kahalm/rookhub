@@ -74,6 +74,8 @@ export interface ExplorerAnalysisRequest {
   includePositionFrequencies?: boolean;
   /** Nichts abfragen, nur mit dem Gespeicherten rechnen (Nachschlag nach einer Lochsuche). */
   cachedOnly?: boolean;
+  /** Nur diese Stellungen (FEN) interessieren — der Server holt nur, was zu ihrer Häufigkeit beiträgt. */
+  targets?: string[];
 }
 
 export interface RepertoireHole {

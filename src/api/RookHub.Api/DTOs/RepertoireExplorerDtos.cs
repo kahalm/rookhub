@@ -38,6 +38,11 @@ public class ExplorerAnalysisRequestDto
     /// <summary>Nichts abfragen, nur mit dem rechnen, was schon im Speicher liegt — der Nachschlag
     /// nach einer Lochsuche, der sofort antworten soll.</summary>
     public bool CachedOnly { get; set; }
+
+    /// <summary>Nur diese Stellungen (FEN; es zählen die ersten drei Felder) interessieren — gerechnet
+    /// und abgefragt wird dann nur, was zu ihrer Häufigkeit beiträgt (Baum beim Durchklicken).
+    /// Höchstens 200.</summary>
+    public List<string>? Targets { get; set; }
 }
 
 public class ExplorerAnalysisResultDto

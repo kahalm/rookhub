@@ -900,10 +900,13 @@
       "lineCount": "{{count}} linija",
       "lineCountPlural": "{{count}} linija",
       "empty": "Kraj linije — nema daljnjih poteza.",
-      "freqFrom": "Učestalost iz traženja rupa od {{date}}",
+      "freqFrom": "Učestalost, stanje {{date}}",
       "freqIncomplete": "nepotpuno",
-      "freqHint": "Nakon traženja rupa ovdje uz svaki potez piše koliko često dosegneš poziciju u stvarnim partijama.",
-      "freqTip": "Koliko te često tvoj repertoar dovede u ovu poziciju u stvarnim partijama"
+      "freqHint": "Učestalosti poteza dohvaćaju se dok klikćeš kroz stablo.",
+      "freqTip": "Koliko te često tvoj repertoar dovede u ovu poziciju u stvarnim partijama",
+      "freqToken": "Za učestalosti s lichess.org potreban je Lichess token (profil) – ili u traženju rupa odaberi izvor „Lokalno“.",
+      "freqRateLimited": "Lichess nas trenutačno usporava – sljedeći klik nastavlja.",
+      "freqFailed": "Učestalosti se trenutačno nisu mogle dohvatiti."
     },
     "edit": {
       "uploadHint": "Povuci PGN datoteke ovdje ili klikni za prijenos",
