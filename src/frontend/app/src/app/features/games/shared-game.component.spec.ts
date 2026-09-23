@@ -5,10 +5,12 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { SharedGameComponent } from './shared-game.component';
 
 describe('SharedGameComponent', () => {
-  async function setup() {
+  async function setup(loggedIn = false) {
     await TestBed.configureTestingModule({
       imports: [SharedGameComponent],
       providers: [
@@ -17,6 +19,7 @@ describe('SharedGameComponent', () => {
         provideRouter([]),
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
       ],
     }).compileComponents();
     return { fixture: TestBed.createComponent(SharedGameComponent), http: TestBed.inject(HttpTestingController) };
@@ -79,5 +82,50 @@ describe('SharedGameComponent', () => {
       expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(section.getBoundingClientRect().width));
       expect(moves.getBoundingClientRect().top).toBeGreaterThanOrEqual(board.getBoundingClientRect().bottom);
     }
+  });
+
+  // ----- „Partie analysieren" = derselbe Einwurf wie auf der Punktepartie-Seite -----
+
+  it('analyze without login: no request, goes to the login page and comes back here afterwards', async () => {
+    const { fixture, http } = await setup(false);
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
+
+    http.expectNone(req => req.url.startsWith('/api/game-analyses'));
+    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: router.url } });
+  });
+
+  it('analyze when logged in: posts the PGN to the guess upload and goes to the points-game page', async () => {
+    const { fixture, http } = await setup(true);
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    // Angemeldet fragt die Seite vorab, ob eine Engine da ist (wie die Punktepartie-Seite).
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
+
+    const post = http.expectOne({ method: 'POST', url: '/api/game-analyses/guess' });
+    expect(post.request.body.pgn).toBe(sharedGame('white').pgn);
+    expect(post.request.body.title).toBe('a – b');
+    post.flush({ id: 7 });
+    expect(navigate).toHaveBeenCalledWith(['/guess']);
+  });
+
+  it('analyze without an engine: the button is disabled instead of failing on click', async () => {
+    const { fixture, http } = await setup(true);
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: false, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
   });
 });

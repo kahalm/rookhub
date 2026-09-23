@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.510.0", date: "2026-09-23", changes: [
+    { en: "Shared game page (/g/…): new „Analyse game“ button in the header. It hands the game to the same background analysis as „Add game“ on the points game page (depth and engine are set by the server) and then takes you there, where the game appears with its progress and can be guessed move by move once the first position is done. Without an account the click leads to the sign-in and back here afterwards; without an available engine the button is disabled and says why.", de: "Geteilte Partie (/g/…): neuer Knopf „Partie analysieren“ in der Kopfzeile. Er gibt die Partie in dieselbe Hintergrund-Analyse wie „Partie einwerfen“ auf der Punktepartie-Seite (Tiefe und Engine setzt der Server) und führt danach dorthin, wo die Partie mit Fortschritt erscheint und sich Zug für Zug erraten lässt, sobald die erste Stellung fertig ist. Ohne Konto führt der Klick zur Anmeldung und danach wieder hierher; ohne verfügbare Engine ist der Knopf gesperrt und sagt, warum." },
+  ] },
   { version: "0.509.2", date: "2026-09-23", changes: [
     { en: "Test run only: the layout check of the shared game page (0.509.1) assumed a wide browser window and failed in the build pipeline, whose headless browser was narrower than the phone breakpoint. The test browser now has a fixed window size, and the check verifies the phone layout when the window is narrow. No change to the app itself.", de: "Nur Testlauf: die Layout-Prüfung der geteilten Partie (0.509.1) setzte ein breites Browserfenster voraus und schlug in der Build-Pipeline fehl, deren Browser schmaler als die Handy-Grenze war. Der Test-Browser hat jetzt eine feste Fenstergröße, und die Prüfung kontrolliert bei schmalem Fenster das Handy-Layout. An der App ändert sich nichts." },
   ] },

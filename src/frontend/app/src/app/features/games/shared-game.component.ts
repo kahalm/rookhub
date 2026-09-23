@@ -1,15 +1,19 @@
 import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslatePipe } from '@ngx-translate/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { GamesService, SharedGame } from './games.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
@@ -22,7 +26,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
   selector: 'app-shared-game',
   standalone: true,
   imports: [
-    CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule,
+    CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent,
   ],
   providers: [PgnViewerService],
@@ -52,11 +56,21 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
             </div>
             <!-- Am PC in die Kopfzeile: als eigene Zeile unter Brett und Zugliste war der Knopf so breit wie
                  die Karte und stand mitten im Leeren. Auf dem Handy fällt die Kopfzeile in eine Spalte. -->
-            @if (game.sourceUrl) {
-              <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
-                <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
-              </a>
-            }
+            <div class="header-actions">
+              <!-- Derselbe Weg wie „Partie einwerfen" auf der Punktepartie-Seite: die Partie wird im Hintergrund
+                   gerechnet und steht danach dort als Punktepartie. Ohne Anmeldung führt der Klick zur Anmeldung
+                   und wieder hierher zurück — der Knopf bleibt sichtbar, damit man weiß, dass es den Weg gibt. -->
+              <button mat-flat-button color="primary" class="analyze" (click)="analyze()"
+                      [disabled]="analyzing || uploadStatus?.engineAvailable === false"
+                      [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyzeHint') | translate">
+                <mat-icon>{{ analyzing ? 'hourglass_top' : 'insights' }}</mat-icon> {{ 'games.analyze' | translate }}
+              </button>
+              @if (game.sourceUrl) {
+                <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
+                  <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
+                </a>
+              }
+            </div>
           </div>
           <div class="body">
             <div class="board-section">
@@ -105,7 +119,8 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
     .players .elo { font-weight: 400; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
-    .original { flex: 0 0 auto; white-space: nowrap; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
+    .original, .analyze { white-space: nowrap; }
     .body { display: flex; gap: 20px; align-items: flex-start; }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
@@ -133,7 +148,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
       .shared-page { padding: 0; }
       .viewer { width: auto; padding: 0; border-radius: 0; }
       .header { flex-direction: column; align-items: stretch; padding: 12px 16px; }
-      .original { align-self: stretch; }
+      .header-actions { flex-direction: column; align-items: stretch; }
       .body { flex-direction: column; align-items: stretch; }
       .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
@@ -148,10 +163,21 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
   `]
 })
 export class SharedGameComponent implements OnInit {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private snackbar = inject(SnackbarService);
+  private translate = inject(TranslateService);
+  private analyses = inject(GameAnalysisService);
+
   game: SharedGame | null = null;
   loading = true;
   notFound = false;
   flipped = false;
+  /** Läuft gerade der Einwurf als Punktepartie? (sperrt den Knopf gegen Doppelklick). */
+  analyzing = false;
+  /** Ob eine Engine da ist und wie viele Partien noch frei sind — nur angemeldet abgefragt (der
+   *  Endpunkt braucht ein Konto); ohne Antwort bleibt der Knopf benutzbar und der Server entscheidet. */
+  uploadStatus: GuessUploadStatus | null = null;
 
   constructor(
     public service: PgnViewerService,
@@ -169,8 +195,39 @@ export class SharedGameComponent implements OnInit {
         this.flipped = g.ownerSide === 'black';
         this.service.loadPgn(g.pgn);
         this.loading = false;
+        if (this.auth.isLoggedIn) {
+          this.analyses.guessUploadStatus().subscribe({ next: u => this.uploadStatus = u, error: () => {} });
+        }
       },
       error: () => { this.notFound = true; this.loading = false; },
+    });
+  }
+
+  /** Die Partie als Punktepartie rechnen lassen — derselbe Einwurf wie auf der Punktepartie-Seite
+   *  (`POST /api/game-analyses/guess`: Tiefe und Engine setzt der Server). Danach geht es dorthin, wo
+   *  die Partie mit Fortschritt erscheint. Die Absage-Gründe formuliert dieselbe i18n-Tabelle. */
+  analyze(): void {
+    if (!this.game || this.analyzing) return;
+    if (!this.auth.isLoggedIn) {
+      this.snackbar.info(this.translate.instant('games.analyzeLogin'));
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
+    const title = this.game.white && this.game.black ? `${this.game.white} – ${this.game.black}` : undefined;
+    this.analyzing = true;
+    this.analyses.createForGuess(this.game.pgn, title).subscribe({
+      next: () => {
+        this.analyzing = false;
+        this.snackbar.success(this.translate.instant('guess.upload.started'));
+        this.router.navigate(['/guess']);
+      },
+      error: err => {
+        this.analyzing = false;
+        const reason = err?.error?.reason;
+        this.snackbar.warn(reason
+          ? this.translate.instant('guess.upload.reason.' + reason, { max: this.uploadStatus?.maxGames })
+          : this.translate.instant('guess.upload.failed'));
+      },
     });
   }
 
