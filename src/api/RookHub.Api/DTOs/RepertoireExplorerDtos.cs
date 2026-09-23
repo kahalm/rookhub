@@ -93,3 +93,37 @@ public class ExplorerSourcesDto
     public List<int> LocalRatings { get; set; } = new();
     public List<string> LocalSpeeds { get; set; } = new();
 }
+
+/// <summary>Antwort von <c>GET /api/explorer/position</c>: die Zugstatistik EINER Stellung für den
+/// Eröffnungs-Explorer auf dem Analysebrett.</summary>
+public class ExplorerPositionResultDto
+{
+    /// <summary><c>ok</c>, <c>tokenMissing</c>, <c>tokenInvalid</c>, <c>rateLimited</c> oder <c>failed</c>.</summary>
+    public string Status { get; set; } = "ok";
+    public int? RetryAfterSeconds { get; set; }
+    public string Source { get; set; } = "online";
+    public string Database { get; set; } = "lichess";
+    public long Total { get; set; }
+    public long White { get; set; }
+    public long Draws { get; set; }
+    public long Black { get; set; }
+    /// <summary>Eröffnung der Stellung selbst (falls der Explorer sie kennt).</summary>
+    public string? Opening { get; set; }
+    public string? Eco { get; set; }
+    /// <summary>Züge nach Häufigkeit, wie der Explorer sie liefert (höchstens 40).</summary>
+    public List<ExplorerPositionMoveDto> Moves { get; set; } = new();
+}
+
+public class ExplorerPositionMoveDto
+{
+    public string Uci { get; set; } = string.Empty;
+    public string San { get; set; } = string.Empty;
+    public long Games { get; set; }
+    public long White { get; set; }
+    public long Draws { get; set; }
+    public long Black { get; set; }
+    public int? AverageRating { get; set; }
+    /// <summary>Eröffnung NACH diesem Zug.</summary>
+    public string? Opening { get; set; }
+    public string? Eco { get; set; }
+}

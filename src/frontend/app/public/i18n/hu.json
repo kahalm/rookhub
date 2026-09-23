@@ -1965,7 +1965,19 @@
       "blackToMove": "Sötét lép"
     },
     "queueBackground": "Elemzés a háttérben",
-    "openJobs": "Elemzési feladatok"
+    "openJobs": "Elemzési feladatok",
+    "explorer": {
+      "title": "Megnyitás-explorer",
+      "filters": "Élő-pont és tempó",
+      "orLocal": "Vagy válaszd fent a „Helyi” forrást.",
+      "failed": "Az explorer most nem válaszolt.",
+      "retry": "Újra",
+      "noGames": "Ebben az állásban nincs játszma.",
+      "move": "Lépés",
+      "games": "Játszmák",
+      "results": "Világos / Döntetlen / Sötét",
+      "total": "{{count}} játszma"
+    }
   },
   "stats": {
     "title": "Statisztikák",

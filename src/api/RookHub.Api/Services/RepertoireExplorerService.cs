@@ -85,14 +85,7 @@ public class RepertoireExplorerService
         int userId, int repertoireId, ExplorerAnalysisRequestDto req, CancellationToken ct)
     {
         var query = ExplorerQuery.Create(req.Database, req.Ratings, req.Speeds);
-        var useLocal = req.Source switch
-        {
-            null or "" or "online" => false,
-            "local" => true,
-            _ => throw new ArgumentException("Quelle muss \"online\" oder \"local\" sein."),
-        };
-        if (useLocal && !_local.IsConfigured)
-            throw new ArgumentException("Der lokale Explorer ist auf diesem Server nicht eingerichtet.");
+        var useLocal = UseLocal(req.Source);
         if (double.IsNaN(req.ThresholdPercent) || req.ThresholdPercent < 0.1 || req.ThresholdPercent > 50)
             throw new ArgumentException("Die Schwelle muss zwischen 0,1 und 50 % liegen.");
         char? onlyColor = req.Color switch
@@ -160,6 +153,98 @@ public class RepertoireExplorerService
 
         await CollectAsync(graphs, Stats, null, threshold, req, dto, ct);
         if (dto.RateLimited && _gate.BlockedFor is { } left) dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
+        return dto;
+    }
+
+    /// <summary><c>online</c> (Vorgabe) oder <c>local</c> — letzteres nur, wenn eingerichtet.</summary>
+    private bool UseLocal(string? source)
+    {
+        var local = source switch
+        {
+            null or "" or "online" => false,
+            "local" => true,
+            _ => throw new ArgumentException("Quelle muss \"online\" oder \"local\" sein."),
+        };
+        if (local && !_local.IsConfigured)
+            throw new ArgumentException("Der lokale Explorer ist auf diesem Server nicht eingerichtet.");
+        return local;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex FenPattern = new(
+        @"^[1-8pnbrqkPNBRQK]{1,8}(/[1-8pnbrqkPNBRQK]{1,8}){7} [wb] (-|[KQkq]{1,4}) (-|[a-h][36])( \d{1,3} \d{1,4})?$",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Zugstatistik EINER Stellung für den Eröffnungs-Explorer des Analysebretts
+    /// (<c>GET /api/explorer/position</c>). Dieselbe Datenstrecke wie der Lochfinder: online mit
+    /// Token, Leitung und Datenbank-Speicher, lokal mit Arbeitsspeicher. Ein Speicher-Eintrag ohne
+    /// Ergebnis-Aufteilung (vor 0.504.0 geschrieben) wird dabei neu geholt und überschrieben.
+    /// </summary>
+    /// <exception cref="ArgumentException">Keine FEN, unbekannte Quelle oder Auswahl.</exception>
+    public async Task<ExplorerPositionResultDto> PositionAsync(
+        int userId, string? fen, string? source, ExplorerQuery query, CancellationToken ct)
+    {
+        fen = (fen ?? "").Trim();
+        if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new ArgumentException("Keine gültige FEN.");
+        var useLocal = UseLocal(source);
+        var key = RepertoireReach.Key(fen);
+        var dto = new ExplorerPositionResultDto { Source = useLocal ? "local" : "online", Database = query.Database };
+
+        ExplorerPositionStats? stats;
+        if (useLocal)
+        {
+            var memoryKey = "explorer:local:" + query.CachePrefix + key;
+            if (!_memory.TryGetValue<ExplorerPositionStats>(memoryKey, out stats) || stats is null || !stats.HasResults)
+            {
+                stats = await _local.FetchAsync(fen, query, ct);
+                if (stats is not null) _memory.Set(memoryKey, stats, LocalMemoryTtl);
+            }
+            if (stats is null) { dto.Status = "failed"; return dto; }
+        }
+        else
+        {
+            var cached = await LoadCacheAsync(query, new[] { key }, ct);
+            if (!cached.TryGetValue(key, out stats) || !stats.HasResults)
+            {
+                if (_gate.BlockedFor is { } blocked) return RateLimited(dto, blocked);
+                var token = await ResolveTokenAsync(userId, ct);
+                if (token is null) { dto.Status = "tokenMissing"; return dto; }
+                var (status, fetched) = await _client.FetchAsync(fen, query, token, ct);
+                switch (status)
+                {
+                    case ExplorerFetchStatus.Ok:
+                        stats = fetched!;
+                        await StoreAsync(query.CachePrefix + key, stats, ct);
+                        break;
+                    case ExplorerFetchStatus.RateLimited:
+                        return RateLimited(dto, _gate.BlockedFor ?? LichessExplorerGate.RateLimitPause);
+                    case ExplorerFetchStatus.Unauthorized:
+                        dto.Status = "tokenInvalid"; return dto;
+                    default:
+                        dto.Status = "failed"; return dto;
+                }
+            }
+        }
+
+        dto.Total = stats.Total;
+        dto.White = stats.White ?? 0;
+        dto.Draws = stats.Draws ?? 0;
+        dto.Black = stats.Black ?? 0;
+        dto.Opening = stats.Opening;
+        dto.Eco = stats.Eco;
+        dto.Moves = stats.Moves.Select(m => new ExplorerPositionMoveDto
+        {
+            Uci = m.Uci, San = m.San, Games = m.Games,
+            White = m.White ?? 0, Draws = m.Draws ?? 0, Black = m.Black ?? 0,
+            AverageRating = m.AverageRating, Opening = m.Opening, Eco = m.Eco,
+        }).ToList();
+        return dto;
+    }
+
+    private static ExplorerPositionResultDto RateLimited(ExplorerPositionResultDto dto, TimeSpan left)
+    {
+        dto.Status = "rateLimited";
+        dto.RetryAfterSeconds = (int)Math.Ceiling(left.TotalSeconds);
         return dto;
     }
 

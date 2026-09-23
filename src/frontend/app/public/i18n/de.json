@@ -2484,7 +2484,19 @@
       "blackToMove": "Schwarz am Zug"
     },
     "queueBackground": "Im Hintergrund analysieren",
-    "openJobs": "Analyse-Aufträge"
+    "openJobs": "Analyse-Aufträge",
+    "explorer": {
+      "title": "Eröffnungs-Explorer",
+      "filters": "Elo und Tempo",
+      "orLocal": "Oder oben die Quelle „Lokal“ wählen.",
+      "failed": "Der Explorer hat gerade nicht geantwortet.",
+      "retry": "Erneut versuchen",
+      "noGames": "Keine Partien in dieser Stellung.",
+      "move": "Zug",
+      "games": "Partien",
+      "results": "Weiß / Remis / Schwarz",
+      "total": "{{count}} Partien"
+    }
   },
   "stats": {
     "title": "Statistik",

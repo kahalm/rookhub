@@ -2484,7 +2484,19 @@
       "blackToMove": "Black to move"
     },
     "queueBackground": "Analyse in the background",
-    "openJobs": "Analysis jobs"
+    "openJobs": "Analysis jobs",
+    "explorer": {
+      "title": "Opening explorer",
+      "filters": "Rating and speed",
+      "orLocal": "Or choose the source „Local“ above.",
+      "failed": "The explorer did not answer just now.",
+      "retry": "Try again",
+      "noGames": "No games in this position.",
+      "move": "Move",
+      "games": "Games",
+      "results": "White / Draw / Black",
+      "total": "{{count}} games"
+    }
   },
   "stats": {
     "title": "Statistics",

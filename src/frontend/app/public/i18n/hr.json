@@ -2484,7 +2484,19 @@
       "blackToMove": "Crni na potezu"
     },
     "queueBackground": "Analiziraj u pozadini",
-    "openJobs": "Analize u pozadini"
+    "openJobs": "Analize u pozadini",
+    "explorer": {
+      "title": "Explorer otvaranja",
+      "filters": "Rejting i tempo",
+      "orLocal": "Ili gore odaberi izvor „Lokalno“.",
+      "failed": "Explorer trenutačno nije odgovorio.",
+      "retry": "Pokušaj ponovno",
+      "noGames": "Nema partija u ovoj poziciji.",
+      "move": "Potez",
+      "games": "Partije",
+      "results": "Bijeli / Remi / Crni",
+      "total": "Partija: {{count}}"
+    }
   },
   "stats": {
     "title": "Statistika",

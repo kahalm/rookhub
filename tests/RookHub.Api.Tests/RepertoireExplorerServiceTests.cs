@@ -465,6 +465,124 @@ public class RepertoireExplorerServiceTests : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
     }
 
+    // ---- Einzelne Stellung (Explorer auf dem Analysebrett) ----
+
+    private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    private static readonly ExplorerQuery Blitz = ExplorerQuery.Create("lichess", new[] { 1800, 2000 }, new[] { "blitz", "rapid" });
+
+    private async Task<int> UserAsync(string? token = "lip_user")
+    {
+        var user = new AppUser { Username = "p", Email = "p@x.y", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        if (token is not null)
+        {
+            _db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = user.Id, EncryptedToken = _encryption.Encrypt(token) });
+            await _db.SaveChangesAsync();
+        }
+        return user.Id;
+    }
+
+    [Fact]
+    public async Task Position_Online_ReturnsResultsPerMove_AndCachesThem()
+    {
+        var userId = await UserAsync();
+        _handler.Respond(StartKey, StartJson);
+
+        var r = await Service().PositionAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+
+        Assert.Equal("ok", r.Status);
+        Assert.Equal(1000, r.Total);
+        Assert.Equal((400, 200, 400), (r.White, r.Draws, r.Black));
+        var e4 = r.Moves[0];
+        Assert.Equal(("e4", 600L, 240L, 120L, 240L, 1900), (e4.San, e4.Games, e4.White, e4.Draws, e4.Black, e4.AverageRating!.Value));
+        Assert.Equal("King's Pawn", e4.Opening);
+
+        // Zweiter Aufruf: aus dem Speicher, kein neuer Abruf — und der Lochfinder teilt ihn.
+        await Service().PositionAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+        Assert.Single(_handler.Urls);
+        Assert.Single(_db.LichessExplorerCacheEntries);
+    }
+
+    [Fact]
+    public async Task Position_CacheEntryWithoutResults_IsFetchedAgain()
+    {
+        // Vor 0.504.0 geschrieben: nur Summen, keine Aufteilung Weiß/Remis/Schwarz.
+        var userId = await UserAsync();
+        _db.LichessExplorerCacheEntries.Add(new LichessExplorerCacheEntry
+        {
+            CacheKey = Blitz.CachePrefix + StartKey,
+            Json = """{"t":100,"m":[{"u":"e2e4","s":"e4","g":100}]}""",
+            FetchedAt = _time.GetUtcNow().UtcDateTime,
+        });
+        await _db.SaveChangesAsync();
+        _handler.Respond(StartKey, StartJson);
+
+        var r = await Service().PositionAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+
+        Assert.Single(_handler.Urls);
+        Assert.Equal(1000, r.Total);
+        Assert.Contains("\"w\":400", Assert.Single(_db.LichessExplorerCacheEntries).Json);
+    }
+
+    [Fact]
+    public async Task Position_Local_NeedsNoToken()
+    {
+        var userId = await UserAsync(token: null);
+        _localHandler.Respond(StartKey, StartJson);
+
+        var r = await Service().PositionAsync(userId, StartFen, "local", Blitz, CancellationToken.None);
+
+        Assert.Equal("ok", r.Status);
+        Assert.Equal("local", r.Source);
+        Assert.Equal(3, r.Moves.Count);
+        Assert.Empty(_handler.Urls);
+    }
+
+    [Fact]
+    public async Task Position_Online_WithoutToken_SaysSo()
+    {
+        var userId = await UserAsync(token: null);
+        var r = await Service().PositionAsync(userId, StartFen, "online", Blitz, CancellationToken.None);
+        Assert.Equal("tokenMissing", r.Status);
+        Assert.Empty(_handler.Urls);
+    }
+
+    [Fact]
+    public async Task Position_RateLimited_NamesTheWait()
+    {
+        var userId = await UserAsync();
+        _handler.Status = HttpStatusCode.TooManyRequests;
+
+        var r = await Service().PositionAsync(userId, StartFen, null, Blitz, CancellationToken.None);
+
+        Assert.Equal("rateLimited", r.Status);
+        Assert.Equal(60, r.RetryAfterSeconds);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("hallo")]
+    [InlineData("rnbqkbnr/pppppppp/8/8 w KQkq - 0 1")]
+    [InlineData("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x KQkq - 0 1")]
+    public async Task Position_RejectsWhatIsNoFen(string fen)
+    {
+        var userId = await UserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => Service().PositionAsync(userId, fen, null, Blitz, CancellationToken.None));
+    }
+
+    [Fact]
+    public void Parse_KeepsResultsRatingAndOpeningOfThePosition()
+    {
+        var stats = LichessExplorerClient.Parse(System.Text.Json.JsonDocument.Parse(StartJson))!;
+        Assert.Equal((400L, 200L, 400L), (stats.White!.Value, stats.Draws!.Value, stats.Black!.Value));
+        Assert.True(stats.HasResults);
+        var round = ExplorerPositionStats.FromJson(stats.ToJson())!;
+        Assert.Equal(1900, round.Moves[0].AverageRating);
+        Assert.Equal(120, round.Moves[0].Draws);
+        Assert.False(ExplorerPositionStats.FromJson("""{"t":1,"m":[]}""")!.HasResults);
+    }
+
     [Fact]
     public void Query_ValidatesAndOrders()
     {

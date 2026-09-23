@@ -101,6 +101,37 @@ export interface ExplorerAnalysisResult {
   lineFrequencies: Record<string, number> | null;
 }
 
+/** Ein Zug im Eröffnungs-Explorer des Analysebretts (`GET /api/explorer/position`). */
+export interface ExplorerPositionMove {
+  uci: string;
+  san: string;
+  games: number;
+  white: number;
+  draws: number;
+  black: number;
+  averageRating: number | null;
+  /** Eröffnung NACH diesem Zug. */
+  opening: string | null;
+  eco: string | null;
+}
+
+export type ExplorerPositionStatus = 'ok' | 'tokenMissing' | 'tokenInvalid' | 'rateLimited' | 'failed';
+
+/** Zugstatistik EINER Stellung. */
+export interface ExplorerPosition {
+  status: ExplorerPositionStatus;
+  retryAfterSeconds: number | null;
+  source: ExplorerSource;
+  database: ExplorerDatabase;
+  total: number;
+  white: number;
+  draws: number;
+  black: number;
+  opening: string | null;
+  eco: string | null;
+  moves: ExplorerPositionMove[];
+}
+
 const SETTINGS_KEY = 'rookhub_explorer_settings';
 
 /** Gemerkte Auswahl (je Gerät). Unbrauchbares fällt auf die Vorgabe zurück. */
@@ -227,6 +258,16 @@ export class RepertoireExplorerService {
 
   analyze(repertoireId: number, req: ExplorerAnalysisRequest): Observable<ExplorerAnalysisResult> {
     return this.http.post<ExplorerAnalysisResult>(`/api/repertoires/${repertoireId}/explorer-analysis`, req);
+  }
+
+  /** Zugstatistik einer Stellung — Elo/Tempo gehen nur bei der Lichess-Datenbank mit. */
+  position(fen: string, s: ExplorerSettings): Observable<ExplorerPosition> {
+    const params: Record<string, string> = { fen, source: s.source, database: s.database };
+    if (s.database === 'lichess') {
+      params['ratings'] = s.ratings.join(',');
+      params['speeds'] = s.speeds.join(',');
+    }
+    return this.http.get<ExplorerPosition>('/api/explorer/position', { params });
   }
 
   /** Fragt Runde um Runde, bis {@link nextRoundDelayMs} aufhört; jede Antwort kommt heraus (Fortschritt). */

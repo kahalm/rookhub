@@ -208,6 +208,8 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 | POST | `/api/repertoires/reprocess` | Markiert veraltete eigene Repertoires auf die aktuelle Pipeline-Version (heute No-op für abgeleitete Daten) |
 | GET | `/api/repertoires/{id:int}/flashcards` | PERSISTENT als Flashcard markierte Linien `{ lineKeys }` — Besitzer UND Freigabe-Empfänger, jeweils EIGENER Satz (404 ohne Lese-Zugriff) |
 | POST/DELETE | `/api/repertoires/{id:int}/flashcards/{lineKey}` | Flashcard-Markierung einer Linie setzen/entfernen (idempotent) → `{ marked }`; LineKey = Frontend-Linien-Hash (`repertoire-line-key.util.ts`, wie SR — Re-Import mit geänderter Zugfolge lässt Markierungen ins Leere laufen, gewollt). Frontend: Checkboxen der Linienliste + „(n)"-Knopf → `/repertoires/:id/flashcards?marked=1` |
+| GET | `/api/explorer/position?fen=&source=&database=&ratings=&speeds=` | **Eröffnungs-Explorer des Analysebretts** (0.504.0, `ExplorerController`, nur angemeldet): Zugstatistik EINER Stellung `{ status, retryAfterSeconds?, source, database, total, white, draws, black, opening?, eco?, moves[{ uci, san, games, white, draws, black, averageRating?, opening?, eco? }] }`; `status` ∈ `ok`/`tokenMissing`/`tokenInvalid`/`rateLimited`/`failed` (immer 200), keine FEN / unbekannte Auswahl → 400. `ratings`/`speeds` als Komma-Liste. Dieselbe Datenstrecke wie der Lochfinder (`RepertoireExplorerService.PositionAsync`) |
+| GET | `/api/explorer/sources` | Wie `/api/repertoires/explorer/sources` (Quellen für den Explorer) |
 | GET | `/api/repertoires/explorer/sources` | Welche Explorer-Quellen es gibt `{ online, local, localRatings[], localSpeeds[] }` — `local` nur mit `LichessExplorer:LocalUrl` (0.503.0) |
 | POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
 
@@ -252,6 +254,16 @@ Regeln, die dabei nicht kippen dürfen:
   Engine-Token, den der Nutzer im Profil hinterlegt hat.
 * **Speicher** `LichessExplorerCacheEntries`: je Auswahl (Datenbank + Elo + Tempo) und Stellung,
   90 Tage, für ALLE Nutzer — die ersten Züge sind in jedem Repertoire dieselben.
+
+**Explorer auf dem Analysebrett** (0.504.0, `features/analysis/opening-explorer.component.ts`): Karte
+unter der Zugliste, nur angemeldet. Fragt `GET /api/explorer/position` erst 250 ms nach dem letzten
+Stellungswechsel (Durchklicken einer Partie mit den Pfeiltasten kostet online sonst Kontingent),
+merkt sich Antworten je Stellung + Auswahl im Speicher der Seite, verwirft eine späte Antwort für
+eine schon verlassene Stellung und fragt zugeklappt gar nicht (`rookhub_analysis_explorer_open`).
+Die Auswahl ist DIESELBE wie im Lochfinder (`rookhub_explorer_settings`). Dafür tragen die
+Explorer-Daten seit 0.504.0 auch Weiß/Remis/Schwarz und das Durchschnitts-Elo je Zug
+(`ExplorerMoveStat`, JSON `w`/`d`/`b`/`r`); ein Speicher-Eintrag von vorher (`HasResults == false`)
+genügt dem Lochfinder weiter, der Explorer holt ihn neu und überschreibt ihn.
 
 Frontend: vierter Modus der Repertoire-Detailseite (`repertoire-holes.component.ts`, Lupe;
 `?mode=holes`), Brett zeigt die Stellung NACH dem fehlenden Zug. Trainer: Trend-Knopf in der Leiste

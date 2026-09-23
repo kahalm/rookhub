@@ -49,20 +49,36 @@ public sealed record ExplorerQuery(string Database, IReadOnlyList<int> Ratings, 
     }
 }
 
-/// <summary>Ein Zug in einer Explorer-Stellung: wie oft er dort gespielt wurde.</summary>
+/// <summary>Ein Zug in einer Explorer-Stellung: wie oft er dort gespielt wurde, und (seit 0.504.0)
+/// wie diese Partien ausgingen. Die Ergebnisfelder sind nullbar — Speicher-Einträge von vorher
+/// tragen nur die Summe.</summary>
 public sealed record ExplorerMoveStat(
     [property: JsonPropertyName("u")] string Uci,
     [property: JsonPropertyName("s")] string San,
     [property: JsonPropertyName("g")] long Games,
     [property: JsonPropertyName("o")] string? Opening,
-    [property: JsonPropertyName("e")] string? Eco);
+    [property: JsonPropertyName("e")] string? Eco,
+    [property: JsonPropertyName("w")] long? White = null,
+    [property: JsonPropertyName("d")] long? Draws = null,
+    [property: JsonPropertyName("b")] long? Black = null,
+    [property: JsonPropertyName("r")] int? AverageRating = null);
 
 /// <summary>Explorer-Daten einer Stellung: alle Partien dort (<see cref="Total"/>) und die gespielten
 /// Züge. <see cref="Total"/> ist der Nenner für Anteile — nicht die Summe der gelieferten Züge.</summary>
 public sealed record ExplorerPositionStats(
     [property: JsonPropertyName("t")] long Total,
-    [property: JsonPropertyName("m")] List<ExplorerMoveStat> Moves)
+    [property: JsonPropertyName("m")] List<ExplorerMoveStat> Moves,
+    [property: JsonPropertyName("w")] long? White = null,
+    [property: JsonPropertyName("d")] long? Draws = null,
+    [property: JsonPropertyName("b")] long? Black = null,
+    [property: JsonPropertyName("o")] string? Opening = null,
+    [property: JsonPropertyName("e")] string? Eco = null)
 {
+    /// <summary>Trägt die Ergebnis-Aufteilung? Einträge von vor 0.504.0 nur die Summen — der
+    /// Lochfinder braucht nicht mehr, der Explorer auf dem Analysebrett holt sie dann neu.</summary>
+    [JsonIgnore]
+    public bool HasResults => White is not null;
+
     private static readonly JsonSerializerOptions Options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     public string ToJson() => JsonSerializer.Serialize(this, Options);
@@ -254,17 +270,26 @@ public class LichessExplorerClient
                 var uci = m.TryGetProperty("uci", out var u) ? u.GetString() : null;
                 var san = m.TryGetProperty("san", out var s) ? s.GetString() : null;
                 if (string.IsNullOrEmpty(uci) || string.IsNullOrEmpty(san)) continue;
-                string? opening = null, eco = null;
-                if (m.TryGetProperty("opening", out var o) && o.ValueKind == JsonValueKind.Object)
-                {
-                    opening = o.TryGetProperty("name", out var n) ? n.GetString() : null;
-                    eco = o.TryGetProperty("eco", out var e) ? e.GetString() : null;
-                }
-                moves.Add(new ExplorerMoveStat(uci, san, Count(m), opening, eco));
+                var (opening, eco) = OpeningOf(m);
+                int? rating = m.TryGetProperty("averageRating", out var ar) && ar.TryGetInt32(out var rv) ? rv : null;
+                moves.Add(new ExplorerMoveStat(uci, san, Count(m), opening, eco,
+                    Field(m, "white"), Field(m, "draws"), Field(m, "black"), rating));
             }
         }
-        return new ExplorerPositionStats(total, moves);
+        var (posOpening, posEco) = OpeningOf(root);
+        return new ExplorerPositionStats(total, moves,
+            Field(root, "white") ?? 0, Field(root, "draws") ?? 0, Field(root, "black") ?? 0, posOpening, posEco);
     }
+
+    private static (string? Name, string? Eco) OpeningOf(JsonElement e)
+    {
+        if (!e.TryGetProperty("opening", out var o) || o.ValueKind != JsonValueKind.Object) return (null, null);
+        return (o.TryGetProperty("name", out var n) ? n.GetString() : null,
+                o.TryGetProperty("eco", out var c) ? c.GetString() : null);
+    }
+
+    private static long? Field(JsonElement e, string key) =>
+        e.TryGetProperty(key, out var v) && v.TryGetInt64(out var x) ? x : null;
 
     private static long Count(JsonElement e)
     {

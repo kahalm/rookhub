@@ -1,0 +1,146 @@
+import { TestBed, fakeAsync, tick, ComponentFixture } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { Subject, of } from 'rxjs';
+import { OpeningExplorerComponent } from './opening-explorer.component';
+import { ExplorerPosition, ExplorerSources, RepertoireExplorerService } from '../repertoire/repertoire-explorer.service';
+
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+const AFTER_D4 = 'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1';
+
+const ONLINE_ONLY: ExplorerSources = { online: true, local: false, localRatings: [], localSpeeds: [] };
+
+function position(extra: Partial<ExplorerPosition> = {}): ExplorerPosition {
+  return {
+    status: 'ok', retryAfterSeconds: null, source: 'online', database: 'lichess',
+    total: 1000, white: 400, draws: 200, black: 400, opening: null, eco: null,
+    moves: [
+      { uci: 'e2e4', san: 'e4', games: 600, white: 300, draws: 60, black: 240, averageRating: 1900, opening: "King's Pawn", eco: 'B00' },
+      { uci: 'd2d4', san: 'd4', games: 400, white: 160, draws: 80, black: 160, averageRating: 1910, opening: null, eco: null },
+    ],
+    ...extra,
+  };
+}
+
+describe('OpeningExplorerComponent', () => {
+  let fixture: ComponentFixture<OpeningExplorerComponent>;
+  let positionSpy: jasmine.Spy;
+
+  afterEach(() => {
+    localStorage.removeItem('rookhub_analysis_explorer_open');
+    localStorage.removeItem('rookhub_explorer_settings');
+  });
+
+  function setup(answer: (fen: string) => any = () => of(position())): void {
+    positionSpy = jasmine.createSpy('position').and.callFake((fen: string) => answer(fen));
+    TestBed.configureTestingModule({
+      imports: [OpeningExplorerComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireExplorerService, useValue: { sources: () => of(ONLINE_ONLY), position: positionSpy } },
+      ],
+    });
+    fixture = TestBed.createComponent(OpeningExplorerComponent);
+  }
+
+  function setFen(fen: string): void {
+    fixture.componentRef.setInput('fen', fen);
+    fixture.detectChanges();
+  }
+
+  it('asks once for the position after the pause and shows moves with share and results', fakeAsync(() => {
+    setup();
+    setFen(START);
+    tick(300);
+    fixture.detectChanges();
+
+    expect(positionSpy).toHaveBeenCalledTimes(1);
+    expect(positionSpy.calls.mostRecent().args[0]).toBe(START);
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr');
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('e4');
+    expect(rows[0].textContent).toContain('60');   // 600 von 1000 Partien
+    const c = fixture.componentInstance;
+    expect(c.rows()[0].w).toBeCloseTo(0.5, 6);   // 300 von 600
+  }));
+
+  it('walking through positions quickly asks only for the last one', fakeAsync(() => {
+    setup();
+    setFen(START);
+    tick(100);
+    setFen(AFTER_E4);
+    tick(100);
+    setFen(AFTER_D4);
+    tick(300);
+
+    expect(positionSpy).toHaveBeenCalledTimes(1);
+    expect(positionSpy.calls.mostRecent().args[0]).toBe(AFTER_D4);
+  }));
+
+  it('a position seen before comes from memory', fakeAsync(() => {
+    setup();
+    setFen(START); tick(300);
+    setFen(AFTER_E4); tick(300);
+    setFen(START); tick(300);
+
+    expect(positionSpy).toHaveBeenCalledTimes(2);
+  }));
+
+  it('a late answer for a position already left is not shown', fakeAsync(() => {
+    const pending = new Subject<ExplorerPosition>();
+    setup(fen => fen === START ? pending : of(position({ total: 7 })));
+    setFen(START); tick(300);
+    setFen(AFTER_E4);
+    pending.next(position({ total: 999 }));
+    pending.complete();
+    tick(300);
+
+    expect(fixture.componentInstance.result()!.total).toBe(7);
+  }));
+
+  it('clicking a move plays it', fakeAsync(() => {
+    setup();
+    const played: string[] = [];
+    fixture.componentInstance.playMove.subscribe(s => played.push(s));
+    setFen(START); tick(300); fixture.detectChanges();
+
+    fixture.nativeElement.querySelectorAll('.san-btn')[1].click();
+
+    expect(played).toEqual(['d4']);
+  }));
+
+  it('folded away it does not ask at all', fakeAsync(() => {
+    localStorage.setItem('rookhub_analysis_explorer_open', '0');
+    setup();
+    setFen(START); tick(300);
+    expect(positionSpy).not.toHaveBeenCalled();
+
+    fixture.componentInstance.toggleOpen();
+    tick(300);
+    expect(positionSpy).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('rookhub_analysis_explorer_open')).toBe('1');
+  }));
+
+  it('a missing token is explained, and a rate limit is waited out by itself', fakeAsync(() => {
+    let calls = 0;
+    setup(() => of(++calls === 1 ? position({ status: 'rateLimited', retryAfterSeconds: 2, moves: [] }) : position()));
+    setFen(START); tick(300); fixture.detectChanges();
+    expect(fixture.componentInstance.result()!.status).toBe('rateLimited');
+
+    tick(3000 + 300);
+    expect(calls).toBe(2);
+    expect(fixture.componentInstance.result()!.status).toBe('ok');
+  }));
+
+  it('switching to masters sends no rating or speed and asks again', fakeAsync(() => {
+    setup();
+    setFen(START); tick(300);
+    fixture.componentInstance.setDatabase('masters');
+    tick(300);
+
+    expect(positionSpy).toHaveBeenCalledTimes(2);
+    expect(positionSpy.calls.mostRecent().args[1].database).toBe('masters');
+  }));
+});

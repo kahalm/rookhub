@@ -25,6 +25,7 @@ import { ExternalEngineService, ExternalEngineInfo } from './external-engine.ser
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
+import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
 
 interface LineNode { san: string; fen: string; uci: string; }
@@ -59,7 +60,7 @@ const EVAL_SETTLE_DEPTH = 10;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent, HelpHintComponent
+    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent
   ],
   template: `
     <div class="analysis-page">
@@ -249,6 +250,16 @@ const EVAL_SETTLE_DEPTH = 10;
               }
             </mat-card-content>
           </mat-card>
+
+          <!-- Eröffnungs-Explorer (Lichess/Meister, online oder lokal) — nur eingeloggt: die Online-Quelle
+               verbraucht das gemeinsame Kontingent des Server-Tokens. Ein Klick spielt den Zug. -->
+          @if (auth.isLoggedIn) {
+            <mat-card class="explorer-card">
+              <mat-card-content>
+                <app-opening-explorer [fen]="currentFen" (playMove)="playRepertoireMoves([$event])" />
+              </mat-card-content>
+            </mat-card>
+          }
 
           <!-- „Stellung in meinen Repertoires" gibt es nur eingeloggt; ohne dieses @if stand hier
                für anonyme Besucher eine leere graue Karte zwischen Zug- und FEN-Karte. -->
