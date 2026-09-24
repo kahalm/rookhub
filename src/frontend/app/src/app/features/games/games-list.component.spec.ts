@@ -81,7 +81,8 @@ describe('GamesListComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('.progress')).toBeNull();
     expect(el.querySelector('button.analyze')).toBeNull();
-    expect(el.querySelector('.accuracy')!.textContent!.replace(/\s+/g, ' ').trim()).toBe('♔ 87 % · ♚ 72 %');
+    // Je Seite eine Zeile, auf Höhe des Spielernamens daneben.
+    expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 87 %', '♚ 72 %']);
     tick(ANALYSIS_POLL_MS);
     http.expectNone(listRequest);
     discardPeriodicTasks();
@@ -101,7 +102,7 @@ describe('GamesListComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelectorAll('button.analyze').length).toBe(2);
     expect(el.querySelectorAll('.progress').length).toBe(0);
-    expect(el.querySelector('.accuracy')!.textContent!.replace(/\s+/g, ' ').trim()).toBe('♔ 100 % · ♚ —');
+    expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 100 %', '♚ —']);
     tick(ANALYSIS_POLL_MS);
     http.expectNone(listRequest);   // nichts läuft → kein Nachfragen
     discardPeriodicTasks();
@@ -146,6 +147,31 @@ describe('GamesListComponent', () => {
     expect(el).toBeTruthy();
     expect(el!.textContent).toContain('games.mistakes.progressShort');
     expect(fixture.componentInstance.games[0].mistakes).toEqual(jasmine.objectContaining({ solved: 4, total: 7, open: 3 }));
+  });
+
+  // Die Liste im Schnitt der chess.com-Uebersicht (0.526.0): Spieler mit Wertung, Punkte untereinander,
+  // Bedenkzeit neben dem Quellen-Symbol.
+  it('zeigt Wertung, Punkte und Bedenkzeit wie die Uebersicht auf chess.com', async () => {
+    const { fixture } = await setupMitPartien([{
+      ...partie(1), whiteElo: 1632, blackElo: 1667, timeControl: '180+2',
+    }]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(Array.from(el.querySelectorAll('.elo')).map(e => e.textContent!.trim())).toEqual(['(1632)', '(1667)']);
+    // Ergebnis 1-0: die Punkte stehen untereinander, die Gewinnerseite hervorgehoben.
+    expect(Array.from(el.querySelectorAll('.score span')).map(e => e.textContent!.trim())).toEqual(['1', '0']);
+    expect(el.querySelector('.score .win')!.textContent!.trim()).toBe('1');
+    // Uebersetzungen sind im Test nicht geladen — geprueft wird der gewaehlte Schluessel.
+    expect(el.querySelector('.tc')!.textContent).toContain('games.tc.plus');
+  });
+
+  it('ohne Wertung und ohne Bedenkzeit bleiben die Stellen leer', async () => {
+    const { fixture } = await setupMitPartien([{ ...partie(1), result: '*' }]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.elo')).toBeNull();
+    expect(el.querySelector('.tc')).toBeNull();
+    expect(Array.from(el.querySelectorAll('.score span')).map(e => e.textContent!.trim())).toEqual(['', '']);
   });
 
   it('ohne Training steht dort nichts', async () => {

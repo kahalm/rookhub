@@ -9,10 +9,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { GamesService, SavedGame } from './games.service';
+import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -29,7 +31,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatCheckboxModule, TranslatePipe,
+    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, TranslatePipe,
   ],
   template: `
     <div class="games-page">
@@ -53,43 +55,43 @@ export type AnalysisState = 'none' | 'running' | 'done';
           <p>{{ 'games.empty' | translate }}</p>
         </mat-card>
       } @else {
-        <div class="list">
+        <!-- Tabelle im Schnitt der chess.com-Uebersicht (gewuenscht 24.09.2026): Spieler, Ergebnis,
+             Genauigkeit, Zuege, Datum — genau die Spalten, die der Nutzer dort vor sich hat. Die
+             Kopfzeile ist am Handy weg, dort steht dieselbe Zeile umbrochen. -->
+        <div class="table">
+          <div class="row head-row">
+            <span></span>
+            <span>{{ 'games.col.players' | translate }}</span>
+            <span class="mid">{{ 'games.col.result' | translate }}</span>
+            <span>{{ 'games.col.accuracy' | translate }}</span>
+            <span class="mid">{{ 'games.col.moves' | translate }}</span>
+            <span>{{ 'games.col.date' | translate }}</span>
+            <span></span>
+          </div>
           @for (g of shownGames(); track g.id) {
-            <mat-card class="game">
-              <div class="info">
+            <div class="row game">
+              <div class="kind">
                 <mat-icon class="src" [matTooltip]="g.source">{{ sourceIcon(g.source) }}</mat-icon>
-                <div class="players">
-                  <!-- Der Name führt auf die Partie-SEITE (/games/:id) — kein Dialog mehr (gemeldet 2026-09-23). -->
-                  <a class="vs" [routerLink]="['/games', g.id]"><strong>{{ g.white || '?' }}</strong> – <strong>{{ g.black || '?' }}</strong></a>
-                  <span class="meta">
-                    @if (g.result && g.result !== '*') { <span class="result">{{ g.result }}</span> }
-                    <span>{{ g.moveCount }} {{ 'games.moves' | translate }}</span>
-                    <span class="date">{{ (g.playedAt || g.createdAt) | date:'mediumDate' }}</span>
-                    <!-- Fertig gerechnet: die Genauigkeit beider Seiten steht hier bei den Partie-Daten, der
-                         Analysieren-Knopf ist dann weg (gewünscht 2026-09-24). -->
-                    @if (analysisState(g) === 'done') {
-                      <span class="accuracy" [matTooltip]="'games.accuracyHint' | translate">
-                        ♔ {{ pct(g.analysis?.accuracyWhite) }} · ♚ {{ pct(g.analysis?.accuracyBlack) }}
-                      </span>
-                    }
-                    <!-- Stand des Fehler-Trainings (0.524.0): offene Aufgaben hervorgehoben — das ist die
-                         Zeile, wegen der man die Partie noch einmal aufmacht. -->
-                    @if (g.mistakes; as m) {
-                      <span class="mistakes" [class.open]="m.open > 0" [matTooltip]="'games.mistakes.tooltip' | translate">
-                        {{ 'games.mistakes.progressShort' | translate: { solved: m.solved, total: m.total, open: m.open } }}
-                      </span>
-                    }
-                  </span>
-                </div>
+                @if (timeControl(g); as tc) { <span class="tc">{{ 'games.tc.' + tc.key | translate: tc.params }}</span> }
               </div>
-              <div class="actions">
-                <a mat-icon-button [routerLink]="['/games', g.id]" [matTooltip]="'games.replay' | translate" [attr.aria-label]="'games.replay' | translate">
-                  <mat-icon>play_arrow</mat-icon>
-                </a>
-                <button mat-icon-button (click)="openInAnalysis(g)" [matTooltip]="'games.openInAnalysis' | translate" [attr.aria-label]="'games.openInAnalysis' | translate">
-                  <mat-icon>biotech</mat-icon>
-                </button>
+              <!-- Die Namen führen auf die Partie-SEITE (/games/:id) — kein Dialog mehr (gemeldet 2026-09-23). -->
+              <a class="players" [routerLink]="['/games', g.id]">
+                <span class="p"><i class="dot white"></i><span class="name">{{ g.white || '?' }}</span>@if (g.whiteElo) { <span class="elo">({{ g.whiteElo }})</span> }</span>
+                <span class="p"><i class="dot black"></i><span class="name">{{ g.black || '?' }}</span>@if (g.blackElo) { <span class="elo">({{ g.blackElo }})</span> }</span>
+              </a>
+              <!-- Punkte wie auf chess.com untereinander, die Gewinnerseite hervorgehoben. -->
+              <div class="score">
+                <span [class.win]="score(g).white === '1'">{{ score(g).white }}</span>
+                <span [class.win]="score(g).black === '1'">{{ score(g).black }}</span>
+              </div>
+              <div class="acc-cell">
                 @switch (analysisState(g)) {
+                  @case ('done') {
+                    <span class="accuracy" [matTooltip]="'games.accuracyHint' | translate">
+                      <span>♔ {{ pct(g.analysis?.accuracyWhite) }}</span>
+                      <span>♚ {{ pct(g.analysis?.accuracyBlack) }}</span>
+                    </span>
+                  }
                   @case ('running') {
                     <!-- Statt des Knopfs der Fortschritt — er läuft mit dem 10-s-Nachfragen mit. -->
                     <span class="progress" [matTooltip]="progressTip(g)">{{ progressPercent(g) }} %</span>
@@ -104,53 +106,127 @@ export type AnalysisState = 'none' | 'running' | 'done';
                     </button>
                   }
                 }
-                <button mat-icon-button (click)="share(g)" [matTooltip]="'games.share' | translate" [attr.aria-label]="'games.share' | translate">
-                  <mat-icon>share</mat-icon>
-                </button>
-                @if (g.sourceUrl) {
-                  <a mat-icon-button [href]="g.sourceUrl" target="_blank" rel="noopener" [matTooltip]="'games.openOriginal' | translate" [attr.aria-label]="'games.openOriginal' | translate">
-                    <mat-icon>open_in_new</mat-icon>
-                  </a>
-                }
-                <button mat-icon-button color="warn" (click)="remove(g)" [matTooltip]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate">
-                  <mat-icon>delete</mat-icon>
-                </button>
               </div>
-            </mat-card>
+              <div class="moves mid">{{ g.moveCount }}</div>
+              <div class="date">{{ (g.playedAt || g.createdAt) | date:'mediumDate' }}</div>
+              <div class="actions">
+                <a mat-icon-button [routerLink]="['/games', g.id]" [matTooltip]="'games.replay' | translate" [attr.aria-label]="'games.replay' | translate">
+                  <mat-icon>play_arrow</mat-icon>
+                </a>
+                <!-- Alles Weitere ins ⋮: eine Zeile mit sechs Knöpfen liest sich nicht mehr. -->
+                <button mat-icon-button [matMenuTriggerFor]="menu"
+                        [matTooltip]="'games.moreActions' | translate" [attr.aria-label]="'games.moreActions' | translate">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                  <button mat-menu-item (click)="openInAnalysis(g)">
+                    <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
+                  </button>
+                  <button mat-menu-item (click)="share(g)">
+                    <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
+                  </button>
+                  @if (g.sourceUrl) {
+                    <a mat-menu-item [href]="g.sourceUrl" target="_blank" rel="noopener">
+                      <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
+                    </a>
+                  }
+                  <button mat-menu-item (click)="remove(g)">
+                    <mat-icon color="warn">delete</mat-icon><span>{{ 'common.delete' | translate }}</span>
+                  </button>
+                </mat-menu>
+              </div>
+              <!-- Fußzeile der Zeile wie chess.coms Eröffnungszeile: hier der Stand des Fehler-Trainings
+                   (0.524.0) — die Zeile, wegen der man die Partie noch einmal aufmacht. -->
+              @if (g.mistakes; as m) {
+                <div class="foot">
+                  <span class="mistakes" [class.open]="m.open > 0" [matTooltip]="'games.mistakes.tooltip' | translate">
+                    {{ 'games.mistakes.progressShort' | translate: { solved: m.solved, total: m.total, open: m.open } }}
+                  </span>
+                </div>
+              }
+            </div>
           }
         </div>
       }
     </div>
   `,
   styles: [`
-    .games-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .games-page { max-width: 1040px; margin: 0 auto; padding: 16px; }
     .head h1 { margin: 0 0 4px; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
-    .list { display: flex; flex-direction: column; gap: 8px; }
-    .game { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
-    .info { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .src { flex-shrink: 0; opacity: 0.7; }
-    .players { display: flex; flex-direction: column; min-width: 0; }
-    .vs { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; text-decoration: none; }
-    .vs:hover { text-decoration: underline; }
-    .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .result { color: #1976d2; font-weight: 600; }
-    .mistakes { white-space: nowrap; }
-    .mistakes.open { color: #e58f2a; font-weight: 500; }
     .only-open { margin-top: 4px; }
-    .accuracy { font-variant-numeric: tabular-nums; white-space: nowrap; color: color-mix(in srgb, currentColor 80%, transparent); }
-    .actions { display: flex; align-items: center; flex-shrink: 0; }
+
+    /* Eine Zeile = ein Raster; die Kopfzeile benutzt dasselbe, damit die Spalten stehen. */
+    .table { display: flex; flex-direction: column; }
+    .row {
+      display: grid;
+      grid-template-columns: 78px minmax(0, 1fr) 30px 92px 48px 104px 88px;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    }
+    .head-row {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+      color: color-mix(in srgb, currentColor 55%, transparent);
+      border-bottom-width: 2px; padding-bottom: 4px;
+    }
+    .game:hover { background: color-mix(in srgb, currentColor 5%, transparent); }
+    .mid { text-align: center; }
+
+    .kind { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .src { flex-shrink: 0; opacity: 0.7; }
+    .tc { font-size: 0.8rem; white-space: nowrap; color: color-mix(in srgb, currentColor 70%, transparent); }
+
+    .players { display: flex; flex-direction: column; min-width: 0; color: inherit; text-decoration: none; }
+    .players:hover .name { text-decoration: underline; }
+    .p { display: flex; align-items: center; gap: 6px; min-width: 0; line-height: 1.45; }
+    .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .elo { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
+    /* Farbmarke wie in chess.coms Zeile — ein Rahmen, damit Weiss auf hellem Grund sichtbar bleibt. */
+    .dot { width: 9px; height: 9px; flex-shrink: 0; border: 1px solid color-mix(in srgb, currentColor 45%, transparent); }
+    .dot.white { background: #fff; }
+    .dot.black { background: #333; }
+
+    .score { display: flex; flex-direction: column; text-align: center; font-variant-numeric: tabular-nums; }
+    .score span { line-height: 1.45; color: color-mix(in srgb, currentColor 55%, transparent); }
+    .score .win { color: inherit; font-weight: 700; }
+
+    .acc-cell { display: flex; align-items: center; justify-content: center; }
+    .accuracy {
+      display: flex; flex-direction: column; text-align: right; white-space: nowrap;
+      font-size: 0.85rem; font-variant-numeric: tabular-nums;
+      color: color-mix(in srgb, currentColor 80%, transparent);
+    }
+    .accuracy span { line-height: 1.45; }
     /* So breit wie ein Icon-Knopf, damit die Zeile beim Wechsel Knopf → Prozent nicht springt. */
     .progress {
       display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
       font-size: 0.8rem; font-variant-numeric: tabular-nums; color: #1976d2; cursor: default;
     }
-    @media (max-width: 600px) {
-      .game { flex-direction: column; align-items: stretch; }
-      .actions { justify-content: flex-end; }
+    .moves { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .date { font-size: 0.85rem; white-space: nowrap; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .actions { display: flex; align-items: center; justify-content: flex-end; }
+
+    /* Fusszeile der Zeile, an den Spielernamen ausgerichtet (chess.com setzt dort die Eroeffnung hin). */
+    .foot { grid-column: 2 / -1; font-size: 0.8rem; }
+    .mistakes { white-space: nowrap; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .mistakes.open { color: #e58f2a; font-weight: 500; }
+
+    /* Am Handy gibt es keine Spalten mehr: dieselben Teile umbrechen, Zahl und Datum rutschen
+       in die zweite Reihe. Die Kopfzeile faellt weg — sie beschriftete Spalten, die es nicht gibt. */
+    @media (max-width: 760px) {
+      .head-row { display: none; }
+      .row { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 10px 8px; }
+      .players { flex: 1 1 55%; }
+      .acc-cell { margin-left: auto; }
+      .accuracy { flex-direction: row; gap: 8px; text-align: left; }
+      .actions { order: 9; margin-left: auto; }
+      .moves, .date, .foot { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+      .foot { flex-basis: 100%; }
     }
   `]
 })
@@ -171,6 +247,21 @@ export class GamesListComponent implements OnInit {
   /** Die angezeigte Liste — ungefiltert, oder nur die mit offenen Fehlern. */
   shownGames(): SavedGame[] {
     return this.onlyOpen ? this.games.filter(g => (g.mistakes?.open ?? 0) > 0) : this.games;
+  }
+
+  /** Die beiden Punkte untereinander, wie in chess.coms Ergebnis-Spalte. Offen/unbekannt = leer. */
+  score(g: SavedGame): { white: string; black: string } {
+    switch (g.result) {
+      case '1-0': return { white: '1', black: '0' };
+      case '0-1': return { white: '0', black: '1' };
+      case '1/2-1/2': return { white: '½', black: '½' };
+      default: return { white: '', black: '' };
+    }
+  }
+
+  /** Bedenkzeit als Schlüssel + Zahlen („3 + 2"); `null` = keine bekannt, dann steht dort nichts. */
+  timeControl(g: SavedGame): TimeControlLabel | null {
+    return formatTimeControl(g.timeControl);
   }
 
   private destroyRef = inject(DestroyRef);

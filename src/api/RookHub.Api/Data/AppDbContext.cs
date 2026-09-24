@@ -1176,6 +1176,7 @@ public class AppDbContext : DbContext
             e.Property(g => g.Result).HasMaxLength(12);
             e.Property(g => g.SourceUrl).HasMaxLength(1000);
             e.Property(g => g.ShareToken).HasMaxLength(32);
+            e.Property(g => g.TimeControl).HasMaxLength(32);
             e.HasIndex(g => g.ShareToken).IsUnique();
             // Auflistung je User (neueste zuerst).
             e.HasIndex(g => new { g.UserId, g.CreatedAt });

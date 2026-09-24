@@ -2519,7 +2519,22 @@
       "hint": "Povuci potez na ploči i isprobaj svoje ideje.",
       "undo": "Vrati potez",
       "backToGame": "Natrag na partiju"
-    }
+    },
+    "col": {
+      "players": "Igrači",
+      "result": "Rezultat",
+      "accuracy": "Točnost",
+      "moves": "Potezi",
+      "date": "Datum"
+    },
+    "tc": {
+      "plus": "{{main}} + {{inc}}",
+      "plusSec": "{{main}} s + {{inc}}",
+      "min": "{{count}} min",
+      "sec": "{{count}} s",
+      "days": "{{count}} d/potez"
+    },
+    "moreActions": "Više radnji"
   },
   "analysis": {
     "title": "Analiza",

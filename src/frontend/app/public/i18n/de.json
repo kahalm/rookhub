@@ -2519,7 +2519,22 @@
       "hint": "Zieh auf dem Brett, um eigene Ideen durchzurechnen.",
       "undo": "Zug zurück",
       "backToGame": "Zurück zur Partie"
-    }
+    },
+    "col": {
+      "players": "Spieler",
+      "result": "Ergebnis",
+      "accuracy": "Genauigkeit",
+      "moves": "Züge",
+      "date": "Datum"
+    },
+    "tc": {
+      "plus": "{{main}} + {{inc}}",
+      "plusSec": "{{main}} s + {{inc}}",
+      "min": "{{count}} Min.",
+      "sec": "{{count}} s",
+      "days": "{{count}} T/Zug"
+    },
+    "moreActions": "Weitere Aktionen"
   },
   "analysis": {
     "title": "Analyse",

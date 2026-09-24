@@ -16,6 +16,11 @@ export interface SavedGame {
   shareToken: string;
   moveCount: number;
   createdAt: string;
+  /** Wertung der Seiten (0.526.0, eigene Spalten); `null` = keine bekannt. */
+  whiteElo?: number | null;
+  blackElo?: number | null;
+  /** Bedenkzeit in PGN-Schreibweise („180+2"); `null` = unbekannt (Altbestand). */
+  timeControl?: string | null;
   /** Stand der verknüpften Analyse (0.515.0); `null` = keine — die Liste zeigt dann den Analysieren-Knopf. */
   analysis?: SavedGameAnalysis | null;
   /** Stand des Fehler-Trainings (0.524.0); `null` = noch nie trainiert. */
@@ -44,8 +49,6 @@ export interface GameMistakeProgress {
 /** Detail inkl. PGN (zum Nachspielen/Analysieren). */
 export interface SavedGameDetail extends SavedGame {
   pgn: string;
-  whiteElo?: number | null;
-  blackElo?: number | null;
   /** "white"/"black", wenn der Besitzer einer Seite zuordenbar ist — initiale Brett-Orientierung. */
   ownerSide?: 'white' | 'black' | null;
 }

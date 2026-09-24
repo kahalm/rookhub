@@ -50,6 +50,32 @@ public class SavedGame
     public int? MoveCount { get; set; }
 
     /// <summary>
+    /// Wertung der beiden Seiten, <c>null</c> = keine bekannt. Steht seit 0.526.0 als SPALTE da und
+    /// nicht mehr nur im PGN-Header: die Partienliste zeigt sie (wie die Uebersicht auf chess.com),
+    /// und das PGN dafuer zu laden ist genau der Fehler, den <see cref="MoveCount"/> schon einmal
+    /// behoben hat. Der Altbestand wird portionsweise aus dem PGN nachgetragen
+    /// (<see cref="Services.SavedGameService.HeaderBackfillPerCall"/>).
+    /// </summary>
+    public int? WhiteElo { get; set; }
+
+    /// <inheritdoc cref="WhiteElo"/>
+    public int? BlackElo { get; set; }
+
+    /// <summary>
+    /// Bedenkzeit in PGN-Schreibweise (<c>180+2</c>, <c>600</c>, <c>1/86400</c> fuer Fernschach);
+    /// <c>null</c> = unbekannt. Kommt von der Erweiterung; ALT gespeicherte Partien haben sie nicht
+    /// und bekommen sie auch nicht mehr — sie steht in keinem gespeicherten PGN.
+    /// </summary>
+    public string? TimeControl { get; set; }
+
+    /// <summary>
+    /// Wurden die Elo-Header dieser Zeile schon einmal aus dem PGN in die Spalten gehoben? Ohne die
+    /// Marke waere <c>WhiteElo == null</c> zweideutig: „noch nicht nachgesehen" und „die Partie nennt
+    /// keine Wertung" sehen gleich aus, und der Nachtrag liefe fuer immer im Kreis.
+    /// </summary>
+    public bool HeadersScanned { get; set; }
+
+    /// <summary>
     /// Die Partie-Analyse, aus der die Bewertungskurve dieser Partie kommt — gesetzt, sobald der
     /// BESITZER „Partie analysieren" drueckt (auch wenn dabei eine vorhandene Analyse wiederverwendet
     /// wird). Ein Gast, der die geteilte Partie rechnen laesst, bekommt seine eigene Analyse, aendert

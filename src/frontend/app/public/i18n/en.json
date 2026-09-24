@@ -2519,7 +2519,22 @@
       "hint": "Move on the board to try your own ideas.",
       "undo": "Take back",
       "backToGame": "Back to the game"
-    }
+    },
+    "col": {
+      "players": "Players",
+      "result": "Result",
+      "accuracy": "Accuracy",
+      "moves": "Moves",
+      "date": "Date"
+    },
+    "tc": {
+      "plus": "{{main}} + {{inc}}",
+      "plusSec": "{{main}} s + {{inc}}",
+      "min": "{{count}} min",
+      "sec": "{{count}} s",
+      "days": "{{count}} d/move"
+    },
+    "moreActions": "More actions"
   },
   "analysis": {
     "title": "Analysis",

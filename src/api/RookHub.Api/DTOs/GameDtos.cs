@@ -42,6 +42,11 @@ public class SaveGameInputDto
 
     /// <summary>Elo/Rating des Schwarzspielers auf der Plattform.</summary>
     public int? BlackElo { get; set; }
+
+    /// <summary>Bedenkzeit in PGN-Schreibweise (<c>180+2</c>, <c>600</c>, <c>1/86400</c>), wie die
+    /// Plattform sie nennt — die Liste zeigt daraus „3 + 2". Unbekannt → weglassen.</summary>
+    [MaxLength(32)]
+    public string? TimeControl { get; set; }
 }
 
 /// <summary>Listeneintrag einer gespeicherten Partie (ohne PGN, für die Übersicht).</summary>
@@ -57,6 +62,16 @@ public class SavedGameDto
     public string ShareToken { get; set; } = string.Empty;
     public int MoveCount { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Wertung der Seiten; <c>null</c> = keine bekannt (Altbestand wird portionsweise
+    /// aus dem PGN nachgetragen, siehe <see cref="Models.SavedGame.WhiteElo"/>).</summary>
+    public int? WhiteElo { get; set; }
+
+    /// <inheritdoc cref="WhiteElo"/>
+    public int? BlackElo { get; set; }
+
+    /// <summary>Bedenkzeit in PGN-Schreibweise (<c>180+2</c>); <c>null</c> = unbekannt.</summary>
+    public string? TimeControl { get; set; }
 
     /// <summary>Stand der VERKNUEPFTEN Analyse (<see cref="Models.SavedGame.GameAnalysisId"/>); <c>null</c> =
     /// keine verknuepft oder die Analyse gibt es nicht mehr. Die Liste zeigt damit statt des Analysieren-Knopfs
@@ -110,12 +125,6 @@ public class SavedGameAnalysisDto
 public class SavedGameDetailDto : SavedGameDto
 {
     public string Pgn { get; set; } = string.Empty;
-
-    /// <summary>Elo/Rating des Weißspielers (aus dem PGN-Header <c>WhiteElo</c> gelesen).</summary>
-    public int? WhiteElo { get; set; }
-
-    /// <summary>Elo/Rating des Schwarzspielers (aus dem PGN-Header <c>BlackElo</c> gelesen).</summary>
-    public int? BlackElo { get; set; }
 
     /// <summary>„white"/„black", wenn der Besitzer einer Seite zuordenbar ist (Plattform-Username im
     /// Profil) — die Partie-Seite dreht das Brett dann aus seiner Sicht. Dieselbe Regel wie

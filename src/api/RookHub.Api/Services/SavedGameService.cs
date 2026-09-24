@@ -91,6 +91,10 @@ public class SavedGameService
             SourceUrl = Clip(dto.SourceUrl, 1000),
             Pgn = BuildPgn(moves, dto, result),
             MoveCount = moves.Count,
+            WhiteElo = PlausibleElo(dto.WhiteElo),
+            BlackElo = PlausibleElo(dto.BlackElo),
+            TimeControl = CleanTimeControl(dto.TimeControl),
+            HeadersScanned = true,
             ShareToken = await GenerateUniqueTokenAsync(),
             CreatedAt = DateTime.UtcNow,
         };
@@ -165,9 +169,15 @@ public class SavedGameService
             {
                 g.Id, g.Source, g.White, g.Black, g.Result, g.PlayedAt,
                 g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt, g.GameAnalysisId,
+                g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned,
                 PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
             })
             .ToListAsync();
+
+        // Wertungen des Altbestands aus dem PGN in die Spalten heben — portionsweise, weil dafuer das
+        // LONGTEXT geladen werden muss. Eine EIGENE Abfrage statt eines zweiten Feldes in der Projektion
+        // oben: dort gaebe es keinen Deckel, und die erste Liste eines Vielspielers zoege alle PGNs.
+        var elos = await BackfillElosAsync(rows.Where(r => !r.HeadersScanned).Select(r => r.Id).ToList());
 
         var analyses = await AnalysisStatesAsync(
             rows.Where(r => r.GameAnalysisId != null).Select(r => r.GameAnalysisId!.Value).Distinct().ToList());
@@ -203,6 +213,9 @@ public class SavedGameService
             ShareToken = r.ShareToken,
             MoveCount = r.MoveCount ?? (healed.TryGetValue(r.Id, out var c) ? c : 0),
             CreatedAt = r.CreatedAt,
+            WhiteElo = r.WhiteElo ?? (elos.TryGetValue(r.Id, out var e) ? e.White : null),
+            BlackElo = r.BlackElo ?? (elos.TryGetValue(r.Id, out var e2) ? e2.Black : null),
+            TimeControl = r.TimeControl,
             Analysis = r.GameAnalysisId is int aid && analyses.TryGetValue(aid, out var state) ? state : null,
         }).ToList();
     }
@@ -210,6 +223,37 @@ public class SavedGameService
     /// <summary>So viele fertige Analysen ohne abgelegte Genauigkeit rechnet EIN Listenaufruf nach — der
     /// Altbestand von vor 0.515.0 ist klein, und die Liste fragt waehrend einer Rechnung alle zehn Sekunden.</summary>
     public const int AccuracyBackfillPerCall = 10;
+
+    /// <summary>So viele Partien holt EIN Listenaufruf sich vor, um ihre Wertungen aus dem PGN
+    /// nachzutragen (0.526.0). Gedeckelt, weil dafuer das PGN geladen wird.</summary>
+    public const int HeaderBackfillPerCall = 50;
+
+    /// <summary>
+    /// Traegt die Wertungen aus dem PGN-Header in die Spalten nach und setzt
+    /// <see cref="SavedGame.HeadersScanned"/> — auch bei einer Partie OHNE Elo-Header, sonst sieht
+    /// dieselbe Zeile bei jedem Aufruf wieder „noch nicht nachgesehen" aus. Best-effort: schlaegt das
+    /// Schreiben fehl, stimmt die Anzeige trotzdem (und der naechste Aufruf versucht es erneut).
+    /// </summary>
+    private async Task<Dictionary<int, (int? White, int? Black)>> BackfillElosAsync(List<int> ids)
+    {
+        var found = new Dictionary<int, (int? White, int? Black)>();
+        if (ids.Count == 0) return found;
+        try
+        {
+            var tracked = await _db.SavedGames.Where(g => ids.Contains(g.Id))
+                .OrderByDescending(g => g.CreatedAt).Take(HeaderBackfillPerCall).ToListAsync();
+            foreach (var g in tracked)
+            {
+                g.WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo");
+                g.BlackElo = ParseEloHeader(g.Pgn, "BlackElo");
+                g.HeadersScanned = true;
+                found[g.Id] = (g.WhiteElo, g.BlackElo);
+            }
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) { /* Anzeige stimmt auch ohne den Nachtrag */ }
+        return found;
+    }
 
     /// <summary>
     /// Stand der verknuepften Analysen fuer die Liste: Status, Fortschritt (EINE gruppierte Zaehlung ueber alle
@@ -533,6 +577,7 @@ public class SavedGameService
         // Elo/Rating nur ausgeben, wenn plausibel (100–4000) — sonst weglassen.
         if (IsPlausibleElo(dto.WhiteElo)) sb.Append("[WhiteElo \"").Append(dto.WhiteElo).Append("\"]\n");
         if (IsPlausibleElo(dto.BlackElo)) sb.Append("[BlackElo \"").Append(dto.BlackElo).Append("\"]\n");
+        if (CleanTimeControl(dto.TimeControl) is string tc) sb.Append("[TimeControl \"").Append(tc).Append("\"]\n");
         sb.Append('\n');
         sb.Append(PgnWriter.MoveText(moves, result: result));
         return sb.ToString();
@@ -540,6 +585,21 @@ public class SavedGameService
 
     /// <summary>Plausibilitäts-Check für ein Elo/Rating (verhindert Müll-Header).</summary>
     private static bool IsPlausibleElo(int? elo) => elo is >= 100 and <= 4000;
+
+    /// <summary>Das Elo, wenn es plausibel ist — sonst <c>null</c> (für die Spalten).</summary>
+    private static int? PlausibleElo(int? elo) => IsPlausibleElo(elo) ? elo : null;
+
+    /// <summary>
+    /// Bedenkzeit in der Schreibweise, die das PGN kennt: <c>600</c>, <c>180+2</c>, <c>1/86400</c>
+    /// (Fernschach) oder <c>-</c>. Alles andere wird verworfen statt gespeichert — der Wert geht
+    /// ungeprüft in einen PGN-Header, und die Liste rechnet daraus „3 + 2".
+    /// </summary>
+    public static string? CleanTimeControl(string? raw)
+    {
+        var tc = raw?.Trim();
+        if (string.IsNullOrEmpty(tc) || tc.Length > 32) return null;
+        return Regex.IsMatch(tc, @"^(-|\d{1,6}(\+\d{1,4})?|\d{1,3}/\d{1,7})$") ? tc : null;
+    }
 
     /// <summary>Aktualisiert eine bereits gespeicherte Partie beim Re-Save, wenn die neue
     /// Version mehr Züge hat ODER erstmals ein Elo mitbringt. Gibt <c>true</c> zurück, wenn
@@ -553,6 +613,12 @@ public class SavedGameService
 
         existing.Pgn = BuildPgn(moves, dto, result);
         existing.MoveCount = moves.Count;   // MUSS mit: das PGN wird hier ersetzt
+        // Die Spalten kommen aus derselben Quelle wie das PGN — aber nur, wenn der neue Save etwas
+        // mitbringt: ein Re-Save ohne Wertung darf eine vorhandene nicht loeschen.
+        existing.WhiteElo = PlausibleElo(dto.WhiteElo) ?? existing.WhiteElo;
+        existing.BlackElo = PlausibleElo(dto.BlackElo) ?? existing.BlackElo;
+        existing.TimeControl = CleanTimeControl(dto.TimeControl) ?? existing.TimeControl;
+        existing.HeadersScanned = true;
         if (!string.IsNullOrWhiteSpace(dto.White)) existing.White = Clip(dto.White, 120);
         if (!string.IsNullOrWhiteSpace(dto.Black)) existing.Black = Clip(dto.Black, 120);
         existing.Result = result;
@@ -627,7 +693,10 @@ public class SavedGameService
         MoveCount = CountPlies(g.Pgn),
         CreatedAt = g.CreatedAt,
         Pgn = g.Pgn,
+        // Aus dem PGN und nicht aus den Spalten: hier LIEGT das PGN, und beim Altbestand steht die
+        // Wertung nur dort (der Nachtrag laeuft ueber die Liste).
         WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
         BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
+        TimeControl = g.TimeControl,
     };
 }

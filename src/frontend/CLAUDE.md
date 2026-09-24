@@ -457,6 +457,18 @@ Einwurf) — sonst ruht die Liste. Die Genauigkeit rechnet der SERVER (`GameAccu
 `GameAnalysisService.list(true)` (Seite „Partie-Analysen") nimmt die Partie-Analysen mit; die Punktepartie-Seite ruft
 `list()` ohne Parameter.
 
+**Seit 0.526.0 ist die Liste eine TABELLE im Schnitt der chess.com-Übersicht** (gewünscht 24.09.2026, Spalten aus dem
+DOM-Dump der Profilseite): Quelle + Bedenkzeit · Spieler mit Wertung · Ergebnis · Genauigkeit · Züge · Datum · Aktionen.
+Vier Dinge, die dabei tragen: (1) Kopfzeile und Zeilen benutzen DASSELBE Raster (`.row`), sonst stehen die Spalten nicht;
+(2) die Genauigkeits-SPALTE trägt auch den Analysieren-Knopf bzw. den Fortschritt — genau wie chess.com dort den
+Rückblick-Knopf zeigt, und die Zeile springt beim Wechsel nicht; (3) der Fehler-Fortschritt steht als Fußzeile der Zeile
+(`.foot`, `grid-column: 2 / -1`), wo chess.com die Eröffnung hinschreibt; (4) unter 760 px wird aus dem Raster ein
+umbrechendes Flex-Layout und die Kopfzeile verschwindet — sie beschriftete Spalten, die es dort nicht mehr gibt.
+Von den sechs früheren Icon-Knöpfen bleibt ▶ sichtbar, der Rest steht im ⋮-Menü (UI-Dichte-Regel).
+Die Bedenkzeit kommt als PGN-Wert vom Server (`180+2`); `features/games/time-control.util.ts` macht daraus einen
+i18n-SCHLÜSSEL samt Zahlen (`games.tc.plus|plusSec|min|sec|days`) statt eines fertigen Satzes — und liefert `null`,
+wo nichts Verlässliches herauszulesen ist (dann steht dort nichts, statt etwas geraten zu werden).
+
 **Tippzonen am Brettrand** (`.board-tap` in shared-game, pgn-viewer, shared-line, analysis): EINE globale Regel in
 `styles.scss` — `user-select: none` + `touch-action: manipulation` (0.514.3). Ohne sie markierte ein schnelles
 Doppeltippen Text, und Safari zoomte. Bewusst nur auf den Zonen, nicht seitenweit: Namen und Züge bleiben kopierbar.

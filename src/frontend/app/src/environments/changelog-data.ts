@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.526.0", date: "2026-09-24", changes: [
+    { en: "“Games” now reads like the game list on chess.com: one row per game with players and their ratings, the two scores below each other, accuracy per side, number of moves and the date — plus the time control (“3 + 2”) next to the site icon. Replaying is one click away, everything else sits behind the ⋮ menu, and the mistake training of a game stays under its row. On a phone the same row simply wraps.", de: "„Partien“ liest sich jetzt wie die Partienliste auf chess.com: eine Zeile je Partie mit Spielern und ihren Wertungen, den beiden Punkten untereinander, Genauigkeit je Seite, Zugzahl und Datum — dazu die Bedenkzeit („3 + 2“) neben dem Quellen-Symbol. Nachspielen ist ein Klick, alles Weitere steht im ⋮-Menü, und der Stand des Fehler-Trainings bleibt unter seiner Zeile. Am Handy bricht dieselbe Zeile einfach um." },
+    { en: "Ratings and time control are stored with the game from now on. Games saved earlier get their ratings back from the stored PGN (a few at a time while you browse the list); the time control is only there for games saved from now on — it was never stored.", de: "Wertung und Bedenkzeit werden ab jetzt zur Partie gespeichert. Früher gespeicherte Partien bekommen ihre Wertungen aus dem abgelegten PGN nachgetragen (portionsweise beim Blättern in der Liste); die Bedenkzeit gibt es nur für ab jetzt gespeicherte Partien — sie wurde nie mitgespeichert." },
+  ] },
   { version: "0.525.3", date: "2026-09-24", changes: [
     { en: "Fixed: for games sent from the game list on chess.com, the extension could show the analysis state of a different game. The lookup asked for the state with the game’s id instead of the id of the analysis linked to it.", de: "Behoben: bei Partien, die aus der Partienliste auf chess.com geschickt werden, konnte die Erweiterung den Analyse-Stand einer FREMDEN Partie anzeigen. Die Abfrage fragte den Stand mit der Partie-Nummer ab statt mit der Nummer der daran hängenden Analyse." },
   ] },

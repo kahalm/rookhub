@@ -2773,7 +2773,22 @@
       "hint": "Lépj a táblán, és próbáld ki a saját ötleteidet.",
       "undo": "Lépés vissza",
       "backToGame": "Vissza a játszmához"
-    }
+    },
+    "col": {
+      "players": "Játékosok",
+      "result": "Eredmény",
+      "accuracy": "Pontosság",
+      "moves": "Lépések",
+      "date": "Dátum"
+    },
+    "tc": {
+      "plus": "{{main}} + {{inc}}",
+      "plusSec": "{{main}} mp + {{inc}}",
+      "min": "{{count}} perc",
+      "sec": "{{count}} mp",
+      "days": "{{count}} nap/lépés"
+    },
+    "moreActions": "További műveletek"
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",

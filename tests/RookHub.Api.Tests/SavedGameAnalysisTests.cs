@@ -561,6 +561,75 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Null((await _svc.ListAsync(owner.Id)).Single().Analysis);
     }
 
+    // ----- Wertung + Bedenkzeit als SPALTEN (0.526.0, Partienliste im chess.com-Schnitt) -----
+
+    [Fact]
+    public async Task Save_legtWertungUndBedenkzeitInDieSpalten_undMarkiertSieAlsGelesen()
+    {
+        var user = await UserAsync("anna");
+
+        await _svc.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = new() { "e4", "c5" }, ExternalId = "184299739920",
+            White = "Anna", Black = "Bert", Result = "1-0",
+            WhiteElo = 1632, BlackElo = 40 /* unplausibel */, TimeControl = "180+2",
+        });
+
+        var row = await _db.SavedGames.AsNoTracking().SingleAsync();
+        Assert.Equal(1632, row.WhiteElo);
+        Assert.Null(row.BlackElo);
+        Assert.Equal("180+2", row.TimeControl);
+        Assert.True(row.HeadersScanned);
+
+        var listed = Assert.Single(await _svc.ListAsync(user.Id));
+        Assert.Equal(1632, listed.WhiteElo);
+        Assert.Equal("180+2", listed.TimeControl);
+    }
+
+    /// <summary>Ein Re-Save ohne Wertung darf die gespeicherte nicht loeschen (er heilt nur).</summary>
+    [Fact]
+    public async Task Save_erneut_ohneWertung_laesstDieGespeicherteStehen()
+    {
+        var user = await UserAsync("anna");
+        var dto = new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = new() { "e4", "c5" }, ExternalId = "g1",
+            White = "Anna", Black = "Bert", Result = "1-0", WhiteElo = 1632, TimeControl = "180+2",
+        };
+        await _svc.SaveAsync(user.Id, dto);
+
+        dto.Moves = new() { "e4", "c5", "Nf3" };   // mehr Zuege → der Datensatz wird geheilt
+        dto.WhiteElo = null; dto.TimeControl = null;
+        await _svc.SaveAsync(user.Id, dto);
+
+        var row = await _db.SavedGames.AsNoTracking().SingleAsync();
+        Assert.Equal(3, row.MoveCount);
+        Assert.Equal(1632, row.WhiteElo);
+        Assert.Equal("180+2", row.TimeControl);
+    }
+
+    [Fact]
+    public async Task List_traegtDieWertungDesAltbestandsAusDemPgnNach_undNurEinmal()
+    {
+        var user = await UserAsync("anna");
+        var saved = await SaveAsync(user.Id);
+        // Wie eine Zeile von vor 0.526.0: Wertung nur im PGN, Spalten leer, nie nachgesehen.
+        var row = await _db.SavedGames.SingleAsync(g => g.Id == saved.Id);
+        row.Pgn = row.Pgn.Replace("[Result", "[WhiteElo \"1832\"]\n[Result");
+        row.WhiteElo = null; row.BlackElo = null; row.HeadersScanned = false;
+        await _db.SaveChangesAsync();
+
+        var listed = Assert.Single(await _svc.ListAsync(user.Id));
+        Assert.Equal(1832, listed.WhiteElo);
+        Assert.Null(listed.BlackElo);
+
+        var nachher = await _db.SavedGames.AsNoTracking().SingleAsync(g => g.Id == saved.Id);
+        Assert.Equal(1832, nachher.WhiteElo);
+        // Auch OHNE gefundenes Schwarz-Elo gilt die Zeile als nachgesehen — sonst holte jeder
+        // Listenaufruf ihr PGN wieder.
+        Assert.True(nachher.HeadersScanned);
+    }
+
     // ----- „Welche Partien der Uebersicht kennt RookHub schon?" (0.524.0, Haekchen in der Erweiterung) -----
 
     [Fact]
