@@ -274,7 +274,8 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
     1. **Miss** ersetzt inaccuracy/mistake/blunder: Gegner hat davor gepatzt, Gewinnchance vorher (= die des
        Bestzugs) ≥ `MISS_BEST_WIN` 70, danach ≤ `MISS_AFTER_WIN` 60 und ≥ `MISS_MIN_AFTER_WIN` 40 — von +5 auf
        −5 bleibt ein grober Fehler, das Etikett darf die Katastrophe nicht verdecken.
-    2. **Brilliant** ersetzt best/excellent: `sacrificedPiece` findet ein Opfer, der Zweitbeste liegt unter
+    2. **Brilliant** ersetzt best/excellent und seit 0.521.3 auch good (`BRILLIANT_BASES` — chess.com rechnet die
+       Erwartungspunkte je Elo, dort ist 21.Ba6 der Prod-Partie „nahezu best", bei uns good): `sacrificedPiece` findet ein Opfer, der Zweitbeste liegt unter
        `BRILLIANT_WINNING_ANYWAY_PAWNS` +7 und ist kein Matt für den Ziehenden (fehlt er: kein Ausschluss),
        danach ≥ `BRILLIANT_MIN_AFTER_PAWNS` −1, keine Umwandlung, vorher nicht im Schach.
     3. **Great** ersetzt best (nie zusammen mit Brilliant): zweiter Kandidat da, Abstand ≥
@@ -300,7 +301,8 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   passant = 1). **Seit 0.518.1 zwei Korrekturen**, beide an der Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q gefunden
   (chess.com: kein Brilliant): (1) der Abtausch statt des vollen Figurenwerts — 22…gxf4 ließ einen von der
   Dame GEDECKTEN Turm vor einem Läufer stehen (Verlust die Qualität, 2 < geschlagener Läufer 3); (2) freechess'
-  Schlag-Simulation (`capturable`) ist jetzt drin: kostet das Schlagen den Schläger eine Figur mindestens vom
+  Schlag-Simulation (`capturable`) ist jetzt drin (seit 0.521.3 OHNE den Schläger selbst auf dem Opferfeld — sein
+  Zurückschlagen rechnet schon `exchangeGain`; sonst wäre 21.Ba6 …Txa6 Dxa6 ein „Köder"): kostet das Schlagen den Schläger eine Figur mindestens vom
   Wert des Opfers (Abzugsangriff — 23.Lxd5 öffnet die b-Linie, exd5 verliert die Db8) oder erlaubt es bei
   einem Opfer unter Turmwert Matt in einem, ist es ein Köder. Die frühere Begründung „wir haben die Engine —
   ist der Zug best, ist das Opfer korrekt" war falsch: die Engine sagt „bester Zug", nicht „Opfer".

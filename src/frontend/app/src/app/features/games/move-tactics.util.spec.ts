@@ -178,6 +178,15 @@ describe('move-tactics.util', () => {
         .toEqual({ square: 'd4', piece: 'n' });
     });
 
+    // 21.Ba6 der Prod-Partie (bei chess.com brillant): …bxa6 kostet die Dame (Tb2xb8 im Abzug) — ein Köder; …Txa6
+    // ist der normale Abtausch (Dxa6 schlägt zurück, das rechnet `exchangeGain`) und darf die Simulation NICHT noch
+    // einmal zum Köder erklären. Also bleibt ein Schlagen, das geht → Opfer.
+    it('21.Ba6: das Zurückschlagen auf dem Opferfeld ist Abtausch, kein Köder — der Läufer ist ein Opfer', () => {
+      const before = 'rqb4r/1p2k1pp/4pp2/1B1pn3/5B2/2P5/PR2QPPP/1R4K1 w - - 4 21';
+      const after = 'rqb4r/1p2k1pp/B3pp2/3pn3/5B2/2P5/PR2QPPP/1R4K1 b - - 5 21';
+      expect(sacrificedPiece(before, after, 'b5a6')).toEqual({ square: 'a6', piece: 'b' });
+    });
+
     it('ohne Schlagen ist schon die Qualität ein Opfer: gedeckter Turm, den ein Läufer angreift', () => {
       // Kc1-b1 lässt den Td1 stehen, den der Lf3 angreift; gedeckt nur von der Dd2 → Lxd1 Dxd1 kostet 2 > 0.
       const before = '6k1/8/8/8/8/5b2/3Q4/2KR4 w - - 0 1';

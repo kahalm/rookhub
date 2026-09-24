@@ -168,6 +168,11 @@ function capturable(after: Chess, sacrifices: readonly Sacrifice[]): boolean {
       for (const row of test.board()) {
         for (const cell of row) {
           if (!cell || cell.color !== capturer || cell.type === 'p' || cell.type === 'k') continue;
+          // Der Schläger selbst auf dem Opferfeld zählt NICHT: dass er zurückgeschlagen wird, hat der Abtausch
+          // (`exchangeGain`) schon eingerechnet — freechess zählt ihn hier ein zweites Mal. Gefragt ist nur, ob das
+          // Schlagen ANDERSWO etwas kostet (Abzug, Fesselung). Anlass: 21.Ba6 (…Txa6 Dxa6 ist der normale Abtausch,
+          // …bxa6 Txb8 der Abzug) — bei chess.com brillant (2026-09-24, seit 0.521.3).
+          if (cell.square === capture.to) continue;
           if (pieceValue(cell.type) >= top && hangingOn(after, test, cell.square)) { baitTaken = true; break; }
         }
         if (baitTaken) break;

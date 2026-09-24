@@ -89,6 +89,9 @@ export const MOVE_CLASS_COLORS: Readonly<Record<MoveClass, string>> = {
   inaccuracy: '#f7c631', mistake: '#e58f2a', miss: '#ee6b55', blunder: '#ca3431',
 };
 
+/** Grundklassen, aus denen ein Opfer brillant werden kann — Best, Excellent und (seit 0.521.3) Good. */
+export const BRILLIANT_BASES: ReadonlySet<MoveClass> = new Set<MoveClass>(['best', 'excellent', 'good']);
+
 /** Miss: die Gewinnchance, die der Bestzug gebracht hätte, lag mindestens hier … */
 export const MISS_BEST_WIN = 70;
 /** … und die nach dem gespielten Zug höchstens hier. Beide Zahlen sind gesetzt, nicht übernommen: chess.com
@@ -416,7 +419,11 @@ function specialClass(m: SpecialInput): { cls: MoveClass; sacrifice?: Sacrifice;
       && m.winBefore >= MISS_BEST_WIN && m.winAfter <= MISS_AFTER_WIN && m.winAfter >= MISS_MIN_AFTER_WIN) {
     return { ...out, cls: 'miss' };
   }
-  if (m.base !== 'best' && m.base !== 'excellent') return out;
+  // Brilliant auch bei „Good" (seit 0.521.3): chess.com verlangt „best or nearly best", rechnet die
+  // Erwartungspunkte aber JE SPIELSTÄRKE — bei ~2000 Elo sind +3 und +3,8 praktisch gleich gewonnen, und ein
+  // Zug, der bei uns (Lichess-Kurve ohne Elo) 4 Punkte Gewinnchance kostet, ist dort „nahezu best". Anlass:
+  // 21.Ba6 der Partie MYXN3hXqz1X2hm7Cx6V47Q, bei chess.com brillant, bei uns „Good" (2026-09-24).
+  if (!BRILLIANT_BASES.has(m.base)) return out;
 
   // Das Opfer kostet zwei Brett-Ladungen und wird höchstens einmal gesucht — und nur, wenn es noch zählt.
   let sacrifice: Sacrifice | null | undefined;

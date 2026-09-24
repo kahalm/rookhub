@@ -370,9 +370,13 @@ describe('game-review.util', () => {
         expect(greek({ cp: -80 }, { cp: -100 }, { secondCp: -300 }).moves[0]!.cls).toBe('brilliant');
       });
 
-      it('fast der beste Zug (excellent, Verlust 0,86) kann brillant sein, ein nur guter (Verlust 4,36) nicht', () => {
+      // Seit 0.521.3 auch „Good": chess.com rechnet die Erwartungspunkte je Spielstärke, und 21.Ba6 der Prod-Partie
+      // (bei uns Good, Verlust 4,1) ist dort brillant. Eine Ungenauigkeit bleibt ausgeschlossen.
+      it('best, excellent (Verlust 0,86) und good (Verlust 4,36) können brillant sein — eine Ungenauigkeit (8,88) nicht', () => {
         expect(greek({ cp: 150 }, { cp: 140 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('brilliant');
-        expect(greek({ cp: 150 }, { cp: 100 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('good');
+        expect(greek({ cp: 150 }, { cp: 100 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('brilliant');
+        expect(greek({ cp: 150 }, { cp: 100 }, { secondCp: 140 }, 'e1g1').moves[0]!.base).toBe('good');
+        expect(greek({ cp: 150 }, { cp: 50 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('inaccuracy');
       });
 
       it('eine Umwandlung ist nie brillant — auch wenn die neue Dame hängt', () => {
