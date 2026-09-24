@@ -76,6 +76,10 @@ export interface AnalysisThroughput {
   remaining: number;
   /** Hochgerechnete Restdauer in Minuten; null ohne Tempo oder ohne Rest. */
   etaMinutes: number | null;
+  /** Wie viele Engines GERADE fuer die eigenen Analysen rechnen (je Engine ein Auftrag). */
+  runningEngines: number;
+  /** Summe der zuletzt gemeldeten Knoten/s dieser Laeufe; 0 = noch keine Zeile mit Tempo. */
+  nodesPerSecond: number;
 }
 
 @Injectable({ providedIn: 'root' })

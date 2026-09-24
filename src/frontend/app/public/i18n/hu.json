@@ -2837,6 +2837,7 @@
     "overallFailed": "nincs beszámítva: {{count}} sikertelen",
     "rate": "{{rate}} állás/perc",
     "eta": "még kb. {{eta}}",
+    "engines": "motorok: {{count}}",
     "restart": "Újraindítás",
     "restartHint": "Minden még ki nem számolt állás újra sorba kerül, újonnan választott motoron",
     "restarted": "A játszma elemzése újraindult.",

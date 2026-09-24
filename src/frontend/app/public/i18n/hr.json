@@ -3116,6 +3116,7 @@
     "overallFailed": "nije uračunato: {{count}} neuspjelih",
     "rate": "{{rate}} pozicija/min",
     "eta": "još oko {{eta}}",
+    "engines": "motori: {{count}}",
     "restart": "Pokreni ponovno",
     "restartHint": "Sve još neizračunate pozicije idu ponovno u red, na novoodabranom motoru",
     "restarted": "Partija se ponovno analizira.",

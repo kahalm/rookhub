@@ -148,7 +148,7 @@ public class GameAnalysisService
     /// <c>null</c> = selbst eingeworfen.</param>
     /// <param name="origin"><see cref="GameAnalysisOrigin.SavedGame"/> fuer „Partie analysieren" an
     /// einer gespeicherten Partie: dort ist die Bewertung das Ergebnis, deshalb rechnet sie mit
-    /// <see cref="GameAnalysisDefaults.SavedGameTargetDepth"/> (30) statt 20. Gedeckelt wird gemeinsam;
+    /// <see cref="GameAnalysisDefaults.SavedGameTargetDepth"/> (25) statt 20. Gedeckelt wird gemeinsam;
     /// das Etikett entscheidet ausserdem, in welcher Liste die Analyse erscheint.</param>
     public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
         CancellationToken ct = default, int? libraryGameId = null,

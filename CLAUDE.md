@@ -463,8 +463,8 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 
 **Bewertungskurve aus der EIGENEN Analyse (0.512.0).** „Partie analysieren" (`/g/…`, Liste, Nachspiel-Dialog)
 wirft die Partie über denselben Weg wie die Punktepartie-Seite ein (`GameAnalysisService.CreateForGuessAsync`:
-Haus-Engine, fünf Linien, gemeinsamer Deckel — aber **Tiefe 30** statt 20, `GameAnalysisDefaults.SavedGameTargetDepth`
-seit 0.514.2: hier ist die Bewertung das Ergebnis, und ein Opfer, das die Engine erst zwei Züge später versteht,
+Haus-Engine, fünf Linien, gemeinsamer Deckel — aber **Tiefe 25** statt 20, `GameAnalysisDefaults.SavedGameTargetDepth`
+(0.514.2 mit 30 eingeführt, seit 0.518.0 25 — auf 30 brauchte eine Partie mit 47 Stellungen eine halbe Stunde): hier ist die Bewertung das Ergebnis, und ein Opfer, das die Engine erst zwei Züge später versteht,
 stünde bei 20 als Fehler in der Kurve; eine schon vorhandene Analyse wird trotzdem wiederverwendet, auch eine
 flachere), aber mit eigenem Ursprung
 **`GameAnalysisOrigin.SavedGame`** — die Analyse gehört zur Partie und steht NICHT in „Eigene Analysen"

@@ -31,9 +31,9 @@ describe('GameAnalysesComponent', () => {
   });
 
   /** Das Tempo holt die Seite bei JEDEM Abruf mit; fuer die meisten Tests ist es Beiwerk. */
-  function drainThroughput(perMinute = 0, etaMinutes: number | null = null) {
+  function drainThroughput(perMinute = 0, etaMinutes: number | null = null, runningEngines = 0, nodesPerSecond = 0) {
     http.match('/api/game-analyses/throughput').forEach(r => r.flush({
-      perMinute, analyzedInWindow: 0, windowMinutes: 0, remaining: 0, etaMinutes,
+      perMinute, analyzedInWindow: 0, windowMinutes: 0, remaining: 0, etaMinutes, runningEngines, nodesPerSecond,
     }));
   }
 
@@ -160,5 +160,37 @@ describe('GameAnalysesComponent', () => {
     drainThroughput(0);
 
     expect(fixture.componentInstance.rate).toBeNull();
+  });
+  it('zeigt laufende Engines und ihr Tempo neben den Stellungen je Minute', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ status: 'running', analyzedPlies: 28, plyCount: 47 })]);
+    drainThroughput(1.9, 10, 5, 23_456_000);
+    fixture.detectChanges();
+
+    const engines = fixture.componentInstance.engines;
+    expect(engines?.count).toBe(5);
+    expect(engines?.nps).toMatch(/^23.456 kN\/s$/);
+    const line = (fixture.nativeElement as HTMLElement).querySelector('.overall .muted')?.textContent ?? '';
+    expect(line).toContain('gameAnalysis.engines');
+    expect(line).toContain('kN/s');
+  });
+
+  it('laesst die Engines weg, solange keine rechnet', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis()]);
+    drainThroughput(2.5, 90, 0, 0);
+
+    expect(fixture.componentInstance.engines).toBeNull();
+  });
+
+  it('nennt die Engines ohne Tempo, solange noch keine Zeile mit Tempo kam', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis()]);
+    drainThroughput(0, null, 3, 0);
+
+    expect(fixture.componentInstance.engines).toEqual({ count: 3, nps: null });
   });
 });

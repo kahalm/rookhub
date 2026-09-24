@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, LOCALE_ID, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -18,6 +18,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-analysis.service';
 import { AuthService } from '../../core/auth.service';
 import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
+import { formatKiloNps } from './engine-lines.util';
 
 /**
  * Seite „Partie-Analysen" (`/analysis/games`): eine ganze Partie einwerfen und von der
@@ -62,13 +63,18 @@ import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
             @if (rate; as r) {
               {{ 'gameAnalysis.rate' | translate:{ rate: r.perMinute } }}
               @if (r.eta) { · {{ 'gameAnalysis.eta' | translate:{ eta: r.eta } }} }
-              @if (openCount > 0) { · }
+            }
+            @if (engines; as e) {
+              @if (rate) { · }
+              {{ 'gameAnalysis.engines' | translate:{ count: e.count } }}
+              @if (e.nps) { · {{ e.nps }} }
             }
             @if (openCount > 0) {
+              @if (rate || engines) { · }
               {{ 'gameAnalysis.overallOpen' | translate:{ count: openCount } }}
             }
             @if (failedCount > 0) {
-              @if (openCount > 0) { · }
+              @if (openCount > 0 || rate || engines) { · }
               {{ 'gameAnalysis.overallFailed' | translate:{ count: failedCount } }}
             }
           </span>
@@ -169,6 +175,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  private locale = inject(LOCALE_ID);
 
   analyses: GameAnalysis[] = [];
   loading = true;
@@ -256,6 +263,20 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
         : t.perMinute >= 1 ? t.perMinute.toFixed(1)
         : t.perMinute.toFixed(2),
       eta: t.etaMinutes ? formatEta(t.etaMinutes, this.translate) : null,
+    };
+  }
+
+  /**
+   * Wie viele Engines GERADE fuer die eigenen Analysen rechnen und wie schnell zusammen. Erklaert
+   * das Tempo: sinkt es, sieht man hier, ob eine Engine fehlt oder alle langsamer sind (tiefere
+   * Stellungen). Kommt aus dem Arbeitsspeicher der API — nach einem Neustart steht dort kurz nichts.
+   */
+  get engines(): { count: number; nps: string | null } | null {
+    const t = this.throughput;
+    if (!t?.runningEngines) return null;
+    return {
+      count: t.runningEngines,
+      nps: t.nodesPerSecond > 0 ? formatKiloNps(t.nodesPerSecond, this.locale) : null,
     };
   }
 

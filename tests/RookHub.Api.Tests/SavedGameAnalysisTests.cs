@@ -106,9 +106,10 @@ public class SavedGameAnalysisTests : IDisposable
         var analysis = await _db.GameAnalyses.AsNoTracking().SingleAsync();
         Assert.Equal(result.Analysis!.Id, analysis.Id);
         Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
-        // Tiefe 30, nicht die 20 der Punktepartie: hier ist die Bewertung das Ergebnis (seit 0.514.2).
+        // Tiefer als die 20 der Punktepartie (hier ist die Bewertung das Ergebnis), aber flacher als von
+        // Hand: auf 30 brauchte eine Partie mit 47 Stellungen eine halbe Stunde (seit 0.518.0 25).
         Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.TargetDepth);
-        Assert.Equal(30, analysis.TargetDepth);
+        Assert.Equal(25, analysis.TargetDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.MultiPv);
         Assert.Equal("Anna – Bert", analysis.Title);
         Assert.Equal(owner.Id, analysis.UserId);

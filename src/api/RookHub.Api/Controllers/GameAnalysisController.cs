@@ -17,8 +17,13 @@ namespace RookHub.Api.Controllers;
 public class GameAnalysisController : BaseApiController
 {
     private readonly GameAnalysisService _service;
+    private readonly AnalysisJobLive _live;
 
-    public GameAnalysisController(GameAnalysisService service) => _service = service;
+    public GameAnalysisController(GameAnalysisService service, AnalysisJobLive live)
+    {
+        _service = service;
+        _live = live;
+    }
 
     /// <summary>Eigene Analysen. <c>includeSavedGames=true</c> (die Seite „Partie-Analysen") nimmt die ueber
     /// eine gespeicherte Partie angestossenen mit — dort steht ihr Fortschritt; die Punktepartie-Seite laesst
@@ -54,10 +59,16 @@ public class GameAnalysisController : BaseApiController
     }
 
     /// <summary>Tempo und Restdauer der eigenen Analysen, aus den Zeitstempeln der gerechneten
-    /// Stellungen. Literal-Route VOR <c>{id:int}</c>.</summary>
+    /// Stellungen — dazu, wie viele Engines GERADE rechnen und wie schnell (aus dem Arbeitsspeicher,
+    /// ohne DB). Literal-Route VOR <c>{id:int}</c>.</summary>
     [HttpGet("throughput")]
     public async Task<ActionResult<AnalysisThroughputDto>> Throughput(CancellationToken ct)
-        => Ok(await _service.ThroughputAsync(GetUserId(), ct));
+    {
+        var userId = GetUserId();
+        var dto = await _service.ThroughputAsync(userId, ct);
+        (dto.RunningEngines, dto.NodesPerSecond) = _live.Summary(userId);
+        return Ok(dto);
+    }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<GameAnalysisDto>> Get(int id, CancellationToken ct)

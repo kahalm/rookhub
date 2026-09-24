@@ -68,4 +68,33 @@ public class AnalysisJobLiveTests
         var row = Assert.Single(live.ForUser(1, Start.AddSeconds(-10)));
         Assert.Equal(30, row.Seconds);
     }
+
+    [Fact]
+    public void Summary_CountsOwnRunsAndSumsTheirSpeed()
+    {
+        var live = new AnalysisJobLive();
+        live.Start(1, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Start(2, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Start(3, userId: 5, secondsBase: 0, startedUtc: Start);   // noch keine Zeile mit Tempo
+        live.Start(4, userId: 9, secondsBase: 0, startedUtc: Start);   // fremder Auftrag
+        live.Update(1, depth: 20, nps: 3_000_000);
+        live.Update(2, depth: 22, nps: 2_500_000);
+        live.Update(4, depth: 25, nps: 9_000_000);
+
+        var (runs, nps) = live.Summary(5);
+
+        Assert.Equal(3, runs);
+        Assert.Equal(5_500_000, nps);
+    }
+
+    [Fact]
+    public void Summary_DropsStoppedRuns()
+    {
+        var live = new AnalysisJobLive();
+        live.Start(1, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Update(1, depth: 20, nps: 3_000_000);
+        live.Stop(1);
+
+        Assert.Equal((0, 0L), live.Summary(5));
+    }
 }

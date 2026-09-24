@@ -50,6 +50,21 @@ public sealed class AnalysisJobLive
                 .OrderBy(d => d.Id)
                 .ToList();
 
+    /// <summary>Wie viele Laeufe dieses Nutzers gerade rechnen und ihr Tempo zusammen — fuer die
+    /// Zeile „Stellungen/min · Restdauer" der Partie-Analysen. Laeufe ohne gemeldetes Tempo zaehlen
+    /// als Engine mit, tragen aber 0 zur Summe bei (die ersten Zeilen tragen oft time=0).</summary>
+    public (int Runs, long NodesPerSecond) Summary(int userId)
+    {
+        int runs = 0; long nps = 0;
+        foreach (var r in _runs.Values)
+        {
+            if (r.UserId != userId) continue;
+            runs++;
+            nps += r.Nps;
+        }
+        return (runs, nps);
+    }
+
     private static int SecondsOf(Run r, DateTime nowUtc)
     {
         var elapsed = (nowUtc - r.StartedUtc).TotalSeconds;

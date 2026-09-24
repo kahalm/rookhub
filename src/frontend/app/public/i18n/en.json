@@ -3116,6 +3116,7 @@
     "overallFailed": "not counted: {{count}} failed",
     "rate": "{{rate}} positions/min",
     "eta": "about {{eta}} left",
+    "engines": "engines: {{count}}",
     "restart": "Start again",
     "restartHint": "Queue every position that is not analysed yet, on a freshly chosen engine",
     "restarted": "The game is being analysed again.",

@@ -903,8 +903,8 @@ public class GameAnalysisServiceTests : IDisposable
 
         var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
         Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
-        // Die Bewertung ist hier das Ergebnis: Tiefe 30 wie beim Einreihen von Hand, nicht die 20 der
-        // Punktepartie — Haus-Engine und Deckel bleiben dieselben.
+        // Die Bewertung ist hier das Ergebnis: tiefer als die 20 der Punktepartie (25) — Haus-Engine
+        // und Deckel bleiben dieselben.
         Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.TargetDepth);
         Assert.NotEqual(GameAnalysisDefaults.GuessTargetDepth, analysis.TargetDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.MultiPv);

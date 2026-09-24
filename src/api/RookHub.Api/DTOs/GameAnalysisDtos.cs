@@ -129,4 +129,10 @@ public class AnalysisThroughputDto
     public int Remaining { get; set; }
     /// <summary>Hochgerechnete Restdauer in Minuten; <c>null</c> ohne Tempo oder ohne Rest.</summary>
     public int? EtaMinutes { get; set; }
+    /// <summary>Wie viele Auftraege dieses Nutzers GERADE rechnen — je Engine laeuft genau einer,
+    /// die Zahl ist also die der arbeitenden Engines. Aus <see cref="Services.AnalysisJobLive"/>,
+    /// nach einem API-Neustart 0, bis der Worker wieder aufgreift.</summary>
+    public int RunningEngines { get; set; }
+    /// <summary>Summe der zuletzt gemeldeten Knoten/s dieser Laeufe; 0 = noch keine Zeile mit Tempo.</summary>
+    public long NodesPerSecond { get; set; }
 }

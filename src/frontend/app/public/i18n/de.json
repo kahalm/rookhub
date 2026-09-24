@@ -3116,6 +3116,7 @@
     "overallFailed": "nicht mitgezählt: {{count}} gescheitert",
     "rate": "{{rate}} Stellungen/Min",
     "eta": "noch ca. {{eta}}",
+    "engines": "Engines: {{count}}",
     "restart": "Neu anstoßen",
     "restartHint": "Alle noch nicht gerechneten Stellungen erneut einreihen — auf einer neu gewählten Engine",
     "restarted": "Die Partie wird wieder gerechnet.",
