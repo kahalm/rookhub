@@ -373,6 +373,9 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
   `features/analysis/analysis-settings.ts`, damit die Partieseite nicht das ganze Analysebrett ins Bündel zieht.
 - **Abgleich per `ngDoCheck`** (`session.sync`): der PgnViewerService hat keine Signale; geblättert (Pfeile, Zugliste,
   Kurve) → Nebenvariante weg, neue Stellung → rechnen. In der Nebenvariante nimmt ← den letzten eigenen Zug zurück.
+- **Navigation am Handy** (0.525.1, ≤ 768 px): Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live — Zurück/Vor als breite 48-px-Knöpfe
+  in der Mitte (`nav-prev`/`nav-next`), Anfang/Ende mit 14 px Abstand und blasser am Rand. Dicht nebeneinander traf man
+  statt „einen Zug" oft „ganz an den Anfang/das Ende" (gemeldet 2026-09-24). Am PC unverändert.
 - Tippzonen fallen im Live-Modus weg (sie lägen über dem spielbaren Brett), Computer-Linien/Pfeil der gespeicherten
   Analyse ebenso (`engineHidden`), und das Fehler-Training schaltet die Live-Engine ab.
 

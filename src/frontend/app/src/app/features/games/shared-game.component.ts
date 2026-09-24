@@ -140,11 +140,13 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
                 <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" />
               } @else {
               <div class="nav">
-                <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"><mat-icon>skip_previous</mat-icon></button>
-                <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"><mat-icon>navigate_before</mat-icon></button>
-                <button mat-icon-button (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>navigate_next</mat-icon></button>
-                <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
-                <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
+                <!-- Am Handy (siehe @media): Zurück/Vor breit in der Mitte, Anfang/Ende mit Abstand an den Rand —
+                     dicht nebeneinander traf man statt „einen Zug" oft „ganz an den Anfang/das Ende" (2026-09-24). -->
+                <button mat-icon-button class="nav-start" (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"><mat-icon>skip_previous</mat-icon></button>
+                <button mat-icon-button class="nav-prev" (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"><mat-icon>navigate_before</mat-icon></button>
+                <button mat-icon-button class="nav-next" (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>navigate_next</mat-icon></button>
+                <button mat-icon-button class="nav-end" (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
+                <button mat-icon-button class="nav-flip" (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
                 <button mat-icon-button class="live-toggle" [class.on]="!!live()" (click)="toggleLive()"
                         [attr.aria-pressed]="!!live()"
                         [matTooltip]="'games.live.toggle' | translate" [attr.aria-label]="'games.live.toggle' | translate">
@@ -231,7 +233,20 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
       .board-wrap { width: 100%; }
       .board-wrap app-chess-board { width: 100%; }
       .board-tap { display: block; }
-      .nav { justify-content: center; padding: 4px 0; }
+      /* Reihenfolge am Handy: Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live — die häufigen Knöpfe groß in der Mitte, die
+         Sprünge an den Rand mit Abstand, damit ein daneben getroffener Tipp nicht die ganze Partie überspringt. */
+      .nav { width: 100%; box-sizing: border-box; align-items: center; gap: 4px; padding: 6px 8px; }
+      .nav .nav-flip { order: 0; }
+      .nav .nav-start { order: 1; margin-right: 14px; opacity: 0.7; }
+      .nav .nav-prev { order: 2; }
+      .nav .nav-next { order: 3; }
+      .nav .nav-end { order: 4; margin-left: 14px; opacity: 0.7; }
+      .nav .live-toggle { order: 5; }
+      .nav .nav-prev, .nav .nav-next {
+        flex: 1 1 0; width: auto; height: 48px; border-radius: 10px; overflow: hidden;
+        background: color-mix(in srgb, currentColor 8%, transparent);
+      }
+      .nav .nav-prev mat-icon, .nav .nav-next mat-icon { font-size: 32px; width: 32px; height: 32px; }
       .moves-section {
         width: 100%; height: auto; max-height: 40vh;
         border-left: none; border-right: none; border-radius: 0; border-bottom: none;
