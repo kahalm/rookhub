@@ -560,4 +560,75 @@ public class SavedGameAnalysisTests : IDisposable
 
         Assert.Null((await _svc.ListAsync(owner.Id)).Single().Analysis);
     }
+
+    // ----- „Welche Partien der Uebersicht kennt RookHub schon?" (0.524.0, Haekchen in der Erweiterung) -----
+
+    [Fact]
+    public async Task Known_nurEigenePartienDerQuelle_mitRookHubId()
+    {
+        var owner = await UserAsync("owner");
+        var fremd = await UserAsync("fremd", engine: false);
+        var meine = await SaveAsync(owner.Id, "184299739920");
+        await SaveAsync(fremd.Id, "184296489960", "Clara");
+
+        var known = await _svc.KnownAsync(owner.Id, "lichess",
+            new[] { "184299739920", "184296489960", "999" });
+
+        var hit = Assert.Single(known);
+        Assert.Equal("184299739920", hit.ExternalId);
+        Assert.Equal(meine.Id, hit.Id);
+        Assert.Null(hit.Analysis);
+        // Andere Quelle = andere Partie, auch bei gleicher Nummer.
+        Assert.Empty(await _svc.KnownAsync(owner.Id, "chess.com", new[] { "184299739920" }));
+    }
+
+    /// <summary>
+    /// Der Analyse-Stand haengt an der GameAnalysis-Id, nicht an der Partie-Id — die Abfrage muss die
+    /// verknuepfte Analyse nachschlagen. Mit der Partie-Id gefragt stand hier der Stand einer FREMDEN
+    /// Analyse (oder gar keiner), sobald die beiden Zaehler auseinanderlaufen.
+    /// </summary>
+    [Fact]
+    public async Task Known_traegtDenStandDerVERKNUEPFTENAnalyse()
+    {
+        var owner = await UserAsync("owner");
+        // Den Partie-Zaehler vorschieben, damit Partie-Id und Analyse-Id nicht zufaellig gleich sind.
+        await SaveAsync(owner.Id, "vorlauf-1", "Dora");
+        await SaveAsync(owner.Id, "vorlauf-2", "Emil");
+        var game = await SaveAsync(owner.Id, "184299739920");
+        var created = await _svc.AnalyzeAsync(owner.Id, game.Id);
+        Assert.NotEqual(game.Id, created!.Analysis!.Id);
+
+        var hit = Assert.Single(await _svc.KnownAsync(owner.Id, "lichess", new[] { "184299739920" }));
+
+        // Derselbe Stand, den die Partienliste zeigt — die liest ihn ueber die Analyse-Id.
+        var ausDerListe = (await _svc.ListAsync(owner.Id)).Single(g => g.Id == game.Id).Analysis;
+        Assert.Equal(ausDerListe!.Status, hit.Analysis!.Status);
+        Assert.Equal(4, hit.Analysis.Total);
+        Assert.Equal(ausDerListe.Analyzed, hit.Analysis.Analyzed);
+    }
+
+    [Fact]
+    public async Task Known_verweisInsLeere_keinStand()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id, "184299739920");
+        var row = await RowAsync(game.Id);
+        row.GameAnalysisId = 987654;   // die Analyse gibt es nicht (mehr)
+        await _db.SaveChangesAsync();
+
+        Assert.Null(Assert.Single(await _svc.KnownAsync(owner.Id, "lichess", new[] { "184299739920" })).Analysis);
+    }
+
+    [Fact]
+    public async Task Known_ohneIdsOderMitUnbekannterQuelle_leer()
+    {
+        var owner = await UserAsync("owner");
+        await SaveAsync(owner.Id, "184299739920");
+
+        Assert.Empty(await _svc.KnownAsync(owner.Id, "lichess", Array.Empty<string>()));
+        Assert.Empty(await _svc.KnownAsync(owner.Id, "lichess", new[] { "  " }));
+        Assert.Empty(await _svc.KnownAsync(owner.Id, "irgendwas", new[] { "184299739920" }));
+        Assert.Empty(await _svc.KnownAsync(owner.Id, null, new[] { "184299739920" }));
+        Assert.Empty(await _svc.KnownAsync(owner.Id, "lichess", null));
+    }
 }

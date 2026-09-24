@@ -134,15 +134,17 @@ public class SavedGameService
 
         var games = await _db.SavedGames.AsNoTracking()
             .Where(g => g.UserId == userId && g.Source == src && g.ExternalId != null && ids.Contains(g.ExternalId))
-            .Select(g => new { g.Id, g.ExternalId })
+            .Select(g => new { g.Id, g.ExternalId, g.GameAnalysisId })
             .ToListAsync(ct);
-        var states = await AnalysisStatesAsync(games.Select(g => g.Id).ToList());
+        // AnalysisStatesAsync schluesselt nach GameAnalysis.Id — NICHT nach SavedGame.Id (wie ListAsync).
+        var states = await AnalysisStatesAsync(
+            games.Where(g => g.GameAnalysisId != null).Select(g => g.GameAnalysisId!.Value).Distinct().ToList());
         return games
             .Select(g => new KnownGameDto
             {
                 ExternalId = g.ExternalId!,
                 Id = g.Id,
-                Analysis = states.TryGetValue(g.Id, out var a) ? a : null,
+                Analysis = g.GameAnalysisId != null && states.TryGetValue(g.GameAnalysisId.Value, out var a) ? a : null,
             })
             .ToList();
     }

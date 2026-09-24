@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.525.3", date: "2026-09-24", changes: [
+    { en: "Fixed: for games sent from the game list on chess.com, the extension could show the analysis state of a different game. The lookup asked for the state with the game’s id instead of the id of the analysis linked to it.", de: "Behoben: bei Partien, die aus der Partienliste auf chess.com geschickt werden, konnte die Erweiterung den Analyse-Stand einer FREMDEN Partie anzeigen. Die Abfrage fragte den Stand mit der Partie-Nummer ab statt mit der Nummer der daran hängenden Analyse." },
+  ] },
   { version: "0.525.2", date: "2026-09-24", changes: [
     { en: "Phone: tapping the board or the tap zones beside it no longer makes something flash blue. That was the mobile browser’s tap highlight for clickable areas; it is now switched off for the board and the tap zones on every page (game pages, replay dialog, shared lines, analysis board).", de: "Handy: beim Tippen aufs Brett oder auf die Tippzonen daneben blinkt nichts mehr blau auf. Das war die Tipp-Markierung des mobilen Browsers für klickbare Flächen; sie ist jetzt für das Brett und die Tippzonen auf allen Seiten abgeschaltet (Partieseiten, Nachspiel-Dialog, geteilte Linien, Analysebrett)." },
   ] },
