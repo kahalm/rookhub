@@ -341,8 +341,17 @@ Beenden steht man dort.
 - **Gleichwertige Züge zählen** (0.519.0, `acceptedMoves` in `mistakes.util.ts`): der Bestzug UND jeder
   Kandidat derselben Suche, der höchstens `EQUIVALENT_LIMIT` (= `CLASS_LIMITS.excellent`, 2 Punkte
   Gewinnchance) dahinter liegt — die Grenze, bis zu der der Rückblick einen Zug „Exzellent" nennt. Dafür
-  liefert `GameEvalPlyDto.Candidates` seit 0.519.0 alle (bis zu fünf) Kandidaten in Weiß-Sicht. Ein Zug
-  außerhalb der Kandidaten lässt sich nicht beurteilen und gilt als daneben.
+  liefert `GameEvalPlyDto.Candidates` seit 0.519.0 alle (bis zu fünf) Kandidaten in Weiß-Sicht.
+- **Ein Zug AUSSERHALB der Kandidaten** (0.520.0): liegt schon der SCHWÄCHSTE Kandidat innerhalb der
+  Grenze (`unlistedMayBeEquivalent` → `Mistake.checkUnlisted`), kann auch ein nicht gelisteter Zug
+  gleichwertig sein — dann rechnet die Browser-Engine nach (`mistake-judge.service.ts`, Phase `checking`,
+  Brett gesperrt). Sonst ist er schlechter als der fünfte und sicher daneben, gerechnet wird nichts.
+  Verglichen wird Browser gegen Browser (`isEquivalentAfter`): Bestzug der Analyse UND eigener Zug in
+  derselben Tiefe (`MistakeJudgeService.DEPTH` = 16) — gegen die Zahl der tieferen Server-Analyse zu
+  messen hieße, eine flache mit einer tiefen Suche zu vergleichen. Matt/Remis nach dem Zug stehen ohne
+  Engine fest (sie hätte dort keinen Zug). Ein Urteil, das nach einem Aufgabenwechsel eintrifft, verwirft
+  die Session (`epoch`); kann die Engine nicht prüfen (`null`), gilt der Zug als daneben und die Leiste
+  sagt es. `StockfishResult.score` liefert dafür die Bewertung als Zahl (Weiß-Sicht).
 
 - **Die Auswahl ist rein und getestet** (`features/games/mistakes.util.ts`): `collectMistakes` nimmt
   die Ungenauigkeiten, Fehler und groben Fehler BEIDER Seiten in Partie-Reihenfolge, je mit

@@ -55,6 +55,7 @@ import { MistakesSession } from './mistakes-session';
       <p class="prompt" [class.right]="session.phase() === 'right'" [class.wrong]="session.phase() === 'wrong'">
         @switch (session.phase()) {
           @case ('ask') { {{ 'games.mistakes.prompt' | translate: { san: m.playedSan } }} }
+          @case ('checking') { {{ 'games.mistakes.checking' | translate: { san: session.tried() } }} }
           @case ('wrong') { {{ 'games.mistakes.wrong' | translate: { san: session.tried() } }} }
           @case ('right') {
             @if (session.foundBest()) { {{ 'games.mistakes.right' | translate: { san: m.bestSan } }} }
@@ -63,6 +64,12 @@ import { MistakesSession } from './mistakes-session';
           @case ('shown') { {{ 'games.mistakes.shown' | translate: { san: m.bestSan } }} }
         }
       </p>
+      @if (session.phase() === 'right' && session.foundByEngine()) {
+        <p class="cost">{{ 'games.mistakes.checkedByEngine' | translate }}</p>
+      }
+      @if (session.phase() === 'wrong' && session.checkFailed()) {
+        <p class="cost">{{ 'games.mistakes.checkFailed' | translate }}</p>
+      }
       @if (session.phase() === 'right' || session.phase() === 'shown') {
         @if (others(m); as rest) {
           <p class="cost">{{ 'games.mistakes.alsoGood' | translate: { moves: rest } }}</p>
@@ -74,7 +81,7 @@ import { MistakesSession } from './mistakes-session';
         @if (session.phase() === 'wrong') {
           <button mat-stroked-button (click)="session.retry()"><mat-icon>refresh</mat-icon> {{ 'games.mistakes.retry' | translate }}</button>
         }
-        @if (session.phase() === 'ask' || session.phase() === 'wrong') {
+        @if (session.phase() === 'ask' || session.phase() === 'wrong' || session.phase() === 'checking') {
           <button mat-button (click)="session.showSolution()">{{ 'games.mistakes.show' | translate }}</button>
           <span class="spacer"></span>
           <button mat-button (click)="session.next()">{{ 'games.mistakes.skip' | translate }}</button>

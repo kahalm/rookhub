@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { GameEvalPly, GameEvals, GameReview, ReviewedMove, reviewGame } from './game-review.util';
-import { EQUIVALENT_LIMIT, PlayedMove, acceptedMoves, collectMistakes, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide } from './mistakes.util';
+import { EQUIVALENT_LIMIT, PlayedMove, acceptedMoves, collectMistakes, isEquivalentAfter, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide, unlistedMayBeEquivalent } from './mistakes.util';
 
 /** Kurze Partie nachspielen: liefert die FENs (Stellung VOR jedem Halbzug, plus die letzte) und die Zuege. */
 function play(sans: string[]): { fens: string[]; moves: PlayedMove[] } {
@@ -186,6 +186,50 @@ describe('mistakes.util', () => {
 
       expect(w.acceptUci).toEqual(['b1c3', 'd2d4']);
       expect(w.acceptSan).toEqual(['Nc3', 'd4']);
+    });
+  });
+  // Gewuenscht 2026-09-24: sind alle fuenf Kandidaten gleichwertig, prueft die Browser-Engine einen nicht gelisteten Zug.
+  describe('nicht gelistete Zuege', () => {
+    const row = (cps: number[]): GameEvalPly => ({
+      ply: 2, depth: 20, cp: cps[0], bestUci: 'b1c3', playedUci: 'g1f3',
+      candidates: cps.map((cp, i) => ({ uci: ['b1c3', 'd2d4', 'f1c4', 'c2c3', 'a2a3'][i], cp })),
+    });
+
+    it('nachgerechnet wird nur, wenn selbst der schwaechste Kandidat noch gleichwertig ist', () => {
+      // +30 = 52,75 %, +20 = 51,84 % (0,9 dahinter), −10 = 49,08 % (3,7 dahinter)
+      expect(unlistedMayBeEquivalent(row([30, 28, 25, 22, 20]), true)).toBeTrue();
+      expect(unlistedMayBeEquivalent(row([30, 28, 25, 22, -10]), true)).toBeFalse();
+    });
+
+    it('Schwarz rechnet aus SCHWARZer Sicht — das Vorzeichen der Weiss-Zahlen dreht sich', () => {
+      expect(unlistedMayBeEquivalent(row([-30, -28, -25]), false)).toBeTrue();
+      expect(unlistedMayBeEquivalent(row([-30, -28, 10]), false)).toBeFalse();
+    });
+
+    it('ohne Kandidatenliste wird nichts nachgerechnet', () => {
+      expect(unlistedMayBeEquivalent({ ply: 2, depth: 20, cp: 30, bestUci: 'b1c3', playedUci: 'g1f3' }, true)).toBeFalse();
+    });
+
+    it('die Aufgabe traegt den Vermerk', () => {
+      const alle = evals(rows.map(r => r.ply === 2
+        ? { ...r, candidates: [{ uci: 'b1c3', cp: 30 }, { uci: 'd2d4', cp: 26 }] }
+        : r), 4);
+      expect(collectMistakes(handReview(), alle, fens, moves).white[0].checkUnlisted).toBeTrue();
+      expect(collectMistakes(handReview(), evals(rows, 4), fens, moves).white[0].checkUnlisted).toBeFalse();
+    });
+
+    it('das Urteil vergleicht beide Zuege in derselben Rechnung, aus Sicht des Ziehenden', () => {
+      const w = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2';   // Weiss hat gezogen, Schwarz am Zug
+      expect(isEquivalentAfter({ score: { cp: 30 }, fen: w }, { score: { cp: 25 }, fen: w }, true)).toBeTrue();
+      expect(isEquivalentAfter({ score: { cp: 30 }, fen: w }, { score: { cp: -20 }, fen: w }, true)).toBeFalse();
+      // Schwarz hat gezogen: Weiss-Zahl −30 ist fuer Schwarz besser als −25
+      expect(isEquivalentAfter({ score: { cp: -30 }, fen: fens[2] }, { score: { cp: -25 }, fen: fens[2] }, false)).toBeTrue();
+      expect(isEquivalentAfter({ score: { cp: -30 }, fen: fens[2] }, { score: { cp: 40 }, fen: fens[2] }, false)).toBeFalse();
+    });
+
+    it('ein eigenes Matt ist immer gleichwertig', () => {
+      const matt = 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3';   // Weiss ist matt
+      expect(isEquivalentAfter({ score: { cp: -500 }, fen: matt }, { score: { mate: 0 }, fen: matt }, false)).toBeTrue();
     });
   });
 });

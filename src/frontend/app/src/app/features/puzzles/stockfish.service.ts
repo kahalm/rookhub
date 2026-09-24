@@ -3,6 +3,9 @@ import { Injectable, OnDestroy } from '@angular/core';
 export interface StockfishResult {
   move: string;
   eval: string; // from white's perspective, e.g. "+1.5", "-0.3", "#3", "#-2"
+  /** Dieselbe Bewertung als ZAHL, Weiß-Sicht, genau eines von cp/mate — die Zeichenkette oben ist auf
+   *  Zehntelbauern gerundet und taugt nicht zum Rechnen. Fehlt, wenn die Suche keine Bewertung meldete. */
+  score?: { cp?: number; mate?: number };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -133,6 +136,7 @@ export class StockfishService implements OnDestroy {
 
     return new Promise<StockfishResult>((resolve, reject) => {
       let lastEval = '0.0';
+      let lastScore: { cp?: number; mate?: number } | undefined;
 
       const done = (fn: () => void) => {
         clearTimeout(timeout);
@@ -160,15 +164,17 @@ export class StockfishService implements OnDestroy {
           if (scoreMatch[1] === 'cp') {
             const v = value / 100;
             lastEval = (v >= 0 ? '+' : '') + v.toFixed(1);
+            lastScore = { cp: value };
           } else {
             lastEval = `#${value}`;
+            lastScore = { mate: value };
           }
         }
 
         if (line.startsWith('bestmove')) {
           const move = line.split(' ')[1];
           done(() => {
-            if (move && move !== '(none)') resolve({ move, eval: lastEval });
+            if (move && move !== '(none)') resolve({ move, eval: lastEval, score: lastScore });
             else reject('No move found');
           });
         }

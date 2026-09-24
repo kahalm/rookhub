@@ -1,5 +1,5 @@
 import { Mistake, MistakesBySide } from './mistakes.util';
-import { MistakesSession } from './mistakes-session';
+import { MistakesSession, UnlistedMoveJudge } from './mistakes-session';
 
 describe('MistakesSession', () => {
   const NACH_E4_E5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
@@ -10,6 +10,7 @@ describe('MistakesSession', () => {
       ply: 2, white: true, cls: 'blunder', fenBefore: NACH_E4_E5,
       playedSan: 'Qh5', playedUci: 'd1h5', bestUci: 'g1f3', bestSan: 'Nf3',
       acceptUci: ['g1f3'], acceptSan: ['Nf3'],
+      checkUnlisted: false,
       evalBefore: { cp: 30 }, evalAfter: { cp: -250 }, lostPercent: 24.3, ...over,
     };
   }
@@ -164,5 +165,71 @@ describe('MistakesSession', () => {
     c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'danach' });
 
     expect(c.foundBest()).toBeTrue();
+  });
+  describe('nicht gelistete Zuege', () => {
+    /** Ein Urteil, das der Test von aussen aufloest — so laesst sich der Zwischenstand „rechnet" pruefen. */
+    function judgeLater() {
+      let resolve!: (v: boolean | null) => void;
+      const calls: string[] = [];
+      const judge: UnlistedMoveJudge = (_m, fen) => { calls.push(fen); return new Promise(r => { resolve = r; }); };
+      return { judge, calls, answer: (v: boolean | null) => resolve(v) };
+    }
+    const offen = { white: [fehler({ checkUnlisted: true })], black: [] };
+
+    it('fragt die Engine, zeigt solange „rechnet" und laesst das Brett nicht ziehen', async () => {
+      const j = judgeLater();
+      const c = new MistakesSession(offen, 'white', j.judge);
+
+      c.onMove({ from: 'a2', to: 'a3', san: 'a3', fen: 'nach-a3' });
+
+      expect(j.calls).toEqual(['nach-a3']);
+      expect(c.phase()).toBe('checking');
+      expect(c.playable()).toBeFalse();
+
+      j.answer(true);
+      await Promise.resolve();
+
+      expect(c.phase()).toBe('right');
+      expect(c.foundSan()).toBe('a3');
+      expect(c.foundByEngine()).toBeTrue();
+      expect(c.solved()).toBe(1);
+    });
+
+    it('sagt die Engine nein, ist es daneben; kann sie nicht pruefen, steht das dabei', async () => {
+      const j = judgeLater();
+      const c = new MistakesSession(offen, 'white', j.judge);
+
+      c.onMove({ from: 'a2', to: 'a3', san: 'a3', fen: 'x' });
+      j.answer(null);
+      await Promise.resolve();
+
+      expect(c.phase()).toBe('wrong');
+      expect(c.checkFailed()).toBeTrue();
+      expect(c.tried()).toBe('a3');
+    });
+
+    it('ohne den Vermerk wird gar nicht gefragt', () => {
+      const j = judgeLater();
+      const c = new MistakesSession(zwei, 'white', j.judge);
+
+      c.onMove({ from: 'a2', to: 'a3', san: 'a3', fen: 'x' });
+
+      expect(j.calls).toEqual([]);
+      expect(c.phase()).toBe('wrong');
+    });
+
+    it('ein spaetes Urteil zu einer schon verlassenen Aufgabe wird verworfen', async () => {
+      const j = judgeLater();
+      const c = new MistakesSession({ white: [fehler({ checkUnlisted: true }), fehler({ ply: 4 })], black: [] }, 'white', j.judge);
+
+      c.onMove({ from: 'a2', to: 'a3', san: 'a3', fen: 'x' });
+      c.next();
+      j.answer(true);
+      await Promise.resolve();
+
+      expect(c.index()).toBe(1);
+      expect(c.phase()).toBe('ask');
+      expect(c.solved()).toBe(0);
+    });
   });
 });

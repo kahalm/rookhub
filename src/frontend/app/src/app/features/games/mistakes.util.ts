@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { CLASS_LIMITS, EvalScore, GameEvalPly, GameEvals, GameReview, MoveClass, winPercent } from './game-review.util';
+import { CLASS_LIMITS, EvalScore, GameEvalPly, GameEvals, GameReview, MoveClass, whiteToMove, winPercent } from './game-review.util';
 import { uciOf } from './move-tactics.util';
 
 /**
@@ -38,6 +38,11 @@ export interface Mistake {
    *  (siehe {@link EQUIVALENT_LIMIT}). Mindestens der Bestzug. */
   acceptUci: string[];
   acceptSan: string[];
+  /** Liegt selbst der SCHWÄCHSTE Kandidat der Suche noch innerhalb von {@link EQUIVALENT_LIMIT}, kann auch
+   *  ein Zug gleichwertig sein, den die Engine gar nicht aufführt — dann prüft die Browser-Engine nach
+   *  (siehe {@link unlistedMayBeEquivalent}). Sonst ist jeder nicht gelistete Zug schlechter als der
+   *  fünfte und damit sicher daneben. */
+  checkUnlisted: boolean;
   evalBefore: EvalScore;
   evalAfter: EvalScore;
   /** Verlorene Gewinnchance in Prozentpunkten, aus Sicht des Ziehenden — nie negativ. */
@@ -90,6 +95,42 @@ export function acceptedMoves(
   return out;
 }
 
+/** Gewinnchance der ziehenden Seite NACH ihrem Zug; `score` in Weiß-Sicht, `fenAfter` = Stellung danach
+ *  (nur für Matt 0 = die Gegenseite ist matt). */
+export function moverWinAfter(score: EvalScore, fenAfter: string, white: boolean): number | null {
+  const w = winPercent(score, whiteToMove(fenAfter));
+  return w == null ? null : white ? w : 100 - w;
+}
+
+/**
+ * Ist ein Zug, den die Engine NICHT unter ihren Kandidaten führt, vielleicht trotzdem gleichwertig? Nur dann,
+ * wenn selbst der schwächste gelistete Kandidat noch höchstens {@link EQUIVALENT_LIMIT} hinter dem besten
+ * liegt: die Engine listet ihre besten Züge, jeder andere ist höchstens so gut wie der letzte gelistete.
+ * Ohne Kandidatenliste (älterer Server) weiß man es nicht — dann nein, wie bisher.
+ */
+export function unlistedMayBeEquivalent(row: GameEvalPly, white: boolean): boolean {
+  const candidates = row.candidates ?? [];
+  if (!candidates.length) return false;
+  const wins = candidates.map(c => { const w = winPercent(c); return w == null ? null : white ? w : 100 - w; });
+  if (wins.some(w => w == null)) return false;
+  const top = Math.max(...(wins as number[]));
+  return wins.every(w => top - (w as number) <= EQUIVALENT_LIMIT);
+}
+
+/**
+ * Das Urteil der Browser-Engine über einen nicht gelisteten Zug: beide Züge in DERSELBEN Tiefe gerechnet —
+ * der Bestzug der Analyse und der eigene —, und gleichwertig ist, was höchstens {@link EQUIVALENT_LIMIT}
+ * dahinter liegt. Gegen die Zahl der Server-Analyse zu vergleichen hieße, eine tiefe mit einer flachen
+ * Suche zu messen. Bewertungen jeweils der Stellung NACH dem Zug, in Weiß-Sicht.
+ */
+export function isEquivalentAfter(
+  best: { score: EvalScore; fen: string }, user: { score: EvalScore; fen: string }, white: boolean,
+): boolean {
+  const b = moverWinAfter(best.score, best.fen, white);
+  const u = moverWinAfter(user.score, user.fen, white);
+  return b != null && u != null && b - u <= EQUIVALENT_LIMIT;
+}
+
 /** SAN eines UCI-Zugs in einer Stellung; `null`, wenn er dort nicht geht (oder die FEN unlesbar ist). */
 export function sanOfUci(fen: string, uci: string): string | null {
   if (!fen || !uci || uci.length < 4) return null;
@@ -135,6 +176,7 @@ export function collectMistakes(
       ply: m.ply, white: m.white, cls: m.base, fenBefore,
       playedSan: played.san, playedUci, bestUci: best, bestSan,
       acceptUci: accepted.map(a => a.uci), acceptSan: accepted.map(a => a.san),
+      checkUnlisted: unlistedMayBeEquivalent(row, m.white),
       evalBefore: m.evalBefore, evalAfter: m.evalAfter,
       lostPercent: Math.max(0, m.winBefore - m.winAfter),
     });

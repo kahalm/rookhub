@@ -21,6 +21,7 @@ import { GameEvalsStatus } from './game-review.util';
 import { MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide } from './mistakes.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
+import { MistakeJudgeService } from './mistake-judge.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 /**
@@ -219,6 +220,7 @@ export class SharedGameComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private analyzeGame = inject(AnalyzeGameService);
+  private mistakeJudge = inject(MistakeJudgeService);
 
   game: SharedGame | null = null;
   loading = true;
@@ -275,7 +277,9 @@ export class SharedGameComponent implements OnInit {
    * Brett dieser Seite (bis 0.518.0 ein Dialog mit eigenem, kleinerem Brett).
    */
   trainMistakes(): void {
-    this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide()));
+    // Nicht gelistete Züge prüft die Browser-Engine nach (nur wo die Analyse das offen lässt).
+    this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide(),
+      (m, fen) => this.mistakeJudge.judge(m, fen)));
   }
 
   onTrainingMove(e: UserBoardMove): void {

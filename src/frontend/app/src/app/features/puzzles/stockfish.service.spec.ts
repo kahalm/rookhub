@@ -48,6 +48,16 @@ describe('StockfishService crash recovery', () => {
     expect(await sf.getEval(FEN, 8)).toBe('+0.3');
   });
 
+  it('liefert die Bewertung auch als Zahl in Weiss-Sicht (fuer den Fehler-Trainer)', async () => {
+    const sf = new TestSf();
+    sf.autoReply = { info: 'info depth 8 score cp 30 pv e2e4', bestmove: 'bestmove e2e4' };
+    expect((await sf.getBestMove(FEN, 8)).score).toEqual({ cp: 30 });
+
+    const black = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+    sf.last.autoReply = { info: 'info depth 8 score mate 2 pv e7e5', bestmove: 'bestmove e7e5' };   // der Kern steht schon
+    expect((await sf.getBestMove(black, 8)).score).toEqual({ mate: -2 });
+  });
+
   it('re-initializes with a fresh worker after a crash', async () => {
     const sf = new TestSf();
     await sf.init();
