@@ -2765,6 +2765,14 @@
       "progressShort": "{{solved}} / {{total}} megtalálva · {{open}} nyitott",
       "tooltip": "A parti hibáinak gyakorlása",
       "onlyOpen": "Csak nyitott hibás partik ({{count}})"
+    },
+    "live": {
+      "toggle": "Élő motor — próbáld ki a saját lépéseidet",
+      "browser": "Böngésző (Stockfish)",
+      "depth": "mélység {{depth}}",
+      "hint": "Lépj a táblán, és próbáld ki a saját ötleteidet.",
+      "undo": "Lépés vissza",
+      "backToGame": "Vissza a játszmához"
     }
   },
   "analysisJobs": {

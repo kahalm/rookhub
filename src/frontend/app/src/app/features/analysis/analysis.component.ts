@@ -27,15 +27,16 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
+import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from './analysis-settings';
 
 interface LineNode { san: string; fen: string; uci: string; }
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = 'rookhub_analysis_lines';
 const ENGINE_KEY = 'rookhub_analysis_engine';
-const DEPTH_KEY = 'rookhub_analysis_depth';
+const DEPTH_KEY = ANALYSIS_DEPTH_KEY;
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
-const PROVIDER_KEY = 'rookhub_analysis_engine_provider';
+const PROVIDER_KEY = ANALYSIS_PROVIDER_KEY;
 /** Vergleichsmodus: an/aus und die Wahl der zweiten Engine. */
 const COMPARE_KEY = 'rookhub_analysis_compare';
 const COMPARE_ENGINE_KEY = 'rookhub_analysis_compare_engine';

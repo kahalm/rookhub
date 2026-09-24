@@ -2511,6 +2511,14 @@
       "progressShort": "{{solved}} von {{total}} gefunden · {{open}} offen",
       "tooltip": "Fehler-Training dieser Partie",
       "onlyOpen": "Nur Partien mit offenen Fehlern ({{count}})"
+    },
+    "live": {
+      "toggle": "Live-Engine — eigene Züge ausprobieren",
+      "browser": "Browser (Stockfish)",
+      "depth": "Tiefe {{depth}}",
+      "hint": "Zieh auf dem Brett, um eigene Ideen durchzurechnen.",
+      "undo": "Zug zurück",
+      "backToGame": "Zurück zur Partie"
     }
   },
   "analysis": {

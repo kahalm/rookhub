@@ -11,8 +11,9 @@ import { applyUserMove, legalDests, turnColorOf } from './board-moves.util';
 /** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). */
 export interface UserBoardMove { from: string; to: string; san: string; fen: string; }
 
-/** Ein vom Aufrufer vorgegebener Pfeil (z. B. der beste Zug der Engine) — Chessground-„autoShape". */
-export interface BoardArrow { from: string; to: string; }
+/** Ein vom Aufrufer vorgegebener Pfeil (z. B. der beste Zug der Engine) — Chessground-„autoShape". `brush` =
+ *  Chessground-Farbe (Vorgabe grün; die Live-Engine zeichnet blau, damit man sie von der Partie-Analyse trennt). */
+export interface BoardArrow { from: string; to: string; brush?: string; }
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -199,7 +200,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   private applyArrows(): void {
-    this.ground?.setAutoShapes((this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: 'green' })));
+    this.ground?.setAutoShapes((this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green' })));
   }
 
   /** Figuren-Interaktion je nach `playable`: aus (reine Anzeige) oder legale Züge der Seite am Zug. */

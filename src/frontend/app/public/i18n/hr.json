@@ -2511,6 +2511,14 @@
       "progressShort": "{{solved}} od {{total}} pronađeno · {{open}} otvoreno",
       "tooltip": "Trening pogrešaka za ovu partiju",
       "onlyOpen": "Samo partije s otvorenim pogreškama ({{count}})"
+    },
+    "live": {
+      "toggle": "Motor uživo — isprobaj vlastite poteze",
+      "browser": "Preglednik (Stockfish)",
+      "depth": "dubina {{depth}}",
+      "hint": "Povuci potez na ploči i isprobaj svoje ideje.",
+      "undo": "Vrati potez",
+      "backToGame": "Natrag na partiju"
     }
   },
   "analysis": {

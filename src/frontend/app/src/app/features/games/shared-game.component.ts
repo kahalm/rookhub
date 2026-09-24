@@ -1,4 +1,7 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, effect, signal, viewChild, untracked } from '@angular/core';
+import {
+  Component, DoCheck, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, effect, signal, viewChild,
+  untracked, DestroyRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +26,10 @@ import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
 import { MistakeJudgeService } from './mistake-judge.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
+import { ExternalEngineService } from '../analysis/external-engine.service';
+import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
+import { LiveEngineSession } from './live-engine-session';
+import { LiveEnginePanelComponent } from './live-engine-panel.component';
 
 /**
  * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
@@ -39,7 +46,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
-    MistakesTrainerComponent,
+    MistakesTrainerComponent, LiveEnginePanelComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -113,6 +120,13 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                   <app-chess-board [fen]="t.boardFen()" [lastMove]="t.lastMove()" [flipped]="t.flipped()"
                                    [playable]="t.playable()" (userMove)="onTrainingMove($event)"
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                } @else if (live(); as l) {
+                  <!-- Live-Engine: das Brett ist spielbar (eigene Nebenvariante), die Tippzonen fallen weg — sie lägen
+                       über dem Brett und schluckten jeden Zug. Der blaue Pfeil ist der beste Zug der Live-Engine. -->
+                  <app-chess-board [fen]="l.fen(service.currentFen)" [lastMove]="l.lastMove() ?? service.lastMove"
+                                   [flipped]="flipped" [playable]="true" (userMove)="l.play($event, service.currentFen)"
+                                   [arrows]="l.arrows()"
+                                   [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 } @else {
                   <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
                                    [arrows]="bestArrows()"
@@ -131,11 +145,19 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                 <button mat-icon-button (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>navigate_next</mat-icon></button>
                 <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
                 <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
+                <button mat-icon-button class="live-toggle" [class.on]="!!live()" (click)="toggleLive()"
+                        [attr.aria-pressed]="!!live()"
+                        [matTooltip]="'games.live.toggle' | translate" [attr.aria-label]="'games.live.toggle' | translate">
+                  <mat-icon>memory</mat-icon>
+                </button>
               </div>
+              @if (live(); as l) {
+                <app-live-engine-panel class="live-slot" [session]="l" [gameFen]="service.currentFen" (closed)="stopLive()" />
+              }
               }
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
-                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()"
+                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training() || !!live()"
                                  (arrowsChange)="bestArrows.set($event)"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)"
@@ -190,7 +212,8 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
-    .pr-slot, .review-slot, .trainer-slot { display: block; width: 100%; }
+    .pr-slot, .review-slot, .trainer-slot, .live-slot { display: block; width: 100%; }
+    .live-toggle.on { color: #42a5f5; }
     /* Die Zugliste ist so hoch wie das Brett und scrollt in sich; eine feste Breite, damit die zwei Zugspalten
        nebeneinander stehen statt — bei einer Spalte, die den Rest der Karte füllt — mit einer Handbreit Luft
        dazwischen. */
@@ -216,13 +239,14 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
     }
   `]
 })
-export class SharedGameComponent implements OnInit {
+export class SharedGameComponent implements OnInit, DoCheck {
   private auth = inject(AuthService);
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private analyzeGame = inject(AnalyzeGameService);
   private mistakeJudge = inject(MistakeJudgeService);
+  private externalEngines = inject(ExternalEngineService);
 
   game: SharedGame | null = null;
   loading = true;
@@ -292,7 +316,62 @@ export class SharedGameComponent implements OnInit {
     if (t && solved.length) untracked(() => this.reportMistakes(t, solved));
   });
 
+  /** Live-Engine + eigene Züge (0.525.0) — im Fehler-Training aus, dort verriete sie die Lösung. */
+  readonly live = signal<LiveEngineSession | null>(null);
+  private readonly stopLiveOnDestroy = inject(DestroyRef).onDestroy(() => this.stopLive());
+
+  toggleLive(): void {
+    if (this.live()) { this.stopLive(); return; }
+    const session = this.createLiveSession();
+    this.live.set(session);
+    session.sync(this.service.currentMoveIndex, this.service.currentFen);
+    this.useStoredRemoteEngine(session);
+  }
+
+  /** Eigene Engine-Instanz je Seite — als Methode, damit Tests keinen echten Stockfish starten müssen. */
+  protected createLiveSession(): LiveEngineSession {
+    return new LiveEngineSession(undefined, this.storedDepth());
+  }
+
+  stopLive(): void {
+    this.live()?.destroy();
+    this.live.set(null);
+  }
+
+  /** Mit der Partie abgleichen: geblättert → Nebenvariante weg, neue Stellung → rechnen (billig ohne Änderung). */
+  ngDoCheck(): void {
+    this.live()?.sync(this.service.currentMoveIndex, this.service.currentFen);
+  }
+
+  /** Dieselbe Tiefe wie am Analysebrett (dort gewählt und gemerkt), sonst 22. */
+  private storedDepth(): number {
+    try {
+      const d = parseInt(localStorage.getItem(ANALYSIS_DEPTH_KEY) || '', 10);
+      return d >= 6 && d <= 50 ? d : 22;
+    } catch { return 22; }
+  }
+
+  /**
+   * Hat man am Analysebrett eine externe Engine gewählt (Lichess-Anbindung, z. B. die eigene Cloud-Engine), rechnet
+   * auch hier sie — sonst Stockfish im Browser. Hintergrund-Engines bleiben außen vor (sie gehören den Aufträgen).
+   */
+  private useStoredRemoteEngine(session: LiveEngineSession): void {
+    if (!this.auth.isLoggedIn) return;
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(ANALYSIS_PROVIDER_KEY); } catch { /* kein Speicher → Browser */ }
+    if (!stored || stored === 'wasm') return;
+    this.externalEngines.listEngines().subscribe({
+      next: r => {
+        const background = r.backgroundEngineIds ?? [];
+        const info = r.engines.find(e => e.id === stored && !background.includes(e.id));
+        if (info && this.live() === session) session.useRemote(info, (id, work) => this.externalEngines.analyse(id, work));
+      },
+      error: () => { /* bleibt beim Browser */ },
+    });
+  }
+
   trainMistakes(): void {
+    this.stopLive();
     // Nicht gelistete Züge prüft die Browser-Engine nach (nur wo die Analyse das offen lässt).
     this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide(),
       (m, fen) => this.mistakeJudge.judge(m, fen)));
@@ -403,6 +482,13 @@ export class SharedGameComponent implements OnInit {
   onKeyDown(event: KeyboardEvent): void {
     // Im Training zeigt das Brett die Aufgabe — die Pfeile blätterten sonst unsichtbar in der Partie darunter.
     if (this.training()) return;
+    // In der eigenen Nebenvariante nimmt ← den letzten eigenen Zug zurück, statt in der Partie zu blättern.
+    const l = this.live();
+    if (l && l.variation().length) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); l.undo(this.service.currentFen); }
+      else if (event.key === 'ArrowRight') event.preventDefault();
+      return;
+    }
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.service.goBack(); }
     else if (event.key === 'ArrowRight') { event.preventDefault(); this.service.goForward(); }
   }

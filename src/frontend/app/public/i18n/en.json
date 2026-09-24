@@ -2511,6 +2511,14 @@
       "progressShort": "{{solved}} of {{total}} found · {{open}} open",
       "tooltip": "Mistake training for this game",
       "onlyOpen": "Only games with open mistakes ({{count}})"
+    },
+    "live": {
+      "toggle": "Live engine — try your own moves",
+      "browser": "Browser (Stockfish)",
+      "depth": "depth {{depth}}",
+      "hint": "Move on the board to try your own ideas.",
+      "undo": "Take back",
+      "backToGame": "Back to the game"
     }
   },
   "analysis": {

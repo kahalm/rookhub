@@ -1,3 +1,7 @@
+import { BehaviorSubject } from 'rxjs';
+import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { AnalysisEngineService, AnalysisState } from '../analysis/analysis-engine.service';
+import { LiveEngineSession } from './live-engine-session';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -81,6 +85,41 @@ describe('SharedGameComponent', () => {
     game.mistakes.set({ white: [], black: [m] });
     expect(game.mistakeSide()).toBe('black');
     expect(game.mistakeTotal()).toBe(1);
+  });
+
+  // Live-Engine (0.525.0): das Brett wird spielbar, die Tippzonen fallen weg, die Leiste zeigt die Linien.
+  it('live engine: the board becomes playable, tap zones go, the panel appears — and all of it goes away again', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+    const analyzed: string[] = [];
+    const engine = {
+      analysis$: new BehaviorSubject<AnalysisState>({ fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 }),
+      analyze: (fen: string) => { analyzed.push(fen); return Promise.resolve(); },
+      setMultiPv: () => {}, setDepth: () => {}, stop: () => {}, destroy: jasmine.createSpy('destroy'),
+    };
+    const page = fixture.componentInstance;
+    spyOn(page as never, 'createLiveSession' as never).and.returnValue(
+      new LiveEngineSession(() => engine as unknown as AnalysisEngineService) as never);
+    const el = fixture.nativeElement as HTMLElement;
+    const board = () => fixture.debugElement.query(By.directive(ChessBoardComponent)).componentInstance as ChessBoardComponent;
+
+    expect(board().playable).toBeFalse();
+    expect(el.querySelector('.board-tap')).not.toBeNull();
+
+    (el.querySelector('button.live-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(board().playable).toBeTrue();
+    expect(el.querySelector('.board-tap')).toBeNull();
+    expect(el.querySelector('app-live-engine-panel')).not.toBeNull();
+    expect(analyzed.length).toBeGreaterThan(0);
+
+    (el.querySelector('button.live-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(engine.destroy).toHaveBeenCalled();
+    expect(board().playable).toBeFalse();
+    expect(el.querySelector('app-live-engine-panel')).toBeNull();
   });
 
   it('starts unflipped for ownerSide=white or unknown', async () => {
