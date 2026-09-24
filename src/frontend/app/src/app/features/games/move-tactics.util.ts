@@ -5,11 +5,12 @@ import { tryLoadFen } from '../puzzles/puzzle-move.util';
  * Stellungs-Taktik für die Zug-Klasse „Brilliant" im Partie-Rückblick: hängt nach dem Zug eine eigene
  * Figur, wurde also etwas GEOPFERT? Reine Funktionen über chess.js, einzeln mit Stellungen testbar.
  *
- * Die Regel „hängt" ist die von WintrCat/freechess (`src/lib/board.ts`, `isPieceHanging`), mit einem
- * bewussten Unterschied: freechess prüft nach dem Schlagen per Simulation, ob es nicht ein Matt oder den
- * Verlust einer anderen Figur erlaubt. Das braucht es dort, weil freechess nur die Stellung sieht. Wir
- * haben die Engine: ist der Zug der beste oder fast der beste und steht der Ziehende danach nicht
- * schlecht, IST das Opfer korrekt — genau so definiert chess.com „Brilliant". Die ANGREIFER sind aber wie
+ * Die Regel „hängt" ist die von WintrCat/freechess (`src/lib/board.ts`, `isPieceHanging`), samt dessen
+ * Schlag-Simulation (`capturable`, seit 0.518.1): ein Stück, dessen Schlagen den Schläger selbst etwas
+ * mindestens so Wertvolles kostet, ist kein Opfer, sondern ein Köder. Bis dahin fehlte die Simulation mit
+ * der Begründung „wir haben die Engine — ist der Zug der beste, IST das Opfer korrekt". Die Prod-Partie
+ * MYXN3hXqz1X2hm7Cx6V47Q widerlegte das: 23.Lxd5 ist der beste Zug, WEIL er die b-Linie öffnet — der Läufer
+ * „hängt" gegen exd5, aber dann nimmt Tb2 die Db8. Die Engine sagt „bester Zug", nicht „Opfer". Die ANGREIFER sind aber wie
  * bei freechess die LEGALEN Schlagzüge des Gegners (`legalCapturersOf`): nach einem Abzugsschach darf der
  * Bauer die Figur nicht schlagen, die auf sein Feld gezogen ist, ein gefesselter Läufer auch nicht, und
  * der König nimmt keine gedeckte Dame — mit Pseudo-Angriffen „hing" jede dieser Figuren, und der Zug wäre
@@ -108,8 +109,18 @@ export function isPieceHanging(fenBefore: string, fenAfter: string, square: stri
 
 /**
  * Das Opfer eines Zuges: die TEUERSTE eigene Figur (Springer bis Dame — Bauern und König opfert man in
- * diesem Sinn nicht), die nach dem Zug hängt und mehr wert ist als das, was der Zug geschlagen hat. Wer
- * einen Turm schlägt und dafür einen Läufer stehen lässt, hat nichts geopfert.
+ * diesem Sinn nicht), die nach dem Zug hängt und bei der der Gegner MEHR gewinnt, als der Zug geschlagen
+ * hat. Wer einen Turm schlägt und dafür einen Läufer stehen lässt, hat nichts geopfert.
+ *
+ * „Mehr gewinnt" heißt: der Abtausch auf dem Feld (`exchangeGain`), nicht der Wert der Figur. Bis 0.518.0
+ * stand hier der volle Figurenwert, und 22…gxf4 der Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q hieß Brilliant: der
+ * Lb7 griff den Ta8 an (Turm 5 > geschlagener Läufer 3). Der Turm ist aber von der Dame b8 gedeckt — nach
+ * Lxa8 Dxa8 verliert Schwarz nur die Qualität (2), weniger als der Läufer, den er gerade genommen hat.
+ * chess.com nennt den Zug nicht brillant; bei uns ist er seither „Great" (der einzige gute Zug nach dem
+ * Patzer 22.Lxb7).
+ *
+ * Und es muss sich NEHMEN lassen (`capturable`): kostet das Schlagen den Gegner selbst mindestens so viel,
+ * ist das Stück ein Köder, kein Opfer.
  *
  * Bewusst über ALLE eigenen Figuren, nicht nur die gezogene: beim Legall-Matt zieht der Springer, geopfert
  * wird die Dame, die stehen bleibt. `null`, wenn nichts hängt oder eine Stellung unlesbar ist.
@@ -122,28 +133,96 @@ export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: st
   if (captured === null) return null;
   const mover = before.turn();
 
-  let best: Sacrifice | null = null;
+  const hanging: Sacrifice[] = [];
   for (const row of after.board()) {
     for (const cell of row) {
       if (!cell || cell.color !== mover || cell.type === 'p' || cell.type === 'k') continue;
       if (pieceValue(cell.type) <= captured) continue;
-      if (best && pieceValue(best.piece) >= pieceValue(cell.type)) continue;
-      if (hangingOn(before, after, cell.square)) best = { square: cell.square, piece: cell.type };
+      if (hangingOn(before, after, cell.square) && exchangeLossOn(after, cell.square) > captured) {
+        hanging.push({ square: cell.square, piece: cell.type });
+      }
     }
   }
-  return best;
+  if (hanging.length === 0 || !capturable(after, hanging)) return null;
+  return hanging.reduce((a, b) => pieceValue(b.piece) > pieceValue(a.piece) ? b : a);
+}
+
+/**
+ * Lässt sich wenigstens EINES der hängenden Stücke wirklich nehmen? (freechess, `analysis.ts`.) Für jeden
+ * legalen Schlagzug des Gegners wird geschlagen und nachgesehen: hängt danach eine Figur des SCHLÄGERS, die
+ * mindestens so viel wert ist wie das teuerste Opfer, war das Schlagen ein Fehler — das Stück ein Köder
+ * (Abzugsangriff, Fesselung). Ein Opfer unter Turmwert gilt außerdem nicht, wenn das Schlagen ein Matt in
+ * einem Zug erlaubt: dann ist es eine Mattdrohung, kein Materialopfer. Ab Turmwert zählt das Matt nicht
+ * mehr (wie freechess: eine Dame, die man für ein Matt stehen lässt, IST ein Opfer).
+ */
+function capturable(after: Chess, sacrifices: readonly Sacrifice[]): boolean {
+  const top = Math.max(...sacrifices.map(x => pieceValue(x.piece)));
+  for (const sac of sacrifices) {
+    for (const capture of after.moves({ verbose: true })) {
+      if (capture.to !== sac.square || !capture.captured) continue;
+      const test = tryLoadFen(after.fen());
+      if (!test) return false;
+      test.move(capture);
+      const capturer = capture.color;
+      let baitTaken = false;
+      for (const row of test.board()) {
+        for (const cell of row) {
+          if (!cell || cell.color !== capturer || cell.type === 'p' || cell.type === 'k') continue;
+          if (pieceValue(cell.type) >= top && hangingOn(after, test, cell.square)) { baitTaken = true; break; }
+        }
+        if (baitTaken) break;
+      }
+      if (baitTaken) continue;
+      if (pieceValue(sac.piece) >= 5 || !test.moves().some(m => m.endsWith('#'))) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Was der Gegner im Abtausch auf dem Feld gewinnt (Static Exchange Evaluation): er schlägt mit seiner
+ * billigsten Figur, die Gegenseite schlägt mit ihrer billigsten zurück und so fort — und jede Seite hört auf,
+ * sobald weiterschlagen sie Material kostet. Ohne Röntgen, wie die Angreifer und Verteidiger hier überall.
+ * Der König schlägt nur auf ein Feld, das niemand mehr deckt (Wert ∞). Ein gedeckter Turm, den ein Läufer
+ * angreift, kostet also 2, kein gedeckter 5; ein gedeckter Läufer gegen einen Läufer 0.
+ *
+ * `values` sind je Seite aufsteigend sortiert: `capturers` = wer als Nächstes auf das Feld schlägt,
+ * `owners` = die Seite, der die Figur auf dem Feld gehört.
+ */
+export function exchangeGain(target: number, capturers: readonly number[], owners: readonly number[]): number {
+  if (capturers.length === 0) return 0;
+  const [capturer, ...rest] = capturers;
+  return Math.max(0, target - exchangeGain(capturer, owners, rest));
+}
+
+/** Material, das der Gegner (am Zug) gewinnt, wenn er die Figur auf `square` schlägt — 0, wenn sich das
+ *  Schlagen nicht lohnt. */
+function exchangeLossOn(after: Chess, square: Square): number {
+  const piece = after.get(square);
+  if (!piece) return 0;
+  const { attackers, defenders } = influenceOn(after, square, piece.color);
+  const asc = (list: Influencer[]) => list.map(i => pieceValue(i.type)).sort((a, b) => a - b);
+  return exchangeGain(pieceValue(piece.type), asc(attackers), asc(defenders));
+}
+
+/**
+ * Angreifer und Verteidiger einer Figur der Farbe `color`. Nach dem Zug ist der Gegner am Zug: seine
+ * Angreifer sind seine LEGALEN Schlagzüge auf das Feld. Steht dort (Test-Stellung) doch die eigene Seite am
+ * Zug, gibt es keine legale Sicht — dann Pseudo.
+ */
+function influenceOn(after: Chess, square: Square, color: Color): { attackers: Influencer[]; defenders: Influencer[] } {
+  const opponent: Color = color === 'w' ? 'b' : 'w';
+  return {
+    attackers: after.turn() === opponent ? legalCapturersOf(after, square) : attackersOf(after, square, opponent),
+    defenders: attackersOf(after, square, color),
+  };
 }
 
 function hangingOn(before: Chess, after: Chess, square: Square): boolean {
   const piece = after.get(square);
   if (!piece) return false;
   const value = pieceValue(piece.type);
-  // Nach dem Zug ist der Gegner am Zug: seine Angreifer sind seine legalen Schlagzüge auf das Feld.
-  // Steht dort (Test-Stellung) doch die eigene Seite am Zug, gibt es keine legale Sicht — dann Pseudo.
-  const opponent: Color = piece.color === 'w' ? 'b' : 'w';
-  const attackers = after.turn() === opponent
-    ? legalCapturersOf(after, square) : attackersOf(after, square, opponent);
-  const defenders = attackersOf(after, square, piece.color);
+  const { attackers, defenders } = influenceOn(after, square, piece.color);
 
   // a) Abtausch: das Geschlagene war mindestens so viel wert.
   const previous = before.get(square);

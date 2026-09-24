@@ -296,9 +296,15 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   billigerer Angreifer → ja; (d) mehr Angreifer als Verteidiger → ja, außer (Figur billiger als jeder
   Angreifer UND ein Verteidiger billiger als der billigste Angreifer) oder ein Bauer deckt; (e) sonst nein.
   `sacrificedPiece` = die TEUERSTE eigene Figur (N/B/R/Q, auch eine, die nicht gezogen hat — Legall), die hängt
-  und mehr wert ist als das Geschlagene (en passant = 1). Bewusst OHNE freechess' Schlag-Simulation
-  (Matt oder Figurenverlust NACH dem Schlagen): wir haben die Engine — ist der Zug best/excellent und die
-  Stellung danach nicht schlecht, ist das Opfer korrekt. Unlesbare FEN → kein Opfer, nie ein Wurf (läuft in
+  und bei der der Gegner im ABTAUSCH mehr gewinnt als das Geschlagene (`exchangeGain`, SEE ohne Röntgen; en
+  passant = 1). **Seit 0.518.1 zwei Korrekturen**, beide an der Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q gefunden
+  (chess.com: kein Brilliant): (1) der Abtausch statt des vollen Figurenwerts — 22…gxf4 ließ einen von der
+  Dame GEDECKTEN Turm vor einem Läufer stehen (Verlust die Qualität, 2 < geschlagener Läufer 3); (2) freechess'
+  Schlag-Simulation (`capturable`) ist jetzt drin: kostet das Schlagen den Schläger eine Figur mindestens vom
+  Wert des Opfers (Abzugsangriff — 23.Lxd5 öffnet die b-Linie, exd5 verliert die Db8) oder erlaubt es bei
+  einem Opfer unter Turmwert Matt in einem, ist es ein Köder. Die frühere Begründung „wir haben die Engine —
+  ist der Zug best, ist das Opfer korrekt" war falsch: die Engine sagt „bester Zug", nicht „Opfer".
+  Unlesbare FEN → kein Opfer, nie ein Wurf (läuft in
   einem `computed`). Die Erklärung (geopferte Figur, Abstand, Verpasstes) steht als TEXT neben dem Abzeichen,
   nicht als Tooltip — am Handy gibt es kein Hover.
 - `shared/pgn-viewer/eval-graph.component.ts` — reines SVG, KEINE `clipPath`/`url(#…)` (mit `<base href>`

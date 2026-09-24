@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import {
-  attackersOf, capturedValue, inCheck, isPieceHanging, isPromotion, legalCapturersOf, pieceValue, sacrificedPiece,
+  attackersOf, capturedValue, exchangeGain, inCheck, isPieceHanging, isPromotion, legalCapturersOf, pieceValue, sacrificedPiece,
   uciOf,
 } from './move-tactics.util';
 
@@ -148,9 +148,74 @@ describe('move-tactics.util', () => {
       expect(sacrificedPiece(before, after, 'b7d8')).toBeNull();
     });
 
+    // Gemeldet 2026-09-24 (Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q, chess.com: kein Brilliant): 22.Lxb7 gabelt Ta8 und
+    // Lc8, Schwarz schlägt 22…gxf4 den Läufer. Der Ta8 „hängt" (Läufer 3 < Turm 5), ist aber von der Db8 gedeckt:
+    // nach Lxa8 Dxa8 kostet er die Qualität (2) — weniger als der Läufer, den Schwarz gerade genommen hat.
+    it('22…gxf4: ein gedeckter Turm, der nur die Qualität kostet, ist kein Opfer für einen geschlagenen Läufer', () => {
+      const before = 'rqb4r/1B2k2p/4pp2/3pn1p1/5B2/2P5/PR2QPPP/1R4K1 b - - 0 22';
+      const after = 'rqb4r/1B2k2p/4pp2/3pn3/5p2/2P5/PR2QPPP/1R4K1 w - - 0 23';
+      expect(isPieceHanging(before, after, 'a8')).toBeTrue();
+      expect(sacrificedPiece(before, after, 'g5f4')).toBeNull();
+    });
+
+    // Dieselbe Partie, 23.Lxd5: der Läufer „hängt" gegen exd5, aber der Zug öffnet die b-Linie — nach exd5 nimmt
+    // Tb2 die Db8. Ein Köder, kein Opfer (freechess' Schlag-Simulation; bis 0.518.0 hier Brilliant).
+    it('23.Lxd5: ein Stück, dessen Schlagen die eigene Dame kostet, ist kein Opfer', () => {
+      const before = 'rqb4r/1B2k2p/4pp2/3pn3/5p2/2P5/PR2QPPP/1R4K1 w - - 0 23';
+      const after = 'rqb4r/4k2p/4pp2/3Bn3/5p2/2P5/PR2QPPP/1R4K1 b - - 0 23';
+      expect(isPieceHanging(before, after, 'd5')).toBeTrue();
+      expect(sacrificedPiece(before, after, 'b7d5')).toBeNull();
+    });
+
+    it('ein Leichtfiguren-„Opfer", dessen Schlagen Matt in einem Zug erlaubt, ist eine Mattdrohung, kein Opfer', () => {
+      // Sb5-d4 lässt den Springer vor dem Td8 stehen; Txd4 verlässt die Grundreihe → Te8#.
+      const before = '3r2k1/5ppp/8/1N6/8/8/5PPP/4R1K1 w - - 0 1';
+      const after = '3r2k1/5ppp/8/8/3N4/8/5PPP/4R1K1 b - - 1 1';
+      expect(isPieceHanging(before, after, 'd4')).toBeTrue();
+      expect(sacrificedPiece(before, after, 'b5d4')).toBeNull();
+      // Ohne den Te1 gibt es kein Matt — dann ist es ein (schlechtes) Opfer; ob es gut ist, sagt die Engine.
+      expect(sacrificedPiece('3r2k1/5ppp/8/1N6/8/8/5PPP/6K1 w - - 0 1', '3r2k1/5ppp/8/8/3N4/8/5PPP/6K1 b - - 1 1', 'b5d4'))
+        .toEqual({ square: 'd4', piece: 'n' });
+    });
+
+    it('ohne Schlagen ist schon die Qualität ein Opfer: gedeckter Turm, den ein Läufer angreift', () => {
+      // Kc1-b1 lässt den Td1 stehen, den der Lf3 angreift; gedeckt nur von der Dd2 → Lxd1 Dxd1 kostet 2 > 0.
+      const before = '6k1/8/8/8/8/5b2/3Q4/2KR4 w - - 0 1';
+      const after = '6k1/8/8/8/8/5b2/3Q4/1K1R4 b - - 1 1';
+      expect(sacrificedPiece(before, after, 'c1b1')).toEqual({ square: 'd1', piece: 'r' });
+    });
+
     it('unlesbare Stellung → kein Opfer, statt zu werfen', () => {
       expect(sacrificedPiece('kaputt', GREEK_AFTER, 'd3h7')).toBeNull();
       expect(sacrificedPiece(GREEK_BEFORE, '8/8/8/8/8/8/8/8 w - - 0 1', 'd3h7')).toBeNull();
+    });
+  });
+
+  describe('exchangeGain (Abtausch auf einem Feld, ohne Röntgen)', () => {
+    it('ungedeckt: der volle Wert', () => {
+      expect(exchangeGain(5, [3], [])).toBe(5);
+    });
+    it('gedeckt, billigerer Angreifer: die Differenz', () => {
+      expect(exchangeGain(5, [3], [9])).toBe(2);
+      expect(exchangeGain(9, [3], [Infinity])).toBe(6);   // Legall: Lxd1 Kxd1
+    });
+    it('gedeckt, gleich teurer oder teurerer Angreifer: nichts', () => {
+      expect(exchangeGain(3, [3], [3])).toBe(0);
+      expect(exchangeGain(3, [5], [1])).toBe(0);
+    });
+    it('der König schlägt nur, was niemand mehr deckt', () => {
+      expect(exchangeGain(3, [Infinity], [])).toBe(3);
+      expect(exchangeGain(3, [Infinity], [1])).toBe(0);
+    });
+    it('Überzahl: jede Seite hört auf, sobald weiterschlagen Material kostet', () => {
+      // Turm gegen Turm + Dame, nur von der Dame gedeckt: nach Txt schlägt die Dame NICHT zurück (Dxd kostete sie
+      // die Dame) — der Angreifer gewinnt den Turm, nicht mehr.
+      expect(exchangeGain(5, [5, 9], [9])).toBe(5);
+      // Leichtfigur gegen zwei Leichtfiguren, von einer gedeckt: Sxs, Sxs, Sxs — am Ende eine Figur mehr.
+      expect(exchangeGain(3, [3, 3], [3])).toBe(3);
+    });
+    it('ohne Angreifer: nichts', () => {
+      expect(exchangeGain(9, [], [1])).toBe(0);
     });
   });
 
