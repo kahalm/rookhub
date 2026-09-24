@@ -223,7 +223,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .foot { grid-column: 2 / -1; font-size: 0.8rem; }
     .mistakes { white-space: nowrap; color: color-mix(in srgb, currentColor 60%, transparent); }
     .mistakes { display: inline-flex; align-items: center; gap: 3px; }
-    .mistakes-icon { font-size: 15px; width: 15px; height: 15px; }
+    /* Grün wie die Zug-Klasse „best“ (MOVE_CLASS_COLORS) — das Häkchen sagt „erledigt“, der graue Text daneben bleibt ruhig. */
+    .mistakes-icon { font-size: 15px; width: 15px; height: 15px; color: #96bc4b; }
 
     /* Am Handy gibt es keine Spalten mehr: dieselben Teile umbrechen, Zahl und Datum rutschen
        in die zweite Reihe. Die Kopfzeile faellt weg — sie beschriftete Spalten, die es nicht gibt. */

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.527.1", date: "2026-09-24", changes: [
+    { en: "Game list: the check mark in front of “Mistakes replayed” is green now.", de: "Partienliste: das Häkchen vor „Fehler nachgespielt“ ist jetzt grün." },
+  ] },
   { version: "0.527.0", date: "2026-09-24", changes: [
     { en: "New ⋮ menu for the position on the board – on the game page (next to the live engine button) and on the analysis board (next to flip/reset): search the position on Chessable (opens Chessable’s FEN search in a new tab), share the position (a link to the analysis board with this position; on a phone the device’s share sheet), copy the FEN, and – with an external engine – analyse in the background and the list of analysis jobs. On the analysis board those two moved from the engine row into the menu. On the game page the menu takes the position that is on the board, including your own side line with the live engine.", de: "Neues ⋮-Menü für die Stellung auf dem Brett – auf der Partieseite (neben dem Knopf der Live-Engine) und am Analysebrett (neben Drehen/Zurücksetzen): Stellung auf Chessable suchen (öffnet Chessables FEN-Suche in einem neuen Tab), Stellung teilen (ein Link aufs Analysebrett mit dieser Stellung; am Handy das Teilen-Blatt des Geräts), FEN kopieren und – mit externer Engine – im Hintergrund analysieren samt Liste der Analyseaufträge. Am Analysebrett sind die beiden aus der Engine-Zeile ins Menü gewandert. Auf der Partieseite nimmt das Menü die Stellung, die auf dem Brett steht – auch die der eigenen Nebenvariante mit der Live-Engine." },
   ] },
