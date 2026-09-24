@@ -219,6 +219,28 @@ describe('GameReviewComponent', () => {
     expect(el.querySelectorAll('app-eval-graph .dot').length).toBe(0);
   });
 
+  // Zwei Durchgänge (0.523.0): nach dem schnellen ist die Analyse „done", die Vertiefung läuft im Hintergrund.
+  it('Vertiefung: Text statt Knopf-Sperre, gemächlich alle 60 s nachfragen — und Ruhe, sobald sie fertig ist', fakeAsync(() => {
+    const { fixture, http, el, statuses } = setup();
+    TestBed.inject(TranslateService).setTranslation('en', { games: { review: { refining: 'Deeper {{done}}/{{total}}' } } });
+    TestBed.inject(TranslateService).use('en');
+    http.expectOne(url).flush({ ...evals('done'), refining: true, refined: 1 });
+    fixture.detectChanges();
+
+    expect(statuses).toEqual(['done']);                       // die Seite blendet ihren Knopf aus
+    expect(el.querySelector('.progress')!.textContent).toContain('Deeper 1/2');
+
+    tick(GameReviewComponent.PollMs);
+    http.expectNone(url);                                     // nicht im 10-s-Takt
+    tick(GameReviewComponent.RefinePollMs - GameReviewComponent.PollMs);
+    http.expectOne(url).flush({ ...evals('done'), refining: false, refined: 2 });
+    fixture.detectChanges();
+    expect(el.querySelector('.progress')).toBeNull();
+
+    tick(GameReviewComponent.RefinePollMs * 2);
+    http.expectNone(url);
+  }));
+
   it('geschlossen = kein Nachfragen mehr', fakeAsync(() => {
     const { fixture, http } = setup();
     http.expectOne(url).flush(evals('pending', false));

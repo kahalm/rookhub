@@ -920,7 +920,7 @@ public class GameAnalysisServiceTests : IDisposable
     /// <summary>Der Weg ueber die gespeicherte Partie ist DERSELBE Einwurf (feste Tiefe, fuenf Linien,
     /// Haus-Engine), nur anders etikettiert — das Etikett entscheidet, in welcher Liste er erscheint.</summary>
     [Fact]
-    public async Task CreateForGuess_mitUrsprungGespeichertePartie_rechnetTiefer_aufDerselbenHausEngine()
+    public async Task CreateForGuess_mitUrsprungGespeichertePartie_vertieftSpaeter_aufDerselbenHausEngine()
     {
         var admin = await CreateUserAsync("admin", admin: true);
         await GiveEngineAsync(admin, house: true);
@@ -931,11 +931,13 @@ public class GameAnalysisServiceTests : IDisposable
 
         var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
         Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
-        // Die Bewertung ist hier das Ergebnis: tiefer als die 20 der Punktepartie (25) — Haus-Engine
-        // und Deckel bleiben dieselben.
-        Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.TargetDepth);
-        Assert.NotEqual(GameAnalysisDefaults.GuessTargetDepth, analysis.TargetDepth);
-        Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.MultiPv);
+        // Die Bewertung ist hier das Ergebnis — seit 0.523.0 in zwei Durchgaengen: erst schnell (20, eine Linie),
+        // dann die Vertiefung auf 25 mit fuenf Linien. Haus-Engine und Deckel bleiben dieselben.
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastDepth, analysis.TargetDepth);
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastMultiPv, analysis.MultiPv);
+        Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.RefineDepth);
+        Assert.NotEqual(GameAnalysisDefaults.GuessTargetDepth, analysis.RefineDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.RefineMultiPv);
         Assert.Equal(admin.Id, analysis.EngineOwnerUserId);
     }
 
@@ -1011,5 +1013,116 @@ public class GameAnalysisServiceTests : IDisposable
         cred.SetBackgroundEngines([]);
         Assert.Null(cred.BackgroundEngineIds);
         Assert.Empty(cred.BackgroundEngines);
+    }
+
+    // ===== Zwei Durchgaenge fuer „Partie analysieren" (0.523.0) ==================
+
+    /// <summary>Alle offenen Auftraege der Partie „fertig rechnen" lassen — mit der Bewertung <paramref name="cp"/>.</summary>
+    private async Task FinishOpenJobsOfAsync(int analysisId, int cp, int depth)
+    {
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null).ToListAsync();
+        foreach (var pos in positions)
+        {
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = depth;
+            job.ResultJson = "{\"depth\":" + depth + ",\"pvs\":[{\"depth\":" + depth + ",\"cp\":" + cp + ",\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<List<AnalysisJob>> OpenJobsOfAsync(int analysisId)
+    {
+        var ids = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value).ToListAsync();
+        return await _db.AnalysisJobs.Where(j => ids.Contains(j.Id)).ToListAsync();
+    }
+
+    [Fact]
+    public async Task ZweiDurchgaenge_erstSchnellMitEinerLinie_dannVertiefungImHintergrund_bisAllesErsetztIst()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var created = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+        var id = created.Analysis!.Id;
+
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastDepth, head.TargetDepth);
+        Assert.Equal(20, head.TargetDepth);
+        Assert.Equal(1, head.MultiPv);
+        Assert.Equal(25, head.RefineDepth);
+        Assert.Equal(5, head.RefineMultiPv);
+
+        // Erster Durchgang: normale Auftraege, Tiefe 20, eine Linie.
+        var first = await OpenJobsOfAsync(id);
+        Assert.NotEmpty(first);
+        Assert.All(first, j => { Assert.False(j.Background); Assert.Equal(20, j.TargetDepth); Assert.Equal(1, j.MultiPv); });
+
+        await FinishOpenJobsOfAsync(id, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(id);
+        _db.ChangeTracker.Clear();
+        head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);    // Kurve und Fehler stehen schon
+        Assert.Null(head.RefinedAt);
+
+        // Vertiefung: Hintergrund-Auftraege, Tiefe 25, fuenf Linien, hoechstens ein kleiner Block offen.
+        await _svc.PumpOneAsync(id);
+        _db.ChangeTracker.Clear();
+        var refine = await OpenJobsOfAsync(id);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenRefineJobsPerGame, refine.Count);
+        Assert.All(refine, j => { Assert.True(j.Background); Assert.Equal(25, j.TargetDepth); Assert.Equal(5, j.MultiPv); });
+
+        // Bis alles vertieft ist: die Ergebnisse ERSETZEN die des ersten Durchgangs.
+        for (var round = 0; round < 5 && (await OpenJobsOfAsync(id)).Count > 0; round++)
+        {
+            await FinishOpenJobsOfAsync(id, cp: 77, depth: 25);
+            await _svc.PumpOneAsync(id);
+            _db.ChangeTracker.Clear();
+        }
+        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
+        Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(25, p.Depth); Assert.Contains("77", p.CandidatesJson); });
+        head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.NotNull(head.RefinedAt);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);
+        Assert.False(await _svc.PumpOneAsync(id));             // fertig = Ruhe
+    }
+
+    [Fact]
+    public async Task Vertiefung_wartet_solangeEinePartieImErstenDurchgangSteckt()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var a = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
+        await FinishOpenJobsOfAsync(a, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(a);                             // A: erster Durchgang fertig
+
+        // Eine zweite Partie kommt dazu — ihr schneller Durchgang geht vor.
+        var other = Game.Replace("[White \"", "[White \"X");
+        var b = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = other },
+            origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
+        await _svc.PumpOneAsync(b);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        Assert.Empty(await OpenJobsOfAsync(a));
+
+        await FinishOpenJobsOfAsync(b, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(b);                             // B fertig → A darf vertiefen
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        Assert.NotEmpty(await OpenJobsOfAsync(a));
+        Assert.All(await OpenJobsOfAsync(a), j => Assert.True(j.Background));
+    }
+
+    [Fact]
+    public async Task Punktepartie_bleibtBeiEinemDurchgang()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var id = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game })).Analysis!.Id;
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Null(head.RefineDepth);
+        Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, head.TargetDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, head.MultiPv);
     }
 }

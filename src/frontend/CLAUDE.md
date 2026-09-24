@@ -330,6 +330,9 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   Die Seiten reichen `game.moves` (chess.js `Move`) als `[moves]` herein — daraus werden die UCIs für die
   Sonderklassen. Das Abzeichen des aktuellen Zugs erklärt Brilliant (geopferte Figur + Feld), Great (Abstand
   zum Zweitbesten; mit Matt im Spiel ohne Zahl) und Miss per Tooltip. „!" gehört Great, Excellent trägt 👍.
+  Läuft die Vertiefung (zweiter Durchgang, 0.523.0, `evals.refining`), steht dort „Vertiefung läuft — x von y"
+  (`games.review.refining`) und die Komponente fragt nur noch alle `RefinePollMs` (60 s) nach — die Analyse ist schon
+  `done` (Knopf weg), wird aber genauer; danach Ruhe.
   Neben dem Fortschritt steht seit 0.517.0 die Restdauer (`etaMinutes` vom Server, geschrieben mit
   `shared/eta.util.ts` `formatEta` — derselben Funktion wie auf „Partie-Analysen", Text-Key `gameAnalysis.eta`);
   nur solange die Analyse läuft, ohne Tempo gar nicht.

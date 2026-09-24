@@ -2481,7 +2481,8 @@
       "missHint": "Den Fehler des Gegners nicht bestraft",
       "bookHint": "In deinem Repertoire (für die Erweiterung markiert)",
       "lines": "Computer-Linien",
-      "arrow": "Pfeil für den besten Zug"
+      "arrow": "Pfeil für den besten Zug",
+      "refining": "Vertiefung läuft — {{done}} von {{total}} Stellungen"
     },
     "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
     "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)",

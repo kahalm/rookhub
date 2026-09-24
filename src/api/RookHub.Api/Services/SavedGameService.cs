@@ -389,7 +389,8 @@ public class SavedGameService
         return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, callerUserId, ct);
     }
 
-    private sealed record AnalysisHead(int Id, GameAnalysisStatus Status, int PlyCount, int TargetDepth);
+    private sealed record AnalysisHead(int Id, GameAnalysisStatus Status, int PlyCount, int TargetDepth,
+        int? RefineDepth, DateTime? RefinedAt);
 
     /// <summary>
     /// Welche Analyse: (a) die verknuepfte, solange es sie noch gibt — der Verweis hat keinen
@@ -407,7 +408,7 @@ public class SavedGameService
         if (linkedId is int id)
             analysis = await _db.GameAnalyses.AsNoTracking()
                 .Where(a => a.Id == id)
-                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth))
+                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth, a.RefineDepth, a.RefinedAt))
                 .FirstOrDefaultAsync(ct);
         if (analysis is null && callerUserId is int caller)
         {
@@ -415,7 +416,7 @@ public class SavedGameService
             analysis = await _db.GameAnalyses.AsNoTracking()
                 .Where(a => a.UserId == caller && a.Status != GameAnalysisStatus.Failed && pgn.Contains(a.Pgn))
                 .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
-                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth))
+                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth, a.RefineDepth, a.RefinedAt))
                 .FirstOrDefaultAsync(ct);
         }
         if (analysis is null) return new GameEvalsDto();
@@ -423,7 +424,7 @@ public class SavedGameService
         var rows = await _db.GameAnalysisPositions.AsNoTracking()
             .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
             .OrderBy(p => p.Ply)
-            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth, p.AnalyzedAt })
+            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth, p.AnalyzedAt, p.Refined })
             .ToListAsync(ct);
         var plies = rows
             .Select(r => GameEvals.PlyOf(r.Ply, r.Fen, r.GameMoveUci, r.CandidatesJson, r.Depth))
@@ -455,6 +456,8 @@ public class SavedGameService
             Plies = plies,
             Final = GameEvals.FinalOf(plies.LastOrDefault(), analysis.PlyCount),
             BookPlies = bookPlies,
+            Refining = analysis.Status == GameAnalysisStatus.Done && analysis.RefineDepth != null && analysis.RefinedAt == null,
+            Refined = analysis.RefineDepth != null ? rows.Count(r => r.Refined) : 0,
             EtaMinutes = running
                 ? GameEvals.EtaMinutes(
                     rows.Where(r => r.AnalyzedAt != null).Select(r => r.AnalyzedAt!.Value),

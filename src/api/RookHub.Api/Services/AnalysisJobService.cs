@@ -94,7 +94,7 @@ public class AnalysisJobService
     }
 
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
-        bool remember = true, int? engineOwnerUserId = null)
+        bool remember = true, int? engineOwnerUserId = null, bool background = false)
     {
         var fen = (req.Fen ?? string.Empty).Trim();
         if (fen.Length is 0 or > 120 || !IsLegalFen(fen))
@@ -131,6 +131,7 @@ public class AnalysisJobService
             EngineOwnerUserId = engineOwner,
             TargetDepth = req.TargetDepth, MultiPv = req.MultiPv,
             Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
+            Background = background,
         };
         _db.AnalysisJobs.Add(job);
         await TrimAsync(userId, 1, ct);
@@ -382,7 +383,9 @@ public class AnalysisJobService
             .Where(j => j.EngineId == engineId
                 && (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused)
                 && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
-            .OrderBy(j => j.CreatedAt)
+            // Hintergrundarbeit (Vertiefung) erst, wenn nichts anderes wartet — sonst stuende der schnelle erste
+            // Durchgang einer neuen Partie hinter der Vertiefung einer alten (seit 0.523.0).
+            .OrderBy(j => j.Background).ThenBy(j => j.CreatedAt)
             .ToListAsync(ct);
         if (runnable.Count == 0) return null;
 
@@ -391,7 +394,9 @@ public class AnalysisJobService
             .OrderByDescending(j => j.LastRunAt)
             .Select(j => (int?)j.Id)
             .FirstOrDefaultAsync(ct);
-        return runnable.FirstOrDefault(j => j.Id == lastRunId) ?? runnable[0];
+        // Die warme Hashtabelle zaehlt nur innerhalb derselben Stufe: ein Hintergrundauftrag darf sich nicht ueber
+        // die Treppe „zuletzt gelaufen" vor einen normalen draengen.
+        return runnable.FirstOrDefault(j => j.Id == lastRunId && j.Background == runnable[0].Background) ?? runnable[0];
     }
 
     /// <summary>Alle Engines mit laufbereiten Aufträgen (für den Worker-Tick).</summary>

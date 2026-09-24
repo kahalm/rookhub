@@ -153,6 +153,19 @@ public class GameAnalysis
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? FinishedAt { get; set; }
 
+    /// <summary>
+    /// ZWEITER Durchgang („Vertiefung", seit 0.523.0): nach dem schnellen ersten Durchgang
+    /// (<see cref="TargetDepth"/>/<see cref="MultiPv"/>, fuer „Partie analysieren" Tiefe 20 mit EINER Linie — Kurve,
+    /// Genauigkeit und Fehler stehen damit nach wenigen Minuten) wird jede Stellung noch einmal mit dieser Tiefe und
+    /// <see cref="RefineMultiPv"/> Linien gerechnet und ersetzt. Die Analyse bleibt dabei <see cref="GameAnalysisStatus.Done"/>
+    /// und wird Stueck fuer Stueck besser. <c>null</c> = kein zweiter Durchgang (von Hand eingereiht, Punktepartie,
+    /// Altbestand).
+    /// </summary>
+    public int? RefineDepth { get; set; }
+    public int? RefineMultiPv { get; set; }
+    /// <summary>Wann der zweite Durchgang fertig wurde; <c>null</c> = laeuft noch (oder gibt es nicht).</summary>
+    public DateTime? RefinedAt { get; set; }
+
     public List<GameAnalysisPosition> Positions { get; set; } = new();
 }
 
@@ -243,4 +256,14 @@ public static class GameAnalysisDefaults
     /// sonst liefe eine wirklich unloesbare Stellung ewig im Kreis.
     /// </summary>
     public const int MaxPositionAttempts = 3;
+
+    /// <summary>Erster Durchgang von „Partie analysieren" (seit 0.523.0): Tiefe 20, EINE Linie — schnell genug, dass
+    /// Kurve, Genauigkeit und die eigenen Fehler nach wenigen Minuten stehen (gewuenscht 2026-09-24).</summary>
+    public const int SavedGameFastDepth = 20;
+    public const int SavedGameFastMultiPv = 1;
+
+    /// <summary>So viele Vertiefungs-Auftraege stehen je Partie hoechstens offen. Klein, damit der Deckel der offenen
+    /// Auftraege je Nutzer (<c>AnalysisJobService.MaxOpenJobsPerUser</c>) fuer den ersten Durchgang einer neuen Partie
+    /// frei bleibt — die Vertiefung ist Hintergrundarbeit (<c>AnalysisJob.Background</c>), sie darf warten.</summary>
+    public const int MaxOpenRefineJobsPerGame = 8;
 }

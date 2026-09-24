@@ -367,6 +367,24 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.Empty(_db.AnalysisJobs);
     }
 
+    /// <summary>Hintergrundarbeit (Vertiefung, 0.523.0) kommt erst dran, wenn kein normaler Auftrag wartet — auch wenn
+    /// sie aelter ist und zuletzt lief (warme Hashtabelle zaehlt nur innerhalb derselben Stufe).</summary>
+    [Fact]
+    public async Task PickNextForEngine_NormalVorHintergrund_auchGegenAelterUndZuletztGelaufen()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var now = DateTime.UtcNow;
+        var refine = new AnalysisJob { UserId = u, Fen = START, EngineId = "e", TargetDepth = 25, MultiPv = 5, Status = AnalysisJobStatus.Paused, CreatedAt = now.AddMinutes(-30), LastRunAt = now.AddMinutes(-1), Background = true };
+        var fresh = new AnalysisJob { UserId = u, Fen = START, EngineId = "e", TargetDepth = 20, MultiPv = 1, Status = AnalysisJobStatus.Queued, CreatedAt = now };
+        _db.AnalysisJobs.AddRange(refine, fresh);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(fresh.Id, (await _svc.PickNextForEngineAsync("e", now))!.Id);
+
+        fresh.Status = AnalysisJobStatus.Done; await _db.SaveChangesAsync();
+        Assert.Equal(refine.Id, (await _svc.PickNextForEngineAsync("e", now))!.Id);   // sonst die Vertiefung
+    }
+
     [Fact]
     public async Task PickNextForEngine_PrefersLastRunJob_ThenOldest_SkipsBackoff()
     {

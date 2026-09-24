@@ -167,6 +167,11 @@ public class GameEvalsDto
     /// Repertoire des AUFRUFERS stehen, vor der Abweichung — siehe <see cref="Services.RepertoireAnalyzeService.BookPliesAsync"/>.
     /// Leer ohne Anmeldung.</summary>
     public List<int> BookPlies { get; set; } = new();
+    /// <summary>Der zweite Durchgang (Vertiefung, seit 0.523.0) laeuft noch: die Analyse ist <c>done</c> und nutzbar,
+    /// wird aber Stellung fuer Stellung genauer — der Client fragt dann gemaechlich nach.</summary>
+    public bool Refining { get; set; }
+    /// <summary>So viele Stellungen sind schon vertieft (0 ohne zweiten Durchgang).</summary>
+    public int Refined { get; set; }
 }
 
 /// <summary>Eine gerechnete Stellung — die VOR dem Halbzug <see cref="Ply"/> —, Weiß-Sicht.</summary>

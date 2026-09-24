@@ -48,4 +48,8 @@ public class GameAnalysisPosition
     [MaxLength(16)] public string? EvalText { get; set; }
 
     public DateTime? AnalyzedAt { get; set; }
+
+    /// <summary>Im zweiten Durchgang (<see cref="GameAnalysis.RefineDepth"/>) neu gerechnet — oder dort aufgegeben
+    /// (dann bleibt das Ergebnis des ersten Durchgangs stehen). Ohne zweiten Durchgang bedeutungslos.</summary>
+    public bool Refined { get; set; }
 }

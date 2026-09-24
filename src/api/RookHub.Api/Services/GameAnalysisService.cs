@@ -164,14 +164,24 @@ public class GameAnalysisService
 
         try
         {
+            // „Partie analysieren" rechnet ZWEIMAL (seit 0.523.0, gewuenscht 2026-09-24): erst schnell (Tiefe 20, eine
+            // Linie — Kurve, Genauigkeit und Fehler stehen nach wenigen Minuten), dann im Hintergrund die Vertiefung
+            // (Tiefe 25, fuenf Linien — Zweitbester fuer Great/Brilliant, Computer-Linien, gleichwertige Zuege).
+            var savedGame = origin == GameAnalysisOrigin.SavedGame;
             var dto = await CreateAsync(userId, new CreateGameAnalysisRequest
             {
                 Pgn = req.Pgn,
                 Title = req.Title,
-                TargetDepth = origin == GameAnalysisOrigin.SavedGame
-                    ? GameAnalysisDefaults.SavedGameTargetDepth : GameAnalysisDefaults.GuessTargetDepth,
-                MultiPv = GameAnalysisDefaults.MultiPv,
+                TargetDepth = savedGame ? GameAnalysisDefaults.SavedGameFastDepth : GameAnalysisDefaults.GuessTargetDepth,
+                MultiPv = savedGame ? GameAnalysisDefaults.SavedGameFastMultiPv : GameAnalysisDefaults.MultiPv,
             }, ct, origin, engineOwner.Value, libraryGameId);
+            if (savedGame)
+            {
+                var entity = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id, ct);
+                entity.RefineDepth = GameAnalysisDefaults.SavedGameTargetDepth;
+                entity.RefineMultiPv = GameAnalysisDefaults.MultiPv;
+                await _db.SaveChangesAsync(ct);
+            }
             return new GuessUploadResult(dto, null);
         }
         catch (ArgumentException)
@@ -571,7 +581,8 @@ public class GameAnalysisService
     public async Task<int> PumpAllAsync(CancellationToken ct = default)
     {
         var ids = await _db.GameAnalyses
-            .Where(g => g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
+            .Where(g => g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running
+                || (g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null))
             .OrderBy(g => g.CreatedAt)
             .Select(g => g.Id)
             .ToListAsync(ct);
@@ -594,7 +605,9 @@ public class GameAnalysisService
         var analysis = await _db.GameAnalyses
             .Include(g => g.Positions)
             .FirstOrDefaultAsync(g => g.Id == analysisId, ct);
-        if (analysis is null || analysis.Status is GameAnalysisStatus.Done or GameAnalysisStatus.Failed) return false;
+        if (analysis is null || analysis.Status == GameAnalysisStatus.Failed) return false;
+        if (analysis.Status == GameAnalysisStatus.Done)
+            return analysis.RefineDepth != null && analysis.RefinedAt == null && await RefineStepAsync(analysis, ct);
 
         var changed = await IngestFinishedAsync(analysis, ct);
         // Nachgefuettert wird nur die Partie, die gerade DRAN ist — siehe IsOwnersTurnAsync.
@@ -663,7 +676,8 @@ public class GameAnalysisService
     /// <summary>Fertige Aufträge in die Stellungen kopieren.</summary>
     private async Task<bool> IngestFinishedAsync(GameAnalysis analysis, CancellationToken ct)
     {
-        var pending = analysis.Positions.Where(p => p.CandidatesJson == null && p.AnalysisJobId != null).ToList();
+        // Offene Auftraege BEIDER Durchgaenge: eine Stellung mit Kandidaten UND Auftrag wird gerade vertieft.
+        var pending = analysis.Positions.Where(p => p.AnalysisJobId != null).ToList();
         if (pending.Count == 0) return false;
 
         var jobIds = pending.Select(p => p.AnalysisJobId!.Value).ToList();
@@ -687,6 +701,35 @@ public class GameAnalysisService
                 // Auftrag ist weg (gelöscht/getrimmt) → Stellung erneut einreihen.
                 pos.AnalysisJobId = null;
                 changed = true;
+                continue;
+            }
+
+            if (pos.CandidatesJson != null)
+            {
+                // Zweiter Durchgang: das Ergebnis ERSETZT das des ersten — ist es unbrauchbar oder scheitert der
+                // Auftrag endgueltig, bleibt das erste stehen (eine schwaechere Bewertung ist besser als keine).
+                if (job.Status == AnalysisJobStatus.Done)
+                {
+                    var refined = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
+                    if (refined is { Count: > 0 })
+                    {
+                        pos.CandidatesJson = BrokerCandidates.ToJson(refined);
+                        pos.EvalText = BrokerCandidates.EvalTextOf(refined);
+                        pos.Depth = job.ReachedDepth;
+                        pos.AnalyzedAt = DateTime.UtcNow;
+                    }
+                    pos.Refined = true;
+                    pos.AnalysisJobId = null;
+                    consumed.Add(job);
+                    changed = true;
+                }
+                else if (job.Status == AnalysisJobStatus.Failed)
+                {
+                    pos.FailedAttempts++;
+                    pos.AnalysisJobId = null;
+                    if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts) pos.Refined = true;
+                    changed = true;
+                }
                 continue;
             }
 
@@ -738,6 +781,97 @@ public class GameAnalysisService
             }
         }
         if (consumed.Count > 0) _db.AnalysisJobs.RemoveRange(consumed);
+        return changed;
+    }
+
+    /// <summary>
+    /// Ein Schritt der Vertiefung (<see cref="GameAnalysis.RefineDepth"/>): fertige Auftraege uebernehmen, nachlegen,
+    /// wenn die Partie dran ist, und am Ende die Genauigkeit neu rechnen (sie haengt an den genaueren Zahlen).
+    /// </summary>
+    private async Task<bool> RefineStepAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        var changed = await IngestFinishedAsync(analysis, ct);
+        if (await IsOwnersRefineTurnAsync(analysis, ct))
+            changed |= await EnqueueRefineAsync(analysis, ct);
+
+        if (analysis.Positions.Count > 0 && analysis.Positions.All(p => p.Refined))
+        {
+            analysis.RefinedAt = DateTime.UtcNow;
+            var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
+            analysis.AccuracyWhite = accuracy.White;
+            analysis.AccuracyBlack = accuracy.Black;
+            changed = true;
+        }
+        if (changed)
+        {
+            analysis.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// Ist diese Partie mit der Vertiefung dran? Erst wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt —
+    /// der schnelle Durchgang einer neuen Partie geht immer vor —, und dann die aelteste, die noch vertieft wird
+    /// (dieselbe Regel „eine nach der anderen" wie bei <see cref="IsOwnersTurnAsync"/>).
+    /// </summary>
+    private async Task<bool> IsOwnersRefineTurnAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        var firstPassOpen = await _db.GameAnalyses.AnyAsync(g => g.UserId == analysis.UserId
+            && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
+            && g.Positions.Any(p => p.CandidatesJson == null), ct);
+        if (firstPassOpen) return false;
+        var current = await _db.GameAnalyses
+            .Where(g => g.UserId == analysis.UserId && g.Status == GameAnalysisStatus.Done
+                && g.RefineDepth != null && g.RefinedAt == null)
+            .OrderBy(g => g.CreatedAt).ThenBy(g => g.Id)
+            .Select(g => (int?)g.Id)
+            .FirstOrDefaultAsync(ct);
+        return current == analysis.Id;
+    }
+
+    /// <summary>Vertiefungs-Auftraege nachlegen — hoechstens <see cref="GameAnalysisDefaults.MaxOpenRefineJobsPerGame"/>
+    /// offen, als Hintergrundarbeit (<see cref="AnalysisJob.Background"/>), in Zugreihenfolge.</summary>
+    private async Task<bool> EnqueueRefineAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        var open = analysis.Positions.Count(p => !p.Refined && p.AnalysisJobId != null);
+        var room = GameAnalysisDefaults.MaxOpenRefineJobsPerGame - open;
+        if (room <= 0) return false;
+        var next = analysis.Positions
+            .Where(p => !p.Refined && p.AnalysisJobId == null)
+            .OrderBy(p => p.Ply)
+            .Take(room)
+            .ToList();
+
+        var changed = false;
+        foreach (var pos in next)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
+                {
+                    Fen = pos.Fen,
+                    Title = JobTitle(analysis, pos),
+                    TargetDepth = analysis.RefineDepth!.Value,
+                    MultiPv = analysis.RefineMultiPv ?? analysis.MultiPv,
+                    EngineId = analysis.EngineId,
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: true);
+                pos.AnalysisJobId = job.Id;
+                changed = true;
+            }
+            catch (InvalidOperationException)
+            {
+                // Deckel erreicht oder gerade keine Engine: die Vertiefung ist Hintergrundarbeit — naechster Lauf.
+                break;
+            }
+            catch (ArgumentException ex)
+            {
+                pos.Refined = true;   // diese Stellung nimmt die Engine nicht an — das erste Ergebnis bleibt
+                changed = true;
+                _logger.LogWarning(ex, "GameAnalysis {Id}: Stellung {Ply} nicht vertiefbar", analysis.Id, pos.Ply);
+            }
+        }
         return changed;
     }
 

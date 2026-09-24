@@ -2735,7 +2735,8 @@
       "missHint": "Kimaradt az ellenfél hibájának megbüntetése",
       "bookHint": "A repertoárodban (a bővítményhez megjelölve)",
       "lines": "Gépi változatok",
-      "arrow": "Nyíl a legjobb lépéshez"
+      "arrow": "Nyíl a legjobb lépéshez",
+      "refining": "Mélyebb elemzés — {{done}} / {{total}} állás"
     },
     "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
     "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",

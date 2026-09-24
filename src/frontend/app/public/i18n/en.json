@@ -2481,7 +2481,8 @@
       "missHint": "Missed the chance to punish the opponent's mistake",
       "bookHint": "In your repertoire (marked for the extension)",
       "lines": "Computer lines",
-      "arrow": "Best-move arrow"
+      "arrow": "Best-move arrow",
+      "refining": "Deeper analysis — {{done}} of {{total}} positions"
     },
     "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
     "accuracyHint": "Accuracy white · black (from the game analysis)",

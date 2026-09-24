@@ -2481,7 +2481,8 @@
       "missHint": "Propuštena prilika da se kazni protivnikova pogreška",
       "bookHint": "U tvom repertoaru (označenom za proširenje)",
       "lines": "Računalne varijante",
-      "arrow": "Strelica za najbolji potez"
+      "arrow": "Strelica za najbolji potez",
+      "refining": "Dublja analiza — {{done}} od {{total}} pozicija"
     },
     "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
     "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",

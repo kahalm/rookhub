@@ -68,6 +68,9 @@ const MATE_GAP_PAWNS = 100;
               {{ 'games.review.pending' | translate: progress() }}
               @if (eta(); as e) { · {{ 'gameAnalysis.eta' | translate: { eta: e } }} }
             </span>
+          } @else if (refining()) {
+            <!-- Zweiter Durchgang: die Analyse ist fertig und nutzbar, wird aber Stellung für Stellung genauer. -->
+            <span class="progress">{{ 'games.review.refining' | translate: { done: evals()?.refined ?? 0, total: evals()?.total ?? 0 } }}</span>
           } @else if (status() === 'failed') {
             <span class="progress failed">{{ 'games.review.failed' | translate }}</span>
           }
@@ -227,6 +230,8 @@ export class GameReviewComponent {
   arrowsChange = output<BoardArrow[]>();
 
   static readonly PollMs = 10_000;
+  /** Während der Vertiefung (zweiter Durchgang, 0.523.0) gemächlicher — die Analyse ist schon nutzbar. */
+  static readonly RefinePollMs = 60_000;
   static readonly LinesKey = 'rookhub_game_lines';
   static readonly ArrowKey = 'rookhub_game_arrow';
 
@@ -234,6 +239,7 @@ export class GameReviewComponent {
   readonly evals = signal<GameEvals | null>(null);
   readonly status = computed<GameEvalsStatus>(() => this.evals()?.status ?? 'none');
   readonly running = computed(() => this.status() === 'pending' || this.status() === 'running');
+  readonly refining = computed(() => this.status() === 'done' && !!this.evals()?.refining);
   readonly progress = computed(() => ({ done: this.evals()?.analyzed ?? 0, total: this.evals()?.total ?? 0 }));
   /** Restdauer als Text („11 min"), solange die Analyse läuft und der Server ein Tempo kennt. */
   readonly eta = computed(() => {
@@ -301,10 +307,10 @@ export class GameReviewComponent {
     this.loadSub = this.games.evals(url).subscribe({
       next: evals => {
         this.apply(evals);
-        if (this.running()) this.schedule();
+        this.scheduleIfBusy();
       },
       // Still: ein Aussetzer beim Nachfragen heilt der nächste Takt. Lief die Analyse, bleibt der Takt.
-      error: () => { if (this.running()) this.schedule(); },
+      error: () => this.scheduleIfBusy(),
     });
   }
 
@@ -356,9 +362,15 @@ export class GameReviewComponent {
     }
   }
 
-  private schedule(): void {
+  /** Nachfragen, solange gerechnet wird: im ersten Durchgang alle 10 s, während der Vertiefung einmal je Minute. */
+  private scheduleIfBusy(): void {
+    if (this.running()) this.schedule(GameReviewComponent.PollMs);
+    else if (this.refining()) this.schedule(GameReviewComponent.RefinePollMs);
+  }
+
+  private schedule(ms: number): void {
     this.pollSub?.unsubscribe();
-    this.pollSub = timer(GameReviewComponent.PollMs).subscribe(() => this.reload());
+    this.pollSub = timer(ms).subscribe(() => this.reload());
   }
 
   private stop(): void {

@@ -69,6 +69,10 @@ export interface GameEvals {
    * BETRACHTERS stehen — der Server rechnet sie (`RepertoireAnalyzeService.BookPliesAsync`), anonym leer.
    */
   bookPlies?: number[] | null;
+  /** Zweiter Durchgang (Vertiefung, seit 0.523.0) läuft: die Analyse ist `done` und nutzbar, wird aber genauer. */
+  refining?: boolean;
+  /** So viele Stellungen sind schon vertieft. */
+  refined?: number;
   /**
    * Hochgerechnete Restdauer in Minuten, solange die Analyse läuft — der Server rechnet sie aus dem
    * Tempo der jüngsten Stellungen DIESER Partie (`GameEvals.EtaMinutes`). Fehlt, solange es noch kein

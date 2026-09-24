@@ -487,6 +487,17 @@ flachere), aber mit eigenem Ursprung
 * Frontend: `features/games/game-review.util.ts` (Formeln), `game-review.component.ts` (lädt, fragt alle 10 s
   nach, solange `pending`/`running`), `shared/pgn-viewer/eval-graph.component.ts` (SVG-Kurve). Siehe
   `src/frontend/CLAUDE.md`.
+* **Zwei Durchgänge** (0.523.0, gewünscht 2026-09-24): „Partie analysieren" (`Origin.SavedGame`) rechnet ERST schnell
+  (`SavedGameFastDepth` 20, `SavedGameFastMultiPv` 1 — Kurve, Genauigkeit und Fehler stehen nach Minuten, Status `done`),
+  DANN im Hintergrund die Vertiefung (`GameAnalysis.RefineDepth` = `SavedGameTargetDepth` 25, `RefineMultiPv` 5): jede
+  Stellung wird neu gerechnet und ERSETZT (`GameAnalysisPosition.Refined`), am Ende `RefinedAt` + Genauigkeit neu.
+  Regeln: (1) Vertiefungs-Aufträge sind `AnalysisJob.Background` — `PickNextForEngineAsync` nimmt sie erst, wenn kein
+  normaler wartet (die warme Hashtabelle zählt nur innerhalb derselben Stufe); (2) je Partie höchstens
+  `MaxOpenRefineJobsPerGame` (8) offen, damit `MaxOpenJobsPerUser` für den ersten Durchgang einer neuen Partie frei bleibt;
+  (3) vertieft wird erst, wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt, dann die älteste
+  (`IsOwnersRefineTurnAsync`); (4) scheitert die Vertiefung einer Stellung, bleibt das erste Ergebnis. `GameEvalsDto`
+  meldet `Refining`/`Refined`, der Client fragt dann einmal je Minute nach. Punktepartie und von Hand eingereihte Partien
+  bleiben bei einem Durchgang (`RefineDepth` null), Altbestand ebenso.
 * **Buchzüge** (0.522.0): `GameEvalsDto.BookPlies` = die Halbzüge, deren Stellung DANACH in einem für die Erweiterung
   markierten Repertoire (`UseForExtension`, alle Arten, Zugumstellungen) des AUFRUFERS steht, vor der Abweichung —
   `RepertoireAnalyzeService.BookPliesAsync` (dasselbe gecachte Positions-Set wie die Extension-Abweichungsanalyse).

@@ -105,4 +105,11 @@ public class AnalysisJob
     /// <summary>Letzter Suchstart — der zuletzt gelaufene Auftrag hat die warme Hashtabelle („sticky").</summary>
     public DateTime? LastRunAt { get; set; }
     public DateTime? FinishedAt { get; set; }
+
+    /// <summary>
+    /// Hintergrundarbeit (seit 0.523.0, heute: die Vertiefung einer Partie-Analyse). Eine Engine nimmt solche
+    /// Auftraege erst, wenn kein normaler mehr wartet (<c>AnalysisJobService.PickNextForEngineAsync</c>) — sonst
+    /// stuende der schnelle erste Durchgang einer neuen Partie hinter der Vertiefung einer alten.
+    /// </summary>
+    public bool Background { get; set; }
 }

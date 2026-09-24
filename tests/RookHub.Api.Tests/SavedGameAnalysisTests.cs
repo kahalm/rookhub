@@ -106,11 +106,14 @@ public class SavedGameAnalysisTests : IDisposable
         var analysis = await _db.GameAnalyses.AsNoTracking().SingleAsync();
         Assert.Equal(result.Analysis!.Id, analysis.Id);
         Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
-        // Tiefer als die 20 der Punktepartie (hier ist die Bewertung das Ergebnis), aber flacher als von
-        // Hand: auf 30 brauchte eine Partie mit 47 Stellungen eine halbe Stunde (seit 0.518.0 25).
-        Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.TargetDepth);
-        Assert.Equal(25, analysis.TargetDepth);
-        Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.MultiPv);
+        // Zwei Durchgaenge (0.523.0): erst schnell (Tiefe 20, eine Linie — Kurve und Fehler stehen nach Minuten),
+        // dann im Hintergrund die Vertiefung mit der Tiefe der gespeicherten Partien (25) und fuenf Linien.
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastDepth, analysis.TargetDepth);
+        Assert.Equal(20, analysis.TargetDepth);
+        Assert.Equal(1, analysis.MultiPv);
+        Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.RefineDepth);
+        Assert.Equal(25, analysis.RefineDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.RefineMultiPv);
         Assert.Equal("Anna – Bert", analysis.Title);
         Assert.Equal(owner.Id, analysis.UserId);
         Assert.Equal(analysis.Id, (await RowAsync(game.Id)).GameAnalysisId);
