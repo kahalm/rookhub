@@ -339,8 +339,11 @@ steht man wieder genau dort, wo man war.
   = gespielter Zug, und ein Bestzug, der in der Stellung gar nicht geht. Eine unspielbare „Lösung"
   vorzuführen wäre schlimmer als eine ausgelassene Aufgabe.
 - **Wer wird trainiert**: `SharedGameDetail.ownerSide`; fehlt die Zuordnung (fremde geteilte Partie),
-  die Seite mit den meisten Fehlern (`sideWithMoreMistakes`). Haben beide Seiten welche, schaltet der
-  Dialog um — Brett dreht mit, Zähler beginnt von vorn.
+  die Seite mit den meisten Fehlern (`sideWithMoreMistakes`) — EINE Regel, `trainingSide`. Haben beide
+  Seiten welche, schaltet der Dialog um — Brett dreht mit, Zähler beginnt von vorn. **Der Knopf zählt NUR
+  diese Seite** (0.517.1): er zählte beide zusammen, der Dialog öffnete aber auf der des Besitzers — mit
+  einem einzigen Fehler des Gegners stand „(1)" am Knopf, und der Dialog hatte nichts abzufragen (und ohne
+  Fehler auf der zweiten Seite auch keinen Umschalter).
 - **Die Aufgaben kommen aus dem Rückblick**, nicht aus einem zweiten Abruf: `GameReviewComponent`
   hat die Analyse ohnehin und meldet sie über die Ausgabe `mistakesChange`.
 - **Geurteilt wird mit `sameMove`** aus `shared/chess/line-solver` — der gemeinsame Kern. Das Brett

@@ -19,7 +19,7 @@ import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
-import { MistakesBySide, NO_MISTAKES, mistakeCount, sideWithMoreMistakes } from './mistakes.util';
+import { MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide } from './mistakes.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
@@ -232,7 +232,11 @@ export class SharedGameComponent implements OnInit {
   private readonly review = viewChild(GameReviewComponent);
   /** Abfragbare Fehler beider Seiten, gemeldet vom Rückblick unter dem Brett. */
   readonly mistakes = signal<MistakesBySide>(NO_MISTAKES);
-  readonly mistakeTotal = computed(() => mistakeCount(this.mistakes()));
+  /** Wessen Partie — als Signal, damit Zähler und Trainer-Seite nachziehen, sobald die Partie da ist. */
+  private readonly ownerSide = signal<'white' | 'black' | null>(null);
+  /** Die Seite, die der Trainer abfragt — der Knopf zählt NUR sie (siehe `trainingSide`). */
+  readonly mistakeSide = computed(() => trainingSide(this.mistakes(), this.ownerSide()));
+  readonly mistakeTotal = computed(() => mistakesOf(this.mistakes(), this.mistakeSide()).length);
 
   analysisRunning(): boolean {
     const s = this.reviewStatus();
@@ -246,7 +250,7 @@ export class SharedGameComponent implements OnInit {
   trainMistakes(): void {
     const bySide = this.mistakes();
     this.dialog.open(MistakesTrainerComponent, {
-      data: { bySide, side: this.game?.ownerSide ?? sideWithMoreMistakes(bySide) },
+      data: { bySide, side: this.mistakeSide() },
       autoFocus: false,
     });
   }
@@ -286,6 +290,7 @@ export class SharedGameComponent implements OnInit {
 
   private show(g: SharedGame): void {
     this.game = g;
+    this.ownerSide.set(g.ownerSide ?? null);
     // Aus der Sicht des Besitzers: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
     this.flipped = g.ownerSide === 'black';
     this.service.loadPgn(g.pgn);

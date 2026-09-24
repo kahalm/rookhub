@@ -49,6 +49,40 @@ describe('SharedGameComponent', () => {
     expect(fixture.componentInstance.flipped).toBeTrue();
   });
 
+  // Gemeldet 2026-09-24: „Eigene Fehler nachspielen (1)", der Dialog fand nichts — der Knopf zählte beide Seiten,
+  // der Trainer öffnete auf der des Besitzers, und der einzige Fehler (Analyse lief noch) war der des Gegners.
+  it('the mistakes button counts only the side the trainer opens on', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    const game = fixture.componentInstance;
+    const m = { ply: 1 } as never;
+    const button = () => (fixture.nativeElement as HTMLElement).querySelector('button.mistakes');
+
+    game.mistakes.set({ white: [], black: [m] });
+    fixture.detectChanges();
+    expect(game.mistakeTotal()).toBe(0);
+    expect(button()).toBeNull();
+
+    game.mistakes.set({ white: [m, m], black: [m] });
+    fixture.detectChanges();
+    expect(game.mistakeSide()).toBe('white');
+    expect(game.mistakeTotal()).toBe(2);
+    expect(button()).not.toBeNull();
+  });
+
+  it('without an owner the button and the trainer take the side with more mistakes', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame(null));
+    const game = fixture.componentInstance;
+    const m = { ply: 1 } as never;
+
+    game.mistakes.set({ white: [], black: [m] });
+    expect(game.mistakeSide()).toBe('black');
+    expect(game.mistakeTotal()).toBe(1);
+  });
+
   it('starts unflipped for ownerSide=white or unknown', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

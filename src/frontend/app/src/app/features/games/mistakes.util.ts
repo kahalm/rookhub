@@ -96,9 +96,21 @@ export function collectMistakes(
   return out;
 }
 
-/** Zusammen, fuer den Zaehler am Knopf. */
-export function mistakeCount(bySide: MistakesBySide): number {
-  return bySide.white.length + bySide.black.length;
+/** Die Aufgaben EINER Seite. */
+export function mistakesOf(bySide: MistakesBySide, side: 'white' | 'black'): Mistake[] {
+  return side === 'white' ? bySide.white : bySide.black;
+}
+
+/**
+ * Welche Seite der Trainer abfragt — und damit auch, was der Knopf zaehlt: die des Besitzers, wenn die
+ * Partie ihm zuzuordnen ist, sonst `sideWithMoreMistakes`. Knopf und Dialog MUESSEN dieselbe Seite
+ * meinen. Bis 0.517.0 zaehlte der Knopf beide Seiten zusammen, der Dialog oeffnete aber auf der des
+ * Besitzers — gemeldet 2026-09-24: „Eigene Fehler nachspielen (1)", und der Dialog fand nichts, weil der
+ * einzige bis dahin gefundene Fehler (die Analyse lief noch) der des Gegners war. Ohne Fehler auf der
+ * zweiten Seite gab es im Dialog nicht einmal den Umschalter.
+ */
+export function trainingSide(bySide: MistakesBySide, ownerSide?: 'white' | 'black' | null): 'white' | 'black' {
+  return ownerSide ?? sideWithMoreMistakes(bySide);
 }
 
 /**

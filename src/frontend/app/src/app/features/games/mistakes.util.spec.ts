@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { GameEvalPly, GameEvals, GameReview, ReviewedMove, reviewGame } from './game-review.util';
-import { PlayedMove, collectMistakes, mistakeCount, sanOfUci, sideWithMoreMistakes } from './mistakes.util';
+import { PlayedMove, collectMistakes, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide } from './mistakes.util';
 
 /** Kurze Partie nachspielen: liefert die FENs (Stellung VOR jedem Halbzug, plus die letzte) und die Zuege. */
 function play(sans: string[]): { fens: string[]; moves: PlayedMove[] } {
@@ -36,7 +36,8 @@ describe('mistakes.util', () => {
 
     expect(bySide.white.map(m => m.ply)).toEqual([2]);
     expect(bySide.black.map(m => m.ply)).toEqual([3]);
-    expect(mistakeCount(bySide)).toBe(2);
+    expect(mistakesOf(bySide, 'white').map(m => m.ply)).toEqual([2]);
+    expect(mistakesOf(bySide, 'black').map(m => m.ply)).toEqual([3]);
   });
 
   it('haelt zu jedem Fehler den gespielten Zug UND den besseren bereit — als SAN fuers Vorlesen', () => {
@@ -128,5 +129,17 @@ describe('mistakes.util', () => {
     expect(sideWithMoreMistakes({ white: [w], black: [w, w] })).toBe('black');
     expect(sideWithMoreMistakes({ white: [w, w], black: [w] })).toBe('white');
     expect(sideWithMoreMistakes({ white: [], black: [] })).toBe('white');
+  });
+
+  // Gemeldet 2026-09-24: „Eigene Fehler nachspielen (1)", der Dialog fand nichts — der Knopf zählte beide
+  // Seiten, der Dialog öffnete auf der des Besitzers, und der einzige Fehler war der des Gegners.
+  it('trainiert wird die Seite des Besitzers, auch wenn nur der Gegner Fehler hat; ohne Besitzer die mit den meisten', () => {
+    const w = { ply: 1 } as never;
+    const onlyOpponent = { white: [], black: [w] };
+
+    expect(trainingSide(onlyOpponent, 'white')).toBe('white');
+    expect(mistakesOf(onlyOpponent, trainingSide(onlyOpponent, 'white')).length).toBe(0);
+    expect(trainingSide(onlyOpponent, null)).toBe('black');
+    expect(trainingSide(onlyOpponent)).toBe('black');
   });
 });
