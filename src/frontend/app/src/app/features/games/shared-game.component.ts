@@ -119,7 +119,7 @@ import { PositionMenuComponent } from '../analysis/position-menu.component';
                 @if (training(); as t) {
                   @if (trainingAnalysis(); as a) {
                     <!-- „Analysieren" im Training: frei weiterrechnen ab der Aufgabe, mit der Live-Engine (blauer Pfeil). -->
-                    <app-chess-board [fen]="a.session.fen(a.base)" [lastMove]="a.session.lastMove()" [flipped]="t.flipped()"
+                    <app-chess-board [fen]="a.session.fen(a.base)" [lastMove]="a.session.lastMove() ?? a.lastMove" [flipped]="t.flipped()"
                                      [playable]="true" (userMove)="a.session.play($event, a.base)"
                                      [arrows]="a.session.arrows()"
                                      [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
@@ -375,11 +375,19 @@ export class SharedGameComponent implements OnInit, DoCheck {
   }
 
   /**
-   * „Analysieren" im Fehler-Training (seit 0.526.2): das Brett wird frei, die Live-Engine rechnet — ab der Stellung
-   * VOR dem Fehler, der eigene (oder gezeigte) Zug steht schon auf dem Brett. Gilt bis zur nächsten Aufgabe:
-   * `ngDoCheck` beendet die Analyse, sobald die Aufgabe, die Seite oder die Phase („nochmal") wechselt.
+   * „Analysieren" im Fehler-Training (seit 0.526.2): das Brett wird frei, die Live-Engine rechnet. Gilt bis zur nächsten
+   * Aufgabe: `ngDoCheck` beendet die Analyse, sobald die Aufgabe, die Seite oder die Phase („nochmal") wechselt.
+   *
+   * WO die Analyse anfängt, hängt daran, ob die Lösung schon bekannt ist (seit 0.527.2, gemeldet 2026-09-24):
+   * - gefunden/gezeigt: ab der Stellung VOR dem Fehler, der Zug steht schon drauf — ← darf dorthin zurück;
+   * - nach einem Fehlversuch: ab der Stellung NACH dem eigenen Zug, und das ist der Anfang der Variante. Wer ← dahinter
+   *   zurückkönnte, stünde in der Aufgabenstellung, und die Engine zeigte dort Pfeil und Linien des gesuchten Zugs.
    */
-  readonly trainingAnalysis = signal<{ session: LiveEngineSession; base: string; index: number; side: string } | null>(null);
+  readonly trainingAnalysis = signal<{
+    session: LiveEngineSession; base: string; index: number; side: string;
+    /** Zug, der auf dem Brett markiert bleibt, solange die Variante leer ist (der eigene Fehlversuch). */
+    lastMove?: [string, string];
+  } | null>(null);
 
   toggleTrainingAnalysis(): void {
     if (this.trainingAnalysis()) { this.stopTrainingAnalysis(); return; }
@@ -387,9 +395,16 @@ export class SharedGameComponent implements OnInit, DoCheck {
     const m = t?.current();
     if (!t || !m) return;
     const session = this.createLiveSession();
-    session.sync(-2, m.fenBefore);
     const move = t.lastMove();
-    const san = t.phase() === 'wrong' ? t.tried() : t.phase() === 'right' ? t.foundSan() : m.bestSan;
+    if (t.phase() === 'wrong') {
+      const base = t.boardFen();
+      session.sync(-2, base);
+      this.useStoredRemoteEngine(session);
+      this.trainingAnalysis.set({ session, base, index: t.index(), side: t.side(), lastMove: move ?? undefined });
+      return;
+    }
+    session.sync(-2, m.fenBefore);
+    const san = t.phase() === 'right' ? t.foundSan() : m.bestSan;
     if (move && t.boardFen() !== m.fenBefore) {
       session.play({ from: move[0], to: move[1], san, fen: t.boardFen() }, m.fenBefore);
     }

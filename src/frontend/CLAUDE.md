@@ -377,7 +377,9 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
   `cursor`, `canRedo`); am Variantenende tut → nichts, an ihrem Anfang blättert ← in der Partie. Gemeldet als „die
   Navigation mit den Tasten verloren" — → war in der Variante tot.
 - **Analyse im Fehler-Training** (0.526.2): Knopf „Analysieren" nach dem Urteil (daneben/gezeigt/gefunden) →
-  `trainingAnalysis` = eigene `LiveEngineSession` ab `fenBefore`, der eigene (bzw. gezeigte) Zug steht schon drauf;
+  `trainingAnalysis` = eigene `LiveEngineSession` ab `fenBefore`, der eigene (bzw. gezeigte) Zug steht schon drauf.
+  **Nach einem FEHLVERSUCH (Lösung noch offen) beginnt sie erst NACH dem eigenen Zug** (0.527.2): ← darf nie zurück in
+  die Aufgabenstellung, dort zeigte die Engine Pfeil und Linien des gesuchten Zugs (gemeldet 2026-09-24);
   endet per `ngDoCheck`, sobald Aufgabe, Seite oder Phase wechselt. ← → laufen durch die Variante, die Leertaste
   springt nach der Lösung (right/shown) zur nächsten Aufgabe (Fokus vorher weg vom Knopf, sonst zweiter Klick).
 - **Navigation am Handy** (0.525.1, ≤ 768 px): Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live — Zurück/Vor als breite 48-px-Knöpfe

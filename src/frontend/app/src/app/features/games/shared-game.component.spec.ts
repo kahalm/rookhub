@@ -166,7 +166,7 @@ describe('SharedGameComponent', () => {
     expect(page.service.currentMoveIndex).toBe(0);
   });
 
-  it('training: “Analyse” frees the board with the tried move on it, ← walks back; Space goes to the next task after the solution', async () => {
+  it('training: “Analyse” after a wrong try starts AFTER the tried move (no way back to the task = no spoiler); after the solution ← walks back; Space goes on', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();
     http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
@@ -189,16 +189,32 @@ describe('SharedGameComponent', () => {
     expect(t.phase()).toBe('wrong');
     expect(t.triedEval()).toEqual({ cp: 10 });
 
+    const AFTER_D4 = 'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1';
     page.toggleTrainingAnalysis();
     fixture.detectChanges();
-    const a = page.trainingAnalysis()!;
-    expect(a.session.variation().map(m => m.san)).toEqual(['d4']);
+    const wrong = page.trainingAnalysis()!;
     expect(fixture.nativeElement.querySelector('app-live-engine-panel')).not.toBeNull();
+    // Die Lösung ist noch offen: die Analyse beginnt NACH dem eigenen Zug, und dahinter geht es nicht zurück —
+    // in der Aufgabenstellung zeigte die Engine sonst den gesuchten Zug.
+    expect(wrong.base).toBe(AFTER_D4);
+    expect(wrong.session.fen(wrong.base)).toBe(AFTER_D4);
+    expect(wrong.lastMove).toEqual(['d2', 'd4']);
     key('ArrowLeft');
-    expect(a.session.variation().length).toBe(0);
+    expect(wrong.session.fen(wrong.base)).toBe(AFTER_D4);
+    wrong.session.reset(wrong.base);                 // „Zurück zur Partie“ führt ebenfalls nur bis hierher
+    expect(wrong.session.fen(wrong.base)).toBe(AFTER_D4);
+    page.stopTrainingAnalysis();
 
+    // Nach der Lösung darf man zurück vor den Fehler: der gezeigte Zug steht drauf, ← nimmt ihn zurück.
     t.showSolution();
     fixture.detectChanges();
+    page.toggleTrainingAnalysis();
+    const shown = page.trainingAnalysis()!;
+    expect(shown.base).toBe(START);
+    expect(shown.session.variation().map(m => m.san)).toEqual(['e4']);
+    key('ArrowLeft');
+    expect(shown.session.variation().length).toBe(0);
+
     key(' ');
     fixture.detectChanges();
     expect(t.index()).toBe(1);                       // nächste Aufgabe …
