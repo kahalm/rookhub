@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { GameEvalPly, GameEvals, GameReview, ReviewedMove, reviewGame } from './game-review.util';
-import { PlayedMove, collectMistakes, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide } from './mistakes.util';
+import { EQUIVALENT_LIMIT, PlayedMove, acceptedMoves, collectMistakes, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide } from './mistakes.util';
 
 /** Kurze Partie nachspielen: liefert die FENs (Stellung VOR jedem Halbzug, plus die letzte) und die Zuege. */
 function play(sans: string[]): { fens: string[]; moves: PlayedMove[] } {
@@ -141,5 +141,51 @@ describe('mistakes.util', () => {
     expect(mistakesOf(onlyOpponent, trainingSide(onlyOpponent, 'white')).length).toBe(0);
     expect(trainingSide(onlyOpponent, null)).toBe('black');
     expect(trainingSide(onlyOpponent)).toBe('black');
+  });
+  // Gewuenscht 2026-09-24: nicht nur der Bestzug zaehlt, sondern jeder gleichwertige.
+  describe('gleichwertige Zuege', () => {
+    it('nimmt Kandidaten bis EQUIVALENT_LIMIT Punkte hinter dem Bestzug — Bestzug zuerst, Fehlzug nie', () => {
+      expect(EQUIVALENT_LIMIT).toBe(2);
+      // Weiss am Zug nach 1.e4 e5: +30 = 52,75 %, +25 = 52,29 % (0,5 dahinter), −10 = 49,08 % (3,7 dahinter)
+      const row: GameEvalPly = {
+        ply: 2, depth: 20, cp: 30, bestUci: 'b1c3', playedUci: 'g1f3',
+        candidates: [
+          { uci: 'b1c3', cp: 30 }, { uci: 'd2d4', cp: 25 }, { uci: 'f1c4', cp: -10 }, { uci: 'g1f3', cp: 29 },
+        ],
+      };
+
+      const a = acceptedMoves(row, fens[2], true, 'b1c3', 'g1f3');
+
+      expect(a.map(x => x.uci)).toEqual(['b1c3', 'd2d4']);
+      expect(a.map(x => x.san)).toEqual(['Nc3', 'd4']);
+    });
+
+    it('rechnet fuer Schwarz aus SCHWARZer Sicht', () => {
+      // Schwarz am Zug: −250 (Weiss-Sicht) ist fuer Schwarz 71,5 %, −230 sind 70,1 % (1,4 dahinter), 0 sind 50 %.
+      const row: GameEvalPly = {
+        ply: 3, depth: 20, cp: -250, bestUci: 'g8f6', playedUci: 'b8c6',
+        candidates: [{ uci: 'g8f6', cp: -250 }, { uci: 'd7d6', cp: -230 }, { uci: 'f7f6', cp: 0 }],
+      };
+
+      expect(acceptedMoves(row, fens[3], false, 'g8f6', 'b8c6').map(x => x.san)).toEqual(['Nf6', 'd6']);
+    });
+
+    it('ohne Kandidatenliste (aelterer Server) bleibt es beim Bestzug; Unspielbares faellt heraus', () => {
+      const ohne: GameEvalPly = { ply: 2, depth: 20, cp: 30, bestUci: 'b1c3', playedUci: 'g1f3' };
+      expect(acceptedMoves(ohne, fens[2], true, 'b1c3', 'g1f3').map(x => x.uci)).toEqual(['b1c3']);
+
+      const kaputt: GameEvalPly = { ...ohne, candidates: [{ uci: 'b1c3', cp: 30 }, { uci: 'a1a8', cp: 30 }] };
+      expect(acceptedMoves(kaputt, fens[2], true, 'b1c3', 'g1f3').map(x => x.uci)).toEqual(['b1c3']);
+    });
+
+    it('die Aufgabe traegt die gleichwertigen Zuege mit', () => {
+      const mitKandidaten = evals(rows.map(r => r.ply === 2
+        ? { ...r, candidates: [{ uci: 'b1c3', cp: 30 }, { uci: 'd2d4', cp: 26 }] }
+        : r), 4);
+      const w = collectMistakes(handReview(), mitKandidaten, fens, moves).white[0];
+
+      expect(w.acceptUci).toEqual(['b1c3', 'd2d4']);
+      expect(w.acceptSan).toEqual(['Nc3', 'd4']);
+    });
   });
 });

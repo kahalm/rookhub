@@ -2743,6 +2743,8 @@
       "prompt": "A lépésed {{san}} volt. Keresd a jobb lépést.",
       "wrong": "{{san}} nem az.",
       "right": "Helyes, {{san}} volt a lépés.",
+      "rightEquivalent": "Helyes, {{san}} ugyanolyan jó (motor: {{best}}).",
+      "alsoGood": "Ugyanolyan jó: {{moves}}",
       "shown": "Jobb lett volna: {{san}}.",
       "cost": "{{san}} {{percent}} százalékpont nyerési esélybe került.",
       "retry": "Újra",

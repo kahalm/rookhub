@@ -282,4 +282,58 @@ describe('SharedGameComponent', () => {
     expect(fixture.componentInstance.notFound).toBeTrue();
     expect(fixture.componentInstance.notFoundKey).toBe('games.loadError');
   });
+  // Gewuenscht 2026-09-24: „Eigene Fehler nachspielen" auf dem Brett der Seite statt in einem Dialog mit eigenem Brett.
+  it('replays the mistakes on the page board — no dialog, tap zones gone, the move list follows the task', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush({
+      ...sharedGame('white'), pgn: '[White "a"]\n[Black "b"]\n\n1. e4 e5 2. Qh5 Nc6 0-1',
+    });
+    fixture.detectChanges();
+    const game = fixture.componentInstance;
+    const el = fixture.nativeElement as HTMLElement;
+    const fenBefore = game.service.currentGame!.fens[2];
+    const mistake = {
+      ply: 2, white: true, cls: 'blunder', fenBefore, playedSan: 'Qh5', playedUci: 'd1h5',
+      bestUci: 'g1f3', bestSan: 'Nf3', acceptUci: ['g1f3', 'b1c3'], acceptSan: ['Nf3', 'Nc3'],
+      evalBefore: { cp: 30 }, evalAfter: { cp: -250 }, lostPercent: 24,
+    } as never;
+    game.mistakes.set({ white: [mistake], black: [] });
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.board-tap').length).toBe(2);
+
+    game.trainMistakes();
+    fixture.detectChanges();
+
+    expect(document.querySelector('mat-dialog-container')).toBeNull();
+    expect(el.querySelector('app-mistakes-trainer')).not.toBeNull();
+    expect(el.querySelectorAll('app-chess-board').length).toBe(1);
+    expect(el.querySelectorAll('.board-tap').length).toBe(0);   // die Tippzonen schluckten sonst jeden Zug
+    expect(el.querySelector('button.mistakes')).toBeNull();
+    expect(game.training()!.boardFen()).toBe(fenBefore);
+    expect(game.training()!.playable()).toBeTrue();
+    expect(game.service.currentMoveIndex).toBe(1);              // Zugliste steht auf der Stellung VOR dem Fehler
+
+    game.onTrainingMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'danach' });
+    expect(game.training()!.phase()).toBe('right');              // gleichwertiger Zug zaehlt
+
+    game.endTraining();
+    fixture.detectChanges();
+    expect(el.querySelector('app-mistakes-trainer')).toBeNull();
+    expect(el.querySelectorAll('.board-tap').length).toBe(2);
+  });
+
+  it('arrow keys do not page through the game while training', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    const game = fixture.componentInstance;
+    game.mistakes.set({ white: [{ ply: 1, fenBefore: game.service.currentGame!.fens[1], acceptUci: [], acceptSan: [] } as never], black: [] });
+    game.trainMistakes();
+    const before = game.service.currentMoveIndex;
+
+    game.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+
+    expect(game.service.currentMoveIndex).toBe(before);
+  });
 });

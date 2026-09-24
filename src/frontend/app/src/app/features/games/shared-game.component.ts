@@ -1,14 +1,13 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, signal, viewChild } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, effect, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -21,6 +20,7 @@ import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
 import { MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide } from './mistakes.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
+import { MistakesSession } from './mistakes-session';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 /**
@@ -38,6 +38,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
+    MistakesTrainerComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -88,8 +89,10 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                   <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
                 </a>
               }
-              <!-- „Eigene Fehler nachspielen" (0.516.0) — erscheint erst, wenn die Analyse Aufgaben hergibt. -->
-              @if (mistakeTotal() > 0) {
+              <!-- „Eigene Fehler nachspielen" (0.516.0) — erscheint erst, wenn die Analyse Aufgaben hergibt.
+                   Seit 0.518.1 auf dem Brett DIESER Seite; solange das Training läuft, steht die Leiste unter
+                   dem Brett und der Knopf entfällt. -->
+              @if (mistakeTotal() > 0 && !training()) {
                 <button mat-stroked-button class="mistakes" (click)="trainMistakes()">
                   <mat-icon>replay</mat-icon> {{ 'games.mistakes.button' | translate: { count: mistakeTotal() } }}
                 </button>
@@ -104,11 +107,22 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
           <div class="body">
             <div class="board-section">
               <div class="board-wrap">
-                <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
-                                 [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
-                <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
-                <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
+                @if (training(); as t) {
+                  <!-- Dasselbe Brett wie beim Nachspielen, nur mit der Stellung der Aufgabe und spielbar. -->
+                  <app-chess-board [fen]="t.boardFen()" [lastMove]="t.lastMove()" [flipped]="t.flipped()"
+                                   [playable]="t.playable()" (userMove)="onTrainingMove($event)"
+                                   [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                } @else {
+                  <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
+                                   [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                  <!-- Die Tippzonen blieben im Training über dem Brett liegen und schluckten jeden Zug. -->
+                  <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
+                  <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
+                }
               </div>
+              @if (training(); as t) {
+                <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" />
+              } @else {
               <div class="nav">
                 <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"><mat-icon>skip_previous</mat-icon></button>
                 <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"><mat-icon>navigate_before</mat-icon></button>
@@ -116,6 +130,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                 <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
                 <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
               </div>
+              }
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
                                  [currentIndex]="service.currentMoveIndex"
@@ -172,7 +187,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
-    .pr-slot, .review-slot { display: block; width: 100%; }
+    .pr-slot, .review-slot, .trainer-slot { display: block; width: 100%; }
     /* Die Zugliste ist so hoch wie das Brett und scrollt in sich; eine feste Breite, damit die zwei Zugspalten
        nebeneinander stehen statt — bei einer Spalte, die den Rest der Karte füllt — mit einer Handbreit Luft
        dazwischen. */
@@ -204,7 +219,6 @@ export class SharedGameComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private analyzeGame = inject(AnalyzeGameService);
-  private dialog = inject(MatDialog);
 
   game: SharedGame | null = null;
   loading = true;
@@ -243,16 +257,33 @@ export class SharedGameComponent implements OnInit {
     return s === 'pending' || s === 'running';
   }
 
+  /** Laufendes Training „Eigene Fehler nachspielen" — `null` = die Seite zeigt die Partie. */
+  readonly training = signal<MistakesSession | null>(null);
+
+  /**
+   * Zugliste und Kurve laufen mit: je Aufgabe springt die Partie auf die Stellung VOR dem Fehler — man
+   * sieht, wo in der Partie man ist, und nach dem Beenden steht man genau dort.
+   */
+  private readonly followTask = effect(() => {
+    const m = this.training()?.current();
+    if (m) this.service.goToMove(m.ply - 1);
+  });
+
   /**
    * Trainiert wird die Seite des Besitzers; ohne Zuordnung (fremde geteilte Partie) die mit den meisten
-   * Fehlern — im Dialog lässt sich umschalten, sobald beide Seiten welche haben.
+   * Fehlern — in der Leiste lässt sich umschalten, sobald beide Seiten welche haben. Gespielt wird auf dem
+   * Brett dieser Seite (bis 0.518.0 ein Dialog mit eigenem, kleinerem Brett).
    */
   trainMistakes(): void {
-    const bySide = this.mistakes();
-    this.dialog.open(MistakesTrainerComponent, {
-      data: { bySide, side: this.mistakeSide() },
-      autoFocus: false,
-    });
+    this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide()));
+  }
+
+  onTrainingMove(e: UserBoardMove): void {
+    this.training()?.onMove(e);
+  }
+
+  endTraining(): void {
+    this.training.set(null);
   }
 
   analyzeTooltip(): string {
@@ -329,6 +360,8 @@ export class SharedGameComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    // Im Training zeigt das Brett die Aufgabe — die Pfeile blätterten sonst unsichtbar in der Partie darunter.
+    if (this.training()) return;
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.service.goBack(); }
     else if (event.key === 'ArrowRight') { event.preventDefault(); this.service.goForward(); }
   }

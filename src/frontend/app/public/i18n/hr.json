@@ -2489,6 +2489,8 @@
       "prompt": "Tvoj potez: {{san}}. Pronađi bolji.",
       "wrong": "{{san}} nije taj potez.",
       "right": "Točno, {{san}} je bio potez.",
+      "rightEquivalent": "Točno, {{san}} je jednako dobar (motor: {{best}}).",
+      "alsoGood": "Jednako dobro: {{moves}}",
       "shown": "Bolje je bilo {{san}}.",
       "cost": "{{san}} je stajao {{percent}} postotnih bodova izgleda za pobjedu.",
       "retry": "Pokušaj ponovno",

@@ -38,6 +38,14 @@ export interface GameEvalPly extends EvalScore {
   /** Zweitbester Kandidat derselben Suche — für „Great" (Abstand) und „Brilliant" (ohnehin gewonnen?). */
   secondCp?: number | null;
   secondMate?: number | null;
+  /** Alle Kandidaten dieser Suche (bester zuerst, Weiß-Sicht) — für die gleichwertigen Züge in
+   *  „Eigene Fehler nachspielen". Fehlt bei Antworten älterer Server. */
+  candidates?: GameEvalCandidate[];
+}
+
+/** Ein Kandidat der Engine: Zug (Standard-UCI) + Bewertung in Weiß-Sicht — `GameEvalCandidateDto`. */
+export interface GameEvalCandidate extends EvalScore {
+  uci: string;
 }
 
 export type GameEvalsStatus = 'none' | 'pending' | 'running' | 'done' | 'failed';

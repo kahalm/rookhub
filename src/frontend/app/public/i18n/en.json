@@ -2489,6 +2489,8 @@
       "prompt": "You played {{san}}. Find a better move.",
       "wrong": "{{san}} is not it.",
       "right": "Correct, {{san}} was the move.",
+      "rightEquivalent": "Correct, {{san}} is just as good (engine: {{best}}).",
+      "alsoGood": "Just as good: {{moves}}",
       "shown": "{{san}} was better.",
       "cost": "{{san}} cost {{percent}} percentage points of winning chances.",
       "retry": "Try again",

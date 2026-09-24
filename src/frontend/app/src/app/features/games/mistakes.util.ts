@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { EvalScore, GameEvals, GameReview, MoveClass } from './game-review.util';
+import { CLASS_LIMITS, EvalScore, GameEvalPly, GameEvals, GameReview, MoveClass, winPercent } from './game-review.util';
 import { uciOf } from './move-tactics.util';
 
 /**
@@ -34,6 +34,10 @@ export interface Mistake {
   playedUci: string;
   bestUci: string;
   bestSan: string;
+  /** Alle Züge, die als gefunden zählen — der Bestzug zuerst, dahinter die gleichwertigen
+   *  (siehe {@link EQUIVALENT_LIMIT}). Mindestens der Bestzug. */
+  acceptUci: string[];
+  acceptSan: string[];
   evalBefore: EvalScore;
   evalAfter: EvalScore;
   /** Verlorene Gewinnchance in Prozentpunkten, aus Sicht des Ziehenden — nie negativ. */
@@ -46,6 +50,45 @@ export interface MistakesBySide {
 }
 
 export const NO_MISTAKES: MistakesBySide = { white: [], black: [] };
+
+/**
+ * Wann ein anderer Zug der Engine so gut ist wie ihr bester: höchstens so viele PROZENTPUNKTE
+ * Gewinnchance dahinter, aus Sicht des Ziehenden. Dieselbe Grenze, bis zu der der Rückblick einen Zug
+ * „Exzellent" nennt (`CLASS_LIMITS.excellent`) — ein Zug, den die Kurve nicht als Verlust führt, darf
+ * im Training nicht als daneben gelten. Gewünscht 2026-09-24: vorher zählte NUR der Bestzug, und wer
+ * einen gleich guten spielte, bekam „daneben".
+ */
+export const EQUIVALENT_LIMIT = CLASS_LIMITS.excellent;
+
+/**
+ * Die als gefunden geltenden Züge einer Stellung: der Bestzug und jeder Kandidat derselben Suche, der
+ * höchstens {@link EQUIVALENT_LIMIT} Punkte hinter ihm liegt. Der gespielte Fehlzug ist nie dabei, und
+ * ein Zug, der in der Stellung nicht geht, auch nicht. Ohne Kandidatenliste (älterer Server) bleibt es
+ * beim Bestzug. Züge ausserhalb der fünf Kandidaten lassen sich nicht beurteilen und zählen nicht.
+ */
+export function acceptedMoves(
+  row: GameEvalPly, fenBefore: string, white: boolean, bestUci: string, playedUci: string,
+): { uci: string; san: string }[] {
+  const bestSan = sanOfUci(fenBefore, bestUci);
+  const out = bestSan ? [{ uci: bestUci, san: bestSan }] : [];
+  const mover = (s: EvalScore): number | null => {
+    const w = winPercent(s);
+    return w == null ? null : white ? w : 100 - w;
+  };
+  const candidates = row.candidates ?? [];
+  const bestRow = candidates.find(c => c.uci.toLowerCase() === bestUci) ?? candidates[0];
+  const top = bestRow ? mover(bestRow) : null;
+  if (top == null) return out;
+  for (const c of candidates) {
+    const uci = c.uci.toLowerCase();
+    if (uci === bestUci || uci === playedUci || out.some(o => o.uci === uci)) continue;
+    const win = mover(c);
+    if (win == null || top - win > EQUIVALENT_LIMIT) continue;
+    const san = sanOfUci(fenBefore, uci);
+    if (san) out.push({ uci, san });
+  }
+  return out;
+}
 
 /** SAN eines UCI-Zugs in einer Stellung; `null`, wenn er dort nicht geht (oder die FEN unlesbar ist). */
 export function sanOfUci(fen: string, uci: string): string | null {
@@ -78,17 +121,20 @@ export function collectMistakes(
 
   for (const m of review.moves) {
     if (!m || !TRAINED.has(m.base)) continue;
-    const best = (rows.get(m.ply)?.bestUci || '').toLowerCase();
+    const row = rows.get(m.ply);
+    const best = (row?.bestUci || '').toLowerCase();
     const fenBefore = fens[m.ply];
     const played = moves[m.ply];
     if (!best || !fenBefore || !played) continue;
     const playedUci = uciOf(played).toLowerCase();
     if (best === playedUci) continue;
     const bestSan = sanOfUci(fenBefore, best);
-    if (!bestSan) continue;
+    if (!bestSan || !row) continue;
+    const accepted = acceptedMoves(row, fenBefore, m.white, best, playedUci);
     (m.white ? out.white : out.black).push({
       ply: m.ply, white: m.white, cls: m.base, fenBefore,
       playedSan: played.san, playedUci, bestUci: best, bestSan,
+      acceptUci: accepted.map(a => a.uci), acceptSan: accepted.map(a => a.san),
       evalBefore: m.evalBefore, evalAfter: m.evalAfter,
       lostPercent: Math.max(0, m.winBefore - m.winAfter),
     });

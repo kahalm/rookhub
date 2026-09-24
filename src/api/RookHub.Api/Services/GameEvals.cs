@@ -56,6 +56,11 @@ public static class GameEvals
             dto.SecondCp = second.Cp;
             dto.SecondMate = second.MateIn;
         }
+        foreach (var c in candidates)
+        {
+            var e = White(c.Eval);
+            dto.Candidates.Add(new GameEvalCandidateDto { Uci = c.Uci, Cp = e.Cp, Mate = e.MateIn });
+        }
         return dto;
     }
 

@@ -186,6 +186,18 @@ public class GameEvalPlyDto
     /// spaeteren Schritt (nur ein Zug haelt die Stellung).</summary>
     public int? SecondCp { get; set; }
     public int? SecondMate { get; set; }
+    /// <summary>ALLE Kandidaten dieser Suche (hoechstens fuenf, bester zuerst), Weiß-Sicht. Fuer
+    /// „Eigene Fehler nachspielen": dort zaehlt nicht nur der Bestzug, sondern jeder gleichwertige —
+    /// und ob einer gleichwertig ist, weiss nur, wer auch die anderen Bewertungen kennt.</summary>
+    public List<GameEvalCandidateDto> Candidates { get; set; } = new();
+}
+
+/// <summary>Ein Kandidat der Engine: Zug (Standard-UCI) + Bewertung in Weiß-Sicht.</summary>
+public class GameEvalCandidateDto
+{
+    public string Uci { get; set; } = string.Empty;
+    public int? Cp { get; set; }
+    public int? Mate { get; set; }
 }
 
 /// <summary>Eine einzelne Bewertung (Weiß-Sicht), genau eines von <see cref="Cp"/>/<see cref="Mate"/>.</summary>

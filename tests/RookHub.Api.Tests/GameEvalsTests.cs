@@ -49,6 +49,22 @@ public class GameEvalsTests
         Assert.Equal(35, ply.SecondCp);
     }
 
+    /// <summary>„Eigene Fehler nachspielen" laesst jeden GLEICHWERTIGEN Zug gelten — dafuer braucht der
+    /// Client alle Kandidaten, in derselben Reihenfolge und derselben Weiß-Sicht wie die Kurve.</summary>
+    [Fact]
+    public void Kandidaten_alleInReihenfolge_inWeissSicht()
+    {
+        var ply = GameEvals.PlyOf(1, BlackToMove, "c7c5",
+            """[{"uci":"e7e5","cp":-20},{"uci":"c7c5","cp":-35},{"uci":"d7d5","mate":3}]""", 18);
+
+        Assert.NotNull(ply);
+        Assert.Equal(new[] { "e7e5", "c7c5", "d7d5" }, ply!.Candidates.Select(c => c.Uci));
+        Assert.Equal(20, ply.Candidates[0].Cp);
+        Assert.Equal(35, ply.Candidates[1].Cp);
+        Assert.Null(ply.Candidates[2].Cp);
+        Assert.Equal(-3, ply.Candidates[2].Mate);
+    }
+
     /// <summary>Matt bleibt Matt — nur das Vorzeichen dreht: Schwarz setzt in 1 matt (aus seiner Sicht
     /// +1) heißt für Weiß „wird in 1 mattgesetzt" (−1). Keine Umrechnung in Centipawns.</summary>
     [Fact]

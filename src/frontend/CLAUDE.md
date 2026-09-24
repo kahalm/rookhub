@@ -323,9 +323,20 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
 
 Der Trainer zur Partie, wie Lichess' „Aus deinen Fehlern lernen": Stellung VOR dem eigenen Fehler,
 der gespielte Zug steht daneben, gesucht ist der bessere. Knopf in der Kopfzeile von `/games/:id`
-und `/g/:token`, sobald es Aufgaben gibt; der Trainer selbst ist ein Dialog
-(`features/games/mistakes-trainer.component.ts`) — die Partie ist geladen, und nach dem Schließen
-steht man wieder genau dort, wo man war.
+und `/g/:token`, sobald es Aufgaben gibt. **Gespielt wird seit 0.519.0 auf dem BRETT DER SEITE**
+(bis dahin ein Dialog mit eigenem, kleinerem Brett — gewünscht 2026-09-24): den Zustand hält
+`features/games/mistakes-session.ts` (reine Klasse mit Signalen), die Seite bindet ihr Brett daran
+(`boardFen`/`lastMove`/`flipped`/`playable`, Züge über `onTrainingMove`), und unter dem Brett steht statt
+der Navigationsleiste die Trainer-Leiste (`mistakes-trainer.component.ts`, Eingabe `session`, Ausgabe
+`closed`). Drei Dinge, die dabei nicht kippen dürfen: die Tippzonen neben dem Brett fallen im Training
+weg (sie lägen sonst über dem Brett und schluckten jeden Zug), die Pfeiltasten blättern nicht in der
+Partie darunter, und Zugliste/Kurve springen je Aufgabe auf die Stellung VOR dem Fehler — nach dem
+Beenden steht man dort.
+- **Gleichwertige Züge zählen** (0.519.0, `acceptedMoves` in `mistakes.util.ts`): der Bestzug UND jeder
+  Kandidat derselben Suche, der höchstens `EQUIVALENT_LIMIT` (= `CLASS_LIMITS.excellent`, 2 Punkte
+  Gewinnchance) dahinter liegt — die Grenze, bis zu der der Rückblick einen Zug „Exzellent" nennt. Dafür
+  liefert `GameEvalPlyDto.Candidates` seit 0.519.0 alle (bis zu fünf) Kandidaten in Weiß-Sicht. Ein Zug
+  außerhalb der Kandidaten lässt sich nicht beurteilen und gilt als daneben.
 
 - **Die Auswahl ist rein und getestet** (`features/games/mistakes.util.ts`): `collectMistakes` nimmt
   die Ungenauigkeiten, Fehler und groben Fehler BEIDER Seiten in Partie-Reihenfolge, je mit

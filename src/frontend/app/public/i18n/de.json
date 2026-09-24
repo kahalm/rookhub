@@ -2489,6 +2489,8 @@
       "prompt": "Du spieltest {{san}}. Finde den besseren Zug.",
       "wrong": "{{san}} ist es nicht.",
       "right": "Richtig, {{san}} war der Zug.",
+      "rightEquivalent": "Richtig, {{san}} ist genauso gut (Engine: {{best}}).",
+      "alsoGood": "Genauso gut: {{moves}}",
       "shown": "Besser war {{san}}.",
       "cost": "{{san}} kostete {{percent}} Prozentpunkte Gewinnchance.",
       "retry": "Nochmal",
