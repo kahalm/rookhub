@@ -57,6 +57,12 @@ describe('game-review.util', () => {
     expect(whiteToMove('8/8/8/8/8/8/8/K6k b - - 0 1')).toBeFalse();
   });
 
+  it('winPercent: wie Lichess über ±1000 cp gekappt', () => {
+    expect(winPercent({ cp: 2500 })!).toBeCloseTo(winPercent({ cp: 1000 })!, 6);
+    expect(winPercent({ cp: -4000 })!).toBeCloseTo(winPercent({ cp: -1000 })!, 6);
+    expect(winPercent({ cp: 1000 })!).toBeCloseTo(97.5447, 3);
+  });
+
   describe('moveAccuracy (Sicht des Ziehenden)', () => {
     it('kein Verlust = 100 (die Formel allein gäbe 99,9999), Gewinn ebenso', () => {
       expect(moveAccuracy(60, 60)).toBe(100);
@@ -64,10 +70,10 @@ describe('game-review.util', () => {
     });
 
     it('Lichess-Werte', () => {
-      expect(moveAccuracy(80, 79)).toBeCloseTo(95.6044, 3);
-      expect(moveAccuracy(60, 50)).toBeCloseTo(63.5826, 3);
-      expect(moveAccuracy(70, 40)).toBeCloseTo(24.7756, 3);
-      expect(moveAccuracy(50, 0)).toBeCloseTo(8.5303, 3);
+      expect(moveAccuracy(80, 79)).toBeCloseTo(96.6044, 3);
+      expect(moveAccuracy(60, 50)).toBeCloseTo(64.5826, 3);
+      expect(moveAccuracy(70, 40)).toBeCloseTo(25.7756, 3);
+      expect(moveAccuracy(50, 0)).toBeCloseTo(9.5303, 3);
     });
 
     it('nie unter 0', () => {
@@ -178,7 +184,7 @@ describe('game-review.util', () => {
       expect(r.moves[1]!.white).toBeFalse();
       expect(r.moves[3]!.winBefore).toBeCloseTo(46.3246, 3);   // 100 − 53,6754
       expect(r.moves[3]!.winAfter).toBeCloseTo(24.8874, 3);    // 100 − 75,1126
-      expect(r.moves[3]!.accuracy).toBeCloseTo(37.4009, 3);
+      expect(r.moves[3]!.accuracy).toBeCloseTo(38.4009, 3);
       expect(r.black.counts).toEqual({
         brilliant: 0, great: 0, best: 0, excellent: 1, good: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 1,
       });
@@ -187,8 +193,8 @@ describe('game-review.util', () => {
 
     it('Genauigkeit je Seite, volatilitäts-gewichtet', () => {
       const r = reviewGame(evals(), fens);
-      expect(r.white.accuracy!).toBeCloseTo(98.9739, 3);
-      expect(r.black.accuracy!).toBeCloseTo(46.9172, 3);
+      expect(r.white.accuracy!).toBeCloseTo(99.4778, 3);
+      expect(r.black.accuracy!).toBeCloseTo(48.0122, 3);
     });
 
     it('fehlt die nächste Stellung, trägt der gespielte Kandidat; fehlt die eigene, ist der Zug nicht bewertbar', () => {
@@ -277,7 +283,7 @@ describe('game-review.util', () => {
         expect(r.moves.map(m => m?.cls)).toEqual(['best', 'blunder', 'miss', 'best']);
         expect(r.moves[2]!.winBefore).toBeCloseTo(75.1126, 3);
         expect(r.moves[2]!.winAfter).toBeCloseTo(53.6754, 3);
-        expect(r.moves[2]!.accuracy).toBeCloseTo(37.4009, 3);   // ein Etikett, keine andere Zahl
+        expect(r.moves[2]!.accuracy).toBeCloseTo(38.4009, 3);   // ein Etikett, keine andere Zahl
         expect(r.white.counts).toEqual({
           brilliant: 0, great: 0, best: 1, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, miss: 1, blunder: 0,
         });
@@ -410,7 +416,7 @@ describe('game-review.util', () => {
         const r = reviewGame(greatGame({ secondCp: 150 }), SICILIAN, UCIS);
         expect(r.moves.map(m => m?.cls)).toEqual(['best', 'blunder', 'great', 'best']);
         expect(r.moves[2]!.gapPawns).toBe(1.5);
-        expect(r.moves[2]!.accuracy).toBeCloseTo(93.8910, 3);   // 75,11 → 73,71 %: dieselbe Zahl wie als „best"
+        expect(r.moves[2]!.accuracy).toBeCloseTo(94.8910, 3);   // 75,11 → 73,71 %: dieselbe Zahl wie als „best"
         expect(r.white.counts.great).toBe(1);
         expect(r.white.counts.best).toBe(1);
       });

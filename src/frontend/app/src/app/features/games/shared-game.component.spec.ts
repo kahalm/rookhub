@@ -213,7 +213,7 @@ describe('SharedGameComponent', () => {
     http.expectOne('/api/games/shared/tok/evals').flush({ ...runningEvals, status: 'done' });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('app-game-review app-eval-graph')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-game-review .review')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('button.analyze')).toBeNull();
   });
 

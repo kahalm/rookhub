@@ -57,7 +57,11 @@ const MATE_GAP_PAWNS = 100;
     @if (status() !== 'none') {
       <section class="review">
         <div class="head">
-          <span class="title">{{ 'games.review.title' | translate }}</span>
+          <!-- Die Kurve ist standardmäßig zu (gewünscht 2026-09-24) — ein Klick auf die Überschrift klappt sie auf. -->
+          <button type="button" class="title" (click)="toggleGraph()" [attr.aria-expanded]="graphOpen()">
+            {{ 'games.review.title' | translate }}
+            <mat-icon class="chevron">{{ graphOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
           @if (running()) {
             <!-- „8 von 47" allein sagt nicht, wie lange noch — die Restdauer rechnet der Server. -->
             <span class="progress">
@@ -93,8 +97,10 @@ const MATE_GAP_PAWNS = 100;
             }
           </ol>
         }
-        <app-eval-graph [series]="review().curve" [marks]="marks()" [currentIndex]="currentIndex()"
-                        (moveClicked)="moveClicked.emit($event)" />
+        @if (graphOpen()) {
+          <app-eval-graph [series]="review().curve" [marks]="marks()" [currentIndex]="currentIndex()"
+                          (moveClicked)="moveClicked.emit($event)" />
+        }
         @if (current(); as m) {
           @let tip = hint(m);
           <div [class]="'current ' + m.cls">
@@ -140,7 +146,11 @@ const MATE_GAP_PAWNS = 100;
     :host { display: block; width: 100%; }
     .review { display: flex; flex-direction: column; gap: 6px; width: 100%; }
     .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-    .title { font-weight: 600; font-size: 0.9rem; }
+    .title {
+      display: inline-flex; align-items: center; gap: 2px; padding: 0; border: 0; background: none;
+      color: inherit; font: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    }
+    .title .chevron { font-size: 20px; width: 20px; height: 20px; opacity: 0.7; }
     .progress { font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress.failed { color: #e53935; }
     .toggles { display: inline-flex; margin-left: auto; }
@@ -232,6 +242,8 @@ export class GameReviewComponent {
   });
   readonly ucis = computed(() => this.moves().map(uciOf));
   readonly review = computed(() => reviewGame(this.evals(), this.fens(), this.ucis()));
+  /** Die Kurve ist standardmäßig ZU und klappt nur auf Wunsch auf — bewusst nicht gemerkt: „standardmäßig". */
+  readonly graphOpen = signal(false);
   /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe). */
   readonly showLines = signal(readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
   readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
@@ -295,6 +307,8 @@ export class GameReviewComponent {
       error: () => { if (this.running()) this.schedule(); },
     });
   }
+
+  toggleGraph(): void { this.graphOpen.update(v => !v); }
 
   toggleLines(): void {
     this.showLines.update(v => !v);

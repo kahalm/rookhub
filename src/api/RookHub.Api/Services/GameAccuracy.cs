@@ -12,7 +12,8 @@ namespace RookHub.Api.Services;
 ///
 /// <para>Formeln von Lichess (https://lichess.org/page/accuracy, lila <c>WinPercent</c>/<c>AccuracyPercent</c>):
 /// Gewinnchance <c>50 + 50 · (2 / (1 + e^(−0,00368208 · cp)) − 1)</c>, Matt = Rand (100/0), Zug-Genauigkeit
-/// <c>103,1668 · e^(−0,04354 · Verlust) − 3,1669</c> (kein Verlust = 100), Gewicht = Standardabweichung der
+/// <c>103,1668 · e^(−0,04354 · Verlust) − 3,1669 + 1</c> (kein Verlust = 100; das +1 ist lilas „uncertainty
+/// bonus", Bewertung fuer die Gewinnchance bei ±1000 cp gekappt — beides seit 0.521.1), Gewicht = Standardabweichung der
 /// Gewinnchance im Fenster (Breite ⌊Halbzuege/10⌋ auf 2..8, das erste Fenster fuer die ersten Breite−2 Zuege
 /// wiederholt) auf 0,5..12, Seite = Mittel aus gewichtetem und harmonischem Mittel.</para>
 ///
@@ -24,6 +25,13 @@ public static class GameAccuracy
 {
     /// <summary>Lichess-Konstante der Gewinnchance (lila <c>WinPercent</c>, PR #11148).</summary>
     public const double WinMultiplier = -0.00368208;
+
+    /// <summary>Lichess kappt die Bewertung fuer die Gewinnchance bei ±1000 cp (lila <c>Centipawns.ceiled</c>).</summary>
+    public const int WinCpCap = 1000;
+
+    /// <summary>lila <c>AccuracyPercent.fromWinPercents</c>: +1 auf jede Zug-Genauigkeit („uncertainty bonus (due to
+    /// imperfect analysis)"). Fehlte bis 0.521.1 — Spiegel von <c>ACCURACY_UNCERTAINTY_BONUS</c> im Client.</summary>
+    public const double UncertaintyBonus = 1;
 
     public sealed record Result(double? White, double? Black);
 
@@ -38,14 +46,15 @@ public static class GameAccuracy
             return whiteToMoveHere ? 0 : 100;
         }
         if (cp is null) return null;
-        return 50 + 50 * (2 / (1 + Math.Exp(WinMultiplier * cp.Value)) - 1);
+        var capped = Math.Clamp(cp.Value, -WinCpCap, WinCpCap);
+        return 50 + 50 * (2 / (1 + Math.Exp(WinMultiplier * capped)) - 1);
     }
 
     /// <summary>Genauigkeit EINES Zuges aus Sicht des Ziehenden; kein Verlust = 100, nie unter 0.</summary>
     public static double MoveAccuracy(double winBefore, double winAfter)
     {
         if (winAfter >= winBefore) return 100;
-        var raw = 103.1668 * Math.Exp(-0.04354 * (winBefore - winAfter)) - 3.1669;
+        var raw = 103.1668 * Math.Exp(-0.04354 * (winBefore - winAfter)) - 3.1669 + UncertaintyBonus;
         return Math.Min(100, Math.Max(0, raw));
     }
 

@@ -16,10 +16,29 @@ describe('EvalGraphComponent', () => {
     return { fixture, el, lines };
   }
 
-  it('zeichnet je gerechneter Stellung einen Punkt, Start bis Endstellung über die ganze Breite', () => {
+  it('läuft durch jede gerechnete Stellung, Start bis Endstellung über die ganze Breite — dazwischen geglättet', () => {
     const { lines } = setup([50, 60, 40, 55]);
     expect(lines().length).toBe(1);
-    expect(lines()[0]).toEqual(['0,50', '333.33,40', '666.67,60', '1000,45']);
+    const pts = lines()[0];
+    expect(pts[0]).toBe('0,50');
+    expect(pts[pts.length - 1]).toBe('1000,45');
+    for (const p of ['333.33,40', '666.67,60']) expect(pts).toContain(p);
+    expect(pts.length).toBe(3 * 8 + 1);   // 8 Zwischenschritte je Zug
+  });
+
+  // Gewünscht 2026-09-24: „extremst kantig" — geglättet, aber ohne eine Bewertung zu zeichnen, die keine Stellung hatte.
+  it('geglättet ohne Überschwingen: zwischen zwei Stellungen bleibt die Kurve in deren Wertebereich', () => {
+    const series = [50, 90, 90, 10, 55];
+    const { lines } = setup(series);
+    const ys = lines()[0].map(p => 100 - Number(p.split(',')[1]));   // zurück in „Höhe"
+    for (let i = 0; i < series.length - 1; i++) {
+      const lo = Math.min(series[i], series[i + 1]);
+      const hi = Math.max(series[i], series[i + 1]);
+      for (const y of ys.slice(i * 8, i * 8 + 9)) {
+        expect(y).toBeGreaterThanOrEqual(lo - 1e-9);
+        expect(y).toBeLessThanOrEqual(hi + 1e-9);
+      }
+    }
   });
 
   it('eine Lücke bricht die Linie, statt sie zu überbrücken', () => {
@@ -35,26 +54,17 @@ describe('EvalGraphComponent', () => {
     expect(el.querySelectorAll('.dot.lone').length).toBe(1);
   });
 
-  // Wie chess.com (Vergleich 2026-09-24): weiß ist alles UNTER der Kurve, darüber der dunkle Grund.
-  it('Fläche: weiß vom unteren Rand bis zur Kurve, je zusammenhängendem Lauf', () => {
+  it('Fläche: oberhalb der Mittellinie hell, unterhalb dunkel — geteilt am Schnittpunkt', () => {
     const { el } = setup([50, 70, 30]);
-    const polygons = el.querySelectorAll('polygon.area-white');
-    expect(polygons.length).toBe(1);
-    expect(polygons[0].getAttribute('points')).toBe('0,100 0,50 500,30 1000,70 1000,100');
-    expect(el.querySelector('polygon.area-black')).toBeNull();
-  });
-
-  it('eine nicht gerechnete Strecke bekommt ein neutrales Band — sonst sähe sie wie ein schwarzer Sieg aus', () => {
-    const { el } = setup([50, 60, null, 55, 45]);
-    const gaps = Array.from(el.querySelectorAll('rect.gap')).map(r => [r.getAttribute('x'), r.getAttribute('width')]);
-    expect(gaps).toEqual([['250', '500']]);   // von Stellung 1 bis Stellung 3
-    expect(el.querySelectorAll('polygon.area-white').length).toBe(2);
-  });
-
-  it('läuft die Analyse noch, reicht das Band bis zum rechten Rand', () => {
-    const { el } = setup([50, 60, null, null]);
-    const gaps = Array.from(el.querySelectorAll('rect.gap')).map(r => [r.getAttribute('x'), r.getAttribute('width')]);
-    expect(gaps).toEqual([['333.33', '666.67']]);
+    const white = el.querySelector('polygon.area-white')!.getAttribute('points')!;
+    const black = el.querySelector('polygon.area-black')!.getAttribute('points')!;
+    // Weiß vorn bei Stellung 1 (70 % → y 30); zwischen 1 und 2 schneidet die Kurve die Mitte.
+    expect(white).toContain('500,30');
+    expect(white).not.toContain('1000,70');
+    expect(black).toContain('1000,70');
+    expect(black).not.toContain('500,30');
+    const crossings = white.split(' ').map(p => p.split(',').map(Number)).filter(([x, y]) => y === 50 && x > 500 && x < 1000);
+    expect(crossings.length).toBeGreaterThan(0);
   });
 
   it('Fehler und grobe Fehler als Punkt auf der Stellung NACH dem Zug', () => {

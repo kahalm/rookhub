@@ -111,6 +111,15 @@ const MATE_BASE_PAWNS = 1000;
 
 /** Lichess-Konstante der Gewinnchance (lila `WinPercent`, PR #11148). */
 const WIN_MULTIPLIER = -0.00368208;
+/** Lichess kappt die Bewertung für die Gewinnchance bei ±1000 cp (seit 0.521.1 auch hier). */
+const WIN_CP_CAP = 1000;
+/**
+ * lila `AccuracyPercent.fromWinPercents` rechnet auf jede Zug-Genauigkeit +1 („uncertainty bonus (due to
+ * imperfect analysis)"). Fehlte bis 0.521.1 — gemeldet als „Genauigkeit fühlt sich extremst niedrig an"; an
+ * der Partie MYXN3hXqz1X2hm7Cx6V47Q macht er 78,0 → 78,8 (Weiß) und 70,3 → 71,4 (Schwarz). Der Rest des
+ * Abstands zu chess.com ist Methode: chess.com rechnet anders (CAPS, nicht offengelegt) und höher.
+ */
+export const ACCURACY_UNCERTAINTY_BONUS = 1;
 
 /**
  * Obergrenzen des Verlusts je Klasse in PROZENTPUNKTEN der Gewinnchance (= Erwartungspunkte × 100).
@@ -141,7 +150,9 @@ export function winPercent(score: EvalScore | null | undefined, whiteToMoveHere 
     return whiteToMoveHere ? 0 : 100;
   }
   if (score.cp == null) return null;
-  return 50 + 50 * (2 / (1 + Math.exp(WIN_MULTIPLIER * score.cp)) - 1);
+  // Wie lila (`Centipawns.ceiled`): über ±1000 cp zählt nichts mehr — +15 und +30 sind gleich gewonnen.
+  const cp = Math.max(-WIN_CP_CAP, Math.min(WIN_CP_CAP, score.cp));
+  return 50 + 50 * (2 / (1 + Math.exp(WIN_MULTIPLIER * cp)) - 1);
 }
 
 /** Bis hierhin (in Bauern) steigt die Kurve linear, darüber steht sie am Rand. */
@@ -170,7 +181,7 @@ export function graphHeight(score: EvalScore | null | undefined, whiteToMoveHere
  */
 export function moveAccuracy(winBefore: number, winAfter: number): number {
   if (winAfter >= winBefore) return 100;
-  const raw = 103.1668 * Math.exp(-0.04354 * (winBefore - winAfter)) - 3.1669;
+  const raw = 103.1668 * Math.exp(-0.04354 * (winBefore - winAfter)) - 3.1669 + ACCURACY_UNCERTAINTY_BONUS;
   return Math.min(100, Math.max(0, raw));
 }
 

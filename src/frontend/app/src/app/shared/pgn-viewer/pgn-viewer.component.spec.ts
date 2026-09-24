@@ -85,7 +85,7 @@ describe('PgnViewerComponent', () => {
     http.expectOne('/api/games/4/evals').flush(running);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.board-section app-game-review app-eval-graph')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.board-section app-game-review .review')).not.toBeNull();
     // Läuft die Analyse, ist der Knopf gesperrt (gleiche Regel wie auf /g/).
     expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
   });

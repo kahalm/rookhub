@@ -25,7 +25,8 @@ describe('GameReviewComponent', () => {
     final: withSecond ? { cp: 300 } : null,
   });
 
-  function setup(game: { fens?: string[]; moves?: { from: string; to: string }[] } = {}) {
+  /** `graphClosed`: die Kurve bleibt, wie sie startet — zu. Sonst wird sie für die Kurven-Tests aufgeklappt. */
+  function setup(game: { fens?: string[]; moves?: { from: string; to: string }[]; graphClosed?: boolean } = {}) {
     TestBed.configureTestingModule({
       imports: [GameReviewComponent],
       providers: [
@@ -39,6 +40,7 @@ describe('GameReviewComponent', () => {
     fixture.componentRef.setInput('fens', game.fens ?? fens);
     if (game.moves) fixture.componentRef.setInput('moves', game.moves);
     fixture.componentRef.setInput('evalsUrl', url);
+    if (!game.graphClosed) fixture.componentInstance.graphOpen.set(true);
     fixture.detectChanges();
     return { fixture, http: TestBed.inject(HttpTestingController), statuses, el: fixture.nativeElement as HTMLElement };
   }
@@ -179,6 +181,26 @@ describe('GameReviewComponent', () => {
       expect(el.querySelector('button.lines-toggle')).toBeNull();
       expect(arrows[arrows.length - 1]).toEqual([]);
     });
+  });
+
+  // Gewünscht 2026-09-24: die Kurve standardmäßig eingeklappt, auf Wunsch aufklappen.
+  it('die Kurve ist zu, bis man auf die Überschrift klickt — Zähler und Genauigkeit stehen trotzdem da', () => {
+    const { fixture, http, el } = setup({ graphClosed: true });
+    http.expectOne(url).flush(evals('done'));
+    fixture.detectChanges();
+    expect(el.querySelector('app-eval-graph')).toBeNull();
+    expect(el.querySelector('table.summary')).not.toBeNull();
+    const title = el.querySelector('button.title') as HTMLButtonElement;
+    expect(title.getAttribute('aria-expanded')).toBe('false');
+
+    title.click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-eval-graph')).not.toBeNull();
+    expect(title.getAttribute('aria-expanded')).toBe('true');
+
+    title.click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-eval-graph')).toBeNull();
   });
 
   it('geschlossen = kein Nachfragen mehr', fakeAsync(() => {

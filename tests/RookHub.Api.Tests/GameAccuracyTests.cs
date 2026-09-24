@@ -31,14 +31,14 @@ public class GameAccuracyTests
     }
 
     [Fact]
-    public void MoveAccuracy_keinVerlust100_LichessWerte_nieUnter0()
+    public void MoveAccuracy_keinVerlust100_LichessWerte_samtUnsicherheitsbonus_nieUnter0()
     {
         Assert.Equal(100, GameAccuracy.MoveAccuracy(60, 60));
         Assert.Equal(100, GameAccuracy.MoveAccuracy(60, 70));
-        Assert.Equal(95.6044, GameAccuracy.MoveAccuracy(80, 79), 3);
-        Assert.Equal(63.5826, GameAccuracy.MoveAccuracy(60, 50), 3);
-        Assert.Equal(24.7756, GameAccuracy.MoveAccuracy(70, 40), 3);
-        Assert.Equal(8.5303, GameAccuracy.MoveAccuracy(50, 0), 3);
+        Assert.Equal(96.6044, GameAccuracy.MoveAccuracy(80, 79), 3);
+        Assert.Equal(64.5826, GameAccuracy.MoveAccuracy(60, 50), 3);
+        Assert.Equal(25.7756, GameAccuracy.MoveAccuracy(70, 40), 3);
+        Assert.Equal(9.5303, GameAccuracy.MoveAccuracy(50, 0), 3);
         Assert.Equal(0, GameAccuracy.MoveAccuracy(100, 0));
     }
 
@@ -100,8 +100,8 @@ public class GameAccuracyTests
     public void Compute_GenauigkeitJeSeite_volatilitaetsgewichtet_wieDerClient()
     {
         var r = GameAccuracy.Compute(Plies(), new GameEvalScoreDto { Cp = 300 }, Fens, plyCount: 4);
-        Assert.Equal(98.9739, r.White!.Value, 3);
-        Assert.Equal(46.9172, r.Black!.Value, 3);
+        Assert.Equal(99.4778, r.White!.Value, 3);
+        Assert.Equal(48.0122, r.Black!.Value, 3);
     }
 
     [Fact]
@@ -111,11 +111,11 @@ public class GameAccuracyTests
         // bewertbar, Zug 3 (Schwarz) hat Zeile 3 und die Endbewertung.
         var plies = Plies().Where(p => p.Ply != 2).ToList();
         var r = GameAccuracy.Compute(plies, new GameEvalScoreDto { Cp = 300 }, Fens, plyCount: 4);
-        // Weiss: nur Zug 0 zaehlt (52,7588 → 52,2997 %, Verlust 0,46 → 97,958); Zug 2 faellt heraus.
-        Assert.Equal(97.958, r.White!.Value, 2);
+        // Weiss: nur Zug 0 zaehlt (52,7588 → 52,2997 %, Verlust 0,46 → 98,958); Zug 2 faellt heraus.
+        Assert.Equal(98.958, r.White!.Value, 2);
         // Schwarz: Zug 1 mit dem gespielten Kandidaten (+0,35 = dieselbe Zahl wie die fehlende Zeile 2), Zug 3
         // mit der Endbewertung — dasselbe Ergebnis wie in der vollstaendigen Partie.
-        Assert.Equal(46.917, r.Black!.Value, 2);
+        Assert.Equal(48.012, r.Black!.Value, 2);
     }
 
     [Fact]
@@ -139,7 +139,15 @@ public class GameAccuracyTests
             new() { Ply = 3, Fen = Fens[3], GameMoveUci = "d7d6", Depth = 20, CandidatesJson = "[{\"uci\":\"b8c6\",\"cp\":-40},{\"uci\":\"d7d6\",\"cp\":-300}]" },
         };
         var r = GameAccuracy.FromPositions(positions, plyCount: 4);
-        Assert.Equal(98.9739, r.White!.Value, 3);
-        Assert.Equal(46.9172, r.Black!.Value, 3);
+        Assert.Equal(99.4778, r.White!.Value, 3);
+        Assert.Equal(48.0122, r.Black!.Value, 3);
+    }
+
+    [Fact]
+    public void WinPercent_wieLichess_ueber1000cpGekappt()
+    {
+        Assert.Equal(GameAccuracy.WinPercent(1000, null)!.Value, GameAccuracy.WinPercent(2500, null)!.Value, 6);
+        Assert.Equal(GameAccuracy.WinPercent(-1000, null)!.Value, GameAccuracy.WinPercent(-4000, null)!.Value, 6);
+        Assert.Equal(97.5447, GameAccuracy.WinPercent(1000, null)!.Value, 3);
     }
 }
