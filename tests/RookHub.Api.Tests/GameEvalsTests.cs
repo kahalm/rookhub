@@ -196,6 +196,15 @@ public class GameEvalsTests
     }
 
     [Fact]
+    public void Eta_einePauseImVerlauf_zaehltNicht()
+    {
+        // Zwei Stellungen vor 3 Stunden (Engine war danach aus), dann drei in den letzten drei Minuten.
+        var at = new[] { Now.AddHours(-3), Now.AddHours(-3).AddMinutes(1), Now.AddMinutes(-3), Now.AddMinutes(-2), Now.AddMinutes(-1) };
+
+        Assert.Equal(10, GameEvals.EtaMinutes(at, remaining: 10, Now));   // 3 min fuer 3 Stellungen
+    }
+
+    [Fact]
     public void Eta_mehrereImSelbenTakt_mindestensEineMinuteSpanne()
     {
         // Die Pumpe holt drei Ergebnisse auf einen Schlag: ohne Untergrenze waeren das 0 s je Stellung.

@@ -88,21 +88,12 @@ public static class GameEvals
     /// sofort bremst.</summary>
     public const int EtaRecentPositions = 12;
 
-    /// <summary>Kuerzeste Spanne, ueber die gemessen wird — wie beim Tempo der Partie-Analysen
-    /// (<c>GameAnalysisService.ThroughputAsync</c>). Die Pumpe liefert die ersten Stellungen oft
-    /// im selben Takt; ohne Untergrenze machten drei Ergebnisse binnen Sekunden aus einer Partie
-    /// von vierzig Minuten eine von drei.</summary>
-    public const double EtaMinSpanSeconds = 60;
-
     /// <summary>
     /// Hochgerechnete Restdauer DIESER Partie in Minuten, aus den Zeitstempeln ihrer eigenen
-    /// gerechneten Stellungen (<c>GameAnalysisPosition.AnalyzedAt</c>).
-    ///
-    /// <para>Gemessen wird vom aeltesten der juengsten <see cref="EtaRecentPositions"/> Ergebnisse
-    /// bis JETZT, nicht bis zum letzten Ergebnis: bleibt die Engine haengen, waechst die Restdauer
-    /// mit jeder Minute ohne Ergebnis, statt bei der letzten Schaetzung stehen zu bleiben. Die
-    /// Wartezeit VOR dem ersten Ergebnis (Warteschlange, andere Partien des Nutzers) zaehlt nicht
-    /// mit — sie sagt ueber das Tempo nichts.</para>
+    /// gerechneten Stellungen (<c>GameAnalysisPosition.AnalyzedAt</c>) — Tempo nach <see cref="AnalysisPace"/>:
+    /// die juengsten <see cref="EtaRecentPositions"/> Ergebnisse, nur der zusammenhaengende Lauf (eine Pause davor
+    /// zaehlt nicht), gemessen bis JETZT, solange der Lauf lebt (haengt die Engine, waechst die Restdauer).
+    /// Die Wartezeit VOR dem ersten Ergebnis (Warteschlange, andere Partien des Nutzers) zaehlt nicht mit.
     ///
     /// <para><c>null</c>, wenn nichts mehr offen ist oder es noch kein Tempo gibt (weniger als zwei
     /// Ergebnisse). Nie unter einer Minute: „0 min" bei zwei offenen Stellungen liest sich wie fertig.</para>
@@ -110,12 +101,9 @@ public static class GameEvals
     public static int? EtaMinutes(IEnumerable<DateTime> analyzedAt, int remaining, DateTime now)
     {
         if (remaining <= 0) return null;
-        var recent = analyzedAt.OrderByDescending(t => t).Take(EtaRecentPositions).ToList();
-        if (recent.Count < 2) return null;
-
-        var seconds = Math.Max(EtaMinSpanSeconds, (now - recent[^1]).TotalSeconds);
-        var perPosition = seconds / recent.Count;
-        return (int)Math.Max(1, Math.Round(remaining * perPosition / 60));
+        var run = AnalysisPace.Measure(analyzedAt, now, EtaRecentPositions);
+        if (run is not { Count: >= 2 } r) return null;
+        return (int)Math.Max(1, Math.Round(remaining * r.SecondsPerPosition / 60));
     }
 
     /// <summary>Dieselbe Regel wie <see cref="BrokerCandidates.Parse"/>: nur ein <c>"w"</c> im zweiten

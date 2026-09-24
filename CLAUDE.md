@@ -493,7 +493,8 @@ flachere), aber mit eigenem Ursprung
   Die Wertung (`FromJson`) ignoriert das Feld. Analysen von vor 0.521.0 haben keine Varianten — die Partieseite
   zeigt dort je Kandidat nur den Zug mit Bewertung; wer Linien will, lässt neu rechnen (Restart).
 * **Restdauer DIESER Partie** (0.517.0, `GameEvalsDto.EtaMinutes`, `GameEvals.EtaMinutes`): solange die Analyse
-  läuft, aus den `AnalyzedAt` der jüngsten 12 gerechneten Stellungen — gemessen vom ältesten davon bis JETZT
+  läuft, aus den `AnalyzedAt` der jüngsten 12 gerechneten Stellungen (seit 0.521.2 über `AnalysisPace`: nur der
+  zusammenhängende Lauf, eine Pause > 15 min davor zählt nicht) — gemessen vom ältesten davon bis JETZT
   (hängt die Engine, wächst die Schätzung), mindestens 60 s Spanne (die Pumpe liefert oft mehrere im selben
   Takt), nie unter 1 min; unter zwei Ergebnissen `null`. Die Wartezeit vor dem ersten Ergebnis zählt nicht.
   Bewusst NICHT `GET /api/game-analyses/throughput`: das ist das Tempo aller Analysen EINES Nutzers und braucht
@@ -2039,7 +2040,7 @@ statt erst nach einer halben Stunde Rechnen.
 | GET | `/api/game-analyses/public` | **AllowAnonymous** + RL | Kuratierter Bestand: freigegebene UND spielbare Partien (mind. eine gerechnete Stellung), mit `annotated` fuer den Filter „alle / nur kommentierte". Kopfdaten und Fortschritt, **nicht** die Zugliste |
 | PUT | `/api/game-analyses/{id}/public` | Auth | Partie in den Bestand aufnehmen/herausnehmen `{ isPublic }` — Besitzer der Analyse oder Admin |
 | POST | `/api/game-analyses/guess` | Auth | Eigene Partie einwerfen `{ pgn, title? }` — KEINE Tiefe/Linien/Engine im Rumpf (Server setzt Tiefe 20). 400 mit `reason` ∈ `too-many-open` / `no-engine` / `invalid-pgn`; die Seite formuliert den Satz, der Server kennt die Sprache nicht |
-| GET | `/api/game-analyses/throughput` | Auth | Tempo und Restdauer der eigenen Analysen AUS DER HISTORIE (`GameAnalysisPosition.AnalyzedAt`): Stellungen je Minute, gemessene Spanne, Rest, hochgerechnete Restdauer. Vorher zaehlte der Browser selbst mit — eine Minute offene Seite, bevor ueberhaupt etwas dastand, und beim naechsten Aufruf wieder bei null. Fenster eine Stunde, sonst 24 h; gemessen ab dem ERSTEN Zeitstempel im Fenster, nicht ueber die Fensterlaenge. Literal-Route vor `{id:int}` |
+| GET | `/api/game-analyses/throughput` | Auth | Tempo und Restdauer der eigenen Analysen AUS DER HISTORIE (`GameAnalysisPosition.AnalyzedAt`): Stellungen je Minute, gemessene Spanne, Rest, hochgerechnete Restdauer. Vorher zaehlte der Browser selbst mit — eine Minute offene Seite, bevor ueberhaupt etwas dastand, und beim naechsten Aufruf wieder bei null. Seit 0.521.2 nach `Services/AnalysisPace.cs`: die juengsten ≤ 200 Ergebnisse der letzten 24 h, davon nur der juengste ZUSAMMENHAENGENDE Lauf (eine Luecke > 15 min = Pause, zaehlt nicht), gemessen bis jetzt, solange der Lauf lebt, sonst bis zum letzten Ergebnis. Vorher: letzte Stunde ab dem ersten Zeitstempel darin — eine Pause davor zaehlte als Rechenzeit („0,56 Stellungen/min · noch ca. 1 h 44 min" fuer 58 offene Stellungen). Dieselbe Regel rechnet die Restdauer einer Partie (`GameEvals.EtaMinutes`). Literal-Route vor `{id:int}` |
 | GET | `/api/game-analyses/guess/status` | Auth | Steht eine Engine bereit (eigene oder Haus) und wie viele der fuenf Plaetze sind frei — gefragt, BEVOR jemand ein PGN hineinkopiert |
 | PUT | `/api/engine/house` | Admin | Eigene Hintergrund-Engines als Haus-Engine freigeben `{ share }` (403 ohne Admin, 400 ohne Token bzw. ohne hinterlegte Hintergrund-Engine) |
 

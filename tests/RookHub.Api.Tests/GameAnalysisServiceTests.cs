@@ -571,6 +571,34 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.InRange(t.EtaMinutes!.Value, 3, 5);
     }
 
+    /// <summary>Gemeldet 2026-09-24: eine Pause VOR dem aktuellen Lauf zaehlte als Rechenzeit („0,56 Stellungen/min ·
+    /// noch ca. 1 h 44 min"). Jetzt zaehlt nur der juengste zusammenhaengende Lauf.</summary>
+    [Fact]
+    public async Task Throughput_einePauseVorDemLauf_zaehltNicht()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).Take(10).ToListAsync();
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < positions.Count; i++)
+        {
+            positions[i].CandidatesJson = "[]";
+            positions[i].AnalysisJobId = null;
+            // Fuenf vor 55..51 Minuten, Pause, fuenf in den letzten fuenf Minuten (je eine pro Minute).
+            positions[i].AnalyzedAt = i < 5 ? now.AddMinutes(-55 + i) : now.AddMinutes(-5 + (i - 5));
+        }
+        await _db.SaveChangesAsync();
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(5, t.AnalyzedInWindow);
+        Assert.InRange(t.PerMinute, 0.9, 1.1);     // vorher: 10 in 55 min = 0,18/min
+        Assert.Equal(4, t.Remaining);
+        Assert.InRange(t.EtaMinutes!.Value, 3, 5);
+    }
+
     /// <summary>Nach einer Nacht Pause sieht der Server weiter zurueck, statt „kein Tempo" zu
     /// melden — die Zahl von gestern ist die beste Schaetzung, die es gibt.</summary>
     [Fact]
