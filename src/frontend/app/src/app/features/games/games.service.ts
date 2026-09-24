@@ -67,6 +67,8 @@ export interface SharedGame {
   blackElo?: number | null;
   /** "white"/"black", wenn der Teilende einer Seite zuordenbar ist — initiale Brett-Orientierung. */
   ownerSide?: 'white' | 'black' | null;
+  /** Nur für den angemeldeten BESITZER: die Id seiner Partie — die Seite wechselt dann auf `/games/{id}`. */
+  ownGameId?: number | null;
 }
 
 /** Antwort auf „Partie analysieren" (`POST …/analyze`): neu eingereiht oder wiederverwendet. */

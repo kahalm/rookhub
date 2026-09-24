@@ -2767,7 +2767,8 @@
       "onlyOpen": "Csak nyitott hibás partik ({{count}})",
       "analyze": "Elemzés",
       "triedEval": "{{san}} után: {{eval}} (legjobb lépés: {{best}})",
-      "triedEvalPending": "{{san}} értékelése …"
+      "triedEvalPending": "{{san}} értékelése …",
+      "replayed": "Hibák újrajátszva"
     },
     "live": {
       "toggle": "Élő motor — próbáld ki a saját lépéseidet",

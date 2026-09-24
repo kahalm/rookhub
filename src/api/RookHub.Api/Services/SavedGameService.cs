@@ -339,7 +339,9 @@ public class SavedGameService
     }
 
     /// <summary>Öffentliche Sicht über das ShareToken; null wenn unbekannt.</summary>
-    public async Task<SharedGameDto?> GetSharedAsync(string token)
+    /// <param name="callerUserId">Angemeldeter Aufrufer (oder <c>null</c>): ist er der Besitzer, traegt die Antwort
+    /// <see cref="SharedGameDto.OwnGameId"/> — die Seite wechselt dann auf seine eigene Ansicht.</param>
+    public async Task<SharedGameDto?> GetSharedAsync(string token, int? callerUserId = null)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var g = await _db.SavedGames.AsNoTracking()
@@ -360,6 +362,7 @@ public class SavedGameService
             WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
             BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
             OwnerSide = DetermineOwnerSide(g, profile),
+            OwnGameId = callerUserId is int caller && caller == g.UserId ? g.Id : null,
         };
     }
 

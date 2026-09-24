@@ -157,6 +157,11 @@ public class SharedGameDto
     /// (Partie aus der Sicht des Teilenden). Kein zusätzlicher Identitäts-Leak — die
     /// Spielernamen stehen ohnehin im DTO.</summary>
     public string? OwnerSide { get; set; }
+
+    /// <summary>Die Id der Partie — NUR wenn der angemeldete Aufrufer ihr Besitzer ist (seit 0.526.3). Oeffnet er den
+    /// eigenen Teilen-Link, wechselt die Seite damit auf <c>/games/{id}</c> und sieht dasselbe wie ueber die
+    /// Partienliste (gewuenscht 2026-09-24). Fremden und anonymen Aufrufern bleibt die Id verborgen.</summary>
+    public int? OwnGameId { get; set; }
 }
 
 /// <summary>Antwort auf „Partie analysieren" (<c>POST /api/games/{id}/analyze</c> bzw.

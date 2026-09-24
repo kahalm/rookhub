@@ -17,7 +17,8 @@ public abstract class BaseApiController : ControllerBase
     /// <c>[AllowAnonymous]</c>-Endpoints, die optional einen eingeloggten Nutzer berücksichtigen.</summary>
     protected int? GetUserIdOrNull()
     {
-        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        // Ohne HttpContext (Controller direkt instanziiert, z. B. in Tests) ist `User` null — dann: anonym.
+        var claim = User?.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(claim, out var userId) ? userId : null;
     }
 

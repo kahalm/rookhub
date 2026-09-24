@@ -500,7 +500,15 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.evalsUrl = this.games.sharedEvalsUrl(token);
     this.analyzeUrl = this.games.sharedAnalyzeUrl(token);
     this.games.getShared(token).subscribe({
-      next: g => this.show(g),
+      next: g => {
+        // Der eigene Teilen-Link: dieselbe Ansicht wie über die Partienliste (Zurück-Pfeil, Teilen-Knopf, gemerktes
+        // Fehler-Training …) — gewünscht 2026-09-24. `replaceUrl`, damit „Zurück" im Browser nicht wieder hierher führt.
+        if (g.ownGameId && this.auth.isLoggedIn) {
+          this.router.navigate(['/games', g.ownGameId], { replaceUrl: true });
+          return;
+        }
+        this.show(g);
+      },
       error: () => { this.notFound = true; this.loading = false; },
     });
   }

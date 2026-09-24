@@ -140,12 +140,13 @@ describe('GamesListComponent', () => {
   it('zeigt je Partie den Stand des Fehler-Trainings', async () => {
     const { fixture } = await setupMitPartien([partie(1, { total: 7, solved: 4, open: 3, solvedPlies: [2, 4, 6, 8], lastTrainedAt: '2026-09-24T10:00:00Z' })]);
 
-    // Im Test sind keine Übersetzungen geladen (die Vorlage zeigt die Schlüssel) — geprüft wird deshalb,
-    // DASS die Angabe steht, hervorgehoben ist und die Zahlen als Parameter ankommen.
+    // Im Test sind keine Übersetzungen geladen (die Vorlage zeigt die Schlüssel). Seit 0.526.3 steht in der Zeile nur
+    // noch „Fehler nachgespielt" (gewünscht 2026-09-24) — die Zahlen wandern in den Tooltip.
     const el = (fixture.nativeElement as HTMLElement).querySelector('.mistakes.open');
 
     expect(el).toBeTruthy();
-    expect(el!.textContent).toContain('games.mistakes.progressShort');
+    expect(el!.textContent).toContain('games.mistakes.replayed');
+    expect(el!.textContent).not.toContain('games.mistakes.progressShort');
     expect(fixture.componentInstance.games[0].mistakes).toEqual(jasmine.objectContaining({ solved: 4, total: 7, open: 3 }));
   });
 

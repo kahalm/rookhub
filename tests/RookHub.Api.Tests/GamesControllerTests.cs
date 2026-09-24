@@ -202,6 +202,23 @@ public class GamesControllerTests : IDisposable
         Assert.Equal("black", shared!.OwnerSide);
     }
 
+    /// <summary>Oeffnet der Besitzer seinen eigenen Teilen-Link, bekommt er die Id seiner Partie — die Seite wechselt
+    /// damit auf /games/{id} (0.526.3). Fremde und anonyme Aufrufer bekommen sie nicht.</summary>
+    [Fact]
+    public async Task GetShared_OwnGameId_nurFuerDenBesitzer()
+    {
+        var owner = await CreateUserAsync("besitzer");
+        var other = await CreateUserAsync("gast");
+        var saved = await _service.SaveAsync(owner.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b", Result = "0-1", ExternalId = "own-1",
+        });
+
+        Assert.Equal(saved.Id, (await _service.GetSharedAsync(saved.ShareToken, owner.Id))!.OwnGameId);
+        Assert.Null((await _service.GetSharedAsync(saved.ShareToken, other.Id))!.OwnGameId);
+        Assert.Null((await _service.GetSharedAsync(saved.ShareToken))!.OwnGameId);
+    }
+
     [Fact]
     public async Task GetShared_OwnerPlayedWhiteOnChessCom_OwnerSideWhite_UsesChessComName()
     {

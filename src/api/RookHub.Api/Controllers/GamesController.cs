@@ -63,7 +63,7 @@ public class GamesController : BaseApiController
     [AllowAnonymous]
     public async Task<ActionResult<SharedGameDto>> GetShared(string token)
     {
-        var game = await _service.GetSharedAsync(token);
+        var game = await _service.GetSharedAsync(token, GetUserIdOrNull());
         return game == null ? NotFound() : Ok(game);
     }
 

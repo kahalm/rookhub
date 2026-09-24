@@ -205,6 +205,17 @@ describe('SharedGameComponent', () => {
     expect(page.trainingAnalysis()).toBeNull();      // … und die Analyse der alten ist vorbei
   });
 
+  // 0.526.3: der eigene Teilen-Link führt auf die eigene Ansicht — dieselbe wie über die Partienliste.
+  it('the owner opening his own share link lands on /games/{id}; a guest stays', async () => {
+    const { fixture, http } = await setup(true);
+    const router = TestBed.inject(Router);
+    const nav = spyOn(router, 'navigate').and.resolveTo(true);
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush({ ...sharedGame('white'), ownGameId: 21 });
+    expect(nav).toHaveBeenCalledWith(['/games', 21], { replaceUrl: true });
+    expect(fixture.componentInstance.game).toBeNull();
+  });
+
   it('starts unflipped for ownerSide=white or unknown', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

@@ -139,8 +139,11 @@ export type AnalysisState = 'none' | 'running' | 'done';
                    (0.524.0) — die Zeile, wegen der man die Partie noch einmal aufmacht. -->
               @if (g.mistakes; as m) {
                 <div class="foot">
-                  <span class="mistakes" [class.open]="m.open > 0" [matTooltip]="'games.mistakes.tooltip' | translate">
-                    {{ 'games.mistakes.progressShort' | translate: { solved: m.solved, total: m.total, open: m.open } }}
+                  <!-- Nur DASS nachgespielt wurde (gewünscht 2026-09-24); die Zahlen „9 von 11 gefunden · 2 offen" stehen
+                       im Tooltip. -->
+                  <span class="mistakes" [class.open]="m.open > 0"
+                        [matTooltip]="'games.mistakes.progressShort' | translate: { solved: m.solved, total: m.total, open: m.open }">
+                    <mat-icon class="mistakes-icon">task_alt</mat-icon> {{ 'games.mistakes.replayed' | translate }}
                   </span>
                 </div>
               }
@@ -219,7 +222,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
     /* Fusszeile der Zeile, an den Spielernamen ausgerichtet (chess.com setzt dort die Eroeffnung hin). */
     .foot { grid-column: 2 / -1; font-size: 0.8rem; }
     .mistakes { white-space: nowrap; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .mistakes.open { color: #e58f2a; font-weight: 500; }
+    .mistakes { display: inline-flex; align-items: center; gap: 3px; }
+    .mistakes-icon { font-size: 15px; width: 15px; height: 15px; }
 
     /* Am Handy gibt es keine Spalten mehr: dieselben Teile umbrechen, Zahl und Datum rutschen
        in die zweite Reihe. Die Kopfzeile faellt weg — sie beschriftete Spalten, die es nicht gibt. */

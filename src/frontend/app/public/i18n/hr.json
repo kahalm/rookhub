@@ -2513,7 +2513,8 @@
       "onlyOpen": "Samo partije s otvorenim pogreškama ({{count}})",
       "analyze": "Analiziraj",
       "triedEval": "Nakon {{san}}: {{eval}} (najbolji potez: {{best}})",
-      "triedEvalPending": "Procjena {{san}} …"
+      "triedEvalPending": "Procjena {{san}} …",
+      "replayed": "Pogreške ponovljene"
     },
     "live": {
       "toggle": "Motor uživo — isprobaj vlastite poteze",

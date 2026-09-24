@@ -2513,7 +2513,8 @@
       "onlyOpen": "Nur Partien mit offenen Fehlern ({{count}})",
       "analyze": "Analysieren",
       "triedEval": "Nach {{san}}: {{eval}} (bester Zug: {{best}})",
-      "triedEvalPending": "{{san}} wird bewertet …"
+      "triedEvalPending": "{{san}} wird bewertet …",
+      "replayed": "Fehler nachgespielt"
     },
     "live": {
       "toggle": "Live-Engine — eigene Züge ausprobieren",

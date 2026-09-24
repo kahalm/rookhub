@@ -2513,7 +2513,8 @@
       "onlyOpen": "Only games with open mistakes ({{count}})",
       "analyze": "Analyse",
       "triedEval": "After {{san}}: {{eval}} (best move: {{best}})",
-      "triedEvalPending": "Evaluating {{san}} …"
+      "triedEvalPending": "Evaluating {{san}} …",
+      "replayed": "Mistakes replayed"
     },
     "live": {
       "toggle": "Live engine — try your own moves",
