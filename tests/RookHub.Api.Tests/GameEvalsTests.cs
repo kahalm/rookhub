@@ -136,4 +136,71 @@ public class GameEvalsTests
         Assert.Null(final!.Cp);
         Assert.Equal(-1, final.Mate);
     }
+
+    // ===== Restdauer =========================================================
+
+    private static readonly DateTime Now = new(2026, 9, 24, 9, 41, 52, DateTimeKind.Utc);
+
+    /// <summary>Die Zahlen der Prod-Partie vom 2026-09-24, die den Wunsch ausgeloest hat: 18 von 47
+    /// Stellungen gerechnet, die juengsten zwoelf ueber 4:31 min verteilt → gut 22 s je Stellung,
+    /// 29 offen → 11 Minuten.</summary>
+    [Fact]
+    public void Eta_ausDenJuengstenZwoelf_bisJetzt()
+    {
+        var at = new[]
+        {
+            "09:36:01", "09:36:21", "09:36:21", "09:36:21", "09:36:41", "09:37:01",
+            "09:37:21", "09:37:21", "09:38:21", "09:38:21", "09:38:41", "09:39:01",
+            "09:39:21", "09:40:21", "09:40:42", "09:40:42", "09:40:42", "09:41:22",
+        }.Select(t => DateTime.SpecifyKind(DateTime.Parse("2026-09-24T" + t), DateTimeKind.Utc));
+
+        Assert.Equal(11, GameEvals.EtaMinutes(at, remaining: 29, Now));
+    }
+
+    [Fact]
+    public void Eta_nurAeltereErgebnisseAlsDieJuengstenZwoelf_zaehlenNicht()
+    {
+        // Zwoelf im Minutentakt, davor eine Stunde Warteschlange — die darf das Tempo nicht verderben.
+        var recent = Enumerable.Range(1, 12).Select(i => Now.AddMinutes(-i));
+        var old = new[] { Now.AddHours(-1), Now.AddHours(-2) };
+
+        Assert.Equal(10, GameEvals.EtaMinutes(recent.Concat(old), remaining: 10, Now));
+    }
+
+    [Fact]
+    public void Eta_haengtDieEngine_waechstDieRestdauer()
+    {
+        var at = new[] { Now.AddMinutes(-2), Now.AddMinutes(-1) };
+
+        var fresh = GameEvals.EtaMinutes(at, remaining: 10, Now);
+        var stalled = GameEvals.EtaMinutes(at, remaining: 10, Now.AddMinutes(10));
+
+        Assert.Equal(10, fresh);      // 2 min fuer 2 Stellungen
+        Assert.Equal(60, stalled);    // 12 min fuer 2 Stellungen
+    }
+
+    [Fact]
+    public void Eta_mehrereImSelbenTakt_mindestensEineMinuteSpanne()
+    {
+        // Die Pumpe holt drei Ergebnisse auf einen Schlag: ohne Untergrenze waeren das 0 s je Stellung.
+        var at = new[] { Now, Now, Now };
+
+        Assert.Equal(7, GameEvals.EtaMinutes(at, remaining: 20, Now));   // 60 s / 3 = 20 s → 400 s
+    }
+
+    [Fact]
+    public void Eta_ohneTempoOderOhneRest_null()
+    {
+        Assert.Null(GameEvals.EtaMinutes(Array.Empty<DateTime>(), remaining: 20, Now));
+        Assert.Null(GameEvals.EtaMinutes(new[] { Now.AddMinutes(-1) }, remaining: 20, Now));
+        Assert.Null(GameEvals.EtaMinutes(new[] { Now.AddMinutes(-2), Now.AddMinutes(-1) }, remaining: 0, Now));
+    }
+
+    [Fact]
+    public void Eta_nieUnterEinerMinute()
+    {
+        var at = Enumerable.Range(1, 12).Select(i => Now.AddSeconds(-10 * i));
+
+        Assert.Equal(1, GameEvals.EtaMinutes(at, remaining: 1, Now));
+    }
 }

@@ -159,6 +159,10 @@ public class GameEvalsDto
     /// Kandidat der letzten Zeile; <c>null</c>, solange die nicht gerechnet ist oder der Partiezug
     /// nicht unter den Kandidaten steht.</summary>
     public GameEvalScoreDto? Final { get; set; }
+    /// <summary>Hochgerechnete Restdauer in Minuten, solange die Analyse laeuft — aus dem Tempo der
+    /// juengsten gerechneten Stellungen DIESER Partie (<see cref="Services.GameEvals.EtaMinutes"/>).
+    /// <c>null</c>, solange es noch kein Tempo gibt (weniger als zwei Ergebnisse) oder nichts mehr laeuft.</summary>
+    public int? EtaMinutes { get; set; }
 }
 
 /// <summary>Eine gerechnete Stellung — die VOR dem Halbzug <see cref="Ply"/> —, Weiß-Sicht.</summary>

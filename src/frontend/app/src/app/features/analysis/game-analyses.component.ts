@@ -13,6 +13,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { formatEta } from '../../shared/eta.util';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-analysis.service';
 import { AuthService } from '../../core/auth.service';
@@ -254,7 +255,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       perMinute: t.perMinute >= 10 ? t.perMinute.toFixed(0)
         : t.perMinute >= 1 ? t.perMinute.toFixed(1)
         : t.perMinute.toFixed(2),
-      eta: t.etaMinutes ? this.formatEta(t.etaMinutes) : null,
+      eta: t.etaMinutes ? formatEta(t.etaMinutes, this.translate) : null,
     };
   }
 
@@ -263,22 +264,6 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       next: t => { this.throughput = t; this.cdr.markForCheck(); },
       error: () => { /* Anzeige-Beiwerk: bleibt beim letzten Stand, statt eine Meldung zu werfen */ },
     });
-  }
-
-  /**
-   * Restdauer als „12 min", „3 h 20 min" oder — ab zwei Tagen — „6 Tage 12 h".
-   *
-   * <p>Minuten in einer Angabe ueber hundert Stunden sind Schein-Genauigkeit: die Schaetzung
-   * stammt aus einem Mittel der letzten Stunde, sie ist auf Tage genau und nicht auf Minuten.</p>
-   */
-  private formatEta(minutes: number): string {
-    const total = Math.max(1, Math.round(minutes));
-    const h = Math.floor(total / 60);
-    if (h >= 48) {
-      const days = Math.floor(h / 24);
-      return `${days} ${this.translate.instant(days === 1 ? 'common.day' : 'common.days')} ${h % 24} h`;
-    }
-    return h > 0 ? `${h} h ${total % 60} min` : `${total} min`;
   }
 
   percent(a: GameAnalysis): number {

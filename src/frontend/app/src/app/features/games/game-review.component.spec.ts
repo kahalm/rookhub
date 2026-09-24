@@ -85,6 +85,28 @@ describe('GameReviewComponent', () => {
     http.expectNone(url);
   }));
 
+  it('läuft die Analyse, steht neben dem Fortschritt die Restdauer — ohne Tempo keine', () => {
+    const { fixture, http, el } = setup();
+    TestBed.inject(TranslateService).setTranslation('en', { gameAnalysis: { eta: 'about {{eta}} left' } });
+    TestBed.inject(TranslateService).use('en');
+    http.expectOne(url).flush({ ...evals('running', false), etaMinutes: 11 });
+    fixture.detectChanges();
+    expect(el.querySelector('.progress')!.textContent).toContain('about 11 min left');
+
+    fixture.componentInstance.reload();
+    http.expectOne(url).flush({ ...evals('running', false), etaMinutes: null });
+    fixture.detectChanges();
+    expect(el.querySelector('.progress')!.textContent).not.toContain('left');
+  });
+
+  it('fertig = keine Restdauer, auch wenn der Server noch eine mitschickte', () => {
+    const { fixture, http } = setup();
+    http.expectOne(url).flush({ ...evals('done'), etaMinutes: 3 });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.eta()).toBeNull();
+  });
+
   it('geschlossen = kein Nachfragen mehr', fakeAsync(() => {
     const { fixture, http } = setup();
     http.expectOne(url).flush(evals('pending', false));

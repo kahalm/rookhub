@@ -486,6 +486,13 @@ flachere), aber mit eigenem Ursprung
 * Frontend: `features/games/game-review.util.ts` (Formeln), `game-review.component.ts` (lädt, fragt alle 10 s
   nach, solange `pending`/`running`), `shared/pgn-viewer/eval-graph.component.ts` (SVG-Kurve). Siehe
   `src/frontend/CLAUDE.md`.
+* **Restdauer DIESER Partie** (0.517.0, `GameEvalsDto.EtaMinutes`, `GameEvals.EtaMinutes`): solange die Analyse
+  läuft, aus den `AnalyzedAt` der jüngsten 12 gerechneten Stellungen — gemessen vom ältesten davon bis JETZT
+  (hängt die Engine, wächst die Schätzung), mindestens 60 s Spanne (die Pumpe liefert oft mehrere im selben
+  Takt), nie unter 1 min; unter zwei Ergebnissen `null`. Die Wartezeit vor dem ersten Ergebnis zählt nicht.
+  Bewusst NICHT `GET /api/game-analyses/throughput`: das ist das Tempo aller Analysen EINES Nutzers und braucht
+  Anmeldung — `/g/` ist öffentlich. Die Schreibweise („11 min", „3 h 20 min") teilen sich beide über
+  `shared/eta.util.ts`.
 * **Genauigkeit je Seite liegt AN DER ANALYSE** (0.515.0, `GameAnalysis.AccuracyWhite/AccuracyBlack`,
   `Services/GameAccuracy.cs` = Server-SPIEGEL der Client-Formeln mit denselben LITERALEN Testwerten in
   `GameAccuracyTests` ↔ `game-review.util.spec.ts`): gerechnet in `PumpOneAsync` beim Übergang auf `Done`, damit die

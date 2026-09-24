@@ -421,12 +421,13 @@ public class SavedGameService
         var rows = await _db.GameAnalysisPositions.AsNoTracking()
             .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
             .OrderBy(p => p.Ply)
-            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth })
+            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth, p.AnalyzedAt })
             .ToListAsync(ct);
         var plies = rows
             .Select(r => GameEvals.PlyOf(r.Ply, r.Fen, r.GameMoveUci, r.CandidatesJson, r.Depth))
             .OfType<GameEvalPlyDto>()
             .ToList();
+        var running = analysis.Status is GameAnalysisStatus.Pending or GameAnalysisStatus.Running;
 
         return new GameEvalsDto
         {
@@ -437,6 +438,11 @@ public class SavedGameService
             AnalysisId = analysis.Id,
             Plies = plies,
             Final = GameEvals.FinalOf(plies.LastOrDefault(), analysis.PlyCount),
+            EtaMinutes = running
+                ? GameEvals.EtaMinutes(
+                    rows.Where(r => r.AnalyzedAt != null).Select(r => r.AnalyzedAt!.Value),
+                    analysis.PlyCount - rows.Count, DateTime.UtcNow)
+                : null,
         };
     }
 

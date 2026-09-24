@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
+import { formatEta } from '../../shared/eta.util';
 import { GamesService } from './games.service';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
@@ -53,7 +54,11 @@ const MATE_GAP_PAWNS = 100;
         <div class="head">
           <span class="title">{{ 'games.review.title' | translate }}</span>
           @if (running()) {
-            <span class="progress">{{ 'games.review.pending' | translate: progress() }}</span>
+            <!-- „8 von 47" allein sagt nicht, wie lange noch — die Restdauer rechnet der Server. -->
+            <span class="progress">
+              {{ 'games.review.pending' | translate: progress() }}
+              @if (eta(); as e) { · {{ 'gameAnalysis.eta' | translate: { eta: e } }} }
+            </span>
           } @else if (status() === 'failed') {
             <span class="progress failed">{{ 'games.review.failed' | translate }}</span>
           }
@@ -166,6 +171,11 @@ export class GameReviewComponent {
   readonly status = computed<GameEvalsStatus>(() => this.evals()?.status ?? 'none');
   readonly running = computed(() => this.status() === 'pending' || this.status() === 'running');
   readonly progress = computed(() => ({ done: this.evals()?.analyzed ?? 0, total: this.evals()?.total ?? 0 }));
+  /** Restdauer als Text („11 min"), solange die Analyse läuft und der Server ein Tempo kennt. */
+  readonly eta = computed(() => {
+    const minutes = this.evals()?.etaMinutes;
+    return this.running() && minutes ? formatEta(minutes, this.translate) : null;
+  });
   readonly ucis = computed(() => this.moves().map(uciOf));
   readonly review = computed(() => reviewGame(this.evals(), this.fens(), this.ucis()));
   readonly rows = computed(() => [

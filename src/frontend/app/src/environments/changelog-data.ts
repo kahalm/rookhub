@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.517.0", date: "2026-09-24", changes: [
+    { en: "Game analysis now says how long it will take: next to “Analysis running — 8 of 47 positions” on the shared game (/g/…) and on your own game page stands the estimated remaining time (e.g. “11 min”). The server works it out from the pace of the last twelve positions of this very game, measured up to now – if the engine stalls, the estimate grows instead of freezing. Until two positions are done there is no pace yet and no estimate is shown.", de: "Die Partie-Analyse sagt jetzt, wie lange sie noch braucht: neben „Analyse läuft — 8 von 47 Stellungen“ auf der geteilten Partie (/g/…) und auf der eigenen Partie-Seite steht die geschätzte Restdauer (z. B. „11 min“). Der Server rechnet sie aus dem Tempo der letzten zwölf Stellungen genau dieser Partie, gemessen bis jetzt – hängt die Engine, wächst die Schätzung, statt stehen zu bleiben. Bis zwei Stellungen fertig sind, gibt es noch kein Tempo und keine Angabe." },
+  ] },
   { version: "0.516.0", date: "2026-09-24", changes: [
     { en: "Games with a finished analysis now offer “Replay your mistakes”, the way Lichess does: the board shows the position before each of your inaccuracies, mistakes and blunders, you look for the better move, and the trainer says what the move you played actually cost. Show the solution, skip, or switch to the other side — and at the end you see how many you found yourself.", de: "Partien mit fertiger Analyse bieten jetzt „Eigene Fehler nachspielen“, so wie Lichess es kennt: Das Brett zeigt die Stellung vor jeder eigenen Ungenauigkeit, jedem Fehler und jedem groben Fehler, du suchst den besseren Zug, und der Trainer sagt, was dein gespielter Zug gekostet hat. Lösung zeigen, überspringen oder die Seite wechseln ist möglich — am Ende steht, wie viele du selbst gefunden hast." },
   ] },

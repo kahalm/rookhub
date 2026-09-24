@@ -380,6 +380,28 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Null(evals.Final.Mate);
     }
 
+    /// <summary>„8 von 47 Stellungen" sagt nicht, wie lange noch — die Restdauer kommt aus den
+    /// Zeitstempeln der gerechneten Stellungen DIESER Partie, und nur solange sie laeuft.</summary>
+    [Theory]
+    [InlineData(GameAnalysisStatus.Running, 1)]
+    [InlineData(GameAnalysisStatus.Done, null)]
+    public async Task Evals_Restdauer_nurSolangeDieAnalyseLaeuft(GameAnalysisStatus status, int? expected)
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        var analysis = await SeedAnalysisAsync(owner.Id, game.Pgn, status);
+        var now = DateTime.UtcNow;
+        foreach (var p in await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == analysis.Id && p.Ply < 3).ToListAsync())
+            p.AnalyzedAt = now.AddMinutes(p.Ply - 3);   // vor 3, 2 und 1 Minute(n)
+        await _db.SaveChangesAsync();
+        await LinkAsync(game.Id, analysis.Id);
+
+        var evals = await _svc.GetSharedEvalsAsync(game.ShareToken, callerUserId: null);
+
+        // Drei Stellungen in drei Minuten, eine offen → eine Minute.
+        Assert.Equal(expected, evals!.EtaMinutes);
+    }
+
     /// <summary>Anonym gibt es NUR die verknuepfte Analyse — ohne Verknuepfung nichts, auch wenn
     /// irgendwer dieselbe Partie gerechnet hat.</summary>
     [Fact]

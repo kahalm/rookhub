@@ -53,6 +53,12 @@ export interface GameEvals {
   plies: GameEvalPly[];
   /** Bewertung nach dem letzten Zug (für die Endstellung gibt es keine eigene Zeile). */
   final?: EvalScore | null;
+  /**
+   * Hochgerechnete Restdauer in Minuten, solange die Analyse läuft — der Server rechnet sie aus dem
+   * Tempo der jüngsten Stellungen DIESER Partie (`GameEvals.EtaMinutes`). Fehlt, solange es noch kein
+   * Tempo gibt (weniger als zwei Ergebnisse).
+   */
+  etaMinutes?: number | null;
 }
 
 export type MoveClass =
