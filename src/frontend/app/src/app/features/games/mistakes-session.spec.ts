@@ -232,4 +232,45 @@ describe('MistakesSession', () => {
       expect(c.solved()).toBe(0);
     });
   });
+
+  // Seit 0.526.2: „Bxf6 is not it" nennt die Bewertung des Fehlversuchs.
+  describe('Bewertung des Fehlversuchs', () => {
+    it('aus den Kandidaten der Analyse, wenn der Zug dort steht', () => {
+      const c = setup({ white: [fehler({ candidates: [
+        { uci: 'g1f3', score: { cp: 30 } }, { uci: 'b1c3', score: { cp: -40 } },
+      ] })], black: [] });
+      c.onMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'nach Nc3' });
+      expect(c.phase()).toBe('wrong');
+      expect(c.triedEval()).toEqual({ cp: -40 });
+    });
+
+    it('sonst von der Browser-Engine — bis sie antwortet `undefined`, eine späte Antwort nach „Nochmal" zählt nicht', async () => {
+      let resolve!: (v: { cp: number }) => void;
+      const evaluate = jasmine.createSpy('evaluate').and.returnValue(new Promise(r => { resolve = r; }));
+      const c = new MistakesSession({ white: [fehler({ candidates: [] })], black: [] }, 'white', undefined, evaluate);
+      c.onMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'nach Nc3' });
+      expect(evaluate).toHaveBeenCalledWith('nach Nc3');
+      expect(c.triedEval()).toBeUndefined();
+      resolve({ cp: -55 });
+      await Promise.resolve(); await Promise.resolve();
+      expect(c.triedEval()).toEqual({ cp: -55 });
+
+      c.retry();
+      expect(c.triedEval()).toBeNull();
+    });
+  });
+
+  // Seit 0.526.2: Tipps wie beim Puzzle; die dritte Stufe nennt den Zug — danach nicht mehr „selbst gefunden".
+  it('Tipps: Stufe für Stufe; nach der dritten zählt die Aufgabe nicht mehr als selbst gefunden, nächste Aufgabe startet bei 0', () => {
+    const c = setup(zwei);
+    c.showHint(); c.showHint();
+    expect(c.hintLevel()).toBe(2);
+    c.showHint(); c.showHint();
+    expect(c.hintLevel()).toBe(3);
+    c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'danach' });
+    expect(c.phase()).toBe('right');
+    expect(c.solved()).toBe(0);
+    c.next();
+    expect(c.hintLevel()).toBe(0);
+  });
 });

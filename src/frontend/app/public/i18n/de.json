@@ -2510,7 +2510,10 @@
       "summary": "{{solved}} von {{total}} selbst gefunden.",
       "progressShort": "{{solved}} von {{total}} gefunden · {{open}} offen",
       "tooltip": "Fehler-Training dieser Partie",
-      "onlyOpen": "Nur Partien mit offenen Fehlern ({{count}})"
+      "onlyOpen": "Nur Partien mit offenen Fehlern ({{count}})",
+      "analyze": "Analysieren",
+      "triedEval": "Nach {{san}}: {{eval}} (bester Zug: {{best}})",
+      "triedEvalPending": "{{san}} wird bewertet …"
     },
     "live": {
       "toggle": "Live-Engine — eigene Züge ausprobieren",
@@ -2518,7 +2521,8 @@
       "depth": "Tiefe {{depth}}",
       "hint": "Zieh auf dem Brett, um eigene Ideen durchzurechnen.",
       "undo": "Zug zurück",
-      "backToGame": "Zurück zur Partie"
+      "backToGame": "Zurück zur Partie",
+      "redo": "Zug vor"
     },
     "col": {
       "players": "Spieler",

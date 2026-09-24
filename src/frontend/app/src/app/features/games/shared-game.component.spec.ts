@@ -122,6 +122,89 @@ describe('SharedGameComponent', () => {
     expect(el.querySelector('app-live-engine-panel')).toBeNull();
   });
 
+  // ----- Pfeiltasten + Leertaste + Analyse im Training (0.526.2) -----
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+  const AFTER_E4_E5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+  function fakeLive() {
+    const engine = {
+      analysis$: new BehaviorSubject<AnalysisState>({ fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 }),
+      analyze: () => Promise.resolve(), setMultiPv: () => {}, setDepth: () => {}, stop: () => {}, destroy: () => {},
+    };
+    return new LiveEngineSession(() => engine as unknown as AnalysisEngineService);
+  }
+  const key = (k: string) => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, cancelable: true }));
+
+  it('live side line: ← and → walk through it; at its start ← goes back in the game again', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    spyOn(page as never, 'createLiveSession' as never).and.callFake(fakeLive as never);
+    page.service.goToStart();
+    page.toggleLive();
+    fixture.detectChanges();
+    const l = page.live()!;
+    l.play({ from: 'e2', to: 'e4', san: 'e4', fen: AFTER_E4 }, START);
+    l.play({ from: 'e7', to: 'e5', san: 'e5', fen: AFTER_E4_E5 }, START);
+
+    key('ArrowLeft');
+    expect(l.fen(START)).toBe(AFTER_E4);
+    key('ArrowRight');
+    expect(l.fen(START)).toBe(AFTER_E4_E5);
+    key('ArrowRight');                               // Ende der eigenen Variante: nichts
+    expect(l.fen(START)).toBe(AFTER_E4_E5);
+    expect(page.service.currentMoveIndex).toBe(-1);  // die Partie blieb, wo sie war
+
+    key('ArrowLeft'); key('ArrowLeft');
+    expect(l.variation().length).toBe(0);
+    key('ArrowRight');                               // → holt die Variante wieder
+    expect(l.variation().length).toBe(1);
+    page.stopLive();
+    key('ArrowRight');                               // ohne Live-Engine: wieder die Partie
+    expect(page.service.currentMoveIndex).toBe(0);
+  });
+
+  it('training: “Analyse” frees the board with the tried move on it, ← walks back; Space goes to the next task after the solution', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    spyOn(page as never, 'createLiveSession' as never).and.callFake(fakeLive as never);
+    const task = (ply: number) => ({
+      ply, white: true, cls: 'mistake' as const, fenBefore: START, playedSan: 'a3', playedUci: 'a2a3',
+      bestUci: 'e2e4', bestSan: 'e4', acceptUci: ['e2e4'], acceptSan: ['e4'], checkUnlisted: false,
+      evalBefore: { cp: 30 }, evalAfter: { cp: -60 }, lostPercent: 9,
+      candidates: [{ uci: 'e2e4', score: { cp: 30 } }, { uci: 'd2d4', score: { cp: 10 } }],
+    });
+    page.mistakes.set({ white: [task(0), task(2)], black: [] });
+    page.trainMistakes();
+    fixture.detectChanges();
+    const t = page.training()!;
+
+    page.onTrainingMove({ from: 'd2', to: 'd4', san: 'd4', fen: 'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1' });
+    fixture.detectChanges();
+    expect(t.phase()).toBe('wrong');
+    expect(t.triedEval()).toEqual({ cp: 10 });
+
+    page.toggleTrainingAnalysis();
+    fixture.detectChanges();
+    const a = page.trainingAnalysis()!;
+    expect(a.session.variation().map(m => m.san)).toEqual(['d4']);
+    expect(fixture.nativeElement.querySelector('app-live-engine-panel')).not.toBeNull();
+    key('ArrowLeft');
+    expect(a.session.variation().length).toBe(0);
+
+    t.showSolution();
+    fixture.detectChanges();
+    key(' ');
+    fixture.detectChanges();
+    expect(t.index()).toBe(1);                       // nächste Aufgabe …
+    expect(page.trainingAnalysis()).toBeNull();      // … und die Analyse der alten ist vorbei
+  });
+
   it('starts unflipped for ownerSide=white or unknown', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

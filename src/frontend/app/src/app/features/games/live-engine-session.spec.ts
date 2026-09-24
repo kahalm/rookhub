@@ -92,4 +92,22 @@ describe('LiveEngineSession', () => {
     session.destroy();
     expect(engine.destroyed).toBe(1);
   });
+
+  it('← nimmt zurück, → holt wieder vor; ein neuer Zug nach ← ersetzt, was dahinter lag', () => {
+    const { session } = setup();
+    session.sync(-1, start);
+    session.play({ from: 'e2', to: 'e4', san: 'e4', fen: afterE4 }, start);
+    session.play({ from: 'e7', to: 'e5', san: 'e5', fen: afterE4E5 }, start);
+    session.undo(start);
+    expect(session.fen(start)).toBe(afterE4);
+    expect(session.canRedo()).toBeTrue();
+    session.redo(start);
+    expect(session.fen(start)).toBe(afterE4E5);
+    expect(session.canRedo()).toBeFalse();
+
+    session.undo(start);
+    session.play({ from: 'c7', to: 'c5', san: 'c5', fen: 'nach c5' }, start);
+    expect(session.variationSan()).toBe('1. e4 c5');
+    expect(session.canRedo()).toBeFalse();
+  });
 });

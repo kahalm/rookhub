@@ -2764,7 +2764,10 @@
       "summary": "{{solved}} / {{total}} lépést találtál meg magad.",
       "progressShort": "{{solved}} / {{total}} megtalálva · {{open}} nyitott",
       "tooltip": "A parti hibáinak gyakorlása",
-      "onlyOpen": "Csak nyitott hibás partik ({{count}})"
+      "onlyOpen": "Csak nyitott hibás partik ({{count}})",
+      "analyze": "Elemzés",
+      "triedEval": "{{san}} után: {{eval}} (legjobb lépés: {{best}})",
+      "triedEvalPending": "{{san}} értékelése …"
     },
     "live": {
       "toggle": "Élő motor — próbáld ki a saját lépéseidet",
@@ -2772,7 +2775,8 @@
       "depth": "mélység {{depth}}",
       "hint": "Lépj a táblán, és próbáld ki a saját ötleteidet.",
       "undo": "Lépés vissza",
-      "backToGame": "Vissza a játszmához"
+      "backToGame": "Vissza a játszmához",
+      "redo": "Előre"
     },
     "col": {
       "players": "Játékosok",

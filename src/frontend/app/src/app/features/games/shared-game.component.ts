@@ -116,10 +116,18 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
             <div class="board-section">
               <div class="board-wrap">
                 @if (training(); as t) {
-                  <!-- Dasselbe Brett wie beim Nachspielen, nur mit der Stellung der Aufgabe und spielbar. -->
-                  <app-chess-board [fen]="t.boardFen()" [lastMove]="t.lastMove()" [flipped]="t.flipped()"
-                                   [playable]="t.playable()" (userMove)="onTrainingMove($event)"
-                                   [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                  @if (trainingAnalysis(); as a) {
+                    <!-- „Analysieren" im Training: frei weiterrechnen ab der Aufgabe, mit der Live-Engine (blauer Pfeil). -->
+                    <app-chess-board [fen]="a.session.fen(a.base)" [lastMove]="a.session.lastMove()" [flipped]="t.flipped()"
+                                     [playable]="true" (userMove)="a.session.play($event, a.base)"
+                                     [arrows]="a.session.arrows()"
+                                     [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                  } @else {
+                    <!-- Dasselbe Brett wie beim Nachspielen, nur mit der Stellung der Aufgabe und spielbar. -->
+                    <app-chess-board [fen]="t.boardFen()" [lastMove]="t.lastMove()" [flipped]="t.flipped()"
+                                     [playable]="t.playable()" (userMove)="onTrainingMove($event)"
+                                     [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                  }
                 } @else if (live(); as l) {
                   <!-- Live-Engine: das Brett ist spielbar (eigene Nebenvariante), die Tippzonen fallen weg — sie lägen
                        über dem Brett und schluckten jeden Zug. Der blaue Pfeil ist der beste Zug der Live-Engine. -->
@@ -137,7 +145,11 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
                 }
               </div>
               @if (training(); as t) {
-                <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" />
+                <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()"
+                                      [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()" />
+                @if (trainingAnalysis(); as a) {
+                  <app-live-engine-panel class="live-slot" [session]="a.session" [gameFen]="a.base" (closed)="stopTrainingAnalysis()" />
+                }
               } @else {
               <div class="nav">
                 <!-- Am Handy (siehe @media): Zurück/Vor breit in der Mitte, Anfang/Ende mit Abstand an den Rand —
@@ -333,7 +345,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   /** Live-Engine + eigene Züge (0.525.0) — im Fehler-Training aus, dort verriete sie die Lösung. */
   readonly live = signal<LiveEngineSession | null>(null);
-  private readonly stopLiveOnDestroy = inject(DestroyRef).onDestroy(() => this.stopLive());
+  private readonly stopLiveOnDestroy = inject(DestroyRef).onDestroy(() => { this.stopLive(); this.stopTrainingAnalysis(); });
 
   toggleLive(): void {
     if (this.live()) { this.stopLive(); return; }
@@ -353,9 +365,47 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.live.set(null);
   }
 
+  /**
+   * „Analysieren" im Fehler-Training (seit 0.526.2): das Brett wird frei, die Live-Engine rechnet — ab der Stellung
+   * VOR dem Fehler, der eigene (oder gezeigte) Zug steht schon auf dem Brett. Gilt bis zur nächsten Aufgabe:
+   * `ngDoCheck` beendet die Analyse, sobald die Aufgabe, die Seite oder die Phase („nochmal") wechselt.
+   */
+  readonly trainingAnalysis = signal<{ session: LiveEngineSession; base: string; index: number; side: string } | null>(null);
+
+  toggleTrainingAnalysis(): void {
+    if (this.trainingAnalysis()) { this.stopTrainingAnalysis(); return; }
+    const t = this.training();
+    const m = t?.current();
+    if (!t || !m) return;
+    const session = this.createLiveSession();
+    session.sync(-2, m.fenBefore);
+    const move = t.lastMove();
+    const san = t.phase() === 'wrong' ? t.tried() : t.phase() === 'right' ? t.foundSan() : m.bestSan;
+    if (move && t.boardFen() !== m.fenBefore) {
+      session.play({ from: move[0], to: move[1], san, fen: t.boardFen() }, m.fenBefore);
+    }
+    this.useStoredRemoteEngine(session);
+    this.trainingAnalysis.set({ session, base: m.fenBefore, index: t.index(), side: t.side() });
+  }
+
+  stopTrainingAnalysis(): void {
+    this.trainingAnalysis()?.session.destroy();
+    this.trainingAnalysis.set(null);
+  }
+
   /** Mit der Partie abgleichen: geblättert → Nebenvariante weg, neue Stellung → rechnen (billig ohne Änderung). */
   ngDoCheck(): void {
     this.live()?.sync(this.service.currentMoveIndex, this.service.currentFen);
+    const a = this.trainingAnalysis();
+    if (a) {
+      const t = this.training();
+      const phase = t?.phase();
+      if (!t || t.index() !== a.index || t.side() !== a.side || phase === 'ask' || phase === 'checking' || phase === 'done') {
+        this.stopTrainingAnalysis();
+      } else {
+        a.session.sync(-2, a.base);
+      }
+    }
   }
 
   /** Dieselbe Tiefe wie am Analysebrett (dort gewählt und gemerkt), sonst 22. */
@@ -389,7 +439,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.stopLive();
     // Nicht gelistete Züge prüft die Browser-Engine nach (nur wo die Analyse das offen lässt).
     this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide(),
-      (m, fen) => this.mistakeJudge.judge(m, fen)));
+      (m, fen) => this.mistakeJudge.judge(m, fen), fen => this.mistakeJudge.evaluate(fen)));
   }
 
   onTrainingMove(e: UserBoardMove): void {
@@ -401,6 +451,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     // Partie schon einmal offen war. Der Server vereinigt additiv, hier geht nichts verloren.
     const t = this.training();
     if (t) this.reportMistakes(t, t.solvedPlies());
+    this.stopTrainingAnalysis();
     this.training.set(null);
   }
 
@@ -493,17 +544,39 @@ export class SharedGameComponent implements OnInit, DoCheck {
     });
   }
 
+  /** ← / → in einer eigenen Variante; `true`, wenn die Taste dort etwas getan hat (oder am Variantenende nichts tun darf). */
+  private stepVariation(event: KeyboardEvent, session: LiveEngineSession, baseFen: string): boolean {
+    if (event.key === 'ArrowLeft' && session.variation().length) {
+      event.preventDefault(); session.undo(baseFen); return true;
+    }
+    if (event.key === 'ArrowRight' && (session.canRedo() || session.variation().length)) {
+      event.preventDefault(); session.redo(baseFen); return true;
+    }
+    return false;
+  }
+
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Im Training zeigt das Brett die Aufgabe — die Pfeile blätterten sonst unsichtbar in der Partie darunter.
-    if (this.training()) return;
-    // In der eigenen Nebenvariante nimmt ← den letzten eigenen Zug zurück, statt in der Partie zu blättern.
-    const l = this.live();
-    if (l && l.variation().length) {
-      if (event.key === 'ArrowLeft') { event.preventDefault(); l.undo(this.service.currentFen); }
-      else if (event.key === 'ArrowRight') event.preventDefault();
+    // Im Training zeigt das Brett die Aufgabe — die Pfeile blätterten sonst unsichtbar in der Partie darunter. In
+    // der Analyse einer Aufgabe laufen sie durch die eigene Variante.
+    const t = this.training();
+    if (t) {
+      // Leertaste nach der Lösung (gefunden oder gezeigt) = nächste Aufgabe (seit 0.526.2). Der Fokus geht vorher
+      // vom Knopf weg — sonst löste die Leertaste den zuletzt geklickten Knopf beim Loslassen ein zweites Mal aus.
+      if (event.key === ' ' && (t.phase() === 'right' || t.phase() === 'shown')) {
+        event.preventDefault();
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        t.next();
+        return;
+      }
+      const a = this.trainingAnalysis();
+      if (a) this.stepVariation(event, a.session, a.base);
       return;
     }
+    // In der eigenen Nebenvariante laufen ← und → durch sie (← zurück, → wieder vor); an ihrem Anfang blättert ←
+    // wie gewohnt in der Partie.
+    const l = this.live();
+    if (l && this.stepVariation(event, l, this.service.currentFen)) return;
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.service.goBack(); }
     else if (event.key === 'ArrowRight') { event.preventDefault(); this.service.goForward(); }
   }

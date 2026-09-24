@@ -2510,7 +2510,10 @@
       "summary": "You found {{solved}} of {{total}} yourself.",
       "progressShort": "{{solved}} of {{total}} found · {{open}} open",
       "tooltip": "Mistake training for this game",
-      "onlyOpen": "Only games with open mistakes ({{count}})"
+      "onlyOpen": "Only games with open mistakes ({{count}})",
+      "analyze": "Analyse",
+      "triedEval": "After {{san}}: {{eval}} (best move: {{best}})",
+      "triedEvalPending": "Evaluating {{san}} …"
     },
     "live": {
       "toggle": "Live engine — try your own moves",
@@ -2518,7 +2521,8 @@
       "depth": "depth {{depth}}",
       "hint": "Move on the board to try your own ideas.",
       "undo": "Take back",
-      "backToGame": "Back to the game"
+      "backToGame": "Back to the game",
+      "redo": "Forward"
     },
     "col": {
       "players": "Players",

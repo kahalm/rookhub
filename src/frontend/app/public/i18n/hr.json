@@ -2510,7 +2510,10 @@
       "summary": "Samostalno pronađeno: {{solved}} od {{total}}.",
       "progressShort": "{{solved}} od {{total}} pronađeno · {{open}} otvoreno",
       "tooltip": "Trening pogrešaka za ovu partiju",
-      "onlyOpen": "Samo partije s otvorenim pogreškama ({{count}})"
+      "onlyOpen": "Samo partije s otvorenim pogreškama ({{count}})",
+      "analyze": "Analiziraj",
+      "triedEval": "Nakon {{san}}: {{eval}} (najbolji potez: {{best}})",
+      "triedEvalPending": "Procjena {{san}} …"
     },
     "live": {
       "toggle": "Motor uživo — isprobaj vlastite poteze",
@@ -2518,7 +2521,8 @@
       "depth": "dubina {{depth}}",
       "hint": "Povuci potez na ploči i isprobaj svoje ideje.",
       "undo": "Vrati potez",
-      "backToGame": "Natrag na partiju"
+      "backToGame": "Natrag na partiju",
+      "redo": "Naprijed"
     },
     "col": {
       "players": "Igrači",

@@ -32,7 +32,14 @@ export class LiveEngineSession {
 
   /** Partiezug, an dem die Nebenvariante hängt (`currentMoveIndex`, −1 = Start). */
   readonly baseIndex = signal(-1);
-  readonly variation = signal<LiveMove[]>([]);
+  /** Alle Züge der Nebenvariante — auch die, hinter die man mit ← zurückgegangen ist (→ holt sie wieder). */
+  private readonly moves = signal<LiveMove[]>([]);
+  /** Wie viele davon gerade auf dem Brett stehen. */
+  private readonly cursor = signal(0);
+  /** Die Züge, die gerade auf dem Brett stehen. */
+  readonly variation = computed(() => this.moves().slice(0, this.cursor()));
+  /** Gibt es hinter der Stellung noch eigene Züge (→ / „Zug vor")? */
+  readonly canRedo = computed(() => this.cursor() < this.moves().length);
   readonly lines = signal<EngineDisplayLine[]>([]);
   readonly depth = signal(0);
   /** Bester Zug der gerechneten Stellung (UCI) — für den Pfeil. */
@@ -79,28 +86,39 @@ export class LiveEngineSession {
   sync(gameIndex: number, gameFen: string): void {
     if (gameIndex !== this.baseIndex()) {
       this.baseIndex.set(gameIndex);
-      if (this.variation().length) this.variation.set([]);
+      if (this.moves().length) { this.moves.set([]); this.cursor.set(0); }
     }
     this.analyze(this.fen(gameFen));
   }
 
-  /** Eigener Zug auf dem Brett — hängt sich an die Nebenvariante. */
+  /** Eigener Zug auf dem Brett — hängt sich an die Stelle der Nebenvariante, an der man gerade steht (was dahinter
+   *  lag, fällt weg, wie beim Analysebrett ohne Varianten-Baum). */
   play(move: UserBoardMove, gameFen: string): void {
-    if (!this.variation().length) this.baseFen = gameFen;
+    if (this.cursor() === 0) this.baseFen = gameFen;
     const uci = move.from + move.to + (this.isPromotion(move) ? 'q' : '');
-    this.variation.update(v => [...v, { san: move.san, uci, fen: move.fen, from: move.from, to: move.to }]);
+    this.moves.set([...this.variation(), { san: move.san, uci, fen: move.fen, from: move.from, to: move.to }]);
+    this.cursor.update(c => c + 1);
     this.analyze(move.fen);
   }
 
-  /** Letzten eigenen Zug zurücknehmen. */
+  /** Einen eigenen Zug zurück (←) — er bleibt gemerkt, → holt ihn wieder. */
   undo(gameFen: string): void {
-    this.variation.update(v => v.slice(0, -1));
+    if (this.cursor() === 0) return;
+    this.cursor.update(c => c - 1);
+    this.analyze(this.fen(gameFen));
+  }
+
+  /** Einen eigenen Zug wieder vor (→). */
+  redo(gameFen: string): void {
+    if (!this.canRedo()) return;
+    this.cursor.update(c => c + 1);
     this.analyze(this.fen(gameFen));
   }
 
   /** Zurück zur Partie. */
   reset(gameFen: string): void {
-    this.variation.set([]);
+    this.moves.set([]);
+    this.cursor.set(0);
     this.analyze(gameFen);
   }
 

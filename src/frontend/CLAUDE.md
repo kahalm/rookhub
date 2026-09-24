@@ -373,6 +373,13 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
   `features/analysis/analysis-settings.ts`, damit die Partieseite nicht das ganze Analysebrett ins Bündel zieht.
 - **Abgleich per `ngDoCheck`** (`session.sync`): der PgnViewerService hat keine Signale; geblättert (Pfeile, Zugliste,
   Kurve) → Nebenvariante weg, neue Stellung → rechnen. In der Nebenvariante nimmt ← den letzten eigenen Zug zurück.
+- **Pfeiltasten in der eigenen Variante** (0.526.2): ← zurück, → wieder vor (`LiveEngineSession` hält alle Züge +
+  `cursor`, `canRedo`); am Variantenende tut → nichts, an ihrem Anfang blättert ← in der Partie. Gemeldet als „die
+  Navigation mit den Tasten verloren" — → war in der Variante tot.
+- **Analyse im Fehler-Training** (0.526.2): Knopf „Analysieren" nach dem Urteil (daneben/gezeigt/gefunden) →
+  `trainingAnalysis` = eigene `LiveEngineSession` ab `fenBefore`, der eigene (bzw. gezeigte) Zug steht schon drauf;
+  endet per `ngDoCheck`, sobald Aufgabe, Seite oder Phase wechselt. ← → laufen durch die Variante, die Leertaste
+  springt nach der Lösung (right/shown) zur nächsten Aufgabe (Fokus vorher weg vom Knopf, sonst zweiter Klick).
 - **Navigation am Handy** (0.525.1, ≤ 768 px): Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live — Zurück/Vor als breite 48-px-Knöpfe
   in der Mitte (`nav-prev`/`nav-next`), Anfang/Ende mit 14 px Abstand und blasser am Rand. Dicht nebeneinander traf man
   statt „einen Zug" oft „ganz an den Anfang/das Ende" (gemeldet 2026-09-24). Am PC unverändert.
@@ -380,6 +387,11 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
   Analyse ebenso (`engineHidden`), und das Fehler-Training schaltet die Live-Engine ab.
 
 ## Eigene Fehler nachspielen (0.516.0)
+
+- **Seit 0.526.2**: der Fehlversuch nennt seine Bewertung (`MistakesSession.triedEval` — aus `Mistake.candidates` der
+  Analyse, sonst `MistakeJudgeService.evaluate` im Browser; `undefined` = rechnet noch), und es gibt Tipps WIE BEIM
+  PUZZLE (`classifyMoveFromFen` + `buildStagedHints`, Keys `puzzles.hints.*`: Zugart → Figur → Zug). Nach der dritten
+  Stufe zählt die Aufgabe nicht mehr als selbst gefunden (wie „Lösung zeigen").
 
 Der Trainer zur Partie, wie Lichess' „Aus deinen Fehlern lernen": Stellung VOR dem eigenen Fehler,
 der gespielte Zug steht daneben, gesucht ist der bessere. Knopf in der Kopfzeile von `/games/:id`

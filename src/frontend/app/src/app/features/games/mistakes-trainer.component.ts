@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe } from '@ngx-translate/core';
-import { MOVE_CLASS_COLORS, MoveClass, formatEval } from './game-review.util';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { buildStagedHints, classifyMoveFromFen } from '../puzzles/puzzle-hints.util';
+import { EvalScore, MOVE_CLASS_COLORS, MoveClass, formatEval } from './game-review.util';
 import { Mistake } from './mistakes.util';
 import { MistakesSession } from './mistakes-session';
 
@@ -67,8 +68,22 @@ import { MistakesSession } from './mistakes-session';
       @if (session.phase() === 'right' && session.foundByEngine()) {
         <p class="cost">{{ 'games.mistakes.checkedByEngine' | translate }}</p>
       }
+      <!-- Tipps wie beim Puzzle (seit 0.526.2): Zugart → Figur → Zug, Stufe für Stufe. -->
+      @if (session.hintLevel() > 0) {
+        <ol class="hint-list">
+          @for (h of hints(m).slice(0, session.hintLevel()); track $index) { <li>{{ h }}</li> }
+        </ol>
+      }
       @if (session.phase() === 'wrong' && session.checkFailed()) {
         <p class="cost">{{ 'games.mistakes.checkFailed' | translate }}</p>
+      }
+      @if (session.phase() === 'wrong') {
+        @let te = session.triedEval();
+        @if (te === undefined) {
+          <p class="cost tried-eval">{{ 'games.mistakes.triedEvalPending' | translate: { san: session.tried() } }}</p>
+        } @else if (te) {
+          <p class="cost tried-eval">{{ 'games.mistakes.triedEval' | translate: { san: session.tried(), eval: fmtScore(te), best: fmtScore(m.evalBefore) } }}</p>
+        }
       }
       @if (session.phase() === 'right' || session.phase() === 'shown') {
         @if (others(m); as rest) {
@@ -80,6 +95,20 @@ import { MistakesSession } from './mistakes-session';
       <div class="actions">
         @if (session.phase() === 'wrong') {
           <button mat-stroked-button (click)="session.retry()"><mat-icon>refresh</mat-icon> {{ 'games.mistakes.retry' | translate }}</button>
+        }
+        <!-- Nach dem Urteil (daneben, gezeigt oder gefunden): frei weiterrechnen mit der Live-Engine, bis zur nächsten
+             Aufgabe (seit 0.526.2, gewünscht 2026-09-24). -->
+        @if (session.phase() === 'wrong' || session.phase() === 'shown' || session.phase() === 'right') {
+          <button mat-stroked-button class="analyze" [class.on]="analyzing" (click)="analyze.emit()">
+            <mat-icon>memory</mat-icon> {{ 'games.mistakes.analyze' | translate }}
+          </button>
+        }
+        @if ((session.phase() === 'ask' || session.phase() === 'wrong') && session.hintLevel() < hints(m).length) {
+          <button mat-stroked-button class="hint" (click)="session.showHint(hints(m).length)">
+            <mat-icon>lightbulb</mat-icon>
+            {{ (session.hintLevel() === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
+            ({{ session.hintLevel() }}/{{ hints(m).length }})
+          </button>
         }
         @if (session.phase() === 'ask' || session.phase() === 'wrong' || session.phase() === 'checking') {
           <button mat-button (click)="session.showSolution()">{{ 'games.mistakes.show' | translate }}</button>
@@ -115,17 +144,39 @@ import { MistakesSession } from './mistakes-session';
     .empty, .summary { margin: 8px 0; }
     .actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .spacer { flex: 1 1 auto; }
+    .analyze.on { color: #42a5f5; border-color: #42a5f5; }
+    .hint-list { margin: 6px 0 0; padding-left: 20px; font-size: 0.85rem; }
+    .hint-list li { margin: 2px 0; }
   `],
 })
 export class MistakesTrainerComponent {
   readonly SIDES: readonly ('white' | 'black')[] = ['white', 'black'];
+  private readonly translate = inject(TranslateService);
+  /** Die drei Tipp-Stufen je Aufgabe — einmal gerechnet (die Vorlage fragt bei jeder Prüfung). */
+  private readonly hintCache = new Map<string, string[]>();
 
   @Input({ required: true }) session!: MistakesSession;
   /** Training beenden — die Seite zeigt wieder die Partie. */
   @Output() closed = new EventEmitter<void>();
+  /** Läuft gerade die Analyse dieser Aufgabe (Knopf hervorgehoben)? */
+  @Input() analyzing = false;
+  /** „Analysieren": die Seite macht das Brett frei und schaltet die Live-Engine zu — bis zur nächsten Aufgabe. */
+  @Output() analyze = new EventEmitter<void>();
 
   color(c: MoveClass): string { return MOVE_CLASS_COLORS[c]; }
   fmt(m: Mistake): string { return `${formatEval(m.evalBefore)} → ${formatEval(m.evalAfter)}`; }
+  fmtScore(score: EvalScore): string { return formatEval(score); }
+
+  /** Tipps zur Aufgabe, dieselben wie beim Puzzle: zum Bestzug der Analyse aus der Stellung VOR dem Fehler. */
+  hints(m: Mistake): string[] {
+    const key = `${m.ply}:${this.translate.currentLang() ?? ''}`;
+    let h = this.hintCache.get(key);
+    if (!h) {
+      h = buildStagedHints(classifyMoveFromFen(m.fenBefore, m.bestUci), (k, p) => this.translate.instant(k, p));
+      this.hintCache.set(key, h);
+    }
+    return h;
+  }
   lost(m: Mistake): string { return m.lostPercent.toFixed(1); }
 
   /** Die übrigen gleichwertigen Züge, außer dem gefundenen und dem schon genannten Bestzug. */

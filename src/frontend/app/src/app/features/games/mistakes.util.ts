@@ -47,6 +47,9 @@ export interface Mistake {
   evalAfter: EvalScore;
   /** Verlorene Gewinnchance in Prozentpunkten, aus Sicht des Ziehenden — nie negativ. */
   lostPercent: number;
+  /** Alle Kandidaten der Analyse in dieser Stellung (Weiß-Sicht) — daraus nennt der Trainer die Bewertung eines
+   *  Fehlversuchs, ohne die Engine zu fragen (seit 0.526.2). Fehlt bei Aufgaben von Hand. */
+  candidates?: { uci: string; score: EvalScore }[];
 }
 
 export interface MistakesBySide {
@@ -180,6 +183,7 @@ export function collectMistakes(
       checkUnlisted: unlistedMayBeEquivalent(row, m.white),
       evalBefore: m.evalBefore, evalAfter: m.evalAfter,
       lostPercent: Math.max(0, m.winBefore - m.winAfter),
+      candidates: (row.candidates ?? []).map(c => ({ uci: c.uci.toLowerCase(), score: { cp: c.cp ?? null, mate: c.mate ?? null } })),
     });
   }
   return out;

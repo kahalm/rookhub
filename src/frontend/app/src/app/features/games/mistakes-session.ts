@@ -3,6 +3,7 @@ import { UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { sameMove } from '../../shared/chess/line-solver';
 import { Mistake, MistakesBySide } from './mistakes.util';
+import { EvalScore } from './game-review.util';
 
 /** ask = du bist dran · checking = die Browser-Engine rechnet nach · wrong = daneben · right = selbst gefunden ·
  *  shown = Lösung gezeigt · done = durch. */
@@ -10,6 +11,9 @@ export type MistakesPhase = 'ask' | 'checking' | 'right' | 'wrong' | 'shown' | '
 
 /** Urteil über einen nicht gelisteten Zug: `true` gleichwertig, `false` schlechter, `null` nicht prüfbar. */
 export type UnlistedMoveJudge = (m: Mistake, fenAfter: string) => Promise<boolean | null>;
+
+/** Bewertung einer Stellung (Weiß-Sicht) durch die Browser-Engine — für den Fehlversuch, den die Analyse nicht führt. */
+export type PositionEvaluator = (fen: string) => Promise<EvalScore | null>;
 
 /**
  * Der Zustand von „Eigene Fehler nachspielen" — getrennt von jeder Anzeige, damit das BRETT der
@@ -40,7 +44,15 @@ export class MistakesSession {
   readonly foundByEngine = signal(false);
   /** Die Browser-Engine konnte einen nicht gelisteten Zug nicht prüfen (Fehler, Zeitlimit). */
   readonly checkFailed = signal(false);
+  /**
+   * Bewertung nach dem Fehlversuch (Weiß-Sicht, seit 0.526.2 — gewünscht: „Bxf6 is not it" soll sagen, was der Zug
+   * kostet). Aus den Kandidaten der Analyse, sonst von der Browser-Engine; `undefined` = wird noch gerechnet,
+   * `null` = nicht zu haben.
+   */
+  readonly triedEval = signal<EvalScore | null | undefined>(null);
   readonly solved = signal(0);
+  /** Aufgedeckte Tipp-Stufen der aktuellen Aufgabe (0–3, wie beim Puzzle: Zugart → Figur → Zug; seit 0.526.2). */
+  readonly hintLevel = signal(0);
   /**
    * Die Halbzüge der selbst gefundenen Aufgaben — sie gehen an den Server (`POST /api/games/{id}/mistakes`),
    * damit die Übersicht „4 von 7 · 3 offen" zeigen kann. Gezählt wird dieselbe Regel wie bei `solved`:
@@ -62,7 +74,8 @@ export class MistakesSession {
    *  einem Zug, der nicht mehr auf dem Brett steht, und wird verworfen. */
   private epoch = 0;
 
-  constructor(readonly bySide: MistakesBySide, side: 'white' | 'black', private readonly judge?: UnlistedMoveJudge) {
+  constructor(readonly bySide: MistakesBySide, side: 'white' | 'black', private readonly judge?: UnlistedMoveJudge,
+              private readonly evaluate?: PositionEvaluator) {
     this.bothSides = bySide.white.length > 0 && bySide.black.length > 0;
     this.side.set(side);
     this.start(0);
@@ -111,6 +124,23 @@ export class MistakesSession {
     this.missedHere = true;
     this.tried.set(san);
     this.phase.set('wrong');
+    this.rateTried();
+  }
+
+  /** Bewertung des Fehlversuchs: aus den Kandidaten der Analyse (tiefer gerechnet), sonst die Browser-Engine. */
+  private rateTried(): void {
+    const m = this.current();
+    const move = this.lastMove();
+    if (!m || !move) { this.triedEval.set(null); return; }
+    const listed = (m.candidates ?? []).find(c => sameMove(move[0] + move[1], c.uci));
+    if (listed) { this.triedEval.set(listed.score); return; }
+    if (!this.evaluate) { this.triedEval.set(null); return; }
+    this.triedEval.set(undefined);
+    const token = this.epoch;
+    this.evaluate(this.boardFen()).then(
+      score => { if (token === this.epoch) this.triedEval.set(score); },
+      () => { if (token === this.epoch) this.triedEval.set(null); },
+    );
   }
 
   /** Zurück auf die Ausgangsstellung — das Brett übernimmt den Nutzerzug selbst, es MUSS neu gebunden werden. */
@@ -119,6 +149,7 @@ export class MistakesSession {
     if (!m) return;
     this.epoch++;
     this.checkFailed.set(false);
+    this.triedEval.set(null);
     this.boardFen.set(m.fenBefore);
     this.lastMove.set(undefined);
     this.phase.set('ask');
@@ -132,6 +163,14 @@ export class MistakesSession {
     this.boardFen.set(fenAfterUci(m.fenBefore, m.bestUci) ?? m.fenBefore);
     this.lastMove.set([m.bestUci.slice(0, 2), m.bestUci.slice(2, 4)]);
     this.phase.set('shown');
+  }
+
+  /** Nächste Tipp-Stufe. Die dritte nennt den Zug — danach zählt die Aufgabe nicht mehr als selbst gefunden,
+   *  wie bei „Lösung zeigen". */
+  showHint(max = 3): void {
+    if (this.hintLevel() >= max) return;
+    this.hintLevel.update(h => h + 1);
+    if (this.hintLevel() >= max) this.missedHere = true;
   }
 
   next(): void { this.start(this.index() + 1); }
@@ -155,6 +194,8 @@ export class MistakesSession {
     this.missedHere = false;
     this.foundByEngine.set(false);
     this.checkFailed.set(false);
+    this.triedEval.set(null);
+    this.hintLevel.set(0);
     this.tried.set('');
     this.foundSan.set('');
     this.foundBest.set(false);

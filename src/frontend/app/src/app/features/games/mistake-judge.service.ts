@@ -36,6 +36,12 @@ export class MistakeJudgeService {
     }
   }
 
+  /** Bewertung einer Stellung (Weiß-Sicht) — für den Fehlversuch, den die Analyse nicht unter ihren Kandidaten führt
+   *  (seit 0.526.2). `null` bei Engine-Fehler oder unlesbarer Stellung. */
+  async evaluate(fen: string): Promise<EvalScore | null> {
+    try { return await this.scoreOf(fen); } catch { return null; }
+  }
+
   /** Bewertung einer Stellung in Weiß-Sicht. Ist die Partie dort vorbei, gibt es keinen Zug zu suchen —
    *  die Engine meldete „No move found"; Matt und Remis stehen ohnehin fest. */
   private async scoreOf(fen: string): Promise<EvalScore | null> {

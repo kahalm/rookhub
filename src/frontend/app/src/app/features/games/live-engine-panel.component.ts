@@ -28,12 +28,17 @@ import { LiveEngineSession } from './live-engine-session';
           <mat-icon>close</mat-icon>
         </button>
       </div>
-      @if (s.variation().length) {
+      @if (s.variation().length || s.canRedo()) {
         <div class="variation">
           <span class="variation-san">{{ s.variationSan() }}</span>
           <button mat-stroked-button type="button" class="undo" (click)="s.undo(gameFen())">
             <mat-icon>undo</mat-icon> {{ 'games.live.undo' | translate }}
           </button>
+          @if (s.canRedo()) {
+            <button mat-stroked-button type="button" class="redo" (click)="s.redo(gameFen())">
+              <mat-icon>redo</mat-icon> {{ 'games.live.redo' | translate }}
+            </button>
+          }
           <button mat-stroked-button type="button" class="back" (click)="s.reset(gameFen())">
             <mat-icon>replay</mat-icon> {{ 'games.live.backToGame' | translate }}
           </button>
