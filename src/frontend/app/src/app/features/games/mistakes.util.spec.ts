@@ -93,7 +93,7 @@ describe('mistakes.util', () => {
       ply: 2, white: true, cls, base: cls, accuracy: 10, winBefore: 60, winAfter: 30,
       evalBefore: { cp: 30 }, evalAfter: { cp: -250 },
     };
-    return { series: [], moves: [null, null, m], white: { accuracy: null, counts: {} as never }, black: { accuracy: null, counts: {} as never } };
+    return { series: [], curve: [], moves: [null, null, m], white: { accuracy: null, counts: {} as never }, black: { accuracy: null, counts: {} as never } };
   }
 
   it('ohne Bestzug gibt es keine Aufgabe', () => {

@@ -141,6 +141,25 @@ export function winPercent(score: EvalScore | null | undefined, whiteToMoveHere 
   return 50 + 50 * (2 / (1 + Math.exp(WIN_MULTIPLIER * score.cp)) - 1);
 }
 
+/** Bis hierhin (in Bauern) steigt die Kurve linear, darüber steht sie am Rand. */
+export const GRAPH_CAP_PAWNS = 10;
+
+/**
+ * Höhe der Bewertungskurve (0..100, 50 = ausgeglichen, 100 = Weiß am oberen Rand) — wie chess.com: die
+ * BEWERTUNG linear, bei ±`GRAPH_CAP_PAWNS` gekappt, Matt am Rand. Nicht die Gewinnchance: die sättigt schon
+ * bei +3 bei fast 80 % und machte aus jeder klar gewonnenen Phase einen Block am oberen Rand (gewünscht
+ * 2026-09-24 mit einem chess.com-Schnappschuss derselben Partie daneben; dessen Punkte liegen genau auf dieser
+ * Skala, wo beide Engines übereinstimmen: 0,00 auf der Mitte, +6,51 bei 82,5). Genauigkeit und Zug-Klassen
+ * rechnen weiter mit `winPercent` — das ist nur die Zeichnung.
+ */
+export function graphHeight(score: EvalScore | null | undefined, whiteToMoveHere = true): number | null {
+  if (!score) return null;
+  if (score.mate != null) return winPercent(score, whiteToMoveHere);
+  if (score.cp == null) return null;
+  const pawns = Math.max(-GRAPH_CAP_PAWNS, Math.min(GRAPH_CAP_PAWNS, score.cp / 100));
+  return 50 + 50 * pawns / GRAPH_CAP_PAWNS;
+}
+
 /**
  * Genauigkeit EINES Zuges aus Sicht des Ziehenden (Gewinnchance vorher/nachher, beide aus SEINER
  * Sicht). Kein Verlust = 100 — die Formel selbst liefert dort 99,9999, und ein fehlerfreier Zug soll
@@ -241,6 +260,8 @@ export interface SideSummary {
 export interface GameReview {
   /** Gewinnchance WEISS je Stellung: [0] = Start, [i+1] = nach Zug i; `null` = nicht gerechnet. */
   series: (number | null)[];
+  /** Höhe der Bewertungskurve je Stellung (0..100, 50 = ausgeglichen), wie `series` indiziert — siehe `graphHeight`. */
+  curve: (number | null)[];
   /** Je Halbzug der Rückblick; `null`, wenn vorher oder nachher eine Bewertung fehlt. */
   moves: (ReviewedMove | null)[];
   white: SideSummary;
@@ -284,6 +305,7 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
   for (let j = 0; j < n; j++) evalAt.push(scoreOf(rows.get(j)));
   evalAt.push(scoreOf(evals?.final));
   const series = evalAt.map((s, j) => winPercent(s, whiteToMove(fens[j])));
+  const curve = evalAt.map((s, j) => graphHeight(s, whiteToMove(fens[j])));
 
   const moves: (ReviewedMove | null)[] = [];
   // Grundklasse je Halbzug: Miss und Great fragen, ob der GEGNER einen Fehler gemacht hat — das ist seine
@@ -329,7 +351,7 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
     return { accuracy: sideAccuracy(entries), counts };
   };
 
-  return { series, moves, white: summary(true), black: summary(false) };
+  return { series, curve, moves, white: summary(true), black: summary(false) };
 }
 
 interface SpecialInput {

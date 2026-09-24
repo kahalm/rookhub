@@ -35,16 +35,26 @@ describe('EvalGraphComponent', () => {
     expect(el.querySelectorAll('.dot.lone').length).toBe(1);
   });
 
-  it('Fläche: oberhalb der Mittellinie hell, unterhalb dunkel — geteilt am Schnittpunkt', () => {
+  // Wie chess.com (Vergleich 2026-09-24): weiß ist alles UNTER der Kurve, darüber der dunkle Grund.
+  it('Fläche: weiß vom unteren Rand bis zur Kurve, je zusammenhängendem Lauf', () => {
     const { el } = setup([50, 70, 30]);
-    const white = el.querySelector('polygon.area-white')!.getAttribute('points')!;
-    const black = el.querySelector('polygon.area-black')!.getAttribute('points')!;
-    // Weiß vorn bei Stellung 1 (70 % → y 30); Schnitt mit der Mitte zwischen 1 und 2 bei x = 750.
-    expect(white).toContain('500,30');
-    expect(white).toContain('750,50');
-    expect(white).not.toContain('1000,70');
-    expect(black).toContain('1000,70');
-    expect(black).not.toContain('500,30');
+    const polygons = el.querySelectorAll('polygon.area-white');
+    expect(polygons.length).toBe(1);
+    expect(polygons[0].getAttribute('points')).toBe('0,100 0,50 500,30 1000,70 1000,100');
+    expect(el.querySelector('polygon.area-black')).toBeNull();
+  });
+
+  it('eine nicht gerechnete Strecke bekommt ein neutrales Band — sonst sähe sie wie ein schwarzer Sieg aus', () => {
+    const { el } = setup([50, 60, null, 55, 45]);
+    const gaps = Array.from(el.querySelectorAll('rect.gap')).map(r => [r.getAttribute('x'), r.getAttribute('width')]);
+    expect(gaps).toEqual([['250', '500']]);   // von Stellung 1 bis Stellung 3
+    expect(el.querySelectorAll('polygon.area-white').length).toBe(2);
+  });
+
+  it('läuft die Analyse noch, reicht das Band bis zum rechten Rand', () => {
+    const { el } = setup([50, 60, null, null]);
+    const gaps = Array.from(el.querySelectorAll('rect.gap')).map(r => [r.getAttribute('x'), r.getAttribute('width')]);
+    expect(gaps).toEqual([['333.33', '666.67']]);
   });
 
   it('Fehler und grobe Fehler als Punkt auf der Stellung NACH dem Zug', () => {

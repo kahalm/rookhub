@@ -312,7 +312,12 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   `currentColor` (sonst kehrt sich Weiß/Schwarz im Dunkelmodus um); Punkte als HTML (Kreise in einer
   verzerrten SVG wären Ellipsen) — die Farbe bringt die Marke mit (`EvalGraphMark.color`), die Kurve kennt
   keine Zug-Klassen. Punkte haben brilliant, great, miss, mistake, blunder. Klick → Halbzug-Index wie
-  `currentMoveIndex` (−1 = Start).
+  `currentMoveIndex` (−1 = Start). **Seit 0.520.1 wie chess.com** (Vergleich 2026-09-24): Höhe = `GameReview.curve`
+  (`graphHeight`: Bewertung LINEAR bis ±`GRAPH_CAP_PAWNS` 10, Matt am Rand — nicht die Gewinnchance, die sättigt
+  ab +3 und machte jede gewonnene Phase zum Block am oberen Rand; an der chess.com-Grafik derselben Partie
+  nachgemessen: 0,00 und +6,51 liegen dort genau auf dieser Skala); weiß ist die Fläche vom UNTEREN Rand bis
+  zur Kurve, darüber dunkler Grund. Weil „nicht weiß" jetzt „Schwarz vorn" heißt, bekommen nicht gerechnete
+  Strecken ein neutrales Band (`gaps`) — sonst sähe eine laufende Analyse rechts wie ein schwarzer Sieg aus.
 - `features/games/game-review.component.ts` — lädt, fragt alle 10 s nach, SOLANGE `pending`/`running`
   (nicht bei `none`/`done`/`failed`, nicht nach dem Schließen), zeigt bei `none` nichts; `statusChange` sagt
   der Seite, wann „Partie analysieren" gesperrt (läuft) oder ausgeblendet (fertig) wird, `reload()` nach dem

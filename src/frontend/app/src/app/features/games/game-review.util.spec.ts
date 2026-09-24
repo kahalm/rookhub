@@ -1,5 +1,5 @@
 import {
-  GameEvalPly, GameEvals, MOVE_CLASSES, classify, formatEval, moveAccuracy, reviewGame, sideAccuracy,
+  GameEvalPly, GameEvals, MOVE_CLASSES, classify, formatEval, graphHeight, moveAccuracy, reviewGame, sideAccuracy,
   volatilityWeights, whiteToMove, windowSizeFor, winPercent,
 } from './game-review.util';
 import { sacrificedPiece } from './move-tactics.util';
@@ -8,6 +8,25 @@ import { sacrificedPiece } from './move-tactics.util';
 // ein Test, der die Formel ein zweites Mal ausrechnet, wandert mit jedem Fehler mit.
 
 describe('game-review.util', () => {
+  // chess.com-Skala (Vergleich 2026-09-24): Bewertung linear bis ±10 Bauern, Matt am Rand.
+  describe('graphHeight (Kurvenhöhe, linear bis ±10)', () => {
+    it('0 = Mitte, ±6,51 = 82,55 / 17,45, ±10 und mehr am Rand', () => {
+      expect(graphHeight({ cp: 0 })).toBe(50);
+      expect(graphHeight({ cp: 651 })).toBeCloseTo(82.55, 6);
+      expect(graphHeight({ cp: -651 })).toBeCloseTo(17.45, 6);
+      expect(graphHeight({ cp: 1000 })).toBe(100);
+      expect(graphHeight({ cp: 2500 })).toBe(100);
+      expect(graphHeight({ cp: -2500 })).toBe(0);
+    });
+
+    it('Matt am Rand, ohne Bewertung keine Höhe', () => {
+      expect(graphHeight({ mate: 3 })).toBe(100);
+      expect(graphHeight({ mate: -2 })).toBe(0);
+      expect(graphHeight(null)).toBeNull();
+      expect(graphHeight({})).toBeNull();
+    });
+  });
+
   describe('winPercent (Lichess, Weiß-Sicht)', () => {
     it('0 cp = 50 %, ±100 cp = 59,10 / 40,90 %', () => {
       expect(winPercent({ cp: 0 })).toBe(50);
@@ -148,6 +167,9 @@ describe('game-review.util', () => {
       expect(r.series[0]!).toBeCloseTo(52.7588, 3);
       expect(r.series[1]!).toBeCloseTo(52.2997, 3);
       expect(r.series[4]!).toBeCloseTo(75.1126, 3);
+      // Die gezeichnete Kurve ist die lineare Skala (+3,00 → 65), nicht die Gewinnchance.
+      expect(r.curve.length).toBe(5);
+      expect(r.curve[4]!).toBeCloseTo(65, 6);
     });
 
     it('Klassen aus Sicht des Ziehenden — Schwarz verliert, wenn Weiß steigt', () => {

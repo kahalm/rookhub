@@ -63,7 +63,7 @@ const MATE_GAP_PAWNS = 100;
             <span class="progress failed">{{ 'games.review.failed' | translate }}</span>
           }
         </div>
-        <app-eval-graph [series]="review().series" [marks]="marks()" [currentIndex]="currentIndex()"
+        <app-eval-graph [series]="review().curve" [marks]="marks()" [currentIndex]="currentIndex()"
                         (moveClicked)="moveClicked.emit($event)" />
         @if (current(); as m) {
           @let tip = hint(m);
