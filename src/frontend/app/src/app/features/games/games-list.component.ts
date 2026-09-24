@@ -163,17 +163,22 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .table { display: flex; flex-direction: column; }
     .row {
       display: grid;
-      grid-template-columns: 78px minmax(0, 1fr) 30px 92px 48px 104px 88px;
+      /* Die Ergebnis-Spalte traegt zwei Zeichen, ihre Beschriftung aber acht („Ergebnis", „Rezultat",
+         „Eredmény"): unter 72px lief die Kopfzeile in die naechste hinein bzw. wurde abgeschnitten
+         (im Bild nachgemessen). */
+      grid-template-columns: 78px minmax(0, 1fr) 72px 84px 48px 104px 88px;
       align-items: center;
       gap: 8px;
       padding: 6px 8px;
       border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     }
     .head-row {
-      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em;
       color: color-mix(in srgb, currentColor 55%, transparent);
       border-bottom-width: 2px; padding-bottom: 4px;
     }
+    /* Notnagel fuer laengere Sprachen: lieber abschneiden als in die Nachbarspalte laufen. */
+    .head-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .game:hover { background: color-mix(in srgb, currentColor 5%, transparent); }
     .mid { text-align: center; }
 
@@ -219,14 +224,17 @@ export type AnalysisState = 'none' | 'running' | 'done';
     /* Am Handy gibt es keine Spalten mehr: dieselben Teile umbrechen, Zahl und Datum rutschen
        in die zweite Reihe. Die Kopfzeile faellt weg — sie beschriftete Spalten, die es nicht gibt. */
     @media (max-width: 760px) {
-      .head-row { display: none; }
       .row { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 10px 8px; }
+      /* MIT .row davor: beide Regeln haetten sonst dieselbe Spezifitaet, und die spaetere gewinnt —
+         die Kopfzeile stand dann als Wortreihe ueber der Liste (im Bild nachgemessen). */
+      .row.head-row { display: none; }
       .players { flex: 1 1 55%; }
       .acc-cell { margin-left: auto; }
       .accuracy { flex-direction: row; gap: 8px; text-align: left; }
       .actions { order: 9; margin-left: auto; }
+      /* Die Fussnote ganz nach hinten, sonst draengt sie die Knoepfe in eine eigene leere Zeile. */
+      .foot { order: 10; flex-basis: 100%; }
       .moves, .date, .foot { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-      .foot { flex-basis: 100%; }
     }
   `]
 })
