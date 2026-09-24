@@ -2601,6 +2601,14 @@
       "total": "Partija: {{count}}",
       "gamesInfo": "Partije s ovim potezom",
       "gamesNone": "Za ovaj potez nema zapisanih partija."
+    },
+    "menu": {
+      "title": "Alati za poziciju",
+      "chessable": "Traži poziciju na Chessableu",
+      "share": "Podijeli poziciju",
+      "shareTitle": "Šahovska pozicija",
+      "shareCopied": "Poveznica na poziciju kopirana",
+      "fenCopied": "FEN kopiran"
     }
   },
   "stats": {

@@ -1986,6 +1986,14 @@
       "total": "{{count}} játszma",
       "gamesInfo": "Játszmák ezzel a lépéssel",
       "gamesNone": "Ehhez a lépéshez nincs rögzített játszma."
+    },
+    "menu": {
+      "title": "Állás eszközei",
+      "chessable": "Állás keresése a Chessable-ön",
+      "share": "Állás megosztása",
+      "shareTitle": "Sakkállás",
+      "shareCopied": "Az állás linkje kimásolva",
+      "fenCopied": "FEN kimásolva"
     }
   },
   "stats": {

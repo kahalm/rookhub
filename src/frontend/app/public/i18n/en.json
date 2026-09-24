@@ -2601,6 +2601,14 @@
       "total": "{{count}} games",
       "gamesInfo": "Games with this move",
       "gamesNone": "No games are listed for this move."
+    },
+    "menu": {
+      "title": "Position tools",
+      "chessable": "Search position on Chessable",
+      "share": "Share position",
+      "shareTitle": "Chess position",
+      "shareCopied": "Link to the position copied",
+      "fenCopied": "FEN copied"
     }
   },
   "stats": {

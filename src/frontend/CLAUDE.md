@@ -386,6 +386,19 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
 - Tippzonen fallen im Live-Modus weg (sie lägen über dem spielbaren Brett), Computer-Linien/Pfeil der gespeicherten
   Analyse ebenso (`engineHidden`), und das Fehler-Training schaltet die Live-Engine ab.
 
+## ⋮-Menü für die Stellung (0.527.0)
+
+`features/analysis/position-menu.component.ts` — EIN Menü für Analysebrett (Zugleiste, neben Drehen/Zurücksetzen) und
+Partieseite (Navigationsleiste, am Handy ganz rechts): auf Chessable suchen, Stellung teilen, FEN kopieren, dazu —
+angemeldet und mit externer Engine — „Im Hintergrund analysieren" (`AnalysisJobDialogComponent`) und die Auftragsliste.
+Die Adressen stehen rein in `position-links.util.ts` mit literalen Vektoren: Chessables FEN-Suche schreibt `/` als `U`
+und Leerzeichen als `%20` (dieselbe Regel wie der „Search FEN"-Knopf der RepCheck-Erweiterung, ohne Kurs-Id), der
+Teilen-Link ist `/analysis?fen=…&orientation=black` (öffentliche Route). Teilen nimmt am Handy (`pointer: coarse`) das
+Teilen-Blatt des Geräts, sonst die Zwischenablage. Die Engine-Frage (`GET /api/engine/external`, fragt serverseitig
+Lichess) stellt das Menü erst beim ersten ÖFFNEN — das Analysebrett kennt die Antwort und reicht sie über `engines`
+herein. Auf der Partieseite ist die Stellung die auf dem Brett (`positionFen()`: Ende der Live-Nebenvariante, sonst
+der Partiezug).
+
 ## Eigene Fehler nachspielen (0.516.0)
 
 - **Seit 0.526.2**: der Fehlversuch nennt seine Bewertung (`MistakesSession.triedEval` — aus `Mistake.candidates` der

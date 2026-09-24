@@ -15,8 +15,6 @@ import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Subscription, interval } from 'rxjs';
-import { MatDialog } from '@angular/material/dialog';
-import { AnalysisJobDialogComponent } from './analysis-job-dialog.component';
 import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
@@ -27,12 +25,13 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
-import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from './analysis-settings';
+import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY, ANALYSIS_PROVIDER_KEY } from './analysis-settings';
+import { PositionMenuComponent } from './position-menu.component';
 
 interface LineNode { san: string; fen: string; uci: string; }
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-const LINES_KEY = 'rookhub_analysis_lines';
+const LINES_KEY = ANALYSIS_LINES_KEY;
 const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = ANALYSIS_DEPTH_KEY;
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
@@ -61,7 +60,7 @@ const EVAL_SETTLE_DEPTH = 10;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent
+    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent
   ],
   template: `
     <div class="analysis-page">
@@ -139,16 +138,6 @@ const EVAL_SETTLE_DEPTH = 10;
                           [matTooltip]="'analysis.compareToggle' | translate"
                           (click)="compareOn = !compareOn; onCompareToggle()">
                     <mat-icon>balance</mat-icon>
-                  </button>
-                }
-                @if (auth.isLoggedIn && hasExternalEngines) {
-                  <button mat-icon-button [matTooltip]="'analysis.queueBackground' | translate"
-                          [attr.aria-label]="'analysis.queueBackground' | translate" (click)="openBackgroundJob()">
-                    <mat-icon>schedule</mat-icon>
-                  </button>
-                  <button mat-icon-button [matTooltip]="'analysis.openJobs' | translate"
-                          [attr.aria-label]="'analysis.openJobs' | translate" (click)="openJobs()">
-                    <mat-icon>list_alt</mat-icon>
                   </button>
                 }
               </div>
@@ -238,6 +227,10 @@ const EVAL_SETTLE_DEPTH = 10;
                 <span class="spacer"></span>
                 <button mat-icon-button (click)="flip()" [matTooltip]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
                 <button mat-icon-button (click)="reset()" [matTooltip]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
+                <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
+                     die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
+                <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
+                                   [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
               </div>
               @if (line.length === 0) {
                 <p class="muted">{{ 'analysis.noMoves' | translate }}</p>
@@ -452,8 +445,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
-              @Inject(LOCALE_ID) private locale: string,
-              private dialog?: MatDialog) {
+              @Inject(LOCALE_ID) private locale: string) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -1018,20 +1010,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (this.compareOn && this.compareEngineId === this.selectedEngineId) this.startCompare();
     if (this.engineOn && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
   }
-  /** „Im Hintergrund analysieren": Dialog fragt Tiefe/Linien ab und legt den Auftrag an. */
-  openBackgroundJob(): void {
-    if (!this.dialog) return;
-    const ref = this.dialog.open(AnalysisJobDialogComponent, {
-      width: '440px',
-      data: { fen: this.currentFen, depth: this.depthSetting, lines: this.linesCount, hasBackgroundEngine: this.backgroundEngineIds.length > 0 },
-    });
-    ref.afterClosed().subscribe(job => {
-      if (!job) return;
-      this.snackbar.success(this.translate.instant('analysisJobs.created'));
-      this.cdr.markForCheck();
-    });
-  }
-  openJobs(): void { this.router.navigateByUrl('/analysis/jobs'); }
 
   backToPuzzle(): void {
     if (this.returnTo) this.router.navigateByUrl(this.returnTo);

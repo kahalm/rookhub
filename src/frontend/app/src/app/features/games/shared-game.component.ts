@@ -30,6 +30,7 @@ import { ExternalEngineService } from '../analysis/external-engine.service';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
 import { LiveEngineSession } from './live-engine-session';
 import { LiveEnginePanelComponent } from './live-engine-panel.component';
+import { PositionMenuComponent } from '../analysis/position-menu.component';
 
 /**
  * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
@@ -46,7 +47,7 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
-    MistakesTrainerComponent, LiveEnginePanelComponent,
+    MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -164,6 +165,8 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
                         [matTooltip]="'games.live.toggle' | translate" [attr.aria-label]="'games.live.toggle' | translate">
                   <mat-icon>memory</mat-icon>
                 </button>
+                <!-- ⋮ für die Stellung auf dem Brett (0.527.0) — auch die einer eigenen Nebenvariante der Live-Engine. -->
+                <app-position-menu class="nav-menu" [fen]="positionFen()" [orientation]="flipped ? 'black' : 'white'" />
               </div>
               @if (live(); as l) {
                 <app-live-engine-panel class="live-slot" [session]="l" [gameFen]="service.currentFen" (closed)="stopLive()" />
@@ -254,6 +257,7 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
       .nav .nav-next { order: 3; }
       .nav .nav-end { order: 4; margin-left: 14px; opacity: 0.7; }
       .nav .live-toggle { order: 5; }
+      .nav .nav-menu { order: 6; }
       .nav .nav-prev, .nav .nav-next {
         flex: 1 1 0; width: auto; height: 48px; border-radius: 10px; overflow: hidden;
         background: color-mix(in srgb, currentColor 8%, transparent);
@@ -358,6 +362,11 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Eigene Engine-Instanz je Seite — als Methode, damit Tests keinen echten Stockfish starten müssen. */
   protected createLiveSession(): LiveEngineSession {
     return new LiveEngineSession(undefined, this.storedDepth());
+  }
+
+  /** Die Stellung auf dem Brett — in der Nebenvariante der Live-Engine deren Ende, sonst der Partiezug. */
+  positionFen(): string {
+    return this.live()?.fen(this.service.currentFen) ?? this.service.currentFen;
   }
 
   stopLive(): void {

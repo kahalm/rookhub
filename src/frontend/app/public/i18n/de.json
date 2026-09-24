@@ -2601,6 +2601,14 @@
       "total": "{{count}} Partien",
       "gamesInfo": "Partien mit diesem Zug",
       "gamesNone": "Zu diesem Zug sind keine Partien hinterlegt."
+    },
+    "menu": {
+      "title": "Werkzeuge zur Stellung",
+      "chessable": "Stellung auf Chessable suchen",
+      "share": "Stellung teilen",
+      "shareTitle": "Schachstellung",
+      "shareCopied": "Link zur Stellung kopiert",
+      "fenCopied": "FEN kopiert"
     }
   },
   "stats": {

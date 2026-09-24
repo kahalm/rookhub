@@ -6,3 +6,5 @@
 export const ANALYSIS_DEPTH_KEY = 'rookhub_analysis_depth';
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
 export const ANALYSIS_PROVIDER_KEY = 'rookhub_analysis_engine_provider';
+/** Zahl der Engine-Linien am Analysebrett (1–5) — auch Vorbelegung eines Hintergrund-Auftrags aus dem ⋮-Menü. */
+export const ANALYSIS_LINES_KEY = 'rookhub_analysis_lines';
