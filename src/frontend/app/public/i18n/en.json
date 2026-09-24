@@ -2507,7 +2507,10 @@
       "next": "Next",
       "finish": "Finish",
       "again": "Start over",
-      "summary": "You found {{solved}} of {{total}} yourself."
+      "summary": "You found {{solved}} of {{total}} yourself.",
+      "progressShort": "{{solved}} of {{total}} found · {{open}} open",
+      "tooltip": "Mistake training for this game",
+      "onlyOpen": "Only games with open mistakes ({{count}})"
     }
   },
   "analysis": {

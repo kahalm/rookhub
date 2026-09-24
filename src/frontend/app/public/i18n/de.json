@@ -2507,7 +2507,10 @@
       "next": "Weiter",
       "finish": "Abschließen",
       "again": "Von vorn",
-      "summary": "{{solved}} von {{total}} selbst gefunden."
+      "summary": "{{solved}} von {{total}} selbst gefunden.",
+      "progressShort": "{{solved}} von {{total}} gefunden · {{open}} offen",
+      "tooltip": "Fehler-Training dieser Partie",
+      "onlyOpen": "Nur Partien mit offenen Fehlern ({{count}})"
     }
   },
   "analysis": {

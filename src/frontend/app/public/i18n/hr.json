@@ -2507,7 +2507,10 @@
       "next": "Dalje",
       "finish": "Završi",
       "again": "Ispočetka",
-      "summary": "Samostalno pronađeno: {{solved}} od {{total}}."
+      "summary": "Samostalno pronađeno: {{solved}} od {{total}}.",
+      "progressShort": "{{solved}} od {{total}} pronađeno · {{open}} otvoreno",
+      "tooltip": "Trening pogrešaka za ovu partiju",
+      "onlyOpen": "Samo partije s otvorenim pogreškama ({{count}})"
     }
   },
   "analysis": {

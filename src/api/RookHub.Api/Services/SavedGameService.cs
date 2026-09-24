@@ -112,6 +112,41 @@ public class SavedGameService
         return MapDetail(entity);
     }
 
+    /// <summary>Hoechstens so viele Partie-IDs beantwortet eine Uebersichts-Abfrage.</summary>
+    public const int MaxKnownLookup = 300;
+
+    /// <summary>
+    /// Welche dieser Plattform-Partien liegen schon bei RookHub? Fuer die Uebersicht auf chess.com/lichess:
+    /// bekannte Partien tragen dort ein Haekchen statt des Sende-Knopfs. Nur Existenz und Analyse-Stand —
+    /// keine Zuege, keine PGN.
+    /// </summary>
+    public async Task<List<KnownGameDto>> KnownAsync(int userId, string? source,
+        IReadOnlyCollection<string>? externalIds, CancellationToken ct = default)
+    {
+        var src = NormalizeSource(source);
+        var ids = (externalIds ?? Array.Empty<string>())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct()
+            .Take(MaxKnownLookup)
+            .ToList();
+        if (src == null || ids.Count == 0) return new();
+
+        var games = await _db.SavedGames.AsNoTracking()
+            .Where(g => g.UserId == userId && g.Source == src && g.ExternalId != null && ids.Contains(g.ExternalId))
+            .Select(g => new { g.Id, g.ExternalId })
+            .ToListAsync(ct);
+        var states = await AnalysisStatesAsync(games.Select(g => g.Id).ToList());
+        return games
+            .Select(g => new KnownGameDto
+            {
+                ExternalId = g.ExternalId!,
+                Id = g.Id,
+                Analysis = states.TryGetValue(g.Id, out var a) ? a : null,
+            })
+            .ToList();
+    }
+
     /// <summary>Gespeicherte Partien des Users, neueste zuerst (ohne PGN).</summary>
     public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200)
     {

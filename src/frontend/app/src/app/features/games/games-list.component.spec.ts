@@ -119,4 +119,57 @@ describe('GamesListComponent', () => {
     expect(links.length).toBe(2);   // Spielernamen + Abspiel-Knopf
     http.expectNone('/api/games/4');
   });
+
+  // Fehler-Training auf der Übersicht (0.524.0): „4 von 7 gefunden · 3 offen" je Partie, plus der Filter,
+  // der genau die Partien übrig lässt, an denen noch Arbeit liegt.
+  async function setupMitPartien(partien: unknown[]) {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.method === 'GET' && req.url.startsWith('/api/games') && !req.url.startsWith('/api/games/')).flush(partien);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    return { fixture, http };
+  }
+
+  const partie = (id: number, mistakes: unknown = null) => ({
+    id, source: 'chess.com', white: 'a', black: 'b', result: '1-0', moveCount: 40,
+    shareToken: 't' + id, createdAt: '2026-09-24T00:00:00Z', mistakes,
+  });
+
+  it('zeigt je Partie den Stand des Fehler-Trainings', async () => {
+    const { fixture } = await setupMitPartien([partie(1, { total: 7, solved: 4, open: 3, solvedPlies: [2, 4, 6, 8], lastTrainedAt: '2026-09-24T10:00:00Z' })]);
+
+    // Im Test sind keine Übersetzungen geladen (die Vorlage zeigt die Schlüssel) — geprüft wird deshalb,
+    // DASS die Angabe steht, hervorgehoben ist und die Zahlen als Parameter ankommen.
+    const el = (fixture.nativeElement as HTMLElement).querySelector('.mistakes.open');
+
+    expect(el).toBeTruthy();
+    expect(el!.textContent).toContain('games.mistakes.progressShort');
+    expect(fixture.componentInstance.games[0].mistakes).toEqual(jasmine.objectContaining({ solved: 4, total: 7, open: 3 }));
+  });
+
+  it('ohne Training steht dort nichts', async () => {
+    const { fixture } = await setupMitPartien([partie(2)]);
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.mistakes')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.only-open')).toBeNull();
+  });
+
+  it('der Filter lässt nur die Partien mit offenen Fehlern übrig', async () => {
+    const { fixture } = await setupMitPartien([
+      partie(1, { total: 7, solved: 4, open: 3, solvedPlies: [], lastTrainedAt: '2026-09-24T10:00:00Z' }),
+      partie(2, { total: 2, solved: 2, open: 0, solvedPlies: [], lastTrainedAt: '2026-09-24T10:00:00Z' }),
+      partie(3),
+    ]);
+    const c = fixture.componentInstance;
+
+    expect(c.withOpenMistakes()).toBe(1);
+    expect(c.shownGames().length).toBe(3);
+
+    c.onlyOpen = true;
+    fixture.detectChanges();
+
+    expect(c.shownGames().map(g => g.id)).toEqual([1]);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.game').length).toBe(1);
+  });
 });

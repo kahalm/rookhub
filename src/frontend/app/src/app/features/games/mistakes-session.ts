@@ -41,6 +41,12 @@ export class MistakesSession {
   /** Die Browser-Engine konnte einen nicht gelisteten Zug nicht prüfen (Fehler, Zeitlimit). */
   readonly checkFailed = signal(false);
   readonly solved = signal(0);
+  /**
+   * Die Halbzüge der selbst gefundenen Aufgaben — sie gehen an den Server (`POST /api/games/{id}/mistakes`),
+   * damit die Übersicht „4 von 7 · 3 offen" zeigen kann. Gezählt wird dieselbe Regel wie bei `solved`:
+   * wer erst danebengreift oder die Lösung zeigen lässt, bekommt die Aufgabe nicht gutgeschrieben.
+   */
+  readonly solvedPlies = signal<number[]>([]);
 
   readonly list = computed<Mistake[]>(() => this.side() === 'white' ? this.bySide.white : this.bySide.black);
   readonly current = computed<Mistake | null>(() => this.list()[this.index()] ?? null);
@@ -90,7 +96,11 @@ export class MistakesSession {
   }
 
   private found(san: string, best: boolean, byEngine: boolean): void {
-    if (!this.missedHere) this.solved.update(n => n + 1);
+    if (!this.missedHere) {
+      this.solved.update(n => n + 1);
+      const ply = this.current()?.ply;
+      if (ply != null) this.solvedPlies.update(p => p.includes(ply) ? p : [...p, ply]);
+    }
     this.foundSan.set(san);
     this.foundBest.set(best);
     this.foundByEngine.set(byEngine);

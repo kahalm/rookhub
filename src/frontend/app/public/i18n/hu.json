@@ -2761,7 +2761,10 @@
       "next": "Tovább",
       "finish": "Befejezés",
       "again": "Elölről",
-      "summary": "{{solved}} / {{total}} lépést találtál meg magad."
+      "summary": "{{solved}} / {{total}} lépést találtál meg magad.",
+      "progressShort": "{{solved}} / {{total}} megtalálva · {{open}} nyitott",
+      "tooltip": "A parti hibáinak gyakorlása",
+      "onlyOpen": "Csak nyitott hibás partik ({{count}})"
     }
   },
   "analysisJobs": {

@@ -149,6 +149,7 @@ public class AppDbContext : DbContext
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
+    public DbSet<GameMistakeProgress> GameMistakeProgresses => Set<GameMistakeProgress>();
     public DbSet<SharedLine> SharedLines => Set<SharedLine>();
     public DbSet<GameReconstruction> GameReconstructions => Set<GameReconstruction>();
     public DbSet<GameReconstructionPart> GameReconstructionParts => Set<GameReconstructionPart>();
@@ -1019,6 +1020,14 @@ public class AppDbContext : DbContext
             e.Property(a => a.CourseName).HasMaxLength(200);
             // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<GameMistakeProgress>(e =>
+        {
+            e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Game).WithMany().HasForeignKey(p => p.SavedGameId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(p => p.SolvedPlies).HasMaxLength(4000);
+            e.HasIndex(p => new { p.UserId, p.SavedGameId }).IsUnique();
         });
 
         modelBuilder.Entity<CourseFlashcardMark>(e =>

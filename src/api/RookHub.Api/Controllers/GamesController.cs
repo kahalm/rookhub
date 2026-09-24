@@ -16,12 +16,47 @@ namespace RookHub.Api.Controllers;
 public class GamesController : BaseApiController
 {
     private readonly SavedGameService _service;
-    public GamesController(SavedGameService service) => _service = service;
+    private readonly GameMistakeProgressService _mistakes;
 
-    /// <summary>Eigene gespeicherte Partien (neueste zuerst, ohne PGN).</summary>
+    public GamesController(SavedGameService service, GameMistakeProgressService mistakes)
+    {
+        _service = service;
+        _mistakes = mistakes;
+    }
+
+    /// <summary>Eigene gespeicherte Partien (neueste zuerst, ohne PGN) samt Stand des Fehler-Trainings.</summary>
     [HttpGet]
-    public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200)
-        => Ok(await _service.ListAsync(GetUserId(), take));
+    public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200, CancellationToken ct = default)
+    {
+        var userId = GetUserId();
+        var games = await _service.ListAsync(userId, take);
+        // EINE Abfrage fuer die ganze Liste statt einer je Partie.
+        var stand = await _mistakes.ForGamesAsync(userId, games.Select(g => g.Id).ToList(), ct);
+        foreach (var g in games)
+            if (stand.TryGetValue(g.Id, out var m)) g.Mistakes = m;
+        return Ok(games);
+    }
+
+    /// <summary>Stand des Fehler-Trainings einer eigenen Partie (der Trainer markiert damit Gefundenes).</summary>
+    [HttpGet("{id:int}/mistakes")]
+    public async Task<ActionResult<GameMistakeProgressDto>> Mistakes(int id, CancellationToken ct)
+    {
+        var stand = await _mistakes.GetAsync(GetUserId(), id, ct);
+        return stand == null ? NotFound() : Ok(stand);
+    }
+
+    /// <summary>
+    /// Fortschritt melden: Aufgabenzahl und die in diesem Durchlauf SELBST gefundenen Halbzuege. Additiv und
+    /// idempotent — der Server vereinigt sie mit dem bisherigen Stand, ein zweiter Durchlauf nimmt nichts weg.
+    /// </summary>
+    [HttpPost("{id:int}/mistakes")]
+    public async Task<ActionResult<GameMistakeProgressDto>> RecordMistakes(int id,
+        [FromBody] MistakeProgressInputDto dto, CancellationToken ct)
+    {
+        if (dto is null) return BadRequest(new { message = "Body required." });
+        var stand = await _mistakes.RecordAsync(GetUserId(), id, dto.Total, dto.Solved, ct);
+        return stand == null ? NotFound() : Ok(stand);
+    }
 
     /// <summary>Öffentliche Sicht auf eine geteilte Partie (kein Login nötig). Literal-Route vor {id}.</summary>
     [HttpGet("shared/{token}")]

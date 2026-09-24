@@ -19,6 +19,10 @@ public class SaveGameInputDto
     [MaxLength(120)]
     public string? ExternalId { get; set; }
 
+    /// <summary>Nach dem Speichern gleich analysieren (Uebersicht auf chess.com/lichess, 0.524.0). Fehlt eine
+    /// Engine oder laeuft schon eine Analyse, bleibt die Partie trotzdem gespeichert.</summary>
+    public bool Analyze { get; set; }
+
     [MaxLength(120)]
     public string? White { get; set; }
 
@@ -58,6 +62,33 @@ public class SavedGameDto
     /// keine verknuepft oder die Analyse gibt es nicht mehr. Die Liste zeigt damit statt des Analysieren-Knopfs
     /// den Fortschritt und, wenn fertig, die Genauigkeit beider Seiten.</summary>
     public SavedGameAnalysisDto? Analysis { get; set; }
+
+    /// <summary>Stand des Fehler-Trainings zu dieser Partie; <c>null</c> = noch nie trainiert.</summary>
+    public GameMistakeProgressDto? Mistakes { get; set; }
+}
+
+/// <summary>Fortschritt im Fehler-Training einer Partie („4 von 7 · 3 offen").</summary>
+public class GameMistakeProgressDto
+{
+    /// <summary>Aufgaben, die die Analyse hergibt (Seite des Nutzers).</summary>
+    public int Total { get; set; }
+    /// <summary>Davon selbst gefunden.</summary>
+    public int Solved { get; set; }
+    /// <summary>Noch offen (<c>Total - Solved</c>, nie negativ).</summary>
+    public int Open { get; set; }
+    /// <summary>Die gefundenen Halbzuege — der Trainer markiert damit, was schon saß.</summary>
+    public List<int> SolvedPlies { get; set; } = new();
+    public DateTime LastTrainedAt { get; set; }
+}
+
+/// <summary>Meldung des Trainers: Aufgabenzahl und die in diesem Durchlauf selbst gefundenen Halbzuege.
+/// Additiv — der Server vereinigt sie mit dem bisherigen Stand.</summary>
+public class MistakeProgressInputDto
+{
+    /// <summary>Wie viele Aufgaben die Partie hergibt (Seite des Nutzers).</summary>
+    public int Total { get; set; }
+    /// <summary>Selbst gefundene Halbzuege dieses Durchlaufs.</summary>
+    public List<int> Solved { get; set; } = new();
 }
 
 /// <summary>Kopf der verknuepften Analyse fuer die Partienliste — ohne Stellungen.</summary>
@@ -218,4 +249,24 @@ public class GameEvalScoreDto
 {
     public int? Cp { get; set; }
     public int? Mate { get; set; }
+}
+
+/// <summary>Anfrage der Uebersicht: welche dieser Partien liegen schon bei RookHub?</summary>
+public class KnownGamesInputDto
+{
+    /// <summary><c>chess.com</c> oder <c>lichess</c>.</summary>
+    [Required, MaxLength(20)]
+    public string Source { get; set; } = string.Empty;
+    /// <summary>Partie-IDs der Plattform, wie sie in den Links der Uebersicht stehen.</summary>
+    public List<string> ExternalIds { get; set; } = new();
+}
+
+/// <summary>Eine bereits gespeicherte Partie — die Uebersicht zeigt daraufhin ein Haekchen statt des Knopfs.</summary>
+public class KnownGameDto
+{
+    public string ExternalId { get; set; } = string.Empty;
+    /// <summary>RookHub-Id (fuer den Link auf <c>/games/{id}</c>).</summary>
+    public int Id { get; set; }
+    /// <summary>Stand der Analyse; <c>null</c> = keine.</summary>
+    public SavedGameAnalysisDto? Analysis { get; set; }
 }

@@ -18,6 +18,8 @@ export interface SavedGame {
   createdAt: string;
   /** Stand der verknüpften Analyse (0.515.0); `null` = keine — die Liste zeigt dann den Analysieren-Knopf. */
   analysis?: SavedGameAnalysis | null;
+  /** Stand des Fehler-Trainings (0.524.0); `null` = noch nie trainiert. */
+  mistakes?: GameMistakeProgress | null;
 }
 
 /** Kopf der verknüpften Analyse für die Partienliste: Fortschritt, und wenn fertig die Genauigkeit je Seite. */
@@ -28,6 +30,15 @@ export interface SavedGameAnalysis {
   /** Prozent nach der Lichess-Formel (Server-Spiegel von `game-review.util`); `null` = kein bewertbarer Zug. */
   accuracyWhite?: number | null;
   accuracyBlack?: number | null;
+}
+
+/** Wie viele Fehler einer Partie schon selbst gefunden sind — Quelle der Anzeige „4 von 7 · 3 offen". */
+export interface GameMistakeProgress {
+  total: number;
+  solved: number;
+  open: number;
+  solvedPlies: number[];
+  lastTrainedAt: string;
 }
 
 /** Detail inkl. PGN (zum Nachspielen/Analysieren). */
@@ -88,6 +99,15 @@ export class GamesService {
 
   /** „Partie analysieren" an einer eigenen Partie. */
   analyzeUrl(id: number): string { return `/api/games/${id}/analyze`; }
+
+  /**
+   * Fortschritt im Fehler-Training melden: Aufgabenzahl und die in diesem Durchlauf SELBST gefundenen
+   * Halbzüge. Additiv und idempotent — zweimal dasselbe zu melden ändert nichts, und ein zweiter
+   * Durchlauf nimmt nichts weg.
+   */
+  recordMistakes(id: number, total: number, solved: number[]): Observable<GameMistakeProgress> {
+    return this.http.post<GameMistakeProgress>(`/api/games/${id}/mistakes`, { total, solved });
+  }
   /** Bewertungen einer eigenen Partie (Nachspiel-Dialog). */
   evalsUrl(id: number): string { return `/api/games/${id}/evals`; }
   /** „Partie analysieren" auf der geteilten Partie — jeder Angemeldete. */

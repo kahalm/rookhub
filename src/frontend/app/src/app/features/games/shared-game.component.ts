@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, effect, signal, viewChild } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, effect, signal, viewChild, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -263,6 +263,11 @@ export class SharedGameComponent implements OnInit {
 
   /** Laufendes Training „Eigene Fehler nachspielen" — `null` = die Seite zeigt die Partie. */
   readonly training = signal<MistakesSession | null>(null);
+  /** Id der eigenen Partie (`/games/:id`) — ohne sie wird nichts gemeldet (geteilte Ansicht). */
+  private gameId: number | null = null;
+  /** Schon gemeldete Halbzüge und Aufgabenzahl: verhindert, dass jeder Zug dieselbe Meldung wiederholt. */
+  private readonly reportedPlies = new Set<number>();
+  private reportedTotal = -1;
   /** Pfeil für den besten Zug, geliefert vom Rückblick (Schalter dort); im Training leer. */
   readonly bestArrows = signal<BoardArrow[]>([]);
 
@@ -280,6 +285,13 @@ export class SharedGameComponent implements OnInit {
    * Fehlern — in der Leiste lässt sich umschalten, sobald beide Seiten welche haben. Gespielt wird auf dem
    * Brett dieser Seite (bis 0.518.0 ein Dialog mit eigenem, kleinerem Brett).
    */
+  /** Jeder Treffer wird gemeldet — auch der, den die Browser-Engine erst verzögert bestätigt. */
+  private readonly meldeTreffer = effect(() => {
+    const t = this.training();
+    const solved = t?.solvedPlies() ?? [];
+    if (t && solved.length) untracked(() => this.reportMistakes(t, solved));
+  });
+
   trainMistakes(): void {
     // Nicht gelistete Züge prüft die Browser-Engine nach (nur wo die Analyse das offen lässt).
     this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide(),
@@ -291,7 +303,27 @@ export class SharedGameComponent implements OnInit {
   }
 
   endTraining(): void {
+    // Auch ohne neuen Treffer melden: dann steht in der Übersicht „0 von 7", und man sieht, dass die
+    // Partie schon einmal offen war. Der Server vereinigt additiv, hier geht nichts verloren.
+    const t = this.training();
+    if (t) this.reportMistakes(t, t.solvedPlies());
     this.training.set(null);
+  }
+
+  /**
+   * Gefundene Fehler an RookHub melden — daraus zeigt `/games` „4 von 7 · 3 offen". Nur bei der EIGENEN
+   * Partie (die geteilte Ansicht kennt keine Id des Betrachters). Still im Fehlerfall: das ist
+   * Buchführung im Hintergrund, und die nächste Meldung trägt denselben Stand erneut.
+   */
+  private reportMistakes(session: MistakesSession, solved: readonly number[]): void {
+    if (!this.own || !this.gameId) return;
+    const neu = solved.filter(p => !this.reportedPlies.has(p));
+    if (!neu.length && this.reportedTotal === session.list().length) return;
+    neu.forEach(p => this.reportedPlies.add(p));
+    this.reportedTotal = session.list().length;
+    this.games.recordMistakes(this.gameId, session.list().length, [...solved]).subscribe({
+      error: () => { neu.forEach(p => this.reportedPlies.delete(p)); this.reportedTotal = -1; },
+    });
   }
 
   analyzeTooltip(): string {
@@ -310,6 +342,7 @@ export class SharedGameComponent implements OnInit {
     this.own = this.route.snapshot.data?.['mode'] === 'own';
     if (this.own) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
+      this.gameId = id;
       this.evalsUrl = this.games.evalsUrl(id);
       this.analyzeUrl = this.games.analyzeUrl(id);
       this.games.get(id).subscribe({

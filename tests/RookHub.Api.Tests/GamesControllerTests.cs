@@ -23,7 +23,7 @@ public class GamesControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _service = TestServices.SavedGames(_db);
-        _controller = new GamesController(_service);
+        _controller = new GamesController(_service, new GameMistakeProgressService(_db));
     }
 
     public void Dispose() => _db.Dispose();

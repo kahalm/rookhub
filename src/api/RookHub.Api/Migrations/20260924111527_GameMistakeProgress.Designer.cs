@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260924111527_GameMistakeProgress")]
+    partial class GameMistakeProgress
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -128,9 +131,6 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("int");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Background")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -1871,15 +1871,6 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("PlyCount")
                         .HasColumnType("int");
 
-                    b.Property<int?>("RefineDepth")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RefineMultiPv")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("RefinedAt")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<string>("Result")
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
@@ -1974,9 +1965,6 @@ namespace RookHub.Api.Migrations
 
                     b.Property<int>("Ply")
                         .HasColumnType("int");
-
-                    b.Property<bool>("Refined")
-                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 

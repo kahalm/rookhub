@@ -1,12 +1,14 @@
 import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -26,14 +28,21 @@ export type AnalysisState = 'none' | 'running' | 'done';
   selector: 'app-games-list',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, TranslatePipe,
+    CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    MatProgressSpinnerModule, MatCheckboxModule, TranslatePipe,
   ],
   template: `
     <div class="games-page">
       <div class="head">
         <h1>{{ 'games.title' | translate }}</h1>
         <p class="hint">{{ 'games.hint' | translate }}</p>
+        <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
+             wenn es überhaupt welche gibt, sonst stünde ein Schalter da, der nichts tut. -->
+        @if (withOpenMistakes() > 0) {
+          <mat-checkbox class="only-open" [(ngModel)]="onlyOpen" name="onlyOpen">
+            {{ 'games.mistakes.onlyOpen' | translate: { count: withOpenMistakes() } }}
+          </mat-checkbox>
+        }
       </div>
 
       @if (loading) {
@@ -45,7 +54,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
         </mat-card>
       } @else {
         <div class="list">
-          @for (g of games; track g.id) {
+          @for (g of shownGames(); track g.id) {
             <mat-card class="game">
               <div class="info">
                 <mat-icon class="src" [matTooltip]="g.source">{{ sourceIcon(g.source) }}</mat-icon>
@@ -61,6 +70,13 @@ export type AnalysisState = 'none' | 'running' | 'done';
                     @if (analysisState(g) === 'done') {
                       <span class="accuracy" [matTooltip]="'games.accuracyHint' | translate">
                         ♔ {{ pct(g.analysis?.accuracyWhite) }} · ♚ {{ pct(g.analysis?.accuracyBlack) }}
+                      </span>
+                    }
+                    <!-- Stand des Fehler-Trainings (0.524.0): offene Aufgaben hervorgehoben — das ist die
+                         Zeile, wegen der man die Partie noch einmal aufmacht. -->
+                    @if (g.mistakes; as m) {
+                      <span class="mistakes" [class.open]="m.open > 0" [matTooltip]="'games.mistakes.tooltip' | translate">
+                        {{ 'games.mistakes.progressShort' | translate: { solved: m.solved, total: m.total, open: m.open } }}
                       </span>
                     }
                   </span>
@@ -122,6 +138,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .vs:hover { text-decoration: underline; }
     .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
+    .mistakes { white-space: nowrap; }
+    .mistakes.open { color: #e58f2a; font-weight: 500; }
+    .only-open { margin-top: 4px; }
     .accuracy { font-variant-numeric: tabular-nums; white-space: nowrap; color: color-mix(in srgb, currentColor 80%, transparent); }
     .actions { display: flex; align-items: center; flex-shrink: 0; }
     /* So breit wie ein Icon-Knopf, damit die Zeile beim Wechsel Knopf → Prozent nicht springt. */
@@ -138,10 +157,22 @@ export type AnalysisState = 'none' | 'running' | 'done';
 export class GamesListComponent implements OnInit {
   games: SavedGame[] = [];
   loading = true;
+  /** Filter „nur mit offenen Fehlern" — bewusst NICHT gemerkt: er beantwortet eine Frage von jetzt. */
+  onlyOpen = false;
   /** Welche Partie gerade als Punktepartie eingeworfen wird (sperrt nur ihren Knopf). */
   analyzingId: number | null = null;
   /** Engine da / Plätze frei? `null` = Auskunft fehlt, der Server entscheidet beim Einwurf. */
   uploadStatus: GuessUploadStatus | null = null;
+  /** Partien mit mindestens einem noch nicht selbst gefundenen Fehler. */
+  withOpenMistakes(): number {
+    return this.games.filter(g => (g.mistakes?.open ?? 0) > 0).length;
+  }
+
+  /** Die angezeigte Liste — ungefiltert, oder nur die mit offenen Fehlern. */
+  shownGames(): SavedGame[] {
+    return this.onlyOpen ? this.games.filter(g => (g.mistakes?.open ?? 0) > 0) : this.games;
+  }
+
   private destroyRef = inject(DestroyRef);
   private analyzeGame = inject(AnalyzeGameService);
   private poll?: Subscription;

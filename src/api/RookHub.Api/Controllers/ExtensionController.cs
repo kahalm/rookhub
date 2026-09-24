@@ -209,12 +209,23 @@ public class ExtensionController : BaseApiController
     /// vergibt ein ShareToken. Dedup über (User, Source, ExternalId). Sichtbar im Bereich „Partien".
     /// </summary>
     [HttpPost("games")]
-    public async Task<ActionResult<SavedGameDetailDto>> SaveGame([FromBody] SaveGameInputDto dto)
+    public async Task<ActionResult<SavedGameDetailDto>> SaveGame([FromBody] SaveGameInputDto dto, CancellationToken ct = default)
     {
         if (dto == null) return BadRequest(new { message = "Body required." });
         try
         {
-            return Ok(await _savedGameService.SaveAsync(GetUserId(), dto));
+            var saved = await _savedGameService.SaveAsync(GetUserId(), dto);
+            // „Gleich analysieren" (Uebersicht): scheitert es (keine Engine, Deckel), bleibt die Partie
+            // trotzdem gespeichert — die Uebersicht zeigt dann den Analysieren-Knopf in RookHub.
+            if (dto.Analyze)
+            {
+                try { await _savedGameService.AnalyzeAsync(GetUserId(), saved.Id, ct); }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "Analyse nach dem Speichern von Partie {Id} nicht gestartet", saved.Id);
+                }
+            }
+            return Ok(saved);
         }
         catch (ArgumentException ex)
         {
@@ -391,6 +402,19 @@ public class ExtensionController : BaseApiController
         var distinct = oids.Distinct().ToList();
         var cached = await _chessableProxy.GetCachedLineOidsAsync(distinct, ct);
         return Ok(new ChessableCachedLinesDto(distinct.Where(cached.Contains).ToList()));
+    }
+
+    /// <summary>
+    /// Welche Partien der Uebersicht (chess.com/lichess) liegen schon bei RookHub? Die Erweiterung zeigt
+    /// dort dann ein Haekchen statt des Sende-Knopfs — und, wenn eine Analyse laeuft, deren Fortschritt.
+    /// </summary>
+    [HttpPost("games/known")]
+    public async Task<ActionResult<List<KnownGameDto>>> KnownGames([FromBody] KnownGamesInputDto dto, CancellationToken ct)
+    {
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        if (dto.ExternalIds.Count > SavedGameService.MaxKnownLookup)
+            return BadRequest(new { message = $"At most {SavedGameService.MaxKnownLookup} ids per request." });
+        return Ok(await _savedGameService.KnownAsync(GetUserId(), dto.Source, dto.ExternalIds, ct));
     }
 
     private static readonly HashSet<string> UnexpectedResponseEndpoints =
