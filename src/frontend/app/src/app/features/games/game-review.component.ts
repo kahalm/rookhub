@@ -13,6 +13,7 @@ import {
   reviewGame,
 } from './game-review.util';
 import { uciOf } from './move-tactics.util';
+import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
 
 /**
  * Zeichen je Klasse — dieselben Symbole wie in der Schachnotation, wo es sie gibt. „!" gehört seit den
@@ -146,12 +147,17 @@ export class GameReviewComponent {
    * Die Partiezüge (chess.js-`Move` des PGN-Viewers, `game.moves`). Ohne sie gibt es kein Brilliant, Great
    * oder Miss — ob eine Figur geopfert wurde, steht in der Stellung, nicht in den Bewertungen.
    */
-  moves = input<readonly { from: string; to: string; promotion?: string | null }[]>([]);
+  moves = input<readonly PlayedMove[]>([]);
 
   /** Klick in die Kurve — Halbzug-Index wie `currentMoveIndex`. */
   moveClicked = output<number>();
   /** Damit die Seite ihren Knopf sperren (läuft) oder ausblenden (fertig) kann. */
   statusChange = output<GameEvalsStatus>();
+  /**
+   * Die abfragbaren Fehler beider Seiten — die Seite bietet daraus „Eigene Fehler nachspielen" an.
+   * Sie kommt hierher, weil hier die Analyse liegt; ein zweiter Abruf derselben Daten wäre Verschwendung.
+   */
+  mistakesChange = output<MistakesBySide>();
 
   static readonly PollMs = 10_000;
 
@@ -169,6 +175,7 @@ export class GameReviewComponent {
   readonly marks = computed<EvalGraphMark[]>(() => this.review().moves
     .filter((m): m is ReviewedMove => !!m && MARKED.has(m.cls))
     .map(m => ({ ply: m.ply, kind: m.cls, color: MOVE_CLASS_COLORS[m.cls] })));
+  readonly mistakes = computed(() => collectMistakes(this.review(), this.evals(), this.fens(), this.moves()));
   readonly current = computed(() => {
     const i = this.currentIndex();
     return i >= 0 ? this.review().moves[i] ?? null : null;
@@ -183,6 +190,11 @@ export class GameReviewComponent {
     effect(() => {
       this.evalsUrl();
       untracked(() => this.reload());
+    });
+    // Jede neue Analyse-Antwort kann Aufgaben bringen — die Seite erfährt es über die Ausgabe.
+    effect(() => {
+      const m = this.mistakes();
+      untracked(() => this.mistakesChange.emit(m));
     });
     inject(DestroyRef).onDestroy(() => this.stop());
   }

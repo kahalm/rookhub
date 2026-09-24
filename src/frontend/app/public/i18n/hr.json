@@ -2480,7 +2480,25 @@
       "missHint": "Propuštena prilika da se kazni protivnikova pogreška"
     },
     "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
-    "accuracyHint": "Preciznost bijeli · crni (iz analize partije)"
+    "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",
+    "mistakes": {
+      "button": "Ponovi vlastite pogreške ({{count}})",
+      "title": "Ponovi vlastite pogreške",
+      "none": "Za ovu stranu nema ničega za ponavljanje.",
+      "progress": "Pogreška {{current}} od {{total}}",
+      "prompt": "Tvoj potez: {{san}}. Pronađi bolji.",
+      "wrong": "{{san}} nije taj potez.",
+      "right": "Točno, {{san}} je bio potez.",
+      "shown": "Bolje je bilo {{san}}.",
+      "cost": "{{san}} je stajao {{percent}} postotnih bodova izgleda za pobjedu.",
+      "retry": "Pokušaj ponovno",
+      "show": "Prikaži rješenje",
+      "skip": "Preskoči",
+      "next": "Dalje",
+      "finish": "Završi",
+      "again": "Ispočetka",
+      "summary": "Samostalno pronađeno: {{solved}} od {{total}}."
+    }
   },
   "analysis": {
     "title": "Analiza",

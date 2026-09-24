@@ -1,10 +1,11 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, viewChild } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
@@ -18,6 +19,8 @@ import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
+import { MistakesBySide, NO_MISTAKES, mistakeCount, sideWithMoreMistakes } from './mistakes.util';
+import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 /**
@@ -85,6 +88,12 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                   <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
                 </a>
               }
+              <!-- „Eigene Fehler nachspielen" (0.516.0) — erscheint erst, wenn die Analyse Aufgaben hergibt. -->
+              @if (mistakeTotal() > 0) {
+                <button mat-stroked-button class="mistakes" (click)="trainMistakes()">
+                  <mat-icon>replay</mat-icon> {{ 'games.mistakes.button' | translate: { count: mistakeTotal() } }}
+                </button>
+              }
               @if (own && shareToken) {
                 <button mat-stroked-button class="share" (click)="share()">
                   <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
@@ -111,7 +120,8 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
                                  [currentIndex]="service.currentMoveIndex"
                                  (moveClicked)="service.goToMove($event)"
-                                 (statusChange)="reviewStatus.set($event)" />
+                                 (statusChange)="reviewStatus.set($event)"
+                                 (mistakesChange)="mistakes.set($event)" />
               }
               <app-position-repertoires class="pr-slot" [fen]="service.currentFen" />
             </div>
@@ -194,6 +204,7 @@ export class SharedGameComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private analyzeGame = inject(AnalyzeGameService);
+  private dialog = inject(MatDialog);
 
   game: SharedGame | null = null;
   loading = true;
@@ -219,10 +230,25 @@ export class SharedGameComponent implements OnInit {
   /** Stand der Kurve unter dem Brett (`none` = noch keine Analyse → Knopf anbieten). */
   readonly reviewStatus = signal<GameEvalsStatus>('none');
   private readonly review = viewChild(GameReviewComponent);
+  /** Abfragbare Fehler beider Seiten, gemeldet vom Rückblick unter dem Brett. */
+  readonly mistakes = signal<MistakesBySide>(NO_MISTAKES);
+  readonly mistakeTotal = computed(() => mistakeCount(this.mistakes()));
 
   analysisRunning(): boolean {
     const s = this.reviewStatus();
     return s === 'pending' || s === 'running';
+  }
+
+  /**
+   * Trainiert wird die Seite des Besitzers; ohne Zuordnung (fremde geteilte Partie) die mit den meisten
+   * Fehlern — im Dialog lässt sich umschalten, sobald beide Seiten welche haben.
+   */
+  trainMistakes(): void {
+    const bySide = this.mistakes();
+    this.dialog.open(MistakesTrainerComponent, {
+      data: { bySide, side: this.game?.ownerSide ?? sideWithMoreMistakes(bySide) },
+      autoFocus: false,
+    });
   }
 
   analyzeTooltip(): string {

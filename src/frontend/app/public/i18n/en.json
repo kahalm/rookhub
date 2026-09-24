@@ -2480,7 +2480,25 @@
       "missHint": "Missed the chance to punish the opponent's mistake"
     },
     "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
-    "accuracyHint": "Accuracy white · black (from the game analysis)"
+    "accuracyHint": "Accuracy white · black (from the game analysis)",
+    "mistakes": {
+      "button": "Replay your mistakes ({{count}})",
+      "title": "Replay your mistakes",
+      "none": "Nothing to replay for this side.",
+      "progress": "Mistake {{current}} of {{total}}",
+      "prompt": "You played {{san}}. Find a better move.",
+      "wrong": "{{san}} is not it.",
+      "right": "Correct, {{san}} was the move.",
+      "shown": "{{san}} was better.",
+      "cost": "{{san}} cost {{percent}} percentage points of winning chances.",
+      "retry": "Try again",
+      "show": "Show solution",
+      "skip": "Skip",
+      "next": "Next",
+      "finish": "Finish",
+      "again": "Start over",
+      "summary": "You found {{solved}} of {{total}} yourself."
+    }
   },
   "analysis": {
     "title": "Analysis",

@@ -316,6 +316,40 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   Sonderklassen. Das Abzeichen des aktuellen Zugs erklärt Brilliant (geopferte Figur + Feld), Great (Abstand
   zum Zweitbesten; mit Matt im Spiel ohne Zahl) und Miss per Tooltip. „!" gehört Great, Excellent trägt 👍.
 
+## Eigene Fehler nachspielen (0.516.0)
+
+Der Trainer zur Partie, wie Lichess' „Aus deinen Fehlern lernen": Stellung VOR dem eigenen Fehler,
+der gespielte Zug steht daneben, gesucht ist der bessere. Knopf in der Kopfzeile von `/games/:id`
+und `/g/:token`, sobald es Aufgaben gibt; der Trainer selbst ist ein Dialog
+(`features/games/mistakes-trainer.component.ts`) — die Partie ist geladen, und nach dem Schließen
+steht man wieder genau dort, wo man war.
+
+- **Die Auswahl ist rein und getestet** (`features/games/mistakes.util.ts`): `collectMistakes` nimmt
+  die Ungenauigkeiten, Fehler und groben Fehler BEIDER Seiten in Partie-Reihenfolge, je mit
+  Ausgangsstellung, gespieltem Zug und dem Bestzug der Engine (`GameEvalPly.bestUci`) als SAN.
+- **Entschieden wird über die GRUNDklasse** (`ReviewedMove.base`, neu in 0.516.0), nicht über `cls`:
+  ein als **Miss** ausgewiesener Zug ist ein Fehler, dem zusätzlich eine Gelegenheit entgangen ist —
+  Lichess kennt dieses Etikett gar nicht, und ohne die Unterscheidung fiele genau der Zug aus dem
+  Training, der auf den Patzer des Gegners folgte. Dasselbe gilt für Brilliant/Great, die nie zu den
+  drei Stufen gehören.
+- **Übersprungen wird, was sich nicht abfragen lässt**: kein Bestzug (Lücke in der Analyse), Bestzug
+  = gespielter Zug, und ein Bestzug, der in der Stellung gar nicht geht. Eine unspielbare „Lösung"
+  vorzuführen wäre schlimmer als eine ausgelassene Aufgabe.
+- **Wer wird trainiert**: `SharedGameDetail.ownerSide`; fehlt die Zuordnung (fremde geteilte Partie),
+  die Seite mit den meisten Fehlern (`sideWithMoreMistakes`). Haben beide Seiten welche, schaltet der
+  Dialog um — Brett dreht mit, Zähler beginnt von vorn.
+- **Die Aufgaben kommen aus dem Rückblick**, nicht aus einem zweiten Abruf: `GameReviewComponent`
+  hat die Analyse ohnehin und meldet sie über die Ausgabe `mistakesChange`.
+- **Geurteilt wird mit `sameMove`** aus `shared/chess/line-solver` — der gemeinsame Kern. Das Brett
+  wandelt ohne Rückfrage in eine Dame um, und die Regel dort lässt eine fehlende Umwandlungsfigur
+  gelten; eine Unterverwandlung als Lösung ließe sich dort ohnehin nicht eingeben. Als richtig zählt
+  der Zug der Engine, ein anderer ähnlich guter Zug NICHT (dafür ist der Analysieren-Knopf da).
+- **Nach einem Fehlversuch muss die FEN neu gebunden werden** (`retry()`): `app-chess-board` führt
+  den Nutzerzug selbst aus, und ein Signal mit demselben Wert löst kein `ngOnChanges` aus — deshalb
+  steht nach einem falschen Zug dessen Stellung im Signal und „Nochmal" schreibt die Ausgangsstellung
+  zurück. Wer erst danebengreift oder die Lösung zeigen lässt, bekommt die Aufgabe nicht als selbst
+  gefunden gutgeschrieben.
+
 ## Zugliste: der aktive Zug scrollt NUR seinen Kasten, nie die Seite (0.514.1)
 
 `MoveListComponent.scrollToActive` benutzte `scrollIntoView({ block: 'nearest' })` — und das scrollt JEDEN

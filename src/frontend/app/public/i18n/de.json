@@ -2480,7 +2480,25 @@
       "missHint": "Den Fehler des Gegners nicht bestraft"
     },
     "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
-    "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)"
+    "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)",
+    "mistakes": {
+      "button": "Eigene Fehler nachspielen ({{count}})",
+      "title": "Eigene Fehler nachspielen",
+      "none": "Auf dieser Seite gibt es nichts nachzuspielen.",
+      "progress": "Fehler {{current}} von {{total}}",
+      "prompt": "Du spieltest {{san}}. Finde den besseren Zug.",
+      "wrong": "{{san}} ist es nicht.",
+      "right": "Richtig, {{san}} war der Zug.",
+      "shown": "Besser war {{san}}.",
+      "cost": "{{san}} kostete {{percent}} Prozentpunkte Gewinnchance.",
+      "retry": "Nochmal",
+      "show": "Lösung zeigen",
+      "skip": "Überspringen",
+      "next": "Weiter",
+      "finish": "Abschließen",
+      "again": "Von vorn",
+      "summary": "{{solved}} von {{total}} selbst gefunden."
+    }
   },
   "analysis": {
     "title": "Analyse",

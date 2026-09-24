@@ -202,6 +202,12 @@ export interface ReviewedMove {
   ply: number;
   white: boolean;
   cls: MoveClass;
+  /**
+   * Die Klasse allein aus dem Bewertungsverlust — `cls` kann ein ETIKETT darüber sein (Miss, Brilliant,
+   * Great). Wer nach „war das ein Fehler?" fragt, fragt hier: ein Miss IST ein Fehler, dem zusätzlich eine
+   * Gelegenheit entgangen ist (so nutzt es der Fehler-Trainer, `mistakes.util.ts`).
+   */
+  base: MoveClass;
   accuracy: number;
   winBefore: number;
   winAfter: number;
@@ -284,7 +290,7 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
     const cls = classify(mb, ma, best);
     base.push(cls);
     const move: ReviewedMove = {
-      ply: i, white, cls, accuracy: moveAccuracy(mb, ma),
+      ply: i, white, cls, base: cls, accuracy: moveAccuracy(mb, ma),
       winBefore: mb, winAfter: ma, evalBefore: before, evalAfter: after,
     };
     const uci = ucis?.[i];

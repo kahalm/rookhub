@@ -2734,7 +2734,25 @@
       "missHint": "Kimaradt az ellenfél hibájának megbüntetése"
     },
     "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
-    "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)"
+    "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",
+    "mistakes": {
+      "button": "Saját hibák újrajátszása ({{count}})",
+      "title": "Saját hibák újrajátszása",
+      "none": "Ezen az oldalon nincs mit újrajátszani.",
+      "progress": "Hiba {{current}} / {{total}}",
+      "prompt": "A lépésed {{san}} volt. Keresd a jobb lépést.",
+      "wrong": "{{san}} nem az.",
+      "right": "Helyes, {{san}} volt a lépés.",
+      "shown": "Jobb lett volna: {{san}}.",
+      "cost": "{{san}} {{percent}} százalékpont nyerési esélybe került.",
+      "retry": "Újra",
+      "show": "Megoldás mutatása",
+      "skip": "Kihagyás",
+      "next": "Tovább",
+      "finish": "Befejezés",
+      "again": "Elölről",
+      "summary": "{{solved}} / {{total}} lépést találtál meg magad."
+    }
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",
