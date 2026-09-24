@@ -125,10 +125,13 @@ public class SavedGameService
             .Select(g => new
             {
                 g.Id, g.Source, g.White, g.Black, g.Result, g.PlayedAt,
-                g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt,
+                g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt, g.GameAnalysisId,
                 PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
             })
             .ToListAsync();
+
+        var analyses = await AnalysisStatesAsync(
+            rows.Where(r => r.GameAnalysisId != null).Select(r => r.GameAnalysisId!.Value).Distinct().ToList());
 
         var healed = new Dictionary<int, int>();
         foreach (var r in rows)
@@ -161,7 +164,71 @@ public class SavedGameService
             ShareToken = r.ShareToken,
             MoveCount = r.MoveCount ?? (healed.TryGetValue(r.Id, out var c) ? c : 0),
             CreatedAt = r.CreatedAt,
+            Analysis = r.GameAnalysisId is int aid && analyses.TryGetValue(aid, out var state) ? state : null,
         }).ToList();
+    }
+
+    /// <summary>So viele fertige Analysen ohne abgelegte Genauigkeit rechnet EIN Listenaufruf nach — der
+    /// Altbestand von vor 0.515.0 ist klein, und die Liste fragt waehrend einer Rechnung alle zehn Sekunden.</summary>
+    public const int AccuracyBackfillPerCall = 10;
+
+    /// <summary>
+    /// Stand der verknuepften Analysen fuer die Liste: Status, Fortschritt (EINE gruppierte Zaehlung ueber alle
+    /// Ids statt einer Abfrage je Partie) und die abgelegte Genauigkeit. Eine FERTIGE Analyse ohne Genauigkeit
+    /// (von vor 0.515.0) wird hier einmal nachgerechnet und geschrieben — best-effort, die Anzeige stimmt auch
+    /// ohne den Nachtrag. Verweise ins Leere (Analyse geloescht) fehlen im Ergebnis, die Partie zeigt dann
+    /// wieder den Knopf.
+    /// </summary>
+    private async Task<Dictionary<int, SavedGameAnalysisDto>> AnalysisStatesAsync(List<int> ids)
+    {
+        var result = new Dictionary<int, SavedGameAnalysisDto>();
+        if (ids.Count == 0) return result;
+
+        var heads = await _db.GameAnalyses.AsNoTracking()
+            .Where(a => ids.Contains(a.Id))
+            .Select(a => new { a.Id, a.Status, a.PlyCount, a.AccuracyWhite, a.AccuracyBlack })
+            .ToListAsync();
+        var analyzed = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => ids.Contains(p.GameAnalysisId) && p.CandidatesJson != null)
+            .GroupBy(p => p.GameAnalysisId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count);
+
+        var backfilled = 0;
+        foreach (var h in heads)
+        {
+            var state = new SavedGameAnalysisDto
+            {
+                Status = h.Status.ToString().ToLowerInvariant(),
+                Analyzed = analyzed.TryGetValue(h.Id, out var n) ? n : 0,
+                Total = h.PlyCount,
+                AccuracyWhite = h.AccuracyWhite,
+                AccuracyBlack = h.AccuracyBlack,
+            };
+            if (h.Status == GameAnalysisStatus.Done && h.AccuracyWhite is null && h.AccuracyBlack is null
+                && backfilled < AccuracyBackfillPerCall)
+            {
+                backfilled++;
+                var positions = await _db.GameAnalysisPositions.AsNoTracking()
+                    .Where(p => p.GameAnalysisId == h.Id).ToListAsync();
+                var accuracy = GameAccuracy.FromPositions(positions, h.PlyCount);
+                state.AccuracyWhite = accuracy.White;
+                state.AccuracyBlack = accuracy.Black;
+                try
+                {
+                    var tracked = await _db.GameAnalyses.FirstOrDefaultAsync(a => a.Id == h.Id);
+                    if (tracked is not null)
+                    {
+                        tracked.AccuracyWhite = accuracy.White;
+                        tracked.AccuracyBlack = accuracy.Black;
+                        await _db.SaveChangesAsync();
+                    }
+                }
+                catch (DbUpdateException) { /* Anzeige stimmt auch ohne den Nachtrag */ }
+            }
+            result[h.Id] = state;
+        }
+        return result;
     }
 
     /// <summary>Detail einer eigenen Partie inkl. PGN; null wenn nicht gefunden / fremd.</summary>

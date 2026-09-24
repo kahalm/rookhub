@@ -2478,7 +2478,9 @@
       "greatGap": "Jedini dobar potez — sljedeći najbolji lošiji je za {{gap}} pješaka",
       "greatOnly": "Jedini dobar potez",
       "missHint": "Propuštena prilika da se kazni protivnikova pogreška"
-    }
+    },
+    "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
+    "accuracyHint": "Preciznost bijeli · crni (iz analize partije)"
   },
   "analysis": {
     "title": "Analiza",

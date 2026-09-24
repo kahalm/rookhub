@@ -328,6 +328,15 @@ scrollt (`overflow-y: auto|scroll` UND Überhang; `html`/`body` zählen nie) und
 NICHTS: das Brett darf sich beim Navigieren nie bewegen, das ist die Regel. Spec: langer Seiteninhalt, ein
 60-px-Kasten, `scrollIntoView` darf nicht aufgerufen werden und `window.scrollY` bleibt 0.
 
+**Partienliste (`features/games/games-list.component.ts`, 0.515.0)**: je Partie kommt `analysis` (Stand der verknüpften
+Analyse) mit der Liste. `analysisState` → `none` (Knopf; auch `failed` — der Knopf lädt zum Neuversuch), `running`
+(statt des Knopfs `.progress` mit „NN %", derselbe Platz wie ein Icon-Knopf, damit die Zeile nicht springt), `done` (kein
+Knopf; `.accuracy` „♔ 87 % · ♚ 72 %" in der Meta-Zeile, `—` für eine Seite ohne bewertbaren Zug). Nachgefragt wird
+alle `ANALYSIS_POLL_MS` (10 s) NUR, solange irgendeine Partie läuft (`schedulePoll` nach jedem Laden und nach dem
+Einwurf) — sonst ruht die Liste. Die Genauigkeit rechnet der SERVER (`GameAccuracy`), die Liste rechnet nichts.
+`GameAnalysisService.list(true)` (Seite „Partie-Analysen") nimmt die Partie-Analysen mit; die Punktepartie-Seite ruft
+`list()` ohne Parameter.
+
 **Tippzonen am Brettrand** (`.board-tap` in shared-game, pgn-viewer, shared-line, analysis): EINE globale Regel in
 `styles.scss` — `user-select: none` + `touch-action: manipulation` (0.514.3). Ohne sie markierte ein schnelles
 Doppeltippen Text, und Safari zoomte. Bewusst nur auf den Zonen, nicht seitenweit: Namen und Züge bleiben kopierbar.

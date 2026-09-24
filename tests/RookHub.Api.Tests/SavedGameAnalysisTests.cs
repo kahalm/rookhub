@@ -454,4 +454,62 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Null(await _svc.GetEvalsAsync(other.Id, game.Id));
         Assert.Null(await _svc.GetSharedEvalsAsync("gibt-es-nicht", callerUserId: null));
     }
+
+    // ----- Partienliste: Stand der verknuepften Analyse (0.515.0) -----------------------------------
+
+    [Fact]
+    public async Task List_traegtDenStandDerVerknuepftenAnalyse_laufend_ohneGenauigkeit()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        Assert.Null((await _svc.ListAsync(owner.Id)).Single().Analysis);   // noch nichts verknuepft
+
+        await _svc.AnalyzeAsync(owner.Id, game.Id);
+
+        var row = (await _svc.ListAsync(owner.Id)).Single();
+        Assert.NotNull(row.Analysis);
+        // Der Einwurf reiht sofort den ersten Block ein — die Analyse steht damit schon auf „running".
+        Assert.Contains(row.Analysis!.Status, new[] { "pending", "running" });
+        Assert.Equal(0, row.Analysis.Analyzed);
+        Assert.Equal(4, row.Analysis.Total);
+        Assert.Null(row.Analysis.AccuracyWhite);
+        Assert.Null(row.Analysis.AccuracyBlack);
+    }
+
+    [Fact]
+    public async Task List_fertigeAnalyseOhneGenauigkeit_wirdEinmalNachgerechnetUndAbgelegt()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        var created = await _svc.AnalyzeAsync(owner.Id, game.Id);
+        var analysis = await _db.GameAnalyses.Include(a => a.Positions).SingleAsync(a => a.Id == created!.Analysis!.Id);
+        // Wie eine Analyse von vor 0.515.0: fertig, alle Stellungen gerechnet, aber keine Genauigkeit abgelegt.
+        foreach (var p in analysis.Positions) p.CandidatesJson = $"[{{\"uci\":\"{p.GameMoveUci}\",\"cp\":0}}]";
+        analysis.Status = GameAnalysisStatus.Done;
+        analysis.AccuracyWhite = null;
+        analysis.AccuracyBlack = null;
+        await _db.SaveChangesAsync();
+
+        var row = (await _svc.ListAsync(owner.Id)).Single();
+        Assert.Equal("done", row.Analysis!.Status);
+        Assert.Equal(4, row.Analysis.Analyzed);
+        Assert.Equal(100, row.Analysis.AccuracyWhite!.Value, 3);   // jeder Zug war der Bestzug
+        Assert.Equal(100, row.Analysis.AccuracyBlack!.Value, 3);
+
+        var stored = await _db.GameAnalyses.AsNoTracking().SingleAsync(a => a.Id == analysis.Id);
+        Assert.Equal(100, stored.AccuracyWhite!.Value, 3);
+        Assert.Equal(100, stored.AccuracyBlack!.Value, 3);
+    }
+
+    [Fact]
+    public async Task List_verweisInsLeere_keinStand_derKnopfKommtZurueck()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        var row = await RowAsync(game.Id);
+        row.GameAnalysisId = 987654;   // die Analyse gibt es nicht (mehr)
+        await _db.SaveChangesAsync();
+
+        Assert.Null((await _svc.ListAsync(owner.Id)).Single().Analysis);
+    }
 }

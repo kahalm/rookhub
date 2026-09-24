@@ -45,7 +45,7 @@ describe('GameAnalysesComponent', () => {
   it('zeigt den Fortschritt je Partie in Prozent', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([analysis({ analyzedPlies: 10, plyCount: 40 })]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ analyzedPlies: 10, plyCount: 40 })]);
 
     expect(fixture.componentInstance.percent(fixture.componentInstance.analyses[0])).toBe(25);
   });
@@ -53,7 +53,7 @@ describe('GameAnalysesComponent', () => {
   it('pollt NUR solange eine Partie offen ist', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([analysis({ status: 'running' })]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ status: 'running' })]);
     expect(fixture.componentInstance.hasOpen()).toBeTrue();
 
     fixture.componentInstance.analyses = [analysis({ status: 'done' })];
@@ -64,7 +64,7 @@ describe('GameAnalysesComponent', () => {
   it('meldet einen Startfehler mit der Server-Begruendung', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
 
     fixture.componentInstance.pgn = '1. e4 e5';
     fixture.componentInstance.create();
@@ -79,11 +79,11 @@ describe('GameAnalysesComponent', () => {
   it('nimmt die neue Analyse ohne Neuladen in die Liste', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
 
     fixture.componentInstance.pgn = '1. e4 e5';
     fixture.componentInstance.create();
-    http.expectOne('/api/game-analyses').flush(analysis({ id: 7, status: 'pending' }));
+    http.expectOne({ method: 'POST', url: '/api/game-analyses' }).flush(analysis({ id: 7, status: 'pending' }));
 
     expect(fixture.componentInstance.analyses.map(a => a.id)).toEqual([7]);
     expect(fixture.componentInstance.pgn).toBe('');
@@ -97,7 +97,7 @@ describe('GameAnalysesComponent', () => {
   it('der Gesamtfortschritt laesst gescheiterte Partien draussen', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([
       analysis({ id: 1, status: 'running', plyCount: 100, analyzedPlies: 50 }),
       analysis({ id: 2, status: 'failed', plyCount: 900, analyzedPlies: 0 }),
     ]);
@@ -120,7 +120,7 @@ describe('GameAnalysesComponent', () => {
   it('stoesst eine Partie neu an und uebernimmt den zurueckgemeldeten Stand', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([analysis({ id: 5, status: 'failed', analyzedPlies: 30 })]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 5, status: 'failed', analyzedPlies: 30 })]);
 
     fixture.componentInstance.restart(fixture.componentInstance.analyses[0]);
     const req = http.expectOne(r => r.method === 'POST' && r.url === '/api/game-analyses/5/restart');
@@ -133,7 +133,7 @@ describe('GameAnalysesComponent', () => {
   it('gibt den Knopf nach einem Fehlschlag wieder frei', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([analysis({ id: 5 })]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 5 })]);
 
     fixture.componentInstance.restart(fixture.componentInstance.analyses[0]);
     http.expectOne('/api/game-analyses/5/restart')
@@ -147,7 +147,7 @@ describe('GameAnalysesComponent', () => {
   it('zeigt das Tempo sofort, ohne eigene Proben', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([analysis({ analyzedPlies: 10, plyCount: 40 })]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ analyzedPlies: 10, plyCount: 40 })]);
     drainThroughput(2.5, 90);
 
     expect(fixture.componentInstance.rate).toEqual({ perMinute: '2.5', eta: '1 h 30 min' });
@@ -156,7 +156,7 @@ describe('GameAnalysesComponent', () => {
   it('zeigt kein Tempo, wenn der Server keines kennt', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();
-    http.expectOne('/api/game-analyses').flush([analysis()]);
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis()]);
     drainThroughput(0);
 
     expect(fixture.componentInstance.rate).toBeNull();

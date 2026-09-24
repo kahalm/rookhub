@@ -20,9 +20,12 @@ public class GameAnalysisController : BaseApiController
 
     public GameAnalysisController(GameAnalysisService service) => _service = service;
 
+    /// <summary>Eigene Analysen. <c>includeSavedGames=true</c> (die Seite „Partie-Analysen") nimmt die ueber
+    /// eine gespeicherte Partie angestossenen mit — dort steht ihr Fortschritt; die Punktepartie-Seite laesst
+    /// sie weiter weg, denn dort will niemand seine chess.com-Partie als Punktepartie sehen.</summary>
     [HttpGet]
-    public async Task<ActionResult<List<GameAnalysisDto>>> List(CancellationToken ct)
-        => Ok(await _service.ListAsync(GetUserId(), ct));
+    public async Task<ActionResult<List<GameAnalysisDto>>> List([FromQuery] bool includeSavedGames = false, CancellationToken ct = default)
+        => Ok(await _service.ListAsync(GetUserId(), ct, includeSavedGames));
 
     /// <summary>
     /// Der kuratierte Bestand: Partien, die JEDER als Punktepartie spielen darf — auch ohne

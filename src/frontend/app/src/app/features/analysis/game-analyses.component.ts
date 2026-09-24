@@ -287,7 +287,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
 
   private load(silent = false): void {
     if (!silent) this.loading = true;
-    this.service.list().subscribe({
+    this.service.list(true).subscribe({
       next: list => {
         this.analyses = list;
         this.loading = false;

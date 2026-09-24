@@ -2732,7 +2732,9 @@
       "greatGap": "Az egyetlen jó lépés — a következő legjobb {{gap}} gyaloggal rosszabb",
       "greatOnly": "Az egyetlen jó lépés",
       "missHint": "Kimaradt az ellenfél hibájának megbüntetése"
-    }
+    },
+    "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
+    "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)"
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",

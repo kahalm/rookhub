@@ -452,7 +452,7 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN) |
+| GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN). Seit 0.515.0 je Partie `analysis` = Stand der VERKNÜPFTEN Analyse (`status`, `analyzed`/`total`, `accuracyWhite`/`accuracyBlack` bei `done`) oder `null` — EINE gruppierte Zählung über alle verknüpften Ids, kein Abruf je Partie; fertige Analysen ohne abgelegte Genauigkeit (vor 0.515.0) werden dabei nachgerechnet (`AccuracyBackfillPerCall` = 10 je Aufruf) |
 | GET | `/api/games/shared/{token}` | AllowAnonymous | Öffentliche Sicht einer geteilten Partie inkl. PGN (ohne Besitzer-Daten). Literal-Route VOR `{id}` |
 | GET | `/api/games/shared/{token}/evals` | AllowAnonymous | Bewertungen der geteilten Partie für Kurve/Genauigkeit/Zug-Klassen (`GameEvalsDto`). Anonym NUR die vom Besitzer verknüpfte Analyse; angemeldet ersatzweise die EIGENE mit gleichem PGN. Globaler IP-Limiter wie `GET shared/{token}` |
 | POST | `/api/games/shared/{token}/analyze` | Auth | „Partie analysieren" auf der geteilten Partie — jeder Angemeldete. Antwort `GameAnalyzeResultDto { analysis, reason?, reused }`, Absage 400 `{ reason, message }` wie `POST /api/game-analyses/guess` |
@@ -486,6 +486,13 @@ flachere), aber mit eigenem Ursprung
 * Frontend: `features/games/game-review.util.ts` (Formeln), `game-review.component.ts` (lädt, fragt alle 10 s
   nach, solange `pending`/`running`), `shared/pgn-viewer/eval-graph.component.ts` (SVG-Kurve). Siehe
   `src/frontend/CLAUDE.md`.
+* **Genauigkeit je Seite liegt AN DER ANALYSE** (0.515.0, `GameAnalysis.AccuracyWhite/AccuracyBlack`,
+  `Services/GameAccuracy.cs` = Server-SPIEGEL der Client-Formeln mit denselben LITERALEN Testwerten in
+  `GameAccuracyTests` ↔ `game-review.util.spec.ts`): gerechnet in `PumpOneAsync` beim Übergang auf `Done`, damit die
+  Partienliste sie zeigen kann, ohne je Partie die Stellungen zu laden (sie fragt während einer Rechnung alle 10 s).
+  Die Liste zeigt statt des Analysieren-Knopfs den Fortschritt in %, fertig die beiden Genauigkeiten neben
+  Ergebnis/Zugzahl, gescheitert wieder den Knopf. `GET /api/game-analyses?includeSavedGames=true` nimmt die
+  `SavedGame`-Analysen mit — die Seite „Partie-Analysen" zeigt sie (Fortschritt), die Punktepartie-Seite nicht.
 
 Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh_…`). Bei ApiToken muss `scope=extension` sein (sonst 403). Policy-Scheme im Auth-Stack routet das Bearer-Format automatisch zum passenden Handler.
 

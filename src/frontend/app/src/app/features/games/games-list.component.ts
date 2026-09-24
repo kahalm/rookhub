@@ -8,10 +8,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Subscription, timer } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { GamesService, SavedGame } from './games.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
+
+/** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
+export const ANALYSIS_POLL_MS = 10_000;
+
+/** Was die Liste zu einer Partie zeigt: Knopf (keine/gescheiterte Analyse), Prozent (läuft) oder nichts (fertig). */
+export type AnalysisState = 'none' | 'running' | 'done';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -48,6 +56,13 @@ import { SnackbarService } from '../../core/snackbar.service';
                     @if (g.result && g.result !== '*') { <span class="result">{{ g.result }}</span> }
                     <span>{{ g.moveCount }} {{ 'games.moves' | translate }}</span>
                     <span class="date">{{ (g.playedAt || g.createdAt) | date:'mediumDate' }}</span>
+                    <!-- Fertig gerechnet: die Genauigkeit beider Seiten steht hier bei den Partie-Daten, der
+                         Analysieren-Knopf ist dann weg (gewünscht 2026-09-24). -->
+                    @if (analysisState(g) === 'done') {
+                      <span class="accuracy" [matTooltip]="'games.accuracyHint' | translate">
+                        ♔ {{ pct(g.analysis?.accuracyWhite) }} · ♚ {{ pct(g.analysis?.accuracyBlack) }}
+                      </span>
+                    }
                   </span>
                 </div>
               </div>
@@ -58,13 +73,21 @@ import { SnackbarService } from '../../core/snackbar.service';
                 <button mat-icon-button (click)="openInAnalysis(g)" [matTooltip]="'games.openInAnalysis' | translate" [attr.aria-label]="'games.openInAnalysis' | translate">
                   <mat-icon>biotech</mat-icon>
                 </button>
-                <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach auf der Partie-Seite. -->
-                <button mat-icon-button class="analyze" (click)="analyze(g)"
-                        [disabled]="analyzingId === g.id || uploadStatus?.engineAvailable === false"
-                        [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyze') | translate"
-                        [attr.aria-label]="'games.analyze' | translate">
-                  <mat-icon>{{ analyzingId === g.id ? 'hourglass_top' : 'insights' }}</mat-icon>
-                </button>
+                @switch (analysisState(g)) {
+                  @case ('running') {
+                    <!-- Statt des Knopfs der Fortschritt — er läuft mit dem 10-s-Nachfragen mit. -->
+                    <span class="progress" [matTooltip]="progressTip(g)">{{ progressPercent(g) }} %</span>
+                  }
+                  @case ('none') {
+                    <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach auf der Partie-Seite. -->
+                    <button mat-icon-button class="analyze" (click)="analyze(g)"
+                            [disabled]="analyzingId === g.id || uploadStatus?.engineAvailable === false"
+                            [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyze') | translate"
+                            [attr.aria-label]="'games.analyze' | translate">
+                      <mat-icon>{{ analyzingId === g.id ? 'hourglass_top' : 'insights' }}</mat-icon>
+                    </button>
+                  }
+                }
                 <button mat-icon-button (click)="share(g)" [matTooltip]="'games.share' | translate" [attr.aria-label]="'games.share' | translate">
                   <mat-icon>share</mat-icon>
                 </button>
@@ -97,9 +120,15 @@ import { SnackbarService } from '../../core/snackbar.service';
     .players { display: flex; flex-direction: column; min-width: 0; }
     .vs { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; text-decoration: none; }
     .vs:hover { text-decoration: underline; }
-    .meta { display: flex; gap: 10px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
-    .actions { display: flex; flex-shrink: 0; }
+    .accuracy { font-variant-numeric: tabular-nums; white-space: nowrap; color: color-mix(in srgb, currentColor 80%, transparent); }
+    .actions { display: flex; align-items: center; flex-shrink: 0; }
+    /* So breit wie ein Icon-Knopf, damit die Zeile beim Wechsel Knopf → Prozent nicht springt. */
+    .progress {
+      display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+      font-size: 0.8rem; font-variant-numeric: tabular-nums; color: #1976d2; cursor: default;
+    }
     @media (max-width: 600px) {
       .game { flex-direction: column; align-items: stretch; }
       .actions { justify-content: flex-end; }
@@ -115,6 +144,7 @@ export class GamesListComponent implements OnInit {
   uploadStatus: GuessUploadStatus | null = null;
   private destroyRef = inject(DestroyRef);
   private analyzeGame = inject(AnalyzeGameService);
+  private poll?: Subscription;
 
   constructor(
     private service: GamesService,
@@ -125,20 +155,65 @@ export class GamesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: list => { this.games = list; this.loading = false; },
+      next: list => { this.games = list; this.loading = false; this.schedulePoll(); },
       error: () => { this.loading = false; },
     });
     this.analyzeGame.status().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(u => this.uploadStatus = u);
   }
 
+  /** Knopf, Prozent oder nichts: eine gescheiterte Analyse zählt wie keine — der Knopf lädt zum Neuversuch. */
+  analysisState(g: SavedGame): AnalysisState {
+    const s = g.analysis?.status;
+    if (s === 'pending' || s === 'running') return 'running';
+    if (s === 'done') return 'done';
+    return 'none';
+  }
+
+  progressPercent(g: SavedGame): number {
+    const a = g.analysis;
+    return a && a.total > 0 ? Math.round(100 * a.analyzed / a.total) : 0;
+  }
+
+  progressTip(g: SavedGame): string {
+    return this.translate.instant('games.analyzing', {
+      pct: this.progressPercent(g), analyzed: g.analysis?.analyzed ?? 0, total: g.analysis?.total ?? 0,
+    });
+  }
+
+  /** „87 %" oder „—", wenn die Seite keinen bewertbaren Zug hatte. */
+  pct(value: number | null | undefined): string {
+    return value == null ? '—' : `${Math.round(value)} %`;
+  }
+
   /** Die Partie rechnen lassen — siehe {@link AnalyzeGameService}. Das PGN braucht es dafür nicht mehr,
-   *  der Server hat es; er rechnet auch nur, wenn es noch keine brauchbare Analyse gibt. Die Kurve steht
-   *  danach im Nachspiel-Dialog, man bleibt hier. */
+   *  der Server hat es; er rechnet auch nur, wenn es noch keine brauchbare Analyse gibt. Danach holt
+   *  die Liste den Stand: der Knopf wird zum Fortschritt, man bleibt hier. */
   analyze(g: SavedGame): void {
     if (this.analyzingId !== null) return;
     this.analyzingId = g.id;
     this.analyzeGame.submit(this.service.analyzeUrl(g.id), this.uploadStatus)
-      .subscribe(() => this.analyzingId = null);
+      .subscribe(started => { this.analyzingId = null; if (started) this.refresh(); });
+  }
+
+  /** Stand aller Partien neu holen — und weiter nachfragen, solange irgendwo gerechnet wird. */
+  private refresh(): void {
+    this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => { this.games = list; this.schedulePoll(); },
+      error: () => this.schedulePoll(),
+    });
+  }
+
+  /** Alle zehn Sekunden, SOLANGE eine Analyse läuft — sonst ruht die Liste (kein Dauer-Poll für nichts). */
+  private schedulePoll(): void {
+    this.poll?.unsubscribe();
+    if (!this.games.some(g => this.analysisState(g) === 'running')) return;
+    this.poll = timer(ANALYSIS_POLL_MS).pipe(
+      switchMap(() => this.service.list()),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: list => { this.games = list; this.schedulePoll(); },
+      error: () => this.schedulePoll(),
+    });
   }
 
   sourceIcon(source: string): string {

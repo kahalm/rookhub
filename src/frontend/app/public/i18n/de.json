@@ -2478,7 +2478,9 @@
       "greatGap": "Der einzige gute Zug — der nächstbeste ist {{gap}} Bauern schlechter",
       "greatOnly": "Der einzige gute Zug",
       "missHint": "Den Fehler des Gegners nicht bestraft"
-    }
+    },
+    "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
+    "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)"
   },
   "analysis": {
     "title": "Analyse",

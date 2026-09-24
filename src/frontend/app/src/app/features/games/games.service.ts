@@ -16,6 +16,18 @@ export interface SavedGame {
   shareToken: string;
   moveCount: number;
   createdAt: string;
+  /** Stand der verknüpften Analyse (0.515.0); `null` = keine — die Liste zeigt dann den Analysieren-Knopf. */
+  analysis?: SavedGameAnalysis | null;
+}
+
+/** Kopf der verknüpften Analyse für die Partienliste: Fortschritt, und wenn fertig die Genauigkeit je Seite. */
+export interface SavedGameAnalysis {
+  status: 'pending' | 'running' | 'done' | 'failed';
+  analyzed: number;
+  total: number;
+  /** Prozent nach der Lichess-Formel (Server-Spiegel von `game-review.util`); `null` = kein bewertbarer Zug. */
+  accuracyWhite?: number | null;
+  accuracyBlack?: number | null;
 }
 
 /** Detail inkl. PGN (zum Nachspielen/Analysieren). */

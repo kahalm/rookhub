@@ -88,8 +88,10 @@ export class GameAnalysisService {
   static readonly MaxMultiPv = 5;
   static readonly MaxDepth = 60;
 
-  list(): Observable<GameAnalysis[]> {
-    return this.http.get<GameAnalysis[]>('/api/game-analyses');
+  /** Eigene Analysen. `includeSavedGames` nimmt die über eine gespeicherte Partie angestoßenen mit — die
+   *  Seite „Partie-Analysen" zeigt so ihren Fortschritt; die Punktepartie-Seite lässt sie weg. */
+  list(includeSavedGames = false): Observable<GameAnalysis[]> {
+    return this.http.get<GameAnalysis[]>(includeSavedGames ? '/api/game-analyses?includeSavedGames=true' : '/api/game-analyses');
   }
 
   /** Der kuratierte Bestand — ohne Anmeldung abrufbar; nur SPIELBARE Partien (mindestens eine

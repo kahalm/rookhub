@@ -137,6 +137,16 @@ public class GameAnalysis
     /// <summary>Anzahl der zu analysierenden Halbzüge (= Zeilen in <see cref="Positions"/>).</summary>
     public int PlyCount { get; set; }
 
+    /// <summary>
+    /// Genauigkeit von Weiss bzw. Schwarz in Prozent (Lichess-Formel, <see cref="Services.GameAccuracy"/>) —
+    /// gerechnet, sobald die Analyse fertig ist, und hier ABGELEGT, damit Listen sie zeigen koennen, ohne je
+    /// Partie die Stellungen zu laden (die Partienliste fragt waehrend der Rechnung alle zehn Sekunden).
+    /// <c>null</c> = noch nicht gerechnet (Analysen von vor 0.515.0 traegt die Partienliste nach) oder die
+    /// Seite hat keinen bewertbaren Zug.
+    /// </summary>
+    public double? AccuracyWhite { get; set; }
+    public double? AccuracyBlack { get; set; }
+
     [MaxLength(500)] public string? LastError { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -238,14 +238,14 @@ public class GameAnalysisService
 
     /// <summary>
     /// „Eigene Analysen" — dieselbe Liste auf der Punktepartie-Seite und auf „Partie-Analysen".
-    /// Ohne die ueber eine gespeicherte Partie angestossenen (<see cref="GameAnalysisOrigin.SavedGame"/>):
-    /// die gehoeren zur Partie und erscheinen dort als Bewertungskurve. In der Liste stuenden sie als
-    /// Punktepartie, die niemand eingeworfen hat — wer auf „Partie analysieren" drueckt, will die Kurve
-    /// sehen und nicht die eigene Rateliste fuellen.
+    /// Die ueber eine gespeicherte Partie angestossenen (<see cref="GameAnalysisOrigin.SavedGame"/>) kommen
+    /// nur mit <paramref name="includeSavedGames"/> mit: auf „Partie-Analysen" gehoeren sie hin — dort steht
+    /// der Fortschritt jeder laufenden Rechnung (gewuenscht 2026-09-24) —, auf der Punktepartie-Seite nicht:
+    /// dort stuenden sie als Punktepartie, die niemand eingeworfen hat.
     /// </summary>
-    public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default) =>
+    public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default, bool includeSavedGames = false) =>
         ProjectAsync(_db.GameAnalyses.AsNoTracking()
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.SavedGame), ct);
+            .Where(g => g.UserId == userId && (includeSavedGames || g.Origin != GameAnalysisOrigin.SavedGame)), ct);
 
     /// <summary>
     /// Kopfdaten EINER Analyse ohne Stellungen — und OHNE Besitzer-Pruefung. Nur fuer Aufrufer, die
@@ -622,6 +622,11 @@ public class GameAnalysisService
         {
             analysis.Status = GameAnalysisStatus.Done;
             analysis.FinishedAt = DateTime.UtcNow;
+            // Einmal gerechnet, an der Analyse abgelegt: die Partienliste zeigt die Genauigkeit beider
+            // Seiten, ohne die Stellungen je Partie zu laden.
+            var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
+            analysis.AccuracyWhite = accuracy.White;
+            analysis.AccuracyBlack = accuracy.Black;
             changed = true;
         }
         else if (analysis.Status == GameAnalysisStatus.Pending && analysis.Positions.Any(p => p.AnalysisJobId != null))

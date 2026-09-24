@@ -192,6 +192,12 @@ public class GameAnalysisServiceTests : IDisposable
         var head = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id);
         Assert.Equal(GameAnalysisStatus.Done, head.Status);
         Assert.NotNull(head.FinishedAt);
+        // Beim Fertigwerden wird die Genauigkeit beider Seiten gerechnet und abgelegt (0.515.0) — die
+        // Partienliste zeigt sie, ohne die Stellungen zu laden.
+        Assert.NotNull(head.AccuracyWhite);
+        Assert.NotNull(head.AccuracyBlack);
+        Assert.InRange(head.AccuracyWhite!.Value, 0, 100);
+        Assert.InRange(head.AccuracyBlack!.Value, 0, 100);
     }
 
     [Fact]
@@ -944,6 +950,10 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Contains(manual.Id, ids);
         Assert.Contains(guess.Analysis!.Id, ids);
         Assert.DoesNotContain(saved.Analysis!.Id, ids);
+        // „Partie-Analysen" (includeSavedGames) zeigt sie MIT — dort steht der Fortschritt (0.515.0).
+        var withSaved = (await _svc.ListAsync(user.Id, includeSavedGames: true)).Select(a => a.Id).ToList();
+        Assert.Contains(saved.Analysis.Id, withSaved);
+        Assert.Contains(manual.Id, withSaved);
         // Ueber die Id bleibt sie fuer den Besitzer lesbar — die Partie-Seite braucht das nicht, aber
         // ein Verbergen in der Liste ist keine Sperre.
         Assert.NotNull(await _svc.GetAsync(user.Id, saved.Analysis.Id));

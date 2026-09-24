@@ -2478,7 +2478,9 @@
       "greatGap": "The only good move — the next best is {{gap}} pawns worse",
       "greatOnly": "The only good move",
       "missHint": "Missed the chance to punish the opponent's mistake"
-    }
+    },
+    "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
+    "accuracyHint": "Accuracy white · black (from the game analysis)"
   },
   "analysis": {
     "title": "Analysis",

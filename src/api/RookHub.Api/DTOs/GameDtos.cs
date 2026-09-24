@@ -53,6 +53,26 @@ public class SavedGameDto
     public string ShareToken { get; set; } = string.Empty;
     public int MoveCount { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Stand der VERKNUEPFTEN Analyse (<see cref="Models.SavedGame.GameAnalysisId"/>); <c>null</c> =
+    /// keine verknuepft oder die Analyse gibt es nicht mehr. Die Liste zeigt damit statt des Analysieren-Knopfs
+    /// den Fortschritt und, wenn fertig, die Genauigkeit beider Seiten.</summary>
+    public SavedGameAnalysisDto? Analysis { get; set; }
+}
+
+/// <summary>Kopf der verknuepften Analyse fuer die Partienliste — ohne Stellungen.</summary>
+public class SavedGameAnalysisDto
+{
+    /// <summary><c>pending</c> · <c>running</c> · <c>done</c> · <c>failed</c> (wie <see cref="GameEvalsDto.Status"/>).</summary>
+    public string Status { get; set; } = "pending";
+    /// <summary>Gerechnete Stellungen (aufgegebene eingeschlossen).</summary>
+    public int Analyzed { get; set; }
+    /// <summary>Halbzuege der Partie.</summary>
+    public int Total { get; set; }
+    /// <summary>Genauigkeit in Prozent, nur bei <c>done</c> (<see cref="Services.GameAccuracy"/>); <c>null</c>,
+    /// wenn die Seite keinen bewertbaren Zug hat.</summary>
+    public double? AccuracyWhite { get; set; }
+    public double? AccuracyBlack { get; set; }
 }
 
 /// <summary>Detail einer gespeicherten Partie inkl. PGN (Besitzer; zum Nachspielen/Analysieren).</summary>
