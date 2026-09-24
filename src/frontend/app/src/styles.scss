@@ -272,3 +272,11 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   -webkit-touch-callout: none;
   touch-action: manipulation;
 }
+
+/* Kein blaues Aufblinken beim Tippen (seit 0.525.2, gemeldet 2026-09-24): mobile Browser (Chrome/Android) färben ein
+   angetipptes, klickbares Element kurz ein — die Tippzonen neben dem Brett (Klick-Handler) und das Brett selbst
+   (Chessground hört auf Berührungen, auch zum Pfeile-Zeichnen). Das Brett zeigt ohnehin, was passiert (Zug,
+   Auswahl, nächste Stellung); das Aufblinken war nur Störung. */
+.board-tap, .cg-wrap, cg-container, cg-board {
+  -webkit-tap-highlight-color: transparent;
+}

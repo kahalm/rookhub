@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.525.2", date: "2026-09-24", changes: [
+    { en: "Phone: tapping the board or the tap zones beside it no longer makes something flash blue. That was the mobile browser’s tap highlight for clickable areas; it is now switched off for the board and the tap zones on every page (game pages, replay dialog, shared lines, analysis board).", de: "Handy: beim Tippen aufs Brett oder auf die Tippzonen daneben blinkt nichts mehr blau auf. Das war die Tipp-Markierung des mobilen Browsers für klickbare Flächen; sie ist jetzt für das Brett und die Tippzonen auf allen Seiten abgeschaltet (Partieseiten, Nachspiel-Dialog, geteilte Linien, Analysebrett)." },
+  ] },
   { version: "0.525.1", date: "2026-09-24", changes: [
     { en: "Game page on the phone: the navigation below the board is rearranged so you no longer hit “to the start/end” when you meant “one move”. Back and forward are now two wide, large buttons in the middle; start and end sit apart at the edges and slightly fainter; flipping the board and the live engine are on the far outside. The desktop layout is unchanged.", de: "Partieseite am Handy: die Navigation unter dem Brett ist neu angeordnet, damit man nicht mehr „ganz an den Anfang/ans Ende“ trifft, wenn man „einen Zug“ wollte. Zurück und Vor sind jetzt zwei breite, große Knöpfe in der Mitte; Anfang und Ende stehen mit Abstand am Rand und etwas blasser; Brett drehen und die Live-Engine ganz außen. Am PC bleibt alles, wie es war." },
   ] },

@@ -460,6 +460,9 @@ Einwurf) — sonst ruht die Liste. Die Genauigkeit rechnet der SERVER (`GameAccu
 **Tippzonen am Brettrand** (`.board-tap` in shared-game, pgn-viewer, shared-line, analysis): EINE globale Regel in
 `styles.scss` — `user-select: none` + `touch-action: manipulation` (0.514.3). Ohne sie markierte ein schnelles
 Doppeltippen Text, und Safari zoomte. Bewusst nur auf den Zonen, nicht seitenweit: Namen und Züge bleiben kopierbar.
+Seit 0.525.2 zusätzlich `-webkit-tap-highlight-color: transparent` für `.board-tap`, `.cg-wrap`, `cg-container` und
+`cg-board` (ebenfalls global in `styles.scss`): mobile Browser färbten angetippte klickbare Flächen kurz blau ein —
+gemeldet als „beim Tippen aufs Brett blinkt etwas blau auf".
 
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
