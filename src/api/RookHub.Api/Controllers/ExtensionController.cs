@@ -417,6 +417,22 @@ public class ExtensionController : BaseApiController
         return Ok(await _savedGameService.KnownAsync(GetUserId(), dto.Source, dto.ExternalIds, ct));
     }
 
+    /// <summary>
+    /// „In RookHub analysieren" aus der Uebersicht auf chess.com/lichess — fuer eine Partie, die schon bei
+    /// RookHub liegt, aber nie gerechnet wurde (etwa ueber 💾 gespeichert, bevor es „gleich analysieren"
+    /// gab). Derselbe Weg und dieselbe Antwort wie <c>POST /api/games/{id}/analyze</c>; eine eigene Route,
+    /// weil das API-Token der Erweiterung nur die Extension-Flaeche erreicht (<c>PatScopeFenceMiddleware</c>).
+    /// </summary>
+    [HttpPost("games/{id:int}/analyze")]
+    public async Task<ActionResult<GameAnalyzeResultDto>> AnalyzeSavedGame(int id, CancellationToken ct)
+    {
+        var result = await _savedGameService.AnalyzeAsync(GetUserId(), id, ct);
+        if (result is null) return NotFound();
+        if (result.Reason is not null)
+            return BadRequest(new { reason = result.Reason, message = "Game could not be accepted." });
+        return Ok(result);
+    }
+
     private static readonly HashSet<string> UnexpectedResponseEndpoints =
         new(StringComparer.Ordinal) { "getCourse", "getList", "getGame" };
 

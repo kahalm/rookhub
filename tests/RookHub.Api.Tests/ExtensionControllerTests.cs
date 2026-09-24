@@ -359,6 +359,65 @@ public class ExtensionControllerTests : IDisposable
         Assert.Empty(_db.SavedGames.Where(g => g.UserId == user.Id));
     }
 
+    // ----- „In RookHub analysieren" aus der Uebersicht (0.527.0) — das API-Token erreicht /api/games nicht -----
+
+    private async Task<int> SaveForAnalyzeAsync(int userId, string externalId = "184309568784")
+    {
+        var save = await _controller.SaveGame(new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = new() { "e4", "c5", "Nf3", "d6" }, ExternalId = externalId,
+            White = "kahalm", Black = "agus666666", Result = "1-0",
+        });
+        return (Assert.IsType<OkObjectResult>(save.Result).Value as SavedGameDetailDto)!.Id;
+    }
+
+    [Fact]
+    public async Task AnalyzeSavedGame_eigenePartie_reihtSieEin_undVerknuepft()
+    {
+        var user = await CreateUserAsync();
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = user.Id, EncryptedToken = "enc", BackgroundEngineIds = "eei_1" });
+        await _db.SaveChangesAsync();
+        SetUser(user.Id, scope: "extension");
+        var id = await SaveForAnalyzeAsync(user.Id);
+
+        var result = await _controller.AnalyzeSavedGame(id, default);
+
+        var dto = Assert.IsType<OkObjectResult>(result.Result).Value as GameAnalyzeResultDto;
+        Assert.NotNull(dto!.Analysis);
+        Assert.Null(dto.Reason);
+        Assert.Equal(dto.Analysis!.Id, _db.SavedGames.AsNoTracking().Single(g => g.Id == id).GameAnalysisId);
+    }
+
+    [Fact]
+    public async Task AnalyzeSavedGame_fremdePartie_404_undNichtsWirdGerechnet()
+    {
+        var owner = await CreateUserAsync();
+        SetUser(owner.Id, scope: "extension");
+        var id = await SaveForAnalyzeAsync(owner.Id);
+        var other = await CreateUserAsync();
+        SetUser(other.Id, scope: "extension");
+
+        Assert.IsType<NotFoundResult>((await _controller.AnalyzeSavedGame(id, default)).Result);
+        Assert.IsType<NotFoundResult>((await _controller.AnalyzeSavedGame(id + 999, default)).Result);
+        Assert.Empty(_db.GameAnalyses);
+    }
+
+    /// <summary>Ohne Engine (weder eigene noch Haus-Engine) kommt der Grund zurueck — die Erweiterung
+    /// zeigt ihn am Knopf, statt eine Sanduhr vorzutaeuschen.</summary>
+    [Fact]
+    public async Task AnalyzeSavedGame_ohneEngine_400MitGrund()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        var id = await SaveForAnalyzeAsync(user.Id);
+
+        var result = await _controller.AnalyzeSavedGame(id, default);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Contains("reason", System.Text.Json.JsonSerializer.Serialize(bad.Value));
+        Assert.Empty(_db.GameAnalyses);
+    }
+
     private static ChessableIngestChapter Chapter(params string[] lines)
         => new("{\"list\":{\"name\":\"Ch\",\"data\":[]}}", lines.ToList());
 

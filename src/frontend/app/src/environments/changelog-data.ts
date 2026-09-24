@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.528.0", date: "2026-09-24", changes: [
+    { en: "RepCheck can now start the RookHub analysis of a game right from the game list on chess.com and lichess: next to the ✓ for a game that is already on RookHub, an icon shows the state of its analysis (done, running, or a button to start it). The extension uses a new endpoint of its own for this, because its access token only reaches the extension part of the API.", de: "RepCheck kann die RookHub-Analyse einer Partie jetzt direkt aus der Partienliste auf chess.com und lichess starten: neben dem ✓ einer Partie, die schon bei RookHub liegt, zeigt ein Symbol den Stand ihrer Analyse (fertig, läuft, oder ein Knopf zum Starten). Die Erweiterung benutzt dafür einen eigenen Endpunkt, weil ihr Zugangs-Token nur den Erweiterungs-Teil der API erreicht." },
+  ] },
   { version: "0.527.2", date: "2026-09-24", changes: [
     { en: "Replay your mistakes: “Analyse” after a wrong try now starts at the position after your move, and ← no longer goes back behind it — in the task position the engine would show the move you are still looking for. Once the solution is found or shown, the analysis starts before the mistake as before.", de: "Eigene Fehler nachspielen: „Analysieren“ nach einem Fehlversuch beginnt jetzt bei der Stellung nach deinem Zug, und ← führt nicht mehr dahinter zurück – in der Aufgabenstellung zeigte die Engine sonst den Zug, den du noch suchst. Ist die Lösung gefunden oder gezeigt, beginnt die Analyse wie bisher vor dem Fehler." },
   ] },
