@@ -7,7 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -115,6 +115,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 } @else {
                   <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
+                                   [arrows]="bestArrows()"
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                   <!-- Die Tippzonen blieben im Training über dem Brett liegen und schluckten jeden Zug. -->
                   <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
@@ -134,7 +135,8 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
               }
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
-                                 [currentIndex]="service.currentMoveIndex"
+                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()"
+                                 (arrowsChange)="bestArrows.set($event)"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)"
                                  (mistakesChange)="mistakes.set($event)" />
@@ -261,6 +263,8 @@ export class SharedGameComponent implements OnInit {
 
   /** Laufendes Training „Eigene Fehler nachspielen" — `null` = die Seite zeigt die Partie. */
   readonly training = signal<MistakesSession | null>(null);
+  /** Pfeil für den besten Zug, geliefert vom Rückblick (Schalter dort); im Training leer. */
+  readonly bestArrows = signal<BoardArrow[]>([]);
 
   /**
    * Zugliste und Kurve laufen mit: je Aufgabe springt die Partie auf die Stellung VOR dem Fehler — man

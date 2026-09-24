@@ -46,6 +46,9 @@ export interface GameEvalPly extends EvalScore {
 /** Ein Kandidat der Engine: Zug (Standard-UCI) + Bewertung in Weiß-Sicht — `GameEvalCandidateDto`. */
 export interface GameEvalCandidate extends EvalScore {
   uci: string;
+  /** Variante der Engine ab diesem Zug (UCI roh vom Broker, Rochade ggf. als König-schlägt-Turm); fehlt bei
+   *  Analysen von vor 0.521.0. */
+  pv?: string[] | null;
 }
 
 export type GameEvalsStatus = 'none' | 'pending' | 'running' | 'done' | 'failed';

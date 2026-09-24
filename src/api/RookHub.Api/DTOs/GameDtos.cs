@@ -198,6 +198,10 @@ public class GameEvalCandidateDto
     public string Uci { get; set; } = string.Empty;
     public int? Cp { get; set; }
     public int? Mate { get; set; }
+    /// <summary>Die Variante der Engine ab diesem Zug (UCI roh vom Broker, Rochade ggf. als
+    /// König-schlägt-Turm — der Client spielt sie nach und schreibt sie um); <c>null</c> bei Analysen von
+    /// vor 0.521.0.</summary>
+    public List<string>? Pv { get; set; }
 }
 
 /// <summary>Eine einzelne Bewertung (Weiß-Sicht), genau eines von <see cref="Cp"/>/<see cref="Mate"/>.</summary>

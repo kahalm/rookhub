@@ -107,6 +107,80 @@ describe('GameReviewComponent', () => {
     expect(fixture.componentInstance.eta()).toBeNull();
   });
 
+  describe('Computer-Linien + Pfeil für den besten Zug', () => {
+    beforeEach(() => {
+      localStorage.removeItem(GameReviewComponent.LinesKey);
+      localStorage.removeItem(GameReviewComponent.ArrowKey);
+    });
+    afterEach(() => {
+      localStorage.removeItem(GameReviewComponent.LinesKey);
+      localStorage.removeItem(GameReviewComponent.ArrowKey);
+    });
+
+    const withCandidates = (): GameEvals => ({
+      ...evals('done'),
+      plies: [
+        { ply: 0, cp: 30, depth: 20, bestUci: 'e2e4', playedUci: 'e2e4', playedCp: 30, candidates: [
+          { uci: 'e2e4', cp: 30, pv: ['e2e4', 'e7e5'] }, { uci: 'd2d4', cp: 25 },
+        ] },
+        { ply: 1, cp: 25, depth: 20, bestUci: 'e7e5', playedUci: 'c7c5', playedCp: 300, candidates: [
+          { uci: 'e7e5', cp: 25, pv: ['e7e5', 'g1f3'] }, { uci: 'c7c5', cp: 300 },
+        ] },
+      ],
+    });
+
+    it('aus bis zum Klick; an: die Linien der Stellung auf dem Brett, gemerkt je Gerät', () => {
+      const { fixture, http, el } = setup();
+      http.expectOne(url).flush(withCandidates());
+      fixture.detectChanges();
+      expect(el.querySelector('.lines')).toBeNull();
+
+      (el.querySelector('button.lines-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      // currentIndex −1 = Startstellung → Zeile 0
+      expect(Array.from(el.querySelectorAll('.lines .line-san')).map(e => e.textContent!.trim())).toEqual(['1. e4 e5', '1. d4']);
+      expect(localStorage.getItem(GameReviewComponent.LinesKey)).toBe('1');
+
+      fixture.componentRef.setInput('currentIndex', 0);
+      fixture.detectChanges();
+      expect(el.querySelector('.lines .line-san')!.textContent!.trim()).toBe('1... e5 2. Nf3');
+      expect(el.querySelectorAll('.lines li.played').length).toBe(1);   // c5 wurde gespielt
+    });
+
+    it('Pfeil: an → der beste Zug der Stellung geht an die Seite; wechselt mit dem Zug', () => {
+      const { fixture, http, el } = setup();
+      const arrows: unknown[] = [];
+      fixture.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
+      http.expectOne(url).flush(withCandidates());
+      fixture.detectChanges();
+
+      (el.querySelector('button.arrow-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(arrows[arrows.length - 1]).toEqual([{ from: 'e2', to: 'e4' }]);
+
+      fixture.componentRef.setInput('currentIndex', 0);
+      fixture.detectChanges();
+      expect(arrows[arrows.length - 1]).toEqual([{ from: 'e7', to: 'e5' }]);
+    });
+
+    it('im Fehler-Training: keine Schalter, keine Linien, kein Pfeil — auch wenn sie eingeschaltet sind', () => {
+      localStorage.setItem(GameReviewComponent.LinesKey, '1');
+      localStorage.setItem(GameReviewComponent.ArrowKey, '1');
+      const { fixture, http, el } = setup();
+      const arrows: unknown[] = [];
+      fixture.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
+      http.expectOne(url).flush(withCandidates());
+      fixture.detectChanges();
+      expect(el.querySelector('.lines')).not.toBeNull();
+
+      fixture.componentRef.setInput('engineHidden', true);
+      fixture.detectChanges();
+      expect(el.querySelector('.lines')).toBeNull();
+      expect(el.querySelector('button.lines-toggle')).toBeNull();
+      expect(arrows[arrows.length - 1]).toEqual([]);
+    });
+  });
+
   it('geschlossen = kein Nachfragen mehr', fakeAsync(() => {
     const { fixture, http } = setup();
     http.expectOne(url).flush(evals('pending', false));

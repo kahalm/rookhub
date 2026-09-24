@@ -4,10 +4,15 @@ import {
 } from '@angular/core';
 import { DecimalPipe, formatNumber } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
 import { formatEta } from '../../shared/eta.util';
+import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
+import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
+import { bestMoveArrowAt, computerLinesAt } from './computer-lines.util';
 import { GamesService } from './games.service';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
@@ -47,7 +52,7 @@ const MATE_GAP_PAWNS = 100;
   selector: 'app-game-review',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EvalGraphComponent, TranslatePipe, MatTooltipModule, DecimalPipe],
+  imports: [EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, DecimalPipe],
   template: `
     @if (status() !== 'none') {
       <section class="review">
@@ -62,7 +67,32 @@ const MATE_GAP_PAWNS = 100;
           } @else if (status() === 'failed') {
             <span class="progress failed">{{ 'games.review.failed' | translate }}</span>
           }
+          @if (!engineHidden()) {
+            <!-- Computer-Linien + Pfeil für den besten Zug: je Gerät gemerkt, im Fehler-Training aus (verriete die Lösung). -->
+            <span class="toggles">
+              <button mat-icon-button type="button" class="toggle lines-toggle" [class.on]="showLines()"
+                      [attr.aria-pressed]="showLines()" (click)="toggleLines()"
+                      [matTooltip]="'analysis.lines' | translate" [attr.aria-label]="'analysis.lines' | translate">
+                <mat-icon>format_list_numbered</mat-icon>
+              </button>
+              <button mat-icon-button type="button" class="toggle arrow-toggle" [class.on]="showArrow()"
+                      [attr.aria-pressed]="showArrow()" (click)="toggleArrow()"
+                      [matTooltip]="'games.review.class.best' | translate" [attr.aria-label]="'games.review.class.best' | translate">
+                <mat-icon>north_east</mat-icon>
+              </button>
+            </span>
+          }
         </div>
+        @if (lines().length) {
+          <ol class="lines">
+            @for (l of lines(); track $index) {
+              <li [class.played]="l.played">
+                <span class="line-eval" [class.white]="l.whiteBetter">{{ l.evalText }}</span>
+                <span class="line-san">{{ l.san }}</span>
+              </li>
+            }
+          </ol>
+        }
         <app-eval-graph [series]="review().curve" [marks]="marks()" [currentIndex]="currentIndex()"
                         (moveClicked)="moveClicked.emit($event)" />
         @if (current(); as m) {
@@ -109,10 +139,23 @@ const MATE_GAP_PAWNS = 100;
   styles: [`
     :host { display: block; width: 100%; }
     .review { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-    .head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
     .title { font-weight: 600; font-size: 0.9rem; }
     .progress { font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress.failed { color: #e53935; }
+    .toggles { display: inline-flex; margin-left: auto; }
+    .toggle { opacity: 0.45; --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
+    .toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .toggle.on { opacity: 1; color: #81b64c; }
+    .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.82rem; }
+    .lines li { display: flex; gap: 8px; align-items: baseline; min-width: 0; padding: 1px 4px; border-radius: 4px; }
+    .lines li.played { background: color-mix(in srgb, currentColor 8%, transparent); }
+    .line-eval {
+      flex: 0 0 auto; min-width: 3.4em; text-align: center; padding: 0 4px; border-radius: 3px;
+      font-weight: 600; font-variant-numeric: tabular-nums; background: #403e3b; color: #fff;
+    }
+    .line-eval.white { background: #fff; color: #262421; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2); }
+    .line-san { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .current { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.85rem; }
     .current .why { color: color-mix(in srgb, currentColor 70%, transparent); }
     /* Die chess.com-Farben sind hell (Gelb, Hellgrün) — ein Schatten hält die weiße Schrift darauf lesbar. */
@@ -154,6 +197,9 @@ export class GameReviewComponent {
    */
   moves = input<readonly PlayedMove[]>([]);
 
+  /** Im Fehler-Training: keine Computer-Linien und kein Pfeil — sie verrieten die Lösung. */
+  engineHidden = input<boolean>(false);
+
   /** Klick in die Kurve — Halbzug-Index wie `currentMoveIndex`. */
   moveClicked = output<number>();
   /** Damit die Seite ihren Knopf sperren (läuft) oder ausblenden (fertig) kann. */
@@ -164,7 +210,15 @@ export class GameReviewComponent {
    */
   mistakesChange = output<MistakesBySide>();
 
+  /**
+   * Der Pfeil für den besten Zug der Stellung auf dem Brett (leer = keiner) — die Seite legt ihn auf ihr
+   * Brett. Von hier, weil hier die Analyse liegt; das Brett gehört der Seite.
+   */
+  arrowsChange = output<BoardArrow[]>();
+
   static readonly PollMs = 10_000;
+  static readonly LinesKey = 'rookhub_game_lines';
+  static readonly ArrowKey = 'rookhub_game_arrow';
 
   readonly classes = MOVE_CLASSES;
   readonly evals = signal<GameEvals | null>(null);
@@ -178,6 +232,16 @@ export class GameReviewComponent {
   });
   readonly ucis = computed(() => this.moves().map(uciOf));
   readonly review = computed(() => reviewGame(this.evals(), this.fens(), this.ucis()));
+  /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe). */
+  readonly showLines = signal(readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
+  readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
+  readonly lines = computed(() => this.showLines() && !this.engineHidden()
+    ? computerLinesAt(this.evals(), this.fens(), this.currentIndex()) : []);
+  readonly arrows = computed<BoardArrow[]>(() => {
+    if (!this.showArrow() || this.engineHidden()) return [];
+    const best = bestMoveArrowAt(this.evals(), this.currentIndex());
+    return best ? [best] : [];
+  });
   readonly rows = computed(() => [
     { key: 'white', summary: this.review().white },
     { key: 'black', summary: this.review().black },
@@ -200,6 +264,11 @@ export class GameReviewComponent {
     effect(() => {
       this.evalsUrl();
       untracked(() => this.reload());
+    });
+    // Der Pfeil folgt Stellung, Schalter und Analyse — die Seite legt ihn auf ihr Brett.
+    effect(() => {
+      const a = this.arrows();
+      untracked(() => this.arrowsChange.emit(a));
     });
     // Jede neue Analyse-Antwort kann Aufgaben bringen — die Seite erfährt es über die Ausgabe.
     effect(() => {
@@ -225,6 +294,16 @@ export class GameReviewComponent {
       // Still: ein Aussetzer beim Nachfragen heilt der nächste Takt. Lief die Analyse, bleibt der Takt.
       error: () => { if (this.running()) this.schedule(); },
     });
+  }
+
+  toggleLines(): void {
+    this.showLines.update(v => !v);
+    writeRaw(localStore(), GameReviewComponent.LinesKey, this.showLines() ? '1' : '0');
+  }
+
+  toggleArrow(): void {
+    this.showArrow.update(v => !v);
+    writeRaw(localStore(), GameReviewComponent.ArrowKey, this.showArrow() ? '1' : '0');
   }
 
   symbol(c: MoveClass): string { return SYMBOLS[c]; }

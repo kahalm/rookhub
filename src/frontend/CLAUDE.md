@@ -330,6 +330,22 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   `shared/eta.util.ts` `formatEta` — derselben Funktion wie auf „Partie-Analysen", Text-Key `gameAnalysis.eta`);
   nur solange die Analyse läuft, ohne Tempo gar nicht.
 
+## Computer-Linien + Pfeil für den besten Zug (0.521.0)
+
+Zwei Schalter in der Kopfzeile des Rückblicks (`game-review.component.ts`), je Gerät gemerkt
+(`rookhub_game_lines`, `rookhub_game_arrow`, localStorage): die KANDIDATEN der eigenen Partie-Analyse für die
+Stellung auf dem Brett (bis zu fünf, Bewertung in Weiß-Sicht, Variante in SAN — `computer-lines.util.ts`,
+`uciLineToSan` + `normalizeCastlingUci` aus features/analysis, höchstens `COMPUTER_LINE_PLIES` 10; der gespielte
+Zug ist hinterlegt) und ein grüner Pfeil für den besten Zug. Keine Engine im Browser — nur `GET …/evals`.
+- Der Pfeil geht als Ausgabe `arrowsChange` an die Seite, die ihn über `[arrows]` auf IHR Brett legt
+  (`ChessBoardComponent.arrows` → Chessground `setAutoShapes`; selbst gezogene Rechtsklick-Pfeile bleiben).
+- **Im Fehler-Training aus** (`[engineHidden]="!!training()"`): Linien und Pfeil verrieten die Lösung; auch die
+  Schalter verschwinden.
+- Die Endstellung und nicht gerechnete Stellungen haben keine Linien (die Analyse rechnet nur Stellungen, in
+  denen noch gezogen wird). Analysen von vor 0.521.0 haben keine Varianten → je Kandidat nur der Zug.
+- Beschriftung vorerst mit VORHANDENEN Keys (`analysis.lines`, `games.review.class.best`) — neue i18n-Keys
+  standen beim Bau nicht zur Verfügung.
+
 ## Eigene Fehler nachspielen (0.516.0)
 
 Der Trainer zur Partie, wie Lichess' „Aus deinen Fehlern lernen": Stellung VOR dem eigenen Fehler,

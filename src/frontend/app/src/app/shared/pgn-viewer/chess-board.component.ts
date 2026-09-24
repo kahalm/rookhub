@@ -11,6 +11,9 @@ import { applyUserMove, legalDests, turnColorOf } from './board-moves.util';
 /** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). */
 export interface UserBoardMove { from: string; to: string; san: string; fen: string; }
 
+/** Ein vom Aufrufer vorgegebener Pfeil (z. B. der beste Zug der Engine) — Chessground-„autoShape". */
+export interface BoardArrow { from: string; to: string; }
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chess-board',
@@ -65,6 +68,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
    * Der Aufrufer MUSS auf (userMove) reagieren und die neue FEN zurückbinden — das Brett
    * selbst bleibt zustandslos (Anzeige der [fen]-Bindung). */
   @Input() playable = false;
+  /**
+   * Pfeile, die der Aufrufer vorgibt (`setAutoShapes`) — getrennt von denen, die der Nutzer per Rechtsklick
+   * zieht: die bleiben stehen, wenn sich diese Liste ändert.
+   */
+  @Input() arrows: readonly BoardArrow[] = [];
   @Output() userMove = new EventEmitter<UserBoardMove>();
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
@@ -120,6 +128,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       // Pfeile/Kreise per Rechtsklick-Ziehen (wie im Analyse-/Puzzle-Brett).
       drawable: { enabled: true, visible: true },
     });
+    this.applyArrows();
 
     this.resizeObserver = new ResizeObserver(() => this.fitToHost());
     this.resizeObserver.observe(el.parentElement || el);
@@ -186,6 +195,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
         ...this.interactionConfig(),
       });
     }
+    if (changes['arrows']) this.applyArrows();
+  }
+
+  private applyArrows(): void {
+    this.ground?.setAutoShapes((this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: 'green' })));
   }
 
   /** Figuren-Interaktion je nach `playable`: aus (reine Anzeige) oder legale Züge der Seite am Zug. */

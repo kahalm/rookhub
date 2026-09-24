@@ -20,8 +20,20 @@ namespace RookHub.Api.Services;
 /// </summary>
 public static class BrokerCandidates
 {
-    /// <summary>Ein Kandidat: Zug + Bewertung (genau eines von <c>cp</c>/<c>mate</c>).</summary>
-    public readonly record struct Candidate(string Uci, int? Cp, int? Mate);
+    /// <summary>
+    /// Ein Kandidat: Zug + Bewertung (genau eines von <c>cp</c>/<c>mate</c>) und seit 0.521.0 die
+    /// VARIANTE dazu (<see cref="Pv"/>) — für „Computer-Linien" auf der Partieseite.
+    /// </summary>
+    /// <param name="Pv">Die Hauptvariante der Engine, ROH wie vom Broker (UCI, Rochade ggf. als
+    /// König-schlägt-Turm), beginnend mit dem Kandidatenzug, höchstens <see cref="MaxPvPlies"/> Halbzüge.
+    /// Nicht umgeschrieben: dafür müsste man jeden Zug nachspielen — das tut der Client beim Umrechnen
+    /// in SAN ohnehin (<c>uciLineToSan</c>). <c>null</c> bei Zeilen von vor 0.521.0.</param>
+    public readonly record struct Candidate(string Uci, int? Cp, int? Mate, IReadOnlyList<string>? Pv = null);
+
+    /// <summary>So viele Halbzüge einer Variante werden abgelegt. Die Engine liefert bei Tiefe 30 oft
+    /// 20 und mehr; lesen will man auf der Partieseite ein paar Züge, und fünf Kandidaten je Stellung
+    /// mal 80 Stellungen sollen die Zeile nicht aufblähen.</summary>
+    public const int MaxPvPlies = 16;
 
     /// <summary>
     /// Liest die <c>pvs</c> einer Broker-Zeile. <c>null</c>, wenn die Zeile unbrauchbar ist
@@ -66,7 +78,7 @@ public static class BrokerCandidates
                     mate = mate is int mv ? -mv : null;
                 }
                 if (list.All(x => !string.Equals(x.Uci, uci, StringComparison.OrdinalIgnoreCase)))
-                    list.Add(new Candidate(uci, cp, mate));
+                    list.Add(new Candidate(uci, cp, mate, AllMoves(moves)));
             }
             return list.Count == 0 ? null : list;
         }
@@ -82,6 +94,7 @@ public static class BrokerCandidates
             var o = new JsonObject { ["uci"] = c.Uci };
             if (c.Cp is int cp) o["cp"] = cp;
             if (c.Mate is int m) o["mate"] = m;
+            if (c.Pv is { Count: > 0 } pv) o["pv"] = new JsonArray(pv.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray());
             arr.Add(o);
         }
         return arr.ToJsonString();
@@ -110,6 +123,31 @@ public static class BrokerCandidates
         return result;
     }
 
+    /// <summary>
+    /// Die abgelegten Varianten je Kandidatenzug (UCI in Kleinbuchstaben → Züge). Leer bei Zeilen von vor
+    /// 0.521.0 oder unbrauchbarem JSON — die Wertung (<see cref="FromJson"/>) braucht sie nicht, die
+    /// „Computer-Linien" der Partieseite schon.
+    /// </summary>
+    public static Dictionary<string, List<string>> PvsFromJson(string? json)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(json)) return result;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return result;
+            foreach (var e in doc.RootElement.EnumerateArray())
+            {
+                var uci = e.TryGetProperty("uci", out var u) ? u.GetString() : null;
+                if (string.IsNullOrWhiteSpace(uci) || !e.TryGetProperty("pv", out var pv)) continue;
+                var moves = AllMoves(pv);
+                if (moves is { Count: > 0 }) result.TryAdd(uci, moves);
+            }
+        }
+        catch (JsonException) { /* unbrauchbare Zeile → keine Varianten */ }
+        return result;
+    }
+
     /// <summary>Bewertung der Hauptvariante als Text (<c>+0.34</c>/<c>#3</c>), Sicht der Seite am Zug.</summary>
     public static string? EvalTextOf(IReadOnlyList<Candidate> candidates)
     {
@@ -117,6 +155,19 @@ public static class BrokerCandidates
         var c = candidates[0];
         if (c.Cp is null && c.Mate is null) return null;
         return new GuessScoring.Eval(c.Cp, c.Mate).Text;
+    }
+
+    /// <summary>Alle Züge einer Variante (Array oder Leerzeichen-Text), gekappt auf <see cref="MaxPvPlies"/>.</summary>
+    private static List<string>? AllMoves(JsonElement moves)
+    {
+        IEnumerable<string?> raw = moves.ValueKind switch
+        {
+            JsonValueKind.Array => moves.EnumerateArray().Select(m => m.ValueKind == JsonValueKind.String ? m.GetString() : null),
+            JsonValueKind.String => (moves.GetString() ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries),
+            _ => Array.Empty<string?>(),
+        };
+        var list = raw.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m!.Trim()).Take(MaxPvPlies).ToList();
+        return list.Count == 0 ? null : list;
     }
 
     private static string? FirstMove(JsonElement moves)

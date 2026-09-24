@@ -487,6 +487,11 @@ flachere), aber mit eigenem Ursprung
 * Frontend: `features/games/game-review.util.ts` (Formeln), `game-review.component.ts` (lädt, fragt alle 10 s
   nach, solange `pending`/`running`), `shared/pgn-viewer/eval-graph.component.ts` (SVG-Kurve). Siehe
   `src/frontend/CLAUDE.md`.
+* **Computer-Linien** (0.521.0): `GameEvalCandidateDto.Pv` = die Variante der Engine je Kandidat (UCI ROH vom
+  Broker, Rochade ggf. König-schlägt-Turm — der Client spielt sie nach, `normalizeCastlingUci`), abgelegt in
+  `CandidatesJson` als `"pv":[…]` (`BrokerCandidates.MaxPvPlies` 16), gelesen mit `BrokerCandidates.PvsFromJson`.
+  Die Wertung (`FromJson`) ignoriert das Feld. Analysen von vor 0.521.0 haben keine Varianten — die Partieseite
+  zeigt dort je Kandidat nur den Zug mit Bewertung; wer Linien will, lässt neu rechnen (Restart).
 * **Restdauer DIESER Partie** (0.517.0, `GameEvalsDto.EtaMinutes`, `GameEvals.EtaMinutes`): solange die Analyse
   läuft, aus den `AnalyzedAt` der jüngsten 12 gerechneten Stellungen — gemessen vom ältesten davon bis JETZT
   (hängt die Engine, wächst die Schätzung), mindestens 60 s Spanne (die Pumpe liefert oft mehrere im selben

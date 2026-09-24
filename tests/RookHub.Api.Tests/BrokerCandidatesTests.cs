@@ -84,4 +84,44 @@ public class BrokerCandidatesTests
         Assert.Equal(995, back[1].Eval.Pawns, 3);   // Matt in 5 → 1000 - 5
         Assert.Equal("+0.35", BrokerCandidates.EvalTextOf(parsed));
     }
+
+    // ===== Varianten fuer die Computer-Linien (0.521.0) ======================
+
+    [Fact]
+    public void Variante_wirdMitgelesen_undAbgelegt_undKommtZurueck()
+    {
+        var parsed = BrokerCandidates.Parse(Line(Pv("e2e4", 35), Pv("d2d4", 20)), StartFen)!;
+        Assert.Equal(new[] { "e2e4", "e7e5" }, parsed[0].Pv);
+
+        var json = BrokerCandidates.ToJson(parsed);
+        var pvs = BrokerCandidates.PvsFromJson(json);
+        Assert.Equal(new[] { "e2e4", "e7e5" }, pvs["e2e4"]);
+        Assert.Equal(new[] { "d2d4", "e7e5" }, pvs["d2d4"]);
+        // Die Wertung liest dieselbe Zeile unveraendert.
+        Assert.Equal(2, BrokerCandidates.FromJson(json).Count);
+    }
+
+    [Fact]
+    public void Variante_wirdGekappt_undBleibtRohWieVomBroker()
+    {
+        // Rochade als Koenig-schlaegt-Turm bleibt in der Variante stehen — umgeschrieben wird nur der erste Zug
+        // (gegen die legalen Zuege), den Rest schreibt der Client beim Nachspielen um.
+        const string fen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 6 5";
+        var moves = string.Join(",", Enumerable.Range(0, 30).Select(i => i == 0 ? "\"e1h1\"" : "\"a2a3\""));
+        var list = BrokerCandidates.Parse("{\"pvs\":[{\"cp\":25,\"moves\":[" + moves + "]}]}", fen)!;
+
+        Assert.Equal("e1g1", list[0].Uci);
+        Assert.Equal(BrokerCandidates.MaxPvPlies, list[0].Pv!.Count);
+        Assert.Equal("e1h1", list[0].Pv![0]);
+    }
+
+    [Fact]
+    public void AlteZeileOhneVariante_keineVarianten_WertungUnveraendert()
+    {
+        const string old = """[{"uci":"e2e4","cp":30},{"uci":"d2d4","cp":25}]""";
+        Assert.Empty(BrokerCandidates.PvsFromJson(old));
+        Assert.Empty(BrokerCandidates.PvsFromJson("kein json"));
+        Assert.Equal(2, BrokerCandidates.FromJson(old).Count);
+        Assert.DoesNotContain("pv", BrokerCandidates.ToJson(new[] { new BrokerCandidates.Candidate("e2e4", 30, null) }));
+    }
 }

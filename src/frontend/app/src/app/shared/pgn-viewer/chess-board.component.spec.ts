@@ -74,6 +74,31 @@ describe('ChessBoardComponent right-click drawing', () => {
   });
 });
 
+describe('ChessBoardComponent Pfeile des Aufrufers (bester Zug)', () => {
+  it('legt die Pfeile als autoShapes an, beim Ändern neu, und lässt selbst gezogene Pfeile in Ruhe', () => {
+    const host = document.createElement('div');
+    host.style.width = '320px';
+    document.body.appendChild(host);
+    const inner = document.createElement('div');
+    host.appendChild(inner);
+
+    const c: any = new ChessBoardComponent();
+    c.boardEl = { nativeElement: inner };
+    c.arrows = [{ from: 'e2', to: 'e4' }];
+    c.ngAfterViewInit();
+    expect(c.ground.state.drawable.autoShapes).toEqual([{ orig: 'e2', dest: 'e4', brush: 'green' }]);
+
+    c.ground.state.drawable.shapes = [{ orig: 'a1', dest: 'a8', brush: 'red' }];   // per Rechtsklick gezogen
+    c.arrows = [];
+    c.ngOnChanges({ arrows: {} as never });
+    expect(c.ground.state.drawable.autoShapes).toEqual([]);
+    expect(c.ground.state.drawable.shapes.length).toBe(1);
+
+    c.ngOnDestroy();
+    document.body.removeChild(host);
+  });
+});
+
 describe('ChessBoardComponent Vollbild', () => {
   it('schickt die äußere Hülle ins Vollbild und hängt den Knopf ans Brett', async () => {
     await TestBed.configureTestingModule({

@@ -219,4 +219,16 @@ public class GameEvalsTests
 
         Assert.Equal(1, GameEvals.EtaMinutes(at, remaining: 1, Now));
     }
+
+    [Fact]
+    public void Kandidaten_tragenIhreVariante_inWeissSicht()
+    {
+        var ply = GameEvals.PlyOf(1, BlackToMove, "c7c5",
+            """[{"uci":"e7e5","cp":-25,"pv":["e7e5","g1f3"]},{"uci":"c7c5","cp":-32}]""", 20);
+
+        Assert.Equal(2, ply!.Candidates.Count);
+        Assert.Equal(new[] { "e7e5", "g1f3" }, ply.Candidates[0].Pv);
+        Assert.Equal(25, ply.Candidates[0].Cp);    // Schwarz am Zug → gedreht
+        Assert.Null(ply.Candidates[1].Pv);         // Zeile ohne Variante (Altbestand)
+    }
 }

@@ -56,10 +56,14 @@ public static class GameEvals
             dto.SecondCp = second.Cp;
             dto.SecondMate = second.MateIn;
         }
+        var pvs = BrokerCandidates.PvsFromJson(candidatesJson);
         foreach (var c in candidates)
         {
             var e = White(c.Eval);
-            dto.Candidates.Add(new GameEvalCandidateDto { Uci = c.Uci, Cp = e.Cp, Mate = e.MateIn });
+            dto.Candidates.Add(new GameEvalCandidateDto
+            {
+                Uci = c.Uci, Cp = e.Cp, Mate = e.MateIn, Pv = pvs.TryGetValue(c.Uci, out var pv) ? pv : null,
+            });
         }
         return dto;
     }
