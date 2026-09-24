@@ -2720,7 +2720,8 @@
         "inaccuracy": "Pontatlanság",
         "mistake": "Hiba",
         "miss": "Kihagyott esély",
-        "blunder": "Durva hiba"
+        "blunder": "Durva hiba",
+        "book": "Elméleti lépés"
       },
       "piece": {
         "n": "huszár",
@@ -2731,7 +2732,10 @@
       "sacrifice": "Áldozat: {{piece}} ({{square}})",
       "greatGap": "Az egyetlen jó lépés — a következő legjobb {{gap}} gyaloggal rosszabb",
       "greatOnly": "Az egyetlen jó lépés",
-      "missHint": "Kimaradt az ellenfél hibájának megbüntetése"
+      "missHint": "Kimaradt az ellenfél hibájának megbüntetése",
+      "bookHint": "A repertoárodban (a bővítményhez megjelölve)",
+      "lines": "Gépi változatok",
+      "arrow": "Nyíl a legjobb lépéshez"
     },
     "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
     "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",

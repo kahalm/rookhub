@@ -203,6 +203,22 @@ describe('GameReviewComponent', () => {
     expect(el.querySelector('app-eval-graph')).toBeNull();
   });
 
+  it('Buchzüge (vom Server, aus dem eigenen Repertoire): Etikett „Buch" mit Erklärung, eigene Spalte, kein Punkt in der Kurve', () => {
+    const { fixture, http, el } = setup();
+    TestBed.inject(TranslateService).setTranslation('en', { games: { review: { bookHint: 'In your repertoire' } } });
+    TestBed.inject(TranslateService).use('en');
+    // Zug 1 (…c5) ist ein Patzer — steht er im Repertoire, heißt er trotzdem „Buch".
+    http.expectOne(url).flush({ ...evals('done'), bookPlies: [0, 1] });
+    fixture.componentRef.setInput('currentIndex', 1);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.current')!.className).toContain('book');
+    expect(el.querySelector('.current .why')!.textContent).toContain('In your repertoire');
+    expect(el.querySelector('.row-white .count.book')!.textContent!.trim()).toBe('1');
+    expect(el.querySelector('.row-black .count.book')!.textContent!.trim()).toBe('1');
+    expect(el.querySelectorAll('app-eval-graph .dot').length).toBe(0);
+  });
+
   it('geschlossen = kein Nachfragen mehr', fakeAsync(() => {
     const { fixture, http } = setup();
     http.expectOne(url).flush(evals('pending', false));
@@ -281,12 +297,12 @@ describe('GameReviewComponent', () => {
     const badgeTooltip = (fixture: ReturnType<typeof setup>['fixture']) =>
       (fixture.nativeElement as HTMLElement).querySelector('.current .why')!.textContent!.trim();
 
-    it('neun Spalten; Zähler je Seite und Punkte in der Kurve auch für Great und Miss, in der Farbe der Tabelle', () => {
+    it('zehn Spalten (mit Buch); Zähler je Seite und Punkte in der Kurve auch für Great und Miss, in der Farbe der Tabelle', () => {
       const { fixture, http, el } = setup({ fens: sicilian, moves: sicilianMoves });
       http.expectOne(url).flush(sicilianEvals);
       fixture.detectChanges();
 
-      expect(el.querySelectorAll('thead .sym').length).toBe(9);
+      expect(el.querySelectorAll('thead .sym').length).toBe(10);
       expect(count(el, 'white', 'great')).toBe('1');
       expect(count(el, 'white', 'miss')).toBe('1');
       expect(count(el, 'white', 'blunder')).toBe('0');

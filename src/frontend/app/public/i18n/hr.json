@@ -2466,7 +2466,8 @@
         "inaccuracy": "Netočnost",
         "mistake": "Pogreška",
         "miss": "Propušteno",
-        "blunder": "Gruba pogreška"
+        "blunder": "Gruba pogreška",
+        "book": "Knjiški potez"
       },
       "piece": {
         "n": "skakač",
@@ -2477,7 +2478,10 @@
       "sacrifice": "Žrtva: {{piece}} na {{square}}",
       "greatGap": "Jedini dobar potez — sljedeći najbolji lošiji je za {{gap}} pješaka",
       "greatOnly": "Jedini dobar potez",
-      "missHint": "Propuštena prilika da se kazni protivnikova pogreška"
+      "missHint": "Propuštena prilika da se kazni protivnikova pogreška",
+      "bookHint": "U tvom repertoaru (označenom za proširenje)",
+      "lines": "Računalne varijante",
+      "arrow": "Strelica za najbolji potez"
     },
     "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
     "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",

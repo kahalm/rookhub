@@ -136,4 +136,42 @@ public class RepertoireAnalyzeServiceTests : IDisposable
         Assert.Equal(-1, result.Deviation);
         Assert.Equal(2, result.InRepertoire.Count);
     }
+
+    // ===== Buchzüge für den Partie-Rückblick (0.522.0) ========================
+
+    private static List<string> FensAfter(params string[] sans)
+    {
+        var board = new Chess.ChessBoard();
+        var list = new List<string>();
+        foreach (var san in sans) { board.Move(san); list.Add(board.ToFen()); }
+        return list;
+    }
+
+    [Fact]
+    public async Task Buchzuege_dieRepertoireZuegeVorDerAbweichung_beiderSeiten()
+    {
+        var userId = await SeedUserWithOpeningAsync("[Event \"x\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *");
+        var book = await _analyze.BookPliesAsync(userId, FensAfter("e4", "e5", "Nf3", "d6", "Bc4"));
+        Assert.Equal(new[] { 0, 1, 2 }, book);
+    }
+
+    [Fact]
+    public async Task Buchzuege_Zugumstellung_zaehlt_Abstecher_nicht()
+    {
+        var userId = await SeedUserWithOpeningAsync("[Event \"x\"]\n\n1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 *");
+        // 1.c4 e6 2.d4 Nf6 erreicht nach Zug 2 dieselbe Stellung — die Zwischenstellungen stehen nicht im Repertoire.
+        var book = await _analyze.BookPliesAsync(userId, FensAfter("c4", "e6", "d4", "Nf6", "Nc3", "Bb4", "a3"));
+        Assert.Equal(new[] { 3, 4, 5 }, book);
+    }
+
+    [Fact]
+    public async Task Buchzuege_nurRepertoiresFuerDieErweiterung()
+    {
+        var userId = await SeedUserWithOpeningAsync("[Event \"x\"]\n\n1. e4 e5 *");
+        foreach (var r in _db.Repertoires.Where(r => r.UserId == userId)) r.UseForExtension = false;
+        await _db.SaveChangesAsync();
+        _analyze.Invalidate(userId);
+
+        Assert.Empty(await _analyze.BookPliesAsync(userId, FensAfter("e4", "e5")));
+    }
 }

@@ -101,6 +101,7 @@ internal static class TestServices
     }
 
     /// <summary><paramref name="analyses"/> nur setzen, wenn der Test DIESELBE Instanz selbst haelt.</summary>
-    public static SavedGameService SavedGames(AppDbContext db, GameAnalysisService? analyses = null)
-        => new(db, analyses ?? GameAnalyses(db));
+    public static SavedGameService SavedGames(AppDbContext db, GameAnalysisService? analyses = null,
+        RepertoireAnalyzeService? repertoires = null)
+        => new(db, analyses ?? GameAnalyses(db), repertoires ?? Analyze(db));
 }

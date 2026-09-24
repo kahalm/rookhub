@@ -487,6 +487,11 @@ flachere), aber mit eigenem Ursprung
 * Frontend: `features/games/game-review.util.ts` (Formeln), `game-review.component.ts` (lädt, fragt alle 10 s
   nach, solange `pending`/`running`), `shared/pgn-viewer/eval-graph.component.ts` (SVG-Kurve). Siehe
   `src/frontend/CLAUDE.md`.
+* **Buchzüge** (0.522.0): `GameEvalsDto.BookPlies` = die Halbzüge, deren Stellung DANACH in einem für die Erweiterung
+  markierten Repertoire (`UseForExtension`, alle Arten, Zugumstellungen) des AUFRUFERS steht, vor der Abweichung —
+  `RepertoireAnalyzeService.BookPliesAsync` (dasselbe gecachte Positions-Set wie die Extension-Abweichungsanalyse).
+  Anonym leer — ein Teilen-Link darf nicht verraten, was der Teilende vorbereitet hat. Der Client zeigt die Klasse
+  „book" (schlägt jede andere, Grundklasse + Genauigkeit bleiben), der Fehler-Trainer überspringt Buchzüge.
 * **Computer-Linien** (0.521.0): `GameEvalCandidateDto.Pv` = die Variante der Engine je Kandidat (UCI ROH vom
   Broker, Rochade ggf. König-schlägt-Turm — der Client spielt sie nach, `normalizeCastlingUci`), abgelegt in
   `CandidatesJson` als `"pv":[…]` (`BrokerCandidates.MaxPvPlies` 16), gelesen mit `BrokerCandidates.PvsFromJson`.

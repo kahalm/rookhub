@@ -403,6 +403,28 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(expected, evals!.EtaMinutes);
     }
 
+    /// <summary>Buchzuege (0.522.0): aus den fuer die Erweiterung markierten Repertoires des AUFRUFERS — anonym keine,
+    /// sonst verriete ein Teilen-Link, was der Teilende vorbereitet hat.</summary>
+    [Fact]
+    public async Task Evals_Buchzuege_ausDenErweiterungsRepertoiresDesAufrufers_anonymKeine()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);                       // 1.e4 c5 2.Nf3 d6
+        await _svc.AnalyzeAsync(owner.Id, game.Id);                 // legt die Stellungen an
+        _db.Repertoires.Add(new Repertoire
+        {
+            UserId = owner.Id, Name = "Sizilianisch", Kind = RepertoireKind.Opening, UseForExtension = true,
+            Files = { new RepertoireFile { FileName = "sic.pgn", PgnContent = "[Event \"x\"]\n\n1. e4 c5 2. Nf3 Nc6 *", FileSize = 40 } },
+        });
+        await _db.SaveChangesAsync();
+
+        var mine = await _svc.GetEvalsAsync(owner.Id, game.Id);
+        var anonymous = await _svc.GetSharedEvalsAsync(game.ShareToken, callerUserId: null);
+
+        Assert.Equal(new[] { 0, 1, 2 }, mine!.BookPlies);            // 2…d6 steht nicht im Repertoire
+        Assert.Empty(anonymous!.BookPlies);
+    }
+
     /// <summary>Anonym gibt es NUR die verknuepfte Analyse — ohne Verknuepfung nichts, auch wenn
     /// irgendwer dieselbe Partie gerechnet hat.</summary>
     [Fact]

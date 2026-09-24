@@ -65,6 +65,11 @@ export interface GameEvals {
   /** Bewertung nach dem letzten Zug (für die Endstellung gibt es keine eigene Zeile). */
   final?: EvalScore | null;
   /**
+   * „Buchzüge" (seit 0.522.0): Halbzüge (0-basiert), die in einem für die Erweiterung markierten Repertoire DES
+   * BETRACHTERS stehen — der Server rechnet sie (`RepertoireAnalyzeService.BookPliesAsync`), anonym leer.
+   */
+  bookPlies?: number[] | null;
+  /**
    * Hochgerechnete Restdauer in Minuten, solange die Analyse läuft — der Server rechnet sie aus dem
    * Tempo der jüngsten Stellungen DIESER Partie (`GameEvals.EtaMinutes`). Fehlt, solange es noch kein
    * Tempo gibt (weniger als zwei Ergebnisse).
@@ -73,11 +78,14 @@ export interface GameEvals {
 }
 
 export type MoveClass =
-  'brilliant' | 'great' | 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'miss' | 'blunder';
+  'brilliant' | 'great' | 'best' | 'excellent' | 'good' | 'book' | 'inaccuracy' | 'mistake' | 'miss' | 'blunder';
 
-/** Reihenfolge der Anzeige (Zähler, Legende) — Miss steht vor Blunder, weil es einen ersetzen kann. */
+/**
+ * Reihenfolge der Anzeige (Zähler, Legende) — wie chess.com: Book zwischen Good und Inaccuracy, Miss vor Blunder,
+ * weil es einen ersetzen kann.
+ */
 export const MOVE_CLASSES: readonly MoveClass[] =
-  ['brilliant', 'great', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder'];
+  ['brilliant', 'great', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'miss', 'blunder'];
 
 /**
  * Farbe je Klasse, chess.com-nah — die EINE Tabelle für Zähler, Abzeichen und die Punkte in der Kurve.
@@ -85,7 +93,7 @@ export const MOVE_CLASSES: readonly MoveClass[] =
  * dann zwei gleiche grüne Kästchen nebeneinander.
  */
 export const MOVE_CLASS_COLORS: Readonly<Record<MoveClass, string>> = {
-  brilliant: '#26c2a3', great: '#5b8fd6', best: '#96bc4b', excellent: '#a6c666', good: '#96af8b',
+  brilliant: '#26c2a3', great: '#5b8fd6', best: '#96bc4b', excellent: '#a6c666', good: '#96af8b', book: '#a88865',
   inaccuracy: '#f7c631', mistake: '#e58f2a', miss: '#ee6b55', blunder: '#ca3431',
 };
 
@@ -287,7 +295,7 @@ export interface GameReview {
 
 function emptyCounts(): Record<MoveClass, number> {
   return {
-    brilliant: 0, great: 0, best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 0,
+    brilliant: 0, great: 0, best: 0, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 0,
   };
 }
 
@@ -324,6 +332,7 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
   const series = evalAt.map((s, j) => winPercent(s, whiteToMove(fens[j])));
   const curve = evalAt.map((s, j) => graphHeight(s, whiteToMove(fens[j])));
 
+  const book = new Set(evals?.bookPlies ?? []);
   const moves: (ReviewedMove | null)[] = [];
   // Grundklasse je Halbzug: Miss und Great fragen, ob der GEGNER einen Fehler gemacht hat — das ist seine
   // Grundklasse, nicht sein Etikett (ein Miss war auch ein Fehler, den man bestrafen kann).
@@ -352,6 +361,12 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
         base: cls, prevBase: i > 0 ? base[i - 1] : null, white, winBefore: mb, winAfter: ma,
         row, before, after, fenBefore: fens[i], fenAfter: fens[i + 1], uci,
       }));
+    }
+    // Ein Buchzug ist vorbereitet, nicht gefunden: das Etikett „Book" schlägt jede andere Klasse (wie bei
+    // chess.com). Grundklasse und Genauigkeit bleiben — ein schwacher Repertoirezug kostet weiter Genauigkeit.
+    if (book.has(i)) {
+      move.cls = 'book';
+      delete move.sacrifice;
     }
     moves.push(move);
   }

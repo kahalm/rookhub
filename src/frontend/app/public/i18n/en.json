@@ -2466,7 +2466,8 @@
         "inaccuracy": "Inaccuracy",
         "mistake": "Mistake",
         "miss": "Miss",
-        "blunder": "Blunder"
+        "blunder": "Blunder",
+        "book": "Book"
       },
       "piece": {
         "n": "knight",
@@ -2477,7 +2478,10 @@
       "sacrifice": "Sacrifice: {{piece}} on {{square}}",
       "greatGap": "The only good move — the next best is {{gap}} pawns worse",
       "greatOnly": "The only good move",
-      "missHint": "Missed the chance to punish the opponent's mistake"
+      "missHint": "Missed the chance to punish the opponent's mistake",
+      "bookHint": "In your repertoire (marked for the extension)",
+      "lines": "Computer lines",
+      "arrow": "Best-move arrow"
     },
     "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
     "accuracyHint": "Accuracy white · black (from the game analysis)",

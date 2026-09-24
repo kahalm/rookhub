@@ -22,11 +22,13 @@ public class SavedGameService
 {
     private readonly AppDbContext _db;
     private readonly GameAnalysisService _analyses;
+    private readonly RepertoireAnalyzeService _repertoires;
 
-    public SavedGameService(AppDbContext db, GameAnalysisService analyses)
+    public SavedGameService(AppDbContext db, GameAnalysisService analyses, RepertoireAnalyzeService repertoires)
     {
         _db = db;
         _analyses = analyses;
+        _repertoires = repertoires;
     }
 
     private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
@@ -429,6 +431,20 @@ public class SavedGameService
             .ToList();
         var running = analysis.Status is GameAnalysisStatus.Pending or GameAnalysisStatus.Running;
 
+        // Buchzüge nur für einen angemeldeten Aufrufer und aus SEINEN Repertoires: anonym gibt es keine, und die des
+        // Teilenden bekäme ein Gast nie zu sehen — sonst verriete ein Teilen-Link, was jemand vorbereitet hat.
+        var bookPlies = new List<int>();
+        if (callerUserId is int viewer)
+        {
+            var fens = await _db.GameAnalysisPositions.AsNoTracking()
+                .Where(p => p.GameAnalysisId == analysis.Id)
+                .OrderBy(p => p.Ply)
+                .Select(p => p.Fen)
+                .ToListAsync(ct);
+            // Zeile p+1 ist die Stellung NACH Halbzug p; für den letzten Halbzug gibt es keine (Buch endet vorher).
+            bookPlies = await _repertoires.BookPliesAsync(viewer, fens.Skip(1).ToList());
+        }
+
         return new GameEvalsDto
         {
             Status = analysis.Status.ToString().ToLowerInvariant(),
@@ -438,6 +454,7 @@ public class SavedGameService
             AnalysisId = analysis.Id,
             Plies = plies,
             Final = GameEvals.FinalOf(plies.LastOrDefault(), analysis.PlyCount),
+            BookPlies = bookPlies,
             EtaMinutes = running
                 ? GameEvals.EtaMinutes(
                     rows.Where(r => r.AnalyzedAt != null).Select(r => r.AnalyzedAt!.Value),

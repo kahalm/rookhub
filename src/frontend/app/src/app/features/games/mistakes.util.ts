@@ -161,7 +161,8 @@ export function collectMistakes(
   const rows = new Map((evals.plies ?? []).map(p => [p.ply, p]));
 
   for (const m of review.moves) {
-    if (!m || !TRAINED.has(m.base)) continue;
+    // Ein Buchzug ist ein vorbereiteter Zug aus dem eigenen Repertoire — kein Fehler, den man trainiert.
+    if (!m || m.cls === 'book' || !TRAINED.has(m.base)) continue;
     const row = rows.get(m.ply);
     const best = (row?.bestUci || '').toLowerCase();
     const fenBefore = fens[m.ply];

@@ -26,7 +26,7 @@ import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
  * Sonderklassen dem Great (so auch bei chess.com); Excellent trägt deshalb den Daumen wie dort.
  */
 const SYMBOLS: Record<MoveClass, string> = {
-  brilliant: '!!', great: '!', best: '★', excellent: '👍', good: '✓', inaccuracy: '?!', mistake: '?', miss: '✗',
+  brilliant: '!!', great: '!', best: '★', excellent: '👍', good: '✓', book: '📖', inaccuracy: '?!', mistake: '?', miss: '✗',
   blunder: '??',
 };
 
@@ -76,12 +76,12 @@ const MATE_GAP_PAWNS = 100;
             <span class="toggles">
               <button mat-icon-button type="button" class="toggle lines-toggle" [class.on]="showLines()"
                       [attr.aria-pressed]="showLines()" (click)="toggleLines()"
-                      [matTooltip]="'analysis.lines' | translate" [attr.aria-label]="'analysis.lines' | translate">
+                      [matTooltip]="'games.review.lines' | translate" [attr.aria-label]="'games.review.lines' | translate">
                 <mat-icon>format_list_numbered</mat-icon>
               </button>
               <button mat-icon-button type="button" class="toggle arrow-toggle" [class.on]="showArrow()"
                       [attr.aria-pressed]="showArrow()" (click)="toggleArrow()"
-                      [matTooltip]="'games.review.class.best' | translate" [attr.aria-label]="'games.review.class.best' | translate">
+                      [matTooltip]="'games.review.arrow' | translate" [attr.aria-label]="'games.review.arrow' | translate">
                 <mat-icon>north_east</mat-icon>
               </button>
             </span>
@@ -342,6 +342,7 @@ export class GameReviewComponent {
         : this.translate.instant('games.review.greatOnly');
     }
     if (m.cls === 'miss') return this.translate.instant('games.review.missHint');
+    if (m.cls === 'book') return this.translate.instant('games.review.bookHint');
     return '';
   }
   fmt(score: EvalScore): string { return formatEval(score); }

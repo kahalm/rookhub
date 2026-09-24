@@ -2466,7 +2466,8 @@
         "inaccuracy": "Ungenauigkeit",
         "mistake": "Fehler",
         "miss": "Verpasst",
-        "blunder": "Grober Fehler"
+        "blunder": "Grober Fehler",
+        "book": "Buchzug"
       },
       "piece": {
         "n": "Springer",
@@ -2477,7 +2478,10 @@
       "sacrifice": "Opfer: {{piece}} auf {{square}}",
       "greatGap": "Der einzige gute Zug — der nächstbeste ist {{gap}} Bauern schlechter",
       "greatOnly": "Der einzige gute Zug",
-      "missHint": "Den Fehler des Gegners nicht bestraft"
+      "missHint": "Den Fehler des Gegners nicht bestraft",
+      "bookHint": "In deinem Repertoire (für die Erweiterung markiert)",
+      "lines": "Computer-Linien",
+      "arrow": "Pfeil für den besten Zug"
     },
     "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
     "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)",

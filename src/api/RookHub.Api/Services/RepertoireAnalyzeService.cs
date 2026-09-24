@@ -91,6 +91,33 @@ public class RepertoireAnalyzeService
         return response;
     }
 
+    /// <summary>
+    /// „Buchzüge" einer Partie für den Partie-Rückblick (seit 0.522.0): die Halbzüge, deren Stellung DANACH in einem
+    /// Repertoire des Nutzers steht, das er für die Erweiterung markiert hat (<c>UseForExtension</c>) — über ALLE
+    /// Repertoire-Arten, mit Zugumstellungen. Gezählt wird wie in <see cref="AnalyzeAsync"/>: Buch sind die
+    /// Repertoire-Züge VOR der Abweichung (dem ersten Zug nach dem letzten Repertoire-Zug); ein Zwischenzug, der das
+    /// Repertoire kurz verlässt, ist selbst kein Buchzug.
+    /// </summary>
+    /// <param name="fensAfterPly">Je Halbzug die Stellung DANACH (Index = Halbzug, 0-basiert).</param>
+    public async Task<List<int>> BookPliesAsync(int userId, IReadOnlyList<string> fensAfterPly)
+    {
+        var result = new List<int>();
+        if (fensAfterPly.Count == 0) return result;
+        var sets = new List<HashSet<string>>();
+        foreach (var kind in Enum.GetValues<RepertoireKind>())
+        {
+            var (positions, fileCount) = await GetPositionSetAsync(userId, kind);
+            if (fileCount > 0) sets.Add(positions);
+        }
+        if (sets.Count == 0) return result;
+
+        var inRep = fensAfterPly.Select(f => sets.Any(s => s.Contains(NormalizeFen(f)))).ToList();
+        var lastIn = inRep.LastIndexOf(true);
+        for (var i = 0; i <= lastIn; i++)
+            if (inRep[i]) result.Add(i);
+        return result;
+    }
+
     private async Task<(HashSet<string> Positions, int FileCount)> GetPositionSetAsync(int userId, RepertoireKind kind)
     {
         var key = CacheKey(userId, kind);

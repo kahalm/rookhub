@@ -167,6 +167,17 @@ describe('game-review.util', () => {
       final: { cp: 300 },
     });
 
+    it('Buchzüge: Etikett „book" statt der Klasse, Grundklasse und Genauigkeit bleiben', () => {
+      const r = reviewGame({ ...evals(), bookPlies: [0, 3] }, fens);
+      expect(r.moves[0]!.cls).toBe('book');
+      expect(r.moves[3]!.cls).toBe('book');
+      expect(r.moves[3]!.base).toBe('blunder');          // d6 bleibt in der Rechnung ein grober Fehler …
+      expect(r.moves[3]!.accuracy).toBeCloseTo(38.4009, 3);   // … und kostet weiter Genauigkeit
+      expect(r.white.counts.book).toBe(1);
+      expect(r.black.counts.book).toBe(1);
+      expect(r.black.counts.blunder).toBe(0);
+    });
+
     it('Kurve in Weiß-Sicht, Start bis Endstellung', () => {
       const r = reviewGame(evals(), fens);
       expect(r.series.length).toBe(5);
@@ -186,7 +197,7 @@ describe('game-review.util', () => {
       expect(r.moves[3]!.winAfter).toBeCloseTo(24.8874, 3);    // 100 − 75,1126
       expect(r.moves[3]!.accuracy).toBeCloseTo(38.4009, 3);
       expect(r.black.counts).toEqual({
-        brilliant: 0, great: 0, best: 0, excellent: 1, good: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 1,
+        brilliant: 0, great: 0, best: 0, excellent: 1, good: 0, book: 0, inaccuracy: 0, mistake: 0, miss: 0, blunder: 1,
       });
       expect(r.white.counts.best).toBe(2);
     });
@@ -264,9 +275,9 @@ describe('game-review.util', () => {
     const game = (plies: GameEvalPly[], final: { cp?: number; mate?: number }): GameEvals =>
       ({ status: 'done', analyzed: plies.length, total: plies.length, targetDepth: 20, plies, final });
 
-    it('Reihenfolge der Anzeige', () => {
+    it('Reihenfolge der Anzeige (wie chess.com: Buch zwischen Gut und Ungenauigkeit)', () => {
       expect(MOVE_CLASSES).toEqual(
-        ['brilliant', 'great', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder']);
+        ['brilliant', 'great', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'miss', 'blunder']);
     });
 
     describe('Miss', () => {
@@ -285,7 +296,7 @@ describe('game-review.util', () => {
         expect(r.moves[2]!.winAfter).toBeCloseTo(53.6754, 3);
         expect(r.moves[2]!.accuracy).toBeCloseTo(38.4009, 3);   // ein Etikett, keine andere Zahl
         expect(r.white.counts).toEqual({
-          brilliant: 0, great: 0, best: 1, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, miss: 1, blunder: 0,
+          brilliant: 0, great: 0, best: 1, excellent: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, miss: 1, blunder: 0,
         });
       });
 

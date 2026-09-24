@@ -163,6 +163,10 @@ public class GameEvalsDto
     /// juengsten gerechneten Stellungen DIESER Partie (<see cref="Services.GameEvals.EtaMinutes"/>).
     /// <c>null</c>, solange es noch kein Tempo gibt (weniger als zwei Ergebnisse) oder nichts mehr laeuft.</summary>
     public int? EtaMinutes { get; set; }
+    /// <summary>„Buchzüge" (seit 0.522.0): die Halbzüge (0-basiert), die in einem für die Erweiterung markierten
+    /// Repertoire des AUFRUFERS stehen, vor der Abweichung — siehe <see cref="Services.RepertoireAnalyzeService.BookPliesAsync"/>.
+    /// Leer ohne Anmeldung.</summary>
+    public List<int> BookPlies { get; set; } = new();
 }
 
 /// <summary>Eine gerechnete Stellung — die VOR dem Halbzug <see cref="Ply"/> —, Weiß-Sicht.</summary>

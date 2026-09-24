@@ -40,6 +40,14 @@ describe('mistakes.util', () => {
     expect(mistakesOf(bySide, 'black').map(m => m.ply)).toEqual([3]);
   });
 
+  it('ein Buchzug (eigenes Repertoire) ist keine Aufgabe, auch wenn die Engine ihn einen Fehler nennt', () => {
+    const withBook: GameEvals = { ...withFinal, bookPlies: [3] };
+    const bookReview = reviewGame(withBook, fens, moves.map(m => m.from + m.to + (m.promotion ?? '')));
+    const bySide = collectMistakes(bookReview, withBook, fens, moves);
+    expect(bySide.black).toEqual([]);
+    expect(bySide.white.map(m => m.ply)).toEqual([2]);
+  });
+
   it('haelt zu jedem Fehler den gespielten Zug UND den besseren bereit — als SAN fuers Vorlesen', () => {
     const w = collectMistakes(review, withFinal, fens, moves).white[0];
 
