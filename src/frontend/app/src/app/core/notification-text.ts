@@ -16,6 +16,10 @@ export function notificationText(translate: TranslateService, n: AppNotification
   if (n.type === 'chessable_import_completed' && data['fetchTime']) {
     text += ' · ' + translate.instant('notifications.chessableDuration', data);
   }
+  // Formular-Einlesung: der Server schickt den Grund als Code, lesbar macht ihn erst die Sprache des Nutzers.
+  if (n.type === 'scoresheet_failed') {
+    text = translate.instant(key, { reason: translate.instant('scoresheet.error.' + (data['reason'] || 'failed')) });
+  }
   return text;
 }
 
@@ -90,6 +94,8 @@ export function notificationIcon(n: AppNotification): string {
     case 'catalog_request_approved': return 'check_circle';
     case 'catalog_request_declined': return 'block';
     case 'calc_series_edition_released': return 'event_available';
+    case 'scoresheet_read': return 'document_scanner';
+    case 'scoresheet_failed': return 'error_outline';
     default: return 'notifications';
   }
 }

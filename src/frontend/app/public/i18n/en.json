@@ -127,7 +127,9 @@
       "catalog_request_declined": "Your request for “{{itemName}}” was declined",
       "tournament_nearby_new": "{{count}} new tournaments within {{radiusKm}} km of “{{profileName}}”, e.g. {{firstName}}",
       "tournament_changed": "“{{tournamentName}}” has changed: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
-      "tournament_cancelled": "“{{tournamentName}}” ({{date}}) has disappeared from chess-results — probably cancelled"
+      "tournament_cancelled": "“{{tournamentName}}” ({{date}}) has disappeared from chess-results — probably cancelled",
+      "scoresheet_read": "Scoresheet read: {{white}} – {{black}}, {{moves}} half-moves, {{uncertain}} uncertain",
+      "scoresheet_failed": "Scoresheet could not be read: {{reason}}"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -2590,7 +2592,9 @@
       "dropIllegal": "{{count}} moves are not legal and will be dropped. Save anyway?",
       "saved": "Game saved.",
       "saveFailed": "Saving failed.",
-      "notOnSheet": "not on the sheet"
+      "notOnSheet": "not on the sheet",
+      "ownerSide": "My side",
+      "sideNone": "not set"
     }
   },
   "analysis": {
@@ -3835,6 +3839,10 @@
       "userMonthlyBudget": "Your reading budget for the last 30 days is used up.",
       "globalBudget": "Reading is paused for today — the budget for all users is used up."
     },
-    "budget": "{{percent}} % of your reading budget used"
+    "budget": "{{percent}} % of your reading budget used",
+    "side": "I played",
+    "sideWhite": "White",
+    "sideBlack": "Black",
+    "sideAuto": "automatic"
   }
 }

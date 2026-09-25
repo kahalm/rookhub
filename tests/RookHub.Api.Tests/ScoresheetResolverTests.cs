@@ -88,13 +88,51 @@ public class ScoresheetResolverTests
     }
 
     [Fact]
-    public void Resolve_ModelReadingWins_OverTheWrittenToken_WhenBothAreLegal()
+    public void Resolve_WrittenEntryWins_OverADifferentModelReading_WhenBothAreLegal_AndIsMarked()
     {
+        // Das Modell deutet „Sf6" (Zug 2) als Nd7 — beides legal. Was DASTEHT gewinnt (Beleg 06 des Testsatzes: das
+        // Modell „korrigierte" ein richtiges „De4"), und der Widerspruch wird angezeigt, mit beiden Zügen.
         var sheet = WrittenOnly(SheetGerman.Take(6));
-        // Das Modell liest „Sf6" (Zug 2) als Nd7 — beides legal; die Lesart des Modells kostet 0, der Eintrag 0,2.
         sheet[3] = new ScannedPly("Sf6", "Nd7");
         var r = ScoresheetResolver.Resolve(sheet, German);
-        Assert.Equal("Nd7", r.Plies[3].San);
+        Assert.Equal("Nf6", r.Plies[3].San);
+        Assert.True(r.Plies[3].Uncertain);
+        Assert.Contains(r.Plies[3].Options!, o => o.San == "Nd7");
+    }
+
+    [Fact]
+    public void Resolve_ModelReading_CarriesOn_WhereTheEntryIsIllegal()
+    {
+        // Der Eintrag geht nicht, die Deutung des Modells schon — dann trägt die Deutung (wie „bxa4" → bxc4 in Beleg 01).
+        var sheet = new List<ScannedPly>
+        {
+            new("e4", null), new("d5", null), new("exc5", "exd5"), new("Dxd5", null), new("Sc3", null),
+        };
+        var r = ScoresheetResolver.Resolve(sheet, German);
+        Assert.Equal(new[] { "e4", "d5", "exd5", "Qxd5", "Nc3" }, r.Plies.Select(p => p.San));
+        Assert.Equal(ScoresheetResolver.Matches.Exact, r.Plies[2].Match);
+    }
+
+    [Fact]
+    public void Resolve_ALegalAlternativeNamedByTheModel_MarksThePly_EvenAtHighConfidence()
+    {
+        // 08 des Testsatzes: „high", aber mit Alternative — und die Alternative war die Wahrheit.
+        var sheet = WrittenOnly(SheetGerman.Take(8));
+        sheet[3] = new ScannedPly("Sf6", "Nf6", new[] { "Nh6" }, "high");
+        var r = ScoresheetResolver.Resolve(sheet, German);
+        Assert.Equal("Nf6", r.Plies[3].San);
+        Assert.True(r.Plies[3].Uncertain);
+        Assert.Contains(r.Plies[3].Options!, o => o.San == "Nh6");
+    }
+
+    [Fact]
+    public void Resolve_MediumConfidence_WithoutAlternative_IsNotMarked()
+    {
+        // „medium" vergibt das Modell freigiebig — ohne genannte Alternative ist das kein Grund zu markieren.
+        var sheet = WrittenOnly(SheetGerman.Take(8));
+        sheet[3] = new ScannedPly("Sf6", "Nf6", null, "medium");
+        var r = ScoresheetResolver.Resolve(sheet, German);
+        Assert.False(r.Plies[3].Uncertain);
     }
 
     [Fact]

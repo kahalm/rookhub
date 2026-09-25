@@ -34,6 +34,11 @@ public static class NotificationType
 {
     public const string ChessableImportCompleted = "chessable_import_completed";
     public const string ChessableImportFailed = "chessable_import_failed";
+    /// <summary>Ein Partieformular ist fertig eingelesen (→ Glocke, Link auf die Korrekturseite).
+    /// Daten: white, black, moves, uncertain, unresolved.</summary>
+    public const string ScoresheetRead = "scoresheet_read";
+    /// <summary>Ein Partieformular ließ sich nicht einlesen (→ Glocke, Link auf die Einlese-Seite). Daten: reason.</summary>
+    public const string ScoresheetFailed = "scoresheet_failed";
     public const string FriendRequestReceived = "friend_request_received";
     public const string FriendRequestAccepted = "friend_request_accepted";
     public const string RevengePerformed = "revenge_performed";

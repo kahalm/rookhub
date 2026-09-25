@@ -127,7 +127,9 @@
       "catalog_request_declined": "Deine Anfrage für „{{itemName}}“ wurde abgelehnt",
       "tournament_nearby_new": "{{count}} neue Turniere im Umkreis von {{radiusKm}} km um „{{profileName}}“, z. B. {{firstName}}",
       "tournament_changed": "„{{tournamentName}}“ hat sich geändert: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
-      "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) ist von chess-results verschwunden — vermutlich abgesagt"
+      "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) ist von chess-results verschwunden — vermutlich abgesagt",
+      "scoresheet_read": "Partieformular gelesen: {{white}} – {{black}}, {{moves}} Halbzüge, {{uncertain}} unsicher",
+      "scoresheet_failed": "Partieformular konnte nicht gelesen werden: {{reason}}"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -2590,7 +2592,9 @@
       "dropIllegal": "{{count}} Züge sind nicht legal und fallen weg. Trotzdem speichern?",
       "saved": "Partie gespeichert.",
       "saveFailed": "Speichern fehlgeschlagen.",
-      "notOnSheet": "steht nicht auf dem Formular"
+      "notOnSheet": "steht nicht auf dem Formular",
+      "ownerSide": "Meine Seite",
+      "sideNone": "nicht festgelegt"
     }
   },
   "analysis": {
@@ -3835,6 +3839,10 @@
       "userMonthlyBudget": "Dein Lese-Budget für die letzten 30 Tage ist aufgebraucht.",
       "globalBudget": "Das Einlesen pausiert für heute — das Budget für alle Nutzer ist aufgebraucht."
     },
-    "budget": "{{percent}} % deines Lese-Budgets verbraucht"
+    "budget": "{{percent}} % deines Lese-Budgets verbraucht",
+    "side": "Ich spielte",
+    "sideWhite": "Weiß",
+    "sideBlack": "Schwarz",
+    "sideAuto": "automatisch"
   }
 }

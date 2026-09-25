@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
@@ -22,6 +23,9 @@ export const SCAN_POLL_MS = 3000;
 /** Gemerkte Notationssprache (je Gerät — wer deutsche Formulare schreibt, tut das meistens). */
 export const SCORESHEET_LANG_KEY = 'rookhub_scoresheet_lang';
 
+/** Gemerkte eigene Seite beim Einlesen. */
+export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
+
 /**
  * „Partieformular einlesen" (0.529.0): Foto aufnehmen oder auswählen, Notationssprache wählen, einlesen.
  * Claude liest im Hintergrund; die Seite fragt nach, bis die Partie da ist, und führt dann zur Korrektur
@@ -33,7 +37,7 @@ export const SCORESHEET_LANG_KEY = 'rookhub_scoresheet_lang';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatFormFieldModule,
-    MatSelectModule, MatProgressSpinnerModule, TranslatePipe, HelpHintComponent,
+    MatSelectModule, MatProgressSpinnerModule, MatButtonToggleModule, TranslatePipe, HelpHintComponent,
   ],
   template: `
     <div class="sheet-page">
@@ -77,6 +81,17 @@ export const SCORESHEET_LANG_KEY = 'rookhub_scoresheet_lang';
                 }
               </mat-select>
             </mat-form-field>
+
+            <!-- Die eigene Seite: dreht Partieseite, Teilen-Link und Vorschaubild (0.531.0). „automatisch" sucht den
+                 Profilnamen unter den gelesenen Spielernamen. -->
+            <div class="side">
+              <span class="side-label">{{ 'scoresheet.side' | translate }}</span>
+              <mat-button-toggle-group [value]="side" (change)="setSide($event.value)" hideSingleSelectionIndicator>
+                <mat-button-toggle value="white">{{ 'scoresheet.sideWhite' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="black">{{ 'scoresheet.sideBlack' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="auto">{{ 'scoresheet.sideAuto' | translate }}</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
 
             <div class="actions">
               <button mat-flat-button color="primary" (click)="upload()" [disabled]="!file() || uploading() || !canRead()">
@@ -179,6 +194,8 @@ export const SCORESHEET_LANG_KEY = 'rookhub_scoresheet_lang';
       border: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
     .lang { width: 100%; max-width: 360px; }
     .pieces { opacity: 0.6; font-size: 0.85em; }
+    .side { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .side-label { font-size: 0.9rem; }
     .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .quota { font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .error { color: var(--mat-sys-error, #c62828); margin: 0; }
@@ -219,17 +236,27 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   });
 
   language = 'auto';
+  side: 'white' | 'black' | 'auto' = 'auto';
   private poll?: Subscription;
   private tick?: Subscription;
 
   ngOnInit(): void {
-    try { this.language = localStorage.getItem(SCORESHEET_LANG_KEY) || 'auto'; } catch { /* privat: Vorgabe */ }
+    try {
+      this.language = localStorage.getItem(SCORESHEET_LANG_KEY) || 'auto';
+      const side = localStorage.getItem(SCORESHEET_SIDE_KEY);
+      if (side === 'white' || side === 'black' || side === 'auto') this.side = side;
+    } catch { /* privat: Vorgabe */ }
     this.loadStatus();
     this.loadRecent();
   }
 
   ngOnDestroy(): void {
     this.revokePreview();
+  }
+
+  setSide(side: 'white' | 'black' | 'auto'): void {
+    this.side = side;
+    try { localStorage.setItem(SCORESHEET_SIDE_KEY, side); } catch { /* nur Bequemlichkeit */ }
   }
 
   rememberLanguage(code: string): void {
@@ -252,7 +279,7 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     if (!f || this.uploading()) return;
     this.uploading.set(true);
     this.error.set(null);
-    this.service.upload(f, this.language).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.service.upload(f, this.language, this.side).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: scan => {
         this.uploading.set(false);
         this.file.set(null);

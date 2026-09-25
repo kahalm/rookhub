@@ -449,16 +449,20 @@ public static class ScoresheetResolver
         // Bei „auto" laufen alle Sprachen mit (mit Aufschlag); sonst die gewählte + Englisch.
         var others = sheet == null ? ScoresheetNotation.Languages : english;
 
+        // Was DASTEHT schlägt die Deutung des Modells, wenn beides legal ist (0 gegen 0,1): das Modell „korrigiert"
+        // manchmal einen richtigen Eintrag, weil es die Stellung falsch im Kopf hat (10er-Testsatz, Beleg 06: „De4"
+        // stand da und war richtig, das Modell hielt es für unmöglich und las Dxg4). Die Legalität prüft HIER die
+        // Stellung, nicht das Modell. Ist der Eintrag illegal, trägt die Deutung weiter (Beleg 01: „bxa4" → bxc4).
         foreach (var c in ScoresheetNotation.Candidates(ply.San, null))
         {
-            if (Same(c.Key)) Consider(c.Cost, Matches.Exact);
-            else if (Loose(c.Key)) Consider(c.Cost + 0.3, Matches.Loose);
+            if (Same(c.Key)) Consider(0.1 + c.Cost, Matches.Exact);
+            else if (Loose(c.Key)) Consider(0.4 + c.Cost, Matches.Loose);
         }
         var writtenCands = ScoresheetNotation.Candidates(ply.Written, sheet, others);
         foreach (var c in writtenCands)
         {
-            if (Same(c.Key)) Consider(0.2 + c.Cost, Matches.Written);
-            else if (Loose(c.Key)) Consider(0.5 + c.Cost, Matches.Loose);
+            if (Same(c.Key)) Consider(c.Cost, Matches.Written);
+            else if (Loose(c.Key)) Consider(0.3 + c.Cost, Matches.Loose);
         }
         foreach (var alt in ply.Alternatives ?? Array.Empty<string>())
         {
@@ -548,8 +552,16 @@ public static class ScoresheetResolver
                 .Where(c => c.Uci != step.Uci).OrderBy(c => c.Cost).ToList();
             var smooth = step.Match is Matches.Exact or Matches.Written;
             var close = candidates.Any(c => c.Cost <= step.Cost + 0.5);
-            var doubted = scannedPly.Confidence is "low" or "medium";
-            if (smooth && !close && !doubted) continue;
+            // Zweifel des Modells: „low" allein genügt. „medium" vergibt das Modell freigiebig (05: fast jeder Turmzug,
+            // alle richtig) — dort zählt erst eine genannte ALTERNATIVE, die ein anderer legaler Zug ist: am
+            // 10er-Testsatz stand bei „medium" (02: 7…Se7 statt Sf6) und selbst bei „high" (08: 32…Kh8 statt Kf8) die
+            // Wahrheit genau dort. Und ein Widerspruch zwischen Eintrag und Deutung (beide legal, verschiedene Züge)
+            // zählt nur, wenn beide Lesarten gleich direkt sind — eine Lesart mit Aufschlag (klein geschriebenes „c"
+            // als portugiesischer Springer, Fremdsprache) ist Rauschen, kein Widerspruch.
+            var doubted = scannedPly.Confidence is "low";
+            var conflict = candidates.Any(c => c.Match == Matches.Alternative
+                || (c.Match is Matches.Written or Matches.Exact && c.Cost <= step.Cost + 0.25));
+            if (smooth && !close && !doubted && !conflict && scannedPly.Confidence != "medium") continue;
             points++;
 
             var chosenReach = Math.Min(CleanReach(steps.Skip(i + 1)), ReachHorizon);
@@ -586,7 +598,7 @@ public static class ScoresheetResolver
             }
 
             var bent = step.Match is Matches.Fuzzy or Matches.Guess or Matches.Alternative or Matches.Inserted;
-            ply.Uncertain = bent || scannedPly.Confidence == "low" || rival;
+            ply.Uncertain = bent || doubted || conflict || rival;
             ply.Options = ply.Uncertain ? opts : null;
         }
     }

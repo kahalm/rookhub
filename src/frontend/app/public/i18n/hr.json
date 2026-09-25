@@ -127,7 +127,9 @@
       "catalog_request_declined": "Tvoj zahtjev za „{{itemName}}“ je odbijen",
       "tournament_nearby_new": "{{count}} novih turnira u polumjeru od {{radiusKm}} km oko „{{profileName}}“, npr. {{firstName}}",
       "tournament_changed": "„{{tournamentName}}“ se promijenio: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
-      "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) je nestao s chess-resultsa — vjerojatno otkazan"
+      "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) je nestao s chess-resultsa — vjerojatno otkazan",
+      "scoresheet_read": "Zapisnik učitan: {{white}} – {{black}}, {{moves}} polupoteza, nesigurno: {{uncertain}}",
+      "scoresheet_failed": "Zapisnik nije bilo moguće učitati: {{reason}}"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -2590,7 +2592,9 @@
       "dropIllegal": "Poteza koji nisu legalni i bit će izostavljeni: {{count}}. Ipak spremiti?",
       "saved": "Partija spremljena.",
       "saveFailed": "Spremanje nije uspjelo.",
-      "notOnSheet": "nije na zapisniku"
+      "notOnSheet": "nije na zapisniku",
+      "ownerSide": "Moja strana",
+      "sideNone": "nije postavljeno"
     }
   },
   "analysis": {
@@ -3835,6 +3839,10 @@
       "userMonthlyBudget": "Tvoj budžet za čitanje za zadnjih 30 dana je potrošen.",
       "globalBudget": "Čitanje je za danas pauzirano — budžet za sve korisnike je potrošen."
     },
-    "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje"
+    "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje",
+    "side": "Igrao sam",
+    "sideWhite": "Bijeli",
+    "sideBlack": "Crni",
+    "sideAuto": "automatski"
   }
 }

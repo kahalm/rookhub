@@ -26,11 +26,12 @@ public sealed class ScoresheetReader
     /// am weitesten legal aufgeht, dann die mit den wenigsten unsicheren Stellen) — eine Nachfrage kann auch
     /// schlechter ausfallen.
     /// </summary>
-    /// <param name="beforeCall">Vor JEDEM Modell-Aufruf: darf er starten? (<c>null</c> = ja, sonst der Grund.)
-    /// Vor der ersten Lesung beendet ein Nein die Einlesung, vor einer Nachfrage nur die Nachfragen.</param>
+    /// <param name="beforeCall">Vor JEDEM Modell-Aufruf: darf er starten, und wie lang darf die Antwort werden?
+    /// Vor der ersten Lesung beendet ein Nein die Einlesung, vor einer Nachfrage nur die Nachfragen. Ohne Rückruf
+    /// gilt <see cref="ScoresheetBudget.MaxOutputTokens"/>.</param>
     /// <param name="afterCall">Nach jedem Aufruf: verbrauchte Tokens (auch bei Fehlern) verbuchen.</param>
     public async Task<ReadOutcome> ReadAsync(byte[] jpeg, string language, CancellationToken ct,
-        Func<CancellationToken, Task<string?>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null)
+        Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null)
     {
         ReadOutcome? best = null;
         string? previousJson = null;
@@ -44,12 +45,15 @@ public sealed class ScoresheetReader
                     stuck, previous.Moves[stuck].ToScanned(), previousResolution.StuckFen!,
                     LegalMoves(previousResolution.StuckFen!));
 
-            if (beforeCall != null && await beforeCall(ct) is { } blocked)
+            var allowance = beforeCall != null
+                ? await beforeCall(ct)
+                : new CallAllowance(ScoresheetBudget.MaxOutputTokens, null);
+            if (allowance.Blocked is { } blocked)
             {
                 if (best != null) return best with { Rounds = round - 1 };
                 return new ReadOutcome(null, null, null, null, 0, blocked);
             }
-            var answer = await _vision.ReadAsync(jpeg, instructions, ct);
+            var answer = await _vision.ReadAsync(jpeg, instructions, allowance.MaxTokens, ct);
             if (afterCall != null && (answer.InputTokens > 0 || answer.OutputTokens > 0))
                 await afterCall(answer.InputTokens, answer.OutputTokens, ct);
             if (answer.Error != null || answer.Json == null)

@@ -89,6 +89,13 @@ interface MoveRow { no: number; white: number; black: number | null; }
             <input matInput [(ngModel)]="header.round" name="round" maxlength="40" (ngModelChange)="dirty.set(true)" /></mat-form-field>
           <mat-form-field appearance="outline" class="short"><mat-label>{{ 'games.edit.date' | translate }}</mat-label>
             <input matInput type="date" [(ngModel)]="header.date" name="date" (ngModelChange)="dirty.set(true)" /></mat-form-field>
+          <!-- Meine Seite: dreht Partieseite, Teilen-Link und Vorschaubild — und hier gleich das Brett. -->
+          <mat-form-field appearance="outline" class="short"><mat-label>{{ 'games.edit.ownerSide' | translate }}</mat-label>
+            <mat-select [(ngModel)]="header.ownerSide" name="ownerSide" (ngModelChange)="onSide($event)">
+              <mat-option value="">{{ 'games.edit.sideNone' | translate }}</mat-option>
+              <mat-option value="white">{{ 'scoresheet.sideWhite' | translate }}</mat-option>
+              <mat-option value="black">{{ 'scoresheet.sideBlack' | translate }}</mat-option>
+            </mat-select></mat-form-field>
         </mat-card>
 
         <div class="layout" [class.with-photo]="!!photoUrl()">
@@ -290,7 +297,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
   private photoBlob: Blob | null = null;
   private photoName = 'scoresheet.jpg';
 
-  header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '' };
+  header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '' };
 
   readonly legalCount = computed(() => {
     const idx = this.plies().findIndex(p => p.illegal);
@@ -335,6 +342,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
     this.header = {
       white: game.white ?? '', black: game.black ?? '', result: game.result || '*',
       event: h['Event'] ?? '', site: h['Site'] ?? '', round: h['Round'] ?? '', date: isoDateOf(h['Date']),
+      ownerSide: game.ownerSide ?? '',
     };
     // RepCheck-Partien tragen „RepCheck saved game" als Veranstaltung — das ist keine Angabe des Nutzers.
     if (this.header.event === 'RepCheck saved game') this.header.event = '';
@@ -363,6 +371,11 @@ export class GameEditComponent implements OnInit, OnDestroy {
       const first = this.plies().findIndex(p => p.uncertain && !p.confirmed);
       if (first >= 0) this.cursor.set(first);
     });
+  }
+
+  onSide(side: string): void {
+    this.dirty.set(true);
+    this.flipped.set(side === 'black');
   }
 
   go(i: number): void {
@@ -524,6 +537,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
       site: this.header.site || null,
       round: this.header.round || null,
       date: this.header.date || null,
+      ownerSide: this.header.ownerSide,
       scoresheetPlies: this.isScoresheet() ? toServer(legal) : null,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {

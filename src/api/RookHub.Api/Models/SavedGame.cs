@@ -87,5 +87,13 @@ public class SavedGame
     /// </summary>
     public int? GameAnalysisId { get; set; }
 
+    /// <summary>
+    /// Die Seite des Besitzers, von ihm selbst festgelegt (<c>white</c>/<c>black</c>, 0.531.0) — <c>null</c> = nicht
+    /// festgelegt, dann gilt die Zuordnung über den Plattform-Namen. Dreht die eigene Partieseite, den Teilen-Link und
+    /// das Link-Vorschaubild. Gebraucht bei eingelesenen Formularen (dort gibt es keinen Plattform-Namen), setzbar für
+    /// jede Partie.
+    /// </summary>
+    public string? OwnerSide { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -38,6 +38,14 @@ describe('notificationText', () => {
     expect(notificationText(t, notif('chessable_import_completed')))   // kein fetchTime → kein Suffix
       .toBe('notifications.type.chessable_import_completed');
   });
+
+  it('scoresheet_failed: the reason code is translated into the user\'s language', () => {
+    const seen: [string, object | undefined][] = [];
+    const spy = { instant: (key: string, params?: object) => { seen.push([key, params]); return key === 'scoresheet.error.refused' ? 'abgelehnt' : key; } } as unknown as TranslateService;
+    expect(notificationText(spy, notif('scoresheet_failed', { reason: 'refused' }))).toBe('notifications.type.scoresheet_failed');
+    expect(seen).toContain(['notifications.type.scoresheet_failed', { reason: 'abgelehnt' }]);
+    expect(notificationIcon(notif('scoresheet_read'))).toBe('document_scanner');
+  });
 });
 
 describe('notificationIcon', () => {

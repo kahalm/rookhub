@@ -36,6 +36,10 @@ describe('GameEditComponent', () => {
     expect(c.header.event).toBe('Klub');
     expect(c.header.date).toBe('2026-06-05');
     expect(c.isScoresheet()).toBeFalse();
+    // Meine Seite umstellen dreht das Brett gleich mit.
+    c.header.ownerSide = 'black';
+    c.onSide('black');
+    expect(c.flipped()).toBeTrue();
 
     // 2. Nf3 → 2. Bc4: …Nc6 bleibt legal, und 3. Bb5 ist jetzt der Läufer von c4 — der Rest bleibt stehen.
     c.go(2);
@@ -110,6 +114,7 @@ describe('GameEditComponent', () => {
     expect(body.moves[3].comment).toBe('sheet, not resolved: Lb5');
     expect(body.scoresheetPlies.length).toBe(4);
     expect(body.round).toBe('2');
+    expect(body.ownerSide).toBe('');
     put.flush(detail());
     expect(router.navigate).toHaveBeenCalledWith(['/games', 5]);
   });

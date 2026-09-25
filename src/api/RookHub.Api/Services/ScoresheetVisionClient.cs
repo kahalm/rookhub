@@ -23,7 +23,8 @@ public interface IScoresheetVisionClient
     string Model { get; }
 
     /// <summary>Bild + Auftrag → JSON nach <see cref="ScoresheetPrompt.Schema"/>.</summary>
-    Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, CancellationToken ct = default);
+    /// <param name="maxTokens">Antwort-Deckel (Nachdenken + JSON) — aus dem Budget (<see cref="ScoresheetBudget.Allowance"/>).</param>
+    Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens, CancellationToken ct = default);
 }
 
 /// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Bild + structured output).</summary>
@@ -47,11 +48,8 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
 
     public string Model { get; }
 
-    /// <summary>Deckel der Antwort: Nachdenken + eine Partie mit 150 Halbzügen samt Lesarten. Bestimmt zugleich
-    /// die Reserve je Aufruf im Budget (<see cref="ScoresheetBudget.ReserveMicroUsd"/>).</summary>
-    public const int MaxTokens = 24000;
-
-    public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, CancellationToken ct = default)
+    public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+        CancellationToken ct = default)
     {
         if (_client == null) return new(null, "notConfigured");
         try
@@ -59,7 +57,7 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
             var parameters = new MessageCreateParams
             {
                 Model = Model,
-                MaxTokens = MaxTokens,
+                MaxTokens = Math.Clamp(maxTokens, 1024, ScoresheetBudget.MaxOutputTokens),
                 System = ScoresheetPrompt.System,
                 Thinking = new ThinkingConfigAdaptive(),
                 OutputConfig = new OutputConfig { Format = new JsonOutputFormat { Schema = ScoresheetPrompt.Schema() } },
@@ -102,7 +100,11 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
                     {
                         // Die Ausgabe-Tokens kommen kumuliert mit dem letzten Delta (inklusive Nachdenken).
                         output = (int)messageDelta.Usage.OutputTokens;
-                        if (messageDelta.Delta.StopReason is { } reason) stop = reason.ToString();
+                        // Vergleich über die Gleichheit mit der API-Zeichenkette, NICHT über ToString(): das lieferte
+                        // am 10er-Testsatz für ein abgeschnittenes Ende nicht „max_tokens" — die Einlesung meldete
+                        // „failed" statt „truncated", und dieselbe Lücke hätte eine Ablehnung verschluckt.
+                        if (messageDelta.Delta.StopReason is { } reason)
+                            stop = reason == "refusal" ? "refusal" : reason == "max_tokens" ? "max_tokens" : "end";
                     }
                 }
             }

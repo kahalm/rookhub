@@ -49,6 +49,10 @@ public class ScoresheetScan
     /// <summary>Gewählte Notationssprache (<c>de</c>, <c>en</c>, …) oder <c>auto</c>.</summary>
     public string NotationLanguage { get; set; } = "auto";
 
+    /// <summary>„Ich spielte": <c>white</c>, <c>black</c> oder <c>auto</c> (über die gelesenen Spielernamen und den
+    /// Profilnamen, <see cref="Services.ScoresheetScanService.GuessOwnerSide"/>).</summary>
+    public string OwnerSide { get; set; } = "auto";
+
     public ScoresheetScanStatus Status { get; set; } = ScoresheetScanStatus.Pending;
 
     /// <summary>Grund des Scheiterns als Code (<c>notConfigured</c>, <c>unreadable</c>, <c>noMoves</c>,

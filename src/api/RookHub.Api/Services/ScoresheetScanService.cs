@@ -24,6 +24,7 @@ public class ScoresheetScanService
     private readonly AppDbContext _db;
     private readonly IScoresheetVisionClient _vision;
     private readonly SavedGameService _games;
+    private readonly NotificationService _notifications;
     private readonly ILogger<ScoresheetScanService> _logger;
     private readonly int _dailyLimit;
     private readonly ScoresheetBudget _budget;
@@ -54,14 +55,15 @@ public class ScoresheetScanService
     public const int DefaultDailyLimit = 20;
 
     public ScoresheetScanService(AppDbContext db, IScoresheetVisionClient vision, SavedGameService games,
-        ILogger<ScoresheetScanService> logger, IConfiguration? config = null)
+        NotificationService notifications, ILogger<ScoresheetScanService> logger, IConfiguration? config = null)
     {
         _db = db;
         _vision = vision;
         _games = games;
+        _notifications = notifications;
         _logger = logger;
         _dailyLimit = int.TryParse(config?["Scoresheet:DailyLimit"], out var l) && l > 0 ? l : DefaultDailyLimit;
-        _budget = new ScoresheetBudget(config, ClaudeScoresheetVisionClient.MaxTokens);
+        _budget = new ScoresheetBudget(config);
         _reader = new ScoresheetReader(vision);
     }
 
@@ -85,11 +87,11 @@ public class ScoresheetScanService
         return (userToday, userMonth, globalToday, isAdmin);
     }
 
-    /// <summary>Darf für diesen Nutzer jetzt noch ein Modell-Aufruf starten? <c>null</c> = ja.</summary>
-    internal async Task<string?> BudgetBlockAsync(int userId, CancellationToken ct = default)
+    /// <summary>Darf für diesen Nutzer jetzt noch ein Modell-Aufruf starten, und wie lang darf die Antwort werden?</summary>
+    internal async Task<CallAllowance> AllowanceAsync(int userId, CancellationToken ct = default)
     {
         var (today, month, global, admin) = await SpentAsync(userId, ct);
-        return _budget.Check(today, month, global, admin);
+        return _budget.Allowance(today, month, global, admin);
     }
 
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -125,7 +127,7 @@ public class ScoresheetScanService
     /// <summary>Nimmt ein Foto an und reiht es ein. Absage als Grund-Code (<c>notConfigured</c>,
     /// <c>unsupportedImage</c>, <c>tooLarge</c>, <c>dailyLimit</c>, <c>tooManyOpen</c>, <c>invalidLanguage</c>).</summary>
     public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateAsync(int userId, byte[] data, string? contentType,
-        string? fileName, string? language)
+        string? fileName, string? language, string? ownerSide = null)
     {
         if (!_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
@@ -159,6 +161,7 @@ public class ScoresheetScanService
             ContentType = type,
             FileName = CleanFileName(fileName),
             NotationLanguage = lang,
+            OwnerSide = ownerSide is "white" or "black" ? ownerSide : "auto",
             Status = ScoresheetScanStatus.Pending,
             CreatedAt = DateTime.UtcNow,
         };
@@ -195,7 +198,7 @@ public class ScoresheetScanService
     private IQueryable<ScoresheetScan> ScanHeads() => _db.ScoresheetScans.AsNoTracking().Select(s => new ScoresheetScan
     {
         Id = s.Id, UserId = s.UserId, SavedGameId = s.SavedGameId, ContentType = s.ContentType, FileName = s.FileName,
-        NotationLanguage = s.NotationLanguage, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
+        NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
         Model = s.Model, Attempts = s.Attempts, Rounds = s.Rounds, CreatedAt = s.CreatedAt, StartedAt = s.StartedAt,
         FinishedAt = s.FinishedAt,
     });
@@ -263,7 +266,7 @@ public class ScoresheetScanService
         if (jpeg == null) { await FailAsync(scan, "unreadable", ct); return; }
 
         var outcome = await _reader.ReadAsync(jpeg, scan.NotationLanguage, ct,
-            beforeCall: token => BudgetBlockAsync(scan.UserId, token),
+            beforeCall: token => AllowanceAsync(scan.UserId, token),
             afterCall: async (input, output, token) =>
             {
                 // SOFORT verbuchen: stürzt der Worker danach ab, ist das Geld trotzdem ausgegeben.
@@ -281,10 +284,11 @@ public class ScoresheetScanService
         if (r.Plies.Count == 0) { await FailAsync(scan, "noMoves", ct, outcome.Json); return; }
 
         var comments = CommentsFor(r);
+        var side = scan.OwnerSide is "white" or "black" ? scan.OwnerSide : await GuessOwnerSideAsync(scan.UserId, t, ct);
         var game = await _games.CreateGeneratedAsync(scan.UserId, SavedGameService.ScoresheetSource,
             r.Plies.Select(p => p.San).ToList(), comments,
             new GameHeaderInput(Blank(t.Event), Blank(t.Site), Blank(t.DateIso) ?? Blank(t.Date), Blank(t.Round),
-                Blank(t.White), Blank(t.Black), t.Result));
+                Blank(t.White), Blank(t.Black), t.Result), side);
 
         scan.SavedGameId = game.Id;
         scan.TranscriptionJson = outcome.Json;
@@ -302,6 +306,16 @@ public class ScoresheetScanService
         _logger.LogInformation(
             "Formular-Einlesung {ScanId} fertig: Partie {GameId}, {Plies} Halbzüge, {Uncertain} unsicher, {Unresolved} offen, {Rounds} Durchgänge",
             scan.Id, game.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain), r.Unresolved.Count, outcome.Rounds);
+        // Glocke (und Web-Push, wo eingerichtet): das Lesen dauert Minuten, und wer die Seite verlassen hat,
+        // erfährt sonst nicht, dass die Partie da ist. Direkt auf die Korrekturseite — dort ist die Arbeit.
+        await NotifyAsync(scan.UserId, NotificationType.ScoresheetRead, new Dictionary<string, string>
+        {
+            ["white"] = game.White ?? "?",
+            ["black"] = game.Black ?? "?",
+            ["moves"] = r.Plies.Count.ToString(),
+            ["uncertain"] = r.Plies.Count(p => p.Uncertain).ToString(),
+            ["unresolved"] = r.Unresolved.Count.ToString(),
+        }, $"/games/{game.Id}/edit");
     }
 
     /// <summary>
@@ -345,6 +359,48 @@ public class ScoresheetScanService
         scan.FinishedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         _logger.LogWarning("Formular-Einlesung {ScanId} gescheitert: {Reason}", scan.Id, reason);
+        await NotifyAsync(scan.UserId, NotificationType.ScoresheetFailed,
+            new Dictionary<string, string> { ["reason"] = reason }, "/games/scoresheet");
+    }
+
+    /// <summary>Benachrichtigen, ohne dass ein Fehler dabei die Einlesung scheitern lässt.</summary>
+    private async Task NotifyAsync(int userId, string type, Dictionary<string, string> data, string link)
+    {
+        try { await _notifications.CreateAsync(userId, type, data, link); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Benachrichtigung {Type} an User {UserId} fehlgeschlagen", type, userId); }
+    }
+
+    /// <summary>„Ich spielte: automatisch" — welcher gelesene Spielername passt zum Profil?</summary>
+    private async Task<string?> GuessOwnerSideAsync(int userId, ScoresheetTranscription t, CancellationToken ct)
+    {
+        var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId, ct);
+        var username = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync(ct);
+        return GuessOwnerSide(t.White, t.Black,
+            new[] { profile?.LastName, profile?.DisplayName, profile?.FirstName, username });
+    }
+
+    /// <summary>
+    /// Welche Seite gehört dem Nutzer? Seine Namen (Nachname, Anzeigename, Vorname, Benutzername — in dieser Reihenfolge)
+    /// werden in den vom Formular gelesenen Spielernamen gesucht, als ganzes Wort und ohne Groß/klein und Akzente. Nur
+    /// wenn GENAU EINE Seite passt, gilt sie; sonst <c>null</c> (lieber keine Drehung als eine falsche).
+    /// </summary>
+    public static string? GuessOwnerSide(string? white, string? black, IEnumerable<string?> myNames)
+    {
+        static string Norm(string? s) => new string((s ?? string.Empty).Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .Select(c => char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : ' ').ToArray());
+        var w = Norm(white).Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        var b = Norm(black).Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        foreach (var name in myNames)
+        {
+            var words = Norm(name).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(x => x.Length >= 3).ToList();
+            if (words.Count == 0) continue;
+            var inWhite = words.Any(w.Contains);
+            var inBlack = words.Any(b.Contains);
+            if (inWhite && !inBlack) return "white";
+            if (inBlack && !inWhite) return "black";
+        }
+        return null;
     }
 
     // ── Korrekturseite ────────────────────────────────────────────────
@@ -462,6 +518,7 @@ public class ScoresheetScanService
             Error = s.Error,
             SavedGameId = s.SavedGameId,
             NotationLanguage = s.NotationLanguage,
+            OwnerSide = s.OwnerSide,
             FileName = s.FileName,
             CreatedAt = s.CreatedAt,
             FinishedAt = s.FinishedAt,

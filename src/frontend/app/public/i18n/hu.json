@@ -2222,7 +2222,9 @@
       "catalog_request_declined": "A(z) „{{itemName}}” kérésedet elutasították",
       "tournament_nearby_new": "{{count}} új verseny {{radiusKm}} km-en belül — „{{profileName}}”, például {{firstName}}",
       "tournament_changed": "„{{tournamentName}}” megváltozott: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
-      "tournament_cancelled": "„{{tournamentName}}” ({{date}}) eltűnt a chess-resultsról — valószínűleg elmarad"
+      "tournament_cancelled": "„{{tournamentName}}” ({{date}}) eltűnt a chess-resultsról — valószínűleg elmarad",
+      "scoresheet_read": "Játszmalap beolvasva: {{white}} – {{black}}, {{moves}} féllépés, {{uncertain}} bizonytalan",
+      "scoresheet_failed": "A játszmalapot nem sikerült beolvasni: {{reason}}"
     },
     "markAllRead": "Mind megjelölése olvasottként",
     "filter": {
@@ -2852,7 +2854,9 @@
       "dropIllegal": "{{count}} lépés nem szabályos és kimarad. Mégis mented?",
       "saved": "Játszma mentve.",
       "saveFailed": "A mentés nem sikerült.",
-      "notOnSheet": "nincs a lapon"
+      "notOnSheet": "nincs a lapon",
+      "ownerSide": "Az én oldalam",
+      "sideNone": "nincs megadva"
     }
   },
   "analysisJobs": {
@@ -3835,6 +3839,10 @@
       "userMonthlyBudget": "Az elmúlt 30 napra szóló olvasási kereted elfogyott.",
       "globalBudget": "A beolvasás mára szünetel — az összes felhasználó kerete elfogyott."
     },
-    "budget": "az olvasási kereted {{percent}} %-a elfogyott"
+    "budget": "az olvasási kereted {{percent}} %-a elfogyott",
+    "side": "Ezzel játszottam",
+    "sideWhite": "Világos",
+    "sideBlack": "Sötét",
+    "sideAuto": "automatikus"
   }
 }

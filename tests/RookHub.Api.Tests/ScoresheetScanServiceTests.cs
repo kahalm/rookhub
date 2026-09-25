@@ -26,7 +26,8 @@ public class ScoresheetScanServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
         _games = TestServices.SavedGames(_db);
-        _service = new ScoresheetScanService(_db, _vision, _games, NullLogger<ScoresheetScanService>.Instance);
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -40,7 +41,8 @@ public class ScoresheetScanServiceTests : IDisposable
             ["Scoresheet:UserMonthlyUsd"] = userMonthly.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["Scoresheet:GlobalDailyUsd"] = globalDaily.ToString(System.Globalization.CultureInfo.InvariantCulture),
         }).Build();
-        _service = new ScoresheetScanService(_db, _vision, _games, NullLogger<ScoresheetScanService>.Instance, config);
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
     }
 
     /// <summary>Liefert der Reihe nach die hinterlegten Antworten und merkt sich die Aufträge.</summary>
@@ -51,9 +53,12 @@ public class ScoresheetScanServiceTests : IDisposable
         public Queue<ScoresheetVisionResult> Answers { get; } = new();
         public List<string> Instructions { get; } = new();
 
-        public Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, CancellationToken ct = default)
+        public List<int> MaxTokens { get; } = new();
+
+        public Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens, CancellationToken ct = default)
         {
             Instructions.Add(instructions);
+            MaxTokens.Add(maxTokens);
             return Task.FromResult(Answers.Count > 0 ? Answers.Dequeue() : new ScoresheetVisionResult(null, "failed"));
         }
     }
@@ -177,6 +182,12 @@ public class ScoresheetScanServiceTests : IDisposable
         // In der Partienliste trägt die Partie ihre Einlesung (⋮-Menü: Foto anzeigen/herunterladen).
         var list = await _games.ListAsync(u.Id);
         Assert.Equal(scan.Id, list.Single().ScanId);
+
+        // Glocke: fertig gelesen, mit Link direkt auf die Korrekturseite.
+        var note = await _db.Notifications.SingleAsync(n => n.UserId == u.Id);
+        Assert.Equal(NotificationType.ScoresheetRead, note.Type);
+        Assert.Equal($"/games/{game.Id}/edit", note.Link);
+        Assert.Contains("\"moves\":\"66\"", note.DataJson);
     }
 
     [Fact]
@@ -230,6 +241,9 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal("failed", scan.Status);
         Assert.Equal("refused", scan.Error);
         Assert.Empty(_db.SavedGames);
+        var note = await _db.Notifications.SingleAsync();
+        Assert.Equal(NotificationType.ScoresheetFailed, note.Type);
+        Assert.Contains("refused", note.DataJson);
     }
 
     [Fact]
@@ -399,21 +413,23 @@ public class ScoresheetScanServiceTests : IDisposable
     // ── Kostenbremse ────────────────────────────────────────────────────────
 
     [Fact]
-    public void Budget_CostsAndReserve_FollowThePrices()
+    public void Budget_AnswerCap_ComesFromWhatIsLeft()
     {
-        var b = new ScoresheetBudget(null, 24_000);
+        var b = new ScoresheetBudget(null);
         // 5 $ bzw. 25 $ je Million Tokens = 5 bzw. 25 Millionstel Dollar je Token.
         Assert.Equal(10_000 * 5 + 2_000 * 25, b.CostMicroUsd(10_000, 2_000));
-        Assert.Equal(12_000 * 5 + 24_000 * 25, b.ReserveMicroUsd); // 0,66 $
         Assert.Equal(2_000_000, b.UserDailyMicroUsd);
-        Assert.Null(b.Check(0, 0, 0, false));
-        // Ein Aufruf startet nur, wenn der UNGÜNSTIGSTE Fall noch ins Budget passt.
-        Assert.Equal("userDailyBudget", b.Check(2_000_000 - b.ReserveMicroUsd + 1, 0, 0, false));
-        Assert.Equal("userMonthlyBudget", b.Check(0, 10_000_000 - b.ReserveMicroUsd + 1, 0, false));
-        Assert.Equal("globalBudget", b.Check(0, 0, 15_000_000 - b.ReserveMicroUsd + 1, false));
+        // Frisch: der volle Deckel (2 $ − 0,06 $ Eingabe-Reserve reicht für 77 600 Tokens → auf 64 000 gedeckelt).
+        Assert.Equal(new CallAllowance(ScoresheetBudget.MaxOutputTokens, null), b.Allowance(0, 0, 0, false));
+        // 1,5 $ verbraucht: (0,5 − 0,06) / 25e-6 = 17 600 Tokens.
+        Assert.Equal(new CallAllowance(17_600, null), b.Allowance(1_500_000, 1_500_000, 1_500_000, false));
+        // Unter 16 000 Tokens gesperrt — mit dem Grund des knappsten Budgets.
+        Assert.Equal("userDailyBudget", b.Allowance(1_700_000, 0, 0, false).Blocked);
+        Assert.Equal("userMonthlyBudget", b.Allowance(0, 9_700_000, 0, false).Blocked);
+        Assert.Equal("globalBudget", b.Allowance(0, 0, 14_700_000, false).Blocked);
         // Admins: keine Nutzerbudgets, das Gesamtbudget gilt trotzdem.
-        Assert.Null(b.Check(50_000_000, 50_000_000, 0, true));
-        Assert.Equal("globalBudget", b.Check(0, 0, 15_000_000, true));
+        Assert.Null(b.Allowance(50_000_000, 50_000_000, 0, true).Blocked);
+        Assert.Equal("globalBudget", b.Allowance(0, 0, 15_000_000, true).Blocked);
     }
 
     [Fact]
@@ -446,16 +462,16 @@ public class ScoresheetScanServiceTests : IDisposable
         var u = await UserAsync();
         _db.ScoresheetScans.Add(new ScoresheetScan
         {
-            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 500_000,
+            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 600_000,
         });
         await _db.SaveChangesAsync();
 
         var (_, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
-        Assert.Equal("userDailyBudget", reason); // 0,50 $ verbraucht + 0,66 $ Reserve > 1 $
+        Assert.Equal("userDailyBudget", reason); // 0,40 $ übrig reichen nicht für 16 000 Antwort-Tokens + Eingabe
 
         var status = await _service.StatusAsync(u.Id);
         Assert.Equal("userDailyBudget", status.Blocked);
-        Assert.Equal(50, status.BudgetUsedPercent);
+        Assert.Equal(60, status.BudgetUsedPercent);
 
         u.IsAdmin = true;
         await _db.SaveChangesAsync();
@@ -471,7 +487,7 @@ public class ScoresheetScanServiceTests : IDisposable
         var other = await UserAsync("other");
         _db.ScoresheetScans.Add(new ScoresheetScan
         {
-            UserId = rich.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 4_500_000,
+            UserId = rich.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 4_700_000,
         });
         await _db.SaveChangesAsync();
         Assert.Equal("globalBudget", (await _service.CreateAsync(other.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
@@ -485,14 +501,15 @@ public class ScoresheetScanServiceTests : IDisposable
         var broken = Written.ToArray();
         broken[60] = "Zz9";
         broken[61] = "Yy8";
-        // Die erste Lesung kostet 0,5 $ — danach passt die Reserve eines weiteren Aufrufs nicht mehr ins Budget.
-        _vision.Answers.Enqueue(new(Answer(broken), null, 20_000, 16_000));
+        // Die erste Lesung kostet 0,6 $ — danach reicht der Rest nicht mehr für eine brauchbare Antwort.
+        _vision.Answers.Enqueue(new(Answer(broken), null, 20_000, 20_000));
         _vision.Answers.Enqueue(new(Answer(Written), null, 1, 1));
 
         var scan = await UploadAndProcessAsync(u.Id);
 
         Assert.Equal("done", scan.Status);
         Assert.Single(_vision.Instructions);           // keine Nachfrage
+        Assert.Equal(37_600, _vision.MaxTokens[0]);    // (1 $ − 0,06 $) / 25e-6 — der Deckel kam aus dem Budget
         Assert.Equal(60, scan.MoveCount);              // die erste Lesung bleibt
         Assert.Equal(6, scan.UnresolvedCount);
     }
@@ -517,5 +534,61 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal("failed", dto!.Status);
         Assert.Equal("userDailyBudget", dto.Error);
         Assert.Empty(_vision.Instructions);
+    }
+
+    // ── Meine Seite (0.531.0) ────────────────────────────────────────────
+
+    [Fact]
+    public async Task Process_ChosenSide_IsStored_AndTurnsTheSharedView()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", "black");
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+
+        var game = await _db.SavedGames.SingleAsync();
+        Assert.Equal("black", game.OwnerSide);
+        Assert.Equal("black", (await _games.GetAsync(u.Id, game.Id))!.OwnerSide);
+        Assert.Equal("black", (await _games.GetSharedAsync(game.ShareToken))!.OwnerSide);
+    }
+
+    [Fact]
+    public async Task Process_AutoSide_FindsTheProfileNameAmongThePlayers()
+    {
+        var u = await UserAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = u.Id, FirstName = "Patrick", LastName = "Oberschmid" });
+        await _db.SaveChangesAsync();
+        _vision.Answers.Enqueue(new(Answer(Written, white: "Didi", black: "P. Oberschmid"), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("black", (await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId)).OwnerSide);
+    }
+
+    [Theory]
+    [InlineData("Didi", "Patrick", "white")]           // eigener Name „Didi" steht bei Weiß
+    [InlineData("Müller, Jörg", "Huber", "white")]
+    [InlineData("Huber", "Jorg Muller", "black")]      // Akzente egal
+    [InlineData("Muller", "Muller", null)]             // beide Seiten → keine Drehung
+    [InlineData("Maier", "Huber", null)]               // keine Seite
+    public void GuessOwnerSide_MatchesWholeWords_OnlyOneSide(string white, string black, string? expected)
+    {
+        var mine = white == "Didi" ? new[] { "Didi" } : new[] { "Müller", null, "Jörg" };
+        Assert.Equal(expected, ScoresheetScanService.GuessOwnerSide(white, black, mine));
+    }
+
+    [Fact]
+    public async Task Update_SetsAndClearsTheOwnSide()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5" } });
+        var c = Controller(u.Id);
+        var moves = new List<GameMoveInputDto> { new() { San = "e4" }, new() { San = "e5" } };
+
+        var r1 = Assert.IsType<OkObjectResult>((await c.Update(saved.Id, new GameUpdateDto { Moves = moves, OwnerSide = "black" })).Result);
+        Assert.Equal("black", ((SavedGameDetailDto)r1.Value!).OwnerSide);
+        await c.Update(saved.Id, new GameUpdateDto { Moves = moves });          // null = unverändert
+        Assert.Equal("black", (await _db.SavedGames.SingleAsync()).OwnerSide);
+        await c.Update(saved.Id, new GameUpdateDto { Moves = moves, OwnerSide = "" });
+        Assert.Null((await _db.SavedGames.SingleAsync()).OwnerSide);
     }
 }

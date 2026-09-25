@@ -11,6 +11,8 @@ export interface ScoresheetScan {
   error?: string | null;
   savedGameId?: number | null;
   notationLanguage: string;
+  /** „Ich spielte": white/black/auto. */
+  ownerSide?: string;
   fileName?: string | null;
   createdAt: string;
   finishedAt?: string | null;
@@ -92,6 +94,8 @@ export interface GameUpdate {
   round?: string | null;
   /** `yyyy-MM-dd` oder leer. */
   date?: string | null;
+  /** Meine Seite: `white`/`black`; leer = zurücknehmen; weglassen = unverändert. */
+  ownerSide?: string | null;
   scoresheetPlies?: ScoresheetPly[] | null;
 }
 
@@ -108,10 +112,11 @@ export class ScoresheetService {
     return this.http.get<ScoresheetScan[]>(`/api/scoresheets?take=${take}`);
   }
 
-  upload(file: File, language: string): Observable<ScoresheetScan> {
+  upload(file: File, language: string, side: 'white' | 'black' | 'auto' = 'auto'): Observable<ScoresheetScan> {
     const form = new FormData();
     form.append('file', file, file.name);
     form.append('language', language);
+    form.append('side', side);
     return this.http.post<ScoresheetScan>('/api/scoresheets', form);
   }
 

@@ -31,6 +31,9 @@ public class GameUpdateDto
     /// <summary><c>yyyy-MM-dd</c> (oder leer).</summary>
     [MaxLength(20)] public string? Date { get; set; }
 
+    /// <summary>Meine Seite: <c>white</c>/<c>black</c>; leer = Festlegung zurücknehmen; <c>null</c> = unverändert.</summary>
+    [MaxLength(8)] public string? OwnerSide { get; set; }
+
     /// <summary>Nur bei eingelesenen Partien: der Stand der Korrekturseite je Halbzug (Formular-Eintrag,
     /// bestätigt, unsicher, Lesarten) — damit die Seite beim nächsten Öffnen dort weitermacht. Für den Server
     /// Anzeige-Zustand; die Züge selbst kommen aus <see cref="Moves"/>.</summary>
@@ -47,6 +50,7 @@ public class ScoresheetScanDto
     public string? Error { get; set; }
     public int? SavedGameId { get; set; }
     public string NotationLanguage { get; set; } = "auto";
+    public string OwnerSide { get; set; } = "auto";
     public string? FileName { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? FinishedAt { get; set; }

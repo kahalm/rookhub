@@ -1178,6 +1178,7 @@ public class AppDbContext : DbContext
             e.Property(g => g.SourceUrl).HasMaxLength(1000);
             e.Property(g => g.ShareToken).HasMaxLength(32);
             e.Property(g => g.TimeControl).HasMaxLength(32);
+            e.Property(g => g.OwnerSide).HasMaxLength(5);
             e.HasIndex(g => g.ShareToken).IsUnique();
             // Auflistung je User (neueste zuerst).
             e.HasIndex(g => new { g.UserId, g.CreatedAt });
@@ -1196,6 +1197,7 @@ public class AppDbContext : DbContext
             e.Property(s => s.ContentType).HasMaxLength(40);
             e.Property(s => s.FileName).HasMaxLength(200);
             e.Property(s => s.NotationLanguage).HasMaxLength(8);
+            e.Property(s => s.OwnerSide).HasMaxLength(8);
             e.Property(s => s.Error).HasMaxLength(40);
             e.Property(s => s.Model).HasMaxLength(60);
             e.Property(s => s.TranscriptionJson).HasColumnType("LONGTEXT");

@@ -49,12 +49,14 @@ describe('ScoresheetUploadComponent', () => {
     const file = new File([new Uint8Array([1, 2, 3])], 'sheet.jpg', { type: 'image/jpeg' });
     c.onFile({ target: { files: [file], value: '' } } as unknown as Event);
     c.language = 'de';
+    c.setSide('black');
     c.upload();
 
     const post = http.expectOne({ method: 'POST', url: '/api/scoresheets' });
     const body = post.request.body as FormData;
     expect((body.get('file') as File).name).toBe('sheet.jpg');
     expect(body.get('language')).toBe('de');
+    expect(body.get('side')).toBe('black');
     post.flush(scan('pending'));
     http.expectOne('/api/scoresheets/status').flush(status());
     fixture.detectChanges();

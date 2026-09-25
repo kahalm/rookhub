@@ -561,6 +561,8 @@ public class SavedGameService
     /// Logik wie das clientseitige Flippen der eigenen Nachspiel-Ansicht (games-list.isFlipped).</summary>
     private static string? DetermineOwnerSide(SavedGame g, UserProfile? profile)
     {
+        // Selbst festgelegt schlägt jede Vermutung (0.531.0).
+        if (g.OwnerSide is "white" or "black") return g.OwnerSide;
         var myName = g.Source == "lichess" ? profile?.LichessUsername : profile?.ChessComUsername;
         if (string.IsNullOrWhiteSpace(myName)) return null;
         if (string.Equals(g.Black?.Trim(), myName.Trim(), StringComparison.OrdinalIgnoreCase)) return "black";
@@ -582,7 +584,7 @@ public class SavedGameService
     /// am Halbzug-Index wie bei <see cref="PgnWriter.MoveText"/>.
     /// </summary>
     public async Task<SavedGame> CreateGeneratedAsync(int userId, string source, IReadOnlyList<string> sans,
-        IReadOnlyDictionary<int, string>? comments, GameHeaderInput header)
+        IReadOnlyDictionary<int, string>? comments, GameHeaderInput header, string? ownerSide = null)
     {
         var result = header.Result is { } r && AllowedResults.Contains(r) ? r : "*";
         var entity = new SavedGame
@@ -596,6 +598,7 @@ public class SavedGameService
             Pgn = BuildHeaderedPgn(new Dictionary<string, string>(), header, result, sans, null, comments),
             MoveCount = sans.Count,
             HeadersScanned = true,
+            OwnerSide = ownerSide is "white" or "black" ? ownerSide : null,
             ShareToken = await GenerateUniqueTokenAsync(),
             CreatedAt = DateTime.UtcNow,
         };
@@ -641,6 +644,8 @@ public class SavedGameService
         g.Result = result;
         g.PlayedAt = ParseDate(dto.Date) ?? (string.IsNullOrWhiteSpace(dto.Date) ? null : g.PlayedAt);
         g.MoveCount = sans.Count;
+        // null = unverändert; "" oder etwas anderes = Festlegung zurücknehmen.
+        if (dto.OwnerSide != null) g.OwnerSide = dto.OwnerSide is "white" or "black" ? dto.OwnerSide : null;
         if (movesChanged)
         {
             g.GameAnalysisId = null;
@@ -648,7 +653,10 @@ public class SavedGameService
             _db.GameMistakeProgresses.RemoveRange(progress);
         }
         await _db.SaveChangesAsync();
-        return MapDetail(g);
+        var dtoOut = MapDetail(g);
+        var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
+        dtoOut.OwnerSide = DetermineOwnerSide(g, profile);
+        return dtoOut;
     }
 
     /// <summary>Spielt die Züge nach und gibt sie in der Schreibweise des Bretts zurück; wirft beim ersten

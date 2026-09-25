@@ -43,7 +43,8 @@ public class ScoresheetsController : BaseApiController
     [HttpPost]
     [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    public async Task<ActionResult<ScoresheetScanDto>> Upload(IFormFile? file, [FromForm] string? language)
+    public async Task<ActionResult<ScoresheetScanDto>> Upload(IFormFile? file, [FromForm] string? language,
+        [FromForm] string? side)
     {
         if (file == null || file.Length == 0) return BadRequest(new { reason = "noFile", message = "No file." });
         if (file.Length > ScoresheetScanService.MaxUploadBytes)
@@ -55,7 +56,7 @@ public class ScoresheetsController : BaseApiController
             await file.CopyToAsync(ms);
             data = ms.ToArray();
         }
-        var (scan, reason) = await _service.CreateAsync(GetUserId(), data, file.ContentType, file.FileName, language);
+        var (scan, reason) = await _service.CreateAsync(GetUserId(), data, file.ContentType, file.FileName, language, side);
         if (reason == "notConfigured")
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason, message = "Reading is not configured." });
         if (reason != null) return BadRequest(new { reason, message = "Photo not accepted." });
