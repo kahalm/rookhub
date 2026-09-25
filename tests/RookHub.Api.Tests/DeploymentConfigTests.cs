@@ -257,6 +257,22 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void Csp_AllowsBlobImages_ButNoForeignImageOrigin()
+    {
+        // Das Formular-Foto (0.529.0) kommt ueber den HttpClient mit Anmelde-Token und wird als blob:-URL angezeigt;
+        // ohne blob: in img-src blockiert der Browser das Bild lautlos — das Foto-Fenster war leer (0.531.1).
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var csp = Regex.Match(nginx, "Content-Security-Policy \"(?<v>[^\"]+)\"");
+        Assert.True(csp.Success, "CSP fehlt in nginx.conf");
+        var img = Regex.Match(csp.Groups["v"].Value, "img-src (?<v>[^;]+);");
+        Assert.True(img.Success, "img-src fehlt");
+        var sources = img.Groups["v"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Contains("blob:", sources);
+        // Und weiterhin keine fremde Herkunft (Kacheln laufen ueber /tiles/, Schriften ueber /fonts/).
+        Assert.All(sources, s => Assert.Contains(s, new[] { "'self'", "data:", "blob:" }));
+    }
+
+    [Fact]
     public void ScannerPaths_Get404_WhileAppFilesAndApiStayUntouched()
     {
         // 2026-09-17: ein .env-Scan (313 Anfragen) bekam fuer 291 Pfade 200 und die Startseite, weil
