@@ -9,6 +9,29 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Eigener Engine-Broker ausrollen — NPM-Custom-Location zuerst (2026-09-26)
+
+Der eigene Broker (0.537.0, `docs/eigener-engine-broker.md`, CLAUDE.md „Eigener Engine-Broker“) ist gebaut
+und gegen den E2E-Stack mit dem echten Provider gemessen. Fuer Dev/Prod fehlen Schritte AUSSERHALB des
+Repos, alle nur auf Zuruf:
+
+1. **Nginx Proxy Manager, Host rookhub-dev**: Custom Location `/api/external-engine/` mit
+   `proxy_http_version 1.1; proxy_request_buffering off; proxy_buffering off; proxy_cache off;
+   client_max_body_size 0; proxy_read_timeout 3600s; proxy_send_timeout 3600s;`. Ohne sie puffert NPM den
+   Chunked-Upload bis zum Ende der Suche — die erste Zeile kaeme mit der letzten. ACHTUNG: die
+   Registrierung heisst `/api/external-engine` OHNE Schraegstrich; eine NPM-Location mit Schraegstrich
+   darf sie nicht per 301 umleiten (im Frontend-nginx ist genau das passiert, siehe 1114af79) — nach dem
+   Eintragen `curl -si https://rookhub-dev…/api/external-engine` pruefen: 401, nicht 301.
+2. Provider auf dem Server testweise mit `ROOKHUB_URL=https://rookhub-dev.oberschmid.homes` +
+   `ROOKHUB_API_TOKEN` (Token mit Bereich „Engine" im Dev-Profil) starten, 12-Engine-Messung wiederholen
+   (`engine-provider/test/rookhub_broker_e2e.py wait`/`measure` mit `--base https://…` und einer
+   `jwt`-Datei im Arbeitsordner — Kopf des Skripts; ACHTUNG: `measure` setzt die Hintergrund-Liste des Kontos).
+3. Tag → Prod; dieselbe Custom Location auf dem Prod-Host; Provider-Stacks
+   (`/opt/stacks/rookhub-schach-engine` und die zweite Maschine) auf `ROOKHUB_URL`/`ROOKHUB_API_TOKEN`
+   umstellen; im Profil die Hintergrund-Liste auf die `rhe_`-Engines umstellen.
+4. Die Lichess-Registrierungen bleiben liegen (stoeren nicht); der Lichess-Token bleibt optional fuer
+   Cloud-Engines.
+
 ## [~] Sprachmodell auf dem DGX Spark für RookHub (2026-09-25)
 
 Nr. 1 ERLEDIGT (0.533.3): Tipps + Übersetzung über `TextLlm:*` (OpenAI-kompatibel), Dev eingerichtet, Prod-Stack
@@ -248,6 +271,11 @@ rechnet langsamer und spielt trotzdem staerker). Der Maszstab ist Elo aus der Ve
 Stockfish 19 nennt gegen 18 bis zu 44 Elo.
 
 ## [ ] Stellungen pruefen, BEVOR sie an die Engine gehen (2026-09-10)
+
+> **Stand 0.537.0: fuer DIREKT angemeldete Engines erledigt.** Der eigene Broker weist so eine Stellung vor
+> der Schlange ab (`WorkSanitizer`, 400; Test mit genau dieser koeniglosen FEN in `WorkSanitizerTests`), der
+> Auftrags-Worker setzt den Auftrag dann sofort auf `Failed`. Offen bleibt der LICHESS-Weg (Cloud-Engines) —
+> dort geht die Stellung weiter ungeprueft raus.
 
 Stockfish 19 prueft Stellungen streng und **beendet den Prozess** bei einer ungueltigen. Nachgestellt
 mit einer koeniglosen Diagramm-Stellung, wie sie in Chessable-Info-Linien vorkommt:

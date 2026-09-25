@@ -85,6 +85,26 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - `board-fs-actions.component.ts` (features/puzzles) — kleine Icon-Leiste im schwarzen Balken (Tipp/Zurücksetzen/Mausrutscher/Aufgeben) für alle drei Solver, per `<ng-content>` in die Vollbild-Hülle projiziert und über `data-fs-only` nur dort sichtbar.
 - Nicht enthalten: der Stellungs-Editor (`analysis/position-setup.component.ts`) — dort baut die Palette neben dem Brett den Nutzen zunichte.
 
+## Externe Engines: zwei Quellen, eine Liste (0.537.0)
+
+`GET /api/engine/external` liefert Engines, die DIREKT bei RookHub angemeldet sind (eigener Broker, Kennung `rhe_…`,
+`source: 'rookhub'`, `online` = der Provider pollt gerade), und die des Lichess-Kontos (`eei_…`, `source: 'lichess'`,
+`online: null` — Lichess sagt es nicht). Die Regeln stehen EINMAL in `features/analysis/external-engine.service.ts`:
+`engineSourceOf` (Feld, sonst aus der Kennung — ältere Server schicken kein `source`), `isEngineOffline` (nur direkte
+Engines können „offline“ sein) und `engineTagKey` (Zusatz hinter dem Namen in den Auswahlen: „offline“ bzw. „über
+Lichess“; ohne ihn wären gleichnamige Engines beider Quellen nicht zu unterscheiden). Analysebrett, Vergleich und
+Auftragsseite (`analysis-jobs.component.ts`) benutzen diese drei — keine eigene Präfix-Prüfung.
+
+- **Profil-Engine-Karte** (`features/profile/engine-card.component.ts`): zwei Abschnitte. „Direkt mit RookHub“ zeigt
+  die angemeldeten Engines mit Online-Punkt und Entfernen (`DELETE /api/external-engine/{id}`, mit Rückfrage) und
+  verweist auf die API-Tokens derselben Seite; „Über Lichess (für Cloud-Engines)“ ist der bisherige Token-Block. Die
+  Liste wird IMMER geladen, auch ohne Lichess-Token — sonst sähe man direkt angemeldete Engines nie. Hintergrund-
+  Auswahl und Haus-Engine gelten für beide Quellen; `lichessUnreachable` blendet einen Hinweis ein, die direkten
+  Engines bleiben benutzbar.
+- **API-Tokens** (`features/profile/api-tokens.component.ts`): der Anlege-Dialog fragt den BEREICH (`extension` =
+  Browser-Erweiterung, Vorgabe; `engine` = Engine-Provider), die Liste zeigt ihn als Spalte. Ein Engine-Token erreicht
+  serverseitig NUR `/api/external-engine/*`.
+
 ## Offline / PWA (Service Worker)
 
 - **Service Worker**: `@angular/service-worker` (ngsw), Konfig in `ngsw-config.json`, registriert in `app.config.ts` via `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() })` — **nur im Prod-Build aktiv** (`serviceWorker: "ngsw-config.json"` steht in der `production`-Configuration der `angular.json`). Cacht App-Shell, **alle Lazy-Chunks** (assetGroup `app`, prefetch → Routen wie `/puzzles`, `/endless` öffnen offline) + i18n (prefetch) + Google-Fonts (dataGroup, performance). `/api/*` wird **nicht** vom SW gecacht (immer Netz → App fällt offline auf lokale Caches/Queue zurück). **Stockfish (`/assets/stockfish/**`, ~7 MB `.wasm`) ist als eigene assetGroup `engine` (installMode `prefetch`) im SW** → Engine/Analyse/Eval funktionieren offline. Das `.wasm` wird vom dedizierten Worker per Subresource-Fetch geladen (geht über den SW-Cache); falls `WebAssembly.instantiateStreaming` an einem cache-servierten Response scheitert, fällt das Glue auf `WebAssembly.instantiate(arrayBuffer)` zurück (kein Hänger). Hinweis: Der frühere „Berechne…"-Hänger lag NICHT am SW, sondern am UCI-Sequencing in `AnalysisEngineService.analyze` (stop→isready→readyok→position+go; seit 0.64.2 behoben). Hash ist auf 16 MB begrenzt (OOM-Schutz). nginx: SW-Steuerdateien `no-cache`, CSP `connect-src` enthält die Font-Origins (SW-Caching).
@@ -131,7 +151,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/games/scoresheet` | ScoresheetUploadComponent (Partieformular einlesen: Foto + Notationssprache, fragt alle 3 s nach, bis die Partie da ist; die letzten Einlesungen darunter; Literal VOR `/games/:id`) | `authGuard` + `menuGuard('scoresheet')` |
 | `/games/:id/edit` | GameEditComponent (Partie korrigieren: Kopfdaten, Cursor-Brett ersetzen/einfügen/löschen; bei eingelesenen Partien Foto, Formular-Einträge, Lesarten mit Reichweite, Rest wird nach jeder Änderung serverseitig neu aufbereitet — Logik rein in `game-edit.util.ts`) | `authGuard` + `menuGuard('games')` |
 | `/reconstruct/:id` | ReconstructDetailComponent (Arbeitsplatz: Teile links, Brett rechts; Zugfolgen werden lokal mit chess.js mitgespielt, geprüft wird serverseitig) | `authGuard` + `menuGuard('reconstruct')` |
-| `/analysis` | AnalysisComponent | nein (öffentlich; Stockfish-MultiPV-Analyse — lokal per WASM, eingeloggt wahlweise über eine externe Engine des eigenen Lichess-Kontos, siehe „Externe Engine" im Haupt-CLAUDE.md) |
+| `/analysis` | AnalysisComponent | nein (öffentlich; Stockfish-MultiPV-Analyse — lokal per WASM, eingeloggt wahlweise über eine externe Engine — direkt bei RookHub angemeldet oder über das eigene Lichess-Konto, siehe „Externe Engine" im Haupt-CLAUDE.md) |
 | `/install` | InstallComponent | nein (öffentlich; APK-Download + PWA-Install, plattformabhängig via `PwaInstallService`) |
 | `/stats` | StatsComponent | ja (Puzzle-Elo-Kurve + Stats; `GET /api/puzzles/elo-history`) |
 | `/training-goals` | TrainingGoalsComponent | `authGuard` (Tagesziele setzen, Heute-Fortschritt + Ziele-Heatmap; `/api/training-goals/*`) |

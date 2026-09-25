@@ -122,7 +122,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | POST | `/api/profile/discord/link` | Discord verknüpfen via bot-signiertem Token `{ token }` (400 ungültig/abgelaufen, 409 Discord-ID schon vergeben) |
 | DELETE | `/api/profile/discord` | Discord-Verknüpfung trennen |
 | GET | `/api/profile/tokens` | Eigene API-Tokens (ohne Raw-Token) |
-| POST | `/api/profile/tokens` | Neuen Token anlegen `{ name, expiresInDays?, scope? }` — Raw-Token nur einmalig im Response |
+| POST | `/api/profile/tokens` | Neuen Token anlegen `{ name, expiresInDays?, scope? }` — `scope` ∈ `extension` (Vorgabe, nur `/api/extension/*`) / `engine` (nur `/api/external-engine/*`, der Engine-Provider, seit 0.537.0); Raw-Token nur einmalig im Response |
 | DELETE | `/api/profile/tokens/{id}` | Token widerrufen |
 
 ### Freunde (auth)
@@ -560,7 +560,7 @@ flachere), aber mit eigenem Ursprung
   Ergebnis/Zugzahl, gescheitert wieder den Knopf. `GET /api/game-analyses?includeSavedGames=true` nimmt die
   `SavedGame`-Analysen mit — die Seite „Partie-Analysen" zeigt sie (Fortschritt), die Punktepartie-Seite nicht.
 
-Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh_…`). Bei ApiToken muss `scope=extension` sein (sonst 403). Policy-Scheme im Auth-Stack routet das Bearer-Format automatisch zum passenden Handler.
+Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh_…`). Bei ApiToken muss `scope=extension` sein (sonst 403); ein Token mit Scope `engine` erreicht ausschließlich `/api/external-engine/*` (`PatScopeFenceMiddleware.AllowedPrefixesByScope`, siehe „Eigener Engine-Broker“). Policy-Scheme im Auth-Stack routet das Bearer-Format automatisch zum passenden Handler.
 
 CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.chess.com`, `https://lichess.org`, `https://www.chessable.com`, `https://chessable.com` mit `GET`+`POST`, ohne `AllowCredentials` (Auth strikt über Bearer-Header). Gilt für den Userscript-`fetch`-Pfad; die Extension-Variante geht ohnehin CORS-frei über ihren Background-Worker. Die Default-CORS-Policy (Frontend) erlaubt `http://localhost:4200` + `http://localhost:8085`.
 
@@ -1367,12 +1367,13 @@ Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Dat
 |---------|----------|------|-------|
 | GET | `/api/bot/player-progress/{discordId}` | AllowAnonymous + HMAC | Heutiger Trainingsziel-Fortschritt + Puzzle-Stats + jüngster Wochenpost-Status für eine verknüpfte Discord-ID. Signaturheader `X-Bot-Signature: sha256=…` mit `SchachBot:StatsSecret` (== Bot-`ROOKHUB_STATS_SECRET`); 401 bei falscher Signatur, 404 bei nicht verknüpfter Discord-ID |
 
-### Externe Engine (auth) — Lichess-External-Engine-Protokoll als CLIENT
+### Externe Engine (auth) — eigener Broker ODER Lichess-External-Engine-Protokoll als CLIENT
 Das Analysebrett kann statt der Browser-WASM-Engine eine **externe Engine** rechnen lassen: Stockfish auf
 dem eigenen Rechner (offizieller Lichess-Provider, `lichess-org/external-engine`) oder eine gemietete
 Cloud-Engine (stockfishcloud.com tritt selbst als Provider auf; Chessify lässt sich über sein
-UCI-Tunnel-Binary vom Provider wrappen). RookHub implementiert dafür **keine eigene Engine-Infrastruktur**,
-sondern spricht die offene Lichess-API als Client: der User hinterlegt einen Lichess-API-Token (Scope
+UCI-Tunnel-Binary vom Provider wrappen). **Zwei Wege** (seit 0.537.0): der Provider meldet sich DIREKT bei RookHub an (eigener Broker, empfohlen —
+Abschnitt „Eigener Engine-Broker“ unten), oder RookHub spricht die offene Lichess-API als Client (bleibt für
+Cloud-Engines, die sich nur bei Lichess registrieren können): der User hinterlegt einen Lichess-API-Token (Scope
 `engine:read`, AES-verschlüsselt in `LichessEngineCredentials`), RookHub listet damit die auf DIESEM
 Lichess-Konto registrierten External Engines und reicht Analyse-Anfragen an den Broker
 (`engine.lichess.ovh`) durch — der ndjson-Stream geht 1:1 an den Browser.
@@ -1382,17 +1383,123 @@ Dauer-Geheimnis (wer es hat, kann fremde Rechenzeit verbrauchen) und bleibt desh
 (`LichessEngineService`, MemoryCache je `userId:engineId`, TTL 10 min). Nebeneffekt: die CSP
 (`connect-src 'self'`) bleibt unangetastet und die eigene Engine ist auch vom Handy aus nutzbar.
 Logik in `Services/LichessEngineService.cs`; URLs konfigurierbar (`Lichess:ApiUrl`/`Lichess:BrokerUrl`) —
-zugleich die Vorbereitung auf einen späteren RookHub-EIGENEN Broker (Phase 2, gleiche Endpoints).
+zugleich die Vorbereitung auf den RookHub-EIGENEN Broker (seit 0.537.0, gleiche Endpoints, siehe unten).
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/engine/credentials` | Status + maskierter Token (`{ hasCredentials, maskedToken }`) |
 | POST | `/api/engine/credentials` | Lichess-Token setzen/überschreiben `{ token }` (max. 200 Zeichen) |
 | DELETE | `/api/engine/credentials` | Token löschen |
-| GET | `/api/engine/external` | Registrierte External Engines des Kontos — **ohne `clientSecret`** (`{ hasCredentials, tokenInvalid, engines[] }`). Immer 200: `tokenInvalid` sagt, WARUM die Liste leer ist (Lichess wies den Token ab) |
-| POST | `/api/engine/external/{id}/analyse` | Analyse anfordern → **`application/x-ndjson`-Stream** (durchgereicht). Body = `EngineAnalyseRequest` (`sessionId`, `initialFen`, `moves[]`, `multiPv`, GENAU EINES von `depth`/`movetime`/`nodes`, optional `threads`/`hash`); Threads/Hash werden serverseitig auf die von Lichess gemeldeten Engine-Maxima geklemmt, `variant` ist fest `chess`. Abbruch = Verbindung schließen (wandert über den Broker zum Provider) |
+| GET | `/api/engine/external` | Engines BEIDER Quellen — direkt angemeldete (`rhe_…`, `source: "rookhub"`, `online` = Provider hat in den letzten 30 s gepollt) zuerst, dann die des Lichess-Kontos (`eei_…`, `source: "lichess"`, `online: null`) — **ohne `clientSecret`** (`{ hasCredentials, tokenInvalid, lichessUnreachable, engines[] }`). Immer 200: `tokenInvalid` sagt, WARUM die Lichess-Liste leer ist (Lichess wies den Token ab), `lichessUnreachable`, dass Lichess nicht antwortete (die direkten Engines stehen trotzdem da) |
+| POST | `/api/engine/external/{id}/analyse` | Analyse anfordern → **`application/x-ndjson`-Stream** (bei `rhe_…` vom eigenen Broker erzeugt, bei `eei_…` von Lichess durchgereicht — dieselben Zeilen). Body = `EngineAnalyseRequest` (`sessionId`, `initialFen`, `moves[]`, `multiPv`, GENAU EINES von `depth`/`movetime`/`nodes`, optional `threads`/`hash`); Threads/Hash werden serverseitig auf die von Lichess gemeldeten Engine-Maxima geklemmt, `variant` ist fest `chess`. Abbruch = Verbindung schließen (wandert über den Broker zum Provider) |
 
 | PUT | `/api/engine/background` | Hintergrund-Engines für Analyseaufträge setzen `{ engineIds: [] }` (leere Liste = entfernen; jede muss registriert sein → sonst 404, höchstens 8). `GET /api/engine/external` liefert sie als `backgroundEngineIds` mit — der Live-Picker blendet sie aus. **MEHRERE sind der Sinn** (0.460.0): der Worker rechnet je ENGINE genau einen Auftrag, es laufen also so viele Aufträge nebeneinander, wie hier stehen. Mit einer einzigen ist die Warteschlange strikt seriell — auf Dev blockierte EIN zäher Auftrag (Tiefe 22, 5 Linien, 31 min) alle 49 wartenden. Ein neuer Auftrag geht auf die Engine mit der KÜRZESTEN Schlange (`AnalysisJobService.PickBackgroundEngineAsync`), nicht reihum: reihum trifft daneben, sobald eine Engine an einer zähen Stellung hängt |
+
+### Eigener Engine-Broker (0.537.0) — der Provider spricht direkt mit RookHub
+
+**Was**: RookHub bietet die PROVIDER-Seite des Lichess-External-Engine-Protokolls selbst an
+(`Controllers/ExternalEngineController.cs`, `Controllers/TokenController.cs`, `Services/EngineBroker/`). Der
+offizielle Provider (`example-provider.py`, Pin `d0eeb242`) läuft UNVERÄNDERT — nur `--lichess`/`--broker` zeigen
+auf RookHub (`ROOKHUB_URL`), und der Token ist ein RookHub-API-Token mit Scope `engine` (`ROOKHUB_API_TOKEN`,
+im Profil unter „API-Tokens“ anzulegen). Plan, Protokoll und Begründung: `docs/eigener-engine-broker.md`.
+
+**Warum**: jede Suche lief über lichess.org/engine.lichess.ovh. Dreizehn Engines einer Maschine liefen in 429 und
+IP-Sperren (2026-09-11), der Lichess-Broker antwortete 503, sobald gerade kein Provider pollte, und ohne
+Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Lichess-Token und keinen Hop übers Internet.
+
+**Aufbau**:
+* **Registrierung** `ExternalEngineRegistrations`: Kennung `rhe_` + 12 Zeichen, `ClientSecret` (32 Byte base64url,
+  verlässt den Server nie Richtung Browser), `ProviderSelector` = sha256(`"providerSecret:" + secret`) hex — das
+  Geheimnis des Providers selbst wird NIE gespeichert. Identität = der NAME je Konto: der Provider fragt `GET`, dann
+  `PUT` auf den gleichnamigen Eintrag bzw. `POST`; ein `POST` mit exakt vorhandenem Namen aktualisiert ebenfalls
+  (zwei Provider, die gleichzeitig starten). Ein Name, der sich nur in Groß/Klein unterscheidet → 409; höchstens 32
+  je Konto. Anlegen/Ändern NUR mit Engine-Token (der Provider registriert, der Browser nicht → 403), Löschen auch
+  aus dem Profil.
+* **`EngineHub`** (Singleton, Arbeitsspeicher): Schlange je Selector, Übergabe direkt an einen wartenden Poll.
+  `POST /api/external-engine/work` wartet `AcquireWaitSeconds` (10) → 200 `{ id, work, engine }` oder 204. Der
+  Upload `POST /api/external-engine/work/{id}` wird ZEILENWEISE gelesen (`EngineUploadPump`), über `UciLineParser` +
+  `EmitBuilder` (Port von lila-engine `emit.rs`, Commit 60ea115c) in genau die ndjson-Zeilen verwandelt, die der
+  Lichess-Broker schickt, und sofort an den Anfragenden gereicht. `{"keepalive":true}` geht unverändert durch.
+* **`EngineRegistry`** löst eine Kennung auf (lokal/Lichess), **`IEngineBroker`** (`EngineBrokerRouter` →
+  `LocalEngineBroker` bzw. `LichessEngineBroker`) liefert beiden Aufrufern denselben Strom. `EngineController`
+  (live) und `AnalysisJobWorker` (Hintergrund, damit auch `GameAnalysisService`) kennen nur noch diese zwei.
+* Nimmt kein Provider einen Auftrag binnen `ProviderTimeoutSeconds` (15) an, ist das ein **503** wie beim
+  Lichess-Broker (der Worker wechselt dann die Engine); ebenso eine Schlange über `MaxQueuedPerEngine` (64).
+  „online“ = gepollt in den letzten `OnlineWindowSeconds` (30) (`EngineSelectorDirectory`; `LastSeenAt` schreibt
+  `EngineBrokerMaintenanceService` alle 60 s, dazu alle 10 min eine Statistikzeile). Schalter
+  `Engine:LocalBroker:Enabled` (Vorgabe an; aus = `/api/external-engine/*` 404).
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/external-engine` | JWT oder Token `engine` | Registrierte Engines im Lichess-Format; `clientSecret` NUR für den Engine-Token |
+| POST | `/api/external-engine` | Token `engine` | Registrieren `{ name, maxThreads, maxHash, variants, providerSecret, providerData? }` (gleicher Name = Aktualisierung) |
+| PUT | `/api/external-engine/{id}` | Token `engine` | Registrierung ändern (neues `providerSecret` = neuer Selector) |
+| DELETE | `/api/external-engine/{id}` | JWT oder Token `engine` | Engine entfernen (auch aus der Hintergrund-Liste); ein laufender Provider meldet sie beim nächsten Start neu an |
+| POST | `/api/external-engine/work` | **anonym** (Selector ist der Nachweis) | Long-Poll `{ providerSecret }` → 200/204. Unbekannter Selector = 204 nach der Wartezeit |
+| POST | `/api/external-engine/work/{id}` | **anonym** (Auftragskennung) | Chunked-Upload der UCI-Ausgabe bis `bestmove`; 404 = Auftrag weg/abgelaufen |
+| POST | `/api/token/test` | **anonym** + RL | Lichess-kompatible Token-Prüfung (Rumpf `text/plain`, Tokens mit Komma, max. 20) → `{ token: { userId, scopes, expires } \| null }`; Scopes `engine:read,engine:write` NUR für Scope `engine`. Der Provider fragt hier vor dem Start (`preflight.py`) |
+
+**Abweichungen von lila-engine — alle bewusst, alle mit Test:**
+* `EmitBuilder` ist ein TREUER Port. `tools/emit-reference/run.sh` baut das Original (Rust, im Container) und lässt es
+  gegen dieselben Fälle laufen; `EmitBuilderVectorTests` enthält dessen Ausgaben LITERAL. Wer am Emit dreht, lässt das
+  Skript laufen und übernimmt die neuen Ausgaben nicht ungeprüft.
+* Eine unlesbare `info`-Zeile, eine Zeile über 16 KiB und eine unbekannte JSON-Steuerzeile werden ÜBERSPRUNGEN (lila:
+  400), ein Upload-Ende ohne `bestmove` beendet den Strom regulär (lila: 400 — genau diese 400 kostete bis d0eeb242
+  fünf Sekunden je Suche). Warnungen je Upload auf drei gedeckelt. `bestmove (none)` erscheint nicht als Zug.
+* Der `WorkSanitizer` weist VOR der Schlange ab, was keine legale Standardstellung ist (Gegner im Schach, Bauer auf der
+  Grundreihe, Rochaderechte ohne König/Turm, Chess960-Rochaderechte, falsches e.p.-Feld) → **400**. Stockfish 19
+  BEENDET sich bei so einer Stellung samt Provider (siehe Dockerfile); eine krumme Stellung kostete sonst den ganzen
+  Engine-Pool einen Neustart. Der Worker setzt so einen Auftrag bei einer `rhe_`-Engine sofort auf `Failed`
+  („Stellung abgewiesen: …“) statt ihn zwei Minuten zurückzustellen — Warten ändert daran nichts.
+
+**Fallen, an denen es STILL scheitert** (alle mit Test festgenagelt):
+1. **Kestrels Mindest-Datenrate**: ein Upload schweigt zwischen zwei tiefen Iterationen minutenlang (nur das Keepalive
+   alle 15 s); Kestrel bricht Rümpfe unter 240 B/s ab („Reading the request body timed out due to data arriving too
+   slowly“). `Submit` setzt `IHttpMinRequestBodyDataRateFeature.MinDataRate = null` und `[DisableRequestSizeLimit]` —
+   `EngineBrokerTests` (Integration, echter Kestrel) fällt ohne beides um.
+2. **Rate-Limiter**: 13 Provider sind 78 Polls je Minute plus Uploads, der globale Deckel 100/min je IP →
+   `[DisableRateLimiting]` an Poll UND Upload (schaltet auch den globalen Limiter ab — per Test belegt: ohne es 429).
+   Registrierung und `token/test` bleiben limitiert.
+3. **Puffernde Proxys**: der Frontend-nginx hat `location ^~ /api/external-engine/` mit `proxy_request_buffering off`
+   (sonst sammelt nginx den Chunked-Upload bis zum ENDE der Suche und die erste Zeile käme mit der letzten),
+   `proxy_buffering off`, `client_max_body_size 0` und 3600-s-Timeouts (`DeploymentConfigTests`). **Der Nginx Proxy
+   Manager davor puffert Anfragen per Vorgabe genauso** — Dev und Prod brauchen je eine Custom Location
+   `/api/external-engine/` mit denselben Direktiven, sonst läuft der direkte Weg nur in Zeitlupe. Deploy-Schritt
+   außerhalb des Repos, nur auf Zuruf (TODO.md). **Und die Registrierung heißt `/api/external-engine` OHNE
+   Schrägstrich**: für genau diese URI antwortet nginx bei einer Präfix-location mit Schrägstrich und `proxy_pass`
+   SELBST mit 301 auf „…/“ (an den Container-Port). Die exakte `location = /api/external-engine` nimmt ihr die URI
+   weg (`DeploymentConfigTests`). Gefunden erst mit dem echten Provider — der Kestrel-Integrationstest geht an nginx
+   vorbei.
+4. **Die frühe Antwort**: ist der Anfragende weg (Browser zu, Worker bricht ab), antwortet der Broker dem Upload
+   SOFORT 200 — so stoppt der Provider die Engine und holt den nächsten Auftrag. Kestrel meldet den dabei
+   abgebrochenen Rumpf als `BadHttpRequestException` („Unexpected end of request content“), nicht als Abbruch: ob der
+   Anfragende oder der Provider weg ist, entscheidet deshalb der Zustand des Auftrags, nicht der Ausnahmetyp.
+5. **Unbekannter Selector = 204 nach der Wartezeit**, nicht 401/404: ein veralteter Provider pollte sonst im
+   Sekundentakt Fehler (log-watcher `api_scan`), und ein fremder Selector verrät nichts. Polls loggen auf Debug,
+   `/api/external-engine/work` zählt als Systemaufruf (`SystemCallClassifier`).
+6. **Scope-Zaun je Scope** (`PatScopeFenceMiddleware.AllowedPrefixesByScope`): ein Token `engine` erreicht NUR
+   `/api/external-engine/*`, einer `extension` nur `/api/extension/*`. Ein neuer Scope braucht dort einen Eintrag,
+   sonst erreicht er gar nichts.
+7. **Die Selector-Menge liegt im Speicher** (`EngineSelectorDirectory`, alle 60 s bzw. bei Registrierung neu geladen):
+   ein Poll kostet keine Datenbankabfrage. Ein Neustart der API verliert die Schlangen — laufende Uploads enden, der
+   Browser setzt fort (Abriss-Regel des Live-Pfads), der Worker pausiert und startet neu.
+8. `LichessEngineCredentials` trägt die Hintergrund-Liste auch OHNE Lichess-Token (`EncryptedToken` leer):
+   `DELETE /api/engine/credentials` löscht dann nur den Token, die Zeile mit `rhe_`-Hintergrund-Engines bleibt.
+
+**Vertragstest mit dem echten Provider**: `engine-provider/test/rookhub-broker.e2e.sh` (kein CI-Test — baut den
+E2E-Stack und das Provider-Image, läuft rund zehn Minuten). Provider gegen `http://host.docker.internal:18099`
+(Frontend-nginx-Hop), lichess.org/engine.lichess.ovh im Container auf 127.0.0.1 gesperrt; misst erste Zeile,
+`pvs`, `bestmove`, zweiten Auftrag direkt danach und drei Minuten Last mit 12 Hintergrund-Engines; prüft die Logs
+auf 503/ProviderTimeout, abgerissene Uploads und Lichess-Aufrufe. **Gemessen 2026-09-26** (Provider auf
+`--cpus 6`, Live 2 Threads, Hintergrund je 1 Thread/64 MB): Live-Analyse Tiefe 18 × 3 Linien erste Zeile nach
+0,55 s (kalte Engine), der zweite Auftrag direkt danach nach 0,05 s; drei Minuten Last mit 12 Hintergrund-Engines
+(Tiefe 20, 2 Linien): 206 Aufträge angelegt, 182 fertig, 0 gescheitert, 11–18 je Engine; 22 Live-Proben daneben
+erste Zeile im Mittel 0,11 s, höchstens 0,18 s; **0 × 503**, 0 abgerissene Uploads, keine Lichess-Erwähnung.
+
+**Rollout** (nur auf Zuruf): Merge → NPM-Custom-Location auf Dev → Provider mit `ROOKHUB_URL` gegen Dev, Messung
+wiederholen → Tag → NPM-Custom-Location auf Prod → Provider-Stacks auf `ROOKHUB_URL`/`ROOKHUB_API_TOKEN` umstellen
+und die Hintergrund-Liste im Profil auf die `rhe_`-Engines. Die Lichess-Registrierungen bleiben liegen und stören
+nicht; der Lichess-Token bleibt optional für Cloud-Engines.
 
 ### Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist"
 `AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
@@ -1586,7 +1693,9 @@ Die Karte zeigt zusätzlich „rechnet seit m:ss an Tiefe N" ab 5 s ohne neue Ze
 Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Provider — beim Bauen
 auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (eindeutige Herkunft,
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
-und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). **Das Lebenszeichen patcht das
+und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). **Seit 0.537.0 zeigt `ROOKHUB_URL`
+beide Basen (`--lichess`, `--broker`) auf RookHub** und `ROOKHUB_API_TOKEN` ersetzt den Lichess-Token (eigener
+Broker, siehe oben); ohne `ROOKHUB_URL` läuft alles wie bisher über Lichess. **Das Lebenszeichen patcht das
 Image seit 0.478.11 nicht mehr hinein** (bis dahin `patch_provider.py`): der gepinnte Stand (`d0eeb242`, 2026-09-06) erfüllt die zwei Regeln
 des Brokers, an denen RookHub hängt, und `test/provider.test.py` prüft sie gegen einen nachgebauten Broker.
 
@@ -1621,7 +1730,7 @@ dann den Provider — ein älteres Frontend reicht jedes Keepalive als leeres Er
 
 Zwei Fallen, die dort
 bewusst adressiert sind: der Provider-Token braucht `engine:read` **und `engine:write`** (er
-REGISTRIERT die Engine; RookHub selbst genügt `engine:read`) — ohne Vorabprüfung endete das in einem
+REGISTRIERT die Engine; RookHub selbst genügt `engine:read`; ein RookHub-Token mit Scope `engine` meldet beides) — ohne Vorabprüfung endete das in einem
 401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt; und die Registrierung
 wird über den **Namen** identifiziert (gleicher Name = Aktualisierung, zwei Rechner brauchen zwei
 Namen, sonst überschreiben sie sich). **`ENGINE_COUNT` (0.378.0)**: ein Container kann mehrere
@@ -2565,14 +2674,15 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | GameReconstructionParts | EIN Bruchstück: Zugfolge ODER Stellung. **`BlackToMove`** gilt nur für eine Zugfolge OHNE Anschluss (sonst sagt es die Stellung davor bzw. die FEN); beim ersten Teil heißt es „das ist nicht die Eröffnung". `Ordinal` ist die Reihenfolge in der Partie; **`ContinuesPrevious` (Vorgabe false) sagt, ob es NAHTLOS an das vorige anschließt** — ohne das liegt dazwischen eine Lücke, und genau das ist der Normalfall | GameReconstructionId (Cascade), Ordinal, Kind (Moves/Position), Moves? (≤4000, SAN ohne Zugnummern), Fen? (≤120), **Certain (Vorgabe true — „hier bin ich mir nicht sicher" ist die Auskunft; ein per Lückensuche eingesetztes Teil steht auf false)**, FromPly? (Erinnerungs-Hinweis, keine Verankerung), Note? (≤500), CreatedAt, UpdatedAt; Index (GameReconstructionId, Ordinal). Deckel 200 je Rekonstruktion |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |
 | PlayTimeSyncs | Sync-Cursor externe Spielzeit | UserId + Platform (unique, Cascade), LastGameTimestamp (ms), LastSyncedAt, LastError |
-| UserApiTokens | Personal-Access-Tokens für Maschinen-Clients (chess.com-Extension) | UserId (Cascade), Name, TokenHash (SHA-256, UNIQUE), Prefix (12 char), Scope ("extension"), CreatedAt, LastUsedAt, ExpiresAt (nullable); Index (UserId, Name) |
+| UserApiTokens | Personal-Access-Tokens für Maschinen-Clients (chess.com-Extension) | UserId (Cascade), Name, TokenHash (SHA-256, UNIQUE), Prefix (12 char), Scope ("extension" = Browser-Erweiterung, "engine" = Engine-Provider), CreatedAt, LastUsedAt, ExpiresAt (nullable); Index (UserId, Name) |
 | PasswordResetTokens | „Passwort vergessen"-Einmal-Token | UserId (Cascade), TokenHash (SHA-256-Hex, UNIQUE), CreatedAt, ExpiresAt, UsedAt (nullable); Roh-Token nur per Mail, nie gespeichert. Beim Anfordern werden ältere offene Tokens des Users entwertet |
 | MenuItemSettings | Admin-Override der Menü-Sichtbarkeit | ItemKey (PK, string), Level (Enum All/Registered/Groups/Admin); fehlt eine Zeile → Default aus `MenuRegistry` |
 | MenuItemGroupAccesses | Welche Gruppe sieht einen gruppen-gegateten Menüeintrag | Composite PK (ItemKey, GroupId), Cascade von MenuItemSetting + Group, Index GroupId |
 | ChessableCredentials | Per-User Chessable-Bearer (1:1) | UserId (unique, Cascade), EncryptedBearer (TEXT, AES via `EncryptionService`), **ChessableUid? (≤32; beim erfolgreichen `POST /api/chessable/test` aus der Chessable-Antwort BEWIESEN gesetzt — nicht aus dem ungeprüften JWT; verknüpft den User mit seiner Chessable-Identität fürs Claimen anonymer getReview-Linien)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Wird vom `ChessableProxyService` an piratechess durchgereicht |
 | LichessExplorerCacheEntries | Zwischengespeicherte Lichess-Explorer-Antworten des Lochfinders — geteilt über alle Nutzer | CacheKey (≤255, **UNIQUE**; `{Auswahl}\|{Stellung}` mit Auswahl `lichess\|<Elo>\|<Tempo>\|` bzw. `masters\|` und Stellung = erste drei FEN-Felder), Json (TEXT, kompakt: Gesamtzahl + Züge mit uci/san/Partien/Eröffnung), FetchedAt (älter als 90 Tage → wird neu geholt und überschrieben) |
-| LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
-| AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess eei_…), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
+| LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) — trägt seit 0.537.0 auch die Hintergrund-Liste für direkt angemeldete Engines, dann OHNE Token | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`; LEER = kein Lichess-Token hinterlegt), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
+| ExternalEngineRegistrations | Direkt bei RookHub angemeldete External Engines (eigener Broker, 0.537.0) — der Provider registriert sie mit einem API-Token Scope `engine` | Id (PK, ≤20, `rhe_` + 12 Zeichen), UserId (Cascade), Name (≤200, **UNIQUE (UserId, Name)** — die Identität der Registrierung), ClientSecret (≤64, für den Anfragenden; nie im Browser), ProviderSelector (≤64, sha256(`providerSecret:`+Geheimnis) hex, Index — das Geheimnis selbst wird nie gespeichert), MaxThreads, MaxHash, Variants (CSV ≤200), ProviderData? (≤500), CreatedAt, UpdatedAt, LastSeenAt? (letzter Poll, minütlich geschrieben); höchstens 32 je Konto, Konto löschen räumt ab |
+| AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess `eei_…` oder direkt angemeldet `rhe_…`), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |
 | MessageThreads | Metadaten/Zuweisung einer Konversation (1 Zeile je User) | UserId (PK + FK AppUser Cascade), ClaimedByAdminId? (welcher Admin übernommen hat, **ohne FK** → vermeidet doppelte Cascade-Pfade; Name wird beim Abruf aufgelöst), ClaimedAt?; entsteht mit der ersten Nachricht |
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |
@@ -2594,13 +2704,15 @@ init-db.sh                  Erstellt beide DBs + User beim ersten MariaDB-Start
 .env.vpn.example            Umgebungsvariablen-Template (VPN/Production)
 twa/                        Android-TWA-Build-Gerüst (Bubblewrap, GH-Action — prod + dev-Variante)
 engine-provider/            Docker-Setup für den RECHNER DES NUTZERS: verbindet lokales Stockfish
-                            über den Lichess-Broker mit dem Analysebrett (läuft NICHT im Stack)
+                            direkt mit RookHub (eigener Broker) oder über den Lichess-Broker mit dem
+                            Analysebrett (läuft NICHT im Stack)
 src/
   api/RookHub.Api/
     Controllers/            Auth, Profile, Friend, Repertoire, Extension, TournamentProxy,
                             TournamentFavorite, TournamentMonitor, Subscription, BookPuzzle,
                             Course, Calculation, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
-                            Puzzle, Admin, Me, BotStats, Engine, BaseApiController
+                            Puzzle, Admin, Me, BotStats, Engine, ExternalEngine, Token,
+                            BaseApiController
     Services/               Auth, Profile, Friend, Repertoire, CrawlerProxy, PlayerSearch,
                             BookPuzzle, Course, CourseAccess, CourseAuthoring, Calculation,
                             FenListParser, Puzzle, EndlessProgress, TrainingGoal,
@@ -2610,7 +2722,8 @@ src/
                             AdminSeeder, AutoSubscription, RoundMonitor,
                             DailyPuzzleScheduler, Heartbeat,
                             CalcEdition, CalcSeriesAnnounce(+Scheduler), LichessEngine,
-                            EngineActivityTracker, AnalysisJob(+Worker), NdjsonHeartbeatPump
+                            EngineActivityTracker, AnalysisJob(+Worker), NdjsonHeartbeatPump,
+                            EngineBroker/ (eigener Broker: Hub, Registry, Emit, Sanitizer)
     Models/                 EF-Entities (1:1 zum Schema oben)
     DTOs/                   Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
