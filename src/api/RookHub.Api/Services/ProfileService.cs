@@ -280,6 +280,9 @@ public class ProfileService
         // anonymisiert die AppUser-Zeile IN PLACE, der Cascade-FK feuert hier also NICHT — ohne
         // diese Zeile bliebe ein fremder, weiterhin gültiger Lichess-Token dauerhaft in der DB.
         _db.LichessEngineCredentials.RemoveRange(await _db.LichessEngineCredentials.Where(c => c.UserId == userId).ToListAsync());
+        // Engines „RookHub direkt": ihr Selector nimmt sonst weiter Arbeit an (der Provider pollt ja weiter),
+        // und die Zeile trüge den Namen der Maschine eines gelöschten Kontos.
+        _db.ExternalEngineRegistrations.RemoveRange(await _db.ExternalEngineRegistrations.Where(r => r.UserId == userId).ToListAsync());
         _db.PasswordResetTokens.RemoveRange(await _db.PasswordResetTokens.Where(t => t.UserId == userId).ToListAsync());
         // Ein noch offener Uebergabe-Code wuerde sonst nach der Loeschung noch Sekunden lang
         // eine Anmeldung erzeugen (der Einloeser prueft zwar DeletedAt — die Zeile hat hier aber

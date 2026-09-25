@@ -195,4 +195,26 @@ public class ApiTokenServiceTests : IDisposable
         var updated = (await _db.UserApiTokens.SingleAsync()).LastUsedAt;
         Assert.True(updated > stale);
     }
+
+    /// <summary>Scope <c>engine</c> (eigener Engine-Broker): der Provider auf dem Rechner des Nutzers
+    /// bekommt einen EIGENEN Token, keinen Extension-Token.</summary>
+    [Fact]
+    public async Task CreateAsync_AcceptsEngineScope()
+    {
+        var uid = await CreateUserAsync();
+        var created = await _svc.CreateAsync(uid, "Engine-Provider", ApiTokenService.EngineScope, null);
+        Assert.Equal("engine", created.Scope);
+        Assert.Equal("engine", (await _svc.ValidateAsync(created.RawToken))!.Scope);
+    }
+
+    [Fact]
+    public async Task FindValidAsync_DoesNotTouchLastUsedAt()
+    {
+        var uid = await CreateUserAsync();
+        var created = await _svc.CreateAsync(uid, "x", ApiTokenService.EngineScope, null);
+        Assert.NotNull(await _svc.FindValidAsync(created.RawToken));
+        Assert.Null((await _db.UserApiTokens.SingleAsync()).LastUsedAt);
+        Assert.Null(await _svc.FindValidAsync("rkh_unknown"));
+        Assert.Null(await _svc.FindValidAsync("lip_x"));
+    }
 }

@@ -262,6 +262,12 @@ try
     // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
     // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand).
     builder.Services.AddHostedService<AnonymousDataRetentionService>();
+    // Eigener Engine-Broker (Provider auf dem Rechner des Nutzers spricht direkt mit RookHub, ohne Lichess):
+    // Registrierung (rhe_…), Selector-Verzeichnis, Engine-Auflösung beider Quellen.
+    builder.Services.AddSingleton(RookHub.Api.Services.EngineBroker.LocalBrokerOptions.FromConfig(builder.Configuration));
+    builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineSelectorDirectory>();
+    builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.ExternalEngineRegistrationService>();
+    builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.EngineRegistry>();
     builder.Services.AddSingleton<AnalysisJobLive>();
     builder.Services.AddSingleton<AnalysisJobWorker>();
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
@@ -732,7 +738,7 @@ try
 
     // ===== Scope-Zaun für Personal-Access-Tokens (rkh_…) =====
     // Wer einen scope-Claim mitbringt (= PAT, JWTs haben keinen), darf ausschließlich die
-    // Extension-Fläche; alles andere ist 403. Muss NACH UseAuthentication() stehen, sonst ist
+    // Fläche seines Scopes (Extension bzw. Engine-Provider); alles andere ist 403. Muss NACH UseAuthentication() stehen, sonst ist
     // HttpContext.User noch anonym und der Zaun ein No-op. Logik + erlaubte Präfixe bewusst in
     // PatScopeFenceMiddleware statt inline hier: nur so kann PatScopeFenceTests den echten Code
     // prüfen (eine Test-Kopie der Präfix-Liste würde still auseinanderlaufen).

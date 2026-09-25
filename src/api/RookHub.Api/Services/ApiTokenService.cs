@@ -17,7 +17,12 @@ public class ApiTokenService
     public const int RandomBytes = 32;          // → ~43 Char Base64URL ohne Padding
     public const int PrefixLength = 12;         // "rkh_" + 8 zufaellige Zeichen → ApiTokenDto.Prefix
     public const string DefaultScope = "extension";
-    public static readonly string[] AllowedScopes = { "extension" };
+    /// <summary>Scope fuer den Engine-Provider auf dem Rechner des Nutzers: er registriert seine Engine
+    /// (<c>/api/external-engine</c>) und holt dort Arbeit. Bewusst ein EIGENER Scope — ein Token, der auf
+    /// einem fremden Rechner in einer <c>.env</c> liegt, soll nicht auch die Repertoires lesen koennen
+    /// (und umgekehrt ein Extension-Token keine Engines anlegen).</summary>
+    public const string EngineScope = "engine";
+    public static readonly string[] AllowedScopes = { DefaultScope, EngineScope };
     public const int MaxTokensPerUser = 20;
     /// <summary>LastUsedAt wird höchstens einmal pro diesem Fenster persistiert (Auth-Hot-Path-Drossel).</summary>
     public static readonly TimeSpan LastUsedThrottle = TimeSpan.FromMinutes(5);
@@ -110,17 +115,27 @@ public class ApiTokenService
         _logger.LogInformation("ApiToken: revoked user={UserId} id={Id}", userId, id);
     }
 
-    /// <summary>Prueft einen Raw-Token. Setzt <c>LastUsedAt</c> fire-and-forget. <c>null</c> = invalide/abgelaufen.</summary>
-    public async Task<UserApiToken?> ValidateAsync(string rawToken)
+    /// <summary>Prueft einen Raw-Token OHNE ihn als benutzt zu vermerken (fuer <c>POST /api/token/test</c>:
+    /// eine Vorabpruefung ist keine Benutzung). <c>null</c> = unbekannt/abgelaufen.</summary>
+    public async Task<UserApiToken?> FindValidAsync(string rawToken, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(rawToken) || !rawToken.StartsWith(Prefix))
+        if (string.IsNullOrEmpty(rawToken) || !rawToken.StartsWith(Prefix, StringComparison.Ordinal))
             return null;
 
         var hash = ComputeHash(rawToken);
-        var token = await _db.UserApiTokens.FirstOrDefaultAsync(t => t.TokenHash == hash);
+        var token = await _db.UserApiTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
         if (token == null)
             return null;
         if (token.ExpiresAt.HasValue && token.ExpiresAt.Value < DateTime.UtcNow)
+            return null;
+        return token;
+    }
+
+    /// <summary>Prueft einen Raw-Token. Setzt <c>LastUsedAt</c> fire-and-forget. <c>null</c> = invalide/abgelaufen.</summary>
+    public async Task<UserApiToken?> ValidateAsync(string rawToken)
+    {
+        var token = await FindValidAsync(rawToken);
+        if (token == null)
             return null;
 
         // LastUsedAt aktualisieren — aber gedrosselt: jeder authentifizierte Request liefe sonst

@@ -51,3 +51,41 @@ public class EngineAnalyseRequest
     public int? Threads { get; set; }
     public int? Hash { get; set; }
 }
+
+/// <summary>
+/// Rumpf von <c>POST/PUT /api/external-engine</c> — genau das, was der offizielle Lichess-Provider
+/// schickt (<c>{ name, maxThreads, maxHash, variants, providerSecret }</c>), plus das optionale
+/// <c>providerData</c> der Lichess-API.
+/// </summary>
+public class ExternalEngineRegistrationRequest
+{
+    public string? Name { get; set; }
+    public int? MaxThreads { get; set; }
+    public int? MaxHash { get; set; }
+    public List<string>? Variants { get; set; }
+    public string? ProviderSecret { get; set; }
+    public string? ProviderData { get; set; }
+}
+
+/// <summary>
+/// Eine Engine „RookHub direkt" in der Form der Lichess-API (<c>{ id, name, clientSecret, userId,
+/// maxThreads, maxHash, variants, providerData }</c>) — der Provider sucht darin per <c>name</c>.
+/// <c>clientSecret</c> nur für den Provider (API-Token), nicht für den Browser.
+/// </summary>
+public class ExternalEngineRegistrationDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ClientSecret { get; set; }
+    /// <summary>Benutzername des Besitzers (bei Lichess die Konto-Kennung).</summary>
+    public string UserId { get; set; } = string.Empty;
+    public int MaxThreads { get; set; }
+    public int MaxHash { get; set; }
+    public List<string> Variants { get; set; } = [];
+    public string? ProviderData { get; set; }
+}
+
+/// <summary>Antwort von <c>POST /api/token/test</c> je Token (Lichess-Form): <c>scopes</c> kommagetrennt,
+/// <c>expires</c> in Millisekunden seit der Epoche oder <c>null</c>.</summary>
+public record TokenTestInfo(string UserId, string Scopes, long? Expires);

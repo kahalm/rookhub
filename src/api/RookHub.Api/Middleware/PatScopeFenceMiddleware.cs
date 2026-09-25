@@ -7,8 +7,9 @@ namespace RookHub.Api.Middleware;
 
 /// <summary>
 /// Scope-Zaun für Personal-Access-Tokens (<c>rkh_…</c>): wer einen <c>scope</c>-Claim mitbringt
-/// (= PAT, JWTs haben keinen), darf ausschließlich die Extension-Fläche benutzen — alles andere
-/// endet mit 403, noch bevor Routing/Controller den Request sehen.
+/// (= PAT, JWTs haben keinen), darf ausschließlich die Fläche SEINES Scopes benutzen
+/// (<see cref="AllowedPrefixesByScope"/>: <c>extension</c> → Extension-API, <c>engine</c> →
+/// Engine-Provider-API) — alles andere endet mit 403, noch bevor Routing/Controller den Request sehen.
 ///
 /// <para>WARUM: Ein PAT bekommt im <see cref="Services.ApiTokenAuthenticationHandler"/> dieselben
 /// Identitäts-Claims wie ein JWT. Vorher war der Scope NUR im ExtensionController geprüft — damit
@@ -17,16 +18,27 @@ namespace RookHub.Api.Middleware;
 /// automatisch gesperrt statt automatisch offen.</para>
 ///
 /// <para>Der Zaun steht bewusst als eigene Klasse (nicht als Inline-Lambda in <c>Program.cs</c>):
-/// so testet <c>PatScopeFenceTests</c> den ECHTEN Code samt <see cref="AllowedPrefixes"/> statt
+/// so testet <c>PatScopeFenceTests</c> den ECHTEN Code samt <see cref="AllowedPrefixesByScope"/> statt
 /// einer Kopie, die still auseinanderlaufen kann. <c>Program.cs</c> verdrahtet ihn per
 /// <see cref="PatScopeFenceExtensions.UsePatScopeFence"/> NACH <c>UseAuthentication()</c> —
 /// davor wäre <c>HttpContext.User</c> noch anonym und der Zaun ein wirkungsloses No-op.</para>
 /// </summary>
 public sealed class PatScopeFenceMiddleware
 {
-    /// <summary>Einzige Quelle der Wahrheit für die Fläche, die ein PAT benutzen darf.
-    /// Segment-Vergleich: „/api/extensionfoo" ist KEIN Treffer.</summary>
-    public static readonly string[] AllowedPrefixes = ["/api/extension"];
+    /// <summary>Einzige Quelle der Wahrheit für die Fläche, die ein PAT benutzen darf — JE SCOPE.
+    /// Segment-Vergleich: „/api/extensionfoo" ist KEIN Treffer. Ein Scope, der hier nicht steht,
+    /// darf gar nichts (ein künftiger Scope öffnet nicht versehentlich die ganze API).
+    ///
+    /// <para><c>engine</c> (seit dem eigenen Engine-Broker): der Provider auf dem Rechner des Nutzers
+    /// registriert seine Engine und holt Arbeit — ausschließlich unter <c>/api/external-engine</c>. Ein
+    /// solcher Token liegt in einer <c>.env</c> auf fremder Hardware; er darf deshalb weder die
+    /// Extension-Fläche lesen noch umgekehrt ein Extension-Token Engines anlegen.</para></summary>
+    public static readonly IReadOnlyDictionary<string, string[]> AllowedPrefixesByScope =
+        new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["extension"] = ["/api/extension"],
+            ["engine"] = ["/api/external-engine"],
+        };
 
     /// <summary>Maschinenlesbarer Fehlercode im 403-Body (das Frontend/RepCheck unterscheidet
     /// daran „Token hat den falschen Scope" von „Token ungültig").</summary>
@@ -58,16 +70,17 @@ public sealed class PatScopeFenceMiddleware
         _logger = logger;
     }
 
-    /// <summary>Darf ein PAT diesen Pfad benutzen? Segment-basiert und case-insensitiv.</summary>
-    public static bool IsAllowedPath(PathString path) =>
-        AllowedPrefixes.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
+    /// <summary>Darf ein PAT mit diesem Scope diesen Pfad benutzen? Segment-basiert und case-insensitiv.</summary>
+    public static bool IsAllowedPath(PathString path, string scope) =>
+        AllowedPrefixesByScope.TryGetValue(scope, out var prefixes)
+        && prefixes.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
 
     public async Task InvokeAsync(HttpContext context)
     {
         // Der Zaun hängt am VORHANDENSEIN des scope-Claims, nicht an seinem Wert: ein künftiger
         // Scope öffnet damit nicht versehentlich die ganze API.
         var scope = context.User?.FindFirst("scope")?.Value;
-        if (scope == null || IsAllowedPath(context.Request.Path))
+        if (scope == null || IsAllowedPath(context.Request.Path, scope))
         {
             await _next(context);
             return;
@@ -79,7 +92,9 @@ public sealed class PatScopeFenceMiddleware
         await context.Response.WriteAsJsonAsync(new
         {
             error = ErrorCode,
-            detail = $"API tokens (scope '{scope}') may only be used on {string.Join(", ", AllowedPrefixes)}.",
+            detail = AllowedPrefixesByScope.TryGetValue(scope, out var prefixes)
+                ? $"API tokens (scope '{scope}') may only be used on {string.Join(", ", prefixes)}."
+                : $"API tokens (scope '{scope}') may not be used on this API.",
         });
     }
 

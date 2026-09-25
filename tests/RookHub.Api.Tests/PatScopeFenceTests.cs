@@ -117,7 +117,8 @@ public class PatScopeFenceTests
         // hätte eine neue Route mit diesem Präfix still für PATs geöffnet.
         var r = await RunAsync("/api/extensionfoo/secret", scope: "extension");
         Assert.Equal(StatusCodes.Status403Forbidden, r.Status);
-        Assert.False(PatScopeFenceMiddleware.IsAllowedPath("/api/extensionfoo/secret"));
+        Assert.False(PatScopeFenceMiddleware.IsAllowedPath("/api/extensionfoo/secret", "extension"));
+        Assert.False(PatScopeFenceMiddleware.IsAllowedPath("/api/external-enginefoo", "engine"));
     }
 
     [Fact]
@@ -143,12 +144,48 @@ public class PatScopeFenceTests
         Assert.True((await RunAsync("/api/menu", scope: null, authenticated: false)).Passed);
     }
 
-    /// <summary>Die erlaubte Fläche ist genau eine Liste — und die steht in der Middleware.
-    /// Wächst sie, muss das eine bewusste Änderung sein (dieser Test schlägt dann fehl).</summary>
+    /// <summary>Die erlaubte Fläche ist genau EINE Tabelle je Scope — und die steht in der Middleware.
+    /// Wächst sie, muss das eine bewusste Änderung sein (dieser Test schlägt dann fehl). Bewusst
+    /// gewachsen mit dem eigenen Engine-Broker: Scope <c>engine</c> → nur <c>/api/external-engine</c>.</summary>
     [Fact]
-    public void AllowedPrefixes_AreExactlyTheExtensionSurface()
+    public void AllowedPrefixes_AreExactlyTheTokenSurfaces()
     {
-        Assert.Equal(new[] { "/api/extension" }, PatScopeFenceMiddleware.AllowedPrefixes);
+        Assert.Equal(new[] { "engine", "extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope.Keys.Order());
+        Assert.Equal(new[] { "/api/extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["extension"]);
+        Assert.Equal(new[] { "/api/external-engine" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["engine"]);
+    }
+
+    // ---------------------------------------------------------------- Scope „engine" (eigener Broker)
+
+    [Theory]
+    [InlineData("/api/external-engine", "GET")]
+    [InlineData("/api/external-engine", "POST")]
+    [InlineData("/api/external-engine/rhe_abcdefghijkl", "PUT")]
+    [InlineData("/api/external-engine/work", "POST")]
+    public async Task EngineToken_MayUseTheProviderSurface(string path, string method)
+    {
+        var r = await RunAsync(path, scope: "engine", method: method);
+        Assert.True(r.Passed);
+    }
+
+    [Theory]
+    [InlineData("/api/extension/repertoires")]   // ein Token auf fremder Hardware liest keine Repertoires
+    [InlineData("/api/profile")]
+    [InlineData("/api/engine/external")]          // auch nicht die Browser-Seite der Engines
+    public async Task EngineToken_IsFencedOutOfEverythingElse(string path)
+    {
+        var r = await RunAsync(path, scope: "engine");
+        Assert.False(r.Passed);
+        Assert.Equal(StatusCodes.Status403Forbidden, r.Status);
+        Assert.Contains("/api/external-engine", r.Body);
+    }
+
+    [Fact]
+    public async Task ExtensionToken_CannotRegisterEngines()
+    {
+        var r = await RunAsync("/api/external-engine", scope: "extension", method: "POST");
+        Assert.False(r.Passed);
+        Assert.Equal(StatusCodes.Status403Forbidden, r.Status);
     }
 
     // ---------------------------------------------------------------- Logging des Blocks

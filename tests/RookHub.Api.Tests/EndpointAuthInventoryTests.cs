@@ -107,6 +107,7 @@ public class EndpointAuthInventoryTests
         "POST /api/extension/chessable/review-lines/anon",           // ExtensionController.ChessableReviewLinesAnon (uid-based, token-less)
         "POST /api/puzzles/random-batch",                            // PuzzleController.GetRandomBatch
         "POST /api/puzzles/{id}/attempt/anonymous",                  // PuzzleController.RecordAnonymousAttempt
+        "POST /api/token/test",                                      // TokenController.Test (Vorabpruefung des Engine-Providers; der Token steht im RUMPF, Lichess-Form)
         "PUT /api/endless/progress/anonymous",                       // EndlessController.SaveAnonymousProgress
     ];
 

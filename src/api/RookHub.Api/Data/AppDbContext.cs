@@ -120,6 +120,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
+    public DbSet<ExternalEngineRegistration> ExternalEngineRegistrations => Set<ExternalEngineRegistration>();
     public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
@@ -1394,6 +1395,19 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedToken).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<ExternalEngineRegistration>(e =>
+        {
+            // Der Name ist die Identitaet einer Registrierung (der Provider aktualisiert per Name).
+            e.HasIndex(r => new { r.UserId, r.Name }).IsUnique();
+            // Der Broker findet die Engine eines Pollers ueber den Selector — nicht eindeutig: ein fest
+            // gesetztes PROVIDER_SECRET darf mehrere Registrierungen bedienen (wie bei lila-engine).
+            e.HasIndex(r => r.ProviderSelector);
+            e.HasOne(r => r.User)
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LichessExplorerCacheEntry>(e =>

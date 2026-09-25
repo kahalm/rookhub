@@ -29,7 +29,8 @@ public class CreateApiTokenDto
     /// <summary>Optionaler Ablauf in Tagen ab jetzt (NULL = laeuft nie ab).</summary>
     [Range(1, 36500)]
     public int? ExpiresInDays { get; set; }
-    /// <summary>Aktuell unterstuetzt: nur <c>extension</c> (read-only auf /api/extension/*).</summary>
+    /// <summary>Unterstuetzt: <c>extension</c> (Vorgabe; nur /api/extension/*) und <c>engine</c> (nur
+    /// /api/external-engine/* — der Engine-Provider auf dem Rechner des Nutzers).</summary>
     [MaxLength(50)]
     public string? Scope { get; set; }
 }
