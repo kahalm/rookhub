@@ -54,8 +54,11 @@ public abstract class MariaDbClassFixture : IAsyncLifetime
         Schema = await MariaDbSchema.CreateAsync(_prefix);
         await using (var db = Schema.NewContext()) await db.Database.MigrateAsync();
         _tables = await LoadTableNamesAsync();
-        if (_withApp) Factory = new ApiFactory(Schema.ConnectionString);
+        if (_withApp) Factory = CreateFactory(Schema.ConnectionString);
     }
+
+    /// <summary>Wie die Anwendung hochfährt — eine Unterklasse kann Einstellungen oder echten Kestrel wählen.</summary>
+    protected virtual ApiFactory CreateFactory(string connectionString) => new(connectionString);
 
     public async Task DisposeAsync()
     {
@@ -118,4 +121,23 @@ public sealed class CourseStatsFixture() : MariaDbClassFixture("stats", withApp:
 public sealed class QueryTranslationFixture() : MariaDbClassFixture("q", withApp: true);
 public sealed class BookSourceSplitFixture() : MariaDbClassFixture("bsrc", withApp: true);
 public sealed class RepertoireReprocessFixture() : MariaDbClassFixture("rrep", withApp: false);
+
+/// <summary>Eigener Engine-Broker: auf ECHTEM Kestrel (die Fallen des Uploads — Mindest-Datenrate, chunked,
+/// früher Abschluss — gibt es unter TestServer nicht) und mit kurzen Fristen.</summary>
+public sealed class EngineBrokerFixture() : MariaDbClassFixture("brk", withApp: true)
+{
+    protected override ApiFactory CreateFactory(string connectionString)
+    {
+        var factory = new ApiFactory(connectionString, new Dictionary<string, string?>
+        {
+            ["Engine:LocalBroker:AcquireWaitSeconds"] = "1",
+            ["Engine:LocalBroker:ProviderTimeoutSeconds"] = "5",
+            ["AnalysisJobs:TickSeconds"] = "1",
+            ["AnalysisJobs:IdleGraceSeconds"] = "0",
+        });
+        factory.UseKestrel(0);
+        factory.StartServer();
+        return factory;
+    }
+}
 public sealed class CommentSearchFixture() : MariaDbClassFixture("vec", withApp: false);

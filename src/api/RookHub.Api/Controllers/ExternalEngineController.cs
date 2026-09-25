@@ -179,8 +179,9 @@ public class ExternalEngineController : BaseApiController
             }
         });
         _logger.LogInformation(
-            "EngineBroker: Upload {Outcome} engine={EngineId} job={JobId} nach {Seconds:F1} s — {Emits} Zeilen, {Keepalives} Lebenszeichen",
-            result.Outcome, job.EngineId, job.Id, (DateTime.UtcNow - started).TotalSeconds, result.Emits, result.Keepalives);
+            "EngineBroker: Upload {Outcome} engine={EngineId} job={JobId} nach {Seconds:F1} s — {Emits} Zeilen, {Keepalives} Lebenszeichen{Error}",
+            result.Outcome, job.EngineId, job.Id, (DateTime.UtcNow - started).TotalSeconds, result.Emits, result.Keepalives,
+            result.Error is null ? "" : " — " + result.Error);
         return Ok();
     }
 

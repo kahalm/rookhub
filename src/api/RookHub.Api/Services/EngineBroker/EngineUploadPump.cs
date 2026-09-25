@@ -16,7 +16,8 @@ public enum UploadOutcome
     ProviderGone,
 }
 
-public sealed record UploadResult(UploadOutcome Outcome, int Emits, int Keepalives, int SkippedLines);
+/// <param name="Error">Bei <see cref="UploadOutcome.ProviderGone"/>: woran der Upload gerissen ist.</param>
+public sealed record UploadResult(UploadOutcome Outcome, int Emits, int Keepalives, int SkippedLines, string? Error = null);
 
 /// <summary>
 /// Liest den Upload des Providers (<c>POST /api/external-engine/work/{id}</c>, chunked, eine Zeile je
@@ -46,6 +47,7 @@ public static class EngineUploadPump
         var writer = job.Lines.Writer;
         int emits = 0, keepalives = 0, skipped = 0, warnings = 0;
         UploadOutcome outcome;
+        string? error = null;
 
         void Skip(string why, string line)
         {
@@ -118,8 +120,12 @@ public static class EngineUploadPump
                 }
             }
         }
-        catch (OperationCanceledException) when (job.RequesterGone.IsCancellationRequested)
+        catch (Exception ex) when (job.RequesterGone.IsCancellationRequested
+                                   && ex is OperationCanceledException or IOException
+                                       or Microsoft.AspNetCore.Http.BadHttpRequestException)
         {
+            // Kestrel meldet ein abgebrochenes Lesen des Rumpfs nicht immer als Abbruch, sondern auch als
+            // „Unexpected end of request content" — entscheidend ist, dass der ANFRAGENDE weg ist.
             outcome = UploadOutcome.RequesterGone;
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException
@@ -128,6 +134,7 @@ public static class EngineUploadPump
         {
             // Wie lila-engine: der Anfragende bekommt den letzten Stand als Abschluss, dann endet sein Strom.
             outcome = UploadOutcome.ProviderGone;
+            error = $"{ex.GetType().Name}: {ex.Message}";
             emit.Finish(null, null);
             writer.TryWrite(emit.ToJson() + "\n");
         }
@@ -142,7 +149,7 @@ public static class EngineUploadPump
         if (skipped > MaxWarningsPerUpload)
             logger.LogWarning("EngineBroker: {Skipped} Zeilen uebersprungen engine={EngineId} job={JobId}",
                 skipped, job.EngineId, job.Id);
-        return new UploadResult(outcome, emits, keepalives, skipped);
+        return new UploadResult(outcome, emits, keepalives, skipped, error);
     }
 
     /// <summary><c>{"keepalive": …}</c> — ein JSON-Objekt mit genau diesem Feld (lila-engine

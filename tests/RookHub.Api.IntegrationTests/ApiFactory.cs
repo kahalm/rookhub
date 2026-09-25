@@ -18,8 +18,14 @@ namespace RookHub.Api.IntegrationTests;
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
+    private readonly IReadOnlyDictionary<string, string?> _settings;
 
-    public ApiFactory(string connectionString) => _connectionString = connectionString;
+    /// <param name="settings">Zusätzliche Konfiguration dieser Anwendung (z. B. kurze Fristen im Test).</param>
+    public ApiFactory(string connectionString, IReadOnlyDictionary<string, string?>? settings = null)
+    {
+        _connectionString = connectionString;
+        _settings = settings ?? new Dictionary<string, string?>();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -34,6 +40,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         // mit UnauthorizedAccessException. Wegwerf-Verzeichnis je Testlauf.
         builder.UseSetting("DataProtection:KeyPath",
             Path.Combine(Path.GetTempPath(), "rookhub-it-keys", Guid.NewGuid().ToString("N")));
+        foreach (var (key, value) in _settings) builder.UseSetting(key, value);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IHostedService>();
