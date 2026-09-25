@@ -84,6 +84,10 @@ public class DeploymentConfigTests
         // Lochfinder: leer = Nutzer-Token aus dem Profil; ohne die Zeile gäbe es nie einen Server-Token.
         Assert.Contains("LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}", text);
         Assert.Contains("LichessExplorer__LocalUrl: ${LICHESS_EXPLORER_LOCAL_URL:-}", text);
+        // Tipps + Übersetzung über eigene Hardware (DGX Spark) — optional, leer = Claude bzw. aus.
+        Assert.Contains("TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}", text);
+        Assert.Contains("TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}", text);
+        Assert.Contains("TextLlm__Model: ${TEXT_LLM_MODEL:-}", text);
         // Der Log-Sink darf den API-Start nicht blockieren (ES rot ⇒ App startet trotzdem).
         // Nur im api-Block geprüft: Kibana braucht ein gesundes Elasticsearch zu Recht. Die
         // Beispiel-Stacks bringen gar kein ES mit (externe URL) — dort gibt es nichts zu prüfen.

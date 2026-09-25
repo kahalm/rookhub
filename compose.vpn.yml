@@ -167,6 +167,9 @@ services:
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
       Anthropic__TextApiKey: ${ANTHROPIC_TEXT_API_KEY:-}
+      TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}
+      TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}
+      TextLlm__Model: ${TEXT_LLM_MODEL:-}
       # Optional: Lichess-Token fuer den Lochfinder (Eroeffnungs-Explorer, beliebiger Token ohne Scope).
       # Leer -> es gilt der Engine-Token, den ein Nutzer im Profil hinterlegt hat.
       LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}

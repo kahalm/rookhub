@@ -2897,6 +2897,15 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   der beiden und schreibt es hier dazu; `ClaudeJsonClientTests` haelt fest, dass der Konto-Schluessel den Text-Client NICHT
   einschaltet. Der Discord-Bot (`CLAUDE_API_KEY` im Bot-Stack) und der log-watcher (eigener Schluessel) haengen nicht an
   RookHub — der Bot-Chat wurde am 2026-09-25 durch Entfernen des Schluessels abgeschaltet.
+  **Seit 0.533.3 gibt es fuer Tipps und Uebersetzung einen dritten Weg: eigene Hardware.** `TextLlm:BaseUrl`
+  (Compose `TEXT_LLM_BASE_URL`, OpenAI-kompatibel bis `/v1`, z. B. vLLM auf dem DGX Spark) + `TextLlm:ApiKey`
+  (`TEXT_LLM_API_KEY`) + `TextLlm:Model` (`TEXT_LLM_MODEL`, leer = erstes Modell unter `/models` — auf dem Spark
+  wechselt das Modell) → `OpenAiJsonClient`, kostenlos je Aufruf. Die EINE Auswahlregel ist `TextJsonClients.Create`
+  (API und `tools/LibraryImport`): eigene Hardware VOR `Anthropic:TextApiKey`, ohne beides aus. Nachdenken ist dort aus
+  (`chat_template_kwargs.enable_thinking=false`, `TextLlm:Thinking=true` schaltet es ein) — Qwen3.5 braucht auf dem
+  Spark sonst Minuten je Tipp —, gestreamt wegen des 90-s-Proxys vor dem Spark (`OpenAiChat.SendAsync`), dasselbe
+  JSON-Schema wie der Claude-Weg (vLLM erzwingt es per Grammatik; lehnt ein Server es ab, einmal ohne und dann dabei
+  bleiben).
 - **`SourcePgn` liegt in `BookSource` (Tabellensplitting auf `Books`), nie an `Book`** (seit 0.508.3) – Das Roh-PGN
   eines Buchs (Ø ~480 KB, bis 6 MB) hing als Property an `Book` und kam mit JEDEM `.Include(bp => bp.Book)` mit:
   `GET /api/courses/{id}/puzzles` zog 6 MB × 1.881 Linien = 11 GB aus der DB für einen Request, die Prod-API stand

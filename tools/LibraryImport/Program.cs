@@ -784,10 +784,11 @@ async Task<int> TranslateAsync()
 
     var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
     await using var db = NewDb();
-    var claude = new ClaudeJsonClient(config, NullLogger<ClaudeJsonClient>.Instance);
+    // Dieselbe Regel wie die API: eigene Hardware (TextLlm__BaseUrl) vor Claude (Anthropic__TextApiKey).
+    var claude = TextJsonClients.Create(config, NullLoggerFactory.Instance);
     if (!claude.IsConfigured)
     {
-        Console.Error.WriteLine("Anthropic:TextApiKey fehlt (ANTHROPIC__TEXTAPIKEY) — ohne eigenen Schluessel wird nicht uebersetzt.");
+        Console.Error.WriteLine("Weder TextLlm__BaseUrl (eigene Hardware) noch Anthropic__TextApiKey gesetzt — ohne wird nicht uebersetzt.");
         return 1;
     }
     var service = new CommentTranslationService(db, claude, NullLogger<CommentTranslationService>.Instance);

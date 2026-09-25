@@ -306,7 +306,11 @@ try
     builder.Services.AddScoped<BookAdminService>();
     // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
     builder.Services.AddSingleton<StockfishAnalyzer>();
-    builder.Services.AddSingleton<IClaudeJsonClient, ClaudeJsonClient>();
+    // Tipps + Übersetzung: eigene Hardware (TextLlm:BaseUrl, OpenAI-kompatibel — DGX Spark) vor Claude
+    // (Anthropic:TextApiKey); ohne beides aus. Eigener langer Timeout: das Modell streamt minutenlang.
+    builder.Services.AddHttpClient("text-llm", c => c.Timeout = TimeSpan.FromMinutes(30));
+    builder.Services.AddSingleton<IClaudeJsonClient>(sp => TextJsonClients.Create(builder.Configuration,
+        sp.GetRequiredService<ILoggerFactory>(), sp.GetRequiredService<IHttpClientFactory>().CreateClient("text-llm")));
     builder.Services.AddScoped<HintGenerationService>();
     builder.Services.AddScoped<MenuVisibilityService>();
     // Open-Graph-/Link-Vorschau (Brett-Bild + Meta-Tag-Injektion in die SPA-index.html).
