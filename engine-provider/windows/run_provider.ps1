@@ -21,6 +21,13 @@ public class CtrlCImmune {
 "@ -ErrorAction SilentlyContinue
 try { [CtrlCImmune]::Ignore() } catch {}
 
+# DIREKT MIT ROOKHUB (empfohlen): Adresse von RookHub — fuer Anmeldung UND Arbeit. Leer = ueber Lichess.
+# Der Token kommt in beiden Faellen aus der Umgebungsvariable LICHESS_API_TOKEN (der Provider kennt nur
+# diesen Namen): direkt = der RookHub-API-Token (rkh_..., Profil -> API-Tokens -> Bereich "Engine"),
+# ueber Lichess = ein Lichess-Token mit engine:read + engine:write. Einmalig setzen:
+#   [Environment]::SetEnvironmentVariable("LICHESS_API_TOKEN", "rkh_...", "User")
+$rookhubUrl = "https://rookhub.oberschmid.homes"
+
 $pythonExe = "python.exe"                                       # ggf. Vollpfad, falls nicht auf PATH
 $script    = "C:\stockfish\example-provider.py"
 $engine    = "C:\stockfish\stockfish-windows-x86-64-bmi2.exe"   # passende Variante siehe README-Tabelle;
@@ -42,6 +49,9 @@ $argList = @(
     "--keep-alive", "3600",
     "--log-level", "info"
 )
+if ($rookhubUrl) {
+    $argList += @("--lichess", $rookhubUrl.TrimEnd("/"), "--broker", $rookhubUrl.TrimEnd("/"))
+}
 
 while ($true) {
     "$(Get-Date -Format o) [wrapper] starte example-provider.py" | Out-File -FilePath $wrapperLog -Append -Encoding utf8

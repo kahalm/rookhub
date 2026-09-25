@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Prüft VOR dem Start, ob der Lichess-Token taugt — und sagt im Klartext, was fehlt.
+"""Prüft VOR dem Start, ob der Token taugt — und sagt im Klartext, was fehlt.
+
+Gilt für beide Wege: direkt mit RookHub (ROOKHUB_URL gesetzt, der Entrypoint richtet LICHESS_URL darauf;
+RookHub beantwortet POST /api/token/test in der Lichess-Form, ein API-Token mit Scope „Engine" gilt als
+engine:read + engine:write) und über Lichess.
 
 Ohne diese Prüfung endet ein falscher Token in einem rohen Python-Stacktrace
 (`401 Client Error` aus dem Provider), der unter `restart: unless-stopped` endlos
@@ -33,9 +37,11 @@ def main():
     if not token:
         return 0   # Das Fehlen prüft bereits das entrypoint-Skript mit eigener Meldung.
 
-    # Gegen den konfigurierten Lichess-Server prüfen (Phase 2/Selbstbetrieb), sonst lichess.org.
+    # Gegen den Server prüfen, bei dem registriert wird (RookHub bzw. ein eigener Lichess), sonst lichess.org.
     base = os.environ.get("LICHESS_URL", "").strip().rstrip("/")
     url = f"{base}/api/token/test" if base else TOKEN_TEST_URL
+    rookhub = bool(os.environ.get("ROOKHUB_URL", "").strip())
+    server = "RookHub" if rookhub else "Lichess"
 
     request = urllib.request.Request(url, data=token.encode(), method="POST")
     request.add_header("Content-Type", "text/plain")
@@ -58,8 +64,13 @@ def main():
 
     info = payload.get(token)
     if info is None:
-        print("FEHLER: Lichess kennt diesen Token nicht (ungültig, widerrufen oder abgelaufen).", file=sys.stderr)
-        print("        Neuen Token anlegen — die URL steht in der .env.example.", file=sys.stderr)
+        print(f"FEHLER: {server} kennt diesen Token nicht (ungültig, widerrufen oder abgelaufen).", file=sys.stderr)
+        if rookhub:
+            print("        RookHub nimmt nur API-Tokens mit Scope „Engine“ (ein Extension-Token gilt hier nicht).",
+                  file=sys.stderr)
+            print("        Im RookHub-Profil unter „API-Tokens“ einen Token mit Scope „Engine“ anlegen.", file=sys.stderr)
+        else:
+            print("        Neuen Token anlegen — die URL steht in der .env.example.", file=sys.stderr)
         return 1
 
     if not isinstance(info, dict):
@@ -74,7 +85,7 @@ def main():
         print("        Neuen Token mit BEIDEN Scopes anlegen (URL in der .env.example).", file=sys.stderr)
         return 1
 
-    print(f"Token in Ordnung (Lichess-Konto: {info.get('userId', '?')}).")
+    print(f"Token in Ordnung ({server}-Konto: {info.get('userId', '?')}).")
     return 0
 
 

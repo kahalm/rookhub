@@ -1,6 +1,7 @@
 #!/bin/bash
 # Baut den Aufruf des Lichess-Providers aus den Umgebungsvariablen (siehe .env.example),
-# damit in compose.yml/`docker run` nichts als Kommandozeile gepflegt werden muss.
+# damit in compose.yml/`docker run` nichts als Kommandozeile gepflegt werden muss. Mit ROOKHUB_URL
+# spricht der Provider direkt mit RookHub (eigener Broker), sonst ueber Lichess.
 #
 # ENGINE_COUNT>1 startet MEHRERE Provider (= mehrere bei Lichess registrierte Engines, je ein
 # eigener Stockfish-Prozess) in diesem einen Container — z. B. „Server 1" für die Live-Analyse
@@ -15,10 +16,41 @@
 # stürbe dann kommentarlos, nur weil eine OPTIONALE Variable nicht gesetzt ist.
 set -eu
 
+# ---------------------------------------------------------------------------
+# DIREKT MIT ROOKHUB (empfohlen, ohne Lichess): ROOKHUB_URL ist dann EINE Adresse fuer beides —
+# Registrierung (sonst lichess.org, --lichess) und Arbeit holen/hochladen (sonst engine.lichess.ovh,
+# --broker). RookHub spricht an dieser Stelle dasselbe Protokoll wie Lichess, der Provider bleibt
+# unveraendert. Ausdruecklich gesetzte LICHESS_URL/BROKER_URL gewinnen (z. B. Registrierung ueber eine
+# andere Adresse als die Arbeit).
+#
+# ROOKHUB_API_TOKEN (rkh_…, im RookHub-Profil mit Scope „Engine" angelegt) ist nur ein zweiter NAME fuer
+# den Token: der Provider liest ausschliesslich LICHESS_API_TOKEN. Steht beides da, gewinnt
+# LICHESS_API_TOKEN — so bleibt eine bestehende .env unveraendert gueltig.
+# ---------------------------------------------------------------------------
+TOKEN_SOURCE=LICHESS_API_TOKEN
+if [ -z "${LICHESS_API_TOKEN:-}" ] && [ -n "${ROOKHUB_API_TOKEN:-}" ]; then
+    LICHESS_API_TOKEN="$ROOKHUB_API_TOKEN"
+    TOKEN_SOURCE=ROOKHUB_API_TOKEN
+fi
+if [ -n "${ROOKHUB_URL:-}" ]; then
+    ROOKHUB_URL="${ROOKHUB_URL%/}"
+    LICHESS_URL="${LICHESS_URL:-$ROOKHUB_URL}"
+    BROKER_URL="${BROKER_URL:-$ROOKHUB_URL}"
+fi
+# preflight.py liest LICHESS_URL (Token-Pruefung gegen denselben Server, bei dem registriert wird).
+if [ -n "${LICHESS_URL:-}" ]; then export LICHESS_URL; fi
+
 if [ -z "${LICHESS_API_TOKEN:-}" ]; then
-    echo "FEHLER: LICHESS_API_TOKEN ist nicht gesetzt." >&2
-    echo "        Token mit den Scopes engine:read UND engine:write anlegen und in die .env eintragen:" >&2
-    echo "        https://lichess.org/account/oauth/token/create?scopes[]=engine:read&scopes[]=engine:write" >&2
+    if [ -n "${ROOKHUB_URL:-}" ]; then
+        echo "FEHLER: ROOKHUB_API_TOKEN ist nicht gesetzt." >&2
+        echo "        Im RookHub-Profil unter „API-Tokens" einen Token mit Scope „Engine" anlegen und in die .env" >&2
+        echo "        eintragen: ROOKHUB_API_TOKEN=rkh_…" >&2
+    else
+        echo "FEHLER: LICHESS_API_TOKEN ist nicht gesetzt." >&2
+        echo "        Direkt mit RookHub (empfohlen): ROOKHUB_URL und ROOKHUB_API_TOKEN setzen (siehe .env.example)." >&2
+        echo "        Ueber Lichess: Token mit den Scopes engine:read UND engine:write anlegen und eintragen:" >&2
+        echo "        https://lichess.org/account/oauth/token/create?scopes[]=engine:read&scopes[]=engine:write" >&2
+    fi
     exit 1
 fi
 export LICHESS_API_TOKEN
@@ -173,7 +205,8 @@ build_args() {
     if [ -n "$hash" ];                then ARGS+=(--max-hash "$hash"); fi
     if [ -n "${KEEP_ALIVE:-}" ];  then ARGS+=(--keep-alive "$KEEP_ALIVE"); fi
     if [ -n "${LOG_LEVEL:-}" ];   then ARGS+=(--log-level "$LOG_LEVEL"); fi
-    # Nur für einen späteren RookHub-EIGENEN Broker (Phase 2) nötig; leer = lichess.org.
+    # Registrierung und Arbeit: bei ROOKHUB_URL beides RookHub (siehe oben); leer = lichess.org bzw.
+    # engine.lichess.ovh, die Vorgaben des Providers.
     if [ -n "${LICHESS_URL:-}" ]; then ARGS+=(--lichess "$LICHESS_URL"); fi
     if [ -n "${BROKER_URL:-}" ];  then ARGS+=(--broker "$BROKER_URL"); fi
 }
@@ -187,6 +220,8 @@ if [ -n "${ENTRYPOINT_DRY_RUN:-}" ]; then
     if [ "$ENGINE_COUNT" -gt 1 ]; then
         printf 'DRY-RUN Staffelung: %s s zwischen den Provider-Starts\n' "$PROVIDER_START_DELAY"
     fi
+    # Woher der Token kam — NIE der Token selbst; nur beim Alias, sonst bleibt die Ausgabe wie bisher.
+    if [ "$TOKEN_SOURCE" != LICHESS_API_TOKEN ]; then printf 'TOKEN-QUELLE: %s\n' "$TOKEN_SOURCE"; fi
     exit 0
 fi
 

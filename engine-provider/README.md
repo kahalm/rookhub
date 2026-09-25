@@ -8,22 +8,70 @@ auf dem RookHub-Server.
 
 ## Wie das zusammenhängt
 
+Zwei Wege, dieselbe Software auf deinem Rechner:
+
 ```
-RookHub-Analysebrett  ──►  Lichess-Broker  ──►  dieser Container  ──►  Stockfish
-   (Browser/Handy)          (engine.lichess.ovh)   (dein Rechner)
+Direkt (empfohlen):   RookHub-Analysebrett  ──►  RookHub  ◄──  dieser Container  ──►  Stockfish
+                         (Browser/Handy)                        (dein Rechner)
+
+Über Lichess:         RookHub-Analysebrett  ──►  Lichess-Broker  ◄──  dieser Container  ──►  Stockfish
+                                                (engine.lichess.ovh)
 ```
 
-RookHub nutzt dafür die **offene External-Engine-Schnittstelle von Lichess**: Dein Rechner
-meldet die Engine bei deinem Lichess-Konto an, RookHub findet sie dort und schickt ihr
-Analyse-Aufträge. Praktische Folgen:
+In beiden Fällen läuft der **offizielle Provider von Lichess** — RookHub spricht auf der direkten
+Strecke dasselbe Protokoll wie Lichess (Engine anmelden, Arbeit holen, Suche hochladen). Der
+Unterschied ist nur, wohin er sich verbindet. Praktische Folgen, für beide Wege:
 
 - **Kein Port muss offen sein.** Der Container baut die Verbindung von sich aus nach außen
   auf — keine Freigabe im Router, kein DynDNS, kein Zertifikat.
-- Die Engine steht damit **auch in Lichess' eigenem Analysebrett** zur Verfügung.
 - Dein Rechner muss laufen, wenn du analysieren willst. Ist er aus, rechnet RookHub still
-  wieder mit der Browser-Engine weiter (und sagt es dir).
+  wieder mit der Browser-Engine weiter (und sagt es dir). Die Profil-Karte zeigt bei direkt
+  angemeldeten Engines einen **Online-Punkt**.
 
-## Einrichten (3 Schritte)
+**Warum direkt?** Über Lichess hängt alles an Lichess: dessen DDoS-Schutz drosselt je IP (acht
+Provider auf einer Maschine gehen, zwölf nicht — und eine Überschreitung endete am 2026-09-11 in einer
+IP-Sperre), Protokolländerungen kommen ohne Vorwarnung, und ohne Lichess-Konto geht es gar nicht.
+Direkt mit RookHub gibt es nichts davon. Den Lichess-Weg brauchst du nur noch für **Cloud-Anbieter**
+(stockfishcloud, Chessify), die selbst als Lichess-Provider auftreten — beide Quellen stehen im
+Analysebrett in derselben Auswahl.
+
+## Direkt mit RookHub (ohne Lichess) — empfohlen
+
+**1. API-Token in RookHub anlegen** — Profil → *API-Tokens* → Name z. B. „Engine-Provider",
+Bereich **„Engine"** wählen, anlegen, den angezeigten Token (`rkh_…`) kopieren. Er wird nur
+EINMAL angezeigt. Ein Token mit Bereich „Extension" (für RepCheck) gilt hier nicht — und
+umgekehrt: der Engine-Token öffnet nur die Engine-Anmeldung, nicht deine Repertoires.
+
+**2. Container starten:**
+
+```bash
+cd engine-provider
+cp .env.example .env
+# .env öffnen: ROOKHUB_URL und ROOKHUB_API_TOKEN eintragen (bei Bedarf ENGINE_NAME/MAX_THREADS anpassen)
+docker compose up -d --build
+```
+
+Die zwei Zeilen in der `.env`:
+
+```bash
+ROOKHUB_URL=https://rookhub.oberschmid.homes
+ROOKHUB_API_TOKEN=rkh_…
+```
+
+`ROOKHUB_URL` ist EINE Adresse für beides — Anmeldung und Arbeit (der Entrypoint gibt sie dem
+Provider als `--lichess` und `--broker`). Beim Start prüft `preflight.py` den Token gegen
+`{ROOKHUB_URL}/api/token/test`; läuft alles, steht im Log `Registering new engine` bzw.
+`Updating engine`.
+
+**3. In RookHub auswählen** — nichts weiter einzutragen: die Engine steht sofort im Profil unter
+*Externe Engine* (mit Online-Punkt) und im Analysebrett in der Auswahl **Browser / \<dein
+Engine-Name\>**. Für Hintergrund-Analysen dort die Hintergrund-Engines wählen.
+
+Windows ohne Docker: in `windows/run_provider.ps1` `$rookhubUrl` setzen und den Token als
+Umgebungsvariable `LICHESS_API_TOKEN` hinterlegen (der Provider kennt nur diesen Namen) — siehe
+„Auf Windows" unten.
+
+## Über Lichess (für Cloud-Anbieter)
 
 **1. Lichess-Token anlegen** — mit den Scopes `engine:read` **und** `engine:write`:
 
@@ -37,7 +85,7 @@ den du später in RookHub hinterlegst, braucht nur `engine:read` — siehe Schri
 ```bash
 cd engine-provider
 cp .env.example .env
-# .env öffnen und LICHESS_API_TOKEN eintragen (bei Bedarf ENGINE_NAME/MAX_THREADS anpassen)
+# .env öffnen und LICHESS_API_TOKEN eintragen (ROOKHUB_URL leer lassen)
 docker compose up -d --build
 ```
 
@@ -47,10 +95,11 @@ Läuft alles, steht im Log `Registering new engine` bzw. `Updating engine`:
 docker compose logs -f
 ```
 
-**3. In RookHub hinterlegen** — Profil → *Externe Engine (Lichess)*: dort einen Lichess-Token
+**3. In RookHub hinterlegen** — Profil → *Externe Engine*: dort einen Lichess-Token
 eintragen (dafür genügt `engine:read`, du kannst aber denselben nehmen). Die Karte listet
 danach die gefundenen Engines auf. Im Analysebrett erscheint über den Varianten eine
-Auswahl **Browser / \<dein Engine-Name\>**.
+Auswahl **Browser / \<dein Engine-Name\>**. Über Lichess steht die Engine zusätzlich auch in
+Lichess' eigenem Analysebrett zur Verfügung.
 
 ## Einstellungen
 
@@ -58,7 +107,10 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 
 | Variable | Wofür |
 |---|---|
-| `LICHESS_API_TOKEN` | **Pflicht.** Token mit `engine:read` + `engine:write` |
+| `ROOKHUB_URL` | **Direkt mit RookHub:** Adresse von RookHub, z. B. `https://rookhub.oberschmid.homes`. Setzt Anmeldung (`--lichess`) und Arbeit (`--broker`) darauf; ausdrücklich gesetzte `LICHESS_URL`/`BROKER_URL` gewinnen. Leer = über Lichess |
+| `ROOKHUB_API_TOKEN` | **Direkt mit RookHub: Pflicht.** API-Token (`rkh_…`) mit Bereich „Engine" aus dem RookHub-Profil. Nur ein zweiter Name für `LICHESS_API_TOKEN` — steht beides da, gewinnt dieser |
+| `LICHESS_API_TOKEN` | **Über Lichess: Pflicht.** Token mit `engine:read` + `engine:write` |
+| `LICHESS_URL` / `BROKER_URL` | Nur für Sonderfälle: Anmeldung bzw. Arbeit an eine andere Adresse als `ROOKHUB_URL` |
 | `ENGINE_NAME` | Anzeigename in der RookHub-Auswahl |
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
 | `MAX_HASH` | Hash-Tabelle in MiB (leer = 512) |
@@ -435,6 +487,9 @@ zwei Namen) ist der bequemste Fall: Du wählst im Analysebrett, was gerade läuf
 
 | Symptom | Ursache |
 |---|---|
+| `RookHub kennt diesen Token nicht` | Token vertippt, widerrufen, abgelaufen — oder mit Bereich „Extension" statt „Engine" angelegt. Im RookHub-Profil einen Token mit Bereich „Engine" anlegen |
+| `ROOKHUB_API_TOKEN ist nicht gesetzt` | `ROOKHUB_URL` steht in der `.env`, der Token fehlt |
+| Direkt: Engine erscheint, rechnet aber nie (Analysebrett fällt nach 12 s auf „Browser" zurück) | Ein Proxy vor RookHub puffert den Upload der Suche. Auf dem Server braucht `/api/external-engine/` `proxy_request_buffering off` (der Frontend-nginx hat es; ein davor stehender Nginx Proxy Manager braucht eine eigene Location) |
 | `Lichess kennt diesen Token nicht` | Token vertippt, widerrufen oder abgelaufen — neu anlegen |
 | Container startet immer wieder neu | Genau das ist bei einem Token-Fehler erwartet (`restart: unless-stopped`). `.env` korrigieren, dann `docker compose up -d` |
 | `Keine ausführbare Engine-DATEI` | `ENGINE_PATH` zeigt auf einen Ordner statt auf die Binärdatei, das Volume fehlt, oder die Datei ist nicht ausführbar (`chmod +x`) |
@@ -445,7 +500,7 @@ zwei Namen) ist der bequemste Fall: Du wählst im Analysebrett, was gerade läuf
 | Eine Engine ist aus der Auswahl verschwunden | Zwei Provider liefen unter demselben Namen — der zuletzt gestartete hat den Eintrag übernommen. Einen umbenennen und neu starten |
 | Windows: `'python' is not recognized` | Beim Python-Setup war „Add python.exe to PATH" nicht angekreuzt — Setup erneut ausführen (Modify → Repair) oder `py` statt `python` verwenden |
 | Windows: `/bin/sh: … not found` bzw. Engine startet nicht | Der Pfad zur `.exe` enthält Leerzeichen. Stockfish nach `C:\stockfish\` entpacken |
-| Nach dem Start `429` von lichess.org, danach gar keine Antwort mehr | Zu viele Registrierungen auf einmal — der DDoS-Schutz von Lichess sperrt die IP zeitweise. Container stoppen, die Sperre abwarten, `PROVIDER_START_DELAY` nicht auf 0 setzen |
+| Nach dem Start `429` von lichess.org, danach gar keine Antwort mehr | **Betrifft nur den Lichess-Weg.** Zu viele Registrierungen auf einmal — der DDoS-Schutz von Lichess sperrt die IP zeitweise. Container stoppen, die Sperre abwarten, `PROVIDER_START_DELAY` nicht auf 0 setzen — oder gleich direkt mit RookHub verbinden (`ROOKHUB_URL`), dort gibt es diese Drosselung nicht |
 
 Alte Registrierungen aufräumen kannst du auf <https://lichess.org/account/oauth/token> (Token
 widerrufen) bzw. über die Engine-Verwaltung im Lichess-Analysebrett.
@@ -460,8 +515,8 @@ Zeilenwechsel im `Dockerfile`. Ergänzt haben wir nur `entrypoint.sh` (baut den 
 `.env`-Variablen und startet bei `ENGINE_COUNT`>1 mehrere Provider; `bash test/entrypoint.test.sh`
 prüft den Argument-Aufbau im Trockenlauf, `bash test/supervisor.test.sh` den echten Fehlerpfad bei
 mehreren Engines: stirbt einer, muss der Container mit DESSEN Code enden — sonst greift
-`restart: unless-stopped` nicht) und `preflight.py` (prüft den Token vorab, damit ein fehlender Scope als
-Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace). Den Provider selbst prüft
+`restart: unless-stopped` nicht) und `preflight.py` (prüft den Token vorab — gegen RookHub oder Lichess —, damit ein fehlender Scope als
+Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace; `python3 test/preflight.test.py`). Den Provider selbst prüft
 `python3 test/provider.test.py <provider.py>` gegen einen nachgebauten Broker (siehe „Provider-Stand"
 oben).
 

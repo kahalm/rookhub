@@ -150,6 +150,9 @@ jobs:
       # Argument-Aufbau + Vorprüfungen (Dry-Run) …
       - run: bash test/entrypoint.test.sh
         working-directory: engine-provider
+      # … die Token-Vorabprüfung gegen einen nachgebauten /api/token/test (RookHub- und Lichess-Form) …
+      - run: python3 test/preflight.test.py
+        working-directory: engine-provider
       # … der ECHTE Fehlerpfad des Multi-Engine-Supervisors …
       - run: bash test/supervisor.test.sh
         working-directory: engine-provider

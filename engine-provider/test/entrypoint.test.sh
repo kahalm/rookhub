@@ -142,4 +142,41 @@ check_fail "Staffelung: bei einer Engine keine Zeile" grep -q 'Staffelung' "$out
 check_fail "PROVIDER_START_DELAY=abc abgelehnt"  run ENGINE_COUNT=2 PROVIDER_START_DELAY=abc
 check_fail "PROVIDER_START_DELAY=-1 abgelehnt"   run ENGINE_COUNT=2 PROVIDER_START_DELAY=-1
 
+# 9) DIREKT MIT ROOKHUB (eigener Broker, ohne Lichess): ROOKHUB_URL ist EINE Adresse fuer Registrierung
+#    (--lichess) UND Arbeit (--broker); ausdruecklich gesetzte Werte gewinnen. ROOKHUB_API_TOKEN ist nur ein
+#    zweiter Name fuer LICHESS_API_TOKEN (der Provider kennt nur diesen) und verliert gegen ihn.
+rh() { env -i PATH="$PATH" ENTRYPOINT_DRY_RUN=1 ENGINE_PATH="$fake" "$@" bash ./entrypoint.sh > "$out" 2>&1; }
+
+rh ROOKHUB_URL=https://rookhub.example ROOKHUB_API_TOKEN=rkh_x
+check "ROOKHUB_URL: --lichess darauf"            grep -q -- '--lichess https://rookhub.example' "$out"
+check "ROOKHUB_URL: --broker darauf"             grep -q -- '--broker https://rookhub.example' "$out"
+check "Token-Alias genommen"                     grep -q '^TOKEN-QUELLE: ROOKHUB_API_TOKEN' "$out"
+check_fail "der Token selbst steht nirgends"     grep -q 'rkh_x' "$out"
+check "weiterhin genau ein Aufruf"               test "$(grep -c '^DRY-RUN [0-9]' "$out")" -eq 1
+
+rh ROOKHUB_URL=https://rookhub.example/ ROOKHUB_API_TOKEN=rkh_x
+check "Schraegstrich am Ende weg"                grep -q -- '--broker https://rookhub.example$' "$out"
+
+rh ROOKHUB_URL=https://rookhub.example BROKER_URL=https://broker.example ROOKHUB_API_TOKEN=rkh_x
+check "ausdrueckliches BROKER_URL gewinnt"       grep -q -- '--broker https://broker.example' "$out"
+check "LICHESS_URL bleibt ROOKHUB_URL"           grep -q -- '--lichess https://rookhub.example' "$out"
+
+rh ROOKHUB_URL=https://rookhub.example LICHESS_URL=https://lichess.example ROOKHUB_API_TOKEN=rkh_x
+check "ausdrueckliches LICHESS_URL gewinnt"      grep -q -- '--lichess https://lichess.example' "$out"
+
+rh ROOKHUB_URL=https://rookhub.example ROOKHUB_API_TOKEN=rkh_x LICHESS_API_TOKEN=lip_y
+check_fail "Alias verliert gegen LICHESS_API_TOKEN" grep -q 'TOKEN-QUELLE' "$out"
+
+rh ROOKHUB_URL=https://rookhub.example ENGINE_COUNT=3 ROOKHUB_API_TOKEN=rkh_x
+check "mehrere Engines: alle direkt"             test "$(grep -c -- '--broker https://rookhub.example' "$out")" -eq 3
+
+check_fail "ROOKHUB_URL ohne Token abgelehnt"    rh ROOKHUB_URL=https://rookhub.example
+rh ROOKHUB_URL=https://rookhub.example || true
+check "Fehlermeldung nennt ROOKHUB_API_TOKEN"    grep -q 'ROOKHUB_API_TOKEN ist nicht gesetzt' "$out"
+
+# Ohne ROOKHUB_URL bleibt alles beim Lichess-Weg (keine --lichess/--broker-Argumente).
+run ENGINE_NAME="Nur Lichess"
+check_fail "ohne ROOKHUB_URL kein --broker"      grep -q -- '--broker' "$out"
+check_fail "ohne ROOKHUB_URL kein --lichess"     grep -q -- '--lichess' "$out"
+
 if [ "$fails" -eq 0 ]; then echo "ALLE TESTS OK"; else echo "$fails Test(s) fehlgeschlagen"; exit 1; fi
