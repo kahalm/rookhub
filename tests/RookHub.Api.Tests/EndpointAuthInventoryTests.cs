@@ -51,6 +51,8 @@ public class EndpointAuthInventoryTests
         // Kopfdaten ohne Zuege und ohne Anmerkungen, derselbe Zuschnitt wie der Baum. Das
         // ANFORDERN einer Partie bleibt angemeldet (POST .../request traegt kein AllowAnonymous).
         "GET /api/library-games",                                    // LibraryGameController.Search
+        // „Frag die Kommentare" (0.536.0): wie die Namenssuche ohne Anmeldung — Kopfdaten + Kommentar-Auszüge, keine Züge.
+        "GET /api/library-games/semantic",                          // LibraryGameController.Semantic
         "GET /api/guess-sessions/anonymous",                         // GuessSessionAnonymousController.List
         "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
         "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review

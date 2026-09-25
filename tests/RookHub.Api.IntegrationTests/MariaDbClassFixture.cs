@@ -118,3 +118,4 @@ public sealed class CourseStatsFixture() : MariaDbClassFixture("stats", withApp:
 public sealed class QueryTranslationFixture() : MariaDbClassFixture("q", withApp: true);
 public sealed class BookSourceSplitFixture() : MariaDbClassFixture("bsrc", withApp: true);
 public sealed class RepertoireReprocessFixture() : MariaDbClassFixture("rrep", withApp: false);
+public sealed class CommentSearchFixture() : MariaDbClassFixture("vec", withApp: false);

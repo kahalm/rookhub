@@ -3366,6 +3366,12 @@
       "none": "Nothing matches that."
     },
     "library": {
+      "modeNames": "Names & events",
+      "modeComments": "Ask the comments",
+      "ask": "Ask the annotations",
+      "askHint": "e.g. bishop sacrifice on h7, minority attack, knight outpost on d5",
+      "askEmpty": "Describe an idea, a plan or a motif — the search looks for annotations that talk about it, in any language.",
+      "askNone": "No annotation matches that — try other words.",
       "open": "Request a game",
       "title": "Annotated master games",
       "intro": "Pick a game and have it computed. It waits under your games once the engine is through.",

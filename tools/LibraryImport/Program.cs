@@ -56,10 +56,48 @@ switch (command)
     case "analysis-openings": return await AnalysisOpeningsAsync();
     case "tree": return await TreeAsync();
     case "translate": return await TranslateAsync();
+    case "embed": return await EmbedAsync();
     case "stats": return await StatsAsync();
     default:
         Console.Error.WriteLine($"Unbekannter Befehl: {command}");
         return 1;
+}
+
+// ===== Einbetten („Frag die Kommentare", 0.536.0) ===========================
+
+// Die Kommentare der noch nicht eingebetteten Partien in Stücke zerlegen und über das Embedding-Modell (Embedding__BaseUrl,
+// OpenAI-kompatibel — ein Pooling-Modell auf dem DGX Spark) in CommentEmbeddings ablegen. Wiederholbar: was schon da ist,
+// bleibt, der nächste Lauf macht weiter. Portionsweise, damit ein Abbruch nichts Großes verwirft.
+async Task<int> EmbedAsync()
+{
+    var limit = IntArg("--limit") ?? int.MaxValue;
+    var batch = IntArg("--batch") ?? 32;
+    var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+    using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+    var embedder = new OpenAiTextEmbedder(http, config, NullLogger.Instance);
+    if (!embedder.IsConfigured)
+    {
+        Console.Error.WriteLine("Embedding__BaseUrl fehlt (OpenAI-kompatibler Embedding-Server, z. B. vLLM auf dem Spark).");
+        return 1;
+    }
+    var started = DateTime.UtcNow;
+    int games = 0, chunks = 0, failed = 0;
+    while (games + failed < limit)
+    {
+        await using var db = NewDb();
+        // LibraryGameService braucht nur die Suche (MarkKnownAsync) — beim Einbetten wird sie nicht angefasst.
+        var service = new CommentSearchService(db, embedder, new LibraryGameService(db, null!), NullLogger<CommentSearchService>.Instance);
+        var step = await service.EmbedPendingAsync(Math.Min(500, limit - games - failed), batch, CancellationToken.None);
+        if (step.Games == 0 && step.Failed == 0) break;
+        games += step.Games;
+        chunks += step.Chunks;
+        failed += step.Failed;
+        var rate = games / Math.Max(1, (DateTime.UtcNow - started).TotalSeconds);
+        Console.WriteLine($"{games} Partien, {chunks} Stücke eingebettet ({rate:0.0} Partien/s), {failed} gescheitert");
+        if (step.Games == 0) break; // nur Fehlschläge — das Modell antwortet nicht, nicht endlos weiterversuchen
+    }
+    Console.WriteLine($"Fertig: {games} Partien, {chunks} Stücke, {failed} gescheitert, {(DateTime.UtcNow - started).TotalMinutes:0.0} min");
+    return failed > 0 && games == 0 ? 2 : 0;
 }
 
 // ===== 1. Einlesen ==========================================================

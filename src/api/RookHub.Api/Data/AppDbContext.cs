@@ -129,6 +129,7 @@ public class AppDbContext : DbContext
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<GameMoveExplanation> GameMoveExplanations => Set<GameMoveExplanation>();
     public DbSet<GameRoast> GameRoasts => Set<GameRoast>();
+    public DbSet<CommentEmbedding> CommentEmbeddings => Set<CommentEmbedding>();
     public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
     public DbSet<GuessMove> GuessMoves => Set<GuessMove>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
@@ -1486,6 +1487,20 @@ public class AppDbContext : DbContext
              .HasForeignKey(g => g.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+        });
+
+        // Frag die Kommentare (0.536.0): Vektor als MariaDB VECTOR(512); der Kosinus-Index kommt per SQL aus der Migration.
+
+        modelBuilder.Entity<CommentEmbedding>(e =>
+
+        {
+
+            e.Property(x => x.Vector).HasColumnType($"vector({CommentEmbedding.Dimensions})");
+
+            e.HasIndex(x => x.LibraryGameId);
+
+            e.HasOne(x => x.LibraryGame).WithMany().HasForeignKey(x => x.LibraryGameId).OnDelete(DeleteBehavior.Cascade);
+
         });
 
         // Roast my game (0.535.0): je Partie, Sprache und Stil der zuletzt gewuerfelte Text; geht mit der Partie.

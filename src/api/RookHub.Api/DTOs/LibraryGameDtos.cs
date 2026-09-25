@@ -61,3 +61,29 @@ public static class LibraryRequestReason
 
 /// <summary>Ergebnis einer Anforderung: die (neue oder schon vorhandene) Analyse, oder ein Grund.</summary>
 public record LibraryRequestResult(GameAnalysisDto? Analysis, string? Reason, bool AlreadyPlayable);
+
+/// <summary>„Frag die Kommentare" (0.536.0): Treffer der semantischen Suche, je Partie die passendsten Stellen.</summary>
+public class LibrarySemanticPageDto
+{
+    /// <summary>Ein Embedding-Modell ist eingerichtet — ohne gibt es diese Suche nicht.</summary>
+    public bool Available { get; set; }
+    /// <summary>So viele Textstücke sind eingebettet (0 = der Bestand wurde noch nicht vorbereitet).</summary>
+    public long Indexed { get; set; }
+    public List<LibrarySemanticHitDto> Items { get; set; } = new();
+}
+
+public class LibrarySemanticHitDto
+{
+    public LibraryGameDto Game { get; set; } = new();
+    /// <summary>Die passendsten Stücke dieser Partie, bestes zuerst.</summary>
+    public List<LibrarySemanticMatchDto> Matches { get; set; } = new();
+}
+
+public class LibrarySemanticMatchDto
+{
+    /// <summary>Erster kommentierter Halbzug des Stücks (−1 = Einleitung) — dorthin springt die Partie.</summary>
+    public int FromPly { get; set; }
+    public string Text { get; set; } = string.Empty;
+    /// <summary>Ähnlichkeit 0..1 (1 − Kosinus-Abstand).</summary>
+    public double Score { get; set; }
+}

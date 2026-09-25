@@ -88,6 +88,10 @@ public class DeploymentConfigTests
         Assert.Contains("TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}", text);
         Assert.Contains("TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}", text);
         Assert.Contains("TextLlm__Model: ${TEXT_LLM_MODEL:-}", text);
+        // „Frag die Kommentare" (0.536.0): Embedding-Modell — optional, leer = Suche aus.
+        Assert.Contains("Embedding__BaseUrl: ${EMBEDDING_BASE_URL:-}", text);
+        Assert.Contains("Embedding__ApiKey: ${EMBEDDING_API_KEY:-}", text);
+        Assert.Contains("Embedding__Model: ${EMBEDDING_MODEL:-}", text);
         // Der Log-Sink darf den API-Start nicht blockieren (ES rot ⇒ App startet trotzdem).
         // Nur im api-Block geprüft: Kibana braucht ein gesundes Elasticsearch zu Recht. Die
         // Beispiel-Stacks bringen gar kein ES mit (externe URL) — dort gibt es nichts zu prüfen.

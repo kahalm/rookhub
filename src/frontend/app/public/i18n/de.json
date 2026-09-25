@@ -3366,6 +3366,12 @@
       "none": "Dazu findet sich nichts."
     },
     "library": {
+      "modeNames": "Namen & Turniere",
+      "modeComments": "Frag die Kommentare",
+      "ask": "Frag die Anmerkungen",
+      "askHint": "z. B. Läuferopfer auf h7, Minoritätsangriff, Springer-Vorposten auf d5",
+      "askEmpty": "Beschreib eine Idee, einen Plan oder ein Motiv — gesucht werden Anmerkungen, die davon sprechen, in jeder Sprache.",
+      "askNone": "Keine Anmerkung passt dazu — probier andere Worte.",
       "open": "Partie anfordern",
       "title": "Kommentierte Meisterpartien",
       "intro": "Such dir eine Partie aus und lass sie rechnen. Sie steht danach unter deinen Partien, sobald die Engine durch ist.",

@@ -49,6 +49,26 @@ export interface LibraryQuery {
   pageSize?: number;
 }
 
+/** „Frag die Kommentare" (0.536.0): eine passende Stelle — erster kommentierter Halbzug, Auszug, Ähnlichkeit 0..1. */
+export interface LibrarySemanticMatch {
+  fromPly: number;
+  text: string;
+  score: number;
+}
+
+export interface LibrarySemanticHit {
+  game: LibraryGame;
+  matches: LibrarySemanticMatch[];
+}
+
+export interface LibrarySemanticPage {
+  /** Ein Embedding-Modell ist eingerichtet. */
+  available: boolean;
+  /** So viele Textstücke sind eingebettet — 0 heißt, der Bestand wurde noch nicht vorbereitet. */
+  indexed: number;
+  items: LibrarySemanticHit[];
+}
+
 /** Warum eine Anforderung abgelehnt wurde. */
 export type LibraryRequestReason = 'not-found' | 'too-many-open' | 'no-engine' | 'invalid-pgn';
 
@@ -71,6 +91,13 @@ export class LibraryService {
     if (query.page) params = params.set('page', query.page);
     if (query.pageSize) params = params.set('pageSize', query.pageSize);
     return this.http.get<LibraryGamePage>('/api/library-games', { params });
+  }
+
+  /** „Frag die Kommentare" (0.536.0): semantische Suche über die Anmerkungen. Ohne `q` nur, ob es sie gibt. */
+  semantic(q: string, take = 20): Observable<LibrarySemanticPage> {
+    let params = new HttpParams().set('take', take);
+    if (q.trim()) params = params.set('q', q.trim());
+    return this.http.get<LibrarySemanticPage>('/api/library-games/semantic', { params });
   }
 
   /** Diese Partie rechnen lassen — oder, wenn sie schon spielbar ist, die vorhandene bekommen. */

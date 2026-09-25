@@ -170,6 +170,9 @@ services:
       TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}
       TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}
       TextLlm__Model: ${TEXT_LLM_MODEL:-}
+      Embedding__BaseUrl: ${EMBEDDING_BASE_URL:-}
+      Embedding__ApiKey: ${EMBEDDING_API_KEY:-}
+      Embedding__Model: ${EMBEDDING_MODEL:-}
       # Optional: Lichess-Token fuer den Lochfinder (Eroeffnungs-Explorer, beliebiger Token ohne Scope).
       # Leer -> es gilt der Engine-Token, den ein Nutzer im Profil hinterlegt hat.
       LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}

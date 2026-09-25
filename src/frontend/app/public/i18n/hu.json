@@ -3087,6 +3087,12 @@
       "none": "Erre nincs találat."
     },
     "library": {
+      "modeNames": "Nevek és versenyek",
+      "modeComments": "Kérdezd a kommentárokat",
+      "ask": "Kérdezd a megjegyzéseket",
+      "askHint": "pl. futóáldozat h7-en, kisebbségi támadás, huszár előőrs d5-ön",
+      "askEmpty": "Írj le egy ötletet, tervet vagy motívumot — olyan megjegyzéseket keresünk, amelyek erről szólnak, bármilyen nyelven.",
+      "askNone": "Egyik megjegyzés sem illik ehhez — próbáld más szavakkal.",
       "open": "Játszma kérése",
       "title": "Kommentált mesterjátszmák",
       "intro": "Válassz egy játszmát és számoltasd ki. Utána a játszmáid között vár.",

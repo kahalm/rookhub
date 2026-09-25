@@ -28,7 +28,7 @@ erreichbar ist, und scheitert leise.
   posten" über den Bot-Webhook mit Partie-Link. Tabelle `GameRoasts` (Partie, Sprache, Stil, Text) + „Neu würfeln".
   „russisch" ist auf Wunsch „free for all"; die einzige Grenze im Auftrag: keine Angriffe auf Herkunft, Nationalität,
   Religion, Geschlecht, Sexualität, Behinderung.
-- [ ] **9 Semantische Suche im Rohbestand** („Frag die Kommentare"). Embedding-Modell zusätzlich auf der Spark
+- [~] **9 Semantische Suche im Rohbestand** („Frag die Kommentare") — GEBAUT in 0.536.0; offen: Embedding-Modell auf dem Spark starten, `EMBEDDING_*` in den Stack, `tools/LibraryImport embed` einmal laufen lassen. Embedding-Modell zusätzlich auf der Spark
   (`Qwen/Qwen3-Embedding-0.6B` oder `BAAI/bge-m3`, mehrsprachig), Vektoren in MariaDB 11.8 (VECTOR + HNSW, läuft auf Dev
   und Prod), Tabelle `CommentEmbeddings` (Partie, Halbzug, Stück, Vektor), Schritt `embed` in `tools/LibraryImport`
   (Stücke „Zug 17.Lxh7+: Kommentar …"), Suche = Frage einbetten → nächste Stücke → nach Partie gruppiert, Sprung auf den

@@ -3366,6 +3366,12 @@
       "none": "Za to nema rezultata."
     },
     "library": {
+      "modeNames": "Imena i turniri",
+      "modeComments": "Pitaj komentare",
+      "ask": "Pitaj bilješke",
+      "askHint": "npr. žrtva lovca na h7, napad manjine, skakačka ispostava na d5",
+      "askEmpty": "Opiši ideju, plan ili motiv — traže se bilješke koje o tome govore, na bilo kojem jeziku.",
+      "askNone": "Nijedna bilješka ne odgovara — pokušaj drugim riječima.",
       "open": "Zatraži partiju",
       "title": "Komentirane majstorske partije",
       "intro": "Odaberi partiju i daj je izračunati. Nakon toga čeka među tvojim partijama.",

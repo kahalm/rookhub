@@ -24,7 +24,22 @@ public class LibraryGameController : BaseApiController
 {
     private readonly LibraryGameService _service;
 
-    public LibraryGameController(LibraryGameService service) => _service = service;
+    private readonly CommentSearchService _comments;
+
+    public LibraryGameController(LibraryGameService service, CommentSearchService comments)
+    {
+        _service = service;
+        _comments = comments;
+    }
+
+    /// <summary>„Frag die Kommentare" (0.536.0): semantische Suche über die Anmerkungen — je Partie die passendsten
+    /// Stellen. Wie die Namenssuche ohne Anmeldung (nur Kopfdaten und Kommentar-Auszüge, keine Züge).</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    [HttpGet("semantic")]
+    public async Task<ActionResult<LibrarySemanticPageDto>> Semantic([FromQuery] string? q, [FromQuery] int take = 20,
+        CancellationToken ct = default)
+        => Ok(await _comments.SearchAsync(GetUserIdOrNull() ?? 0, q, take, ct));
 
     /// <summary>
     /// Eine Seite der Bestandssuche, nach Eignungsnote sortiert. OHNE die Zuege.

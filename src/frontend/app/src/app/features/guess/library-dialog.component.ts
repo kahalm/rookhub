@@ -12,7 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
-import { LibraryGame, LibraryService } from './library.service';
+import { LibraryGame, LibrarySemanticHit, LibraryService } from './library.service';
 
 /**
  * „Partie anfordern": der Rohbestand kommentierter Meisterpartien als Nachschlagewerk.
@@ -39,6 +39,57 @@ import { LibraryGame, LibraryService } from './library.service';
     <mat-dialog-content class="lib">
       <p class="muted small">{{ 'guess.library.intro' | translate }}</p>
 
+      <!-- „Frag die Kommentare" (0.536.0): nur, wenn ein Embedding-Modell da ist UND der Bestand eingebettet ist. -->
+      @if (semanticReady) {
+        <div class="modes" role="tablist">
+          <button mat-stroked-button type="button" role="tab" class="mode" [class.on]="mode === 'names'"
+                  [attr.aria-selected]="mode === 'names'" (click)="setMode('names')">
+            <mat-icon>search</mat-icon> {{ 'guess.library.modeNames' | translate }}
+          </button>
+          <button mat-stroked-button type="button" role="tab" class="mode" [class.on]="mode === 'comments'"
+                  [attr.aria-selected]="mode === 'comments'" (click)="setMode('comments')">
+            <mat-icon>forum</mat-icon> {{ 'guess.library.modeComments' | translate }}
+          </button>
+        </div>
+      }
+
+      @if (mode === 'comments') {
+        <mat-form-field appearance="outline" class="ask" subscriptSizing="dynamic">
+          <mat-label>{{ 'guess.library.ask' | translate }}</mat-label>
+          <mat-icon matPrefix>forum</mat-icon>
+          <input matInput [(ngModel)]="ask" (ngModelChange)="asked.next()"
+                 [placeholder]="'guess.library.askHint' | translate">
+        </mat-form-field>
+        @if (asking) {
+          <app-loading-spinner />
+        } @else if (!ask.trim()) {
+          <p class="muted">{{ 'guess.library.askEmpty' | translate }}</p>
+        } @else if (hits.length === 0) {
+          <p class="muted">{{ 'guess.library.askNone' | translate }}</p>
+        } @else {
+          @for (h of hits; track h.game.id) {
+            <div class="row">
+              <div class="who">
+                <span class="names">{{ names(h.game) }}</span>
+                <span class="muted small meta">{{ meta(h.game) }}</span>
+                @for (m of h.matches.slice(0, 1); track m.fromPly) {
+                  <span class="snippet small">„{{ m.text }}“</span>
+                }
+              </div>
+              <span class="spacer"></span>
+              @if (h.game.inPool || h.game.requested) {
+                <button mat-stroked-button (click)="play(h.game)">
+                  <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
+                </button>
+              } @else {
+                <button mat-flat-button color="primary" [disabled]="busy === h.game.id" (click)="request(h.game)">
+                  <mat-icon>hourglass_top</mat-icon> {{ 'guess.library.request' | translate }}
+                </button>
+              }
+            </div>
+          }
+        }
+      } @else {
       <div class="filters">
         <mat-form-field appearance="outline" class="q" subscriptSizing="dynamic">
           <mat-label>{{ 'guess.library.search' | translate }}</mat-label>
@@ -109,6 +160,7 @@ import { LibraryGame, LibraryService } from './library.service';
           </div>
         }
       }
+      }
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
@@ -131,6 +183,12 @@ import { LibraryGame, LibraryService } from './library.service';
     .pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
+    .modes { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .mode.on { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 16%, transparent); font-weight: 600; }
+    .ask { width: 100%; margin-bottom: 8px; }
+    .ask mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }
+    .snippet { margin-top: 4px; font-style: italic; white-space: pre-line;
+               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   `],
 })
 export class LibraryDialogComponent implements OnInit, OnDestroy {
@@ -145,8 +203,12 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   private static readonly SearchDebounceMs = 350;
   /** Fuenfzig je Seite: die Trefferliste soll etwas hergeben, ohne dass eine Seite zur Wand wird. */
   private static readonly PageSize = 50;
+  /** Eine Frage wird am Server eingebettet — etwas länger warten als beim Namen, bis der Satz steht. */
+  private static readonly AskDebounceMs = 600;
 
   readonly typed = new Subject<void>();
+  /** „Frag die Kommentare": gedrosselt wie die Namenssuche, die Frage wird am Server eingebettet. */
+  readonly asked = new Subject<void>();
   private readonly destroyed = new Subject<void>();
 
   /** Die vollständig gepflegten Sprachen des Bestands; alles Übrige steht unter „egal". */
@@ -158,6 +220,12 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   minCommentedPlies = 0;
 
   items: LibraryGame[] = [];
+  /** „Frag die Kommentare" (0.536.0). */
+  mode: 'names' | 'comments' = 'names';
+  semanticReady = false;
+  ask = '';
+  asking = false;
+  hits: LibrarySemanticHit[] = [];
   total = 0;
   page = 1;
   loading = true;
@@ -169,7 +237,14 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.typed.pipe(debounceTime(LibraryDialogComponent.SearchDebounceMs), takeUntil(this.destroyed))
       .subscribe(() => this.reload(1));
+    this.asked.pipe(debounceTime(LibraryDialogComponent.AskDebounceMs), takeUntil(this.destroyed))
+      .subscribe(() => this.runAsk());
     this.reload(1);
+    // Gibt es die Kommentar-Suche? Ohne Frage antwortet der Server nur mit „verfügbar" und der Zahl der Stücke.
+    this.service.semantic('').pipe(takeUntil(this.destroyed)).subscribe({
+      next: p => { this.semanticReady = p.available && p.indexed > 0; this.cdr.markForCheck(); },
+      error: () => { /* still: ohne Modell gibt es den Reiter nicht */ },
+    });
   }
 
   ngOnDestroy(): void {
@@ -194,6 +269,33 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
+        this.snackbar.warn(this.translate.instant('guess.library.loadFailed'));
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  setMode(mode: 'names' | 'comments'): void {
+    this.mode = mode;
+    this.cdr.markForCheck();
+  }
+
+  runAsk(): void {
+    const q = this.ask.trim();
+    if (q.length < 3) {
+      this.hits = [];
+      this.cdr.markForCheck();
+      return;
+    }
+    this.asking = true;
+    this.service.semantic(q).pipe(takeUntil(this.destroyed)).subscribe({
+      next: p => {
+        this.hits = p.items;
+        this.asking = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.asking = false;
         this.snackbar.warn(this.translate.instant('guess.library.loadFailed'));
         this.cdr.markForCheck();
       },

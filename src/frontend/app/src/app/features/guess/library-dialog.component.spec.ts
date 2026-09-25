@@ -43,12 +43,47 @@ describe('LibraryDialogComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  function open(items: LibraryGame[] = [game()], total = items.length) {
+  function open(items: LibraryGame[] = [game()], total = items.length, semantic = { available: false, indexed: 0 }) {
     const fixture = TestBed.createComponent(LibraryDialogComponent);
     fixture.detectChanges();
     http.expectOne(r => r.url === '/api/library-games').flush({ items, total, page: 1, pageSize: 50 });
+    // „Frag die Kommentare" (0.536.0): beim Öffnen einmal fragen, ob es die Suche gibt.
+    http.expectOne(r => r.url === '/api/library-games/semantic' && !r.params.has('q')).flush({ ...semantic, items: [] });
+    fixture.detectChanges();
     return fixture;
   }
+
+  it('Frag die Kommentare: Reiter nur mit Modell UND eingebettetem Bestand', () => {
+    const el = open().nativeElement as HTMLElement;
+    expect(el.querySelector('.modes')).toBeNull();
+  });
+
+  it('Frag die Kommentare: gedrosselte Frage, Treffer mit Auszug, Spielen/Anfordern wie in der Namenssuche', fakeAsync(() => {
+    const fixture = open([game()], 1, { available: true, indexed: 1200 });
+    const el = fixture.nativeElement as HTMLElement;
+    const modes = el.querySelectorAll('.modes button');
+    expect(modes.length).toBe(2);
+    (modes[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('guess.library.askEmpty');
+
+    const c = fixture.componentInstance;
+    c.ask = 'bishop sacrifice on h7';
+    c.asked.next();
+    tick(599);
+    http.expectNone(r => r.url === '/api/library-games/semantic' && r.params.has('q'));
+    tick(1);
+    const req = http.expectOne(r => r.url === '/api/library-games/semantic' && r.params.get('q') === 'bishop sacrifice on h7');
+    req.flush({
+      available: true, indexed: 1200,
+      items: [{ game: game({ id: 7, white: 'Tal', inPool: true, gameAnalysisId: 70 }),
+                matches: [{ fromPly: 22, text: '12. Bxh7+: The classic sacrifice.', score: 0.81 }] }],
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('.snippet')!.textContent).toContain('The classic sacrifice.');
+    (Array.from(el.querySelectorAll('button')).find(b => b.textContent!.includes('guess.play')) as HTMLButtonElement).click();
+    expect(closed).toBe(70);
+  }));
 
   it('sucht am Server und blaettert dort', () => {
     const fixture = open([game()], 120);

@@ -1895,6 +1895,33 @@ Fortschrittsbalken, „Spielen" bis zur ersten gerechneten Stellung gesperrt) un
 Stellung — die gerade eingeworfene waere fuer Minuten spurlos verschwunden und ein zweites Mal
 eingeworfen worden.
 
+### „Frag die Kommentare" — semantische Suche im Rohbestand (0.536.0)
+
+Dritte Suchart im Dialog „Partie anfordern" (Reiter „Namen & Turniere" | „Frag die Kommentare"): eine Idee, ein Plan
+oder ein Motiv in Worten („Läuferopfer auf h7", „Minoritätsangriff") → Partien, deren ANMERKUNGEN davon sprechen, in jeder
+Sprache (das Embedding-Modell ist mehrsprachig), je Partie der passendste Auszug.
+
+| Methode | Endpoint | Auth | Zweck |
+|---|---|---|---|
+| GET | `/api/library-games/semantic?q=&take=` | **AllowAnonymous** + RL | `{ available, indexed, items[{ game (wie die Namenssuche, mit inPool/requested), matches[{ fromPly, text, score }] }] }`. Ohne `q` nur `available`/`indexed` — der Dialog zeigt den Reiter nur mit Modell UND eingebettetem Bestand |
+
+* **Stücke statt Partien** (`CommentChunks`, Tabelle `CommentEmbeddings`): Kopfzeile (Spieler, Turnier, Jahr, Kommentator)
+  plus aufeinanderfolgende kommentierte Halbzüge („17. Bxh7+: …", Figurenschrift aufgelöst) bis ~900 Zeichen. Der Text
+  des Stücks ist zugleich der Auszug der Trefferliste (ohne Kopfzeile).
+* **Vektor in MariaDB** (≥ 11.7, Prod/Dev 11.8): Spalte `VECTOR(512)` (EF-seitig `byte[]`, float32 little endian — so nimmt
+  MariaDB den Parameter an), Kosinus-Index per SQL in der Migration. Gesucht wird mit rohem SQL
+  `ORDER BY VEC_DISTANCE_COSINE(`Vector`, @q) LIMIT 200` — genau diese Form benutzt den Index; InMemory rechnet in C#
+  (`VectorMath`). **`VECTOR` ist ein Schlüsselwort — die Spalte steht in SQL immer in Backticks** (ohne: Syntaxfehler im
+  `CREATE VECTOR INDEX`). Die CI-MariaDB (`mariadb:11`) muss dafür ≥ 11.7 sein; `CommentSearchSqlTests` prüft Speichern
+  und Suche gegen echtes MariaDB.
+* **Embedding-Modell** (`OpenAiTextEmbedder`, `Embedding:BaseUrl`/`ApiKey`/`Model`, Compose `EMBEDDING_*`): OpenAI-kompatibles
+  `POST /embeddings` — gedacht ist ein Pooling-Modell auf dem DGX Spark, z. B. `Qwen/Qwen3-Embedding-0.6B`. Angefordert werden
+  512 Werte (`dimensions`, Matryoshka); mehr wird gekürzt und neu normiert, weniger ist ein Fehler. Suchfragen bekommen die
+  Qwen3-Anweisung vorangestellt (`QueryInstruction`), Dokumente nicht.
+* **Befüllen**: `tools/LibraryImport embed [--limit n] [--batch 32]` (Env `Embedding__BaseUrl` …): noch nicht eingebettete
+  kommentierte Partien, beste Note zuerst, je Partie ganz oder gar nicht; wiederholbar. Dev: ~130 000 Partien, ~800 000
+  kommentierte Halbzüge, ~95 Mio. Zeichen → geschätzt 150–250 000 Stücke, ~0,5 GB Vektoren.
+
 ### Stellungsfilter (`/api/guess-tree`) — der Eroeffnungsbaum der Punktepartie
 
 Die Bestandssuche daneben beantwortet „ich weiss, wie die Partie heisst". Die andere Frage, die
@@ -2530,6 +2557,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
 | GameRoasts | „Roast my game" (0.535.0): je eigener Partie, Sprache und Stil der zuletzt gewürfelte Kommentar (`GameRoastService`) | SavedGameId (Cascade), Style (≤12), Language (≤8), Text (≤2000), Model? (≤80), CreatedAt; **UNIQUE (SavedGameId, Language, Style)** |
+| CommentEmbeddings | „Frag die Kommentare" (0.536.0): Kommentar-Stück einer Bibliothekspartie + Vektor | LibraryGameId (Cascade, Index), FromPly/ToPly, Text (≤1600, zugleich der Auszug), **Vector (`VECTOR(512)`, Kosinus-Index per SQL)**, Model? (≤80), CreatedAt |
 | GameMoveExplanations | „Warum war das ein Fehler?" (0.534.0): ein Text je Analyse, Halbzug und Sprache, geschrieben vom Sprachmodell auf eigener Hardware (`GameMoveExplanationService`) | GameAnalysisId (Cascade), Ply, Language (≤8), Class (≤12: inaccuracy/mistake/blunder/miss), Text (≤1200), Model? (≤80), CreatedAt; **UNIQUE (GameAnalysisId, Ply, Language)** |
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), **WhiteElo?/BlackElo? + TimeControl? (≤32, „180+2“) + HeadersScanned (0.526.0 — die Partienliste zeigt Wertung und Bedenkzeit wie chess.coms Übersicht; das PGN dafür zu laden wäre derselbe Fehler, den `MoveCount` schon behoben hat. Der Altbestand bekommt seine Wertungen portionsweise aus dem PGN (`HeaderBackfillPerCall` = 50 je Listenaufruf), und die Marke `HeadersScanned` unterscheidet „noch nicht nachgesehen“ von „nennt keine Wertung“; die Bedenkzeit steht in keinem alten PGN und bleibt dort leer)**, ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), **GameAnalysisId? (kein FK — die Analyse der Bewertungskurve; nur vom BESITZER gesetzt, kann ins Leere zeigen)**, **OwnerSide? (≤5, white/black — selbst festgelegte Seite, schlägt die Namenszuordnung; 0.531.0)**, CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
 | ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade (Partie, Konto) räumen OHNE das Foto zu laden ab (`ScoresheetScanService.RemoveWithoutLoading`) |
