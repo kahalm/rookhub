@@ -50,6 +50,17 @@ public sealed class ScoresheetResolution
     public string? StuckFen { get; set; }
     /// <summary>Die Einträge ab <see cref="StuckAt"/>, wie sie dastehen.</summary>
     public List<string> Unresolved { get; set; } = new();
+    /// <summary>Einträge, die zu keinem Zug gehören (doppelt/versehentlich notiert) — übersprungen.</summary>
+    public List<ScoresheetSkip> Skipped { get; set; } = new();
+}
+
+/// <summary>Ein übersprungener Formular-Eintrag.</summary>
+public sealed class ScoresheetSkip
+{
+    public int W { get; set; }
+    public string Written { get; set; } = string.Empty;
+    /// <summary>Zahl der Halbzüge davor — der Eintrag stand hinter Halbzug <c>AfterPly</c>.</summary>
+    public int AfterPly { get; set; }
 }
 
 /// <summary>
@@ -111,14 +122,46 @@ public static class ScoresheetResolver
         public const string Fuzzy = "fuzzy";
         public const string Guess = "guess";
         public const string User = "user";
+        /// <summary>Ein Zug, der auf dem Formular FEHLT (der Spieler hat ihn nicht notiert) — erschlossen, weil der
+        /// Eintrag danach sonst nicht passt.</summary>
+        public const string Inserted = "inserted";
+        /// <summary>Ein Eintrag, der zu KEINEM Zug gehört (doppelt oder versehentlich notiert).</summary>
+        public const string Skip = "skip";
     }
 
     private const double GuessCost = 8;
     private const int PerStateMoves = 6;
 
-    private sealed record Step(Step? Parent, int W, string San, string Uci, string Match, double Cost, string FenBefore);
+    /// <summary>Kosten eines fehlenden bzw. überzähligen Eintrags. Teurer als ein Lesefehler um ein Zeichen (2,5),
+    /// billiger als zwei: eine Verschiebung zieht sonst eine Kette von Lesefehlern nach sich, und DIE ist teurer.</summary>
+    private const double EditCost = 5;
 
-    private sealed record State(string Fen, double Cost, Step? Last, int Guesses = 0);
+    /// <summary>Erst ab so hohen Kosten des besten normalen Treffers wird ein fehlender/überzähliger Eintrag
+    /// erwogen — wo etwas glatt passt, bleibt es beim einfachen Lesen (und die Suche schnell).</summary>
+    private const double EditThreshold = 1.0;
+
+    /// <summary>So viele der besten Zustände eines Strahls dürfen einen fehlenden/überzähligen Eintrag versuchen.</summary>
+    private const int EditStates = 4;
+
+    /// <summary>Reservierte Plätze je Strahl für Wege kurz nach einem fehlenden/überzähligen Eintrag.</summary>
+    private const int ShelterSlots = 8;
+
+    /// <summary>So viele Einträge lang gilt der Schutz nach einem fehlenden/überzähligen Eintrag.</summary>
+    private const int ShelterLayers = 3;
+
+    /// <summary>So viele eingeschobene Züge je Zustand kommen in den Strahl (die mit dem besten Blick voraus).</summary>
+    private const int InsertsPerState = 6;
+
+    /// <summary>So gut muss der Eintrag NACH einem eingeschobenen Zug passen („glatt"): das ist die Bestätigung.</summary>
+    private const double SmoothCost = 0.5;
+
+    private sealed record Step(Step? Parent, int W, string San, string Uci, string Match, double Cost, string FenBefore,
+        string FenAfter);
+
+    /// <param name="Shelter">So viele Einträge lang bekommt ein Weg nach einem fehlenden/überzähligen Eintrag noch
+    /// reservierte Plätze im Strahl (<see cref="ShelterSlots"/>) — sonst verdrängen ihn die vielen billigen
+    /// Lesefehler-Varianten, bevor er sich als der glatte erweisen kann.</param>
+    private sealed record State(string Fen, double Cost, Step? Last, int Guesses = 0, int Shelter = 0);
 
     /// <summary>Einstellungen einer Auflösung.</summary>
     /// <param name="Language">Sprache der Einträge; <c>null</c> = automatisch (alle Sprachen mit Aufschlag).</param>
@@ -145,13 +188,21 @@ public static class ScoresheetResolver
         var steps = Unwind(best?.Last);
         var result = new ScoresheetResolution
         {
-            Plies = steps.Select(s => new ScoresheetPly
+            Plies = steps.Where(s => s.Match != Matches.Skip).Select(s => new ScoresheetPly
             {
-                W = s.W, Written = scanned[s.W].Written, San = s.San, Uci = s.Uci, Match = s.Match,
+                W = s.W >= 0 ? s.W : null, Written = s.W >= 0 ? scanned[s.W].Written : string.Empty,
+                San = s.San, Uci = s.Uci, Match = s.Match,
             }).ToList(),
             StuckAt = stuckAt,
             StuckFen = stuckFen,
         };
+        var pliesSoFar = 0;
+        foreach (var st in steps)
+        {
+            if (st.Match == Matches.Skip)
+                result.Skipped.Add(new ScoresheetSkip { W = st.W, Written = scanned[st.W].Written, AfterPly = pliesSoFar });
+            else pliesSoFar++;
+        }
         if (stuckAt is int from)
             result.Unresolved = scanned.Skip(from).Select(p => p.Written).ToList();
 
@@ -168,13 +219,14 @@ public static class ScoresheetResolver
     private static (State? Best, int? StuckAt, string? StuckFen, bool Merged) Search(IReadOnlyList<ScannedPly> scanned,
         Options options, string fen, int from, int to, int width,
         Dictionary<(string, int, bool), List<(Move, string, string, string, double, string)>> cache,
-        IReadOnlyDictionary<int, string>? mergeKeys = null)
+        IReadOnlyDictionary<int, string>? mergeKeys = null, bool allowEdits = true)
     {
         var maxGuesses = 1 + (to - from) / GuessEvery;
+        var editBudget = allowEdits ? maxGuesses : 0;
         var beams = new List<List<State>> { new() { new State(fen, 0, null) } };
         for (var w = from; w < to; w++)
         {
-            var next = Expand(beams[^1], w, scanned, options, guess: false, width, cache);
+            var next = Expand(beams[^1], w, scanned, options, guess: false, width, cache, editBudget);
             if (next.Count == 0)
             {
                 next = Backtrack(beams, w, from, to, scanned, options, width, maxGuesses, cache);
@@ -248,26 +300,89 @@ public static class ScoresheetResolver
         return new();
     }
 
+    /// <summary>Steht derselbe Eintrag direkt davor oder danach noch einmal (doppelt notiert)?</summary>
+    private static bool IsDuplicate(IReadOnlyList<ScannedPly> scanned, int w)
+    {
+        var key = ScoresheetNotation.Clean(scanned[w].Written).ToLowerInvariant();
+        if (key.Length < 2) return false;
+        bool Same(int k) => k >= 0 && k < scanned.Count
+            && ScoresheetNotation.Clean(scanned[k].Written).ToLowerInvariant() == key;
+        return Same(w - 1) || Same(w + 1);
+    }
+
     /// <summary>Unleserlich markiert: leer, Fragezeichen, oder das Modell war sich nicht sicher.</summary>
     private static bool LooksUnreadable(ScannedPly ply)
         => string.IsNullOrWhiteSpace(ply.Written) || ply.Written.Contains('?') || ply.Confidence == "low";
 
+    /// <param name="maxGuesses">Nur im normalen Lesen (nicht im Joker-Modus): ab so vielen erschlossenen
+    /// Einträgen sind fehlende/überzählige Einträge nicht mehr erlaubt. <c>0</c> = gar nicht.</param>
     private static List<State> Expand(List<State> beam, int w, IReadOnlyList<ScannedPly> scanned, Options options,
-        bool guess, int width, Dictionary<(string, int, bool), List<(Move, string, string, string, double, string)>> cache)
+        bool guess, int width, Dictionary<(string, int, bool), List<(Move, string, string, string, double, string)>> cache,
+        int maxGuesses = 0)
     {
         var merged = new Dictionary<string, State>(StringComparer.Ordinal);
+        void Add(State candidate)
+        {
+            var key = PositionKey(candidate.Fen);
+            if (merged.TryGetValue(key, out var old) && old.Cost <= candidate.Cost) return;
+            merged[key] = candidate;
+        }
+
+        var rank = 0;
         foreach (var state in beam)
         {
-            foreach (var (_, san, uci, match, cost, after) in Scored(state.Fen, w, scanned, options, guess, cache))
+            var scored = Scored(state.Fen, w, scanned, options, guess, cache);
+            var shelter = Math.Max(0, state.Shelter - 1);
+            foreach (var (_, san, uci, match, cost, after) in scored)
             {
-                var total = state.Cost + cost;
-                var key = PositionKey(after);
-                if (merged.TryGetValue(key, out var old) && old.Cost <= total) continue;
                 var guesses = state.Guesses + (match == Matches.Guess ? 1 : 0);
-                merged[key] = new State(after, total, new Step(state.Last, w, san, uci, match, cost, state.Fen), guesses);
+                Add(new State(after, state.Cost + cost,
+                    new Step(state.Last, w, san, uci, match, cost, state.Fen, after), guesses, shelter));
             }
+
+            // Passt hier nichts glatt, kann das Formular verschoben sein: ein Zug fehlt (der Spieler hat ihn nicht
+            // notiert) oder ein Eintrag ist zu viel. Beides kostet EditCost und zählt wie ein Joker.
+            var bestNormal = scored.Count == 0 ? double.PositiveInfinity : scored.Min(x => x.Cost);
+            if (!guess && bestNormal >= EditThreshold && rank < EditStates && state.Guesses < maxGuesses)
+            {
+                // Überzähliger Eintrag: verbrauchen, ohne zu ziehen — aber NUR einen doppelt notierten (gleich dem
+                // Eintrag davor oder danach). Ein beliebiger Eintrag wäre sonst die billigste Art, Unleserliches
+                // loszuwerden: die Lesung bliebe nicht mehr hängen, fragte nicht nach und ließe still echte Züge weg.
+                if (IsDuplicate(scanned, w))
+                    Add(new State(state.Fen, state.Cost + EditCost,
+                        new Step(state.Last, w, string.Empty, string.Empty, Matches.Skip, EditCost, state.Fen, state.Fen),
+                        state.Guesses + 1, ShelterLayers));
+                // Fehlender Zug: irgendein legaler Zug, BESTÄTIGT dadurch, dass der Eintrag danach glatt passt. Meist
+                // „passen" so dutzende Züge gleich gut (jeder ruhige Zug der Seite) — ungeordnet verstopften sie den
+                // Strahl, und der richtige fiel heraus, bevor ein späterer Eintrag ihn bestätigen konnte (HCS-Beleg 03:
+                // 21…Sg4 fehlt, erst 22…Dxa6 verrät ihn). Deshalb vorsortiert nach dem ÜBERNÄCHSTEN Eintrag, und nur
+                // die besten kommen in den Strahl.
+                var inserts = new List<(State State, double Rank)>();
+                foreach (var ins in Scored(state.Fen, w, scanned, options, guess: true, cache))
+                {
+                    foreach (var (_, san2, uci2, match2, cost2, after2) in Scored(ins.After, w, scanned, options, false, cache))
+                    {
+                        if (cost2 > SmoothCost) continue;
+                        var inserted = new Step(state.Last, -1, ins.San, ins.Uci, Matches.Inserted, EditCost, state.Fen, ins.After);
+                        var next = w + 1 < scanned.Count ? Scored(after2, w + 1, scanned, options, false, cache) : null;
+                        var ahead = next == null ? 0 : next.Count == 0 ? GuessCost : next.Min(x => x.Cost);
+                        inserts.Add((new State(after2, state.Cost + EditCost + cost2,
+                            new Step(inserted, w, san2, uci2, match2, cost2, ins.After, after2), state.Guesses + 1,
+                            ShelterLayers), cost2 + ahead));
+                    }
+                }
+                foreach (var (candidate, _) in inserts.OrderBy(x => x.Rank).ThenBy(x => x.State.Fen, StringComparer.Ordinal).Take(InsertsPerState))
+                    Add(candidate);
+            }
+            rank++;
         }
-        return merged.Values.OrderBy(s => s.Cost).Take(width).ToList();
+        // Bei Gleichstand fest nach Stellung sortieren: die Zugreihenfolge der Schach-Bibliothek ist kein Vertrag, und
+        // ein echter Gleichstand (Thh1/Tdh1) soll bei jedem Lauf gleich ausgehen.
+        var ordered = merged.Values.OrderBy(s => s.Cost).ThenBy(s => s.Fen, StringComparer.Ordinal).ToList();
+        var chosen = ordered.Take(width).ToList();
+        // Dazu die geschützten Wege nach einem fehlenden/überzähligen Eintrag, die sonst herausfielen.
+        chosen.AddRange(ordered.Skip(width).Where(s => s.Shelter > 0).Take(ShelterSlots));
+        return chosen;
     }
 
     /// <summary>Die passenden legalen Züge zu Eintrag <paramref name="w"/> in Stellung <paramref name="fen"/>,
@@ -294,7 +409,8 @@ public static class ScoresheetResolver
             }
             scored.Add((m, san, uci, match, cost));
         }
-        var take = scored.OrderBy(s => s.Item5).Take(guess ? 64 : PerStateMoves).ToList();
+        var take = scored.OrderBy(s => s.Item5).ThenBy(s => s.Item3, StringComparer.Ordinal)
+            .Take(guess ? 64 : PerStateMoves).ToList();
 
         var result = new List<(Move, string, string, string, double, string)>(take.Count);
         foreach (var (m, san, uci, match, cost) in take)
@@ -357,8 +473,13 @@ public static class ScoresheetResolver
         // Lesefehler: ein, zwei Zeichen daneben („Dc1" für De1, „Qxd4" für exd4).
         foreach (var c in ScoresheetNotation.Candidates(ply.San, null).Concat(writtenCands))
         {
-            var d = ScoresheetNotation.Distance(c.Key, key);
-            if (d is >= 1 and <= 2 && c.Key.Length >= 2) Consider(2.5 * d + c.Cost, Matches.Fuzzy);
+            var d = ScoresheetNotation.WeightedDistance(c.Key, key);
+            if (d is < 1 or > 2.4 || c.Key.Length < 2) continue;
+            // Ein Zeichen vertauscht, und zwar eines, das sich in Handschrift leicht verwechseln lässt (6/8, 1/7,
+            // a/d …): billiger als ein beliebiger Lesefehler — so entscheidet bei „Rf8" zwischen Rf6 und Ra8 nicht
+            // der Zufall (am HCS-Beleg 05 gemessen), sondern die Ähnlichkeit der Zeichen.
+            var similar = d == 1.0 && ScoresheetNotation.IsConfusable(c.Key, key);
+            Consider(2.5 * d - (similar ? 0.5 : 0) + c.Cost, Matches.Fuzzy);
         }
         return (best, match);
     }
@@ -370,7 +491,8 @@ public static class ScoresheetResolver
     /// des unmöglichen „Sxd4" bis zum letzten Zug).
     /// </summary>
     private static int CleanReach(IEnumerable<Step> steps)
-        => steps.TakeWhile(s => s.Match is not (Matches.Fuzzy or Matches.Guess)).Count();
+        => steps.TakeWhile(s => s.Match is not (Matches.Fuzzy or Matches.Guess or Matches.Inserted or Matches.Skip))
+            .Count(s => s.W >= 0);
 
     /// <summary>Stellungsschlüssel ohne Zugzähler — zwei Wege zur selben Stellung sind derselbe Strahl.</summary>
     private static string PositionKey(string fen)
@@ -405,13 +527,22 @@ public static class ScoresheetResolver
         var end = result.StuckAt ?? scanned.Count;
         // Stellung der gewählten Lesung NACH jedem Eintrag — dort trifft sich eine Zugumstellung wieder.
         var chosenKeys = new Dictionary<int, string>();
-        for (var i = 0; i + 1 < steps.Count; i++) chosenKeys[steps[i].W] = PositionKey(steps[i + 1].FenBefore);
+        foreach (var st in steps.Where(st => st.W >= 0)) chosenKeys[st.W] = PositionKey(st.FenAfter);
 
         var points = 0;
+        var plyIndex = -1;
         for (var i = 0; i < steps.Count && points < MaxBranchPoints; i++)
         {
             var step = steps[i];
-            var ply = result.Plies[i];
+            if (step.Match == Matches.Skip) continue;       // kein Zug — steht in result.Skipped
+            plyIndex++;
+            var ply = result.Plies[plyIndex];
+            if (step.Match == Matches.Inserted)
+            {
+                // Stand nicht auf dem Formular: immer ansehen lassen; Lesarten gibt es keine (es gibt nichts zu lesen).
+                ply.Uncertain = true;
+                continue;
+            }
             var scannedPly = scanned[step.W];
             var candidates = Scored(step.FenBefore, step.W, scanned, options, guess: false, cache)
                 .Where(c => c.Uci != step.Uci).OrderBy(c => c.Cost).ToList();
@@ -427,20 +558,22 @@ public static class ScoresheetResolver
                 new()
                 {
                     San = step.San, Uci = step.Uci, Match = step.Match, Reach = chosenReach,
-                    Preview = steps.Skip(i + 1).Take(4).Select(s => s.San).ToList(),
+                    Preview = steps.Skip(i + 1).Where(s => s.Match != Matches.Skip).Take(4).Select(s => s.San).ToList(),
                 },
             };
             var rival = false;
             foreach (var alt in candidates.Take(BranchWidth - 1))
             {
                 var horizon = Math.Min(end, step.W + 1 + ReachHorizon);
-                var (bestAlt, _, _, merged) = Search(scanned, options, alt.After, step.W + 1, horizon, 8, cache, chosenKeys);
+                // Ohne fehlende/überzählige Einträge: gemessen wird die GLATTE Reichweite, und die endet dort ohnehin.
+                var (bestAlt, _, _, merged) = Search(scanned, options, alt.After, step.W + 1, horizon, 8, cache, chosenKeys,
+                    allowEdits: false);
                 var altSteps = Unwind(bestAlt?.Last);
                 var reach = merged ? chosenReach : CleanReach(altSteps);
                 opts.Add(new ScoresheetOption
                 {
                     San = alt.San, Uci = alt.Uci, Match = alt.Match, Reach = Math.Min(reach, ReachHorizon),
-                    Preview = altSteps.Take(4).Select(s => s.San).ToList(),
+                    Preview = altSteps.Where(s => s.Match != Matches.Skip).Take(4).Select(s => s.San).ToList(),
                 });
 
                 // Ebenbürtig ist eine Lesart, die GLEICH WEIT trägt und dabei nicht teurer ist — verglichen über
@@ -452,7 +585,7 @@ public static class ScoresheetResolver
                 if (altCost <= chosenCost + RivalMargin) rival = true;
             }
 
-            var bent = step.Match is Matches.Fuzzy or Matches.Guess or Matches.Alternative;
+            var bent = step.Match is Matches.Fuzzy or Matches.Guess or Matches.Alternative or Matches.Inserted;
             ply.Uncertain = bent || scannedPly.Confidence == "low" || rival;
             ply.Options = ply.Uncertain ? opts : null;
         }

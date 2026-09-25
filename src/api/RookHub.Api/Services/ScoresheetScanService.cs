@@ -27,6 +27,7 @@ public class ScoresheetScanService
     private readonly ILogger<ScoresheetScanService> _logger;
     private readonly int _dailyLimit;
     private readonly ScoresheetBudget _budget;
+    private readonly ScoresheetReader _reader;
 
     /// <summary>Größter angenommener Upload.</summary>
     public const int MaxUploadBytes = 30 * 1024 * 1024;
@@ -61,6 +62,7 @@ public class ScoresheetScanService
         _logger = logger;
         _dailyLimit = int.TryParse(config?["Scoresheet:DailyLimit"], out var l) && l > 0 ? l : DefaultDailyLimit;
         _budget = new ScoresheetBudget(config, ClaudeScoresheetVisionClient.MaxTokens);
+        _reader = new ScoresheetReader(vision);
     }
 
     /// <summary>Die Kostenbremse (für Tests und die Statusanzeige).</summary>
@@ -260,7 +262,7 @@ public class ScoresheetScanService
         var jpeg = ScoresheetImage.Prepare(scan.Photo, ModelEdge);
         if (jpeg == null) { await FailAsync(scan, "unreadable", ct); return; }
 
-        var outcome = await ReadAndResolveAsync(jpeg, scan.NotationLanguage, ct,
+        var outcome = await _reader.ReadAsync(jpeg, scan.NotationLanguage, ct,
             beforeCall: token => BudgetBlockAsync(scan.UserId, token),
             afterCall: async (input, output, token) =>
             {
@@ -302,90 +304,6 @@ public class ScoresheetScanService
             scan.Id, game.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain), r.Unresolved.Count, outcome.Rounds);
     }
 
-    /// <summary>Ergebnis des Lesens: Transkription + Auflösung, oder ein Fehlergrund.</summary>
-    internal sealed record ReadOutcome(ScoresheetTranscription? Transcription, ScoresheetResolution? Resolution,
-        string? Json, string? Language, int Rounds, string? Error);
-
-    /// <summary>
-    /// Lesen, auflösen, bei einer Sackgasse nachfragen. Behalten wird die BESTE Lesung aller Durchgänge (die
-    /// am weitesten legal aufgeht, dann die mit den wenigsten unsicheren Stellen) — eine Nachfrage kann auch
-    /// schlechter ausfallen.
-    /// </summary>
-    /// <param name="beforeCall">Vor JEDEM Modell-Aufruf: darf er starten? (<c>null</c> = ja, sonst der Grund.)
-    /// Vor der ersten Lesung beendet ein Nein die Einlesung, vor einer Nachfrage nur die Nachfragen.</param>
-    /// <param name="afterCall">Nach jedem Aufruf: verbrauchte Tokens (auch bei Fehlern) verbuchen.</param>
-    internal async Task<ReadOutcome> ReadAndResolveAsync(byte[] jpeg, string language, CancellationToken ct,
-        Func<CancellationToken, Task<string?>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null)
-    {
-        ReadOutcome? best = null;
-        string? previousJson = null;
-        ScoresheetTranscription? previous = null;
-        ScoresheetResolution? previousResolution = null;
-        for (var round = 1; round <= MaxRounds; round++)
-        {
-            var instructions = round == 1 || previous == null || previousResolution?.StuckAt is not int stuck
-                ? ScoresheetPrompt.FirstRead(language)
-                : ScoresheetPrompt.Repair(language, previousJson!, previousResolution.Plies.Select(p => p.San).ToList(),
-                    stuck, previous.Moves[stuck].ToScanned(), previousResolution.StuckFen!,
-                    LegalMoves(previousResolution.StuckFen!));
-
-            if (beforeCall != null && await beforeCall(ct) is { } blocked)
-            {
-                if (best != null) return best with { Rounds = round - 1 };
-                return new ReadOutcome(null, null, null, null, 0, blocked);
-            }
-            var answer = await _vision.ReadAsync(jpeg, instructions, ct);
-            if (afterCall != null && (answer.InputTokens > 0 || answer.OutputTokens > 0))
-                await afterCall(answer.InputTokens, answer.OutputTokens, ct);
-            if (answer.Error != null || answer.Json == null)
-            {
-                // Eine gescheiterte NACHFRAGE verwirft die erste Lesung nicht.
-                if (best != null) return best with { Rounds = round };
-                return new ReadOutcome(null, null, null, null, round, answer.Error ?? "failed");
-            }
-
-            var transcription = ScoresheetTranscription.Parse(answer.Json);
-            if (transcription == null)
-            {
-                if (best != null) return best with { Rounds = round };
-                return new ReadOutcome(null, null, answer.Json, null, round, "failed");
-            }
-            if (transcription.Moves.Count == 0)
-            {
-                if (best != null) return best with { Rounds = round };
-                return new ReadOutcome(transcription, null, answer.Json, null, round, "noMoves");
-            }
-
-            var effective = EffectiveLanguage(language, transcription.NotationLanguage);
-            var resolution = ScoresheetResolver.Resolve(transcription.Scanned(),
-                new ScoresheetResolver.Options(ScoresheetNotation.Find(effective)));
-            var outcome = new ReadOutcome(transcription, resolution, answer.Json, effective, round, null);
-            if (best == null || IsBetter(resolution, best.Resolution!)) best = outcome;
-            if (resolution.StuckAt == null) return best with { Rounds = round };
-
-            previousJson = answer.Json;
-            previous = transcription;
-            previousResolution = resolution;
-        }
-        return best!;
-    }
-
-    private static bool IsBetter(ScoresheetResolution a, ScoresheetResolution b)
-    {
-        if (a.Plies.Count != b.Plies.Count) return a.Plies.Count > b.Plies.Count;
-        return a.Plies.Count(p => p.Uncertain) < b.Plies.Count(p => p.Uncertain);
-    }
-
-    /// <summary>Gewählte Sprache gewinnt; bei „auto" die vom Modell erkannte; sonst automatisch (alle).</summary>
-    internal static string EffectiveLanguage(string chosen, string? detected)
-        => chosen != "auto" ? chosen : ScoresheetNotation.Find(detected) != null ? detected! : "auto";
-
-    private static List<string> LegalMoves(string fen)
-    {
-        try { return ChessBoard.LoadFromFen(fen).Moves(generateSan: true).Select(m => m.San ?? GamePlies.ToUci(m)).ToList(); }
-        catch { return new(); }
-    }
-
     /// <summary>
     /// Kommentare im PGN: wo der Zug vom Formular abweicht (Lesefehler repariert, Eintrag erschlossen), steht,
     /// was DASTAND — dieselbe Auskunft, die man beim Nachspielen braucht, um dem Zug zu misstrauen. Die nicht
@@ -399,6 +317,16 @@ public class ScoresheetScanService
             var p = r.Plies[i];
             if (p.Match is ScoresheetResolver.Matches.Fuzzy or ScoresheetResolver.Matches.Guess)
                 comments[i] = $"sheet: {(string.IsNullOrWhiteSpace(p.Written) ? "?" : p.Written)}";
+            else if (p.Match == ScoresheetResolver.Matches.Inserted)
+                comments[i] = "sheet: —"; // stand nicht auf dem Formular
+        }
+        // Doppelt notierte Einträge hängen am Zug davor.
+        foreach (var skip in r.Skipped)
+        {
+            var at = Math.Max(0, skip.AfterPly - 1);
+            if (at >= r.Plies.Count) continue;
+            var text = "sheet, extra: " + skip.Written;
+            comments[at] = comments.TryGetValue(at, out var c0) ? c0 + " | " + text : text;
         }
         if (r.Unresolved.Count > 0 && r.Plies.Count > 0)
         {

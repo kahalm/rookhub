@@ -81,11 +81,14 @@ public static class ScoresheetNotation
         foreach (var o in others ?? Array.Empty<Language>())
             if (langs.All(l => l.Lang.Code != o.Code)) langs.Add((o, otherCost));
 
+        // Ein KLEINER Buchstabe a–h vorn ist eher eine Linie als eine Figur („bxa4" ist ein Bauer, kein Läufer):
+        // die Figur-Lesart bleibt, kostet aber etwas mehr — bei einem Gleichstand gewinnt der Bauer.
+        var lowerFile = cleaned[0] is >= 'a' and <= 'h';
         foreach (var (lang, baseCost) in langs)
         {
             // Figurenzug: führender Figurenbuchstabe dieser Sprache (Groß/klein egal — Handschrift).
             if (TryStripPiece(cleaned, lang, out var piece, out var rest))
-                Add(piece + NormalizeSquares(rest, lang), baseCost);
+                Add(piece + NormalizeSquares(rest, lang), baseCost + (lowerFile ? 0.3 : 0));
         }
         // Bauernzug: beginnt mit einer Linie a–h. Handschriftlich groß geschrieben („B3") kostet es etwas.
         if (cleaned[0] is >= 'a' and <= 'h')
@@ -215,6 +218,57 @@ public static class ScoresheetNotation
             if (string.Equals(code, l.Knight, StringComparison.OrdinalIgnoreCase)) return "N";
         }
         return code.ToUpperInvariant();
+    }
+
+    /// <summary>Zeichenpaare, die in Handschrift leicht verwechselt werden (Ziffern der Reihen, Buchstaben der Linien).</summary>
+    private static readonly HashSet<(char, char)> Confusable = BuildConfusable(
+        "16", "17", "38", "68", "56", "49", "06", "08", "23", "27", "35", "ad", "bh", "ce", "gq", "ef", "hk", "bd");
+
+    private static HashSet<(char, char)> BuildConfusable(params string[] pairs)
+    {
+        var set = new HashSet<(char, char)>();
+        foreach (var p in pairs) { set.Add((p[0], p[1])); set.Add((p[1], p[0])); }
+        return set;
+    }
+
+    /// <summary>Unterscheiden sich zwei gleich lange Schlüssel in genau EINEM Zeichen, und ist das ein leicht zu
+    /// verwechselndes Paar (6/8, 1/7, a/d …)?</summary>
+    public static bool IsConfusable(string a, string b)
+    {
+        if (a.Length != b.Length) return false;
+        var diff = -1;
+        for (var i = 0; i < a.Length; i++)
+        {
+            if (a[i] == b[i]) continue;
+            if (diff >= 0) return false;
+            diff = i;
+        }
+        return diff >= 0 && Confusable.Contains((char.ToLowerInvariant(a[diff]), char.ToLowerInvariant(b[diff])));
+    }
+
+    /// <summary>
+    /// Gewichteter Abstand für Lesefehler: ein VERLESENES Zeichen kostet 1, ein fehlendes oder dazugedichtetes 1,2.
+    /// In Handschrift wird ein Zeichen viel öfter falsch gelesen als ganz übersehen — am HCS-Beleg 01 gewann sonst
+    /// „bxa4" → „a4" (Zeichen gestrichen) gegen das richtige „bxa4" → „bxc4" (Zeichen verlesen).
+    /// </summary>
+    public static double WeightedDistance(string a, string b)
+    {
+        const double indel = 1.2;
+        if (a == b) return 0;
+        var prev = new double[b.Length + 1];
+        var cur = new double[b.Length + 1];
+        for (var j = 0; j <= b.Length; j++) prev[j] = j * indel;
+        for (var i = 1; i <= a.Length; i++)
+        {
+            cur[0] = i * indel;
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var sub = a[i - 1] == b[j - 1] ? 0 : 1;
+                cur[j] = Math.Min(Math.Min(cur[j - 1] + indel, prev[j] + indel), prev[j - 1] + sub);
+            }
+            (prev, cur) = (cur, prev);
+        }
+        return prev[b.Length];
     }
 
     /// <summary>Levenshtein-Abstand (klein, für Tippfehler/Lesefehler in einem Zug).</summary>

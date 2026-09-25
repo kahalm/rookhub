@@ -2589,7 +2589,8 @@
       "resolveFailed": "The rest could not be rebuilt — it stays as it was, as far as it is still legal.",
       "dropIllegal": "{{count}} moves are not legal and will be dropped. Save anyway?",
       "saved": "Game saved.",
-      "saveFailed": "Saving failed."
+      "saveFailed": "Saving failed.",
+      "notOnSheet": "not on the sheet"
     }
   },
   "analysis": {

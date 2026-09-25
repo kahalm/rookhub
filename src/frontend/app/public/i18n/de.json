@@ -2589,7 +2589,8 @@
       "resolveFailed": "Der Rest konnte nicht neu aufbereitet werden — er bleibt, soweit er noch legal ist.",
       "dropIllegal": "{{count}} Züge sind nicht legal und fallen weg. Trotzdem speichern?",
       "saved": "Partie gespeichert.",
-      "saveFailed": "Speichern fehlgeschlagen."
+      "saveFailed": "Speichern fehlgeschlagen.",
+      "notOnSheet": "steht nicht auf dem Formular"
     }
   },
   "analysis": {

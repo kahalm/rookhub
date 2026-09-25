@@ -157,12 +157,15 @@ export function isoDateOf(pgnDate: string | undefined): string {
 /** Vom Server erzeugte Hinweise im PGN-Kommentar (siehe `ScoresheetScanService.CommentsFor`). */
 export const SHEET_NOTE = 'sheet: ';
 export const SHEET_OPEN = 'sheet, not resolved: ';
+export const SHEET_EXTRA = 'sheet, extra: ';
+/** Hinweis an einem Zug, der auf dem Formular FEHLTE (vom Auflöser eingeschoben). */
+export const SHEET_MISSING = 'sheet: —';
 
 /** Den Nutzer-Anteil eines Kommentars — ohne die vom Server erzeugten Formular-Hinweise. */
 export function stripSheetNotes(comment: string | null | undefined): string | null {
   if (!comment) return null;
   const kept = comment.split(' | ').map(s => s.trim())
-    .filter(s => s && !s.startsWith(SHEET_NOTE) && !s.startsWith(SHEET_OPEN));
+    .filter(s => s && !s.startsWith(SHEET_NOTE) && !s.startsWith(SHEET_OPEN) && !s.startsWith(SHEET_EXTRA));
   return kept.length ? kept.join(' | ') : null;
 }
 
@@ -177,6 +180,7 @@ export function commentsForSave(plies: readonly EditPly[], unresolved: readonly 
     const parts: string[] = [];
     if (p.comment?.trim()) parts.push(p.comment.trim());
     if (!p.confirmed && (p.match === 'fuzzy' || p.match === 'guess')) parts.push(SHEET_NOTE + (p.written || '?'));
+    if (!p.confirmed && p.match === 'inserted') parts.push(SHEET_MISSING);
     return parts.length ? parts.join(' | ') : null;
   });
   if (unresolved.length && out.length) {

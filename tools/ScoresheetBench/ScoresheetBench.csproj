@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Testwerkzeug für „Partieformular einlesen" (0.529.0), KEIN Teil der API. Misst Belege mit bekannter Partie
+    durch: Formular-Bild + Soll-PGN + Abschrift. Ohne Datenbank und ohne zweite API-Instanz — es benutzt nur die
+    Lese-Schleife (ScoresheetReader) und den Auflöser. Das Docker-Image der API sieht diesen Ordner nie.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RookHub.Tools.ScoresheetBench</RootNamespace>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/api/RookHub.Api/RookHub.Api.csproj" />
+  </ItemGroup>
+
+</Project>

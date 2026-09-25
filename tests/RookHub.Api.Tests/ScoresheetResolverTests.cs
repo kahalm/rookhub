@@ -162,4 +162,47 @@ public class ScoresheetResolverTests
         var r = ScoresheetResolver.Resolve(sheet, German);
         Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6", "Bb5" }, r.Plies.Select(p => p.San));
     }
+
+    [Fact]
+    public void Resolve_AMoveMissingOnTheSheet_IsInserted_AndTheRestStaysInStep()
+    {
+        // Der Spieler hat 3…Sf6 nicht notiert: ab dort stehen alle Einträge einen Halbzug zu früh (Farben vertauscht).
+        var sheet = WrittenOnly(new[] { "e4", "e5", "Sf3", "Sc6", "Lb5", "a6", "La4", "Sf6", "0-0", "Le7" }
+            .Where((_, i) => i != 3).ToList());
+        var r = ScoresheetResolver.Resolve(sheet, German);
+        Assert.Null(r.StuckAt);
+        Assert.Equal(10, r.Plies.Count);
+        Assert.Equal(ScoresheetResolver.Matches.Inserted, r.Plies[3].Match);
+        Assert.Null(r.Plies[3].W);
+        Assert.True(r.Plies[3].Uncertain);
+        Assert.Equal(new[] { "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7" }, r.Plies.Skip(4).Select(p => p.San));
+    }
+
+    [Fact]
+    public void Resolve_AnEntryWrittenTwice_IsSkipped()
+    {
+        var sheet = WrittenOnly(new[] { "e4", "e5", "Sf3", "Sf3", "Sc6", "Lb5", "a6", "La4", "Sf6" });
+        var r = ScoresheetResolver.Resolve(sheet, German);
+        Assert.Null(r.StuckAt);
+        Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6" }, r.Plies.Select(p => p.San));
+        var skip = Assert.Single(r.Skipped);
+        Assert.Equal("Sf3", skip.Written);
+    }
+
+    [Fact]
+    public void Candidates_LowercaseFileLetter_PrefersThePawn()
+    {
+        // „bxa4" in englischer Notation: Bauer (b-Linie) oder Läufer? Klein geschrieben: der Bauer ist billiger.
+        var c = ScoresheetNotation.Candidates("bxa4", ScoresheetNotation.Find("en"));
+        Assert.True(c.Single(x => x.Key == "ba4").Cost < c.Single(x => x.Key == "Ba4").Cost);
+    }
+
+    [Fact]
+    public void Fuzzy_ConfusableCharacters_AreCheaper_AndDeletionsDearer()
+    {
+        Assert.True(ScoresheetNotation.IsConfusable("Rf8", "Rf6"));
+        Assert.False(ScoresheetNotation.IsConfusable("Rf8", "Ra8"));
+        Assert.Equal(1.0, ScoresheetNotation.WeightedDistance("ba4", "bc4"));
+        Assert.Equal(1.2, ScoresheetNotation.WeightedDistance("ba4", "a4"));
+    }
 }

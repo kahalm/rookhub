@@ -2589,7 +2589,8 @@
       "resolveFailed": "Ostatak nije bilo moguće ponovno sastaviti — ostaje kakav je bio, dokle je legalan.",
       "dropIllegal": "Poteza koji nisu legalni i bit će izostavljeni: {{count}}. Ipak spremiti?",
       "saved": "Partija spremljena.",
-      "saveFailed": "Spremanje nije uspjelo."
+      "saveFailed": "Spremanje nije uspjelo.",
+      "notOnSheet": "nije na zapisniku"
     }
   },
   "analysis": {

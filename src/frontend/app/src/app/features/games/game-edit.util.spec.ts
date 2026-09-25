@@ -1,5 +1,5 @@
 import {
-  EditPly, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn,
+  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn,
   resolveRequest, revalidate, stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 
@@ -79,6 +79,10 @@ describe('game-edit.util', () => {
     ];
     expect(commentsForSave(list, ['Zz9'])).toEqual(['gut', `${SHEET_NOTE}e6`, `${SHEET_OPEN}Zz9`]);
     expect(commentsForSave(list, [])).toEqual(['gut', `${SHEET_NOTE}e6`, null]);
+    // Ein eingeschobener (auf dem Formular fehlender) Zug bekommt seinen Hinweis, bestätigt verliert er ihn.
+    const inserted = [ply('e4', null, { match: 'inserted' }), ply('e5', null, { match: 'inserted', confirmed: true })];
+    expect(commentsForSave(inserted, [])).toEqual([SHEET_MISSING, null]);
+    expect(stripSheetNotes(`${SHEET_EXTRA}Nf3 | eigener`)).toBe('eigener');
   });
 
   it('headersOf + isoDateOf: header values, "?" counts as empty', () => {

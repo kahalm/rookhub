@@ -2851,7 +2851,8 @@
       "resolveFailed": "A hátralévő részt nem sikerült újra összeállítani — marad, ameddig szabályos.",
       "dropIllegal": "{{count}} lépés nem szabályos és kimarad. Mégis mented?",
       "saved": "Játszma mentve.",
-      "saveFailed": "A mentés nem sikerült."
+      "saveFailed": "A mentés nem sikerült.",
+      "notOnSheet": "nincs a lapon"
     }
   },
   "analysisJobs": {

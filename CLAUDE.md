@@ -2090,7 +2090,16 @@ bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/g
   nächsten Eintrag (sonst „löst" die Suche jeden Unsinn auf), höchstens 1 + einer je 15 Einträge, und bei einer
   Sackgasse geht die Suche bis zu drei Einträge zurück. **Unsichere Stellen** bekommen die drei wahrscheinlichsten
   Lesarten, jede bis zu 60 Einträge weitergespielt; gemessen wird die GLATTE Reichweite (bis zum ersten Lesefehler
-  oder Joker — mit genug Reparaturen käme fast jede falsche Lesart bis zum Ende). Unsicher bleibt eine Stelle nur,
+  oder Joker — mit genug Reparaturen käme fast jede falsche Lesart bis zum Ende). **Verschobene Formulare**
+  (0.530.0): passt an einem Eintrag nichts glatt, darf ein Zug EINGESCHOBEN werden, der auf dem Formular fehlt
+  (Kosten 5, bestätigt nur, wenn der Eintrag danach glatt passt; vorsortiert nach dem übernächsten Eintrag, höchstens
+  6 je Zustand), oder ein Eintrag ÜBERSPRUNGEN — aber nur ein DOPPELT notierter (sonst wäre Überspringen der
+  billigste Weg, Unleserliches loszuwerden, und die Lesung ließe still echte Züge weg). Solche Wege bekommen drei
+  Einträge lang reservierte Plätze im Strahl, sonst verdrängen sie die vielen billigen Lesefehler-Varianten. Weitere
+  Regeln: ein KLEINER Buchstabe a–h vorn ist eher Bauer als Figur (+0,3), in Handschrift verwechselbare Zeichen (6/8,
+  1/7, a/d …) machen einen Lesefehler um 0,5 billiger, ein gestrichenes/dazugedichtetes Zeichen zählt 1,2 statt 1;
+  Gleichstände werden fest nach Stellung/Zug entschieden (die Zugreihenfolge von Gera.Chess ist kein Vertrag).
+  Unsicher bleibt eine Stelle nur,
   wenn der Zug zurechtgebogen ist, das Modell zweifelte oder eine andere Lesart gleich weit trägt, ohne teurer zu
   sein; eine Zugumstellung (17. Sbd4/Sfd4 Sxd4 18. Sxd4) gilt als ebenbürtig. Anlass-Partie als Test:
   `ScoresheetResolverTests` rekonstruiert alle 66 Halbzüge allein aus den deutschen Einträgen.
@@ -2116,6 +2125,14 @@ nur, wenn die RESERVE noch passt** (ungünstigster Fall eines Aufrufs: `MaxToken
 einer Nachfrage entfallen nur die Nachfragen (die Lesung bis dahin bleibt). Admins: keine Nutzerbudgets und keine
 Tageszahl, das Gesamtbudget gilt auch für sie. Dazu weiter `Scoresheet:DailyLimit` (20 Einlesungen je 24 h) und 3
 offene je Nutzer. Die Upload-Seite zeigt den Verbrauch in Prozent (`budgetUsedPercent`, das knappere Budget).
+
+**Testwerkzeug** `tools/ScoresheetBench` (Konsole, wie `tools/LibraryImport` kein Teil des Images, OHNE Datenbank
+und ohne zweite API-Instanz — es benutzt nur `ScoresheetReader` + Auflöser): misst einen Ordner mit `NN.png|jpg`
+(Formular), `NN.pgn` (Soll), `NN.formular.txt` (Abschrift) und `belege.json`. `--resolver-only` nimmt die Abschrift
+als Eingabe (kostenlos, misst nur den Auflöser); ohne den Schalter liest das Modell die Bilder
+(`ANTHROPIC_API_KEY`, harter Deckel `--max-usd`). Ausgabe: `report.md`, `results.json`, je Beleg `NN.plies.tsv`
+(Abschrift, Modell, Soll, Ergebnis, Art, Lesarten, Kosten des Soll-Wegs) und `NN.answer.json`. Stand 25.09.2026 am
+10er-Testsatz (HCS USA + Brasilien, portugiesisch): nur Auflöser 583/591 Halbzüge richtig, jeder falsche markiert.
 
 **Korrekturseite**: das Brett zeigt die Stellung VOR dem gewählten Halbzug, ein Zug am Brett ersetzt ihn (oder fügt
 ein), `Zug löschen` streicht ihn. Bei einer eingelesenen Partie wird danach der REST neu aufbereitet

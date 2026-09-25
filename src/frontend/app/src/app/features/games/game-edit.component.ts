@@ -139,6 +139,7 @@ interface MoveRow { no: number; white: number; black: number | null; }
                   <strong>{{ plyLabel(cursor()) }}</strong>
                   <span class="san" [class.bad]="p.illegal">{{ p.san }}</span>
                   @if (p.written) { <span class="written">{{ 'games.edit.written' | translate: { text: p.written } }}</span> }
+                  @if (p.match === 'inserted') { <span class="chip warn">{{ 'games.edit.notOnSheet' | translate }}</span> }
                   @if (p.uncertain && !p.confirmed) { <span class="chip warn">{{ 'games.edit.uncertain' | translate }}</span> }
                   @if (p.confirmed) { <span class="chip ok">{{ 'games.edit.confirmed' | translate }}</span> }
                   @if (p.illegal) { <span class="chip bad">{{ 'games.edit.illegal' | translate }}</span> }
