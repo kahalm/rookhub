@@ -327,11 +327,37 @@ public class DeploymentConfigTests
         Assert.True(firstRule > 0 && firstRule < nginx.IndexOf("location ~ ^/(g|t|puzzles)", StringComparison.Ordinal),
             "Scanner-Regeln muessen vor der OG-Location stehen");
         Assert.True(firstRule < nginx.IndexOf("location / {", StringComparison.Ordinal));
-        foreach (var api in new[] { "/api/", "/api/engine/", "/api/extension/chessable/" })
+        foreach (var api in new[] { "/api/", "/api/engine/", "/api/extension/chessable/", "/api/external-engine/" })
         {
             Assert.Contains($"location ^~ {api} {{", nginx);
             Assert.DoesNotContain($"location {api} {{", nginx);
         }
+    }
+
+    /// <summary>
+    /// Eigener Engine-Broker: der Upload des Providers ist ein CHUNKED-Strom, der so lange läuft, wie die Engine
+    /// rechnet. Ohne <c>proxy_request_buffering off</c> sammelt nginx ihn bis zum Ende — der Anfragende sähe die
+    /// erste Zeile erst nach der Suche (Plan-Kapitel 6.1). Ohne <c>client_max_body_size 0</c> bräche eine lange
+    /// Suche an der Größe ab, ohne lange Timeouts an der Stille zwischen zwei tiefen Iterationen.
+    /// </summary>
+    [Fact]
+    public void ExternalEngineLocation_StreamsTheProviderUploadUnbuffered()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/external-engine/ \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/external-engine/ fehlt in nginx.conf");
+        var body = loc.Groups["body"].Value;
+        foreach (var directive in new[]
+        {
+            "proxy_http_version 1.1;", "proxy_request_buffering off;", "proxy_buffering off;", "proxy_cache off;",
+            "client_max_body_size 0;", "proxy_read_timeout 3600s;", "proxy_send_timeout 3600s;",
+            "proxy_pass http://$rookhub_broker_api$request_uri;",
+        })
+            Assert.Contains(directive, body);
+
+        // Die Location steht VOR der generischen /api/ (Lesbarkeit; für nginx entscheidet der längere Präfix).
+        Assert.True(nginx.IndexOf("location ^~ /api/external-engine/ {", StringComparison.Ordinal)
+                    < nginx.IndexOf("location ^~ /api/ {", StringComparison.Ordinal));
     }
 
     [Fact]
