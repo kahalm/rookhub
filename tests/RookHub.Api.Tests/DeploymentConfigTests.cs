@@ -143,6 +143,9 @@ public class DeploymentConfigTests
         Assert.Contains("test/entrypoint.test.sh", text);
         Assert.Contains("test/supervisor.test.sh", text);
         Assert.Contains("test/provider.test.py", text);
+        // Der eine Eingriff in den Provider (frische Verbindung je Upload) wird VOR dem Vertragstest
+        // angewandt — sonst prüft die CI einen anderen Provider als das Image ausliefert.
+        Assert.Contains("patch_force_close.py", text);
         Assert.DoesNotContain("heartbeat.test.py", text);
     }
 

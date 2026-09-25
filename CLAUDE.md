@@ -1586,8 +1586,8 @@ Die Karte zeigt zusätzlich „rechnet seit m:ss an Tiefe N" ab 5 s ohne neue Ze
 Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Provider — beim Bauen
 auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (eindeutige Herkunft,
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
-und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). **In den Provider selbst greift
-das Image seit 0.478.11 nicht mehr ein**: der gepinnte Stand (`d0eeb242`, 2026-09-06) erfüllt die zwei Regeln
+und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). **Das Lebenszeichen patcht das
+Image seit 0.478.11 nicht mehr hinein** (bis dahin `patch_provider.py`): der gepinnte Stand (`d0eeb242`, 2026-09-06) erfüllt die zwei Regeln
 des Brokers, an denen RookHub hängt, und `test/provider.test.py` prüft sie gegen einen nachgebauten Broker.
 
 1. **Jede Suche endet mit `bestmove`.** Der Broker verlangt das seit lila-engine `0e1223b` (2026-09-06) und
@@ -1605,6 +1605,14 @@ des Brokers, an denen RookHub hängt, und `test/provider.test.py` prüft sie geg
    Klasse Fehler wie der `NdjsonHeartbeatPump` auf der Strecke API→Browser, nur einen Hop weiter vorne. Das
    Keepalive kommt beim Empfänger als eigene ndjson-Zeile an: der Worker zählt es als Lebenszeichen
    (`StreamTally.IsKeepalive`), der Browser verwirft es im Parser (`ExternalEngineService.analyse`).
+
+**Ein Eingriff bleibt (0.535.1, `patch_force_close.py`)**: der asynchrone Provider lädt Suchen über eine
+aiohttp-Sitzung mit Verbindungs-Pool hoch; eine inzwischen von der Gegenseite geschlossene Pool-Verbindung
+fällt erst beim nächsten Upload auf — Auftrag schon abgeholt, Engine hat `go`, Upload stirbt im ersten Byte,
+der Anfragende bekommt nach 15 s einen 503 (upstream Issue #45, per A/B belegt). `TCPConnector(force_close=True)`
+für die Upload-Sitzung (nicht für den Poll) behebt es; `test/provider.test.py` verlangt drei Uploads auf drei
+Verbindungen, die CI wendet den Patch vor dem Test an (`DeploymentConfigTests` hält die Zeile fest). Weg damit,
+sobald upstream es behebt.
 
 **Wer den Pin anhebt, lässt `test/provider.test.py` laufen** (die CI tut es): die Regeln des Brokers ändern
 sich, ohne dass ein laufender Provider davon erfährt. Gegen den alten Stand scheitert der Test mit genau den

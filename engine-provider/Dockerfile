@@ -72,8 +72,8 @@ RUN pip install --no-cache-dir "aiohttp==3.14.3"
 # uns ändern) und per Prüfsumme verifiziert — ein manipuliertes Skript bekäme sonst den
 # Lichess-Token zu sehen.
 #
-# KEIN Eingriff mehr in den geholten Provider (bis 0.478.10 patchte patch_provider.py ein
-# Lebenszeichen hinein). Seit d0eeb242 (2026-09-06) schickt er es selbst — alle 15 s
+# Das Lebenszeichen patcht das Image NICHT mehr hinein (bis 0.478.10 tat das
+# patch_provider.py). Seit d0eeb242 (2026-09-06) schickt der Provider es selbst — alle 15 s
 # `{"keepalive":true}` — und beendet jeden Upload mit `bestmove`. Das zweite verlangt der Broker
 # seit demselben Tag (lila-engine 0e1223b): der frueher gepinnte Stand bekam bei JEDER Suche eine
 # 400, schlief danach 5 s und holte erst dann den naechsten Auftrag — ein Zug kurz nach einer
@@ -83,6 +83,13 @@ ARG PROVIDER_SHA256=aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c
 RUN curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/${PROVIDER_SHA}/example-provider.py" \
       -o /opt/provider.py \
  && echo "${PROVIDER_SHA256}  /opt/provider.py" | sha256sum -c -
+
+# EIN Eingriff bleibt: frische Verbindung je Upload (upstream Issue #45 — eine wiederverwendete
+# Pool-Verbindung kann beim naechsten Upload tot sein, der Auftrag verhungert dann als 503;
+# Begruendung im Skript). Absichtlich NACH der Pruefsumme: gepatcht wird nur der verifizierte
+# Originaltext, und aendert der sich, bricht der Build ab statt still ungepatcht durchzulaufen.
+COPY patch_force_close.py /opt/
+RUN python3 /opt/patch_force_close.py /opt/provider.py
 
 COPY entrypoint.sh preflight.py /opt/
 RUN chmod +x /opt/entrypoint.sh

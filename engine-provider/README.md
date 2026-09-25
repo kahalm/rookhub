@@ -99,7 +99,8 @@ den Stempel während der Suche und beendet nur Prozesse, die wirklich untätig s
 ### Provider-Stand: Suchende und Lebenszeichen
 
 Der gepinnte Provider (`PROVIDER_SHA` im `Dockerfile`, Stand `d0eeb242` vom 2026-09-06) erfüllt zwei
-Regeln des Brokers, an denen RookHub hängt. Dieses Image greift deshalb nicht mehr in ihn ein.
+Regeln des Brokers, an denen RookHub hängt. Das frühere Lebenszeichen patcht dieses Image nicht mehr hinein; ein anderer, kleinerer Eingriff kam mit
+0.535.1 dazu (siehe unten).
 
 **Jede Suche endet mit `bestmove`.** Der Broker verlangt das seit 2026-09-06 (lila-engine `0e1223b`)
 und weist einen Upload ohne mit `400 uci protocol error: expected bestmove before end of stream` ab.
@@ -121,6 +122,19 @@ dass score-lose Zeilen beim Provider bleiben und dass auch ein Zug WÄHREND eine
 Gegen den alten Stand schlägt der Test mit genau den vier bis fünf Sekunden Wartezeit fehl. **Beim
 Aktualisieren des Pins** läuft er in der CI mit: die Regeln des Brokers ändern sich, ohne dass ein
 bereits laufender Provider davon erfährt.
+
+**Ein Eingriff bleibt: eine frische Verbindung je Upload** (`patch_force_close.py`, seit 0.535.1). Der
+asynchrone Provider schickt den Upload einer Suche über eine aiohttp-Sitzung mit Verbindungs-Pool: die
+Verbindung zum Broker bleibt nach einer Antwort offen und wird für den nächsten Upload wiederverwendet.
+Schließt die Gegenseite sie inzwischen (nginx nach dem Ende eines Streams, oder weil der Anfragende weg
+ist), merkt aiohttp das erst beim nächsten Schreiben — der Auftrag ist da schon abgeholt, die Engine hat
+`go`, der Upload stirbt im ersten Byte („Connection closed while streaming analysis"), und der Anfragende
+wartet 15 s ins Leere (Broker-503). Gemeldet als [external-engine #45](https://github.com/lichess-org/external-engine/issues/45)
+mit A/B-Nachweis: `TCPConnector(force_close=True)` für die Upload-Sitzung behebt es — so machte es der alte
+Provider mit `requests.post` ohnehin. Die Poll-Sitzung bleibt im Pool (die Abfrage alle 10 s soll keinen
+TLS-Handshake kosten). Der Patch wird NACH der Prüfsummen-Kontrolle angewandt und bricht den Build ab, wenn
+die Textstelle fehlt; `test/provider.test.py` prüft, dass drei Uploads auf drei Verbindungen kommen. Behebt
+upstream das Problem, fliegen Skript und Dockerfile-Zeilen wieder raus.
 
 ### Gestaffelte Starts (`PROVIDER_START_DELAY`)
 

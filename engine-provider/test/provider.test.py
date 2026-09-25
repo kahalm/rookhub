@@ -15,6 +15,10 @@ rund vier Sekunden, bis die Engine anlief. Geprueft wird deshalb, was man am Bre
 3. Schweigt die Engine (lange MultiPV-Iteration), kommt `{"keepalive":true}` — ohne ein
    Lebenszeichen kappt der Broker die stumme Verbindung nach 60 s.
 4. Ein Zug WAEHREND der Suche: die alte Suche endet mit `bestmove`, die neue startet sofort.
+5. Jeder Upload kommt auf einer FRISCHEN Verbindung (patch_force_close.py, upstream Issue #45):
+   eine wiederverwendete Pool-Verbindung kann inzwischen von der Gegenseite geschlossen sein, der
+   Upload stirbt dann im ersten Byte und der Anfragende wartet 15 s ins Leere. Der Test erwartet
+   den GEPATCHTEN Provider (die CI wendet den Patch vor dem Test an); ungepatcht ist er hier rot.
 
 Statt Stockfish laeuft ein Stub. Der Test dauert rund 20 s — der 15-s-Takt der Lebenszeichen ist
 im Provider fest verdrahtet.
@@ -75,6 +79,7 @@ class FakeBroker:
         self.jobs = asyncio.Queue()
         self.uploads = {}
         self.keepalive = asyncio.Event()
+        self.peers = []          # Client-Adresse je Upload: gleicher Port = wiederverwendete Verbindung
 
     async def list_engines(self, _request):
         return web.json_response([])
@@ -90,6 +95,7 @@ class FakeBroker:
             return web.Response(status=204)
 
     async def submit(self, request):
+        self.peers.append(request.transport.get_extra_info("peername") if request.transport else None)
         upload = self.uploads[request.match_info["id"]] = {"lines": []}
         async for raw in request.content:
             line = raw.decode().strip()
@@ -166,6 +172,14 @@ async def scenario(broker, check):
     check(wait < MAX_START_SECONDS,
           f"Zug waehrend der Suche startet sofort ({wait:.2f} s)",
           f"Zug waehrend der Suche lieferte erst nach {wait:.2f} s (Grenze {MAX_START_SECONDS} s)")
+
+    # ===== 5. Jeder Upload auf einer frischen Verbindung =====================================
+    # Mit Verbindungs-Pool kaemen j2 und j3 ueber dieselbe Verbindung wie j1 (gleicher Client-Port);
+    # mit force_close hat jeder Upload einen eigenen.
+    ports = [peer[1] for peer in broker.peers if peer]
+    check(len(ports) == 3 and len(set(ports)) == 3,
+          f"jeder Upload auf frischer Verbindung (Client-Ports {ports})",
+          f"Uploads teilen sich Verbindungen (Client-Ports {ports}) — patch_force_close.py fehlt oder greift nicht")
 
 
 async def main(src):

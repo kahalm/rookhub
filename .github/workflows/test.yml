@@ -143,6 +143,10 @@ jobs:
       - name: aiohttp wie im Dockerfile
         working-directory: engine-provider
         run: pip install --quiet "$(grep -oP 'pip install --no-cache-dir "\K[^"]+' Dockerfile)"
+      # Derselbe Eingriff wie im Dockerfile (frische Verbindung je Upload, upstream Issue #45) — der
+      # Vertragstest unten prüft ihn mit und ist ungepatcht rot.
+      - run: python3 patch_force_close.py /tmp/provider.py
+        working-directory: engine-provider
       # Argument-Aufbau + Vorprüfungen (Dry-Run) …
       - run: bash test/entrypoint.test.sh
         working-directory: engine-provider
