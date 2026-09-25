@@ -44,6 +44,12 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
     /// <summary>Das Modell, das zuletzt geantwortet hat (bzw. das eingestellte) — gehört an den gespeicherten Satz.</summary>
     public string TranslationModel => _configuredModel ?? _resolvedModel ?? "local";
 
+    public bool IsLocal => true;
+
+    public Task<string?> CompleteJsonAsync(string purpose, string system, string userPrompt, JsonNode schema,
+        int maxTokens, CancellationToken ct = default)
+        => AskAsync(purpose, system, userPrompt, schema, maxTokens, ct);
+
     public Task<string?> GenerateHintsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
         => AskAsync("hints", system, userPrompt, HintSchema(), maxTokens: 4096, ct);
 

@@ -81,6 +81,24 @@ export interface GameAnalyzeResult {
   reused: boolean;
 }
 
+/** Eine Erklärung zu einem Fehler (Halbzug 0-basiert wie in den Bewertungen). */
+export interface GameExplanation {
+  ply: number;
+  class: string;
+  text: string;
+}
+
+/** „Warum war das ein Fehler?" (0.534.0) — die Erklärungen einer Partie in einer Sprache. */
+export interface GameExplanations {
+  /** Ein Sprachmodell auf eigener Hardware ist eingerichtet. */
+  available: boolean;
+  /** Der Aufrufer darf erzeugen lassen (Besitzer, Analyse fertig, nichts läuft). */
+  canGenerate: boolean;
+  running: boolean;
+  language: string;
+  items: GameExplanation[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
@@ -128,6 +146,19 @@ export class GamesService {
 
   evals(url: string): Observable<GameEvals> {
     return this.http.get<GameEvals>(url);
+  }
+
+  /** „Warum war das ein Fehler?" (0.534.0): die Erklärungen liegen neben den Bewertungen — dieselbe Adresse mit
+   *  `/explanations` statt `/evals` (eigene Partie wie Teilen-Link). */
+  explanationsUrl(evalsUrl: string): string { return evalsUrl.replace(/\/evals$/, '/explanations'); }
+
+  explanations(url: string, lang: string): Observable<GameExplanations> {
+    return this.http.get<GameExplanations>(url, { params: { lang } });
+  }
+
+  /** Erzeugen anstoßen (nur der Besitzer; läuft im Hintergrund, der Client fragt nach). */
+  requestExplanations(url: string, lang: string): Observable<GameExplanations> {
+    return this.http.post<GameExplanations>(url, {}, { params: { lang } });
   }
 
   /** Absolute Teilen-URL einer Partie (für Copy-to-Clipboard). */

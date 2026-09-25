@@ -2745,6 +2745,8 @@
       "greatGap": "Az egyetlen jó lépés — a következő legjobb {{gap}} gyaloggal rosszabb",
       "greatOnly": "Az egyetlen jó lépés",
       "missHint": "Kimaradt az ellenfél hibájának megbüntetése",
+      "explain": "Hibáim magyarázata",
+      "explaining": "A magyarázatok készülnek …",
       "bookHint": "A repertoárodban (a bővítményhez megjelölve)",
       "lines": "Gépi változatok",
       "arrow": "Nyíl a legjobb lépéshez",

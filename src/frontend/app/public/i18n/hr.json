@@ -2483,6 +2483,8 @@
       "greatGap": "Jedini dobar potez — sljedeći najbolji lošiji je za {{gap}} pješaka",
       "greatOnly": "Jedini dobar potez",
       "missHint": "Propuštena prilika da se kazni protivnikova pogreška",
+      "explain": "Objasni moje pogreške",
+      "explaining": "Objašnjenja se pišu …",
       "bookHint": "U tvom repertoaru (označenom za proširenje)",
       "lines": "Računalne varijante",
       "arrow": "Strelica za najbolji potez",

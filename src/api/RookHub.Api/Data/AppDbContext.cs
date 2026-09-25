@@ -127,6 +127,7 @@ public class AppDbContext : DbContext
     public DbSet<CommentText> CommentTexts => Set<CommentText>();
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
+    public DbSet<GameMoveExplanation> GameMoveExplanations => Set<GameMoveExplanation>();
     public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
     public DbSet<GuessMove> GuessMoves => Set<GuessMove>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
@@ -1485,6 +1486,19 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
         });
+
+        // Warum war das ein Fehler? (0.534.0): je Analyse, Halbzug und Sprache EIN Text; geht mit der Analyse.
+
+        modelBuilder.Entity<GameMoveExplanation>(e =>
+
+        {
+
+            e.HasIndex(x => new { x.GameAnalysisId, x.Ply, x.Language }).IsUnique();
+
+            e.HasOne(x => x.GameAnalysis).WithMany().HasForeignKey(x => x.GameAnalysisId).OnDelete(DeleteBehavior.Cascade);
+
+        });
+
 
         modelBuilder.Entity<GameAnalysisPosition>(e =>
         {

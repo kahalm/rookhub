@@ -29,6 +29,16 @@ public interface IClaudeJsonClient
 
     /// <summary>Welches Modell die Uebersetzung benutzt — gehoert an den gespeicherten Satz.</summary>
     string TranslationModel { get; }
+
+    /// <summary>Laeuft auf EIGENER Hardware (kein Geld je Aufruf). Funktionen, die nur dann laufen sollen (Fehler-
+    /// Erklaerungen, 0.534.0), fragen das — ueber den Claude-Text-Schluessel sollen sie keine Kosten erzeugen.</summary>
+    bool IsLocal => false;
+
+    /// <summary>Beliebige JSON-Antwort nach <paramref name="schema"/>. Vorgabe: nicht unterstuetzt (<c>null</c>) —
+    /// nur der Client fuer eigene Hardware bietet das an.</summary>
+    Task<string?> CompleteJsonAsync(string purpose, string system, string userPrompt,
+        System.Text.Json.Nodes.JsonNode schema, int maxTokens, CancellationToken ct = default)
+        => Task.FromResult<string?>(null);
 }
 
 /// <summary>

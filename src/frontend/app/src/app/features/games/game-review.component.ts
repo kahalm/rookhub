@@ -13,7 +13,7 @@ import { formatEta } from '../../shared/eta.util';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { bestMoveArrowAt, computerLinesAt } from './computer-lines.util';
-import { GamesService } from './games.service';
+import { GameExplanations, GamesService } from './games.service';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
   reviewGame,
@@ -32,6 +32,9 @@ const SYMBOLS: Record<MoveClass, string> = {
 
 /** Diese Klassen bekommen einen Punkt in der Kurve — die Züge, bei denen man hinsehen will. */
 const MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>(['brilliant', 'great', 'miss', 'mistake', 'blunder']);
+
+/** Diese Grundklassen sind Fehler — nur zu ihnen gibt es Erklärungen (Spiegel von `GameMistakes` am Server). */
+const ERROR_CLASSES: ReadonlySet<MoveClass> = new Set<MoveClass>(['inaccuracy', 'mistake', 'blunder']);
 
 /** Ab diesem Abstand ist er keine Zahl in Bauern mehr, sondern ein Matt auf der einen Seite. */
 const MATE_GAP_PAWNS = 100;
@@ -113,6 +116,16 @@ const MATE_GAP_PAWNS = 100;
                  die Auskunft, für die man hinsieht. -->
             @if (tip) { <span class="why">{{ tip }}</span> }
           </div>
+          <!-- „Warum war das ein Fehler?" (0.534.0): geschrieben vom Sprachmodell auf eigener Hardware, nur aus den
+               Linien der Analyse. Im Fehler-Training aus — der Text nennt den besseren Zug. -->
+          @if (explanationFor(); as ex) { <p class="explain">💬 {{ ex }}</p> }
+        }
+        @if (explainState() === 'can') {
+          <button mat-stroked-button type="button" class="explain-btn" (click)="explain()">
+            <mat-icon>psychology</mat-icon> {{ 'games.review.explain' | translate }}
+          </button>
+        } @else if (explainState() === 'running') {
+          <span class="progress explaining">{{ 'games.review.explaining' | translate }}</span>
         }
         <div class="table-wrap">
           <table class="summary">
@@ -171,6 +184,9 @@ const MATE_GAP_PAWNS = 100;
     .line-san { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .current { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.85rem; }
     .current .why { color: color-mix(in srgb, currentColor 70%, transparent); }
+    .explain { margin: 2px 0 0; font-size: 0.88rem; line-height: 1.35; }
+    .explain-btn { align-self: flex-start; }
+    .explaining { font-size: 0.85rem; }
     /* Die chess.com-Farben sind hell (Gelb, Hellgrün) — ein Schatten hält die weiße Schrift darauf lesbar. */
     .current .badge {
       padding: 1px 8px; border-radius: 10px; color: #fff; font-weight: 600; white-space: nowrap;
@@ -232,6 +248,8 @@ export class GameReviewComponent {
   static readonly PollMs = 10_000;
   /** Während der Vertiefung (zweiter Durchgang, 0.523.0) gemächlicher — die Analyse ist schon nutzbar. */
   static readonly RefinePollMs = 60_000;
+  /** Während Erklärungen entstehen: alle 5 s nachfragen (eine Erklärung braucht auf der Spark ein paar Sekunden). */
+  static readonly ExplainPollMs = 5_000;
   static readonly LinesKey = 'rookhub_game_lines';
   static readonly ArrowKey = 'rookhub_game_arrow';
 
@@ -273,8 +291,29 @@ export class GameReviewComponent {
     return i >= 0 ? this.review().moves[i] ?? null : null;
   });
 
+  /** „Warum war das ein Fehler?" (0.534.0): Erklärungen der Partie in der Sprache der Oberfläche. */
+  readonly explanations = signal<GameExplanations | null>(null);
+  /** Der Text zum aktuellen Zug — nicht im Fehler-Training (er nennt den besseren Zug). */
+  readonly explanationFor = computed(() => {
+    const m = this.current();
+    const e = this.explanations();
+    if (!m || !e || this.engineHidden()) return null;
+    return e.items.find(x => x.ply === m.ply)?.text ?? null;
+  });
+  /** Knopf „Fehler erklären lassen": nur der Besitzer, nur wenn es Fehler gibt und noch keine Erklärung. */
+  readonly explainState = computed<'can' | 'running' | null>(() => {
+    const e = this.explanations();
+    if (!e || this.engineHidden() || this.status() !== 'done') return null;
+    if (e.running) return 'running';
+    const hasErrors = this.review().moves.some(m => !!m && ERROR_CLASSES.has(m.base));
+    return e.canGenerate && e.items.length === 0 && hasErrors ? 'can' : null;
+  });
+
   private loadSub?: Subscription;
   private pollSub?: Subscription;
+  private explainSub?: Subscription;
+  private explainPoll?: Subscription;
+  private explainKey: string | null = null;
   private lastStatus: GameEvalsStatus | null = null;
 
   constructor() {
@@ -293,7 +332,59 @@ export class GameReviewComponent {
       const m = this.mistakes();
       untracked(() => this.mistakesChange.emit(m));
     });
-    inject(DestroyRef).onDestroy(() => this.stop());
+    // Erklärungen: sobald die Analyse fertig ist, und neu bei einem Sprachwechsel.
+    effect(() => {
+      const url = this.evalsUrl();
+      const done = this.status() === 'done';
+      const lang = this.language();
+      untracked(() => this.loadExplanations(url, done, lang));
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.stop();
+      this.explainSub?.unsubscribe();
+      this.explainPoll?.unsubscribe();
+    });
+  }
+
+  private language(): string {
+    return this.translate.currentLang() || this.translate.getFallbackLang() || 'en';
+  }
+
+  private loadExplanations(evalsUrl: string | null, done: boolean, lang: string, force = false): void {
+    const key = evalsUrl && done ? `${evalsUrl}|${lang}` : null;
+    if (!force && key === this.explainKey) return;
+    this.explainKey = key;
+    this.explainSub?.unsubscribe();
+    this.explainPoll?.unsubscribe();
+    if (!key || !evalsUrl) {
+      this.explanations.set(null);
+      return;
+    }
+    // Still: ohne Modell auf eigener Hardware (oder ohne Anmeldung am eigenen Endpunkt) gibt es schlicht keinen Text.
+    this.explainSub = this.games.explanations(this.games.explanationsUrl(evalsUrl), lang).subscribe({
+      next: e => this.applyExplanations(e),
+      error: () => this.explanations.set(null),
+    });
+  }
+
+  /** Erzeugen lassen — läuft im Hintergrund; bis es fertig ist, fragt die Komponente alle 5 s nach. */
+  explain(): void {
+    const url = this.evalsUrl();
+    if (!url) return;
+    this.explainSub?.unsubscribe();
+    this.explainSub = this.games.requestExplanations(this.games.explanationsUrl(url), this.language()).subscribe({
+      next: e => this.applyExplanations(e),
+      error: () => this.explanations.update(e => e ? { ...e, canGenerate: false } : e),
+    });
+  }
+
+  private applyExplanations(e: GameExplanations): void {
+    this.explanations.set(e);
+    this.explainPoll?.unsubscribe();
+    if (e.running) {
+      this.explainPoll = timer(GameReviewComponent.ExplainPollMs).subscribe(() =>
+        this.loadExplanations(this.evalsUrl(), this.status() === 'done', this.language(), true));
+    }
   }
 
   /** Sofort neu laden — nach „Partie analysieren", damit die Kurve nicht bis zum nächsten Takt wartet. */

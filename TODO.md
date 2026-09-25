@@ -9,6 +9,31 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [~] Sprachmodell auf dem DGX Spark für RookHub (2026-09-25)
+
+Nr. 1 ERLEDIGT (0.533.3): Tipps + Übersetzung über `TextLlm:*` (OpenAI-kompatibel), Dev eingerichtet, Prod-Stack
+hat die Werte in `.env`/`compose.yaml`, wirkt dort ab Tag ≥ 0.533.3 + `docker compose up -d api`. Die Spark
+(`spark.cp-austria.at`) kann ausfallen oder ihr Modell wechseln — alles hier erscheint nur, wenn sie konfiguriert und
+erreichbar ist, und scheitert leise.
+
+- [x] **4 „Warum war das ein Fehler?"** — ERLEDIGT in 0.534.0 (Details in CLAUDE.md). Je Ungenauigkeit/Fehler/grobem Fehler/verpasster Chance ein, zwei
+  Sätze im Partie-Rückblick, gebaut aus GEPRÜFTEN Fakten (Stellung, gespielter Zug, Bestzug + Engine-Linie, Widerlegung,
+  Gewinnchance vorher/nachher). Jeder im Text genannte Zug muss in den mitgegebenen Linien stehen, sonst verworfen.
+  Tabelle `GameMoveExplanations` (Analyse, Halbzug, Sprache, Text, Modell), höchstens ~15 je Partie, NUR über die Spark
+  (keine Claude-Kosten). Braucht einen Server-Spiegel der Zug-Klassen (wie `GameAccuracy`).
+- [ ] **5 „Roast my game"** (nach 4, nutzt dieselben Klassen). Eingabe: Kopfdaten, Ergebnis, Genauigkeit je Seite,
+  markante Züge mit Bewertungsumschwung. **Drei Stile** (Wunsch des Nutzers): **freundlich**; **frech**; **russisch** —
+  flamet den Spieler und hinterfragt seine mentale Kapazität (derber Trainer-Ton, ausdrücklich gewollt). Nur der
+  Besitzer der Partie, im ⋮-Menü von `/games/:id`, nie automatisch veröffentlicht; Teilen per Kopieren bzw. „In Discord
+  posten" über den Bot-Webhook mit Partie-Link. Tabelle `GameRoasts` (Partie, Sprache, Stil, Text) + „Neu würfeln".
+  Grenzen auch für „russisch": gegen die Züge und die Denkleistung am Brett, keine Beleidigungen über Herkunft,
+  Aussehen, Gesundheit o. Ä.; Länge gedeckelt.
+- [ ] **9 Semantische Suche im Rohbestand** („Frag die Kommentare"). Embedding-Modell zusätzlich auf der Spark
+  (`Qwen/Qwen3-Embedding-0.6B` oder `BAAI/bge-m3`, mehrsprachig), Vektoren in MariaDB 11.8 (VECTOR + HNSW, läuft auf Dev
+  und Prod), Tabelle `CommentEmbeddings` (Partie, Halbzug, Stück, Vektor), Schritt `embed` in `tools/LibraryImport`
+  (Stücke „Zug 17.Lxh7+: Kommentar …"), Suche = Frage einbetten → nächste Stücke → nach Partie gruppiert, Sprung auf den
+  Halbzug; dritte Suchart im Dialog „Partie anfordern", kombinierbar mit Spieler-/Stellungsfilter.
+
 ## [ ] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23)
 
 `PgnImportService.ImportFileAsync` laedt das Buch IMMER mit `.Include(b => b.Source)` — auch bei

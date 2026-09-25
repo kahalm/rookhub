@@ -312,6 +312,9 @@ try
     builder.Services.AddSingleton<IClaudeJsonClient>(sp => TextJsonClients.Create(builder.Configuration,
         sp.GetRequiredService<ILoggerFactory>(), sp.GetRequiredService<IHttpClientFactory>().CreateClient("text-llm")));
     builder.Services.AddScoped<HintGenerationService>();
+    // „Warum war das ein Fehler?" (0.534.0): Erklärungen über das Modell auf eigener Hardware.
+    builder.Services.AddSingleton<GameExplanationJobs>();
+    builder.Services.AddScoped<GameMoveExplanationService>();
     builder.Services.AddScoped<MenuVisibilityService>();
     // Open-Graph-/Link-Vorschau (Brett-Bild + Meta-Tag-Injektion in die SPA-index.html).
     builder.Services.AddScoped<RookHub.Api.Services.Og.OgMetaService>();

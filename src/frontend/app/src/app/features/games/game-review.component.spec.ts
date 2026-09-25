@@ -267,6 +267,54 @@ describe('GameReviewComponent', () => {
     expect(current.textContent).toContain('+3.00');
   });
 
+  it('Fehler-Erklärungen (0.534.0): Knopf beim Besitzer, danach nachfragen, Text beim aktuellen Zug, im Training aus', fakeAsync(() => {
+    const { fixture, http, el } = setup();
+    http.expectOne(url).flush(evals('done'));
+    fixture.detectChanges();
+    const ex = '/api/games/4/explanations';
+    http.expectOne(r => r.url === ex && r.method === 'GET' && r.params.get('lang') === 'en')
+      .flush({ available: true, canGenerate: true, running: false, language: 'en', items: [] });
+    fixture.detectChanges();
+
+    const btn = el.querySelector('.explain-btn') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+    http.expectOne(r => r.url === ex && r.method === 'POST')
+      .flush({ available: true, canGenerate: false, running: true, language: 'en', items: [] });
+    fixture.detectChanges();
+    expect(el.querySelector('.explain-btn')).toBeNull();
+    expect(el.querySelector('.explaining')).not.toBeNull();
+
+    tick(5000);
+    http.expectOne(r => r.url === ex && r.method === 'GET').flush({
+      available: true, canGenerate: false, running: false, language: 'en',
+      items: [{ ply: 1, class: 'blunder', text: 'c5 hands White the centre.' }],
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('.explaining')).toBeNull();
+    expect(el.querySelector('.explain')).toBeNull();   // Startstellung: kein Zug
+
+    fixture.componentRef.setInput('currentIndex', 1);
+    fixture.detectChanges();
+    expect(el.querySelector('.explain')!.textContent).toContain('c5 hands White the centre.');
+
+    // Im Fehler-Training verriete der Text den besseren Zug.
+    fixture.componentRef.setInput('engineHidden', true);
+    fixture.detectChanges();
+    expect(el.querySelector('.explain')).toBeNull();
+  }));
+
+  it('Fehler-Erklärungen: fremde Partie (kein Erzeugen) und ohne Modell — kein Knopf', () => {
+    const { fixture, http, el } = setup();
+    http.expectOne(url).flush(evals('done'));
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/games/4/explanations')
+      .flush({ available: false, canGenerate: false, running: false, language: 'en', items: [] });
+    fixture.detectChanges();
+    expect(el.querySelector('.explain-btn')).toBeNull();
+    expect(el.querySelector('.explaining')).toBeNull();
+  });
+
   it('Fehler und grobe Fehler gehen als Punkte in die Kurve', () => {
     const { fixture, http, el } = setup();
     http.expectOne(url).flush(evals('done'));

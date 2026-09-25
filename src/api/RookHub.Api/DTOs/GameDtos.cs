@@ -288,3 +288,24 @@ public class KnownGameDto
     /// <summary>Stand der Analyse; <c>null</c> = keine.</summary>
     public SavedGameAnalysisDto? Analysis { get; set; }
 }
+
+/// <summary>„Warum war das ein Fehler?" (0.534.0) — die Erklärungen einer Partie in einer Sprache.</summary>
+public class GameExplanationsDto
+{
+    /// <summary>Ein Modell auf eigener Hardware ist eingerichtet — ohne gibt es die Funktion nicht.</summary>
+    public bool Available { get; set; }
+    /// <summary>Der Aufrufer darf erzeugen lassen (Besitzer, Analyse fertig, nichts läuft).</summary>
+    public bool CanGenerate { get; set; }
+    /// <summary>Gerade entstehen Erklärungen — der Client fragt nach.</summary>
+    public bool Running { get; set; }
+    public string Language { get; set; } = "en";
+    public List<GameExplanationDto> Items { get; set; } = new();
+}
+
+public class GameExplanationDto
+{
+    /// <summary>Halbzug (0 = erster Zug), wie in <see cref="GameEvalPlyDto.Ply"/>.</summary>
+    public int Ply { get; set; }
+    public string Class { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+}
