@@ -172,9 +172,6 @@
       "stashed": "Connectez-vous ou inscrivez-vous pour terminer la liaison de votre compte Discord."
     },
     "tokens": {
-      "title": "Jetons d'extension",
-      "subtitle": "Jetons d'accès personnels pour les clients machine (ex. extension chess.com).",
-      "empty": "Aucun jeton pour l'instant. Créez-en un si vous souhaitez connecter l'extension chess.com.",
       "create": "Créer un jeton",
       "revoke": "Révoquer le jeton",
       "revokeConfirm": "Révoquer le jeton « {{name}} » ? Le client ne pourra plus se connecter.",
@@ -190,7 +187,6 @@
         "expires": "Expire le"
       },
       "dialog": {
-        "title": "Nouveau jeton d'extension",
         "name": "Nom",
         "nameHint": "ex. « Extension Chess.com (ordinateur portable) »",
         "expires": "Expire",

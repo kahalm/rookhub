@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpEventType, provideHttpClient } from '@angular/common/http';
-import { ExternalEngineService, EngineAnalyseLine, EngineAnalyseWork } from './external-engine.service';
+import {
+  ExternalEngineService, EngineAnalyseLine, EngineAnalyseWork, engineSourceOf, engineTagKey, isEngineOffline,
+} from './external-engine.service';
 
 const WORK: EngineAnalyseWork = {
   sessionId: 's1',
@@ -122,5 +124,37 @@ describe('ExternalEngineService', () => {
   it('encodes the engine id into the URL', () => {
     svc.analyse('eei/../x', WORK).subscribe({ error: () => {} });
     http.expectOne('/api/engine/external/eei%2F..%2Fx/analyse').flush('');
+  });
+
+  it('removes a direct engine registration via DELETE /api/external-engine/{id}', () => {
+    let done = false;
+    svc.deleteDirectEngine('rhe_ab/cd').subscribe(() => done = true);
+    const req = http.expectOne('/api/external-engine/rhe_ab%2Fcd');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+    expect(done).toBeTrue();
+  });
+});
+
+describe('engine source helpers', () => {
+  it('reads the source from the field, else from the id prefix', () => {
+    expect(engineSourceOf({ id: 'rhe_aaaaaaaaaaaa', source: 'rookhub' })).toBe('rookhub');
+    expect(engineSourceOf({ id: 'eei_x', source: 'lichess' })).toBe('lichess');
+    // Ältere Server liefern kein `source` — die Kennung entscheidet.
+    expect(engineSourceOf({ id: 'rhe_aaaaaaaaaaaa' })).toBe('rookhub');
+    expect(engineSourceOf({ id: 'eei_x' })).toBe('lichess');
+  });
+
+  it('only a direct engine can be offline (for Lichess we do not know)', () => {
+    expect(isEngineOffline({ id: 'rhe_a', source: 'rookhub', online: false })).toBeTrue();
+    expect(isEngineOffline({ id: 'rhe_a', source: 'rookhub', online: true })).toBeFalse();
+    expect(isEngineOffline({ id: 'eei_a', source: 'lichess', online: null })).toBeFalse();
+    expect(isEngineOffline({ id: 'eei_a', source: 'lichess', online: false })).toBeFalse();
+  });
+
+  it('tags picker entries: offline for a silent direct engine, "via Lichess" for Lichess, none otherwise', () => {
+    expect(engineTagKey({ id: 'rhe_a', source: 'rookhub', online: false })).toBe('analysis.engineOffline');
+    expect(engineTagKey({ id: 'rhe_a', source: 'rookhub', online: true })).toBeNull();
+    expect(engineTagKey({ id: 'eei_a', source: 'lichess', online: null })).toBe('analysis.engineViaLichess');
   });
 });

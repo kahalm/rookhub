@@ -10,14 +10,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
-import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-engine.service';
+import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../analysis/external-engine.service';
 
 /**
- * Karte „Externe Engine (Lichess)": Lichess-API-Token (Scope engine:read) hinterlegen —
- * damit stehen im Analysebrett alle External Engines des Lichess-Kontos zur Wahl (eigener
- * Rechner via offiziellem Provider, Miet-Anbieter). Nach Speichern/Laden zeigt die Karte
- * die gefundenen Engines als direktes Funktioniert-Feedback; ein abgewiesener Token wird
- * benannt statt leer auszusehen.
+ * Karte „Externe Engine" — zwei Quellen, EINE Liste:
+ * - **RookHub direkt** (`rhe_…`): der Provider auf dem eigenen Rechner meldet sich mit einem API-Token
+ *   (Bereich „Engine") direkt bei RookHub an — kein Lichess-Konto nötig. Die Karte zeigt je Engine einen
+ *   Online-Punkt (Provider hat in den letzten 30 s abgefragt) und kann die Registrierung entfernen.
+ * - **Über Lichess** (`eei_…`, für Cloud-Anbieter): Lichess-API-Token (Scope engine:read) hinterlegen —
+ *   dann stehen alle External Engines des Lichess-Kontos zur Wahl.
+ * Die Liste wird IMMER geholt (direkte Engines gibt es auch ohne Lichess-Token); ein abgewiesener Token
+ * und ein nicht antwortendes Lichess werden benannt statt leer auszusehen. Hintergrund-Auswahl und
+ * Haus-Engine gelten für beide Quellen.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -32,6 +36,32 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
     <div class="engine-section">
       <h4>{{ 'profile.engine.title' | translate }}</h4>
       <p class="engine-hint">{{ 'profile.engine.hint' | translate }}</p>
+
+      <h5>{{ 'profile.engine.directTitle' | translate }}</h5>
+      <p class="engine-hint">{{ 'profile.engine.directHint' | translate }}</p>
+      @if (enginesLoaded) {
+        @if (directEngines.length > 0) {
+          <ul class="engine-list direct-list">
+            @for (e of directEngines; track e.id) {
+              <li>
+                <span class="dot" [class.on]="e.online === true"
+                      [attr.title]="(e.online ? 'profile.engine.online' : 'profile.engine.offline') | translate"></span>
+                <strong>{{ e.name }}</strong> — {{ 'profile.engine.specs' | translate: { threads: e.maxThreads, hash: e.maxHash } }}
+                <span class="state">{{ (e.online ? 'profile.engine.online' : 'profile.engine.offline') | translate }}</span>
+                <button mat-icon-button type="button" class="del" (click)="removeDirect(e)"
+                        [attr.aria-label]="'profile.engine.deleteEngine' | translate"
+                        [attr.title]="'profile.engine.deleteEngine' | translate">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="engine-hint">{{ 'profile.engine.directNone' | translate }}</p>
+        }
+      }
+
+      <h5>{{ 'profile.engine.lichessTitle' | translate }}</h5>
       <p class="engine-hint">
         <a href="https://lichess.org/account/oauth/token/create?scopes[]=engine:read&description=RookHub"
            target="_blank" rel="noopener">{{ 'profile.engine.createToken' | translate }}</a>
@@ -57,24 +87,34 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
         </button>
       </div>
 
-      @if (tokenInvalid) {
-        <p class="engine-warn"><mat-icon>error_outline</mat-icon> {{ 'profile.engine.tokenInvalid' | translate }}</p>
-      } @else if (listFailed) {
+      @if (listFailed) {
         <p class="engine-warn"><mat-icon>cloud_off</mat-icon> {{ 'profile.engine.listFailed' | translate }}</p>
-      } @else if (hasCredentials && enginesLoaded) {
-        @if (engines.length > 0) {
-          <p class="engine-list-title">{{ 'profile.engine.enginesFound' | translate }}</p>
+      } @else if (enginesLoaded) {
+        @if (tokenInvalid) {
+          <p class="engine-warn"><mat-icon>error_outline</mat-icon> {{ 'profile.engine.tokenInvalid' | translate }}</p>
+        }
+        @if (lichessUnreachable) {
+          <p class="engine-warn"><mat-icon>cloud_off</mat-icon> {{ 'profile.engine.lichessUnreachable' | translate }}</p>
+        }
+        @if (hasCredentials && lichessEngines.length > 0) {
           <ul class="engine-list">
-            @for (e of engines; track e.id) {
+            @for (e of lichessEngines; track e.id) {
               <li><strong>{{ e.name }}</strong> — {{ 'profile.engine.specs' | translate: { threads: e.maxThreads, hash: e.maxHash } }}</li>
             }
           </ul>
+        } @else if (hasCredentials && !tokenInvalid && !lichessUnreachable) {
+          <p class="engine-hint">{{ 'profile.engine.noLichessEngines' | translate }}</p>
+        }
+
+        @if (engines.length > 0) {
           <div class="engine-row">
             <mat-form-field appearance="outline" class="bg-field" subscriptSizing="dynamic">
               <mat-label>{{ 'profile.engine.backgroundLabel' | translate }}</mat-label>
               <mat-select [(ngModel)]="backgroundEngineIds" name="backgroundEngine" multiple
                           (selectionChange)="saveBackground()">
-                @for (e of engines; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
+                @for (e of engines; track e.id) {
+                  <mat-option [value]="e.id">{{ e.name }} · {{ sourceLabel(e) | translate }}</mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
@@ -105,6 +145,13 @@ import { ExternalEngineService, ExternalEngineInfo } from '../analysis/external-
     .engine-warn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .engine-list-title { color: #ccc; font-size: 0.9rem; margin: 4px 0 2px; }
     .engine-list { margin: 0; padding-left: 20px; color: #ccc; font-size: 0.9rem; }
+    .engine-section h5 { margin: 0.75rem 0 0.25rem; color: #e0e0e0; font-size: 0.95rem; font-weight: 500; }
+    .direct-list { list-style: none; padding-left: 0; }
+    .direct-list li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #757575; flex: 0 0 10px; }
+    .dot.on { background: #66bb6a; }
+    .state { color: #9e9e9e; font-size: 0.8rem; }
+    .del { margin-left: auto; }
   `]
 })
 export class EngineCardComponent implements OnInit, OnDestroy {
@@ -116,6 +163,11 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   enginesLoaded = false;
   listFailed = false;
   engines: ExternalEngineInfo[] = [];
+  /** Direkt bei RookHub angemeldete Engines (mit Online-Punkt) bzw. die des Lichess-Kontos — beide aus `engines`. */
+  directEngines: ExternalEngineInfo[] = [];
+  lichessEngines: ExternalEngineInfo[] = [];
+  /** Lichess antwortete nicht; die Liste enthält nur die direkt angemeldeten Engines. */
+  lichessUnreachable = false;
   /** Hintergrund-Engine für Analyseaufträge (null = keine). */
   backgroundEngineIds: string[] = [];
   /** Haus-Engine: die eigenen Hintergrund-Engines rechnen auch fremde eingeworfene Partien. */
@@ -139,10 +191,29 @@ export class EngineCardComponent implements OnInit, OnDestroy {
       next: s => {
         this.hasCredentials = s.hasCredentials;
         this.maskedToken = s.maskedToken;
-        if (s.hasCredentials) this.loadEngines();
         this.cdr.markForCheck();
       },
       error: () => {},
+    });
+    // Immer: direkt angemeldete Engines gibt es auch ohne Lichess-Token.
+    this.loadEngines();
+  }
+
+  /** i18n-Schlüssel der Quelle für die Hintergrund-Auswahl. */
+  sourceLabel(e: ExternalEngineInfo): string {
+    return engineSourceOf(e) === 'rookhub' ? 'profile.engine.sourceRookhub' : 'profile.engine.sourceLichess';
+  }
+
+  /** Registrierung einer direkt angemeldeten Engine entfernen (der Server nimmt sie auch aus der
+   *  Hintergrund-Liste). Läuft ihr Provider noch, meldet er sich beim nächsten Start wieder an. */
+  removeDirect(e: ExternalEngineInfo): void {
+    if (!confirm(this.translate.instant('profile.engine.deleteConfirm', { name: e.name }))) return;
+    this.externalEngines.deleteDirectEngine(e.id).subscribe({
+      next: () => {
+        this.snackbar.success(this.translate.instant('profile.engine.deleted'));
+        this.loadEngines();
+      },
+      error: () => this.snackbar.warn(this.translate.instant('profile.engine.deleteFailed')),
     });
   }
 
@@ -173,12 +244,11 @@ export class EngineCardComponent implements OnInit, OnDestroy {
       next: () => {
         this.hasCredentials = false;
         this.maskedToken = null;
-        this.engines = [];
-        this.enginesLoaded = false;
         this.tokenInvalid = false;
         this.listFailed = false;
-        this.backgroundEngineIds = [];
-        this.shareAsHouseEngine = false;
+        // Die Lichess-Engines fallen weg, direkt angemeldete bleiben (samt ihrem Platz in der
+        // Hintergrund-Liste) — also neu holen statt alles zu leeren.
+        this.loadEngines();
         this.cdr.markForCheck();
       },
       error: () => this.snackbar.warn(this.translate.instant('profile.engine.saveFailed')),
@@ -226,7 +296,10 @@ export class EngineCardComponent implements OnInit, OnDestroy {
       next: r => {
         this.enginesLoaded = true;
         this.tokenInvalid = r.tokenInvalid;
+        this.lichessUnreachable = r.lichessUnreachable ?? false;
         this.engines = r.engines;
+        this.directEngines = r.engines.filter(e => engineSourceOf(e) === 'rookhub');
+        this.lichessEngines = r.engines.filter(e => engineSourceOf(e) === 'lichess');
         this.backgroundEngineIds = r.backgroundEngineIds ?? [];
         this.shareAsHouseEngine = r.shareAsHouseEngine ?? false;
         this.canShareHouseEngine = r.canShareHouseEngine ?? false;

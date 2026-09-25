@@ -162,9 +162,6 @@
     "chessResultsApplied": "Datos de ChessResults aplicados",
     "fideApplied": "Datos de FIDE aplicados",
     "tokens": {
-      "title": "Tokens de extensión",
-      "subtitle": "Tokens de acceso personal para clientes automatizados (p. ej. extensión de chess.com).",
-      "empty": "Aún no hay tokens. Crea uno si quieres conectar la extensión de chess.com.",
       "create": "Crear token",
       "revoke": "Revocar token",
       "revokeConfirm": "¿Revocar el token \"{{name}}\"? El cliente ya no podrá conectarse.",
@@ -180,7 +177,6 @@
         "expires": "Caduca"
       },
       "dialog": {
-        "title": "Nuevo token de extensión",
         "name": "Nombre",
         "nameHint": "p. ej. \"Extensión de Chess.com (portátil)\"",
         "expires": "Caduca",

@@ -17,7 +17,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisJob, AnalysisJobLive, AnalysisJobsService } from './analysis-jobs.service';
 import { EngineDisplayLine, formatElapsed, formatKiloNodes, formatKiloNps, mapBrokerLine, toDisplayLines } from './engine-lines.util';
-import { ExternalEngineInfo, ExternalEngineService } from './external-engine.service';
+import { ExternalEngineInfo, ExternalEngineService, engineTagKey } from './external-engine.service';
 import { JOB_DEPTH_OPTIONS, JOB_LINE_OPTIONS } from './analysis-job-dialog.component';
 import type { EngineAnalyseLine } from './external-engine.service';
 
@@ -115,7 +115,9 @@ import type { EngineAnalyseLine } from './external-engine.service';
                       <mat-form-field appearance="outline" class="engine" subscriptSizing="dynamic">
                         <mat-label>{{ 'analysisJobs.engine' | translate }}</mat-label>
                         <mat-select [(ngModel)]="editEngineId">
-                          @for (e of engines; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
+                          @for (e of engines; track e.id) {
+                            <mat-option [value]="e.id">{{ e.name }}@if (tagOf(e); as tag) { · {{ tag | translate }} }</mat-option>
+                          }
                         </mat-select>
                       </mat-form-field>
                     }
@@ -191,6 +193,8 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   editEngineId = '';
   /** Externe Engines des Kontos — für den Engine-Wechsel je Auftrag (inkl. Hintergrund-Engine). */
   engines: ExternalEngineInfo[] = [];
+  /** Zusatz hinter dem Engine-Namen („über Lichess" / „offline", siehe `engineTagKey`). */
+  tagOf(e: ExternalEngineInfo): string | null { return engineTagKey(e); }
   saving = false;
   readonly depthOptions = JOB_DEPTH_OPTIONS;
   readonly lineOptions = JOB_LINE_OPTIONS;

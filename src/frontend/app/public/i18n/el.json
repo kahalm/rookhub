@@ -162,9 +162,6 @@
     "chessResultsApplied": "Τα δεδομένα ChessResults εφαρμόστηκαν",
     "fideApplied": "Τα δεδομένα FIDE εφαρμόστηκαν",
     "tokens": {
-      "title": "Tokens επέκτασης",
-      "subtitle": "Προσωπικά tokens πρόσβασης για μηχανικούς πελάτες (π.χ. επέκταση chess.com).",
-      "empty": "Δεν υπάρχουν tokens ακόμα. Δημιουργήστε ένα αν θέλετε να συνδέσετε την επέκταση chess.com.",
       "create": "Δημιουργία Token",
       "revoke": "Ανάκληση token",
       "revokeConfirm": "Ανάκληση token «{{name}}»; Ο πελάτης δεν θα μπορεί πλέον να συνδεθεί.",
@@ -180,7 +177,6 @@
         "expires": "Λήγει"
       },
       "dialog": {
-        "title": "Νέο Token Επέκτασης",
         "name": "Όνομα",
         "nameHint": "π.χ. «Επέκταση Chess.com (φορητός)»",
         "expires": "Λήγει",

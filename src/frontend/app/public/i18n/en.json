@@ -550,9 +550,9 @@
       "stashed": "Sign in or register to finish linking your Discord account."
     },
     "tokens": {
-      "title": "Extension Tokens",
-      "subtitle": "Personal access tokens for machine clients (e.g. chess.com extension).",
-      "empty": "No tokens yet. Create one if you want to connect the chess.com extension.",
+      "title": "API tokens",
+      "subtitle": "Personal access tokens for machine clients: the chess.com extension (scope “Extension”) or the engine provider on your computer (scope “Engine”).",
+      "empty": "No tokens yet. Create one to connect the chess.com extension or your engine provider.",
       "create": "Create token",
       "revoke": "Revoke token",
       "revokeConfirm": "Revoke token \"{{name}}\"? The client will no longer be able to connect.",
@@ -565,27 +565,36 @@
         "prefix": "Prefix",
         "created": "Created",
         "lastUsed": "Last used",
-        "expires": "Expires"
+        "expires": "Expires",
+        "scope": "Scope"
       },
       "dialog": {
-        "title": "New Extension Token",
+        "title": "New API token",
         "name": "Name",
         "nameHint": "e.g. \"Chess.com extension (laptop)\"",
         "expires": "Expires",
         "never": "never",
         "days": "days",
-        "create": "Create"
+        "create": "Create",
+        "scope": "Scope",
+        "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeEngine": "Engine (engine provider on your computer)",
+        "scopeHint": "A token only works for its scope: an extension token cannot register engines, an engine token cannot read your repertoires."
       },
       "show": {
         "title": "Token created",
         "warning": "This token is shown ONLY once, right now. Copy it into your extension — it cannot be retrieved later.",
         "copy": "Copy",
         "copied": "Copied to clipboard"
+      },
+      "scope": {
+        "extension": "Extension",
+        "engine": "Engine"
       }
     },
     "engine": {
-      "title": "External engine (Lichess)",
-      "hint": "Use a stronger engine on the analysis board: RookHub can use any external engine registered on your Lichess account — your own machine running the official provider, or a rented cloud engine. Store a Lichess API token with the engine:read scope here.",
+      "title": "External engine",
+      "hint": "Use a stronger engine on the analysis board — your own computer or a rented cloud engine. There are two ways to connect one; all your engines appear together in one list.",
       "createToken": "Create a Lichess token (engine:read)",
       "tokenLabel": "Lichess API token",
       "stored": "Stored token",
@@ -593,8 +602,7 @@
       "saveFailed": "Could not save the token",
       "tokenInvalid": "Lichess rejected this token. Create a new one with the engine:read scope.",
       "listFailed": "Could not load the engine list from Lichess. Try again in a moment.",
-      "enginesFound": "Engines found on your Lichess account:",
-      "noEngines": "No external engines registered on your Lichess account yet.",
+      "noEngines": "No external engine yet — connect one directly or via Lichess.",
       "specs": "{{threads}} threads, {{hash}} MiB hash",
       "backgroundLabel": "Background engine for jobs",
       "backgroundNone": "None",
@@ -603,7 +611,21 @@
       "backgroundFailed": "Could not save the background engine.",
       "houseLabel": "Also let my background engines work on games other people add",
       "houseHint": "Registered users without an engine of their own can then add games on the points game page; they are computed on your machine, at a fixed depth.",
-      "houseSaved": "Sharing saved"
+      "houseSaved": "Sharing saved",
+      "directTitle": "Directly with RookHub (recommended)",
+      "directHint": "Run the engine provider on your computer with ROOKHUB_URL and an API token with the “Engine” scope (create it under “API tokens” on this page). No Lichess account needed.",
+      "directNone": "No engine connected directly yet.",
+      "online": "online",
+      "offline": "offline",
+      "deleteEngine": "Remove registration",
+      "deleteConfirm": "Remove the engine “{{name}}”? If its provider is still running, it registers again on its next start.",
+      "deleted": "Engine removed",
+      "deleteFailed": "Could not remove the engine",
+      "lichessTitle": "Via Lichess (for cloud engines)",
+      "lichessUnreachable": "Lichess is not answering right now — only the engines connected directly are shown.",
+      "noLichessEngines": "No external engines registered on your Lichess account yet.",
+      "sourceRookhub": "RookHub",
+      "sourceLichess": "Lichess"
     },
     "offline": {
       "title": "Offline",
@@ -2693,7 +2715,9 @@
       "shareTitle": "Chess position",
       "shareCopied": "Link to the position copied",
       "fenCopied": "FEN copied"
-    }
+    },
+    "engineViaLichess": "via Lichess",
+    "engineOffline": "offline"
   },
   "stats": {
     "title": "Statistics",
@@ -3027,7 +3051,7 @@
         "p": [
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
           "Two variants with identical functionality exist: a browser extension (available from the Chrome Web Store and, as a signed build, for Firefox) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
-          "Setup: create a token under »Extension tokens« in your profile (scope “extension”), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
+          "Setup: create a token under »API tokens« in your profile (scope “extension”), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
           "Installation, auto-update and details: https://github.com/kahalm/repcheck — the extension is on the Chrome Web Store at https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn and as a signed Firefox build at https://addons.mozilla.org/en-US/firefox/addon/repcheck/, and the Tampermonkey userscript can be imported directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },

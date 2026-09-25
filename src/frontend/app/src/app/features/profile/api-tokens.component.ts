@@ -27,6 +27,11 @@ interface ApiTokenCreated extends ApiToken {
   rawToken: string;
 }
 
+/** Bereich eines Tokens: `extension` (RepCheck, nur /api/extension) oder `engine` (Engine-Provider auf dem
+ *  eigenen Rechner, nur /api/external-engine — der eigene Engine-Broker). Der Server zäunt jeden Token auf
+ *  seine Fläche ein; ein Token für die falsche Aufgabe bekommt dort 403. */
+export type ApiTokenScope = 'extension' | 'engine';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-create-token-dialog',
@@ -42,6 +47,14 @@ interface ApiTokenCreated extends ApiToken {
           <mat-hint>{{ 'profile.tokens.dialog.nameHint' | translate }}</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline">
+          <mat-label>{{ 'profile.tokens.dialog.scope' | translate }}</mat-label>
+          <mat-select [(ngModel)]="scope" name="scope">
+            <mat-option value="extension">{{ 'profile.tokens.dialog.scopeExtension' | translate }}</mat-option>
+            <mat-option value="engine">{{ 'profile.tokens.dialog.scopeEngine' | translate }}</mat-option>
+          </mat-select>
+          <mat-hint>{{ 'profile.tokens.dialog.scopeHint' | translate }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'profile.tokens.dialog.expires' | translate }}</mat-label>
           <mat-select [(ngModel)]="expiresInDays" name="expiresInDays">
             <mat-option [value]="null">{{ 'profile.tokens.dialog.never' | translate }}</mat-option>
@@ -54,7 +67,7 @@ interface ApiTokenCreated extends ApiToken {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, expiresInDays })">
+      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, expiresInDays, scope })">
         {{ 'profile.tokens.dialog.create' | translate }}
       </button>
     </mat-dialog-actions>
@@ -64,6 +77,7 @@ interface ApiTokenCreated extends ApiToken {
 export class CreateTokenDialogComponent {
   name = '';
   expiresInDays: number | null = null;
+  scope: ApiTokenScope = 'extension';
   constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>) {}
 }
 
@@ -146,6 +160,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
               <tr>
                 <th>{{ 'profile.tokens.col.name' | translate }}</th>
                 <th>{{ 'profile.tokens.col.prefix' | translate }}</th>
+                <th>{{ 'profile.tokens.col.scope' | translate }}</th>
                 <th>{{ 'profile.tokens.col.created' | translate }}</th>
                 <th>{{ 'profile.tokens.col.lastUsed' | translate }}</th>
                 <th>{{ 'profile.tokens.col.expires' | translate }}</th>
@@ -157,6 +172,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
                 <tr>
                   <td>{{ t.name }}</td>
                   <td><code>{{ t.prefix }}…</code></td>
+                  <td>{{ scopeLabel(t.scope) | translate }}</td>
                   <td>{{ t.createdAt | date:'short' }}</td>
                   <td>{{ t.lastUsedAt ? (t.lastUsedAt | date:'short') : ('profile.tokens.never' | translate) }}</td>
                   <td>{{ t.expiresAt ? (t.expiresAt | date:'short') : ('profile.tokens.never' | translate) }}</td>
@@ -183,7 +199,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
     .tokens-card { margin-top: 1rem; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
     .tokens-scroll { overflow-x: auto; }
-    .tokens-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.9rem; }
+    .tokens-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.9rem; }
     .tokens-table th, .tokens-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); text-align: left; }
     .tokens-table code { font-family: monospace; background: color-mix(in srgb, currentColor 6%, transparent); padding: 2px 6px; border-radius: 3px; }
   `]
@@ -224,6 +240,11 @@ export class ApiTokensComponent implements OnInit {
             .afterClosed();
         }),
       ).subscribe(() => this.load());
+  }
+
+  /** i18n-Schlüssel des Bereichs; ein unbekannter (älterer/neuerer Server) steht roh da. */
+  scopeLabel(scope: string): string {
+    return scope === 'engine' || scope === 'extension' ? `profile.tokens.scope.${scope}` : scope;
   }
 
   revoke(t: ApiToken): void {

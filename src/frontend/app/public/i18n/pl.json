@@ -172,9 +172,6 @@
       "stashed": "Zaloguj się lub zarejestruj, aby dokończyć łączenie konta Discord."
     },
     "tokens": {
-      "title": "Tokeny rozszerzeń",
-      "subtitle": "Osobiste tokeny dostępu dla klientów maszynowych (np. rozszerzenie chess.com).",
-      "empty": "Brak tokenów. Utwórz jeden, jeśli chcesz połączyć rozszerzenie chess.com.",
       "create": "Utwórz token",
       "revoke": "Unieważnij token",
       "revokeConfirm": "Unieważnić token \"{{name}}\"? Klient nie będzie już mógł się połączyć.",
@@ -190,7 +187,6 @@
         "expires": "Wygasa"
       },
       "dialog": {
-        "title": "Nowy token rozszerzenia",
         "name": "Nazwa",
         "nameHint": "np. \"Rozszerzenie Chess.com (laptop)\"",
         "expires": "Wygasa",

@@ -19,7 +19,7 @@ import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes,
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
-import { ExternalEngineService, ExternalEngineInfo } from './external-engine.service';
+import { ExternalEngineService, ExternalEngineInfo, engineTagKey } from './external-engine.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
@@ -126,7 +126,9 @@ const EVAL_SETTLE_DEPTH = 10;
                     <mat-label>{{ 'analysis.engineProvider' | translate }}</mat-label>
                     <mat-select [(ngModel)]="selectedEngineId" (selectionChange)="onEngineSelect()">
                       <mat-option value="wasm">{{ 'analysis.engineBrowser' | translate }}</mat-option>
-                      @for (e of externalEnginesList; track e.id) { <mat-option [value]="e.id">{{ e.name }}</mat-option> }
+                      @for (e of externalEnginesList; track e.id) {
+                        <mat-option [value]="e.id">{{ e.name }}@if (tagOf(e); as tag) { <span class="engine-tag">· {{ tag | translate }}</span> }</mat-option>
+                      }
                     </mat-select>
                   </mat-form-field>
                 }
@@ -147,7 +149,7 @@ const EVAL_SETTLE_DEPTH = 10;
                     <mat-label>{{ 'analysis.compareWith' | translate }}</mat-label>
                     <mat-select [(ngModel)]="compareEngineId" (selectionChange)="onCompareEngineSelect()">
                       @for (c of engineChoices; track c.id) {
-                        <mat-option [value]="c.id" [disabled]="c.id === selectedEngineId">{{ c.name }}</mat-option>
+                        <mat-option [value]="c.id" [disabled]="c.id === selectedEngineId">{{ c.name }}@if (c.tag) { <span class="engine-tag">· {{ c.tag | translate }}</span> }</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
@@ -305,6 +307,7 @@ const EVAL_SETTLE_DEPTH = 10;
     .he-spacer { flex: 1 1 auto; }
     .num-field { width: 104px; }
     .engine-field { width: 190px; }
+    .engine-tag { opacity: 0.65; font-size: 0.85em; }
     .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
     .cmp-btn { width: 34px; height: 34px; line-height: 34px; opacity: .55; }
     .cmp-btn.on { opacity: 1; color: #64b5f6; }
@@ -896,18 +899,22 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  und das mehrfach je Durchlauf, weil beide Namens-Getter ihn ebenfalls aufrufen. Der Cache
    *  haelt bewusst die Sprache mit fest, sonst bliebe die Beschriftung nach einem Sprachwechsel
    *  auf der alten stehen. */
-  private choicesCache?: { lang: string | null; list: ExternalEngineInfo[]; value: { id: string; name: string }[] };
-  get engineChoices(): { id: string; name: string }[] {
+  private choicesCache?: { lang: string | null; list: ExternalEngineInfo[]; value: { id: string; name: string; tag: string | null }[] };
+  get engineChoices(): { id: string; name: string; tag: string | null }[] {
     const lang = this.translate.currentLang();   // ngx-translate 18: Signal, kein String
     const c = this.choicesCache;
     if (c && c.lang === lang && c.list === this.externalEnginesList) return c.value;
     const value = [
-      { id: 'wasm', name: this.translate.instant('analysis.engineBrowser') },
-      ...this.externalEnginesList.map(e => ({ id: e.id, name: e.name })),
+      { id: 'wasm', name: this.translate.instant('analysis.engineBrowser'), tag: null },
+      // `tag`: „· über Lichess" / „· offline" hinter dem Namen — die Auswahl mischt beide Quellen.
+      ...this.externalEnginesList.map(e => ({ id: e.id, name: e.name, tag: engineTagKey(e) })),
     ];
     this.choicesCache = { lang, list: this.externalEnginesList, value };
     return value;
   }
+
+  /** Zusatz hinter dem Engine-Namen in der Auswahl (siehe `engineTagKey`). */
+  tagOf(e: ExternalEngineInfo): string | null { return engineTagKey(e); }
 
   /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
    *  Engine genannt — ein Vergleich mit falschem Etikett wäre schlimmer als gar keiner. */

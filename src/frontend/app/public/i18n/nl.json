@@ -162,9 +162,6 @@
     "chessResultsApplied": "ChessResults-gegevens toegepast",
     "fideApplied": "FIDE-gegevens toegepast",
     "tokens": {
-      "title": "Extensie-tokens",
-      "subtitle": "Persoonlijke toegangstokens voor machineclients (bijv. chess.com-extensie).",
-      "empty": "Nog geen tokens. Maak er een aan als je de chess.com-extensie wilt koppelen.",
       "create": "Token aanmaken",
       "revoke": "Token intrekken",
       "revokeConfirm": "Token \"{{name}}\" intrekken? De client kan dan niet meer verbinden.",
@@ -180,7 +177,6 @@
         "expires": "Verloopt"
       },
       "dialog": {
-        "title": "Nieuw extensie-token",
         "name": "Naam",
         "nameHint": "bijv. \"Chess.com-extensie (laptop)\"",
         "expires": "Verloopt",

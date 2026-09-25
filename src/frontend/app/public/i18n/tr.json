@@ -162,9 +162,6 @@
     "chessResultsApplied": "ChessResults verileri uygulandı",
     "fideApplied": "FIDE verileri uygulandı",
     "tokens": {
-      "title": "Uzantı Tokenları",
-      "subtitle": "Makine istemcileri için kişisel erişim tokenları (örn. chess.com uzantısı).",
-      "empty": "Henüz token yok. Chess.com uzantısını bağlamak istiyorsanız bir tane oluşturun.",
       "create": "Token Oluştur",
       "revoke": "Tokeni iptal et",
       "revokeConfirm": "\"{{name}}\" tokeni iptal edilsin mi? İstemci artık bağlanamayacak.",
@@ -180,7 +177,6 @@
         "expires": "Son kullanma"
       },
       "dialog": {
-        "title": "Yeni Uzantı Tokeni",
         "name": "Ad",
         "nameHint": "örn. \"Chess.com uzantısı (dizüstü)\"",
         "expires": "Son kullanma",

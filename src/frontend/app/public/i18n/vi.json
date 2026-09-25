@@ -172,9 +172,6 @@
       "stashed": "Đăng nhập hoặc đăng ký để hoàn tất liên kết tài khoản Discord của bạn."
     },
     "tokens": {
-      "title": "Token mở rộng",
-      "subtitle": "Token truy cập cá nhân cho các máy khách (ví dụ: tiện ích chess.com).",
-      "empty": "Chưa có token nào. Tạo một token nếu bạn muốn kết nối tiện ích chess.com.",
       "create": "Tạo Token",
       "revoke": "Thu hồi token",
       "revokeConfirm": "Thu hồi token \"{{name}}\"? Máy khách sẽ không còn kết nối được nữa.",
@@ -190,7 +187,6 @@
         "expires": "Hết hạn"
       },
       "dialog": {
-        "title": "Token mở rộng mới",
         "name": "Tên",
         "nameHint": "ví dụ: \"Tiện ích Chess.com (laptop)\"",
         "expires": "Hết hạn",

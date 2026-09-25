@@ -172,9 +172,6 @@
       "stashed": "Logga in eller registrera dig för att slutföra kopplingen av ditt Discord-konto."
     },
     "tokens": {
-      "title": "Utökningstokens",
-      "subtitle": "Personliga åtkomsttokens för maskinklienter (t.ex. chess.com-utökning).",
-      "empty": "Inga tokens ännu. Skapa en om du vill ansluta chess.com-utökningen.",
       "create": "Skapa token",
       "revoke": "Återkalla token",
       "revokeConfirm": "Återkalla token \"{{name}}\"? Klienten kan inte längre ansluta.",
@@ -190,7 +187,6 @@
         "expires": "Går ut"
       },
       "dialog": {
-        "title": "Ny utökningstoken",
         "name": "Namn",
         "nameHint": "t.ex. \"Chess.com-utökning (laptop)\"",
         "expires": "Går ut",

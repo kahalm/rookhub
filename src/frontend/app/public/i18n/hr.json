@@ -550,9 +550,9 @@
       "stashed": "Prijavi se ili registriraj da dovršiš povezivanje Discord računa."
     },
     "tokens": {
-      "title": "Tokeni za proširenje",
-      "subtitle": "Osobni tokeni pristupa za strojne klijente (npr. chess.com proširenje).",
-      "empty": "Još nema tokena. Stvori jedan ako želiš povezati chess.com proširenje.",
+      "title": "API tokeni",
+      "subtitle": "Osobni tokeni pristupa za strojne klijente: chess.com proširenje (opseg „Extension“) ili provider motora na tvom računalu (opseg „Engine“).",
+      "empty": "Još nema tokena. Izradi jedan kako bi povezao chess.com proširenje ili svoj provider motora.",
       "create": "Stvori token",
       "revoke": "Opozovi token",
       "revokeConfirm": "Opozvati token \"{{name}}\"? Klijent se više neće moći povezati.",
@@ -565,27 +565,36 @@
         "prefix": "Prefiks",
         "created": "Stvoreno",
         "lastUsed": "Zadnje korišteno",
-        "expires": "Istječe"
+        "expires": "Istječe",
+        "scope": "Opseg"
       },
       "dialog": {
-        "title": "Novi token za proširenje",
+        "title": "Novi API token",
         "name": "Naziv",
         "nameHint": "npr. \"Chess.com proširenje (laptop)\"",
         "expires": "Istječe",
         "never": "nikada",
         "days": "dana",
-        "create": "Stvori"
+        "create": "Stvori",
+        "scope": "Opseg",
+        "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeEngine": "Engine (provider motora na tvom računalu)",
+        "scopeHint": "Token vrijedi samo za svoj opseg: token za proširenje ne može prijavljivati motore, token za motor ne može čitati tvoje repertoare."
       },
       "show": {
         "title": "Token je stvoren",
         "warning": "Ovaj token prikazuje se SAMO jednom, sada. Kopiraj ga u svoje proširenje — kasnije se ne može dohvatiti.",
         "copy": "Kopiraj",
         "copied": "Kopirano u međuspremnik"
+      },
+      "scope": {
+        "extension": "Extension",
+        "engine": "Engine"
       }
     },
     "engine": {
-      "title": "Vanjski motor (Lichess)",
-      "hint": "Jači motor za ploču za analizu: RookHub može koristiti svaki vanjski motor registriran na tvom Lichess računu — vlastito računalo sa službenim providerom ili unajmljeni motor u oblaku. Ovdje spremi Lichess API token s opsegom engine:read.",
+      "title": "Vanjski motor",
+      "hint": "Jači motor za ploču za analizu — tvoje vlastito računalo ili unajmljeni motor u oblaku. Postoje dva načina povezivanja; svi tvoji motori prikazuju se zajedno na jednom popisu.",
       "createToken": "Izradi Lichess token (engine:read)",
       "tokenLabel": "Lichess API token",
       "stored": "Spremljeni token",
@@ -593,8 +602,7 @@
       "saveFailed": "Token nije spremljen",
       "tokenInvalid": "Lichess je odbio ovaj token. Izradi novi s opsegom engine:read.",
       "listFailed": "Popis motora nije se mogao učitati s Lichessa. Pokušaj ponovno za koji trenutak.",
-      "enginesFound": "Motori pronađeni na tvom Lichess računu:",
-      "noEngines": "Na tvom Lichess računu još nije registriran nijedan vanjski motor.",
+      "noEngines": "Još nema vanjskog motora — poveži ga izravno ili preko Lichessa.",
       "specs": "{{threads}} niti, {{hash}} MiB hash",
       "backgroundLabel": "Pozadinski motor za zadatke",
       "backgroundNone": "Nijedan",
@@ -603,7 +611,21 @@
       "backgroundFailed": "Pozadinski motor nije bilo moguće spremiti.",
       "houseLabel": "Dopusti da moji pozadinski motori računaju i partije koje dodaju drugi",
       "houseHint": "Registrirani korisnici bez vlastitog motora tada mogu dodavati partije na stranici bodovne partije; računaju se na tvojem stroju, s fiksnom dubinom.",
-      "houseSaved": "Dijeljenje spremljeno"
+      "houseSaved": "Dijeljenje spremljeno",
+      "directTitle": "Izravno s RookHubom (preporučeno)",
+      "directHint": "Pokreni provider motora na svojem računalu s ROOKHUB_URL i API tokenom s opsegom „Engine“ (izradi ga na ovoj stranici pod „API tokeni“). Lichess račun nije potreban.",
+      "directNone": "Još nijedan motor nije izravno povezan.",
+      "online": "na mreži",
+      "offline": "izvan mreže",
+      "deleteEngine": "Ukloni registraciju",
+      "deleteConfirm": "Ukloniti motor „{{name}}“? Ako mu provider još radi, ponovno će se prijaviti pri sljedećem pokretanju.",
+      "deleted": "Motor uklonjen",
+      "deleteFailed": "Motor nije bilo moguće ukloniti",
+      "lichessTitle": "Preko Lichessa (za motore u oblaku)",
+      "lichessUnreachable": "Lichess trenutno ne odgovara — prikazani su samo izravno povezani motori.",
+      "noLichessEngines": "Na tvom Lichess računu još nije registriran nijedan vanjski motor.",
+      "sourceRookhub": "RookHub",
+      "sourceLichess": "Lichess"
     },
     "offline": {
       "title": "Offline",
@@ -2693,7 +2715,9 @@
       "shareTitle": "Šahovska pozicija",
       "shareCopied": "Poveznica na poziciju kopirana",
       "fenCopied": "FEN kopiran"
-    }
+    },
+    "engineViaLichess": "preko Lichessa",
+    "engineOffline": "izvan mreže"
   },
   "stats": {
     "title": "Statistika",
@@ -3027,7 +3051,7 @@
         "p": [
           "RepCheck na stranicama za analizu na chess.com i lichess.org označava od kojeg poteza tvoja partija izlazi iz pohranjenog repertoara otvaranja. Repertoar pritom ostaje na poslužitelju – ekstenzija šalje samo popis poteza trenutačne partije i dobiva natrag odstupanje.",
           "Postoje dvije inačice s istom funkcijom: ekstenzija preglednika (dostupna u Chrome Web Storeu te kao potpisana verzija za Firefox) i Tampermonkey userscript koji radi u svakom pregledniku s Tampermonkeyjem/Greasemonkeyjem.",
-          "Postavljanje: u profilu pod »Extension tokeni« stvori token (opseg „extension“), na chess.com ili lichess.org otvori ploču sa zupčanikom u baneru repertoara, upiši svoj RookHub URL i token te klikni »Poveži«.",
+          "Postavljanje: u profilu pod »API tokeni« stvori token (opseg „extension“), na chess.com ili lichess.org otvori ploču sa zupčanikom u baneru repertoara, upiši svoj RookHub URL i token te klikni »Poveži«.",
           "Instalacija, automatsko ažuriranje i pojedinosti: https://github.com/kahalm/repcheck — ekstenzija je dostupna u Chrome Web Storeu na https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn i kao potpisana Firefox verzija na https://addons.mozilla.org/hr/firefox/addon/repcheck/, a Tampermonkey userscript može se uvesti izravno s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },

@@ -317,9 +317,9 @@
       "stashed": "Jelentkezz be vagy regisztrálj a Discord-fiókod összekapcsolásának befejezéséhez."
     },
     "tokens": {
-      "title": "Kiterjesztés-tokenek",
-      "subtitle": "Személyes hozzáférési tokenek gépi klienseknek (pl. chess.com kiterjesztés).",
-      "empty": "Még nincs token. Hozz létre egyet, ha csatlakoztatni szeretnéd a chess.com kiterjesztést.",
+      "title": "API-tokenek",
+      "subtitle": "Személyes hozzáférési tokenek gépi klienseknek: a chess.com kiterjesztés („Extension” hatókör) vagy a gépeden futó motor-provider („Engine” hatókör).",
+      "empty": "Még nincsenek tokenek. Hozz létre egyet, ha a chess.com kiterjesztést vagy a motor-providered csatlakoztatnád.",
       "create": "Token létrehozása",
       "revoke": "Token visszavonása",
       "revokeConfirm": "Visszavonja a(z) \"{{name}}\" tokent? A kliens többé nem tud csatlakozni.",
@@ -332,22 +332,31 @@
         "prefix": "Előtag",
         "created": "Létrehozva",
         "lastUsed": "Utoljára használva",
-        "expires": "Lejárat"
+        "expires": "Lejárat",
+        "scope": "Hatókör"
       },
       "dialog": {
-        "title": "Új kiterjesztés-token",
+        "title": "Új API-token",
         "name": "Név",
         "nameHint": "pl. \"Chess.com kiterjesztés (laptop)\"",
         "expires": "Lejárat",
         "never": "soha",
         "days": "nap",
-        "create": "Létrehozás"
+        "create": "Létrehozás",
+        "scope": "Hatókör",
+        "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeEngine": "Engine (motor-provider a gépeden)",
+        "scopeHint": "Egy token csak a saját hatókörében érvényes: kiterjesztés-tokennel nem lehet motort regisztrálni, motor-tokennel nem olvashatók a repertoárjaid."
       },
       "show": {
         "title": "Token létrehozva",
         "warning": "Ez a token CSAK most, egyszer látható. Másold be a kiterjesztésedbe – később nem lehet visszakeresni.",
         "copy": "Másolás",
         "copied": "Vágólapra másolva"
+      },
+      "scope": {
+        "extension": "Extension",
+        "engine": "Engine"
       }
     },
     "offline": {
@@ -382,8 +391,8 @@
       "dark": "Dark"
     },
     "engine": {
-      "title": "Külső motor (Lichess)",
-      "hint": "Erősebb motor az elemzőtáblához: a RookHub bármelyik külső motort tudja használni, amely a Lichess-fiókodon regisztrálva van — a saját géped a hivatalos providerrel vagy egy bérelt felhőmotor. Ehhez tárolj el itt egy Lichess API-tokent engine:read jogosultsággal.",
+      "title": "Külső motor",
+      "hint": "Erősebb motor az elemzőtáblához — a saját géped vagy egy bérelt felhőmotor. Kétféleképpen csatlakoztathatod; minden motorod egy közös listában jelenik meg.",
       "createToken": "Lichess-token létrehozása (engine:read)",
       "tokenLabel": "Lichess API-token",
       "stored": "Mentett token",
@@ -391,8 +400,7 @@
       "saveFailed": "A tokent nem sikerült elmenteni",
       "tokenInvalid": "A Lichess elutasította ezt a tokent. Hozz létre egy újat engine:read jogosultsággal.",
       "listFailed": "A motorlistát nem sikerült betölteni a Lichessről. Próbáld újra egy pillanat múlva.",
-      "enginesFound": "A Lichess-fiókodon talált motorok:",
-      "noEngines": "A Lichess-fiókodon még nincs regisztrálva külső motor.",
+      "noEngines": "Még nincs külső motor — csatlakoztass egyet közvetlenül vagy a Lichessen keresztül.",
       "specs": "{{threads}} szál, {{hash}} MiB hash",
       "backgroundLabel": "Háttérmotor a feladatokhoz",
       "backgroundNone": "Nincs",
@@ -401,7 +409,21 @@
       "backgroundFailed": "A háttérmotort nem sikerült elmenteni.",
       "houseLabel": "A háttérmotorjaim a mások által hozzáadott játszmákat is számolhassák",
       "houseHint": "A saját motorral nem rendelkező regisztrált felhasználók így hozzáadhatnak játszmákat a pontozós játszma oldalán; a számítás a te gépeden fut, rögzített mélységgel.",
-      "houseSaved": "Megosztás mentve"
+      "houseSaved": "Megosztás mentve",
+      "directTitle": "Közvetlenül a RookHubbal (ajánlott)",
+      "directHint": "Indítsd el a motor-providert a gépeden ROOKHUB_URL-lel és egy „Engine” hatókörű API-tokennel (ezen az oldalon, az „API-tokenek” résznél hozhatod létre). Lichess-fiók nem kell.",
+      "directNone": "Még nincs közvetlenül csatlakoztatott motor.",
+      "online": "online",
+      "offline": "offline",
+      "deleteEngine": "Regisztráció törlése",
+      "deleteConfirm": "Törlöd a(z) „{{name}}” motort? Ha a providere még fut, a következő indításkor újra regisztrál.",
+      "deleted": "Motor törölve",
+      "deleteFailed": "A motort nem sikerült törölni",
+      "lichessTitle": "Lichessen keresztül (felhőmotorokhoz)",
+      "lichessUnreachable": "A Lichess most nem válaszol — csak a közvetlenül csatlakoztatott motorok látszanak.",
+      "noLichessEngines": "A Lichess-fiókodon még nincs regisztrálva külső motor.",
+      "sourceRookhub": "RookHub",
+      "sourceLichess": "Lichess"
     },
     "changePwd": {
       "title": "Jelszó módosítása",
@@ -1996,7 +2018,9 @@
       "shareTitle": "Sakkállás",
       "shareCopied": "Az állás linkje kimásolva",
       "fenCopied": "FEN kimásolva"
-    }
+    },
+    "engineViaLichess": "Lichessen keresztül",
+    "engineOffline": "offline"
   },
   "stats": {
     "title": "Statisztikák",
@@ -3574,7 +3598,7 @@
         "p": [
           "A RepCheck a chess.com és a lichess.org elemzőoldalain kiemeli, melyik lépéstől lép ki a játszmád a tárolt megnyitási repertoárodból. A repertoár közben a szerveren marad – a bővítmény csak az aktuális játszma lépéslistáját küldi el, és az eltérést kapja vissza.",
           "Két, azonos működésű változat létezik: egy böngészőbővítmény (elérhető a Chrome Web Store-ban, valamint aláírt változatként Firefoxhoz) és egy Tampermonkey-userscript, amely minden olyan böngészőben fut, amelyen van Tampermonkey/Greasemonkey.",
-          "Beállítás: hozz létre a profilodban a „Bővítmény-tokenek” alatt egy tokent („extension” hatókörrel), nyisd meg a chess.comon vagy a lichess.orgon a repertoársávban a fogaskerék-panelt, add meg a RookHub-URL-edet és a tokent, majd kattints a „Csatlakozás” gombra.",
+          "Beállítás: hozz létre a profilodban a „API-tokenek” alatt egy tokent („extension” hatókörrel), nyisd meg a chess.comon vagy a lichess.orgon a repertoársávban a fogaskerék-panelt, add meg a RookHub-URL-edet és a tokent, majd kattints a „Csatlakozás” gombra.",
           "Telepítés, automatikus frissítés és részletek: https://github.com/kahalm/repcheck — a bővítmény a Chrome Web Store-ban a https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn címen, aláírt Firefox-változatként pedig a https://addons.mozilla.org/en-US/firefox/addon/repcheck/ címen érhető el, a Tampermonkey-userscript pedig közvetlenül a https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js címről importálható."
         ]
       },

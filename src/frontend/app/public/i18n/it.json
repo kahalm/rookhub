@@ -172,9 +172,6 @@
       "stashed": "Accedi o registrati per completare il collegamento del tuo account Discord."
     },
     "tokens": {
-      "title": "Token di estensione",
-      "subtitle": "Token di accesso personali per client automatici (es. estensione chess.com).",
-      "empty": "Nessun token ancora. Creane uno se vuoi collegare l'estensione chess.com.",
       "create": "Crea token",
       "revoke": "Revoca token",
       "revokeConfirm": "Revocare il token \"{{name}}\"? Il client non potrà più connettersi.",
@@ -190,7 +187,6 @@
         "expires": "Scade"
       },
       "dialog": {
-        "title": "Nuovo token di estensione",
         "name": "Nome",
         "nameHint": "es. \"Estensione Chess.com (laptop)\"",
         "expires": "Scade",

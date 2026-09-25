@@ -162,9 +162,6 @@
     "chessResultsApplied": "Data ChessResults diterapkan",
     "fideApplied": "Data FIDE diterapkan",
     "tokens": {
-      "title": "Token Ekstensi",
-      "subtitle": "Token akses pribadi untuk klien mesin (mis. ekstensi chess.com).",
-      "empty": "Belum ada token. Buat satu jika ingin menghubungkan ekstensi chess.com.",
       "create": "Buat Token",
       "revoke": "Cabut token",
       "revokeConfirm": "Cabut token \"{{name}}\"? Klien tidak akan bisa terhubung lagi.",
@@ -180,7 +177,6 @@
         "expires": "Kedaluwarsa"
       },
       "dialog": {
-        "title": "Token Ekstensi Baru",
         "name": "Nama",
         "nameHint": "mis. \"Ekstensi Chess.com (laptop)\"",
         "expires": "Kedaluwarsa",

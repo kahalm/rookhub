@@ -550,9 +550,9 @@
       "stashed": "Melde dich an oder registriere dich, um die Discord-Verknüpfung abzuschließen."
     },
     "tokens": {
-      "title": "Extension-Tokens",
-      "subtitle": "Persönliche Zugriffs-Tokens für Maschinen-Clients (z. B. chess.com-Extension).",
-      "empty": "Noch keine Tokens. Lege einen an, wenn du die chess.com-Extension verbinden willst.",
+      "title": "API-Tokens",
+      "subtitle": "Persönliche Zugriffs-Tokens für Maschinen-Clients: die chess.com-Extension (Bereich „Extension“) oder der Engine-Provider auf deinem Rechner (Bereich „Engine“).",
+      "empty": "Noch keine Tokens. Lege einen an, wenn du die chess.com-Extension oder deinen Engine-Provider verbinden willst.",
       "create": "Token erstellen",
       "revoke": "Token widerrufen",
       "revokeConfirm": "Token „{{name}}“ widerrufen? Damit kann der Client sich nicht mehr verbinden.",
@@ -565,27 +565,36 @@
         "prefix": "Präfix",
         "created": "Erstellt",
         "lastUsed": "Zuletzt benutzt",
-        "expires": "Ablauf"
+        "expires": "Ablauf",
+        "scope": "Bereich"
       },
       "dialog": {
-        "title": "Neuer Extension-Token",
+        "title": "Neuer API-Token",
         "name": "Name",
         "nameHint": "z. B. „Chess.com-Extension (Laptop)“",
         "expires": "Ablauf",
         "never": "nie",
         "days": "Tage",
-        "create": "Erstellen"
+        "create": "Erstellen",
+        "scope": "Bereich",
+        "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeEngine": "Engine (Engine-Provider auf deinem Rechner)",
+        "scopeHint": "Ein Token gilt nur für seinen Bereich: ein Extension-Token kann keine Engines anmelden, ein Engine-Token deine Repertoires nicht lesen."
       },
       "show": {
         "title": "Token erstellt",
         "warning": "Dieser Token wird NUR jetzt einmalig angezeigt. Kopiere ihn in deine Extension — danach ist er nicht mehr abrufbar.",
         "copy": "Kopieren",
         "copied": "In die Zwischenablage kopiert"
+      },
+      "scope": {
+        "extension": "Extension",
+        "engine": "Engine"
       }
     },
     "engine": {
-      "title": "Externe Engine (Lichess)",
-      "hint": "Stärkere Engine für das Analysebrett: RookHub kann jede External Engine nutzen, die auf deinem Lichess-Konto registriert ist — dein eigener Rechner mit dem offiziellen Provider oder eine gemietete Cloud-Engine. Dafür hier einen Lichess-API-Token mit dem Scope engine:read hinterlegen.",
+      "title": "Externe Engine",
+      "hint": "Stärkere Engine für das Analysebrett — dein eigener Rechner oder eine gemietete Cloud-Engine. Es gibt zwei Wege, eine anzubinden; alle deine Engines stehen zusammen in einer Liste.",
       "createToken": "Lichess-Token erstellen (engine:read)",
       "tokenLabel": "Lichess-API-Token",
       "stored": "Gespeicherter Token",
@@ -593,8 +602,7 @@
       "saveFailed": "Token konnte nicht gespeichert werden",
       "tokenInvalid": "Lichess hat diesen Token abgewiesen. Erstelle einen neuen mit dem Scope engine:read.",
       "listFailed": "Die Engine-Liste konnte nicht von Lichess geladen werden. Versuch es gleich noch einmal.",
-      "enginesFound": "Auf deinem Lichess-Konto gefundene Engines:",
-      "noEngines": "Auf deinem Lichess-Konto ist noch keine External Engine registriert.",
+      "noEngines": "Noch keine externe Engine — verbinde eine direkt oder über Lichess.",
       "specs": "{{threads}} Threads, {{hash}} MiB Hash",
       "backgroundLabel": "Hintergrund-Engine für Aufträge",
       "backgroundNone": "Keine",
@@ -603,7 +611,21 @@
       "backgroundFailed": "Hintergrund-Engine konnte nicht gespeichert werden.",
       "houseLabel": "Meine Hintergrund-Engines auch für eingeworfene Partien freigeben",
       "houseHint": "Registrierte Nutzer ohne eigene Engine können dann auf der Punktepartie-Seite eigene Partien einwerfen; gerechnet wird auf deiner Maschine, mit fester Tiefe.",
-      "houseSaved": "Freigabe gespeichert"
+      "houseSaved": "Freigabe gespeichert",
+      "directTitle": "Direkt mit RookHub (empfohlen)",
+      "directHint": "Den Engine-Provider auf deinem Rechner mit ROOKHUB_URL und einem API-Token mit Bereich „Engine“ starten (auf dieser Seite unter „API-Tokens“ anlegen). Kein Lichess-Konto nötig.",
+      "directNone": "Noch keine Engine direkt verbunden.",
+      "online": "online",
+      "offline": "offline",
+      "deleteEngine": "Registrierung entfernen",
+      "deleteConfirm": "Engine „{{name}}“ entfernen? Läuft ihr Provider noch, meldet er sich beim nächsten Start wieder an.",
+      "deleted": "Engine entfernt",
+      "deleteFailed": "Engine konnte nicht entfernt werden",
+      "lichessTitle": "Über Lichess (für Cloud-Engines)",
+      "lichessUnreachable": "Lichess antwortet gerade nicht — angezeigt werden nur die direkt verbundenen Engines.",
+      "noLichessEngines": "Auf deinem Lichess-Konto ist noch keine External Engine registriert.",
+      "sourceRookhub": "RookHub",
+      "sourceLichess": "Lichess"
     },
     "offline": {
       "title": "Offline",
@@ -2693,7 +2715,9 @@
       "shareTitle": "Schachstellung",
       "shareCopied": "Link zur Stellung kopiert",
       "fenCopied": "FEN kopiert"
-    }
+    },
+    "engineViaLichess": "über Lichess",
+    "engineOffline": "offline"
   },
   "stats": {
     "title": "Statistik",
@@ -3027,7 +3051,7 @@
         "p": [
           "RepCheck markiert auf chess.com- und lichess.org-Analyseseiten, ab welchem Zug deine Partie aus deinem hinterlegten Eröffnungsrepertoire herausläuft. Das Repertoire bleibt dabei auf dem Server – die Erweiterung schickt nur die Zugliste der aktuellen Partie und bekommt die Abweichung zurück.",
           "Es gibt zwei Varianten mit identischer Funktion: eine Browser-Erweiterung (im Chrome Web Store sowie als signierte Version für Firefox verfügbar) und ein Tampermonkey-Userscript, das in jedem Browser mit Tampermonkey/Greasemonkey läuft.",
-          "Einrichtung: Lege im Profil unter »Extension-Tokens« ein Token an (Scope „extension“), öffne auf chess.com oder lichess.org das Zahnrad-Panel im Repertoire-Banner, trage deine RookHub-URL und das Token ein und klicke »Verbinden«.",
+          "Einrichtung: Lege im Profil unter »API-Tokens« ein Token an (Scope „extension“), öffne auf chess.com oder lichess.org das Zahnrad-Panel im Repertoire-Banner, trage deine RookHub-URL und das Token ein und klicke »Verbinden«.",
           "Installation, Auto-Update und Details: https://github.com/kahalm/repcheck — die Erweiterung gibt es im Chrome Web Store unter https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn und als signierte Firefox-Version unter https://addons.mozilla.org/de/firefox/addon/repcheck/, das Tampermonkey-Userscript lässt sich direkt über https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js importieren."
         ]
       },

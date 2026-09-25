@@ -162,9 +162,6 @@
     "chessResultsApplied": "ChessResults のデータを適用しました",
     "fideApplied": "FIDE のデータを適用しました",
     "tokens": {
-      "title": "拡張トークン",
-      "subtitle": "マシンクライアント（例: chess.com 拡張機能）用の個人アクセストークン。",
-      "empty": "トークンがまだありません。chess.com 拡張機能を接続する場合は作成してください。",
       "create": "トークンを作成",
       "revoke": "トークンを失効",
       "revokeConfirm": "トークン「{{name}}」を失効しますか？クライアントは接続できなくなります。",
@@ -180,7 +177,6 @@
         "expires": "有効期限"
       },
       "dialog": {
-        "title": "新規拡張トークン",
         "name": "名前",
         "nameHint": "例: 「Chess.com 拡張機能（ノートPC）」",
         "expires": "有効期限",

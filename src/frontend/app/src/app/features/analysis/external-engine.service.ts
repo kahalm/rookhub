@@ -2,15 +2,43 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpDownloadProgressEvent, HttpEventType } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-/** Eine auf dem Lichess-Konto registrierte External Engine (ohne clientSecret — bleibt serverseitig). */
+/** Woher eine Engine kommt: direkt bei RookHub angemeldet (`rhe_…`, eigener Broker) oder über das
+ *  Lichess-Konto (`eei_…`). */
+export type ExternalEngineSource = 'rookhub' | 'lichess';
+
+/** Eine External Engine des Kontos (ohne clientSecret — bleibt serverseitig). */
 export interface ExternalEngineInfo {
   id: string;
   name: string;
   maxThreads: number;
   maxHash: number;
+  /** Fehlt bei Antworten älterer Server → aus der Kennung abgeleitet (`engineSourceOf`). */
+  source?: ExternalEngineSource;
+  /** Nur für `rookhub`: hat der Provider in den letzten 30 s abgefragt? Für Lichess `null` (unbekannt). */
+  online?: boolean | null;
+}
+
+/** Quelle einer Engine — aus dem Feld, sonst aus der Kennung (`rhe_` = RookHub direkt). */
+export function engineSourceOf(e: Pick<ExternalEngineInfo, 'id' | 'source'>): ExternalEngineSource {
+  return e.source ?? (e.id.startsWith('rhe_') ? 'rookhub' : 'lichess');
+}
+
+/** Direkt angemeldete Engine, deren Provider gerade nicht abfragt (Rechner aus). Bei Lichess wissen wir
+ *  es nicht — dort nie „offline". */
+export function isEngineOffline(e: Pick<ExternalEngineInfo, 'id' | 'source' | 'online'>): boolean {
+  return engineSourceOf(e) === 'rookhub' && e.online === false;
+}
+
+/** Zusatz hinter dem Namen in den Engine-Auswahlen (i18n-Schlüssel oder `null`): „offline" für eine direkt
+ *  angemeldete Engine ohne laufenden Provider, „über Lichess" für eine Lichess-Engine — die Auswahl mischt
+ *  beide Quellen, und ein gleichnamiger Eintrag aus beiden wäre sonst nicht zu unterscheiden. */
+export function engineTagKey(e: Pick<ExternalEngineInfo, 'id' | 'source' | 'online'>): string | null {
+  if (isEngineOffline(e)) return 'analysis.engineOffline';
+  return engineSourceOf(e) === 'lichess' ? 'analysis.engineViaLichess' : null;
 }
 
 export interface ExternalEnginesResponse {
+  /** Ein LICHESS-Token ist hinterlegt. Direkt angemeldete Engines stehen auch ohne ihn in `engines`. */
   hasCredentials: boolean;
   /** Lichess hat den gespeicherten Token abgewiesen (ungültig/abgelaufen/falscher Scope). */
   tokenInvalid: boolean;
@@ -23,6 +51,8 @@ export interface ExternalEnginesResponse {
   shareAsHouseEngine?: boolean;
   /** Darf dieses Konto das ueberhaupt entscheiden (nur Admin)? */
   canShareHouseEngine?: boolean;
+  /** Lichess hat nicht geantwortet — `engines` enthält nur die direkt angemeldeten. */
+  lichessUnreachable?: boolean;
 }
 
 export interface EngineCredentialStatus {
@@ -50,8 +80,9 @@ export interface EngineAnalyseLine {
 }
 
 /**
- * External-Engine-Anbindung (Lichess-Client-Modus): Token-Verwaltung + Engine-Liste + Analyse-
- * Stream über den RookHub-Proxy (<c>/api/engine/*</c>). Der ndjson-Stream läuft über den normalen
+ * External-Engine-Anbindung — zwei Quellen, eine Liste: direkt bei RookHub angemeldete Engines und die
+ * des Lichess-Kontos. Token-Verwaltung (Lichess) + Engine-Liste + Analyse-Stream über den RookHub-Proxy
+ * (<c>/api/engine/*</c>) — der Strom sieht für beide Quellen gleich aus. Der ndjson-Stream läuft über den normalen
  * HttpClient (XHR + <c>reportProgress</c> ⇒ <c>partialText</c> wächst mit) — damit greifen die
  * Interceptors (Auth!) und die Antwortgröße bleibt bei tiefen-limitierter Suche überschaubar.
  */
@@ -73,6 +104,12 @@ export class ExternalEngineService {
 
   listEngines(): Observable<ExternalEnginesResponse> {
     return this.http.get<ExternalEnginesResponse>('/api/engine/external');
+  }
+
+  /** Registrierung einer direkt angemeldeten Engine entfernen (`rhe_…`). Läuft ihr Provider noch, meldet
+   *  er sich beim nächsten Start wieder an. */
+  deleteDirectEngine(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/external-engine/${encodeURIComponent(id)}`);
   }
 
   /** Hintergrund-Engine festlegen (null = entfernen). */

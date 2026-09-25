@@ -172,9 +172,6 @@
       "stashed": "Přihlaste se nebo se registrujte pro dokončení propojení Discord účtu."
     },
     "tokens": {
-      "title": "Tokeny rozšíření",
-      "subtitle": "Osobní přístupové tokeny pro strojové klienty (např. rozšíření chess.com).",
-      "empty": "Zatím žádné tokeny. Vytvořte jeden, chcete-li připojit rozšíření chess.com.",
       "create": "Vytvořit token",
       "revoke": "Odvolat token",
       "revokeConfirm": "Odvolat token \"{{name}}\"? Klient se již nebude moci připojit.",
@@ -190,7 +187,6 @@
         "expires": "Vyprší"
       },
       "dialog": {
-        "title": "Nový token rozšíření",
         "name": "Název",
         "nameHint": "např. \"Rozšíření Chess.com (notebook)\"",
         "expires": "Vyprší",

@@ -23,11 +23,81 @@ describe('EngineCardComponent', () => {
 
   afterEach(() => http.verify());
 
-  it('shows no engine list when no token is stored (and does not query engines)', () => {
+  // Seit dem eigenen Broker gibt es Engines auch OHNE Lichess-Token („RookHub direkt") — die Liste wird
+  // deshalb immer geholt; ohne Token bleibt nur der Lichess-Teil leer.
+  it('queries the engine list even without a Lichess token and shows direct engines', () => {
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
-    http.expectNone('/api/engine/external');
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: false, tokenInvalid: false,
+      engines: [{ id: 'rhe_aaaaaaaaaaaa', name: 'Heim-PC', maxThreads: 8, maxHash: 512, source: 'rookhub', online: true }],
+    });
+    fixture.detectChanges();
+
     expect(component.hasCredentials).toBeFalse();
+    expect(component.directEngines.map(e => e.id)).toEqual(['rhe_aaaaaaaaaaaa']);
+    expect(component.lichessEngines).toEqual([]);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.direct-list')?.textContent).toContain('Heim-PC');
+    expect(el.querySelector('.direct-list .dot.on')).not.toBeNull();   // Online-Punkt
+  });
+
+  it('marks an offline direct engine and splits the sources', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false,
+      engines: [
+        { id: 'rhe_bbbbbbbbbbbb', name: 'Laptop', maxThreads: 4, maxHash: 256, source: 'rookhub', online: false },
+        { id: 'eei_cloud', name: 'Cloud', maxThreads: 32, maxHash: 8192, source: 'lichess', online: null },
+      ],
+    });
+    fixture.detectChanges();
+
+    expect(component.directEngines.length).toBe(1);
+    expect(component.lichessEngines.map(e => e.id)).toEqual(['eei_cloud']);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.direct-list .dot')).not.toBeNull();
+    expect(el.querySelector('.direct-list .dot.on')).toBeNull();
+  });
+
+  it('says so when Lichess is unreachable but direct engines are listed', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false, lichessUnreachable: true,
+      engines: [{ id: 'rhe_aaaaaaaaaaaa', name: 'Heim-PC', maxThreads: 8, maxHash: 512, source: 'rookhub', online: true }],
+    });
+    expect(component.lichessUnreachable).toBeTrue();
+  });
+
+  it('removes a direct engine via DELETE /api/external-engine/{id} and reloads', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: false, tokenInvalid: false,
+      engines: [{ id: 'rhe_aaaaaaaaaaaa', name: 'Heim-PC', maxThreads: 8, maxHash: 512, source: 'rookhub', online: true }],
+    });
+
+    component.removeDirect(component.directEngines[0]);
+    const del = http.expectOne('/api/external-engine/rhe_aaaaaaaaaaaa');
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    expect(component.directEngines).toEqual([]);
+  });
+
+  it('does not delete when the confirmation is declined', () => {
+    spyOn(window, 'confirm').and.returnValue(false);
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: false, tokenInvalid: false,
+      engines: [{ id: 'rhe_aaaaaaaaaaaa', name: 'Heim-PC', maxThreads: 8, maxHash: 512, source: 'rookhub', online: true }],
+    });
+    component.removeDirect(component.directEngines[0]);
+    http.expectNone('/api/external-engine/rhe_aaaaaaaaaaaa');
   });
 
   it('loads the engine list when a token is stored', () => {
@@ -73,7 +143,8 @@ describe('EngineCardComponent', () => {
 
   it('saves a token, clears the input and reloads the engines', () => {
     fixture.detectChanges();
-    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne(r => r.url === '/api/engine/credentials' && r.method === 'GET').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
 
     component.tokenInput = '  lip_tok  ';
     component.save();
@@ -88,19 +159,28 @@ describe('EngineCardComponent', () => {
     expect(component.saving).toBeFalse();
   });
 
-  it('resets the state after deleting the token', () => {
+  it('resets the state after deleting the token — direct engines stay', () => {
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
     http.expectOne('/api/engine/external').flush({
       hasCredentials: true, tokenInvalid: false,
-      engines: [{ id: 'eei_a', name: 'SF', maxThreads: 2, maxHash: 64 }],
+      engines: [
+        { id: 'eei_a', name: 'SF', maxThreads: 2, maxHash: 64 },
+        { id: 'rhe_aaaaaaaaaaaa', name: 'Heim-PC', maxThreads: 8, maxHash: 512, source: 'rookhub', online: true },
+      ],
     });
 
     component.remove();
     http.expectOne(r => r.url === '/api/engine/credentials' && r.method === 'DELETE').flush(null);
+    // Nach dem Löschen wird neu geholt: die Lichess-Engine ist weg, die direkte bleibt.
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: false, tokenInvalid: false,
+      engines: [{ id: 'rhe_aaaaaaaaaaaa', name: 'Heim-PC', maxThreads: 8, maxHash: 512, source: 'rookhub', online: true }],
+    });
 
     expect(component.hasCredentials).toBeFalse();
-    expect(component.engines.length).toBe(0);
+    expect(component.lichessEngines.length).toBe(0);
+    expect(component.directEngines.length).toBe(1);
     expect(component.maskedToken).toBeNull();
   });
 });
