@@ -105,6 +105,8 @@ public class EndpointAuthInventoryTests
         "DELETE /api/guess-sessions/anonymous/{id:int}",             // GuessSessionAnonymousController.Delete
         "POST /api/endless/sessions/bulk/anonymous",                 // EndlessController.BulkImportAnonymousSessions
         "POST /api/extension/chessable/review-lines/anon",           // ExtensionController.ChessableReviewLinesAnon (uid-based, token-less)
+        "POST /api/external-engine/work",                            // ExternalEngineController.Acquire (Long-Poll des Engine-Providers; das providerSecret IST der Nachweis, unbekannt = 204)
+        "POST /api/external-engine/work/{id}",                       // ExternalEngineController.Submit (Upload; die Kennung des abgeholten Auftrags IST der Nachweis)
         "POST /api/puzzles/random-batch",                            // PuzzleController.GetRandomBatch
         "POST /api/puzzles/{id}/attempt/anonymous",                  // PuzzleController.RecordAnonymousAttempt
         "POST /api/token/test",                                      // TokenController.Test (Vorabpruefung des Engine-Providers; der Token steht im RUMPF, Lichess-Form)

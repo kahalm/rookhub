@@ -34,6 +34,9 @@ public static class SystemCallClassifier
         if (EndsWith(p, "/count") || EndsWith(p, "-count")
             || EndsWith(p, "/counts") || EndsWith(p, "-counts")) return true;
 
+        // Engine-Provider (eigener Broker): Long-Poll und Upload kommen von einer Maschine, nicht vom Nutzer
+        if (StartsWith(p, "/api/external-engine/work")) return true;
+
         // Chessable-Import-Status-Polls (Dashboard-Widget / Kursseite / Chessable-Tab)
         if (Eq(p, "/api/chessable/admin/active") || Eq(p, "/api/chessable/admin/imports")) return true;
 

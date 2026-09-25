@@ -22,6 +22,9 @@ public class ExternalEngineControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly ServiceProvider _sp;
     private readonly ExternalEngineController _controller;
+    private readonly EngineHub _hub;
+    private readonly EngineSelectorDirectory _directory;
+    private readonly LocalBrokerOptions _options = new() { AcquireWait = TimeSpan.FromMilliseconds(150) };
     private int _userId;
 
     public ExternalEngineControllerTests()
@@ -31,10 +34,11 @@ public class ExternalEngineControllerTests : IDisposable
         services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(name));
         _sp = services.BuildServiceProvider();
         _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
-        var directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
-        var registrations = new ExternalEngineRegistrationService(_db, directory, NullLogger<ExternalEngineRegistrationService>.Instance);
-        _controller = new ExternalEngineController(registrations, new LocalBrokerOptions(),
-            NullLogger<ExternalEngineController>.Instance);
+        _directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
+        var registrations = new ExternalEngineRegistrationService(_db, _directory, NullLogger<ExternalEngineRegistrationService>.Instance);
+        _hub = new EngineHub(_options, () => DateTime.UtcNow, startSweeper: false);
+        _controller = new ExternalEngineController(registrations, _options,
+            NullLogger<ExternalEngineController>.Instance, _hub, _directory);
     }
 
     public void Dispose()
@@ -141,7 +145,7 @@ public class ExternalEngineControllerTests : IDisposable
         var directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
         var off = new ExternalEngineController(
             new ExternalEngineRegistrationService(_db, directory, NullLogger<ExternalEngineRegistrationService>.Instance),
-            new LocalBrokerOptions { Enabled = false }, NullLogger<ExternalEngineController>.Instance)
+            new LocalBrokerOptions { Enabled = false }, NullLogger<ExternalEngineController>.Instance, _hub, directory)
         {
             ControllerContext = _controller.ControllerContext,
         };
@@ -149,5 +153,127 @@ public class ExternalEngineControllerTests : IDisposable
         off.ControllerContext = _controller.ControllerContext;
         Assert.IsType<NotFoundResult>(await off.List(CancellationToken.None));
         Assert.IsType<NotFoundResult>(await off.Create(Req(), CancellationToken.None));
+        Assert.IsType<NotFoundResult>(await off.Acquire(new EngineAcquireRequest { ProviderSecret = "x" }, CancellationToken.None));
+        Assert.IsType<NotFoundResult>(await off.Submit("abc"));
+    }
+
+    // ---------------------------------------------------------------- Arbeit holen / hochladen
+
+    private void Anonymous() => _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+    [Fact]
+    public async Task Acquire_UnknownSecret_Waits_ThenIs204_Not401()
+    {
+        Anonymous();
+        var started = DateTime.UtcNow;
+        var r = await _controller.Acquire(new EngineAcquireRequest { ProviderSecret = "never-registered-0123" }, CancellationToken.None);
+        Assert.IsType<NoContentResult>(r);
+        Assert.True(DateTime.UtcNow - started >= TimeSpan.FromMilliseconds(120));
+    }
+
+    [Fact]
+    public async Task Acquire_KnownSecret_WithoutWork_Is204_AndMarksTheEngineSeen()
+    {
+        await UserAsync();
+        As("engine");
+        await _controller.Create(Req(), CancellationToken.None);
+        Anonymous();
+        var r = await _controller.Acquire(new EngineAcquireRequest { ProviderSecret = "provider-secret-0123456789" }, CancellationToken.None);
+        Assert.IsType<NoContentResult>(r);
+        Assert.NotNull(_directory.LastSeen(ProviderSecrets.Selector("provider-secret-0123456789")));
+    }
+
+    [Fact]
+    public async Task Acquire_WithWork_ReturnsIdWorkEngine()
+    {
+        await UserAsync();
+        As("engine");
+        await _controller.Create(Req(), CancellationToken.None);
+        var selector = ProviderSecrets.Selector("provider-secret-0123456789");
+        var job = new PendingJob(selector, "rhe_x", new System.Text.Json.Nodes.JsonObject { ["id"] = "rhe_x" },
+            new EngineWork("s", 1, 16, 1, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", [], Depth: 5),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        _hub.Submit(job);
+
+        Anonymous();
+        var ok = Assert.IsType<OkObjectResult>(
+            await _controller.Acquire(new EngineAcquireRequest { ProviderSecret = "provider-secret-0123456789" }, CancellationToken.None));
+        var json = System.Text.Json.JsonSerializer.Serialize(ok.Value, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        Assert.StartsWith("{\"id\":\"" + job.Id + "\",\"work\":{\"sessionId\":\"s\"", json);
+        Assert.Contains("\"engine\":{\"id\":\"rhe_x\"}", json);
+    }
+
+    [Fact]
+    public async Task Acquire_WithoutSecret_Is400()
+    {
+        Anonymous();
+        Assert.IsType<BadRequestObjectResult>(await _controller.Acquire(new EngineAcquireRequest(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Submit_UnknownId_Is404()
+    {
+        Anonymous();
+        _controller.ControllerContext.HttpContext.Request.Body = new MemoryStream();
+        Assert.IsType<NotFoundObjectResult>(await _controller.Submit("doesnotexist0000"));
+    }
+
+    [Fact]
+    public async Task Submit_RequesterAlreadyGone_Is200Immediately()
+    {
+        var job = new PendingJob("sel", "rhe_x", new System.Text.Json.Nodes.JsonObject(),
+            new EngineWork("s", 1, 16, 1, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", [], Depth: 5),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        _hub.Submit(job);
+        var got = await _hub.AcquireAsync("sel", TimeSpan.FromSeconds(1), CancellationToken.None);
+        job.CancelRequester();
+
+        Anonymous();
+        _controller.ControllerContext.HttpContext.Request.Body = new MemoryStream();
+        Assert.IsType<OkResult>(await _controller.Submit(got!.Id!));
+        Assert.Null(_hub.TakeOngoing(got.Id!));
+    }
+
+    [Fact]
+    public async Task Submit_StreamsTheUpload_ToTheRequester()
+    {
+        var job = new PendingJob("sel", "rhe_x", new System.Text.Json.Nodes.JsonObject(),
+            new EngineWork("s", 1, 16, 1, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", [], Depth: 5),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        _hub.Submit(job);
+        var got = await _hub.AcquireAsync("sel", TimeSpan.FromSeconds(1), CancellationToken.None);
+
+        Anonymous();
+        _controller.ControllerContext.HttpContext.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+            "info depth 1 multipv 1 score cp 3 nodes 1 time 1 pv e2e4\n{\"keepalive\":true}\nbestmove e2e4\n"));
+        Assert.IsType<OkResult>(await _controller.Submit(got!.Id!));
+
+        var lines = new List<string>();
+        await foreach (var l in job.Lines.Reader.ReadAllAsync()) lines.Add(l.TrimEnd('\n'));
+        Assert.Equal(3, lines.Count);
+        Assert.Equal("{\"keepalive\":true}", lines[1]);
+        Assert.EndsWith("\"bestmove\":\"e2e4\"}", lines[2]);
+        Assert.Equal(1, _hub.Stats.For("rhe_x")!.Completed);
+    }
+
+    /// <summary>Die drei Grenzen, an denen ein Upload sonst still stirbt, stehen an den Aktionen — und nur
+    /// dort: die Registrierung bleibt gedrosselt.</summary>
+    [Fact]
+    public void ProviderEndpoints_AreExemptFromRateLimitAndSizeLimit_RegistrationIsNot()
+    {
+        static bool Has<T>(string action) where T : Attribute =>
+            typeof(ExternalEngineController).GetMethod(action)!.GetCustomAttributes(typeof(T), true).Length > 0;
+
+        Assert.True(Has<Microsoft.AspNetCore.RateLimiting.DisableRateLimitingAttribute>(nameof(ExternalEngineController.Acquire)));
+        Assert.True(Has<Microsoft.AspNetCore.RateLimiting.DisableRateLimitingAttribute>(nameof(ExternalEngineController.Submit)));
+        Assert.True(Has<DisableRequestSizeLimitAttribute>(nameof(ExternalEngineController.Submit)));
+        Assert.True(Has<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>(nameof(ExternalEngineController.Acquire)));
+        Assert.True(Has<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>(nameof(ExternalEngineController.Submit)));
+        foreach (var registration in new[] { nameof(ExternalEngineController.List), nameof(ExternalEngineController.Create),
+                     nameof(ExternalEngineController.Update), nameof(ExternalEngineController.Delete) })
+        {
+            Assert.False(Has<Microsoft.AspNetCore.RateLimiting.DisableRateLimitingAttribute>(registration));
+            Assert.False(Has<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>(registration));
+        }
     }
 }

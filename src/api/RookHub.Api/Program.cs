@@ -268,6 +268,9 @@ try
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineSelectorDirectory>();
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.ExternalEngineRegistrationService>();
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.EngineRegistry>();
+    builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineHub>();
+    builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.LocalEngineBroker>();
+    builder.Services.AddHostedService<RookHub.Api.Services.EngineBroker.EngineBrokerMaintenanceService>();
     builder.Services.AddSingleton<AnalysisJobLive>();
     builder.Services.AddSingleton<AnalysisJobWorker>();
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
@@ -831,6 +834,11 @@ try
         {
             var path = httpContext.Request.Path.Value ?? "";
             if (path.StartsWith("/health") || path.StartsWith("/swagger"))
+                return LogEventLevel.Debug;
+            // Long-Poll der Engine-Provider (eigener Broker): 13 Provider = 78 Zeilen je Minute ohne Aussage.
+            // Die abgeholten Auftraege protokolliert der Upload selbst (EngineBroker: Upload …).
+            if (path.Equals("/api/external-engine/work", StringComparison.OrdinalIgnoreCase)
+                && httpContext.Response.StatusCode < 400 && ex == null)
                 return LogEventLevel.Debug;
             if (ex != null || httpContext.Response.StatusCode >= 500)
                 return LogEventLevel.Error;

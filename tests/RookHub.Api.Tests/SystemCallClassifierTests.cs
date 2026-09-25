@@ -22,6 +22,8 @@ public class SystemCallClassifierTests
     // Import-Status-Polls
     [InlineData("/api/chessable/admin/active")]
     [InlineData("/api/chessable/admin/imports")]
+    [InlineData("/api/external-engine/work")]              // Long-Poll des Engine-Providers
+    [InlineData("/api/external-engine/work/AbCdEf0123456789")]  // Upload einer Suche
     public void SystemPaths_AreSystem(string path)
     {
         Assert.True(SystemCallClassifier.IsSystemCall(path));
@@ -38,6 +40,7 @@ public class SystemCallClassifierTests
     [InlineData("/api/messages")]               // Thread lesen ≠ unread-count
     [InlineData("/api/auth/login")]
     [InlineData("/api/tournaments/999/players")]
+    [InlineData("/api/external-engine")]                   // Registrierung: selten, bleibt sichtbar
     [InlineData("")]
     [InlineData("/")]
     public void UserPaths_AreUser(string path)

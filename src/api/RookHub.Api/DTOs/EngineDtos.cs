@@ -89,3 +89,12 @@ public class ExternalEngineRegistrationDto
 /// <summary>Antwort von <c>POST /api/token/test</c> je Token (Lichess-Form): <c>scopes</c> kommagetrennt,
 /// <c>expires</c> in Millisekunden seit der Epoche oder <c>null</c>.</summary>
 public record TokenTestInfo(string UserId, string Scopes, long? Expires);
+
+/// <summary>Rumpf des Long-Polls <c>POST /api/external-engine/work</c>.</summary>
+public class EngineAcquireRequest
+{
+    public string? ProviderSecret { get; set; }
+}
+
+/// <summary>Antwort des Long-Polls: der abgeholte Auftrag (lila-engine <c>AcquireResponse</c>).</summary>
+public record EngineAcquireResponse(string Id, System.Text.Json.Nodes.JsonObject Work, System.Text.Json.Nodes.JsonObject Engine);
