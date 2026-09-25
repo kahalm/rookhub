@@ -493,6 +493,30 @@ public class ScoresheetScanServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Process_ThinkingSwitchedOff_ReadsWithoutThinkingFromTheStart()
+    {
+        // Scoresheet:Thinking=false — z. B. für Haiku: gleich nur abschreiben, auch die Nachfrage.
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Thinking"] = "false",
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[40] = "Zz9";
+        broken[41] = "Yy8";
+        _vision.Answers.Enqueue(new(Answer(broken), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal([ScoresheetReadMode.Transcribe, ScoresheetReadMode.Transcribe], _vision.Modes);
+        Assert.Equal(ScoresheetReader.TranscribeCallMaxTokens, _vision.MaxTokens[0]);
+    }
+
+    [Fact]
     public async Task Process_RuntimeCapMidCall_FailsWithTimeout_BooksTheWorstCase_AndRingsTheBell()
     {
         var u = await UserAsync();

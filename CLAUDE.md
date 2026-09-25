@@ -2130,6 +2130,16 @@ bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/g
   langen Lesung mit fast nur „medium" war das Budget nach 28 Zügen verbraucht, und jeder spätere zurechtgebogene Zug
   stand da wie ein sicherer (Kufstein: 42 repariert, 14 markiert). Jetzt wird über das Budget hinaus weiter MARKIERT
   (zurechtgebogen oder „low"), nur ohne Lesarten. Am 10er-Testsatz unverändert (578/591, dieselben Markierungen).
+* **Ohne Nachdenken von Anfang an** (0.533.0, `Scoresheet:Thinking=false`, Vorgabe true): der erste Durchgang liest
+  schon im Modus `Transcribe` (Deckel `TranscribeCallMaxTokens`), die Nachfragen ebenso. Gedacht für ein kleineres
+  Modell (`Anthropic:ScoresheetModel` = Haiku — dessen adaptives Nachdenken ist nicht geprüft, daher nur so) oder wenn
+  das Nachdenken sein Geld nicht wert ist. Wer das Modell wechselt, stellt die Preise der Kostenbremse mit um.
+  Im Testwerkzeug: `--no-thinking`, `--usd-per-mtok ein,aus` (Vorgabe nach Modell: `claude-haiku-*` 1,5, sonst 5,25).
+  **Gemessen 25.09.** (10er-Testsatz, 591 Halbzüge): Opus 5 MIT Nachdenken 578 (97,8 %, ~0,37 $ und 1–4½ min je
+  Formular, 6 falsch ohne Marke); Opus 5 OHNE Nachdenken 563 (95,3 %, 0,13 $ und ~37 s je Formular, 10 falsch ohne
+  Marke); **Haiku 4.5 ohne Nachdenken 208 (35,2 %, 0,025 $, 160 falsch ohne Marke) — unbrauchbar**: am Kufstein-Formular
+  erfand Haiku eine völlig andere, LEGALE Partie (2…Dd6 3…c5 statt 2…Sf6 3…Sxd5), die kaum Reparaturen braucht und
+  deshalb sicher aussieht. Eine glatte Auflösung ist also KEIN Beleg für eine richtige Lesung.
 
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT

@@ -35,6 +35,9 @@ using RookHub.Api.Services;
 //   --timeout 900         Sekunden je Aufruf
 //   --edge 2000           längste Bildkante in Pixeln
 //   --list-models         nur die Modelle am --endpoint auflisten (Verbindungstest; braucht keinen Testordner)
+//   --no-thinking         gleich ohne Nachdenken lesen (nur abschreiben) — wie Scoresheet:Thinking=false in RookHub
+//   --usd-per-mtok 1,5    Preise Eingabe,Ausgabe je Million Tokens für die Kosten-Rechnung; Vorgabe nach Modell
+//                         (claude-haiku-* 1,5, sonst 5,25 = Opus)
 //
 // Der Testordner enthält je Beleg NN.png|jpg (Formular), NN.pgn (Soll = gespielte Partie), NN.formular.txt (was
 // auf DIESEM Formular steht) und belege.json. Der Claude-Schlüssel kommt aus ANTHROPIC_API_KEY.
@@ -53,6 +56,8 @@ var localMaxTokens = int.Parse(Opt("--max-tokens", "16384"), CultureInfo.Invaria
 var promptKind = Opt("--prompt", "transcribe").ToLowerInvariant();
 var useSchema = !argv.Contains("--no-schema");
 var timeoutSec = int.Parse(Opt("--timeout", "900"), CultureInfo.InvariantCulture);
+var noThinking = argv.Contains("--no-thinking");
+var prices = Opt("--usd-per-mtok", "");
 var edge = int.Parse(Opt("--edge", ScoresheetScanService.ModelEdge.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
 if (provider is not ("claude" or "openai" or "dots"))
 {
@@ -98,7 +103,14 @@ var belege = JsonSerializer.Deserialize<List<BelegInfo>>(File.ReadAllText(Path.C
 if (only.Count > 0) belege = belege.Where(b => only.Contains(b.Beleg)).ToList();
 
 IScoresheetVisionClient? vision = null;
-var budget = new ScoresheetBudget(null);
+// Preise für die Kosten-Rechnung: ausdrücklich, sonst nach Modell (Haiku 4.5: 1/5 $, Opus 5: 5/25 $ je Million Tokens).
+if (prices.Length == 0) prices = model.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase) ? "1,5" : "5,25";
+var priceParts = prices.Split(',', StringSplitOptions.TrimEntries);
+var budget = new ScoresheetBudget(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Scoresheet:InputUsdPerMTok"] = priceParts[0],
+    ["Scoresheet:OutputUsdPerMTok"] = priceParts.Length > 1 ? priceParts[1] : priceParts[0],
+}).Build());
 var local = provider != "claude";
 Func<string?>? lastRaw = null;
 if (!resolverOnly && replayDir.Length == 0 && local)
@@ -215,7 +227,8 @@ foreach (var b in belege)
                 spentMicro += cost;
                 return Task.CompletedTask;
             },
-            maxRounds: provider == "dots" ? 1 : ScoresheetReader.MaxRounds);
+            maxRounds: provider == "dots" ? 1 : ScoresheetReader.MaxRounds,
+            startMode: noThinking ? ScoresheetReadMode.Transcribe : ScoresheetReadMode.Full);
         if (lastRaw?.Invoke() is { } raw)
             File.WriteAllText(Path.Combine(outDir, b.Beleg + (provider == "dots" ? ".dots.txt" : ".raw.txt")), raw);
         r.Runden = outcome.Rounds;
@@ -270,7 +283,8 @@ var json = JsonSerializer.Serialize(results, new JsonSerializerOptions
 });
 File.WriteAllText(Path.Combine(outDir, "results.json"), json);
 File.WriteAllText(Path.Combine(outDir, "report.md"), Report(results, resolverOnly,
-    replayDir.Length > 0 ? $"Replay von {replayDir}" : local ? $"{provider}: {model} @ {endpoint}" : model, spentMicro));
+    replayDir.Length > 0 ? $"Replay von {replayDir}" : (local ? $"{provider}: {model} @ {endpoint}" : model)
+        + (noThinking ? ", ohne Nachdenken" : ""), spentMicro));
 Console.WriteLine($"→ {Path.Combine(outDir, "report.md")}" + (resolverOnly ? "" : $" · Kosten gesamt {spentMicro / 1_000_000m:0.000} $"));
 return 0;
 

@@ -47,6 +47,8 @@ public sealed class ScoresheetReader
     /// <param name="afterCall">Nach jedem Aufruf: verbrauchte Tokens (auch bei Fehlern) verbuchen.</param>
     /// <param name="maxRounds">Durchgänge höchstens — 1 für einen Leser, der den Auftrag nicht liest (dots.ocr:
     /// eine Nachfrage ergäbe dieselbe Lesung noch einmal).</param>
+    /// <param name="startMode">Womit der erste Durchgang liest — <see cref="ScoresheetReadMode.Transcribe"/> für ein
+    /// Modell, das OHNE Nachdenken lesen soll (Einstellung <c>Scoresheet:Thinking=false</c>, z. B. Haiku).</param>
     /// <remarks>
     /// Wird ein Aufruf MIT Nachdenken am Deckel abgeschnitten, ist der nächste Durchgang derselbe Auftrag OHNE
     /// Nachdenken (<see cref="ScoresheetReadMode.Transcribe"/>), und dabei bleibt es auch für die Nachfragen — ein
@@ -54,10 +56,10 @@ public sealed class ScoresheetReader
     /// </remarks>
     public async Task<ReadOutcome> ReadAsync(byte[] jpeg, string language, CancellationToken ct,
         Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null,
-        int maxRounds = MaxRounds)
+        int maxRounds = MaxRounds, ScoresheetReadMode startMode = ScoresheetReadMode.Full)
     {
         ReadOutcome? best = null;
-        var mode = ScoresheetReadMode.Full;
+        var mode = startMode;
         var rounds = Math.Clamp(maxRounds, 1, MaxRounds);
         string? previousJson = null;
         ScoresheetTranscription? previous = null;

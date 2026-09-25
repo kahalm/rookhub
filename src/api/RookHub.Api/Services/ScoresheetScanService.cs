@@ -29,6 +29,7 @@ public class ScoresheetScanService
     private readonly int _dailyLimit;
     private readonly ScoresheetBudget _budget;
     private readonly ScoresheetReader _reader;
+    private readonly ScoresheetReadMode _startMode;
 
     /// <summary>Größter angenommener Upload.</summary>
     public const int MaxUploadBytes = 30 * 1024 * 1024;
@@ -63,6 +64,10 @@ public class ScoresheetScanService
         _notifications = notifications;
         _logger = logger;
         _dailyLimit = int.TryParse(config?["Scoresheet:DailyLimit"], out var l) && l > 0 ? l : DefaultDailyLimit;
+        // Scoresheet:Thinking=false: gleich ohne Nachdenken lesen (nur abschreiben) — für ein kleines Modell wie Haiku,
+        // oder wenn das Nachdenken sein Geld nicht wert ist. Vorgabe: mit Nachdenken, Rückfall ohne.
+        _startMode = bool.TryParse(config?["Scoresheet:Thinking"], out var thinking) && !thinking
+            ? ScoresheetReadMode.Transcribe : ScoresheetReadMode.Full;
         _budget = new ScoresheetBudget(config);
         _reader = new ScoresheetReader(vision);
     }
@@ -281,7 +286,8 @@ public class ScoresheetScanService
                     scan.OutputTokens += output;
                     scan.CostMicroUsd += _budget.CostMicroUsd(input, output);
                     await _db.SaveChangesAsync(token);
-                });
+                },
+                startMode: _startMode);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested && !shutdown.IsCancellationRequested)
         {
