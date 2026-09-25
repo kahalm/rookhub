@@ -55,7 +55,13 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
         _logger = logger;
         // Handschrift lesen UND die Partie im Kopf mitspielen ist die schwerste Aufgabe, die RookHub einem
         // Modell stellt — deshalb das große Modell mit Nachdenken, nicht das Übersetzungsmodell.
-        Model = config["Anthropic:ScoresheetModel"] ?? "claude-opus-5";
+        // Vorgabe seit 0.533.2: Opus 5.5 — mit „nur abschreiben" (Scoresheet:Thinking, Vorgabe aus) die Referenz des
+        // Modellvergleichs vom 25.09.2026 (siehe CLAUDE.md, Partieformular einlesen).
+        Model = config["Anthropic:ScoresheetModel"] ?? "claude-opus-5-5";
+        // low|medium|high|xhigh|max — leer = die Vorgabe des Modells. Bei Opus 5.5 ist effort der EINZIGE Hebel gegen
+        // zu langes Nachdenken (abschalten lässt es sich dort nicht).
+        Effort = string.IsNullOrWhiteSpace(config["Anthropic:ScoresheetEffort"]) ? null
+            : config["Anthropic:ScoresheetEffort"]!.Trim().ToLowerInvariant();
         var key = config["Anthropic:ApiKey"];
         if (!string.IsNullOrWhiteSpace(key))
             _client = new Anthropic.AnthropicClient { ApiKey = key };
@@ -65,6 +71,37 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
 
     public string Model { get; }
 
+    /// <summary>Eingestellter Denkaufwand (<c>Anthropic:ScoresheetEffort</c>), <c>null</c> = Vorgabe des Modells.</summary>
+    public string? Effort { get; }
+
+    /// <summary>Wie ein Aufruf nachdenkt: abgeschaltet, und mit welchem <c>effort</c>.</summary>
+    internal sealed record ThinkingPlan(bool Disabled, string? Effort);
+
+    /// <summary>
+    /// Nachdenken je Modell und Modus. „Nur abschreiben" schaltet es ab — außer bei Modellen, bei denen das nicht
+    /// geht (Opus 5.5, Fable/Mythos: Nachdenken immer an): dort wird es mit <c>effort: low</c> so klein wie möglich.
+    /// Opus 5 erlaubt das Abschalten nur bis <c>effort: high</c> — ein eingestelltes <c>xhigh</c>/<c>max</c> fällt dann weg.
+    /// </summary>
+    internal static ThinkingPlan PlanThinking(string model, ScoresheetReadMode mode, string? effort)
+    {
+        if (mode != ScoresheetReadMode.Transcribe) return new(false, effort);
+        var alwaysOn = model.StartsWith("claude-opus-5-5", StringComparison.OrdinalIgnoreCase)
+            || model.StartsWith("claude-fable", StringComparison.OrdinalIgnoreCase)
+            || model.StartsWith("claude-mythos", StringComparison.OrdinalIgnoreCase);
+        if (alwaysOn) return new(false, "low");
+        return new(true, effort is "xhigh" or "max" ? null : effort);
+    }
+
+    private static Anthropic.Models.Messages.Effort? EffortOf(string? effort) => effort switch
+    {
+        "low" => Anthropic.Models.Messages.Effort.Low,
+        "medium" => Anthropic.Models.Messages.Effort.Medium,
+        "high" => Anthropic.Models.Messages.Effort.High,
+        "xhigh" => Anthropic.Models.Messages.Effort.Xhigh,
+        "max" => Anthropic.Models.Messages.Effort.Max,
+        _ => null,
+    };
+
     public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
         CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
     {
@@ -72,13 +109,18 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
         try
         {
             var transcribe = mode == ScoresheetReadMode.Transcribe;
+            var plan = PlanThinking(Model, mode, Effort);
+            var format = new JsonOutputFormat { Schema = ScoresheetPrompt.Schema() };
+            var outputConfig = EffortOf(plan.Effort) is { } effort
+                ? new OutputConfig { Format = format, Effort = effort }
+                : new OutputConfig { Format = format };
             var parameters = new MessageCreateParams
             {
                 Model = Model,
                 MaxTokens = Math.Clamp(maxTokens, 1024, ScoresheetBudget.MaxOutputTokens),
                 System = transcribe ? ScoresheetPrompt.TranscribeSystem : ScoresheetPrompt.System,
-                Thinking = transcribe ? new ThinkingConfigDisabled() : new ThinkingConfigAdaptive(),
-                OutputConfig = new OutputConfig { Format = new JsonOutputFormat { Schema = ScoresheetPrompt.Schema() } },
+                Thinking = plan.Disabled ? new ThinkingConfigDisabled() : new ThinkingConfigAdaptive(),
+                OutputConfig = outputConfig,
                 Messages =
                 [
                     new()

@@ -45,6 +45,17 @@ public class ScoresheetScanServiceTests : IDisposable
             NullLogger<ScoresheetScanService>.Instance, config);
     }
 
+    /// <summary>Dienst MIT Nachdenken (<c>Scoresheet:Thinking=true</c>) — die Vorgabe ist seit 0.533.2 „nur abschreiben".</summary>
+    private void WithThinking()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Thinking"] = "true",
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
     /// <summary>Liefert der Reihe nach die hinterlegten Antworten und merkt sich die Aufträge.</summary>
     private sealed class FakeVision : IScoresheetVisionClient
     {
@@ -424,13 +435,13 @@ public class ScoresheetScanServiceTests : IDisposable
     public void Budget_AnswerCap_ComesFromWhatIsLeft()
     {
         var b = new ScoresheetBudget(null);
-        // 5 $ bzw. 25 $ je Million Tokens = 5 bzw. 25 Millionstel Dollar je Token.
-        Assert.Equal(10_000 * 5 + 2_000 * 25, b.CostMicroUsd(10_000, 2_000));
+        // Opus 5.5: 4 $ bzw. 20 $ je Million Tokens = 4 bzw. 20 Millionstel Dollar je Token.
+        Assert.Equal(10_000 * 4 + 2_000 * 20, b.CostMicroUsd(10_000, 2_000));
         Assert.Equal(2_000_000, b.UserDailyMicroUsd);
-        // Frisch: der volle Deckel (2 $ − 0,06 $ Eingabe-Reserve reicht für 77 600 Tokens → auf 64 000 gedeckelt).
+        // Frisch: der volle Deckel (2 $ − 0,048 $ Eingabe-Reserve reicht für 97 600 Tokens → auf 64 000 gedeckelt).
         Assert.Equal(new CallAllowance(ScoresheetBudget.MaxOutputTokens, null), b.Allowance(0, 0, 0, false));
-        // 1,5 $ verbraucht: (0,5 − 0,06) / 25e-6 = 17 600 Tokens.
-        Assert.Equal(new CallAllowance(17_600, null), b.Allowance(1_500_000, 1_500_000, 1_500_000, false));
+        // 1,5 $ verbraucht: (0,5 − 0,048) / 20e-6 = 22 600 Tokens.
+        Assert.Equal(new CallAllowance(22_600, null), b.Allowance(1_500_000, 1_500_000, 1_500_000, false));
         // Unter 16 000 Tokens gesperrt — mit dem Grund des knappsten Budgets.
         Assert.Equal("userDailyBudget", b.Allowance(1_700_000, 0, 0, false).Blocked);
         Assert.Equal("userMonthlyBudget", b.Allowance(0, 9_700_000, 0, false).Blocked);
@@ -449,7 +460,7 @@ public class ScoresheetScanServiceTests : IDisposable
         var row = await _db.ScoresheetScans.SingleAsync(s => s.Id == scan.Id);
         Assert.Equal(8_000, row.InputTokens);
         Assert.Equal(12_000, row.OutputTokens);
-        Assert.Equal(8_000 * 5 + 12_000 * 25, row.CostMicroUsd);
+        Assert.Equal(8_000 * 4 + 12_000 * 20, row.CostMicroUsd);
     }
 
     [Fact]
@@ -457,12 +468,25 @@ public class ScoresheetScanServiceTests : IDisposable
     {
         var u = await UserAsync();
         _vision.Answers.Enqueue(new(null, "truncated", 8_000, 24_000));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("failed", scan.Status);
+        Assert.Equal("truncated", scan.Error);
+        Assert.Equal([ScoresheetReadMode.Transcribe], _vision.Modes); // schon ohne Nachdenken: kein Rückfall mehr
+        Assert.Equal(8_000 * 4 + 24_000 * 20, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
+    }
+
+    [Fact]
+    public async Task Process_WithThinking_CutOffTwice_FailsTruncated_AndBooksBoth()
+    {
+        WithThinking();
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(null, "truncated", 8_000, 24_000));
         _vision.Answers.Enqueue(new(null, "truncated", 8_000, 10_000)); // auch der Rückfall ohne Nachdenken
         var scan = await UploadAndProcessAsync(u.Id);
         Assert.Equal("failed", scan.Status);
         Assert.Equal("truncated", scan.Error);
         Assert.Equal([ScoresheetReadMode.Full, ScoresheetReadMode.Transcribe], _vision.Modes);
-        Assert.Equal(16_000 * 5 + 34_000 * 25, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
+        Assert.Equal(16_000 * 4 + 34_000 * 20, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
     }
 
     // ── Festgedacht (Prod 25.09.: 64 000 Tokens Nachdenken, keine Antwort) ─────────────────────────
@@ -470,6 +494,7 @@ public class ScoresheetScanServiceTests : IDisposable
     [Fact]
     public async Task Process_ThinkingCutOff_ReadsAgainWithoutThinking_AndStaysThereForTheSecondLook()
     {
+        WithThinking();
         var u = await UserAsync();
         var broken = Written.ToArray();
         broken[40] = "Zz9";
@@ -489,19 +514,13 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.DoesNotContain("second look", _vision.Instructions[1]); // derselbe erste Auftrag, nur ohne Nachdenken
         Assert.Contains("second look", _vision.Instructions[2]);
         var row = await _db.ScoresheetScans.SingleAsync();
-        Assert.Equal(20_000 * 5 + 58_000 * 25, row.CostMicroUsd); // alle drei Aufrufe verbucht
+        Assert.Equal(20_000 * 4 + 58_000 * 20, row.CostMicroUsd); // alle drei Aufrufe verbucht
     }
 
     [Fact]
-    public async Task Process_ThinkingSwitchedOff_ReadsWithoutThinkingFromTheStart()
+    public async Task Process_ByDefault_ReadsWithoutThinking_AlsoTheSecondLook()
     {
-        // Scoresheet:Thinking=false — z. B. für Haiku: gleich nur abschreiben, auch die Nachfrage.
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Scoresheet:Thinking"] = "false",
-        }).Build();
-        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
-            NullLogger<ScoresheetScanService>.Instance, config);
+        // Vorgabe seit 0.533.2 (Scoresheet:Thinking nicht gesetzt): nur abschreiben, auch die Nachfrage.
         var u = await UserAsync();
         var broken = Written.ToArray();
         broken[40] = "Zz9";
@@ -531,8 +550,8 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(ScoresheetScanStatus.Failed, row.Status);
         Assert.Equal("timeout", row.Error);
         // Was der abgebrochene Aufruf gekostet hat, meldet niemand mehr — verbucht wird sein Deckel.
-        Assert.Equal(ScoresheetReader.FullCallMaxTokens, row.OutputTokens);
-        Assert.Equal(ScoresheetBudget.ReserveInputTokens * 5L + ScoresheetReader.FullCallMaxTokens * 25L, row.CostMicroUsd);
+        Assert.Equal(ScoresheetReader.TranscribeCallMaxTokens, row.OutputTokens);
+        Assert.Equal(ScoresheetBudget.ReserveInputTokens * 4L + ScoresheetReader.TranscribeCallMaxTokens * 20L, row.CostMicroUsd);
         var note = await _db.Notifications.SingleAsync(n => n.UserId == u.Id);
         Assert.Equal(NotificationType.ScoresheetFailed, note.Type);
         Assert.Contains("\"reason\":\"timeout\"", note.DataJson);
@@ -560,16 +579,16 @@ public class ScoresheetScanServiceTests : IDisposable
         var u = await UserAsync();
         _db.ScoresheetScans.Add(new ScoresheetScan
         {
-            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 600_000,
+            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 700_000,
         });
         await _db.SaveChangesAsync();
 
         var (_, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
-        Assert.Equal("userDailyBudget", reason); // 0,40 $ übrig reichen nicht für 16 000 Antwort-Tokens + Eingabe
+        Assert.Equal("userDailyBudget", reason); // 0,30 $ übrig reichen nicht für 16 000 Antwort-Tokens + Eingabe
 
         var status = await _service.StatusAsync(u.Id);
         Assert.Equal("userDailyBudget", status.Blocked);
-        Assert.Equal(60, status.BudgetUsedPercent);
+        Assert.Equal(70, status.BudgetUsedPercent);
 
         u.IsAdmin = true;
         await _db.SaveChangesAsync();
@@ -594,20 +613,20 @@ public class ScoresheetScanServiceTests : IDisposable
     [Fact]
     public async Task Process_WhenTheBudgetRunsOut_SkipsTheSecondLook_AndKeepsTheFirstReading()
     {
-        WithBudgets(userDaily: 1m);
+        WithBudgets(userDaily: 0.6m);
         var u = await UserAsync();
         var broken = Written.ToArray();
         broken[60] = "Zz9";
         broken[61] = "Yy8";
-        // Die erste Lesung kostet 0,6 $ — danach reicht der Rest nicht mehr für eine brauchbare Antwort.
-        _vision.Answers.Enqueue(new(Answer(broken), null, 20_000, 20_000));
+        // Die erste Lesung kostet 0,28 $ — danach reicht der Rest nicht mehr für eine brauchbare Antwort.
+        _vision.Answers.Enqueue(new(Answer(broken), null, 20_000, 10_000));
         _vision.Answers.Enqueue(new(Answer(Written), null, 1, 1));
 
         var scan = await UploadAndProcessAsync(u.Id);
 
         Assert.Equal("done", scan.Status);
         Assert.Single(_vision.Instructions);           // keine Nachfrage
-        Assert.Equal(37_600, _vision.MaxTokens[0]);    // (1 $ − 0,06 $) / 25e-6 — der Deckel kam aus dem Budget
+        Assert.Equal(27_600, _vision.MaxTokens[0]);    // (0,6 $ − 0,048 $) / 20e-6 — der Deckel kam aus dem Budget
         Assert.Equal(60, scan.MoveCount);              // die erste Lesung bleibt
         Assert.Equal(6, scan.UnresolvedCount);
     }

@@ -64,10 +64,12 @@ public class ScoresheetScanService
         _notifications = notifications;
         _logger = logger;
         _dailyLimit = int.TryParse(config?["Scoresheet:DailyLimit"], out var l) && l > 0 ? l : DefaultDailyLimit;
-        // Scoresheet:Thinking=false: gleich ohne Nachdenken lesen (nur abschreiben) — für ein kleines Modell wie Haiku,
-        // oder wenn das Nachdenken sein Geld nicht wert ist. Vorgabe: mit Nachdenken, Rückfall ohne.
-        _startMode = bool.TryParse(config?["Scoresheet:Thinking"], out var thinking) && !thinking
-            ? ScoresheetReadMode.Transcribe : ScoresheetReadMode.Full;
+        // Scoresheet:Thinking — Vorgabe seit 0.533.2: NUR ABSCHREIBEN (Opus 5.5 mit effort low, die Schachlogik macht der
+        // Auflöser): am Testsatz 93,1 % für 0,08 $ und 25 s je Formular, und als einzige Variante schlüssig am langen,
+        // verbesserten Kufstein-Formular (10 Reparaturen statt 42–60). true = mit Nachdenken und dem vollen Auftrag,
+        // Rückfall ohne.
+        _startMode = bool.TryParse(config?["Scoresheet:Thinking"], out var thinking) && thinking
+            ? ScoresheetReadMode.Full : ScoresheetReadMode.Transcribe;
         _budget = new ScoresheetBudget(config);
         _reader = new ScoresheetReader(vision);
     }

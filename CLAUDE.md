@@ -2077,8 +2077,8 @@ bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/g
 ALLEIN diesem Feature (Tipps/Übersetzung laufen über `Anthropic:TextApiKey`); ohne Schlüssel antwortet der Upload 503 `notConfigured` und die Seite sagt es.
 
 **Drei Schichten, jede für sich testbar:**
-* **Lesen** (`ClaudeScoresheetVisionClient`, Modell `Anthropic:ScoresheetModel`, Vorgabe `claude-opus-5`, adaptives
-  Nachdenken, gestreamt, structured output nach `ScoresheetPrompt.Schema`): je Halbzug, was DASTEHT (`written`, in der
+* **Lesen** (`ClaudeScoresheetVisionClient`, Modell `Anthropic:ScoresheetModel`, Vorgabe seit 0.533.2 `claude-opus-5-5`
+  im Modus „nur abschreiben" — siehe **Vorgabe** unten; mit `Scoresheet:Thinking=true` adaptives Nachdenken; gestreamt, structured output nach `ScoresheetPrompt.Schema`): je Halbzug, was DASTEHT (`written`, in der
   Sprache des Formulars), die Lesart des Modells als englische SAN, bis zu drei Ersatz-Lesarten und eine Sicherheit.
   Das Modell soll zuerst das GANZE Formular lesen und die Partie im Kopf mitspielen; Korrekturen (Streichungen,
   Pfeile, übersprungene Zeilen) löst es selbst und nummeriert neu. Bild vorher aufrecht (EXIF) und auf 2000 px
@@ -2131,24 +2131,42 @@ ALLEIN diesem Feature (Tipps/Übersetzung laufen über `Anthropic:TextApiKey`); 
   langen Lesung mit fast nur „medium" war das Budget nach 28 Zügen verbraucht, und jeder spätere zurechtgebogene Zug
   stand da wie ein sicherer (Kufstein: 42 repariert, 14 markiert). Jetzt wird über das Budget hinaus weiter MARKIERT
   (zurechtgebogen oder „low"), nur ohne Lesarten. Am 10er-Testsatz unverändert (578/591, dieselben Markierungen).
-* **Ohne Nachdenken von Anfang an** (0.533.0, `Scoresheet:Thinking=false`, Vorgabe true): der erste Durchgang liest
+* **Ohne Nachdenken von Anfang an** (0.533.0, `Scoresheet:Thinking=false`, seit 0.533.2 die VORGABE): der erste Durchgang liest
   schon im Modus `Transcribe` (Deckel `TranscribeCallMaxTokens`), die Nachfragen ebenso. Gedacht für ein kleineres
   Modell (`Anthropic:ScoresheetModel` = Haiku — dessen adaptives Nachdenken ist nicht geprüft, daher nur so) oder wenn
   das Nachdenken sein Geld nicht wert ist. Wer das Modell wechselt, stellt die Preise der Kostenbremse mit um.
-  Im Testwerkzeug: `--no-thinking`, `--usd-per-mtok ein,aus` (Vorgabe nach Modell: `claude-haiku-*` 1,5, sonst 5,25).
+  Im Testwerkzeug seit 0.533.2 ebenfalls Vorgabe (`--thinking` schaltet es ein), `--usd-per-mtok ein,aus` (Vorgabe nach
+  Modell: `claude-haiku-*` 1,5; `claude-sonnet-*` 2,10; `claude-opus-5-5` 4,20; sonst 5,25).
   **Gemessen 25.09.** (10er-Testsatz, 591 Halbzüge): Opus 5 MIT Nachdenken 578 (97,8 %, ~0,37 $ und 1–4½ min je
   Formular, 6 falsch ohne Marke); Opus 5 OHNE Nachdenken 563 (95,3 %, 0,13 $ und ~37 s je Formular, 10 falsch ohne
   Marke); **Haiku 4.5 ohne Nachdenken 208 (35,2 %, 0,025 $, 160 falsch ohne Marke) — unbrauchbar**: am Kufstein-Formular
   erfand Haiku eine völlig andere, LEGALE Partie (2…Dd6 3…c5 statt 2…Sf6 3…Sxd5), die kaum Reparaturen braucht und
   deshalb sicher aussieht. Eine glatte Auflösung ist also KEIN Beleg für eine richtige Lesung.
+* **Denkaufwand** (0.533.2, `Anthropic:ScoresheetEffort` = low|medium|high|xhigh|max, leer = Vorgabe des Modells;
+  Testwerkzeug `--effort`). `ClaudeScoresheetVisionClient.PlanThinking` ist die EINE Regel je Modell und Modus: „nur
+  abschreiben" schaltet das Nachdenken ab — außer bei Modellen, die das nicht erlauben (`claude-opus-5-5`, Fable/Mythos:
+  Nachdenken immer an), dort `effort: low`; Opus 5 verbietet Abschalten zusammen mit `xhigh`/`max`, der effort fällt dann
+  weg. Ohne diese Regel liefe der Rückfall unter Opus 5.5 in einen 400. Der OpenAI-kompatible Leser schickt beim
+  Abschreiben `chat_template_kwargs: {enable_thinking: false}` mit (Qwen3/Qwen3.5 denken sonst über die Chat-Vorlage).
+  Er STREAMT (`stream: true`, `include_usage`): vor dem Spark kappt ein Reverse-Proxy (openresty) jede Anfrage nach
+  90 s ohne Antwort mit 504, eine Formular-Lesung dauert dort Minuten.
+* **Vorgabe = Opus 5.5 „nur abschreiben"** (0.533.2, Wunsch des Nutzers nach dem Modellvergleich vom 25.09.2026):
+  `Anthropic:ScoresheetModel` = `claude-opus-5-5`, `Scoresheet:Thinking` aus (→ `effort: low` + `TranscribeSystem`),
+  Preise der Kostenbremse 4 $ / 20 $. Gemessen am 10er-Testsatz: 550/591 (93,1 %), 7 falsch ohne Marke, 0,08 $ und
+  ~25 s je Formular (Ausreißer Formular 10: 59/92); am Kufstein-Formular die einzige schlüssige Lesung (120 Halbzüge,
+  10 Reparaturen; Opus 5 ohne Nachdenken 52, mit Nachdenken festgedacht). Weitere Zeilen des Vergleichs: Opus 5.5
+  `effort: low` mit vollem Auftrag 95,6 % (am Kufstein-Formular nach 13 Zügen aufgegeben), Sonnet 5 93,4 % ohne /
+  94,5 % mit Nachdenken (8 Formulare, so teuer wie Opus 5), Qwen3.5-122B auf dem Spark rund 70 % (verrutscht bei
+  unordentlichen Formularen). Diese Konfiguration ist die REFERENZ für künftige Vergleiche; zurück zu Opus 5 mit
+  Nachdenken: `Anthropic:ScoresheetModel=claude-opus-5`, `Scoresheet:Thinking=true`, Preise 5 / 25.
 
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT
 die Tokens, die die API meldet (`InputTokens`/`OutputTokens`/`CostMicroUsd` an der Einlesung; Nachdenken zählt als
 Ausgabe, abgebrochene und abgeschnittene Aufrufe zählen mit). Drei Budgets, alle als Konfiguration mit Vorgabe:
 `Scoresheet:UserDailyUsd` (2), `Scoresheet:UserMonthlyUsd` (10, über 30 Tage), `Scoresheet:GlobalDailyUsd` (15, alle
-Nutzer zusammen — schützt das Konto auch bei vielen Nutzern); Preise `Scoresheet:InputUsdPerMTok` (5) /
-`Scoresheet:OutputUsdPerMTok` (25) = Claude Opus 5 — wer das Modell wechselt, stellt sie mit um. **Der
+Nutzer zusammen — schützt das Konto auch bei vielen Nutzern); Preise `Scoresheet:InputUsdPerMTok` (4) /
+`Scoresheet:OutputUsdPerMTok` (20) = Claude Opus 5.5 (bis 0.533.1: 5 / 25 = Opus 5) — wer das Modell wechselt, stellt sie mit um. **Der
 Antwort-Deckel (max_tokens) kommt aus dem verbleibenden Budget** (`ScoresheetBudget.Allowance`, seit 0.531.0): so viel
 Ausgabe, wie nach 12 000 Eingabe-Tokens Reserve noch bezahlbar ist, höchstens 64 000 (je Aufruf mit Nachdenken seit
 0.532.1 höchstens 40 000, siehe oben); unter 16 000 startet der Aufruf

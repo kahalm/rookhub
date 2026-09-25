@@ -19,7 +19,7 @@ using RookHub.Api.Services;
 //                         zurückübersetzt, damit auch die Notations-Zuordnung mitläuft.
 //   --max-usd 8           harter Deckel für den GANZEN Lauf; ein Aufruf startet nur, wenn sein ungünstigster
 //                         Fall noch passt (dieselbe Regel wie in RookHub)
-//   --model <id>          Vorgabe claude-opus-5; bei openai/dots das erste Modell, das der Server meldet
+//   --model <id>          Vorgabe claude-opus-5-5; bei openai/dots das erste Modell, das der Server meldet
 //   --replay <ordner>     KEIN Modell-Aufruf: die gespeicherten Antworten (NN.answer.json eines früheren Laufs)
 //                         werden neu aufgelöst — misst Auflöser-Änderungen an echten Modell-Lesungen, kostenlos
 //
@@ -35,9 +35,11 @@ using RookHub.Api.Services;
 //   --timeout 900         Sekunden je Aufruf
 //   --edge 2000           längste Bildkante in Pixeln
 //   --list-models         nur die Modelle am --endpoint auflisten (Verbindungstest; braucht keinen Testordner)
-//   --no-thinking         gleich ohne Nachdenken lesen (nur abschreiben) — wie Scoresheet:Thinking=false in RookHub
+//   --thinking            MIT Nachdenken und vollem Auftrag lesen (Rückfall ohne) — wie Scoresheet:Thinking=true.
+//                         Vorgabe (wie RookHub seit 0.533.2): nur abschreiben; --no-thinking bleibt als Synonym
 //   --usd-per-mtok 1,5    Preise Eingabe,Ausgabe je Million Tokens für die Kosten-Rechnung; Vorgabe nach Modell
-//                         (claude-haiku-* 1,5, sonst 5,25 = Opus)
+//                         (claude-haiku-* 1,5; claude-sonnet-* 2,10; claude-opus-5-5 4,20; sonst 5,25 = Opus 5)
+//   --effort low          Claude: Denkaufwand (low|medium|high|xhigh|max) — wie Anthropic:ScoresheetEffort
 //
 // Der Testordner enthält je Beleg NN.png|jpg (Formular), NN.pgn (Soll = gespielte Partie), NN.formular.txt (was
 // auf DIESEM Formular steht) und belege.json. Der Claude-Schlüssel kommt aus ANTHROPIC_API_KEY.
@@ -56,8 +58,10 @@ var localMaxTokens = int.Parse(Opt("--max-tokens", "16384"), CultureInfo.Invaria
 var promptKind = Opt("--prompt", "transcribe").ToLowerInvariant();
 var useSchema = !argv.Contains("--no-schema");
 var timeoutSec = int.Parse(Opt("--timeout", "900"), CultureInfo.InvariantCulture);
-var noThinking = argv.Contains("--no-thinking");
+// Vorgabe wie RookHub seit 0.533.2: nur abschreiben. --thinking = mit Nachdenken und vollem Auftrag, Rückfall ohne.
+var noThinking = !argv.Contains("--thinking");
 var prices = Opt("--usd-per-mtok", "");
+var effortOpt = Opt("--effort", "");
 var edge = int.Parse(Opt("--edge", ScoresheetScanService.ModelEdge.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
 if (provider is not ("claude" or "openai" or "dots"))
 {
@@ -94,7 +98,7 @@ var outDir = Opt("--out", Path.Combine(Directory.GetCurrentDirectory(), "scoresh
 var only = Opt("--only", "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
 var resolverOnly = argv.Contains("--resolver-only");
 var maxUsd = decimal.Parse(Opt("--max-usd", "8"), CultureInfo.InvariantCulture);
-var model = Opt("--model", provider == "claude" ? "claude-opus-5" : "");
+var model = Opt("--model", provider == "claude" ? "claude-opus-5-5" : "");
 var replayDir = Opt("--replay", "");
 Directory.CreateDirectory(outDir);
 
@@ -104,7 +108,10 @@ if (only.Count > 0) belege = belege.Where(b => only.Contains(b.Beleg)).ToList();
 
 IScoresheetVisionClient? vision = null;
 // Preise für die Kosten-Rechnung: ausdrücklich, sonst nach Modell (Haiku 4.5: 1/5 $, Opus 5: 5/25 $ je Million Tokens).
-if (prices.Length == 0) prices = model.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase) ? "1,5" : "5,25";
+if (prices.Length == 0)
+    prices = model.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase) ? "1,5"
+        : model.StartsWith("claude-sonnet", StringComparison.OrdinalIgnoreCase) ? "2,10"
+        : model.StartsWith("claude-opus-5-5", StringComparison.OrdinalIgnoreCase) ? "4,20" : "5,25";
 var priceParts = prices.Split(',', StringSplitOptions.TrimEntries);
 var budget = new ScoresheetBudget(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
 {
@@ -156,6 +163,7 @@ else if (!resolverOnly && replayDir.Length == 0)
     {
         ["Anthropic:ApiKey"] = key,
         ["Anthropic:ScoresheetModel"] = model,
+        ["Anthropic:ScoresheetEffort"] = effortOpt,
     }).Build();
     vision = new ClaudeScoresheetVisionClient(config, NullLogger<ClaudeScoresheetVisionClient>.Instance);
 }
@@ -284,7 +292,7 @@ var json = JsonSerializer.Serialize(results, new JsonSerializerOptions
 File.WriteAllText(Path.Combine(outDir, "results.json"), json);
 File.WriteAllText(Path.Combine(outDir, "report.md"), Report(results, resolverOnly,
     replayDir.Length > 0 ? $"Replay von {replayDir}" : (local ? $"{provider}: {model} @ {endpoint}" : model)
-        + (noThinking ? ", ohne Nachdenken" : ""), spentMicro));
+        + (noThinking ? ", ohne Nachdenken" : "") + (effortOpt.Length > 0 ? $", effort {effortOpt}" : ""), spentMicro));
 Console.WriteLine($"→ {Path.Combine(outDir, "report.md")}" + (resolverOnly ? "" : $" · Kosten gesamt {spentMicro / 1_000_000m:0.000} $"));
 return 0;
 

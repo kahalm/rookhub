@@ -38,8 +38,26 @@ public class ScoresheetOpenAiVisionClientTests
         Assert.Equal("data:image/jpeg;base64,AQID", (string?)content[0]!["image_url"]!["url"]);
         Assert.Equal("Transcribe the scoresheet.", (string?)content[1]!["text"]);
         Assert.Equal("json_schema", (string?)body["response_format"]!["type"]);
+        // Gestreamt: vor dem Spark kappt ein Proxy jede Anfrage nach 90 s ohne Antwort.
+        Assert.True((bool?)body["stream"]);
+        Assert.True((bool?)body["stream_options"]!["include_usage"]);
         var required = body["response_format"]!["json_schema"]!["schema"]!["required"]!.AsArray().Select(n => (string?)n);
         Assert.Contains("moves", required);
+    }
+
+    [Fact]
+    public async Task ReadAsync_TranscribeMode_SwitchesThinkingOffInTheChatTemplate()
+    {
+        // Qwen3/Qwen3.5 denken über die Chat-Vorlage nach, solange man es nicht abschaltet.
+        _handler.Reply("{\"moves\":[]}").Reply("{\"moves\":[]}");
+        var client = Client();
+
+        await client.ReadAsync(new byte[] { 1 }, "a", 4000, mode: ScoresheetReadMode.Transcribe);
+        await client.ReadAsync(new byte[] { 1 }, "b", 4000, mode: ScoresheetReadMode.Full);
+
+        Assert.False((bool?)_handler.Requests[0].Body["chat_template_kwargs"]!["enable_thinking"]);
+        Assert.Equal(ScoresheetPrompt.TranscribeSystem, (string?)_handler.Requests[0].Body["messages"]![0]!["content"]);
+        Assert.Null(_handler.Requests[1].Body["chat_template_kwargs"]);
     }
 
     [Fact]
@@ -137,7 +155,7 @@ public class ScoresheetOpenAiVisionClientTests
                 },
             },
         };
-        _handler.Replies.Enqueue((HttpStatusCode.OK, reply.ToJsonString()));
+        _handler.Raw(reply.ToJsonString()); // ein Server, der den Stream ignoriert und ganz antwortet
 
         var result = await Client().ReadAsync(new byte[] { 1 }, "x", 4000);
 

@@ -90,7 +90,7 @@ public sealed class DotsOcrScoresheetVisionClient : IScoresheetVisionClient
             },
         };
         var reply = await OpenAiChat.SendAsync(_http, _settings.BaseUrl, _settings.ApiKey, body, ct);
-        LastRaw = reply.Content;
+        LastRaw = reply.Content ?? reply.Error; // im Fehlerfall die Meldung — fürs Testwerkzeug
         if (reply.Error != null)
         {
             _logger.LogWarning("Formular-Lesung via dots.ocr fehlgeschlagen: {Error}", reply.Error);

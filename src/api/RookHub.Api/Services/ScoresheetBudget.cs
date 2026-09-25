@@ -24,8 +24,10 @@ public sealed class ScoresheetBudget
     public const decimal DefaultUserDailyUsd = 2m;
     public const decimal DefaultUserMonthlyUsd = 10m;
     public const decimal DefaultGlobalDailyUsd = 15m;
-    public const decimal DefaultInputUsdPerMTok = 5m;
-    public const decimal DefaultOutputUsdPerMTok = 25m;
+    /// <summary>Preise des Vorgabe-Modells Claude Opus 5.5 (<c>claude-opus-5-5</c>, seit 0.533.2; Opus 5 war 5 / 25).
+    /// Wer das Modell wechselt, stellt sie mit um.</summary>
+    public const decimal DefaultInputUsdPerMTok = 4m;
+    public const decimal DefaultOutputUsdPerMTok = 20m;
 
     /// <summary>So viele Eingabe-Tokens rechnet die Reserve für einen Aufruf (Bild 2000 px + Auftrag + bei einer
     /// Nachfrage die vorige Lesung). Gemessen: rund 5 000 bei der ersten Lesung, 12 000 bei einer Nachfrage.</summary>

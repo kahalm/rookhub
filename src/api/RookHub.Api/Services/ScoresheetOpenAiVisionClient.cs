@@ -54,9 +54,10 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
     {
         if (!IsConfigured) return new(null, "notConfigured");
         var useSchema = _settings.UseJsonSchema && !_schemaRejected;
-        var system = mode == ScoresheetReadMode.Transcribe ? ScoresheetPrompt.TranscribeSystem : _settings.SystemPrompt;
+        var noThinking = mode == ScoresheetReadMode.Transcribe;
+        var system = noThinking ? ScoresheetPrompt.TranscribeSystem : _settings.SystemPrompt;
         var reply = await OpenAiChat.SendAsync(_http, _settings.BaseUrl, _settings.ApiKey,
-            Body(jpeg, instructions, maxTokens, useSchema, system), ct);
+            Body(jpeg, instructions, maxTokens, useSchema, system, noThinking), ct);
         if (useSchema && reply.Status == HttpStatusCode.BadRequest)
         {
             // Kein strukturiertes Ausgeben auf diesem Server: einmal ohne, und dabei bleibt es.
@@ -64,9 +65,9 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
                 _settings.BaseUrl, reply.Error);
             _schemaRejected = true;
             reply = await OpenAiChat.SendAsync(_http, _settings.BaseUrl, _settings.ApiKey,
-                Body(jpeg, instructions, maxTokens, useSchema: false, system), ct);
+                Body(jpeg, instructions, maxTokens, useSchema: false, system, noThinking), ct);
         }
-        LastRaw = reply.Content;
+        LastRaw = reply.Content ?? reply.Error; // im Fehlerfall die Meldung — fürs Testwerkzeug
         if (reply.Error != null)
         {
             _logger.LogWarning("Formular-Lesung via {Model} fehlgeschlagen: {Error}", _settings.Model, reply.Error);
@@ -80,7 +81,7 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
             : new(json, null, reply.InputTokens, reply.OutputTokens);
     }
 
-    private JsonObject Body(byte[] jpeg, string instructions, int maxTokens, bool useSchema, string system)
+    private JsonObject Body(byte[] jpeg, string instructions, int maxTokens, bool useSchema, string system, bool noThinking)
     {
         var body = new JsonObject
         {
@@ -101,6 +102,10 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
                 },
             },
         };
+        // Qwen3/Qwen3.5 denken über die Chat-Vorlage nach, solange man es nicht abschaltet — beim Abschreiben (Rückfall
+        // bzw. Scoresheet:Thinking=false) aus. Vorlagen ohne den Schalter ignorieren ihn.
+        if (noThinking)
+            body["chat_template_kwargs"] = new JsonObject { ["enable_thinking"] = false };
         if (useSchema)
             body["response_format"] = new JsonObject
             {
@@ -129,9 +134,17 @@ internal static class OpenAiChat
         ["image_url"] = new JsonObject { ["url"] = "data:image/jpeg;base64," + Convert.ToBase64String(jpeg) },
     };
 
+    /// <summary>
+    /// Ein <c>chat/completions</c>-Aufruf, GESTREAMT (<c>stream: true</c> + <c>include_usage</c>). Gebraucht, weil vor
+    /// dem Spark ein Reverse-Proxy (openresty) jede Anfrage nach 90 Sekunden ohne Antwort mit 504 abbricht — eine ganze
+    /// Formular-Lesung dauert dort Minuten. Solange Tokens fließen, bleibt die Verbindung offen. Antwortet ein Server
+    /// trotzdem mit einem ganzen JSON-Objekt (Stream ignoriert), wird das gelesen.
+    /// </summary>
     internal static async Task<Reply> SendAsync(HttpClient http, string baseUrl, string? apiKey, JsonObject body,
         CancellationToken ct)
     {
+        body["stream"] = true;
+        body["stream_options"] = new JsonObject { ["include_usage"] = true };
         using var request = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + "/chat/completions")
         {
             Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
@@ -141,7 +154,7 @@ internal static class OpenAiChat
         HttpResponseMessage response;
         try
         {
-            response = await http.SendAsync(request, ct);
+            response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -153,36 +166,92 @@ internal static class OpenAiChat
         }
         using (response)
         {
-            var text = await response.Content.ReadAsStringAsync(ct);
             if (!response.IsSuccessStatusCode)
-                return new(response.StatusCode, null, null, 0, 0, $"HTTP {(int)response.StatusCode}: {Snippet(text)}");
+            {
+                var error = await response.Content.ReadAsStringAsync(ct);
+                return new(response.StatusCode, null, null, 0, 0, $"HTTP {(int)response.StatusCode}: {Snippet(error)}");
+            }
+            if (response.Content.Headers.ContentType?.MediaType != "text/event-stream")
+                return ParseCompletion(response.StatusCode, await response.Content.ReadAsStringAsync(ct));
             try
             {
-                using var doc = JsonDocument.Parse(text);
-                var root = doc.RootElement;
-                int input = 0, output = 0;
-                if (root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
-                {
-                    input = usage.TryGetProperty("prompt_tokens", out var p) && p.TryGetInt32(out var pi) ? pi : 0;
-                    output = usage.TryGetProperty("completion_tokens", out var c) && c.TryGetInt32(out var ci) ? ci : 0;
-                }
-                if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array
-                    || choices.GetArrayLength() == 0)
-                    return new(response.StatusCode, null, null, input, output, "no choices: " + Snippet(text));
-                var choice = choices[0];
-                var finish = choice.TryGetProperty("finish_reason", out var f) && f.ValueKind == JsonValueKind.String
-                    ? f.GetString() : null;
-                var content = choice.TryGetProperty("message", out var message) ? ContentOf(message) : null;
-                return new(response.StatusCode, content, finish, input, output, null);
+                return await ReadStreamAsync(response, ct);
             }
-            catch (JsonException)
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                return new(response.StatusCode, null, null, 0, 0, "no JSON: " + Snippet(text));
+                throw;
+            }
+            catch (Exception ex) // Verbindung mitten im Strom abgerissen
+            {
+                return new(response.StatusCode, null, null, 0, 0, "stream: " + ex.GetType().Name + ": " + ex.Message);
             }
         }
     }
 
-    /// <summary><c>message.content</c> als Text — ein String, oder (manche Server) eine Liste von Text-Teilen.</summary>
+    /// <summary>Server-Sent Events: <c>data: {…}</c>-Zeilen bis <c>data: [DONE]</c>. Gesammelt wird nur
+    /// <c>delta.content</c> (Denken steht bei vLLM in <c>reasoning</c>/<c>reasoning_content</c> und bleibt draußen),
+    /// dazu der Stoppgrund und die Tokens aus dem letzten Stück.</summary>
+    private static async Task<Reply> ReadStreamAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        var content = new StringBuilder();
+        string? finish = null;
+        int input = 0, output = 0;
+        while (await reader.ReadLineAsync(ct) is { } line)
+        {
+            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            var data = line[5..].Trim();
+            if (data == "[DONE]") break;
+            if (data.Length == 0) continue;
+            using var doc = JsonDocument.Parse(data);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("error", out var err))
+                return new(response.StatusCode, null, null, input, output, "stream error: " + Snippet(err.ToString()));
+            ReadUsage(root, ref input, ref output);
+            if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array) continue;
+            foreach (var choice in choices.EnumerateArray())
+            {
+                if (choice.TryGetProperty("delta", out var delta) && ContentOf(delta) is { } part) content.Append(part);
+                if (choice.TryGetProperty("finish_reason", out var f) && f.ValueKind == JsonValueKind.String) finish = f.GetString();
+            }
+        }
+        return new(response.StatusCode, content.ToString(), finish, input, output, null);
+    }
+
+    private static void ReadUsage(JsonElement root, ref int input, ref int output)
+    {
+        if (!root.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object) return;
+        if (usage.TryGetProperty("prompt_tokens", out var p) && p.TryGetInt32(out var pi)) input = pi;
+        if (usage.TryGetProperty("completion_tokens", out var c) && c.TryGetInt32(out var ci)) output = ci;
+    }
+
+    /// <summary>Eine ganze (nicht gestreamte) Antwort.</summary>
+    private static Reply ParseCompletion(HttpStatusCode status, string text)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            var root = doc.RootElement;
+            int input = 0, output = 0;
+            ReadUsage(root, ref input, ref output);
+            if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array
+                || choices.GetArrayLength() == 0)
+                return new(status, null, null, input, output, "no choices: " + Snippet(text));
+            var choice = choices[0];
+            var finish = choice.TryGetProperty("finish_reason", out var f) && f.ValueKind == JsonValueKind.String
+                ? f.GetString() : null;
+            var content = choice.TryGetProperty("message", out var message) ? ContentOf(message) : null;
+            return new(status, content, finish, input, output, null);
+        }
+        catch (JsonException)
+        {
+            return new(status, null, null, 0, 0, "no JSON: " + Snippet(text));
+        }
+    }
+
+    /// <summary><c>content</c> einer Nachricht oder eines Stream-Stücks als Text — ein String, oder (manche Server)
+    /// eine Liste von Text-Teilen.</summary>
     private static string? ContentOf(JsonElement message)
     {
         if (!message.TryGetProperty("content", out var content)) return null;
