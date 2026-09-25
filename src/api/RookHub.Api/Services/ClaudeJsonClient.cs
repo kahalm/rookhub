@@ -10,8 +10,8 @@ namespace RookHub.Api.Services;
 /// </summary>
 public interface IClaudeJsonClient
 {
-    /// <summary>True, wenn ein API-Key konfiguriert ist (<c>Anthropic:ApiKey</c>). Sonst ist die
-    /// Tipp-Generierung inaktiv und der Stack läuft normal weiter.</summary>
+    /// <summary>True, wenn ein API-Key fuer die TEXT-Aufrufe konfiguriert ist (<c>Anthropic:TextApiKey</c>).
+    /// Sonst sind Tipp-Generierung und Uebersetzung inaktiv und der Stack laeuft normal weiter.</summary>
     bool IsConfigured { get; }
 
     /// <summary>Erzeugt eine JSON-Antwort <c>{hint1,hint2,hint3}</c> (structured output). Null bei Fehler.</summary>
@@ -31,7 +31,15 @@ public interface IClaudeJsonClient
     string TranslationModel { get; }
 }
 
-/// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Claude Opus 5, structured output).</summary>
+/// <summary>
+/// Echte Implementierung über die offizielle Anthropic-C#-SDK (Claude Opus 5, structured output).
+///
+/// <para><b>Eigener Schluessel</b> (<c>Anthropic:TextApiKey</c>, Compose <c>ANTHROPIC_TEXT_API_KEY</c>), NICHT der
+/// Konto-Schluessel <c>Anthropic:ApiKey</c>: der gehoert seit dem 2026-09-25 allein dem Formular-Einlesen
+/// (<see cref="ClaudeScoresheetVisionClient"/>) — „ausser Scoresheet soll nichts ueber den Key laufen". Ohne
+/// eigenen Schluessel sind Tipps und Uebersetzung aus, auch wenn der Konto-Schluessel gesetzt ist; wer sie
+/// wieder will, traegt bewusst einen zweiten (oder denselben) Schluessel ein.</para>
+/// </summary>
 public class ClaudeJsonClient : IClaudeJsonClient
 {
     private readonly Anthropic.AnthropicClient? _client;
@@ -45,11 +53,11 @@ public class ClaudeJsonClient : IClaudeJsonClient
         // und der Bestand hat zehntausende Partien. Ein Tipp ist dagegen ein Dreizeiler, der jede
         // Sorgfalt wert ist — deshalb hier ein eigenes, kleineres Modell und ein eigener Schalter.
         _translationModel = config["Anthropic:TranslationModel"] ?? "claude-sonnet-5";
-        var key = config["Anthropic:ApiKey"];
+        var key = config["Anthropic:TextApiKey"];
         if (!string.IsNullOrWhiteSpace(key))
             _client = new Anthropic.AnthropicClient { ApiKey = key };
         else
-            _logger.LogInformation("Anthropic:ApiKey nicht gesetzt — Tipp-Generierung ist inaktiv.");
+            _logger.LogInformation("Anthropic:TextApiKey nicht gesetzt — Tipp-Generierung und Uebersetzung sind inaktiv (der Konto-Schluessel Anthropic:ApiKey gehoert allein dem Formular-Einlesen).");
     }
 
     public bool IsConfigured => _client != null;

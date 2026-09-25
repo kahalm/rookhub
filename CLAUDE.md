@@ -1049,7 +1049,7 @@ Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 | GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts — nur **lesbare** Bücher (`BookAccess`) |
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
 | POST | `/api/admin/book-puzzles/daily/{date}/regenerate` | Admin | Tagespuzzle eines UTC-Datums neu generieren: Datum/Link bleibt, bisheriges Puzzle wird `Retired=true` gesetzt (nie wieder in Daily/Random/Blind), neues aus dem forDaily-Pool zugeordnet |
-| POST | `/api/admin/book-puzzles/{id}/regenerate-hints` | Admin | Tipps eines einzelnen Buch-Puzzles synchron (neu) generieren (force). 400 ohne `Anthropic:ApiKey`, 404 wenn Puzzle/keine Tipps; sonst die generierten Tipps |
+| POST | `/api/admin/book-puzzles/{id}/regenerate-hints` | Admin | Tipps eines einzelnen Buch-Puzzles synchron (neu) generieren (force). 400 ohne `Anthropic:TextApiKey`, 404 wenn Puzzle/keine Tipps; sonst die generierten Tipps |
 | POST | `/api/admin/books/{bookId}/generate-hints?force=` | Admin | Tipps für ein ganzes Buch im Hintergrund erzeugen (Queue); `force` regeneriert auch vorhandene, sonst nur fehlende/veraltete. Antwort `{ queued }` |
 
 **Zugriff auf die offenen Buch-Endpoints (`Services/BookAccess.cs`, seit 0.317.1)**: EINE Regel für
@@ -2038,7 +2038,8 @@ Regeln, die dabei nicht kippen duerfen:
   keine Zuege stehen. Die Grenze liegt bei 70 % und nicht hoeher, weil manche Quell-Saetze selbst
   zweisprachig sind und die Uebersetzung die doppelte Haelfte zu Recht wegwirft (gemessen 53 %).
 
-Braucht `Anthropic:ApiKey` (derselbe Schluessel wie die Puzzle-Tipps). Ohne Schluessel passiert
+Braucht `Anthropic:TextApiKey` (derselbe Schluessel wie die Puzzle-Tipps — NICHT der Konto-Schluessel
+`Anthropic:ApiKey`, der gehoert allein dem Formular-Einlesen). Ohne Schluessel passiert
 nichts — der Rest des Stacks laeuft unveraendert. **Das Modell ist ein eigener Schalter**
 (`Anthropic:TranslationModel`, Vorgabe `claude-sonnet-5`) und nicht dasselbe wie bei den Tipps:
 ein Tipp ist ein Dreizeiler, der jede Sorgfalt wert ist, eine Uebersetzung ist Mengenarbeit —
@@ -2072,8 +2073,8 @@ die Route traegt entsprechend keinen `authGuard` mehr.
 
 Foto eines handgeschriebenen Partieformulars → legale Partie in „Meine Partien" (Quelle `scoresheet`), das Foto
 bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/games/scoresheet` (Upload) und
-`/games/:id/edit` (Korrekturseite, für JEDE eigene Partie). Braucht `Anthropic:ApiKey` (derselbe wie Tipps und
-Übersetzungen); ohne Schlüssel antwortet der Upload 503 `notConfigured` und die Seite sagt es.
+`/games/:id/edit` (Korrekturseite, für JEDE eigene Partie). Braucht `Anthropic:ApiKey` — und der gehört seit 2026-09-25
+ALLEIN diesem Feature (Tipps/Übersetzung laufen über `Anthropic:TextApiKey`); ohne Schlüssel antwortet der Upload 503 `notConfigured` und die Seite sagt es.
 
 **Drei Schichten, jede für sich testbar:**
 * **Lesen** (`ClaudeScoresheetVisionClient`, Modell `Anthropic:ScoresheetModel`, Vorgabe `claude-opus-5`, adaptives
@@ -2869,6 +2870,15 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Wichtige Konventionen
 
+- **Zwei Anthropic-Schluessel, und der Konto-Schluessel gehoert allein dem Formular-Einlesen** (seit 2026-09-25,
+  Nutzer: „ausser Scoresheet soll nichts ueber den Key laufen"). `Anthropic:ApiKey` (Compose `ANTHROPIC_API_KEY`) liest
+  NUR `ClaudeScoresheetVisionClient` (Foto → Partie, Kostenbremse `ScoresheetBudget`). Puzzle-Tipps (`HintGenerationService`)
+  und Kommentar-Uebersetzung (`CommentTranslationService`, `tools/LibraryImport translate`) gehen ueber den
+  `ClaudeJsonClient`, und der liest AUSSCHLIESSLICH `Anthropic:TextApiKey` (`ANTHROPIC_TEXT_API_KEY`) — ungesetzt sind
+  beide aus, auch wenn der Konto-Schluessel da ist. Wer einen neuen Claude-Aufruf einbaut, entscheidet sich fuer einen
+  der beiden und schreibt es hier dazu; `ClaudeJsonClientTests` haelt fest, dass der Konto-Schluessel den Text-Client NICHT
+  einschaltet. Der Discord-Bot (`CLAUDE_API_KEY` im Bot-Stack) und der log-watcher (eigener Schluessel) haengen nicht an
+  RookHub — der Bot-Chat wurde am 2026-09-25 durch Entfernen des Schluessels abgeschaltet.
 - **`SourcePgn` liegt in `BookSource` (Tabellensplitting auf `Books`), nie an `Book`** (seit 0.508.3) – Das Roh-PGN
   eines Buchs (Ø ~480 KB, bis 6 MB) hing als Property an `Book` und kam mit JEDEM `.Include(bp => bp.Book)` mit:
   `GET /api/courses/{id}/puzzles` zog 6 MB × 1.881 Linien = 11 GB aus der DB für einen Request, die Prod-API stand

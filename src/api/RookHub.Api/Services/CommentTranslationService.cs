@@ -43,7 +43,7 @@ public class CommentTranslationService
         _logger = logger;
     }
 
-    /// <summary>True, wenn ueberhaupt uebersetzt werden kann (<c>Anthropic:ApiKey</c> gesetzt).</summary>
+    /// <summary>True, wenn ueberhaupt uebersetzt werden kann (<c>Anthropic:TextApiKey</c> gesetzt — nicht der Konto-Schluessel).</summary>
     public bool IsAvailable => _claude.IsConfigured;
 
     /// <summary>

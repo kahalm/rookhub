@@ -259,7 +259,7 @@ public class BookPuzzleController : BaseApiController
     [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> RegenerateHints(int id)
     {
-        if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic API key not configured." });
+        if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic:TextApiKey not configured (the account key serves the scoresheet reader only)." });
         var ok = await _hints.GenerateForPuzzleAsync(id, force: true, HttpContext.RequestAborted);
         if (!ok) return NotFound(new { message = "Puzzle not found or no hints generated." });
         var dto = await _service.GetByIdAsync(id);
@@ -290,7 +290,7 @@ public class BookPuzzleController : BaseApiController
     [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> GenerateBookHints(int bookId, [FromQuery] bool force = false)
     {
-        if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic API key not configured." });
+        if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic:TextApiKey not configured (the account key serves the scoresheet reader only)." });
         var ids = await _db.BookPuzzles.Where(bp => bp.BookId == bookId).Select(bp => bp.Id).ToListAsync();
         if (ids.Count == 0) return NotFound(new { message = "No puzzles for this book." });
         await _bgQueue.EnqueueAsync(async (sp, ct) =>

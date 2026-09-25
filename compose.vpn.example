@@ -44,7 +44,8 @@
 #   EMAIL_SMTP_HOST/PORT/USER/PASSWORD/FROM_ADDRESS/FROM_NAME/USE_STARTTLS
 #   ELASTICSEARCH_URL=         Serilog sink; unset = file/console logging only
 #   SCHACH_BOT_WEBHOOK_URL/SCHACH_BOT_WEBHOOK_SECRET/SCHACH_BOT_STATS_SECRET
-#   ANTHROPIC_API_KEY=         puzzle hint generation
+#   ANTHROPIC_API_KEY=         scoresheet reader ONLY (photo -> game)
+#   ANTHROPIC_TEXT_API_KEY=    puzzle hints + comment translation (unset = off)
 #
 # Ports:
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
@@ -186,6 +187,7 @@ services:
       SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      Anthropic__TextApiKey: ${ANTHROPIC_TEXT_API_KEY:-}
       # Optional: Lichess-Token fuer den Lochfinder (Eroeffnungs-Explorer, beliebiger Token ohne Scope).
       # Leer -> es gilt der Engine-Token, den ein Nutzer im Profil hinterlegt hat.
       LichessExplorer__Token: ${LICHESS_EXPLORER_TOKEN:-}

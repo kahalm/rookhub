@@ -17,7 +17,7 @@ using RookHub.Tools.LibraryImport;
 //   queue            die besten Partien zum Rechnen einreihen
 //   comments         die Kommentare eingereihter Partien nach Sprachen trennen
 //   analysis-openings  Eroeffnungszeile der eingereihten Partien nachtragen
-//   translate        fehlende Sprachen uebersetzen lassen (Anthropic:ApiKey noetig)
+//   translate        fehlende Sprachen uebersetzen lassen (Anthropic:TextApiKey noetig — nicht der Konto-Schluessel)
 //   stats            zeigen, was drinsteht
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
@@ -747,7 +747,8 @@ async Task<int> AnalysisOpeningsAsync()
 //
 //   translate --to de [--limit n] [--force] [--game <analyse-id>] [--library n] [--shard i/n]
 //
-// Braucht ANTHROPIC__APIKEY (bzw. Anthropic:ApiKey) in der Umgebung — ohne Schluessel passiert
+// Braucht ANTHROPIC__TEXTAPIKEY (bzw. Anthropic:TextApiKey) in der Umgebung — NICHT den Konto-Schluessel
+//   Anthropic:ApiKey, der gehoert allein dem Formular-Einlesen — ohne Schluessel passiert
 // nichts. Uebersetzt wird immer aus der QUELLE, nie aus einer Uebersetzung, und die Quelle wird
 // nie ueberschrieben: es entsteht ein eigener Satz mit Herkunft „Machine".
 async Task<int> TranslateAsync()
@@ -786,7 +787,7 @@ async Task<int> TranslateAsync()
     var claude = new ClaudeJsonClient(config, NullLogger<ClaudeJsonClient>.Instance);
     if (!claude.IsConfigured)
     {
-        Console.Error.WriteLine("Anthropic:ApiKey fehlt — ohne Schluessel wird nicht uebersetzt.");
+        Console.Error.WriteLine("Anthropic:TextApiKey fehlt (ANTHROPIC__TEXTAPIKEY) — ohne eigenen Schluessel wird nicht uebersetzt.");
         return 1;
     }
     var service = new CommentTranslationService(db, claude, NullLogger<CommentTranslationService>.Instance);
