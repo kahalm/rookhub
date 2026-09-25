@@ -361,6 +361,21 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void ExternalEngineRegistration_HasAnExactLocation_SoNginxDoesNotRedirectIt()
+    {
+        // Gefunden mit dem echten Provider im E2E-Stack: die Registrierung ist GET/POST /api/external-engine OHNE
+        // Schrägstrich. Eine Präfix-location „/api/external-engine/“ mit proxy_pass beantwortet genau diese URI
+        // nginx-intern mit 301 auf „…/“ (an den Container-Port 8080) — der Provider registrierte nie eine Engine.
+        // Die exakte location nimmt ihr die URI weg und muss an die API weiterreichen, nicht selbst antworten.
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location = /api/external-engine \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location = /api/external-engine fehlt in nginx.conf (sonst 301 auf die Registrierung)");
+        var body = loc.Groups["body"].Value;
+        Assert.Contains("proxy_pass http://$rookhub_api$request_uri;", body);
+        Assert.DoesNotContain("return ", body);
+    }
+
+    [Fact]
     public void ExtensionChessableLocation_AllowsTheApiRequestSizeLimits()
     {
         // Gemeldet 2026-09-14: „Mitschnitt importieren" bekam 413, obwohl die API bis 64 MB annimmt — die
