@@ -1609,7 +1609,11 @@ sonst `ENGINE_NAME <i>`) — gedacht als „Server Live" + „Server Hintergrund
 Analyseaufträge; beide dürfen alle Kerne haben, weil RookHub den Hintergrund pausiert, sobald Live
 rechnet. Stirbt ein Provider, endet der Container mit dessen Code (restart zieht alle neu). Der
 Entrypoint ist deshalb bash (`wait -n`); `ENTRYPOINT_DRY_RUN=1` zeigt nur die Aufrufe —
-`engine-provider/test/entrypoint.test.sh` prüft damit den Argument-Aufbau.
+`engine-provider/test/entrypoint.test.sh` prüft damit den Argument-Aufbau. **Die Provider starten
+GESTAFFELT** (`PROVIDER_START_DELAY`, Vorgabe 3 s, seit 0.534.1): jeder registriert sich beim Start bei
+lichess.org, und 13 Registrierungen im selben Augenblick hielt der DDoS-Schutz von Lichess für einen
+Angriff (2026-09-11 auf der zweiten Maschine: 429, dann IP-Sperre, null Engines — jeder Neustart
+wiederholte es). `test/supervisor.test.sh` misst den Abstand der echten Starts.
 
 ### Punktepartie (`/guess`) — eine Meisterpartie Zug fuer Zug erraten
 

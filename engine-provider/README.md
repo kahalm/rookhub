@@ -70,6 +70,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `ENGINE_BACKGROUND_COUNT` | Wie viele Hintergrund-Engines (leer = nur eine einzelne Engine wie früher; max. 15) |
 | `ENGINE_COUNT` | Älteres Schema: Engines von Hand durchnummerieren (max. 16) |
 | `ENGINE_<i>_NAME` / `_MAX_THREADS` / `_MAX_HASH` | Einstellungen der i-ten Engine; schlagen die Werte oben |
+| `PROVIDER_START_DELAY` | Sekunden Pause zwischen den Provider-Starts bei mehreren Engines (leer = 3, 0 = aus) — siehe unten |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
 
@@ -120,6 +121,16 @@ dass score-lose Zeilen beim Provider bleiben und dass auch ein Zug WÄHREND eine
 Gegen den alten Stand schlägt der Test mit genau den vier bis fünf Sekunden Wartezeit fehl. **Beim
 Aktualisieren des Pins** läuft er in der CI mit: die Regeln des Brokers ändern sich, ohne dass ein
 bereits laufender Provider davon erfährt.
+
+### Gestaffelte Starts (`PROVIDER_START_DELAY`)
+
+Jeder Provider registriert sich beim Start bei lichess.org (Engine-Liste holen, Eintrag aktualisieren).
+Bei mehreren Engines im Container passierte das bisher **gleichzeitig** — und dreizehn Registrierungen
+im selben Augenblick hielt der DDoS-Schutz von Lichess für einen Angriff: am 2026-09-11 erst `429`,
+dann eine Sperre der ganzen IP, null registrierte Engines, und jeder Neustart des Containers wiederholte
+genau das. Der Entrypoint wartet deshalb `PROVIDER_START_DELAY` Sekunden zwischen zwei Starts (Vorgabe 3;
+13 Engines sind damit nach gut einer halben Minute alle da). `0` schaltet die Pause ab; bei einer einzelnen
+Engine hat sie keine Wirkung. Beim Start steht je Engine eine Zeile „Warte 3 s vor Engine 2/13" im Log.
 
 ### Für Analyse-Aufträge: VIELE Engines mit WENIGEN Threads
 
@@ -420,6 +431,7 @@ zwei Namen) ist der bequemste Fall: Du wählst im Analysebrett, was gerade läuf
 | Eine Engine ist aus der Auswahl verschwunden | Zwei Provider liefen unter demselben Namen — der zuletzt gestartete hat den Eintrag übernommen. Einen umbenennen und neu starten |
 | Windows: `'python' is not recognized` | Beim Python-Setup war „Add python.exe to PATH" nicht angekreuzt — Setup erneut ausführen (Modify → Repair) oder `py` statt `python` verwenden |
 | Windows: `/bin/sh: … not found` bzw. Engine startet nicht | Der Pfad zur `.exe` enthält Leerzeichen. Stockfish nach `C:\stockfish\` entpacken |
+| Nach dem Start `429` von lichess.org, danach gar keine Antwort mehr | Zu viele Registrierungen auf einmal — der DDoS-Schutz von Lichess sperrt die IP zeitweise. Container stoppen, die Sperre abwarten, `PROVIDER_START_DELAY` nicht auf 0 setzen |
 
 Alte Registrierungen aufräumen kannst du auf <https://lichess.org/account/oauth/token> (Token
 widerrufen) bzw. über die Engine-Verwaltung im Lichess-Analysebrett.

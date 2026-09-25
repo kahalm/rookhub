@@ -115,6 +115,18 @@ if ! [[ "$ENGINE_COUNT" =~ ^[0-9]+$ ]] || [ "$ENGINE_COUNT" -lt 1 ] || [ "$ENGIN
     exit 1
 fi
 
+# GESTAFFELTE STARTS bei mehreren Engines. Jeder Provider registriert sich beim Start bei
+# lichess.org (GET + PUT /api/external-engine). 13 Provider, die das im selben Augenblick tun,
+# sehen für den DDoS-Schutz von Lichess wie ein Angriff aus — am 2026-09-11 auf der zweiten
+# Maschine erlebt: erst 429, dann eine Sperre der ganzen IP, null registrierte Engines, und ein
+# Neustart des Containers wiederholte genau das. PROVIDER_START_DELAY Sekunden Pause zwischen zwei
+# Starts (Vorgabe 3, 0 = aus, Dezimalzahl erlaubt); bei einer einzelnen Engine ohne Wirkung.
+PROVIDER_START_DELAY="${PROVIDER_START_DELAY:-3}"
+if ! [[ "$PROVIDER_START_DELAY" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    echo "FEHLER: PROVIDER_START_DELAY muss eine Zahl in Sekunden sein, z. B. 3 oder 0.5 (ist '$PROVIDER_START_DELAY')." >&2
+    exit 1
+fi
+
 # `--engine` ist für den Provider eine SHELL-Zeile (er startet sie mit `sh -c`), nicht ein
 # fertiges Argument. Ein Pfad mit Leerzeichen („/engine/my stockfish") würde dort zerlegt.
 # Deshalb hier in einfache Anführungszeichen fassen (enthaltene ' korrekt maskiert) — dass es
@@ -172,6 +184,9 @@ if [ -n "${ENTRYPOINT_DRY_RUN:-}" ]; then
         build_args "$i"
         printf 'DRY-RUN %d:' "$i"; printf ' %q' "${ARGS[@]}"; printf '\n'
     done
+    if [ "$ENGINE_COUNT" -gt 1 ]; then
+        printf 'DRY-RUN Staffelung: %s s zwischen den Provider-Starts\n' "$PROVIDER_START_DELAY"
+    fi
     exit 0
 fi
 
@@ -194,6 +209,12 @@ PIDS=()
 # mitten im Aufräumen abgebrochen und der Container mit dem falschen Code beendet.
 trap 'kill "${PIDS[@]}" 2>/dev/null || true; wait || true; exit 143' TERM INT
 for ((i = 1; i <= ENGINE_COUNT; i++)); do
+    # Pause VOR jedem weiteren Provider (nicht vor dem ersten, nicht nach dem letzten): die
+    # Registrierungen sollen nacheinander bei lichess.org ankommen, siehe PROVIDER_START_DELAY oben.
+    if [ "$i" -gt 1 ] && awk "BEGIN { exit !($PROVIDER_START_DELAY > 0) }"; then
+        echo "Warte $PROVIDER_START_DELAY s vor Engine $i/$ENGINE_COUNT (gestaffelte Registrierung)"
+        sleep "$PROVIDER_START_DELAY"
+    fi
     build_args "$i"
     echo "Starte Engine-Provider $i/$ENGINE_COUNT: $ENGINE_PATH als '$(engine_name "$i")'"
     python /opt/provider.py "${ARGS[@]}" &

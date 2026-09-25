@@ -19,7 +19,7 @@ check "eine Engine, genau eine Zeile"     test "$(wc -l < "$out")" -eq 1
 
 # 2) Zwei Engines: Standardnamen mit Index, Hash-Override nur für Engine 2, Threads geteilt
 run ENGINE_NAME="Server" ENGINE_COUNT=2 MAX_THREADS=16 MAX_HASH=1024 ENGINE_2_MAX_HASH=8192
-check "zwei Zeilen"                       test "$(wc -l < "$out")" -eq 2
+check "zwei Aufruf-Zeilen"                test "$(grep -c '^DRY-RUN [0-9]' "$out")" -eq 2
 check "Engine 1 heisst 'Server 1'"        grep -q -- 'DRY-RUN 1:.*--name Server\\ 1 ' "$out"
 check "Engine 2 heisst 'Server 2'"        grep -q -- 'DRY-RUN 2:.*--name Server\\ 2 ' "$out"
 check "Engine 1 Hash Default 1024"        grep -q -- 'DRY-RUN 1:.*--max-hash 1024' "$out"
@@ -81,7 +81,7 @@ env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh
     ENGINE_BACKGROUND_MAX_THREADS=2 ENGINE_BACKGROUND_MAX_HASH=1024 \
     bash ./entrypoint.sh > "$out" 2>&1
 plain=$(tr -d '\\' < "$out")
-check "eine Live plus vier Hintergrund"   test "$(grep -c '^DRY-RUN' "$out")" -eq 5
+check "eine Live plus vier Hintergrund"   test "$(grep -c '^DRY-RUN [0-9]' "$out")" -eq 5
 check "Haupt-Engine mit vollen Threads"   grep -q "DRY-RUN 1:.*--name RookHub Server 19 --max-threads 8 --max-hash 4096" <<< "$plain"
 check "erste Hintergrund-Engine OHNE 1"   grep -q "DRY-RUN 2:.*--name RookHub Server 19 Hintergrund --max-threads 2" <<< "$plain"
 check "zweite Hintergrund-Engine mit 2"   grep -q "DRY-RUN 3:.*--name RookHub Server 19 Hintergrund 2 " <<< "$plain"
@@ -97,7 +97,7 @@ env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh
     BACKGROUND_MAX_THREADS=2 BACKGROUND_MAX_HASH=1024 \
     bash ./entrypoint.sh > "$out" 2>&1
 plain=$(tr -d '\\' < "$out")
-check "alte Namen: fuenf Engines"        test "$(grep -c '^DRY-RUN' "$out")" -eq 5
+check "alte Namen: fuenf Engines"        test "$(grep -c '^DRY-RUN [0-9]' "$out")" -eq 5
 check "alte Namen: Haupt-Engine"         grep -q "DRY-RUN 1:.*--name RookHub Server 19 --max-threads 8 --max-hash 4096" <<< "$plain"
 check "alte Namen: erste OHNE 1"         grep -q "DRY-RUN 2:.*--name RookHub Server 19 Hintergrund --max-threads 2" <<< "$plain"
 check "alte Namen: vierte mit 4"         grep -q "DRY-RUN 5:.*--name RookHub Server 19 Hintergrund 4 " <<< "$plain"
@@ -126,5 +126,20 @@ check "Widerspruch der Zaehlungen faellt auf" grep -q 'widersprechen sich' "$out
 env -i PATH="$PATH" LICHESS_API_TOKEN=x ENTRYPOINT_DRY_RUN=1 ENGINE_PATH=/bin/sh \
     ENGINE_NAME="Einzeln" bash ./entrypoint.sh > "$out" 2>&1
 check "ohne das neue Schema genau eine Engine" test "$(grep -c '^DRY-RUN' "$out")" -eq 1
+
+# 8) GESTAFFELTE STARTS (PROVIDER_START_DELAY): bei mehreren Engines registriert sich jeder Provider
+#    beim Start bei lichess.org — 13 auf einmal hielt der DDoS-Schutz von Lichess für einen Angriff
+#    (2026-09-11: 429, dann IP-Sperre, keine Engine registriert). Der Dry-Run zeigt den Wert, der
+#    echte Ablauf steckt in supervisor.test.sh.
+run ENGINE_COUNT=2
+check "Staffelung: Vorgabe 3 s"           grep -q '^DRY-RUN Staffelung: 3 s' "$out"
+run ENGINE_COUNT=2 PROVIDER_START_DELAY=0.5
+check "Staffelung: eigener Wert (0.5)"    grep -q '^DRY-RUN Staffelung: 0.5 s' "$out"
+run ENGINE_COUNT=2 PROVIDER_START_DELAY=0
+check "Staffelung: 0 = aus, bleibt gueltig" grep -q '^DRY-RUN Staffelung: 0 s' "$out"
+run ENGINE_NAME="Einzeln"
+check_fail "Staffelung: bei einer Engine keine Zeile" grep -q 'Staffelung' "$out"
+check_fail "PROVIDER_START_DELAY=abc abgelehnt"  run ENGINE_COUNT=2 PROVIDER_START_DELAY=abc
+check_fail "PROVIDER_START_DELAY=-1 abgelehnt"   run ENGINE_COUNT=2 PROVIDER_START_DELAY=-1
 
 if [ "$fails" -eq 0 ]; then echo "ALLE TESTS OK"; else echo "$fails Test(s) fehlgeschlagen"; exit 1; fi
