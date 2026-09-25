@@ -518,6 +518,9 @@ mehreren Engines: stirbt einer, muss der Container mit DESSEN Code enden — son
 `restart: unless-stopped` nicht) und `preflight.py` (prüft den Token vorab — gegen RookHub oder Lichess —, damit ein fehlender Scope als
 Klartext-Satz erscheint und nicht als endlos wiederholter Stacktrace; `python3 test/preflight.test.py`). Den Provider selbst prüft
 `python3 test/provider.test.py <provider.py>` gegen einen nachgebauten Broker (siehe „Provider-Stand"
-oben).
+oben). Gegen RookHubs EIGENEN Broker läuft das echte Image in `test/rookhub-broker.e2e.sh` (kein CI-Test,
+rund zehn Minuten): E2E-Stack bauen, Konto und Engine-Token anlegen, 1 Live- und 12 Hintergrund-Engines
+starten — Lichess ist im Container dabei gesperrt —, erste Zeile, zweiten Auftrag direkt danach und drei
+Minuten Auftrag an Auftrag messen, Logs auf 503 und Lichess-Aufrufe prüfen.
 
 Serverseitig ist die Gegenstelle in `rookhub/CLAUDE.md` unter „Externe Engine" beschrieben.
