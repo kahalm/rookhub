@@ -19,6 +19,7 @@ import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
+import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
@@ -137,6 +138,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
                       <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
                     </button>
                   }
+                  <button mat-menu-item (click)="roast(g)">
+                    <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
+                  </button>
                   <a mat-menu-item [routerLink]="['/games', g.id, 'edit']">
                     <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
                   </a>
@@ -377,6 +381,14 @@ export class GamesListComponent implements OnInit {
   }
 
   /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
+  /** „Roast my game" (0.535.0). */
+  roast(g: SavedGame): void {
+    this.dialog.open(GameRoastDialogComponent, {
+      data: { gameId: g.id, shareUrl: g.shareToken ? this.service.shareUrl(g.shareToken) : null } satisfies GameRoastData,
+      maxWidth: '96vw',
+    });
+  }
+
   photo(g: SavedGame, download: boolean): void {
     if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, g.id); return; }
     this.scoresheets.photo(g.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

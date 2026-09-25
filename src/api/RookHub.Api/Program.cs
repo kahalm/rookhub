@@ -315,6 +315,7 @@ try
     // „Warum war das ein Fehler?" (0.534.0): Erklärungen über das Modell auf eigener Hardware.
     builder.Services.AddSingleton<GameExplanationJobs>();
     builder.Services.AddScoped<GameMoveExplanationService>();
+    builder.Services.AddScoped<GameRoastService>();
     builder.Services.AddScoped<MenuVisibilityService>();
     // Open-Graph-/Link-Vorschau (Brett-Bild + Meta-Tag-Injektion in die SPA-index.html).
     builder.Services.AddScoped<RookHub.Api.Services.Og.OgMetaService>();

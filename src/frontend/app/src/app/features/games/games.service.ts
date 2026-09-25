@@ -99,6 +99,24 @@ export interface GameExplanations {
   items: GameExplanation[];
 }
 
+/** „Roast my game" (0.535.0): die drei Stile — freundlich, frech, russisch (gnadenlos). */
+export type RoastStyle = 'friendly' | 'cheeky' | 'russian';
+
+export interface GameRoast {
+  style: RoastStyle;
+  language: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface GameRoasts {
+  /** Ein Sprachmodell auf eigener Hardware ist eingerichtet. */
+  available: boolean;
+  /** Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu roasten. */
+  hasAnalysis: boolean;
+  items: GameRoast[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
@@ -154,6 +172,16 @@ export class GamesService {
 
   explanations(url: string, lang: string): Observable<GameExplanations> {
     return this.http.get<GameExplanations>(url, { params: { lang } });
+  }
+
+  /** „Roast my game" (0.535.0): die gewürfelten Kommentare einer eigenen Partie. */
+  roasts(id: number, lang: string): Observable<GameRoasts> {
+    return this.http.get<GameRoasts>(`/api/games/${id}/roasts`, { params: { lang } });
+  }
+
+  /** Würfeln — ersetzt den vorigen Text desselben Stils. Dauert ein paar Sekunden (Sprachmodell auf der Spark). */
+  roast(id: number, style: RoastStyle, lang: string): Observable<GameRoast> {
+    return this.http.post<GameRoast>(`/api/games/${id}/roasts`, {}, { params: { style, lang } });
   }
 
   /** Erzeugen anstoßen (nur der Besitzer; läuft im Hintergrund, der Client fragt nach). */

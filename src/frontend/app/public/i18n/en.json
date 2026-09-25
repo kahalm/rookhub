@@ -2451,6 +2451,32 @@
     "shared": {
       "notFound": "This shared game does not exist or was removed."
     },
+    "roast": {
+      "menu": "Roast my game",
+      "title": "Roast my game",
+      "style": "Style",
+      "styles": {
+        "friendly": "Friendly",
+        "cheeky": "Cheeky",
+        "russian": "Russian"
+      },
+      "go": "Roast!",
+      "again": "Roll again",
+      "busy": "The AI is sharpening its tongue …",
+      "copy": "Copy",
+      "share": "Share",
+      "notConfigured": "Roasting is not set up on this server.",
+      "noAnalysis": "Analyse the game first — without an analysis there is nothing to roast.",
+      "error": {
+        "notConfigured": "Roasting is not set up on this server.",
+        "noAnalysis": "Analyse the game first.",
+        "dailyLimit": "Enough roasting for today — try again tomorrow.",
+        "failed": "The AI did not deliver — try again.",
+        "invalidStyle": "Unknown style.",
+        "copyFailed": "Copying failed.",
+        "notFound": "Game not found."
+      }
+    },
     "review": {
       "title": "Game review",
       "accuracy": "Accuracy",

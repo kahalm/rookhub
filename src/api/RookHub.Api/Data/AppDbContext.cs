@@ -128,6 +128,7 @@ public class AppDbContext : DbContext
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<GameMoveExplanation> GameMoveExplanations => Set<GameMoveExplanation>();
+    public DbSet<GameRoast> GameRoasts => Set<GameRoast>();
     public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
     public DbSet<GuessMove> GuessMoves => Set<GuessMove>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
@@ -1485,6 +1486,18 @@ public class AppDbContext : DbContext
              .HasForeignKey(g => g.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+        });
+
+        // Roast my game (0.535.0): je Partie, Sprache und Stil der zuletzt gewuerfelte Text; geht mit der Partie.
+
+        modelBuilder.Entity<GameRoast>(e =>
+
+        {
+
+            e.HasIndex(x => new { x.SavedGameId, x.Language, x.Style }).IsUnique();
+
+            e.HasOne(x => x.SavedGame).WithMany().HasForeignKey(x => x.SavedGameId).OnDelete(DeleteBehavior.Cascade);
+
         });
 
         // Warum war das ein Fehler? (0.534.0): je Analyse, Halbzug und Sprache EIN Text; geht mit der Analyse.

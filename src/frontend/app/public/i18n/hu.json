@@ -2713,6 +2713,32 @@
     "shared": {
       "notFound": "Ez a megosztott játszma nem létezik, vagy eltávolították."
     },
+    "roast": {
+      "menu": "Roast my game",
+      "title": "Roast my game",
+      "style": "Stílus",
+      "styles": {
+        "friendly": "Barátságos",
+        "cheeky": "Szemtelen",
+        "russian": "Orosz"
+      },
+      "go": "Roastolás!",
+      "again": "Újra",
+      "busy": "Az AI élesíti a nyelvét …",
+      "copy": "Másolás",
+      "share": "Megosztás",
+      "notConfigured": "A roastolás nincs beállítva ezen a szerveren.",
+      "noAnalysis": "Előbb elemeztesd a játszmát — elemzés nélkül nincs mit roastolni.",
+      "error": {
+        "notConfigured": "A roastolás nincs beállítva ezen a szerveren.",
+        "noAnalysis": "Előbb elemeztesd a játszmát.",
+        "dailyLimit": "Mára elég a roastolásból — holnap újra.",
+        "failed": "Az AI nem teljesített — próbáld újra.",
+        "invalidStyle": "Ismeretlen stílus.",
+        "copyFailed": "A másolás nem sikerült.",
+        "notFound": "A játszma nem található."
+      }
+    },
     "review": {
       "title": "Játszmaértékelés",
       "accuracy": "Pontosság",

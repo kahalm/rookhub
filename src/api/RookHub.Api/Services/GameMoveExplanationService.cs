@@ -221,12 +221,15 @@ public sealed class GameMoveExplanationService
 
     /// <summary>Nennt der Text nur Züge aus den mitgegebenen Linien (gespielter Zug, Bestlinie, Widerlegung)?</summary>
     internal static bool IsGrounded(string text, GameMistakes.Flaw f)
+        => MentionsOnly(text, f.BestLine.Concat(f.Refutation).Append(f.PlayedSan));
+
+    /// <summary>Nennt der Text (Figurenzüge, Schlagzüge, Rochaden) nur Züge aus <paramref name="allowed"/>? Auch für den
+    /// Roast (<see cref="GameRoastService"/>).</summary>
+    internal static bool MentionsOnly(string text, IEnumerable<string> allowed)
     {
-        var allowed = new HashSet<string>(StringComparer.Ordinal) { Norm(f.PlayedSan) };
-        foreach (var s in f.BestLine) allowed.Add(Norm(s));
-        foreach (var s in f.Refutation) allowed.Add(Norm(s));
+        var set = new HashSet<string>(allowed.Select(Norm), StringComparer.Ordinal);
         foreach (Match m in SanToken.Matches(text))
-            if (!allowed.Contains(Norm(m.Groups[1].Value))) return false;
+            if (!set.Contains(Norm(m.Groups[1].Value))) return false;
         return true;
     }
 
@@ -250,7 +253,7 @@ public sealed class GameMoveExplanationService
         return Languages.ContainsKey(l) ? l : "en";
     }
 
-    private static string LanguageName(string lang) => Languages.TryGetValue(lang, out var n) ? n : "English";
+    internal static string LanguageName(string lang) => Languages.TryGetValue(lang, out var n) ? n : "English";
 }
 
 /// <summary>Welche Erklärungen gerade entstehen (Analyse + Sprache) — damit ein zweiter Klick nichts doppelt rechnet

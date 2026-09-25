@@ -309,3 +309,21 @@ public class GameExplanationDto
     public string Class { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
 }
+
+/// <summary>„Roast my game" (0.535.0) — die gewürfelten Kommentare einer eigenen Partie in einer Sprache.</summary>
+public class GameRoastsDto
+{
+    /// <summary>Ein Modell auf eigener Hardware ist eingerichtet.</summary>
+    public bool Available { get; set; }
+    /// <summary>Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu roasten.</summary>
+    public bool HasAnalysis { get; set; }
+    public List<GameRoastDto> Items { get; set; } = new();
+}
+
+public class GameRoastDto
+{
+    public string Style { get; set; } = string.Empty;
+    public string Language { get; set; } = "en";
+    public string Text { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}

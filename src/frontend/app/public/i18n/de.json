@@ -2451,6 +2451,32 @@
     "shared": {
       "notFound": "Diese geteilte Partie existiert nicht oder wurde entfernt."
     },
+    "roast": {
+      "menu": "Roast my game",
+      "title": "Roast my game",
+      "style": "Stil",
+      "styles": {
+        "friendly": "Freundlich",
+        "cheeky": "Frech",
+        "russian": "Russisch"
+      },
+      "go": "Roasten!",
+      "again": "Neu würfeln",
+      "busy": "Die KI wetzt die Zunge …",
+      "copy": "Kopieren",
+      "share": "Teilen",
+      "notConfigured": "Das Roasten ist auf diesem Server nicht eingerichtet.",
+      "noAnalysis": "Erst die Partie analysieren lassen — ohne Analyse gibt es nichts zu roasten.",
+      "error": {
+        "notConfigured": "Das Roasten ist auf diesem Server nicht eingerichtet.",
+        "noAnalysis": "Erst die Partie analysieren lassen.",
+        "dailyLimit": "Genug geroastet für heute — morgen wieder.",
+        "failed": "Die KI hat nicht geliefert — nochmal versuchen.",
+        "invalidStyle": "Unbekannter Stil.",
+        "copyFailed": "Kopieren hat nicht geklappt.",
+        "notFound": "Partie nicht gefunden."
+      }
+    },
     "review": {
       "title": "Auswertung",
       "accuracy": "Genauigkeit",

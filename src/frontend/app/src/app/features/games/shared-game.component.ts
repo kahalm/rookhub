@@ -35,6 +35,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
+import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 
 /**
  * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
@@ -125,6 +126,9 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
                   <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
                     <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
                   </a>
+                  <button mat-menu-item (click)="roast()">
+                    <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
+                  </button>
                   @if (scanId) {
                     <button mat-menu-item (click)="photo(false)">
                       <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
@@ -578,6 +582,15 @@ export class SharedGameComponent implements OnInit, DoCheck {
   }
 
   /** Das Formular-Foto der eigenen, eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
+  /** „Roast my game" (0.535.0) — nur die eigene Partie. */
+  roast(): void {
+    if (!this.gameId) return;
+    this.dialog.open(GameRoastDialogComponent, {
+      data: { gameId: this.gameId, shareUrl: this.shareToken ? this.games.shareUrl(this.shareToken) : null } satisfies GameRoastData,
+      maxWidth: '96vw',
+    });
+  }
+
   photo(download: boolean): void {
     if (!this.gameId) return;
     if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, this.gameId); return; }

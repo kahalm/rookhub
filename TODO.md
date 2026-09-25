@@ -21,13 +21,13 @@ erreichbar ist, und scheitert leise.
   Gewinnchance vorher/nachher). Jeder im Text genannte Zug muss in den mitgegebenen Linien stehen, sonst verworfen.
   Tabelle `GameMoveExplanations` (Analyse, Halbzug, Sprache, Text, Modell), höchstens ~15 je Partie, NUR über die Spark
   (keine Claude-Kosten). Braucht einen Server-Spiegel der Zug-Klassen (wie `GameAccuracy`).
-- [ ] **5 „Roast my game"** (nach 4, nutzt dieselben Klassen). Eingabe: Kopfdaten, Ergebnis, Genauigkeit je Seite,
+- [x] **5 „Roast my game"** — ERLEDIGT in 0.535.0 (Discord-Post über den Bot-Webhook bewusst NICHT: bräuchte einen neuen Ereignistyp im schach-bot; geteilt wird über Kopieren/Teilen-Blatt). Eingabe: Kopfdaten, Ergebnis, Genauigkeit je Seite,
   markante Züge mit Bewertungsumschwung. **Drei Stile** (Wunsch des Nutzers): **freundlich**; **frech**; **russisch** —
   flamet den Spieler und hinterfragt seine mentale Kapazität (derber Trainer-Ton, ausdrücklich gewollt). Nur der
   Besitzer der Partie, im ⋮-Menü von `/games/:id`, nie automatisch veröffentlicht; Teilen per Kopieren bzw. „In Discord
   posten" über den Bot-Webhook mit Partie-Link. Tabelle `GameRoasts` (Partie, Sprache, Stil, Text) + „Neu würfeln".
-  Grenzen auch für „russisch": gegen die Züge und die Denkleistung am Brett, keine Beleidigungen über Herkunft,
-  Aussehen, Gesundheit o. Ä.; Länge gedeckelt.
+  „russisch" ist auf Wunsch „free for all"; die einzige Grenze im Auftrag: keine Angriffe auf Herkunft, Nationalität,
+  Religion, Geschlecht, Sexualität, Behinderung.
 - [ ] **9 Semantische Suche im Rohbestand** („Frag die Kommentare"). Embedding-Modell zusätzlich auf der Spark
   (`Qwen/Qwen3-Embedding-0.6B` oder `BAAI/bge-m3`, mehrsprachig), Vektoren in MariaDB 11.8 (VECTOR + HNSW, läuft auf Dev
   und Prod), Tabelle `CommentEmbeddings` (Partie, Halbzug, Stück, Vektor), Schritt `embed` in `tools/LibraryImport`
