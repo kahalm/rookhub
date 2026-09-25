@@ -17,13 +17,18 @@ public class LichessEngineCredential
     public int UserId { get; set; }
     public AppUser? User { get; set; }
 
-    /// <summary>AES-verschlüsselter Lichess-Token (EncryptionService, v2/GCM).</summary>
+    /// <summary>AES-verschlüsselter Lichess-Token (EncryptionService, v2/GCM). LEER erlaubt (seit dem eigenen
+    /// Engine-Broker): ein Nutzer ohne Lichess-Konto braucht die Zeile trotzdem — sie trägt
+    /// <see cref="BackgroundEngineIds"/> (dann „RookHub direkt"-Engines, <c>rhe_…</c>) und
+    /// <see cref="ShareAsHouseEngine"/>. Jeder Leser prüft deshalb auf „Token vorhanden", nicht auf „Zeile
+    /// vorhanden" (<c>TryDecrypt("")</c> liefert <c>null</c>).</summary>
     [Required]
     public string EncryptedToken { get; set; } = string.Empty;
 
     /// <summary>
     /// Die Engines, auf denen Hintergrund-Analyseauftraege laufen duerfen — als
-    /// kommagetrennte Liste von Lichess-Kennungen (<c>eei_…</c>), leer/<c>null</c> = keine.
+    /// kommagetrennte Liste von Engine-Kennungen — Lichess (<c>eei_…</c>) und „RookHub direkt" (<c>rhe_…</c>)
+    /// gemischt erlaubt, beide 16 Zeichen lang —, leer/<c>null</c> = keine.
     ///
     /// <para><b>Warum mehrere:</b> der Worker rechnet je ENGINE genau einen Auftrag (ein
     /// Stockfish-Prozess kann nur eine Suche). Mit EINER Engine ist die Warteschlange also strikt

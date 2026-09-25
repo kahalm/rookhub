@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.EngineBroker;
 
 namespace RookHub.Api.Services;
 
@@ -113,7 +114,8 @@ public sealed class StreamTally
 }
 
 /// <summary>
-/// Arbeitet Hintergrund-Analyseaufträge (<see cref="AnalysisJob"/>) über den Lichess-Broker ab — höchstens
+/// Arbeitet Hintergrund-Analyseaufträge (<see cref="AnalysisJob"/>) über den Broker ihrer Engine ab (eigener
+/// Broker für <c>rhe_</c>, Lichess für <c>eei_</c> — <see cref="IEngineBroker"/>) — höchstens
 /// einer je ENGINE (ein Stockfish-Prozess kann nur eine Suche; Aufträge auf verschiedenen Engines laufen
 /// deshalb parallel). Vorrang der Live-Analyse: meldet der <see cref="EngineActivityTracker"/> einen
 /// Live-Stream AUF EINER ENGINE, wird genau der Auftrag auf dieser Engine abgebrochen (Status Paused — der
@@ -129,7 +131,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly EngineActivityTracker _tracker;
     private readonly AnalysisJobLive _live;
-    private readonly LichessEngineService _lichess;
+    private readonly IEngineBroker _broker;
     private readonly ILogger<AnalysisJobWorker> _logger;
     private readonly TimeSpan _tick;
     private readonly TimeSpan _idleGrace;
@@ -162,12 +164,12 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private readonly ConcurrentDictionary<string, Running> _running = new();   // key = EngineId
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
-        LichessEngineService lichess, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live)
+        IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live)
     {
         _scopeFactory = scopeFactory;
         _tracker = tracker;
         _live = live;
-        _lichess = lichess;
+        _broker = broker;
         _logger = logger;
         _tick = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:TickSeconds") ?? 5, 1, 60));
         _idleGrace = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:IdleGraceSeconds") ?? 20, 0, 600));
@@ -259,7 +261,6 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var svc = scope.ServiceProvider.GetRequiredService<AnalysisJobService>();
             var job = await db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId, CancellationToken.None);
             if (job is null) return;
 
@@ -274,15 +275,11 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 
             // Token und Engine-Registrierung kommen vom ENGINE-BESITZER: bei einer eingeworfenen
             // Punktepartie ohne eigene Engine ist das nicht der Auftraggeber, sondern das Haus-Konto.
+            // Eine Engine „RookHub direkt" (rhe_) braucht keinen Token, eine Lichess-Engine (eei_) schon.
             var engineOwnerId = job.EngineOwnerUserId ?? job.UserId;
-            var token = await svc.TokenAsync(engineOwnerId, CancellationToken.None);
-            if (token is null)
-            {
-                await FailAsync(db, job, "Kein Lichess-Token hinterlegt");
-                return;
-            }
-            LichessExternalEngine? engine;
-            try { engine = await _lichess.ResolveEngineAsync(engineOwnerId, token, job.EngineId, ct); }
+            var registry = scope.ServiceProvider.GetRequiredService<EngineRegistry>();
+            EngineLookup lookup;
+            try { lookup = await registry.ResolveAsync(engineOwnerId, job.EngineId, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 // Live hat begonnen / gelöscht / Shutdown — MUSS vor dem Filter darunter stehen, sonst wäre
@@ -295,9 +292,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 await BackoffAsync(db, job, "Lichess nicht erreichbar", TimeSpan.FromSeconds(60));
                 return;
             }
-            if (engine is null)
+            if (lookup.Failure == EngineLookupFailure.NoToken)
             {
-                await FailAsync(db, job, "Engine bei Lichess nicht (mehr) registriert");
+                await FailAsync(db, job, "Kein Lichess-Token hinterlegt");
+                return;
+            }
+            if (lookup.Engine is not { } engine)
+            {
+                await FailAsync(db, job, "Engine nicht (mehr) registriert");
                 return;
             }
 
@@ -307,17 +309,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             job.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(CancellationToken.None);
 
-            var work = new
-            {
-                sessionId = $"rh-bg-{job.UserId}", threads = Math.Max(1, engine.MaxThreads),
-                hash = Math.Clamp(engine.MaxHash, 16, 32768),
+            var work = new EngineWork(
+                SessionId: $"rh-bg-{job.UserId}", Threads: Math.Max(1, engine.MaxThreads),
+                Hash: Math.Clamp(engine.MaxHash, 16, 32768),
                 // Das Protokoll erlaubt 1..5; ein größerer Wert würde vom Broker abgewiesen und der Auftrag
                 // liefe endlos in die Wiederholung. Zweiter Riegel neben AnalysisJobService.MaxMultiPv.
-                multiPv = Math.Clamp(job.MultiPv, 1, 5), variant = "chess",
-                initialFen = job.Fen, moves = Array.Empty<string>(), depth = job.TargetDepth,
-            };
+                MultiPv: Math.Clamp(job.MultiPv, 1, 5),
+                InitialFen: job.Fen, Moves: [], Depth: job.TargetDepth);
 
-            HttpResponseMessage upstream;
+            EngineAnalysisSession upstream;
             // Frist NUR für die Antwort-KOPFZEILEN: der HttpClient des Brokers ist bewusst timeout-los
             // (eine Suche darf Stunden dauern), und der `firstLine`-Wächter unten beginnt erst NACH den
             // Headern. Antwortet der Broker mit Verbindungsaufbau, aber ohne Header — er wartet auf einen
@@ -326,7 +326,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             // dieser Engine warteten mit. Auflösbar war das nur durch einen Live-Stream oder Neustart.
             using var headerCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             headerCts.CancelAfter(_firstLineTimeout);
-            try { upstream = await _lichess.AnalyseAsync(engine, work, headerCts.Token); }
+            try { upstream = await _broker.AnalyseAsync(engine, work, headerCts.Token); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { await PauseAsync(db, job, null); return; }
             catch (OperationCanceledException)
             {
@@ -342,11 +342,19 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 return;
             }
 
-            using (upstream)
+            await using (upstream)
             {
-                if (!upstream.IsSuccessStatusCode)
+                if (!upstream.IsSuccess)
                 {
-                    var code = (int)upstream.StatusCode;
+                    var code = upstream.StatusCode;
+                    // Der EIGENE Broker weist mit 400 nur ab, was die Stellung selbst betrifft (Sanitizer:
+                    // Gegner im Schach, falsche Rochaderechte …) — das ändert sich durch Warten nicht. Bei
+                    // Lichess bleibt es beim bisherigen Backoff.
+                    if (code == 400 && engine.Source == EngineSource.Local)
+                    {
+                        await FailAsync(db, job, $"Stellung abgewiesen: {upstream.Error}");
+                        return;
+                    }
                     // 503/504 heisst beim Broker: fuer DIESE Engine ist gerade kein Provider
                     // verbunden. Das ist eine Aussage ueber die ENGINE und nicht ueber den Auftrag,
                     // also umhaengen statt zwei Minuten dieselbe Tuer anzuklopfen. Am 2026-09-12 auf
@@ -387,7 +395,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 var streamCt = streamCts.Token;
                 try
                 {
-                    await using var stream = await upstream.Content.ReadAsStreamAsync(streamCt);
+                    var stream = upstream.Ndjson!;
                     await AnalysisJobStream.ConsumeAsync(stream, async (line, depth) =>
                     {
                         // Nur eine FRISCHE Zeile stellt den Wächter neu — die Wiederholung ist ein Lebenszeichen.

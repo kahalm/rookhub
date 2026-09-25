@@ -270,6 +270,8 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.EngineRegistry>();
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineHub>();
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.LocalEngineBroker>();
+    builder.Services.AddTransient<RookHub.Api.Services.EngineBroker.LichessEngineBroker>();
+    builder.Services.AddTransient<RookHub.Api.Services.EngineBroker.IEngineBroker, RookHub.Api.Services.EngineBroker.EngineBrokerRouter>();
     builder.Services.AddHostedService<RookHub.Api.Services.EngineBroker.EngineBrokerMaintenanceService>();
     builder.Services.AddSingleton<AnalysisJobLive>();
     builder.Services.AddSingleton<AnalysisJobWorker>();

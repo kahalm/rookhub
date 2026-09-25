@@ -10,7 +10,12 @@ public class SaveLichessTokenRequest
 
 /// <summary>Eine auf dem Lichess-Konto des Users registrierte External Engine — bewusst OHNE
 /// <c>clientSecret</c>: das bleibt serverseitig, der Browser analysiert nur über den RookHub-Proxy.</summary>
-public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxHash);
+public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxHash,
+    string Source = ExternalEngineDto.SourceLichess, bool? Online = null)
+{
+    public const string SourceLichess = "lichess";
+    public const string SourceRookHub = "rookhub";
+}
 
 /// <summary>Antwort der Engine-Liste. <c>TokenInvalid</c> = Lichess hat den gespeicherten Token
 /// abgewiesen (401/403) — die UI fordert dann zur Neu-Eingabe auf, statt leer auszusehen.
@@ -20,9 +25,12 @@ public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxH
 /// <para><c>ShareAsHouseEngine</c> = diese Hintergrund-Engines stehen auch fremden Partien offen, die
 /// jemand auf der Punktepartie-Seite einwirft (nur ein Admin kann das setzen); <c>CanShareHouseEngine</c>
 /// sagt der Karte, ob sie das Haekchen ueberhaupt zeigen soll.</para>
+/// <para><c>HasCredentials</c> heißt seit dem eigenen Broker nur noch „ein LICHESS-Token ist hinterlegt";
+/// Engines „RookHub direkt" stehen auch ohne ihn in <c>Engines</c>. <c>LichessUnreachable</c> = Lichess hat
+/// nicht geantwortet, die Liste enthält nur die eigenen Engines (ohne eigene gibt es wie bisher 502).</para>
 public record ExternalEnginesResponse(bool HasCredentials, bool TokenInvalid, List<ExternalEngineDto> Engines,
     IReadOnlyList<string>? BackgroundEngineIds = null, bool ShareAsHouseEngine = false,
-    bool CanShareHouseEngine = false);
+    bool CanShareHouseEngine = false, bool LichessUnreachable = false);
 
 /// <summary>Haus-Engine-Freigabe schalten (nur Admin).</summary>
 public class SetHouseEngineRequest

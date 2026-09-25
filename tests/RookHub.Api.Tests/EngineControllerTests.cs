@@ -13,6 +13,8 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.EngineBroker;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RookHub.Api.Tests;
 
@@ -32,13 +34,21 @@ public class EngineControllerTests : IDisposable
     private readonly EncryptionService _encryption;
     private readonly StubHandler _handler = new();
     private readonly EngineController _controller;
+    private readonly ServiceProvider _sp;
+    private readonly EngineHub _hub;
+    private readonly EngineSelectorDirectory _directory;
+    private readonly LocalBrokerOptions _brokerOptions = new() { ProviderTimeout = TimeSpan.FromMilliseconds(300) };
 
     public EngineControllerTests()
     {
+        var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(dbName)
             .Options;
         _db = new AppDbContext(options);
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(dbName));
+        _sp = services.BuildServiceProvider();
 
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -53,11 +63,21 @@ public class EngineControllerTests : IDisposable
             new MemoryCache(new MemoryCacheOptions()),
             config,
             NullLogger<LichessEngineService>.Instance);
-        _controller = new EngineController(_db, _encryption, lichess, new EngineActivityTracker(), NullLogger<EngineController>.Instance);
+        _directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
+        _hub = new EngineHub(_brokerOptions, () => DateTime.UtcNow, startSweeper: false);
+        var registry = new EngineRegistry(_db, _encryption, lichess, _directory, _brokerOptions);
+        var broker = new EngineBrokerRouter(
+            new LocalEngineBroker(_hub, _brokerOptions, NullLogger<LocalEngineBroker>.Instance),
+            new LichessEngineBroker(lichess));
+        _controller = new EngineController(_db, _encryption, registry, broker, new EngineActivityTracker(), NullLogger<EngineController>.Instance);
         SetUser(42);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        _sp.Dispose();
+    }
 
     private void SetUser(int userId)
     {
@@ -414,5 +434,194 @@ public class EngineControllerTests : IDisposable
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Null(_db.LichessEngineCredentials.Single().BackgroundEngineIds);
+    }
+
+    // ---- Eigener Broker („RookHub direkt", rhe_) ----
+
+    private async Task<ExternalEngineRegistration> LocalEngineAsync(string name = "Heim-PC", string secret = "provider-secret-000001")
+    {
+        var reg = new ExternalEngineRegistration
+        {
+            Id = ProviderSecrets.NewEngineId(), UserId = 42, Name = name, ClientSecret = "cs",
+            ProviderSelector = ProviderSecrets.Selector(secret), MaxThreads = 4, MaxHash = 256,
+        };
+        _db.ExternalEngineRegistrations.Add(reg);
+        await _db.SaveChangesAsync();
+        return reg;
+    }
+
+    [Fact]
+    public async Task ListExternalEngines_LocalEngineWithoutLichessToken_IsListed_WithSourceAndOnline()
+    {
+        await CreateUserAsync();
+        var reg = await LocalEngineAsync();
+        _directory.MarkSeen(reg.ProviderSelector);
+
+        var dto = Assert.IsType<ExternalEnginesResponse>(
+            Assert.IsType<OkObjectResult>(await _controller.ListExternalEngines(CancellationToken.None)).Value);
+        Assert.False(dto.HasCredentials);                  // kein LICHESS-Token
+        var e = Assert.Single(dto.Engines);
+        Assert.Equal(reg.Id, e.Id);
+        Assert.Equal("rookhub", e.Source);
+        Assert.True(e.Online);
+        Assert.Equal(0, _handler.ListCalls);
+        Assert.DoesNotContain("\"cs\"", JsonSerializer.Serialize(dto));   // clientSecret bleibt serverseitig
+    }
+
+    [Fact]
+    public async Task ListExternalEngines_BothSources_LichessEnginesKeepTheirShape()
+    {
+        await CreateUserAsync();
+        await LocalEngineAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+
+        var dto = Assert.IsType<ExternalEnginesResponse>(
+            Assert.IsType<OkObjectResult>(await _controller.ListExternalEngines(CancellationToken.None)).Value);
+        Assert.True(dto.HasCredentials);
+        Assert.Equal(["rookhub", "lichess"], dto.Engines.Select(e => e.Source));
+        Assert.Null(dto.Engines[1].Online);
+        Assert.Equal("eei_abc", dto.Engines[1].Id);
+    }
+
+    [Fact]
+    public async Task ListExternalEngines_LichessDown_StillShowsLocalEngines()
+    {
+        await CreateUserAsync();
+        await LocalEngineAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        _handler.ListStatus = HttpStatusCode.BadGateway;     // EnsureSuccessStatusCode wirft
+
+        var dto = Assert.IsType<ExternalEnginesResponse>(
+            Assert.IsType<OkObjectResult>(await _controller.ListExternalEngines(CancellationToken.None)).Value);
+        Assert.True(dto.LichessUnreachable);
+        Assert.Single(dto.Engines);
+    }
+
+    [Fact]
+    public async Task ListExternalEngines_LichessDown_WithoutLocalEngines_StaysA502()
+    {
+        await CreateUserAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        _handler.ListStatus = HttpStatusCode.BadGateway;
+        var r = Assert.IsType<ObjectResult>(await _controller.ListExternalEngines(CancellationToken.None));
+        Assert.Equal(502, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task Analyse_LocalEngine_NeedsNoToken_AndStreamsWhatTheProviderUploads()
+    {
+        await CreateUserAsync();
+        var reg = await LocalEngineAsync();
+
+        var analyse = _controller.Analyse(reg.Id, ValidRequest(), CancellationToken.None);
+        var job = await _hub.AcquireAsync(reg.ProviderSelector, TimeSpan.FromSeconds(2), CancellationToken.None);
+        Assert.NotNull(job);
+        Assert.Equal(4, job!.Work.Threads);                  // 64 angefragt, auf maxThreads geklemmt
+        Assert.Equal(["e2e4"], job.Work.Moves);
+        var taken = _hub.TakeOngoing(job.Id!)!;
+        var body = new MemoryStream(Encoding.UTF8.GetBytes(
+            "info depth 5 multipv 1 score cp -30 nodes 99 time 3 pv e7e5\n{\"keepalive\":true}\nbestmove e7e5\n"));
+        await EngineUploadPump.RunAsync(taken, body, CancellationToken.None, NullLogger.Instance);
+
+        Assert.IsType<EmptyResult>(await analyse);
+        var response = _controller.ControllerContext.HttpContext.Response;
+        Assert.Equal(200, response.StatusCode);
+        Assert.Equal("application/x-ndjson", response.ContentType);
+        response.Body.Position = 0;
+        var lines = (await new StreamReader(response.Body).ReadToEndAsync()).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        // Schwarz am Zug: -30 aus Sicht der Engine = +30 aus Weiß-Sicht.
+        Assert.Equal("{\"time\":3,\"depth\":5,\"nodes\":99,\"pvs\":[{\"moves\":[\"e7e5\"],\"cp\":30,\"depth\":5}]}", lines[0]);
+        Assert.Equal("{\"keepalive\":true}", lines[1]);
+        Assert.Contains("\"bestmove\":\"e7e5\"", lines[2]);
+        Assert.Equal(0, _handler.AnalyseCalls);              // kein Weg über Lichess
+    }
+
+    [Fact]
+    public async Task Analyse_LocalEngine_NoProvider_Is502_AfterTheProviderTimeout()
+    {
+        await CreateUserAsync();
+        var reg = await LocalEngineAsync();
+        var r = Assert.IsType<ObjectResult>(await _controller.Analyse(reg.Id, ValidRequest(), CancellationToken.None));
+        Assert.Equal(502, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task Analyse_ForeignLocalEngine_Is404()
+    {
+        await CreateUserAsync();
+        await CreateUserAsync(7);
+        var reg = await LocalEngineAsync();
+        reg.UserId = 7;
+        await _db.SaveChangesAsync();
+        Assert.IsType<NotFoundObjectResult>(await _controller.Analyse(reg.Id, ValidRequest(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SetBackgroundEngine_LocalEngines_WithoutLichessToken_CreateATokenlessRow()
+    {
+        await CreateUserAsync();
+        var a = await LocalEngineAsync("A", "provider-secret-000001");
+        var b = await LocalEngineAsync("B", "provider-secret-000002");
+
+        Assert.IsType<OkObjectResult>(await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = [a.Id, b.Id] }, CancellationToken.None));
+        var row = _db.LichessEngineCredentials.Single();
+        Assert.Equal("", row.EncryptedToken);
+        Assert.Equal([a.Id, b.Id], row.BackgroundEngines);
+
+        // Die Karte sagt weiterhin „kein Lichess-Token".
+        var creds = Assert.IsType<LichessEngineCredentialResponse>(
+            Assert.IsType<OkObjectResult>(await _controller.GetCredentials()).Value);
+        Assert.False(creds.HasCredentials);
+    }
+
+    [Fact]
+    public async Task SetBackgroundEngine_UnknownLocalEngine_Is404_LichessIdWithoutToken_Is400()
+    {
+        await CreateUserAsync();
+        Assert.IsType<NotFoundObjectResult>(await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = ["rhe_doesnotexist"] }, CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = ["eei_abc"] }, CancellationToken.None));
+        Assert.Empty(_db.LichessEngineCredentials);
+    }
+
+    [Fact]
+    public async Task SetBackgroundEngine_MixedSources_AreStored()
+    {
+        await CreateUserAsync();
+        var local = await LocalEngineAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        Assert.IsType<OkObjectResult>(await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = [local.Id, "eei_abc"] }, CancellationToken.None));
+        Assert.Equal([local.Id, "eei_abc"], _db.LichessEngineCredentials.Single().BackgroundEngines);
+    }
+
+    [Fact]
+    public async Task DeleteCredentials_KeepsTheRow_WhenLocalBackgroundEnginesHangOnIt()
+    {
+        await CreateUserAsync();
+        var local = await LocalEngineAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        await _controller.SetBackgroundEngine(new SetBackgroundEngineRequest { EngineIds = [local.Id, "eei_abc"] }, CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(await _controller.DeleteCredentials());
+        var row = _db.LichessEngineCredentials.Single();
+        Assert.Equal("", row.EncryptedToken);                // Token weg …
+        Assert.Equal([local.Id], row.BackgroundEngines);     // … die Lichess-Engine auch, die eigene bleibt
+    }
+
+    [Fact]
+    public async Task HouseEngine_WorksWithLocalEnginesOnly()
+    {
+        await CreateUserAsync();
+        var local = await LocalEngineAsync();
+        await _controller.SetBackgroundEngine(new SetBackgroundEngineRequest { EngineIds = [local.Id] }, CancellationToken.None);
+        var ctx = _controller.ControllerContext.HttpContext;
+        ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "42"), new Claim(ClaimTypes.Role, "Admin")], "Test"));
+
+        Assert.IsType<OkObjectResult>(await _controller.SetHouseEngine(new SetHouseEngineRequest { Share = true }, CancellationToken.None));
+        Assert.True(_db.LichessEngineCredentials.Single().ShareAsHouseEngine);
     }
 }
