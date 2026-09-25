@@ -19,31 +19,77 @@ using RookHub.Api.Services;
 //                         zurückübersetzt, damit auch die Notations-Zuordnung mitläuft.
 //   --max-usd 8           harter Deckel für den GANZEN Lauf; ein Aufruf startet nur, wenn sein ungünstigster
 //                         Fall noch passt (dieselbe Regel wie in RookHub)
-//   --model <id>          Vorgabe claude-opus-5
+//   --model <id>          Vorgabe claude-opus-5; bei openai/dots das erste Modell, das der Server meldet
 //   --replay <ordner>     KEIN Modell-Aufruf: die gespeicherten Antworten (NN.answer.json eines früheren Laufs)
 //                         werden neu aufgelöst — misst Auflöser-Änderungen an echten Modell-Lesungen, kostenlos
 //
+// Andere Leser (eigene Hardware, OpenAI-kompatible Schnittstelle, z. B. vLLM auf dem DGX Spark):
+//   --provider claude|openai|dots   Vorgabe claude. openai = ein Vision-Modell wie Qwen3-VL (liest UND deutet),
+//                         dots = dots.ocr (reiner Dokument-Leser: Tabelle → Einträge, ein Durchgang, keine Nachfrage)
+//   --endpoint <url>      Basis bis einschließlich /v1, z. B. https://spark.example/v1 (Pflicht für openai/dots)
+//   --key-env <NAME>      Name der Umgebungsvariable mit dem Schlüssel (z. B. SPARK_API_KEY) — der Schlüssel
+//                         selbst steht nie auf der Kommandozeile und wird nie ausgegeben
+//   --max-tokens 16384    Antwort-Deckel für openai/dots (hängt am --max-model-len des Servers, nicht an Geld)
+//   --prompt transcribe|full   openai: nur abschreiben (Vorgabe) oder der volle Claude-Auftrag (Partie mitspielen)
+//   --no-schema           openai: ohne response_format (für Server ohne Grammatik-Steuerung)
+//   --timeout 900         Sekunden je Aufruf
+//   --edge 2000           längste Bildkante in Pixeln
+//   --list-models         nur die Modelle am --endpoint auflisten (Verbindungstest; braucht keinen Testordner)
+//
 // Der Testordner enthält je Beleg NN.png|jpg (Formular), NN.pgn (Soll = gespielte Partie), NN.formular.txt (was
-// auf DIESEM Formular steht) und belege.json. Der API-Schlüssel kommt aus ANTHROPIC_API_KEY.
+// auf DIESEM Formular steht) und belege.json. Der Claude-Schlüssel kommt aus ANTHROPIC_API_KEY.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 var argv = args.ToList();
-if (argv.Count == 0 || argv[0].StartsWith("--"))
-{
-    Console.Error.WriteLine("Aufruf: ScoresheetBench <testset-ordner> [--out DIR] [--only 01,02] [--resolver-only] [--max-usd N] [--model ID]");
-    return 2;
-}
-var dir = argv[0];
 string Opt(string name, string fallback)
 {
     var i = argv.IndexOf(name);
     return i >= 0 && i + 1 < argv.Count ? argv[i + 1] : fallback;
 }
+var provider = Opt("--provider", "claude").ToLowerInvariant();
+var endpoint = Opt("--endpoint", "");
+var keyEnv = Opt("--key-env", "");
+var localMaxTokens = int.Parse(Opt("--max-tokens", "16384"), CultureInfo.InvariantCulture);
+var promptKind = Opt("--prompt", "transcribe").ToLowerInvariant();
+var useSchema = !argv.Contains("--no-schema");
+var timeoutSec = int.Parse(Opt("--timeout", "900"), CultureInfo.InvariantCulture);
+var edge = int.Parse(Opt("--edge", ScoresheetScanService.ModelEdge.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
+if (provider is not ("claude" or "openai" or "dots"))
+{
+    Console.Error.WriteLine($"Unbekannter --provider „{provider}“ (claude|openai|dots).");
+    return 2;
+}
+string? localKey = null;
+if (keyEnv.Length > 0)
+{
+    localKey = Environment.GetEnvironmentVariable(keyEnv);
+    if (string.IsNullOrWhiteSpace(localKey))
+    {
+        Console.Error.WriteLine($"Umgebungsvariable {keyEnv} ist leer.");
+        return 3;
+    }
+}
+using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(timeoutSec) };
+if (argv.Contains("--list-models"))
+{
+    if (endpoint.Length == 0) { Console.Error.WriteLine("--list-models braucht --endpoint."); return 2; }
+    var ids = await ModelIds(http, endpoint, localKey);
+    if (ids == null) return 4;
+    foreach (var id in ids) Console.WriteLine(id);
+    return 0;
+}
+if (argv.Count == 0 || argv[0].StartsWith("--"))
+{
+    Console.Error.WriteLine("Aufruf: ScoresheetBench <testset-ordner> [--out DIR] [--only 01,02] [--resolver-only] [--max-usd N] [--model ID]\n" +
+                            "        [--provider claude|openai|dots --endpoint URL --key-env NAME] — Einzelheiten oben in Program.cs");
+    return 2;
+}
+var dir = argv[0];
 var outDir = Opt("--out", Path.Combine(Directory.GetCurrentDirectory(), "scoresheet-bench-out"));
 var only = Opt("--only", "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
 var resolverOnly = argv.Contains("--resolver-only");
 var maxUsd = decimal.Parse(Opt("--max-usd", "8"), CultureInfo.InvariantCulture);
-var model = Opt("--model", "claude-opus-5");
+var model = Opt("--model", provider == "claude" ? "claude-opus-5" : "");
 var replayDir = Opt("--replay", "");
 Directory.CreateDirectory(outDir);
 
@@ -53,7 +99,40 @@ if (only.Count > 0) belege = belege.Where(b => only.Contains(b.Beleg)).ToList();
 
 IScoresheetVisionClient? vision = null;
 var budget = new ScoresheetBudget(null);
-if (!resolverOnly && replayDir.Length == 0)
+var local = provider != "claude";
+Func<string?>? lastRaw = null;
+if (!resolverOnly && replayDir.Length == 0 && local)
+{
+    if (endpoint.Length == 0)
+    {
+        Console.Error.WriteLine($"--provider {provider} braucht --endpoint.");
+        return 2;
+    }
+    if (model.Length == 0)
+    {
+        var ids = await ModelIds(http, endpoint, localKey);
+        if (ids == null || ids.Count == 0) { Console.Error.WriteLine("Kein Modell am Endpunkt."); return 4; }
+        model = ids[0];
+        Console.WriteLine($"Modell: {model}" + (ids.Count > 1 ? $" (weitere: {string.Join(", ", ids.Skip(1))})" : ""));
+    }
+    if (provider == "dots")
+    {
+        var dots = new DotsOcrScoresheetVisionClient(http,
+            new DotsOcrScoresheetVisionClient.Settings(endpoint, model, localKey, localMaxTokens), NullLogger.Instance);
+        vision = dots;
+        lastRaw = () => dots.LastRaw;
+    }
+    else
+    {
+        var system = promptKind == "full" ? ScoresheetPrompt.System : ScoresheetPrompt.TranscribeSystem;
+        var open = new OpenAiScoresheetVisionClient(http,
+            new OpenAiScoresheetVisionClient.Settings(endpoint, model, localKey, system, useSchema, MaxTokensCap: localMaxTokens),
+            NullLogger.Instance);
+        vision = open;
+        lastRaw = () => open.LastRaw;
+    }
+}
+else if (!resolverOnly && replayDir.Length == 0)
 {
     var key = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
     if (string.IsNullOrWhiteSpace(key))
@@ -110,12 +189,14 @@ foreach (var b in belege)
     }
     else
     {
-        var jpeg = ScoresheetImage.Prepare(File.ReadAllBytes(Path.Combine(dir, b.Bild)), ScoresheetScanService.ModelEdge);
+        var jpeg = ScoresheetImage.Prepare(File.ReadAllBytes(Path.Combine(dir, b.Bild)), edge);
         if (jpeg == null) { r.Fehler = "Bild nicht lesbar"; continue; }
         var reader = new ScoresheetReader(vision!);
         var outcome = await reader.ReadAsync(jpeg, lang, CancellationToken.None,
             beforeCall: _ =>
             {
+                // Eigene Hardware kostet kein Geld je Aufruf — der Deckel ist das Kontextfenster des Servers.
+                if (local) return Task.FromResult(new CallAllowance(localMaxTokens, null));
                 // Derselbe Gedanke wie in RookHub: der Antwort-Deckel kommt aus dem, was vom Lauf-Deckel übrig ist.
                 var left = maxMicro - spentMicro - budget.WorstCaseMicroUsd(0);
                 var tokens = (int)Math.Min(ScoresheetBudget.MaxOutputTokens, Math.Max(0, left / budget.OutputUsdPerMTok));
@@ -126,11 +207,15 @@ foreach (var b in belege)
             {
                 r.InputTokens += input;
                 r.OutputTokens += output;
+                if (local) return Task.CompletedTask;
                 var cost = budget.CostMicroUsd(input, output);
                 r.KostenUsd += cost / 1_000_000m;
                 spentMicro += cost;
                 return Task.CompletedTask;
-            });
+            },
+            maxRounds: provider == "dots" ? 1 : ScoresheetReader.MaxRounds);
+        if (lastRaw?.Invoke() is { } raw)
+            File.WriteAllText(Path.Combine(outDir, b.Beleg + (provider == "dots" ? ".dots.txt" : ".raw.txt")), raw);
         r.Runden = outcome.Rounds;
         r.Fehler = outcome.Error;
         if (outcome.Json != null) File.WriteAllText(Path.Combine(outDir, b.Beleg + ".answer.json"), outcome.Json);
@@ -182,11 +267,38 @@ var json = JsonSerializer.Serialize(results, new JsonSerializerOptions
     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
 });
 File.WriteAllText(Path.Combine(outDir, "results.json"), json);
-File.WriteAllText(Path.Combine(outDir, "report.md"), Report(results, resolverOnly, model, spentMicro));
+File.WriteAllText(Path.Combine(outDir, "report.md"), Report(results, resolverOnly,
+    replayDir.Length > 0 ? $"Replay von {replayDir}" : local ? $"{provider}: {model} @ {endpoint}" : model, spentMicro));
 Console.WriteLine($"→ {Path.Combine(outDir, "report.md")}" + (resolverOnly ? "" : $" · Kosten gesamt {spentMicro / 1_000_000m:0.000} $"));
 return 0;
 
 // ── Hilfen ───────────────────────────────────────────────────────────────────────────────────────
+
+/// <summary>Die Modelle eines OpenAI-kompatiblen Servers (<c>GET /models</c>), oder <c>null</c> mit Meldung.</summary>
+static async Task<List<string>?> ModelIds(HttpClient http, string endpoint, string? key)
+{
+    using var request = new HttpRequestMessage(HttpMethod.Get, endpoint.TrimEnd('/') + "/models");
+    if (!string.IsNullOrWhiteSpace(key))
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+    try
+    {
+        using var response = await http.SendAsync(request);
+        var text = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.Error.WriteLine($"{endpoint}/models: HTTP {(int)response.StatusCode}");
+            return null;
+        }
+        using var doc = JsonDocument.Parse(text);
+        return doc.RootElement.GetProperty("data").EnumerateArray()
+            .Select(m => m.GetProperty("id").GetString() ?? "").Where(id => id.Length > 0).ToList();
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"{endpoint}/models: {ex.GetType().Name}: {ex.Message}");
+        return null;
+    }
+}
 
 /// <summary>Lesen: die Rohausgabe gegen die Abschrift (HCS: der gelesene Eintrag, dort steht, was WIRKLICH dasteht;
 /// portugiesisch: die SAN-Lesart, dort ist die Abschrift die gespielte Partie) — und die SAN-Lesart des Modells gegen

@@ -171,6 +171,29 @@ public static class ScoresheetPrompt
         alternative readings (most likely first) when you are not sure, and a confidence.
         """;
 
+    /// <summary>
+    /// Auftrag für kleinere, offene Vision-Modelle (Qwen3-VL auf eigener Hardware): NUR abschreiben. Das große
+    /// Modell spielt die Partie im Kopf mit und „repariert" dabei; ein 30-B-Modell tut das schlechter, als es liest,
+    /// und seine Reparaturen verdecken, was wirklich dasteht. Die Legalität prüft ohnehin der Auflöser.
+    /// </summary>
+    public const string TranscribeSystem =
+        """
+        You transcribe photographed chess scoresheets (handwritten game records). Copy, do not correct.
+
+        - Read the move table row by row: move number, White's move, Black's move. If the sheet has several
+          column blocks (for example moves 1-30 and 31-60 side by side), read the first block to its end, then
+          the next.
+        - "written" is exactly what stands in the cell, in the sheet's own notation. Piece letters differ by
+          language: German K D T L S, Portuguese/Spanish R D T B/A C, French R D T F C, English K Q R B N.
+          Pawns have no letter. Castling may be 0-0 or O-O.
+        - "san" is the same move with the piece letter translated to English (K Q R B N). Change nothing else:
+          do not move squares or add captures to make a move legal.
+        - Ignore clock times, minutes, signatures and other marks. For a crossed-out entry use the replacement.
+        - Stop at the last written move. Never invent moves.
+        - confidence: "high" = clearly legible, "medium" = probably right, "low" = hard to read. For anything
+          that is not clearly legible give up to three alternative readings, most likely first.
+        """;
+
     /// <summary>Auftrag für die erste Lesung.</summary>
     /// <param name="languageHint">Code aus <see cref="ScoresheetNotation.Languages"/> oder <c>auto</c>.</param>
     public static string FirstRead(string languageHint)

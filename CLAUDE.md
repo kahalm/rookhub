@@ -2144,6 +2144,22 @@ als Eingabe (kostenlos, misst nur den Auflöser); ohne den Schalter liest das Mo
 Mit Modell (Claude Opus 5, 25.09.): 0,18–0,56 $ und 1–4½ min je Formular, 3,69 $ für alle zehn; auf den neun vollständig
 gelesenen 486/499 richtig. `--replay <ordner>` wertet gespeicherte Antworten neu aus, ohne Kosten — so werden
 Auflöser-Änderungen an echten Modell-Lesungen gemessen. Verglichen wird der ZUG (von–nach), nicht die Schreibweise.
+**Andere Leser** (0.532.0, bisher NUR im Testwerkzeug, in der API nicht verdrahtet): `--provider openai` liest über eine
+OpenAI-kompatible Schnittstelle (vLLM auf eigener Hardware, gedacht für Qwen3-VL auf dem DGX Spark;
+`OpenAiScoresheetVisionClient`: Bild als Daten-URL, `response_format: json_schema` mit demselben Schema — lehnt der
+Server das ab, einmal ohne und dann dabei bleiben —, Denkblöcke und Code-Zäune fallen weg, `finish_reason: length` =
+`truncated`; Vorgabe-Auftrag `ScoresheetPrompt.TranscribeSystem` = NUR abschreiben, `--prompt full` = der
+Claude-Auftrag). `--provider dots` nimmt dots.ocr (`DotsOcrScoresheetVisionClient`): ein Dokument-Leser, der IMMER
+denselben Layout-Auftrag bekommt — wörtlich `prompt_layout_all_en` aus dem dots.ocr-Quelltext, auf diesen Wortlaut ist
+das Modell trainiert, ein Test hält ihn fest — und Tabellen als HTML liefert; `DotsOcrLayout` macht daraus
+Formular-Einträge (Nummern-Spalte = Zahlen, die Zeile für Zeile um eins steigen — so fallen Zeit-Spalten heraus;
+jede Nummern-Spalte beginnt einen Block, darin Weiß und Schwarz; fehlende Nummer aus dem Versatz; ohne Nummern
+paarweise; ohne Tabelle Zeilen „12. Sf3 Sc6"), ohne SAN-Deutung, und liest mit EINEM Durchgang
+(`ScoresheetReader.ReadAsync(maxRounds: 1)` — eine Nachfrage ergäbe dieselbe Lesung). Aufruf:
+`--endpoint <…/v1> --key-env SPARK_API_KEY [--model …] [--max-tokens 16384]`; der Schlüssel kommt nur aus der
+genannten Umgebungsvariable, `--list-models` prüft die Verbindung. Eigene Hardware kostet 0 $ — der Deckel ist dort das
+Kontextfenster des Servers, nicht das Budget. Abgelegt wird zusätzlich die Rohantwort (`NN.raw.txt` bzw.
+`NN.dots.txt`).
 
 **Glocke** (0.531.0): fertig gelesen → `scoresheet_read` (Daten white/black/moves/uncertain/unresolved, Link auf
 `/games/{id}/edit`), gescheitert → `scoresheet_failed` (Daten reason, die Glocke übersetzt den Code über

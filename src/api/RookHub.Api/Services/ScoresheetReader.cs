@@ -30,14 +30,17 @@ public sealed class ScoresheetReader
     /// Vor der ersten Lesung beendet ein Nein die Einlesung, vor einer Nachfrage nur die Nachfragen. Ohne Rückruf
     /// gilt <see cref="ScoresheetBudget.MaxOutputTokens"/>.</param>
     /// <param name="afterCall">Nach jedem Aufruf: verbrauchte Tokens (auch bei Fehlern) verbuchen.</param>
+    /// <param name="maxRounds">Durchgänge höchstens — 1 für einen Leser, der den Auftrag nicht liest (dots.ocr:
+    /// eine Nachfrage ergäbe dieselbe Lesung noch einmal).</param>
     public async Task<ReadOutcome> ReadAsync(byte[] jpeg, string language, CancellationToken ct,
-        Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null)
+        Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null,
+        int maxRounds = MaxRounds)
     {
         ReadOutcome? best = null;
         string? previousJson = null;
         ScoresheetTranscription? previous = null;
         ScoresheetResolution? previousResolution = null;
-        for (var round = 1; round <= MaxRounds; round++)
+        for (var round = 1; round <= Math.Clamp(maxRounds, 1, MaxRounds); round++)
         {
             var instructions = round == 1 || previous == null || previousResolution?.StuckAt is not int stuck
                 ? ScoresheetPrompt.FirstRead(language)

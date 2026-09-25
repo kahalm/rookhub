@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.532.0", date: "2026-09-25", changes: [
+    { en: "For developers: the scoresheet test tool can now measure other readers than Claude — a vision model on our own hardware behind an OpenAI-compatible interface (meant for Qwen3-VL on the DGX Spark), and dots.ocr, a small document reader that returns the move table, from which RookHub builds the entries itself. Both run on the same ten test sheets and are compared with the same measures as Claude, at no cost per call. Reading in RookHub itself is unchanged.", de: "Für Entwickler: Das Testwerkzeug für Partieformulare misst jetzt auch andere Leser als Claude — ein Vision-Modell auf eigener Hardware hinter einer OpenAI-kompatiblen Schnittstelle (gedacht für Qwen3-VL auf dem DGX Spark) und dots.ocr, einen kleinen Dokument-Leser, der die Zugtabelle liefert, aus der RookHub die Einträge selbst baut. Beide laufen über dieselben zehn Testformulare und werden mit denselben Maßen wie Claude verglichen, ohne Kosten je Aufruf. Am Einlesen in RookHub selbst ändert sich nichts." },
+  ] },
   { version: "0.531.1", date: "2026-09-25", changes: [
     { en: "Fix: the scoresheet photo showed an empty window — in the ⋮ menu, on the correction page and as the preview before uploading. The photo is fetched with your login and shown as a picture the page creates itself, and the site's security policy did not allow such pictures yet. It does now, without opening the page to any other origin.", de: "Korrektur: Das Formular-Foto zeigte ein leeres Fenster — im ⋮-Menü, auf der Korrekturseite und als Vorschau vor dem Hochladen. Das Foto wird mit deiner Anmeldung geholt und als Bild angezeigt, das die Seite selbst erzeugt, und die Sicherheitsrichtlinie der Seite erlaubte solche Bilder noch nicht. Jetzt schon, ohne die Seite für irgendeine andere Herkunft zu öffnen." },
   ] },
